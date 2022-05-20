@@ -15,11 +15,9 @@ namespace fidl {
 namespace internal {
 
 template <>
-struct WireNaturalConversionTraits<::test_struct::wire::Simple,
-                                   ::test_struct::Simple> {
+struct WireNaturalConversionTraits<::test_struct::wire::Simple, ::test_struct::Simple> {
   static ::test_struct::Simple ToNatural(::test_struct::wire::Simple src);
-  static ::test_struct::wire::Simple ToWire(fidl::AnyArena& arena,
-                                            ::test_struct::Simple src);
+  static ::test_struct::wire::Simple ToWire(fidl::AnyArena& arena, ::test_struct::Simple src);
 };
 
 template <>
@@ -32,12 +30,9 @@ struct WireTypeForNaturalType<::test_struct::Simple> {
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_struct::wire::BasicStruct,
-                                   ::test_struct::BasicStruct> {
-  static ::test_struct::BasicStruct ToNatural(
-      ::test_struct::wire::BasicStruct src);
-  static ::test_struct::wire::BasicStruct ToWire(
-      fidl::AnyArena& arena, ::test_struct::BasicStruct src);
+struct WireNaturalConversionTraits<::test_struct::wire::BasicStruct, ::test_struct::BasicStruct> {
+  static ::test_struct::BasicStruct ToNatural(::test_struct::wire::BasicStruct src);
+  static ::test_struct::wire::BasicStruct ToWire(fidl::AnyArena& arena, ::test_struct::BasicStruct src);
 };
 
 template <>

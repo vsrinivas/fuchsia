@@ -19,13 +19,10 @@ class Baz final {
 
   ::test::middle::Bar g{};
 
-  static inline ::std::unique_ptr<Baz> New() {
-    return ::std::make_unique<Baz>();
-  }
+  static inline ::std::unique_ptr<Baz> New() { return ::std::make_unique<Baz>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
   static void Decode(::fidl::Decoder* _decoder, Baz* value, size_t _offset);
   zx_status_t Clone(Baz* result) const;
 };
@@ -45,10 +42,8 @@ struct CodingTraits<::test::transitivedependencies::Baz>
     : public EncodableCodingTraits<::test::transitivedependencies::Baz, 4> {};
 
 template <>
-struct IsMemcpyCompatible<::test::transitivedependencies::Baz>
-    : public internal::BoolConstant<
-          !HasPadding<::test::transitivedependencies::Baz>::value &&
-          IsMemcpyCompatible<::test::middle::Bar>::value> {};
+struct IsMemcpyCompatible<::test::transitivedependencies::Baz> : public internal::BoolConstant<
+                                                                     !HasPadding<::test::transitivedependencies::Baz>::value && IsMemcpyCompatible<::test::middle::Bar>::value> {};
 
 inline zx_status_t Clone(const ::test::transitivedependencies::Baz& value,
                          ::test::transitivedependencies::Baz* result) {
@@ -57,8 +52,7 @@ inline zx_status_t Clone(const ::test::transitivedependencies::Baz& value,
 
 template <>
 struct Equality<::test::transitivedependencies::Baz> {
-  bool operator()(const ::test::transitivedependencies::Baz& _lhs,
-                  const ::test::transitivedependencies::Baz& _rhs) const {
+  bool operator()(const ::test::transitivedependencies::Baz& _lhs, const ::test::transitivedependencies::Baz& _rhs) const {
     if (!::fidl::Equals(_lhs.g, _rhs.g)) {
       return false;
     }

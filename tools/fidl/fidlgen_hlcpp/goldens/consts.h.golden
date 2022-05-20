@@ -32,47 +32,44 @@ enum class BitsType : uint32_t {
 
 const static BitsType BitsTypeMask = static_cast<BitsType>(3u);
 
-constexpr inline ::test::consts::BitsType operator|(
-    ::test::consts::BitsType _lhs, ::test::consts::BitsType _rhs) {
-  return static_cast<::test::consts::BitsType>(static_cast<uint32_t>(_lhs) |
-                                               static_cast<uint32_t>(_rhs));
+constexpr inline ::test::consts::BitsType operator|(::test::consts::BitsType _lhs, ::test::consts::BitsType _rhs) {
+  return static_cast<::test::consts::BitsType>(
+      static_cast<uint32_t>(_lhs) | static_cast<uint32_t>(_rhs));
 }
 
-constexpr inline ::test::consts::BitsType& operator|=(
-    ::test::consts::BitsType& _lhs, ::test::consts::BitsType _rhs) {
+constexpr inline ::test::consts::BitsType& operator|=(::test::consts::BitsType& _lhs,
+                                                      ::test::consts::BitsType _rhs) {
   _lhs = _lhs | _rhs;
   return _lhs;
 }
 
-constexpr inline ::test::consts::BitsType operator&(
-    ::test::consts::BitsType _lhs, ::test::consts::BitsType _rhs) {
-  return static_cast<::test::consts::BitsType>(static_cast<uint32_t>(_lhs) &
-                                               static_cast<uint32_t>(_rhs));
+constexpr inline ::test::consts::BitsType operator&(::test::consts::BitsType _lhs,
+                                                    ::test::consts::BitsType _rhs) {
+  return static_cast<::test::consts::BitsType>(
+      static_cast<uint32_t>(_lhs) & static_cast<uint32_t>(_rhs));
 }
 
-constexpr inline ::test::consts::BitsType& operator&=(
-    ::test::consts::BitsType& _lhs, ::test::consts::BitsType _rhs) {
+constexpr inline ::test::consts::BitsType& operator&=(::test::consts::BitsType& _lhs,
+                                                      ::test::consts::BitsType _rhs) {
   _lhs = _lhs & _rhs;
   return _lhs;
 }
 
-constexpr inline ::test::consts::BitsType operator^(
-    ::test::consts::BitsType _lhs, ::test::consts::BitsType _rhs) {
-  return static_cast<::test::consts::BitsType>(static_cast<uint32_t>(_lhs) ^
-                                               static_cast<uint32_t>(_rhs));
+constexpr inline ::test::consts::BitsType operator^(::test::consts::BitsType _lhs,
+                                                    ::test::consts::BitsType _rhs) {
+  return static_cast<::test::consts::BitsType>(
+      static_cast<uint32_t>(_lhs) ^ static_cast<uint32_t>(_rhs));
 }
 
-constexpr inline ::test::consts::BitsType& operator^=(
-    ::test::consts::BitsType& _lhs, ::test::consts::BitsType _rhs) {
+constexpr inline ::test::consts::BitsType& operator^=(::test::consts::BitsType& _lhs,
+                                                      ::test::consts::BitsType _rhs) {
   _lhs = _lhs ^ _rhs;
   return _lhs;
 }
 
-constexpr inline ::test::consts::BitsType operator~(
-    ::test::consts::BitsType _value) {
+constexpr inline ::test::consts::BitsType operator~(::test::consts::BitsType _value) {
   return static_cast<::test::consts::BitsType>(
-      ~static_cast<uint32_t>(_value) &
-      static_cast<uint32_t>(::test::consts::BitsTypeMask));
+      ~static_cast<uint32_t>(_value) & static_cast<uint32_t>(::test::consts::BitsTypeMask));
 }
 
 inline zx_status_t Clone(::test::consts::BitsType value,
@@ -129,15 +126,13 @@ namespace fidl {
 template <>
 struct CodingTraits<::test::consts::EnumType> {
   static constexpr size_t inline_size_v2 = sizeof(::test::consts::EnumType);
-  static void Encode(
-      Encoder* encoder, ::test::consts::EnumType* value, size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  static void Encode(Encoder* encoder, ::test::consts::EnumType* value, size_t offset,
+                     cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
     ZX_DEBUG_ASSERT(!maybe_handle_info);
     int32_t underlying = static_cast<int32_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
   }
-  static void Decode(Decoder* decoder, ::test::consts::EnumType* value,
-                     size_t offset) {
+  static void Decode(Decoder* decoder, ::test::consts::EnumType* value, size_t offset) {
     int32_t underlying = {};
     ::fidl::Decode(decoder, &underlying, offset);
     *value = static_cast<::test::consts::EnumType>(underlying);
@@ -150,8 +145,7 @@ inline zx_status_t Clone(::test::consts::EnumType value,
 }
 template <>
 struct Equality<::test::consts::EnumType> {
-  bool operator()(const ::test::consts::EnumType& _lhs,
-                  const ::test::consts::EnumType& _rhs) const {
+  bool operator()(const ::test::consts::EnumType& _lhs, const ::test::consts::EnumType& _rhs) const {
     return _lhs == _rhs;
   }
 };
@@ -159,15 +153,13 @@ struct Equality<::test::consts::EnumType> {
 template <>
 struct CodingTraits<::test::consts::BitsType> {
   static constexpr size_t inline_size_v2 = sizeof(::test::consts::BitsType);
-  static void Encode(
-      Encoder* encoder, ::test::consts::BitsType* value, size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  static void Encode(Encoder* encoder, ::test::consts::BitsType* value, size_t offset,
+                     cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
     ZX_DEBUG_ASSERT(!maybe_handle_info);
     uint32_t underlying = static_cast<uint32_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
   }
-  static void Decode(Decoder* decoder, ::test::consts::BitsType* value,
-                     size_t offset) {
+  static void Decode(Decoder* decoder, ::test::consts::BitsType* value, size_t offset) {
     uint32_t underlying = {};
     ::fidl::Decode(decoder, &underlying, offset);
     *value = static_cast<::test::consts::BitsType>(underlying);
@@ -181,8 +173,7 @@ inline zx_status_t Clone(::test::consts::BitsType value,
 
 template <>
 struct Equality<::test::consts::BitsType> {
-  bool operator()(const ::test::consts::BitsType& _lhs,
-                  const ::test::consts::BitsType& _rhs) const {
+  bool operator()(const ::test::consts::BitsType& _lhs, const ::test::consts::BitsType& _rhs) const {
     uint32_t _lhs_underlying = static_cast<uint32_t>(_lhs);
     uint32_t _rhs_underlying = static_cast<uint32_t>(_rhs);
     return ::fidl::Equals(_lhs_underlying, _rhs_underlying);

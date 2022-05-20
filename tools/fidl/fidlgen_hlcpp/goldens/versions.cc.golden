@@ -14,7 +14,9 @@ const fidl_type_t* Union::FidlType = &test_versions_UnionTable;
 
 Union::Union() {}
 
-Union::~Union() { Destroy(); }
+Union::~Union() {
+  Destroy();
+}
 
 Union::Union(Union&& other) : tag_(other.tag_) {
   switch (tag_) {
@@ -38,8 +40,7 @@ Union& Union::operator=(Union&& other) {
       case ::test::versions::Union::Tag::kX:
         x_ = std::move(other.x_);
         break;
-      case static_cast<fidl_xunion_tag_t>(
-          ::test::versions::Union::Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(::test::versions::Union::Tag::Invalid):
         break;
       default:
         new (&unknown_data_) decltype(unknown_data_);
@@ -56,44 +57,37 @@ Union Union::WithX(uint32_t&& val) {
   return result;
 }
 
-void Union::Encode(
-    ::fidl::Encoder* encoder, size_t offset,
-    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+void Union::Encode(::fidl::Encoder* encoder, size_t offset,
+                   cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
   switch (Which()) {
     case ::test::versions::Union::Tag::kX: {
-      if (::fidl::EncodingInlineSize<uint32_t>(encoder) <=
-          FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-        ::fidl::Encode(encoder, &x_,
-                       offset + offsetof(fidl_xunion_v2_t, envelope));
+      if (::fidl::EncodingInlineSize<uint32_t>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+        ::fidl::Encode(encoder, &x_, offset + offsetof(fidl_xunion_v2_t, envelope));
 
         fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
         xunion->tag = tag_;
-        xunion->envelope.num_handles = static_cast<uint16_t>(
-            encoder->CurrentHandleCount() - handles_before);
+        xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
         xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
         break;
       }
 
       ::fidl::Encode(
-          encoder, &x_,
-          encoder->Alloc(
-              ::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(encoder)));
+          encoder,
+          &x_,
+          encoder->Alloc(::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(encoder)));
 
       fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
       xunion->tag = tag_;
-      xunion->envelope.num_bytes =
-          static_cast<uint32_t>(encoder->CurrentLength() - length_before);
-      xunion->envelope.num_handles =
-          static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
+      xunion->envelope.num_bytes = static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+      xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
       xunion->envelope.flags = 0;
       break;
     }
     case ::test::versions::Union::Tag::kUnknown: {
-      ::fidl::EncodeUnknownBytes(encoder, &unknown_data_,
-                                 offset + offsetof(fidl_xunion_t, envelope));
+      ::fidl::EncodeUnknownBytes(encoder, &unknown_data_, offset + offsetof(fidl_xunion_t, envelope));
       *encoder->GetPtr<uint64_t>(offset) = tag_;
       break;
     }
@@ -105,10 +99,10 @@ void Union::Encode(
 void Union::Decode(::fidl::Decoder* _decoder, Union* value, size_t offset) {
   fidl_xunion_v2_t* xunion = _decoder->GetPtr<fidl_xunion_v2_t>(offset);
 
-  if (xunion->envelope.num_bytes == 0 && xunion->envelope.num_handles == 0 &&
+  if (xunion->envelope.num_bytes == 0 &&
+      xunion->envelope.num_handles == 0 &&
       xunion->envelope.flags == 0) {
-    value->EnsureStorageInitialized(
-        static_cast<fidl_xunion_tag_t>(::test::versions::Union::Tag::Invalid));
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(::test::versions::Union::Tag::Invalid));
     return;
   }
 
@@ -124,8 +118,7 @@ void Union::Decode(::fidl::Decoder* _decoder, Union* value, size_t offset) {
     default: {
       auto unknown_info = _decoder->EnvelopeUnknownDataInfo(&xunion->envelope);
       value->unknown_data_.resize(unknown_info.num_bytes);
-      ::fidl::DecodeUnknownBytesContents(_decoder, &value->unknown_data_,
-                                         unknown_info.value_offset);
+      ::fidl::DecodeUnknownBytesContents(_decoder, &value->unknown_data_, unknown_info.value_offset);
       break;
     }
   }
@@ -151,8 +144,7 @@ Union& Union::set_x(uint32_t value) {
   x_ = std::move(value);
   return *this;
 }
-Union& Union::SetUnknownData(fidl_xunion_tag_t ordinal,
-                             std::vector<uint8_t> bytes) {
+Union& Union::SetUnknownData(fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes) {
   EnsureStorageInitialized(ordinal);
   unknown_data_ = std::move(bytes);
   return *this;
@@ -177,8 +169,7 @@ void Union::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     Destroy();
     tag_ = tag;
     switch (tag_) {
-      case static_cast<fidl_xunion_tag_t>(
-          ::test::versions::Union::Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(::test::versions::Union::Tag::Invalid):
         break;
       case ::test::versions::Union::Tag::kX:
         new (&x_) uint32_t();
@@ -223,43 +214,37 @@ Table& Table::operator=(Table&& other) {
   return *this;
 }
 
-bool Table::IsEmpty() const { return field_presence_.IsEmpty(); }
+bool Table::IsEmpty() const {
+  return field_presence_.IsEmpty();
+}
 
-void Table::Encode(
-    ::fidl::Encoder* _encoder, size_t _offset,
-    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+void Table::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                   cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   size_t max_ordinal = MaxOrdinal();
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
-  __attribute__((__unused__)) size_t base =
-      _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
+  __attribute__((__unused__)) size_t base = _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
   if (field_presence_.IsSet<0>()) {
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
     size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
 
-    if (::fidl::EncodingInlineSize<uint32_t>(_encoder) <=
-        FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+    if (::fidl::EncodingInlineSize<uint32_t>(_encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
       ::fidl::Encode(_encoder, &x_value_.value, envelope_base);
 
-      fidl_envelope_v2_t* envelope =
-          _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      envelope->num_handles = static_cast<uint16_t>(
-          _encoder->CurrentHandleCount() - handles_before);
+      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder, &x_value_.value,
-          _encoder->Alloc(
-              ::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(_encoder)));
+          _encoder,
+          &x_value_.value,
+          _encoder->Alloc(::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(_encoder)));
 
-      fidl_envelope_v2_t* envelope =
-          _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      envelope->num_bytes =
-          static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
-      envelope->num_handles = static_cast<uint16_t>(
-          _encoder->CurrentHandleCount() - handles_before);
+      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
+      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
       envelope->flags = 0;
     }
   }
@@ -277,8 +262,7 @@ void Table::Decode(::fidl::Decoder* _decoder, Table* _value, size_t _offset) {
   count = encoded->count;
   if (count >= 1) {
     size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
-    fidl_envelope_v2_t* envelope =
-        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_x(),
                      _decoder->EnvelopeValueOffset(envelope));
@@ -301,7 +285,8 @@ done_1:
 zx_status_t Table::Clone(Table* result) const {
   if (field_presence_.IsSet<0>()) {
     zx_status_t _status = ::fidl::Clone(x_value_.value, result->mutable_x());
-    if (_status != ZX_OK) return _status;
+    if (_status != ZX_OK)
+      return _status;
   } else {
     result->clear_x();
   }
@@ -311,9 +296,8 @@ zx_status_t Table::Clone(Table* result) const {
 extern "C" const fidl_type_t test_versions_StructTable;
 const fidl_type_t* Struct::FidlType = &test_versions_StructTable;
 
-void Struct::Encode(
-    ::fidl::Encoder* _encoder, size_t _offset,
-    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+void Struct::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<Struct>::value) {
     memcpy(_encoder->template GetPtr<Struct>(_offset), this, sizeof(Struct));
   } else {
@@ -331,7 +315,8 @@ void Struct::Decode(::fidl::Decoder* _decoder, Struct* _value, size_t _offset) {
 
 zx_status_t Struct::Clone(Struct* _result) const {
   zx_status_t _status = ::fidl::Clone(x, &_result->x);
-  if (_status != ZX_OK) return _status;
+  if (_status != ZX_OK)
+    return _status;
   return ZX_OK;
 }
 
@@ -352,8 +337,7 @@ constexpr const ::test::versions::Bits Bits::kMask = ::test::versions::Bits(1u);
 
 OtherProtocol::~OtherProtocol() = default;
 
-const fidl_type_t* ::test::versions::OtherProtocol_RequestDecoder::GetType(
-    uint64_t ordinal, bool* out_needs_response) {
+const fidl_type_t* ::test::versions::OtherProtocol_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
   *out_needs_response = false;
   switch (ordinal) {
     default:
@@ -372,16 +356,14 @@ OtherProtocol_EventSender::~OtherProtocol_EventSender() = default;
 
 OtherProtocol_Sync::~OtherProtocol_Sync() = default;
 
-OtherProtocol_Proxy::OtherProtocol_Proxy(
-    ::fidl::internal::ProxyController* controller)
+OtherProtocol_Proxy::OtherProtocol_Proxy(::fidl::internal::ProxyController* controller)
     : controller_(controller) {
   (void)controller_;
 }
 
 OtherProtocol_Proxy::~OtherProtocol_Proxy() = default;
 
-zx_status_t OtherProtocol_Proxy::Dispatch_(
-    ::fidl::HLCPPIncomingMessage message) {
+zx_status_t OtherProtocol_Proxy::Dispatch_(::fidl::HLCPPIncomingMessage message) {
   zx_status_t status = ZX_OK;
   switch (message.ordinal()) {
     default: {
@@ -392,23 +374,21 @@ zx_status_t OtherProtocol_Proxy::Dispatch_(
   return status;
 }
 
-OtherProtocol_Stub::OtherProtocol_Stub(
-    ::test::versions::OtherProtocol_Stub::OtherProtocol_clazz* impl)
-    : impl_(impl) {
+OtherProtocol_Stub::OtherProtocol_Stub(::test::versions::OtherProtocol_Stub::OtherProtocol_clazz* impl) : impl_(impl) {
   (void)impl_;
 }
 
 OtherProtocol_Stub::~OtherProtocol_Stub() = default;
 
-namespace {}  // namespace
+namespace {
+
+}  // namespace
 
 zx_status_t OtherProtocol_Stub::Dispatch_(
     ::fidl::HLCPPIncomingMessage message,
     ::fidl::internal::PendingResponse response) {
   bool needs_response;
-  const fidl_type_t* request_type =
-      ::test::versions::OtherProtocol_RequestDecoder::GetType(message.ordinal(),
-                                                              &needs_response);
+  const fidl_type_t* request_type = ::test::versions::OtherProtocol_RequestDecoder::GetType(message.ordinal(), &needs_response);
   if (!message.has_only_header()) {
     if (request_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
@@ -423,11 +403,9 @@ zx_status_t OtherProtocol_Stub::Dispatch_(
 
   if (response.needs_response() != needs_response) {
     if (needs_response) {
-      FIDL_REPORT_DECODING_ERROR(message, request_type,
-                                 "Message needing a response with no txid");
+      FIDL_REPORT_DECODING_ERROR(message, request_type, "Message needing a response with no txid");
     } else {
-      FIDL_REPORT_DECODING_ERROR(message, request_type,
-                                 "Message not needing a response with a txid");
+      FIDL_REPORT_DECODING_ERROR(message, request_type, "Message not needing a response with a txid");
     }
     return ZX_ERR_INVALID_ARGS;
   }
@@ -451,8 +429,7 @@ OtherProtocol_SyncProxy::~OtherProtocol_SyncProxy() = default;
 
 Protocol::~Protocol() = default;
 
-const fidl_type_t* ::test::versions::Protocol_RequestDecoder::GetType(
-    uint64_t ordinal, bool* out_needs_response) {
+const fidl_type_t* ::test::versions::Protocol_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
   *out_needs_response = false;
   switch (ordinal) {
     case ::test::versions::internal::kProtocol_Foo_Ordinal:
@@ -493,32 +470,26 @@ zx_status_t Protocol_Proxy::Dispatch_(::fidl::HLCPPIncomingMessage message) {
 }
 
 void Protocol_Proxy::Foo() {
-  ::fidl::MessageEncoder _encoder(
-      ::test::versions::internal::kProtocol_Foo_Ordinal,
-      ::test::versions::internal::kProtocol_Foo_DynamicFlags);
+  ::fidl::MessageEncoder _encoder(::test::versions::internal::kProtocol_Foo_Ordinal, ::test::versions::internal::kProtocol_Foo_DynamicFlags);
   const fidl_type_t* req_type = nullptr;
-  controller_->Send(req_type,
-                    ::test::versions::Protocol_RequestEncoder::Foo(&_encoder),
-                    nullptr);
+  controller_->Send(req_type, ::test::versions::Protocol_RequestEncoder::Foo(&_encoder), nullptr);
 }
 
-Protocol_Stub::Protocol_Stub(
-    ::test::versions::Protocol_Stub::Protocol_clazz* impl)
-    : impl_(impl) {
+Protocol_Stub::Protocol_Stub(::test::versions::Protocol_Stub::Protocol_clazz* impl) : impl_(impl) {
   (void)impl_;
 }
 
 Protocol_Stub::~Protocol_Stub() = default;
 
-namespace {}  // namespace
+namespace {
+
+}  // namespace
 
 zx_status_t Protocol_Stub::Dispatch_(
     ::fidl::HLCPPIncomingMessage message,
     ::fidl::internal::PendingResponse response) {
   bool needs_response;
-  const fidl_type_t* request_type =
-      ::test::versions::Protocol_RequestDecoder::GetType(message.ordinal(),
-                                                         &needs_response);
+  const fidl_type_t* request_type = ::test::versions::Protocol_RequestDecoder::GetType(message.ordinal(), &needs_response);
   if (!message.has_only_header()) {
     if (request_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
@@ -533,11 +504,9 @@ zx_status_t Protocol_Stub::Dispatch_(
 
   if (response.needs_response() != needs_response) {
     if (needs_response) {
-      FIDL_REPORT_DECODING_ERROR(message, request_type,
-                                 "Message needing a response with no txid");
+      FIDL_REPORT_DECODING_ERROR(message, request_type, "Message needing a response with no txid");
     } else {
-      FIDL_REPORT_DECODING_ERROR(message, request_type,
-                                 "Message not needing a response with a txid");
+      FIDL_REPORT_DECODING_ERROR(message, request_type, "Message not needing a response with a txid");
     }
     return ZX_ERR_INVALID_ARGS;
   }
@@ -561,12 +530,9 @@ Protocol_SyncProxy::Protocol_SyncProxy(::zx::channel channel)
 Protocol_SyncProxy::~Protocol_SyncProxy() = default;
 
 zx_status_t Protocol_SyncProxy::Foo() {
-  ::fidl::MessageEncoder _encoder(
-      ::test::versions::internal::kProtocol_Foo_Ordinal,
-      ::test::versions::internal::kProtocol_Foo_DynamicFlags);
+  ::fidl::MessageEncoder _encoder(::test::versions::internal::kProtocol_Foo_Ordinal, ::test::versions::internal::kProtocol_Foo_DynamicFlags);
   const fidl_type_t* req_type = nullptr;
-  return proxy_.Send(req_type,
-                     ::test::versions::Protocol_RequestEncoder::Foo(&_encoder));
+  return proxy_.Send(req_type, ::test::versions::Protocol_RequestEncoder::Foo(&_encoder));
 }
 #endif  // __Fuchsia__
 

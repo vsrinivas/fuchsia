@@ -6,16 +6,14 @@
 namespace test {
 namespace protocols {
 namespace testing {
-class WithAndWithoutRequestResponse_TestBase
-    : public ::test::protocols::WithAndWithoutRequestResponse {
+class WithAndWithoutRequestResponse_TestBase : public ::test::protocols::WithAndWithoutRequestResponse {
  public:
   virtual ~WithAndWithoutRequestResponse_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
   void NoRequestNoResponse() override {
     NotImplemented_("NoRequestNoResponse");
   }
-  void NoRequestEmptyResponse(
-      NoRequestEmptyResponseCallback callback) override {
+  void NoRequestEmptyResponse(NoRequestEmptyResponseCallback callback) override {
     NotImplemented_("NoRequestEmptyResponse");
   }
   void NoRequestWithResponse(NoRequestWithResponseCallback callback) override {
@@ -24,12 +22,10 @@ class WithAndWithoutRequestResponse_TestBase
   void WithRequestNoResponse(::std::string arg) override {
     NotImplemented_("WithRequestNoResponse");
   }
-  void WithRequestEmptyResponse(
-      ::std::string arg, WithRequestEmptyResponseCallback callback) override {
+  void WithRequestEmptyResponse(::std::string arg, WithRequestEmptyResponseCallback callback) override {
     NotImplemented_("WithRequestEmptyResponse");
   }
-  void WithRequestWithResponse(
-      ::std::string arg, WithRequestWithResponseCallback callback) override {
+  void WithRequestWithResponse(::std::string arg, WithRequestWithResponseCallback callback) override {
     NotImplemented_("WithRequestWithResponse");
   }
 };
@@ -41,7 +37,9 @@ class Transitional_TestBase : public ::test::protocols::Transitional {
   void Request(int64_t x, RequestCallback callback) override {
     NotImplemented_("Request");
   }
-  void OneWay(int64_t x) override { NotImplemented_("OneWay"); }
+  void OneWay(int64_t x) override {
+    NotImplemented_("OneWay");
+  }
 };
 
 class MethodWithUnion_TestBase : public ::test::protocols::MethodWithUnion {
@@ -57,18 +55,13 @@ class WithProtocolEnds_TestBase : public ::test::protocols::WithProtocolEnds {
  public:
   virtual ~WithProtocolEnds_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
-  void ClientEnds(
-      ::fidl::InterfaceHandle<::test::protocols::DiscoverableProtocol> in,
-      ClientEndsCallback callback) override {
+  void ClientEnds(::fidl::InterfaceHandle<::test::protocols::DiscoverableProtocol> in, ClientEndsCallback callback) override {
     NotImplemented_("ClientEnds");
   }
-  void ServerEnds(
-      ::fidl::InterfaceRequest<::test::protocols::DiscoverableProtocol> in,
-      ServerEndsCallback callback) override {
+  void ServerEnds(::fidl::InterfaceRequest<::test::protocols::DiscoverableProtocol> in, ServerEndsCallback callback) override {
     NotImplemented_("ServerEnds");
   }
-  void StructContainingEnds(::test::protocols::ProtocolEnds in,
-                            StructContainingEndsCallback callback) override {
+  void StructContainingEnds(::test::protocols::ProtocolEnds in, StructContainingEndsCallback callback) override {
     NotImplemented_("StructContainingEnds");
   }
 };
@@ -77,23 +70,19 @@ class ManyParameters_TestBase : public ::test::protocols::ManyParameters {
  public:
   virtual ~ManyParameters_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
-  void Fifteen(bool p1, bool p2, bool p3, bool p4, bool p5, bool p6, bool p7,
-               bool p8, bool p9, bool p10, bool p11, bool p12, bool p13,
-               bool p14, bool p15) override {
+  void Fifteen(bool p1, bool p2, bool p3, bool p4, bool p5, bool p6, bool p7, bool p8, bool p9, bool p10, bool p11, bool p12, bool p13, bool p14, bool p15) override {
     NotImplemented_("Fifteen");
   }
 };
 
-class HandleRightsProtocol_TestBase
-    : public ::test::protocols::HandleRightsProtocol {
+class HandleRightsProtocol_TestBase : public ::test::protocols::HandleRightsProtocol {
  public:
   virtual ~HandleRightsProtocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
   void NoResponseMethod(::zx::socket h) override {
     NotImplemented_("NoResponseMethod");
   }
-  void ResponseMethod(::zx::socket h,
-                      ResponseMethodCallback callback) override {
+  void ResponseMethod(::zx::socket h, ResponseMethodCallback callback) override {
     NotImplemented_("ResponseMethod");
   }
 };
@@ -116,19 +105,22 @@ class WithErrorSyntax_TestBase : public ::test::protocols::WithErrorSyntax {
   }
 };
 
-class DiscoverableProtocol_TestBase
-    : public ::test::protocols::DiscoverableProtocol {
+class DiscoverableProtocol_TestBase : public ::test::protocols::DiscoverableProtocol {
  public:
   virtual ~DiscoverableProtocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
-  void Method() override { NotImplemented_("Method"); }
+  void Method() override {
+    NotImplemented_("Method");
+  }
 };
 
 class ChannelProtocol_TestBase : public ::test::protocols::ChannelProtocol {
  public:
   virtual ~ChannelProtocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
-  void MethodA(int64_t a, int64_t b) override { NotImplemented_("MethodA"); }
+  void MethodA(int64_t a, int64_t b) override {
+    NotImplemented_("MethodA");
+  }
   void MethodB(int64_t a, int64_t b, MethodBCallback callback) override {
     NotImplemented_("MethodB");
   }

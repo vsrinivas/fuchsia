@@ -7,32 +7,24 @@ namespace fidl {
 namespace testing {
 
 template <>
-class WireTestBase<::test_requestflexibleenvelope::Protocol>
-    : public ::fidl::WireServer<::test_requestflexibleenvelope::Protocol> {
+class WireTestBase<::test_requestflexibleenvelope::Protocol> : public ::fidl::WireServer<::test_requestflexibleenvelope::Protocol> {
  public:
   virtual ~WireTestBase<::test_requestflexibleenvelope::Protocol>() = default;
-  virtual void NotImplemented_(const std::string& name,
-                               ::fidl::CompleterBase& completer) = 0;
+  virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
   virtual void RequestStrictResponseFlexible(
-      RequestStrictResponseFlexibleRequestView request,
-      RequestStrictResponseFlexibleCompleter::Sync& completer) override {
+      RequestStrictResponseFlexibleRequestView request, RequestStrictResponseFlexibleCompleter::Sync& completer) override {
     NotImplemented_("RequestStrictResponseFlexible", completer);
   }
   virtual void RequestFlexibleResponseStrict(
-      RequestFlexibleResponseStrictRequestView request,
-      RequestFlexibleResponseStrictCompleter::Sync& completer) override {
+      RequestFlexibleResponseStrictRequestView request, RequestFlexibleResponseStrictCompleter::Sync& completer) override {
     NotImplemented_("RequestFlexibleResponseStrict", completer);
   }
 };
 
 template <>
-class ::fidl::testing::WireSyncEventHandlerTestBase<
-    ::test_requestflexibleenvelope::Protocol>
-    : public ::fidl::WireSyncEventHandler<
-          ::test_requestflexibleenvelope::Protocol> {
+class ::fidl::testing::WireSyncEventHandlerTestBase<::test_requestflexibleenvelope::Protocol> : public ::fidl::WireSyncEventHandler<::test_requestflexibleenvelope::Protocol> {
  public:
-  virtual ~WireSyncEventHandlerTestBase<
-      ::test_requestflexibleenvelope::Protocol>() = default;
+  virtual ~WireSyncEventHandlerTestBase<::test_requestflexibleenvelope::Protocol>() = default;
   virtual void NotImplemented_(const std::string& name) = 0;
 };
 }  // namespace testing

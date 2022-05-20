@@ -6,8 +6,7 @@ namespace test_protocols {
 extern "C" const fidl_type_t test_protocols_ErrorEnumTable;
 }  // namespace test_protocols
 size_t fidl::internal::DisplayError<::test_protocols::ErrorEnum>::Format(
-    const ::test_protocols::ErrorEnum& value, char* destination,
-    size_t capacity) {
+    const ::test_protocols::ErrorEnum& value, char* destination, size_t capacity) {
   const char* name = [&]() -> const char* {
     switch (static_cast<uint32_t>(value)) {
       case 1u:
@@ -19,6 +18,5 @@ size_t fidl::internal::DisplayError<::test_protocols::ErrorEnum>::Format(
     }
   }();
   return ::fidl::internal::FormatApplicationError(
-      static_cast<uint32_t>(value), name,
-      &::test_protocols::test_protocols_ErrorEnumTable, destination, capacity);
+      static_cast<uint32_t>(value), name, &::test_protocols::test_protocols_ErrorEnumTable, destination, capacity);
 }

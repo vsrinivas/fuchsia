@@ -15,12 +15,9 @@ namespace fidl {
 namespace internal {
 
 template <>
-struct WireNaturalConversionTraits<::test_emptystruct::wire::Empty,
-                                   ::test_emptystruct::Empty> {
-  static ::test_emptystruct::Empty ToNatural(
-      ::test_emptystruct::wire::Empty src);
-  static ::test_emptystruct::wire::Empty ToWire(fidl::AnyArena& arena,
-                                                ::test_emptystruct::Empty src);
+struct WireNaturalConversionTraits<::test_emptystruct::wire::Empty, ::test_emptystruct::Empty> {
+  static ::test_emptystruct::Empty ToNatural(::test_emptystruct::wire::Empty src);
+  static ::test_emptystruct::wire::Empty ToWire(fidl::AnyArena& arena, ::test_emptystruct::Empty src);
 };
 
 template <>
@@ -33,18 +30,13 @@ struct WireTypeForNaturalType<::test_emptystruct::Empty> {
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_emptystruct::wire::EmptyProtocolSendRequest,
-    ::test_emptystruct::EmptyProtocolSendRequest> {
-  static ::test_emptystruct::EmptyProtocolSendRequest ToNatural(
-      ::test_emptystruct::wire::EmptyProtocolSendRequest src);
-  static ::test_emptystruct::wire::EmptyProtocolSendRequest ToWire(
-      fidl::AnyArena& arena, ::test_emptystruct::EmptyProtocolSendRequest src);
+struct WireNaturalConversionTraits<::test_emptystruct::wire::EmptyProtocolSendRequest, ::test_emptystruct::EmptyProtocolSendRequest> {
+  static ::test_emptystruct::EmptyProtocolSendRequest ToNatural(::test_emptystruct::wire::EmptyProtocolSendRequest src);
+  static ::test_emptystruct::wire::EmptyProtocolSendRequest ToWire(fidl::AnyArena& arena, ::test_emptystruct::EmptyProtocolSendRequest src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_emptystruct::wire::EmptyProtocolSendRequest> {
+struct NaturalTypeForWireType<::test_emptystruct::wire::EmptyProtocolSendRequest> {
   using type = ::test_emptystruct::EmptyProtocolSendRequest;
 };
 template <>
@@ -53,63 +45,43 @@ struct WireTypeForNaturalType<::test_emptystruct::EmptyProtocolSendRequest> {
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse,
-    ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse> {
-  static ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse ToNatural(
-      ::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse src);
-  static ::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse
-  ToWire(fidl::AnyArena& arena,
-         ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse src);
+struct WireNaturalConversionTraits<::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse, ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse> {
+  static ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse ToNatural(::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse src);
+  static ::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse ToWire(fidl::AnyArena& arena, ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse> {
+struct NaturalTypeForWireType<::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse> {
   using type = ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse> {
+struct WireTypeForNaturalType<::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse> {
   using type = ::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_emptystruct::wire::EmptyProtocolSendAndReceiveRequest,
-    ::test_emptystruct::EmptyProtocolSendAndReceiveRequest> {
-  static ::test_emptystruct::EmptyProtocolSendAndReceiveRequest ToNatural(
-      ::test_emptystruct::wire::EmptyProtocolSendAndReceiveRequest src);
-  static ::test_emptystruct::wire::EmptyProtocolSendAndReceiveRequest ToWire(
-      fidl::AnyArena& arena,
-      ::test_emptystruct::EmptyProtocolSendAndReceiveRequest src);
+struct WireNaturalConversionTraits<::test_emptystruct::wire::EmptyProtocolSendAndReceiveRequest, ::test_emptystruct::EmptyProtocolSendAndReceiveRequest> {
+  static ::test_emptystruct::EmptyProtocolSendAndReceiveRequest ToNatural(::test_emptystruct::wire::EmptyProtocolSendAndReceiveRequest src);
+  static ::test_emptystruct::wire::EmptyProtocolSendAndReceiveRequest ToWire(fidl::AnyArena& arena, ::test_emptystruct::EmptyProtocolSendAndReceiveRequest src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_emptystruct::wire::EmptyProtocolSendAndReceiveRequest> {
+struct NaturalTypeForWireType<::test_emptystruct::wire::EmptyProtocolSendAndReceiveRequest> {
   using type = ::test_emptystruct::EmptyProtocolSendAndReceiveRequest;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_emptystruct::EmptyProtocolSendAndReceiveRequest> {
+struct WireTypeForNaturalType<::test_emptystruct::EmptyProtocolSendAndReceiveRequest> {
   using type = ::test_emptystruct::wire::EmptyProtocolSendAndReceiveRequest;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_emptystruct::wire::EmptyProtocolReceiveRequest,
-    ::test_emptystruct::EmptyProtocolReceiveRequest> {
-  static ::test_emptystruct::EmptyProtocolReceiveRequest ToNatural(
-      ::test_emptystruct::wire::EmptyProtocolReceiveRequest src);
-  static ::test_emptystruct::wire::EmptyProtocolReceiveRequest ToWire(
-      fidl::AnyArena& arena,
-      ::test_emptystruct::EmptyProtocolReceiveRequest src);
+struct WireNaturalConversionTraits<::test_emptystruct::wire::EmptyProtocolReceiveRequest, ::test_emptystruct::EmptyProtocolReceiveRequest> {
+  static ::test_emptystruct::EmptyProtocolReceiveRequest ToNatural(::test_emptystruct::wire::EmptyProtocolReceiveRequest src);
+  static ::test_emptystruct::wire::EmptyProtocolReceiveRequest ToWire(fidl::AnyArena& arena, ::test_emptystruct::EmptyProtocolReceiveRequest src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_emptystruct::wire::EmptyProtocolReceiveRequest> {
+struct NaturalTypeForWireType<::test_emptystruct::wire::EmptyProtocolReceiveRequest> {
   using type = ::test_emptystruct::EmptyProtocolReceiveRequest;
 };
 template <>
@@ -120,100 +92,62 @@ struct WireTypeForNaturalType<::test_emptystruct::EmptyProtocolReceiveRequest> {
 #ifdef __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send>,
-    ::fidl::Request<::test_emptystruct::EmptyProtocol::Send>> {
-  static ::fidl::Request<::test_emptystruct::EmptyProtocol::Send> ToNatural(
-      ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send> src);
-  static ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send> ToWire(
-      fidl::AnyArena& arena,
-      ::fidl::Request<::test_emptystruct::EmptyProtocol::Send> src);
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send>, ::fidl::Request<::test_emptystruct::EmptyProtocol::Send>> {
+  static ::fidl::Request<::test_emptystruct::EmptyProtocol::Send> ToNatural(::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send> src);
+  static ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_emptystruct::EmptyProtocol::Send> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send>> {
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send>> {
   using type = ::fidl::Request<::test_emptystruct::EmptyProtocol::Send>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Request<::test_emptystruct::EmptyProtocol::Send>> {
+struct WireTypeForNaturalType<::fidl::Request<::test_emptystruct::EmptyProtocol::Send>> {
   using type = ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>,
-    ::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive>> {
-  static ::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive>
-  ToNatural(
-      ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>
-          src);
-  static ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>
-  ToWire(
-      fidl::AnyArena& arena,
-      ::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive> src);
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>, ::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive>> {
+  static ::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive> ToNatural(::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive> src);
+  static ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>> {
-  using type =
-      ::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive>;
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>> {
+  using type = ::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive>> {
-  using type =
-      ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>;
+struct WireTypeForNaturalType<::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive>> {
+  using type = ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>,
-    ::fidl::Response<::test_emptystruct::EmptyProtocol::SendAndReceive>> {
-  static ::fidl::Response<::test_emptystruct::EmptyProtocol::SendAndReceive>
-  ToNatural(
-      ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>
-          src);
-  static ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>
-  ToWire(
-      fidl::AnyArena& arena,
-      ::fidl::Response<::test_emptystruct::EmptyProtocol::SendAndReceive> src);
+struct WireNaturalConversionTraits<::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>, ::fidl::Response<::test_emptystruct::EmptyProtocol::SendAndReceive>> {
+  static ::fidl::Response<::test_emptystruct::EmptyProtocol::SendAndReceive> ToNatural(::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive> src);
+  static ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive> ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_emptystruct::EmptyProtocol::SendAndReceive> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>> {
-  using type =
-      ::fidl::Response<::test_emptystruct::EmptyProtocol::SendAndReceive>;
+struct NaturalTypeForWireType<::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>> {
+  using type = ::fidl::Response<::test_emptystruct::EmptyProtocol::SendAndReceive>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Response<::test_emptystruct::EmptyProtocol::SendAndReceive>> {
-  using type =
-      ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>;
+struct WireTypeForNaturalType<::fidl::Response<::test_emptystruct::EmptyProtocol::SendAndReceive>> {
+  using type = ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive>,
-    ::fidl::Event<::test_emptystruct::EmptyProtocol::Receive>> {
-  static ::fidl::Event<::test_emptystruct::EmptyProtocol::Receive> ToNatural(
-      ::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive> src);
-  static ::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive> ToWire(
-      fidl::AnyArena& arena,
-      ::fidl::Event<::test_emptystruct::EmptyProtocol::Receive> src);
+struct WireNaturalConversionTraits<::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive>, ::fidl::Event<::test_emptystruct::EmptyProtocol::Receive>> {
+  static ::fidl::Event<::test_emptystruct::EmptyProtocol::Receive> ToNatural(::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive> src);
+  static ::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive> ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_emptystruct::EmptyProtocol::Receive> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive>> {
+struct NaturalTypeForWireType<::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive>> {
   using type = ::fidl::Event<::test_emptystruct::EmptyProtocol::Receive>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Event<::test_emptystruct::EmptyProtocol::Receive>> {
+struct WireTypeForNaturalType<::fidl::Event<::test_emptystruct::EmptyProtocol::Receive>> {
   using type = ::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive>;
 };
 #endif  // __Fuchsia__

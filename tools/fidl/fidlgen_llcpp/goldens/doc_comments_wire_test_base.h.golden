@@ -7,29 +7,22 @@ namespace fidl {
 namespace testing {
 
 template <>
-class WireTestBase<::test_doccomments::Interface>
-    : public ::fidl::WireServer<::test_doccomments::Interface> {
+class WireTestBase<::test_doccomments::Interface> : public ::fidl::WireServer<::test_doccomments::Interface> {
  public:
   virtual ~WireTestBase<::test_doccomments::Interface>() = default;
-  virtual void NotImplemented_(const std::string& name,
-                               ::fidl::CompleterBase& completer) = 0;
-  virtual void Method(MethodRequestView request,
-                      MethodCompleter::Sync& completer) override {
+  virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
+  virtual void Method(
+      MethodRequestView request, MethodCompleter::Sync& completer) override {
     NotImplemented_("Method", completer);
   }
 };
 
 template <>
-class ::fidl::testing::WireSyncEventHandlerTestBase<
-    ::test_doccomments::Interface>
-    : public ::fidl::WireSyncEventHandler<::test_doccomments::Interface> {
+class ::fidl::testing::WireSyncEventHandlerTestBase<::test_doccomments::Interface> : public ::fidl::WireSyncEventHandler<::test_doccomments::Interface> {
  public:
-  virtual ~WireSyncEventHandlerTestBase<::test_doccomments::Interface>() =
-      default;
+  virtual ~WireSyncEventHandlerTestBase<::test_doccomments::Interface>() = default;
   virtual void NotImplemented_(const std::string& name) = 0;
-  virtual void OnEvent(
-      ::fidl::WireEvent<::test_doccomments::Interface::OnEvent>* event)
-      override {
+  virtual void OnEvent(::fidl::WireEvent<::test_doccomments::Interface::OnEvent>* event) override {
     NotImplemented_("OnEvent");
   }
 };

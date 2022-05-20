@@ -15,12 +15,9 @@ namespace fidl {
 namespace internal {
 
 template <>
-struct WireNaturalConversionTraits<::test_importedconstvalues::wire::MyStruct,
-                                   ::test_importedconstvalues::MyStruct> {
-  static ::test_importedconstvalues::MyStruct ToNatural(
-      ::test_importedconstvalues::wire::MyStruct src);
-  static ::test_importedconstvalues::wire::MyStruct ToWire(
-      fidl::AnyArena& arena, ::test_importedconstvalues::MyStruct src);
+struct WireNaturalConversionTraits<::test_importedconstvalues::wire::MyStruct, ::test_importedconstvalues::MyStruct> {
+  static ::test_importedconstvalues::MyStruct ToNatural(::test_importedconstvalues::wire::MyStruct src);
+  static ::test_importedconstvalues::wire::MyStruct ToWire(fidl::AnyArena& arena, ::test_importedconstvalues::MyStruct src);
 };
 
 template <>

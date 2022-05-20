@@ -32,18 +32,13 @@ __LOCAL extern "C" const fidl_type_t test_middle_MiddleGetFooTopResponseTable;
 }  // namespace _internal
 class Top_ResponseEncoder {
  public:
-  static ::fidl::HLCPPOutgoingMessage GetFoo(::fidl::MessageEncoder* _encoder,
-                                             ::test::bottom::Foo* foo) {
+  static ::fidl::HLCPPOutgoingMessage GetFoo(::fidl::MessageEncoder* _encoder, ::test::bottom::Foo* foo) {
     fidl_trace(WillHLCPPEncode);
 
     _encoder->Alloc(4);
     ::fidl::Encode(_encoder, foo, 0 + sizeof(fidl_message_header_t));
 
-    fidl_trace(DidHLCPPEncode,
-               &::test::foreigntypeinresponseusedthroughcompose::_internal::
-                   test_middle_MiddleGetFooTopResponseTable,
-               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-               _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode, &::test::foreigntypeinresponseusedthroughcompose::_internal::test_middle_MiddleGetFooTopResponseTable, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -72,8 +67,7 @@ class Top_SyncProxy;
 
 namespace internal {
 constexpr uint64_t kTop_GetFoo_Ordinal = 0x401a9ffa95a4c333lu;
-constexpr ::fidl::MessageDynamicFlags kTop_GetFoo_DynamicFlags =
-    ::fidl::MessageDynamicFlags::kStrictMethod;
+constexpr ::fidl::MessageDynamicFlags kTop_GetFoo_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 }  // namespace internal
 #endif  // __Fuchsia__
 
@@ -83,11 +77,11 @@ class Top {
  public:
   using Proxy_ = ::test::foreigntypeinresponseusedthroughcompose::Top_Proxy;
   using Stub_ = ::test::foreigntypeinresponseusedthroughcompose::Top_Stub;
-  using EventSender_ =
-      ::test::foreigntypeinresponseusedthroughcompose::Top_EventSender;
+  using EventSender_ = ::test::foreigntypeinresponseusedthroughcompose::Top_EventSender;
   using Sync_ = ::test::foreigntypeinresponseusedthroughcompose::Top_Sync;
   virtual ~Top();
-  using GetFooCallback = fit::function<void(::test::bottom::Foo)>;
+  using GetFooCallback =
+      fit::function<void(::test::bottom::Foo)>;
 
   virtual void GetFoo(GetFooCallback callback) = 0;
 };
@@ -130,23 +124,16 @@ class Top_Proxy final : public ::fidl::internal::Proxy, public Top {
   void GetFoo(GetFooCallback callback) override;
 
  private:
-  Top_Proxy(const ::test::foreigntypeinresponseusedthroughcompose::Top_Proxy&) =
-      delete;
-  Top_Proxy& operator=(
-      const ::test::foreigntypeinresponseusedthroughcompose::Top_Proxy&) =
-      delete;
+  Top_Proxy(const ::test::foreigntypeinresponseusedthroughcompose::Top_Proxy&) = delete;
+  Top_Proxy& operator=(const ::test::foreigntypeinresponseusedthroughcompose::Top_Proxy&) = delete;
 
   ::fidl::internal::ProxyController* controller_;
 };
 
-class Top_Stub final
-    : public ::fidl::internal::Stub,
-      public ::test::foreigntypeinresponseusedthroughcompose::Top_EventSender {
+class Top_Stub final : public ::fidl::internal::Stub, public ::test::foreigntypeinresponseusedthroughcompose::Top_EventSender {
  public:
   typedef class ::test::foreigntypeinresponseusedthroughcompose::Top Top_clazz;
-  explicit Top_Stub(
-      ::test::foreigntypeinresponseusedthroughcompose::Top_Stub::Top_clazz*
-          impl);
+  explicit Top_Stub(::test::foreigntypeinresponseusedthroughcompose::Top_Stub::Top_clazz* impl);
   ~Top_Stub() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
@@ -156,8 +143,7 @@ class Top_Stub final
   ::test::foreigntypeinresponseusedthroughcompose::Top_Stub::Top_clazz* impl_;
 };
 
-class Top_SyncProxy
-    : public ::test::foreigntypeinresponseusedthroughcompose::Top_Sync {
+class Top_SyncProxy : public ::test::foreigntypeinresponseusedthroughcompose::Top_Sync {
  public:
   explicit Top_SyncProxy(::zx::channel channel);
   ~Top_SyncProxy() override;

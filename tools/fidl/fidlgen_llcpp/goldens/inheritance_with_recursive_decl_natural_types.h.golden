@@ -23,25 +23,20 @@ class ChildSecondRequest;
 
 #ifdef __Fuchsia__
 
-extern "C" const fidl_type_t
-    test_inheritancewithrecursivedecl_ParentFirstRequestTable;
+extern "C" const fidl_type_t test_inheritancewithrecursivedecl_ParentFirstRequestTable;
 
 class ParentFirstRequest {
  private:
   struct Storage_;
 
  public:
-  ParentFirstRequest(Storage_ storage) noexcept
-      : storage_(std::move(storage)) {}
-  ParentFirstRequest(
-      ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>
-          request) noexcept
+  ParentFirstRequest(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  ParentFirstRequest(::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent> request) noexcept
       : storage_({.request = std::move(request)}) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |ParentFirstRequest| only if all of its members are
-  // default constructible.
+  // Default constructs a |ParentFirstRequest| only if all of its members are default constructible.
   ParentFirstRequest() = default;
 #pragma clang diagnostic pop
 
@@ -57,10 +52,9 @@ class ParentFirstRequest {
     return storage_.request;
   }
 
-  ParentFirstRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : ParentFirstRequest(Storage_{
-            .request = {},
-        }) {}
+  ParentFirstRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ParentFirstRequest(Storage_{
+                                                                                       .request = {},
+                                                                                   }) {}
 
  private:
   struct Storage_ final {
@@ -69,17 +63,10 @@ class ParentFirstRequest {
 
   Storage_ storage_;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_inheritancewithrecursivedecl::ParentFirstRequest, 4>;
-  friend struct ::fidl::internal::MemberVisitor<
-      ::test_inheritancewithrecursivedecl::ParentFirstRequest>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<
-          Storage_,
-          ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>,
-          fidl::internal::NaturalCodingConstraintHandle<
-              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>>{
-          &Storage_::request, 0});
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_inheritancewithrecursivedecl::ParentFirstRequest, 4>;
+  friend struct ::fidl::internal::MemberVisitor<::test_inheritancewithrecursivedecl::ParentFirstRequest>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>>{
+      &Storage_::request, 0});
   static constexpr auto kPadding = std::make_tuple();
 };
 
@@ -87,25 +74,20 @@ class ParentFirstRequest {
 
 #ifdef __Fuchsia__
 
-extern "C" const fidl_type_t
-    test_inheritancewithrecursivedecl_ChildSecondRequestTable;
+extern "C" const fidl_type_t test_inheritancewithrecursivedecl_ChildSecondRequestTable;
 
 class ChildSecondRequest {
  private:
   struct Storage_;
 
  public:
-  ChildSecondRequest(Storage_ storage) noexcept
-      : storage_(std::move(storage)) {}
-  ChildSecondRequest(
-      ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>
-          request) noexcept
+  ChildSecondRequest(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  ChildSecondRequest(::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent> request) noexcept
       : storage_({.request = std::move(request)}) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |ChildSecondRequest| only if all of its members are
-  // default constructible.
+  // Default constructs a |ChildSecondRequest| only if all of its members are default constructible.
   ChildSecondRequest() = default;
 #pragma clang diagnostic pop
 
@@ -121,10 +103,9 @@ class ChildSecondRequest {
     return storage_.request;
   }
 
-  ChildSecondRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : ChildSecondRequest(Storage_{
-            .request = {},
-        }) {}
+  ChildSecondRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ChildSecondRequest(Storage_{
+                                                                                       .request = {},
+                                                                                   }) {}
 
  private:
   struct Storage_ final {
@@ -133,17 +114,10 @@ class ChildSecondRequest {
 
   Storage_ storage_;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_inheritancewithrecursivedecl::ChildSecondRequest, 4>;
-  friend struct ::fidl::internal::MemberVisitor<
-      ::test_inheritancewithrecursivedecl::ChildSecondRequest>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<
-          Storage_,
-          ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>,
-          fidl::internal::NaturalCodingConstraintHandle<
-              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>>{
-          &Storage_::request, 0});
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_inheritancewithrecursivedecl::ChildSecondRequest, 4>;
+  friend struct ::fidl::internal::MemberVisitor<::test_inheritancewithrecursivedecl::ChildSecondRequest>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>>{
+      &Storage_::request, 0});
   static constexpr auto kPadding = std::make_tuple();
 };
 
@@ -154,43 +128,31 @@ namespace fidl {
 
 #ifdef __Fuchsia__
 
-extern "C" const fidl_type_t
-    test_inheritancewithrecursivedecl_ParentFirstRequestTable;
+extern "C" const fidl_type_t test_inheritancewithrecursivedecl_ParentFirstRequestTable;
 
 template <>
-struct IsResource<::test_inheritancewithrecursivedecl::ParentFirstRequest>
-    : public std::true_type {};
+struct IsResource<::test_inheritancewithrecursivedecl::ParentFirstRequest> : public std::true_type {};
 template <>
-struct IsFidlType<::test_inheritancewithrecursivedecl::ParentFirstRequest>
-    : public std::true_type {};
+struct IsFidlType<::test_inheritancewithrecursivedecl::ParentFirstRequest> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<
-    ::test_inheritancewithrecursivedecl::ParentFirstRequest,
-    ::fidl::internal::NaturalCodingConstraintEmpty>
-    final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_inheritancewithrecursivedecl::ParentFirstRequest, 4> {};
+struct internal::NaturalCodingTraits<::test_inheritancewithrecursivedecl::ParentFirstRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_inheritancewithrecursivedecl::ParentFirstRequest, 4> {};
 
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
-extern "C" const fidl_type_t
-    test_inheritancewithrecursivedecl_ChildSecondRequestTable;
+extern "C" const fidl_type_t test_inheritancewithrecursivedecl_ChildSecondRequestTable;
 
 template <>
-struct IsResource<::test_inheritancewithrecursivedecl::ChildSecondRequest>
-    : public std::true_type {};
+struct IsResource<::test_inheritancewithrecursivedecl::ChildSecondRequest> : public std::true_type {};
 template <>
-struct IsFidlType<::test_inheritancewithrecursivedecl::ChildSecondRequest>
-    : public std::true_type {};
+struct IsFidlType<::test_inheritancewithrecursivedecl::ChildSecondRequest> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<
-    ::test_inheritancewithrecursivedecl::ChildSecondRequest,
-    ::fidl::internal::NaturalCodingConstraintEmpty>
-    final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_inheritancewithrecursivedecl::ChildSecondRequest, 4> {};
+struct internal::NaturalCodingTraits<::test_inheritancewithrecursivedecl::ChildSecondRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_inheritancewithrecursivedecl::ChildSecondRequest, 4> {};
 
 #endif  // __Fuchsia__
 

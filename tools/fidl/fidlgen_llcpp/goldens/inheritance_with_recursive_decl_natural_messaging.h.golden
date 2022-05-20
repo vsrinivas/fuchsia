@@ -11,22 +11,19 @@
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
-namespace fidl {}  // namespace fidl
+namespace fidl {
+
+}  // namespace fidl
 namespace test_inheritancewithrecursivedecl {
-__LOCAL extern "C" const fidl_type_t
-    test_inheritancewithrecursivedecl_ParentFirstRequestTable;
+__LOCAL extern "C" const fidl_type_t test_inheritancewithrecursivedecl_ParentFirstRequestTable;
 
 #ifdef __Fuchsia__
 }  // namespace test_inheritancewithrecursivedecl
 template <>
-class ::fidl::internal::NaturalClientImpl<
-    ::test_inheritancewithrecursivedecl::Parent>
-    final : public ::fidl::internal::NaturalClientBase {
+class ::fidl::internal::NaturalClientImpl<::test_inheritancewithrecursivedecl::Parent> final : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
-  ::fitx::result<::fidl::Error> First(
-      ::fidl::Request<::test_inheritancewithrecursivedecl::Parent::First>
-          request) const;
+  ::fitx::result<::fidl::Error> First(::fidl::Request<::test_inheritancewithrecursivedecl::Parent::First> request) const;
 };
 namespace test_inheritancewithrecursivedecl {
 #endif  // __Fuchsia__
@@ -35,21 +32,14 @@ namespace test_inheritancewithrecursivedecl {
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::internal::NaturalSyncClientImpl<
-    ::test_inheritancewithrecursivedecl::Parent>
-    final : public ::fidl::internal::SyncEndpointManagedVeneer<
-                ::fidl::internal::NaturalSyncClientImpl<
-                    ::test_inheritancewithrecursivedecl::Parent>> {
+class ::fidl::internal::NaturalSyncClientImpl<::test_inheritancewithrecursivedecl::Parent> final
+    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalSyncClientImpl<::test_inheritancewithrecursivedecl::Parent>> {
  public:
-  ::fitx::result<::fidl::Error> First(
-      ::fidl::Request<::test_inheritancewithrecursivedecl::Parent::First>
-          request);
+  ::fitx::result<::fidl::Error> First(::fidl::Request<::test_inheritancewithrecursivedecl::Parent::First> request);
 
  private:
-  ::fidl::UnownedClientEnd<::test_inheritancewithrecursivedecl::Parent>
-  _client_end() const {
-    return ::fidl::UnownedClientEnd<
-        ::test_inheritancewithrecursivedecl::Parent>(
+  ::fidl::UnownedClientEnd<::test_inheritancewithrecursivedecl::Parent> _client_end() const {
+    return ::fidl::UnownedClientEnd<::test_inheritancewithrecursivedecl::Parent>(
         _transport().get<::fidl::internal::ChannelTransport>());
   }
 };
@@ -58,8 +48,7 @@ class ::fidl::internal::NaturalSyncClientImpl<
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::internal::NaturalEventHandlerInterface<
-    ::test_inheritancewithrecursivedecl::Parent> {
+class ::fidl::internal::NaturalEventHandlerInterface<::test_inheritancewithrecursivedecl::Parent> {
  public:
   NaturalEventHandlerInterface() = default;
   virtual ~NaturalEventHandlerInterface() = default;
@@ -67,23 +56,15 @@ class ::fidl::internal::NaturalEventHandlerInterface<
 
 template <>
 class ::fidl::AsyncEventHandler<::test_inheritancewithrecursivedecl::Parent>
-    : public ::fidl::internal::NaturalEventHandlerInterface<
-          ::test_inheritancewithrecursivedecl::Parent>,
-      public ::fidl::internal::AsyncEventHandler {
+    : public ::fidl::internal::NaturalEventHandlerInterface<::test_inheritancewithrecursivedecl::Parent>, public ::fidl::internal::AsyncEventHandler {
  public:
   AsyncEventHandler() = default;
 };
 
 template <>
-class ::fidl::internal::NaturalEventDispatcher<
-    ::test_inheritancewithrecursivedecl::Parent>
-    final : public ::fidl::internal::IncomingEventDispatcher<
-                ::fidl::AsyncEventHandler<
-                    ::test_inheritancewithrecursivedecl::Parent>> {
+class ::fidl::internal::NaturalEventDispatcher<::test_inheritancewithrecursivedecl::Parent> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::AsyncEventHandler<::test_inheritancewithrecursivedecl::Parent>> {
  public:
-  explicit NaturalEventDispatcher(
-      ::fidl::AsyncEventHandler<::test_inheritancewithrecursivedecl::Parent>*
-          event_handler)
+  explicit NaturalEventDispatcher(::fidl::AsyncEventHandler<::test_inheritancewithrecursivedecl::Parent>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 
  private:
@@ -95,19 +76,14 @@ class ::fidl::internal::NaturalEventDispatcher<
 
 #ifdef __Fuchsia__
 template <>
-class ::fidl::internal::NaturalWeakEventSender<
-    ::test_inheritancewithrecursivedecl::Parent>
-    : public ::fidl::internal::WeakEventSenderBase {
+class ::fidl::internal::NaturalWeakEventSender<::test_inheritancewithrecursivedecl::Parent> : public ::fidl::internal::WeakEventSenderBase {
  public:
   using WeakEventSenderBase::WeakEventSenderBase;
 };
 
 template <>
-class ::fidl::internal::NaturalEventSender<
-    ::test_inheritancewithrecursivedecl::Parent>
-    : public ::fidl::internal::SyncEndpointManagedVeneer<
-          ::fidl::internal::NaturalEventSender<
-              ::test_inheritancewithrecursivedecl::Parent>> {
+class ::fidl::internal::NaturalEventSender<::test_inheritancewithrecursivedecl::Parent>
+    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalEventSender<::test_inheritancewithrecursivedecl::Parent>> {
  public:
   using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 };
@@ -116,19 +92,14 @@ class ::fidl::internal::NaturalEventSender<
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::Request<::test_inheritancewithrecursivedecl::Parent::First> final
-    : public ::test_inheritancewithrecursivedecl::ParentFirstRequest {
+class ::fidl::Request<::test_inheritancewithrecursivedecl::Parent::First> final : public ::test_inheritancewithrecursivedecl::ParentFirstRequest {
  public:
-  using ::test_inheritancewithrecursivedecl::ParentFirstRequest::
-      ParentFirstRequest;
-  Request(::test_inheritancewithrecursivedecl::ParentFirstRequest v)
-      : ::test_inheritancewithrecursivedecl::ParentFirstRequest(std::move(v)) {}
+  using ::test_inheritancewithrecursivedecl::ParentFirstRequest::ParentFirstRequest;
+  Request(::test_inheritancewithrecursivedecl::ParentFirstRequest v) : ::test_inheritancewithrecursivedecl::ParentFirstRequest(std::move(v)) {}
 };
 
 template <>
-struct ::fidl::internal::MessageTraits<
-    ::fidl::Request<::test_inheritancewithrecursivedecl::Parent::First>>
-    final {
+struct ::fidl::internal::MessageTraits<::fidl::Request<::test_inheritancewithrecursivedecl::Parent::First>> final {
  public:
   static constexpr bool kHasPayload = true;
   using Payload = ::test_inheritancewithrecursivedecl::ParentFirstRequest;
@@ -136,8 +107,7 @@ struct ::fidl::internal::MessageTraits<
 #endif  // __Fuchsia__
 
 template <>
-class ::fidl::Server<::test_inheritancewithrecursivedecl::Parent>
-    : public ::fidl::internal::IncomingMessageDispatcher {
+class ::fidl::Server<::test_inheritancewithrecursivedecl::Parent> : public ::fidl::internal::IncomingMessageDispatcher {
  public:
   Server() = default;
   virtual ~Server() = default;
@@ -145,13 +115,10 @@ class ::fidl::Server<::test_inheritancewithrecursivedecl::Parent>
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_inheritancewithrecursivedecl::Parent;
 
-  using FirstRequest =
-      ::fidl::Request<::test_inheritancewithrecursivedecl::Parent::First>;
-  using FirstCompleter = ::fidl::internal::NaturalCompleter<
-      ::test_inheritancewithrecursivedecl::Parent::First>;
+  using FirstRequest = ::fidl::Request<::test_inheritancewithrecursivedecl::Parent::First>;
+  using FirstCompleter = ::fidl::internal::NaturalCompleter<::test_inheritancewithrecursivedecl::Parent::First>;
 
-  virtual void First(FirstRequest& request,
-                     FirstCompleter::Sync& completer) = 0;
+  virtual void First(FirstRequest& request, FirstCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(
@@ -162,14 +129,11 @@ class ::fidl::Server<::test_inheritancewithrecursivedecl::Parent>
 #ifdef __Fuchsia__
 
 template <>
-struct ::fidl::internal::NaturalServerDispatcher<
-    ::test_inheritancewithrecursivedecl::Parent>
-    final {
+struct ::fidl::internal::NaturalServerDispatcher<::test_inheritancewithrecursivedecl::Parent> final {
   NaturalServerDispatcher() = delete;
-  static void Dispatch(
-      ::fidl::Server<::test_inheritancewithrecursivedecl::Parent>* impl,
-      ::fidl::IncomingMessage&& msg,
-      internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn);
+  static void Dispatch(::fidl::Server<::test_inheritancewithrecursivedecl::Parent>* impl, ::fidl::IncomingMessage&& msg,
+                       internal::MessageStorageViewBase* storage_view,
+                       ::fidl::Transaction* txn);
 
  private:
   static const ::fidl::internal::MethodEntry entries_[];
@@ -178,24 +142,17 @@ struct ::fidl::internal::NaturalServerDispatcher<
 #endif  // __Fuchsia__
 
 namespace test_inheritancewithrecursivedecl {
-__LOCAL extern "C" const fidl_type_t
-    test_inheritancewithrecursivedecl_ChildSecondRequestTable;
+__LOCAL extern "C" const fidl_type_t test_inheritancewithrecursivedecl_ChildSecondRequestTable;
 
 #ifdef __Fuchsia__
 }  // namespace test_inheritancewithrecursivedecl
 template <>
-class ::fidl::internal::NaturalClientImpl<
-    ::test_inheritancewithrecursivedecl::Child>
-    final : public ::fidl::internal::NaturalClientBase {
+class ::fidl::internal::NaturalClientImpl<::test_inheritancewithrecursivedecl::Child> final : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
-  ::fitx::result<::fidl::Error> First(
-      ::fidl::Request<::test_inheritancewithrecursivedecl::Child::First>
-          request) const;
+  ::fitx::result<::fidl::Error> First(::fidl::Request<::test_inheritancewithrecursivedecl::Child::First> request) const;
 
-  ::fitx::result<::fidl::Error> Second(
-      ::fidl::Request<::test_inheritancewithrecursivedecl::Child::Second>
-          request) const;
+  ::fitx::result<::fidl::Error> Second(::fidl::Request<::test_inheritancewithrecursivedecl::Child::Second> request) const;
 };
 namespace test_inheritancewithrecursivedecl {
 #endif  // __Fuchsia__
@@ -204,23 +161,15 @@ namespace test_inheritancewithrecursivedecl {
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::internal::NaturalSyncClientImpl<
-    ::test_inheritancewithrecursivedecl::Child>
-    final : public ::fidl::internal::SyncEndpointManagedVeneer<
-                ::fidl::internal::NaturalSyncClientImpl<
-                    ::test_inheritancewithrecursivedecl::Child>> {
+class ::fidl::internal::NaturalSyncClientImpl<::test_inheritancewithrecursivedecl::Child> final
+    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalSyncClientImpl<::test_inheritancewithrecursivedecl::Child>> {
  public:
-  ::fitx::result<::fidl::Error> First(
-      ::fidl::Request<::test_inheritancewithrecursivedecl::Child::First>
-          request);
+  ::fitx::result<::fidl::Error> First(::fidl::Request<::test_inheritancewithrecursivedecl::Child::First> request);
 
-  ::fitx::result<::fidl::Error> Second(
-      ::fidl::Request<::test_inheritancewithrecursivedecl::Child::Second>
-          request);
+  ::fitx::result<::fidl::Error> Second(::fidl::Request<::test_inheritancewithrecursivedecl::Child::Second> request);
 
  private:
-  ::fidl::UnownedClientEnd<::test_inheritancewithrecursivedecl::Child>
-  _client_end() const {
+  ::fidl::UnownedClientEnd<::test_inheritancewithrecursivedecl::Child> _client_end() const {
     return ::fidl::UnownedClientEnd<::test_inheritancewithrecursivedecl::Child>(
         _transport().get<::fidl::internal::ChannelTransport>());
   }
@@ -230,8 +179,7 @@ class ::fidl::internal::NaturalSyncClientImpl<
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::internal::NaturalEventHandlerInterface<
-    ::test_inheritancewithrecursivedecl::Child> {
+class ::fidl::internal::NaturalEventHandlerInterface<::test_inheritancewithrecursivedecl::Child> {
  public:
   NaturalEventHandlerInterface() = default;
   virtual ~NaturalEventHandlerInterface() = default;
@@ -239,23 +187,15 @@ class ::fidl::internal::NaturalEventHandlerInterface<
 
 template <>
 class ::fidl::AsyncEventHandler<::test_inheritancewithrecursivedecl::Child>
-    : public ::fidl::internal::NaturalEventHandlerInterface<
-          ::test_inheritancewithrecursivedecl::Child>,
-      public ::fidl::internal::AsyncEventHandler {
+    : public ::fidl::internal::NaturalEventHandlerInterface<::test_inheritancewithrecursivedecl::Child>, public ::fidl::internal::AsyncEventHandler {
  public:
   AsyncEventHandler() = default;
 };
 
 template <>
-class ::fidl::internal::NaturalEventDispatcher<
-    ::test_inheritancewithrecursivedecl::Child>
-    final : public ::fidl::internal::IncomingEventDispatcher<
-                ::fidl::AsyncEventHandler<
-                    ::test_inheritancewithrecursivedecl::Child>> {
+class ::fidl::internal::NaturalEventDispatcher<::test_inheritancewithrecursivedecl::Child> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::AsyncEventHandler<::test_inheritancewithrecursivedecl::Child>> {
  public:
-  explicit NaturalEventDispatcher(
-      ::fidl::AsyncEventHandler<::test_inheritancewithrecursivedecl::Child>*
-          event_handler)
+  explicit NaturalEventDispatcher(::fidl::AsyncEventHandler<::test_inheritancewithrecursivedecl::Child>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 
  private:
@@ -267,19 +207,14 @@ class ::fidl::internal::NaturalEventDispatcher<
 
 #ifdef __Fuchsia__
 template <>
-class ::fidl::internal::NaturalWeakEventSender<
-    ::test_inheritancewithrecursivedecl::Child>
-    : public ::fidl::internal::WeakEventSenderBase {
+class ::fidl::internal::NaturalWeakEventSender<::test_inheritancewithrecursivedecl::Child> : public ::fidl::internal::WeakEventSenderBase {
  public:
   using WeakEventSenderBase::WeakEventSenderBase;
 };
 
 template <>
-class ::fidl::internal::NaturalEventSender<
-    ::test_inheritancewithrecursivedecl::Child>
-    : public ::fidl::internal::SyncEndpointManagedVeneer<
-          ::fidl::internal::NaturalEventSender<
-              ::test_inheritancewithrecursivedecl::Child>> {
+class ::fidl::internal::NaturalEventSender<::test_inheritancewithrecursivedecl::Child>
+    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalEventSender<::test_inheritancewithrecursivedecl::Child>> {
  public:
   using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 };
@@ -288,19 +223,14 @@ class ::fidl::internal::NaturalEventSender<
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::Request<::test_inheritancewithrecursivedecl::Child::First> final
-    : public ::test_inheritancewithrecursivedecl::ParentFirstRequest {
+class ::fidl::Request<::test_inheritancewithrecursivedecl::Child::First> final : public ::test_inheritancewithrecursivedecl::ParentFirstRequest {
  public:
-  using ::test_inheritancewithrecursivedecl::ParentFirstRequest::
-      ParentFirstRequest;
-  Request(::test_inheritancewithrecursivedecl::ParentFirstRequest v)
-      : ::test_inheritancewithrecursivedecl::ParentFirstRequest(std::move(v)) {}
+  using ::test_inheritancewithrecursivedecl::ParentFirstRequest::ParentFirstRequest;
+  Request(::test_inheritancewithrecursivedecl::ParentFirstRequest v) : ::test_inheritancewithrecursivedecl::ParentFirstRequest(std::move(v)) {}
 };
 
 template <>
-struct ::fidl::internal::MessageTraits<
-    ::fidl::Request<::test_inheritancewithrecursivedecl::Child::First>>
-    final {
+struct ::fidl::internal::MessageTraits<::fidl::Request<::test_inheritancewithrecursivedecl::Child::First>> final {
  public:
   static constexpr bool kHasPayload = true;
   using Payload = ::test_inheritancewithrecursivedecl::ParentFirstRequest;
@@ -310,19 +240,14 @@ struct ::fidl::internal::MessageTraits<
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::Request<::test_inheritancewithrecursivedecl::Child::Second> final
-    : public ::test_inheritancewithrecursivedecl::ChildSecondRequest {
+class ::fidl::Request<::test_inheritancewithrecursivedecl::Child::Second> final : public ::test_inheritancewithrecursivedecl::ChildSecondRequest {
  public:
-  using ::test_inheritancewithrecursivedecl::ChildSecondRequest::
-      ChildSecondRequest;
-  Request(::test_inheritancewithrecursivedecl::ChildSecondRequest v)
-      : ::test_inheritancewithrecursivedecl::ChildSecondRequest(std::move(v)) {}
+  using ::test_inheritancewithrecursivedecl::ChildSecondRequest::ChildSecondRequest;
+  Request(::test_inheritancewithrecursivedecl::ChildSecondRequest v) : ::test_inheritancewithrecursivedecl::ChildSecondRequest(std::move(v)) {}
 };
 
 template <>
-struct ::fidl::internal::MessageTraits<
-    ::fidl::Request<::test_inheritancewithrecursivedecl::Child::Second>>
-    final {
+struct ::fidl::internal::MessageTraits<::fidl::Request<::test_inheritancewithrecursivedecl::Child::Second>> final {
  public:
   static constexpr bool kHasPayload = true;
   using Payload = ::test_inheritancewithrecursivedecl::ChildSecondRequest;
@@ -330,8 +255,7 @@ struct ::fidl::internal::MessageTraits<
 #endif  // __Fuchsia__
 
 template <>
-class ::fidl::Server<::test_inheritancewithrecursivedecl::Child>
-    : public ::fidl::internal::IncomingMessageDispatcher {
+class ::fidl::Server<::test_inheritancewithrecursivedecl::Child> : public ::fidl::internal::IncomingMessageDispatcher {
  public:
   Server() = default;
   virtual ~Server() = default;
@@ -339,21 +263,15 @@ class ::fidl::Server<::test_inheritancewithrecursivedecl::Child>
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_inheritancewithrecursivedecl::Child;
 
-  using FirstRequest =
-      ::fidl::Request<::test_inheritancewithrecursivedecl::Child::First>;
-  using FirstCompleter = ::fidl::internal::NaturalCompleter<
-      ::test_inheritancewithrecursivedecl::Child::First>;
+  using FirstRequest = ::fidl::Request<::test_inheritancewithrecursivedecl::Child::First>;
+  using FirstCompleter = ::fidl::internal::NaturalCompleter<::test_inheritancewithrecursivedecl::Child::First>;
 
-  virtual void First(FirstRequest& request,
-                     FirstCompleter::Sync& completer) = 0;
+  virtual void First(FirstRequest& request, FirstCompleter::Sync& completer) = 0;
 
-  using SecondRequest =
-      ::fidl::Request<::test_inheritancewithrecursivedecl::Child::Second>;
-  using SecondCompleter = ::fidl::internal::NaturalCompleter<
-      ::test_inheritancewithrecursivedecl::Child::Second>;
+  using SecondRequest = ::fidl::Request<::test_inheritancewithrecursivedecl::Child::Second>;
+  using SecondCompleter = ::fidl::internal::NaturalCompleter<::test_inheritancewithrecursivedecl::Child::Second>;
 
-  virtual void Second(SecondRequest& request,
-                      SecondCompleter::Sync& completer) = 0;
+  virtual void Second(SecondRequest& request, SecondCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(
@@ -364,14 +282,11 @@ class ::fidl::Server<::test_inheritancewithrecursivedecl::Child>
 #ifdef __Fuchsia__
 
 template <>
-struct ::fidl::internal::NaturalServerDispatcher<
-    ::test_inheritancewithrecursivedecl::Child>
-    final {
+struct ::fidl::internal::NaturalServerDispatcher<::test_inheritancewithrecursivedecl::Child> final {
   NaturalServerDispatcher() = delete;
-  static void Dispatch(
-      ::fidl::Server<::test_inheritancewithrecursivedecl::Child>* impl,
-      ::fidl::IncomingMessage&& msg,
-      internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn);
+  static void Dispatch(::fidl::Server<::test_inheritancewithrecursivedecl::Child>* impl, ::fidl::IncomingMessage&& msg,
+                       internal::MessageStorageViewBase* storage_view,
+                       ::fidl::Transaction* txn);
 
  private:
   static const ::fidl::internal::MethodEntry entries_[];

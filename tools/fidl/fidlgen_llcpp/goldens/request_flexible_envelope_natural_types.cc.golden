@@ -2,38 +2,27 @@
 
 #include <fidl/test.requestflexibleenvelope/cpp/natural_types.h>
 
-::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest::
-    Storage_
-    test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest::
-        CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.s)};
+::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest::Storage_ test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.s)};
 }
 
-::test_requestflexibleenvelope::
-    ProtocolRequestFlexibleResponseStrictTopResponse::Storage_
-    test_requestflexibleenvelope::
-        ProtocolRequestFlexibleResponseStrictTopResponse::CloneStorage_()
-            const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.f)};
+::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse::Storage_ test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.f)};
 }
 
-::test_requestflexibleenvelope::
-    ProtocolRequestStrictResponseFlexibleTopResponse::Storage_
-    test_requestflexibleenvelope::
-        ProtocolRequestStrictResponseFlexibleTopResponse::CloneStorage_()
-            const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.f)};
+::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse::Storage_ test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.f)};
 }
 
-::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictRequest::
-    Storage_
-    test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictRequest::
-        CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.s)};
+::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictRequest::Storage_ test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictRequest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.s)};
 }
 
-std::shared_ptr<::test_requestflexibleenvelope::StrictFoo::Storage_>
-test_requestflexibleenvelope::StrictFoo::CloneStorage_() const {
+std::shared_ptr<::test_requestflexibleenvelope::StrictFoo::Storage_> test_requestflexibleenvelope::StrictFoo::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
@@ -49,8 +38,7 @@ test_requestflexibleenvelope::StrictFoo::CloneStorage_() const {
   }
 }
 
-std::shared_ptr<::test_requestflexibleenvelope::FlexibleFoo::Storage_>
-test_requestflexibleenvelope::FlexibleFoo::CloneStorage_() const {
+std::shared_ptr<::test_requestflexibleenvelope::FlexibleFoo::Storage_> test_requestflexibleenvelope::FlexibleFoo::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:

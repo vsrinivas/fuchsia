@@ -2,12 +2,8 @@
 
 #include <fidl/test.unknowninteractions/cpp/wire_types.h>
 
-void ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult::
-    SizeAndOffsetAssertionHelper() {
-  static_assert(sizeof(ExampleFlexibleTwoWayResult) ==
-                sizeof(fidl_xunion_v2_t));
-  static_assert(offsetof(ExampleFlexibleTwoWayResult, ordinal_) ==
-                offsetof(fidl_xunion_v2_t, tag));
-  static_assert(offsetof(ExampleFlexibleTwoWayResult, envelope_) ==
-                offsetof(fidl_xunion_v2_t, envelope));
+void ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult::SizeAndOffsetAssertionHelper() {
+  static_assert(sizeof(ExampleFlexibleTwoWayResult) == sizeof(fidl_xunion_v2_t));
+  static_assert(offsetof(ExampleFlexibleTwoWayResult, ordinal_) == offsetof(fidl_xunion_v2_t, tag));
+  static_assert(offsetof(ExampleFlexibleTwoWayResult, envelope_) == offsetof(fidl_xunion_v2_t, envelope));
 }

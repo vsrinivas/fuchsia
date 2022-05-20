@@ -31,13 +31,10 @@ class Empty final {
 
   uint8_t __reserved = 0u;
 
-  static inline ::std::unique_ptr<Empty> New() {
-    return ::std::make_unique<Empty>();
-  }
+  static inline ::std::unique_ptr<Empty> New() { return ::std::make_unique<Empty>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
   static void Decode(::fidl::Decoder* _decoder, Empty* value, size_t _offset);
   zx_status_t Clone(Empty* result) const;
 };
@@ -55,21 +52,16 @@ class EmptyProtocolSendRequest final {
 
   ::test::emptystruct::Empty e{};
 
-  static inline ::std::unique_ptr<EmptyProtocolSendRequest> New() {
-    return ::std::make_unique<EmptyProtocolSendRequest>();
-  }
+  static inline ::std::unique_ptr<EmptyProtocolSendRequest> New() { return ::std::make_unique<EmptyProtocolSendRequest>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, EmptyProtocolSendRequest* value,
-                     size_t _offset);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, EmptyProtocolSendRequest* value, size_t _offset);
   zx_status_t Clone(EmptyProtocolSendRequest* result) const;
 };
 
-inline zx_status_t Clone(
-    const ::test::emptystruct::EmptyProtocolSendRequest& _value,
-    ::test::emptystruct::EmptyProtocolSendRequest* _result) {
+inline zx_status_t Clone(const ::test::emptystruct::EmptyProtocolSendRequest& _value,
+                         ::test::emptystruct::EmptyProtocolSendRequest* _result) {
   return _value.Clone(_result);
 }
 
@@ -81,28 +73,20 @@ class EmptyProtocolSendAndReceiveTopResponse final {
 
   ::test::emptystruct::Empty e{};
 
-  static inline ::std::unique_ptr<EmptyProtocolSendAndReceiveTopResponse>
-  New() {
-    return ::std::make_unique<EmptyProtocolSendAndReceiveTopResponse>();
-  }
+  static inline ::std::unique_ptr<EmptyProtocolSendAndReceiveTopResponse> New() { return ::std::make_unique<EmptyProtocolSendAndReceiveTopResponse>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder,
-                     EmptyProtocolSendAndReceiveTopResponse* value,
-                     size_t _offset);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, EmptyProtocolSendAndReceiveTopResponse* value, size_t _offset);
   zx_status_t Clone(EmptyProtocolSendAndReceiveTopResponse* result) const;
 };
 
-inline zx_status_t Clone(
-    const ::test::emptystruct::EmptyProtocolSendAndReceiveTopResponse& _value,
-    ::test::emptystruct::EmptyProtocolSendAndReceiveTopResponse* _result) {
+inline zx_status_t Clone(const ::test::emptystruct::EmptyProtocolSendAndReceiveTopResponse& _value,
+                         ::test::emptystruct::EmptyProtocolSendAndReceiveTopResponse* _result) {
   return _value.Clone(_result);
 }
 
-using EmptyProtocolSendAndReceiveTopResponsePtr =
-    ::std::unique_ptr<EmptyProtocolSendAndReceiveTopResponse>;
+using EmptyProtocolSendAndReceiveTopResponsePtr = ::std::unique_ptr<EmptyProtocolSendAndReceiveTopResponse>;
 
 class EmptyProtocolSendAndReceiveRequest final {
  public:
@@ -110,26 +94,20 @@ class EmptyProtocolSendAndReceiveRequest final {
 
   ::test::emptystruct::Empty e{};
 
-  static inline ::std::unique_ptr<EmptyProtocolSendAndReceiveRequest> New() {
-    return ::std::make_unique<EmptyProtocolSendAndReceiveRequest>();
-  }
+  static inline ::std::unique_ptr<EmptyProtocolSendAndReceiveRequest> New() { return ::std::make_unique<EmptyProtocolSendAndReceiveRequest>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder,
-                     EmptyProtocolSendAndReceiveRequest* value, size_t _offset);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, EmptyProtocolSendAndReceiveRequest* value, size_t _offset);
   zx_status_t Clone(EmptyProtocolSendAndReceiveRequest* result) const;
 };
 
-inline zx_status_t Clone(
-    const ::test::emptystruct::EmptyProtocolSendAndReceiveRequest& _value,
-    ::test::emptystruct::EmptyProtocolSendAndReceiveRequest* _result) {
+inline zx_status_t Clone(const ::test::emptystruct::EmptyProtocolSendAndReceiveRequest& _value,
+                         ::test::emptystruct::EmptyProtocolSendAndReceiveRequest* _result) {
   return _value.Clone(_result);
 }
 
-using EmptyProtocolSendAndReceiveRequestPtr =
-    ::std::unique_ptr<EmptyProtocolSendAndReceiveRequest>;
+using EmptyProtocolSendAndReceiveRequestPtr = ::std::unique_ptr<EmptyProtocolSendAndReceiveRequest>;
 
 class EmptyProtocolReceiveRequest final {
  public:
@@ -137,105 +115,75 @@ class EmptyProtocolReceiveRequest final {
 
   ::test::emptystruct::Empty e{};
 
-  static inline ::std::unique_ptr<EmptyProtocolReceiveRequest> New() {
-    return ::std::make_unique<EmptyProtocolReceiveRequest>();
-  }
+  static inline ::std::unique_ptr<EmptyProtocolReceiveRequest> New() { return ::std::make_unique<EmptyProtocolReceiveRequest>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder,
-                     EmptyProtocolReceiveRequest* value, size_t _offset);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, EmptyProtocolReceiveRequest* value, size_t _offset);
   zx_status_t Clone(EmptyProtocolReceiveRequest* result) const;
 };
 
-inline zx_status_t Clone(
-    const ::test::emptystruct::EmptyProtocolReceiveRequest& _value,
-    ::test::emptystruct::EmptyProtocolReceiveRequest* _result) {
+inline zx_status_t Clone(const ::test::emptystruct::EmptyProtocolReceiveRequest& _value,
+                         ::test::emptystruct::EmptyProtocolReceiveRequest* _result) {
   return _value.Clone(_result);
 }
 
-using EmptyProtocolReceiveRequestPtr =
-    ::std::unique_ptr<EmptyProtocolReceiveRequest>;
+using EmptyProtocolReceiveRequestPtr = ::std::unique_ptr<EmptyProtocolReceiveRequest>;
 
 #ifdef __Fuchsia__
 
 namespace _internal {
-__LOCAL extern "C" const fidl_type_t
-    test_emptystruct_EmptyProtocolSendRequestTable;
+__LOCAL extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendRequestTable;
 
-__LOCAL extern "C" const fidl_type_t
-    test_emptystruct_EmptyProtocolSendAndReceiveRequestTable;
+__LOCAL extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendAndReceiveRequestTable;
 
 }  // namespace _internal
 class EmptyProtocol_RequestEncoder {
  public:
-  static ::fidl::HLCPPOutgoingMessage Send(::fidl::MessageEncoder* _encoder,
-                                           ::test::emptystruct::Empty* e) {
+  static ::fidl::HLCPPOutgoingMessage Send(::fidl::MessageEncoder* _encoder, ::test::emptystruct::Empty* e) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(1);
     ::fidl::Encode(_encoder, e, 0 + sizeof(fidl_message_header_t));
 
-    fidl_trace(DidHLCPPEncode,
-               &::test::emptystruct::_internal::
-                   test_emptystruct_EmptyProtocolSendRequestTable,
-               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-               _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode, &::test::emptystruct::_internal::test_emptystruct_EmptyProtocolSendRequestTable, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
-  static ::fidl::HLCPPOutgoingMessage SendAndReceive(
-      ::fidl::MessageEncoder* _encoder, ::test::emptystruct::Empty* e) {
+  static ::fidl::HLCPPOutgoingMessage SendAndReceive(::fidl::MessageEncoder* _encoder, ::test::emptystruct::Empty* e) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(1);
     ::fidl::Encode(_encoder, e, 0 + sizeof(fidl_message_header_t));
 
-    fidl_trace(DidHLCPPEncode,
-               &::test::emptystruct::_internal::
-                   test_emptystruct_EmptyProtocolSendAndReceiveRequestTable,
-               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-               _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode, &::test::emptystruct::_internal::test_emptystruct_EmptyProtocolSendAndReceiveRequestTable, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
 };
 
 namespace _internal {
-__LOCAL extern "C" const fidl_type_t
-    test_emptystruct_EmptyProtocolReceiveRequestTable;
-__LOCAL extern "C" const fidl_type_t
-    test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_emptystruct_EmptyProtocolReceiveRequestTable;
+__LOCAL extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
 
 }  // namespace _internal
 class EmptyProtocol_ResponseEncoder {
  public:
-  static ::fidl::HLCPPOutgoingMessage Receive(::fidl::MessageEncoder* _encoder,
-                                              ::test::emptystruct::Empty* e) {
+  static ::fidl::HLCPPOutgoingMessage Receive(::fidl::MessageEncoder* _encoder, ::test::emptystruct::Empty* e) {
     fidl_trace(WillHLCPPEncode);
 
     _encoder->Alloc(1);
     ::fidl::Encode(_encoder, e, 0 + sizeof(fidl_message_header_t));
 
-    fidl_trace(DidHLCPPEncode,
-               &::test::emptystruct::_internal::
-                   test_emptystruct_EmptyProtocolReceiveRequestTable,
-               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-               _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode, &::test::emptystruct::_internal::test_emptystruct_EmptyProtocolReceiveRequestTable, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
-  static ::fidl::HLCPPOutgoingMessage SendAndReceive(
-      ::fidl::MessageEncoder* _encoder, ::test::emptystruct::Empty* e) {
+  static ::fidl::HLCPPOutgoingMessage SendAndReceive(::fidl::MessageEncoder* _encoder, ::test::emptystruct::Empty* e) {
     fidl_trace(WillHLCPPEncode);
 
     _encoder->Alloc(1);
     ::fidl::Encode(_encoder, e, 0 + sizeof(fidl_message_header_t));
 
-    fidl_trace(DidHLCPPEncode,
-               &::test::emptystruct::_internal::
-                   test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable,
-               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-               _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode, &::test::emptystruct::_internal::test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -250,10 +198,8 @@ struct CodingTraits<::test::emptystruct::Empty>
     : public EncodableCodingTraits<::test::emptystruct::Empty, 1> {};
 
 template <>
-struct IsMemcpyCompatible<::test::emptystruct::Empty>
-    : public internal::BoolConstant<
-          !HasPadding<::test::emptystruct::Empty>::value &&
-          IsMemcpyCompatible<uint8_t>::value> {};
+struct IsMemcpyCompatible<::test::emptystruct::Empty> : public internal::BoolConstant<
+                                                            !HasPadding<::test::emptystruct::Empty>::value && IsMemcpyCompatible<uint8_t>::value> {};
 
 inline zx_status_t Clone(const ::test::emptystruct::Empty& value,
                          ::test::emptystruct::Empty* result) {
@@ -262,8 +208,7 @@ inline zx_status_t Clone(const ::test::emptystruct::Empty& value,
 
 template <>
 struct Equality<::test::emptystruct::Empty> {
-  bool operator()(const ::test::emptystruct::Empty& _lhs,
-                  const ::test::emptystruct::Empty& _rhs) const {
+  bool operator()(const ::test::emptystruct::Empty& _lhs, const ::test::emptystruct::Empty& _rhs) const {
     if (!::fidl::Equals(_lhs.__reserved, _rhs.__reserved)) {
       return false;
     }
@@ -272,26 +217,20 @@ struct Equality<::test::emptystruct::Empty> {
 };
 template <>
 struct CodingTraits<::test::emptystruct::EmptyProtocolSendRequest>
-    : public EncodableCodingTraits<
-          ::test::emptystruct::EmptyProtocolSendRequest, 1> {};
+    : public EncodableCodingTraits<::test::emptystruct::EmptyProtocolSendRequest, 1> {};
 
 template <>
-struct IsMemcpyCompatible<::test::emptystruct::EmptyProtocolSendRequest>
-    : public internal::BoolConstant<
-          !HasPadding<::test::emptystruct::EmptyProtocolSendRequest>::value &&
-          IsMemcpyCompatible<::test::emptystruct::Empty>::value> {};
+struct IsMemcpyCompatible<::test::emptystruct::EmptyProtocolSendRequest> : public internal::BoolConstant<
+                                                                               !HasPadding<::test::emptystruct::EmptyProtocolSendRequest>::value && IsMemcpyCompatible<::test::emptystruct::Empty>::value> {};
 
-inline zx_status_t Clone(
-    const ::test::emptystruct::EmptyProtocolSendRequest& value,
-    ::test::emptystruct::EmptyProtocolSendRequest* result) {
+inline zx_status_t Clone(const ::test::emptystruct::EmptyProtocolSendRequest& value,
+                         ::test::emptystruct::EmptyProtocolSendRequest* result) {
   return ::test::emptystruct::Clone(value, result);
 }
 
 template <>
 struct Equality<::test::emptystruct::EmptyProtocolSendRequest> {
-  bool operator()(
-      const ::test::emptystruct::EmptyProtocolSendRequest& _lhs,
-      const ::test::emptystruct::EmptyProtocolSendRequest& _rhs) const {
+  bool operator()(const ::test::emptystruct::EmptyProtocolSendRequest& _lhs, const ::test::emptystruct::EmptyProtocolSendRequest& _rhs) const {
     if (!::fidl::Equals(_lhs.e, _rhs.e)) {
       return false;
     }
@@ -300,29 +239,20 @@ struct Equality<::test::emptystruct::EmptyProtocolSendRequest> {
 };
 template <>
 struct CodingTraits<::test::emptystruct::EmptyProtocolSendAndReceiveTopResponse>
-    : public EncodableCodingTraits<
-          ::test::emptystruct::EmptyProtocolSendAndReceiveTopResponse, 1> {};
+    : public EncodableCodingTraits<::test::emptystruct::EmptyProtocolSendAndReceiveTopResponse, 1> {};
 
 template <>
-struct IsMemcpyCompatible<
-    ::test::emptystruct::EmptyProtocolSendAndReceiveTopResponse>
-    : public internal::BoolConstant<
-          !HasPadding<::test::emptystruct::
-                          EmptyProtocolSendAndReceiveTopResponse>::value &&
-          IsMemcpyCompatible<::test::emptystruct::Empty>::value> {};
+struct IsMemcpyCompatible<::test::emptystruct::EmptyProtocolSendAndReceiveTopResponse> : public internal::BoolConstant<
+                                                                                             !HasPadding<::test::emptystruct::EmptyProtocolSendAndReceiveTopResponse>::value && IsMemcpyCompatible<::test::emptystruct::Empty>::value> {};
 
-inline zx_status_t Clone(
-    const ::test::emptystruct::EmptyProtocolSendAndReceiveTopResponse& value,
-    ::test::emptystruct::EmptyProtocolSendAndReceiveTopResponse* result) {
+inline zx_status_t Clone(const ::test::emptystruct::EmptyProtocolSendAndReceiveTopResponse& value,
+                         ::test::emptystruct::EmptyProtocolSendAndReceiveTopResponse* result) {
   return ::test::emptystruct::Clone(value, result);
 }
 
 template <>
 struct Equality<::test::emptystruct::EmptyProtocolSendAndReceiveTopResponse> {
-  bool operator()(
-      const ::test::emptystruct::EmptyProtocolSendAndReceiveTopResponse& _lhs,
-      const ::test::emptystruct::EmptyProtocolSendAndReceiveTopResponse& _rhs)
-      const {
+  bool operator()(const ::test::emptystruct::EmptyProtocolSendAndReceiveTopResponse& _lhs, const ::test::emptystruct::EmptyProtocolSendAndReceiveTopResponse& _rhs) const {
     if (!::fidl::Equals(_lhs.e, _rhs.e)) {
       return false;
     }
@@ -331,29 +261,20 @@ struct Equality<::test::emptystruct::EmptyProtocolSendAndReceiveTopResponse> {
 };
 template <>
 struct CodingTraits<::test::emptystruct::EmptyProtocolSendAndReceiveRequest>
-    : public EncodableCodingTraits<
-          ::test::emptystruct::EmptyProtocolSendAndReceiveRequest, 1> {};
+    : public EncodableCodingTraits<::test::emptystruct::EmptyProtocolSendAndReceiveRequest, 1> {};
 
 template <>
-struct IsMemcpyCompatible<
-    ::test::emptystruct::EmptyProtocolSendAndReceiveRequest>
-    : public internal::BoolConstant<
-          !HasPadding<
-              ::test::emptystruct::EmptyProtocolSendAndReceiveRequest>::value &&
-          IsMemcpyCompatible<::test::emptystruct::Empty>::value> {};
+struct IsMemcpyCompatible<::test::emptystruct::EmptyProtocolSendAndReceiveRequest> : public internal::BoolConstant<
+                                                                                         !HasPadding<::test::emptystruct::EmptyProtocolSendAndReceiveRequest>::value && IsMemcpyCompatible<::test::emptystruct::Empty>::value> {};
 
-inline zx_status_t Clone(
-    const ::test::emptystruct::EmptyProtocolSendAndReceiveRequest& value,
-    ::test::emptystruct::EmptyProtocolSendAndReceiveRequest* result) {
+inline zx_status_t Clone(const ::test::emptystruct::EmptyProtocolSendAndReceiveRequest& value,
+                         ::test::emptystruct::EmptyProtocolSendAndReceiveRequest* result) {
   return ::test::emptystruct::Clone(value, result);
 }
 
 template <>
 struct Equality<::test::emptystruct::EmptyProtocolSendAndReceiveRequest> {
-  bool operator()(
-      const ::test::emptystruct::EmptyProtocolSendAndReceiveRequest& _lhs,
-      const ::test::emptystruct::EmptyProtocolSendAndReceiveRequest& _rhs)
-      const {
+  bool operator()(const ::test::emptystruct::EmptyProtocolSendAndReceiveRequest& _lhs, const ::test::emptystruct::EmptyProtocolSendAndReceiveRequest& _rhs) const {
     if (!::fidl::Equals(_lhs.e, _rhs.e)) {
       return false;
     }
@@ -362,27 +283,20 @@ struct Equality<::test::emptystruct::EmptyProtocolSendAndReceiveRequest> {
 };
 template <>
 struct CodingTraits<::test::emptystruct::EmptyProtocolReceiveRequest>
-    : public EncodableCodingTraits<
-          ::test::emptystruct::EmptyProtocolReceiveRequest, 1> {};
+    : public EncodableCodingTraits<::test::emptystruct::EmptyProtocolReceiveRequest, 1> {};
 
 template <>
-struct IsMemcpyCompatible<::test::emptystruct::EmptyProtocolReceiveRequest>
-    : public internal::BoolConstant<
-          !HasPadding<
-              ::test::emptystruct::EmptyProtocolReceiveRequest>::value &&
-          IsMemcpyCompatible<::test::emptystruct::Empty>::value> {};
+struct IsMemcpyCompatible<::test::emptystruct::EmptyProtocolReceiveRequest> : public internal::BoolConstant<
+                                                                                  !HasPadding<::test::emptystruct::EmptyProtocolReceiveRequest>::value && IsMemcpyCompatible<::test::emptystruct::Empty>::value> {};
 
-inline zx_status_t Clone(
-    const ::test::emptystruct::EmptyProtocolReceiveRequest& value,
-    ::test::emptystruct::EmptyProtocolReceiveRequest* result) {
+inline zx_status_t Clone(const ::test::emptystruct::EmptyProtocolReceiveRequest& value,
+                         ::test::emptystruct::EmptyProtocolReceiveRequest* result) {
   return ::test::emptystruct::Clone(value, result);
 }
 
 template <>
 struct Equality<::test::emptystruct::EmptyProtocolReceiveRequest> {
-  bool operator()(
-      const ::test::emptystruct::EmptyProtocolReceiveRequest& _lhs,
-      const ::test::emptystruct::EmptyProtocolReceiveRequest& _rhs) const {
+  bool operator()(const ::test::emptystruct::EmptyProtocolReceiveRequest& _lhs, const ::test::emptystruct::EmptyProtocolReceiveRequest& _rhs) const {
     if (!::fidl::Equals(_lhs.e, _rhs.e)) {
       return false;
     }
@@ -408,15 +322,11 @@ class EmptyProtocol_SyncProxy;
 
 namespace internal {
 constexpr uint64_t kEmptyProtocol_Send_Ordinal = 0x132262fd8b200708lu;
-constexpr ::fidl::MessageDynamicFlags kEmptyProtocol_Send_DynamicFlags =
-    ::fidl::MessageDynamicFlags::kStrictMethod;
+constexpr ::fidl::MessageDynamicFlags kEmptyProtocol_Send_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 constexpr uint64_t kEmptyProtocol_Receive_Ordinal = 0x1ff0ccf9b710e23flu;
-constexpr ::fidl::MessageDynamicFlags kEmptyProtocol_Receive_DynamicFlags =
-    ::fidl::MessageDynamicFlags::kStrictMethod;
+constexpr ::fidl::MessageDynamicFlags kEmptyProtocol_Receive_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 constexpr uint64_t kEmptyProtocol_SendAndReceive_Ordinal = 0x76a931254962cealu;
-constexpr ::fidl::MessageDynamicFlags
-    kEmptyProtocol_SendAndReceive_DynamicFlags =
-        ::fidl::MessageDynamicFlags::kStrictMethod;
+constexpr ::fidl::MessageDynamicFlags kEmptyProtocol_SendAndReceive_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 }  // namespace internal
 #endif  // __Fuchsia__
 
@@ -431,12 +341,12 @@ class EmptyProtocol {
   virtual ~EmptyProtocol();
 
   virtual void Send(::test::emptystruct::Empty e) = 0;
-  using ReceiveCallback = fit::function<void(::test::emptystruct::Empty)>;
+  using ReceiveCallback =
+      fit::function<void(::test::emptystruct::Empty)>;
   using SendAndReceiveCallback =
       fit::function<void(::test::emptystruct::Empty)>;
 
-  virtual void SendAndReceive(::test::emptystruct::Empty e,
-                              SendAndReceiveCallback callback) = 0;
+  virtual void SendAndReceive(::test::emptystruct::Empty e, SendAndReceiveCallback callback) = 0;
 };
 
 class EmptyProtocol_RequestDecoder {
@@ -468,12 +378,10 @@ class EmptyProtocol_Sync {
   using Proxy_ = ::test::emptystruct::EmptyProtocol_SyncProxy;
   virtual ~EmptyProtocol_Sync();
   virtual zx_status_t Send(::test::emptystruct::Empty e) = 0;
-  virtual zx_status_t SendAndReceive(::test::emptystruct::Empty e,
-                                     ::test::emptystruct::Empty* out_e) = 0;
+  virtual zx_status_t SendAndReceive(::test::emptystruct::Empty e, ::test::emptystruct::Empty* out_e) = 0;
 };
 
-class EmptyProtocol_Proxy final : public ::fidl::internal::Proxy,
-                                  public EmptyProtocol {
+class EmptyProtocol_Proxy final : public ::fidl::internal::Proxy, public EmptyProtocol {
  public:
   explicit EmptyProtocol_Proxy(::fidl::internal::ProxyController* controller);
   ~EmptyProtocol_Proxy() override;
@@ -483,24 +391,19 @@ class EmptyProtocol_Proxy final : public ::fidl::internal::Proxy,
   void Send(::test::emptystruct::Empty e) override;
   ReceiveCallback Receive;
   // cts-coverage-fidl-name:test.emptystruct/EmptyProtocol.SendAndReceive
-  void SendAndReceive(::test::emptystruct::Empty e,
-                      SendAndReceiveCallback callback) override;
+  void SendAndReceive(::test::emptystruct::Empty e, SendAndReceiveCallback callback) override;
 
  private:
   EmptyProtocol_Proxy(const ::test::emptystruct::EmptyProtocol_Proxy&) = delete;
-  EmptyProtocol_Proxy& operator=(
-      const ::test::emptystruct::EmptyProtocol_Proxy&) = delete;
+  EmptyProtocol_Proxy& operator=(const ::test::emptystruct::EmptyProtocol_Proxy&) = delete;
 
   ::fidl::internal::ProxyController* controller_;
 };
 
-class EmptyProtocol_Stub final
-    : public ::fidl::internal::Stub,
-      public ::test::emptystruct::EmptyProtocol_EventSender {
+class EmptyProtocol_Stub final : public ::fidl::internal::Stub, public ::test::emptystruct::EmptyProtocol_EventSender {
  public:
   typedef class ::test::emptystruct::EmptyProtocol EmptyProtocol_clazz;
-  explicit EmptyProtocol_Stub(
-      ::test::emptystruct::EmptyProtocol_Stub::EmptyProtocol_clazz* impl);
+  explicit EmptyProtocol_Stub(::test::emptystruct::EmptyProtocol_Stub::EmptyProtocol_clazz* impl);
   ~EmptyProtocol_Stub() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
@@ -518,8 +421,7 @@ class EmptyProtocol_SyncProxy : public ::test::emptystruct::EmptyProtocol_Sync {
   // cts-coverage-fidl-name:test.emptystruct/EmptyProtocol.Send
   zx_status_t Send(::test::emptystruct::Empty e) override;
   // cts-coverage-fidl-name:test.emptystruct/EmptyProtocol.SendAndReceive
-  zx_status_t SendAndReceive(::test::emptystruct::Empty e,
-                             ::test::emptystruct::Empty* out_e) override;
+  zx_status_t SendAndReceive(::test::emptystruct::Empty e, ::test::emptystruct::Empty* out_e) override;
 
  private:
   ::fidl::internal::SynchronousProxy proxy_;

@@ -29,12 +29,12 @@ class Payload {
 
  public:
   Payload(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-  Payload(uint32_t value) noexcept : storage_({.value = std::move(value)}) {}
+  Payload(uint32_t value) noexcept
+      : storage_({.value = std::move(value)}) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |Payload| only if all of its members are default
-  // constructible.
+  // Default constructs a |Payload| only if all of its members are default constructible.
   Payload() = default;
 #pragma clang diagnostic pop
 
@@ -47,22 +47,24 @@ class Payload {
   }
 
   bool operator==(const Payload& other) const noexcept {
-    return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_driveroneway::Payload, 4>::Equal(this, &other);
+    return ::fidl::internal::NaturalStructCodingTraits<::test_driveroneway::Payload, 4>::Equal(this, &other);
   }
   bool operator!=(const Payload& other) const noexcept {
-    return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_driveroneway::Payload, 4>::Equal(this, &other);
+    return !::fidl::internal::NaturalStructCodingTraits<::test_driveroneway::Payload, 4>::Equal(this, &other);
   }
 
-  uint32_t value() const { return storage_.value; }
+  uint32_t
+  value() const {
+    return storage_.value;
+  }
 
-  uint32_t& value() { return storage_.value; }
+  uint32_t& value() {
+    return storage_.value;
+  }
 
-  Payload(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : Payload(Storage_{
-            .value = {},
-        }) {}
+  Payload(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Payload(Storage_{
+                                                                            .value = {},
+                                                                        }) {}
 
  private:
   struct Storage_ final {
@@ -72,13 +74,10 @@ class Payload {
   Storage_ storage_;
   Storage_ CloneStorage_() const;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_driveroneway::Payload, 4>;
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_driveroneway::Payload, 4>;
   friend struct ::fidl::internal::MemberVisitor<::test_driveroneway::Payload>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<
-          Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::value, 0});
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{
+      &Storage_::value, 0});
   static constexpr auto kPadding = std::make_tuple();
 };
 
@@ -95,40 +94,37 @@ class OneWaySendRequest {
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |OneWaySendRequest| only if all of its members are
-  // default constructible.
+  // Default constructs a |OneWaySendRequest| only if all of its members are default constructible.
   OneWaySendRequest() = default;
 #pragma clang diagnostic pop
 
   OneWaySendRequest(OneWaySendRequest&&) noexcept = default;
   OneWaySendRequest& operator=(OneWaySendRequest&&) noexcept = default;
-  OneWaySendRequest(const OneWaySendRequest& other) noexcept
-      : OneWaySendRequest(other.CloneStorage_()) {}
+  OneWaySendRequest(const OneWaySendRequest& other) noexcept : OneWaySendRequest(other.CloneStorage_()) {}
   OneWaySendRequest& operator=(const OneWaySendRequest& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
   }
 
   bool operator==(const OneWaySendRequest& other) const noexcept {
-    return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_driveroneway::OneWaySendRequest, 4>::Equal(this, &other);
+    return ::fidl::internal::NaturalStructCodingTraits<::test_driveroneway::OneWaySendRequest, 4>::Equal(this, &other);
   }
   bool operator!=(const OneWaySendRequest& other) const noexcept {
-    return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_driveroneway::OneWaySendRequest, 4>::Equal(this, &other);
+    return !::fidl::internal::NaturalStructCodingTraits<::test_driveroneway::OneWaySendRequest, 4>::Equal(this, &other);
   }
 
-  const ::test_driveroneway::Payload& payload() const {
+  const ::test_driveroneway::Payload&
+  payload() const {
     return storage_.payload;
   }
 
-  ::test_driveroneway::Payload& payload() { return storage_.payload; }
+  ::test_driveroneway::Payload& payload() {
+    return storage_.payload;
+  }
 
-  OneWaySendRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : OneWaySendRequest(Storage_{
-            .payload =
-                ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
-        }) {}
+  OneWaySendRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : OneWaySendRequest(Storage_{
+                                                                                      .payload = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+                                                                                  }) {}
 
  private:
   struct Storage_ final {
@@ -138,14 +134,10 @@ class OneWaySendRequest {
   Storage_ storage_;
   Storage_ CloneStorage_() const;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_driveroneway::OneWaySendRequest, 4>;
-  friend struct ::fidl::internal::MemberVisitor<
-      ::test_driveroneway::OneWaySendRequest>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::test_driveroneway::Payload,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::payload, 0});
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_driveroneway::OneWaySendRequest, 4>;
+  friend struct ::fidl::internal::MemberVisitor<::test_driveroneway::OneWaySendRequest>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::test_driveroneway::Payload, fidl::internal::NaturalCodingConstraintEmpty>{
+      &Storage_::payload, 0});
   static constexpr auto kPadding = std::make_tuple();
 };
 
@@ -158,23 +150,16 @@ template <>
 struct IsFidlType<::test_driveroneway::Payload> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<
-    ::test_driveroneway::Payload,
-    ::fidl::internal::NaturalCodingConstraintEmpty>
-    final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_driveroneway::Payload, 4> {};
+struct internal::NaturalCodingTraits<::test_driveroneway::Payload, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_driveroneway::Payload, 4> {};
 
 extern "C" const fidl_type_t test_driveroneway_OneWaySendRequestTable;
 
 template <>
-struct IsFidlType<::test_driveroneway::OneWaySendRequest>
-    : public std::true_type {};
+struct IsFidlType<::test_driveroneway::OneWaySendRequest> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<
-    ::test_driveroneway::OneWaySendRequest,
-    ::fidl::internal::NaturalCodingConstraintEmpty>
-    final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_driveroneway::OneWaySendRequest, 4> {};
+struct internal::NaturalCodingTraits<::test_driveroneway::OneWaySendRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_driveroneway::OneWaySendRequest, 4> {};
 
 }  // namespace fidl

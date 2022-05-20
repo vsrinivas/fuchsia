@@ -7,28 +7,20 @@ namespace fidl {
 namespace testing {
 
 template <>
-class WireTestBase<::test_foreigntypeinresponseusedthroughcompose::Top>
-    : public ::fidl::WireServer<
-          ::test_foreigntypeinresponseusedthroughcompose::Top> {
+class WireTestBase<::test_foreigntypeinresponseusedthroughcompose::Top> : public ::fidl::WireServer<::test_foreigntypeinresponseusedthroughcompose::Top> {
  public:
-  virtual ~WireTestBase<::test_foreigntypeinresponseusedthroughcompose::Top>() =
-      default;
-  virtual void NotImplemented_(const std::string& name,
-                               ::fidl::CompleterBase& completer) = 0;
-  virtual void GetFoo(GetFooRequestView request,
-                      GetFooCompleter::Sync& completer) override {
+  virtual ~WireTestBase<::test_foreigntypeinresponseusedthroughcompose::Top>() = default;
+  virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
+  virtual void GetFoo(
+      GetFooRequestView request, GetFooCompleter::Sync& completer) override {
     NotImplemented_("GetFoo", completer);
   }
 };
 
 template <>
-class ::fidl::testing::WireSyncEventHandlerTestBase<
-    ::test_foreigntypeinresponseusedthroughcompose::Top>
-    : public ::fidl::WireSyncEventHandler<
-          ::test_foreigntypeinresponseusedthroughcompose::Top> {
+class ::fidl::testing::WireSyncEventHandlerTestBase<::test_foreigntypeinresponseusedthroughcompose::Top> : public ::fidl::WireSyncEventHandler<::test_foreigntypeinresponseusedthroughcompose::Top> {
  public:
-  virtual ~WireSyncEventHandlerTestBase<
-      ::test_foreigntypeinresponseusedthroughcompose::Top>() = default;
+  virtual ~WireSyncEventHandlerTestBase<::test_foreigntypeinresponseusedthroughcompose::Top>() = default;
   virtual void NotImplemented_(const std::string& name) = 0;
 };
 }  // namespace testing

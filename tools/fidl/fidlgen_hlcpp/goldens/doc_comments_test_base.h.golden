@@ -10,7 +10,9 @@ class Interface_TestBase : public ::test::doccomments::Interface {
  public:
   virtual ~Interface_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
-  void Method() override { NotImplemented_("Method"); }
+  void Method() override {
+    NotImplemented_("Method");
+  }
 };
 }  // namespace testing
 }  // namespace doccomments

@@ -7,210 +7,76 @@ namespace internal {
 
 #ifdef __Fuchsia__
 
-::test_handles::Handles WireNaturalConversionTraits<
-    ::test_handles::wire::Handles,
-    ::test_handles::Handles>::ToNatural(::test_handles::wire::Handles src) {
+::test_handles::Handles WireNaturalConversionTraits<::test_handles::wire::Handles, ::test_handles::Handles>::ToNatural(::test_handles::wire::Handles src) {
   return ::test_handles::Handles({
-      .plain_handle =
-          WireNaturalConversionTraits<::zx::handle, ::zx::handle>::ToNatural(
-              std::move(src.plain_handle)),
-      .bti_handle =
-          WireNaturalConversionTraits<::zx::bti, ::zx::bti>::ToNatural(
-              std::move(src.bti_handle)),
-      .channel_handle =
-          WireNaturalConversionTraits<::zx::channel, ::zx::channel>::ToNatural(
-              std::move(src.channel_handle)),
-      .clock_handle =
-          WireNaturalConversionTraits<::zx::clock, ::zx::clock>::ToNatural(
-              std::move(src.clock_handle)),
-      .debuglog_handle =
-          WireNaturalConversionTraits<::zx::debuglog, ::zx::debuglog>::
-              ToNatural(std::move(src.debuglog_handle)),
-      .event_handle =
-          WireNaturalConversionTraits<::zx::event, ::zx::event>::ToNatural(
-              std::move(src.event_handle)),
-      .eventpair_handle =
-          WireNaturalConversionTraits<::zx::eventpair, ::zx::eventpair>::
-              ToNatural(std::move(src.eventpair_handle)),
-      .exception_handle =
-          WireNaturalConversionTraits<::zx::exception, ::zx::exception>::
-              ToNatural(std::move(src.exception_handle)),
-      .fifo_handle =
-          WireNaturalConversionTraits<::zx::fifo, ::zx::fifo>::ToNatural(
-              std::move(src.fifo_handle)),
-      .guest_handle =
-          WireNaturalConversionTraits<::zx::guest, ::zx::guest>::ToNatural(
-              std::move(src.guest_handle)),
-      .interrupt_handle =
-          WireNaturalConversionTraits<::zx::interrupt, ::zx::interrupt>::
-              ToNatural(std::move(src.interrupt_handle)),
-      .iommu_handle =
-          WireNaturalConversionTraits<::zx::iommu, ::zx::iommu>::ToNatural(
-              std::move(src.iommu_handle)),
-      .job_handle =
-          WireNaturalConversionTraits<::zx::job, ::zx::job>::ToNatural(
-              std::move(src.job_handle)),
-      .pager_handle =
-          WireNaturalConversionTraits<::zx::pager, ::zx::pager>::ToNatural(
-              std::move(src.pager_handle)),
-      .pmt_handle =
-          WireNaturalConversionTraits<::zx::pmt, ::zx::pmt>::ToNatural(
-              std::move(src.pmt_handle)),
-      .port_handle =
-          WireNaturalConversionTraits<::zx::port, ::zx::port>::ToNatural(
-              std::move(src.port_handle)),
-      .process_handle =
-          WireNaturalConversionTraits<::zx::process, ::zx::process>::ToNatural(
-              std::move(src.process_handle)),
-      .profile_handle =
-          WireNaturalConversionTraits<::zx::profile, ::zx::profile>::ToNatural(
-              std::move(src.profile_handle)),
-      .resource_handle =
-          WireNaturalConversionTraits<::zx::resource, ::zx::resource>::
-              ToNatural(std::move(src.resource_handle)),
-      .socket_handle =
-          WireNaturalConversionTraits<::zx::socket, ::zx::socket>::ToNatural(
-              std::move(src.socket_handle)),
-      .suspendtoken_handle = WireNaturalConversionTraits<
-          ::zx::suspend_token,
-          ::zx::suspend_token>::ToNatural(std::move(src.suspendtoken_handle)),
-      .thread_handle =
-          WireNaturalConversionTraits<::zx::thread, ::zx::thread>::ToNatural(
-              std::move(src.thread_handle)),
-      .timer_handle =
-          WireNaturalConversionTraits<::zx::timer, ::zx::timer>::ToNatural(
-              std::move(src.timer_handle)),
-      .vcpu_handle =
-          WireNaturalConversionTraits<::zx::vcpu, ::zx::vcpu>::ToNatural(
-              std::move(src.vcpu_handle)),
-      .vmar_handle =
-          WireNaturalConversionTraits<::zx::vmar, ::zx::vmar>::ToNatural(
-              std::move(src.vmar_handle)),
-      .vmo_handle =
-          WireNaturalConversionTraits<::zx::vmo, ::zx::vmo>::ToNatural(
-              std::move(src.vmo_handle)),
-      .rights_handle =
-          WireNaturalConversionTraits<::zx::vmo, ::zx::vmo>::ToNatural(
-              std::move(src.rights_handle)),
-      .aliased_plain_handle_field =
-          WireNaturalConversionTraits<::zx::handle, ::zx::handle>::ToNatural(
-              std::move(src.aliased_plain_handle_field)),
-      .aliased_subtype_handle_field =
-          WireNaturalConversionTraits<::zx::vmo, ::zx::vmo>::ToNatural(
-              std::move(src.aliased_subtype_handle_field)),
-      .aliased_rights_handle_field =
-          WireNaturalConversionTraits<::zx::vmo, ::zx::vmo>::ToNatural(
-              std::move(src.aliased_rights_handle_field)),
-      .some_protocol = WireNaturalConversionTraits<
-          ::fidl::ClientEnd<::test_handles::SomeProtocol>,
-          ::fidl::ClientEnd<::test_handles::SomeProtocol>>::
-          ToNatural(std::move(src.some_protocol)),
-      .request_some_protocol = WireNaturalConversionTraits<
-          ::fidl::ServerEnd<::test_handles::SomeProtocol>,
-          ::fidl::ServerEnd<::test_handles::SomeProtocol>>::
-          ToNatural(std::move(src.request_some_protocol)),
+      .plain_handle = WireNaturalConversionTraits<::zx::handle, ::zx::handle>::ToNatural(std::move(src.plain_handle)),
+      .bti_handle = WireNaturalConversionTraits<::zx::bti, ::zx::bti>::ToNatural(std::move(src.bti_handle)),
+      .channel_handle = WireNaturalConversionTraits<::zx::channel, ::zx::channel>::ToNatural(std::move(src.channel_handle)),
+      .clock_handle = WireNaturalConversionTraits<::zx::clock, ::zx::clock>::ToNatural(std::move(src.clock_handle)),
+      .debuglog_handle = WireNaturalConversionTraits<::zx::debuglog, ::zx::debuglog>::ToNatural(std::move(src.debuglog_handle)),
+      .event_handle = WireNaturalConversionTraits<::zx::event, ::zx::event>::ToNatural(std::move(src.event_handle)),
+      .eventpair_handle = WireNaturalConversionTraits<::zx::eventpair, ::zx::eventpair>::ToNatural(std::move(src.eventpair_handle)),
+      .exception_handle = WireNaturalConversionTraits<::zx::exception, ::zx::exception>::ToNatural(std::move(src.exception_handle)),
+      .fifo_handle = WireNaturalConversionTraits<::zx::fifo, ::zx::fifo>::ToNatural(std::move(src.fifo_handle)),
+      .guest_handle = WireNaturalConversionTraits<::zx::guest, ::zx::guest>::ToNatural(std::move(src.guest_handle)),
+      .interrupt_handle = WireNaturalConversionTraits<::zx::interrupt, ::zx::interrupt>::ToNatural(std::move(src.interrupt_handle)),
+      .iommu_handle = WireNaturalConversionTraits<::zx::iommu, ::zx::iommu>::ToNatural(std::move(src.iommu_handle)),
+      .job_handle = WireNaturalConversionTraits<::zx::job, ::zx::job>::ToNatural(std::move(src.job_handle)),
+      .pager_handle = WireNaturalConversionTraits<::zx::pager, ::zx::pager>::ToNatural(std::move(src.pager_handle)),
+      .pmt_handle = WireNaturalConversionTraits<::zx::pmt, ::zx::pmt>::ToNatural(std::move(src.pmt_handle)),
+      .port_handle = WireNaturalConversionTraits<::zx::port, ::zx::port>::ToNatural(std::move(src.port_handle)),
+      .process_handle = WireNaturalConversionTraits<::zx::process, ::zx::process>::ToNatural(std::move(src.process_handle)),
+      .profile_handle = WireNaturalConversionTraits<::zx::profile, ::zx::profile>::ToNatural(std::move(src.profile_handle)),
+      .resource_handle = WireNaturalConversionTraits<::zx::resource, ::zx::resource>::ToNatural(std::move(src.resource_handle)),
+      .socket_handle = WireNaturalConversionTraits<::zx::socket, ::zx::socket>::ToNatural(std::move(src.socket_handle)),
+      .suspendtoken_handle = WireNaturalConversionTraits<::zx::suspend_token, ::zx::suspend_token>::ToNatural(std::move(src.suspendtoken_handle)),
+      .thread_handle = WireNaturalConversionTraits<::zx::thread, ::zx::thread>::ToNatural(std::move(src.thread_handle)),
+      .timer_handle = WireNaturalConversionTraits<::zx::timer, ::zx::timer>::ToNatural(std::move(src.timer_handle)),
+      .vcpu_handle = WireNaturalConversionTraits<::zx::vcpu, ::zx::vcpu>::ToNatural(std::move(src.vcpu_handle)),
+      .vmar_handle = WireNaturalConversionTraits<::zx::vmar, ::zx::vmar>::ToNatural(std::move(src.vmar_handle)),
+      .vmo_handle = WireNaturalConversionTraits<::zx::vmo, ::zx::vmo>::ToNatural(std::move(src.vmo_handle)),
+      .rights_handle = WireNaturalConversionTraits<::zx::vmo, ::zx::vmo>::ToNatural(std::move(src.rights_handle)),
+      .aliased_plain_handle_field = WireNaturalConversionTraits<::zx::handle, ::zx::handle>::ToNatural(std::move(src.aliased_plain_handle_field)),
+      .aliased_subtype_handle_field = WireNaturalConversionTraits<::zx::vmo, ::zx::vmo>::ToNatural(std::move(src.aliased_subtype_handle_field)),
+      .aliased_rights_handle_field = WireNaturalConversionTraits<::zx::vmo, ::zx::vmo>::ToNatural(std::move(src.aliased_rights_handle_field)),
+      .some_protocol = WireNaturalConversionTraits<::fidl::ClientEnd<::test_handles::SomeProtocol>, ::fidl::ClientEnd<::test_handles::SomeProtocol>>::ToNatural(std::move(src.some_protocol)),
+      .request_some_protocol = WireNaturalConversionTraits<::fidl::ServerEnd<::test_handles::SomeProtocol>, ::fidl::ServerEnd<::test_handles::SomeProtocol>>::ToNatural(std::move(src.request_some_protocol)),
   });
 }
-::test_handles::wire::Handles WireNaturalConversionTraits<
-    ::test_handles::wire::Handles,
-    ::test_handles::Handles>::ToWire(fidl::AnyArena& arena,
-                                     ::test_handles::Handles src) {
+::test_handles::wire::Handles WireNaturalConversionTraits<::test_handles::wire::Handles, ::test_handles::Handles>::ToWire(fidl::AnyArena& arena, ::test_handles::Handles src) {
   return ::test_handles::wire::Handles{
-      .plain_handle =
-          WireNaturalConversionTraits<::zx::handle, ::zx::handle>::ToWire(
-              arena, std::move(src.plain_handle())),
-      .bti_handle = WireNaturalConversionTraits<::zx::bti, ::zx::bti>::ToWire(
-          arena, std::move(src.bti_handle())),
-      .channel_handle =
-          WireNaturalConversionTraits<::zx::channel, ::zx::channel>::ToWire(
-              arena, std::move(src.channel_handle())),
-      .clock_handle =
-          WireNaturalConversionTraits<::zx::clock, ::zx::clock>::ToWire(
-              arena, std::move(src.clock_handle())),
-      .debuglog_handle =
-          WireNaturalConversionTraits<::zx::debuglog, ::zx::debuglog>::ToWire(
-              arena, std::move(src.debuglog_handle())),
-      .event_handle =
-          WireNaturalConversionTraits<::zx::event, ::zx::event>::ToWire(
-              arena, std::move(src.event_handle())),
-      .eventpair_handle =
-          WireNaturalConversionTraits<::zx::eventpair, ::zx::eventpair>::ToWire(
-              arena, std::move(src.eventpair_handle())),
-      .exception_handle =
-          WireNaturalConversionTraits<::zx::exception, ::zx::exception>::ToWire(
-              arena, std::move(src.exception_handle())),
-      .fifo_handle =
-          WireNaturalConversionTraits<::zx::fifo, ::zx::fifo>::ToWire(
-              arena, std::move(src.fifo_handle())),
-      .guest_handle =
-          WireNaturalConversionTraits<::zx::guest, ::zx::guest>::ToWire(
-              arena, std::move(src.guest_handle())),
-      .interrupt_handle =
-          WireNaturalConversionTraits<::zx::interrupt, ::zx::interrupt>::ToWire(
-              arena, std::move(src.interrupt_handle())),
-      .iommu_handle =
-          WireNaturalConversionTraits<::zx::iommu, ::zx::iommu>::ToWire(
-              arena, std::move(src.iommu_handle())),
-      .job_handle = WireNaturalConversionTraits<::zx::job, ::zx::job>::ToWire(
-          arena, std::move(src.job_handle())),
-      .pager_handle =
-          WireNaturalConversionTraits<::zx::pager, ::zx::pager>::ToWire(
-              arena, std::move(src.pager_handle())),
-      .pmt_handle = WireNaturalConversionTraits<::zx::pmt, ::zx::pmt>::ToWire(
-          arena, std::move(src.pmt_handle())),
-      .port_handle =
-          WireNaturalConversionTraits<::zx::port, ::zx::port>::ToWire(
-              arena, std::move(src.port_handle())),
-      .process_handle =
-          WireNaturalConversionTraits<::zx::process, ::zx::process>::ToWire(
-              arena, std::move(src.process_handle())),
-      .profile_handle =
-          WireNaturalConversionTraits<::zx::profile, ::zx::profile>::ToWire(
-              arena, std::move(src.profile_handle())),
-      .resource_handle =
-          WireNaturalConversionTraits<::zx::resource, ::zx::resource>::ToWire(
-              arena, std::move(src.resource_handle())),
-      .socket_handle =
-          WireNaturalConversionTraits<::zx::socket, ::zx::socket>::ToWire(
-              arena, std::move(src.socket_handle())),
-      .suspendtoken_handle = WireNaturalConversionTraits<
-          ::zx::suspend_token,
-          ::zx::suspend_token>::ToWire(arena,
-                                       std::move(src.suspendtoken_handle())),
-      .thread_handle =
-          WireNaturalConversionTraits<::zx::thread, ::zx::thread>::ToWire(
-              arena, std::move(src.thread_handle())),
-      .timer_handle =
-          WireNaturalConversionTraits<::zx::timer, ::zx::timer>::ToWire(
-              arena, std::move(src.timer_handle())),
-      .vcpu_handle =
-          WireNaturalConversionTraits<::zx::vcpu, ::zx::vcpu>::ToWire(
-              arena, std::move(src.vcpu_handle())),
-      .vmar_handle =
-          WireNaturalConversionTraits<::zx::vmar, ::zx::vmar>::ToWire(
-              arena, std::move(src.vmar_handle())),
-      .vmo_handle = WireNaturalConversionTraits<::zx::vmo, ::zx::vmo>::ToWire(
-          arena, std::move(src.vmo_handle())),
-      .rights_handle =
-          WireNaturalConversionTraits<::zx::vmo, ::zx::vmo>::ToWire(
-              arena, std::move(src.rights_handle())),
-      .aliased_plain_handle_field =
-          WireNaturalConversionTraits<::zx::handle, ::zx::handle>::ToWire(
-              arena, std::move(src.aliased_plain_handle_field())),
-      .aliased_subtype_handle_field =
-          WireNaturalConversionTraits<::zx::vmo, ::zx::vmo>::ToWire(
-              arena, std::move(src.aliased_subtype_handle_field())),
-      .aliased_rights_handle_field =
-          WireNaturalConversionTraits<::zx::vmo, ::zx::vmo>::ToWire(
-              arena, std::move(src.aliased_rights_handle_field())),
-      .some_protocol = WireNaturalConversionTraits<
-          ::fidl::ClientEnd<::test_handles::SomeProtocol>,
-          ::fidl::ClientEnd<::test_handles::SomeProtocol>>::
-          ToWire(arena, std::move(src.some_protocol())),
-      .request_some_protocol = WireNaturalConversionTraits<
-          ::fidl::ServerEnd<::test_handles::SomeProtocol>,
-          ::fidl::ServerEnd<::test_handles::SomeProtocol>>::
-          ToWire(arena, std::move(src.request_some_protocol())),
+      .plain_handle = WireNaturalConversionTraits<::zx::handle, ::zx::handle>::ToWire(arena, std::move(src.plain_handle())),
+      .bti_handle = WireNaturalConversionTraits<::zx::bti, ::zx::bti>::ToWire(arena, std::move(src.bti_handle())),
+      .channel_handle = WireNaturalConversionTraits<::zx::channel, ::zx::channel>::ToWire(arena, std::move(src.channel_handle())),
+      .clock_handle = WireNaturalConversionTraits<::zx::clock, ::zx::clock>::ToWire(arena, std::move(src.clock_handle())),
+      .debuglog_handle = WireNaturalConversionTraits<::zx::debuglog, ::zx::debuglog>::ToWire(arena, std::move(src.debuglog_handle())),
+      .event_handle = WireNaturalConversionTraits<::zx::event, ::zx::event>::ToWire(arena, std::move(src.event_handle())),
+      .eventpair_handle = WireNaturalConversionTraits<::zx::eventpair, ::zx::eventpair>::ToWire(arena, std::move(src.eventpair_handle())),
+      .exception_handle = WireNaturalConversionTraits<::zx::exception, ::zx::exception>::ToWire(arena, std::move(src.exception_handle())),
+      .fifo_handle = WireNaturalConversionTraits<::zx::fifo, ::zx::fifo>::ToWire(arena, std::move(src.fifo_handle())),
+      .guest_handle = WireNaturalConversionTraits<::zx::guest, ::zx::guest>::ToWire(arena, std::move(src.guest_handle())),
+      .interrupt_handle = WireNaturalConversionTraits<::zx::interrupt, ::zx::interrupt>::ToWire(arena, std::move(src.interrupt_handle())),
+      .iommu_handle = WireNaturalConversionTraits<::zx::iommu, ::zx::iommu>::ToWire(arena, std::move(src.iommu_handle())),
+      .job_handle = WireNaturalConversionTraits<::zx::job, ::zx::job>::ToWire(arena, std::move(src.job_handle())),
+      .pager_handle = WireNaturalConversionTraits<::zx::pager, ::zx::pager>::ToWire(arena, std::move(src.pager_handle())),
+      .pmt_handle = WireNaturalConversionTraits<::zx::pmt, ::zx::pmt>::ToWire(arena, std::move(src.pmt_handle())),
+      .port_handle = WireNaturalConversionTraits<::zx::port, ::zx::port>::ToWire(arena, std::move(src.port_handle())),
+      .process_handle = WireNaturalConversionTraits<::zx::process, ::zx::process>::ToWire(arena, std::move(src.process_handle())),
+      .profile_handle = WireNaturalConversionTraits<::zx::profile, ::zx::profile>::ToWire(arena, std::move(src.profile_handle())),
+      .resource_handle = WireNaturalConversionTraits<::zx::resource, ::zx::resource>::ToWire(arena, std::move(src.resource_handle())),
+      .socket_handle = WireNaturalConversionTraits<::zx::socket, ::zx::socket>::ToWire(arena, std::move(src.socket_handle())),
+      .suspendtoken_handle = WireNaturalConversionTraits<::zx::suspend_token, ::zx::suspend_token>::ToWire(arena, std::move(src.suspendtoken_handle())),
+      .thread_handle = WireNaturalConversionTraits<::zx::thread, ::zx::thread>::ToWire(arena, std::move(src.thread_handle())),
+      .timer_handle = WireNaturalConversionTraits<::zx::timer, ::zx::timer>::ToWire(arena, std::move(src.timer_handle())),
+      .vcpu_handle = WireNaturalConversionTraits<::zx::vcpu, ::zx::vcpu>::ToWire(arena, std::move(src.vcpu_handle())),
+      .vmar_handle = WireNaturalConversionTraits<::zx::vmar, ::zx::vmar>::ToWire(arena, std::move(src.vmar_handle())),
+      .vmo_handle = WireNaturalConversionTraits<::zx::vmo, ::zx::vmo>::ToWire(arena, std::move(src.vmo_handle())),
+      .rights_handle = WireNaturalConversionTraits<::zx::vmo, ::zx::vmo>::ToWire(arena, std::move(src.rights_handle())),
+      .aliased_plain_handle_field = WireNaturalConversionTraits<::zx::handle, ::zx::handle>::ToWire(arena, std::move(src.aliased_plain_handle_field())),
+      .aliased_subtype_handle_field = WireNaturalConversionTraits<::zx::vmo, ::zx::vmo>::ToWire(arena, std::move(src.aliased_subtype_handle_field())),
+      .aliased_rights_handle_field = WireNaturalConversionTraits<::zx::vmo, ::zx::vmo>::ToWire(arena, std::move(src.aliased_rights_handle_field())),
+      .some_protocol = WireNaturalConversionTraits<::fidl::ClientEnd<::test_handles::SomeProtocol>, ::fidl::ClientEnd<::test_handles::SomeProtocol>>::ToWire(arena, std::move(src.some_protocol())),
+      .request_some_protocol = WireNaturalConversionTraits<::fidl::ServerEnd<::test_handles::SomeProtocol>, ::fidl::ServerEnd<::test_handles::SomeProtocol>>::ToWire(arena, std::move(src.request_some_protocol())),
   };
 }
 
@@ -218,40 +84,18 @@ namespace internal {
 
 #ifdef __Fuchsia__
 
-::test_handles::FdfHandles WireNaturalConversionTraits<
-    ::test_handles::wire::FdfHandles,
-    ::test_handles::FdfHandles>::ToNatural(::test_handles::wire::FdfHandles
-                                               src) {
+::test_handles::FdfHandles WireNaturalConversionTraits<::test_handles::wire::FdfHandles, ::test_handles::FdfHandles>::ToNatural(::test_handles::wire::FdfHandles src) {
   return ::test_handles::FdfHandles({
-      .fdf_channel_handle =
-          WireNaturalConversionTraits<::fdf::Channel, ::fdf::Channel>::
-              ToNatural(std::move(src.fdf_channel_handle)),
-      .client_end_driver = WireNaturalConversionTraits<
-          ::fdf::ClientEnd<::test_handles::DriverProtocol>,
-          ::fdf::ClientEnd<::test_handles::DriverProtocol>>::
-          ToNatural(std::move(src.client_end_driver)),
-      .server_end_driver = WireNaturalConversionTraits<
-          ::fdf::ServerEnd<::test_handles::DriverProtocol>,
-          ::fdf::ServerEnd<::test_handles::DriverProtocol>>::
-          ToNatural(std::move(src.server_end_driver)),
+      .fdf_channel_handle = WireNaturalConversionTraits<::fdf::Channel, ::fdf::Channel>::ToNatural(std::move(src.fdf_channel_handle)),
+      .client_end_driver = WireNaturalConversionTraits<::fdf::ClientEnd<::test_handles::DriverProtocol>, ::fdf::ClientEnd<::test_handles::DriverProtocol>>::ToNatural(std::move(src.client_end_driver)),
+      .server_end_driver = WireNaturalConversionTraits<::fdf::ServerEnd<::test_handles::DriverProtocol>, ::fdf::ServerEnd<::test_handles::DriverProtocol>>::ToNatural(std::move(src.server_end_driver)),
   });
 }
-::test_handles::wire::FdfHandles WireNaturalConversionTraits<
-    ::test_handles::wire::FdfHandles,
-    ::test_handles::FdfHandles>::ToWire(fidl::AnyArena& arena,
-                                        ::test_handles::FdfHandles src) {
+::test_handles::wire::FdfHandles WireNaturalConversionTraits<::test_handles::wire::FdfHandles, ::test_handles::FdfHandles>::ToWire(fidl::AnyArena& arena, ::test_handles::FdfHandles src) {
   return ::test_handles::wire::FdfHandles{
-      .fdf_channel_handle =
-          WireNaturalConversionTraits<::fdf::Channel, ::fdf::Channel>::ToWire(
-              arena, std::move(src.fdf_channel_handle())),
-      .client_end_driver = WireNaturalConversionTraits<
-          ::fdf::ClientEnd<::test_handles::DriverProtocol>,
-          ::fdf::ClientEnd<::test_handles::DriverProtocol>>::
-          ToWire(arena, std::move(src.client_end_driver())),
-      .server_end_driver = WireNaturalConversionTraits<
-          ::fdf::ServerEnd<::test_handles::DriverProtocol>,
-          ::fdf::ServerEnd<::test_handles::DriverProtocol>>::
-          ToWire(arena, std::move(src.server_end_driver())),
+      .fdf_channel_handle = WireNaturalConversionTraits<::fdf::Channel, ::fdf::Channel>::ToWire(arena, std::move(src.fdf_channel_handle())),
+      .client_end_driver = WireNaturalConversionTraits<::fdf::ClientEnd<::test_handles::DriverProtocol>, ::fdf::ClientEnd<::test_handles::DriverProtocol>>::ToWire(arena, std::move(src.client_end_driver())),
+      .server_end_driver = WireNaturalConversionTraits<::fdf::ServerEnd<::test_handles::DriverProtocol>, ::fdf::ServerEnd<::test_handles::DriverProtocol>>::ToWire(arena, std::move(src.server_end_driver())),
   };
 }
 

@@ -7,34 +7,26 @@ namespace fidl {
 namespace testing {
 
 template <>
-class WireTestBase<::test_emptystruct::EmptyProtocol>
-    : public ::fidl::WireServer<::test_emptystruct::EmptyProtocol> {
+class WireTestBase<::test_emptystruct::EmptyProtocol> : public ::fidl::WireServer<::test_emptystruct::EmptyProtocol> {
  public:
   virtual ~WireTestBase<::test_emptystruct::EmptyProtocol>() = default;
-  virtual void NotImplemented_(const std::string& name,
-                               ::fidl::CompleterBase& completer) = 0;
-  virtual void Send(SendRequestView request,
-                    SendCompleter::Sync& completer) override {
+  virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
+  virtual void Send(
+      SendRequestView request, SendCompleter::Sync& completer) override {
     NotImplemented_("Send", completer);
   }
   virtual void SendAndReceive(
-      SendAndReceiveRequestView request,
-      SendAndReceiveCompleter::Sync& completer) override {
+      SendAndReceiveRequestView request, SendAndReceiveCompleter::Sync& completer) override {
     NotImplemented_("SendAndReceive", completer);
   }
 };
 
 template <>
-class ::fidl::testing::WireSyncEventHandlerTestBase<
-    ::test_emptystruct::EmptyProtocol>
-    : public ::fidl::WireSyncEventHandler<::test_emptystruct::EmptyProtocol> {
+class ::fidl::testing::WireSyncEventHandlerTestBase<::test_emptystruct::EmptyProtocol> : public ::fidl::WireSyncEventHandler<::test_emptystruct::EmptyProtocol> {
  public:
-  virtual ~WireSyncEventHandlerTestBase<::test_emptystruct::EmptyProtocol>() =
-      default;
+  virtual ~WireSyncEventHandlerTestBase<::test_emptystruct::EmptyProtocol>() = default;
   virtual void NotImplemented_(const std::string& name) = 0;
-  virtual void Receive(
-      ::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive>* event)
-      override {
+  virtual void Receive(::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive>* event) override {
     NotImplemented_("Receive");
   }
 };

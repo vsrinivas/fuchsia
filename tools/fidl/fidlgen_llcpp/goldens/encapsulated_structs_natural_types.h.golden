@@ -31,34 +31,29 @@ class TopLevelStruct;
 
 #ifdef __Fuchsia__
 
-extern "C" const fidl_type_t
-    test_encapsulatedstructs_NonInlineStructTestStructTable;
+extern "C" const fidl_type_t test_encapsulatedstructs_NonInlineStructTestStructTable;
 
 class NonInlineStructTestStruct {
  private:
   struct Storage_;
 
  public:
-  NonInlineStructTestStruct(Storage_ storage) noexcept
-      : storage_(std::move(storage)) {}
-  NonInlineStructTestStruct(
-      ::std::unique_ptr<::test_encapsulatedstructs::Int16Int8> element,
-      ::zx::handle h) noexcept
-      : storage_({.element = std::move(element), .h = std::move(h)}) {}
+  NonInlineStructTestStruct(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  NonInlineStructTestStruct(::std::unique_ptr<::test_encapsulatedstructs::Int16Int8> element, ::zx::handle h) noexcept
+      : storage_({.element = std::move(element),
+                  .h = std::move(h)}) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |NonInlineStructTestStruct| only if all of its members
-  // are default constructible.
+  // Default constructs a |NonInlineStructTestStruct| only if all of its members are default constructible.
   NonInlineStructTestStruct() = default;
 #pragma clang diagnostic pop
 
   NonInlineStructTestStruct(NonInlineStructTestStruct&&) noexcept = default;
-  NonInlineStructTestStruct& operator=(NonInlineStructTestStruct&&) noexcept =
-      default;
+  NonInlineStructTestStruct& operator=(NonInlineStructTestStruct&&) noexcept = default;
 
-  const ::std::unique_ptr<::test_encapsulatedstructs::Int16Int8>& element()
-      const {
+  const ::std::unique_ptr<::test_encapsulatedstructs::Int16Int8>&
+  element() const {
     return storage_.element;
   }
 
@@ -66,16 +61,19 @@ class NonInlineStructTestStruct {
     return storage_.element;
   }
 
-  const ::zx::handle& h() const { return storage_.h; }
+  const ::zx::handle&
+  h() const {
+    return storage_.h;
+  }
 
-  ::zx::handle& h() { return storage_.h; }
+  ::zx::handle& h() {
+    return storage_.h;
+  }
 
-  NonInlineStructTestStruct(
-      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : NonInlineStructTestStruct(Storage_{
-            .element = {},
-            .h = {},
-        }) {}
+  NonInlineStructTestStruct(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : NonInlineStructTestStruct(Storage_{
+                                                                                              .element = {},
+                                                                                              .h = {},
+                                                                                          }) {}
 
  private:
   struct Storage_ final {
@@ -85,24 +83,15 @@ class NonInlineStructTestStruct {
 
   Storage_ storage_;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_encapsulatedstructs::NonInlineStructTestStruct, 16>;
-  friend struct ::fidl::internal::MemberVisitor<
-      ::test_encapsulatedstructs::NonInlineStructTestStruct>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::std::unique_ptr<::test_encapsulatedstructs::Int16Int8>,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::element, 0},
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::zx::handle,
-          fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_NONE,
-                                                        0x80000000, false>>{
-          &Storage_::h, 8});
-  static constexpr auto kPadding =
-      std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{
-          .offset = 8,
-          .mask = 0xffffffff00000000ull,
-      });
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_encapsulatedstructs::NonInlineStructTestStruct, 16>;
+  friend struct ::fidl::internal::MemberVisitor<::test_encapsulatedstructs::NonInlineStructTestStruct>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::std::unique_ptr<::test_encapsulatedstructs::Int16Int8>, fidl::internal::NaturalCodingConstraintEmpty>{
+                                                       &Storage_::element, 0},
+                                                   ::fidl::internal::NaturalStructMember<Storage_, ::zx::handle, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_NONE, 0x80000000, false>>{&Storage_::h, 8});
+  static constexpr auto kPadding = std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{
+      .offset = 8,
+      .mask = 0xffffffff00000000ull,
+  });
 };
 
 #endif  // __Fuchsia__
@@ -116,46 +105,52 @@ class Int8Int32 {
  public:
   Int8Int32(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   Int8Int32(int8_t a, int32_t b) noexcept
-      : storage_({.a = std::move(a), .b = std::move(b)}) {}
+      : storage_({.a = std::move(a),
+                  .b = std::move(b)}) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |Int8Int32| only if all of its members are default
-  // constructible.
+  // Default constructs a |Int8Int32| only if all of its members are default constructible.
   Int8Int32() = default;
 #pragma clang diagnostic pop
 
   Int8Int32(Int8Int32&&) noexcept = default;
   Int8Int32& operator=(Int8Int32&&) noexcept = default;
-  Int8Int32(const Int8Int32& other) noexcept
-      : Int8Int32(other.CloneStorage_()) {}
+  Int8Int32(const Int8Int32& other) noexcept : Int8Int32(other.CloneStorage_()) {}
   Int8Int32& operator=(const Int8Int32& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
   }
 
   bool operator==(const Int8Int32& other) const noexcept {
-    return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_encapsulatedstructs::Int8Int32, 8>::Equal(this, &other);
+    return ::fidl::internal::NaturalStructCodingTraits<::test_encapsulatedstructs::Int8Int32, 8>::Equal(this, &other);
   }
   bool operator!=(const Int8Int32& other) const noexcept {
-    return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_encapsulatedstructs::Int8Int32, 8>::Equal(this, &other);
+    return !::fidl::internal::NaturalStructCodingTraits<::test_encapsulatedstructs::Int8Int32, 8>::Equal(this, &other);
   }
 
-  int8_t a() const { return storage_.a; }
+  int8_t
+  a() const {
+    return storage_.a;
+  }
 
-  int8_t& a() { return storage_.a; }
+  int8_t& a() {
+    return storage_.a;
+  }
 
-  int32_t b() const { return storage_.b; }
+  int32_t
+  b() const {
+    return storage_.b;
+  }
 
-  int32_t& b() { return storage_.b; }
+  int32_t& b() {
+    return storage_.b;
+  }
 
-  Int8Int32(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : Int8Int32(Storage_{
-            .a = {},
-            .b = {},
-        }) {}
+  Int8Int32(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Int8Int32(Storage_{
+                                                                              .a = {},
+                                                                              .b = {},
+                                                                          }) {}
 
  private:
   struct Storage_ final {
@@ -166,22 +161,15 @@ class Int8Int32 {
   Storage_ storage_;
   Storage_ CloneStorage_() const;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_encapsulatedstructs::Int8Int32, 8>;
-  friend struct ::fidl::internal::MemberVisitor<
-      ::test_encapsulatedstructs::Int8Int32>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<
-          Storage_, int8_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::a, 0},
-      ::fidl::internal::NaturalStructMember<
-          Storage_, int32_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::b, 4});
-  static constexpr auto kPadding =
-      std::make_tuple(::fidl::internal::NaturalStructPadding<uint32_t>{
-          .offset = 0,
-          .mask = 0xffffff00,
-      });
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_encapsulatedstructs::Int8Int32, 8>;
+  friend struct ::fidl::internal::MemberVisitor<::test_encapsulatedstructs::Int8Int32>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, int8_t, fidl::internal::NaturalCodingConstraintEmpty>{
+                                                       &Storage_::a, 0},
+                                                   ::fidl::internal::NaturalStructMember<Storage_, int32_t, fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::b, 4});
+  static constexpr auto kPadding = std::make_tuple(::fidl::internal::NaturalStructPadding<uint32_t>{
+      .offset = 0,
+      .mask = 0xffffff00,
+  });
 };
 
 extern "C" const fidl_type_t test_encapsulatedstructs_Int16Int8Table;
@@ -193,46 +181,52 @@ class Int16Int8 {
  public:
   Int16Int8(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   Int16Int8(int16_t a, int8_t b) noexcept
-      : storage_({.a = std::move(a), .b = std::move(b)}) {}
+      : storage_({.a = std::move(a),
+                  .b = std::move(b)}) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |Int16Int8| only if all of its members are default
-  // constructible.
+  // Default constructs a |Int16Int8| only if all of its members are default constructible.
   Int16Int8() = default;
 #pragma clang diagnostic pop
 
   Int16Int8(Int16Int8&&) noexcept = default;
   Int16Int8& operator=(Int16Int8&&) noexcept = default;
-  Int16Int8(const Int16Int8& other) noexcept
-      : Int16Int8(other.CloneStorage_()) {}
+  Int16Int8(const Int16Int8& other) noexcept : Int16Int8(other.CloneStorage_()) {}
   Int16Int8& operator=(const Int16Int8& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
   }
 
   bool operator==(const Int16Int8& other) const noexcept {
-    return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_encapsulatedstructs::Int16Int8, 4>::Equal(this, &other);
+    return ::fidl::internal::NaturalStructCodingTraits<::test_encapsulatedstructs::Int16Int8, 4>::Equal(this, &other);
   }
   bool operator!=(const Int16Int8& other) const noexcept {
-    return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_encapsulatedstructs::Int16Int8, 4>::Equal(this, &other);
+    return !::fidl::internal::NaturalStructCodingTraits<::test_encapsulatedstructs::Int16Int8, 4>::Equal(this, &other);
   }
 
-  int16_t a() const { return storage_.a; }
+  int16_t
+  a() const {
+    return storage_.a;
+  }
 
-  int16_t& a() { return storage_.a; }
+  int16_t& a() {
+    return storage_.a;
+  }
 
-  int8_t b() const { return storage_.b; }
+  int8_t
+  b() const {
+    return storage_.b;
+  }
 
-  int8_t& b() { return storage_.b; }
+  int8_t& b() {
+    return storage_.b;
+  }
 
-  Int16Int8(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : Int16Int8(Storage_{
-            .a = {},
-            .b = {},
-        }) {}
+  Int16Int8(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Int16Int8(Storage_{
+                                                                              .a = {},
+                                                                              .b = {},
+                                                                          }) {}
 
  private:
   struct Storage_ final {
@@ -243,22 +237,15 @@ class Int16Int8 {
   Storage_ storage_;
   Storage_ CloneStorage_() const;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_encapsulatedstructs::Int16Int8, 4>;
-  friend struct ::fidl::internal::MemberVisitor<
-      ::test_encapsulatedstructs::Int16Int8>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<
-          Storage_, int16_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::a, 0},
-      ::fidl::internal::NaturalStructMember<
-          Storage_, int8_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::b, 2});
-  static constexpr auto kPadding =
-      std::make_tuple(::fidl::internal::NaturalStructPadding<uint16_t>{
-          .offset = 2,
-          .mask = 0xff00,
-      });
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_encapsulatedstructs::Int16Int8, 4>;
+  friend struct ::fidl::internal::MemberVisitor<::test_encapsulatedstructs::Int16Int8>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, int16_t, fidl::internal::NaturalCodingConstraintEmpty>{
+                                                       &Storage_::a, 0},
+                                                   ::fidl::internal::NaturalStructMember<Storage_, int8_t, fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::b, 2});
+  static constexpr auto kPadding = std::make_tuple(::fidl::internal::NaturalStructPadding<uint16_t>{
+      .offset = 2,
+      .mask = 0xff00,
+  });
 };
 
 extern "C" const fidl_type_t test_encapsulatedstructs_ArrayInt16Int8Table;
@@ -269,36 +256,32 @@ class ArrayInt16Int8 {
 
  public:
   ArrayInt16Int8(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-  ArrayInt16Int8(
-      ::std::array<::test_encapsulatedstructs::Int16Int8, 3> arr) noexcept
+  ArrayInt16Int8(::std::array<::test_encapsulatedstructs::Int16Int8, 3> arr) noexcept
       : storage_({.arr = std::move(arr)}) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |ArrayInt16Int8| only if all of its members are
-  // default constructible.
+  // Default constructs a |ArrayInt16Int8| only if all of its members are default constructible.
   ArrayInt16Int8() = default;
 #pragma clang diagnostic pop
 
   ArrayInt16Int8(ArrayInt16Int8&&) noexcept = default;
   ArrayInt16Int8& operator=(ArrayInt16Int8&&) noexcept = default;
-  ArrayInt16Int8(const ArrayInt16Int8& other) noexcept
-      : ArrayInt16Int8(other.CloneStorage_()) {}
+  ArrayInt16Int8(const ArrayInt16Int8& other) noexcept : ArrayInt16Int8(other.CloneStorage_()) {}
   ArrayInt16Int8& operator=(const ArrayInt16Int8& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
   }
 
   bool operator==(const ArrayInt16Int8& other) const noexcept {
-    return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_encapsulatedstructs::ArrayInt16Int8, 12>::Equal(this, &other);
+    return ::fidl::internal::NaturalStructCodingTraits<::test_encapsulatedstructs::ArrayInt16Int8, 12>::Equal(this, &other);
   }
   bool operator!=(const ArrayInt16Int8& other) const noexcept {
-    return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_encapsulatedstructs::ArrayInt16Int8, 12>::Equal(this, &other);
+    return !::fidl::internal::NaturalStructCodingTraits<::test_encapsulatedstructs::ArrayInt16Int8, 12>::Equal(this, &other);
   }
 
-  const ::std::array<::test_encapsulatedstructs::Int16Int8, 3>& arr() const {
+  const ::std::array<::test_encapsulatedstructs::Int16Int8, 3>&
+  arr() const {
     return storage_.arr;
   }
 
@@ -306,11 +289,9 @@ class ArrayInt16Int8 {
     return storage_.arr;
   }
 
-  ArrayInt16Int8(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : ArrayInt16Int8(Storage_{
-            .arr = ::fidl::internal::DefaultConstructPossiblyInvalidObject<
-                ::std::array<::test_encapsulatedstructs::Int16Int8, 3>>::Make(),
-        }) {}
+  ArrayInt16Int8(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ArrayInt16Int8(Storage_{
+                                                                                   .arr = ::fidl::internal::DefaultConstructPossiblyInvalidObject<::std::array<::test_encapsulatedstructs::Int16Int8, 3>>::Make(),
+                                                                               }) {}
 
  private:
   struct Storage_ final {
@@ -320,65 +301,49 @@ class ArrayInt16Int8 {
   Storage_ storage_;
   Storage_ CloneStorage_() const;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_encapsulatedstructs::ArrayInt16Int8, 12>;
-  friend struct ::fidl::internal::MemberVisitor<
-      ::test_encapsulatedstructs::ArrayInt16Int8>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::std::array<::test_encapsulatedstructs::Int16Int8, 3>,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::arr, 0});
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_encapsulatedstructs::ArrayInt16Int8, 12>;
+  friend struct ::fidl::internal::MemberVisitor<::test_encapsulatedstructs::ArrayInt16Int8>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::std::array<::test_encapsulatedstructs::Int16Int8, 3>, fidl::internal::NaturalCodingConstraintEmpty>{
+      &Storage_::arr, 0});
   static constexpr auto kPadding = std::make_tuple();
 };
 
-extern "C" const fidl_type_t
-    test_encapsulatedstructs_StructPaddingTestStructTable;
+extern "C" const fidl_type_t test_encapsulatedstructs_StructPaddingTestStructTable;
 
 class StructPaddingTestStruct {
  private:
   struct Storage_;
 
  public:
-  StructPaddingTestStruct(Storage_ storage) noexcept
-      : storage_(std::move(storage)) {}
-  StructPaddingTestStruct(
-      ::test_encapsulatedstructs::Int16Int8 trailing,
-      ::test_encapsulatedstructs::Int8Int32 inner,
-      ::test_encapsulatedstructs::ArrayInt16Int8 array) noexcept
+  StructPaddingTestStruct(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  StructPaddingTestStruct(::test_encapsulatedstructs::Int16Int8 trailing, ::test_encapsulatedstructs::Int8Int32 inner, ::test_encapsulatedstructs::ArrayInt16Int8 array) noexcept
       : storage_({.trailing = std::move(trailing),
                   .inner = std::move(inner),
                   .array = std::move(array)}) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |StructPaddingTestStruct| only if all of its members
-  // are default constructible.
+  // Default constructs a |StructPaddingTestStruct| only if all of its members are default constructible.
   StructPaddingTestStruct() = default;
 #pragma clang diagnostic pop
 
   StructPaddingTestStruct(StructPaddingTestStruct&&) noexcept = default;
-  StructPaddingTestStruct& operator=(StructPaddingTestStruct&&) noexcept =
-      default;
-  StructPaddingTestStruct(const StructPaddingTestStruct& other) noexcept
-      : StructPaddingTestStruct(other.CloneStorage_()) {}
-  StructPaddingTestStruct& operator=(
-      const StructPaddingTestStruct& other) noexcept {
+  StructPaddingTestStruct& operator=(StructPaddingTestStruct&&) noexcept = default;
+  StructPaddingTestStruct(const StructPaddingTestStruct& other) noexcept : StructPaddingTestStruct(other.CloneStorage_()) {}
+  StructPaddingTestStruct& operator=(const StructPaddingTestStruct& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
   }
 
   bool operator==(const StructPaddingTestStruct& other) const noexcept {
-    return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_encapsulatedstructs::StructPaddingTestStruct, 24>::Equal(this,
-                                                                        &other);
+    return ::fidl::internal::NaturalStructCodingTraits<::test_encapsulatedstructs::StructPaddingTestStruct, 24>::Equal(this, &other);
   }
   bool operator!=(const StructPaddingTestStruct& other) const noexcept {
-    return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_encapsulatedstructs::StructPaddingTestStruct, 24>::Equal(this,
-                                                                        &other);
+    return !::fidl::internal::NaturalStructCodingTraits<::test_encapsulatedstructs::StructPaddingTestStruct, 24>::Equal(this, &other);
   }
 
-  const ::test_encapsulatedstructs::Int16Int8& trailing() const {
+  const ::test_encapsulatedstructs::Int16Int8&
+  trailing() const {
     return storage_.trailing;
   }
 
@@ -386,28 +351,29 @@ class StructPaddingTestStruct {
     return storage_.trailing;
   }
 
-  const ::test_encapsulatedstructs::Int8Int32& inner() const {
+  const ::test_encapsulatedstructs::Int8Int32&
+  inner() const {
     return storage_.inner;
   }
 
-  ::test_encapsulatedstructs::Int8Int32& inner() { return storage_.inner; }
+  ::test_encapsulatedstructs::Int8Int32& inner() {
+    return storage_.inner;
+  }
 
-  const ::test_encapsulatedstructs::ArrayInt16Int8& array() const {
+  const ::test_encapsulatedstructs::ArrayInt16Int8&
+  array() const {
     return storage_.array;
   }
 
-  ::test_encapsulatedstructs::ArrayInt16Int8& array() { return storage_.array; }
+  ::test_encapsulatedstructs::ArrayInt16Int8& array() {
+    return storage_.array;
+  }
 
-  StructPaddingTestStruct(
-      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : StructPaddingTestStruct(Storage_{
-            .trailing =
-                ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
-            .inner =
-                ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
-            .array =
-                ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
-        }) {}
+  StructPaddingTestStruct(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : StructPaddingTestStruct(Storage_{
+                                                                                            .trailing = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+                                                                                            .inner = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+                                                                                            .array = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+                                                                                        }) {}
 
  private:
   struct Storage_ final {
@@ -419,20 +385,11 @@ class StructPaddingTestStruct {
   Storage_ storage_;
   Storage_ CloneStorage_() const;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_encapsulatedstructs::StructPaddingTestStruct, 24>;
-  friend struct ::fidl::internal::MemberVisitor<
-      ::test_encapsulatedstructs::StructPaddingTestStruct>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::test_encapsulatedstructs::Int16Int8,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::trailing, 0},
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::test_encapsulatedstructs::Int8Int32,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::inner, 4},
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::test_encapsulatedstructs::ArrayInt16Int8,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::array, 12});
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_encapsulatedstructs::StructPaddingTestStruct, 24>;
+  friend struct ::fidl::internal::MemberVisitor<::test_encapsulatedstructs::StructPaddingTestStruct>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::test_encapsulatedstructs::Int16Int8, fidl::internal::NaturalCodingConstraintEmpty>{
+                                                       &Storage_::trailing, 0},
+                                                   ::fidl::internal::NaturalStructMember<Storage_, ::test_encapsulatedstructs::Int8Int32, fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::inner, 4}, ::fidl::internal::NaturalStructMember<Storage_, ::test_encapsulatedstructs::ArrayInt16Int8, fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::array, 12});
   static constexpr auto kPadding = std::make_tuple();
 };
 
@@ -446,22 +403,21 @@ class TopLevelStruct {
 
  public:
   TopLevelStruct(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-  TopLevelStruct(
-      ::test_encapsulatedstructs::StructPaddingTestStruct a,
-      ::test_encapsulatedstructs::NonInlineStructTestStruct b) noexcept
-      : storage_({.a = std::move(a), .b = std::move(b)}) {}
+  TopLevelStruct(::test_encapsulatedstructs::StructPaddingTestStruct a, ::test_encapsulatedstructs::NonInlineStructTestStruct b) noexcept
+      : storage_({.a = std::move(a),
+                  .b = std::move(b)}) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |TopLevelStruct| only if all of its members are
-  // default constructible.
+  // Default constructs a |TopLevelStruct| only if all of its members are default constructible.
   TopLevelStruct() = default;
 #pragma clang diagnostic pop
 
   TopLevelStruct(TopLevelStruct&&) noexcept = default;
   TopLevelStruct& operator=(TopLevelStruct&&) noexcept = default;
 
-  const ::test_encapsulatedstructs::StructPaddingTestStruct& a() const {
+  const ::test_encapsulatedstructs::StructPaddingTestStruct&
+  a() const {
     return storage_.a;
   }
 
@@ -469,7 +425,8 @@ class TopLevelStruct {
     return storage_.a;
   }
 
-  const ::test_encapsulatedstructs::NonInlineStructTestStruct& b() const {
+  const ::test_encapsulatedstructs::NonInlineStructTestStruct&
+  b() const {
     return storage_.b;
   }
 
@@ -477,11 +434,10 @@ class TopLevelStruct {
     return storage_.b;
   }
 
-  TopLevelStruct(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : TopLevelStruct(Storage_{
-            .a = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
-            .b = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
-        }) {}
+  TopLevelStruct(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : TopLevelStruct(Storage_{
+                                                                                   .a = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+                                                                                   .b = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+                                                                               }) {}
 
  private:
   struct Storage_ final {
@@ -491,17 +447,11 @@ class TopLevelStruct {
 
   Storage_ storage_;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_encapsulatedstructs::TopLevelStruct, 40>;
-  friend struct ::fidl::internal::MemberVisitor<
-      ::test_encapsulatedstructs::TopLevelStruct>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::test_encapsulatedstructs::StructPaddingTestStruct,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::a, 0},
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::test_encapsulatedstructs::NonInlineStructTestStruct,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::b, 24});
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_encapsulatedstructs::TopLevelStruct, 40>;
+  friend struct ::fidl::internal::MemberVisitor<::test_encapsulatedstructs::TopLevelStruct>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::test_encapsulatedstructs::StructPaddingTestStruct, fidl::internal::NaturalCodingConstraintEmpty>{
+                                                       &Storage_::a, 0},
+                                                   ::fidl::internal::NaturalStructMember<Storage_, ::test_encapsulatedstructs::NonInlineStructTestStruct, fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::b, 24});
   static constexpr auto kPadding = std::make_tuple();
 };
 
@@ -512,95 +462,67 @@ namespace fidl {
 
 #ifdef __Fuchsia__
 
-extern "C" const fidl_type_t
-    test_encapsulatedstructs_NonInlineStructTestStructTable;
+extern "C" const fidl_type_t test_encapsulatedstructs_NonInlineStructTestStructTable;
 
 template <>
-struct IsResource<::test_encapsulatedstructs::NonInlineStructTestStruct>
-    : public std::true_type {};
+struct IsResource<::test_encapsulatedstructs::NonInlineStructTestStruct> : public std::true_type {};
 template <>
-struct IsFidlType<::test_encapsulatedstructs::NonInlineStructTestStruct>
-    : public std::true_type {};
+struct IsFidlType<::test_encapsulatedstructs::NonInlineStructTestStruct> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<
-    ::test_encapsulatedstructs::NonInlineStructTestStruct,
-    ::fidl::internal::NaturalCodingConstraintEmpty>
-    final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_encapsulatedstructs::NonInlineStructTestStruct, 16> {};
+struct internal::NaturalCodingTraits<::test_encapsulatedstructs::NonInlineStructTestStruct, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_encapsulatedstructs::NonInlineStructTestStruct, 16> {};
 
 #endif  // __Fuchsia__
 
 extern "C" const fidl_type_t test_encapsulatedstructs_Int8Int32Table;
 
 template <>
-struct IsFidlType<::test_encapsulatedstructs::Int8Int32>
-    : public std::true_type {};
+struct IsFidlType<::test_encapsulatedstructs::Int8Int32> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<
-    ::test_encapsulatedstructs::Int8Int32,
-    ::fidl::internal::NaturalCodingConstraintEmpty>
-    final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_encapsulatedstructs::Int8Int32, 8> {};
+struct internal::NaturalCodingTraits<::test_encapsulatedstructs::Int8Int32, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_encapsulatedstructs::Int8Int32, 8> {};
 
 extern "C" const fidl_type_t test_encapsulatedstructs_Int16Int8Table;
 
 template <>
-struct IsFidlType<::test_encapsulatedstructs::Int16Int8>
-    : public std::true_type {};
+struct IsFidlType<::test_encapsulatedstructs::Int16Int8> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<
-    ::test_encapsulatedstructs::Int16Int8,
-    ::fidl::internal::NaturalCodingConstraintEmpty>
-    final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_encapsulatedstructs::Int16Int8, 4> {};
+struct internal::NaturalCodingTraits<::test_encapsulatedstructs::Int16Int8, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_encapsulatedstructs::Int16Int8, 4> {};
 
 extern "C" const fidl_type_t test_encapsulatedstructs_ArrayInt16Int8Table;
 
 template <>
-struct IsFidlType<::test_encapsulatedstructs::ArrayInt16Int8>
-    : public std::true_type {};
+struct IsFidlType<::test_encapsulatedstructs::ArrayInt16Int8> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<
-    ::test_encapsulatedstructs::ArrayInt16Int8,
-    ::fidl::internal::NaturalCodingConstraintEmpty>
-    final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_encapsulatedstructs::ArrayInt16Int8, 12> {};
+struct internal::NaturalCodingTraits<::test_encapsulatedstructs::ArrayInt16Int8, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_encapsulatedstructs::ArrayInt16Int8, 12> {};
 
-extern "C" const fidl_type_t
-    test_encapsulatedstructs_StructPaddingTestStructTable;
+extern "C" const fidl_type_t test_encapsulatedstructs_StructPaddingTestStructTable;
 
 template <>
-struct IsFidlType<::test_encapsulatedstructs::StructPaddingTestStruct>
-    : public std::true_type {};
+struct IsFidlType<::test_encapsulatedstructs::StructPaddingTestStruct> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<
-    ::test_encapsulatedstructs::StructPaddingTestStruct,
-    ::fidl::internal::NaturalCodingConstraintEmpty>
-    final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_encapsulatedstructs::StructPaddingTestStruct, 24> {};
+struct internal::NaturalCodingTraits<::test_encapsulatedstructs::StructPaddingTestStruct, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_encapsulatedstructs::StructPaddingTestStruct, 24> {};
 
 #ifdef __Fuchsia__
 
 extern "C" const fidl_type_t test_encapsulatedstructs_TopLevelStructTable;
 
 template <>
-struct IsResource<::test_encapsulatedstructs::TopLevelStruct>
-    : public std::true_type {};
+struct IsResource<::test_encapsulatedstructs::TopLevelStruct> : public std::true_type {};
 template <>
-struct IsFidlType<::test_encapsulatedstructs::TopLevelStruct>
-    : public std::true_type {};
+struct IsFidlType<::test_encapsulatedstructs::TopLevelStruct> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<
-    ::test_encapsulatedstructs::TopLevelStruct,
-    ::fidl::internal::NaturalCodingConstraintEmpty>
-    final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_encapsulatedstructs::TopLevelStruct, 40> {};
+struct internal::NaturalCodingTraits<::test_encapsulatedstructs::TopLevelStruct, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_encapsulatedstructs::TopLevelStruct, 40> {};
 
 #endif  // __Fuchsia__
 

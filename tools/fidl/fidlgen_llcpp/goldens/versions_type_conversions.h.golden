@@ -15,11 +15,9 @@ namespace fidl {
 namespace internal {
 
 template <>
-struct WireNaturalConversionTraits<::test_versions::wire::Struct,
-                                   ::test_versions::Struct> {
+struct WireNaturalConversionTraits<::test_versions::wire::Struct, ::test_versions::Struct> {
   static ::test_versions::Struct ToNatural(::test_versions::wire::Struct src);
-  static ::test_versions::wire::Struct ToWire(fidl::AnyArena& arena,
-                                              ::test_versions::Struct src);
+  static ::test_versions::wire::Struct ToWire(fidl::AnyArena& arena, ::test_versions::Struct src);
 };
 
 template <>
@@ -32,11 +30,9 @@ struct WireTypeForNaturalType<::test_versions::Struct> {
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_versions::wire::Table,
-                                   ::test_versions::Table> {
+struct WireNaturalConversionTraits<::test_versions::wire::Table, ::test_versions::Table> {
   static ::test_versions::Table ToNatural(::test_versions::wire::Table src);
-  static ::test_versions::wire::Table ToWire(fidl::AnyArena& arena,
-                                             ::test_versions::Table src);
+  static ::test_versions::wire::Table ToWire(fidl::AnyArena& arena, ::test_versions::Table src);
 };
 
 template <>
@@ -49,20 +45,15 @@ struct WireTypeForNaturalType<::test_versions::Table> {
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_versions::wire::Union,
-                                   ::test_versions::Union> {
+struct WireNaturalConversionTraits<::test_versions::wire::Union, ::test_versions::Union> {
   static ::test_versions::Union ToNatural(::test_versions::wire::Union src);
-  static ::test_versions::wire::Union ToWire(fidl::AnyArena& arena,
-                                             ::test_versions::Union src);
+  static ::test_versions::wire::Union ToWire(fidl::AnyArena& arena, ::test_versions::Union src);
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_versions::wire::Union,
-                                   std::unique_ptr<::test_versions::Union>> {
-  static std::unique_ptr<::test_versions::Union> ToNatural(
-      ::test_versions::wire::Union src);
-  static ::test_versions::wire::Union ToWire(
-      fidl::AnyArena& arena, std::unique_ptr<::test_versions::Union> src);
+struct WireNaturalConversionTraits<::test_versions::wire::Union, std::unique_ptr<::test_versions::Union>> {
+  static std::unique_ptr<::test_versions::Union> ToNatural(::test_versions::wire::Union src);
+  static ::test_versions::wire::Union ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_versions::Union> src);
 };
 
 template <>
@@ -81,19 +72,13 @@ struct WireTypeForNaturalType<std::unique_ptr<::test_versions::Union>> {
 #ifdef __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireRequest<::test_versions::Protocol::Foo>,
-    ::fidl::Request<::test_versions::Protocol::Foo>> {
-  static ::fidl::Request<::test_versions::Protocol::Foo> ToNatural(
-      ::fidl::WireRequest<::test_versions::Protocol::Foo> src);
-  static ::fidl::WireRequest<::test_versions::Protocol::Foo> ToWire(
-      fidl::AnyArena& arena,
-      ::fidl::Request<::test_versions::Protocol::Foo> src);
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_versions::Protocol::Foo>, ::fidl::Request<::test_versions::Protocol::Foo>> {
+  static ::fidl::Request<::test_versions::Protocol::Foo> ToNatural(::fidl::WireRequest<::test_versions::Protocol::Foo> src);
+  static ::fidl::WireRequest<::test_versions::Protocol::Foo> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_versions::Protocol::Foo> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireRequest<::test_versions::Protocol::Foo>> {
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_versions::Protocol::Foo>> {
   using type = ::fidl::Request<::test_versions::Protocol::Foo>;
 };
 template <>

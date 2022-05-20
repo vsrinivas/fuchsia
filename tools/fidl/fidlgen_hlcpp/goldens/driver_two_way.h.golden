@@ -19,21 +19,16 @@ class TwoWayAddTopResponse final {
 
   uint16_t sum{};
 
-  static inline ::std::unique_ptr<TwoWayAddTopResponse> New() {
-    return ::std::make_unique<TwoWayAddTopResponse>();
-  }
+  static inline ::std::unique_ptr<TwoWayAddTopResponse> New() { return ::std::make_unique<TwoWayAddTopResponse>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, TwoWayAddTopResponse* value,
-                     size_t _offset);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, TwoWayAddTopResponse* value, size_t _offset);
   zx_status_t Clone(TwoWayAddTopResponse* result) const;
 };
 
-inline zx_status_t Clone(
-    const ::test::drivertwoway::TwoWayAddTopResponse& _value,
-    ::test::drivertwoway::TwoWayAddTopResponse* _result) {
+inline zx_status_t Clone(const ::test::drivertwoway::TwoWayAddTopResponse& _value,
+                         ::test::drivertwoway::TwoWayAddTopResponse* _result) {
   return _value.Clone(_result);
 }
 
@@ -47,15 +42,11 @@ class TwoWayAddRequest final {
 
   uint16_t addend2{};
 
-  static inline ::std::unique_ptr<TwoWayAddRequest> New() {
-    return ::std::make_unique<TwoWayAddRequest>();
-  }
+  static inline ::std::unique_ptr<TwoWayAddRequest> New() { return ::std::make_unique<TwoWayAddRequest>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, TwoWayAddRequest* value,
-                     size_t _offset);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, TwoWayAddRequest* value, size_t _offset);
   zx_status_t Clone(TwoWayAddRequest* result) const;
 };
 
@@ -71,26 +62,20 @@ using TwoWayAddRequestPtr = ::std::unique_ptr<TwoWayAddRequest>;
 namespace fidl {
 template <>
 struct CodingTraits<::test::drivertwoway::TwoWayAddTopResponse>
-    : public EncodableCodingTraits<::test::drivertwoway::TwoWayAddTopResponse,
-                                   2> {};
+    : public EncodableCodingTraits<::test::drivertwoway::TwoWayAddTopResponse, 2> {};
 
 template <>
-struct IsMemcpyCompatible<::test::drivertwoway::TwoWayAddTopResponse>
-    : public internal::BoolConstant<
-          !HasPadding<::test::drivertwoway::TwoWayAddTopResponse>::value &&
-          IsMemcpyCompatible<uint16_t>::value> {};
+struct IsMemcpyCompatible<::test::drivertwoway::TwoWayAddTopResponse> : public internal::BoolConstant<
+                                                                            !HasPadding<::test::drivertwoway::TwoWayAddTopResponse>::value && IsMemcpyCompatible<uint16_t>::value> {};
 
-inline zx_status_t Clone(
-    const ::test::drivertwoway::TwoWayAddTopResponse& value,
-    ::test::drivertwoway::TwoWayAddTopResponse* result) {
+inline zx_status_t Clone(const ::test::drivertwoway::TwoWayAddTopResponse& value,
+                         ::test::drivertwoway::TwoWayAddTopResponse* result) {
   return ::test::drivertwoway::Clone(value, result);
 }
 
 template <>
 struct Equality<::test::drivertwoway::TwoWayAddTopResponse> {
-  bool operator()(
-      const ::test::drivertwoway::TwoWayAddTopResponse& _lhs,
-      const ::test::drivertwoway::TwoWayAddTopResponse& _rhs) const {
+  bool operator()(const ::test::drivertwoway::TwoWayAddTopResponse& _lhs, const ::test::drivertwoway::TwoWayAddTopResponse& _rhs) const {
     if (!::fidl::Equals(_lhs.sum, _rhs.sum)) {
       return false;
     }
@@ -99,14 +84,11 @@ struct Equality<::test::drivertwoway::TwoWayAddTopResponse> {
 };
 template <>
 struct CodingTraits<::test::drivertwoway::TwoWayAddRequest>
-    : public EncodableCodingTraits<::test::drivertwoway::TwoWayAddRequest, 4> {
-};
+    : public EncodableCodingTraits<::test::drivertwoway::TwoWayAddRequest, 4> {};
 
 template <>
-struct IsMemcpyCompatible<::test::drivertwoway::TwoWayAddRequest>
-    : public internal::BoolConstant<
-          !HasPadding<::test::drivertwoway::TwoWayAddRequest>::value &&
-          IsMemcpyCompatible<uint16_t>::value> {};
+struct IsMemcpyCompatible<::test::drivertwoway::TwoWayAddRequest> : public internal::BoolConstant<
+                                                                        !HasPadding<::test::drivertwoway::TwoWayAddRequest>::value && IsMemcpyCompatible<uint16_t>::value> {};
 
 inline zx_status_t Clone(const ::test::drivertwoway::TwoWayAddRequest& value,
                          ::test::drivertwoway::TwoWayAddRequest* result) {
@@ -115,8 +97,7 @@ inline zx_status_t Clone(const ::test::drivertwoway::TwoWayAddRequest& value,
 
 template <>
 struct Equality<::test::drivertwoway::TwoWayAddRequest> {
-  bool operator()(const ::test::drivertwoway::TwoWayAddRequest& _lhs,
-                  const ::test::drivertwoway::TwoWayAddRequest& _rhs) const {
+  bool operator()(const ::test::drivertwoway::TwoWayAddRequest& _lhs, const ::test::drivertwoway::TwoWayAddRequest& _rhs) const {
     if (!::fidl::Equals(_lhs.addend1, _rhs.addend1)) {
       return false;
     }

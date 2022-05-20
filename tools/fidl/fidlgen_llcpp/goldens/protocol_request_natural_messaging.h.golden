@@ -11,15 +11,15 @@
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
-namespace fidl {}  // namespace fidl
-template <>
-struct ::fidl::internal::NaturalMethodTypes<
-    ::test_protocolrequest::Parent::GetChild> {
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<
-      ::test_protocolrequest::Parent::GetChild>>;
+namespace fidl {
 
-  using ResultCallback = ::fit::callback<void(
-      ::fidl::Result<::test_protocolrequest::Parent::GetChild>&)>;
+}  // namespace fidl
+template <>
+struct ::fidl::internal::NaturalMethodTypes<::test_protocolrequest::Parent::GetChild> {
+  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocolrequest::Parent::GetChild>>;
+
+  using ResultCallback =
+      ::fit::callback<void(::fidl::Result<::test_protocolrequest::Parent::GetChild>&)>;
 
   static constexpr bool HasApplicationError = false;
 
@@ -27,13 +27,11 @@ struct ::fidl::internal::NaturalMethodTypes<
 };
 
 template <>
-struct ::fidl::internal::NaturalMethodTypes<
-    ::test_protocolrequest::Parent::GetChildRequest> {
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<
-      ::test_protocolrequest::Parent::GetChildRequest>>;
+struct ::fidl::internal::NaturalMethodTypes<::test_protocolrequest::Parent::GetChildRequest> {
+  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocolrequest::Parent::GetChildRequest>>;
 
-  using ResultCallback = ::fit::callback<void(
-      ::fidl::Result<::test_protocolrequest::Parent::GetChildRequest>&)>;
+  using ResultCallback =
+      ::fit::callback<void(::fidl::Result<::test_protocolrequest::Parent::GetChildRequest>&)>;
 
   static constexpr bool HasApplicationError = false;
 
@@ -41,101 +39,72 @@ struct ::fidl::internal::NaturalMethodTypes<
 };
 
 namespace test_protocolrequest {
-__LOCAL extern "C" const fidl_type_t
-    test_protocolrequest_ParentGetChildTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_protocolrequest_ParentGetChildTopResponseTable;
 
-__LOCAL extern "C" const fidl_type_t
-    test_protocolrequest_ParentGetChildRequestTopResponseTable;
-__LOCAL extern "C" const fidl_type_t
-    test_protocolrequest_ParentTakeChildRequestTable;
+__LOCAL extern "C" const fidl_type_t test_protocolrequest_ParentGetChildRequestTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_protocolrequest_ParentTakeChildRequestTable;
 
-__LOCAL extern "C" const fidl_type_t
-    test_protocolrequest_ParentTakeChildRequestRequestTable;
+__LOCAL extern "C" const fidl_type_t test_protocolrequest_ParentTakeChildRequestRequestTable;
 
 #ifdef __Fuchsia__
 }  // namespace test_protocolrequest
 
 template <>
-class ::fidl::Response<::test_protocolrequest::Parent::GetChild> final
-    : public ::test_protocolrequest::ParentGetChildTopResponse {
+class ::fidl::Response<::test_protocolrequest::Parent::GetChild> final : public ::test_protocolrequest::ParentGetChildTopResponse {
  public:
-  using ::test_protocolrequest::ParentGetChildTopResponse::
-      ParentGetChildTopResponse;
-  Response(::test_protocolrequest::ParentGetChildTopResponse v)
-      : ParentGetChildTopResponse(std::move(v)) {}
+  using ::test_protocolrequest::ParentGetChildTopResponse::ParentGetChildTopResponse;
+  Response(::test_protocolrequest::ParentGetChildTopResponse v) : ParentGetChildTopResponse(std::move(v)) {}
 };
 
 template <>
-struct ::fidl::internal::MessageTraits<
-    ::fidl::Response<::test_protocolrequest::Parent::GetChild>>
-    final {
+struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocolrequest::Parent::GetChild>> final {
  public:
   static constexpr bool kHasPayload = true;
   using Payload = ::test_protocolrequest::ParentGetChildTopResponse;
 };
 namespace test_protocolrequest {}  // namespace test_protocolrequest
 template <>
-class ::fidl::Result<::test_protocolrequest::Parent::GetChild> final
-    : public ::fitx::result<::fidl::Error,
-                            ::test_protocolrequest::ParentGetChildTopResponse> {
+class ::fidl::Result<::test_protocolrequest::Parent::GetChild> final : public ::fitx::result<::fidl::Error, ::test_protocolrequest::ParentGetChildTopResponse> {
  public:
-  using ::fitx::result<
-      ::fidl::Error, ::test_protocolrequest::ParentGetChildTopResponse>::result;
+  using ::fitx::result<::fidl::Error, ::test_protocolrequest::ParentGetChildTopResponse>::result;
 
  protected:
   Result() = default;
 };
 
 template <>
-class ::fidl::Response<::test_protocolrequest::Parent::GetChildRequest> final
-    : public ::test_protocolrequest::ParentGetChildRequestTopResponse {
+class ::fidl::Response<::test_protocolrequest::Parent::GetChildRequest> final : public ::test_protocolrequest::ParentGetChildRequestTopResponse {
  public:
-  using ::test_protocolrequest::ParentGetChildRequestTopResponse::
-      ParentGetChildRequestTopResponse;
-  Response(::test_protocolrequest::ParentGetChildRequestTopResponse v)
-      : ParentGetChildRequestTopResponse(std::move(v)) {}
+  using ::test_protocolrequest::ParentGetChildRequestTopResponse::ParentGetChildRequestTopResponse;
+  Response(::test_protocolrequest::ParentGetChildRequestTopResponse v) : ParentGetChildRequestTopResponse(std::move(v)) {}
 };
 
 template <>
-struct ::fidl::internal::MessageTraits<
-    ::fidl::Response<::test_protocolrequest::Parent::GetChildRequest>>
-    final {
+struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocolrequest::Parent::GetChildRequest>> final {
  public:
   static constexpr bool kHasPayload = true;
   using Payload = ::test_protocolrequest::ParentGetChildRequestTopResponse;
 };
 template <>
-class ::fidl::Result<::test_protocolrequest::Parent::GetChildRequest> final
-    : public ::fitx::result<
-          ::fidl::Error,
-          ::test_protocolrequest::ParentGetChildRequestTopResponse> {
+class ::fidl::Result<::test_protocolrequest::Parent::GetChildRequest> final : public ::fitx::result<::fidl::Error, ::test_protocolrequest::ParentGetChildRequestTopResponse> {
  public:
-  using ::fitx::result<
-      ::fidl::Error,
-      ::test_protocolrequest::ParentGetChildRequestTopResponse>::result;
+  using ::fitx::result<::fidl::Error, ::test_protocolrequest::ParentGetChildRequestTopResponse>::result;
 
  protected:
   Result() = default;
 };
 
 template <>
-class ::fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent> final
-    : public ::fidl::internal::NaturalClientBase {
+class ::fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent> final : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
-  ::fidl::internal::NaturalThenable<::test_protocolrequest::Parent::GetChild>
-  GetChild() const;
+  ::fidl::internal::NaturalThenable<::test_protocolrequest::Parent::GetChild> GetChild() const;
 
-  ::fidl::internal::NaturalThenable<
-      ::test_protocolrequest::Parent::GetChildRequest>
-  GetChildRequest() const;
+  ::fidl::internal::NaturalThenable<::test_protocolrequest::Parent::GetChildRequest> GetChildRequest() const;
 
-  ::fitx::result<::fidl::Error> TakeChild(
-      ::fidl::Request<::test_protocolrequest::Parent::TakeChild> request) const;
+  ::fitx::result<::fidl::Error> TakeChild(::fidl::Request<::test_protocolrequest::Parent::TakeChild> request) const;
 
-  ::fitx::result<::fidl::Error> TakeChildRequest(
-      ::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest> request)
-      const;
+  ::fitx::result<::fidl::Error> TakeChildRequest(::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest> request) const;
 };
 namespace test_protocolrequest {
 #endif  // __Fuchsia__
@@ -144,22 +113,16 @@ namespace test_protocolrequest {
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::internal::NaturalSyncClientImpl<::test_protocolrequest::Parent>
-    final : public ::fidl::internal::SyncEndpointManagedVeneer<
-                ::fidl::internal::NaturalSyncClientImpl<
-                    ::test_protocolrequest::Parent>> {
+class ::fidl::internal::NaturalSyncClientImpl<::test_protocolrequest::Parent> final
+    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalSyncClientImpl<::test_protocolrequest::Parent>> {
  public:
   ::fidl::Result<::test_protocolrequest::Parent::GetChild> GetChild();
 
-  ::fidl::Result<::test_protocolrequest::Parent::GetChildRequest>
-  GetChildRequest();
+  ::fidl::Result<::test_protocolrequest::Parent::GetChildRequest> GetChildRequest();
 
-  ::fitx::result<::fidl::Error> TakeChild(
-      ::fidl::Request<::test_protocolrequest::Parent::TakeChild> request);
+  ::fitx::result<::fidl::Error> TakeChild(::fidl::Request<::test_protocolrequest::Parent::TakeChild> request);
 
-  ::fitx::result<::fidl::Error> TakeChildRequest(
-      ::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest>
-          request);
+  ::fitx::result<::fidl::Error> TakeChildRequest(::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest> request);
 
  private:
   ::fidl::UnownedClientEnd<::test_protocolrequest::Parent> _client_end() const {
@@ -172,8 +135,7 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_protocolrequest::Parent>
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::internal::NaturalEventHandlerInterface<
-    ::test_protocolrequest::Parent> {
+class ::fidl::internal::NaturalEventHandlerInterface<::test_protocolrequest::Parent> {
  public:
   NaturalEventHandlerInterface() = default;
   virtual ~NaturalEventHandlerInterface() = default;
@@ -181,20 +143,15 @@ class ::fidl::internal::NaturalEventHandlerInterface<
 
 template <>
 class ::fidl::AsyncEventHandler<::test_protocolrequest::Parent>
-    : public ::fidl::internal::NaturalEventHandlerInterface<
-          ::test_protocolrequest::Parent>,
-      public ::fidl::internal::AsyncEventHandler {
+    : public ::fidl::internal::NaturalEventHandlerInterface<::test_protocolrequest::Parent>, public ::fidl::internal::AsyncEventHandler {
  public:
   AsyncEventHandler() = default;
 };
 
 template <>
-class ::fidl::internal::NaturalEventDispatcher<::test_protocolrequest::Parent>
-    final : public ::fidl::internal::IncomingEventDispatcher<
-                ::fidl::AsyncEventHandler<::test_protocolrequest::Parent>> {
+class ::fidl::internal::NaturalEventDispatcher<::test_protocolrequest::Parent> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::AsyncEventHandler<::test_protocolrequest::Parent>> {
  public:
-  explicit NaturalEventDispatcher(
-      ::fidl::AsyncEventHandler<::test_protocolrequest::Parent>* event_handler)
+  explicit NaturalEventDispatcher(::fidl::AsyncEventHandler<::test_protocolrequest::Parent>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 
  private:
@@ -206,17 +163,14 @@ class ::fidl::internal::NaturalEventDispatcher<::test_protocolrequest::Parent>
 
 #ifdef __Fuchsia__
 template <>
-class ::fidl::internal::NaturalWeakEventSender<::test_protocolrequest::Parent>
-    : public ::fidl::internal::WeakEventSenderBase {
+class ::fidl::internal::NaturalWeakEventSender<::test_protocolrequest::Parent> : public ::fidl::internal::WeakEventSenderBase {
  public:
   using WeakEventSenderBase::WeakEventSenderBase;
 };
 
 template <>
 class ::fidl::internal::NaturalEventSender<::test_protocolrequest::Parent>
-    : public ::fidl::internal::SyncEndpointManagedVeneer<
-          ::fidl::internal::NaturalEventSender<
-              ::test_protocolrequest::Parent>> {
+    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalEventSender<::test_protocolrequest::Parent>> {
  public:
   using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 };
@@ -230,9 +184,7 @@ class ::fidl::Request<::test_protocolrequest::Parent::GetChild> final {
 };
 
 template <>
-struct ::fidl::internal::MessageTraits<
-    ::fidl::Request<::test_protocolrequest::Parent::GetChild>>
-    final {
+struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocolrequest::Parent::GetChild>> final {
  public:
   static constexpr bool kHasPayload = false;
 };
@@ -246,9 +198,7 @@ class ::fidl::Request<::test_protocolrequest::Parent::GetChildRequest> final {
 };
 
 template <>
-struct ::fidl::internal::MessageTraits<
-    ::fidl::Request<::test_protocolrequest::Parent::GetChildRequest>>
-    final {
+struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocolrequest::Parent::GetChildRequest>> final {
  public:
   static constexpr bool kHasPayload = false;
 };
@@ -257,18 +207,14 @@ struct ::fidl::internal::MessageTraits<
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::Request<::test_protocolrequest::Parent::TakeChild> final
-    : public ::test_protocolrequest::ParentTakeChildRequest {
+class ::fidl::Request<::test_protocolrequest::Parent::TakeChild> final : public ::test_protocolrequest::ParentTakeChildRequest {
  public:
   using ::test_protocolrequest::ParentTakeChildRequest::ParentTakeChildRequest;
-  Request(::test_protocolrequest::ParentTakeChildRequest v)
-      : ::test_protocolrequest::ParentTakeChildRequest(std::move(v)) {}
+  Request(::test_protocolrequest::ParentTakeChildRequest v) : ::test_protocolrequest::ParentTakeChildRequest(std::move(v)) {}
 };
 
 template <>
-struct ::fidl::internal::MessageTraits<
-    ::fidl::Request<::test_protocolrequest::Parent::TakeChild>>
-    final {
+struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocolrequest::Parent::TakeChild>> final {
  public:
   static constexpr bool kHasPayload = true;
   using Payload = ::test_protocolrequest::ParentTakeChildRequest;
@@ -278,19 +224,14 @@ struct ::fidl::internal::MessageTraits<
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest> final
-    : public ::test_protocolrequest::ParentTakeChildRequestRequest {
+class ::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest> final : public ::test_protocolrequest::ParentTakeChildRequestRequest {
  public:
-  using ::test_protocolrequest::ParentTakeChildRequestRequest::
-      ParentTakeChildRequestRequest;
-  Request(::test_protocolrequest::ParentTakeChildRequestRequest v)
-      : ::test_protocolrequest::ParentTakeChildRequestRequest(std::move(v)) {}
+  using ::test_protocolrequest::ParentTakeChildRequestRequest::ParentTakeChildRequestRequest;
+  Request(::test_protocolrequest::ParentTakeChildRequestRequest v) : ::test_protocolrequest::ParentTakeChildRequestRequest(std::move(v)) {}
 };
 
 template <>
-struct ::fidl::internal::MessageTraits<
-    ::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest>>
-    final {
+struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest>> final {
  public:
   static constexpr bool kHasPayload = true;
   using Payload = ::test_protocolrequest::ParentTakeChildRequestRequest;
@@ -298,31 +239,25 @@ struct ::fidl::internal::MessageTraits<
 #endif  // __Fuchsia__
 
 template <>
-class ::fidl::internal::NaturalCompleterBase<
-    ::test_protocolrequest::Parent::GetChild> : public ::fidl::CompleterBase {
+class ::fidl::internal::NaturalCompleterBase<::test_protocolrequest::Parent::GetChild> : public ::fidl::CompleterBase {
  public:
-  void Reply(
-      ::fidl::Response<::test_protocolrequest::Parent::GetChild>&& response);
+  void Reply(::fidl::Response<::test_protocolrequest::Parent::GetChild>&& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
 };
 
 template <>
-class ::fidl::internal::NaturalCompleterBase<
-    ::test_protocolrequest::Parent::GetChildRequest>
-    : public ::fidl::CompleterBase {
+class ::fidl::internal::NaturalCompleterBase<::test_protocolrequest::Parent::GetChildRequest> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_protocolrequest::Parent::GetChildRequest>&&
-                 response);
+  void Reply(::fidl::Response<::test_protocolrequest::Parent::GetChildRequest>&& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
 };
 
 template <>
-class ::fidl::Server<::test_protocolrequest::Parent>
-    : public ::fidl::internal::IncomingMessageDispatcher {
+class ::fidl::Server<::test_protocolrequest::Parent> : public ::fidl::internal::IncomingMessageDispatcher {
  public:
   Server() = default;
   virtual ~Server() = default;
@@ -330,37 +265,25 @@ class ::fidl::Server<::test_protocolrequest::Parent>
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_protocolrequest::Parent;
 
-  using GetChildRequest =
-      ::fidl::Request<::test_protocolrequest::Parent::GetChild>;
-  using GetChildCompleter = ::fidl::internal::NaturalCompleter<
-      ::test_protocolrequest::Parent::GetChild>;
+  using GetChildRequest = ::fidl::Request<::test_protocolrequest::Parent::GetChild>;
+  using GetChildCompleter = ::fidl::internal::NaturalCompleter<::test_protocolrequest::Parent::GetChild>;
 
-  virtual void GetChild(GetChildRequest& request,
-                        GetChildCompleter::Sync& completer) = 0;
+  virtual void GetChild(GetChildRequest& request, GetChildCompleter::Sync& completer) = 0;
 
-  using GetChildRequestRequest =
-      ::fidl::Request<::test_protocolrequest::Parent::GetChildRequest>;
-  using GetChildRequestCompleter = ::fidl::internal::NaturalCompleter<
-      ::test_protocolrequest::Parent::GetChildRequest>;
+  using GetChildRequestRequest = ::fidl::Request<::test_protocolrequest::Parent::GetChildRequest>;
+  using GetChildRequestCompleter = ::fidl::internal::NaturalCompleter<::test_protocolrequest::Parent::GetChildRequest>;
 
-  virtual void GetChildRequest(GetChildRequestRequest& request,
-                               GetChildRequestCompleter::Sync& completer) = 0;
+  virtual void GetChildRequest(GetChildRequestRequest& request, GetChildRequestCompleter::Sync& completer) = 0;
 
-  using TakeChildRequest =
-      ::fidl::Request<::test_protocolrequest::Parent::TakeChild>;
-  using TakeChildCompleter = ::fidl::internal::NaturalCompleter<
-      ::test_protocolrequest::Parent::TakeChild>;
+  using TakeChildRequest = ::fidl::Request<::test_protocolrequest::Parent::TakeChild>;
+  using TakeChildCompleter = ::fidl::internal::NaturalCompleter<::test_protocolrequest::Parent::TakeChild>;
 
-  virtual void TakeChild(TakeChildRequest& request,
-                         TakeChildCompleter::Sync& completer) = 0;
+  virtual void TakeChild(TakeChildRequest& request, TakeChildCompleter::Sync& completer) = 0;
 
-  using TakeChildRequestRequest =
-      ::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest>;
-  using TakeChildRequestCompleter = ::fidl::internal::NaturalCompleter<
-      ::test_protocolrequest::Parent::TakeChildRequest>;
+  using TakeChildRequestRequest = ::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest>;
+  using TakeChildRequestCompleter = ::fidl::internal::NaturalCompleter<::test_protocolrequest::Parent::TakeChildRequest>;
 
-  virtual void TakeChildRequest(TakeChildRequestRequest& request,
-                                TakeChildRequestCompleter::Sync& completer) = 0;
+  virtual void TakeChildRequest(TakeChildRequestRequest& request, TakeChildRequestCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(
@@ -371,11 +294,9 @@ class ::fidl::Server<::test_protocolrequest::Parent>
 #ifdef __Fuchsia__
 
 template <>
-struct ::fidl::internal::NaturalServerDispatcher<::test_protocolrequest::Parent>
-    final {
+struct ::fidl::internal::NaturalServerDispatcher<::test_protocolrequest::Parent> final {
   NaturalServerDispatcher() = delete;
-  static void Dispatch(::fidl::Server<::test_protocolrequest::Parent>* impl,
-                       ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fidl::Server<::test_protocolrequest::Parent>* impl, ::fidl::IncomingMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
@@ -388,8 +309,7 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_protocolrequest::Parent>
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::internal::NaturalClientImpl<::test_protocolrequest::Child> final
-    : public ::fidl::internal::NaturalClientBase {
+class ::fidl::internal::NaturalClientImpl<::test_protocolrequest::Child> final : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
 };
@@ -398,10 +318,8 @@ class ::fidl::internal::NaturalClientImpl<::test_protocolrequest::Child> final
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::internal::NaturalSyncClientImpl<::test_protocolrequest::Child>
-    final : public ::fidl::internal::SyncEndpointManagedVeneer<
-                ::fidl::internal::NaturalSyncClientImpl<
-                    ::test_protocolrequest::Child>> {
+class ::fidl::internal::NaturalSyncClientImpl<::test_protocolrequest::Child> final
+    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalSyncClientImpl<::test_protocolrequest::Child>> {
  public:
  private:
   ::fidl::UnownedClientEnd<::test_protocolrequest::Child> _client_end() const {
@@ -414,8 +332,7 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_protocolrequest::Child>
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::internal::NaturalEventHandlerInterface<
-    ::test_protocolrequest::Child> {
+class ::fidl::internal::NaturalEventHandlerInterface<::test_protocolrequest::Child> {
  public:
   NaturalEventHandlerInterface() = default;
   virtual ~NaturalEventHandlerInterface() = default;
@@ -423,20 +340,15 @@ class ::fidl::internal::NaturalEventHandlerInterface<
 
 template <>
 class ::fidl::AsyncEventHandler<::test_protocolrequest::Child>
-    : public ::fidl::internal::NaturalEventHandlerInterface<
-          ::test_protocolrequest::Child>,
-      public ::fidl::internal::AsyncEventHandler {
+    : public ::fidl::internal::NaturalEventHandlerInterface<::test_protocolrequest::Child>, public ::fidl::internal::AsyncEventHandler {
  public:
   AsyncEventHandler() = default;
 };
 
 template <>
-class ::fidl::internal::NaturalEventDispatcher<::test_protocolrequest::Child>
-    final : public ::fidl::internal::IncomingEventDispatcher<
-                ::fidl::AsyncEventHandler<::test_protocolrequest::Child>> {
+class ::fidl::internal::NaturalEventDispatcher<::test_protocolrequest::Child> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::AsyncEventHandler<::test_protocolrequest::Child>> {
  public:
-  explicit NaturalEventDispatcher(
-      ::fidl::AsyncEventHandler<::test_protocolrequest::Child>* event_handler)
+  explicit NaturalEventDispatcher(::fidl::AsyncEventHandler<::test_protocolrequest::Child>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 
  private:
@@ -448,24 +360,21 @@ class ::fidl::internal::NaturalEventDispatcher<::test_protocolrequest::Child>
 
 #ifdef __Fuchsia__
 template <>
-class ::fidl::internal::NaturalWeakEventSender<::test_protocolrequest::Child>
-    : public ::fidl::internal::WeakEventSenderBase {
+class ::fidl::internal::NaturalWeakEventSender<::test_protocolrequest::Child> : public ::fidl::internal::WeakEventSenderBase {
  public:
   using WeakEventSenderBase::WeakEventSenderBase;
 };
 
 template <>
 class ::fidl::internal::NaturalEventSender<::test_protocolrequest::Child>
-    : public ::fidl::internal::SyncEndpointManagedVeneer<
-          ::fidl::internal::NaturalEventSender<::test_protocolrequest::Child>> {
+    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalEventSender<::test_protocolrequest::Child>> {
  public:
   using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 };
 #endif  // __Fuchsia__
 
 template <>
-class ::fidl::Server<::test_protocolrequest::Child>
-    : public ::fidl::internal::IncomingMessageDispatcher {
+class ::fidl::Server<::test_protocolrequest::Child> : public ::fidl::internal::IncomingMessageDispatcher {
  public:
   Server() = default;
   virtual ~Server() = default;
@@ -482,11 +391,9 @@ class ::fidl::Server<::test_protocolrequest::Child>
 #ifdef __Fuchsia__
 
 template <>
-struct ::fidl::internal::NaturalServerDispatcher<::test_protocolrequest::Child>
-    final {
+struct ::fidl::internal::NaturalServerDispatcher<::test_protocolrequest::Child> final {
   NaturalServerDispatcher() = delete;
-  static void Dispatch(::fidl::Server<::test_protocolrequest::Child>* impl,
-                       ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fidl::Server<::test_protocolrequest::Child>* impl, ::fidl::IncomingMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 

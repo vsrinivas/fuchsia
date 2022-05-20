@@ -2,8 +2,7 @@
 
 #include <fidl/test.table/cpp/wire_types.h>
 
-bool ::fidl::WireTableFrame<
-    ::test_table::wire::TableWithAttributes>::HasUnknownData() const {
+bool ::fidl::WireTableFrame<::test_table::wire::TableWithAttributes>::HasUnknownData() const {
   return false;
 }
 
@@ -17,8 +16,7 @@ bool ::test_table::wire::TableWithAttributes::HasUnknownData() const {
   return frame_ptr_->HasUnknownData();
 }
 
-bool ::fidl::WireTableFrame<::test_table::wire::SimpleTable>::HasUnknownData()
-    const {
+bool ::fidl::WireTableFrame<::test_table::wire::SimpleTable>::HasUnknownData() const {
   if (!reserved_1_.IsZeroEnvelope()) {
     return true;
   }
@@ -41,8 +39,7 @@ bool ::test_table::wire::SimpleTable::HasUnknownData() const {
   return frame_ptr_->HasUnknownData();
 }
 
-bool ::fidl::WireTableFrame<
-    ::test_table::wire::ReverseOrdinalTable>::HasUnknownData() const {
+bool ::fidl::WireTableFrame<::test_table::wire::ReverseOrdinalTable>::HasUnknownData() const {
   return false;
 }
 
@@ -56,8 +53,7 @@ bool ::test_table::wire::ReverseOrdinalTable::HasUnknownData() const {
   return frame_ptr_->HasUnknownData();
 }
 
-bool ::fidl::WireTableFrame<
-    ::test_table::wire::OlderSimpleTable>::HasUnknownData() const {
+bool ::fidl::WireTableFrame<::test_table::wire::OlderSimpleTable>::HasUnknownData() const {
   return false;
 }
 
@@ -71,8 +67,7 @@ bool ::test_table::wire::OlderSimpleTable::HasUnknownData() const {
   return frame_ptr_->HasUnknownData();
 }
 
-bool ::fidl::WireTableFrame<
-    ::test_table::wire::NewerSimpleTable>::HasUnknownData() const {
+bool ::fidl::WireTableFrame<::test_table::wire::NewerSimpleTable>::HasUnknownData() const {
   if (!reserved_1_.IsZeroEnvelope()) {
     return true;
   }
@@ -95,8 +90,7 @@ bool ::test_table::wire::NewerSimpleTable::HasUnknownData() const {
   return frame_ptr_->HasUnknownData();
 }
 
-bool ::fidl::WireTableFrame<
-    ::test_table::wire::ExtensionTable>::HasUnknownData() const {
+bool ::fidl::WireTableFrame<::test_table::wire::ExtensionTable>::HasUnknownData() const {
   return false;
 }
 
@@ -110,8 +104,7 @@ bool ::test_table::wire::ExtensionTable::HasUnknownData() const {
   return frame_ptr_->HasUnknownData();
 }
 
-bool ::fidl::WireTableFrame<
-    ::test_table::wire::SixtyFourOrdinalTable>::HasUnknownData() const {
+bool ::fidl::WireTableFrame<::test_table::wire::SixtyFourOrdinalTable>::HasUnknownData() const {
   return false;
 }
 
@@ -125,8 +118,7 @@ bool ::test_table::wire::SixtyFourOrdinalTable::HasUnknownData() const {
   return frame_ptr_->HasUnknownData();
 }
 
-bool ::fidl::WireTableFrame<::test_table::wire::EmptyTable>::HasUnknownData()
-    const {
+bool ::fidl::WireTableFrame<::test_table::wire::EmptyTable>::HasUnknownData() const {
   return false;
 }
 

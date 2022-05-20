@@ -18,15 +18,16 @@ using TwoWayAddRequest = ::test::drivertwoway::TwoWayAddRequest;
 
 template <>
 struct MinSize<TwoWayAddTopResponse> {
-  operator size_t() { return MinSize<uint16_t>(); }
+  operator size_t() {
+    return MinSize<uint16_t>();
+  }
 };
 template <>
 struct Allocate<TwoWayAddTopResponse> {
   TwoWayAddTopResponse operator()(FuzzInput* src, size_t* size) {
     ZX_ASSERT(*size >= MinSize<TwoWayAddTopResponse>());
     TwoWayAddTopResponse out;
-    const size_t slack_per_member =
-        (*size - MinSize<TwoWayAddTopResponse>()) / 1;
+    const size_t slack_per_member = (*size - MinSize<TwoWayAddTopResponse>()) / 1;
     size_t out_size;
     out_size = MinSize<uint16_t>() + slack_per_member;
     out.sum = Allocate<uint16_t>{}(src, &out_size);
@@ -35,7 +36,9 @@ struct Allocate<TwoWayAddTopResponse> {
 };
 template <>
 struct MinSize<TwoWayAddRequest> {
-  operator size_t() { return MinSize<uint16_t>() + MinSize<uint16_t>(); }
+  operator size_t() {
+    return MinSize<uint16_t>() + MinSize<uint16_t>();
+  }
 };
 template <>
 struct Allocate<TwoWayAddRequest> {

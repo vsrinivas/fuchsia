@@ -7,27 +7,20 @@ namespace fidl {
 namespace testing {
 
 template <>
-class WireTestBase<::test_placementofattributes::ExampleProtocol>
-    : public ::fidl::WireServer<::test_placementofattributes::ExampleProtocol> {
+class WireTestBase<::test_placementofattributes::ExampleProtocol> : public ::fidl::WireServer<::test_placementofattributes::ExampleProtocol> {
  public:
-  virtual ~WireTestBase<::test_placementofattributes::ExampleProtocol>() =
-      default;
-  virtual void NotImplemented_(const std::string& name,
-                               ::fidl::CompleterBase& completer) = 0;
-  virtual void Method(MethodRequestView request,
-                      MethodCompleter::Sync& completer) override {
+  virtual ~WireTestBase<::test_placementofattributes::ExampleProtocol>() = default;
+  virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
+  virtual void Method(
+      MethodRequestView request, MethodCompleter::Sync& completer) override {
     NotImplemented_("Method", completer);
   }
 };
 
 template <>
-class ::fidl::testing::WireSyncEventHandlerTestBase<
-    ::test_placementofattributes::ExampleProtocol>
-    : public ::fidl::WireSyncEventHandler<
-          ::test_placementofattributes::ExampleProtocol> {
+class ::fidl::testing::WireSyncEventHandlerTestBase<::test_placementofattributes::ExampleProtocol> : public ::fidl::WireSyncEventHandler<::test_placementofattributes::ExampleProtocol> {
  public:
-  virtual ~WireSyncEventHandlerTestBase<
-      ::test_placementofattributes::ExampleProtocol>() = default;
+  virtual ~WireSyncEventHandlerTestBase<::test_placementofattributes::ExampleProtocol>() = default;
   virtual void NotImplemented_(const std::string& name) = 0;
 };
 }  // namespace testing

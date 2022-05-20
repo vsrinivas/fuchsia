@@ -14,15 +14,16 @@ const fidl_type_t* UnionMember::FidlType = &test_anonymous_UnionMemberTable;
 
 UnionMember::UnionMember() {}
 
-UnionMember::~UnionMember() { Destroy(); }
+UnionMember::~UnionMember() {
+  Destroy();
+}
 
 UnionMember::UnionMember(UnionMember&& other) : tag_(other.tag_) {
   switch (tag_) {
     case ::test::anonymous::UnionMember::Tag::kUnionData:
       union_data_ = std::move(other.union_data_);
       break;
-    case static_cast<fidl_xunion_tag_t>(
-        ::test::anonymous::UnionMember::Tag::Invalid):
+    case static_cast<fidl_xunion_tag_t>(::test::anonymous::UnionMember::Tag::Invalid):
       break;
     default:
       new (&unknown_data_) decltype(unknown_data_);
@@ -39,8 +40,7 @@ UnionMember& UnionMember::operator=(UnionMember&& other) {
       case ::test::anonymous::UnionMember::Tag::kUnionData:
         union_data_ = std::move(other.union_data_);
         break;
-      case static_cast<fidl_xunion_tag_t>(
-          ::test::anonymous::UnionMember::Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(::test::anonymous::UnionMember::Tag::Invalid):
         break;
       default:
         new (&unknown_data_) decltype(unknown_data_);
@@ -57,44 +57,37 @@ UnionMember UnionMember::WithUnionData(uint8_t&& val) {
   return result;
 }
 
-void UnionMember::Encode(
-    ::fidl::Encoder* encoder, size_t offset,
-    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+void UnionMember::Encode(::fidl::Encoder* encoder, size_t offset,
+                         cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
   switch (Which()) {
     case ::test::anonymous::UnionMember::Tag::kUnionData: {
-      if (::fidl::EncodingInlineSize<uint8_t>(encoder) <=
-          FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-        ::fidl::Encode(encoder, &union_data_,
-                       offset + offsetof(fidl_xunion_v2_t, envelope));
+      if (::fidl::EncodingInlineSize<uint8_t>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+        ::fidl::Encode(encoder, &union_data_, offset + offsetof(fidl_xunion_v2_t, envelope));
 
         fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
         xunion->tag = tag_;
-        xunion->envelope.num_handles = static_cast<uint16_t>(
-            encoder->CurrentHandleCount() - handles_before);
+        xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
         xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
         break;
       }
 
       ::fidl::Encode(
-          encoder, &union_data_,
-          encoder->Alloc(
-              ::fidl::EncodingInlineSize<uint8_t, ::fidl::Encoder>(encoder)));
+          encoder,
+          &union_data_,
+          encoder->Alloc(::fidl::EncodingInlineSize<uint8_t, ::fidl::Encoder>(encoder)));
 
       fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
       xunion->tag = tag_;
-      xunion->envelope.num_bytes =
-          static_cast<uint32_t>(encoder->CurrentLength() - length_before);
-      xunion->envelope.num_handles =
-          static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
+      xunion->envelope.num_bytes = static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+      xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
       xunion->envelope.flags = 0;
       break;
     }
     case ::test::anonymous::UnionMember::Tag::kUnknown: {
-      ::fidl::EncodeUnknownBytes(encoder, &unknown_data_,
-                                 offset + offsetof(fidl_xunion_t, envelope));
+      ::fidl::EncodeUnknownBytes(encoder, &unknown_data_, offset + offsetof(fidl_xunion_t, envelope));
       *encoder->GetPtr<uint64_t>(offset) = tag_;
       break;
     }
@@ -103,14 +96,13 @@ void UnionMember::Encode(
   }
 }
 
-void UnionMember::Decode(::fidl::Decoder* _decoder, UnionMember* value,
-                         size_t offset) {
+void UnionMember::Decode(::fidl::Decoder* _decoder, UnionMember* value, size_t offset) {
   fidl_xunion_v2_t* xunion = _decoder->GetPtr<fidl_xunion_v2_t>(offset);
 
-  if (xunion->envelope.num_bytes == 0 && xunion->envelope.num_handles == 0 &&
+  if (xunion->envelope.num_bytes == 0 &&
+      xunion->envelope.num_handles == 0 &&
       xunion->envelope.flags == 0) {
-    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
-        ::test::anonymous::UnionMember::Tag::Invalid));
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(::test::anonymous::UnionMember::Tag::Invalid));
     return;
   }
 
@@ -126,8 +118,7 @@ void UnionMember::Decode(::fidl::Decoder* _decoder, UnionMember* value,
     default: {
       auto unknown_info = _decoder->EnvelopeUnknownDataInfo(&xunion->envelope);
       value->unknown_data_.resize(unknown_info.num_bytes);
-      ::fidl::DecodeUnknownBytesContents(_decoder, &value->unknown_data_,
-                                         unknown_info.value_offset);
+      ::fidl::DecodeUnknownBytesContents(_decoder, &value->unknown_data_, unknown_info.value_offset);
       break;
     }
   }
@@ -153,8 +144,7 @@ UnionMember& UnionMember::set_union_data(uint8_t value) {
   union_data_ = std::move(value);
   return *this;
 }
-UnionMember& UnionMember::SetUnknownData(fidl_xunion_tag_t ordinal,
-                                         std::vector<uint8_t> bytes) {
+UnionMember& UnionMember::SetUnknownData(fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes) {
   EnsureStorageInitialized(ordinal);
   unknown_data_ = std::move(bytes);
   return *this;
@@ -165,15 +155,13 @@ void UnionMember::Destroy() {
     case ::test::anonymous::UnionMember::Tag::kUnionData:
       break;
 
-    case static_cast<fidl_xunion_tag_t>(
-        ::test::anonymous::UnionMember::Tag::Invalid):
+    case static_cast<fidl_xunion_tag_t>(::test::anonymous::UnionMember::Tag::Invalid):
       break;
     default:
       unknown_data_.~decltype(unknown_data_)();
       break;
   }
-  tag_ = static_cast<fidl_xunion_tag_t>(
-      ::test::anonymous::UnionMember::Tag::Invalid);
+  tag_ = static_cast<fidl_xunion_tag_t>(::test::anonymous::UnionMember::Tag::Invalid);
 }
 
 void UnionMember::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
@@ -181,8 +169,7 @@ void UnionMember::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     Destroy();
     tag_ = tag;
     switch (tag_) {
-      case static_cast<fidl_xunion_tag_t>(
-          ::test::anonymous::UnionMember::Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(::test::anonymous::UnionMember::Tag::Invalid):
         break;
       case ::test::anonymous::UnionMember::Tag::kUnionData:
         new (&union_data_) uint8_t();
@@ -197,22 +184,18 @@ void UnionMember::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
 extern "C" const fidl_type_t test_anonymous_TableDataTable;
 const fidl_type_t* TableData::FidlType = &test_anonymous_TableDataTable;
 
-void TableData::Encode(
-    ::fidl::Encoder* _encoder, size_t _offset,
-    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+void TableData::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                       cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<TableData>::value) {
-    memcpy(_encoder->template GetPtr<TableData>(_offset), this,
-           sizeof(TableData));
+    memcpy(_encoder->template GetPtr<TableData>(_offset), this, sizeof(TableData));
   } else {
     ::fidl::Encode(_encoder, &data, _offset + 0);
   }
 }
 
-void TableData::Decode(::fidl::Decoder* _decoder, TableData* _value,
-                       size_t _offset) {
+void TableData::Decode(::fidl::Decoder* _decoder, TableData* _value, size_t _offset) {
   if (::fidl::IsMemcpyCompatible<TableData>::value) {
-    memcpy(_value, _decoder->template GetPtr<TableData>(_offset),
-           sizeof(TableData));
+    memcpy(_value, _decoder->template GetPtr<TableData>(_offset), sizeof(TableData));
   } else {
     ::fidl::Decode(_decoder, &_value->data, _offset + 0);
   }
@@ -220,7 +203,8 @@ void TableData::Decode(::fidl::Decoder* _decoder, TableData* _value,
 
 zx_status_t TableData::Clone(TableData* _result) const {
   zx_status_t _status = ::fidl::Clone(data, &_result->data);
-  if (_status != ZX_OK) return _status;
+  if (_status != ZX_OK)
+    return _status;
   return ZX_OK;
 }
 
@@ -232,8 +216,7 @@ TableMember::TableMember() {}
 TableMember::TableMember(TableMember&& other) {
   field_presence_ = other.field_presence_;
   if (field_presence_.IsSet<1>()) {
-    Construct(&table_data_value_.value,
-              std::move(other.table_data_value_.value));
+    Construct(&table_data_value_.value, std::move(other.table_data_value_.value));
   }
 }
 
@@ -249,8 +232,7 @@ TableMember& TableMember::operator=(TableMember&& other) {
       table_data_value_.value = std::move(other.table_data_value_.value);
     } else {
       field_presence_.Set<1>();
-      Construct(&table_data_value_.value,
-                std::move(other.table_data_value_.value));
+      Construct(&table_data_value_.value, std::move(other.table_data_value_.value));
     }
   } else if (field_presence_.IsSet<1>()) {
     field_presence_.Clear<1>();
@@ -259,52 +241,43 @@ TableMember& TableMember::operator=(TableMember&& other) {
   return *this;
 }
 
-bool TableMember::IsEmpty() const { return field_presence_.IsEmpty(); }
+bool TableMember::IsEmpty() const {
+  return field_presence_.IsEmpty();
+}
 
-void TableMember::Encode(
-    ::fidl::Encoder* _encoder, size_t _offset,
-    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+void TableMember::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                         cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   size_t max_ordinal = MaxOrdinal();
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
-  __attribute__((__unused__)) size_t base =
-      _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
+  __attribute__((__unused__)) size_t base = _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
   if (field_presence_.IsSet<1>()) {
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
     size_t envelope_base = base + (2 - 1) * sizeof(fidl_envelope_v2_t);
 
-    if (::fidl::EncodingInlineSize<::std::vector<::test::anonymous::TableData>>(
-            _encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+    if (::fidl::EncodingInlineSize<::std::vector<::test::anonymous::TableData>>(_encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
       ::fidl::Encode(_encoder, &table_data_value_.value, envelope_base);
 
-      fidl_envelope_v2_t* envelope =
-          _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      envelope->num_handles = static_cast<uint16_t>(
-          _encoder->CurrentHandleCount() - handles_before);
+      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder, &table_data_value_.value,
-          _encoder->Alloc(
-              ::fidl::EncodingInlineSize<
-                  ::std::vector<::test::anonymous::TableData>, ::fidl::Encoder>(
-                  _encoder)));
+          _encoder,
+          &table_data_value_.value,
+          _encoder->Alloc(::fidl::EncodingInlineSize<::std::vector<::test::anonymous::TableData>, ::fidl::Encoder>(_encoder)));
 
-      fidl_envelope_v2_t* envelope =
-          _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      envelope->num_bytes =
-          static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
-      envelope->num_handles = static_cast<uint16_t>(
-          _encoder->CurrentHandleCount() - handles_before);
+      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
+      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
       envelope->flags = 0;
     }
   }
 }
 
-void TableMember::Decode(::fidl::Decoder* _decoder, TableMember* _value,
-                         size_t _offset) {
+void TableMember::Decode(::fidl::Decoder* _decoder, TableMember* _value, size_t _offset) {
   fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
   __attribute__((__unused__)) size_t base;
   __attribute__((__unused__)) size_t count;
@@ -316,8 +289,7 @@ void TableMember::Decode(::fidl::Decoder* _decoder, TableMember* _value,
   count = encoded->count;
   if (count >= 2) {
     size_t envelope_base = base + (2 - 1) * sizeof(fidl_envelope_v2_t);
-    fidl_envelope_v2_t* envelope =
-        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_table_data(),
                      _decoder->EnvelopeValueOffset(envelope));
@@ -339,9 +311,9 @@ done_2:
 
 zx_status_t TableMember::Clone(TableMember* result) const {
   if (field_presence_.IsSet<1>()) {
-    zx_status_t _status =
-        ::fidl::Clone(table_data_value_.value, result->mutable_table_data());
-    if (_status != ZX_OK) return _status;
+    zx_status_t _status = ::fidl::Clone(table_data_value_.value, result->mutable_table_data());
+    if (_status != ZX_OK)
+      return _status;
   } else {
     result->clear_table_data();
   }
@@ -349,50 +321,40 @@ zx_status_t TableMember::Clone(TableMember* result) const {
 }
 
 extern "C" const fidl_type_t test_anonymous_SomeProtocolSomeMethodRequestTable;
-const fidl_type_t* SomeProtocolSomeMethodRequest::FidlType =
-    &test_anonymous_SomeProtocolSomeMethodRequestTable;
+const fidl_type_t* SomeProtocolSomeMethodRequest::FidlType = &test_anonymous_SomeProtocolSomeMethodRequestTable;
 
-void SomeProtocolSomeMethodRequest::Encode(
-    ::fidl::Encoder* _encoder, size_t _offset,
-    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+void SomeProtocolSomeMethodRequest::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                                           cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<SomeProtocolSomeMethodRequest>::value) {
-    memcpy(_encoder->template GetPtr<SomeProtocolSomeMethodRequest>(_offset),
-           this, sizeof(SomeProtocolSomeMethodRequest));
+    memcpy(_encoder->template GetPtr<SomeProtocolSomeMethodRequest>(_offset), this, sizeof(SomeProtocolSomeMethodRequest));
   } else {
     ::fidl::Encode(_encoder, &union_member, _offset + 0);
     ::fidl::Encode(_encoder, &table_member, _offset + 16);
   }
 }
 
-void SomeProtocolSomeMethodRequest::Decode(
-    ::fidl::Decoder* _decoder, SomeProtocolSomeMethodRequest* _value,
-    size_t _offset) {
+void SomeProtocolSomeMethodRequest::Decode(::fidl::Decoder* _decoder, SomeProtocolSomeMethodRequest* _value, size_t _offset) {
   if (::fidl::IsMemcpyCompatible<SomeProtocolSomeMethodRequest>::value) {
-    memcpy(_value,
-           _decoder->template GetPtr<SomeProtocolSomeMethodRequest>(_offset),
-           sizeof(SomeProtocolSomeMethodRequest));
+    memcpy(_value, _decoder->template GetPtr<SomeProtocolSomeMethodRequest>(_offset), sizeof(SomeProtocolSomeMethodRequest));
   } else {
     ::fidl::Decode(_decoder, &_value->union_member, _offset + 0);
     ::fidl::Decode(_decoder, &_value->table_member, _offset + 16);
   }
 }
 
-zx_status_t SomeProtocolSomeMethodRequest::Clone(
-    SomeProtocolSomeMethodRequest* _result) const {
+zx_status_t SomeProtocolSomeMethodRequest::Clone(SomeProtocolSomeMethodRequest* _result) const {
   zx_status_t _status = ::fidl::Clone(union_member, &_result->union_member);
-  if (_status != ZX_OK) return _status;
+  if (_status != ZX_OK)
+    return _status;
   _status = ::fidl::Clone(table_member, &_result->table_member);
-  if (_status != ZX_OK) return _status;
+  if (_status != ZX_OK)
+    return _status;
   return ZX_OK;
 }
 
 #if (__cplusplus < 201703)
-constexpr const ::test::anonymous::SomeProtocol_SomeMethod_Error
-    SomeProtocol_SomeMethod_Error::ERROR_ONE =
-        ::test::anonymous::SomeProtocol_SomeMethod_Error(1u);
-constexpr const ::test::anonymous::SomeProtocol_SomeMethod_Error
-    SomeProtocol_SomeMethod_Error::ERROR_TWO =
-        ::test::anonymous::SomeProtocol_SomeMethod_Error(2u);
+constexpr const ::test::anonymous::SomeProtocol_SomeMethod_Error SomeProtocol_SomeMethod_Error::ERROR_ONE = ::test::anonymous::SomeProtocol_SomeMethod_Error(1u);
+constexpr const ::test::anonymous::SomeProtocol_SomeMethod_Error SomeProtocol_SomeMethod_Error::ERROR_TWO = ::test::anonymous::SomeProtocol_SomeMethod_Error(2u);
 #endif  // (__cplusplus < 201703)
 
 #if (__cplusplus < 201703)
@@ -404,12 +366,10 @@ constexpr const ::test::anonymous::Op Op::DIV = ::test::anonymous::Op(3u);
 extern "C" const fidl_type_t test_anonymous_OverrideTestTable;
 const fidl_type_t* OverrideTest::FidlType = &test_anonymous_OverrideTestTable;
 
-void OverrideTest::Encode(
-    ::fidl::Encoder* _encoder, size_t _offset,
-    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+void OverrideTest::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                          cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<OverrideTest>::value) {
-    memcpy(_encoder->template GetPtr<OverrideTest>(_offset), this,
-           sizeof(OverrideTest));
+    memcpy(_encoder->template GetPtr<OverrideTest>(_offset), this, sizeof(OverrideTest));
   } else {
     ::fidl::Encode(_encoder, &op, _offset + 0);
     ::fidl::Encode(_encoder, &left, _offset + 8);
@@ -417,11 +377,9 @@ void OverrideTest::Encode(
   }
 }
 
-void OverrideTest::Decode(::fidl::Decoder* _decoder, OverrideTest* _value,
-                          size_t _offset) {
+void OverrideTest::Decode(::fidl::Decoder* _decoder, OverrideTest* _value, size_t _offset) {
   if (::fidl::IsMemcpyCompatible<OverrideTest>::value) {
-    memcpy(_value, _decoder->template GetPtr<OverrideTest>(_offset),
-           sizeof(OverrideTest));
+    memcpy(_value, _decoder->template GetPtr<OverrideTest>(_offset), sizeof(OverrideTest));
   } else {
     ::fidl::Decode(_decoder, &_value->op, _offset + 0);
     ::fidl::Decode(_decoder, &_value->left, _offset + 8);
@@ -431,25 +389,25 @@ void OverrideTest::Decode(::fidl::Decoder* _decoder, OverrideTest* _value,
 
 zx_status_t OverrideTest::Clone(OverrideTest* _result) const {
   zx_status_t _status = ::fidl::Clone(op, &_result->op);
-  if (_status != ZX_OK) return _status;
+  if (_status != ZX_OK)
+    return _status;
   _status = ::fidl::Clone(left, &_result->left);
-  if (_status != ZX_OK) return _status;
+  if (_status != ZX_OK)
+    return _status;
   _status = ::fidl::Clone(right, &_result->right);
-  if (_status != ZX_OK) return _status;
+  if (_status != ZX_OK)
+    return _status;
   return ZX_OK;
 }
 
 #if (__cplusplus < 201703)
-constexpr const ::test::anonymous::Flags Flags::INLINE =
-    ::test::anonymous::Flags(1u);
-constexpr const ::test::anonymous::Flags Flags::kMask =
-    ::test::anonymous::Flags(1u);
+constexpr const ::test::anonymous::Flags Flags::INLINE = ::test::anonymous::Flags(1u);
+constexpr const ::test::anonymous::Flags Flags::kMask = ::test::anonymous::Flags(1u);
 
 #endif  // (__cplusplus < 201703)
 
 extern "C" const fidl_type_t test_anonymous_FunctionApplicationTable;
-const fidl_type_t* FunctionApplication::FidlType =
-    &test_anonymous_FunctionApplicationTable;
+const fidl_type_t* FunctionApplication::FidlType = &test_anonymous_FunctionApplicationTable;
 
 FunctionApplication::FunctionApplication() {}
 
@@ -478,8 +436,7 @@ FunctionApplication::~FunctionApplication() {
   }
 }
 
-FunctionApplication& FunctionApplication::operator=(
-    FunctionApplication&& other) {
+FunctionApplication& FunctionApplication::operator=(FunctionApplication&& other) {
   if (other.field_presence_.IsSet<0>()) {
     if (field_presence_.IsSet<0>()) {
       func_value_.value = std::move(other.func_value_.value);
@@ -516,44 +473,37 @@ FunctionApplication& FunctionApplication::operator=(
   return *this;
 }
 
-bool FunctionApplication::IsEmpty() const { return field_presence_.IsEmpty(); }
+bool FunctionApplication::IsEmpty() const {
+  return field_presence_.IsEmpty();
+}
 
-void FunctionApplication::Encode(
-    ::fidl::Encoder* _encoder, size_t _offset,
-    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+void FunctionApplication::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                                 cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   size_t max_ordinal = MaxOrdinal();
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
-  __attribute__((__unused__)) size_t base =
-      _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
+  __attribute__((__unused__)) size_t base = _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
   if (field_presence_.IsSet<0>()) {
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
     size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
 
-    if (::fidl::EncodingInlineSize<::std::string>(_encoder) <=
-        FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+    if (::fidl::EncodingInlineSize<::std::string>(_encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
       ::fidl::Encode(_encoder, &func_value_.value, envelope_base);
 
-      fidl_envelope_v2_t* envelope =
-          _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      envelope->num_handles = static_cast<uint16_t>(
-          _encoder->CurrentHandleCount() - handles_before);
+      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder, &func_value_.value,
-          _encoder->Alloc(
-              ::fidl::EncodingInlineSize<::std::string, ::fidl::Encoder>(
-                  _encoder)));
+          _encoder,
+          &func_value_.value,
+          _encoder->Alloc(::fidl::EncodingInlineSize<::std::string, ::fidl::Encoder>(_encoder)));
 
-      fidl_envelope_v2_t* envelope =
-          _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      envelope->num_bytes =
-          static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
-      envelope->num_handles = static_cast<uint16_t>(
-          _encoder->CurrentHandleCount() - handles_before);
+      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
+      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
       envelope->flags = 0;
     }
   }
@@ -563,30 +513,21 @@ void FunctionApplication::Encode(
 
     size_t envelope_base = base + (3 - 1) * sizeof(fidl_envelope_v2_t);
 
-    if (::fidl::EncodingInlineSize<
-            ::std::vector<::std::unique_ptr<::test::anonymous::Expression>>>(
-            _encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+    if (::fidl::EncodingInlineSize<::std::vector<::std::unique_ptr<::test::anonymous::Expression>>>(_encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
       ::fidl::Encode(_encoder, &args_value_.value, envelope_base);
 
-      fidl_envelope_v2_t* envelope =
-          _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      envelope->num_handles = static_cast<uint16_t>(
-          _encoder->CurrentHandleCount() - handles_before);
+      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder, &args_value_.value,
-          _encoder->Alloc(
-              ::fidl::EncodingInlineSize<::std::vector<::std::unique_ptr<
-                                             ::test::anonymous::Expression>>,
-                                         ::fidl::Encoder>(_encoder)));
+          _encoder,
+          &args_value_.value,
+          _encoder->Alloc(::fidl::EncodingInlineSize<::std::vector<::std::unique_ptr<::test::anonymous::Expression>>, ::fidl::Encoder>(_encoder)));
 
-      fidl_envelope_v2_t* envelope =
-          _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      envelope->num_bytes =
-          static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
-      envelope->num_handles = static_cast<uint16_t>(
-          _encoder->CurrentHandleCount() - handles_before);
+      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
+      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
       envelope->flags = 0;
     }
   }
@@ -596,35 +537,27 @@ void FunctionApplication::Encode(
 
     size_t envelope_base = base + (4 - 1) * sizeof(fidl_envelope_v2_t);
 
-    if (::fidl::EncodingInlineSize<::test::anonymous::Flags>(_encoder) <=
-        FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+    if (::fidl::EncodingInlineSize<::test::anonymous::Flags>(_encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
       ::fidl::Encode(_encoder, &flags_value_.value, envelope_base);
 
-      fidl_envelope_v2_t* envelope =
-          _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      envelope->num_handles = static_cast<uint16_t>(
-          _encoder->CurrentHandleCount() - handles_before);
+      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder, &flags_value_.value,
-          _encoder->Alloc(
-              ::fidl::EncodingInlineSize<::test::anonymous::Flags,
-                                         ::fidl::Encoder>(_encoder)));
+          _encoder,
+          &flags_value_.value,
+          _encoder->Alloc(::fidl::EncodingInlineSize<::test::anonymous::Flags, ::fidl::Encoder>(_encoder)));
 
-      fidl_envelope_v2_t* envelope =
-          _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      envelope->num_bytes =
-          static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
-      envelope->num_handles = static_cast<uint16_t>(
-          _encoder->CurrentHandleCount() - handles_before);
+      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
+      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
       envelope->flags = 0;
     }
   }
 }
 
-void FunctionApplication::Decode(::fidl::Decoder* _decoder,
-                                 FunctionApplication* _value, size_t _offset) {
+void FunctionApplication::Decode(::fidl::Decoder* _decoder, FunctionApplication* _value, size_t _offset) {
   fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
   __attribute__((__unused__)) size_t base;
   __attribute__((__unused__)) size_t count;
@@ -636,8 +569,7 @@ void FunctionApplication::Decode(::fidl::Decoder* _decoder,
   count = encoded->count;
   if (count >= 1) {
     size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
-    fidl_envelope_v2_t* envelope =
-        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_func(),
                      _decoder->EnvelopeValueOffset(envelope));
@@ -649,8 +581,7 @@ void FunctionApplication::Decode(::fidl::Decoder* _decoder,
   }
   if (count >= 3) {
     size_t envelope_base = base + (3 - 1) * sizeof(fidl_envelope_v2_t);
-    fidl_envelope_v2_t* envelope =
-        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_args(),
                      _decoder->EnvelopeValueOffset(envelope));
@@ -662,8 +593,7 @@ void FunctionApplication::Decode(::fidl::Decoder* _decoder,
   }
   if (count >= 4) {
     size_t envelope_base = base + (4 - 1) * sizeof(fidl_envelope_v2_t);
-    fidl_envelope_v2_t* envelope =
-        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_flags(),
                      _decoder->EnvelopeValueOffset(envelope));
@@ -689,23 +619,23 @@ done_4:
 
 zx_status_t FunctionApplication::Clone(FunctionApplication* result) const {
   if (field_presence_.IsSet<0>()) {
-    zx_status_t _status =
-        ::fidl::Clone(func_value_.value, result->mutable_func());
-    if (_status != ZX_OK) return _status;
+    zx_status_t _status = ::fidl::Clone(func_value_.value, result->mutable_func());
+    if (_status != ZX_OK)
+      return _status;
   } else {
     result->clear_func();
   }
   if (field_presence_.IsSet<2>()) {
-    zx_status_t _status =
-        ::fidl::Clone(args_value_.value, result->mutable_args());
-    if (_status != ZX_OK) return _status;
+    zx_status_t _status = ::fidl::Clone(args_value_.value, result->mutable_args());
+    if (_status != ZX_OK)
+      return _status;
   } else {
     result->clear_args();
   }
   if (field_presence_.IsSet<3>()) {
-    zx_status_t _status =
-        ::fidl::Clone(flags_value_.value, result->mutable_flags());
-    if (_status != ZX_OK) return _status;
+    zx_status_t _status = ::fidl::Clone(flags_value_.value, result->mutable_flags());
+    if (_status != ZX_OK)
+      return _status;
   } else {
     result->clear_flags();
   }
@@ -717,7 +647,9 @@ const fidl_type_t* Expression::FidlType = &test_anonymous_ExpressionTable;
 
 Expression::Expression() {}
 
-Expression::~Expression() { Destroy(); }
+Expression::~Expression() {
+  Destroy();
+}
 
 Expression::Expression(Expression&& other) : tag_(other.tag_) {
   switch (tag_) {
@@ -732,8 +664,7 @@ Expression::Expression(Expression&& other) : tag_(other.tag_) {
       new (&function_application_)::test::anonymous::FunctionApplication();
       function_application_ = std::move(other.function_application_);
       break;
-    case static_cast<fidl_xunion_tag_t>(
-        ::test::anonymous::Expression::Tag::Invalid):
+    case static_cast<fidl_xunion_tag_t>(::test::anonymous::Expression::Tag::Invalid):
       break;
     default:
       new (&unknown_data_) decltype(unknown_data_);
@@ -758,8 +689,7 @@ Expression& Expression::operator=(Expression&& other) {
         new (&function_application_)::test::anonymous::FunctionApplication();
         function_application_ = std::move(other.function_application_);
         break;
-      case static_cast<fidl_xunion_tag_t>(
-          ::test::anonymous::Expression::Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(::test::anonymous::Expression::Tag::Invalid):
         break;
       default:
         new (&unknown_data_) decltype(unknown_data_);
@@ -780,109 +710,89 @@ Expression Expression::WithBinOp(::test::anonymous::OverrideTest&& val) {
   result.set_bin_op(std::move(val));
   return result;
 }
-Expression Expression::WithFunctionApplication(
-    ::test::anonymous::FunctionApplication&& val) {
+Expression Expression::WithFunctionApplication(::test::anonymous::FunctionApplication&& val) {
   Expression result;
   result.set_function_application(std::move(val));
   return result;
 }
 
-void Expression::Encode(
-    ::fidl::Encoder* encoder, size_t offset,
-    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+void Expression::Encode(::fidl::Encoder* encoder, size_t offset,
+                        cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
   switch (Which()) {
     case ::test::anonymous::Expression::Tag::kValue: {
-      if (::fidl::EncodingInlineSize<uint64_t>(encoder) <=
-          FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-        ::fidl::Encode(encoder, &value_,
-                       offset + offsetof(fidl_xunion_v2_t, envelope));
+      if (::fidl::EncodingInlineSize<uint64_t>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+        ::fidl::Encode(encoder, &value_, offset + offsetof(fidl_xunion_v2_t, envelope));
 
         fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
         xunion->tag = tag_;
-        xunion->envelope.num_handles = static_cast<uint16_t>(
-            encoder->CurrentHandleCount() - handles_before);
+        xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
         xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
         break;
       }
 
       ::fidl::Encode(
-          encoder, &value_,
-          encoder->Alloc(
-              ::fidl::EncodingInlineSize<uint64_t, ::fidl::Encoder>(encoder)));
+          encoder,
+          &value_,
+          encoder->Alloc(::fidl::EncodingInlineSize<uint64_t, ::fidl::Encoder>(encoder)));
 
       fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
       xunion->tag = tag_;
-      xunion->envelope.num_bytes =
-          static_cast<uint32_t>(encoder->CurrentLength() - length_before);
-      xunion->envelope.num_handles =
-          static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
+      xunion->envelope.num_bytes = static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+      xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
       xunion->envelope.flags = 0;
       break;
     }
     case ::test::anonymous::Expression::Tag::kBinOp: {
-      if (::fidl::EncodingInlineSize<::test::anonymous::OverrideTest>(
-              encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-        ::fidl::Encode(encoder, &bin_op_,
-                       offset + offsetof(fidl_xunion_v2_t, envelope));
+      if (::fidl::EncodingInlineSize<::test::anonymous::OverrideTest>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+        ::fidl::Encode(encoder, &bin_op_, offset + offsetof(fidl_xunion_v2_t, envelope));
 
         fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
         xunion->tag = tag_;
-        xunion->envelope.num_handles = static_cast<uint16_t>(
-            encoder->CurrentHandleCount() - handles_before);
+        xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
         xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
         break;
       }
 
       ::fidl::Encode(
-          encoder, &bin_op_,
-          encoder->Alloc(
-              ::fidl::EncodingInlineSize<::test::anonymous::OverrideTest,
-                                         ::fidl::Encoder>(encoder)));
+          encoder,
+          &bin_op_,
+          encoder->Alloc(::fidl::EncodingInlineSize<::test::anonymous::OverrideTest, ::fidl::Encoder>(encoder)));
 
       fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
       xunion->tag = tag_;
-      xunion->envelope.num_bytes =
-          static_cast<uint32_t>(encoder->CurrentLength() - length_before);
-      xunion->envelope.num_handles =
-          static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
+      xunion->envelope.num_bytes = static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+      xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
       xunion->envelope.flags = 0;
       break;
     }
     case ::test::anonymous::Expression::Tag::kFunctionApplication: {
-      if (::fidl::EncodingInlineSize<::test::anonymous::FunctionApplication>(
-              encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-        ::fidl::Encode(encoder, &function_application_,
-                       offset + offsetof(fidl_xunion_v2_t, envelope));
+      if (::fidl::EncodingInlineSize<::test::anonymous::FunctionApplication>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+        ::fidl::Encode(encoder, &function_application_, offset + offsetof(fidl_xunion_v2_t, envelope));
 
         fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
         xunion->tag = tag_;
-        xunion->envelope.num_handles = static_cast<uint16_t>(
-            encoder->CurrentHandleCount() - handles_before);
+        xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
         xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
         break;
       }
 
       ::fidl::Encode(
-          encoder, &function_application_,
-          encoder->Alloc(
-              ::fidl::EncodingInlineSize<::test::anonymous::FunctionApplication,
-                                         ::fidl::Encoder>(encoder)));
+          encoder,
+          &function_application_,
+          encoder->Alloc(::fidl::EncodingInlineSize<::test::anonymous::FunctionApplication, ::fidl::Encoder>(encoder)));
 
       fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
       xunion->tag = tag_;
-      xunion->envelope.num_bytes =
-          static_cast<uint32_t>(encoder->CurrentLength() - length_before);
-      xunion->envelope.num_handles =
-          static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
+      xunion->envelope.num_bytes = static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+      xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
       xunion->envelope.flags = 0;
       break;
     }
     case ::test::anonymous::Expression::Tag::kUnknown: {
-      ::fidl::EncodeUnknownBytes(encoder, &unknown_data_,
-                                 offset + offsetof(fidl_xunion_t, envelope));
+      ::fidl::EncodeUnknownBytes(encoder, &unknown_data_, offset + offsetof(fidl_xunion_t, envelope));
       *encoder->GetPtr<uint64_t>(offset) = tag_;
       break;
     }
@@ -891,14 +801,13 @@ void Expression::Encode(
   }
 }
 
-void Expression::Decode(::fidl::Decoder* _decoder, Expression* value,
-                        size_t offset) {
+void Expression::Decode(::fidl::Decoder* _decoder, Expression* value, size_t offset) {
   fidl_xunion_v2_t* xunion = _decoder->GetPtr<fidl_xunion_v2_t>(offset);
 
-  if (xunion->envelope.num_bytes == 0 && xunion->envelope.num_handles == 0 &&
+  if (xunion->envelope.num_bytes == 0 &&
+      xunion->envelope.num_handles == 0 &&
       xunion->envelope.flags == 0) {
-    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
-        ::test::anonymous::Expression::Tag::Invalid));
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(::test::anonymous::Expression::Tag::Invalid));
     return;
   }
 
@@ -917,17 +826,14 @@ void Expression::Decode(::fidl::Decoder* _decoder, Expression* value,
       break;
     }
     case ::test::anonymous::Expression::Tag::kFunctionApplication: {
-      new (
-          &value
-               ->function_application_)::test::anonymous::FunctionApplication();
+      new (&value->function_application_)::test::anonymous::FunctionApplication();
       ::fidl::Decode(_decoder, &value->function_application_, value_offset);
       break;
     }
     default: {
       auto unknown_info = _decoder->EnvelopeUnknownDataInfo(&xunion->envelope);
       value->unknown_data_.resize(unknown_info.num_bytes);
-      ::fidl::DecodeUnknownBytesContents(_decoder, &value->unknown_data_,
-                                         unknown_info.value_offset);
+      ::fidl::DecodeUnknownBytesContents(_decoder, &value->unknown_data_, unknown_info.value_offset);
       break;
     }
   }
@@ -945,11 +851,8 @@ zx_status_t Expression::Clone(Expression* result) const {
       new (&result->bin_op_)::test::anonymous::OverrideTest();
       return ::fidl::Clone(bin_op_, &result->bin_op_);
     case ::test::anonymous::Expression::Tag::kFunctionApplication:
-      new (
-          &result
-               ->function_application_)::test::anonymous::FunctionApplication();
-      return ::fidl::Clone(function_application_,
-                           &result->function_application_);
+      new (&result->function_application_)::test::anonymous::FunctionApplication();
+      return ::fidl::Clone(function_application_, &result->function_application_);
     default:
       new (&result->unknown_data_) decltype(unknown_data_);
       return ::fidl::Clone(unknown_data_, &result->unknown_data_);
@@ -969,15 +872,12 @@ Expression& Expression::set_bin_op(::test::anonymous::OverrideTest value) {
   return *this;
 }
 
-Expression& Expression::set_function_application(
-    ::test::anonymous::FunctionApplication value) {
-  EnsureStorageInitialized(
-      ::test::anonymous::Expression::Tag::kFunctionApplication);
+Expression& Expression::set_function_application(::test::anonymous::FunctionApplication value) {
+  EnsureStorageInitialized(::test::anonymous::Expression::Tag::kFunctionApplication);
   function_application_ = std::move(value);
   return *this;
 }
-Expression& Expression::SetUnknownData(fidl_xunion_tag_t ordinal,
-                                       std::vector<uint8_t> bytes) {
+Expression& Expression::SetUnknownData(fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes) {
   EnsureStorageInitialized(ordinal);
   unknown_data_ = std::move(bytes);
   return *this;
@@ -994,15 +894,13 @@ void Expression::Destroy() {
       function_application_.~decltype(function_application_)();
       break;
 
-    case static_cast<fidl_xunion_tag_t>(
-        ::test::anonymous::Expression::Tag::Invalid):
+    case static_cast<fidl_xunion_tag_t>(::test::anonymous::Expression::Tag::Invalid):
       break;
     default:
       unknown_data_.~decltype(unknown_data_)();
       break;
   }
-  tag_ = static_cast<fidl_xunion_tag_t>(
-      ::test::anonymous::Expression::Tag::Invalid);
+  tag_ = static_cast<fidl_xunion_tag_t>(::test::anonymous::Expression::Tag::Invalid);
 }
 
 void Expression::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
@@ -1010,8 +908,7 @@ void Expression::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     Destroy();
     tag_ = tag;
     switch (tag_) {
-      case static_cast<fidl_xunion_tag_t>(
-          ::test::anonymous::Expression::Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(::test::anonymous::Expression::Tag::Invalid):
         break;
       case ::test::anonymous::Expression::Tag::kValue:
         new (&value_) uint64_t();
@@ -1030,61 +927,49 @@ void Expression::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
 }
 
 #if (__cplusplus < 201703)
-constexpr const ::test::anonymous::BitsMember BitsMember::BIT_ONE =
-    ::test::anonymous::BitsMember(1u);
-constexpr const ::test::anonymous::BitsMember BitsMember::BIT_TWO =
-    ::test::anonymous::BitsMember(2u);
-constexpr const ::test::anonymous::BitsMember BitsMember::kMask =
-    ::test::anonymous::BitsMember(3u);
+constexpr const ::test::anonymous::BitsMember BitsMember::BIT_ONE = ::test::anonymous::BitsMember(1u);
+constexpr const ::test::anonymous::BitsMember BitsMember::BIT_TWO = ::test::anonymous::BitsMember(2u);
+constexpr const ::test::anonymous::BitsMember BitsMember::kMask = ::test::anonymous::BitsMember(3u);
 
 #endif  // (__cplusplus < 201703)
 
-extern "C" const fidl_type_t
-    test_anonymous_SomeProtocol_SomeMethod_ResponseTable;
-const fidl_type_t* SomeProtocol_SomeMethod_Response::FidlType =
-    &test_anonymous_SomeProtocol_SomeMethod_ResponseTable;
+extern "C" const fidl_type_t test_anonymous_SomeProtocol_SomeMethod_ResponseTable;
+const fidl_type_t* SomeProtocol_SomeMethod_Response::FidlType = &test_anonymous_SomeProtocol_SomeMethod_ResponseTable;
 
-void SomeProtocol_SomeMethod_Response::Encode(
-    ::fidl::Encoder* _encoder, size_t _offset,
-    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+void SomeProtocol_SomeMethod_Response::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                                              cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<SomeProtocol_SomeMethod_Response>::value) {
-    memcpy(_encoder->template GetPtr<SomeProtocol_SomeMethod_Response>(_offset),
-           this, sizeof(SomeProtocol_SomeMethod_Response));
+    memcpy(_encoder->template GetPtr<SomeProtocol_SomeMethod_Response>(_offset), this, sizeof(SomeProtocol_SomeMethod_Response));
   } else {
     ::fidl::Encode(_encoder, &bits_member, _offset + 0);
   }
 }
 
-void SomeProtocol_SomeMethod_Response::Decode(
-    ::fidl::Decoder* _decoder, SomeProtocol_SomeMethod_Response* _value,
-    size_t _offset) {
+void SomeProtocol_SomeMethod_Response::Decode(::fidl::Decoder* _decoder, SomeProtocol_SomeMethod_Response* _value, size_t _offset) {
   if (::fidl::IsMemcpyCompatible<SomeProtocol_SomeMethod_Response>::value) {
-    memcpy(_value,
-           _decoder->template GetPtr<SomeProtocol_SomeMethod_Response>(_offset),
-           sizeof(SomeProtocol_SomeMethod_Response));
+    memcpy(_value, _decoder->template GetPtr<SomeProtocol_SomeMethod_Response>(_offset), sizeof(SomeProtocol_SomeMethod_Response));
   } else {
     ::fidl::Decode(_decoder, &_value->bits_member, _offset + 0);
   }
 }
 
-zx_status_t SomeProtocol_SomeMethod_Response::Clone(
-    SomeProtocol_SomeMethod_Response* _result) const {
+zx_status_t SomeProtocol_SomeMethod_Response::Clone(SomeProtocol_SomeMethod_Response* _result) const {
   zx_status_t _status = ::fidl::Clone(bits_member, &_result->bits_member);
-  if (_status != ZX_OK) return _status;
+  if (_status != ZX_OK)
+    return _status;
   return ZX_OK;
 }
 
 extern "C" const fidl_type_t test_anonymous_SomeProtocol_SomeMethod_ResultTable;
-const fidl_type_t* SomeProtocol_SomeMethod_Result::FidlType =
-    &test_anonymous_SomeProtocol_SomeMethod_ResultTable;
+const fidl_type_t* SomeProtocol_SomeMethod_Result::FidlType = &test_anonymous_SomeProtocol_SomeMethod_ResultTable;
 
 SomeProtocol_SomeMethod_Result::SomeProtocol_SomeMethod_Result() {}
 
-SomeProtocol_SomeMethod_Result::~SomeProtocol_SomeMethod_Result() { Destroy(); }
+SomeProtocol_SomeMethod_Result::~SomeProtocol_SomeMethod_Result() {
+  Destroy();
+}
 
-SomeProtocol_SomeMethod_Result::SomeProtocol_SomeMethod_Result(
-    SomeProtocol_SomeMethod_Result&& other)
-    : tag_(other.tag_) {
+SomeProtocol_SomeMethod_Result::SomeProtocol_SomeMethod_Result(SomeProtocol_SomeMethod_Result&& other) : tag_(other.tag_) {
   switch (tag_) {
     case ::test::anonymous::SomeProtocol_SomeMethod_Result::Tag::kResponse:
       new (&response_)::test::anonymous::SomeProtocol_SomeMethod_Response();
@@ -1094,14 +979,12 @@ SomeProtocol_SomeMethod_Result::SomeProtocol_SomeMethod_Result(
       new (&err_)::test::anonymous::SomeProtocol_SomeMethod_Error();
       err_ = std::move(other.err_);
       break;
-    case static_cast<fidl_xunion_tag_t>(
-        ::test::anonymous::SomeProtocol_SomeMethod_Result::Tag::Invalid):
+    case static_cast<fidl_xunion_tag_t>(::test::anonymous::SomeProtocol_SomeMethod_Result::Tag::Invalid):
       break;
   }
 }
 
-SomeProtocol_SomeMethod_Result& SomeProtocol_SomeMethod_Result::operator=(
-    SomeProtocol_SomeMethod_Result&& other) {
+SomeProtocol_SomeMethod_Result& SomeProtocol_SomeMethod_Result::operator=(SomeProtocol_SomeMethod_Result&& other) {
   if (this != &other) {
     Destroy();
     tag_ = other.tag_;
@@ -1114,91 +997,73 @@ SomeProtocol_SomeMethod_Result& SomeProtocol_SomeMethod_Result::operator=(
         new (&err_)::test::anonymous::SomeProtocol_SomeMethod_Error();
         err_ = std::move(other.err_);
         break;
-      case static_cast<fidl_xunion_tag_t>(
-          ::test::anonymous::SomeProtocol_SomeMethod_Result::Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(::test::anonymous::SomeProtocol_SomeMethod_Result::Tag::Invalid):
         break;
     }
   }
   return *this;
 }
 
-SomeProtocol_SomeMethod_Result SomeProtocol_SomeMethod_Result::WithResponse(
-    ::test::anonymous::SomeProtocol_SomeMethod_Response&& val) {
+SomeProtocol_SomeMethod_Result SomeProtocol_SomeMethod_Result::WithResponse(::test::anonymous::SomeProtocol_SomeMethod_Response&& val) {
   SomeProtocol_SomeMethod_Result result;
   result.set_response(std::move(val));
   return result;
 }
-SomeProtocol_SomeMethod_Result SomeProtocol_SomeMethod_Result::WithErr(
-    ::test::anonymous::SomeProtocol_SomeMethod_Error&& val) {
+SomeProtocol_SomeMethod_Result SomeProtocol_SomeMethod_Result::WithErr(::test::anonymous::SomeProtocol_SomeMethod_Error&& val) {
   SomeProtocol_SomeMethod_Result result;
   result.set_err(std::move(val));
   return result;
 }
 
-void SomeProtocol_SomeMethod_Result::Encode(
-    ::fidl::Encoder* encoder, size_t offset,
-    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+void SomeProtocol_SomeMethod_Result::Encode(::fidl::Encoder* encoder, size_t offset,
+                                            cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
   switch (Which()) {
     case ::test::anonymous::SomeProtocol_SomeMethod_Result::Tag::kResponse: {
-      if (::fidl::EncodingInlineSize<
-              ::test::anonymous::SomeProtocol_SomeMethod_Response>(encoder) <=
-          FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-        ::fidl::Encode(encoder, &response_,
-                       offset + offsetof(fidl_xunion_v2_t, envelope));
+      if (::fidl::EncodingInlineSize<::test::anonymous::SomeProtocol_SomeMethod_Response>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+        ::fidl::Encode(encoder, &response_, offset + offsetof(fidl_xunion_v2_t, envelope));
 
         fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
         xunion->tag = tag_;
-        xunion->envelope.num_handles = static_cast<uint16_t>(
-            encoder->CurrentHandleCount() - handles_before);
+        xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
         xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
         break;
       }
 
       ::fidl::Encode(
-          encoder, &response_,
-          encoder->Alloc(::fidl::EncodingInlineSize<
-                         ::test::anonymous::SomeProtocol_SomeMethod_Response,
-                         ::fidl::Encoder>(encoder)));
+          encoder,
+          &response_,
+          encoder->Alloc(::fidl::EncodingInlineSize<::test::anonymous::SomeProtocol_SomeMethod_Response, ::fidl::Encoder>(encoder)));
 
       fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
       xunion->tag = tag_;
-      xunion->envelope.num_bytes =
-          static_cast<uint32_t>(encoder->CurrentLength() - length_before);
-      xunion->envelope.num_handles =
-          static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
+      xunion->envelope.num_bytes = static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+      xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
       xunion->envelope.flags = 0;
       break;
     }
     case ::test::anonymous::SomeProtocol_SomeMethod_Result::Tag::kErr: {
-      if (::fidl::EncodingInlineSize<
-              ::test::anonymous::SomeProtocol_SomeMethod_Error>(encoder) <=
-          FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-        ::fidl::Encode(encoder, &err_,
-                       offset + offsetof(fidl_xunion_v2_t, envelope));
+      if (::fidl::EncodingInlineSize<::test::anonymous::SomeProtocol_SomeMethod_Error>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+        ::fidl::Encode(encoder, &err_, offset + offsetof(fidl_xunion_v2_t, envelope));
 
         fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
         xunion->tag = tag_;
-        xunion->envelope.num_handles = static_cast<uint16_t>(
-            encoder->CurrentHandleCount() - handles_before);
+        xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
         xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
         break;
       }
 
       ::fidl::Encode(
-          encoder, &err_,
-          encoder->Alloc(::fidl::EncodingInlineSize<
-                         ::test::anonymous::SomeProtocol_SomeMethod_Error,
-                         ::fidl::Encoder>(encoder)));
+          encoder,
+          &err_,
+          encoder->Alloc(::fidl::EncodingInlineSize<::test::anonymous::SomeProtocol_SomeMethod_Error, ::fidl::Encoder>(encoder)));
 
       fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
       xunion->tag = tag_;
-      xunion->envelope.num_bytes =
-          static_cast<uint32_t>(encoder->CurrentLength() - length_before);
-      xunion->envelope.num_handles =
-          static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
+      xunion->envelope.num_bytes = static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+      xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
       xunion->envelope.flags = 0;
       break;
     }
@@ -1207,15 +1072,13 @@ void SomeProtocol_SomeMethod_Result::Encode(
   }
 }
 
-void SomeProtocol_SomeMethod_Result::Decode(
-    ::fidl::Decoder* _decoder, SomeProtocol_SomeMethod_Result* value,
-    size_t offset) {
+void SomeProtocol_SomeMethod_Result::Decode(::fidl::Decoder* _decoder, SomeProtocol_SomeMethod_Result* value, size_t offset) {
   fidl_xunion_v2_t* xunion = _decoder->GetPtr<fidl_xunion_v2_t>(offset);
 
-  if (xunion->envelope.num_bytes == 0 && xunion->envelope.num_handles == 0 &&
+  if (xunion->envelope.num_bytes == 0 &&
+      xunion->envelope.num_handles == 0 &&
       xunion->envelope.flags == 0) {
-    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
-        ::test::anonymous::SomeProtocol_SomeMethod_Result::Tag::Invalid));
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(::test::anonymous::SomeProtocol_SomeMethod_Result::Tag::Invalid));
     return;
   }
 
@@ -1225,8 +1088,7 @@ void SomeProtocol_SomeMethod_Result::Decode(
 
   switch (value->tag_) {
     case ::test::anonymous::SomeProtocol_SomeMethod_Result::Tag::kResponse: {
-      new (&value->response_)::test::anonymous::
-          SomeProtocol_SomeMethod_Response();
+      new (&value->response_)::test::anonymous::SomeProtocol_SomeMethod_Response();
       ::fidl::Decode(_decoder, &value->response_, value_offset);
       break;
     }
@@ -1241,16 +1103,14 @@ void SomeProtocol_SomeMethod_Result::Decode(
   }
 }
 
-zx_status_t SomeProtocol_SomeMethod_Result::Clone(
-    SomeProtocol_SomeMethod_Result* result) const {
+zx_status_t SomeProtocol_SomeMethod_Result::Clone(SomeProtocol_SomeMethod_Result* result) const {
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
     case ::test::anonymous::SomeProtocol_SomeMethod_Result::Tag::Invalid:
       return ZX_OK;
     case ::test::anonymous::SomeProtocol_SomeMethod_Result::Tag::kResponse:
-      new (&result->response_)::test::anonymous::
-          SomeProtocol_SomeMethod_Response();
+      new (&result->response_)::test::anonymous::SomeProtocol_SomeMethod_Response();
       return ::fidl::Clone(response_, &result->response_);
     case ::test::anonymous::SomeProtocol_SomeMethod_Result::Tag::kErr:
       new (&result->err_)::test::anonymous::SomeProtocol_SomeMethod_Error();
@@ -1260,18 +1120,14 @@ zx_status_t SomeProtocol_SomeMethod_Result::Clone(
   }
 }
 
-SomeProtocol_SomeMethod_Result& SomeProtocol_SomeMethod_Result::set_response(
-    ::test::anonymous::SomeProtocol_SomeMethod_Response value) {
-  EnsureStorageInitialized(
-      ::test::anonymous::SomeProtocol_SomeMethod_Result::Tag::kResponse);
+SomeProtocol_SomeMethod_Result& SomeProtocol_SomeMethod_Result::set_response(::test::anonymous::SomeProtocol_SomeMethod_Response value) {
+  EnsureStorageInitialized(::test::anonymous::SomeProtocol_SomeMethod_Result::Tag::kResponse);
   response_ = std::move(value);
   return *this;
 }
 
-SomeProtocol_SomeMethod_Result& SomeProtocol_SomeMethod_Result::set_err(
-    ::test::anonymous::SomeProtocol_SomeMethod_Error value) {
-  EnsureStorageInitialized(
-      ::test::anonymous::SomeProtocol_SomeMethod_Result::Tag::kErr);
+SomeProtocol_SomeMethod_Result& SomeProtocol_SomeMethod_Result::set_err(::test::anonymous::SomeProtocol_SomeMethod_Error value) {
+  EnsureStorageInitialized(::test::anonymous::SomeProtocol_SomeMethod_Result::Tag::kErr);
   err_ = std::move(value);
   return *this;
 }
@@ -1288,18 +1144,15 @@ void SomeProtocol_SomeMethod_Result::Destroy() {
     default:
       break;
   }
-  tag_ = static_cast<fidl_xunion_tag_t>(
-      ::test::anonymous::SomeProtocol_SomeMethod_Result::Tag::Invalid);
+  tag_ = static_cast<fidl_xunion_tag_t>(::test::anonymous::SomeProtocol_SomeMethod_Result::Tag::Invalid);
 }
 
-void SomeProtocol_SomeMethod_Result::EnsureStorageInitialized(
-    ::fidl_xunion_tag_t tag) {
+void SomeProtocol_SomeMethod_Result::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
   if (tag_ != tag) {
     Destroy();
     tag_ = tag;
     switch (tag_) {
-      case static_cast<fidl_xunion_tag_t>(
-          ::test::anonymous::SomeProtocol_SomeMethod_Result::Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(::test::anonymous::SomeProtocol_SomeMethod_Result::Tag::Invalid):
         break;
       case ::test::anonymous::SomeProtocol_SomeMethod_Result::Tag::kResponse:
         new (&response_)::test::anonymous::SomeProtocol_SomeMethod_Response();
@@ -1313,40 +1166,30 @@ void SomeProtocol_SomeMethod_Result::EnsureStorageInitialized(
   }
 }
 
-extern "C" const fidl_type_t
-    test_anonymous_SomeProtocolSomeMethodTopResponseTable;
-const fidl_type_t* SomeProtocolSomeMethodTopResponse::FidlType =
-    &test_anonymous_SomeProtocolSomeMethodTopResponseTable;
+extern "C" const fidl_type_t test_anonymous_SomeProtocolSomeMethodTopResponseTable;
+const fidl_type_t* SomeProtocolSomeMethodTopResponse::FidlType = &test_anonymous_SomeProtocolSomeMethodTopResponseTable;
 
-void SomeProtocolSomeMethodTopResponse::Encode(
-    ::fidl::Encoder* _encoder, size_t _offset,
-    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+void SomeProtocolSomeMethodTopResponse::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                                               cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<SomeProtocolSomeMethodTopResponse>::value) {
-    memcpy(
-        _encoder->template GetPtr<SomeProtocolSomeMethodTopResponse>(_offset),
-        this, sizeof(SomeProtocolSomeMethodTopResponse));
+    memcpy(_encoder->template GetPtr<SomeProtocolSomeMethodTopResponse>(_offset), this, sizeof(SomeProtocolSomeMethodTopResponse));
   } else {
     ::fidl::Encode(_encoder, &result, _offset + 0);
   }
 }
 
-void SomeProtocolSomeMethodTopResponse::Decode(
-    ::fidl::Decoder* _decoder, SomeProtocolSomeMethodTopResponse* _value,
-    size_t _offset) {
+void SomeProtocolSomeMethodTopResponse::Decode(::fidl::Decoder* _decoder, SomeProtocolSomeMethodTopResponse* _value, size_t _offset) {
   if (::fidl::IsMemcpyCompatible<SomeProtocolSomeMethodTopResponse>::value) {
-    memcpy(
-        _value,
-        _decoder->template GetPtr<SomeProtocolSomeMethodTopResponse>(_offset),
-        sizeof(SomeProtocolSomeMethodTopResponse));
+    memcpy(_value, _decoder->template GetPtr<SomeProtocolSomeMethodTopResponse>(_offset), sizeof(SomeProtocolSomeMethodTopResponse));
   } else {
     ::fidl::Decode(_decoder, &_value->result, _offset + 0);
   }
 }
 
-zx_status_t SomeProtocolSomeMethodTopResponse::Clone(
-    SomeProtocolSomeMethodTopResponse* _result) const {
+zx_status_t SomeProtocolSomeMethodTopResponse::Clone(SomeProtocolSomeMethodTopResponse* _result) const {
   zx_status_t _status = ::fidl::Clone(result, &_result->result);
-  if (_status != ZX_OK) return _status;
+  if (_status != ZX_OK)
+    return _status;
   return ZX_OK;
 }
 
@@ -1356,22 +1199,18 @@ zx_status_t SomeProtocolSomeMethodTopResponse::Clone(
 #ifdef __Fuchsia__
 
 namespace _internal {
-__LOCAL extern "C" const fidl_type_t
-    test_anonymous_SomeProtocolSomeMethodRequestTable;
-__LOCAL extern "C" const fidl_type_t
-    test_anonymous_SomeProtocolSomeMethodTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_anonymous_SomeProtocolSomeMethodRequestTable;
+__LOCAL extern "C" const fidl_type_t test_anonymous_SomeProtocolSomeMethodTopResponseTable;
 
 }  // namespace _internal
 SomeProtocol::~SomeProtocol() = default;
 
-const fidl_type_t* ::test::anonymous::SomeProtocol_RequestDecoder::GetType(
-    uint64_t ordinal, bool* out_needs_response) {
+const fidl_type_t* ::test::anonymous::SomeProtocol_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
   *out_needs_response = false;
   switch (ordinal) {
     case ::test::anonymous::internal::kSomeProtocol_SomeMethod_Ordinal:
       *out_needs_response = true;
-      return &::test::anonymous::_internal::
-          test_anonymous_SomeProtocolSomeMethodRequestTable;
+      return &::test::anonymous::_internal::test_anonymous_SomeProtocolSomeMethodRequestTable;
       ;
     default:
       return nullptr;
@@ -1381,8 +1220,7 @@ const fidl_type_t* ::test::anonymous::SomeProtocol_RequestDecoder::GetType(
 const fidl_type_t* SomeProtocol_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
     case ::test::anonymous::internal::kSomeProtocol_SomeMethod_Ordinal:
-      return &::test::anonymous::_internal::
-          test_anonymous_SomeProtocolSomeMethodTopResponseTable;
+      return &::test::anonymous::_internal::test_anonymous_SomeProtocolSomeMethodTopResponseTable;
       ;
     default:
       return nullptr;
@@ -1393,16 +1231,14 @@ SomeProtocol_EventSender::~SomeProtocol_EventSender() = default;
 
 SomeProtocol_Sync::~SomeProtocol_Sync() = default;
 
-SomeProtocol_Proxy::SomeProtocol_Proxy(
-    ::fidl::internal::ProxyController* controller)
+SomeProtocol_Proxy::SomeProtocol_Proxy(::fidl::internal::ProxyController* controller)
     : controller_(controller) {
   (void)controller_;
 }
 
 SomeProtocol_Proxy::~SomeProtocol_Proxy() = default;
 
-zx_status_t SomeProtocol_Proxy::Dispatch_(
-    ::fidl::HLCPPIncomingMessage message) {
+zx_status_t SomeProtocol_Proxy::Dispatch_(::fidl::HLCPPIncomingMessage message) {
   zx_status_t status = ZX_OK;
   switch (message.ordinal()) {
     default: {
@@ -1416,43 +1252,26 @@ zx_status_t SomeProtocol_Proxy::Dispatch_(
 namespace {
 
 ::std::unique_ptr<::fidl::internal::SingleUseMessageHandler>
-SomeProtocol_SomeMethod_ResponseHandler(
-    SomeProtocol::SomeMethodCallback&& callback) {
-  ZX_DEBUG_ASSERT_MSG(
-      callback, "Callback must not be empty for SomeProtocol::SomeMethod\n");
+SomeProtocol_SomeMethod_ResponseHandler(SomeProtocol::SomeMethodCallback&& callback) {
+  ZX_DEBUG_ASSERT_MSG(callback,
+                      "Callback must not be empty for SomeProtocol::SomeMethod\n");
   return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
-      [callback_ =
-           std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
+      [callback_ = std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
         ::fidl::Decoder decoder(std::move(message));
-        callback_(
-            ::fidl::DecodeAs<::test::anonymous::SomeProtocol_SomeMethod_Result>(
-                &decoder, 0 + sizeof(fidl_message_header_t)));
+        callback_(::fidl::DecodeAs<::test::anonymous::SomeProtocol_SomeMethod_Result>(&decoder, 0 + sizeof(fidl_message_header_t)));
         return ZX_OK;
       },
-      &::test::anonymous::_internal::
-          test_anonymous_SomeProtocolSomeMethodTopResponseTable);
+      &::test::anonymous::_internal::test_anonymous_SomeProtocolSomeMethodTopResponseTable);
 }
 
 }  // namespace
-void SomeProtocol_Proxy::SomeMethod(::test::anonymous::UnionMember union_member,
-                                    ::test::anonymous::TableMember table_member,
-                                    SomeMethodCallback callback) {
-  ::fidl::MessageEncoder _encoder(
-      ::test::anonymous::internal::kSomeProtocol_SomeMethod_Ordinal,
-      ::test::anonymous::internal::kSomeProtocol_SomeMethod_DynamicFlags);
-  const fidl_type_t* req_type =
-      &::test::anonymous::_internal::
-          test_anonymous_SomeProtocolSomeMethodRequestTable;
-  controller_->Send(
-      req_type,
-      ::test::anonymous::SomeProtocol_RequestEncoder::SomeMethod(
-          &_encoder, &union_member, &table_member),
-      SomeProtocol_SomeMethod_ResponseHandler(std::move(callback)));
+void SomeProtocol_Proxy::SomeMethod(::test::anonymous::UnionMember union_member, ::test::anonymous::TableMember table_member, SomeMethodCallback callback) {
+  ::fidl::MessageEncoder _encoder(::test::anonymous::internal::kSomeProtocol_SomeMethod_Ordinal, ::test::anonymous::internal::kSomeProtocol_SomeMethod_DynamicFlags);
+  const fidl_type_t* req_type = &::test::anonymous::_internal::test_anonymous_SomeProtocolSomeMethodRequestTable;
+  controller_->Send(req_type, ::test::anonymous::SomeProtocol_RequestEncoder::SomeMethod(&_encoder, &union_member, &table_member), SomeProtocol_SomeMethod_ResponseHandler(std::move(callback)));
 }
 
-SomeProtocol_Stub::SomeProtocol_Stub(
-    ::test::anonymous::SomeProtocol_Stub::SomeProtocol_clazz* impl)
-    : impl_(impl) {
+SomeProtocol_Stub::SomeProtocol_Stub(::test::anonymous::SomeProtocol_Stub::SomeProtocol_clazz* impl) : impl_(impl) {
   (void)impl_;
 }
 
@@ -1466,15 +1285,9 @@ class SomeProtocol_SomeMethod_Responder final {
       : response_(std::move(response)) {}
 
   void operator()(::test::anonymous::SomeProtocol_SomeMethod_Result result) {
-    ::fidl::MessageEncoder _encoder(
-        ::test::anonymous::internal::kSomeProtocol_SomeMethod_Ordinal,
-        ::test::anonymous::internal::kSomeProtocol_SomeMethod_DynamicFlags);
-    const fidl_type_t* resp_type =
-        &::test::anonymous::_internal::
-            test_anonymous_SomeProtocolSomeMethodTopResponseTable;
-    response_.Send(resp_type,
-                   ::test::anonymous::SomeProtocol_ResponseEncoder::SomeMethod(
-                       &_encoder, &result));
+    ::fidl::MessageEncoder _encoder(::test::anonymous::internal::kSomeProtocol_SomeMethod_Ordinal, ::test::anonymous::internal::kSomeProtocol_SomeMethod_DynamicFlags);
+    const fidl_type_t* resp_type = &::test::anonymous::_internal::test_anonymous_SomeProtocolSomeMethodTopResponseTable;
+    response_.Send(resp_type, ::test::anonymous::SomeProtocol_ResponseEncoder::SomeMethod(&_encoder, &result));
   }
 
  private:
@@ -1487,9 +1300,7 @@ zx_status_t SomeProtocol_Stub::Dispatch_(
     ::fidl::HLCPPIncomingMessage message,
     ::fidl::internal::PendingResponse response) {
   bool needs_response;
-  const fidl_type_t* request_type =
-      ::test::anonymous::SomeProtocol_RequestDecoder::GetType(message.ordinal(),
-                                                              &needs_response);
+  const fidl_type_t* request_type = ::test::anonymous::SomeProtocol_RequestDecoder::GetType(message.ordinal(), &needs_response);
   if (!message.has_only_header()) {
     if (request_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
@@ -1504,11 +1315,9 @@ zx_status_t SomeProtocol_Stub::Dispatch_(
 
   if (response.needs_response() != needs_response) {
     if (needs_response) {
-      FIDL_REPORT_DECODING_ERROR(message, request_type,
-                                 "Message needing a response with no txid");
+      FIDL_REPORT_DECODING_ERROR(message, request_type, "Message needing a response with no txid");
     } else {
-      FIDL_REPORT_DECODING_ERROR(message, request_type,
-                                 "Message not needing a response with a txid");
+      FIDL_REPORT_DECODING_ERROR(message, request_type, "Message not needing a response with a txid");
     }
     return ZX_ERR_INVALID_ARGS;
   }
@@ -1517,11 +1326,7 @@ zx_status_t SomeProtocol_Stub::Dispatch_(
   switch (ordinal) {
     case ::test::anonymous::internal::kSomeProtocol_SomeMethod_Ordinal: {
       ::fidl::Decoder decoder(std::move(message));
-      impl_->SomeMethod(::fidl::DecodeAs<::test::anonymous::UnionMember>(
-                            &decoder, 0 + sizeof(fidl_message_header_t)),
-                        ::fidl::DecodeAs<::test::anonymous::TableMember>(
-                            &decoder, 16 + sizeof(fidl_message_header_t)),
-                        SomeProtocol_SomeMethod_Responder(std::move(response)));
+      impl_->SomeMethod(::fidl::DecodeAs<::test::anonymous::UnionMember>(&decoder, 0 + sizeof(fidl_message_header_t)), ::fidl::DecodeAs<::test::anonymous::TableMember>(&decoder, 16 + sizeof(fidl_message_header_t)), SomeProtocol_SomeMethod_Responder(std::move(response)));
       break;
     }
     default: {
@@ -1536,31 +1341,17 @@ SomeProtocol_SyncProxy::SomeProtocol_SyncProxy(::zx::channel channel)
 
 SomeProtocol_SyncProxy::~SomeProtocol_SyncProxy() = default;
 
-zx_status_t SomeProtocol_SyncProxy::SomeMethod(
-    ::test::anonymous::UnionMember union_member,
-    ::test::anonymous::TableMember table_member,
-    ::test::anonymous::SomeProtocol_SomeMethod_Result* out_result) {
-  ::fidl::MessageEncoder _encoder(
-      ::test::anonymous::internal::kSomeProtocol_SomeMethod_Ordinal,
-      ::test::anonymous::internal::kSomeProtocol_SomeMethod_DynamicFlags);
+zx_status_t SomeProtocol_SyncProxy::SomeMethod(::test::anonymous::UnionMember union_member, ::test::anonymous::TableMember table_member, ::test::anonymous::SomeProtocol_SomeMethod_Result* out_result) {
+  ::fidl::MessageEncoder _encoder(::test::anonymous::internal::kSomeProtocol_SomeMethod_Ordinal, ::test::anonymous::internal::kSomeProtocol_SomeMethod_DynamicFlags);
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
-  const fidl_type_t* req_type =
-      &::test::anonymous::_internal::
-          test_anonymous_SomeProtocolSomeMethodRequestTable;
-  const fidl_type_t* resp_type =
-      &::test::anonymous::_internal::
-          test_anonymous_SomeProtocolSomeMethodTopResponseTable;
-  zx_status_t status_ =
-      proxy_.Call(req_type, resp_type,
-                  ::test::anonymous::SomeProtocol_RequestEncoder::SomeMethod(
-                      &_encoder, &union_member, &table_member),
-                  &response_);
-  if (status_ != ZX_OK) return status_;
+  const fidl_type_t* req_type = &::test::anonymous::_internal::test_anonymous_SomeProtocolSomeMethodRequestTable;
+  const fidl_type_t* resp_type = &::test::anonymous::_internal::test_anonymous_SomeProtocolSomeMethodTopResponseTable;
+  zx_status_t status_ = proxy_.Call(req_type, resp_type, ::test::anonymous::SomeProtocol_RequestEncoder::SomeMethod(&_encoder, &union_member, &table_member), &response_);
+  if (status_ != ZX_OK)
+    return status_;
   ::fidl::Decoder decoder_(std::move(response_));
-  *out_result =
-      ::fidl::DecodeAs<::test::anonymous::SomeProtocol_SomeMethod_Result>(
-          &decoder_, 0 + sizeof(fidl_message_header_t));
+  *out_result = ::fidl::DecodeAs<::test::anonymous::SomeProtocol_SomeMethod_Result>(&decoder_, 0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
 #endif  // __Fuchsia__

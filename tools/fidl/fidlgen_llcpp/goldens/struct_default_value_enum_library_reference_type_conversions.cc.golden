@@ -5,25 +5,12 @@
 namespace fidl {
 namespace internal {
 
-::test_structdefaultvalueenumlibraryreference::Foo WireNaturalConversionTraits<
-    ::test_structdefaultvalueenumlibraryreference::wire::Foo,
-    ::test_structdefaultvalueenumlibraryreference::Foo>::
-    ToNatural(::test_structdefaultvalueenumlibraryreference::wire::Foo src) {
-  return ::test_structdefaultvalueenumlibraryreference::Foo(
-      WireNaturalConversionTraits<
-          ::test_dependent::wire::MyEnum,
-          ::test_dependent::MyEnum>::ToNatural(std::move(src.field)));
+::test_structdefaultvalueenumlibraryreference::Foo WireNaturalConversionTraits<::test_structdefaultvalueenumlibraryreference::wire::Foo, ::test_structdefaultvalueenumlibraryreference::Foo>::ToNatural(::test_structdefaultvalueenumlibraryreference::wire::Foo src) {
+  return ::test_structdefaultvalueenumlibraryreference::Foo(WireNaturalConversionTraits<::test_dependent::wire::MyEnum, ::test_dependent::MyEnum>::ToNatural(std::move(src.field)));
 }
-::test_structdefaultvalueenumlibraryreference::wire::Foo
-WireNaturalConversionTraits<
-    ::test_structdefaultvalueenumlibraryreference::wire::Foo,
-    ::test_structdefaultvalueenumlibraryreference::Foo>::
-    ToWire(fidl::AnyArena& arena,
-           ::test_structdefaultvalueenumlibraryreference::Foo src) {
+::test_structdefaultvalueenumlibraryreference::wire::Foo WireNaturalConversionTraits<::test_structdefaultvalueenumlibraryreference::wire::Foo, ::test_structdefaultvalueenumlibraryreference::Foo>::ToWire(fidl::AnyArena& arena, ::test_structdefaultvalueenumlibraryreference::Foo src) {
   return ::test_structdefaultvalueenumlibraryreference::wire::Foo{
-      .field = WireNaturalConversionTraits<
-          ::test_dependent::wire::MyEnum,
-          ::test_dependent::MyEnum>::ToWire(arena, std::move(src.field())),
+      .field = WireNaturalConversionTraits<::test_dependent::wire::MyEnum, ::test_dependent::MyEnum>::ToWire(arena, std::move(src.field())),
   };
 }
 

@@ -22,15 +22,9 @@ class Flags final {
   const static Flags kMask;
 
   explicit constexpr inline operator uint16_t() const { return value_; }
-  explicit constexpr inline operator bool() const {
-    return static_cast<bool>(value_);
-  }
-  constexpr inline bool operator==(const Flags& other) const {
-    return value_ == other.value_;
-  }
-  constexpr inline bool operator!=(const Flags& other) const {
-    return value_ != other.value_;
-  }
+  explicit constexpr inline operator bool() const { return static_cast<bool>(value_); }
+  constexpr inline bool operator==(const Flags& other) const { return value_ == other.value_; }
+  constexpr inline bool operator!=(const Flags& other) const { return value_ != other.value_; }
   constexpr inline Flags operator~() const;
   constexpr inline Flags operator|(const Flags& other) const;
   constexpr inline Flags operator&(const Flags& other) const;
@@ -57,50 +51,46 @@ class Flags final {
   constexpr inline Flags unknown_bits() const {
     return *this & Flags(~kMask.value_);
   }
-  constexpr inline bool has_unknown_bits() const {
-    return static_cast<bool>(unknown_bits());
-  }
+  constexpr inline bool has_unknown_bits() const { return static_cast<bool>(unknown_bits()); }
 
  private:
   uint16_t value_ = 0;
 };
 constexpr const ::test_anonymous::Flags Flags::kInline =
     ::test_anonymous::Flags(1u);
-constexpr const ::test_anonymous::Flags Flags::kMask =
-    ::test_anonymous::Flags(1u);
+constexpr const ::test_anonymous::Flags Flags::kMask = ::test_anonymous::Flags(1u);
 
 constexpr inline ::test_anonymous::Flags Flags::operator~() const {
-  return ::test_anonymous::Flags(
-      static_cast<uint16_t>(~this->value_ & kMask.value_));
+  return ::test_anonymous::Flags(static_cast<uint16_t>(~this->value_ & kMask.value_));
 }
 
 constexpr inline ::test_anonymous::Flags Flags::operator|(
     const ::test_anonymous::Flags& other) const {
-  return ::test_anonymous::Flags(
-      static_cast<uint16_t>(this->value_ | other.value_));
+  return ::test_anonymous::Flags(static_cast<uint16_t>(this->value_ | other.value_));
 }
 
 constexpr inline ::test_anonymous::Flags Flags::operator&(
     const ::test_anonymous::Flags& other) const {
-  return ::test_anonymous::Flags(
-      static_cast<uint16_t>(this->value_ & other.value_));
+  return ::test_anonymous::Flags(static_cast<uint16_t>(this->value_ & other.value_));
 }
 
 constexpr inline ::test_anonymous::Flags Flags::operator^(
     const ::test_anonymous::Flags& other) const {
-  return ::test_anonymous::Flags(
-      static_cast<uint16_t>(this->value_ ^ other.value_));
+  return ::test_anonymous::Flags(static_cast<uint16_t>(this->value_ ^ other.value_));
 }
 
-constexpr inline void Flags::operator|=(const ::test_anonymous::Flags& other) {
+constexpr inline void Flags::operator|=(
+    const ::test_anonymous::Flags& other) {
   this->value_ |= other.value_;
 }
 
-constexpr inline void Flags::operator&=(const ::test_anonymous::Flags& other) {
+constexpr inline void Flags::operator&=(
+    const ::test_anonymous::Flags& other) {
   this->value_ &= other.value_;
 }
 
-constexpr inline void Flags::operator^=(const ::test_anonymous::Flags& other) {
+constexpr inline void Flags::operator^=(
+    const ::test_anonymous::Flags& other) {
   this->value_ ^= other.value_;
 }
 
@@ -118,15 +108,9 @@ class BitsMember final {
   const static BitsMember kMask;
 
   explicit constexpr inline operator uint32_t() const { return value_; }
-  explicit constexpr inline operator bool() const {
-    return static_cast<bool>(value_);
-  }
-  constexpr inline bool operator==(const BitsMember& other) const {
-    return value_ == other.value_;
-  }
-  constexpr inline bool operator!=(const BitsMember& other) const {
-    return value_ != other.value_;
-  }
+  explicit constexpr inline operator bool() const { return static_cast<bool>(value_); }
+  constexpr inline bool operator==(const BitsMember& other) const { return value_ == other.value_; }
+  constexpr inline bool operator!=(const BitsMember& other) const { return value_ != other.value_; }
   constexpr inline BitsMember operator~() const;
   constexpr inline BitsMember operator|(const BitsMember& other) const;
   constexpr inline BitsMember operator&(const BitsMember& other) const;
@@ -153,9 +137,7 @@ class BitsMember final {
   constexpr inline BitsMember unknown_bits() const {
     return *this & BitsMember(~kMask.value_);
   }
-  constexpr inline bool has_unknown_bits() const {
-    return static_cast<bool>(unknown_bits());
-  }
+  constexpr inline bool has_unknown_bits() const { return static_cast<bool>(unknown_bits()); }
 
  private:
   uint32_t value_ = 0;
@@ -164,30 +146,25 @@ constexpr const ::test_anonymous::BitsMember BitsMember::kBitOne =
     ::test_anonymous::BitsMember(1u);
 constexpr const ::test_anonymous::BitsMember BitsMember::kBitTwo =
     ::test_anonymous::BitsMember(2u);
-constexpr const ::test_anonymous::BitsMember BitsMember::kMask =
-    ::test_anonymous::BitsMember(3u);
+constexpr const ::test_anonymous::BitsMember BitsMember::kMask = ::test_anonymous::BitsMember(3u);
 
 constexpr inline ::test_anonymous::BitsMember BitsMember::operator~() const {
-  return ::test_anonymous::BitsMember(
-      static_cast<uint32_t>(~this->value_ & kMask.value_));
+  return ::test_anonymous::BitsMember(static_cast<uint32_t>(~this->value_ & kMask.value_));
 }
 
 constexpr inline ::test_anonymous::BitsMember BitsMember::operator|(
     const ::test_anonymous::BitsMember& other) const {
-  return ::test_anonymous::BitsMember(
-      static_cast<uint32_t>(this->value_ | other.value_));
+  return ::test_anonymous::BitsMember(static_cast<uint32_t>(this->value_ | other.value_));
 }
 
 constexpr inline ::test_anonymous::BitsMember BitsMember::operator&(
     const ::test_anonymous::BitsMember& other) const {
-  return ::test_anonymous::BitsMember(
-      static_cast<uint32_t>(this->value_ & other.value_));
+  return ::test_anonymous::BitsMember(static_cast<uint32_t>(this->value_ & other.value_));
 }
 
 constexpr inline ::test_anonymous::BitsMember BitsMember::operator^(
     const ::test_anonymous::BitsMember& other) const {
-  return ::test_anonymous::BitsMember(
-      static_cast<uint32_t>(this->value_ ^ other.value_));
+  return ::test_anonymous::BitsMember(static_cast<uint32_t>(this->value_ ^ other.value_));
 }
 
 constexpr inline void BitsMember::operator|=(
@@ -208,8 +185,7 @@ constexpr inline void BitsMember::operator^=(
 class SomeProtocolSomeMethodError final {
  public:
   constexpr SomeProtocolSomeMethodError() : value_(0) {}
-  constexpr explicit SomeProtocolSomeMethodError(uint32_t value)
-      : value_(value) {}
+  constexpr explicit SomeProtocolSomeMethodError(uint32_t value) : value_(value) {}
   constexpr operator uint32_t() const { return value_; }
 
   constexpr bool IsUnknown() const {
@@ -234,20 +210,15 @@ class SomeProtocolSomeMethodError final {
  private:
   uint32_t value_;
 };
-constexpr const ::test_anonymous::SomeProtocolSomeMethodError
-    SomeProtocolSomeMethodError::kErrorOne =
-        ::test_anonymous::SomeProtocolSomeMethodError(1u);
-constexpr const ::test_anonymous::SomeProtocolSomeMethodError
-    SomeProtocolSomeMethodError::kErrorTwo =
-        ::test_anonymous::SomeProtocolSomeMethodError(2u);
+constexpr const ::test_anonymous::SomeProtocolSomeMethodError SomeProtocolSomeMethodError::kErrorOne =
+    ::test_anonymous::SomeProtocolSomeMethodError(1u);
+constexpr const ::test_anonymous::SomeProtocolSomeMethodError SomeProtocolSomeMethodError::kErrorTwo =
+    ::test_anonymous::SomeProtocolSomeMethodError(2u);
 
 }  // namespace test_anonymous
 template <>
-struct fidl::internal::DisplayError<
-    ::test_anonymous::SomeProtocolSomeMethodError> {
-  static size_t Format(
-      const ::test_anonymous::SomeProtocolSomeMethodError& value,
-      char* destination, size_t capacity);
+struct fidl::internal::DisplayError<::test_anonymous::SomeProtocolSomeMethodError> {
+  static size_t Format(const ::test_anonymous::SomeProtocolSomeMethodError& value, char* destination, size_t capacity);
 };
 
 namespace test_anonymous {
@@ -271,7 +242,9 @@ class Op final {
     return true;
   }
 
-  constexpr static Op Unknown() { return Op(0xffffffff); }
+  constexpr static Op Unknown() {
+    return Op(0xffffffff);
+  }
 
   static const Op kAdd;
 
@@ -282,15 +255,17 @@ class Op final {
  private:
   uint32_t value_;
 };
-constexpr const ::test_anonymous::Op Op::kAdd = ::test_anonymous::Op(1u);
-constexpr const ::test_anonymous::Op Op::kMul = ::test_anonymous::Op(2u);
-constexpr const ::test_anonymous::Op Op::kDiv = ::test_anonymous::Op(3u);
+constexpr const ::test_anonymous::Op Op::kAdd =
+    ::test_anonymous::Op(1u);
+constexpr const ::test_anonymous::Op Op::kMul =
+    ::test_anonymous::Op(2u);
+constexpr const ::test_anonymous::Op Op::kDiv =
+    ::test_anonymous::Op(3u);
 
 }  // namespace test_anonymous
 template <>
 struct fidl::internal::DisplayError<::test_anonymous::Op> {
-  static size_t Format(const ::test_anonymous::Op& value, char* destination,
-                       size_t capacity);
+  static size_t Format(const ::test_anonymous::Op& value, char* destination, size_t capacity);
 };
 
 namespace fidl {
@@ -310,11 +285,9 @@ static_assert(std::is_standard_layout_v<::test_anonymous::BitsMember>);
 static_assert(sizeof(::test_anonymous::BitsMember) == sizeof(uint32_t));
 
 template <>
-struct IsFidlType<::test_anonymous::SomeProtocolSomeMethodError>
-    : public std::true_type {};
+struct IsFidlType<::test_anonymous::SomeProtocolSomeMethodError> : public std::true_type {};
 template <>
-struct ContainsHandle<::test_anonymous::SomeProtocolSomeMethodError>
-    : public std::false_type {};
+struct ContainsHandle<::test_anonymous::SomeProtocolSomeMethodError> : public std::false_type {};
 
 template <>
 struct IsFidlType<::test_anonymous::Op> : public std::true_type {};

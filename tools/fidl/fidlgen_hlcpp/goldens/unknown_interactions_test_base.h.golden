@@ -10,8 +10,12 @@ class Example_TestBase : public ::test::unknowninteractions::Example {
  public:
   virtual ~Example_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
-  void StrictOneWay() override { NotImplemented_("StrictOneWay"); }
-  void FlexibleOneWay() override { NotImplemented_("FlexibleOneWay"); }
+  void StrictOneWay() override {
+    NotImplemented_("StrictOneWay");
+  }
+  void FlexibleOneWay() override {
+    NotImplemented_("FlexibleOneWay");
+  }
   void StrictTwoWay(StrictTwoWayCallback callback) override {
     NotImplemented_("StrictTwoWay");
   }

@@ -2,28 +2,27 @@
 
 #include <fidl/test.emptystruct/cpp/natural_types.h>
 
-::test_emptystruct::Empty::Storage_ test_emptystruct::Empty::CloneStorage_()
-    const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.__reserved)};
+::test_emptystruct::Empty::Storage_ test_emptystruct::Empty::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.__reserved)};
 }
 
-::test_emptystruct::EmptyProtocolSendRequest::Storage_
-test_emptystruct::EmptyProtocolSendRequest::CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.e)};
+::test_emptystruct::EmptyProtocolSendRequest::Storage_ test_emptystruct::EmptyProtocolSendRequest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.e)};
 }
 
-::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse::Storage_
-test_emptystruct::EmptyProtocolSendAndReceiveTopResponse::CloneStorage_()
-    const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.e)};
+::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse::Storage_ test_emptystruct::EmptyProtocolSendAndReceiveTopResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.e)};
 }
 
-::test_emptystruct::EmptyProtocolSendAndReceiveRequest::Storage_
-test_emptystruct::EmptyProtocolSendAndReceiveRequest::CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.e)};
+::test_emptystruct::EmptyProtocolSendAndReceiveRequest::Storage_ test_emptystruct::EmptyProtocolSendAndReceiveRequest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.e)};
 }
 
-::test_emptystruct::EmptyProtocolReceiveRequest::Storage_
-test_emptystruct::EmptyProtocolReceiveRequest::CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.e)};
+::test_emptystruct::EmptyProtocolReceiveRequest::Storage_ test_emptystruct::EmptyProtocolReceiveRequest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.e)};
 }

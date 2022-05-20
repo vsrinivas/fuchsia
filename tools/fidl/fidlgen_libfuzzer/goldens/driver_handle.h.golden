@@ -14,17 +14,14 @@
 namespace fuzzing {
 
 using T = ::test::driverhandle::T;
-using HandlesInProtocolSendHandlesRequest =
-    ::test::driverhandle::HandlesInProtocolSendHandlesRequest;
+using HandlesInProtocolSendHandlesRequest = ::test::driverhandle::HandlesInProtocolSendHandlesRequest;
 using ServerEndWrapper = ::test::driverhandle::ServerEndWrapper;
 using ClientEndWrapper = ::test::driverhandle::ClientEndWrapper;
 
 template <>
 struct MinSize<T> {
   operator size_t() {
-    return MinSize<::zx::event>() +
-           MinSize<
-               ::fidl::InterfaceHandle<::test::driverhandle::DriverProtocol>>();
+    return MinSize<::zx::event>() + MinSize<::fidl::InterfaceHandle<::test::driverhandle::DriverProtocol>>();
   }
 };
 template <>
@@ -36,28 +33,23 @@ struct Allocate<T> {
     size_t out_size;
     out_size = MinSize<::zx::event>() + slack_per_member;
     out.set_zircon_handle(Allocate<::zx::event>{}(src, &out_size));
-    out_size =
-        MinSize<
-            ::fidl::InterfaceHandle<::test::driverhandle::DriverProtocol>>() +
-        slack_per_member;
-    out.set_fdf_handle(
-        Allocate<
-            ::fidl::InterfaceHandle<::test::driverhandle::DriverProtocol>>{}(
-            src, &out_size));
+    out_size = MinSize<::fidl::InterfaceHandle<::test::driverhandle::DriverProtocol>>() + slack_per_member;
+    out.set_fdf_handle(Allocate<::fidl::InterfaceHandle<::test::driverhandle::DriverProtocol>>{}(src, &out_size));
     return out;
   }
 };
 template <>
 struct MinSize<HandlesInProtocolSendHandlesRequest> {
-  operator size_t() { return MinSize<::test::driverhandle::T>(); }
+  operator size_t() {
+    return MinSize<::test::driverhandle::T>();
+  }
 };
 template <>
 struct Allocate<HandlesInProtocolSendHandlesRequest> {
   HandlesInProtocolSendHandlesRequest operator()(FuzzInput* src, size_t* size) {
     ZX_ASSERT(*size >= MinSize<HandlesInProtocolSendHandlesRequest>());
     HandlesInProtocolSendHandlesRequest out;
-    const size_t slack_per_member =
-        (*size - MinSize<HandlesInProtocolSendHandlesRequest>()) / 1;
+    const size_t slack_per_member = (*size - MinSize<HandlesInProtocolSendHandlesRequest>()) / 1;
     size_t out_size;
     out_size = MinSize<::test::driverhandle::T>() + slack_per_member;
     out.t = Allocate<::test::driverhandle::T>{}(src, &out_size);
@@ -67,8 +59,7 @@ struct Allocate<HandlesInProtocolSendHandlesRequest> {
 template <>
 struct MinSize<ServerEndWrapper> {
   operator size_t() {
-    return MinSize<
-        ::fidl::InterfaceRequest<::test::driverhandle::DriverProtocol>>();
+    return MinSize<::fidl::InterfaceRequest<::test::driverhandle::DriverProtocol>>();
   }
 };
 template <>
@@ -78,21 +69,15 @@ struct Allocate<ServerEndWrapper> {
     ServerEndWrapper out;
     const size_t slack_per_member = (*size - MinSize<ServerEndWrapper>()) / 1;
     size_t out_size;
-    out_size =
-        MinSize<
-            ::fidl::InterfaceRequest<::test::driverhandle::DriverProtocol>>() +
-        slack_per_member;
-    out.value = Allocate<
-        ::fidl::InterfaceRequest<::test::driverhandle::DriverProtocol>>{}(
-        src, &out_size);
+    out_size = MinSize<::fidl::InterfaceRequest<::test::driverhandle::DriverProtocol>>() + slack_per_member;
+    out.value = Allocate<::fidl::InterfaceRequest<::test::driverhandle::DriverProtocol>>{}(src, &out_size);
     return out;
   }
 };
 template <>
 struct MinSize<ClientEndWrapper> {
   operator size_t() {
-    return MinSize<
-        ::fidl::InterfaceHandle<::test::driverhandle::DriverProtocol>>();
+    return MinSize<::fidl::InterfaceHandle<::test::driverhandle::DriverProtocol>>();
   }
 };
 template <>
@@ -102,13 +87,8 @@ struct Allocate<ClientEndWrapper> {
     ClientEndWrapper out;
     const size_t slack_per_member = (*size - MinSize<ClientEndWrapper>()) / 1;
     size_t out_size;
-    out_size =
-        MinSize<
-            ::fidl::InterfaceHandle<::test::driverhandle::DriverProtocol>>() +
-        slack_per_member;
-    out.value = Allocate<
-        ::fidl::InterfaceHandle<::test::driverhandle::DriverProtocol>>{}(
-        src, &out_size);
+    out_size = MinSize<::fidl::InterfaceHandle<::test::driverhandle::DriverProtocol>>() + slack_per_member;
+    out.value = Allocate<::fidl::InterfaceHandle<::test::driverhandle::DriverProtocol>>{}(src, &out_size);
     return out;
   }
 };

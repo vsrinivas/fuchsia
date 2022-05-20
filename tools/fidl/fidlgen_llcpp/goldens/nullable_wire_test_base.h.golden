@@ -7,25 +7,20 @@ namespace fidl {
 namespace testing {
 
 template <>
-class WireTestBase<::test_nullable::SimpleProtocol>
-    : public ::fidl::WireServer<::test_nullable::SimpleProtocol> {
+class WireTestBase<::test_nullable::SimpleProtocol> : public ::fidl::WireServer<::test_nullable::SimpleProtocol> {
  public:
   virtual ~WireTestBase<::test_nullable::SimpleProtocol>() = default;
-  virtual void NotImplemented_(const std::string& name,
-                               ::fidl::CompleterBase& completer) = 0;
-  virtual void Add(AddRequestView request,
-                   AddCompleter::Sync& completer) override {
+  virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
+  virtual void Add(
+      AddRequestView request, AddCompleter::Sync& completer) override {
     NotImplemented_("Add", completer);
   }
 };
 
 template <>
-class ::fidl::testing::WireSyncEventHandlerTestBase<
-    ::test_nullable::SimpleProtocol>
-    : public ::fidl::WireSyncEventHandler<::test_nullable::SimpleProtocol> {
+class ::fidl::testing::WireSyncEventHandlerTestBase<::test_nullable::SimpleProtocol> : public ::fidl::WireSyncEventHandler<::test_nullable::SimpleProtocol> {
  public:
-  virtual ~WireSyncEventHandlerTestBase<::test_nullable::SimpleProtocol>() =
-      default;
+  virtual ~WireSyncEventHandlerTestBase<::test_nullable::SimpleProtocol>() = default;
   virtual void NotImplemented_(const std::string& name) = 0;
 };
 }  // namespace testing

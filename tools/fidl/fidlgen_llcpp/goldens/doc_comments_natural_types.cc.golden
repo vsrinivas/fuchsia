@@ -2,18 +2,17 @@
 
 #include <fidl/test.doccomments/cpp/natural_types.h>
 
-::test_doccomments::Struct::Storage_ test_doccomments::Struct::CloneStorage_()
-    const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.field)};
+::test_doccomments::Struct::Storage_ test_doccomments::Struct::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.field)};
 }
 
-::test_doccomments::Table::Storage_ test_doccomments::Table::CloneStorage_()
-    const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.field)};
+::test_doccomments::Table::Storage_ test_doccomments::Table::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.field)};
 }
 
-std::shared_ptr<::test_doccomments::StrictUnion::Storage_>
-test_doccomments::StrictUnion::CloneStorage_() const {
+std::shared_ptr<::test_doccomments::StrictUnion::Storage_> test_doccomments::StrictUnion::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
@@ -25,8 +24,7 @@ test_doccomments::StrictUnion::CloneStorage_() const {
   }
 }
 
-std::shared_ptr<::test_doccomments::FlexibleUnion::Storage_>
-test_doccomments::FlexibleUnion::CloneStorage_() const {
+std::shared_ptr<::test_doccomments::FlexibleUnion::Storage_> test_doccomments::FlexibleUnion::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:

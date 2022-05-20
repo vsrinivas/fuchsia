@@ -3,32 +3,24 @@
 #include <fidl/test.anonymous/cpp/natural_messaging.h>
 
 namespace test_anonymous {
-[[maybe_unused]] constexpr inline uint64_t kSomeProtocol_SomeMethod_Ordinal =
-    2515914517457749720lu;
+[[maybe_unused]] constexpr inline uint64_t kSomeProtocol_SomeMethod_Ordinal = 2515914517457749720lu;
 
-[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
-    kSomeProtocol_SomeMethod_DynamicFlags =
-        ::fidl::MessageDynamicFlags::kStrictMethod;
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kSomeProtocol_SomeMethod_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
 #ifdef __Fuchsia__
 }  // namespace test_anonymous
 ::fidl::internal::NaturalThenable<::test_anonymous::SomeProtocol::SomeMethod>
-fidl::internal::NaturalClientImpl<::test_anonymous::SomeProtocol>::SomeMethod(
-    ::fidl::Request<::test_anonymous::SomeProtocol::SomeMethod> request) const {
+fidl::internal::NaturalClientImpl<::test_anonymous::SomeProtocol>::SomeMethod(::fidl::Request<::test_anonymous::SomeProtocol::SomeMethod> request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_anonymous::kSomeProtocol_SomeMethod_Ordinal,
-      ::test_anonymous::kSomeProtocol_SomeMethod_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_anonymous::kSomeProtocol_SomeMethod_Ordinal, ::test_anonymous::kSomeProtocol_SomeMethod_DynamicFlags};
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<
-          ::fidl::Request<::test_anonymous::SomeProtocol::SomeMethod>>::
-          IntoDomainObject(std::move(request)));
-  return ::fidl::internal::NaturalThenable<
-      ::test_anonymous::SomeProtocol::SomeMethod>(
+      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_anonymous::SomeProtocol::SomeMethod>>::IntoDomainObject(std::move(request)));
+  return ::fidl::internal::NaturalThenable<::test_anonymous::SomeProtocol::SomeMethod>(
       &client_base(), {}, std::move(_encoder),
-      [](::fidl::internal::ThenableBase* base,
-         ::fidl::internal::NaturalMessageEncoder& encoder,
-         ::fidl::internal::ResponseContext* response_context) {
+      [](
+          ::fidl::internal::ThenableBase* base,
+          ::fidl::internal::NaturalMessageEncoder& encoder,
+          ::fidl::internal::ResponseContext* response_context) {
         ::fidl::OutgoingMessage msg = encoder.GetMessage();
         return base->SendTwoWay(msg, response_context);
       });
@@ -40,24 +32,15 @@ namespace test_anonymous {
 }  // namespace test_anonymous
 #ifdef __Fuchsia__
 
-::fidl::Result<::test_anonymous::SomeProtocol::SomeMethod> fidl::internal::
-    NaturalSyncClientImpl<::test_anonymous::SomeProtocol>::SomeMethod(
-        ::fidl::Request<::test_anonymous::SomeProtocol::SomeMethod> request) {
+::fidl::Result<::test_anonymous::SomeProtocol::SomeMethod>
+fidl::internal::NaturalSyncClientImpl<::test_anonymous::SomeProtocol>::SomeMethod(::fidl::Request<::test_anonymous::SomeProtocol::SomeMethod> request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_anonymous::kSomeProtocol_SomeMethod_Ordinal,
-      ::test_anonymous::kSomeProtocol_SomeMethod_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_anonymous::kSomeProtocol_SomeMethod_Ordinal, ::test_anonymous::kSomeProtocol_SomeMethod_DynamicFlags};
   encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<
-          ::fidl::Request<::test_anonymous::SomeProtocol::SomeMethod>>::
-          IntoDomainObject(std::move(request)));
+      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_anonymous::SomeProtocol::SomeMethod>>::IntoDomainObject(std::move(request)));
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
-  ::fidl::internal::IncomingMessageStorage<
-      ::fidl::internal::TransactionalResponse<
-          ::test_anonymous::SomeProtocol::SomeMethod>>
-      response_storage;
-  return ::fidl::internal::DecodeResponseAndFoldError<
-      ::test_anonymous::SomeProtocol::SomeMethod>(
+  ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_anonymous::SomeProtocol::SomeMethod>> response_storage;
+  return ::fidl::internal::DecodeResponseAndFoldError<::test_anonymous::SomeProtocol::SomeMethod>(
       msg.Call(_client_end().handle(), response_storage.view()), nullptr);
 }
 
@@ -65,10 +48,10 @@ namespace test_anonymous {
 
 #ifdef __Fuchsia__
 
-std::optional<::fidl::UnbindInfo> fidl::internal::
-    NaturalEventDispatcher<::test_anonymous::SomeProtocol>::DispatchEvent(
-        ::fidl::IncomingMessage& msg,
-        ::fidl::internal::MessageStorageViewBase* storage_view) {
+std::optional<::fidl::UnbindInfo>
+fidl::internal::NaturalEventDispatcher<::test_anonymous::SomeProtocol>::DispatchEvent(
+    ::fidl::IncomingMessage& msg,
+    ::fidl::internal::MessageStorageViewBase* storage_view) {
   return ::fidl::UnbindInfo::UnknownOrdinal();
 }
 #endif  // __Fuchsia__
@@ -77,66 +60,45 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
 
 #endif  // __Fuchsia__
 
-void fidl::internal::
-    NaturalCompleterBase<::test_anonymous::SomeProtocol::SomeMethod>::Reply(
-        ::fidl::Response<::test_anonymous::SomeProtocol::SomeMethod>&&
-            response) {
+void fidl::internal::NaturalCompleterBase<::test_anonymous::SomeProtocol::SomeMethod>::Reply(::fidl::Response<::test_anonymous::SomeProtocol::SomeMethod>&& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_anonymous::kSomeProtocol_SomeMethod_Ordinal,
-      ::test_anonymous::kSomeProtocol_SomeMethod_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_anonymous::kSomeProtocol_SomeMethod_Ordinal, ::test_anonymous::kSomeProtocol_SomeMethod_DynamicFlags};
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<
-          ::fidl::Response<::test_anonymous::SomeProtocol::SomeMethod>>::
-          IntoDomainObject(std::move(response)));
+      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_anonymous::SomeProtocol::SomeMethod>>::IntoDomainObject(std::move(response)));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
 
 #ifdef __Fuchsia__
 
-constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
-    ::test_anonymous::SomeProtocol>::entries_[] = {
+constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<::test_anonymous::SomeProtocol>::entries_[] = {
     {
         ::test_anonymous::kSomeProtocol_SomeMethod_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::MessageStorageViewBase* storage_view,
-           ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
-              ::test_anonymous::SomeProtocolSomeMethodRequest>(std::move(msg));
+           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_anonymous::SomeProtocolSomeMethodRequest>(std::move(msg));
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_anonymous::SomeProtocol::SomeMethod> request =
-              ::fidl::internal::NaturalMessageConverter<
-                  ::fidl::Request<::test_anonymous::SomeProtocol::SomeMethod>>::
-                  FromDomainObject(std::move(decoded.value()));
-          ::fidl::internal::NaturalCompleter<
-              ::test_anonymous::SomeProtocol::SomeMethod>::Sync completer(txn);
-          static_cast<::fidl::Server<::test_anonymous::SomeProtocol>*>(
-              interface)
-              ->SomeMethod(request, completer);
+          ::fidl::Request<::test_anonymous::SomeProtocol::SomeMethod> request = ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_anonymous::SomeProtocol::SomeMethod>>::FromDomainObject(std::move(decoded.value()));
+          ::fidl::internal::NaturalCompleter<::test_anonymous::SomeProtocol::SomeMethod>::Sync completer(txn);
+          static_cast<::fidl::Server<::test_anonymous::SomeProtocol>*>(interface)->SomeMethod(
+              request, completer);
           return ::fidl::Status::Ok();
         },
     },
 };
 
-const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<
-    ::test_anonymous::SomeProtocol>::entries_end_ = &entries_[1];
+const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::test_anonymous::SomeProtocol>::entries_end_ =
+    &entries_[1];
 
-void fidl::internal::NaturalServerDispatcher<::test_anonymous::SomeProtocol>::
-    Dispatch(::fidl::Server<::test_anonymous::SomeProtocol>* impl,
-             ::fidl::IncomingMessage&& msg,
-             internal::MessageStorageViewBase* storage_view,
-             ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_,
-                             entries_end_);
+void fidl::internal::NaturalServerDispatcher<::test_anonymous::SomeProtocol>::Dispatch(::fidl::Server<::test_anonymous::SomeProtocol>* impl, ::fidl::IncomingMessage&& msg,
+                                                                                       internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_);
 }
 void fidl::Server<::test_anonymous::SomeProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
-  ::fidl::internal::NaturalServerDispatcher<
-      ::test_anonymous::SomeProtocol>::Dispatch(this, std::move(msg),
-                                                storage_view, txn);
+  ::fidl::internal::NaturalServerDispatcher<::test_anonymous::SomeProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }
 #endif  // __Fuchsia__

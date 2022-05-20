@@ -15,12 +15,9 @@ namespace fidl {
 namespace internal {
 
 template <>
-struct WireNaturalConversionTraits<::test_driveroneway::wire::Payload,
-                                   ::test_driveroneway::Payload> {
-  static ::test_driveroneway::Payload ToNatural(
-      ::test_driveroneway::wire::Payload src);
-  static ::test_driveroneway::wire::Payload ToWire(
-      fidl::AnyArena& arena, ::test_driveroneway::Payload src);
+struct WireNaturalConversionTraits<::test_driveroneway::wire::Payload, ::test_driveroneway::Payload> {
+  static ::test_driveroneway::Payload ToNatural(::test_driveroneway::wire::Payload src);
+  static ::test_driveroneway::wire::Payload ToWire(fidl::AnyArena& arena, ::test_driveroneway::Payload src);
 };
 
 template <>
@@ -33,12 +30,9 @@ struct WireTypeForNaturalType<::test_driveroneway::Payload> {
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_driveroneway::wire::OneWaySendRequest,
-                                   ::test_driveroneway::OneWaySendRequest> {
-  static ::test_driveroneway::OneWaySendRequest ToNatural(
-      ::test_driveroneway::wire::OneWaySendRequest src);
-  static ::test_driveroneway::wire::OneWaySendRequest ToWire(
-      fidl::AnyArena& arena, ::test_driveroneway::OneWaySendRequest src);
+struct WireNaturalConversionTraits<::test_driveroneway::wire::OneWaySendRequest, ::test_driveroneway::OneWaySendRequest> {
+  static ::test_driveroneway::OneWaySendRequest ToNatural(::test_driveroneway::wire::OneWaySendRequest src);
+  static ::test_driveroneway::wire::OneWaySendRequest ToWire(fidl::AnyArena& arena, ::test_driveroneway::OneWaySendRequest src);
 };
 
 template <>

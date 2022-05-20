@@ -7,28 +7,22 @@ void ::test_handlesintypes::wire::HandlesInTypes::_CloseHandles() {
   normal_handle.reset();
   {
     ::zx::vmo* handle_in_vec_element = handle_in_vec.mutable_data();
-    for (uint64_t i = 0; i < handle_in_vec.count();
-         ++i, ++handle_in_vec_element) {
+    for (uint64_t i = 0; i < handle_in_vec.count(); ++i, ++handle_in_vec_element) {
       handle_in_vec_element->reset();
     }
   }
   {
     ::zx::vmo* handle_in_array_element = handle_in_array.data();
-    for (size_t i = 0; i < handle_in_array.size();
-         ++i, ++handle_in_array_element) {
+    for (size_t i = 0; i < handle_in_array.size(); ++i, ++handle_in_array_element) {
       handle_in_array_element->reset();
     }
   }
   {
-    ::fidl::Array<::zx::vmo, 5>* handle_in_mixed_vec_array_element =
-        handle_in_mixed_vec_array.mutable_data();
-    for (uint64_t i = 0; i < handle_in_mixed_vec_array.count();
-         ++i, ++handle_in_mixed_vec_array_element) {
+    ::fidl::Array<::zx::vmo, 5>* handle_in_mixed_vec_array_element = handle_in_mixed_vec_array.mutable_data();
+    for (uint64_t i = 0; i < handle_in_mixed_vec_array.count(); ++i, ++handle_in_mixed_vec_array_element) {
       {
-        ::zx::vmo* handle_in_mixed_vec_array_element_element =
-            (*handle_in_mixed_vec_array_element).data();
-        for (size_t i = 0; i < (*handle_in_mixed_vec_array_element).size();
-             ++i, ++handle_in_mixed_vec_array_element_element) {
+        ::zx::vmo* handle_in_mixed_vec_array_element_element = (*handle_in_mixed_vec_array_element).data();
+        for (size_t i = 0; i < (*handle_in_mixed_vec_array_element).size(); ++i, ++handle_in_mixed_vec_array_element_element) {
           handle_in_mixed_vec_array_element_element->reset();
         }
       }
@@ -41,25 +35,20 @@ void ::test_handlesintypes::wire::HandlesInTypes::_CloseHandles() {
 
 #ifdef __Fuchsia__
 
-auto ::test_handlesintypes::wire::UnionWithHandle::Which() const
-    -> ::test_handlesintypes::wire::UnionWithHandle::Tag {
+auto ::test_handlesintypes::wire::UnionWithHandle::Which() const -> ::test_handlesintypes::wire::UnionWithHandle::Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
     case ::test_handlesintypes::wire::UnionWithHandle::Ordinal::kH:
-      return static_cast<::test_handlesintypes::wire::UnionWithHandle::Tag>(
-          ordinal_);
+      return static_cast<::test_handlesintypes::wire::UnionWithHandle::Tag>(ordinal_);
     default:
       return ::test_handlesintypes::wire::UnionWithHandle::Tag::kUnknown;
   }
 }
 
-void ::test_handlesintypes::wire::UnionWithHandle::
-    SizeAndOffsetAssertionHelper() {
+void ::test_handlesintypes::wire::UnionWithHandle::SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(UnionWithHandle) == sizeof(fidl_xunion_v2_t));
-  static_assert(offsetof(UnionWithHandle, ordinal_) ==
-                offsetof(fidl_xunion_v2_t, tag));
-  static_assert(offsetof(UnionWithHandle, envelope_) ==
-                offsetof(fidl_xunion_v2_t, envelope));
+  static_assert(offsetof(UnionWithHandle, ordinal_) == offsetof(fidl_xunion_v2_t, tag));
+  static_assert(offsetof(UnionWithHandle, envelope_) == offsetof(fidl_xunion_v2_t, envelope));
 }
 ::test_handlesintypes::wire::UnionWithHandle::~UnionWithHandle() {
   switch (ordinal_) {
@@ -71,8 +60,7 @@ void ::test_handlesintypes::wire::UnionWithHandle::
   }
 }
 
-void ::test_handlesintypes::wire::UnionWithHandle::_Move(
-    UnionWithHandle&& other) {
+void ::test_handlesintypes::wire::UnionWithHandle::_Move(UnionWithHandle&& other) {
   ordinal_ = other.ordinal_;
   switch (ordinal_) {
     case ::test_handlesintypes::wire::UnionWithHandle::Ordinal::kH:
@@ -97,8 +85,7 @@ void ::test_handlesintypes::wire::UnionWithHandle::_CloseHandles() {
 
 #ifdef __Fuchsia__
 
-bool ::fidl::WireTableFrame<
-    ::test_handlesintypes::wire::TableWithHandle>::HasUnknownData() const {
+bool ::fidl::WireTableFrame<::test_handlesintypes::wire::TableWithHandle>::HasUnknownData() const {
   return false;
 }
 

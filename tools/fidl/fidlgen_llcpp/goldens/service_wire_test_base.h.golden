@@ -7,49 +7,38 @@ namespace fidl {
 namespace testing {
 
 template <>
-class WireTestBase<::test_service::SecondProtocol>
-    : public ::fidl::WireServer<::test_service::SecondProtocol> {
+class WireTestBase<::test_service::SecondProtocol> : public ::fidl::WireServer<::test_service::SecondProtocol> {
  public:
   virtual ~WireTestBase<::test_service::SecondProtocol>() = default;
-  virtual void NotImplemented_(const std::string& name,
-                               ::fidl::CompleterBase& completer) = 0;
+  virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
   virtual void MethodOnSecond(
-      MethodOnSecondRequestView request,
-      MethodOnSecondCompleter::Sync& completer) override {
+      MethodOnSecondRequestView request, MethodOnSecondCompleter::Sync& completer) override {
     NotImplemented_("MethodOnSecond", completer);
   }
 };
 
 template <>
-class ::fidl::testing::WireSyncEventHandlerTestBase<
-    ::test_service::SecondProtocol>
-    : public ::fidl::WireSyncEventHandler<::test_service::SecondProtocol> {
+class ::fidl::testing::WireSyncEventHandlerTestBase<::test_service::SecondProtocol> : public ::fidl::WireSyncEventHandler<::test_service::SecondProtocol> {
  public:
-  virtual ~WireSyncEventHandlerTestBase<::test_service::SecondProtocol>() =
-      default;
+  virtual ~WireSyncEventHandlerTestBase<::test_service::SecondProtocol>() = default;
   virtual void NotImplemented_(const std::string& name) = 0;
 };
 
 template <>
-class WireTestBase<::test_service::FirstProtocol>
-    : public ::fidl::WireServer<::test_service::FirstProtocol> {
+class WireTestBase<::test_service::FirstProtocol> : public ::fidl::WireServer<::test_service::FirstProtocol> {
  public:
   virtual ~WireTestBase<::test_service::FirstProtocol>() = default;
-  virtual void NotImplemented_(const std::string& name,
-                               ::fidl::CompleterBase& completer) = 0;
-  virtual void MethodOnFirst(MethodOnFirstRequestView request,
-                             MethodOnFirstCompleter::Sync& completer) override {
+  virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
+  virtual void MethodOnFirst(
+      MethodOnFirstRequestView request, MethodOnFirstCompleter::Sync& completer) override {
     NotImplemented_("MethodOnFirst", completer);
   }
 };
 
 template <>
-class ::fidl::testing::WireSyncEventHandlerTestBase<
-    ::test_service::FirstProtocol>
-    : public ::fidl::WireSyncEventHandler<::test_service::FirstProtocol> {
+class ::fidl::testing::WireSyncEventHandlerTestBase<::test_service::FirstProtocol> : public ::fidl::WireSyncEventHandler<::test_service::FirstProtocol> {
  public:
-  virtual ~WireSyncEventHandlerTestBase<::test_service::FirstProtocol>() =
-      default;
+  virtual ~WireSyncEventHandlerTestBase<::test_service::FirstProtocol>() = default;
   virtual void NotImplemented_(const std::string& name) = 0;
 };
 }  // namespace testing

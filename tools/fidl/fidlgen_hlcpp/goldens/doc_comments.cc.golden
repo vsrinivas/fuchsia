@@ -42,43 +42,37 @@ Table& Table::operator=(Table&& other) {
   return *this;
 }
 
-bool Table::IsEmpty() const { return field_presence_.IsEmpty(); }
+bool Table::IsEmpty() const {
+  return field_presence_.IsEmpty();
+}
 
-void Table::Encode(
-    ::fidl::Encoder* _encoder, size_t _offset,
-    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+void Table::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                   cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   size_t max_ordinal = MaxOrdinal();
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
-  __attribute__((__unused__)) size_t base =
-      _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
+  __attribute__((__unused__)) size_t base = _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
   if (field_presence_.IsSet<0>()) {
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
     size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
 
-    if (::fidl::EncodingInlineSize<int32_t>(_encoder) <=
-        FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+    if (::fidl::EncodingInlineSize<int32_t>(_encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
       ::fidl::Encode(_encoder, &Field_value_.value, envelope_base);
 
-      fidl_envelope_v2_t* envelope =
-          _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      envelope->num_handles = static_cast<uint16_t>(
-          _encoder->CurrentHandleCount() - handles_before);
+      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder, &Field_value_.value,
-          _encoder->Alloc(
-              ::fidl::EncodingInlineSize<int32_t, ::fidl::Encoder>(_encoder)));
+          _encoder,
+          &Field_value_.value,
+          _encoder->Alloc(::fidl::EncodingInlineSize<int32_t, ::fidl::Encoder>(_encoder)));
 
-      fidl_envelope_v2_t* envelope =
-          _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      envelope->num_bytes =
-          static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
-      envelope->num_handles = static_cast<uint16_t>(
-          _encoder->CurrentHandleCount() - handles_before);
+      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
+      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
       envelope->flags = 0;
     }
   }
@@ -96,8 +90,7 @@ void Table::Decode(::fidl::Decoder* _decoder, Table* _value, size_t _offset) {
   count = encoded->count;
   if (count >= 1) {
     size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
-    fidl_envelope_v2_t* envelope =
-        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_Field(),
                      _decoder->EnvelopeValueOffset(envelope));
@@ -119,9 +112,9 @@ done_1:
 
 zx_status_t Table::Clone(Table* result) const {
   if (field_presence_.IsSet<0>()) {
-    zx_status_t _status =
-        ::fidl::Clone(Field_value_.value, result->mutable_Field());
-    if (_status != ZX_OK) return _status;
+    zx_status_t _status = ::fidl::Clone(Field_value_.value, result->mutable_Field());
+    if (_status != ZX_OK)
+      return _status;
   } else {
     result->clear_Field();
   }
@@ -131,9 +124,8 @@ zx_status_t Table::Clone(Table* result) const {
 extern "C" const fidl_type_t test_doccomments_StructTable;
 const fidl_type_t* Struct::FidlType = &test_doccomments_StructTable;
 
-void Struct::Encode(
-    ::fidl::Encoder* _encoder, size_t _offset,
-    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+void Struct::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<Struct>::value) {
     memcpy(_encoder->template GetPtr<Struct>(_offset), this, sizeof(Struct));
   } else {
@@ -151,7 +143,8 @@ void Struct::Decode(::fidl::Decoder* _decoder, Struct* _value, size_t _offset) {
 
 zx_status_t Struct::Clone(Struct* _result) const {
   zx_status_t _status = ::fidl::Clone(Field, &_result->Field);
-  if (_status != ZX_OK) return _status;
+  if (_status != ZX_OK)
+    return _status;
   return ZX_OK;
 }
 
@@ -160,15 +153,16 @@ const fidl_type_t* StrictUnion::FidlType = &test_doccomments_StrictUnionTable;
 
 StrictUnion::StrictUnion() {}
 
-StrictUnion::~StrictUnion() { Destroy(); }
+StrictUnion::~StrictUnion() {
+  Destroy();
+}
 
 StrictUnion::StrictUnion(StrictUnion&& other) : tag_(other.tag_) {
   switch (tag_) {
     case ::test::doccomments::StrictUnion::Tag::kField:
       Field_ = std::move(other.Field_);
       break;
-    case static_cast<fidl_xunion_tag_t>(
-        ::test::doccomments::StrictUnion::Tag::Invalid):
+    case static_cast<fidl_xunion_tag_t>(::test::doccomments::StrictUnion::Tag::Invalid):
       break;
   }
 }
@@ -181,8 +175,7 @@ StrictUnion& StrictUnion::operator=(StrictUnion&& other) {
       case ::test::doccomments::StrictUnion::Tag::kField:
         Field_ = std::move(other.Field_);
         break;
-      case static_cast<fidl_xunion_tag_t>(
-          ::test::doccomments::StrictUnion::Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(::test::doccomments::StrictUnion::Tag::Invalid):
         break;
     }
   }
@@ -195,38 +188,32 @@ StrictUnion StrictUnion::WithField(int32_t&& val) {
   return result;
 }
 
-void StrictUnion::Encode(
-    ::fidl::Encoder* encoder, size_t offset,
-    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+void StrictUnion::Encode(::fidl::Encoder* encoder, size_t offset,
+                         cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
   switch (Which()) {
     case ::test::doccomments::StrictUnion::Tag::kField: {
-      if (::fidl::EncodingInlineSize<int32_t>(encoder) <=
-          FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-        ::fidl::Encode(encoder, &Field_,
-                       offset + offsetof(fidl_xunion_v2_t, envelope));
+      if (::fidl::EncodingInlineSize<int32_t>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+        ::fidl::Encode(encoder, &Field_, offset + offsetof(fidl_xunion_v2_t, envelope));
 
         fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
         xunion->tag = tag_;
-        xunion->envelope.num_handles = static_cast<uint16_t>(
-            encoder->CurrentHandleCount() - handles_before);
+        xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
         xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
         break;
       }
 
       ::fidl::Encode(
-          encoder, &Field_,
-          encoder->Alloc(
-              ::fidl::EncodingInlineSize<int32_t, ::fidl::Encoder>(encoder)));
+          encoder,
+          &Field_,
+          encoder->Alloc(::fidl::EncodingInlineSize<int32_t, ::fidl::Encoder>(encoder)));
 
       fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
       xunion->tag = tag_;
-      xunion->envelope.num_bytes =
-          static_cast<uint32_t>(encoder->CurrentLength() - length_before);
-      xunion->envelope.num_handles =
-          static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
+      xunion->envelope.num_bytes = static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+      xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
       xunion->envelope.flags = 0;
       break;
     }
@@ -235,14 +222,13 @@ void StrictUnion::Encode(
   }
 }
 
-void StrictUnion::Decode(::fidl::Decoder* _decoder, StrictUnion* value,
-                         size_t offset) {
+void StrictUnion::Decode(::fidl::Decoder* _decoder, StrictUnion* value, size_t offset) {
   fidl_xunion_v2_t* xunion = _decoder->GetPtr<fidl_xunion_v2_t>(offset);
 
-  if (xunion->envelope.num_bytes == 0 && xunion->envelope.num_handles == 0 &&
+  if (xunion->envelope.num_bytes == 0 &&
+      xunion->envelope.num_handles == 0 &&
       xunion->envelope.flags == 0) {
-    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
-        ::test::doccomments::StrictUnion::Tag::Invalid));
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(::test::doccomments::StrictUnion::Tag::Invalid));
     return;
   }
 
@@ -288,8 +274,7 @@ void StrictUnion::Destroy() {
     default:
       break;
   }
-  tag_ = static_cast<fidl_xunion_tag_t>(
-      ::test::doccomments::StrictUnion::Tag::Invalid);
+  tag_ = static_cast<fidl_xunion_tag_t>(::test::doccomments::StrictUnion::Tag::Invalid);
 }
 
 void StrictUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
@@ -297,8 +282,7 @@ void StrictUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     Destroy();
     tag_ = tag;
     switch (tag_) {
-      case static_cast<fidl_xunion_tag_t>(
-          ::test::doccomments::StrictUnion::Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(::test::doccomments::StrictUnion::Tag::Invalid):
         break;
       case ::test::doccomments::StrictUnion::Tag::kField:
         new (&Field_) int32_t();
@@ -310,37 +294,32 @@ void StrictUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
 }
 
 #if (__cplusplus < 201703)
-constexpr const ::test::doccomments::MyFlexibleEnum MyFlexibleEnum::FOO =
-    ::test::doccomments::MyFlexibleEnum(1u);
-constexpr const ::test::doccomments::MyFlexibleEnum MyFlexibleEnum::BAR =
-    ::test::doccomments::MyFlexibleEnum(2u);
+constexpr const ::test::doccomments::MyFlexibleEnum MyFlexibleEnum::FOO = ::test::doccomments::MyFlexibleEnum(1u);
+constexpr const ::test::doccomments::MyFlexibleEnum MyFlexibleEnum::BAR = ::test::doccomments::MyFlexibleEnum(2u);
 #endif  // (__cplusplus < 201703)
 
 #if (__cplusplus < 201703)
-constexpr const ::test::doccomments::MyFlexibleBits
-    MyFlexibleBits::MY_FIRST_BIT = ::test::doccomments::MyFlexibleBits(1u);
-constexpr const ::test::doccomments::MyFlexibleBits
-    MyFlexibleBits::MY_OTHER_BIT = ::test::doccomments::MyFlexibleBits(2u);
-constexpr const ::test::doccomments::MyFlexibleBits MyFlexibleBits::kMask =
-    ::test::doccomments::MyFlexibleBits(3u);
+constexpr const ::test::doccomments::MyFlexibleBits MyFlexibleBits::MY_FIRST_BIT = ::test::doccomments::MyFlexibleBits(1u);
+constexpr const ::test::doccomments::MyFlexibleBits MyFlexibleBits::MY_OTHER_BIT = ::test::doccomments::MyFlexibleBits(2u);
+constexpr const ::test::doccomments::MyFlexibleBits MyFlexibleBits::kMask = ::test::doccomments::MyFlexibleBits(3u);
 
 #endif  // (__cplusplus < 201703)
 
 extern "C" const fidl_type_t test_doccomments_FlexibleUnionTable;
-const fidl_type_t* FlexibleUnion::FidlType =
-    &test_doccomments_FlexibleUnionTable;
+const fidl_type_t* FlexibleUnion::FidlType = &test_doccomments_FlexibleUnionTable;
 
 FlexibleUnion::FlexibleUnion() {}
 
-FlexibleUnion::~FlexibleUnion() { Destroy(); }
+FlexibleUnion::~FlexibleUnion() {
+  Destroy();
+}
 
 FlexibleUnion::FlexibleUnion(FlexibleUnion&& other) : tag_(other.tag_) {
   switch (tag_) {
     case ::test::doccomments::FlexibleUnion::Tag::kField:
       Field_ = std::move(other.Field_);
       break;
-    case static_cast<fidl_xunion_tag_t>(
-        ::test::doccomments::FlexibleUnion::Tag::Invalid):
+    case static_cast<fidl_xunion_tag_t>(::test::doccomments::FlexibleUnion::Tag::Invalid):
       break;
     default:
       new (&unknown_data_) decltype(unknown_data_);
@@ -357,8 +336,7 @@ FlexibleUnion& FlexibleUnion::operator=(FlexibleUnion&& other) {
       case ::test::doccomments::FlexibleUnion::Tag::kField:
         Field_ = std::move(other.Field_);
         break;
-      case static_cast<fidl_xunion_tag_t>(
-          ::test::doccomments::FlexibleUnion::Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(::test::doccomments::FlexibleUnion::Tag::Invalid):
         break;
       default:
         new (&unknown_data_) decltype(unknown_data_);
@@ -375,44 +353,37 @@ FlexibleUnion FlexibleUnion::WithField(int32_t&& val) {
   return result;
 }
 
-void FlexibleUnion::Encode(
-    ::fidl::Encoder* encoder, size_t offset,
-    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+void FlexibleUnion::Encode(::fidl::Encoder* encoder, size_t offset,
+                           cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
   switch (Which()) {
     case ::test::doccomments::FlexibleUnion::Tag::kField: {
-      if (::fidl::EncodingInlineSize<int32_t>(encoder) <=
-          FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-        ::fidl::Encode(encoder, &Field_,
-                       offset + offsetof(fidl_xunion_v2_t, envelope));
+      if (::fidl::EncodingInlineSize<int32_t>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+        ::fidl::Encode(encoder, &Field_, offset + offsetof(fidl_xunion_v2_t, envelope));
 
         fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
         xunion->tag = tag_;
-        xunion->envelope.num_handles = static_cast<uint16_t>(
-            encoder->CurrentHandleCount() - handles_before);
+        xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
         xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
         break;
       }
 
       ::fidl::Encode(
-          encoder, &Field_,
-          encoder->Alloc(
-              ::fidl::EncodingInlineSize<int32_t, ::fidl::Encoder>(encoder)));
+          encoder,
+          &Field_,
+          encoder->Alloc(::fidl::EncodingInlineSize<int32_t, ::fidl::Encoder>(encoder)));
 
       fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
       xunion->tag = tag_;
-      xunion->envelope.num_bytes =
-          static_cast<uint32_t>(encoder->CurrentLength() - length_before);
-      xunion->envelope.num_handles =
-          static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
+      xunion->envelope.num_bytes = static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+      xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
       xunion->envelope.flags = 0;
       break;
     }
     case ::test::doccomments::FlexibleUnion::Tag::kUnknown: {
-      ::fidl::EncodeUnknownBytes(encoder, &unknown_data_,
-                                 offset + offsetof(fidl_xunion_t, envelope));
+      ::fidl::EncodeUnknownBytes(encoder, &unknown_data_, offset + offsetof(fidl_xunion_t, envelope));
       *encoder->GetPtr<uint64_t>(offset) = tag_;
       break;
     }
@@ -421,14 +392,13 @@ void FlexibleUnion::Encode(
   }
 }
 
-void FlexibleUnion::Decode(::fidl::Decoder* _decoder, FlexibleUnion* value,
-                           size_t offset) {
+void FlexibleUnion::Decode(::fidl::Decoder* _decoder, FlexibleUnion* value, size_t offset) {
   fidl_xunion_v2_t* xunion = _decoder->GetPtr<fidl_xunion_v2_t>(offset);
 
-  if (xunion->envelope.num_bytes == 0 && xunion->envelope.num_handles == 0 &&
+  if (xunion->envelope.num_bytes == 0 &&
+      xunion->envelope.num_handles == 0 &&
       xunion->envelope.flags == 0) {
-    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
-        ::test::doccomments::FlexibleUnion::Tag::Invalid));
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(::test::doccomments::FlexibleUnion::Tag::Invalid));
     return;
   }
 
@@ -444,8 +414,7 @@ void FlexibleUnion::Decode(::fidl::Decoder* _decoder, FlexibleUnion* value,
     default: {
       auto unknown_info = _decoder->EnvelopeUnknownDataInfo(&xunion->envelope);
       value->unknown_data_.resize(unknown_info.num_bytes);
-      ::fidl::DecodeUnknownBytesContents(_decoder, &value->unknown_data_,
-                                         unknown_info.value_offset);
+      ::fidl::DecodeUnknownBytesContents(_decoder, &value->unknown_data_, unknown_info.value_offset);
       break;
     }
   }
@@ -471,8 +440,7 @@ FlexibleUnion& FlexibleUnion::set_Field(int32_t value) {
   Field_ = std::move(value);
   return *this;
 }
-FlexibleUnion& FlexibleUnion::SetUnknownData(fidl_xunion_tag_t ordinal,
-                                             std::vector<uint8_t> bytes) {
+FlexibleUnion& FlexibleUnion::SetUnknownData(fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes) {
   EnsureStorageInitialized(ordinal);
   unknown_data_ = std::move(bytes);
   return *this;
@@ -483,15 +451,13 @@ void FlexibleUnion::Destroy() {
     case ::test::doccomments::FlexibleUnion::Tag::kField:
       break;
 
-    case static_cast<fidl_xunion_tag_t>(
-        ::test::doccomments::FlexibleUnion::Tag::Invalid):
+    case static_cast<fidl_xunion_tag_t>(::test::doccomments::FlexibleUnion::Tag::Invalid):
       break;
     default:
       unknown_data_.~decltype(unknown_data_)();
       break;
   }
-  tag_ = static_cast<fidl_xunion_tag_t>(
-      ::test::doccomments::FlexibleUnion::Tag::Invalid);
+  tag_ = static_cast<fidl_xunion_tag_t>(::test::doccomments::FlexibleUnion::Tag::Invalid);
 }
 
 void FlexibleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
@@ -499,8 +465,7 @@ void FlexibleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     Destroy();
     tag_ = tag;
     switch (tag_) {
-      case static_cast<fidl_xunion_tag_t>(
-          ::test::doccomments::FlexibleUnion::Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(::test::doccomments::FlexibleUnion::Tag::Invalid):
         break;
       case ::test::doccomments::FlexibleUnion::Tag::kField:
         new (&Field_) int32_t();
@@ -519,8 +484,7 @@ void FlexibleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
 
 Interface::~Interface() = default;
 
-const fidl_type_t* ::test::doccomments::Interface_RequestDecoder::GetType(
-    uint64_t ordinal, bool* out_needs_response) {
+const fidl_type_t* ::test::doccomments::Interface_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
   *out_needs_response = false;
   switch (ordinal) {
     case ::test::doccomments::internal::kInterface_Method_Ordinal:
@@ -572,33 +536,26 @@ zx_status_t Interface_Proxy::Dispatch_(::fidl::HLCPPIncomingMessage message) {
 }
 
 void Interface_Proxy::Method() {
-  ::fidl::MessageEncoder _encoder(
-      ::test::doccomments::internal::kInterface_Method_Ordinal,
-      ::test::doccomments::internal::kInterface_Method_DynamicFlags);
+  ::fidl::MessageEncoder _encoder(::test::doccomments::internal::kInterface_Method_Ordinal, ::test::doccomments::internal::kInterface_Method_DynamicFlags);
   const fidl_type_t* req_type = nullptr;
-  controller_->Send(
-      req_type,
-      ::test::doccomments::Interface_RequestEncoder::Method(&_encoder),
-      nullptr);
+  controller_->Send(req_type, ::test::doccomments::Interface_RequestEncoder::Method(&_encoder), nullptr);
 }
 
-Interface_Stub::Interface_Stub(
-    ::test::doccomments::Interface_Stub::Interface_clazz* impl)
-    : impl_(impl) {
+Interface_Stub::Interface_Stub(::test::doccomments::Interface_Stub::Interface_clazz* impl) : impl_(impl) {
   (void)impl_;
 }
 
 Interface_Stub::~Interface_Stub() = default;
 
-namespace {}  // namespace
+namespace {
+
+}  // namespace
 
 zx_status_t Interface_Stub::Dispatch_(
     ::fidl::HLCPPIncomingMessage message,
     ::fidl::internal::PendingResponse response) {
   bool needs_response;
-  const fidl_type_t* request_type =
-      ::test::doccomments::Interface_RequestDecoder::GetType(message.ordinal(),
-                                                             &needs_response);
+  const fidl_type_t* request_type = ::test::doccomments::Interface_RequestDecoder::GetType(message.ordinal(), &needs_response);
   if (!message.has_only_header()) {
     if (request_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
@@ -613,11 +570,9 @@ zx_status_t Interface_Stub::Dispatch_(
 
   if (response.needs_response() != needs_response) {
     if (needs_response) {
-      FIDL_REPORT_DECODING_ERROR(message, request_type,
-                                 "Message needing a response with no txid");
+      FIDL_REPORT_DECODING_ERROR(message, request_type, "Message needing a response with no txid");
     } else {
-      FIDL_REPORT_DECODING_ERROR(message, request_type,
-                                 "Message not needing a response with a txid");
+      FIDL_REPORT_DECODING_ERROR(message, request_type, "Message not needing a response with a txid");
     }
     return ZX_ERR_INVALID_ARGS;
   }
@@ -635,13 +590,9 @@ zx_status_t Interface_Stub::Dispatch_(
   return ZX_OK;
 }
 void Interface_Stub::OnEvent() {
-  ::fidl::MessageEncoder _encoder(
-      ::test::doccomments::internal::kInterface_OnEvent_Ordinal,
-      ::test::doccomments::internal::kInterface_OnEvent_DynamicFlags);
+  ::fidl::MessageEncoder _encoder(::test::doccomments::internal::kInterface_OnEvent_Ordinal, ::test::doccomments::internal::kInterface_OnEvent_DynamicFlags);
   const fidl_type_t* resp_type = nullptr;
-  sender_()->Send(
-      resp_type,
-      ::test::doccomments::Interface_ResponseEncoder::OnEvent(&_encoder));
+  sender_()->Send(resp_type, ::test::doccomments::Interface_ResponseEncoder::OnEvent(&_encoder));
 }
 
 Interface_SyncProxy::Interface_SyncProxy(::zx::channel channel)
@@ -650,13 +601,9 @@ Interface_SyncProxy::Interface_SyncProxy(::zx::channel channel)
 Interface_SyncProxy::~Interface_SyncProxy() = default;
 
 zx_status_t Interface_SyncProxy::Method() {
-  ::fidl::MessageEncoder _encoder(
-      ::test::doccomments::internal::kInterface_Method_Ordinal,
-      ::test::doccomments::internal::kInterface_Method_DynamicFlags);
+  ::fidl::MessageEncoder _encoder(::test::doccomments::internal::kInterface_Method_Ordinal, ::test::doccomments::internal::kInterface_Method_DynamicFlags);
   const fidl_type_t* req_type = nullptr;
-  return proxy_.Send(
-      req_type,
-      ::test::doccomments::Interface_RequestEncoder::Method(&_encoder));
+  return proxy_.Send(req_type, ::test::doccomments::Interface_RequestEncoder::Method(&_encoder));
 }
 #endif  // __Fuchsia__
 

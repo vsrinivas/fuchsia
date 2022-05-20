@@ -3,8 +3,7 @@
 #include <fidl/test.encapsulatedstructs/cpp/wire_types.h>
 
 #ifdef __Fuchsia__
-void ::test_encapsulatedstructs::wire::NonInlineStructTestStruct::
-    _CloseHandles() {
+void ::test_encapsulatedstructs::wire::NonInlineStructTestStruct::_CloseHandles() {
   h.reset();
 }
 #endif  // __Fuchsia__

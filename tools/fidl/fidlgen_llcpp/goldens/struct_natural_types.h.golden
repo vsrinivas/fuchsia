@@ -28,12 +28,12 @@ class Simple {
  public:
   Simple(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   Simple(uint8_t f1, bool f2) noexcept
-      : storage_({.f1 = std::move(f1), .f2 = std::move(f2)}) {}
+      : storage_({.f1 = std::move(f1),
+                  .f2 = std::move(f2)}) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |Simple| only if all of its members are default
-  // constructible.
+  // Default constructs a |Simple| only if all of its members are default constructible.
   Simple() = default;
 #pragma clang diagnostic pop
 
@@ -46,27 +46,34 @@ class Simple {
   }
 
   bool operator==(const Simple& other) const noexcept {
-    return ::fidl::internal::NaturalStructCodingTraits<::test_struct::Simple,
-                                                       2>::Equal(this, &other);
+    return ::fidl::internal::NaturalStructCodingTraits<::test_struct::Simple, 2>::Equal(this, &other);
   }
   bool operator!=(const Simple& other) const noexcept {
-    return !::fidl::internal::NaturalStructCodingTraits<::test_struct::Simple,
-                                                        2>::Equal(this, &other);
+    return !::fidl::internal::NaturalStructCodingTraits<::test_struct::Simple, 2>::Equal(this, &other);
   }
 
-  uint8_t f1() const { return storage_.f1; }
+  uint8_t
+  f1() const {
+    return storage_.f1;
+  }
 
-  uint8_t& f1() { return storage_.f1; }
+  uint8_t& f1() {
+    return storage_.f1;
+  }
 
-  bool f2() const { return storage_.f2; }
+  bool
+  f2() const {
+    return storage_.f2;
+  }
 
-  bool& f2() { return storage_.f2; }
+  bool& f2() {
+    return storage_.f2;
+  }
 
-  Simple(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : Simple(Storage_{
-            .f1 = {},
-            .f2 = {},
-        }) {}
+  Simple(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Simple(Storage_{
+                                                                           .f1 = {},
+                                                                           .f2 = {},
+                                                                       }) {}
 
  private:
   struct Storage_ final {
@@ -77,16 +84,11 @@ class Simple {
   Storage_ storage_;
   Storage_ CloneStorage_() const;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_struct::Simple, 2>;
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_struct::Simple, 2>;
   friend struct ::fidl::internal::MemberVisitor<::test_struct::Simple>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<
-          Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::f1, 0},
-      ::fidl::internal::NaturalStructMember<
-          Storage_, bool, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::f2, 1});
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{
+                                                       &Storage_::f1, 0},
+                                                   ::fidl::internal::NaturalStructMember<Storage_, bool, fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::f2, 1});
   static constexpr auto kPadding = std::make_tuple();
 };
 
@@ -99,46 +101,52 @@ class BasicStruct {
  public:
   BasicStruct(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   BasicStruct(uint32_t x, ::std::string y) noexcept
-      : storage_({.x = std::move(x), .y = std::move(y)}) {}
+      : storage_({.x = std::move(x),
+                  .y = std::move(y)}) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |BasicStruct| only if all of its members are default
-  // constructible.
+  // Default constructs a |BasicStruct| only if all of its members are default constructible.
   BasicStruct() = default;
 #pragma clang diagnostic pop
 
   BasicStruct(BasicStruct&&) noexcept = default;
   BasicStruct& operator=(BasicStruct&&) noexcept = default;
-  BasicStruct(const BasicStruct& other) noexcept
-      : BasicStruct(other.CloneStorage_()) {}
+  BasicStruct(const BasicStruct& other) noexcept : BasicStruct(other.CloneStorage_()) {}
   BasicStruct& operator=(const BasicStruct& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
   }
 
   bool operator==(const BasicStruct& other) const noexcept {
-    return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_struct::BasicStruct, 24>::Equal(this, &other);
+    return ::fidl::internal::NaturalStructCodingTraits<::test_struct::BasicStruct, 24>::Equal(this, &other);
   }
   bool operator!=(const BasicStruct& other) const noexcept {
-    return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_struct::BasicStruct, 24>::Equal(this, &other);
+    return !::fidl::internal::NaturalStructCodingTraits<::test_struct::BasicStruct, 24>::Equal(this, &other);
   }
 
-  uint32_t x() const { return storage_.x; }
+  uint32_t
+  x() const {
+    return storage_.x;
+  }
 
-  uint32_t& x() { return storage_.x; }
+  uint32_t& x() {
+    return storage_.x;
+  }
 
-  const ::std::string& y() const { return storage_.y; }
+  const ::std::string&
+  y() const {
+    return storage_.y;
+  }
 
-  ::std::string& y() { return storage_.y; }
+  ::std::string& y() {
+    return storage_.y;
+  }
 
-  BasicStruct(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : BasicStruct(Storage_{
-            .x = {},
-            .y = {},
-        }) {}
+  BasicStruct(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : BasicStruct(Storage_{
+                                                                                .x = {},
+                                                                                .y = {},
+                                                                            }) {}
 
  private:
   struct Storage_ final {
@@ -149,21 +157,15 @@ class BasicStruct {
   Storage_ storage_;
   Storage_ CloneStorage_() const;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_struct::BasicStruct, 24>;
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_struct::BasicStruct, 24>;
   friend struct ::fidl::internal::MemberVisitor<::test_struct::BasicStruct>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<
-          Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::x, 0},
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::std::string,
-          fidl::internal::NaturalCodingConstraintString<>>{&Storage_::y, 8});
-  static constexpr auto kPadding =
-      std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{
-          .offset = 0,
-          .mask = 0xffffffff00000000ull,
-      });
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{
+                                                       &Storage_::x, 0},
+                                                   ::fidl::internal::NaturalStructMember<Storage_, ::std::string, fidl::internal::NaturalCodingConstraintString<>>{&Storage_::y, 8});
+  static constexpr auto kPadding = std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{
+      .offset = 0,
+      .mask = 0xffffffff00000000ull,
+  });
 };
 
 }  // namespace test_struct
@@ -175,11 +177,8 @@ template <>
 struct IsFidlType<::test_struct::Simple> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<
-    ::test_struct::Simple, ::fidl::internal::NaturalCodingConstraintEmpty>
-    final
-    : public ::fidl::internal::NaturalStructCodingTraits<::test_struct::Simple,
-                                                         2> {};
+struct internal::NaturalCodingTraits<::test_struct::Simple, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_struct::Simple, 2> {};
 
 extern "C" const fidl_type_t test_struct_BasicStructTable;
 
@@ -187,9 +186,7 @@ template <>
 struct IsFidlType<::test_struct::BasicStruct> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<
-    ::test_struct::BasicStruct, ::fidl::internal::NaturalCodingConstraintEmpty>
-    final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_struct::BasicStruct, 24> {};
+struct internal::NaturalCodingTraits<::test_struct::BasicStruct, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_struct::BasicStruct, 24> {};
 
 }  // namespace fidl

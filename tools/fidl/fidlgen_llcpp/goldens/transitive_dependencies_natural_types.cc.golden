@@ -2,7 +2,7 @@
 
 #include <fidl/test.transitivedependencies/cpp/natural_types.h>
 
-::test_transitivedependencies::Baz::Storage_
-test_transitivedependencies::Baz::CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.g)};
+::test_transitivedependencies::Baz::Storage_ test_transitivedependencies::Baz::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.g)};
 }

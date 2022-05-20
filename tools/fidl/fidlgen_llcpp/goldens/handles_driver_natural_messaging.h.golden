@@ -14,8 +14,7 @@
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::internal::NaturalClientImpl<::test_handles::DriverProtocol> final
-    : public ::fidl::internal::NaturalClientBase {
+class ::fidl::internal::NaturalClientImpl<::test_handles::DriverProtocol> final : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
 };
@@ -24,8 +23,7 @@ class ::fidl::internal::NaturalClientImpl<::test_handles::DriverProtocol> final
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::internal::NaturalEventHandlerInterface<
-    ::test_handles::DriverProtocol> {
+class ::fidl::internal::NaturalEventHandlerInterface<::test_handles::DriverProtocol> {
  public:
   NaturalEventHandlerInterface() = default;
   virtual ~NaturalEventHandlerInterface() = default;
@@ -33,20 +31,15 @@ class ::fidl::internal::NaturalEventHandlerInterface<
 
 template <>
 class ::fdf::AsyncEventHandler<::test_handles::DriverProtocol>
-    : public ::fidl::internal::NaturalEventHandlerInterface<
-          ::test_handles::DriverProtocol>,
-      public ::fidl::internal::AsyncEventHandler {
+    : public ::fidl::internal::NaturalEventHandlerInterface<::test_handles::DriverProtocol>, public ::fidl::internal::AsyncEventHandler {
  public:
   AsyncEventHandler() = default;
 };
 
 template <>
-class ::fidl::internal::NaturalEventDispatcher<::test_handles::DriverProtocol>
-    final : public ::fidl::internal::IncomingEventDispatcher<
-                ::fdf::AsyncEventHandler<::test_handles::DriverProtocol>> {
+class ::fidl::internal::NaturalEventDispatcher<::test_handles::DriverProtocol> final : public ::fidl::internal::IncomingEventDispatcher<::fdf::AsyncEventHandler<::test_handles::DriverProtocol>> {
  public:
-  explicit NaturalEventDispatcher(
-      ::fdf::AsyncEventHandler<::test_handles::DriverProtocol>* event_handler)
+  explicit NaturalEventDispatcher(::fdf::AsyncEventHandler<::test_handles::DriverProtocol>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 
  private:
@@ -57,8 +50,7 @@ class ::fidl::internal::NaturalEventDispatcher<::test_handles::DriverProtocol>
 #endif  // __Fuchsia__
 
 template <>
-class ::fdf::Server<::test_handles::DriverProtocol>
-    : public ::fidl::internal::IncomingMessageDispatcher {
+class ::fdf::Server<::test_handles::DriverProtocol> : public ::fidl::internal::IncomingMessageDispatcher {
  public:
   Server() = default;
   virtual ~Server() = default;
@@ -74,11 +66,9 @@ class ::fdf::Server<::test_handles::DriverProtocol>
 #ifdef __Fuchsia__
 
 template <>
-struct ::fidl::internal::NaturalServerDispatcher<::test_handles::DriverProtocol>
-    final {
+struct ::fidl::internal::NaturalServerDispatcher<::test_handles::DriverProtocol> final {
   NaturalServerDispatcher() = delete;
-  static void Dispatch(::fdf::Server<::test_handles::DriverProtocol>* impl,
-                       ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fdf::Server<::test_handles::DriverProtocol>* impl, ::fidl::IncomingMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 

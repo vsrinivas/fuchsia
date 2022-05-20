@@ -45,10 +45,7 @@ extern "C" const fidl_type_t test_unionsandwich_UnionSize8Alignment4Table;
 
 class UnionSize8Alignment4 {
  public:
-  UnionSize8Alignment4()
-      : ordinal_(
-            ::test_unionsandwich::wire::UnionSize8Alignment4::Ordinal::Invalid),
-        envelope_{} {}
+  UnionSize8Alignment4() : ordinal_(::test_unionsandwich::wire::UnionSize8Alignment4::Ordinal::Invalid), envelope_{} {}
 
   UnionSize8Alignment4(const UnionSize8Alignment4&) = default;
   UnionSize8Alignment4& operator=(const UnionSize8Alignment4&) = default;
@@ -59,40 +56,28 @@ class UnionSize8Alignment4 {
     kVariant = 1,  // 0x1
   };
 
-  bool has_invalid_tag() const {
-    return ordinal_ ==
-           ::test_unionsandwich::wire::UnionSize8Alignment4::Ordinal::Invalid;
-  }
+  bool has_invalid_tag() const { return ordinal_ == ::test_unionsandwich::wire::UnionSize8Alignment4::Ordinal::Invalid; }
 
-  bool is_variant() const {
-    return ordinal_ ==
-           ::test_unionsandwich::wire::UnionSize8Alignment4::Ordinal::kVariant;
-  }
+  bool is_variant() const { return ordinal_ == ::test_unionsandwich::wire::UnionSize8Alignment4::Ordinal::kVariant; }
 
   static UnionSize8Alignment4 WithVariant(uint32_t val) {
     UnionSize8Alignment4 result;
-    result.ordinal_ =
-        ::test_unionsandwich::wire::UnionSize8Alignment4::Ordinal::kVariant;
+    result.ordinal_ = ::test_unionsandwich::wire::UnionSize8Alignment4::Ordinal::kVariant;
     result.envelope_.As<uint32_t>().set_data(std::move(val));
     return result;
   }
 
   uint32_t& variant() {
-    ZX_ASSERT(
-        ordinal_ ==
-        ::test_unionsandwich::wire::UnionSize8Alignment4::Ordinal::kVariant);
+    ZX_ASSERT(ordinal_ == ::test_unionsandwich::wire::UnionSize8Alignment4::Ordinal::kVariant);
     return envelope_.As<uint32_t>().get_data();
   }
   const uint32_t& variant() const {
-    ZX_ASSERT(
-        ordinal_ ==
-        ::test_unionsandwich::wire::UnionSize8Alignment4::Ordinal::kVariant);
+    ZX_ASSERT(ordinal_ == ::test_unionsandwich::wire::UnionSize8Alignment4::Ordinal::kVariant);
     return envelope_.As<uint32_t>().get_data();
   }
   ::test_unionsandwich::wire::UnionSize8Alignment4::Tag Which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<::test_unionsandwich::wire::UnionSize8Alignment4::Tag>(
-        ordinal_);
+    return static_cast<::test_unionsandwich::wire::UnionSize8Alignment4::Tag>(ordinal_);
   }
 
  private:
@@ -111,10 +96,7 @@ extern "C" const fidl_type_t test_unionsandwich_UnionSize36Alignment4Table;
 
 class UnionSize36Alignment4 {
  public:
-  UnionSize36Alignment4()
-      : ordinal_(::test_unionsandwich::wire::UnionSize36Alignment4::Ordinal::
-                     Invalid),
-        envelope_{} {}
+  UnionSize36Alignment4() : ordinal_(::test_unionsandwich::wire::UnionSize36Alignment4::Ordinal::Invalid), envelope_{} {}
 
   UnionSize36Alignment4(const UnionSize36Alignment4&) = default;
   UnionSize36Alignment4& operator=(const UnionSize36Alignment4&) = default;
@@ -125,48 +107,34 @@ class UnionSize36Alignment4 {
     kVariant = 1,  // 0x1
   };
 
-  bool has_invalid_tag() const {
-    return ordinal_ ==
-           ::test_unionsandwich::wire::UnionSize36Alignment4::Ordinal::Invalid;
-  }
+  bool has_invalid_tag() const { return ordinal_ == ::test_unionsandwich::wire::UnionSize36Alignment4::Ordinal::Invalid; }
 
-  bool is_variant() const {
-    return ordinal_ ==
-           ::test_unionsandwich::wire::UnionSize36Alignment4::Ordinal::kVariant;
-  }
+  bool is_variant() const { return ordinal_ == ::test_unionsandwich::wire::UnionSize36Alignment4::Ordinal::kVariant; }
 
-  static UnionSize36Alignment4 WithVariant(
-      ::fidl::ObjectView<::fidl::Array<uint8_t, 32>> val) {
+  static UnionSize36Alignment4 WithVariant(::fidl::ObjectView<::fidl::Array<uint8_t, 32>> val) {
     UnionSize36Alignment4 result;
-    result.ordinal_ =
-        ::test_unionsandwich::wire::UnionSize36Alignment4::Ordinal::kVariant;
+    result.ordinal_ = ::test_unionsandwich::wire::UnionSize36Alignment4::Ordinal::kVariant;
     result.envelope_.As<::fidl::Array<uint8_t, 32>>().set_data(std::move(val));
     return result;
   }
 
   template <typename... Args>
-  static UnionSize36Alignment4 WithVariant(::fidl::AnyArena& allocator,
-                                           Args&&... args) {
-    return WithVariant(::fidl::ObjectView<::fidl::Array<uint8_t, 32>>(
-        allocator, std::forward<Args>(args)...));
+  static UnionSize36Alignment4 WithVariant(::fidl::AnyArena& allocator, Args&&... args) {
+    return WithVariant(::fidl::ObjectView<::fidl::Array<uint8_t, 32>>(allocator,
+                                                                      std::forward<Args>(args)...));
   }
 
   ::fidl::Array<uint8_t, 32>& variant() {
-    ZX_ASSERT(
-        ordinal_ ==
-        ::test_unionsandwich::wire::UnionSize36Alignment4::Ordinal::kVariant);
+    ZX_ASSERT(ordinal_ == ::test_unionsandwich::wire::UnionSize36Alignment4::Ordinal::kVariant);
     return envelope_.As<::fidl::Array<uint8_t, 32>>().get_data();
   }
   const ::fidl::Array<uint8_t, 32>& variant() const {
-    ZX_ASSERT(
-        ordinal_ ==
-        ::test_unionsandwich::wire::UnionSize36Alignment4::Ordinal::kVariant);
+    ZX_ASSERT(ordinal_ == ::test_unionsandwich::wire::UnionSize36Alignment4::Ordinal::kVariant);
     return envelope_.As<::fidl::Array<uint8_t, 32>>().get_data();
   }
   ::test_unionsandwich::wire::UnionSize36Alignment4::Tag Which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<::test_unionsandwich::wire::UnionSize36Alignment4::Tag>(
-        ordinal_);
+    return static_cast<::test_unionsandwich::wire::UnionSize36Alignment4::Tag>(ordinal_);
   }
 
  private:
@@ -185,10 +153,7 @@ extern "C" const fidl_type_t test_unionsandwich_UnionSize12Alignment4Table;
 
 class UnionSize12Alignment4 {
  public:
-  UnionSize12Alignment4()
-      : ordinal_(::test_unionsandwich::wire::UnionSize12Alignment4::Ordinal::
-                     Invalid),
-        envelope_{} {}
+  UnionSize12Alignment4() : ordinal_(::test_unionsandwich::wire::UnionSize12Alignment4::Ordinal::Invalid), envelope_{} {}
 
   UnionSize12Alignment4(const UnionSize12Alignment4&) = default;
   UnionSize12Alignment4& operator=(const UnionSize12Alignment4&) = default;
@@ -199,48 +164,34 @@ class UnionSize12Alignment4 {
     kVariant = 1,  // 0x1
   };
 
-  bool has_invalid_tag() const {
-    return ordinal_ ==
-           ::test_unionsandwich::wire::UnionSize12Alignment4::Ordinal::Invalid;
-  }
+  bool has_invalid_tag() const { return ordinal_ == ::test_unionsandwich::wire::UnionSize12Alignment4::Ordinal::Invalid; }
 
-  bool is_variant() const {
-    return ordinal_ ==
-           ::test_unionsandwich::wire::UnionSize12Alignment4::Ordinal::kVariant;
-  }
+  bool is_variant() const { return ordinal_ == ::test_unionsandwich::wire::UnionSize12Alignment4::Ordinal::kVariant; }
 
-  static UnionSize12Alignment4 WithVariant(
-      ::fidl::ObjectView<::fidl::Array<uint8_t, 6>> val) {
+  static UnionSize12Alignment4 WithVariant(::fidl::ObjectView<::fidl::Array<uint8_t, 6>> val) {
     UnionSize12Alignment4 result;
-    result.ordinal_ =
-        ::test_unionsandwich::wire::UnionSize12Alignment4::Ordinal::kVariant;
+    result.ordinal_ = ::test_unionsandwich::wire::UnionSize12Alignment4::Ordinal::kVariant;
     result.envelope_.As<::fidl::Array<uint8_t, 6>>().set_data(std::move(val));
     return result;
   }
 
   template <typename... Args>
-  static UnionSize12Alignment4 WithVariant(::fidl::AnyArena& allocator,
-                                           Args&&... args) {
-    return WithVariant(::fidl::ObjectView<::fidl::Array<uint8_t, 6>>(
-        allocator, std::forward<Args>(args)...));
+  static UnionSize12Alignment4 WithVariant(::fidl::AnyArena& allocator, Args&&... args) {
+    return WithVariant(::fidl::ObjectView<::fidl::Array<uint8_t, 6>>(allocator,
+                                                                     std::forward<Args>(args)...));
   }
 
   ::fidl::Array<uint8_t, 6>& variant() {
-    ZX_ASSERT(
-        ordinal_ ==
-        ::test_unionsandwich::wire::UnionSize12Alignment4::Ordinal::kVariant);
+    ZX_ASSERT(ordinal_ == ::test_unionsandwich::wire::UnionSize12Alignment4::Ordinal::kVariant);
     return envelope_.As<::fidl::Array<uint8_t, 6>>().get_data();
   }
   const ::fidl::Array<uint8_t, 6>& variant() const {
-    ZX_ASSERT(
-        ordinal_ ==
-        ::test_unionsandwich::wire::UnionSize12Alignment4::Ordinal::kVariant);
+    ZX_ASSERT(ordinal_ == ::test_unionsandwich::wire::UnionSize12Alignment4::Ordinal::kVariant);
     return envelope_.As<::fidl::Array<uint8_t, 6>>().get_data();
   }
   ::test_unionsandwich::wire::UnionSize12Alignment4::Tag Which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<::test_unionsandwich::wire::UnionSize12Alignment4::Tag>(
-        ordinal_);
+    return static_cast<::test_unionsandwich::wire::UnionSize12Alignment4::Tag>(ordinal_);
   }
 
  private:
@@ -259,10 +210,7 @@ extern "C" const fidl_type_t test_unionsandwich_UnionSize24Alignment8Table;
 
 class UnionSize24Alignment8 {
  public:
-  UnionSize24Alignment8()
-      : ordinal_(::test_unionsandwich::wire::UnionSize24Alignment8::Ordinal::
-                     Invalid),
-        envelope_{} {}
+  UnionSize24Alignment8() : ordinal_(::test_unionsandwich::wire::UnionSize24Alignment8::Ordinal::Invalid), envelope_{} {}
 
   UnionSize24Alignment8(const UnionSize24Alignment8&) = default;
   UnionSize24Alignment8& operator=(const UnionSize24Alignment8&) = default;
@@ -273,53 +221,34 @@ class UnionSize24Alignment8 {
     kVariant = 1,  // 0x1
   };
 
-  bool has_invalid_tag() const {
-    return ordinal_ ==
-           ::test_unionsandwich::wire::UnionSize24Alignment8::Ordinal::Invalid;
-  }
+  bool has_invalid_tag() const { return ordinal_ == ::test_unionsandwich::wire::UnionSize24Alignment8::Ordinal::Invalid; }
 
-  bool is_variant() const {
-    return ordinal_ ==
-           ::test_unionsandwich::wire::UnionSize24Alignment8::Ordinal::kVariant;
-  }
+  bool is_variant() const { return ordinal_ == ::test_unionsandwich::wire::UnionSize24Alignment8::Ordinal::kVariant; }
 
-  static UnionSize24Alignment8 WithVariant(
-      ::fidl::ObjectView<::test_unionsandwich::wire::StructSize16Alignment8>
-          val) {
+  static UnionSize24Alignment8 WithVariant(::fidl::ObjectView<::test_unionsandwich::wire::StructSize16Alignment8> val) {
     UnionSize24Alignment8 result;
-    result.ordinal_ =
-        ::test_unionsandwich::wire::UnionSize24Alignment8::Ordinal::kVariant;
-    result.envelope_.As<::test_unionsandwich::wire::StructSize16Alignment8>()
-        .set_data(std::move(val));
+    result.ordinal_ = ::test_unionsandwich::wire::UnionSize24Alignment8::Ordinal::kVariant;
+    result.envelope_.As<::test_unionsandwich::wire::StructSize16Alignment8>().set_data(std::move(val));
     return result;
   }
 
   template <typename... Args>
-  static UnionSize24Alignment8 WithVariant(::fidl::AnyArena& allocator,
-                                           Args&&... args) {
-    return WithVariant(
-        ::fidl::ObjectView<::test_unionsandwich::wire::StructSize16Alignment8>(
-            allocator, std::forward<Args>(args)...));
+  static UnionSize24Alignment8 WithVariant(::fidl::AnyArena& allocator, Args&&... args) {
+    return WithVariant(::fidl::ObjectView<::test_unionsandwich::wire::StructSize16Alignment8>(allocator,
+                                                                                              std::forward<Args>(args)...));
   }
 
   ::test_unionsandwich::wire::StructSize16Alignment8& variant() {
-    ZX_ASSERT(
-        ordinal_ ==
-        ::test_unionsandwich::wire::UnionSize24Alignment8::Ordinal::kVariant);
-    return envelope_.As<::test_unionsandwich::wire::StructSize16Alignment8>()
-        .get_data();
+    ZX_ASSERT(ordinal_ == ::test_unionsandwich::wire::UnionSize24Alignment8::Ordinal::kVariant);
+    return envelope_.As<::test_unionsandwich::wire::StructSize16Alignment8>().get_data();
   }
   const ::test_unionsandwich::wire::StructSize16Alignment8& variant() const {
-    ZX_ASSERT(
-        ordinal_ ==
-        ::test_unionsandwich::wire::UnionSize24Alignment8::Ordinal::kVariant);
-    return envelope_.As<::test_unionsandwich::wire::StructSize16Alignment8>()
-        .get_data();
+    ZX_ASSERT(ordinal_ == ::test_unionsandwich::wire::UnionSize24Alignment8::Ordinal::kVariant);
+    return envelope_.As<::test_unionsandwich::wire::StructSize16Alignment8>().get_data();
   }
   ::test_unionsandwich::wire::UnionSize24Alignment8::Tag Which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<::test_unionsandwich::wire::UnionSize24Alignment8::Tag>(
-        ordinal_);
+    return static_cast<::test_unionsandwich::wire::UnionSize24Alignment8::Tag>(ordinal_);
   }
 
  private:
@@ -334,8 +263,7 @@ class UnionSize24Alignment8 {
   ::fidl::UntypedEnvelope envelope_;
 };
 
-extern "C" const fidl_type_t
-    test_unionsandwich_SandwichUnionSize8Alignment4Table;
+extern "C" const fidl_type_t test_unionsandwich_SandwichUnionSize8Alignment4Table;
 
 struct SandwichUnionSize8Alignment4 {
   uint32_t before = {};
@@ -345,8 +273,7 @@ struct SandwichUnionSize8Alignment4 {
   uint32_t after = {};
 };
 
-extern "C" const fidl_type_t
-    test_unionsandwich_SandwichUnionSize36Alignment4Table;
+extern "C" const fidl_type_t test_unionsandwich_SandwichUnionSize36Alignment4Table;
 
 struct SandwichUnionSize36Alignment4 {
   uint32_t before = {};
@@ -356,8 +283,7 @@ struct SandwichUnionSize36Alignment4 {
   uint32_t after = {};
 };
 
-extern "C" const fidl_type_t
-    test_unionsandwich_SandwichUnionSize12Alignment4Table;
+extern "C" const fidl_type_t test_unionsandwich_SandwichUnionSize12Alignment4Table;
 
 struct SandwichUnionSize12Alignment4 {
   uint32_t before = {};
@@ -375,8 +301,7 @@ struct StructSize16Alignment8 {
   uint64_t f2 = {};
 };
 
-extern "C" const fidl_type_t
-    test_unionsandwich_SandwichUnionSize24Alignment8Table;
+extern "C" const fidl_type_t test_unionsandwich_SandwichUnionSize24Alignment8Table;
 
 struct SandwichUnionSize24Alignment8 {
   uint32_t before = {};
@@ -392,11 +317,8 @@ namespace fidl {
 
 // TODO(fxbug.dev/95833) Remove this.
 template <>
-struct DeprecatedCTypeTraits<
-    ::test_unionsandwich::wire::SandwichUnionSize8Alignment4> {
-  static constexpr const fidl_type_t* kType =
-      &::test_unionsandwich::wire::
-          test_unionsandwich_SandwichUnionSize8Alignment4Table;
+struct DeprecatedCTypeTraits<::test_unionsandwich::wire::SandwichUnionSize8Alignment4> {
+  static constexpr const fidl_type_t* kType = &::test_unionsandwich::wire::test_unionsandwich_SandwichUnionSize8Alignment4Table;
 };
 
 template <>
@@ -412,102 +334,54 @@ struct TypeTraits<::test_unionsandwich::wire::SandwichUnionSize8Alignment4> {
 };
 
 template <>
-struct IsFidlType<::test_unionsandwich::wire::SandwichUnionSize8Alignment4>
-    : public std::true_type {};
+struct IsFidlType<::test_unionsandwich::wire::SandwichUnionSize8Alignment4> : public std::true_type {};
 template <>
-struct IsStruct<::test_unionsandwich::wire::SandwichUnionSize8Alignment4>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::test_unionsandwich::wire::SandwichUnionSize8Alignment4>);
-static_assert(offsetof(::test_unionsandwich::wire::SandwichUnionSize8Alignment4,
-                       before) == 0);
-static_assert(offsetof(::test_unionsandwich::wire::SandwichUnionSize8Alignment4,
-                       union_) == 8);
-static_assert(offsetof(::test_unionsandwich::wire::SandwichUnionSize8Alignment4,
-                       after) == 24);
-static_assert(
-    sizeof(::test_unionsandwich::wire::SandwichUnionSize8Alignment4) ==
-    TypeTraits<::test_unionsandwich::wire::SandwichUnionSize8Alignment4>::
-        kPrimarySize);
+struct IsStruct<::test_unionsandwich::wire::SandwichUnionSize8Alignment4> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_unionsandwich::wire::SandwichUnionSize8Alignment4>);
+static_assert(offsetof(::test_unionsandwich::wire::SandwichUnionSize8Alignment4, before) == 0);
+static_assert(offsetof(::test_unionsandwich::wire::SandwichUnionSize8Alignment4, union_) == 8);
+static_assert(offsetof(::test_unionsandwich::wire::SandwichUnionSize8Alignment4, after) == 24);
+static_assert(sizeof(::test_unionsandwich::wire::SandwichUnionSize8Alignment4) == TypeTraits<::test_unionsandwich::wire::SandwichUnionSize8Alignment4>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::test_unionsandwich::wire::SandwichUnionSize8Alignment4,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_unionsandwich::wire::SandwichUnionSize8Alignment4, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 32;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::WireStructMemberCodingInfo<
-          uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(),
-      ::fidl::internal::WireStructMemberCodingInfo<
-          ::test_unionsandwich::wire::UnionSize8Alignment4,
-          fidl::internal::WireCodingConstraintUnion<false>, IsRecursive>(),
-      ::fidl::internal::WireStructMemberCodingInfo<
-          uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(), ::fidl::internal::WireStructMemberCodingInfo<::test_unionsandwich::wire::UnionSize8Alignment4, fidl::internal::WireCodingConstraintUnion<false>, IsRecursive>(), ::fidl::internal::WireStructMemberCodingInfo<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
   static constexpr bool kHasPadding = true;
-  using Base = WireStructCodingTraitsBase<
-      ::test_unionsandwich::wire::SandwichUnionSize8Alignment4,
-      ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_unionsandwich::wire::SandwichUnionSize8Alignment4, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
   static void Encode(
-      internal::WireEncoder* encoder,
-      ::test_unionsandwich::wire::SandwichUnionSize8Alignment4* value,
-      ::fidl::internal::WirePosition position,
-      RecursionDepth<IsRecursive> recursion_depth) {
+      internal::WireEncoder* encoder, ::test_unionsandwich::wire::SandwichUnionSize8Alignment4* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value,
-             sizeof(::test_unionsandwich::wire::SandwichUnionSize8Alignment4));
+      memcpy(position.As<void>(), value, sizeof(::test_unionsandwich::wire::SandwichUnionSize8Alignment4));
     } else {
       internal::WireZeroPadding<uint64_t>(encoder, position + 0);
       internal::WireZeroPadding<uint64_t>(encoder, position + 24);
-      internal::WireCodingTraits<uint32_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->before,
-                                                      position + 0,
-                                                      recursion_depth);
-      internal::WireCodingTraits<
-          ::test_unionsandwich::wire::UnionSize8Alignment4,
-          fidl::internal::WireCodingConstraintUnion<false>,
-          IsRecursive>::Encode(encoder, &value->union_, position + 8,
-                               recursion_depth);
-      internal::WireCodingTraits<uint32_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->after,
-                                                      position + 24,
-                                                      recursion_depth);
+      internal::WireCodingTraits<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->before, position + 0, recursion_depth);
+      internal::WireCodingTraits<::test_unionsandwich::wire::UnionSize8Alignment4, fidl::internal::WireCodingConstraintUnion<false>, IsRecursive>::Encode(encoder, &value->union_, position + 8, recursion_depth);
+      internal::WireCodingTraits<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->after, position + 24, recursion_depth);
     }
   }
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (!Base::are_members_memcpy_compatible) {
-      internal::WireCodingTraits<uint32_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 0,
-                                                      recursion_depth);
-      internal::WireCodingTraits<
-          ::test_unionsandwich::wire::UnionSize8Alignment4,
-          fidl::internal::WireCodingConstraintUnion<false>,
-          IsRecursive>::Decode(decoder, position + 8, recursion_depth);
-      internal::WireCodingTraits<uint32_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 24,
-                                                      recursion_depth);
+      internal::WireCodingTraits<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 0, recursion_depth);
+      internal::WireCodingTraits<::test_unionsandwich::wire::UnionSize8Alignment4, fidl::internal::WireCodingConstraintUnion<false>, IsRecursive>::Decode(
+          decoder, position + 8, recursion_depth);
+      internal::WireCodingTraits<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 24, recursion_depth);
     }
-    internal::WireCheckPadding<uint64_t>(decoder, position + 0,
-                                         0xffffffff00000000ull);
-    internal::WireCheckPadding<uint64_t>(decoder, position + 24,
-                                         0xffffffff00000000ull);
+    internal::WireCheckPadding<uint64_t>(decoder, position + 0, 0xffffffff00000000ull);
+    internal::WireCheckPadding<uint64_t>(decoder, position + 24, 0xffffffff00000000ull);
   }
 };
 
 // TODO(fxbug.dev/95833) Remove this.
 template <>
-struct DeprecatedCTypeTraits<
-    ::test_unionsandwich::wire::SandwichUnionSize36Alignment4> {
-  static constexpr const fidl_type_t* kType =
-      &::test_unionsandwich::wire::
-          test_unionsandwich_SandwichUnionSize36Alignment4Table;
+struct DeprecatedCTypeTraits<::test_unionsandwich::wire::SandwichUnionSize36Alignment4> {
+  static constexpr const fidl_type_t* kType = &::test_unionsandwich::wire::test_unionsandwich_SandwichUnionSize36Alignment4Table;
 };
 
 template <>
@@ -523,105 +397,54 @@ struct TypeTraits<::test_unionsandwich::wire::SandwichUnionSize36Alignment4> {
 };
 
 template <>
-struct IsFidlType<::test_unionsandwich::wire::SandwichUnionSize36Alignment4>
-    : public std::true_type {};
+struct IsFidlType<::test_unionsandwich::wire::SandwichUnionSize36Alignment4> : public std::true_type {};
 template <>
-struct IsStruct<::test_unionsandwich::wire::SandwichUnionSize36Alignment4>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::test_unionsandwich::wire::SandwichUnionSize36Alignment4>);
-static_assert(
-    offsetof(::test_unionsandwich::wire::SandwichUnionSize36Alignment4,
-             before) == 0);
-static_assert(
-    offsetof(::test_unionsandwich::wire::SandwichUnionSize36Alignment4,
-             union_) == 8);
-static_assert(
-    offsetof(::test_unionsandwich::wire::SandwichUnionSize36Alignment4,
-             after) == 24);
-static_assert(
-    sizeof(::test_unionsandwich::wire::SandwichUnionSize36Alignment4) ==
-    TypeTraits<::test_unionsandwich::wire::SandwichUnionSize36Alignment4>::
-        kPrimarySize);
+struct IsStruct<::test_unionsandwich::wire::SandwichUnionSize36Alignment4> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_unionsandwich::wire::SandwichUnionSize36Alignment4>);
+static_assert(offsetof(::test_unionsandwich::wire::SandwichUnionSize36Alignment4, before) == 0);
+static_assert(offsetof(::test_unionsandwich::wire::SandwichUnionSize36Alignment4, union_) == 8);
+static_assert(offsetof(::test_unionsandwich::wire::SandwichUnionSize36Alignment4, after) == 24);
+static_assert(sizeof(::test_unionsandwich::wire::SandwichUnionSize36Alignment4) == TypeTraits<::test_unionsandwich::wire::SandwichUnionSize36Alignment4>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::test_unionsandwich::wire::SandwichUnionSize36Alignment4,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_unionsandwich::wire::SandwichUnionSize36Alignment4, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 32;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::WireStructMemberCodingInfo<
-          uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(),
-      ::fidl::internal::WireStructMemberCodingInfo<
-          ::test_unionsandwich::wire::UnionSize36Alignment4,
-          fidl::internal::WireCodingConstraintUnion<false>, IsRecursive>(),
-      ::fidl::internal::WireStructMemberCodingInfo<
-          uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(), ::fidl::internal::WireStructMemberCodingInfo<::test_unionsandwich::wire::UnionSize36Alignment4, fidl::internal::WireCodingConstraintUnion<false>, IsRecursive>(), ::fidl::internal::WireStructMemberCodingInfo<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
   static constexpr bool kHasPadding = true;
-  using Base = WireStructCodingTraitsBase<
-      ::test_unionsandwich::wire::SandwichUnionSize36Alignment4,
-      ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_unionsandwich::wire::SandwichUnionSize36Alignment4, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
   static void Encode(
-      internal::WireEncoder* encoder,
-      ::test_unionsandwich::wire::SandwichUnionSize36Alignment4* value,
-      ::fidl::internal::WirePosition position,
-      RecursionDepth<IsRecursive> recursion_depth) {
+      internal::WireEncoder* encoder, ::test_unionsandwich::wire::SandwichUnionSize36Alignment4* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value,
-             sizeof(::test_unionsandwich::wire::SandwichUnionSize36Alignment4));
+      memcpy(position.As<void>(), value, sizeof(::test_unionsandwich::wire::SandwichUnionSize36Alignment4));
     } else {
       internal::WireZeroPadding<uint64_t>(encoder, position + 0);
       internal::WireZeroPadding<uint64_t>(encoder, position + 24);
-      internal::WireCodingTraits<uint32_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->before,
-                                                      position + 0,
-                                                      recursion_depth);
-      internal::WireCodingTraits<
-          ::test_unionsandwich::wire::UnionSize36Alignment4,
-          fidl::internal::WireCodingConstraintUnion<false>,
-          IsRecursive>::Encode(encoder, &value->union_, position + 8,
-                               recursion_depth);
-      internal::WireCodingTraits<uint32_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->after,
-                                                      position + 24,
-                                                      recursion_depth);
+      internal::WireCodingTraits<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->before, position + 0, recursion_depth);
+      internal::WireCodingTraits<::test_unionsandwich::wire::UnionSize36Alignment4, fidl::internal::WireCodingConstraintUnion<false>, IsRecursive>::Encode(encoder, &value->union_, position + 8, recursion_depth);
+      internal::WireCodingTraits<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->after, position + 24, recursion_depth);
     }
   }
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (!Base::are_members_memcpy_compatible) {
-      internal::WireCodingTraits<uint32_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 0,
-                                                      recursion_depth);
-      internal::WireCodingTraits<
-          ::test_unionsandwich::wire::UnionSize36Alignment4,
-          fidl::internal::WireCodingConstraintUnion<false>,
-          IsRecursive>::Decode(decoder, position + 8, recursion_depth);
-      internal::WireCodingTraits<uint32_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 24,
-                                                      recursion_depth);
+      internal::WireCodingTraits<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 0, recursion_depth);
+      internal::WireCodingTraits<::test_unionsandwich::wire::UnionSize36Alignment4, fidl::internal::WireCodingConstraintUnion<false>, IsRecursive>::Decode(
+          decoder, position + 8, recursion_depth);
+      internal::WireCodingTraits<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 24, recursion_depth);
     }
-    internal::WireCheckPadding<uint64_t>(decoder, position + 0,
-                                         0xffffffff00000000ull);
-    internal::WireCheckPadding<uint64_t>(decoder, position + 24,
-                                         0xffffffff00000000ull);
+    internal::WireCheckPadding<uint64_t>(decoder, position + 0, 0xffffffff00000000ull);
+    internal::WireCheckPadding<uint64_t>(decoder, position + 24, 0xffffffff00000000ull);
   }
 };
 
 // TODO(fxbug.dev/95833) Remove this.
 template <>
-struct DeprecatedCTypeTraits<
-    ::test_unionsandwich::wire::SandwichUnionSize12Alignment4> {
-  static constexpr const fidl_type_t* kType =
-      &::test_unionsandwich::wire::
-          test_unionsandwich_SandwichUnionSize12Alignment4Table;
+struct DeprecatedCTypeTraits<::test_unionsandwich::wire::SandwichUnionSize12Alignment4> {
+  static constexpr const fidl_type_t* kType = &::test_unionsandwich::wire::test_unionsandwich_SandwichUnionSize12Alignment4Table;
 };
 
 template <>
@@ -637,105 +460,54 @@ struct TypeTraits<::test_unionsandwich::wire::SandwichUnionSize12Alignment4> {
 };
 
 template <>
-struct IsFidlType<::test_unionsandwich::wire::SandwichUnionSize12Alignment4>
-    : public std::true_type {};
+struct IsFidlType<::test_unionsandwich::wire::SandwichUnionSize12Alignment4> : public std::true_type {};
 template <>
-struct IsStruct<::test_unionsandwich::wire::SandwichUnionSize12Alignment4>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::test_unionsandwich::wire::SandwichUnionSize12Alignment4>);
-static_assert(
-    offsetof(::test_unionsandwich::wire::SandwichUnionSize12Alignment4,
-             before) == 0);
-static_assert(
-    offsetof(::test_unionsandwich::wire::SandwichUnionSize12Alignment4,
-             union_) == 8);
-static_assert(
-    offsetof(::test_unionsandwich::wire::SandwichUnionSize12Alignment4,
-             after) == 24);
-static_assert(
-    sizeof(::test_unionsandwich::wire::SandwichUnionSize12Alignment4) ==
-    TypeTraits<::test_unionsandwich::wire::SandwichUnionSize12Alignment4>::
-        kPrimarySize);
+struct IsStruct<::test_unionsandwich::wire::SandwichUnionSize12Alignment4> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_unionsandwich::wire::SandwichUnionSize12Alignment4>);
+static_assert(offsetof(::test_unionsandwich::wire::SandwichUnionSize12Alignment4, before) == 0);
+static_assert(offsetof(::test_unionsandwich::wire::SandwichUnionSize12Alignment4, union_) == 8);
+static_assert(offsetof(::test_unionsandwich::wire::SandwichUnionSize12Alignment4, after) == 24);
+static_assert(sizeof(::test_unionsandwich::wire::SandwichUnionSize12Alignment4) == TypeTraits<::test_unionsandwich::wire::SandwichUnionSize12Alignment4>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::test_unionsandwich::wire::SandwichUnionSize12Alignment4,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_unionsandwich::wire::SandwichUnionSize12Alignment4, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 32;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::WireStructMemberCodingInfo<
-          uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(),
-      ::fidl::internal::WireStructMemberCodingInfo<
-          ::test_unionsandwich::wire::UnionSize12Alignment4,
-          fidl::internal::WireCodingConstraintUnion<false>, IsRecursive>(),
-      ::fidl::internal::WireStructMemberCodingInfo<
-          int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(), ::fidl::internal::WireStructMemberCodingInfo<::test_unionsandwich::wire::UnionSize12Alignment4, fidl::internal::WireCodingConstraintUnion<false>, IsRecursive>(), ::fidl::internal::WireStructMemberCodingInfo<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
   static constexpr bool kHasPadding = true;
-  using Base = WireStructCodingTraitsBase<
-      ::test_unionsandwich::wire::SandwichUnionSize12Alignment4,
-      ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_unionsandwich::wire::SandwichUnionSize12Alignment4, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
   static void Encode(
-      internal::WireEncoder* encoder,
-      ::test_unionsandwich::wire::SandwichUnionSize12Alignment4* value,
-      ::fidl::internal::WirePosition position,
-      RecursionDepth<IsRecursive> recursion_depth) {
+      internal::WireEncoder* encoder, ::test_unionsandwich::wire::SandwichUnionSize12Alignment4* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value,
-             sizeof(::test_unionsandwich::wire::SandwichUnionSize12Alignment4));
+      memcpy(position.As<void>(), value, sizeof(::test_unionsandwich::wire::SandwichUnionSize12Alignment4));
     } else {
       internal::WireZeroPadding<uint64_t>(encoder, position + 0);
       internal::WireZeroPadding<uint64_t>(encoder, position + 24);
-      internal::WireCodingTraits<uint32_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->before,
-                                                      position + 0,
-                                                      recursion_depth);
-      internal::WireCodingTraits<
-          ::test_unionsandwich::wire::UnionSize12Alignment4,
-          fidl::internal::WireCodingConstraintUnion<false>,
-          IsRecursive>::Encode(encoder, &value->union_, position + 8,
-                               recursion_depth);
-      internal::WireCodingTraits<int32_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->after,
-                                                      position + 24,
-                                                      recursion_depth);
+      internal::WireCodingTraits<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->before, position + 0, recursion_depth);
+      internal::WireCodingTraits<::test_unionsandwich::wire::UnionSize12Alignment4, fidl::internal::WireCodingConstraintUnion<false>, IsRecursive>::Encode(encoder, &value->union_, position + 8, recursion_depth);
+      internal::WireCodingTraits<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->after, position + 24, recursion_depth);
     }
   }
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (!Base::are_members_memcpy_compatible) {
-      internal::WireCodingTraits<uint32_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 0,
-                                                      recursion_depth);
-      internal::WireCodingTraits<
-          ::test_unionsandwich::wire::UnionSize12Alignment4,
-          fidl::internal::WireCodingConstraintUnion<false>,
-          IsRecursive>::Decode(decoder, position + 8, recursion_depth);
-      internal::WireCodingTraits<int32_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 24,
-                                                      recursion_depth);
+      internal::WireCodingTraits<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 0, recursion_depth);
+      internal::WireCodingTraits<::test_unionsandwich::wire::UnionSize12Alignment4, fidl::internal::WireCodingConstraintUnion<false>, IsRecursive>::Decode(
+          decoder, position + 8, recursion_depth);
+      internal::WireCodingTraits<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 24, recursion_depth);
     }
-    internal::WireCheckPadding<uint64_t>(decoder, position + 0,
-                                         0xffffffff00000000ull);
-    internal::WireCheckPadding<uint64_t>(decoder, position + 24,
-                                         0xffffffff00000000ull);
+    internal::WireCheckPadding<uint64_t>(decoder, position + 0, 0xffffffff00000000ull);
+    internal::WireCheckPadding<uint64_t>(decoder, position + 24, 0xffffffff00000000ull);
   }
 };
 
 // TODO(fxbug.dev/95833) Remove this.
 template <>
-struct DeprecatedCTypeTraits<
-    ::test_unionsandwich::wire::StructSize16Alignment8> {
-  static constexpr const fidl_type_t* kType =
-      &::test_unionsandwich::wire::
-          test_unionsandwich_StructSize16Alignment8Table;
+struct DeprecatedCTypeTraits<::test_unionsandwich::wire::StructSize16Alignment8> {
+  static constexpr const fidl_type_t* kType = &::test_unionsandwich::wire::test_unionsandwich_StructSize16Alignment8Table;
 };
 
 template <>
@@ -751,80 +523,46 @@ struct TypeTraits<::test_unionsandwich::wire::StructSize16Alignment8> {
 };
 
 template <>
-struct IsFidlType<::test_unionsandwich::wire::StructSize16Alignment8>
-    : public std::true_type {};
+struct IsFidlType<::test_unionsandwich::wire::StructSize16Alignment8> : public std::true_type {};
 template <>
-struct IsStruct<::test_unionsandwich::wire::StructSize16Alignment8>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::test_unionsandwich::wire::StructSize16Alignment8>);
-static_assert(offsetof(::test_unionsandwich::wire::StructSize16Alignment8,
-                       f1) == 0);
-static_assert(offsetof(::test_unionsandwich::wire::StructSize16Alignment8,
-                       f2) == 8);
-static_assert(sizeof(::test_unionsandwich::wire::StructSize16Alignment8) ==
-              TypeTraits<::test_unionsandwich::wire::StructSize16Alignment8>::
-                  kPrimarySize);
+struct IsStruct<::test_unionsandwich::wire::StructSize16Alignment8> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_unionsandwich::wire::StructSize16Alignment8>);
+static_assert(offsetof(::test_unionsandwich::wire::StructSize16Alignment8, f1) == 0);
+static_assert(offsetof(::test_unionsandwich::wire::StructSize16Alignment8, f2) == 8);
+static_assert(sizeof(::test_unionsandwich::wire::StructSize16Alignment8) == TypeTraits<::test_unionsandwich::wire::StructSize16Alignment8>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::test_unionsandwich::wire::StructSize16Alignment8,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_unionsandwich::wire::StructSize16Alignment8, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 16;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::WireStructMemberCodingInfo<
-          uint64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(),
-      ::fidl::internal::WireStructMemberCodingInfo<
-          uint64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<uint64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(), ::fidl::internal::WireStructMemberCodingInfo<uint64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
   static constexpr bool kHasPadding = false;
-  using Base = WireStructCodingTraitsBase<
-      ::test_unionsandwich::wire::StructSize16Alignment8,
-      ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_unionsandwich::wire::StructSize16Alignment8, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
-  static void Encode(internal::WireEncoder* encoder,
-                     ::test_unionsandwich::wire::StructSize16Alignment8* value,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Encode(
+      internal::WireEncoder* encoder, ::test_unionsandwich::wire::StructSize16Alignment8* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value,
-             sizeof(::test_unionsandwich::wire::StructSize16Alignment8));
+      memcpy(position.As<void>(), value, sizeof(::test_unionsandwich::wire::StructSize16Alignment8));
     } else {
-      internal::WireCodingTraits<uint64_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->f1,
-                                                      position + 0,
-                                                      recursion_depth);
-      internal::WireCodingTraits<uint64_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->f2,
-                                                      position + 8,
-                                                      recursion_depth);
+      internal::WireCodingTraits<uint64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->f1, position + 0, recursion_depth);
+      internal::WireCodingTraits<uint64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->f2, position + 8, recursion_depth);
     }
   }
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (!Base::are_members_memcpy_compatible) {
-      internal::WireCodingTraits<uint64_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 0,
-                                                      recursion_depth);
-      internal::WireCodingTraits<uint64_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 8,
-                                                      recursion_depth);
+      internal::WireCodingTraits<uint64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 0, recursion_depth);
+      internal::WireCodingTraits<uint64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 8, recursion_depth);
     }
   }
 };
 
 // TODO(fxbug.dev/95833) Remove this.
 template <>
-struct DeprecatedCTypeTraits<
-    ::test_unionsandwich::wire::SandwichUnionSize24Alignment8> {
-  static constexpr const fidl_type_t* kType =
-      &::test_unionsandwich::wire::
-          test_unionsandwich_SandwichUnionSize24Alignment8Table;
+struct DeprecatedCTypeTraits<::test_unionsandwich::wire::SandwichUnionSize24Alignment8> {
+  static constexpr const fidl_type_t* kType = &::test_unionsandwich::wire::test_unionsandwich_SandwichUnionSize24Alignment8Table;
 };
 
 template <>
@@ -840,95 +578,47 @@ struct TypeTraits<::test_unionsandwich::wire::SandwichUnionSize24Alignment8> {
 };
 
 template <>
-struct IsFidlType<::test_unionsandwich::wire::SandwichUnionSize24Alignment8>
-    : public std::true_type {};
+struct IsFidlType<::test_unionsandwich::wire::SandwichUnionSize24Alignment8> : public std::true_type {};
 template <>
-struct IsStruct<::test_unionsandwich::wire::SandwichUnionSize24Alignment8>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::test_unionsandwich::wire::SandwichUnionSize24Alignment8>);
-static_assert(
-    offsetof(::test_unionsandwich::wire::SandwichUnionSize24Alignment8,
-             before) == 0);
-static_assert(
-    offsetof(::test_unionsandwich::wire::SandwichUnionSize24Alignment8,
-             union_) == 8);
-static_assert(
-    offsetof(::test_unionsandwich::wire::SandwichUnionSize24Alignment8,
-             after) == 24);
-static_assert(
-    sizeof(::test_unionsandwich::wire::SandwichUnionSize24Alignment8) ==
-    TypeTraits<::test_unionsandwich::wire::SandwichUnionSize24Alignment8>::
-        kPrimarySize);
+struct IsStruct<::test_unionsandwich::wire::SandwichUnionSize24Alignment8> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_unionsandwich::wire::SandwichUnionSize24Alignment8>);
+static_assert(offsetof(::test_unionsandwich::wire::SandwichUnionSize24Alignment8, before) == 0);
+static_assert(offsetof(::test_unionsandwich::wire::SandwichUnionSize24Alignment8, union_) == 8);
+static_assert(offsetof(::test_unionsandwich::wire::SandwichUnionSize24Alignment8, after) == 24);
+static_assert(sizeof(::test_unionsandwich::wire::SandwichUnionSize24Alignment8) == TypeTraits<::test_unionsandwich::wire::SandwichUnionSize24Alignment8>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::test_unionsandwich::wire::SandwichUnionSize24Alignment8,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_unionsandwich::wire::SandwichUnionSize24Alignment8, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 32;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::WireStructMemberCodingInfo<
-          uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(),
-      ::fidl::internal::WireStructMemberCodingInfo<
-          ::test_unionsandwich::wire::UnionSize24Alignment8,
-          fidl::internal::WireCodingConstraintUnion<false>, IsRecursive>(),
-      ::fidl::internal::WireStructMemberCodingInfo<
-          uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(), ::fidl::internal::WireStructMemberCodingInfo<::test_unionsandwich::wire::UnionSize24Alignment8, fidl::internal::WireCodingConstraintUnion<false>, IsRecursive>(), ::fidl::internal::WireStructMemberCodingInfo<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
   static constexpr bool kHasPadding = true;
-  using Base = WireStructCodingTraitsBase<
-      ::test_unionsandwich::wire::SandwichUnionSize24Alignment8,
-      ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_unionsandwich::wire::SandwichUnionSize24Alignment8, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
   static void Encode(
-      internal::WireEncoder* encoder,
-      ::test_unionsandwich::wire::SandwichUnionSize24Alignment8* value,
-      ::fidl::internal::WirePosition position,
-      RecursionDepth<IsRecursive> recursion_depth) {
+      internal::WireEncoder* encoder, ::test_unionsandwich::wire::SandwichUnionSize24Alignment8* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value,
-             sizeof(::test_unionsandwich::wire::SandwichUnionSize24Alignment8));
+      memcpy(position.As<void>(), value, sizeof(::test_unionsandwich::wire::SandwichUnionSize24Alignment8));
     } else {
       internal::WireZeroPadding<uint64_t>(encoder, position + 0);
       internal::WireZeroPadding<uint64_t>(encoder, position + 24);
-      internal::WireCodingTraits<uint32_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->before,
-                                                      position + 0,
-                                                      recursion_depth);
-      internal::WireCodingTraits<
-          ::test_unionsandwich::wire::UnionSize24Alignment8,
-          fidl::internal::WireCodingConstraintUnion<false>,
-          IsRecursive>::Encode(encoder, &value->union_, position + 8,
-                               recursion_depth);
-      internal::WireCodingTraits<uint32_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->after,
-                                                      position + 24,
-                                                      recursion_depth);
+      internal::WireCodingTraits<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->before, position + 0, recursion_depth);
+      internal::WireCodingTraits<::test_unionsandwich::wire::UnionSize24Alignment8, fidl::internal::WireCodingConstraintUnion<false>, IsRecursive>::Encode(encoder, &value->union_, position + 8, recursion_depth);
+      internal::WireCodingTraits<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->after, position + 24, recursion_depth);
     }
   }
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (!Base::are_members_memcpy_compatible) {
-      internal::WireCodingTraits<uint32_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 0,
-                                                      recursion_depth);
-      internal::WireCodingTraits<
-          ::test_unionsandwich::wire::UnionSize24Alignment8,
-          fidl::internal::WireCodingConstraintUnion<false>,
-          IsRecursive>::Decode(decoder, position + 8, recursion_depth);
-      internal::WireCodingTraits<uint32_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 24,
-                                                      recursion_depth);
+      internal::WireCodingTraits<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 0, recursion_depth);
+      internal::WireCodingTraits<::test_unionsandwich::wire::UnionSize24Alignment8, fidl::internal::WireCodingConstraintUnion<false>, IsRecursive>::Decode(
+          decoder, position + 8, recursion_depth);
+      internal::WireCodingTraits<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 24, recursion_depth);
     }
-    internal::WireCheckPadding<uint64_t>(decoder, position + 0,
-                                         0xffffffff00000000ull);
-    internal::WireCheckPadding<uint64_t>(decoder, position + 24,
-                                         0xffffffff00000000ull);
+    internal::WireCheckPadding<uint64_t>(decoder, position + 0, 0xffffffff00000000ull);
+    internal::WireCheckPadding<uint64_t>(decoder, position + 24, 0xffffffff00000000ull);
   }
 };
 
@@ -945,24 +635,17 @@ struct TypeTraits<::test_unionsandwich::wire::UnionSize8Alignment4> {
 };
 
 template <>
-struct IsFidlType<::test_unionsandwich::wire::UnionSize8Alignment4>
-    : public std::true_type {};
+struct IsFidlType<::test_unionsandwich::wire::UnionSize8Alignment4> : public std::true_type {};
 template <>
-struct IsUnion<::test_unionsandwich::wire::UnionSize8Alignment4>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::test_unionsandwich::wire::UnionSize8Alignment4>);
+struct IsUnion<::test_unionsandwich::wire::UnionSize8Alignment4> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_unionsandwich::wire::UnionSize8Alignment4>);
 
 template <typename Constraint, bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::test_unionsandwich::wire::UnionSize8Alignment4, Constraint, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_unionsandwich::wire::UnionSize8Alignment4, Constraint, IsRecursive> {
   static constexpr size_t inline_size = 16;
   static constexpr bool is_memcpy_compatible = false;
 
-  static void Encode(internal::WireEncoder* encoder,
-                     ::test_unionsandwich::wire::UnionSize8Alignment4* value,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Encode(internal::WireEncoder* encoder, ::test_unionsandwich::wire::UnionSize8Alignment4* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     fidl_xunion_v2_t* u = reinterpret_cast<fidl_xunion_v2_t*>(value);
 
     if (unlikely(u->tag == 0)) {
@@ -984,9 +667,7 @@ struct ::fidl::internal::WireCodingTraits<
     size_t inline_size;
     switch (u->tag) {
       case 1:  // ::test_unionsandwich::wire::UnionSize8Alignment4::Tag::kVariant
-        inline_size = ::fidl::internal::WireCodingTraits<
-            uint32_t, fidl::internal::WireCodingConstraintEmpty,
-            IsRecursive>::inline_size;
+        inline_size = ::fidl::internal::WireCodingTraits<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
         break;
       default:
         inline_size = 0;
@@ -995,22 +676,17 @@ struct ::fidl::internal::WireCodingTraits<
     ::fidl::internal::EncodeFn<IsRecursive> encode_fn;
     switch (u->tag) {
       case 1:  // ::test_unionsandwich::wire::UnionSize8Alignment4::Tag::kVariant
-        encode_fn = ::fidl::internal::MakeEncodeFn<
-            uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        encode_fn = ::fidl::internal::MakeEncodeFn<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
         break;
       default:
         encode_fn = nullptr;
         break;
     }
-    WireEncodeEnvelope(inline_size, encode_fn, encoder, &u->envelope,
-                       position + sizeof(fidl_xunion_tag_t), inner_depth);
+    WireEncodeEnvelope(inline_size, encode_fn, encoder, &u->envelope, position + sizeof(fidl_xunion_tag_t), inner_depth);
   }
 
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
-    ::test_unionsandwich::wire::UnionSize8Alignment4::Tag tag =
-        *position.As<::test_unionsandwich::wire::UnionSize8Alignment4::Tag>();
+  static void Decode(internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    ::test_unionsandwich::wire::UnionSize8Alignment4::Tag tag = *position.As<::test_unionsandwich::wire::UnionSize8Alignment4::Tag>();
     if (unlikely(static_cast<uint64_t>(tag) == 0)) {
       if constexpr (!Constraint::is_optional) {
         decoder->SetError(kCodingErrorInvalidUnionTag);
@@ -1031,9 +707,7 @@ struct ::fidl::internal::WireCodingTraits<
     size_t inline_size;
     switch (tag) {
       case ::test_unionsandwich::wire::UnionSize8Alignment4::Tag::kVariant:
-        inline_size = ::fidl::internal::WireCodingTraits<
-            uint32_t, fidl::internal::WireCodingConstraintEmpty,
-            IsRecursive>::inline_size;
+        inline_size = ::fidl::internal::WireCodingTraits<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
         break;
       default:
         inline_size = 0;
@@ -1042,27 +716,20 @@ struct ::fidl::internal::WireCodingTraits<
     DecodeFn<IsRecursive> decode_fn;
     switch (tag) {
       case ::test_unionsandwich::wire::UnionSize8Alignment4::Tag::kVariant:
-        decode_fn = ::fidl::internal::MakeDecodeFn<
-            uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        decode_fn = ::fidl::internal::MakeDecodeFn<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
         break;
       default:
         decode_fn = nullptr;
         break;
     }
-    ::fidl::internal::WireDecodeStrictEnvelope(
-        inline_size, decode_fn, decoder, position + sizeof(fidl_xunion_tag_t),
-        inner_depth);
+    ::fidl::internal::WireDecodeStrictEnvelope(inline_size, decode_fn, decoder, position + sizeof(fidl_xunion_tag_t), inner_depth);
   }
 };
 
 // Top-level union.
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::test_unionsandwich::wire::UnionSize8Alignment4,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-    : public ::fidl::internal::WireCodingTraits<
-          ::test_unionsandwich::wire::UnionSize8Alignment4,
-          ::fidl::internal::WireCodingConstraintUnion<false>, IsRecursive> {};
+struct ::fidl::internal::WireCodingTraits<::test_unionsandwich::wire::UnionSize8Alignment4, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public ::fidl::internal::WireCodingTraits<::test_unionsandwich::wire::UnionSize8Alignment4, ::fidl::internal::WireCodingConstraintUnion<false>, IsRecursive> {};
 
 template <>
 struct TypeTraits<::test_unionsandwich::wire::UnionSize36Alignment4> {
@@ -1077,25 +744,17 @@ struct TypeTraits<::test_unionsandwich::wire::UnionSize36Alignment4> {
 };
 
 template <>
-struct IsFidlType<::test_unionsandwich::wire::UnionSize36Alignment4>
-    : public std::true_type {};
+struct IsFidlType<::test_unionsandwich::wire::UnionSize36Alignment4> : public std::true_type {};
 template <>
-struct IsUnion<::test_unionsandwich::wire::UnionSize36Alignment4>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::test_unionsandwich::wire::UnionSize36Alignment4>);
+struct IsUnion<::test_unionsandwich::wire::UnionSize36Alignment4> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_unionsandwich::wire::UnionSize36Alignment4>);
 
 template <typename Constraint, bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::test_unionsandwich::wire::UnionSize36Alignment4, Constraint,
-    IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_unionsandwich::wire::UnionSize36Alignment4, Constraint, IsRecursive> {
   static constexpr size_t inline_size = 16;
   static constexpr bool is_memcpy_compatible = false;
 
-  static void Encode(internal::WireEncoder* encoder,
-                     ::test_unionsandwich::wire::UnionSize36Alignment4* value,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Encode(internal::WireEncoder* encoder, ::test_unionsandwich::wire::UnionSize36Alignment4* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     fidl_xunion_v2_t* u = reinterpret_cast<fidl_xunion_v2_t*>(value);
 
     if (unlikely(u->tag == 0)) {
@@ -1117,10 +776,7 @@ struct ::fidl::internal::WireCodingTraits<
     size_t inline_size;
     switch (u->tag) {
       case 1:  // ::test_unionsandwich::wire::UnionSize36Alignment4::Tag::kVariant
-        inline_size = ::fidl::internal::WireCodingTraits<
-            ::fidl::Array<uint8_t, 32>,
-            fidl::internal::WireCodingConstraintEmpty,
-            IsRecursive>::inline_size;
+        inline_size = ::fidl::internal::WireCodingTraits<::fidl::Array<uint8_t, 32>, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
         break;
       default:
         inline_size = 0;
@@ -1129,23 +785,17 @@ struct ::fidl::internal::WireCodingTraits<
     ::fidl::internal::EncodeFn<IsRecursive> encode_fn;
     switch (u->tag) {
       case 1:  // ::test_unionsandwich::wire::UnionSize36Alignment4::Tag::kVariant
-        encode_fn = ::fidl::internal::MakeEncodeFn<
-            ::fidl::Array<uint8_t, 32>,
-            fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        encode_fn = ::fidl::internal::MakeEncodeFn<::fidl::Array<uint8_t, 32>, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
         break;
       default:
         encode_fn = nullptr;
         break;
     }
-    WireEncodeEnvelope(inline_size, encode_fn, encoder, &u->envelope,
-                       position + sizeof(fidl_xunion_tag_t), inner_depth);
+    WireEncodeEnvelope(inline_size, encode_fn, encoder, &u->envelope, position + sizeof(fidl_xunion_tag_t), inner_depth);
   }
 
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
-    ::test_unionsandwich::wire::UnionSize36Alignment4::Tag tag =
-        *position.As<::test_unionsandwich::wire::UnionSize36Alignment4::Tag>();
+  static void Decode(internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    ::test_unionsandwich::wire::UnionSize36Alignment4::Tag tag = *position.As<::test_unionsandwich::wire::UnionSize36Alignment4::Tag>();
     if (unlikely(static_cast<uint64_t>(tag) == 0)) {
       if constexpr (!Constraint::is_optional) {
         decoder->SetError(kCodingErrorInvalidUnionTag);
@@ -1166,10 +816,7 @@ struct ::fidl::internal::WireCodingTraits<
     size_t inline_size;
     switch (tag) {
       case ::test_unionsandwich::wire::UnionSize36Alignment4::Tag::kVariant:
-        inline_size = ::fidl::internal::WireCodingTraits<
-            ::fidl::Array<uint8_t, 32>,
-            fidl::internal::WireCodingConstraintEmpty,
-            IsRecursive>::inline_size;
+        inline_size = ::fidl::internal::WireCodingTraits<::fidl::Array<uint8_t, 32>, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
         break;
       default:
         inline_size = 0;
@@ -1178,28 +825,20 @@ struct ::fidl::internal::WireCodingTraits<
     DecodeFn<IsRecursive> decode_fn;
     switch (tag) {
       case ::test_unionsandwich::wire::UnionSize36Alignment4::Tag::kVariant:
-        decode_fn = ::fidl::internal::MakeDecodeFn<
-            ::fidl::Array<uint8_t, 32>,
-            fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        decode_fn = ::fidl::internal::MakeDecodeFn<::fidl::Array<uint8_t, 32>, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
         break;
       default:
         decode_fn = nullptr;
         break;
     }
-    ::fidl::internal::WireDecodeStrictEnvelope(
-        inline_size, decode_fn, decoder, position + sizeof(fidl_xunion_tag_t),
-        inner_depth);
+    ::fidl::internal::WireDecodeStrictEnvelope(inline_size, decode_fn, decoder, position + sizeof(fidl_xunion_tag_t), inner_depth);
   }
 };
 
 // Top-level union.
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::test_unionsandwich::wire::UnionSize36Alignment4,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-    : public ::fidl::internal::WireCodingTraits<
-          ::test_unionsandwich::wire::UnionSize36Alignment4,
-          ::fidl::internal::WireCodingConstraintUnion<false>, IsRecursive> {};
+struct ::fidl::internal::WireCodingTraits<::test_unionsandwich::wire::UnionSize36Alignment4, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public ::fidl::internal::WireCodingTraits<::test_unionsandwich::wire::UnionSize36Alignment4, ::fidl::internal::WireCodingConstraintUnion<false>, IsRecursive> {};
 
 template <>
 struct TypeTraits<::test_unionsandwich::wire::UnionSize12Alignment4> {
@@ -1214,25 +853,17 @@ struct TypeTraits<::test_unionsandwich::wire::UnionSize12Alignment4> {
 };
 
 template <>
-struct IsFidlType<::test_unionsandwich::wire::UnionSize12Alignment4>
-    : public std::true_type {};
+struct IsFidlType<::test_unionsandwich::wire::UnionSize12Alignment4> : public std::true_type {};
 template <>
-struct IsUnion<::test_unionsandwich::wire::UnionSize12Alignment4>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::test_unionsandwich::wire::UnionSize12Alignment4>);
+struct IsUnion<::test_unionsandwich::wire::UnionSize12Alignment4> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_unionsandwich::wire::UnionSize12Alignment4>);
 
 template <typename Constraint, bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::test_unionsandwich::wire::UnionSize12Alignment4, Constraint,
-    IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_unionsandwich::wire::UnionSize12Alignment4, Constraint, IsRecursive> {
   static constexpr size_t inline_size = 16;
   static constexpr bool is_memcpy_compatible = false;
 
-  static void Encode(internal::WireEncoder* encoder,
-                     ::test_unionsandwich::wire::UnionSize12Alignment4* value,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Encode(internal::WireEncoder* encoder, ::test_unionsandwich::wire::UnionSize12Alignment4* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     fidl_xunion_v2_t* u = reinterpret_cast<fidl_xunion_v2_t*>(value);
 
     if (unlikely(u->tag == 0)) {
@@ -1254,10 +885,7 @@ struct ::fidl::internal::WireCodingTraits<
     size_t inline_size;
     switch (u->tag) {
       case 1:  // ::test_unionsandwich::wire::UnionSize12Alignment4::Tag::kVariant
-        inline_size = ::fidl::internal::WireCodingTraits<
-            ::fidl::Array<uint8_t, 6>,
-            fidl::internal::WireCodingConstraintEmpty,
-            IsRecursive>::inline_size;
+        inline_size = ::fidl::internal::WireCodingTraits<::fidl::Array<uint8_t, 6>, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
         break;
       default:
         inline_size = 0;
@@ -1266,23 +894,17 @@ struct ::fidl::internal::WireCodingTraits<
     ::fidl::internal::EncodeFn<IsRecursive> encode_fn;
     switch (u->tag) {
       case 1:  // ::test_unionsandwich::wire::UnionSize12Alignment4::Tag::kVariant
-        encode_fn = ::fidl::internal::MakeEncodeFn<
-            ::fidl::Array<uint8_t, 6>,
-            fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        encode_fn = ::fidl::internal::MakeEncodeFn<::fidl::Array<uint8_t, 6>, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
         break;
       default:
         encode_fn = nullptr;
         break;
     }
-    WireEncodeEnvelope(inline_size, encode_fn, encoder, &u->envelope,
-                       position + sizeof(fidl_xunion_tag_t), inner_depth);
+    WireEncodeEnvelope(inline_size, encode_fn, encoder, &u->envelope, position + sizeof(fidl_xunion_tag_t), inner_depth);
   }
 
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
-    ::test_unionsandwich::wire::UnionSize12Alignment4::Tag tag =
-        *position.As<::test_unionsandwich::wire::UnionSize12Alignment4::Tag>();
+  static void Decode(internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    ::test_unionsandwich::wire::UnionSize12Alignment4::Tag tag = *position.As<::test_unionsandwich::wire::UnionSize12Alignment4::Tag>();
     if (unlikely(static_cast<uint64_t>(tag) == 0)) {
       if constexpr (!Constraint::is_optional) {
         decoder->SetError(kCodingErrorInvalidUnionTag);
@@ -1303,10 +925,7 @@ struct ::fidl::internal::WireCodingTraits<
     size_t inline_size;
     switch (tag) {
       case ::test_unionsandwich::wire::UnionSize12Alignment4::Tag::kVariant:
-        inline_size = ::fidl::internal::WireCodingTraits<
-            ::fidl::Array<uint8_t, 6>,
-            fidl::internal::WireCodingConstraintEmpty,
-            IsRecursive>::inline_size;
+        inline_size = ::fidl::internal::WireCodingTraits<::fidl::Array<uint8_t, 6>, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
         break;
       default:
         inline_size = 0;
@@ -1315,28 +934,20 @@ struct ::fidl::internal::WireCodingTraits<
     DecodeFn<IsRecursive> decode_fn;
     switch (tag) {
       case ::test_unionsandwich::wire::UnionSize12Alignment4::Tag::kVariant:
-        decode_fn = ::fidl::internal::MakeDecodeFn<
-            ::fidl::Array<uint8_t, 6>,
-            fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        decode_fn = ::fidl::internal::MakeDecodeFn<::fidl::Array<uint8_t, 6>, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
         break;
       default:
         decode_fn = nullptr;
         break;
     }
-    ::fidl::internal::WireDecodeStrictEnvelope(
-        inline_size, decode_fn, decoder, position + sizeof(fidl_xunion_tag_t),
-        inner_depth);
+    ::fidl::internal::WireDecodeStrictEnvelope(inline_size, decode_fn, decoder, position + sizeof(fidl_xunion_tag_t), inner_depth);
   }
 };
 
 // Top-level union.
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::test_unionsandwich::wire::UnionSize12Alignment4,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-    : public ::fidl::internal::WireCodingTraits<
-          ::test_unionsandwich::wire::UnionSize12Alignment4,
-          ::fidl::internal::WireCodingConstraintUnion<false>, IsRecursive> {};
+struct ::fidl::internal::WireCodingTraits<::test_unionsandwich::wire::UnionSize12Alignment4, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public ::fidl::internal::WireCodingTraits<::test_unionsandwich::wire::UnionSize12Alignment4, ::fidl::internal::WireCodingConstraintUnion<false>, IsRecursive> {};
 
 template <>
 struct TypeTraits<::test_unionsandwich::wire::UnionSize24Alignment8> {
@@ -1351,25 +962,17 @@ struct TypeTraits<::test_unionsandwich::wire::UnionSize24Alignment8> {
 };
 
 template <>
-struct IsFidlType<::test_unionsandwich::wire::UnionSize24Alignment8>
-    : public std::true_type {};
+struct IsFidlType<::test_unionsandwich::wire::UnionSize24Alignment8> : public std::true_type {};
 template <>
-struct IsUnion<::test_unionsandwich::wire::UnionSize24Alignment8>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::test_unionsandwich::wire::UnionSize24Alignment8>);
+struct IsUnion<::test_unionsandwich::wire::UnionSize24Alignment8> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_unionsandwich::wire::UnionSize24Alignment8>);
 
 template <typename Constraint, bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::test_unionsandwich::wire::UnionSize24Alignment8, Constraint,
-    IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_unionsandwich::wire::UnionSize24Alignment8, Constraint, IsRecursive> {
   static constexpr size_t inline_size = 16;
   static constexpr bool is_memcpy_compatible = false;
 
-  static void Encode(internal::WireEncoder* encoder,
-                     ::test_unionsandwich::wire::UnionSize24Alignment8* value,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Encode(internal::WireEncoder* encoder, ::test_unionsandwich::wire::UnionSize24Alignment8* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     fidl_xunion_v2_t* u = reinterpret_cast<fidl_xunion_v2_t*>(value);
 
     if (unlikely(u->tag == 0)) {
@@ -1391,10 +994,7 @@ struct ::fidl::internal::WireCodingTraits<
     size_t inline_size;
     switch (u->tag) {
       case 1:  // ::test_unionsandwich::wire::UnionSize24Alignment8::Tag::kVariant
-        inline_size = ::fidl::internal::WireCodingTraits<
-            ::test_unionsandwich::wire::StructSize16Alignment8,
-            fidl::internal::WireCodingConstraintEmpty,
-            IsRecursive>::inline_size;
+        inline_size = ::fidl::internal::WireCodingTraits<::test_unionsandwich::wire::StructSize16Alignment8, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
         break;
       default:
         inline_size = 0;
@@ -1403,23 +1003,17 @@ struct ::fidl::internal::WireCodingTraits<
     ::fidl::internal::EncodeFn<IsRecursive> encode_fn;
     switch (u->tag) {
       case 1:  // ::test_unionsandwich::wire::UnionSize24Alignment8::Tag::kVariant
-        encode_fn = ::fidl::internal::MakeEncodeFn<
-            ::test_unionsandwich::wire::StructSize16Alignment8,
-            fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        encode_fn = ::fidl::internal::MakeEncodeFn<::test_unionsandwich::wire::StructSize16Alignment8, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
         break;
       default:
         encode_fn = nullptr;
         break;
     }
-    WireEncodeEnvelope(inline_size, encode_fn, encoder, &u->envelope,
-                       position + sizeof(fidl_xunion_tag_t), inner_depth);
+    WireEncodeEnvelope(inline_size, encode_fn, encoder, &u->envelope, position + sizeof(fidl_xunion_tag_t), inner_depth);
   }
 
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
-    ::test_unionsandwich::wire::UnionSize24Alignment8::Tag tag =
-        *position.As<::test_unionsandwich::wire::UnionSize24Alignment8::Tag>();
+  static void Decode(internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    ::test_unionsandwich::wire::UnionSize24Alignment8::Tag tag = *position.As<::test_unionsandwich::wire::UnionSize24Alignment8::Tag>();
     if (unlikely(static_cast<uint64_t>(tag) == 0)) {
       if constexpr (!Constraint::is_optional) {
         decoder->SetError(kCodingErrorInvalidUnionTag);
@@ -1440,10 +1034,7 @@ struct ::fidl::internal::WireCodingTraits<
     size_t inline_size;
     switch (tag) {
       case ::test_unionsandwich::wire::UnionSize24Alignment8::Tag::kVariant:
-        inline_size = ::fidl::internal::WireCodingTraits<
-            ::test_unionsandwich::wire::StructSize16Alignment8,
-            fidl::internal::WireCodingConstraintEmpty,
-            IsRecursive>::inline_size;
+        inline_size = ::fidl::internal::WireCodingTraits<::test_unionsandwich::wire::StructSize16Alignment8, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
         break;
       default:
         inline_size = 0;
@@ -1452,27 +1043,19 @@ struct ::fidl::internal::WireCodingTraits<
     DecodeFn<IsRecursive> decode_fn;
     switch (tag) {
       case ::test_unionsandwich::wire::UnionSize24Alignment8::Tag::kVariant:
-        decode_fn = ::fidl::internal::MakeDecodeFn<
-            ::test_unionsandwich::wire::StructSize16Alignment8,
-            fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        decode_fn = ::fidl::internal::MakeDecodeFn<::test_unionsandwich::wire::StructSize16Alignment8, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
         break;
       default:
         decode_fn = nullptr;
         break;
     }
-    ::fidl::internal::WireDecodeStrictEnvelope(
-        inline_size, decode_fn, decoder, position + sizeof(fidl_xunion_tag_t),
-        inner_depth);
+    ::fidl::internal::WireDecodeStrictEnvelope(inline_size, decode_fn, decoder, position + sizeof(fidl_xunion_tag_t), inner_depth);
   }
 };
 
 // Top-level union.
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::test_unionsandwich::wire::UnionSize24Alignment8,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-    : public ::fidl::internal::WireCodingTraits<
-          ::test_unionsandwich::wire::UnionSize24Alignment8,
-          ::fidl::internal::WireCodingConstraintUnion<false>, IsRecursive> {};
+struct ::fidl::internal::WireCodingTraits<::test_unionsandwich::wire::UnionSize24Alignment8, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public ::fidl::internal::WireCodingTraits<::test_unionsandwich::wire::UnionSize24Alignment8, ::fidl::internal::WireCodingConstraintUnion<false>, IsRecursive> {};
 
 }  // namespace fidl

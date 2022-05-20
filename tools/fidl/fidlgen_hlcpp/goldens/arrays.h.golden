@@ -39,18 +39,16 @@ class UnionSmallArray final {
     Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
-  static inline ::std::unique_ptr<UnionSmallArray> New() {
-    return ::std::make_unique<UnionSmallArray>();
-  }
+  static inline ::std::unique_ptr<UnionSmallArray> New() { return ::std::make_unique<UnionSmallArray>(); }
 
   void Encode(::fidl::Encoder* encoder, size_t offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, UnionSmallArray* value,
-                     size_t offset);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, UnionSmallArray* value, size_t offset);
   zx_status_t Clone(UnionSmallArray* result) const;
 
-  bool has_invalid_tag() const { return tag_ == Invalid; }
+  bool has_invalid_tag() const {
+    return tag_ == Invalid;
+  }
 
   bool is_a() const { return tag_ == ::test::arrays::UnionSmallArray::Tag::kA; }
 
@@ -69,9 +67,11 @@ class UnionSmallArray final {
     return ::test::arrays::UnionSmallArray::Tag(tag_);
   }
 
-  // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
-  // only when you need access to the raw integral ordinal value.
-  fidl_xunion_tag_t Ordinal() const { return tag_; }
+  // You probably want to use Which() method instead of Ordinal(). Use Ordinal() only when you need
+  // access to the raw integral ordinal value.
+  fidl_xunion_tag_t Ordinal() const {
+    return tag_;
+  }
 
   friend ::fidl::Equality<::test::arrays::UnionSmallArray>;
 
@@ -79,8 +79,7 @@ class UnionSmallArray final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
-      ::test::arrays::UnionSmallArray::Tag::Invalid);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(::test::arrays::UnionSmallArray::Tag::Invalid);
   union {
     ::std::array<uint32_t, 2> a_;
   };
@@ -111,18 +110,16 @@ class UnionLargeArray final {
     Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
-  static inline ::std::unique_ptr<UnionLargeArray> New() {
-    return ::std::make_unique<UnionLargeArray>();
-  }
+  static inline ::std::unique_ptr<UnionLargeArray> New() { return ::std::make_unique<UnionLargeArray>(); }
 
   void Encode(::fidl::Encoder* encoder, size_t offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, UnionLargeArray* value,
-                     size_t offset);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, UnionLargeArray* value, size_t offset);
   zx_status_t Clone(UnionLargeArray* result) const;
 
-  bool has_invalid_tag() const { return tag_ == Invalid; }
+  bool has_invalid_tag() const {
+    return tag_ == Invalid;
+  }
 
   bool is_a() const { return tag_ == ::test::arrays::UnionLargeArray::Tag::kA; }
 
@@ -141,9 +138,11 @@ class UnionLargeArray final {
     return ::test::arrays::UnionLargeArray::Tag(tag_);
   }
 
-  // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
-  // only when you need access to the raw integral ordinal value.
-  fidl_xunion_tag_t Ordinal() const { return tag_; }
+  // You probably want to use Which() method instead of Ordinal(). Use Ordinal() only when you need
+  // access to the raw integral ordinal value.
+  fidl_xunion_tag_t Ordinal() const {
+    return tag_;
+  }
 
   friend ::fidl::Equality<::test::arrays::UnionLargeArray>;
 
@@ -151,8 +150,7 @@ class UnionLargeArray final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
-      ::test::arrays::UnionLargeArray::Tag::Invalid);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(::test::arrays::UnionLargeArray::Tag::Invalid);
   union {
     ::std::array<uint32_t, 100> a_;
   };
@@ -175,7 +173,9 @@ class TableSmallArray final {
     ZX_ASSERT(field_presence_.IsSet<0>());
     return a_value_.value;
   }
-  bool has_a() const { return field_presence_.IsSet<0>(); }
+  bool has_a() const {
+    return field_presence_.IsSet<0>();
+  }
 
   ::std::array<uint32_t, 2>* mutable_a() {
     if (!field_presence_.IsSet<0>()) {
@@ -206,15 +206,11 @@ class TableSmallArray final {
   ~TableSmallArray();
   TableSmallArray& operator=(TableSmallArray&& other);
 
-  static inline ::std::unique_ptr<TableSmallArray> New() {
-    return ::std::make_unique<TableSmallArray>();
-  }
+  static inline ::std::unique_ptr<TableSmallArray> New() { return ::std::make_unique<TableSmallArray>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, TableSmallArray* _value,
-                     size_t _offset);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, TableSmallArray* _value, size_t _offset);
   zx_status_t Clone(TableSmallArray* _result) const;
 
  private:
@@ -263,7 +259,9 @@ class TableLargeArray final {
     ZX_ASSERT(field_presence_.IsSet<0>());
     return a_value_.value;
   }
-  bool has_a() const { return field_presence_.IsSet<0>(); }
+  bool has_a() const {
+    return field_presence_.IsSet<0>();
+  }
 
   ::std::array<uint32_t, 100>* mutable_a() {
     if (!field_presence_.IsSet<0>()) {
@@ -294,15 +292,11 @@ class TableLargeArray final {
   ~TableLargeArray();
   TableLargeArray& operator=(TableLargeArray&& other);
 
-  static inline ::std::unique_ptr<TableLargeArray> New() {
-    return ::std::make_unique<TableLargeArray>();
-  }
+  static inline ::std::unique_ptr<TableLargeArray> New() { return ::std::make_unique<TableLargeArray>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, TableLargeArray* _value,
-                     size_t _offset);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, TableLargeArray* _value, size_t _offset);
   zx_status_t Clone(TableLargeArray* _result) const;
 
  private:
@@ -347,15 +341,11 @@ class StructSmallArray final {
 
   ::std::array<uint32_t, 2> a{};
 
-  static inline ::std::unique_ptr<StructSmallArray> New() {
-    return ::std::make_unique<StructSmallArray>();
-  }
+  static inline ::std::unique_ptr<StructSmallArray> New() { return ::std::make_unique<StructSmallArray>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, StructSmallArray* value,
-                     size_t _offset);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, StructSmallArray* value, size_t _offset);
   zx_status_t Clone(StructSmallArray* result) const;
 };
 
@@ -372,15 +362,11 @@ class StructLargeArray final {
 
   ::std::array<uint32_t, 100> a{};
 
-  static inline ::std::unique_ptr<StructLargeArray> New() {
-    return ::std::make_unique<StructLargeArray>();
-  }
+  static inline ::std::unique_ptr<StructLargeArray> New() { return ::std::make_unique<StructLargeArray>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, StructLargeArray* value,
-                     size_t _offset);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, StructLargeArray* value, size_t _offset);
   zx_status_t Clone(StructLargeArray* result) const;
 };
 
@@ -405,20 +391,15 @@ template <>
 struct CodingTraits<std::unique_ptr<::test::arrays::UnionSmallArray>> {
   static constexpr size_t inline_size_v2 = 16;
 
-  static void Encode(Encoder* encoder,
-                     std::unique_ptr<::test::arrays::UnionSmallArray>* value,
-                     size_t offset,
-                     cpp17::optional<::fidl::HandleInformation>
-                         maybe_handle_info = cpp17::nullopt) {
+  static void Encode(Encoder* encoder, std::unique_ptr<::test::arrays::UnionSmallArray>* value, size_t offset,
+                     cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
     }
   }
 
-  static void Decode(Decoder* _decoder,
-                     std::unique_ptr<::test::arrays::UnionSmallArray>* value,
-                     size_t offset) {
+  static void Decode(Decoder* _decoder, std::unique_ptr<::test::arrays::UnionSmallArray>* value, size_t offset) {
     fidl_xunion_t* encoded = _decoder->GetPtr<fidl_xunion_t>(offset);
     if (encoded->tag == 0) {
       value->reset(nullptr);
@@ -438,15 +419,13 @@ inline zx_status_t Clone(const ::test::arrays::UnionSmallArray& value,
 
 template <>
 struct Equality<::test::arrays::UnionSmallArray> {
-  bool operator()(const ::test::arrays::UnionSmallArray& _lhs,
-                  const ::test::arrays::UnionSmallArray& _rhs) const {
+  bool operator()(const ::test::arrays::UnionSmallArray& _lhs, const ::test::arrays::UnionSmallArray& _rhs) const {
     if (_lhs.Ordinal() != _rhs.Ordinal()) {
       return false;
     }
 
     switch (_lhs.Ordinal()) {
-      case static_cast<fidl_xunion_tag_t>(
-          ::test::arrays::UnionSmallArray::Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(::test::arrays::UnionSmallArray::Tag::Invalid):
         return true;
       case ::test::arrays::UnionSmallArray::Tag::kA:
         return ::fidl::Equals(_lhs.a_, _rhs.a_);
@@ -467,20 +446,15 @@ template <>
 struct CodingTraits<std::unique_ptr<::test::arrays::UnionLargeArray>> {
   static constexpr size_t inline_size_v2 = 16;
 
-  static void Encode(Encoder* encoder,
-                     std::unique_ptr<::test::arrays::UnionLargeArray>* value,
-                     size_t offset,
-                     cpp17::optional<::fidl::HandleInformation>
-                         maybe_handle_info = cpp17::nullopt) {
+  static void Encode(Encoder* encoder, std::unique_ptr<::test::arrays::UnionLargeArray>* value, size_t offset,
+                     cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
     }
   }
 
-  static void Decode(Decoder* _decoder,
-                     std::unique_ptr<::test::arrays::UnionLargeArray>* value,
-                     size_t offset) {
+  static void Decode(Decoder* _decoder, std::unique_ptr<::test::arrays::UnionLargeArray>* value, size_t offset) {
     fidl_xunion_t* encoded = _decoder->GetPtr<fidl_xunion_t>(offset);
     if (encoded->tag == 0) {
       value->reset(nullptr);
@@ -500,15 +474,13 @@ inline zx_status_t Clone(const ::test::arrays::UnionLargeArray& value,
 
 template <>
 struct Equality<::test::arrays::UnionLargeArray> {
-  bool operator()(const ::test::arrays::UnionLargeArray& _lhs,
-                  const ::test::arrays::UnionLargeArray& _rhs) const {
+  bool operator()(const ::test::arrays::UnionLargeArray& _lhs, const ::test::arrays::UnionLargeArray& _rhs) const {
     if (_lhs.Ordinal() != _rhs.Ordinal()) {
       return false;
     }
 
     switch (_lhs.Ordinal()) {
-      case static_cast<fidl_xunion_tag_t>(
-          ::test::arrays::UnionLargeArray::Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(::test::arrays::UnionLargeArray::Tag::Invalid):
         return true;
       case ::test::arrays::UnionLargeArray::Tag::kA:
         return ::fidl::Equals(_lhs.a_, _rhs.a_);
@@ -528,8 +500,7 @@ inline zx_status_t Clone(const ::test::arrays::TableSmallArray& _value,
 }
 template <>
 struct Equality<::test::arrays::TableSmallArray> {
-  bool operator()(const ::test::arrays::TableSmallArray& _lhs,
-                  const ::test::arrays::TableSmallArray& _rhs) const {
+  bool operator()(const ::test::arrays::TableSmallArray& _lhs, const ::test::arrays::TableSmallArray& _rhs) const {
     if (_lhs.has_a()) {
       if (!_rhs.has_a()) {
         return false;
@@ -553,8 +524,7 @@ inline zx_status_t Clone(const ::test::arrays::TableLargeArray& _value,
 }
 template <>
 struct Equality<::test::arrays::TableLargeArray> {
-  bool operator()(const ::test::arrays::TableLargeArray& _lhs,
-                  const ::test::arrays::TableLargeArray& _rhs) const {
+  bool operator()(const ::test::arrays::TableLargeArray& _lhs, const ::test::arrays::TableLargeArray& _rhs) const {
     if (_lhs.has_a()) {
       if (!_rhs.has_a()) {
         return false;
@@ -573,10 +543,8 @@ struct CodingTraits<::test::arrays::StructSmallArray>
     : public EncodableCodingTraits<::test::arrays::StructSmallArray, 8> {};
 
 template <>
-struct IsMemcpyCompatible<::test::arrays::StructSmallArray>
-    : public internal::BoolConstant<
-          !HasPadding<::test::arrays::StructSmallArray>::value &&
-          IsMemcpyCompatible<::std::array<uint32_t, 2>>::value> {};
+struct IsMemcpyCompatible<::test::arrays::StructSmallArray> : public internal::BoolConstant<
+                                                                  !HasPadding<::test::arrays::StructSmallArray>::value && IsMemcpyCompatible<::std::array<uint32_t, 2>>::value> {};
 
 inline zx_status_t Clone(const ::test::arrays::StructSmallArray& value,
                          ::test::arrays::StructSmallArray* result) {
@@ -585,8 +553,7 @@ inline zx_status_t Clone(const ::test::arrays::StructSmallArray& value,
 
 template <>
 struct Equality<::test::arrays::StructSmallArray> {
-  bool operator()(const ::test::arrays::StructSmallArray& _lhs,
-                  const ::test::arrays::StructSmallArray& _rhs) const {
+  bool operator()(const ::test::arrays::StructSmallArray& _lhs, const ::test::arrays::StructSmallArray& _rhs) const {
     if (!::fidl::Equals(_lhs.a, _rhs.a)) {
       return false;
     }
@@ -598,10 +565,8 @@ struct CodingTraits<::test::arrays::StructLargeArray>
     : public EncodableCodingTraits<::test::arrays::StructLargeArray, 400> {};
 
 template <>
-struct IsMemcpyCompatible<::test::arrays::StructLargeArray>
-    : public internal::BoolConstant<
-          !HasPadding<::test::arrays::StructLargeArray>::value &&
-          IsMemcpyCompatible<::std::array<uint32_t, 100>>::value> {};
+struct IsMemcpyCompatible<::test::arrays::StructLargeArray> : public internal::BoolConstant<
+                                                                  !HasPadding<::test::arrays::StructLargeArray>::value && IsMemcpyCompatible<::std::array<uint32_t, 100>>::value> {};
 
 inline zx_status_t Clone(const ::test::arrays::StructLargeArray& value,
                          ::test::arrays::StructLargeArray* result) {
@@ -610,8 +575,7 @@ inline zx_status_t Clone(const ::test::arrays::StructLargeArray& value,
 
 template <>
 struct Equality<::test::arrays::StructLargeArray> {
-  bool operator()(const ::test::arrays::StructLargeArray& _lhs,
-                  const ::test::arrays::StructLargeArray& _rhs) const {
+  bool operator()(const ::test::arrays::StructLargeArray& _lhs, const ::test::arrays::StructLargeArray& _rhs) const {
     if (!::fidl::Equals(_lhs.a, _rhs.a)) {
       return false;
     }

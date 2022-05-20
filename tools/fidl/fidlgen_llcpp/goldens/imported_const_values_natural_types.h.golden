@@ -32,8 +32,7 @@ class MyStruct {
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |MyStruct| only if all of its members are default
-  // constructible.
+  // Default constructs a |MyStruct| only if all of its members are default constructible.
   MyStruct() = default;
 #pragma clang diagnostic pop
 
@@ -46,22 +45,24 @@ class MyStruct {
   }
 
   bool operator==(const MyStruct& other) const noexcept {
-    return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_importedconstvalues::MyStruct, 1>::Equal(this, &other);
+    return ::fidl::internal::NaturalStructCodingTraits<::test_importedconstvalues::MyStruct, 1>::Equal(this, &other);
   }
   bool operator!=(const MyStruct& other) const noexcept {
-    return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_importedconstvalues::MyStruct, 1>::Equal(this, &other);
+    return !::fidl::internal::NaturalStructCodingTraits<::test_importedconstvalues::MyStruct, 1>::Equal(this, &other);
   }
 
-  uint8_t __reserved() const { return storage_.__reserved; }
+  uint8_t
+  __reserved() const {
+    return storage_.__reserved;
+  }
 
-  uint8_t& __reserved() { return storage_.__reserved; }
+  uint8_t& __reserved() {
+    return storage_.__reserved;
+  }
 
-  MyStruct(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : MyStruct(Storage_{
-            .__reserved = 0u,
-        }) {}
+  MyStruct(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : MyStruct(Storage_{
+                                                                             .__reserved = 0u,
+                                                                         }) {}
 
  private:
   struct Storage_ final {
@@ -71,22 +72,16 @@ class MyStruct {
   Storage_ storage_;
   Storage_ CloneStorage_() const;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_importedconstvalues::MyStruct, 1>;
-  friend struct ::fidl::internal::MemberVisitor<
-      ::test_importedconstvalues::MyStruct>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<
-          Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::__reserved, 0});
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_importedconstvalues::MyStruct, 1>;
+  friend struct ::fidl::internal::MemberVisitor<::test_importedconstvalues::MyStruct>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{
+      &Storage_::__reserved, 0});
   static constexpr auto kPadding = std::make_tuple();
 };
 
-constexpr ::test_dependent::MyEnum kEnumMember =
-    ::test_dependent::MyEnum::kMember;
+constexpr ::test_dependent::MyEnum kEnumMember = ::test_dependent::MyEnum::kMember;
 
-constexpr ::test_dependent::MyBits kBitsMember =
-    ::test_dependent::MyBits::kMember;
+constexpr ::test_dependent::MyBits kBitsMember = ::test_dependent::MyBits::kMember;
 
 }  // namespace test_importedconstvalues
 namespace fidl {
@@ -94,14 +89,10 @@ namespace fidl {
 extern "C" const fidl_type_t test_importedconstvalues_MyStructTable;
 
 template <>
-struct IsFidlType<::test_importedconstvalues::MyStruct>
-    : public std::true_type {};
+struct IsFidlType<::test_importedconstvalues::MyStruct> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<
-    ::test_importedconstvalues::MyStruct,
-    ::fidl::internal::NaturalCodingConstraintEmpty>
-    final : public ::fidl::internal::NaturalEmptyStructCodingTraits<
-                ::test_importedconstvalues::MyStruct> {};
+struct internal::NaturalCodingTraits<::test_importedconstvalues::MyStruct, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalEmptyStructCodingTraits<::test_importedconstvalues::MyStruct> {};
 
 }  // namespace fidl

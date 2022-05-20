@@ -31,7 +31,8 @@ void Baz::Decode(::fidl::Decoder* _decoder, Baz* _value, size_t _offset) {
 
 zx_status_t Baz::Clone(Baz* _result) const {
   zx_status_t _status = ::fidl::Clone(g, &_result->g);
-  if (_status != ZX_OK) return _status;
+  if (_status != ZX_OK)
+    return _status;
   return ZX_OK;
 }
 

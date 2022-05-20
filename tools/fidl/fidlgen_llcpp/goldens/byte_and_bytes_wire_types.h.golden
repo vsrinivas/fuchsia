@@ -44,8 +44,7 @@ namespace fidl {
 // TODO(fxbug.dev/95833) Remove this.
 template <>
 struct DeprecatedCTypeTraits<::test_byteandbytes::wire::ByteAndBytes> {
-  static constexpr const fidl_type_t* kType =
-      &::test_byteandbytes::wire::test_byteandbytes_ByteAndBytesTable;
+  static constexpr const fidl_type_t* kType = &::test_byteandbytes::wire::test_byteandbytes_ByteAndBytesTable;
 };
 
 template <>
@@ -61,116 +60,49 @@ struct TypeTraits<::test_byteandbytes::wire::ByteAndBytes> {
 };
 
 template <>
-struct IsFidlType<::test_byteandbytes::wire::ByteAndBytes>
-    : public std::true_type {};
+struct IsFidlType<::test_byteandbytes::wire::ByteAndBytes> : public std::true_type {};
 template <>
-struct IsStruct<::test_byteandbytes::wire::ByteAndBytes>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::test_byteandbytes::wire::ByteAndBytes>);
-static_assert(offsetof(::test_byteandbytes::wire::ByteAndBytes, single_byte) ==
-              0);
-static_assert(offsetof(::test_byteandbytes::wire::ByteAndBytes, many_bytes) ==
-              8);
-static_assert(offsetof(::test_byteandbytes::wire::ByteAndBytes,
-                       only_one_k_bytes) == 24);
-static_assert(offsetof(::test_byteandbytes::wire::ByteAndBytes,
-                       opt_only_one_k_bytes) == 40);
-static_assert(
-    sizeof(::test_byteandbytes::wire::ByteAndBytes) ==
-    TypeTraits<::test_byteandbytes::wire::ByteAndBytes>::kPrimarySize);
+struct IsStruct<::test_byteandbytes::wire::ByteAndBytes> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_byteandbytes::wire::ByteAndBytes>);
+static_assert(offsetof(::test_byteandbytes::wire::ByteAndBytes, single_byte) == 0);
+static_assert(offsetof(::test_byteandbytes::wire::ByteAndBytes, many_bytes) == 8);
+static_assert(offsetof(::test_byteandbytes::wire::ByteAndBytes, only_one_k_bytes) == 24);
+static_assert(offsetof(::test_byteandbytes::wire::ByteAndBytes, opt_only_one_k_bytes) == 40);
+static_assert(sizeof(::test_byteandbytes::wire::ByteAndBytes) == TypeTraits<::test_byteandbytes::wire::ByteAndBytes>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::test_byteandbytes::wire::ByteAndBytes,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_byteandbytes::wire::ByteAndBytes, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 56;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::WireStructMemberCodingInfo<
-          uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(),
-      ::fidl::internal::WireStructMemberCodingInfo<
-          ::fidl::VectorView<uint8_t>,
-          fidl::internal::WireCodingConstraintVector<
-              fidl::internal::WireCodingConstraintEmpty, false>,
-          IsRecursive>(),
-      ::fidl::internal::WireStructMemberCodingInfo<
-          ::fidl::VectorView<uint8_t>,
-          fidl::internal::WireCodingConstraintVector<
-              fidl::internal::WireCodingConstraintEmpty, false, 1024>,
-          IsRecursive>(),
-      ::fidl::internal::WireStructMemberCodingInfo<
-          ::fidl::VectorView<uint8_t>,
-          fidl::internal::WireCodingConstraintVector<
-              fidl::internal::WireCodingConstraintEmpty, true, 1024>,
-          IsRecursive>());
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(), ::fidl::internal::WireStructMemberCodingInfo<::fidl::VectorView<uint8_t>, fidl::internal::WireCodingConstraintVector<fidl::internal::WireCodingConstraintEmpty, false>, IsRecursive>(), ::fidl::internal::WireStructMemberCodingInfo<::fidl::VectorView<uint8_t>, fidl::internal::WireCodingConstraintVector<fidl::internal::WireCodingConstraintEmpty, false, 1024>, IsRecursive>(), ::fidl::internal::WireStructMemberCodingInfo<::fidl::VectorView<uint8_t>, fidl::internal::WireCodingConstraintVector<fidl::internal::WireCodingConstraintEmpty, true, 1024>, IsRecursive>());
   static constexpr bool kHasPadding = true;
-  using Base =
-      WireStructCodingTraitsBase<::test_byteandbytes::wire::ByteAndBytes,
-                                 ::fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_byteandbytes::wire::ByteAndBytes, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
-  static void Encode(internal::WireEncoder* encoder,
-                     ::test_byteandbytes::wire::ByteAndBytes* value,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Encode(
+      internal::WireEncoder* encoder, ::test_byteandbytes::wire::ByteAndBytes* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value,
-             sizeof(::test_byteandbytes::wire::ByteAndBytes));
+      memcpy(position.As<void>(), value, sizeof(::test_byteandbytes::wire::ByteAndBytes));
     } else {
       internal::WireZeroPadding<uint64_t>(encoder, position + 0);
-      internal::WireCodingTraits<uint8_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder,
-                                                      &value->single_byte,
-                                                      position + 0,
-                                                      recursion_depth);
-      internal::WireCodingTraits<
-          ::fidl::VectorView<uint8_t>,
-          fidl::internal::WireCodingConstraintVector<
-              fidl::internal::WireCodingConstraintEmpty, false>,
-          IsRecursive>::Encode(encoder, &value->many_bytes, position + 8,
-                               recursion_depth);
-      internal::WireCodingTraits<
-          ::fidl::VectorView<uint8_t>,
-          fidl::internal::WireCodingConstraintVector<
-              fidl::internal::WireCodingConstraintEmpty, false, 1024>,
-          IsRecursive>::Encode(encoder, &value->only_one_k_bytes, position + 24,
-                               recursion_depth);
-      internal::WireCodingTraits<
-          ::fidl::VectorView<uint8_t>,
-          fidl::internal::WireCodingConstraintVector<
-              fidl::internal::WireCodingConstraintEmpty, true, 1024>,
-          IsRecursive>::Encode(encoder, &value->opt_only_one_k_bytes,
-                               position + 40, recursion_depth);
+      internal::WireCodingTraits<uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->single_byte, position + 0, recursion_depth);
+      internal::WireCodingTraits<::fidl::VectorView<uint8_t>, fidl::internal::WireCodingConstraintVector<fidl::internal::WireCodingConstraintEmpty, false>, IsRecursive>::Encode(encoder, &value->many_bytes, position + 8, recursion_depth);
+      internal::WireCodingTraits<::fidl::VectorView<uint8_t>, fidl::internal::WireCodingConstraintVector<fidl::internal::WireCodingConstraintEmpty, false, 1024>, IsRecursive>::Encode(encoder, &value->only_one_k_bytes, position + 24, recursion_depth);
+      internal::WireCodingTraits<::fidl::VectorView<uint8_t>, fidl::internal::WireCodingConstraintVector<fidl::internal::WireCodingConstraintEmpty, true, 1024>, IsRecursive>::Encode(encoder, &value->opt_only_one_k_bytes, position + 40, recursion_depth);
     }
   }
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (!Base::are_members_memcpy_compatible) {
-      internal::WireCodingTraits<uint8_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 0,
-                                                      recursion_depth);
-      internal::WireCodingTraits<
-          ::fidl::VectorView<uint8_t>,
-          fidl::internal::WireCodingConstraintVector<
-              fidl::internal::WireCodingConstraintEmpty, false>,
-          IsRecursive>::Decode(decoder, position + 8, recursion_depth);
-      internal::WireCodingTraits<
-          ::fidl::VectorView<uint8_t>,
-          fidl::internal::WireCodingConstraintVector<
-              fidl::internal::WireCodingConstraintEmpty, false, 1024>,
-          IsRecursive>::Decode(decoder, position + 24, recursion_depth);
-      internal::WireCodingTraits<
-          ::fidl::VectorView<uint8_t>,
-          fidl::internal::WireCodingConstraintVector<
-              fidl::internal::WireCodingConstraintEmpty, true, 1024>,
-          IsRecursive>::Decode(decoder, position + 40, recursion_depth);
+      internal::WireCodingTraits<uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 0, recursion_depth);
+      internal::WireCodingTraits<::fidl::VectorView<uint8_t>, fidl::internal::WireCodingConstraintVector<fidl::internal::WireCodingConstraintEmpty, false>, IsRecursive>::Decode(
+          decoder, position + 8, recursion_depth);
+      internal::WireCodingTraits<::fidl::VectorView<uint8_t>, fidl::internal::WireCodingConstraintVector<fidl::internal::WireCodingConstraintEmpty, false, 1024>, IsRecursive>::Decode(
+          decoder, position + 24, recursion_depth);
+      internal::WireCodingTraits<::fidl::VectorView<uint8_t>, fidl::internal::WireCodingConstraintVector<fidl::internal::WireCodingConstraintEmpty, true, 1024>, IsRecursive>::Decode(
+          decoder, position + 40, recursion_depth);
     }
-    internal::WireCheckPadding<uint64_t>(decoder, position + 0,
-                                         0xffffffffffffff00ull);
+    internal::WireCheckPadding<uint64_t>(decoder, position + 0, 0xffffffffffffff00ull);
   }
 };
 

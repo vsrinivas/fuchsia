@@ -11,15 +11,15 @@
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
-namespace fidl {}  // namespace fidl
-template <>
-struct ::fidl::internal::NaturalMethodTypes<
-    ::test_unknowninteractions::Example::StrictTwoWay> {
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<
-      ::test_unknowninteractions::Example::StrictTwoWay>>;
+namespace fidl {
 
-  using ResultCallback = ::fit::callback<void(
-      ::fidl::Result<::test_unknowninteractions::Example::StrictTwoWay>&)>;
+}  // namespace fidl
+template <>
+struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::Example::StrictTwoWay> {
+  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Example::StrictTwoWay>>;
+
+  using ResultCallback =
+      ::fit::callback<void(::fidl::Result<::test_unknowninteractions::Example::StrictTwoWay>&)>;
 
   static constexpr bool HasApplicationError = false;
 
@@ -27,13 +27,11 @@ struct ::fidl::internal::NaturalMethodTypes<
 };
 
 template <>
-struct ::fidl::internal::NaturalMethodTypes<
-    ::test_unknowninteractions::Example::FlexibleTwoWay> {
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<
-      ::test_unknowninteractions::Example::FlexibleTwoWay>>;
+struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::Example::FlexibleTwoWay> {
+  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Example::FlexibleTwoWay>>;
 
-  using ResultCallback = ::fit::callback<void(
-      ::fidl::Result<::test_unknowninteractions::Example::FlexibleTwoWay>&)>;
+  using ResultCallback =
+      ::fit::callback<void(::fidl::Result<::test_unknowninteractions::Example::FlexibleTwoWay>&)>;
 
   static constexpr bool HasApplicationError = false;
 
@@ -41,8 +39,7 @@ struct ::fidl::internal::NaturalMethodTypes<
 };
 
 namespace test_unknowninteractions {
-__LOCAL extern "C" const fidl_type_t
-    test_unknowninteractions_ExampleFlexibleTwoWayTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_ExampleFlexibleTwoWayTopResponseTable;
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
@@ -53,9 +50,7 @@ class ::fidl::Event<::test_unknowninteractions::Example::StrictEvent> final {
 };
 
 template <>
-struct ::fidl::internal::MessageTraits<
-    ::fidl::Event<::test_unknowninteractions::Example::StrictEvent>>
-    final {
+struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions::Example::StrictEvent>> final {
  public:
   static constexpr bool kHasPayload = false;
 };
@@ -67,31 +62,25 @@ class ::fidl::Event<::test_unknowninteractions::Example::FlexibleEvent> final {
 };
 
 template <>
-struct ::fidl::internal::MessageTraits<
-    ::fidl::Event<::test_unknowninteractions::Example::FlexibleEvent>>
-    final {
+struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions::Example::FlexibleEvent>> final {
  public:
   static constexpr bool kHasPayload = false;
 };
 namespace test_unknowninteractions {}  // namespace test_unknowninteractions
 
 template <>
-class ::fidl::Response<::test_unknowninteractions::Example::StrictTwoWay>
-    final {
+class ::fidl::Response<::test_unknowninteractions::Example::StrictTwoWay> final {
  public:
 };
 
 template <>
-struct ::fidl::internal::MessageTraits<
-    ::fidl::Response<::test_unknowninteractions::Example::StrictTwoWay>>
-    final {
+struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractions::Example::StrictTwoWay>> final {
  public:
   static constexpr bool kHasPayload = false;
 };
 namespace test_unknowninteractions {}  // namespace test_unknowninteractions
 template <>
-class ::fidl::Result<::test_unknowninteractions::Example::StrictTwoWay> final
-    : public ::fitx::result<::fidl::Error> {
+class ::fidl::Result<::test_unknowninteractions::Example::StrictTwoWay> final : public ::fitx::result<::fidl::Error> {
  public:
   using ::fitx::result<::fidl::Error>::result;
 
@@ -100,50 +89,34 @@ class ::fidl::Result<::test_unknowninteractions::Example::StrictTwoWay> final
 };
 
 template <>
-class ::fidl::Response<::test_unknowninteractions::Example::FlexibleTwoWay>
-    final
-    : public ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse {
+class ::fidl::Response<::test_unknowninteractions::Example::FlexibleTwoWay> final : public ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse {
  public:
-  using ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse::
-      ExampleFlexibleTwoWayTopResponse;
-  Response(::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse v)
-      : ExampleFlexibleTwoWayTopResponse(std::move(v)) {}
+  using ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse::ExampleFlexibleTwoWayTopResponse;
+  Response(::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse v) : ExampleFlexibleTwoWayTopResponse(std::move(v)) {}
 };
 
 template <>
-struct ::fidl::internal::MessageTraits<
-    ::fidl::Response<::test_unknowninteractions::Example::FlexibleTwoWay>>
-    final {
+struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractions::Example::FlexibleTwoWay>> final {
  public:
   static constexpr bool kHasPayload = true;
   using Payload = ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse;
 };
 template <>
-class ::fidl::Result<::test_unknowninteractions::Example::FlexibleTwoWay> final
-    : public ::fitx::result<
-          ::fidl::Error,
-          ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse> {
+class ::fidl::Result<::test_unknowninteractions::Example::FlexibleTwoWay> final : public ::fitx::result<::fidl::Error, ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse> {
  public:
-  using ::fitx::result<
-      ::fidl::Error,
-      ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse>::result;
+  using ::fitx::result<::fidl::Error, ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse>::result;
 
  protected:
   Result() = default;
 };
 
 template <>
-class ::fidl::internal::NaturalClientImpl<::test_unknowninteractions::Example>
-    final : public ::fidl::internal::NaturalClientBase {
+class ::fidl::internal::NaturalClientImpl<::test_unknowninteractions::Example> final : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
-  ::fidl::internal::NaturalThenable<
-      ::test_unknowninteractions::Example::StrictTwoWay>
-  StrictTwoWay() const;
+  ::fidl::internal::NaturalThenable<::test_unknowninteractions::Example::StrictTwoWay> StrictTwoWay() const;
 
-  ::fidl::internal::NaturalThenable<
-      ::test_unknowninteractions::Example::FlexibleTwoWay>
-  FlexibleTwoWay() const;
+  ::fidl::internal::NaturalThenable<::test_unknowninteractions::Example::FlexibleTwoWay> FlexibleTwoWay() const;
 
   ::fitx::result<::fidl::Error> StrictOneWay() const;
 
@@ -156,25 +129,19 @@ namespace test_unknowninteractions {
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::internal::NaturalSyncClientImpl<
-    ::test_unknowninteractions::Example>
-    final : public ::fidl::internal::SyncEndpointManagedVeneer<
-                ::fidl::internal::NaturalSyncClientImpl<
-                    ::test_unknowninteractions::Example>> {
+class ::fidl::internal::NaturalSyncClientImpl<::test_unknowninteractions::Example> final
+    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalSyncClientImpl<::test_unknowninteractions::Example>> {
  public:
-  ::fidl::Result<::test_unknowninteractions::Example::StrictTwoWay>
-  StrictTwoWay();
+  ::fidl::Result<::test_unknowninteractions::Example::StrictTwoWay> StrictTwoWay();
 
-  ::fidl::Result<::test_unknowninteractions::Example::FlexibleTwoWay>
-  FlexibleTwoWay();
+  ::fidl::Result<::test_unknowninteractions::Example::FlexibleTwoWay> FlexibleTwoWay();
 
   ::fitx::result<::fidl::Error> StrictOneWay();
 
   ::fitx::result<::fidl::Error> FlexibleOneWay();
 
  private:
-  ::fidl::UnownedClientEnd<::test_unknowninteractions::Example> _client_end()
-      const {
+  ::fidl::UnownedClientEnd<::test_unknowninteractions::Example> _client_end() const {
     return ::fidl::UnownedClientEnd<::test_unknowninteractions::Example>(
         _transport().get<::fidl::internal::ChannelTransport>());
   }
@@ -184,42 +151,27 @@ class ::fidl::internal::NaturalSyncClientImpl<
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::internal::NaturalEventHandlerInterface<
-    ::test_unknowninteractions::Example> {
+class ::fidl::internal::NaturalEventHandlerInterface<::test_unknowninteractions::Example> {
  public:
   NaturalEventHandlerInterface() = default;
   virtual ~NaturalEventHandlerInterface() = default;
-  virtual void StrictEvent(
-      ::fidl::Event<::test_unknowninteractions::Example::StrictEvent>&) = 0;
-  virtual void FlexibleEvent(
-      ::fidl::Event<::test_unknowninteractions::Example::FlexibleEvent>&) = 0;
+  virtual void StrictEvent(::fidl::Event<::test_unknowninteractions::Example::StrictEvent>&) = 0;
+  virtual void FlexibleEvent(::fidl::Event<::test_unknowninteractions::Example::FlexibleEvent>&) = 0;
 };
 
 template <>
 class ::fidl::AsyncEventHandler<::test_unknowninteractions::Example>
-    : public ::fidl::internal::NaturalEventHandlerInterface<
-          ::test_unknowninteractions::Example>,
-      public ::fidl::internal::AsyncEventHandler {
+    : public ::fidl::internal::NaturalEventHandlerInterface<::test_unknowninteractions::Example>, public ::fidl::internal::AsyncEventHandler {
  public:
   AsyncEventHandler() = default;
-  void StrictEvent(
-      ::fidl::Event<::test_unknowninteractions::Example::StrictEvent>&)
-      override {}
-  void FlexibleEvent(
-      ::fidl::Event<::test_unknowninteractions::Example::FlexibleEvent>&)
-      override {}
+  void StrictEvent(::fidl::Event<::test_unknowninteractions::Example::StrictEvent>&) override {}
+  void FlexibleEvent(::fidl::Event<::test_unknowninteractions::Example::FlexibleEvent>&) override {}
 };
 
 template <>
-class ::fidl::internal::NaturalEventDispatcher<
-    ::test_unknowninteractions::Example>
-    final
-    : public ::fidl::internal::IncomingEventDispatcher<
-          ::fidl::AsyncEventHandler<::test_unknowninteractions::Example>> {
+class ::fidl::internal::NaturalEventDispatcher<::test_unknowninteractions::Example> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::AsyncEventHandler<::test_unknowninteractions::Example>> {
  public:
-  explicit NaturalEventDispatcher(
-      ::fidl::AsyncEventHandler<::test_unknowninteractions::Example>*
-          event_handler)
+  explicit NaturalEventDispatcher(::fidl::AsyncEventHandler<::test_unknowninteractions::Example>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 
  private:
@@ -231,9 +183,7 @@ class ::fidl::internal::NaturalEventDispatcher<
 
 #ifdef __Fuchsia__
 template <>
-class ::fidl::internal::NaturalWeakEventSender<
-    ::test_unknowninteractions::Example>
-    : public ::fidl::internal::WeakEventSenderBase {
+class ::fidl::internal::NaturalWeakEventSender<::test_unknowninteractions::Example> : public ::fidl::internal::WeakEventSenderBase {
  public:
   using WeakEventSenderBase::WeakEventSenderBase;
 
@@ -244,9 +194,7 @@ class ::fidl::internal::NaturalWeakEventSender<
 
 template <>
 class ::fidl::internal::NaturalEventSender<::test_unknowninteractions::Example>
-    : public ::fidl::internal::SyncEndpointManagedVeneer<
-          ::fidl::internal::NaturalEventSender<
-              ::test_unknowninteractions::Example>> {
+    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalEventSender<::test_unknowninteractions::Example>> {
  public:
   using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 
@@ -264,9 +212,7 @@ class ::fidl::Request<::test_unknowninteractions::Example::StrictOneWay> final {
 };
 
 template <>
-struct ::fidl::internal::MessageTraits<
-    ::fidl::Request<::test_unknowninteractions::Example::StrictOneWay>>
-    final {
+struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteractions::Example::StrictOneWay>> final {
  public:
   static constexpr bool kHasPayload = false;
 };
@@ -275,15 +221,12 @@ struct ::fidl::internal::MessageTraits<
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::Request<::test_unknowninteractions::Example::FlexibleOneWay>
-    final {
+class ::fidl::Request<::test_unknowninteractions::Example::FlexibleOneWay> final {
  public:
 };
 
 template <>
-struct ::fidl::internal::MessageTraits<
-    ::fidl::Request<::test_unknowninteractions::Example::FlexibleOneWay>>
-    final {
+struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteractions::Example::FlexibleOneWay>> final {
  public:
   static constexpr bool kHasPayload = false;
 };
@@ -297,9 +240,7 @@ class ::fidl::Request<::test_unknowninteractions::Example::StrictTwoWay> final {
 };
 
 template <>
-struct ::fidl::internal::MessageTraits<
-    ::fidl::Request<::test_unknowninteractions::Example::StrictTwoWay>>
-    final {
+struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteractions::Example::StrictTwoWay>> final {
  public:
   static constexpr bool kHasPayload = false;
 };
@@ -308,24 +249,19 @@ struct ::fidl::internal::MessageTraits<
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::Request<::test_unknowninteractions::Example::FlexibleTwoWay>
-    final {
+class ::fidl::Request<::test_unknowninteractions::Example::FlexibleTwoWay> final {
  public:
 };
 
 template <>
-struct ::fidl::internal::MessageTraits<
-    ::fidl::Request<::test_unknowninteractions::Example::FlexibleTwoWay>>
-    final {
+struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteractions::Example::FlexibleTwoWay>> final {
  public:
   static constexpr bool kHasPayload = false;
 };
 #endif  // __Fuchsia__
 
 template <>
-class ::fidl::internal::NaturalCompleterBase<
-    ::test_unknowninteractions::Example::StrictTwoWay>
-    : public ::fidl::CompleterBase {
+class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Example::StrictTwoWay> : public ::fidl::CompleterBase {
  public:
   void Reply();
 
@@ -334,21 +270,16 @@ class ::fidl::internal::NaturalCompleterBase<
 };
 
 template <>
-class ::fidl::internal::NaturalCompleterBase<
-    ::test_unknowninteractions::Example::FlexibleTwoWay>
-    : public ::fidl::CompleterBase {
+class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Example::FlexibleTwoWay> : public ::fidl::CompleterBase {
  public:
-  void Reply(
-      ::fidl::Response<::test_unknowninteractions::Example::FlexibleTwoWay>&&
-          response);
+  void Reply(::fidl::Response<::test_unknowninteractions::Example::FlexibleTwoWay>&& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
 };
 
 template <>
-class ::fidl::Server<::test_unknowninteractions::Example>
-    : public ::fidl::internal::IncomingMessageDispatcher {
+class ::fidl::Server<::test_unknowninteractions::Example> : public ::fidl::internal::IncomingMessageDispatcher {
  public:
   Server() = default;
   virtual ~Server() = default;
@@ -356,37 +287,25 @@ class ::fidl::Server<::test_unknowninteractions::Example>
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_unknowninteractions::Example;
 
-  using StrictOneWayRequest =
-      ::fidl::Request<::test_unknowninteractions::Example::StrictOneWay>;
-  using StrictOneWayCompleter = ::fidl::internal::NaturalCompleter<
-      ::test_unknowninteractions::Example::StrictOneWay>;
+  using StrictOneWayRequest = ::fidl::Request<::test_unknowninteractions::Example::StrictOneWay>;
+  using StrictOneWayCompleter = ::fidl::internal::NaturalCompleter<::test_unknowninteractions::Example::StrictOneWay>;
 
-  virtual void StrictOneWay(StrictOneWayRequest& request,
-                            StrictOneWayCompleter::Sync& completer) = 0;
+  virtual void StrictOneWay(StrictOneWayRequest& request, StrictOneWayCompleter::Sync& completer) = 0;
 
-  using FlexibleOneWayRequest =
-      ::fidl::Request<::test_unknowninteractions::Example::FlexibleOneWay>;
-  using FlexibleOneWayCompleter = ::fidl::internal::NaturalCompleter<
-      ::test_unknowninteractions::Example::FlexibleOneWay>;
+  using FlexibleOneWayRequest = ::fidl::Request<::test_unknowninteractions::Example::FlexibleOneWay>;
+  using FlexibleOneWayCompleter = ::fidl::internal::NaturalCompleter<::test_unknowninteractions::Example::FlexibleOneWay>;
 
-  virtual void FlexibleOneWay(FlexibleOneWayRequest& request,
-                              FlexibleOneWayCompleter::Sync& completer) = 0;
+  virtual void FlexibleOneWay(FlexibleOneWayRequest& request, FlexibleOneWayCompleter::Sync& completer) = 0;
 
-  using StrictTwoWayRequest =
-      ::fidl::Request<::test_unknowninteractions::Example::StrictTwoWay>;
-  using StrictTwoWayCompleter = ::fidl::internal::NaturalCompleter<
-      ::test_unknowninteractions::Example::StrictTwoWay>;
+  using StrictTwoWayRequest = ::fidl::Request<::test_unknowninteractions::Example::StrictTwoWay>;
+  using StrictTwoWayCompleter = ::fidl::internal::NaturalCompleter<::test_unknowninteractions::Example::StrictTwoWay>;
 
-  virtual void StrictTwoWay(StrictTwoWayRequest& request,
-                            StrictTwoWayCompleter::Sync& completer) = 0;
+  virtual void StrictTwoWay(StrictTwoWayRequest& request, StrictTwoWayCompleter::Sync& completer) = 0;
 
-  using FlexibleTwoWayRequest =
-      ::fidl::Request<::test_unknowninteractions::Example::FlexibleTwoWay>;
-  using FlexibleTwoWayCompleter = ::fidl::internal::NaturalCompleter<
-      ::test_unknowninteractions::Example::FlexibleTwoWay>;
+  using FlexibleTwoWayRequest = ::fidl::Request<::test_unknowninteractions::Example::FlexibleTwoWay>;
+  using FlexibleTwoWayCompleter = ::fidl::internal::NaturalCompleter<::test_unknowninteractions::Example::FlexibleTwoWay>;
 
-  virtual void FlexibleTwoWay(FlexibleTwoWayRequest& request,
-                              FlexibleTwoWayCompleter::Sync& completer) = 0;
+  virtual void FlexibleTwoWay(FlexibleTwoWayRequest& request, FlexibleTwoWayCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(
@@ -397,14 +316,11 @@ class ::fidl::Server<::test_unknowninteractions::Example>
 #ifdef __Fuchsia__
 
 template <>
-struct ::fidl::internal::NaturalServerDispatcher<
-    ::test_unknowninteractions::Example>
-    final {
+struct ::fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::Example> final {
   NaturalServerDispatcher() = delete;
-  static void Dispatch(
-      ::fidl::Server<::test_unknowninteractions::Example>* impl,
-      ::fidl::IncomingMessage&& msg,
-      internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn);
+  static void Dispatch(::fidl::Server<::test_unknowninteractions::Example>* impl, ::fidl::IncomingMessage&& msg,
+                       internal::MessageStorageViewBase* storage_view,
+                       ::fidl::Transaction* txn);
 
  private:
   static const ::fidl::internal::MethodEntry entries_[];

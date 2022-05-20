@@ -2,38 +2,29 @@
 
 #include <fidl/test.placementofattributes/cpp/wire_types.h>
 
-auto ::test_placementofattributes::wire::ExampleXUnion::Which() const
-    -> ::test_placementofattributes::wire::ExampleXUnion::Tag {
+auto ::test_placementofattributes::wire::ExampleXUnion::Which() const -> ::test_placementofattributes::wire::ExampleXUnion::Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
     case ::test_placementofattributes::wire::ExampleXUnion::Ordinal::kVariant:
-      return static_cast<
-          ::test_placementofattributes::wire::ExampleXUnion::Tag>(ordinal_);
+      return static_cast<::test_placementofattributes::wire::ExampleXUnion::Tag>(ordinal_);
     default:
       return ::test_placementofattributes::wire::ExampleXUnion::Tag::kUnknown;
   }
 }
 
-void ::test_placementofattributes::wire::ExampleXUnion::
-    SizeAndOffsetAssertionHelper() {
+void ::test_placementofattributes::wire::ExampleXUnion::SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(ExampleXUnion) == sizeof(fidl_xunion_v2_t));
-  static_assert(offsetof(ExampleXUnion, ordinal_) ==
-                offsetof(fidl_xunion_v2_t, tag));
-  static_assert(offsetof(ExampleXUnion, envelope_) ==
-                offsetof(fidl_xunion_v2_t, envelope));
+  static_assert(offsetof(ExampleXUnion, ordinal_) == offsetof(fidl_xunion_v2_t, tag));
+  static_assert(offsetof(ExampleXUnion, envelope_) == offsetof(fidl_xunion_v2_t, envelope));
 }
 
-void ::test_placementofattributes::wire::ExampleUnion::
-    SizeAndOffsetAssertionHelper() {
+void ::test_placementofattributes::wire::ExampleUnion::SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(ExampleUnion) == sizeof(fidl_xunion_v2_t));
-  static_assert(offsetof(ExampleUnion, ordinal_) ==
-                offsetof(fidl_xunion_v2_t, tag));
-  static_assert(offsetof(ExampleUnion, envelope_) ==
-                offsetof(fidl_xunion_v2_t, envelope));
+  static_assert(offsetof(ExampleUnion, ordinal_) == offsetof(fidl_xunion_v2_t, tag));
+  static_assert(offsetof(ExampleUnion, envelope_) == offsetof(fidl_xunion_v2_t, envelope));
 }
 
-bool ::fidl::WireTableFrame<
-    ::test_placementofattributes::wire::ExampleTable>::HasUnknownData() const {
+bool ::fidl::WireTableFrame<::test_placementofattributes::wire::ExampleTable>::HasUnknownData() const {
   return false;
 }
 

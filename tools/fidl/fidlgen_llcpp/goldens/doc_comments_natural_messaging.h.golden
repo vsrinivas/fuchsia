@@ -22,16 +22,13 @@ class ::fidl::Event<::test_doccomments::Interface::OnEvent> final {
 };
 
 template <>
-struct ::fidl::internal::MessageTraits<
-    ::fidl::Event<::test_doccomments::Interface::OnEvent>>
-    final {
+struct ::fidl::internal::MessageTraits<::fidl::Event<::test_doccomments::Interface::OnEvent>> final {
  public:
   static constexpr bool kHasPayload = false;
 };
 namespace fidl {}  // namespace fidl
 template <>
-class ::fidl::internal::NaturalClientImpl<::test_doccomments::Interface> final
-    : public ::fidl::internal::NaturalClientBase {
+class ::fidl::internal::NaturalClientImpl<::test_doccomments::Interface> final : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
   /// method comment #1
@@ -46,10 +43,8 @@ namespace fidl {
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::internal::NaturalSyncClientImpl<::test_doccomments::Interface>
-    final : public ::fidl::internal::SyncEndpointManagedVeneer<
-                ::fidl::internal::NaturalSyncClientImpl<
-                    ::test_doccomments::Interface>> {
+class ::fidl::internal::NaturalSyncClientImpl<::test_doccomments::Interface> final
+    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalSyncClientImpl<::test_doccomments::Interface>> {
  public:
   /// method comment #1
   ///
@@ -67,39 +62,31 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_doccomments::Interface>
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::internal::NaturalEventHandlerInterface<
-    ::test_doccomments::Interface> {
+class ::fidl::internal::NaturalEventHandlerInterface<::test_doccomments::Interface> {
  public:
   NaturalEventHandlerInterface() = default;
   virtual ~NaturalEventHandlerInterface() = default;
   /// event comment #1
   ///
   /// event comment #3
-  virtual void OnEvent(
-      ::fidl::Event<::test_doccomments::Interface::OnEvent>&) = 0;
+  virtual void OnEvent(::fidl::Event<::test_doccomments::Interface::OnEvent>&) = 0;
 };
 
 template <>
 class ::fidl::AsyncEventHandler<::test_doccomments::Interface>
-    : public ::fidl::internal::NaturalEventHandlerInterface<
-          ::test_doccomments::Interface>,
-      public ::fidl::internal::AsyncEventHandler {
+    : public ::fidl::internal::NaturalEventHandlerInterface<::test_doccomments::Interface>, public ::fidl::internal::AsyncEventHandler {
  public:
   AsyncEventHandler() = default;
   /// event comment #1
   ///
   /// event comment #3
-  void OnEvent(
-      ::fidl::Event<::test_doccomments::Interface::OnEvent>&) override {}
+  void OnEvent(::fidl::Event<::test_doccomments::Interface::OnEvent>&) override {}
 };
 
 template <>
-class ::fidl::internal::NaturalEventDispatcher<::test_doccomments::Interface>
-    final : public ::fidl::internal::IncomingEventDispatcher<
-                ::fidl::AsyncEventHandler<::test_doccomments::Interface>> {
+class ::fidl::internal::NaturalEventDispatcher<::test_doccomments::Interface> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::AsyncEventHandler<::test_doccomments::Interface>> {
  public:
-  explicit NaturalEventDispatcher(
-      ::fidl::AsyncEventHandler<::test_doccomments::Interface>* event_handler)
+  explicit NaturalEventDispatcher(::fidl::AsyncEventHandler<::test_doccomments::Interface>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 
  private:
@@ -111,8 +98,7 @@ class ::fidl::internal::NaturalEventDispatcher<::test_doccomments::Interface>
 
 #ifdef __Fuchsia__
 template <>
-class ::fidl::internal::NaturalWeakEventSender<::test_doccomments::Interface>
-    : public ::fidl::internal::WeakEventSenderBase {
+class ::fidl::internal::NaturalWeakEventSender<::test_doccomments::Interface> : public ::fidl::internal::WeakEventSenderBase {
  public:
   using WeakEventSenderBase::WeakEventSenderBase;
 
@@ -124,8 +110,7 @@ class ::fidl::internal::NaturalWeakEventSender<::test_doccomments::Interface>
 
 template <>
 class ::fidl::internal::NaturalEventSender<::test_doccomments::Interface>
-    : public ::fidl::internal::SyncEndpointManagedVeneer<
-          ::fidl::internal::NaturalEventSender<::test_doccomments::Interface>> {
+    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalEventSender<::test_doccomments::Interface>> {
  public:
   using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 
@@ -144,17 +129,14 @@ class ::fidl::Request<::test_doccomments::Interface::Method> final {
 };
 
 template <>
-struct ::fidl::internal::MessageTraits<
-    ::fidl::Request<::test_doccomments::Interface::Method>>
-    final {
+struct ::fidl::internal::MessageTraits<::fidl::Request<::test_doccomments::Interface::Method>> final {
  public:
   static constexpr bool kHasPayload = false;
 };
 #endif  // __Fuchsia__
 
 template <>
-class ::fidl::Server<::test_doccomments::Interface>
-    : public ::fidl::internal::IncomingMessageDispatcher {
+class ::fidl::Server<::test_doccomments::Interface> : public ::fidl::internal::IncomingMessageDispatcher {
  public:
   Server() = default;
   virtual ~Server() = default;
@@ -163,14 +145,12 @@ class ::fidl::Server<::test_doccomments::Interface>
   using _EnclosingProtocol = ::test_doccomments::Interface;
 
   using MethodRequest = ::fidl::Request<::test_doccomments::Interface::Method>;
-  using MethodCompleter =
-      ::fidl::internal::NaturalCompleter<::test_doccomments::Interface::Method>;
+  using MethodCompleter = ::fidl::internal::NaturalCompleter<::test_doccomments::Interface::Method>;
 
   /// method comment #1
   ///
   /// method comment #3
-  virtual void Method(MethodRequest& request,
-                      MethodCompleter::Sync& completer) = 0;
+  virtual void Method(MethodRequest& request, MethodCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(
@@ -181,11 +161,9 @@ class ::fidl::Server<::test_doccomments::Interface>
 #ifdef __Fuchsia__
 
 template <>
-struct ::fidl::internal::NaturalServerDispatcher<::test_doccomments::Interface>
-    final {
+struct ::fidl::internal::NaturalServerDispatcher<::test_doccomments::Interface> final {
   NaturalServerDispatcher() = delete;
-  static void Dispatch(::fidl::Server<::test_doccomments::Interface>* impl,
-                       ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fidl::Server<::test_doccomments::Interface>* impl, ::fidl::IncomingMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 

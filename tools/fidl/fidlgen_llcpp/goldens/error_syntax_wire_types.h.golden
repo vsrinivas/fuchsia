@@ -33,125 +33,70 @@ struct ExampleUseOfErrorSyntaxCallWhichMayFailRequest;
 
 class ExampleUseOfErrorSyntaxCallWhichMayFailResult;
 
-extern "C" const fidl_type_t
-    test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResultTable;
+extern "C" const fidl_type_t test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResultTable;
 
 class ExampleUseOfErrorSyntaxCallWhichMayFailResult {
  public:
-  using Response =
-      test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse;
+  using Response = test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse;
 
-  ExampleUseOfErrorSyntaxCallWhichMayFailResult()
-      : ordinal_(::test_errorsyntax::wire::
-                     ExampleUseOfErrorSyntaxCallWhichMayFailResult::Ordinal::
-                         Invalid),
-        envelope_{} {}
+  ExampleUseOfErrorSyntaxCallWhichMayFailResult() : ordinal_(::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult::Ordinal::Invalid), envelope_{} {}
 
-  ExampleUseOfErrorSyntaxCallWhichMayFailResult(
-      const ExampleUseOfErrorSyntaxCallWhichMayFailResult&) = default;
-  ExampleUseOfErrorSyntaxCallWhichMayFailResult& operator=(
-      const ExampleUseOfErrorSyntaxCallWhichMayFailResult&) = default;
-  ExampleUseOfErrorSyntaxCallWhichMayFailResult(
-      ExampleUseOfErrorSyntaxCallWhichMayFailResult&&) = default;
-  ExampleUseOfErrorSyntaxCallWhichMayFailResult& operator=(
-      ExampleUseOfErrorSyntaxCallWhichMayFailResult&&) = default;
+  ExampleUseOfErrorSyntaxCallWhichMayFailResult(const ExampleUseOfErrorSyntaxCallWhichMayFailResult&) = default;
+  ExampleUseOfErrorSyntaxCallWhichMayFailResult& operator=(const ExampleUseOfErrorSyntaxCallWhichMayFailResult&) = default;
+  ExampleUseOfErrorSyntaxCallWhichMayFailResult(ExampleUseOfErrorSyntaxCallWhichMayFailResult&&) = default;
+  ExampleUseOfErrorSyntaxCallWhichMayFailResult& operator=(ExampleUseOfErrorSyntaxCallWhichMayFailResult&&) = default;
 
   enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,       // 0x2
   };
 
-  bool has_invalid_tag() const {
-    return ordinal_ ==
-           ::test_errorsyntax::wire::
-               ExampleUseOfErrorSyntaxCallWhichMayFailResult::Ordinal::Invalid;
-  }
+  bool has_invalid_tag() const { return ordinal_ == ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult::Ordinal::Invalid; }
 
-  bool is_response() const {
-    return ordinal_ == ::test_errorsyntax::wire::
-                           ExampleUseOfErrorSyntaxCallWhichMayFailResult::
-                               Ordinal::kResponse;
-  }
+  bool is_response() const { return ordinal_ == ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult::Ordinal::kResponse; }
 
-  static ExampleUseOfErrorSyntaxCallWhichMayFailResult WithResponse(
-      ::fidl::ObjectView<::test_errorsyntax::wire::
-                             ExampleUseOfErrorSyntaxCallWhichMayFailResponse>
-          val) {
+  static ExampleUseOfErrorSyntaxCallWhichMayFailResult WithResponse(::fidl::ObjectView<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse> val) {
     ExampleUseOfErrorSyntaxCallWhichMayFailResult result;
-    result.ordinal_ = ::test_errorsyntax::wire::
-        ExampleUseOfErrorSyntaxCallWhichMayFailResult::Ordinal::kResponse;
-    result.envelope_
-        .As<::test_errorsyntax::wire::
-                ExampleUseOfErrorSyntaxCallWhichMayFailResponse>()
-        .set_data(std::move(val));
+    result.ordinal_ = ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult::Ordinal::kResponse;
+    result.envelope_.As<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse>().set_data(std::move(val));
     return result;
   }
 
   template <typename... Args>
-  static ExampleUseOfErrorSyntaxCallWhichMayFailResult WithResponse(
-      ::fidl::AnyArena& allocator, Args&&... args) {
-    return WithResponse(
-        ::fidl::ObjectView<::test_errorsyntax::wire::
-                               ExampleUseOfErrorSyntaxCallWhichMayFailResponse>(
-            allocator, std::forward<Args>(args)...));
+  static ExampleUseOfErrorSyntaxCallWhichMayFailResult WithResponse(::fidl::AnyArena& allocator, Args&&... args) {
+    return WithResponse(::fidl::ObjectView<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse>(allocator,
+                                                                                                                      std::forward<Args>(args)...));
   }
 
-  ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse&
-  response() {
-    ZX_ASSERT(
-        ordinal_ ==
-        ::test_errorsyntax::wire::
-            ExampleUseOfErrorSyntaxCallWhichMayFailResult::Ordinal::kResponse);
-    return envelope_
-        .As<::test_errorsyntax::wire::
-                ExampleUseOfErrorSyntaxCallWhichMayFailResponse>()
-        .get_data();
+  ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse& response() {
+    ZX_ASSERT(ordinal_ == ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult::Ordinal::kResponse);
+    return envelope_.As<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse>().get_data();
   }
-  const ::test_errorsyntax::wire::
-      ExampleUseOfErrorSyntaxCallWhichMayFailResponse&
-      response() const {
-    ZX_ASSERT(
-        ordinal_ ==
-        ::test_errorsyntax::wire::
-            ExampleUseOfErrorSyntaxCallWhichMayFailResult::Ordinal::kResponse);
-    return envelope_
-        .As<::test_errorsyntax::wire::
-                ExampleUseOfErrorSyntaxCallWhichMayFailResponse>()
-        .get_data();
+  const ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse& response() const {
+    ZX_ASSERT(ordinal_ == ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult::Ordinal::kResponse);
+    return envelope_.As<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse>().get_data();
   }
 
-  bool is_err() const {
-    return ordinal_ ==
-           ::test_errorsyntax::wire::
-               ExampleUseOfErrorSyntaxCallWhichMayFailResult::Ordinal::kErr;
-  }
+  bool is_err() const { return ordinal_ == ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult::Ordinal::kErr; }
 
   static ExampleUseOfErrorSyntaxCallWhichMayFailResult WithErr(uint32_t val) {
     ExampleUseOfErrorSyntaxCallWhichMayFailResult result;
-    result.ordinal_ = ::test_errorsyntax::wire::
-        ExampleUseOfErrorSyntaxCallWhichMayFailResult::Ordinal::kErr;
+    result.ordinal_ = ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult::Ordinal::kErr;
     result.envelope_.As<uint32_t>().set_data(std::move(val));
     return result;
   }
 
   uint32_t& err() {
-    ZX_ASSERT(ordinal_ ==
-              ::test_errorsyntax::wire::
-                  ExampleUseOfErrorSyntaxCallWhichMayFailResult::Ordinal::kErr);
+    ZX_ASSERT(ordinal_ == ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult::Ordinal::kErr);
     return envelope_.As<uint32_t>().get_data();
   }
   const uint32_t& err() const {
-    ZX_ASSERT(ordinal_ ==
-              ::test_errorsyntax::wire::
-                  ExampleUseOfErrorSyntaxCallWhichMayFailResult::Ordinal::kErr);
+    ZX_ASSERT(ordinal_ == ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult::Ordinal::kErr);
     return envelope_.As<uint32_t>().get_data();
   }
-  ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult::Tag
-  Which() const {
+  ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult::Tag Which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<::test_errorsyntax::wire::
-                           ExampleUseOfErrorSyntaxCallWhichMayFailResult::Tag>(
-        ordinal_);
+    return static_cast<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult::Tag>(ordinal_);
   }
 
  private:
@@ -162,32 +107,26 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailResult {
   };
 
   static void SizeAndOffsetAssertionHelper();
-  ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult::
-      Ordinal ordinal_;
+  ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult::Ordinal ordinal_;
   FIDL_ALIGNDECL
   ::fidl::UntypedEnvelope envelope_;
 };
 
-extern "C" const fidl_type_t
-    test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResponseTable;
+extern "C" const fidl_type_t test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResponseTable;
 
 struct ExampleUseOfErrorSyntaxCallWhichMayFailResponse {
   int64_t value = {};
 };
 
-extern "C" const fidl_type_t
-    test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailTopResponseTable;
+extern "C" const fidl_type_t test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailTopResponseTable;
 
 struct ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse {
-  using Result =
-      test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult;
+  using Result = test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult;
 
-  ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult
-      result = {};
+  ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult result = {};
 };
 
-extern "C" const fidl_type_t
-    test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestTable;
+extern "C" const fidl_type_t test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestTable;
 
 struct ExampleUseOfErrorSyntaxCallWhichMayFailRequest {
   ::fidl::StringView s = {};
@@ -199,16 +138,12 @@ namespace fidl {
 
 // TODO(fxbug.dev/95833) Remove this.
 template <>
-struct DeprecatedCTypeTraits<
-    ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse> {
-  static constexpr const fidl_type_t* kType =
-      &::test_errorsyntax::wire::
-          test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResponseTable;
+struct DeprecatedCTypeTraits<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse> {
+  static constexpr const fidl_type_t* kType = &::test_errorsyntax::wire::test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResponseTable;
 };
 
 template <>
-struct TypeTraits<
-    ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse> {
+struct TypeTraits<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 8;
@@ -220,83 +155,46 @@ struct TypeTraits<
 };
 
 template <>
-struct IsFidlType<
-    ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse>
-    : public std::true_type {};
+struct IsFidlType<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse> : public std::true_type {};
 template <>
-struct IsStruct<
-    ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::test_errorsyntax::wire::
-                  ExampleUseOfErrorSyntaxCallWhichMayFailResponse>);
-static_assert(offsetof(::test_errorsyntax::wire::
-                           ExampleUseOfErrorSyntaxCallWhichMayFailResponse,
-                       value) == 0);
-static_assert(
-    sizeof(::test_errorsyntax::wire::
-               ExampleUseOfErrorSyntaxCallWhichMayFailResponse) ==
-    TypeTraits<
-        ::test_errorsyntax::wire::
-            ExampleUseOfErrorSyntaxCallWhichMayFailResponse>::kPrimarySize);
+struct IsStruct<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse>);
+static_assert(offsetof(::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse, value) == 0);
+static_assert(sizeof(::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse) == TypeTraits<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 8;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::WireStructMemberCodingInfo<
-          int64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<int64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
   static constexpr bool kHasPadding = false;
-  using Base = WireStructCodingTraitsBase<
-      ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse,
-      ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
   static void Encode(
-      internal::WireEncoder* encoder,
-      ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse*
-          value,
-      ::fidl::internal::WirePosition position,
-      RecursionDepth<IsRecursive> recursion_depth) {
+      internal::WireEncoder* encoder, ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value,
-             sizeof(::test_errorsyntax::wire::
-                        ExampleUseOfErrorSyntaxCallWhichMayFailResponse));
+      memcpy(position.As<void>(), value, sizeof(::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse));
     } else {
-      internal::WireCodingTraits<int64_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->value,
-                                                      position + 0,
-                                                      recursion_depth);
+      internal::WireCodingTraits<int64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->value, position + 0, recursion_depth);
     }
   }
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (!Base::are_members_memcpy_compatible) {
-      internal::WireCodingTraits<int64_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 0,
-                                                      recursion_depth);
+      internal::WireCodingTraits<int64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 0, recursion_depth);
     }
   }
 };
 
 // TODO(fxbug.dev/95833) Remove this.
 template <>
-struct DeprecatedCTypeTraits<
-    ::test_errorsyntax::wire::
-        ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse> {
-  static constexpr const fidl_type_t* kType =
-      &::test_errorsyntax::wire::
-          test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailTopResponseTable;
+struct DeprecatedCTypeTraits<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse> {
+  static constexpr const fidl_type_t* kType = &::test_errorsyntax::wire::test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailTopResponseTable;
 };
 
 template <>
-struct TypeTraits<::test_errorsyntax::wire::
-                      ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse> {
+struct TypeTraits<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
@@ -308,88 +206,46 @@ struct TypeTraits<::test_errorsyntax::wire::
 };
 
 template <>
-struct IsFidlType<::test_errorsyntax::wire::
-                      ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>
-    : public std::true_type {};
+struct IsFidlType<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse> : public std::true_type {};
 template <>
-struct IsStruct<::test_errorsyntax::wire::
-                    ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::test_errorsyntax::wire::
-                  ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>);
-static_assert(offsetof(::test_errorsyntax::wire::
-                           ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse,
-                       result) == 0);
-static_assert(
-    sizeof(::test_errorsyntax::wire::
-               ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse) ==
-    TypeTraits<
-        ::test_errorsyntax::wire::
-            ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>::kPrimarySize);
+struct IsStruct<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>);
+static_assert(offsetof(::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse, result) == 0);
+static_assert(sizeof(::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse) == TypeTraits<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::test_errorsyntax::wire::
-        ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 16;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::WireStructMemberCodingInfo<
-          ::test_errorsyntax::wire::
-              ExampleUseOfErrorSyntaxCallWhichMayFailResult,
-          fidl::internal::WireCodingConstraintUnion<false>, IsRecursive>());
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult, fidl::internal::WireCodingConstraintUnion<false>, IsRecursive>());
   static constexpr bool kHasPadding = false;
-  using Base = WireStructCodingTraitsBase<
-      ::test_errorsyntax::wire::
-          ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse,
-      ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
   static void Encode(
-      internal::WireEncoder* encoder,
-      ::test_errorsyntax::wire::
-          ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse* value,
-      ::fidl::internal::WirePosition position,
-      RecursionDepth<IsRecursive> recursion_depth) {
+      internal::WireEncoder* encoder, ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value,
-             sizeof(::test_errorsyntax::wire::
-                        ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse));
+      memcpy(position.As<void>(), value, sizeof(::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse));
     } else {
-      internal::WireCodingTraits<
-          ::test_errorsyntax::wire::
-              ExampleUseOfErrorSyntaxCallWhichMayFailResult,
-          fidl::internal::WireCodingConstraintUnion<false>,
-          IsRecursive>::Encode(encoder, &value->result, position + 0,
-                               recursion_depth);
+      internal::WireCodingTraits<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult, fidl::internal::WireCodingConstraintUnion<false>, IsRecursive>::Encode(encoder, &value->result, position + 0, recursion_depth);
     }
   }
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (!Base::are_members_memcpy_compatible) {
-      internal::WireCodingTraits<
-          ::test_errorsyntax::wire::
-              ExampleUseOfErrorSyntaxCallWhichMayFailResult,
-          fidl::internal::WireCodingConstraintUnion<false>,
-          IsRecursive>::Decode(decoder, position + 0, recursion_depth);
+      internal::WireCodingTraits<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult, fidl::internal::WireCodingConstraintUnion<false>, IsRecursive>::Decode(
+          decoder, position + 0, recursion_depth);
     }
   }
 };
 
 // TODO(fxbug.dev/95833) Remove this.
 template <>
-struct DeprecatedCTypeTraits<
-    ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest> {
-  static constexpr const fidl_type_t* kType =
-      &::test_errorsyntax::wire::
-          test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestTable;
+struct DeprecatedCTypeTraits<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest> {
+  static constexpr const fidl_type_t* kType = &::test_errorsyntax::wire::test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestTable;
 };
 
 template <>
-struct TypeTraits<
-    ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest> {
+struct TypeTraits<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
@@ -401,72 +257,40 @@ struct TypeTraits<
 };
 
 template <>
-struct IsFidlType<
-    ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>
-    : public std::true_type {};
+struct IsFidlType<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest> : public std::true_type {};
 template <>
-struct IsStruct<
-    ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::test_errorsyntax::wire::
-                  ExampleUseOfErrorSyntaxCallWhichMayFailRequest>);
-static_assert(offsetof(::test_errorsyntax::wire::
-                           ExampleUseOfErrorSyntaxCallWhichMayFailRequest,
-                       s) == 0);
-static_assert(
-    sizeof(::test_errorsyntax::wire::
-               ExampleUseOfErrorSyntaxCallWhichMayFailRequest) ==
-    TypeTraits<
-        ::test_errorsyntax::wire::
-            ExampleUseOfErrorSyntaxCallWhichMayFailRequest>::kPrimarySize);
+struct IsStruct<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>);
+static_assert(offsetof(::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest, s) == 0);
+static_assert(sizeof(::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest) == TypeTraits<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 16;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::WireStructMemberCodingInfo<
-          ::fidl::StringView, fidl::internal::WireCodingConstraintString<false>,
-          IsRecursive>());
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<::fidl::StringView, fidl::internal::WireCodingConstraintString<false>, IsRecursive>());
   static constexpr bool kHasPadding = false;
-  using Base = WireStructCodingTraitsBase<
-      ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest,
-      ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
   static void Encode(
-      internal::WireEncoder* encoder,
-      ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest*
-          value,
-      ::fidl::internal::WirePosition position,
-      RecursionDepth<IsRecursive> recursion_depth) {
+      internal::WireEncoder* encoder, ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value,
-             sizeof(::test_errorsyntax::wire::
-                        ExampleUseOfErrorSyntaxCallWhichMayFailRequest));
+      memcpy(position.As<void>(), value, sizeof(::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest));
     } else {
-      internal::WireCodingTraits<
-          ::fidl::StringView, fidl::internal::WireCodingConstraintString<false>,
-          IsRecursive>::Encode(encoder, &value->s, position + 0,
-                               recursion_depth);
+      internal::WireCodingTraits<::fidl::StringView, fidl::internal::WireCodingConstraintString<false>, IsRecursive>::Encode(encoder, &value->s, position + 0, recursion_depth);
     }
   }
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (!Base::are_members_memcpy_compatible) {
-      internal::WireCodingTraits<
-          ::fidl::StringView, fidl::internal::WireCodingConstraintString<false>,
-          IsRecursive>::Decode(decoder, position + 0, recursion_depth);
+      internal::WireCodingTraits<::fidl::StringView, fidl::internal::WireCodingConstraintString<false>, IsRecursive>::Decode(
+          decoder, position + 0, recursion_depth);
     }
   }
 };
 
 template <>
-struct TypeTraits<
-    ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult> {
+struct TypeTraits<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
@@ -478,30 +302,17 @@ struct TypeTraits<
 };
 
 template <>
-struct IsFidlType<
-    ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult>
-    : public std::true_type {};
+struct IsFidlType<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult> : public std::true_type {};
 template <>
-struct IsUnion<
-    ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::test_errorsyntax::wire::
-                  ExampleUseOfErrorSyntaxCallWhichMayFailResult>);
+struct IsUnion<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult>);
 
 template <typename Constraint, bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult,
-    Constraint, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult, Constraint, IsRecursive> {
   static constexpr size_t inline_size = 16;
   static constexpr bool is_memcpy_compatible = false;
 
-  static void Encode(
-      internal::WireEncoder* encoder,
-      ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult*
-          value,
-      ::fidl::internal::WirePosition position,
-      RecursionDepth<IsRecursive> recursion_depth) {
+  static void Encode(internal::WireEncoder* encoder, ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     fidl_xunion_v2_t* u = reinterpret_cast<fidl_xunion_v2_t*>(value);
 
     if (unlikely(u->tag == 0)) {
@@ -523,16 +334,10 @@ struct ::fidl::internal::WireCodingTraits<
     size_t inline_size;
     switch (u->tag) {
       case 1:  // ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult::Tag::kResponse
-        inline_size = ::fidl::internal::WireCodingTraits<
-            ::test_errorsyntax::wire::
-                ExampleUseOfErrorSyntaxCallWhichMayFailResponse,
-            fidl::internal::WireCodingConstraintEmpty,
-            IsRecursive>::inline_size;
+        inline_size = ::fidl::internal::WireCodingTraits<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
         break;
       case 2:  // ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult::Tag::kErr
-        inline_size = ::fidl::internal::WireCodingTraits<
-            uint32_t, fidl::internal::WireCodingConstraintEmpty,
-            IsRecursive>::inline_size;
+        inline_size = ::fidl::internal::WireCodingTraits<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
         break;
       default:
         inline_size = 0;
@@ -541,31 +346,20 @@ struct ::fidl::internal::WireCodingTraits<
     ::fidl::internal::EncodeFn<IsRecursive> encode_fn;
     switch (u->tag) {
       case 1:  // ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult::Tag::kResponse
-        encode_fn = ::fidl::internal::MakeEncodeFn<
-            ::test_errorsyntax::wire::
-                ExampleUseOfErrorSyntaxCallWhichMayFailResponse,
-            fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        encode_fn = ::fidl::internal::MakeEncodeFn<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
         break;
       case 2:  // ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult::Tag::kErr
-        encode_fn = ::fidl::internal::MakeEncodeFn<
-            uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        encode_fn = ::fidl::internal::MakeEncodeFn<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
         break;
       default:
         encode_fn = nullptr;
         break;
     }
-    WireEncodeEnvelope(inline_size, encode_fn, encoder, &u->envelope,
-                       position + sizeof(fidl_xunion_tag_t), inner_depth);
+    WireEncodeEnvelope(inline_size, encode_fn, encoder, &u->envelope, position + sizeof(fidl_xunion_tag_t), inner_depth);
   }
 
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
-    ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult::Tag
-        tag =
-            *position
-                 .As<::test_errorsyntax::wire::
-                         ExampleUseOfErrorSyntaxCallWhichMayFailResult::Tag>();
+  static void Decode(internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult::Tag tag = *position.As<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult::Tag>();
     if (unlikely(static_cast<uint64_t>(tag) == 0)) {
       if constexpr (!Constraint::is_optional) {
         decoder->SetError(kCodingErrorInvalidUnionTag);
@@ -585,19 +379,11 @@ struct ::fidl::internal::WireCodingTraits<
 
     size_t inline_size;
     switch (tag) {
-      case ::test_errorsyntax::wire::
-          ExampleUseOfErrorSyntaxCallWhichMayFailResult::Tag::kResponse:
-        inline_size = ::fidl::internal::WireCodingTraits<
-            ::test_errorsyntax::wire::
-                ExampleUseOfErrorSyntaxCallWhichMayFailResponse,
-            fidl::internal::WireCodingConstraintEmpty,
-            IsRecursive>::inline_size;
+      case ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult::Tag::kResponse:
+        inline_size = ::fidl::internal::WireCodingTraits<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
         break;
-      case ::test_errorsyntax::wire::
-          ExampleUseOfErrorSyntaxCallWhichMayFailResult::Tag::kErr:
-        inline_size = ::fidl::internal::WireCodingTraits<
-            uint32_t, fidl::internal::WireCodingConstraintEmpty,
-            IsRecursive>::inline_size;
+      case ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult::Tag::kErr:
+        inline_size = ::fidl::internal::WireCodingTraits<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
         break;
       default:
         inline_size = 0;
@@ -605,36 +391,23 @@ struct ::fidl::internal::WireCodingTraits<
     }
     DecodeFn<IsRecursive> decode_fn;
     switch (tag) {
-      case ::test_errorsyntax::wire::
-          ExampleUseOfErrorSyntaxCallWhichMayFailResult::Tag::kResponse:
-        decode_fn = ::fidl::internal::MakeDecodeFn<
-            ::test_errorsyntax::wire::
-                ExampleUseOfErrorSyntaxCallWhichMayFailResponse,
-            fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+      case ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult::Tag::kResponse:
+        decode_fn = ::fidl::internal::MakeDecodeFn<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
         break;
-      case ::test_errorsyntax::wire::
-          ExampleUseOfErrorSyntaxCallWhichMayFailResult::Tag::kErr:
-        decode_fn = ::fidl::internal::MakeDecodeFn<
-            uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+      case ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult::Tag::kErr:
+        decode_fn = ::fidl::internal::MakeDecodeFn<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
         break;
       default:
         decode_fn = nullptr;
         break;
     }
-    ::fidl::internal::WireDecodeStrictEnvelope(
-        inline_size, decode_fn, decoder, position + sizeof(fidl_xunion_tag_t),
-        inner_depth);
+    ::fidl::internal::WireDecodeStrictEnvelope(inline_size, decode_fn, decoder, position + sizeof(fidl_xunion_tag_t), inner_depth);
   }
 };
 
 // Top-level union.
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-    : public ::fidl::internal::WireCodingTraits<
-          ::test_errorsyntax::wire::
-              ExampleUseOfErrorSyntaxCallWhichMayFailResult,
-          ::fidl::internal::WireCodingConstraintUnion<false>, IsRecursive> {};
+struct ::fidl::internal::WireCodingTraits<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public ::fidl::internal::WireCodingTraits<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult, ::fidl::internal::WireCodingConstraintUnion<false>, IsRecursive> {};
 
 }  // namespace fidl

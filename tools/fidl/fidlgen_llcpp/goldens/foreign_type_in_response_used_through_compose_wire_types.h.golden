@@ -24,4 +24,6 @@
 #include <fidl/test.foreigntypeinresponseusedthroughcompose/cpp/markers.h>
 #include <fidl/test.middle/cpp/wire_types.h>
 
-namespace fidl {}  // namespace fidl
+namespace fidl {
+
+}  // namespace fidl

@@ -2,28 +2,27 @@
 
 #include <fidl/test.arrays/cpp/natural_types.h>
 
-::test_arrays::StructSmallArray::Storage_
-test_arrays::StructSmallArray::CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.a)};
+::test_arrays::StructSmallArray::Storage_ test_arrays::StructSmallArray::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.a)};
 }
 
-::test_arrays::StructLargeArray::Storage_
-test_arrays::StructLargeArray::CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.a)};
+::test_arrays::StructLargeArray::Storage_ test_arrays::StructLargeArray::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.a)};
 }
 
-::test_arrays::TableSmallArray::Storage_
-test_arrays::TableSmallArray::CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.a)};
+::test_arrays::TableSmallArray::Storage_ test_arrays::TableSmallArray::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.a)};
 }
 
-::test_arrays::TableLargeArray::Storage_
-test_arrays::TableLargeArray::CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.a)};
+::test_arrays::TableLargeArray::Storage_ test_arrays::TableLargeArray::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.a)};
 }
 
-std::shared_ptr<::test_arrays::UnionSmallArray::Storage_>
-test_arrays::UnionSmallArray::CloneStorage_() const {
+std::shared_ptr<::test_arrays::UnionSmallArray::Storage_> test_arrays::UnionSmallArray::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
@@ -35,8 +34,7 @@ test_arrays::UnionSmallArray::CloneStorage_() const {
   }
 }
 
-std::shared_ptr<::test_arrays::UnionLargeArray::Storage_>
-test_arrays::UnionLargeArray::CloneStorage_() const {
+std::shared_ptr<::test_arrays::UnionLargeArray::Storage_> test_arrays::UnionLargeArray::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:

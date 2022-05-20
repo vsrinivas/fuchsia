@@ -15,12 +15,9 @@ namespace fidl {
 namespace internal {
 
 template <>
-struct WireNaturalConversionTraits<::test_table::wire::TableWithAttributes,
-                                   ::test_table::TableWithAttributes> {
-  static ::test_table::TableWithAttributes ToNatural(
-      ::test_table::wire::TableWithAttributes src);
-  static ::test_table::wire::TableWithAttributes ToWire(
-      fidl::AnyArena& arena, ::test_table::TableWithAttributes src);
+struct WireNaturalConversionTraits<::test_table::wire::TableWithAttributes, ::test_table::TableWithAttributes> {
+  static ::test_table::TableWithAttributes ToNatural(::test_table::wire::TableWithAttributes src);
+  static ::test_table::wire::TableWithAttributes ToWire(fidl::AnyArena& arena, ::test_table::TableWithAttributes src);
 };
 
 template <>
@@ -33,12 +30,9 @@ struct WireTypeForNaturalType<::test_table::TableWithAttributes> {
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_table::wire::SimpleTable,
-                                   ::test_table::SimpleTable> {
-  static ::test_table::SimpleTable ToNatural(
-      ::test_table::wire::SimpleTable src);
-  static ::test_table::wire::SimpleTable ToWire(fidl::AnyArena& arena,
-                                                ::test_table::SimpleTable src);
+struct WireNaturalConversionTraits<::test_table::wire::SimpleTable, ::test_table::SimpleTable> {
+  static ::test_table::SimpleTable ToNatural(::test_table::wire::SimpleTable src);
+  static ::test_table::wire::SimpleTable ToWire(fidl::AnyArena& arena, ::test_table::SimpleTable src);
 };
 
 template <>
@@ -51,12 +45,9 @@ struct WireTypeForNaturalType<::test_table::SimpleTable> {
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_table::wire::ReverseOrdinalTable,
-                                   ::test_table::ReverseOrdinalTable> {
-  static ::test_table::ReverseOrdinalTable ToNatural(
-      ::test_table::wire::ReverseOrdinalTable src);
-  static ::test_table::wire::ReverseOrdinalTable ToWire(
-      fidl::AnyArena& arena, ::test_table::ReverseOrdinalTable src);
+struct WireNaturalConversionTraits<::test_table::wire::ReverseOrdinalTable, ::test_table::ReverseOrdinalTable> {
+  static ::test_table::ReverseOrdinalTable ToNatural(::test_table::wire::ReverseOrdinalTable src);
+  static ::test_table::wire::ReverseOrdinalTable ToWire(fidl::AnyArena& arena, ::test_table::ReverseOrdinalTable src);
 };
 
 template <>
@@ -69,12 +60,9 @@ struct WireTypeForNaturalType<::test_table::ReverseOrdinalTable> {
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_table::wire::OlderSimpleTable,
-                                   ::test_table::OlderSimpleTable> {
-  static ::test_table::OlderSimpleTable ToNatural(
-      ::test_table::wire::OlderSimpleTable src);
-  static ::test_table::wire::OlderSimpleTable ToWire(
-      fidl::AnyArena& arena, ::test_table::OlderSimpleTable src);
+struct WireNaturalConversionTraits<::test_table::wire::OlderSimpleTable, ::test_table::OlderSimpleTable> {
+  static ::test_table::OlderSimpleTable ToNatural(::test_table::wire::OlderSimpleTable src);
+  static ::test_table::wire::OlderSimpleTable ToWire(fidl::AnyArena& arena, ::test_table::OlderSimpleTable src);
 };
 
 template <>
@@ -87,12 +75,9 @@ struct WireTypeForNaturalType<::test_table::OlderSimpleTable> {
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_table::wire::NewerSimpleTable,
-                                   ::test_table::NewerSimpleTable> {
-  static ::test_table::NewerSimpleTable ToNatural(
-      ::test_table::wire::NewerSimpleTable src);
-  static ::test_table::wire::NewerSimpleTable ToWire(
-      fidl::AnyArena& arena, ::test_table::NewerSimpleTable src);
+struct WireNaturalConversionTraits<::test_table::wire::NewerSimpleTable, ::test_table::NewerSimpleTable> {
+  static ::test_table::NewerSimpleTable ToNatural(::test_table::wire::NewerSimpleTable src);
+  static ::test_table::wire::NewerSimpleTable ToWire(fidl::AnyArena& arena, ::test_table::NewerSimpleTable src);
 };
 
 template <>
@@ -105,12 +90,9 @@ struct WireTypeForNaturalType<::test_table::NewerSimpleTable> {
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_table::wire::ExtensionTable,
-                                   ::test_table::ExtensionTable> {
-  static ::test_table::ExtensionTable ToNatural(
-      ::test_table::wire::ExtensionTable src);
-  static ::test_table::wire::ExtensionTable ToWire(
-      fidl::AnyArena& arena, ::test_table::ExtensionTable src);
+struct WireNaturalConversionTraits<::test_table::wire::ExtensionTable, ::test_table::ExtensionTable> {
+  static ::test_table::ExtensionTable ToNatural(::test_table::wire::ExtensionTable src);
+  static ::test_table::wire::ExtensionTable ToWire(fidl::AnyArena& arena, ::test_table::ExtensionTable src);
 };
 
 template <>
@@ -123,12 +105,9 @@ struct WireTypeForNaturalType<::test_table::ExtensionTable> {
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_table::wire::SixtyFourOrdinalTable,
-                                   ::test_table::SixtyFourOrdinalTable> {
-  static ::test_table::SixtyFourOrdinalTable ToNatural(
-      ::test_table::wire::SixtyFourOrdinalTable src);
-  static ::test_table::wire::SixtyFourOrdinalTable ToWire(
-      fidl::AnyArena& arena, ::test_table::SixtyFourOrdinalTable src);
+struct WireNaturalConversionTraits<::test_table::wire::SixtyFourOrdinalTable, ::test_table::SixtyFourOrdinalTable> {
+  static ::test_table::SixtyFourOrdinalTable ToNatural(::test_table::wire::SixtyFourOrdinalTable src);
+  static ::test_table::wire::SixtyFourOrdinalTable ToWire(fidl::AnyArena& arena, ::test_table::SixtyFourOrdinalTable src);
 };
 
 template <>
@@ -141,11 +120,9 @@ struct WireTypeForNaturalType<::test_table::SixtyFourOrdinalTable> {
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_table::wire::EmptyTable,
-                                   ::test_table::EmptyTable> {
+struct WireNaturalConversionTraits<::test_table::wire::EmptyTable, ::test_table::EmptyTable> {
   static ::test_table::EmptyTable ToNatural(::test_table::wire::EmptyTable src);
-  static ::test_table::wire::EmptyTable ToWire(fidl::AnyArena& arena,
-                                               ::test_table::EmptyTable src);
+  static ::test_table::wire::EmptyTable ToWire(fidl::AnyArena& arena, ::test_table::EmptyTable src);
 };
 
 template <>

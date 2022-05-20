@@ -3,12 +3,13 @@
 #include <fidl/test.struct/cpp/natural_types.h>
 
 ::test_struct::Simple::Storage_ test_struct::Simple::CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.f1),
-                  ::fidl::internal::NaturalClone(storage_.f2)};
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.f1),
+      ::fidl::internal::NaturalClone(storage_.f2)};
 }
 
-::test_struct::BasicStruct::Storage_ test_struct::BasicStruct::CloneStorage_()
-    const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.x),
-                  ::fidl::internal::NaturalClone(storage_.y)};
+::test_struct::BasicStruct::Storage_ test_struct::BasicStruct::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.x),
+      ::fidl::internal::NaturalClone(storage_.y)};
 }

@@ -50,22 +50,18 @@ class UnionWithHandle final {
     Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
-  static inline ::std::unique_ptr<UnionWithHandle> New() {
-    return ::std::make_unique<UnionWithHandle>();
-  }
+  static inline ::std::unique_ptr<UnionWithHandle> New() { return ::std::make_unique<UnionWithHandle>(); }
 
   void Encode(::fidl::Encoder* encoder, size_t offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, UnionWithHandle* value,
-                     size_t offset);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, UnionWithHandle* value, size_t offset);
   zx_status_t Clone(UnionWithHandle* result) const;
 
-  bool has_invalid_tag() const { return tag_ == Invalid; }
-
-  bool is_h() const {
-    return tag_ == ::test::handlesintypes::UnionWithHandle::Tag::kH;
+  bool has_invalid_tag() const {
+    return tag_ == Invalid;
   }
+
+  bool is_h() const { return tag_ == ::test::handlesintypes::UnionWithHandle::Tag::kH; }
 
   ::zx::vmo& h() {
     EnsureStorageInitialized(::test::handlesintypes::UnionWithHandle::Tag::kH);
@@ -77,9 +73,7 @@ class UnionWithHandle final {
     return h_;
   }
   UnionWithHandle& set_h(::zx::vmo value);
-  UnionWithHandle& SetUnknownData(fidl_xunion_tag_t ordinal,
-                                  std::vector<uint8_t> bytes,
-                                  std::vector<zx::handle> handles);
+  UnionWithHandle& SetUnknownData(fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes, std::vector<zx::handle> handles);
 
   ::test::handlesintypes::UnionWithHandle::Tag Which() const {
     switch (tag_) {
@@ -91,9 +85,11 @@ class UnionWithHandle final {
     }
   }
 
-  // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
-  // only when you need access to the raw integral ordinal value.
-  fidl_xunion_tag_t Ordinal() const { return tag_; }
+  // You probably want to use Which() method instead of Ordinal(). Use Ordinal() only when you need
+  // access to the raw integral ordinal value.
+  fidl_xunion_tag_t Ordinal() const {
+    return tag_;
+  }
   const std::vector<uint8_t>* UnknownBytes() const {
     if (Which() != ::test::handlesintypes::UnionWithHandle::Tag::kUnknown) {
       return nullptr;
@@ -113,8 +109,7 @@ class UnionWithHandle final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
-      ::test::handlesintypes::UnionWithHandle::Tag::Invalid);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(::test::handlesintypes::UnionWithHandle::Tag::Invalid);
   union {
     ::zx::vmo h_;
     ::fidl::UnknownData unknown_data_;
@@ -141,7 +136,9 @@ class TableWithHandle final {
     ZX_ASSERT(field_presence_.IsSet<0>());
     return h_value_.value;
   }
-  bool has_h() const { return field_presence_.IsSet<0>(); }
+  bool has_h() const {
+    return field_presence_.IsSet<0>();
+  }
 
   ::zx::vmo* mutable_h() {
     if (!field_presence_.IsSet<0>()) {
@@ -172,15 +169,11 @@ class TableWithHandle final {
   ~TableWithHandle();
   TableWithHandle& operator=(TableWithHandle&& other);
 
-  static inline ::std::unique_ptr<TableWithHandle> New() {
-    return ::std::make_unique<TableWithHandle>();
-  }
+  static inline ::std::unique_ptr<TableWithHandle> New() { return ::std::make_unique<TableWithHandle>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, TableWithHandle* _value,
-                     size_t _offset);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, TableWithHandle* _value, size_t _offset);
   zx_status_t Clone(TableWithHandle* _result) const;
 
  private:
@@ -238,15 +231,11 @@ class HandlesInTypes final {
 
   ::test::handlesintypes::UnionWithHandle union_with_handle{};
 
-  static inline ::std::unique_ptr<HandlesInTypes> New() {
-    return ::std::make_unique<HandlesInTypes>();
-  }
+  static inline ::std::unique_ptr<HandlesInTypes> New() { return ::std::make_unique<HandlesInTypes>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, HandlesInTypes* value,
-                     size_t _offset);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, HandlesInTypes* value, size_t _offset);
   zx_status_t Clone(HandlesInTypes* result) const;
 };
 
@@ -263,17 +252,14 @@ using HandlesInTypesPtr = ::std::unique_ptr<HandlesInTypes>;
 namespace fidl {
 template <>
 struct CodingTraits<::test::handlesintypes::obj_type> {
-  static constexpr size_t inline_size_v2 =
-      sizeof(::test::handlesintypes::obj_type);
-  static void Encode(
-      Encoder* encoder, ::test::handlesintypes::obj_type* value, size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  static constexpr size_t inline_size_v2 = sizeof(::test::handlesintypes::obj_type);
+  static void Encode(Encoder* encoder, ::test::handlesintypes::obj_type* value, size_t offset,
+                     cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
     ZX_DEBUG_ASSERT(!maybe_handle_info);
     uint32_t underlying = static_cast<uint32_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
   }
-  static void Decode(Decoder* decoder, ::test::handlesintypes::obj_type* value,
-                     size_t offset) {
+  static void Decode(Decoder* decoder, ::test::handlesintypes::obj_type* value, size_t offset) {
     uint32_t underlying = {};
     ::fidl::Decode(decoder, &underlying, offset);
     *value = static_cast<::test::handlesintypes::obj_type>(underlying);
@@ -286,8 +272,7 @@ inline zx_status_t Clone(::test::handlesintypes::obj_type value,
 }
 template <>
 struct Equality<::test::handlesintypes::obj_type> {
-  bool operator()(const ::test::handlesintypes::obj_type& _lhs,
-                  const ::test::handlesintypes::obj_type& _rhs) const {
+  bool operator()(const ::test::handlesintypes::obj_type& _lhs, const ::test::handlesintypes::obj_type& _rhs) const {
     return _lhs == _rhs;
   }
 };
@@ -295,34 +280,25 @@ struct Equality<::test::handlesintypes::obj_type> {
 #ifdef __Fuchsia__
 
 template <>
-struct IsFidlXUnion<::test::handlesintypes::UnionWithHandle>
-    : public std::true_type {};
+struct IsFidlXUnion<::test::handlesintypes::UnionWithHandle> : public std::true_type {};
 
 template <>
 struct CodingTraits<::test::handlesintypes::UnionWithHandle>
-    : public EncodableCodingTraits<::test::handlesintypes::UnionWithHandle,
-                                   16> {};
+    : public EncodableCodingTraits<::test::handlesintypes::UnionWithHandle, 16> {};
 
 template <>
 struct CodingTraits<std::unique_ptr<::test::handlesintypes::UnionWithHandle>> {
   static constexpr size_t inline_size_v2 = 16;
 
-  static void Encode(
-      Encoder* encoder,
-      std::unique_ptr<::test::handlesintypes::UnionWithHandle>* value,
-      size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-          cpp17::nullopt) {
+  static void Encode(Encoder* encoder, std::unique_ptr<::test::handlesintypes::UnionWithHandle>* value, size_t offset,
+                     cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
     }
   }
 
-  static void Decode(
-      Decoder* _decoder,
-      std::unique_ptr<::test::handlesintypes::UnionWithHandle>* value,
-      size_t offset) {
+  static void Decode(Decoder* _decoder, std::unique_ptr<::test::handlesintypes::UnionWithHandle>* value, size_t offset) {
     fidl_xunion_t* encoded = _decoder->GetPtr<fidl_xunion_t>(offset);
     if (encoded->tag == 0) {
       value->reset(nullptr);
@@ -331,8 +307,7 @@ struct CodingTraits<std::unique_ptr<::test::handlesintypes::UnionWithHandle>> {
 
     value->reset(new ::test::handlesintypes::UnionWithHandle);
 
-    ::test::handlesintypes::UnionWithHandle::Decode(_decoder, value->get(),
-                                                    offset);
+    ::test::handlesintypes::UnionWithHandle::Decode(_decoder, value->get(), offset);
   }
 };
 
@@ -343,15 +318,13 @@ inline zx_status_t Clone(const ::test::handlesintypes::UnionWithHandle& value,
 
 template <>
 struct Equality<::test::handlesintypes::UnionWithHandle> {
-  bool operator()(const ::test::handlesintypes::UnionWithHandle& _lhs,
-                  const ::test::handlesintypes::UnionWithHandle& _rhs) const {
+  bool operator()(const ::test::handlesintypes::UnionWithHandle& _lhs, const ::test::handlesintypes::UnionWithHandle& _rhs) const {
     if (_lhs.Ordinal() != _rhs.Ordinal()) {
       return false;
     }
 
     switch (_lhs.Ordinal()) {
-      case static_cast<fidl_xunion_tag_t>(
-          ::test::handlesintypes::UnionWithHandle::Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(::test::handlesintypes::UnionWithHandle::Tag::Invalid):
         return true;
       case ::test::handlesintypes::UnionWithHandle::Tag::kH:
         return ::fidl::Equals(_lhs.h_, _rhs.h_);
@@ -366,8 +339,7 @@ struct Equality<::test::handlesintypes::UnionWithHandle> {
 
 template <>
 struct CodingTraits<::test::handlesintypes::TableWithHandle>
-    : public EncodableCodingTraits<::test::handlesintypes::TableWithHandle,
-                                   16> {};
+    : public EncodableCodingTraits<::test::handlesintypes::TableWithHandle, 16> {};
 
 inline zx_status_t Clone(const ::test::handlesintypes::TableWithHandle& _value,
                          ::test::handlesintypes::TableWithHandle* result) {
@@ -375,8 +347,7 @@ inline zx_status_t Clone(const ::test::handlesintypes::TableWithHandle& _value,
 }
 template <>
 struct Equality<::test::handlesintypes::TableWithHandle> {
-  bool operator()(const ::test::handlesintypes::TableWithHandle& _lhs,
-                  const ::test::handlesintypes::TableWithHandle& _rhs) const {
+  bool operator()(const ::test::handlesintypes::TableWithHandle& _lhs, const ::test::handlesintypes::TableWithHandle& _rhs) const {
     if (_lhs.has_h()) {
       if (!_rhs.has_h()) {
         return false;
@@ -396,25 +367,14 @@ struct Equality<::test::handlesintypes::TableWithHandle> {
 
 template <>
 struct CodingTraits<::test::handlesintypes::HandlesInTypes>
-    : public EncodableCodingTraits<::test::handlesintypes::HandlesInTypes, 96> {
-};
+    : public EncodableCodingTraits<::test::handlesintypes::HandlesInTypes, 96> {};
 
 template <>
-struct HasPadding<::test::handlesintypes::HandlesInTypes>
-    : public std::true_type {};
+struct HasPadding<::test::handlesintypes::HandlesInTypes> : public std::true_type {};
 
 template <>
-struct IsMemcpyCompatible<::test::handlesintypes::HandlesInTypes>
-    : public internal::BoolConstant<
-          !HasPadding<::test::handlesintypes::HandlesInTypes>::value &&
-          IsMemcpyCompatible<::zx::vmo>::value &&
-          IsMemcpyCompatible<::std::vector<::zx::vmo>>::value &&
-          IsMemcpyCompatible<::std::array<::zx::vmo, 5>>::value &&
-          IsMemcpyCompatible<
-              ::std::vector<::std::array<::zx::vmo, 5>>>::value &&
-          IsMemcpyCompatible<::test::handlesintypes::TableWithHandle>::value &&
-          IsMemcpyCompatible<::test::handlesintypes::UnionWithHandle>::value> {
-};
+struct IsMemcpyCompatible<::test::handlesintypes::HandlesInTypes> : public internal::BoolConstant<
+                                                                        !HasPadding<::test::handlesintypes::HandlesInTypes>::value && IsMemcpyCompatible<::zx::vmo>::value && IsMemcpyCompatible<::std::vector<::zx::vmo>>::value && IsMemcpyCompatible<::std::array<::zx::vmo, 5>>::value && IsMemcpyCompatible<::std::vector<::std::array<::zx::vmo, 5>>>::value && IsMemcpyCompatible<::test::handlesintypes::TableWithHandle>::value && IsMemcpyCompatible<::test::handlesintypes::UnionWithHandle>::value> {};
 
 inline zx_status_t Clone(const ::test::handlesintypes::HandlesInTypes& value,
                          ::test::handlesintypes::HandlesInTypes* result) {
@@ -423,8 +383,7 @@ inline zx_status_t Clone(const ::test::handlesintypes::HandlesInTypes& value,
 
 template <>
 struct Equality<::test::handlesintypes::HandlesInTypes> {
-  bool operator()(const ::test::handlesintypes::HandlesInTypes& _lhs,
-                  const ::test::handlesintypes::HandlesInTypes& _rhs) const {
+  bool operator()(const ::test::handlesintypes::HandlesInTypes& _lhs, const ::test::handlesintypes::HandlesInTypes& _rhs) const {
     if (!::fidl::Equals(_lhs.normal_handle, _rhs.normal_handle)) {
       return false;
     }
@@ -434,8 +393,7 @@ struct Equality<::test::handlesintypes::HandlesInTypes> {
     if (!::fidl::Equals(_lhs.handle_in_array, _rhs.handle_in_array)) {
       return false;
     }
-    if (!::fidl::Equals(_lhs.handle_in_mixed_vec_array,
-                        _rhs.handle_in_mixed_vec_array)) {
+    if (!::fidl::Equals(_lhs.handle_in_mixed_vec_array, _rhs.handle_in_mixed_vec_array)) {
       return false;
     }
     if (!::fidl::Equals(_lhs.table_with_handle, _rhs.table_with_handle)) {

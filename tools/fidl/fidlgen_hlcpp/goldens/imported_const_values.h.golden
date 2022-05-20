@@ -19,15 +19,11 @@ class MyStruct final {
 
   uint8_t __reserved = 0u;
 
-  static inline ::std::unique_ptr<MyStruct> New() {
-    return ::std::make_unique<MyStruct>();
-  }
+  static inline ::std::unique_ptr<MyStruct> New() { return ::std::make_unique<MyStruct>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, MyStruct* value,
-                     size_t _offset);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, MyStruct* value, size_t _offset);
   zx_status_t Clone(MyStruct* result) const;
 };
 
@@ -38,11 +34,9 @@ inline zx_status_t Clone(const ::test::importedconstvalues::MyStruct& _value,
 
 using MyStructPtr = ::std::unique_ptr<MyStruct>;
 
-constexpr ::test::dependent::MyEnum ENUM_MEMBER =
-    ::test::dependent::MyEnum::MEMBER;
+constexpr ::test::dependent::MyEnum ENUM_MEMBER = ::test::dependent::MyEnum::MEMBER;
 
-constexpr ::test::dependent::MyBits BITS_MEMBER =
-    ::test::dependent::MyBits::MEMBER;
+constexpr ::test::dependent::MyBits BITS_MEMBER = ::test::dependent::MyBits::MEMBER;
 
 }  // namespace importedconstvalues
 }  // namespace test
@@ -52,10 +46,8 @@ struct CodingTraits<::test::importedconstvalues::MyStruct>
     : public EncodableCodingTraits<::test::importedconstvalues::MyStruct, 1> {};
 
 template <>
-struct IsMemcpyCompatible<::test::importedconstvalues::MyStruct>
-    : public internal::BoolConstant<
-          !HasPadding<::test::importedconstvalues::MyStruct>::value &&
-          IsMemcpyCompatible<uint8_t>::value> {};
+struct IsMemcpyCompatible<::test::importedconstvalues::MyStruct> : public internal::BoolConstant<
+                                                                       !HasPadding<::test::importedconstvalues::MyStruct>::value && IsMemcpyCompatible<uint8_t>::value> {};
 
 inline zx_status_t Clone(const ::test::importedconstvalues::MyStruct& value,
                          ::test::importedconstvalues::MyStruct* result) {
@@ -64,8 +56,7 @@ inline zx_status_t Clone(const ::test::importedconstvalues::MyStruct& value,
 
 template <>
 struct Equality<::test::importedconstvalues::MyStruct> {
-  bool operator()(const ::test::importedconstvalues::MyStruct& _lhs,
-                  const ::test::importedconstvalues::MyStruct& _rhs) const {
+  bool operator()(const ::test::importedconstvalues::MyStruct& _lhs, const ::test::importedconstvalues::MyStruct& _rhs) const {
     if (!::fidl::Equals(_lhs.__reserved, _rhs.__reserved)) {
       return false;
     }

@@ -16,7 +16,9 @@ class Protocol_TestBase : public ::test::versions::Protocol {
  public:
   virtual ~Protocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
-  void Foo() override { NotImplemented_("Foo"); }
+  void Foo() override {
+    NotImplemented_("Foo");
+  }
 };
 }  // namespace testing
 }  // namespace versions

@@ -24,15 +24,9 @@ class BitsType final {
   const static BitsType kMask;
 
   explicit constexpr inline operator uint32_t() const { return value_; }
-  explicit constexpr inline operator bool() const {
-    return static_cast<bool>(value_);
-  }
-  constexpr inline bool operator==(const BitsType& other) const {
-    return value_ == other.value_;
-  }
-  constexpr inline bool operator!=(const BitsType& other) const {
-    return value_ != other.value_;
-  }
+  explicit constexpr inline operator bool() const { return static_cast<bool>(value_); }
+  constexpr inline bool operator==(const BitsType& other) const { return value_ == other.value_; }
+  constexpr inline bool operator!=(const BitsType& other) const { return value_ != other.value_; }
   constexpr inline BitsType operator~() const;
   constexpr inline BitsType operator|(const BitsType& other) const;
   constexpr inline BitsType operator&(const BitsType& other) const;
@@ -64,30 +58,25 @@ constexpr const ::test_consts::BitsType BitsType::kValue =
     ::test_consts::BitsType(1u);
 constexpr const ::test_consts::BitsType BitsType::kTrue =
     ::test_consts::BitsType(2u);
-constexpr const ::test_consts::BitsType BitsType::kMask =
-    ::test_consts::BitsType(3u);
+constexpr const ::test_consts::BitsType BitsType::kMask = ::test_consts::BitsType(3u);
 
 constexpr inline ::test_consts::BitsType BitsType::operator~() const {
-  return ::test_consts::BitsType(
-      static_cast<uint32_t>(~this->value_ & kMask.value_));
+  return ::test_consts::BitsType(static_cast<uint32_t>(~this->value_ & kMask.value_));
 }
 
 constexpr inline ::test_consts::BitsType BitsType::operator|(
     const ::test_consts::BitsType& other) const {
-  return ::test_consts::BitsType(
-      static_cast<uint32_t>(this->value_ | other.value_));
+  return ::test_consts::BitsType(static_cast<uint32_t>(this->value_ | other.value_));
 }
 
 constexpr inline ::test_consts::BitsType BitsType::operator&(
     const ::test_consts::BitsType& other) const {
-  return ::test_consts::BitsType(
-      static_cast<uint32_t>(this->value_ & other.value_));
+  return ::test_consts::BitsType(static_cast<uint32_t>(this->value_ & other.value_));
 }
 
 constexpr inline ::test_consts::BitsType BitsType::operator^(
     const ::test_consts::BitsType& other) const {
-  return ::test_consts::BitsType(
-      static_cast<uint32_t>(this->value_ ^ other.value_));
+  return ::test_consts::BitsType(static_cast<uint32_t>(this->value_ ^ other.value_));
 }
 
 constexpr inline void BitsType::operator|=(
@@ -115,8 +104,7 @@ enum class EnumType : int32_t {
 }  // namespace test_consts
 template <>
 struct fidl::internal::DisplayError<::test_consts::EnumType> {
-  static size_t Format(const ::test_consts::EnumType& value, char* destination,
-                       size_t capacity);
+  static size_t Format(const ::test_consts::EnumType& value, char* destination, size_t capacity);
 };
 
 namespace fidl {

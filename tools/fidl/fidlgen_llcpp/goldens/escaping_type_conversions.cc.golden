@@ -5,21 +5,12 @@
 namespace fidl {
 namespace internal {
 
-::test_escaping::DocCommentWithQuotes
-WireNaturalConversionTraits<::test_escaping::wire::DocCommentWithQuotes,
-                            ::test_escaping::DocCommentWithQuotes>::
-    ToNatural(::test_escaping::wire::DocCommentWithQuotes src) {
-  return ::test_escaping::DocCommentWithQuotes(
-      WireNaturalConversionTraits<uint8_t, uint8_t>::ToNatural(
-          std::move(src.__reserved)));
+::test_escaping::DocCommentWithQuotes WireNaturalConversionTraits<::test_escaping::wire::DocCommentWithQuotes, ::test_escaping::DocCommentWithQuotes>::ToNatural(::test_escaping::wire::DocCommentWithQuotes src) {
+  return ::test_escaping::DocCommentWithQuotes(WireNaturalConversionTraits<uint8_t, uint8_t>::ToNatural(std::move(src.__reserved)));
 }
-::test_escaping::wire::DocCommentWithQuotes
-WireNaturalConversionTraits<::test_escaping::wire::DocCommentWithQuotes,
-                            ::test_escaping::DocCommentWithQuotes>::
-    ToWire(fidl::AnyArena& arena, ::test_escaping::DocCommentWithQuotes src) {
+::test_escaping::wire::DocCommentWithQuotes WireNaturalConversionTraits<::test_escaping::wire::DocCommentWithQuotes, ::test_escaping::DocCommentWithQuotes>::ToWire(fidl::AnyArena& arena, ::test_escaping::DocCommentWithQuotes src) {
   return ::test_escaping::wire::DocCommentWithQuotes{
-      .__reserved = WireNaturalConversionTraits<uint8_t, uint8_t>::ToWire(
-          arena, std::move(src.__reserved())),
+      .__reserved = WireNaturalConversionTraits<uint8_t, uint8_t>::ToWire(arena, std::move(src.__reserved())),
   };
 }
 

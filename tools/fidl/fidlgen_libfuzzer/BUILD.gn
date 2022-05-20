@@ -43,10 +43,8 @@ if (is_host) {
   golden_test("fidlgen_libfuzzer_golden_tests") {
     goldens_dir = "goldens"
     reformat_goldens_bin = "$root_out_dir/clang-format-wrapper"
-    reformat_goldens_args = [
-      rebase_path("${clang_prefix}/clang-format", root_build_dir),
-      "--style=google",
-    ]
+    reformat_goldens_args =
+        [ rebase_path("${clang_prefix}/clang-format", root_build_dir) ]
     reformat_goldens_inputs = [ "${clang_prefix}/clang-format" ]
     deps = [ "//tools/fidl/clang-format-wrapper" ]
     entries = []

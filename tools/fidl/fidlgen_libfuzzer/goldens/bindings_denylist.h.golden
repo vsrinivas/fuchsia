@@ -14,62 +14,41 @@
 
 namespace fuzzing {
 
-using MemberOnlyAppearsInImportingLibrary =
-    ::test::bindingsdenylist::MemberOnlyAppearsInImportingLibrary;
-using OnlyAppearsInImportingLibrary =
-    ::test::bindingsdenylist::OnlyAppearsInImportingLibrary;
-using DenyEachBinding_OnlyDenySyzkaller_Response =
-    ::test::bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Response;
-using DenyEachBinding_OnlyDenySyzkaller_Result =
-    ::test::bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result;
-using DenyEachBindingOnlyDenySyzkallerTopResponse =
-    ::test::bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse;
-using DenyEachBinding_OnlyDenyRust_Response =
-    ::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Response;
-using DenyEachBinding_OnlyDenyRust_Result =
-    ::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result;
-using DenyEachBindingOnlyDenyRustTopResponse =
-    ::test::bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse;
-using DenyEachBinding_OnlyDenyGo_Response =
-    ::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Response;
-using DenyEachBinding_OnlyDenyGo_Result =
-    ::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result;
-using DenyEachBindingOnlyDenyGoTopResponse =
-    ::test::bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse;
-using DenyEachBinding_OnlyDenyDart_Response =
-    ::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Response;
-using DenyEachBinding_OnlyDenyDart_Result =
-    ::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result;
-using DenyEachBindingOnlyDenyDartTopResponse =
-    ::test::bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse;
-using DenyEachBinding_OnlyDenyCpp_Response =
-    ::test::bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Response;
-using DenyEachBinding_OnlyDenyCpp_Result =
-    ::test::bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Result;
-using DenyEachBindingOnlyDenyCppTopResponse =
-    ::test::bindingsdenylist::DenyEachBindingOnlyDenyCppTopResponse;
-using DenyEachBindingOnlyDenySyzkallerRequest =
-    ::test::bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest;
-using DenyEachBindingOnlyDenyRustRequest =
-    ::test::bindingsdenylist::DenyEachBindingOnlyDenyRustRequest;
-using DenyEachBindingOnlyDenyGoRequest =
-    ::test::bindingsdenylist::DenyEachBindingOnlyDenyGoRequest;
-using DenyEachBindingOnlyDenyDartRequest =
-    ::test::bindingsdenylist::DenyEachBindingOnlyDenyDartRequest;
-using DenyEachBindingOnlyDenyCppRequest =
-    ::test::bindingsdenylist::DenyEachBindingOnlyDenyCppRequest;
+using MemberOnlyAppearsInImportingLibrary = ::test::bindingsdenylist::MemberOnlyAppearsInImportingLibrary;
+using OnlyAppearsInImportingLibrary = ::test::bindingsdenylist::OnlyAppearsInImportingLibrary;
+using DenyEachBinding_OnlyDenySyzkaller_Response = ::test::bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Response;
+using DenyEachBinding_OnlyDenySyzkaller_Result = ::test::bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result;
+using DenyEachBindingOnlyDenySyzkallerTopResponse = ::test::bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse;
+using DenyEachBinding_OnlyDenyRust_Response = ::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Response;
+using DenyEachBinding_OnlyDenyRust_Result = ::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result;
+using DenyEachBindingOnlyDenyRustTopResponse = ::test::bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse;
+using DenyEachBinding_OnlyDenyGo_Response = ::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Response;
+using DenyEachBinding_OnlyDenyGo_Result = ::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result;
+using DenyEachBindingOnlyDenyGoTopResponse = ::test::bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse;
+using DenyEachBinding_OnlyDenyDart_Response = ::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Response;
+using DenyEachBinding_OnlyDenyDart_Result = ::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result;
+using DenyEachBindingOnlyDenyDartTopResponse = ::test::bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse;
+using DenyEachBinding_OnlyDenyCpp_Response = ::test::bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Response;
+using DenyEachBinding_OnlyDenyCpp_Result = ::test::bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Result;
+using DenyEachBindingOnlyDenyCppTopResponse = ::test::bindingsdenylist::DenyEachBindingOnlyDenyCppTopResponse;
+using DenyEachBindingOnlyDenySyzkallerRequest = ::test::bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest;
+using DenyEachBindingOnlyDenyRustRequest = ::test::bindingsdenylist::DenyEachBindingOnlyDenyRustRequest;
+using DenyEachBindingOnlyDenyGoRequest = ::test::bindingsdenylist::DenyEachBindingOnlyDenyGoRequest;
+using DenyEachBindingOnlyDenyDartRequest = ::test::bindingsdenylist::DenyEachBindingOnlyDenyDartRequest;
+using DenyEachBindingOnlyDenyCppRequest = ::test::bindingsdenylist::DenyEachBindingOnlyDenyCppRequest;
 
 template <>
 struct MinSize<MemberOnlyAppearsInImportingLibrary> {
-  operator size_t() { return MinSize<bool>(); }
+  operator size_t() {
+    return MinSize<bool>();
+  }
 };
 template <>
 struct Allocate<MemberOnlyAppearsInImportingLibrary> {
   MemberOnlyAppearsInImportingLibrary operator()(FuzzInput* src, size_t* size) {
     ZX_ASSERT(*size >= MinSize<MemberOnlyAppearsInImportingLibrary>());
     MemberOnlyAppearsInImportingLibrary out;
-    const size_t slack_per_member =
-        (*size - MinSize<MemberOnlyAppearsInImportingLibrary>()) / 1;
+    const size_t slack_per_member = (*size - MinSize<MemberOnlyAppearsInImportingLibrary>()) / 1;
     size_t out_size;
     out_size = MinSize<bool>() + slack_per_member;
     out.a = Allocate<bool>{}(src, &out_size);
@@ -79,8 +58,7 @@ struct Allocate<MemberOnlyAppearsInImportingLibrary> {
 template <>
 struct MinSize<OnlyAppearsInImportingLibrary> {
   operator size_t() {
-    return MinSize<
-        ::test::bindingsdenylist::MemberOnlyAppearsInImportingLibrary>();
+    return MinSize<::test::bindingsdenylist::MemberOnlyAppearsInImportingLibrary>();
   }
 };
 template <>
@@ -88,31 +66,25 @@ struct Allocate<OnlyAppearsInImportingLibrary> {
   OnlyAppearsInImportingLibrary operator()(FuzzInput* src, size_t* size) {
     ZX_ASSERT(*size >= MinSize<OnlyAppearsInImportingLibrary>());
     OnlyAppearsInImportingLibrary out;
-    const size_t slack_per_member =
-        (*size - MinSize<OnlyAppearsInImportingLibrary>()) / 1;
+    const size_t slack_per_member = (*size - MinSize<OnlyAppearsInImportingLibrary>()) / 1;
     size_t out_size;
-    out_size =
-        MinSize<
-            ::test::bindingsdenylist::MemberOnlyAppearsInImportingLibrary>() +
-        slack_per_member;
-    out.member_only_appears_in_importing_library = Allocate<
-        ::test::bindingsdenylist::MemberOnlyAppearsInImportingLibrary>{}(
-        src, &out_size);
+    out_size = MinSize<::test::bindingsdenylist::MemberOnlyAppearsInImportingLibrary>() + slack_per_member;
+    out.member_only_appears_in_importing_library = Allocate<::test::bindingsdenylist::MemberOnlyAppearsInImportingLibrary>{}(src, &out_size);
     return out;
   }
 };
 template <>
 struct MinSize<DenyEachBinding_OnlyDenySyzkaller_Response> {
-  operator size_t() { return MinSize<int32_t>(); }
+  operator size_t() {
+    return MinSize<int32_t>();
+  }
 };
 template <>
 struct Allocate<DenyEachBinding_OnlyDenySyzkaller_Response> {
-  DenyEachBinding_OnlyDenySyzkaller_Response operator()(FuzzInput* src,
-                                                        size_t* size) {
+  DenyEachBinding_OnlyDenySyzkaller_Response operator()(FuzzInput* src, size_t* size) {
     ZX_ASSERT(*size >= MinSize<DenyEachBinding_OnlyDenySyzkaller_Response>());
     DenyEachBinding_OnlyDenySyzkaller_Response out;
-    const size_t slack_per_member =
-        (*size - MinSize<DenyEachBinding_OnlyDenySyzkaller_Response>()) / 1;
+    const size_t slack_per_member = (*size - MinSize<DenyEachBinding_OnlyDenySyzkaller_Response>()) / 1;
     size_t out_size;
     out_size = MinSize<int32_t>() + slack_per_member;
     out.b = Allocate<int32_t>{}(src, &out_size);
@@ -122,10 +94,7 @@ struct Allocate<DenyEachBinding_OnlyDenySyzkaller_Response> {
 template <>
 struct MinSize<DenyEachBinding_OnlyDenySyzkaller_Result> {
   operator size_t() {
-    size_t sizes[] = {0,
-                      MinSize<::test::bindingsdenylist::
-                                  DenyEachBinding_OnlyDenySyzkaller_Response>(),
-                      MinSize<uint32_t>()};
+    size_t sizes[] = {0, MinSize<::test::bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Response>(), MinSize<uint32_t>()};
     return 1 + *std::max_element(sizes, sizes + 2 + 1);
   }
 };
@@ -133,8 +102,7 @@ template <>
 struct Allocate<DenyEachBinding_OnlyDenySyzkaller_Result> {
   static_assert(2 > 0, "xunion must have at least one member");
 
-  DenyEachBinding_OnlyDenySyzkaller_Result operator()(FuzzInput* src,
-                                                      size_t* size) {
+  DenyEachBinding_OnlyDenySyzkaller_Result operator()(FuzzInput* src, size_t* size) {
     ZX_ASSERT(*size >= MinSize<DenyEachBinding_OnlyDenySyzkaller_Result>());
 
     uint8_t selector;
@@ -144,10 +112,7 @@ struct Allocate<DenyEachBinding_OnlyDenySyzkaller_Result> {
     DenyEachBinding_OnlyDenySyzkaller_Result out;
     switch (selector % 2) {
       case 0: {
-        out.set_response(
-            Allocate<::test::bindingsdenylist::
-                         DenyEachBinding_OnlyDenySyzkaller_Response>{}(src,
-                                                                       size));
+        out.set_response(Allocate<::test::bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Response>{}(src, size));
         break;
       }
       case 1: {
@@ -162,40 +127,33 @@ struct Allocate<DenyEachBinding_OnlyDenySyzkaller_Result> {
 template <>
 struct MinSize<DenyEachBindingOnlyDenySyzkallerTopResponse> {
   operator size_t() {
-    return MinSize<
-        ::test::bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result>();
+    return MinSize<::test::bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result>();
   }
 };
 template <>
 struct Allocate<DenyEachBindingOnlyDenySyzkallerTopResponse> {
-  DenyEachBindingOnlyDenySyzkallerTopResponse operator()(FuzzInput* src,
-                                                         size_t* size) {
+  DenyEachBindingOnlyDenySyzkallerTopResponse operator()(FuzzInput* src, size_t* size) {
     ZX_ASSERT(*size >= MinSize<DenyEachBindingOnlyDenySyzkallerTopResponse>());
     DenyEachBindingOnlyDenySyzkallerTopResponse out;
-    const size_t slack_per_member =
-        (*size - MinSize<DenyEachBindingOnlyDenySyzkallerTopResponse>()) / 1;
+    const size_t slack_per_member = (*size - MinSize<DenyEachBindingOnlyDenySyzkallerTopResponse>()) / 1;
     size_t out_size;
-    out_size = MinSize<::test::bindingsdenylist::
-                           DenyEachBinding_OnlyDenySyzkaller_Result>() +
-               slack_per_member;
-    out.result = Allocate<
-        ::test::bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result>{}(
-        src, &out_size);
+    out_size = MinSize<::test::bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result>() + slack_per_member;
+    out.result = Allocate<::test::bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result>{}(src, &out_size);
     return out;
   }
 };
 template <>
 struct MinSize<DenyEachBinding_OnlyDenyRust_Response> {
-  operator size_t() { return MinSize<int32_t>(); }
+  operator size_t() {
+    return MinSize<int32_t>();
+  }
 };
 template <>
 struct Allocate<DenyEachBinding_OnlyDenyRust_Response> {
-  DenyEachBinding_OnlyDenyRust_Response operator()(FuzzInput* src,
-                                                   size_t* size) {
+  DenyEachBinding_OnlyDenyRust_Response operator()(FuzzInput* src, size_t* size) {
     ZX_ASSERT(*size >= MinSize<DenyEachBinding_OnlyDenyRust_Response>());
     DenyEachBinding_OnlyDenyRust_Response out;
-    const size_t slack_per_member =
-        (*size - MinSize<DenyEachBinding_OnlyDenyRust_Response>()) / 1;
+    const size_t slack_per_member = (*size - MinSize<DenyEachBinding_OnlyDenyRust_Response>()) / 1;
     size_t out_size;
     out_size = MinSize<int32_t>() + slack_per_member;
     out.b = Allocate<int32_t>{}(src, &out_size);
@@ -205,11 +163,7 @@ struct Allocate<DenyEachBinding_OnlyDenyRust_Response> {
 template <>
 struct MinSize<DenyEachBinding_OnlyDenyRust_Result> {
   operator size_t() {
-    size_t sizes[] = {
-        0,
-        MinSize<
-            ::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Response>(),
-        MinSize<uint32_t>()};
+    size_t sizes[] = {0, MinSize<::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Response>(), MinSize<uint32_t>()};
     return 1 + *std::max_element(sizes, sizes + 2 + 1);
   }
 };
@@ -227,9 +181,7 @@ struct Allocate<DenyEachBinding_OnlyDenyRust_Result> {
     DenyEachBinding_OnlyDenyRust_Result out;
     switch (selector % 2) {
       case 0: {
-        out.set_response(
-            Allocate<::test::bindingsdenylist::
-                         DenyEachBinding_OnlyDenyRust_Response>{}(src, size));
+        out.set_response(Allocate<::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Response>{}(src, size));
         break;
       }
       case 1: {
@@ -244,40 +196,33 @@ struct Allocate<DenyEachBinding_OnlyDenyRust_Result> {
 template <>
 struct MinSize<DenyEachBindingOnlyDenyRustTopResponse> {
   operator size_t() {
-    return MinSize<
-        ::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result>();
+    return MinSize<::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result>();
   }
 };
 template <>
 struct Allocate<DenyEachBindingOnlyDenyRustTopResponse> {
-  DenyEachBindingOnlyDenyRustTopResponse operator()(FuzzInput* src,
-                                                    size_t* size) {
+  DenyEachBindingOnlyDenyRustTopResponse operator()(FuzzInput* src, size_t* size) {
     ZX_ASSERT(*size >= MinSize<DenyEachBindingOnlyDenyRustTopResponse>());
     DenyEachBindingOnlyDenyRustTopResponse out;
-    const size_t slack_per_member =
-        (*size - MinSize<DenyEachBindingOnlyDenyRustTopResponse>()) / 1;
+    const size_t slack_per_member = (*size - MinSize<DenyEachBindingOnlyDenyRustTopResponse>()) / 1;
     size_t out_size;
-    out_size =
-        MinSize<
-            ::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result>() +
-        slack_per_member;
-    out.result = Allocate<
-        ::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result>{}(
-        src, &out_size);
+    out_size = MinSize<::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result>() + slack_per_member;
+    out.result = Allocate<::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result>{}(src, &out_size);
     return out;
   }
 };
 template <>
 struct MinSize<DenyEachBinding_OnlyDenyGo_Response> {
-  operator size_t() { return MinSize<int32_t>(); }
+  operator size_t() {
+    return MinSize<int32_t>();
+  }
 };
 template <>
 struct Allocate<DenyEachBinding_OnlyDenyGo_Response> {
   DenyEachBinding_OnlyDenyGo_Response operator()(FuzzInput* src, size_t* size) {
     ZX_ASSERT(*size >= MinSize<DenyEachBinding_OnlyDenyGo_Response>());
     DenyEachBinding_OnlyDenyGo_Response out;
-    const size_t slack_per_member =
-        (*size - MinSize<DenyEachBinding_OnlyDenyGo_Response>()) / 1;
+    const size_t slack_per_member = (*size - MinSize<DenyEachBinding_OnlyDenyGo_Response>()) / 1;
     size_t out_size;
     out_size = MinSize<int32_t>() + slack_per_member;
     out.b = Allocate<int32_t>{}(src, &out_size);
@@ -287,11 +232,7 @@ struct Allocate<DenyEachBinding_OnlyDenyGo_Response> {
 template <>
 struct MinSize<DenyEachBinding_OnlyDenyGo_Result> {
   operator size_t() {
-    size_t sizes[] = {
-        0,
-        MinSize<
-            ::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Response>(),
-        MinSize<uint32_t>()};
+    size_t sizes[] = {0, MinSize<::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Response>(), MinSize<uint32_t>()};
     return 1 + *std::max_element(sizes, sizes + 2 + 1);
   }
 };
@@ -309,9 +250,7 @@ struct Allocate<DenyEachBinding_OnlyDenyGo_Result> {
     DenyEachBinding_OnlyDenyGo_Result out;
     switch (selector % 2) {
       case 0: {
-        out.set_response(
-            Allocate<::test::bindingsdenylist::
-                         DenyEachBinding_OnlyDenyGo_Response>{}(src, size));
+        out.set_response(Allocate<::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Response>{}(src, size));
         break;
       }
       case 1: {
@@ -326,40 +265,33 @@ struct Allocate<DenyEachBinding_OnlyDenyGo_Result> {
 template <>
 struct MinSize<DenyEachBindingOnlyDenyGoTopResponse> {
   operator size_t() {
-    return MinSize<
-        ::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result>();
+    return MinSize<::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result>();
   }
 };
 template <>
 struct Allocate<DenyEachBindingOnlyDenyGoTopResponse> {
-  DenyEachBindingOnlyDenyGoTopResponse operator()(FuzzInput* src,
-                                                  size_t* size) {
+  DenyEachBindingOnlyDenyGoTopResponse operator()(FuzzInput* src, size_t* size) {
     ZX_ASSERT(*size >= MinSize<DenyEachBindingOnlyDenyGoTopResponse>());
     DenyEachBindingOnlyDenyGoTopResponse out;
-    const size_t slack_per_member =
-        (*size - MinSize<DenyEachBindingOnlyDenyGoTopResponse>()) / 1;
+    const size_t slack_per_member = (*size - MinSize<DenyEachBindingOnlyDenyGoTopResponse>()) / 1;
     size_t out_size;
-    out_size =
-        MinSize<::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result>() +
-        slack_per_member;
-    out.result =
-        Allocate<::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result>{}(
-            src, &out_size);
+    out_size = MinSize<::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result>() + slack_per_member;
+    out.result = Allocate<::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result>{}(src, &out_size);
     return out;
   }
 };
 template <>
 struct MinSize<DenyEachBinding_OnlyDenyDart_Response> {
-  operator size_t() { return MinSize<int32_t>(); }
+  operator size_t() {
+    return MinSize<int32_t>();
+  }
 };
 template <>
 struct Allocate<DenyEachBinding_OnlyDenyDart_Response> {
-  DenyEachBinding_OnlyDenyDart_Response operator()(FuzzInput* src,
-                                                   size_t* size) {
+  DenyEachBinding_OnlyDenyDart_Response operator()(FuzzInput* src, size_t* size) {
     ZX_ASSERT(*size >= MinSize<DenyEachBinding_OnlyDenyDart_Response>());
     DenyEachBinding_OnlyDenyDart_Response out;
-    const size_t slack_per_member =
-        (*size - MinSize<DenyEachBinding_OnlyDenyDart_Response>()) / 1;
+    const size_t slack_per_member = (*size - MinSize<DenyEachBinding_OnlyDenyDart_Response>()) / 1;
     size_t out_size;
     out_size = MinSize<int32_t>() + slack_per_member;
     out.b = Allocate<int32_t>{}(src, &out_size);
@@ -369,11 +301,7 @@ struct Allocate<DenyEachBinding_OnlyDenyDart_Response> {
 template <>
 struct MinSize<DenyEachBinding_OnlyDenyDart_Result> {
   operator size_t() {
-    size_t sizes[] = {
-        0,
-        MinSize<
-            ::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Response>(),
-        MinSize<uint32_t>()};
+    size_t sizes[] = {0, MinSize<::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Response>(), MinSize<uint32_t>()};
     return 1 + *std::max_element(sizes, sizes + 2 + 1);
   }
 };
@@ -391,9 +319,7 @@ struct Allocate<DenyEachBinding_OnlyDenyDart_Result> {
     DenyEachBinding_OnlyDenyDart_Result out;
     switch (selector % 2) {
       case 0: {
-        out.set_response(
-            Allocate<::test::bindingsdenylist::
-                         DenyEachBinding_OnlyDenyDart_Response>{}(src, size));
+        out.set_response(Allocate<::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Response>{}(src, size));
         break;
       }
       case 1: {
@@ -408,41 +334,33 @@ struct Allocate<DenyEachBinding_OnlyDenyDart_Result> {
 template <>
 struct MinSize<DenyEachBindingOnlyDenyDartTopResponse> {
   operator size_t() {
-    return MinSize<
-        ::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result>();
+    return MinSize<::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result>();
   }
 };
 template <>
 struct Allocate<DenyEachBindingOnlyDenyDartTopResponse> {
-  DenyEachBindingOnlyDenyDartTopResponse operator()(FuzzInput* src,
-                                                    size_t* size) {
+  DenyEachBindingOnlyDenyDartTopResponse operator()(FuzzInput* src, size_t* size) {
     ZX_ASSERT(*size >= MinSize<DenyEachBindingOnlyDenyDartTopResponse>());
     DenyEachBindingOnlyDenyDartTopResponse out;
-    const size_t slack_per_member =
-        (*size - MinSize<DenyEachBindingOnlyDenyDartTopResponse>()) / 1;
+    const size_t slack_per_member = (*size - MinSize<DenyEachBindingOnlyDenyDartTopResponse>()) / 1;
     size_t out_size;
-    out_size =
-        MinSize<
-            ::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result>() +
-        slack_per_member;
-    out.result = Allocate<
-        ::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result>{}(
-        src, &out_size);
+    out_size = MinSize<::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result>() + slack_per_member;
+    out.result = Allocate<::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result>{}(src, &out_size);
     return out;
   }
 };
 template <>
 struct MinSize<DenyEachBinding_OnlyDenyCpp_Response> {
-  operator size_t() { return MinSize<int32_t>(); }
+  operator size_t() {
+    return MinSize<int32_t>();
+  }
 };
 template <>
 struct Allocate<DenyEachBinding_OnlyDenyCpp_Response> {
-  DenyEachBinding_OnlyDenyCpp_Response operator()(FuzzInput* src,
-                                                  size_t* size) {
+  DenyEachBinding_OnlyDenyCpp_Response operator()(FuzzInput* src, size_t* size) {
     ZX_ASSERT(*size >= MinSize<DenyEachBinding_OnlyDenyCpp_Response>());
     DenyEachBinding_OnlyDenyCpp_Response out;
-    const size_t slack_per_member =
-        (*size - MinSize<DenyEachBinding_OnlyDenyCpp_Response>()) / 1;
+    const size_t slack_per_member = (*size - MinSize<DenyEachBinding_OnlyDenyCpp_Response>()) / 1;
     size_t out_size;
     out_size = MinSize<int32_t>() + slack_per_member;
     out.b = Allocate<int32_t>{}(src, &out_size);
@@ -452,11 +370,7 @@ struct Allocate<DenyEachBinding_OnlyDenyCpp_Response> {
 template <>
 struct MinSize<DenyEachBinding_OnlyDenyCpp_Result> {
   operator size_t() {
-    size_t sizes[] = {
-        0,
-        MinSize<
-            ::test::bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Response>(),
-        MinSize<uint32_t>()};
+    size_t sizes[] = {0, MinSize<::test::bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Response>(), MinSize<uint32_t>()};
     return 1 + *std::max_element(sizes, sizes + 2 + 1);
   }
 };
@@ -474,9 +388,7 @@ struct Allocate<DenyEachBinding_OnlyDenyCpp_Result> {
     DenyEachBinding_OnlyDenyCpp_Result out;
     switch (selector % 2) {
       case 0: {
-        out.set_response(
-            Allocate<::test::bindingsdenylist::
-                         DenyEachBinding_OnlyDenyCpp_Response>{}(src, size));
+        out.set_response(Allocate<::test::bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Response>{}(src, size));
         break;
       }
       case 1: {
@@ -491,41 +403,33 @@ struct Allocate<DenyEachBinding_OnlyDenyCpp_Result> {
 template <>
 struct MinSize<DenyEachBindingOnlyDenyCppTopResponse> {
   operator size_t() {
-    return MinSize<
-        ::test::bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Result>();
+    return MinSize<::test::bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Result>();
   }
 };
 template <>
 struct Allocate<DenyEachBindingOnlyDenyCppTopResponse> {
-  DenyEachBindingOnlyDenyCppTopResponse operator()(FuzzInput* src,
-                                                   size_t* size) {
+  DenyEachBindingOnlyDenyCppTopResponse operator()(FuzzInput* src, size_t* size) {
     ZX_ASSERT(*size >= MinSize<DenyEachBindingOnlyDenyCppTopResponse>());
     DenyEachBindingOnlyDenyCppTopResponse out;
-    const size_t slack_per_member =
-        (*size - MinSize<DenyEachBindingOnlyDenyCppTopResponse>()) / 1;
+    const size_t slack_per_member = (*size - MinSize<DenyEachBindingOnlyDenyCppTopResponse>()) / 1;
     size_t out_size;
-    out_size =
-        MinSize<
-            ::test::bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Result>() +
-        slack_per_member;
-    out.result = Allocate<
-        ::test::bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Result>{}(
-        src, &out_size);
+    out_size = MinSize<::test::bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Result>() + slack_per_member;
+    out.result = Allocate<::test::bindingsdenylist::DenyEachBinding_OnlyDenyCpp_Result>{}(src, &out_size);
     return out;
   }
 };
 template <>
 struct MinSize<DenyEachBindingOnlyDenySyzkallerRequest> {
-  operator size_t() { return MinSize<bool>(); }
+  operator size_t() {
+    return MinSize<bool>();
+  }
 };
 template <>
 struct Allocate<DenyEachBindingOnlyDenySyzkallerRequest> {
-  DenyEachBindingOnlyDenySyzkallerRequest operator()(FuzzInput* src,
-                                                     size_t* size) {
+  DenyEachBindingOnlyDenySyzkallerRequest operator()(FuzzInput* src, size_t* size) {
     ZX_ASSERT(*size >= MinSize<DenyEachBindingOnlyDenySyzkallerRequest>());
     DenyEachBindingOnlyDenySyzkallerRequest out;
-    const size_t slack_per_member =
-        (*size - MinSize<DenyEachBindingOnlyDenySyzkallerRequest>()) / 1;
+    const size_t slack_per_member = (*size - MinSize<DenyEachBindingOnlyDenySyzkallerRequest>()) / 1;
     size_t out_size;
     out_size = MinSize<bool>() + slack_per_member;
     out.a = Allocate<bool>{}(src, &out_size);
@@ -534,15 +438,16 @@ struct Allocate<DenyEachBindingOnlyDenySyzkallerRequest> {
 };
 template <>
 struct MinSize<DenyEachBindingOnlyDenyRustRequest> {
-  operator size_t() { return MinSize<bool>(); }
+  operator size_t() {
+    return MinSize<bool>();
+  }
 };
 template <>
 struct Allocate<DenyEachBindingOnlyDenyRustRequest> {
   DenyEachBindingOnlyDenyRustRequest operator()(FuzzInput* src, size_t* size) {
     ZX_ASSERT(*size >= MinSize<DenyEachBindingOnlyDenyRustRequest>());
     DenyEachBindingOnlyDenyRustRequest out;
-    const size_t slack_per_member =
-        (*size - MinSize<DenyEachBindingOnlyDenyRustRequest>()) / 1;
+    const size_t slack_per_member = (*size - MinSize<DenyEachBindingOnlyDenyRustRequest>()) / 1;
     size_t out_size;
     out_size = MinSize<bool>() + slack_per_member;
     out.a = Allocate<bool>{}(src, &out_size);
@@ -551,15 +456,16 @@ struct Allocate<DenyEachBindingOnlyDenyRustRequest> {
 };
 template <>
 struct MinSize<DenyEachBindingOnlyDenyGoRequest> {
-  operator size_t() { return MinSize<bool>(); }
+  operator size_t() {
+    return MinSize<bool>();
+  }
 };
 template <>
 struct Allocate<DenyEachBindingOnlyDenyGoRequest> {
   DenyEachBindingOnlyDenyGoRequest operator()(FuzzInput* src, size_t* size) {
     ZX_ASSERT(*size >= MinSize<DenyEachBindingOnlyDenyGoRequest>());
     DenyEachBindingOnlyDenyGoRequest out;
-    const size_t slack_per_member =
-        (*size - MinSize<DenyEachBindingOnlyDenyGoRequest>()) / 1;
+    const size_t slack_per_member = (*size - MinSize<DenyEachBindingOnlyDenyGoRequest>()) / 1;
     size_t out_size;
     out_size = MinSize<bool>() + slack_per_member;
     out.a = Allocate<bool>{}(src, &out_size);
@@ -568,15 +474,16 @@ struct Allocate<DenyEachBindingOnlyDenyGoRequest> {
 };
 template <>
 struct MinSize<DenyEachBindingOnlyDenyDartRequest> {
-  operator size_t() { return MinSize<bool>(); }
+  operator size_t() {
+    return MinSize<bool>();
+  }
 };
 template <>
 struct Allocate<DenyEachBindingOnlyDenyDartRequest> {
   DenyEachBindingOnlyDenyDartRequest operator()(FuzzInput* src, size_t* size) {
     ZX_ASSERT(*size >= MinSize<DenyEachBindingOnlyDenyDartRequest>());
     DenyEachBindingOnlyDenyDartRequest out;
-    const size_t slack_per_member =
-        (*size - MinSize<DenyEachBindingOnlyDenyDartRequest>()) / 1;
+    const size_t slack_per_member = (*size - MinSize<DenyEachBindingOnlyDenyDartRequest>()) / 1;
     size_t out_size;
     out_size = MinSize<bool>() + slack_per_member;
     out.a = Allocate<bool>{}(src, &out_size);
@@ -585,15 +492,16 @@ struct Allocate<DenyEachBindingOnlyDenyDartRequest> {
 };
 template <>
 struct MinSize<DenyEachBindingOnlyDenyCppRequest> {
-  operator size_t() { return MinSize<bool>(); }
+  operator size_t() {
+    return MinSize<bool>();
+  }
 };
 template <>
 struct Allocate<DenyEachBindingOnlyDenyCppRequest> {
   DenyEachBindingOnlyDenyCppRequest operator()(FuzzInput* src, size_t* size) {
     ZX_ASSERT(*size >= MinSize<DenyEachBindingOnlyDenyCppRequest>());
     DenyEachBindingOnlyDenyCppRequest out;
-    const size_t slack_per_member =
-        (*size - MinSize<DenyEachBindingOnlyDenyCppRequest>()) / 1;
+    const size_t slack_per_member = (*size - MinSize<DenyEachBindingOnlyDenyCppRequest>()) / 1;
     size_t out_size;
     out_size = MinSize<bool>() + slack_per_member;
     out.a = Allocate<bool>{}(src, &out_size);

@@ -11,79 +11,49 @@ class MainProtocol_TestBase : public ::test::protocollayouts::MainProtocol {
  public:
   virtual ~MainProtocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
-  void OneWayAnonComposed(
-      ::test::protocollayouts::imported::
-          ComposedProtocolOneWayAnonComposedRequest
-              ComposedProtocolOneWayAnonComposedRequest) override {
+  void OneWayAnonComposed(::test::protocollayouts::imported::ComposedProtocolOneWayAnonComposedRequest ComposedProtocolOneWayAnonComposedRequest) override {
     NotImplemented_("OneWayAnonComposed");
   }
-  void TwoWayAnonComposed(::test::protocollayouts::imported::
-                              ComposedProtocolTwoWayAnonComposedRequest
-                                  ComposedProtocolTwoWayAnonComposedRequest,
-                          TwoWayAnonComposedCallback callback) override {
+  void TwoWayAnonComposed(::test::protocollayouts::imported::ComposedProtocolTwoWayAnonComposedRequest ComposedProtocolTwoWayAnonComposedRequest, TwoWayAnonComposedCallback callback) override {
     NotImplemented_("TwoWayAnonComposed");
   }
-  void TwoWayAnonComposedWithError(
-      ::test::protocollayouts::imported::
-          ComposedProtocolTwoWayAnonComposedWithErrorRequest
-              ComposedProtocolTwoWayAnonComposedWithErrorRequest,
-      TwoWayAnonComposedWithErrorCallback callback) override {
+  void TwoWayAnonComposedWithError(::test::protocollayouts::imported::ComposedProtocolTwoWayAnonComposedWithErrorRequest ComposedProtocolTwoWayAnonComposedWithErrorRequest, TwoWayAnonComposedWithErrorCallback callback) override {
     NotImplemented_("TwoWayAnonComposedWithError");
   }
-  void OneWayNamedComposed(::test::protocollayouts::imported::ImportTablePayload
-                               ImportTablePayload) override {
+  void OneWayNamedComposed(::test::protocollayouts::imported::ImportTablePayload ImportTablePayload) override {
     NotImplemented_("OneWayNamedComposed");
   }
-  void TwoWayNamedComposed(
-      ::test::protocollayouts::imported::ImportUnionPayload ImportUnionPayload,
-      TwoWayNamedComposedCallback callback) override {
+  void TwoWayNamedComposed(::test::protocollayouts::imported::ImportUnionPayload ImportUnionPayload, TwoWayNamedComposedCallback callback) override {
     NotImplemented_("TwoWayNamedComposed");
   }
-  void TwoWayNamedComposedWithError(
-      ::test::protocollayouts::imported::ImportTablePayload ImportTablePayload,
-      TwoWayNamedComposedWithErrorCallback callback) override {
+  void TwoWayNamedComposedWithError(::test::protocollayouts::imported::ImportTablePayload ImportTablePayload, TwoWayNamedComposedWithErrorCallback callback) override {
     NotImplemented_("TwoWayNamedComposedWithError");
   }
-  void OneWayImport(::test::protocollayouts::imported::ImportTablePayload
-                        ImportTablePayload) override {
+  void OneWayImport(::test::protocollayouts::imported::ImportTablePayload ImportTablePayload) override {
     NotImplemented_("OneWayImport");
   }
-  void TwoWayImport(
-      ::test::protocollayouts::imported::ImportUnionPayload ImportUnionPayload,
-      TwoWayImportCallback callback) override {
+  void TwoWayImport(::test::protocollayouts::imported::ImportUnionPayload ImportUnionPayload, TwoWayImportCallback callback) override {
     NotImplemented_("TwoWayImport");
   }
-  void TwoWayImportWithError(
-      ::test::protocollayouts::imported::ImportTablePayload ImportTablePayload,
-      TwoWayImportWithErrorCallback callback) override {
+  void TwoWayImportWithError(::test::protocollayouts::imported::ImportTablePayload ImportTablePayload, TwoWayImportWithErrorCallback callback) override {
     NotImplemented_("TwoWayImportWithError");
   }
-  void OneWayLocal(
-      ::test::protocollayouts::LocalTablePayload LocalTablePayload) override {
+  void OneWayLocal(::test::protocollayouts::LocalTablePayload LocalTablePayload) override {
     NotImplemented_("OneWayLocal");
   }
-  void TwoWayLocal(::test::protocollayouts::LocalUnionPayload LocalUnionPayload,
-                   TwoWayLocalCallback callback) override {
+  void TwoWayLocal(::test::protocollayouts::LocalUnionPayload LocalUnionPayload, TwoWayLocalCallback callback) override {
     NotImplemented_("TwoWayLocal");
   }
-  void TwoWayLocalWithError(
-      ::test::protocollayouts::LocalTablePayload LocalTablePayload,
-      TwoWayLocalWithErrorCallback callback) override {
+  void TwoWayLocalWithError(::test::protocollayouts::LocalTablePayload LocalTablePayload, TwoWayLocalWithErrorCallback callback) override {
     NotImplemented_("TwoWayLocalWithError");
   }
-  void OneWayAnon(::test::protocollayouts::MainProtocolOneWayAnonRequest
-                      MainProtocolOneWayAnonRequest) override {
+  void OneWayAnon(::test::protocollayouts::MainProtocolOneWayAnonRequest MainProtocolOneWayAnonRequest) override {
     NotImplemented_("OneWayAnon");
   }
-  void TwoWayAnon(::test::protocollayouts::MainProtocolTwoWayAnonRequest
-                      MainProtocolTwoWayAnonRequest,
-                  TwoWayAnonCallback callback) override {
+  void TwoWayAnon(::test::protocollayouts::MainProtocolTwoWayAnonRequest MainProtocolTwoWayAnonRequest, TwoWayAnonCallback callback) override {
     NotImplemented_("TwoWayAnon");
   }
-  void TwoWayAnonWithError(
-      ::test::protocollayouts::MainProtocolTwoWayAnonWithErrorRequest
-          MainProtocolTwoWayAnonWithErrorRequest,
-      TwoWayAnonWithErrorCallback callback) override {
+  void TwoWayAnonWithError(::test::protocollayouts::MainProtocolTwoWayAnonWithErrorRequest MainProtocolTwoWayAnonWithErrorRequest, TwoWayAnonWithErrorCallback callback) override {
     NotImplemented_("TwoWayAnonWithError");
   }
 };

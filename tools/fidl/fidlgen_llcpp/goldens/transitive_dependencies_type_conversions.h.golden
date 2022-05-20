@@ -15,12 +15,9 @@ namespace fidl {
 namespace internal {
 
 template <>
-struct WireNaturalConversionTraits<::test_transitivedependencies::wire::Baz,
-                                   ::test_transitivedependencies::Baz> {
-  static ::test_transitivedependencies::Baz ToNatural(
-      ::test_transitivedependencies::wire::Baz src);
-  static ::test_transitivedependencies::wire::Baz ToWire(
-      fidl::AnyArena& arena, ::test_transitivedependencies::Baz src);
+struct WireNaturalConversionTraits<::test_transitivedependencies::wire::Baz, ::test_transitivedependencies::Baz> {
+  static ::test_transitivedependencies::Baz ToNatural(::test_transitivedependencies::wire::Baz src);
+  static ::test_transitivedependencies::wire::Baz ToWire(fidl::AnyArena& arena, ::test_transitivedependencies::Baz src);
 };
 
 template <>

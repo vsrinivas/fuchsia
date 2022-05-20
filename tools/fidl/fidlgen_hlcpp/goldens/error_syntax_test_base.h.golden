@@ -7,17 +7,14 @@
 namespace test {
 namespace errorsyntax {
 namespace testing {
-class ExampleUseOfErrorSyntax_TestBase
-    : public ::test::errorsyntax::ExampleUseOfErrorSyntax {
+class ExampleUseOfErrorSyntax_TestBase : public ::test::errorsyntax::ExampleUseOfErrorSyntax {
  public:
   virtual ~ExampleUseOfErrorSyntax_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
-  void ComposedCallWhichMayFail(
-      ::std::string s, ComposedCallWhichMayFailCallback callback) override {
+  void ComposedCallWhichMayFail(::std::string s, ComposedCallWhichMayFailCallback callback) override {
     NotImplemented_("ComposedCallWhichMayFail");
   }
-  void CallWhichMayFail(::std::string s,
-                        CallWhichMayFailCallback callback) override {
+  void CallWhichMayFail(::std::string s, CallWhichMayFailCallback callback) override {
     NotImplemented_("CallWhichMayFail");
   }
 };

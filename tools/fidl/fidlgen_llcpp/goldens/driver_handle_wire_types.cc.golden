@@ -3,8 +3,7 @@
 #include <fidl/test.driverhandle/cpp/wire_types.h>
 
 #ifdef __Fuchsia__
-void ::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest::
-    _CloseHandles() {
+void ::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest::_CloseHandles() {
   t._CloseHandles();
 }
 #endif  // __Fuchsia__
@@ -23,8 +22,7 @@ void ::test_driverhandle::wire::ClientEndWrapper::_CloseHandles() {
 
 #ifdef __Fuchsia__
 
-bool ::fidl::WireTableFrame<::test_driverhandle::wire::T>::HasUnknownData()
-    const {
+bool ::fidl::WireTableFrame<::test_driverhandle::wire::T>::HasUnknownData() const {
   return false;
 }
 

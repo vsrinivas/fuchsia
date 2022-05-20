@@ -11,12 +11,9 @@ namespace test {
 namespace bits {
 
 #if (__cplusplus < 201703)
-constexpr const ::test::bits::FlexibleBits FlexibleBits::SMALLEST =
-    ::test::bits::FlexibleBits(1u);
-constexpr const ::test::bits::FlexibleBits FlexibleBits::BIGGEST =
-    ::test::bits::FlexibleBits(9223372036854775808u);
-constexpr const ::test::bits::FlexibleBits FlexibleBits::kMask =
-    ::test::bits::FlexibleBits(9223372036854775809u);
+constexpr const ::test::bits::FlexibleBits FlexibleBits::SMALLEST = ::test::bits::FlexibleBits(1u);
+constexpr const ::test::bits::FlexibleBits FlexibleBits::BIGGEST = ::test::bits::FlexibleBits(9223372036854775808u);
+constexpr const ::test::bits::FlexibleBits FlexibleBits::kMask = ::test::bits::FlexibleBits(9223372036854775809u);
 
 #endif  // (__cplusplus < 201703)
 

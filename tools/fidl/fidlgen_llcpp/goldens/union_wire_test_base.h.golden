@@ -7,30 +7,22 @@ namespace fidl {
 namespace testing {
 
 template <>
-class WireTestBase<::test_union::TestProtocol>
-    : public ::fidl::WireServer<::test_union::TestProtocol> {
+class WireTestBase<::test_union::TestProtocol> : public ::fidl::WireServer<::test_union::TestProtocol> {
  public:
   virtual ~WireTestBase<::test_union::TestProtocol>() = default;
-  virtual void NotImplemented_(const std::string& name,
-                               ::fidl::CompleterBase& completer) = 0;
+  virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
   virtual void StrictXUnionHenceResponseMayBeStackAllocated(
-      StrictXUnionHenceResponseMayBeStackAllocatedRequestView request,
-      StrictXUnionHenceResponseMayBeStackAllocatedCompleter::Sync& completer)
-      override {
+      StrictXUnionHenceResponseMayBeStackAllocatedRequestView request, StrictXUnionHenceResponseMayBeStackAllocatedCompleter::Sync& completer) override {
     NotImplemented_("StrictXUnionHenceResponseMayBeStackAllocated", completer);
   }
   virtual void FlexibleXUnionHenceResponseMustBeHeapAllocated(
-      FlexibleXUnionHenceResponseMustBeHeapAllocatedRequestView request,
-      FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleter::Sync& completer)
-      override {
-    NotImplemented_("FlexibleXUnionHenceResponseMustBeHeapAllocated",
-                    completer);
+      FlexibleXUnionHenceResponseMustBeHeapAllocatedRequestView request, FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleter::Sync& completer) override {
+    NotImplemented_("FlexibleXUnionHenceResponseMustBeHeapAllocated", completer);
   }
 };
 
 template <>
-class ::fidl::testing::WireSyncEventHandlerTestBase<::test_union::TestProtocol>
-    : public ::fidl::WireSyncEventHandler<::test_union::TestProtocol> {
+class ::fidl::testing::WireSyncEventHandlerTestBase<::test_union::TestProtocol> : public ::fidl::WireSyncEventHandler<::test_union::TestProtocol> {
  public:
   virtual ~WireSyncEventHandlerTestBase<::test_union::TestProtocol>() = default;
   virtual void NotImplemented_(const std::string& name) = 0;

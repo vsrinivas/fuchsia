@@ -2,73 +2,62 @@
 
 #include <fidl/test.protocollayouts/cpp/natural_types.h>
 
-::test_protocollayouts::MainProtocolTwoWayImportWithErrorTopResponse::Storage_
-test_protocollayouts::MainProtocolTwoWayImportWithErrorTopResponse::
-    CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.result)};
+::test_protocollayouts::MainProtocolTwoWayImportWithErrorTopResponse::Storage_ test_protocollayouts::MainProtocolTwoWayImportWithErrorTopResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.result)};
 }
 
-::test_protocollayouts::MainProtocolTwoWayAnonWithErrorTopResponse::Storage_
-test_protocollayouts::MainProtocolTwoWayAnonWithErrorTopResponse::
-    CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.result)};
+::test_protocollayouts::MainProtocolTwoWayAnonWithErrorTopResponse::Storage_ test_protocollayouts::MainProtocolTwoWayAnonWithErrorTopResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.result)};
 }
 
-::test_protocollayouts::MainProtocolOnImportWithErrorRequest::Storage_
-test_protocollayouts::MainProtocolOnImportWithErrorRequest::CloneStorage_()
-    const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.result)};
+::test_protocollayouts::MainProtocolOnImportWithErrorRequest::Storage_ test_protocollayouts::MainProtocolOnImportWithErrorRequest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.result)};
 }
 
-::test_protocollayouts::MainProtocolOnAnonWithErrorRequest::Storage_
-test_protocollayouts::MainProtocolOnAnonWithErrorRequest::CloneStorage_()
-    const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.result)};
+::test_protocollayouts::MainProtocolOnAnonWithErrorRequest::Storage_ test_protocollayouts::MainProtocolOnAnonWithErrorRequest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.result)};
 }
 
-::test_protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse::Storage_
-test_protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse::
-    CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.result)};
+::test_protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse::Storage_ test_protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.result)};
 }
 
-::test_protocollayouts::MainProtocolOnLocalWithErrorRequest::Storage_
-test_protocollayouts::MainProtocolOnLocalWithErrorRequest::CloneStorage_()
-    const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.result)};
+::test_protocollayouts::MainProtocolOnLocalWithErrorRequest::Storage_ test_protocollayouts::MainProtocolOnLocalWithErrorRequest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.result)};
 }
 
-::test_protocollayouts::MainProtocolOnAnonWithErrorResponse::Storage_
-test_protocollayouts::MainProtocolOnAnonWithErrorResponse::CloneStorage_()
-    const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.a)};
+::test_protocollayouts::MainProtocolOnAnonWithErrorResponse::Storage_ test_protocollayouts::MainProtocolOnAnonWithErrorResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.a)};
 }
 
-::test_protocollayouts::MainProtocolTwoWayAnonWithErrorRequest::Storage_
-test_protocollayouts::MainProtocolTwoWayAnonWithErrorRequest::CloneStorage_()
-    const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.a)};
+::test_protocollayouts::MainProtocolTwoWayAnonWithErrorRequest::Storage_ test_protocollayouts::MainProtocolTwoWayAnonWithErrorRequest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.a)};
 }
 
-::test_protocollayouts::MainProtocolTwoWayAnonResponse::Storage_
-test_protocollayouts::MainProtocolTwoWayAnonResponse::CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.a)};
+::test_protocollayouts::MainProtocolTwoWayAnonResponse::Storage_ test_protocollayouts::MainProtocolTwoWayAnonResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.a)};
 }
 
-::test_protocollayouts::MainProtocolOneWayAnonRequest::Storage_
-test_protocollayouts::MainProtocolOneWayAnonRequest::CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.a)};
+::test_protocollayouts::MainProtocolOneWayAnonRequest::Storage_ test_protocollayouts::MainProtocolOneWayAnonRequest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.a)};
 }
 
-::test_protocollayouts::LocalTablePayload::Storage_
-test_protocollayouts::LocalTablePayload::CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.a)};
+::test_protocollayouts::LocalTablePayload::Storage_ test_protocollayouts::LocalTablePayload::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.a)};
 }
 
-std::shared_ptr<
-    ::test_protocollayouts::MainProtocolTwoWayImportWithErrorResult::Storage_>
-test_protocollayouts::MainProtocolTwoWayImportWithErrorResult::CloneStorage_()
-    const {
+std::shared_ptr<::test_protocollayouts::MainProtocolTwoWayImportWithErrorResult::Storage_> test_protocollayouts::MainProtocolTwoWayImportWithErrorResult::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
@@ -84,10 +73,7 @@ test_protocollayouts::MainProtocolTwoWayImportWithErrorResult::CloneStorage_()
   }
 }
 
-std::shared_ptr<
-    ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse::Storage_>
-test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse::CloneStorage_()
-    const {
+std::shared_ptr<::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse::Storage_> test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
@@ -99,29 +85,7 @@ test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse::CloneStorage_()
   }
 }
 
-std::shared_ptr<
-    ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResult::Storage_>
-test_protocollayouts::MainProtocolTwoWayAnonWithErrorResult::CloneStorage_()
-    const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    case 2:
-      return std::make_shared<Storage_>(
-          std::in_place_index<2>,
-          ::fidl::internal::NaturalClone(std::get<2>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<
-    ::test_protocollayouts::MainProtocolOnImportWithErrorResult::Storage_>
-test_protocollayouts::MainProtocolOnImportWithErrorResult::CloneStorage_()
-    const {
+std::shared_ptr<::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResult::Storage_> test_protocollayouts::MainProtocolTwoWayAnonWithErrorResult::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
@@ -137,9 +101,7 @@ test_protocollayouts::MainProtocolOnImportWithErrorResult::CloneStorage_()
   }
 }
 
-std::shared_ptr<
-    ::test_protocollayouts::MainProtocolOnAnonWithErrorResult::Storage_>
-test_protocollayouts::MainProtocolOnAnonWithErrorResult::CloneStorage_() const {
+std::shared_ptr<::test_protocollayouts::MainProtocolOnImportWithErrorResult::Storage_> test_protocollayouts::MainProtocolOnImportWithErrorResult::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
@@ -155,49 +117,7 @@ test_protocollayouts::MainProtocolOnAnonWithErrorResult::CloneStorage_() const {
   }
 }
 
-std::shared_ptr<::test_protocollayouts::MainProtocolTwoWayAnonRequest::Storage_>
-test_protocollayouts::MainProtocolTwoWayAnonRequest::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_protocollayouts::MainProtocolOnAnonRequest::Storage_>
-test_protocollayouts::MainProtocolOnAnonRequest::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_protocollayouts::LocalUnionPayload::Storage_>
-test_protocollayouts::LocalUnionPayload::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<
-    ::test_protocollayouts::MainProtocolTwoWayLocalWithErrorResult::Storage_>
-test_protocollayouts::MainProtocolTwoWayLocalWithErrorResult::CloneStorage_()
-    const {
+std::shared_ptr<::test_protocollayouts::MainProtocolOnAnonWithErrorResult::Storage_> test_protocollayouts::MainProtocolOnAnonWithErrorResult::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
@@ -213,10 +133,59 @@ test_protocollayouts::MainProtocolTwoWayLocalWithErrorResult::CloneStorage_()
   }
 }
 
-std::shared_ptr<
-    ::test_protocollayouts::MainProtocolOnLocalWithErrorResult::Storage_>
-test_protocollayouts::MainProtocolOnLocalWithErrorResult::CloneStorage_()
-    const {
+std::shared_ptr<::test_protocollayouts::MainProtocolTwoWayAnonRequest::Storage_> test_protocollayouts::MainProtocolTwoWayAnonRequest::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_protocollayouts::MainProtocolOnAnonRequest::Storage_> test_protocollayouts::MainProtocolOnAnonRequest::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_protocollayouts::LocalUnionPayload::Storage_> test_protocollayouts::LocalUnionPayload::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_protocollayouts::MainProtocolTwoWayLocalWithErrorResult::Storage_> test_protocollayouts::MainProtocolTwoWayLocalWithErrorResult::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    case 2:
+      return std::make_shared<Storage_>(
+          std::in_place_index<2>,
+          ::fidl::internal::NaturalClone(std::get<2>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_protocollayouts::MainProtocolOnLocalWithErrorResult::Storage_> test_protocollayouts::MainProtocolOnLocalWithErrorResult::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:

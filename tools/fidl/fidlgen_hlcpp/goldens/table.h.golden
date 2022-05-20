@@ -35,7 +35,9 @@ class TableWithAttributes final {
     ZX_ASSERT(field_presence_.IsSet<0>());
     return x_value_.value;
   }
-  bool has_x() const { return field_presence_.IsSet<0>(); }
+  bool has_x() const {
+    return field_presence_.IsSet<0>();
+  }
 
   int64_t* mutable_x() {
     if (!field_presence_.IsSet<0>()) {
@@ -66,15 +68,11 @@ class TableWithAttributes final {
   ~TableWithAttributes();
   TableWithAttributes& operator=(TableWithAttributes&& other);
 
-  static inline ::std::unique_ptr<TableWithAttributes> New() {
-    return ::std::make_unique<TableWithAttributes>();
-  }
+  static inline ::std::unique_ptr<TableWithAttributes> New() { return ::std::make_unique<TableWithAttributes>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, TableWithAttributes* _value,
-                     size_t _offset);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, TableWithAttributes* _value, size_t _offset);
   zx_status_t Clone(TableWithAttributes* _result) const;
 
  private:
@@ -123,7 +121,9 @@ class SimpleTable final {
     ZX_ASSERT(field_presence_.IsSet<0>());
     return x_value_.value;
   }
-  bool has_x() const { return field_presence_.IsSet<0>(); }
+  bool has_x() const {
+    return field_presence_.IsSet<0>();
+  }
 
   int64_t* mutable_x() {
     if (!field_presence_.IsSet<0>()) {
@@ -153,7 +153,9 @@ class SimpleTable final {
     ZX_ASSERT(field_presence_.IsSet<4>());
     return y_value_.value;
   }
-  bool has_y() const { return field_presence_.IsSet<4>(); }
+  bool has_y() const {
+    return field_presence_.IsSet<4>();
+  }
 
   int64_t* mutable_y() {
     if (!field_presence_.IsSet<4>()) {
@@ -184,15 +186,11 @@ class SimpleTable final {
   ~SimpleTable();
   SimpleTable& operator=(SimpleTable&& other);
 
-  static inline ::std::unique_ptr<SimpleTable> New() {
-    return ::std::make_unique<SimpleTable>();
-  }
+  static inline ::std::unique_ptr<SimpleTable> New() { return ::std::make_unique<SimpleTable>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, SimpleTable* _value,
-                     size_t _offset);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, SimpleTable* _value, size_t _offset);
   zx_status_t Clone(SimpleTable* _result) const;
 
  private:
@@ -249,7 +247,9 @@ class ReverseOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<0>());
     return z_value_.value;
   }
-  bool has_z() const { return field_presence_.IsSet<0>(); }
+  bool has_z() const {
+    return field_presence_.IsSet<0>();
+  }
 
   int64_t* mutable_z() {
     if (!field_presence_.IsSet<0>()) {
@@ -279,7 +279,9 @@ class ReverseOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<1>());
     return y_value_.value;
   }
-  bool has_y() const { return field_presence_.IsSet<1>(); }
+  bool has_y() const {
+    return field_presence_.IsSet<1>();
+  }
 
   int64_t* mutable_y() {
     if (!field_presence_.IsSet<1>()) {
@@ -309,7 +311,9 @@ class ReverseOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<2>());
     return x_value_.value;
   }
-  bool has_x() const { return field_presence_.IsSet<2>(); }
+  bool has_x() const {
+    return field_presence_.IsSet<2>();
+  }
 
   int64_t* mutable_x() {
     if (!field_presence_.IsSet<2>()) {
@@ -340,15 +344,11 @@ class ReverseOrdinalTable final {
   ~ReverseOrdinalTable();
   ReverseOrdinalTable& operator=(ReverseOrdinalTable&& other);
 
-  static inline ::std::unique_ptr<ReverseOrdinalTable> New() {
-    return ::std::make_unique<ReverseOrdinalTable>();
-  }
+  static inline ::std::unique_ptr<ReverseOrdinalTable> New() { return ::std::make_unique<ReverseOrdinalTable>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, ReverseOrdinalTable* _value,
-                     size_t _offset);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, ReverseOrdinalTable* _value, size_t _offset);
   zx_status_t Clone(ReverseOrdinalTable* _result) const;
 
  private:
@@ -413,7 +413,9 @@ class OlderSimpleTable final {
     ZX_ASSERT(field_presence_.IsSet<0>());
     return x_value_.value;
   }
-  bool has_x() const { return field_presence_.IsSet<0>(); }
+  bool has_x() const {
+    return field_presence_.IsSet<0>();
+  }
 
   int64_t* mutable_x() {
     if (!field_presence_.IsSet<0>()) {
@@ -444,15 +446,11 @@ class OlderSimpleTable final {
   ~OlderSimpleTable();
   OlderSimpleTable& operator=(OlderSimpleTable&& other);
 
-  static inline ::std::unique_ptr<OlderSimpleTable> New() {
-    return ::std::make_unique<OlderSimpleTable>();
-  }
+  static inline ::std::unique_ptr<OlderSimpleTable> New() { return ::std::make_unique<OlderSimpleTable>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, OlderSimpleTable* _value,
-                     size_t _offset);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, OlderSimpleTable* _value, size_t _offset);
   zx_status_t Clone(OlderSimpleTable* _result) const;
 
  private:
@@ -501,7 +499,9 @@ class NewerSimpleTable final {
     ZX_ASSERT(field_presence_.IsSet<0>());
     return x_value_.value;
   }
-  bool has_x() const { return field_presence_.IsSet<0>(); }
+  bool has_x() const {
+    return field_presence_.IsSet<0>();
+  }
 
   int64_t* mutable_x() {
     if (!field_presence_.IsSet<0>()) {
@@ -531,7 +531,9 @@ class NewerSimpleTable final {
     ZX_ASSERT(field_presence_.IsSet<4>());
     return y_value_.value;
   }
-  bool has_y() const { return field_presence_.IsSet<4>(); }
+  bool has_y() const {
+    return field_presence_.IsSet<4>();
+  }
 
   int64_t* mutable_y() {
     if (!field_presence_.IsSet<4>()) {
@@ -561,7 +563,9 @@ class NewerSimpleTable final {
     ZX_ASSERT(field_presence_.IsSet<5>());
     return z_value_.value;
   }
-  bool has_z() const { return field_presence_.IsSet<5>(); }
+  bool has_z() const {
+    return field_presence_.IsSet<5>();
+  }
 
   int64_t* mutable_z() {
     if (!field_presence_.IsSet<5>()) {
@@ -592,15 +596,11 @@ class NewerSimpleTable final {
   ~NewerSimpleTable();
   NewerSimpleTable& operator=(NewerSimpleTable&& other);
 
-  static inline ::std::unique_ptr<NewerSimpleTable> New() {
-    return ::std::make_unique<NewerSimpleTable>();
-  }
+  static inline ::std::unique_ptr<NewerSimpleTable> New() { return ::std::make_unique<NewerSimpleTable>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, NewerSimpleTable* _value,
-                     size_t _offset);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, NewerSimpleTable* _value, size_t _offset);
   zx_status_t Clone(NewerSimpleTable* _result) const;
 
  private:
@@ -666,15 +666,11 @@ class ExtensionTable final {
   ~ExtensionTable();
   ExtensionTable& operator=(ExtensionTable&& other);
 
-  static inline ::std::unique_ptr<ExtensionTable> New() {
-    return ::std::make_unique<ExtensionTable>();
-  }
+  static inline ::std::unique_ptr<ExtensionTable> New() { return ::std::make_unique<ExtensionTable>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, ExtensionTable* _value,
-                     size_t _offset);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, ExtensionTable* _value, size_t _offset);
   zx_status_t Clone(ExtensionTable* _result) const;
 
  private:
@@ -715,7 +711,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<0>());
     return v1_value_.value;
   }
-  bool has_v1() const { return field_presence_.IsSet<0>(); }
+  bool has_v1() const {
+    return field_presence_.IsSet<0>();
+  }
 
   int64_t* mutable_v1() {
     if (!field_presence_.IsSet<0>()) {
@@ -745,7 +743,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<1>());
     return v2_value_.value;
   }
-  bool has_v2() const { return field_presence_.IsSet<1>(); }
+  bool has_v2() const {
+    return field_presence_.IsSet<1>();
+  }
 
   int64_t* mutable_v2() {
     if (!field_presence_.IsSet<1>()) {
@@ -775,7 +775,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<2>());
     return v3_value_.value;
   }
-  bool has_v3() const { return field_presence_.IsSet<2>(); }
+  bool has_v3() const {
+    return field_presence_.IsSet<2>();
+  }
 
   int64_t* mutable_v3() {
     if (!field_presence_.IsSet<2>()) {
@@ -805,7 +807,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<3>());
     return v4_value_.value;
   }
-  bool has_v4() const { return field_presence_.IsSet<3>(); }
+  bool has_v4() const {
+    return field_presence_.IsSet<3>();
+  }
 
   int64_t* mutable_v4() {
     if (!field_presence_.IsSet<3>()) {
@@ -835,7 +839,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<4>());
     return v5_value_.value;
   }
-  bool has_v5() const { return field_presence_.IsSet<4>(); }
+  bool has_v5() const {
+    return field_presence_.IsSet<4>();
+  }
 
   int64_t* mutable_v5() {
     if (!field_presence_.IsSet<4>()) {
@@ -865,7 +871,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<5>());
     return v6_value_.value;
   }
-  bool has_v6() const { return field_presence_.IsSet<5>(); }
+  bool has_v6() const {
+    return field_presence_.IsSet<5>();
+  }
 
   int64_t* mutable_v6() {
     if (!field_presence_.IsSet<5>()) {
@@ -895,7 +903,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<6>());
     return v7_value_.value;
   }
-  bool has_v7() const { return field_presence_.IsSet<6>(); }
+  bool has_v7() const {
+    return field_presence_.IsSet<6>();
+  }
 
   int64_t* mutable_v7() {
     if (!field_presence_.IsSet<6>()) {
@@ -925,7 +935,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<7>());
     return v8_value_.value;
   }
-  bool has_v8() const { return field_presence_.IsSet<7>(); }
+  bool has_v8() const {
+    return field_presence_.IsSet<7>();
+  }
 
   int64_t* mutable_v8() {
     if (!field_presence_.IsSet<7>()) {
@@ -955,7 +967,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<8>());
     return v9_value_.value;
   }
-  bool has_v9() const { return field_presence_.IsSet<8>(); }
+  bool has_v9() const {
+    return field_presence_.IsSet<8>();
+  }
 
   int64_t* mutable_v9() {
     if (!field_presence_.IsSet<8>()) {
@@ -985,7 +999,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<9>());
     return v10_value_.value;
   }
-  bool has_v10() const { return field_presence_.IsSet<9>(); }
+  bool has_v10() const {
+    return field_presence_.IsSet<9>();
+  }
 
   int64_t* mutable_v10() {
     if (!field_presence_.IsSet<9>()) {
@@ -1015,7 +1031,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<10>());
     return v11_value_.value;
   }
-  bool has_v11() const { return field_presence_.IsSet<10>(); }
+  bool has_v11() const {
+    return field_presence_.IsSet<10>();
+  }
 
   int64_t* mutable_v11() {
     if (!field_presence_.IsSet<10>()) {
@@ -1045,7 +1063,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<11>());
     return v12_value_.value;
   }
-  bool has_v12() const { return field_presence_.IsSet<11>(); }
+  bool has_v12() const {
+    return field_presence_.IsSet<11>();
+  }
 
   int64_t* mutable_v12() {
     if (!field_presence_.IsSet<11>()) {
@@ -1075,7 +1095,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<12>());
     return v13_value_.value;
   }
-  bool has_v13() const { return field_presence_.IsSet<12>(); }
+  bool has_v13() const {
+    return field_presence_.IsSet<12>();
+  }
 
   int64_t* mutable_v13() {
     if (!field_presence_.IsSet<12>()) {
@@ -1105,7 +1127,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<13>());
     return v14_value_.value;
   }
-  bool has_v14() const { return field_presence_.IsSet<13>(); }
+  bool has_v14() const {
+    return field_presence_.IsSet<13>();
+  }
 
   int64_t* mutable_v14() {
     if (!field_presence_.IsSet<13>()) {
@@ -1135,7 +1159,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<14>());
     return v15_value_.value;
   }
-  bool has_v15() const { return field_presence_.IsSet<14>(); }
+  bool has_v15() const {
+    return field_presence_.IsSet<14>();
+  }
 
   int64_t* mutable_v15() {
     if (!field_presence_.IsSet<14>()) {
@@ -1165,7 +1191,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<15>());
     return v16_value_.value;
   }
-  bool has_v16() const { return field_presence_.IsSet<15>(); }
+  bool has_v16() const {
+    return field_presence_.IsSet<15>();
+  }
 
   int64_t* mutable_v16() {
     if (!field_presence_.IsSet<15>()) {
@@ -1195,7 +1223,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<16>());
     return v17_value_.value;
   }
-  bool has_v17() const { return field_presence_.IsSet<16>(); }
+  bool has_v17() const {
+    return field_presence_.IsSet<16>();
+  }
 
   int64_t* mutable_v17() {
     if (!field_presence_.IsSet<16>()) {
@@ -1225,7 +1255,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<17>());
     return v18_value_.value;
   }
-  bool has_v18() const { return field_presence_.IsSet<17>(); }
+  bool has_v18() const {
+    return field_presence_.IsSet<17>();
+  }
 
   int64_t* mutable_v18() {
     if (!field_presence_.IsSet<17>()) {
@@ -1255,7 +1287,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<18>());
     return v19_value_.value;
   }
-  bool has_v19() const { return field_presence_.IsSet<18>(); }
+  bool has_v19() const {
+    return field_presence_.IsSet<18>();
+  }
 
   int64_t* mutable_v19() {
     if (!field_presence_.IsSet<18>()) {
@@ -1285,7 +1319,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<19>());
     return v20_value_.value;
   }
-  bool has_v20() const { return field_presence_.IsSet<19>(); }
+  bool has_v20() const {
+    return field_presence_.IsSet<19>();
+  }
 
   int64_t* mutable_v20() {
     if (!field_presence_.IsSet<19>()) {
@@ -1315,7 +1351,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<20>());
     return v21_value_.value;
   }
-  bool has_v21() const { return field_presence_.IsSet<20>(); }
+  bool has_v21() const {
+    return field_presence_.IsSet<20>();
+  }
 
   int64_t* mutable_v21() {
     if (!field_presence_.IsSet<20>()) {
@@ -1345,7 +1383,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<21>());
     return v22_value_.value;
   }
-  bool has_v22() const { return field_presence_.IsSet<21>(); }
+  bool has_v22() const {
+    return field_presence_.IsSet<21>();
+  }
 
   int64_t* mutable_v22() {
     if (!field_presence_.IsSet<21>()) {
@@ -1375,7 +1415,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<22>());
     return v23_value_.value;
   }
-  bool has_v23() const { return field_presence_.IsSet<22>(); }
+  bool has_v23() const {
+    return field_presence_.IsSet<22>();
+  }
 
   int64_t* mutable_v23() {
     if (!field_presence_.IsSet<22>()) {
@@ -1405,7 +1447,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<23>());
     return v24_value_.value;
   }
-  bool has_v24() const { return field_presence_.IsSet<23>(); }
+  bool has_v24() const {
+    return field_presence_.IsSet<23>();
+  }
 
   int64_t* mutable_v24() {
     if (!field_presence_.IsSet<23>()) {
@@ -1435,7 +1479,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<24>());
     return v25_value_.value;
   }
-  bool has_v25() const { return field_presence_.IsSet<24>(); }
+  bool has_v25() const {
+    return field_presence_.IsSet<24>();
+  }
 
   int64_t* mutable_v25() {
     if (!field_presence_.IsSet<24>()) {
@@ -1465,7 +1511,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<25>());
     return v26_value_.value;
   }
-  bool has_v26() const { return field_presence_.IsSet<25>(); }
+  bool has_v26() const {
+    return field_presence_.IsSet<25>();
+  }
 
   int64_t* mutable_v26() {
     if (!field_presence_.IsSet<25>()) {
@@ -1495,7 +1543,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<26>());
     return v27_value_.value;
   }
-  bool has_v27() const { return field_presence_.IsSet<26>(); }
+  bool has_v27() const {
+    return field_presence_.IsSet<26>();
+  }
 
   int64_t* mutable_v27() {
     if (!field_presence_.IsSet<26>()) {
@@ -1525,7 +1575,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<27>());
     return v28_value_.value;
   }
-  bool has_v28() const { return field_presence_.IsSet<27>(); }
+  bool has_v28() const {
+    return field_presence_.IsSet<27>();
+  }
 
   int64_t* mutable_v28() {
     if (!field_presence_.IsSet<27>()) {
@@ -1555,7 +1607,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<28>());
     return v29_value_.value;
   }
-  bool has_v29() const { return field_presence_.IsSet<28>(); }
+  bool has_v29() const {
+    return field_presence_.IsSet<28>();
+  }
 
   int64_t* mutable_v29() {
     if (!field_presence_.IsSet<28>()) {
@@ -1585,7 +1639,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<29>());
     return v30_value_.value;
   }
-  bool has_v30() const { return field_presence_.IsSet<29>(); }
+  bool has_v30() const {
+    return field_presence_.IsSet<29>();
+  }
 
   int64_t* mutable_v30() {
     if (!field_presence_.IsSet<29>()) {
@@ -1615,7 +1671,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<30>());
     return v31_value_.value;
   }
-  bool has_v31() const { return field_presence_.IsSet<30>(); }
+  bool has_v31() const {
+    return field_presence_.IsSet<30>();
+  }
 
   int64_t* mutable_v31() {
     if (!field_presence_.IsSet<30>()) {
@@ -1645,7 +1703,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<31>());
     return v32_value_.value;
   }
-  bool has_v32() const { return field_presence_.IsSet<31>(); }
+  bool has_v32() const {
+    return field_presence_.IsSet<31>();
+  }
 
   int64_t* mutable_v32() {
     if (!field_presence_.IsSet<31>()) {
@@ -1675,7 +1735,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<32>());
     return v33_value_.value;
   }
-  bool has_v33() const { return field_presence_.IsSet<32>(); }
+  bool has_v33() const {
+    return field_presence_.IsSet<32>();
+  }
 
   int64_t* mutable_v33() {
     if (!field_presence_.IsSet<32>()) {
@@ -1705,7 +1767,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<33>());
     return v34_value_.value;
   }
-  bool has_v34() const { return field_presence_.IsSet<33>(); }
+  bool has_v34() const {
+    return field_presence_.IsSet<33>();
+  }
 
   int64_t* mutable_v34() {
     if (!field_presence_.IsSet<33>()) {
@@ -1735,7 +1799,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<34>());
     return v35_value_.value;
   }
-  bool has_v35() const { return field_presence_.IsSet<34>(); }
+  bool has_v35() const {
+    return field_presence_.IsSet<34>();
+  }
 
   int64_t* mutable_v35() {
     if (!field_presence_.IsSet<34>()) {
@@ -1765,7 +1831,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<35>());
     return v36_value_.value;
   }
-  bool has_v36() const { return field_presence_.IsSet<35>(); }
+  bool has_v36() const {
+    return field_presence_.IsSet<35>();
+  }
 
   int64_t* mutable_v36() {
     if (!field_presence_.IsSet<35>()) {
@@ -1795,7 +1863,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<36>());
     return v37_value_.value;
   }
-  bool has_v37() const { return field_presence_.IsSet<36>(); }
+  bool has_v37() const {
+    return field_presence_.IsSet<36>();
+  }
 
   int64_t* mutable_v37() {
     if (!field_presence_.IsSet<36>()) {
@@ -1825,7 +1895,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<37>());
     return v38_value_.value;
   }
-  bool has_v38() const { return field_presence_.IsSet<37>(); }
+  bool has_v38() const {
+    return field_presence_.IsSet<37>();
+  }
 
   int64_t* mutable_v38() {
     if (!field_presence_.IsSet<37>()) {
@@ -1855,7 +1927,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<38>());
     return v39_value_.value;
   }
-  bool has_v39() const { return field_presence_.IsSet<38>(); }
+  bool has_v39() const {
+    return field_presence_.IsSet<38>();
+  }
 
   int64_t* mutable_v39() {
     if (!field_presence_.IsSet<38>()) {
@@ -1885,7 +1959,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<39>());
     return v40_value_.value;
   }
-  bool has_v40() const { return field_presence_.IsSet<39>(); }
+  bool has_v40() const {
+    return field_presence_.IsSet<39>();
+  }
 
   int64_t* mutable_v40() {
     if (!field_presence_.IsSet<39>()) {
@@ -1915,7 +1991,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<40>());
     return v41_value_.value;
   }
-  bool has_v41() const { return field_presence_.IsSet<40>(); }
+  bool has_v41() const {
+    return field_presence_.IsSet<40>();
+  }
 
   int64_t* mutable_v41() {
     if (!field_presence_.IsSet<40>()) {
@@ -1945,7 +2023,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<41>());
     return v42_value_.value;
   }
-  bool has_v42() const { return field_presence_.IsSet<41>(); }
+  bool has_v42() const {
+    return field_presence_.IsSet<41>();
+  }
 
   int64_t* mutable_v42() {
     if (!field_presence_.IsSet<41>()) {
@@ -1975,7 +2055,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<42>());
     return v43_value_.value;
   }
-  bool has_v43() const { return field_presence_.IsSet<42>(); }
+  bool has_v43() const {
+    return field_presence_.IsSet<42>();
+  }
 
   int64_t* mutable_v43() {
     if (!field_presence_.IsSet<42>()) {
@@ -2005,7 +2087,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<43>());
     return v44_value_.value;
   }
-  bool has_v44() const { return field_presence_.IsSet<43>(); }
+  bool has_v44() const {
+    return field_presence_.IsSet<43>();
+  }
 
   int64_t* mutable_v44() {
     if (!field_presence_.IsSet<43>()) {
@@ -2035,7 +2119,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<44>());
     return v45_value_.value;
   }
-  bool has_v45() const { return field_presence_.IsSet<44>(); }
+  bool has_v45() const {
+    return field_presence_.IsSet<44>();
+  }
 
   int64_t* mutable_v45() {
     if (!field_presence_.IsSet<44>()) {
@@ -2065,7 +2151,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<45>());
     return v46_value_.value;
   }
-  bool has_v46() const { return field_presence_.IsSet<45>(); }
+  bool has_v46() const {
+    return field_presence_.IsSet<45>();
+  }
 
   int64_t* mutable_v46() {
     if (!field_presence_.IsSet<45>()) {
@@ -2095,7 +2183,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<46>());
     return v47_value_.value;
   }
-  bool has_v47() const { return field_presence_.IsSet<46>(); }
+  bool has_v47() const {
+    return field_presence_.IsSet<46>();
+  }
 
   int64_t* mutable_v47() {
     if (!field_presence_.IsSet<46>()) {
@@ -2125,7 +2215,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<47>());
     return v48_value_.value;
   }
-  bool has_v48() const { return field_presence_.IsSet<47>(); }
+  bool has_v48() const {
+    return field_presence_.IsSet<47>();
+  }
 
   int64_t* mutable_v48() {
     if (!field_presence_.IsSet<47>()) {
@@ -2155,7 +2247,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<48>());
     return v49_value_.value;
   }
-  bool has_v49() const { return field_presence_.IsSet<48>(); }
+  bool has_v49() const {
+    return field_presence_.IsSet<48>();
+  }
 
   int64_t* mutable_v49() {
     if (!field_presence_.IsSet<48>()) {
@@ -2185,7 +2279,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<49>());
     return v50_value_.value;
   }
-  bool has_v50() const { return field_presence_.IsSet<49>(); }
+  bool has_v50() const {
+    return field_presence_.IsSet<49>();
+  }
 
   int64_t* mutable_v50() {
     if (!field_presence_.IsSet<49>()) {
@@ -2215,7 +2311,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<50>());
     return v51_value_.value;
   }
-  bool has_v51() const { return field_presence_.IsSet<50>(); }
+  bool has_v51() const {
+    return field_presence_.IsSet<50>();
+  }
 
   int64_t* mutable_v51() {
     if (!field_presence_.IsSet<50>()) {
@@ -2245,7 +2343,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<51>());
     return v52_value_.value;
   }
-  bool has_v52() const { return field_presence_.IsSet<51>(); }
+  bool has_v52() const {
+    return field_presence_.IsSet<51>();
+  }
 
   int64_t* mutable_v52() {
     if (!field_presence_.IsSet<51>()) {
@@ -2275,7 +2375,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<52>());
     return v53_value_.value;
   }
-  bool has_v53() const { return field_presence_.IsSet<52>(); }
+  bool has_v53() const {
+    return field_presence_.IsSet<52>();
+  }
 
   int64_t* mutable_v53() {
     if (!field_presence_.IsSet<52>()) {
@@ -2305,7 +2407,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<53>());
     return v54_value_.value;
   }
-  bool has_v54() const { return field_presence_.IsSet<53>(); }
+  bool has_v54() const {
+    return field_presence_.IsSet<53>();
+  }
 
   int64_t* mutable_v54() {
     if (!field_presence_.IsSet<53>()) {
@@ -2335,7 +2439,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<54>());
     return v55_value_.value;
   }
-  bool has_v55() const { return field_presence_.IsSet<54>(); }
+  bool has_v55() const {
+    return field_presence_.IsSet<54>();
+  }
 
   int64_t* mutable_v55() {
     if (!field_presence_.IsSet<54>()) {
@@ -2365,7 +2471,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<55>());
     return v56_value_.value;
   }
-  bool has_v56() const { return field_presence_.IsSet<55>(); }
+  bool has_v56() const {
+    return field_presence_.IsSet<55>();
+  }
 
   int64_t* mutable_v56() {
     if (!field_presence_.IsSet<55>()) {
@@ -2395,7 +2503,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<56>());
     return v57_value_.value;
   }
-  bool has_v57() const { return field_presence_.IsSet<56>(); }
+  bool has_v57() const {
+    return field_presence_.IsSet<56>();
+  }
 
   int64_t* mutable_v57() {
     if (!field_presence_.IsSet<56>()) {
@@ -2425,7 +2535,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<57>());
     return v58_value_.value;
   }
-  bool has_v58() const { return field_presence_.IsSet<57>(); }
+  bool has_v58() const {
+    return field_presence_.IsSet<57>();
+  }
 
   int64_t* mutable_v58() {
     if (!field_presence_.IsSet<57>()) {
@@ -2455,7 +2567,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<58>());
     return v59_value_.value;
   }
-  bool has_v59() const { return field_presence_.IsSet<58>(); }
+  bool has_v59() const {
+    return field_presence_.IsSet<58>();
+  }
 
   int64_t* mutable_v59() {
     if (!field_presence_.IsSet<58>()) {
@@ -2485,7 +2599,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<59>());
     return v60_value_.value;
   }
-  bool has_v60() const { return field_presence_.IsSet<59>(); }
+  bool has_v60() const {
+    return field_presence_.IsSet<59>();
+  }
 
   int64_t* mutable_v60() {
     if (!field_presence_.IsSet<59>()) {
@@ -2515,7 +2631,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<60>());
     return v61_value_.value;
   }
-  bool has_v61() const { return field_presence_.IsSet<60>(); }
+  bool has_v61() const {
+    return field_presence_.IsSet<60>();
+  }
 
   int64_t* mutable_v61() {
     if (!field_presence_.IsSet<60>()) {
@@ -2545,7 +2663,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<61>());
     return v62_value_.value;
   }
-  bool has_v62() const { return field_presence_.IsSet<61>(); }
+  bool has_v62() const {
+    return field_presence_.IsSet<61>();
+  }
 
   int64_t* mutable_v62() {
     if (!field_presence_.IsSet<61>()) {
@@ -2575,7 +2695,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<62>());
     return v63_value_.value;
   }
-  bool has_v63() const { return field_presence_.IsSet<62>(); }
+  bool has_v63() const {
+    return field_presence_.IsSet<62>();
+  }
 
   int64_t* mutable_v63() {
     if (!field_presence_.IsSet<62>()) {
@@ -2605,7 +2727,9 @@ class SixtyFourOrdinalTable final {
     ZX_ASSERT(field_presence_.IsSet<63>());
     return v64_value_.value;
   }
-  bool has_v64() const { return field_presence_.IsSet<63>(); }
+  bool has_v64() const {
+    return field_presence_.IsSet<63>();
+  }
 
   ::test::table::ExtensionTable* mutable_v64() {
     if (!field_presence_.IsSet<63>()) {
@@ -2636,15 +2760,11 @@ class SixtyFourOrdinalTable final {
   ~SixtyFourOrdinalTable();
   SixtyFourOrdinalTable& operator=(SixtyFourOrdinalTable&& other);
 
-  static inline ::std::unique_ptr<SixtyFourOrdinalTable> New() {
-    return ::std::make_unique<SixtyFourOrdinalTable>();
-  }
+  static inline ::std::unique_ptr<SixtyFourOrdinalTable> New() { return ::std::make_unique<SixtyFourOrdinalTable>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTable* _value,
-                     size_t _offset);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTable* _value, size_t _offset);
   zx_status_t Clone(SixtyFourOrdinalTable* _result) const;
 
  private:
@@ -3198,15 +3318,11 @@ class EmptyTable final {
   ~EmptyTable();
   EmptyTable& operator=(EmptyTable&& other);
 
-  static inline ::std::unique_ptr<EmptyTable> New() {
-    return ::std::make_unique<EmptyTable>();
-  }
+  static inline ::std::unique_ptr<EmptyTable> New() { return ::std::make_unique<EmptyTable>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, EmptyTable* _value,
-                     size_t _offset);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, EmptyTable* _value, size_t _offset);
   zx_status_t Clone(EmptyTable* _result) const;
 
  private:
@@ -3250,8 +3366,7 @@ inline zx_status_t Clone(const ::test::table::TableWithAttributes& _value,
 }
 template <>
 struct Equality<::test::table::TableWithAttributes> {
-  bool operator()(const ::test::table::TableWithAttributes& _lhs,
-                  const ::test::table::TableWithAttributes& _rhs) const {
+  bool operator()(const ::test::table::TableWithAttributes& _lhs, const ::test::table::TableWithAttributes& _rhs) const {
     if (_lhs.has_x()) {
       if (!_rhs.has_x()) {
         return false;
@@ -3275,8 +3390,7 @@ inline zx_status_t Clone(const ::test::table::SimpleTable& _value,
 }
 template <>
 struct Equality<::test::table::SimpleTable> {
-  bool operator()(const ::test::table::SimpleTable& _lhs,
-                  const ::test::table::SimpleTable& _rhs) const {
+  bool operator()(const ::test::table::SimpleTable& _lhs, const ::test::table::SimpleTable& _rhs) const {
     if (_lhs.has_x()) {
       if (!_rhs.has_x()) {
         return false;
@@ -3310,8 +3424,7 @@ inline zx_status_t Clone(const ::test::table::ReverseOrdinalTable& _value,
 }
 template <>
 struct Equality<::test::table::ReverseOrdinalTable> {
-  bool operator()(const ::test::table::ReverseOrdinalTable& _lhs,
-                  const ::test::table::ReverseOrdinalTable& _rhs) const {
+  bool operator()(const ::test::table::ReverseOrdinalTable& _lhs, const ::test::table::ReverseOrdinalTable& _rhs) const {
     if (_lhs.has_z()) {
       if (!_rhs.has_z()) {
         return false;
@@ -3355,8 +3468,7 @@ inline zx_status_t Clone(const ::test::table::OlderSimpleTable& _value,
 }
 template <>
 struct Equality<::test::table::OlderSimpleTable> {
-  bool operator()(const ::test::table::OlderSimpleTable& _lhs,
-                  const ::test::table::OlderSimpleTable& _rhs) const {
+  bool operator()(const ::test::table::OlderSimpleTable& _lhs, const ::test::table::OlderSimpleTable& _rhs) const {
     if (_lhs.has_x()) {
       if (!_rhs.has_x()) {
         return false;
@@ -3380,8 +3492,7 @@ inline zx_status_t Clone(const ::test::table::NewerSimpleTable& _value,
 }
 template <>
 struct Equality<::test::table::NewerSimpleTable> {
-  bool operator()(const ::test::table::NewerSimpleTable& _lhs,
-                  const ::test::table::NewerSimpleTable& _rhs) const {
+  bool operator()(const ::test::table::NewerSimpleTable& _lhs, const ::test::table::NewerSimpleTable& _rhs) const {
     if (_lhs.has_x()) {
       if (!_rhs.has_x()) {
         return false;
@@ -3425,8 +3536,7 @@ inline zx_status_t Clone(const ::test::table::ExtensionTable& _value,
 }
 template <>
 struct Equality<::test::table::ExtensionTable> {
-  bool operator()(const ::test::table::ExtensionTable& _lhs,
-                  const ::test::table::ExtensionTable& _rhs) const {
+  bool operator()(const ::test::table::ExtensionTable& _lhs, const ::test::table::ExtensionTable& _rhs) const {
     return true;
   }
 };
@@ -3440,8 +3550,7 @@ inline zx_status_t Clone(const ::test::table::SixtyFourOrdinalTable& _value,
 }
 template <>
 struct Equality<::test::table::SixtyFourOrdinalTable> {
-  bool operator()(const ::test::table::SixtyFourOrdinalTable& _lhs,
-                  const ::test::table::SixtyFourOrdinalTable& _rhs) const {
+  bool operator()(const ::test::table::SixtyFourOrdinalTable& _lhs, const ::test::table::SixtyFourOrdinalTable& _rhs) const {
     if (_lhs.has_v1()) {
       if (!_rhs.has_v1()) {
         return false;
@@ -4095,8 +4204,7 @@ inline zx_status_t Clone(const ::test::table::EmptyTable& _value,
 }
 template <>
 struct Equality<::test::table::EmptyTable> {
-  bool operator()(const ::test::table::EmptyTable& _lhs,
-                  const ::test::table::EmptyTable& _rhs) const {
+  bool operator()(const ::test::table::EmptyTable& _lhs, const ::test::table::EmptyTable& _rhs) const {
     return true;
   }
 };

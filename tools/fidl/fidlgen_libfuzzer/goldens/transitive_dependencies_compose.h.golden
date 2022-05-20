@@ -13,4 +13,6 @@
 // For uint64_t.
 #include <stdint.h>
 
-namespace fuzzing {}  // namespace fuzzing
+namespace fuzzing {
+
+}  // namespace fuzzing

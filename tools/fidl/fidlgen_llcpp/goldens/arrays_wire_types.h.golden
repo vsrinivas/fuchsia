@@ -61,12 +61,8 @@ struct ::fidl::WireTableFrame<::test_arrays::wire::TableSmallArray> final {
   ::fidl::Envelope<::fidl::Array<uint32_t, 2>> a_;
 
   friend class ::test_arrays::wire::TableSmallArray;
-  friend ::fidl::internal::WireTableBaseBuilder<
-      ::test_arrays::wire::TableSmallArray,
-      ::fidl::WireTableBuilder<::test_arrays::wire::TableSmallArray>>;
-  friend ::fidl::internal::WireTableBaseBuilder<
-      ::test_arrays::wire::TableSmallArray,
-      ::fidl::WireTableExternalBuilder<::test_arrays::wire::TableSmallArray>>;
+  friend ::fidl::internal::WireTableBaseBuilder<::test_arrays::wire::TableSmallArray, ::fidl::WireTableBuilder<::test_arrays::wire::TableSmallArray>>;
+  friend ::fidl::internal::WireTableBaseBuilder<::test_arrays::wire::TableSmallArray, ::fidl::WireTableExternalBuilder<::test_arrays::wire::TableSmallArray>>;
 };
 
 namespace test_arrays {
@@ -90,14 +86,10 @@ class TableSmallArray {
   bool HasUnknownData() const;
 
   // Return a builder that by defaults allocates of an arena.
-  static ::fidl::WireTableBuilder<::test_arrays::wire::TableSmallArray> Builder(
-      ::fidl::AnyArena& arena);
+  static ::fidl::WireTableBuilder<::test_arrays::wire::TableSmallArray> Builder(::fidl::AnyArena& arena);
 
   // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
-  static ::fidl::WireTableExternalBuilder<::test_arrays::wire::TableSmallArray>
-  ExternalBuilder(::fidl::ObjectView<
-                  ::fidl::WireTableFrame<::test_arrays::wire::TableSmallArray>>
-                      frame);
+  static ::fidl::WireTableExternalBuilder<::test_arrays::wire::TableSmallArray> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_arrays::wire::TableSmallArray>> frame);
 
   const ::fidl::Array<uint32_t, 2>& a() const {
     ZX_ASSERT(has_a());
@@ -107,7 +99,9 @@ class TableSmallArray {
     ZX_ASSERT(has_a());
     return frame_ptr_->a_.get_data();
   }
-  bool has_a() const { return max_ordinal_ >= 1 && frame_ptr_->a_.has_data(); }
+  bool has_a() const {
+    return max_ordinal_ >= 1 && frame_ptr_->a_.has_data();
+  }
 #if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
  public:
 #else   // !defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES)
@@ -128,8 +122,8 @@ class TableSmallArray {
   template <typename... Args>
   TableSmallArray& set_a(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->a_.set_data(::fidl::ObjectView<::fidl::Array<uint32_t, 2>>(
-        allocator, std::forward<Args>(args)...));
+    frame_ptr_->a_.set_data(
+        ::fidl::ObjectView<::fidl::Array<uint32_t, 2>>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
     return *this;
   }
@@ -141,49 +135,33 @@ class TableSmallArray {
   }
 
   explicit TableSmallArray(::fidl::AnyArena& allocator)
-      : frame_ptr_(
-            ::fidl::ObjectView<
-                ::fidl::WireTableFrame<::test_arrays::wire::TableSmallArray>>(
-                allocator)) {}
+      : frame_ptr_(::fidl::ObjectView<::fidl::WireTableFrame<::test_arrays::wire::TableSmallArray>>(allocator)) {}
   // This constructor allows a user controlled allocation (not using a Arena).
   // It should only be used when performance is key.
-  // As soon as the frame is given to the table, it must not be used directly or
-  // for another table.
-  explicit TableSmallArray(
-      ::fidl::ObjectView<
-          ::fidl::WireTableFrame<::test_arrays::wire::TableSmallArray>>&& frame)
+  // As soon as the frame is given to the table, it must not be used directly or for another table.
+  explicit TableSmallArray(::fidl::ObjectView<::fidl::WireTableFrame<::test_arrays::wire::TableSmallArray>>&& frame)
       : frame_ptr_(std::move(frame)) {}
 
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
-    frame_ptr_ = ::fidl::ObjectView<
-        ::fidl::WireTableFrame<::test_arrays::wire::TableSmallArray>>(
-        allocator);
+    frame_ptr_ = ::fidl::ObjectView<::fidl::WireTableFrame<::test_arrays::wire::TableSmallArray>>(allocator);
   }
-  void Init(::fidl::ObjectView<::fidl::WireTableFrame<
-                ::test_arrays::wire::TableSmallArray>>&& frame_ptr) {
+  void Init(::fidl::ObjectView<::fidl::WireTableFrame<::test_arrays::wire::TableSmallArray>>&& frame_ptr) {
     max_ordinal_ = 0;
     frame_ptr_ = std::move(frame_ptr);
   }
 
  private:
-  friend ::fidl::internal::WireTableBaseBuilder<
-      ::test_arrays::wire::TableSmallArray,
-      ::fidl::WireTableBuilder<::test_arrays::wire::TableSmallArray>>;
-  friend ::fidl::internal::WireTableBaseBuilder<
-      ::test_arrays::wire::TableSmallArray,
-      ::fidl::WireTableExternalBuilder<::test_arrays::wire::TableSmallArray>>;
+  friend ::fidl::internal::WireTableBaseBuilder<::test_arrays::wire::TableSmallArray, ::fidl::WireTableBuilder<::test_arrays::wire::TableSmallArray>>;
+  friend ::fidl::internal::WireTableBaseBuilder<::test_arrays::wire::TableSmallArray, ::fidl::WireTableExternalBuilder<::test_arrays::wire::TableSmallArray>>;
 
   uint64_t max_ordinal_ = 0;
-  ::fidl::ObjectView<
-      ::fidl::WireTableFrame<::test_arrays::wire::TableSmallArray>>
-      frame_ptr_;
+  ::fidl::ObjectView<::fidl::WireTableFrame<::test_arrays::wire::TableSmallArray>> frame_ptr_;
 };
 }  // namespace wire
 }  // namespace test_arrays
 template <typename BuilderImpl>
-class ::fidl::internal::WireTableBaseBuilder<
-    ::test_arrays::wire::TableSmallArray, BuilderImpl> {
+class ::fidl::internal::WireTableBaseBuilder<::test_arrays::wire::TableSmallArray, BuilderImpl> {
  public:
   // Build and return the table. The builder should not be used after this.
   ::test_arrays::wire::TableSmallArray Build() {
@@ -197,15 +175,12 @@ class ::fidl::internal::WireTableBaseBuilder<
   BuilderImpl& a(::fidl::ObjectView<::fidl::Array<uint32_t, 2>> elem) {
     ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
     table_.frame_ptr_->a_.set_data(elem);
-    table_.max_ordinal_ =
-        std::max(table_.max_ordinal_, static_cast<uint64_t>(1));
+    table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(1));
     return *static_cast<BuilderImpl*>(this);
   }
 
  protected:
-  WireTableBaseBuilder(
-      ::fidl::ObjectView<
-          ::fidl::WireTableFrame<::test_arrays::wire::TableSmallArray>>&& frame)
+  WireTableBaseBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_arrays::wire::TableSmallArray>>&& frame)
       : table_(std::move(frame)) {}
 
  private:
@@ -213,67 +188,44 @@ class ::fidl::internal::WireTableBaseBuilder<
 };
 
 template <>
-class ::fidl::WireTableBuilder<::test_arrays::wire::TableSmallArray> final
-    : public ::fidl::internal::WireTableBaseBuilder<
-          ::test_arrays::wire::TableSmallArray,
-          ::fidl::WireTableBuilder<::test_arrays::wire::TableSmallArray>> {
-  using Base = ::fidl::internal::WireTableBaseBuilder<
-      ::test_arrays::wire::TableSmallArray,
-      ::fidl::WireTableBuilder<::test_arrays::wire::TableSmallArray>>;
+class ::fidl::WireTableBuilder<::test_arrays::wire::TableSmallArray> final : public ::fidl::internal::WireTableBaseBuilder<::test_arrays::wire::TableSmallArray, ::fidl::WireTableBuilder<::test_arrays::wire::TableSmallArray>> {
+  using Base = ::fidl::internal::WireTableBaseBuilder<::test_arrays::wire::TableSmallArray, ::fidl::WireTableBuilder<::test_arrays::wire::TableSmallArray>>;
 
  public:
   using Base::a;
 
   template <typename... Args>
-  ::fidl::WireTableBuilder<::test_arrays::wire::TableSmallArray>& a(
-      Args&&... args_) {
-    a(::fidl::ObjectView<::fidl::Array<uint32_t, 2>>(
-        arena_.get(), std::forward<Args>(args_)...));
+  ::fidl::WireTableBuilder<::test_arrays::wire::TableSmallArray>& a(Args&&... args_) {
+    a(::fidl::ObjectView<::fidl::Array<uint32_t, 2>>(arena_.get(), std::forward<Args>(args_)...));
     return *this;
   }
 
  private:
   friend class ::test_arrays::wire::TableSmallArray;
   WireTableBuilder(::fidl::AnyArena& arena)
-      : Base(::fidl::ObjectView<
-             ::fidl::WireTableFrame<::test_arrays::wire::TableSmallArray>>(
-            arena)),
+      : Base(::fidl::ObjectView<::fidl::WireTableFrame<::test_arrays::wire::TableSmallArray>>(arena)),
         arena_(arena) {}
 
   [[maybe_unused]] std::reference_wrapper<::fidl::AnyArena> arena_;
 };
 
 template <>
-class ::fidl::WireTableExternalBuilder<::test_arrays::wire::TableSmallArray>
-    final : public ::fidl::internal::WireTableBaseBuilder<
-                ::test_arrays::wire::TableSmallArray,
-                ::fidl::WireTableExternalBuilder<
-                    ::test_arrays::wire::TableSmallArray>> {
-  using Base = ::fidl::internal::WireTableBaseBuilder<
-      ::test_arrays::wire::TableSmallArray,
-      ::fidl::WireTableExternalBuilder<::test_arrays::wire::TableSmallArray>>;
+class ::fidl::WireTableExternalBuilder<::test_arrays::wire::TableSmallArray> final : public ::fidl::internal::WireTableBaseBuilder<::test_arrays::wire::TableSmallArray, ::fidl::WireTableExternalBuilder<::test_arrays::wire::TableSmallArray>> {
+  using Base = ::fidl::internal::WireTableBaseBuilder<::test_arrays::wire::TableSmallArray, ::fidl::WireTableExternalBuilder<::test_arrays::wire::TableSmallArray>>;
 
  private:
   friend class ::test_arrays::wire::TableSmallArray;
   using Base::Base;
-  WireTableExternalBuilder(
-      ::fidl::WireTableFrame<::test_arrays::wire::TableSmallArray>* frame)
-      : Base(::fidl::ObjectView<::fidl::WireTableFrame<
-                 ::test_arrays::wire::TableSmallArray>>::FromExternal(frame)) {}
+  WireTableExternalBuilder(::fidl::WireTableFrame<::test_arrays::wire::TableSmallArray>* frame)
+      : Base(::fidl::ObjectView<::fidl::WireTableFrame<::test_arrays::wire::TableSmallArray>>::FromExternal(frame)) {}
 };
 namespace test_arrays {
 namespace wire {
-inline ::fidl::WireTableBuilder<::test_arrays::wire::TableSmallArray>
-TableSmallArray::Builder(::fidl::AnyArena& arena) {
+inline ::fidl::WireTableBuilder<::test_arrays::wire::TableSmallArray> TableSmallArray::Builder(::fidl::AnyArena& arena) {
   return ::fidl::WireTableBuilder<::test_arrays::wire::TableSmallArray>(arena);
 }
-inline ::fidl::WireTableExternalBuilder<::test_arrays::wire::TableSmallArray>
-TableSmallArray::ExternalBuilder(
-    ::fidl::ObjectView<
-        ::fidl::WireTableFrame<::test_arrays::wire::TableSmallArray>>
-        frame) {
-  return ::fidl::WireTableExternalBuilder<::test_arrays::wire::TableSmallArray>(
-      std::move(frame));
+inline ::fidl::WireTableExternalBuilder<::test_arrays::wire::TableSmallArray> TableSmallArray::ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_arrays::wire::TableSmallArray>> frame) {
+  return ::fidl::WireTableExternalBuilder<::test_arrays::wire::TableSmallArray>(std::move(frame));
 }
 
 }  // namespace wire
@@ -302,12 +254,8 @@ struct ::fidl::WireTableFrame<::test_arrays::wire::TableLargeArray> final {
   ::fidl::Envelope<::fidl::Array<uint32_t, 100>> a_;
 
   friend class ::test_arrays::wire::TableLargeArray;
-  friend ::fidl::internal::WireTableBaseBuilder<
-      ::test_arrays::wire::TableLargeArray,
-      ::fidl::WireTableBuilder<::test_arrays::wire::TableLargeArray>>;
-  friend ::fidl::internal::WireTableBaseBuilder<
-      ::test_arrays::wire::TableLargeArray,
-      ::fidl::WireTableExternalBuilder<::test_arrays::wire::TableLargeArray>>;
+  friend ::fidl::internal::WireTableBaseBuilder<::test_arrays::wire::TableLargeArray, ::fidl::WireTableBuilder<::test_arrays::wire::TableLargeArray>>;
+  friend ::fidl::internal::WireTableBaseBuilder<::test_arrays::wire::TableLargeArray, ::fidl::WireTableExternalBuilder<::test_arrays::wire::TableLargeArray>>;
 };
 
 namespace test_arrays {
@@ -331,14 +279,10 @@ class TableLargeArray {
   bool HasUnknownData() const;
 
   // Return a builder that by defaults allocates of an arena.
-  static ::fidl::WireTableBuilder<::test_arrays::wire::TableLargeArray> Builder(
-      ::fidl::AnyArena& arena);
+  static ::fidl::WireTableBuilder<::test_arrays::wire::TableLargeArray> Builder(::fidl::AnyArena& arena);
 
   // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
-  static ::fidl::WireTableExternalBuilder<::test_arrays::wire::TableLargeArray>
-  ExternalBuilder(::fidl::ObjectView<
-                  ::fidl::WireTableFrame<::test_arrays::wire::TableLargeArray>>
-                      frame);
+  static ::fidl::WireTableExternalBuilder<::test_arrays::wire::TableLargeArray> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_arrays::wire::TableLargeArray>> frame);
 
   const ::fidl::Array<uint32_t, 100>& a() const {
     ZX_ASSERT(has_a());
@@ -348,15 +292,16 @@ class TableLargeArray {
     ZX_ASSERT(has_a());
     return frame_ptr_->a_.get_data();
   }
-  bool has_a() const { return max_ordinal_ >= 1 && frame_ptr_->a_.has_data(); }
+  bool has_a() const {
+    return max_ordinal_ >= 1 && frame_ptr_->a_.has_data();
+  }
 #if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
  public:
 #else   // !defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES)
  private:
 #endif  // FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES
 
-  TableLargeArray& set_a(
-      ::fidl::ObjectView<::fidl::Array<uint32_t, 100>> elem) {
+  TableLargeArray& set_a(::fidl::ObjectView<::fidl::Array<uint32_t, 100>> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->a_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
@@ -370,8 +315,8 @@ class TableLargeArray {
   template <typename... Args>
   TableLargeArray& set_a(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->a_.set_data(::fidl::ObjectView<::fidl::Array<uint32_t, 100>>(
-        allocator, std::forward<Args>(args)...));
+    frame_ptr_->a_.set_data(
+        ::fidl::ObjectView<::fidl::Array<uint32_t, 100>>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
     return *this;
   }
@@ -383,49 +328,33 @@ class TableLargeArray {
   }
 
   explicit TableLargeArray(::fidl::AnyArena& allocator)
-      : frame_ptr_(
-            ::fidl::ObjectView<
-                ::fidl::WireTableFrame<::test_arrays::wire::TableLargeArray>>(
-                allocator)) {}
+      : frame_ptr_(::fidl::ObjectView<::fidl::WireTableFrame<::test_arrays::wire::TableLargeArray>>(allocator)) {}
   // This constructor allows a user controlled allocation (not using a Arena).
   // It should only be used when performance is key.
-  // As soon as the frame is given to the table, it must not be used directly or
-  // for another table.
-  explicit TableLargeArray(
-      ::fidl::ObjectView<
-          ::fidl::WireTableFrame<::test_arrays::wire::TableLargeArray>>&& frame)
+  // As soon as the frame is given to the table, it must not be used directly or for another table.
+  explicit TableLargeArray(::fidl::ObjectView<::fidl::WireTableFrame<::test_arrays::wire::TableLargeArray>>&& frame)
       : frame_ptr_(std::move(frame)) {}
 
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
-    frame_ptr_ = ::fidl::ObjectView<
-        ::fidl::WireTableFrame<::test_arrays::wire::TableLargeArray>>(
-        allocator);
+    frame_ptr_ = ::fidl::ObjectView<::fidl::WireTableFrame<::test_arrays::wire::TableLargeArray>>(allocator);
   }
-  void Init(::fidl::ObjectView<::fidl::WireTableFrame<
-                ::test_arrays::wire::TableLargeArray>>&& frame_ptr) {
+  void Init(::fidl::ObjectView<::fidl::WireTableFrame<::test_arrays::wire::TableLargeArray>>&& frame_ptr) {
     max_ordinal_ = 0;
     frame_ptr_ = std::move(frame_ptr);
   }
 
  private:
-  friend ::fidl::internal::WireTableBaseBuilder<
-      ::test_arrays::wire::TableLargeArray,
-      ::fidl::WireTableBuilder<::test_arrays::wire::TableLargeArray>>;
-  friend ::fidl::internal::WireTableBaseBuilder<
-      ::test_arrays::wire::TableLargeArray,
-      ::fidl::WireTableExternalBuilder<::test_arrays::wire::TableLargeArray>>;
+  friend ::fidl::internal::WireTableBaseBuilder<::test_arrays::wire::TableLargeArray, ::fidl::WireTableBuilder<::test_arrays::wire::TableLargeArray>>;
+  friend ::fidl::internal::WireTableBaseBuilder<::test_arrays::wire::TableLargeArray, ::fidl::WireTableExternalBuilder<::test_arrays::wire::TableLargeArray>>;
 
   uint64_t max_ordinal_ = 0;
-  ::fidl::ObjectView<
-      ::fidl::WireTableFrame<::test_arrays::wire::TableLargeArray>>
-      frame_ptr_;
+  ::fidl::ObjectView<::fidl::WireTableFrame<::test_arrays::wire::TableLargeArray>> frame_ptr_;
 };
 }  // namespace wire
 }  // namespace test_arrays
 template <typename BuilderImpl>
-class ::fidl::internal::WireTableBaseBuilder<
-    ::test_arrays::wire::TableLargeArray, BuilderImpl> {
+class ::fidl::internal::WireTableBaseBuilder<::test_arrays::wire::TableLargeArray, BuilderImpl> {
  public:
   // Build and return the table. The builder should not be used after this.
   ::test_arrays::wire::TableLargeArray Build() {
@@ -439,15 +368,12 @@ class ::fidl::internal::WireTableBaseBuilder<
   BuilderImpl& a(::fidl::ObjectView<::fidl::Array<uint32_t, 100>> elem) {
     ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
     table_.frame_ptr_->a_.set_data(elem);
-    table_.max_ordinal_ =
-        std::max(table_.max_ordinal_, static_cast<uint64_t>(1));
+    table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(1));
     return *static_cast<BuilderImpl*>(this);
   }
 
  protected:
-  WireTableBaseBuilder(
-      ::fidl::ObjectView<
-          ::fidl::WireTableFrame<::test_arrays::wire::TableLargeArray>>&& frame)
+  WireTableBaseBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_arrays::wire::TableLargeArray>>&& frame)
       : table_(std::move(frame)) {}
 
  private:
@@ -455,76 +381,51 @@ class ::fidl::internal::WireTableBaseBuilder<
 };
 
 template <>
-class ::fidl::WireTableBuilder<::test_arrays::wire::TableLargeArray> final
-    : public ::fidl::internal::WireTableBaseBuilder<
-          ::test_arrays::wire::TableLargeArray,
-          ::fidl::WireTableBuilder<::test_arrays::wire::TableLargeArray>> {
-  using Base = ::fidl::internal::WireTableBaseBuilder<
-      ::test_arrays::wire::TableLargeArray,
-      ::fidl::WireTableBuilder<::test_arrays::wire::TableLargeArray>>;
+class ::fidl::WireTableBuilder<::test_arrays::wire::TableLargeArray> final : public ::fidl::internal::WireTableBaseBuilder<::test_arrays::wire::TableLargeArray, ::fidl::WireTableBuilder<::test_arrays::wire::TableLargeArray>> {
+  using Base = ::fidl::internal::WireTableBaseBuilder<::test_arrays::wire::TableLargeArray, ::fidl::WireTableBuilder<::test_arrays::wire::TableLargeArray>>;
 
  public:
   using Base::a;
 
   template <typename... Args>
-  ::fidl::WireTableBuilder<::test_arrays::wire::TableLargeArray>& a(
-      Args&&... args_) {
-    a(::fidl::ObjectView<::fidl::Array<uint32_t, 100>>(
-        arena_.get(), std::forward<Args>(args_)...));
+  ::fidl::WireTableBuilder<::test_arrays::wire::TableLargeArray>& a(Args&&... args_) {
+    a(::fidl::ObjectView<::fidl::Array<uint32_t, 100>>(arena_.get(), std::forward<Args>(args_)...));
     return *this;
   }
 
  private:
   friend class ::test_arrays::wire::TableLargeArray;
   WireTableBuilder(::fidl::AnyArena& arena)
-      : Base(::fidl::ObjectView<
-             ::fidl::WireTableFrame<::test_arrays::wire::TableLargeArray>>(
-            arena)),
+      : Base(::fidl::ObjectView<::fidl::WireTableFrame<::test_arrays::wire::TableLargeArray>>(arena)),
         arena_(arena) {}
 
   [[maybe_unused]] std::reference_wrapper<::fidl::AnyArena> arena_;
 };
 
 template <>
-class ::fidl::WireTableExternalBuilder<::test_arrays::wire::TableLargeArray>
-    final : public ::fidl::internal::WireTableBaseBuilder<
-                ::test_arrays::wire::TableLargeArray,
-                ::fidl::WireTableExternalBuilder<
-                    ::test_arrays::wire::TableLargeArray>> {
-  using Base = ::fidl::internal::WireTableBaseBuilder<
-      ::test_arrays::wire::TableLargeArray,
-      ::fidl::WireTableExternalBuilder<::test_arrays::wire::TableLargeArray>>;
+class ::fidl::WireTableExternalBuilder<::test_arrays::wire::TableLargeArray> final : public ::fidl::internal::WireTableBaseBuilder<::test_arrays::wire::TableLargeArray, ::fidl::WireTableExternalBuilder<::test_arrays::wire::TableLargeArray>> {
+  using Base = ::fidl::internal::WireTableBaseBuilder<::test_arrays::wire::TableLargeArray, ::fidl::WireTableExternalBuilder<::test_arrays::wire::TableLargeArray>>;
 
  private:
   friend class ::test_arrays::wire::TableLargeArray;
   using Base::Base;
-  WireTableExternalBuilder(
-      ::fidl::WireTableFrame<::test_arrays::wire::TableLargeArray>* frame)
-      : Base(::fidl::ObjectView<::fidl::WireTableFrame<
-                 ::test_arrays::wire::TableLargeArray>>::FromExternal(frame)) {}
+  WireTableExternalBuilder(::fidl::WireTableFrame<::test_arrays::wire::TableLargeArray>* frame)
+      : Base(::fidl::ObjectView<::fidl::WireTableFrame<::test_arrays::wire::TableLargeArray>>::FromExternal(frame)) {}
 };
 namespace test_arrays {
 namespace wire {
-inline ::fidl::WireTableBuilder<::test_arrays::wire::TableLargeArray>
-TableLargeArray::Builder(::fidl::AnyArena& arena) {
+inline ::fidl::WireTableBuilder<::test_arrays::wire::TableLargeArray> TableLargeArray::Builder(::fidl::AnyArena& arena) {
   return ::fidl::WireTableBuilder<::test_arrays::wire::TableLargeArray>(arena);
 }
-inline ::fidl::WireTableExternalBuilder<::test_arrays::wire::TableLargeArray>
-TableLargeArray::ExternalBuilder(
-    ::fidl::ObjectView<
-        ::fidl::WireTableFrame<::test_arrays::wire::TableLargeArray>>
-        frame) {
-  return ::fidl::WireTableExternalBuilder<::test_arrays::wire::TableLargeArray>(
-      std::move(frame));
+inline ::fidl::WireTableExternalBuilder<::test_arrays::wire::TableLargeArray> TableLargeArray::ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_arrays::wire::TableLargeArray>> frame) {
+  return ::fidl::WireTableExternalBuilder<::test_arrays::wire::TableLargeArray>(std::move(frame));
 }
 
 extern "C" const fidl_type_t test_arrays_UnionSmallArrayTable;
 
 class UnionSmallArray {
  public:
-  UnionSmallArray()
-      : ordinal_(::test_arrays::wire::UnionSmallArray::Ordinal::Invalid),
-        envelope_{} {}
+  UnionSmallArray() : ordinal_(::test_arrays::wire::UnionSmallArray::Ordinal::Invalid), envelope_{} {}
 
   UnionSmallArray(const UnionSmallArray&) = default;
   UnionSmallArray& operator=(const UnionSmallArray&) = default;
@@ -535,16 +436,11 @@ class UnionSmallArray {
     kA = 1,  // 0x1
   };
 
-  bool has_invalid_tag() const {
-    return ordinal_ == ::test_arrays::wire::UnionSmallArray::Ordinal::Invalid;
-  }
+  bool has_invalid_tag() const { return ordinal_ == ::test_arrays::wire::UnionSmallArray::Ordinal::Invalid; }
 
-  bool is_a() const {
-    return ordinal_ == ::test_arrays::wire::UnionSmallArray::Ordinal::kA;
-  }
+  bool is_a() const { return ordinal_ == ::test_arrays::wire::UnionSmallArray::Ordinal::kA; }
 
-  static UnionSmallArray WithA(
-      ::fidl::ObjectView<::fidl::Array<uint32_t, 2>> val) {
+  static UnionSmallArray WithA(::fidl::ObjectView<::fidl::Array<uint32_t, 2>> val) {
     UnionSmallArray result;
     result.ordinal_ = ::test_arrays::wire::UnionSmallArray::Ordinal::kA;
     result.envelope_.As<::fidl::Array<uint32_t, 2>>().set_data(std::move(val));
@@ -553,8 +449,8 @@ class UnionSmallArray {
 
   template <typename... Args>
   static UnionSmallArray WithA(::fidl::AnyArena& allocator, Args&&... args) {
-    return WithA(::fidl::ObjectView<::fidl::Array<uint32_t, 2>>(
-        allocator, std::forward<Args>(args)...));
+    return WithA(::fidl::ObjectView<::fidl::Array<uint32_t, 2>>(allocator,
+                                                                std::forward<Args>(args)...));
   }
 
   ::fidl::Array<uint32_t, 2>& a() {
@@ -586,9 +482,7 @@ extern "C" const fidl_type_t test_arrays_UnionLargeArrayTable;
 
 class UnionLargeArray {
  public:
-  UnionLargeArray()
-      : ordinal_(::test_arrays::wire::UnionLargeArray::Ordinal::Invalid),
-        envelope_{} {}
+  UnionLargeArray() : ordinal_(::test_arrays::wire::UnionLargeArray::Ordinal::Invalid), envelope_{} {}
 
   UnionLargeArray(const UnionLargeArray&) = default;
   UnionLargeArray& operator=(const UnionLargeArray&) = default;
@@ -599,27 +493,21 @@ class UnionLargeArray {
     kA = 1,  // 0x1
   };
 
-  bool has_invalid_tag() const {
-    return ordinal_ == ::test_arrays::wire::UnionLargeArray::Ordinal::Invalid;
-  }
+  bool has_invalid_tag() const { return ordinal_ == ::test_arrays::wire::UnionLargeArray::Ordinal::Invalid; }
 
-  bool is_a() const {
-    return ordinal_ == ::test_arrays::wire::UnionLargeArray::Ordinal::kA;
-  }
+  bool is_a() const { return ordinal_ == ::test_arrays::wire::UnionLargeArray::Ordinal::kA; }
 
-  static UnionLargeArray WithA(
-      ::fidl::ObjectView<::fidl::Array<uint32_t, 100>> val) {
+  static UnionLargeArray WithA(::fidl::ObjectView<::fidl::Array<uint32_t, 100>> val) {
     UnionLargeArray result;
     result.ordinal_ = ::test_arrays::wire::UnionLargeArray::Ordinal::kA;
-    result.envelope_.As<::fidl::Array<uint32_t, 100>>().set_data(
-        std::move(val));
+    result.envelope_.As<::fidl::Array<uint32_t, 100>>().set_data(std::move(val));
     return result;
   }
 
   template <typename... Args>
   static UnionLargeArray WithA(::fidl::AnyArena& allocator, Args&&... args) {
-    return WithA(::fidl::ObjectView<::fidl::Array<uint32_t, 100>>(
-        allocator, std::forward<Args>(args)...));
+    return WithA(::fidl::ObjectView<::fidl::Array<uint32_t, 100>>(allocator,
+                                                                  std::forward<Args>(args)...));
   }
 
   ::fidl::Array<uint32_t, 100>& a() {
@@ -666,8 +554,7 @@ namespace fidl {
 // TODO(fxbug.dev/95833) Remove this.
 template <>
 struct DeprecatedCTypeTraits<::test_arrays::wire::StructSmallArray> {
-  static constexpr const fidl_type_t* kType =
-      &::test_arrays::wire::test_arrays_StructSmallArrayTable;
+  static constexpr const fidl_type_t* kType = &::test_arrays::wire::test_arrays_StructSmallArrayTable;
 };
 
 template <>
@@ -683,55 +570,34 @@ struct TypeTraits<::test_arrays::wire::StructSmallArray> {
 };
 
 template <>
-struct IsFidlType<::test_arrays::wire::StructSmallArray>
-    : public std::true_type {};
+struct IsFidlType<::test_arrays::wire::StructSmallArray> : public std::true_type {};
 template <>
-struct IsStruct<::test_arrays::wire::StructSmallArray> : public std::true_type {
-};
+struct IsStruct<::test_arrays::wire::StructSmallArray> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test_arrays::wire::StructSmallArray>);
 static_assert(offsetof(::test_arrays::wire::StructSmallArray, a) == 0);
-static_assert(sizeof(::test_arrays::wire::StructSmallArray) ==
-              TypeTraits<::test_arrays::wire::StructSmallArray>::kPrimarySize);
+static_assert(sizeof(::test_arrays::wire::StructSmallArray) == TypeTraits<::test_arrays::wire::StructSmallArray>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::test_arrays::wire::StructSmallArray,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_arrays::wire::StructSmallArray, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 8;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::WireStructMemberCodingInfo<
-          ::fidl::Array<uint32_t, 2>, fidl::internal::WireCodingConstraintEmpty,
-          IsRecursive>());
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<::fidl::Array<uint32_t, 2>, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
   static constexpr bool kHasPadding = false;
-  using Base =
-      WireStructCodingTraitsBase<::test_arrays::wire::StructSmallArray,
-                                 ::fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_arrays::wire::StructSmallArray, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
-  static void Encode(internal::WireEncoder* encoder,
-                     ::test_arrays::wire::StructSmallArray* value,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Encode(
+      internal::WireEncoder* encoder, ::test_arrays::wire::StructSmallArray* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value,
-             sizeof(::test_arrays::wire::StructSmallArray));
+      memcpy(position.As<void>(), value, sizeof(::test_arrays::wire::StructSmallArray));
     } else {
-      internal::WireCodingTraits<::fidl::Array<uint32_t, 2>,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->a,
-                                                      position + 0,
-                                                      recursion_depth);
+      internal::WireCodingTraits<::fidl::Array<uint32_t, 2>, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->a, position + 0, recursion_depth);
     }
   }
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (!Base::are_members_memcpy_compatible) {
-      internal::WireCodingTraits<::fidl::Array<uint32_t, 2>,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 0,
-                                                      recursion_depth);
+      internal::WireCodingTraits<::fidl::Array<uint32_t, 2>, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 0, recursion_depth);
     }
   }
 };
@@ -739,8 +605,7 @@ struct ::fidl::internal::WireCodingTraits<
 // TODO(fxbug.dev/95833) Remove this.
 template <>
 struct DeprecatedCTypeTraits<::test_arrays::wire::StructLargeArray> {
-  static constexpr const fidl_type_t* kType =
-      &::test_arrays::wire::test_arrays_StructLargeArrayTable;
+  static constexpr const fidl_type_t* kType = &::test_arrays::wire::test_arrays_StructLargeArrayTable;
 };
 
 template <>
@@ -756,55 +621,34 @@ struct TypeTraits<::test_arrays::wire::StructLargeArray> {
 };
 
 template <>
-struct IsFidlType<::test_arrays::wire::StructLargeArray>
-    : public std::true_type {};
+struct IsFidlType<::test_arrays::wire::StructLargeArray> : public std::true_type {};
 template <>
-struct IsStruct<::test_arrays::wire::StructLargeArray> : public std::true_type {
-};
+struct IsStruct<::test_arrays::wire::StructLargeArray> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test_arrays::wire::StructLargeArray>);
 static_assert(offsetof(::test_arrays::wire::StructLargeArray, a) == 0);
-static_assert(sizeof(::test_arrays::wire::StructLargeArray) ==
-              TypeTraits<::test_arrays::wire::StructLargeArray>::kPrimarySize);
+static_assert(sizeof(::test_arrays::wire::StructLargeArray) == TypeTraits<::test_arrays::wire::StructLargeArray>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::test_arrays::wire::StructLargeArray,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_arrays::wire::StructLargeArray, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 400;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::WireStructMemberCodingInfo<
-          ::fidl::Array<uint32_t, 100>,
-          fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<::fidl::Array<uint32_t, 100>, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
   static constexpr bool kHasPadding = false;
-  using Base =
-      WireStructCodingTraitsBase<::test_arrays::wire::StructLargeArray,
-                                 ::fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_arrays::wire::StructLargeArray, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
-  static void Encode(internal::WireEncoder* encoder,
-                     ::test_arrays::wire::StructLargeArray* value,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Encode(
+      internal::WireEncoder* encoder, ::test_arrays::wire::StructLargeArray* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value,
-             sizeof(::test_arrays::wire::StructLargeArray));
+      memcpy(position.As<void>(), value, sizeof(::test_arrays::wire::StructLargeArray));
     } else {
-      internal::WireCodingTraits<::fidl::Array<uint32_t, 100>,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->a,
-                                                      position + 0,
-                                                      recursion_depth);
+      internal::WireCodingTraits<::fidl::Array<uint32_t, 100>, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->a, position + 0, recursion_depth);
     }
   }
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (!Base::are_members_memcpy_compatible) {
-      internal::WireCodingTraits<::fidl::Array<uint32_t, 100>,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 0,
-                                                      recursion_depth);
+      internal::WireCodingTraits<::fidl::Array<uint32_t, 100>, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 0, recursion_depth);
     }
   }
 };
@@ -822,25 +666,19 @@ struct TypeTraits<::test_arrays::wire::TableSmallArray> {
 };
 
 template <>
-struct IsFidlType<::test_arrays::wire::TableSmallArray>
-    : public std::true_type {};
+struct IsFidlType<::test_arrays::wire::TableSmallArray> : public std::true_type {};
 template <>
 struct IsTable<::test_arrays::wire::TableSmallArray> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test_arrays::wire::TableSmallArray>);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::test_arrays::wire::TableSmallArray,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+struct ::fidl::internal::WireCodingTraits<::test_arrays::wire::TableSmallArray, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
     : ::fidl::internal::WireTableCodingTraitsBase<IsRecursive> {
   using Base = ::fidl::internal::WireTableCodingTraitsBase<IsRecursive>;
   static constexpr size_t inline_size = 16;
   static constexpr bool is_memcpy_compatible = false;
 
-  static void Encode(internal::WireEncoder* encoder,
-                     ::test_arrays::wire::TableSmallArray* value,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Encode(internal::WireEncoder* encoder, ::test_arrays::wire::TableSmallArray* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(encoder, 2);
     if (!inner_depth.IsValid()) {
       return;
@@ -848,8 +686,7 @@ struct ::fidl::internal::WireCodingTraits<
 
     ::fidl::internal::WirePosition vector_position;
     if (Base::PreworkResult::kEarlyExit ==
-        Base::PrepareForBodyEncode(encoder, value, position,
-                                   &vector_position)) {
+        Base::PrepareForBodyEncode(encoder, value, position, &vector_position)) {
       return;
     }
 
@@ -859,37 +696,27 @@ struct ::fidl::internal::WireCodingTraits<
       size_t inline_size = 0;
       switch (i) {
         case 0:
-          inline_size = ::fidl::internal::WireCodingTraits<
-              ::fidl::Array<uint32_t, 2>,
-              fidl::internal::WireCodingConstraintEmpty,
-              IsRecursive>::inline_size;
+          inline_size = ::fidl::internal::WireCodingTraits<::fidl::Array<uint32_t, 2>, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
           break;
       }
       ::fidl::internal::EncodeFn<IsRecursive> encode_fn = nullptr;
       switch (i) {
         case 0:
-          encode_fn = ::fidl::internal::MakeEncodeFn<
-              ::fidl::Array<uint32_t, 2>,
-              fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+          encode_fn = ::fidl::internal::MakeEncodeFn<::fidl::Array<uint32_t, 2>, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
           break;
       }
-      WirePosition envelope_position =
-          vector_position + i * sizeof(fidl_envelope_v2_t);
-      WireEncodeEnvelope(inline_size, encode_fn, encoder, &envelopes[i],
-                         envelope_position, inner_depth);
+      WirePosition envelope_position = vector_position + i * sizeof(fidl_envelope_v2_t);
+      WireEncodeEnvelope(inline_size, encode_fn, encoder, &envelopes[i], envelope_position, inner_depth);
     }
   }
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Decode(internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(decoder, 2);
     if (!inner_depth.IsValid()) {
       return;
     }
 
     ::fidl::internal::WirePosition vector_position;
-    if (Base::PreworkResult::kEarlyExit ==
-        Base::DecodePrework(decoder, position, &vector_position)) {
+    if (Base::PreworkResult::kEarlyExit == Base::DecodePrework(decoder, position, &vector_position)) {
       return;
     }
 
@@ -898,23 +725,16 @@ struct ::fidl::internal::WireCodingTraits<
       size_t inline_size = 0;
       switch (i) {
         case 0:
-          inline_size = ::fidl::internal::WireCodingTraits<
-              ::fidl::Array<uint32_t, 2>,
-              fidl::internal::WireCodingConstraintEmpty,
-              IsRecursive>::inline_size;
+          inline_size = ::fidl::internal::WireCodingTraits<::fidl::Array<uint32_t, 2>, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
           break;
       }
       DecodeFn<IsRecursive> decode_fn = nullptr;
       switch (i) {
         case 0:
-          decode_fn = ::fidl::internal::MakeDecodeFn<
-              ::fidl::Array<uint32_t, 2>,
-              fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+          decode_fn = ::fidl::internal::MakeDecodeFn<::fidl::Array<uint32_t, 2>, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
           break;
       }
-      ::fidl::internal::WireDecodeOptionalEnvelope(
-          inline_size, decode_fn, decoder,
-          vector_position + i * sizeof(fidl_envelope_v2_t), inner_depth);
+      ::fidl::internal::WireDecodeOptionalEnvelope(inline_size, decode_fn, decoder, vector_position + i * sizeof(fidl_envelope_v2_t), inner_depth);
     }
   }
 };
@@ -932,25 +752,19 @@ struct TypeTraits<::test_arrays::wire::TableLargeArray> {
 };
 
 template <>
-struct IsFidlType<::test_arrays::wire::TableLargeArray>
-    : public std::true_type {};
+struct IsFidlType<::test_arrays::wire::TableLargeArray> : public std::true_type {};
 template <>
 struct IsTable<::test_arrays::wire::TableLargeArray> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test_arrays::wire::TableLargeArray>);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::test_arrays::wire::TableLargeArray,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+struct ::fidl::internal::WireCodingTraits<::test_arrays::wire::TableLargeArray, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
     : ::fidl::internal::WireTableCodingTraitsBase<IsRecursive> {
   using Base = ::fidl::internal::WireTableCodingTraitsBase<IsRecursive>;
   static constexpr size_t inline_size = 16;
   static constexpr bool is_memcpy_compatible = false;
 
-  static void Encode(internal::WireEncoder* encoder,
-                     ::test_arrays::wire::TableLargeArray* value,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Encode(internal::WireEncoder* encoder, ::test_arrays::wire::TableLargeArray* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(encoder, 2);
     if (!inner_depth.IsValid()) {
       return;
@@ -958,8 +772,7 @@ struct ::fidl::internal::WireCodingTraits<
 
     ::fidl::internal::WirePosition vector_position;
     if (Base::PreworkResult::kEarlyExit ==
-        Base::PrepareForBodyEncode(encoder, value, position,
-                                   &vector_position)) {
+        Base::PrepareForBodyEncode(encoder, value, position, &vector_position)) {
       return;
     }
 
@@ -969,37 +782,27 @@ struct ::fidl::internal::WireCodingTraits<
       size_t inline_size = 0;
       switch (i) {
         case 0:
-          inline_size = ::fidl::internal::WireCodingTraits<
-              ::fidl::Array<uint32_t, 100>,
-              fidl::internal::WireCodingConstraintEmpty,
-              IsRecursive>::inline_size;
+          inline_size = ::fidl::internal::WireCodingTraits<::fidl::Array<uint32_t, 100>, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
           break;
       }
       ::fidl::internal::EncodeFn<IsRecursive> encode_fn = nullptr;
       switch (i) {
         case 0:
-          encode_fn = ::fidl::internal::MakeEncodeFn<
-              ::fidl::Array<uint32_t, 100>,
-              fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+          encode_fn = ::fidl::internal::MakeEncodeFn<::fidl::Array<uint32_t, 100>, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
           break;
       }
-      WirePosition envelope_position =
-          vector_position + i * sizeof(fidl_envelope_v2_t);
-      WireEncodeEnvelope(inline_size, encode_fn, encoder, &envelopes[i],
-                         envelope_position, inner_depth);
+      WirePosition envelope_position = vector_position + i * sizeof(fidl_envelope_v2_t);
+      WireEncodeEnvelope(inline_size, encode_fn, encoder, &envelopes[i], envelope_position, inner_depth);
     }
   }
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Decode(internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(decoder, 2);
     if (!inner_depth.IsValid()) {
       return;
     }
 
     ::fidl::internal::WirePosition vector_position;
-    if (Base::PreworkResult::kEarlyExit ==
-        Base::DecodePrework(decoder, position, &vector_position)) {
+    if (Base::PreworkResult::kEarlyExit == Base::DecodePrework(decoder, position, &vector_position)) {
       return;
     }
 
@@ -1008,23 +811,16 @@ struct ::fidl::internal::WireCodingTraits<
       size_t inline_size = 0;
       switch (i) {
         case 0:
-          inline_size = ::fidl::internal::WireCodingTraits<
-              ::fidl::Array<uint32_t, 100>,
-              fidl::internal::WireCodingConstraintEmpty,
-              IsRecursive>::inline_size;
+          inline_size = ::fidl::internal::WireCodingTraits<::fidl::Array<uint32_t, 100>, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
           break;
       }
       DecodeFn<IsRecursive> decode_fn = nullptr;
       switch (i) {
         case 0:
-          decode_fn = ::fidl::internal::MakeDecodeFn<
-              ::fidl::Array<uint32_t, 100>,
-              fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+          decode_fn = ::fidl::internal::MakeDecodeFn<::fidl::Array<uint32_t, 100>, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
           break;
       }
-      ::fidl::internal::WireDecodeOptionalEnvelope(
-          inline_size, decode_fn, decoder,
-          vector_position + i * sizeof(fidl_envelope_v2_t), inner_depth);
+      ::fidl::internal::WireDecodeOptionalEnvelope(inline_size, decode_fn, decoder, vector_position + i * sizeof(fidl_envelope_v2_t), inner_depth);
     }
   }
 };
@@ -1042,22 +838,17 @@ struct TypeTraits<::test_arrays::wire::UnionSmallArray> {
 };
 
 template <>
-struct IsFidlType<::test_arrays::wire::UnionSmallArray>
-    : public std::true_type {};
+struct IsFidlType<::test_arrays::wire::UnionSmallArray> : public std::true_type {};
 template <>
 struct IsUnion<::test_arrays::wire::UnionSmallArray> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test_arrays::wire::UnionSmallArray>);
 
 template <typename Constraint, bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::test_arrays::wire::UnionSmallArray,
-                                          Constraint, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_arrays::wire::UnionSmallArray, Constraint, IsRecursive> {
   static constexpr size_t inline_size = 16;
   static constexpr bool is_memcpy_compatible = false;
 
-  static void Encode(internal::WireEncoder* encoder,
-                     ::test_arrays::wire::UnionSmallArray* value,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Encode(internal::WireEncoder* encoder, ::test_arrays::wire::UnionSmallArray* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     fidl_xunion_v2_t* u = reinterpret_cast<fidl_xunion_v2_t*>(value);
 
     if (unlikely(u->tag == 0)) {
@@ -1079,10 +870,7 @@ struct ::fidl::internal::WireCodingTraits<::test_arrays::wire::UnionSmallArray,
     size_t inline_size;
     switch (u->tag) {
       case 1:  // ::test_arrays::wire::UnionSmallArray::Tag::kA
-        inline_size = ::fidl::internal::WireCodingTraits<
-            ::fidl::Array<uint32_t, 2>,
-            fidl::internal::WireCodingConstraintEmpty,
-            IsRecursive>::inline_size;
+        inline_size = ::fidl::internal::WireCodingTraits<::fidl::Array<uint32_t, 2>, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
         break;
       default:
         inline_size = 0;
@@ -1091,23 +879,17 @@ struct ::fidl::internal::WireCodingTraits<::test_arrays::wire::UnionSmallArray,
     ::fidl::internal::EncodeFn<IsRecursive> encode_fn;
     switch (u->tag) {
       case 1:  // ::test_arrays::wire::UnionSmallArray::Tag::kA
-        encode_fn = ::fidl::internal::MakeEncodeFn<
-            ::fidl::Array<uint32_t, 2>,
-            fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        encode_fn = ::fidl::internal::MakeEncodeFn<::fidl::Array<uint32_t, 2>, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
         break;
       default:
         encode_fn = nullptr;
         break;
     }
-    WireEncodeEnvelope(inline_size, encode_fn, encoder, &u->envelope,
-                       position + sizeof(fidl_xunion_tag_t), inner_depth);
+    WireEncodeEnvelope(inline_size, encode_fn, encoder, &u->envelope, position + sizeof(fidl_xunion_tag_t), inner_depth);
   }
 
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
-    ::test_arrays::wire::UnionSmallArray::Tag tag =
-        *position.As<::test_arrays::wire::UnionSmallArray::Tag>();
+  static void Decode(internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    ::test_arrays::wire::UnionSmallArray::Tag tag = *position.As<::test_arrays::wire::UnionSmallArray::Tag>();
     if (unlikely(static_cast<uint64_t>(tag) == 0)) {
       if constexpr (!Constraint::is_optional) {
         decoder->SetError(kCodingErrorInvalidUnionTag);
@@ -1128,10 +910,7 @@ struct ::fidl::internal::WireCodingTraits<::test_arrays::wire::UnionSmallArray,
     size_t inline_size;
     switch (tag) {
       case ::test_arrays::wire::UnionSmallArray::Tag::kA:
-        inline_size = ::fidl::internal::WireCodingTraits<
-            ::fidl::Array<uint32_t, 2>,
-            fidl::internal::WireCodingConstraintEmpty,
-            IsRecursive>::inline_size;
+        inline_size = ::fidl::internal::WireCodingTraits<::fidl::Array<uint32_t, 2>, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
         break;
       default:
         inline_size = 0;
@@ -1140,28 +919,20 @@ struct ::fidl::internal::WireCodingTraits<::test_arrays::wire::UnionSmallArray,
     DecodeFn<IsRecursive> decode_fn;
     switch (tag) {
       case ::test_arrays::wire::UnionSmallArray::Tag::kA:
-        decode_fn = ::fidl::internal::MakeDecodeFn<
-            ::fidl::Array<uint32_t, 2>,
-            fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        decode_fn = ::fidl::internal::MakeDecodeFn<::fidl::Array<uint32_t, 2>, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
         break;
       default:
         decode_fn = nullptr;
         break;
     }
-    ::fidl::internal::WireDecodeStrictEnvelope(
-        inline_size, decode_fn, decoder, position + sizeof(fidl_xunion_tag_t),
-        inner_depth);
+    ::fidl::internal::WireDecodeStrictEnvelope(inline_size, decode_fn, decoder, position + sizeof(fidl_xunion_tag_t), inner_depth);
   }
 };
 
 // Top-level union.
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::test_arrays::wire::UnionSmallArray,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-    : public ::fidl::internal::WireCodingTraits<
-          ::test_arrays::wire::UnionSmallArray,
-          ::fidl::internal::WireCodingConstraintUnion<false>, IsRecursive> {};
+struct ::fidl::internal::WireCodingTraits<::test_arrays::wire::UnionSmallArray, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public ::fidl::internal::WireCodingTraits<::test_arrays::wire::UnionSmallArray, ::fidl::internal::WireCodingConstraintUnion<false>, IsRecursive> {};
 
 template <>
 struct TypeTraits<::test_arrays::wire::UnionLargeArray> {
@@ -1176,22 +947,17 @@ struct TypeTraits<::test_arrays::wire::UnionLargeArray> {
 };
 
 template <>
-struct IsFidlType<::test_arrays::wire::UnionLargeArray>
-    : public std::true_type {};
+struct IsFidlType<::test_arrays::wire::UnionLargeArray> : public std::true_type {};
 template <>
 struct IsUnion<::test_arrays::wire::UnionLargeArray> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test_arrays::wire::UnionLargeArray>);
 
 template <typename Constraint, bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::test_arrays::wire::UnionLargeArray,
-                                          Constraint, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_arrays::wire::UnionLargeArray, Constraint, IsRecursive> {
   static constexpr size_t inline_size = 16;
   static constexpr bool is_memcpy_compatible = false;
 
-  static void Encode(internal::WireEncoder* encoder,
-                     ::test_arrays::wire::UnionLargeArray* value,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Encode(internal::WireEncoder* encoder, ::test_arrays::wire::UnionLargeArray* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     fidl_xunion_v2_t* u = reinterpret_cast<fidl_xunion_v2_t*>(value);
 
     if (unlikely(u->tag == 0)) {
@@ -1213,10 +979,7 @@ struct ::fidl::internal::WireCodingTraits<::test_arrays::wire::UnionLargeArray,
     size_t inline_size;
     switch (u->tag) {
       case 1:  // ::test_arrays::wire::UnionLargeArray::Tag::kA
-        inline_size = ::fidl::internal::WireCodingTraits<
-            ::fidl::Array<uint32_t, 100>,
-            fidl::internal::WireCodingConstraintEmpty,
-            IsRecursive>::inline_size;
+        inline_size = ::fidl::internal::WireCodingTraits<::fidl::Array<uint32_t, 100>, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
         break;
       default:
         inline_size = 0;
@@ -1225,23 +988,17 @@ struct ::fidl::internal::WireCodingTraits<::test_arrays::wire::UnionLargeArray,
     ::fidl::internal::EncodeFn<IsRecursive> encode_fn;
     switch (u->tag) {
       case 1:  // ::test_arrays::wire::UnionLargeArray::Tag::kA
-        encode_fn = ::fidl::internal::MakeEncodeFn<
-            ::fidl::Array<uint32_t, 100>,
-            fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        encode_fn = ::fidl::internal::MakeEncodeFn<::fidl::Array<uint32_t, 100>, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
         break;
       default:
         encode_fn = nullptr;
         break;
     }
-    WireEncodeEnvelope(inline_size, encode_fn, encoder, &u->envelope,
-                       position + sizeof(fidl_xunion_tag_t), inner_depth);
+    WireEncodeEnvelope(inline_size, encode_fn, encoder, &u->envelope, position + sizeof(fidl_xunion_tag_t), inner_depth);
   }
 
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
-    ::test_arrays::wire::UnionLargeArray::Tag tag =
-        *position.As<::test_arrays::wire::UnionLargeArray::Tag>();
+  static void Decode(internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    ::test_arrays::wire::UnionLargeArray::Tag tag = *position.As<::test_arrays::wire::UnionLargeArray::Tag>();
     if (unlikely(static_cast<uint64_t>(tag) == 0)) {
       if constexpr (!Constraint::is_optional) {
         decoder->SetError(kCodingErrorInvalidUnionTag);
@@ -1262,10 +1019,7 @@ struct ::fidl::internal::WireCodingTraits<::test_arrays::wire::UnionLargeArray,
     size_t inline_size;
     switch (tag) {
       case ::test_arrays::wire::UnionLargeArray::Tag::kA:
-        inline_size = ::fidl::internal::WireCodingTraits<
-            ::fidl::Array<uint32_t, 100>,
-            fidl::internal::WireCodingConstraintEmpty,
-            IsRecursive>::inline_size;
+        inline_size = ::fidl::internal::WireCodingTraits<::fidl::Array<uint32_t, 100>, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
         break;
       default:
         inline_size = 0;
@@ -1274,27 +1028,19 @@ struct ::fidl::internal::WireCodingTraits<::test_arrays::wire::UnionLargeArray,
     DecodeFn<IsRecursive> decode_fn;
     switch (tag) {
       case ::test_arrays::wire::UnionLargeArray::Tag::kA:
-        decode_fn = ::fidl::internal::MakeDecodeFn<
-            ::fidl::Array<uint32_t, 100>,
-            fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        decode_fn = ::fidl::internal::MakeDecodeFn<::fidl::Array<uint32_t, 100>, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
         break;
       default:
         decode_fn = nullptr;
         break;
     }
-    ::fidl::internal::WireDecodeStrictEnvelope(
-        inline_size, decode_fn, decoder, position + sizeof(fidl_xunion_tag_t),
-        inner_depth);
+    ::fidl::internal::WireDecodeStrictEnvelope(inline_size, decode_fn, decoder, position + sizeof(fidl_xunion_tag_t), inner_depth);
   }
 };
 
 // Top-level union.
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::test_arrays::wire::UnionLargeArray,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-    : public ::fidl::internal::WireCodingTraits<
-          ::test_arrays::wire::UnionLargeArray,
-          ::fidl::internal::WireCodingConstraintUnion<false>, IsRecursive> {};
+struct ::fidl::internal::WireCodingTraits<::test_arrays::wire::UnionLargeArray, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public ::fidl::internal::WireCodingTraits<::test_arrays::wire::UnionLargeArray, ::fidl::internal::WireCodingConstraintUnion<false>, IsRecursive> {};
 
 }  // namespace fidl

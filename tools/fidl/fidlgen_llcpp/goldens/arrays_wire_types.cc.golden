@@ -4,22 +4,17 @@
 
 void ::test_arrays::wire::UnionSmallArray::SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(UnionSmallArray) == sizeof(fidl_xunion_v2_t));
-  static_assert(offsetof(UnionSmallArray, ordinal_) ==
-                offsetof(fidl_xunion_v2_t, tag));
-  static_assert(offsetof(UnionSmallArray, envelope_) ==
-                offsetof(fidl_xunion_v2_t, envelope));
+  static_assert(offsetof(UnionSmallArray, ordinal_) == offsetof(fidl_xunion_v2_t, tag));
+  static_assert(offsetof(UnionSmallArray, envelope_) == offsetof(fidl_xunion_v2_t, envelope));
 }
 
 void ::test_arrays::wire::UnionLargeArray::SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(UnionLargeArray) == sizeof(fidl_xunion_v2_t));
-  static_assert(offsetof(UnionLargeArray, ordinal_) ==
-                offsetof(fidl_xunion_v2_t, tag));
-  static_assert(offsetof(UnionLargeArray, envelope_) ==
-                offsetof(fidl_xunion_v2_t, envelope));
+  static_assert(offsetof(UnionLargeArray, ordinal_) == offsetof(fidl_xunion_v2_t, tag));
+  static_assert(offsetof(UnionLargeArray, envelope_) == offsetof(fidl_xunion_v2_t, envelope));
 }
 
-bool ::fidl::WireTableFrame<
-    ::test_arrays::wire::TableSmallArray>::HasUnknownData() const {
+bool ::fidl::WireTableFrame<::test_arrays::wire::TableSmallArray>::HasUnknownData() const {
   return false;
 }
 
@@ -33,8 +28,7 @@ bool ::test_arrays::wire::TableSmallArray::HasUnknownData() const {
   return frame_ptr_->HasUnknownData();
 }
 
-bool ::fidl::WireTableFrame<
-    ::test_arrays::wire::TableLargeArray>::HasUnknownData() const {
+bool ::fidl::WireTableFrame<::test_arrays::wire::TableLargeArray>::HasUnknownData() const {
   return false;
 }
 

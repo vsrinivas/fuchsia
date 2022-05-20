@@ -11,48 +11,39 @@
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
-namespace fidl {}  // namespace fidl
-template <>
-struct ::fidl::internal::NaturalMethodTypes<
-    ::test_emptystruct::EmptyProtocol::SendAndReceive> {
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<
-      ::test_emptystruct::EmptyProtocol::SendAndReceive>>;
+namespace fidl {
 
-  using ResultCallback = ::fit::callback<void(
-      ::fidl::Result<::test_emptystruct::EmptyProtocol::SendAndReceive>&)>;
+}  // namespace fidl
+template <>
+struct ::fidl::internal::NaturalMethodTypes<::test_emptystruct::EmptyProtocol::SendAndReceive> {
+  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_emptystruct::EmptyProtocol::SendAndReceive>>;
+
+  using ResultCallback =
+      ::fit::callback<void(::fidl::Result<::test_emptystruct::EmptyProtocol::SendAndReceive>&)>;
 
   static constexpr bool HasApplicationError = false;
 
   static constexpr bool IsAbsentBody = false;
 };
 namespace test_emptystruct {
-__LOCAL extern "C" const fidl_type_t
-    test_emptystruct_EmptyProtocolSendRequestTable;
+__LOCAL extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendRequestTable;
 
-__LOCAL extern "C" const fidl_type_t
-    test_emptystruct_EmptyProtocolReceiveRequestTable;
-__LOCAL extern "C" const fidl_type_t
-    test_emptystruct_EmptyProtocolSendAndReceiveRequestTable;
-__LOCAL extern "C" const fidl_type_t
-    test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_emptystruct_EmptyProtocolReceiveRequestTable;
+__LOCAL extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendAndReceiveRequestTable;
+__LOCAL extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
 
 #ifdef __Fuchsia__
 }  // namespace test_emptystruct
 
 template <>
-class ::fidl::Event<::test_emptystruct::EmptyProtocol::Receive> final
-    : public ::test_emptystruct::EmptyProtocolReceiveRequest {
+class ::fidl::Event<::test_emptystruct::EmptyProtocol::Receive> final : public ::test_emptystruct::EmptyProtocolReceiveRequest {
  public:
-  using ::test_emptystruct::EmptyProtocolReceiveRequest::
-      EmptyProtocolReceiveRequest;
-  Event(::test_emptystruct::EmptyProtocolReceiveRequest v)
-      : EmptyProtocolReceiveRequest(std::move(v)) {}
+  using ::test_emptystruct::EmptyProtocolReceiveRequest::EmptyProtocolReceiveRequest;
+  Event(::test_emptystruct::EmptyProtocolReceiveRequest v) : EmptyProtocolReceiveRequest(std::move(v)) {}
 };
 
 template <>
-struct ::fidl::internal::MessageTraits<
-    ::fidl::Event<::test_emptystruct::EmptyProtocol::Receive>>
-    final {
+struct ::fidl::internal::MessageTraits<::fidl::Event<::test_emptystruct::EmptyProtocol::Receive>> final {
  public:
   static constexpr bool kHasPayload = true;
   using Payload = ::test_emptystruct::EmptyProtocolReceiveRequest;
@@ -60,51 +51,35 @@ struct ::fidl::internal::MessageTraits<
 namespace test_emptystruct {}  // namespace test_emptystruct
 
 template <>
-class ::fidl::Response<::test_emptystruct::EmptyProtocol::SendAndReceive> final
-    : public ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse {
+class ::fidl::Response<::test_emptystruct::EmptyProtocol::SendAndReceive> final : public ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse {
  public:
-  using ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse::
-      EmptyProtocolSendAndReceiveTopResponse;
-  Response(::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse v)
-      : EmptyProtocolSendAndReceiveTopResponse(std::move(v)) {}
+  using ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse::EmptyProtocolSendAndReceiveTopResponse;
+  Response(::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse v) : EmptyProtocolSendAndReceiveTopResponse(std::move(v)) {}
 };
 
 template <>
-struct ::fidl::internal::MessageTraits<
-    ::fidl::Response<::test_emptystruct::EmptyProtocol::SendAndReceive>>
-    final {
+struct ::fidl::internal::MessageTraits<::fidl::Response<::test_emptystruct::EmptyProtocol::SendAndReceive>> final {
  public:
   static constexpr bool kHasPayload = true;
   using Payload = ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse;
 };
 namespace test_emptystruct {}  // namespace test_emptystruct
 template <>
-class ::fidl::Result<::test_emptystruct::EmptyProtocol::SendAndReceive> final
-    : public ::fitx::result<
-          ::fidl::Error,
-          ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse> {
+class ::fidl::Result<::test_emptystruct::EmptyProtocol::SendAndReceive> final : public ::fitx::result<::fidl::Error, ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse> {
  public:
-  using ::fitx::result<
-      ::fidl::Error,
-      ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse>::result;
+  using ::fitx::result<::fidl::Error, ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse>::result;
 
  protected:
   Result() = default;
 };
 
 template <>
-class ::fidl::internal::NaturalClientImpl<::test_emptystruct::EmptyProtocol>
-    final : public ::fidl::internal::NaturalClientBase {
+class ::fidl::internal::NaturalClientImpl<::test_emptystruct::EmptyProtocol> final : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
-  ::fidl::internal::NaturalThenable<
-      ::test_emptystruct::EmptyProtocol::SendAndReceive>
-  SendAndReceive(
-      ::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive>
-          request) const;
+  ::fidl::internal::NaturalThenable<::test_emptystruct::EmptyProtocol::SendAndReceive> SendAndReceive(::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive> request) const;
 
-  ::fitx::result<::fidl::Error> Send(
-      ::fidl::Request<::test_emptystruct::EmptyProtocol::Send> request) const;
+  ::fitx::result<::fidl::Error> Send(::fidl::Request<::test_emptystruct::EmptyProtocol::Send> request) const;
 };
 namespace test_emptystruct {
 #endif  // __Fuchsia__
@@ -113,22 +88,15 @@ namespace test_emptystruct {
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::internal::NaturalSyncClientImpl<::test_emptystruct::EmptyProtocol>
-    final : public ::fidl::internal::SyncEndpointManagedVeneer<
-                ::fidl::internal::NaturalSyncClientImpl<
-                    ::test_emptystruct::EmptyProtocol>> {
+class ::fidl::internal::NaturalSyncClientImpl<::test_emptystruct::EmptyProtocol> final
+    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalSyncClientImpl<::test_emptystruct::EmptyProtocol>> {
  public:
-  ::fidl::Result<::test_emptystruct::EmptyProtocol::SendAndReceive>
-  SendAndReceive(
-      ::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive>
-          request);
+  ::fidl::Result<::test_emptystruct::EmptyProtocol::SendAndReceive> SendAndReceive(::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive> request);
 
-  ::fitx::result<::fidl::Error> Send(
-      ::fidl::Request<::test_emptystruct::EmptyProtocol::Send> request);
+  ::fitx::result<::fidl::Error> Send(::fidl::Request<::test_emptystruct::EmptyProtocol::Send> request);
 
  private:
-  ::fidl::UnownedClientEnd<::test_emptystruct::EmptyProtocol> _client_end()
-      const {
+  ::fidl::UnownedClientEnd<::test_emptystruct::EmptyProtocol> _client_end() const {
     return ::fidl::UnownedClientEnd<::test_emptystruct::EmptyProtocol>(
         _transport().get<::fidl::internal::ChannelTransport>());
   }
@@ -138,35 +106,25 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_emptystruct::EmptyProtocol>
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::internal::NaturalEventHandlerInterface<
-    ::test_emptystruct::EmptyProtocol> {
+class ::fidl::internal::NaturalEventHandlerInterface<::test_emptystruct::EmptyProtocol> {
  public:
   NaturalEventHandlerInterface() = default;
   virtual ~NaturalEventHandlerInterface() = default;
-  virtual void Receive(
-      ::fidl::Event<::test_emptystruct::EmptyProtocol::Receive>&) = 0;
+  virtual void Receive(::fidl::Event<::test_emptystruct::EmptyProtocol::Receive>&) = 0;
 };
 
 template <>
 class ::fidl::AsyncEventHandler<::test_emptystruct::EmptyProtocol>
-    : public ::fidl::internal::NaturalEventHandlerInterface<
-          ::test_emptystruct::EmptyProtocol>,
-      public ::fidl::internal::AsyncEventHandler {
+    : public ::fidl::internal::NaturalEventHandlerInterface<::test_emptystruct::EmptyProtocol>, public ::fidl::internal::AsyncEventHandler {
  public:
   AsyncEventHandler() = default;
-  void Receive(
-      ::fidl::Event<::test_emptystruct::EmptyProtocol::Receive>&) override {}
+  void Receive(::fidl::Event<::test_emptystruct::EmptyProtocol::Receive>&) override {}
 };
 
 template <>
-class ::fidl::internal::NaturalEventDispatcher<
-    ::test_emptystruct::EmptyProtocol>
-    final : public ::fidl::internal::IncomingEventDispatcher<
-                ::fidl::AsyncEventHandler<::test_emptystruct::EmptyProtocol>> {
+class ::fidl::internal::NaturalEventDispatcher<::test_emptystruct::EmptyProtocol> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::AsyncEventHandler<::test_emptystruct::EmptyProtocol>> {
  public:
-  explicit NaturalEventDispatcher(
-      ::fidl::AsyncEventHandler<::test_emptystruct::EmptyProtocol>*
-          event_handler)
+  explicit NaturalEventDispatcher(::fidl::AsyncEventHandler<::test_emptystruct::EmptyProtocol>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 
  private:
@@ -178,44 +136,34 @@ class ::fidl::internal::NaturalEventDispatcher<
 
 #ifdef __Fuchsia__
 template <>
-class ::fidl::internal::NaturalWeakEventSender<
-    ::test_emptystruct::EmptyProtocol>
-    : public ::fidl::internal::WeakEventSenderBase {
+class ::fidl::internal::NaturalWeakEventSender<::test_emptystruct::EmptyProtocol> : public ::fidl::internal::WeakEventSenderBase {
  public:
   using WeakEventSenderBase::WeakEventSenderBase;
 
-  ::fitx::result<::fidl::Error> Receive(
-      ::test_emptystruct::EmptyProtocolReceiveRequest payload);
+  ::fitx::result<::fidl::Error> Receive(::test_emptystruct::EmptyProtocolReceiveRequest payload);
 };
 
 template <>
 class ::fidl::internal::NaturalEventSender<::test_emptystruct::EmptyProtocol>
-    : public ::fidl::internal::SyncEndpointManagedVeneer<
-          ::fidl::internal::NaturalEventSender<
-              ::test_emptystruct::EmptyProtocol>> {
+    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalEventSender<::test_emptystruct::EmptyProtocol>> {
  public:
   using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 
-  ::fitx::result<::fidl::Error> Receive(
-      ::test_emptystruct::EmptyProtocolReceiveRequest payload);
+  ::fitx::result<::fidl::Error> Receive(::test_emptystruct::EmptyProtocolReceiveRequest payload);
 };
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::Request<::test_emptystruct::EmptyProtocol::Send> final
-    : public ::test_emptystruct::EmptyProtocolSendRequest {
+class ::fidl::Request<::test_emptystruct::EmptyProtocol::Send> final : public ::test_emptystruct::EmptyProtocolSendRequest {
  public:
   using ::test_emptystruct::EmptyProtocolSendRequest::EmptyProtocolSendRequest;
-  Request(::test_emptystruct::EmptyProtocolSendRequest v)
-      : ::test_emptystruct::EmptyProtocolSendRequest(std::move(v)) {}
+  Request(::test_emptystruct::EmptyProtocolSendRequest v) : ::test_emptystruct::EmptyProtocolSendRequest(std::move(v)) {}
 };
 
 template <>
-struct ::fidl::internal::MessageTraits<
-    ::fidl::Request<::test_emptystruct::EmptyProtocol::Send>>
-    final {
+struct ::fidl::internal::MessageTraits<::fidl::Request<::test_emptystruct::EmptyProtocol::Send>> final {
  public:
   static constexpr bool kHasPayload = true;
   using Payload = ::test_emptystruct::EmptyProtocolSendRequest;
@@ -225,19 +173,14 @@ struct ::fidl::internal::MessageTraits<
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive> final
-    : public ::test_emptystruct::EmptyProtocolSendAndReceiveRequest {
+class ::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive> final : public ::test_emptystruct::EmptyProtocolSendAndReceiveRequest {
  public:
-  using ::test_emptystruct::EmptyProtocolSendAndReceiveRequest::
-      EmptyProtocolSendAndReceiveRequest;
-  Request(::test_emptystruct::EmptyProtocolSendAndReceiveRequest v)
-      : ::test_emptystruct::EmptyProtocolSendAndReceiveRequest(std::move(v)) {}
+  using ::test_emptystruct::EmptyProtocolSendAndReceiveRequest::EmptyProtocolSendAndReceiveRequest;
+  Request(::test_emptystruct::EmptyProtocolSendAndReceiveRequest v) : ::test_emptystruct::EmptyProtocolSendAndReceiveRequest(std::move(v)) {}
 };
 
 template <>
-struct ::fidl::internal::MessageTraits<
-    ::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive>>
-    final {
+struct ::fidl::internal::MessageTraits<::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive>> final {
  public:
   static constexpr bool kHasPayload = true;
   using Payload = ::test_emptystruct::EmptyProtocolSendAndReceiveRequest;
@@ -245,21 +188,16 @@ struct ::fidl::internal::MessageTraits<
 #endif  // __Fuchsia__
 
 template <>
-class ::fidl::internal::NaturalCompleterBase<
-    ::test_emptystruct::EmptyProtocol::SendAndReceive>
-    : public ::fidl::CompleterBase {
+class ::fidl::internal::NaturalCompleterBase<::test_emptystruct::EmptyProtocol::SendAndReceive> : public ::fidl::CompleterBase {
  public:
-  void Reply(
-      ::fidl::Response<::test_emptystruct::EmptyProtocol::SendAndReceive>&&
-          response);
+  void Reply(::fidl::Response<::test_emptystruct::EmptyProtocol::SendAndReceive>&& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
 };
 
 template <>
-class ::fidl::Server<::test_emptystruct::EmptyProtocol>
-    : public ::fidl::internal::IncomingMessageDispatcher {
+class ::fidl::Server<::test_emptystruct::EmptyProtocol> : public ::fidl::internal::IncomingMessageDispatcher {
  public:
   Server() = default;
   virtual ~Server() = default;
@@ -268,18 +206,14 @@ class ::fidl::Server<::test_emptystruct::EmptyProtocol>
   using _EnclosingProtocol = ::test_emptystruct::EmptyProtocol;
 
   using SendRequest = ::fidl::Request<::test_emptystruct::EmptyProtocol::Send>;
-  using SendCompleter = ::fidl::internal::NaturalCompleter<
-      ::test_emptystruct::EmptyProtocol::Send>;
+  using SendCompleter = ::fidl::internal::NaturalCompleter<::test_emptystruct::EmptyProtocol::Send>;
 
   virtual void Send(SendRequest& request, SendCompleter::Sync& completer) = 0;
 
-  using SendAndReceiveRequest =
-      ::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive>;
-  using SendAndReceiveCompleter = ::fidl::internal::NaturalCompleter<
-      ::test_emptystruct::EmptyProtocol::SendAndReceive>;
+  using SendAndReceiveRequest = ::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive>;
+  using SendAndReceiveCompleter = ::fidl::internal::NaturalCompleter<::test_emptystruct::EmptyProtocol::SendAndReceive>;
 
-  virtual void SendAndReceive(SendAndReceiveRequest& request,
-                              SendAndReceiveCompleter::Sync& completer) = 0;
+  virtual void SendAndReceive(SendAndReceiveRequest& request, SendAndReceiveCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(
@@ -290,12 +224,9 @@ class ::fidl::Server<::test_emptystruct::EmptyProtocol>
 #ifdef __Fuchsia__
 
 template <>
-struct ::fidl::internal::NaturalServerDispatcher<
-    ::test_emptystruct::EmptyProtocol>
-    final {
+struct ::fidl::internal::NaturalServerDispatcher<::test_emptystruct::EmptyProtocol> final {
   NaturalServerDispatcher() = delete;
-  static void Dispatch(::fidl::Server<::test_emptystruct::EmptyProtocol>* impl,
-                       ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fidl::Server<::test_emptystruct::EmptyProtocol>* impl, ::fidl::IncomingMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 

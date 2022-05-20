@@ -4,19 +4,15 @@
 
 void ::test_doccomments::wire::StrictUnion::SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(StrictUnion) == sizeof(fidl_xunion_v2_t));
-  static_assert(offsetof(StrictUnion, ordinal_) ==
-                offsetof(fidl_xunion_v2_t, tag));
-  static_assert(offsetof(StrictUnion, envelope_) ==
-                offsetof(fidl_xunion_v2_t, envelope));
+  static_assert(offsetof(StrictUnion, ordinal_) == offsetof(fidl_xunion_v2_t, tag));
+  static_assert(offsetof(StrictUnion, envelope_) == offsetof(fidl_xunion_v2_t, envelope));
 }
 
-auto ::test_doccomments::wire::FlexibleUnion::Which() const
-    -> ::test_doccomments::wire::FlexibleUnion::Tag {
+auto ::test_doccomments::wire::FlexibleUnion::Which() const -> ::test_doccomments::wire::FlexibleUnion::Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
     case ::test_doccomments::wire::FlexibleUnion::Ordinal::kField:
-      return static_cast<::test_doccomments::wire::FlexibleUnion::Tag>(
-          ordinal_);
+      return static_cast<::test_doccomments::wire::FlexibleUnion::Tag>(ordinal_);
     default:
       return ::test_doccomments::wire::FlexibleUnion::Tag::kUnknown;
   }
@@ -24,14 +20,11 @@ auto ::test_doccomments::wire::FlexibleUnion::Which() const
 
 void ::test_doccomments::wire::FlexibleUnion::SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(FlexibleUnion) == sizeof(fidl_xunion_v2_t));
-  static_assert(offsetof(FlexibleUnion, ordinal_) ==
-                offsetof(fidl_xunion_v2_t, tag));
-  static_assert(offsetof(FlexibleUnion, envelope_) ==
-                offsetof(fidl_xunion_v2_t, envelope));
+  static_assert(offsetof(FlexibleUnion, ordinal_) == offsetof(fidl_xunion_v2_t, tag));
+  static_assert(offsetof(FlexibleUnion, envelope_) == offsetof(fidl_xunion_v2_t, envelope));
 }
 
-bool ::fidl::WireTableFrame<::test_doccomments::wire::Table>::HasUnknownData()
-    const {
+bool ::fidl::WireTableFrame<::test_doccomments::wire::Table>::HasUnknownData() const {
   return false;
 }
 

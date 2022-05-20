@@ -3,73 +3,45 @@
 #include <fidl/test.errorsyntax/cpp/natural_messaging.h>
 
 namespace test_errorsyntax {
-[[maybe_unused]] constexpr inline uint64_t
-    kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal =
-        3565108794310607393lu;
+[[maybe_unused]] constexpr inline uint64_t kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal = 3565108794310607393lu;
 
-[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
-    kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_DynamicFlags =
-        ::fidl::MessageDynamicFlags::kStrictMethod;
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
-[[maybe_unused]] constexpr inline uint64_t
-    kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal = 3757408930698888354lu;
+[[maybe_unused]] constexpr inline uint64_t kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal = 3757408930698888354lu;
 
-[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
-    kExampleUseOfErrorSyntax_CallWhichMayFail_DynamicFlags =
-        ::fidl::MessageDynamicFlags::kStrictMethod;
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kExampleUseOfErrorSyntax_CallWhichMayFail_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
 #ifdef __Fuchsia__
 }  // namespace test_errorsyntax
-::fidl::internal::NaturalThenable<
-    ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
-fidl::internal::NaturalClientImpl<::test_errorsyntax::ExampleUseOfErrorSyntax>::
-    ComposedCallWhichMayFail(
-        ::fidl::Request<::test_errorsyntax::ExampleUseOfErrorSyntax::
-                            ComposedCallWhichMayFail>
-            request) const {
+::fidl::internal::NaturalThenable<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
+fidl::internal::NaturalClientImpl<::test_errorsyntax::ExampleUseOfErrorSyntax>::ComposedCallWhichMayFail(::fidl::Request<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail> request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_errorsyntax::
-          kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal,
-      ::test_errorsyntax::
-          kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_errorsyntax::kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal, ::test_errorsyntax::kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_DynamicFlags};
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<
-          ::test_errorsyntax::ExampleUseOfErrorSyntax::
-              ComposedCallWhichMayFail>>::IntoDomainObject(std::move(request)));
-  return ::fidl::internal::NaturalThenable<
-      ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>(
+      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>>::IntoDomainObject(std::move(request)));
+  return ::fidl::internal::NaturalThenable<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>(
       &client_base(), {}, std::move(_encoder),
-      [](::fidl::internal::ThenableBase* base,
-         ::fidl::internal::NaturalMessageEncoder& encoder,
-         ::fidl::internal::ResponseContext* response_context) {
+      [](
+          ::fidl::internal::ThenableBase* base,
+          ::fidl::internal::NaturalMessageEncoder& encoder,
+          ::fidl::internal::ResponseContext* response_context) {
         ::fidl::OutgoingMessage msg = encoder.GetMessage();
         return base->SendTwoWay(msg, response_context);
       });
 }
 
-::fidl::internal::NaturalThenable<
-    ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
-fidl::internal::NaturalClientImpl<::test_errorsyntax::ExampleUseOfErrorSyntax>::
-    CallWhichMayFail(
-        ::fidl::Request<
-            ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
-            request) const {
+::fidl::internal::NaturalThenable<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
+fidl::internal::NaturalClientImpl<::test_errorsyntax::ExampleUseOfErrorSyntax>::CallWhichMayFail(::fidl::Request<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail> request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_errorsyntax::kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal,
-      ::test_errorsyntax::
-          kExampleUseOfErrorSyntax_CallWhichMayFail_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_errorsyntax::kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal, ::test_errorsyntax::kExampleUseOfErrorSyntax_CallWhichMayFail_DynamicFlags};
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<
-          ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>::
-          IntoDomainObject(std::move(request)));
-  return ::fidl::internal::NaturalThenable<
-      ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>(
+      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>::IntoDomainObject(std::move(request)));
+  return ::fidl::internal::NaturalThenable<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>(
       &client_base(), {}, std::move(_encoder),
-      [](::fidl::internal::ThenableBase* base,
-         ::fidl::internal::NaturalMessageEncoder& encoder,
-         ::fidl::internal::ResponseContext* response_context) {
+      [](
+          ::fidl::internal::ThenableBase* base,
+          ::fidl::internal::NaturalMessageEncoder& encoder,
+          ::fidl::internal::ResponseContext* response_context) {
         ::fidl::OutgoingMessage msg = encoder.GetMessage();
         return base->SendTwoWay(msg, response_context);
       });
@@ -81,58 +53,27 @@ namespace test_errorsyntax {
 }  // namespace test_errorsyntax
 #ifdef __Fuchsia__
 
-::fidl::Result<
-    ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
-fidl::internal::NaturalSyncClientImpl<
-    ::test_errorsyntax::ExampleUseOfErrorSyntax>::
-    ComposedCallWhichMayFail(
-        ::fidl::Request<::test_errorsyntax::ExampleUseOfErrorSyntax::
-                            ComposedCallWhichMayFail>
-            request) {
+::fidl::Result<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
+fidl::internal::NaturalSyncClientImpl<::test_errorsyntax::ExampleUseOfErrorSyntax>::ComposedCallWhichMayFail(::fidl::Request<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail> request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_errorsyntax::
-          kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal,
-      ::test_errorsyntax::
-          kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_errorsyntax::kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal, ::test_errorsyntax::kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_DynamicFlags};
   encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<
-          ::test_errorsyntax::ExampleUseOfErrorSyntax::
-              ComposedCallWhichMayFail>>::IntoDomainObject(std::move(request)));
+      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>>::IntoDomainObject(std::move(request)));
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
-  ::fidl::internal::IncomingMessageStorage<
-      ::fidl::internal::TransactionalResponse<
-          ::test_errorsyntax::ExampleUseOfErrorSyntax::
-              ComposedCallWhichMayFail>>
-      response_storage;
-  return ::fidl::internal::DecodeResponseAndFoldError<
-      ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>(
+  ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>> response_storage;
+  return ::fidl::internal::DecodeResponseAndFoldError<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>(
       msg.Call(_client_end().handle(), response_storage.view()), nullptr);
 }
 
 ::fidl::Result<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
-fidl::internal::NaturalSyncClientImpl<
-    ::test_errorsyntax::ExampleUseOfErrorSyntax>::
-    CallWhichMayFail(
-        ::fidl::Request<
-            ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
-            request) {
+fidl::internal::NaturalSyncClientImpl<::test_errorsyntax::ExampleUseOfErrorSyntax>::CallWhichMayFail(::fidl::Request<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail> request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_errorsyntax::kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal,
-      ::test_errorsyntax::
-          kExampleUseOfErrorSyntax_CallWhichMayFail_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_errorsyntax::kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal, ::test_errorsyntax::kExampleUseOfErrorSyntax_CallWhichMayFail_DynamicFlags};
   encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<
-          ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>::
-          IntoDomainObject(std::move(request)));
+      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>::IntoDomainObject(std::move(request)));
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
-  ::fidl::internal::IncomingMessageStorage<
-      ::fidl::internal::TransactionalResponse<
-          ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>
-      response_storage;
-  return ::fidl::internal::DecodeResponseAndFoldError<
-      ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>(
+  ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>> response_storage;
+  return ::fidl::internal::DecodeResponseAndFoldError<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>(
       msg.Call(_client_end().handle(), response_storage.view()), nullptr);
 }
 
@@ -140,10 +81,10 @@ fidl::internal::NaturalSyncClientImpl<
 
 #ifdef __Fuchsia__
 
-std::optional<::fidl::UnbindInfo> fidl::internal::NaturalEventDispatcher<
-    ::test_errorsyntax::ExampleUseOfErrorSyntax>::
-    DispatchEvent(::fidl::IncomingMessage& msg,
-                  ::fidl::internal::MessageStorageViewBase* storage_view) {
+std::optional<::fidl::UnbindInfo>
+fidl::internal::NaturalEventDispatcher<::test_errorsyntax::ExampleUseOfErrorSyntax>::DispatchEvent(
+    ::fidl::IncomingMessage& msg,
+    ::fidl::internal::MessageStorageViewBase* storage_view) {
   return ::fidl::UnbindInfo::UnknownOrdinal();
 }
 #endif  // __Fuchsia__
@@ -152,124 +93,69 @@ std::optional<::fidl::UnbindInfo> fidl::internal::NaturalEventDispatcher<
 
 #endif  // __Fuchsia__
 
-void fidl::internal::NaturalCompleterBase<
-    ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>::
-    Reply(::fidl::Response<::test_errorsyntax::ExampleUseOfErrorSyntax::
-                               ComposedCallWhichMayFail>&& response) {
+void fidl::internal::NaturalCompleterBase<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>::Reply(::fidl::Response<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>&& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_errorsyntax::
-          kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal,
-      ::test_errorsyntax::
-          kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_errorsyntax::kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal, ::test_errorsyntax::kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_DynamicFlags};
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<
-          ::fidl::Response<::test_errorsyntax::ExampleUseOfErrorSyntax::
-                               ComposedCallWhichMayFail>>::
-          IntoDomainObject(std::move(response)));
+      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>>::IntoDomainObject(std::move(response)));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
 
-void fidl::internal::NaturalCompleterBase<
-    ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>::
-    Reply(::fidl::Response<
-          ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>&&
-              response) {
+void fidl::internal::NaturalCompleterBase<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>::Reply(::fidl::Response<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>&& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_errorsyntax::kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal,
-      ::test_errorsyntax::
-          kExampleUseOfErrorSyntax_CallWhichMayFail_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_errorsyntax::kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal, ::test_errorsyntax::kExampleUseOfErrorSyntax_CallWhichMayFail_DynamicFlags};
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<
-          ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>::
-          IntoDomainObject(std::move(response)));
+      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>::IntoDomainObject(std::move(response)));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
 
 #ifdef __Fuchsia__
 
-constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
-    ::test_errorsyntax::ExampleUseOfErrorSyntax>::entries_[] = {
+constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<::test_errorsyntax::ExampleUseOfErrorSyntax>::entries_[] = {
     {
-        ::test_errorsyntax::
-            kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal,
+        ::test_errorsyntax::kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::MessageStorageViewBase* storage_view,
-           ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
-              ::test_errorsyntax_parent::
-                  ParentUsesErrorSyntaxComposedCallWhichMayFailRequest>(
-              std::move(msg));
+           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_errorsyntax_parent::ParentUsesErrorSyntaxComposedCallWhichMayFailRequest>(std::move(msg));
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_errorsyntax::ExampleUseOfErrorSyntax::
-                              ComposedCallWhichMayFail>
-              request = ::fidl::internal::NaturalMessageConverter<
-                  ::fidl::Request<::test_errorsyntax::ExampleUseOfErrorSyntax::
-                                      ComposedCallWhichMayFail>>::
-                  FromDomainObject(std::move(decoded.value()));
-          ::fidl::internal::NaturalCompleter<
-              ::test_errorsyntax::ExampleUseOfErrorSyntax::
-                  ComposedCallWhichMayFail>::Sync completer(txn);
-          static_cast<
-              ::fidl::Server<::test_errorsyntax::ExampleUseOfErrorSyntax>*>(
-              interface)
-              ->ComposedCallWhichMayFail(request, completer);
+          ::fidl::Request<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail> request = ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>>::FromDomainObject(std::move(decoded.value()));
+          ::fidl::internal::NaturalCompleter<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>::Sync completer(txn);
+          static_cast<::fidl::Server<::test_errorsyntax::ExampleUseOfErrorSyntax>*>(interface)->ComposedCallWhichMayFail(
+              request, completer);
           return ::fidl::Status::Ok();
         },
     },
     {
         ::test_errorsyntax::kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::MessageStorageViewBase* storage_view,
-           ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
-              ::test_errorsyntax::
-                  ExampleUseOfErrorSyntaxCallWhichMayFailRequest>(
-              std::move(msg));
+           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>(std::move(msg));
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<
-              ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
-              request = ::fidl::internal::NaturalMessageConverter<
-                  ::fidl::Request<::test_errorsyntax::ExampleUseOfErrorSyntax::
-                                      CallWhichMayFail>>::
-                  FromDomainObject(std::move(decoded.value()));
-          ::fidl::internal::NaturalCompleter<
-              ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>::
-              Sync completer(txn);
-          static_cast<
-              ::fidl::Server<::test_errorsyntax::ExampleUseOfErrorSyntax>*>(
-              interface)
-              ->CallWhichMayFail(request, completer);
+          ::fidl::Request<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail> request = ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>::FromDomainObject(std::move(decoded.value()));
+          ::fidl::internal::NaturalCompleter<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>::Sync completer(txn);
+          static_cast<::fidl::Server<::test_errorsyntax::ExampleUseOfErrorSyntax>*>(interface)->CallWhichMayFail(
+              request, completer);
           return ::fidl::Status::Ok();
         },
     },
 };
 
-const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<
-    ::test_errorsyntax::ExampleUseOfErrorSyntax>::entries_end_ = &entries_[2];
+const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::test_errorsyntax::ExampleUseOfErrorSyntax>::entries_end_ =
+    &entries_[2];
 
-void fidl::internal::NaturalServerDispatcher<
-    ::test_errorsyntax::ExampleUseOfErrorSyntax>::
-    Dispatch(::fidl::Server<::test_errorsyntax::ExampleUseOfErrorSyntax>* impl,
-             ::fidl::IncomingMessage&& msg,
-             internal::MessageStorageViewBase* storage_view,
-             ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_,
-                             entries_end_);
+void fidl::internal::NaturalServerDispatcher<::test_errorsyntax::ExampleUseOfErrorSyntax>::Dispatch(::fidl::Server<::test_errorsyntax::ExampleUseOfErrorSyntax>* impl, ::fidl::IncomingMessage&& msg,
+                                                                                                    internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_);
 }
-void fidl::Server<::test_errorsyntax::ExampleUseOfErrorSyntax>::
-    dispatch_message(::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-                     ::fidl::internal::MessageStorageViewBase* storage_view) {
-  ::fidl::internal::NaturalServerDispatcher<
-      ::test_errorsyntax::ExampleUseOfErrorSyntax>::Dispatch(this,
-                                                             std::move(msg),
-                                                             storage_view, txn);
+void fidl::Server<::test_errorsyntax::ExampleUseOfErrorSyntax>::dispatch_message(
+    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::internal::MessageStorageViewBase* storage_view) {
+  ::fidl::internal::NaturalServerDispatcher<::test_errorsyntax::ExampleUseOfErrorSyntax>::Dispatch(this, std::move(msg), storage_view, txn);
 }
 #endif  // __Fuchsia__

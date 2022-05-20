@@ -17,14 +17,11 @@
 namespace fidl {
 
 template <>
-struct internal::NaturalCodingTraits<
-    ::test_enum::MyStrictEnum, ::fidl::internal::NaturalCodingConstraintEmpty> {
+struct internal::NaturalCodingTraits<::test_enum::MyStrictEnum, ::fidl::internal::NaturalCodingConstraintEmpty> {
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
   static constexpr bool is_memcpy_compatible = false;
 
-  static void Encode(internal::NaturalEncoder* encoder,
-                     ::test_enum::MyStrictEnum* value, size_t offset,
-                     size_t recursion_depth) {
+  static void Encode(internal::NaturalEncoder* encoder, ::test_enum::MyStrictEnum* value, size_t offset, size_t recursion_depth) {
     switch (*value) {
       case ::test_enum::MyStrictEnum::kFoo:
       case ::test_enum::MyStrictEnum::kBar:
@@ -35,9 +32,7 @@ struct internal::NaturalCodingTraits<
     }
     *encoder->template GetPtr<::test_enum::MyStrictEnum>(offset) = *value;
   }
-  static void Decode(internal::NaturalDecoder* decoder,
-                     ::test_enum::MyStrictEnum* value, size_t offset,
-                     size_t recursion_depth) {
+  static void Decode(internal::NaturalDecoder* decoder, ::test_enum::MyStrictEnum* value, size_t offset, size_t recursion_depth) {
     *value = *decoder->template GetPtr<::test_enum::MyStrictEnum>(offset);
     switch (*value) {
       case ::test_enum::MyStrictEnum::kFoo:
@@ -50,62 +45,39 @@ struct internal::NaturalCodingTraits<
   }
 };
 template <>
-struct internal::NaturalCodingTraits<
-    ::test_enum::MyFlexibleEnumWithCustomUnknown,
-    ::fidl::internal::NaturalCodingConstraintEmpty> {
+struct internal::NaturalCodingTraits<::test_enum::MyFlexibleEnumWithCustomUnknown, ::fidl::internal::NaturalCodingConstraintEmpty> {
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
   static constexpr bool is_memcpy_compatible = true;
 
-  static void Encode(internal::NaturalEncoder* encoder,
-                     ::test_enum::MyFlexibleEnumWithCustomUnknown* value,
-                     size_t offset, size_t recursion_depth) {
-    *encoder->template GetPtr<::test_enum::MyFlexibleEnumWithCustomUnknown>(
-        offset) = *value;
+  static void Encode(internal::NaturalEncoder* encoder, ::test_enum::MyFlexibleEnumWithCustomUnknown* value, size_t offset, size_t recursion_depth) {
+    *encoder->template GetPtr<::test_enum::MyFlexibleEnumWithCustomUnknown>(offset) = *value;
   }
-  static void Decode(internal::NaturalDecoder* decoder,
-                     ::test_enum::MyFlexibleEnumWithCustomUnknown* value,
-                     size_t offset, size_t recursion_depth) {
-    *value =
-        *decoder->template GetPtr<::test_enum::MyFlexibleEnumWithCustomUnknown>(
-            offset);
+  static void Decode(internal::NaturalDecoder* decoder, ::test_enum::MyFlexibleEnumWithCustomUnknown* value, size_t offset, size_t recursion_depth) {
+    *value = *decoder->template GetPtr<::test_enum::MyFlexibleEnumWithCustomUnknown>(offset);
   }
 };
 template <>
-struct internal::NaturalCodingTraits<
-    ::test_enum::MyFlexibleEnum,
-    ::fidl::internal::NaturalCodingConstraintEmpty> {
+struct internal::NaturalCodingTraits<::test_enum::MyFlexibleEnum, ::fidl::internal::NaturalCodingConstraintEmpty> {
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
   static constexpr bool is_memcpy_compatible = true;
 
-  static void Encode(internal::NaturalEncoder* encoder,
-                     ::test_enum::MyFlexibleEnum* value, size_t offset,
-                     size_t recursion_depth) {
+  static void Encode(internal::NaturalEncoder* encoder, ::test_enum::MyFlexibleEnum* value, size_t offset, size_t recursion_depth) {
     *encoder->template GetPtr<::test_enum::MyFlexibleEnum>(offset) = *value;
   }
-  static void Decode(internal::NaturalDecoder* decoder,
-                     ::test_enum::MyFlexibleEnum* value, size_t offset,
-                     size_t recursion_depth) {
+  static void Decode(internal::NaturalDecoder* decoder, ::test_enum::MyFlexibleEnum* value, size_t offset, size_t recursion_depth) {
     *value = *decoder->template GetPtr<::test_enum::MyFlexibleEnum>(offset);
   }
 };
 template <>
-struct internal::NaturalCodingTraits<
-    ::test_enum::MyEmptyFlexibleEnum,
-    ::fidl::internal::NaturalCodingConstraintEmpty> {
+struct internal::NaturalCodingTraits<::test_enum::MyEmptyFlexibleEnum, ::fidl::internal::NaturalCodingConstraintEmpty> {
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
   static constexpr bool is_memcpy_compatible = true;
 
-  static void Encode(internal::NaturalEncoder* encoder,
-                     ::test_enum::MyEmptyFlexibleEnum* value, size_t offset,
-                     size_t recursion_depth) {
-    *encoder->template GetPtr<::test_enum::MyEmptyFlexibleEnum>(offset) =
-        *value;
+  static void Encode(internal::NaturalEncoder* encoder, ::test_enum::MyEmptyFlexibleEnum* value, size_t offset, size_t recursion_depth) {
+    *encoder->template GetPtr<::test_enum::MyEmptyFlexibleEnum>(offset) = *value;
   }
-  static void Decode(internal::NaturalDecoder* decoder,
-                     ::test_enum::MyEmptyFlexibleEnum* value, size_t offset,
-                     size_t recursion_depth) {
-    *value =
-        *decoder->template GetPtr<::test_enum::MyEmptyFlexibleEnum>(offset);
+  static void Decode(internal::NaturalDecoder* decoder, ::test_enum::MyEmptyFlexibleEnum* value, size_t offset, size_t recursion_depth) {
+    *value = *decoder->template GetPtr<::test_enum::MyEmptyFlexibleEnum>(offset);
   }
 };
 

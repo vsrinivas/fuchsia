@@ -13,24 +13,14 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 2>
     test_foreigntypeinresponseusedthroughcompose_decoder_encoders = {
 
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name =
-                "::fidl::internal::TransactionalRequest<::test_"
-                "foreigntypeinresponseusedthroughcompose::Top::GetFoo>",
+            .fidl_type_name = "::fidl::internal::TransactionalRequest<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>",
             .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::fidl::internal::TransactionalRequest<
-                    ::test_foreigntypeinresponseusedthroughcompose::Top::
-                        GetFoo>>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::fidl::internal::TransactionalRequest<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name =
-                "::fidl::internal::TransactionalResponse<::test_"
-                "foreigntypeinresponseusedthroughcompose::Top::GetFoo>",
+            .fidl_type_name = "::fidl::internal::TransactionalResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>",
             .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::fidl::internal::TransactionalResponse<
-                    ::test_foreigntypeinresponseusedthroughcompose::Top::
-                        GetFoo>>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::fidl::internal::TransactionalResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>,
         },
 };
 

@@ -17,13 +17,9 @@ namespace internal {
 #ifdef __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_typealiases::wire::ExampleOfUseOfAliases,
-    ::test_typealiases::ExampleOfUseOfAliases> {
-  static ::test_typealiases::ExampleOfUseOfAliases ToNatural(
-      ::test_typealiases::wire::ExampleOfUseOfAliases src);
-  static ::test_typealiases::wire::ExampleOfUseOfAliases ToWire(
-      fidl::AnyArena& arena, ::test_typealiases::ExampleOfUseOfAliases src);
+struct WireNaturalConversionTraits<::test_typealiases::wire::ExampleOfUseOfAliases, ::test_typealiases::ExampleOfUseOfAliases> {
+  static ::test_typealiases::ExampleOfUseOfAliases ToNatural(::test_typealiases::wire::ExampleOfUseOfAliases src);
+  static ::test_typealiases::wire::ExampleOfUseOfAliases ToWire(fidl::AnyArena& arena, ::test_typealiases::ExampleOfUseOfAliases src);
 };
 
 template <>

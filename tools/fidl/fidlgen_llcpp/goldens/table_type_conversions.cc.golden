@@ -5,720 +5,674 @@
 namespace fidl {
 namespace internal {
 
-::test_table::TableWithAttributes
-WireNaturalConversionTraits<::test_table::wire::TableWithAttributes,
-                            ::test_table::TableWithAttributes>::
-    ToNatural(::test_table::wire::TableWithAttributes src) {
+::test_table::TableWithAttributes WireNaturalConversionTraits<::test_table::wire::TableWithAttributes, ::test_table::TableWithAttributes>::ToNatural(::test_table::wire::TableWithAttributes src) {
   ::test_table::TableWithAttributes dst;
   if (src.has_x()) {
-    dst.x() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.x()));
+    dst.x() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.x()));
   }
 
   return dst;
 }
-::test_table::wire::TableWithAttributes WireNaturalConversionTraits<
-    ::test_table::wire::TableWithAttributes,
-    ::test_table::TableWithAttributes>::ToWire(fidl::AnyArena& arena,
-                                               ::test_table::TableWithAttributes
-                                                   src) {
+::test_table::wire::TableWithAttributes WireNaturalConversionTraits<::test_table::wire::TableWithAttributes, ::test_table::TableWithAttributes>::ToWire(fidl::AnyArena& arena, ::test_table::TableWithAttributes src) {
   auto builder = ::test_table::wire::TableWithAttributes::Builder(arena);
   if (src.x().has_value()) {
-    builder.x(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.x().value())));
+    builder.x(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.x().value())));
   }
   return builder.Build();
 }
 
-::test_table::SimpleTable WireNaturalConversionTraits<
-    ::test_table::wire::SimpleTable,
-    ::test_table::SimpleTable>::ToNatural(::test_table::wire::SimpleTable src) {
+::test_table::SimpleTable WireNaturalConversionTraits<::test_table::wire::SimpleTable, ::test_table::SimpleTable>::ToNatural(::test_table::wire::SimpleTable src) {
   ::test_table::SimpleTable dst;
   if (src.has_x()) {
-    dst.x() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.x()));
+    dst.x() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.x()));
   }
   if (src.has_y()) {
-    dst.y() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.y()));
+    dst.y() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.y()));
   }
 
   return dst;
 }
-::test_table::wire::SimpleTable WireNaturalConversionTraits<
-    ::test_table::wire::SimpleTable,
-    ::test_table::SimpleTable>::ToWire(fidl::AnyArena& arena,
-                                       ::test_table::SimpleTable src) {
+::test_table::wire::SimpleTable WireNaturalConversionTraits<::test_table::wire::SimpleTable, ::test_table::SimpleTable>::ToWire(fidl::AnyArena& arena, ::test_table::SimpleTable src) {
   auto builder = ::test_table::wire::SimpleTable::Builder(arena);
   if (src.x().has_value()) {
-    builder.x(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.x().value())));
+    builder.x(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.x().value())));
   }
   if (src.y().has_value()) {
-    builder.y(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.y().value())));
+    builder.y(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.y().value())));
   }
   return builder.Build();
 }
 
-::test_table::ReverseOrdinalTable
-WireNaturalConversionTraits<::test_table::wire::ReverseOrdinalTable,
-                            ::test_table::ReverseOrdinalTable>::
-    ToNatural(::test_table::wire::ReverseOrdinalTable src) {
+::test_table::ReverseOrdinalTable WireNaturalConversionTraits<::test_table::wire::ReverseOrdinalTable, ::test_table::ReverseOrdinalTable>::ToNatural(::test_table::wire::ReverseOrdinalTable src) {
   ::test_table::ReverseOrdinalTable dst;
   if (src.has_z()) {
-    dst.z() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.z()));
+    dst.z() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.z()));
   }
   if (src.has_y()) {
-    dst.y() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.y()));
+    dst.y() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.y()));
   }
   if (src.has_x()) {
-    dst.x() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.x()));
+    dst.x() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.x()));
   }
 
   return dst;
 }
-::test_table::wire::ReverseOrdinalTable WireNaturalConversionTraits<
-    ::test_table::wire::ReverseOrdinalTable,
-    ::test_table::ReverseOrdinalTable>::ToWire(fidl::AnyArena& arena,
-                                               ::test_table::ReverseOrdinalTable
-                                                   src) {
+::test_table::wire::ReverseOrdinalTable WireNaturalConversionTraits<::test_table::wire::ReverseOrdinalTable, ::test_table::ReverseOrdinalTable>::ToWire(fidl::AnyArena& arena, ::test_table::ReverseOrdinalTable src) {
   auto builder = ::test_table::wire::ReverseOrdinalTable::Builder(arena);
   if (src.z().has_value()) {
-    builder.z(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.z().value())));
+    builder.z(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.z().value())));
   }
   if (src.y().has_value()) {
-    builder.y(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.y().value())));
+    builder.y(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.y().value())));
   }
   if (src.x().has_value()) {
-    builder.x(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.x().value())));
+    builder.x(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.x().value())));
   }
   return builder.Build();
 }
 
-::test_table::OlderSimpleTable WireNaturalConversionTraits<
-    ::test_table::wire::OlderSimpleTable, ::test_table::OlderSimpleTable>::
-    ToNatural(::test_table::wire::OlderSimpleTable src) {
+::test_table::OlderSimpleTable WireNaturalConversionTraits<::test_table::wire::OlderSimpleTable, ::test_table::OlderSimpleTable>::ToNatural(::test_table::wire::OlderSimpleTable src) {
   ::test_table::OlderSimpleTable dst;
   if (src.has_x()) {
-    dst.x() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.x()));
+    dst.x() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.x()));
   }
 
   return dst;
 }
-::test_table::wire::OlderSimpleTable WireNaturalConversionTraits<
-    ::test_table::wire::OlderSimpleTable, ::test_table::OlderSimpleTable>::
-    ToWire(fidl::AnyArena& arena, ::test_table::OlderSimpleTable src) {
+::test_table::wire::OlderSimpleTable WireNaturalConversionTraits<::test_table::wire::OlderSimpleTable, ::test_table::OlderSimpleTable>::ToWire(fidl::AnyArena& arena, ::test_table::OlderSimpleTable src) {
   auto builder = ::test_table::wire::OlderSimpleTable::Builder(arena);
   if (src.x().has_value()) {
-    builder.x(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.x().value())));
+    builder.x(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.x().value())));
   }
   return builder.Build();
 }
 
-::test_table::NewerSimpleTable WireNaturalConversionTraits<
-    ::test_table::wire::NewerSimpleTable, ::test_table::NewerSimpleTable>::
-    ToNatural(::test_table::wire::NewerSimpleTable src) {
+::test_table::NewerSimpleTable WireNaturalConversionTraits<::test_table::wire::NewerSimpleTable, ::test_table::NewerSimpleTable>::ToNatural(::test_table::wire::NewerSimpleTable src) {
   ::test_table::NewerSimpleTable dst;
   if (src.has_x()) {
-    dst.x() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.x()));
+    dst.x() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.x()));
   }
   if (src.has_y()) {
-    dst.y() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.y()));
+    dst.y() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.y()));
   }
   if (src.has_z()) {
-    dst.z() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.z()));
+    dst.z() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.z()));
   }
 
   return dst;
 }
-::test_table::wire::NewerSimpleTable WireNaturalConversionTraits<
-    ::test_table::wire::NewerSimpleTable, ::test_table::NewerSimpleTable>::
-    ToWire(fidl::AnyArena& arena, ::test_table::NewerSimpleTable src) {
+::test_table::wire::NewerSimpleTable WireNaturalConversionTraits<::test_table::wire::NewerSimpleTable, ::test_table::NewerSimpleTable>::ToWire(fidl::AnyArena& arena, ::test_table::NewerSimpleTable src) {
   auto builder = ::test_table::wire::NewerSimpleTable::Builder(arena);
   if (src.x().has_value()) {
-    builder.x(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.x().value())));
+    builder.x(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.x().value())));
   }
   if (src.y().has_value()) {
-    builder.y(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.y().value())));
+    builder.y(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.y().value())));
   }
   if (src.z().has_value()) {
-    builder.z(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.z().value())));
+    builder.z(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.z().value())));
   }
   return builder.Build();
 }
 
-::test_table::ExtensionTable WireNaturalConversionTraits<
-    ::test_table::wire::ExtensionTable,
-    ::test_table::ExtensionTable>::ToNatural(::test_table::wire::ExtensionTable
-                                                 src) {
+::test_table::ExtensionTable WireNaturalConversionTraits<::test_table::wire::ExtensionTable, ::test_table::ExtensionTable>::ToNatural(::test_table::wire::ExtensionTable src) {
   ::test_table::ExtensionTable dst;
 
   return dst;
 }
-::test_table::wire::ExtensionTable WireNaturalConversionTraits<
-    ::test_table::wire::ExtensionTable,
-    ::test_table::ExtensionTable>::ToWire(fidl::AnyArena& arena,
-                                          ::test_table::ExtensionTable src) {
+::test_table::wire::ExtensionTable WireNaturalConversionTraits<::test_table::wire::ExtensionTable, ::test_table::ExtensionTable>::ToWire(fidl::AnyArena& arena, ::test_table::ExtensionTable src) {
   auto builder = ::test_table::wire::ExtensionTable::Builder(arena);
   return builder.Build();
 }
 
-::test_table::SixtyFourOrdinalTable
-WireNaturalConversionTraits<::test_table::wire::SixtyFourOrdinalTable,
-                            ::test_table::SixtyFourOrdinalTable>::
-    ToNatural(::test_table::wire::SixtyFourOrdinalTable src) {
+::test_table::SixtyFourOrdinalTable WireNaturalConversionTraits<::test_table::wire::SixtyFourOrdinalTable, ::test_table::SixtyFourOrdinalTable>::ToNatural(::test_table::wire::SixtyFourOrdinalTable src) {
   ::test_table::SixtyFourOrdinalTable dst;
   if (src.has_v1()) {
-    dst.v1() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v1()));
+    dst.v1() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v1()));
   }
   if (src.has_v2()) {
-    dst.v2() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v2()));
+    dst.v2() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v2()));
   }
   if (src.has_v3()) {
-    dst.v3() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v3()));
+    dst.v3() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v3()));
   }
   if (src.has_v4()) {
-    dst.v4() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v4()));
+    dst.v4() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v4()));
   }
   if (src.has_v5()) {
-    dst.v5() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v5()));
+    dst.v5() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v5()));
   }
   if (src.has_v6()) {
-    dst.v6() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v6()));
+    dst.v6() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v6()));
   }
   if (src.has_v7()) {
-    dst.v7() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v7()));
+    dst.v7() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v7()));
   }
   if (src.has_v8()) {
-    dst.v8() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v8()));
+    dst.v8() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v8()));
   }
   if (src.has_v9()) {
-    dst.v9() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v9()));
+    dst.v9() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v9()));
   }
   if (src.has_v10()) {
-    dst.v10() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v10()));
+    dst.v10() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v10()));
   }
   if (src.has_v11()) {
-    dst.v11() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v11()));
+    dst.v11() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v11()));
   }
   if (src.has_v12()) {
-    dst.v12() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v12()));
+    dst.v12() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v12()));
   }
   if (src.has_v13()) {
-    dst.v13() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v13()));
+    dst.v13() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v13()));
   }
   if (src.has_v14()) {
-    dst.v14() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v14()));
+    dst.v14() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v14()));
   }
   if (src.has_v15()) {
-    dst.v15() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v15()));
+    dst.v15() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v15()));
   }
   if (src.has_v16()) {
-    dst.v16() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v16()));
+    dst.v16() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v16()));
   }
   if (src.has_v17()) {
-    dst.v17() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v17()));
+    dst.v17() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v17()));
   }
   if (src.has_v18()) {
-    dst.v18() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v18()));
+    dst.v18() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v18()));
   }
   if (src.has_v19()) {
-    dst.v19() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v19()));
+    dst.v19() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v19()));
   }
   if (src.has_v20()) {
-    dst.v20() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v20()));
+    dst.v20() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v20()));
   }
   if (src.has_v21()) {
-    dst.v21() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v21()));
+    dst.v21() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v21()));
   }
   if (src.has_v22()) {
-    dst.v22() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v22()));
+    dst.v22() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v22()));
   }
   if (src.has_v23()) {
-    dst.v23() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v23()));
+    dst.v23() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v23()));
   }
   if (src.has_v24()) {
-    dst.v24() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v24()));
+    dst.v24() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v24()));
   }
   if (src.has_v25()) {
-    dst.v25() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v25()));
+    dst.v25() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v25()));
   }
   if (src.has_v26()) {
-    dst.v26() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v26()));
+    dst.v26() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v26()));
   }
   if (src.has_v27()) {
-    dst.v27() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v27()));
+    dst.v27() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v27()));
   }
   if (src.has_v28()) {
-    dst.v28() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v28()));
+    dst.v28() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v28()));
   }
   if (src.has_v29()) {
-    dst.v29() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v29()));
+    dst.v29() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v29()));
   }
   if (src.has_v30()) {
-    dst.v30() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v30()));
+    dst.v30() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v30()));
   }
   if (src.has_v31()) {
-    dst.v31() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v31()));
+    dst.v31() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v31()));
   }
   if (src.has_v32()) {
-    dst.v32() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v32()));
+    dst.v32() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v32()));
   }
   if (src.has_v33()) {
-    dst.v33() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v33()));
+    dst.v33() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v33()));
   }
   if (src.has_v34()) {
-    dst.v34() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v34()));
+    dst.v34() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v34()));
   }
   if (src.has_v35()) {
-    dst.v35() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v35()));
+    dst.v35() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v35()));
   }
   if (src.has_v36()) {
-    dst.v36() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v36()));
+    dst.v36() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v36()));
   }
   if (src.has_v37()) {
-    dst.v37() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v37()));
+    dst.v37() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v37()));
   }
   if (src.has_v38()) {
-    dst.v38() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v38()));
+    dst.v38() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v38()));
   }
   if (src.has_v39()) {
-    dst.v39() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v39()));
+    dst.v39() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v39()));
   }
   if (src.has_v40()) {
-    dst.v40() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v40()));
+    dst.v40() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v40()));
   }
   if (src.has_v41()) {
-    dst.v41() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v41()));
+    dst.v41() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v41()));
   }
   if (src.has_v42()) {
-    dst.v42() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v42()));
+    dst.v42() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v42()));
   }
   if (src.has_v43()) {
-    dst.v43() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v43()));
+    dst.v43() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v43()));
   }
   if (src.has_v44()) {
-    dst.v44() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v44()));
+    dst.v44() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v44()));
   }
   if (src.has_v45()) {
-    dst.v45() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v45()));
+    dst.v45() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v45()));
   }
   if (src.has_v46()) {
-    dst.v46() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v46()));
+    dst.v46() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v46()));
   }
   if (src.has_v47()) {
-    dst.v47() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v47()));
+    dst.v47() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v47()));
   }
   if (src.has_v48()) {
-    dst.v48() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v48()));
+    dst.v48() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v48()));
   }
   if (src.has_v49()) {
-    dst.v49() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v49()));
+    dst.v49() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v49()));
   }
   if (src.has_v50()) {
-    dst.v50() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v50()));
+    dst.v50() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v50()));
   }
   if (src.has_v51()) {
-    dst.v51() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v51()));
+    dst.v51() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v51()));
   }
   if (src.has_v52()) {
-    dst.v52() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v52()));
+    dst.v52() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v52()));
   }
   if (src.has_v53()) {
-    dst.v53() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v53()));
+    dst.v53() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v53()));
   }
   if (src.has_v54()) {
-    dst.v54() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v54()));
+    dst.v54() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v54()));
   }
   if (src.has_v55()) {
-    dst.v55() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v55()));
+    dst.v55() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v55()));
   }
   if (src.has_v56()) {
-    dst.v56() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v56()));
+    dst.v56() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v56()));
   }
   if (src.has_v57()) {
-    dst.v57() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v57()));
+    dst.v57() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v57()));
   }
   if (src.has_v58()) {
-    dst.v58() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v58()));
+    dst.v58() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v58()));
   }
   if (src.has_v59()) {
-    dst.v59() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v59()));
+    dst.v59() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v59()));
   }
   if (src.has_v60()) {
-    dst.v60() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v60()));
+    dst.v60() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v60()));
   }
   if (src.has_v61()) {
-    dst.v61() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v61()));
+    dst.v61() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v61()));
   }
   if (src.has_v62()) {
-    dst.v62() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v62()));
+    dst.v62() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v62()));
   }
   if (src.has_v63()) {
-    dst.v63() = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
-        std::move(src.v63()));
+    dst.v63() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.v63()));
   }
   if (src.has_v64()) {
-    dst.v64() = WireNaturalConversionTraits<
-        ::test_table::wire::ExtensionTable,
-        ::test_table::ExtensionTable>::ToNatural(std::move(src.v64()));
+    dst.v64() =
+        WireNaturalConversionTraits<::test_table::wire::ExtensionTable, ::test_table::ExtensionTable>::ToNatural(std::move(src.v64()));
   }
 
   return dst;
 }
-::test_table::wire::SixtyFourOrdinalTable
-WireNaturalConversionTraits<::test_table::wire::SixtyFourOrdinalTable,
-                            ::test_table::SixtyFourOrdinalTable>::
-    ToWire(fidl::AnyArena& arena, ::test_table::SixtyFourOrdinalTable src) {
+::test_table::wire::SixtyFourOrdinalTable WireNaturalConversionTraits<::test_table::wire::SixtyFourOrdinalTable, ::test_table::SixtyFourOrdinalTable>::ToWire(fidl::AnyArena& arena, ::test_table::SixtyFourOrdinalTable src) {
   auto builder = ::test_table::wire::SixtyFourOrdinalTable::Builder(arena);
   if (src.v1().has_value()) {
-    builder.v1(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v1().value())));
+    builder.v1(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v1().value())));
   }
   if (src.v2().has_value()) {
-    builder.v2(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v2().value())));
+    builder.v2(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v2().value())));
   }
   if (src.v3().has_value()) {
-    builder.v3(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v3().value())));
+    builder.v3(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v3().value())));
   }
   if (src.v4().has_value()) {
-    builder.v4(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v4().value())));
+    builder.v4(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v4().value())));
   }
   if (src.v5().has_value()) {
-    builder.v5(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v5().value())));
+    builder.v5(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v5().value())));
   }
   if (src.v6().has_value()) {
-    builder.v6(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v6().value())));
+    builder.v6(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v6().value())));
   }
   if (src.v7().has_value()) {
-    builder.v7(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v7().value())));
+    builder.v7(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v7().value())));
   }
   if (src.v8().has_value()) {
-    builder.v8(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v8().value())));
+    builder.v8(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v8().value())));
   }
   if (src.v9().has_value()) {
-    builder.v9(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v9().value())));
+    builder.v9(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v9().value())));
   }
   if (src.v10().has_value()) {
-    builder.v10(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v10().value())));
+    builder.v10(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v10().value())));
   }
   if (src.v11().has_value()) {
-    builder.v11(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v11().value())));
+    builder.v11(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v11().value())));
   }
   if (src.v12().has_value()) {
-    builder.v12(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v12().value())));
+    builder.v12(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v12().value())));
   }
   if (src.v13().has_value()) {
-    builder.v13(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v13().value())));
+    builder.v13(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v13().value())));
   }
   if (src.v14().has_value()) {
-    builder.v14(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v14().value())));
+    builder.v14(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v14().value())));
   }
   if (src.v15().has_value()) {
-    builder.v15(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v15().value())));
+    builder.v15(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v15().value())));
   }
   if (src.v16().has_value()) {
-    builder.v16(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v16().value())));
+    builder.v16(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v16().value())));
   }
   if (src.v17().has_value()) {
-    builder.v17(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v17().value())));
+    builder.v17(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v17().value())));
   }
   if (src.v18().has_value()) {
-    builder.v18(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v18().value())));
+    builder.v18(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v18().value())));
   }
   if (src.v19().has_value()) {
-    builder.v19(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v19().value())));
+    builder.v19(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v19().value())));
   }
   if (src.v20().has_value()) {
-    builder.v20(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v20().value())));
+    builder.v20(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v20().value())));
   }
   if (src.v21().has_value()) {
-    builder.v21(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v21().value())));
+    builder.v21(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v21().value())));
   }
   if (src.v22().has_value()) {
-    builder.v22(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v22().value())));
+    builder.v22(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v22().value())));
   }
   if (src.v23().has_value()) {
-    builder.v23(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v23().value())));
+    builder.v23(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v23().value())));
   }
   if (src.v24().has_value()) {
-    builder.v24(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v24().value())));
+    builder.v24(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v24().value())));
   }
   if (src.v25().has_value()) {
-    builder.v25(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v25().value())));
+    builder.v25(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v25().value())));
   }
   if (src.v26().has_value()) {
-    builder.v26(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v26().value())));
+    builder.v26(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v26().value())));
   }
   if (src.v27().has_value()) {
-    builder.v27(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v27().value())));
+    builder.v27(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v27().value())));
   }
   if (src.v28().has_value()) {
-    builder.v28(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v28().value())));
+    builder.v28(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v28().value())));
   }
   if (src.v29().has_value()) {
-    builder.v29(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v29().value())));
+    builder.v29(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v29().value())));
   }
   if (src.v30().has_value()) {
-    builder.v30(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v30().value())));
+    builder.v30(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v30().value())));
   }
   if (src.v31().has_value()) {
-    builder.v31(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v31().value())));
+    builder.v31(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v31().value())));
   }
   if (src.v32().has_value()) {
-    builder.v32(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v32().value())));
+    builder.v32(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v32().value())));
   }
   if (src.v33().has_value()) {
-    builder.v33(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v33().value())));
+    builder.v33(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v33().value())));
   }
   if (src.v34().has_value()) {
-    builder.v34(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v34().value())));
+    builder.v34(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v34().value())));
   }
   if (src.v35().has_value()) {
-    builder.v35(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v35().value())));
+    builder.v35(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v35().value())));
   }
   if (src.v36().has_value()) {
-    builder.v36(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v36().value())));
+    builder.v36(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v36().value())));
   }
   if (src.v37().has_value()) {
-    builder.v37(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v37().value())));
+    builder.v37(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v37().value())));
   }
   if (src.v38().has_value()) {
-    builder.v38(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v38().value())));
+    builder.v38(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v38().value())));
   }
   if (src.v39().has_value()) {
-    builder.v39(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v39().value())));
+    builder.v39(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v39().value())));
   }
   if (src.v40().has_value()) {
-    builder.v40(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v40().value())));
+    builder.v40(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v40().value())));
   }
   if (src.v41().has_value()) {
-    builder.v41(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v41().value())));
+    builder.v41(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v41().value())));
   }
   if (src.v42().has_value()) {
-    builder.v42(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v42().value())));
+    builder.v42(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v42().value())));
   }
   if (src.v43().has_value()) {
-    builder.v43(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v43().value())));
+    builder.v43(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v43().value())));
   }
   if (src.v44().has_value()) {
-    builder.v44(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v44().value())));
+    builder.v44(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v44().value())));
   }
   if (src.v45().has_value()) {
-    builder.v45(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v45().value())));
+    builder.v45(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v45().value())));
   }
   if (src.v46().has_value()) {
-    builder.v46(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v46().value())));
+    builder.v46(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v46().value())));
   }
   if (src.v47().has_value()) {
-    builder.v47(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v47().value())));
+    builder.v47(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v47().value())));
   }
   if (src.v48().has_value()) {
-    builder.v48(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v48().value())));
+    builder.v48(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v48().value())));
   }
   if (src.v49().has_value()) {
-    builder.v49(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v49().value())));
+    builder.v49(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v49().value())));
   }
   if (src.v50().has_value()) {
-    builder.v50(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v50().value())));
+    builder.v50(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v50().value())));
   }
   if (src.v51().has_value()) {
-    builder.v51(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v51().value())));
+    builder.v51(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v51().value())));
   }
   if (src.v52().has_value()) {
-    builder.v52(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v52().value())));
+    builder.v52(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v52().value())));
   }
   if (src.v53().has_value()) {
-    builder.v53(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v53().value())));
+    builder.v53(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v53().value())));
   }
   if (src.v54().has_value()) {
-    builder.v54(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v54().value())));
+    builder.v54(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v54().value())));
   }
   if (src.v55().has_value()) {
-    builder.v55(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v55().value())));
+    builder.v55(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v55().value())));
   }
   if (src.v56().has_value()) {
-    builder.v56(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v56().value())));
+    builder.v56(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v56().value())));
   }
   if (src.v57().has_value()) {
-    builder.v57(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v57().value())));
+    builder.v57(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v57().value())));
   }
   if (src.v58().has_value()) {
-    builder.v58(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v58().value())));
+    builder.v58(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v58().value())));
   }
   if (src.v59().has_value()) {
-    builder.v59(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v59().value())));
+    builder.v59(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v59().value())));
   }
   if (src.v60().has_value()) {
-    builder.v60(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v60().value())));
+    builder.v60(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v60().value())));
   }
   if (src.v61().has_value()) {
-    builder.v61(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v61().value())));
+    builder.v61(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v61().value())));
   }
   if (src.v62().has_value()) {
-    builder.v62(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v62().value())));
+    builder.v62(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v62().value())));
   }
   if (src.v63().has_value()) {
-    builder.v63(WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
-        arena, std::move(src.v63().value())));
+    builder.v63(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.v63().value())));
   }
   if (src.v64().has_value()) {
-    builder.v64(WireNaturalConversionTraits<::test_table::wire::ExtensionTable,
-                                            ::test_table::ExtensionTable>::
-                    ToWire(arena, std::move(src.v64().value())));
+    builder.v64(
+        WireNaturalConversionTraits<::test_table::wire::ExtensionTable, ::test_table::ExtensionTable>::ToWire(arena, std::move(src.v64().value())));
   }
   return builder.Build();
 }
 
-::test_table::EmptyTable WireNaturalConversionTraits<
-    ::test_table::wire::EmptyTable,
-    ::test_table::EmptyTable>::ToNatural(::test_table::wire::EmptyTable src) {
+::test_table::EmptyTable WireNaturalConversionTraits<::test_table::wire::EmptyTable, ::test_table::EmptyTable>::ToNatural(::test_table::wire::EmptyTable src) {
   ::test_table::EmptyTable dst;
 
   return dst;
 }
-::test_table::wire::EmptyTable WireNaturalConversionTraits<
-    ::test_table::wire::EmptyTable,
-    ::test_table::EmptyTable>::ToWire(fidl::AnyArena& arena,
-                                      ::test_table::EmptyTable src) {
+::test_table::wire::EmptyTable WireNaturalConversionTraits<::test_table::wire::EmptyTable, ::test_table::EmptyTable>::ToWire(fidl::AnyArena& arena, ::test_table::EmptyTable src) {
   auto builder = ::test_table::wire::EmptyTable::Builder(arena);
   return builder.Build();
 }

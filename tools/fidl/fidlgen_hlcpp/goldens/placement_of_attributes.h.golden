@@ -45,53 +45,44 @@ enum class ExampleBits : uint32_t {
 
 const static ExampleBits ExampleBitsMask = static_cast<ExampleBits>(1u);
 
-constexpr inline ::test::placementofattributes::ExampleBits operator|(
-    ::test::placementofattributes::ExampleBits _lhs,
-    ::test::placementofattributes::ExampleBits _rhs) {
+constexpr inline ::test::placementofattributes::ExampleBits operator|(::test::placementofattributes::ExampleBits _lhs, ::test::placementofattributes::ExampleBits _rhs) {
   return static_cast<::test::placementofattributes::ExampleBits>(
       static_cast<uint32_t>(_lhs) | static_cast<uint32_t>(_rhs));
 }
 
-constexpr inline ::test::placementofattributes::ExampleBits& operator|=(
-    ::test::placementofattributes::ExampleBits& _lhs,
-    ::test::placementofattributes::ExampleBits _rhs) {
+constexpr inline ::test::placementofattributes::ExampleBits& operator|=(::test::placementofattributes::ExampleBits& _lhs,
+                                                                        ::test::placementofattributes::ExampleBits _rhs) {
   _lhs = _lhs | _rhs;
   return _lhs;
 }
 
-constexpr inline ::test::placementofattributes::ExampleBits operator&(
-    ::test::placementofattributes::ExampleBits _lhs,
-    ::test::placementofattributes::ExampleBits _rhs) {
+constexpr inline ::test::placementofattributes::ExampleBits operator&(::test::placementofattributes::ExampleBits _lhs,
+                                                                      ::test::placementofattributes::ExampleBits _rhs) {
   return static_cast<::test::placementofattributes::ExampleBits>(
       static_cast<uint32_t>(_lhs) & static_cast<uint32_t>(_rhs));
 }
 
-constexpr inline ::test::placementofattributes::ExampleBits& operator&=(
-    ::test::placementofattributes::ExampleBits& _lhs,
-    ::test::placementofattributes::ExampleBits _rhs) {
+constexpr inline ::test::placementofattributes::ExampleBits& operator&=(::test::placementofattributes::ExampleBits& _lhs,
+                                                                        ::test::placementofattributes::ExampleBits _rhs) {
   _lhs = _lhs & _rhs;
   return _lhs;
 }
 
-constexpr inline ::test::placementofattributes::ExampleBits operator^(
-    ::test::placementofattributes::ExampleBits _lhs,
-    ::test::placementofattributes::ExampleBits _rhs) {
+constexpr inline ::test::placementofattributes::ExampleBits operator^(::test::placementofattributes::ExampleBits _lhs,
+                                                                      ::test::placementofattributes::ExampleBits _rhs) {
   return static_cast<::test::placementofattributes::ExampleBits>(
       static_cast<uint32_t>(_lhs) ^ static_cast<uint32_t>(_rhs));
 }
 
-constexpr inline ::test::placementofattributes::ExampleBits& operator^=(
-    ::test::placementofattributes::ExampleBits& _lhs,
-    ::test::placementofattributes::ExampleBits _rhs) {
+constexpr inline ::test::placementofattributes::ExampleBits& operator^=(::test::placementofattributes::ExampleBits& _lhs,
+                                                                        ::test::placementofattributes::ExampleBits _rhs) {
   _lhs = _lhs ^ _rhs;
   return _lhs;
 }
 
-constexpr inline ::test::placementofattributes::ExampleBits operator~(
-    ::test::placementofattributes::ExampleBits _value) {
+constexpr inline ::test::placementofattributes::ExampleBits operator~(::test::placementofattributes::ExampleBits _value) {
   return static_cast<::test::placementofattributes::ExampleBits>(
-      ~static_cast<uint32_t>(_value) &
-      static_cast<uint32_t>(::test::placementofattributes::ExampleBitsMask));
+      ~static_cast<uint32_t>(_value) & static_cast<uint32_t>(::test::placementofattributes::ExampleBitsMask));
 }
 
 inline zx_status_t Clone(::test::placementofattributes::ExampleBits value,
@@ -119,26 +110,21 @@ class ExampleXUnion final {
     Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
-  static inline ::std::unique_ptr<ExampleXUnion> New() {
-    return ::std::make_unique<ExampleXUnion>();
-  }
+  static inline ::std::unique_ptr<ExampleXUnion> New() { return ::std::make_unique<ExampleXUnion>(); }
 
   void Encode(::fidl::Encoder* encoder, size_t offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, ExampleXUnion* value,
-                     size_t offset);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, ExampleXUnion* value, size_t offset);
   zx_status_t Clone(ExampleXUnion* result) const;
 
-  bool has_invalid_tag() const { return tag_ == Invalid; }
-
-  bool is_variant() const {
-    return tag_ == ::test::placementofattributes::ExampleXUnion::Tag::kVariant;
+  bool has_invalid_tag() const {
+    return tag_ == Invalid;
   }
 
+  bool is_variant() const { return tag_ == ::test::placementofattributes::ExampleXUnion::Tag::kVariant; }
+
   uint32_t& variant() {
-    EnsureStorageInitialized(
-        ::test::placementofattributes::ExampleXUnion::Tag::kVariant);
+    EnsureStorageInitialized(::test::placementofattributes::ExampleXUnion::Tag::kVariant);
     return variant_;
   }
 
@@ -147,8 +133,7 @@ class ExampleXUnion final {
     return variant_;
   }
   ExampleXUnion& set_variant(uint32_t value);
-  ExampleXUnion& SetUnknownData(fidl_xunion_tag_t ordinal,
-                                std::vector<uint8_t> bytes);
+  ExampleXUnion& SetUnknownData(fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes);
 
   ::test::placementofattributes::ExampleXUnion::Tag Which() const {
     switch (tag_) {
@@ -160,12 +145,13 @@ class ExampleXUnion final {
     }
   }
 
-  // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
-  // only when you need access to the raw integral ordinal value.
-  fidl_xunion_tag_t Ordinal() const { return tag_; }
+  // You probably want to use Which() method instead of Ordinal(). Use Ordinal() only when you need
+  // access to the raw integral ordinal value.
+  fidl_xunion_tag_t Ordinal() const {
+    return tag_;
+  }
   const std::vector<uint8_t>* UnknownBytes() const {
-    if (Which() !=
-        ::test::placementofattributes::ExampleXUnion::Tag::kUnknown) {
+    if (Which() != ::test::placementofattributes::ExampleXUnion::Tag::kUnknown) {
       return nullptr;
     }
     return &unknown_data_;
@@ -177,17 +163,15 @@ class ExampleXUnion final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
-      ::test::placementofattributes::ExampleXUnion::Tag::Invalid);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(::test::placementofattributes::ExampleXUnion::Tag::Invalid);
   union {
     uint32_t variant_;
     std::vector<uint8_t> unknown_data_;
   };
 };
 
-inline zx_status_t Clone(
-    const ::test::placementofattributes::ExampleXUnion& value,
-    ::test::placementofattributes::ExampleXUnion* result) {
+inline zx_status_t Clone(const ::test::placementofattributes::ExampleXUnion& value,
+                         ::test::placementofattributes::ExampleXUnion* result) {
   return value.Clone(result);
 }
 
@@ -211,26 +195,21 @@ class ExampleUnion final {
     Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
-  static inline ::std::unique_ptr<ExampleUnion> New() {
-    return ::std::make_unique<ExampleUnion>();
-  }
+  static inline ::std::unique_ptr<ExampleUnion> New() { return ::std::make_unique<ExampleUnion>(); }
 
   void Encode(::fidl::Encoder* encoder, size_t offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, ExampleUnion* value,
-                     size_t offset);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, ExampleUnion* value, size_t offset);
   zx_status_t Clone(ExampleUnion* result) const;
 
-  bool has_invalid_tag() const { return tag_ == Invalid; }
-
-  bool is_variant() const {
-    return tag_ == ::test::placementofattributes::ExampleUnion::Tag::kVariant;
+  bool has_invalid_tag() const {
+    return tag_ == Invalid;
   }
 
+  bool is_variant() const { return tag_ == ::test::placementofattributes::ExampleUnion::Tag::kVariant; }
+
   uint32_t& variant() {
-    EnsureStorageInitialized(
-        ::test::placementofattributes::ExampleUnion::Tag::kVariant);
+    EnsureStorageInitialized(::test::placementofattributes::ExampleUnion::Tag::kVariant);
     return variant_;
   }
 
@@ -244,9 +223,11 @@ class ExampleUnion final {
     return ::test::placementofattributes::ExampleUnion::Tag(tag_);
   }
 
-  // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
-  // only when you need access to the raw integral ordinal value.
-  fidl_xunion_tag_t Ordinal() const { return tag_; }
+  // You probably want to use Which() method instead of Ordinal(). Use Ordinal() only when you need
+  // access to the raw integral ordinal value.
+  fidl_xunion_tag_t Ordinal() const {
+    return tag_;
+  }
 
   friend ::fidl::Equality<::test::placementofattributes::ExampleUnion>;
 
@@ -254,16 +235,14 @@ class ExampleUnion final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
-      ::test::placementofattributes::ExampleUnion::Tag::Invalid);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(::test::placementofattributes::ExampleUnion::Tag::Invalid);
   union {
     uint32_t variant_;
   };
 };
 
-inline zx_status_t Clone(
-    const ::test::placementofattributes::ExampleUnion& value,
-    ::test::placementofattributes::ExampleUnion* result) {
+inline zx_status_t Clone(const ::test::placementofattributes::ExampleUnion& value,
+                         ::test::placementofattributes::ExampleUnion* result) {
   return value.Clone(result);
 }
 
@@ -279,7 +258,9 @@ class ExampleTable final {
     ZX_ASSERT(field_presence_.IsSet<0>());
     return member_value_.value;
   }
-  bool has_member() const { return field_presence_.IsSet<0>(); }
+  bool has_member() const {
+    return field_presence_.IsSet<0>();
+  }
 
   uint32_t* mutable_member() {
     if (!field_presence_.IsSet<0>()) {
@@ -310,15 +291,11 @@ class ExampleTable final {
   ~ExampleTable();
   ExampleTable& operator=(ExampleTable&& other);
 
-  static inline ::std::unique_ptr<ExampleTable> New() {
-    return ::std::make_unique<ExampleTable>();
-  }
+  static inline ::std::unique_ptr<ExampleTable> New() { return ::std::make_unique<ExampleTable>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, ExampleTable* _value,
-                     size_t _offset);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, ExampleTable* _value, size_t _offset);
   zx_status_t Clone(ExampleTable* _result) const;
 
  private:
@@ -363,21 +340,16 @@ class ExampleStruct final {
 
   uint32_t member{};
 
-  static inline ::std::unique_ptr<ExampleStruct> New() {
-    return ::std::make_unique<ExampleStruct>();
-  }
+  static inline ::std::unique_ptr<ExampleStruct> New() { return ::std::make_unique<ExampleStruct>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, ExampleStruct* value,
-                     size_t _offset);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, ExampleStruct* value, size_t _offset);
   zx_status_t Clone(ExampleStruct* result) const;
 };
 
-inline zx_status_t Clone(
-    const ::test::placementofattributes::ExampleStruct& _value,
-    ::test::placementofattributes::ExampleStruct* _result) {
+inline zx_status_t Clone(const ::test::placementofattributes::ExampleStruct& _value,
+                         ::test::placementofattributes::ExampleStruct* _result) {
   return _value.Clone(_result);
 }
 
@@ -389,47 +361,35 @@ class ExampleProtocolMethodRequest final {
 
   ::test::exampleusing::Empty arg{};
 
-  static inline ::std::unique_ptr<ExampleProtocolMethodRequest> New() {
-    return ::std::make_unique<ExampleProtocolMethodRequest>();
-  }
+  static inline ::std::unique_ptr<ExampleProtocolMethodRequest> New() { return ::std::make_unique<ExampleProtocolMethodRequest>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder,
-                     ExampleProtocolMethodRequest* value, size_t _offset);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, ExampleProtocolMethodRequest* value, size_t _offset);
   zx_status_t Clone(ExampleProtocolMethodRequest* result) const;
 };
 
-inline zx_status_t Clone(
-    const ::test::placementofattributes::ExampleProtocolMethodRequest& _value,
-    ::test::placementofattributes::ExampleProtocolMethodRequest* _result) {
+inline zx_status_t Clone(const ::test::placementofattributes::ExampleProtocolMethodRequest& _value,
+                         ::test::placementofattributes::ExampleProtocolMethodRequest* _result) {
   return _value.Clone(_result);
 }
 
-using ExampleProtocolMethodRequestPtr =
-    ::std::unique_ptr<ExampleProtocolMethodRequest>;
+using ExampleProtocolMethodRequestPtr = ::std::unique_ptr<ExampleProtocolMethodRequest>;
 
 #ifdef __Fuchsia__
 
 namespace _internal {
-__LOCAL extern "C" const fidl_type_t
-    test_placementofattributes_ExampleProtocolMethodRequestTable;
+__LOCAL extern "C" const fidl_type_t test_placementofattributes_ExampleProtocolMethodRequestTable;
 
 }  // namespace _internal
 class ExampleProtocol_RequestEncoder {
  public:
-  static ::fidl::HLCPPOutgoingMessage Method(::fidl::MessageEncoder* _encoder,
-                                             ::test::exampleusing::Empty* arg) {
+  static ::fidl::HLCPPOutgoingMessage Method(::fidl::MessageEncoder* _encoder, ::test::exampleusing::Empty* arg) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(1);
     ::fidl::Encode(_encoder, arg, 0 + sizeof(fidl_message_header_t));
 
-    fidl_trace(DidHLCPPEncode,
-               &::test::placementofattributes::_internal::
-                   test_placementofattributes_ExampleProtocolMethodRequestTable,
-               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-               _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode, &::test::placementofattributes::_internal::test_placementofattributes_ExampleProtocolMethodRequestTable, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -446,35 +406,25 @@ constexpr uint32_t EXAMPLE_CONST = 0u;
 }  // namespace test
 namespace fidl {
 template <>
-struct IsFidlXUnion<::test::placementofattributes::ExampleXUnion>
-    : public std::true_type {};
+struct IsFidlXUnion<::test::placementofattributes::ExampleXUnion> : public std::true_type {};
 
 template <>
 struct CodingTraits<::test::placementofattributes::ExampleXUnion>
-    : public EncodableCodingTraits<::test::placementofattributes::ExampleXUnion,
-                                   16> {};
+    : public EncodableCodingTraits<::test::placementofattributes::ExampleXUnion, 16> {};
 
 template <>
-struct CodingTraits<
-    std::unique_ptr<::test::placementofattributes::ExampleXUnion>> {
+struct CodingTraits<std::unique_ptr<::test::placementofattributes::ExampleXUnion>> {
   static constexpr size_t inline_size_v2 = 16;
 
-  static void Encode(
-      Encoder* encoder,
-      std::unique_ptr<::test::placementofattributes::ExampleXUnion>* value,
-      size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-          cpp17::nullopt) {
+  static void Encode(Encoder* encoder, std::unique_ptr<::test::placementofattributes::ExampleXUnion>* value, size_t offset,
+                     cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
     }
   }
 
-  static void Decode(
-      Decoder* _decoder,
-      std::unique_ptr<::test::placementofattributes::ExampleXUnion>* value,
-      size_t offset) {
+  static void Decode(Decoder* _decoder, std::unique_ptr<::test::placementofattributes::ExampleXUnion>* value, size_t offset) {
     fidl_xunion_t* encoded = _decoder->GetPtr<fidl_xunion_t>(offset);
     if (encoded->tag == 0) {
       value->reset(nullptr);
@@ -483,29 +433,24 @@ struct CodingTraits<
 
     value->reset(new ::test::placementofattributes::ExampleXUnion);
 
-    ::test::placementofattributes::ExampleXUnion::Decode(_decoder, value->get(),
-                                                         offset);
+    ::test::placementofattributes::ExampleXUnion::Decode(_decoder, value->get(), offset);
   }
 };
 
-inline zx_status_t Clone(
-    const ::test::placementofattributes::ExampleXUnion& value,
-    ::test::placementofattributes::ExampleXUnion* result) {
+inline zx_status_t Clone(const ::test::placementofattributes::ExampleXUnion& value,
+                         ::test::placementofattributes::ExampleXUnion* result) {
   return ::test::placementofattributes::Clone(value, result);
 }
 
 template <>
 struct Equality<::test::placementofattributes::ExampleXUnion> {
-  bool operator()(
-      const ::test::placementofattributes::ExampleXUnion& _lhs,
-      const ::test::placementofattributes::ExampleXUnion& _rhs) const {
+  bool operator()(const ::test::placementofattributes::ExampleXUnion& _lhs, const ::test::placementofattributes::ExampleXUnion& _rhs) const {
     if (_lhs.Ordinal() != _rhs.Ordinal()) {
       return false;
     }
 
     switch (_lhs.Ordinal()) {
-      case static_cast<fidl_xunion_tag_t>(
-          ::test::placementofattributes::ExampleXUnion::Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(::test::placementofattributes::ExampleXUnion::Tag::Invalid):
         return true;
       case ::test::placementofattributes::ExampleXUnion::Tag::kVariant:
         return ::fidl::Equals(_lhs.variant_, _rhs.variant_);
@@ -515,35 +460,25 @@ struct Equality<::test::placementofattributes::ExampleXUnion> {
   }
 };
 template <>
-struct IsFidlXUnion<::test::placementofattributes::ExampleUnion>
-    : public std::true_type {};
+struct IsFidlXUnion<::test::placementofattributes::ExampleUnion> : public std::true_type {};
 
 template <>
 struct CodingTraits<::test::placementofattributes::ExampleUnion>
-    : public EncodableCodingTraits<::test::placementofattributes::ExampleUnion,
-                                   16> {};
+    : public EncodableCodingTraits<::test::placementofattributes::ExampleUnion, 16> {};
 
 template <>
-struct CodingTraits<
-    std::unique_ptr<::test::placementofattributes::ExampleUnion>> {
+struct CodingTraits<std::unique_ptr<::test::placementofattributes::ExampleUnion>> {
   static constexpr size_t inline_size_v2 = 16;
 
-  static void Encode(
-      Encoder* encoder,
-      std::unique_ptr<::test::placementofattributes::ExampleUnion>* value,
-      size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-          cpp17::nullopt) {
+  static void Encode(Encoder* encoder, std::unique_ptr<::test::placementofattributes::ExampleUnion>* value, size_t offset,
+                     cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
     }
   }
 
-  static void Decode(
-      Decoder* _decoder,
-      std::unique_ptr<::test::placementofattributes::ExampleUnion>* value,
-      size_t offset) {
+  static void Decode(Decoder* _decoder, std::unique_ptr<::test::placementofattributes::ExampleUnion>* value, size_t offset) {
     fidl_xunion_t* encoded = _decoder->GetPtr<fidl_xunion_t>(offset);
     if (encoded->tag == 0) {
       value->reset(nullptr);
@@ -552,29 +487,24 @@ struct CodingTraits<
 
     value->reset(new ::test::placementofattributes::ExampleUnion);
 
-    ::test::placementofattributes::ExampleUnion::Decode(_decoder, value->get(),
-                                                        offset);
+    ::test::placementofattributes::ExampleUnion::Decode(_decoder, value->get(), offset);
   }
 };
 
-inline zx_status_t Clone(
-    const ::test::placementofattributes::ExampleUnion& value,
-    ::test::placementofattributes::ExampleUnion* result) {
+inline zx_status_t Clone(const ::test::placementofattributes::ExampleUnion& value,
+                         ::test::placementofattributes::ExampleUnion* result) {
   return ::test::placementofattributes::Clone(value, result);
 }
 
 template <>
 struct Equality<::test::placementofattributes::ExampleUnion> {
-  bool operator()(
-      const ::test::placementofattributes::ExampleUnion& _lhs,
-      const ::test::placementofattributes::ExampleUnion& _rhs) const {
+  bool operator()(const ::test::placementofattributes::ExampleUnion& _lhs, const ::test::placementofattributes::ExampleUnion& _rhs) const {
     if (_lhs.Ordinal() != _rhs.Ordinal()) {
       return false;
     }
 
     switch (_lhs.Ordinal()) {
-      case static_cast<fidl_xunion_tag_t>(
-          ::test::placementofattributes::ExampleUnion::Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(::test::placementofattributes::ExampleUnion::Tag::Invalid):
         return true;
       case ::test::placementofattributes::ExampleUnion::Tag::kVariant:
         return ::fidl::Equals(_lhs.variant_, _rhs.variant_);
@@ -586,19 +516,15 @@ struct Equality<::test::placementofattributes::ExampleUnion> {
 };
 template <>
 struct CodingTraits<::test::placementofattributes::ExampleTable>
-    : public EncodableCodingTraits<::test::placementofattributes::ExampleTable,
-                                   16> {};
+    : public EncodableCodingTraits<::test::placementofattributes::ExampleTable, 16> {};
 
-inline zx_status_t Clone(
-    const ::test::placementofattributes::ExampleTable& _value,
-    ::test::placementofattributes::ExampleTable* result) {
+inline zx_status_t Clone(const ::test::placementofattributes::ExampleTable& _value,
+                         ::test::placementofattributes::ExampleTable* result) {
   return _value.Clone(result);
 }
 template <>
 struct Equality<::test::placementofattributes::ExampleTable> {
-  bool operator()(
-      const ::test::placementofattributes::ExampleTable& _lhs,
-      const ::test::placementofattributes::ExampleTable& _rhs) const {
+  bool operator()(const ::test::placementofattributes::ExampleTable& _lhs, const ::test::placementofattributes::ExampleTable& _rhs) const {
     if (_lhs.has_member()) {
       if (!_rhs.has_member()) {
         return false;
@@ -614,26 +540,20 @@ struct Equality<::test::placementofattributes::ExampleTable> {
 };
 template <>
 struct CodingTraits<::test::placementofattributes::ExampleStruct>
-    : public EncodableCodingTraits<::test::placementofattributes::ExampleStruct,
-                                   4> {};
+    : public EncodableCodingTraits<::test::placementofattributes::ExampleStruct, 4> {};
 
 template <>
-struct IsMemcpyCompatible<::test::placementofattributes::ExampleStruct>
-    : public internal::BoolConstant<
-          !HasPadding<::test::placementofattributes::ExampleStruct>::value &&
-          IsMemcpyCompatible<uint32_t>::value> {};
+struct IsMemcpyCompatible<::test::placementofattributes::ExampleStruct> : public internal::BoolConstant<
+                                                                              !HasPadding<::test::placementofattributes::ExampleStruct>::value && IsMemcpyCompatible<uint32_t>::value> {};
 
-inline zx_status_t Clone(
-    const ::test::placementofattributes::ExampleStruct& value,
-    ::test::placementofattributes::ExampleStruct* result) {
+inline zx_status_t Clone(const ::test::placementofattributes::ExampleStruct& value,
+                         ::test::placementofattributes::ExampleStruct* result) {
   return ::test::placementofattributes::Clone(value, result);
 }
 
 template <>
 struct Equality<::test::placementofattributes::ExampleStruct> {
-  bool operator()(
-      const ::test::placementofattributes::ExampleStruct& _lhs,
-      const ::test::placementofattributes::ExampleStruct& _rhs) const {
+  bool operator()(const ::test::placementofattributes::ExampleStruct& _lhs, const ::test::placementofattributes::ExampleStruct& _rhs) const {
     if (!::fidl::Equals(_lhs.member, _rhs.member)) {
       return false;
     }
@@ -642,29 +562,20 @@ struct Equality<::test::placementofattributes::ExampleStruct> {
 };
 template <>
 struct CodingTraits<::test::placementofattributes::ExampleProtocolMethodRequest>
-    : public EncodableCodingTraits<
-          ::test::placementofattributes::ExampleProtocolMethodRequest, 1> {};
+    : public EncodableCodingTraits<::test::placementofattributes::ExampleProtocolMethodRequest, 1> {};
 
 template <>
-struct IsMemcpyCompatible<
-    ::test::placementofattributes::ExampleProtocolMethodRequest>
-    : public internal::BoolConstant<
-          !HasPadding<::test::placementofattributes::
-                          ExampleProtocolMethodRequest>::value &&
-          IsMemcpyCompatible<::test::exampleusing::Empty>::value> {};
+struct IsMemcpyCompatible<::test::placementofattributes::ExampleProtocolMethodRequest> : public internal::BoolConstant<
+                                                                                             !HasPadding<::test::placementofattributes::ExampleProtocolMethodRequest>::value && IsMemcpyCompatible<::test::exampleusing::Empty>::value> {};
 
-inline zx_status_t Clone(
-    const ::test::placementofattributes::ExampleProtocolMethodRequest& value,
-    ::test::placementofattributes::ExampleProtocolMethodRequest* result) {
+inline zx_status_t Clone(const ::test::placementofattributes::ExampleProtocolMethodRequest& value,
+                         ::test::placementofattributes::ExampleProtocolMethodRequest* result) {
   return ::test::placementofattributes::Clone(value, result);
 }
 
 template <>
 struct Equality<::test::placementofattributes::ExampleProtocolMethodRequest> {
-  bool operator()(
-      const ::test::placementofattributes::ExampleProtocolMethodRequest& _lhs,
-      const ::test::placementofattributes::ExampleProtocolMethodRequest& _rhs)
-      const {
+  bool operator()(const ::test::placementofattributes::ExampleProtocolMethodRequest& _lhs, const ::test::placementofattributes::ExampleProtocolMethodRequest& _rhs) const {
     if (!::fidl::Equals(_lhs.arg, _rhs.arg)) {
       return false;
     }
@@ -673,23 +584,17 @@ struct Equality<::test::placementofattributes::ExampleProtocolMethodRequest> {
 };
 template <>
 struct CodingTraits<::test::placementofattributes::ExampleEnum> {
-  static constexpr size_t inline_size_v2 =
-      sizeof(::test::placementofattributes::ExampleEnum);
-  static void Encode(
-      Encoder* encoder, ::test::placementofattributes::ExampleEnum* value,
-      size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  static constexpr size_t inline_size_v2 = sizeof(::test::placementofattributes::ExampleEnum);
+  static void Encode(Encoder* encoder, ::test::placementofattributes::ExampleEnum* value, size_t offset,
+                     cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
     ZX_DEBUG_ASSERT(!maybe_handle_info);
     uint32_t underlying = static_cast<uint32_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
   }
-  static void Decode(Decoder* decoder,
-                     ::test::placementofattributes::ExampleEnum* value,
-                     size_t offset) {
+  static void Decode(Decoder* decoder, ::test::placementofattributes::ExampleEnum* value, size_t offset) {
     uint32_t underlying = {};
     ::fidl::Decode(decoder, &underlying, offset);
-    *value =
-        static_cast<::test::placementofattributes::ExampleEnum>(underlying);
+    *value = static_cast<::test::placementofattributes::ExampleEnum>(underlying);
   }
 };
 
@@ -699,32 +604,24 @@ inline zx_status_t Clone(::test::placementofattributes::ExampleEnum value,
 }
 template <>
 struct Equality<::test::placementofattributes::ExampleEnum> {
-  bool operator()(
-      const ::test::placementofattributes::ExampleEnum& _lhs,
-      const ::test::placementofattributes::ExampleEnum& _rhs) const {
+  bool operator()(const ::test::placementofattributes::ExampleEnum& _lhs, const ::test::placementofattributes::ExampleEnum& _rhs) const {
     return _lhs == _rhs;
   }
 };
 
 template <>
 struct CodingTraits<::test::placementofattributes::ExampleBits> {
-  static constexpr size_t inline_size_v2 =
-      sizeof(::test::placementofattributes::ExampleBits);
-  static void Encode(
-      Encoder* encoder, ::test::placementofattributes::ExampleBits* value,
-      size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  static constexpr size_t inline_size_v2 = sizeof(::test::placementofattributes::ExampleBits);
+  static void Encode(Encoder* encoder, ::test::placementofattributes::ExampleBits* value, size_t offset,
+                     cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
     ZX_DEBUG_ASSERT(!maybe_handle_info);
     uint32_t underlying = static_cast<uint32_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
   }
-  static void Decode(Decoder* decoder,
-                     ::test::placementofattributes::ExampleBits* value,
-                     size_t offset) {
+  static void Decode(Decoder* decoder, ::test::placementofattributes::ExampleBits* value, size_t offset) {
     uint32_t underlying = {};
     ::fidl::Decode(decoder, &underlying, offset);
-    *value =
-        static_cast<::test::placementofattributes::ExampleBits>(underlying);
+    *value = static_cast<::test::placementofattributes::ExampleBits>(underlying);
   }
 };
 
@@ -735,9 +632,7 @@ inline zx_status_t Clone(::test::placementofattributes::ExampleBits value,
 
 template <>
 struct Equality<::test::placementofattributes::ExampleBits> {
-  bool operator()(
-      const ::test::placementofattributes::ExampleBits& _lhs,
-      const ::test::placementofattributes::ExampleBits& _rhs) const {
+  bool operator()(const ::test::placementofattributes::ExampleBits& _lhs, const ::test::placementofattributes::ExampleBits& _rhs) const {
     uint32_t _lhs_underlying = static_cast<uint32_t>(_lhs);
     uint32_t _rhs_underlying = static_cast<uint32_t>(_rhs);
     return ::fidl::Equals(_lhs_underlying, _rhs_underlying);
@@ -762,8 +657,7 @@ class ExampleProtocol_SyncProxy;
 
 namespace internal {
 constexpr uint64_t kExampleProtocol_Method_Ordinal = 0x53978e6fc7476749lu;
-constexpr ::fidl::MessageDynamicFlags kExampleProtocol_Method_DynamicFlags =
-    ::fidl::MessageDynamicFlags::kStrictMethod;
+constexpr ::fidl::MessageDynamicFlags kExampleProtocol_Method_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 }  // namespace internal
 #endif  // __Fuchsia__
 
@@ -773,8 +667,7 @@ class ExampleProtocol {
  public:
   using Proxy_ = ::test::placementofattributes::ExampleProtocol_Proxy;
   using Stub_ = ::test::placementofattributes::ExampleProtocol_Stub;
-  using EventSender_ =
-      ::test::placementofattributes::ExampleProtocol_EventSender;
+  using EventSender_ = ::test::placementofattributes::ExampleProtocol_EventSender;
   using Sync_ = ::test::placementofattributes::ExampleProtocol_Sync;
   virtual ~ExampleProtocol();
 
@@ -808,8 +701,7 @@ class ExampleProtocol_Sync {
   virtual zx_status_t Method(::test::exampleusing::Empty arg) = 0;
 };
 
-class ExampleProtocol_Proxy final : public ::fidl::internal::Proxy,
-                                    public ExampleProtocol {
+class ExampleProtocol_Proxy final : public ::fidl::internal::Proxy, public ExampleProtocol {
  public:
   explicit ExampleProtocol_Proxy(::fidl::internal::ProxyController* controller);
   ~ExampleProtocol_Proxy() override;
@@ -819,35 +711,26 @@ class ExampleProtocol_Proxy final : public ::fidl::internal::Proxy,
   void Method(::test::exampleusing::Empty arg) override;
 
  private:
-  ExampleProtocol_Proxy(
-      const ::test::placementofattributes::ExampleProtocol_Proxy&) = delete;
-  ExampleProtocol_Proxy& operator=(
-      const ::test::placementofattributes::ExampleProtocol_Proxy&) = delete;
+  ExampleProtocol_Proxy(const ::test::placementofattributes::ExampleProtocol_Proxy&) = delete;
+  ExampleProtocol_Proxy& operator=(const ::test::placementofattributes::ExampleProtocol_Proxy&) = delete;
 
   ::fidl::internal::ProxyController* controller_;
 };
 
-class ExampleProtocol_Stub final
-    : public ::fidl::internal::Stub,
-      public ::test::placementofattributes::ExampleProtocol_EventSender {
+class ExampleProtocol_Stub final : public ::fidl::internal::Stub, public ::test::placementofattributes::ExampleProtocol_EventSender {
  public:
-  typedef class ::test::placementofattributes::ExampleProtocol
-      ExampleProtocol_clazz;
-  explicit ExampleProtocol_Stub(
-      ::test::placementofattributes::ExampleProtocol_Stub::
-          ExampleProtocol_clazz* impl);
+  typedef class ::test::placementofattributes::ExampleProtocol ExampleProtocol_clazz;
+  explicit ExampleProtocol_Stub(::test::placementofattributes::ExampleProtocol_Stub::ExampleProtocol_clazz* impl);
   ~ExampleProtocol_Stub() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
                         ::fidl::internal::PendingResponse response) override;
 
  private:
-  ::test::placementofattributes::ExampleProtocol_Stub::ExampleProtocol_clazz*
-      impl_;
+  ::test::placementofattributes::ExampleProtocol_Stub::ExampleProtocol_clazz* impl_;
 };
 
-class ExampleProtocol_SyncProxy
-    : public ::test::placementofattributes::ExampleProtocol_Sync {
+class ExampleProtocol_SyncProxy : public ::test::placementofattributes::ExampleProtocol_Sync {
  public:
   explicit ExampleProtocol_SyncProxy(::zx::channel channel);
   ~ExampleProtocol_SyncProxy() override;

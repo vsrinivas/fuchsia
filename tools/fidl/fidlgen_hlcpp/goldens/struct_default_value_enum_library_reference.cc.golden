@@ -9,10 +9,8 @@
 //
 namespace test {
 namespace structdefaultvalueenumlibraryreference {
-extern "C" const fidl_type_t
-    test_structdefaultvalueenumlibraryreference_FooTable;
-const fidl_type_t* Foo::FidlType =
-    &test_structdefaultvalueenumlibraryreference_FooTable;
+extern "C" const fidl_type_t test_structdefaultvalueenumlibraryreference_FooTable;
+const fidl_type_t* Foo::FidlType = &test_structdefaultvalueenumlibraryreference_FooTable;
 
 void Foo::Encode(::fidl::Encoder* _encoder, size_t _offset,
                  cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
@@ -33,7 +31,8 @@ void Foo::Decode(::fidl::Decoder* _decoder, Foo* _value, size_t _offset) {
 
 zx_status_t Foo::Clone(Foo* _result) const {
   zx_status_t _status = ::fidl::Clone(field, &_result->field);
-  if (_status != ZX_OK) return _status;
+  if (_status != ZX_OK)
+    return _status;
   return ZX_OK;
 }
 

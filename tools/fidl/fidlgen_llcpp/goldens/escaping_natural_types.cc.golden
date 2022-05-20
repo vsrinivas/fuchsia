@@ -2,7 +2,7 @@
 
 #include <fidl/test.escaping/cpp/natural_types.h>
 
-::test_escaping::DocCommentWithQuotes::Storage_
-test_escaping::DocCommentWithQuotes::CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.__reserved)};
+::test_escaping::DocCommentWithQuotes::Storage_ test_escaping::DocCommentWithQuotes::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.__reserved)};
 }

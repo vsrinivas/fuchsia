@@ -13,8 +13,7 @@
 using namespace ::fuzzing;
 using namespace ::test::inheritancewithrecursivedecl;
 
-// Add //build/fuzzing:fuzzing_verbose_logging to a GN target's configs to
-// enable.
+// Add //build/fuzzing:fuzzing_verbose_logging to a GN target's configs to enable.
 #if FUZZING_VERBOSE_LOGGING
 #include <stdio.h>
 #define xprintf(fmt...) printf(fmt)
@@ -32,8 +31,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
     loop_ = new ::async::Loop(&kAsyncLoopConfigAttachToCurrentThread);
   }
 
-  // Must fuzz some protocol; first two bytes used to select protocol and
-  // method.
+  // Must fuzz some protocol; first two bytes used to select protocol and method.
   if (size_ < 2) {
     xprintf("Early exit: Input too small: %zu\n", size_);
     return 0;
@@ -50,33 +48,26 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
   if (protocol_selection_ == 0) {
 #if !defined(PROTOCOL_test_inheritancewithrecursivedecl_Parent)
     // Selected protocol from FIDL file that is not part of this fuzzer.
-    xprintf(
-        "Early exit: Chose disabled protocol: "
-        "test_inheritancewithrecursivedecl_Parent\n");
+    xprintf("Early exit: Chose disabled protocol: test_inheritancewithrecursivedecl_Parent\n");
     return 0;
 #else
 
-    ::fidl::InterfacePtr< ::test::inheritancewithrecursivedecl::Parent>
-        protocol_;
+    ::fidl::InterfacePtr< ::test::inheritancewithrecursivedecl::Parent> protocol_;
 
     xprintf("Starting test_inheritancewithrecursivedecl_Parent service\n");
-    ::fidl::fuzzing::Fuzzer< ::test::inheritancewithrecursivedecl::Parent>
-        fuzzer_(loop_->dispatcher());
+    ::fidl::fuzzing::Fuzzer< ::test::inheritancewithrecursivedecl::Parent> fuzzer_(loop_->dispatcher());
     if ((status_ = fuzzer_.Init()) != ZX_OK) {
       xprintf("Early exit: fuzzer.Init returned bad status: %d\n", status_);
       return 0;
     }
 
     if ((status_ = fuzzer_.BindService()) != ZX_OK) {
-      xprintf("Early exit: fuzzer.BindService returned bad status: %d\n",
-              status_);
+      xprintf("Early exit: fuzzer.BindService returned bad status: %d\n", status_);
       return 0;
     }
 
-    if ((status_ = fuzzer_.BindClient(&protocol_, loop_->dispatcher())) !=
-        ZX_OK) {
-      xprintf("Early exit: fuzzer.BindClient returned bad status: %d\n",
-              status_);
+    if ((status_ = fuzzer_.BindClient(&protocol_, loop_->dispatcher())) != ZX_OK) {
+      xprintf("Early exit: fuzzer.BindClient returned bad status: %d\n", status_);
       return 0;
     }
 
@@ -90,38 +81,25 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
       xprintf("Early exit: Chose disabled method: First\n");
       return 0;
 #else
-      const size_t min_size_ = MinSize< ::fidl::InterfaceRequest<
-          ::test::inheritancewithrecursivedecl::Parent> >();
+      const size_t min_size_ = MinSize< ::fidl::InterfaceRequest< ::test::inheritancewithrecursivedecl::Parent> >();
 
       // Must have enough bytes for input.
       if (size_ < min_size_) {
-        xprintf("Early exit: Input size too small: %zu < %zu\n", size_,
-                min_size_);
+        xprintf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
         return 0;
       }
 
       const size_t slack_size_ = size_ - min_size_;
       const size_t slack_size_per_param = slack_size_ / 1;
 
-      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n",
-              slack_size_, slack_size_per_param);
+      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
 
       size_t param_size_;
-      param_size_ = MinSize< ::fidl::InterfaceRequest<
-                        ::test::inheritancewithrecursivedecl::Parent> >() +
-                    slack_size_per_param;
-      xprintf(
-          "Allocating %zu bytes for "
-          "::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::"
-          "Parent> request\n",
-          param_size_);
-      ::fidl::InterfaceRequest< ::test::inheritancewithrecursivedecl::Parent>
-          request = Allocate< ::fidl::InterfaceRequest<
-              ::test::inheritancewithrecursivedecl::Parent> >{}(&src_,
-                                                                &param_size_);
+      param_size_ = MinSize< ::fidl::InterfaceRequest< ::test::inheritancewithrecursivedecl::Parent> >() + slack_size_per_param;
+      xprintf("Allocating %zu bytes for ::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent> request\n", param_size_);
+      ::fidl::InterfaceRequest< ::test::inheritancewithrecursivedecl::Parent> request = Allocate< ::fidl::InterfaceRequest< ::test::inheritancewithrecursivedecl::Parent> >{}(&src_, &param_size_);
 
-      xprintf(
-          "Invoking method test_inheritancewithrecursivedecl_Parent.First\n");
+      xprintf("Invoking method test_inheritancewithrecursivedecl_Parent.First\n");
       protocol_->First(std::move(request));
 #endif
     }
@@ -138,33 +116,26 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
   if (protocol_selection_ == 1) {
 #if !defined(PROTOCOL_test_inheritancewithrecursivedecl_Child)
     // Selected protocol from FIDL file that is not part of this fuzzer.
-    xprintf(
-        "Early exit: Chose disabled protocol: "
-        "test_inheritancewithrecursivedecl_Child\n");
+    xprintf("Early exit: Chose disabled protocol: test_inheritancewithrecursivedecl_Child\n");
     return 0;
 #else
 
-    ::fidl::InterfacePtr< ::test::inheritancewithrecursivedecl::Child>
-        protocol_;
+    ::fidl::InterfacePtr< ::test::inheritancewithrecursivedecl::Child> protocol_;
 
     xprintf("Starting test_inheritancewithrecursivedecl_Child service\n");
-    ::fidl::fuzzing::Fuzzer< ::test::inheritancewithrecursivedecl::Child>
-        fuzzer_(loop_->dispatcher());
+    ::fidl::fuzzing::Fuzzer< ::test::inheritancewithrecursivedecl::Child> fuzzer_(loop_->dispatcher());
     if ((status_ = fuzzer_.Init()) != ZX_OK) {
       xprintf("Early exit: fuzzer.Init returned bad status: %d\n", status_);
       return 0;
     }
 
     if ((status_ = fuzzer_.BindService()) != ZX_OK) {
-      xprintf("Early exit: fuzzer.BindService returned bad status: %d\n",
-              status_);
+      xprintf("Early exit: fuzzer.BindService returned bad status: %d\n", status_);
       return 0;
     }
 
-    if ((status_ = fuzzer_.BindClient(&protocol_, loop_->dispatcher())) !=
-        ZX_OK) {
-      xprintf("Early exit: fuzzer.BindClient returned bad status: %d\n",
-              status_);
+    if ((status_ = fuzzer_.BindClient(&protocol_, loop_->dispatcher())) != ZX_OK) {
+      xprintf("Early exit: fuzzer.BindClient returned bad status: %d\n", status_);
       return 0;
     }
 
@@ -178,38 +149,25 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
       xprintf("Early exit: Chose disabled method: First\n");
       return 0;
 #else
-      const size_t min_size_ = MinSize< ::fidl::InterfaceRequest<
-          ::test::inheritancewithrecursivedecl::Parent> >();
+      const size_t min_size_ = MinSize< ::fidl::InterfaceRequest< ::test::inheritancewithrecursivedecl::Parent> >();
 
       // Must have enough bytes for input.
       if (size_ < min_size_) {
-        xprintf("Early exit: Input size too small: %zu < %zu\n", size_,
-                min_size_);
+        xprintf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
         return 0;
       }
 
       const size_t slack_size_ = size_ - min_size_;
       const size_t slack_size_per_param = slack_size_ / 1;
 
-      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n",
-              slack_size_, slack_size_per_param);
+      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
 
       size_t param_size_;
-      param_size_ = MinSize< ::fidl::InterfaceRequest<
-                        ::test::inheritancewithrecursivedecl::Parent> >() +
-                    slack_size_per_param;
-      xprintf(
-          "Allocating %zu bytes for "
-          "::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::"
-          "Parent> request\n",
-          param_size_);
-      ::fidl::InterfaceRequest< ::test::inheritancewithrecursivedecl::Parent>
-          request = Allocate< ::fidl::InterfaceRequest<
-              ::test::inheritancewithrecursivedecl::Parent> >{}(&src_,
-                                                                &param_size_);
+      param_size_ = MinSize< ::fidl::InterfaceRequest< ::test::inheritancewithrecursivedecl::Parent> >() + slack_size_per_param;
+      xprintf("Allocating %zu bytes for ::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent> request\n", param_size_);
+      ::fidl::InterfaceRequest< ::test::inheritancewithrecursivedecl::Parent> request = Allocate< ::fidl::InterfaceRequest< ::test::inheritancewithrecursivedecl::Parent> >{}(&src_, &param_size_);
 
-      xprintf(
-          "Invoking method test_inheritancewithrecursivedecl_Child.First\n");
+      xprintf("Invoking method test_inheritancewithrecursivedecl_Child.First\n");
       protocol_->First(std::move(request));
 #endif
     }
@@ -219,38 +177,25 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
       xprintf("Early exit: Chose disabled method: Second\n");
       return 0;
 #else
-      const size_t min_size_ = MinSize< ::fidl::InterfaceRequest<
-          ::test::inheritancewithrecursivedecl::Parent> >();
+      const size_t min_size_ = MinSize< ::fidl::InterfaceRequest< ::test::inheritancewithrecursivedecl::Parent> >();
 
       // Must have enough bytes for input.
       if (size_ < min_size_) {
-        xprintf("Early exit: Input size too small: %zu < %zu\n", size_,
-                min_size_);
+        xprintf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
         return 0;
       }
 
       const size_t slack_size_ = size_ - min_size_;
       const size_t slack_size_per_param = slack_size_ / 1;
 
-      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n",
-              slack_size_, slack_size_per_param);
+      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
 
       size_t param_size_;
-      param_size_ = MinSize< ::fidl::InterfaceRequest<
-                        ::test::inheritancewithrecursivedecl::Parent> >() +
-                    slack_size_per_param;
-      xprintf(
-          "Allocating %zu bytes for "
-          "::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::"
-          "Parent> request\n",
-          param_size_);
-      ::fidl::InterfaceRequest< ::test::inheritancewithrecursivedecl::Parent>
-          request = Allocate< ::fidl::InterfaceRequest<
-              ::test::inheritancewithrecursivedecl::Parent> >{}(&src_,
-                                                                &param_size_);
+      param_size_ = MinSize< ::fidl::InterfaceRequest< ::test::inheritancewithrecursivedecl::Parent> >() + slack_size_per_param;
+      xprintf("Allocating %zu bytes for ::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent> request\n", param_size_);
+      ::fidl::InterfaceRequest< ::test::inheritancewithrecursivedecl::Parent> request = Allocate< ::fidl::InterfaceRequest< ::test::inheritancewithrecursivedecl::Parent> >{}(&src_, &param_size_);
 
-      xprintf(
-          "Invoking method test_inheritancewithrecursivedecl_Child.Second\n");
+      xprintf("Invoking method test_inheritancewithrecursivedecl_Child.Second\n");
       protocol_->Second(std::move(request));
 #endif
     }

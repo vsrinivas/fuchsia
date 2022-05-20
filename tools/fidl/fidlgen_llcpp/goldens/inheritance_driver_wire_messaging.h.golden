@@ -17,4 +17,6 @@
 
 #endif  // __Fuchsia__
 
-namespace fidl {}  // namespace fidl
+namespace fidl {
+
+}  // namespace fidl

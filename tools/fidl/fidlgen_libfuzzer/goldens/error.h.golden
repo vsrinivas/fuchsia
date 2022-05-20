@@ -20,15 +20,16 @@ using ExampleFooRequest = ::test::error::ExampleFooRequest;
 
 template <>
 struct MinSize<Example_foo_Response> {
-  operator size_t() { return MinSize<int64_t>(); }
+  operator size_t() {
+    return MinSize<int64_t>();
+  }
 };
 template <>
 struct Allocate<Example_foo_Response> {
   Example_foo_Response operator()(FuzzInput* src, size_t* size) {
     ZX_ASSERT(*size >= MinSize<Example_foo_Response>());
     Example_foo_Response out;
-    const size_t slack_per_member =
-        (*size - MinSize<Example_foo_Response>()) / 1;
+    const size_t slack_per_member = (*size - MinSize<Example_foo_Response>()) / 1;
     size_t out_size;
     out_size = MinSize<int64_t>() + slack_per_member;
     out.y = Allocate<int64_t>{}(src, &out_size);
@@ -38,8 +39,7 @@ struct Allocate<Example_foo_Response> {
 template <>
 struct MinSize<Example_foo_Result> {
   operator size_t() {
-    size_t sizes[] = {0, MinSize<::test::error::Example_foo_Response>(),
-                      MinSize<uint32_t>()};
+    size_t sizes[] = {0, MinSize<::test::error::Example_foo_Response>(), MinSize<uint32_t>()};
     return 1 + *std::max_element(sizes, sizes + 2 + 1);
   }
 };
@@ -57,8 +57,7 @@ struct Allocate<Example_foo_Result> {
     Example_foo_Result out;
     switch (selector % 2) {
       case 0: {
-        out.set_response(
-            Allocate<::test::error::Example_foo_Response>{}(src, size));
+        out.set_response(Allocate<::test::error::Example_foo_Response>{}(src, size));
         break;
       }
       case 1: {
@@ -72,15 +71,16 @@ struct Allocate<Example_foo_Result> {
 };
 template <>
 struct MinSize<ExampleFooTopResponse> {
-  operator size_t() { return MinSize<::test::error::Example_foo_Result>(); }
+  operator size_t() {
+    return MinSize<::test::error::Example_foo_Result>();
+  }
 };
 template <>
 struct Allocate<ExampleFooTopResponse> {
   ExampleFooTopResponse operator()(FuzzInput* src, size_t* size) {
     ZX_ASSERT(*size >= MinSize<ExampleFooTopResponse>());
     ExampleFooTopResponse out;
-    const size_t slack_per_member =
-        (*size - MinSize<ExampleFooTopResponse>()) / 1;
+    const size_t slack_per_member = (*size - MinSize<ExampleFooTopResponse>()) / 1;
     size_t out_size;
     out_size = MinSize<::test::error::Example_foo_Result>() + slack_per_member;
     out.result = Allocate<::test::error::Example_foo_Result>{}(src, &out_size);
@@ -89,7 +89,9 @@ struct Allocate<ExampleFooTopResponse> {
 };
 template <>
 struct MinSize<ExampleFooRequest> {
-  operator size_t() { return MinSize<::std::string>(); }
+  operator size_t() {
+    return MinSize<::std::string>();
+  }
 };
 template <>
 struct Allocate<ExampleFooRequest> {

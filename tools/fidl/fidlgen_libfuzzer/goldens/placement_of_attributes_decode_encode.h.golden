@@ -12,35 +12,25 @@ namespace fuzzing {
 inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 4>
     test_placementofattributes_decoder_encoders = {
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name =
-                "::test_placementofattributes::wire::ExampleTable",
+            .fidl_type_name = "::test_placementofattributes::wire::ExampleTable",
             .has_flexible_envelope = true,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::test_placementofattributes::wire::ExampleTable>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_placementofattributes::wire::ExampleTable>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name =
-                "::test_placementofattributes::wire::ExampleStruct",
+            .fidl_type_name = "::test_placementofattributes::wire::ExampleStruct",
             .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::test_placementofattributes::wire::ExampleStruct>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_placementofattributes::wire::ExampleStruct>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_placementofattributes::wire::"
-                              "ExampleProtocolMethodRequest",
+            .fidl_type_name = "::test_placementofattributes::wire::ExampleProtocolMethodRequest",
             .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::test_placementofattributes::wire::
-                    ExampleProtocolMethodRequest>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_placementofattributes::wire::ExampleProtocolMethodRequest>,
         },
 
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::fidl::internal::TransactionalRequest<::test_"
-                              "placementofattributes::ExampleProtocol::Method>",
+            .fidl_type_name = "::fidl::internal::TransactionalRequest<::test_placementofattributes::ExampleProtocol::Method>",
             .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::fidl::internal::TransactionalRequest<
-                    ::test_placementofattributes::ExampleProtocol::Method>>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::fidl::internal::TransactionalRequest<::test_placementofattributes::ExampleProtocol::Method>>,
         },
 };
 

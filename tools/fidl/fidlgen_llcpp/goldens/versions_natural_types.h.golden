@@ -27,7 +27,9 @@ extern "C" const fidl_type_t test_versions_UnionTable;
 
 class Union {
  private:
-  using Storage_ = std::variant<std::monostate, uint32_t>;
+  using Storage_ =
+      std::variant<
+          std::monostate, uint32_t>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -67,8 +69,9 @@ class Union {
     return Union::IndexToTag(storage_->index()).value();
   }
   static Union WithX(uint32_t val) {
-    return Union(
-        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+    return Union(std::make_shared<Storage_>(
+        std::in_place_index_t<1>{},
+        std::move(val)));
   }
 
   const ::fidl::internal::UnionMemberView<1, Storage_> x() const {
@@ -78,25 +81,18 @@ class Union {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
 
-  Union(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : storage_(std::make_shared<Storage_>()) {}
+  Union(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
   std::shared_ptr<Storage_> CloneStorage_() const;
-  friend struct ::fidl::internal::NaturalUnionCodingTraits<
-      ::test_versions::Union>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalUnionMember<
-                          ::fidl::internal::NaturalCodingConstraintEmpty>(),
-                      ::fidl::internal::NaturalUnionMember<
-                          fidl::internal::NaturalCodingConstraintEmpty>());
+  friend struct ::fidl::internal::NaturalUnionCodingTraits<::test_versions::Union>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalUnionMember<::fidl::internal::NaturalCodingConstraintEmpty>(), ::fidl::internal::NaturalUnionMember<fidl::internal::NaturalCodingConstraintEmpty>());
 
-  explicit Union(std::shared_ptr<Storage_> storage)
-      : storage_(std::move(storage)) {}
+  explicit Union(std::shared_ptr<Storage_> storage) : storage_(std::move(storage)) {}
 
-  static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder,
-                                     ::test_versions::Union::Tag tag) {
+  static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_versions::Union::Tag tag) {
     switch (tag) {
       case ::test_versions::Union::Tag::kX:
         return 1;
@@ -109,8 +105,7 @@ class Union {
     }
   }
 
-  static constexpr std::optional<::test_versions::Union::Tag> IndexToTag(
-      size_t index) {
+  static constexpr std::optional<::test_versions::Union::Tag> IndexToTag(size_t index) {
     switch (index) {
       case 1:
         return ::test_versions::Union::Tag::kX;
@@ -137,21 +132,20 @@ class Table {
     return *this;
   }
   bool operator==(const Table& other) const noexcept {
-    return ::fidl::internal::NaturalTableCodingTraits<
-        ::test_versions::Table>::Equal(this, &other);
+    return ::fidl::internal::NaturalTableCodingTraits<::test_versions::Table>::Equal(this, &other);
   }
   bool operator!=(const Table& other) const noexcept {
-    return !::fidl::internal::NaturalTableCodingTraits<
-        ::test_versions::Table>::Equal(this, &other);
+    return !::fidl::internal::NaturalTableCodingTraits<::test_versions::Table>::Equal(this, &other);
   }
 
-  bool IsEmpty() const { return !(storage_.x.has_value()); }
+  bool IsEmpty() const {
+    return !(storage_.x.has_value());
+  }
 
   const std::optional<uint32_t>& x() const { return storage_.x; }
   ::std::optional<uint32_t>& x() { return storage_.x; }
 
-  Table(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : Table(Storage_{}) {}
+  Table(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Table(Storage_{}) {}
 
  private:
   struct Storage_ final {
@@ -161,13 +155,10 @@ class Table {
   // TODO(https://fxbug.dev/91252): Box the storage.
   Storage_ storage_;
   Storage_ CloneStorage_() const;
-  friend struct ::fidl::internal::NaturalTableCodingTraits<
-      ::test_versions::Table>;
+  friend struct ::fidl::internal::NaturalTableCodingTraits<::test_versions::Table>;
   friend struct ::fidl::internal::MemberVisitor<::test_versions::Table>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalTableMember<
-          Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          1, &Storage_::x});
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalTableMember<Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{
+      1, &Storage_::x});
 };
 
 extern "C" const fidl_type_t test_versions_StructTable;
@@ -178,12 +169,12 @@ class Struct {
 
  public:
   Struct(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-  Struct(uint32_t x) noexcept : storage_({.x = std::move(x)}) {}
+  Struct(uint32_t x) noexcept
+      : storage_({.x = std::move(x)}) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |Struct| only if all of its members are default
-  // constructible.
+  // Default constructs a |Struct| only if all of its members are default constructible.
   Struct() = default;
 #pragma clang diagnostic pop
 
@@ -196,22 +187,24 @@ class Struct {
   }
 
   bool operator==(const Struct& other) const noexcept {
-    return ::fidl::internal::NaturalStructCodingTraits<::test_versions::Struct,
-                                                       4>::Equal(this, &other);
+    return ::fidl::internal::NaturalStructCodingTraits<::test_versions::Struct, 4>::Equal(this, &other);
   }
   bool operator!=(const Struct& other) const noexcept {
-    return !::fidl::internal::NaturalStructCodingTraits<::test_versions::Struct,
-                                                        4>::Equal(this, &other);
+    return !::fidl::internal::NaturalStructCodingTraits<::test_versions::Struct, 4>::Equal(this, &other);
   }
 
-  uint32_t x() const { return storage_.x; }
+  uint32_t
+  x() const {
+    return storage_.x;
+  }
 
-  uint32_t& x() { return storage_.x; }
+  uint32_t& x() {
+    return storage_.x;
+  }
 
-  Struct(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : Struct(Storage_{
-            .x = {},
-        }) {}
+  Struct(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Struct(Storage_{
+                                                                           .x = {},
+                                                                       }) {}
 
  private:
   struct Storage_ final {
@@ -221,13 +214,10 @@ class Struct {
   Storage_ storage_;
   Storage_ CloneStorage_() const;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_versions::Struct, 4>;
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_versions::Struct, 4>;
   friend struct ::fidl::internal::MemberVisitor<::test_versions::Struct>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<
-          Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::x, 0});
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{
+      &Storage_::x, 0});
   static constexpr auto kPadding = std::make_tuple();
 };
 
@@ -244,10 +234,8 @@ template <>
 struct IsFidlType<::test_versions::Struct> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<
-    ::test_versions::Struct, ::fidl::internal::NaturalCodingConstraintEmpty>
-    final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_versions::Struct, 4> {};
+struct internal::NaturalCodingTraits<::test_versions::Struct, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_versions::Struct, 4> {};
 
 extern "C" const fidl_type_t test_versions_TableTable;
 
@@ -255,10 +243,7 @@ template <>
 struct IsFidlType<::test_versions::Table> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<
-    ::test_versions::Table, ::fidl::internal::NaturalCodingConstraintEmpty>
-    : public ::fidl::internal::NaturalTableCodingTraits<
-          ::test_versions::Table> {};
+struct internal::NaturalCodingTraits<::test_versions::Table, ::fidl::internal::NaturalCodingConstraintEmpty> : public ::fidl::internal::NaturalTableCodingTraits<::test_versions::Table> {};
 
 extern "C" const fidl_type_t test_versions_UnionTable;
 
@@ -268,43 +253,31 @@ template <>
 struct IsUnion<::test_versions::Union> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<
-    ::test_versions::Union, ::fidl::internal::NaturalCodingConstraintEmpty>
-    final : public ::fidl::internal::NaturalUnionCodingTraits<
-                ::test_versions::Union> {};
+struct internal::NaturalCodingTraits<::test_versions::Union, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalUnionCodingTraits<::test_versions::Union> {};
 
 template <>
-struct internal::NaturalCodingTraits<
-    ::test_versions::Bits, ::fidl::internal::NaturalCodingConstraintEmpty> {
+struct internal::NaturalCodingTraits<::test_versions::Bits, ::fidl::internal::NaturalCodingConstraintEmpty> {
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
   static constexpr bool is_memcpy_compatible = true;
 
-  static void Encode(internal::NaturalEncoder* encoder,
-                     ::test_versions::Bits* value, size_t offset,
-                     size_t recursion_depth) {
+  static void Encode(internal::NaturalEncoder* encoder, ::test_versions::Bits* value, size_t offset, size_t recursion_depth) {
     *encoder->template GetPtr<::test_versions::Bits>(offset) = *value;
   }
-  static void Decode(internal::NaturalDecoder* decoder,
-                     ::test_versions::Bits* value, size_t offset,
-                     size_t recursion_depth) {
+  static void Decode(internal::NaturalDecoder* decoder, ::test_versions::Bits* value, size_t offset, size_t recursion_depth) {
     *value = *decoder->template GetPtr<::test_versions::Bits>(offset);
   }
 };
 
 template <>
-struct internal::NaturalCodingTraits<
-    ::test_versions::Enum, ::fidl::internal::NaturalCodingConstraintEmpty> {
+struct internal::NaturalCodingTraits<::test_versions::Enum, ::fidl::internal::NaturalCodingConstraintEmpty> {
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
   static constexpr bool is_memcpy_compatible = true;
 
-  static void Encode(internal::NaturalEncoder* encoder,
-                     ::test_versions::Enum* value, size_t offset,
-                     size_t recursion_depth) {
+  static void Encode(internal::NaturalEncoder* encoder, ::test_versions::Enum* value, size_t offset, size_t recursion_depth) {
     *encoder->template GetPtr<::test_versions::Enum>(offset) = *value;
   }
-  static void Decode(internal::NaturalDecoder* decoder,
-                     ::test_versions::Enum* value, size_t offset,
-                     size_t recursion_depth) {
+  static void Decode(internal::NaturalDecoder* decoder, ::test_versions::Enum* value, size_t offset, size_t recursion_depth) {
     *value = *decoder->template GetPtr<::test_versions::Enum>(offset);
   }
 };

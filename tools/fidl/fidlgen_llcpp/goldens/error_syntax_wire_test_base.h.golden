@@ -7,33 +7,24 @@ namespace fidl {
 namespace testing {
 
 template <>
-class WireTestBase<::test_errorsyntax::ExampleUseOfErrorSyntax>
-    : public ::fidl::WireServer<::test_errorsyntax::ExampleUseOfErrorSyntax> {
+class WireTestBase<::test_errorsyntax::ExampleUseOfErrorSyntax> : public ::fidl::WireServer<::test_errorsyntax::ExampleUseOfErrorSyntax> {
  public:
-  virtual ~WireTestBase<::test_errorsyntax::ExampleUseOfErrorSyntax>() =
-      default;
-  virtual void NotImplemented_(const std::string& name,
-                               ::fidl::CompleterBase& completer) = 0;
+  virtual ~WireTestBase<::test_errorsyntax::ExampleUseOfErrorSyntax>() = default;
+  virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
   virtual void ComposedCallWhichMayFail(
-      ComposedCallWhichMayFailRequestView request,
-      ComposedCallWhichMayFailCompleter::Sync& completer) override {
+      ComposedCallWhichMayFailRequestView request, ComposedCallWhichMayFailCompleter::Sync& completer) override {
     NotImplemented_("ComposedCallWhichMayFail", completer);
   }
   virtual void CallWhichMayFail(
-      CallWhichMayFailRequestView request,
-      CallWhichMayFailCompleter::Sync& completer) override {
+      CallWhichMayFailRequestView request, CallWhichMayFailCompleter::Sync& completer) override {
     NotImplemented_("CallWhichMayFail", completer);
   }
 };
 
 template <>
-class ::fidl::testing::WireSyncEventHandlerTestBase<
-    ::test_errorsyntax::ExampleUseOfErrorSyntax>
-    : public ::fidl::WireSyncEventHandler<
-          ::test_errorsyntax::ExampleUseOfErrorSyntax> {
+class ::fidl::testing::WireSyncEventHandlerTestBase<::test_errorsyntax::ExampleUseOfErrorSyntax> : public ::fidl::WireSyncEventHandler<::test_errorsyntax::ExampleUseOfErrorSyntax> {
  public:
-  virtual ~WireSyncEventHandlerTestBase<
-      ::test_errorsyntax::ExampleUseOfErrorSyntax>() = default;
+  virtual ~WireSyncEventHandlerTestBase<::test_errorsyntax::ExampleUseOfErrorSyntax>() = default;
   virtual void NotImplemented_(const std::string& name) = 0;
 };
 }  // namespace testing

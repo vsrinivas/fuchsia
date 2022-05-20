@@ -18,4 +18,6 @@
 
 #include <fidl/test.someotherlibrary/cpp/wire_messaging.h>
 
-namespace fidl {}  // namespace fidl
+namespace fidl {
+
+}  // namespace fidl

@@ -2,53 +2,49 @@
 
 #include <fidl/test.union/cpp/natural_types.h>
 
-::test_union::StructWithNullableXUnion::Storage_
-test_union::StructWithNullableXUnion::CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.x1)};
+::test_union::StructWithNullableXUnion::Storage_ test_union::StructWithNullableXUnion::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.x1)};
 }
 
-::test_union::
-    TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse::Storage_
-    test_union::
-        TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse::
-            CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.xu)};
+::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse::Storage_ test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.xu)};
 }
 
 ::test_union::Pizza::Storage_ test_union::Pizza::CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.toppings)};
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.toppings)};
 }
 
 ::test_union::Pasta::Storage_ test_union::Pasta::CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.sauce)};
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.sauce)};
 }
 
-::test_union::
-    TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse::Storage_
-    test_union::
-        TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse::
-            CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.xu)};
+::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse::Storage_ test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.xu)};
 }
 
-::test_union::NullableUnionStruct::Storage_
-test_union::NullableUnionStruct::CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.the_union)};
+::test_union::NullableUnionStruct::Storage_ test_union::NullableUnionStruct::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.the_union)};
 }
 
-::test_union::UnionSandwich::Storage_ test_union::UnionSandwich::CloneStorage_()
-    const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.a),
-                  ::fidl::internal::NaturalClone(storage_.u),
-                  ::fidl::internal::NaturalClone(storage_.b)};
+::test_union::UnionSandwich::Storage_ test_union::UnionSandwich::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.a),
+      ::fidl::internal::NaturalClone(storage_.u),
+      ::fidl::internal::NaturalClone(storage_.b)};
 }
 
 ::test_union::Empty::Storage_ test_union::Empty::CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.__reserved)};
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.__reserved)};
 }
 
-std::shared_ptr<::test_union::UnionWithAttributes::Storage_>
-test_union::UnionWithAttributes::CloneStorage_() const {
+std::shared_ptr<::test_union::UnionWithAttributes::Storage_> test_union::UnionWithAttributes::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
@@ -60,29 +56,7 @@ test_union::UnionWithAttributes::CloneStorage_() const {
   }
 }
 
-std::shared_ptr<::test_union::Union::Storage_>
-test_union::Union::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    case 2:
-      return std::make_shared<Storage_>(
-          std::in_place_index<2>,
-          ::fidl::internal::NaturalClone(std::get<2>(storage)));
-    case 3:
-      return std::make_shared<Storage_>(
-          std::in_place_index<3>,
-          ::fidl::internal::NaturalClone(std::get<3>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_union::StrictUnion::Storage_>
-test_union::StrictUnion::CloneStorage_() const {
+std::shared_ptr<::test_union::Union::Storage_> test_union::Union::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
@@ -102,8 +76,7 @@ test_union::StrictUnion::CloneStorage_() const {
   }
 }
 
-std::shared_ptr<::test_union::StrictSimpleXUnion::Storage_>
-test_union::StrictSimpleXUnion::CloneStorage_() const {
+std::shared_ptr<::test_union::StrictUnion::Storage_> test_union::StrictUnion::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
@@ -123,140 +96,7 @@ test_union::StrictSimpleXUnion::CloneStorage_() const {
   }
 }
 
-std::shared_ptr<::test_union::StrictFoo::Storage_>
-test_union::StrictFoo::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    case 2:
-      return std::make_shared<Storage_>(
-          std::in_place_index<2>,
-          ::fidl::internal::NaturalClone(std::get<2>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_union::StrictBoundedXUnion::Storage_>
-test_union::StrictBoundedXUnion::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_union::ReverseOrdinalUnion::Storage_>
-test_union::ReverseOrdinalUnion::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    case 2:
-      return std::make_shared<Storage_>(
-          std::in_place_index<2>,
-          ::fidl::internal::NaturalClone(std::get<2>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_union::StrictPizzaOrPasta::Storage_>
-test_union::StrictPizzaOrPasta::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    case 2:
-      return std::make_shared<Storage_>(
-          std::in_place_index<2>,
-          ::fidl::internal::NaturalClone(std::get<2>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_union::PizzaOrPasta::Storage_>
-test_union::PizzaOrPasta::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    case 2:
-      return std::make_shared<Storage_>(
-          std::in_place_index<2>,
-          ::fidl::internal::NaturalClone(std::get<2>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_union::FlexiblePizzaOrPasta::Storage_>
-test_union::FlexiblePizzaOrPasta::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    case 2:
-      return std::make_shared<Storage_>(
-          std::in_place_index<2>,
-          ::fidl::internal::NaturalClone(std::get<2>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_union::ExplicitPizzaOrPasta::Storage_>
-test_union::ExplicitPizzaOrPasta::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    case 2:
-      return std::make_shared<Storage_>(
-          std::in_place_index<2>,
-          ::fidl::internal::NaturalClone(std::get<2>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_union::OlderSimpleUnion::Storage_>
-test_union::OlderSimpleUnion::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    case 2:
-      return std::make_shared<Storage_>(
-          std::in_place_index<2>,
-          ::fidl::internal::NaturalClone(std::get<2>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_union::NewerSimpleUnion::Storage_>
-test_union::NewerSimpleUnion::CloneStorage_() const {
+std::shared_ptr<::test_union::StrictSimpleXUnion::Storage_> test_union::StrictSimpleXUnion::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
@@ -276,8 +116,131 @@ test_union::NewerSimpleUnion::CloneStorage_() const {
   }
 }
 
-std::shared_ptr<::test_union::FlexibleUnion::Storage_>
-test_union::FlexibleUnion::CloneStorage_() const {
+std::shared_ptr<::test_union::StrictFoo::Storage_> test_union::StrictFoo::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    case 2:
+      return std::make_shared<Storage_>(
+          std::in_place_index<2>,
+          ::fidl::internal::NaturalClone(std::get<2>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_union::StrictBoundedXUnion::Storage_> test_union::StrictBoundedXUnion::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_union::ReverseOrdinalUnion::Storage_> test_union::ReverseOrdinalUnion::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    case 2:
+      return std::make_shared<Storage_>(
+          std::in_place_index<2>,
+          ::fidl::internal::NaturalClone(std::get<2>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_union::StrictPizzaOrPasta::Storage_> test_union::StrictPizzaOrPasta::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    case 2:
+      return std::make_shared<Storage_>(
+          std::in_place_index<2>,
+          ::fidl::internal::NaturalClone(std::get<2>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_union::PizzaOrPasta::Storage_> test_union::PizzaOrPasta::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    case 2:
+      return std::make_shared<Storage_>(
+          std::in_place_index<2>,
+          ::fidl::internal::NaturalClone(std::get<2>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_union::FlexiblePizzaOrPasta::Storage_> test_union::FlexiblePizzaOrPasta::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    case 2:
+      return std::make_shared<Storage_>(
+          std::in_place_index<2>,
+          ::fidl::internal::NaturalClone(std::get<2>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_union::ExplicitPizzaOrPasta::Storage_> test_union::ExplicitPizzaOrPasta::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    case 2:
+      return std::make_shared<Storage_>(
+          std::in_place_index<2>,
+          ::fidl::internal::NaturalClone(std::get<2>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_union::OlderSimpleUnion::Storage_> test_union::OlderSimpleUnion::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    case 2:
+      return std::make_shared<Storage_>(
+          std::in_place_index<2>,
+          ::fidl::internal::NaturalClone(std::get<2>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_union::NewerSimpleUnion::Storage_> test_union::NewerSimpleUnion::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
@@ -297,8 +260,27 @@ test_union::FlexibleUnion::CloneStorage_() const {
   }
 }
 
-std::shared_ptr<::test_union::FlexibleFoo::Storage_>
-test_union::FlexibleFoo::CloneStorage_() const {
+std::shared_ptr<::test_union::FlexibleUnion::Storage_> test_union::FlexibleUnion::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    case 2:
+      return std::make_shared<Storage_>(
+          std::in_place_index<2>,
+          ::fidl::internal::NaturalClone(std::get<2>(storage)));
+    case 3:
+      return std::make_shared<Storage_>(
+          std::in_place_index<3>,
+          ::fidl::internal::NaturalClone(std::get<3>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_union::FlexibleFoo::Storage_> test_union::FlexibleFoo::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
@@ -314,8 +296,7 @@ test_union::FlexibleFoo::CloneStorage_() const {
   }
 }
 
-std::shared_ptr<::test_union::FieldCollision::Storage_>
-test_union::FieldCollision::CloneStorage_() const {
+std::shared_ptr<::test_union::FieldCollision::Storage_> test_union::FieldCollision::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
@@ -327,25 +308,7 @@ test_union::FieldCollision::CloneStorage_() const {
   }
 }
 
-std::shared_ptr<::test_union::ExplicitXUnion::Storage_>
-test_union::ExplicitXUnion::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    case 2:
-      return std::make_shared<Storage_>(
-          std::in_place_index<2>,
-          ::fidl::internal::NaturalClone(std::get<2>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_union::ExplicitUnion::Storage_>
-test_union::ExplicitUnion::CloneStorage_() const {
+std::shared_ptr<::test_union::ExplicitXUnion::Storage_> test_union::ExplicitXUnion::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
@@ -361,8 +324,7 @@ test_union::ExplicitUnion::CloneStorage_() const {
   }
 }
 
-std::shared_ptr<::test_union::ExplicitStrictFoo::Storage_>
-test_union::ExplicitStrictFoo::CloneStorage_() const {
+std::shared_ptr<::test_union::ExplicitUnion::Storage_> test_union::ExplicitUnion::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
@@ -378,8 +340,7 @@ test_union::ExplicitStrictFoo::CloneStorage_() const {
   }
 }
 
-std::shared_ptr<::test_union::ExplicitFoo::Storage_>
-test_union::ExplicitFoo::CloneStorage_() const {
+std::shared_ptr<::test_union::ExplicitStrictFoo::Storage_> test_union::ExplicitStrictFoo::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
@@ -395,8 +356,23 @@ test_union::ExplicitFoo::CloneStorage_() const {
   }
 }
 
-std::shared_ptr<::test_union::XUnionContainingEmptyStruct::Storage_>
-test_union::XUnionContainingEmptyStruct::CloneStorage_() const {
+std::shared_ptr<::test_union::ExplicitFoo::Storage_> test_union::ExplicitFoo::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    case 2:
+      return std::make_shared<Storage_>(
+          std::in_place_index<2>,
+          ::fidl::internal::NaturalClone(std::get<2>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_union::XUnionContainingEmptyStruct::Storage_> test_union::XUnionContainingEmptyStruct::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:

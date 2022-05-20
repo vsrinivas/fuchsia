@@ -18,7 +18,9 @@ using OneWaySendRequest = ::test::driveroneway::OneWaySendRequest;
 
 template <>
 struct MinSize<Payload> {
-  operator size_t() { return MinSize<uint32_t>(); }
+  operator size_t() {
+    return MinSize<uint32_t>();
+  }
 };
 template <>
 struct Allocate<Payload> {
@@ -34,7 +36,9 @@ struct Allocate<Payload> {
 };
 template <>
 struct MinSize<OneWaySendRequest> {
-  operator size_t() { return MinSize<::test::driveroneway::Payload>(); }
+  operator size_t() {
+    return MinSize<::test::driveroneway::Payload>();
+  }
 };
 template <>
 struct Allocate<OneWaySendRequest> {

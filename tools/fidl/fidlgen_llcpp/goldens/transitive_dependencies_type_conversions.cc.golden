@@ -5,25 +5,12 @@
 namespace fidl {
 namespace internal {
 
-::test_transitivedependencies::Baz
-WireNaturalConversionTraits<::test_transitivedependencies::wire::Baz,
-                            ::test_transitivedependencies::Baz>::
-    ToNatural(::test_transitivedependencies::wire::Baz src) {
-  return ::test_transitivedependencies::Baz(
-      WireNaturalConversionTraits<
-          ::test_middle::wire::Bar,
-          ::test_middle::Bar>::ToNatural(std::move(src.g)));
+::test_transitivedependencies::Baz WireNaturalConversionTraits<::test_transitivedependencies::wire::Baz, ::test_transitivedependencies::Baz>::ToNatural(::test_transitivedependencies::wire::Baz src) {
+  return ::test_transitivedependencies::Baz(WireNaturalConversionTraits<::test_middle::wire::Bar, ::test_middle::Bar>::ToNatural(std::move(src.g)));
 }
-::test_transitivedependencies::wire::Baz
-WireNaturalConversionTraits<::test_transitivedependencies::wire::Baz,
-                            ::test_transitivedependencies::Baz>::
-    ToWire(fidl::AnyArena& arena, ::test_transitivedependencies::Baz src) {
+::test_transitivedependencies::wire::Baz WireNaturalConversionTraits<::test_transitivedependencies::wire::Baz, ::test_transitivedependencies::Baz>::ToWire(fidl::AnyArena& arena, ::test_transitivedependencies::Baz src) {
   return ::test_transitivedependencies::wire::Baz{
-      .g =
-          WireNaturalConversionTraits<::test_middle::wire::Bar,
-                                      ::test_middle::Bar>::ToWire(arena,
-                                                                  std::move(
-                                                                      src.g())),
+      .g = WireNaturalConversionTraits<::test_middle::wire::Bar, ::test_middle::Bar>::ToWire(arena, std::move(src.g())),
   };
 }
 

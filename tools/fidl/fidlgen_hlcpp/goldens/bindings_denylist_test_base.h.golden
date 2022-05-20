@@ -13,37 +13,34 @@ class Allowed_TestBase : public ::test::bindingsdenylist::Allowed {
   virtual void NotImplemented_(const std::string& name) = 0;
 };
 
-class OnlyLibfuzzerAndDeps_TestBase
-    : public ::test::bindingsdenylist::OnlyLibfuzzerAndDeps {
+class OnlyLibfuzzerAndDeps_TestBase : public ::test::bindingsdenylist::OnlyLibfuzzerAndDeps {
  public:
   virtual ~OnlyLibfuzzerAndDeps_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
-  void LibfuzzerNeedsNonemptyProtocol(
-      LibfuzzerNeedsNonemptyProtocolCallback callback) override {
+  void LibfuzzerNeedsNonemptyProtocol(LibfuzzerNeedsNonemptyProtocolCallback callback) override {
     NotImplemented_("LibfuzzerNeedsNonemptyProtocol");
   }
 };
 
-class OnlyCppAndDeps_TestBase
-    : public ::test::bindingsdenylist::OnlyCppAndDeps {
+class OnlyCppAndDeps_TestBase : public ::test::bindingsdenylist::OnlyCppAndDeps {
  public:
   virtual ~OnlyCppAndDeps_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
 };
 
-class ImportsSameNameContext_TestBase
-    : public ::test::bindingsdenylist::ImportsSameNameContext {
+class ImportsSameNameContext_TestBase : public ::test::bindingsdenylist::ImportsSameNameContext {
  public:
   virtual ~ImportsSameNameContext_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
-  void Unattributed() override { NotImplemented_("Unattributed"); }
+  void Unattributed() override {
+    NotImplemented_("Unattributed");
+  }
   void AlwaysAppearsInImportingLibrary() override {
     NotImplemented_("AlwaysAppearsInImportingLibrary");
   }
 };
 
-class DenyEachBinding_TestBase
-    : public ::test::bindingsdenylist::DenyEachBinding {
+class DenyEachBinding_TestBase : public ::test::bindingsdenylist::DenyEachBinding {
  public:
   virtual ~DenyEachBinding_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;

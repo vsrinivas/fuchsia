@@ -59,24 +59,7 @@ class Handles {
 
  public:
   Handles(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-  Handles(::zx::handle plain_handle, ::zx::bti bti_handle,
-          ::zx::channel channel_handle, ::zx::clock clock_handle,
-          ::zx::debuglog debuglog_handle, ::zx::event event_handle,
-          ::zx::eventpair eventpair_handle, ::zx::exception exception_handle,
-          ::zx::fifo fifo_handle, ::zx::guest guest_handle,
-          ::zx::interrupt interrupt_handle, ::zx::iommu iommu_handle,
-          ::zx::job job_handle, ::zx::pager pager_handle, ::zx::pmt pmt_handle,
-          ::zx::port port_handle, ::zx::process process_handle,
-          ::zx::profile profile_handle, ::zx::resource resource_handle,
-          ::zx::socket socket_handle, ::zx::suspend_token suspendtoken_handle,
-          ::zx::thread thread_handle, ::zx::timer timer_handle,
-          ::zx::vcpu vcpu_handle, ::zx::vmar vmar_handle, ::zx::vmo vmo_handle,
-          ::zx::vmo rights_handle, ::zx::handle aliased_plain_handle_field,
-          ::zx::vmo aliased_subtype_handle_field,
-          ::zx::vmo aliased_rights_handle_field,
-          ::fidl::ClientEnd<::test_handles::SomeProtocol> some_protocol,
-          ::fidl::ServerEnd<::test_handles::SomeProtocol>
-              request_some_protocol) noexcept
+  Handles(::zx::handle plain_handle, ::zx::bti bti_handle, ::zx::channel channel_handle, ::zx::clock clock_handle, ::zx::debuglog debuglog_handle, ::zx::event event_handle, ::zx::eventpair eventpair_handle, ::zx::exception exception_handle, ::zx::fifo fifo_handle, ::zx::guest guest_handle, ::zx::interrupt interrupt_handle, ::zx::iommu iommu_handle, ::zx::job job_handle, ::zx::pager pager_handle, ::zx::pmt pmt_handle, ::zx::port port_handle, ::zx::process process_handle, ::zx::profile profile_handle, ::zx::resource resource_handle, ::zx::socket socket_handle, ::zx::suspend_token suspendtoken_handle, ::zx::thread thread_handle, ::zx::timer timer_handle, ::zx::vcpu vcpu_handle, ::zx::vmar vmar_handle, ::zx::vmo vmo_handle, ::zx::vmo rights_handle, ::zx::handle aliased_plain_handle_field, ::zx::vmo aliased_subtype_handle_field, ::zx::vmo aliased_rights_handle_field, ::fidl::ClientEnd<::test_handles::SomeProtocol> some_protocol, ::fidl::ServerEnd<::test_handles::SomeProtocol> request_some_protocol) noexcept
       : storage_({.plain_handle = std::move(plain_handle),
                   .bti_handle = std::move(bti_handle),
                   .channel_handle = std::move(channel_handle),
@@ -104,122 +87,203 @@ class Handles {
                   .vmar_handle = std::move(vmar_handle),
                   .vmo_handle = std::move(vmo_handle),
                   .rights_handle = std::move(rights_handle),
-                  .aliased_plain_handle_field =
-                      std::move(aliased_plain_handle_field),
-                  .aliased_subtype_handle_field =
-                      std::move(aliased_subtype_handle_field),
-                  .aliased_rights_handle_field =
-                      std::move(aliased_rights_handle_field),
+                  .aliased_plain_handle_field = std::move(aliased_plain_handle_field),
+                  .aliased_subtype_handle_field = std::move(aliased_subtype_handle_field),
+                  .aliased_rights_handle_field = std::move(aliased_rights_handle_field),
                   .some_protocol = std::move(some_protocol),
                   .request_some_protocol = std::move(request_some_protocol)}) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |Handles| only if all of its members are default
-  // constructible.
+  // Default constructs a |Handles| only if all of its members are default constructible.
   Handles() = default;
 #pragma clang diagnostic pop
 
   Handles(Handles&&) noexcept = default;
   Handles& operator=(Handles&&) noexcept = default;
 
-  const ::zx::handle& plain_handle() const { return storage_.plain_handle; }
+  const ::zx::handle&
+  plain_handle() const {
+    return storage_.plain_handle;
+  }
 
-  ::zx::handle& plain_handle() { return storage_.plain_handle; }
+  ::zx::handle& plain_handle() {
+    return storage_.plain_handle;
+  }
 
-  const ::zx::bti& bti_handle() const { return storage_.bti_handle; }
+  const ::zx::bti&
+  bti_handle() const {
+    return storage_.bti_handle;
+  }
 
-  ::zx::bti& bti_handle() { return storage_.bti_handle; }
+  ::zx::bti& bti_handle() {
+    return storage_.bti_handle;
+  }
 
-  const ::zx::channel& channel_handle() const {
+  const ::zx::channel&
+  channel_handle() const {
     return storage_.channel_handle;
   }
 
-  ::zx::channel& channel_handle() { return storage_.channel_handle; }
+  ::zx::channel& channel_handle() {
+    return storage_.channel_handle;
+  }
 
-  const ::zx::clock& clock_handle() const { return storage_.clock_handle; }
+  const ::zx::clock&
+  clock_handle() const {
+    return storage_.clock_handle;
+  }
 
-  ::zx::clock& clock_handle() { return storage_.clock_handle; }
+  ::zx::clock& clock_handle() {
+    return storage_.clock_handle;
+  }
 
-  const ::zx::debuglog& debuglog_handle() const {
+  const ::zx::debuglog&
+  debuglog_handle() const {
     return storage_.debuglog_handle;
   }
 
-  ::zx::debuglog& debuglog_handle() { return storage_.debuglog_handle; }
+  ::zx::debuglog& debuglog_handle() {
+    return storage_.debuglog_handle;
+  }
 
-  const ::zx::event& event_handle() const { return storage_.event_handle; }
+  const ::zx::event&
+  event_handle() const {
+    return storage_.event_handle;
+  }
 
-  ::zx::event& event_handle() { return storage_.event_handle; }
+  ::zx::event& event_handle() {
+    return storage_.event_handle;
+  }
 
-  const ::zx::eventpair& eventpair_handle() const {
+  const ::zx::eventpair&
+  eventpair_handle() const {
     return storage_.eventpair_handle;
   }
 
-  ::zx::eventpair& eventpair_handle() { return storage_.eventpair_handle; }
+  ::zx::eventpair& eventpair_handle() {
+    return storage_.eventpair_handle;
+  }
 
-  const ::zx::exception& exception_handle() const {
+  const ::zx::exception&
+  exception_handle() const {
     return storage_.exception_handle;
   }
 
-  ::zx::exception& exception_handle() { return storage_.exception_handle; }
+  ::zx::exception& exception_handle() {
+    return storage_.exception_handle;
+  }
 
-  const ::zx::fifo& fifo_handle() const { return storage_.fifo_handle; }
+  const ::zx::fifo&
+  fifo_handle() const {
+    return storage_.fifo_handle;
+  }
 
-  ::zx::fifo& fifo_handle() { return storage_.fifo_handle; }
+  ::zx::fifo& fifo_handle() {
+    return storage_.fifo_handle;
+  }
 
-  const ::zx::guest& guest_handle() const { return storage_.guest_handle; }
+  const ::zx::guest&
+  guest_handle() const {
+    return storage_.guest_handle;
+  }
 
-  ::zx::guest& guest_handle() { return storage_.guest_handle; }
+  ::zx::guest& guest_handle() {
+    return storage_.guest_handle;
+  }
 
-  const ::zx::interrupt& interrupt_handle() const {
+  const ::zx::interrupt&
+  interrupt_handle() const {
     return storage_.interrupt_handle;
   }
 
-  ::zx::interrupt& interrupt_handle() { return storage_.interrupt_handle; }
+  ::zx::interrupt& interrupt_handle() {
+    return storage_.interrupt_handle;
+  }
 
-  const ::zx::iommu& iommu_handle() const { return storage_.iommu_handle; }
+  const ::zx::iommu&
+  iommu_handle() const {
+    return storage_.iommu_handle;
+  }
 
-  ::zx::iommu& iommu_handle() { return storage_.iommu_handle; }
+  ::zx::iommu& iommu_handle() {
+    return storage_.iommu_handle;
+  }
 
-  const ::zx::job& job_handle() const { return storage_.job_handle; }
+  const ::zx::job&
+  job_handle() const {
+    return storage_.job_handle;
+  }
 
-  ::zx::job& job_handle() { return storage_.job_handle; }
+  ::zx::job& job_handle() {
+    return storage_.job_handle;
+  }
 
-  const ::zx::pager& pager_handle() const { return storage_.pager_handle; }
+  const ::zx::pager&
+  pager_handle() const {
+    return storage_.pager_handle;
+  }
 
-  ::zx::pager& pager_handle() { return storage_.pager_handle; }
+  ::zx::pager& pager_handle() {
+    return storage_.pager_handle;
+  }
 
-  const ::zx::pmt& pmt_handle() const { return storage_.pmt_handle; }
+  const ::zx::pmt&
+  pmt_handle() const {
+    return storage_.pmt_handle;
+  }
 
-  ::zx::pmt& pmt_handle() { return storage_.pmt_handle; }
+  ::zx::pmt& pmt_handle() {
+    return storage_.pmt_handle;
+  }
 
-  const ::zx::port& port_handle() const { return storage_.port_handle; }
+  const ::zx::port&
+  port_handle() const {
+    return storage_.port_handle;
+  }
 
-  ::zx::port& port_handle() { return storage_.port_handle; }
+  ::zx::port& port_handle() {
+    return storage_.port_handle;
+  }
 
-  const ::zx::process& process_handle() const {
+  const ::zx::process&
+  process_handle() const {
     return storage_.process_handle;
   }
 
-  ::zx::process& process_handle() { return storage_.process_handle; }
+  ::zx::process& process_handle() {
+    return storage_.process_handle;
+  }
 
-  const ::zx::profile& profile_handle() const {
+  const ::zx::profile&
+  profile_handle() const {
     return storage_.profile_handle;
   }
 
-  ::zx::profile& profile_handle() { return storage_.profile_handle; }
+  ::zx::profile& profile_handle() {
+    return storage_.profile_handle;
+  }
 
-  const ::zx::resource& resource_handle() const {
+  const ::zx::resource&
+  resource_handle() const {
     return storage_.resource_handle;
   }
 
-  ::zx::resource& resource_handle() { return storage_.resource_handle; }
+  ::zx::resource& resource_handle() {
+    return storage_.resource_handle;
+  }
 
-  const ::zx::socket& socket_handle() const { return storage_.socket_handle; }
+  const ::zx::socket&
+  socket_handle() const {
+    return storage_.socket_handle;
+  }
 
-  ::zx::socket& socket_handle() { return storage_.socket_handle; }
+  ::zx::socket& socket_handle() {
+    return storage_.socket_handle;
+  }
 
-  const ::zx::suspend_token& suspendtoken_handle() const {
+  const ::zx::suspend_token&
+  suspendtoken_handle() const {
     return storage_.suspendtoken_handle;
   }
 
@@ -227,31 +291,62 @@ class Handles {
     return storage_.suspendtoken_handle;
   }
 
-  const ::zx::thread& thread_handle() const { return storage_.thread_handle; }
+  const ::zx::thread&
+  thread_handle() const {
+    return storage_.thread_handle;
+  }
 
-  ::zx::thread& thread_handle() { return storage_.thread_handle; }
+  ::zx::thread& thread_handle() {
+    return storage_.thread_handle;
+  }
 
-  const ::zx::timer& timer_handle() const { return storage_.timer_handle; }
+  const ::zx::timer&
+  timer_handle() const {
+    return storage_.timer_handle;
+  }
 
-  ::zx::timer& timer_handle() { return storage_.timer_handle; }
+  ::zx::timer& timer_handle() {
+    return storage_.timer_handle;
+  }
 
-  const ::zx::vcpu& vcpu_handle() const { return storage_.vcpu_handle; }
+  const ::zx::vcpu&
+  vcpu_handle() const {
+    return storage_.vcpu_handle;
+  }
 
-  ::zx::vcpu& vcpu_handle() { return storage_.vcpu_handle; }
+  ::zx::vcpu& vcpu_handle() {
+    return storage_.vcpu_handle;
+  }
 
-  const ::zx::vmar& vmar_handle() const { return storage_.vmar_handle; }
+  const ::zx::vmar&
+  vmar_handle() const {
+    return storage_.vmar_handle;
+  }
 
-  ::zx::vmar& vmar_handle() { return storage_.vmar_handle; }
+  ::zx::vmar& vmar_handle() {
+    return storage_.vmar_handle;
+  }
 
-  const ::zx::vmo& vmo_handle() const { return storage_.vmo_handle; }
+  const ::zx::vmo&
+  vmo_handle() const {
+    return storage_.vmo_handle;
+  }
 
-  ::zx::vmo& vmo_handle() { return storage_.vmo_handle; }
+  ::zx::vmo& vmo_handle() {
+    return storage_.vmo_handle;
+  }
 
-  const ::zx::vmo& rights_handle() const { return storage_.rights_handle; }
+  const ::zx::vmo&
+  rights_handle() const {
+    return storage_.rights_handle;
+  }
 
-  ::zx::vmo& rights_handle() { return storage_.rights_handle; }
+  ::zx::vmo& rights_handle() {
+    return storage_.rights_handle;
+  }
 
-  const ::zx::handle& aliased_plain_handle_field() const {
+  const ::zx::handle&
+  aliased_plain_handle_field() const {
     return storage_.aliased_plain_handle_field;
   }
 
@@ -259,7 +354,8 @@ class Handles {
     return storage_.aliased_plain_handle_field;
   }
 
-  const ::zx::vmo& aliased_subtype_handle_field() const {
+  const ::zx::vmo&
+  aliased_subtype_handle_field() const {
     return storage_.aliased_subtype_handle_field;
   }
 
@@ -267,7 +363,8 @@ class Handles {
     return storage_.aliased_subtype_handle_field;
   }
 
-  const ::zx::vmo& aliased_rights_handle_field() const {
+  const ::zx::vmo&
+  aliased_rights_handle_field() const {
     return storage_.aliased_rights_handle_field;
   }
 
@@ -275,7 +372,8 @@ class Handles {
     return storage_.aliased_rights_handle_field;
   }
 
-  const ::fidl::ClientEnd<::test_handles::SomeProtocol>& some_protocol() const {
+  const ::fidl::ClientEnd<::test_handles::SomeProtocol>&
+  some_protocol() const {
     return storage_.some_protocol;
   }
 
@@ -283,8 +381,8 @@ class Handles {
     return storage_.some_protocol;
   }
 
-  const ::fidl::ServerEnd<::test_handles::SomeProtocol>& request_some_protocol()
-      const {
+  const ::fidl::ServerEnd<::test_handles::SomeProtocol>&
+  request_some_protocol() const {
     return storage_.request_some_protocol;
   }
 
@@ -292,41 +390,40 @@ class Handles {
     return storage_.request_some_protocol;
   }
 
-  Handles(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : Handles(Storage_{
-            .plain_handle = {},
-            .bti_handle = {},
-            .channel_handle = {},
-            .clock_handle = {},
-            .debuglog_handle = {},
-            .event_handle = {},
-            .eventpair_handle = {},
-            .exception_handle = {},
-            .fifo_handle = {},
-            .guest_handle = {},
-            .interrupt_handle = {},
-            .iommu_handle = {},
-            .job_handle = {},
-            .pager_handle = {},
-            .pmt_handle = {},
-            .port_handle = {},
-            .process_handle = {},
-            .profile_handle = {},
-            .resource_handle = {},
-            .socket_handle = {},
-            .suspendtoken_handle = {},
-            .thread_handle = {},
-            .timer_handle = {},
-            .vcpu_handle = {},
-            .vmar_handle = {},
-            .vmo_handle = {},
-            .rights_handle = {},
-            .aliased_plain_handle_field = {},
-            .aliased_subtype_handle_field = {},
-            .aliased_rights_handle_field = {},
-            .some_protocol = {},
-            .request_some_protocol = {},
-        }) {}
+  Handles(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Handles(Storage_{
+                                                                            .plain_handle = {},
+                                                                            .bti_handle = {},
+                                                                            .channel_handle = {},
+                                                                            .clock_handle = {},
+                                                                            .debuglog_handle = {},
+                                                                            .event_handle = {},
+                                                                            .eventpair_handle = {},
+                                                                            .exception_handle = {},
+                                                                            .fifo_handle = {},
+                                                                            .guest_handle = {},
+                                                                            .interrupt_handle = {},
+                                                                            .iommu_handle = {},
+                                                                            .job_handle = {},
+                                                                            .pager_handle = {},
+                                                                            .pmt_handle = {},
+                                                                            .port_handle = {},
+                                                                            .process_handle = {},
+                                                                            .profile_handle = {},
+                                                                            .resource_handle = {},
+                                                                            .socket_handle = {},
+                                                                            .suspendtoken_handle = {},
+                                                                            .thread_handle = {},
+                                                                            .timer_handle = {},
+                                                                            .vcpu_handle = {},
+                                                                            .vmar_handle = {},
+                                                                            .vmo_handle = {},
+                                                                            .rights_handle = {},
+                                                                            .aliased_plain_handle_field = {},
+                                                                            .aliased_subtype_handle_field = {},
+                                                                            .aliased_rights_handle_field = {},
+                                                                            .some_protocol = {},
+                                                                            .request_some_protocol = {},
+                                                                        }) {}
 
  private:
   struct Storage_ final {
@@ -366,170 +463,11 @@ class Handles {
 
   Storage_ storage_;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_handles::Handles, 128>;
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_handles::Handles, 128>;
   friend struct ::fidl::internal::MemberVisitor<::test_handles::Handles>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::zx::handle,
-          fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_NONE,
-                                                        0x80000000, false>>{
-          &Storage_::plain_handle, 0},
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::zx::bti,
-          fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_BTI,
-                                                        0x80000000, false>>{
-          &Storage_::bti_handle, 4},
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::zx::channel,
-          fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL,
-                                                        0x80000000, false>>{
-          &Storage_::channel_handle, 8},
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::zx::clock,
-          fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_CLOCK,
-                                                        0x80000000, false>>{
-          &Storage_::clock_handle, 12},
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::zx::debuglog,
-          fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_LOG,
-                                                        0x80000000, false>>{
-          &Storage_::debuglog_handle, 16},
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::zx::event,
-          fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_EVENT,
-                                                        0x80000000, false>>{
-          &Storage_::event_handle, 20},
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::zx::eventpair,
-          fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_EVENTPAIR,
-                                                        0x80000000, false>>{
-          &Storage_::eventpair_handle, 24},
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::zx::exception,
-          fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_EXCEPTION,
-                                                        0x80000000, false>>{
-          &Storage_::exception_handle, 28},
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::zx::fifo,
-          fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_FIFO,
-                                                        0x80000000, false>>{
-          &Storage_::fifo_handle, 32},
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::zx::guest,
-          fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_GUEST,
-                                                        0x80000000, false>>{
-          &Storage_::guest_handle, 36},
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::zx::interrupt,
-          fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_INTERRUPT,
-                                                        0x80000000, false>>{
-          &Storage_::interrupt_handle, 40},
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::zx::iommu,
-          fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_IOMMU,
-                                                        0x80000000, false>>{
-          &Storage_::iommu_handle, 44},
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::zx::job,
-          fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_JOB,
-                                                        0x80000000, false>>{
-          &Storage_::job_handle, 48},
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::zx::pager,
-          fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_PAGER,
-                                                        0x80000000, false>>{
-          &Storage_::pager_handle, 52},
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::zx::pmt,
-          fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_PMT,
-                                                        0x80000000, false>>{
-          &Storage_::pmt_handle, 56},
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::zx::port,
-          fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_PORT,
-                                                        0x80000000, false>>{
-          &Storage_::port_handle, 60},
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::zx::process,
-          fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_PROCESS,
-                                                        0x80000000, false>>{
-          &Storage_::process_handle, 64},
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::zx::profile,
-          fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_PROFILE,
-                                                        0x80000000, false>>{
-          &Storage_::profile_handle, 68},
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::zx::resource,
-          fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_RESOURCE,
-                                                        0x80000000, false>>{
-          &Storage_::resource_handle, 72},
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::zx::socket,
-          fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_SOCKET,
-                                                        0x80000000, false>>{
-          &Storage_::socket_handle, 76},
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::zx::suspend_token,
-          fidl::internal::NaturalCodingConstraintHandle<
-              ZX_OBJ_TYPE_SUSPEND_TOKEN, 0x80000000, false>>{
-          &Storage_::suspendtoken_handle, 80},
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::zx::thread,
-          fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_THREAD,
-                                                        0x80000000, false>>{
-          &Storage_::thread_handle, 84},
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::zx::timer,
-          fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_TIMER,
-                                                        0x80000000, false>>{
-          &Storage_::timer_handle, 88},
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::zx::vcpu,
-          fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_VCPU,
-                                                        0x80000000, false>>{
-          &Storage_::vcpu_handle, 92},
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::zx::vmar,
-          fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_VMAR,
-                                                        0x80000000, false>>{
-          &Storage_::vmar_handle, 96},
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::zx::vmo,
-          fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_VMO,
-                                                        0x80000000, false>>{
-          &Storage_::vmo_handle, 100},
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::zx::vmo,
-          fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_VMO, 0x5,
-                                                        false>>{
-          &Storage_::rights_handle, 104},
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::zx::handle,
-          fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_NONE,
-                                                        0x80000000, false>>{
-          &Storage_::aliased_plain_handle_field, 108},
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::zx::vmo,
-          fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_VMO,
-                                                        0x80000000, false>>{
-          &Storage_::aliased_subtype_handle_field, 112},
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::zx::vmo,
-          fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_VMO, 0x1,
-                                                        false>>{
-          &Storage_::aliased_rights_handle_field, 116},
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::fidl::ClientEnd<::test_handles::SomeProtocol>,
-          fidl::internal::NaturalCodingConstraintHandle<
-              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>>{
-          &Storage_::some_protocol, 120},
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::fidl::ServerEnd<::test_handles::SomeProtocol>,
-          fidl::internal::NaturalCodingConstraintHandle<
-              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>>{
-          &Storage_::request_some_protocol, 124});
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::zx::handle, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_NONE, 0x80000000, false>>{
+                                                       &Storage_::plain_handle, 0},
+                                                   ::fidl::internal::NaturalStructMember<Storage_, ::zx::bti, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_BTI, 0x80000000, false>>{&Storage_::bti_handle, 4}, ::fidl::internal::NaturalStructMember<Storage_, ::zx::channel, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL, 0x80000000, false>>{&Storage_::channel_handle, 8}, ::fidl::internal::NaturalStructMember<Storage_, ::zx::clock, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_CLOCK, 0x80000000, false>>{&Storage_::clock_handle, 12}, ::fidl::internal::NaturalStructMember<Storage_, ::zx::debuglog, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_LOG, 0x80000000, false>>{&Storage_::debuglog_handle, 16}, ::fidl::internal::NaturalStructMember<Storage_, ::zx::event, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_EVENT, 0x80000000, false>>{&Storage_::event_handle, 20}, ::fidl::internal::NaturalStructMember<Storage_, ::zx::eventpair, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_EVENTPAIR, 0x80000000, false>>{&Storage_::eventpair_handle, 24}, ::fidl::internal::NaturalStructMember<Storage_, ::zx::exception, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_EXCEPTION, 0x80000000, false>>{&Storage_::exception_handle, 28}, ::fidl::internal::NaturalStructMember<Storage_, ::zx::fifo, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_FIFO, 0x80000000, false>>{&Storage_::fifo_handle, 32}, ::fidl::internal::NaturalStructMember<Storage_, ::zx::guest, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_GUEST, 0x80000000, false>>{&Storage_::guest_handle, 36}, ::fidl::internal::NaturalStructMember<Storage_, ::zx::interrupt, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_INTERRUPT, 0x80000000, false>>{&Storage_::interrupt_handle, 40}, ::fidl::internal::NaturalStructMember<Storage_, ::zx::iommu, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_IOMMU, 0x80000000, false>>{&Storage_::iommu_handle, 44}, ::fidl::internal::NaturalStructMember<Storage_, ::zx::job, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_JOB, 0x80000000, false>>{&Storage_::job_handle, 48}, ::fidl::internal::NaturalStructMember<Storage_, ::zx::pager, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_PAGER, 0x80000000, false>>{&Storage_::pager_handle, 52}, ::fidl::internal::NaturalStructMember<Storage_, ::zx::pmt, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_PMT, 0x80000000, false>>{&Storage_::pmt_handle, 56}, ::fidl::internal::NaturalStructMember<Storage_, ::zx::port, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_PORT, 0x80000000, false>>{&Storage_::port_handle, 60}, ::fidl::internal::NaturalStructMember<Storage_, ::zx::process, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_PROCESS, 0x80000000, false>>{&Storage_::process_handle, 64}, ::fidl::internal::NaturalStructMember<Storage_, ::zx::profile, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_PROFILE, 0x80000000, false>>{&Storage_::profile_handle, 68}, ::fidl::internal::NaturalStructMember<Storage_, ::zx::resource, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_RESOURCE, 0x80000000, false>>{&Storage_::resource_handle, 72}, ::fidl::internal::NaturalStructMember<Storage_, ::zx::socket, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_SOCKET, 0x80000000, false>>{&Storage_::socket_handle, 76}, ::fidl::internal::NaturalStructMember<Storage_, ::zx::suspend_token, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_SUSPEND_TOKEN, 0x80000000, false>>{&Storage_::suspendtoken_handle, 80}, ::fidl::internal::NaturalStructMember<Storage_, ::zx::thread, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_THREAD, 0x80000000, false>>{&Storage_::thread_handle, 84}, ::fidl::internal::NaturalStructMember<Storage_, ::zx::timer, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_TIMER, 0x80000000, false>>{&Storage_::timer_handle, 88}, ::fidl::internal::NaturalStructMember<Storage_, ::zx::vcpu, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_VCPU, 0x80000000, false>>{&Storage_::vcpu_handle, 92}, ::fidl::internal::NaturalStructMember<Storage_, ::zx::vmar, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_VMAR, 0x80000000, false>>{&Storage_::vmar_handle, 96}, ::fidl::internal::NaturalStructMember<Storage_, ::zx::vmo, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_VMO, 0x80000000, false>>{&Storage_::vmo_handle, 100}, ::fidl::internal::NaturalStructMember<Storage_, ::zx::vmo, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_VMO, 0x5, false>>{&Storage_::rights_handle, 104}, ::fidl::internal::NaturalStructMember<Storage_, ::zx::handle, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_NONE, 0x80000000, false>>{&Storage_::aliased_plain_handle_field, 108}, ::fidl::internal::NaturalStructMember<Storage_, ::zx::vmo, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_VMO, 0x80000000, false>>{&Storage_::aliased_subtype_handle_field, 112}, ::fidl::internal::NaturalStructMember<Storage_, ::zx::vmo, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_VMO, 0x1, false>>{&Storage_::aliased_rights_handle_field, 116}, ::fidl::internal::NaturalStructMember<Storage_, ::fidl::ClientEnd<::test_handles::SomeProtocol>, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>>{&Storage_::some_protocol, 120}, ::fidl::internal::NaturalStructMember<Storage_, ::fidl::ServerEnd<::test_handles::SomeProtocol>, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>>{&Storage_::request_some_protocol, 124});
   static constexpr auto kPadding = std::make_tuple();
 };
 
@@ -545,32 +483,31 @@ class FdfHandles {
 
  public:
   FdfHandles(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-  FdfHandles(::fdf::Channel fdf_channel_handle,
-             ::fdf::ClientEnd<::test_handles::DriverProtocol> client_end_driver,
-             ::fdf::ServerEnd<::test_handles::DriverProtocol>
-                 server_end_driver) noexcept
+  FdfHandles(::fdf::Channel fdf_channel_handle, ::fdf::ClientEnd<::test_handles::DriverProtocol> client_end_driver, ::fdf::ServerEnd<::test_handles::DriverProtocol> server_end_driver) noexcept
       : storage_({.fdf_channel_handle = std::move(fdf_channel_handle),
                   .client_end_driver = std::move(client_end_driver),
                   .server_end_driver = std::move(server_end_driver)}) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |FdfHandles| only if all of its members are default
-  // constructible.
+  // Default constructs a |FdfHandles| only if all of its members are default constructible.
   FdfHandles() = default;
 #pragma clang diagnostic pop
 
   FdfHandles(FdfHandles&&) noexcept = default;
   FdfHandles& operator=(FdfHandles&&) noexcept = default;
 
-  const ::fdf::Channel& fdf_channel_handle() const {
+  const ::fdf::Channel&
+  fdf_channel_handle() const {
     return storage_.fdf_channel_handle;
   }
 
-  ::fdf::Channel& fdf_channel_handle() { return storage_.fdf_channel_handle; }
+  ::fdf::Channel& fdf_channel_handle() {
+    return storage_.fdf_channel_handle;
+  }
 
-  const ::fdf::ClientEnd<::test_handles::DriverProtocol>& client_end_driver()
-      const {
+  const ::fdf::ClientEnd<::test_handles::DriverProtocol>&
+  client_end_driver() const {
     return storage_.client_end_driver;
   }
 
@@ -578,8 +515,8 @@ class FdfHandles {
     return storage_.client_end_driver;
   }
 
-  const ::fdf::ServerEnd<::test_handles::DriverProtocol>& server_end_driver()
-      const {
+  const ::fdf::ServerEnd<::test_handles::DriverProtocol>&
+  server_end_driver() const {
     return storage_.server_end_driver;
   }
 
@@ -587,12 +524,11 @@ class FdfHandles {
     return storage_.server_end_driver;
   }
 
-  FdfHandles(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : FdfHandles(Storage_{
-            .fdf_channel_handle = {},
-            .client_end_driver = {},
-            .server_end_driver = {},
-        }) {}
+  FdfHandles(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : FdfHandles(Storage_{
+                                                                               .fdf_channel_handle = {},
+                                                                               .client_end_driver = {},
+                                                                               .server_end_driver = {},
+                                                                           }) {}
 
  private:
   struct Storage_ final {
@@ -603,25 +539,11 @@ class FdfHandles {
 
   Storage_ storage_;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_handles::FdfHandles, 12>;
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_handles::FdfHandles, 12>;
   friend struct ::fidl::internal::MemberVisitor<::test_handles::FdfHandles>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::fdf::Channel,
-          fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL,
-                                                        0x80000000, false>>{
-          &Storage_::fdf_channel_handle, 0},
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::fdf::ClientEnd<::test_handles::DriverProtocol>,
-          fidl::internal::NaturalCodingConstraintHandle<
-              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>>{
-          &Storage_::client_end_driver, 4},
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::fdf::ServerEnd<::test_handles::DriverProtocol>,
-          fidl::internal::NaturalCodingConstraintHandle<
-              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>>{
-          &Storage_::server_end_driver, 8});
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::fdf::Channel, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL, 0x80000000, false>>{
+                                                       &Storage_::fdf_channel_handle, 0},
+                                                   ::fidl::internal::NaturalStructMember<Storage_, ::fdf::ClientEnd<::test_handles::DriverProtocol>, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>>{&Storage_::client_end_driver, 4}, ::fidl::internal::NaturalStructMember<Storage_, ::fdf::ServerEnd<::test_handles::DriverProtocol>, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>>{&Storage_::server_end_driver, 8});
   static constexpr auto kPadding = std::make_tuple();
 };
 
@@ -640,10 +562,8 @@ template <>
 struct IsFidlType<::test_handles::Handles> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<
-    ::test_handles::Handles, ::fidl::internal::NaturalCodingConstraintEmpty>
-    final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_handles::Handles, 128> {};
+struct internal::NaturalCodingTraits<::test_handles::Handles, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_handles::Handles, 128> {};
 
 #endif  // __Fuchsia__
 
@@ -657,10 +577,8 @@ template <>
 struct IsFidlType<::test_handles::FdfHandles> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<
-    ::test_handles::FdfHandles, ::fidl::internal::NaturalCodingConstraintEmpty>
-    final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_handles::FdfHandles, 12> {};
+struct internal::NaturalCodingTraits<::test_handles::FdfHandles, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_handles::FdfHandles, 12> {};
 
 #endif  // __Fuchsia__
 

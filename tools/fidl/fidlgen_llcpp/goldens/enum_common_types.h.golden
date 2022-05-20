@@ -20,8 +20,7 @@ enum class MyStrictEnum : uint32_t {
 }  // namespace test_enum
 template <>
 struct fidl::internal::DisplayError<::test_enum::MyStrictEnum> {
-  static size_t Format(const ::test_enum::MyStrictEnum& value,
-                       char* destination, size_t capacity);
+  static size_t Format(const ::test_enum::MyStrictEnum& value, char* destination, size_t capacity);
 };
 
 namespace test_enum {
@@ -29,8 +28,7 @@ namespace test_enum {
 class MyFlexibleEnumWithCustomUnknown final {
  public:
   constexpr MyFlexibleEnumWithCustomUnknown() : value_(0) {}
-  constexpr explicit MyFlexibleEnumWithCustomUnknown(uint32_t value)
-      : value_(value) {}
+  constexpr explicit MyFlexibleEnumWithCustomUnknown(uint32_t value) : value_(value) {}
   constexpr operator uint32_t() const { return value_; }
 
   constexpr bool IsUnknown() const {
@@ -57,23 +55,17 @@ class MyFlexibleEnumWithCustomUnknown final {
  private:
   uint32_t value_;
 };
-constexpr const ::test_enum::MyFlexibleEnumWithCustomUnknown
-    MyFlexibleEnumWithCustomUnknown::kFoo =
-        ::test_enum::MyFlexibleEnumWithCustomUnknown(1u);
-constexpr const ::test_enum::MyFlexibleEnumWithCustomUnknown
-    MyFlexibleEnumWithCustomUnknown::kBar =
-        ::test_enum::MyFlexibleEnumWithCustomUnknown(2u);
-constexpr const ::test_enum::MyFlexibleEnumWithCustomUnknown
-    MyFlexibleEnumWithCustomUnknown::kCustomUnknown =
-        ::test_enum::MyFlexibleEnumWithCustomUnknown(3u);
+constexpr const ::test_enum::MyFlexibleEnumWithCustomUnknown MyFlexibleEnumWithCustomUnknown::kFoo =
+    ::test_enum::MyFlexibleEnumWithCustomUnknown(1u);
+constexpr const ::test_enum::MyFlexibleEnumWithCustomUnknown MyFlexibleEnumWithCustomUnknown::kBar =
+    ::test_enum::MyFlexibleEnumWithCustomUnknown(2u);
+constexpr const ::test_enum::MyFlexibleEnumWithCustomUnknown MyFlexibleEnumWithCustomUnknown::kCustomUnknown =
+    ::test_enum::MyFlexibleEnumWithCustomUnknown(3u);
 
 }  // namespace test_enum
 template <>
-struct fidl::internal::DisplayError<
-    ::test_enum::MyFlexibleEnumWithCustomUnknown> {
-  static size_t Format(
-      const ::test_enum::MyFlexibleEnumWithCustomUnknown& value,
-      char* destination, size_t capacity);
+struct fidl::internal::DisplayError<::test_enum::MyFlexibleEnumWithCustomUnknown> {
+  static size_t Format(const ::test_enum::MyFlexibleEnumWithCustomUnknown& value, char* destination, size_t capacity);
 };
 
 namespace test_enum {
@@ -114,8 +106,7 @@ constexpr const ::test_enum::MyFlexibleEnum MyFlexibleEnum::kBar =
 }  // namespace test_enum
 template <>
 struct fidl::internal::DisplayError<::test_enum::MyFlexibleEnum> {
-  static size_t Format(const ::test_enum::MyFlexibleEnum& value,
-                       char* destination, size_t capacity);
+  static size_t Format(const ::test_enum::MyFlexibleEnum& value, char* destination, size_t capacity);
 };
 
 namespace test_enum {
@@ -126,7 +117,9 @@ class MyEmptyFlexibleEnum final {
   constexpr explicit MyEmptyFlexibleEnum(uint32_t value) : value_(value) {}
   constexpr operator uint32_t() const { return value_; }
 
-  constexpr bool IsUnknown() const { return true; }
+  constexpr bool IsUnknown() const {
+    return true;
+  }
 
   constexpr static MyEmptyFlexibleEnum Unknown() {
     return MyEmptyFlexibleEnum(0xffffffff);
@@ -139,8 +132,7 @@ class MyEmptyFlexibleEnum final {
 }  // namespace test_enum
 template <>
 struct fidl::internal::DisplayError<::test_enum::MyEmptyFlexibleEnum> {
-  static size_t Format(const ::test_enum::MyEmptyFlexibleEnum& value,
-                       char* destination, size_t capacity);
+  static size_t Format(const ::test_enum::MyEmptyFlexibleEnum& value, char* destination, size_t capacity);
 };
 
 namespace fidl {
@@ -151,11 +143,9 @@ template <>
 struct ContainsHandle<::test_enum::MyStrictEnum> : public std::false_type {};
 
 template <>
-struct IsFidlType<::test_enum::MyFlexibleEnumWithCustomUnknown>
-    : public std::true_type {};
+struct IsFidlType<::test_enum::MyFlexibleEnumWithCustomUnknown> : public std::true_type {};
 template <>
-struct ContainsHandle<::test_enum::MyFlexibleEnumWithCustomUnknown>
-    : public std::false_type {};
+struct ContainsHandle<::test_enum::MyFlexibleEnumWithCustomUnknown> : public std::false_type {};
 
 template <>
 struct IsFidlType<::test_enum::MyFlexibleEnum> : public std::true_type {};
@@ -165,7 +155,6 @@ struct ContainsHandle<::test_enum::MyFlexibleEnum> : public std::false_type {};
 template <>
 struct IsFidlType<::test_enum::MyEmptyFlexibleEnum> : public std::true_type {};
 template <>
-struct ContainsHandle<::test_enum::MyEmptyFlexibleEnum>
-    : public std::false_type {};
+struct ContainsHandle<::test_enum::MyEmptyFlexibleEnum> : public std::false_type {};
 
 }  // namespace fidl

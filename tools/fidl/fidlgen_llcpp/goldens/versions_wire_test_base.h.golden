@@ -7,40 +7,32 @@ namespace fidl {
 namespace testing {
 
 template <>
-class WireTestBase<::test_versions::OtherProtocol>
-    : public ::fidl::WireServer<::test_versions::OtherProtocol> {
+class WireTestBase<::test_versions::OtherProtocol> : public ::fidl::WireServer<::test_versions::OtherProtocol> {
  public:
   virtual ~WireTestBase<::test_versions::OtherProtocol>() = default;
-  virtual void NotImplemented_(const std::string& name,
-                               ::fidl::CompleterBase& completer) = 0;
+  virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
 };
 
 template <>
-class ::fidl::testing::WireSyncEventHandlerTestBase<
-    ::test_versions::OtherProtocol>
-    : public ::fidl::WireSyncEventHandler<::test_versions::OtherProtocol> {
+class ::fidl::testing::WireSyncEventHandlerTestBase<::test_versions::OtherProtocol> : public ::fidl::WireSyncEventHandler<::test_versions::OtherProtocol> {
  public:
-  virtual ~WireSyncEventHandlerTestBase<::test_versions::OtherProtocol>() =
-      default;
+  virtual ~WireSyncEventHandlerTestBase<::test_versions::OtherProtocol>() = default;
   virtual void NotImplemented_(const std::string& name) = 0;
 };
 
 template <>
-class WireTestBase<::test_versions::Protocol>
-    : public ::fidl::WireServer<::test_versions::Protocol> {
+class WireTestBase<::test_versions::Protocol> : public ::fidl::WireServer<::test_versions::Protocol> {
  public:
   virtual ~WireTestBase<::test_versions::Protocol>() = default;
-  virtual void NotImplemented_(const std::string& name,
-                               ::fidl::CompleterBase& completer) = 0;
-  virtual void Foo(FooRequestView request,
-                   FooCompleter::Sync& completer) override {
+  virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
+  virtual void Foo(
+      FooRequestView request, FooCompleter::Sync& completer) override {
     NotImplemented_("Foo", completer);
   }
 };
 
 template <>
-class ::fidl::testing::WireSyncEventHandlerTestBase<::test_versions::Protocol>
-    : public ::fidl::WireSyncEventHandler<::test_versions::Protocol> {
+class ::fidl::testing::WireSyncEventHandlerTestBase<::test_versions::Protocol> : public ::fidl::WireSyncEventHandler<::test_versions::Protocol> {
  public:
   virtual ~WireSyncEventHandlerTestBase<::test_versions::Protocol>() = default;
   virtual void NotImplemented_(const std::string& name) = 0;

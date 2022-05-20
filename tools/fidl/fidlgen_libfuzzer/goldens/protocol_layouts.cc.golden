@@ -13,8 +13,7 @@
 using namespace ::fuzzing;
 using namespace ::test::protocollayouts;
 
-// Add //build/fuzzing:fuzzing_verbose_logging to a GN target's configs to
-// enable.
+// Add //build/fuzzing:fuzzing_verbose_logging to a GN target's configs to enable.
 #if FUZZING_VERBOSE_LOGGING
 #include <stdio.h>
 #define xprintf(fmt...) printf(fmt)
@@ -32,8 +31,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
     loop_ = new ::async::Loop(&kAsyncLoopConfigAttachToCurrentThread);
   }
 
-  // Must fuzz some protocol; first two bytes used to select protocol and
-  // method.
+  // Must fuzz some protocol; first two bytes used to select protocol and method.
   if (size_ < 2) {
     xprintf("Early exit: Input too small: %zu\n", size_);
     return 0;
@@ -50,32 +48,26 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
   if (protocol_selection_ == 0) {
 #if !defined(PROTOCOL_test_protocollayouts_MainProtocol)
     // Selected protocol from FIDL file that is not part of this fuzzer.
-    xprintf(
-        "Early exit: Chose disabled protocol: "
-        "test_protocollayouts_MainProtocol\n");
+    xprintf("Early exit: Chose disabled protocol: test_protocollayouts_MainProtocol\n");
     return 0;
 #else
 
     ::fidl::InterfacePtr< ::test::protocollayouts::MainProtocol> protocol_;
 
     xprintf("Starting test_protocollayouts_MainProtocol service\n");
-    ::fidl::fuzzing::Fuzzer< ::test::protocollayouts::MainProtocol> fuzzer_(
-        loop_->dispatcher());
+    ::fidl::fuzzing::Fuzzer< ::test::protocollayouts::MainProtocol> fuzzer_(loop_->dispatcher());
     if ((status_ = fuzzer_.Init()) != ZX_OK) {
       xprintf("Early exit: fuzzer.Init returned bad status: %d\n", status_);
       return 0;
     }
 
     if ((status_ = fuzzer_.BindService()) != ZX_OK) {
-      xprintf("Early exit: fuzzer.BindService returned bad status: %d\n",
-              status_);
+      xprintf("Early exit: fuzzer.BindService returned bad status: %d\n", status_);
       return 0;
     }
 
-    if ((status_ = fuzzer_.BindClient(&protocol_, loop_->dispatcher())) !=
-        ZX_OK) {
-      xprintf("Early exit: fuzzer.BindClient returned bad status: %d\n",
-              status_);
+    if ((status_ = fuzzer_.BindClient(&protocol_, loop_->dispatcher())) != ZX_OK) {
+      xprintf("Early exit: fuzzer.BindClient returned bad status: %d\n", status_);
       return 0;
     }
 
@@ -89,45 +81,26 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
       xprintf("Early exit: Chose disabled method: OneWayAnonComposed\n");
       return 0;
 #else
-      const size_t min_size_ =
-          MinSize< ::test::protocollayouts::imported::
-                       ComposedProtocolOneWayAnonComposedRequest>();
+      const size_t min_size_ = MinSize< ::test::protocollayouts::imported::ComposedProtocolOneWayAnonComposedRequest>();
 
       // Must have enough bytes for input.
       if (size_ < min_size_) {
-        xprintf("Early exit: Input size too small: %zu < %zu\n", size_,
-                min_size_);
+        xprintf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
         return 0;
       }
 
       const size_t slack_size_ = size_ - min_size_;
       const size_t slack_size_per_param = slack_size_ / 1;
 
-      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n",
-              slack_size_, slack_size_per_param);
+      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
 
       size_t param_size_;
-      param_size_ = MinSize< ::test::protocollayouts::imported::
-                                 ComposedProtocolOneWayAnonComposedRequest>() +
-                    slack_size_per_param;
-      xprintf(
-          "Allocating %zu bytes for "
-          "::test::protocollayouts::imported::"
-          "ComposedProtocolOneWayAnonComposedRequest "
-          "ComposedProtocolOneWayAnonComposedRequest\n",
-          param_size_);
-      ::test::protocollayouts::imported::
-          ComposedProtocolOneWayAnonComposedRequest
-              ComposedProtocolOneWayAnonComposedRequest =
-                  Allocate< ::test::protocollayouts::imported::
-                                ComposedProtocolOneWayAnonComposedRequest>{}(
-                      &src_, &param_size_);
+      param_size_ = MinSize< ::test::protocollayouts::imported::ComposedProtocolOneWayAnonComposedRequest>() + slack_size_per_param;
+      xprintf("Allocating %zu bytes for ::test::protocollayouts::imported::ComposedProtocolOneWayAnonComposedRequest ComposedProtocolOneWayAnonComposedRequest\n", param_size_);
+      ::test::protocollayouts::imported::ComposedProtocolOneWayAnonComposedRequest ComposedProtocolOneWayAnonComposedRequest = Allocate< ::test::protocollayouts::imported::ComposedProtocolOneWayAnonComposedRequest>{}(&src_, &param_size_);
 
-      xprintf(
-          "Invoking method "
-          "test_protocollayouts_MainProtocol.OneWayAnonComposed\n");
-      protocol_->OneWayAnonComposed(
-          std::move(ComposedProtocolOneWayAnonComposedRequest));
+      xprintf("Invoking method test_protocollayouts_MainProtocol.OneWayAnonComposed\n");
+      protocol_->OneWayAnonComposed(std::move(ComposedProtocolOneWayAnonComposedRequest));
 #endif
     }
     if (method_selection_ == 1) {
@@ -136,120 +109,66 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
       xprintf("Early exit: Chose disabled method: TwoWayAnonComposed\n");
       return 0;
 #else
-      const size_t min_size_ =
-          MinSize< ::test::protocollayouts::imported::
-                       ComposedProtocolTwoWayAnonComposedRequest>();
+      const size_t min_size_ = MinSize< ::test::protocollayouts::imported::ComposedProtocolTwoWayAnonComposedRequest>();
 
       // Must have enough bytes for input.
       if (size_ < min_size_) {
-        xprintf("Early exit: Input size too small: %zu < %zu\n", size_,
-                min_size_);
+        xprintf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
         return 0;
       }
 
       const size_t slack_size_ = size_ - min_size_;
       const size_t slack_size_per_param = slack_size_ / 1;
 
-      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n",
-              slack_size_, slack_size_per_param);
+      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
 
       size_t param_size_;
-      param_size_ = MinSize< ::test::protocollayouts::imported::
-                                 ComposedProtocolTwoWayAnonComposedRequest>() +
-                    slack_size_per_param;
-      xprintf(
-          "Allocating %zu bytes for "
-          "::test::protocollayouts::imported::"
-          "ComposedProtocolTwoWayAnonComposedRequest "
-          "ComposedProtocolTwoWayAnonComposedRequest\n",
-          param_size_);
-      ::test::protocollayouts::imported::
-          ComposedProtocolTwoWayAnonComposedRequest
-              ComposedProtocolTwoWayAnonComposedRequest =
-                  Allocate< ::test::protocollayouts::imported::
-                                ComposedProtocolTwoWayAnonComposedRequest>{}(
-                      &src_, &param_size_);
+      param_size_ = MinSize< ::test::protocollayouts::imported::ComposedProtocolTwoWayAnonComposedRequest>() + slack_size_per_param;
+      xprintf("Allocating %zu bytes for ::test::protocollayouts::imported::ComposedProtocolTwoWayAnonComposedRequest ComposedProtocolTwoWayAnonComposedRequest\n", param_size_);
+      ::test::protocollayouts::imported::ComposedProtocolTwoWayAnonComposedRequest ComposedProtocolTwoWayAnonComposedRequest = Allocate< ::test::protocollayouts::imported::ComposedProtocolTwoWayAnonComposedRequest>{}(&src_, &param_size_);
 
-      xprintf(
-          "Invoking method "
-          "test_protocollayouts_MainProtocol.TwoWayAnonComposed\n");
-      protocol_->TwoWayAnonComposed(
-          std::move(ComposedProtocolTwoWayAnonComposedRequest),
-          [signaller = fuzzer_.NewCallbackSignaller()](
-              ::test::protocollayouts::imported::
-                  ComposedProtocolTwoWayAnonComposedResponse
-                      ComposedProtocolTwoWayAnonComposedResponse) {
-            xprintf(
-                "Invoked "
-                "test_protocollayouts_MainProtocol.TwoWayAnonComposed\n");
-            zx_status_t status_ = signaller.SignalCallback();
-            if (status_ != ZX_OK) {
-              xprintf("signaller.SignalCallback returned bad status: %d\n",
-                      status_);
-            }
-          });
+      xprintf("Invoking method test_protocollayouts_MainProtocol.TwoWayAnonComposed\n");
+      protocol_->TwoWayAnonComposed(std::move(ComposedProtocolTwoWayAnonComposedRequest), [signaller = fuzzer_.NewCallbackSignaller()](::test::protocollayouts::imported::ComposedProtocolTwoWayAnonComposedResponse ComposedProtocolTwoWayAnonComposedResponse) {
+        xprintf("Invoked test_protocollayouts_MainProtocol.TwoWayAnonComposed\n");
+        zx_status_t status_ = signaller.SignalCallback();
+        if (status_ != ZX_OK) {
+          xprintf("signaller.SignalCallback returned bad status: %d\n", status_);
+        }
+      });
 #endif
     }
     if (method_selection_ == 2) {
 #if !(ALL_METHODS || defined(METHOD_TwoWayAnonComposedWithError))
       // Selected method from protocol that is not part of this fuzzer.
-      xprintf(
-          "Early exit: Chose disabled method: TwoWayAnonComposedWithError\n");
+      xprintf("Early exit: Chose disabled method: TwoWayAnonComposedWithError\n");
       return 0;
 #else
-      const size_t min_size_ =
-          MinSize< ::test::protocollayouts::imported::
-                       ComposedProtocolTwoWayAnonComposedWithErrorRequest>();
+      const size_t min_size_ = MinSize< ::test::protocollayouts::imported::ComposedProtocolTwoWayAnonComposedWithErrorRequest>();
 
       // Must have enough bytes for input.
       if (size_ < min_size_) {
-        xprintf("Early exit: Input size too small: %zu < %zu\n", size_,
-                min_size_);
+        xprintf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
         return 0;
       }
 
       const size_t slack_size_ = size_ - min_size_;
       const size_t slack_size_per_param = slack_size_ / 1;
 
-      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n",
-              slack_size_, slack_size_per_param);
+      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
 
       size_t param_size_;
-      param_size_ =
-          MinSize< ::test::protocollayouts::imported::
-                       ComposedProtocolTwoWayAnonComposedWithErrorRequest>() +
-          slack_size_per_param;
-      xprintf(
-          "Allocating %zu bytes for "
-          "::test::protocollayouts::imported::"
-          "ComposedProtocolTwoWayAnonComposedWithErrorRequest "
-          "ComposedProtocolTwoWayAnonComposedWithErrorRequest\n",
-          param_size_);
-      ::test::protocollayouts::imported::
-          ComposedProtocolTwoWayAnonComposedWithErrorRequest
-              ComposedProtocolTwoWayAnonComposedWithErrorRequest = Allocate<
-                  ::test::protocollayouts::imported::
-                      ComposedProtocolTwoWayAnonComposedWithErrorRequest>{}(
-                  &src_, &param_size_);
+      param_size_ = MinSize< ::test::protocollayouts::imported::ComposedProtocolTwoWayAnonComposedWithErrorRequest>() + slack_size_per_param;
+      xprintf("Allocating %zu bytes for ::test::protocollayouts::imported::ComposedProtocolTwoWayAnonComposedWithErrorRequest ComposedProtocolTwoWayAnonComposedWithErrorRequest\n", param_size_);
+      ::test::protocollayouts::imported::ComposedProtocolTwoWayAnonComposedWithErrorRequest ComposedProtocolTwoWayAnonComposedWithErrorRequest = Allocate< ::test::protocollayouts::imported::ComposedProtocolTwoWayAnonComposedWithErrorRequest>{}(&src_, &param_size_);
 
-      xprintf(
-          "Invoking method "
-          "test_protocollayouts_MainProtocol.TwoWayAnonComposedWithError\n");
-      protocol_->TwoWayAnonComposedWithError(
-          std::move(ComposedProtocolTwoWayAnonComposedWithErrorRequest),
-          [signaller = fuzzer_.NewCallbackSignaller()](
-              ::test::protocollayouts::imported::
-                  ComposedProtocol_TwoWayAnonComposedWithError_Result result) {
-            xprintf(
-                "Invoked "
-                "test_protocollayouts_MainProtocol."
-                "TwoWayAnonComposedWithError\n");
-            zx_status_t status_ = signaller.SignalCallback();
-            if (status_ != ZX_OK) {
-              xprintf("signaller.SignalCallback returned bad status: %d\n",
-                      status_);
-            }
-          });
+      xprintf("Invoking method test_protocollayouts_MainProtocol.TwoWayAnonComposedWithError\n");
+      protocol_->TwoWayAnonComposedWithError(std::move(ComposedProtocolTwoWayAnonComposedWithErrorRequest), [signaller = fuzzer_.NewCallbackSignaller()](::test::protocollayouts::imported::ComposedProtocol_TwoWayAnonComposedWithError_Result result) {
+        xprintf("Invoked test_protocollayouts_MainProtocol.TwoWayAnonComposedWithError\n");
+        zx_status_t status_ = signaller.SignalCallback();
+        if (status_ != ZX_OK) {
+          xprintf("signaller.SignalCallback returned bad status: %d\n", status_);
+        }
+      });
 #endif
     }
     if (method_selection_ == 5) {
@@ -258,38 +177,25 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
       xprintf("Early exit: Chose disabled method: OneWayNamedComposed\n");
       return 0;
 #else
-      const size_t min_size_ =
-          MinSize< ::test::protocollayouts::imported::ImportTablePayload>();
+      const size_t min_size_ = MinSize< ::test::protocollayouts::imported::ImportTablePayload>();
 
       // Must have enough bytes for input.
       if (size_ < min_size_) {
-        xprintf("Early exit: Input size too small: %zu < %zu\n", size_,
-                min_size_);
+        xprintf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
         return 0;
       }
 
       const size_t slack_size_ = size_ - min_size_;
       const size_t slack_size_per_param = slack_size_ / 1;
 
-      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n",
-              slack_size_, slack_size_per_param);
+      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
 
       size_t param_size_;
-      param_size_ =
-          MinSize< ::test::protocollayouts::imported::ImportTablePayload>() +
-          slack_size_per_param;
-      xprintf(
-          "Allocating %zu bytes for "
-          "::test::protocollayouts::imported::ImportTablePayload "
-          "ImportTablePayload\n",
-          param_size_);
-      ::test::protocollayouts::imported::ImportTablePayload ImportTablePayload =
-          Allocate< ::test::protocollayouts::imported::ImportTablePayload>{}(
-              &src_, &param_size_);
+      param_size_ = MinSize< ::test::protocollayouts::imported::ImportTablePayload>() + slack_size_per_param;
+      xprintf("Allocating %zu bytes for ::test::protocollayouts::imported::ImportTablePayload ImportTablePayload\n", param_size_);
+      ::test::protocollayouts::imported::ImportTablePayload ImportTablePayload = Allocate< ::test::protocollayouts::imported::ImportTablePayload>{}(&src_, &param_size_);
 
-      xprintf(
-          "Invoking method "
-          "test_protocollayouts_MainProtocol.OneWayNamedComposed\n");
+      xprintf("Invoking method test_protocollayouts_MainProtocol.OneWayNamedComposed\n");
       protocol_->OneWayNamedComposed(std::move(ImportTablePayload));
 #endif
     }
@@ -299,108 +205,66 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
       xprintf("Early exit: Chose disabled method: TwoWayNamedComposed\n");
       return 0;
 #else
-      const size_t min_size_ =
-          MinSize< ::test::protocollayouts::imported::ImportUnionPayload>();
+      const size_t min_size_ = MinSize< ::test::protocollayouts::imported::ImportUnionPayload>();
 
       // Must have enough bytes for input.
       if (size_ < min_size_) {
-        xprintf("Early exit: Input size too small: %zu < %zu\n", size_,
-                min_size_);
+        xprintf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
         return 0;
       }
 
       const size_t slack_size_ = size_ - min_size_;
       const size_t slack_size_per_param = slack_size_ / 1;
 
-      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n",
-              slack_size_, slack_size_per_param);
+      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
 
       size_t param_size_;
-      param_size_ =
-          MinSize< ::test::protocollayouts::imported::ImportUnionPayload>() +
-          slack_size_per_param;
-      xprintf(
-          "Allocating %zu bytes for "
-          "::test::protocollayouts::imported::ImportUnionPayload "
-          "ImportUnionPayload\n",
-          param_size_);
-      ::test::protocollayouts::imported::ImportUnionPayload ImportUnionPayload =
-          Allocate< ::test::protocollayouts::imported::ImportUnionPayload>{}(
-              &src_, &param_size_);
+      param_size_ = MinSize< ::test::protocollayouts::imported::ImportUnionPayload>() + slack_size_per_param;
+      xprintf("Allocating %zu bytes for ::test::protocollayouts::imported::ImportUnionPayload ImportUnionPayload\n", param_size_);
+      ::test::protocollayouts::imported::ImportUnionPayload ImportUnionPayload = Allocate< ::test::protocollayouts::imported::ImportUnionPayload>{}(&src_, &param_size_);
 
-      xprintf(
-          "Invoking method "
-          "test_protocollayouts_MainProtocol.TwoWayNamedComposed\n");
-      protocol_->TwoWayNamedComposed(
-          std::move(ImportUnionPayload),
-          [signaller = fuzzer_.NewCallbackSignaller()](
-              ::test::protocollayouts::imported::ImportTablePayload
-                  ImportTablePayload) {
-            xprintf(
-                "Invoked "
-                "test_protocollayouts_MainProtocol.TwoWayNamedComposed\n");
-            zx_status_t status_ = signaller.SignalCallback();
-            if (status_ != ZX_OK) {
-              xprintf("signaller.SignalCallback returned bad status: %d\n",
-                      status_);
-            }
-          });
+      xprintf("Invoking method test_protocollayouts_MainProtocol.TwoWayNamedComposed\n");
+      protocol_->TwoWayNamedComposed(std::move(ImportUnionPayload), [signaller = fuzzer_.NewCallbackSignaller()](::test::protocollayouts::imported::ImportTablePayload ImportTablePayload) {
+        xprintf("Invoked test_protocollayouts_MainProtocol.TwoWayNamedComposed\n");
+        zx_status_t status_ = signaller.SignalCallback();
+        if (status_ != ZX_OK) {
+          xprintf("signaller.SignalCallback returned bad status: %d\n", status_);
+        }
+      });
 #endif
     }
     if (method_selection_ == 7) {
 #if !(ALL_METHODS || defined(METHOD_TwoWayNamedComposedWithError))
       // Selected method from protocol that is not part of this fuzzer.
-      xprintf(
-          "Early exit: Chose disabled method: TwoWayNamedComposedWithError\n");
+      xprintf("Early exit: Chose disabled method: TwoWayNamedComposedWithError\n");
       return 0;
 #else
-      const size_t min_size_ =
-          MinSize< ::test::protocollayouts::imported::ImportTablePayload>();
+      const size_t min_size_ = MinSize< ::test::protocollayouts::imported::ImportTablePayload>();
 
       // Must have enough bytes for input.
       if (size_ < min_size_) {
-        xprintf("Early exit: Input size too small: %zu < %zu\n", size_,
-                min_size_);
+        xprintf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
         return 0;
       }
 
       const size_t slack_size_ = size_ - min_size_;
       const size_t slack_size_per_param = slack_size_ / 1;
 
-      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n",
-              slack_size_, slack_size_per_param);
+      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
 
       size_t param_size_;
-      param_size_ =
-          MinSize< ::test::protocollayouts::imported::ImportTablePayload>() +
-          slack_size_per_param;
-      xprintf(
-          "Allocating %zu bytes for "
-          "::test::protocollayouts::imported::ImportTablePayload "
-          "ImportTablePayload\n",
-          param_size_);
-      ::test::protocollayouts::imported::ImportTablePayload ImportTablePayload =
-          Allocate< ::test::protocollayouts::imported::ImportTablePayload>{}(
-              &src_, &param_size_);
+      param_size_ = MinSize< ::test::protocollayouts::imported::ImportTablePayload>() + slack_size_per_param;
+      xprintf("Allocating %zu bytes for ::test::protocollayouts::imported::ImportTablePayload ImportTablePayload\n", param_size_);
+      ::test::protocollayouts::imported::ImportTablePayload ImportTablePayload = Allocate< ::test::protocollayouts::imported::ImportTablePayload>{}(&src_, &param_size_);
 
-      xprintf(
-          "Invoking method "
-          "test_protocollayouts_MainProtocol.TwoWayNamedComposedWithError\n");
-      protocol_->TwoWayNamedComposedWithError(
-          std::move(ImportTablePayload),
-          [signaller = fuzzer_.NewCallbackSignaller()](
-              ::test::protocollayouts::imported::
-                  ComposedProtocol_TwoWayNamedComposedWithError_Result result) {
-            xprintf(
-                "Invoked "
-                "test_protocollayouts_MainProtocol."
-                "TwoWayNamedComposedWithError\n");
-            zx_status_t status_ = signaller.SignalCallback();
-            if (status_ != ZX_OK) {
-              xprintf("signaller.SignalCallback returned bad status: %d\n",
-                      status_);
-            }
-          });
+      xprintf("Invoking method test_protocollayouts_MainProtocol.TwoWayNamedComposedWithError\n");
+      protocol_->TwoWayNamedComposedWithError(std::move(ImportTablePayload), [signaller = fuzzer_.NewCallbackSignaller()](::test::protocollayouts::imported::ComposedProtocol_TwoWayNamedComposedWithError_Result result) {
+        xprintf("Invoked test_protocollayouts_MainProtocol.TwoWayNamedComposedWithError\n");
+        zx_status_t status_ = signaller.SignalCallback();
+        if (status_ != ZX_OK) {
+          xprintf("signaller.SignalCallback returned bad status: %d\n", status_);
+        }
+      });
 #endif
     }
     if (method_selection_ == 10) {
@@ -409,37 +273,25 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
       xprintf("Early exit: Chose disabled method: OneWayImport\n");
       return 0;
 #else
-      const size_t min_size_ =
-          MinSize< ::test::protocollayouts::imported::ImportTablePayload>();
+      const size_t min_size_ = MinSize< ::test::protocollayouts::imported::ImportTablePayload>();
 
       // Must have enough bytes for input.
       if (size_ < min_size_) {
-        xprintf("Early exit: Input size too small: %zu < %zu\n", size_,
-                min_size_);
+        xprintf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
         return 0;
       }
 
       const size_t slack_size_ = size_ - min_size_;
       const size_t slack_size_per_param = slack_size_ / 1;
 
-      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n",
-              slack_size_, slack_size_per_param);
+      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
 
       size_t param_size_;
-      param_size_ =
-          MinSize< ::test::protocollayouts::imported::ImportTablePayload>() +
-          slack_size_per_param;
-      xprintf(
-          "Allocating %zu bytes for "
-          "::test::protocollayouts::imported::ImportTablePayload "
-          "ImportTablePayload\n",
-          param_size_);
-      ::test::protocollayouts::imported::ImportTablePayload ImportTablePayload =
-          Allocate< ::test::protocollayouts::imported::ImportTablePayload>{}(
-              &src_, &param_size_);
+      param_size_ = MinSize< ::test::protocollayouts::imported::ImportTablePayload>() + slack_size_per_param;
+      xprintf("Allocating %zu bytes for ::test::protocollayouts::imported::ImportTablePayload ImportTablePayload\n", param_size_);
+      ::test::protocollayouts::imported::ImportTablePayload ImportTablePayload = Allocate< ::test::protocollayouts::imported::ImportTablePayload>{}(&src_, &param_size_);
 
-      xprintf(
-          "Invoking method test_protocollayouts_MainProtocol.OneWayImport\n");
+      xprintf("Invoking method test_protocollayouts_MainProtocol.OneWayImport\n");
       protocol_->OneWayImport(std::move(ImportTablePayload));
 #endif
     }
@@ -449,49 +301,32 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
       xprintf("Early exit: Chose disabled method: TwoWayImport\n");
       return 0;
 #else
-      const size_t min_size_ =
-          MinSize< ::test::protocollayouts::imported::ImportUnionPayload>();
+      const size_t min_size_ = MinSize< ::test::protocollayouts::imported::ImportUnionPayload>();
 
       // Must have enough bytes for input.
       if (size_ < min_size_) {
-        xprintf("Early exit: Input size too small: %zu < %zu\n", size_,
-                min_size_);
+        xprintf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
         return 0;
       }
 
       const size_t slack_size_ = size_ - min_size_;
       const size_t slack_size_per_param = slack_size_ / 1;
 
-      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n",
-              slack_size_, slack_size_per_param);
+      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
 
       size_t param_size_;
-      param_size_ =
-          MinSize< ::test::protocollayouts::imported::ImportUnionPayload>() +
-          slack_size_per_param;
-      xprintf(
-          "Allocating %zu bytes for "
-          "::test::protocollayouts::imported::ImportUnionPayload "
-          "ImportUnionPayload\n",
-          param_size_);
-      ::test::protocollayouts::imported::ImportUnionPayload ImportUnionPayload =
-          Allocate< ::test::protocollayouts::imported::ImportUnionPayload>{}(
-              &src_, &param_size_);
+      param_size_ = MinSize< ::test::protocollayouts::imported::ImportUnionPayload>() + slack_size_per_param;
+      xprintf("Allocating %zu bytes for ::test::protocollayouts::imported::ImportUnionPayload ImportUnionPayload\n", param_size_);
+      ::test::protocollayouts::imported::ImportUnionPayload ImportUnionPayload = Allocate< ::test::protocollayouts::imported::ImportUnionPayload>{}(&src_, &param_size_);
 
-      xprintf(
-          "Invoking method test_protocollayouts_MainProtocol.TwoWayImport\n");
-      protocol_->TwoWayImport(
-          std::move(ImportUnionPayload),
-          [signaller = fuzzer_.NewCallbackSignaller()](
-              ::test::protocollayouts::imported::ImportTablePayload
-                  ImportTablePayload) {
-            xprintf("Invoked test_protocollayouts_MainProtocol.TwoWayImport\n");
-            zx_status_t status_ = signaller.SignalCallback();
-            if (status_ != ZX_OK) {
-              xprintf("signaller.SignalCallback returned bad status: %d\n",
-                      status_);
-            }
-          });
+      xprintf("Invoking method test_protocollayouts_MainProtocol.TwoWayImport\n");
+      protocol_->TwoWayImport(std::move(ImportUnionPayload), [signaller = fuzzer_.NewCallbackSignaller()](::test::protocollayouts::imported::ImportTablePayload ImportTablePayload) {
+        xprintf("Invoked test_protocollayouts_MainProtocol.TwoWayImport\n");
+        zx_status_t status_ = signaller.SignalCallback();
+        if (status_ != ZX_OK) {
+          xprintf("signaller.SignalCallback returned bad status: %d\n", status_);
+        }
+      });
 #endif
     }
     if (method_selection_ == 12) {
@@ -500,52 +335,32 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
       xprintf("Early exit: Chose disabled method: TwoWayImportWithError\n");
       return 0;
 #else
-      const size_t min_size_ =
-          MinSize< ::test::protocollayouts::imported::ImportTablePayload>();
+      const size_t min_size_ = MinSize< ::test::protocollayouts::imported::ImportTablePayload>();
 
       // Must have enough bytes for input.
       if (size_ < min_size_) {
-        xprintf("Early exit: Input size too small: %zu < %zu\n", size_,
-                min_size_);
+        xprintf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
         return 0;
       }
 
       const size_t slack_size_ = size_ - min_size_;
       const size_t slack_size_per_param = slack_size_ / 1;
 
-      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n",
-              slack_size_, slack_size_per_param);
+      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
 
       size_t param_size_;
-      param_size_ =
-          MinSize< ::test::protocollayouts::imported::ImportTablePayload>() +
-          slack_size_per_param;
-      xprintf(
-          "Allocating %zu bytes for "
-          "::test::protocollayouts::imported::ImportTablePayload "
-          "ImportTablePayload\n",
-          param_size_);
-      ::test::protocollayouts::imported::ImportTablePayload ImportTablePayload =
-          Allocate< ::test::protocollayouts::imported::ImportTablePayload>{}(
-              &src_, &param_size_);
+      param_size_ = MinSize< ::test::protocollayouts::imported::ImportTablePayload>() + slack_size_per_param;
+      xprintf("Allocating %zu bytes for ::test::protocollayouts::imported::ImportTablePayload ImportTablePayload\n", param_size_);
+      ::test::protocollayouts::imported::ImportTablePayload ImportTablePayload = Allocate< ::test::protocollayouts::imported::ImportTablePayload>{}(&src_, &param_size_);
 
-      xprintf(
-          "Invoking method "
-          "test_protocollayouts_MainProtocol.TwoWayImportWithError\n");
-      protocol_->TwoWayImportWithError(
-          std::move(ImportTablePayload),
-          [signaller = fuzzer_.NewCallbackSignaller()](
-              ::test::protocollayouts::MainProtocol_TwoWayImportWithError_Result
-                  result) {
-            xprintf(
-                "Invoked "
-                "test_protocollayouts_MainProtocol.TwoWayImportWithError\n");
-            zx_status_t status_ = signaller.SignalCallback();
-            if (status_ != ZX_OK) {
-              xprintf("signaller.SignalCallback returned bad status: %d\n",
-                      status_);
-            }
-          });
+      xprintf("Invoking method test_protocollayouts_MainProtocol.TwoWayImportWithError\n");
+      protocol_->TwoWayImportWithError(std::move(ImportTablePayload), [signaller = fuzzer_.NewCallbackSignaller()](::test::protocollayouts::MainProtocol_TwoWayImportWithError_Result result) {
+        xprintf("Invoked test_protocollayouts_MainProtocol.TwoWayImportWithError\n");
+        zx_status_t status_ = signaller.SignalCallback();
+        if (status_ != ZX_OK) {
+          xprintf("signaller.SignalCallback returned bad status: %d\n", status_);
+        }
+      });
 #endif
     }
     if (method_selection_ == 15) {
@@ -554,35 +369,25 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
       xprintf("Early exit: Chose disabled method: OneWayLocal\n");
       return 0;
 #else
-      const size_t min_size_ =
-          MinSize< ::test::protocollayouts::LocalTablePayload>();
+      const size_t min_size_ = MinSize< ::test::protocollayouts::LocalTablePayload>();
 
       // Must have enough bytes for input.
       if (size_ < min_size_) {
-        xprintf("Early exit: Input size too small: %zu < %zu\n", size_,
-                min_size_);
+        xprintf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
         return 0;
       }
 
       const size_t slack_size_ = size_ - min_size_;
       const size_t slack_size_per_param = slack_size_ / 1;
 
-      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n",
-              slack_size_, slack_size_per_param);
+      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
 
       size_t param_size_;
-      param_size_ = MinSize< ::test::protocollayouts::LocalTablePayload>() +
-                    slack_size_per_param;
-      xprintf(
-          "Allocating %zu bytes for ::test::protocollayouts::LocalTablePayload "
-          "LocalTablePayload\n",
-          param_size_);
-      ::test::protocollayouts::LocalTablePayload LocalTablePayload =
-          Allocate< ::test::protocollayouts::LocalTablePayload>{}(&src_,
-                                                                  &param_size_);
+      param_size_ = MinSize< ::test::protocollayouts::LocalTablePayload>() + slack_size_per_param;
+      xprintf("Allocating %zu bytes for ::test::protocollayouts::LocalTablePayload LocalTablePayload\n", param_size_);
+      ::test::protocollayouts::LocalTablePayload LocalTablePayload = Allocate< ::test::protocollayouts::LocalTablePayload>{}(&src_, &param_size_);
 
-      xprintf(
-          "Invoking method test_protocollayouts_MainProtocol.OneWayLocal\n");
+      xprintf("Invoking method test_protocollayouts_MainProtocol.OneWayLocal\n");
       protocol_->OneWayLocal(std::move(LocalTablePayload));
 #endif
     }
@@ -592,46 +397,32 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
       xprintf("Early exit: Chose disabled method: TwoWayLocal\n");
       return 0;
 #else
-      const size_t min_size_ =
-          MinSize< ::test::protocollayouts::LocalUnionPayload>();
+      const size_t min_size_ = MinSize< ::test::protocollayouts::LocalUnionPayload>();
 
       // Must have enough bytes for input.
       if (size_ < min_size_) {
-        xprintf("Early exit: Input size too small: %zu < %zu\n", size_,
-                min_size_);
+        xprintf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
         return 0;
       }
 
       const size_t slack_size_ = size_ - min_size_;
       const size_t slack_size_per_param = slack_size_ / 1;
 
-      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n",
-              slack_size_, slack_size_per_param);
+      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
 
       size_t param_size_;
-      param_size_ = MinSize< ::test::protocollayouts::LocalUnionPayload>() +
-                    slack_size_per_param;
-      xprintf(
-          "Allocating %zu bytes for ::test::protocollayouts::LocalUnionPayload "
-          "LocalUnionPayload\n",
-          param_size_);
-      ::test::protocollayouts::LocalUnionPayload LocalUnionPayload =
-          Allocate< ::test::protocollayouts::LocalUnionPayload>{}(&src_,
-                                                                  &param_size_);
+      param_size_ = MinSize< ::test::protocollayouts::LocalUnionPayload>() + slack_size_per_param;
+      xprintf("Allocating %zu bytes for ::test::protocollayouts::LocalUnionPayload LocalUnionPayload\n", param_size_);
+      ::test::protocollayouts::LocalUnionPayload LocalUnionPayload = Allocate< ::test::protocollayouts::LocalUnionPayload>{}(&src_, &param_size_);
 
-      xprintf(
-          "Invoking method test_protocollayouts_MainProtocol.TwoWayLocal\n");
-      protocol_->TwoWayLocal(
-          std::move(LocalUnionPayload),
-          [signaller = fuzzer_.NewCallbackSignaller()](
-              ::test::protocollayouts::LocalTablePayload LocalTablePayload) {
-            xprintf("Invoked test_protocollayouts_MainProtocol.TwoWayLocal\n");
-            zx_status_t status_ = signaller.SignalCallback();
-            if (status_ != ZX_OK) {
-              xprintf("signaller.SignalCallback returned bad status: %d\n",
-                      status_);
-            }
-          });
+      xprintf("Invoking method test_protocollayouts_MainProtocol.TwoWayLocal\n");
+      protocol_->TwoWayLocal(std::move(LocalUnionPayload), [signaller = fuzzer_.NewCallbackSignaller()](::test::protocollayouts::LocalTablePayload LocalTablePayload) {
+        xprintf("Invoked test_protocollayouts_MainProtocol.TwoWayLocal\n");
+        zx_status_t status_ = signaller.SignalCallback();
+        if (status_ != ZX_OK) {
+          xprintf("signaller.SignalCallback returned bad status: %d\n", status_);
+        }
+      });
 #endif
     }
     if (method_selection_ == 17) {
@@ -640,50 +431,32 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
       xprintf("Early exit: Chose disabled method: TwoWayLocalWithError\n");
       return 0;
 #else
-      const size_t min_size_ =
-          MinSize< ::test::protocollayouts::LocalTablePayload>();
+      const size_t min_size_ = MinSize< ::test::protocollayouts::LocalTablePayload>();
 
       // Must have enough bytes for input.
       if (size_ < min_size_) {
-        xprintf("Early exit: Input size too small: %zu < %zu\n", size_,
-                min_size_);
+        xprintf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
         return 0;
       }
 
       const size_t slack_size_ = size_ - min_size_;
       const size_t slack_size_per_param = slack_size_ / 1;
 
-      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n",
-              slack_size_, slack_size_per_param);
+      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
 
       size_t param_size_;
-      param_size_ = MinSize< ::test::protocollayouts::LocalTablePayload>() +
-                    slack_size_per_param;
-      xprintf(
-          "Allocating %zu bytes for ::test::protocollayouts::LocalTablePayload "
-          "LocalTablePayload\n",
-          param_size_);
-      ::test::protocollayouts::LocalTablePayload LocalTablePayload =
-          Allocate< ::test::protocollayouts::LocalTablePayload>{}(&src_,
-                                                                  &param_size_);
+      param_size_ = MinSize< ::test::protocollayouts::LocalTablePayload>() + slack_size_per_param;
+      xprintf("Allocating %zu bytes for ::test::protocollayouts::LocalTablePayload LocalTablePayload\n", param_size_);
+      ::test::protocollayouts::LocalTablePayload LocalTablePayload = Allocate< ::test::protocollayouts::LocalTablePayload>{}(&src_, &param_size_);
 
-      xprintf(
-          "Invoking method "
-          "test_protocollayouts_MainProtocol.TwoWayLocalWithError\n");
-      protocol_->TwoWayLocalWithError(
-          std::move(LocalTablePayload),
-          [signaller = fuzzer_.NewCallbackSignaller()](
-              ::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result
-                  result) {
-            xprintf(
-                "Invoked "
-                "test_protocollayouts_MainProtocol.TwoWayLocalWithError\n");
-            zx_status_t status_ = signaller.SignalCallback();
-            if (status_ != ZX_OK) {
-              xprintf("signaller.SignalCallback returned bad status: %d\n",
-                      status_);
-            }
-          });
+      xprintf("Invoking method test_protocollayouts_MainProtocol.TwoWayLocalWithError\n");
+      protocol_->TwoWayLocalWithError(std::move(LocalTablePayload), [signaller = fuzzer_.NewCallbackSignaller()](::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result result) {
+        xprintf("Invoked test_protocollayouts_MainProtocol.TwoWayLocalWithError\n");
+        zx_status_t status_ = signaller.SignalCallback();
+        if (status_ != ZX_OK) {
+          xprintf("signaller.SignalCallback returned bad status: %d\n", status_);
+        }
+      });
 #endif
     }
     if (method_selection_ == 20) {
@@ -692,35 +465,23 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
       xprintf("Early exit: Chose disabled method: OneWayAnon\n");
       return 0;
 #else
-      const size_t min_size_ =
-          MinSize< ::test::protocollayouts::MainProtocolOneWayAnonRequest>();
+      const size_t min_size_ = MinSize< ::test::protocollayouts::MainProtocolOneWayAnonRequest>();
 
       // Must have enough bytes for input.
       if (size_ < min_size_) {
-        xprintf("Early exit: Input size too small: %zu < %zu\n", size_,
-                min_size_);
+        xprintf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
         return 0;
       }
 
       const size_t slack_size_ = size_ - min_size_;
       const size_t slack_size_per_param = slack_size_ / 1;
 
-      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n",
-              slack_size_, slack_size_per_param);
+      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
 
       size_t param_size_;
-      param_size_ =
-          MinSize< ::test::protocollayouts::MainProtocolOneWayAnonRequest>() +
-          slack_size_per_param;
-      xprintf(
-          "Allocating %zu bytes for "
-          "::test::protocollayouts::MainProtocolOneWayAnonRequest "
-          "MainProtocolOneWayAnonRequest\n",
-          param_size_);
-      ::test::protocollayouts::MainProtocolOneWayAnonRequest
-          MainProtocolOneWayAnonRequest = Allocate<
-              ::test::protocollayouts::MainProtocolOneWayAnonRequest>{}(
-              &src_, &param_size_);
+      param_size_ = MinSize< ::test::protocollayouts::MainProtocolOneWayAnonRequest>() + slack_size_per_param;
+      xprintf("Allocating %zu bytes for ::test::protocollayouts::MainProtocolOneWayAnonRequest MainProtocolOneWayAnonRequest\n", param_size_);
+      ::test::protocollayouts::MainProtocolOneWayAnonRequest MainProtocolOneWayAnonRequest = Allocate< ::test::protocollayouts::MainProtocolOneWayAnonRequest>{}(&src_, &param_size_);
 
       xprintf("Invoking method test_protocollayouts_MainProtocol.OneWayAnon\n");
       protocol_->OneWayAnon(std::move(MainProtocolOneWayAnonRequest));
@@ -732,49 +493,32 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
       xprintf("Early exit: Chose disabled method: TwoWayAnon\n");
       return 0;
 #else
-      const size_t min_size_ =
-          MinSize< ::test::protocollayouts::MainProtocolTwoWayAnonRequest>();
+      const size_t min_size_ = MinSize< ::test::protocollayouts::MainProtocolTwoWayAnonRequest>();
 
       // Must have enough bytes for input.
       if (size_ < min_size_) {
-        xprintf("Early exit: Input size too small: %zu < %zu\n", size_,
-                min_size_);
+        xprintf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
         return 0;
       }
 
       const size_t slack_size_ = size_ - min_size_;
       const size_t slack_size_per_param = slack_size_ / 1;
 
-      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n",
-              slack_size_, slack_size_per_param);
+      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
 
       size_t param_size_;
-      param_size_ =
-          MinSize< ::test::protocollayouts::MainProtocolTwoWayAnonRequest>() +
-          slack_size_per_param;
-      xprintf(
-          "Allocating %zu bytes for "
-          "::test::protocollayouts::MainProtocolTwoWayAnonRequest "
-          "MainProtocolTwoWayAnonRequest\n",
-          param_size_);
-      ::test::protocollayouts::MainProtocolTwoWayAnonRequest
-          MainProtocolTwoWayAnonRequest = Allocate<
-              ::test::protocollayouts::MainProtocolTwoWayAnonRequest>{}(
-              &src_, &param_size_);
+      param_size_ = MinSize< ::test::protocollayouts::MainProtocolTwoWayAnonRequest>() + slack_size_per_param;
+      xprintf("Allocating %zu bytes for ::test::protocollayouts::MainProtocolTwoWayAnonRequest MainProtocolTwoWayAnonRequest\n", param_size_);
+      ::test::protocollayouts::MainProtocolTwoWayAnonRequest MainProtocolTwoWayAnonRequest = Allocate< ::test::protocollayouts::MainProtocolTwoWayAnonRequest>{}(&src_, &param_size_);
 
       xprintf("Invoking method test_protocollayouts_MainProtocol.TwoWayAnon\n");
-      protocol_->TwoWayAnon(
-          std::move(MainProtocolTwoWayAnonRequest),
-          [signaller = fuzzer_.NewCallbackSignaller()](
-              ::test::protocollayouts::MainProtocolTwoWayAnonResponse
-                  MainProtocolTwoWayAnonResponse) {
-            xprintf("Invoked test_protocollayouts_MainProtocol.TwoWayAnon\n");
-            zx_status_t status_ = signaller.SignalCallback();
-            if (status_ != ZX_OK) {
-              xprintf("signaller.SignalCallback returned bad status: %d\n",
-                      status_);
-            }
-          });
+      protocol_->TwoWayAnon(std::move(MainProtocolTwoWayAnonRequest), [signaller = fuzzer_.NewCallbackSignaller()](::test::protocollayouts::MainProtocolTwoWayAnonResponse MainProtocolTwoWayAnonResponse) {
+        xprintf("Invoked test_protocollayouts_MainProtocol.TwoWayAnon\n");
+        zx_status_t status_ = signaller.SignalCallback();
+        if (status_ != ZX_OK) {
+          xprintf("signaller.SignalCallback returned bad status: %d\n", status_);
+        }
+      });
 #endif
     }
     if (method_selection_ == 22) {
@@ -783,54 +527,32 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
       xprintf("Early exit: Chose disabled method: TwoWayAnonWithError\n");
       return 0;
 #else
-      const size_t min_size_ = MinSize<
-          ::test::protocollayouts::MainProtocolTwoWayAnonWithErrorRequest>();
+      const size_t min_size_ = MinSize< ::test::protocollayouts::MainProtocolTwoWayAnonWithErrorRequest>();
 
       // Must have enough bytes for input.
       if (size_ < min_size_) {
-        xprintf("Early exit: Input size too small: %zu < %zu\n", size_,
-                min_size_);
+        xprintf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
         return 0;
       }
 
       const size_t slack_size_ = size_ - min_size_;
       const size_t slack_size_per_param = slack_size_ / 1;
 
-      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n",
-              slack_size_, slack_size_per_param);
+      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
 
       size_t param_size_;
-      param_size_ = MinSize< ::test::protocollayouts::
-                                 MainProtocolTwoWayAnonWithErrorRequest>() +
-                    slack_size_per_param;
-      xprintf(
-          "Allocating %zu bytes for "
-          "::test::protocollayouts::MainProtocolTwoWayAnonWithErrorRequest "
-          "MainProtocolTwoWayAnonWithErrorRequest\n",
-          param_size_);
-      ::test::protocollayouts::MainProtocolTwoWayAnonWithErrorRequest
-          MainProtocolTwoWayAnonWithErrorRequest =
-              Allocate< ::test::protocollayouts::
-                            MainProtocolTwoWayAnonWithErrorRequest>{}(
-                  &src_, &param_size_);
+      param_size_ = MinSize< ::test::protocollayouts::MainProtocolTwoWayAnonWithErrorRequest>() + slack_size_per_param;
+      xprintf("Allocating %zu bytes for ::test::protocollayouts::MainProtocolTwoWayAnonWithErrorRequest MainProtocolTwoWayAnonWithErrorRequest\n", param_size_);
+      ::test::protocollayouts::MainProtocolTwoWayAnonWithErrorRequest MainProtocolTwoWayAnonWithErrorRequest = Allocate< ::test::protocollayouts::MainProtocolTwoWayAnonWithErrorRequest>{}(&src_, &param_size_);
 
-      xprintf(
-          "Invoking method "
-          "test_protocollayouts_MainProtocol.TwoWayAnonWithError\n");
-      protocol_->TwoWayAnonWithError(
-          std::move(MainProtocolTwoWayAnonWithErrorRequest),
-          [signaller = fuzzer_.NewCallbackSignaller()](
-              ::test::protocollayouts::MainProtocol_TwoWayAnonWithError_Result
-                  result) {
-            xprintf(
-                "Invoked "
-                "test_protocollayouts_MainProtocol.TwoWayAnonWithError\n");
-            zx_status_t status_ = signaller.SignalCallback();
-            if (status_ != ZX_OK) {
-              xprintf("signaller.SignalCallback returned bad status: %d\n",
-                      status_);
-            }
-          });
+      xprintf("Invoking method test_protocollayouts_MainProtocol.TwoWayAnonWithError\n");
+      protocol_->TwoWayAnonWithError(std::move(MainProtocolTwoWayAnonWithErrorRequest), [signaller = fuzzer_.NewCallbackSignaller()](::test::protocollayouts::MainProtocol_TwoWayAnonWithError_Result result) {
+        xprintf("Invoked test_protocollayouts_MainProtocol.TwoWayAnonWithError\n");
+        zx_status_t status_ = signaller.SignalCallback();
+        if (status_ != ZX_OK) {
+          xprintf("signaller.SignalCallback returned bad status: %d\n", status_);
+        }
+      });
 #endif
     }
 

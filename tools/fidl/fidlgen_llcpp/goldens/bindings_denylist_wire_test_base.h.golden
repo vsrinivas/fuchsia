@@ -7,140 +7,104 @@ namespace fidl {
 namespace testing {
 
 template <>
-class WireTestBase<::test_bindingsdenylist::Allowed>
-    : public ::fidl::WireServer<::test_bindingsdenylist::Allowed> {
+class WireTestBase<::test_bindingsdenylist::Allowed> : public ::fidl::WireServer<::test_bindingsdenylist::Allowed> {
  public:
   virtual ~WireTestBase<::test_bindingsdenylist::Allowed>() = default;
-  virtual void NotImplemented_(const std::string& name,
-                               ::fidl::CompleterBase& completer) = 0;
+  virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
 };
 
 template <>
-class ::fidl::testing::WireSyncEventHandlerTestBase<
-    ::test_bindingsdenylist::Allowed>
-    : public ::fidl::WireSyncEventHandler<::test_bindingsdenylist::Allowed> {
+class ::fidl::testing::WireSyncEventHandlerTestBase<::test_bindingsdenylist::Allowed> : public ::fidl::WireSyncEventHandler<::test_bindingsdenylist::Allowed> {
  public:
-  virtual ~WireSyncEventHandlerTestBase<::test_bindingsdenylist::Allowed>() =
-      default;
+  virtual ~WireSyncEventHandlerTestBase<::test_bindingsdenylist::Allowed>() = default;
   virtual void NotImplemented_(const std::string& name) = 0;
 };
 
 template <>
-class WireTestBase<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>
-    : public ::fidl::WireServer<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> {
+class WireTestBase<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> : public ::fidl::WireServer<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> {
  public:
-  virtual ~WireTestBase<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>() =
-      default;
-  virtual void NotImplemented_(const std::string& name,
-                               ::fidl::CompleterBase& completer) = 0;
+  virtual ~WireTestBase<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>() = default;
+  virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
   virtual void LibfuzzerNeedsNonemptyProtocol(
-      LibfuzzerNeedsNonemptyProtocolRequestView request,
-      LibfuzzerNeedsNonemptyProtocolCompleter::Sync& completer) override {
+      LibfuzzerNeedsNonemptyProtocolRequestView request, LibfuzzerNeedsNonemptyProtocolCompleter::Sync& completer) override {
     NotImplemented_("LibfuzzerNeedsNonemptyProtocol", completer);
   }
 };
 
 template <>
-class ::fidl::testing::WireSyncEventHandlerTestBase<
-    ::test_bindingsdenylist::OnlyLibfuzzerAndDeps>
-    : public ::fidl::WireSyncEventHandler<
-          ::test_bindingsdenylist::OnlyLibfuzzerAndDeps> {
+class ::fidl::testing::WireSyncEventHandlerTestBase<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> : public ::fidl::WireSyncEventHandler<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> {
  public:
-  virtual ~WireSyncEventHandlerTestBase<
-      ::test_bindingsdenylist::OnlyLibfuzzerAndDeps>() = default;
+  virtual ~WireSyncEventHandlerTestBase<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>() = default;
   virtual void NotImplemented_(const std::string& name) = 0;
 };
 
 template <>
-class WireTestBase<::test_bindingsdenylist::OnlyCppAndDeps>
-    : public ::fidl::WireServer<::test_bindingsdenylist::OnlyCppAndDeps> {
+class WireTestBase<::test_bindingsdenylist::OnlyCppAndDeps> : public ::fidl::WireServer<::test_bindingsdenylist::OnlyCppAndDeps> {
  public:
   virtual ~WireTestBase<::test_bindingsdenylist::OnlyCppAndDeps>() = default;
-  virtual void NotImplemented_(const std::string& name,
-                               ::fidl::CompleterBase& completer) = 0;
+  virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
 };
 
 template <>
-class ::fidl::testing::WireSyncEventHandlerTestBase<
-    ::test_bindingsdenylist::OnlyCppAndDeps>
-    : public ::fidl::WireSyncEventHandler<
-          ::test_bindingsdenylist::OnlyCppAndDeps> {
+class ::fidl::testing::WireSyncEventHandlerTestBase<::test_bindingsdenylist::OnlyCppAndDeps> : public ::fidl::WireSyncEventHandler<::test_bindingsdenylist::OnlyCppAndDeps> {
  public:
-  virtual ~WireSyncEventHandlerTestBase<
-      ::test_bindingsdenylist::OnlyCppAndDeps>() = default;
+  virtual ~WireSyncEventHandlerTestBase<::test_bindingsdenylist::OnlyCppAndDeps>() = default;
   virtual void NotImplemented_(const std::string& name) = 0;
 };
 
 template <>
-class WireTestBase<::test_bindingsdenylist::ImportsSameNameContext>
-    : public ::fidl::WireServer<
-          ::test_bindingsdenylist::ImportsSameNameContext> {
+class WireTestBase<::test_bindingsdenylist::ImportsSameNameContext> : public ::fidl::WireServer<::test_bindingsdenylist::ImportsSameNameContext> {
  public:
-  virtual ~WireTestBase<::test_bindingsdenylist::ImportsSameNameContext>() =
-      default;
-  virtual void NotImplemented_(const std::string& name,
-                               ::fidl::CompleterBase& completer) = 0;
-  virtual void Unattributed(UnattributedRequestView request,
-                            UnattributedCompleter::Sync& completer) override {
+  virtual ~WireTestBase<::test_bindingsdenylist::ImportsSameNameContext>() = default;
+  virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
+  virtual void Unattributed(
+      UnattributedRequestView request, UnattributedCompleter::Sync& completer) override {
     NotImplemented_("Unattributed", completer);
   }
   virtual void AlwaysAppearsInImportingLibrary(
-      AlwaysAppearsInImportingLibraryRequestView request,
-      AlwaysAppearsInImportingLibraryCompleter::Sync& completer) override {
+      AlwaysAppearsInImportingLibraryRequestView request, AlwaysAppearsInImportingLibraryCompleter::Sync& completer) override {
     NotImplemented_("AlwaysAppearsInImportingLibrary", completer);
   }
 };
 
 template <>
-class ::fidl::testing::WireSyncEventHandlerTestBase<
-    ::test_bindingsdenylist::ImportsSameNameContext>
-    : public ::fidl::WireSyncEventHandler<
-          ::test_bindingsdenylist::ImportsSameNameContext> {
+class ::fidl::testing::WireSyncEventHandlerTestBase<::test_bindingsdenylist::ImportsSameNameContext> : public ::fidl::WireSyncEventHandler<::test_bindingsdenylist::ImportsSameNameContext> {
  public:
-  virtual ~WireSyncEventHandlerTestBase<
-      ::test_bindingsdenylist::ImportsSameNameContext>() = default;
+  virtual ~WireSyncEventHandlerTestBase<::test_bindingsdenylist::ImportsSameNameContext>() = default;
   virtual void NotImplemented_(const std::string& name) = 0;
 };
 
 template <>
-class WireTestBase<::test_bindingsdenylist::DenyEachBinding>
-    : public ::fidl::WireServer<::test_bindingsdenylist::DenyEachBinding> {
+class WireTestBase<::test_bindingsdenylist::DenyEachBinding> : public ::fidl::WireServer<::test_bindingsdenylist::DenyEachBinding> {
  public:
   virtual ~WireTestBase<::test_bindingsdenylist::DenyEachBinding>() = default;
-  virtual void NotImplemented_(const std::string& name,
-                               ::fidl::CompleterBase& completer) = 0;
-  virtual void OnlyDenyDart(OnlyDenyDartRequestView request,
-                            OnlyDenyDartCompleter::Sync& completer) override {
+  virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
+  virtual void OnlyDenyDart(
+      OnlyDenyDartRequestView request, OnlyDenyDartCompleter::Sync& completer) override {
     NotImplemented_("OnlyDenyDart", completer);
   }
-  virtual void OnlyDenyGo(OnlyDenyGoRequestView request,
-                          OnlyDenyGoCompleter::Sync& completer) override {
+  virtual void OnlyDenyGo(
+      OnlyDenyGoRequestView request, OnlyDenyGoCompleter::Sync& completer) override {
     NotImplemented_("OnlyDenyGo", completer);
   }
   virtual void OnlyDenyLibfuzzer(
-      OnlyDenyLibfuzzerRequestView request,
-      OnlyDenyLibfuzzerCompleter::Sync& completer) override {
+      OnlyDenyLibfuzzerRequestView request, OnlyDenyLibfuzzerCompleter::Sync& completer) override {
     NotImplemented_("OnlyDenyLibfuzzer", completer);
   }
-  virtual void OnlyDenyRust(OnlyDenyRustRequestView request,
-                            OnlyDenyRustCompleter::Sync& completer) override {
+  virtual void OnlyDenyRust(
+      OnlyDenyRustRequestView request, OnlyDenyRustCompleter::Sync& completer) override {
     NotImplemented_("OnlyDenyRust", completer);
   }
   virtual void OnlyDenySyzkaller(
-      OnlyDenySyzkallerRequestView request,
-      OnlyDenySyzkallerCompleter::Sync& completer) override {
+      OnlyDenySyzkallerRequestView request, OnlyDenySyzkallerCompleter::Sync& completer) override {
     NotImplemented_("OnlyDenySyzkaller", completer);
   }
 };
 
 template <>
-class ::fidl::testing::WireSyncEventHandlerTestBase<
-    ::test_bindingsdenylist::DenyEachBinding>
-    : public ::fidl::WireSyncEventHandler<
-          ::test_bindingsdenylist::DenyEachBinding> {
+class ::fidl::testing::WireSyncEventHandlerTestBase<::test_bindingsdenylist::DenyEachBinding> : public ::fidl::WireSyncEventHandler<::test_bindingsdenylist::DenyEachBinding> {
  public:
-  virtual ~WireSyncEventHandlerTestBase<
-      ::test_bindingsdenylist::DenyEachBinding>() = default;
+  virtual ~WireSyncEventHandlerTestBase<::test_bindingsdenylist::DenyEachBinding>() = default;
   virtual void NotImplemented_(const std::string& name) = 0;
 };
 }  // namespace testing

@@ -10,9 +10,7 @@ class Parent_TestBase : public ::test::inheritancewithrecursivedecl::Parent {
  public:
   virtual ~Parent_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
-  void First(
-      ::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent>
-          request) override {
+  void First(::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent> request) override {
     NotImplemented_("First");
   }
 };
@@ -21,14 +19,10 @@ class Child_TestBase : public ::test::inheritancewithrecursivedecl::Child {
  public:
   virtual ~Child_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
-  void First(
-      ::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent>
-          request) override {
+  void First(::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent> request) override {
     NotImplemented_("First");
   }
-  void Second(
-      ::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent>
-          request) override {
+  void Second(::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent> request) override {
     NotImplemented_("Second");
   }
 };

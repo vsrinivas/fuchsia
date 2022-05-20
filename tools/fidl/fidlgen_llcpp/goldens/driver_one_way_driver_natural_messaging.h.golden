@@ -17,12 +17,10 @@ __LOCAL extern "C" const fidl_type_t test_driveroneway_OneWaySendRequestTable;
 #ifdef __Fuchsia__
 }  // namespace test_driveroneway
 template <>
-class ::fidl::internal::NaturalClientImpl<::test_driveroneway::OneWay> final
-    : public ::fidl::internal::NaturalClientBase {
+class ::fidl::internal::NaturalClientImpl<::test_driveroneway::OneWay> final : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
-  ::fitx::result<::fidl::Error> Send(
-      ::fidl::Request<::test_driveroneway::OneWay::Send> request) const;
+  ::fitx::result<::fidl::Error> Send(::fidl::Request<::test_driveroneway::OneWay::Send> request) const;
 };
 namespace test_driveroneway {
 #endif  // __Fuchsia__
@@ -30,8 +28,7 @@ namespace test_driveroneway {
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::internal::NaturalEventHandlerInterface<
-    ::test_driveroneway::OneWay> {
+class ::fidl::internal::NaturalEventHandlerInterface<::test_driveroneway::OneWay> {
  public:
   NaturalEventHandlerInterface() = default;
   virtual ~NaturalEventHandlerInterface() = default;
@@ -39,20 +36,15 @@ class ::fidl::internal::NaturalEventHandlerInterface<
 
 template <>
 class ::fdf::AsyncEventHandler<::test_driveroneway::OneWay>
-    : public ::fidl::internal::NaturalEventHandlerInterface<
-          ::test_driveroneway::OneWay>,
-      public ::fidl::internal::AsyncEventHandler {
+    : public ::fidl::internal::NaturalEventHandlerInterface<::test_driveroneway::OneWay>, public ::fidl::internal::AsyncEventHandler {
  public:
   AsyncEventHandler() = default;
 };
 
 template <>
-class ::fidl::internal::NaturalEventDispatcher<::test_driveroneway::OneWay>
-    final : public ::fidl::internal::IncomingEventDispatcher<
-                ::fdf::AsyncEventHandler<::test_driveroneway::OneWay>> {
+class ::fidl::internal::NaturalEventDispatcher<::test_driveroneway::OneWay> final : public ::fidl::internal::IncomingEventDispatcher<::fdf::AsyncEventHandler<::test_driveroneway::OneWay>> {
  public:
-  explicit NaturalEventDispatcher(
-      ::fdf::AsyncEventHandler<::test_driveroneway::OneWay>* event_handler)
+  explicit NaturalEventDispatcher(::fdf::AsyncEventHandler<::test_driveroneway::OneWay>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 
  private:
@@ -65,18 +57,14 @@ class ::fidl::internal::NaturalEventDispatcher<::test_driveroneway::OneWay>
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::Request<::test_driveroneway::OneWay::Send> final
-    : public ::test_driveroneway::OneWaySendRequest {
+class ::fidl::Request<::test_driveroneway::OneWay::Send> final : public ::test_driveroneway::OneWaySendRequest {
  public:
   using ::test_driveroneway::OneWaySendRequest::OneWaySendRequest;
-  Request(::test_driveroneway::OneWaySendRequest v)
-      : ::test_driveroneway::OneWaySendRequest(std::move(v)) {}
+  Request(::test_driveroneway::OneWaySendRequest v) : ::test_driveroneway::OneWaySendRequest(std::move(v)) {}
 };
 
 template <>
-struct ::fidl::internal::MessageTraits<
-    ::fidl::Request<::test_driveroneway::OneWay::Send>>
-    final {
+struct ::fidl::internal::MessageTraits<::fidl::Request<::test_driveroneway::OneWay::Send>> final {
  public:
   static constexpr bool kHasPayload = true;
   using Payload = ::test_driveroneway::OneWaySendRequest;
@@ -84,8 +72,7 @@ struct ::fidl::internal::MessageTraits<
 #endif  // __Fuchsia__
 
 template <>
-class ::fdf::Server<::test_driveroneway::OneWay>
-    : public ::fidl::internal::IncomingMessageDispatcher {
+class ::fdf::Server<::test_driveroneway::OneWay> : public ::fidl::internal::IncomingMessageDispatcher {
  public:
   Server() = default;
   virtual ~Server() = default;
@@ -94,8 +81,7 @@ class ::fdf::Server<::test_driveroneway::OneWay>
   using _EnclosingProtocol = ::test_driveroneway::OneWay;
 
   using SendRequest = ::fidl::Request<::test_driveroneway::OneWay::Send>;
-  using SendCompleter =
-      ::fidl::internal::NaturalCompleter<::test_driveroneway::OneWay::Send>;
+  using SendCompleter = ::fidl::internal::NaturalCompleter<::test_driveroneway::OneWay::Send>;
 
   virtual void Send(SendRequest& request, SendCompleter::Sync& completer) = 0;
 
@@ -107,11 +93,9 @@ class ::fdf::Server<::test_driveroneway::OneWay>
 #ifdef __Fuchsia__
 
 template <>
-struct ::fidl::internal::NaturalServerDispatcher<::test_driveroneway::OneWay>
-    final {
+struct ::fidl::internal::NaturalServerDispatcher<::test_driveroneway::OneWay> final {
   NaturalServerDispatcher() = delete;
-  static void Dispatch(::fdf::Server<::test_driveroneway::OneWay>* impl,
-                       ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fdf::Server<::test_driveroneway::OneWay>* impl, ::fidl::IncomingMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 

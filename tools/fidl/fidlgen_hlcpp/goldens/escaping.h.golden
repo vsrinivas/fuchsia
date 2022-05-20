@@ -18,15 +18,11 @@ class DocCommentWithQuotes final {
 
   uint8_t __reserved = 0u;
 
-  static inline ::std::unique_ptr<DocCommentWithQuotes> New() {
-    return ::std::make_unique<DocCommentWithQuotes>();
-  }
+  static inline ::std::unique_ptr<DocCommentWithQuotes> New() { return ::std::make_unique<DocCommentWithQuotes>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, DocCommentWithQuotes* value,
-                     size_t _offset);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, DocCommentWithQuotes* value, size_t _offset);
   zx_status_t Clone(DocCommentWithQuotes* result) const;
 };
 
@@ -42,14 +38,11 @@ using DocCommentWithQuotesPtr = ::std::unique_ptr<DocCommentWithQuotes>;
 namespace fidl {
 template <>
 struct CodingTraits<::test::escaping::DocCommentWithQuotes>
-    : public EncodableCodingTraits<::test::escaping::DocCommentWithQuotes, 1> {
-};
+    : public EncodableCodingTraits<::test::escaping::DocCommentWithQuotes, 1> {};
 
 template <>
-struct IsMemcpyCompatible<::test::escaping::DocCommentWithQuotes>
-    : public internal::BoolConstant<
-          !HasPadding<::test::escaping::DocCommentWithQuotes>::value &&
-          IsMemcpyCompatible<uint8_t>::value> {};
+struct IsMemcpyCompatible<::test::escaping::DocCommentWithQuotes> : public internal::BoolConstant<
+                                                                        !HasPadding<::test::escaping::DocCommentWithQuotes>::value && IsMemcpyCompatible<uint8_t>::value> {};
 
 inline zx_status_t Clone(const ::test::escaping::DocCommentWithQuotes& value,
                          ::test::escaping::DocCommentWithQuotes* result) {
@@ -58,8 +51,7 @@ inline zx_status_t Clone(const ::test::escaping::DocCommentWithQuotes& value,
 
 template <>
 struct Equality<::test::escaping::DocCommentWithQuotes> {
-  bool operator()(const ::test::escaping::DocCommentWithQuotes& _lhs,
-                  const ::test::escaping::DocCommentWithQuotes& _rhs) const {
+  bool operator()(const ::test::escaping::DocCommentWithQuotes& _lhs, const ::test::escaping::DocCommentWithQuotes& _rhs) const {
     if (!::fidl::Equals(_lhs.__reserved, _rhs.__reserved)) {
       return false;
     }

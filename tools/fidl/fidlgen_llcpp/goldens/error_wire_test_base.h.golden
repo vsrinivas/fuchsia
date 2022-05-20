@@ -7,21 +7,18 @@ namespace fidl {
 namespace testing {
 
 template <>
-class WireTestBase<::test_error::Example>
-    : public ::fidl::WireServer<::test_error::Example> {
+class WireTestBase<::test_error::Example> : public ::fidl::WireServer<::test_error::Example> {
  public:
   virtual ~WireTestBase<::test_error::Example>() = default;
-  virtual void NotImplemented_(const std::string& name,
-                               ::fidl::CompleterBase& completer) = 0;
-  virtual void Foo(FooRequestView request,
-                   FooCompleter::Sync& completer) override {
+  virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
+  virtual void Foo(
+      FooRequestView request, FooCompleter::Sync& completer) override {
     NotImplemented_("Foo", completer);
   }
 };
 
 template <>
-class ::fidl::testing::WireSyncEventHandlerTestBase<::test_error::Example>
-    : public ::fidl::WireSyncEventHandler<::test_error::Example> {
+class ::fidl::testing::WireSyncEventHandlerTestBase<::test_error::Example> : public ::fidl::WireSyncEventHandler<::test_error::Example> {
  public:
   virtual ~WireSyncEventHandlerTestBase<::test_error::Example>() = default;
   virtual void NotImplemented_(const std::string& name) = 0;

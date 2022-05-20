@@ -19,23 +19,17 @@ class MyStrictBits final {
  public:
   constexpr MyStrictBits() = default;
 
-  // Constructs an instance of |MyStrictBits| from an underlying primitive
-  // value, preserving any bit member not defined in the FIDL schema.
+  // Constructs an instance of |MyStrictBits| from an underlying primitive value,
+  // preserving any bit member not defined in the FIDL schema.
   explicit constexpr MyStrictBits(uint32_t value) : value_(value) {}
   const static MyStrictBits kMyFirstBit;
   const static MyStrictBits kMyOtherBit;
   const static MyStrictBits kMask;
 
   explicit constexpr inline operator uint32_t() const { return value_; }
-  explicit constexpr inline operator bool() const {
-    return static_cast<bool>(value_);
-  }
-  constexpr inline bool operator==(const MyStrictBits& other) const {
-    return value_ == other.value_;
-  }
-  constexpr inline bool operator!=(const MyStrictBits& other) const {
-    return value_ != other.value_;
-  }
+  explicit constexpr inline operator bool() const { return static_cast<bool>(value_); }
+  constexpr inline bool operator==(const MyStrictBits& other) const { return value_ == other.value_; }
+  constexpr inline bool operator!=(const MyStrictBits& other) const { return value_ != other.value_; }
   constexpr inline MyStrictBits operator~() const;
   constexpr inline MyStrictBits operator|(const MyStrictBits& other) const;
   constexpr inline MyStrictBits operator&(const MyStrictBits& other) const;
@@ -54,8 +48,8 @@ class MyStrictBits final {
     return MyStrictBits(value & MyStrictBits::kMask.value_);
   }
 
-  // Constructs an instance of |MyStrictBits| from an underlying primitive
-  // value, clearing any bit member not defined in the FIDL schema.
+  // Constructs an instance of |MyStrictBits| from an underlying primitive value,
+  // clearing any bit member not defined in the FIDL schema.
   constexpr inline static MyStrictBits TruncatingUnknown(uint32_t value) {
     return MyStrictBits(value & MyStrictBits::kMask.value_);
   }
@@ -67,31 +61,25 @@ constexpr const ::test_doccomments::MyStrictBits MyStrictBits::kMyFirstBit =
     ::test_doccomments::MyStrictBits(1u);
 constexpr const ::test_doccomments::MyStrictBits MyStrictBits::kMyOtherBit =
     ::test_doccomments::MyStrictBits(2u);
-constexpr const ::test_doccomments::MyStrictBits MyStrictBits::kMask =
-    ::test_doccomments::MyStrictBits(3u);
+constexpr const ::test_doccomments::MyStrictBits MyStrictBits::kMask = ::test_doccomments::MyStrictBits(3u);
 
-constexpr inline ::test_doccomments::MyStrictBits MyStrictBits::operator~()
-    const {
-  return ::test_doccomments::MyStrictBits(
-      static_cast<uint32_t>(~this->value_ & kMask.value_));
+constexpr inline ::test_doccomments::MyStrictBits MyStrictBits::operator~() const {
+  return ::test_doccomments::MyStrictBits(static_cast<uint32_t>(~this->value_ & kMask.value_));
 }
 
 constexpr inline ::test_doccomments::MyStrictBits MyStrictBits::operator|(
     const ::test_doccomments::MyStrictBits& other) const {
-  return ::test_doccomments::MyStrictBits(
-      static_cast<uint32_t>(this->value_ | other.value_));
+  return ::test_doccomments::MyStrictBits(static_cast<uint32_t>(this->value_ | other.value_));
 }
 
 constexpr inline ::test_doccomments::MyStrictBits MyStrictBits::operator&(
     const ::test_doccomments::MyStrictBits& other) const {
-  return ::test_doccomments::MyStrictBits(
-      static_cast<uint32_t>(this->value_ & other.value_));
+  return ::test_doccomments::MyStrictBits(static_cast<uint32_t>(this->value_ & other.value_));
 }
 
 constexpr inline ::test_doccomments::MyStrictBits MyStrictBits::operator^(
     const ::test_doccomments::MyStrictBits& other) const {
-  return ::test_doccomments::MyStrictBits(
-      static_cast<uint32_t>(this->value_ ^ other.value_));
+  return ::test_doccomments::MyStrictBits(static_cast<uint32_t>(this->value_ ^ other.value_));
 }
 
 constexpr inline void MyStrictBits::operator|=(
@@ -118,23 +106,17 @@ class MyFlexibleBits final {
  public:
   constexpr MyFlexibleBits() = default;
 
-  // Constructs an instance of |MyFlexibleBits| from an underlying primitive
-  // value, preserving any bit member not defined in the FIDL schema.
+  // Constructs an instance of |MyFlexibleBits| from an underlying primitive value,
+  // preserving any bit member not defined in the FIDL schema.
   explicit constexpr MyFlexibleBits(uint32_t value) : value_(value) {}
   const static MyFlexibleBits kMyFirstBit;
   const static MyFlexibleBits kMyOtherBit;
   const static MyFlexibleBits kMask;
 
   explicit constexpr inline operator uint32_t() const { return value_; }
-  explicit constexpr inline operator bool() const {
-    return static_cast<bool>(value_);
-  }
-  constexpr inline bool operator==(const MyFlexibleBits& other) const {
-    return value_ == other.value_;
-  }
-  constexpr inline bool operator!=(const MyFlexibleBits& other) const {
-    return value_ != other.value_;
-  }
+  explicit constexpr inline operator bool() const { return static_cast<bool>(value_); }
+  constexpr inline bool operator==(const MyFlexibleBits& other) const { return value_ == other.value_; }
+  constexpr inline bool operator!=(const MyFlexibleBits& other) const { return value_ != other.value_; }
   constexpr inline MyFlexibleBits operator~() const;
   constexpr inline MyFlexibleBits operator|(const MyFlexibleBits& other) const;
   constexpr inline MyFlexibleBits operator&(const MyFlexibleBits& other) const;
@@ -143,28 +125,25 @@ class MyFlexibleBits final {
   constexpr inline void operator&=(const MyFlexibleBits& other);
   constexpr inline void operator^=(const MyFlexibleBits& other);
 
-  // Constructs an instance of |MyFlexibleBits| from an underlying primitive
-  // value if the primitive does not contain any unknown members not defined in
-  // the FIDL schema. Otherwise, returns |std::nullopt|.
-  constexpr inline static std::optional<MyFlexibleBits> TryFrom(
-      uint32_t value) {
+  // Constructs an instance of |MyFlexibleBits| from an underlying primitive value
+  // if the primitive does not contain any unknown members not defined in the
+  // FIDL schema. Otherwise, returns |std::nullopt|.
+  constexpr inline static std::optional<MyFlexibleBits> TryFrom(uint32_t value) {
     if (value & ~kMask.value_) {
       return std::nullopt;
     }
     return MyFlexibleBits(value & MyFlexibleBits::kMask.value_);
   }
 
-  // Constructs an instance of |MyFlexibleBits| from an underlying primitive
-  // value, clearing any bit member not defined in the FIDL schema.
+  // Constructs an instance of |MyFlexibleBits| from an underlying primitive value,
+  // clearing any bit member not defined in the FIDL schema.
   constexpr inline static MyFlexibleBits TruncatingUnknown(uint32_t value) {
     return MyFlexibleBits(value & MyFlexibleBits::kMask.value_);
   }
   constexpr inline MyFlexibleBits unknown_bits() const {
     return *this & MyFlexibleBits(~kMask.value_);
   }
-  constexpr inline bool has_unknown_bits() const {
-    return static_cast<bool>(unknown_bits());
-  }
+  constexpr inline bool has_unknown_bits() const { return static_cast<bool>(unknown_bits()); }
 
  private:
   uint32_t value_ = 0;
@@ -173,31 +152,25 @@ constexpr const ::test_doccomments::MyFlexibleBits MyFlexibleBits::kMyFirstBit =
     ::test_doccomments::MyFlexibleBits(1u);
 constexpr const ::test_doccomments::MyFlexibleBits MyFlexibleBits::kMyOtherBit =
     ::test_doccomments::MyFlexibleBits(2u);
-constexpr const ::test_doccomments::MyFlexibleBits MyFlexibleBits::kMask =
-    ::test_doccomments::MyFlexibleBits(3u);
+constexpr const ::test_doccomments::MyFlexibleBits MyFlexibleBits::kMask = ::test_doccomments::MyFlexibleBits(3u);
 
-constexpr inline ::test_doccomments::MyFlexibleBits MyFlexibleBits::operator~()
-    const {
-  return ::test_doccomments::MyFlexibleBits(
-      static_cast<uint32_t>(~this->value_ & kMask.value_));
+constexpr inline ::test_doccomments::MyFlexibleBits MyFlexibleBits::operator~() const {
+  return ::test_doccomments::MyFlexibleBits(static_cast<uint32_t>(~this->value_ & kMask.value_));
 }
 
 constexpr inline ::test_doccomments::MyFlexibleBits MyFlexibleBits::operator|(
     const ::test_doccomments::MyFlexibleBits& other) const {
-  return ::test_doccomments::MyFlexibleBits(
-      static_cast<uint32_t>(this->value_ | other.value_));
+  return ::test_doccomments::MyFlexibleBits(static_cast<uint32_t>(this->value_ | other.value_));
 }
 
 constexpr inline ::test_doccomments::MyFlexibleBits MyFlexibleBits::operator&(
     const ::test_doccomments::MyFlexibleBits& other) const {
-  return ::test_doccomments::MyFlexibleBits(
-      static_cast<uint32_t>(this->value_ & other.value_));
+  return ::test_doccomments::MyFlexibleBits(static_cast<uint32_t>(this->value_ & other.value_));
 }
 
 constexpr inline ::test_doccomments::MyFlexibleBits MyFlexibleBits::operator^(
     const ::test_doccomments::MyFlexibleBits& other) const {
-  return ::test_doccomments::MyFlexibleBits(
-      static_cast<uint32_t>(this->value_ ^ other.value_));
+  return ::test_doccomments::MyFlexibleBits(static_cast<uint32_t>(this->value_ ^ other.value_));
 }
 
 constexpr inline void MyFlexibleBits::operator|=(
@@ -234,8 +207,7 @@ enum class MyStrictEnum : uint32_t {
 }  // namespace test_doccomments
 template <>
 struct fidl::internal::DisplayError<::test_doccomments::MyStrictEnum> {
-  static size_t Format(const ::test_doccomments::MyStrictEnum& value,
-                       char* destination, size_t capacity);
+  static size_t Format(const ::test_doccomments::MyStrictEnum& value, char* destination, size_t capacity);
 };
 
 namespace test_doccomments {
@@ -285,8 +257,7 @@ constexpr const ::test_doccomments::MyFlexibleEnum MyFlexibleEnum::kBar =
 }  // namespace test_doccomments
 template <>
 struct fidl::internal::DisplayError<::test_doccomments::MyFlexibleEnum> {
-  static size_t Format(const ::test_doccomments::MyFlexibleEnum& value,
-                       char* destination, size_t capacity);
+  static size_t Format(const ::test_doccomments::MyFlexibleEnum& value, char* destination, size_t capacity);
 };
 
 namespace fidl {
@@ -294,31 +265,25 @@ namespace fidl {
 template <>
 struct IsFidlType<::test_doccomments::MyStrictBits> : public std::true_type {};
 template <>
-struct ContainsHandle<::test_doccomments::MyStrictBits>
-    : public std::false_type {};
+struct ContainsHandle<::test_doccomments::MyStrictBits> : public std::false_type {};
 static_assert(std::is_standard_layout_v<::test_doccomments::MyStrictBits>);
 static_assert(sizeof(::test_doccomments::MyStrictBits) == sizeof(uint32_t));
 
 template <>
-struct IsFidlType<::test_doccomments::MyFlexibleBits> : public std::true_type {
-};
+struct IsFidlType<::test_doccomments::MyFlexibleBits> : public std::true_type {};
 template <>
-struct ContainsHandle<::test_doccomments::MyFlexibleBits>
-    : public std::false_type {};
+struct ContainsHandle<::test_doccomments::MyFlexibleBits> : public std::false_type {};
 static_assert(std::is_standard_layout_v<::test_doccomments::MyFlexibleBits>);
 static_assert(sizeof(::test_doccomments::MyFlexibleBits) == sizeof(uint32_t));
 
 template <>
 struct IsFidlType<::test_doccomments::MyStrictEnum> : public std::true_type {};
 template <>
-struct ContainsHandle<::test_doccomments::MyStrictEnum>
-    : public std::false_type {};
+struct ContainsHandle<::test_doccomments::MyStrictEnum> : public std::false_type {};
 
 template <>
-struct IsFidlType<::test_doccomments::MyFlexibleEnum> : public std::true_type {
-};
+struct IsFidlType<::test_doccomments::MyFlexibleEnum> : public std::true_type {};
 template <>
-struct ContainsHandle<::test_doccomments::MyFlexibleEnum>
-    : public std::false_type {};
+struct ContainsHandle<::test_doccomments::MyFlexibleEnum> : public std::false_type {};
 
 }  // namespace fidl

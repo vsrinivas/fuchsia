@@ -11,11 +11,12 @@
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
-namespace fidl {}  // namespace fidl
+namespace fidl {
+
+}  // namespace fidl
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_error::Example::Foo> {
-  using Completer = fidl::Completer<
-      ::fidl::internal::NaturalCompleterBase<::test_error::Example::Foo>>;
+  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_error::Example::Foo>>;
 
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_error::Example::Foo>&)>;
@@ -34,31 +35,25 @@ __LOCAL extern "C" const fidl_type_t test_error_ExampleFooTopResponseTable;
 }  // namespace test_error
 
 template <>
-class ::fidl::Response<::test_error::Example::Foo> final
-    : public ::fitx::result<uint32_t, ::test_error::ExampleFooResponse> {
+class ::fidl::Response<::test_error::Example::Foo> final : public ::fitx::result<uint32_t, ::test_error::ExampleFooResponse> {
  public:
   using ::fitx::result<uint32_t, ::test_error::ExampleFooResponse>::result;
-  Response(::fitx::result<uint32_t, ::test_error::ExampleFooResponse> v)
-      : result(std::move(v)) {}
+  Response(::fitx::result<uint32_t, ::test_error::ExampleFooResponse> v) : result(std::move(v)) {}
   Response() = delete;
 };
 
 template <>
-struct ::fidl::internal::MessageTraits<
-    ::fidl::Response<::test_error::Example::Foo>>
-    final {
+struct ::fidl::internal::MessageTraits<::fidl::Response<::test_error::Example::Foo>> final {
  public:
   static constexpr bool kHasPayload = true;
   using Payload = ::test_error::ExampleFooTopResponse;
 };
 template <>
-class ::fidl::internal::NaturalMessageConverter<
-    ::fidl::Response<::test_error::Example::Foo>> {
+class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_error::Example::Foo>> {
   using DomainObject = ::test_error::ExampleFooTopResponse;
 
  public:
-  static ::fidl::Response<::test_error::Example::Foo> FromDomainObject(
-      DomainObject o) {
+  static ::fidl::Response<::test_error::Example::Foo> FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
       return ::fitx::error(std::move(o.result().err().value()));
     } else {
@@ -67,38 +62,29 @@ class ::fidl::internal::NaturalMessageConverter<
     }
   }
 
-  static DomainObject IntoDomainObject(
-      ::fidl::Response<::test_error::Example::Foo>&& m) {
+  static DomainObject IntoDomainObject(::fidl::Response<::test_error::Example::Foo>&& m) {
     if (m.is_error()) {
-      return DomainObject{
-          {.result = ::test_error::ExampleFooResult::WithErr(m.error_value())}};
+      return DomainObject{{.result = ::test_error::ExampleFooResult::WithErr(m.error_value())}};
     } else {
-      return DomainObject{
-          {.result = ::test_error::ExampleFooResult::WithResponse(
-               std::move(m.value()))}};
+      return DomainObject{{.result = ::test_error::ExampleFooResult::WithResponse(std::move(m.value()))}};
     }
   }
 };
 namespace test_error {}  // namespace test_error
 template <>
-class ::fidl::Result<::test_error::Example::Foo> final
-    : public ::fitx::result<::fidl::AnyErrorIn<::test_error::Example::Foo>,
-                            ::test_error::ExampleFooResponse> {
+class ::fidl::Result<::test_error::Example::Foo> final : public ::fitx::result<::fidl::AnyErrorIn<::test_error::Example::Foo>, ::test_error::ExampleFooResponse> {
  public:
-  using ::fitx::result<::fidl::AnyErrorIn<::test_error::Example::Foo>,
-                       ::test_error::ExampleFooResponse>::result;
+  using ::fitx::result<::fidl::AnyErrorIn<::test_error::Example::Foo>, ::test_error::ExampleFooResponse>::result;
 
  protected:
   Result() = default;
 };
 
 template <>
-class ::fidl::internal::NaturalClientImpl<::test_error::Example> final
-    : public ::fidl::internal::NaturalClientBase {
+class ::fidl::internal::NaturalClientImpl<::test_error::Example> final : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
-  ::fidl::internal::NaturalThenable<::test_error::Example::Foo> Foo(
-      ::fidl::Request<::test_error::Example::Foo> request) const;
+  ::fidl::internal::NaturalThenable<::test_error::Example::Foo> Foo(::fidl::Request<::test_error::Example::Foo> request) const;
 };
 namespace test_error {
 #endif  // __Fuchsia__
@@ -108,11 +94,9 @@ namespace test_error {
 
 template <>
 class ::fidl::internal::NaturalSyncClientImpl<::test_error::Example> final
-    : public ::fidl::internal::SyncEndpointManagedVeneer<
-          ::fidl::internal::NaturalSyncClientImpl<::test_error::Example>> {
+    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalSyncClientImpl<::test_error::Example>> {
  public:
-  ::fidl::Result<::test_error::Example::Foo> Foo(
-      ::fidl::Request<::test_error::Example::Foo> request);
+  ::fidl::Result<::test_error::Example::Foo> Foo(::fidl::Request<::test_error::Example::Foo> request);
 
  private:
   ::fidl::UnownedClientEnd<::test_error::Example> _client_end() const {
@@ -133,20 +117,15 @@ class ::fidl::internal::NaturalEventHandlerInterface<::test_error::Example> {
 
 template <>
 class ::fidl::AsyncEventHandler<::test_error::Example>
-    : public ::fidl::internal::NaturalEventHandlerInterface<
-          ::test_error::Example>,
-      public ::fidl::internal::AsyncEventHandler {
+    : public ::fidl::internal::NaturalEventHandlerInterface<::test_error::Example>, public ::fidl::internal::AsyncEventHandler {
  public:
   AsyncEventHandler() = default;
 };
 
 template <>
-class ::fidl::internal::NaturalEventDispatcher<::test_error::Example> final
-    : public ::fidl::internal::IncomingEventDispatcher<
-          ::fidl::AsyncEventHandler<::test_error::Example>> {
+class ::fidl::internal::NaturalEventDispatcher<::test_error::Example> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::AsyncEventHandler<::test_error::Example>> {
  public:
-  explicit NaturalEventDispatcher(
-      ::fidl::AsyncEventHandler<::test_error::Example>* event_handler)
+  explicit NaturalEventDispatcher(::fidl::AsyncEventHandler<::test_error::Example>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 
  private:
@@ -158,16 +137,14 @@ class ::fidl::internal::NaturalEventDispatcher<::test_error::Example> final
 
 #ifdef __Fuchsia__
 template <>
-class ::fidl::internal::NaturalWeakEventSender<::test_error::Example>
-    : public ::fidl::internal::WeakEventSenderBase {
+class ::fidl::internal::NaturalWeakEventSender<::test_error::Example> : public ::fidl::internal::WeakEventSenderBase {
  public:
   using WeakEventSenderBase::WeakEventSenderBase;
 };
 
 template <>
 class ::fidl::internal::NaturalEventSender<::test_error::Example>
-    : public ::fidl::internal::SyncEndpointManagedVeneer<
-          ::fidl::internal::NaturalEventSender<::test_error::Example>> {
+    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalEventSender<::test_error::Example>> {
  public:
   using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 };
@@ -176,18 +153,14 @@ class ::fidl::internal::NaturalEventSender<::test_error::Example>
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::Request<::test_error::Example::Foo> final
-    : public ::test_error::ExampleFooRequest {
+class ::fidl::Request<::test_error::Example::Foo> final : public ::test_error::ExampleFooRequest {
  public:
   using ::test_error::ExampleFooRequest::ExampleFooRequest;
-  Request(::test_error::ExampleFooRequest v)
-      : ::test_error::ExampleFooRequest(std::move(v)) {}
+  Request(::test_error::ExampleFooRequest v) : ::test_error::ExampleFooRequest(std::move(v)) {}
 };
 
 template <>
-struct ::fidl::internal::MessageTraits<
-    ::fidl::Request<::test_error::Example::Foo>>
-    final {
+struct ::fidl::internal::MessageTraits<::fidl::Request<::test_error::Example::Foo>> final {
  public:
   static constexpr bool kHasPayload = true;
   using Payload = ::test_error::ExampleFooRequest;
@@ -195,8 +168,7 @@ struct ::fidl::internal::MessageTraits<
 #endif  // __Fuchsia__
 
 template <>
-class ::fidl::internal::NaturalCompleterBase<::test_error::Example::Foo>
-    : public ::fidl::CompleterBase {
+class ::fidl::internal::NaturalCompleterBase<::test_error::Example::Foo> : public ::fidl::CompleterBase {
  public:
   void Reply(::fidl::Response<::test_error::Example::Foo>&& response);
 
@@ -205,8 +177,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_error::Example::Foo>
 };
 
 template <>
-class ::fidl::Server<::test_error::Example>
-    : public ::fidl::internal::IncomingMessageDispatcher {
+class ::fidl::Server<::test_error::Example> : public ::fidl::internal::IncomingMessageDispatcher {
  public:
   Server() = default;
   virtual ~Server() = default;
@@ -215,8 +186,7 @@ class ::fidl::Server<::test_error::Example>
   using _EnclosingProtocol = ::test_error::Example;
 
   using FooRequest = ::fidl::Request<::test_error::Example::Foo>;
-  using FooCompleter =
-      ::fidl::internal::NaturalCompleter<::test_error::Example::Foo>;
+  using FooCompleter = ::fidl::internal::NaturalCompleter<::test_error::Example::Foo>;
 
   virtual void Foo(FooRequest& request, FooCompleter::Sync& completer) = 0;
 
@@ -231,8 +201,7 @@ class ::fidl::Server<::test_error::Example>
 template <>
 struct ::fidl::internal::NaturalServerDispatcher<::test_error::Example> final {
   NaturalServerDispatcher() = delete;
-  static void Dispatch(::fidl::Server<::test_error::Example>* impl,
-                       ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fidl::Server<::test_error::Example>* impl, ::fidl::IncomingMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 

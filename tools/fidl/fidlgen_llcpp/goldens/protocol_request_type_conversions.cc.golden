@@ -7,28 +7,12 @@ namespace internal {
 
 #ifdef __Fuchsia__
 
-::test_protocolrequest::ParentTakeChildRequestRequest
-WireNaturalConversionTraits<
-    ::test_protocolrequest::wire::ParentTakeChildRequestRequest,
-    ::test_protocolrequest::ParentTakeChildRequestRequest>::
-    ToNatural(::test_protocolrequest::wire::ParentTakeChildRequestRequest src) {
-  return ::test_protocolrequest::ParentTakeChildRequestRequest(
-      WireNaturalConversionTraits<
-          ::fidl::ServerEnd<::test_protocolrequest::Child>,
-          ::fidl::ServerEnd<::test_protocolrequest::Child>>::
-          ToNatural(std::move(src.r)));
+::test_protocolrequest::ParentTakeChildRequestRequest WireNaturalConversionTraits<::test_protocolrequest::wire::ParentTakeChildRequestRequest, ::test_protocolrequest::ParentTakeChildRequestRequest>::ToNatural(::test_protocolrequest::wire::ParentTakeChildRequestRequest src) {
+  return ::test_protocolrequest::ParentTakeChildRequestRequest(WireNaturalConversionTraits<::fidl::ServerEnd<::test_protocolrequest::Child>, ::fidl::ServerEnd<::test_protocolrequest::Child>>::ToNatural(std::move(src.r)));
 }
-::test_protocolrequest::wire::ParentTakeChildRequestRequest
-WireNaturalConversionTraits<
-    ::test_protocolrequest::wire::ParentTakeChildRequestRequest,
-    ::test_protocolrequest::ParentTakeChildRequestRequest>::
-    ToWire(fidl::AnyArena& arena,
-           ::test_protocolrequest::ParentTakeChildRequestRequest src) {
+::test_protocolrequest::wire::ParentTakeChildRequestRequest WireNaturalConversionTraits<::test_protocolrequest::wire::ParentTakeChildRequestRequest, ::test_protocolrequest::ParentTakeChildRequestRequest>::ToWire(fidl::AnyArena& arena, ::test_protocolrequest::ParentTakeChildRequestRequest src) {
   return ::test_protocolrequest::wire::ParentTakeChildRequestRequest{
-      .r = WireNaturalConversionTraits<
-          ::fidl::ServerEnd<::test_protocolrequest::Child>,
-          ::fidl::ServerEnd<::test_protocolrequest::Child>>::
-          ToWire(arena, std::move(src.r())),
+      .r = WireNaturalConversionTraits<::fidl::ServerEnd<::test_protocolrequest::Child>, ::fidl::ServerEnd<::test_protocolrequest::Child>>::ToWire(arena, std::move(src.r())),
   };
 }
 
@@ -36,27 +20,12 @@ WireNaturalConversionTraits<
 
 #ifdef __Fuchsia__
 
-::test_protocolrequest::ParentTakeChildRequest WireNaturalConversionTraits<
-    ::test_protocolrequest::wire::ParentTakeChildRequest,
-    ::test_protocolrequest::ParentTakeChildRequest>::
-    ToNatural(::test_protocolrequest::wire::ParentTakeChildRequest src) {
-  return ::test_protocolrequest::ParentTakeChildRequest(
-      WireNaturalConversionTraits<
-          ::fidl::ClientEnd<::test_protocolrequest::Child>,
-          ::fidl::ClientEnd<::test_protocolrequest::Child>>::
-          ToNatural(std::move(src.c)));
+::test_protocolrequest::ParentTakeChildRequest WireNaturalConversionTraits<::test_protocolrequest::wire::ParentTakeChildRequest, ::test_protocolrequest::ParentTakeChildRequest>::ToNatural(::test_protocolrequest::wire::ParentTakeChildRequest src) {
+  return ::test_protocolrequest::ParentTakeChildRequest(WireNaturalConversionTraits<::fidl::ClientEnd<::test_protocolrequest::Child>, ::fidl::ClientEnd<::test_protocolrequest::Child>>::ToNatural(std::move(src.c)));
 }
-::test_protocolrequest::wire::ParentTakeChildRequest
-WireNaturalConversionTraits<
-    ::test_protocolrequest::wire::ParentTakeChildRequest,
-    ::test_protocolrequest::ParentTakeChildRequest>::
-    ToWire(fidl::AnyArena& arena,
-           ::test_protocolrequest::ParentTakeChildRequest src) {
+::test_protocolrequest::wire::ParentTakeChildRequest WireNaturalConversionTraits<::test_protocolrequest::wire::ParentTakeChildRequest, ::test_protocolrequest::ParentTakeChildRequest>::ToWire(fidl::AnyArena& arena, ::test_protocolrequest::ParentTakeChildRequest src) {
   return ::test_protocolrequest::wire::ParentTakeChildRequest{
-      .c = WireNaturalConversionTraits<
-          ::fidl::ClientEnd<::test_protocolrequest::Child>,
-          ::fidl::ClientEnd<::test_protocolrequest::Child>>::
-          ToWire(arena, std::move(src.c())),
+      .c = WireNaturalConversionTraits<::fidl::ClientEnd<::test_protocolrequest::Child>, ::fidl::ClientEnd<::test_protocolrequest::Child>>::ToWire(arena, std::move(src.c())),
   };
 }
 
@@ -64,27 +33,12 @@ WireNaturalConversionTraits<
 
 #ifdef __Fuchsia__
 
-::test_protocolrequest::ParentGetChildTopResponse WireNaturalConversionTraits<
-    ::test_protocolrequest::wire::ParentGetChildTopResponse,
-    ::test_protocolrequest::ParentGetChildTopResponse>::
-    ToNatural(::test_protocolrequest::wire::ParentGetChildTopResponse src) {
-  return ::test_protocolrequest::ParentGetChildTopResponse(
-      WireNaturalConversionTraits<
-          ::fidl::ClientEnd<::test_protocolrequest::Child>,
-          ::fidl::ClientEnd<::test_protocolrequest::Child>>::
-          ToNatural(std::move(src.c)));
+::test_protocolrequest::ParentGetChildTopResponse WireNaturalConversionTraits<::test_protocolrequest::wire::ParentGetChildTopResponse, ::test_protocolrequest::ParentGetChildTopResponse>::ToNatural(::test_protocolrequest::wire::ParentGetChildTopResponse src) {
+  return ::test_protocolrequest::ParentGetChildTopResponse(WireNaturalConversionTraits<::fidl::ClientEnd<::test_protocolrequest::Child>, ::fidl::ClientEnd<::test_protocolrequest::Child>>::ToNatural(std::move(src.c)));
 }
-::test_protocolrequest::wire::ParentGetChildTopResponse
-WireNaturalConversionTraits<
-    ::test_protocolrequest::wire::ParentGetChildTopResponse,
-    ::test_protocolrequest::ParentGetChildTopResponse>::
-    ToWire(fidl::AnyArena& arena,
-           ::test_protocolrequest::ParentGetChildTopResponse src) {
+::test_protocolrequest::wire::ParentGetChildTopResponse WireNaturalConversionTraits<::test_protocolrequest::wire::ParentGetChildTopResponse, ::test_protocolrequest::ParentGetChildTopResponse>::ToWire(fidl::AnyArena& arena, ::test_protocolrequest::ParentGetChildTopResponse src) {
   return ::test_protocolrequest::wire::ParentGetChildTopResponse{
-      .c = WireNaturalConversionTraits<
-          ::fidl::ClientEnd<::test_protocolrequest::Child>,
-          ::fidl::ClientEnd<::test_protocolrequest::Child>>::
-          ToWire(arena, std::move(src.c())),
+      .c = WireNaturalConversionTraits<::fidl::ClientEnd<::test_protocolrequest::Child>, ::fidl::ClientEnd<::test_protocolrequest::Child>>::ToWire(arena, std::move(src.c())),
   };
 }
 
@@ -92,29 +46,12 @@ WireNaturalConversionTraits<
 
 #ifdef __Fuchsia__
 
-::test_protocolrequest::ParentGetChildRequestTopResponse
-WireNaturalConversionTraits<
-    ::test_protocolrequest::wire::ParentGetChildRequestTopResponse,
-    ::test_protocolrequest::ParentGetChildRequestTopResponse>::
-    ToNatural(
-        ::test_protocolrequest::wire::ParentGetChildRequestTopResponse src) {
-  return ::test_protocolrequest::ParentGetChildRequestTopResponse(
-      WireNaturalConversionTraits<
-          ::fidl::ServerEnd<::test_protocolrequest::Child>,
-          ::fidl::ServerEnd<::test_protocolrequest::Child>>::
-          ToNatural(std::move(src.r)));
+::test_protocolrequest::ParentGetChildRequestTopResponse WireNaturalConversionTraits<::test_protocolrequest::wire::ParentGetChildRequestTopResponse, ::test_protocolrequest::ParentGetChildRequestTopResponse>::ToNatural(::test_protocolrequest::wire::ParentGetChildRequestTopResponse src) {
+  return ::test_protocolrequest::ParentGetChildRequestTopResponse(WireNaturalConversionTraits<::fidl::ServerEnd<::test_protocolrequest::Child>, ::fidl::ServerEnd<::test_protocolrequest::Child>>::ToNatural(std::move(src.r)));
 }
-::test_protocolrequest::wire::ParentGetChildRequestTopResponse
-WireNaturalConversionTraits<
-    ::test_protocolrequest::wire::ParentGetChildRequestTopResponse,
-    ::test_protocolrequest::ParentGetChildRequestTopResponse>::
-    ToWire(fidl::AnyArena& arena,
-           ::test_protocolrequest::ParentGetChildRequestTopResponse src) {
+::test_protocolrequest::wire::ParentGetChildRequestTopResponse WireNaturalConversionTraits<::test_protocolrequest::wire::ParentGetChildRequestTopResponse, ::test_protocolrequest::ParentGetChildRequestTopResponse>::ToWire(fidl::AnyArena& arena, ::test_protocolrequest::ParentGetChildRequestTopResponse src) {
   return ::test_protocolrequest::wire::ParentGetChildRequestTopResponse{
-      .r = WireNaturalConversionTraits<
-          ::fidl::ServerEnd<::test_protocolrequest::Child>,
-          ::fidl::ServerEnd<::test_protocolrequest::Child>>::
-          ToWire(arena, std::move(src.r())),
+      .r = WireNaturalConversionTraits<::fidl::ServerEnd<::test_protocolrequest::Child>, ::fidl::ServerEnd<::test_protocolrequest::Child>>::ToWire(arena, std::move(src.r())),
   };
 }
 
@@ -122,146 +59,54 @@ WireNaturalConversionTraits<
 
 #ifdef __Fuchsia__
 
-::fidl::Request<::test_protocolrequest::Parent::GetChild>
-WireNaturalConversionTraits<
-    ::fidl::WireRequest<::test_protocolrequest::Parent::GetChild>,
-    ::fidl::Request<::test_protocolrequest::Parent::GetChild>>::
-    ToNatural(
-        ::fidl::WireRequest<::test_protocolrequest::Parent::GetChild> src) {
+::fidl::Request<::test_protocolrequest::Parent::GetChild> WireNaturalConversionTraits<::fidl::WireRequest<::test_protocolrequest::Parent::GetChild>, ::fidl::Request<::test_protocolrequest::Parent::GetChild>>::ToNatural(::fidl::WireRequest<::test_protocolrequest::Parent::GetChild> src) {
   return ::fidl::Request<::test_protocolrequest::Parent::GetChild>();
 }
-::fidl::WireRequest<::test_protocolrequest::Parent::GetChild>
-WireNaturalConversionTraits<
-    ::fidl::WireRequest<::test_protocolrequest::Parent::GetChild>,
-    ::fidl::Request<::test_protocolrequest::Parent::GetChild>>::
-    ToWire(fidl::AnyArena& arena,
-           ::fidl::Request<::test_protocolrequest::Parent::GetChild> src) {
+::fidl::WireRequest<::test_protocolrequest::Parent::GetChild> WireNaturalConversionTraits<::fidl::WireRequest<::test_protocolrequest::Parent::GetChild>, ::fidl::Request<::test_protocolrequest::Parent::GetChild>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocolrequest::Parent::GetChild> src) {
   return ::fidl::WireRequest<::test_protocolrequest::Parent::GetChild>();
 }
 
-::fidl::Request<::test_protocolrequest::Parent::GetChildRequest>
-WireNaturalConversionTraits<
-    ::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest>,
-    ::fidl::Request<::test_protocolrequest::Parent::GetChildRequest>>::
-    ToNatural(
-        ::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest>
-            src) {
+::fidl::Request<::test_protocolrequest::Parent::GetChildRequest> WireNaturalConversionTraits<::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest>, ::fidl::Request<::test_protocolrequest::Parent::GetChildRequest>>::ToNatural(::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest> src) {
   return ::fidl::Request<::test_protocolrequest::Parent::GetChildRequest>();
 }
-::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest>
-WireNaturalConversionTraits<
-    ::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest>,
-    ::fidl::Request<::test_protocolrequest::Parent::GetChildRequest>>::
-    ToWire(
-        fidl::AnyArena& arena,
-        ::fidl::Request<::test_protocolrequest::Parent::GetChildRequest> src) {
+::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest> WireNaturalConversionTraits<::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest>, ::fidl::Request<::test_protocolrequest::Parent::GetChildRequest>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocolrequest::Parent::GetChildRequest> src) {
   return ::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest>();
 }
 
-::fidl::Request<::test_protocolrequest::Parent::TakeChild>
-WireNaturalConversionTraits<
-    ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>,
-    ::fidl::Request<::test_protocolrequest::Parent::TakeChild>>::
-    ToNatural(
-        ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild> src) {
+::fidl::Request<::test_protocolrequest::Parent::TakeChild> WireNaturalConversionTraits<::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>, ::fidl::Request<::test_protocolrequest::Parent::TakeChild>>::ToNatural(::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild> src) {
   return ::fidl::Request<::test_protocolrequest::Parent::TakeChild>(
-      WireNaturalConversionTraits<
-          ::test_protocolrequest::wire::ParentTakeChildRequest,
-          ::test_protocolrequest::ParentTakeChildRequest>::
-          ToNatural(std::move(src)));
+      WireNaturalConversionTraits<::test_protocolrequest::wire::ParentTakeChildRequest, ::test_protocolrequest::ParentTakeChildRequest>::ToNatural(std::move(src)));
 }
-::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>
-WireNaturalConversionTraits<
-    ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>,
-    ::fidl::Request<::test_protocolrequest::Parent::TakeChild>>::
-    ToWire(fidl::AnyArena& arena,
-           ::fidl::Request<::test_protocolrequest::Parent::TakeChild> src) {
+::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild> WireNaturalConversionTraits<::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>, ::fidl::Request<::test_protocolrequest::Parent::TakeChild>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocolrequest::Parent::TakeChild> src) {
   return ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>(
-      WireNaturalConversionTraits<
-          ::test_protocolrequest::wire::ParentTakeChildRequest,
-          ::test_protocolrequest::ParentTakeChildRequest>::ToWire(arena,
-                                                                  std::move(
-                                                                      src)));
+      WireNaturalConversionTraits<::test_protocolrequest::wire::ParentTakeChildRequest, ::test_protocolrequest::ParentTakeChildRequest>::ToWire(arena, std::move(src)));
 }
 
-::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest>
-WireNaturalConversionTraits<
-    ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>,
-    ::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest>>::
-    ToNatural(
-        ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>
-            src) {
+::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest> WireNaturalConversionTraits<::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>, ::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest>>::ToNatural(::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest> src) {
   return ::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest>(
-      WireNaturalConversionTraits<
-          ::test_protocolrequest::wire::ParentTakeChildRequestRequest,
-          ::test_protocolrequest::ParentTakeChildRequestRequest>::
-          ToNatural(std::move(src)));
+      WireNaturalConversionTraits<::test_protocolrequest::wire::ParentTakeChildRequestRequest, ::test_protocolrequest::ParentTakeChildRequestRequest>::ToNatural(std::move(src)));
 }
-::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>
-WireNaturalConversionTraits<
-    ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>,
-    ::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest>>::
-    ToWire(
-        fidl::AnyArena& arena,
-        ::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest> src) {
+::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest> WireNaturalConversionTraits<::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>, ::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest> src) {
   return ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>(
-      WireNaturalConversionTraits<
-          ::test_protocolrequest::wire::ParentTakeChildRequestRequest,
-          ::test_protocolrequest::ParentTakeChildRequestRequest>::
-          ToWire(arena, std::move(src)));
+      WireNaturalConversionTraits<::test_protocolrequest::wire::ParentTakeChildRequestRequest, ::test_protocolrequest::ParentTakeChildRequestRequest>::ToWire(arena, std::move(src)));
 }
 
-::fidl::Response<::test_protocolrequest::Parent::GetChild>
-WireNaturalConversionTraits<
-    ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>,
-    ::fidl::Response<::test_protocolrequest::Parent::GetChild>>::
-    ToNatural(
-        ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild> src) {
+::fidl::Response<::test_protocolrequest::Parent::GetChild> WireNaturalConversionTraits<::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>, ::fidl::Response<::test_protocolrequest::Parent::GetChild>>::ToNatural(::fidl::WireResponse<::test_protocolrequest::Parent::GetChild> src) {
   return ::fidl::Response<::test_protocolrequest::Parent::GetChild>(
-      WireNaturalConversionTraits<
-          ::test_protocolrequest::wire::ParentGetChildTopResponse,
-          ::test_protocolrequest::ParentGetChildTopResponse>::
-          ToNatural(std::move(src)));
+      WireNaturalConversionTraits<::test_protocolrequest::wire::ParentGetChildTopResponse, ::test_protocolrequest::ParentGetChildTopResponse>::ToNatural(std::move(src)));
 }
-::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>
-WireNaturalConversionTraits<
-    ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>,
-    ::fidl::Response<::test_protocolrequest::Parent::GetChild>>::
-    ToWire(fidl::AnyArena& arena,
-           ::fidl::Response<::test_protocolrequest::Parent::GetChild> src) {
+::fidl::WireResponse<::test_protocolrequest::Parent::GetChild> WireNaturalConversionTraits<::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>, ::fidl::Response<::test_protocolrequest::Parent::GetChild>>::ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_protocolrequest::Parent::GetChild> src) {
   return ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>(
-      WireNaturalConversionTraits<
-          ::test_protocolrequest::wire::ParentGetChildTopResponse,
-          ::test_protocolrequest::ParentGetChildTopResponse>::ToWire(arena,
-                                                                     std::move(
-                                                                         src)));
+      WireNaturalConversionTraits<::test_protocolrequest::wire::ParentGetChildTopResponse, ::test_protocolrequest::ParentGetChildTopResponse>::ToWire(arena, std::move(src)));
 }
 
-::fidl::Response<::test_protocolrequest::Parent::GetChildRequest>
-WireNaturalConversionTraits<
-    ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>,
-    ::fidl::Response<::test_protocolrequest::Parent::GetChildRequest>>::
-    ToNatural(
-        ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>
-            src) {
+::fidl::Response<::test_protocolrequest::Parent::GetChildRequest> WireNaturalConversionTraits<::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>, ::fidl::Response<::test_protocolrequest::Parent::GetChildRequest>>::ToNatural(::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest> src) {
   return ::fidl::Response<::test_protocolrequest::Parent::GetChildRequest>(
-      WireNaturalConversionTraits<
-          ::test_protocolrequest::wire::ParentGetChildRequestTopResponse,
-          ::test_protocolrequest::ParentGetChildRequestTopResponse>::
-          ToNatural(std::move(src)));
+      WireNaturalConversionTraits<::test_protocolrequest::wire::ParentGetChildRequestTopResponse, ::test_protocolrequest::ParentGetChildRequestTopResponse>::ToNatural(std::move(src)));
 }
-::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>
-WireNaturalConversionTraits<
-    ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>,
-    ::fidl::Response<::test_protocolrequest::Parent::GetChildRequest>>::
-    ToWire(
-        fidl::AnyArena& arena,
-        ::fidl::Response<::test_protocolrequest::Parent::GetChildRequest> src) {
+::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest> WireNaturalConversionTraits<::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>, ::fidl::Response<::test_protocolrequest::Parent::GetChildRequest>>::ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_protocolrequest::Parent::GetChildRequest> src) {
   return ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>(
-      WireNaturalConversionTraits<
-          ::test_protocolrequest::wire::ParentGetChildRequestTopResponse,
-          ::test_protocolrequest::ParentGetChildRequestTopResponse>::
-          ToWire(arena, std::move(src)));
+      WireNaturalConversionTraits<::test_protocolrequest::wire::ParentGetChildRequestTopResponse, ::test_protocolrequest::ParentGetChildRequestTopResponse>::ToWire(arena, std::move(src)));
 }
 #endif  // __Fuchsia__
 }  // namespace internal

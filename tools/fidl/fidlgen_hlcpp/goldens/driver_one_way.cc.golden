@@ -12,9 +12,8 @@ namespace driveroneway {
 extern "C" const fidl_type_t test_driveroneway_PayloadTable;
 const fidl_type_t* Payload::FidlType = &test_driveroneway_PayloadTable;
 
-void Payload::Encode(
-    ::fidl::Encoder* _encoder, size_t _offset,
-    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+void Payload::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                     cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<Payload>::value) {
     memcpy(_encoder->template GetPtr<Payload>(_offset), this, sizeof(Payload));
   } else {
@@ -22,11 +21,9 @@ void Payload::Encode(
   }
 }
 
-void Payload::Decode(::fidl::Decoder* _decoder, Payload* _value,
-                     size_t _offset) {
+void Payload::Decode(::fidl::Decoder* _decoder, Payload* _value, size_t _offset) {
   if (::fidl::IsMemcpyCompatible<Payload>::value) {
-    memcpy(_value, _decoder->template GetPtr<Payload>(_offset),
-           sizeof(Payload));
+    memcpy(_value, _decoder->template GetPtr<Payload>(_offset), sizeof(Payload));
   } else {
     ::fidl::Decode(_decoder, &_value->value, _offset + 0);
   }
@@ -34,30 +31,26 @@ void Payload::Decode(::fidl::Decoder* _decoder, Payload* _value,
 
 zx_status_t Payload::Clone(Payload* _result) const {
   zx_status_t _status = ::fidl::Clone(value, &_result->value);
-  if (_status != ZX_OK) return _status;
+  if (_status != ZX_OK)
+    return _status;
   return ZX_OK;
 }
 
 extern "C" const fidl_type_t test_driveroneway_OneWaySendRequestTable;
-const fidl_type_t* OneWaySendRequest::FidlType =
-    &test_driveroneway_OneWaySendRequestTable;
+const fidl_type_t* OneWaySendRequest::FidlType = &test_driveroneway_OneWaySendRequestTable;
 
-void OneWaySendRequest::Encode(
-    ::fidl::Encoder* _encoder, size_t _offset,
-    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+void OneWaySendRequest::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                               cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<OneWaySendRequest>::value) {
-    memcpy(_encoder->template GetPtr<OneWaySendRequest>(_offset), this,
-           sizeof(OneWaySendRequest));
+    memcpy(_encoder->template GetPtr<OneWaySendRequest>(_offset), this, sizeof(OneWaySendRequest));
   } else {
     ::fidl::Encode(_encoder, &payload, _offset + 0);
   }
 }
 
-void OneWaySendRequest::Decode(::fidl::Decoder* _decoder,
-                               OneWaySendRequest* _value, size_t _offset) {
+void OneWaySendRequest::Decode(::fidl::Decoder* _decoder, OneWaySendRequest* _value, size_t _offset) {
   if (::fidl::IsMemcpyCompatible<OneWaySendRequest>::value) {
-    memcpy(_value, _decoder->template GetPtr<OneWaySendRequest>(_offset),
-           sizeof(OneWaySendRequest));
+    memcpy(_value, _decoder->template GetPtr<OneWaySendRequest>(_offset), sizeof(OneWaySendRequest));
   } else {
     ::fidl::Decode(_decoder, &_value->payload, _offset + 0);
   }
@@ -65,7 +58,8 @@ void OneWaySendRequest::Decode(::fidl::Decoder* _decoder,
 
 zx_status_t OneWaySendRequest::Clone(OneWaySendRequest* _result) const {
   zx_status_t _status = ::fidl::Clone(payload, &_result->payload);
-  if (_status != ZX_OK) return _status;
+  if (_status != ZX_OK)
+    return _status;
   return ZX_OK;
 }
 

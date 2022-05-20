@@ -15,258 +15,159 @@ namespace fidl {
 namespace internal {
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocollayouts::wire::MainProtocolTwoWayImportWithErrorTopResponse,
-    ::test_protocollayouts::MainProtocolTwoWayImportWithErrorTopResponse> {
-  static ::test_protocollayouts::MainProtocolTwoWayImportWithErrorTopResponse
-  ToNatural(
-      ::test_protocollayouts::wire::MainProtocolTwoWayImportWithErrorTopResponse
-          src);
-  static ::test_protocollayouts::wire::
-      MainProtocolTwoWayImportWithErrorTopResponse
-      ToWire(
-          fidl::AnyArena& arena,
-          ::test_protocollayouts::MainProtocolTwoWayImportWithErrorTopResponse
-              src);
+struct WireNaturalConversionTraits<::test_protocollayouts::wire::MainProtocolTwoWayImportWithErrorTopResponse, ::test_protocollayouts::MainProtocolTwoWayImportWithErrorTopResponse> {
+  static ::test_protocollayouts::MainProtocolTwoWayImportWithErrorTopResponse ToNatural(::test_protocollayouts::wire::MainProtocolTwoWayImportWithErrorTopResponse src);
+  static ::test_protocollayouts::wire::MainProtocolTwoWayImportWithErrorTopResponse ToWire(fidl::AnyArena& arena, ::test_protocollayouts::MainProtocolTwoWayImportWithErrorTopResponse src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocollayouts::wire::
-        MainProtocolTwoWayImportWithErrorTopResponse> {
-  using type =
-      ::test_protocollayouts::MainProtocolTwoWayImportWithErrorTopResponse;
+struct NaturalTypeForWireType<::test_protocollayouts::wire::MainProtocolTwoWayImportWithErrorTopResponse> {
+  using type = ::test_protocollayouts::MainProtocolTwoWayImportWithErrorTopResponse;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocollayouts::MainProtocolTwoWayImportWithErrorTopResponse> {
-  using type = ::test_protocollayouts::wire::
-      MainProtocolTwoWayImportWithErrorTopResponse;
+struct WireTypeForNaturalType<::test_protocollayouts::MainProtocolTwoWayImportWithErrorTopResponse> {
+  using type = ::test_protocollayouts::wire::MainProtocolTwoWayImportWithErrorTopResponse;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorTopResponse,
-    ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorTopResponse> {
-  static ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorTopResponse
-  ToNatural(
-      ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorTopResponse
-          src);
-  static ::test_protocollayouts::wire::
-      MainProtocolTwoWayAnonWithErrorTopResponse
-      ToWire(fidl::AnyArena& arena,
-             ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorTopResponse
-                 src);
+struct WireNaturalConversionTraits<::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorTopResponse, ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorTopResponse> {
+  static ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorTopResponse ToNatural(::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorTopResponse src);
+  static ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorTopResponse ToWire(fidl::AnyArena& arena, ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorTopResponse src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorTopResponse> {
-  using type =
-      ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorTopResponse;
+struct NaturalTypeForWireType<::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorTopResponse> {
+  using type = ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorTopResponse;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorTopResponse> {
-  using type =
-      ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorTopResponse;
+struct WireTypeForNaturalType<::test_protocollayouts::MainProtocolTwoWayAnonWithErrorTopResponse> {
+  using type = ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorTopResponse;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocollayouts::wire::MainProtocolOnImportWithErrorRequest,
-    ::test_protocollayouts::MainProtocolOnImportWithErrorRequest> {
-  static ::test_protocollayouts::MainProtocolOnImportWithErrorRequest ToNatural(
-      ::test_protocollayouts::wire::MainProtocolOnImportWithErrorRequest src);
-  static ::test_protocollayouts::wire::MainProtocolOnImportWithErrorRequest
-  ToWire(fidl::AnyArena& arena,
-         ::test_protocollayouts::MainProtocolOnImportWithErrorRequest src);
+struct WireNaturalConversionTraits<::test_protocollayouts::wire::MainProtocolOnImportWithErrorRequest, ::test_protocollayouts::MainProtocolOnImportWithErrorRequest> {
+  static ::test_protocollayouts::MainProtocolOnImportWithErrorRequest ToNatural(::test_protocollayouts::wire::MainProtocolOnImportWithErrorRequest src);
+  static ::test_protocollayouts::wire::MainProtocolOnImportWithErrorRequest ToWire(fidl::AnyArena& arena, ::test_protocollayouts::MainProtocolOnImportWithErrorRequest src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocollayouts::wire::MainProtocolOnImportWithErrorRequest> {
+struct NaturalTypeForWireType<::test_protocollayouts::wire::MainProtocolOnImportWithErrorRequest> {
   using type = ::test_protocollayouts::MainProtocolOnImportWithErrorRequest;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocollayouts::MainProtocolOnImportWithErrorRequest> {
-  using type =
-      ::test_protocollayouts::wire::MainProtocolOnImportWithErrorRequest;
+struct WireTypeForNaturalType<::test_protocollayouts::MainProtocolOnImportWithErrorRequest> {
+  using type = ::test_protocollayouts::wire::MainProtocolOnImportWithErrorRequest;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorRequest,
-    ::test_protocollayouts::MainProtocolOnAnonWithErrorRequest> {
-  static ::test_protocollayouts::MainProtocolOnAnonWithErrorRequest ToNatural(
-      ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorRequest src);
-  static ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorRequest
-  ToWire(fidl::AnyArena& arena,
-         ::test_protocollayouts::MainProtocolOnAnonWithErrorRequest src);
+struct WireNaturalConversionTraits<::test_protocollayouts::wire::MainProtocolOnAnonWithErrorRequest, ::test_protocollayouts::MainProtocolOnAnonWithErrorRequest> {
+  static ::test_protocollayouts::MainProtocolOnAnonWithErrorRequest ToNatural(::test_protocollayouts::wire::MainProtocolOnAnonWithErrorRequest src);
+  static ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorRequest ToWire(fidl::AnyArena& arena, ::test_protocollayouts::MainProtocolOnAnonWithErrorRequest src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorRequest> {
+struct NaturalTypeForWireType<::test_protocollayouts::wire::MainProtocolOnAnonWithErrorRequest> {
   using type = ::test_protocollayouts::MainProtocolOnAnonWithErrorRequest;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocollayouts::MainProtocolOnAnonWithErrorRequest> {
+struct WireTypeForNaturalType<::test_protocollayouts::MainProtocolOnAnonWithErrorRequest> {
   using type = ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorRequest;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocollayouts::wire::MainProtocolTwoWayLocalWithErrorTopResponse,
-    ::test_protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse> {
-  static ::test_protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse
-  ToNatural(
-      ::test_protocollayouts::wire::MainProtocolTwoWayLocalWithErrorTopResponse
-          src);
-  static ::test_protocollayouts::wire::
-      MainProtocolTwoWayLocalWithErrorTopResponse
-      ToWire(fidl::AnyArena& arena,
-             ::test_protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse
-                 src);
+struct WireNaturalConversionTraits<::test_protocollayouts::wire::MainProtocolTwoWayLocalWithErrorTopResponse, ::test_protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse> {
+  static ::test_protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse ToNatural(::test_protocollayouts::wire::MainProtocolTwoWayLocalWithErrorTopResponse src);
+  static ::test_protocollayouts::wire::MainProtocolTwoWayLocalWithErrorTopResponse ToWire(fidl::AnyArena& arena, ::test_protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocollayouts::wire::MainProtocolTwoWayLocalWithErrorTopResponse> {
-  using type =
-      ::test_protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse;
+struct NaturalTypeForWireType<::test_protocollayouts::wire::MainProtocolTwoWayLocalWithErrorTopResponse> {
+  using type = ::test_protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse> {
-  using type =
-      ::test_protocollayouts::wire::MainProtocolTwoWayLocalWithErrorTopResponse;
+struct WireTypeForNaturalType<::test_protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse> {
+  using type = ::test_protocollayouts::wire::MainProtocolTwoWayLocalWithErrorTopResponse;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocollayouts::wire::MainProtocolOnLocalWithErrorRequest,
-    ::test_protocollayouts::MainProtocolOnLocalWithErrorRequest> {
-  static ::test_protocollayouts::MainProtocolOnLocalWithErrorRequest ToNatural(
-      ::test_protocollayouts::wire::MainProtocolOnLocalWithErrorRequest src);
-  static ::test_protocollayouts::wire::MainProtocolOnLocalWithErrorRequest
-  ToWire(fidl::AnyArena& arena,
-         ::test_protocollayouts::MainProtocolOnLocalWithErrorRequest src);
+struct WireNaturalConversionTraits<::test_protocollayouts::wire::MainProtocolOnLocalWithErrorRequest, ::test_protocollayouts::MainProtocolOnLocalWithErrorRequest> {
+  static ::test_protocollayouts::MainProtocolOnLocalWithErrorRequest ToNatural(::test_protocollayouts::wire::MainProtocolOnLocalWithErrorRequest src);
+  static ::test_protocollayouts::wire::MainProtocolOnLocalWithErrorRequest ToWire(fidl::AnyArena& arena, ::test_protocollayouts::MainProtocolOnLocalWithErrorRequest src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocollayouts::wire::MainProtocolOnLocalWithErrorRequest> {
+struct NaturalTypeForWireType<::test_protocollayouts::wire::MainProtocolOnLocalWithErrorRequest> {
   using type = ::test_protocollayouts::MainProtocolOnLocalWithErrorRequest;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocollayouts::MainProtocolOnLocalWithErrorRequest> {
-  using type =
-      ::test_protocollayouts::wire::MainProtocolOnLocalWithErrorRequest;
+struct WireTypeForNaturalType<::test_protocollayouts::MainProtocolOnLocalWithErrorRequest> {
+  using type = ::test_protocollayouts::wire::MainProtocolOnLocalWithErrorRequest;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse,
-    ::test_protocollayouts::MainProtocolOnAnonWithErrorResponse> {
-  static ::test_protocollayouts::MainProtocolOnAnonWithErrorResponse ToNatural(
-      ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse src);
-  static ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse
-  ToWire(fidl::AnyArena& arena,
-         ::test_protocollayouts::MainProtocolOnAnonWithErrorResponse src);
+struct WireNaturalConversionTraits<::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse, ::test_protocollayouts::MainProtocolOnAnonWithErrorResponse> {
+  static ::test_protocollayouts::MainProtocolOnAnonWithErrorResponse ToNatural(::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse src);
+  static ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse ToWire(fidl::AnyArena& arena, ::test_protocollayouts::MainProtocolOnAnonWithErrorResponse src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse> {
+struct NaturalTypeForWireType<::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse> {
   using type = ::test_protocollayouts::MainProtocolOnAnonWithErrorResponse;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocollayouts::MainProtocolOnAnonWithErrorResponse> {
-  using type =
-      ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse;
+struct WireTypeForNaturalType<::test_protocollayouts::MainProtocolOnAnonWithErrorResponse> {
+  using type = ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest,
-    ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorRequest> {
-  static ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorRequest
-  ToNatural(
-      ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest src);
-  static ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest
-  ToWire(fidl::AnyArena& arena,
-         ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorRequest src);
+struct WireNaturalConversionTraits<::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest, ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorRequest> {
+  static ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorRequest ToNatural(::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest src);
+  static ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest ToWire(fidl::AnyArena& arena, ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorRequest src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest> {
+struct NaturalTypeForWireType<::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest> {
   using type = ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorRequest;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorRequest> {
-  using type =
-      ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest;
+struct WireTypeForNaturalType<::test_protocollayouts::MainProtocolTwoWayAnonWithErrorRequest> {
+  using type = ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse,
-    ::test_protocollayouts::MainProtocolTwoWayAnonResponse> {
-  static ::test_protocollayouts::MainProtocolTwoWayAnonResponse ToNatural(
-      ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse src);
-  static ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse ToWire(
-      fidl::AnyArena& arena,
-      ::test_protocollayouts::MainProtocolTwoWayAnonResponse src);
+struct WireNaturalConversionTraits<::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse, ::test_protocollayouts::MainProtocolTwoWayAnonResponse> {
+  static ::test_protocollayouts::MainProtocolTwoWayAnonResponse ToNatural(::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse src);
+  static ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse ToWire(fidl::AnyArena& arena, ::test_protocollayouts::MainProtocolTwoWayAnonResponse src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse> {
+struct NaturalTypeForWireType<::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse> {
   using type = ::test_protocollayouts::MainProtocolTwoWayAnonResponse;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocollayouts::MainProtocolTwoWayAnonResponse> {
+struct WireTypeForNaturalType<::test_protocollayouts::MainProtocolTwoWayAnonResponse> {
   using type = ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest,
-    ::test_protocollayouts::MainProtocolOneWayAnonRequest> {
-  static ::test_protocollayouts::MainProtocolOneWayAnonRequest ToNatural(
-      ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest src);
-  static ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest ToWire(
-      fidl::AnyArena& arena,
-      ::test_protocollayouts::MainProtocolOneWayAnonRequest src);
+struct WireNaturalConversionTraits<::test_protocollayouts::wire::MainProtocolOneWayAnonRequest, ::test_protocollayouts::MainProtocolOneWayAnonRequest> {
+  static ::test_protocollayouts::MainProtocolOneWayAnonRequest ToNatural(::test_protocollayouts::wire::MainProtocolOneWayAnonRequest src);
+  static ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest ToWire(fidl::AnyArena& arena, ::test_protocollayouts::MainProtocolOneWayAnonRequest src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest> {
+struct NaturalTypeForWireType<::test_protocollayouts::wire::MainProtocolOneWayAnonRequest> {
   using type = ::test_protocollayouts::MainProtocolOneWayAnonRequest;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocollayouts::MainProtocolOneWayAnonRequest> {
+struct WireTypeForNaturalType<::test_protocollayouts::MainProtocolOneWayAnonRequest> {
   using type = ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocollayouts::wire::LocalTablePayload,
-    ::test_protocollayouts::LocalTablePayload> {
-  static ::test_protocollayouts::LocalTablePayload ToNatural(
-      ::test_protocollayouts::wire::LocalTablePayload src);
-  static ::test_protocollayouts::wire::LocalTablePayload ToWire(
-      fidl::AnyArena& arena, ::test_protocollayouts::LocalTablePayload src);
+struct WireNaturalConversionTraits<::test_protocollayouts::wire::LocalTablePayload, ::test_protocollayouts::LocalTablePayload> {
+  static ::test_protocollayouts::LocalTablePayload ToNatural(::test_protocollayouts::wire::LocalTablePayload src);
+  static ::test_protocollayouts::wire::LocalTablePayload ToWire(fidl::AnyArena& arena, ::test_protocollayouts::LocalTablePayload src);
 };
 
 template <>
@@ -279,337 +180,190 @@ struct WireTypeForNaturalType<::test_protocollayouts::LocalTablePayload> {
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocollayouts::wire::MainProtocolTwoWayImportWithErrorResult,
-    ::test_protocollayouts::MainProtocolTwoWayImportWithErrorResult> {
-  static ::test_protocollayouts::MainProtocolTwoWayImportWithErrorResult
-  ToNatural(
-      ::test_protocollayouts::wire::MainProtocolTwoWayImportWithErrorResult
-          src);
-  static ::test_protocollayouts::wire::MainProtocolTwoWayImportWithErrorResult
-  ToWire(fidl::AnyArena& arena,
-         ::test_protocollayouts::MainProtocolTwoWayImportWithErrorResult src);
+struct WireNaturalConversionTraits<::test_protocollayouts::wire::MainProtocolTwoWayImportWithErrorResult, ::test_protocollayouts::MainProtocolTwoWayImportWithErrorResult> {
+  static ::test_protocollayouts::MainProtocolTwoWayImportWithErrorResult ToNatural(::test_protocollayouts::wire::MainProtocolTwoWayImportWithErrorResult src);
+  static ::test_protocollayouts::wire::MainProtocolTwoWayImportWithErrorResult ToWire(fidl::AnyArena& arena, ::test_protocollayouts::MainProtocolTwoWayImportWithErrorResult src);
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocollayouts::wire::MainProtocolTwoWayImportWithErrorResult,
-    std::unique_ptr<
-        ::test_protocollayouts::MainProtocolTwoWayImportWithErrorResult>> {
-  static std::unique_ptr<
-      ::test_protocollayouts::MainProtocolTwoWayImportWithErrorResult>
-  ToNatural(
-      ::test_protocollayouts::wire::MainProtocolTwoWayImportWithErrorResult
-          src);
-  static ::test_protocollayouts::wire::MainProtocolTwoWayImportWithErrorResult
-  ToWire(fidl::AnyArena& arena,
-         std::unique_ptr<
-             ::test_protocollayouts::MainProtocolTwoWayImportWithErrorResult>
-             src);
+struct WireNaturalConversionTraits<::test_protocollayouts::wire::MainProtocolTwoWayImportWithErrorResult, std::unique_ptr<::test_protocollayouts::MainProtocolTwoWayImportWithErrorResult>> {
+  static std::unique_ptr<::test_protocollayouts::MainProtocolTwoWayImportWithErrorResult> ToNatural(::test_protocollayouts::wire::MainProtocolTwoWayImportWithErrorResult src);
+  static ::test_protocollayouts::wire::MainProtocolTwoWayImportWithErrorResult ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_protocollayouts::MainProtocolTwoWayImportWithErrorResult> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocollayouts::wire::MainProtocolTwoWayImportWithErrorResult> {
-  using type = std::unique_ptr<
-      ::test_protocollayouts::MainProtocolTwoWayImportWithErrorResult>;
+struct NaturalTypeForWireType<::test_protocollayouts::wire::MainProtocolTwoWayImportWithErrorResult> {
+  using type = std::unique_ptr<::test_protocollayouts::MainProtocolTwoWayImportWithErrorResult>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocollayouts::MainProtocolTwoWayImportWithErrorResult> {
-  using type =
-      ::test_protocollayouts::wire::MainProtocolTwoWayImportWithErrorResult;
+struct WireTypeForNaturalType<::test_protocollayouts::MainProtocolTwoWayImportWithErrorResult> {
+  using type = ::test_protocollayouts::wire::MainProtocolTwoWayImportWithErrorResult;
 };
 template <>
-struct WireTypeForNaturalType<std::unique_ptr<
-    ::test_protocollayouts::MainProtocolTwoWayImportWithErrorResult>> {
-  using type =
-      ::test_protocollayouts::wire::MainProtocolTwoWayImportWithErrorResult;
+struct WireTypeForNaturalType<std::unique_ptr<::test_protocollayouts::MainProtocolTwoWayImportWithErrorResult>> {
+  using type = ::test_protocollayouts::wire::MainProtocolTwoWayImportWithErrorResult;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse,
-    ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse> {
-  static ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse
-  ToNatural(
-      ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse
-          src);
-  static ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse
-  ToWire(fidl::AnyArena& arena,
-         ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse src);
+struct WireNaturalConversionTraits<::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse, ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse> {
+  static ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse ToNatural(::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse src);
+  static ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse ToWire(fidl::AnyArena& arena, ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse src);
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse,
-    std::unique_ptr<
-        ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse>> {
-  static std::unique_ptr<
-      ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse>
-  ToNatural(
-      ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse
-          src);
-  static ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse
-  ToWire(fidl::AnyArena& arena,
-         std::unique_ptr<
-             ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse>
-             src);
+struct WireNaturalConversionTraits<::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse, std::unique_ptr<::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse>> {
+  static std::unique_ptr<::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse> ToNatural(::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse src);
+  static ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse> {
-  using type = std::unique_ptr<
-      ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse>;
+struct NaturalTypeForWireType<::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse> {
+  using type = std::unique_ptr<::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse> {
-  using type =
-      ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse;
+struct WireTypeForNaturalType<::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse> {
+  using type = ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse;
 };
 template <>
-struct WireTypeForNaturalType<std::unique_ptr<
-    ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse>> {
-  using type =
-      ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse;
+struct WireTypeForNaturalType<std::unique_ptr<::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse>> {
+  using type = ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResult,
-    ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResult> {
-  static ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResult
-  ToNatural(
-      ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResult src);
-  static ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResult
-  ToWire(fidl::AnyArena& arena,
-         ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResult src);
+struct WireNaturalConversionTraits<::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResult, ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResult> {
+  static ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResult ToNatural(::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResult src);
+  static ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResult ToWire(fidl::AnyArena& arena, ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResult src);
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResult,
-    std::unique_ptr<
-        ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResult>> {
-  static std::unique_ptr<
-      ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResult>
-  ToNatural(
-      ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResult src);
-  static ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResult
-  ToWire(fidl::AnyArena& arena,
-         std::unique_ptr<
-             ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResult>
-             src);
+struct WireNaturalConversionTraits<::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResult, std::unique_ptr<::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResult>> {
+  static std::unique_ptr<::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResult> ToNatural(::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResult src);
+  static ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResult ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResult> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResult> {
-  using type = std::unique_ptr<
-      ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResult>;
+struct NaturalTypeForWireType<::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResult> {
+  using type = std::unique_ptr<::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResult>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResult> {
-  using type =
-      ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResult;
+struct WireTypeForNaturalType<::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResult> {
+  using type = ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResult;
 };
 template <>
-struct WireTypeForNaturalType<std::unique_ptr<
-    ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResult>> {
-  using type =
-      ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResult;
+struct WireTypeForNaturalType<std::unique_ptr<::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResult>> {
+  using type = ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResult;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocollayouts::wire::MainProtocolOnImportWithErrorResult,
-    ::test_protocollayouts::MainProtocolOnImportWithErrorResult> {
-  static ::test_protocollayouts::MainProtocolOnImportWithErrorResult ToNatural(
-      ::test_protocollayouts::wire::MainProtocolOnImportWithErrorResult src);
-  static ::test_protocollayouts::wire::MainProtocolOnImportWithErrorResult
-  ToWire(fidl::AnyArena& arena,
-         ::test_protocollayouts::MainProtocolOnImportWithErrorResult src);
+struct WireNaturalConversionTraits<::test_protocollayouts::wire::MainProtocolOnImportWithErrorResult, ::test_protocollayouts::MainProtocolOnImportWithErrorResult> {
+  static ::test_protocollayouts::MainProtocolOnImportWithErrorResult ToNatural(::test_protocollayouts::wire::MainProtocolOnImportWithErrorResult src);
+  static ::test_protocollayouts::wire::MainProtocolOnImportWithErrorResult ToWire(fidl::AnyArena& arena, ::test_protocollayouts::MainProtocolOnImportWithErrorResult src);
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocollayouts::wire::MainProtocolOnImportWithErrorResult,
-    std::unique_ptr<
-        ::test_protocollayouts::MainProtocolOnImportWithErrorResult>> {
-  static std::unique_ptr<
-      ::test_protocollayouts::MainProtocolOnImportWithErrorResult>
-  ToNatural(
-      ::test_protocollayouts::wire::MainProtocolOnImportWithErrorResult src);
-  static ::test_protocollayouts::wire::MainProtocolOnImportWithErrorResult
-  ToWire(fidl::AnyArena& arena,
-         std::unique_ptr<
-             ::test_protocollayouts::MainProtocolOnImportWithErrorResult>
-             src);
+struct WireNaturalConversionTraits<::test_protocollayouts::wire::MainProtocolOnImportWithErrorResult, std::unique_ptr<::test_protocollayouts::MainProtocolOnImportWithErrorResult>> {
+  static std::unique_ptr<::test_protocollayouts::MainProtocolOnImportWithErrorResult> ToNatural(::test_protocollayouts::wire::MainProtocolOnImportWithErrorResult src);
+  static ::test_protocollayouts::wire::MainProtocolOnImportWithErrorResult ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_protocollayouts::MainProtocolOnImportWithErrorResult> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocollayouts::wire::MainProtocolOnImportWithErrorResult> {
-  using type = std::unique_ptr<
-      ::test_protocollayouts::MainProtocolOnImportWithErrorResult>;
+struct NaturalTypeForWireType<::test_protocollayouts::wire::MainProtocolOnImportWithErrorResult> {
+  using type = std::unique_ptr<::test_protocollayouts::MainProtocolOnImportWithErrorResult>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocollayouts::MainProtocolOnImportWithErrorResult> {
-  using type =
-      ::test_protocollayouts::wire::MainProtocolOnImportWithErrorResult;
+struct WireTypeForNaturalType<::test_protocollayouts::MainProtocolOnImportWithErrorResult> {
+  using type = ::test_protocollayouts::wire::MainProtocolOnImportWithErrorResult;
 };
 template <>
-struct WireTypeForNaturalType<std::unique_ptr<
-    ::test_protocollayouts::MainProtocolOnImportWithErrorResult>> {
-  using type =
-      ::test_protocollayouts::wire::MainProtocolOnImportWithErrorResult;
+struct WireTypeForNaturalType<std::unique_ptr<::test_protocollayouts::MainProtocolOnImportWithErrorResult>> {
+  using type = ::test_protocollayouts::wire::MainProtocolOnImportWithErrorResult;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResult,
-    ::test_protocollayouts::MainProtocolOnAnonWithErrorResult> {
-  static ::test_protocollayouts::MainProtocolOnAnonWithErrorResult ToNatural(
-      ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResult src);
-  static ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResult ToWire(
-      fidl::AnyArena& arena,
-      ::test_protocollayouts::MainProtocolOnAnonWithErrorResult src);
+struct WireNaturalConversionTraits<::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResult, ::test_protocollayouts::MainProtocolOnAnonWithErrorResult> {
+  static ::test_protocollayouts::MainProtocolOnAnonWithErrorResult ToNatural(::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResult src);
+  static ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResult ToWire(fidl::AnyArena& arena, ::test_protocollayouts::MainProtocolOnAnonWithErrorResult src);
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResult,
-    std::unique_ptr<
-        ::test_protocollayouts::MainProtocolOnAnonWithErrorResult>> {
-  static std::unique_ptr<
-      ::test_protocollayouts::MainProtocolOnAnonWithErrorResult>
-  ToNatural(
-      ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResult src);
-  static ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResult ToWire(
-      fidl::AnyArena& arena,
-      std::unique_ptr<::test_protocollayouts::MainProtocolOnAnonWithErrorResult>
-          src);
+struct WireNaturalConversionTraits<::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResult, std::unique_ptr<::test_protocollayouts::MainProtocolOnAnonWithErrorResult>> {
+  static std::unique_ptr<::test_protocollayouts::MainProtocolOnAnonWithErrorResult> ToNatural(::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResult src);
+  static ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResult ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_protocollayouts::MainProtocolOnAnonWithErrorResult> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResult> {
-  using type = std::unique_ptr<
-      ::test_protocollayouts::MainProtocolOnAnonWithErrorResult>;
+struct NaturalTypeForWireType<::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResult> {
+  using type = std::unique_ptr<::test_protocollayouts::MainProtocolOnAnonWithErrorResult>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocollayouts::MainProtocolOnAnonWithErrorResult> {
+struct WireTypeForNaturalType<::test_protocollayouts::MainProtocolOnAnonWithErrorResult> {
   using type = ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResult;
 };
 template <>
-struct WireTypeForNaturalType<std::unique_ptr<
-    ::test_protocollayouts::MainProtocolOnAnonWithErrorResult>> {
+struct WireTypeForNaturalType<std::unique_ptr<::test_protocollayouts::MainProtocolOnAnonWithErrorResult>> {
   using type = ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResult;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocollayouts::wire::MainProtocolTwoWayAnonRequest,
-    ::test_protocollayouts::MainProtocolTwoWayAnonRequest> {
-  static ::test_protocollayouts::MainProtocolTwoWayAnonRequest ToNatural(
-      ::test_protocollayouts::wire::MainProtocolTwoWayAnonRequest src);
-  static ::test_protocollayouts::wire::MainProtocolTwoWayAnonRequest ToWire(
-      fidl::AnyArena& arena,
-      ::test_protocollayouts::MainProtocolTwoWayAnonRequest src);
+struct WireNaturalConversionTraits<::test_protocollayouts::wire::MainProtocolTwoWayAnonRequest, ::test_protocollayouts::MainProtocolTwoWayAnonRequest> {
+  static ::test_protocollayouts::MainProtocolTwoWayAnonRequest ToNatural(::test_protocollayouts::wire::MainProtocolTwoWayAnonRequest src);
+  static ::test_protocollayouts::wire::MainProtocolTwoWayAnonRequest ToWire(fidl::AnyArena& arena, ::test_protocollayouts::MainProtocolTwoWayAnonRequest src);
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocollayouts::wire::MainProtocolTwoWayAnonRequest,
-    std::unique_ptr<::test_protocollayouts::MainProtocolTwoWayAnonRequest>> {
-  static std::unique_ptr<::test_protocollayouts::MainProtocolTwoWayAnonRequest>
-  ToNatural(::test_protocollayouts::wire::MainProtocolTwoWayAnonRequest src);
-  static ::test_protocollayouts::wire::MainProtocolTwoWayAnonRequest ToWire(
-      fidl::AnyArena& arena,
-      std::unique_ptr<::test_protocollayouts::MainProtocolTwoWayAnonRequest>
-          src);
+struct WireNaturalConversionTraits<::test_protocollayouts::wire::MainProtocolTwoWayAnonRequest, std::unique_ptr<::test_protocollayouts::MainProtocolTwoWayAnonRequest>> {
+  static std::unique_ptr<::test_protocollayouts::MainProtocolTwoWayAnonRequest> ToNatural(::test_protocollayouts::wire::MainProtocolTwoWayAnonRequest src);
+  static ::test_protocollayouts::wire::MainProtocolTwoWayAnonRequest ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_protocollayouts::MainProtocolTwoWayAnonRequest> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocollayouts::wire::MainProtocolTwoWayAnonRequest> {
-  using type =
-      std::unique_ptr<::test_protocollayouts::MainProtocolTwoWayAnonRequest>;
+struct NaturalTypeForWireType<::test_protocollayouts::wire::MainProtocolTwoWayAnonRequest> {
+  using type = std::unique_ptr<::test_protocollayouts::MainProtocolTwoWayAnonRequest>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocollayouts::MainProtocolTwoWayAnonRequest> {
+struct WireTypeForNaturalType<::test_protocollayouts::MainProtocolTwoWayAnonRequest> {
   using type = ::test_protocollayouts::wire::MainProtocolTwoWayAnonRequest;
 };
 template <>
-struct WireTypeForNaturalType<
-    std::unique_ptr<::test_protocollayouts::MainProtocolTwoWayAnonRequest>> {
+struct WireTypeForNaturalType<std::unique_ptr<::test_protocollayouts::MainProtocolTwoWayAnonRequest>> {
   using type = ::test_protocollayouts::wire::MainProtocolTwoWayAnonRequest;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocollayouts::wire::MainProtocolOnAnonRequest,
-    ::test_protocollayouts::MainProtocolOnAnonRequest> {
-  static ::test_protocollayouts::MainProtocolOnAnonRequest ToNatural(
-      ::test_protocollayouts::wire::MainProtocolOnAnonRequest src);
-  static ::test_protocollayouts::wire::MainProtocolOnAnonRequest ToWire(
-      fidl::AnyArena& arena,
-      ::test_protocollayouts::MainProtocolOnAnonRequest src);
+struct WireNaturalConversionTraits<::test_protocollayouts::wire::MainProtocolOnAnonRequest, ::test_protocollayouts::MainProtocolOnAnonRequest> {
+  static ::test_protocollayouts::MainProtocolOnAnonRequest ToNatural(::test_protocollayouts::wire::MainProtocolOnAnonRequest src);
+  static ::test_protocollayouts::wire::MainProtocolOnAnonRequest ToWire(fidl::AnyArena& arena, ::test_protocollayouts::MainProtocolOnAnonRequest src);
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocollayouts::wire::MainProtocolOnAnonRequest,
-    std::unique_ptr<::test_protocollayouts::MainProtocolOnAnonRequest>> {
-  static std::unique_ptr<::test_protocollayouts::MainProtocolOnAnonRequest>
-  ToNatural(::test_protocollayouts::wire::MainProtocolOnAnonRequest src);
-  static ::test_protocollayouts::wire::MainProtocolOnAnonRequest ToWire(
-      fidl::AnyArena& arena,
-      std::unique_ptr<::test_protocollayouts::MainProtocolOnAnonRequest> src);
+struct WireNaturalConversionTraits<::test_protocollayouts::wire::MainProtocolOnAnonRequest, std::unique_ptr<::test_protocollayouts::MainProtocolOnAnonRequest>> {
+  static std::unique_ptr<::test_protocollayouts::MainProtocolOnAnonRequest> ToNatural(::test_protocollayouts::wire::MainProtocolOnAnonRequest src);
+  static ::test_protocollayouts::wire::MainProtocolOnAnonRequest ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_protocollayouts::MainProtocolOnAnonRequest> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocollayouts::wire::MainProtocolOnAnonRequest> {
-  using type =
-      std::unique_ptr<::test_protocollayouts::MainProtocolOnAnonRequest>;
+struct NaturalTypeForWireType<::test_protocollayouts::wire::MainProtocolOnAnonRequest> {
+  using type = std::unique_ptr<::test_protocollayouts::MainProtocolOnAnonRequest>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocollayouts::MainProtocolOnAnonRequest> {
+struct WireTypeForNaturalType<::test_protocollayouts::MainProtocolOnAnonRequest> {
   using type = ::test_protocollayouts::wire::MainProtocolOnAnonRequest;
 };
 template <>
-struct WireTypeForNaturalType<
-    std::unique_ptr<::test_protocollayouts::MainProtocolOnAnonRequest>> {
+struct WireTypeForNaturalType<std::unique_ptr<::test_protocollayouts::MainProtocolOnAnonRequest>> {
   using type = ::test_protocollayouts::wire::MainProtocolOnAnonRequest;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocollayouts::wire::LocalUnionPayload,
-    ::test_protocollayouts::LocalUnionPayload> {
-  static ::test_protocollayouts::LocalUnionPayload ToNatural(
-      ::test_protocollayouts::wire::LocalUnionPayload src);
-  static ::test_protocollayouts::wire::LocalUnionPayload ToWire(
-      fidl::AnyArena& arena, ::test_protocollayouts::LocalUnionPayload src);
+struct WireNaturalConversionTraits<::test_protocollayouts::wire::LocalUnionPayload, ::test_protocollayouts::LocalUnionPayload> {
+  static ::test_protocollayouts::LocalUnionPayload ToNatural(::test_protocollayouts::wire::LocalUnionPayload src);
+  static ::test_protocollayouts::wire::LocalUnionPayload ToWire(fidl::AnyArena& arena, ::test_protocollayouts::LocalUnionPayload src);
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocollayouts::wire::LocalUnionPayload,
-    std::unique_ptr<::test_protocollayouts::LocalUnionPayload>> {
-  static std::unique_ptr<::test_protocollayouts::LocalUnionPayload> ToNatural(
-      ::test_protocollayouts::wire::LocalUnionPayload src);
-  static ::test_protocollayouts::wire::LocalUnionPayload ToWire(
-      fidl::AnyArena& arena,
-      std::unique_ptr<::test_protocollayouts::LocalUnionPayload> src);
+struct WireNaturalConversionTraits<::test_protocollayouts::wire::LocalUnionPayload, std::unique_ptr<::test_protocollayouts::LocalUnionPayload>> {
+  static std::unique_ptr<::test_protocollayouts::LocalUnionPayload> ToNatural(::test_protocollayouts::wire::LocalUnionPayload src);
+  static ::test_protocollayouts::wire::LocalUnionPayload ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_protocollayouts::LocalUnionPayload> src);
 };
 
 template <>
@@ -621,1125 +375,585 @@ struct WireTypeForNaturalType<::test_protocollayouts::LocalUnionPayload> {
   using type = ::test_protocollayouts::wire::LocalUnionPayload;
 };
 template <>
-struct WireTypeForNaturalType<
-    std::unique_ptr<::test_protocollayouts::LocalUnionPayload>> {
+struct WireTypeForNaturalType<std::unique_ptr<::test_protocollayouts::LocalUnionPayload>> {
   using type = ::test_protocollayouts::wire::LocalUnionPayload;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocollayouts::wire::MainProtocolTwoWayLocalWithErrorResult,
-    ::test_protocollayouts::MainProtocolTwoWayLocalWithErrorResult> {
-  static ::test_protocollayouts::MainProtocolTwoWayLocalWithErrorResult
-  ToNatural(
-      ::test_protocollayouts::wire::MainProtocolTwoWayLocalWithErrorResult src);
-  static ::test_protocollayouts::wire::MainProtocolTwoWayLocalWithErrorResult
-  ToWire(fidl::AnyArena& arena,
-         ::test_protocollayouts::MainProtocolTwoWayLocalWithErrorResult src);
+struct WireNaturalConversionTraits<::test_protocollayouts::wire::MainProtocolTwoWayLocalWithErrorResult, ::test_protocollayouts::MainProtocolTwoWayLocalWithErrorResult> {
+  static ::test_protocollayouts::MainProtocolTwoWayLocalWithErrorResult ToNatural(::test_protocollayouts::wire::MainProtocolTwoWayLocalWithErrorResult src);
+  static ::test_protocollayouts::wire::MainProtocolTwoWayLocalWithErrorResult ToWire(fidl::AnyArena& arena, ::test_protocollayouts::MainProtocolTwoWayLocalWithErrorResult src);
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocollayouts::wire::MainProtocolTwoWayLocalWithErrorResult,
-    std::unique_ptr<
-        ::test_protocollayouts::MainProtocolTwoWayLocalWithErrorResult>> {
-  static std::unique_ptr<
-      ::test_protocollayouts::MainProtocolTwoWayLocalWithErrorResult>
-  ToNatural(
-      ::test_protocollayouts::wire::MainProtocolTwoWayLocalWithErrorResult src);
-  static ::test_protocollayouts::wire::MainProtocolTwoWayLocalWithErrorResult
-  ToWire(fidl::AnyArena& arena,
-         std::unique_ptr<
-             ::test_protocollayouts::MainProtocolTwoWayLocalWithErrorResult>
-             src);
+struct WireNaturalConversionTraits<::test_protocollayouts::wire::MainProtocolTwoWayLocalWithErrorResult, std::unique_ptr<::test_protocollayouts::MainProtocolTwoWayLocalWithErrorResult>> {
+  static std::unique_ptr<::test_protocollayouts::MainProtocolTwoWayLocalWithErrorResult> ToNatural(::test_protocollayouts::wire::MainProtocolTwoWayLocalWithErrorResult src);
+  static ::test_protocollayouts::wire::MainProtocolTwoWayLocalWithErrorResult ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_protocollayouts::MainProtocolTwoWayLocalWithErrorResult> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocollayouts::wire::MainProtocolTwoWayLocalWithErrorResult> {
-  using type = std::unique_ptr<
-      ::test_protocollayouts::MainProtocolTwoWayLocalWithErrorResult>;
+struct NaturalTypeForWireType<::test_protocollayouts::wire::MainProtocolTwoWayLocalWithErrorResult> {
+  using type = std::unique_ptr<::test_protocollayouts::MainProtocolTwoWayLocalWithErrorResult>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocollayouts::MainProtocolTwoWayLocalWithErrorResult> {
-  using type =
-      ::test_protocollayouts::wire::MainProtocolTwoWayLocalWithErrorResult;
+struct WireTypeForNaturalType<::test_protocollayouts::MainProtocolTwoWayLocalWithErrorResult> {
+  using type = ::test_protocollayouts::wire::MainProtocolTwoWayLocalWithErrorResult;
 };
 template <>
-struct WireTypeForNaturalType<std::unique_ptr<
-    ::test_protocollayouts::MainProtocolTwoWayLocalWithErrorResult>> {
-  using type =
-      ::test_protocollayouts::wire::MainProtocolTwoWayLocalWithErrorResult;
+struct WireTypeForNaturalType<std::unique_ptr<::test_protocollayouts::MainProtocolTwoWayLocalWithErrorResult>> {
+  using type = ::test_protocollayouts::wire::MainProtocolTwoWayLocalWithErrorResult;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocollayouts::wire::MainProtocolOnLocalWithErrorResult,
-    ::test_protocollayouts::MainProtocolOnLocalWithErrorResult> {
-  static ::test_protocollayouts::MainProtocolOnLocalWithErrorResult ToNatural(
-      ::test_protocollayouts::wire::MainProtocolOnLocalWithErrorResult src);
-  static ::test_protocollayouts::wire::MainProtocolOnLocalWithErrorResult
-  ToWire(fidl::AnyArena& arena,
-         ::test_protocollayouts::MainProtocolOnLocalWithErrorResult src);
+struct WireNaturalConversionTraits<::test_protocollayouts::wire::MainProtocolOnLocalWithErrorResult, ::test_protocollayouts::MainProtocolOnLocalWithErrorResult> {
+  static ::test_protocollayouts::MainProtocolOnLocalWithErrorResult ToNatural(::test_protocollayouts::wire::MainProtocolOnLocalWithErrorResult src);
+  static ::test_protocollayouts::wire::MainProtocolOnLocalWithErrorResult ToWire(fidl::AnyArena& arena, ::test_protocollayouts::MainProtocolOnLocalWithErrorResult src);
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocollayouts::wire::MainProtocolOnLocalWithErrorResult,
-    std::unique_ptr<
-        ::test_protocollayouts::MainProtocolOnLocalWithErrorResult>> {
-  static std::unique_ptr<
-      ::test_protocollayouts::MainProtocolOnLocalWithErrorResult>
-  ToNatural(
-      ::test_protocollayouts::wire::MainProtocolOnLocalWithErrorResult src);
-  static ::test_protocollayouts::wire::MainProtocolOnLocalWithErrorResult
-  ToWire(fidl::AnyArena& arena,
-         std::unique_ptr<
-             ::test_protocollayouts::MainProtocolOnLocalWithErrorResult>
-             src);
+struct WireNaturalConversionTraits<::test_protocollayouts::wire::MainProtocolOnLocalWithErrorResult, std::unique_ptr<::test_protocollayouts::MainProtocolOnLocalWithErrorResult>> {
+  static std::unique_ptr<::test_protocollayouts::MainProtocolOnLocalWithErrorResult> ToNatural(::test_protocollayouts::wire::MainProtocolOnLocalWithErrorResult src);
+  static ::test_protocollayouts::wire::MainProtocolOnLocalWithErrorResult ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_protocollayouts::MainProtocolOnLocalWithErrorResult> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocollayouts::wire::MainProtocolOnLocalWithErrorResult> {
-  using type = std::unique_ptr<
-      ::test_protocollayouts::MainProtocolOnLocalWithErrorResult>;
+struct NaturalTypeForWireType<::test_protocollayouts::wire::MainProtocolOnLocalWithErrorResult> {
+  using type = std::unique_ptr<::test_protocollayouts::MainProtocolOnLocalWithErrorResult>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocollayouts::MainProtocolOnLocalWithErrorResult> {
+struct WireTypeForNaturalType<::test_protocollayouts::MainProtocolOnLocalWithErrorResult> {
   using type = ::test_protocollayouts::wire::MainProtocolOnLocalWithErrorResult;
 };
 template <>
-struct WireTypeForNaturalType<std::unique_ptr<
-    ::test_protocollayouts::MainProtocolOnLocalWithErrorResult>> {
+struct WireTypeForNaturalType<std::unique_ptr<::test_protocollayouts::MainProtocolOnLocalWithErrorResult>> {
   using type = ::test_protocollayouts::wire::MainProtocolOnLocalWithErrorResult;
 };
 
 #ifdef __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireRequest<
-        ::test_protocollayouts::MainProtocol::OneWayAnonComposed>,
-    ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayAnonComposed>> {
-  static ::fidl::Request<
-      ::test_protocollayouts::MainProtocol::OneWayAnonComposed>
-  ToNatural(::fidl::WireRequest<
-            ::test_protocollayouts::MainProtocol::OneWayAnonComposed>
-                src);
-  static ::fidl::WireRequest<
-      ::test_protocollayouts::MainProtocol::OneWayAnonComposed>
-  ToWire(
-      fidl::AnyArena& arena,
-      ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayAnonComposed>
-          src);
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayAnonComposed>, ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayAnonComposed>> {
+  static ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayAnonComposed> ToNatural(::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayAnonComposed> src);
+  static ::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayAnonComposed> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayAnonComposed> src);
 };
 
 template <>
-struct NaturalTypeForWireType<::fidl::WireRequest<
-    ::test_protocollayouts::MainProtocol::OneWayAnonComposed>> {
-  using type =
-      ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayAnonComposed>;
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayAnonComposed>> {
+  using type = ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayAnonComposed>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayAnonComposed>> {
-  using type = ::fidl::WireRequest<
-      ::test_protocollayouts::MainProtocol::OneWayAnonComposed>;
+struct WireTypeForNaturalType<::fidl::Request<::test_protocollayouts::MainProtocol::OneWayAnonComposed>> {
+  using type = ::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayAnonComposed>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireRequest<
-        ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>,
-    ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>> {
-  static ::fidl::Request<
-      ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>
-  ToNatural(::fidl::WireRequest<
-            ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>
-                src);
-  static ::fidl::WireRequest<
-      ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>
-  ToWire(
-      fidl::AnyArena& arena,
-      ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>
-          src);
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>, ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>> {
+  static ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayAnonComposed> ToNatural(::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayAnonComposed> src);
+  static ::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayAnonComposed> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayAnonComposed> src);
 };
 
 template <>
-struct NaturalTypeForWireType<::fidl::WireRequest<
-    ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>> {
-  using type =
-      ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>;
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>> {
+  using type = ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>> {
-  using type = ::fidl::WireRequest<
-      ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>;
+struct WireTypeForNaturalType<::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>> {
+  using type = ::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireRequest<
-        ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>,
-    ::fidl::Request<
-        ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>> {
-  static ::fidl::Request<
-      ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>
-  ToNatural(::fidl::WireRequest<
-            ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>
-                src);
-  static ::fidl::WireRequest<
-      ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>
-  ToWire(fidl::AnyArena& arena,
-         ::fidl::Request<
-             ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>
-             src);
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>, ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>> {
+  static ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError> ToNatural(::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError> src);
+  static ::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError> src);
 };
 
 template <>
-struct NaturalTypeForWireType<::fidl::WireRequest<
-    ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>> {
-  using type = ::fidl::Request<
-      ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>;
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>> {
+  using type = ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>;
 };
 template <>
-struct WireTypeForNaturalType<::fidl::Request<
-    ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>> {
-  using type = ::fidl::WireRequest<
-      ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>;
+struct WireTypeForNaturalType<::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>> {
+  using type = ::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireRequest<
-        ::test_protocollayouts::MainProtocol::OneWayNamedComposed>,
-    ::fidl::Request<
-        ::test_protocollayouts::MainProtocol::OneWayNamedComposed>> {
-  static ::fidl::Request<
-      ::test_protocollayouts::MainProtocol::OneWayNamedComposed>
-  ToNatural(::fidl::WireRequest<
-            ::test_protocollayouts::MainProtocol::OneWayNamedComposed>
-                src);
-  static ::fidl::WireRequest<
-      ::test_protocollayouts::MainProtocol::OneWayNamedComposed>
-  ToWire(
-      fidl::AnyArena& arena,
-      ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayNamedComposed>
-          src);
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayNamedComposed>, ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayNamedComposed>> {
+  static ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayNamedComposed> ToNatural(::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayNamedComposed> src);
+  static ::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayNamedComposed> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayNamedComposed> src);
 };
 
 template <>
-struct NaturalTypeForWireType<::fidl::WireRequest<
-    ::test_protocollayouts::MainProtocol::OneWayNamedComposed>> {
-  using type = ::fidl::Request<
-      ::test_protocollayouts::MainProtocol::OneWayNamedComposed>;
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayNamedComposed>> {
+  using type = ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayNamedComposed>;
 };
 template <>
-struct WireTypeForNaturalType<::fidl::Request<
-    ::test_protocollayouts::MainProtocol::OneWayNamedComposed>> {
-  using type = ::fidl::WireRequest<
-      ::test_protocollayouts::MainProtocol::OneWayNamedComposed>;
+struct WireTypeForNaturalType<::fidl::Request<::test_protocollayouts::MainProtocol::OneWayNamedComposed>> {
+  using type = ::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayNamedComposed>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireRequest<
-        ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>,
-    ::fidl::Request<
-        ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>> {
-  static ::fidl::Request<
-      ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>
-  ToNatural(::fidl::WireRequest<
-            ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>
-                src);
-  static ::fidl::WireRequest<
-      ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>
-  ToWire(
-      fidl::AnyArena& arena,
-      ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>
-          src);
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>, ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>> {
+  static ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayNamedComposed> ToNatural(::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayNamedComposed> src);
+  static ::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayNamedComposed> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayNamedComposed> src);
 };
 
 template <>
-struct NaturalTypeForWireType<::fidl::WireRequest<
-    ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>> {
-  using type = ::fidl::Request<
-      ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>;
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>> {
+  using type = ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>;
 };
 template <>
-struct WireTypeForNaturalType<::fidl::Request<
-    ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>> {
-  using type = ::fidl::WireRequest<
-      ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>;
+struct WireTypeForNaturalType<::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>> {
+  using type = ::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireRequest<
-        ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>,
-    ::fidl::Request<
-        ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>> {
-  static ::fidl::Request<
-      ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>
-  ToNatural(::fidl::WireRequest<
-            ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>
-                src);
-  static ::fidl::WireRequest<
-      ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>
-  ToWire(fidl::AnyArena& arena,
-         ::fidl::Request<
-             ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>
-             src);
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>, ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>> {
+  static ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError> ToNatural(::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError> src);
+  static ::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError> src);
 };
 
 template <>
-struct NaturalTypeForWireType<::fidl::WireRequest<
-    ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>> {
-  using type = ::fidl::Request<
-      ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>;
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>> {
+  using type = ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>;
 };
 template <>
-struct WireTypeForNaturalType<::fidl::Request<
-    ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>> {
-  using type = ::fidl::WireRequest<
-      ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>;
+struct WireTypeForNaturalType<::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>> {
+  using type = ::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayImport>,
-    ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayImport>> {
-  static ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayImport>
-  ToNatural(
-      ::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayImport>
-          src);
-  static ::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayImport>
-  ToWire(
-      fidl::AnyArena& arena,
-      ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayImport> src);
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayImport>, ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayImport>> {
+  static ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayImport> ToNatural(::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayImport> src);
+  static ::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayImport> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayImport> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayImport>> {
-  using type =
-      ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayImport>;
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayImport>> {
+  using type = ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayImport>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayImport>> {
-  using type =
-      ::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayImport>;
+struct WireTypeForNaturalType<::fidl::Request<::test_protocollayouts::MainProtocol::OneWayImport>> {
+  using type = ::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayImport>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayImport>,
-    ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayImport>> {
-  static ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayImport>
-  ToNatural(
-      ::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayImport>
-          src);
-  static ::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayImport>
-  ToWire(
-      fidl::AnyArena& arena,
-      ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayImport> src);
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayImport>, ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayImport>> {
+  static ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayImport> ToNatural(::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayImport> src);
+  static ::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayImport> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayImport> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayImport>> {
-  using type =
-      ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayImport>;
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayImport>> {
+  using type = ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayImport>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayImport>> {
-  using type =
-      ::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayImport>;
+struct WireTypeForNaturalType<::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayImport>> {
+  using type = ::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayImport>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireRequest<
-        ::test_protocollayouts::MainProtocol::TwoWayImportWithError>,
-    ::fidl::Request<
-        ::test_protocollayouts::MainProtocol::TwoWayImportWithError>> {
-  static ::fidl::Request<
-      ::test_protocollayouts::MainProtocol::TwoWayImportWithError>
-  ToNatural(::fidl::WireRequest<
-            ::test_protocollayouts::MainProtocol::TwoWayImportWithError>
-                src);
-  static ::fidl::WireRequest<
-      ::test_protocollayouts::MainProtocol::TwoWayImportWithError>
-  ToWire(fidl::AnyArena& arena,
-         ::fidl::Request<
-             ::test_protocollayouts::MainProtocol::TwoWayImportWithError>
-             src);
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayImportWithError>, ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayImportWithError>> {
+  static ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayImportWithError> ToNatural(::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayImportWithError> src);
+  static ::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayImportWithError> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayImportWithError> src);
 };
 
 template <>
-struct NaturalTypeForWireType<::fidl::WireRequest<
-    ::test_protocollayouts::MainProtocol::TwoWayImportWithError>> {
-  using type = ::fidl::Request<
-      ::test_protocollayouts::MainProtocol::TwoWayImportWithError>;
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayImportWithError>> {
+  using type = ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayImportWithError>;
 };
 template <>
-struct WireTypeForNaturalType<::fidl::Request<
-    ::test_protocollayouts::MainProtocol::TwoWayImportWithError>> {
-  using type = ::fidl::WireRequest<
-      ::test_protocollayouts::MainProtocol::TwoWayImportWithError>;
+struct WireTypeForNaturalType<::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayImportWithError>> {
+  using type = ::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayImportWithError>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayLocal>,
-    ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayLocal>> {
-  static ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayLocal>
-  ToNatural(
-      ::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayLocal>
-          src);
-  static ::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayLocal>
-  ToWire(
-      fidl::AnyArena& arena,
-      ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayLocal> src);
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayLocal>, ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayLocal>> {
+  static ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayLocal> ToNatural(::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayLocal> src);
+  static ::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayLocal> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayLocal> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayLocal>> {
-  using type =
-      ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayLocal>;
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayLocal>> {
+  using type = ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayLocal>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayLocal>> {
-  using type =
-      ::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayLocal>;
+struct WireTypeForNaturalType<::fidl::Request<::test_protocollayouts::MainProtocol::OneWayLocal>> {
+  using type = ::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayLocal>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayLocal>,
-    ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayLocal>> {
-  static ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayLocal>
-  ToNatural(
-      ::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayLocal>
-          src);
-  static ::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayLocal>
-  ToWire(
-      fidl::AnyArena& arena,
-      ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayLocal> src);
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayLocal>, ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayLocal>> {
+  static ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayLocal> ToNatural(::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayLocal> src);
+  static ::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayLocal> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayLocal> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayLocal>> {
-  using type =
-      ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayLocal>;
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayLocal>> {
+  using type = ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayLocal>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayLocal>> {
-  using type =
-      ::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayLocal>;
+struct WireTypeForNaturalType<::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayLocal>> {
+  using type = ::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayLocal>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireRequest<
-        ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>,
-    ::fidl::Request<
-        ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>> {
-  static ::fidl::Request<
-      ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>
-  ToNatural(::fidl::WireRequest<
-            ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>
-                src);
-  static ::fidl::WireRequest<
-      ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>
-  ToWire(fidl::AnyArena& arena,
-         ::fidl::Request<
-             ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>
-             src);
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>, ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>> {
+  static ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayLocalWithError> ToNatural(::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayLocalWithError> src);
+  static ::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayLocalWithError> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayLocalWithError> src);
 };
 
 template <>
-struct NaturalTypeForWireType<::fidl::WireRequest<
-    ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>> {
-  using type = ::fidl::Request<
-      ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>;
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>> {
+  using type = ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>;
 };
 template <>
-struct WireTypeForNaturalType<::fidl::Request<
-    ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>> {
-  using type = ::fidl::WireRequest<
-      ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>;
+struct WireTypeForNaturalType<::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>> {
+  using type = ::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayAnon>,
-    ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayAnon>> {
-  static ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayAnon>
-  ToNatural(
-      ::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayAnon>
-          src);
-  static ::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayAnon>
-  ToWire(fidl::AnyArena& arena,
-         ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayAnon> src);
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayAnon>, ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayAnon>> {
+  static ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayAnon> ToNatural(::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayAnon> src);
+  static ::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayAnon> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayAnon> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayAnon>> {
-  using type =
-      ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayAnon>;
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayAnon>> {
+  using type = ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayAnon>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayAnon>> {
-  using type =
-      ::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayAnon>;
+struct WireTypeForNaturalType<::fidl::Request<::test_protocollayouts::MainProtocol::OneWayAnon>> {
+  using type = ::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayAnon>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayAnon>,
-    ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayAnon>> {
-  static ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayAnon>
-  ToNatural(
-      ::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayAnon>
-          src);
-  static ::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayAnon>
-  ToWire(fidl::AnyArena& arena,
-         ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayAnon> src);
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayAnon>, ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayAnon>> {
+  static ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayAnon> ToNatural(::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayAnon> src);
+  static ::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayAnon> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayAnon> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayAnon>> {
-  using type =
-      ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayAnon>;
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayAnon>> {
+  using type = ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayAnon>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayAnon>> {
-  using type =
-      ::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayAnon>;
+struct WireTypeForNaturalType<::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayAnon>> {
+  using type = ::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayAnon>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireRequest<
-        ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>,
-    ::fidl::Request<
-        ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>> {
-  static ::fidl::Request<
-      ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>
-  ToNatural(::fidl::WireRequest<
-            ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>
-                src);
-  static ::fidl::WireRequest<
-      ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>
-  ToWire(
-      fidl::AnyArena& arena,
-      ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>
-          src);
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>, ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>> {
+  static ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayAnonWithError> ToNatural(::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayAnonWithError> src);
+  static ::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayAnonWithError> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayAnonWithError> src);
 };
 
 template <>
-struct NaturalTypeForWireType<::fidl::WireRequest<
-    ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>> {
-  using type = ::fidl::Request<
-      ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>;
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>> {
+  using type = ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>;
 };
 template <>
-struct WireTypeForNaturalType<::fidl::Request<
-    ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>> {
-  using type = ::fidl::WireRequest<
-      ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>;
+struct WireTypeForNaturalType<::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>> {
+  using type = ::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireResponse<
-        ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>,
-    ::fidl::Response<
-        ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>> {
-  static ::fidl::Response<
-      ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>
-  ToNatural(::fidl::WireResponse<
-            ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>
-                src);
-  static ::fidl::WireResponse<
-      ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>
-  ToWire(
-      fidl::AnyArena& arena,
-      ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>
-          src);
+struct WireNaturalConversionTraits<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>, ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>> {
+  static ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayAnonComposed> ToNatural(::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed> src);
+  static ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed> ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayAnonComposed> src);
 };
 
 template <>
-struct NaturalTypeForWireType<::fidl::WireResponse<
-    ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>> {
-  using type = ::fidl::Response<
-      ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>;
+struct NaturalTypeForWireType<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>> {
+  using type = ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>;
 };
 template <>
-struct WireTypeForNaturalType<::fidl::Response<
-    ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>> {
-  using type = ::fidl::WireResponse<
-      ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>;
+struct WireTypeForNaturalType<::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>> {
+  using type = ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireResponse<
-        ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>,
-    ::fidl::Response<
-        ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>> {
-  static ::fidl::Response<
-      ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>
-  ToNatural(::fidl::WireResponse<
-            ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>
-                src);
-  static ::fidl::WireResponse<
-      ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>
-  ToWire(fidl::AnyArena& arena,
-         ::fidl::Response<
-             ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>
-             src);
+struct WireNaturalConversionTraits<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>, ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>> {
+  static ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError> ToNatural(::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError> src);
+  static ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError> ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError> src);
 };
 
 template <>
-struct NaturalTypeForWireType<::fidl::WireResponse<
-    ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>> {
-  using type = ::fidl::Response<
-      ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>;
+struct NaturalTypeForWireType<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>> {
+  using type = ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>;
 };
 template <>
-struct WireTypeForNaturalType<::fidl::Response<
-    ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>> {
-  using type = ::fidl::WireResponse<
-      ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>;
+struct WireTypeForNaturalType<::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>> {
+  using type = ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireResponse<
-        ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>,
-    ::fidl::Response<
-        ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>> {
-  static ::fidl::Response<
-      ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>
-  ToNatural(::fidl::WireResponse<
-            ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>
-                src);
-  static ::fidl::WireResponse<
-      ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>
-  ToWire(fidl::AnyArena& arena,
-         ::fidl::Response<
-             ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>
-             src);
+struct WireNaturalConversionTraits<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>, ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>> {
+  static ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayNamedComposed> ToNatural(::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed> src);
+  static ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed> ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayNamedComposed> src);
 };
 
 template <>
-struct NaturalTypeForWireType<::fidl::WireResponse<
-    ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>> {
-  using type = ::fidl::Response<
-      ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>;
+struct NaturalTypeForWireType<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>> {
+  using type = ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>;
 };
 template <>
-struct WireTypeForNaturalType<::fidl::Response<
-    ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>> {
-  using type = ::fidl::WireResponse<
-      ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>;
+struct WireTypeForNaturalType<::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>> {
+  using type = ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireResponse<
-        ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>,
-    ::fidl::Response<
-        ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>> {
-  static ::fidl::Response<
-      ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>
-  ToNatural(::fidl::WireResponse<
-            ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>
-                src);
-  static ::fidl::WireResponse<
-      ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>
-  ToWire(fidl::AnyArena& arena,
-         ::fidl::Response<
-             ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>
-             src);
+struct WireNaturalConversionTraits<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>, ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>> {
+  static ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError> ToNatural(::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError> src);
+  static ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError> ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError> src);
 };
 
 template <>
-struct NaturalTypeForWireType<::fidl::WireResponse<
-    ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>> {
-  using type = ::fidl::Response<
-      ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>;
+struct NaturalTypeForWireType<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>> {
+  using type = ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>;
 };
 template <>
-struct WireTypeForNaturalType<::fidl::Response<
-    ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>> {
-  using type = ::fidl::WireResponse<
-      ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>;
+struct WireTypeForNaturalType<::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>> {
+  using type = ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImport>,
-    ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayImport>> {
-  static ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayImport>
-  ToNatural(
-      ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImport>
-          src);
-  static ::fidl::WireResponse<
-      ::test_protocollayouts::MainProtocol::TwoWayImport>
-  ToWire(
-      fidl::AnyArena& arena,
-      ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayImport> src);
+struct WireNaturalConversionTraits<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImport>, ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayImport>> {
+  static ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayImport> ToNatural(::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImport> src);
+  static ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImport> ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayImport> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImport>> {
-  using type =
-      ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayImport>;
+struct NaturalTypeForWireType<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImport>> {
+  using type = ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayImport>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayImport>> {
-  using type =
-      ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImport>;
+struct WireTypeForNaturalType<::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayImport>> {
+  using type = ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImport>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireResponse<
-        ::test_protocollayouts::MainProtocol::TwoWayImportWithError>,
-    ::fidl::Response<
-        ::test_protocollayouts::MainProtocol::TwoWayImportWithError>> {
-  static ::fidl::Response<
-      ::test_protocollayouts::MainProtocol::TwoWayImportWithError>
-  ToNatural(::fidl::WireResponse<
-            ::test_protocollayouts::MainProtocol::TwoWayImportWithError>
-                src);
-  static ::fidl::WireResponse<
-      ::test_protocollayouts::MainProtocol::TwoWayImportWithError>
-  ToWire(fidl::AnyArena& arena,
-         ::fidl::Response<
-             ::test_protocollayouts::MainProtocol::TwoWayImportWithError>
-             src);
+struct WireNaturalConversionTraits<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImportWithError>, ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayImportWithError>> {
+  static ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayImportWithError> ToNatural(::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImportWithError> src);
+  static ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImportWithError> ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayImportWithError> src);
 };
 
 template <>
-struct NaturalTypeForWireType<::fidl::WireResponse<
-    ::test_protocollayouts::MainProtocol::TwoWayImportWithError>> {
-  using type = ::fidl::Response<
-      ::test_protocollayouts::MainProtocol::TwoWayImportWithError>;
+struct NaturalTypeForWireType<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImportWithError>> {
+  using type = ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayImportWithError>;
 };
 template <>
-struct WireTypeForNaturalType<::fidl::Response<
-    ::test_protocollayouts::MainProtocol::TwoWayImportWithError>> {
-  using type = ::fidl::WireResponse<
-      ::test_protocollayouts::MainProtocol::TwoWayImportWithError>;
+struct WireTypeForNaturalType<::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayImportWithError>> {
+  using type = ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImportWithError>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>,
-    ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayLocal>> {
-  static ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayLocal>
-  ToNatural(
-      ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>
-          src);
-  static ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>
-  ToWire(
-      fidl::AnyArena& arena,
-      ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayLocal> src);
+struct WireNaturalConversionTraits<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>, ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayLocal>> {
+  static ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayLocal> ToNatural(::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocal> src);
+  static ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocal> ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayLocal> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>> {
-  using type =
-      ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayLocal>;
+struct NaturalTypeForWireType<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>> {
+  using type = ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayLocal>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayLocal>> {
-  using type =
-      ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>;
+struct WireTypeForNaturalType<::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayLocal>> {
+  using type = ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireResponse<
-        ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>,
-    ::fidl::Response<
-        ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>> {
-  static ::fidl::Response<
-      ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>
-  ToNatural(::fidl::WireResponse<
-            ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>
-                src);
-  static ::fidl::WireResponse<
-      ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>
-  ToWire(fidl::AnyArena& arena,
-         ::fidl::Response<
-             ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>
-             src);
+struct WireNaturalConversionTraits<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>, ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>> {
+  static ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayLocalWithError> ToNatural(::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocalWithError> src);
+  static ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocalWithError> ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayLocalWithError> src);
 };
 
 template <>
-struct NaturalTypeForWireType<::fidl::WireResponse<
-    ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>> {
-  using type = ::fidl::Response<
-      ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>;
+struct NaturalTypeForWireType<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>> {
+  using type = ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>;
 };
 template <>
-struct WireTypeForNaturalType<::fidl::Response<
-    ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>> {
-  using type = ::fidl::WireResponse<
-      ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>;
+struct WireTypeForNaturalType<::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>> {
+  using type = ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>,
-    ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayAnon>> {
-  static ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayAnon>
-  ToNatural(
-      ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>
-          src);
-  static ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>
-  ToWire(
-      fidl::AnyArena& arena,
-      ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayAnon> src);
+struct WireNaturalConversionTraits<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>, ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayAnon>> {
+  static ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayAnon> ToNatural(::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon> src);
+  static ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon> ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayAnon> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>> {
-  using type =
-      ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayAnon>;
+struct NaturalTypeForWireType<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>> {
+  using type = ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayAnon>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayAnon>> {
-  using type =
-      ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>;
+struct WireTypeForNaturalType<::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayAnon>> {
+  using type = ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireResponse<
-        ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>,
-    ::fidl::Response<
-        ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>> {
-  static ::fidl::Response<
-      ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>
-  ToNatural(::fidl::WireResponse<
-            ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>
-                src);
-  static ::fidl::WireResponse<
-      ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>
-  ToWire(fidl::AnyArena& arena,
-         ::fidl::Response<
-             ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>
-             src);
+struct WireNaturalConversionTraits<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>, ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>> {
+  static ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayAnonWithError> ToNatural(::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonWithError> src);
+  static ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonWithError> ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayAnonWithError> src);
 };
 
 template <>
-struct NaturalTypeForWireType<::fidl::WireResponse<
-    ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>> {
-  using type = ::fidl::Response<
-      ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>;
+struct NaturalTypeForWireType<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>> {
+  using type = ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>;
 };
 template <>
-struct WireTypeForNaturalType<::fidl::Response<
-    ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>> {
-  using type = ::fidl::WireResponse<
-      ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>;
+struct WireTypeForNaturalType<::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>> {
+  using type = ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonComposed>,
-    ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonComposed>> {
-  static ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonComposed>
-  ToNatural(
-      ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonComposed>
-          src);
-  static ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonComposed>
-  ToWire(
-      fidl::AnyArena& arena,
-      ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonComposed> src);
+struct WireNaturalConversionTraits<::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonComposed>, ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonComposed>> {
+  static ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonComposed> ToNatural(::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonComposed> src);
+  static ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonComposed> ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonComposed> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonComposed>> {
-  using type =
-      ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonComposed>;
+struct NaturalTypeForWireType<::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonComposed>> {
+  using type = ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonComposed>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonComposed>> {
-  using type =
-      ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonComposed>;
+struct WireTypeForNaturalType<::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonComposed>> {
+  using type = ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonComposed>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireEvent<
-        ::test_protocollayouts::MainProtocol::OnAnonComposedWithError>,
-    ::fidl::Event<
-        ::test_protocollayouts::MainProtocol::OnAnonComposedWithError>> {
-  static ::fidl::Event<
-      ::test_protocollayouts::MainProtocol::OnAnonComposedWithError>
-  ToNatural(::fidl::WireEvent<
-            ::test_protocollayouts::MainProtocol::OnAnonComposedWithError>
-                src);
-  static ::fidl::WireEvent<
-      ::test_protocollayouts::MainProtocol::OnAnonComposedWithError>
-  ToWire(fidl::AnyArena& arena,
-         ::fidl::Event<
-             ::test_protocollayouts::MainProtocol::OnAnonComposedWithError>
-             src);
+struct WireNaturalConversionTraits<::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonComposedWithError>, ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonComposedWithError>> {
+  static ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonComposedWithError> ToNatural(::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonComposedWithError> src);
+  static ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonComposedWithError> ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonComposedWithError> src);
 };
 
 template <>
-struct NaturalTypeForWireType<::fidl::WireEvent<
-    ::test_protocollayouts::MainProtocol::OnAnonComposedWithError>> {
-  using type = ::fidl::Event<
-      ::test_protocollayouts::MainProtocol::OnAnonComposedWithError>;
+struct NaturalTypeForWireType<::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonComposedWithError>> {
+  using type = ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonComposedWithError>;
 };
 template <>
-struct WireTypeForNaturalType<::fidl::Event<
-    ::test_protocollayouts::MainProtocol::OnAnonComposedWithError>> {
-  using type = ::fidl::WireEvent<
-      ::test_protocollayouts::MainProtocol::OnAnonComposedWithError>;
+struct WireTypeForNaturalType<::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonComposedWithError>> {
+  using type = ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonComposedWithError>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnNamedComposed>,
-    ::fidl::Event<::test_protocollayouts::MainProtocol::OnNamedComposed>> {
-  static ::fidl::Event<::test_protocollayouts::MainProtocol::OnNamedComposed>
-  ToNatural(
-      ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnNamedComposed>
-          src);
-  static ::fidl::WireEvent<
-      ::test_protocollayouts::MainProtocol::OnNamedComposed>
-  ToWire(
-      fidl::AnyArena& arena,
-      ::fidl::Event<::test_protocollayouts::MainProtocol::OnNamedComposed> src);
+struct WireNaturalConversionTraits<::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnNamedComposed>, ::fidl::Event<::test_protocollayouts::MainProtocol::OnNamedComposed>> {
+  static ::fidl::Event<::test_protocollayouts::MainProtocol::OnNamedComposed> ToNatural(::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnNamedComposed> src);
+  static ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnNamedComposed> ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_protocollayouts::MainProtocol::OnNamedComposed> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnNamedComposed>> {
-  using type =
-      ::fidl::Event<::test_protocollayouts::MainProtocol::OnNamedComposed>;
+struct NaturalTypeForWireType<::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnNamedComposed>> {
+  using type = ::fidl::Event<::test_protocollayouts::MainProtocol::OnNamedComposed>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Event<::test_protocollayouts::MainProtocol::OnNamedComposed>> {
-  using type =
-      ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnNamedComposed>;
+struct WireTypeForNaturalType<::fidl::Event<::test_protocollayouts::MainProtocol::OnNamedComposed>> {
+  using type = ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnNamedComposed>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireEvent<
-        ::test_protocollayouts::MainProtocol::OnNamedComposedWithError>,
-    ::fidl::Event<
-        ::test_protocollayouts::MainProtocol::OnNamedComposedWithError>> {
-  static ::fidl::Event<
-      ::test_protocollayouts::MainProtocol::OnNamedComposedWithError>
-  ToNatural(::fidl::WireEvent<
-            ::test_protocollayouts::MainProtocol::OnNamedComposedWithError>
-                src);
-  static ::fidl::WireEvent<
-      ::test_protocollayouts::MainProtocol::OnNamedComposedWithError>
-  ToWire(fidl::AnyArena& arena,
-         ::fidl::Event<
-             ::test_protocollayouts::MainProtocol::OnNamedComposedWithError>
-             src);
+struct WireNaturalConversionTraits<::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnNamedComposedWithError>, ::fidl::Event<::test_protocollayouts::MainProtocol::OnNamedComposedWithError>> {
+  static ::fidl::Event<::test_protocollayouts::MainProtocol::OnNamedComposedWithError> ToNatural(::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnNamedComposedWithError> src);
+  static ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnNamedComposedWithError> ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_protocollayouts::MainProtocol::OnNamedComposedWithError> src);
 };
 
 template <>
-struct NaturalTypeForWireType<::fidl::WireEvent<
-    ::test_protocollayouts::MainProtocol::OnNamedComposedWithError>> {
-  using type = ::fidl::Event<
-      ::test_protocollayouts::MainProtocol::OnNamedComposedWithError>;
+struct NaturalTypeForWireType<::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnNamedComposedWithError>> {
+  using type = ::fidl::Event<::test_protocollayouts::MainProtocol::OnNamedComposedWithError>;
 };
 template <>
-struct WireTypeForNaturalType<::fidl::Event<
-    ::test_protocollayouts::MainProtocol::OnNamedComposedWithError>> {
-  using type = ::fidl::WireEvent<
-      ::test_protocollayouts::MainProtocol::OnNamedComposedWithError>;
+struct WireTypeForNaturalType<::fidl::Event<::test_protocollayouts::MainProtocol::OnNamedComposedWithError>> {
+  using type = ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnNamedComposedWithError>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnImport>,
-    ::fidl::Event<::test_protocollayouts::MainProtocol::OnImport>> {
-  static ::fidl::Event<::test_protocollayouts::MainProtocol::OnImport>
-  ToNatural(
-      ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnImport> src);
-  static ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnImport>
-  ToWire(fidl::AnyArena& arena,
-         ::fidl::Event<::test_protocollayouts::MainProtocol::OnImport> src);
+struct WireNaturalConversionTraits<::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnImport>, ::fidl::Event<::test_protocollayouts::MainProtocol::OnImport>> {
+  static ::fidl::Event<::test_protocollayouts::MainProtocol::OnImport> ToNatural(::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnImport> src);
+  static ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnImport> ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_protocollayouts::MainProtocol::OnImport> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnImport>> {
+struct NaturalTypeForWireType<::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnImport>> {
   using type = ::fidl::Event<::test_protocollayouts::MainProtocol::OnImport>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Event<::test_protocollayouts::MainProtocol::OnImport>> {
-  using type =
-      ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnImport>;
+struct WireTypeForNaturalType<::fidl::Event<::test_protocollayouts::MainProtocol::OnImport>> {
+  using type = ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnImport>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnImportWithError>,
-    ::fidl::Event<::test_protocollayouts::MainProtocol::OnImportWithError>> {
-  static ::fidl::Event<::test_protocollayouts::MainProtocol::OnImportWithError>
-  ToNatural(
-      ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnImportWithError>
-          src);
-  static ::fidl::WireEvent<
-      ::test_protocollayouts::MainProtocol::OnImportWithError>
-  ToWire(fidl::AnyArena& arena,
-         ::fidl::Event<::test_protocollayouts::MainProtocol::OnImportWithError>
-             src);
+struct WireNaturalConversionTraits<::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnImportWithError>, ::fidl::Event<::test_protocollayouts::MainProtocol::OnImportWithError>> {
+  static ::fidl::Event<::test_protocollayouts::MainProtocol::OnImportWithError> ToNatural(::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnImportWithError> src);
+  static ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnImportWithError> ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_protocollayouts::MainProtocol::OnImportWithError> src);
 };
 
 template <>
-struct NaturalTypeForWireType<::fidl::WireEvent<
-    ::test_protocollayouts::MainProtocol::OnImportWithError>> {
-  using type =
-      ::fidl::Event<::test_protocollayouts::MainProtocol::OnImportWithError>;
+struct NaturalTypeForWireType<::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnImportWithError>> {
+  using type = ::fidl::Event<::test_protocollayouts::MainProtocol::OnImportWithError>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Event<::test_protocollayouts::MainProtocol::OnImportWithError>> {
-  using type = ::fidl::WireEvent<
-      ::test_protocollayouts::MainProtocol::OnImportWithError>;
+struct WireTypeForNaturalType<::fidl::Event<::test_protocollayouts::MainProtocol::OnImportWithError>> {
+  using type = ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnImportWithError>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnLocal>,
-    ::fidl::Event<::test_protocollayouts::MainProtocol::OnLocal>> {
-  static ::fidl::Event<::test_protocollayouts::MainProtocol::OnLocal> ToNatural(
-      ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnLocal> src);
-  static ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnLocal>
-  ToWire(fidl::AnyArena& arena,
-         ::fidl::Event<::test_protocollayouts::MainProtocol::OnLocal> src);
+struct WireNaturalConversionTraits<::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnLocal>, ::fidl::Event<::test_protocollayouts::MainProtocol::OnLocal>> {
+  static ::fidl::Event<::test_protocollayouts::MainProtocol::OnLocal> ToNatural(::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnLocal> src);
+  static ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnLocal> ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_protocollayouts::MainProtocol::OnLocal> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnLocal>> {
+struct NaturalTypeForWireType<::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnLocal>> {
   using type = ::fidl::Event<::test_protocollayouts::MainProtocol::OnLocal>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Event<::test_protocollayouts::MainProtocol::OnLocal>> {
+struct WireTypeForNaturalType<::fidl::Event<::test_protocollayouts::MainProtocol::OnLocal>> {
   using type = ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnLocal>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnLocalWithError>,
-    ::fidl::Event<::test_protocollayouts::MainProtocol::OnLocalWithError>> {
-  static ::fidl::Event<::test_protocollayouts::MainProtocol::OnLocalWithError>
-  ToNatural(
-      ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnLocalWithError>
-          src);
-  static ::fidl::WireEvent<
-      ::test_protocollayouts::MainProtocol::OnLocalWithError>
-  ToWire(fidl::AnyArena& arena,
-         ::fidl::Event<::test_protocollayouts::MainProtocol::OnLocalWithError>
-             src);
+struct WireNaturalConversionTraits<::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnLocalWithError>, ::fidl::Event<::test_protocollayouts::MainProtocol::OnLocalWithError>> {
+  static ::fidl::Event<::test_protocollayouts::MainProtocol::OnLocalWithError> ToNatural(::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnLocalWithError> src);
+  static ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnLocalWithError> ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_protocollayouts::MainProtocol::OnLocalWithError> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnLocalWithError>> {
-  using type =
-      ::fidl::Event<::test_protocollayouts::MainProtocol::OnLocalWithError>;
+struct NaturalTypeForWireType<::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnLocalWithError>> {
+  using type = ::fidl::Event<::test_protocollayouts::MainProtocol::OnLocalWithError>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Event<::test_protocollayouts::MainProtocol::OnLocalWithError>> {
-  using type =
-      ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnLocalWithError>;
+struct WireTypeForNaturalType<::fidl::Event<::test_protocollayouts::MainProtocol::OnLocalWithError>> {
+  using type = ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnLocalWithError>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnon>,
-    ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnon>> {
-  static ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnon> ToNatural(
-      ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnon> src);
-  static ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnon> ToWire(
-      fidl::AnyArena& arena,
-      ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnon> src);
+struct WireNaturalConversionTraits<::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnon>, ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnon>> {
+  static ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnon> ToNatural(::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnon> src);
+  static ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnon> ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnon> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnon>> {
+struct NaturalTypeForWireType<::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnon>> {
   using type = ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnon>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnon>> {
+struct WireTypeForNaturalType<::fidl::Event<::test_protocollayouts::MainProtocol::OnAnon>> {
   using type = ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnon>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonWithError>,
-    ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonWithError>> {
-  static ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonWithError>
-  ToNatural(
-      ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonWithError>
-          src);
-  static ::fidl::WireEvent<
-      ::test_protocollayouts::MainProtocol::OnAnonWithError>
-  ToWire(
-      fidl::AnyArena& arena,
-      ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonWithError> src);
+struct WireNaturalConversionTraits<::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonWithError>, ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonWithError>> {
+  static ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonWithError> ToNatural(::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonWithError> src);
+  static ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonWithError> ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonWithError> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonWithError>> {
-  using type =
-      ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonWithError>;
+struct NaturalTypeForWireType<::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonWithError>> {
+  using type = ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonWithError>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonWithError>> {
-  using type =
-      ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonWithError>;
+struct WireTypeForNaturalType<::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonWithError>> {
+  using type = ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonWithError>;
 };
 #endif  // __Fuchsia__
 }  // namespace internal

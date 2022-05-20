@@ -18,17 +18,16 @@
 
 #endif  // __Fuchsia__
 
-::test_protocols::WithErrorSyntaxResponseAsStructResponse::Storage_
-test_protocols::WithErrorSyntaxResponseAsStructResponse::CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.a),
-                  ::fidl::internal::NaturalClone(storage_.b),
-                  ::fidl::internal::NaturalClone(storage_.c)};
+::test_protocols::WithErrorSyntaxResponseAsStructResponse::Storage_ test_protocols::WithErrorSyntaxResponseAsStructResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.a),
+      ::fidl::internal::NaturalClone(storage_.b),
+      ::fidl::internal::NaturalClone(storage_.c)};
 }
 
-::test_protocols::WithErrorSyntaxResponseAsStructTopResponse::Storage_
-test_protocols::WithErrorSyntaxResponseAsStructTopResponse::CloneStorage_()
-    const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.result)};
+::test_protocols::WithErrorSyntaxResponseAsStructTopResponse::Storage_ test_protocols::WithErrorSyntaxResponseAsStructTopResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.result)};
 }
 
 #ifdef __Fuchsia__
@@ -39,96 +38,80 @@ test_protocols::WithErrorSyntaxResponseAsStructTopResponse::CloneStorage_()
 
 #endif  // __Fuchsia__
 
-::test_protocols::WithErrorSyntaxErrorAsPrimitiveResponse::Storage_
-test_protocols::WithErrorSyntaxErrorAsPrimitiveResponse::CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.__reserved)};
+::test_protocols::WithErrorSyntaxErrorAsPrimitiveResponse::Storage_ test_protocols::WithErrorSyntaxErrorAsPrimitiveResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.__reserved)};
 }
 
-::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse::Storage_
-test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse::CloneStorage_()
-    const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.result)};
+::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse::Storage_ test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.result)};
 }
 
-::test_protocols::WithErrorSyntaxErrorAsEnumResponse::Storage_
-test_protocols::WithErrorSyntaxErrorAsEnumResponse::CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.__reserved)};
+::test_protocols::WithErrorSyntaxErrorAsEnumResponse::Storage_ test_protocols::WithErrorSyntaxErrorAsEnumResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.__reserved)};
 }
 
-::test_protocols::
-    WithAndWithoutRequestResponseWithRequestWithResponseTopResponse::Storage_
-    test_protocols::
-        WithAndWithoutRequestResponseWithRequestWithResponseTopResponse::
-            CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.ret)};
+::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse::Storage_ test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.ret)};
 }
 
-::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseRequest::
-    Storage_
-    test_protocols::
-        WithAndWithoutRequestResponseWithRequestWithResponseRequest::
-            CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.arg)};
+::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseRequest::Storage_ test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseRequest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.arg)};
 }
 
-::test_protocols::WithAndWithoutRequestResponseWithRequestNoResponseRequest::
-    Storage_
-    test_protocols::WithAndWithoutRequestResponseWithRequestNoResponseRequest::
-        CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.arg)};
+::test_protocols::WithAndWithoutRequestResponseWithRequestNoResponseRequest::Storage_ test_protocols::WithAndWithoutRequestResponseWithRequestNoResponseRequest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.arg)};
 }
 
-::test_protocols::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest::
-    Storage_
-    test_protocols::
-        WithAndWithoutRequestResponseWithRequestEmptyResponseRequest::
-            CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.arg)};
+::test_protocols::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest::Storage_ test_protocols::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.arg)};
 }
 
-::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest::Storage_
-test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest::
-    CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.ret)};
+::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest::Storage_ test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.ret)};
 }
 
-::test_protocols::
-    WithAndWithoutRequestResponseNoRequestWithResponseTopResponse::Storage_
-    test_protocols::
-        WithAndWithoutRequestResponseNoRequestWithResponseTopResponse::
-            CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.ret)};
+::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse::Storage_ test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.ret)};
 }
 
-::test_protocols::TransitionalRequestTopResponse::Storage_
-test_protocols::TransitionalRequestTopResponse::CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.y)};
+::test_protocols::TransitionalRequestTopResponse::Storage_ test_protocols::TransitionalRequestTopResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.y)};
 }
 
-::test_protocols::TransitionalRequestRequest::Storage_
-test_protocols::TransitionalRequestRequest::CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.x)};
+::test_protocols::TransitionalRequestRequest::Storage_ test_protocols::TransitionalRequestRequest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.x)};
 }
 
-::test_protocols::TransitionalOneWayRequest::Storage_
-test_protocols::TransitionalOneWayRequest::CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.x)};
+::test_protocols::TransitionalOneWayRequest::Storage_ test_protocols::TransitionalOneWayRequest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.x)};
 }
 
-::test_protocols::TransitionalEventRequest::Storage_
-test_protocols::TransitionalEventRequest::CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.x)};
+::test_protocols::TransitionalEventRequest::Storage_ test_protocols::TransitionalEventRequest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.x)};
 }
 
-::test_protocols::MethodWithUnionUnionMethodRequest::Storage_
-test_protocols::MethodWithUnionUnionMethodRequest::CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.u)};
+::test_protocols::MethodWithUnionUnionMethodRequest::Storage_ test_protocols::MethodWithUnionUnionMethodRequest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.u)};
 }
 
-::test_protocols::SyscallProtocolMethodCRequest::Storage_
-test_protocols::SyscallProtocolMethodCRequest::CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.a),
-                  ::fidl::internal::NaturalClone(storage_.b)};
+::test_protocols::SyscallProtocolMethodCRequest::Storage_ test_protocols::SyscallProtocolMethodCRequest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.a),
+      ::fidl::internal::NaturalClone(storage_.b)};
 }
 
 #ifdef __Fuchsia__
@@ -143,23 +126,23 @@ test_protocols::SyscallProtocolMethodCRequest::CloneStorage_() const {
 
 #endif  // __Fuchsia__
 
-::test_protocols::ManyParametersFifteenRequest::Storage_
-test_protocols::ManyParametersFifteenRequest::CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.p1),
-                  ::fidl::internal::NaturalClone(storage_.p2),
-                  ::fidl::internal::NaturalClone(storage_.p3),
-                  ::fidl::internal::NaturalClone(storage_.p4),
-                  ::fidl::internal::NaturalClone(storage_.p5),
-                  ::fidl::internal::NaturalClone(storage_.p6),
-                  ::fidl::internal::NaturalClone(storage_.p7),
-                  ::fidl::internal::NaturalClone(storage_.p8),
-                  ::fidl::internal::NaturalClone(storage_.p9),
-                  ::fidl::internal::NaturalClone(storage_.p10),
-                  ::fidl::internal::NaturalClone(storage_.p11),
-                  ::fidl::internal::NaturalClone(storage_.p12),
-                  ::fidl::internal::NaturalClone(storage_.p13),
-                  ::fidl::internal::NaturalClone(storage_.p14),
-                  ::fidl::internal::NaturalClone(storage_.p15)};
+::test_protocols::ManyParametersFifteenRequest::Storage_ test_protocols::ManyParametersFifteenRequest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.p1),
+      ::fidl::internal::NaturalClone(storage_.p2),
+      ::fidl::internal::NaturalClone(storage_.p3),
+      ::fidl::internal::NaturalClone(storage_.p4),
+      ::fidl::internal::NaturalClone(storage_.p5),
+      ::fidl::internal::NaturalClone(storage_.p6),
+      ::fidl::internal::NaturalClone(storage_.p7),
+      ::fidl::internal::NaturalClone(storage_.p8),
+      ::fidl::internal::NaturalClone(storage_.p9),
+      ::fidl::internal::NaturalClone(storage_.p10),
+      ::fidl::internal::NaturalClone(storage_.p11),
+      ::fidl::internal::NaturalClone(storage_.p12),
+      ::fidl::internal::NaturalClone(storage_.p13),
+      ::fidl::internal::NaturalClone(storage_.p14),
+      ::fidl::internal::NaturalClone(storage_.p15)};
 }
 
 #ifdef __Fuchsia__
@@ -178,9 +161,9 @@ test_protocols::ManyParametersFifteenRequest::CloneStorage_() const {
 
 #endif  // __Fuchsia__
 
-::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse::Storage_
-test_protocols::WithErrorSyntaxErrorAsEnumTopResponse::CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.result)};
+::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse::Storage_ test_protocols::WithErrorSyntaxErrorAsEnumTopResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.result)};
 }
 
 #ifdef __Fuchsia__
@@ -195,32 +178,30 @@ test_protocols::WithErrorSyntaxErrorAsEnumTopResponse::CloneStorage_() const {
 
 #endif  // __Fuchsia__
 
-::test_protocols::ChannelProtocolMethodBTopResponse::Storage_
-test_protocols::ChannelProtocolMethodBTopResponse::CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.result)};
+::test_protocols::ChannelProtocolMethodBTopResponse::Storage_ test_protocols::ChannelProtocolMethodBTopResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.result)};
 }
 
-::test_protocols::ChannelProtocolMethodBRequest::Storage_
-test_protocols::ChannelProtocolMethodBRequest::CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.a),
-                  ::fidl::internal::NaturalClone(storage_.b)};
+::test_protocols::ChannelProtocolMethodBRequest::Storage_ test_protocols::ChannelProtocolMethodBRequest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.a),
+      ::fidl::internal::NaturalClone(storage_.b)};
 }
 
-::test_protocols::ChannelProtocolMethodARequest::Storage_
-test_protocols::ChannelProtocolMethodARequest::CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.a),
-                  ::fidl::internal::NaturalClone(storage_.b)};
+::test_protocols::ChannelProtocolMethodARequest::Storage_ test_protocols::ChannelProtocolMethodARequest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.a),
+      ::fidl::internal::NaturalClone(storage_.b)};
 }
 
-::test_protocols::ChannelProtocolEventARequest::Storage_
-test_protocols::ChannelProtocolEventARequest::CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.a),
-                  ::fidl::internal::NaturalClone(storage_.b)};
+::test_protocols::ChannelProtocolEventARequest::Storage_ test_protocols::ChannelProtocolEventARequest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.a),
+      ::fidl::internal::NaturalClone(storage_.b)};
 }
 
-std::shared_ptr<
-    ::test_protocols::WithErrorSyntaxResponseAsStructResult::Storage_>
-test_protocols::WithErrorSyntaxResponseAsStructResult::CloneStorage_() const {
+std::shared_ptr<::test_protocols::WithErrorSyntaxResponseAsStructResult::Storage_> test_protocols::WithErrorSyntaxResponseAsStructResult::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
@@ -240,9 +221,7 @@ test_protocols::WithErrorSyntaxResponseAsStructResult::CloneStorage_() const {
 
 #endif  // __Fuchsia__
 
-std::shared_ptr<
-    ::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult::Storage_>
-test_protocols::WithErrorSyntaxErrorAsPrimitiveResult::CloneStorage_() const {
+std::shared_ptr<::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult::Storage_> test_protocols::WithErrorSyntaxErrorAsPrimitiveResult::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
@@ -258,8 +237,7 @@ test_protocols::WithErrorSyntaxErrorAsPrimitiveResult::CloneStorage_() const {
   }
 }
 
-std::shared_ptr<::test_protocols::TheUnion::Storage_>
-test_protocols::TheUnion::CloneStorage_() const {
+std::shared_ptr<::test_protocols::TheUnion::Storage_> test_protocols::TheUnion::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
@@ -271,8 +249,7 @@ test_protocols::TheUnion::CloneStorage_() const {
   }
 }
 
-std::shared_ptr<::test_protocols::WithErrorSyntaxErrorAsEnumResult::Storage_>
-test_protocols::WithErrorSyntaxErrorAsEnumResult::CloneStorage_() const {
+std::shared_ptr<::test_protocols::WithErrorSyntaxErrorAsEnumResult::Storage_> test_protocols::WithErrorSyntaxErrorAsEnumResult::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:

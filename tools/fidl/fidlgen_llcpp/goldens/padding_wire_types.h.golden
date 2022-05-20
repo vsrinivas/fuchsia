@@ -200,8 +200,7 @@ namespace fidl {
 // TODO(fxbug.dev/95833) Remove this.
 template <>
 struct DeprecatedCTypeTraits<::test_padding::wire::Padding7ByteMiddle> {
-  static constexpr const fidl_type_t* kType =
-      &::test_padding::wire::test_padding_Padding7ByteMiddleTable;
+  static constexpr const fidl_type_t* kType = &::test_padding::wire::test_padding_Padding7ByteMiddleTable;
 };
 
 template <>
@@ -217,80 +216,48 @@ struct TypeTraits<::test_padding::wire::Padding7ByteMiddle> {
 };
 
 template <>
-struct IsFidlType<::test_padding::wire::Padding7ByteMiddle>
-    : public std::true_type {};
+struct IsFidlType<::test_padding::wire::Padding7ByteMiddle> : public std::true_type {};
 template <>
-struct IsStruct<::test_padding::wire::Padding7ByteMiddle>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::test_padding::wire::Padding7ByteMiddle>);
+struct IsStruct<::test_padding::wire::Padding7ByteMiddle> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_padding::wire::Padding7ByteMiddle>);
 static_assert(offsetof(::test_padding::wire::Padding7ByteMiddle, a) == 0);
 static_assert(offsetof(::test_padding::wire::Padding7ByteMiddle, b) == 8);
-static_assert(
-    sizeof(::test_padding::wire::Padding7ByteMiddle) ==
-    TypeTraits<::test_padding::wire::Padding7ByteMiddle>::kPrimarySize);
+static_assert(sizeof(::test_padding::wire::Padding7ByteMiddle) == TypeTraits<::test_padding::wire::Padding7ByteMiddle>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::test_padding::wire::Padding7ByteMiddle,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_padding::wire::Padding7ByteMiddle, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 16;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::WireStructMemberCodingInfo<
-          uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(),
-      ::fidl::internal::WireStructMemberCodingInfo<
-          uint64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(), ::fidl::internal::WireStructMemberCodingInfo<uint64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
   static constexpr bool kHasPadding = true;
-  using Base =
-      WireStructCodingTraitsBase<::test_padding::wire::Padding7ByteMiddle,
-                                 ::fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_padding::wire::Padding7ByteMiddle, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
-  static void Encode(internal::WireEncoder* encoder,
-                     ::test_padding::wire::Padding7ByteMiddle* value,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Encode(
+      internal::WireEncoder* encoder, ::test_padding::wire::Padding7ByteMiddle* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value,
-             sizeof(::test_padding::wire::Padding7ByteMiddle));
+      memcpy(position.As<void>(), value, sizeof(::test_padding::wire::Padding7ByteMiddle));
     } else {
       internal::WireZeroPadding<uint64_t>(encoder, position + 0);
-      internal::WireCodingTraits<uint8_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->a,
-                                                      position + 0,
-                                                      recursion_depth);
-      internal::WireCodingTraits<uint64_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->b,
-                                                      position + 8,
-                                                      recursion_depth);
+      internal::WireCodingTraits<uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->a, position + 0, recursion_depth);
+      internal::WireCodingTraits<uint64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->b, position + 8, recursion_depth);
     }
   }
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (!Base::are_members_memcpy_compatible) {
-      internal::WireCodingTraits<uint8_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 0,
-                                                      recursion_depth);
-      internal::WireCodingTraits<uint64_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 8,
-                                                      recursion_depth);
+      internal::WireCodingTraits<uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 0, recursion_depth);
+      internal::WireCodingTraits<uint64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 8, recursion_depth);
     }
-    internal::WireCheckPadding<uint64_t>(decoder, position + 0,
-                                         0xffffffffffffff00ull);
+    internal::WireCheckPadding<uint64_t>(decoder, position + 0, 0xffffffffffffff00ull);
   }
 };
 
 // TODO(fxbug.dev/95833) Remove this.
 template <>
 struct DeprecatedCTypeTraits<::test_padding::wire::Padding7ByteEnd> {
-  static constexpr const fidl_type_t* kType =
-      &::test_padding::wire::test_padding_Padding7ByteEndTable;
+  static constexpr const fidl_type_t* kType = &::test_padding::wire::test_padding_Padding7ByteEndTable;
 };
 
 template <>
@@ -306,78 +273,48 @@ struct TypeTraits<::test_padding::wire::Padding7ByteEnd> {
 };
 
 template <>
-struct IsFidlType<::test_padding::wire::Padding7ByteEnd>
-    : public std::true_type {};
+struct IsFidlType<::test_padding::wire::Padding7ByteEnd> : public std::true_type {};
 template <>
-struct IsStruct<::test_padding::wire::Padding7ByteEnd> : public std::true_type {
-};
+struct IsStruct<::test_padding::wire::Padding7ByteEnd> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test_padding::wire::Padding7ByteEnd>);
 static_assert(offsetof(::test_padding::wire::Padding7ByteEnd, a) == 0);
 static_assert(offsetof(::test_padding::wire::Padding7ByteEnd, b) == 8);
-static_assert(sizeof(::test_padding::wire::Padding7ByteEnd) ==
-              TypeTraits<::test_padding::wire::Padding7ByteEnd>::kPrimarySize);
+static_assert(sizeof(::test_padding::wire::Padding7ByteEnd) == TypeTraits<::test_padding::wire::Padding7ByteEnd>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::test_padding::wire::Padding7ByteEnd,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_padding::wire::Padding7ByteEnd, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 16;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::WireStructMemberCodingInfo<
-          uint64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(),
-      ::fidl::internal::WireStructMemberCodingInfo<
-          uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<uint64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(), ::fidl::internal::WireStructMemberCodingInfo<uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
   static constexpr bool kHasPadding = true;
-  using Base =
-      WireStructCodingTraitsBase<::test_padding::wire::Padding7ByteEnd,
-                                 ::fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_padding::wire::Padding7ByteEnd, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
-  static void Encode(internal::WireEncoder* encoder,
-                     ::test_padding::wire::Padding7ByteEnd* value,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Encode(
+      internal::WireEncoder* encoder, ::test_padding::wire::Padding7ByteEnd* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value,
-             sizeof(::test_padding::wire::Padding7ByteEnd));
+      memcpy(position.As<void>(), value, sizeof(::test_padding::wire::Padding7ByteEnd));
     } else {
       internal::WireZeroPadding<uint64_t>(encoder, position + 8);
-      internal::WireCodingTraits<uint64_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->a,
-                                                      position + 0,
-                                                      recursion_depth);
-      internal::WireCodingTraits<uint8_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->b,
-                                                      position + 8,
-                                                      recursion_depth);
+      internal::WireCodingTraits<uint64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->a, position + 0, recursion_depth);
+      internal::WireCodingTraits<uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->b, position + 8, recursion_depth);
     }
   }
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (!Base::are_members_memcpy_compatible) {
-      internal::WireCodingTraits<uint64_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 0,
-                                                      recursion_depth);
-      internal::WireCodingTraits<uint8_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 8,
-                                                      recursion_depth);
+      internal::WireCodingTraits<uint64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 0, recursion_depth);
+      internal::WireCodingTraits<uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 8, recursion_depth);
     }
-    internal::WireCheckPadding<uint64_t>(decoder, position + 8,
-                                         0xffffffffffffff00ull);
+    internal::WireCheckPadding<uint64_t>(decoder, position + 8, 0xffffffffffffff00ull);
   }
 };
 
 // TODO(fxbug.dev/95833) Remove this.
 template <>
 struct DeprecatedCTypeTraits<::test_padding::wire::Padding6ByteMiddle> {
-  static constexpr const fidl_type_t* kType =
-      &::test_padding::wire::test_padding_Padding6ByteMiddleTable;
+  static constexpr const fidl_type_t* kType = &::test_padding::wire::test_padding_Padding6ByteMiddleTable;
 };
 
 template <>
@@ -393,80 +330,48 @@ struct TypeTraits<::test_padding::wire::Padding6ByteMiddle> {
 };
 
 template <>
-struct IsFidlType<::test_padding::wire::Padding6ByteMiddle>
-    : public std::true_type {};
+struct IsFidlType<::test_padding::wire::Padding6ByteMiddle> : public std::true_type {};
 template <>
-struct IsStruct<::test_padding::wire::Padding6ByteMiddle>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::test_padding::wire::Padding6ByteMiddle>);
+struct IsStruct<::test_padding::wire::Padding6ByteMiddle> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_padding::wire::Padding6ByteMiddle>);
 static_assert(offsetof(::test_padding::wire::Padding6ByteMiddle, a) == 0);
 static_assert(offsetof(::test_padding::wire::Padding6ByteMiddle, b) == 8);
-static_assert(
-    sizeof(::test_padding::wire::Padding6ByteMiddle) ==
-    TypeTraits<::test_padding::wire::Padding6ByteMiddle>::kPrimarySize);
+static_assert(sizeof(::test_padding::wire::Padding6ByteMiddle) == TypeTraits<::test_padding::wire::Padding6ByteMiddle>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::test_padding::wire::Padding6ByteMiddle,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_padding::wire::Padding6ByteMiddle, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 16;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::WireStructMemberCodingInfo<
-          uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(),
-      ::fidl::internal::WireStructMemberCodingInfo<
-          uint64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(), ::fidl::internal::WireStructMemberCodingInfo<uint64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
   static constexpr bool kHasPadding = true;
-  using Base =
-      WireStructCodingTraitsBase<::test_padding::wire::Padding6ByteMiddle,
-                                 ::fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_padding::wire::Padding6ByteMiddle, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
-  static void Encode(internal::WireEncoder* encoder,
-                     ::test_padding::wire::Padding6ByteMiddle* value,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Encode(
+      internal::WireEncoder* encoder, ::test_padding::wire::Padding6ByteMiddle* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value,
-             sizeof(::test_padding::wire::Padding6ByteMiddle));
+      memcpy(position.As<void>(), value, sizeof(::test_padding::wire::Padding6ByteMiddle));
     } else {
       internal::WireZeroPadding<uint64_t>(encoder, position + 0);
-      internal::WireCodingTraits<uint16_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->a,
-                                                      position + 0,
-                                                      recursion_depth);
-      internal::WireCodingTraits<uint64_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->b,
-                                                      position + 8,
-                                                      recursion_depth);
+      internal::WireCodingTraits<uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->a, position + 0, recursion_depth);
+      internal::WireCodingTraits<uint64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->b, position + 8, recursion_depth);
     }
   }
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (!Base::are_members_memcpy_compatible) {
-      internal::WireCodingTraits<uint16_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 0,
-                                                      recursion_depth);
-      internal::WireCodingTraits<uint64_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 8,
-                                                      recursion_depth);
+      internal::WireCodingTraits<uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 0, recursion_depth);
+      internal::WireCodingTraits<uint64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 8, recursion_depth);
     }
-    internal::WireCheckPadding<uint64_t>(decoder, position + 0,
-                                         0xffffffffffff0000ull);
+    internal::WireCheckPadding<uint64_t>(decoder, position + 0, 0xffffffffffff0000ull);
   }
 };
 
 // TODO(fxbug.dev/95833) Remove this.
 template <>
 struct DeprecatedCTypeTraits<::test_padding::wire::Padding6ByteEnd> {
-  static constexpr const fidl_type_t* kType =
-      &::test_padding::wire::test_padding_Padding6ByteEndTable;
+  static constexpr const fidl_type_t* kType = &::test_padding::wire::test_padding_Padding6ByteEndTable;
 };
 
 template <>
@@ -482,78 +387,48 @@ struct TypeTraits<::test_padding::wire::Padding6ByteEnd> {
 };
 
 template <>
-struct IsFidlType<::test_padding::wire::Padding6ByteEnd>
-    : public std::true_type {};
+struct IsFidlType<::test_padding::wire::Padding6ByteEnd> : public std::true_type {};
 template <>
-struct IsStruct<::test_padding::wire::Padding6ByteEnd> : public std::true_type {
-};
+struct IsStruct<::test_padding::wire::Padding6ByteEnd> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test_padding::wire::Padding6ByteEnd>);
 static_assert(offsetof(::test_padding::wire::Padding6ByteEnd, a) == 0);
 static_assert(offsetof(::test_padding::wire::Padding6ByteEnd, b) == 8);
-static_assert(sizeof(::test_padding::wire::Padding6ByteEnd) ==
-              TypeTraits<::test_padding::wire::Padding6ByteEnd>::kPrimarySize);
+static_assert(sizeof(::test_padding::wire::Padding6ByteEnd) == TypeTraits<::test_padding::wire::Padding6ByteEnd>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::test_padding::wire::Padding6ByteEnd,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_padding::wire::Padding6ByteEnd, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 16;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::WireStructMemberCodingInfo<
-          uint64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(),
-      ::fidl::internal::WireStructMemberCodingInfo<
-          uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<uint64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(), ::fidl::internal::WireStructMemberCodingInfo<uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
   static constexpr bool kHasPadding = true;
-  using Base =
-      WireStructCodingTraitsBase<::test_padding::wire::Padding6ByteEnd,
-                                 ::fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_padding::wire::Padding6ByteEnd, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
-  static void Encode(internal::WireEncoder* encoder,
-                     ::test_padding::wire::Padding6ByteEnd* value,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Encode(
+      internal::WireEncoder* encoder, ::test_padding::wire::Padding6ByteEnd* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value,
-             sizeof(::test_padding::wire::Padding6ByteEnd));
+      memcpy(position.As<void>(), value, sizeof(::test_padding::wire::Padding6ByteEnd));
     } else {
       internal::WireZeroPadding<uint64_t>(encoder, position + 8);
-      internal::WireCodingTraits<uint64_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->a,
-                                                      position + 0,
-                                                      recursion_depth);
-      internal::WireCodingTraits<uint16_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->b,
-                                                      position + 8,
-                                                      recursion_depth);
+      internal::WireCodingTraits<uint64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->a, position + 0, recursion_depth);
+      internal::WireCodingTraits<uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->b, position + 8, recursion_depth);
     }
   }
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (!Base::are_members_memcpy_compatible) {
-      internal::WireCodingTraits<uint64_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 0,
-                                                      recursion_depth);
-      internal::WireCodingTraits<uint16_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 8,
-                                                      recursion_depth);
+      internal::WireCodingTraits<uint64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 0, recursion_depth);
+      internal::WireCodingTraits<uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 8, recursion_depth);
     }
-    internal::WireCheckPadding<uint64_t>(decoder, position + 8,
-                                         0xffffffffffff0000ull);
+    internal::WireCheckPadding<uint64_t>(decoder, position + 8, 0xffffffffffff0000ull);
   }
 };
 
 // TODO(fxbug.dev/95833) Remove this.
 template <>
 struct DeprecatedCTypeTraits<::test_padding::wire::Padding5ByteMiddle> {
-  static constexpr const fidl_type_t* kType =
-      &::test_padding::wire::test_padding_Padding5ByteMiddleTable;
+  static constexpr const fidl_type_t* kType = &::test_padding::wire::test_padding_Padding5ByteMiddleTable;
 };
 
 template <>
@@ -569,92 +444,52 @@ struct TypeTraits<::test_padding::wire::Padding5ByteMiddle> {
 };
 
 template <>
-struct IsFidlType<::test_padding::wire::Padding5ByteMiddle>
-    : public std::true_type {};
+struct IsFidlType<::test_padding::wire::Padding5ByteMiddle> : public std::true_type {};
 template <>
-struct IsStruct<::test_padding::wire::Padding5ByteMiddle>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::test_padding::wire::Padding5ByteMiddle>);
+struct IsStruct<::test_padding::wire::Padding5ByteMiddle> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_padding::wire::Padding5ByteMiddle>);
 static_assert(offsetof(::test_padding::wire::Padding5ByteMiddle, a) == 0);
 static_assert(offsetof(::test_padding::wire::Padding5ByteMiddle, b) == 2);
 static_assert(offsetof(::test_padding::wire::Padding5ByteMiddle, c) == 8);
-static_assert(
-    sizeof(::test_padding::wire::Padding5ByteMiddle) ==
-    TypeTraits<::test_padding::wire::Padding5ByteMiddle>::kPrimarySize);
+static_assert(sizeof(::test_padding::wire::Padding5ByteMiddle) == TypeTraits<::test_padding::wire::Padding5ByteMiddle>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::test_padding::wire::Padding5ByteMiddle,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_padding::wire::Padding5ByteMiddle, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 16;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::WireStructMemberCodingInfo<
-          uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(),
-      ::fidl::internal::WireStructMemberCodingInfo<
-          uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(),
-      ::fidl::internal::WireStructMemberCodingInfo<
-          uint64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(), ::fidl::internal::WireStructMemberCodingInfo<uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(), ::fidl::internal::WireStructMemberCodingInfo<uint64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
   static constexpr bool kHasPadding = true;
-  using Base =
-      WireStructCodingTraitsBase<::test_padding::wire::Padding5ByteMiddle,
-                                 ::fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_padding::wire::Padding5ByteMiddle, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
-  static void Encode(internal::WireEncoder* encoder,
-                     ::test_padding::wire::Padding5ByteMiddle* value,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Encode(
+      internal::WireEncoder* encoder, ::test_padding::wire::Padding5ByteMiddle* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value,
-             sizeof(::test_padding::wire::Padding5ByteMiddle));
+      memcpy(position.As<void>(), value, sizeof(::test_padding::wire::Padding5ByteMiddle));
     } else {
       internal::WireZeroPadding<uint64_t>(encoder, position + 0);
-      internal::WireCodingTraits<uint16_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->a,
-                                                      position + 0,
-                                                      recursion_depth);
-      internal::WireCodingTraits<uint8_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->b,
-                                                      position + 2,
-                                                      recursion_depth);
-      internal::WireCodingTraits<uint64_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->c,
-                                                      position + 8,
-                                                      recursion_depth);
+      internal::WireCodingTraits<uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->a, position + 0, recursion_depth);
+      internal::WireCodingTraits<uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->b, position + 2, recursion_depth);
+      internal::WireCodingTraits<uint64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->c, position + 8, recursion_depth);
     }
   }
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (!Base::are_members_memcpy_compatible) {
-      internal::WireCodingTraits<uint16_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 0,
-                                                      recursion_depth);
-      internal::WireCodingTraits<uint8_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 2,
-                                                      recursion_depth);
-      internal::WireCodingTraits<uint64_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 8,
-                                                      recursion_depth);
+      internal::WireCodingTraits<uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 0, recursion_depth);
+      internal::WireCodingTraits<uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 2, recursion_depth);
+      internal::WireCodingTraits<uint64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 8, recursion_depth);
     }
-    internal::WireCheckPadding<uint64_t>(decoder, position + 0,
-                                         0xffffffffff000000ull);
+    internal::WireCheckPadding<uint64_t>(decoder, position + 0, 0xffffffffff000000ull);
   }
 };
 
 // TODO(fxbug.dev/95833) Remove this.
 template <>
 struct DeprecatedCTypeTraits<::test_padding::wire::Padding5ByteEnd> {
-  static constexpr const fidl_type_t* kType =
-      &::test_padding::wire::test_padding_Padding5ByteEndTable;
+  static constexpr const fidl_type_t* kType = &::test_padding::wire::test_padding_Padding5ByteEndTable;
 };
 
 template <>
@@ -670,90 +505,52 @@ struct TypeTraits<::test_padding::wire::Padding5ByteEnd> {
 };
 
 template <>
-struct IsFidlType<::test_padding::wire::Padding5ByteEnd>
-    : public std::true_type {};
+struct IsFidlType<::test_padding::wire::Padding5ByteEnd> : public std::true_type {};
 template <>
-struct IsStruct<::test_padding::wire::Padding5ByteEnd> : public std::true_type {
-};
+struct IsStruct<::test_padding::wire::Padding5ByteEnd> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test_padding::wire::Padding5ByteEnd>);
 static_assert(offsetof(::test_padding::wire::Padding5ByteEnd, a) == 0);
 static_assert(offsetof(::test_padding::wire::Padding5ByteEnd, b) == 8);
 static_assert(offsetof(::test_padding::wire::Padding5ByteEnd, c) == 10);
-static_assert(sizeof(::test_padding::wire::Padding5ByteEnd) ==
-              TypeTraits<::test_padding::wire::Padding5ByteEnd>::kPrimarySize);
+static_assert(sizeof(::test_padding::wire::Padding5ByteEnd) == TypeTraits<::test_padding::wire::Padding5ByteEnd>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::test_padding::wire::Padding5ByteEnd,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_padding::wire::Padding5ByteEnd, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 16;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::WireStructMemberCodingInfo<
-          uint64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(),
-      ::fidl::internal::WireStructMemberCodingInfo<
-          uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(),
-      ::fidl::internal::WireStructMemberCodingInfo<
-          uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<uint64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(), ::fidl::internal::WireStructMemberCodingInfo<uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(), ::fidl::internal::WireStructMemberCodingInfo<uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
   static constexpr bool kHasPadding = true;
-  using Base =
-      WireStructCodingTraitsBase<::test_padding::wire::Padding5ByteEnd,
-                                 ::fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_padding::wire::Padding5ByteEnd, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
-  static void Encode(internal::WireEncoder* encoder,
-                     ::test_padding::wire::Padding5ByteEnd* value,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Encode(
+      internal::WireEncoder* encoder, ::test_padding::wire::Padding5ByteEnd* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value,
-             sizeof(::test_padding::wire::Padding5ByteEnd));
+      memcpy(position.As<void>(), value, sizeof(::test_padding::wire::Padding5ByteEnd));
     } else {
       internal::WireZeroPadding<uint64_t>(encoder, position + 8);
-      internal::WireCodingTraits<uint64_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->a,
-                                                      position + 0,
-                                                      recursion_depth);
-      internal::WireCodingTraits<uint16_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->b,
-                                                      position + 8,
-                                                      recursion_depth);
-      internal::WireCodingTraits<uint8_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->c,
-                                                      position + 10,
-                                                      recursion_depth);
+      internal::WireCodingTraits<uint64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->a, position + 0, recursion_depth);
+      internal::WireCodingTraits<uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->b, position + 8, recursion_depth);
+      internal::WireCodingTraits<uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->c, position + 10, recursion_depth);
     }
   }
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (!Base::are_members_memcpy_compatible) {
-      internal::WireCodingTraits<uint64_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 0,
-                                                      recursion_depth);
-      internal::WireCodingTraits<uint16_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 8,
-                                                      recursion_depth);
-      internal::WireCodingTraits<uint8_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 10,
-                                                      recursion_depth);
+      internal::WireCodingTraits<uint64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 0, recursion_depth);
+      internal::WireCodingTraits<uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 8, recursion_depth);
+      internal::WireCodingTraits<uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 10, recursion_depth);
     }
-    internal::WireCheckPadding<uint64_t>(decoder, position + 8,
-                                         0xffffffffff000000ull);
+    internal::WireCheckPadding<uint64_t>(decoder, position + 8, 0xffffffffff000000ull);
   }
 };
 
 // TODO(fxbug.dev/95833) Remove this.
 template <>
 struct DeprecatedCTypeTraits<::test_padding::wire::Padding4ByteMiddle> {
-  static constexpr const fidl_type_t* kType =
-      &::test_padding::wire::test_padding_Padding4ByteMiddleTable;
+  static constexpr const fidl_type_t* kType = &::test_padding::wire::test_padding_Padding4ByteMiddleTable;
 };
 
 template <>
@@ -769,80 +566,48 @@ struct TypeTraits<::test_padding::wire::Padding4ByteMiddle> {
 };
 
 template <>
-struct IsFidlType<::test_padding::wire::Padding4ByteMiddle>
-    : public std::true_type {};
+struct IsFidlType<::test_padding::wire::Padding4ByteMiddle> : public std::true_type {};
 template <>
-struct IsStruct<::test_padding::wire::Padding4ByteMiddle>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::test_padding::wire::Padding4ByteMiddle>);
+struct IsStruct<::test_padding::wire::Padding4ByteMiddle> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_padding::wire::Padding4ByteMiddle>);
 static_assert(offsetof(::test_padding::wire::Padding4ByteMiddle, a) == 0);
 static_assert(offsetof(::test_padding::wire::Padding4ByteMiddle, b) == 8);
-static_assert(
-    sizeof(::test_padding::wire::Padding4ByteMiddle) ==
-    TypeTraits<::test_padding::wire::Padding4ByteMiddle>::kPrimarySize);
+static_assert(sizeof(::test_padding::wire::Padding4ByteMiddle) == TypeTraits<::test_padding::wire::Padding4ByteMiddle>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::test_padding::wire::Padding4ByteMiddle,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_padding::wire::Padding4ByteMiddle, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 16;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::WireStructMemberCodingInfo<
-          uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(),
-      ::fidl::internal::WireStructMemberCodingInfo<
-          uint64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(), ::fidl::internal::WireStructMemberCodingInfo<uint64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
   static constexpr bool kHasPadding = true;
-  using Base =
-      WireStructCodingTraitsBase<::test_padding::wire::Padding4ByteMiddle,
-                                 ::fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_padding::wire::Padding4ByteMiddle, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
-  static void Encode(internal::WireEncoder* encoder,
-                     ::test_padding::wire::Padding4ByteMiddle* value,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Encode(
+      internal::WireEncoder* encoder, ::test_padding::wire::Padding4ByteMiddle* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value,
-             sizeof(::test_padding::wire::Padding4ByteMiddle));
+      memcpy(position.As<void>(), value, sizeof(::test_padding::wire::Padding4ByteMiddle));
     } else {
       internal::WireZeroPadding<uint64_t>(encoder, position + 0);
-      internal::WireCodingTraits<uint32_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->a,
-                                                      position + 0,
-                                                      recursion_depth);
-      internal::WireCodingTraits<uint64_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->b,
-                                                      position + 8,
-                                                      recursion_depth);
+      internal::WireCodingTraits<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->a, position + 0, recursion_depth);
+      internal::WireCodingTraits<uint64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->b, position + 8, recursion_depth);
     }
   }
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (!Base::are_members_memcpy_compatible) {
-      internal::WireCodingTraits<uint32_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 0,
-                                                      recursion_depth);
-      internal::WireCodingTraits<uint64_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 8,
-                                                      recursion_depth);
+      internal::WireCodingTraits<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 0, recursion_depth);
+      internal::WireCodingTraits<uint64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 8, recursion_depth);
     }
-    internal::WireCheckPadding<uint64_t>(decoder, position + 0,
-                                         0xffffffff00000000ull);
+    internal::WireCheckPadding<uint64_t>(decoder, position + 0, 0xffffffff00000000ull);
   }
 };
 
 // TODO(fxbug.dev/95833) Remove this.
 template <>
 struct DeprecatedCTypeTraits<::test_padding::wire::Padding4ByteEnd> {
-  static constexpr const fidl_type_t* kType =
-      &::test_padding::wire::test_padding_Padding4ByteEndTable;
+  static constexpr const fidl_type_t* kType = &::test_padding::wire::test_padding_Padding4ByteEndTable;
 };
 
 template <>
@@ -858,79 +623,48 @@ struct TypeTraits<::test_padding::wire::Padding4ByteEnd> {
 };
 
 template <>
-struct IsFidlType<::test_padding::wire::Padding4ByteEnd>
-    : public std::true_type {};
+struct IsFidlType<::test_padding::wire::Padding4ByteEnd> : public std::true_type {};
 template <>
-struct IsStruct<::test_padding::wire::Padding4ByteEnd> : public std::true_type {
-};
+struct IsStruct<::test_padding::wire::Padding4ByteEnd> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test_padding::wire::Padding4ByteEnd>);
 static_assert(offsetof(::test_padding::wire::Padding4ByteEnd, a) == 0);
 static_assert(offsetof(::test_padding::wire::Padding4ByteEnd, b) == 8);
-static_assert(sizeof(::test_padding::wire::Padding4ByteEnd) ==
-              TypeTraits<::test_padding::wire::Padding4ByteEnd>::kPrimarySize);
+static_assert(sizeof(::test_padding::wire::Padding4ByteEnd) == TypeTraits<::test_padding::wire::Padding4ByteEnd>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::test_padding::wire::Padding4ByteEnd,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_padding::wire::Padding4ByteEnd, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 16;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::WireStructMemberCodingInfo<
-          uint64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(),
-      ::fidl::internal::WireStructMemberCodingInfo<
-          uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<uint64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(), ::fidl::internal::WireStructMemberCodingInfo<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
   static constexpr bool kHasPadding = true;
-  using Base =
-      WireStructCodingTraitsBase<::test_padding::wire::Padding4ByteEnd,
-                                 ::fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_padding::wire::Padding4ByteEnd, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
-  static void Encode(internal::WireEncoder* encoder,
-                     ::test_padding::wire::Padding4ByteEnd* value,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Encode(
+      internal::WireEncoder* encoder, ::test_padding::wire::Padding4ByteEnd* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value,
-             sizeof(::test_padding::wire::Padding4ByteEnd));
+      memcpy(position.As<void>(), value, sizeof(::test_padding::wire::Padding4ByteEnd));
     } else {
       internal::WireZeroPadding<uint64_t>(encoder, position + 8);
-      internal::WireCodingTraits<uint64_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->a,
-                                                      position + 0,
-                                                      recursion_depth);
-      internal::WireCodingTraits<uint32_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->b,
-                                                      position + 8,
-                                                      recursion_depth);
+      internal::WireCodingTraits<uint64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->a, position + 0, recursion_depth);
+      internal::WireCodingTraits<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->b, position + 8, recursion_depth);
     }
   }
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (!Base::are_members_memcpy_compatible) {
-      internal::WireCodingTraits<uint64_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 0,
-                                                      recursion_depth);
-      internal::WireCodingTraits<uint32_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 8,
-                                                      recursion_depth);
+      internal::WireCodingTraits<uint64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 0, recursion_depth);
+      internal::WireCodingTraits<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 8, recursion_depth);
     }
-    internal::WireCheckPadding<uint64_t>(decoder, position + 8,
-                                         0xffffffff00000000ull);
+    internal::WireCheckPadding<uint64_t>(decoder, position + 8, 0xffffffff00000000ull);
   }
 };
 
 // TODO(fxbug.dev/95833) Remove this.
 template <>
-struct DeprecatedCTypeTraits<
-    ::test_padding::wire::Padding4ByteAlignmentLength12> {
-  static constexpr const fidl_type_t* kType =
-      &::test_padding::wire::test_padding_Padding4ByteAlignmentLength12Table;
+struct DeprecatedCTypeTraits<::test_padding::wire::Padding4ByteAlignmentLength12> {
+  static constexpr const fidl_type_t* kType = &::test_padding::wire::test_padding_Padding4ByteAlignmentLength12Table;
 };
 
 template <>
@@ -946,97 +680,48 @@ struct TypeTraits<::test_padding::wire::Padding4ByteAlignmentLength12> {
 };
 
 template <>
-struct IsFidlType<::test_padding::wire::Padding4ByteAlignmentLength12>
-    : public std::true_type {};
+struct IsFidlType<::test_padding::wire::Padding4ByteAlignmentLength12> : public std::true_type {};
 template <>
-struct IsStruct<::test_padding::wire::Padding4ByteAlignmentLength12>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::test_padding::wire::Padding4ByteAlignmentLength12>);
-static_assert(offsetof(::test_padding::wire::Padding4ByteAlignmentLength12,
-                       a) == 0);
-static_assert(offsetof(::test_padding::wire::Padding4ByteAlignmentLength12,
-                       b) == 4);
-static_assert(offsetof(::test_padding::wire::Padding4ByteAlignmentLength12,
-                       c) == 6);
-static_assert(offsetof(::test_padding::wire::Padding4ByteAlignmentLength12,
-                       d) == 8);
-static_assert(sizeof(::test_padding::wire::Padding4ByteAlignmentLength12) ==
-              TypeTraits<::test_padding::wire::Padding4ByteAlignmentLength12>::
-                  kPrimarySize);
+struct IsStruct<::test_padding::wire::Padding4ByteAlignmentLength12> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_padding::wire::Padding4ByteAlignmentLength12>);
+static_assert(offsetof(::test_padding::wire::Padding4ByteAlignmentLength12, a) == 0);
+static_assert(offsetof(::test_padding::wire::Padding4ByteAlignmentLength12, b) == 4);
+static_assert(offsetof(::test_padding::wire::Padding4ByteAlignmentLength12, c) == 6);
+static_assert(offsetof(::test_padding::wire::Padding4ByteAlignmentLength12, d) == 8);
+static_assert(sizeof(::test_padding::wire::Padding4ByteAlignmentLength12) == TypeTraits<::test_padding::wire::Padding4ByteAlignmentLength12>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::test_padding::wire::Padding4ByteAlignmentLength12,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_padding::wire::Padding4ByteAlignmentLength12, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 12;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::WireStructMemberCodingInfo<
-          uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(),
-      ::fidl::internal::WireStructMemberCodingInfo<
-          uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(),
-      ::fidl::internal::WireStructMemberCodingInfo<
-          uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(),
-      ::fidl::internal::WireStructMemberCodingInfo<
-          uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(), ::fidl::internal::WireStructMemberCodingInfo<uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(), ::fidl::internal::WireStructMemberCodingInfo<uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(), ::fidl::internal::WireStructMemberCodingInfo<uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
   static constexpr bool kHasPadding = true;
-  using Base = WireStructCodingTraitsBase<
-      ::test_padding::wire::Padding4ByteAlignmentLength12,
-      ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_padding::wire::Padding4ByteAlignmentLength12, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
-  static void Encode(internal::WireEncoder* encoder,
-                     ::test_padding::wire::Padding4ByteAlignmentLength12* value,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Encode(
+      internal::WireEncoder* encoder, ::test_padding::wire::Padding4ByteAlignmentLength12* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value,
-             sizeof(::test_padding::wire::Padding4ByteAlignmentLength12));
+      memcpy(position.As<void>(), value, sizeof(::test_padding::wire::Padding4ByteAlignmentLength12));
     } else {
       internal::WireZeroPadding<uint32_t>(encoder, position + 4);
       internal::WireZeroPadding<uint32_t>(encoder, position + 8);
-      internal::WireCodingTraits<uint32_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->a,
-                                                      position + 0,
-                                                      recursion_depth);
-      internal::WireCodingTraits<uint8_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->b,
-                                                      position + 4,
-                                                      recursion_depth);
-      internal::WireCodingTraits<uint16_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->c,
-                                                      position + 6,
-                                                      recursion_depth);
-      internal::WireCodingTraits<uint16_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->d,
-                                                      position + 8,
-                                                      recursion_depth);
+      internal::WireCodingTraits<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->a, position + 0, recursion_depth);
+      internal::WireCodingTraits<uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->b, position + 4, recursion_depth);
+      internal::WireCodingTraits<uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->c, position + 6, recursion_depth);
+      internal::WireCodingTraits<uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->d, position + 8, recursion_depth);
     }
   }
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (!Base::are_members_memcpy_compatible) {
-      internal::WireCodingTraits<uint32_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 0,
-                                                      recursion_depth);
-      internal::WireCodingTraits<uint8_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 4,
-                                                      recursion_depth);
-      internal::WireCodingTraits<uint16_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 6,
-                                                      recursion_depth);
-      internal::WireCodingTraits<uint16_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 8,
-                                                      recursion_depth);
+      internal::WireCodingTraits<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 0, recursion_depth);
+      internal::WireCodingTraits<uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 4, recursion_depth);
+      internal::WireCodingTraits<uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 6, recursion_depth);
+      internal::WireCodingTraits<uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 8, recursion_depth);
     }
     internal::WireCheckPadding<uint32_t>(decoder, position + 4, 0x0000ff00);
     internal::WireCheckPadding<uint32_t>(decoder, position + 8, 0xffff0000);
@@ -1046,8 +731,7 @@ struct ::fidl::internal::WireCodingTraits<
 // TODO(fxbug.dev/95833) Remove this.
 template <>
 struct DeprecatedCTypeTraits<::test_padding::wire::Padding3ByteMiddle> {
-  static constexpr const fidl_type_t* kType =
-      &::test_padding::wire::test_padding_Padding3ByteMiddleTable;
+  static constexpr const fidl_type_t* kType = &::test_padding::wire::test_padding_Padding3ByteMiddleTable;
 };
 
 template <>
@@ -1063,69 +747,39 @@ struct TypeTraits<::test_padding::wire::Padding3ByteMiddle> {
 };
 
 template <>
-struct IsFidlType<::test_padding::wire::Padding3ByteMiddle>
-    : public std::true_type {};
+struct IsFidlType<::test_padding::wire::Padding3ByteMiddle> : public std::true_type {};
 template <>
-struct IsStruct<::test_padding::wire::Padding3ByteMiddle>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::test_padding::wire::Padding3ByteMiddle>);
+struct IsStruct<::test_padding::wire::Padding3ByteMiddle> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_padding::wire::Padding3ByteMiddle>);
 static_assert(offsetof(::test_padding::wire::Padding3ByteMiddle, a) == 0);
 static_assert(offsetof(::test_padding::wire::Padding3ByteMiddle, b) == 4);
-static_assert(
-    sizeof(::test_padding::wire::Padding3ByteMiddle) ==
-    TypeTraits<::test_padding::wire::Padding3ByteMiddle>::kPrimarySize);
+static_assert(sizeof(::test_padding::wire::Padding3ByteMiddle) == TypeTraits<::test_padding::wire::Padding3ByteMiddle>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::test_padding::wire::Padding3ByteMiddle,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_padding::wire::Padding3ByteMiddle, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 8;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::WireStructMemberCodingInfo<
-          uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(),
-      ::fidl::internal::WireStructMemberCodingInfo<
-          uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(), ::fidl::internal::WireStructMemberCodingInfo<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
   static constexpr bool kHasPadding = true;
-  using Base =
-      WireStructCodingTraitsBase<::test_padding::wire::Padding3ByteMiddle,
-                                 ::fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_padding::wire::Padding3ByteMiddle, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
-  static void Encode(internal::WireEncoder* encoder,
-                     ::test_padding::wire::Padding3ByteMiddle* value,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Encode(
+      internal::WireEncoder* encoder, ::test_padding::wire::Padding3ByteMiddle* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value,
-             sizeof(::test_padding::wire::Padding3ByteMiddle));
+      memcpy(position.As<void>(), value, sizeof(::test_padding::wire::Padding3ByteMiddle));
     } else {
       internal::WireZeroPadding<uint32_t>(encoder, position + 0);
-      internal::WireCodingTraits<uint8_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->a,
-                                                      position + 0,
-                                                      recursion_depth);
-      internal::WireCodingTraits<uint32_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->b,
-                                                      position + 4,
-                                                      recursion_depth);
+      internal::WireCodingTraits<uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->a, position + 0, recursion_depth);
+      internal::WireCodingTraits<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->b, position + 4, recursion_depth);
     }
   }
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (!Base::are_members_memcpy_compatible) {
-      internal::WireCodingTraits<uint8_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 0,
-                                                      recursion_depth);
-      internal::WireCodingTraits<uint32_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 4,
-                                                      recursion_depth);
+      internal::WireCodingTraits<uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 0, recursion_depth);
+      internal::WireCodingTraits<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 4, recursion_depth);
     }
     internal::WireCheckPadding<uint32_t>(decoder, position + 0, 0xffffff00);
   }
@@ -1134,8 +788,7 @@ struct ::fidl::internal::WireCodingTraits<
 // TODO(fxbug.dev/95833) Remove this.
 template <>
 struct DeprecatedCTypeTraits<::test_padding::wire::Padding3ByteEnd> {
-  static constexpr const fidl_type_t* kType =
-      &::test_padding::wire::test_padding_Padding3ByteEndTable;
+  static constexpr const fidl_type_t* kType = &::test_padding::wire::test_padding_Padding3ByteEndTable;
 };
 
 template <>
@@ -1151,67 +804,39 @@ struct TypeTraits<::test_padding::wire::Padding3ByteEnd> {
 };
 
 template <>
-struct IsFidlType<::test_padding::wire::Padding3ByteEnd>
-    : public std::true_type {};
+struct IsFidlType<::test_padding::wire::Padding3ByteEnd> : public std::true_type {};
 template <>
-struct IsStruct<::test_padding::wire::Padding3ByteEnd> : public std::true_type {
-};
+struct IsStruct<::test_padding::wire::Padding3ByteEnd> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test_padding::wire::Padding3ByteEnd>);
 static_assert(offsetof(::test_padding::wire::Padding3ByteEnd, a) == 0);
 static_assert(offsetof(::test_padding::wire::Padding3ByteEnd, b) == 4);
-static_assert(sizeof(::test_padding::wire::Padding3ByteEnd) ==
-              TypeTraits<::test_padding::wire::Padding3ByteEnd>::kPrimarySize);
+static_assert(sizeof(::test_padding::wire::Padding3ByteEnd) == TypeTraits<::test_padding::wire::Padding3ByteEnd>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::test_padding::wire::Padding3ByteEnd,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_padding::wire::Padding3ByteEnd, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 8;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::WireStructMemberCodingInfo<
-          uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(),
-      ::fidl::internal::WireStructMemberCodingInfo<
-          uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(), ::fidl::internal::WireStructMemberCodingInfo<uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
   static constexpr bool kHasPadding = true;
-  using Base =
-      WireStructCodingTraitsBase<::test_padding::wire::Padding3ByteEnd,
-                                 ::fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_padding::wire::Padding3ByteEnd, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
-  static void Encode(internal::WireEncoder* encoder,
-                     ::test_padding::wire::Padding3ByteEnd* value,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Encode(
+      internal::WireEncoder* encoder, ::test_padding::wire::Padding3ByteEnd* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value,
-             sizeof(::test_padding::wire::Padding3ByteEnd));
+      memcpy(position.As<void>(), value, sizeof(::test_padding::wire::Padding3ByteEnd));
     } else {
       internal::WireZeroPadding<uint32_t>(encoder, position + 4);
-      internal::WireCodingTraits<uint32_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->a,
-                                                      position + 0,
-                                                      recursion_depth);
-      internal::WireCodingTraits<uint8_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->b,
-                                                      position + 4,
-                                                      recursion_depth);
+      internal::WireCodingTraits<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->a, position + 0, recursion_depth);
+      internal::WireCodingTraits<uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->b, position + 4, recursion_depth);
     }
   }
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (!Base::are_members_memcpy_compatible) {
-      internal::WireCodingTraits<uint32_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 0,
-                                                      recursion_depth);
-      internal::WireCodingTraits<uint8_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 4,
-                                                      recursion_depth);
+      internal::WireCodingTraits<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 0, recursion_depth);
+      internal::WireCodingTraits<uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 4, recursion_depth);
     }
     internal::WireCheckPadding<uint32_t>(decoder, position + 4, 0xffffff00);
   }
@@ -1220,8 +845,7 @@ struct ::fidl::internal::WireCodingTraits<
 // TODO(fxbug.dev/95833) Remove this.
 template <>
 struct DeprecatedCTypeTraits<::test_padding::wire::Padding2ByteMiddle> {
-  static constexpr const fidl_type_t* kType =
-      &::test_padding::wire::test_padding_Padding2ByteMiddleTable;
+  static constexpr const fidl_type_t* kType = &::test_padding::wire::test_padding_Padding2ByteMiddleTable;
 };
 
 template <>
@@ -1237,69 +861,39 @@ struct TypeTraits<::test_padding::wire::Padding2ByteMiddle> {
 };
 
 template <>
-struct IsFidlType<::test_padding::wire::Padding2ByteMiddle>
-    : public std::true_type {};
+struct IsFidlType<::test_padding::wire::Padding2ByteMiddle> : public std::true_type {};
 template <>
-struct IsStruct<::test_padding::wire::Padding2ByteMiddle>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::test_padding::wire::Padding2ByteMiddle>);
+struct IsStruct<::test_padding::wire::Padding2ByteMiddle> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_padding::wire::Padding2ByteMiddle>);
 static_assert(offsetof(::test_padding::wire::Padding2ByteMiddle, a) == 0);
 static_assert(offsetof(::test_padding::wire::Padding2ByteMiddle, b) == 4);
-static_assert(
-    sizeof(::test_padding::wire::Padding2ByteMiddle) ==
-    TypeTraits<::test_padding::wire::Padding2ByteMiddle>::kPrimarySize);
+static_assert(sizeof(::test_padding::wire::Padding2ByteMiddle) == TypeTraits<::test_padding::wire::Padding2ByteMiddle>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::test_padding::wire::Padding2ByteMiddle,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_padding::wire::Padding2ByteMiddle, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 8;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::WireStructMemberCodingInfo<
-          uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(),
-      ::fidl::internal::WireStructMemberCodingInfo<
-          uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(), ::fidl::internal::WireStructMemberCodingInfo<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
   static constexpr bool kHasPadding = true;
-  using Base =
-      WireStructCodingTraitsBase<::test_padding::wire::Padding2ByteMiddle,
-                                 ::fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_padding::wire::Padding2ByteMiddle, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
-  static void Encode(internal::WireEncoder* encoder,
-                     ::test_padding::wire::Padding2ByteMiddle* value,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Encode(
+      internal::WireEncoder* encoder, ::test_padding::wire::Padding2ByteMiddle* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value,
-             sizeof(::test_padding::wire::Padding2ByteMiddle));
+      memcpy(position.As<void>(), value, sizeof(::test_padding::wire::Padding2ByteMiddle));
     } else {
       internal::WireZeroPadding<uint32_t>(encoder, position + 0);
-      internal::WireCodingTraits<uint16_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->a,
-                                                      position + 0,
-                                                      recursion_depth);
-      internal::WireCodingTraits<uint32_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->b,
-                                                      position + 4,
-                                                      recursion_depth);
+      internal::WireCodingTraits<uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->a, position + 0, recursion_depth);
+      internal::WireCodingTraits<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->b, position + 4, recursion_depth);
     }
   }
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (!Base::are_members_memcpy_compatible) {
-      internal::WireCodingTraits<uint16_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 0,
-                                                      recursion_depth);
-      internal::WireCodingTraits<uint32_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 4,
-                                                      recursion_depth);
+      internal::WireCodingTraits<uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 0, recursion_depth);
+      internal::WireCodingTraits<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 4, recursion_depth);
     }
     internal::WireCheckPadding<uint32_t>(decoder, position + 0, 0xffff0000);
   }
@@ -1308,8 +902,7 @@ struct ::fidl::internal::WireCodingTraits<
 // TODO(fxbug.dev/95833) Remove this.
 template <>
 struct DeprecatedCTypeTraits<::test_padding::wire::Padding2ByteEnd> {
-  static constexpr const fidl_type_t* kType =
-      &::test_padding::wire::test_padding_Padding2ByteEndTable;
+  static constexpr const fidl_type_t* kType = &::test_padding::wire::test_padding_Padding2ByteEndTable;
 };
 
 template <>
@@ -1325,67 +918,39 @@ struct TypeTraits<::test_padding::wire::Padding2ByteEnd> {
 };
 
 template <>
-struct IsFidlType<::test_padding::wire::Padding2ByteEnd>
-    : public std::true_type {};
+struct IsFidlType<::test_padding::wire::Padding2ByteEnd> : public std::true_type {};
 template <>
-struct IsStruct<::test_padding::wire::Padding2ByteEnd> : public std::true_type {
-};
+struct IsStruct<::test_padding::wire::Padding2ByteEnd> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test_padding::wire::Padding2ByteEnd>);
 static_assert(offsetof(::test_padding::wire::Padding2ByteEnd, a) == 0);
 static_assert(offsetof(::test_padding::wire::Padding2ByteEnd, b) == 4);
-static_assert(sizeof(::test_padding::wire::Padding2ByteEnd) ==
-              TypeTraits<::test_padding::wire::Padding2ByteEnd>::kPrimarySize);
+static_assert(sizeof(::test_padding::wire::Padding2ByteEnd) == TypeTraits<::test_padding::wire::Padding2ByteEnd>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::test_padding::wire::Padding2ByteEnd,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_padding::wire::Padding2ByteEnd, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 8;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::WireStructMemberCodingInfo<
-          uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(),
-      ::fidl::internal::WireStructMemberCodingInfo<
-          uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(), ::fidl::internal::WireStructMemberCodingInfo<uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
   static constexpr bool kHasPadding = true;
-  using Base =
-      WireStructCodingTraitsBase<::test_padding::wire::Padding2ByteEnd,
-                                 ::fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_padding::wire::Padding2ByteEnd, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
-  static void Encode(internal::WireEncoder* encoder,
-                     ::test_padding::wire::Padding2ByteEnd* value,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Encode(
+      internal::WireEncoder* encoder, ::test_padding::wire::Padding2ByteEnd* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value,
-             sizeof(::test_padding::wire::Padding2ByteEnd));
+      memcpy(position.As<void>(), value, sizeof(::test_padding::wire::Padding2ByteEnd));
     } else {
       internal::WireZeroPadding<uint32_t>(encoder, position + 4);
-      internal::WireCodingTraits<uint32_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->a,
-                                                      position + 0,
-                                                      recursion_depth);
-      internal::WireCodingTraits<uint16_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->b,
-                                                      position + 4,
-                                                      recursion_depth);
+      internal::WireCodingTraits<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->a, position + 0, recursion_depth);
+      internal::WireCodingTraits<uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->b, position + 4, recursion_depth);
     }
   }
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (!Base::are_members_memcpy_compatible) {
-      internal::WireCodingTraits<uint32_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 0,
-                                                      recursion_depth);
-      internal::WireCodingTraits<uint16_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 4,
-                                                      recursion_depth);
+      internal::WireCodingTraits<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 0, recursion_depth);
+      internal::WireCodingTraits<uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 4, recursion_depth);
     }
     internal::WireCheckPadding<uint32_t>(decoder, position + 4, 0xffff0000);
   }
@@ -1393,10 +958,8 @@ struct ::fidl::internal::WireCodingTraits<
 
 // TODO(fxbug.dev/95833) Remove this.
 template <>
-struct DeprecatedCTypeTraits<
-    ::test_padding::wire::Padding2ByteAlignmentLength6> {
-  static constexpr const fidl_type_t* kType =
-      &::test_padding::wire::test_padding_Padding2ByteAlignmentLength6Table;
+struct DeprecatedCTypeTraits<::test_padding::wire::Padding2ByteAlignmentLength6> {
+  static constexpr const fidl_type_t* kType = &::test_padding::wire::test_padding_Padding2ByteAlignmentLength6Table;
 };
 
 template <>
@@ -1412,84 +975,44 @@ struct TypeTraits<::test_padding::wire::Padding2ByteAlignmentLength6> {
 };
 
 template <>
-struct IsFidlType<::test_padding::wire::Padding2ByteAlignmentLength6>
-    : public std::true_type {};
+struct IsFidlType<::test_padding::wire::Padding2ByteAlignmentLength6> : public std::true_type {};
 template <>
-struct IsStruct<::test_padding::wire::Padding2ByteAlignmentLength6>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::test_padding::wire::Padding2ByteAlignmentLength6>);
-static_assert(offsetof(::test_padding::wire::Padding2ByteAlignmentLength6, a) ==
-              0);
-static_assert(offsetof(::test_padding::wire::Padding2ByteAlignmentLength6, b) ==
-              2);
-static_assert(offsetof(::test_padding::wire::Padding2ByteAlignmentLength6, c) ==
-              4);
-static_assert(sizeof(::test_padding::wire::Padding2ByteAlignmentLength6) ==
-              TypeTraits<::test_padding::wire::Padding2ByteAlignmentLength6>::
-                  kPrimarySize);
+struct IsStruct<::test_padding::wire::Padding2ByteAlignmentLength6> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_padding::wire::Padding2ByteAlignmentLength6>);
+static_assert(offsetof(::test_padding::wire::Padding2ByteAlignmentLength6, a) == 0);
+static_assert(offsetof(::test_padding::wire::Padding2ByteAlignmentLength6, b) == 2);
+static_assert(offsetof(::test_padding::wire::Padding2ByteAlignmentLength6, c) == 4);
+static_assert(sizeof(::test_padding::wire::Padding2ByteAlignmentLength6) == TypeTraits<::test_padding::wire::Padding2ByteAlignmentLength6>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::test_padding::wire::Padding2ByteAlignmentLength6,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_padding::wire::Padding2ByteAlignmentLength6, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 6;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::WireStructMemberCodingInfo<
-          uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(),
-      ::fidl::internal::WireStructMemberCodingInfo<
-          uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(),
-      ::fidl::internal::WireStructMemberCodingInfo<
-          uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(), ::fidl::internal::WireStructMemberCodingInfo<uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(), ::fidl::internal::WireStructMemberCodingInfo<uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
   static constexpr bool kHasPadding = true;
-  using Base = WireStructCodingTraitsBase<
-      ::test_padding::wire::Padding2ByteAlignmentLength6,
-      ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_padding::wire::Padding2ByteAlignmentLength6, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
-  static void Encode(internal::WireEncoder* encoder,
-                     ::test_padding::wire::Padding2ByteAlignmentLength6* value,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Encode(
+      internal::WireEncoder* encoder, ::test_padding::wire::Padding2ByteAlignmentLength6* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value,
-             sizeof(::test_padding::wire::Padding2ByteAlignmentLength6));
+      memcpy(position.As<void>(), value, sizeof(::test_padding::wire::Padding2ByteAlignmentLength6));
     } else {
       internal::WireZeroPadding<uint16_t>(encoder, position + 0);
       internal::WireZeroPadding<uint16_t>(encoder, position + 4);
-      internal::WireCodingTraits<uint8_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->a,
-                                                      position + 0,
-                                                      recursion_depth);
-      internal::WireCodingTraits<uint16_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->b,
-                                                      position + 2,
-                                                      recursion_depth);
-      internal::WireCodingTraits<uint8_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->c,
-                                                      position + 4,
-                                                      recursion_depth);
+      internal::WireCodingTraits<uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->a, position + 0, recursion_depth);
+      internal::WireCodingTraits<uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->b, position + 2, recursion_depth);
+      internal::WireCodingTraits<uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->c, position + 4, recursion_depth);
     }
   }
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (!Base::are_members_memcpy_compatible) {
-      internal::WireCodingTraits<uint8_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 0,
-                                                      recursion_depth);
-      internal::WireCodingTraits<uint16_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 2,
-                                                      recursion_depth);
-      internal::WireCodingTraits<uint8_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 4,
-                                                      recursion_depth);
+      internal::WireCodingTraits<uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 0, recursion_depth);
+      internal::WireCodingTraits<uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 2, recursion_depth);
+      internal::WireCodingTraits<uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 4, recursion_depth);
     }
     internal::WireCheckPadding<uint16_t>(decoder, position + 0, 0xff00);
     internal::WireCheckPadding<uint16_t>(decoder, position + 4, 0xff00);
@@ -1499,8 +1022,7 @@ struct ::fidl::internal::WireCodingTraits<
 // TODO(fxbug.dev/95833) Remove this.
 template <>
 struct DeprecatedCTypeTraits<::test_padding::wire::Padding1ByteMiddle> {
-  static constexpr const fidl_type_t* kType =
-      &::test_padding::wire::test_padding_Padding1ByteMiddleTable;
+  static constexpr const fidl_type_t* kType = &::test_padding::wire::test_padding_Padding1ByteMiddleTable;
 };
 
 template <>
@@ -1516,69 +1038,39 @@ struct TypeTraits<::test_padding::wire::Padding1ByteMiddle> {
 };
 
 template <>
-struct IsFidlType<::test_padding::wire::Padding1ByteMiddle>
-    : public std::true_type {};
+struct IsFidlType<::test_padding::wire::Padding1ByteMiddle> : public std::true_type {};
 template <>
-struct IsStruct<::test_padding::wire::Padding1ByteMiddle>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::test_padding::wire::Padding1ByteMiddle>);
+struct IsStruct<::test_padding::wire::Padding1ByteMiddle> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_padding::wire::Padding1ByteMiddle>);
 static_assert(offsetof(::test_padding::wire::Padding1ByteMiddle, a) == 0);
 static_assert(offsetof(::test_padding::wire::Padding1ByteMiddle, b) == 2);
-static_assert(
-    sizeof(::test_padding::wire::Padding1ByteMiddle) ==
-    TypeTraits<::test_padding::wire::Padding1ByteMiddle>::kPrimarySize);
+static_assert(sizeof(::test_padding::wire::Padding1ByteMiddle) == TypeTraits<::test_padding::wire::Padding1ByteMiddle>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::test_padding::wire::Padding1ByteMiddle,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_padding::wire::Padding1ByteMiddle, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 4;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::WireStructMemberCodingInfo<
-          uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(),
-      ::fidl::internal::WireStructMemberCodingInfo<
-          uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(), ::fidl::internal::WireStructMemberCodingInfo<uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
   static constexpr bool kHasPadding = true;
-  using Base =
-      WireStructCodingTraitsBase<::test_padding::wire::Padding1ByteMiddle,
-                                 ::fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_padding::wire::Padding1ByteMiddle, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
-  static void Encode(internal::WireEncoder* encoder,
-                     ::test_padding::wire::Padding1ByteMiddle* value,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Encode(
+      internal::WireEncoder* encoder, ::test_padding::wire::Padding1ByteMiddle* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value,
-             sizeof(::test_padding::wire::Padding1ByteMiddle));
+      memcpy(position.As<void>(), value, sizeof(::test_padding::wire::Padding1ByteMiddle));
     } else {
       internal::WireZeroPadding<uint16_t>(encoder, position + 0);
-      internal::WireCodingTraits<uint8_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->a,
-                                                      position + 0,
-                                                      recursion_depth);
-      internal::WireCodingTraits<uint16_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->b,
-                                                      position + 2,
-                                                      recursion_depth);
+      internal::WireCodingTraits<uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->a, position + 0, recursion_depth);
+      internal::WireCodingTraits<uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->b, position + 2, recursion_depth);
     }
   }
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (!Base::are_members_memcpy_compatible) {
-      internal::WireCodingTraits<uint8_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 0,
-                                                      recursion_depth);
-      internal::WireCodingTraits<uint16_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 2,
-                                                      recursion_depth);
+      internal::WireCodingTraits<uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 0, recursion_depth);
+      internal::WireCodingTraits<uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 2, recursion_depth);
     }
     internal::WireCheckPadding<uint16_t>(decoder, position + 0, 0xff00);
   }
@@ -1587,8 +1079,7 @@ struct ::fidl::internal::WireCodingTraits<
 // TODO(fxbug.dev/95833) Remove this.
 template <>
 struct DeprecatedCTypeTraits<::test_padding::wire::Padding1ByteEnd> {
-  static constexpr const fidl_type_t* kType =
-      &::test_padding::wire::test_padding_Padding1ByteEndTable;
+  static constexpr const fidl_type_t* kType = &::test_padding::wire::test_padding_Padding1ByteEndTable;
 };
 
 template <>
@@ -1604,67 +1095,39 @@ struct TypeTraits<::test_padding::wire::Padding1ByteEnd> {
 };
 
 template <>
-struct IsFidlType<::test_padding::wire::Padding1ByteEnd>
-    : public std::true_type {};
+struct IsFidlType<::test_padding::wire::Padding1ByteEnd> : public std::true_type {};
 template <>
-struct IsStruct<::test_padding::wire::Padding1ByteEnd> : public std::true_type {
-};
+struct IsStruct<::test_padding::wire::Padding1ByteEnd> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test_padding::wire::Padding1ByteEnd>);
 static_assert(offsetof(::test_padding::wire::Padding1ByteEnd, a) == 0);
 static_assert(offsetof(::test_padding::wire::Padding1ByteEnd, b) == 2);
-static_assert(sizeof(::test_padding::wire::Padding1ByteEnd) ==
-              TypeTraits<::test_padding::wire::Padding1ByteEnd>::kPrimarySize);
+static_assert(sizeof(::test_padding::wire::Padding1ByteEnd) == TypeTraits<::test_padding::wire::Padding1ByteEnd>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::test_padding::wire::Padding1ByteEnd,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_padding::wire::Padding1ByteEnd, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 4;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::WireStructMemberCodingInfo<
-          uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(),
-      ::fidl::internal::WireStructMemberCodingInfo<
-          uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(), ::fidl::internal::WireStructMemberCodingInfo<uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
   static constexpr bool kHasPadding = true;
-  using Base =
-      WireStructCodingTraitsBase<::test_padding::wire::Padding1ByteEnd,
-                                 ::fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_padding::wire::Padding1ByteEnd, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
-  static void Encode(internal::WireEncoder* encoder,
-                     ::test_padding::wire::Padding1ByteEnd* value,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Encode(
+      internal::WireEncoder* encoder, ::test_padding::wire::Padding1ByteEnd* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value,
-             sizeof(::test_padding::wire::Padding1ByteEnd));
+      memcpy(position.As<void>(), value, sizeof(::test_padding::wire::Padding1ByteEnd));
     } else {
       internal::WireZeroPadding<uint16_t>(encoder, position + 2);
-      internal::WireCodingTraits<uint16_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->a,
-                                                      position + 0,
-                                                      recursion_depth);
-      internal::WireCodingTraits<uint8_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->b,
-                                                      position + 2,
-                                                      recursion_depth);
+      internal::WireCodingTraits<uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->a, position + 0, recursion_depth);
+      internal::WireCodingTraits<uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->b, position + 2, recursion_depth);
     }
   }
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (!Base::are_members_memcpy_compatible) {
-      internal::WireCodingTraits<uint16_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 0,
-                                                      recursion_depth);
-      internal::WireCodingTraits<uint8_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 2,
-                                                      recursion_depth);
+      internal::WireCodingTraits<uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 0, recursion_depth);
+      internal::WireCodingTraits<uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 2, recursion_depth);
     }
     internal::WireCheckPadding<uint16_t>(decoder, position + 2, 0xff00);
   }

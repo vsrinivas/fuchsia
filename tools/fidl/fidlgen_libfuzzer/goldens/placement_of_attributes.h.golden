@@ -18,8 +18,7 @@ using ExampleXUnion = ::test::placementofattributes::ExampleXUnion;
 using ExampleUnion = ::test::placementofattributes::ExampleUnion;
 using ExampleTable = ::test::placementofattributes::ExampleTable;
 using ExampleStruct = ::test::placementofattributes::ExampleStruct;
-using ExampleProtocolMethodRequest =
-    ::test::placementofattributes::ExampleProtocolMethodRequest;
+using ExampleProtocolMethodRequest = ::test::placementofattributes::ExampleProtocolMethodRequest;
 using ExampleEnum = ::test::placementofattributes::ExampleEnum;
 using ExampleBits = ::test::placementofattributes::ExampleBits;
 
@@ -83,7 +82,9 @@ struct Allocate<ExampleUnion> {
 };
 template <>
 struct MinSize<ExampleTable> {
-  operator size_t() { return MinSize<uint32_t>(); }
+  operator size_t() {
+    return MinSize<uint32_t>();
+  }
 };
 template <>
 struct Allocate<ExampleTable> {
@@ -99,7 +100,9 @@ struct Allocate<ExampleTable> {
 };
 template <>
 struct MinSize<ExampleStruct> {
-  operator size_t() { return MinSize<uint32_t>(); }
+  operator size_t() {
+    return MinSize<uint32_t>();
+  }
 };
 template <>
 struct Allocate<ExampleStruct> {
@@ -115,15 +118,16 @@ struct Allocate<ExampleStruct> {
 };
 template <>
 struct MinSize<ExampleProtocolMethodRequest> {
-  operator size_t() { return MinSize<::test::exampleusing::Empty>(); }
+  operator size_t() {
+    return MinSize<::test::exampleusing::Empty>();
+  }
 };
 template <>
 struct Allocate<ExampleProtocolMethodRequest> {
   ExampleProtocolMethodRequest operator()(FuzzInput* src, size_t* size) {
     ZX_ASSERT(*size >= MinSize<ExampleProtocolMethodRequest>());
     ExampleProtocolMethodRequest out;
-    const size_t slack_per_member =
-        (*size - MinSize<ExampleProtocolMethodRequest>()) / 1;
+    const size_t slack_per_member = (*size - MinSize<ExampleProtocolMethodRequest>()) / 1;
     size_t out_size;
     out_size = MinSize<::test::exampleusing::Empty>() + slack_per_member;
     out.arg = Allocate<::test::exampleusing::Empty>{}(src, &out_size);

@@ -2,12 +2,12 @@
 
 #include <fidl/test.driveroneway/cpp/natural_types.h>
 
-::test_driveroneway::Payload::Storage_
-test_driveroneway::Payload::CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.value)};
+::test_driveroneway::Payload::Storage_ test_driveroneway::Payload::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.value)};
 }
 
-::test_driveroneway::OneWaySendRequest::Storage_
-test_driveroneway::OneWaySendRequest::CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.payload)};
+::test_driveroneway::OneWaySendRequest::Storage_ test_driveroneway::OneWaySendRequest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.payload)};
 }

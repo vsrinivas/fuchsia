@@ -13,8 +13,7 @@
 using namespace ::fuzzing;
 using namespace ::test::service;
 
-// Add //build/fuzzing:fuzzing_verbose_logging to a GN target's configs to
-// enable.
+// Add //build/fuzzing:fuzzing_verbose_logging to a GN target's configs to enable.
 #if FUZZING_VERBOSE_LOGGING
 #include <stdio.h>
 #define xprintf(fmt...) printf(fmt)
@@ -32,8 +31,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
     loop_ = new ::async::Loop(&kAsyncLoopConfigAttachToCurrentThread);
   }
 
-  // Must fuzz some protocol; first two bytes used to select protocol and
-  // method.
+  // Must fuzz some protocol; first two bytes used to select protocol and method.
   if (size_ < 2) {
     xprintf("Early exit: Input too small: %zu\n", size_);
     return 0;
@@ -50,31 +48,26 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
   if (protocol_selection_ == 0) {
 #if !defined(PROTOCOL_test_service_SecondProtocol)
     // Selected protocol from FIDL file that is not part of this fuzzer.
-    xprintf(
-        "Early exit: Chose disabled protocol: test_service_SecondProtocol\n");
+    xprintf("Early exit: Chose disabled protocol: test_service_SecondProtocol\n");
     return 0;
 #else
 
     ::fidl::InterfacePtr< ::test::service::SecondProtocol> protocol_;
 
     xprintf("Starting test_service_SecondProtocol service\n");
-    ::fidl::fuzzing::Fuzzer< ::test::service::SecondProtocol> fuzzer_(
-        loop_->dispatcher());
+    ::fidl::fuzzing::Fuzzer< ::test::service::SecondProtocol> fuzzer_(loop_->dispatcher());
     if ((status_ = fuzzer_.Init()) != ZX_OK) {
       xprintf("Early exit: fuzzer.Init returned bad status: %d\n", status_);
       return 0;
     }
 
     if ((status_ = fuzzer_.BindService()) != ZX_OK) {
-      xprintf("Early exit: fuzzer.BindService returned bad status: %d\n",
-              status_);
+      xprintf("Early exit: fuzzer.BindService returned bad status: %d\n", status_);
       return 0;
     }
 
-    if ((status_ = fuzzer_.BindClient(&protocol_, loop_->dispatcher())) !=
-        ZX_OK) {
-      xprintf("Early exit: fuzzer.BindClient returned bad status: %d\n",
-              status_);
+    if ((status_ = fuzzer_.BindClient(&protocol_, loop_->dispatcher())) != ZX_OK) {
+      xprintf("Early exit: fuzzer.BindClient returned bad status: %d\n", status_);
       return 0;
     }
 
@@ -95,31 +88,26 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
   if (protocol_selection_ == 1) {
 #if !defined(PROTOCOL_test_service_FirstProtocol)
     // Selected protocol from FIDL file that is not part of this fuzzer.
-    xprintf(
-        "Early exit: Chose disabled protocol: test_service_FirstProtocol\n");
+    xprintf("Early exit: Chose disabled protocol: test_service_FirstProtocol\n");
     return 0;
 #else
 
     ::fidl::InterfacePtr< ::test::service::FirstProtocol> protocol_;
 
     xprintf("Starting test_service_FirstProtocol service\n");
-    ::fidl::fuzzing::Fuzzer< ::test::service::FirstProtocol> fuzzer_(
-        loop_->dispatcher());
+    ::fidl::fuzzing::Fuzzer< ::test::service::FirstProtocol> fuzzer_(loop_->dispatcher());
     if ((status_ = fuzzer_.Init()) != ZX_OK) {
       xprintf("Early exit: fuzzer.Init returned bad status: %d\n", status_);
       return 0;
     }
 
     if ((status_ = fuzzer_.BindService()) != ZX_OK) {
-      xprintf("Early exit: fuzzer.BindService returned bad status: %d\n",
-              status_);
+      xprintf("Early exit: fuzzer.BindService returned bad status: %d\n", status_);
       return 0;
     }
 
-    if ((status_ = fuzzer_.BindClient(&protocol_, loop_->dispatcher())) !=
-        ZX_OK) {
-      xprintf("Early exit: fuzzer.BindClient returned bad status: %d\n",
-              status_);
+    if ((status_ = fuzzer_.BindClient(&protocol_, loop_->dispatcher())) != ZX_OK) {
+      xprintf("Early exit: fuzzer.BindClient returned bad status: %d\n", status_);
       return 0;
     }
 

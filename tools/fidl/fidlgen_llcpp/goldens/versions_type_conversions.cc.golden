@@ -5,108 +5,71 @@
 namespace fidl {
 namespace internal {
 
-::test_versions::Struct WireNaturalConversionTraits<
-    ::test_versions::wire::Struct,
-    ::test_versions::Struct>::ToNatural(::test_versions::wire::Struct src) {
-  return ::test_versions::Struct(
-      WireNaturalConversionTraits<uint32_t, uint32_t>::ToNatural(
-          std::move(src.x)));
+::test_versions::Struct WireNaturalConversionTraits<::test_versions::wire::Struct, ::test_versions::Struct>::ToNatural(::test_versions::wire::Struct src) {
+  return ::test_versions::Struct(WireNaturalConversionTraits<uint32_t, uint32_t>::ToNatural(std::move(src.x)));
 }
-::test_versions::wire::Struct WireNaturalConversionTraits<
-    ::test_versions::wire::Struct,
-    ::test_versions::Struct>::ToWire(fidl::AnyArena& arena,
-                                     ::test_versions::Struct src) {
+::test_versions::wire::Struct WireNaturalConversionTraits<::test_versions::wire::Struct, ::test_versions::Struct>::ToWire(fidl::AnyArena& arena, ::test_versions::Struct src) {
   return ::test_versions::wire::Struct{
-      .x = WireNaturalConversionTraits<uint32_t, uint32_t>::ToWire(
-          arena, std::move(src.x())),
+      .x = WireNaturalConversionTraits<uint32_t, uint32_t>::ToWire(arena, std::move(src.x())),
   };
 }
 
-::test_versions::Table WireNaturalConversionTraits<
-    ::test_versions::wire::Table,
-    ::test_versions::Table>::ToNatural(::test_versions::wire::Table src) {
+::test_versions::Table WireNaturalConversionTraits<::test_versions::wire::Table, ::test_versions::Table>::ToNatural(::test_versions::wire::Table src) {
   ::test_versions::Table dst;
   if (src.has_x()) {
-    dst.x() = WireNaturalConversionTraits<uint32_t, uint32_t>::ToNatural(
-        std::move(src.x()));
+    dst.x() =
+        WireNaturalConversionTraits<uint32_t, uint32_t>::ToNatural(std::move(src.x()));
   }
 
   return dst;
 }
-::test_versions::wire::Table WireNaturalConversionTraits<
-    ::test_versions::wire::Table,
-    ::test_versions::Table>::ToWire(fidl::AnyArena& arena,
-                                    ::test_versions::Table src) {
+::test_versions::wire::Table WireNaturalConversionTraits<::test_versions::wire::Table, ::test_versions::Table>::ToWire(fidl::AnyArena& arena, ::test_versions::Table src) {
   auto builder = ::test_versions::wire::Table::Builder(arena);
   if (src.x().has_value()) {
-    builder.x(WireNaturalConversionTraits<uint32_t, uint32_t>::ToWire(
-        arena, std::move(src.x().value())));
+    builder.x(
+        WireNaturalConversionTraits<uint32_t, uint32_t>::ToWire(arena, std::move(src.x().value())));
   }
   return builder.Build();
 }
 
-::test_versions::Union WireNaturalConversionTraits<
-    ::test_versions::wire::Union,
-    ::test_versions::Union>::ToNatural(::test_versions::wire::Union src) {
+::test_versions::Union WireNaturalConversionTraits<::test_versions::wire::Union, ::test_versions::Union>::ToNatural(::test_versions::wire::Union src) {
   switch (src.Which()) {
     case ::test_versions::wire::Union::Tag::kX:
       return ::test_versions::Union::WithX(
-          WireNaturalConversionTraits<uint32_t, uint32_t>::ToNatural(
-              std::move(src.x())));
+          WireNaturalConversionTraits<uint32_t, uint32_t>::ToNatural(std::move(src.x())));
     default:
       return ::test_versions::Union();
   }
 }
-::test_versions::wire::Union WireNaturalConversionTraits<
-    ::test_versions::wire::Union,
-    ::test_versions::Union>::ToWire(fidl::AnyArena& arena,
-                                    ::test_versions::Union src) {
+::test_versions::wire::Union WireNaturalConversionTraits<::test_versions::wire::Union, ::test_versions::Union>::ToWire(fidl::AnyArena& arena, ::test_versions::Union src) {
   switch (src.Which()) {
     case ::test_versions::Union::Tag::kX:
       return ::test_versions::wire::Union::WithX(
-          WireNaturalConversionTraits<uint32_t, uint32_t>::ToWire(
-              arena, std::move(src.x().value())));
+          WireNaturalConversionTraits<uint32_t, uint32_t>::ToWire(arena, std::move(src.x().value())));
     default:
       return ::test_versions::wire::Union();
   }
 }
 
-std::unique_ptr<::test_versions::Union> WireNaturalConversionTraits<
-    ::test_versions::wire::Union, std::unique_ptr<::test_versions::Union>>::
-    ToNatural(::test_versions::wire::Union src) {
+std::unique_ptr<::test_versions::Union> WireNaturalConversionTraits<::test_versions::wire::Union, std::unique_ptr<::test_versions::Union>>::ToNatural(::test_versions::wire::Union src) {
   if (src.has_invalid_tag()) {
     return nullptr;
   }
-  return std::make_unique<::test_versions::Union>(
-      WireNaturalConversionTraits<
-          ::test_versions::wire::Union,
-          ::test_versions::Union>::ToNatural(std::move(src)));
+  return std::make_unique<::test_versions::Union>(WireNaturalConversionTraits<::test_versions::wire::Union, ::test_versions::Union>::ToNatural(std::move(src)));
 }
-::test_versions::wire::Union WireNaturalConversionTraits<
-    ::test_versions::wire::Union, std::unique_ptr<::test_versions::Union>>::
-    ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_versions::Union> src) {
+::test_versions::wire::Union WireNaturalConversionTraits<::test_versions::wire::Union, std::unique_ptr<::test_versions::Union>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_versions::Union> src) {
   if (!src) {
     return ::test_versions::wire::Union();
   }
-  return WireNaturalConversionTraits<::test_versions::wire::Union,
-                                     ::test_versions::Union>::ToWire(arena,
-                                                                     std::move(
-                                                                         *src));
+  return WireNaturalConversionTraits<::test_versions::wire::Union, ::test_versions::Union>::ToWire(arena, std::move(*src));
 }
 
 #ifdef __Fuchsia__
 
-::fidl::Request<::test_versions::Protocol::Foo>
-WireNaturalConversionTraits<::fidl::WireRequest<::test_versions::Protocol::Foo>,
-                            ::fidl::Request<::test_versions::Protocol::Foo>>::
-    ToNatural(::fidl::WireRequest<::test_versions::Protocol::Foo> src) {
+::fidl::Request<::test_versions::Protocol::Foo> WireNaturalConversionTraits<::fidl::WireRequest<::test_versions::Protocol::Foo>, ::fidl::Request<::test_versions::Protocol::Foo>>::ToNatural(::fidl::WireRequest<::test_versions::Protocol::Foo> src) {
   return ::fidl::Request<::test_versions::Protocol::Foo>();
 }
-::fidl::WireRequest<::test_versions::Protocol::Foo>
-WireNaturalConversionTraits<::fidl::WireRequest<::test_versions::Protocol::Foo>,
-                            ::fidl::Request<::test_versions::Protocol::Foo>>::
-    ToWire(fidl::AnyArena& arena,
-           ::fidl::Request<::test_versions::Protocol::Foo> src) {
+::fidl::WireRequest<::test_versions::Protocol::Foo> WireNaturalConversionTraits<::fidl::WireRequest<::test_versions::Protocol::Foo>, ::fidl::Request<::test_versions::Protocol::Foo>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_versions::Protocol::Foo> src) {
   return ::fidl::WireRequest<::test_versions::Protocol::Foo>();
 }
 #endif  // __Fuchsia__

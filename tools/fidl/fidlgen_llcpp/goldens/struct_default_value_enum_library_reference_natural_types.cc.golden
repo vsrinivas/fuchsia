@@ -2,7 +2,7 @@
 
 #include <fidl/test.structdefaultvalueenumlibraryreference/cpp/natural_types.h>
 
-::test_structdefaultvalueenumlibraryreference::Foo::Storage_
-test_structdefaultvalueenumlibraryreference::Foo::CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.field)};
+::test_structdefaultvalueenumlibraryreference::Foo::Storage_ test_structdefaultvalueenumlibraryreference::Foo::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.field)};
 }

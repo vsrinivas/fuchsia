@@ -16,6 +16,5 @@ size_t fidl::internal::DisplayError<::test_versions::Enum>::Format(
     }
   }();
   return ::fidl::internal::FormatApplicationError(
-      static_cast<uint32_t>(value), name,
-      &::test_versions::test_versions_EnumTable, destination, capacity);
+      static_cast<uint32_t>(value), name, &::test_versions::test_versions_EnumTable, destination, capacity);
 }

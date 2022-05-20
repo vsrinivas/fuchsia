@@ -5,21 +5,12 @@
 namespace fidl {
 namespace internal {
 
-::test_importedconstvalues::MyStruct
-WireNaturalConversionTraits<::test_importedconstvalues::wire::MyStruct,
-                            ::test_importedconstvalues::MyStruct>::
-    ToNatural(::test_importedconstvalues::wire::MyStruct src) {
-  return ::test_importedconstvalues::MyStruct(
-      WireNaturalConversionTraits<uint8_t, uint8_t>::ToNatural(
-          std::move(src.__reserved)));
+::test_importedconstvalues::MyStruct WireNaturalConversionTraits<::test_importedconstvalues::wire::MyStruct, ::test_importedconstvalues::MyStruct>::ToNatural(::test_importedconstvalues::wire::MyStruct src) {
+  return ::test_importedconstvalues::MyStruct(WireNaturalConversionTraits<uint8_t, uint8_t>::ToNatural(std::move(src.__reserved)));
 }
-::test_importedconstvalues::wire::MyStruct
-WireNaturalConversionTraits<::test_importedconstvalues::wire::MyStruct,
-                            ::test_importedconstvalues::MyStruct>::
-    ToWire(fidl::AnyArena& arena, ::test_importedconstvalues::MyStruct src) {
+::test_importedconstvalues::wire::MyStruct WireNaturalConversionTraits<::test_importedconstvalues::wire::MyStruct, ::test_importedconstvalues::MyStruct>::ToWire(fidl::AnyArena& arena, ::test_importedconstvalues::MyStruct src) {
   return ::test_importedconstvalues::wire::MyStruct{
-      .__reserved = WireNaturalConversionTraits<uint8_t, uint8_t>::ToWire(
-          arena, std::move(src.__reserved())),
+      .__reserved = WireNaturalConversionTraits<uint8_t, uint8_t>::ToWire(arena, std::move(src.__reserved())),
   };
 }
 

@@ -3,27 +3,20 @@
 #include <fidl/test.doccomments/cpp/natural_messaging.h>
 
 namespace test_doccomments {
-[[maybe_unused]] constexpr inline uint64_t kInterface_Method_Ordinal =
-    5017051197196532121lu;
+[[maybe_unused]] constexpr inline uint64_t kInterface_Method_Ordinal = 5017051197196532121lu;
 
-[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
-    kInterface_Method_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kInterface_Method_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
-[[maybe_unused]] constexpr inline uint64_t kInterface_OnEvent_Ordinal =
-    28780186509098736lu;
+[[maybe_unused]] constexpr inline uint64_t kInterface_OnEvent_Ordinal = 28780186509098736lu;
 
-[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
-    kInterface_OnEvent_DynamicFlags =
-        ::fidl::MessageDynamicFlags::kStrictMethod;
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kInterface_OnEvent_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
 #ifdef __Fuchsia__
 }  // namespace test_doccomments
-::fitx::result<::fidl::Error> fidl::internal::NaturalClientImpl<
-    ::test_doccomments::Interface>::Method() const {
+::fitx::result<::fidl::Error>
+fidl::internal::NaturalClientImpl<::test_doccomments::Interface>::Method() const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_doccomments::kInterface_Method_Ordinal,
-      ::test_doccomments::kInterface_Method_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_doccomments::kInterface_Method_Ordinal, ::test_doccomments::kInterface_Method_DynamicFlags};
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   ::fidl::Status status = client_base().SendOneWay(_encoded_message);
   return ::fidl::internal::ToFitxResult(status);
@@ -37,9 +30,7 @@ namespace test_doccomments {
 ::fitx::result<::fidl::Error>
 fidl::internal::NaturalSyncClientImpl<::test_doccomments::Interface>::Method() {
   ::fidl::internal::NaturalMessageEncoder encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_doccomments::kInterface_Method_Ordinal,
-      ::test_doccomments::kInterface_Method_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_doccomments::kInterface_Method_Ordinal, ::test_doccomments::kInterface_Method_DynamicFlags};
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
   msg.Write(_client_end().handle());
   return ::fidl::internal::ToFitxResult(::fidl::Status{msg});
@@ -49,14 +40,13 @@ fidl::internal::NaturalSyncClientImpl<::test_doccomments::Interface>::Method() {
 
 #ifdef __Fuchsia__
 
-std::optional<::fidl::UnbindInfo> fidl::internal::
-    NaturalEventDispatcher<::test_doccomments::Interface>::DispatchEvent(
-        ::fidl::IncomingMessage& msg,
-        ::fidl::internal::MessageStorageViewBase* storage_view) {
+std::optional<::fidl::UnbindInfo>
+fidl::internal::NaturalEventDispatcher<::test_doccomments::Interface>::DispatchEvent(
+    ::fidl::IncomingMessage& msg,
+    ::fidl::internal::MessageStorageViewBase* storage_view) {
   switch (msg.header()->ordinal) {
     case ::test_doccomments::kInterface_OnEvent_Ordinal: {
-      ::fitx::result decoded =
-          ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
+      ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
       if (decoded.is_error()) {
         return ::fidl::UnbindInfo(decoded.error_value());
       }
@@ -75,23 +65,17 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
 
 #ifdef __Fuchsia__
 
-::fitx::result<::fidl::Error> fidl::internal::NaturalWeakEventSender<
-    ::test_doccomments::Interface>::OnEvent() {
+::fitx::result<::fidl::Error> fidl::internal::NaturalWeakEventSender<::test_doccomments::Interface>::OnEvent() {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_doccomments::kInterface_OnEvent_Ordinal,
-      ::test_doccomments::kInterface_OnEvent_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_doccomments::kInterface_OnEvent_Ordinal, ::test_doccomments::kInterface_OnEvent_DynamicFlags};
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   ::fidl::Status result = _inner().SendEvent(_encoded_message);
   return ::fidl::internal::ToFitxResult(result);
 }
 
-::fitx::result<::fidl::Error>
-fidl::internal::NaturalEventSender<::test_doccomments::Interface>::OnEvent() {
+::fitx::result<::fidl::Error> fidl::internal::NaturalEventSender<::test_doccomments::Interface>::OnEvent() {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_doccomments::kInterface_OnEvent_Ordinal,
-      ::test_doccomments::kInterface_OnEvent_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_doccomments::kInterface_OnEvent_Ordinal, ::test_doccomments::kInterface_OnEvent_DynamicFlags};
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   _encoded_message.Write(_transport());
   return ::fidl::internal::ToFitxResult(::fidl::Status{_encoded_message});
@@ -101,44 +85,34 @@ fidl::internal::NaturalEventSender<::test_doccomments::Interface>::OnEvent() {
 
 #ifdef __Fuchsia__
 
-constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
-    ::test_doccomments::Interface>::entries_[] = {
+constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<::test_doccomments::Interface>::entries_[] = {
     {
         ::test_doccomments::kInterface_Method_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::MessageStorageViewBase* storage_view,
-           ::fidl::Transaction* txn) {
-          ::fitx::result decoded =
-              ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
+           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
           if (decoded.is_error()) {
             return decoded.error_value();
           }
           ::fidl::Request<::test_doccomments::Interface::Method> request;
-          ::fidl::internal::NaturalCompleter<
-              ::test_doccomments::Interface::Method>::Sync completer(txn);
-          static_cast<::fidl::Server<::test_doccomments::Interface>*>(interface)
-              ->Method(request, completer);
+          ::fidl::internal::NaturalCompleter<::test_doccomments::Interface::Method>::Sync completer(txn);
+          static_cast<::fidl::Server<::test_doccomments::Interface>*>(interface)->Method(
+              request, completer);
           return ::fidl::Status::Ok();
         },
     },
 };
 
-const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<
-    ::test_doccomments::Interface>::entries_end_ = &entries_[1];
+const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::test_doccomments::Interface>::entries_end_ =
+    &entries_[1];
 
-void fidl::internal::NaturalServerDispatcher<::test_doccomments::Interface>::
-    Dispatch(::fidl::Server<::test_doccomments::Interface>* impl,
-             ::fidl::IncomingMessage&& msg,
-             internal::MessageStorageViewBase* storage_view,
-             ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_,
-                             entries_end_);
+void fidl::internal::NaturalServerDispatcher<::test_doccomments::Interface>::Dispatch(::fidl::Server<::test_doccomments::Interface>* impl, ::fidl::IncomingMessage&& msg,
+                                                                                      internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_);
 }
 void fidl::Server<::test_doccomments::Interface>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
-  ::fidl::internal::NaturalServerDispatcher<
-      ::test_doccomments::Interface>::Dispatch(this, std::move(msg),
-                                               storage_view, txn);
+  ::fidl::internal::NaturalServerDispatcher<::test_doccomments::Interface>::Dispatch(this, std::move(msg), storage_view, txn);
 }
 #endif  // __Fuchsia__

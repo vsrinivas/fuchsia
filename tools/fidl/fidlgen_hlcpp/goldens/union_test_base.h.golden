@@ -10,13 +10,10 @@ class TestProtocol_TestBase : public ::test::union_::TestProtocol {
  public:
   virtual ~TestProtocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
-  void StrictXUnionHenceResponseMayBeStackAllocated(
-      StrictXUnionHenceResponseMayBeStackAllocatedCallback callback) override {
+  void StrictXUnionHenceResponseMayBeStackAllocated(StrictXUnionHenceResponseMayBeStackAllocatedCallback callback) override {
     NotImplemented_("StrictXUnionHenceResponseMayBeStackAllocated");
   }
-  void FlexibleXUnionHenceResponseMustBeHeapAllocated(
-      FlexibleXUnionHenceResponseMustBeHeapAllocatedCallback callback)
-      override {
+  void FlexibleXUnionHenceResponseMustBeHeapAllocated(FlexibleXUnionHenceResponseMustBeHeapAllocatedCallback callback) override {
     NotImplemented_("FlexibleXUnionHenceResponseMustBeHeapAllocated");
   }
 };

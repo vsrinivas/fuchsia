@@ -7,55 +7,42 @@ namespace fidl {
 namespace testing {
 
 template <>
-class WireTestBase<::test_inheritancewithrecursivedecl::Parent>
-    : public ::fidl::WireServer<::test_inheritancewithrecursivedecl::Parent> {
+class WireTestBase<::test_inheritancewithrecursivedecl::Parent> : public ::fidl::WireServer<::test_inheritancewithrecursivedecl::Parent> {
  public:
-  virtual ~WireTestBase<::test_inheritancewithrecursivedecl::Parent>() =
-      default;
-  virtual void NotImplemented_(const std::string& name,
-                               ::fidl::CompleterBase& completer) = 0;
-  virtual void First(FirstRequestView request,
-                     FirstCompleter::Sync& completer) override {
+  virtual ~WireTestBase<::test_inheritancewithrecursivedecl::Parent>() = default;
+  virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
+  virtual void First(
+      FirstRequestView request, FirstCompleter::Sync& completer) override {
     NotImplemented_("First", completer);
   }
 };
 
 template <>
-class ::fidl::testing::WireSyncEventHandlerTestBase<
-    ::test_inheritancewithrecursivedecl::Parent>
-    : public ::fidl::WireSyncEventHandler<
-          ::test_inheritancewithrecursivedecl::Parent> {
+class ::fidl::testing::WireSyncEventHandlerTestBase<::test_inheritancewithrecursivedecl::Parent> : public ::fidl::WireSyncEventHandler<::test_inheritancewithrecursivedecl::Parent> {
  public:
-  virtual ~WireSyncEventHandlerTestBase<
-      ::test_inheritancewithrecursivedecl::Parent>() = default;
+  virtual ~WireSyncEventHandlerTestBase<::test_inheritancewithrecursivedecl::Parent>() = default;
   virtual void NotImplemented_(const std::string& name) = 0;
 };
 
 template <>
-class WireTestBase<::test_inheritancewithrecursivedecl::Child>
-    : public ::fidl::WireServer<::test_inheritancewithrecursivedecl::Child> {
+class WireTestBase<::test_inheritancewithrecursivedecl::Child> : public ::fidl::WireServer<::test_inheritancewithrecursivedecl::Child> {
  public:
   virtual ~WireTestBase<::test_inheritancewithrecursivedecl::Child>() = default;
-  virtual void NotImplemented_(const std::string& name,
-                               ::fidl::CompleterBase& completer) = 0;
-  virtual void First(FirstRequestView request,
-                     FirstCompleter::Sync& completer) override {
+  virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
+  virtual void First(
+      FirstRequestView request, FirstCompleter::Sync& completer) override {
     NotImplemented_("First", completer);
   }
-  virtual void Second(SecondRequestView request,
-                      SecondCompleter::Sync& completer) override {
+  virtual void Second(
+      SecondRequestView request, SecondCompleter::Sync& completer) override {
     NotImplemented_("Second", completer);
   }
 };
 
 template <>
-class ::fidl::testing::WireSyncEventHandlerTestBase<
-    ::test_inheritancewithrecursivedecl::Child>
-    : public ::fidl::WireSyncEventHandler<
-          ::test_inheritancewithrecursivedecl::Child> {
+class ::fidl::testing::WireSyncEventHandlerTestBase<::test_inheritancewithrecursivedecl::Child> : public ::fidl::WireSyncEventHandler<::test_inheritancewithrecursivedecl::Child> {
  public:
-  virtual ~WireSyncEventHandlerTestBase<
-      ::test_inheritancewithrecursivedecl::Child>() = default;
+  virtual ~WireSyncEventHandlerTestBase<::test_inheritancewithrecursivedecl::Child>() = default;
   virtual void NotImplemented_(const std::string& name) = 0;
 };
 }  // namespace testing

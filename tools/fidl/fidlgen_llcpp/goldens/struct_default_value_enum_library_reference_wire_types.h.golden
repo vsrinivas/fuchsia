@@ -26,8 +26,7 @@ namespace test_structdefaultvalueenumlibraryreference {
 namespace wire {
 struct Foo;
 
-extern "C" const fidl_type_t
-    test_structdefaultvalueenumlibraryreference_FooTable;
+extern "C" const fidl_type_t test_structdefaultvalueenumlibraryreference_FooTable;
 
 struct Foo {
   ::test_dependent::wire::MyEnum field = {};
@@ -39,11 +38,8 @@ namespace fidl {
 
 // TODO(fxbug.dev/95833) Remove this.
 template <>
-struct DeprecatedCTypeTraits<
-    ::test_structdefaultvalueenumlibraryreference::wire::Foo> {
-  static constexpr const fidl_type_t* kType =
-      &::test_structdefaultvalueenumlibraryreference::wire::
-          test_structdefaultvalueenumlibraryreference_FooTable;
+struct DeprecatedCTypeTraits<::test_structdefaultvalueenumlibraryreference::wire::Foo> {
+  static constexpr const fidl_type_t* kType = &::test_structdefaultvalueenumlibraryreference::wire::test_structdefaultvalueenumlibraryreference_FooTable;
 };
 
 template <>
@@ -59,59 +55,34 @@ struct TypeTraits<::test_structdefaultvalueenumlibraryreference::wire::Foo> {
 };
 
 template <>
-struct IsFidlType<::test_structdefaultvalueenumlibraryreference::wire::Foo>
-    : public std::true_type {};
+struct IsFidlType<::test_structdefaultvalueenumlibraryreference::wire::Foo> : public std::true_type {};
 template <>
-struct IsStruct<::test_structdefaultvalueenumlibraryreference::wire::Foo>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::test_structdefaultvalueenumlibraryreference::wire::Foo>);
-static_assert(offsetof(::test_structdefaultvalueenumlibraryreference::wire::Foo,
-                       field) == 0);
-static_assert(
-    sizeof(::test_structdefaultvalueenumlibraryreference::wire::Foo) ==
-    TypeTraits<::test_structdefaultvalueenumlibraryreference::wire::Foo>::
-        kPrimarySize);
+struct IsStruct<::test_structdefaultvalueenumlibraryreference::wire::Foo> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_structdefaultvalueenumlibraryreference::wire::Foo>);
+static_assert(offsetof(::test_structdefaultvalueenumlibraryreference::wire::Foo, field) == 0);
+static_assert(sizeof(::test_structdefaultvalueenumlibraryreference::wire::Foo) == TypeTraits<::test_structdefaultvalueenumlibraryreference::wire::Foo>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::test_structdefaultvalueenumlibraryreference::wire::Foo,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_structdefaultvalueenumlibraryreference::wire::Foo, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 4;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::WireStructMemberCodingInfo<
-          ::test_dependent::wire::MyEnum,
-          fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<::test_dependent::wire::MyEnum, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
   static constexpr bool kHasPadding = false;
-  using Base = WireStructCodingTraitsBase<
-      ::test_structdefaultvalueenumlibraryreference::wire::Foo,
-      ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_structdefaultvalueenumlibraryreference::wire::Foo, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
   static void Encode(
-      internal::WireEncoder* encoder,
-      ::test_structdefaultvalueenumlibraryreference::wire::Foo* value,
-      ::fidl::internal::WirePosition position,
-      RecursionDepth<IsRecursive> recursion_depth) {
+      internal::WireEncoder* encoder, ::test_structdefaultvalueenumlibraryreference::wire::Foo* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value,
-             sizeof(::test_structdefaultvalueenumlibraryreference::wire::Foo));
+      memcpy(position.As<void>(), value, sizeof(::test_structdefaultvalueenumlibraryreference::wire::Foo));
     } else {
-      internal::WireCodingTraits<::test_dependent::wire::MyEnum,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->field,
-                                                      position + 0,
-                                                      recursion_depth);
+      internal::WireCodingTraits<::test_dependent::wire::MyEnum, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->field, position + 0, recursion_depth);
     }
   }
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (!Base::are_members_memcpy_compatible) {
-      internal::WireCodingTraits<::test_dependent::wire::MyEnum,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 0,
-                                                      recursion_depth);
+      internal::WireCodingTraits<::test_dependent::wire::MyEnum, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 0, recursion_depth);
     }
   }
 };

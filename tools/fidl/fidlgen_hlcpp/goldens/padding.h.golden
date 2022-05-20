@@ -49,15 +49,11 @@ class Padding7ByteMiddle final {
 
   uint64_t b{};
 
-  static inline ::std::unique_ptr<Padding7ByteMiddle> New() {
-    return ::std::make_unique<Padding7ByteMiddle>();
-  }
+  static inline ::std::unique_ptr<Padding7ByteMiddle> New() { return ::std::make_unique<Padding7ByteMiddle>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, Padding7ByteMiddle* value,
-                     size_t _offset);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, Padding7ByteMiddle* value, size_t _offset);
   zx_status_t Clone(Padding7ByteMiddle* result) const;
 };
 
@@ -76,15 +72,11 @@ class Padding7ByteEnd final {
 
   uint8_t b{};
 
-  static inline ::std::unique_ptr<Padding7ByteEnd> New() {
-    return ::std::make_unique<Padding7ByteEnd>();
-  }
+  static inline ::std::unique_ptr<Padding7ByteEnd> New() { return ::std::make_unique<Padding7ByteEnd>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, Padding7ByteEnd* value,
-                     size_t _offset);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, Padding7ByteEnd* value, size_t _offset);
   zx_status_t Clone(Padding7ByteEnd* result) const;
 };
 
@@ -103,15 +95,11 @@ class Padding6ByteMiddle final {
 
   uint64_t b{};
 
-  static inline ::std::unique_ptr<Padding6ByteMiddle> New() {
-    return ::std::make_unique<Padding6ByteMiddle>();
-  }
+  static inline ::std::unique_ptr<Padding6ByteMiddle> New() { return ::std::make_unique<Padding6ByteMiddle>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, Padding6ByteMiddle* value,
-                     size_t _offset);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, Padding6ByteMiddle* value, size_t _offset);
   zx_status_t Clone(Padding6ByteMiddle* result) const;
 };
 
@@ -130,15 +118,11 @@ class Padding6ByteEnd final {
 
   uint16_t b{};
 
-  static inline ::std::unique_ptr<Padding6ByteEnd> New() {
-    return ::std::make_unique<Padding6ByteEnd>();
-  }
+  static inline ::std::unique_ptr<Padding6ByteEnd> New() { return ::std::make_unique<Padding6ByteEnd>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, Padding6ByteEnd* value,
-                     size_t _offset);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, Padding6ByteEnd* value, size_t _offset);
   zx_status_t Clone(Padding6ByteEnd* result) const;
 };
 
@@ -159,15 +143,11 @@ class Padding5ByteMiddle final {
 
   uint64_t c{};
 
-  static inline ::std::unique_ptr<Padding5ByteMiddle> New() {
-    return ::std::make_unique<Padding5ByteMiddle>();
-  }
+  static inline ::std::unique_ptr<Padding5ByteMiddle> New() { return ::std::make_unique<Padding5ByteMiddle>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, Padding5ByteMiddle* value,
-                     size_t _offset);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, Padding5ByteMiddle* value, size_t _offset);
   zx_status_t Clone(Padding5ByteMiddle* result) const;
 };
 
@@ -188,15 +168,11 @@ class Padding5ByteEnd final {
 
   uint8_t c{};
 
-  static inline ::std::unique_ptr<Padding5ByteEnd> New() {
-    return ::std::make_unique<Padding5ByteEnd>();
-  }
+  static inline ::std::unique_ptr<Padding5ByteEnd> New() { return ::std::make_unique<Padding5ByteEnd>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, Padding5ByteEnd* value,
-                     size_t _offset);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, Padding5ByteEnd* value, size_t _offset);
   zx_status_t Clone(Padding5ByteEnd* result) const;
 };
 
@@ -215,15 +191,11 @@ class Padding4ByteMiddle final {
 
   uint64_t b{};
 
-  static inline ::std::unique_ptr<Padding4ByteMiddle> New() {
-    return ::std::make_unique<Padding4ByteMiddle>();
-  }
+  static inline ::std::unique_ptr<Padding4ByteMiddle> New() { return ::std::make_unique<Padding4ByteMiddle>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, Padding4ByteMiddle* value,
-                     size_t _offset);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, Padding4ByteMiddle* value, size_t _offset);
   zx_status_t Clone(Padding4ByteMiddle* result) const;
 };
 
@@ -242,15 +214,11 @@ class Padding4ByteEnd final {
 
   uint32_t b{};
 
-  static inline ::std::unique_ptr<Padding4ByteEnd> New() {
-    return ::std::make_unique<Padding4ByteEnd>();
-  }
+  static inline ::std::unique_ptr<Padding4ByteEnd> New() { return ::std::make_unique<Padding4ByteEnd>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, Padding4ByteEnd* value,
-                     size_t _offset);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, Padding4ByteEnd* value, size_t _offset);
   zx_status_t Clone(Padding4ByteEnd* result) const;
 };
 
@@ -273,26 +241,20 @@ class Padding4ByteAlignmentLength12 final {
 
   uint16_t d{};
 
-  static inline ::std::unique_ptr<Padding4ByteAlignmentLength12> New() {
-    return ::std::make_unique<Padding4ByteAlignmentLength12>();
-  }
+  static inline ::std::unique_ptr<Padding4ByteAlignmentLength12> New() { return ::std::make_unique<Padding4ByteAlignmentLength12>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder,
-                     Padding4ByteAlignmentLength12* value, size_t _offset);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, Padding4ByteAlignmentLength12* value, size_t _offset);
   zx_status_t Clone(Padding4ByteAlignmentLength12* result) const;
 };
 
-inline zx_status_t Clone(
-    const ::test::padding::Padding4ByteAlignmentLength12& _value,
-    ::test::padding::Padding4ByteAlignmentLength12* _result) {
+inline zx_status_t Clone(const ::test::padding::Padding4ByteAlignmentLength12& _value,
+                         ::test::padding::Padding4ByteAlignmentLength12* _result) {
   return _value.Clone(_result);
 }
 
-using Padding4ByteAlignmentLength12Ptr =
-    ::std::unique_ptr<Padding4ByteAlignmentLength12>;
+using Padding4ByteAlignmentLength12Ptr = ::std::unique_ptr<Padding4ByteAlignmentLength12>;
 
 class Padding3ByteMiddle final {
  public:
@@ -302,15 +264,11 @@ class Padding3ByteMiddle final {
 
   uint32_t b{};
 
-  static inline ::std::unique_ptr<Padding3ByteMiddle> New() {
-    return ::std::make_unique<Padding3ByteMiddle>();
-  }
+  static inline ::std::unique_ptr<Padding3ByteMiddle> New() { return ::std::make_unique<Padding3ByteMiddle>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, Padding3ByteMiddle* value,
-                     size_t _offset);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, Padding3ByteMiddle* value, size_t _offset);
   zx_status_t Clone(Padding3ByteMiddle* result) const;
 };
 
@@ -329,15 +287,11 @@ class Padding3ByteEnd final {
 
   uint8_t b{};
 
-  static inline ::std::unique_ptr<Padding3ByteEnd> New() {
-    return ::std::make_unique<Padding3ByteEnd>();
-  }
+  static inline ::std::unique_ptr<Padding3ByteEnd> New() { return ::std::make_unique<Padding3ByteEnd>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, Padding3ByteEnd* value,
-                     size_t _offset);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, Padding3ByteEnd* value, size_t _offset);
   zx_status_t Clone(Padding3ByteEnd* result) const;
 };
 
@@ -356,15 +310,11 @@ class Padding2ByteMiddle final {
 
   uint32_t b{};
 
-  static inline ::std::unique_ptr<Padding2ByteMiddle> New() {
-    return ::std::make_unique<Padding2ByteMiddle>();
-  }
+  static inline ::std::unique_ptr<Padding2ByteMiddle> New() { return ::std::make_unique<Padding2ByteMiddle>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, Padding2ByteMiddle* value,
-                     size_t _offset);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, Padding2ByteMiddle* value, size_t _offset);
   zx_status_t Clone(Padding2ByteMiddle* result) const;
 };
 
@@ -383,15 +333,11 @@ class Padding2ByteEnd final {
 
   uint16_t b{};
 
-  static inline ::std::unique_ptr<Padding2ByteEnd> New() {
-    return ::std::make_unique<Padding2ByteEnd>();
-  }
+  static inline ::std::unique_ptr<Padding2ByteEnd> New() { return ::std::make_unique<Padding2ByteEnd>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, Padding2ByteEnd* value,
-                     size_t _offset);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, Padding2ByteEnd* value, size_t _offset);
   zx_status_t Clone(Padding2ByteEnd* result) const;
 };
 
@@ -412,26 +358,20 @@ class Padding2ByteAlignmentLength6 final {
 
   uint8_t c{};
 
-  static inline ::std::unique_ptr<Padding2ByteAlignmentLength6> New() {
-    return ::std::make_unique<Padding2ByteAlignmentLength6>();
-  }
+  static inline ::std::unique_ptr<Padding2ByteAlignmentLength6> New() { return ::std::make_unique<Padding2ByteAlignmentLength6>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder,
-                     Padding2ByteAlignmentLength6* value, size_t _offset);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, Padding2ByteAlignmentLength6* value, size_t _offset);
   zx_status_t Clone(Padding2ByteAlignmentLength6* result) const;
 };
 
-inline zx_status_t Clone(
-    const ::test::padding::Padding2ByteAlignmentLength6& _value,
-    ::test::padding::Padding2ByteAlignmentLength6* _result) {
+inline zx_status_t Clone(const ::test::padding::Padding2ByteAlignmentLength6& _value,
+                         ::test::padding::Padding2ByteAlignmentLength6* _result) {
   return _value.Clone(_result);
 }
 
-using Padding2ByteAlignmentLength6Ptr =
-    ::std::unique_ptr<Padding2ByteAlignmentLength6>;
+using Padding2ByteAlignmentLength6Ptr = ::std::unique_ptr<Padding2ByteAlignmentLength6>;
 
 class Padding1ByteMiddle final {
  public:
@@ -441,15 +381,11 @@ class Padding1ByteMiddle final {
 
   uint16_t b{};
 
-  static inline ::std::unique_ptr<Padding1ByteMiddle> New() {
-    return ::std::make_unique<Padding1ByteMiddle>();
-  }
+  static inline ::std::unique_ptr<Padding1ByteMiddle> New() { return ::std::make_unique<Padding1ByteMiddle>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, Padding1ByteMiddle* value,
-                     size_t _offset);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, Padding1ByteMiddle* value, size_t _offset);
   zx_status_t Clone(Padding1ByteMiddle* result) const;
 };
 
@@ -468,15 +404,11 @@ class Padding1ByteEnd final {
 
   uint8_t b{};
 
-  static inline ::std::unique_ptr<Padding1ByteEnd> New() {
-    return ::std::make_unique<Padding1ByteEnd>();
-  }
+  static inline ::std::unique_ptr<Padding1ByteEnd> New() { return ::std::make_unique<Padding1ByteEnd>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, Padding1ByteEnd* value,
-                     size_t _offset);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, Padding1ByteEnd* value, size_t _offset);
   zx_status_t Clone(Padding1ByteEnd* result) const;
 };
 
@@ -495,15 +427,11 @@ struct CodingTraits<::test::padding::Padding7ByteMiddle>
     : public EncodableCodingTraits<::test::padding::Padding7ByteMiddle, 16> {};
 
 template <>
-struct HasPadding<::test::padding::Padding7ByteMiddle> : public std::true_type {
-};
+struct HasPadding<::test::padding::Padding7ByteMiddle> : public std::true_type {};
 
 template <>
-struct IsMemcpyCompatible<::test::padding::Padding7ByteMiddle>
-    : public internal::BoolConstant<
-          !HasPadding<::test::padding::Padding7ByteMiddle>::value &&
-          IsMemcpyCompatible<uint8_t>::value &&
-          IsMemcpyCompatible<uint64_t>::value> {};
+struct IsMemcpyCompatible<::test::padding::Padding7ByteMiddle> : public internal::BoolConstant<
+                                                                     !HasPadding<::test::padding::Padding7ByteMiddle>::value && IsMemcpyCompatible<uint8_t>::value && IsMemcpyCompatible<uint64_t>::value> {};
 
 inline zx_status_t Clone(const ::test::padding::Padding7ByteMiddle& value,
                          ::test::padding::Padding7ByteMiddle* result) {
@@ -512,8 +440,7 @@ inline zx_status_t Clone(const ::test::padding::Padding7ByteMiddle& value,
 
 template <>
 struct Equality<::test::padding::Padding7ByteMiddle> {
-  bool operator()(const ::test::padding::Padding7ByteMiddle& _lhs,
-                  const ::test::padding::Padding7ByteMiddle& _rhs) const {
+  bool operator()(const ::test::padding::Padding7ByteMiddle& _lhs, const ::test::padding::Padding7ByteMiddle& _rhs) const {
     if (!::fidl::Equals(_lhs.a, _rhs.a)) {
       return false;
     }
@@ -531,11 +458,8 @@ template <>
 struct HasPadding<::test::padding::Padding7ByteEnd> : public std::true_type {};
 
 template <>
-struct IsMemcpyCompatible<::test::padding::Padding7ByteEnd>
-    : public internal::BoolConstant<
-          !HasPadding<::test::padding::Padding7ByteEnd>::value &&
-          IsMemcpyCompatible<uint64_t>::value &&
-          IsMemcpyCompatible<uint8_t>::value> {};
+struct IsMemcpyCompatible<::test::padding::Padding7ByteEnd> : public internal::BoolConstant<
+                                                                  !HasPadding<::test::padding::Padding7ByteEnd>::value && IsMemcpyCompatible<uint64_t>::value && IsMemcpyCompatible<uint8_t>::value> {};
 
 inline zx_status_t Clone(const ::test::padding::Padding7ByteEnd& value,
                          ::test::padding::Padding7ByteEnd* result) {
@@ -544,8 +468,7 @@ inline zx_status_t Clone(const ::test::padding::Padding7ByteEnd& value,
 
 template <>
 struct Equality<::test::padding::Padding7ByteEnd> {
-  bool operator()(const ::test::padding::Padding7ByteEnd& _lhs,
-                  const ::test::padding::Padding7ByteEnd& _rhs) const {
+  bool operator()(const ::test::padding::Padding7ByteEnd& _lhs, const ::test::padding::Padding7ByteEnd& _rhs) const {
     if (!::fidl::Equals(_lhs.a, _rhs.a)) {
       return false;
     }
@@ -560,15 +483,11 @@ struct CodingTraits<::test::padding::Padding6ByteMiddle>
     : public EncodableCodingTraits<::test::padding::Padding6ByteMiddle, 16> {};
 
 template <>
-struct HasPadding<::test::padding::Padding6ByteMiddle> : public std::true_type {
-};
+struct HasPadding<::test::padding::Padding6ByteMiddle> : public std::true_type {};
 
 template <>
-struct IsMemcpyCompatible<::test::padding::Padding6ByteMiddle>
-    : public internal::BoolConstant<
-          !HasPadding<::test::padding::Padding6ByteMiddle>::value &&
-          IsMemcpyCompatible<uint16_t>::value &&
-          IsMemcpyCompatible<uint64_t>::value> {};
+struct IsMemcpyCompatible<::test::padding::Padding6ByteMiddle> : public internal::BoolConstant<
+                                                                     !HasPadding<::test::padding::Padding6ByteMiddle>::value && IsMemcpyCompatible<uint16_t>::value && IsMemcpyCompatible<uint64_t>::value> {};
 
 inline zx_status_t Clone(const ::test::padding::Padding6ByteMiddle& value,
                          ::test::padding::Padding6ByteMiddle* result) {
@@ -577,8 +496,7 @@ inline zx_status_t Clone(const ::test::padding::Padding6ByteMiddle& value,
 
 template <>
 struct Equality<::test::padding::Padding6ByteMiddle> {
-  bool operator()(const ::test::padding::Padding6ByteMiddle& _lhs,
-                  const ::test::padding::Padding6ByteMiddle& _rhs) const {
+  bool operator()(const ::test::padding::Padding6ByteMiddle& _lhs, const ::test::padding::Padding6ByteMiddle& _rhs) const {
     if (!::fidl::Equals(_lhs.a, _rhs.a)) {
       return false;
     }
@@ -596,11 +514,8 @@ template <>
 struct HasPadding<::test::padding::Padding6ByteEnd> : public std::true_type {};
 
 template <>
-struct IsMemcpyCompatible<::test::padding::Padding6ByteEnd>
-    : public internal::BoolConstant<
-          !HasPadding<::test::padding::Padding6ByteEnd>::value &&
-          IsMemcpyCompatible<uint64_t>::value &&
-          IsMemcpyCompatible<uint16_t>::value> {};
+struct IsMemcpyCompatible<::test::padding::Padding6ByteEnd> : public internal::BoolConstant<
+                                                                  !HasPadding<::test::padding::Padding6ByteEnd>::value && IsMemcpyCompatible<uint64_t>::value && IsMemcpyCompatible<uint16_t>::value> {};
 
 inline zx_status_t Clone(const ::test::padding::Padding6ByteEnd& value,
                          ::test::padding::Padding6ByteEnd* result) {
@@ -609,8 +524,7 @@ inline zx_status_t Clone(const ::test::padding::Padding6ByteEnd& value,
 
 template <>
 struct Equality<::test::padding::Padding6ByteEnd> {
-  bool operator()(const ::test::padding::Padding6ByteEnd& _lhs,
-                  const ::test::padding::Padding6ByteEnd& _rhs) const {
+  bool operator()(const ::test::padding::Padding6ByteEnd& _lhs, const ::test::padding::Padding6ByteEnd& _rhs) const {
     if (!::fidl::Equals(_lhs.a, _rhs.a)) {
       return false;
     }
@@ -625,16 +539,11 @@ struct CodingTraits<::test::padding::Padding5ByteMiddle>
     : public EncodableCodingTraits<::test::padding::Padding5ByteMiddle, 16> {};
 
 template <>
-struct HasPadding<::test::padding::Padding5ByteMiddle> : public std::true_type {
-};
+struct HasPadding<::test::padding::Padding5ByteMiddle> : public std::true_type {};
 
 template <>
-struct IsMemcpyCompatible<::test::padding::Padding5ByteMiddle>
-    : public internal::BoolConstant<
-          !HasPadding<::test::padding::Padding5ByteMiddle>::value &&
-          IsMemcpyCompatible<uint16_t>::value &&
-          IsMemcpyCompatible<uint8_t>::value &&
-          IsMemcpyCompatible<uint64_t>::value> {};
+struct IsMemcpyCompatible<::test::padding::Padding5ByteMiddle> : public internal::BoolConstant<
+                                                                     !HasPadding<::test::padding::Padding5ByteMiddle>::value && IsMemcpyCompatible<uint16_t>::value && IsMemcpyCompatible<uint8_t>::value && IsMemcpyCompatible<uint64_t>::value> {};
 
 inline zx_status_t Clone(const ::test::padding::Padding5ByteMiddle& value,
                          ::test::padding::Padding5ByteMiddle* result) {
@@ -643,8 +552,7 @@ inline zx_status_t Clone(const ::test::padding::Padding5ByteMiddle& value,
 
 template <>
 struct Equality<::test::padding::Padding5ByteMiddle> {
-  bool operator()(const ::test::padding::Padding5ByteMiddle& _lhs,
-                  const ::test::padding::Padding5ByteMiddle& _rhs) const {
+  bool operator()(const ::test::padding::Padding5ByteMiddle& _lhs, const ::test::padding::Padding5ByteMiddle& _rhs) const {
     if (!::fidl::Equals(_lhs.a, _rhs.a)) {
       return false;
     }
@@ -665,12 +573,8 @@ template <>
 struct HasPadding<::test::padding::Padding5ByteEnd> : public std::true_type {};
 
 template <>
-struct IsMemcpyCompatible<::test::padding::Padding5ByteEnd>
-    : public internal::BoolConstant<
-          !HasPadding<::test::padding::Padding5ByteEnd>::value &&
-          IsMemcpyCompatible<uint64_t>::value &&
-          IsMemcpyCompatible<uint16_t>::value &&
-          IsMemcpyCompatible<uint8_t>::value> {};
+struct IsMemcpyCompatible<::test::padding::Padding5ByteEnd> : public internal::BoolConstant<
+                                                                  !HasPadding<::test::padding::Padding5ByteEnd>::value && IsMemcpyCompatible<uint64_t>::value && IsMemcpyCompatible<uint16_t>::value && IsMemcpyCompatible<uint8_t>::value> {};
 
 inline zx_status_t Clone(const ::test::padding::Padding5ByteEnd& value,
                          ::test::padding::Padding5ByteEnd* result) {
@@ -679,8 +583,7 @@ inline zx_status_t Clone(const ::test::padding::Padding5ByteEnd& value,
 
 template <>
 struct Equality<::test::padding::Padding5ByteEnd> {
-  bool operator()(const ::test::padding::Padding5ByteEnd& _lhs,
-                  const ::test::padding::Padding5ByteEnd& _rhs) const {
+  bool operator()(const ::test::padding::Padding5ByteEnd& _lhs, const ::test::padding::Padding5ByteEnd& _rhs) const {
     if (!::fidl::Equals(_lhs.a, _rhs.a)) {
       return false;
     }
@@ -698,15 +601,11 @@ struct CodingTraits<::test::padding::Padding4ByteMiddle>
     : public EncodableCodingTraits<::test::padding::Padding4ByteMiddle, 16> {};
 
 template <>
-struct HasPadding<::test::padding::Padding4ByteMiddle> : public std::true_type {
-};
+struct HasPadding<::test::padding::Padding4ByteMiddle> : public std::true_type {};
 
 template <>
-struct IsMemcpyCompatible<::test::padding::Padding4ByteMiddle>
-    : public internal::BoolConstant<
-          !HasPadding<::test::padding::Padding4ByteMiddle>::value &&
-          IsMemcpyCompatible<uint32_t>::value &&
-          IsMemcpyCompatible<uint64_t>::value> {};
+struct IsMemcpyCompatible<::test::padding::Padding4ByteMiddle> : public internal::BoolConstant<
+                                                                     !HasPadding<::test::padding::Padding4ByteMiddle>::value && IsMemcpyCompatible<uint32_t>::value && IsMemcpyCompatible<uint64_t>::value> {};
 
 inline zx_status_t Clone(const ::test::padding::Padding4ByteMiddle& value,
                          ::test::padding::Padding4ByteMiddle* result) {
@@ -715,8 +614,7 @@ inline zx_status_t Clone(const ::test::padding::Padding4ByteMiddle& value,
 
 template <>
 struct Equality<::test::padding::Padding4ByteMiddle> {
-  bool operator()(const ::test::padding::Padding4ByteMiddle& _lhs,
-                  const ::test::padding::Padding4ByteMiddle& _rhs) const {
+  bool operator()(const ::test::padding::Padding4ByteMiddle& _lhs, const ::test::padding::Padding4ByteMiddle& _rhs) const {
     if (!::fidl::Equals(_lhs.a, _rhs.a)) {
       return false;
     }
@@ -734,11 +632,8 @@ template <>
 struct HasPadding<::test::padding::Padding4ByteEnd> : public std::true_type {};
 
 template <>
-struct IsMemcpyCompatible<::test::padding::Padding4ByteEnd>
-    : public internal::BoolConstant<
-          !HasPadding<::test::padding::Padding4ByteEnd>::value &&
-          IsMemcpyCompatible<uint64_t>::value &&
-          IsMemcpyCompatible<uint32_t>::value> {};
+struct IsMemcpyCompatible<::test::padding::Padding4ByteEnd> : public internal::BoolConstant<
+                                                                  !HasPadding<::test::padding::Padding4ByteEnd>::value && IsMemcpyCompatible<uint64_t>::value && IsMemcpyCompatible<uint32_t>::value> {};
 
 inline zx_status_t Clone(const ::test::padding::Padding4ByteEnd& value,
                          ::test::padding::Padding4ByteEnd* result) {
@@ -747,8 +642,7 @@ inline zx_status_t Clone(const ::test::padding::Padding4ByteEnd& value,
 
 template <>
 struct Equality<::test::padding::Padding4ByteEnd> {
-  bool operator()(const ::test::padding::Padding4ByteEnd& _lhs,
-                  const ::test::padding::Padding4ByteEnd& _rhs) const {
+  bool operator()(const ::test::padding::Padding4ByteEnd& _lhs, const ::test::padding::Padding4ByteEnd& _rhs) const {
     if (!::fidl::Equals(_lhs.a, _rhs.a)) {
       return false;
     }
@@ -760,32 +654,23 @@ struct Equality<::test::padding::Padding4ByteEnd> {
 };
 template <>
 struct CodingTraits<::test::padding::Padding4ByteAlignmentLength12>
-    : public EncodableCodingTraits<
-          ::test::padding::Padding4ByteAlignmentLength12, 12> {};
+    : public EncodableCodingTraits<::test::padding::Padding4ByteAlignmentLength12, 12> {};
 
 template <>
-struct HasPadding<::test::padding::Padding4ByteAlignmentLength12>
-    : public std::true_type {};
+struct HasPadding<::test::padding::Padding4ByteAlignmentLength12> : public std::true_type {};
 
 template <>
-struct IsMemcpyCompatible<::test::padding::Padding4ByteAlignmentLength12>
-    : public internal::BoolConstant<
-          !HasPadding<::test::padding::Padding4ByteAlignmentLength12>::value &&
-          IsMemcpyCompatible<uint32_t>::value &&
-          IsMemcpyCompatible<uint8_t>::value &&
-          IsMemcpyCompatible<uint16_t>::value> {};
+struct IsMemcpyCompatible<::test::padding::Padding4ByteAlignmentLength12> : public internal::BoolConstant<
+                                                                                !HasPadding<::test::padding::Padding4ByteAlignmentLength12>::value && IsMemcpyCompatible<uint32_t>::value && IsMemcpyCompatible<uint8_t>::value && IsMemcpyCompatible<uint16_t>::value> {};
 
-inline zx_status_t Clone(
-    const ::test::padding::Padding4ByteAlignmentLength12& value,
-    ::test::padding::Padding4ByteAlignmentLength12* result) {
+inline zx_status_t Clone(const ::test::padding::Padding4ByteAlignmentLength12& value,
+                         ::test::padding::Padding4ByteAlignmentLength12* result) {
   return ::test::padding::Clone(value, result);
 }
 
 template <>
 struct Equality<::test::padding::Padding4ByteAlignmentLength12> {
-  bool operator()(
-      const ::test::padding::Padding4ByteAlignmentLength12& _lhs,
-      const ::test::padding::Padding4ByteAlignmentLength12& _rhs) const {
+  bool operator()(const ::test::padding::Padding4ByteAlignmentLength12& _lhs, const ::test::padding::Padding4ByteAlignmentLength12& _rhs) const {
     if (!::fidl::Equals(_lhs.a, _rhs.a)) {
       return false;
     }
@@ -806,15 +691,11 @@ struct CodingTraits<::test::padding::Padding3ByteMiddle>
     : public EncodableCodingTraits<::test::padding::Padding3ByteMiddle, 8> {};
 
 template <>
-struct HasPadding<::test::padding::Padding3ByteMiddle> : public std::true_type {
-};
+struct HasPadding<::test::padding::Padding3ByteMiddle> : public std::true_type {};
 
 template <>
-struct IsMemcpyCompatible<::test::padding::Padding3ByteMiddle>
-    : public internal::BoolConstant<
-          !HasPadding<::test::padding::Padding3ByteMiddle>::value &&
-          IsMemcpyCompatible<uint8_t>::value &&
-          IsMemcpyCompatible<uint32_t>::value> {};
+struct IsMemcpyCompatible<::test::padding::Padding3ByteMiddle> : public internal::BoolConstant<
+                                                                     !HasPadding<::test::padding::Padding3ByteMiddle>::value && IsMemcpyCompatible<uint8_t>::value && IsMemcpyCompatible<uint32_t>::value> {};
 
 inline zx_status_t Clone(const ::test::padding::Padding3ByteMiddle& value,
                          ::test::padding::Padding3ByteMiddle* result) {
@@ -823,8 +704,7 @@ inline zx_status_t Clone(const ::test::padding::Padding3ByteMiddle& value,
 
 template <>
 struct Equality<::test::padding::Padding3ByteMiddle> {
-  bool operator()(const ::test::padding::Padding3ByteMiddle& _lhs,
-                  const ::test::padding::Padding3ByteMiddle& _rhs) const {
+  bool operator()(const ::test::padding::Padding3ByteMiddle& _lhs, const ::test::padding::Padding3ByteMiddle& _rhs) const {
     if (!::fidl::Equals(_lhs.a, _rhs.a)) {
       return false;
     }
@@ -842,11 +722,8 @@ template <>
 struct HasPadding<::test::padding::Padding3ByteEnd> : public std::true_type {};
 
 template <>
-struct IsMemcpyCompatible<::test::padding::Padding3ByteEnd>
-    : public internal::BoolConstant<
-          !HasPadding<::test::padding::Padding3ByteEnd>::value &&
-          IsMemcpyCompatible<uint32_t>::value &&
-          IsMemcpyCompatible<uint8_t>::value> {};
+struct IsMemcpyCompatible<::test::padding::Padding3ByteEnd> : public internal::BoolConstant<
+                                                                  !HasPadding<::test::padding::Padding3ByteEnd>::value && IsMemcpyCompatible<uint32_t>::value && IsMemcpyCompatible<uint8_t>::value> {};
 
 inline zx_status_t Clone(const ::test::padding::Padding3ByteEnd& value,
                          ::test::padding::Padding3ByteEnd* result) {
@@ -855,8 +732,7 @@ inline zx_status_t Clone(const ::test::padding::Padding3ByteEnd& value,
 
 template <>
 struct Equality<::test::padding::Padding3ByteEnd> {
-  bool operator()(const ::test::padding::Padding3ByteEnd& _lhs,
-                  const ::test::padding::Padding3ByteEnd& _rhs) const {
+  bool operator()(const ::test::padding::Padding3ByteEnd& _lhs, const ::test::padding::Padding3ByteEnd& _rhs) const {
     if (!::fidl::Equals(_lhs.a, _rhs.a)) {
       return false;
     }
@@ -871,15 +747,11 @@ struct CodingTraits<::test::padding::Padding2ByteMiddle>
     : public EncodableCodingTraits<::test::padding::Padding2ByteMiddle, 8> {};
 
 template <>
-struct HasPadding<::test::padding::Padding2ByteMiddle> : public std::true_type {
-};
+struct HasPadding<::test::padding::Padding2ByteMiddle> : public std::true_type {};
 
 template <>
-struct IsMemcpyCompatible<::test::padding::Padding2ByteMiddle>
-    : public internal::BoolConstant<
-          !HasPadding<::test::padding::Padding2ByteMiddle>::value &&
-          IsMemcpyCompatible<uint16_t>::value &&
-          IsMemcpyCompatible<uint32_t>::value> {};
+struct IsMemcpyCompatible<::test::padding::Padding2ByteMiddle> : public internal::BoolConstant<
+                                                                     !HasPadding<::test::padding::Padding2ByteMiddle>::value && IsMemcpyCompatible<uint16_t>::value && IsMemcpyCompatible<uint32_t>::value> {};
 
 inline zx_status_t Clone(const ::test::padding::Padding2ByteMiddle& value,
                          ::test::padding::Padding2ByteMiddle* result) {
@@ -888,8 +760,7 @@ inline zx_status_t Clone(const ::test::padding::Padding2ByteMiddle& value,
 
 template <>
 struct Equality<::test::padding::Padding2ByteMiddle> {
-  bool operator()(const ::test::padding::Padding2ByteMiddle& _lhs,
-                  const ::test::padding::Padding2ByteMiddle& _rhs) const {
+  bool operator()(const ::test::padding::Padding2ByteMiddle& _lhs, const ::test::padding::Padding2ByteMiddle& _rhs) const {
     if (!::fidl::Equals(_lhs.a, _rhs.a)) {
       return false;
     }
@@ -907,11 +778,8 @@ template <>
 struct HasPadding<::test::padding::Padding2ByteEnd> : public std::true_type {};
 
 template <>
-struct IsMemcpyCompatible<::test::padding::Padding2ByteEnd>
-    : public internal::BoolConstant<
-          !HasPadding<::test::padding::Padding2ByteEnd>::value &&
-          IsMemcpyCompatible<uint32_t>::value &&
-          IsMemcpyCompatible<uint16_t>::value> {};
+struct IsMemcpyCompatible<::test::padding::Padding2ByteEnd> : public internal::BoolConstant<
+                                                                  !HasPadding<::test::padding::Padding2ByteEnd>::value && IsMemcpyCompatible<uint32_t>::value && IsMemcpyCompatible<uint16_t>::value> {};
 
 inline zx_status_t Clone(const ::test::padding::Padding2ByteEnd& value,
                          ::test::padding::Padding2ByteEnd* result) {
@@ -920,8 +788,7 @@ inline zx_status_t Clone(const ::test::padding::Padding2ByteEnd& value,
 
 template <>
 struct Equality<::test::padding::Padding2ByteEnd> {
-  bool operator()(const ::test::padding::Padding2ByteEnd& _lhs,
-                  const ::test::padding::Padding2ByteEnd& _rhs) const {
+  bool operator()(const ::test::padding::Padding2ByteEnd& _lhs, const ::test::padding::Padding2ByteEnd& _rhs) const {
     if (!::fidl::Equals(_lhs.a, _rhs.a)) {
       return false;
     }
@@ -933,31 +800,23 @@ struct Equality<::test::padding::Padding2ByteEnd> {
 };
 template <>
 struct CodingTraits<::test::padding::Padding2ByteAlignmentLength6>
-    : public EncodableCodingTraits<
-          ::test::padding::Padding2ByteAlignmentLength6, 6> {};
+    : public EncodableCodingTraits<::test::padding::Padding2ByteAlignmentLength6, 6> {};
 
 template <>
-struct HasPadding<::test::padding::Padding2ByteAlignmentLength6>
-    : public std::true_type {};
+struct HasPadding<::test::padding::Padding2ByteAlignmentLength6> : public std::true_type {};
 
 template <>
-struct IsMemcpyCompatible<::test::padding::Padding2ByteAlignmentLength6>
-    : public internal::BoolConstant<
-          !HasPadding<::test::padding::Padding2ByteAlignmentLength6>::value &&
-          IsMemcpyCompatible<uint8_t>::value &&
-          IsMemcpyCompatible<uint16_t>::value> {};
+struct IsMemcpyCompatible<::test::padding::Padding2ByteAlignmentLength6> : public internal::BoolConstant<
+                                                                               !HasPadding<::test::padding::Padding2ByteAlignmentLength6>::value && IsMemcpyCompatible<uint8_t>::value && IsMemcpyCompatible<uint16_t>::value> {};
 
-inline zx_status_t Clone(
-    const ::test::padding::Padding2ByteAlignmentLength6& value,
-    ::test::padding::Padding2ByteAlignmentLength6* result) {
+inline zx_status_t Clone(const ::test::padding::Padding2ByteAlignmentLength6& value,
+                         ::test::padding::Padding2ByteAlignmentLength6* result) {
   return ::test::padding::Clone(value, result);
 }
 
 template <>
 struct Equality<::test::padding::Padding2ByteAlignmentLength6> {
-  bool operator()(
-      const ::test::padding::Padding2ByteAlignmentLength6& _lhs,
-      const ::test::padding::Padding2ByteAlignmentLength6& _rhs) const {
+  bool operator()(const ::test::padding::Padding2ByteAlignmentLength6& _lhs, const ::test::padding::Padding2ByteAlignmentLength6& _rhs) const {
     if (!::fidl::Equals(_lhs.a, _rhs.a)) {
       return false;
     }
@@ -975,15 +834,11 @@ struct CodingTraits<::test::padding::Padding1ByteMiddle>
     : public EncodableCodingTraits<::test::padding::Padding1ByteMiddle, 4> {};
 
 template <>
-struct HasPadding<::test::padding::Padding1ByteMiddle> : public std::true_type {
-};
+struct HasPadding<::test::padding::Padding1ByteMiddle> : public std::true_type {};
 
 template <>
-struct IsMemcpyCompatible<::test::padding::Padding1ByteMiddle>
-    : public internal::BoolConstant<
-          !HasPadding<::test::padding::Padding1ByteMiddle>::value &&
-          IsMemcpyCompatible<uint8_t>::value &&
-          IsMemcpyCompatible<uint16_t>::value> {};
+struct IsMemcpyCompatible<::test::padding::Padding1ByteMiddle> : public internal::BoolConstant<
+                                                                     !HasPadding<::test::padding::Padding1ByteMiddle>::value && IsMemcpyCompatible<uint8_t>::value && IsMemcpyCompatible<uint16_t>::value> {};
 
 inline zx_status_t Clone(const ::test::padding::Padding1ByteMiddle& value,
                          ::test::padding::Padding1ByteMiddle* result) {
@@ -992,8 +847,7 @@ inline zx_status_t Clone(const ::test::padding::Padding1ByteMiddle& value,
 
 template <>
 struct Equality<::test::padding::Padding1ByteMiddle> {
-  bool operator()(const ::test::padding::Padding1ByteMiddle& _lhs,
-                  const ::test::padding::Padding1ByteMiddle& _rhs) const {
+  bool operator()(const ::test::padding::Padding1ByteMiddle& _lhs, const ::test::padding::Padding1ByteMiddle& _rhs) const {
     if (!::fidl::Equals(_lhs.a, _rhs.a)) {
       return false;
     }
@@ -1011,11 +865,8 @@ template <>
 struct HasPadding<::test::padding::Padding1ByteEnd> : public std::true_type {};
 
 template <>
-struct IsMemcpyCompatible<::test::padding::Padding1ByteEnd>
-    : public internal::BoolConstant<
-          !HasPadding<::test::padding::Padding1ByteEnd>::value &&
-          IsMemcpyCompatible<uint16_t>::value &&
-          IsMemcpyCompatible<uint8_t>::value> {};
+struct IsMemcpyCompatible<::test::padding::Padding1ByteEnd> : public internal::BoolConstant<
+                                                                  !HasPadding<::test::padding::Padding1ByteEnd>::value && IsMemcpyCompatible<uint16_t>::value && IsMemcpyCompatible<uint8_t>::value> {};
 
 inline zx_status_t Clone(const ::test::padding::Padding1ByteEnd& value,
                          ::test::padding::Padding1ByteEnd* result) {
@@ -1024,8 +875,7 @@ inline zx_status_t Clone(const ::test::padding::Padding1ByteEnd& value,
 
 template <>
 struct Equality<::test::padding::Padding1ByteEnd> {
-  bool operator()(const ::test::padding::Padding1ByteEnd& _lhs,
-                  const ::test::padding::Padding1ByteEnd& _rhs) const {
+  bool operator()(const ::test::padding::Padding1ByteEnd& _lhs, const ::test::padding::Padding1ByteEnd& _rhs) const {
     if (!::fidl::Equals(_lhs.a, _rhs.a)) {
       return false;
     }

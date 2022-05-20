@@ -25,7 +25,9 @@ using FlexibleUnion = ::test::doccomments::FlexibleUnion;
 
 template <>
 struct MinSize<Table> {
-  operator size_t() { return MinSize<int32_t>(); }
+  operator size_t() {
+    return MinSize<int32_t>();
+  }
 };
 template <>
 struct Allocate<Table> {
@@ -41,7 +43,9 @@ struct Allocate<Table> {
 };
 template <>
 struct MinSize<Struct> {
-  operator size_t() { return MinSize<int32_t>(); }
+  operator size_t() {
+    return MinSize<int32_t>();
+  }
 };
 template <>
 struct Allocate<Struct> {
@@ -156,8 +160,7 @@ template <>
 struct Allocate<MyFlexibleBits> {
   MyFlexibleBits operator()(FuzzInput* src, size_t* size) {
     ZX_ASSERT(*size >= sizeof(uint32_t));
-    return MyFlexibleBits(
-        *reinterpret_cast<const uint32_t*>(src->TakeBytes(sizeof(uint32_t))));
+    return MyFlexibleBits(*reinterpret_cast<const uint32_t*>(src->TakeBytes(sizeof(uint32_t))));
   }
 };
 template <>

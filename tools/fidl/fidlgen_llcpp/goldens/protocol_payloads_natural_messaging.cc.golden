@@ -3,420 +3,266 @@
 #include <fidl/test.protocolpayloads/cpp/natural_messaging.h>
 
 namespace test_protocolpayloads {
-[[maybe_unused]] constexpr inline uint64_t
-    kMainProtocol_OneWayComposed_Ordinal = 2602591870026304272lu;
+[[maybe_unused]] constexpr inline uint64_t kMainProtocol_OneWayComposed_Ordinal = 2602591870026304272lu;
 
-[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
-    kMainProtocol_OneWayComposed_DynamicFlags =
-        ::fidl::MessageDynamicFlags::kStrictMethod;
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kMainProtocol_OneWayComposed_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
-[[maybe_unused]] constexpr inline uint64_t
-    kMainProtocol_TwoWayComposed_Ordinal = 2542459230546612144lu;
+[[maybe_unused]] constexpr inline uint64_t kMainProtocol_TwoWayComposed_Ordinal = 2542459230546612144lu;
 
-[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
-    kMainProtocol_TwoWayComposed_DynamicFlags =
-        ::fidl::MessageDynamicFlags::kStrictMethod;
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kMainProtocol_TwoWayComposed_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
-[[maybe_unused]] constexpr inline uint64_t
-    kMainProtocol_TwoWayComposedWithError_Ordinal = 7681984876526769495lu;
+[[maybe_unused]] constexpr inline uint64_t kMainProtocol_TwoWayComposedWithError_Ordinal = 7681984876526769495lu;
 
-[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
-    kMainProtocol_TwoWayComposedWithError_DynamicFlags =
-        ::fidl::MessageDynamicFlags::kStrictMethod;
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kMainProtocol_TwoWayComposedWithError_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
-[[maybe_unused]] constexpr inline uint64_t kMainProtocol_OnComposed_Ordinal =
-    1872339328378152762lu;
+[[maybe_unused]] constexpr inline uint64_t kMainProtocol_OnComposed_Ordinal = 1872339328378152762lu;
 
-[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
-    kMainProtocol_OnComposed_DynamicFlags =
-        ::fidl::MessageDynamicFlags::kStrictMethod;
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kMainProtocol_OnComposed_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
-[[maybe_unused]] constexpr inline uint64_t
-    kMainProtocol_OnComposedWithError_Ordinal = 7167282778061495960lu;
+[[maybe_unused]] constexpr inline uint64_t kMainProtocol_OnComposedWithError_Ordinal = 7167282778061495960lu;
 
-[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
-    kMainProtocol_OnComposedWithError_DynamicFlags =
-        ::fidl::MessageDynamicFlags::kStrictMethod;
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kMainProtocol_OnComposedWithError_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
-[[maybe_unused]] constexpr inline uint64_t kMainProtocol_OneWayLocal_Ordinal =
-    7755175439334311701lu;
+[[maybe_unused]] constexpr inline uint64_t kMainProtocol_OneWayLocal_Ordinal = 7755175439334311701lu;
 
-[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
-    kMainProtocol_OneWayLocal_DynamicFlags =
-        ::fidl::MessageDynamicFlags::kStrictMethod;
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kMainProtocol_OneWayLocal_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
-[[maybe_unused]] constexpr inline uint64_t kMainProtocol_TwoWayLocal_Ordinal =
-    8374292137648566031lu;
+[[maybe_unused]] constexpr inline uint64_t kMainProtocol_TwoWayLocal_Ordinal = 8374292137648566031lu;
 
-[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
-    kMainProtocol_TwoWayLocal_DynamicFlags =
-        ::fidl::MessageDynamicFlags::kStrictMethod;
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kMainProtocol_TwoWayLocal_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
-[[maybe_unused]] constexpr inline uint64_t
-    kMainProtocol_TwoWayLocalWithError_Ordinal = 2898559119954589948lu;
+[[maybe_unused]] constexpr inline uint64_t kMainProtocol_TwoWayLocalWithError_Ordinal = 2898559119954589948lu;
 
-[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
-    kMainProtocol_TwoWayLocalWithError_DynamicFlags =
-        ::fidl::MessageDynamicFlags::kStrictMethod;
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kMainProtocol_TwoWayLocalWithError_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
-[[maybe_unused]] constexpr inline uint64_t kMainProtocol_OnLocal_Ordinal =
-    5135782819583756313lu;
+[[maybe_unused]] constexpr inline uint64_t kMainProtocol_OnLocal_Ordinal = 5135782819583756313lu;
 
-[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
-    kMainProtocol_OnLocal_DynamicFlags =
-        ::fidl::MessageDynamicFlags::kStrictMethod;
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kMainProtocol_OnLocal_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
-[[maybe_unused]] constexpr inline uint64_t
-    kMainProtocol_OnLocalWithError_Ordinal = 5678277415565140399lu;
+[[maybe_unused]] constexpr inline uint64_t kMainProtocol_OnLocalWithError_Ordinal = 5678277415565140399lu;
 
-[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
-    kMainProtocol_OnLocalWithError_DynamicFlags =
-        ::fidl::MessageDynamicFlags::kStrictMethod;
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kMainProtocol_OnLocalWithError_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
-[[maybe_unused]] constexpr inline uint64_t kMainProtocol_OneWayImport_Ordinal =
-    3344777159365288972lu;
+[[maybe_unused]] constexpr inline uint64_t kMainProtocol_OneWayImport_Ordinal = 3344777159365288972lu;
 
-[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
-    kMainProtocol_OneWayImport_DynamicFlags =
-        ::fidl::MessageDynamicFlags::kStrictMethod;
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kMainProtocol_OneWayImport_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
-[[maybe_unused]] constexpr inline uint64_t kMainProtocol_TwoWayImport_Ordinal =
-    2374708679656510579lu;
+[[maybe_unused]] constexpr inline uint64_t kMainProtocol_TwoWayImport_Ordinal = 2374708679656510579lu;
 
-[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
-    kMainProtocol_TwoWayImport_DynamicFlags =
-        ::fidl::MessageDynamicFlags::kStrictMethod;
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kMainProtocol_TwoWayImport_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
-[[maybe_unused]] constexpr inline uint64_t
-    kMainProtocol_TwoWayImportWithError_Ordinal = 4286143084949642173lu;
+[[maybe_unused]] constexpr inline uint64_t kMainProtocol_TwoWayImportWithError_Ordinal = 4286143084949642173lu;
 
-[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
-    kMainProtocol_TwoWayImportWithError_DynamicFlags =
-        ::fidl::MessageDynamicFlags::kStrictMethod;
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kMainProtocol_TwoWayImportWithError_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
-[[maybe_unused]] constexpr inline uint64_t kMainProtocol_OnImport_Ordinal =
-    1996489653379631369lu;
+[[maybe_unused]] constexpr inline uint64_t kMainProtocol_OnImport_Ordinal = 1996489653379631369lu;
 
-[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
-    kMainProtocol_OnImport_DynamicFlags =
-        ::fidl::MessageDynamicFlags::kStrictMethod;
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kMainProtocol_OnImport_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
-[[maybe_unused]] constexpr inline uint64_t
-    kMainProtocol_OnImportWithError_Ordinal = 7102941407914553861lu;
+[[maybe_unused]] constexpr inline uint64_t kMainProtocol_OnImportWithError_Ordinal = 7102941407914553861lu;
 
-[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
-    kMainProtocol_OnImportWithError_DynamicFlags =
-        ::fidl::MessageDynamicFlags::kStrictMethod;
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kMainProtocol_OnImportWithError_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
-[[maybe_unused]] constexpr inline uint64_t kMainProtocol_OneWayAnon_Ordinal =
-    811587311021806764lu;
+[[maybe_unused]] constexpr inline uint64_t kMainProtocol_OneWayAnon_Ordinal = 811587311021806764lu;
 
-[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
-    kMainProtocol_OneWayAnon_DynamicFlags =
-        ::fidl::MessageDynamicFlags::kStrictMethod;
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kMainProtocol_OneWayAnon_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
-[[maybe_unused]] constexpr inline uint64_t kMainProtocol_TwoWayAnon_Ordinal =
-    629880979996923737lu;
+[[maybe_unused]] constexpr inline uint64_t kMainProtocol_TwoWayAnon_Ordinal = 629880979996923737lu;
 
-[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
-    kMainProtocol_TwoWayAnon_DynamicFlags =
-        ::fidl::MessageDynamicFlags::kStrictMethod;
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kMainProtocol_TwoWayAnon_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
-[[maybe_unused]] constexpr inline uint64_t
-    kMainProtocol_TwoWayAnonWithError_Ordinal = 6368863385719175734lu;
+[[maybe_unused]] constexpr inline uint64_t kMainProtocol_TwoWayAnonWithError_Ordinal = 6368863385719175734lu;
 
-[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
-    kMainProtocol_TwoWayAnonWithError_DynamicFlags =
-        ::fidl::MessageDynamicFlags::kStrictMethod;
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kMainProtocol_TwoWayAnonWithError_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
-[[maybe_unused]] constexpr inline uint64_t kMainProtocol_OnAnon_Ordinal =
-    4815229650203439104lu;
+[[maybe_unused]] constexpr inline uint64_t kMainProtocol_OnAnon_Ordinal = 4815229650203439104lu;
 
-[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
-    kMainProtocol_OnAnon_DynamicFlags =
-        ::fidl::MessageDynamicFlags::kStrictMethod;
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kMainProtocol_OnAnon_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
-[[maybe_unused]] constexpr inline uint64_t
-    kMainProtocol_OnAnonWithError_Ordinal = 5024931894357412354lu;
+[[maybe_unused]] constexpr inline uint64_t kMainProtocol_OnAnonWithError_Ordinal = 5024931894357412354lu;
 
-[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
-    kMainProtocol_OnAnonWithError_DynamicFlags =
-        ::fidl::MessageDynamicFlags::kStrictMethod;
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kMainProtocol_OnAnonWithError_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
 #ifdef __Fuchsia__
 }  // namespace test_protocolpayloads
-::fidl::internal::NaturalThenable<
-    ::test_protocolpayloads::MainProtocol::TwoWayComposed>
-fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
-    TwoWayComposed(
-        ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayComposed>
-            request) const {
+::fidl::internal::NaturalThenable<::test_protocolpayloads::MainProtocol::TwoWayComposed>
+fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::TwoWayComposed(::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayComposed> request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_TwoWayComposed_Ordinal,
-      ::test_protocolpayloads::kMainProtocol_TwoWayComposed_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_protocolpayloads::kMainProtocol_TwoWayComposed_Ordinal, ::test_protocolpayloads::kMainProtocol_TwoWayComposed_DynamicFlags};
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<
-          ::test_protocolpayloads::MainProtocol::TwoWayComposed>>::
-          IntoDomainObject(std::move(request)));
-  return ::fidl::internal::NaturalThenable<
-      ::test_protocolpayloads::MainProtocol::TwoWayComposed>(
+      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayComposed>>::IntoDomainObject(std::move(request)));
+  return ::fidl::internal::NaturalThenable<::test_protocolpayloads::MainProtocol::TwoWayComposed>(
       &client_base(), {}, std::move(_encoder),
-      [](::fidl::internal::ThenableBase* base,
-         ::fidl::internal::NaturalMessageEncoder& encoder,
-         ::fidl::internal::ResponseContext* response_context) {
+      [](
+          ::fidl::internal::ThenableBase* base,
+          ::fidl::internal::NaturalMessageEncoder& encoder,
+          ::fidl::internal::ResponseContext* response_context) {
         ::fidl::OutgoingMessage msg = encoder.GetMessage();
         return base->SendTwoWay(msg, response_context);
       });
 }
 
-::fidl::internal::NaturalThenable<
-    ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>
-fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
-    TwoWayComposedWithError(
-        ::fidl::Request<
-            ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>
-            request) const {
+::fidl::internal::NaturalThenable<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>
+fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::TwoWayComposedWithError(::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError> request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_TwoWayComposedWithError_Ordinal,
-      ::test_protocolpayloads::
-          kMainProtocol_TwoWayComposedWithError_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_protocolpayloads::kMainProtocol_TwoWayComposedWithError_Ordinal, ::test_protocolpayloads::kMainProtocol_TwoWayComposedWithError_DynamicFlags};
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<
-          ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>>::
-          IntoDomainObject(std::move(request)));
-  return ::fidl::internal::NaturalThenable<
-      ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>(
+      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>>::IntoDomainObject(std::move(request)));
+  return ::fidl::internal::NaturalThenable<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>(
       &client_base(), {}, std::move(_encoder),
-      [](::fidl::internal::ThenableBase* base,
-         ::fidl::internal::NaturalMessageEncoder& encoder,
-         ::fidl::internal::ResponseContext* response_context) {
+      [](
+          ::fidl::internal::ThenableBase* base,
+          ::fidl::internal::NaturalMessageEncoder& encoder,
+          ::fidl::internal::ResponseContext* response_context) {
         ::fidl::OutgoingMessage msg = encoder.GetMessage();
         return base->SendTwoWay(msg, response_context);
       });
 }
 
-::fidl::internal::NaturalThenable<
-    ::test_protocolpayloads::MainProtocol::TwoWayLocal>
-fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
-    TwoWayLocal(
-        ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayLocal>
-            request) const {
+::fidl::internal::NaturalThenable<::test_protocolpayloads::MainProtocol::TwoWayLocal>
+fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::TwoWayLocal(::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayLocal> request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_TwoWayLocal_Ordinal,
-      ::test_protocolpayloads::kMainProtocol_TwoWayLocal_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_protocolpayloads::kMainProtocol_TwoWayLocal_Ordinal, ::test_protocolpayloads::kMainProtocol_TwoWayLocal_DynamicFlags};
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<
-          ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayLocal>>::
-          IntoDomainObject(std::move(request)));
-  return ::fidl::internal::NaturalThenable<
-      ::test_protocolpayloads::MainProtocol::TwoWayLocal>(
+      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayLocal>>::IntoDomainObject(std::move(request)));
+  return ::fidl::internal::NaturalThenable<::test_protocolpayloads::MainProtocol::TwoWayLocal>(
       &client_base(), {}, std::move(_encoder),
-      [](::fidl::internal::ThenableBase* base,
-         ::fidl::internal::NaturalMessageEncoder& encoder,
-         ::fidl::internal::ResponseContext* response_context) {
+      [](
+          ::fidl::internal::ThenableBase* base,
+          ::fidl::internal::NaturalMessageEncoder& encoder,
+          ::fidl::internal::ResponseContext* response_context) {
         ::fidl::OutgoingMessage msg = encoder.GetMessage();
         return base->SendTwoWay(msg, response_context);
       });
 }
 
-::fidl::internal::NaturalThenable<
-    ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>
-fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
-    TwoWayLocalWithError(
-        ::fidl::Request<
-            ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>
-            request) const {
+::fidl::internal::NaturalThenable<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>
+fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::TwoWayLocalWithError(::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError> request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_TwoWayLocalWithError_Ordinal,
-      ::test_protocolpayloads::kMainProtocol_TwoWayLocalWithError_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_protocolpayloads::kMainProtocol_TwoWayLocalWithError_Ordinal, ::test_protocolpayloads::kMainProtocol_TwoWayLocalWithError_DynamicFlags};
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<
-          ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>>::
-          IntoDomainObject(std::move(request)));
-  return ::fidl::internal::NaturalThenable<
-      ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>(
+      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>>::IntoDomainObject(std::move(request)));
+  return ::fidl::internal::NaturalThenable<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>(
       &client_base(), {}, std::move(_encoder),
-      [](::fidl::internal::ThenableBase* base,
-         ::fidl::internal::NaturalMessageEncoder& encoder,
-         ::fidl::internal::ResponseContext* response_context) {
+      [](
+          ::fidl::internal::ThenableBase* base,
+          ::fidl::internal::NaturalMessageEncoder& encoder,
+          ::fidl::internal::ResponseContext* response_context) {
         ::fidl::OutgoingMessage msg = encoder.GetMessage();
         return base->SendTwoWay(msg, response_context);
       });
 }
 
-::fidl::internal::NaturalThenable<
-    ::test_protocolpayloads::MainProtocol::TwoWayImport>
-fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
-    TwoWayImport(
-        ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayImport>
-            request) const {
+::fidl::internal::NaturalThenable<::test_protocolpayloads::MainProtocol::TwoWayImport>
+fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::TwoWayImport(::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayImport> request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_TwoWayImport_Ordinal,
-      ::test_protocolpayloads::kMainProtocol_TwoWayImport_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_protocolpayloads::kMainProtocol_TwoWayImport_Ordinal, ::test_protocolpayloads::kMainProtocol_TwoWayImport_DynamicFlags};
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<
-          ::test_protocolpayloads::MainProtocol::TwoWayImport>>::
-          IntoDomainObject(std::move(request)));
-  return ::fidl::internal::NaturalThenable<
-      ::test_protocolpayloads::MainProtocol::TwoWayImport>(
+      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayImport>>::IntoDomainObject(std::move(request)));
+  return ::fidl::internal::NaturalThenable<::test_protocolpayloads::MainProtocol::TwoWayImport>(
       &client_base(), {}, std::move(_encoder),
-      [](::fidl::internal::ThenableBase* base,
-         ::fidl::internal::NaturalMessageEncoder& encoder,
-         ::fidl::internal::ResponseContext* response_context) {
+      [](
+          ::fidl::internal::ThenableBase* base,
+          ::fidl::internal::NaturalMessageEncoder& encoder,
+          ::fidl::internal::ResponseContext* response_context) {
         ::fidl::OutgoingMessage msg = encoder.GetMessage();
         return base->SendTwoWay(msg, response_context);
       });
 }
 
-::fidl::internal::NaturalThenable<
-    ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>
-fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
-    TwoWayImportWithError(
-        ::fidl::Request<
-            ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>
-            request) const {
+::fidl::internal::NaturalThenable<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>
+fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::TwoWayImportWithError(::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayImportWithError> request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_TwoWayImportWithError_Ordinal,
-      ::test_protocolpayloads::
-          kMainProtocol_TwoWayImportWithError_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_protocolpayloads::kMainProtocol_TwoWayImportWithError_Ordinal, ::test_protocolpayloads::kMainProtocol_TwoWayImportWithError_DynamicFlags};
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<
-          ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>>::
-          IntoDomainObject(std::move(request)));
-  return ::fidl::internal::NaturalThenable<
-      ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>(
+      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>>::IntoDomainObject(std::move(request)));
+  return ::fidl::internal::NaturalThenable<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>(
       &client_base(), {}, std::move(_encoder),
-      [](::fidl::internal::ThenableBase* base,
-         ::fidl::internal::NaturalMessageEncoder& encoder,
-         ::fidl::internal::ResponseContext* response_context) {
+      [](
+          ::fidl::internal::ThenableBase* base,
+          ::fidl::internal::NaturalMessageEncoder& encoder,
+          ::fidl::internal::ResponseContext* response_context) {
         ::fidl::OutgoingMessage msg = encoder.GetMessage();
         return base->SendTwoWay(msg, response_context);
       });
 }
 
-::fidl::internal::NaturalThenable<
-    ::test_protocolpayloads::MainProtocol::TwoWayAnon>
-fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
-    TwoWayAnon(
-        ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayAnon>
-            request) const {
+::fidl::internal::NaturalThenable<::test_protocolpayloads::MainProtocol::TwoWayAnon>
+fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::TwoWayAnon(::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayAnon> request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_TwoWayAnon_Ordinal,
-      ::test_protocolpayloads::kMainProtocol_TwoWayAnon_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_protocolpayloads::kMainProtocol_TwoWayAnon_Ordinal, ::test_protocolpayloads::kMainProtocol_TwoWayAnon_DynamicFlags};
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<
-          ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayAnon>>::
-          IntoDomainObject(std::move(request)));
-  return ::fidl::internal::NaturalThenable<
-      ::test_protocolpayloads::MainProtocol::TwoWayAnon>(
+      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayAnon>>::IntoDomainObject(std::move(request)));
+  return ::fidl::internal::NaturalThenable<::test_protocolpayloads::MainProtocol::TwoWayAnon>(
       &client_base(), {}, std::move(_encoder),
-      [](::fidl::internal::ThenableBase* base,
-         ::fidl::internal::NaturalMessageEncoder& encoder,
-         ::fidl::internal::ResponseContext* response_context) {
+      [](
+          ::fidl::internal::ThenableBase* base,
+          ::fidl::internal::NaturalMessageEncoder& encoder,
+          ::fidl::internal::ResponseContext* response_context) {
         ::fidl::OutgoingMessage msg = encoder.GetMessage();
         return base->SendTwoWay(msg, response_context);
       });
 }
 
-::fidl::internal::NaturalThenable<
-    ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>
-fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
-    TwoWayAnonWithError(
-        ::fidl::Request<
-            ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>
-            request) const {
+::fidl::internal::NaturalThenable<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>
+fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::TwoWayAnonWithError(::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError> request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_TwoWayAnonWithError_Ordinal,
-      ::test_protocolpayloads::kMainProtocol_TwoWayAnonWithError_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_protocolpayloads::kMainProtocol_TwoWayAnonWithError_Ordinal, ::test_protocolpayloads::kMainProtocol_TwoWayAnonWithError_DynamicFlags};
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<
-          ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>>::
-          IntoDomainObject(std::move(request)));
-  return ::fidl::internal::NaturalThenable<
-      ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>(
+      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>>::IntoDomainObject(std::move(request)));
+  return ::fidl::internal::NaturalThenable<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>(
       &client_base(), {}, std::move(_encoder),
-      [](::fidl::internal::ThenableBase* base,
-         ::fidl::internal::NaturalMessageEncoder& encoder,
-         ::fidl::internal::ResponseContext* response_context) {
+      [](
+          ::fidl::internal::ThenableBase* base,
+          ::fidl::internal::NaturalMessageEncoder& encoder,
+          ::fidl::internal::ResponseContext* response_context) {
         ::fidl::OutgoingMessage msg = encoder.GetMessage();
         return base->SendTwoWay(msg, response_context);
       });
 }
 
-::fitx::result<::fidl::Error> fidl::internal::
-    NaturalClientImpl<::test_protocolpayloads::MainProtocol>::OneWayComposed(
-        ::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayComposed>
-            request) const {
+::fitx::result<::fidl::Error>
+fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::OneWayComposed(::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayComposed> request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_OneWayComposed_Ordinal,
-      ::test_protocolpayloads::kMainProtocol_OneWayComposed_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_protocolpayloads::kMainProtocol_OneWayComposed_Ordinal, ::test_protocolpayloads::kMainProtocol_OneWayComposed_DynamicFlags};
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<
-          ::test_protocolpayloads::MainProtocol::OneWayComposed>>::
-          IntoDomainObject(std::move(request)));
+      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayComposed>>::IntoDomainObject(std::move(request)));
 
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   ::fidl::Status status = client_base().SendOneWay(_encoded_message);
   return ::fidl::internal::ToFitxResult(status);
 }
 
-::fitx::result<::fidl::Error> fidl::internal::
-    NaturalClientImpl<::test_protocolpayloads::MainProtocol>::OneWayLocal(
-        ::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayLocal>
-            request) const {
+::fitx::result<::fidl::Error>
+fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::OneWayLocal(::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayLocal> request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_OneWayLocal_Ordinal,
-      ::test_protocolpayloads::kMainProtocol_OneWayLocal_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_protocolpayloads::kMainProtocol_OneWayLocal_Ordinal, ::test_protocolpayloads::kMainProtocol_OneWayLocal_DynamicFlags};
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<
-          ::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayLocal>>::
-          IntoDomainObject(std::move(request)));
+      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayLocal>>::IntoDomainObject(std::move(request)));
 
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   ::fidl::Status status = client_base().SendOneWay(_encoded_message);
   return ::fidl::internal::ToFitxResult(status);
 }
 
-::fitx::result<::fidl::Error> fidl::internal::
-    NaturalClientImpl<::test_protocolpayloads::MainProtocol>::OneWayImport(
-        ::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayImport>
-            request) const {
+::fitx::result<::fidl::Error>
+fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::OneWayImport(::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayImport> request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_OneWayImport_Ordinal,
-      ::test_protocolpayloads::kMainProtocol_OneWayImport_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_protocolpayloads::kMainProtocol_OneWayImport_Ordinal, ::test_protocolpayloads::kMainProtocol_OneWayImport_DynamicFlags};
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<
-          ::test_protocolpayloads::MainProtocol::OneWayImport>>::
-          IntoDomainObject(std::move(request)));
+      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayImport>>::IntoDomainObject(std::move(request)));
 
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   ::fidl::Status status = client_base().SendOneWay(_encoded_message);
   return ::fidl::internal::ToFitxResult(status);
 }
 
-::fitx::result<::fidl::Error> fidl::internal::
-    NaturalClientImpl<::test_protocolpayloads::MainProtocol>::OneWayAnon(
-        ::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayAnon>
-            request) const {
+::fitx::result<::fidl::Error>
+fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::OneWayAnon(::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayAnon> request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_OneWayAnon_Ordinal,
-      ::test_protocolpayloads::kMainProtocol_OneWayAnon_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_protocolpayloads::kMainProtocol_OneWayAnon_Ordinal, ::test_protocolpayloads::kMainProtocol_OneWayAnon_DynamicFlags};
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<
-          ::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayAnon>>::
-          IntoDomainObject(std::move(request)));
+      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayAnon>>::IntoDomainObject(std::move(request)));
 
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   ::fidl::Status status = client_base().SendOneWay(_encoded_message);
@@ -429,257 +275,140 @@ namespace test_protocolpayloads {
 #ifdef __Fuchsia__
 
 ::fidl::Result<::test_protocolpayloads::MainProtocol::TwoWayComposed>
-fidl::internal::NaturalSyncClientImpl<::test_protocolpayloads::MainProtocol>::
-    TwoWayComposed(
-        ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayComposed>
-            request) {
+fidl::internal::NaturalSyncClientImpl<::test_protocolpayloads::MainProtocol>::TwoWayComposed(::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayComposed> request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_TwoWayComposed_Ordinal,
-      ::test_protocolpayloads::kMainProtocol_TwoWayComposed_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_protocolpayloads::kMainProtocol_TwoWayComposed_Ordinal, ::test_protocolpayloads::kMainProtocol_TwoWayComposed_DynamicFlags};
   encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<
-          ::test_protocolpayloads::MainProtocol::TwoWayComposed>>::
-          IntoDomainObject(std::move(request)));
+      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayComposed>>::IntoDomainObject(std::move(request)));
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
-  ::fidl::internal::IncomingMessageStorage<
-      ::fidl::internal::TransactionalResponse<
-          ::test_protocolpayloads::MainProtocol::TwoWayComposed>>
-      response_storage;
-  return ::fidl::internal::DecodeResponseAndFoldError<
-      ::test_protocolpayloads::MainProtocol::TwoWayComposed>(
+  ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayComposed>> response_storage;
+  return ::fidl::internal::DecodeResponseAndFoldError<::test_protocolpayloads::MainProtocol::TwoWayComposed>(
       msg.Call(_client_end().handle(), response_storage.view()), nullptr);
 }
 
 ::fidl::Result<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>
-fidl::internal::NaturalSyncClientImpl<::test_protocolpayloads::MainProtocol>::
-    TwoWayComposedWithError(
-        ::fidl::Request<
-            ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>
-            request) {
+fidl::internal::NaturalSyncClientImpl<::test_protocolpayloads::MainProtocol>::TwoWayComposedWithError(::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError> request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_TwoWayComposedWithError_Ordinal,
-      ::test_protocolpayloads::
-          kMainProtocol_TwoWayComposedWithError_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_protocolpayloads::kMainProtocol_TwoWayComposedWithError_Ordinal, ::test_protocolpayloads::kMainProtocol_TwoWayComposedWithError_DynamicFlags};
   encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<
-          ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>>::
-          IntoDomainObject(std::move(request)));
+      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>>::IntoDomainObject(std::move(request)));
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
-  ::fidl::internal::IncomingMessageStorage<
-      ::fidl::internal::TransactionalResponse<
-          ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>>
-      response_storage;
-  return ::fidl::internal::DecodeResponseAndFoldError<
-      ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>(
+  ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>> response_storage;
+  return ::fidl::internal::DecodeResponseAndFoldError<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>(
       msg.Call(_client_end().handle(), response_storage.view()), nullptr);
 }
 
 ::fidl::Result<::test_protocolpayloads::MainProtocol::TwoWayLocal>
-fidl::internal::NaturalSyncClientImpl<::test_protocolpayloads::MainProtocol>::
-    TwoWayLocal(
-        ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayLocal>
-            request) {
+fidl::internal::NaturalSyncClientImpl<::test_protocolpayloads::MainProtocol>::TwoWayLocal(::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayLocal> request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_TwoWayLocal_Ordinal,
-      ::test_protocolpayloads::kMainProtocol_TwoWayLocal_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_protocolpayloads::kMainProtocol_TwoWayLocal_Ordinal, ::test_protocolpayloads::kMainProtocol_TwoWayLocal_DynamicFlags};
   encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<
-          ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayLocal>>::
-          IntoDomainObject(std::move(request)));
+      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayLocal>>::IntoDomainObject(std::move(request)));
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
-  ::fidl::internal::IncomingMessageStorage<
-      ::fidl::internal::TransactionalResponse<
-          ::test_protocolpayloads::MainProtocol::TwoWayLocal>>
-      response_storage;
-  return ::fidl::internal::DecodeResponseAndFoldError<
-      ::test_protocolpayloads::MainProtocol::TwoWayLocal>(
+  ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayLocal>> response_storage;
+  return ::fidl::internal::DecodeResponseAndFoldError<::test_protocolpayloads::MainProtocol::TwoWayLocal>(
       msg.Call(_client_end().handle(), response_storage.view()), nullptr);
 }
 
 ::fidl::Result<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>
-fidl::internal::NaturalSyncClientImpl<::test_protocolpayloads::MainProtocol>::
-    TwoWayLocalWithError(
-        ::fidl::Request<
-            ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>
-            request) {
+fidl::internal::NaturalSyncClientImpl<::test_protocolpayloads::MainProtocol>::TwoWayLocalWithError(::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError> request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_TwoWayLocalWithError_Ordinal,
-      ::test_protocolpayloads::kMainProtocol_TwoWayLocalWithError_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_protocolpayloads::kMainProtocol_TwoWayLocalWithError_Ordinal, ::test_protocolpayloads::kMainProtocol_TwoWayLocalWithError_DynamicFlags};
   encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<
-          ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>>::
-          IntoDomainObject(std::move(request)));
+      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>>::IntoDomainObject(std::move(request)));
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
-  ::fidl::internal::IncomingMessageStorage<
-      ::fidl::internal::TransactionalResponse<
-          ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>>
-      response_storage;
-  return ::fidl::internal::DecodeResponseAndFoldError<
-      ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>(
+  ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>> response_storage;
+  return ::fidl::internal::DecodeResponseAndFoldError<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>(
       msg.Call(_client_end().handle(), response_storage.view()), nullptr);
 }
 
 ::fidl::Result<::test_protocolpayloads::MainProtocol::TwoWayImport>
-fidl::internal::NaturalSyncClientImpl<::test_protocolpayloads::MainProtocol>::
-    TwoWayImport(
-        ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayImport>
-            request) {
+fidl::internal::NaturalSyncClientImpl<::test_protocolpayloads::MainProtocol>::TwoWayImport(::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayImport> request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_TwoWayImport_Ordinal,
-      ::test_protocolpayloads::kMainProtocol_TwoWayImport_DynamicFlags};
-  encoder.EncodeBody(::fidl::internal::NaturalMessageConverter<::fidl::Request<
-                         ::test_protocolpayloads::MainProtocol::TwoWayImport>>::
-                         IntoDomainObject(std::move(request)));
+      &::fidl::internal::ChannelTransport::VTable, ::test_protocolpayloads::kMainProtocol_TwoWayImport_Ordinal, ::test_protocolpayloads::kMainProtocol_TwoWayImport_DynamicFlags};
+  encoder.EncodeBody(
+      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayImport>>::IntoDomainObject(std::move(request)));
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
-  ::fidl::internal::IncomingMessageStorage<
-      ::fidl::internal::TransactionalResponse<
-          ::test_protocolpayloads::MainProtocol::TwoWayImport>>
-      response_storage;
-  return ::fidl::internal::DecodeResponseAndFoldError<
-      ::test_protocolpayloads::MainProtocol::TwoWayImport>(
+  ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayImport>> response_storage;
+  return ::fidl::internal::DecodeResponseAndFoldError<::test_protocolpayloads::MainProtocol::TwoWayImport>(
       msg.Call(_client_end().handle(), response_storage.view()), nullptr);
 }
 
 ::fidl::Result<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>
-fidl::internal::NaturalSyncClientImpl<::test_protocolpayloads::MainProtocol>::
-    TwoWayImportWithError(
-        ::fidl::Request<
-            ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>
-            request) {
+fidl::internal::NaturalSyncClientImpl<::test_protocolpayloads::MainProtocol>::TwoWayImportWithError(::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayImportWithError> request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_TwoWayImportWithError_Ordinal,
-      ::test_protocolpayloads::
-          kMainProtocol_TwoWayImportWithError_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_protocolpayloads::kMainProtocol_TwoWayImportWithError_Ordinal, ::test_protocolpayloads::kMainProtocol_TwoWayImportWithError_DynamicFlags};
   encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<
-          ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>>::
-          IntoDomainObject(std::move(request)));
+      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>>::IntoDomainObject(std::move(request)));
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
-  ::fidl::internal::IncomingMessageStorage<
-      ::fidl::internal::TransactionalResponse<
-          ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>>
-      response_storage;
-  return ::fidl::internal::DecodeResponseAndFoldError<
-      ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>(
+  ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>> response_storage;
+  return ::fidl::internal::DecodeResponseAndFoldError<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>(
       msg.Call(_client_end().handle(), response_storage.view()), nullptr);
 }
 
 ::fidl::Result<::test_protocolpayloads::MainProtocol::TwoWayAnon>
-fidl::internal::NaturalSyncClientImpl<::test_protocolpayloads::MainProtocol>::
-    TwoWayAnon(
-        ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayAnon>
-            request) {
+fidl::internal::NaturalSyncClientImpl<::test_protocolpayloads::MainProtocol>::TwoWayAnon(::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayAnon> request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_TwoWayAnon_Ordinal,
-      ::test_protocolpayloads::kMainProtocol_TwoWayAnon_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_protocolpayloads::kMainProtocol_TwoWayAnon_Ordinal, ::test_protocolpayloads::kMainProtocol_TwoWayAnon_DynamicFlags};
   encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<
-          ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayAnon>>::
-          IntoDomainObject(std::move(request)));
+      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayAnon>>::IntoDomainObject(std::move(request)));
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
-  ::fidl::internal::IncomingMessageStorage<
-      ::fidl::internal::TransactionalResponse<
-          ::test_protocolpayloads::MainProtocol::TwoWayAnon>>
-      response_storage;
-  return ::fidl::internal::DecodeResponseAndFoldError<
-      ::test_protocolpayloads::MainProtocol::TwoWayAnon>(
+  ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon>> response_storage;
+  return ::fidl::internal::DecodeResponseAndFoldError<::test_protocolpayloads::MainProtocol::TwoWayAnon>(
       msg.Call(_client_end().handle(), response_storage.view()), nullptr);
 }
 
 ::fidl::Result<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>
-fidl::internal::NaturalSyncClientImpl<::test_protocolpayloads::MainProtocol>::
-    TwoWayAnonWithError(
-        ::fidl::Request<
-            ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>
-            request) {
+fidl::internal::NaturalSyncClientImpl<::test_protocolpayloads::MainProtocol>::TwoWayAnonWithError(::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError> request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_TwoWayAnonWithError_Ordinal,
-      ::test_protocolpayloads::kMainProtocol_TwoWayAnonWithError_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_protocolpayloads::kMainProtocol_TwoWayAnonWithError_Ordinal, ::test_protocolpayloads::kMainProtocol_TwoWayAnonWithError_DynamicFlags};
   encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<
-          ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>>::
-          IntoDomainObject(std::move(request)));
+      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>>::IntoDomainObject(std::move(request)));
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
-  ::fidl::internal::IncomingMessageStorage<
-      ::fidl::internal::TransactionalResponse<
-          ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>>
-      response_storage;
-  return ::fidl::internal::DecodeResponseAndFoldError<
-      ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>(
+  ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>> response_storage;
+  return ::fidl::internal::DecodeResponseAndFoldError<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>(
       msg.Call(_client_end().handle(), response_storage.view()), nullptr);
 }
 
 ::fitx::result<::fidl::Error>
-fidl::internal::NaturalSyncClientImpl<::test_protocolpayloads::MainProtocol>::
-    OneWayComposed(
-        ::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayComposed>
-            request) {
+fidl::internal::NaturalSyncClientImpl<::test_protocolpayloads::MainProtocol>::OneWayComposed(::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayComposed> request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_OneWayComposed_Ordinal,
-      ::test_protocolpayloads::kMainProtocol_OneWayComposed_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_protocolpayloads::kMainProtocol_OneWayComposed_Ordinal, ::test_protocolpayloads::kMainProtocol_OneWayComposed_DynamicFlags};
   encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<
-          ::test_protocolpayloads::MainProtocol::OneWayComposed>>::
-          IntoDomainObject(std::move(request)));
+      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayComposed>>::IntoDomainObject(std::move(request)));
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
   msg.Write(_client_end().handle());
   return ::fidl::internal::ToFitxResult(::fidl::Status{msg});
 }
 
-::fitx::result<::fidl::Error> fidl::internal::
-    NaturalSyncClientImpl<::test_protocolpayloads::MainProtocol>::OneWayLocal(
-        ::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayLocal>
-            request) {
+::fitx::result<::fidl::Error>
+fidl::internal::NaturalSyncClientImpl<::test_protocolpayloads::MainProtocol>::OneWayLocal(::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayLocal> request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_OneWayLocal_Ordinal,
-      ::test_protocolpayloads::kMainProtocol_OneWayLocal_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_protocolpayloads::kMainProtocol_OneWayLocal_Ordinal, ::test_protocolpayloads::kMainProtocol_OneWayLocal_DynamicFlags};
   encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<
-          ::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayLocal>>::
-          IntoDomainObject(std::move(request)));
+      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayLocal>>::IntoDomainObject(std::move(request)));
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
   msg.Write(_client_end().handle());
   return ::fidl::internal::ToFitxResult(::fidl::Status{msg});
 }
 
-::fitx::result<::fidl::Error> fidl::internal::
-    NaturalSyncClientImpl<::test_protocolpayloads::MainProtocol>::OneWayImport(
-        ::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayImport>
-            request) {
+::fitx::result<::fidl::Error>
+fidl::internal::NaturalSyncClientImpl<::test_protocolpayloads::MainProtocol>::OneWayImport(::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayImport> request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_OneWayImport_Ordinal,
-      ::test_protocolpayloads::kMainProtocol_OneWayImport_DynamicFlags};
-  encoder.EncodeBody(::fidl::internal::NaturalMessageConverter<::fidl::Request<
-                         ::test_protocolpayloads::MainProtocol::OneWayImport>>::
-                         IntoDomainObject(std::move(request)));
+      &::fidl::internal::ChannelTransport::VTable, ::test_protocolpayloads::kMainProtocol_OneWayImport_Ordinal, ::test_protocolpayloads::kMainProtocol_OneWayImport_DynamicFlags};
+  encoder.EncodeBody(
+      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayImport>>::IntoDomainObject(std::move(request)));
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
   msg.Write(_client_end().handle());
   return ::fidl::internal::ToFitxResult(::fidl::Status{msg});
 }
 
-::fitx::result<::fidl::Error> fidl::internal::
-    NaturalSyncClientImpl<::test_protocolpayloads::MainProtocol>::OneWayAnon(
-        ::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayAnon>
-            request) {
+::fitx::result<::fidl::Error>
+fidl::internal::NaturalSyncClientImpl<::test_protocolpayloads::MainProtocol>::OneWayAnon(::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayAnon> request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_OneWayAnon_Ordinal,
-      ::test_protocolpayloads::kMainProtocol_OneWayAnon_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_protocolpayloads::kMainProtocol_OneWayAnon_Ordinal, ::test_protocolpayloads::kMainProtocol_OneWayAnon_DynamicFlags};
   encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<
-          ::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayAnon>>::
-          IntoDomainObject(std::move(request)));
+      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayAnon>>::IntoDomainObject(std::move(request)));
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
   msg.Write(_client_end().handle());
   return ::fidl::internal::ToFitxResult(::fidl::Status{msg});
@@ -690,133 +419,94 @@ fidl::internal::NaturalSyncClientImpl<::test_protocolpayloads::MainProtocol>::
 #ifdef __Fuchsia__
 
 std::optional<::fidl::UnbindInfo>
-fidl::internal::NaturalEventDispatcher<::test_protocolpayloads::MainProtocol>::
-    DispatchEvent(::fidl::IncomingMessage& msg,
-                  ::fidl::internal::MessageStorageViewBase* storage_view) {
+fidl::internal::NaturalEventDispatcher<::test_protocolpayloads::MainProtocol>::DispatchEvent(
+    ::fidl::IncomingMessage& msg,
+    ::fidl::internal::MessageStorageViewBase* storage_view) {
   switch (msg.header()->ordinal) {
     case ::test_protocolpayloads::kMainProtocol_OnComposed_Ordinal: {
-      ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
-          ::test_protocolpayloads_imported::ImportStructPayload>(
-          std::move(msg));
+      ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocolpayloads_imported::ImportStructPayload>(std::move(msg));
       if (decoded.is_error()) {
         return ::fidl::UnbindInfo(decoded.error_value());
       }
       if (event_handler()) {
-        ::fidl::Event<::test_protocolpayloads::MainProtocol::OnComposed> event =
-            ::fidl::internal::NaturalMessageConverter<::fidl::Event<
-                ::test_protocolpayloads::MainProtocol::OnComposed>>::
-                FromDomainObject(std::move(decoded.value()));
+        ::fidl::Event<::test_protocolpayloads::MainProtocol::OnComposed> event = ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_protocolpayloads::MainProtocol::OnComposed>>::FromDomainObject(std::move(decoded.value()));
         event_handler()->OnComposed(event);
       }
       return std::nullopt;
     }
     case ::test_protocolpayloads::kMainProtocol_OnComposedWithError_Ordinal: {
-      ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
-          ::test_protocolpayloads_imported::
-              ComposedProtocolOnComposedWithErrorRequest>(std::move(msg));
+      ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocolpayloads_imported::ComposedProtocolOnComposedWithErrorRequest>(std::move(msg));
       if (decoded.is_error()) {
         return ::fidl::UnbindInfo(decoded.error_value());
       }
       if (event_handler()) {
-        ::fidl::Event<
-            ::test_protocolpayloads::MainProtocol::OnComposedWithError>
-            event = ::fidl::internal::NaturalMessageConverter<::fidl::Event<
-                ::test_protocolpayloads::MainProtocol::OnComposedWithError>>::
-                FromDomainObject(std::move(decoded.value()));
+        ::fidl::Event<::test_protocolpayloads::MainProtocol::OnComposedWithError> event = ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_protocolpayloads::MainProtocol::OnComposedWithError>>::FromDomainObject(std::move(decoded.value()));
         event_handler()->OnComposedWithError(event);
       }
       return std::nullopt;
     }
     case ::test_protocolpayloads::kMainProtocol_OnLocal_Ordinal: {
-      ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
-          ::test_protocolpayloads::LocalStructPayload>(std::move(msg));
+      ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocolpayloads::LocalStructPayload>(std::move(msg));
       if (decoded.is_error()) {
         return ::fidl::UnbindInfo(decoded.error_value());
       }
       if (event_handler()) {
-        ::fidl::Event<::test_protocolpayloads::MainProtocol::OnLocal> event =
-            ::fidl::internal::NaturalMessageConverter<
-                ::fidl::Event<::test_protocolpayloads::MainProtocol::OnLocal>>::
-                FromDomainObject(std::move(decoded.value()));
+        ::fidl::Event<::test_protocolpayloads::MainProtocol::OnLocal> event = ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_protocolpayloads::MainProtocol::OnLocal>>::FromDomainObject(std::move(decoded.value()));
         event_handler()->OnLocal(event);
       }
       return std::nullopt;
     }
     case ::test_protocolpayloads::kMainProtocol_OnLocalWithError_Ordinal: {
-      ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
-          ::test_protocolpayloads::MainProtocolOnLocalWithErrorRequest>(
-          std::move(msg));
+      ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocolpayloads::MainProtocolOnLocalWithErrorRequest>(std::move(msg));
       if (decoded.is_error()) {
         return ::fidl::UnbindInfo(decoded.error_value());
       }
       if (event_handler()) {
-        ::fidl::Event<::test_protocolpayloads::MainProtocol::OnLocalWithError>
-            event = ::fidl::internal::NaturalMessageConverter<::fidl::Event<
-                ::test_protocolpayloads::MainProtocol::OnLocalWithError>>::
-                FromDomainObject(std::move(decoded.value()));
+        ::fidl::Event<::test_protocolpayloads::MainProtocol::OnLocalWithError> event = ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_protocolpayloads::MainProtocol::OnLocalWithError>>::FromDomainObject(std::move(decoded.value()));
         event_handler()->OnLocalWithError(event);
       }
       return std::nullopt;
     }
     case ::test_protocolpayloads::kMainProtocol_OnImport_Ordinal: {
-      ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
-          ::test_protocolpayloads_imported::ImportStructPayload>(
-          std::move(msg));
+      ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocolpayloads_imported::ImportStructPayload>(std::move(msg));
       if (decoded.is_error()) {
         return ::fidl::UnbindInfo(decoded.error_value());
       }
       if (event_handler()) {
-        ::fidl::Event<::test_protocolpayloads::MainProtocol::OnImport> event =
-            ::fidl::internal::NaturalMessageConverter<::fidl::Event<
-                ::test_protocolpayloads::MainProtocol::OnImport>>::
-                FromDomainObject(std::move(decoded.value()));
+        ::fidl::Event<::test_protocolpayloads::MainProtocol::OnImport> event = ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_protocolpayloads::MainProtocol::OnImport>>::FromDomainObject(std::move(decoded.value()));
         event_handler()->OnImport(event);
       }
       return std::nullopt;
     }
     case ::test_protocolpayloads::kMainProtocol_OnImportWithError_Ordinal: {
-      ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
-          ::test_protocolpayloads::MainProtocolOnImportWithErrorRequest>(
-          std::move(msg));
+      ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocolpayloads::MainProtocolOnImportWithErrorRequest>(std::move(msg));
       if (decoded.is_error()) {
         return ::fidl::UnbindInfo(decoded.error_value());
       }
       if (event_handler()) {
-        ::fidl::Event<::test_protocolpayloads::MainProtocol::OnImportWithError>
-            event = ::fidl::internal::NaturalMessageConverter<::fidl::Event<
-                ::test_protocolpayloads::MainProtocol::OnImportWithError>>::
-                FromDomainObject(std::move(decoded.value()));
+        ::fidl::Event<::test_protocolpayloads::MainProtocol::OnImportWithError> event = ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_protocolpayloads::MainProtocol::OnImportWithError>>::FromDomainObject(std::move(decoded.value()));
         event_handler()->OnImportWithError(event);
       }
       return std::nullopt;
     }
     case ::test_protocolpayloads::kMainProtocol_OnAnon_Ordinal: {
-      ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
-          ::test_protocolpayloads::MainProtocolOnAnonRequest>(std::move(msg));
+      ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocolpayloads::MainProtocolOnAnonRequest>(std::move(msg));
       if (decoded.is_error()) {
         return ::fidl::UnbindInfo(decoded.error_value());
       }
       if (event_handler()) {
-        ::fidl::Event<::test_protocolpayloads::MainProtocol::OnAnon> event =
-            ::fidl::internal::NaturalMessageConverter<
-                ::fidl::Event<::test_protocolpayloads::MainProtocol::OnAnon>>::
-                FromDomainObject(std::move(decoded.value()));
+        ::fidl::Event<::test_protocolpayloads::MainProtocol::OnAnon> event = ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_protocolpayloads::MainProtocol::OnAnon>>::FromDomainObject(std::move(decoded.value()));
         event_handler()->OnAnon(event);
       }
       return std::nullopt;
     }
     case ::test_protocolpayloads::kMainProtocol_OnAnonWithError_Ordinal: {
-      ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
-          ::test_protocolpayloads::MainProtocolOnAnonWithErrorRequest>(
-          std::move(msg));
+      ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocolpayloads::MainProtocolOnAnonWithErrorRequest>(std::move(msg));
       if (decoded.is_error()) {
         return ::fidl::UnbindInfo(decoded.error_value());
       }
       if (event_handler()) {
-        ::fidl::Event<::test_protocolpayloads::MainProtocol::OnAnonWithError>
-            event = ::fidl::internal::NaturalMessageConverter<::fidl::Event<
-                ::test_protocolpayloads::MainProtocol::OnAnonWithError>>::
-                FromDomainObject(std::move(decoded.value()));
+        ::fidl::Event<::test_protocolpayloads::MainProtocol::OnAnonWithError> event = ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_protocolpayloads::MainProtocol::OnAnonWithError>>::FromDomainObject(std::move(decoded.value()));
         event_handler()->OnAnonWithError(event);
       }
       return std::nullopt;
@@ -830,216 +520,144 @@ fidl::internal::NaturalEventDispatcher<::test_protocolpayloads::MainProtocol>::
 
 #ifdef __Fuchsia__
 
-::fitx::result<::fidl::Error> fidl::internal::
-    NaturalWeakEventSender<::test_protocolpayloads::MainProtocol>::OnComposed(
-        ::test_protocolpayloads_imported::ImportStructPayload payload) {
+::fitx::result<::fidl::Error> fidl::internal::NaturalWeakEventSender<::test_protocolpayloads::MainProtocol>::OnComposed(::test_protocolpayloads_imported::ImportStructPayload payload) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_OnComposed_Ordinal,
-      ::test_protocolpayloads::kMainProtocol_OnComposed_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_protocolpayloads::kMainProtocol_OnComposed_Ordinal, ::test_protocolpayloads::kMainProtocol_OnComposed_DynamicFlags};
   _encoder.EncodeBody(std::move(payload));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   ::fidl::Status result = _inner().SendEvent(_encoded_message);
   return ::fidl::internal::ToFitxResult(result);
 }
 
-::fitx::result<::fidl::Error> fidl::internal::
-    NaturalEventSender<::test_protocolpayloads::MainProtocol>::OnComposed(
-        ::test_protocolpayloads_imported::ImportStructPayload payload) {
+::fitx::result<::fidl::Error> fidl::internal::NaturalEventSender<::test_protocolpayloads::MainProtocol>::OnComposed(::test_protocolpayloads_imported::ImportStructPayload payload) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_OnComposed_Ordinal,
-      ::test_protocolpayloads::kMainProtocol_OnComposed_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_protocolpayloads::kMainProtocol_OnComposed_Ordinal, ::test_protocolpayloads::kMainProtocol_OnComposed_DynamicFlags};
   _encoder.EncodeBody(std::move(payload));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   _encoded_message.Write(_transport());
   return ::fidl::internal::ToFitxResult(::fidl::Status{_encoded_message});
 }
 
-::fitx::result<::fidl::Error>
-fidl::internal::NaturalWeakEventSender<::test_protocolpayloads::MainProtocol>::
-    OnComposedWithError(
-        ::test_protocolpayloads_imported::
-            ComposedProtocolOnComposedWithErrorRequest payload) {
+::fitx::result<::fidl::Error> fidl::internal::NaturalWeakEventSender<::test_protocolpayloads::MainProtocol>::OnComposedWithError(::test_protocolpayloads_imported::ComposedProtocolOnComposedWithErrorRequest payload) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_OnComposedWithError_Ordinal,
-      ::test_protocolpayloads::kMainProtocol_OnComposedWithError_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_protocolpayloads::kMainProtocol_OnComposedWithError_Ordinal, ::test_protocolpayloads::kMainProtocol_OnComposedWithError_DynamicFlags};
   _encoder.EncodeBody(std::move(payload));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   ::fidl::Status result = _inner().SendEvent(_encoded_message);
   return ::fidl::internal::ToFitxResult(result);
 }
 
-::fitx::result<::fidl::Error>
-fidl::internal::NaturalEventSender<::test_protocolpayloads::MainProtocol>::
-    OnComposedWithError(
-        ::test_protocolpayloads_imported::
-            ComposedProtocolOnComposedWithErrorRequest payload) {
+::fitx::result<::fidl::Error> fidl::internal::NaturalEventSender<::test_protocolpayloads::MainProtocol>::OnComposedWithError(::test_protocolpayloads_imported::ComposedProtocolOnComposedWithErrorRequest payload) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_OnComposedWithError_Ordinal,
-      ::test_protocolpayloads::kMainProtocol_OnComposedWithError_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_protocolpayloads::kMainProtocol_OnComposedWithError_Ordinal, ::test_protocolpayloads::kMainProtocol_OnComposedWithError_DynamicFlags};
   _encoder.EncodeBody(std::move(payload));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   _encoded_message.Write(_transport());
   return ::fidl::internal::ToFitxResult(::fidl::Status{_encoded_message});
 }
 
-::fitx::result<::fidl::Error> fidl::internal::
-    NaturalWeakEventSender<::test_protocolpayloads::MainProtocol>::OnLocal(
-        ::test_protocolpayloads::LocalStructPayload payload) {
+::fitx::result<::fidl::Error> fidl::internal::NaturalWeakEventSender<::test_protocolpayloads::MainProtocol>::OnLocal(::test_protocolpayloads::LocalStructPayload payload) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_OnLocal_Ordinal,
-      ::test_protocolpayloads::kMainProtocol_OnLocal_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_protocolpayloads::kMainProtocol_OnLocal_Ordinal, ::test_protocolpayloads::kMainProtocol_OnLocal_DynamicFlags};
   _encoder.EncodeBody(std::move(payload));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   ::fidl::Status result = _inner().SendEvent(_encoded_message);
   return ::fidl::internal::ToFitxResult(result);
 }
 
-::fitx::result<::fidl::Error> fidl::internal::
-    NaturalEventSender<::test_protocolpayloads::MainProtocol>::OnLocal(
-        ::test_protocolpayloads::LocalStructPayload payload) {
+::fitx::result<::fidl::Error> fidl::internal::NaturalEventSender<::test_protocolpayloads::MainProtocol>::OnLocal(::test_protocolpayloads::LocalStructPayload payload) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_OnLocal_Ordinal,
-      ::test_protocolpayloads::kMainProtocol_OnLocal_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_protocolpayloads::kMainProtocol_OnLocal_Ordinal, ::test_protocolpayloads::kMainProtocol_OnLocal_DynamicFlags};
   _encoder.EncodeBody(std::move(payload));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   _encoded_message.Write(_transport());
   return ::fidl::internal::ToFitxResult(::fidl::Status{_encoded_message});
 }
 
-::fitx::result<::fidl::Error>
-fidl::internal::NaturalWeakEventSender<::test_protocolpayloads::MainProtocol>::
-    OnLocalWithError(
-        ::test_protocolpayloads::MainProtocolOnLocalWithErrorRequest payload) {
+::fitx::result<::fidl::Error> fidl::internal::NaturalWeakEventSender<::test_protocolpayloads::MainProtocol>::OnLocalWithError(::test_protocolpayloads::MainProtocolOnLocalWithErrorRequest payload) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_OnLocalWithError_Ordinal,
-      ::test_protocolpayloads::kMainProtocol_OnLocalWithError_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_protocolpayloads::kMainProtocol_OnLocalWithError_Ordinal, ::test_protocolpayloads::kMainProtocol_OnLocalWithError_DynamicFlags};
   _encoder.EncodeBody(std::move(payload));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   ::fidl::Status result = _inner().SendEvent(_encoded_message);
   return ::fidl::internal::ToFitxResult(result);
 }
 
-::fitx::result<::fidl::Error> fidl::internal::
-    NaturalEventSender<::test_protocolpayloads::MainProtocol>::OnLocalWithError(
-        ::test_protocolpayloads::MainProtocolOnLocalWithErrorRequest payload) {
+::fitx::result<::fidl::Error> fidl::internal::NaturalEventSender<::test_protocolpayloads::MainProtocol>::OnLocalWithError(::test_protocolpayloads::MainProtocolOnLocalWithErrorRequest payload) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_OnLocalWithError_Ordinal,
-      ::test_protocolpayloads::kMainProtocol_OnLocalWithError_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_protocolpayloads::kMainProtocol_OnLocalWithError_Ordinal, ::test_protocolpayloads::kMainProtocol_OnLocalWithError_DynamicFlags};
   _encoder.EncodeBody(std::move(payload));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   _encoded_message.Write(_transport());
   return ::fidl::internal::ToFitxResult(::fidl::Status{_encoded_message});
 }
 
-::fitx::result<::fidl::Error> fidl::internal::
-    NaturalWeakEventSender<::test_protocolpayloads::MainProtocol>::OnImport(
-        ::test_protocolpayloads_imported::ImportStructPayload payload) {
+::fitx::result<::fidl::Error> fidl::internal::NaturalWeakEventSender<::test_protocolpayloads::MainProtocol>::OnImport(::test_protocolpayloads_imported::ImportStructPayload payload) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_OnImport_Ordinal,
-      ::test_protocolpayloads::kMainProtocol_OnImport_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_protocolpayloads::kMainProtocol_OnImport_Ordinal, ::test_protocolpayloads::kMainProtocol_OnImport_DynamicFlags};
   _encoder.EncodeBody(std::move(payload));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   ::fidl::Status result = _inner().SendEvent(_encoded_message);
   return ::fidl::internal::ToFitxResult(result);
 }
 
-::fitx::result<::fidl::Error> fidl::internal::
-    NaturalEventSender<::test_protocolpayloads::MainProtocol>::OnImport(
-        ::test_protocolpayloads_imported::ImportStructPayload payload) {
+::fitx::result<::fidl::Error> fidl::internal::NaturalEventSender<::test_protocolpayloads::MainProtocol>::OnImport(::test_protocolpayloads_imported::ImportStructPayload payload) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_OnImport_Ordinal,
-      ::test_protocolpayloads::kMainProtocol_OnImport_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_protocolpayloads::kMainProtocol_OnImport_Ordinal, ::test_protocolpayloads::kMainProtocol_OnImport_DynamicFlags};
   _encoder.EncodeBody(std::move(payload));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   _encoded_message.Write(_transport());
   return ::fidl::internal::ToFitxResult(::fidl::Status{_encoded_message});
 }
 
-::fitx::result<::fidl::Error>
-fidl::internal::NaturalWeakEventSender<::test_protocolpayloads::MainProtocol>::
-    OnImportWithError(
-        ::test_protocolpayloads::MainProtocolOnImportWithErrorRequest payload) {
+::fitx::result<::fidl::Error> fidl::internal::NaturalWeakEventSender<::test_protocolpayloads::MainProtocol>::OnImportWithError(::test_protocolpayloads::MainProtocolOnImportWithErrorRequest payload) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_OnImportWithError_Ordinal,
-      ::test_protocolpayloads::kMainProtocol_OnImportWithError_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_protocolpayloads::kMainProtocol_OnImportWithError_Ordinal, ::test_protocolpayloads::kMainProtocol_OnImportWithError_DynamicFlags};
   _encoder.EncodeBody(std::move(payload));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   ::fidl::Status result = _inner().SendEvent(_encoded_message);
   return ::fidl::internal::ToFitxResult(result);
 }
 
-::fitx::result<::fidl::Error>
-fidl::internal::NaturalEventSender<::test_protocolpayloads::MainProtocol>::
-    OnImportWithError(
-        ::test_protocolpayloads::MainProtocolOnImportWithErrorRequest payload) {
+::fitx::result<::fidl::Error> fidl::internal::NaturalEventSender<::test_protocolpayloads::MainProtocol>::OnImportWithError(::test_protocolpayloads::MainProtocolOnImportWithErrorRequest payload) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_OnImportWithError_Ordinal,
-      ::test_protocolpayloads::kMainProtocol_OnImportWithError_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_protocolpayloads::kMainProtocol_OnImportWithError_Ordinal, ::test_protocolpayloads::kMainProtocol_OnImportWithError_DynamicFlags};
   _encoder.EncodeBody(std::move(payload));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   _encoded_message.Write(_transport());
   return ::fidl::internal::ToFitxResult(::fidl::Status{_encoded_message});
 }
 
-::fitx::result<::fidl::Error> fidl::internal::
-    NaturalWeakEventSender<::test_protocolpayloads::MainProtocol>::OnAnon(
-        ::test_protocolpayloads::MainProtocolOnAnonRequest payload) {
+::fitx::result<::fidl::Error> fidl::internal::NaturalWeakEventSender<::test_protocolpayloads::MainProtocol>::OnAnon(::test_protocolpayloads::MainProtocolOnAnonRequest payload) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_OnAnon_Ordinal,
-      ::test_protocolpayloads::kMainProtocol_OnAnon_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_protocolpayloads::kMainProtocol_OnAnon_Ordinal, ::test_protocolpayloads::kMainProtocol_OnAnon_DynamicFlags};
   _encoder.EncodeBody(std::move(payload));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   ::fidl::Status result = _inner().SendEvent(_encoded_message);
   return ::fidl::internal::ToFitxResult(result);
 }
 
-::fitx::result<::fidl::Error> fidl::internal::
-    NaturalEventSender<::test_protocolpayloads::MainProtocol>::OnAnon(
-        ::test_protocolpayloads::MainProtocolOnAnonRequest payload) {
+::fitx::result<::fidl::Error> fidl::internal::NaturalEventSender<::test_protocolpayloads::MainProtocol>::OnAnon(::test_protocolpayloads::MainProtocolOnAnonRequest payload) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_OnAnon_Ordinal,
-      ::test_protocolpayloads::kMainProtocol_OnAnon_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_protocolpayloads::kMainProtocol_OnAnon_Ordinal, ::test_protocolpayloads::kMainProtocol_OnAnon_DynamicFlags};
   _encoder.EncodeBody(std::move(payload));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   _encoded_message.Write(_transport());
   return ::fidl::internal::ToFitxResult(::fidl::Status{_encoded_message});
 }
 
-::fitx::result<::fidl::Error>
-fidl::internal::NaturalWeakEventSender<::test_protocolpayloads::MainProtocol>::
-    OnAnonWithError(
-        ::test_protocolpayloads::MainProtocolOnAnonWithErrorRequest payload) {
+::fitx::result<::fidl::Error> fidl::internal::NaturalWeakEventSender<::test_protocolpayloads::MainProtocol>::OnAnonWithError(::test_protocolpayloads::MainProtocolOnAnonWithErrorRequest payload) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_OnAnonWithError_Ordinal,
-      ::test_protocolpayloads::kMainProtocol_OnAnonWithError_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_protocolpayloads::kMainProtocol_OnAnonWithError_Ordinal, ::test_protocolpayloads::kMainProtocol_OnAnonWithError_DynamicFlags};
   _encoder.EncodeBody(std::move(payload));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   ::fidl::Status result = _inner().SendEvent(_encoded_message);
   return ::fidl::internal::ToFitxResult(result);
 }
 
-::fitx::result<::fidl::Error> fidl::internal::
-    NaturalEventSender<::test_protocolpayloads::MainProtocol>::OnAnonWithError(
-        ::test_protocolpayloads::MainProtocolOnAnonWithErrorRequest payload) {
+::fitx::result<::fidl::Error> fidl::internal::NaturalEventSender<::test_protocolpayloads::MainProtocol>::OnAnonWithError(::test_protocolpayloads::MainProtocolOnAnonWithErrorRequest payload) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_OnAnonWithError_Ordinal,
-      ::test_protocolpayloads::kMainProtocol_OnAnonWithError_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_protocolpayloads::kMainProtocol_OnAnonWithError_Ordinal, ::test_protocolpayloads::kMainProtocol_OnAnonWithError_DynamicFlags};
   _encoder.EncodeBody(std::move(payload));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   _encoded_message.Write(_transport());
@@ -1048,465 +666,273 @@ fidl::internal::NaturalWeakEventSender<::test_protocolpayloads::MainProtocol>::
 
 #endif  // __Fuchsia__
 
-void fidl::internal::NaturalCompleterBase<
-    ::test_protocolpayloads::MainProtocol::TwoWayComposed>::
-    Reply(::fidl::Response<
-          ::test_protocolpayloads::MainProtocol::TwoWayComposed>&& response) {
+void fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtocol::TwoWayComposed>::Reply(::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayComposed>&& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_TwoWayComposed_Ordinal,
-      ::test_protocolpayloads::kMainProtocol_TwoWayComposed_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_protocolpayloads::kMainProtocol_TwoWayComposed_Ordinal, ::test_protocolpayloads::kMainProtocol_TwoWayComposed_DynamicFlags};
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<
-          ::test_protocolpayloads::MainProtocol::TwoWayComposed>>::
-          IntoDomainObject(std::move(response)));
+      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayComposed>>::IntoDomainObject(std::move(response)));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
 
-void fidl::internal::NaturalCompleterBase<
-    ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>::
-    Reply(::fidl::Response<
-          ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>&&
-              response) {
+void fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>::Reply(::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>&& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_TwoWayComposedWithError_Ordinal,
-      ::test_protocolpayloads::
-          kMainProtocol_TwoWayComposedWithError_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_protocolpayloads::kMainProtocol_TwoWayComposedWithError_Ordinal, ::test_protocolpayloads::kMainProtocol_TwoWayComposedWithError_DynamicFlags};
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<
-          ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>>::
-          IntoDomainObject(std::move(response)));
+      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>>::IntoDomainObject(std::move(response)));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
 
-void fidl::internal::NaturalCompleterBase<
-    ::test_protocolpayloads::MainProtocol::TwoWayLocal>::
-    Reply(::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayLocal>&&
-              response) {
+void fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtocol::TwoWayLocal>::Reply(::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayLocal>&& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_TwoWayLocal_Ordinal,
-      ::test_protocolpayloads::kMainProtocol_TwoWayLocal_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_protocolpayloads::kMainProtocol_TwoWayLocal_Ordinal, ::test_protocolpayloads::kMainProtocol_TwoWayLocal_DynamicFlags};
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<
-          ::test_protocolpayloads::MainProtocol::TwoWayLocal>>::
-          IntoDomainObject(std::move(response)));
+      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayLocal>>::IntoDomainObject(std::move(response)));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
 
-void fidl::internal::NaturalCompleterBase<
-    ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>::
-    Reply(::fidl::Response<
-          ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>&&
-              response) {
+void fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>::Reply(::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>&& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_TwoWayLocalWithError_Ordinal,
-      ::test_protocolpayloads::kMainProtocol_TwoWayLocalWithError_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_protocolpayloads::kMainProtocol_TwoWayLocalWithError_Ordinal, ::test_protocolpayloads::kMainProtocol_TwoWayLocalWithError_DynamicFlags};
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<
-          ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>>::
-          IntoDomainObject(std::move(response)));
+      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>>::IntoDomainObject(std::move(response)));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
 
-void fidl::internal::NaturalCompleterBase<
-    ::test_protocolpayloads::MainProtocol::TwoWayImport>::
-    Reply(
-        ::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayImport>&&
-            response) {
+void fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtocol::TwoWayImport>::Reply(::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayImport>&& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_TwoWayImport_Ordinal,
-      ::test_protocolpayloads::kMainProtocol_TwoWayImport_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_protocolpayloads::kMainProtocol_TwoWayImport_Ordinal, ::test_protocolpayloads::kMainProtocol_TwoWayImport_DynamicFlags};
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<
-          ::test_protocolpayloads::MainProtocol::TwoWayImport>>::
-          IntoDomainObject(std::move(response)));
+      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayImport>>::IntoDomainObject(std::move(response)));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
 
-void fidl::internal::NaturalCompleterBase<
-    ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>::
-    Reply(::fidl::Response<
-          ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>&&
-              response) {
+void fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>::Reply(::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>&& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_TwoWayImportWithError_Ordinal,
-      ::test_protocolpayloads::
-          kMainProtocol_TwoWayImportWithError_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_protocolpayloads::kMainProtocol_TwoWayImportWithError_Ordinal, ::test_protocolpayloads::kMainProtocol_TwoWayImportWithError_DynamicFlags};
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<
-          ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>>::
-          IntoDomainObject(std::move(response)));
+      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>>::IntoDomainObject(std::move(response)));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
 
-void fidl::internal::NaturalCompleterBase<
-    ::test_protocolpayloads::MainProtocol::TwoWayAnon>::
-    Reply(::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayAnon>&&
-              response) {
+void fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtocol::TwoWayAnon>::Reply(::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayAnon>&& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_TwoWayAnon_Ordinal,
-      ::test_protocolpayloads::kMainProtocol_TwoWayAnon_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_protocolpayloads::kMainProtocol_TwoWayAnon_Ordinal, ::test_protocolpayloads::kMainProtocol_TwoWayAnon_DynamicFlags};
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<
-          ::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayAnon>>::
-          IntoDomainObject(std::move(response)));
+      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayAnon>>::IntoDomainObject(std::move(response)));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
 
-void fidl::internal::NaturalCompleterBase<
-    ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>::
-    Reply(::fidl::Response<
-          ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>&&
-              response) {
+void fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>::Reply(::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>&& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_TwoWayAnonWithError_Ordinal,
-      ::test_protocolpayloads::kMainProtocol_TwoWayAnonWithError_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_protocolpayloads::kMainProtocol_TwoWayAnonWithError_Ordinal, ::test_protocolpayloads::kMainProtocol_TwoWayAnonWithError_DynamicFlags};
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<
-          ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>>::
-          IntoDomainObject(std::move(response)));
+      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>>::IntoDomainObject(std::move(response)));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
 
 #ifdef __Fuchsia__
 
-constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
-    ::test_protocolpayloads::MainProtocol>::entries_[] = {
+constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<::test_protocolpayloads::MainProtocol>::entries_[] = {
     {
         ::test_protocolpayloads::kMainProtocol_OneWayComposed_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::MessageStorageViewBase* storage_view,
-           ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
-              ::test_protocolpayloads_imported::ImportStructPayload>(
-              std::move(msg));
+           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocolpayloads_imported::ImportStructPayload>(std::move(msg));
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayComposed>
-              request =
-                  ::fidl::internal::NaturalMessageConverter<::fidl::Request<
-                      ::test_protocolpayloads::MainProtocol::OneWayComposed>>::
-                      FromDomainObject(std::move(decoded.value()));
-          ::fidl::internal::NaturalCompleter<
-              ::test_protocolpayloads::MainProtocol::OneWayComposed>::Sync
-              completer(txn);
-          static_cast<::fidl::Server<::test_protocolpayloads::MainProtocol>*>(
-              interface)
-              ->OneWayComposed(request, completer);
+          ::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayComposed> request = ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayComposed>>::FromDomainObject(std::move(decoded.value()));
+          ::fidl::internal::NaturalCompleter<::test_protocolpayloads::MainProtocol::OneWayComposed>::Sync completer(txn);
+          static_cast<::fidl::Server<::test_protocolpayloads::MainProtocol>*>(interface)->OneWayComposed(
+              request, completer);
           return ::fidl::Status::Ok();
         },
     },
     {
         ::test_protocolpayloads::kMainProtocol_TwoWayComposed_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::MessageStorageViewBase* storage_view,
-           ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
-              ::test_protocolpayloads_imported::ImportStructPayload>(
-              std::move(msg));
+           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocolpayloads_imported::ImportStructPayload>(std::move(msg));
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayComposed>
-              request =
-                  ::fidl::internal::NaturalMessageConverter<::fidl::Request<
-                      ::test_protocolpayloads::MainProtocol::TwoWayComposed>>::
-                      FromDomainObject(std::move(decoded.value()));
-          ::fidl::internal::NaturalCompleter<
-              ::test_protocolpayloads::MainProtocol::TwoWayComposed>::Sync
-              completer(txn);
-          static_cast<::fidl::Server<::test_protocolpayloads::MainProtocol>*>(
-              interface)
-              ->TwoWayComposed(request, completer);
+          ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayComposed> request = ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayComposed>>::FromDomainObject(std::move(decoded.value()));
+          ::fidl::internal::NaturalCompleter<::test_protocolpayloads::MainProtocol::TwoWayComposed>::Sync completer(txn);
+          static_cast<::fidl::Server<::test_protocolpayloads::MainProtocol>*>(interface)->TwoWayComposed(
+              request, completer);
           return ::fidl::Status::Ok();
         },
     },
     {
         ::test_protocolpayloads::kMainProtocol_TwoWayComposedWithError_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::MessageStorageViewBase* storage_view,
-           ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
-              ::test_protocolpayloads_imported::ImportStructPayload>(
-              std::move(msg));
+           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocolpayloads_imported::ImportStructPayload>(std::move(msg));
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<
-              ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>
-              request = ::fidl::internal::NaturalMessageConverter<
-                  ::fidl::Request<::test_protocolpayloads::MainProtocol::
-                                      TwoWayComposedWithError>>::
-                  FromDomainObject(std::move(decoded.value()));
-          ::fidl::internal::NaturalCompleter<
-              ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>::
-              Sync completer(txn);
-          static_cast<::fidl::Server<::test_protocolpayloads::MainProtocol>*>(
-              interface)
-              ->TwoWayComposedWithError(request, completer);
+          ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError> request = ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>>::FromDomainObject(std::move(decoded.value()));
+          ::fidl::internal::NaturalCompleter<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>::Sync completer(txn);
+          static_cast<::fidl::Server<::test_protocolpayloads::MainProtocol>*>(interface)->TwoWayComposedWithError(
+              request, completer);
           return ::fidl::Status::Ok();
         },
     },
     {
         ::test_protocolpayloads::kMainProtocol_OneWayLocal_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::MessageStorageViewBase* storage_view,
-           ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
-              ::test_protocolpayloads::LocalStructPayload>(std::move(msg));
+           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocolpayloads::LocalStructPayload>(std::move(msg));
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayLocal>
-              request =
-                  ::fidl::internal::NaturalMessageConverter<::fidl::Request<
-                      ::test_protocolpayloads::MainProtocol::OneWayLocal>>::
-                      FromDomainObject(std::move(decoded.value()));
-          ::fidl::internal::NaturalCompleter<
-              ::test_protocolpayloads::MainProtocol::OneWayLocal>::Sync
-              completer(txn);
-          static_cast<::fidl::Server<::test_protocolpayloads::MainProtocol>*>(
-              interface)
-              ->OneWayLocal(request, completer);
+          ::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayLocal> request = ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayLocal>>::FromDomainObject(std::move(decoded.value()));
+          ::fidl::internal::NaturalCompleter<::test_protocolpayloads::MainProtocol::OneWayLocal>::Sync completer(txn);
+          static_cast<::fidl::Server<::test_protocolpayloads::MainProtocol>*>(interface)->OneWayLocal(
+              request, completer);
           return ::fidl::Status::Ok();
         },
     },
     {
         ::test_protocolpayloads::kMainProtocol_TwoWayLocal_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::MessageStorageViewBase* storage_view,
-           ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
-              ::test_protocolpayloads::LocalStructPayload>(std::move(msg));
+           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocolpayloads::LocalStructPayload>(std::move(msg));
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayLocal>
-              request =
-                  ::fidl::internal::NaturalMessageConverter<::fidl::Request<
-                      ::test_protocolpayloads::MainProtocol::TwoWayLocal>>::
-                      FromDomainObject(std::move(decoded.value()));
-          ::fidl::internal::NaturalCompleter<
-              ::test_protocolpayloads::MainProtocol::TwoWayLocal>::Sync
-              completer(txn);
-          static_cast<::fidl::Server<::test_protocolpayloads::MainProtocol>*>(
-              interface)
-              ->TwoWayLocal(request, completer);
+          ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayLocal> request = ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayLocal>>::FromDomainObject(std::move(decoded.value()));
+          ::fidl::internal::NaturalCompleter<::test_protocolpayloads::MainProtocol::TwoWayLocal>::Sync completer(txn);
+          static_cast<::fidl::Server<::test_protocolpayloads::MainProtocol>*>(interface)->TwoWayLocal(
+              request, completer);
           return ::fidl::Status::Ok();
         },
     },
     {
         ::test_protocolpayloads::kMainProtocol_TwoWayLocalWithError_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::MessageStorageViewBase* storage_view,
-           ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
-              ::test_protocolpayloads::LocalStructPayload>(std::move(msg));
+           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocolpayloads::LocalStructPayload>(std::move(msg));
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<
-              ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>
-              request = ::fidl::internal::NaturalMessageConverter<
-                  ::fidl::Request<::test_protocolpayloads::MainProtocol::
-                                      TwoWayLocalWithError>>::
-                  FromDomainObject(std::move(decoded.value()));
-          ::fidl::internal::NaturalCompleter<
-              ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>::Sync
-              completer(txn);
-          static_cast<::fidl::Server<::test_protocolpayloads::MainProtocol>*>(
-              interface)
-              ->TwoWayLocalWithError(request, completer);
+          ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError> request = ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>>::FromDomainObject(std::move(decoded.value()));
+          ::fidl::internal::NaturalCompleter<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>::Sync completer(txn);
+          static_cast<::fidl::Server<::test_protocolpayloads::MainProtocol>*>(interface)->TwoWayLocalWithError(
+              request, completer);
           return ::fidl::Status::Ok();
         },
     },
     {
         ::test_protocolpayloads::kMainProtocol_OneWayImport_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::MessageStorageViewBase* storage_view,
-           ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
-              ::test_protocolpayloads_imported::ImportStructPayload>(
-              std::move(msg));
+           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocolpayloads_imported::ImportStructPayload>(std::move(msg));
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayImport>
-              request =
-                  ::fidl::internal::NaturalMessageConverter<::fidl::Request<
-                      ::test_protocolpayloads::MainProtocol::OneWayImport>>::
-                      FromDomainObject(std::move(decoded.value()));
-          ::fidl::internal::NaturalCompleter<
-              ::test_protocolpayloads::MainProtocol::OneWayImport>::Sync
-              completer(txn);
-          static_cast<::fidl::Server<::test_protocolpayloads::MainProtocol>*>(
-              interface)
-              ->OneWayImport(request, completer);
+          ::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayImport> request = ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayImport>>::FromDomainObject(std::move(decoded.value()));
+          ::fidl::internal::NaturalCompleter<::test_protocolpayloads::MainProtocol::OneWayImport>::Sync completer(txn);
+          static_cast<::fidl::Server<::test_protocolpayloads::MainProtocol>*>(interface)->OneWayImport(
+              request, completer);
           return ::fidl::Status::Ok();
         },
     },
     {
         ::test_protocolpayloads::kMainProtocol_TwoWayImport_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::MessageStorageViewBase* storage_view,
-           ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
-              ::test_protocolpayloads_imported::ImportStructPayload>(
-              std::move(msg));
+           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocolpayloads_imported::ImportStructPayload>(std::move(msg));
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayImport>
-              request =
-                  ::fidl::internal::NaturalMessageConverter<::fidl::Request<
-                      ::test_protocolpayloads::MainProtocol::TwoWayImport>>::
-                      FromDomainObject(std::move(decoded.value()));
-          ::fidl::internal::NaturalCompleter<
-              ::test_protocolpayloads::MainProtocol::TwoWayImport>::Sync
-              completer(txn);
-          static_cast<::fidl::Server<::test_protocolpayloads::MainProtocol>*>(
-              interface)
-              ->TwoWayImport(request, completer);
+          ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayImport> request = ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayImport>>::FromDomainObject(std::move(decoded.value()));
+          ::fidl::internal::NaturalCompleter<::test_protocolpayloads::MainProtocol::TwoWayImport>::Sync completer(txn);
+          static_cast<::fidl::Server<::test_protocolpayloads::MainProtocol>*>(interface)->TwoWayImport(
+              request, completer);
           return ::fidl::Status::Ok();
         },
     },
     {
         ::test_protocolpayloads::kMainProtocol_TwoWayImportWithError_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::MessageStorageViewBase* storage_view,
-           ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
-              ::test_protocolpayloads_imported::ImportStructPayload>(
-              std::move(msg));
+           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocolpayloads_imported::ImportStructPayload>(std::move(msg));
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<
-              ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>
-              request = ::fidl::internal::NaturalMessageConverter<
-                  ::fidl::Request<::test_protocolpayloads::MainProtocol::
-                                      TwoWayImportWithError>>::
-                  FromDomainObject(std::move(decoded.value()));
-          ::fidl::internal::NaturalCompleter<
-              ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>::
-              Sync completer(txn);
-          static_cast<::fidl::Server<::test_protocolpayloads::MainProtocol>*>(
-              interface)
-              ->TwoWayImportWithError(request, completer);
+          ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayImportWithError> request = ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>>::FromDomainObject(std::move(decoded.value()));
+          ::fidl::internal::NaturalCompleter<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>::Sync completer(txn);
+          static_cast<::fidl::Server<::test_protocolpayloads::MainProtocol>*>(interface)->TwoWayImportWithError(
+              request, completer);
           return ::fidl::Status::Ok();
         },
     },
     {
         ::test_protocolpayloads::kMainProtocol_OneWayAnon_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::MessageStorageViewBase* storage_view,
-           ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
-              ::test_protocolpayloads::MainProtocolOneWayAnonRequest>(
-              std::move(msg));
+           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocolpayloads::MainProtocolOneWayAnonRequest>(std::move(msg));
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayAnon>
-              request =
-                  ::fidl::internal::NaturalMessageConverter<::fidl::Request<
-                      ::test_protocolpayloads::MainProtocol::OneWayAnon>>::
-                      FromDomainObject(std::move(decoded.value()));
-          ::fidl::internal::NaturalCompleter<
-              ::test_protocolpayloads::MainProtocol::OneWayAnon>::Sync
-              completer(txn);
-          static_cast<::fidl::Server<::test_protocolpayloads::MainProtocol>*>(
-              interface)
-              ->OneWayAnon(request, completer);
+          ::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayAnon> request = ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayAnon>>::FromDomainObject(std::move(decoded.value()));
+          ::fidl::internal::NaturalCompleter<::test_protocolpayloads::MainProtocol::OneWayAnon>::Sync completer(txn);
+          static_cast<::fidl::Server<::test_protocolpayloads::MainProtocol>*>(interface)->OneWayAnon(
+              request, completer);
           return ::fidl::Status::Ok();
         },
     },
     {
         ::test_protocolpayloads::kMainProtocol_TwoWayAnon_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::MessageStorageViewBase* storage_view,
-           ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
-              ::test_protocolpayloads::MainProtocolTwoWayAnonRequest>(
-              std::move(msg));
+           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocolpayloads::MainProtocolTwoWayAnonRequest>(std::move(msg));
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayAnon>
-              request =
-                  ::fidl::internal::NaturalMessageConverter<::fidl::Request<
-                      ::test_protocolpayloads::MainProtocol::TwoWayAnon>>::
-                      FromDomainObject(std::move(decoded.value()));
-          ::fidl::internal::NaturalCompleter<
-              ::test_protocolpayloads::MainProtocol::TwoWayAnon>::Sync
-              completer(txn);
-          static_cast<::fidl::Server<::test_protocolpayloads::MainProtocol>*>(
-              interface)
-              ->TwoWayAnon(request, completer);
+          ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayAnon> request = ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayAnon>>::FromDomainObject(std::move(decoded.value()));
+          ::fidl::internal::NaturalCompleter<::test_protocolpayloads::MainProtocol::TwoWayAnon>::Sync completer(txn);
+          static_cast<::fidl::Server<::test_protocolpayloads::MainProtocol>*>(interface)->TwoWayAnon(
+              request, completer);
           return ::fidl::Status::Ok();
         },
     },
     {
         ::test_protocolpayloads::kMainProtocol_TwoWayAnonWithError_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::MessageStorageViewBase* storage_view,
-           ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
-              ::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorRequest>(
-              std::move(msg));
+           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorRequest>(std::move(msg));
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<
-              ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>
-              request = ::fidl::internal::NaturalMessageConverter<
-                  ::fidl::Request<::test_protocolpayloads::MainProtocol::
-                                      TwoWayAnonWithError>>::
-                  FromDomainObject(std::move(decoded.value()));
-          ::fidl::internal::NaturalCompleter<
-              ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>::Sync
-              completer(txn);
-          static_cast<::fidl::Server<::test_protocolpayloads::MainProtocol>*>(
-              interface)
-              ->TwoWayAnonWithError(request, completer);
+          ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError> request = ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>>::FromDomainObject(std::move(decoded.value()));
+          ::fidl::internal::NaturalCompleter<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>::Sync completer(txn);
+          static_cast<::fidl::Server<::test_protocolpayloads::MainProtocol>*>(interface)->TwoWayAnonWithError(
+              request, completer);
           return ::fidl::Status::Ok();
         },
     },
 };
 
-const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<
-    ::test_protocolpayloads::MainProtocol>::entries_end_ = &entries_[12];
+const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::test_protocolpayloads::MainProtocol>::entries_end_ =
+    &entries_[12];
 
-void fidl::internal::
-    NaturalServerDispatcher<::test_protocolpayloads::MainProtocol>::Dispatch(
-        ::fidl::Server<::test_protocolpayloads::MainProtocol>* impl,
-        ::fidl::IncomingMessage&& msg,
-        internal::MessageStorageViewBase* storage_view,
-        ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_,
-                             entries_end_);
+void fidl::internal::NaturalServerDispatcher<::test_protocolpayloads::MainProtocol>::Dispatch(::fidl::Server<::test_protocolpayloads::MainProtocol>* impl, ::fidl::IncomingMessage&& msg,
+                                                                                              internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_);
 }
 void fidl::Server<::test_protocolpayloads::MainProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
-  ::fidl::internal::NaturalServerDispatcher<
-      ::test_protocolpayloads::MainProtocol>::Dispatch(this, std::move(msg),
-                                                       storage_view, txn);
+  ::fidl::internal::NaturalServerDispatcher<::test_protocolpayloads::MainProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }
 #endif  // __Fuchsia__

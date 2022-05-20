@@ -15,12 +15,9 @@ namespace fidl {
 namespace internal {
 
 template <>
-struct WireNaturalConversionTraits<::test_escaping::wire::DocCommentWithQuotes,
-                                   ::test_escaping::DocCommentWithQuotes> {
-  static ::test_escaping::DocCommentWithQuotes ToNatural(
-      ::test_escaping::wire::DocCommentWithQuotes src);
-  static ::test_escaping::wire::DocCommentWithQuotes ToWire(
-      fidl::AnyArena& arena, ::test_escaping::DocCommentWithQuotes src);
+struct WireNaturalConversionTraits<::test_escaping::wire::DocCommentWithQuotes, ::test_escaping::DocCommentWithQuotes> {
+  static ::test_escaping::DocCommentWithQuotes ToNatural(::test_escaping::wire::DocCommentWithQuotes src);
+  static ::test_escaping::wire::DocCommentWithQuotes ToWire(fidl::AnyArena& arena, ::test_escaping::DocCommentWithQuotes src);
 };
 
 template <>

@@ -10,26 +10,20 @@
 namespace test {
 namespace escaping {
 extern "C" const fidl_type_t test_escaping_DocCommentWithQuotesTable;
-const fidl_type_t* DocCommentWithQuotes::FidlType =
-    &test_escaping_DocCommentWithQuotesTable;
+const fidl_type_t* DocCommentWithQuotes::FidlType = &test_escaping_DocCommentWithQuotesTable;
 
-void DocCommentWithQuotes::Encode(
-    ::fidl::Encoder* _encoder, size_t _offset,
-    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+void DocCommentWithQuotes::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                                  cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<DocCommentWithQuotes>::value) {
-    memcpy(_encoder->template GetPtr<DocCommentWithQuotes>(_offset), this,
-           sizeof(DocCommentWithQuotes));
+    memcpy(_encoder->template GetPtr<DocCommentWithQuotes>(_offset), this, sizeof(DocCommentWithQuotes));
   } else {
     ::fidl::Encode(_encoder, &__reserved, _offset + 0);
   }
 }
 
-void DocCommentWithQuotes::Decode(::fidl::Decoder* _decoder,
-                                  DocCommentWithQuotes* _value,
-                                  size_t _offset) {
+void DocCommentWithQuotes::Decode(::fidl::Decoder* _decoder, DocCommentWithQuotes* _value, size_t _offset) {
   if (::fidl::IsMemcpyCompatible<DocCommentWithQuotes>::value) {
-    memcpy(_value, _decoder->template GetPtr<DocCommentWithQuotes>(_offset),
-           sizeof(DocCommentWithQuotes));
+    memcpy(_value, _decoder->template GetPtr<DocCommentWithQuotes>(_offset), sizeof(DocCommentWithQuotes));
   } else {
     ::fidl::Decode(_decoder, &_value->__reserved, _offset + 0);
   }
@@ -37,7 +31,8 @@ void DocCommentWithQuotes::Decode(::fidl::Decoder* _decoder,
 
 zx_status_t DocCommentWithQuotes::Clone(DocCommentWithQuotes* _result) const {
   zx_status_t _status = ::fidl::Clone(__reserved, &_result->__reserved);
-  if (_status != ZX_OK) return _status;
+  if (_status != ZX_OK)
+    return _status;
   return ZX_OK;
 }
 

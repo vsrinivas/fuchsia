@@ -29,7 +29,9 @@ extern "C" const fidl_type_t test_handlesintypes_UnionWithHandleTable;
 
 class UnionWithHandle {
  private:
-  using Storage_ = std::variant<std::monostate, ::zx::vmo>;
+  using Storage_ =
+      std::variant<
+          std::monostate, ::zx::vmo>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -41,8 +43,7 @@ class UnionWithHandle {
   UnionWithHandle() : storage_(std::make_shared<Storage_>()) {}
 
   UnionWithHandle(UnionWithHandle&& other) noexcept
-      : UnionWithHandle(
-            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+      : UnionWithHandle(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
     *storage_ = std::move(*other.storage_);
   }
   UnionWithHandle& operator=(UnionWithHandle&& other) noexcept {
@@ -56,8 +57,9 @@ class UnionWithHandle {
     return UnionWithHandle::IndexToTag(storage_->index()).value();
   }
   static UnionWithHandle WithH(::zx::vmo val) {
-    return UnionWithHandle(
-        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+    return UnionWithHandle(std::make_shared<Storage_>(
+        std::in_place_index_t<1>{},
+        std::move(val)));
   }
 
   const ::fidl::internal::UnionMemberView<1, Storage_> h() const {
@@ -67,26 +69,17 @@ class UnionWithHandle {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
 
-  UnionWithHandle(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : storage_(std::make_shared<Storage_>()) {}
+  UnionWithHandle(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
-  friend struct ::fidl::internal::NaturalUnionCodingTraits<
-      ::test_handlesintypes::UnionWithHandle>;
+  friend struct ::fidl::internal::NaturalUnionCodingTraits<::test_handlesintypes::UnionWithHandle>;
   static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalUnionMember<
-          ::fidl::internal::NaturalCodingConstraintEmpty>(),
-      ::fidl::internal::NaturalUnionMember<
-          fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_VMO,
-                                                        0x80000000, false>>());
+      ::fidl::internal::NaturalUnionMember<::fidl::internal::NaturalCodingConstraintEmpty>(), ::fidl::internal::NaturalUnionMember<fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_VMO, 0x80000000, false>>());
 
-  explicit UnionWithHandle(std::shared_ptr<Storage_> storage)
-      : storage_(std::move(storage)) {}
+  explicit UnionWithHandle(std::shared_ptr<Storage_> storage) : storage_(std::move(storage)) {}
 
-  static constexpr size_t TagToIndex(
-      ::fidl::internal::NaturalDecoder* decoder,
-      ::test_handlesintypes::UnionWithHandle::Tag tag) {
+  static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_handlesintypes::UnionWithHandle::Tag tag) {
     switch (tag) {
       case ::test_handlesintypes::UnionWithHandle::Tag::kH:
         return 1;
@@ -99,8 +92,7 @@ class UnionWithHandle {
     }
   }
 
-  static constexpr std::optional<::test_handlesintypes::UnionWithHandle::Tag>
-  IndexToTag(size_t index) {
+  static constexpr std::optional<::test_handlesintypes::UnionWithHandle::Tag> IndexToTag(size_t index) {
     switch (index) {
       case 1:
         return ::test_handlesintypes::UnionWithHandle::Tag::kH;
@@ -126,13 +118,14 @@ class TableWithHandle {
   TableWithHandle(TableWithHandle&&) noexcept = default;
   TableWithHandle& operator=(TableWithHandle&&) noexcept = default;
 
-  bool IsEmpty() const { return !(storage_.h.has_value()); }
+  bool IsEmpty() const {
+    return !(storage_.h.has_value());
+  }
 
   const std::optional<::zx::vmo>& h() const { return storage_.h; }
   ::std::optional<::zx::vmo>& h() { return storage_.h; }
 
-  TableWithHandle(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : TableWithHandle(Storage_{}) {}
+  TableWithHandle(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : TableWithHandle(Storage_{}) {}
 
  private:
   struct Storage_ final {
@@ -141,16 +134,10 @@ class TableWithHandle {
 
   // TODO(https://fxbug.dev/91252): Box the storage.
   Storage_ storage_;
-  friend struct ::fidl::internal::NaturalTableCodingTraits<
-      ::test_handlesintypes::TableWithHandle>;
-  friend struct ::fidl::internal::MemberVisitor<
-      ::test_handlesintypes::TableWithHandle>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalTableMember<
-          Storage_, ::zx::vmo,
-          fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_VMO,
-                                                        0x80000000, false>>{
-          1, &Storage_::h});
+  friend struct ::fidl::internal::NaturalTableCodingTraits<::test_handlesintypes::TableWithHandle>;
+  friend struct ::fidl::internal::MemberVisitor<::test_handlesintypes::TableWithHandle>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalTableMember<Storage_, ::zx::vmo, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_VMO, 0x80000000, false>>{
+      1, &Storage_::h});
 };
 
 #endif  // __Fuchsia__
@@ -165,41 +152,43 @@ class HandlesInTypes {
 
  public:
   HandlesInTypes(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-  HandlesInTypes(
-      ::zx::vmo normal_handle, ::std::vector<::zx::vmo> handle_in_vec,
-      ::std::array<::zx::vmo, 5> handle_in_array,
-      ::std::vector<::std::array<::zx::vmo, 5>> handle_in_mixed_vec_array,
-      ::test_handlesintypes::TableWithHandle table_with_handle,
-      ::test_handlesintypes::UnionWithHandle union_with_handle) noexcept
-      : storage_(
-            {.normal_handle = std::move(normal_handle),
-             .handle_in_vec = std::move(handle_in_vec),
-             .handle_in_array = std::move(handle_in_array),
-             .handle_in_mixed_vec_array = std::move(handle_in_mixed_vec_array),
-             .table_with_handle = std::move(table_with_handle),
-             .union_with_handle = std::move(union_with_handle)}) {}
+  HandlesInTypes(::zx::vmo normal_handle, ::std::vector<::zx::vmo> handle_in_vec, ::std::array<::zx::vmo, 5> handle_in_array, ::std::vector<::std::array<::zx::vmo, 5>> handle_in_mixed_vec_array, ::test_handlesintypes::TableWithHandle table_with_handle, ::test_handlesintypes::UnionWithHandle union_with_handle) noexcept
+      : storage_({.normal_handle = std::move(normal_handle),
+                  .handle_in_vec = std::move(handle_in_vec),
+                  .handle_in_array = std::move(handle_in_array),
+                  .handle_in_mixed_vec_array = std::move(handle_in_mixed_vec_array),
+                  .table_with_handle = std::move(table_with_handle),
+                  .union_with_handle = std::move(union_with_handle)}) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |HandlesInTypes| only if all of its members are
-  // default constructible.
+  // Default constructs a |HandlesInTypes| only if all of its members are default constructible.
   HandlesInTypes() = default;
 #pragma clang diagnostic pop
 
   HandlesInTypes(HandlesInTypes&&) noexcept = default;
   HandlesInTypes& operator=(HandlesInTypes&&) noexcept = default;
 
-  const ::zx::vmo& normal_handle() const { return storage_.normal_handle; }
+  const ::zx::vmo&
+  normal_handle() const {
+    return storage_.normal_handle;
+  }
 
-  ::zx::vmo& normal_handle() { return storage_.normal_handle; }
+  ::zx::vmo& normal_handle() {
+    return storage_.normal_handle;
+  }
 
-  const ::std::vector<::zx::vmo>& handle_in_vec() const {
+  const ::std::vector<::zx::vmo>&
+  handle_in_vec() const {
     return storage_.handle_in_vec;
   }
 
-  ::std::vector<::zx::vmo>& handle_in_vec() { return storage_.handle_in_vec; }
+  ::std::vector<::zx::vmo>& handle_in_vec() {
+    return storage_.handle_in_vec;
+  }
 
-  const ::std::array<::zx::vmo, 5>& handle_in_array() const {
+  const ::std::array<::zx::vmo, 5>&
+  handle_in_array() const {
     return storage_.handle_in_array;
   }
 
@@ -207,8 +196,8 @@ class HandlesInTypes {
     return storage_.handle_in_array;
   }
 
-  const ::std::vector<::std::array<::zx::vmo, 5>>& handle_in_mixed_vec_array()
-      const {
+  const ::std::vector<::std::array<::zx::vmo, 5>>&
+  handle_in_mixed_vec_array() const {
     return storage_.handle_in_mixed_vec_array;
   }
 
@@ -216,7 +205,8 @@ class HandlesInTypes {
     return storage_.handle_in_mixed_vec_array;
   }
 
-  const ::test_handlesintypes::TableWithHandle& table_with_handle() const {
+  const ::test_handlesintypes::TableWithHandle&
+  table_with_handle() const {
     return storage_.table_with_handle;
   }
 
@@ -224,7 +214,8 @@ class HandlesInTypes {
     return storage_.table_with_handle;
   }
 
-  const ::test_handlesintypes::UnionWithHandle& union_with_handle() const {
+  const ::test_handlesintypes::UnionWithHandle&
+  union_with_handle() const {
     return storage_.union_with_handle;
   }
 
@@ -232,19 +223,14 @@ class HandlesInTypes {
     return storage_.union_with_handle;
   }
 
-  HandlesInTypes(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : HandlesInTypes(Storage_{
-            .normal_handle = {},
-            .handle_in_vec = {},
-            .handle_in_array =
-                ::fidl::internal::DefaultConstructPossiblyInvalidObject<
-                    ::std::array<::zx::vmo, 5>>::Make(),
-            .handle_in_mixed_vec_array = {},
-            .table_with_handle =
-                ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
-            .union_with_handle =
-                ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
-        }) {}
+  HandlesInTypes(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : HandlesInTypes(Storage_{
+                                                                                   .normal_handle = {},
+                                                                                   .handle_in_vec = {},
+                                                                                   .handle_in_array = ::fidl::internal::DefaultConstructPossiblyInvalidObject<::std::array<::zx::vmo, 5>>::Make(),
+                                                                                   .handle_in_mixed_vec_array = {},
+                                                                                   .table_with_handle = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+                                                                                   .union_with_handle = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+                                                                               }) {}
 
  private:
   struct Storage_ final {
@@ -258,50 +244,19 @@ class HandlesInTypes {
 
   Storage_ storage_;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_handlesintypes::HandlesInTypes, 96>;
-  friend struct ::fidl::internal::MemberVisitor<
-      ::test_handlesintypes::HandlesInTypes>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::zx::vmo,
-          fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_VMO,
-                                                        0x80000000, false>>{
-          &Storage_::normal_handle, 0},
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::std::vector<::zx::vmo>,
-          fidl::internal::NaturalCodingConstraintVector<
-              fidl::internal::NaturalCodingConstraintHandle<
-                  ZX_OBJ_TYPE_VMO, 0x80000000, false>>>{
-          &Storage_::handle_in_vec, 8},
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::std::array<::zx::vmo, 5>,
-          fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_VMO,
-                                                        0x80000000, false>>{
-          &Storage_::handle_in_array, 24},
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::std::vector<::std::array<::zx::vmo, 5>>,
-          fidl::internal::NaturalCodingConstraintVector<
-              fidl::internal::NaturalCodingConstraintHandle<
-                  ZX_OBJ_TYPE_VMO, 0x80000000, false>>>{
-          &Storage_::handle_in_mixed_vec_array, 48},
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::test_handlesintypes::TableWithHandle,
-          fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::table_with_handle, 64},
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::test_handlesintypes::UnionWithHandle,
-          fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::union_with_handle, 80});
-  static constexpr auto kPadding = std::make_tuple(
-      ::fidl::internal::NaturalStructPadding<uint64_t>{
-          .offset = 0,
-          .mask = 0xffffffff00000000ull,
-      },
-      ::fidl::internal::NaturalStructPadding<uint64_t>{
-          .offset = 40,
-          .mask = 0xffffffff00000000ull,
-      });
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_handlesintypes::HandlesInTypes, 96>;
+  friend struct ::fidl::internal::MemberVisitor<::test_handlesintypes::HandlesInTypes>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::zx::vmo, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_VMO, 0x80000000, false>>{
+                                                       &Storage_::normal_handle, 0},
+                                                   ::fidl::internal::NaturalStructMember<Storage_, ::std::vector<::zx::vmo>, fidl::internal::NaturalCodingConstraintVector<fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_VMO, 0x80000000, false>>>{&Storage_::handle_in_vec, 8}, ::fidl::internal::NaturalStructMember<Storage_, ::std::array<::zx::vmo, 5>, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_VMO, 0x80000000, false>>{&Storage_::handle_in_array, 24}, ::fidl::internal::NaturalStructMember<Storage_, ::std::vector<::std::array<::zx::vmo, 5>>, fidl::internal::NaturalCodingConstraintVector<fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_VMO, 0x80000000, false>>>{&Storage_::handle_in_mixed_vec_array, 48}, ::fidl::internal::NaturalStructMember<Storage_, ::test_handlesintypes::TableWithHandle, fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::table_with_handle, 64}, ::fidl::internal::NaturalStructMember<Storage_, ::test_handlesintypes::UnionWithHandle, fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::union_with_handle, 80});
+  static constexpr auto kPadding = std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{
+                                                       .offset = 0,
+                                                       .mask = 0xffffffff00000000ull,
+                                                   },
+                                                   ::fidl::internal::NaturalStructPadding<uint64_t>{
+                                                       .offset = 40,
+                                                       .mask = 0xffffffff00000000ull,
+                                                   });
 };
 
 #endif  // __Fuchsia__
@@ -314,18 +269,13 @@ namespace fidl {
 extern "C" const fidl_type_t test_handlesintypes_HandlesInTypesTable;
 
 template <>
-struct IsResource<::test_handlesintypes::HandlesInTypes>
-    : public std::true_type {};
+struct IsResource<::test_handlesintypes::HandlesInTypes> : public std::true_type {};
 template <>
-struct IsFidlType<::test_handlesintypes::HandlesInTypes>
-    : public std::true_type {};
+struct IsFidlType<::test_handlesintypes::HandlesInTypes> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<
-    ::test_handlesintypes::HandlesInTypes,
-    ::fidl::internal::NaturalCodingConstraintEmpty>
-    final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_handlesintypes::HandlesInTypes, 96> {};
+struct internal::NaturalCodingTraits<::test_handlesintypes::HandlesInTypes, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_handlesintypes::HandlesInTypes, 96> {};
 
 #endif  // __Fuchsia__
 
@@ -334,18 +284,12 @@ struct internal::NaturalCodingTraits<
 extern "C" const fidl_type_t test_handlesintypes_TableWithHandleTable;
 
 template <>
-struct IsResource<::test_handlesintypes::TableWithHandle>
-    : public std::true_type {};
+struct IsResource<::test_handlesintypes::TableWithHandle> : public std::true_type {};
 template <>
-struct IsFidlType<::test_handlesintypes::TableWithHandle>
-    : public std::true_type {};
+struct IsFidlType<::test_handlesintypes::TableWithHandle> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<
-    ::test_handlesintypes::TableWithHandle,
-    ::fidl::internal::NaturalCodingConstraintEmpty>
-    : public ::fidl::internal::NaturalTableCodingTraits<
-          ::test_handlesintypes::TableWithHandle> {};
+struct internal::NaturalCodingTraits<::test_handlesintypes::TableWithHandle, ::fidl::internal::NaturalCodingConstraintEmpty> : public ::fidl::internal::NaturalTableCodingTraits<::test_handlesintypes::TableWithHandle> {};
 
 #endif  // __Fuchsia__
 
@@ -354,34 +298,24 @@ struct internal::NaturalCodingTraits<
 extern "C" const fidl_type_t test_handlesintypes_UnionWithHandleTable;
 
 template <>
-struct IsResource<::test_handlesintypes::UnionWithHandle>
-    : public std::true_type {};
+struct IsResource<::test_handlesintypes::UnionWithHandle> : public std::true_type {};
 template <>
-struct IsFidlType<::test_handlesintypes::UnionWithHandle>
-    : public std::true_type {};
+struct IsFidlType<::test_handlesintypes::UnionWithHandle> : public std::true_type {};
 template <>
-struct IsUnion<::test_handlesintypes::UnionWithHandle> : public std::true_type {
-};
+struct IsUnion<::test_handlesintypes::UnionWithHandle> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<
-    ::test_handlesintypes::UnionWithHandle,
-    ::fidl::internal::NaturalCodingConstraintEmpty>
-    final : public ::fidl::internal::NaturalUnionCodingTraits<
-                ::test_handlesintypes::UnionWithHandle> {};
+struct internal::NaturalCodingTraits<::test_handlesintypes::UnionWithHandle, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalUnionCodingTraits<::test_handlesintypes::UnionWithHandle> {};
 
 #endif  // __Fuchsia__
 
 template <>
-struct internal::NaturalCodingTraits<
-    ::test_handlesintypes::ObjType,
-    ::fidl::internal::NaturalCodingConstraintEmpty> {
+struct internal::NaturalCodingTraits<::test_handlesintypes::ObjType, ::fidl::internal::NaturalCodingConstraintEmpty> {
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
   static constexpr bool is_memcpy_compatible = false;
 
-  static void Encode(internal::NaturalEncoder* encoder,
-                     ::test_handlesintypes::ObjType* value, size_t offset,
-                     size_t recursion_depth) {
+  static void Encode(internal::NaturalEncoder* encoder, ::test_handlesintypes::ObjType* value, size_t offset, size_t recursion_depth) {
     switch (*value) {
       case ::test_handlesintypes::ObjType::kNone:
       case ::test_handlesintypes::ObjType::kVmo:
@@ -392,9 +326,7 @@ struct internal::NaturalCodingTraits<
     }
     *encoder->template GetPtr<::test_handlesintypes::ObjType>(offset) = *value;
   }
-  static void Decode(internal::NaturalDecoder* decoder,
-                     ::test_handlesintypes::ObjType* value, size_t offset,
-                     size_t recursion_depth) {
+  static void Decode(internal::NaturalDecoder* decoder, ::test_handlesintypes::ObjType* value, size_t offset, size_t recursion_depth) {
     *value = *decoder->template GetPtr<::test_handlesintypes::ObjType>(offset);
     switch (*value) {
       case ::test_handlesintypes::ObjType::kNone:

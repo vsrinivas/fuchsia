@@ -12,22 +12,18 @@ namespace importedconstvalues {
 extern "C" const fidl_type_t test_importedconstvalues_MyStructTable;
 const fidl_type_t* MyStruct::FidlType = &test_importedconstvalues_MyStructTable;
 
-void MyStruct::Encode(
-    ::fidl::Encoder* _encoder, size_t _offset,
-    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+void MyStruct::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<MyStruct>::value) {
-    memcpy(_encoder->template GetPtr<MyStruct>(_offset), this,
-           sizeof(MyStruct));
+    memcpy(_encoder->template GetPtr<MyStruct>(_offset), this, sizeof(MyStruct));
   } else {
     ::fidl::Encode(_encoder, &__reserved, _offset + 0);
   }
 }
 
-void MyStruct::Decode(::fidl::Decoder* _decoder, MyStruct* _value,
-                      size_t _offset) {
+void MyStruct::Decode(::fidl::Decoder* _decoder, MyStruct* _value, size_t _offset) {
   if (::fidl::IsMemcpyCompatible<MyStruct>::value) {
-    memcpy(_value, _decoder->template GetPtr<MyStruct>(_offset),
-           sizeof(MyStruct));
+    memcpy(_value, _decoder->template GetPtr<MyStruct>(_offset), sizeof(MyStruct));
   } else {
     ::fidl::Decode(_decoder, &_value->__reserved, _offset + 0);
   }
@@ -35,7 +31,8 @@ void MyStruct::Decode(::fidl::Decoder* _decoder, MyStruct* _value,
 
 zx_status_t MyStruct::Clone(MyStruct* _result) const {
   zx_status_t _status = ::fidl::Clone(__reserved, &_result->__reserved);
-  if (_status != ZX_OK) return _status;
+  if (_status != ZX_OK)
+    return _status;
   return ZX_OK;
 }
 

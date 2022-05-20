@@ -19,48 +19,36 @@
 namespace test_unknowninteractions {
 class Example;
 
-__LOCAL extern "C" const fidl_type_t
-    test_unknowninteractions_ExampleFlexibleTwoWayTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_ExampleFlexibleTwoWayTopResponseTable;
 
 }  // namespace test_unknowninteractions
 template <>
-struct ::fidl::internal::WireOrdinal<
-    ::test_unknowninteractions::Example::StrictOneWay>
-    final {
+struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::Example::StrictOneWay> final {
   static constexpr uint64_t value = 2276912608357927194lu;
 };
 template <>
-struct ::fidl::internal::WireOrdinal<
-    ::test_unknowninteractions::Example::FlexibleOneWay>
-    final {
+struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::Example::FlexibleOneWay> final {
   static constexpr uint64_t value = 2309537410782500280lu;
 };
 template <>
-struct ::fidl::internal::WireOrdinal<
-    ::test_unknowninteractions::Example::StrictTwoWay>
-    final {
+struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::Example::StrictTwoWay> final {
   static constexpr uint64_t value = 4530909159434307973lu;
 };
 template <>
-struct ::fidl::internal::WireOrdinal<
-    ::test_unknowninteractions::Example::FlexibleTwoWay>
-    final {
+struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::Example::FlexibleTwoWay> final {
   static constexpr uint64_t value = 9070032238358100524lu;
 };
 template <>
-struct ::fidl::internal::WireOrdinal<
-    ::test_unknowninteractions::Example::StrictEvent>
-    final {
+struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::Example::StrictEvent> final {
   static constexpr uint64_t value = 2942732192976592869lu;
 };
 template <>
-struct ::fidl::internal::WireOrdinal<
-    ::test_unknowninteractions::Example::FlexibleEvent>
-    final {
+struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::Example::FlexibleEvent> final {
   static constexpr uint64_t value = 2065245206460174394lu;
 };
 
-namespace test_unknowninteractions {}  // namespace test_unknowninteractions
+namespace test_unknowninteractions {
+}  // namespace test_unknowninteractions
 #ifdef __Fuchsia__
 
 template <>
@@ -71,18 +59,14 @@ struct ::fidl::internal::ProtocolDetails<::test_unknowninteractions::Example> {
 #ifdef __Fuchsia__
 
 template <>
-struct ::fidl::internal::WireServerDispatcher<
-    ::test_unknowninteractions::Example>
-    final {
+struct ::fidl::internal::WireServerDispatcher<::test_unknowninteractions::Example> final {
   WireServerDispatcher() = delete;
-  static ::fidl::DispatchResult TryDispatch(
-      ::fidl::WireServer<::test_unknowninteractions::Example>* impl,
-      ::fidl::IncomingMessage& msg,
-      internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn);
-  static void Dispatch(
-      ::fidl::WireServer<::test_unknowninteractions::Example>* impl,
-      ::fidl::IncomingMessage&& msg,
-      internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn);
+  static ::fidl::DispatchResult TryDispatch(::fidl::WireServer<::test_unknowninteractions::Example>* impl, ::fidl::IncomingMessage& msg,
+                                            internal::MessageStorageViewBase* storage_view,
+                                            ::fidl::Transaction* txn);
+  static void Dispatch(::fidl::WireServer<::test_unknowninteractions::Example>* impl, ::fidl::IncomingMessage&& msg,
+                       internal::MessageStorageViewBase* storage_view,
+                       ::fidl::Transaction* txn);
 
  private:
   static const ::fidl::internal::MethodEntry entries_[];
@@ -91,439 +75,302 @@ struct ::fidl::internal::WireServerDispatcher<
 #endif  // __Fuchsia__
 
 template <>
-struct ::fidl::WireRequest<::test_unknowninteractions::Example::StrictOneWay>
-    final {
+struct ::fidl::WireRequest<::test_unknowninteractions::Example::StrictOneWay> final {
   WireRequest() = default;
 };
 
 template <>
-struct ::fidl::internal::TransactionalRequest<
-    ::test_unknowninteractions::Example::StrictOneWay>
-    final {
+struct ::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::StrictOneWay> final {
   FIDL_ALIGNDECL
   fidl_message_header_t header;
 
-  TransactionalRequest() { _InitHeader(); }
+  TransactionalRequest() {
+    _InitHeader();
+  }
 
  private:
   void _InitHeader();
 };
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::fidl::internal::TransactionalRequest<
-        ::test_unknowninteractions::Example::StrictOneWay>,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-    : public WireStructCodingTraitsBase<
-          ::fidl::internal::TransactionalRequest<
-              ::test_unknowninteractions::Example::StrictOneWay>,
-          ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::StrictOneWay>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::StrictOneWay>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 0 + sizeof(fidl_message_header_t);
 
-  static void Encode(
-      internal::WireEncoder* encoder,
-      ::fidl::internal::TransactionalRequest<
-          ::test_unknowninteractions::Example::StrictOneWay>* value,
-      ::fidl::internal::WirePosition position,
-      RecursionDepth<IsRecursive> recursion_depth) {
+  static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::StrictOneWay>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     *position.As<fidl_message_header_t>() = value->header;
   }
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {}
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+  }
 };
 
 template <>
-struct ::fidl::WireRequest<::test_unknowninteractions::Example::FlexibleOneWay>
-    final {
+struct ::fidl::WireRequest<::test_unknowninteractions::Example::FlexibleOneWay> final {
   WireRequest() = default;
 };
 
 template <>
-struct ::fidl::internal::TransactionalRequest<
-    ::test_unknowninteractions::Example::FlexibleOneWay>
-    final {
+struct ::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::FlexibleOneWay> final {
   FIDL_ALIGNDECL
   fidl_message_header_t header;
 
-  TransactionalRequest() { _InitHeader(); }
+  TransactionalRequest() {
+    _InitHeader();
+  }
 
  private:
   void _InitHeader();
 };
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::fidl::internal::TransactionalRequest<
-        ::test_unknowninteractions::Example::FlexibleOneWay>,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-    : public WireStructCodingTraitsBase<
-          ::fidl::internal::TransactionalRequest<
-              ::test_unknowninteractions::Example::FlexibleOneWay>,
-          ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::FlexibleOneWay>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::FlexibleOneWay>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 0 + sizeof(fidl_message_header_t);
 
-  static void Encode(
-      internal::WireEncoder* encoder,
-      ::fidl::internal::TransactionalRequest<
-          ::test_unknowninteractions::Example::FlexibleOneWay>* value,
-      ::fidl::internal::WirePosition position,
-      RecursionDepth<IsRecursive> recursion_depth) {
+  static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::FlexibleOneWay>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     *position.As<fidl_message_header_t>() = value->header;
   }
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {}
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+  }
 };
 
 template <>
-struct ::fidl::WireRequest<::test_unknowninteractions::Example::StrictTwoWay>
-    final {
+struct ::fidl::WireRequest<::test_unknowninteractions::Example::StrictTwoWay> final {
   WireRequest() = default;
 };
 
 template <>
-struct ::fidl::internal::TransactionalRequest<
-    ::test_unknowninteractions::Example::StrictTwoWay>
-    final {
+struct ::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::StrictTwoWay> final {
   FIDL_ALIGNDECL
   fidl_message_header_t header;
 
-  TransactionalRequest() { _InitHeader(); }
+  TransactionalRequest() {
+    _InitHeader();
+  }
 
  private:
   void _InitHeader();
 };
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::fidl::internal::TransactionalRequest<
-        ::test_unknowninteractions::Example::StrictTwoWay>,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-    : public WireStructCodingTraitsBase<
-          ::fidl::internal::TransactionalRequest<
-              ::test_unknowninteractions::Example::StrictTwoWay>,
-          ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::StrictTwoWay>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::StrictTwoWay>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 0 + sizeof(fidl_message_header_t);
 
-  static void Encode(
-      internal::WireEncoder* encoder,
-      ::fidl::internal::TransactionalRequest<
-          ::test_unknowninteractions::Example::StrictTwoWay>* value,
-      ::fidl::internal::WirePosition position,
-      RecursionDepth<IsRecursive> recursion_depth) {
+  static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::StrictTwoWay>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     *position.As<fidl_message_header_t>() = value->header;
   }
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {}
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+  }
 };
 
 template <>
-struct ::fidl::WireResponse<::test_unknowninteractions::Example::StrictTwoWay>
-    final {
+struct ::fidl::WireResponse<::test_unknowninteractions::Example::StrictTwoWay> final {
   WireResponse() = default;
 };
 
 template <>
-struct ::fidl::internal::TransactionalResponse<
-    ::test_unknowninteractions::Example::StrictTwoWay>
-    final {
+struct ::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::StrictTwoWay> final {
   FIDL_ALIGNDECL
   fidl_message_header_t header;
 
-  TransactionalResponse() { _InitHeader(); }
+  TransactionalResponse() {
+    _InitHeader();
+  }
 
  private:
   void _InitHeader();
 };
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::fidl::internal::TransactionalResponse<
-        ::test_unknowninteractions::Example::StrictTwoWay>,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-    : public WireStructCodingTraitsBase<
-          ::fidl::internal::TransactionalResponse<
-              ::test_unknowninteractions::Example::StrictTwoWay>,
-          ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::StrictTwoWay>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::StrictTwoWay>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 0 + sizeof(fidl_message_header_t);
 
-  static void Encode(
-      internal::WireEncoder* encoder,
-      ::fidl::internal::TransactionalResponse<
-          ::test_unknowninteractions::Example::StrictTwoWay>* value,
-      ::fidl::internal::WirePosition position,
-      RecursionDepth<IsRecursive> recursion_depth) {
+  static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::StrictTwoWay>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     *position.As<fidl_message_header_t>() = value->header;
   }
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {}
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+  }
 };
 
 template <>
-struct ::fidl::WireRequest<::test_unknowninteractions::Example::FlexibleTwoWay>
-    final {
+struct ::fidl::WireRequest<::test_unknowninteractions::Example::FlexibleTwoWay> final {
   WireRequest() = default;
-  using ResponseType =
-      ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>;
+  using ResponseType = ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>;
 };
 
 template <>
-struct ::fidl::internal::TransactionalRequest<
-    ::test_unknowninteractions::Example::FlexibleTwoWay>
-    final {
+struct ::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::FlexibleTwoWay> final {
   FIDL_ALIGNDECL
   fidl_message_header_t header;
 
-  TransactionalRequest() { _InitHeader(); }
-  using ResponseType = ::fidl::internal::TransactionalResponse<
-      ::test_unknowninteractions::Example::FlexibleTwoWay>;
+  TransactionalRequest() {
+    _InitHeader();
+  }
+  using ResponseType = ::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::FlexibleTwoWay>;
 
  private:
   void _InitHeader();
 };
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::fidl::internal::TransactionalRequest<
-        ::test_unknowninteractions::Example::FlexibleTwoWay>,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-    : public WireStructCodingTraitsBase<
-          ::fidl::internal::TransactionalRequest<
-              ::test_unknowninteractions::Example::FlexibleTwoWay>,
-          ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::FlexibleTwoWay>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::FlexibleTwoWay>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 0 + sizeof(fidl_message_header_t);
 
-  static void Encode(
-      internal::WireEncoder* encoder,
-      ::fidl::internal::TransactionalRequest<
-          ::test_unknowninteractions::Example::FlexibleTwoWay>* value,
-      ::fidl::internal::WirePosition position,
-      RecursionDepth<IsRecursive> recursion_depth) {
+  static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::FlexibleTwoWay>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     *position.As<fidl_message_header_t>() = value->header;
   }
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {}
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+  }
 };
 
 template <>
-struct ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>
-    final : public ::test_unknowninteractions::wire::
-                ExampleFlexibleTwoWayTopResponse {
+struct ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay> final : public ::test_unknowninteractions::wire::ExampleFlexibleTwoWayTopResponse {
   using Result = test_unknowninteractions::wire::ExampleFlexibleTwoWayResult;
 
-  explicit WireResponse(
-      ::test_unknowninteractions::wire::ExampleFlexibleTwoWayTopResponse base)
-      : ::test_unknowninteractions::wire::ExampleFlexibleTwoWayTopResponse(
-            std::move(base)) {}
-  explicit WireResponse(
-      ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult result)
-      : ::test_unknowninteractions::wire::ExampleFlexibleTwoWayTopResponse{
-            .result = std::move(result)} {}
+  explicit WireResponse(::test_unknowninteractions::wire::ExampleFlexibleTwoWayTopResponse base) : ::test_unknowninteractions::wire::ExampleFlexibleTwoWayTopResponse(std::move(base)) {}
+  explicit WireResponse(::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult result) : ::test_unknowninteractions::wire::ExampleFlexibleTwoWayTopResponse{.result = std::move(result)} {}
   WireResponse() = default;
 };
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-    : public WireStructCodingTraitsBase<
-          ::fidl::WireResponse<
-              ::test_unknowninteractions::Example::FlexibleTwoWay>,
-          ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 16;
 
   static void Encode(
-      internal::WireEncoder* encoder,
-      ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>*
-          value,
-      ::fidl::internal::WirePosition position,
-      RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<
-        ::test_unknowninteractions::wire::ExampleFlexibleTwoWayTopResponse,
-        ::fidl::internal::WireCodingConstraintEmpty,
-        IsRecursive>::Encode(encoder, value, position, recursion_depth);
+      internal::WireEncoder* encoder, ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::ExampleFlexibleTwoWayTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
+        encoder, value, position, recursion_depth);
   }
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<
-        ::test_unknowninteractions::wire::ExampleFlexibleTwoWayTopResponse,
-        ::fidl::internal::WireCodingConstraintEmpty,
-        IsRecursive>::Decode(decoder, position, recursion_depth);
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::ExampleFlexibleTwoWayTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+        decoder, position, recursion_depth);
   }
 };
 
 template <>
-struct ::fidl::internal::TransactionalResponse<
-    ::test_unknowninteractions::Example::FlexibleTwoWay>
-    final {
+struct ::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::FlexibleTwoWay> final {
   FIDL_ALIGNDECL
   fidl_message_header_t header;
 
-  ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>
-      body;
-  explicit TransactionalResponse(
-      ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult result)
-      : body(::fidl::WireResponse<
-             ::test_unknowninteractions::Example::FlexibleTwoWay>(result)) {
+  ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay> body;
+  explicit TransactionalResponse(::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult result)
+      : body(::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>(result)) {
     _InitHeader();
   }
-  TransactionalResponse() { _InitHeader(); }
+  TransactionalResponse() {
+    _InitHeader();
+  }
 
  private:
   void _InitHeader();
 };
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::fidl::internal::TransactionalResponse<
-        ::test_unknowninteractions::Example::FlexibleTwoWay>,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-    : public WireStructCodingTraitsBase<
-          ::fidl::internal::TransactionalResponse<
-              ::test_unknowninteractions::Example::FlexibleTwoWay>,
-          ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::FlexibleTwoWay>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::FlexibleTwoWay>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 16 + sizeof(fidl_message_header_t);
 
-  static void Encode(
-      internal::WireEncoder* encoder,
-      ::fidl::internal::TransactionalResponse<
-          ::test_unknowninteractions::Example::FlexibleTwoWay>* value,
-      ::fidl::internal::WirePosition position,
-      RecursionDepth<IsRecursive> recursion_depth) {
+  static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::FlexibleTwoWay>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     *position.As<fidl_message_header_t>() = value->header;
-    WireCodingTraits<::fidl::WireResponse<
-                         ::test_unknowninteractions::Example::FlexibleTwoWay>,
-                     WireCodingConstraintEmpty,
-                     IsRecursive>::Encode(encoder, &value->body,
-                                          position +
-                                              sizeof(fidl_message_header_t),
-                                          recursion_depth);
+    WireCodingTraits<::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>, WireCodingConstraintEmpty, IsRecursive>::Encode(
+        encoder, &value->body, position + sizeof(fidl_message_header_t), recursion_depth);
   }
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
-    WireCodingTraits<::fidl::WireResponse<
-                         ::test_unknowninteractions::Example::FlexibleTwoWay>,
-                     WireCodingConstraintEmpty,
-                     IsRecursive>::Decode(decoder,
-                                          position +
-                                              sizeof(fidl_message_header_t),
-                                          recursion_depth);
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    WireCodingTraits<::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>, WireCodingConstraintEmpty, IsRecursive>::Decode(
+        decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
 
 template <>
-struct ::fidl::WireEvent<::test_unknowninteractions::Example::StrictEvent>
-    final {
+struct ::fidl::WireEvent<::test_unknowninteractions::Example::StrictEvent> final {
   WireEvent() = default;
 };
 
 template <>
-struct ::fidl::internal::TransactionalEvent<
-    ::test_unknowninteractions::Example::StrictEvent>
-    final {
+struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::Example::StrictEvent> final {
   FIDL_ALIGNDECL
   fidl_message_header_t header;
 
-  TransactionalEvent() { _InitHeader(); }
+  TransactionalEvent() {
+    _InitHeader();
+  }
 
  private:
   void _InitHeader();
 };
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::fidl::internal::TransactionalEvent<
-        ::test_unknowninteractions::Example::StrictEvent>,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-    : public WireStructCodingTraitsBase<
-          ::fidl::internal::TransactionalEvent<
-              ::test_unknowninteractions::Example::StrictEvent>,
-          ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_unknowninteractions::Example::StrictEvent>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<::fidl::internal::TransactionalEvent<::test_unknowninteractions::Example::StrictEvent>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 0 + sizeof(fidl_message_header_t);
 
   static void Encode(
-      internal::WireEncoder* encoder,
-      ::fidl::internal::TransactionalEvent<
-          ::test_unknowninteractions::Example::StrictEvent>* value,
-      ::fidl::internal::WirePosition position,
-      RecursionDepth<IsRecursive> recursion_depth) {
+      internal::WireEncoder* encoder, ::fidl::internal::TransactionalEvent<::test_unknowninteractions::Example::StrictEvent>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     *position.As<fidl_message_header_t>() = value->header;
   }
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {}
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+  }
 };
 
 template <>
-struct ::fidl::WireEvent<::test_unknowninteractions::Example::FlexibleEvent>
-    final {
+struct ::fidl::WireEvent<::test_unknowninteractions::Example::FlexibleEvent> final {
   WireEvent() = default;
 };
 
 template <>
-struct ::fidl::internal::TransactionalEvent<
-    ::test_unknowninteractions::Example::FlexibleEvent>
-    final {
+struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::Example::FlexibleEvent> final {
   FIDL_ALIGNDECL
   fidl_message_header_t header;
 
-  TransactionalEvent() { _InitHeader(); }
+  TransactionalEvent() {
+    _InitHeader();
+  }
 
  private:
   void _InitHeader();
 };
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::fidl::internal::TransactionalEvent<
-        ::test_unknowninteractions::Example::FlexibleEvent>,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-    : public WireStructCodingTraitsBase<
-          ::fidl::internal::TransactionalEvent<
-              ::test_unknowninteractions::Example::FlexibleEvent>,
-          ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_unknowninteractions::Example::FlexibleEvent>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<::fidl::internal::TransactionalEvent<::test_unknowninteractions::Example::FlexibleEvent>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 0 + sizeof(fidl_message_header_t);
 
   static void Encode(
-      internal::WireEncoder* encoder,
-      ::fidl::internal::TransactionalEvent<
-          ::test_unknowninteractions::Example::FlexibleEvent>* value,
-      ::fidl::internal::WirePosition position,
-      RecursionDepth<IsRecursive> recursion_depth) {
+      internal::WireEncoder* encoder, ::fidl::internal::TransactionalEvent<::test_unknowninteractions::Example::FlexibleEvent>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     *position.As<fidl_message_header_t>() = value->header;
   }
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {}
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+  }
 };
 
 #ifdef __Fuchsia__
 
 template <>
-struct ::fidl::internal::WireMethodTypes<
-    ::test_unknowninteractions::Example::StrictTwoWay> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
-      ::test_unknowninteractions::Example::StrictTwoWay>>;
+struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::Example::StrictTwoWay> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::Example::StrictTwoWay>>;
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::Example::StrictTwoWay,
       ::fidl::unstable::OwnedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<
-              ::test_unknowninteractions::Example::StrictTwoWay>,
-          ::fidl::internal::ChannelTransport>>;
+          ::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::StrictTwoWay>, ::fidl::internal::ChannelTransport>>;
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::Example::StrictTwoWay,
       ::fidl::unstable::UnownedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<
-              ::test_unknowninteractions::Example::StrictTwoWay>,
-          ::fidl::internal::ChannelTransport>>;
+          ::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::StrictTwoWay>, ::fidl::internal::ChannelTransport>>;
 };
 
 #endif  // __Fuchsia__
@@ -531,24 +378,18 @@ struct ::fidl::internal::WireMethodTypes<
 #ifdef __Fuchsia__
 
 template <>
-struct ::fidl::internal::WireMethodTypes<
-    ::test_unknowninteractions::Example::FlexibleTwoWay> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
-      ::test_unknowninteractions::Example::FlexibleTwoWay>>;
+struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::Example::FlexibleTwoWay> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::Example::FlexibleTwoWay>>;
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::Example::FlexibleTwoWay,
       ::fidl::unstable::OwnedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<
-              ::test_unknowninteractions::Example::FlexibleTwoWay>,
-          ::fidl::internal::ChannelTransport>>;
+          ::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::FlexibleTwoWay>, ::fidl::internal::ChannelTransport>>;
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::Example::FlexibleTwoWay,
       ::fidl::unstable::UnownedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<
-              ::test_unknowninteractions::Example::FlexibleTwoWay>,
-          ::fidl::internal::ChannelTransport>>;
+          ::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::FlexibleTwoWay>, ::fidl::internal::ChannelTransport>>;
 };
 
 #endif  // __Fuchsia__
@@ -556,347 +397,255 @@ struct ::fidl::internal::WireMethodTypes<
 namespace fidl {
 
 template <>
-struct IsFidlType<::fidl::internal::TransactionalRequest<
-    ::test_unknowninteractions::Example::StrictOneWay>>
-    : public std::true_type {};
+struct IsFidlType<::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::StrictOneWay>> : public std::true_type {};
 template <>
-struct IsFidlType<
-    ::fidl::WireRequest<::test_unknowninteractions::Example::StrictOneWay>>
-    : public std::true_type {};
+struct IsFidlType<::fidl::WireRequest<::test_unknowninteractions::Example::StrictOneWay>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<
-    ::test_unknowninteractions::Example::StrictOneWay>>
-    : public std::true_type {};
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::StrictOneWay>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<
-    ::fidl::WireRequest<::test_unknowninteractions::Example::StrictOneWay>>
-    : public std::false_type {};
+struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_unknowninteractions::Example::StrictOneWay>> : public std::false_type {};
 
 template <>
-struct TypeTraits<::fidl::internal::TransactionalRequest<
-    ::test_unknowninteractions::Example::StrictOneWay>> {
-  static constexpr const fidl_type_t* kType = nullptr;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize =
-      FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
-  static constexpr uint32_t kPrimarySizeV1 =
-      FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-      ::fidl::internal::TransactionalMessageKind::kRequest;
-};
-
-static_assert(
-    sizeof(::fidl::internal::TransactionalRequest<
-           ::test_unknowninteractions::Example::StrictOneWay>) ==
-    TypeTraits<::fidl::internal::TransactionalRequest<
-        ::test_unknowninteractions::Example::StrictOneWay>>::kPrimarySize);
-static_assert(offsetof(::fidl::internal::TransactionalRequest<
-                           ::test_unknowninteractions::Example::StrictOneWay>,
-                       header) == 0);
-
-template <>
-struct TypeTraits<
-    ::fidl::WireRequest<::test_unknowninteractions::Example::StrictOneWay>> {
-  static constexpr const fidl_type_t* kType = nullptr;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize = 0;
-  static constexpr uint32_t kPrimarySizeV1 = 0;
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-      ::fidl::internal::TransactionalMessageKind::kRequest;
-};
-
-template <>
-struct IsFidlType<::fidl::internal::TransactionalRequest<
-    ::test_unknowninteractions::Example::FlexibleOneWay>>
-    : public std::true_type {};
-template <>
-struct IsFidlType<
-    ::fidl::WireRequest<::test_unknowninteractions::Example::FlexibleOneWay>>
-    : public std::true_type {};
-template <>
-struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<
-    ::test_unknowninteractions::Example::FlexibleOneWay>>
-    : public std::true_type {};
-template <>
-struct IsFidlTransactionalMessage<
-    ::fidl::WireRequest<::test_unknowninteractions::Example::FlexibleOneWay>>
-    : public std::false_type {};
-
-template <>
-struct TypeTraits<::fidl::internal::TransactionalRequest<
-    ::test_unknowninteractions::Example::FlexibleOneWay>> {
-  static constexpr const fidl_type_t* kType = nullptr;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize =
-      FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
-  static constexpr uint32_t kPrimarySizeV1 =
-      FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-      ::fidl::internal::TransactionalMessageKind::kRequest;
-};
-
-static_assert(
-    sizeof(::fidl::internal::TransactionalRequest<
-           ::test_unknowninteractions::Example::FlexibleOneWay>) ==
-    TypeTraits<::fidl::internal::TransactionalRequest<
-        ::test_unknowninteractions::Example::FlexibleOneWay>>::kPrimarySize);
-static_assert(offsetof(::fidl::internal::TransactionalRequest<
-                           ::test_unknowninteractions::Example::FlexibleOneWay>,
-                       header) == 0);
-
-template <>
-struct TypeTraits<
-    ::fidl::WireRequest<::test_unknowninteractions::Example::FlexibleOneWay>> {
-  static constexpr const fidl_type_t* kType = nullptr;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize = 0;
-  static constexpr uint32_t kPrimarySizeV1 = 0;
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-      ::fidl::internal::TransactionalMessageKind::kRequest;
-};
-
-template <>
-struct IsFidlType<::fidl::internal::TransactionalRequest<
-    ::test_unknowninteractions::Example::StrictTwoWay>>
-    : public std::true_type {};
-template <>
-struct IsFidlType<
-    ::fidl::WireRequest<::test_unknowninteractions::Example::StrictTwoWay>>
-    : public std::true_type {};
-template <>
-struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<
-    ::test_unknowninteractions::Example::StrictTwoWay>>
-    : public std::true_type {};
-template <>
-struct IsFidlTransactionalMessage<
-    ::fidl::WireRequest<::test_unknowninteractions::Example::StrictTwoWay>>
-    : public std::false_type {};
-
-template <>
-struct TypeTraits<::fidl::internal::TransactionalRequest<
-    ::test_unknowninteractions::Example::StrictTwoWay>> {
-  static constexpr const fidl_type_t* kType = nullptr;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize =
-      FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
-  static constexpr uint32_t kPrimarySizeV1 =
-      FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-      ::fidl::internal::TransactionalMessageKind::kRequest;
-};
-
-static_assert(
-    sizeof(::fidl::internal::TransactionalRequest<
-           ::test_unknowninteractions::Example::StrictTwoWay>) ==
-    TypeTraits<::fidl::internal::TransactionalRequest<
-        ::test_unknowninteractions::Example::StrictTwoWay>>::kPrimarySize);
-static_assert(offsetof(::fidl::internal::TransactionalRequest<
-                           ::test_unknowninteractions::Example::StrictTwoWay>,
-                       header) == 0);
-
-template <>
-struct TypeTraits<
-    ::fidl::WireRequest<::test_unknowninteractions::Example::StrictTwoWay>> {
-  static constexpr const fidl_type_t* kType = nullptr;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize = 0;
-  static constexpr uint32_t kPrimarySizeV1 = 0;
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-      ::fidl::internal::TransactionalMessageKind::kRequest;
-};
-
-template <>
-struct IsFidlType<::fidl::internal::TransactionalResponse<
-    ::test_unknowninteractions::Example::StrictTwoWay>>
-    : public std::true_type {};
-template <>
-struct IsFidlType<
-    ::fidl::WireResponse<::test_unknowninteractions::Example::StrictTwoWay>>
-    : public std::true_type {};
-template <>
-struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<
-    ::test_unknowninteractions::Example::StrictTwoWay>>
-    : public std::true_type {};
-template <>
-struct IsFidlTransactionalMessage<
-    ::fidl::WireResponse<::test_unknowninteractions::Example::StrictTwoWay>>
-    : public std::false_type {};
-
-template <>
-struct TypeTraits<::fidl::internal::TransactionalResponse<
-    ::test_unknowninteractions::Example::StrictTwoWay>> {
-  static constexpr const fidl_type_t* kType = nullptr;
-  static constexpr bool kHasResponseBody = false;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize =
-      FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
-  static constexpr uint32_t kPrimarySizeV1 =
-      FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-      ::fidl::internal::TransactionalMessageKind::kResponse;
-};
-
-static_assert(
-    sizeof(::fidl::internal::TransactionalResponse<
-           ::test_unknowninteractions::Example::StrictTwoWay>) ==
-    TypeTraits<::fidl::internal::TransactionalResponse<
-        ::test_unknowninteractions::Example::StrictTwoWay>>::kPrimarySize);
-static_assert(offsetof(::fidl::internal::TransactionalResponse<
-                           ::test_unknowninteractions::Example::StrictTwoWay>,
-                       header) == 0);
-
-template <>
-struct TypeTraits<
-    ::fidl::WireResponse<::test_unknowninteractions::Example::StrictTwoWay>> {
-  static constexpr const fidl_type_t* kType = nullptr;
-  static constexpr bool kHasResponseBody = false;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize = 0;
-  static constexpr uint32_t kPrimarySizeV1 = 0;
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-      ::fidl::internal::TransactionalMessageKind::kResponse;
-};
-
-template <>
-struct IsFidlType<::fidl::internal::TransactionalRequest<
-    ::test_unknowninteractions::Example::FlexibleTwoWay>>
-    : public std::true_type {};
-template <>
-struct IsFidlType<
-    ::fidl::WireRequest<::test_unknowninteractions::Example::FlexibleTwoWay>>
-    : public std::true_type {};
-template <>
-struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<
-    ::test_unknowninteractions::Example::FlexibleTwoWay>>
-    : public std::true_type {};
-template <>
-struct IsFidlTransactionalMessage<
-    ::fidl::WireRequest<::test_unknowninteractions::Example::FlexibleTwoWay>>
-    : public std::false_type {};
-
-template <>
-struct TypeTraits<::fidl::internal::TransactionalRequest<
-    ::test_unknowninteractions::Example::FlexibleTwoWay>> {
-  static constexpr const fidl_type_t* kType = nullptr;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize =
-      FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
-  static constexpr uint32_t kPrimarySizeV1 =
-      FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-      ::fidl::internal::TransactionalMessageKind::kRequest;
-};
-
-static_assert(
-    sizeof(::fidl::internal::TransactionalRequest<
-           ::test_unknowninteractions::Example::FlexibleTwoWay>) ==
-    TypeTraits<::fidl::internal::TransactionalRequest<
-        ::test_unknowninteractions::Example::FlexibleTwoWay>>::kPrimarySize);
-static_assert(offsetof(::fidl::internal::TransactionalRequest<
-                           ::test_unknowninteractions::Example::FlexibleTwoWay>,
-                       header) == 0);
-
-template <>
-struct TypeTraits<
-    ::fidl::WireRequest<::test_unknowninteractions::Example::FlexibleTwoWay>> {
-  static constexpr const fidl_type_t* kType = nullptr;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize = 0;
-  static constexpr uint32_t kPrimarySizeV1 = 0;
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-      ::fidl::internal::TransactionalMessageKind::kRequest;
-};
-
-template <>
-struct IsFidlType<::fidl::internal::TransactionalResponse<
-    ::test_unknowninteractions::Example::FlexibleTwoWay>>
-    : public std::true_type {};
-template <>
-struct IsFidlType<
-    ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>>
-    : public std::true_type {};
-template <>
-struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<
-    ::test_unknowninteractions::Example::FlexibleTwoWay>>
-    : public std::true_type {};
-template <>
-struct IsFidlTransactionalMessage<
-    ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>>
-    : public std::false_type {};
-
-template <>
-struct TypeTraits<::fidl::internal::TransactionalResponse<
-    ::test_unknowninteractions::Example::FlexibleTwoWay>> {
+struct TypeTraits<::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::StrictOneWay>> {
   static constexpr const fidl_type_t* kType =
-      &::test_unknowninteractions::
-          test_unknowninteractions_ExampleFlexibleTwoWayTopResponseTable;
+      nullptr;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::StrictOneWay>) == TypeTraits<::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::StrictOneWay>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::StrictOneWay>, header) == 0);
+
+template <>
+struct TypeTraits<::fidl::WireRequest<::test_unknowninteractions::Example::StrictOneWay>> {
+  static constexpr const fidl_type_t* kType =
+      nullptr;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 0;
+  static constexpr uint32_t kPrimarySizeV1 = 0;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+template <>
+struct IsFidlType<::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::FlexibleOneWay>> : public std::true_type {};
+template <>
+struct IsFidlType<::fidl::WireRequest<::test_unknowninteractions::Example::FlexibleOneWay>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::FlexibleOneWay>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_unknowninteractions::Example::FlexibleOneWay>> : public std::false_type {};
+
+template <>
+struct TypeTraits<::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::FlexibleOneWay>> {
+  static constexpr const fidl_type_t* kType =
+      nullptr;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::FlexibleOneWay>) == TypeTraits<::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::FlexibleOneWay>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::FlexibleOneWay>, header) == 0);
+
+template <>
+struct TypeTraits<::fidl::WireRequest<::test_unknowninteractions::Example::FlexibleOneWay>> {
+  static constexpr const fidl_type_t* kType =
+      nullptr;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 0;
+  static constexpr uint32_t kPrimarySizeV1 = 0;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+template <>
+struct IsFidlType<::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::StrictTwoWay>> : public std::true_type {};
+template <>
+struct IsFidlType<::fidl::WireRequest<::test_unknowninteractions::Example::StrictTwoWay>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::StrictTwoWay>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_unknowninteractions::Example::StrictTwoWay>> : public std::false_type {};
+
+template <>
+struct TypeTraits<::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::StrictTwoWay>> {
+  static constexpr const fidl_type_t* kType =
+      nullptr;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::StrictTwoWay>) == TypeTraits<::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::StrictTwoWay>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::StrictTwoWay>, header) == 0);
+
+template <>
+struct TypeTraits<::fidl::WireRequest<::test_unknowninteractions::Example::StrictTwoWay>> {
+  static constexpr const fidl_type_t* kType =
+      nullptr;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 0;
+  static constexpr uint32_t kPrimarySizeV1 = 0;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+template <>
+struct IsFidlType<::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::StrictTwoWay>> : public std::true_type {};
+template <>
+struct IsFidlType<::fidl::WireResponse<::test_unknowninteractions::Example::StrictTwoWay>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::StrictTwoWay>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::WireResponse<::test_unknowninteractions::Example::StrictTwoWay>> : public std::false_type {};
+
+template <>
+struct TypeTraits<::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::StrictTwoWay>> {
+  static constexpr const fidl_type_t* kType =
+      nullptr;
+  static constexpr bool kHasResponseBody = false;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+};
+
+static_assert(sizeof(::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::StrictTwoWay>) == TypeTraits<::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::StrictTwoWay>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::StrictTwoWay>, header) == 0);
+
+template <>
+struct TypeTraits<::fidl::WireResponse<::test_unknowninteractions::Example::StrictTwoWay>> {
+  static constexpr const fidl_type_t* kType =
+      nullptr;
+  static constexpr bool kHasResponseBody = false;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 0;
+  static constexpr uint32_t kPrimarySizeV1 = 0;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+};
+
+template <>
+struct IsFidlType<::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::FlexibleTwoWay>> : public std::true_type {};
+template <>
+struct IsFidlType<::fidl::WireRequest<::test_unknowninteractions::Example::FlexibleTwoWay>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::FlexibleTwoWay>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_unknowninteractions::Example::FlexibleTwoWay>> : public std::false_type {};
+
+template <>
+struct TypeTraits<::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::FlexibleTwoWay>> {
+  static constexpr const fidl_type_t* kType =
+      nullptr;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::FlexibleTwoWay>) == TypeTraits<::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::FlexibleTwoWay>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::FlexibleTwoWay>, header) == 0);
+
+template <>
+struct TypeTraits<::fidl::WireRequest<::test_unknowninteractions::Example::FlexibleTwoWay>> {
+  static constexpr const fidl_type_t* kType =
+      nullptr;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 0;
+  static constexpr uint32_t kPrimarySizeV1 = 0;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+template <>
+struct IsFidlType<::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::FlexibleTwoWay>> : public std::true_type {};
+template <>
+struct IsFidlType<::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::FlexibleTwoWay>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>> : public std::false_type {};
+
+template <>
+struct TypeTraits<::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::FlexibleTwoWay>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_unknowninteractions::test_unknowninteractions_ExampleFlexibleTwoWayTopResponseTable;
   static constexpr bool kHasResponseBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
-  static constexpr uint32_t kPrimarySize =
-      FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
-  static constexpr uint32_t kPrimarySizeV1 =
-      FIDL_ALIGN(24 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(24 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -906,24 +655,14 @@ struct TypeTraits<::fidl::internal::TransactionalResponse<
       ::fidl::internal::TransactionalMessageKind::kResponse;
 };
 
-static_assert(
-    sizeof(::fidl::internal::TransactionalResponse<
-           ::test_unknowninteractions::Example::FlexibleTwoWay>) ==
-    TypeTraits<::fidl::internal::TransactionalResponse<
-        ::test_unknowninteractions::Example::FlexibleTwoWay>>::kPrimarySize);
-static_assert(offsetof(::fidl::internal::TransactionalResponse<
-                           ::test_unknowninteractions::Example::FlexibleTwoWay>,
-                       header) == 0);
-static_assert(offsetof(::fidl::internal::TransactionalResponse<
-                           ::test_unknowninteractions::Example::FlexibleTwoWay>,
-                       body) == sizeof(fidl_message_header_t));
+static_assert(sizeof(::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::FlexibleTwoWay>) == TypeTraits<::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::FlexibleTwoWay>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::FlexibleTwoWay>, header) == 0);
+static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::FlexibleTwoWay>, body) == sizeof(fidl_message_header_t));
 
 template <>
-struct TypeTraits<
-    ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>> {
+struct TypeTraits<::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>> {
   static constexpr const fidl_type_t* kType =
-      &::test_unknowninteractions::
-          test_unknowninteractions_ExampleFlexibleTwoWayTopResponseTable;
+      &::test_unknowninteractions::test_unknowninteractions_ExampleFlexibleTwoWayTopResponseTable;
   static constexpr bool kHasResponseBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
@@ -937,42 +676,26 @@ struct TypeTraits<
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
       ::fidl::internal::TransactionalMessageKind::kResponse;
 };
-static_assert(
-    sizeof(::fidl::WireResponse<
-           ::test_unknowninteractions::Example::FlexibleTwoWay>) ==
-    TypeTraits<::fidl::WireResponse<
-        ::test_unknowninteractions::Example::FlexibleTwoWay>>::kPrimarySize);
-static_assert(offsetof(::fidl::WireResponse<
-                           ::test_unknowninteractions::Example::FlexibleTwoWay>,
-                       result) == 0);
+static_assert(sizeof(::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>) == TypeTraits<::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>>::kPrimarySize);
+static_assert(offsetof(::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>, result) == 0);
 
 template <>
-struct IsFidlType<::fidl::internal::TransactionalEvent<
-    ::test_unknowninteractions::Example::StrictEvent>> : public std::true_type {
-};
+struct IsFidlType<::fidl::internal::TransactionalEvent<::test_unknowninteractions::Example::StrictEvent>> : public std::true_type {};
 template <>
-struct IsFidlType<
-    ::fidl::WireEvent<::test_unknowninteractions::Example::StrictEvent>>
-    : public std::true_type {};
+struct IsFidlType<::fidl::WireEvent<::test_unknowninteractions::Example::StrictEvent>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::internal::TransactionalEvent<
-    ::test_unknowninteractions::Example::StrictEvent>> : public std::true_type {
-};
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::Example::StrictEvent>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<
-    ::fidl::WireEvent<::test_unknowninteractions::Example::StrictEvent>>
-    : public std::false_type {};
+struct IsFidlTransactionalMessage<::fidl::WireEvent<::test_unknowninteractions::Example::StrictEvent>> : public std::false_type {};
 
 template <>
-struct TypeTraits<::fidl::internal::TransactionalEvent<
-    ::test_unknowninteractions::Example::StrictEvent>> {
-  static constexpr const fidl_type_t* kType = nullptr;
+struct TypeTraits<::fidl::internal::TransactionalEvent<::test_unknowninteractions::Example::StrictEvent>> {
+  static constexpr const fidl_type_t* kType =
+      nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize =
-      FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
-  static constexpr uint32_t kPrimarySizeV1 =
-      FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -982,19 +705,13 @@ struct TypeTraits<::fidl::internal::TransactionalEvent<
       ::fidl::internal::TransactionalMessageKind::kResponse;
 };
 
-static_assert(
-    sizeof(::fidl::internal::TransactionalEvent<
-           ::test_unknowninteractions::Example::StrictEvent>) ==
-    TypeTraits<::fidl::internal::TransactionalEvent<
-        ::test_unknowninteractions::Example::StrictEvent>>::kPrimarySize);
-static_assert(offsetof(::fidl::internal::TransactionalEvent<
-                           ::test_unknowninteractions::Example::StrictEvent>,
-                       header) == 0);
+static_assert(sizeof(::fidl::internal::TransactionalEvent<::test_unknowninteractions::Example::StrictEvent>) == TypeTraits<::fidl::internal::TransactionalEvent<::test_unknowninteractions::Example::StrictEvent>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalEvent<::test_unknowninteractions::Example::StrictEvent>, header) == 0);
 
 template <>
-struct TypeTraits<
-    ::fidl::WireEvent<::test_unknowninteractions::Example::StrictEvent>> {
-  static constexpr const fidl_type_t* kType = nullptr;
+struct TypeTraits<::fidl::WireEvent<::test_unknowninteractions::Example::StrictEvent>> {
+  static constexpr const fidl_type_t* kType =
+      nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 0;
@@ -1009,32 +726,22 @@ struct TypeTraits<
 };
 
 template <>
-struct IsFidlType<::fidl::internal::TransactionalEvent<
-    ::test_unknowninteractions::Example::FlexibleEvent>>
-    : public std::true_type {};
+struct IsFidlType<::fidl::internal::TransactionalEvent<::test_unknowninteractions::Example::FlexibleEvent>> : public std::true_type {};
 template <>
-struct IsFidlType<
-    ::fidl::WireEvent<::test_unknowninteractions::Example::FlexibleEvent>>
-    : public std::true_type {};
+struct IsFidlType<::fidl::WireEvent<::test_unknowninteractions::Example::FlexibleEvent>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::internal::TransactionalEvent<
-    ::test_unknowninteractions::Example::FlexibleEvent>>
-    : public std::true_type {};
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::Example::FlexibleEvent>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<
-    ::fidl::WireEvent<::test_unknowninteractions::Example::FlexibleEvent>>
-    : public std::false_type {};
+struct IsFidlTransactionalMessage<::fidl::WireEvent<::test_unknowninteractions::Example::FlexibleEvent>> : public std::false_type {};
 
 template <>
-struct TypeTraits<::fidl::internal::TransactionalEvent<
-    ::test_unknowninteractions::Example::FlexibleEvent>> {
-  static constexpr const fidl_type_t* kType = nullptr;
+struct TypeTraits<::fidl::internal::TransactionalEvent<::test_unknowninteractions::Example::FlexibleEvent>> {
+  static constexpr const fidl_type_t* kType =
+      nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize =
-      FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
-  static constexpr uint32_t kPrimarySizeV1 =
-      FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -1044,19 +751,13 @@ struct TypeTraits<::fidl::internal::TransactionalEvent<
       ::fidl::internal::TransactionalMessageKind::kResponse;
 };
 
-static_assert(
-    sizeof(::fidl::internal::TransactionalEvent<
-           ::test_unknowninteractions::Example::FlexibleEvent>) ==
-    TypeTraits<::fidl::internal::TransactionalEvent<
-        ::test_unknowninteractions::Example::FlexibleEvent>>::kPrimarySize);
-static_assert(offsetof(::fidl::internal::TransactionalEvent<
-                           ::test_unknowninteractions::Example::FlexibleEvent>,
-                       header) == 0);
+static_assert(sizeof(::fidl::internal::TransactionalEvent<::test_unknowninteractions::Example::FlexibleEvent>) == TypeTraits<::fidl::internal::TransactionalEvent<::test_unknowninteractions::Example::FlexibleEvent>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalEvent<::test_unknowninteractions::Example::FlexibleEvent>, header) == 0);
 
 template <>
-struct TypeTraits<
-    ::fidl::WireEvent<::test_unknowninteractions::Example::FlexibleEvent>> {
-  static constexpr const fidl_type_t* kType = nullptr;
+struct TypeTraits<::fidl::WireEvent<::test_unknowninteractions::Example::FlexibleEvent>> {
+  static constexpr const fidl_type_t* kType =
+      nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 0;
@@ -1072,75 +773,44 @@ struct TypeTraits<
 #ifdef __Fuchsia__
 }  // namespace fidl
 template <>
-struct ::fidl::internal::IncomingHandleStorage<
-    ::fidl::internal::TransactionalResponse<
-        ::test_unknowninteractions::Example::StrictTwoWay>>
-    final : public ::fidl::internal::ChannelHandleStorageBase<
-                ::fidl::internal::IncomingHandleStorage<
-                    ::fidl::internal::TransactionalResponse<
-                        ::test_unknowninteractions::Example::StrictTwoWay>>> {
-  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
-      ::fidl::WireResponse<::test_unknowninteractions::Example::StrictTwoWay>,
-      fidl::MessageDirection::kReceiving>();
+struct ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::StrictTwoWay>> final
+    : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::StrictTwoWay>>> {
+  static constexpr uint32_t kNumHandles =
+      fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_unknowninteractions::Example::StrictTwoWay>, fidl::MessageDirection::kReceiving>();
 
   ::std::array<zx_handle_t, kNumHandles> handles_;
   ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
 };
 
 template <>
-struct ::fidl::internal::IncomingMessageStorage<
-    ::fidl::internal::TransactionalResponse<
-        ::test_unknowninteractions::Example::StrictTwoWay>>
-    final : public ::fidl::internal::ChannelMessageStorageBase<
-                ::fidl::internal::IncomingMessageStorage<
-                    ::fidl::internal::TransactionalResponse<
-                        ::test_unknowninteractions::Example::StrictTwoWay>>> {
+struct ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::StrictTwoWay>> final
+    : public ::fidl::internal::ChannelMessageStorageBase<::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::StrictTwoWay>>> {
   ::fidl::internal::InlineMessageBuffer<16> bytes_;
-  ::fidl::internal::IncomingHandleStorage<
-      ::fidl::internal::TransactionalResponse<
-          ::test_unknowninteractions::Example::StrictTwoWay>>
-      handles_storage_;
+  ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::StrictTwoWay>> handles_storage_;
 };
 template <>
-struct ::fidl::internal::IncomingHandleStorage<
-    ::fidl::internal::TransactionalResponse<
-        ::test_unknowninteractions::Example::FlexibleTwoWay>>
-    final : public ::fidl::internal::ChannelHandleStorageBase<
-                ::fidl::internal::IncomingHandleStorage<
-                    ::fidl::internal::TransactionalResponse<
-                        ::test_unknowninteractions::Example::FlexibleTwoWay>>> {
-  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
-      ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>,
-      fidl::MessageDirection::kReceiving>();
+struct ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::FlexibleTwoWay>> final
+    : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::FlexibleTwoWay>>> {
+  static constexpr uint32_t kNumHandles =
+      fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>, fidl::MessageDirection::kReceiving>();
 
   ::std::array<zx_handle_t, kNumHandles> handles_;
   ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
 };
 
 template <>
-struct ::fidl::internal::IncomingMessageStorage<
-    ::fidl::internal::TransactionalResponse<
-        ::test_unknowninteractions::Example::FlexibleTwoWay>>
-    final : public ::fidl::internal::ChannelMessageStorageBase<
-                ::fidl::internal::IncomingMessageStorage<
-                    ::fidl::internal::TransactionalResponse<
-                        ::test_unknowninteractions::Example::FlexibleTwoWay>>> {
+struct ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::FlexibleTwoWay>> final
+    : public ::fidl::internal::ChannelMessageStorageBase<::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::FlexibleTwoWay>>> {
   ::fidl::internal::InlineMessageBuffer<48> bytes_;
-  ::fidl::internal::IncomingHandleStorage<
-      ::fidl::internal::TransactionalResponse<
-          ::test_unknowninteractions::Example::FlexibleTwoWay>>
-      handles_storage_;
+  ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::FlexibleTwoWay>> handles_storage_;
 };
 
 template <>
-class [[nodiscard]] ::fidl::WireResult<
-    ::test_unknowninteractions::Example::StrictOneWay>
-    final : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::Example::StrictOneWay> final : public ::fidl::Status {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_unknowninteractions::Example> client,
-      ::fidl::internal::TransactionalRequest<
-          ::test_unknowninteractions::Example::StrictOneWay>* request);
+      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::StrictOneWay>* request);
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
@@ -1151,18 +821,11 @@ class [[nodiscard]] ::fidl::WireResult<
 };
 
 template <>
-class [[nodiscard]] ::fidl::WireUnownedResult<
-    ::test_unknowninteractions::Example::StrictOneWay>
-    final : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Example::StrictOneWay> final : public ::fidl::Status {
  public:
-  explicit WireUnownedResult(
-      ::fidl::UnownedClientEnd<::test_unknowninteractions::Example> client_end,
-      ::fidl::internal::AnyBufferAllocator& allocator,
-      ::fidl::internal::TransactionalRequest<
-          ::test_unknowninteractions::Example::StrictOneWay>* request);
+  explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::Example> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::StrictOneWay>* request);
 
-  explicit WireUnownedResult(const ::fidl::Status& result)
-      : ::fidl::Status(result) {}
+  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
   WireUnownedResult(const WireUnownedResult&) = delete;
   WireUnownedResult& operator=(WireUnownedResult&&) = delete;
@@ -1171,14 +834,11 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
 };
 
 template <>
-class [[nodiscard]] ::fidl::WireResult<
-    ::test_unknowninteractions::Example::FlexibleOneWay>
-    final : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::Example::FlexibleOneWay> final : public ::fidl::Status {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_unknowninteractions::Example> client,
-      ::fidl::internal::TransactionalRequest<
-          ::test_unknowninteractions::Example::FlexibleOneWay>* request);
+      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::FlexibleOneWay>* request);
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
@@ -1189,18 +849,11 @@ class [[nodiscard]] ::fidl::WireResult<
 };
 
 template <>
-class [[nodiscard]] ::fidl::WireUnownedResult<
-    ::test_unknowninteractions::Example::FlexibleOneWay>
-    final : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Example::FlexibleOneWay> final : public ::fidl::Status {
  public:
-  explicit WireUnownedResult(
-      ::fidl::UnownedClientEnd<::test_unknowninteractions::Example> client_end,
-      ::fidl::internal::AnyBufferAllocator& allocator,
-      ::fidl::internal::TransactionalRequest<
-          ::test_unknowninteractions::Example::FlexibleOneWay>* request);
+  explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::Example> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::FlexibleOneWay>* request);
 
-  explicit WireUnownedResult(const ::fidl::Status& result)
-      : ::fidl::Status(result) {}
+  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
   WireUnownedResult(const WireUnownedResult&) = delete;
   WireUnownedResult& operator=(WireUnownedResult&&) = delete;
@@ -1209,15 +862,11 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
 };
 
 template <>
-class [[nodiscard]] ::fidl::WireResult<
-    ::test_unknowninteractions::Example::StrictTwoWay>
-    final : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::Example::StrictTwoWay> final : public ::fidl::Status {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_unknowninteractions::Example> client,
-      ::fidl::internal::TransactionalRequest<
-          ::test_unknowninteractions::Example::StrictTwoWay>* request,
-      std::optional<zx::time> deadline = std::nullopt);
+      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::StrictTwoWay>* request, std::optional<zx::time> deadline = std::nullopt);
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
@@ -1228,38 +877,26 @@ class [[nodiscard]] ::fidl::WireResult<
 
  private:
   ::fidl::internal::InlineMessageBuffer<16> bytes_;
-  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<
-      ::test_unknowninteractions::Example::StrictTwoWay>>
-      decoded_;
+  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::StrictTwoWay>> decoded_;
 };
 
 template <>
-class [[nodiscard]] ::fidl::WireUnownedResult<
-    ::test_unknowninteractions::Example::StrictTwoWay>
-    final : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Example::StrictTwoWay> final : public ::fidl::Status {
  public:
-  explicit WireUnownedResult(
-      ::fidl::UnownedClientEnd<::test_unknowninteractions::Example> client_end,
-      ::fidl::internal::AnyBufferAllocator& allocator,
-      ::fidl::internal::TransactionalRequest<
-          ::test_unknowninteractions::Example::StrictTwoWay>* request);
-  explicit WireUnownedResult(
-      ::fidl::internal::TransactionalResponse<
-          ::test_unknowninteractions::Example::StrictTwoWay>* response)
-      : fidl::Status(fidl::Status::Ok()), decoded_(response) {}
+  explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::Example> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::StrictTwoWay>* request);
+  explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::StrictTwoWay>* response)
+      : fidl::Status(fidl::Status::Ok()), decoded_(response) {
+  }
 
   explicit WireUnownedResult(
-      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
-          ::test_unknowninteractions::Example::StrictTwoWay>>&& decoded,
-      ::fidl::internal::MessageStorageViewBase* storage_view)
-      : fidl::Status(decoded) {
+      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::StrictTwoWay>>&& decoded,
+      ::fidl::internal::MessageStorageViewBase* storage_view) : fidl::Status(decoded) {
     if (decoded.ok()) {
       decoded_ = decoded.Take();
     }
   }
 
-  explicit WireUnownedResult(const ::fidl::Status& result)
-      : ::fidl::Status(result) {}
+  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
   WireUnownedResult(const WireUnownedResult&) = delete;
   WireUnownedResult& operator=(WireUnownedResult&&) = delete;
@@ -1267,21 +904,15 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
   ~WireUnownedResult() = default;
 
  private:
-  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<
-      ::test_unknowninteractions::Example::StrictTwoWay>>
-      decoded_;
+  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::StrictTwoWay>> decoded_;
 };
 
 template <>
-class [[nodiscard]] ::fidl::WireResult<
-    ::test_unknowninteractions::Example::FlexibleTwoWay>
-    final : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::Example::FlexibleTwoWay> final : public ::fidl::Status {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_unknowninteractions::Example> client,
-      ::fidl::internal::TransactionalRequest<
-          ::test_unknowninteractions::Example::FlexibleTwoWay>* request,
-      std::optional<zx::time> deadline = std::nullopt);
+      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::FlexibleTwoWay>* request, std::optional<zx::time> deadline = std::nullopt);
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
@@ -1289,217 +920,122 @@ class [[nodiscard]] ::fidl::WireResult<
   WireResult& operator=(WireResult&&) = delete;
   WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
-  ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>*
-  Unwrap() {
+  ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>* Unwrap() {
     ZX_ASSERT(ok());
     return &decoded_.Value()->body;
   }
-  const ::fidl::WireResponse<
-      ::test_unknowninteractions::Example::FlexibleTwoWay>*
-  Unwrap() const {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-
-  ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>*
-  Unwrap_NEW() {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-  const ::fidl::WireResponse<
-      ::test_unknowninteractions::Example::FlexibleTwoWay>*
-  Unwrap_NEW() const {
+  const ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>* Unwrap() const {
     ZX_ASSERT(ok());
     return &decoded_.Value()->body;
   }
 
-  ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>&
-  value() {
-    return *Unwrap();
+  ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>* Unwrap_NEW() {
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
-  const ::fidl::WireResponse<
-      ::test_unknowninteractions::Example::FlexibleTwoWay>&
-  value() const {
-    return *Unwrap();
-  }
-
-  ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>&
-  value_NEW() {
-    return *Unwrap_NEW();
-  }
-  const ::fidl::WireResponse<
-      ::test_unknowninteractions::Example::FlexibleTwoWay>&
-  value_NEW() const {
-    return *Unwrap_NEW();
+  const ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>* Unwrap_NEW() const {
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
 
-  ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>*
-  operator->() {
-    return &value();
-  }
-  const ::fidl::WireResponse<
-      ::test_unknowninteractions::Example::FlexibleTwoWay>*
-  operator->() const {
-    return &value();
-  }
+  ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>& value() { return *Unwrap(); }
+  const ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>& value() const { return *Unwrap(); }
 
-  ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>&
-  operator*() {
-    return value();
-  }
-  const ::fidl::WireResponse<
-      ::test_unknowninteractions::Example::FlexibleTwoWay>&
-  operator*() const {
-    return value();
-  }
+  ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>& value_NEW() { return *Unwrap_NEW(); }
+  const ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>& value_NEW() const { return *Unwrap_NEW(); }
+
+  ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>* operator->() { return &value(); }
+  const ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>* operator->() const { return &value(); }
+
+  ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>& operator*() { return value(); }
+  const ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>& operator*() const { return value(); }
 
  private:
   ::fidl::internal::InlineMessageBuffer<48> bytes_;
-  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<
-      ::test_unknowninteractions::Example::FlexibleTwoWay>>
-      decoded_;
+  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::FlexibleTwoWay>> decoded_;
 };
 
 template <>
-class [[nodiscard]] ::fidl::WireUnownedResult<
-    ::test_unknowninteractions::Example::FlexibleTwoWay>
-    final : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Example::FlexibleTwoWay> final : public ::fidl::Status {
  public:
-  explicit WireUnownedResult(
-      ::fidl::UnownedClientEnd<::test_unknowninteractions::Example> client_end,
-      ::fidl::internal::AnyBufferAllocator& allocator,
-      ::fidl::internal::TransactionalRequest<
-          ::test_unknowninteractions::Example::FlexibleTwoWay>* request);
-  explicit WireUnownedResult(
-      ::fidl::internal::TransactionalResponse<
-          ::test_unknowninteractions::Example::FlexibleTwoWay>* response)
-      : fidl::Status(fidl::Status::Ok()), decoded_(response) {}
+  explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::Example> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::FlexibleTwoWay>* request);
+  explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::FlexibleTwoWay>* response)
+      : fidl::Status(fidl::Status::Ok()), decoded_(response) {
+  }
 
   explicit WireUnownedResult(
-      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
-          ::test_unknowninteractions::Example::FlexibleTwoWay>>&& decoded,
-      ::fidl::internal::MessageStorageViewBase* storage_view)
-      : fidl::Status(decoded) {
+      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::FlexibleTwoWay>>&& decoded,
+      ::fidl::internal::MessageStorageViewBase* storage_view) : fidl::Status(decoded) {
     if (decoded.ok()) {
       decoded_ = decoded.Take();
     }
   }
 
-  explicit WireUnownedResult(const ::fidl::Status& result)
-      : ::fidl::Status(result) {}
+  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
   WireUnownedResult(const WireUnownedResult&) = delete;
   WireUnownedResult& operator=(WireUnownedResult&&) = delete;
   WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
-  ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>*
-  Unwrap() {
+  ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>* Unwrap() {
     ZX_ASSERT(ok());
     return &decoded_.Value()->body;
   }
-  const ::fidl::WireResponse<
-      ::test_unknowninteractions::Example::FlexibleTwoWay>*
-  Unwrap() const {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-
-  ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>*
-  Unwrap_NEW() {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-  const ::fidl::WireResponse<
-      ::test_unknowninteractions::Example::FlexibleTwoWay>*
-  Unwrap_NEW() const {
+  const ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>* Unwrap() const {
     ZX_ASSERT(ok());
     return &decoded_.Value()->body;
   }
 
-  ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>&
-  value() {
-    return *Unwrap();
+  ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>* Unwrap_NEW() {
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
-  const ::fidl::WireResponse<
-      ::test_unknowninteractions::Example::FlexibleTwoWay>&
-  value() const {
-    return *Unwrap();
-  }
-
-  ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>&
-  value_NEW() {
-    return *Unwrap_NEW();
-  }
-  const ::fidl::WireResponse<
-      ::test_unknowninteractions::Example::FlexibleTwoWay>&
-  value_NEW() const {
-    return *Unwrap_NEW();
+  const ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>* Unwrap_NEW() const {
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
 
-  ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>*
-  operator->() {
-    return &value();
-  }
-  const ::fidl::WireResponse<
-      ::test_unknowninteractions::Example::FlexibleTwoWay>*
-  operator->() const {
-    return &value();
-  }
+  ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>& value() { return *Unwrap(); }
+  const ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>& value() const { return *Unwrap(); }
 
-  ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>&
-  operator*() {
-    return value();
-  }
-  const ::fidl::WireResponse<
-      ::test_unknowninteractions::Example::FlexibleTwoWay>&
-  operator*() const {
-    return value();
-  }
+  ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>& value_NEW() { return *Unwrap_NEW(); }
+  const ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>& value_NEW() const { return *Unwrap_NEW(); }
+
+  ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>* operator->() { return &value(); }
+  const ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>* operator->() const { return &value(); }
+
+  ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>& operator*() { return value(); }
+  const ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>& operator*() const { return value(); }
 
  private:
-  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<
-      ::test_unknowninteractions::Example::FlexibleTwoWay>>
-      decoded_;
+  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::FlexibleTwoWay>> decoded_;
 };
 template <>
-class ::fidl::internal::WireEventHandlerInterface<
-    ::test_unknowninteractions::Example> {
+class ::fidl::internal::WireEventHandlerInterface<::test_unknowninteractions::Example> {
  public:
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
-  virtual void StrictEvent(
-      ::fidl::WireEvent<::test_unknowninteractions::Example::StrictEvent>*
-          event) = 0;
-  virtual void FlexibleEvent(
-      ::fidl::WireEvent<::test_unknowninteractions::Example::FlexibleEvent>*
-          event) = 0;
+  virtual void StrictEvent(::fidl::WireEvent<::test_unknowninteractions::Example::StrictEvent>* event) = 0;
+  virtual void FlexibleEvent(::fidl::WireEvent<::test_unknowninteractions::Example::FlexibleEvent>* event) = 0;
 };
 
 template <>
 class ::fidl::WireAsyncEventHandler<::test_unknowninteractions::Example>
-    : public ::fidl::internal::WireEventHandlerInterface<
-          ::test_unknowninteractions::Example>,
-      public ::fidl::internal::AsyncEventHandler {
+    : public ::fidl::internal::WireEventHandlerInterface<::test_unknowninteractions::Example>, public ::fidl::internal::AsyncEventHandler {
  public:
   WireAsyncEventHandler() = default;
-  void StrictEvent(
-      ::fidl::WireEvent<::test_unknowninteractions::Example::StrictEvent>*
-          event) override {}
-  void FlexibleEvent(
-      ::fidl::WireEvent<::test_unknowninteractions::Example::FlexibleEvent>*
-          event) override {}
+  void StrictEvent(::fidl::WireEvent<::test_unknowninteractions::Example::StrictEvent>* event) override {}
+  void FlexibleEvent(::fidl::WireEvent<::test_unknowninteractions::Example::FlexibleEvent>* event) override {}
 };
 
 template <>
-class ::fidl::WireSyncEventHandler<::test_unknowninteractions::Example>
-    : public ::fidl::internal::WireEventHandlerInterface<
-          ::test_unknowninteractions::Example> {
+class ::fidl::WireSyncEventHandler<::test_unknowninteractions::Example> : public ::fidl::internal::WireEventHandlerInterface<::test_unknowninteractions::Example> {
  public:
   WireSyncEventHandler() = default;
 
   // Handle all possible events defined in this protocol.
-  // Blocks to consume exactly one message from the channel, then call the
-  // corresponding virtual method.
+  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
+  // method.
   ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_unknowninteractions::Example> client_end);
 
@@ -1508,14 +1044,9 @@ class ::fidl::WireSyncEventHandler<::test_unknowninteractions::Example>
 };
 
 template <>
-class ::fidl::internal::WireEventDispatcher<::test_unknowninteractions::Example>
-    final
-    : public ::fidl::internal::IncomingEventDispatcher<
-          ::fidl::WireAsyncEventHandler<::test_unknowninteractions::Example>> {
+class ::fidl::internal::WireEventDispatcher<::test_unknowninteractions::Example> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::WireAsyncEventHandler<::test_unknowninteractions::Example>> {
  public:
-  explicit WireEventDispatcher(
-      ::fidl::WireAsyncEventHandler<::test_unknowninteractions::Example>*
-          event_handler)
+  explicit WireEventDispatcher(::fidl::WireAsyncEventHandler<::test_unknowninteractions::Example>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 
  private:
@@ -1528,135 +1059,75 @@ class ::fidl::internal::WireEventDispatcher<::test_unknowninteractions::Example>
 // const reference to a |fidl::ClientEnd<::test_unknowninteractions::Example>|,
 // avoiding setting up a client.
 template <>
-class ::fidl::internal::WireSyncClientImpl<::test_unknowninteractions::Example>
-    final : public ::fidl::internal::SyncEndpointManagedVeneer<
-                ::fidl::internal::WireSyncClientImpl<
-                    ::test_unknowninteractions::Example>> {
+class ::fidl::internal::WireSyncClientImpl<::test_unknowninteractions::Example> final : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::WireSyncClientImpl<::test_unknowninteractions::Example>> {
  public:
-  // Allocates 32 bytes of message buffer on the stack. No heap allocation
-  // necessary.
-  ::fidl::WireResult<::test_unknowninteractions::Example::StrictOneWay>
-  StrictOneWay() {
-    ::fidl::internal::TransactionalRequest<
-        ::test_unknowninteractions::Example::StrictOneWay>
-        _request{};
-    return ::fidl::WireResult<
-        ::test_unknowninteractions::Example::StrictOneWay>(_client_end(),
-                                                           &_request);
+  // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
+  ::fidl::WireResult<::test_unknowninteractions::Example::StrictOneWay> StrictOneWay() {
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::StrictOneWay> _request{};
+    return ::fidl::WireResult<::test_unknowninteractions::Example::StrictOneWay>(_client_end(), &_request);
   }
 
-  // Allocates 32 bytes of message buffer on the stack. No heap allocation
-  // necessary.
-  ::fidl::WireResult<::test_unknowninteractions::Example::FlexibleOneWay>
-  FlexibleOneWay() {
-    ::fidl::internal::TransactionalRequest<
-        ::test_unknowninteractions::Example::FlexibleOneWay>
-        _request{};
-    return ::fidl::WireResult<
-        ::test_unknowninteractions::Example::FlexibleOneWay>(_client_end(),
-                                                             &_request);
+  // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
+  ::fidl::WireResult<::test_unknowninteractions::Example::FlexibleOneWay> FlexibleOneWay() {
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::FlexibleOneWay> _request{};
+    return ::fidl::WireResult<::test_unknowninteractions::Example::FlexibleOneWay>(_client_end(), &_request);
   }
 
-  // Allocates 32 bytes of message buffer on the stack. No heap allocation
-  // necessary.
-  ::fidl::WireResult<::test_unknowninteractions::Example::StrictTwoWay>
-  StrictTwoWay() {
-    ::fidl::internal::TransactionalRequest<
-        ::test_unknowninteractions::Example::StrictTwoWay>
-        _request{};
-    return ::fidl::WireResult<
-        ::test_unknowninteractions::Example::StrictTwoWay>(_client_end(),
-                                                           &_request);
+  // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
+  ::fidl::WireResult<::test_unknowninteractions::Example::StrictTwoWay> StrictTwoWay() {
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::StrictTwoWay> _request{};
+    return ::fidl::WireResult<::test_unknowninteractions::Example::StrictTwoWay>(_client_end(), &_request);
   }
 
-  // Allocates 48 bytes of message buffer on the stack. No heap allocation
-  // necessary.
-  ::fidl::WireResult<::test_unknowninteractions::Example::FlexibleTwoWay>
-  FlexibleTwoWay() {
-    ::fidl::internal::TransactionalRequest<
-        ::test_unknowninteractions::Example::FlexibleTwoWay>
-        _request{};
-    return ::fidl::WireResult<
-        ::test_unknowninteractions::Example::FlexibleTwoWay>(_client_end(),
-                                                             &_request);
+  // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+  ::fidl::WireResult<::test_unknowninteractions::Example::FlexibleTwoWay> FlexibleTwoWay() {
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::FlexibleTwoWay> _request{};
+    return ::fidl::WireResult<::test_unknowninteractions::Example::FlexibleTwoWay>(_client_end(), &_request);
   }
 
  private:
-  ::fidl::UnownedClientEnd<::test_unknowninteractions::Example> _client_end()
-      const {
+  ::fidl::UnownedClientEnd<::test_unknowninteractions::Example> _client_end() const {
     return ::fidl::UnownedClientEnd<::test_unknowninteractions::Example>(
         _transport().get<::fidl::internal::ChannelTransport>());
   }
 };
 
 template <>
-class ::fidl::internal::WireSyncBufferClientImpl<
-    ::test_unknowninteractions::Example>
-    final : public ::fidl::internal::SyncEndpointBufferVeneer<
-                ::fidl::internal::WireSyncBufferClientImpl<
-                    ::test_unknowninteractions::Example>> {
+class ::fidl::internal::WireSyncBufferClientImpl<::test_unknowninteractions::Example> final : public ::fidl::internal::SyncEndpointBufferVeneer<::fidl::internal::WireSyncBufferClientImpl<::test_unknowninteractions::Example>> {
  public:
-  // Caller provides the backing storage for FIDL message via an argument to
-  // `.buffer()`.
-  ::fidl::WireUnownedResult<::test_unknowninteractions::Example::StrictOneWay>
-  StrictOneWay() {
-    ::fidl::internal::TransactionalRequest<
-        ::test_unknowninteractions::Example::StrictOneWay>
-        _request{};
-    return ::fidl::WireUnownedResult<
-        ::test_unknowninteractions::Example::StrictOneWay>(
-        _client_end(), _allocator(), &_request);
+  // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
+  ::fidl::WireUnownedResult<::test_unknowninteractions::Example::StrictOneWay> StrictOneWay() {
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::StrictOneWay> _request{};
+    return ::fidl::WireUnownedResult<::test_unknowninteractions::Example::StrictOneWay>(_client_end(), _allocator(), &_request);
   }
 
-  // Caller provides the backing storage for FIDL message via an argument to
-  // `.buffer()`.
-  ::fidl::WireUnownedResult<::test_unknowninteractions::Example::FlexibleOneWay>
-  FlexibleOneWay() {
-    ::fidl::internal::TransactionalRequest<
-        ::test_unknowninteractions::Example::FlexibleOneWay>
-        _request{};
-    return ::fidl::WireUnownedResult<
-        ::test_unknowninteractions::Example::FlexibleOneWay>(
-        _client_end(), _allocator(), &_request);
+  // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
+  ::fidl::WireUnownedResult<::test_unknowninteractions::Example::FlexibleOneWay> FlexibleOneWay() {
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::FlexibleOneWay> _request{};
+    return ::fidl::WireUnownedResult<::test_unknowninteractions::Example::FlexibleOneWay>(_client_end(), _allocator(), &_request);
   }
 
-  // Caller provides the backing storage for FIDL message via an argument to
-  // `.buffer()`.
-  ::fidl::WireUnownedResult<::test_unknowninteractions::Example::StrictTwoWay>
-  StrictTwoWay() {
-    ::fidl::internal::TransactionalRequest<
-        ::test_unknowninteractions::Example::StrictTwoWay>
-        _request{};
-    return ::fidl::WireUnownedResult<
-        ::test_unknowninteractions::Example::StrictTwoWay>(
-        _client_end(), _allocator(), &_request);
+  // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
+  ::fidl::WireUnownedResult<::test_unknowninteractions::Example::StrictTwoWay> StrictTwoWay() {
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::StrictTwoWay> _request{};
+    return ::fidl::WireUnownedResult<::test_unknowninteractions::Example::StrictTwoWay>(_client_end(), _allocator(), &_request);
   }
 
-  // Caller provides the backing storage for FIDL message via an argument to
-  // `.buffer()`.
-  ::fidl::WireUnownedResult<::test_unknowninteractions::Example::FlexibleTwoWay>
-  FlexibleTwoWay() {
-    ::fidl::internal::TransactionalRequest<
-        ::test_unknowninteractions::Example::FlexibleTwoWay>
-        _request{};
-    return ::fidl::WireUnownedResult<
-        ::test_unknowninteractions::Example::FlexibleTwoWay>(
-        _client_end(), _allocator(), &_request);
+  // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
+  ::fidl::WireUnownedResult<::test_unknowninteractions::Example::FlexibleTwoWay> FlexibleTwoWay() {
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::FlexibleTwoWay> _request{};
+    return ::fidl::WireUnownedResult<::test_unknowninteractions::Example::FlexibleTwoWay>(_client_end(), _allocator(), &_request);
   }
 
  private:
-  ::fidl::UnownedClientEnd<::test_unknowninteractions::Example> _client_end()
-      const {
+  ::fidl::UnownedClientEnd<::test_unknowninteractions::Example> _client_end() const {
     return ::fidl::UnownedClientEnd<::test_unknowninteractions::Example>(
         _transport().get<::fidl::internal::ChannelTransport>());
   }
 };
 
 template <>
-class ::fidl::internal::WireCompleterImpl<
-    ::test_unknowninteractions::Example::StrictTwoWay>
-    : public ::fidl::internal::CompleterImplBase<
-          ::test_unknowninteractions::Example::StrictTwoWay> {
+class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::Example::StrictTwoWay> : public ::fidl::internal::CompleterImplBase<::test_unknowninteractions::Example::StrictTwoWay> {
  public:
   using CompleterImplBase::CompleterImplBase;
 
@@ -1664,9 +1135,7 @@ class ::fidl::internal::WireCompleterImpl<
 };
 
 template <>
-class ::fidl::internal::WireBufferCompleterImpl<
-    ::test_unknowninteractions::Example::StrictTwoWay>
-    : public ::fidl::internal::BufferCompleterImplBase {
+class ::fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Example::StrictTwoWay> : public ::fidl::internal::BufferCompleterImplBase {
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
@@ -1674,14 +1143,9 @@ class ::fidl::internal::WireBufferCompleterImpl<
 };
 
 template <>
-class ::fidl::internal::WireCompleterBase<
-    ::test_unknowninteractions::Example::StrictTwoWay>
-    : public ::fidl::CompleterBase,
-      public ::fidl::internal::WireCompleterImpl<
-          ::test_unknowninteractions::Example::StrictTwoWay> {
+class ::fidl::internal::WireCompleterBase<::test_unknowninteractions::Example::StrictTwoWay> : public ::fidl::CompleterBase, public ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::Example::StrictTwoWay> {
  public:
-  WireCompleterBase(::fidl::Transaction* transaction, bool owned,
-                    bool expects_reply)
+  WireCompleterBase(::fidl::Transaction* transaction, bool owned, bool expects_reply)
       : CompleterBase(transaction, owned, expects_reply),
         WireCompleterImpl(this) {}
   WireCompleterBase(WireCompleterBase&& other) noexcept
@@ -1694,37 +1158,25 @@ class ::fidl::internal::WireCompleterBase<
 };
 
 template <>
-class ::fidl::internal::WireCompleterImpl<
-    ::test_unknowninteractions::Example::FlexibleTwoWay>
-    : public ::fidl::internal::CompleterImplBase<
-          ::test_unknowninteractions::Example::FlexibleTwoWay> {
+class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::Example::FlexibleTwoWay> : public ::fidl::internal::CompleterImplBase<::test_unknowninteractions::Example::FlexibleTwoWay> {
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  void Reply(
-      ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult result);
+  void Reply(::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult result);
 };
 
 template <>
-class ::fidl::internal::WireBufferCompleterImpl<
-    ::test_unknowninteractions::Example::FlexibleTwoWay>
-    : public ::fidl::internal::BufferCompleterImplBase {
+class ::fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Example::FlexibleTwoWay> : public ::fidl::internal::BufferCompleterImplBase {
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(
-      ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult result);
+  void Reply(::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult result);
 };
 
 template <>
-class ::fidl::internal::WireCompleterBase<
-    ::test_unknowninteractions::Example::FlexibleTwoWay>
-    : public ::fidl::CompleterBase,
-      public ::fidl::internal::WireCompleterImpl<
-          ::test_unknowninteractions::Example::FlexibleTwoWay> {
+class ::fidl::internal::WireCompleterBase<::test_unknowninteractions::Example::FlexibleTwoWay> : public ::fidl::CompleterBase, public ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::Example::FlexibleTwoWay> {
  public:
-  WireCompleterBase(::fidl::Transaction* transaction, bool owned,
-                    bool expects_reply)
+  WireCompleterBase(::fidl::Transaction* transaction, bool owned, bool expects_reply)
       : CompleterBase(transaction, owned, expects_reply),
         WireCompleterImpl(this) {}
   WireCompleterBase(WireCompleterBase&& other) noexcept
@@ -1740,8 +1192,7 @@ class ::fidl::internal::WireCompleterBase<
 // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
 // and |fidl::ServerEnd<SomeProtocol>|).
 template <>
-class ::fidl::WireServer<::test_unknowninteractions::Example>
-    : public ::fidl::internal::IncomingMessageDispatcher {
+class ::fidl::WireServer<::test_unknowninteractions::Example> : public ::fidl::internal::IncomingMessageDispatcher {
  public:
   WireServer() = default;
   virtual ~WireServer() = default;
@@ -1749,37 +1200,29 @@ class ::fidl::WireServer<::test_unknowninteractions::Example>
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_unknowninteractions::Example;
 
-  using StrictOneWayCompleter = ::fidl::internal::WireCompleter<
-      ::test_unknowninteractions::Example::StrictOneWay>;
-  using StrictOneWayRequestView = ::fidl::internal::WireRequestView<
-      ::test_unknowninteractions::Example::StrictOneWay>;
+  using StrictOneWayCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::Example::StrictOneWay>;
+  using StrictOneWayRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::Example::StrictOneWay>;
 
-  virtual void StrictOneWay(StrictOneWayRequestView request,
-                            StrictOneWayCompleter::Sync& completer) = 0;
+  virtual void StrictOneWay(
+      StrictOneWayRequestView request, StrictOneWayCompleter::Sync& completer) = 0;
 
-  using FlexibleOneWayCompleter = ::fidl::internal::WireCompleter<
-      ::test_unknowninteractions::Example::FlexibleOneWay>;
-  using FlexibleOneWayRequestView = ::fidl::internal::WireRequestView<
-      ::test_unknowninteractions::Example::FlexibleOneWay>;
+  using FlexibleOneWayCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::Example::FlexibleOneWay>;
+  using FlexibleOneWayRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::Example::FlexibleOneWay>;
 
-  virtual void FlexibleOneWay(FlexibleOneWayRequestView request,
-                              FlexibleOneWayCompleter::Sync& completer) = 0;
+  virtual void FlexibleOneWay(
+      FlexibleOneWayRequestView request, FlexibleOneWayCompleter::Sync& completer) = 0;
 
-  using StrictTwoWayCompleter = ::fidl::internal::WireCompleter<
-      ::test_unknowninteractions::Example::StrictTwoWay>;
-  using StrictTwoWayRequestView = ::fidl::internal::WireRequestView<
-      ::test_unknowninteractions::Example::StrictTwoWay>;
+  using StrictTwoWayCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::Example::StrictTwoWay>;
+  using StrictTwoWayRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::Example::StrictTwoWay>;
 
-  virtual void StrictTwoWay(StrictTwoWayRequestView request,
-                            StrictTwoWayCompleter::Sync& completer) = 0;
+  virtual void StrictTwoWay(
+      StrictTwoWayRequestView request, StrictTwoWayCompleter::Sync& completer) = 0;
 
-  using FlexibleTwoWayCompleter = ::fidl::internal::WireCompleter<
-      ::test_unknowninteractions::Example::FlexibleTwoWay>;
-  using FlexibleTwoWayRequestView = ::fidl::internal::WireRequestView<
-      ::test_unknowninteractions::Example::FlexibleTwoWay>;
+  using FlexibleTwoWayCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::Example::FlexibleTwoWay>;
+  using FlexibleTwoWayRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::Example::FlexibleTwoWay>;
 
-  virtual void FlexibleTwoWay(FlexibleTwoWayRequestView request,
-                              FlexibleTwoWayCompleter::Sync& completer) = 0;
+  virtual void FlexibleTwoWay(
+      FlexibleTwoWayRequestView request, FlexibleTwoWayCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(
@@ -1792,44 +1235,29 @@ namespace fidl {
 #ifdef __Fuchsia__
 }  // namespace fidl
 template <>
-class ::fidl::internal::WireWeakOnewayClientImpl<
-    ::test_unknowninteractions::Example>
-    : public ::fidl::internal::ClientImplBase {
+class ::fidl::internal::WireWeakOnewayClientImpl<::test_unknowninteractions::Example> : public ::fidl::internal::ClientImplBase {
  public:
   using ClientImplBase::ClientImplBase;
 
-  // Allocates 32 bytes of message buffer on the stack. No heap allocation
-  // necessary.
+  // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
   ::fidl::Status StrictOneWay();
 
-  // Allocates 32 bytes of message buffer on the stack. No heap allocation
-  // necessary.
+  // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
   ::fidl::Status FlexibleOneWay();
 };
 
 template <>
-class ::fidl::internal::WireWeakAsyncClientImpl<
-    ::test_unknowninteractions::Example>
-    final : public ::fidl::internal::WireWeakOnewayClientImpl<
-                ::test_unknowninteractions::Example> {
+class ::fidl::internal::WireWeakAsyncClientImpl<::test_unknowninteractions::Example> final : public ::fidl::internal::WireWeakOnewayClientImpl<::test_unknowninteractions::Example> {
  public:
   using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
-  // Allocates 16 bytes of request buffer on the stack. The callback is stored
-  // on the heap.
-  ::fidl::internal::WireThenable<
-      ::test_unknowninteractions::Example::StrictTwoWay>
-  StrictTwoWay();
-  // Allocates 16 bytes of request buffer on the stack. The callback is stored
-  // on the heap.
-  ::fidl::internal::WireThenable<
-      ::test_unknowninteractions::Example::FlexibleTwoWay>
-  FlexibleTwoWay();
+  // Allocates 16 bytes of request buffer on the stack. The callback is stored on the heap.
+  ::fidl::internal::WireThenable<::test_unknowninteractions::Example::StrictTwoWay> StrictTwoWay();
+  // Allocates 16 bytes of request buffer on the stack. The callback is stored on the heap.
+  ::fidl::internal::WireThenable<::test_unknowninteractions::Example::FlexibleTwoWay> FlexibleTwoWay();
 };
 
 template <>
-class ::fidl::internal::WireWeakOnewayBufferClientImpl<
-    ::test_unknowninteractions::Example>
-    : public ::fidl::internal::BufferClientImplBase {
+class ::fidl::internal::WireWeakOnewayBufferClientImpl<::test_unknowninteractions::Example> : public ::fidl::internal::BufferClientImplBase {
  public:
   using BufferClientImplBase::BufferClientImplBase;
 
@@ -1841,40 +1269,26 @@ class ::fidl::internal::WireWeakOnewayBufferClientImpl<
 };
 
 template <>
-class ::fidl::internal::WireWeakAsyncBufferClientImpl<
-    ::test_unknowninteractions::Example>
-    final : public ::fidl::internal::WireWeakOnewayBufferClientImpl<
-                ::test_unknowninteractions::Example> {
+class ::fidl::internal::WireWeakAsyncBufferClientImpl<::test_unknowninteractions::Example> final : public ::fidl::internal::WireWeakOnewayBufferClientImpl<::test_unknowninteractions::Example> {
  public:
   using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
 
   // Caller provides the backing storage for FIDL message.
-  ::fidl::internal::WireBufferThenable<
-      ::test_unknowninteractions::Example::StrictTwoWay>
-  StrictTwoWay();
+  ::fidl::internal::WireBufferThenable<::test_unknowninteractions::Example::StrictTwoWay> StrictTwoWay();
 
   // Caller provides the backing storage for FIDL message.
-  ::fidl::internal::WireBufferThenable<
-      ::test_unknowninteractions::Example::FlexibleTwoWay>
-  FlexibleTwoWay();
+  ::fidl::internal::WireBufferThenable<::test_unknowninteractions::Example::FlexibleTwoWay> FlexibleTwoWay();
 };
 template <>
-class ::fidl::internal::WireWeakSyncClientImpl<
-    ::test_unknowninteractions::Example>
-    final : public ::fidl::internal::WireWeakOnewayClientImpl<
-                ::test_unknowninteractions::Example> {
+class ::fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::Example> final : public ::fidl::internal::WireWeakOnewayClientImpl<::test_unknowninteractions::Example> {
  public:
   using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
 
-  // Allocates 32 bytes of message buffer on the stack. No heap allocation
-  // necessary.
-  ::fidl::WireResult<::test_unknowninteractions::Example::StrictTwoWay>
-  StrictTwoWay();
+  // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
+  ::fidl::WireResult<::test_unknowninteractions::Example::StrictTwoWay> StrictTwoWay();
 
-  // Allocates 48 bytes of message buffer on the stack. No heap allocation
-  // necessary.
-  ::fidl::WireResult<::test_unknowninteractions::Example::FlexibleTwoWay>
-  FlexibleTwoWay();
+  // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+  ::fidl::WireResult<::test_unknowninteractions::Example::FlexibleTwoWay> FlexibleTwoWay();
 };
 namespace fidl {
 #endif  // __Fuchsia__
@@ -1882,8 +1296,7 @@ namespace fidl {
 }  // namespace fidl
 #ifdef __Fuchsia__
 template <>
-class ::fidl::internal::WireWeakEventSender<::test_unknowninteractions::Example>
-    : public ::fidl::internal::WeakEventSenderBase {
+class ::fidl::internal::WireWeakEventSender<::test_unknowninteractions::Example> : public ::fidl::internal::WeakEventSenderBase {
  public:
   using WeakEventSenderBase::WeakEventSenderBase;
 
@@ -1893,9 +1306,7 @@ class ::fidl::internal::WireWeakEventSender<::test_unknowninteractions::Example>
 };
 
 template <>
-class ::fidl::internal::WireWeakBufferEventSender<
-    ::test_unknowninteractions::Example>
-    : public ::fidl::internal::WeakBufferEventSenderBase {
+class ::fidl::internal::WireWeakBufferEventSender<::test_unknowninteractions::Example> : public ::fidl::internal::WeakBufferEventSenderBase {
  public:
   using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
 
@@ -1906,9 +1317,7 @@ class ::fidl::internal::WireWeakBufferEventSender<
 
 template <>
 class ::fidl::internal::WireEventSender<::test_unknowninteractions::Example>
-    : public ::fidl::internal::SyncEndpointManagedVeneer<
-          ::fidl::internal::WireEventSender<
-              ::test_unknowninteractions::Example>> {
+    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::WireEventSender<::test_unknowninteractions::Example>> {
  public:
   using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 
@@ -1918,11 +1327,8 @@ class ::fidl::internal::WireEventSender<::test_unknowninteractions::Example>
 };
 
 template <>
-class ::fidl::internal::WireBufferEventSender<
-    ::test_unknowninteractions::Example>
-    : public ::fidl::internal::SyncEndpointBufferVeneer<
-          ::fidl::internal::WireBufferEventSender<
-              ::test_unknowninteractions::Example>> {
+class ::fidl::internal::WireBufferEventSender<::test_unknowninteractions::Example>
+    : public ::fidl::internal::SyncEndpointBufferVeneer<::fidl::internal::WireBufferEventSender<::test_unknowninteractions::Example>> {
  public:
   using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
 

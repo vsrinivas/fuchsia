@@ -24,15 +24,9 @@ class StrictBits final {
   const static StrictBits kMask;
 
   explicit constexpr inline operator uint64_t() const { return value_; }
-  explicit constexpr inline operator bool() const {
-    return static_cast<bool>(value_);
-  }
-  constexpr inline bool operator==(const StrictBits& other) const {
-    return value_ == other.value_;
-  }
-  constexpr inline bool operator!=(const StrictBits& other) const {
-    return value_ != other.value_;
-  }
+  explicit constexpr inline operator bool() const { return static_cast<bool>(value_); }
+  constexpr inline bool operator==(const StrictBits& other) const { return value_ == other.value_; }
+  constexpr inline bool operator!=(const StrictBits& other) const { return value_ != other.value_; }
   constexpr inline StrictBits operator~() const;
   constexpr inline StrictBits operator|(const StrictBits& other) const;
   constexpr inline StrictBits operator&(const StrictBits& other) const;
@@ -64,30 +58,25 @@ constexpr const ::test_bits::StrictBits StrictBits::kSmallest =
     ::test_bits::StrictBits(1u);
 constexpr const ::test_bits::StrictBits StrictBits::kBiggest =
     ::test_bits::StrictBits(9223372036854775808u);
-constexpr const ::test_bits::StrictBits StrictBits::kMask =
-    ::test_bits::StrictBits(9223372036854775809u);
+constexpr const ::test_bits::StrictBits StrictBits::kMask = ::test_bits::StrictBits(9223372036854775809u);
 
 constexpr inline ::test_bits::StrictBits StrictBits::operator~() const {
-  return ::test_bits::StrictBits(
-      static_cast<uint64_t>(~this->value_ & kMask.value_));
+  return ::test_bits::StrictBits(static_cast<uint64_t>(~this->value_ & kMask.value_));
 }
 
 constexpr inline ::test_bits::StrictBits StrictBits::operator|(
     const ::test_bits::StrictBits& other) const {
-  return ::test_bits::StrictBits(
-      static_cast<uint64_t>(this->value_ | other.value_));
+  return ::test_bits::StrictBits(static_cast<uint64_t>(this->value_ | other.value_));
 }
 
 constexpr inline ::test_bits::StrictBits StrictBits::operator&(
     const ::test_bits::StrictBits& other) const {
-  return ::test_bits::StrictBits(
-      static_cast<uint64_t>(this->value_ & other.value_));
+  return ::test_bits::StrictBits(static_cast<uint64_t>(this->value_ & other.value_));
 }
 
 constexpr inline ::test_bits::StrictBits StrictBits::operator^(
     const ::test_bits::StrictBits& other) const {
-  return ::test_bits::StrictBits(
-      static_cast<uint64_t>(this->value_ ^ other.value_));
+  return ::test_bits::StrictBits(static_cast<uint64_t>(this->value_ ^ other.value_));
 }
 
 constexpr inline void StrictBits::operator|=(
@@ -121,15 +110,9 @@ class MyBits final {
   const static MyBits kMask;
 
   explicit constexpr inline operator uint32_t() const { return value_; }
-  explicit constexpr inline operator bool() const {
-    return static_cast<bool>(value_);
-  }
-  constexpr inline bool operator==(const MyBits& other) const {
-    return value_ == other.value_;
-  }
-  constexpr inline bool operator!=(const MyBits& other) const {
-    return value_ != other.value_;
-  }
+  explicit constexpr inline operator bool() const { return static_cast<bool>(value_); }
+  constexpr inline bool operator==(const MyBits& other) const { return value_ == other.value_; }
+  constexpr inline bool operator!=(const MyBits& other) const { return value_ != other.value_; }
   constexpr inline MyBits operator~() const;
   constexpr inline MyBits operator|(const MyBits& other) const;
   constexpr inline MyBits operator&(const MyBits& other) const;
@@ -161,41 +144,41 @@ constexpr const ::test_bits::MyBits MyBits::kMyFirstBit =
     ::test_bits::MyBits(1u);
 constexpr const ::test_bits::MyBits MyBits::kMyOtherBit =
     ::test_bits::MyBits(2u);
-constexpr const ::test_bits::MyBits MyBits::kMask_ = ::test_bits::MyBits(4u);
+constexpr const ::test_bits::MyBits MyBits::kMask_ =
+    ::test_bits::MyBits(4u);
 constexpr const ::test_bits::MyBits MyBits::kMask = ::test_bits::MyBits(7u);
 
 constexpr inline ::test_bits::MyBits MyBits::operator~() const {
-  return ::test_bits::MyBits(
-      static_cast<uint32_t>(~this->value_ & kMask.value_));
+  return ::test_bits::MyBits(static_cast<uint32_t>(~this->value_ & kMask.value_));
 }
 
 constexpr inline ::test_bits::MyBits MyBits::operator|(
     const ::test_bits::MyBits& other) const {
-  return ::test_bits::MyBits(
-      static_cast<uint32_t>(this->value_ | other.value_));
+  return ::test_bits::MyBits(static_cast<uint32_t>(this->value_ | other.value_));
 }
 
 constexpr inline ::test_bits::MyBits MyBits::operator&(
     const ::test_bits::MyBits& other) const {
-  return ::test_bits::MyBits(
-      static_cast<uint32_t>(this->value_ & other.value_));
+  return ::test_bits::MyBits(static_cast<uint32_t>(this->value_ & other.value_));
 }
 
 constexpr inline ::test_bits::MyBits MyBits::operator^(
     const ::test_bits::MyBits& other) const {
-  return ::test_bits::MyBits(
-      static_cast<uint32_t>(this->value_ ^ other.value_));
+  return ::test_bits::MyBits(static_cast<uint32_t>(this->value_ ^ other.value_));
 }
 
-constexpr inline void MyBits::operator|=(const ::test_bits::MyBits& other) {
+constexpr inline void MyBits::operator|=(
+    const ::test_bits::MyBits& other) {
   this->value_ |= other.value_;
 }
 
-constexpr inline void MyBits::operator&=(const ::test_bits::MyBits& other) {
+constexpr inline void MyBits::operator&=(
+    const ::test_bits::MyBits& other) {
   this->value_ &= other.value_;
 }
 
-constexpr inline void MyBits::operator^=(const ::test_bits::MyBits& other) {
+constexpr inline void MyBits::operator^=(
+    const ::test_bits::MyBits& other) {
   this->value_ ^= other.value_;
 }
 
@@ -205,23 +188,17 @@ class FlexibleBits final {
  public:
   constexpr FlexibleBits() = default;
 
-  // Constructs an instance of |FlexibleBits| from an underlying primitive
-  // value, preserving any bit member not defined in the FIDL schema.
+  // Constructs an instance of |FlexibleBits| from an underlying primitive value,
+  // preserving any bit member not defined in the FIDL schema.
   explicit constexpr FlexibleBits(uint64_t value) : value_(value) {}
   const static FlexibleBits kSmallest;
   const static FlexibleBits kBiggest;
   const static FlexibleBits kMask;
 
   explicit constexpr inline operator uint64_t() const { return value_; }
-  explicit constexpr inline operator bool() const {
-    return static_cast<bool>(value_);
-  }
-  constexpr inline bool operator==(const FlexibleBits& other) const {
-    return value_ == other.value_;
-  }
-  constexpr inline bool operator!=(const FlexibleBits& other) const {
-    return value_ != other.value_;
-  }
+  explicit constexpr inline operator bool() const { return static_cast<bool>(value_); }
+  constexpr inline bool operator==(const FlexibleBits& other) const { return value_ == other.value_; }
+  constexpr inline bool operator!=(const FlexibleBits& other) const { return value_ != other.value_; }
   constexpr inline FlexibleBits operator~() const;
   constexpr inline FlexibleBits operator|(const FlexibleBits& other) const;
   constexpr inline FlexibleBits operator&(const FlexibleBits& other) const;
@@ -240,17 +217,15 @@ class FlexibleBits final {
     return FlexibleBits(value & FlexibleBits::kMask.value_);
   }
 
-  // Constructs an instance of |FlexibleBits| from an underlying primitive
-  // value, clearing any bit member not defined in the FIDL schema.
+  // Constructs an instance of |FlexibleBits| from an underlying primitive value,
+  // clearing any bit member not defined in the FIDL schema.
   constexpr inline static FlexibleBits TruncatingUnknown(uint64_t value) {
     return FlexibleBits(value & FlexibleBits::kMask.value_);
   }
   constexpr inline FlexibleBits unknown_bits() const {
     return *this & FlexibleBits(~kMask.value_);
   }
-  constexpr inline bool has_unknown_bits() const {
-    return static_cast<bool>(unknown_bits());
-  }
+  constexpr inline bool has_unknown_bits() const { return static_cast<bool>(unknown_bits()); }
 
  private:
   uint64_t value_ = 0;
@@ -259,30 +234,25 @@ constexpr const ::test_bits::FlexibleBits FlexibleBits::kSmallest =
     ::test_bits::FlexibleBits(1u);
 constexpr const ::test_bits::FlexibleBits FlexibleBits::kBiggest =
     ::test_bits::FlexibleBits(9223372036854775808u);
-constexpr const ::test_bits::FlexibleBits FlexibleBits::kMask =
-    ::test_bits::FlexibleBits(9223372036854775809u);
+constexpr const ::test_bits::FlexibleBits FlexibleBits::kMask = ::test_bits::FlexibleBits(9223372036854775809u);
 
 constexpr inline ::test_bits::FlexibleBits FlexibleBits::operator~() const {
-  return ::test_bits::FlexibleBits(
-      static_cast<uint64_t>(~this->value_ & kMask.value_));
+  return ::test_bits::FlexibleBits(static_cast<uint64_t>(~this->value_ & kMask.value_));
 }
 
 constexpr inline ::test_bits::FlexibleBits FlexibleBits::operator|(
     const ::test_bits::FlexibleBits& other) const {
-  return ::test_bits::FlexibleBits(
-      static_cast<uint64_t>(this->value_ | other.value_));
+  return ::test_bits::FlexibleBits(static_cast<uint64_t>(this->value_ | other.value_));
 }
 
 constexpr inline ::test_bits::FlexibleBits FlexibleBits::operator&(
     const ::test_bits::FlexibleBits& other) const {
-  return ::test_bits::FlexibleBits(
-      static_cast<uint64_t>(this->value_ & other.value_));
+  return ::test_bits::FlexibleBits(static_cast<uint64_t>(this->value_ & other.value_));
 }
 
 constexpr inline ::test_bits::FlexibleBits FlexibleBits::operator^(
     const ::test_bits::FlexibleBits& other) const {
-  return ::test_bits::FlexibleBits(
-      static_cast<uint64_t>(this->value_ ^ other.value_));
+  return ::test_bits::FlexibleBits(static_cast<uint64_t>(this->value_ ^ other.value_));
 }
 
 constexpr inline void FlexibleBits::operator|=(

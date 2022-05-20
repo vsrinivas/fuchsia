@@ -17,8 +17,7 @@ namespace fidl {
 #ifdef __Fuchsia__
 }  // namespace fidl
 template <>
-class ::fidl::internal::NaturalClientImpl<::test_handles::SomeProtocol> final
-    : public ::fidl::internal::NaturalClientBase {
+class ::fidl::internal::NaturalClientImpl<::test_handles::SomeProtocol> final : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
 };
@@ -29,10 +28,8 @@ namespace fidl {
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::internal::NaturalSyncClientImpl<::test_handles::SomeProtocol>
-    final : public ::fidl::internal::SyncEndpointManagedVeneer<
-                ::fidl::internal::NaturalSyncClientImpl<
-                    ::test_handles::SomeProtocol>> {
+class ::fidl::internal::NaturalSyncClientImpl<::test_handles::SomeProtocol> final
+    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalSyncClientImpl<::test_handles::SomeProtocol>> {
  public:
  private:
   ::fidl::UnownedClientEnd<::test_handles::SomeProtocol> _client_end() const {
@@ -45,8 +42,7 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_handles::SomeProtocol>
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::internal::NaturalEventHandlerInterface<
-    ::test_handles::SomeProtocol> {
+class ::fidl::internal::NaturalEventHandlerInterface<::test_handles::SomeProtocol> {
  public:
   NaturalEventHandlerInterface() = default;
   virtual ~NaturalEventHandlerInterface() = default;
@@ -54,20 +50,15 @@ class ::fidl::internal::NaturalEventHandlerInterface<
 
 template <>
 class ::fidl::AsyncEventHandler<::test_handles::SomeProtocol>
-    : public ::fidl::internal::NaturalEventHandlerInterface<
-          ::test_handles::SomeProtocol>,
-      public ::fidl::internal::AsyncEventHandler {
+    : public ::fidl::internal::NaturalEventHandlerInterface<::test_handles::SomeProtocol>, public ::fidl::internal::AsyncEventHandler {
  public:
   AsyncEventHandler() = default;
 };
 
 template <>
-class ::fidl::internal::NaturalEventDispatcher<::test_handles::SomeProtocol>
-    final : public ::fidl::internal::IncomingEventDispatcher<
-                ::fidl::AsyncEventHandler<::test_handles::SomeProtocol>> {
+class ::fidl::internal::NaturalEventDispatcher<::test_handles::SomeProtocol> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::AsyncEventHandler<::test_handles::SomeProtocol>> {
  public:
-  explicit NaturalEventDispatcher(
-      ::fidl::AsyncEventHandler<::test_handles::SomeProtocol>* event_handler)
+  explicit NaturalEventDispatcher(::fidl::AsyncEventHandler<::test_handles::SomeProtocol>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 
  private:
@@ -79,24 +70,21 @@ class ::fidl::internal::NaturalEventDispatcher<::test_handles::SomeProtocol>
 
 #ifdef __Fuchsia__
 template <>
-class ::fidl::internal::NaturalWeakEventSender<::test_handles::SomeProtocol>
-    : public ::fidl::internal::WeakEventSenderBase {
+class ::fidl::internal::NaturalWeakEventSender<::test_handles::SomeProtocol> : public ::fidl::internal::WeakEventSenderBase {
  public:
   using WeakEventSenderBase::WeakEventSenderBase;
 };
 
 template <>
 class ::fidl::internal::NaturalEventSender<::test_handles::SomeProtocol>
-    : public ::fidl::internal::SyncEndpointManagedVeneer<
-          ::fidl::internal::NaturalEventSender<::test_handles::SomeProtocol>> {
+    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalEventSender<::test_handles::SomeProtocol>> {
  public:
   using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 };
 #endif  // __Fuchsia__
 
 template <>
-class ::fidl::Server<::test_handles::SomeProtocol>
-    : public ::fidl::internal::IncomingMessageDispatcher {
+class ::fidl::Server<::test_handles::SomeProtocol> : public ::fidl::internal::IncomingMessageDispatcher {
  public:
   Server() = default;
   virtual ~Server() = default;
@@ -113,11 +101,9 @@ class ::fidl::Server<::test_handles::SomeProtocol>
 #ifdef __Fuchsia__
 
 template <>
-struct ::fidl::internal::NaturalServerDispatcher<::test_handles::SomeProtocol>
-    final {
+struct ::fidl::internal::NaturalServerDispatcher<::test_handles::SomeProtocol> final {
   NaturalServerDispatcher() = delete;
-  static void Dispatch(::fidl::Server<::test_handles::SomeProtocol>* impl,
-                       ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fidl::Server<::test_handles::SomeProtocol>* impl, ::fidl::IncomingMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 

@@ -15,12 +15,9 @@ namespace fidl {
 namespace internal {
 
 template <>
-struct WireNaturalConversionTraits<::test_padding::wire::Padding7ByteMiddle,
-                                   ::test_padding::Padding7ByteMiddle> {
-  static ::test_padding::Padding7ByteMiddle ToNatural(
-      ::test_padding::wire::Padding7ByteMiddle src);
-  static ::test_padding::wire::Padding7ByteMiddle ToWire(
-      fidl::AnyArena& arena, ::test_padding::Padding7ByteMiddle src);
+struct WireNaturalConversionTraits<::test_padding::wire::Padding7ByteMiddle, ::test_padding::Padding7ByteMiddle> {
+  static ::test_padding::Padding7ByteMiddle ToNatural(::test_padding::wire::Padding7ByteMiddle src);
+  static ::test_padding::wire::Padding7ByteMiddle ToWire(fidl::AnyArena& arena, ::test_padding::Padding7ByteMiddle src);
 };
 
 template <>
@@ -33,12 +30,9 @@ struct WireTypeForNaturalType<::test_padding::Padding7ByteMiddle> {
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_padding::wire::Padding7ByteEnd,
-                                   ::test_padding::Padding7ByteEnd> {
-  static ::test_padding::Padding7ByteEnd ToNatural(
-      ::test_padding::wire::Padding7ByteEnd src);
-  static ::test_padding::wire::Padding7ByteEnd ToWire(
-      fidl::AnyArena& arena, ::test_padding::Padding7ByteEnd src);
+struct WireNaturalConversionTraits<::test_padding::wire::Padding7ByteEnd, ::test_padding::Padding7ByteEnd> {
+  static ::test_padding::Padding7ByteEnd ToNatural(::test_padding::wire::Padding7ByteEnd src);
+  static ::test_padding::wire::Padding7ByteEnd ToWire(fidl::AnyArena& arena, ::test_padding::Padding7ByteEnd src);
 };
 
 template <>
@@ -51,12 +45,9 @@ struct WireTypeForNaturalType<::test_padding::Padding7ByteEnd> {
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_padding::wire::Padding6ByteMiddle,
-                                   ::test_padding::Padding6ByteMiddle> {
-  static ::test_padding::Padding6ByteMiddle ToNatural(
-      ::test_padding::wire::Padding6ByteMiddle src);
-  static ::test_padding::wire::Padding6ByteMiddle ToWire(
-      fidl::AnyArena& arena, ::test_padding::Padding6ByteMiddle src);
+struct WireNaturalConversionTraits<::test_padding::wire::Padding6ByteMiddle, ::test_padding::Padding6ByteMiddle> {
+  static ::test_padding::Padding6ByteMiddle ToNatural(::test_padding::wire::Padding6ByteMiddle src);
+  static ::test_padding::wire::Padding6ByteMiddle ToWire(fidl::AnyArena& arena, ::test_padding::Padding6ByteMiddle src);
 };
 
 template <>
@@ -69,12 +60,9 @@ struct WireTypeForNaturalType<::test_padding::Padding6ByteMiddle> {
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_padding::wire::Padding6ByteEnd,
-                                   ::test_padding::Padding6ByteEnd> {
-  static ::test_padding::Padding6ByteEnd ToNatural(
-      ::test_padding::wire::Padding6ByteEnd src);
-  static ::test_padding::wire::Padding6ByteEnd ToWire(
-      fidl::AnyArena& arena, ::test_padding::Padding6ByteEnd src);
+struct WireNaturalConversionTraits<::test_padding::wire::Padding6ByteEnd, ::test_padding::Padding6ByteEnd> {
+  static ::test_padding::Padding6ByteEnd ToNatural(::test_padding::wire::Padding6ByteEnd src);
+  static ::test_padding::wire::Padding6ByteEnd ToWire(fidl::AnyArena& arena, ::test_padding::Padding6ByteEnd src);
 };
 
 template <>
@@ -87,12 +75,9 @@ struct WireTypeForNaturalType<::test_padding::Padding6ByteEnd> {
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_padding::wire::Padding5ByteMiddle,
-                                   ::test_padding::Padding5ByteMiddle> {
-  static ::test_padding::Padding5ByteMiddle ToNatural(
-      ::test_padding::wire::Padding5ByteMiddle src);
-  static ::test_padding::wire::Padding5ByteMiddle ToWire(
-      fidl::AnyArena& arena, ::test_padding::Padding5ByteMiddle src);
+struct WireNaturalConversionTraits<::test_padding::wire::Padding5ByteMiddle, ::test_padding::Padding5ByteMiddle> {
+  static ::test_padding::Padding5ByteMiddle ToNatural(::test_padding::wire::Padding5ByteMiddle src);
+  static ::test_padding::wire::Padding5ByteMiddle ToWire(fidl::AnyArena& arena, ::test_padding::Padding5ByteMiddle src);
 };
 
 template <>
@@ -105,12 +90,9 @@ struct WireTypeForNaturalType<::test_padding::Padding5ByteMiddle> {
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_padding::wire::Padding5ByteEnd,
-                                   ::test_padding::Padding5ByteEnd> {
-  static ::test_padding::Padding5ByteEnd ToNatural(
-      ::test_padding::wire::Padding5ByteEnd src);
-  static ::test_padding::wire::Padding5ByteEnd ToWire(
-      fidl::AnyArena& arena, ::test_padding::Padding5ByteEnd src);
+struct WireNaturalConversionTraits<::test_padding::wire::Padding5ByteEnd, ::test_padding::Padding5ByteEnd> {
+  static ::test_padding::Padding5ByteEnd ToNatural(::test_padding::wire::Padding5ByteEnd src);
+  static ::test_padding::wire::Padding5ByteEnd ToWire(fidl::AnyArena& arena, ::test_padding::Padding5ByteEnd src);
 };
 
 template <>
@@ -123,12 +105,9 @@ struct WireTypeForNaturalType<::test_padding::Padding5ByteEnd> {
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_padding::wire::Padding4ByteMiddle,
-                                   ::test_padding::Padding4ByteMiddle> {
-  static ::test_padding::Padding4ByteMiddle ToNatural(
-      ::test_padding::wire::Padding4ByteMiddle src);
-  static ::test_padding::wire::Padding4ByteMiddle ToWire(
-      fidl::AnyArena& arena, ::test_padding::Padding4ByteMiddle src);
+struct WireNaturalConversionTraits<::test_padding::wire::Padding4ByteMiddle, ::test_padding::Padding4ByteMiddle> {
+  static ::test_padding::Padding4ByteMiddle ToNatural(::test_padding::wire::Padding4ByteMiddle src);
+  static ::test_padding::wire::Padding4ByteMiddle ToWire(fidl::AnyArena& arena, ::test_padding::Padding4ByteMiddle src);
 };
 
 template <>
@@ -141,12 +120,9 @@ struct WireTypeForNaturalType<::test_padding::Padding4ByteMiddle> {
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_padding::wire::Padding4ByteEnd,
-                                   ::test_padding::Padding4ByteEnd> {
-  static ::test_padding::Padding4ByteEnd ToNatural(
-      ::test_padding::wire::Padding4ByteEnd src);
-  static ::test_padding::wire::Padding4ByteEnd ToWire(
-      fidl::AnyArena& arena, ::test_padding::Padding4ByteEnd src);
+struct WireNaturalConversionTraits<::test_padding::wire::Padding4ByteEnd, ::test_padding::Padding4ByteEnd> {
+  static ::test_padding::Padding4ByteEnd ToNatural(::test_padding::wire::Padding4ByteEnd src);
+  static ::test_padding::wire::Padding4ByteEnd ToWire(fidl::AnyArena& arena, ::test_padding::Padding4ByteEnd src);
 };
 
 template <>
@@ -159,18 +135,13 @@ struct WireTypeForNaturalType<::test_padding::Padding4ByteEnd> {
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_padding::wire::Padding4ByteAlignmentLength12,
-    ::test_padding::Padding4ByteAlignmentLength12> {
-  static ::test_padding::Padding4ByteAlignmentLength12 ToNatural(
-      ::test_padding::wire::Padding4ByteAlignmentLength12 src);
-  static ::test_padding::wire::Padding4ByteAlignmentLength12 ToWire(
-      fidl::AnyArena& arena, ::test_padding::Padding4ByteAlignmentLength12 src);
+struct WireNaturalConversionTraits<::test_padding::wire::Padding4ByteAlignmentLength12, ::test_padding::Padding4ByteAlignmentLength12> {
+  static ::test_padding::Padding4ByteAlignmentLength12 ToNatural(::test_padding::wire::Padding4ByteAlignmentLength12 src);
+  static ::test_padding::wire::Padding4ByteAlignmentLength12 ToWire(fidl::AnyArena& arena, ::test_padding::Padding4ByteAlignmentLength12 src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_padding::wire::Padding4ByteAlignmentLength12> {
+struct NaturalTypeForWireType<::test_padding::wire::Padding4ByteAlignmentLength12> {
   using type = ::test_padding::Padding4ByteAlignmentLength12;
 };
 template <>
@@ -179,12 +150,9 @@ struct WireTypeForNaturalType<::test_padding::Padding4ByteAlignmentLength12> {
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_padding::wire::Padding3ByteMiddle,
-                                   ::test_padding::Padding3ByteMiddle> {
-  static ::test_padding::Padding3ByteMiddle ToNatural(
-      ::test_padding::wire::Padding3ByteMiddle src);
-  static ::test_padding::wire::Padding3ByteMiddle ToWire(
-      fidl::AnyArena& arena, ::test_padding::Padding3ByteMiddle src);
+struct WireNaturalConversionTraits<::test_padding::wire::Padding3ByteMiddle, ::test_padding::Padding3ByteMiddle> {
+  static ::test_padding::Padding3ByteMiddle ToNatural(::test_padding::wire::Padding3ByteMiddle src);
+  static ::test_padding::wire::Padding3ByteMiddle ToWire(fidl::AnyArena& arena, ::test_padding::Padding3ByteMiddle src);
 };
 
 template <>
@@ -197,12 +165,9 @@ struct WireTypeForNaturalType<::test_padding::Padding3ByteMiddle> {
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_padding::wire::Padding3ByteEnd,
-                                   ::test_padding::Padding3ByteEnd> {
-  static ::test_padding::Padding3ByteEnd ToNatural(
-      ::test_padding::wire::Padding3ByteEnd src);
-  static ::test_padding::wire::Padding3ByteEnd ToWire(
-      fidl::AnyArena& arena, ::test_padding::Padding3ByteEnd src);
+struct WireNaturalConversionTraits<::test_padding::wire::Padding3ByteEnd, ::test_padding::Padding3ByteEnd> {
+  static ::test_padding::Padding3ByteEnd ToNatural(::test_padding::wire::Padding3ByteEnd src);
+  static ::test_padding::wire::Padding3ByteEnd ToWire(fidl::AnyArena& arena, ::test_padding::Padding3ByteEnd src);
 };
 
 template <>
@@ -215,12 +180,9 @@ struct WireTypeForNaturalType<::test_padding::Padding3ByteEnd> {
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_padding::wire::Padding2ByteMiddle,
-                                   ::test_padding::Padding2ByteMiddle> {
-  static ::test_padding::Padding2ByteMiddle ToNatural(
-      ::test_padding::wire::Padding2ByteMiddle src);
-  static ::test_padding::wire::Padding2ByteMiddle ToWire(
-      fidl::AnyArena& arena, ::test_padding::Padding2ByteMiddle src);
+struct WireNaturalConversionTraits<::test_padding::wire::Padding2ByteMiddle, ::test_padding::Padding2ByteMiddle> {
+  static ::test_padding::Padding2ByteMiddle ToNatural(::test_padding::wire::Padding2ByteMiddle src);
+  static ::test_padding::wire::Padding2ByteMiddle ToWire(fidl::AnyArena& arena, ::test_padding::Padding2ByteMiddle src);
 };
 
 template <>
@@ -233,12 +195,9 @@ struct WireTypeForNaturalType<::test_padding::Padding2ByteMiddle> {
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_padding::wire::Padding2ByteEnd,
-                                   ::test_padding::Padding2ByteEnd> {
-  static ::test_padding::Padding2ByteEnd ToNatural(
-      ::test_padding::wire::Padding2ByteEnd src);
-  static ::test_padding::wire::Padding2ByteEnd ToWire(
-      fidl::AnyArena& arena, ::test_padding::Padding2ByteEnd src);
+struct WireNaturalConversionTraits<::test_padding::wire::Padding2ByteEnd, ::test_padding::Padding2ByteEnd> {
+  static ::test_padding::Padding2ByteEnd ToNatural(::test_padding::wire::Padding2ByteEnd src);
+  static ::test_padding::wire::Padding2ByteEnd ToWire(fidl::AnyArena& arena, ::test_padding::Padding2ByteEnd src);
 };
 
 template <>
@@ -251,18 +210,13 @@ struct WireTypeForNaturalType<::test_padding::Padding2ByteEnd> {
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_padding::wire::Padding2ByteAlignmentLength6,
-    ::test_padding::Padding2ByteAlignmentLength6> {
-  static ::test_padding::Padding2ByteAlignmentLength6 ToNatural(
-      ::test_padding::wire::Padding2ByteAlignmentLength6 src);
-  static ::test_padding::wire::Padding2ByteAlignmentLength6 ToWire(
-      fidl::AnyArena& arena, ::test_padding::Padding2ByteAlignmentLength6 src);
+struct WireNaturalConversionTraits<::test_padding::wire::Padding2ByteAlignmentLength6, ::test_padding::Padding2ByteAlignmentLength6> {
+  static ::test_padding::Padding2ByteAlignmentLength6 ToNatural(::test_padding::wire::Padding2ByteAlignmentLength6 src);
+  static ::test_padding::wire::Padding2ByteAlignmentLength6 ToWire(fidl::AnyArena& arena, ::test_padding::Padding2ByteAlignmentLength6 src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_padding::wire::Padding2ByteAlignmentLength6> {
+struct NaturalTypeForWireType<::test_padding::wire::Padding2ByteAlignmentLength6> {
   using type = ::test_padding::Padding2ByteAlignmentLength6;
 };
 template <>
@@ -271,12 +225,9 @@ struct WireTypeForNaturalType<::test_padding::Padding2ByteAlignmentLength6> {
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_padding::wire::Padding1ByteMiddle,
-                                   ::test_padding::Padding1ByteMiddle> {
-  static ::test_padding::Padding1ByteMiddle ToNatural(
-      ::test_padding::wire::Padding1ByteMiddle src);
-  static ::test_padding::wire::Padding1ByteMiddle ToWire(
-      fidl::AnyArena& arena, ::test_padding::Padding1ByteMiddle src);
+struct WireNaturalConversionTraits<::test_padding::wire::Padding1ByteMiddle, ::test_padding::Padding1ByteMiddle> {
+  static ::test_padding::Padding1ByteMiddle ToNatural(::test_padding::wire::Padding1ByteMiddle src);
+  static ::test_padding::wire::Padding1ByteMiddle ToWire(fidl::AnyArena& arena, ::test_padding::Padding1ByteMiddle src);
 };
 
 template <>
@@ -289,12 +240,9 @@ struct WireTypeForNaturalType<::test_padding::Padding1ByteMiddle> {
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_padding::wire::Padding1ByteEnd,
-                                   ::test_padding::Padding1ByteEnd> {
-  static ::test_padding::Padding1ByteEnd ToNatural(
-      ::test_padding::wire::Padding1ByteEnd src);
-  static ::test_padding::wire::Padding1ByteEnd ToWire(
-      fidl::AnyArena& arena, ::test_padding::Padding1ByteEnd src);
+struct WireNaturalConversionTraits<::test_padding::wire::Padding1ByteEnd, ::test_padding::Padding1ByteEnd> {
+  static ::test_padding::Padding1ByteEnd ToNatural(::test_padding::wire::Padding1ByteEnd src);
+  static ::test_padding::wire::Padding1ByteEnd ToWire(fidl::AnyArena& arena, ::test_padding::Padding1ByteEnd src);
 };
 
 template <>

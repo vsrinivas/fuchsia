@@ -14,29 +14,23 @@
 
 namespace fuzzing {
 
-using ExampleUseOfErrorSyntax_CallWhichMayFail_Response =
-    ::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response;
-using ExampleUseOfErrorSyntax_CallWhichMayFail_Result =
-    ::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result;
-using ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse =
-    ::test::errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse;
-using ExampleUseOfErrorSyntaxCallWhichMayFailRequest =
-    ::test::errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest;
+using ExampleUseOfErrorSyntax_CallWhichMayFail_Response = ::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response;
+using ExampleUseOfErrorSyntax_CallWhichMayFail_Result = ::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result;
+using ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse = ::test::errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse;
+using ExampleUseOfErrorSyntaxCallWhichMayFailRequest = ::test::errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest;
 
 template <>
 struct MinSize<ExampleUseOfErrorSyntax_CallWhichMayFail_Response> {
-  operator size_t() { return MinSize<int64_t>(); }
+  operator size_t() {
+    return MinSize<int64_t>();
+  }
 };
 template <>
 struct Allocate<ExampleUseOfErrorSyntax_CallWhichMayFail_Response> {
-  ExampleUseOfErrorSyntax_CallWhichMayFail_Response operator()(FuzzInput* src,
-                                                               size_t* size) {
-    ZX_ASSERT(*size >=
-              MinSize<ExampleUseOfErrorSyntax_CallWhichMayFail_Response>());
+  ExampleUseOfErrorSyntax_CallWhichMayFail_Response operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<ExampleUseOfErrorSyntax_CallWhichMayFail_Response>());
     ExampleUseOfErrorSyntax_CallWhichMayFail_Response out;
-    const size_t slack_per_member =
-        (*size - MinSize<ExampleUseOfErrorSyntax_CallWhichMayFail_Response>()) /
-        1;
+    const size_t slack_per_member = (*size - MinSize<ExampleUseOfErrorSyntax_CallWhichMayFail_Response>()) / 1;
     size_t out_size;
     out_size = MinSize<int64_t>() + slack_per_member;
     out.value = Allocate<int64_t>{}(src, &out_size);
@@ -46,11 +40,7 @@ struct Allocate<ExampleUseOfErrorSyntax_CallWhichMayFail_Response> {
 template <>
 struct MinSize<ExampleUseOfErrorSyntax_CallWhichMayFail_Result> {
   operator size_t() {
-    size_t sizes[] = {
-        0,
-        MinSize<::test::errorsyntax::
-                    ExampleUseOfErrorSyntax_CallWhichMayFail_Response>(),
-        MinSize<uint32_t>()};
+    size_t sizes[] = {0, MinSize<::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response>(), MinSize<uint32_t>()};
     return 1 + *std::max_element(sizes, sizes + 2 + 1);
   }
 };
@@ -58,10 +48,8 @@ template <>
 struct Allocate<ExampleUseOfErrorSyntax_CallWhichMayFail_Result> {
   static_assert(2 > 0, "xunion must have at least one member");
 
-  ExampleUseOfErrorSyntax_CallWhichMayFail_Result operator()(FuzzInput* src,
-                                                             size_t* size) {
-    ZX_ASSERT(*size >=
-              MinSize<ExampleUseOfErrorSyntax_CallWhichMayFail_Result>());
+  ExampleUseOfErrorSyntax_CallWhichMayFail_Result operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<ExampleUseOfErrorSyntax_CallWhichMayFail_Result>());
 
     uint8_t selector;
     ZX_ASSERT(src->CopyBytes(&selector, 1));
@@ -70,10 +58,7 @@ struct Allocate<ExampleUseOfErrorSyntax_CallWhichMayFail_Result> {
     ExampleUseOfErrorSyntax_CallWhichMayFail_Result out;
     switch (selector % 2) {
       case 0: {
-        out.set_response(
-            Allocate<::test::errorsyntax::
-                         ExampleUseOfErrorSyntax_CallWhichMayFail_Response>{}(
-                src, size));
+        out.set_response(Allocate<::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response>{}(src, size));
         break;
       }
       case 1: {
@@ -88,44 +73,33 @@ struct Allocate<ExampleUseOfErrorSyntax_CallWhichMayFail_Result> {
 template <>
 struct MinSize<ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse> {
   operator size_t() {
-    return MinSize<
-        ::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result>();
+    return MinSize<::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result>();
   }
 };
 template <>
 struct Allocate<ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse> {
-  ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse operator()(FuzzInput* src,
-                                                                size_t* size) {
-    ZX_ASSERT(*size >=
-              MinSize<ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>());
+  ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>());
     ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse out;
-    const size_t slack_per_member =
-        (*size -
-         MinSize<ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>()) /
-        1;
+    const size_t slack_per_member = (*size - MinSize<ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>()) / 1;
     size_t out_size;
-    out_size = MinSize<::test::errorsyntax::
-                           ExampleUseOfErrorSyntax_CallWhichMayFail_Result>() +
-               slack_per_member;
-    out.result = Allocate<
-        ::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result>{}(
-        src, &out_size);
+    out_size = MinSize<::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result>() + slack_per_member;
+    out.result = Allocate<::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result>{}(src, &out_size);
     return out;
   }
 };
 template <>
 struct MinSize<ExampleUseOfErrorSyntaxCallWhichMayFailRequest> {
-  operator size_t() { return MinSize<::std::string>(); }
+  operator size_t() {
+    return MinSize<::std::string>();
+  }
 };
 template <>
 struct Allocate<ExampleUseOfErrorSyntaxCallWhichMayFailRequest> {
-  ExampleUseOfErrorSyntaxCallWhichMayFailRequest operator()(FuzzInput* src,
-                                                            size_t* size) {
-    ZX_ASSERT(*size >=
-              MinSize<ExampleUseOfErrorSyntaxCallWhichMayFailRequest>());
+  ExampleUseOfErrorSyntaxCallWhichMayFailRequest operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<ExampleUseOfErrorSyntaxCallWhichMayFailRequest>());
     ExampleUseOfErrorSyntaxCallWhichMayFailRequest out;
-    const size_t slack_per_member =
-        (*size - MinSize<ExampleUseOfErrorSyntaxCallWhichMayFailRequest>()) / 1;
+    const size_t slack_per_member = (*size - MinSize<ExampleUseOfErrorSyntaxCallWhichMayFailRequest>()) / 1;
     size_t out_size;
     out_size = MinSize<::std::string>() + slack_per_member;
     out.s = Allocate<::std::string>{}(src, &out_size);

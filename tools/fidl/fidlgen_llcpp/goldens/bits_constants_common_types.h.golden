@@ -25,15 +25,9 @@ class BitsType final {
   const static BitsType kMask;
 
   explicit constexpr inline operator uint32_t() const { return value_; }
-  explicit constexpr inline operator bool() const {
-    return static_cast<bool>(value_);
-  }
-  constexpr inline bool operator==(const BitsType& other) const {
-    return value_ == other.value_;
-  }
-  constexpr inline bool operator!=(const BitsType& other) const {
-    return value_ != other.value_;
-  }
+  explicit constexpr inline operator bool() const { return static_cast<bool>(value_); }
+  constexpr inline bool operator==(const BitsType& other) const { return value_ == other.value_; }
+  constexpr inline bool operator!=(const BitsType& other) const { return value_ != other.value_; }
   constexpr inline BitsType operator~() const;
   constexpr inline BitsType operator|(const BitsType& other) const;
   constexpr inline BitsType operator&(const BitsType& other) const;
@@ -67,30 +61,25 @@ constexpr const ::test_bitsconstants::BitsType BitsType::kB =
     ::test_bitsconstants::BitsType(128u);
 constexpr const ::test_bitsconstants::BitsType BitsType::kC =
     ::test_bitsconstants::BitsType(2u);
-constexpr const ::test_bitsconstants::BitsType BitsType::kMask =
-    ::test_bitsconstants::BitsType(131u);
+constexpr const ::test_bitsconstants::BitsType BitsType::kMask = ::test_bitsconstants::BitsType(131u);
 
 constexpr inline ::test_bitsconstants::BitsType BitsType::operator~() const {
-  return ::test_bitsconstants::BitsType(
-      static_cast<uint32_t>(~this->value_ & kMask.value_));
+  return ::test_bitsconstants::BitsType(static_cast<uint32_t>(~this->value_ & kMask.value_));
 }
 
 constexpr inline ::test_bitsconstants::BitsType BitsType::operator|(
     const ::test_bitsconstants::BitsType& other) const {
-  return ::test_bitsconstants::BitsType(
-      static_cast<uint32_t>(this->value_ | other.value_));
+  return ::test_bitsconstants::BitsType(static_cast<uint32_t>(this->value_ | other.value_));
 }
 
 constexpr inline ::test_bitsconstants::BitsType BitsType::operator&(
     const ::test_bitsconstants::BitsType& other) const {
-  return ::test_bitsconstants::BitsType(
-      static_cast<uint32_t>(this->value_ & other.value_));
+  return ::test_bitsconstants::BitsType(static_cast<uint32_t>(this->value_ & other.value_));
 }
 
 constexpr inline ::test_bitsconstants::BitsType BitsType::operator^(
     const ::test_bitsconstants::BitsType& other) const {
-  return ::test_bitsconstants::BitsType(
-      static_cast<uint32_t>(this->value_ ^ other.value_));
+  return ::test_bitsconstants::BitsType(static_cast<uint32_t>(this->value_ ^ other.value_));
 }
 
 constexpr inline void BitsType::operator|=(
@@ -114,8 +103,7 @@ namespace fidl {
 template <>
 struct IsFidlType<::test_bitsconstants::BitsType> : public std::true_type {};
 template <>
-struct ContainsHandle<::test_bitsconstants::BitsType> : public std::false_type {
-};
+struct ContainsHandle<::test_bitsconstants::BitsType> : public std::false_type {};
 static_assert(std::is_standard_layout_v<::test_bitsconstants::BitsType>);
 static_assert(sizeof(::test_bitsconstants::BitsType) == sizeof(uint32_t));
 

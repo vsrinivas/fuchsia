@@ -19,8 +19,7 @@
 namespace test_structdefaultvalueenumlibraryreference {
 class Foo;
 
-extern "C" const fidl_type_t
-    test_structdefaultvalueenumlibraryreference_FooTable;
+extern "C" const fidl_type_t test_structdefaultvalueenumlibraryreference_FooTable;
 
 class Foo {
  private:
@@ -33,8 +32,7 @@ class Foo {
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |Foo| only if all of its members are default
-  // constructible.
+  // Default constructs a |Foo| only if all of its members are default constructible.
   Foo() = default;
 #pragma clang diagnostic pop
 
@@ -47,24 +45,24 @@ class Foo {
   }
 
   bool operator==(const Foo& other) const noexcept {
-    return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_structdefaultvalueenumlibraryreference::Foo, 4>::Equal(this,
-                                                                      &other);
+    return ::fidl::internal::NaturalStructCodingTraits<::test_structdefaultvalueenumlibraryreference::Foo, 4>::Equal(this, &other);
   }
   bool operator!=(const Foo& other) const noexcept {
-    return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_structdefaultvalueenumlibraryreference::Foo, 4>::Equal(this,
-                                                                      &other);
+    return !::fidl::internal::NaturalStructCodingTraits<::test_structdefaultvalueenumlibraryreference::Foo, 4>::Equal(this, &other);
   }
 
-  ::test_dependent::MyEnum field() const { return storage_.field; }
+  ::test_dependent::MyEnum
+  field() const {
+    return storage_.field;
+  }
 
-  ::test_dependent::MyEnum& field() { return storage_.field; }
+  ::test_dependent::MyEnum& field() {
+    return storage_.field;
+  }
 
-  Foo(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : Foo(Storage_{
-            .field = ::test_dependent::MyEnum::kA,
-        }) {}
+  Foo(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Foo(Storage_{
+                                                                        .field = ::test_dependent::MyEnum::kA,
+                                                                    }) {}
 
  private:
   struct Storage_ final {
@@ -74,32 +72,23 @@ class Foo {
   Storage_ storage_;
   Storage_ CloneStorage_() const;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_structdefaultvalueenumlibraryreference::Foo, 4>;
-  friend struct ::fidl::internal::MemberVisitor<
-      ::test_structdefaultvalueenumlibraryreference::Foo>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::test_dependent::MyEnum,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::field, 0});
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_structdefaultvalueenumlibraryreference::Foo, 4>;
+  friend struct ::fidl::internal::MemberVisitor<::test_structdefaultvalueenumlibraryreference::Foo>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::test_dependent::MyEnum, fidl::internal::NaturalCodingConstraintEmpty>{
+      &Storage_::field, 0});
   static constexpr auto kPadding = std::make_tuple();
 };
 
 }  // namespace test_structdefaultvalueenumlibraryreference
 namespace fidl {
 
-extern "C" const fidl_type_t
-    test_structdefaultvalueenumlibraryreference_FooTable;
+extern "C" const fidl_type_t test_structdefaultvalueenumlibraryreference_FooTable;
 
 template <>
-struct IsFidlType<::test_structdefaultvalueenumlibraryreference::Foo>
-    : public std::true_type {};
+struct IsFidlType<::test_structdefaultvalueenumlibraryreference::Foo> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<
-    ::test_structdefaultvalueenumlibraryreference::Foo,
-    ::fidl::internal::NaturalCodingConstraintEmpty>
-    final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_structdefaultvalueenumlibraryreference::Foo, 4> {};
+struct internal::NaturalCodingTraits<::test_structdefaultvalueenumlibraryreference::Foo, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_structdefaultvalueenumlibraryreference::Foo, 4> {};
 
 }  // namespace fidl

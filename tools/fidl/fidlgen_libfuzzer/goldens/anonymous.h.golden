@@ -16,22 +16,17 @@ namespace fuzzing {
 using UnionMember = ::test::anonymous::UnionMember;
 using TableData = ::test::anonymous::TableData;
 using TableMember = ::test::anonymous::TableMember;
-using SomeProtocolSomeMethodRequest =
-    ::test::anonymous::SomeProtocolSomeMethodRequest;
-using SomeProtocol_SomeMethod_Error =
-    ::test::anonymous::SomeProtocol_SomeMethod_Error;
+using SomeProtocolSomeMethodRequest = ::test::anonymous::SomeProtocolSomeMethodRequest;
+using SomeProtocol_SomeMethod_Error = ::test::anonymous::SomeProtocol_SomeMethod_Error;
 using Op = ::test::anonymous::Op;
 using OverrideTest = ::test::anonymous::OverrideTest;
 using Flags = ::test::anonymous::Flags;
 using FunctionApplication = ::test::anonymous::FunctionApplication;
 using Expression = ::test::anonymous::Expression;
 using BitsMember = ::test::anonymous::BitsMember;
-using SomeProtocol_SomeMethod_Response =
-    ::test::anonymous::SomeProtocol_SomeMethod_Response;
-using SomeProtocol_SomeMethod_Result =
-    ::test::anonymous::SomeProtocol_SomeMethod_Result;
-using SomeProtocolSomeMethodTopResponse =
-    ::test::anonymous::SomeProtocolSomeMethodTopResponse;
+using SomeProtocol_SomeMethod_Response = ::test::anonymous::SomeProtocol_SomeMethod_Response;
+using SomeProtocol_SomeMethod_Result = ::test::anonymous::SomeProtocol_SomeMethod_Result;
+using SomeProtocolSomeMethodTopResponse = ::test::anonymous::SomeProtocolSomeMethodTopResponse;
 
 template <>
 struct MinSize<UnionMember> {
@@ -64,7 +59,9 @@ struct Allocate<UnionMember> {
 };
 template <>
 struct MinSize<TableData> {
-  operator size_t() { return MinSize<uint8_t>(); }
+  operator size_t() {
+    return MinSize<uint8_t>();
+  }
 };
 template <>
 struct Allocate<TableData> {
@@ -91,18 +88,15 @@ struct Allocate<TableMember> {
     TableMember out;
     const size_t slack_per_member = (*size - MinSize<TableMember>()) / 1;
     size_t out_size;
-    out_size = MinSize<::std::vector<::test::anonymous::TableData>>() +
-               slack_per_member;
-    out.set_table_data(Allocate<::std::vector<::test::anonymous::TableData>>{}(
-        src, &out_size));
+    out_size = MinSize<::std::vector<::test::anonymous::TableData>>() + slack_per_member;
+    out.set_table_data(Allocate<::std::vector<::test::anonymous::TableData>>{}(src, &out_size));
     return out;
   }
 };
 template <>
 struct MinSize<SomeProtocolSomeMethodRequest> {
   operator size_t() {
-    return MinSize<::test::anonymous::UnionMember>() +
-           MinSize<::test::anonymous::TableMember>();
+    return MinSize<::test::anonymous::UnionMember>() + MinSize<::test::anonymous::TableMember>();
   }
 };
 template <>
@@ -110,15 +104,12 @@ struct Allocate<SomeProtocolSomeMethodRequest> {
   SomeProtocolSomeMethodRequest operator()(FuzzInput* src, size_t* size) {
     ZX_ASSERT(*size >= MinSize<SomeProtocolSomeMethodRequest>());
     SomeProtocolSomeMethodRequest out;
-    const size_t slack_per_member =
-        (*size - MinSize<SomeProtocolSomeMethodRequest>()) / 2;
+    const size_t slack_per_member = (*size - MinSize<SomeProtocolSomeMethodRequest>()) / 2;
     size_t out_size;
     out_size = MinSize<::test::anonymous::UnionMember>() + slack_per_member;
-    out.union_member =
-        Allocate<::test::anonymous::UnionMember>{}(src, &out_size);
+    out.union_member = Allocate<::test::anonymous::UnionMember>{}(src, &out_size);
     out_size = MinSize<::test::anonymous::TableMember>() + slack_per_member;
-    out.table_member =
-        Allocate<::test::anonymous::TableMember>{}(src, &out_size);
+    out.table_member = Allocate<::test::anonymous::TableMember>{}(src, &out_size);
     return out;
   }
 };
@@ -178,9 +169,7 @@ struct Allocate<Op> {
 template <>
 struct MinSize<OverrideTest> {
   operator size_t() {
-    return MinSize<::test::anonymous::Op>() +
-           MinSize<::std::unique_ptr<::test::anonymous::Expression>>() +
-           MinSize<::std::unique_ptr<::test::anonymous::Expression>>();
+    return MinSize<::test::anonymous::Op>() + MinSize<::std::unique_ptr<::test::anonymous::Expression>>() + MinSize<::std::unique_ptr<::test::anonymous::Expression>>();
   }
 };
 template <>
@@ -192,14 +181,10 @@ struct Allocate<OverrideTest> {
     size_t out_size;
     out_size = MinSize<::test::anonymous::Op>() + slack_per_member;
     out.op = Allocate<::test::anonymous::Op>{}(src, &out_size);
-    out_size = MinSize<::std::unique_ptr<::test::anonymous::Expression>>() +
-               slack_per_member;
-    out.left = Allocate<::std::unique_ptr<::test::anonymous::Expression>>{}(
-        src, &out_size);
-    out_size = MinSize<::std::unique_ptr<::test::anonymous::Expression>>() +
-               slack_per_member;
-    out.right = Allocate<::std::unique_ptr<::test::anonymous::Expression>>{}(
-        src, &out_size);
+    out_size = MinSize<::std::unique_ptr<::test::anonymous::Expression>>() + slack_per_member;
+    out.left = Allocate<::std::unique_ptr<::test::anonymous::Expression>>{}(src, &out_size);
+    out_size = MinSize<::std::unique_ptr<::test::anonymous::Expression>>() + slack_per_member;
+    out.right = Allocate<::std::unique_ptr<::test::anonymous::Expression>>{}(src, &out_size);
     return out;
   }
 };
@@ -211,17 +196,13 @@ template <>
 struct Allocate<Flags> {
   Flags operator()(FuzzInput* src, size_t* size) {
     ZX_ASSERT(*size >= sizeof(uint16_t));
-    return Flags(
-        *reinterpret_cast<const uint16_t*>(src->TakeBytes(sizeof(uint16_t))));
+    return Flags(*reinterpret_cast<const uint16_t*>(src->TakeBytes(sizeof(uint16_t))));
   }
 };
 template <>
 struct MinSize<FunctionApplication> {
   operator size_t() {
-    return MinSize<::std::string>() +
-           MinSize<::std::vector<
-               ::std::unique_ptr<::test::anonymous::Expression>>>() +
-           MinSize<::test::anonymous::Flags>();
+    return MinSize<::std::string>() + MinSize<::std::vector<::std::unique_ptr<::test::anonymous::Expression>>>() + MinSize<::test::anonymous::Flags>();
   }
 };
 template <>
@@ -229,19 +210,12 @@ struct Allocate<FunctionApplication> {
   FunctionApplication operator()(FuzzInput* src, size_t* size) {
     ZX_ASSERT(*size >= MinSize<FunctionApplication>());
     FunctionApplication out;
-    const size_t slack_per_member =
-        (*size - MinSize<FunctionApplication>()) / 3;
+    const size_t slack_per_member = (*size - MinSize<FunctionApplication>()) / 3;
     size_t out_size;
     out_size = MinSize<::std::string>() + slack_per_member;
     out.set_func(Allocate<::std::string>{}(src, &out_size));
-    out_size =
-        MinSize<
-            ::std::vector<::std::unique_ptr<::test::anonymous::Expression>>>() +
-        slack_per_member;
-    out.set_args(
-        Allocate<
-            ::std::vector<::std::unique_ptr<::test::anonymous::Expression>>>{}(
-            src, &out_size));
+    out_size = MinSize<::std::vector<::std::unique_ptr<::test::anonymous::Expression>>>() + slack_per_member;
+    out.set_args(Allocate<::std::vector<::std::unique_ptr<::test::anonymous::Expression>>>{}(src, &out_size));
     out_size = MinSize<::test::anonymous::Flags>() + slack_per_member;
     out.set_flags(Allocate<::test::anonymous::Flags>{}(src, &out_size));
     return out;
@@ -250,9 +224,7 @@ struct Allocate<FunctionApplication> {
 template <>
 struct MinSize<Expression> {
   operator size_t() {
-    size_t sizes[] = {0, MinSize<uint64_t>(),
-                      MinSize<::test::anonymous::OverrideTest>(),
-                      MinSize<::test::anonymous::FunctionApplication>()};
+    size_t sizes[] = {0, MinSize<uint64_t>(), MinSize<::test::anonymous::OverrideTest>(), MinSize<::test::anonymous::FunctionApplication>()};
     return 1 + *std::max_element(sizes, sizes + 3 + 1);
   }
 };
@@ -278,8 +250,7 @@ struct Allocate<Expression> {
         break;
       }
       case 2: {
-        out.set_function_application(
-            Allocate<::test::anonymous::FunctionApplication>{}(src, size));
+        out.set_function_application(Allocate<::test::anonymous::FunctionApplication>{}(src, size));
         break;
       }
     }
@@ -295,21 +266,21 @@ template <>
 struct Allocate<BitsMember> {
   BitsMember operator()(FuzzInput* src, size_t* size) {
     ZX_ASSERT(*size >= sizeof(uint32_t));
-    return BitsMember(
-        *reinterpret_cast<const uint32_t*>(src->TakeBytes(sizeof(uint32_t))));
+    return BitsMember(*reinterpret_cast<const uint32_t*>(src->TakeBytes(sizeof(uint32_t))));
   }
 };
 template <>
 struct MinSize<SomeProtocol_SomeMethod_Response> {
-  operator size_t() { return MinSize<::test::anonymous::BitsMember>(); }
+  operator size_t() {
+    return MinSize<::test::anonymous::BitsMember>();
+  }
 };
 template <>
 struct Allocate<SomeProtocol_SomeMethod_Response> {
   SomeProtocol_SomeMethod_Response operator()(FuzzInput* src, size_t* size) {
     ZX_ASSERT(*size >= MinSize<SomeProtocol_SomeMethod_Response>());
     SomeProtocol_SomeMethod_Response out;
-    const size_t slack_per_member =
-        (*size - MinSize<SomeProtocol_SomeMethod_Response>()) / 1;
+    const size_t slack_per_member = (*size - MinSize<SomeProtocol_SomeMethod_Response>()) / 1;
     size_t out_size;
     out_size = MinSize<::test::anonymous::BitsMember>() + slack_per_member;
     out.bits_member = Allocate<::test::anonymous::BitsMember>{}(src, &out_size);
@@ -319,9 +290,7 @@ struct Allocate<SomeProtocol_SomeMethod_Response> {
 template <>
 struct MinSize<SomeProtocol_SomeMethod_Result> {
   operator size_t() {
-    size_t sizes[] = {
-        0, MinSize<::test::anonymous::SomeProtocol_SomeMethod_Response>(),
-        MinSize<::test::anonymous::SomeProtocol_SomeMethod_Error>()};
+    size_t sizes[] = {0, MinSize<::test::anonymous::SomeProtocol_SomeMethod_Response>(), MinSize<::test::anonymous::SomeProtocol_SomeMethod_Error>()};
     return 1 + *std::max_element(sizes, sizes + 2 + 1);
   }
 };
@@ -339,15 +308,11 @@ struct Allocate<SomeProtocol_SomeMethod_Result> {
     SomeProtocol_SomeMethod_Result out;
     switch (selector % 2) {
       case 0: {
-        out.set_response(
-            Allocate<::test::anonymous::SomeProtocol_SomeMethod_Response>{}(
-                src, size));
+        out.set_response(Allocate<::test::anonymous::SomeProtocol_SomeMethod_Response>{}(src, size));
         break;
       }
       case 1: {
-        out.set_err(
-            Allocate<::test::anonymous::SomeProtocol_SomeMethod_Error>{}(src,
-                                                                         size));
+        out.set_err(Allocate<::test::anonymous::SomeProtocol_SomeMethod_Error>{}(src, size));
         break;
       }
     }
@@ -366,13 +331,10 @@ struct Allocate<SomeProtocolSomeMethodTopResponse> {
   SomeProtocolSomeMethodTopResponse operator()(FuzzInput* src, size_t* size) {
     ZX_ASSERT(*size >= MinSize<SomeProtocolSomeMethodTopResponse>());
     SomeProtocolSomeMethodTopResponse out;
-    const size_t slack_per_member =
-        (*size - MinSize<SomeProtocolSomeMethodTopResponse>()) / 1;
+    const size_t slack_per_member = (*size - MinSize<SomeProtocolSomeMethodTopResponse>()) / 1;
     size_t out_size;
-    out_size = MinSize<::test::anonymous::SomeProtocol_SomeMethod_Result>() +
-               slack_per_member;
-    out.result = Allocate<::test::anonymous::SomeProtocol_SomeMethod_Result>{}(
-        src, &out_size);
+    out_size = MinSize<::test::anonymous::SomeProtocol_SomeMethod_Result>() + slack_per_member;
+    out.result = Allocate<::test::anonymous::SomeProtocol_SomeMethod_Result>{}(src, &out_size);
     return out;
   }
 };

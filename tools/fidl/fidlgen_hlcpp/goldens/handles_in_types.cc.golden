@@ -13,12 +13,13 @@ namespace handlesintypes {
 #ifdef __Fuchsia__
 
 extern "C" const fidl_type_t test_handlesintypes_UnionWithHandleTable;
-const fidl_type_t* UnionWithHandle::FidlType =
-    &test_handlesintypes_UnionWithHandleTable;
+const fidl_type_t* UnionWithHandle::FidlType = &test_handlesintypes_UnionWithHandleTable;
 
 UnionWithHandle::UnionWithHandle() {}
 
-UnionWithHandle::~UnionWithHandle() { Destroy(); }
+UnionWithHandle::~UnionWithHandle() {
+  Destroy();
+}
 
 UnionWithHandle::UnionWithHandle(UnionWithHandle&& other) : tag_(other.tag_) {
   switch (tag_) {
@@ -26,8 +27,7 @@ UnionWithHandle::UnionWithHandle(UnionWithHandle&& other) : tag_(other.tag_) {
       new (&h_)::zx::vmo();
       h_ = std::move(other.h_);
       break;
-    case static_cast<fidl_xunion_tag_t>(
-        ::test::handlesintypes::UnionWithHandle::Tag::Invalid):
+    case static_cast<fidl_xunion_tag_t>(::test::handlesintypes::UnionWithHandle::Tag::Invalid):
       break;
     default:
       new (&unknown_data_) decltype(unknown_data_);
@@ -45,8 +45,7 @@ UnionWithHandle& UnionWithHandle::operator=(UnionWithHandle&& other) {
         new (&h_)::zx::vmo();
         h_ = std::move(other.h_);
         break;
-      case static_cast<fidl_xunion_tag_t>(
-          ::test::handlesintypes::UnionWithHandle::Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(::test::handlesintypes::UnionWithHandle::Tag::Invalid):
         break;
       default:
         new (&unknown_data_) decltype(unknown_data_);
@@ -63,48 +62,37 @@ UnionWithHandle UnionWithHandle::WithH(::zx::vmo&& val) {
   return result;
 }
 
-void UnionWithHandle::Encode(
-    ::fidl::Encoder* encoder, size_t offset,
-    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+void UnionWithHandle::Encode(::fidl::Encoder* encoder, size_t offset,
+                             cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
   switch (Which()) {
     case ::test::handlesintypes::UnionWithHandle::Tag::kH: {
-      if (::fidl::EncodingInlineSize<::zx::vmo>(encoder) <=
-          FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-        ::fidl::Encode(encoder, &h_,
-                       offset + offsetof(fidl_xunion_v2_t, envelope),
-                       ::fidl::HandleInformation{.object_type = ZX_OBJ_TYPE_VMO,
-                                                 .rights = 0x80000000});
+      if (::fidl::EncodingInlineSize<::zx::vmo>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+        ::fidl::Encode(encoder, &h_, offset + offsetof(fidl_xunion_v2_t, envelope), ::fidl::HandleInformation{.object_type = ZX_OBJ_TYPE_VMO, .rights = 0x80000000});
 
         fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
         xunion->tag = tag_;
-        xunion->envelope.num_handles = static_cast<uint16_t>(
-            encoder->CurrentHandleCount() - handles_before);
+        xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
         xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
         break;
       }
 
       ::fidl::Encode(
-          encoder, &h_,
-          encoder->Alloc(
-              ::fidl::EncodingInlineSize<::zx::vmo, ::fidl::Encoder>(encoder)),
-          ::fidl::HandleInformation{.object_type = ZX_OBJ_TYPE_VMO,
-                                    .rights = 0x80000000});
+          encoder,
+          &h_,
+          encoder->Alloc(::fidl::EncodingInlineSize<::zx::vmo, ::fidl::Encoder>(encoder)), ::fidl::HandleInformation{.object_type = ZX_OBJ_TYPE_VMO, .rights = 0x80000000});
 
       fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
       xunion->tag = tag_;
-      xunion->envelope.num_bytes =
-          static_cast<uint32_t>(encoder->CurrentLength() - length_before);
-      xunion->envelope.num_handles =
-          static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
+      xunion->envelope.num_bytes = static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+      xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
       xunion->envelope.flags = 0;
       break;
     }
     case ::test::handlesintypes::UnionWithHandle::Tag::kUnknown: {
-      ::fidl::EncodeUnknownData(encoder, &unknown_data_,
-                                offset + offsetof(fidl_xunion_t, envelope));
+      ::fidl::EncodeUnknownData(encoder, &unknown_data_, offset + offsetof(fidl_xunion_t, envelope));
       *encoder->GetPtr<uint64_t>(offset) = tag_;
       break;
     }
@@ -113,14 +101,13 @@ void UnionWithHandle::Encode(
   }
 }
 
-void UnionWithHandle::Decode(::fidl::Decoder* _decoder, UnionWithHandle* value,
-                             size_t offset) {
+void UnionWithHandle::Decode(::fidl::Decoder* _decoder, UnionWithHandle* value, size_t offset) {
   fidl_xunion_v2_t* xunion = _decoder->GetPtr<fidl_xunion_v2_t>(offset);
 
-  if (xunion->envelope.num_bytes == 0 && xunion->envelope.num_handles == 0 &&
+  if (xunion->envelope.num_bytes == 0 &&
+      xunion->envelope.num_handles == 0 &&
       xunion->envelope.flags == 0) {
-    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
-        ::test::handlesintypes::UnionWithHandle::Tag::Invalid));
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(::test::handlesintypes::UnionWithHandle::Tag::Invalid));
     return;
   }
 
@@ -138,8 +125,7 @@ void UnionWithHandle::Decode(::fidl::Decoder* _decoder, UnionWithHandle* value,
       auto unknown_info = _decoder->EnvelopeUnknownDataInfo(&xunion->envelope);
       value->unknown_data_.bytes.resize(unknown_info.num_bytes);
       value->unknown_data_.handles.resize(unknown_info.num_handles);
-      ::fidl::DecodeUnknownDataContents(_decoder, &value->unknown_data_,
-                                        unknown_info.value_offset);
+      ::fidl::DecodeUnknownDataContents(_decoder, &value->unknown_data_, unknown_info.value_offset);
       break;
     }
   }
@@ -166,9 +152,7 @@ UnionWithHandle& UnionWithHandle::set_h(::zx::vmo value) {
   h_ = std::move(value);
   return *this;
 }
-UnionWithHandle& UnionWithHandle::SetUnknownData(
-    fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes,
-    std::vector<zx::handle> handles) {
+UnionWithHandle& UnionWithHandle::SetUnknownData(fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes, std::vector<zx::handle> handles) {
   EnsureStorageInitialized(ordinal);
   unknown_data_.bytes = std::move(bytes);
   unknown_data_.handles = std::move(handles);
@@ -181,15 +165,13 @@ void UnionWithHandle::Destroy() {
       h_.~decltype(h_)();
       break;
 
-    case static_cast<fidl_xunion_tag_t>(
-        ::test::handlesintypes::UnionWithHandle::Tag::Invalid):
+    case static_cast<fidl_xunion_tag_t>(::test::handlesintypes::UnionWithHandle::Tag::Invalid):
       break;
     default:
       unknown_data_.~decltype(unknown_data_)();
       break;
   }
-  tag_ = static_cast<fidl_xunion_tag_t>(
-      ::test::handlesintypes::UnionWithHandle::Tag::Invalid);
+  tag_ = static_cast<fidl_xunion_tag_t>(::test::handlesintypes::UnionWithHandle::Tag::Invalid);
 }
 
 void UnionWithHandle::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
@@ -197,8 +179,7 @@ void UnionWithHandle::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     Destroy();
     tag_ = tag;
     switch (tag_) {
-      case static_cast<fidl_xunion_tag_t>(
-          ::test::handlesintypes::UnionWithHandle::Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(::test::handlesintypes::UnionWithHandle::Tag::Invalid):
         break;
       case ::test::handlesintypes::UnionWithHandle::Tag::kH:
         new (&h_)::zx::vmo();
@@ -214,8 +195,7 @@ void UnionWithHandle::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
 #ifdef __Fuchsia__
 
 extern "C" const fidl_type_t test_handlesintypes_TableWithHandleTable;
-const fidl_type_t* TableWithHandle::FidlType =
-    &test_handlesintypes_TableWithHandleTable;
+const fidl_type_t* TableWithHandle::FidlType = &test_handlesintypes_TableWithHandleTable;
 
 TableWithHandle::TableWithHandle() {}
 
@@ -247,54 +227,43 @@ TableWithHandle& TableWithHandle::operator=(TableWithHandle&& other) {
   return *this;
 }
 
-bool TableWithHandle::IsEmpty() const { return field_presence_.IsEmpty(); }
+bool TableWithHandle::IsEmpty() const {
+  return field_presence_.IsEmpty();
+}
 
-void TableWithHandle::Encode(
-    ::fidl::Encoder* _encoder, size_t _offset,
-    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+void TableWithHandle::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                             cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   size_t max_ordinal = MaxOrdinal();
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
-  __attribute__((__unused__)) size_t base =
-      _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
+  __attribute__((__unused__)) size_t base = _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
   if (field_presence_.IsSet<0>()) {
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
     size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
 
-    if (::fidl::EncodingInlineSize<::zx::vmo>(_encoder) <=
-        FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-      ::fidl::Encode(_encoder, &h_value_.value, envelope_base,
-                     ::fidl::HandleInformation{.object_type = ZX_OBJ_TYPE_VMO,
-                                               .rights = 0x80000000});
+    if (::fidl::EncodingInlineSize<::zx::vmo>(_encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+      ::fidl::Encode(_encoder, &h_value_.value, envelope_base, ::fidl::HandleInformation{.object_type = ZX_OBJ_TYPE_VMO, .rights = 0x80000000});
 
-      fidl_envelope_v2_t* envelope =
-          _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      envelope->num_handles = static_cast<uint16_t>(
-          _encoder->CurrentHandleCount() - handles_before);
+      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder, &h_value_.value,
-          _encoder->Alloc(
-              ::fidl::EncodingInlineSize<::zx::vmo, ::fidl::Encoder>(_encoder)),
-          ::fidl::HandleInformation{.object_type = ZX_OBJ_TYPE_VMO,
-                                    .rights = 0x80000000});
+          _encoder,
+          &h_value_.value,
+          _encoder->Alloc(::fidl::EncodingInlineSize<::zx::vmo, ::fidl::Encoder>(_encoder)), ::fidl::HandleInformation{.object_type = ZX_OBJ_TYPE_VMO, .rights = 0x80000000});
 
-      fidl_envelope_v2_t* envelope =
-          _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      envelope->num_bytes =
-          static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
-      envelope->num_handles = static_cast<uint16_t>(
-          _encoder->CurrentHandleCount() - handles_before);
+      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
+      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
       envelope->flags = 0;
     }
   }
 }
 
-void TableWithHandle::Decode(::fidl::Decoder* _decoder, TableWithHandle* _value,
-                             size_t _offset) {
+void TableWithHandle::Decode(::fidl::Decoder* _decoder, TableWithHandle* _value, size_t _offset) {
   fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
   __attribute__((__unused__)) size_t base;
   __attribute__((__unused__)) size_t count;
@@ -306,8 +275,7 @@ void TableWithHandle::Decode(::fidl::Decoder* _decoder, TableWithHandle* _value,
   count = encoded->count;
   if (count >= 1) {
     size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
-    fidl_envelope_v2_t* envelope =
-        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_h(),
                      _decoder->EnvelopeValueOffset(envelope));
@@ -325,8 +293,7 @@ void TableWithHandle::Decode(::fidl::Decoder* _decoder, TableWithHandle* _value,
       }
 
       size_t envelope_base = base + (ordinal - 1) * sizeof(fidl_envelope_v2_t);
-      fidl_envelope_v2_t* envelope =
-          _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       _decoder->CloseUnknownHandlesInEnvelope(envelope);
     }
   }
@@ -343,7 +310,8 @@ done_1:
 zx_status_t TableWithHandle::Clone(TableWithHandle* result) const {
   if (field_presence_.IsSet<0>()) {
     zx_status_t _status = ::fidl::Clone(h_value_.value, result->mutable_h());
-    if (_status != ZX_OK) return _status;
+    if (_status != ZX_OK)
+      return _status;
   } else {
     result->clear_h();
   }
@@ -354,49 +322,40 @@ zx_status_t TableWithHandle::Clone(TableWithHandle* result) const {
 #ifdef __Fuchsia__
 
 extern "C" const fidl_type_t test_handlesintypes_HandlesInTypesTable;
-const fidl_type_t* HandlesInTypes::FidlType =
-    &test_handlesintypes_HandlesInTypesTable;
+const fidl_type_t* HandlesInTypes::FidlType = &test_handlesintypes_HandlesInTypesTable;
 
-void HandlesInTypes::Encode(
-    ::fidl::Encoder* _encoder, size_t _offset,
-    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+void HandlesInTypes::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                            cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<HandlesInTypes>::value) {
-    memcpy(_encoder->template GetPtr<HandlesInTypes>(_offset), this,
-           sizeof(HandlesInTypes));
+    memcpy(_encoder->template GetPtr<HandlesInTypes>(_offset), this, sizeof(HandlesInTypes));
   } else {
-    ::fidl::Encode(_encoder, &normal_handle, _offset + 0,
-                   ::fidl::HandleInformation{
-                       .object_type = ZX_OBJ_TYPE_VMO,
-                       .rights = 0x80000000,
-                   });
+    ::fidl::Encode(_encoder, &normal_handle, _offset + 0, ::fidl::HandleInformation{
+                                                              .object_type = ZX_OBJ_TYPE_VMO,
+                                                              .rights = 0x80000000,
+                                                          });
 
-    ::fidl::Encode(_encoder, &handle_in_vec, _offset + 8,
-                   ::fidl::HandleInformation{
-                       .object_type = ZX_OBJ_TYPE_VMO,
-                       .rights = 0x80000000,
-                   });
+    ::fidl::Encode(_encoder, &handle_in_vec, _offset + 8, ::fidl::HandleInformation{
+                                                              .object_type = ZX_OBJ_TYPE_VMO,
+                                                              .rights = 0x80000000,
+                                                          });
 
-    ::fidl::Encode(_encoder, &handle_in_array, _offset + 24,
-                   ::fidl::HandleInformation{
-                       .object_type = ZX_OBJ_TYPE_VMO,
-                       .rights = 0x80000000,
-                   });
+    ::fidl::Encode(_encoder, &handle_in_array, _offset + 24, ::fidl::HandleInformation{
+                                                                 .object_type = ZX_OBJ_TYPE_VMO,
+                                                                 .rights = 0x80000000,
+                                                             });
 
-    ::fidl::Encode(_encoder, &handle_in_mixed_vec_array, _offset + 48,
-                   ::fidl::HandleInformation{
-                       .object_type = ZX_OBJ_TYPE_VMO,
-                       .rights = 0x80000000,
-                   });
+    ::fidl::Encode(_encoder, &handle_in_mixed_vec_array, _offset + 48, ::fidl::HandleInformation{
+                                                                           .object_type = ZX_OBJ_TYPE_VMO,
+                                                                           .rights = 0x80000000,
+                                                                       });
     ::fidl::Encode(_encoder, &table_with_handle, _offset + 64);
     ::fidl::Encode(_encoder, &union_with_handle, _offset + 80);
   }
 }
 
-void HandlesInTypes::Decode(::fidl::Decoder* _decoder, HandlesInTypes* _value,
-                            size_t _offset) {
+void HandlesInTypes::Decode(::fidl::Decoder* _decoder, HandlesInTypes* _value, size_t _offset) {
   if (::fidl::IsMemcpyCompatible<HandlesInTypes>::value) {
-    memcpy(_value, _decoder->template GetPtr<HandlesInTypes>(_offset),
-           sizeof(HandlesInTypes));
+    memcpy(_value, _decoder->template GetPtr<HandlesInTypes>(_offset), sizeof(HandlesInTypes));
   } else {
     ::fidl::Decode(_decoder, &_value->normal_handle, _offset + 0);
     ::fidl::Decode(_decoder, &_value->handle_in_vec, _offset + 8);
@@ -409,18 +368,23 @@ void HandlesInTypes::Decode(::fidl::Decoder* _decoder, HandlesInTypes* _value,
 
 zx_status_t HandlesInTypes::Clone(HandlesInTypes* _result) const {
   zx_status_t _status = ::fidl::Clone(normal_handle, &_result->normal_handle);
-  if (_status != ZX_OK) return _status;
+  if (_status != ZX_OK)
+    return _status;
   _status = ::fidl::Clone(handle_in_vec, &_result->handle_in_vec);
-  if (_status != ZX_OK) return _status;
+  if (_status != ZX_OK)
+    return _status;
   _status = ::fidl::Clone(handle_in_array, &_result->handle_in_array);
-  if (_status != ZX_OK) return _status;
-  _status = ::fidl::Clone(handle_in_mixed_vec_array,
-                          &_result->handle_in_mixed_vec_array);
-  if (_status != ZX_OK) return _status;
+  if (_status != ZX_OK)
+    return _status;
+  _status = ::fidl::Clone(handle_in_mixed_vec_array, &_result->handle_in_mixed_vec_array);
+  if (_status != ZX_OK)
+    return _status;
   _status = ::fidl::Clone(table_with_handle, &_result->table_with_handle);
-  if (_status != ZX_OK) return _status;
+  if (_status != ZX_OK)
+    return _status;
   _status = ::fidl::Clone(union_with_handle, &_result->union_with_handle);
-  if (_status != ZX_OK) return _status;
+  if (_status != ZX_OK)
+    return _status;
   return ZX_OK;
 }
 #endif  // __Fuchsia__

@@ -5,30 +5,21 @@
 #include <memory>
 
 namespace test_doccomments {
-[[maybe_unused]] constexpr uint64_t kInterface_Method_Ordinal =
-    5017051197196532121lu;
+[[maybe_unused]] constexpr uint64_t kInterface_Method_Ordinal = 5017051197196532121lu;
 
-[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
-    kInterface_Method_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kInterface_Method_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
-[[maybe_unused]] constexpr uint64_t kInterface_OnEvent_Ordinal =
-    28780186509098736lu;
+[[maybe_unused]] constexpr uint64_t kInterface_OnEvent_Ordinal = 28780186509098736lu;
 
-[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
-    kInterface_OnEvent_DynamicFlags =
-        ::fidl::MessageDynamicFlags::kStrictMethod;
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kInterface_OnEvent_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 #ifdef __Fuchsia__
 }  // namespace test_doccomments
 ::fidl::WireResult<::test_doccomments::Interface::Method>::WireResult(
     ::fidl::UnownedClientEnd<::test_doccomments::Interface> client,
-    ::fidl::internal::TransactionalRequest<
-        ::test_doccomments::Interface::Method>* request) {
+    ::fidl::internal::TransactionalRequest<::test_doccomments::Interface::Method>* request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_doccomments::Interface::Method>,
-      ::fidl::internal::ChannelTransport>
-      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
+  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_doccomments::Interface::Method>, ::fidl::internal::ChannelTransport> request_message(
+      ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client.handle());
   SetStatus(outgoing);
@@ -38,16 +29,9 @@ namespace test_doccomments {
 
 #ifdef __Fuchsia__
 }  // namespace test_doccomments
-::fidl::WireUnownedResult<::test_doccomments::Interface::Method>::
-    WireUnownedResult(
-        ::fidl::UnownedClientEnd<::test_doccomments::Interface> client_end,
-        ::fidl::internal::AnyBufferAllocator& allocator,
-        ::fidl::internal::TransactionalRequest<
-            ::test_doccomments::Interface::Method>* request) {
-  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
-      ::test_doccomments::Interface::Method>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
-      allocator.TryAllocate(buffer_size);
+::fidl::WireUnownedResult<::test_doccomments::Interface::Method>::WireUnownedResult(::fidl::UnownedClientEnd<::test_doccomments::Interface> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_doccomments::Interface::Method>* request) {
+  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_doccomments::Interface::Method>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
     SetStatus(allocation.error_value());
     return;
@@ -56,10 +40,8 @@ namespace test_doccomments {
   uint32_t request_byte_capacity = buffer_size;
   uint8_t* request_bytes = buffer;
 
-  ::fidl::unstable::UnownedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_doccomments::Interface::Method>>
-      request_message(request_bytes, request_byte_capacity, request);
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_doccomments::Interface::Method>> request_message(
+      request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client_end.handle());
   SetStatus(outgoing);
@@ -70,58 +52,42 @@ namespace test_doccomments {
 }  // namespace test_doccomments
 #ifdef __Fuchsia__
 
-::fidl::Status fidl::internal::WireWeakOnewayClientImpl<
-    ::test_doccomments::Interface>::Method() {
+::fidl::Status fidl::internal::WireWeakOnewayClientImpl<::test_doccomments::Interface>::Method() {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::internal::TransactionalRequest<::test_doccomments::Interface::Method>
-      _request_object{};
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_doccomments::Interface::Method>,
-      ::fidl::internal::ChannelTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{},
-                       &_request_object);
+  ::fidl::internal::TransactionalRequest<::test_doccomments::Interface::Method> _request_object{};
+  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_doccomments::Interface::Method>, ::fidl::internal::ChannelTransport> _request_message(
+      ::fidl::internal::AllowUnownedInputRef{}, &_request_object);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
-::fidl::Status fidl::internal::WireWeakOnewayBufferClientImpl<
-    ::test_doccomments::Interface>::Method() {
-  constexpr uint32_t _buffer_size =
-      ::fidl::AsyncClientMethodBufferSizeInChannel<
-          ::test_doccomments::Interface::Method>();
+::fidl::Status fidl::internal::WireWeakOnewayBufferClientImpl<::test_doccomments::Interface>::Method() {
+  constexpr uint32_t _buffer_size = ::fidl::AsyncClientMethodBufferSizeInChannel<::test_doccomments::Interface::Method>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
       _allocator().TryAllocate(_buffer_size);
   if (!_allocation.is_ok()) {
     return _allocation.error_value();
   }
 
-  ::fidl::internal::TransactionalRequest<::test_doccomments::Interface::Method>
-      _request{};
-  ::fidl::unstable::UnownedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_doccomments::Interface::Method>>
-      _request_message(_allocation->data, _buffer_size, &_request);
+  ::fidl::internal::TransactionalRequest<::test_doccomments::Interface::Method> _request{};
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_doccomments::Interface::Method>> _request_message(
+      _allocation->data, _buffer_size, &_request);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
-::fidl::Status
-fidl::WireSyncEventHandler<::test_doccomments::Interface>::HandleOneEvent(
+::fidl::Status fidl::WireSyncEventHandler<::test_doccomments::Interface>::HandleOneEvent(
     ::fidl::UnownedClientEnd<::test_doccomments::Interface> client_end) {
-  zx_status_t status = client_end.channel()->wait_one(
-      ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ::zx::time::infinite(),
-      nullptr);
+  zx_status_t status = client_end.channel()->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
+                                                      ::zx::time::infinite(),
+                                                      nullptr);
   if (status != ZX_OK) {
-    return ::fidl::Status::TransportError(
-        status, ::fidl::internal::kErrorWaitOneFailed);
+    return ::fidl::Status::TransportError(status, ::fidl::internal::kErrorWaitOneFailed);
   }
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
     uint32_t x = 0;
-    if (::fidl::TypeTraits<::fidl::internal::TransactionalEvent<
-            ::test_doccomments::Interface::OnEvent>>::kMaxNumHandles >= x) {
-      x = ::fidl::TypeTraits<::fidl::internal::TransactionalEvent<
-          ::test_doccomments::Interface::OnEvent>>::kMaxNumHandles;
+    if (::fidl::TypeTraits<::fidl::internal::TransactionalEvent<::test_doccomments::Interface::OnEvent>>::kMaxNumHandles >= x) {
+      x = ::fidl::TypeTraits<::fidl::internal::TransactionalEvent<::test_doccomments::Interface::OnEvent>>::kMaxNumHandles;
     }
     if (x > ZX_CHANNEL_MAX_MSG_HANDLES) {
       x = ZX_CHANNEL_MAX_MSG_HANDLES;
@@ -132,25 +98,22 @@ fidl::WireSyncEventHandler<::test_doccomments::Interface>::HandleOneEvent(
   ::fidl::internal::InlineMessageBuffer<16> read_storage;
   std::array<zx_handle_t, kHandleAllocSize> read_handles;
   // TODO(fxbug.dev/85734) Remove this channel-specific allocation.
-  std::array<fidl_channel_handle_metadata_t, kHandleAllocSize>
-      read_handle_metadata;
-  ::fidl::IncomingMessage msg =
-      ::fidl::MessageRead(zx::unowned_channel(client_end.handle()),
-                          ::fidl::ChannelMessageStorageView{
-                              .bytes = read_storage.view(),
-                              .handles = read_handles.data(),
-                              .handle_metadata = read_handle_metadata.data(),
-                              .handle_capacity = kHandleAllocSize,
-                          },
-                          ReadOptions{.discardable = true});
+  std::array<fidl_channel_handle_metadata_t, kHandleAllocSize> read_handle_metadata;
+  ::fidl::IncomingMessage msg = ::fidl::MessageRead(
+      zx::unowned_channel(client_end.handle()),
+      ::fidl::ChannelMessageStorageView{
+          .bytes = read_storage.view(),
+          .handles = read_handles.data(),
+          .handle_metadata = read_handle_metadata.data(),
+          .handle_capacity = kHandleAllocSize,
+      },
+      ReadOptions{.discardable = true});
   if (msg.status() == ZX_ERR_BUFFER_TOO_SMALL) {
     // Message size is unexpectedly larger than calculated.
-    // This can only be due to a newer version of the protocol defining a new
-    // event, whose size exceeds the maximum of known events in the current
-    // protocol.
+    // This can only be due to a newer version of the protocol defining a new event,
+    // whose size exceeds the maximum of known events in the current protocol.
     return ::fidl::Status::UnexpectedMessage(
-        ZX_ERR_BUFFER_TOO_SMALL,
-        ::fidl::internal::kErrorSyncEventBufferTooSmall);
+        ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorSyncEventBufferTooSmall);
   }
   if (!msg.ok()) {
     return msg;
@@ -158,9 +121,7 @@ fidl::WireSyncEventHandler<::test_doccomments::Interface>::HandleOneEvent(
   fidl_message_header_t* hdr = msg.header();
   switch (hdr->ordinal) {
     case ::test_doccomments::kInterface_OnEvent_Ordinal: {
-      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<
-          ::test_doccomments::Interface::OnEvent>>
-          decoded{::std::move(msg)};
+      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_doccomments::Interface::OnEvent>> decoded{::std::move(msg)};
       if (!decoded.ok()) {
         return ::fidl::Status(decoded);
       }
@@ -170,8 +131,7 @@ fidl::WireSyncEventHandler<::test_doccomments::Interface>::HandleOneEvent(
       OnEvent(primary);
       if (got_transitional_) {
         return ::fidl::Status::UnexpectedMessage(
-            ZX_ERR_NOT_SUPPORTED,
-            ::fidl::internal::kErrorSyncEventUnhandledTransitionalEvent);
+            ZX_ERR_NOT_SUPPORTED, ::fidl::internal::kErrorSyncEventUnhandledTransitionalEvent);
       }
       return ::fidl::Status::Ok();
     }
@@ -181,15 +141,13 @@ fidl::WireSyncEventHandler<::test_doccomments::Interface>::HandleOneEvent(
   }
 }
 
-std::optional<::fidl::UnbindInfo> fidl::internal::
-    WireEventDispatcher<::test_doccomments::Interface>::DispatchEvent(
-        ::fidl::IncomingMessage& msg,
-        ::fidl::internal::MessageStorageViewBase* storage_view) {
+std::optional<::fidl::UnbindInfo>
+fidl::internal::WireEventDispatcher<::test_doccomments::Interface>::DispatchEvent(
+    ::fidl::IncomingMessage& msg,
+    ::fidl::internal::MessageStorageViewBase* storage_view) {
   switch (msg.header()->ordinal) {
     case ::test_doccomments::kInterface_OnEvent_Ordinal: {
-      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<
-          ::test_doccomments::Interface::OnEvent>>
-          decoded{std::move(msg)};
+      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_doccomments::Interface::OnEvent>> decoded{std::move(msg)};
       if (!decoded.ok()) {
         return ::fidl::UnbindInfo{decoded};
       }
@@ -209,89 +167,62 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
 
 #ifdef __Fuchsia__
 
-constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
-    ::test_doccomments::Interface>::entries_[] = {
+constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::test_doccomments::Interface>::entries_[] = {
     {
         ::test_doccomments::kInterface_Method_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::MessageStorageViewBase* storage_view,
-           ::fidl::Transaction* txn) {
-          ::fidl::WireRequest<::test_doccomments::Interface::Method>
-              empty_request;
+           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fidl::WireRequest<::test_doccomments::Interface::Method> empty_request;
           auto* primary = &empty_request;
-          ::fidl::internal::WireCompleter<
-              ::test_doccomments::Interface::Method>::Sync completer(txn);
-          reinterpret_cast<::fidl::WireServer<::test_doccomments::Interface>*>(
-              interface)
-              ->Method(primary, completer);
+          ::fidl::internal::WireCompleter<::test_doccomments::Interface::Method>::Sync completer(txn);
+          reinterpret_cast<::fidl::WireServer<::test_doccomments::Interface>*>(interface)->Method(
+              primary, completer);
           return ::fidl::Status::Ok();
         },
     },
 };
 
-const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<
-    ::test_doccomments::Interface>::entries_end_ = &entries_[1];
+const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test_doccomments::Interface>::entries_end_ =
+    &entries_[1];
 
-::fidl::DispatchResult fidl::internal::
-    WireServerDispatcher<::test_doccomments::Interface>::TryDispatch(
-        ::fidl::WireServer<::test_doccomments::Interface>* impl,
-        ::fidl::IncomingMessage& msg,
-        internal::MessageStorageViewBase* storage_view,
-        ::fidl::Transaction* txn) {
-  return ::fidl::internal::TryDispatch(impl, msg, storage_view, txn, entries_,
-                                       entries_end_);
+::fidl::DispatchResult fidl::internal::WireServerDispatcher<::test_doccomments::Interface>::TryDispatch(
+    ::fidl::WireServer<::test_doccomments::Interface>* impl, ::fidl::IncomingMessage& msg,
+    internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+  return ::fidl::internal::TryDispatch(
+      impl, msg, storage_view, txn, entries_, entries_end_);
 }
 
-void fidl::internal::WireServerDispatcher<::test_doccomments::Interface>::
-    Dispatch(::fidl::WireServer<::test_doccomments::Interface>* impl,
-             ::fidl::IncomingMessage&& msg,
-             internal::MessageStorageViewBase* storage_view,
-             ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_,
-                             entries_end_);
+void fidl::internal::WireServerDispatcher<::test_doccomments::Interface>::Dispatch(::fidl::WireServer<::test_doccomments::Interface>* impl, ::fidl::IncomingMessage&& msg,
+                                                                                   internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_);
 }
 void fidl::WireServer<::test_doccomments::Interface>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
-  ::fidl::internal::WireServerDispatcher<
-      ::test_doccomments::Interface>::Dispatch(this, std::move(msg),
-                                               storage_view, txn);
+  ::fidl::internal::WireServerDispatcher<::test_doccomments::Interface>::Dispatch(this, std::move(msg), storage_view, txn);
 }
 #endif  // __Fuchsia__
 
-void ::fidl::internal::TransactionalRequest<
-    ::test_doccomments::Interface::Method>::_InitHeader() {
-  ::fidl::InitTxnHeader(&header, 0,
-                        ::test_doccomments::kInterface_Method_Ordinal,
-                        ::test_doccomments::kInterface_Method_DynamicFlags);
+void ::fidl::internal::TransactionalRequest<::test_doccomments::Interface::Method>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_doccomments::kInterface_Method_Ordinal, ::test_doccomments::kInterface_Method_DynamicFlags);
 }
 
-void ::fidl::internal::TransactionalEvent<
-    ::test_doccomments::Interface::OnEvent>::_InitHeader() {
-  ::fidl::InitTxnHeader(&header, 0,
-                        ::test_doccomments::kInterface_OnEvent_Ordinal,
-                        ::test_doccomments::kInterface_OnEvent_DynamicFlags);
+void ::fidl::internal::TransactionalEvent<::test_doccomments::Interface::OnEvent>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_doccomments::kInterface_OnEvent_Ordinal, ::test_doccomments::kInterface_OnEvent_DynamicFlags);
 }
 
 #ifdef __Fuchsia__
 
-fidl::Status
-fidl::internal::WireWeakEventSender<::test_doccomments::Interface>::OnEvent() {
-  ::fidl::internal::TransactionalEvent<::test_doccomments::Interface::OnEvent>
-      _response{};
+fidl::Status fidl::internal::WireWeakEventSender<::test_doccomments::Interface>::OnEvent() {
+  ::fidl::internal::TransactionalEvent<::test_doccomments::Interface::OnEvent> _response{};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalEvent<
-          ::test_doccomments::Interface::OnEvent>,
-      ::fidl::internal::ChannelTransport>
-      _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
+  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_doccomments::Interface::OnEvent>, ::fidl::internal::ChannelTransport> _response_message{
+      ::fidl::internal::AllowUnownedInputRef{}, &_response};
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
 }
 
-fidl::Status fidl::internal::WireWeakBufferEventSender<
-    ::test_doccomments::Interface>::OnEvent() {
-  constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<
-      ::test_doccomments::Interface::OnEvent>();
+fidl::Status fidl::internal::WireWeakBufferEventSender<::test_doccomments::Interface>::OnEvent() {
+  constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<::test_doccomments::Interface::OnEvent>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
       _allocator().TryAllocate(_buffer_size);
   if (!_allocation.is_ok()) {
@@ -299,48 +230,33 @@ fidl::Status fidl::internal::WireWeakBufferEventSender<
     return _allocation.error_value();
   }
 
-  ::fidl::internal::TransactionalEvent<::test_doccomments::Interface::OnEvent>
-      _response{};
-  ::fidl::unstable::UnownedEncodedMessage<
-      ::fidl::internal::TransactionalEvent<
-          ::test_doccomments::Interface::OnEvent>,
-      ::fidl::internal::ChannelTransport>
-      _response_message(_allocation->data, _buffer_size, &_response);
+  ::fidl::internal::TransactionalEvent<::test_doccomments::Interface::OnEvent> _response{};
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalEvent<::test_doccomments::Interface::OnEvent>, ::fidl::internal::ChannelTransport> _response_message(
+      _allocation->data, _buffer_size, &_response);
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
 }
 
-fidl::Status
-fidl::internal::WireEventSender<::test_doccomments::Interface>::OnEvent() {
-  ::fidl::internal::TransactionalEvent<::test_doccomments::Interface::OnEvent>
-      _response{};
+fidl::Status fidl::internal::WireEventSender<::test_doccomments::Interface>::OnEvent() {
+  ::fidl::internal::TransactionalEvent<::test_doccomments::Interface::OnEvent> _response{};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalEvent<
-          ::test_doccomments::Interface::OnEvent>,
-      ::fidl::internal::ChannelTransport>
-      _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
+  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_doccomments::Interface::OnEvent>, ::fidl::internal::ChannelTransport> _response_message{
+      ::fidl::internal::AllowUnownedInputRef{}, &_response};
   auto& _message = _response_message.GetOutgoingMessage();
   _message.Write(_transport());
   return ::fidl::Status{_message};
 }
 
-fidl::Status fidl::internal::WireBufferEventSender<
-    ::test_doccomments::Interface>::OnEvent() {
-  constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<
-      ::test_doccomments::Interface::OnEvent>();
+fidl::Status fidl::internal::WireBufferEventSender<::test_doccomments::Interface>::OnEvent() {
+  constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<::test_doccomments::Interface::OnEvent>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
       _allocator().TryAllocate(_buffer_size);
   if (!_allocation.is_ok()) {
     return _allocation.error_value();
   }
 
-  ::fidl::internal::TransactionalEvent<::test_doccomments::Interface::OnEvent>
-      _response{};
-  ::fidl::unstable::UnownedEncodedMessage<
-      ::fidl::internal::TransactionalEvent<
-          ::test_doccomments::Interface::OnEvent>,
-      ::fidl::internal::ChannelTransport>
-      _response_message(_allocation->data, _buffer_size, &_response);
+  ::fidl::internal::TransactionalEvent<::test_doccomments::Interface::OnEvent> _response{};
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalEvent<::test_doccomments::Interface::OnEvent>, ::fidl::internal::ChannelTransport> _response_message(
+      _allocation->data, _buffer_size, &_response);
   auto& _message = _response_message.GetOutgoingMessage();
   _message.Write(_transport());
   return ::fidl::Status{_message};

@@ -46,7 +46,9 @@ class Enum final {
     return true;
   }
 
-  constexpr static Enum Unknown() { return Enum(0xffffffff); }
+  constexpr static Enum Unknown() {
+    return Enum(0xffffffff);
+  }
 
   static const Enum A;
 
@@ -93,15 +95,9 @@ class Bits final {
   const static Bits kMask;
 
   explicit constexpr inline operator uint32_t() const { return value_; }
-  explicit constexpr inline operator bool() const {
-    return static_cast<bool>(value_);
-  }
-  constexpr inline bool operator==(const Bits& other) const {
-    return value_ == other.value_;
-  }
-  constexpr inline bool operator!=(const Bits& other) const {
-    return value_ != other.value_;
-  }
+  explicit constexpr inline operator bool() const { return static_cast<bool>(value_); }
+  constexpr inline bool operator==(const Bits& other) const { return value_ == other.value_; }
+  constexpr inline bool operator!=(const Bits& other) const { return value_ != other.value_; }
   constexpr inline Bits operator~() const;
   constexpr inline Bits operator|(const Bits& other) const;
   constexpr inline Bits operator&(const Bits& other) const;
@@ -112,9 +108,7 @@ class Bits final {
   constexpr inline Bits unknown_bits() const {
     return *this & Bits(~kMask.value_);
   }
-  constexpr inline bool has_unknown_bits() const {
-    return static_cast<bool>(unknown_bits());
-  }
+  constexpr inline bool has_unknown_bits() const { return static_cast<bool>(unknown_bits()); }
 
  private:
   uint32_t value_ = 0;
@@ -127,37 +121,36 @@ constexpr const ::test::versions::Bits Bits::kMask = ::test::versions::Bits(1u);
 #endif  // !(__cplusplus < 201703)
 
 constexpr inline ::test::versions::Bits Bits::operator~() const {
-  return ::test::versions::Bits(
-      static_cast<uint32_t>(~this->value_ & kMask.value_));
+  return ::test::versions::Bits(static_cast<uint32_t>(~this->value_ & kMask.value_));
 }
 
 constexpr inline ::test::versions::Bits Bits::operator|(
     const ::test::versions::Bits& other) const {
-  return ::test::versions::Bits(
-      static_cast<uint32_t>(this->value_ | other.value_));
+  return ::test::versions::Bits(static_cast<uint32_t>(this->value_ | other.value_));
 }
 
 constexpr inline ::test::versions::Bits Bits::operator&(
     const ::test::versions::Bits& other) const {
-  return ::test::versions::Bits(
-      static_cast<uint32_t>(this->value_ & other.value_));
+  return ::test::versions::Bits(static_cast<uint32_t>(this->value_ & other.value_));
 }
 
 constexpr inline ::test::versions::Bits Bits::operator^(
     const ::test::versions::Bits& other) const {
-  return ::test::versions::Bits(
-      static_cast<uint32_t>(this->value_ ^ other.value_));
+  return ::test::versions::Bits(static_cast<uint32_t>(this->value_ ^ other.value_));
 }
 
-constexpr inline void Bits::operator|=(const ::test::versions::Bits& other) {
+constexpr inline void Bits::operator|=(
+    const ::test::versions::Bits& other) {
   this->value_ |= other.value_;
 }
 
-constexpr inline void Bits::operator&=(const ::test::versions::Bits& other) {
+constexpr inline void Bits::operator&=(
+    const ::test::versions::Bits& other) {
   this->value_ &= other.value_;
 }
 
-constexpr inline void Bits::operator^=(const ::test::versions::Bits& other) {
+constexpr inline void Bits::operator^=(
+    const ::test::versions::Bits& other) {
   this->value_ ^= other.value_;
 }
 
@@ -186,17 +179,16 @@ class Union final {
     Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
-  static inline ::std::unique_ptr<Union> New() {
-    return ::std::make_unique<Union>();
-  }
+  static inline ::std::unique_ptr<Union> New() { return ::std::make_unique<Union>(); }
 
   void Encode(::fidl::Encoder* encoder, size_t offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
   static void Decode(::fidl::Decoder* _decoder, Union* value, size_t offset);
   zx_status_t Clone(Union* result) const;
 
-  bool has_invalid_tag() const { return tag_ == Invalid; }
+  bool has_invalid_tag() const {
+    return tag_ == Invalid;
+  }
 
   bool is_x() const { return tag_ == ::test::versions::Union::Tag::kX; }
 
@@ -222,9 +214,11 @@ class Union final {
     }
   }
 
-  // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
-  // only when you need access to the raw integral ordinal value.
-  fidl_xunion_tag_t Ordinal() const { return tag_; }
+  // You probably want to use Which() method instead of Ordinal(). Use Ordinal() only when you need
+  // access to the raw integral ordinal value.
+  fidl_xunion_tag_t Ordinal() const {
+    return tag_;
+  }
   const std::vector<uint8_t>* UnknownBytes() const {
     if (Which() != ::test::versions::Union::Tag::kUnknown) {
       return nullptr;
@@ -238,8 +232,7 @@ class Union final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ =
-      static_cast<fidl_xunion_tag_t>(::test::versions::Union::Tag::Invalid);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(::test::versions::Union::Tag::Invalid);
   union {
     uint32_t x_;
     std::vector<uint8_t> unknown_data_;
@@ -263,7 +256,9 @@ class Table final {
     ZX_ASSERT(field_presence_.IsSet<0>());
     return x_value_.value;
   }
-  bool has_x() const { return field_presence_.IsSet<0>(); }
+  bool has_x() const {
+    return field_presence_.IsSet<0>();
+  }
 
   uint32_t* mutable_x() {
     if (!field_presence_.IsSet<0>()) {
@@ -294,13 +289,10 @@ class Table final {
   ~Table();
   Table& operator=(Table&& other);
 
-  static inline ::std::unique_ptr<Table> New() {
-    return ::std::make_unique<Table>();
-  }
+  static inline ::std::unique_ptr<Table> New() { return ::std::make_unique<Table>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
   static void Decode(::fidl::Decoder* _decoder, Table* _value, size_t _offset);
   zx_status_t Clone(Table* _result) const;
 
@@ -346,13 +338,10 @@ class Struct final {
 
   uint32_t x{};
 
-  static inline ::std::unique_ptr<Struct> New() {
-    return ::std::make_unique<Struct>();
-  }
+  static inline ::std::unique_ptr<Struct> New() { return ::std::make_unique<Struct>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
   static void Decode(::fidl::Decoder* _decoder, Struct* value, size_t _offset);
   zx_status_t Clone(Struct* result) const;
 };
@@ -407,20 +396,15 @@ template <>
 struct CodingTraits<std::unique_ptr<::test::versions::Union>> {
   static constexpr size_t inline_size_v2 = 16;
 
-  static void Encode(Encoder* encoder,
-                     std::unique_ptr<::test::versions::Union>* value,
-                     size_t offset,
-                     cpp17::optional<::fidl::HandleInformation>
-                         maybe_handle_info = cpp17::nullopt) {
+  static void Encode(Encoder* encoder, std::unique_ptr<::test::versions::Union>* value, size_t offset,
+                     cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
     }
   }
 
-  static void Decode(Decoder* _decoder,
-                     std::unique_ptr<::test::versions::Union>* value,
-                     size_t offset) {
+  static void Decode(Decoder* _decoder, std::unique_ptr<::test::versions::Union>* value, size_t offset) {
     fidl_xunion_t* encoded = _decoder->GetPtr<fidl_xunion_t>(offset);
     if (encoded->tag == 0) {
       value->reset(nullptr);
@@ -440,15 +424,13 @@ inline zx_status_t Clone(const ::test::versions::Union& value,
 
 template <>
 struct Equality<::test::versions::Union> {
-  bool operator()(const ::test::versions::Union& _lhs,
-                  const ::test::versions::Union& _rhs) const {
+  bool operator()(const ::test::versions::Union& _lhs, const ::test::versions::Union& _rhs) const {
     if (_lhs.Ordinal() != _rhs.Ordinal()) {
       return false;
     }
 
     switch (_lhs.Ordinal()) {
-      case static_cast<fidl_xunion_tag_t>(
-          ::test::versions::Union::Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(::test::versions::Union::Tag::Invalid):
         return true;
       case ::test::versions::Union::Tag::kX:
         return ::fidl::Equals(_lhs.x_, _rhs.x_);
@@ -467,8 +449,7 @@ inline zx_status_t Clone(const ::test::versions::Table& _value,
 }
 template <>
 struct Equality<::test::versions::Table> {
-  bool operator()(const ::test::versions::Table& _lhs,
-                  const ::test::versions::Table& _rhs) const {
+  bool operator()(const ::test::versions::Table& _lhs, const ::test::versions::Table& _rhs) const {
     if (_lhs.has_x()) {
       if (!_rhs.has_x()) {
         return false;
@@ -487,10 +468,8 @@ struct CodingTraits<::test::versions::Struct>
     : public EncodableCodingTraits<::test::versions::Struct, 4> {};
 
 template <>
-struct IsMemcpyCompatible<::test::versions::Struct>
-    : public internal::BoolConstant<
-          !HasPadding<::test::versions::Struct>::value &&
-          IsMemcpyCompatible<uint32_t>::value> {};
+struct IsMemcpyCompatible<::test::versions::Struct> : public internal::BoolConstant<
+                                                          !HasPadding<::test::versions::Struct>::value && IsMemcpyCompatible<uint32_t>::value> {};
 
 inline zx_status_t Clone(const ::test::versions::Struct& value,
                          ::test::versions::Struct* result) {
@@ -499,8 +478,7 @@ inline zx_status_t Clone(const ::test::versions::Struct& value,
 
 template <>
 struct Equality<::test::versions::Struct> {
-  bool operator()(const ::test::versions::Struct& _lhs,
-                  const ::test::versions::Struct& _rhs) const {
+  bool operator()(const ::test::versions::Struct& _lhs, const ::test::versions::Struct& _rhs) const {
     if (!::fidl::Equals(_lhs.x, _rhs.x)) {
       return false;
     }
@@ -510,15 +488,13 @@ struct Equality<::test::versions::Struct> {
 template <>
 struct CodingTraits<::test::versions::Enum> {
   static constexpr size_t inline_size_v2 = sizeof(::test::versions::Enum);
-  static void Encode(
-      Encoder* encoder, ::test::versions::Enum* value, size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  static void Encode(Encoder* encoder, ::test::versions::Enum* value, size_t offset,
+                     cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
     ZX_DEBUG_ASSERT(!maybe_handle_info);
     uint32_t underlying = static_cast<uint32_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
   }
-  static void Decode(Decoder* decoder, ::test::versions::Enum* value,
-                     size_t offset) {
+  static void Decode(Decoder* decoder, ::test::versions::Enum* value, size_t offset) {
     uint32_t underlying = {};
     ::fidl::Decode(decoder, &underlying, offset);
     *value = static_cast<::test::versions::Enum>(underlying);
@@ -531,8 +507,7 @@ inline zx_status_t Clone(::test::versions::Enum value,
 }
 template <>
 struct Equality<::test::versions::Enum> {
-  bool operator()(const ::test::versions::Enum& _lhs,
-                  const ::test::versions::Enum& _rhs) const {
+  bool operator()(const ::test::versions::Enum& _lhs, const ::test::versions::Enum& _rhs) const {
     return _lhs == _rhs;
   }
 };
@@ -540,15 +515,13 @@ struct Equality<::test::versions::Enum> {
 template <>
 struct CodingTraits<::test::versions::Bits> {
   static constexpr size_t inline_size_v2 = sizeof(::test::versions::Bits);
-  static void Encode(
-      Encoder* encoder, ::test::versions::Bits* value, size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  static void Encode(Encoder* encoder, ::test::versions::Bits* value, size_t offset,
+                     cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
     ZX_DEBUG_ASSERT(!maybe_handle_info);
     uint32_t underlying = static_cast<uint32_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
   }
-  static void Decode(Decoder* decoder, ::test::versions::Bits* value,
-                     size_t offset) {
+  static void Decode(Decoder* decoder, ::test::versions::Bits* value, size_t offset) {
     uint32_t underlying = {};
     ::fidl::Decode(decoder, &underlying, offset);
     *value = static_cast<::test::versions::Bits>(underlying);
@@ -562,8 +535,7 @@ inline zx_status_t Clone(::test::versions::Bits value,
 
 template <>
 struct Equality<::test::versions::Bits> {
-  bool operator()(const ::test::versions::Bits& _lhs,
-                  const ::test::versions::Bits& _rhs) const {
+  bool operator()(const ::test::versions::Bits& _lhs, const ::test::versions::Bits& _rhs) const {
     uint32_t _lhs_underlying = static_cast<uint32_t>(_lhs);
     uint32_t _rhs_underlying = static_cast<uint32_t>(_rhs);
     return ::fidl::Equals(_lhs_underlying, _rhs_underlying);
@@ -604,8 +576,7 @@ class Protocol_SyncProxy;
 
 namespace internal {
 constexpr uint64_t kProtocol_Foo_Ordinal = 0x567a8096af6e6139lu;
-constexpr ::fidl::MessageDynamicFlags kProtocol_Foo_DynamicFlags =
-    ::fidl::MessageDynamicFlags::kStrictMethod;
+constexpr ::fidl::MessageDynamicFlags kProtocol_Foo_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 }  // namespace internal
 #endif  // __Fuchsia__
 
@@ -621,11 +592,9 @@ class Service final {
       : service_(std::move(service)) {}
 
   explicit operator bool() const { return !!service_; }
-  /// Returns a |fidl::MemberConnector| which can be used to connect to the
-  /// member protocol "p".
+  /// Returns a |fidl::MemberConnector| which can be used to connect to the member protocol "p".
   ::fidl::MemberConnector<::test::versions::Protocol> p() const {
-    return ::fidl::MemberConnector<::test::versions::Protocol>(service_.get(),
-                                                               "p");
+    return ::fidl::MemberConnector<::test::versions::Protocol>(service_.get(), "p");
   }
 
  private:
@@ -636,15 +605,15 @@ class Service final {
 class Service::Handler final {
  public:
   /// Constructs a new |Handler|. Does not take ownership of |service|.
-  explicit Handler(::fidl::ServiceHandlerBase* service) : service_(service) {}
-  /// Adds member "p" to the service instance. |handler| is invoked when a
-  /// connection is made to the member protocol.
+  explicit Handler(::fidl::ServiceHandlerBase* service)
+      : service_(service) {}
+  /// Adds member "p" to the service instance. |handler| is invoked when a connection
+  /// is made to the member protocol.
   ///
   /// # Errors
   ///
   /// Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
-  zx_status_t add_p(
-      ::fidl::InterfaceRequestHandler<::test::versions::Protocol> handler) {
+  zx_status_t add_p(::fidl::InterfaceRequestHandler<::test::versions::Protocol> handler) {
     return service_->AddMember("p", std::move(handler));
   }
 
@@ -689,8 +658,7 @@ class OtherProtocol_Sync {
   virtual ~OtherProtocol_Sync();
 };
 
-class OtherProtocol_Proxy final : public ::fidl::internal::Proxy,
-                                  public OtherProtocol {
+class OtherProtocol_Proxy final : public ::fidl::internal::Proxy, public OtherProtocol {
  public:
   explicit OtherProtocol_Proxy(::fidl::internal::ProxyController* controller);
   ~OtherProtocol_Proxy() override;
@@ -699,19 +667,15 @@ class OtherProtocol_Proxy final : public ::fidl::internal::Proxy,
 
  private:
   OtherProtocol_Proxy(const ::test::versions::OtherProtocol_Proxy&) = delete;
-  OtherProtocol_Proxy& operator=(const ::test::versions::OtherProtocol_Proxy&) =
-      delete;
+  OtherProtocol_Proxy& operator=(const ::test::versions::OtherProtocol_Proxy&) = delete;
 
   ::fidl::internal::ProxyController* controller_;
 };
 
-class OtherProtocol_Stub final
-    : public ::fidl::internal::Stub,
-      public ::test::versions::OtherProtocol_EventSender {
+class OtherProtocol_Stub final : public ::fidl::internal::Stub, public ::test::versions::OtherProtocol_EventSender {
  public:
   typedef class ::test::versions::OtherProtocol OtherProtocol_clazz;
-  explicit OtherProtocol_Stub(
-      ::test::versions::OtherProtocol_Stub::OtherProtocol_clazz* impl);
+  explicit OtherProtocol_Stub(::test::versions::OtherProtocol_Stub::OtherProtocol_clazz* impl);
   ~OtherProtocol_Stub() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
@@ -788,8 +752,7 @@ class Protocol_Proxy final : public ::fidl::internal::Proxy, public Protocol {
   ::fidl::internal::ProxyController* controller_;
 };
 
-class Protocol_Stub final : public ::fidl::internal::Stub,
-                            public ::test::versions::Protocol_EventSender {
+class Protocol_Stub final : public ::fidl::internal::Stub, public ::test::versions::Protocol_EventSender {
  public:
   typedef class ::test::versions::Protocol Protocol_clazz;
   explicit Protocol_Stub(::test::versions::Protocol_Stub::Protocol_clazz* impl);

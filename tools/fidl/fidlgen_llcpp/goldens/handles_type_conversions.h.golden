@@ -17,11 +17,9 @@ namespace internal {
 #ifdef __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<::test_handles::wire::Handles,
-                                   ::test_handles::Handles> {
+struct WireNaturalConversionTraits<::test_handles::wire::Handles, ::test_handles::Handles> {
   static ::test_handles::Handles ToNatural(::test_handles::wire::Handles src);
-  static ::test_handles::wire::Handles ToWire(fidl::AnyArena& arena,
-                                              ::test_handles::Handles src);
+  static ::test_handles::wire::Handles ToWire(fidl::AnyArena& arena, ::test_handles::Handles src);
 };
 
 template <>
@@ -38,12 +36,9 @@ struct WireTypeForNaturalType<::test_handles::Handles> {
 #ifdef __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<::test_handles::wire::FdfHandles,
-                                   ::test_handles::FdfHandles> {
-  static ::test_handles::FdfHandles ToNatural(
-      ::test_handles::wire::FdfHandles src);
-  static ::test_handles::wire::FdfHandles ToWire(
-      fidl::AnyArena& arena, ::test_handles::FdfHandles src);
+struct WireNaturalConversionTraits<::test_handles::wire::FdfHandles, ::test_handles::FdfHandles> {
+  static ::test_handles::FdfHandles ToNatural(::test_handles::wire::FdfHandles src);
+  static ::test_handles::wire::FdfHandles ToWire(fidl::AnyArena& arena, ::test_handles::FdfHandles src);
 };
 
 template <>

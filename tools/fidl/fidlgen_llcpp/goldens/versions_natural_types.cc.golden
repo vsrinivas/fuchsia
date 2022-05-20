@@ -3,15 +3,16 @@
 #include <fidl/test.versions/cpp/natural_types.h>
 
 ::test_versions::Struct::Storage_ test_versions::Struct::CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.x)};
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.x)};
 }
 
 ::test_versions::Table::Storage_ test_versions::Table::CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.x)};
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.x)};
 }
 
-std::shared_ptr<::test_versions::Union::Storage_>
-test_versions::Union::CloneStorage_() const {
+std::shared_ptr<::test_versions::Union::Storage_> test_versions::Union::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:

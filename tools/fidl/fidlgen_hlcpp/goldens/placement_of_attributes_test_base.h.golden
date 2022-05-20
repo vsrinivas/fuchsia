@@ -7,8 +7,7 @@
 namespace test {
 namespace placementofattributes {
 namespace testing {
-class ExampleProtocol_TestBase
-    : public ::test::placementofattributes::ExampleProtocol {
+class ExampleProtocol_TestBase : public ::test::placementofattributes::ExampleProtocol {
  public:
   virtual ~ExampleProtocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;

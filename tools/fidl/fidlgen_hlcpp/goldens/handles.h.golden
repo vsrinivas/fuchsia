@@ -87,16 +87,12 @@ class Handles final {
 
   ::fidl::InterfaceHandle<::test::handles::SomeProtocol> some_protocol{};
 
-  ::fidl::InterfaceRequest<::test::handles::SomeProtocol>
-      request_some_protocol{};
+  ::fidl::InterfaceRequest<::test::handles::SomeProtocol> request_some_protocol{};
 
-  static inline ::std::unique_ptr<Handles> New() {
-    return ::std::make_unique<Handles>();
-  }
+  static inline ::std::unique_ptr<Handles> New() { return ::std::make_unique<Handles>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
   static void Decode(::fidl::Decoder* _decoder, Handles* value, size_t _offset);
   zx_status_t Clone(Handles* result) const;
 };
@@ -130,40 +126,8 @@ struct CodingTraits<::test::handles::Handles>
     : public EncodableCodingTraits<::test::handles::Handles, 128> {};
 
 template <>
-struct IsMemcpyCompatible<::test::handles::Handles>
-    : public internal::BoolConstant<
-          !HasPadding<::test::handles::Handles>::value &&
-          IsMemcpyCompatible<::zx::handle>::value &&
-          IsMemcpyCompatible<::zx::bti>::value &&
-          IsMemcpyCompatible<::zx::channel>::value &&
-          IsMemcpyCompatible<::zx::clock>::value &&
-          IsMemcpyCompatible<::zx::debuglog>::value &&
-          IsMemcpyCompatible<::zx::event>::value &&
-          IsMemcpyCompatible<::zx::eventpair>::value &&
-          IsMemcpyCompatible<::zx::exception>::value &&
-          IsMemcpyCompatible<::zx::fifo>::value &&
-          IsMemcpyCompatible<::zx::guest>::value &&
-          IsMemcpyCompatible<::zx::interrupt>::value &&
-          IsMemcpyCompatible<::zx::iommu>::value &&
-          IsMemcpyCompatible<::zx::job>::value &&
-          IsMemcpyCompatible<::zx::pager>::value &&
-          IsMemcpyCompatible<::zx::pmt>::value &&
-          IsMemcpyCompatible<::zx::port>::value &&
-          IsMemcpyCompatible<::zx::process>::value &&
-          IsMemcpyCompatible<::zx::profile>::value &&
-          IsMemcpyCompatible<::zx::resource>::value &&
-          IsMemcpyCompatible<::zx::socket>::value &&
-          IsMemcpyCompatible<::zx::suspend_token>::value &&
-          IsMemcpyCompatible<::zx::thread>::value &&
-          IsMemcpyCompatible<::zx::timer>::value &&
-          IsMemcpyCompatible<::zx::vcpu>::value &&
-          IsMemcpyCompatible<::zx::vmar>::value &&
-          IsMemcpyCompatible<::zx::vmo>::value &&
-          IsMemcpyCompatible<
-              ::fidl::InterfaceHandle<::test::handles::SomeProtocol>>::value &&
-          IsMemcpyCompatible<
-              ::fidl::InterfaceRequest<::test::handles::SomeProtocol>>::value> {
-};
+struct IsMemcpyCompatible<::test::handles::Handles> : public internal::BoolConstant<
+                                                          !HasPadding<::test::handles::Handles>::value && IsMemcpyCompatible<::zx::handle>::value && IsMemcpyCompatible<::zx::bti>::value && IsMemcpyCompatible<::zx::channel>::value && IsMemcpyCompatible<::zx::clock>::value && IsMemcpyCompatible<::zx::debuglog>::value && IsMemcpyCompatible<::zx::event>::value && IsMemcpyCompatible<::zx::eventpair>::value && IsMemcpyCompatible<::zx::exception>::value && IsMemcpyCompatible<::zx::fifo>::value && IsMemcpyCompatible<::zx::guest>::value && IsMemcpyCompatible<::zx::interrupt>::value && IsMemcpyCompatible<::zx::iommu>::value && IsMemcpyCompatible<::zx::job>::value && IsMemcpyCompatible<::zx::pager>::value && IsMemcpyCompatible<::zx::pmt>::value && IsMemcpyCompatible<::zx::port>::value && IsMemcpyCompatible<::zx::process>::value && IsMemcpyCompatible<::zx::profile>::value && IsMemcpyCompatible<::zx::resource>::value && IsMemcpyCompatible<::zx::socket>::value && IsMemcpyCompatible<::zx::suspend_token>::value && IsMemcpyCompatible<::zx::thread>::value && IsMemcpyCompatible<::zx::timer>::value && IsMemcpyCompatible<::zx::vcpu>::value && IsMemcpyCompatible<::zx::vmar>::value && IsMemcpyCompatible<::zx::vmo>::value && IsMemcpyCompatible<::fidl::InterfaceHandle<::test::handles::SomeProtocol>>::value && IsMemcpyCompatible<::fidl::InterfaceRequest<::test::handles::SomeProtocol>>::value> {};
 
 inline zx_status_t Clone(const ::test::handles::Handles& value,
                          ::test::handles::Handles* result) {
@@ -172,8 +136,7 @@ inline zx_status_t Clone(const ::test::handles::Handles& value,
 
 template <>
 struct Equality<::test::handles::Handles> {
-  bool operator()(const ::test::handles::Handles& _lhs,
-                  const ::test::handles::Handles& _rhs) const {
+  bool operator()(const ::test::handles::Handles& _lhs, const ::test::handles::Handles& _rhs) const {
     if (!::fidl::Equals(_lhs.plain_handle, _rhs.plain_handle)) {
       return false;
     }
@@ -255,23 +218,19 @@ struct Equality<::test::handles::Handles> {
     if (!::fidl::Equals(_lhs.rights_handle, _rhs.rights_handle)) {
       return false;
     }
-    if (!::fidl::Equals(_lhs.aliased_plain_handle_field,
-                        _rhs.aliased_plain_handle_field)) {
+    if (!::fidl::Equals(_lhs.aliased_plain_handle_field, _rhs.aliased_plain_handle_field)) {
       return false;
     }
-    if (!::fidl::Equals(_lhs.aliased_subtype_handle_field,
-                        _rhs.aliased_subtype_handle_field)) {
+    if (!::fidl::Equals(_lhs.aliased_subtype_handle_field, _rhs.aliased_subtype_handle_field)) {
       return false;
     }
-    if (!::fidl::Equals(_lhs.aliased_rights_handle_field,
-                        _rhs.aliased_rights_handle_field)) {
+    if (!::fidl::Equals(_lhs.aliased_rights_handle_field, _rhs.aliased_rights_handle_field)) {
       return false;
     }
     if (!::fidl::Equals(_lhs.some_protocol, _rhs.some_protocol)) {
       return false;
     }
-    if (!::fidl::Equals(_lhs.request_some_protocol,
-                        _rhs.request_some_protocol)) {
+    if (!::fidl::Equals(_lhs.request_some_protocol, _rhs.request_some_protocol)) {
       return false;
     }
     return true;
@@ -333,8 +292,7 @@ class SomeProtocol_Sync {
   virtual ~SomeProtocol_Sync();
 };
 
-class SomeProtocol_Proxy final : public ::fidl::internal::Proxy,
-                                 public SomeProtocol {
+class SomeProtocol_Proxy final : public ::fidl::internal::Proxy, public SomeProtocol {
  public:
   explicit SomeProtocol_Proxy(::fidl::internal::ProxyController* controller);
   ~SomeProtocol_Proxy() override;
@@ -343,19 +301,15 @@ class SomeProtocol_Proxy final : public ::fidl::internal::Proxy,
 
  private:
   SomeProtocol_Proxy(const ::test::handles::SomeProtocol_Proxy&) = delete;
-  SomeProtocol_Proxy& operator=(const ::test::handles::SomeProtocol_Proxy&) =
-      delete;
+  SomeProtocol_Proxy& operator=(const ::test::handles::SomeProtocol_Proxy&) = delete;
 
   ::fidl::internal::ProxyController* controller_;
 };
 
-class SomeProtocol_Stub final
-    : public ::fidl::internal::Stub,
-      public ::test::handles::SomeProtocol_EventSender {
+class SomeProtocol_Stub final : public ::fidl::internal::Stub, public ::test::handles::SomeProtocol_EventSender {
  public:
   typedef class ::test::handles::SomeProtocol SomeProtocol_clazz;
-  explicit SomeProtocol_Stub(
-      ::test::handles::SomeProtocol_Stub::SomeProtocol_clazz* impl);
+  explicit SomeProtocol_Stub(::test::handles::SomeProtocol_Stub::SomeProtocol_clazz* impl);
   ~SomeProtocol_Stub() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,

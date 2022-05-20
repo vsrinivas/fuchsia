@@ -11,31 +11,24 @@ namespace test {
 namespace inheritancewithrecursivedecl {
 #ifdef __Fuchsia__
 
-extern "C" const fidl_type_t
-    test_inheritancewithrecursivedecl_ParentFirstRequestTable;
-const fidl_type_t* ParentFirstRequest::FidlType =
-    &test_inheritancewithrecursivedecl_ParentFirstRequestTable;
+extern "C" const fidl_type_t test_inheritancewithrecursivedecl_ParentFirstRequestTable;
+const fidl_type_t* ParentFirstRequest::FidlType = &test_inheritancewithrecursivedecl_ParentFirstRequestTable;
 
-void ParentFirstRequest::Encode(
-    ::fidl::Encoder* _encoder, size_t _offset,
-    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+void ParentFirstRequest::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                                cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<ParentFirstRequest>::value) {
-    memcpy(_encoder->template GetPtr<ParentFirstRequest>(_offset), this,
-           sizeof(ParentFirstRequest));
+    memcpy(_encoder->template GetPtr<ParentFirstRequest>(_offset), this, sizeof(ParentFirstRequest));
   } else {
-    ::fidl::Encode(_encoder, &request, _offset + 0,
-                   ::fidl::HandleInformation{
-                       .object_type = ZX_OBJ_TYPE_CHANNEL,
-                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                   });
+    ::fidl::Encode(_encoder, &request, _offset + 0, ::fidl::HandleInformation{
+                                                        .object_type = ZX_OBJ_TYPE_CHANNEL,
+                                                        .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                                                    });
   }
 }
 
-void ParentFirstRequest::Decode(::fidl::Decoder* _decoder,
-                                ParentFirstRequest* _value, size_t _offset) {
+void ParentFirstRequest::Decode(::fidl::Decoder* _decoder, ParentFirstRequest* _value, size_t _offset) {
   if (::fidl::IsMemcpyCompatible<ParentFirstRequest>::value) {
-    memcpy(_value, _decoder->template GetPtr<ParentFirstRequest>(_offset),
-           sizeof(ParentFirstRequest));
+    memcpy(_value, _decoder->template GetPtr<ParentFirstRequest>(_offset), sizeof(ParentFirstRequest));
   } else {
     ::fidl::Decode(_decoder, &_value->request, _offset + 0);
   }
@@ -43,38 +36,32 @@ void ParentFirstRequest::Decode(::fidl::Decoder* _decoder,
 
 zx_status_t ParentFirstRequest::Clone(ParentFirstRequest* _result) const {
   zx_status_t _status = ::fidl::Clone(request, &_result->request);
-  if (_status != ZX_OK) return _status;
+  if (_status != ZX_OK)
+    return _status;
   return ZX_OK;
 }
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
-extern "C" const fidl_type_t
-    test_inheritancewithrecursivedecl_ChildSecondRequestTable;
-const fidl_type_t* ChildSecondRequest::FidlType =
-    &test_inheritancewithrecursivedecl_ChildSecondRequestTable;
+extern "C" const fidl_type_t test_inheritancewithrecursivedecl_ChildSecondRequestTable;
+const fidl_type_t* ChildSecondRequest::FidlType = &test_inheritancewithrecursivedecl_ChildSecondRequestTable;
 
-void ChildSecondRequest::Encode(
-    ::fidl::Encoder* _encoder, size_t _offset,
-    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+void ChildSecondRequest::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                                cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<ChildSecondRequest>::value) {
-    memcpy(_encoder->template GetPtr<ChildSecondRequest>(_offset), this,
-           sizeof(ChildSecondRequest));
+    memcpy(_encoder->template GetPtr<ChildSecondRequest>(_offset), this, sizeof(ChildSecondRequest));
   } else {
-    ::fidl::Encode(_encoder, &request, _offset + 0,
-                   ::fidl::HandleInformation{
-                       .object_type = ZX_OBJ_TYPE_CHANNEL,
-                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                   });
+    ::fidl::Encode(_encoder, &request, _offset + 0, ::fidl::HandleInformation{
+                                                        .object_type = ZX_OBJ_TYPE_CHANNEL,
+                                                        .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                                                    });
   }
 }
 
-void ChildSecondRequest::Decode(::fidl::Decoder* _decoder,
-                                ChildSecondRequest* _value, size_t _offset) {
+void ChildSecondRequest::Decode(::fidl::Decoder* _decoder, ChildSecondRequest* _value, size_t _offset) {
   if (::fidl::IsMemcpyCompatible<ChildSecondRequest>::value) {
-    memcpy(_value, _decoder->template GetPtr<ChildSecondRequest>(_offset),
-           sizeof(ChildSecondRequest));
+    memcpy(_value, _decoder->template GetPtr<ChildSecondRequest>(_offset), sizeof(ChildSecondRequest));
   } else {
     ::fidl::Decode(_decoder, &_value->request, _offset + 0);
   }
@@ -82,7 +69,8 @@ void ChildSecondRequest::Decode(::fidl::Decoder* _decoder,
 
 zx_status_t ChildSecondRequest::Clone(ChildSecondRequest* _result) const {
   zx_status_t _status = ::fidl::Clone(request, &_result->request);
-  if (_status != ZX_OK) return _status;
+  if (_status != ZX_OK)
+    return _status;
   return ZX_OK;
 }
 #endif  // __Fuchsia__
@@ -93,19 +81,16 @@ zx_status_t ChildSecondRequest::Clone(ChildSecondRequest* _result) const {
 #ifdef __Fuchsia__
 
 namespace _internal {
-__LOCAL extern "C" const fidl_type_t
-    test_inheritancewithrecursivedecl_ParentFirstRequestTable;
+__LOCAL extern "C" const fidl_type_t test_inheritancewithrecursivedecl_ParentFirstRequestTable;
 
 }  // namespace _internal
 Parent::~Parent() = default;
 
-const fidl_type_t* ::test::inheritancewithrecursivedecl::Parent_RequestDecoder::
-    GetType(uint64_t ordinal, bool* out_needs_response) {
+const fidl_type_t* ::test::inheritancewithrecursivedecl::Parent_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
   *out_needs_response = false;
   switch (ordinal) {
     case ::test::inheritancewithrecursivedecl::internal::kParent_First_Ordinal:
-      return &::test::inheritancewithrecursivedecl::_internal::
-          test_inheritancewithrecursivedecl_ParentFirstRequestTable;
+      return &::test::inheritancewithrecursivedecl::_internal::test_inheritancewithrecursivedecl_ParentFirstRequestTable;
       ;
     default:
       return nullptr;
@@ -141,39 +126,27 @@ zx_status_t Parent_Proxy::Dispatch_(::fidl::HLCPPIncomingMessage message) {
   return status;
 }
 
-void Parent_Proxy::First(
-    ::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent>
-        request) {
-  ::fidl::MessageEncoder _encoder(
-      ::test::inheritancewithrecursivedecl::internal::kParent_First_Ordinal,
-      ::test::inheritancewithrecursivedecl::internal::
-          kParent_First_DynamicFlags);
-  const fidl_type_t* req_type =
-      &::test::inheritancewithrecursivedecl::_internal::
-          test_inheritancewithrecursivedecl_ParentFirstRequestTable;
-  controller_->Send(
-      req_type,
-      ::test::inheritancewithrecursivedecl::Parent_RequestEncoder::First(
-          &_encoder, &request),
-      nullptr);
+void Parent_Proxy::First(::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent> request) {
+  ::fidl::MessageEncoder _encoder(::test::inheritancewithrecursivedecl::internal::kParent_First_Ordinal, ::test::inheritancewithrecursivedecl::internal::kParent_First_DynamicFlags);
+  const fidl_type_t* req_type = &::test::inheritancewithrecursivedecl::_internal::test_inheritancewithrecursivedecl_ParentFirstRequestTable;
+  controller_->Send(req_type, ::test::inheritancewithrecursivedecl::Parent_RequestEncoder::First(&_encoder, &request), nullptr);
 }
 
-Parent_Stub::Parent_Stub(
-    ::test::inheritancewithrecursivedecl::Parent_Stub::Parent_clazz* impl)
-    : impl_(impl) {
+Parent_Stub::Parent_Stub(::test::inheritancewithrecursivedecl::Parent_Stub::Parent_clazz* impl) : impl_(impl) {
   (void)impl_;
 }
 
 Parent_Stub::~Parent_Stub() = default;
 
-namespace {}  // namespace
+namespace {
 
-zx_status_t Parent_Stub::Dispatch_(::fidl::HLCPPIncomingMessage message,
-                                   ::fidl::internal::PendingResponse response) {
+}  // namespace
+
+zx_status_t Parent_Stub::Dispatch_(
+    ::fidl::HLCPPIncomingMessage message,
+    ::fidl::internal::PendingResponse response) {
   bool needs_response;
-  const fidl_type_t* request_type =
-      ::test::inheritancewithrecursivedecl::Parent_RequestDecoder::GetType(
-          message.ordinal(), &needs_response);
+  const fidl_type_t* request_type = ::test::inheritancewithrecursivedecl::Parent_RequestDecoder::GetType(message.ordinal(), &needs_response);
   if (!message.has_only_header()) {
     if (request_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
@@ -188,23 +161,18 @@ zx_status_t Parent_Stub::Dispatch_(::fidl::HLCPPIncomingMessage message,
 
   if (response.needs_response() != needs_response) {
     if (needs_response) {
-      FIDL_REPORT_DECODING_ERROR(message, request_type,
-                                 "Message needing a response with no txid");
+      FIDL_REPORT_DECODING_ERROR(message, request_type, "Message needing a response with no txid");
     } else {
-      FIDL_REPORT_DECODING_ERROR(message, request_type,
-                                 "Message not needing a response with a txid");
+      FIDL_REPORT_DECODING_ERROR(message, request_type, "Message not needing a response with a txid");
     }
     return ZX_ERR_INVALID_ARGS;
   }
 
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
-    case ::test::inheritancewithrecursivedecl::internal::
-        kParent_First_Ordinal: {
+    case ::test::inheritancewithrecursivedecl::internal::kParent_First_Ordinal: {
       ::fidl::Decoder decoder(std::move(message));
-      impl_->First(::fidl::DecodeAs<::fidl::InterfaceRequest<
-                       ::test::inheritancewithrecursivedecl::Parent>>(
-          &decoder, 0 + sizeof(fidl_message_header_t)));
+      impl_->First(::fidl::DecodeAs<::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent>>(&decoder, 0 + sizeof(fidl_message_header_t)));
       break;
     }
     default: {
@@ -219,43 +187,29 @@ Parent_SyncProxy::Parent_SyncProxy(::zx::channel channel)
 
 Parent_SyncProxy::~Parent_SyncProxy() = default;
 
-zx_status_t Parent_SyncProxy::First(
-    ::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent>
-        request) {
-  ::fidl::MessageEncoder _encoder(
-      ::test::inheritancewithrecursivedecl::internal::kParent_First_Ordinal,
-      ::test::inheritancewithrecursivedecl::internal::
-          kParent_First_DynamicFlags);
-  const fidl_type_t* req_type =
-      &::test::inheritancewithrecursivedecl::_internal::
-          test_inheritancewithrecursivedecl_ParentFirstRequestTable;
-  return proxy_.Send(
-      req_type,
-      ::test::inheritancewithrecursivedecl::Parent_RequestEncoder::First(
-          &_encoder, &request));
+zx_status_t Parent_SyncProxy::First(::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent> request) {
+  ::fidl::MessageEncoder _encoder(::test::inheritancewithrecursivedecl::internal::kParent_First_Ordinal, ::test::inheritancewithrecursivedecl::internal::kParent_First_DynamicFlags);
+  const fidl_type_t* req_type = &::test::inheritancewithrecursivedecl::_internal::test_inheritancewithrecursivedecl_ParentFirstRequestTable;
+  return proxy_.Send(req_type, ::test::inheritancewithrecursivedecl::Parent_RequestEncoder::First(&_encoder, &request));
 }
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
 namespace _internal {
-__LOCAL extern "C" const fidl_type_t
-    test_inheritancewithrecursivedecl_ChildSecondRequestTable;
+__LOCAL extern "C" const fidl_type_t test_inheritancewithrecursivedecl_ChildSecondRequestTable;
 
 }  // namespace _internal
 Child::~Child() = default;
 
-const fidl_type_t* ::test::inheritancewithrecursivedecl::Child_RequestDecoder::
-    GetType(uint64_t ordinal, bool* out_needs_response) {
+const fidl_type_t* ::test::inheritancewithrecursivedecl::Child_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
   *out_needs_response = false;
   switch (ordinal) {
     case ::test::inheritancewithrecursivedecl::internal::kChild_First_Ordinal:
-      return &::test::inheritancewithrecursivedecl::_internal::
-          test_inheritancewithrecursivedecl_ParentFirstRequestTable;
+      return &::test::inheritancewithrecursivedecl::_internal::test_inheritancewithrecursivedecl_ParentFirstRequestTable;
       ;
     case ::test::inheritancewithrecursivedecl::internal::kChild_Second_Ordinal:
-      return &::test::inheritancewithrecursivedecl::_internal::
-          test_inheritancewithrecursivedecl_ChildSecondRequestTable;
+      return &::test::inheritancewithrecursivedecl::_internal::test_inheritancewithrecursivedecl_ChildSecondRequestTable;
       ;
     default:
       return nullptr;
@@ -291,55 +245,32 @@ zx_status_t Child_Proxy::Dispatch_(::fidl::HLCPPIncomingMessage message) {
   return status;
 }
 
-void Child_Proxy::First(
-    ::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent>
-        request) {
-  ::fidl::MessageEncoder _encoder(
-      ::test::inheritancewithrecursivedecl::internal::kChild_First_Ordinal,
-      ::test::inheritancewithrecursivedecl::internal::
-          kChild_First_DynamicFlags);
-  const fidl_type_t* req_type =
-      &::test::inheritancewithrecursivedecl::_internal::
-          test_inheritancewithrecursivedecl_ParentFirstRequestTable;
-  controller_->Send(
-      req_type,
-      ::test::inheritancewithrecursivedecl::Child_RequestEncoder::First(
-          &_encoder, &request),
-      nullptr);
+void Child_Proxy::First(::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent> request) {
+  ::fidl::MessageEncoder _encoder(::test::inheritancewithrecursivedecl::internal::kChild_First_Ordinal, ::test::inheritancewithrecursivedecl::internal::kChild_First_DynamicFlags);
+  const fidl_type_t* req_type = &::test::inheritancewithrecursivedecl::_internal::test_inheritancewithrecursivedecl_ParentFirstRequestTable;
+  controller_->Send(req_type, ::test::inheritancewithrecursivedecl::Child_RequestEncoder::First(&_encoder, &request), nullptr);
 }
-void Child_Proxy::Second(
-    ::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent>
-        request) {
-  ::fidl::MessageEncoder _encoder(
-      ::test::inheritancewithrecursivedecl::internal::kChild_Second_Ordinal,
-      ::test::inheritancewithrecursivedecl::internal::
-          kChild_Second_DynamicFlags);
-  const fidl_type_t* req_type =
-      &::test::inheritancewithrecursivedecl::_internal::
-          test_inheritancewithrecursivedecl_ChildSecondRequestTable;
-  controller_->Send(
-      req_type,
-      ::test::inheritancewithrecursivedecl::Child_RequestEncoder::Second(
-          &_encoder, &request),
-      nullptr);
+void Child_Proxy::Second(::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent> request) {
+  ::fidl::MessageEncoder _encoder(::test::inheritancewithrecursivedecl::internal::kChild_Second_Ordinal, ::test::inheritancewithrecursivedecl::internal::kChild_Second_DynamicFlags);
+  const fidl_type_t* req_type = &::test::inheritancewithrecursivedecl::_internal::test_inheritancewithrecursivedecl_ChildSecondRequestTable;
+  controller_->Send(req_type, ::test::inheritancewithrecursivedecl::Child_RequestEncoder::Second(&_encoder, &request), nullptr);
 }
 
-Child_Stub::Child_Stub(
-    ::test::inheritancewithrecursivedecl::Child_Stub::Child_clazz* impl)
-    : impl_(impl) {
+Child_Stub::Child_Stub(::test::inheritancewithrecursivedecl::Child_Stub::Child_clazz* impl) : impl_(impl) {
   (void)impl_;
 }
 
 Child_Stub::~Child_Stub() = default;
 
-namespace {}  // namespace
+namespace {
 
-zx_status_t Child_Stub::Dispatch_(::fidl::HLCPPIncomingMessage message,
-                                  ::fidl::internal::PendingResponse response) {
+}  // namespace
+
+zx_status_t Child_Stub::Dispatch_(
+    ::fidl::HLCPPIncomingMessage message,
+    ::fidl::internal::PendingResponse response) {
   bool needs_response;
-  const fidl_type_t* request_type =
-      ::test::inheritancewithrecursivedecl::Child_RequestDecoder::GetType(
-          message.ordinal(), &needs_response);
+  const fidl_type_t* request_type = ::test::inheritancewithrecursivedecl::Child_RequestDecoder::GetType(message.ordinal(), &needs_response);
   if (!message.has_only_header()) {
     if (request_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
@@ -354,11 +285,9 @@ zx_status_t Child_Stub::Dispatch_(::fidl::HLCPPIncomingMessage message,
 
   if (response.needs_response() != needs_response) {
     if (needs_response) {
-      FIDL_REPORT_DECODING_ERROR(message, request_type,
-                                 "Message needing a response with no txid");
+      FIDL_REPORT_DECODING_ERROR(message, request_type, "Message needing a response with no txid");
     } else {
-      FIDL_REPORT_DECODING_ERROR(message, request_type,
-                                 "Message not needing a response with a txid");
+      FIDL_REPORT_DECODING_ERROR(message, request_type, "Message not needing a response with a txid");
     }
     return ZX_ERR_INVALID_ARGS;
   }
@@ -367,17 +296,12 @@ zx_status_t Child_Stub::Dispatch_(::fidl::HLCPPIncomingMessage message,
   switch (ordinal) {
     case ::test::inheritancewithrecursivedecl::internal::kChild_First_Ordinal: {
       ::fidl::Decoder decoder(std::move(message));
-      impl_->First(::fidl::DecodeAs<::fidl::InterfaceRequest<
-                       ::test::inheritancewithrecursivedecl::Parent>>(
-          &decoder, 0 + sizeof(fidl_message_header_t)));
+      impl_->First(::fidl::DecodeAs<::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent>>(&decoder, 0 + sizeof(fidl_message_header_t)));
       break;
     }
-    case ::test::inheritancewithrecursivedecl::internal::
-        kChild_Second_Ordinal: {
+    case ::test::inheritancewithrecursivedecl::internal::kChild_Second_Ordinal: {
       ::fidl::Decoder decoder(std::move(message));
-      impl_->Second(::fidl::DecodeAs<::fidl::InterfaceRequest<
-                        ::test::inheritancewithrecursivedecl::Parent>>(
-          &decoder, 0 + sizeof(fidl_message_header_t)));
+      impl_->Second(::fidl::DecodeAs<::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent>>(&decoder, 0 + sizeof(fidl_message_header_t)));
       break;
     }
     default: {
@@ -392,36 +316,16 @@ Child_SyncProxy::Child_SyncProxy(::zx::channel channel)
 
 Child_SyncProxy::~Child_SyncProxy() = default;
 
-zx_status_t Child_SyncProxy::First(
-    ::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent>
-        request) {
-  ::fidl::MessageEncoder _encoder(
-      ::test::inheritancewithrecursivedecl::internal::kChild_First_Ordinal,
-      ::test::inheritancewithrecursivedecl::internal::
-          kChild_First_DynamicFlags);
-  const fidl_type_t* req_type =
-      &::test::inheritancewithrecursivedecl::_internal::
-          test_inheritancewithrecursivedecl_ParentFirstRequestTable;
-  return proxy_.Send(
-      req_type,
-      ::test::inheritancewithrecursivedecl::Child_RequestEncoder::First(
-          &_encoder, &request));
+zx_status_t Child_SyncProxy::First(::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent> request) {
+  ::fidl::MessageEncoder _encoder(::test::inheritancewithrecursivedecl::internal::kChild_First_Ordinal, ::test::inheritancewithrecursivedecl::internal::kChild_First_DynamicFlags);
+  const fidl_type_t* req_type = &::test::inheritancewithrecursivedecl::_internal::test_inheritancewithrecursivedecl_ParentFirstRequestTable;
+  return proxy_.Send(req_type, ::test::inheritancewithrecursivedecl::Child_RequestEncoder::First(&_encoder, &request));
 }
 
-zx_status_t Child_SyncProxy::Second(
-    ::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent>
-        request) {
-  ::fidl::MessageEncoder _encoder(
-      ::test::inheritancewithrecursivedecl::internal::kChild_Second_Ordinal,
-      ::test::inheritancewithrecursivedecl::internal::
-          kChild_Second_DynamicFlags);
-  const fidl_type_t* req_type =
-      &::test::inheritancewithrecursivedecl::_internal::
-          test_inheritancewithrecursivedecl_ChildSecondRequestTable;
-  return proxy_.Send(
-      req_type,
-      ::test::inheritancewithrecursivedecl::Child_RequestEncoder::Second(
-          &_encoder, &request));
+zx_status_t Child_SyncProxy::Second(::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent> request) {
+  ::fidl::MessageEncoder _encoder(::test::inheritancewithrecursivedecl::internal::kChild_Second_Ordinal, ::test::inheritancewithrecursivedecl::internal::kChild_Second_DynamicFlags);
+  const fidl_type_t* req_type = &::test::inheritancewithrecursivedecl::_internal::test_inheritancewithrecursivedecl_ChildSecondRequestTable;
+  return proxy_.Send(req_type, ::test::inheritancewithrecursivedecl::Child_RequestEncoder::Second(&_encoder, &request));
 }
 #endif  // __Fuchsia__
 

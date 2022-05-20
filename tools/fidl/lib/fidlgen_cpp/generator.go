@@ -14,10 +14,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
-// TODO(fxbug.dev/49757) Use --style=file and copy the .clang-format file to the correct location.
-// An alternate way to do this is to load the config directly from .clang_format and put the
-// style as JSON in quotes.
-var clangFormatArgs = []string{"--style=google"}
+var clangFormatArgs = []string{"--style={BasedOnStyle: google, ColumnLimit: 0}"}
 
 type Generator struct {
 	gen       *fidlgen.Generator
@@ -38,12 +35,12 @@ func NewGenerator(flags *CmdlineFlags, templates fs.FS, extraFuncs template.Func
 		},
 	})
 
-	formatter := NewFormatter(flags.clangFormatPath, clangFormatArgs)
+	formatter := NewFormatter(flags.clangFormatPath)
 	gen.gen = fidlgen.NewGenerator(flags.name, templates, formatter, funcs)
 	return gen
 }
 
-func NewFormatter(clangFormatPath string, clangFormatArgs []string) fidlgen.Formatter {
+func NewFormatter(clangFormatPath string) fidlgen.Formatter {
 	// TODO(fxbug.dev/78303): Investigate clang-format memory usage on large files.
 	return fidlgen.NewFormatterWithSizeLimit(256*1024, clangFormatPath, clangFormatArgs...)
 }

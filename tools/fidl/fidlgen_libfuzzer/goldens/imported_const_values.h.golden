@@ -18,7 +18,9 @@ using MyStruct = ::test::importedconstvalues::MyStruct;
 
 template <>
 struct MinSize<MyStruct> {
-  operator size_t() { return MinSize<uint8_t>(); }
+  operator size_t() {
+    return MinSize<uint8_t>();
+  }
 };
 template <>
 struct Allocate<MyStruct> {

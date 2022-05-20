@@ -5,10 +5,8 @@
 namespace test_placementofattributes {
 extern "C" const fidl_type_t test_placementofattributes_ExampleEnumTable;
 }  // namespace test_placementofattributes
-size_t
-fidl::internal::DisplayError<::test_placementofattributes::ExampleEnum>::Format(
-    const ::test_placementofattributes::ExampleEnum& value, char* destination,
-    size_t capacity) {
+size_t fidl::internal::DisplayError<::test_placementofattributes::ExampleEnum>::Format(
+    const ::test_placementofattributes::ExampleEnum& value, char* destination, size_t capacity) {
   const char* name = [&]() -> const char* {
     switch (static_cast<uint32_t>(value)) {
       case 1u:
@@ -18,8 +16,5 @@ fidl::internal::DisplayError<::test_placementofattributes::ExampleEnum>::Format(
     }
   }();
   return ::fidl::internal::FormatApplicationError(
-      static_cast<uint32_t>(value), name,
-      &::test_placementofattributes::
-          test_placementofattributes_ExampleEnumTable,
-      destination, capacity);
+      static_cast<uint32_t>(value), name, &::test_placementofattributes::test_placementofattributes_ExampleEnumTable, destination, capacity);
 }

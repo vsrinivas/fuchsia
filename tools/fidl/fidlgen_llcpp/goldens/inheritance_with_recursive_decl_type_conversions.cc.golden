@@ -7,29 +7,12 @@ namespace internal {
 
 #ifdef __Fuchsia__
 
-::test_inheritancewithrecursivedecl::ParentFirstRequest
-WireNaturalConversionTraits<
-    ::test_inheritancewithrecursivedecl::wire::ParentFirstRequest,
-    ::test_inheritancewithrecursivedecl::ParentFirstRequest>::
-    ToNatural(
-        ::test_inheritancewithrecursivedecl::wire::ParentFirstRequest src) {
-  return ::test_inheritancewithrecursivedecl::ParentFirstRequest(
-      WireNaturalConversionTraits<
-          ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>,
-          ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>>::
-          ToNatural(std::move(src.request)));
+::test_inheritancewithrecursivedecl::ParentFirstRequest WireNaturalConversionTraits<::test_inheritancewithrecursivedecl::wire::ParentFirstRequest, ::test_inheritancewithrecursivedecl::ParentFirstRequest>::ToNatural(::test_inheritancewithrecursivedecl::wire::ParentFirstRequest src) {
+  return ::test_inheritancewithrecursivedecl::ParentFirstRequest(WireNaturalConversionTraits<::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>, ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>>::ToNatural(std::move(src.request)));
 }
-::test_inheritancewithrecursivedecl::wire::ParentFirstRequest
-WireNaturalConversionTraits<
-    ::test_inheritancewithrecursivedecl::wire::ParentFirstRequest,
-    ::test_inheritancewithrecursivedecl::ParentFirstRequest>::
-    ToWire(fidl::AnyArena& arena,
-           ::test_inheritancewithrecursivedecl::ParentFirstRequest src) {
+::test_inheritancewithrecursivedecl::wire::ParentFirstRequest WireNaturalConversionTraits<::test_inheritancewithrecursivedecl::wire::ParentFirstRequest, ::test_inheritancewithrecursivedecl::ParentFirstRequest>::ToWire(fidl::AnyArena& arena, ::test_inheritancewithrecursivedecl::ParentFirstRequest src) {
   return ::test_inheritancewithrecursivedecl::wire::ParentFirstRequest{
-      .request = WireNaturalConversionTraits<
-          ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>,
-          ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>>::
-          ToWire(arena, std::move(src.request())),
+      .request = WireNaturalConversionTraits<::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>, ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>>::ToWire(arena, std::move(src.request())),
   };
 }
 
@@ -37,29 +20,12 @@ WireNaturalConversionTraits<
 
 #ifdef __Fuchsia__
 
-::test_inheritancewithrecursivedecl::ChildSecondRequest
-WireNaturalConversionTraits<
-    ::test_inheritancewithrecursivedecl::wire::ChildSecondRequest,
-    ::test_inheritancewithrecursivedecl::ChildSecondRequest>::
-    ToNatural(
-        ::test_inheritancewithrecursivedecl::wire::ChildSecondRequest src) {
-  return ::test_inheritancewithrecursivedecl::ChildSecondRequest(
-      WireNaturalConversionTraits<
-          ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>,
-          ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>>::
-          ToNatural(std::move(src.request)));
+::test_inheritancewithrecursivedecl::ChildSecondRequest WireNaturalConversionTraits<::test_inheritancewithrecursivedecl::wire::ChildSecondRequest, ::test_inheritancewithrecursivedecl::ChildSecondRequest>::ToNatural(::test_inheritancewithrecursivedecl::wire::ChildSecondRequest src) {
+  return ::test_inheritancewithrecursivedecl::ChildSecondRequest(WireNaturalConversionTraits<::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>, ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>>::ToNatural(std::move(src.request)));
 }
-::test_inheritancewithrecursivedecl::wire::ChildSecondRequest
-WireNaturalConversionTraits<
-    ::test_inheritancewithrecursivedecl::wire::ChildSecondRequest,
-    ::test_inheritancewithrecursivedecl::ChildSecondRequest>::
-    ToWire(fidl::AnyArena& arena,
-           ::test_inheritancewithrecursivedecl::ChildSecondRequest src) {
+::test_inheritancewithrecursivedecl::wire::ChildSecondRequest WireNaturalConversionTraits<::test_inheritancewithrecursivedecl::wire::ChildSecondRequest, ::test_inheritancewithrecursivedecl::ChildSecondRequest>::ToWire(fidl::AnyArena& arena, ::test_inheritancewithrecursivedecl::ChildSecondRequest src) {
   return ::test_inheritancewithrecursivedecl::wire::ChildSecondRequest{
-      .request = WireNaturalConversionTraits<
-          ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>,
-          ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>>::
-          ToWire(arena, std::move(src.request())),
+      .request = WireNaturalConversionTraits<::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>, ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>>::ToWire(arena, std::move(src.request())),
   };
 }
 
@@ -67,87 +33,31 @@ WireNaturalConversionTraits<
 
 #ifdef __Fuchsia__
 
-::fidl::Request<::test_inheritancewithrecursivedecl::Parent::First>
-WireNaturalConversionTraits<
-    ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Parent::First>,
-    ::fidl::Request<::test_inheritancewithrecursivedecl::Parent::First>>::
-    ToNatural(
-        ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Parent::First>
-            src) {
+::fidl::Request<::test_inheritancewithrecursivedecl::Parent::First> WireNaturalConversionTraits<::fidl::WireRequest<::test_inheritancewithrecursivedecl::Parent::First>, ::fidl::Request<::test_inheritancewithrecursivedecl::Parent::First>>::ToNatural(::fidl::WireRequest<::test_inheritancewithrecursivedecl::Parent::First> src) {
   return ::fidl::Request<::test_inheritancewithrecursivedecl::Parent::First>(
-      WireNaturalConversionTraits<
-          ::test_inheritancewithrecursivedecl::wire::ParentFirstRequest,
-          ::test_inheritancewithrecursivedecl::ParentFirstRequest>::
-          ToNatural(std::move(src)));
+      WireNaturalConversionTraits<::test_inheritancewithrecursivedecl::wire::ParentFirstRequest, ::test_inheritancewithrecursivedecl::ParentFirstRequest>::ToNatural(std::move(src)));
 }
-::fidl::WireRequest<::test_inheritancewithrecursivedecl::Parent::First>
-WireNaturalConversionTraits<
-    ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Parent::First>,
-    ::fidl::Request<::test_inheritancewithrecursivedecl::Parent::First>>::
-    ToWire(fidl::AnyArena& arena,
-           ::fidl::Request<::test_inheritancewithrecursivedecl::Parent::First>
-               src) {
-  return ::fidl::WireRequest<
-      ::test_inheritancewithrecursivedecl::Parent::First>(
-      WireNaturalConversionTraits<
-          ::test_inheritancewithrecursivedecl::wire::ParentFirstRequest,
-          ::test_inheritancewithrecursivedecl::ParentFirstRequest>::
-          ToWire(arena, std::move(src)));
+::fidl::WireRequest<::test_inheritancewithrecursivedecl::Parent::First> WireNaturalConversionTraits<::fidl::WireRequest<::test_inheritancewithrecursivedecl::Parent::First>, ::fidl::Request<::test_inheritancewithrecursivedecl::Parent::First>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_inheritancewithrecursivedecl::Parent::First> src) {
+  return ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Parent::First>(
+      WireNaturalConversionTraits<::test_inheritancewithrecursivedecl::wire::ParentFirstRequest, ::test_inheritancewithrecursivedecl::ParentFirstRequest>::ToWire(arena, std::move(src)));
 }
 
-::fidl::Request<::test_inheritancewithrecursivedecl::Child::First>
-WireNaturalConversionTraits<
-    ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::First>,
-    ::fidl::Request<::test_inheritancewithrecursivedecl::Child::First>>::
-    ToNatural(
-        ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::First>
-            src) {
+::fidl::Request<::test_inheritancewithrecursivedecl::Child::First> WireNaturalConversionTraits<::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::First>, ::fidl::Request<::test_inheritancewithrecursivedecl::Child::First>>::ToNatural(::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::First> src) {
   return ::fidl::Request<::test_inheritancewithrecursivedecl::Child::First>(
-      WireNaturalConversionTraits<
-          ::test_inheritancewithrecursivedecl::wire::ParentFirstRequest,
-          ::test_inheritancewithrecursivedecl::ParentFirstRequest>::
-          ToNatural(std::move(src)));
+      WireNaturalConversionTraits<::test_inheritancewithrecursivedecl::wire::ParentFirstRequest, ::test_inheritancewithrecursivedecl::ParentFirstRequest>::ToNatural(std::move(src)));
 }
-::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::First>
-WireNaturalConversionTraits<
-    ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::First>,
-    ::fidl::Request<::test_inheritancewithrecursivedecl::Child::First>>::
-    ToWire(fidl::AnyArena& arena,
-           ::fidl::Request<::test_inheritancewithrecursivedecl::Child::First>
-               src) {
+::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::First> WireNaturalConversionTraits<::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::First>, ::fidl::Request<::test_inheritancewithrecursivedecl::Child::First>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_inheritancewithrecursivedecl::Child::First> src) {
   return ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::First>(
-      WireNaturalConversionTraits<
-          ::test_inheritancewithrecursivedecl::wire::ParentFirstRequest,
-          ::test_inheritancewithrecursivedecl::ParentFirstRequest>::
-          ToWire(arena, std::move(src)));
+      WireNaturalConversionTraits<::test_inheritancewithrecursivedecl::wire::ParentFirstRequest, ::test_inheritancewithrecursivedecl::ParentFirstRequest>::ToWire(arena, std::move(src)));
 }
 
-::fidl::Request<::test_inheritancewithrecursivedecl::Child::Second>
-WireNaturalConversionTraits<
-    ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::Second>,
-    ::fidl::Request<::test_inheritancewithrecursivedecl::Child::Second>>::
-    ToNatural(
-        ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::Second>
-            src) {
+::fidl::Request<::test_inheritancewithrecursivedecl::Child::Second> WireNaturalConversionTraits<::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::Second>, ::fidl::Request<::test_inheritancewithrecursivedecl::Child::Second>>::ToNatural(::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::Second> src) {
   return ::fidl::Request<::test_inheritancewithrecursivedecl::Child::Second>(
-      WireNaturalConversionTraits<
-          ::test_inheritancewithrecursivedecl::wire::ChildSecondRequest,
-          ::test_inheritancewithrecursivedecl::ChildSecondRequest>::
-          ToNatural(std::move(src)));
+      WireNaturalConversionTraits<::test_inheritancewithrecursivedecl::wire::ChildSecondRequest, ::test_inheritancewithrecursivedecl::ChildSecondRequest>::ToNatural(std::move(src)));
 }
-::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::Second>
-WireNaturalConversionTraits<
-    ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::Second>,
-    ::fidl::Request<::test_inheritancewithrecursivedecl::Child::Second>>::
-    ToWire(fidl::AnyArena& arena,
-           ::fidl::Request<::test_inheritancewithrecursivedecl::Child::Second>
-               src) {
-  return ::fidl::WireRequest<
-      ::test_inheritancewithrecursivedecl::Child::Second>(
-      WireNaturalConversionTraits<
-          ::test_inheritancewithrecursivedecl::wire::ChildSecondRequest,
-          ::test_inheritancewithrecursivedecl::ChildSecondRequest>::
-          ToWire(arena, std::move(src)));
+::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::Second> WireNaturalConversionTraits<::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::Second>, ::fidl::Request<::test_inheritancewithrecursivedecl::Child::Second>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_inheritancewithrecursivedecl::Child::Second> src) {
+  return ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::Second>(
+      WireNaturalConversionTraits<::test_inheritancewithrecursivedecl::wire::ChildSecondRequest, ::test_inheritancewithrecursivedecl::ChildSecondRequest>::ToWire(arena, std::move(src)));
 }
 #endif  // __Fuchsia__
 }  // namespace internal

@@ -15,12 +15,9 @@ namespace fidl {
 namespace internal {
 
 template <>
-struct WireNaturalConversionTraits<::test_byteandbytes::wire::ByteAndBytes,
-                                   ::test_byteandbytes::ByteAndBytes> {
-  static ::test_byteandbytes::ByteAndBytes ToNatural(
-      ::test_byteandbytes::wire::ByteAndBytes src);
-  static ::test_byteandbytes::wire::ByteAndBytes ToWire(
-      fidl::AnyArena& arena, ::test_byteandbytes::ByteAndBytes src);
+struct WireNaturalConversionTraits<::test_byteandbytes::wire::ByteAndBytes, ::test_byteandbytes::ByteAndBytes> {
+  static ::test_byteandbytes::ByteAndBytes ToNatural(::test_byteandbytes::wire::ByteAndBytes src);
+  static ::test_byteandbytes::wire::ByteAndBytes ToWire(fidl::AnyArena& arena, ::test_byteandbytes::ByteAndBytes src);
 };
 
 template <>

@@ -2,8 +2,7 @@
 
 #include <fidl/test.byteandbytes/cpp/natural_types.h>
 
-::test_byteandbytes::ByteAndBytes::Storage_
-test_byteandbytes::ByteAndBytes::CloneStorage_() const {
+::test_byteandbytes::ByteAndBytes::Storage_ test_byteandbytes::ByteAndBytes::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.single_byte),
       ::fidl::internal::NaturalClone(storage_.many_bytes),

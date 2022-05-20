@@ -3,105 +3,75 @@
 #include <fidl/test.unknowninteractions/cpp/natural_messaging.h>
 
 namespace test_unknowninteractions {
-[[maybe_unused]] constexpr inline uint64_t kExample_StrictOneWay_Ordinal =
-    2276912608357927194lu;
+[[maybe_unused]] constexpr inline uint64_t kExample_StrictOneWay_Ordinal = 2276912608357927194lu;
 
-[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
-    kExample_StrictOneWay_DynamicFlags =
-        ::fidl::MessageDynamicFlags::kStrictMethod;
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kExample_StrictOneWay_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
-[[maybe_unused]] constexpr inline uint64_t kExample_FlexibleOneWay_Ordinal =
-    2309537410782500280lu;
+[[maybe_unused]] constexpr inline uint64_t kExample_FlexibleOneWay_Ordinal = 2309537410782500280lu;
 
-[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
-    kExample_FlexibleOneWay_DynamicFlags =
-        ::fidl::MessageDynamicFlags::kFlexibleMethod;
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kExample_FlexibleOneWay_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
-[[maybe_unused]] constexpr inline uint64_t kExample_StrictTwoWay_Ordinal =
-    4530909159434307973lu;
+[[maybe_unused]] constexpr inline uint64_t kExample_StrictTwoWay_Ordinal = 4530909159434307973lu;
 
-[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
-    kExample_StrictTwoWay_DynamicFlags =
-        ::fidl::MessageDynamicFlags::kStrictMethod;
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kExample_StrictTwoWay_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
-[[maybe_unused]] constexpr inline uint64_t kExample_FlexibleTwoWay_Ordinal =
-    9070032238358100524lu;
+[[maybe_unused]] constexpr inline uint64_t kExample_FlexibleTwoWay_Ordinal = 9070032238358100524lu;
 
-[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
-    kExample_FlexibleTwoWay_DynamicFlags =
-        ::fidl::MessageDynamicFlags::kFlexibleMethod;
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kExample_FlexibleTwoWay_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
-[[maybe_unused]] constexpr inline uint64_t kExample_StrictEvent_Ordinal =
-    2942732192976592869lu;
+[[maybe_unused]] constexpr inline uint64_t kExample_StrictEvent_Ordinal = 2942732192976592869lu;
 
-[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
-    kExample_StrictEvent_DynamicFlags =
-        ::fidl::MessageDynamicFlags::kStrictMethod;
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kExample_StrictEvent_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
-[[maybe_unused]] constexpr inline uint64_t kExample_FlexibleEvent_Ordinal =
-    2065245206460174394lu;
+[[maybe_unused]] constexpr inline uint64_t kExample_FlexibleEvent_Ordinal = 2065245206460174394lu;
 
-[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
-    kExample_FlexibleEvent_DynamicFlags =
-        ::fidl::MessageDynamicFlags::kFlexibleMethod;
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kExample_FlexibleEvent_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
-::fidl::internal::NaturalThenable<
-    ::test_unknowninteractions::Example::StrictTwoWay>
-fidl::internal::NaturalClientImpl<
-    ::test_unknowninteractions::Example>::StrictTwoWay() const {
+::fidl::internal::NaturalThenable<::test_unknowninteractions::Example::StrictTwoWay>
+fidl::internal::NaturalClientImpl<::test_unknowninteractions::Example>::StrictTwoWay() const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_unknowninteractions::kExample_StrictTwoWay_Ordinal,
-      ::test_unknowninteractions::kExample_StrictTwoWay_DynamicFlags};
-  return ::fidl::internal::NaturalThenable<
-      ::test_unknowninteractions::Example::StrictTwoWay>(
+      &::fidl::internal::ChannelTransport::VTable, ::test_unknowninteractions::kExample_StrictTwoWay_Ordinal, ::test_unknowninteractions::kExample_StrictTwoWay_DynamicFlags};
+  return ::fidl::internal::NaturalThenable<::test_unknowninteractions::Example::StrictTwoWay>(
       &client_base(), {}, std::move(_encoder),
-      [](::fidl::internal::ThenableBase* base,
-         ::fidl::internal::NaturalMessageEncoder& encoder,
-         ::fidl::internal::ResponseContext* response_context) {
+      [](
+          ::fidl::internal::ThenableBase* base,
+          ::fidl::internal::NaturalMessageEncoder& encoder,
+          ::fidl::internal::ResponseContext* response_context) {
         ::fidl::OutgoingMessage msg = encoder.GetMessage();
         return base->SendTwoWay(msg, response_context);
       });
 }
 
-::fidl::internal::NaturalThenable<
-    ::test_unknowninteractions::Example::FlexibleTwoWay>
-fidl::internal::NaturalClientImpl<
-    ::test_unknowninteractions::Example>::FlexibleTwoWay() const {
+::fidl::internal::NaturalThenable<::test_unknowninteractions::Example::FlexibleTwoWay>
+fidl::internal::NaturalClientImpl<::test_unknowninteractions::Example>::FlexibleTwoWay() const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_unknowninteractions::kExample_FlexibleTwoWay_Ordinal,
-      ::test_unknowninteractions::kExample_FlexibleTwoWay_DynamicFlags};
-  return ::fidl::internal::NaturalThenable<
-      ::test_unknowninteractions::Example::FlexibleTwoWay>(
+      &::fidl::internal::ChannelTransport::VTable, ::test_unknowninteractions::kExample_FlexibleTwoWay_Ordinal, ::test_unknowninteractions::kExample_FlexibleTwoWay_DynamicFlags};
+  return ::fidl::internal::NaturalThenable<::test_unknowninteractions::Example::FlexibleTwoWay>(
       &client_base(), {}, std::move(_encoder),
-      [](::fidl::internal::ThenableBase* base,
-         ::fidl::internal::NaturalMessageEncoder& encoder,
-         ::fidl::internal::ResponseContext* response_context) {
+      [](
+          ::fidl::internal::ThenableBase* base,
+          ::fidl::internal::NaturalMessageEncoder& encoder,
+          ::fidl::internal::ResponseContext* response_context) {
         ::fidl::OutgoingMessage msg = encoder.GetMessage();
         return base->SendTwoWay(msg, response_context);
       });
 }
 
-::fitx::result<::fidl::Error> fidl::internal::NaturalClientImpl<
-    ::test_unknowninteractions::Example>::StrictOneWay() const {
+::fitx::result<::fidl::Error>
+fidl::internal::NaturalClientImpl<::test_unknowninteractions::Example>::StrictOneWay() const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_unknowninteractions::kExample_StrictOneWay_Ordinal,
-      ::test_unknowninteractions::kExample_StrictOneWay_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_unknowninteractions::kExample_StrictOneWay_Ordinal, ::test_unknowninteractions::kExample_StrictOneWay_DynamicFlags};
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   ::fidl::Status status = client_base().SendOneWay(_encoded_message);
   return ::fidl::internal::ToFitxResult(status);
 }
 
-::fitx::result<::fidl::Error> fidl::internal::NaturalClientImpl<
-    ::test_unknowninteractions::Example>::FlexibleOneWay() const {
+::fitx::result<::fidl::Error>
+fidl::internal::NaturalClientImpl<::test_unknowninteractions::Example>::FlexibleOneWay() const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_unknowninteractions::kExample_FlexibleOneWay_Ordinal,
-      ::test_unknowninteractions::kExample_FlexibleOneWay_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_unknowninteractions::kExample_FlexibleOneWay_Ordinal, ::test_unknowninteractions::kExample_FlexibleOneWay_DynamicFlags};
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   ::fidl::Status status = client_base().SendOneWay(_encoded_message);
   return ::fidl::internal::ToFitxResult(status);
@@ -113,56 +83,38 @@ namespace test_unknowninteractions {
 #ifdef __Fuchsia__
 
 ::fidl::Result<::test_unknowninteractions::Example::StrictTwoWay>
-fidl::internal::NaturalSyncClientImpl<
-    ::test_unknowninteractions::Example>::StrictTwoWay() {
+fidl::internal::NaturalSyncClientImpl<::test_unknowninteractions::Example>::StrictTwoWay() {
   ::fidl::internal::NaturalMessageEncoder encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_unknowninteractions::kExample_StrictTwoWay_Ordinal,
-      ::test_unknowninteractions::kExample_StrictTwoWay_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_unknowninteractions::kExample_StrictTwoWay_Ordinal, ::test_unknowninteractions::kExample_StrictTwoWay_DynamicFlags};
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
-  ::fidl::internal::IncomingMessageStorage<
-      ::fidl::internal::TransactionalResponse<
-          ::test_unknowninteractions::Example::StrictTwoWay>>
-      response_storage;
-  return ::fidl::internal::DecodeResponseAndFoldError<
-      ::test_unknowninteractions::Example::StrictTwoWay>(
+  ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::StrictTwoWay>> response_storage;
+  return ::fidl::internal::DecodeResponseAndFoldError<::test_unknowninteractions::Example::StrictTwoWay>(
       msg.Call(_client_end().handle(), response_storage.view()), nullptr);
 }
 
 ::fidl::Result<::test_unknowninteractions::Example::FlexibleTwoWay>
-fidl::internal::NaturalSyncClientImpl<
-    ::test_unknowninteractions::Example>::FlexibleTwoWay() {
+fidl::internal::NaturalSyncClientImpl<::test_unknowninteractions::Example>::FlexibleTwoWay() {
   ::fidl::internal::NaturalMessageEncoder encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_unknowninteractions::kExample_FlexibleTwoWay_Ordinal,
-      ::test_unknowninteractions::kExample_FlexibleTwoWay_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_unknowninteractions::kExample_FlexibleTwoWay_Ordinal, ::test_unknowninteractions::kExample_FlexibleTwoWay_DynamicFlags};
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
-  ::fidl::internal::IncomingMessageStorage<
-      ::fidl::internal::TransactionalResponse<
-          ::test_unknowninteractions::Example::FlexibleTwoWay>>
-      response_storage;
-  return ::fidl::internal::DecodeResponseAndFoldError<
-      ::test_unknowninteractions::Example::FlexibleTwoWay>(
+  ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::FlexibleTwoWay>> response_storage;
+  return ::fidl::internal::DecodeResponseAndFoldError<::test_unknowninteractions::Example::FlexibleTwoWay>(
       msg.Call(_client_end().handle(), response_storage.view()), nullptr);
 }
 
-::fitx::result<::fidl::Error> fidl::internal::NaturalSyncClientImpl<
-    ::test_unknowninteractions::Example>::StrictOneWay() {
+::fitx::result<::fidl::Error>
+fidl::internal::NaturalSyncClientImpl<::test_unknowninteractions::Example>::StrictOneWay() {
   ::fidl::internal::NaturalMessageEncoder encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_unknowninteractions::kExample_StrictOneWay_Ordinal,
-      ::test_unknowninteractions::kExample_StrictOneWay_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_unknowninteractions::kExample_StrictOneWay_Ordinal, ::test_unknowninteractions::kExample_StrictOneWay_DynamicFlags};
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
   msg.Write(_client_end().handle());
   return ::fidl::internal::ToFitxResult(::fidl::Status{msg});
 }
 
-::fitx::result<::fidl::Error> fidl::internal::NaturalSyncClientImpl<
-    ::test_unknowninteractions::Example>::FlexibleOneWay() {
+::fitx::result<::fidl::Error>
+fidl::internal::NaturalSyncClientImpl<::test_unknowninteractions::Example>::FlexibleOneWay() {
   ::fidl::internal::NaturalMessageEncoder encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_unknowninteractions::kExample_FlexibleOneWay_Ordinal,
-      ::test_unknowninteractions::kExample_FlexibleOneWay_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_unknowninteractions::kExample_FlexibleOneWay_Ordinal, ::test_unknowninteractions::kExample_FlexibleOneWay_DynamicFlags};
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
   msg.Write(_client_end().handle());
   return ::fidl::internal::ToFitxResult(::fidl::Status{msg});
@@ -172,14 +124,13 @@ fidl::internal::NaturalSyncClientImpl<
 
 #ifdef __Fuchsia__
 
-std::optional<::fidl::UnbindInfo> fidl::internal::
-    NaturalEventDispatcher<::test_unknowninteractions::Example>::DispatchEvent(
-        ::fidl::IncomingMessage& msg,
-        ::fidl::internal::MessageStorageViewBase* storage_view) {
+std::optional<::fidl::UnbindInfo>
+fidl::internal::NaturalEventDispatcher<::test_unknowninteractions::Example>::DispatchEvent(
+    ::fidl::IncomingMessage& msg,
+    ::fidl::internal::MessageStorageViewBase* storage_view) {
   switch (msg.header()->ordinal) {
     case ::test_unknowninteractions::kExample_StrictEvent_Ordinal: {
-      ::fitx::result decoded =
-          ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
+      ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
       if (decoded.is_error()) {
         return ::fidl::UnbindInfo(decoded.error_value());
       }
@@ -190,8 +141,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
       return std::nullopt;
     }
     case ::test_unknowninteractions::kExample_FlexibleEvent_Ordinal: {
-      ::fitx::result decoded =
-          ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
+      ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
       if (decoded.is_error()) {
         return ::fidl::UnbindInfo(decoded.error_value());
       }
@@ -210,45 +160,33 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
 
 #ifdef __Fuchsia__
 
-::fitx::result<::fidl::Error> fidl::internal::NaturalWeakEventSender<
-    ::test_unknowninteractions::Example>::StrictEvent() {
+::fitx::result<::fidl::Error> fidl::internal::NaturalWeakEventSender<::test_unknowninteractions::Example>::StrictEvent() {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_unknowninteractions::kExample_StrictEvent_Ordinal,
-      ::test_unknowninteractions::kExample_StrictEvent_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_unknowninteractions::kExample_StrictEvent_Ordinal, ::test_unknowninteractions::kExample_StrictEvent_DynamicFlags};
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   ::fidl::Status result = _inner().SendEvent(_encoded_message);
   return ::fidl::internal::ToFitxResult(result);
 }
 
-::fitx::result<::fidl::Error> fidl::internal::NaturalEventSender<
-    ::test_unknowninteractions::Example>::StrictEvent() {
+::fitx::result<::fidl::Error> fidl::internal::NaturalEventSender<::test_unknowninteractions::Example>::StrictEvent() {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_unknowninteractions::kExample_StrictEvent_Ordinal,
-      ::test_unknowninteractions::kExample_StrictEvent_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_unknowninteractions::kExample_StrictEvent_Ordinal, ::test_unknowninteractions::kExample_StrictEvent_DynamicFlags};
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   _encoded_message.Write(_transport());
   return ::fidl::internal::ToFitxResult(::fidl::Status{_encoded_message});
 }
 
-::fitx::result<::fidl::Error> fidl::internal::NaturalWeakEventSender<
-    ::test_unknowninteractions::Example>::FlexibleEvent() {
+::fitx::result<::fidl::Error> fidl::internal::NaturalWeakEventSender<::test_unknowninteractions::Example>::FlexibleEvent() {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_unknowninteractions::kExample_FlexibleEvent_Ordinal,
-      ::test_unknowninteractions::kExample_FlexibleEvent_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_unknowninteractions::kExample_FlexibleEvent_Ordinal, ::test_unknowninteractions::kExample_FlexibleEvent_DynamicFlags};
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   ::fidl::Status result = _inner().SendEvent(_encoded_message);
   return ::fidl::internal::ToFitxResult(result);
 }
 
-::fitx::result<::fidl::Error> fidl::internal::NaturalEventSender<
-    ::test_unknowninteractions::Example>::FlexibleEvent() {
+::fitx::result<::fidl::Error> fidl::internal::NaturalEventSender<::test_unknowninteractions::Example>::FlexibleEvent() {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_unknowninteractions::kExample_FlexibleEvent_Ordinal,
-      ::test_unknowninteractions::kExample_FlexibleEvent_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_unknowninteractions::kExample_FlexibleEvent_Ordinal, ::test_unknowninteractions::kExample_FlexibleEvent_DynamicFlags};
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   _encoded_message.Write(_transport());
   return ::fidl::internal::ToFitxResult(::fidl::Status{_encoded_message});
@@ -256,140 +194,97 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
 
 #endif  // __Fuchsia__
 
-void fidl::internal::NaturalCompleterBase<
-    ::test_unknowninteractions::Example::StrictTwoWay>::Reply() {
+void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Example::StrictTwoWay>::Reply() {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_unknowninteractions::kExample_StrictTwoWay_Ordinal,
-      ::test_unknowninteractions::kExample_StrictTwoWay_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_unknowninteractions::kExample_StrictTwoWay_Ordinal, ::test_unknowninteractions::kExample_StrictTwoWay_DynamicFlags};
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
 
-void fidl::internal::NaturalCompleterBase<
-    ::test_unknowninteractions::Example::FlexibleTwoWay>::
-    Reply(
-        ::fidl::Response<::test_unknowninteractions::Example::FlexibleTwoWay>&&
-            response) {
+void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Example::FlexibleTwoWay>::Reply(::fidl::Response<::test_unknowninteractions::Example::FlexibleTwoWay>&& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_unknowninteractions::kExample_FlexibleTwoWay_Ordinal,
-      ::test_unknowninteractions::kExample_FlexibleTwoWay_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_unknowninteractions::kExample_FlexibleTwoWay_Ordinal, ::test_unknowninteractions::kExample_FlexibleTwoWay_DynamicFlags};
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<
-          ::test_unknowninteractions::Example::FlexibleTwoWay>>::
-          IntoDomainObject(std::move(response)));
+      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::Example::FlexibleTwoWay>>::IntoDomainObject(std::move(response)));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
 
 #ifdef __Fuchsia__
 
-constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
-    ::test_unknowninteractions::Example>::entries_[] = {
+constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::Example>::entries_[] = {
     {
         ::test_unknowninteractions::kExample_StrictOneWay_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::MessageStorageViewBase* storage_view,
-           ::fidl::Transaction* txn) {
-          ::fitx::result decoded =
-              ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
+           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_unknowninteractions::Example::StrictOneWay>
-              request;
-          ::fidl::internal::NaturalCompleter<
-              ::test_unknowninteractions::Example::StrictOneWay>::Sync
-              completer(txn);
-          static_cast<::fidl::Server<::test_unknowninteractions::Example>*>(
-              interface)
-              ->StrictOneWay(request, completer);
+          ::fidl::Request<::test_unknowninteractions::Example::StrictOneWay> request;
+          ::fidl::internal::NaturalCompleter<::test_unknowninteractions::Example::StrictOneWay>::Sync completer(txn);
+          static_cast<::fidl::Server<::test_unknowninteractions::Example>*>(interface)->StrictOneWay(
+              request, completer);
           return ::fidl::Status::Ok();
         },
     },
     {
         ::test_unknowninteractions::kExample_FlexibleOneWay_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::MessageStorageViewBase* storage_view,
-           ::fidl::Transaction* txn) {
-          ::fitx::result decoded =
-              ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
+           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_unknowninteractions::Example::FlexibleOneWay>
-              request;
-          ::fidl::internal::NaturalCompleter<
-              ::test_unknowninteractions::Example::FlexibleOneWay>::Sync
-              completer(txn);
-          static_cast<::fidl::Server<::test_unknowninteractions::Example>*>(
-              interface)
-              ->FlexibleOneWay(request, completer);
+          ::fidl::Request<::test_unknowninteractions::Example::FlexibleOneWay> request;
+          ::fidl::internal::NaturalCompleter<::test_unknowninteractions::Example::FlexibleOneWay>::Sync completer(txn);
+          static_cast<::fidl::Server<::test_unknowninteractions::Example>*>(interface)->FlexibleOneWay(
+              request, completer);
           return ::fidl::Status::Ok();
         },
     },
     {
         ::test_unknowninteractions::kExample_StrictTwoWay_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::MessageStorageViewBase* storage_view,
-           ::fidl::Transaction* txn) {
-          ::fitx::result decoded =
-              ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
+           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_unknowninteractions::Example::StrictTwoWay>
-              request;
-          ::fidl::internal::NaturalCompleter<
-              ::test_unknowninteractions::Example::StrictTwoWay>::Sync
-              completer(txn);
-          static_cast<::fidl::Server<::test_unknowninteractions::Example>*>(
-              interface)
-              ->StrictTwoWay(request, completer);
+          ::fidl::Request<::test_unknowninteractions::Example::StrictTwoWay> request;
+          ::fidl::internal::NaturalCompleter<::test_unknowninteractions::Example::StrictTwoWay>::Sync completer(txn);
+          static_cast<::fidl::Server<::test_unknowninteractions::Example>*>(interface)->StrictTwoWay(
+              request, completer);
           return ::fidl::Status::Ok();
         },
     },
     {
         ::test_unknowninteractions::kExample_FlexibleTwoWay_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::MessageStorageViewBase* storage_view,
-           ::fidl::Transaction* txn) {
-          ::fitx::result decoded =
-              ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
+           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_unknowninteractions::Example::FlexibleTwoWay>
-              request;
-          ::fidl::internal::NaturalCompleter<
-              ::test_unknowninteractions::Example::FlexibleTwoWay>::Sync
-              completer(txn);
-          static_cast<::fidl::Server<::test_unknowninteractions::Example>*>(
-              interface)
-              ->FlexibleTwoWay(request, completer);
+          ::fidl::Request<::test_unknowninteractions::Example::FlexibleTwoWay> request;
+          ::fidl::internal::NaturalCompleter<::test_unknowninteractions::Example::FlexibleTwoWay>::Sync completer(txn);
+          static_cast<::fidl::Server<::test_unknowninteractions::Example>*>(interface)->FlexibleTwoWay(
+              request, completer);
           return ::fidl::Status::Ok();
         },
     },
 };
 
-const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<
-    ::test_unknowninteractions::Example>::entries_end_ = &entries_[4];
+const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::Example>::entries_end_ =
+    &entries_[4];
 
-void fidl::internal::
-    NaturalServerDispatcher<::test_unknowninteractions::Example>::Dispatch(
-        ::fidl::Server<::test_unknowninteractions::Example>* impl,
-        ::fidl::IncomingMessage&& msg,
-        internal::MessageStorageViewBase* storage_view,
-        ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_,
-                             entries_end_);
+void fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::Example>::Dispatch(::fidl::Server<::test_unknowninteractions::Example>* impl, ::fidl::IncomingMessage&& msg,
+                                                                                            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_);
 }
 void fidl::Server<::test_unknowninteractions::Example>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
-  ::fidl::internal::NaturalServerDispatcher<
-      ::test_unknowninteractions::Example>::Dispatch(this, std::move(msg),
-                                                     storage_view, txn);
+  ::fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::Example>::Dispatch(this, std::move(msg), storage_view, txn);
 }
 #endif  // __Fuchsia__

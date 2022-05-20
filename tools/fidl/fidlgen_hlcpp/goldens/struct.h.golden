@@ -21,13 +21,10 @@ class Simple final {
 
   bool f2{};
 
-  static inline ::std::unique_ptr<Simple> New() {
-    return ::std::make_unique<Simple>();
-  }
+  static inline ::std::unique_ptr<Simple> New() { return ::std::make_unique<Simple>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
   static void Decode(::fidl::Decoder* _decoder, Simple* value, size_t _offset);
   zx_status_t Clone(Simple* result) const;
 };
@@ -47,15 +44,11 @@ class BasicStruct final {
 
   ::std::string y{};
 
-  static inline ::std::unique_ptr<BasicStruct> New() {
-    return ::std::make_unique<BasicStruct>();
-  }
+  static inline ::std::unique_ptr<BasicStruct> New() { return ::std::make_unique<BasicStruct>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, BasicStruct* value,
-                     size_t _offset);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, BasicStruct* value, size_t _offset);
   zx_status_t Clone(BasicStruct* result) const;
 };
 
@@ -74,11 +67,8 @@ struct CodingTraits<::test::struct_::Simple>
     : public EncodableCodingTraits<::test::struct_::Simple, 2> {};
 
 template <>
-struct IsMemcpyCompatible<::test::struct_::Simple>
-    : public internal::BoolConstant<
-          !HasPadding<::test::struct_::Simple>::value &&
-          IsMemcpyCompatible<uint8_t>::value &&
-          IsMemcpyCompatible<bool>::value> {};
+struct IsMemcpyCompatible<::test::struct_::Simple> : public internal::BoolConstant<
+                                                         !HasPadding<::test::struct_::Simple>::value && IsMemcpyCompatible<uint8_t>::value && IsMemcpyCompatible<bool>::value> {};
 
 inline zx_status_t Clone(const ::test::struct_::Simple& value,
                          ::test::struct_::Simple* result) {
@@ -87,8 +77,7 @@ inline zx_status_t Clone(const ::test::struct_::Simple& value,
 
 template <>
 struct Equality<::test::struct_::Simple> {
-  bool operator()(const ::test::struct_::Simple& _lhs,
-                  const ::test::struct_::Simple& _rhs) const {
+  bool operator()(const ::test::struct_::Simple& _lhs, const ::test::struct_::Simple& _rhs) const {
     if (!::fidl::Equals(_lhs.f1, _rhs.f1)) {
       return false;
     }
@@ -106,11 +95,8 @@ template <>
 struct HasPadding<::test::struct_::BasicStruct> : public std::true_type {};
 
 template <>
-struct IsMemcpyCompatible<::test::struct_::BasicStruct>
-    : public internal::BoolConstant<
-          !HasPadding<::test::struct_::BasicStruct>::value &&
-          IsMemcpyCompatible<uint32_t>::value &&
-          IsMemcpyCompatible<::std::string>::value> {};
+struct IsMemcpyCompatible<::test::struct_::BasicStruct> : public internal::BoolConstant<
+                                                              !HasPadding<::test::struct_::BasicStruct>::value && IsMemcpyCompatible<uint32_t>::value && IsMemcpyCompatible<::std::string>::value> {};
 
 inline zx_status_t Clone(const ::test::struct_::BasicStruct& value,
                          ::test::struct_::BasicStruct* result) {
@@ -119,8 +105,7 @@ inline zx_status_t Clone(const ::test::struct_::BasicStruct& value,
 
 template <>
 struct Equality<::test::struct_::BasicStruct> {
-  bool operator()(const ::test::struct_::BasicStruct& _lhs,
-                  const ::test::struct_::BasicStruct& _rhs) const {
+  bool operator()(const ::test::struct_::BasicStruct& _lhs, const ::test::struct_::BasicStruct& _rhs) const {
     if (!::fidl::Equals(_lhs.x, _rhs.x)) {
       return false;
     }

@@ -33,7 +33,9 @@ extern "C" const fidl_type_t test_placementofattributes_ExampleXUnionTable;
 
 class ExampleXUnion {
  private:
-  using Storage_ = std::variant<std::monostate, uint32_t>;
+  using Storage_ =
+      std::variant<
+          std::monostate, uint32_t>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -45,8 +47,7 @@ class ExampleXUnion {
   ExampleXUnion() : storage_(std::make_shared<Storage_>()) {}
 
   ExampleXUnion(ExampleXUnion&& other) noexcept
-      : ExampleXUnion(
-            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+      : ExampleXUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
     *storage_ = std::move(*other.storage_);
   }
   ExampleXUnion& operator=(ExampleXUnion&& other) noexcept {
@@ -55,8 +56,7 @@ class ExampleXUnion {
     }
     return *this;
   }
-  ExampleXUnion(const ExampleXUnion& other) noexcept
-      : ExampleXUnion(other.CloneStorage_()) {}
+  ExampleXUnion(const ExampleXUnion& other) noexcept : ExampleXUnion(other.CloneStorage_()) {}
   ExampleXUnion& operator=(const ExampleXUnion& other) noexcept {
     if (this != &other) {
       storage_ = other.CloneStorage_();
@@ -75,8 +75,9 @@ class ExampleXUnion {
     return ExampleXUnion::IndexToTag(storage_->index()).value();
   }
   static ExampleXUnion WithVariant(uint32_t val) {
-    return ExampleXUnion(
-        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+    return ExampleXUnion(std::make_shared<Storage_>(
+        std::in_place_index_t<1>{},
+        std::move(val)));
   }
 
   const ::fidl::internal::UnionMemberView<1, Storage_> variant() const {
@@ -86,26 +87,18 @@ class ExampleXUnion {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
 
-  ExampleXUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : storage_(std::make_shared<Storage_>()) {}
+  ExampleXUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
   std::shared_ptr<Storage_> CloneStorage_() const;
-  friend struct ::fidl::internal::NaturalUnionCodingTraits<
-      ::test_placementofattributes::ExampleXUnion>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalUnionMember<
-                          ::fidl::internal::NaturalCodingConstraintEmpty>(),
-                      ::fidl::internal::NaturalUnionMember<
-                          fidl::internal::NaturalCodingConstraintEmpty>());
+  friend struct ::fidl::internal::NaturalUnionCodingTraits<::test_placementofattributes::ExampleXUnion>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalUnionMember<::fidl::internal::NaturalCodingConstraintEmpty>(), ::fidl::internal::NaturalUnionMember<fidl::internal::NaturalCodingConstraintEmpty>());
 
-  explicit ExampleXUnion(std::shared_ptr<Storage_> storage)
-      : storage_(std::move(storage)) {}
+  explicit ExampleXUnion(std::shared_ptr<Storage_> storage) : storage_(std::move(storage)) {}
 
-  static constexpr size_t TagToIndex(
-      ::fidl::internal::NaturalDecoder* decoder,
-      ::test_placementofattributes::ExampleXUnion::Tag tag) {
+  static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_placementofattributes::ExampleXUnion::Tag tag) {
     switch (tag) {
       case ::test_placementofattributes::ExampleXUnion::Tag::kVariant:
         return 1;
@@ -118,9 +111,7 @@ class ExampleXUnion {
     }
   }
 
-  static constexpr std::optional<
-      ::test_placementofattributes::ExampleXUnion::Tag>
-  IndexToTag(size_t index) {
+  static constexpr std::optional<::test_placementofattributes::ExampleXUnion::Tag> IndexToTag(size_t index) {
     switch (index) {
       case 1:
         return ::test_placementofattributes::ExampleXUnion::Tag::kVariant;
@@ -134,7 +125,9 @@ extern "C" const fidl_type_t test_placementofattributes_ExampleUnionTable;
 
 class ExampleUnion {
  private:
-  using Storage_ = std::variant<std::monostate, uint32_t>;
+  using Storage_ =
+      std::variant<
+          std::monostate, uint32_t>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -143,8 +136,7 @@ class ExampleUnion {
   };
 
   ExampleUnion(ExampleUnion&& other) noexcept
-      : ExampleUnion(
-            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+      : ExampleUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
     *storage_ = std::move(*other.storage_);
   }
   ExampleUnion& operator=(ExampleUnion&& other) noexcept {
@@ -153,8 +145,7 @@ class ExampleUnion {
     }
     return *this;
   }
-  ExampleUnion(const ExampleUnion& other) noexcept
-      : ExampleUnion(other.CloneStorage_()) {}
+  ExampleUnion(const ExampleUnion& other) noexcept : ExampleUnion(other.CloneStorage_()) {}
   ExampleUnion& operator=(const ExampleUnion& other) noexcept {
     if (this != &other) {
       storage_ = other.CloneStorage_();
@@ -173,8 +164,9 @@ class ExampleUnion {
     return ExampleUnion::IndexToTag(storage_->index()).value();
   }
   static ExampleUnion WithVariant(uint32_t val) {
-    return ExampleUnion(
-        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+    return ExampleUnion(std::make_shared<Storage_>(
+        std::in_place_index_t<1>{},
+        std::move(val)));
   }
 
   const ::fidl::internal::UnionMemberView<1, Storage_> variant() const {
@@ -184,26 +176,18 @@ class ExampleUnion {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
 
-  ExampleUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : storage_(std::make_shared<Storage_>()) {}
+  ExampleUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
   std::shared_ptr<Storage_> CloneStorage_() const;
-  friend struct ::fidl::internal::NaturalUnionCodingTraits<
-      ::test_placementofattributes::ExampleUnion>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalUnionMember<
-                          ::fidl::internal::NaturalCodingConstraintEmpty>(),
-                      ::fidl::internal::NaturalUnionMember<
-                          fidl::internal::NaturalCodingConstraintEmpty>());
+  friend struct ::fidl::internal::NaturalUnionCodingTraits<::test_placementofattributes::ExampleUnion>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalUnionMember<::fidl::internal::NaturalCodingConstraintEmpty>(), ::fidl::internal::NaturalUnionMember<fidl::internal::NaturalCodingConstraintEmpty>());
 
-  explicit ExampleUnion(std::shared_ptr<Storage_> storage)
-      : storage_(std::move(storage)) {}
+  explicit ExampleUnion(std::shared_ptr<Storage_> storage) : storage_(std::move(storage)) {}
 
-  static constexpr size_t TagToIndex(
-      ::fidl::internal::NaturalDecoder* decoder,
-      ::test_placementofattributes::ExampleUnion::Tag tag) {
+  static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_placementofattributes::ExampleUnion::Tag tag) {
     switch (tag) {
       case ::test_placementofattributes::ExampleUnion::Tag::kVariant:
         return 1;
@@ -214,9 +198,7 @@ class ExampleUnion {
     }
   }
 
-  static constexpr std::optional<
-      ::test_placementofattributes::ExampleUnion::Tag>
-  IndexToTag(size_t index) {
+  static constexpr std::optional<::test_placementofattributes::ExampleUnion::Tag> IndexToTag(size_t index) {
     switch (index) {
       case 1:
         return ::test_placementofattributes::ExampleUnion::Tag::kVariant;
@@ -237,28 +219,26 @@ class ExampleTable {
   ExampleTable() noexcept = default;
   ExampleTable(ExampleTable&&) noexcept = default;
   ExampleTable& operator=(ExampleTable&&) noexcept = default;
-  ExampleTable(const ExampleTable& other) noexcept
-      : ExampleTable(other.CloneStorage_()) {}
+  ExampleTable(const ExampleTable& other) noexcept : ExampleTable(other.CloneStorage_()) {}
   ExampleTable& operator=(const ExampleTable& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
   }
   bool operator==(const ExampleTable& other) const noexcept {
-    return ::fidl::internal::NaturalTableCodingTraits<
-        ::test_placementofattributes::ExampleTable>::Equal(this, &other);
+    return ::fidl::internal::NaturalTableCodingTraits<::test_placementofattributes::ExampleTable>::Equal(this, &other);
   }
   bool operator!=(const ExampleTable& other) const noexcept {
-    return !::fidl::internal::NaturalTableCodingTraits<
-        ::test_placementofattributes::ExampleTable>::Equal(this, &other);
+    return !::fidl::internal::NaturalTableCodingTraits<::test_placementofattributes::ExampleTable>::Equal(this, &other);
   }
 
-  bool IsEmpty() const { return !(storage_.member.has_value()); }
+  bool IsEmpty() const {
+    return !(storage_.member.has_value());
+  }
 
   const std::optional<uint32_t>& member() const { return storage_.member; }
   ::std::optional<uint32_t>& member() { return storage_.member; }
 
-  ExampleTable(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : ExampleTable(Storage_{}) {}
+  ExampleTable(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ExampleTable(Storage_{}) {}
 
  private:
   struct Storage_ final {
@@ -268,14 +248,10 @@ class ExampleTable {
   // TODO(https://fxbug.dev/91252): Box the storage.
   Storage_ storage_;
   Storage_ CloneStorage_() const;
-  friend struct ::fidl::internal::NaturalTableCodingTraits<
-      ::test_placementofattributes::ExampleTable>;
-  friend struct ::fidl::internal::MemberVisitor<
-      ::test_placementofattributes::ExampleTable>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalTableMember<
-          Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          1, &Storage_::member});
+  friend struct ::fidl::internal::NaturalTableCodingTraits<::test_placementofattributes::ExampleTable>;
+  friend struct ::fidl::internal::MemberVisitor<::test_placementofattributes::ExampleTable>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalTableMember<Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{
+      1, &Storage_::member});
 };
 
 extern "C" const fidl_type_t test_placementofattributes_ExampleStructTable;
@@ -291,37 +267,37 @@ class ExampleStruct {
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |ExampleStruct| only if all of its members are default
-  // constructible.
+  // Default constructs a |ExampleStruct| only if all of its members are default constructible.
   ExampleStruct() = default;
 #pragma clang diagnostic pop
 
   ExampleStruct(ExampleStruct&&) noexcept = default;
   ExampleStruct& operator=(ExampleStruct&&) noexcept = default;
-  ExampleStruct(const ExampleStruct& other) noexcept
-      : ExampleStruct(other.CloneStorage_()) {}
+  ExampleStruct(const ExampleStruct& other) noexcept : ExampleStruct(other.CloneStorage_()) {}
   ExampleStruct& operator=(const ExampleStruct& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
   }
 
   bool operator==(const ExampleStruct& other) const noexcept {
-    return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_placementofattributes::ExampleStruct, 4>::Equal(this, &other);
+    return ::fidl::internal::NaturalStructCodingTraits<::test_placementofattributes::ExampleStruct, 4>::Equal(this, &other);
   }
   bool operator!=(const ExampleStruct& other) const noexcept {
-    return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_placementofattributes::ExampleStruct, 4>::Equal(this, &other);
+    return !::fidl::internal::NaturalStructCodingTraits<::test_placementofattributes::ExampleStruct, 4>::Equal(this, &other);
   }
 
-  uint32_t member() const { return storage_.member; }
+  uint32_t
+  member() const {
+    return storage_.member;
+  }
 
-  uint32_t& member() { return storage_.member; }
+  uint32_t& member() {
+    return storage_.member;
+  }
 
-  ExampleStruct(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : ExampleStruct(Storage_{
-            .member = {},
-        }) {}
+  ExampleStruct(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ExampleStruct(Storage_{
+                                                                                  .member = {},
+                                                                              }) {}
 
  private:
   struct Storage_ final {
@@ -331,70 +307,57 @@ class ExampleStruct {
   Storage_ storage_;
   Storage_ CloneStorage_() const;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_placementofattributes::ExampleStruct, 4>;
-  friend struct ::fidl::internal::MemberVisitor<
-      ::test_placementofattributes::ExampleStruct>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<
-          Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::member, 0});
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_placementofattributes::ExampleStruct, 4>;
+  friend struct ::fidl::internal::MemberVisitor<::test_placementofattributes::ExampleStruct>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{
+      &Storage_::member, 0});
   static constexpr auto kPadding = std::make_tuple();
 };
 
-extern "C" const fidl_type_t
-    test_placementofattributes_ExampleProtocolMethodRequestTable;
+extern "C" const fidl_type_t test_placementofattributes_ExampleProtocolMethodRequestTable;
 
 class ExampleProtocolMethodRequest {
  private:
   struct Storage_;
 
  public:
-  ExampleProtocolMethodRequest(Storage_ storage) noexcept
-      : storage_(std::move(storage)) {}
+  ExampleProtocolMethodRequest(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   ExampleProtocolMethodRequest(::test_exampleusing::Empty arg) noexcept
       : storage_({.arg = std::move(arg)}) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |ExampleProtocolMethodRequest| only if all of its
-  // members are default constructible.
+  // Default constructs a |ExampleProtocolMethodRequest| only if all of its members are default constructible.
   ExampleProtocolMethodRequest() = default;
 #pragma clang diagnostic pop
 
-  ExampleProtocolMethodRequest(ExampleProtocolMethodRequest&&) noexcept =
-      default;
-  ExampleProtocolMethodRequest& operator=(
-      ExampleProtocolMethodRequest&&) noexcept = default;
-  ExampleProtocolMethodRequest(
-      const ExampleProtocolMethodRequest& other) noexcept
-      : ExampleProtocolMethodRequest(other.CloneStorage_()) {}
-  ExampleProtocolMethodRequest& operator=(
-      const ExampleProtocolMethodRequest& other) noexcept {
+  ExampleProtocolMethodRequest(ExampleProtocolMethodRequest&&) noexcept = default;
+  ExampleProtocolMethodRequest& operator=(ExampleProtocolMethodRequest&&) noexcept = default;
+  ExampleProtocolMethodRequest(const ExampleProtocolMethodRequest& other) noexcept : ExampleProtocolMethodRequest(other.CloneStorage_()) {}
+  ExampleProtocolMethodRequest& operator=(const ExampleProtocolMethodRequest& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
   }
 
   bool operator==(const ExampleProtocolMethodRequest& other) const noexcept {
-    return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_placementofattributes::ExampleProtocolMethodRequest,
-        1>::Equal(this, &other);
+    return ::fidl::internal::NaturalStructCodingTraits<::test_placementofattributes::ExampleProtocolMethodRequest, 1>::Equal(this, &other);
   }
   bool operator!=(const ExampleProtocolMethodRequest& other) const noexcept {
-    return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_placementofattributes::ExampleProtocolMethodRequest,
-        1>::Equal(this, &other);
+    return !::fidl::internal::NaturalStructCodingTraits<::test_placementofattributes::ExampleProtocolMethodRequest, 1>::Equal(this, &other);
   }
 
-  const ::test_exampleusing::Empty& arg() const { return storage_.arg; }
+  const ::test_exampleusing::Empty&
+  arg() const {
+    return storage_.arg;
+  }
 
-  ::test_exampleusing::Empty& arg() { return storage_.arg; }
+  ::test_exampleusing::Empty& arg() {
+    return storage_.arg;
+  }
 
-  ExampleProtocolMethodRequest(
-      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : ExampleProtocolMethodRequest(Storage_{
-            .arg = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
-        }) {}
+  ExampleProtocolMethodRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ExampleProtocolMethodRequest(Storage_{
+                                                                                                 .arg = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+                                                                                             }) {}
 
  private:
   struct Storage_ final {
@@ -404,14 +367,10 @@ class ExampleProtocolMethodRequest {
   Storage_ storage_;
   Storage_ CloneStorage_() const;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_placementofattributes::ExampleProtocolMethodRequest, 1>;
-  friend struct ::fidl::internal::MemberVisitor<
-      ::test_placementofattributes::ExampleProtocolMethodRequest>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::test_exampleusing::Empty,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::arg, 0});
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_placementofattributes::ExampleProtocolMethodRequest, 1>;
+  friend struct ::fidl::internal::MemberVisitor<::test_placementofattributes::ExampleProtocolMethodRequest>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::test_exampleusing::Empty, fidl::internal::NaturalCodingConstraintEmpty>{
+      &Storage_::arg, 0});
   static constexpr auto kPadding = std::make_tuple();
 };
 
@@ -423,98 +382,64 @@ namespace fidl {
 extern "C" const fidl_type_t test_placementofattributes_ExampleStructTable;
 
 template <>
-struct IsFidlType<::test_placementofattributes::ExampleStruct>
-    : public std::true_type {};
+struct IsFidlType<::test_placementofattributes::ExampleStruct> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<
-    ::test_placementofattributes::ExampleStruct,
-    ::fidl::internal::NaturalCodingConstraintEmpty>
-    final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_placementofattributes::ExampleStruct, 4> {};
+struct internal::NaturalCodingTraits<::test_placementofattributes::ExampleStruct, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_placementofattributes::ExampleStruct, 4> {};
 
-extern "C" const fidl_type_t
-    test_placementofattributes_ExampleProtocolMethodRequestTable;
+extern "C" const fidl_type_t test_placementofattributes_ExampleProtocolMethodRequestTable;
 
 template <>
-struct IsFidlType<::test_placementofattributes::ExampleProtocolMethodRequest>
-    : public std::true_type {};
+struct IsFidlType<::test_placementofattributes::ExampleProtocolMethodRequest> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<
-    ::test_placementofattributes::ExampleProtocolMethodRequest,
-    ::fidl::internal::NaturalCodingConstraintEmpty>
-    final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_placementofattributes::ExampleProtocolMethodRequest, 1> {
-};
+struct internal::NaturalCodingTraits<::test_placementofattributes::ExampleProtocolMethodRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_placementofattributes::ExampleProtocolMethodRequest, 1> {};
 
 extern "C" const fidl_type_t test_placementofattributes_ExampleTableTable;
 
 template <>
-struct IsFidlType<::test_placementofattributes::ExampleTable>
-    : public std::true_type {};
+struct IsFidlType<::test_placementofattributes::ExampleTable> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<
-    ::test_placementofattributes::ExampleTable,
-    ::fidl::internal::NaturalCodingConstraintEmpty>
-    : public ::fidl::internal::NaturalTableCodingTraits<
-          ::test_placementofattributes::ExampleTable> {};
+struct internal::NaturalCodingTraits<::test_placementofattributes::ExampleTable, ::fidl::internal::NaturalCodingConstraintEmpty> : public ::fidl::internal::NaturalTableCodingTraits<::test_placementofattributes::ExampleTable> {};
 
 extern "C" const fidl_type_t test_placementofattributes_ExampleXUnionTable;
 
 template <>
-struct IsFidlType<::test_placementofattributes::ExampleXUnion>
-    : public std::true_type {};
+struct IsFidlType<::test_placementofattributes::ExampleXUnion> : public std::true_type {};
 template <>
-struct IsUnion<::test_placementofattributes::ExampleXUnion>
-    : public std::true_type {};
+struct IsUnion<::test_placementofattributes::ExampleXUnion> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<
-    ::test_placementofattributes::ExampleXUnion,
-    ::fidl::internal::NaturalCodingConstraintEmpty>
-    final : public ::fidl::internal::NaturalUnionCodingTraits<
-                ::test_placementofattributes::ExampleXUnion> {};
+struct internal::NaturalCodingTraits<::test_placementofattributes::ExampleXUnion, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalUnionCodingTraits<::test_placementofattributes::ExampleXUnion> {};
 
 extern "C" const fidl_type_t test_placementofattributes_ExampleUnionTable;
 
 template <>
-struct IsFidlType<::test_placementofattributes::ExampleUnion>
-    : public std::true_type {};
+struct IsFidlType<::test_placementofattributes::ExampleUnion> : public std::true_type {};
 template <>
-struct IsUnion<::test_placementofattributes::ExampleUnion>
-    : public std::true_type {};
+struct IsUnion<::test_placementofattributes::ExampleUnion> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<
-    ::test_placementofattributes::ExampleUnion,
-    ::fidl::internal::NaturalCodingConstraintEmpty>
-    final : public ::fidl::internal::NaturalUnionCodingTraits<
-                ::test_placementofattributes::ExampleUnion> {};
+struct internal::NaturalCodingTraits<::test_placementofattributes::ExampleUnion, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalUnionCodingTraits<::test_placementofattributes::ExampleUnion> {};
 
 template <>
-struct internal::NaturalCodingTraits<
-    ::test_placementofattributes::ExampleBits,
-    ::fidl::internal::NaturalCodingConstraintEmpty> {
+struct internal::NaturalCodingTraits<::test_placementofattributes::ExampleBits, ::fidl::internal::NaturalCodingConstraintEmpty> {
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
   static constexpr bool is_memcpy_compatible = false;
 
-  static void Encode(internal::NaturalEncoder* encoder,
-                     ::test_placementofattributes::ExampleBits* value,
-                     size_t offset, size_t recursion_depth) {
+  static void Encode(internal::NaturalEncoder* encoder, ::test_placementofattributes::ExampleBits* value, size_t offset, size_t recursion_depth) {
     if (unlikely(static_cast<uint32_t>(*value) & ~1ull)) {
       encoder->SetError(::fidl::internal::kCodingErrorUnknownBitSetInBitsValue);
     }
-    *encoder->template GetPtr<::test_placementofattributes::ExampleBits>(
-        offset) = *value;
+    *encoder->template GetPtr<::test_placementofattributes::ExampleBits>(offset) = *value;
   }
-  static void Decode(internal::NaturalDecoder* decoder,
-                     ::test_placementofattributes::ExampleBits* value,
-                     size_t offset, size_t recursion_depth) {
-    *value =
-        *decoder->template GetPtr<::test_placementofattributes::ExampleBits>(
-            offset);
+  static void Decode(internal::NaturalDecoder* decoder, ::test_placementofattributes::ExampleBits* value, size_t offset, size_t recursion_depth) {
+    *value = *decoder->template GetPtr<::test_placementofattributes::ExampleBits>(offset);
     if (unlikely(static_cast<uint32_t>(*value) & ~1ull)) {
       decoder->SetError(::fidl::internal::kCodingErrorUnknownBitSetInBitsValue);
     }
@@ -522,15 +447,11 @@ struct internal::NaturalCodingTraits<
 };
 
 template <>
-struct internal::NaturalCodingTraits<
-    ::test_placementofattributes::ExampleEnum,
-    ::fidl::internal::NaturalCodingConstraintEmpty> {
+struct internal::NaturalCodingTraits<::test_placementofattributes::ExampleEnum, ::fidl::internal::NaturalCodingConstraintEmpty> {
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
   static constexpr bool is_memcpy_compatible = false;
 
-  static void Encode(internal::NaturalEncoder* encoder,
-                     ::test_placementofattributes::ExampleEnum* value,
-                     size_t offset, size_t recursion_depth) {
+  static void Encode(internal::NaturalEncoder* encoder, ::test_placementofattributes::ExampleEnum* value, size_t offset, size_t recursion_depth) {
     switch (*value) {
       case ::test_placementofattributes::ExampleEnum::kMember:
         break;
@@ -538,15 +459,10 @@ struct internal::NaturalCodingTraits<
         encoder->SetError(::fidl::internal::kCodingErrorUnknownEnumValue);
         return;
     }
-    *encoder->template GetPtr<::test_placementofattributes::ExampleEnum>(
-        offset) = *value;
+    *encoder->template GetPtr<::test_placementofattributes::ExampleEnum>(offset) = *value;
   }
-  static void Decode(internal::NaturalDecoder* decoder,
-                     ::test_placementofattributes::ExampleEnum* value,
-                     size_t offset, size_t recursion_depth) {
-    *value =
-        *decoder->template GetPtr<::test_placementofattributes::ExampleEnum>(
-            offset);
+  static void Decode(internal::NaturalDecoder* decoder, ::test_placementofattributes::ExampleEnum* value, size_t offset, size_t recursion_depth) {
+    *value = *decoder->template GetPtr<::test_placementofattributes::ExampleEnum>(offset);
     switch (*value) {
       case ::test_placementofattributes::ExampleEnum::kMember:
         break;

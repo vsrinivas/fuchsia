@@ -27,11 +27,13 @@ struct ::fidl::internal::WireOrdinal<::test_error::Example::Foo> final {
   static constexpr uint64_t value = 1107623248440401476lu;
 };
 
-namespace test_error {}  // namespace test_error
+namespace test_error {
+}  // namespace test_error
 #ifdef __Fuchsia__
 
 template <>
-struct ::fidl::internal::ProtocolDetails<::test_error::Example> {};
+struct ::fidl::internal::ProtocolDetails<::test_error::Example> {
+};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -39,12 +41,10 @@ struct ::fidl::internal::ProtocolDetails<::test_error::Example> {};
 template <>
 struct ::fidl::internal::WireServerDispatcher<::test_error::Example> final {
   WireServerDispatcher() = delete;
-  static ::fidl::DispatchResult TryDispatch(
-      ::fidl::WireServer<::test_error::Example>* impl,
-      ::fidl::IncomingMessage& msg,
-      internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn);
-  static void Dispatch(::fidl::WireServer<::test_error::Example>* impl,
-                       ::fidl::IncomingMessage&& msg,
+  static ::fidl::DispatchResult TryDispatch(::fidl::WireServer<::test_error::Example>* impl, ::fidl::IncomingMessage& msg,
+                                            internal::MessageStorageViewBase* storage_view,
+                                            ::fidl::Transaction* txn);
+  static void Dispatch(::fidl::WireServer<::test_error::Example>* impl, ::fidl::IncomingMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
@@ -55,47 +55,32 @@ struct ::fidl::internal::WireServerDispatcher<::test_error::Example> final {
 #endif  // __Fuchsia__
 
 template <>
-struct ::fidl::WireRequest<::test_error::Example::Foo> final
-    : public ::test_error::wire::ExampleFooRequest {
-  explicit WireRequest(::test_error::wire::ExampleFooRequest base)
-      : ::test_error::wire::ExampleFooRequest(std::move(base)) {}
-  explicit WireRequest(::fidl::StringView s)
-      : ::test_error::wire::ExampleFooRequest{.s = std::move(s)} {}
+struct ::fidl::WireRequest<::test_error::Example::Foo> final : public ::test_error::wire::ExampleFooRequest {
+  explicit WireRequest(::test_error::wire::ExampleFooRequest base) : ::test_error::wire::ExampleFooRequest(std::move(base)) {}
+  explicit WireRequest(::fidl::StringView s) : ::test_error::wire::ExampleFooRequest{.s = std::move(s)} {}
   WireRequest() = default;
   using ResponseType = ::fidl::WireResponse<::test_error::Example::Foo>;
 };
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::fidl::WireRequest<::test_error::Example::Foo>,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-    : public WireStructCodingTraitsBase<
-          ::fidl::WireRequest<::test_error::Example::Foo>,
-          ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::fidl::WireRequest<::test_error::Example::Foo>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<::fidl::WireRequest<::test_error::Example::Foo>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 16;
 
-  static void Encode(internal::WireEncoder* encoder,
-                     ::fidl::WireRequest<::test_error::Example::Foo>* value,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<
-        ::test_error::wire::ExampleFooRequest,
-        ::fidl::internal::WireCodingConstraintEmpty,
-        IsRecursive>::Encode(encoder, value, position, recursion_depth);
+  static void Encode(
+      internal::WireEncoder* encoder, ::fidl::WireRequest<::test_error::Example::Foo>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    fidl::internal::WireCodingTraits<::test_error::wire::ExampleFooRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
+        encoder, value, position, recursion_depth);
   }
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<
-        ::test_error::wire::ExampleFooRequest,
-        ::fidl::internal::WireCodingConstraintEmpty,
-        IsRecursive>::Decode(decoder, position, recursion_depth);
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    fidl::internal::WireCodingTraits<::test_error::wire::ExampleFooRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+        decoder, position, recursion_depth);
   }
 };
 
 template <>
-struct ::fidl::internal::TransactionalRequest<::test_error::Example::Foo>
-    final {
+struct ::fidl::internal::TransactionalRequest<::test_error::Example::Foo> final {
   FIDL_ALIGNDECL
   fidl_message_header_t header;
 
@@ -104,92 +89,60 @@ struct ::fidl::internal::TransactionalRequest<::test_error::Example::Foo>
       : body(::fidl::WireRequest<::test_error::Example::Foo>(s)) {
     _InitHeader();
   }
-  TransactionalRequest() { _InitHeader(); }
-  using ResponseType =
-      ::fidl::internal::TransactionalResponse<::test_error::Example::Foo>;
+  TransactionalRequest() {
+    _InitHeader();
+  }
+  using ResponseType = ::fidl::internal::TransactionalResponse<::test_error::Example::Foo>;
 
  private:
   void _InitHeader();
 };
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::fidl::internal::TransactionalRequest<::test_error::Example::Foo>,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-    : public WireStructCodingTraitsBase<
-          ::fidl::internal::TransactionalRequest<::test_error::Example::Foo>,
-          ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest<::test_error::Example::Foo>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<::fidl::internal::TransactionalRequest<::test_error::Example::Foo>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 16 + sizeof(fidl_message_header_t);
 
-  static void Encode(
-      internal::WireEncoder* encoder,
-      ::fidl::internal::TransactionalRequest<::test_error::Example::Foo>* value,
-      ::fidl::internal::WirePosition position,
-      RecursionDepth<IsRecursive> recursion_depth) {
+  static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalRequest<::test_error::Example::Foo>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     *position.As<fidl_message_header_t>() = value->header;
-    WireCodingTraits<::fidl::WireRequest<::test_error::Example::Foo>,
-                     WireCodingConstraintEmpty,
-                     IsRecursive>::Encode(encoder, &value->body,
-                                          position +
-                                              sizeof(fidl_message_header_t),
-                                          recursion_depth);
+    WireCodingTraits<::fidl::WireRequest<::test_error::Example::Foo>, WireCodingConstraintEmpty, IsRecursive>::Encode(
+        encoder, &value->body, position + sizeof(fidl_message_header_t), recursion_depth);
   }
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
-    WireCodingTraits<::fidl::WireRequest<::test_error::Example::Foo>,
-                     WireCodingConstraintEmpty,
-                     IsRecursive>::Decode(decoder,
-                                          position +
-                                              sizeof(fidl_message_header_t),
-                                          recursion_depth);
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    WireCodingTraits<::fidl::WireRequest<::test_error::Example::Foo>, WireCodingConstraintEmpty, IsRecursive>::Decode(
+        decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
 
 template <>
-struct ::fidl::WireResponse<::test_error::Example::Foo> final
-    : public ::test_error::wire::ExampleFooTopResponse {
+struct ::fidl::WireResponse<::test_error::Example::Foo> final : public ::test_error::wire::ExampleFooTopResponse {
   using Result = test_error::wire::ExampleFooResult;
 
-  explicit WireResponse(::test_error::wire::ExampleFooTopResponse base)
-      : ::test_error::wire::ExampleFooTopResponse(std::move(base)) {}
-  explicit WireResponse(::test_error::wire::ExampleFooResult result)
-      : ::test_error::wire::ExampleFooTopResponse{.result = std::move(result)} {
-  }
+  explicit WireResponse(::test_error::wire::ExampleFooTopResponse base) : ::test_error::wire::ExampleFooTopResponse(std::move(base)) {}
+  explicit WireResponse(::test_error::wire::ExampleFooResult result) : ::test_error::wire::ExampleFooTopResponse{.result = std::move(result)} {}
   WireResponse() = default;
 };
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::fidl::WireResponse<::test_error::Example::Foo>,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-    : public WireStructCodingTraitsBase<
-          ::fidl::WireResponse<::test_error::Example::Foo>,
-          ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::fidl::WireResponse<::test_error::Example::Foo>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<::fidl::WireResponse<::test_error::Example::Foo>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 16;
 
-  static void Encode(internal::WireEncoder* encoder,
-                     ::fidl::WireResponse<::test_error::Example::Foo>* value,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<
-        ::test_error::wire::ExampleFooTopResponse,
-        ::fidl::internal::WireCodingConstraintEmpty,
-        IsRecursive>::Encode(encoder, value, position, recursion_depth);
+  static void Encode(
+      internal::WireEncoder* encoder, ::fidl::WireResponse<::test_error::Example::Foo>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    fidl::internal::WireCodingTraits<::test_error::wire::ExampleFooTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
+        encoder, value, position, recursion_depth);
   }
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<
-        ::test_error::wire::ExampleFooTopResponse,
-        ::fidl::internal::WireCodingConstraintEmpty,
-        IsRecursive>::Decode(decoder, position, recursion_depth);
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    fidl::internal::WireCodingTraits<::test_error::wire::ExampleFooTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+        decoder, position, recursion_depth);
   }
 };
 
 template <>
-struct ::fidl::internal::TransactionalResponse<::test_error::Example::Foo>
-    final {
+struct ::fidl::internal::TransactionalResponse<::test_error::Example::Foo> final {
   FIDL_ALIGNDECL
   fidl_message_header_t header;
 
@@ -198,44 +151,28 @@ struct ::fidl::internal::TransactionalResponse<::test_error::Example::Foo>
       : body(::fidl::WireResponse<::test_error::Example::Foo>(result)) {
     _InitHeader();
   }
-  TransactionalResponse() { _InitHeader(); }
+  TransactionalResponse() {
+    _InitHeader();
+  }
 
  private:
   void _InitHeader();
 };
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::fidl::internal::TransactionalResponse<::test_error::Example::Foo>,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-    : public WireStructCodingTraitsBase<
-          ::fidl::internal::TransactionalResponse<::test_error::Example::Foo>,
-          ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalResponse<::test_error::Example::Foo>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<::fidl::internal::TransactionalResponse<::test_error::Example::Foo>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 16 + sizeof(fidl_message_header_t);
 
-  static void Encode(
-      internal::WireEncoder* encoder,
-      ::fidl::internal::TransactionalResponse<::test_error::Example::Foo>*
-          value,
-      ::fidl::internal::WirePosition position,
-      RecursionDepth<IsRecursive> recursion_depth) {
+  static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalResponse<::test_error::Example::Foo>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     *position.As<fidl_message_header_t>() = value->header;
-    WireCodingTraits<::fidl::WireResponse<::test_error::Example::Foo>,
-                     WireCodingConstraintEmpty,
-                     IsRecursive>::Encode(encoder, &value->body,
-                                          position +
-                                              sizeof(fidl_message_header_t),
-                                          recursion_depth);
+    WireCodingTraits<::fidl::WireResponse<::test_error::Example::Foo>, WireCodingConstraintEmpty, IsRecursive>::Encode(
+        encoder, &value->body, position + sizeof(fidl_message_header_t), recursion_depth);
   }
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
-    WireCodingTraits<::fidl::WireResponse<::test_error::Example::Foo>,
-                     WireCodingConstraintEmpty,
-                     IsRecursive>::Decode(decoder,
-                                          position +
-                                              sizeof(fidl_message_header_t),
-                                          recursion_depth);
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    WireCodingTraits<::fidl::WireResponse<::test_error::Example::Foo>, WireCodingConstraintEmpty, IsRecursive>::Decode(
+        decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
 
@@ -243,22 +180,19 @@ struct ::fidl::internal::WireCodingTraits<
 
 template <>
 struct ::fidl::internal::WireMethodTypes<::test_error::Example::Foo> {
-  using Completer = fidl::Completer<
-      ::fidl::internal::WireCompleterBase<::test_error::Example::Foo>>;
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_error::Example::Foo>>;
 
   using ApplicationError = uint32_t;
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_error::Example::Foo,
       ::fidl::unstable::OwnedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_error::Example::Foo>,
-          ::fidl::internal::ChannelTransport>>;
+          ::fidl::internal::TransactionalRequest<::test_error::Example::Foo>, ::fidl::internal::ChannelTransport>>;
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_error::Example::Foo,
       ::fidl::unstable::UnownedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_error::Example::Foo>,
-          ::fidl::internal::ChannelTransport>>;
+          ::fidl::internal::TransactionalRequest<::test_error::Example::Foo>, ::fidl::internal::ChannelTransport>>;
 };
 
 #endif  // __Fuchsia__
@@ -266,32 +200,22 @@ struct ::fidl::internal::WireMethodTypes<::test_error::Example::Foo> {
 namespace fidl {
 
 template <>
-struct IsFidlType<
-    ::fidl::internal::TransactionalRequest<::test_error::Example::Foo>>
-    : public std::true_type {};
+struct IsFidlType<::fidl::internal::TransactionalRequest<::test_error::Example::Foo>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_error::Example::Foo>>
-    : public std::true_type {};
+struct IsFidlType<::fidl::WireRequest<::test_error::Example::Foo>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<
-    ::fidl::internal::TransactionalRequest<::test_error::Example::Foo>>
-    : public std::true_type {};
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_error::Example::Foo>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<
-    ::fidl::WireRequest<::test_error::Example::Foo>> : public std::false_type {
-};
+struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_error::Example::Foo>> : public std::false_type {};
 
 template <>
-struct TypeTraits<
-    ::fidl::internal::TransactionalRequest<::test_error::Example::Foo>> {
+struct TypeTraits<::fidl::internal::TransactionalRequest<::test_error::Example::Foo>> {
   static constexpr const fidl_type_t* kType =
       &::test_error::test_error_ExampleFooRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
-  static constexpr uint32_t kPrimarySize =
-      FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
-  static constexpr uint32_t kPrimarySizeV1 =
-      FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -301,17 +225,9 @@ struct TypeTraits<
       ::fidl::internal::TransactionalMessageKind::kRequest;
 };
 
-static_assert(
-    sizeof(
-        ::fidl::internal::TransactionalRequest<::test_error::Example::Foo>) ==
-    TypeTraits<::fidl::internal::TransactionalRequest<
-        ::test_error::Example::Foo>>::kPrimarySize);
-static_assert(
-    offsetof(::fidl::internal::TransactionalRequest<::test_error::Example::Foo>,
-             header) == 0);
-static_assert(
-    offsetof(::fidl::internal::TransactionalRequest<::test_error::Example::Foo>,
-             body) == sizeof(fidl_message_header_t));
+static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_error::Example::Foo>) == TypeTraits<::fidl::internal::TransactionalRequest<::test_error::Example::Foo>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_error::Example::Foo>, header) == 0);
+static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_error::Example::Foo>, body) == sizeof(fidl_message_header_t));
 
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_error::Example::Foo>> {
@@ -329,40 +245,27 @@ struct TypeTraits<::fidl::WireRequest<::test_error::Example::Foo>> {
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
       ::fidl::internal::TransactionalMessageKind::kRequest;
 };
-static_assert(
-    sizeof(::fidl::WireRequest<::test_error::Example::Foo>) ==
-    TypeTraits<::fidl::WireRequest<::test_error::Example::Foo>>::kPrimarySize);
-static_assert(offsetof(::fidl::WireRequest<::test_error::Example::Foo>, s) ==
-              0);
+static_assert(sizeof(::fidl::WireRequest<::test_error::Example::Foo>) == TypeTraits<::fidl::WireRequest<::test_error::Example::Foo>>::kPrimarySize);
+static_assert(offsetof(::fidl::WireRequest<::test_error::Example::Foo>, s) == 0);
 
 template <>
-struct IsFidlType<
-    ::fidl::internal::TransactionalResponse<::test_error::Example::Foo>>
-    : public std::true_type {};
+struct IsFidlType<::fidl::internal::TransactionalResponse<::test_error::Example::Foo>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireResponse<::test_error::Example::Foo>>
-    : public std::true_type {};
+struct IsFidlType<::fidl::WireResponse<::test_error::Example::Foo>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<
-    ::fidl::internal::TransactionalResponse<::test_error::Example::Foo>>
-    : public std::true_type {};
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<::test_error::Example::Foo>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<
-    ::fidl::WireResponse<::test_error::Example::Foo>> : public std::false_type {
-};
+struct IsFidlTransactionalMessage<::fidl::WireResponse<::test_error::Example::Foo>> : public std::false_type {};
 
 template <>
-struct TypeTraits<
-    ::fidl::internal::TransactionalResponse<::test_error::Example::Foo>> {
+struct TypeTraits<::fidl::internal::TransactionalResponse<::test_error::Example::Foo>> {
   static constexpr const fidl_type_t* kType =
       &::test_error::test_error_ExampleFooTopResponseTable;
   static constexpr bool kHasResponseBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
-  static constexpr uint32_t kPrimarySize =
-      FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
-  static constexpr uint32_t kPrimarySizeV1 =
-      FIDL_ALIGN(24 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(24 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 8;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -372,19 +275,9 @@ struct TypeTraits<
       ::fidl::internal::TransactionalMessageKind::kResponse;
 };
 
-static_assert(
-    sizeof(
-        ::fidl::internal::TransactionalResponse<::test_error::Example::Foo>) ==
-    TypeTraits<::fidl::internal::TransactionalResponse<
-        ::test_error::Example::Foo>>::kPrimarySize);
-static_assert(
-    offsetof(
-        ::fidl::internal::TransactionalResponse<::test_error::Example::Foo>,
-        header) == 0);
-static_assert(
-    offsetof(
-        ::fidl::internal::TransactionalResponse<::test_error::Example::Foo>,
-        body) == sizeof(fidl_message_header_t));
+static_assert(sizeof(::fidl::internal::TransactionalResponse<::test_error::Example::Foo>) == TypeTraits<::fidl::internal::TransactionalResponse<::test_error::Example::Foo>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_error::Example::Foo>, header) == 0);
+static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_error::Example::Foo>, body) == sizeof(fidl_message_header_t));
 
 template <>
 struct TypeTraits<::fidl::WireResponse<::test_error::Example::Foo>> {
@@ -403,49 +296,33 @@ struct TypeTraits<::fidl::WireResponse<::test_error::Example::Foo>> {
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
       ::fidl::internal::TransactionalMessageKind::kResponse;
 };
-static_assert(
-    sizeof(::fidl::WireResponse<::test_error::Example::Foo>) ==
-    TypeTraits<::fidl::WireResponse<::test_error::Example::Foo>>::kPrimarySize);
-static_assert(offsetof(::fidl::WireResponse<::test_error::Example::Foo>,
-                       result) == 0);
+static_assert(sizeof(::fidl::WireResponse<::test_error::Example::Foo>) == TypeTraits<::fidl::WireResponse<::test_error::Example::Foo>>::kPrimarySize);
+static_assert(offsetof(::fidl::WireResponse<::test_error::Example::Foo>, result) == 0);
 #ifdef __Fuchsia__
 }  // namespace fidl
 template <>
-struct ::fidl::internal::IncomingHandleStorage<
-    ::fidl::internal::TransactionalResponse<::test_error::Example::Foo>>
-    final : public ::fidl::internal::ChannelHandleStorageBase<
-                ::fidl::internal::IncomingHandleStorage<
-                    ::fidl::internal::TransactionalResponse<
-                        ::test_error::Example::Foo>>> {
-  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
-      ::fidl::WireResponse<::test_error::Example::Foo>,
-      fidl::MessageDirection::kReceiving>();
+struct ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_error::Example::Foo>> final
+    : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_error::Example::Foo>>> {
+  static constexpr uint32_t kNumHandles =
+      fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_error::Example::Foo>, fidl::MessageDirection::kReceiving>();
 
   ::std::array<zx_handle_t, kNumHandles> handles_;
   ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
 };
 
 template <>
-struct ::fidl::internal::IncomingMessageStorage<
-    ::fidl::internal::TransactionalResponse<::test_error::Example::Foo>>
-    final : public ::fidl::internal::ChannelMessageStorageBase<
-                ::fidl::internal::IncomingMessageStorage<
-                    ::fidl::internal::TransactionalResponse<
-                        ::test_error::Example::Foo>>> {
+struct ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_error::Example::Foo>> final
+    : public ::fidl::internal::ChannelMessageStorageBase<::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_error::Example::Foo>>> {
   ::fidl::internal::InlineMessageBuffer<48> bytes_;
-  ::fidl::internal::IncomingHandleStorage<
-      ::fidl::internal::TransactionalResponse<::test_error::Example::Foo>>
-      handles_storage_;
+  ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_error::Example::Foo>> handles_storage_;
 };
 
 template <>
-class [[nodiscard]] ::fidl::WireResult<::test_error::Example::Foo> final
-    : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireResult<::test_error::Example::Foo> final : public ::fidl::Status {
  public:
-  WireResult(::fidl::UnownedClientEnd<::test_error::Example> client,
-             ::fidl::internal::TransactionalRequest<::test_error::Example::Foo>*
-                 request,
-             std::optional<zx::time> deadline = std::nullopt);
+  WireResult(
+      ::fidl::UnownedClientEnd<::test_error::Example> client,
+      ::fidl::internal::TransactionalRequest<::test_error::Example::Foo>* request, std::optional<zx::time> deadline = std::nullopt);
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
@@ -462,67 +339,36 @@ class [[nodiscard]] ::fidl::WireResult<::test_error::Example::Foo> final
     return &decoded_.Value()->body;
   }
 
-  ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>*
-  Unwrap_NEW() {
+  ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>* Unwrap_NEW() {
     return &result_.value();
   }
-  const ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>*
-  Unwrap_NEW() const {
+  const ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>* Unwrap_NEW() const {
     return &result_.value();
   }
 
-  ::fidl::WireResponse<::test_error::Example::Foo>& value() {
-    return *Unwrap();
-  }
-  const ::fidl::WireResponse<::test_error::Example::Foo>& value() const {
-    return *Unwrap();
-  }
+  ::fidl::WireResponse<::test_error::Example::Foo>& value() { return *Unwrap(); }
+  const ::fidl::WireResponse<::test_error::Example::Foo>& value() const { return *Unwrap(); }
 
-  ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>&
-  value_NEW() {
-    return *Unwrap_NEW();
-  }
-  const ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>&
-  value_NEW() const {
-    return *Unwrap_NEW();
-  }
+  ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>& value_NEW() { return *Unwrap_NEW(); }
+  const ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>& value_NEW() const { return *Unwrap_NEW(); }
 
-  ::fidl::WireResponse<::test_error::Example::Foo>* operator->() {
-    return &value();
-  }
-  const ::fidl::WireResponse<::test_error::Example::Foo>* operator->() const {
-    return &value();
-  }
+  ::fidl::WireResponse<::test_error::Example::Foo>* operator->() { return &value(); }
+  const ::fidl::WireResponse<::test_error::Example::Foo>* operator->() const { return &value(); }
 
-  ::fidl::WireResponse<::test_error::Example::Foo>& operator*() {
-    return value();
-  }
-  const ::fidl::WireResponse<::test_error::Example::Foo>& operator*() const {
-    return value();
-  }
+  ::fidl::WireResponse<::test_error::Example::Foo>& operator*() { return value(); }
+  const ::fidl::WireResponse<::test_error::Example::Foo>& operator*() const { return value(); }
 
  private:
   ::fidl::internal::InlineMessageBuffer<48> bytes_;
-  ::fidl::internal::DecodedValue<
-      ::fidl::internal::TransactionalResponse<::test_error::Example::Foo>>
-      decoded_;
-  std::optional<
-      ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>>
-      result_ = std::nullopt;
+  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_error::Example::Foo>> decoded_;
+  std::optional<::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>> result_ = std::nullopt;
 };
 
 template <>
-class [[nodiscard]] ::fidl::WireUnownedResult<::test_error::Example::Foo> final
-    : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireUnownedResult<::test_error::Example::Foo> final : public ::fidl::Status {
  public:
-  explicit WireUnownedResult(
-      ::fidl::UnownedClientEnd<::test_error::Example> client_end,
-      ::fidl::internal::AnyBufferAllocator& allocator,
-      ::fidl::internal::TransactionalRequest<::test_error::Example::Foo>*
-          request);
-  explicit WireUnownedResult(
-      ::fidl::internal::TransactionalResponse<::test_error::Example::Foo>*
-          response)
+  explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_error::Example> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_error::Example::Foo>* request);
+  explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_error::Example::Foo>* response)
       : fidl::Status(fidl::Status::Ok()), decoded_(response) {
     auto* raw_response = &decoded_.Value()->body;
     if (raw_response->result.is_err()) {
@@ -533,10 +379,8 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_error::Example::Foo> final
   }
 
   explicit WireUnownedResult(
-      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
-          ::test_error::Example::Foo>>&& decoded,
-      ::fidl::internal::MessageStorageViewBase* storage_view)
-      : fidl::Status(decoded) {
+      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_error::Example::Foo>>&& decoded,
+      ::fidl::internal::MessageStorageViewBase* storage_view) : fidl::Status(decoded) {
     if (decoded.ok()) {
       decoded_ = decoded.Take();
       auto* raw_response = &decoded_.Value()->body;
@@ -548,8 +392,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_error::Example::Foo> final
     }
   }
 
-  explicit WireUnownedResult(const ::fidl::Status& result)
-      : ::fidl::Status(result) {}
+  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
   WireUnownedResult(const WireUnownedResult&) = delete;
   WireUnownedResult& operator=(WireUnownedResult&&) = delete;
@@ -564,52 +407,28 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_error::Example::Foo> final
     return &decoded_.Value()->body;
   }
 
-  ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>*
-  Unwrap_NEW() {
+  ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>* Unwrap_NEW() {
     return &result_.value();
   }
-  const ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>*
-  Unwrap_NEW() const {
+  const ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>* Unwrap_NEW() const {
     return &result_.value();
   }
 
-  ::fidl::WireResponse<::test_error::Example::Foo>& value() {
-    return *Unwrap();
-  }
-  const ::fidl::WireResponse<::test_error::Example::Foo>& value() const {
-    return *Unwrap();
-  }
+  ::fidl::WireResponse<::test_error::Example::Foo>& value() { return *Unwrap(); }
+  const ::fidl::WireResponse<::test_error::Example::Foo>& value() const { return *Unwrap(); }
 
-  ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>&
-  value_NEW() {
-    return *Unwrap_NEW();
-  }
-  const ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>&
-  value_NEW() const {
-    return *Unwrap_NEW();
-  }
+  ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>& value_NEW() { return *Unwrap_NEW(); }
+  const ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>& value_NEW() const { return *Unwrap_NEW(); }
 
-  ::fidl::WireResponse<::test_error::Example::Foo>* operator->() {
-    return &value();
-  }
-  const ::fidl::WireResponse<::test_error::Example::Foo>* operator->() const {
-    return &value();
-  }
+  ::fidl::WireResponse<::test_error::Example::Foo>* operator->() { return &value(); }
+  const ::fidl::WireResponse<::test_error::Example::Foo>* operator->() const { return &value(); }
 
-  ::fidl::WireResponse<::test_error::Example::Foo>& operator*() {
-    return value();
-  }
-  const ::fidl::WireResponse<::test_error::Example::Foo>& operator*() const {
-    return value();
-  }
+  ::fidl::WireResponse<::test_error::Example::Foo>& operator*() { return value(); }
+  const ::fidl::WireResponse<::test_error::Example::Foo>& operator*() const { return value(); }
 
  private:
-  ::fidl::internal::DecodedValue<
-      ::fidl::internal::TransactionalResponse<::test_error::Example::Foo>>
-      decoded_;
-  std::optional<
-      ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>>
-      result_ = std::nullopt;
+  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_error::Example::Foo>> decoded_;
+  std::optional<::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>> result_ = std::nullopt;
 };
 template <>
 class ::fidl::internal::WireEventHandlerInterface<::test_error::Example> {
@@ -620,22 +439,19 @@ class ::fidl::internal::WireEventHandlerInterface<::test_error::Example> {
 
 template <>
 class ::fidl::WireAsyncEventHandler<::test_error::Example>
-    : public ::fidl::internal::WireEventHandlerInterface<::test_error::Example>,
-      public ::fidl::internal::AsyncEventHandler {
+    : public ::fidl::internal::WireEventHandlerInterface<::test_error::Example>, public ::fidl::internal::AsyncEventHandler {
  public:
   WireAsyncEventHandler() = default;
 };
 
 template <>
-class ::fidl::WireSyncEventHandler<::test_error::Example>
-    : public ::fidl::internal::WireEventHandlerInterface<
-          ::test_error::Example> {
+class ::fidl::WireSyncEventHandler<::test_error::Example> : public ::fidl::internal::WireEventHandlerInterface<::test_error::Example> {
  public:
   WireSyncEventHandler() = default;
 
   // Handle all possible events defined in this protocol.
-  // Blocks to consume exactly one message from the channel, then call the
-  // corresponding virtual method.
+  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
+  // method.
   ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_error::Example> client_end);
 
@@ -644,12 +460,9 @@ class ::fidl::WireSyncEventHandler<::test_error::Example>
 };
 
 template <>
-class ::fidl::internal::WireEventDispatcher<::test_error::Example> final
-    : public ::fidl::internal::IncomingEventDispatcher<
-          ::fidl::WireAsyncEventHandler<::test_error::Example>> {
+class ::fidl::internal::WireEventDispatcher<::test_error::Example> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::WireAsyncEventHandler<::test_error::Example>> {
  public:
-  explicit WireEventDispatcher(
-      ::fidl::WireAsyncEventHandler<::test_error::Example>* event_handler)
+  explicit WireEventDispatcher(::fidl::WireAsyncEventHandler<::test_error::Example>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 
  private:
@@ -662,17 +475,12 @@ class ::fidl::internal::WireEventDispatcher<::test_error::Example> final
 // const reference to a |fidl::ClientEnd<::test_error::Example>|,
 // avoiding setting up a client.
 template <>
-class ::fidl::internal::WireSyncClientImpl<::test_error::Example> final
-    : public ::fidl::internal::SyncEndpointManagedVeneer<
-          ::fidl::internal::WireSyncClientImpl<::test_error::Example>> {
+class ::fidl::internal::WireSyncClientImpl<::test_error::Example> final : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::WireSyncClientImpl<::test_error::Example>> {
  public:
-  // Allocates 40 bytes of response buffer on the stack. Request is
-  // heap-allocated.
+  // Allocates 40 bytes of response buffer on the stack. Request is heap-allocated.
   ::fidl::WireResult<::test_error::Example::Foo> Foo(::fidl::StringView s) {
-    ::fidl::internal::TransactionalRequest<::test_error::Example::Foo> _request{
-        s};
-    return ::fidl::WireResult<::test_error::Example::Foo>(_client_end(),
-                                                          &_request);
+    ::fidl::internal::TransactionalRequest<::test_error::Example::Foo> _request{s};
+    return ::fidl::WireResult<::test_error::Example::Foo>(_client_end(), &_request);
   }
 
  private:
@@ -683,18 +491,12 @@ class ::fidl::internal::WireSyncClientImpl<::test_error::Example> final
 };
 
 template <>
-class ::fidl::internal::WireSyncBufferClientImpl<::test_error::Example> final
-    : public ::fidl::internal::SyncEndpointBufferVeneer<
-          ::fidl::internal::WireSyncBufferClientImpl<::test_error::Example>> {
+class ::fidl::internal::WireSyncBufferClientImpl<::test_error::Example> final : public ::fidl::internal::SyncEndpointBufferVeneer<::fidl::internal::WireSyncBufferClientImpl<::test_error::Example>> {
  public:
-  // Caller provides the backing storage for FIDL message via an argument to
-  // `.buffer()`.
-  ::fidl::WireUnownedResult<::test_error::Example::Foo> Foo(
-      ::fidl::StringView s) {
-    ::fidl::internal::TransactionalRequest<::test_error::Example::Foo> _request{
-        s};
-    return ::fidl::WireUnownedResult<::test_error::Example::Foo>(
-        _client_end(), _allocator(), &_request);
+  // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
+  ::fidl::WireUnownedResult<::test_error::Example::Foo> Foo(::fidl::StringView s) {
+    ::fidl::internal::TransactionalRequest<::test_error::Example::Foo> _request{s};
+    return ::fidl::WireUnownedResult<::test_error::Example::Foo>(_client_end(), _allocator(), &_request);
   }
 
  private:
@@ -705,8 +507,7 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_error::Example> final
 };
 
 template <>
-class ::fidl::internal::WireCompleterImpl<::test_error::Example::Foo>
-    : public ::fidl::internal::CompleterImplBase<::test_error::Example::Foo> {
+class ::fidl::internal::WireCompleterImpl<::test_error::Example::Foo> : public ::fidl::internal::CompleterImplBase<::test_error::Example::Foo> {
  public:
   using CompleterImplBase::CompleterImplBase;
 
@@ -716,8 +517,7 @@ class ::fidl::internal::WireCompleterImpl<::test_error::Example::Foo>
 };
 
 template <>
-class ::fidl::internal::WireBufferCompleterImpl<::test_error::Example::Foo>
-    : public ::fidl::internal::BufferCompleterImplBase {
+class ::fidl::internal::WireBufferCompleterImpl<::test_error::Example::Foo> : public ::fidl::internal::BufferCompleterImplBase {
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
@@ -727,12 +527,9 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_error::Example::Foo>
 };
 
 template <>
-class ::fidl::internal::WireCompleterBase<::test_error::Example::Foo>
-    : public ::fidl::CompleterBase,
-      public ::fidl::internal::WireCompleterImpl<::test_error::Example::Foo> {
+class ::fidl::internal::WireCompleterBase<::test_error::Example::Foo> : public ::fidl::CompleterBase, public ::fidl::internal::WireCompleterImpl<::test_error::Example::Foo> {
  public:
-  WireCompleterBase(::fidl::Transaction* transaction, bool owned,
-                    bool expects_reply)
+  WireCompleterBase(::fidl::Transaction* transaction, bool owned, bool expects_reply)
       : CompleterBase(transaction, owned, expects_reply),
         WireCompleterImpl(this) {}
   WireCompleterBase(WireCompleterBase&& other) noexcept
@@ -748,8 +545,7 @@ class ::fidl::internal::WireCompleterBase<::test_error::Example::Foo>
 // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
 // and |fidl::ServerEnd<SomeProtocol>|).
 template <>
-class ::fidl::WireServer<::test_error::Example>
-    : public ::fidl::internal::IncomingMessageDispatcher {
+class ::fidl::WireServer<::test_error::Example> : public ::fidl::internal::IncomingMessageDispatcher {
  public:
   WireServer() = default;
   virtual ~WireServer() = default;
@@ -757,12 +553,11 @@ class ::fidl::WireServer<::test_error::Example>
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_error::Example;
 
-  using FooCompleter =
-      ::fidl::internal::WireCompleter<::test_error::Example::Foo>;
-  using FooRequestView =
-      ::fidl::internal::WireRequestView<::test_error::Example::Foo>;
+  using FooCompleter = ::fidl::internal::WireCompleter<::test_error::Example::Foo>;
+  using FooRequestView = ::fidl::internal::WireRequestView<::test_error::Example::Foo>;
 
-  virtual void Foo(FooRequestView request, FooCompleter::Sync& completer) = 0;
+  virtual void Foo(
+      FooRequestView request, FooCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(
@@ -775,48 +570,39 @@ namespace fidl {
 #ifdef __Fuchsia__
 }  // namespace fidl
 template <>
-class ::fidl::internal::WireWeakOnewayClientImpl<::test_error::Example>
-    : public ::fidl::internal::ClientImplBase {
+class ::fidl::internal::WireWeakOnewayClientImpl<::test_error::Example> : public ::fidl::internal::ClientImplBase {
  public:
   using ClientImplBase::ClientImplBase;
 };
 
 template <>
-class ::fidl::internal::WireWeakAsyncClientImpl<::test_error::Example> final
-    : public ::fidl::internal::WireWeakOnewayClientImpl<::test_error::Example> {
+class ::fidl::internal::WireWeakAsyncClientImpl<::test_error::Example> final : public ::fidl::internal::WireWeakOnewayClientImpl<::test_error::Example> {
  public:
   using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
   // The request and callback are allocated on the heap.
-  ::fidl::internal::WireThenable<::test_error::Example::Foo> Foo(
-      ::fidl::StringView s);
+  ::fidl::internal::WireThenable<::test_error::Example::Foo> Foo(::fidl::StringView s);
 };
 
 template <>
-class ::fidl::internal::WireWeakOnewayBufferClientImpl<::test_error::Example>
-    : public ::fidl::internal::BufferClientImplBase {
+class ::fidl::internal::WireWeakOnewayBufferClientImpl<::test_error::Example> : public ::fidl::internal::BufferClientImplBase {
  public:
   using BufferClientImplBase::BufferClientImplBase;
 };
 
 template <>
-class ::fidl::internal::WireWeakAsyncBufferClientImpl<::test_error::Example>
-    final : public ::fidl::internal::WireWeakOnewayBufferClientImpl<
-                ::test_error::Example> {
+class ::fidl::internal::WireWeakAsyncBufferClientImpl<::test_error::Example> final : public ::fidl::internal::WireWeakOnewayBufferClientImpl<::test_error::Example> {
  public:
   using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
 
   // Caller provides the backing storage for FIDL message.
-  ::fidl::internal::WireBufferThenable<::test_error::Example::Foo> Foo(
-      ::fidl::StringView s);
+  ::fidl::internal::WireBufferThenable<::test_error::Example::Foo> Foo(::fidl::StringView s);
 };
 template <>
-class ::fidl::internal::WireWeakSyncClientImpl<::test_error::Example> final
-    : public ::fidl::internal::WireWeakOnewayClientImpl<::test_error::Example> {
+class ::fidl::internal::WireWeakSyncClientImpl<::test_error::Example> final : public ::fidl::internal::WireWeakOnewayClientImpl<::test_error::Example> {
  public:
   using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
 
-  // Allocates 40 bytes of response buffer on the stack. Request is
-  // heap-allocated.
+  // Allocates 40 bytes of response buffer on the stack. Request is heap-allocated.
   ::fidl::WireResult<::test_error::Example::Foo> Foo(::fidl::StringView s);
 };
 namespace fidl {
@@ -825,31 +611,27 @@ namespace fidl {
 }  // namespace fidl
 #ifdef __Fuchsia__
 template <>
-class ::fidl::internal::WireWeakEventSender<::test_error::Example>
-    : public ::fidl::internal::WeakEventSenderBase {
+class ::fidl::internal::WireWeakEventSender<::test_error::Example> : public ::fidl::internal::WeakEventSenderBase {
  public:
   using WeakEventSenderBase::WeakEventSenderBase;
 };
 
 template <>
-class ::fidl::internal::WireWeakBufferEventSender<::test_error::Example>
-    : public ::fidl::internal::WeakBufferEventSenderBase {
+class ::fidl::internal::WireWeakBufferEventSender<::test_error::Example> : public ::fidl::internal::WeakBufferEventSenderBase {
  public:
   using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
 };
 
 template <>
 class ::fidl::internal::WireEventSender<::test_error::Example>
-    : public ::fidl::internal::SyncEndpointManagedVeneer<
-          ::fidl::internal::WireEventSender<::test_error::Example>> {
+    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::WireEventSender<::test_error::Example>> {
  public:
   using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 };
 
 template <>
 class ::fidl::internal::WireBufferEventSender<::test_error::Example>
-    : public ::fidl::internal::SyncEndpointBufferVeneer<
-          ::fidl::internal::WireBufferEventSender<::test_error::Example>> {
+    : public ::fidl::internal::SyncEndpointBufferVeneer<::fidl::internal::WireBufferEventSender<::test_error::Example>> {
  public:
   using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
 };

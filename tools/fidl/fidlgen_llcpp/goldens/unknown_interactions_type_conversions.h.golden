@@ -15,306 +15,180 @@ namespace fidl {
 namespace internal {
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResponse,
-    ::test_unknowninteractions::ExampleFlexibleTwoWayResponse> {
-  static ::test_unknowninteractions::ExampleFlexibleTwoWayResponse ToNatural(
-      ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResponse src);
-  static ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResponse ToWire(
-      fidl::AnyArena& arena,
-      ::test_unknowninteractions::ExampleFlexibleTwoWayResponse src);
+struct WireNaturalConversionTraits<::test_unknowninteractions::wire::ExampleFlexibleTwoWayResponse, ::test_unknowninteractions::ExampleFlexibleTwoWayResponse> {
+  static ::test_unknowninteractions::ExampleFlexibleTwoWayResponse ToNatural(::test_unknowninteractions::wire::ExampleFlexibleTwoWayResponse src);
+  static ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResponse ToWire(fidl::AnyArena& arena, ::test_unknowninteractions::ExampleFlexibleTwoWayResponse src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResponse> {
+struct NaturalTypeForWireType<::test_unknowninteractions::wire::ExampleFlexibleTwoWayResponse> {
   using type = ::test_unknowninteractions::ExampleFlexibleTwoWayResponse;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_unknowninteractions::ExampleFlexibleTwoWayResponse> {
+struct WireTypeForNaturalType<::test_unknowninteractions::ExampleFlexibleTwoWayResponse> {
   using type = ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResponse;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_unknowninteractions::wire::ExampleFlexibleTwoWayTopResponse,
-    ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse> {
-  static ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse ToNatural(
-      ::test_unknowninteractions::wire::ExampleFlexibleTwoWayTopResponse src);
-  static ::test_unknowninteractions::wire::ExampleFlexibleTwoWayTopResponse
-  ToWire(fidl::AnyArena& arena,
-         ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse src);
+struct WireNaturalConversionTraits<::test_unknowninteractions::wire::ExampleFlexibleTwoWayTopResponse, ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse> {
+  static ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse ToNatural(::test_unknowninteractions::wire::ExampleFlexibleTwoWayTopResponse src);
+  static ::test_unknowninteractions::wire::ExampleFlexibleTwoWayTopResponse ToWire(fidl::AnyArena& arena, ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_unknowninteractions::wire::ExampleFlexibleTwoWayTopResponse> {
+struct NaturalTypeForWireType<::test_unknowninteractions::wire::ExampleFlexibleTwoWayTopResponse> {
   using type = ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse> {
-  using type =
-      ::test_unknowninteractions::wire::ExampleFlexibleTwoWayTopResponse;
+struct WireTypeForNaturalType<::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse> {
+  using type = ::test_unknowninteractions::wire::ExampleFlexibleTwoWayTopResponse;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult,
-    ::test_unknowninteractions::ExampleFlexibleTwoWayResult> {
-  static ::test_unknowninteractions::ExampleFlexibleTwoWayResult ToNatural(
-      ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult src);
-  static ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult ToWire(
-      fidl::AnyArena& arena,
-      ::test_unknowninteractions::ExampleFlexibleTwoWayResult src);
+struct WireNaturalConversionTraits<::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult, ::test_unknowninteractions::ExampleFlexibleTwoWayResult> {
+  static ::test_unknowninteractions::ExampleFlexibleTwoWayResult ToNatural(::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult src);
+  static ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult ToWire(fidl::AnyArena& arena, ::test_unknowninteractions::ExampleFlexibleTwoWayResult src);
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult,
-    std::unique_ptr<::test_unknowninteractions::ExampleFlexibleTwoWayResult>> {
-  static std::unique_ptr<
-      ::test_unknowninteractions::ExampleFlexibleTwoWayResult>
-  ToNatural(::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult src);
-  static ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult ToWire(
-      fidl::AnyArena& arena,
-      std::unique_ptr<::test_unknowninteractions::ExampleFlexibleTwoWayResult>
-          src);
+struct WireNaturalConversionTraits<::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult, std::unique_ptr<::test_unknowninteractions::ExampleFlexibleTwoWayResult>> {
+  static std::unique_ptr<::test_unknowninteractions::ExampleFlexibleTwoWayResult> ToNatural(::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult src);
+  static ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_unknowninteractions::ExampleFlexibleTwoWayResult> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult> {
-  using type =
-      std::unique_ptr<::test_unknowninteractions::ExampleFlexibleTwoWayResult>;
+struct NaturalTypeForWireType<::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult> {
+  using type = std::unique_ptr<::test_unknowninteractions::ExampleFlexibleTwoWayResult>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_unknowninteractions::ExampleFlexibleTwoWayResult> {
+struct WireTypeForNaturalType<::test_unknowninteractions::ExampleFlexibleTwoWayResult> {
   using type = ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult;
 };
 template <>
-struct WireTypeForNaturalType<
-    std::unique_ptr<::test_unknowninteractions::ExampleFlexibleTwoWayResult>> {
+struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::ExampleFlexibleTwoWayResult>> {
   using type = ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult;
 };
 
 #ifdef __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireRequest<::test_unknowninteractions::Example::StrictOneWay>,
-    ::fidl::Request<::test_unknowninteractions::Example::StrictOneWay>> {
-  static ::fidl::Request<::test_unknowninteractions::Example::StrictOneWay>
-  ToNatural(
-      ::fidl::WireRequest<::test_unknowninteractions::Example::StrictOneWay>
-          src);
-  static ::fidl::WireRequest<::test_unknowninteractions::Example::StrictOneWay>
-  ToWire(
-      fidl::AnyArena& arena,
-      ::fidl::Request<::test_unknowninteractions::Example::StrictOneWay> src);
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::Example::StrictOneWay>, ::fidl::Request<::test_unknowninteractions::Example::StrictOneWay>> {
+  static ::fidl::Request<::test_unknowninteractions::Example::StrictOneWay> ToNatural(::fidl::WireRequest<::test_unknowninteractions::Example::StrictOneWay> src);
+  static ::fidl::WireRequest<::test_unknowninteractions::Example::StrictOneWay> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_unknowninteractions::Example::StrictOneWay> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireRequest<::test_unknowninteractions::Example::StrictOneWay>> {
-  using type =
-      ::fidl::Request<::test_unknowninteractions::Example::StrictOneWay>;
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_unknowninteractions::Example::StrictOneWay>> {
+  using type = ::fidl::Request<::test_unknowninteractions::Example::StrictOneWay>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Request<::test_unknowninteractions::Example::StrictOneWay>> {
-  using type =
-      ::fidl::WireRequest<::test_unknowninteractions::Example::StrictOneWay>;
+struct WireTypeForNaturalType<::fidl::Request<::test_unknowninteractions::Example::StrictOneWay>> {
+  using type = ::fidl::WireRequest<::test_unknowninteractions::Example::StrictOneWay>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireRequest<::test_unknowninteractions::Example::FlexibleOneWay>,
-    ::fidl::Request<::test_unknowninteractions::Example::FlexibleOneWay>> {
-  static ::fidl::Request<::test_unknowninteractions::Example::FlexibleOneWay>
-  ToNatural(
-      ::fidl::WireRequest<::test_unknowninteractions::Example::FlexibleOneWay>
-          src);
-  static ::fidl::WireRequest<
-      ::test_unknowninteractions::Example::FlexibleOneWay>
-  ToWire(
-      fidl::AnyArena& arena,
-      ::fidl::Request<::test_unknowninteractions::Example::FlexibleOneWay> src);
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::Example::FlexibleOneWay>, ::fidl::Request<::test_unknowninteractions::Example::FlexibleOneWay>> {
+  static ::fidl::Request<::test_unknowninteractions::Example::FlexibleOneWay> ToNatural(::fidl::WireRequest<::test_unknowninteractions::Example::FlexibleOneWay> src);
+  static ::fidl::WireRequest<::test_unknowninteractions::Example::FlexibleOneWay> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_unknowninteractions::Example::FlexibleOneWay> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireRequest<::test_unknowninteractions::Example::FlexibleOneWay>> {
-  using type =
-      ::fidl::Request<::test_unknowninteractions::Example::FlexibleOneWay>;
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_unknowninteractions::Example::FlexibleOneWay>> {
+  using type = ::fidl::Request<::test_unknowninteractions::Example::FlexibleOneWay>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Request<::test_unknowninteractions::Example::FlexibleOneWay>> {
-  using type =
-      ::fidl::WireRequest<::test_unknowninteractions::Example::FlexibleOneWay>;
+struct WireTypeForNaturalType<::fidl::Request<::test_unknowninteractions::Example::FlexibleOneWay>> {
+  using type = ::fidl::WireRequest<::test_unknowninteractions::Example::FlexibleOneWay>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireRequest<::test_unknowninteractions::Example::StrictTwoWay>,
-    ::fidl::Request<::test_unknowninteractions::Example::StrictTwoWay>> {
-  static ::fidl::Request<::test_unknowninteractions::Example::StrictTwoWay>
-  ToNatural(
-      ::fidl::WireRequest<::test_unknowninteractions::Example::StrictTwoWay>
-          src);
-  static ::fidl::WireRequest<::test_unknowninteractions::Example::StrictTwoWay>
-  ToWire(
-      fidl::AnyArena& arena,
-      ::fidl::Request<::test_unknowninteractions::Example::StrictTwoWay> src);
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::Example::StrictTwoWay>, ::fidl::Request<::test_unknowninteractions::Example::StrictTwoWay>> {
+  static ::fidl::Request<::test_unknowninteractions::Example::StrictTwoWay> ToNatural(::fidl::WireRequest<::test_unknowninteractions::Example::StrictTwoWay> src);
+  static ::fidl::WireRequest<::test_unknowninteractions::Example::StrictTwoWay> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_unknowninteractions::Example::StrictTwoWay> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireRequest<::test_unknowninteractions::Example::StrictTwoWay>> {
-  using type =
-      ::fidl::Request<::test_unknowninteractions::Example::StrictTwoWay>;
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_unknowninteractions::Example::StrictTwoWay>> {
+  using type = ::fidl::Request<::test_unknowninteractions::Example::StrictTwoWay>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Request<::test_unknowninteractions::Example::StrictTwoWay>> {
-  using type =
-      ::fidl::WireRequest<::test_unknowninteractions::Example::StrictTwoWay>;
+struct WireTypeForNaturalType<::fidl::Request<::test_unknowninteractions::Example::StrictTwoWay>> {
+  using type = ::fidl::WireRequest<::test_unknowninteractions::Example::StrictTwoWay>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireRequest<::test_unknowninteractions::Example::FlexibleTwoWay>,
-    ::fidl::Request<::test_unknowninteractions::Example::FlexibleTwoWay>> {
-  static ::fidl::Request<::test_unknowninteractions::Example::FlexibleTwoWay>
-  ToNatural(
-      ::fidl::WireRequest<::test_unknowninteractions::Example::FlexibleTwoWay>
-          src);
-  static ::fidl::WireRequest<
-      ::test_unknowninteractions::Example::FlexibleTwoWay>
-  ToWire(
-      fidl::AnyArena& arena,
-      ::fidl::Request<::test_unknowninteractions::Example::FlexibleTwoWay> src);
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::Example::FlexibleTwoWay>, ::fidl::Request<::test_unknowninteractions::Example::FlexibleTwoWay>> {
+  static ::fidl::Request<::test_unknowninteractions::Example::FlexibleTwoWay> ToNatural(::fidl::WireRequest<::test_unknowninteractions::Example::FlexibleTwoWay> src);
+  static ::fidl::WireRequest<::test_unknowninteractions::Example::FlexibleTwoWay> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_unknowninteractions::Example::FlexibleTwoWay> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireRequest<::test_unknowninteractions::Example::FlexibleTwoWay>> {
-  using type =
-      ::fidl::Request<::test_unknowninteractions::Example::FlexibleTwoWay>;
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_unknowninteractions::Example::FlexibleTwoWay>> {
+  using type = ::fidl::Request<::test_unknowninteractions::Example::FlexibleTwoWay>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Request<::test_unknowninteractions::Example::FlexibleTwoWay>> {
-  using type =
-      ::fidl::WireRequest<::test_unknowninteractions::Example::FlexibleTwoWay>;
+struct WireTypeForNaturalType<::fidl::Request<::test_unknowninteractions::Example::FlexibleTwoWay>> {
+  using type = ::fidl::WireRequest<::test_unknowninteractions::Example::FlexibleTwoWay>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireResponse<::test_unknowninteractions::Example::StrictTwoWay>,
-    ::fidl::Response<::test_unknowninteractions::Example::StrictTwoWay>> {
-  static ::fidl::Response<::test_unknowninteractions::Example::StrictTwoWay>
-  ToNatural(
-      ::fidl::WireResponse<::test_unknowninteractions::Example::StrictTwoWay>
-          src);
-  static ::fidl::WireResponse<::test_unknowninteractions::Example::StrictTwoWay>
-  ToWire(
-      fidl::AnyArena& arena,
-      ::fidl::Response<::test_unknowninteractions::Example::StrictTwoWay> src);
+struct WireNaturalConversionTraits<::fidl::WireResponse<::test_unknowninteractions::Example::StrictTwoWay>, ::fidl::Response<::test_unknowninteractions::Example::StrictTwoWay>> {
+  static ::fidl::Response<::test_unknowninteractions::Example::StrictTwoWay> ToNatural(::fidl::WireResponse<::test_unknowninteractions::Example::StrictTwoWay> src);
+  static ::fidl::WireResponse<::test_unknowninteractions::Example::StrictTwoWay> ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_unknowninteractions::Example::StrictTwoWay> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireResponse<::test_unknowninteractions::Example::StrictTwoWay>> {
-  using type =
-      ::fidl::Response<::test_unknowninteractions::Example::StrictTwoWay>;
+struct NaturalTypeForWireType<::fidl::WireResponse<::test_unknowninteractions::Example::StrictTwoWay>> {
+  using type = ::fidl::Response<::test_unknowninteractions::Example::StrictTwoWay>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Response<::test_unknowninteractions::Example::StrictTwoWay>> {
-  using type =
-      ::fidl::WireResponse<::test_unknowninteractions::Example::StrictTwoWay>;
+struct WireTypeForNaturalType<::fidl::Response<::test_unknowninteractions::Example::StrictTwoWay>> {
+  using type = ::fidl::WireResponse<::test_unknowninteractions::Example::StrictTwoWay>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>,
-    ::fidl::Response<::test_unknowninteractions::Example::FlexibleTwoWay>> {
-  static ::fidl::Response<::test_unknowninteractions::Example::FlexibleTwoWay>
-  ToNatural(
-      ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>
-          src);
-  static ::fidl::WireResponse<
-      ::test_unknowninteractions::Example::FlexibleTwoWay>
-  ToWire(fidl::AnyArena& arena,
-         ::fidl::Response<::test_unknowninteractions::Example::FlexibleTwoWay>
-             src);
+struct WireNaturalConversionTraits<::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>, ::fidl::Response<::test_unknowninteractions::Example::FlexibleTwoWay>> {
+  static ::fidl::Response<::test_unknowninteractions::Example::FlexibleTwoWay> ToNatural(::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay> src);
+  static ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay> ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_unknowninteractions::Example::FlexibleTwoWay> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>> {
-  using type =
-      ::fidl::Response<::test_unknowninteractions::Example::FlexibleTwoWay>;
+struct NaturalTypeForWireType<::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>> {
+  using type = ::fidl::Response<::test_unknowninteractions::Example::FlexibleTwoWay>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Response<::test_unknowninteractions::Example::FlexibleTwoWay>> {
-  using type =
-      ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>;
+struct WireTypeForNaturalType<::fidl::Response<::test_unknowninteractions::Example::FlexibleTwoWay>> {
+  using type = ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireEvent<::test_unknowninteractions::Example::StrictEvent>,
-    ::fidl::Event<::test_unknowninteractions::Example::StrictEvent>> {
-  static ::fidl::Event<::test_unknowninteractions::Example::StrictEvent>
-  ToNatural(
-      ::fidl::WireEvent<::test_unknowninteractions::Example::StrictEvent> src);
-  static ::fidl::WireEvent<::test_unknowninteractions::Example::StrictEvent>
-  ToWire(fidl::AnyArena& arena,
-         ::fidl::Event<::test_unknowninteractions::Example::StrictEvent> src);
+struct WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::Example::StrictEvent>, ::fidl::Event<::test_unknowninteractions::Example::StrictEvent>> {
+  static ::fidl::Event<::test_unknowninteractions::Example::StrictEvent> ToNatural(::fidl::WireEvent<::test_unknowninteractions::Example::StrictEvent> src);
+  static ::fidl::WireEvent<::test_unknowninteractions::Example::StrictEvent> ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_unknowninteractions::Example::StrictEvent> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireEvent<::test_unknowninteractions::Example::StrictEvent>> {
+struct NaturalTypeForWireType<::fidl::WireEvent<::test_unknowninteractions::Example::StrictEvent>> {
   using type = ::fidl::Event<::test_unknowninteractions::Example::StrictEvent>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Event<::test_unknowninteractions::Example::StrictEvent>> {
-  using type =
-      ::fidl::WireEvent<::test_unknowninteractions::Example::StrictEvent>;
+struct WireTypeForNaturalType<::fidl::Event<::test_unknowninteractions::Example::StrictEvent>> {
+  using type = ::fidl::WireEvent<::test_unknowninteractions::Example::StrictEvent>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireEvent<::test_unknowninteractions::Example::FlexibleEvent>,
-    ::fidl::Event<::test_unknowninteractions::Example::FlexibleEvent>> {
-  static ::fidl::Event<::test_unknowninteractions::Example::FlexibleEvent>
-  ToNatural(
-      ::fidl::WireEvent<::test_unknowninteractions::Example::FlexibleEvent>
-          src);
-  static ::fidl::WireEvent<::test_unknowninteractions::Example::FlexibleEvent>
-  ToWire(fidl::AnyArena& arena,
-         ::fidl::Event<::test_unknowninteractions::Example::FlexibleEvent> src);
+struct WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::Example::FlexibleEvent>, ::fidl::Event<::test_unknowninteractions::Example::FlexibleEvent>> {
+  static ::fidl::Event<::test_unknowninteractions::Example::FlexibleEvent> ToNatural(::fidl::WireEvent<::test_unknowninteractions::Example::FlexibleEvent> src);
+  static ::fidl::WireEvent<::test_unknowninteractions::Example::FlexibleEvent> ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_unknowninteractions::Example::FlexibleEvent> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireEvent<::test_unknowninteractions::Example::FlexibleEvent>> {
-  using type =
-      ::fidl::Event<::test_unknowninteractions::Example::FlexibleEvent>;
+struct NaturalTypeForWireType<::fidl::WireEvent<::test_unknowninteractions::Example::FlexibleEvent>> {
+  using type = ::fidl::Event<::test_unknowninteractions::Example::FlexibleEvent>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Event<::test_unknowninteractions::Example::FlexibleEvent>> {
-  using type =
-      ::fidl::WireEvent<::test_unknowninteractions::Example::FlexibleEvent>;
+struct WireTypeForNaturalType<::fidl::Event<::test_unknowninteractions::Example::FlexibleEvent>> {
+  using type = ::fidl::WireEvent<::test_unknowninteractions::Example::FlexibleEvent>;
 };
 #endif  // __Fuchsia__
 }  // namespace internal

@@ -14,70 +14,48 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 9>
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_emptystruct::wire::Empty",
             .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::test_emptystruct::wire::Empty>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_emptystruct::wire::Empty>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name =
-                "::test_emptystruct::wire::EmptyProtocolSendRequest",
+            .fidl_type_name = "::test_emptystruct::wire::EmptyProtocolSendRequest",
             .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::test_emptystruct::wire::EmptyProtocolSendRequest>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_emptystruct::wire::EmptyProtocolSendRequest>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_emptystruct::wire::"
-                              "EmptyProtocolSendAndReceiveTopResponse",
+            .fidl_type_name = "::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse",
             .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::test_emptystruct::wire::
-                    EmptyProtocolSendAndReceiveTopResponse>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name =
-                "::test_emptystruct::wire::EmptyProtocolSendAndReceiveRequest",
+            .fidl_type_name = "::test_emptystruct::wire::EmptyProtocolSendAndReceiveRequest",
             .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::test_emptystruct::wire::EmptyProtocolSendAndReceiveRequest>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_emptystruct::wire::EmptyProtocolSendAndReceiveRequest>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name =
-                "::test_emptystruct::wire::EmptyProtocolReceiveRequest",
+            .fidl_type_name = "::test_emptystruct::wire::EmptyProtocolReceiveRequest",
             .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::test_emptystruct::wire::EmptyProtocolReceiveRequest>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_emptystruct::wire::EmptyProtocolReceiveRequest>,
         },
 
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::fidl::internal::TransactionalRequest<::test_"
-                              "emptystruct::EmptyProtocol::Send>",
+            .fidl_type_name = "::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::Send>",
             .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::fidl::internal::TransactionalRequest<
-                    ::test_emptystruct::EmptyProtocol::Send>>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::Send>>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::fidl::internal::TransactionalEvent<::test_"
-                              "emptystruct::EmptyProtocol::Receive>",
+            .fidl_type_name = "::fidl::internal::TransactionalEvent<::test_emptystruct::EmptyProtocol::Receive>",
             .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::fidl::internal::TransactionalEvent<
-                    ::test_emptystruct::EmptyProtocol::Receive>>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::fidl::internal::TransactionalEvent<::test_emptystruct::EmptyProtocol::Receive>>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::fidl::internal::TransactionalRequest<::test_"
-                              "emptystruct::EmptyProtocol::SendAndReceive>",
+            .fidl_type_name = "::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>",
             .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::fidl::internal::TransactionalRequest<
-                    ::test_emptystruct::EmptyProtocol::SendAndReceive>>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::fidl::internal::TransactionalResponse<::test_"
-                              "emptystruct::EmptyProtocol::SendAndReceive>",
+            .fidl_type_name = "::fidl::internal::TransactionalResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>",
             .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::fidl::internal::TransactionalResponse<
-                    ::test_emptystruct::EmptyProtocol::SendAndReceive>>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::fidl::internal::TransactionalResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>>,
         },
 };
 

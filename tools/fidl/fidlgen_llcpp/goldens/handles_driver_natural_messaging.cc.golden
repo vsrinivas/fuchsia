@@ -5,35 +5,28 @@
 
 #ifdef __Fuchsia__
 
-std::optional<::fidl::UnbindInfo> fidl::internal::
-    NaturalEventDispatcher<::test_handles::DriverProtocol>::DispatchEvent(
-        ::fidl::IncomingMessage& msg,
-        ::fidl::internal::MessageStorageViewBase* storage_view) {
+std::optional<::fidl::UnbindInfo>
+fidl::internal::NaturalEventDispatcher<::test_handles::DriverProtocol>::DispatchEvent(
+    ::fidl::IncomingMessage& msg,
+    ::fidl::internal::MessageStorageViewBase* storage_view) {
   return ::fidl::UnbindInfo::UnknownOrdinal();
 }
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
-constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
-    ::test_handles::DriverProtocol>::entries_[] = {};
+constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<::test_handles::DriverProtocol>::entries_[] = {};
 
-const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<
-    ::test_handles::DriverProtocol>::entries_end_ = &entries_[0];
+const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::test_handles::DriverProtocol>::entries_end_ =
+    &entries_[0];
 
-void fidl::internal::NaturalServerDispatcher<::test_handles::DriverProtocol>::
-    Dispatch(::fdf::Server<::test_handles::DriverProtocol>* impl,
-             ::fidl::IncomingMessage&& msg,
-             internal::MessageStorageViewBase* storage_view,
-             ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_,
-                             entries_end_);
+void fidl::internal::NaturalServerDispatcher<::test_handles::DriverProtocol>::Dispatch(::fdf::Server<::test_handles::DriverProtocol>* impl, ::fidl::IncomingMessage&& msg,
+                                                                                       internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_);
 }
 void fdf::Server<::test_handles::DriverProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
-  ::fidl::internal::NaturalServerDispatcher<
-      ::test_handles::DriverProtocol>::Dispatch(this, std::move(msg),
-                                                storage_view, txn);
+  ::fidl::internal::NaturalServerDispatcher<::test_handles::DriverProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }
 #endif  // __Fuchsia__

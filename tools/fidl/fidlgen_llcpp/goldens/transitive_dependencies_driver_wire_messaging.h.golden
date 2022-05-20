@@ -19,4 +19,6 @@
 
 #include <fidl/test.middle/cpp/driver/wire_messaging.h>
 
-namespace fidl {}  // namespace fidl
+namespace fidl {
+
+}  // namespace fidl

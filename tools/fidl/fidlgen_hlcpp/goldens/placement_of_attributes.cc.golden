@@ -10,20 +10,20 @@
 namespace test {
 namespace placementofattributes {
 extern "C" const fidl_type_t test_placementofattributes_ExampleXUnionTable;
-const fidl_type_t* ExampleXUnion::FidlType =
-    &test_placementofattributes_ExampleXUnionTable;
+const fidl_type_t* ExampleXUnion::FidlType = &test_placementofattributes_ExampleXUnionTable;
 
 ExampleXUnion::ExampleXUnion() {}
 
-ExampleXUnion::~ExampleXUnion() { Destroy(); }
+ExampleXUnion::~ExampleXUnion() {
+  Destroy();
+}
 
 ExampleXUnion::ExampleXUnion(ExampleXUnion&& other) : tag_(other.tag_) {
   switch (tag_) {
     case ::test::placementofattributes::ExampleXUnion::Tag::kVariant:
       variant_ = std::move(other.variant_);
       break;
-    case static_cast<fidl_xunion_tag_t>(
-        ::test::placementofattributes::ExampleXUnion::Tag::Invalid):
+    case static_cast<fidl_xunion_tag_t>(::test::placementofattributes::ExampleXUnion::Tag::Invalid):
       break;
     default:
       new (&unknown_data_) decltype(unknown_data_);
@@ -40,8 +40,7 @@ ExampleXUnion& ExampleXUnion::operator=(ExampleXUnion&& other) {
       case ::test::placementofattributes::ExampleXUnion::Tag::kVariant:
         variant_ = std::move(other.variant_);
         break;
-      case static_cast<fidl_xunion_tag_t>(
-          ::test::placementofattributes::ExampleXUnion::Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(::test::placementofattributes::ExampleXUnion::Tag::Invalid):
         break;
       default:
         new (&unknown_data_) decltype(unknown_data_);
@@ -58,44 +57,37 @@ ExampleXUnion ExampleXUnion::WithVariant(uint32_t&& val) {
   return result;
 }
 
-void ExampleXUnion::Encode(
-    ::fidl::Encoder* encoder, size_t offset,
-    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+void ExampleXUnion::Encode(::fidl::Encoder* encoder, size_t offset,
+                           cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
   switch (Which()) {
     case ::test::placementofattributes::ExampleXUnion::Tag::kVariant: {
-      if (::fidl::EncodingInlineSize<uint32_t>(encoder) <=
-          FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-        ::fidl::Encode(encoder, &variant_,
-                       offset + offsetof(fidl_xunion_v2_t, envelope));
+      if (::fidl::EncodingInlineSize<uint32_t>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+        ::fidl::Encode(encoder, &variant_, offset + offsetof(fidl_xunion_v2_t, envelope));
 
         fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
         xunion->tag = tag_;
-        xunion->envelope.num_handles = static_cast<uint16_t>(
-            encoder->CurrentHandleCount() - handles_before);
+        xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
         xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
         break;
       }
 
       ::fidl::Encode(
-          encoder, &variant_,
-          encoder->Alloc(
-              ::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(encoder)));
+          encoder,
+          &variant_,
+          encoder->Alloc(::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(encoder)));
 
       fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
       xunion->tag = tag_;
-      xunion->envelope.num_bytes =
-          static_cast<uint32_t>(encoder->CurrentLength() - length_before);
-      xunion->envelope.num_handles =
-          static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
+      xunion->envelope.num_bytes = static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+      xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
       xunion->envelope.flags = 0;
       break;
     }
     case ::test::placementofattributes::ExampleXUnion::Tag::kUnknown: {
-      ::fidl::EncodeUnknownBytes(encoder, &unknown_data_,
-                                 offset + offsetof(fidl_xunion_t, envelope));
+      ::fidl::EncodeUnknownBytes(encoder, &unknown_data_, offset + offsetof(fidl_xunion_t, envelope));
       *encoder->GetPtr<uint64_t>(offset) = tag_;
       break;
     }
@@ -104,14 +96,13 @@ void ExampleXUnion::Encode(
   }
 }
 
-void ExampleXUnion::Decode(::fidl::Decoder* _decoder, ExampleXUnion* value,
-                           size_t offset) {
+void ExampleXUnion::Decode(::fidl::Decoder* _decoder, ExampleXUnion* value, size_t offset) {
   fidl_xunion_v2_t* xunion = _decoder->GetPtr<fidl_xunion_v2_t>(offset);
 
-  if (xunion->envelope.num_bytes == 0 && xunion->envelope.num_handles == 0 &&
+  if (xunion->envelope.num_bytes == 0 &&
+      xunion->envelope.num_handles == 0 &&
       xunion->envelope.flags == 0) {
-    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
-        ::test::placementofattributes::ExampleXUnion::Tag::Invalid));
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(::test::placementofattributes::ExampleXUnion::Tag::Invalid));
     return;
   }
 
@@ -127,8 +118,7 @@ void ExampleXUnion::Decode(::fidl::Decoder* _decoder, ExampleXUnion* value,
     default: {
       auto unknown_info = _decoder->EnvelopeUnknownDataInfo(&xunion->envelope);
       value->unknown_data_.resize(unknown_info.num_bytes);
-      ::fidl::DecodeUnknownBytesContents(_decoder, &value->unknown_data_,
-                                         unknown_info.value_offset);
+      ::fidl::DecodeUnknownBytesContents(_decoder, &value->unknown_data_, unknown_info.value_offset);
       break;
     }
   }
@@ -150,13 +140,11 @@ zx_status_t ExampleXUnion::Clone(ExampleXUnion* result) const {
 }
 
 ExampleXUnion& ExampleXUnion::set_variant(uint32_t value) {
-  EnsureStorageInitialized(
-      ::test::placementofattributes::ExampleXUnion::Tag::kVariant);
+  EnsureStorageInitialized(::test::placementofattributes::ExampleXUnion::Tag::kVariant);
   variant_ = std::move(value);
   return *this;
 }
-ExampleXUnion& ExampleXUnion::SetUnknownData(fidl_xunion_tag_t ordinal,
-                                             std::vector<uint8_t> bytes) {
+ExampleXUnion& ExampleXUnion::SetUnknownData(fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes) {
   EnsureStorageInitialized(ordinal);
   unknown_data_ = std::move(bytes);
   return *this;
@@ -167,15 +155,13 @@ void ExampleXUnion::Destroy() {
     case ::test::placementofattributes::ExampleXUnion::Tag::kVariant:
       break;
 
-    case static_cast<fidl_xunion_tag_t>(
-        ::test::placementofattributes::ExampleXUnion::Tag::Invalid):
+    case static_cast<fidl_xunion_tag_t>(::test::placementofattributes::ExampleXUnion::Tag::Invalid):
       break;
     default:
       unknown_data_.~decltype(unknown_data_)();
       break;
   }
-  tag_ = static_cast<fidl_xunion_tag_t>(
-      ::test::placementofattributes::ExampleXUnion::Tag::Invalid);
+  tag_ = static_cast<fidl_xunion_tag_t>(::test::placementofattributes::ExampleXUnion::Tag::Invalid);
 }
 
 void ExampleXUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
@@ -183,8 +169,7 @@ void ExampleXUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     Destroy();
     tag_ = tag;
     switch (tag_) {
-      case static_cast<fidl_xunion_tag_t>(
-          ::test::placementofattributes::ExampleXUnion::Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(::test::placementofattributes::ExampleXUnion::Tag::Invalid):
         break;
       case ::test::placementofattributes::ExampleXUnion::Tag::kVariant:
         new (&variant_) uint32_t();
@@ -197,20 +182,20 @@ void ExampleXUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
 }
 
 extern "C" const fidl_type_t test_placementofattributes_ExampleUnionTable;
-const fidl_type_t* ExampleUnion::FidlType =
-    &test_placementofattributes_ExampleUnionTable;
+const fidl_type_t* ExampleUnion::FidlType = &test_placementofattributes_ExampleUnionTable;
 
 ExampleUnion::ExampleUnion() {}
 
-ExampleUnion::~ExampleUnion() { Destroy(); }
+ExampleUnion::~ExampleUnion() {
+  Destroy();
+}
 
 ExampleUnion::ExampleUnion(ExampleUnion&& other) : tag_(other.tag_) {
   switch (tag_) {
     case ::test::placementofattributes::ExampleUnion::Tag::kVariant:
       variant_ = std::move(other.variant_);
       break;
-    case static_cast<fidl_xunion_tag_t>(
-        ::test::placementofattributes::ExampleUnion::Tag::Invalid):
+    case static_cast<fidl_xunion_tag_t>(::test::placementofattributes::ExampleUnion::Tag::Invalid):
       break;
   }
 }
@@ -223,8 +208,7 @@ ExampleUnion& ExampleUnion::operator=(ExampleUnion&& other) {
       case ::test::placementofattributes::ExampleUnion::Tag::kVariant:
         variant_ = std::move(other.variant_);
         break;
-      case static_cast<fidl_xunion_tag_t>(
-          ::test::placementofattributes::ExampleUnion::Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(::test::placementofattributes::ExampleUnion::Tag::Invalid):
         break;
     }
   }
@@ -237,38 +221,32 @@ ExampleUnion ExampleUnion::WithVariant(uint32_t&& val) {
   return result;
 }
 
-void ExampleUnion::Encode(
-    ::fidl::Encoder* encoder, size_t offset,
-    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+void ExampleUnion::Encode(::fidl::Encoder* encoder, size_t offset,
+                          cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
   switch (Which()) {
     case ::test::placementofattributes::ExampleUnion::Tag::kVariant: {
-      if (::fidl::EncodingInlineSize<uint32_t>(encoder) <=
-          FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-        ::fidl::Encode(encoder, &variant_,
-                       offset + offsetof(fidl_xunion_v2_t, envelope));
+      if (::fidl::EncodingInlineSize<uint32_t>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+        ::fidl::Encode(encoder, &variant_, offset + offsetof(fidl_xunion_v2_t, envelope));
 
         fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
         xunion->tag = tag_;
-        xunion->envelope.num_handles = static_cast<uint16_t>(
-            encoder->CurrentHandleCount() - handles_before);
+        xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
         xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
         break;
       }
 
       ::fidl::Encode(
-          encoder, &variant_,
-          encoder->Alloc(
-              ::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(encoder)));
+          encoder,
+          &variant_,
+          encoder->Alloc(::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(encoder)));
 
       fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
       xunion->tag = tag_;
-      xunion->envelope.num_bytes =
-          static_cast<uint32_t>(encoder->CurrentLength() - length_before);
-      xunion->envelope.num_handles =
-          static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
+      xunion->envelope.num_bytes = static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+      xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
       xunion->envelope.flags = 0;
       break;
     }
@@ -277,14 +255,13 @@ void ExampleUnion::Encode(
   }
 }
 
-void ExampleUnion::Decode(::fidl::Decoder* _decoder, ExampleUnion* value,
-                          size_t offset) {
+void ExampleUnion::Decode(::fidl::Decoder* _decoder, ExampleUnion* value, size_t offset) {
   fidl_xunion_v2_t* xunion = _decoder->GetPtr<fidl_xunion_v2_t>(offset);
 
-  if (xunion->envelope.num_bytes == 0 && xunion->envelope.num_handles == 0 &&
+  if (xunion->envelope.num_bytes == 0 &&
+      xunion->envelope.num_handles == 0 &&
       xunion->envelope.flags == 0) {
-    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
-        ::test::placementofattributes::ExampleUnion::Tag::Invalid));
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(::test::placementofattributes::ExampleUnion::Tag::Invalid));
     return;
   }
 
@@ -317,8 +294,7 @@ zx_status_t ExampleUnion::Clone(ExampleUnion* result) const {
 }
 
 ExampleUnion& ExampleUnion::set_variant(uint32_t value) {
-  EnsureStorageInitialized(
-      ::test::placementofattributes::ExampleUnion::Tag::kVariant);
+  EnsureStorageInitialized(::test::placementofattributes::ExampleUnion::Tag::kVariant);
   variant_ = std::move(value);
   return *this;
 }
@@ -331,8 +307,7 @@ void ExampleUnion::Destroy() {
     default:
       break;
   }
-  tag_ = static_cast<fidl_xunion_tag_t>(
-      ::test::placementofattributes::ExampleUnion::Tag::Invalid);
+  tag_ = static_cast<fidl_xunion_tag_t>(::test::placementofattributes::ExampleUnion::Tag::Invalid);
 }
 
 void ExampleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
@@ -340,8 +315,7 @@ void ExampleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     Destroy();
     tag_ = tag;
     switch (tag_) {
-      case static_cast<fidl_xunion_tag_t>(
-          ::test::placementofattributes::ExampleUnion::Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(::test::placementofattributes::ExampleUnion::Tag::Invalid):
         break;
       case ::test::placementofattributes::ExampleUnion::Tag::kVariant:
         new (&variant_) uint32_t();
@@ -353,8 +327,7 @@ void ExampleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
 }
 
 extern "C" const fidl_type_t test_placementofattributes_ExampleTableTable;
-const fidl_type_t* ExampleTable::FidlType =
-    &test_placementofattributes_ExampleTableTable;
+const fidl_type_t* ExampleTable::FidlType = &test_placementofattributes_ExampleTableTable;
 
 ExampleTable::ExampleTable() {}
 
@@ -386,50 +359,43 @@ ExampleTable& ExampleTable::operator=(ExampleTable&& other) {
   return *this;
 }
 
-bool ExampleTable::IsEmpty() const { return field_presence_.IsEmpty(); }
+bool ExampleTable::IsEmpty() const {
+  return field_presence_.IsEmpty();
+}
 
-void ExampleTable::Encode(
-    ::fidl::Encoder* _encoder, size_t _offset,
-    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+void ExampleTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                          cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   size_t max_ordinal = MaxOrdinal();
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
-  __attribute__((__unused__)) size_t base =
-      _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
+  __attribute__((__unused__)) size_t base = _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
   if (field_presence_.IsSet<0>()) {
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
     size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
 
-    if (::fidl::EncodingInlineSize<uint32_t>(_encoder) <=
-        FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+    if (::fidl::EncodingInlineSize<uint32_t>(_encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
       ::fidl::Encode(_encoder, &member_value_.value, envelope_base);
 
-      fidl_envelope_v2_t* envelope =
-          _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      envelope->num_handles = static_cast<uint16_t>(
-          _encoder->CurrentHandleCount() - handles_before);
+      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder, &member_value_.value,
-          _encoder->Alloc(
-              ::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(_encoder)));
+          _encoder,
+          &member_value_.value,
+          _encoder->Alloc(::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(_encoder)));
 
-      fidl_envelope_v2_t* envelope =
-          _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      envelope->num_bytes =
-          static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
-      envelope->num_handles = static_cast<uint16_t>(
-          _encoder->CurrentHandleCount() - handles_before);
+      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
+      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
       envelope->flags = 0;
     }
   }
 }
 
-void ExampleTable::Decode(::fidl::Decoder* _decoder, ExampleTable* _value,
-                          size_t _offset) {
+void ExampleTable::Decode(::fidl::Decoder* _decoder, ExampleTable* _value, size_t _offset) {
   fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
   __attribute__((__unused__)) size_t base;
   __attribute__((__unused__)) size_t count;
@@ -441,8 +407,7 @@ void ExampleTable::Decode(::fidl::Decoder* _decoder, ExampleTable* _value,
   count = encoded->count;
   if (count >= 1) {
     size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
-    fidl_envelope_v2_t* envelope =
-        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_member(),
                      _decoder->EnvelopeValueOffset(envelope));
@@ -464,9 +429,9 @@ done_1:
 
 zx_status_t ExampleTable::Clone(ExampleTable* result) const {
   if (field_presence_.IsSet<0>()) {
-    zx_status_t _status =
-        ::fidl::Clone(member_value_.value, result->mutable_member());
-    if (_status != ZX_OK) return _status;
+    zx_status_t _status = ::fidl::Clone(member_value_.value, result->mutable_member());
+    if (_status != ZX_OK)
+      return _status;
   } else {
     result->clear_member();
   }
@@ -474,25 +439,20 @@ zx_status_t ExampleTable::Clone(ExampleTable* result) const {
 }
 
 extern "C" const fidl_type_t test_placementofattributes_ExampleStructTable;
-const fidl_type_t* ExampleStruct::FidlType =
-    &test_placementofattributes_ExampleStructTable;
+const fidl_type_t* ExampleStruct::FidlType = &test_placementofattributes_ExampleStructTable;
 
-void ExampleStruct::Encode(
-    ::fidl::Encoder* _encoder, size_t _offset,
-    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+void ExampleStruct::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                           cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<ExampleStruct>::value) {
-    memcpy(_encoder->template GetPtr<ExampleStruct>(_offset), this,
-           sizeof(ExampleStruct));
+    memcpy(_encoder->template GetPtr<ExampleStruct>(_offset), this, sizeof(ExampleStruct));
   } else {
     ::fidl::Encode(_encoder, &member, _offset + 0);
   }
 }
 
-void ExampleStruct::Decode(::fidl::Decoder* _decoder, ExampleStruct* _value,
-                           size_t _offset) {
+void ExampleStruct::Decode(::fidl::Decoder* _decoder, ExampleStruct* _value, size_t _offset) {
   if (::fidl::IsMemcpyCompatible<ExampleStruct>::value) {
-    memcpy(_value, _decoder->template GetPtr<ExampleStruct>(_offset),
-           sizeof(ExampleStruct));
+    memcpy(_value, _decoder->template GetPtr<ExampleStruct>(_offset), sizeof(ExampleStruct));
   } else {
     ::fidl::Decode(_decoder, &_value->member, _offset + 0);
   }
@@ -500,42 +460,35 @@ void ExampleStruct::Decode(::fidl::Decoder* _decoder, ExampleStruct* _value,
 
 zx_status_t ExampleStruct::Clone(ExampleStruct* _result) const {
   zx_status_t _status = ::fidl::Clone(member, &_result->member);
-  if (_status != ZX_OK) return _status;
+  if (_status != ZX_OK)
+    return _status;
   return ZX_OK;
 }
 
-extern "C" const fidl_type_t
-    test_placementofattributes_ExampleProtocolMethodRequestTable;
-const fidl_type_t* ExampleProtocolMethodRequest::FidlType =
-    &test_placementofattributes_ExampleProtocolMethodRequestTable;
+extern "C" const fidl_type_t test_placementofattributes_ExampleProtocolMethodRequestTable;
+const fidl_type_t* ExampleProtocolMethodRequest::FidlType = &test_placementofattributes_ExampleProtocolMethodRequestTable;
 
-void ExampleProtocolMethodRequest::Encode(
-    ::fidl::Encoder* _encoder, size_t _offset,
-    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+void ExampleProtocolMethodRequest::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                                          cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<ExampleProtocolMethodRequest>::value) {
-    memcpy(_encoder->template GetPtr<ExampleProtocolMethodRequest>(_offset),
-           this, sizeof(ExampleProtocolMethodRequest));
+    memcpy(_encoder->template GetPtr<ExampleProtocolMethodRequest>(_offset), this, sizeof(ExampleProtocolMethodRequest));
   } else {
     ::fidl::Encode(_encoder, &arg, _offset + 0);
   }
 }
 
-void ExampleProtocolMethodRequest::Decode(::fidl::Decoder* _decoder,
-                                          ExampleProtocolMethodRequest* _value,
-                                          size_t _offset) {
+void ExampleProtocolMethodRequest::Decode(::fidl::Decoder* _decoder, ExampleProtocolMethodRequest* _value, size_t _offset) {
   if (::fidl::IsMemcpyCompatible<ExampleProtocolMethodRequest>::value) {
-    memcpy(_value,
-           _decoder->template GetPtr<ExampleProtocolMethodRequest>(_offset),
-           sizeof(ExampleProtocolMethodRequest));
+    memcpy(_value, _decoder->template GetPtr<ExampleProtocolMethodRequest>(_offset), sizeof(ExampleProtocolMethodRequest));
   } else {
     ::fidl::Decode(_decoder, &_value->arg, _offset + 0);
   }
 }
 
-zx_status_t ExampleProtocolMethodRequest::Clone(
-    ExampleProtocolMethodRequest* _result) const {
+zx_status_t ExampleProtocolMethodRequest::Clone(ExampleProtocolMethodRequest* _result) const {
   zx_status_t _status = ::fidl::Clone(arg, &_result->arg);
-  if (_status != ZX_OK) return _status;
+  if (_status != ZX_OK)
+    return _status;
   return ZX_OK;
 }
 
@@ -545,21 +498,16 @@ zx_status_t ExampleProtocolMethodRequest::Clone(
 #ifdef __Fuchsia__
 
 namespace _internal {
-__LOCAL extern "C" const fidl_type_t
-    test_placementofattributes_ExampleProtocolMethodRequestTable;
+__LOCAL extern "C" const fidl_type_t test_placementofattributes_ExampleProtocolMethodRequestTable;
 
 }  // namespace _internal
 ExampleProtocol::~ExampleProtocol() = default;
 
-const fidl_type_t* ::test::placementofattributes::
-    ExampleProtocol_RequestDecoder::GetType(uint64_t ordinal,
-                                            bool* out_needs_response) {
+const fidl_type_t* ::test::placementofattributes::ExampleProtocol_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
   *out_needs_response = false;
   switch (ordinal) {
-    case ::test::placementofattributes::internal::
-        kExampleProtocol_Method_Ordinal:
-      return &::test::placementofattributes::_internal::
-          test_placementofattributes_ExampleProtocolMethodRequestTable;
+    case ::test::placementofattributes::internal::kExampleProtocol_Method_Ordinal:
+      return &::test::placementofattributes::_internal::test_placementofattributes_ExampleProtocolMethodRequestTable;
       ;
     default:
       return nullptr;
@@ -577,16 +525,14 @@ ExampleProtocol_EventSender::~ExampleProtocol_EventSender() = default;
 
 ExampleProtocol_Sync::~ExampleProtocol_Sync() = default;
 
-ExampleProtocol_Proxy::ExampleProtocol_Proxy(
-    ::fidl::internal::ProxyController* controller)
+ExampleProtocol_Proxy::ExampleProtocol_Proxy(::fidl::internal::ProxyController* controller)
     : controller_(controller) {
   (void)controller_;
 }
 
 ExampleProtocol_Proxy::~ExampleProtocol_Proxy() = default;
 
-zx_status_t ExampleProtocol_Proxy::Dispatch_(
-    ::fidl::HLCPPIncomingMessage message) {
+zx_status_t ExampleProtocol_Proxy::Dispatch_(::fidl::HLCPPIncomingMessage message) {
   zx_status_t status = ZX_OK;
   switch (message.ordinal()) {
     default: {
@@ -598,38 +544,26 @@ zx_status_t ExampleProtocol_Proxy::Dispatch_(
 }
 
 void ExampleProtocol_Proxy::Method(::test::exampleusing::Empty arg) {
-  ::fidl::MessageEncoder _encoder(
-      ::test::placementofattributes::internal::kExampleProtocol_Method_Ordinal,
-      ::test::placementofattributes::internal::
-          kExampleProtocol_Method_DynamicFlags);
-  const fidl_type_t* req_type =
-      &::test::placementofattributes::_internal::
-          test_placementofattributes_ExampleProtocolMethodRequestTable;
-  controller_->Send(
-      req_type,
-      ::test::placementofattributes::ExampleProtocol_RequestEncoder::Method(
-          &_encoder, &arg),
-      nullptr);
+  ::fidl::MessageEncoder _encoder(::test::placementofattributes::internal::kExampleProtocol_Method_Ordinal, ::test::placementofattributes::internal::kExampleProtocol_Method_DynamicFlags);
+  const fidl_type_t* req_type = &::test::placementofattributes::_internal::test_placementofattributes_ExampleProtocolMethodRequestTable;
+  controller_->Send(req_type, ::test::placementofattributes::ExampleProtocol_RequestEncoder::Method(&_encoder, &arg), nullptr);
 }
 
-ExampleProtocol_Stub::ExampleProtocol_Stub(
-    ::test::placementofattributes::ExampleProtocol_Stub::ExampleProtocol_clazz*
-        impl)
-    : impl_(impl) {
+ExampleProtocol_Stub::ExampleProtocol_Stub(::test::placementofattributes::ExampleProtocol_Stub::ExampleProtocol_clazz* impl) : impl_(impl) {
   (void)impl_;
 }
 
 ExampleProtocol_Stub::~ExampleProtocol_Stub() = default;
 
-namespace {}  // namespace
+namespace {
+
+}  // namespace
 
 zx_status_t ExampleProtocol_Stub::Dispatch_(
     ::fidl::HLCPPIncomingMessage message,
     ::fidl::internal::PendingResponse response) {
   bool needs_response;
-  const fidl_type_t* request_type =
-      ::test::placementofattributes::ExampleProtocol_RequestDecoder::GetType(
-          message.ordinal(), &needs_response);
+  const fidl_type_t* request_type = ::test::placementofattributes::ExampleProtocol_RequestDecoder::GetType(message.ordinal(), &needs_response);
   if (!message.has_only_header()) {
     if (request_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
@@ -644,22 +578,18 @@ zx_status_t ExampleProtocol_Stub::Dispatch_(
 
   if (response.needs_response() != needs_response) {
     if (needs_response) {
-      FIDL_REPORT_DECODING_ERROR(message, request_type,
-                                 "Message needing a response with no txid");
+      FIDL_REPORT_DECODING_ERROR(message, request_type, "Message needing a response with no txid");
     } else {
-      FIDL_REPORT_DECODING_ERROR(message, request_type,
-                                 "Message not needing a response with a txid");
+      FIDL_REPORT_DECODING_ERROR(message, request_type, "Message not needing a response with a txid");
     }
     return ZX_ERR_INVALID_ARGS;
   }
 
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
-    case ::test::placementofattributes::internal::
-        kExampleProtocol_Method_Ordinal: {
+    case ::test::placementofattributes::internal::kExampleProtocol_Method_Ordinal: {
       ::fidl::Decoder decoder(std::move(message));
-      impl_->Method(::fidl::DecodeAs<::test::exampleusing::Empty>(
-          &decoder, 0 + sizeof(fidl_message_header_t)));
+      impl_->Method(::fidl::DecodeAs<::test::exampleusing::Empty>(&decoder, 0 + sizeof(fidl_message_header_t)));
       break;
     }
     default: {
@@ -675,17 +605,9 @@ ExampleProtocol_SyncProxy::ExampleProtocol_SyncProxy(::zx::channel channel)
 ExampleProtocol_SyncProxy::~ExampleProtocol_SyncProxy() = default;
 
 zx_status_t ExampleProtocol_SyncProxy::Method(::test::exampleusing::Empty arg) {
-  ::fidl::MessageEncoder _encoder(
-      ::test::placementofattributes::internal::kExampleProtocol_Method_Ordinal,
-      ::test::placementofattributes::internal::
-          kExampleProtocol_Method_DynamicFlags);
-  const fidl_type_t* req_type =
-      &::test::placementofattributes::_internal::
-          test_placementofattributes_ExampleProtocolMethodRequestTable;
-  return proxy_.Send(
-      req_type,
-      ::test::placementofattributes::ExampleProtocol_RequestEncoder::Method(
-          &_encoder, &arg));
+  ::fidl::MessageEncoder _encoder(::test::placementofattributes::internal::kExampleProtocol_Method_Ordinal, ::test::placementofattributes::internal::kExampleProtocol_Method_DynamicFlags);
+  const fidl_type_t* req_type = &::test::placementofattributes::_internal::test_placementofattributes_ExampleProtocolMethodRequestTable;
+  return proxy_.Send(req_type, ::test::placementofattributes::ExampleProtocol_RequestEncoder::Method(&_encoder, &arg));
 }
 #endif  // __Fuchsia__
 

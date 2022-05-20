@@ -17,11 +17,11 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 2 {
-		fmt.Fprintf(os.Stderr, "Usage: %s <clang-format-path> <arg>...", os.Args[0])
+	if len(os.Args) != 2 {
+		fmt.Fprintf(os.Stderr, "Usage: %s <clang-format-path>", os.Args[0])
 		os.Exit(1)
 	}
-	formatter := fidlgen_cpp.NewFormatter(os.Args[1], os.Args[2:])
+	formatter := fidlgen_cpp.NewFormatter(os.Args[1])
 	input, err := io.ReadAll(os.Stdin)
 	if err != nil {
 		log.Fatalf("reading stdin: %s", err)

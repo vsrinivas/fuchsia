@@ -7,21 +7,16 @@ namespace fidl {
 namespace testing {
 
 template <>
-class WireTestBase<::test_handles::SomeProtocol>
-    : public ::fidl::WireServer<::test_handles::SomeProtocol> {
+class WireTestBase<::test_handles::SomeProtocol> : public ::fidl::WireServer<::test_handles::SomeProtocol> {
  public:
   virtual ~WireTestBase<::test_handles::SomeProtocol>() = default;
-  virtual void NotImplemented_(const std::string& name,
-                               ::fidl::CompleterBase& completer) = 0;
+  virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
 };
 
 template <>
-class ::fidl::testing::WireSyncEventHandlerTestBase<
-    ::test_handles::SomeProtocol>
-    : public ::fidl::WireSyncEventHandler<::test_handles::SomeProtocol> {
+class ::fidl::testing::WireSyncEventHandlerTestBase<::test_handles::SomeProtocol> : public ::fidl::WireSyncEventHandler<::test_handles::SomeProtocol> {
  public:
-  virtual ~WireSyncEventHandlerTestBase<::test_handles::SomeProtocol>() =
-      default;
+  virtual ~WireSyncEventHandlerTestBase<::test_handles::SomeProtocol>() = default;
   virtual void NotImplemented_(const std::string& name) = 0;
 };
 }  // namespace testing

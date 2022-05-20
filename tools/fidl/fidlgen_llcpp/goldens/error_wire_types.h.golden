@@ -38,9 +38,7 @@ class ExampleFooResult {
  public:
   using Response = test_error::wire::ExampleFooResponse;
 
-  ExampleFooResult()
-      : ordinal_(::test_error::wire::ExampleFooResult::Ordinal::Invalid),
-        envelope_{} {}
+  ExampleFooResult() : ordinal_(::test_error::wire::ExampleFooResult::Ordinal::Invalid), envelope_{} {}
 
   ExampleFooResult(const ExampleFooResult&) = default;
   ExampleFooResult& operator=(const ExampleFooResult&) = default;
@@ -52,45 +50,33 @@ class ExampleFooResult {
     kErr = 2,       // 0x2
   };
 
-  bool has_invalid_tag() const {
-    return ordinal_ == ::test_error::wire::ExampleFooResult::Ordinal::Invalid;
-  }
+  bool has_invalid_tag() const { return ordinal_ == ::test_error::wire::ExampleFooResult::Ordinal::Invalid; }
 
-  bool is_response() const {
-    return ordinal_ == ::test_error::wire::ExampleFooResult::Ordinal::kResponse;
-  }
+  bool is_response() const { return ordinal_ == ::test_error::wire::ExampleFooResult::Ordinal::kResponse; }
 
-  static ExampleFooResult WithResponse(
-      ::fidl::ObjectView<::test_error::wire::ExampleFooResponse> val) {
+  static ExampleFooResult WithResponse(::fidl::ObjectView<::test_error::wire::ExampleFooResponse> val) {
     ExampleFooResult result;
     result.ordinal_ = ::test_error::wire::ExampleFooResult::Ordinal::kResponse;
-    result.envelope_.As<::test_error::wire::ExampleFooResponse>().set_data(
-        std::move(val));
+    result.envelope_.As<::test_error::wire::ExampleFooResponse>().set_data(std::move(val));
     return result;
   }
 
   template <typename... Args>
-  static ExampleFooResult WithResponse(::fidl::AnyArena& allocator,
-                                       Args&&... args) {
-    return WithResponse(
-        ::fidl::ObjectView<::test_error::wire::ExampleFooResponse>(
-            allocator, std::forward<Args>(args)...));
+  static ExampleFooResult WithResponse(::fidl::AnyArena& allocator, Args&&... args) {
+    return WithResponse(::fidl::ObjectView<::test_error::wire::ExampleFooResponse>(allocator,
+                                                                                   std::forward<Args>(args)...));
   }
 
   ::test_error::wire::ExampleFooResponse& response() {
-    ZX_ASSERT(ordinal_ ==
-              ::test_error::wire::ExampleFooResult::Ordinal::kResponse);
+    ZX_ASSERT(ordinal_ == ::test_error::wire::ExampleFooResult::Ordinal::kResponse);
     return envelope_.As<::test_error::wire::ExampleFooResponse>().get_data();
   }
   const ::test_error::wire::ExampleFooResponse& response() const {
-    ZX_ASSERT(ordinal_ ==
-              ::test_error::wire::ExampleFooResult::Ordinal::kResponse);
+    ZX_ASSERT(ordinal_ == ::test_error::wire::ExampleFooResult::Ordinal::kResponse);
     return envelope_.As<::test_error::wire::ExampleFooResponse>().get_data();
   }
 
-  bool is_err() const {
-    return ordinal_ == ::test_error::wire::ExampleFooResult::Ordinal::kErr;
-  }
+  bool is_err() const { return ordinal_ == ::test_error::wire::ExampleFooResult::Ordinal::kErr; }
 
   static ExampleFooResult WithErr(uint32_t val) {
     ExampleFooResult result;
@@ -152,8 +138,7 @@ namespace fidl {
 // TODO(fxbug.dev/95833) Remove this.
 template <>
 struct DeprecatedCTypeTraits<::test_error::wire::ExampleFooResponse> {
-  static constexpr const fidl_type_t* kType =
-      &::test_error::wire::test_error_Example_foo_ResponseTable;
+  static constexpr const fidl_type_t* kType = &::test_error::wire::test_error_Example_foo_ResponseTable;
 };
 
 template <>
@@ -169,55 +154,34 @@ struct TypeTraits<::test_error::wire::ExampleFooResponse> {
 };
 
 template <>
-struct IsFidlType<::test_error::wire::ExampleFooResponse>
-    : public std::true_type {};
+struct IsFidlType<::test_error::wire::ExampleFooResponse> : public std::true_type {};
 template <>
-struct IsStruct<::test_error::wire::ExampleFooResponse>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::test_error::wire::ExampleFooResponse>);
+struct IsStruct<::test_error::wire::ExampleFooResponse> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_error::wire::ExampleFooResponse>);
 static_assert(offsetof(::test_error::wire::ExampleFooResponse, y) == 0);
-static_assert(sizeof(::test_error::wire::ExampleFooResponse) ==
-              TypeTraits<::test_error::wire::ExampleFooResponse>::kPrimarySize);
+static_assert(sizeof(::test_error::wire::ExampleFooResponse) == TypeTraits<::test_error::wire::ExampleFooResponse>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::test_error::wire::ExampleFooResponse,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_error::wire::ExampleFooResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 8;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::WireStructMemberCodingInfo<
-          int64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<int64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
   static constexpr bool kHasPadding = false;
-  using Base =
-      WireStructCodingTraitsBase<::test_error::wire::ExampleFooResponse,
-                                 ::fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_error::wire::ExampleFooResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
-  static void Encode(internal::WireEncoder* encoder,
-                     ::test_error::wire::ExampleFooResponse* value,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Encode(
+      internal::WireEncoder* encoder, ::test_error::wire::ExampleFooResponse* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value,
-             sizeof(::test_error::wire::ExampleFooResponse));
+      memcpy(position.As<void>(), value, sizeof(::test_error::wire::ExampleFooResponse));
     } else {
-      internal::WireCodingTraits<int64_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->y,
-                                                      position + 0,
-                                                      recursion_depth);
+      internal::WireCodingTraits<int64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->y, position + 0, recursion_depth);
     }
   }
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (!Base::are_members_memcpy_compatible) {
-      internal::WireCodingTraits<int64_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 0,
-                                                      recursion_depth);
+      internal::WireCodingTraits<int64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 0, recursion_depth);
     }
   }
 };
@@ -225,8 +189,7 @@ struct ::fidl::internal::WireCodingTraits<
 // TODO(fxbug.dev/95833) Remove this.
 template <>
 struct DeprecatedCTypeTraits<::test_error::wire::ExampleFooTopResponse> {
-  static constexpr const fidl_type_t* kType =
-      &::test_error::wire::test_error_ExampleFooTopResponseTable;
+  static constexpr const fidl_type_t* kType = &::test_error::wire::test_error_ExampleFooTopResponseTable;
 };
 
 template <>
@@ -242,57 +205,34 @@ struct TypeTraits<::test_error::wire::ExampleFooTopResponse> {
 };
 
 template <>
-struct IsFidlType<::test_error::wire::ExampleFooTopResponse>
-    : public std::true_type {};
+struct IsFidlType<::test_error::wire::ExampleFooTopResponse> : public std::true_type {};
 template <>
-struct IsStruct<::test_error::wire::ExampleFooTopResponse>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::test_error::wire::ExampleFooTopResponse>);
+struct IsStruct<::test_error::wire::ExampleFooTopResponse> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_error::wire::ExampleFooTopResponse>);
 static_assert(offsetof(::test_error::wire::ExampleFooTopResponse, result) == 0);
-static_assert(
-    sizeof(::test_error::wire::ExampleFooTopResponse) ==
-    TypeTraits<::test_error::wire::ExampleFooTopResponse>::kPrimarySize);
+static_assert(sizeof(::test_error::wire::ExampleFooTopResponse) == TypeTraits<::test_error::wire::ExampleFooTopResponse>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::test_error::wire::ExampleFooTopResponse,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_error::wire::ExampleFooTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 16;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::WireStructMemberCodingInfo<
-          ::test_error::wire::ExampleFooResult,
-          fidl::internal::WireCodingConstraintUnion<false>, IsRecursive>());
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<::test_error::wire::ExampleFooResult, fidl::internal::WireCodingConstraintUnion<false>, IsRecursive>());
   static constexpr bool kHasPadding = false;
-  using Base =
-      WireStructCodingTraitsBase<::test_error::wire::ExampleFooTopResponse,
-                                 ::fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_error::wire::ExampleFooTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
-  static void Encode(internal::WireEncoder* encoder,
-                     ::test_error::wire::ExampleFooTopResponse* value,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Encode(
+      internal::WireEncoder* encoder, ::test_error::wire::ExampleFooTopResponse* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value,
-             sizeof(::test_error::wire::ExampleFooTopResponse));
+      memcpy(position.As<void>(), value, sizeof(::test_error::wire::ExampleFooTopResponse));
     } else {
-      internal::WireCodingTraits<
-          ::test_error::wire::ExampleFooResult,
-          fidl::internal::WireCodingConstraintUnion<false>,
-          IsRecursive>::Encode(encoder, &value->result, position + 0,
-                               recursion_depth);
+      internal::WireCodingTraits<::test_error::wire::ExampleFooResult, fidl::internal::WireCodingConstraintUnion<false>, IsRecursive>::Encode(encoder, &value->result, position + 0, recursion_depth);
     }
   }
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (!Base::are_members_memcpy_compatible) {
-      internal::WireCodingTraits<
-          ::test_error::wire::ExampleFooResult,
-          fidl::internal::WireCodingConstraintUnion<false>,
-          IsRecursive>::Decode(decoder, position + 0, recursion_depth);
+      internal::WireCodingTraits<::test_error::wire::ExampleFooResult, fidl::internal::WireCodingConstraintUnion<false>, IsRecursive>::Decode(
+          decoder, position + 0, recursion_depth);
     }
   }
 };
@@ -300,8 +240,7 @@ struct ::fidl::internal::WireCodingTraits<
 // TODO(fxbug.dev/95833) Remove this.
 template <>
 struct DeprecatedCTypeTraits<::test_error::wire::ExampleFooRequest> {
-  static constexpr const fidl_type_t* kType =
-      &::test_error::wire::test_error_ExampleFooRequestTable;
+  static constexpr const fidl_type_t* kType = &::test_error::wire::test_error_ExampleFooRequestTable;
 };
 
 template <>
@@ -317,53 +256,34 @@ struct TypeTraits<::test_error::wire::ExampleFooRequest> {
 };
 
 template <>
-struct IsFidlType<::test_error::wire::ExampleFooRequest>
-    : public std::true_type {};
+struct IsFidlType<::test_error::wire::ExampleFooRequest> : public std::true_type {};
 template <>
-struct IsStruct<::test_error::wire::ExampleFooRequest> : public std::true_type {
-};
+struct IsStruct<::test_error::wire::ExampleFooRequest> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test_error::wire::ExampleFooRequest>);
 static_assert(offsetof(::test_error::wire::ExampleFooRequest, s) == 0);
-static_assert(sizeof(::test_error::wire::ExampleFooRequest) ==
-              TypeTraits<::test_error::wire::ExampleFooRequest>::kPrimarySize);
+static_assert(sizeof(::test_error::wire::ExampleFooRequest) == TypeTraits<::test_error::wire::ExampleFooRequest>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::test_error::wire::ExampleFooRequest,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_error::wire::ExampleFooRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 16;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::WireStructMemberCodingInfo<
-          ::fidl::StringView, fidl::internal::WireCodingConstraintString<false>,
-          IsRecursive>());
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<::fidl::StringView, fidl::internal::WireCodingConstraintString<false>, IsRecursive>());
   static constexpr bool kHasPadding = false;
-  using Base =
-      WireStructCodingTraitsBase<::test_error::wire::ExampleFooRequest,
-                                 ::fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_error::wire::ExampleFooRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
-  static void Encode(internal::WireEncoder* encoder,
-                     ::test_error::wire::ExampleFooRequest* value,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Encode(
+      internal::WireEncoder* encoder, ::test_error::wire::ExampleFooRequest* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value,
-             sizeof(::test_error::wire::ExampleFooRequest));
+      memcpy(position.As<void>(), value, sizeof(::test_error::wire::ExampleFooRequest));
     } else {
-      internal::WireCodingTraits<
-          ::fidl::StringView, fidl::internal::WireCodingConstraintString<false>,
-          IsRecursive>::Encode(encoder, &value->s, position + 0,
-                               recursion_depth);
+      internal::WireCodingTraits<::fidl::StringView, fidl::internal::WireCodingConstraintString<false>, IsRecursive>::Encode(encoder, &value->s, position + 0, recursion_depth);
     }
   }
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (!Base::are_members_memcpy_compatible) {
-      internal::WireCodingTraits<
-          ::fidl::StringView, fidl::internal::WireCodingConstraintString<false>,
-          IsRecursive>::Decode(decoder, position + 0, recursion_depth);
+      internal::WireCodingTraits<::fidl::StringView, fidl::internal::WireCodingConstraintString<false>, IsRecursive>::Decode(
+          decoder, position + 0, recursion_depth);
     }
   }
 };
@@ -381,22 +301,17 @@ struct TypeTraits<::test_error::wire::ExampleFooResult> {
 };
 
 template <>
-struct IsFidlType<::test_error::wire::ExampleFooResult>
-    : public std::true_type {};
+struct IsFidlType<::test_error::wire::ExampleFooResult> : public std::true_type {};
 template <>
 struct IsUnion<::test_error::wire::ExampleFooResult> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test_error::wire::ExampleFooResult>);
 
 template <typename Constraint, bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::test_error::wire::ExampleFooResult,
-                                          Constraint, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_error::wire::ExampleFooResult, Constraint, IsRecursive> {
   static constexpr size_t inline_size = 16;
   static constexpr bool is_memcpy_compatible = false;
 
-  static void Encode(internal::WireEncoder* encoder,
-                     ::test_error::wire::ExampleFooResult* value,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Encode(internal::WireEncoder* encoder, ::test_error::wire::ExampleFooResult* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     fidl_xunion_v2_t* u = reinterpret_cast<fidl_xunion_v2_t*>(value);
 
     if (unlikely(u->tag == 0)) {
@@ -418,15 +333,10 @@ struct ::fidl::internal::WireCodingTraits<::test_error::wire::ExampleFooResult,
     size_t inline_size;
     switch (u->tag) {
       case 1:  // ::test_error::wire::ExampleFooResult::Tag::kResponse
-        inline_size = ::fidl::internal::WireCodingTraits<
-            ::test_error::wire::ExampleFooResponse,
-            fidl::internal::WireCodingConstraintEmpty,
-            IsRecursive>::inline_size;
+        inline_size = ::fidl::internal::WireCodingTraits<::test_error::wire::ExampleFooResponse, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
         break;
       case 2:  // ::test_error::wire::ExampleFooResult::Tag::kErr
-        inline_size = ::fidl::internal::WireCodingTraits<
-            uint32_t, fidl::internal::WireCodingConstraintEmpty,
-            IsRecursive>::inline_size;
+        inline_size = ::fidl::internal::WireCodingTraits<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
         break;
       default:
         inline_size = 0;
@@ -435,27 +345,20 @@ struct ::fidl::internal::WireCodingTraits<::test_error::wire::ExampleFooResult,
     ::fidl::internal::EncodeFn<IsRecursive> encode_fn;
     switch (u->tag) {
       case 1:  // ::test_error::wire::ExampleFooResult::Tag::kResponse
-        encode_fn = ::fidl::internal::MakeEncodeFn<
-            ::test_error::wire::ExampleFooResponse,
-            fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        encode_fn = ::fidl::internal::MakeEncodeFn<::test_error::wire::ExampleFooResponse, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
         break;
       case 2:  // ::test_error::wire::ExampleFooResult::Tag::kErr
-        encode_fn = ::fidl::internal::MakeEncodeFn<
-            uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        encode_fn = ::fidl::internal::MakeEncodeFn<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
         break;
       default:
         encode_fn = nullptr;
         break;
     }
-    WireEncodeEnvelope(inline_size, encode_fn, encoder, &u->envelope,
-                       position + sizeof(fidl_xunion_tag_t), inner_depth);
+    WireEncodeEnvelope(inline_size, encode_fn, encoder, &u->envelope, position + sizeof(fidl_xunion_tag_t), inner_depth);
   }
 
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
-    ::test_error::wire::ExampleFooResult::Tag tag =
-        *position.As<::test_error::wire::ExampleFooResult::Tag>();
+  static void Decode(internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    ::test_error::wire::ExampleFooResult::Tag tag = *position.As<::test_error::wire::ExampleFooResult::Tag>();
     if (unlikely(static_cast<uint64_t>(tag) == 0)) {
       if constexpr (!Constraint::is_optional) {
         decoder->SetError(kCodingErrorInvalidUnionTag);
@@ -476,15 +379,10 @@ struct ::fidl::internal::WireCodingTraits<::test_error::wire::ExampleFooResult,
     size_t inline_size;
     switch (tag) {
       case ::test_error::wire::ExampleFooResult::Tag::kResponse:
-        inline_size = ::fidl::internal::WireCodingTraits<
-            ::test_error::wire::ExampleFooResponse,
-            fidl::internal::WireCodingConstraintEmpty,
-            IsRecursive>::inline_size;
+        inline_size = ::fidl::internal::WireCodingTraits<::test_error::wire::ExampleFooResponse, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
         break;
       case ::test_error::wire::ExampleFooResult::Tag::kErr:
-        inline_size = ::fidl::internal::WireCodingTraits<
-            uint32_t, fidl::internal::WireCodingConstraintEmpty,
-            IsRecursive>::inline_size;
+        inline_size = ::fidl::internal::WireCodingTraits<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
         break;
       default:
         inline_size = 0;
@@ -493,31 +391,22 @@ struct ::fidl::internal::WireCodingTraits<::test_error::wire::ExampleFooResult,
     DecodeFn<IsRecursive> decode_fn;
     switch (tag) {
       case ::test_error::wire::ExampleFooResult::Tag::kResponse:
-        decode_fn = ::fidl::internal::MakeDecodeFn<
-            ::test_error::wire::ExampleFooResponse,
-            fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        decode_fn = ::fidl::internal::MakeDecodeFn<::test_error::wire::ExampleFooResponse, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
         break;
       case ::test_error::wire::ExampleFooResult::Tag::kErr:
-        decode_fn = ::fidl::internal::MakeDecodeFn<
-            uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        decode_fn = ::fidl::internal::MakeDecodeFn<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
         break;
       default:
         decode_fn = nullptr;
         break;
     }
-    ::fidl::internal::WireDecodeStrictEnvelope(
-        inline_size, decode_fn, decoder, position + sizeof(fidl_xunion_tag_t),
-        inner_depth);
+    ::fidl::internal::WireDecodeStrictEnvelope(inline_size, decode_fn, decoder, position + sizeof(fidl_xunion_tag_t), inner_depth);
   }
 };
 
 // Top-level union.
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::test_error::wire::ExampleFooResult,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-    : public ::fidl::internal::WireCodingTraits<
-          ::test_error::wire::ExampleFooResult,
-          ::fidl::internal::WireCodingConstraintUnion<false>, IsRecursive> {};
+struct ::fidl::internal::WireCodingTraits<::test_error::wire::ExampleFooResult, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public ::fidl::internal::WireCodingTraits<::test_error::wire::ExampleFooResult, ::fidl::internal::WireCodingConstraintUnion<false>, IsRecursive> {};
 
 }  // namespace fidl

@@ -25,45 +25,43 @@ class DocCommentWithQuotes {
   struct Storage_;
 
  public:
-  DocCommentWithQuotes(Storage_ storage) noexcept
-      : storage_(std::move(storage)) {}
+  DocCommentWithQuotes(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   DocCommentWithQuotes(uint8_t __reserved) noexcept
       : storage_({.__reserved = std::move(__reserved)}) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |DocCommentWithQuotes| only if all of its members are
-  // default constructible.
+  // Default constructs a |DocCommentWithQuotes| only if all of its members are default constructible.
   DocCommentWithQuotes() = default;
 #pragma clang diagnostic pop
 
   DocCommentWithQuotes(DocCommentWithQuotes&&) noexcept = default;
   DocCommentWithQuotes& operator=(DocCommentWithQuotes&&) noexcept = default;
-  DocCommentWithQuotes(const DocCommentWithQuotes& other) noexcept
-      : DocCommentWithQuotes(other.CloneStorage_()) {}
+  DocCommentWithQuotes(const DocCommentWithQuotes& other) noexcept : DocCommentWithQuotes(other.CloneStorage_()) {}
   DocCommentWithQuotes& operator=(const DocCommentWithQuotes& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
   }
 
   bool operator==(const DocCommentWithQuotes& other) const noexcept {
-    return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_escaping::DocCommentWithQuotes, 1>::Equal(this, &other);
+    return ::fidl::internal::NaturalStructCodingTraits<::test_escaping::DocCommentWithQuotes, 1>::Equal(this, &other);
   }
   bool operator!=(const DocCommentWithQuotes& other) const noexcept {
-    return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_escaping::DocCommentWithQuotes, 1>::Equal(this, &other);
+    return !::fidl::internal::NaturalStructCodingTraits<::test_escaping::DocCommentWithQuotes, 1>::Equal(this, &other);
   }
 
-  uint8_t __reserved() const { return storage_.__reserved; }
+  uint8_t
+  __reserved() const {
+    return storage_.__reserved;
+  }
 
-  uint8_t& __reserved() { return storage_.__reserved; }
+  uint8_t& __reserved() {
+    return storage_.__reserved;
+  }
 
-  DocCommentWithQuotes(
-      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : DocCommentWithQuotes(Storage_{
-            .__reserved = 0u,
-        }) {}
+  DocCommentWithQuotes(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : DocCommentWithQuotes(Storage_{
+                                                                                         .__reserved = 0u,
+                                                                                     }) {}
 
  private:
   struct Storage_ final {
@@ -73,14 +71,10 @@ class DocCommentWithQuotes {
   Storage_ storage_;
   Storage_ CloneStorage_() const;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_escaping::DocCommentWithQuotes, 1>;
-  friend struct ::fidl::internal::MemberVisitor<
-      ::test_escaping::DocCommentWithQuotes>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<
-          Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::__reserved, 0});
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_escaping::DocCommentWithQuotes, 1>;
+  friend struct ::fidl::internal::MemberVisitor<::test_escaping::DocCommentWithQuotes>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{
+      &Storage_::__reserved, 0});
   static constexpr auto kPadding = std::make_tuple();
 };
 
@@ -90,14 +84,10 @@ namespace fidl {
 extern "C" const fidl_type_t test_escaping_DocCommentWithQuotesTable;
 
 template <>
-struct IsFidlType<::test_escaping::DocCommentWithQuotes>
-    : public std::true_type {};
+struct IsFidlType<::test_escaping::DocCommentWithQuotes> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<
-    ::test_escaping::DocCommentWithQuotes,
-    ::fidl::internal::NaturalCodingConstraintEmpty>
-    final : public ::fidl::internal::NaturalEmptyStructCodingTraits<
-                ::test_escaping::DocCommentWithQuotes> {};
+struct internal::NaturalCodingTraits<::test_escaping::DocCommentWithQuotes, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalEmptyStructCodingTraits<::test_escaping::DocCommentWithQuotes> {};
 
 }  // namespace fidl

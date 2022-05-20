@@ -7,63 +7,24 @@ namespace internal {
 
 #ifdef __Fuchsia__
 
-::test_handlesintypes::HandlesInTypes
-WireNaturalConversionTraits<::test_handlesintypes::wire::HandlesInTypes,
-                            ::test_handlesintypes::HandlesInTypes>::
-    ToNatural(::test_handlesintypes::wire::HandlesInTypes src) {
+::test_handlesintypes::HandlesInTypes WireNaturalConversionTraits<::test_handlesintypes::wire::HandlesInTypes, ::test_handlesintypes::HandlesInTypes>::ToNatural(::test_handlesintypes::wire::HandlesInTypes src) {
   return ::test_handlesintypes::HandlesInTypes({
-      .normal_handle =
-          WireNaturalConversionTraits<::zx::vmo, ::zx::vmo>::ToNatural(
-              std::move(src.normal_handle)),
-      .handle_in_vec = WireNaturalConversionTraits<
-          ::fidl::VectorView<::zx::vmo>,
-          ::std::vector<::zx::vmo>>::ToNatural(std::move(src.handle_in_vec)),
-      .handle_in_array =
-          WireNaturalConversionTraits<::fidl::Array<::zx::vmo, 5>,
-                                      ::std::array<::zx::vmo, 5>>::
-              ToNatural(std::move(src.handle_in_array)),
-      .handle_in_mixed_vec_array = WireNaturalConversionTraits<
-          ::fidl::VectorView<::fidl::Array<::zx::vmo, 5>>,
-          ::std::vector<::std::array<::zx::vmo, 5>>>::
-          ToNatural(std::move(src.handle_in_mixed_vec_array)),
-      .table_with_handle = WireNaturalConversionTraits<
-          ::test_handlesintypes::wire::TableWithHandle,
-          ::test_handlesintypes::TableWithHandle>::
-          ToNatural(std::move(src.table_with_handle)),
-      .union_with_handle = WireNaturalConversionTraits<
-          ::test_handlesintypes::wire::UnionWithHandle,
-          ::test_handlesintypes::UnionWithHandle>::
-          ToNatural(std::move(src.union_with_handle)),
+      .normal_handle = WireNaturalConversionTraits<::zx::vmo, ::zx::vmo>::ToNatural(std::move(src.normal_handle)),
+      .handle_in_vec = WireNaturalConversionTraits<::fidl::VectorView<::zx::vmo>, ::std::vector<::zx::vmo>>::ToNatural(std::move(src.handle_in_vec)),
+      .handle_in_array = WireNaturalConversionTraits<::fidl::Array<::zx::vmo, 5>, ::std::array<::zx::vmo, 5>>::ToNatural(std::move(src.handle_in_array)),
+      .handle_in_mixed_vec_array = WireNaturalConversionTraits<::fidl::VectorView<::fidl::Array<::zx::vmo, 5>>, ::std::vector<::std::array<::zx::vmo, 5>>>::ToNatural(std::move(src.handle_in_mixed_vec_array)),
+      .table_with_handle = WireNaturalConversionTraits<::test_handlesintypes::wire::TableWithHandle, ::test_handlesintypes::TableWithHandle>::ToNatural(std::move(src.table_with_handle)),
+      .union_with_handle = WireNaturalConversionTraits<::test_handlesintypes::wire::UnionWithHandle, ::test_handlesintypes::UnionWithHandle>::ToNatural(std::move(src.union_with_handle)),
   });
 }
-::test_handlesintypes::wire::HandlesInTypes
-WireNaturalConversionTraits<::test_handlesintypes::wire::HandlesInTypes,
-                            ::test_handlesintypes::HandlesInTypes>::
-    ToWire(fidl::AnyArena& arena, ::test_handlesintypes::HandlesInTypes src) {
+::test_handlesintypes::wire::HandlesInTypes WireNaturalConversionTraits<::test_handlesintypes::wire::HandlesInTypes, ::test_handlesintypes::HandlesInTypes>::ToWire(fidl::AnyArena& arena, ::test_handlesintypes::HandlesInTypes src) {
   return ::test_handlesintypes::wire::HandlesInTypes{
-      .normal_handle =
-          WireNaturalConversionTraits<::zx::vmo, ::zx::vmo>::ToWire(
-              arena, std::move(src.normal_handle())),
-      .handle_in_vec = WireNaturalConversionTraits<
-          ::fidl::VectorView<::zx::vmo>,
-          ::std::vector<::zx::vmo>>::ToWire(arena,
-                                            std::move(src.handle_in_vec())),
-      .handle_in_array = WireNaturalConversionTraits<
-          ::fidl::Array<::zx::vmo, 5>,
-          ::std::array<::zx::vmo, 5>>::ToWire(arena,
-                                              std::move(src.handle_in_array())),
-      .handle_in_mixed_vec_array = WireNaturalConversionTraits<
-          ::fidl::VectorView<::fidl::Array<::zx::vmo, 5>>,
-          ::std::vector<::std::array<::zx::vmo, 5>>>::
-          ToWire(arena, std::move(src.handle_in_mixed_vec_array())),
-      .table_with_handle = WireNaturalConversionTraits<
-          ::test_handlesintypes::wire::TableWithHandle,
-          ::test_handlesintypes::TableWithHandle>::
-          ToWire(arena, std::move(src.table_with_handle())),
-      .union_with_handle = WireNaturalConversionTraits<
-          ::test_handlesintypes::wire::UnionWithHandle,
-          ::test_handlesintypes::UnionWithHandle>::
-          ToWire(arena, std::move(src.union_with_handle())),
+      .normal_handle = WireNaturalConversionTraits<::zx::vmo, ::zx::vmo>::ToWire(arena, std::move(src.normal_handle())),
+      .handle_in_vec = WireNaturalConversionTraits<::fidl::VectorView<::zx::vmo>, ::std::vector<::zx::vmo>>::ToWire(arena, std::move(src.handle_in_vec())),
+      .handle_in_array = WireNaturalConversionTraits<::fidl::Array<::zx::vmo, 5>, ::std::array<::zx::vmo, 5>>::ToWire(arena, std::move(src.handle_in_array())),
+      .handle_in_mixed_vec_array = WireNaturalConversionTraits<::fidl::VectorView<::fidl::Array<::zx::vmo, 5>>, ::std::vector<::std::array<::zx::vmo, 5>>>::ToWire(arena, std::move(src.handle_in_mixed_vec_array())),
+      .table_with_handle = WireNaturalConversionTraits<::test_handlesintypes::wire::TableWithHandle, ::test_handlesintypes::TableWithHandle>::ToWire(arena, std::move(src.table_with_handle())),
+      .union_with_handle = WireNaturalConversionTraits<::test_handlesintypes::wire::UnionWithHandle, ::test_handlesintypes::UnionWithHandle>::ToWire(arena, std::move(src.union_with_handle())),
   };
 }
 
@@ -71,26 +32,20 @@ WireNaturalConversionTraits<::test_handlesintypes::wire::HandlesInTypes,
 
 #ifdef __Fuchsia__
 
-::test_handlesintypes::TableWithHandle
-WireNaturalConversionTraits<::test_handlesintypes::wire::TableWithHandle,
-                            ::test_handlesintypes::TableWithHandle>::
-    ToNatural(::test_handlesintypes::wire::TableWithHandle src) {
+::test_handlesintypes::TableWithHandle WireNaturalConversionTraits<::test_handlesintypes::wire::TableWithHandle, ::test_handlesintypes::TableWithHandle>::ToNatural(::test_handlesintypes::wire::TableWithHandle src) {
   ::test_handlesintypes::TableWithHandle dst;
   if (src.has_h()) {
-    dst.h() = WireNaturalConversionTraits<::zx::vmo, ::zx::vmo>::ToNatural(
-        std::move(src.h()));
+    dst.h() =
+        WireNaturalConversionTraits<::zx::vmo, ::zx::vmo>::ToNatural(std::move(src.h()));
   }
 
   return dst;
 }
-::test_handlesintypes::wire::TableWithHandle
-WireNaturalConversionTraits<::test_handlesintypes::wire::TableWithHandle,
-                            ::test_handlesintypes::TableWithHandle>::
-    ToWire(fidl::AnyArena& arena, ::test_handlesintypes::TableWithHandle src) {
+::test_handlesintypes::wire::TableWithHandle WireNaturalConversionTraits<::test_handlesintypes::wire::TableWithHandle, ::test_handlesintypes::TableWithHandle>::ToWire(fidl::AnyArena& arena, ::test_handlesintypes::TableWithHandle src) {
   auto builder = ::test_handlesintypes::wire::TableWithHandle::Builder(arena);
   if (src.h().has_value()) {
-    builder.h(WireNaturalConversionTraits<::zx::vmo, ::zx::vmo>::ToWire(
-        arena, std::move(src.h().value())));
+    builder.h(
+        WireNaturalConversionTraits<::zx::vmo, ::zx::vmo>::ToWire(arena, std::move(src.h().value())));
   }
   return builder.Build();
 }
@@ -99,57 +54,36 @@ WireNaturalConversionTraits<::test_handlesintypes::wire::TableWithHandle,
 
 #ifdef __Fuchsia__
 
-::test_handlesintypes::UnionWithHandle
-WireNaturalConversionTraits<::test_handlesintypes::wire::UnionWithHandle,
-                            ::test_handlesintypes::UnionWithHandle>::
-    ToNatural(::test_handlesintypes::wire::UnionWithHandle src) {
+::test_handlesintypes::UnionWithHandle WireNaturalConversionTraits<::test_handlesintypes::wire::UnionWithHandle, ::test_handlesintypes::UnionWithHandle>::ToNatural(::test_handlesintypes::wire::UnionWithHandle src) {
   switch (src.Which()) {
     case ::test_handlesintypes::wire::UnionWithHandle::Tag::kH:
       return ::test_handlesintypes::UnionWithHandle::WithH(
-          WireNaturalConversionTraits<::zx::vmo, ::zx::vmo>::ToNatural(
-              std::move(src.h())));
+          WireNaturalConversionTraits<::zx::vmo, ::zx::vmo>::ToNatural(std::move(src.h())));
     default:
       return ::test_handlesintypes::UnionWithHandle();
   }
 }
-::test_handlesintypes::wire::UnionWithHandle
-WireNaturalConversionTraits<::test_handlesintypes::wire::UnionWithHandle,
-                            ::test_handlesintypes::UnionWithHandle>::
-    ToWire(fidl::AnyArena& arena, ::test_handlesintypes::UnionWithHandle src) {
+::test_handlesintypes::wire::UnionWithHandle WireNaturalConversionTraits<::test_handlesintypes::wire::UnionWithHandle, ::test_handlesintypes::UnionWithHandle>::ToWire(fidl::AnyArena& arena, ::test_handlesintypes::UnionWithHandle src) {
   switch (src.Which()) {
     case ::test_handlesintypes::UnionWithHandle::Tag::kH:
       return ::test_handlesintypes::wire::UnionWithHandle::WithH(
-          WireNaturalConversionTraits<::zx::vmo, ::zx::vmo>::ToWire(
-              arena, std::move(src.h().value())));
+          WireNaturalConversionTraits<::zx::vmo, ::zx::vmo>::ToWire(arena, std::move(src.h().value())));
     default:
       return ::test_handlesintypes::wire::UnionWithHandle();
   }
 }
 
-std::unique_ptr<::test_handlesintypes::UnionWithHandle>
-WireNaturalConversionTraits<
-    ::test_handlesintypes::wire::UnionWithHandle,
-    std::unique_ptr<::test_handlesintypes::UnionWithHandle>>::
-    ToNatural(::test_handlesintypes::wire::UnionWithHandle src) {
+std::unique_ptr<::test_handlesintypes::UnionWithHandle> WireNaturalConversionTraits<::test_handlesintypes::wire::UnionWithHandle, std::unique_ptr<::test_handlesintypes::UnionWithHandle>>::ToNatural(::test_handlesintypes::wire::UnionWithHandle src) {
   if (src.has_invalid_tag()) {
     return nullptr;
   }
-  return std::make_unique<::test_handlesintypes::UnionWithHandle>(
-      WireNaturalConversionTraits<
-          ::test_handlesintypes::wire::UnionWithHandle,
-          ::test_handlesintypes::UnionWithHandle>::ToNatural(std::move(src)));
+  return std::make_unique<::test_handlesintypes::UnionWithHandle>(WireNaturalConversionTraits<::test_handlesintypes::wire::UnionWithHandle, ::test_handlesintypes::UnionWithHandle>::ToNatural(std::move(src)));
 }
-::test_handlesintypes::wire::UnionWithHandle WireNaturalConversionTraits<
-    ::test_handlesintypes::wire::UnionWithHandle,
-    std::unique_ptr<::test_handlesintypes::UnionWithHandle>>::
-    ToWire(fidl::AnyArena& arena,
-           std::unique_ptr<::test_handlesintypes::UnionWithHandle> src) {
+::test_handlesintypes::wire::UnionWithHandle WireNaturalConversionTraits<::test_handlesintypes::wire::UnionWithHandle, std::unique_ptr<::test_handlesintypes::UnionWithHandle>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_handlesintypes::UnionWithHandle> src) {
   if (!src) {
     return ::test_handlesintypes::wire::UnionWithHandle();
   }
-  return WireNaturalConversionTraits<
-      ::test_handlesintypes::wire::UnionWithHandle,
-      ::test_handlesintypes::UnionWithHandle>::ToWire(arena, std::move(*src));
+  return WireNaturalConversionTraits<::test_handlesintypes::wire::UnionWithHandle, ::test_handlesintypes::UnionWithHandle>::ToWire(arena, std::move(*src));
 }
 
 #endif  // __Fuchsia__

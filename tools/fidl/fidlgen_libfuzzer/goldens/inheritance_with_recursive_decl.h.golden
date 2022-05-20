@@ -13,16 +13,13 @@
 
 namespace fuzzing {
 
-using ParentFirstRequest =
-    ::test::inheritancewithrecursivedecl::ParentFirstRequest;
-using ChildSecondRequest =
-    ::test::inheritancewithrecursivedecl::ChildSecondRequest;
+using ParentFirstRequest = ::test::inheritancewithrecursivedecl::ParentFirstRequest;
+using ChildSecondRequest = ::test::inheritancewithrecursivedecl::ChildSecondRequest;
 
 template <>
 struct MinSize<ParentFirstRequest> {
   operator size_t() {
-    return MinSize<::fidl::InterfaceRequest<
-        ::test::inheritancewithrecursivedecl::Parent>>();
+    return MinSize<::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent>>();
   }
 };
 template <>
@@ -32,19 +29,15 @@ struct Allocate<ParentFirstRequest> {
     ParentFirstRequest out;
     const size_t slack_per_member = (*size - MinSize<ParentFirstRequest>()) / 1;
     size_t out_size;
-    out_size = MinSize<::fidl::InterfaceRequest<
-                   ::test::inheritancewithrecursivedecl::Parent>>() +
-               slack_per_member;
-    out.request = Allocate<::fidl::InterfaceRequest<
-        ::test::inheritancewithrecursivedecl::Parent>>{}(src, &out_size);
+    out_size = MinSize<::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent>>() + slack_per_member;
+    out.request = Allocate<::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent>>{}(src, &out_size);
     return out;
   }
 };
 template <>
 struct MinSize<ChildSecondRequest> {
   operator size_t() {
-    return MinSize<::fidl::InterfaceRequest<
-        ::test::inheritancewithrecursivedecl::Parent>>();
+    return MinSize<::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent>>();
   }
 };
 template <>
@@ -54,11 +47,8 @@ struct Allocate<ChildSecondRequest> {
     ChildSecondRequest out;
     const size_t slack_per_member = (*size - MinSize<ChildSecondRequest>()) / 1;
     size_t out_size;
-    out_size = MinSize<::fidl::InterfaceRequest<
-                   ::test::inheritancewithrecursivedecl::Parent>>() +
-               slack_per_member;
-    out.request = Allocate<::fidl::InterfaceRequest<
-        ::test::inheritancewithrecursivedecl::Parent>>{}(src, &out_size);
+    out_size = MinSize<::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent>>() + slack_per_member;
+    out.request = Allocate<::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent>>{}(src, &out_size);
     return out;
   }
 };

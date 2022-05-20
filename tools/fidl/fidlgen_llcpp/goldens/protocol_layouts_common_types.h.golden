@@ -9,4 +9,6 @@
 
 #include <cinttypes>
 
-namespace fidl {}  // namespace fidl
+namespace fidl {
+
+}  // namespace fidl

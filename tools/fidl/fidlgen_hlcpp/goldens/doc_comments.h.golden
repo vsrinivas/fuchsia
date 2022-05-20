@@ -59,53 +59,44 @@ enum class MyStrictBits : uint32_t {
 
 const static MyStrictBits MyStrictBitsMask = static_cast<MyStrictBits>(3u);
 
-constexpr inline ::test::doccomments::MyStrictBits operator|(
-    ::test::doccomments::MyStrictBits _lhs,
-    ::test::doccomments::MyStrictBits _rhs) {
+constexpr inline ::test::doccomments::MyStrictBits operator|(::test::doccomments::MyStrictBits _lhs, ::test::doccomments::MyStrictBits _rhs) {
   return static_cast<::test::doccomments::MyStrictBits>(
       static_cast<uint32_t>(_lhs) | static_cast<uint32_t>(_rhs));
 }
 
-constexpr inline ::test::doccomments::MyStrictBits& operator|=(
-    ::test::doccomments::MyStrictBits& _lhs,
-    ::test::doccomments::MyStrictBits _rhs) {
+constexpr inline ::test::doccomments::MyStrictBits& operator|=(::test::doccomments::MyStrictBits& _lhs,
+                                                               ::test::doccomments::MyStrictBits _rhs) {
   _lhs = _lhs | _rhs;
   return _lhs;
 }
 
-constexpr inline ::test::doccomments::MyStrictBits operator&(
-    ::test::doccomments::MyStrictBits _lhs,
-    ::test::doccomments::MyStrictBits _rhs) {
+constexpr inline ::test::doccomments::MyStrictBits operator&(::test::doccomments::MyStrictBits _lhs,
+                                                             ::test::doccomments::MyStrictBits _rhs) {
   return static_cast<::test::doccomments::MyStrictBits>(
       static_cast<uint32_t>(_lhs) & static_cast<uint32_t>(_rhs));
 }
 
-constexpr inline ::test::doccomments::MyStrictBits& operator&=(
-    ::test::doccomments::MyStrictBits& _lhs,
-    ::test::doccomments::MyStrictBits _rhs) {
+constexpr inline ::test::doccomments::MyStrictBits& operator&=(::test::doccomments::MyStrictBits& _lhs,
+                                                               ::test::doccomments::MyStrictBits _rhs) {
   _lhs = _lhs & _rhs;
   return _lhs;
 }
 
-constexpr inline ::test::doccomments::MyStrictBits operator^(
-    ::test::doccomments::MyStrictBits _lhs,
-    ::test::doccomments::MyStrictBits _rhs) {
+constexpr inline ::test::doccomments::MyStrictBits operator^(::test::doccomments::MyStrictBits _lhs,
+                                                             ::test::doccomments::MyStrictBits _rhs) {
   return static_cast<::test::doccomments::MyStrictBits>(
       static_cast<uint32_t>(_lhs) ^ static_cast<uint32_t>(_rhs));
 }
 
-constexpr inline ::test::doccomments::MyStrictBits& operator^=(
-    ::test::doccomments::MyStrictBits& _lhs,
-    ::test::doccomments::MyStrictBits _rhs) {
+constexpr inline ::test::doccomments::MyStrictBits& operator^=(::test::doccomments::MyStrictBits& _lhs,
+                                                               ::test::doccomments::MyStrictBits _rhs) {
   _lhs = _lhs ^ _rhs;
   return _lhs;
 }
 
-constexpr inline ::test::doccomments::MyStrictBits operator~(
-    ::test::doccomments::MyStrictBits _value) {
+constexpr inline ::test::doccomments::MyStrictBits operator~(::test::doccomments::MyStrictBits _value) {
   return static_cast<::test::doccomments::MyStrictBits>(
-      ~static_cast<uint32_t>(_value) &
-      static_cast<uint32_t>(::test::doccomments::MyStrictBitsMask));
+      ~static_cast<uint32_t>(_value) & static_cast<uint32_t>(::test::doccomments::MyStrictBitsMask));
 }
 
 inline zx_status_t Clone(::test::doccomments::MyStrictBits value,
@@ -153,10 +144,8 @@ class MyFlexibleEnum final {
 };
 
 #if !(__cplusplus < 201703)
-constexpr const ::test::doccomments::MyFlexibleEnum MyFlexibleEnum::FOO =
-    ::test::doccomments::MyFlexibleEnum(1u);
-constexpr const ::test::doccomments::MyFlexibleEnum MyFlexibleEnum::BAR =
-    ::test::doccomments::MyFlexibleEnum(2u);
+constexpr const ::test::doccomments::MyFlexibleEnum MyFlexibleEnum::FOO = ::test::doccomments::MyFlexibleEnum(1u);
+constexpr const ::test::doccomments::MyFlexibleEnum MyFlexibleEnum::BAR = ::test::doccomments::MyFlexibleEnum(2u);
 #endif  // !(__cplusplus < 201703)
 
 inline zx_status_t Clone(::test::doccomments::MyFlexibleEnum value,
@@ -174,40 +163,33 @@ class MyFlexibleBits final {
  public:
   constexpr MyFlexibleBits() = default;
 
-  // Constructs an instance of |MyFlexibleBits| from an underlying primitive
-  // value if the primitive does not contain any unknown members not defined in
-  // the FIDL schema. Otherwise, returns |cpp17::nullopt|.
-  constexpr inline static cpp17::optional<MyFlexibleBits> TryFrom(
-      uint32_t value) {
+  // Constructs an instance of |MyFlexibleBits| from an underlying primitive value
+  // if the primitive does not contain any unknown members not defined in the
+  // FIDL schema. Otherwise, returns |cpp17::nullopt|.
+  constexpr inline static cpp17::optional<MyFlexibleBits> TryFrom(uint32_t value) {
     if (value & ~kMask.value_) {
       return cpp17::nullopt;
     }
     return MyFlexibleBits(value & MyFlexibleBits::kMask.value_);
   }
 
-  // Constructs an instance of |MyFlexibleBits| from an underlying primitive
-  // value, clearing any bit member not defined in the FIDL schema.
+  // Constructs an instance of |MyFlexibleBits| from an underlying primitive value,
+  // clearing any bit member not defined in the FIDL schema.
   constexpr inline static MyFlexibleBits TruncatingUnknown(uint32_t value) {
     return MyFlexibleBits(value & MyFlexibleBits::kMask.value_);
   }
 
-  // Constructs an instance of |MyFlexibleBits| from an underlying primitive
-  // value, preserving any bit member not defined in the FIDL schema.
+  // Constructs an instance of |MyFlexibleBits| from an underlying primitive value,
+  // preserving any bit member not defined in the FIDL schema.
   constexpr explicit MyFlexibleBits(uint32_t value) : value_(value) {}
   const static MyFlexibleBits MY_FIRST_BIT;
   const static MyFlexibleBits MY_OTHER_BIT;
   const static MyFlexibleBits kMask;
 
   explicit constexpr inline operator uint32_t() const { return value_; }
-  explicit constexpr inline operator bool() const {
-    return static_cast<bool>(value_);
-  }
-  constexpr inline bool operator==(const MyFlexibleBits& other) const {
-    return value_ == other.value_;
-  }
-  constexpr inline bool operator!=(const MyFlexibleBits& other) const {
-    return value_ != other.value_;
-  }
+  explicit constexpr inline operator bool() const { return static_cast<bool>(value_); }
+  constexpr inline bool operator==(const MyFlexibleBits& other) const { return value_ == other.value_; }
+  constexpr inline bool operator!=(const MyFlexibleBits& other) const { return value_ != other.value_; }
   constexpr inline MyFlexibleBits operator~() const;
   constexpr inline MyFlexibleBits operator|(const MyFlexibleBits& other) const;
   constexpr inline MyFlexibleBits operator&(const MyFlexibleBits& other) const;
@@ -218,46 +200,36 @@ class MyFlexibleBits final {
   constexpr inline MyFlexibleBits unknown_bits() const {
     return *this & MyFlexibleBits(~kMask.value_);
   }
-  constexpr inline bool has_unknown_bits() const {
-    return static_cast<bool>(unknown_bits());
-  }
+  constexpr inline bool has_unknown_bits() const { return static_cast<bool>(unknown_bits()); }
 
  private:
   uint32_t value_ = 0;
 };
 
 #if !(__cplusplus < 201703)
-constexpr const ::test::doccomments::MyFlexibleBits
-    MyFlexibleBits::MY_FIRST_BIT = ::test::doccomments::MyFlexibleBits(1u);
-constexpr const ::test::doccomments::MyFlexibleBits
-    MyFlexibleBits::MY_OTHER_BIT = ::test::doccomments::MyFlexibleBits(2u);
-constexpr const ::test::doccomments::MyFlexibleBits MyFlexibleBits::kMask =
-    ::test::doccomments::MyFlexibleBits(3u);
+constexpr const ::test::doccomments::MyFlexibleBits MyFlexibleBits::MY_FIRST_BIT = ::test::doccomments::MyFlexibleBits(1u);
+constexpr const ::test::doccomments::MyFlexibleBits MyFlexibleBits::MY_OTHER_BIT = ::test::doccomments::MyFlexibleBits(2u);
+constexpr const ::test::doccomments::MyFlexibleBits MyFlexibleBits::kMask = ::test::doccomments::MyFlexibleBits(3u);
 
 #endif  // !(__cplusplus < 201703)
 
-constexpr inline ::test::doccomments::MyFlexibleBits MyFlexibleBits::operator~()
-    const {
-  return ::test::doccomments::MyFlexibleBits(
-      static_cast<uint32_t>(~this->value_ & kMask.value_));
+constexpr inline ::test::doccomments::MyFlexibleBits MyFlexibleBits::operator~() const {
+  return ::test::doccomments::MyFlexibleBits(static_cast<uint32_t>(~this->value_ & kMask.value_));
 }
 
 constexpr inline ::test::doccomments::MyFlexibleBits MyFlexibleBits::operator|(
     const ::test::doccomments::MyFlexibleBits& other) const {
-  return ::test::doccomments::MyFlexibleBits(
-      static_cast<uint32_t>(this->value_ | other.value_));
+  return ::test::doccomments::MyFlexibleBits(static_cast<uint32_t>(this->value_ | other.value_));
 }
 
 constexpr inline ::test::doccomments::MyFlexibleBits MyFlexibleBits::operator&(
     const ::test::doccomments::MyFlexibleBits& other) const {
-  return ::test::doccomments::MyFlexibleBits(
-      static_cast<uint32_t>(this->value_ & other.value_));
+  return ::test::doccomments::MyFlexibleBits(static_cast<uint32_t>(this->value_ & other.value_));
 }
 
 constexpr inline ::test::doccomments::MyFlexibleBits MyFlexibleBits::operator^(
     const ::test::doccomments::MyFlexibleBits& other) const {
-  return ::test::doccomments::MyFlexibleBits(
-      static_cast<uint32_t>(this->value_ ^ other.value_));
+  return ::test::doccomments::MyFlexibleBits(static_cast<uint32_t>(this->value_ ^ other.value_));
 }
 
 constexpr inline void MyFlexibleBits::operator|=(
@@ -308,7 +280,9 @@ class Table final {
     ZX_ASSERT(field_presence_.IsSet<0>());
     return Field_value_.value;
   }
-  bool has_Field() const { return field_presence_.IsSet<0>(); }
+  bool has_Field() const {
+    return field_presence_.IsSet<0>();
+  }
 
   /// table field comment #1
   ///
@@ -342,13 +316,10 @@ class Table final {
   ~Table();
   Table& operator=(Table&& other);
 
-  static inline ::std::unique_ptr<Table> New() {
-    return ::std::make_unique<Table>();
-  }
+  static inline ::std::unique_ptr<Table> New() { return ::std::make_unique<Table>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
   static void Decode(::fidl::Decoder* _decoder, Table* _value, size_t _offset);
   zx_status_t Clone(Table* _result) const;
 
@@ -400,13 +371,10 @@ class Struct final {
   /// struct member comment #3
   int32_t Field{};
 
-  static inline ::std::unique_ptr<Struct> New() {
-    return ::std::make_unique<Struct>();
-  }
+  static inline ::std::unique_ptr<Struct> New() { return ::std::make_unique<Struct>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
   static void Decode(::fidl::Decoder* _decoder, Struct* value, size_t _offset);
   zx_status_t Clone(Struct* result) const;
 };
@@ -439,22 +407,18 @@ class StrictUnion final {
     Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
-  static inline ::std::unique_ptr<StrictUnion> New() {
-    return ::std::make_unique<StrictUnion>();
-  }
+  static inline ::std::unique_ptr<StrictUnion> New() { return ::std::make_unique<StrictUnion>(); }
 
   void Encode(::fidl::Encoder* encoder, size_t offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, StrictUnion* value,
-                     size_t offset);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, StrictUnion* value, size_t offset);
   zx_status_t Clone(StrictUnion* result) const;
 
-  bool has_invalid_tag() const { return tag_ == Invalid; }
-
-  bool is_Field() const {
-    return tag_ == ::test::doccomments::StrictUnion::Tag::kField;
+  bool has_invalid_tag() const {
+    return tag_ == Invalid;
   }
+
+  bool is_Field() const { return tag_ == ::test::doccomments::StrictUnion::Tag::kField; }
 
   /// union member comment #1
   ///
@@ -477,9 +441,11 @@ class StrictUnion final {
     return ::test::doccomments::StrictUnion::Tag(tag_);
   }
 
-  // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
-  // only when you need access to the raw integral ordinal value.
-  fidl_xunion_tag_t Ordinal() const { return tag_; }
+  // You probably want to use Which() method instead of Ordinal(). Use Ordinal() only when you need
+  // access to the raw integral ordinal value.
+  fidl_xunion_tag_t Ordinal() const {
+    return tag_;
+  }
 
   friend ::fidl::Equality<::test::doccomments::StrictUnion>;
 
@@ -487,8 +453,7 @@ class StrictUnion final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
-      ::test::doccomments::StrictUnion::Tag::Invalid);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(::test::doccomments::StrictUnion::Tag::Invalid);
   union {
     int32_t Field_;
   };
@@ -512,8 +477,7 @@ class Interface_RequestEncoder {
 
 class Interface_ResponseEncoder {
  public:
-  static ::fidl::HLCPPOutgoingMessage OnEvent(
-      ::fidl::MessageEncoder* _encoder) {
+  static ::fidl::HLCPPOutgoingMessage OnEvent(::fidl::MessageEncoder* _encoder) {
     return _encoder->GetMessage();
   }
 };
@@ -541,22 +505,18 @@ class FlexibleUnion final {
     Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
-  static inline ::std::unique_ptr<FlexibleUnion> New() {
-    return ::std::make_unique<FlexibleUnion>();
-  }
+  static inline ::std::unique_ptr<FlexibleUnion> New() { return ::std::make_unique<FlexibleUnion>(); }
 
   void Encode(::fidl::Encoder* encoder, size_t offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
-                  cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, FlexibleUnion* value,
-                     size_t offset);
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, FlexibleUnion* value, size_t offset);
   zx_status_t Clone(FlexibleUnion* result) const;
 
-  bool has_invalid_tag() const { return tag_ == Invalid; }
-
-  bool is_Field() const {
-    return tag_ == ::test::doccomments::FlexibleUnion::Tag::kField;
+  bool has_invalid_tag() const {
+    return tag_ == Invalid;
   }
+
+  bool is_Field() const { return tag_ == ::test::doccomments::FlexibleUnion::Tag::kField; }
 
   /// union member comment #1
   ///
@@ -574,8 +534,7 @@ class FlexibleUnion final {
     return Field_;
   }
   FlexibleUnion& set_Field(int32_t value);
-  FlexibleUnion& SetUnknownData(fidl_xunion_tag_t ordinal,
-                                std::vector<uint8_t> bytes);
+  FlexibleUnion& SetUnknownData(fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes);
 
   ::test::doccomments::FlexibleUnion::Tag Which() const {
     switch (tag_) {
@@ -587,9 +546,11 @@ class FlexibleUnion final {
     }
   }
 
-  // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
-  // only when you need access to the raw integral ordinal value.
-  fidl_xunion_tag_t Ordinal() const { return tag_; }
+  // You probably want to use Which() method instead of Ordinal(). Use Ordinal() only when you need
+  // access to the raw integral ordinal value.
+  fidl_xunion_tag_t Ordinal() const {
+    return tag_;
+  }
   const std::vector<uint8_t>* UnknownBytes() const {
     if (Which() != ::test::doccomments::FlexibleUnion::Tag::kUnknown) {
       return nullptr;
@@ -603,8 +564,7 @@ class FlexibleUnion final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
-      ::test::doccomments::FlexibleUnion::Tag::Invalid);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(::test::doccomments::FlexibleUnion::Tag::Invalid);
   union {
     int32_t Field_;
     std::vector<uint8_t> unknown_data_;
@@ -636,8 +596,7 @@ inline zx_status_t Clone(const ::test::doccomments::Table& _value,
 }
 template <>
 struct Equality<::test::doccomments::Table> {
-  bool operator()(const ::test::doccomments::Table& _lhs,
-                  const ::test::doccomments::Table& _rhs) const {
+  bool operator()(const ::test::doccomments::Table& _lhs, const ::test::doccomments::Table& _rhs) const {
     if (_lhs.has_Field()) {
       if (!_rhs.has_Field()) {
         return false;
@@ -656,10 +615,8 @@ struct CodingTraits<::test::doccomments::Struct>
     : public EncodableCodingTraits<::test::doccomments::Struct, 4> {};
 
 template <>
-struct IsMemcpyCompatible<::test::doccomments::Struct>
-    : public internal::BoolConstant<
-          !HasPadding<::test::doccomments::Struct>::value &&
-          IsMemcpyCompatible<int32_t>::value> {};
+struct IsMemcpyCompatible<::test::doccomments::Struct> : public internal::BoolConstant<
+                                                             !HasPadding<::test::doccomments::Struct>::value && IsMemcpyCompatible<int32_t>::value> {};
 
 inline zx_status_t Clone(const ::test::doccomments::Struct& value,
                          ::test::doccomments::Struct* result) {
@@ -668,8 +625,7 @@ inline zx_status_t Clone(const ::test::doccomments::Struct& value,
 
 template <>
 struct Equality<::test::doccomments::Struct> {
-  bool operator()(const ::test::doccomments::Struct& _lhs,
-                  const ::test::doccomments::Struct& _rhs) const {
+  bool operator()(const ::test::doccomments::Struct& _lhs, const ::test::doccomments::Struct& _rhs) const {
     if (!::fidl::Equals(_lhs.Field, _rhs.Field)) {
       return false;
     }
@@ -677,8 +633,7 @@ struct Equality<::test::doccomments::Struct> {
   }
 };
 template <>
-struct IsFidlXUnion<::test::doccomments::StrictUnion> : public std::true_type {
-};
+struct IsFidlXUnion<::test::doccomments::StrictUnion> : public std::true_type {};
 
 template <>
 struct CodingTraits<::test::doccomments::StrictUnion>
@@ -688,20 +643,15 @@ template <>
 struct CodingTraits<std::unique_ptr<::test::doccomments::StrictUnion>> {
   static constexpr size_t inline_size_v2 = 16;
 
-  static void Encode(Encoder* encoder,
-                     std::unique_ptr<::test::doccomments::StrictUnion>* value,
-                     size_t offset,
-                     cpp17::optional<::fidl::HandleInformation>
-                         maybe_handle_info = cpp17::nullopt) {
+  static void Encode(Encoder* encoder, std::unique_ptr<::test::doccomments::StrictUnion>* value, size_t offset,
+                     cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
     }
   }
 
-  static void Decode(Decoder* _decoder,
-                     std::unique_ptr<::test::doccomments::StrictUnion>* value,
-                     size_t offset) {
+  static void Decode(Decoder* _decoder, std::unique_ptr<::test::doccomments::StrictUnion>* value, size_t offset) {
     fidl_xunion_t* encoded = _decoder->GetPtr<fidl_xunion_t>(offset);
     if (encoded->tag == 0) {
       value->reset(nullptr);
@@ -721,15 +671,13 @@ inline zx_status_t Clone(const ::test::doccomments::StrictUnion& value,
 
 template <>
 struct Equality<::test::doccomments::StrictUnion> {
-  bool operator()(const ::test::doccomments::StrictUnion& _lhs,
-                  const ::test::doccomments::StrictUnion& _rhs) const {
+  bool operator()(const ::test::doccomments::StrictUnion& _lhs, const ::test::doccomments::StrictUnion& _rhs) const {
     if (_lhs.Ordinal() != _rhs.Ordinal()) {
       return false;
     }
 
     switch (_lhs.Ordinal()) {
-      case static_cast<fidl_xunion_tag_t>(
-          ::test::doccomments::StrictUnion::Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(::test::doccomments::StrictUnion::Tag::Invalid):
         return true;
       case ::test::doccomments::StrictUnion::Tag::kField:
         return ::fidl::Equals(_lhs.Field_, _rhs.Field_);
@@ -741,17 +689,14 @@ struct Equality<::test::doccomments::StrictUnion> {
 };
 template <>
 struct CodingTraits<::test::doccomments::MyStrictEnum> {
-  static constexpr size_t inline_size_v2 =
-      sizeof(::test::doccomments::MyStrictEnum);
-  static void Encode(
-      Encoder* encoder, ::test::doccomments::MyStrictEnum* value, size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  static constexpr size_t inline_size_v2 = sizeof(::test::doccomments::MyStrictEnum);
+  static void Encode(Encoder* encoder, ::test::doccomments::MyStrictEnum* value, size_t offset,
+                     cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
     ZX_DEBUG_ASSERT(!maybe_handle_info);
     uint32_t underlying = static_cast<uint32_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
   }
-  static void Decode(Decoder* decoder, ::test::doccomments::MyStrictEnum* value,
-                     size_t offset) {
+  static void Decode(Decoder* decoder, ::test::doccomments::MyStrictEnum* value, size_t offset) {
     uint32_t underlying = {};
     ::fidl::Decode(decoder, &underlying, offset);
     *value = static_cast<::test::doccomments::MyStrictEnum>(underlying);
@@ -764,25 +709,21 @@ inline zx_status_t Clone(::test::doccomments::MyStrictEnum value,
 }
 template <>
 struct Equality<::test::doccomments::MyStrictEnum> {
-  bool operator()(const ::test::doccomments::MyStrictEnum& _lhs,
-                  const ::test::doccomments::MyStrictEnum& _rhs) const {
+  bool operator()(const ::test::doccomments::MyStrictEnum& _lhs, const ::test::doccomments::MyStrictEnum& _rhs) const {
     return _lhs == _rhs;
   }
 };
 
 template <>
 struct CodingTraits<::test::doccomments::MyStrictBits> {
-  static constexpr size_t inline_size_v2 =
-      sizeof(::test::doccomments::MyStrictBits);
-  static void Encode(
-      Encoder* encoder, ::test::doccomments::MyStrictBits* value, size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  static constexpr size_t inline_size_v2 = sizeof(::test::doccomments::MyStrictBits);
+  static void Encode(Encoder* encoder, ::test::doccomments::MyStrictBits* value, size_t offset,
+                     cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
     ZX_DEBUG_ASSERT(!maybe_handle_info);
     uint32_t underlying = static_cast<uint32_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
   }
-  static void Decode(Decoder* decoder, ::test::doccomments::MyStrictBits* value,
-                     size_t offset) {
+  static void Decode(Decoder* decoder, ::test::doccomments::MyStrictBits* value, size_t offset) {
     uint32_t underlying = {};
     ::fidl::Decode(decoder, &underlying, offset);
     *value = static_cast<::test::doccomments::MyStrictBits>(underlying);
@@ -796,8 +737,7 @@ inline zx_status_t Clone(::test::doccomments::MyStrictBits value,
 
 template <>
 struct Equality<::test::doccomments::MyStrictBits> {
-  bool operator()(const ::test::doccomments::MyStrictBits& _lhs,
-                  const ::test::doccomments::MyStrictBits& _rhs) const {
+  bool operator()(const ::test::doccomments::MyStrictBits& _lhs, const ::test::doccomments::MyStrictBits& _rhs) const {
     uint32_t _lhs_underlying = static_cast<uint32_t>(_lhs);
     uint32_t _rhs_underlying = static_cast<uint32_t>(_rhs);
     return ::fidl::Equals(_lhs_underlying, _rhs_underlying);
@@ -805,19 +745,14 @@ struct Equality<::test::doccomments::MyStrictBits> {
 };
 template <>
 struct CodingTraits<::test::doccomments::MyFlexibleEnum> {
-  static constexpr size_t inline_size_v2 =
-      sizeof(::test::doccomments::MyFlexibleEnum);
-  static void Encode(
-      Encoder* encoder, ::test::doccomments::MyFlexibleEnum* value,
-      size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  static constexpr size_t inline_size_v2 = sizeof(::test::doccomments::MyFlexibleEnum);
+  static void Encode(Encoder* encoder, ::test::doccomments::MyFlexibleEnum* value, size_t offset,
+                     cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
     ZX_DEBUG_ASSERT(!maybe_handle_info);
     uint32_t underlying = static_cast<uint32_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
   }
-  static void Decode(Decoder* decoder,
-                     ::test::doccomments::MyFlexibleEnum* value,
-                     size_t offset) {
+  static void Decode(Decoder* decoder, ::test::doccomments::MyFlexibleEnum* value, size_t offset) {
     uint32_t underlying = {};
     ::fidl::Decode(decoder, &underlying, offset);
     *value = static_cast<::test::doccomments::MyFlexibleEnum>(underlying);
@@ -830,27 +765,21 @@ inline zx_status_t Clone(::test::doccomments::MyFlexibleEnum value,
 }
 template <>
 struct Equality<::test::doccomments::MyFlexibleEnum> {
-  bool operator()(const ::test::doccomments::MyFlexibleEnum& _lhs,
-                  const ::test::doccomments::MyFlexibleEnum& _rhs) const {
+  bool operator()(const ::test::doccomments::MyFlexibleEnum& _lhs, const ::test::doccomments::MyFlexibleEnum& _rhs) const {
     return _lhs == _rhs;
   }
 };
 
 template <>
 struct CodingTraits<::test::doccomments::MyFlexibleBits> {
-  static constexpr size_t inline_size_v2 =
-      sizeof(::test::doccomments::MyFlexibleBits);
-  static void Encode(
-      Encoder* encoder, ::test::doccomments::MyFlexibleBits* value,
-      size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  static constexpr size_t inline_size_v2 = sizeof(::test::doccomments::MyFlexibleBits);
+  static void Encode(Encoder* encoder, ::test::doccomments::MyFlexibleBits* value, size_t offset,
+                     cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
     ZX_DEBUG_ASSERT(!maybe_handle_info);
     uint32_t underlying = static_cast<uint32_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
   }
-  static void Decode(Decoder* decoder,
-                     ::test::doccomments::MyFlexibleBits* value,
-                     size_t offset) {
+  static void Decode(Decoder* decoder, ::test::doccomments::MyFlexibleBits* value, size_t offset) {
     uint32_t underlying = {};
     ::fidl::Decode(decoder, &underlying, offset);
     *value = static_cast<::test::doccomments::MyFlexibleBits>(underlying);
@@ -864,16 +793,14 @@ inline zx_status_t Clone(::test::doccomments::MyFlexibleBits value,
 
 template <>
 struct Equality<::test::doccomments::MyFlexibleBits> {
-  bool operator()(const ::test::doccomments::MyFlexibleBits& _lhs,
-                  const ::test::doccomments::MyFlexibleBits& _rhs) const {
+  bool operator()(const ::test::doccomments::MyFlexibleBits& _lhs, const ::test::doccomments::MyFlexibleBits& _rhs) const {
     uint32_t _lhs_underlying = static_cast<uint32_t>(_lhs);
     uint32_t _rhs_underlying = static_cast<uint32_t>(_rhs);
     return ::fidl::Equals(_lhs_underlying, _rhs_underlying);
   }
 };
 template <>
-struct IsFidlXUnion<::test::doccomments::FlexibleUnion>
-    : public std::true_type {};
+struct IsFidlXUnion<::test::doccomments::FlexibleUnion> : public std::true_type {};
 
 template <>
 struct CodingTraits<::test::doccomments::FlexibleUnion>
@@ -883,20 +810,15 @@ template <>
 struct CodingTraits<std::unique_ptr<::test::doccomments::FlexibleUnion>> {
   static constexpr size_t inline_size_v2 = 16;
 
-  static void Encode(Encoder* encoder,
-                     std::unique_ptr<::test::doccomments::FlexibleUnion>* value,
-                     size_t offset,
-                     cpp17::optional<::fidl::HandleInformation>
-                         maybe_handle_info = cpp17::nullopt) {
+  static void Encode(Encoder* encoder, std::unique_ptr<::test::doccomments::FlexibleUnion>* value, size_t offset,
+                     cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
     }
   }
 
-  static void Decode(Decoder* _decoder,
-                     std::unique_ptr<::test::doccomments::FlexibleUnion>* value,
-                     size_t offset) {
+  static void Decode(Decoder* _decoder, std::unique_ptr<::test::doccomments::FlexibleUnion>* value, size_t offset) {
     fidl_xunion_t* encoded = _decoder->GetPtr<fidl_xunion_t>(offset);
     if (encoded->tag == 0) {
       value->reset(nullptr);
@@ -916,15 +838,13 @@ inline zx_status_t Clone(const ::test::doccomments::FlexibleUnion& value,
 
 template <>
 struct Equality<::test::doccomments::FlexibleUnion> {
-  bool operator()(const ::test::doccomments::FlexibleUnion& _lhs,
-                  const ::test::doccomments::FlexibleUnion& _rhs) const {
+  bool operator()(const ::test::doccomments::FlexibleUnion& _lhs, const ::test::doccomments::FlexibleUnion& _rhs) const {
     if (_lhs.Ordinal() != _rhs.Ordinal()) {
       return false;
     }
 
     switch (_lhs.Ordinal()) {
-      case static_cast<fidl_xunion_tag_t>(
-          ::test::doccomments::FlexibleUnion::Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(::test::doccomments::FlexibleUnion::Tag::Invalid):
         return true;
       case ::test::doccomments::FlexibleUnion::Tag::kField:
         return ::fidl::Equals(_lhs.Field_, _rhs.Field_);
@@ -959,11 +879,9 @@ class Interface_SyncProxy;
 
 namespace internal {
 constexpr uint64_t kInterface_Method_Ordinal = 0x45a0257b7cd8f999lu;
-constexpr ::fidl::MessageDynamicFlags kInterface_Method_DynamicFlags =
-    ::fidl::MessageDynamicFlags::kStrictMethod;
+constexpr ::fidl::MessageDynamicFlags kInterface_Method_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 constexpr uint64_t kInterface_OnEvent_Ordinal = 0x663f6d5971bef0lu;
-constexpr ::fidl::MessageDynamicFlags kInterface_OnEvent_DynamicFlags =
-    ::fidl::MessageDynamicFlags::kStrictMethod;
+constexpr ::fidl::MessageDynamicFlags kInterface_OnEvent_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 }  // namespace internal
 #endif  // __Fuchsia__
 
@@ -982,11 +900,9 @@ class Service final {
       : service_(std::move(service)) {}
 
   explicit operator bool() const { return !!service_; }
-  /// Returns a |fidl::MemberConnector| which can be used to connect to the
-  /// member protocol "interface".
+  /// Returns a |fidl::MemberConnector| which can be used to connect to the member protocol "interface".
   ::fidl::MemberConnector<::test::doccomments::Interface> interface() const {
-    return ::fidl::MemberConnector<::test::doccomments::Interface>(
-        service_.get(), "interface");
+    return ::fidl::MemberConnector<::test::doccomments::Interface>(service_.get(), "interface");
   }
 
  private:
@@ -997,15 +913,15 @@ class Service final {
 class Service::Handler final {
  public:
   /// Constructs a new |Handler|. Does not take ownership of |service|.
-  explicit Handler(::fidl::ServiceHandlerBase* service) : service_(service) {}
-  /// Adds member "interface" to the service instance. |handler| is invoked when
-  /// a connection is made to the member protocol.
+  explicit Handler(::fidl::ServiceHandlerBase* service)
+      : service_(service) {}
+  /// Adds member "interface" to the service instance. |handler| is invoked when a connection
+  /// is made to the member protocol.
   ///
   /// # Errors
   ///
   /// Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
-  zx_status_t add_interface(
-      ::fidl::InterfaceRequestHandler<::test::doccomments::Interface> handler) {
+  zx_status_t add_interface(::fidl::InterfaceRequestHandler<::test::doccomments::Interface> handler) {
     return service_->AddMember("interface", std::move(handler));
   }
 
@@ -1031,7 +947,8 @@ class Interface {
   ///
   /// method comment #3
   virtual void Method() = 0;
-  using OnEventCallback = fit::function<void()>;
+  using OnEventCallback =
+      fit::function<void()>;
 };
 
 class Interface_RequestDecoder {
@@ -1075,18 +992,15 @@ class Interface_Proxy final : public ::fidl::internal::Proxy, public Interface {
 
  private:
   Interface_Proxy(const ::test::doccomments::Interface_Proxy&) = delete;
-  Interface_Proxy& operator=(const ::test::doccomments::Interface_Proxy&) =
-      delete;
+  Interface_Proxy& operator=(const ::test::doccomments::Interface_Proxy&) = delete;
 
   ::fidl::internal::ProxyController* controller_;
 };
 
-class Interface_Stub final : public ::fidl::internal::Stub,
-                             public ::test::doccomments::Interface_EventSender {
+class Interface_Stub final : public ::fidl::internal::Stub, public ::test::doccomments::Interface_EventSender {
  public:
   typedef class ::test::doccomments::Interface Interface_clazz;
-  explicit Interface_Stub(
-      ::test::doccomments::Interface_Stub::Interface_clazz* impl);
+  explicit Interface_Stub(::test::doccomments::Interface_Stub::Interface_clazz* impl);
   ~Interface_Stub() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,

@@ -32,43 +32,43 @@ class ExampleFooResponse {
   struct Storage_;
 
  public:
-  ExampleFooResponse(Storage_ storage) noexcept
-      : storage_(std::move(storage)) {}
-  ExampleFooResponse(int64_t y) noexcept : storage_({.y = std::move(y)}) {}
+  ExampleFooResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  ExampleFooResponse(int64_t y) noexcept
+      : storage_({.y = std::move(y)}) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |ExampleFooResponse| only if all of its members are
-  // default constructible.
+  // Default constructs a |ExampleFooResponse| only if all of its members are default constructible.
   ExampleFooResponse() = default;
 #pragma clang diagnostic pop
 
   ExampleFooResponse(ExampleFooResponse&&) noexcept = default;
   ExampleFooResponse& operator=(ExampleFooResponse&&) noexcept = default;
-  ExampleFooResponse(const ExampleFooResponse& other) noexcept
-      : ExampleFooResponse(other.CloneStorage_()) {}
+  ExampleFooResponse(const ExampleFooResponse& other) noexcept : ExampleFooResponse(other.CloneStorage_()) {}
   ExampleFooResponse& operator=(const ExampleFooResponse& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
   }
 
   bool operator==(const ExampleFooResponse& other) const noexcept {
-    return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_error::ExampleFooResponse, 8>::Equal(this, &other);
+    return ::fidl::internal::NaturalStructCodingTraits<::test_error::ExampleFooResponse, 8>::Equal(this, &other);
   }
   bool operator!=(const ExampleFooResponse& other) const noexcept {
-    return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_error::ExampleFooResponse, 8>::Equal(this, &other);
+    return !::fidl::internal::NaturalStructCodingTraits<::test_error::ExampleFooResponse, 8>::Equal(this, &other);
   }
 
-  int64_t y() const { return storage_.y; }
+  int64_t
+  y() const {
+    return storage_.y;
+  }
 
-  int64_t& y() { return storage_.y; }
+  int64_t& y() {
+    return storage_.y;
+  }
 
-  ExampleFooResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : ExampleFooResponse(Storage_{
-            .y = {},
-        }) {}
+  ExampleFooResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ExampleFooResponse(Storage_{
+                                                                                       .y = {},
+                                                                                   }) {}
 
  private:
   struct Storage_ final {
@@ -78,14 +78,10 @@ class ExampleFooResponse {
   Storage_ storage_;
   Storage_ CloneStorage_() const;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_error::ExampleFooResponse, 8>;
-  friend struct ::fidl::internal::MemberVisitor<
-      ::test_error::ExampleFooResponse>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<
-          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::y, 0});
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_error::ExampleFooResponse, 8>;
+  friend struct ::fidl::internal::MemberVisitor<::test_error::ExampleFooResponse>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+      &Storage_::y, 0});
   static constexpr auto kPadding = std::make_tuple();
 };
 
@@ -94,7 +90,8 @@ extern "C" const fidl_type_t test_error_Example_foo_ResultTable;
 class ExampleFooResult {
  private:
   using Storage_ =
-      std::variant<std::monostate, ::test_error::ExampleFooResponse, uint32_t>;
+      std::variant<
+          std::monostate, ::test_error::ExampleFooResponse, uint32_t>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -104,8 +101,7 @@ class ExampleFooResult {
   };
 
   ExampleFooResult(ExampleFooResult&& other) noexcept
-      : ExampleFooResult(
-            ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+      : ExampleFooResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
     *storage_ = std::move(*other.storage_);
   }
   ExampleFooResult& operator=(ExampleFooResult&& other) noexcept {
@@ -114,8 +110,7 @@ class ExampleFooResult {
     }
     return *this;
   }
-  ExampleFooResult(const ExampleFooResult& other) noexcept
-      : ExampleFooResult(other.CloneStorage_()) {}
+  ExampleFooResult(const ExampleFooResult& other) noexcept : ExampleFooResult(other.CloneStorage_()) {}
   ExampleFooResult& operator=(const ExampleFooResult& other) noexcept {
     if (this != &other) {
       storage_ = other.CloneStorage_();
@@ -134,8 +129,9 @@ class ExampleFooResult {
     return ExampleFooResult::IndexToTag(storage_->index()).value();
   }
   static ExampleFooResult WithResponse(::test_error::ExampleFooResponse val) {
-    return ExampleFooResult(
-        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+    return ExampleFooResult(std::make_shared<Storage_>(
+        std::in_place_index_t<1>{},
+        std::move(val)));
   }
 
   const ::fidl::internal::UnionMemberView<1, Storage_> response() const {
@@ -145,8 +141,9 @@ class ExampleFooResult {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
   static ExampleFooResult WithErr(uint32_t val) {
-    return ExampleFooResult(
-        std::make_shared<Storage_>(std::in_place_index_t<2>{}, std::move(val)));
+    return ExampleFooResult(std::make_shared<Storage_>(
+        std::in_place_index_t<2>{},
+        std::move(val)));
   }
 
   const ::fidl::internal::UnionMemberView<2, Storage_> err() const {
@@ -156,27 +153,18 @@ class ExampleFooResult {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
 
-  ExampleFooResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : storage_(std::make_shared<Storage_>()) {}
+  ExampleFooResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
   std::shared_ptr<Storage_> CloneStorage_() const;
-  friend struct ::fidl::internal::NaturalUnionCodingTraits<
-      ::test_error::ExampleFooResult>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalUnionMember<
-                          ::fidl::internal::NaturalCodingConstraintEmpty>(),
-                      ::fidl::internal::NaturalUnionMember<
-                          fidl::internal::NaturalCodingConstraintEmpty>(),
-                      ::fidl::internal::NaturalUnionMember<
-                          fidl::internal::NaturalCodingConstraintEmpty>());
+  friend struct ::fidl::internal::NaturalUnionCodingTraits<::test_error::ExampleFooResult>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalUnionMember<::fidl::internal::NaturalCodingConstraintEmpty>(), ::fidl::internal::NaturalUnionMember<fidl::internal::NaturalCodingConstraintEmpty>(), ::fidl::internal::NaturalUnionMember<fidl::internal::NaturalCodingConstraintEmpty>());
 
-  explicit ExampleFooResult(std::shared_ptr<Storage_> storage)
-      : storage_(std::move(storage)) {}
+  explicit ExampleFooResult(std::shared_ptr<Storage_> storage) : storage_(std::move(storage)) {}
 
-  static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder,
-                                     ::test_error::ExampleFooResult::Tag tag) {
+  static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_error::ExampleFooResult::Tag tag) {
     switch (tag) {
       case ::test_error::ExampleFooResult::Tag::kResponse:
         return 1;
@@ -189,8 +177,7 @@ class ExampleFooResult {
     }
   }
 
-  static constexpr std::optional<::test_error::ExampleFooResult::Tag>
-  IndexToTag(size_t index) {
+  static constexpr std::optional<::test_error::ExampleFooResult::Tag> IndexToTag(size_t index) {
     switch (index) {
       case 1:
         return ::test_error::ExampleFooResult::Tag::kResponse;
@@ -209,49 +196,43 @@ class ExampleFooTopResponse {
   struct Storage_;
 
  public:
-  ExampleFooTopResponse(Storage_ storage) noexcept
-      : storage_(std::move(storage)) {}
+  ExampleFooTopResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   ExampleFooTopResponse(::test_error::ExampleFooResult result) noexcept
       : storage_({.result = std::move(result)}) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |ExampleFooTopResponse| only if all of its members are
-  // default constructible.
+  // Default constructs a |ExampleFooTopResponse| only if all of its members are default constructible.
   ExampleFooTopResponse() = default;
 #pragma clang diagnostic pop
 
   ExampleFooTopResponse(ExampleFooTopResponse&&) noexcept = default;
   ExampleFooTopResponse& operator=(ExampleFooTopResponse&&) noexcept = default;
-  ExampleFooTopResponse(const ExampleFooTopResponse& other) noexcept
-      : ExampleFooTopResponse(other.CloneStorage_()) {}
-  ExampleFooTopResponse& operator=(
-      const ExampleFooTopResponse& other) noexcept {
+  ExampleFooTopResponse(const ExampleFooTopResponse& other) noexcept : ExampleFooTopResponse(other.CloneStorage_()) {}
+  ExampleFooTopResponse& operator=(const ExampleFooTopResponse& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
   }
 
   bool operator==(const ExampleFooTopResponse& other) const noexcept {
-    return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_error::ExampleFooTopResponse, 16>::Equal(this, &other);
+    return ::fidl::internal::NaturalStructCodingTraits<::test_error::ExampleFooTopResponse, 16>::Equal(this, &other);
   }
   bool operator!=(const ExampleFooTopResponse& other) const noexcept {
-    return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_error::ExampleFooTopResponse, 16>::Equal(this, &other);
+    return !::fidl::internal::NaturalStructCodingTraits<::test_error::ExampleFooTopResponse, 16>::Equal(this, &other);
   }
 
-  const ::test_error::ExampleFooResult& result() const {
+  const ::test_error::ExampleFooResult&
+  result() const {
     return storage_.result;
   }
 
-  ::test_error::ExampleFooResult& result() { return storage_.result; }
+  ::test_error::ExampleFooResult& result() {
+    return storage_.result;
+  }
 
-  ExampleFooTopResponse(
-      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : ExampleFooTopResponse(Storage_{
-            .result =
-                ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
-        }) {}
+  ExampleFooTopResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ExampleFooTopResponse(Storage_{
+                                                                                          .result = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+                                                                                      }) {}
 
  private:
   struct Storage_ final {
@@ -261,14 +242,10 @@ class ExampleFooTopResponse {
   Storage_ storage_;
   Storage_ CloneStorage_() const;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_error::ExampleFooTopResponse, 16>;
-  friend struct ::fidl::internal::MemberVisitor<
-      ::test_error::ExampleFooTopResponse>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::test_error::ExampleFooResult,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0});
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_error::ExampleFooTopResponse, 16>;
+  friend struct ::fidl::internal::MemberVisitor<::test_error::ExampleFooTopResponse>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::test_error::ExampleFooResult, fidl::internal::NaturalCodingConstraintEmpty>{
+      &Storage_::result, 0});
   static constexpr auto kPadding = std::make_tuple();
 };
 
@@ -280,41 +257,42 @@ class ExampleFooRequest {
 
  public:
   ExampleFooRequest(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-  ExampleFooRequest(::std::string s) noexcept : storage_({.s = std::move(s)}) {}
+  ExampleFooRequest(::std::string s) noexcept
+      : storage_({.s = std::move(s)}) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |ExampleFooRequest| only if all of its members are
-  // default constructible.
+  // Default constructs a |ExampleFooRequest| only if all of its members are default constructible.
   ExampleFooRequest() = default;
 #pragma clang diagnostic pop
 
   ExampleFooRequest(ExampleFooRequest&&) noexcept = default;
   ExampleFooRequest& operator=(ExampleFooRequest&&) noexcept = default;
-  ExampleFooRequest(const ExampleFooRequest& other) noexcept
-      : ExampleFooRequest(other.CloneStorage_()) {}
+  ExampleFooRequest(const ExampleFooRequest& other) noexcept : ExampleFooRequest(other.CloneStorage_()) {}
   ExampleFooRequest& operator=(const ExampleFooRequest& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
   }
 
   bool operator==(const ExampleFooRequest& other) const noexcept {
-    return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_error::ExampleFooRequest, 16>::Equal(this, &other);
+    return ::fidl::internal::NaturalStructCodingTraits<::test_error::ExampleFooRequest, 16>::Equal(this, &other);
   }
   bool operator!=(const ExampleFooRequest& other) const noexcept {
-    return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_error::ExampleFooRequest, 16>::Equal(this, &other);
+    return !::fidl::internal::NaturalStructCodingTraits<::test_error::ExampleFooRequest, 16>::Equal(this, &other);
   }
 
-  const ::std::string& s() const { return storage_.s; }
+  const ::std::string&
+  s() const {
+    return storage_.s;
+  }
 
-  ::std::string& s() { return storage_.s; }
+  ::std::string& s() {
+    return storage_.s;
+  }
 
-  ExampleFooRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : ExampleFooRequest(Storage_{
-            .s = {},
-        }) {}
+  ExampleFooRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ExampleFooRequest(Storage_{
+                                                                                      .s = {},
+                                                                                  }) {}
 
  private:
   struct Storage_ final {
@@ -324,14 +302,10 @@ class ExampleFooRequest {
   Storage_ storage_;
   Storage_ CloneStorage_() const;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_error::ExampleFooRequest, 16>;
-  friend struct ::fidl::internal::MemberVisitor<
-      ::test_error::ExampleFooRequest>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::std::string,
-          fidl::internal::NaturalCodingConstraintString<>>{&Storage_::s, 0});
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_error::ExampleFooRequest, 16>;
+  friend struct ::fidl::internal::MemberVisitor<::test_error::ExampleFooRequest>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::std::string, fidl::internal::NaturalCodingConstraintString<>>{
+      &Storage_::s, 0});
   static constexpr auto kPadding = std::make_tuple();
 };
 
@@ -344,24 +318,17 @@ template <>
 struct IsFidlType<::test_error::ExampleFooResponse> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<
-    ::test_error::ExampleFooResponse,
-    ::fidl::internal::NaturalCodingConstraintEmpty>
-    final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_error::ExampleFooResponse, 8> {};
+struct internal::NaturalCodingTraits<::test_error::ExampleFooResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_error::ExampleFooResponse, 8> {};
 
 extern "C" const fidl_type_t test_error_ExampleFooTopResponseTable;
 
 template <>
-struct IsFidlType<::test_error::ExampleFooTopResponse> : public std::true_type {
-};
+struct IsFidlType<::test_error::ExampleFooTopResponse> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<
-    ::test_error::ExampleFooTopResponse,
-    ::fidl::internal::NaturalCodingConstraintEmpty>
-    final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_error::ExampleFooTopResponse, 16> {};
+struct internal::NaturalCodingTraits<::test_error::ExampleFooTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_error::ExampleFooTopResponse, 16> {};
 
 extern "C" const fidl_type_t test_error_ExampleFooRequestTable;
 
@@ -369,11 +336,8 @@ template <>
 struct IsFidlType<::test_error::ExampleFooRequest> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<
-    ::test_error::ExampleFooRequest,
-    ::fidl::internal::NaturalCodingConstraintEmpty>
-    final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_error::ExampleFooRequest, 16> {};
+struct internal::NaturalCodingTraits<::test_error::ExampleFooRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_error::ExampleFooRequest, 16> {};
 
 extern "C" const fidl_type_t test_error_Example_foo_ResultTable;
 
@@ -383,10 +347,7 @@ template <>
 struct IsUnion<::test_error::ExampleFooResult> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<
-    ::test_error::ExampleFooResult,
-    ::fidl::internal::NaturalCodingConstraintEmpty>
-    final : public ::fidl::internal::NaturalUnionCodingTraits<
-                ::test_error::ExampleFooResult> {};
+struct internal::NaturalCodingTraits<::test_error::ExampleFooResult, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalUnionCodingTraits<::test_error::ExampleFooResult> {};
 
 }  // namespace fidl

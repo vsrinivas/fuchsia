@@ -2,48 +2,47 @@
 
 #include <fidl/test.anonymous/cpp/natural_types.h>
 
-::test_anonymous::TableData::Storage_ test_anonymous::TableData::CloneStorage_()
-    const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.data)};
+::test_anonymous::TableData::Storage_ test_anonymous::TableData::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.data)};
 }
 
-::test_anonymous::SomeProtocolSomeMethodRequest::Storage_
-test_anonymous::SomeProtocolSomeMethodRequest::CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.union_member),
-                  ::fidl::internal::NaturalClone(storage_.table_member)};
+::test_anonymous::SomeProtocolSomeMethodRequest::Storage_ test_anonymous::SomeProtocolSomeMethodRequest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.union_member),
+      ::fidl::internal::NaturalClone(storage_.table_member)};
 }
 
-::test_anonymous::OverrideTest::Storage_
-test_anonymous::OverrideTest::CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.op),
-                  ::fidl::internal::NaturalClone(storage_.left),
-                  ::fidl::internal::NaturalClone(storage_.right)};
+::test_anonymous::OverrideTest::Storage_ test_anonymous::OverrideTest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.op),
+      ::fidl::internal::NaturalClone(storage_.left),
+      ::fidl::internal::NaturalClone(storage_.right)};
 }
 
-::test_anonymous::SomeProtocolSomeMethodResponse::Storage_
-test_anonymous::SomeProtocolSomeMethodResponse::CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.bits_member)};
+::test_anonymous::SomeProtocolSomeMethodResponse::Storage_ test_anonymous::SomeProtocolSomeMethodResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.bits_member)};
 }
 
-::test_anonymous::SomeProtocolSomeMethodTopResponse::Storage_
-test_anonymous::SomeProtocolSomeMethodTopResponse::CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.result)};
+::test_anonymous::SomeProtocolSomeMethodTopResponse::Storage_ test_anonymous::SomeProtocolSomeMethodTopResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.result)};
 }
 
-::test_anonymous::TableMember::Storage_
-test_anonymous::TableMember::CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.table_data)};
+::test_anonymous::TableMember::Storage_ test_anonymous::TableMember::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.table_data)};
 }
 
-::test_anonymous::FunctionApplication::Storage_
-test_anonymous::FunctionApplication::CloneStorage_() const {
-  return Storage_{::fidl::internal::NaturalClone(storage_.func),
-                  ::fidl::internal::NaturalClone(storage_.args),
-                  ::fidl::internal::NaturalClone(storage_.flags)};
+::test_anonymous::FunctionApplication::Storage_ test_anonymous::FunctionApplication::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.func),
+      ::fidl::internal::NaturalClone(storage_.args),
+      ::fidl::internal::NaturalClone(storage_.flags)};
 }
 
-std::shared_ptr<::test_anonymous::UnionMember::Storage_>
-test_anonymous::UnionMember::CloneStorage_() const {
+std::shared_ptr<::test_anonymous::UnionMember::Storage_> test_anonymous::UnionMember::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
@@ -55,8 +54,7 @@ test_anonymous::UnionMember::CloneStorage_() const {
   }
 }
 
-std::shared_ptr<::test_anonymous::Expression::Storage_>
-test_anonymous::Expression::CloneStorage_() const {
+std::shared_ptr<::test_anonymous::Expression::Storage_> test_anonymous::Expression::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
@@ -76,8 +74,7 @@ test_anonymous::Expression::CloneStorage_() const {
   }
 }
 
-std::shared_ptr<::test_anonymous::SomeProtocolSomeMethodResult::Storage_>
-test_anonymous::SomeProtocolSomeMethodResult::CloneStorage_() const {
+std::shared_ptr<::test_anonymous::SomeProtocolSomeMethodResult::Storage_> test_anonymous::SomeProtocolSomeMethodResult::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:

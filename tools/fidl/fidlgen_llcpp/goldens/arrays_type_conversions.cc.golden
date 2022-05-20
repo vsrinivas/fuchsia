@@ -5,194 +5,118 @@
 namespace fidl {
 namespace internal {
 
-::test_arrays::StructSmallArray WireNaturalConversionTraits<
-    ::test_arrays::wire::StructSmallArray, ::test_arrays::StructSmallArray>::
-    ToNatural(::test_arrays::wire::StructSmallArray src) {
-  return ::test_arrays::StructSmallArray(
-      WireNaturalConversionTraits<
-          ::fidl::Array<uint32_t, 2>,
-          ::std::array<uint32_t, 2>>::ToNatural(std::move(src.a)));
+::test_arrays::StructSmallArray WireNaturalConversionTraits<::test_arrays::wire::StructSmallArray, ::test_arrays::StructSmallArray>::ToNatural(::test_arrays::wire::StructSmallArray src) {
+  return ::test_arrays::StructSmallArray(WireNaturalConversionTraits<::fidl::Array<uint32_t, 2>, ::std::array<uint32_t, 2>>::ToNatural(std::move(src.a)));
 }
-::test_arrays::wire::StructSmallArray WireNaturalConversionTraits<
-    ::test_arrays::wire::StructSmallArray, ::test_arrays::StructSmallArray>::
-    ToWire(fidl::AnyArena& arena, ::test_arrays::StructSmallArray src) {
+::test_arrays::wire::StructSmallArray WireNaturalConversionTraits<::test_arrays::wire::StructSmallArray, ::test_arrays::StructSmallArray>::ToWire(fidl::AnyArena& arena, ::test_arrays::StructSmallArray src) {
   return ::test_arrays::wire::StructSmallArray{
-      .a = WireNaturalConversionTraits<
-          ::fidl::Array<uint32_t, 2>,
-          ::std::array<uint32_t, 2>>::ToWire(arena, std::move(src.a())),
+      .a = WireNaturalConversionTraits<::fidl::Array<uint32_t, 2>, ::std::array<uint32_t, 2>>::ToWire(arena, std::move(src.a())),
   };
 }
 
-::test_arrays::StructLargeArray WireNaturalConversionTraits<
-    ::test_arrays::wire::StructLargeArray, ::test_arrays::StructLargeArray>::
-    ToNatural(::test_arrays::wire::StructLargeArray src) {
-  return ::test_arrays::StructLargeArray(
-      WireNaturalConversionTraits<
-          ::fidl::Array<uint32_t, 100>,
-          ::std::array<uint32_t, 100>>::ToNatural(std::move(src.a)));
+::test_arrays::StructLargeArray WireNaturalConversionTraits<::test_arrays::wire::StructLargeArray, ::test_arrays::StructLargeArray>::ToNatural(::test_arrays::wire::StructLargeArray src) {
+  return ::test_arrays::StructLargeArray(WireNaturalConversionTraits<::fidl::Array<uint32_t, 100>, ::std::array<uint32_t, 100>>::ToNatural(std::move(src.a)));
 }
-::test_arrays::wire::StructLargeArray WireNaturalConversionTraits<
-    ::test_arrays::wire::StructLargeArray, ::test_arrays::StructLargeArray>::
-    ToWire(fidl::AnyArena& arena, ::test_arrays::StructLargeArray src) {
+::test_arrays::wire::StructLargeArray WireNaturalConversionTraits<::test_arrays::wire::StructLargeArray, ::test_arrays::StructLargeArray>::ToWire(fidl::AnyArena& arena, ::test_arrays::StructLargeArray src) {
   return ::test_arrays::wire::StructLargeArray{
-      .a = WireNaturalConversionTraits<
-          ::fidl::Array<uint32_t, 100>,
-          ::std::array<uint32_t, 100>>::ToWire(arena, std::move(src.a())),
+      .a = WireNaturalConversionTraits<::fidl::Array<uint32_t, 100>, ::std::array<uint32_t, 100>>::ToWire(arena, std::move(src.a())),
   };
 }
 
-::test_arrays::TableSmallArray WireNaturalConversionTraits<
-    ::test_arrays::wire::TableSmallArray, ::test_arrays::TableSmallArray>::
-    ToNatural(::test_arrays::wire::TableSmallArray src) {
+::test_arrays::TableSmallArray WireNaturalConversionTraits<::test_arrays::wire::TableSmallArray, ::test_arrays::TableSmallArray>::ToNatural(::test_arrays::wire::TableSmallArray src) {
   ::test_arrays::TableSmallArray dst;
   if (src.has_a()) {
-    dst.a() = WireNaturalConversionTraits<
-        ::fidl::Array<uint32_t, 2>,
-        ::std::array<uint32_t, 2>>::ToNatural(std::move(src.a()));
+    dst.a() =
+        WireNaturalConversionTraits<::fidl::Array<uint32_t, 2>, ::std::array<uint32_t, 2>>::ToNatural(std::move(src.a()));
   }
 
   return dst;
 }
-::test_arrays::wire::TableSmallArray WireNaturalConversionTraits<
-    ::test_arrays::wire::TableSmallArray, ::test_arrays::TableSmallArray>::
-    ToWire(fidl::AnyArena& arena, ::test_arrays::TableSmallArray src) {
+::test_arrays::wire::TableSmallArray WireNaturalConversionTraits<::test_arrays::wire::TableSmallArray, ::test_arrays::TableSmallArray>::ToWire(fidl::AnyArena& arena, ::test_arrays::TableSmallArray src) {
   auto builder = ::test_arrays::wire::TableSmallArray::Builder(arena);
   if (src.a().has_value()) {
-    builder.a(WireNaturalConversionTraits<
-              ::fidl::Array<uint32_t, 2>,
-              ::std::array<uint32_t, 2>>::ToWire(arena,
-                                                 std::move(src.a().value())));
+    builder.a(
+        WireNaturalConversionTraits<::fidl::Array<uint32_t, 2>, ::std::array<uint32_t, 2>>::ToWire(arena, std::move(src.a().value())));
   }
   return builder.Build();
 }
 
-::test_arrays::TableLargeArray WireNaturalConversionTraits<
-    ::test_arrays::wire::TableLargeArray, ::test_arrays::TableLargeArray>::
-    ToNatural(::test_arrays::wire::TableLargeArray src) {
+::test_arrays::TableLargeArray WireNaturalConversionTraits<::test_arrays::wire::TableLargeArray, ::test_arrays::TableLargeArray>::ToNatural(::test_arrays::wire::TableLargeArray src) {
   ::test_arrays::TableLargeArray dst;
   if (src.has_a()) {
-    dst.a() = WireNaturalConversionTraits<
-        ::fidl::Array<uint32_t, 100>,
-        ::std::array<uint32_t, 100>>::ToNatural(std::move(src.a()));
+    dst.a() =
+        WireNaturalConversionTraits<::fidl::Array<uint32_t, 100>, ::std::array<uint32_t, 100>>::ToNatural(std::move(src.a()));
   }
 
   return dst;
 }
-::test_arrays::wire::TableLargeArray WireNaturalConversionTraits<
-    ::test_arrays::wire::TableLargeArray, ::test_arrays::TableLargeArray>::
-    ToWire(fidl::AnyArena& arena, ::test_arrays::TableLargeArray src) {
+::test_arrays::wire::TableLargeArray WireNaturalConversionTraits<::test_arrays::wire::TableLargeArray, ::test_arrays::TableLargeArray>::ToWire(fidl::AnyArena& arena, ::test_arrays::TableLargeArray src) {
   auto builder = ::test_arrays::wire::TableLargeArray::Builder(arena);
   if (src.a().has_value()) {
-    builder.a(WireNaturalConversionTraits<
-              ::fidl::Array<uint32_t, 100>,
-              ::std::array<uint32_t, 100>>::ToWire(arena,
-                                                   std::move(src.a().value())));
+    builder.a(
+        WireNaturalConversionTraits<::fidl::Array<uint32_t, 100>, ::std::array<uint32_t, 100>>::ToWire(arena, std::move(src.a().value())));
   }
   return builder.Build();
 }
 
-::test_arrays::UnionSmallArray WireNaturalConversionTraits<
-    ::test_arrays::wire::UnionSmallArray, ::test_arrays::UnionSmallArray>::
-    ToNatural(::test_arrays::wire::UnionSmallArray src) {
+::test_arrays::UnionSmallArray WireNaturalConversionTraits<::test_arrays::wire::UnionSmallArray, ::test_arrays::UnionSmallArray>::ToNatural(::test_arrays::wire::UnionSmallArray src) {
   switch (src.Which()) {
     case ::test_arrays::wire::UnionSmallArray::Tag::kA:
       return ::test_arrays::UnionSmallArray::WithA(
-          WireNaturalConversionTraits<
-              ::fidl::Array<uint32_t, 2>,
-              ::std::array<uint32_t, 2>>::ToNatural(std::move(src.a())));
+          WireNaturalConversionTraits<::fidl::Array<uint32_t, 2>, ::std::array<uint32_t, 2>>::ToNatural(std::move(src.a())));
     default:
       ZX_PANIC("unknown union tag in strict union");
   }
 }
-::test_arrays::wire::UnionSmallArray WireNaturalConversionTraits<
-    ::test_arrays::wire::UnionSmallArray, ::test_arrays::UnionSmallArray>::
-    ToWire(fidl::AnyArena& arena, ::test_arrays::UnionSmallArray src) {
+::test_arrays::wire::UnionSmallArray WireNaturalConversionTraits<::test_arrays::wire::UnionSmallArray, ::test_arrays::UnionSmallArray>::ToWire(fidl::AnyArena& arena, ::test_arrays::UnionSmallArray src) {
   switch (src.Which()) {
     case ::test_arrays::UnionSmallArray::Tag::kA:
-      return ::test_arrays::wire::UnionSmallArray::WithA(
-          arena,
-          WireNaturalConversionTraits<
-              ::fidl::Array<uint32_t, 2>,
-              ::std::array<uint32_t, 2>>::ToWire(arena,
-                                                 std::move(src.a().value())));
+      return ::test_arrays::wire::UnionSmallArray::WithA(arena,
+                                                         WireNaturalConversionTraits<::fidl::Array<uint32_t, 2>, ::std::array<uint32_t, 2>>::ToWire(arena, std::move(src.a().value())));
   }
 }
 
-std::unique_ptr<::test_arrays::UnionSmallArray>
-WireNaturalConversionTraits<::test_arrays::wire::UnionSmallArray,
-                            std::unique_ptr<::test_arrays::UnionSmallArray>>::
-    ToNatural(::test_arrays::wire::UnionSmallArray src) {
+std::unique_ptr<::test_arrays::UnionSmallArray> WireNaturalConversionTraits<::test_arrays::wire::UnionSmallArray, std::unique_ptr<::test_arrays::UnionSmallArray>>::ToNatural(::test_arrays::wire::UnionSmallArray src) {
   if (src.has_invalid_tag()) {
     return nullptr;
   }
-  return std::make_unique<::test_arrays::UnionSmallArray>(
-      WireNaturalConversionTraits<
-          ::test_arrays::wire::UnionSmallArray,
-          ::test_arrays::UnionSmallArray>::ToNatural(std::move(src)));
+  return std::make_unique<::test_arrays::UnionSmallArray>(WireNaturalConversionTraits<::test_arrays::wire::UnionSmallArray, ::test_arrays::UnionSmallArray>::ToNatural(std::move(src)));
 }
-::test_arrays::wire::UnionSmallArray
-WireNaturalConversionTraits<::test_arrays::wire::UnionSmallArray,
-                            std::unique_ptr<::test_arrays::UnionSmallArray>>::
-    ToWire(fidl::AnyArena& arena,
-           std::unique_ptr<::test_arrays::UnionSmallArray> src) {
+::test_arrays::wire::UnionSmallArray WireNaturalConversionTraits<::test_arrays::wire::UnionSmallArray, std::unique_ptr<::test_arrays::UnionSmallArray>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_arrays::UnionSmallArray> src) {
   if (!src) {
     return ::test_arrays::wire::UnionSmallArray();
   }
-  return WireNaturalConversionTraits<
-      ::test_arrays::wire::UnionSmallArray,
-      ::test_arrays::UnionSmallArray>::ToWire(arena, std::move(*src));
+  return WireNaturalConversionTraits<::test_arrays::wire::UnionSmallArray, ::test_arrays::UnionSmallArray>::ToWire(arena, std::move(*src));
 }
 
-::test_arrays::UnionLargeArray WireNaturalConversionTraits<
-    ::test_arrays::wire::UnionLargeArray, ::test_arrays::UnionLargeArray>::
-    ToNatural(::test_arrays::wire::UnionLargeArray src) {
+::test_arrays::UnionLargeArray WireNaturalConversionTraits<::test_arrays::wire::UnionLargeArray, ::test_arrays::UnionLargeArray>::ToNatural(::test_arrays::wire::UnionLargeArray src) {
   switch (src.Which()) {
     case ::test_arrays::wire::UnionLargeArray::Tag::kA:
       return ::test_arrays::UnionLargeArray::WithA(
-          WireNaturalConversionTraits<
-              ::fidl::Array<uint32_t, 100>,
-              ::std::array<uint32_t, 100>>::ToNatural(std::move(src.a())));
+          WireNaturalConversionTraits<::fidl::Array<uint32_t, 100>, ::std::array<uint32_t, 100>>::ToNatural(std::move(src.a())));
     default:
       ZX_PANIC("unknown union tag in strict union");
   }
 }
-::test_arrays::wire::UnionLargeArray WireNaturalConversionTraits<
-    ::test_arrays::wire::UnionLargeArray, ::test_arrays::UnionLargeArray>::
-    ToWire(fidl::AnyArena& arena, ::test_arrays::UnionLargeArray src) {
+::test_arrays::wire::UnionLargeArray WireNaturalConversionTraits<::test_arrays::wire::UnionLargeArray, ::test_arrays::UnionLargeArray>::ToWire(fidl::AnyArena& arena, ::test_arrays::UnionLargeArray src) {
   switch (src.Which()) {
     case ::test_arrays::UnionLargeArray::Tag::kA:
-      return ::test_arrays::wire::UnionLargeArray::WithA(
-          arena,
-          WireNaturalConversionTraits<
-              ::fidl::Array<uint32_t, 100>,
-              ::std::array<uint32_t, 100>>::ToWire(arena,
-                                                   std::move(src.a().value())));
+      return ::test_arrays::wire::UnionLargeArray::WithA(arena,
+                                                         WireNaturalConversionTraits<::fidl::Array<uint32_t, 100>, ::std::array<uint32_t, 100>>::ToWire(arena, std::move(src.a().value())));
   }
 }
 
-std::unique_ptr<::test_arrays::UnionLargeArray>
-WireNaturalConversionTraits<::test_arrays::wire::UnionLargeArray,
-                            std::unique_ptr<::test_arrays::UnionLargeArray>>::
-    ToNatural(::test_arrays::wire::UnionLargeArray src) {
+std::unique_ptr<::test_arrays::UnionLargeArray> WireNaturalConversionTraits<::test_arrays::wire::UnionLargeArray, std::unique_ptr<::test_arrays::UnionLargeArray>>::ToNatural(::test_arrays::wire::UnionLargeArray src) {
   if (src.has_invalid_tag()) {
     return nullptr;
   }
-  return std::make_unique<::test_arrays::UnionLargeArray>(
-      WireNaturalConversionTraits<
-          ::test_arrays::wire::UnionLargeArray,
-          ::test_arrays::UnionLargeArray>::ToNatural(std::move(src)));
+  return std::make_unique<::test_arrays::UnionLargeArray>(WireNaturalConversionTraits<::test_arrays::wire::UnionLargeArray, ::test_arrays::UnionLargeArray>::ToNatural(std::move(src)));
 }
-::test_arrays::wire::UnionLargeArray
-WireNaturalConversionTraits<::test_arrays::wire::UnionLargeArray,
-                            std::unique_ptr<::test_arrays::UnionLargeArray>>::
-    ToWire(fidl::AnyArena& arena,
-           std::unique_ptr<::test_arrays::UnionLargeArray> src) {
+::test_arrays::wire::UnionLargeArray WireNaturalConversionTraits<::test_arrays::wire::UnionLargeArray, std::unique_ptr<::test_arrays::UnionLargeArray>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_arrays::UnionLargeArray> src) {
   if (!src) {
     return ::test_arrays::wire::UnionLargeArray();
   }
-  return WireNaturalConversionTraits<
-      ::test_arrays::wire::UnionLargeArray,
-      ::test_arrays::UnionLargeArray>::ToWire(arena, std::move(*src));
+  return WireNaturalConversionTraits<::test_arrays::wire::UnionLargeArray, ::test_arrays::UnionLargeArray>::ToWire(arena, std::move(*src));
 }
 
 #ifdef __Fuchsia__

@@ -13,13 +13,10 @@
 
 namespace fuzzing {
 
-using ParentTakeChildRequestRequest =
-    ::test::protocolrequest::ParentTakeChildRequestRequest;
+using ParentTakeChildRequestRequest = ::test::protocolrequest::ParentTakeChildRequestRequest;
 using ParentTakeChildRequest = ::test::protocolrequest::ParentTakeChildRequest;
-using ParentGetChildTopResponse =
-    ::test::protocolrequest::ParentGetChildTopResponse;
-using ParentGetChildRequestTopResponse =
-    ::test::protocolrequest::ParentGetChildRequestTopResponse;
+using ParentGetChildTopResponse = ::test::protocolrequest::ParentGetChildTopResponse;
+using ParentGetChildRequestTopResponse = ::test::protocolrequest::ParentGetChildRequestTopResponse;
 
 template <>
 struct MinSize<ParentTakeChildRequestRequest> {
@@ -32,15 +29,10 @@ struct Allocate<ParentTakeChildRequestRequest> {
   ParentTakeChildRequestRequest operator()(FuzzInput* src, size_t* size) {
     ZX_ASSERT(*size >= MinSize<ParentTakeChildRequestRequest>());
     ParentTakeChildRequestRequest out;
-    const size_t slack_per_member =
-        (*size - MinSize<ParentTakeChildRequestRequest>()) / 1;
+    const size_t slack_per_member = (*size - MinSize<ParentTakeChildRequestRequest>()) / 1;
     size_t out_size;
-    out_size =
-        MinSize<::fidl::InterfaceRequest<::test::protocolrequest::Child>>() +
-        slack_per_member;
-    out.r =
-        Allocate<::fidl::InterfaceRequest<::test::protocolrequest::Child>>{}(
-            src, &out_size);
+    out_size = MinSize<::fidl::InterfaceRequest<::test::protocolrequest::Child>>() + slack_per_member;
+    out.r = Allocate<::fidl::InterfaceRequest<::test::protocolrequest::Child>>{}(src, &out_size);
     return out;
   }
 };
@@ -55,14 +47,10 @@ struct Allocate<ParentTakeChildRequest> {
   ParentTakeChildRequest operator()(FuzzInput* src, size_t* size) {
     ZX_ASSERT(*size >= MinSize<ParentTakeChildRequest>());
     ParentTakeChildRequest out;
-    const size_t slack_per_member =
-        (*size - MinSize<ParentTakeChildRequest>()) / 1;
+    const size_t slack_per_member = (*size - MinSize<ParentTakeChildRequest>()) / 1;
     size_t out_size;
-    out_size =
-        MinSize<::fidl::InterfaceHandle<::test::protocolrequest::Child>>() +
-        slack_per_member;
-    out.c = Allocate<::fidl::InterfaceHandle<::test::protocolrequest::Child>>{}(
-        src, &out_size);
+    out_size = MinSize<::fidl::InterfaceHandle<::test::protocolrequest::Child>>() + slack_per_member;
+    out.c = Allocate<::fidl::InterfaceHandle<::test::protocolrequest::Child>>{}(src, &out_size);
     return out;
   }
 };
@@ -77,14 +65,10 @@ struct Allocate<ParentGetChildTopResponse> {
   ParentGetChildTopResponse operator()(FuzzInput* src, size_t* size) {
     ZX_ASSERT(*size >= MinSize<ParentGetChildTopResponse>());
     ParentGetChildTopResponse out;
-    const size_t slack_per_member =
-        (*size - MinSize<ParentGetChildTopResponse>()) / 1;
+    const size_t slack_per_member = (*size - MinSize<ParentGetChildTopResponse>()) / 1;
     size_t out_size;
-    out_size =
-        MinSize<::fidl::InterfaceHandle<::test::protocolrequest::Child>>() +
-        slack_per_member;
-    out.c = Allocate<::fidl::InterfaceHandle<::test::protocolrequest::Child>>{}(
-        src, &out_size);
+    out_size = MinSize<::fidl::InterfaceHandle<::test::protocolrequest::Child>>() + slack_per_member;
+    out.c = Allocate<::fidl::InterfaceHandle<::test::protocolrequest::Child>>{}(src, &out_size);
     return out;
   }
 };
@@ -99,15 +83,10 @@ struct Allocate<ParentGetChildRequestTopResponse> {
   ParentGetChildRequestTopResponse operator()(FuzzInput* src, size_t* size) {
     ZX_ASSERT(*size >= MinSize<ParentGetChildRequestTopResponse>());
     ParentGetChildRequestTopResponse out;
-    const size_t slack_per_member =
-        (*size - MinSize<ParentGetChildRequestTopResponse>()) / 1;
+    const size_t slack_per_member = (*size - MinSize<ParentGetChildRequestTopResponse>()) / 1;
     size_t out_size;
-    out_size =
-        MinSize<::fidl::InterfaceRequest<::test::protocolrequest::Child>>() +
-        slack_per_member;
-    out.r =
-        Allocate<::fidl::InterfaceRequest<::test::protocolrequest::Child>>{}(
-            src, &out_size);
+    out_size = MinSize<::fidl::InterfaceRequest<::test::protocolrequest::Child>>() + slack_per_member;
+    out.r = Allocate<::fidl::InterfaceRequest<::test::protocolrequest::Child>>{}(src, &out_size);
     return out;
   }
 };

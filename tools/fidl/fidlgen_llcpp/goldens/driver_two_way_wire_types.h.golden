@@ -49,8 +49,7 @@ namespace fidl {
 // TODO(fxbug.dev/95833) Remove this.
 template <>
 struct DeprecatedCTypeTraits<::test_drivertwoway::wire::TwoWayAddTopResponse> {
-  static constexpr const fidl_type_t* kType =
-      &::test_drivertwoway::wire::test_drivertwoway_TwoWayAddTopResponseTable;
+  static constexpr const fidl_type_t* kType = &::test_drivertwoway::wire::test_drivertwoway_TwoWayAddTopResponseTable;
 };
 
 template <>
@@ -66,56 +65,34 @@ struct TypeTraits<::test_drivertwoway::wire::TwoWayAddTopResponse> {
 };
 
 template <>
-struct IsFidlType<::test_drivertwoway::wire::TwoWayAddTopResponse>
-    : public std::true_type {};
+struct IsFidlType<::test_drivertwoway::wire::TwoWayAddTopResponse> : public std::true_type {};
 template <>
-struct IsStruct<::test_drivertwoway::wire::TwoWayAddTopResponse>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::test_drivertwoway::wire::TwoWayAddTopResponse>);
-static_assert(offsetof(::test_drivertwoway::wire::TwoWayAddTopResponse, sum) ==
-              0);
-static_assert(
-    sizeof(::test_drivertwoway::wire::TwoWayAddTopResponse) ==
-    TypeTraits<::test_drivertwoway::wire::TwoWayAddTopResponse>::kPrimarySize);
+struct IsStruct<::test_drivertwoway::wire::TwoWayAddTopResponse> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_drivertwoway::wire::TwoWayAddTopResponse>);
+static_assert(offsetof(::test_drivertwoway::wire::TwoWayAddTopResponse, sum) == 0);
+static_assert(sizeof(::test_drivertwoway::wire::TwoWayAddTopResponse) == TypeTraits<::test_drivertwoway::wire::TwoWayAddTopResponse>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::test_drivertwoway::wire::TwoWayAddTopResponse,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_drivertwoway::wire::TwoWayAddTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 2;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::WireStructMemberCodingInfo<
-          uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
   static constexpr bool kHasPadding = false;
-  using Base = WireStructCodingTraitsBase<
-      ::test_drivertwoway::wire::TwoWayAddTopResponse,
-      ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_drivertwoway::wire::TwoWayAddTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
-  static void Encode(internal::WireEncoder* encoder,
-                     ::test_drivertwoway::wire::TwoWayAddTopResponse* value,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Encode(
+      internal::WireEncoder* encoder, ::test_drivertwoway::wire::TwoWayAddTopResponse* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value,
-             sizeof(::test_drivertwoway::wire::TwoWayAddTopResponse));
+      memcpy(position.As<void>(), value, sizeof(::test_drivertwoway::wire::TwoWayAddTopResponse));
     } else {
-      internal::WireCodingTraits<uint16_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->sum,
-                                                      position + 0,
-                                                      recursion_depth);
+      internal::WireCodingTraits<uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->sum, position + 0, recursion_depth);
     }
   }
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (!Base::are_members_memcpy_compatible) {
-      internal::WireCodingTraits<uint16_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 0,
-                                                      recursion_depth);
+      internal::WireCodingTraits<uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 0, recursion_depth);
     }
   }
 };
@@ -123,8 +100,7 @@ struct ::fidl::internal::WireCodingTraits<
 // TODO(fxbug.dev/95833) Remove this.
 template <>
 struct DeprecatedCTypeTraits<::test_drivertwoway::wire::TwoWayAddRequest> {
-  static constexpr const fidl_type_t* kType =
-      &::test_drivertwoway::wire::test_drivertwoway_TwoWayAddRequestTable;
+  static constexpr const fidl_type_t* kType = &::test_drivertwoway::wire::test_drivertwoway_TwoWayAddRequestTable;
 };
 
 template <>
@@ -140,70 +116,38 @@ struct TypeTraits<::test_drivertwoway::wire::TwoWayAddRequest> {
 };
 
 template <>
-struct IsFidlType<::test_drivertwoway::wire::TwoWayAddRequest>
-    : public std::true_type {};
+struct IsFidlType<::test_drivertwoway::wire::TwoWayAddRequest> : public std::true_type {};
 template <>
-struct IsStruct<::test_drivertwoway::wire::TwoWayAddRequest>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::test_drivertwoway::wire::TwoWayAddRequest>);
-static_assert(offsetof(::test_drivertwoway::wire::TwoWayAddRequest, addend1) ==
-              0);
-static_assert(offsetof(::test_drivertwoway::wire::TwoWayAddRequest, addend2) ==
-              2);
-static_assert(
-    sizeof(::test_drivertwoway::wire::TwoWayAddRequest) ==
-    TypeTraits<::test_drivertwoway::wire::TwoWayAddRequest>::kPrimarySize);
+struct IsStruct<::test_drivertwoway::wire::TwoWayAddRequest> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_drivertwoway::wire::TwoWayAddRequest>);
+static_assert(offsetof(::test_drivertwoway::wire::TwoWayAddRequest, addend1) == 0);
+static_assert(offsetof(::test_drivertwoway::wire::TwoWayAddRequest, addend2) == 2);
+static_assert(sizeof(::test_drivertwoway::wire::TwoWayAddRequest) == TypeTraits<::test_drivertwoway::wire::TwoWayAddRequest>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::test_drivertwoway::wire::TwoWayAddRequest,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_drivertwoway::wire::TwoWayAddRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 4;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::WireStructMemberCodingInfo<
-          uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(),
-      ::fidl::internal::WireStructMemberCodingInfo<
-          uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(), ::fidl::internal::WireStructMemberCodingInfo<uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
   static constexpr bool kHasPadding = false;
-  using Base =
-      WireStructCodingTraitsBase<::test_drivertwoway::wire::TwoWayAddRequest,
-                                 ::fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_drivertwoway::wire::TwoWayAddRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
-  static void Encode(internal::WireEncoder* encoder,
-                     ::test_drivertwoway::wire::TwoWayAddRequest* value,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Encode(
+      internal::WireEncoder* encoder, ::test_drivertwoway::wire::TwoWayAddRequest* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value,
-             sizeof(::test_drivertwoway::wire::TwoWayAddRequest));
+      memcpy(position.As<void>(), value, sizeof(::test_drivertwoway::wire::TwoWayAddRequest));
     } else {
-      internal::WireCodingTraits<uint16_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->addend1,
-                                                      position + 0,
-                                                      recursion_depth);
-      internal::WireCodingTraits<uint16_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Encode(encoder, &value->addend2,
-                                                      position + 2,
-                                                      recursion_depth);
+      internal::WireCodingTraits<uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->addend1, position + 0, recursion_depth);
+      internal::WireCodingTraits<uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->addend2, position + 2, recursion_depth);
     }
   }
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (!Base::are_members_memcpy_compatible) {
-      internal::WireCodingTraits<uint16_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 0,
-                                                      recursion_depth);
-      internal::WireCodingTraits<uint16_t,
-                                 fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>::Decode(decoder, position + 2,
-                                                      recursion_depth);
+      internal::WireCodingTraits<uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 0, recursion_depth);
+      internal::WireCodingTraits<uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 2, recursion_depth);
     }
   }
 };

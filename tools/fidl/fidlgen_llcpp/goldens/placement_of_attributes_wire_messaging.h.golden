@@ -21,40 +21,34 @@
 namespace test_placementofattributes {
 class ExampleProtocol;
 
-__LOCAL extern "C" const fidl_type_t
-    test_placementofattributes_ExampleProtocolMethodRequestTable;
+__LOCAL extern "C" const fidl_type_t test_placementofattributes_ExampleProtocolMethodRequestTable;
 
 }  // namespace test_placementofattributes
 template <>
-struct ::fidl::internal::WireOrdinal<
-    ::test_placementofattributes::ExampleProtocol::Method>
-    final {
+struct ::fidl::internal::WireOrdinal<::test_placementofattributes::ExampleProtocol::Method> final {
   static constexpr uint64_t value = 6023439637367187273lu;
 };
 
-namespace test_placementofattributes {}  // namespace test_placementofattributes
+namespace test_placementofattributes {
+}  // namespace test_placementofattributes
 #ifdef __Fuchsia__
 
 template <>
-struct ::fidl::internal::ProtocolDetails<
-    ::test_placementofattributes::ExampleProtocol> {};
+struct ::fidl::internal::ProtocolDetails<::test_placementofattributes::ExampleProtocol> {
+};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
 template <>
-struct ::fidl::internal::WireServerDispatcher<
-    ::test_placementofattributes::ExampleProtocol>
-    final {
+struct ::fidl::internal::WireServerDispatcher<::test_placementofattributes::ExampleProtocol> final {
   WireServerDispatcher() = delete;
-  static ::fidl::DispatchResult TryDispatch(
-      ::fidl::WireServer<::test_placementofattributes::ExampleProtocol>* impl,
-      ::fidl::IncomingMessage& msg,
-      internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn);
-  static void Dispatch(
-      ::fidl::WireServer<::test_placementofattributes::ExampleProtocol>* impl,
-      ::fidl::IncomingMessage&& msg,
-      internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn);
+  static ::fidl::DispatchResult TryDispatch(::fidl::WireServer<::test_placementofattributes::ExampleProtocol>* impl, ::fidl::IncomingMessage& msg,
+                                            internal::MessageStorageViewBase* storage_view,
+                                            ::fidl::Transaction* txn);
+  static void Dispatch(::fidl::WireServer<::test_placementofattributes::ExampleProtocol>* impl, ::fidl::IncomingMessage&& msg,
+                       internal::MessageStorageViewBase* storage_view,
+                       ::fidl::Transaction* txn);
 
  private:
   static const ::fidl::internal::MethodEntry entries_[];
@@ -63,141 +57,83 @@ struct ::fidl::internal::WireServerDispatcher<
 #endif  // __Fuchsia__
 
 template <>
-struct ::fidl::WireRequest<
-    ::test_placementofattributes::ExampleProtocol::Method>
-    final
-    : public ::test_placementofattributes::wire::ExampleProtocolMethodRequest {
-  explicit WireRequest(
-      ::test_placementofattributes::wire::ExampleProtocolMethodRequest base)
-      : ::test_placementofattributes::wire::ExampleProtocolMethodRequest(
-            std::move(base)) {}
-  explicit WireRequest(const ::test_exampleusing::wire::Empty& arg)
-      : ::test_placementofattributes::wire::ExampleProtocolMethodRequest{
-            .arg = std::move(arg)} {}
+struct ::fidl::WireRequest<::test_placementofattributes::ExampleProtocol::Method> final : public ::test_placementofattributes::wire::ExampleProtocolMethodRequest {
+  explicit WireRequest(::test_placementofattributes::wire::ExampleProtocolMethodRequest base) : ::test_placementofattributes::wire::ExampleProtocolMethodRequest(std::move(base)) {}
+  explicit WireRequest(const ::test_exampleusing::wire::Empty& arg) : ::test_placementofattributes::wire::ExampleProtocolMethodRequest{.arg = std::move(arg)} {}
   WireRequest() = default;
 };
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::fidl::WireRequest<::test_placementofattributes::ExampleProtocol::Method>,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-    : public WireStructCodingTraitsBase<
-          ::fidl::WireRequest<
-              ::test_placementofattributes::ExampleProtocol::Method>,
-          ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::fidl::WireRequest<::test_placementofattributes::ExampleProtocol::Method>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<::fidl::WireRequest<::test_placementofattributes::ExampleProtocol::Method>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 1;
 
   static void Encode(
-      internal::WireEncoder* encoder,
-      ::fidl::WireRequest<
-          ::test_placementofattributes::ExampleProtocol::Method>* value,
-      ::fidl::internal::WirePosition position,
-      RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<
-        ::test_placementofattributes::wire::ExampleProtocolMethodRequest,
-        ::fidl::internal::WireCodingConstraintEmpty,
-        IsRecursive>::Encode(encoder, value, position, recursion_depth);
+      internal::WireEncoder* encoder, ::fidl::WireRequest<::test_placementofattributes::ExampleProtocol::Method>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    fidl::internal::WireCodingTraits<::test_placementofattributes::wire::ExampleProtocolMethodRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
+        encoder, value, position, recursion_depth);
   }
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<
-        ::test_placementofattributes::wire::ExampleProtocolMethodRequest,
-        ::fidl::internal::WireCodingConstraintEmpty,
-        IsRecursive>::Decode(decoder, position, recursion_depth);
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    fidl::internal::WireCodingTraits<::test_placementofattributes::wire::ExampleProtocolMethodRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+        decoder, position, recursion_depth);
   }
 };
 
 template <>
-struct ::fidl::internal::TransactionalRequest<
-    ::test_placementofattributes::ExampleProtocol::Method>
-    final {
+struct ::fidl::internal::TransactionalRequest<::test_placementofattributes::ExampleProtocol::Method> final {
   FIDL_ALIGNDECL
   fidl_message_header_t header;
 
-  ::fidl::WireRequest<::test_placementofattributes::ExampleProtocol::Method>
-      body;
+  ::fidl::WireRequest<::test_placementofattributes::ExampleProtocol::Method> body;
   explicit TransactionalRequest(const ::test_exampleusing::wire::Empty& arg)
-      : body(::fidl::WireRequest<
-             ::test_placementofattributes::ExampleProtocol::Method>(arg)) {
+      : body(::fidl::WireRequest<::test_placementofattributes::ExampleProtocol::Method>(arg)) {
     _InitHeader();
   }
-  TransactionalRequest() { _InitHeader(); }
+  TransactionalRequest() {
+    _InitHeader();
+  }
 
  private:
   void _InitHeader();
 };
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::fidl::internal::TransactionalRequest<
-        ::test_placementofattributes::ExampleProtocol::Method>,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-    : public WireStructCodingTraitsBase<
-          ::fidl::internal::TransactionalRequest<
-              ::test_placementofattributes::ExampleProtocol::Method>,
-          ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest<::test_placementofattributes::ExampleProtocol::Method>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<::fidl::internal::TransactionalRequest<::test_placementofattributes::ExampleProtocol::Method>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 1 + sizeof(fidl_message_header_t);
 
-  static void Encode(
-      internal::WireEncoder* encoder,
-      ::fidl::internal::TransactionalRequest<
-          ::test_placementofattributes::ExampleProtocol::Method>* value,
-      ::fidl::internal::WirePosition position,
-      RecursionDepth<IsRecursive> recursion_depth) {
+  static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalRequest<::test_placementofattributes::ExampleProtocol::Method>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     *position.As<fidl_message_header_t>() = value->header;
-    WireCodingTraits<::fidl::WireRequest<
-                         ::test_placementofattributes::ExampleProtocol::Method>,
-                     WireCodingConstraintEmpty,
-                     IsRecursive>::Encode(encoder, &value->body,
-                                          position +
-                                              sizeof(fidl_message_header_t),
-                                          recursion_depth);
+    WireCodingTraits<::fidl::WireRequest<::test_placementofattributes::ExampleProtocol::Method>, WireCodingConstraintEmpty, IsRecursive>::Encode(
+        encoder, &value->body, position + sizeof(fidl_message_header_t), recursion_depth);
   }
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
-    WireCodingTraits<::fidl::WireRequest<
-                         ::test_placementofattributes::ExampleProtocol::Method>,
-                     WireCodingConstraintEmpty,
-                     IsRecursive>::Decode(decoder,
-                                          position +
-                                              sizeof(fidl_message_header_t),
-                                          recursion_depth);
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    WireCodingTraits<::fidl::WireRequest<::test_placementofattributes::ExampleProtocol::Method>, WireCodingConstraintEmpty, IsRecursive>::Decode(
+        decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
 
 namespace fidl {
 
 template <>
-struct IsFidlType<::fidl::internal::TransactionalRequest<
-    ::test_placementofattributes::ExampleProtocol::Method>>
-    : public std::true_type {};
+struct IsFidlType<::fidl::internal::TransactionalRequest<::test_placementofattributes::ExampleProtocol::Method>> : public std::true_type {};
 template <>
-struct IsFidlType<
-    ::fidl::WireRequest<::test_placementofattributes::ExampleProtocol::Method>>
-    : public std::true_type {};
+struct IsFidlType<::fidl::WireRequest<::test_placementofattributes::ExampleProtocol::Method>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<
-    ::test_placementofattributes::ExampleProtocol::Method>>
-    : public std::true_type {};
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_placementofattributes::ExampleProtocol::Method>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<
-    ::fidl::WireRequest<::test_placementofattributes::ExampleProtocol::Method>>
-    : public std::false_type {};
+struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_placementofattributes::ExampleProtocol::Method>> : public std::false_type {};
 
 template <>
-struct TypeTraits<::fidl::internal::TransactionalRequest<
-    ::test_placementofattributes::ExampleProtocol::Method>> {
+struct TypeTraits<::fidl::internal::TransactionalRequest<::test_placementofattributes::ExampleProtocol::Method>> {
   static constexpr const fidl_type_t* kType =
-      &::test_placementofattributes::
-          test_placementofattributes_ExampleProtocolMethodRequestTable;
+      &::test_placementofattributes::test_placementofattributes_ExampleProtocolMethodRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize =
-      FIDL_ALIGN(1 + sizeof(fidl_message_header_t));
-  static constexpr uint32_t kPrimarySizeV1 =
-      FIDL_ALIGN(1 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(1 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(1 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -207,26 +143,14 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<
       ::fidl::internal::TransactionalMessageKind::kRequest;
 };
 
-static_assert(
-    sizeof(::fidl::internal::TransactionalRequest<
-           ::test_placementofattributes::ExampleProtocol::Method>) ==
-    TypeTraits<::fidl::internal::TransactionalRequest<
-        ::test_placementofattributes::ExampleProtocol::Method>>::kPrimarySize);
-static_assert(
-    offsetof(::fidl::internal::TransactionalRequest<
-                 ::test_placementofattributes::ExampleProtocol::Method>,
-             header) == 0);
-static_assert(
-    offsetof(::fidl::internal::TransactionalRequest<
-                 ::test_placementofattributes::ExampleProtocol::Method>,
-             body) == sizeof(fidl_message_header_t));
+static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_placementofattributes::ExampleProtocol::Method>) == TypeTraits<::fidl::internal::TransactionalRequest<::test_placementofattributes::ExampleProtocol::Method>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_placementofattributes::ExampleProtocol::Method>, header) == 0);
+static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_placementofattributes::ExampleProtocol::Method>, body) == sizeof(fidl_message_header_t));
 
 template <>
-struct TypeTraits<::fidl::WireRequest<
-    ::test_placementofattributes::ExampleProtocol::Method>> {
+struct TypeTraits<::fidl::WireRequest<::test_placementofattributes::ExampleProtocol::Method>> {
   static constexpr const fidl_type_t* kType =
-      &::test_placementofattributes::
-          test_placementofattributes_ExampleProtocolMethodRequestTable;
+      &::test_placementofattributes::test_placementofattributes_ExampleProtocolMethodRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 1;
@@ -239,28 +163,17 @@ struct TypeTraits<::fidl::WireRequest<
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
       ::fidl::internal::TransactionalMessageKind::kRequest;
 };
-static_assert(
-    sizeof(::fidl::WireRequest<
-           ::test_placementofattributes::ExampleProtocol::Method>) ==
-    TypeTraits<::fidl::WireRequest<
-        ::test_placementofattributes::ExampleProtocol::Method>>::kPrimarySize);
-static_assert(
-    offsetof(::fidl::WireRequest<
-                 ::test_placementofattributes::ExampleProtocol::Method>,
-             arg) == 0);
+static_assert(sizeof(::fidl::WireRequest<::test_placementofattributes::ExampleProtocol::Method>) == TypeTraits<::fidl::WireRequest<::test_placementofattributes::ExampleProtocol::Method>>::kPrimarySize);
+static_assert(offsetof(::fidl::WireRequest<::test_placementofattributes::ExampleProtocol::Method>, arg) == 0);
 #ifdef __Fuchsia__
 }  // namespace fidl
 
 template <>
-class [[nodiscard]] ::fidl::WireResult<
-    ::test_placementofattributes::ExampleProtocol::Method>
-    final : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireResult<::test_placementofattributes::ExampleProtocol::Method> final : public ::fidl::Status {
  public:
   WireResult(
-      ::fidl::UnownedClientEnd<::test_placementofattributes::ExampleProtocol>
-          client,
-      ::fidl::internal::TransactionalRequest<
-          ::test_placementofattributes::ExampleProtocol::Method>* request);
+      ::fidl::UnownedClientEnd<::test_placementofattributes::ExampleProtocol> client,
+      ::fidl::internal::TransactionalRequest<::test_placementofattributes::ExampleProtocol::Method>* request);
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
@@ -271,19 +184,11 @@ class [[nodiscard]] ::fidl::WireResult<
 };
 
 template <>
-class [[nodiscard]] ::fidl::WireUnownedResult<
-    ::test_placementofattributes::ExampleProtocol::Method>
-    final : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireUnownedResult<::test_placementofattributes::ExampleProtocol::Method> final : public ::fidl::Status {
  public:
-  explicit WireUnownedResult(
-      ::fidl::UnownedClientEnd<::test_placementofattributes::ExampleProtocol>
-          client_end,
-      ::fidl::internal::AnyBufferAllocator& allocator,
-      ::fidl::internal::TransactionalRequest<
-          ::test_placementofattributes::ExampleProtocol::Method>* request);
+  explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_placementofattributes::ExampleProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_placementofattributes::ExampleProtocol::Method>* request);
 
-  explicit WireUnownedResult(const ::fidl::Status& result)
-      : ::fidl::Status(result) {}
+  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
   WireUnownedResult(const WireUnownedResult&) = delete;
   WireUnownedResult& operator=(WireUnownedResult&&) = delete;
@@ -291,52 +196,38 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
   ~WireUnownedResult() = default;
 };
 template <>
-class ::fidl::internal::WireEventHandlerInterface<
-    ::test_placementofattributes::ExampleProtocol> {
+class ::fidl::internal::WireEventHandlerInterface<::test_placementofattributes::ExampleProtocol> {
  public:
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
 };
 
 template <>
-class ::fidl::WireAsyncEventHandler<
-    ::test_placementofattributes::ExampleProtocol>
-    : public ::fidl::internal::WireEventHandlerInterface<
-          ::test_placementofattributes::ExampleProtocol>,
-      public ::fidl::internal::AsyncEventHandler {
+class ::fidl::WireAsyncEventHandler<::test_placementofattributes::ExampleProtocol>
+    : public ::fidl::internal::WireEventHandlerInterface<::test_placementofattributes::ExampleProtocol>, public ::fidl::internal::AsyncEventHandler {
  public:
   WireAsyncEventHandler() = default;
 };
 
 template <>
-class ::fidl::WireSyncEventHandler<
-    ::test_placementofattributes::ExampleProtocol>
-    : public ::fidl::internal::WireEventHandlerInterface<
-          ::test_placementofattributes::ExampleProtocol> {
+class ::fidl::WireSyncEventHandler<::test_placementofattributes::ExampleProtocol> : public ::fidl::internal::WireEventHandlerInterface<::test_placementofattributes::ExampleProtocol> {
  public:
   WireSyncEventHandler() = default;
 
   // Handle all possible events defined in this protocol.
-  // Blocks to consume exactly one message from the channel, then call the
-  // corresponding virtual method.
+  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
+  // method.
   ::fidl::Status HandleOneEvent(
-      ::fidl::UnownedClientEnd<::test_placementofattributes::ExampleProtocol>
-          client_end);
+      ::fidl::UnownedClientEnd<::test_placementofattributes::ExampleProtocol> client_end);
 
  private:
   [[maybe_unused]] bool got_transitional_ = false;
 };
 
 template <>
-class ::fidl::internal::WireEventDispatcher<
-    ::test_placementofattributes::ExampleProtocol>
-    final : public ::fidl::internal::IncomingEventDispatcher<
-                ::fidl::WireAsyncEventHandler<
-                    ::test_placementofattributes::ExampleProtocol>> {
+class ::fidl::internal::WireEventDispatcher<::test_placementofattributes::ExampleProtocol> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::WireAsyncEventHandler<::test_placementofattributes::ExampleProtocol>> {
  public:
-  explicit WireEventDispatcher(
-      ::fidl::WireAsyncEventHandler<
-          ::test_placementofattributes::ExampleProtocol>* event_handler)
+  explicit WireEventDispatcher(::fidl::WireAsyncEventHandler<::test_placementofattributes::ExampleProtocol>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 
  private:
@@ -346,62 +237,36 @@ class ::fidl::internal::WireEventDispatcher<
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
-// const reference to a
-// |fidl::ClientEnd<::test_placementofattributes::ExampleProtocol>|, avoiding
-// setting up a client.
+// const reference to a |fidl::ClientEnd<::test_placementofattributes::ExampleProtocol>|,
+// avoiding setting up a client.
 template <>
-class ::fidl::internal::WireSyncClientImpl<
-    ::test_placementofattributes::ExampleProtocol>
-    final : public ::fidl::internal::SyncEndpointManagedVeneer<
-                ::fidl::internal::WireSyncClientImpl<
-                    ::test_placementofattributes::ExampleProtocol>> {
+class ::fidl::internal::WireSyncClientImpl<::test_placementofattributes::ExampleProtocol> final : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::WireSyncClientImpl<::test_placementofattributes::ExampleProtocol>> {
  public:
-  // Allocates 40 bytes of message buffer on the stack. No heap allocation
-  // necessary.
-  ::fidl::WireResult<::test_placementofattributes::ExampleProtocol::Method>
-  Method(const ::test_exampleusing::wire::Empty& arg) {
-    ::fidl::internal::TransactionalRequest<
-        ::test_placementofattributes::ExampleProtocol::Method>
-        _request{arg};
-    return ::fidl::WireResult<
-        ::test_placementofattributes::ExampleProtocol::Method>(_client_end(),
-                                                               &_request);
+  // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+  ::fidl::WireResult<::test_placementofattributes::ExampleProtocol::Method> Method(const ::test_exampleusing::wire::Empty& arg) {
+    ::fidl::internal::TransactionalRequest<::test_placementofattributes::ExampleProtocol::Method> _request{arg};
+    return ::fidl::WireResult<::test_placementofattributes::ExampleProtocol::Method>(_client_end(), &_request);
   }
 
  private:
-  ::fidl::UnownedClientEnd<::test_placementofattributes::ExampleProtocol>
-  _client_end() const {
-    return ::fidl::UnownedClientEnd<
-        ::test_placementofattributes::ExampleProtocol>(
+  ::fidl::UnownedClientEnd<::test_placementofattributes::ExampleProtocol> _client_end() const {
+    return ::fidl::UnownedClientEnd<::test_placementofattributes::ExampleProtocol>(
         _transport().get<::fidl::internal::ChannelTransport>());
   }
 };
 
 template <>
-class ::fidl::internal::WireSyncBufferClientImpl<
-    ::test_placementofattributes::ExampleProtocol>
-    final : public ::fidl::internal::SyncEndpointBufferVeneer<
-                ::fidl::internal::WireSyncBufferClientImpl<
-                    ::test_placementofattributes::ExampleProtocol>> {
+class ::fidl::internal::WireSyncBufferClientImpl<::test_placementofattributes::ExampleProtocol> final : public ::fidl::internal::SyncEndpointBufferVeneer<::fidl::internal::WireSyncBufferClientImpl<::test_placementofattributes::ExampleProtocol>> {
  public:
-  // Caller provides the backing storage for FIDL message via an argument to
-  // `.buffer()`.
-  ::fidl::WireUnownedResult<
-      ::test_placementofattributes::ExampleProtocol::Method>
-  Method(const ::test_exampleusing::wire::Empty& arg) {
-    ::fidl::internal::TransactionalRequest<
-        ::test_placementofattributes::ExampleProtocol::Method>
-        _request{arg};
-    return ::fidl::WireUnownedResult<
-        ::test_placementofattributes::ExampleProtocol::Method>(
-        _client_end(), _allocator(), &_request);
+  // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
+  ::fidl::WireUnownedResult<::test_placementofattributes::ExampleProtocol::Method> Method(const ::test_exampleusing::wire::Empty& arg) {
+    ::fidl::internal::TransactionalRequest<::test_placementofattributes::ExampleProtocol::Method> _request{arg};
+    return ::fidl::WireUnownedResult<::test_placementofattributes::ExampleProtocol::Method>(_client_end(), _allocator(), &_request);
   }
 
  private:
-  ::fidl::UnownedClientEnd<::test_placementofattributes::ExampleProtocol>
-  _client_end() const {
-    return ::fidl::UnownedClientEnd<
-        ::test_placementofattributes::ExampleProtocol>(
+  ::fidl::UnownedClientEnd<::test_placementofattributes::ExampleProtocol> _client_end() const {
+    return ::fidl::UnownedClientEnd<::test_placementofattributes::ExampleProtocol>(
         _transport().get<::fidl::internal::ChannelTransport>());
   }
 };
@@ -410,8 +275,7 @@ class ::fidl::internal::WireSyncBufferClientImpl<
 // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
 // and |fidl::ServerEnd<SomeProtocol>|).
 template <>
-class ::fidl::WireServer<::test_placementofattributes::ExampleProtocol>
-    : public ::fidl::internal::IncomingMessageDispatcher {
+class ::fidl::WireServer<::test_placementofattributes::ExampleProtocol> : public ::fidl::internal::IncomingMessageDispatcher {
  public:
   WireServer() = default;
   virtual ~WireServer() = default;
@@ -419,13 +283,11 @@ class ::fidl::WireServer<::test_placementofattributes::ExampleProtocol>
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_placementofattributes::ExampleProtocol;
 
-  using MethodCompleter = ::fidl::internal::WireCompleter<
-      ::test_placementofattributes::ExampleProtocol::Method>;
-  using MethodRequestView = ::fidl::internal::WireRequestView<
-      ::test_placementofattributes::ExampleProtocol::Method>;
+  using MethodCompleter = ::fidl::internal::WireCompleter<::test_placementofattributes::ExampleProtocol::Method>;
+  using MethodRequestView = ::fidl::internal::WireRequestView<::test_placementofattributes::ExampleProtocol::Method>;
 
-  virtual void Method(MethodRequestView request,
-                      MethodCompleter::Sync& completer) = 0;
+  virtual void Method(
+      MethodRequestView request, MethodCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(
@@ -438,30 +300,22 @@ namespace fidl {
 #ifdef __Fuchsia__
 }  // namespace fidl
 template <>
-class ::fidl::internal::WireWeakOnewayClientImpl<
-    ::test_placementofattributes::ExampleProtocol>
-    : public ::fidl::internal::ClientImplBase {
+class ::fidl::internal::WireWeakOnewayClientImpl<::test_placementofattributes::ExampleProtocol> : public ::fidl::internal::ClientImplBase {
  public:
   using ClientImplBase::ClientImplBase;
 
-  // Allocates 40 bytes of message buffer on the stack. No heap allocation
-  // necessary.
+  // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
   ::fidl::Status Method(const ::test_exampleusing::wire::Empty& arg);
 };
 
 template <>
-class ::fidl::internal::WireWeakAsyncClientImpl<
-    ::test_placementofattributes::ExampleProtocol>
-    final : public ::fidl::internal::WireWeakOnewayClientImpl<
-                ::test_placementofattributes::ExampleProtocol> {
+class ::fidl::internal::WireWeakAsyncClientImpl<::test_placementofattributes::ExampleProtocol> final : public ::fidl::internal::WireWeakOnewayClientImpl<::test_placementofattributes::ExampleProtocol> {
  public:
   using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
 };
 
 template <>
-class ::fidl::internal::WireWeakOnewayBufferClientImpl<
-    ::test_placementofattributes::ExampleProtocol>
-    : public ::fidl::internal::BufferClientImplBase {
+class ::fidl::internal::WireWeakOnewayBufferClientImpl<::test_placementofattributes::ExampleProtocol> : public ::fidl::internal::BufferClientImplBase {
  public:
   using BufferClientImplBase::BufferClientImplBase;
 
@@ -470,18 +324,12 @@ class ::fidl::internal::WireWeakOnewayBufferClientImpl<
 };
 
 template <>
-class ::fidl::internal::WireWeakAsyncBufferClientImpl<
-    ::test_placementofattributes::ExampleProtocol>
-    final : public ::fidl::internal::WireWeakOnewayBufferClientImpl<
-                ::test_placementofattributes::ExampleProtocol> {
+class ::fidl::internal::WireWeakAsyncBufferClientImpl<::test_placementofattributes::ExampleProtocol> final : public ::fidl::internal::WireWeakOnewayBufferClientImpl<::test_placementofattributes::ExampleProtocol> {
  public:
   using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
 };
 template <>
-class ::fidl::internal::WireWeakSyncClientImpl<
-    ::test_placementofattributes::ExampleProtocol>
-    final : public ::fidl::internal::WireWeakOnewayClientImpl<
-                ::test_placementofattributes::ExampleProtocol> {
+class ::fidl::internal::WireWeakSyncClientImpl<::test_placementofattributes::ExampleProtocol> final : public ::fidl::internal::WireWeakOnewayClientImpl<::test_placementofattributes::ExampleProtocol> {
  public:
   using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
 };
@@ -491,37 +339,27 @@ namespace fidl {
 }  // namespace fidl
 #ifdef __Fuchsia__
 template <>
-class ::fidl::internal::WireWeakEventSender<
-    ::test_placementofattributes::ExampleProtocol>
-    : public ::fidl::internal::WeakEventSenderBase {
+class ::fidl::internal::WireWeakEventSender<::test_placementofattributes::ExampleProtocol> : public ::fidl::internal::WeakEventSenderBase {
  public:
   using WeakEventSenderBase::WeakEventSenderBase;
 };
 
 template <>
-class ::fidl::internal::WireWeakBufferEventSender<
-    ::test_placementofattributes::ExampleProtocol>
-    : public ::fidl::internal::WeakBufferEventSenderBase {
+class ::fidl::internal::WireWeakBufferEventSender<::test_placementofattributes::ExampleProtocol> : public ::fidl::internal::WeakBufferEventSenderBase {
  public:
   using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
 };
 
 template <>
-class ::fidl::internal::WireEventSender<
-    ::test_placementofattributes::ExampleProtocol>
-    : public ::fidl::internal::SyncEndpointManagedVeneer<
-          ::fidl::internal::WireEventSender<
-              ::test_placementofattributes::ExampleProtocol>> {
+class ::fidl::internal::WireEventSender<::test_placementofattributes::ExampleProtocol>
+    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::WireEventSender<::test_placementofattributes::ExampleProtocol>> {
  public:
   using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 };
 
 template <>
-class ::fidl::internal::WireBufferEventSender<
-    ::test_placementofattributes::ExampleProtocol>
-    : public ::fidl::internal::SyncEndpointBufferVeneer<
-          ::fidl::internal::WireBufferEventSender<
-              ::test_placementofattributes::ExampleProtocol>> {
+class ::fidl::internal::WireBufferEventSender<::test_placementofattributes::ExampleProtocol>
+    : public ::fidl::internal::SyncEndpointBufferVeneer<::fidl::internal::WireBufferEventSender<::test_placementofattributes::ExampleProtocol>> {
  public:
   using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
 };

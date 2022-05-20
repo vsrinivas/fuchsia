@@ -27,12 +27,12 @@ class Baz {
 
  public:
   Baz(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-  Baz(::test_middle::Bar g) noexcept : storage_({.g = std::move(g)}) {}
+  Baz(::test_middle::Bar g) noexcept
+      : storage_({.g = std::move(g)}) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |Baz| only if all of its members are default
-  // constructible.
+  // Default constructs a |Baz| only if all of its members are default constructible.
   Baz() = default;
 #pragma clang diagnostic pop
 
@@ -45,22 +45,24 @@ class Baz {
   }
 
   bool operator==(const Baz& other) const noexcept {
-    return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_transitivedependencies::Baz, 4>::Equal(this, &other);
+    return ::fidl::internal::NaturalStructCodingTraits<::test_transitivedependencies::Baz, 4>::Equal(this, &other);
   }
   bool operator!=(const Baz& other) const noexcept {
-    return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_transitivedependencies::Baz, 4>::Equal(this, &other);
+    return !::fidl::internal::NaturalStructCodingTraits<::test_transitivedependencies::Baz, 4>::Equal(this, &other);
   }
 
-  const ::test_middle::Bar& g() const { return storage_.g; }
+  const ::test_middle::Bar&
+  g() const {
+    return storage_.g;
+  }
 
-  ::test_middle::Bar& g() { return storage_.g; }
+  ::test_middle::Bar& g() {
+    return storage_.g;
+  }
 
-  Baz(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : Baz(Storage_{
-            .g = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
-        }) {}
+  Baz(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Baz(Storage_{
+                                                                        .g = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+                                                                    }) {}
 
  private:
   struct Storage_ final {
@@ -70,14 +72,10 @@ class Baz {
   Storage_ storage_;
   Storage_ CloneStorage_() const;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_transitivedependencies::Baz, 4>;
-  friend struct ::fidl::internal::MemberVisitor<
-      ::test_transitivedependencies::Baz>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::test_middle::Bar,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::g, 0});
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_transitivedependencies::Baz, 4>;
+  friend struct ::fidl::internal::MemberVisitor<::test_transitivedependencies::Baz>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::test_middle::Bar, fidl::internal::NaturalCodingConstraintEmpty>{
+      &Storage_::g, 0});
   static constexpr auto kPadding = std::make_tuple();
 };
 
@@ -87,14 +85,10 @@ namespace fidl {
 extern "C" const fidl_type_t test_transitivedependencies_BazTable;
 
 template <>
-struct IsFidlType<::test_transitivedependencies::Baz> : public std::true_type {
-};
+struct IsFidlType<::test_transitivedependencies::Baz> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<
-    ::test_transitivedependencies::Baz,
-    ::fidl::internal::NaturalCodingConstraintEmpty>
-    final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_transitivedependencies::Baz, 4> {};
+struct internal::NaturalCodingTraits<::test_transitivedependencies::Baz, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_transitivedependencies::Baz, 4> {};
 
 }  // namespace fidl

@@ -20,8 +20,7 @@ enum class ObjType : uint32_t {
 }  // namespace test_handlesintypes
 template <>
 struct fidl::internal::DisplayError<::test_handlesintypes::ObjType> {
-  static size_t Format(const ::test_handlesintypes::ObjType& value,
-                       char* destination, size_t capacity);
+  static size_t Format(const ::test_handlesintypes::ObjType& value, char* destination, size_t capacity);
 };
 
 namespace fidl {
@@ -29,7 +28,6 @@ namespace fidl {
 template <>
 struct IsFidlType<::test_handlesintypes::ObjType> : public std::true_type {};
 template <>
-struct ContainsHandle<::test_handlesintypes::ObjType> : public std::false_type {
-};
+struct ContainsHandle<::test_handlesintypes::ObjType> : public std::false_type {};
 
 }  // namespace fidl

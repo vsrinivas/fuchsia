@@ -10,12 +10,13 @@
 namespace test {
 namespace requestflexibleenvelope {
 extern "C" const fidl_type_t test_requestflexibleenvelope_StrictFooTable;
-const fidl_type_t* StrictFoo::FidlType =
-    &test_requestflexibleenvelope_StrictFooTable;
+const fidl_type_t* StrictFoo::FidlType = &test_requestflexibleenvelope_StrictFooTable;
 
 StrictFoo::StrictFoo() {}
 
-StrictFoo::~StrictFoo() { Destroy(); }
+StrictFoo::~StrictFoo() {
+  Destroy();
+}
 
 StrictFoo::StrictFoo(StrictFoo&& other) : tag_(other.tag_) {
   switch (tag_) {
@@ -26,8 +27,7 @@ StrictFoo::StrictFoo(StrictFoo&& other) : tag_(other.tag_) {
     case ::test::requestflexibleenvelope::StrictFoo::Tag::kI:
       i_ = std::move(other.i_);
       break;
-    case static_cast<fidl_xunion_tag_t>(
-        ::test::requestflexibleenvelope::StrictFoo::Tag::Invalid):
+    case static_cast<fidl_xunion_tag_t>(::test::requestflexibleenvelope::StrictFoo::Tag::Invalid):
       break;
   }
 }
@@ -44,8 +44,7 @@ StrictFoo& StrictFoo::operator=(StrictFoo&& other) {
       case ::test::requestflexibleenvelope::StrictFoo::Tag::kI:
         i_ = std::move(other.i_);
         break;
-      case static_cast<fidl_xunion_tag_t>(
-          ::test::requestflexibleenvelope::StrictFoo::Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(::test::requestflexibleenvelope::StrictFoo::Tag::Invalid):
         break;
     }
   }
@@ -63,67 +62,55 @@ StrictFoo StrictFoo::WithI(int32_t&& val) {
   return result;
 }
 
-void StrictFoo::Encode(
-    ::fidl::Encoder* encoder, size_t offset,
-    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+void StrictFoo::Encode(::fidl::Encoder* encoder, size_t offset,
+                       cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
   switch (Which()) {
     case ::test::requestflexibleenvelope::StrictFoo::Tag::kS: {
-      if (::fidl::EncodingInlineSize<::std::string>(encoder) <=
-          FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-        ::fidl::Encode(encoder, &s_,
-                       offset + offsetof(fidl_xunion_v2_t, envelope));
+      if (::fidl::EncodingInlineSize<::std::string>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+        ::fidl::Encode(encoder, &s_, offset + offsetof(fidl_xunion_v2_t, envelope));
 
         fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
         xunion->tag = tag_;
-        xunion->envelope.num_handles = static_cast<uint16_t>(
-            encoder->CurrentHandleCount() - handles_before);
+        xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
         xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
         break;
       }
 
       ::fidl::Encode(
-          encoder, &s_,
-          encoder->Alloc(
-              ::fidl::EncodingInlineSize<::std::string, ::fidl::Encoder>(
-                  encoder)));
+          encoder,
+          &s_,
+          encoder->Alloc(::fidl::EncodingInlineSize<::std::string, ::fidl::Encoder>(encoder)));
 
       fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
       xunion->tag = tag_;
-      xunion->envelope.num_bytes =
-          static_cast<uint32_t>(encoder->CurrentLength() - length_before);
-      xunion->envelope.num_handles =
-          static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
+      xunion->envelope.num_bytes = static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+      xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
       xunion->envelope.flags = 0;
       break;
     }
     case ::test::requestflexibleenvelope::StrictFoo::Tag::kI: {
-      if (::fidl::EncodingInlineSize<int32_t>(encoder) <=
-          FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-        ::fidl::Encode(encoder, &i_,
-                       offset + offsetof(fidl_xunion_v2_t, envelope));
+      if (::fidl::EncodingInlineSize<int32_t>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+        ::fidl::Encode(encoder, &i_, offset + offsetof(fidl_xunion_v2_t, envelope));
 
         fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
         xunion->tag = tag_;
-        xunion->envelope.num_handles = static_cast<uint16_t>(
-            encoder->CurrentHandleCount() - handles_before);
+        xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
         xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
         break;
       }
 
       ::fidl::Encode(
-          encoder, &i_,
-          encoder->Alloc(
-              ::fidl::EncodingInlineSize<int32_t, ::fidl::Encoder>(encoder)));
+          encoder,
+          &i_,
+          encoder->Alloc(::fidl::EncodingInlineSize<int32_t, ::fidl::Encoder>(encoder)));
 
       fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
       xunion->tag = tag_;
-      xunion->envelope.num_bytes =
-          static_cast<uint32_t>(encoder->CurrentLength() - length_before);
-      xunion->envelope.num_handles =
-          static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
+      xunion->envelope.num_bytes = static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+      xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
       xunion->envelope.flags = 0;
       break;
     }
@@ -132,14 +119,13 @@ void StrictFoo::Encode(
   }
 }
 
-void StrictFoo::Decode(::fidl::Decoder* _decoder, StrictFoo* value,
-                       size_t offset) {
+void StrictFoo::Decode(::fidl::Decoder* _decoder, StrictFoo* value, size_t offset) {
   fidl_xunion_v2_t* xunion = _decoder->GetPtr<fidl_xunion_v2_t>(offset);
 
-  if (xunion->envelope.num_bytes == 0 && xunion->envelope.num_handles == 0 &&
+  if (xunion->envelope.num_bytes == 0 &&
+      xunion->envelope.num_handles == 0 &&
       xunion->envelope.flags == 0) {
-    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
-        ::test::requestflexibleenvelope::StrictFoo::Tag::Invalid));
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(::test::requestflexibleenvelope::StrictFoo::Tag::Invalid));
     return;
   }
 
@@ -202,8 +188,7 @@ void StrictFoo::Destroy() {
     default:
       break;
   }
-  tag_ = static_cast<fidl_xunion_tag_t>(
-      ::test::requestflexibleenvelope::StrictFoo::Tag::Invalid);
+  tag_ = static_cast<fidl_xunion_tag_t>(::test::requestflexibleenvelope::StrictFoo::Tag::Invalid);
 }
 
 void StrictFoo::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
@@ -211,8 +196,7 @@ void StrictFoo::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     Destroy();
     tag_ = tag;
     switch (tag_) {
-      case static_cast<fidl_xunion_tag_t>(
-          ::test::requestflexibleenvelope::StrictFoo::Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(::test::requestflexibleenvelope::StrictFoo::Tag::Invalid):
         break;
       case ::test::requestflexibleenvelope::StrictFoo::Tag::kS:
         new (&s_)::std::string();
@@ -226,97 +210,68 @@ void StrictFoo::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
   }
 }
 
-extern "C" const fidl_type_t
-    test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
-const fidl_type_t* ProtocolRequestStrictResponseFlexibleRequest::FidlType =
-    &test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
+extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
+const fidl_type_t* ProtocolRequestStrictResponseFlexibleRequest::FidlType = &test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
 
-void ProtocolRequestStrictResponseFlexibleRequest::Encode(
-    ::fidl::Encoder* _encoder, size_t _offset,
-    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-  if (::fidl::IsMemcpyCompatible<
-          ProtocolRequestStrictResponseFlexibleRequest>::value) {
-    memcpy(
-        _encoder->template GetPtr<ProtocolRequestStrictResponseFlexibleRequest>(
-            _offset),
-        this, sizeof(ProtocolRequestStrictResponseFlexibleRequest));
+void ProtocolRequestStrictResponseFlexibleRequest::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                                                          cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<ProtocolRequestStrictResponseFlexibleRequest>::value) {
+    memcpy(_encoder->template GetPtr<ProtocolRequestStrictResponseFlexibleRequest>(_offset), this, sizeof(ProtocolRequestStrictResponseFlexibleRequest));
   } else {
     ::fidl::Encode(_encoder, &s, _offset + 0);
   }
 }
 
-void ProtocolRequestStrictResponseFlexibleRequest::Decode(
-    ::fidl::Decoder* _decoder,
-    ProtocolRequestStrictResponseFlexibleRequest* _value, size_t _offset) {
-  if (::fidl::IsMemcpyCompatible<
-          ProtocolRequestStrictResponseFlexibleRequest>::value) {
-    memcpy(
-        _value,
-        _decoder->template GetPtr<ProtocolRequestStrictResponseFlexibleRequest>(
-            _offset),
-        sizeof(ProtocolRequestStrictResponseFlexibleRequest));
+void ProtocolRequestStrictResponseFlexibleRequest::Decode(::fidl::Decoder* _decoder, ProtocolRequestStrictResponseFlexibleRequest* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<ProtocolRequestStrictResponseFlexibleRequest>::value) {
+    memcpy(_value, _decoder->template GetPtr<ProtocolRequestStrictResponseFlexibleRequest>(_offset), sizeof(ProtocolRequestStrictResponseFlexibleRequest));
   } else {
     ::fidl::Decode(_decoder, &_value->s, _offset + 0);
   }
 }
 
-zx_status_t ProtocolRequestStrictResponseFlexibleRequest::Clone(
-    ProtocolRequestStrictResponseFlexibleRequest* _result) const {
+zx_status_t ProtocolRequestStrictResponseFlexibleRequest::Clone(ProtocolRequestStrictResponseFlexibleRequest* _result) const {
   zx_status_t _status = ::fidl::Clone(s, &_result->s);
-  if (_status != ZX_OK) return _status;
+  if (_status != ZX_OK)
+    return _status;
   return ZX_OK;
 }
 
-extern "C" const fidl_type_t
-    test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
-const fidl_type_t* ProtocolRequestFlexibleResponseStrictTopResponse::FidlType =
-    &test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
+extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
+const fidl_type_t* ProtocolRequestFlexibleResponseStrictTopResponse::FidlType = &test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
 
-void ProtocolRequestFlexibleResponseStrictTopResponse::Encode(
-    ::fidl::Encoder* _encoder, size_t _offset,
-    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-  if (::fidl::IsMemcpyCompatible<
-          ProtocolRequestFlexibleResponseStrictTopResponse>::value) {
-    memcpy(
-        _encoder
-            ->template GetPtr<ProtocolRequestFlexibleResponseStrictTopResponse>(
-                _offset),
-        this, sizeof(ProtocolRequestFlexibleResponseStrictTopResponse));
+void ProtocolRequestFlexibleResponseStrictTopResponse::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                                                              cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<ProtocolRequestFlexibleResponseStrictTopResponse>::value) {
+    memcpy(_encoder->template GetPtr<ProtocolRequestFlexibleResponseStrictTopResponse>(_offset), this, sizeof(ProtocolRequestFlexibleResponseStrictTopResponse));
   } else {
     ::fidl::Encode(_encoder, &f, _offset + 0);
   }
 }
 
-void ProtocolRequestFlexibleResponseStrictTopResponse::Decode(
-    ::fidl::Decoder* _decoder,
-    ProtocolRequestFlexibleResponseStrictTopResponse* _value, size_t _offset) {
-  if (::fidl::IsMemcpyCompatible<
-          ProtocolRequestFlexibleResponseStrictTopResponse>::value) {
-    memcpy(
-        _value,
-        _decoder
-            ->template GetPtr<ProtocolRequestFlexibleResponseStrictTopResponse>(
-                _offset),
-        sizeof(ProtocolRequestFlexibleResponseStrictTopResponse));
+void ProtocolRequestFlexibleResponseStrictTopResponse::Decode(::fidl::Decoder* _decoder, ProtocolRequestFlexibleResponseStrictTopResponse* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<ProtocolRequestFlexibleResponseStrictTopResponse>::value) {
+    memcpy(_value, _decoder->template GetPtr<ProtocolRequestFlexibleResponseStrictTopResponse>(_offset), sizeof(ProtocolRequestFlexibleResponseStrictTopResponse));
   } else {
     ::fidl::Decode(_decoder, &_value->f, _offset + 0);
   }
 }
 
-zx_status_t ProtocolRequestFlexibleResponseStrictTopResponse::Clone(
-    ProtocolRequestFlexibleResponseStrictTopResponse* _result) const {
+zx_status_t ProtocolRequestFlexibleResponseStrictTopResponse::Clone(ProtocolRequestFlexibleResponseStrictTopResponse* _result) const {
   zx_status_t _status = ::fidl::Clone(f, &_result->f);
-  if (_status != ZX_OK) return _status;
+  if (_status != ZX_OK)
+    return _status;
   return ZX_OK;
 }
 
 extern "C" const fidl_type_t test_requestflexibleenvelope_FlexibleFooTable;
-const fidl_type_t* FlexibleFoo::FidlType =
-    &test_requestflexibleenvelope_FlexibleFooTable;
+const fidl_type_t* FlexibleFoo::FidlType = &test_requestflexibleenvelope_FlexibleFooTable;
 
 FlexibleFoo::FlexibleFoo() {}
 
-FlexibleFoo::~FlexibleFoo() { Destroy(); }
+FlexibleFoo::~FlexibleFoo() {
+  Destroy();
+}
 
 FlexibleFoo::FlexibleFoo(FlexibleFoo&& other) : tag_(other.tag_) {
   switch (tag_) {
@@ -327,8 +282,7 @@ FlexibleFoo::FlexibleFoo(FlexibleFoo&& other) : tag_(other.tag_) {
     case ::test::requestflexibleenvelope::FlexibleFoo::Tag::kI:
       i_ = std::move(other.i_);
       break;
-    case static_cast<fidl_xunion_tag_t>(
-        ::test::requestflexibleenvelope::FlexibleFoo::Tag::Invalid):
+    case static_cast<fidl_xunion_tag_t>(::test::requestflexibleenvelope::FlexibleFoo::Tag::Invalid):
       break;
     default:
       new (&unknown_data_) decltype(unknown_data_);
@@ -349,8 +303,7 @@ FlexibleFoo& FlexibleFoo::operator=(FlexibleFoo&& other) {
       case ::test::requestflexibleenvelope::FlexibleFoo::Tag::kI:
         i_ = std::move(other.i_);
         break;
-      case static_cast<fidl_xunion_tag_t>(
-          ::test::requestflexibleenvelope::FlexibleFoo::Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(::test::requestflexibleenvelope::FlexibleFoo::Tag::Invalid):
         break;
       default:
         new (&unknown_data_) decltype(unknown_data_);
@@ -372,73 +325,60 @@ FlexibleFoo FlexibleFoo::WithI(int32_t&& val) {
   return result;
 }
 
-void FlexibleFoo::Encode(
-    ::fidl::Encoder* encoder, size_t offset,
-    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+void FlexibleFoo::Encode(::fidl::Encoder* encoder, size_t offset,
+                         cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
   switch (Which()) {
     case ::test::requestflexibleenvelope::FlexibleFoo::Tag::kS: {
-      if (::fidl::EncodingInlineSize<::std::string>(encoder) <=
-          FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-        ::fidl::Encode(encoder, &s_,
-                       offset + offsetof(fidl_xunion_v2_t, envelope));
+      if (::fidl::EncodingInlineSize<::std::string>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+        ::fidl::Encode(encoder, &s_, offset + offsetof(fidl_xunion_v2_t, envelope));
 
         fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
         xunion->tag = tag_;
-        xunion->envelope.num_handles = static_cast<uint16_t>(
-            encoder->CurrentHandleCount() - handles_before);
+        xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
         xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
         break;
       }
 
       ::fidl::Encode(
-          encoder, &s_,
-          encoder->Alloc(
-              ::fidl::EncodingInlineSize<::std::string, ::fidl::Encoder>(
-                  encoder)));
+          encoder,
+          &s_,
+          encoder->Alloc(::fidl::EncodingInlineSize<::std::string, ::fidl::Encoder>(encoder)));
 
       fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
       xunion->tag = tag_;
-      xunion->envelope.num_bytes =
-          static_cast<uint32_t>(encoder->CurrentLength() - length_before);
-      xunion->envelope.num_handles =
-          static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
+      xunion->envelope.num_bytes = static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+      xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
       xunion->envelope.flags = 0;
       break;
     }
     case ::test::requestflexibleenvelope::FlexibleFoo::Tag::kI: {
-      if (::fidl::EncodingInlineSize<int32_t>(encoder) <=
-          FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-        ::fidl::Encode(encoder, &i_,
-                       offset + offsetof(fidl_xunion_v2_t, envelope));
+      if (::fidl::EncodingInlineSize<int32_t>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+        ::fidl::Encode(encoder, &i_, offset + offsetof(fidl_xunion_v2_t, envelope));
 
         fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
         xunion->tag = tag_;
-        xunion->envelope.num_handles = static_cast<uint16_t>(
-            encoder->CurrentHandleCount() - handles_before);
+        xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
         xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
         break;
       }
 
       ::fidl::Encode(
-          encoder, &i_,
-          encoder->Alloc(
-              ::fidl::EncodingInlineSize<int32_t, ::fidl::Encoder>(encoder)));
+          encoder,
+          &i_,
+          encoder->Alloc(::fidl::EncodingInlineSize<int32_t, ::fidl::Encoder>(encoder)));
 
       fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
       xunion->tag = tag_;
-      xunion->envelope.num_bytes =
-          static_cast<uint32_t>(encoder->CurrentLength() - length_before);
-      xunion->envelope.num_handles =
-          static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
+      xunion->envelope.num_bytes = static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+      xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
       xunion->envelope.flags = 0;
       break;
     }
     case ::test::requestflexibleenvelope::FlexibleFoo::Tag::kUnknown: {
-      ::fidl::EncodeUnknownBytes(encoder, &unknown_data_,
-                                 offset + offsetof(fidl_xunion_t, envelope));
+      ::fidl::EncodeUnknownBytes(encoder, &unknown_data_, offset + offsetof(fidl_xunion_t, envelope));
       *encoder->GetPtr<uint64_t>(offset) = tag_;
       break;
     }
@@ -447,14 +387,13 @@ void FlexibleFoo::Encode(
   }
 }
 
-void FlexibleFoo::Decode(::fidl::Decoder* _decoder, FlexibleFoo* value,
-                         size_t offset) {
+void FlexibleFoo::Decode(::fidl::Decoder* _decoder, FlexibleFoo* value, size_t offset) {
   fidl_xunion_v2_t* xunion = _decoder->GetPtr<fidl_xunion_v2_t>(offset);
 
-  if (xunion->envelope.num_bytes == 0 && xunion->envelope.num_handles == 0 &&
+  if (xunion->envelope.num_bytes == 0 &&
+      xunion->envelope.num_handles == 0 &&
       xunion->envelope.flags == 0) {
-    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
-        ::test::requestflexibleenvelope::FlexibleFoo::Tag::Invalid));
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(::test::requestflexibleenvelope::FlexibleFoo::Tag::Invalid));
     return;
   }
 
@@ -475,8 +414,7 @@ void FlexibleFoo::Decode(::fidl::Decoder* _decoder, FlexibleFoo* value,
     default: {
       auto unknown_info = _decoder->EnvelopeUnknownDataInfo(&xunion->envelope);
       value->unknown_data_.resize(unknown_info.num_bytes);
-      ::fidl::DecodeUnknownBytesContents(_decoder, &value->unknown_data_,
-                                         unknown_info.value_offset);
+      ::fidl::DecodeUnknownBytesContents(_decoder, &value->unknown_data_, unknown_info.value_offset);
       break;
     }
   }
@@ -501,20 +439,17 @@ zx_status_t FlexibleFoo::Clone(FlexibleFoo* result) const {
 }
 
 FlexibleFoo& FlexibleFoo::set_s(::std::string value) {
-  EnsureStorageInitialized(
-      ::test::requestflexibleenvelope::FlexibleFoo::Tag::kS);
+  EnsureStorageInitialized(::test::requestflexibleenvelope::FlexibleFoo::Tag::kS);
   s_ = std::move(value);
   return *this;
 }
 
 FlexibleFoo& FlexibleFoo::set_i(int32_t value) {
-  EnsureStorageInitialized(
-      ::test::requestflexibleenvelope::FlexibleFoo::Tag::kI);
+  EnsureStorageInitialized(::test::requestflexibleenvelope::FlexibleFoo::Tag::kI);
   i_ = std::move(value);
   return *this;
 }
-FlexibleFoo& FlexibleFoo::SetUnknownData(fidl_xunion_tag_t ordinal,
-                                         std::vector<uint8_t> bytes) {
+FlexibleFoo& FlexibleFoo::SetUnknownData(fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes) {
   EnsureStorageInitialized(ordinal);
   unknown_data_ = std::move(bytes);
   return *this;
@@ -528,15 +463,13 @@ void FlexibleFoo::Destroy() {
     case ::test::requestflexibleenvelope::FlexibleFoo::Tag::kI:
       break;
 
-    case static_cast<fidl_xunion_tag_t>(
-        ::test::requestflexibleenvelope::FlexibleFoo::Tag::Invalid):
+    case static_cast<fidl_xunion_tag_t>(::test::requestflexibleenvelope::FlexibleFoo::Tag::Invalid):
       break;
     default:
       unknown_data_.~decltype(unknown_data_)();
       break;
   }
-  tag_ = static_cast<fidl_xunion_tag_t>(
-      ::test::requestflexibleenvelope::FlexibleFoo::Tag::Invalid);
+  tag_ = static_cast<fidl_xunion_tag_t>(::test::requestflexibleenvelope::FlexibleFoo::Tag::Invalid);
 }
 
 void FlexibleFoo::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
@@ -544,8 +477,7 @@ void FlexibleFoo::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     Destroy();
     tag_ = tag;
     switch (tag_) {
-      case static_cast<fidl_xunion_tag_t>(
-          ::test::requestflexibleenvelope::FlexibleFoo::Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(::test::requestflexibleenvelope::FlexibleFoo::Tag::Invalid):
         break;
       case ::test::requestflexibleenvelope::FlexibleFoo::Tag::kS:
         new (&s_)::std::string();
@@ -560,87 +492,57 @@ void FlexibleFoo::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
   }
 }
 
-extern "C" const fidl_type_t
-    test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
-const fidl_type_t* ProtocolRequestStrictResponseFlexibleTopResponse::FidlType =
-    &test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
+extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
+const fidl_type_t* ProtocolRequestStrictResponseFlexibleTopResponse::FidlType = &test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
 
-void ProtocolRequestStrictResponseFlexibleTopResponse::Encode(
-    ::fidl::Encoder* _encoder, size_t _offset,
-    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-  if (::fidl::IsMemcpyCompatible<
-          ProtocolRequestStrictResponseFlexibleTopResponse>::value) {
-    memcpy(
-        _encoder
-            ->template GetPtr<ProtocolRequestStrictResponseFlexibleTopResponse>(
-                _offset),
-        this, sizeof(ProtocolRequestStrictResponseFlexibleTopResponse));
+void ProtocolRequestStrictResponseFlexibleTopResponse::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                                                              cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<ProtocolRequestStrictResponseFlexibleTopResponse>::value) {
+    memcpy(_encoder->template GetPtr<ProtocolRequestStrictResponseFlexibleTopResponse>(_offset), this, sizeof(ProtocolRequestStrictResponseFlexibleTopResponse));
   } else {
     ::fidl::Encode(_encoder, &f, _offset + 0);
   }
 }
 
-void ProtocolRequestStrictResponseFlexibleTopResponse::Decode(
-    ::fidl::Decoder* _decoder,
-    ProtocolRequestStrictResponseFlexibleTopResponse* _value, size_t _offset) {
-  if (::fidl::IsMemcpyCompatible<
-          ProtocolRequestStrictResponseFlexibleTopResponse>::value) {
-    memcpy(
-        _value,
-        _decoder
-            ->template GetPtr<ProtocolRequestStrictResponseFlexibleTopResponse>(
-                _offset),
-        sizeof(ProtocolRequestStrictResponseFlexibleTopResponse));
+void ProtocolRequestStrictResponseFlexibleTopResponse::Decode(::fidl::Decoder* _decoder, ProtocolRequestStrictResponseFlexibleTopResponse* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<ProtocolRequestStrictResponseFlexibleTopResponse>::value) {
+    memcpy(_value, _decoder->template GetPtr<ProtocolRequestStrictResponseFlexibleTopResponse>(_offset), sizeof(ProtocolRequestStrictResponseFlexibleTopResponse));
   } else {
     ::fidl::Decode(_decoder, &_value->f, _offset + 0);
   }
 }
 
-zx_status_t ProtocolRequestStrictResponseFlexibleTopResponse::Clone(
-    ProtocolRequestStrictResponseFlexibleTopResponse* _result) const {
+zx_status_t ProtocolRequestStrictResponseFlexibleTopResponse::Clone(ProtocolRequestStrictResponseFlexibleTopResponse* _result) const {
   zx_status_t _status = ::fidl::Clone(f, &_result->f);
-  if (_status != ZX_OK) return _status;
+  if (_status != ZX_OK)
+    return _status;
   return ZX_OK;
 }
 
-extern "C" const fidl_type_t
-    test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
-const fidl_type_t* ProtocolRequestFlexibleResponseStrictRequest::FidlType =
-    &test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
+extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
+const fidl_type_t* ProtocolRequestFlexibleResponseStrictRequest::FidlType = &test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
 
-void ProtocolRequestFlexibleResponseStrictRequest::Encode(
-    ::fidl::Encoder* _encoder, size_t _offset,
-    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-  if (::fidl::IsMemcpyCompatible<
-          ProtocolRequestFlexibleResponseStrictRequest>::value) {
-    memcpy(
-        _encoder->template GetPtr<ProtocolRequestFlexibleResponseStrictRequest>(
-            _offset),
-        this, sizeof(ProtocolRequestFlexibleResponseStrictRequest));
+void ProtocolRequestFlexibleResponseStrictRequest::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                                                          cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<ProtocolRequestFlexibleResponseStrictRequest>::value) {
+    memcpy(_encoder->template GetPtr<ProtocolRequestFlexibleResponseStrictRequest>(_offset), this, sizeof(ProtocolRequestFlexibleResponseStrictRequest));
   } else {
     ::fidl::Encode(_encoder, &s, _offset + 0);
   }
 }
 
-void ProtocolRequestFlexibleResponseStrictRequest::Decode(
-    ::fidl::Decoder* _decoder,
-    ProtocolRequestFlexibleResponseStrictRequest* _value, size_t _offset) {
-  if (::fidl::IsMemcpyCompatible<
-          ProtocolRequestFlexibleResponseStrictRequest>::value) {
-    memcpy(
-        _value,
-        _decoder->template GetPtr<ProtocolRequestFlexibleResponseStrictRequest>(
-            _offset),
-        sizeof(ProtocolRequestFlexibleResponseStrictRequest));
+void ProtocolRequestFlexibleResponseStrictRequest::Decode(::fidl::Decoder* _decoder, ProtocolRequestFlexibleResponseStrictRequest* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<ProtocolRequestFlexibleResponseStrictRequest>::value) {
+    memcpy(_value, _decoder->template GetPtr<ProtocolRequestFlexibleResponseStrictRequest>(_offset), sizeof(ProtocolRequestFlexibleResponseStrictRequest));
   } else {
     ::fidl::Decode(_decoder, &_value->s, _offset + 0);
   }
 }
 
-zx_status_t ProtocolRequestFlexibleResponseStrictRequest::Clone(
-    ProtocolRequestFlexibleResponseStrictRequest* _result) const {
+zx_status_t ProtocolRequestFlexibleResponseStrictRequest::Clone(ProtocolRequestFlexibleResponseStrictRequest* _result) const {
   zx_status_t _status = ::fidl::Clone(s, &_result->s);
-  if (_status != ZX_OK) return _status;
+  if (_status != ZX_OK)
+    return _status;
   return ZX_OK;
 }
 
@@ -650,33 +552,24 @@ zx_status_t ProtocolRequestFlexibleResponseStrictRequest::Clone(
 #ifdef __Fuchsia__
 
 namespace _internal {
-__LOCAL extern "C" const fidl_type_t
-    test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
-__LOCAL extern "C" const fidl_type_t
-    test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
-__LOCAL extern "C" const fidl_type_t
-    test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
-__LOCAL extern "C" const fidl_type_t
-    test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
+__LOCAL extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
+__LOCAL extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
 
 }  // namespace _internal
 Protocol::~Protocol() = default;
 
-const fidl_type_t* ::test::requestflexibleenvelope::Protocol_RequestDecoder::
-    GetType(uint64_t ordinal, bool* out_needs_response) {
+const fidl_type_t* ::test::requestflexibleenvelope::Protocol_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
   *out_needs_response = false;
   switch (ordinal) {
-    case ::test::requestflexibleenvelope::internal::
-        kProtocol_RequestStrictResponseFlexible_Ordinal:
+    case ::test::requestflexibleenvelope::internal::kProtocol_RequestStrictResponseFlexible_Ordinal:
       *out_needs_response = true;
-      return &::test::requestflexibleenvelope::_internal::
-          test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
+      return &::test::requestflexibleenvelope::_internal::test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
       ;
-    case ::test::requestflexibleenvelope::internal::
-        kProtocol_RequestFlexibleResponseStrict_Ordinal:
+    case ::test::requestflexibleenvelope::internal::kProtocol_RequestFlexibleResponseStrict_Ordinal:
       *out_needs_response = true;
-      return &::test::requestflexibleenvelope::_internal::
-          test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
+      return &::test::requestflexibleenvelope::_internal::test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
       ;
     default:
       return nullptr;
@@ -685,15 +578,11 @@ const fidl_type_t* ::test::requestflexibleenvelope::Protocol_RequestDecoder::
 
 const fidl_type_t* Protocol_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
-    case ::test::requestflexibleenvelope::internal::
-        kProtocol_RequestStrictResponseFlexible_Ordinal:
-      return &::test::requestflexibleenvelope::_internal::
-          test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
+    case ::test::requestflexibleenvelope::internal::kProtocol_RequestStrictResponseFlexible_Ordinal:
+      return &::test::requestflexibleenvelope::_internal::test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
       ;
-    case ::test::requestflexibleenvelope::internal::
-        kProtocol_RequestFlexibleResponseStrict_Ordinal:
-      return &::test::requestflexibleenvelope::_internal::
-          test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
+    case ::test::requestflexibleenvelope::internal::kProtocol_RequestFlexibleResponseStrict_Ordinal:
+      return &::test::requestflexibleenvelope::_internal::test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
       ;
     default:
       return nullptr;
@@ -725,84 +614,47 @@ zx_status_t Protocol_Proxy::Dispatch_(::fidl::HLCPPIncomingMessage message) {
 namespace {
 
 ::std::unique_ptr<::fidl::internal::SingleUseMessageHandler>
-Protocol_RequestStrictResponseFlexible_ResponseHandler(
-    Protocol::RequestStrictResponseFlexibleCallback&& callback) {
+Protocol_RequestStrictResponseFlexible_ResponseHandler(Protocol::RequestStrictResponseFlexibleCallback&& callback) {
   ZX_DEBUG_ASSERT_MSG(callback,
-                      "Callback must not be empty for "
-                      "Protocol::RequestStrictResponseFlexible\n");
+                      "Callback must not be empty for Protocol::RequestStrictResponseFlexible\n");
   return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
-      [callback_ =
-           std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
+      [callback_ = std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
         ::fidl::Decoder decoder(std::move(message));
-        callback_(
-            ::fidl::DecodeAs<::test::requestflexibleenvelope::FlexibleFoo>(
-                &decoder, 0 + sizeof(fidl_message_header_t)));
+        callback_(::fidl::DecodeAs<::test::requestflexibleenvelope::FlexibleFoo>(&decoder, 0 + sizeof(fidl_message_header_t)));
         return ZX_OK;
       },
-      &::test::requestflexibleenvelope::_internal::
-          test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable);
+      &::test::requestflexibleenvelope::_internal::test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable);
 }
 
 }  // namespace
-void Protocol_Proxy::RequestStrictResponseFlexible(
-    ::test::requestflexibleenvelope::StrictFoo s,
-    RequestStrictResponseFlexibleCallback callback) {
-  ::fidl::MessageEncoder _encoder(
-      ::test::requestflexibleenvelope::internal::
-          kProtocol_RequestStrictResponseFlexible_Ordinal,
-      ::test::requestflexibleenvelope::internal::
-          kProtocol_RequestStrictResponseFlexible_DynamicFlags);
-  const fidl_type_t* req_type =
-      &::test::requestflexibleenvelope::_internal::
-          test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
-  controller_->Send(req_type,
-                    ::test::requestflexibleenvelope::Protocol_RequestEncoder::
-                        RequestStrictResponseFlexible(&_encoder, &s),
-                    Protocol_RequestStrictResponseFlexible_ResponseHandler(
-                        std::move(callback)));
+void Protocol_Proxy::RequestStrictResponseFlexible(::test::requestflexibleenvelope::StrictFoo s, RequestStrictResponseFlexibleCallback callback) {
+  ::fidl::MessageEncoder _encoder(::test::requestflexibleenvelope::internal::kProtocol_RequestStrictResponseFlexible_Ordinal, ::test::requestflexibleenvelope::internal::kProtocol_RequestStrictResponseFlexible_DynamicFlags);
+  const fidl_type_t* req_type = &::test::requestflexibleenvelope::_internal::test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
+  controller_->Send(req_type, ::test::requestflexibleenvelope::Protocol_RequestEncoder::RequestStrictResponseFlexible(&_encoder, &s), Protocol_RequestStrictResponseFlexible_ResponseHandler(std::move(callback)));
 }
 namespace {
 
 ::std::unique_ptr<::fidl::internal::SingleUseMessageHandler>
-Protocol_RequestFlexibleResponseStrict_ResponseHandler(
-    Protocol::RequestFlexibleResponseStrictCallback&& callback) {
+Protocol_RequestFlexibleResponseStrict_ResponseHandler(Protocol::RequestFlexibleResponseStrictCallback&& callback) {
   ZX_DEBUG_ASSERT_MSG(callback,
-                      "Callback must not be empty for "
-                      "Protocol::RequestFlexibleResponseStrict\n");
+                      "Callback must not be empty for Protocol::RequestFlexibleResponseStrict\n");
   return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
-      [callback_ =
-           std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
+      [callback_ = std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
         ::fidl::Decoder decoder(std::move(message));
-        callback_(::fidl::DecodeAs<::test::requestflexibleenvelope::StrictFoo>(
-            &decoder, 0 + sizeof(fidl_message_header_t)));
+        callback_(::fidl::DecodeAs<::test::requestflexibleenvelope::StrictFoo>(&decoder, 0 + sizeof(fidl_message_header_t)));
         return ZX_OK;
       },
-      &::test::requestflexibleenvelope::_internal::
-          test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable);
+      &::test::requestflexibleenvelope::_internal::test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable);
 }
 
 }  // namespace
-void Protocol_Proxy::RequestFlexibleResponseStrict(
-    ::test::requestflexibleenvelope::FlexibleFoo s,
-    RequestFlexibleResponseStrictCallback callback) {
-  ::fidl::MessageEncoder _encoder(
-      ::test::requestflexibleenvelope::internal::
-          kProtocol_RequestFlexibleResponseStrict_Ordinal,
-      ::test::requestflexibleenvelope::internal::
-          kProtocol_RequestFlexibleResponseStrict_DynamicFlags);
-  const fidl_type_t* req_type =
-      &::test::requestflexibleenvelope::_internal::
-          test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
-  controller_->Send(req_type,
-                    ::test::requestflexibleenvelope::Protocol_RequestEncoder::
-                        RequestFlexibleResponseStrict(&_encoder, &s),
-                    Protocol_RequestFlexibleResponseStrict_ResponseHandler(
-                        std::move(callback)));
+void Protocol_Proxy::RequestFlexibleResponseStrict(::test::requestflexibleenvelope::FlexibleFoo s, RequestFlexibleResponseStrictCallback callback) {
+  ::fidl::MessageEncoder _encoder(::test::requestflexibleenvelope::internal::kProtocol_RequestFlexibleResponseStrict_Ordinal, ::test::requestflexibleenvelope::internal::kProtocol_RequestFlexibleResponseStrict_DynamicFlags);
+  const fidl_type_t* req_type = &::test::requestflexibleenvelope::_internal::test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
+  controller_->Send(req_type, ::test::requestflexibleenvelope::Protocol_RequestEncoder::RequestFlexibleResponseStrict(&_encoder, &s), Protocol_RequestFlexibleResponseStrict_ResponseHandler(std::move(callback)));
 }
 
-Protocol_Stub::Protocol_Stub(
-    ::test::requestflexibleenvelope::Protocol_Stub::Protocol_clazz* impl)
-    : impl_(impl) {
+Protocol_Stub::Protocol_Stub(::test::requestflexibleenvelope::Protocol_Stub::Protocol_clazz* impl) : impl_(impl) {
   (void)impl_;
 }
 
@@ -812,22 +664,13 @@ namespace {
 
 class Protocol_RequestStrictResponseFlexible_Responder final {
  public:
-  Protocol_RequestStrictResponseFlexible_Responder(
-      ::fidl::internal::PendingResponse response)
+  Protocol_RequestStrictResponseFlexible_Responder(::fidl::internal::PendingResponse response)
       : response_(std::move(response)) {}
 
   void operator()(::test::requestflexibleenvelope::FlexibleFoo f) {
-    ::fidl::MessageEncoder _encoder(
-        ::test::requestflexibleenvelope::internal::
-            kProtocol_RequestStrictResponseFlexible_Ordinal,
-        ::test::requestflexibleenvelope::internal::
-            kProtocol_RequestStrictResponseFlexible_DynamicFlags);
-    const fidl_type_t* resp_type =
-        &::test::requestflexibleenvelope::_internal::
-            test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
-    response_.Send(resp_type,
-                   ::test::requestflexibleenvelope::Protocol_ResponseEncoder::
-                       RequestStrictResponseFlexible(&_encoder, &f));
+    ::fidl::MessageEncoder _encoder(::test::requestflexibleenvelope::internal::kProtocol_RequestStrictResponseFlexible_Ordinal, ::test::requestflexibleenvelope::internal::kProtocol_RequestStrictResponseFlexible_DynamicFlags);
+    const fidl_type_t* resp_type = &::test::requestflexibleenvelope::_internal::test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
+    response_.Send(resp_type, ::test::requestflexibleenvelope::Protocol_ResponseEncoder::RequestStrictResponseFlexible(&_encoder, &f));
   }
 
  private:
@@ -836,22 +679,13 @@ class Protocol_RequestStrictResponseFlexible_Responder final {
 
 class Protocol_RequestFlexibleResponseStrict_Responder final {
  public:
-  Protocol_RequestFlexibleResponseStrict_Responder(
-      ::fidl::internal::PendingResponse response)
+  Protocol_RequestFlexibleResponseStrict_Responder(::fidl::internal::PendingResponse response)
       : response_(std::move(response)) {}
 
   void operator()(::test::requestflexibleenvelope::StrictFoo f) {
-    ::fidl::MessageEncoder _encoder(
-        ::test::requestflexibleenvelope::internal::
-            kProtocol_RequestFlexibleResponseStrict_Ordinal,
-        ::test::requestflexibleenvelope::internal::
-            kProtocol_RequestFlexibleResponseStrict_DynamicFlags);
-    const fidl_type_t* resp_type =
-        &::test::requestflexibleenvelope::_internal::
-            test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
-    response_.Send(resp_type,
-                   ::test::requestflexibleenvelope::Protocol_ResponseEncoder::
-                       RequestFlexibleResponseStrict(&_encoder, &f));
+    ::fidl::MessageEncoder _encoder(::test::requestflexibleenvelope::internal::kProtocol_RequestFlexibleResponseStrict_Ordinal, ::test::requestflexibleenvelope::internal::kProtocol_RequestFlexibleResponseStrict_DynamicFlags);
+    const fidl_type_t* resp_type = &::test::requestflexibleenvelope::_internal::test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
+    response_.Send(resp_type, ::test::requestflexibleenvelope::Protocol_ResponseEncoder::RequestFlexibleResponseStrict(&_encoder, &f));
   }
 
  private:
@@ -864,9 +698,7 @@ zx_status_t Protocol_Stub::Dispatch_(
     ::fidl::HLCPPIncomingMessage message,
     ::fidl::internal::PendingResponse response) {
   bool needs_response;
-  const fidl_type_t* request_type =
-      ::test::requestflexibleenvelope::Protocol_RequestDecoder::GetType(
-          message.ordinal(), &needs_response);
+  const fidl_type_t* request_type = ::test::requestflexibleenvelope::Protocol_RequestDecoder::GetType(message.ordinal(), &needs_response);
   if (!message.has_only_header()) {
     if (request_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
@@ -881,35 +713,23 @@ zx_status_t Protocol_Stub::Dispatch_(
 
   if (response.needs_response() != needs_response) {
     if (needs_response) {
-      FIDL_REPORT_DECODING_ERROR(message, request_type,
-                                 "Message needing a response with no txid");
+      FIDL_REPORT_DECODING_ERROR(message, request_type, "Message needing a response with no txid");
     } else {
-      FIDL_REPORT_DECODING_ERROR(message, request_type,
-                                 "Message not needing a response with a txid");
+      FIDL_REPORT_DECODING_ERROR(message, request_type, "Message not needing a response with a txid");
     }
     return ZX_ERR_INVALID_ARGS;
   }
 
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
-    case ::test::requestflexibleenvelope::internal::
-        kProtocol_RequestStrictResponseFlexible_Ordinal: {
+    case ::test::requestflexibleenvelope::internal::kProtocol_RequestStrictResponseFlexible_Ordinal: {
       ::fidl::Decoder decoder(std::move(message));
-      impl_->RequestStrictResponseFlexible(
-          ::fidl::DecodeAs<::test::requestflexibleenvelope::StrictFoo>(
-              &decoder, 0 + sizeof(fidl_message_header_t)),
-          Protocol_RequestStrictResponseFlexible_Responder(
-              std::move(response)));
+      impl_->RequestStrictResponseFlexible(::fidl::DecodeAs<::test::requestflexibleenvelope::StrictFoo>(&decoder, 0 + sizeof(fidl_message_header_t)), Protocol_RequestStrictResponseFlexible_Responder(std::move(response)));
       break;
     }
-    case ::test::requestflexibleenvelope::internal::
-        kProtocol_RequestFlexibleResponseStrict_Ordinal: {
+    case ::test::requestflexibleenvelope::internal::kProtocol_RequestFlexibleResponseStrict_Ordinal: {
       ::fidl::Decoder decoder(std::move(message));
-      impl_->RequestFlexibleResponseStrict(
-          ::fidl::DecodeAs<::test::requestflexibleenvelope::FlexibleFoo>(
-              &decoder, 0 + sizeof(fidl_message_header_t)),
-          Protocol_RequestFlexibleResponseStrict_Responder(
-              std::move(response)));
+      impl_->RequestFlexibleResponseStrict(::fidl::DecodeAs<::test::requestflexibleenvelope::FlexibleFoo>(&decoder, 0 + sizeof(fidl_message_header_t)), Protocol_RequestFlexibleResponseStrict_Responder(std::move(response)));
       break;
     }
     default: {
@@ -924,59 +744,31 @@ Protocol_SyncProxy::Protocol_SyncProxy(::zx::channel channel)
 
 Protocol_SyncProxy::~Protocol_SyncProxy() = default;
 
-zx_status_t Protocol_SyncProxy::RequestStrictResponseFlexible(
-    ::test::requestflexibleenvelope::StrictFoo s,
-    ::test::requestflexibleenvelope::FlexibleFoo* out_f) {
-  ::fidl::MessageEncoder _encoder(
-      ::test::requestflexibleenvelope::internal::
-          kProtocol_RequestStrictResponseFlexible_Ordinal,
-      ::test::requestflexibleenvelope::internal::
-          kProtocol_RequestStrictResponseFlexible_DynamicFlags);
+zx_status_t Protocol_SyncProxy::RequestStrictResponseFlexible(::test::requestflexibleenvelope::StrictFoo s, ::test::requestflexibleenvelope::FlexibleFoo* out_f) {
+  ::fidl::MessageEncoder _encoder(::test::requestflexibleenvelope::internal::kProtocol_RequestStrictResponseFlexible_Ordinal, ::test::requestflexibleenvelope::internal::kProtocol_RequestStrictResponseFlexible_DynamicFlags);
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
-  const fidl_type_t* req_type =
-      &::test::requestflexibleenvelope::_internal::
-          test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
-  const fidl_type_t* resp_type =
-      &::test::requestflexibleenvelope::_internal::
-          test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
-  zx_status_t status_ =
-      proxy_.Call(req_type, resp_type,
-                  ::test::requestflexibleenvelope::Protocol_RequestEncoder::
-                      RequestStrictResponseFlexible(&_encoder, &s),
-                  &response_);
-  if (status_ != ZX_OK) return status_;
+  const fidl_type_t* req_type = &::test::requestflexibleenvelope::_internal::test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
+  const fidl_type_t* resp_type = &::test::requestflexibleenvelope::_internal::test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
+  zx_status_t status_ = proxy_.Call(req_type, resp_type, ::test::requestflexibleenvelope::Protocol_RequestEncoder::RequestStrictResponseFlexible(&_encoder, &s), &response_);
+  if (status_ != ZX_OK)
+    return status_;
   ::fidl::Decoder decoder_(std::move(response_));
-  *out_f = ::fidl::DecodeAs<::test::requestflexibleenvelope::FlexibleFoo>(
-      &decoder_, 0 + sizeof(fidl_message_header_t));
+  *out_f = ::fidl::DecodeAs<::test::requestflexibleenvelope::FlexibleFoo>(&decoder_, 0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
 
-zx_status_t Protocol_SyncProxy::RequestFlexibleResponseStrict(
-    ::test::requestflexibleenvelope::FlexibleFoo s,
-    ::test::requestflexibleenvelope::StrictFoo* out_f) {
-  ::fidl::MessageEncoder _encoder(
-      ::test::requestflexibleenvelope::internal::
-          kProtocol_RequestFlexibleResponseStrict_Ordinal,
-      ::test::requestflexibleenvelope::internal::
-          kProtocol_RequestFlexibleResponseStrict_DynamicFlags);
+zx_status_t Protocol_SyncProxy::RequestFlexibleResponseStrict(::test::requestflexibleenvelope::FlexibleFoo s, ::test::requestflexibleenvelope::StrictFoo* out_f) {
+  ::fidl::MessageEncoder _encoder(::test::requestflexibleenvelope::internal::kProtocol_RequestFlexibleResponseStrict_Ordinal, ::test::requestflexibleenvelope::internal::kProtocol_RequestFlexibleResponseStrict_DynamicFlags);
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
-  const fidl_type_t* req_type =
-      &::test::requestflexibleenvelope::_internal::
-          test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
-  const fidl_type_t* resp_type =
-      &::test::requestflexibleenvelope::_internal::
-          test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
-  zx_status_t status_ =
-      proxy_.Call(req_type, resp_type,
-                  ::test::requestflexibleenvelope::Protocol_RequestEncoder::
-                      RequestFlexibleResponseStrict(&_encoder, &s),
-                  &response_);
-  if (status_ != ZX_OK) return status_;
+  const fidl_type_t* req_type = &::test::requestflexibleenvelope::_internal::test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
+  const fidl_type_t* resp_type = &::test::requestflexibleenvelope::_internal::test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
+  zx_status_t status_ = proxy_.Call(req_type, resp_type, ::test::requestflexibleenvelope::Protocol_RequestEncoder::RequestFlexibleResponseStrict(&_encoder, &s), &response_);
+  if (status_ != ZX_OK)
+    return status_;
   ::fidl::Decoder decoder_(std::move(response_));
-  *out_f = ::fidl::DecodeAs<::test::requestflexibleenvelope::StrictFoo>(
-      &decoder_, 0 + sizeof(fidl_message_header_t));
+  *out_f = ::fidl::DecodeAs<::test::requestflexibleenvelope::StrictFoo>(&decoder_, 0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
 #endif  // __Fuchsia__

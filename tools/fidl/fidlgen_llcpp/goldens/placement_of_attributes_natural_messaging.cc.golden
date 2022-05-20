@@ -3,27 +3,18 @@
 #include <fidl/test.placementofattributes/cpp/natural_messaging.h>
 
 namespace test_placementofattributes {
-[[maybe_unused]] constexpr inline uint64_t kExampleProtocol_Method_Ordinal =
-    6023439637367187273lu;
+[[maybe_unused]] constexpr inline uint64_t kExampleProtocol_Method_Ordinal = 6023439637367187273lu;
 
-[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
-    kExampleProtocol_Method_DynamicFlags =
-        ::fidl::MessageDynamicFlags::kStrictMethod;
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kExampleProtocol_Method_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
 #ifdef __Fuchsia__
 }  // namespace test_placementofattributes
-::fitx::result<::fidl::Error> fidl::internal::
-    NaturalClientImpl<::test_placementofattributes::ExampleProtocol>::Method(
-        ::fidl::Request<::test_placementofattributes::ExampleProtocol::Method>
-            request) const {
+::fitx::result<::fidl::Error>
+fidl::internal::NaturalClientImpl<::test_placementofattributes::ExampleProtocol>::Method(::fidl::Request<::test_placementofattributes::ExampleProtocol::Method> request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_placementofattributes::kExampleProtocol_Method_Ordinal,
-      ::test_placementofattributes::kExampleProtocol_Method_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_placementofattributes::kExampleProtocol_Method_Ordinal, ::test_placementofattributes::kExampleProtocol_Method_DynamicFlags};
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<
-          ::test_placementofattributes::ExampleProtocol::Method>>::
-          IntoDomainObject(std::move(request)));
+      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_placementofattributes::ExampleProtocol::Method>>::IntoDomainObject(std::move(request)));
 
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   ::fidl::Status status = client_base().SendOneWay(_encoded_message);
@@ -35,19 +26,12 @@ namespace test_placementofattributes {
 }  // namespace test_placementofattributes
 #ifdef __Fuchsia__
 
-::fitx::result<::fidl::Error> fidl::internal::NaturalSyncClientImpl<
-    ::test_placementofattributes::ExampleProtocol>::
-    Method(
-        ::fidl::Request<::test_placementofattributes::ExampleProtocol::Method>
-            request) {
+::fitx::result<::fidl::Error>
+fidl::internal::NaturalSyncClientImpl<::test_placementofattributes::ExampleProtocol>::Method(::fidl::Request<::test_placementofattributes::ExampleProtocol::Method> request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
-      &::fidl::internal::ChannelTransport::VTable,
-      ::test_placementofattributes::kExampleProtocol_Method_Ordinal,
-      ::test_placementofattributes::kExampleProtocol_Method_DynamicFlags};
+      &::fidl::internal::ChannelTransport::VTable, ::test_placementofattributes::kExampleProtocol_Method_Ordinal, ::test_placementofattributes::kExampleProtocol_Method_DynamicFlags};
   encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<
-          ::test_placementofattributes::ExampleProtocol::Method>>::
-          IntoDomainObject(std::move(request)));
+      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_placementofattributes::ExampleProtocol::Method>>::IntoDomainObject(std::move(request)));
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
   msg.Write(_client_end().handle());
   return ::fidl::internal::ToFitxResult(::fidl::Status{msg});
@@ -57,10 +41,10 @@ namespace test_placementofattributes {
 
 #ifdef __Fuchsia__
 
-std::optional<::fidl::UnbindInfo> fidl::internal::NaturalEventDispatcher<
-    ::test_placementofattributes::ExampleProtocol>::
-    DispatchEvent(::fidl::IncomingMessage& msg,
-                  ::fidl::internal::MessageStorageViewBase* storage_view) {
+std::optional<::fidl::UnbindInfo>
+fidl::internal::NaturalEventDispatcher<::test_placementofattributes::ExampleProtocol>::DispatchEvent(
+    ::fidl::IncomingMessage& msg,
+    ::fidl::internal::MessageStorageViewBase* storage_view) {
   return ::fidl::UnbindInfo::UnknownOrdinal();
 }
 #endif  // __Fuchsia__
@@ -71,56 +55,34 @@ std::optional<::fidl::UnbindInfo> fidl::internal::NaturalEventDispatcher<
 
 #ifdef __Fuchsia__
 
-constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
-    ::test_placementofattributes::ExampleProtocol>::entries_[] = {
+constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<::test_placementofattributes::ExampleProtocol>::entries_[] = {
     {
         ::test_placementofattributes::kExampleProtocol_Method_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::MessageStorageViewBase* storage_view,
-           ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
-              ::test_placementofattributes::ExampleProtocolMethodRequest>(
-              std::move(msg));
+           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_placementofattributes::ExampleProtocolMethodRequest>(std::move(msg));
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_placementofattributes::ExampleProtocol::Method>
-              request =
-                  ::fidl::internal::NaturalMessageConverter<::fidl::Request<
-                      ::test_placementofattributes::ExampleProtocol::Method>>::
-                      FromDomainObject(std::move(decoded.value()));
-          ::fidl::internal::NaturalCompleter<
-              ::test_placementofattributes::ExampleProtocol::Method>::Sync
-              completer(txn);
-          static_cast<
-              ::fidl::Server<::test_placementofattributes::ExampleProtocol>*>(
-              interface)
-              ->Method(request, completer);
+          ::fidl::Request<::test_placementofattributes::ExampleProtocol::Method> request = ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_placementofattributes::ExampleProtocol::Method>>::FromDomainObject(std::move(decoded.value()));
+          ::fidl::internal::NaturalCompleter<::test_placementofattributes::ExampleProtocol::Method>::Sync completer(txn);
+          static_cast<::fidl::Server<::test_placementofattributes::ExampleProtocol>*>(interface)->Method(
+              request, completer);
           return ::fidl::Status::Ok();
         },
     },
 };
 
-const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<
-    ::test_placementofattributes::ExampleProtocol>::entries_end_ = &entries_[1];
+const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::test_placementofattributes::ExampleProtocol>::entries_end_ =
+    &entries_[1];
 
-void fidl::internal::NaturalServerDispatcher<
-    ::test_placementofattributes::ExampleProtocol>::
-    Dispatch(
-        ::fidl::Server<::test_placementofattributes::ExampleProtocol>* impl,
-        ::fidl::IncomingMessage&& msg,
-        internal::MessageStorageViewBase* storage_view,
-        ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_,
-                             entries_end_);
+void fidl::internal::NaturalServerDispatcher<::test_placementofattributes::ExampleProtocol>::Dispatch(::fidl::Server<::test_placementofattributes::ExampleProtocol>* impl, ::fidl::IncomingMessage&& msg,
+                                                                                                      internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_);
 }
-void fidl::Server<::test_placementofattributes::ExampleProtocol>::
-    dispatch_message(::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-                     ::fidl::internal::MessageStorageViewBase* storage_view) {
-  ::fidl::internal::NaturalServerDispatcher<
-      ::test_placementofattributes::ExampleProtocol>::Dispatch(this,
-                                                               std::move(msg),
-                                                               storage_view,
-                                                               txn);
+void fidl::Server<::test_placementofattributes::ExampleProtocol>::dispatch_message(
+    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::internal::MessageStorageViewBase* storage_view) {
+  ::fidl::internal::NaturalServerDispatcher<::test_placementofattributes::ExampleProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }
 #endif  // __Fuchsia__

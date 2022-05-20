@@ -40,8 +40,7 @@ namespace fidl {
 // TODO(fxbug.dev/95833) Remove this.
 template <>
 struct DeprecatedCTypeTraits<::test_vectors::wire::ExampleUseOfVectors> {
-  static constexpr const fidl_type_t* kType =
-      &::test_vectors::wire::test_vectors_ExampleUseOfVectorsTable;
+  static constexpr const fidl_type_t* kType = &::test_vectors::wire::test_vectors_ExampleUseOfVectorsTable;
 };
 
 template <>
@@ -57,86 +56,38 @@ struct TypeTraits<::test_vectors::wire::ExampleUseOfVectors> {
 };
 
 template <>
-struct IsFidlType<::test_vectors::wire::ExampleUseOfVectors>
-    : public std::true_type {};
+struct IsFidlType<::test_vectors::wire::ExampleUseOfVectors> : public std::true_type {};
 template <>
-struct IsStruct<::test_vectors::wire::ExampleUseOfVectors>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::test_vectors::wire::ExampleUseOfVectors>);
-static_assert(offsetof(::test_vectors::wire::ExampleUseOfVectors,
-                       vector_of_uint8) == 0);
-static_assert(offsetof(::test_vectors::wire::ExampleUseOfVectors,
-                       vector_of_vector_of_bool) == 16);
-static_assert(
-    sizeof(::test_vectors::wire::ExampleUseOfVectors) ==
-    TypeTraits<::test_vectors::wire::ExampleUseOfVectors>::kPrimarySize);
+struct IsStruct<::test_vectors::wire::ExampleUseOfVectors> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_vectors::wire::ExampleUseOfVectors>);
+static_assert(offsetof(::test_vectors::wire::ExampleUseOfVectors, vector_of_uint8) == 0);
+static_assert(offsetof(::test_vectors::wire::ExampleUseOfVectors, vector_of_vector_of_bool) == 16);
+static_assert(sizeof(::test_vectors::wire::ExampleUseOfVectors) == TypeTraits<::test_vectors::wire::ExampleUseOfVectors>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<
-    ::test_vectors::wire::ExampleUseOfVectors,
-    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_vectors::wire::ExampleUseOfVectors, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 32;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::WireStructMemberCodingInfo<
-          ::fidl::VectorView<uint8_t>,
-          fidl::internal::WireCodingConstraintVector<
-              fidl::internal::WireCodingConstraintEmpty, false>,
-          IsRecursive>(),
-      ::fidl::internal::WireStructMemberCodingInfo<
-          ::fidl::VectorView<::fidl::VectorView<bool>>,
-          fidl::internal::WireCodingConstraintVector<
-              fidl::internal::WireCodingConstraintVector<
-                  fidl::internal::WireCodingConstraintEmpty, false>,
-              false>,
-          IsRecursive>());
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<::fidl::VectorView<uint8_t>, fidl::internal::WireCodingConstraintVector<fidl::internal::WireCodingConstraintEmpty, false>, IsRecursive>(), ::fidl::internal::WireStructMemberCodingInfo<::fidl::VectorView<::fidl::VectorView<bool>>, fidl::internal::WireCodingConstraintVector<fidl::internal::WireCodingConstraintVector<fidl::internal::WireCodingConstraintEmpty, false>, false>, IsRecursive>());
   static constexpr bool kHasPadding = false;
-  using Base =
-      WireStructCodingTraitsBase<::test_vectors::wire::ExampleUseOfVectors,
-                                 ::fidl::internal::WireCodingConstraintEmpty,
-                                 IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_vectors::wire::ExampleUseOfVectors, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
-  static void Encode(internal::WireEncoder* encoder,
-                     ::test_vectors::wire::ExampleUseOfVectors* value,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Encode(
+      internal::WireEncoder* encoder, ::test_vectors::wire::ExampleUseOfVectors* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value,
-             sizeof(::test_vectors::wire::ExampleUseOfVectors));
+      memcpy(position.As<void>(), value, sizeof(::test_vectors::wire::ExampleUseOfVectors));
     } else {
-      internal::WireCodingTraits<
-          ::fidl::VectorView<uint8_t>,
-          fidl::internal::WireCodingConstraintVector<
-              fidl::internal::WireCodingConstraintEmpty, false>,
-          IsRecursive>::Encode(encoder, &value->vector_of_uint8, position + 0,
-                               recursion_depth);
-      internal::WireCodingTraits<
-          ::fidl::VectorView<::fidl::VectorView<bool>>,
-          fidl::internal::WireCodingConstraintVector<
-              fidl::internal::WireCodingConstraintVector<
-                  fidl::internal::WireCodingConstraintEmpty, false>,
-              false>,
-          IsRecursive>::Encode(encoder, &value->vector_of_vector_of_bool,
-                               position + 16, recursion_depth);
+      internal::WireCodingTraits<::fidl::VectorView<uint8_t>, fidl::internal::WireCodingConstraintVector<fidl::internal::WireCodingConstraintEmpty, false>, IsRecursive>::Encode(encoder, &value->vector_of_uint8, position + 0, recursion_depth);
+      internal::WireCodingTraits<::fidl::VectorView<::fidl::VectorView<bool>>, fidl::internal::WireCodingConstraintVector<fidl::internal::WireCodingConstraintVector<fidl::internal::WireCodingConstraintEmpty, false>, false>, IsRecursive>::Encode(encoder, &value->vector_of_vector_of_bool, position + 16, recursion_depth);
     }
   }
-  static void Decode(internal::WireDecoder* decoder,
-                     ::fidl::internal::WirePosition position,
-                     RecursionDepth<IsRecursive> recursion_depth) {
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (!Base::are_members_memcpy_compatible) {
-      internal::WireCodingTraits<
-          ::fidl::VectorView<uint8_t>,
-          fidl::internal::WireCodingConstraintVector<
-              fidl::internal::WireCodingConstraintEmpty, false>,
-          IsRecursive>::Decode(decoder, position + 0, recursion_depth);
-      internal::WireCodingTraits<
-          ::fidl::VectorView<::fidl::VectorView<bool>>,
-          fidl::internal::WireCodingConstraintVector<
-              fidl::internal::WireCodingConstraintVector<
-                  fidl::internal::WireCodingConstraintEmpty, false>,
-              false>,
-          IsRecursive>::Decode(decoder, position + 16, recursion_depth);
+      internal::WireCodingTraits<::fidl::VectorView<uint8_t>, fidl::internal::WireCodingConstraintVector<fidl::internal::WireCodingConstraintEmpty, false>, IsRecursive>::Decode(
+          decoder, position + 0, recursion_depth);
+      internal::WireCodingTraits<::fidl::VectorView<::fidl::VectorView<bool>>, fidl::internal::WireCodingConstraintVector<fidl::internal::WireCodingConstraintVector<fidl::internal::WireCodingConstraintEmpty, false>, false>, IsRecursive>::Decode(
+          decoder, position + 16, recursion_depth);
     }
   }
 };

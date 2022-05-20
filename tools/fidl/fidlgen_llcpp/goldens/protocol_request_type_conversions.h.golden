@@ -17,24 +17,17 @@ namespace internal {
 #ifdef __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocolrequest::wire::ParentTakeChildRequestRequest,
-    ::test_protocolrequest::ParentTakeChildRequestRequest> {
-  static ::test_protocolrequest::ParentTakeChildRequestRequest ToNatural(
-      ::test_protocolrequest::wire::ParentTakeChildRequestRequest src);
-  static ::test_protocolrequest::wire::ParentTakeChildRequestRequest ToWire(
-      fidl::AnyArena& arena,
-      ::test_protocolrequest::ParentTakeChildRequestRequest src);
+struct WireNaturalConversionTraits<::test_protocolrequest::wire::ParentTakeChildRequestRequest, ::test_protocolrequest::ParentTakeChildRequestRequest> {
+  static ::test_protocolrequest::ParentTakeChildRequestRequest ToNatural(::test_protocolrequest::wire::ParentTakeChildRequestRequest src);
+  static ::test_protocolrequest::wire::ParentTakeChildRequestRequest ToWire(fidl::AnyArena& arena, ::test_protocolrequest::ParentTakeChildRequestRequest src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocolrequest::wire::ParentTakeChildRequestRequest> {
+struct NaturalTypeForWireType<::test_protocolrequest::wire::ParentTakeChildRequestRequest> {
   using type = ::test_protocolrequest::ParentTakeChildRequestRequest;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocolrequest::ParentTakeChildRequestRequest> {
+struct WireTypeForNaturalType<::test_protocolrequest::ParentTakeChildRequestRequest> {
   using type = ::test_protocolrequest::wire::ParentTakeChildRequestRequest;
 };
 
@@ -43,19 +36,13 @@ struct WireTypeForNaturalType<
 #ifdef __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocolrequest::wire::ParentTakeChildRequest,
-    ::test_protocolrequest::ParentTakeChildRequest> {
-  static ::test_protocolrequest::ParentTakeChildRequest ToNatural(
-      ::test_protocolrequest::wire::ParentTakeChildRequest src);
-  static ::test_protocolrequest::wire::ParentTakeChildRequest ToWire(
-      fidl::AnyArena& arena,
-      ::test_protocolrequest::ParentTakeChildRequest src);
+struct WireNaturalConversionTraits<::test_protocolrequest::wire::ParentTakeChildRequest, ::test_protocolrequest::ParentTakeChildRequest> {
+  static ::test_protocolrequest::ParentTakeChildRequest ToNatural(::test_protocolrequest::wire::ParentTakeChildRequest src);
+  static ::test_protocolrequest::wire::ParentTakeChildRequest ToWire(fidl::AnyArena& arena, ::test_protocolrequest::ParentTakeChildRequest src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocolrequest::wire::ParentTakeChildRequest> {
+struct NaturalTypeForWireType<::test_protocolrequest::wire::ParentTakeChildRequest> {
   using type = ::test_protocolrequest::ParentTakeChildRequest;
 };
 template <>
@@ -68,24 +55,17 @@ struct WireTypeForNaturalType<::test_protocolrequest::ParentTakeChildRequest> {
 #ifdef __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocolrequest::wire::ParentGetChildTopResponse,
-    ::test_protocolrequest::ParentGetChildTopResponse> {
-  static ::test_protocolrequest::ParentGetChildTopResponse ToNatural(
-      ::test_protocolrequest::wire::ParentGetChildTopResponse src);
-  static ::test_protocolrequest::wire::ParentGetChildTopResponse ToWire(
-      fidl::AnyArena& arena,
-      ::test_protocolrequest::ParentGetChildTopResponse src);
+struct WireNaturalConversionTraits<::test_protocolrequest::wire::ParentGetChildTopResponse, ::test_protocolrequest::ParentGetChildTopResponse> {
+  static ::test_protocolrequest::ParentGetChildTopResponse ToNatural(::test_protocolrequest::wire::ParentGetChildTopResponse src);
+  static ::test_protocolrequest::wire::ParentGetChildTopResponse ToWire(fidl::AnyArena& arena, ::test_protocolrequest::ParentGetChildTopResponse src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocolrequest::wire::ParentGetChildTopResponse> {
+struct NaturalTypeForWireType<::test_protocolrequest::wire::ParentGetChildTopResponse> {
   using type = ::test_protocolrequest::ParentGetChildTopResponse;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocolrequest::ParentGetChildTopResponse> {
+struct WireTypeForNaturalType<::test_protocolrequest::ParentGetChildTopResponse> {
   using type = ::test_protocolrequest::wire::ParentGetChildTopResponse;
 };
 
@@ -94,24 +74,17 @@ struct WireTypeForNaturalType<
 #ifdef __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocolrequest::wire::ParentGetChildRequestTopResponse,
-    ::test_protocolrequest::ParentGetChildRequestTopResponse> {
-  static ::test_protocolrequest::ParentGetChildRequestTopResponse ToNatural(
-      ::test_protocolrequest::wire::ParentGetChildRequestTopResponse src);
-  static ::test_protocolrequest::wire::ParentGetChildRequestTopResponse ToWire(
-      fidl::AnyArena& arena,
-      ::test_protocolrequest::ParentGetChildRequestTopResponse src);
+struct WireNaturalConversionTraits<::test_protocolrequest::wire::ParentGetChildRequestTopResponse, ::test_protocolrequest::ParentGetChildRequestTopResponse> {
+  static ::test_protocolrequest::ParentGetChildRequestTopResponse ToNatural(::test_protocolrequest::wire::ParentGetChildRequestTopResponse src);
+  static ::test_protocolrequest::wire::ParentGetChildRequestTopResponse ToWire(fidl::AnyArena& arena, ::test_protocolrequest::ParentGetChildRequestTopResponse src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocolrequest::wire::ParentGetChildRequestTopResponse> {
+struct NaturalTypeForWireType<::test_protocolrequest::wire::ParentGetChildRequestTopResponse> {
   using type = ::test_protocolrequest::ParentGetChildRequestTopResponse;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocolrequest::ParentGetChildRequestTopResponse> {
+struct WireTypeForNaturalType<::test_protocolrequest::ParentGetChildRequestTopResponse> {
   using type = ::test_protocolrequest::wire::ParentGetChildRequestTopResponse;
 };
 
@@ -120,145 +93,93 @@ struct WireTypeForNaturalType<
 #ifdef __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireRequest<::test_protocolrequest::Parent::GetChild>,
-    ::fidl::Request<::test_protocolrequest::Parent::GetChild>> {
-  static ::fidl::Request<::test_protocolrequest::Parent::GetChild> ToNatural(
-      ::fidl::WireRequest<::test_protocolrequest::Parent::GetChild> src);
-  static ::fidl::WireRequest<::test_protocolrequest::Parent::GetChild> ToWire(
-      fidl::AnyArena& arena,
-      ::fidl::Request<::test_protocolrequest::Parent::GetChild> src);
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_protocolrequest::Parent::GetChild>, ::fidl::Request<::test_protocolrequest::Parent::GetChild>> {
+  static ::fidl::Request<::test_protocolrequest::Parent::GetChild> ToNatural(::fidl::WireRequest<::test_protocolrequest::Parent::GetChild> src);
+  static ::fidl::WireRequest<::test_protocolrequest::Parent::GetChild> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocolrequest::Parent::GetChild> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireRequest<::test_protocolrequest::Parent::GetChild>> {
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_protocolrequest::Parent::GetChild>> {
   using type = ::fidl::Request<::test_protocolrequest::Parent::GetChild>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Request<::test_protocolrequest::Parent::GetChild>> {
+struct WireTypeForNaturalType<::fidl::Request<::test_protocolrequest::Parent::GetChild>> {
   using type = ::fidl::WireRequest<::test_protocolrequest::Parent::GetChild>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest>,
-    ::fidl::Request<::test_protocolrequest::Parent::GetChildRequest>> {
-  static ::fidl::Request<::test_protocolrequest::Parent::GetChildRequest>
-  ToNatural(
-      ::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest> src);
-  static ::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest>
-  ToWire(fidl::AnyArena& arena,
-         ::fidl::Request<::test_protocolrequest::Parent::GetChildRequest> src);
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest>, ::fidl::Request<::test_protocolrequest::Parent::GetChildRequest>> {
+  static ::fidl::Request<::test_protocolrequest::Parent::GetChildRequest> ToNatural(::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest> src);
+  static ::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocolrequest::Parent::GetChildRequest> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest>> {
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest>> {
   using type = ::fidl::Request<::test_protocolrequest::Parent::GetChildRequest>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Request<::test_protocolrequest::Parent::GetChildRequest>> {
-  using type =
-      ::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest>;
+struct WireTypeForNaturalType<::fidl::Request<::test_protocolrequest::Parent::GetChildRequest>> {
+  using type = ::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>,
-    ::fidl::Request<::test_protocolrequest::Parent::TakeChild>> {
-  static ::fidl::Request<::test_protocolrequest::Parent::TakeChild> ToNatural(
-      ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild> src);
-  static ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild> ToWire(
-      fidl::AnyArena& arena,
-      ::fidl::Request<::test_protocolrequest::Parent::TakeChild> src);
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>, ::fidl::Request<::test_protocolrequest::Parent::TakeChild>> {
+  static ::fidl::Request<::test_protocolrequest::Parent::TakeChild> ToNatural(::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild> src);
+  static ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocolrequest::Parent::TakeChild> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>> {
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>> {
   using type = ::fidl::Request<::test_protocolrequest::Parent::TakeChild>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Request<::test_protocolrequest::Parent::TakeChild>> {
+struct WireTypeForNaturalType<::fidl::Request<::test_protocolrequest::Parent::TakeChild>> {
   using type = ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>,
-    ::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest>> {
-  static ::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest>
-  ToNatural(
-      ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>
-          src);
-  static ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>
-  ToWire(fidl::AnyArena& arena,
-         ::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest> src);
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>, ::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest>> {
+  static ::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest> ToNatural(::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest> src);
+  static ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>> {
-  using type =
-      ::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest>;
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>> {
+  using type = ::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest>> {
-  using type =
-      ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>;
+struct WireTypeForNaturalType<::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest>> {
+  using type = ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>,
-    ::fidl::Response<::test_protocolrequest::Parent::GetChild>> {
-  static ::fidl::Response<::test_protocolrequest::Parent::GetChild> ToNatural(
-      ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild> src);
-  static ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild> ToWire(
-      fidl::AnyArena& arena,
-      ::fidl::Response<::test_protocolrequest::Parent::GetChild> src);
+struct WireNaturalConversionTraits<::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>, ::fidl::Response<::test_protocolrequest::Parent::GetChild>> {
+  static ::fidl::Response<::test_protocolrequest::Parent::GetChild> ToNatural(::fidl::WireResponse<::test_protocolrequest::Parent::GetChild> src);
+  static ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild> ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_protocolrequest::Parent::GetChild> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>> {
+struct NaturalTypeForWireType<::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>> {
   using type = ::fidl::Response<::test_protocolrequest::Parent::GetChild>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Response<::test_protocolrequest::Parent::GetChild>> {
+struct WireTypeForNaturalType<::fidl::Response<::test_protocolrequest::Parent::GetChild>> {
   using type = ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>,
-    ::fidl::Response<::test_protocolrequest::Parent::GetChildRequest>> {
-  static ::fidl::Response<::test_protocolrequest::Parent::GetChildRequest>
-  ToNatural(
-      ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>
-          src);
-  static ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>
-  ToWire(fidl::AnyArena& arena,
-         ::fidl::Response<::test_protocolrequest::Parent::GetChildRequest> src);
+struct WireNaturalConversionTraits<::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>, ::fidl::Response<::test_protocolrequest::Parent::GetChildRequest>> {
+  static ::fidl::Response<::test_protocolrequest::Parent::GetChildRequest> ToNatural(::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest> src);
+  static ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest> ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_protocolrequest::Parent::GetChildRequest> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>> {
-  using type =
-      ::fidl::Response<::test_protocolrequest::Parent::GetChildRequest>;
+struct NaturalTypeForWireType<::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>> {
+  using type = ::fidl::Response<::test_protocolrequest::Parent::GetChildRequest>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Response<::test_protocolrequest::Parent::GetChildRequest>> {
-  using type =
-      ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>;
+struct WireTypeForNaturalType<::fidl::Response<::test_protocolrequest::Parent::GetChildRequest>> {
+  using type = ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>;
 };
 #endif  // __Fuchsia__
 }  // namespace internal

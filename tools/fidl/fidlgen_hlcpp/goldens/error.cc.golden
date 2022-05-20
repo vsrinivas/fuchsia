@@ -10,26 +10,20 @@
 namespace test {
 namespace error {
 extern "C" const fidl_type_t test_error_Example_foo_ResponseTable;
-const fidl_type_t* Example_foo_Response::FidlType =
-    &test_error_Example_foo_ResponseTable;
+const fidl_type_t* Example_foo_Response::FidlType = &test_error_Example_foo_ResponseTable;
 
-void Example_foo_Response::Encode(
-    ::fidl::Encoder* _encoder, size_t _offset,
-    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+void Example_foo_Response::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                                  cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<Example_foo_Response>::value) {
-    memcpy(_encoder->template GetPtr<Example_foo_Response>(_offset), this,
-           sizeof(Example_foo_Response));
+    memcpy(_encoder->template GetPtr<Example_foo_Response>(_offset), this, sizeof(Example_foo_Response));
   } else {
     ::fidl::Encode(_encoder, &y, _offset + 0);
   }
 }
 
-void Example_foo_Response::Decode(::fidl::Decoder* _decoder,
-                                  Example_foo_Response* _value,
-                                  size_t _offset) {
+void Example_foo_Response::Decode(::fidl::Decoder* _decoder, Example_foo_Response* _value, size_t _offset) {
   if (::fidl::IsMemcpyCompatible<Example_foo_Response>::value) {
-    memcpy(_value, _decoder->template GetPtr<Example_foo_Response>(_offset),
-           sizeof(Example_foo_Response));
+    memcpy(_value, _decoder->template GetPtr<Example_foo_Response>(_offset), sizeof(Example_foo_Response));
   } else {
     ::fidl::Decode(_decoder, &_value->y, _offset + 0);
   }
@@ -37,20 +31,21 @@ void Example_foo_Response::Decode(::fidl::Decoder* _decoder,
 
 zx_status_t Example_foo_Response::Clone(Example_foo_Response* _result) const {
   zx_status_t _status = ::fidl::Clone(y, &_result->y);
-  if (_status != ZX_OK) return _status;
+  if (_status != ZX_OK)
+    return _status;
   return ZX_OK;
 }
 
 extern "C" const fidl_type_t test_error_Example_foo_ResultTable;
-const fidl_type_t* Example_foo_Result::FidlType =
-    &test_error_Example_foo_ResultTable;
+const fidl_type_t* Example_foo_Result::FidlType = &test_error_Example_foo_ResultTable;
 
 Example_foo_Result::Example_foo_Result() {}
 
-Example_foo_Result::~Example_foo_Result() { Destroy(); }
+Example_foo_Result::~Example_foo_Result() {
+  Destroy();
+}
 
-Example_foo_Result::Example_foo_Result(Example_foo_Result&& other)
-    : tag_(other.tag_) {
+Example_foo_Result::Example_foo_Result(Example_foo_Result&& other) : tag_(other.tag_) {
   switch (tag_) {
     case ::test::error::Example_foo_Result::Tag::kResponse:
       new (&response_)::test::error::Example_foo_Response();
@@ -59,8 +54,7 @@ Example_foo_Result::Example_foo_Result(Example_foo_Result&& other)
     case ::test::error::Example_foo_Result::Tag::kErr:
       err_ = std::move(other.err_);
       break;
-    case static_cast<fidl_xunion_tag_t>(
-        ::test::error::Example_foo_Result::Tag::Invalid):
+    case static_cast<fidl_xunion_tag_t>(::test::error::Example_foo_Result::Tag::Invalid):
       break;
   }
 }
@@ -77,16 +71,14 @@ Example_foo_Result& Example_foo_Result::operator=(Example_foo_Result&& other) {
       case ::test::error::Example_foo_Result::Tag::kErr:
         err_ = std::move(other.err_);
         break;
-      case static_cast<fidl_xunion_tag_t>(
-          ::test::error::Example_foo_Result::Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(::test::error::Example_foo_Result::Tag::Invalid):
         break;
     }
   }
   return *this;
 }
 
-Example_foo_Result Example_foo_Result::WithResponse(
-    ::test::error::Example_foo_Response&& val) {
+Example_foo_Result Example_foo_Result::WithResponse(::test::error::Example_foo_Response&& val) {
   Example_foo_Result result;
   result.set_response(std::move(val));
   return result;
@@ -97,67 +89,55 @@ Example_foo_Result Example_foo_Result::WithErr(uint32_t&& val) {
   return result;
 }
 
-void Example_foo_Result::Encode(
-    ::fidl::Encoder* encoder, size_t offset,
-    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+void Example_foo_Result::Encode(::fidl::Encoder* encoder, size_t offset,
+                                cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
   switch (Which()) {
     case ::test::error::Example_foo_Result::Tag::kResponse: {
-      if (::fidl::EncodingInlineSize<::test::error::Example_foo_Response>(
-              encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-        ::fidl::Encode(encoder, &response_,
-                       offset + offsetof(fidl_xunion_v2_t, envelope));
+      if (::fidl::EncodingInlineSize<::test::error::Example_foo_Response>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+        ::fidl::Encode(encoder, &response_, offset + offsetof(fidl_xunion_v2_t, envelope));
 
         fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
         xunion->tag = tag_;
-        xunion->envelope.num_handles = static_cast<uint16_t>(
-            encoder->CurrentHandleCount() - handles_before);
+        xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
         xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
         break;
       }
 
       ::fidl::Encode(
-          encoder, &response_,
-          encoder->Alloc(
-              ::fidl::EncodingInlineSize<::test::error::Example_foo_Response,
-                                         ::fidl::Encoder>(encoder)));
+          encoder,
+          &response_,
+          encoder->Alloc(::fidl::EncodingInlineSize<::test::error::Example_foo_Response, ::fidl::Encoder>(encoder)));
 
       fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
       xunion->tag = tag_;
-      xunion->envelope.num_bytes =
-          static_cast<uint32_t>(encoder->CurrentLength() - length_before);
-      xunion->envelope.num_handles =
-          static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
+      xunion->envelope.num_bytes = static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+      xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
       xunion->envelope.flags = 0;
       break;
     }
     case ::test::error::Example_foo_Result::Tag::kErr: {
-      if (::fidl::EncodingInlineSize<uint32_t>(encoder) <=
-          FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-        ::fidl::Encode(encoder, &err_,
-                       offset + offsetof(fidl_xunion_v2_t, envelope));
+      if (::fidl::EncodingInlineSize<uint32_t>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+        ::fidl::Encode(encoder, &err_, offset + offsetof(fidl_xunion_v2_t, envelope));
 
         fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
         xunion->tag = tag_;
-        xunion->envelope.num_handles = static_cast<uint16_t>(
-            encoder->CurrentHandleCount() - handles_before);
+        xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
         xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
         break;
       }
 
       ::fidl::Encode(
-          encoder, &err_,
-          encoder->Alloc(
-              ::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(encoder)));
+          encoder,
+          &err_,
+          encoder->Alloc(::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(encoder)));
 
       fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
       xunion->tag = tag_;
-      xunion->envelope.num_bytes =
-          static_cast<uint32_t>(encoder->CurrentLength() - length_before);
-      xunion->envelope.num_handles =
-          static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
+      xunion->envelope.num_bytes = static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+      xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
       xunion->envelope.flags = 0;
       break;
     }
@@ -166,14 +146,13 @@ void Example_foo_Result::Encode(
   }
 }
 
-void Example_foo_Result::Decode(::fidl::Decoder* _decoder,
-                                Example_foo_Result* value, size_t offset) {
+void Example_foo_Result::Decode(::fidl::Decoder* _decoder, Example_foo_Result* value, size_t offset) {
   fidl_xunion_v2_t* xunion = _decoder->GetPtr<fidl_xunion_v2_t>(offset);
 
-  if (xunion->envelope.num_bytes == 0 && xunion->envelope.num_handles == 0 &&
+  if (xunion->envelope.num_bytes == 0 &&
+      xunion->envelope.num_handles == 0 &&
       xunion->envelope.flags == 0) {
-    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
-        ::test::error::Example_foo_Result::Tag::Invalid));
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(::test::error::Example_foo_Result::Tag::Invalid));
     return;
   }
 
@@ -213,8 +192,7 @@ zx_status_t Example_foo_Result::Clone(Example_foo_Result* result) const {
   }
 }
 
-Example_foo_Result& Example_foo_Result::set_response(
-    ::test::error::Example_foo_Response value) {
+Example_foo_Result& Example_foo_Result::set_response(::test::error::Example_foo_Response value) {
   EnsureStorageInitialized(::test::error::Example_foo_Result::Tag::kResponse);
   response_ = std::move(value);
   return *this;
@@ -237,8 +215,7 @@ void Example_foo_Result::Destroy() {
     default:
       break;
   }
-  tag_ = static_cast<fidl_xunion_tag_t>(
-      ::test::error::Example_foo_Result::Tag::Invalid);
+  tag_ = static_cast<fidl_xunion_tag_t>(::test::error::Example_foo_Result::Tag::Invalid);
 }
 
 void Example_foo_Result::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
@@ -246,8 +223,7 @@ void Example_foo_Result::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     Destroy();
     tag_ = tag;
     switch (tag_) {
-      case static_cast<fidl_xunion_tag_t>(
-          ::test::error::Example_foo_Result::Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(::test::error::Example_foo_Result::Tag::Invalid):
         break;
       case ::test::error::Example_foo_Result::Tag::kResponse:
         new (&response_)::test::error::Example_foo_Response();
@@ -262,26 +238,20 @@ void Example_foo_Result::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
 }
 
 extern "C" const fidl_type_t test_error_ExampleFooTopResponseTable;
-const fidl_type_t* ExampleFooTopResponse::FidlType =
-    &test_error_ExampleFooTopResponseTable;
+const fidl_type_t* ExampleFooTopResponse::FidlType = &test_error_ExampleFooTopResponseTable;
 
-void ExampleFooTopResponse::Encode(
-    ::fidl::Encoder* _encoder, size_t _offset,
-    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+void ExampleFooTopResponse::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                                   cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<ExampleFooTopResponse>::value) {
-    memcpy(_encoder->template GetPtr<ExampleFooTopResponse>(_offset), this,
-           sizeof(ExampleFooTopResponse));
+    memcpy(_encoder->template GetPtr<ExampleFooTopResponse>(_offset), this, sizeof(ExampleFooTopResponse));
   } else {
     ::fidl::Encode(_encoder, &result, _offset + 0);
   }
 }
 
-void ExampleFooTopResponse::Decode(::fidl::Decoder* _decoder,
-                                   ExampleFooTopResponse* _value,
-                                   size_t _offset) {
+void ExampleFooTopResponse::Decode(::fidl::Decoder* _decoder, ExampleFooTopResponse* _value, size_t _offset) {
   if (::fidl::IsMemcpyCompatible<ExampleFooTopResponse>::value) {
-    memcpy(_value, _decoder->template GetPtr<ExampleFooTopResponse>(_offset),
-           sizeof(ExampleFooTopResponse));
+    memcpy(_value, _decoder->template GetPtr<ExampleFooTopResponse>(_offset), sizeof(ExampleFooTopResponse));
   } else {
     ::fidl::Decode(_decoder, &_value->result, _offset + 0);
   }
@@ -289,30 +259,26 @@ void ExampleFooTopResponse::Decode(::fidl::Decoder* _decoder,
 
 zx_status_t ExampleFooTopResponse::Clone(ExampleFooTopResponse* _result) const {
   zx_status_t _status = ::fidl::Clone(result, &_result->result);
-  if (_status != ZX_OK) return _status;
+  if (_status != ZX_OK)
+    return _status;
   return ZX_OK;
 }
 
 extern "C" const fidl_type_t test_error_ExampleFooRequestTable;
-const fidl_type_t* ExampleFooRequest::FidlType =
-    &test_error_ExampleFooRequestTable;
+const fidl_type_t* ExampleFooRequest::FidlType = &test_error_ExampleFooRequestTable;
 
-void ExampleFooRequest::Encode(
-    ::fidl::Encoder* _encoder, size_t _offset,
-    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+void ExampleFooRequest::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                               cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<ExampleFooRequest>::value) {
-    memcpy(_encoder->template GetPtr<ExampleFooRequest>(_offset), this,
-           sizeof(ExampleFooRequest));
+    memcpy(_encoder->template GetPtr<ExampleFooRequest>(_offset), this, sizeof(ExampleFooRequest));
   } else {
     ::fidl::Encode(_encoder, &s, _offset + 0);
   }
 }
 
-void ExampleFooRequest::Decode(::fidl::Decoder* _decoder,
-                               ExampleFooRequest* _value, size_t _offset) {
+void ExampleFooRequest::Decode(::fidl::Decoder* _decoder, ExampleFooRequest* _value, size_t _offset) {
   if (::fidl::IsMemcpyCompatible<ExampleFooRequest>::value) {
-    memcpy(_value, _decoder->template GetPtr<ExampleFooRequest>(_offset),
-           sizeof(ExampleFooRequest));
+    memcpy(_value, _decoder->template GetPtr<ExampleFooRequest>(_offset), sizeof(ExampleFooRequest));
   } else {
     ::fidl::Decode(_decoder, &_value->s, _offset + 0);
   }
@@ -320,7 +286,8 @@ void ExampleFooRequest::Decode(::fidl::Decoder* _decoder,
 
 zx_status_t ExampleFooRequest::Clone(ExampleFooRequest* _result) const {
   zx_status_t _status = ::fidl::Clone(s, &_result->s);
-  if (_status != ZX_OK) return _status;
+  if (_status != ZX_OK)
+    return _status;
   return ZX_OK;
 }
 
@@ -336,8 +303,7 @@ __LOCAL extern "C" const fidl_type_t test_error_ExampleFooTopResponseTable;
 }  // namespace _internal
 Example::~Example() = default;
 
-const fidl_type_t* ::test::error::Example_RequestDecoder::GetType(
-    uint64_t ordinal, bool* out_needs_response) {
+const fidl_type_t* ::test::error::Example_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
   *out_needs_response = false;
   switch (ordinal) {
     case ::test::error::internal::kExample_foo_Ordinal:
@@ -388,11 +354,9 @@ Example_foo_ResponseHandler(Example::fooCallback&& callback) {
   ZX_DEBUG_ASSERT_MSG(callback,
                       "Callback must not be empty for Example::foo\n");
   return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
-      [callback_ =
-           std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
+      [callback_ = std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
         ::fidl::Decoder decoder(std::move(message));
-        callback_(::fidl::DecodeAs<::test::error::Example_foo_Result>(
-            &decoder, 0 + sizeof(fidl_message_header_t)));
+        callback_(::fidl::DecodeAs<::test::error::Example_foo_Result>(&decoder, 0 + sizeof(fidl_message_header_t)));
         return ZX_OK;
       },
       &::test::error::_internal::test_error_ExampleFooTopResponseTable);
@@ -400,18 +364,12 @@ Example_foo_ResponseHandler(Example::fooCallback&& callback) {
 
 }  // namespace
 void Example_Proxy::foo(::std::string s, fooCallback callback) {
-  ::fidl::MessageEncoder _encoder(
-      ::test::error::internal::kExample_foo_Ordinal,
-      ::test::error::internal::kExample_foo_DynamicFlags);
-  const fidl_type_t* req_type =
-      &::test::error::_internal::test_error_ExampleFooRequestTable;
-  controller_->Send(req_type,
-                    ::test::error::Example_RequestEncoder::foo(&_encoder, &s),
-                    Example_foo_ResponseHandler(std::move(callback)));
+  ::fidl::MessageEncoder _encoder(::test::error::internal::kExample_foo_Ordinal, ::test::error::internal::kExample_foo_DynamicFlags);
+  const fidl_type_t* req_type = &::test::error::_internal::test_error_ExampleFooRequestTable;
+  controller_->Send(req_type, ::test::error::Example_RequestEncoder::foo(&_encoder, &s), Example_foo_ResponseHandler(std::move(callback)));
 }
 
-Example_Stub::Example_Stub(::test::error::Example_Stub::Example_clazz* impl)
-    : impl_(impl) {
+Example_Stub::Example_Stub(::test::error::Example_Stub::Example_clazz* impl) : impl_(impl) {
   (void)impl_;
 }
 
@@ -425,13 +383,9 @@ class Example_foo_Responder final {
       : response_(std::move(response)) {}
 
   void operator()(::test::error::Example_foo_Result result) {
-    ::fidl::MessageEncoder _encoder(
-        ::test::error::internal::kExample_foo_Ordinal,
-        ::test::error::internal::kExample_foo_DynamicFlags);
-    const fidl_type_t* resp_type =
-        &::test::error::_internal::test_error_ExampleFooTopResponseTable;
-    response_.Send(resp_type, ::test::error::Example_ResponseEncoder::foo(
-                                  &_encoder, &result));
+    ::fidl::MessageEncoder _encoder(::test::error::internal::kExample_foo_Ordinal, ::test::error::internal::kExample_foo_DynamicFlags);
+    const fidl_type_t* resp_type = &::test::error::_internal::test_error_ExampleFooTopResponseTable;
+    response_.Send(resp_type, ::test::error::Example_ResponseEncoder::foo(&_encoder, &result));
   }
 
  private:
@@ -444,9 +398,7 @@ zx_status_t Example_Stub::Dispatch_(
     ::fidl::HLCPPIncomingMessage message,
     ::fidl::internal::PendingResponse response) {
   bool needs_response;
-  const fidl_type_t* request_type =
-      ::test::error::Example_RequestDecoder::GetType(message.ordinal(),
-                                                     &needs_response);
+  const fidl_type_t* request_type = ::test::error::Example_RequestDecoder::GetType(message.ordinal(), &needs_response);
   if (!message.has_only_header()) {
     if (request_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
@@ -461,11 +413,9 @@ zx_status_t Example_Stub::Dispatch_(
 
   if (response.needs_response() != needs_response) {
     if (needs_response) {
-      FIDL_REPORT_DECODING_ERROR(message, request_type,
-                                 "Message needing a response with no txid");
+      FIDL_REPORT_DECODING_ERROR(message, request_type, "Message needing a response with no txid");
     } else {
-      FIDL_REPORT_DECODING_ERROR(message, request_type,
-                                 "Message not needing a response with a txid");
+      FIDL_REPORT_DECODING_ERROR(message, request_type, "Message not needing a response with a txid");
     }
     return ZX_ERR_INVALID_ARGS;
   }
@@ -474,9 +424,7 @@ zx_status_t Example_Stub::Dispatch_(
   switch (ordinal) {
     case ::test::error::internal::kExample_foo_Ordinal: {
       ::fidl::Decoder decoder(std::move(message));
-      impl_->foo(::fidl::DecodeAs<::std::string>(
-                     &decoder, 0 + sizeof(fidl_message_header_t)),
-                 Example_foo_Responder(std::move(response)));
+      impl_->foo(::fidl::DecodeAs<::std::string>(&decoder, 0 + sizeof(fidl_message_header_t)), Example_foo_Responder(std::move(response)));
       break;
     }
     default: {
@@ -491,24 +439,17 @@ Example_SyncProxy::Example_SyncProxy(::zx::channel channel)
 
 Example_SyncProxy::~Example_SyncProxy() = default;
 
-zx_status_t Example_SyncProxy::foo(
-    ::std::string s, ::test::error::Example_foo_Result* out_result) {
-  ::fidl::MessageEncoder _encoder(
-      ::test::error::internal::kExample_foo_Ordinal,
-      ::test::error::internal::kExample_foo_DynamicFlags);
+zx_status_t Example_SyncProxy::foo(::std::string s, ::test::error::Example_foo_Result* out_result) {
+  ::fidl::MessageEncoder _encoder(::test::error::internal::kExample_foo_Ordinal, ::test::error::internal::kExample_foo_DynamicFlags);
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
-  const fidl_type_t* req_type =
-      &::test::error::_internal::test_error_ExampleFooRequestTable;
-  const fidl_type_t* resp_type =
-      &::test::error::_internal::test_error_ExampleFooTopResponseTable;
-  zx_status_t status_ = proxy_.Call(
-      req_type, resp_type,
-      ::test::error::Example_RequestEncoder::foo(&_encoder, &s), &response_);
-  if (status_ != ZX_OK) return status_;
+  const fidl_type_t* req_type = &::test::error::_internal::test_error_ExampleFooRequestTable;
+  const fidl_type_t* resp_type = &::test::error::_internal::test_error_ExampleFooTopResponseTable;
+  zx_status_t status_ = proxy_.Call(req_type, resp_type, ::test::error::Example_RequestEncoder::foo(&_encoder, &s), &response_);
+  if (status_ != ZX_OK)
+    return status_;
   ::fidl::Decoder decoder_(std::move(response_));
-  *out_result = ::fidl::DecodeAs<::test::error::Example_foo_Result>(
-      &decoder_, 0 + sizeof(fidl_message_header_t));
+  *out_result = ::fidl::DecodeAs<::test::error::Example_foo_Result>(&decoder_, 0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
 #endif  // __Fuchsia__

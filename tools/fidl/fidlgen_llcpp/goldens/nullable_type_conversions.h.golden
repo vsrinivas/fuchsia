@@ -15,13 +15,9 @@ namespace fidl {
 namespace internal {
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_nullable::wire::StructWithNullableVector,
-    ::test_nullable::StructWithNullableVector> {
-  static ::test_nullable::StructWithNullableVector ToNatural(
-      ::test_nullable::wire::StructWithNullableVector src);
-  static ::test_nullable::wire::StructWithNullableVector ToWire(
-      fidl::AnyArena& arena, ::test_nullable::StructWithNullableVector src);
+struct WireNaturalConversionTraits<::test_nullable::wire::StructWithNullableVector, ::test_nullable::StructWithNullableVector> {
+  static ::test_nullable::StructWithNullableVector ToNatural(::test_nullable::wire::StructWithNullableVector src);
+  static ::test_nullable::wire::StructWithNullableVector ToWire(fidl::AnyArena& arena, ::test_nullable::StructWithNullableVector src);
 };
 
 template <>
@@ -34,13 +30,9 @@ struct WireTypeForNaturalType<::test_nullable::StructWithNullableVector> {
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_nullable::wire::StructWithNullableUnion,
-    ::test_nullable::StructWithNullableUnion> {
-  static ::test_nullable::StructWithNullableUnion ToNatural(
-      ::test_nullable::wire::StructWithNullableUnion src);
-  static ::test_nullable::wire::StructWithNullableUnion ToWire(
-      fidl::AnyArena& arena, ::test_nullable::StructWithNullableUnion src);
+struct WireNaturalConversionTraits<::test_nullable::wire::StructWithNullableUnion, ::test_nullable::StructWithNullableUnion> {
+  static ::test_nullable::StructWithNullableUnion ToNatural(::test_nullable::wire::StructWithNullableUnion src);
+  static ::test_nullable::wire::StructWithNullableUnion ToWire(fidl::AnyArena& arena, ::test_nullable::StructWithNullableUnion src);
 };
 
 template <>
@@ -53,13 +45,9 @@ struct WireTypeForNaturalType<::test_nullable::StructWithNullableUnion> {
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_nullable::wire::StructWithNullableStruct,
-    ::test_nullable::StructWithNullableStruct> {
-  static ::test_nullable::StructWithNullableStruct ToNatural(
-      ::test_nullable::wire::StructWithNullableStruct src);
-  static ::test_nullable::wire::StructWithNullableStruct ToWire(
-      fidl::AnyArena& arena, ::test_nullable::StructWithNullableStruct src);
+struct WireNaturalConversionTraits<::test_nullable::wire::StructWithNullableStruct, ::test_nullable::StructWithNullableStruct> {
+  static ::test_nullable::StructWithNullableStruct ToNatural(::test_nullable::wire::StructWithNullableStruct src);
+  static ::test_nullable::wire::StructWithNullableStruct ToWire(fidl::AnyArena& arena, ::test_nullable::StructWithNullableStruct src);
 };
 
 template <>
@@ -72,13 +60,9 @@ struct WireTypeForNaturalType<::test_nullable::StructWithNullableStruct> {
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_nullable::wire::StructWithNullableString,
-    ::test_nullable::StructWithNullableString> {
-  static ::test_nullable::StructWithNullableString ToNatural(
-      ::test_nullable::wire::StructWithNullableString src);
-  static ::test_nullable::wire::StructWithNullableString ToWire(
-      fidl::AnyArena& arena, ::test_nullable::StructWithNullableString src);
+struct WireNaturalConversionTraits<::test_nullable::wire::StructWithNullableString, ::test_nullable::StructWithNullableString> {
+  static ::test_nullable::StructWithNullableString ToNatural(::test_nullable::wire::StructWithNullableString src);
+  static ::test_nullable::wire::StructWithNullableString ToWire(fidl::AnyArena& arena, ::test_nullable::StructWithNullableString src);
 };
 
 template <>
@@ -93,18 +77,13 @@ struct WireTypeForNaturalType<::test_nullable::StructWithNullableString> {
 #ifdef __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_nullable::wire::StructWithNullableRequest,
-    ::test_nullable::StructWithNullableRequest> {
-  static ::test_nullable::StructWithNullableRequest ToNatural(
-      ::test_nullable::wire::StructWithNullableRequest src);
-  static ::test_nullable::wire::StructWithNullableRequest ToWire(
-      fidl::AnyArena& arena, ::test_nullable::StructWithNullableRequest src);
+struct WireNaturalConversionTraits<::test_nullable::wire::StructWithNullableRequest, ::test_nullable::StructWithNullableRequest> {
+  static ::test_nullable::StructWithNullableRequest ToNatural(::test_nullable::wire::StructWithNullableRequest src);
+  static ::test_nullable::wire::StructWithNullableRequest ToWire(fidl::AnyArena& arena, ::test_nullable::StructWithNullableRequest src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_nullable::wire::StructWithNullableRequest> {
+struct NaturalTypeForWireType<::test_nullable::wire::StructWithNullableRequest> {
   using type = ::test_nullable::StructWithNullableRequest;
 };
 template <>
@@ -117,18 +96,13 @@ struct WireTypeForNaturalType<::test_nullable::StructWithNullableRequest> {
 #ifdef __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_nullable::wire::StructWithNullableProtocol,
-    ::test_nullable::StructWithNullableProtocol> {
-  static ::test_nullable::StructWithNullableProtocol ToNatural(
-      ::test_nullable::wire::StructWithNullableProtocol src);
-  static ::test_nullable::wire::StructWithNullableProtocol ToWire(
-      fidl::AnyArena& arena, ::test_nullable::StructWithNullableProtocol src);
+struct WireNaturalConversionTraits<::test_nullable::wire::StructWithNullableProtocol, ::test_nullable::StructWithNullableProtocol> {
+  static ::test_nullable::StructWithNullableProtocol ToNatural(::test_nullable::wire::StructWithNullableProtocol src);
+  static ::test_nullable::wire::StructWithNullableProtocol ToWire(fidl::AnyArena& arena, ::test_nullable::StructWithNullableProtocol src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_nullable::wire::StructWithNullableProtocol> {
+struct NaturalTypeForWireType<::test_nullable::wire::StructWithNullableProtocol> {
   using type = ::test_nullable::StructWithNullableProtocol;
 };
 template <>
@@ -141,13 +115,9 @@ struct WireTypeForNaturalType<::test_nullable::StructWithNullableProtocol> {
 #ifdef __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_nullable::wire::StructWithNullableHandle,
-    ::test_nullable::StructWithNullableHandle> {
-  static ::test_nullable::StructWithNullableHandle ToNatural(
-      ::test_nullable::wire::StructWithNullableHandle src);
-  static ::test_nullable::wire::StructWithNullableHandle ToWire(
-      fidl::AnyArena& arena, ::test_nullable::StructWithNullableHandle src);
+struct WireNaturalConversionTraits<::test_nullable::wire::StructWithNullableHandle, ::test_nullable::StructWithNullableHandle> {
+  static ::test_nullable::StructWithNullableHandle ToNatural(::test_nullable::wire::StructWithNullableHandle src);
+  static ::test_nullable::wire::StructWithNullableHandle ToWire(fidl::AnyArena& arena, ::test_nullable::StructWithNullableHandle src);
 };
 
 template <>
@@ -162,18 +132,13 @@ struct WireTypeForNaturalType<::test_nullable::StructWithNullableHandle> {
 #endif  // __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_nullable::wire::SimpleProtocolAddTopResponse,
-    ::test_nullable::SimpleProtocolAddTopResponse> {
-  static ::test_nullable::SimpleProtocolAddTopResponse ToNatural(
-      ::test_nullable::wire::SimpleProtocolAddTopResponse src);
-  static ::test_nullable::wire::SimpleProtocolAddTopResponse ToWire(
-      fidl::AnyArena& arena, ::test_nullable::SimpleProtocolAddTopResponse src);
+struct WireNaturalConversionTraits<::test_nullable::wire::SimpleProtocolAddTopResponse, ::test_nullable::SimpleProtocolAddTopResponse> {
+  static ::test_nullable::SimpleProtocolAddTopResponse ToNatural(::test_nullable::wire::SimpleProtocolAddTopResponse src);
+  static ::test_nullable::wire::SimpleProtocolAddTopResponse ToWire(fidl::AnyArena& arena, ::test_nullable::SimpleProtocolAddTopResponse src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_nullable::wire::SimpleProtocolAddTopResponse> {
+struct NaturalTypeForWireType<::test_nullable::wire::SimpleProtocolAddTopResponse> {
   using type = ::test_nullable::SimpleProtocolAddTopResponse;
 };
 template <>
@@ -182,13 +147,9 @@ struct WireTypeForNaturalType<::test_nullable::SimpleProtocolAddTopResponse> {
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_nullable::wire::SimpleProtocolAddRequest,
-    ::test_nullable::SimpleProtocolAddRequest> {
-  static ::test_nullable::SimpleProtocolAddRequest ToNatural(
-      ::test_nullable::wire::SimpleProtocolAddRequest src);
-  static ::test_nullable::wire::SimpleProtocolAddRequest ToWire(
-      fidl::AnyArena& arena, ::test_nullable::SimpleProtocolAddRequest src);
+struct WireNaturalConversionTraits<::test_nullable::wire::SimpleProtocolAddRequest, ::test_nullable::SimpleProtocolAddRequest> {
+  static ::test_nullable::SimpleProtocolAddRequest ToNatural(::test_nullable::wire::SimpleProtocolAddRequest src);
+  static ::test_nullable::wire::SimpleProtocolAddRequest ToWire(fidl::AnyArena& arena, ::test_nullable::SimpleProtocolAddRequest src);
 };
 
 template <>
@@ -201,12 +162,9 @@ struct WireTypeForNaturalType<::test_nullable::SimpleProtocolAddRequest> {
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_nullable::wire::Int32Wrapper,
-                                   ::test_nullable::Int32Wrapper> {
-  static ::test_nullable::Int32Wrapper ToNatural(
-      ::test_nullable::wire::Int32Wrapper src);
-  static ::test_nullable::wire::Int32Wrapper ToWire(
-      fidl::AnyArena& arena, ::test_nullable::Int32Wrapper src);
+struct WireNaturalConversionTraits<::test_nullable::wire::Int32Wrapper, ::test_nullable::Int32Wrapper> {
+  static ::test_nullable::Int32Wrapper ToNatural(::test_nullable::wire::Int32Wrapper src);
+  static ::test_nullable::wire::Int32Wrapper ToWire(fidl::AnyArena& arena, ::test_nullable::Int32Wrapper src);
 };
 
 template <>
@@ -219,22 +177,15 @@ struct WireTypeForNaturalType<::test_nullable::Int32Wrapper> {
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_nullable::wire::SimpleUnion,
-                                   ::test_nullable::SimpleUnion> {
-  static ::test_nullable::SimpleUnion ToNatural(
-      ::test_nullable::wire::SimpleUnion src);
-  static ::test_nullable::wire::SimpleUnion ToWire(
-      fidl::AnyArena& arena, ::test_nullable::SimpleUnion src);
+struct WireNaturalConversionTraits<::test_nullable::wire::SimpleUnion, ::test_nullable::SimpleUnion> {
+  static ::test_nullable::SimpleUnion ToNatural(::test_nullable::wire::SimpleUnion src);
+  static ::test_nullable::wire::SimpleUnion ToWire(fidl::AnyArena& arena, ::test_nullable::SimpleUnion src);
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_nullable::wire::SimpleUnion,
-    std::unique_ptr<::test_nullable::SimpleUnion>> {
-  static std::unique_ptr<::test_nullable::SimpleUnion> ToNatural(
-      ::test_nullable::wire::SimpleUnion src);
-  static ::test_nullable::wire::SimpleUnion ToWire(
-      fidl::AnyArena& arena, std::unique_ptr<::test_nullable::SimpleUnion> src);
+struct WireNaturalConversionTraits<::test_nullable::wire::SimpleUnion, std::unique_ptr<::test_nullable::SimpleUnion>> {
+  static std::unique_ptr<::test_nullable::SimpleUnion> ToNatural(::test_nullable::wire::SimpleUnion src);
+  static ::test_nullable::wire::SimpleUnion ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_nullable::SimpleUnion> src);
 };
 
 template <>
@@ -253,46 +204,32 @@ struct WireTypeForNaturalType<std::unique_ptr<::test_nullable::SimpleUnion>> {
 #ifdef __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireRequest<::test_nullable::SimpleProtocol::Add>,
-    ::fidl::Request<::test_nullable::SimpleProtocol::Add>> {
-  static ::fidl::Request<::test_nullable::SimpleProtocol::Add> ToNatural(
-      ::fidl::WireRequest<::test_nullable::SimpleProtocol::Add> src);
-  static ::fidl::WireRequest<::test_nullable::SimpleProtocol::Add> ToWire(
-      fidl::AnyArena& arena,
-      ::fidl::Request<::test_nullable::SimpleProtocol::Add> src);
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_nullable::SimpleProtocol::Add>, ::fidl::Request<::test_nullable::SimpleProtocol::Add>> {
+  static ::fidl::Request<::test_nullable::SimpleProtocol::Add> ToNatural(::fidl::WireRequest<::test_nullable::SimpleProtocol::Add> src);
+  static ::fidl::WireRequest<::test_nullable::SimpleProtocol::Add> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_nullable::SimpleProtocol::Add> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireRequest<::test_nullable::SimpleProtocol::Add>> {
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_nullable::SimpleProtocol::Add>> {
   using type = ::fidl::Request<::test_nullable::SimpleProtocol::Add>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Request<::test_nullable::SimpleProtocol::Add>> {
+struct WireTypeForNaturalType<::fidl::Request<::test_nullable::SimpleProtocol::Add>> {
   using type = ::fidl::WireRequest<::test_nullable::SimpleProtocol::Add>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>,
-    ::fidl::Response<::test_nullable::SimpleProtocol::Add>> {
-  static ::fidl::Response<::test_nullable::SimpleProtocol::Add> ToNatural(
-      ::fidl::WireResponse<::test_nullable::SimpleProtocol::Add> src);
-  static ::fidl::WireResponse<::test_nullable::SimpleProtocol::Add> ToWire(
-      fidl::AnyArena& arena,
-      ::fidl::Response<::test_nullable::SimpleProtocol::Add> src);
+struct WireNaturalConversionTraits<::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>, ::fidl::Response<::test_nullable::SimpleProtocol::Add>> {
+  static ::fidl::Response<::test_nullable::SimpleProtocol::Add> ToNatural(::fidl::WireResponse<::test_nullable::SimpleProtocol::Add> src);
+  static ::fidl::WireResponse<::test_nullable::SimpleProtocol::Add> ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_nullable::SimpleProtocol::Add> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>> {
+struct NaturalTypeForWireType<::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>> {
   using type = ::fidl::Response<::test_nullable::SimpleProtocol::Add>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Response<::test_nullable::SimpleProtocol::Add>> {
+struct WireTypeForNaturalType<::fidl::Response<::test_nullable::SimpleProtocol::Add>> {
   using type = ::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>;
 };
 #endif  // __Fuchsia__

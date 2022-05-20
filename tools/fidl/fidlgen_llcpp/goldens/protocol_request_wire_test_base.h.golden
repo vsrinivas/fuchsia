@@ -7,58 +7,46 @@ namespace fidl {
 namespace testing {
 
 template <>
-class WireTestBase<::test_protocolrequest::Parent>
-    : public ::fidl::WireServer<::test_protocolrequest::Parent> {
+class WireTestBase<::test_protocolrequest::Parent> : public ::fidl::WireServer<::test_protocolrequest::Parent> {
  public:
   virtual ~WireTestBase<::test_protocolrequest::Parent>() = default;
-  virtual void NotImplemented_(const std::string& name,
-                               ::fidl::CompleterBase& completer) = 0;
-  virtual void GetChild(GetChildRequestView request,
-                        GetChildCompleter::Sync& completer) override {
+  virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
+  virtual void GetChild(
+      GetChildRequestView request, GetChildCompleter::Sync& completer) override {
     NotImplemented_("GetChild", completer);
   }
   virtual void GetChildRequest(
-      GetChildRequestRequestView request,
-      GetChildRequestCompleter::Sync& completer) override {
+      GetChildRequestRequestView request, GetChildRequestCompleter::Sync& completer) override {
     NotImplemented_("GetChildRequest", completer);
   }
-  virtual void TakeChild(TakeChildRequestView request,
-                         TakeChildCompleter::Sync& completer) override {
+  virtual void TakeChild(
+      TakeChildRequestView request, TakeChildCompleter::Sync& completer) override {
     NotImplemented_("TakeChild", completer);
   }
   virtual void TakeChildRequest(
-      TakeChildRequestRequestView request,
-      TakeChildRequestCompleter::Sync& completer) override {
+      TakeChildRequestRequestView request, TakeChildRequestCompleter::Sync& completer) override {
     NotImplemented_("TakeChildRequest", completer);
   }
 };
 
 template <>
-class ::fidl::testing::WireSyncEventHandlerTestBase<
-    ::test_protocolrequest::Parent>
-    : public ::fidl::WireSyncEventHandler<::test_protocolrequest::Parent> {
+class ::fidl::testing::WireSyncEventHandlerTestBase<::test_protocolrequest::Parent> : public ::fidl::WireSyncEventHandler<::test_protocolrequest::Parent> {
  public:
-  virtual ~WireSyncEventHandlerTestBase<::test_protocolrequest::Parent>() =
-      default;
+  virtual ~WireSyncEventHandlerTestBase<::test_protocolrequest::Parent>() = default;
   virtual void NotImplemented_(const std::string& name) = 0;
 };
 
 template <>
-class WireTestBase<::test_protocolrequest::Child>
-    : public ::fidl::WireServer<::test_protocolrequest::Child> {
+class WireTestBase<::test_protocolrequest::Child> : public ::fidl::WireServer<::test_protocolrequest::Child> {
  public:
   virtual ~WireTestBase<::test_protocolrequest::Child>() = default;
-  virtual void NotImplemented_(const std::string& name,
-                               ::fidl::CompleterBase& completer) = 0;
+  virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
 };
 
 template <>
-class ::fidl::testing::WireSyncEventHandlerTestBase<
-    ::test_protocolrequest::Child>
-    : public ::fidl::WireSyncEventHandler<::test_protocolrequest::Child> {
+class ::fidl::testing::WireSyncEventHandlerTestBase<::test_protocolrequest::Child> : public ::fidl::WireSyncEventHandler<::test_protocolrequest::Child> {
  public:
-  virtual ~WireSyncEventHandlerTestBase<::test_protocolrequest::Child>() =
-      default;
+  virtual ~WireSyncEventHandlerTestBase<::test_protocolrequest::Child>() = default;
   virtual void NotImplemented_(const std::string& name) = 0;
 };
 }  // namespace testing

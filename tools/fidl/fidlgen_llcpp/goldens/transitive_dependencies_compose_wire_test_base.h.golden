@@ -7,26 +7,20 @@ namespace fidl {
 namespace testing {
 
 template <>
-class WireTestBase<::test_transitivedependenciescompose::Top>
-    : public ::fidl::WireServer<::test_transitivedependenciescompose::Top> {
+class WireTestBase<::test_transitivedependenciescompose::Top> : public ::fidl::WireServer<::test_transitivedependenciescompose::Top> {
  public:
   virtual ~WireTestBase<::test_transitivedependenciescompose::Top>() = default;
-  virtual void NotImplemented_(const std::string& name,
-                               ::fidl::CompleterBase& completer) = 0;
-  virtual void GetFoo(GetFooRequestView request,
-                      GetFooCompleter::Sync& completer) override {
+  virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
+  virtual void GetFoo(
+      GetFooRequestView request, GetFooCompleter::Sync& completer) override {
     NotImplemented_("GetFoo", completer);
   }
 };
 
 template <>
-class ::fidl::testing::WireSyncEventHandlerTestBase<
-    ::test_transitivedependenciescompose::Top>
-    : public ::fidl::WireSyncEventHandler<
-          ::test_transitivedependenciescompose::Top> {
+class ::fidl::testing::WireSyncEventHandlerTestBase<::test_transitivedependenciescompose::Top> : public ::fidl::WireSyncEventHandler<::test_transitivedependenciescompose::Top> {
  public:
-  virtual ~WireSyncEventHandlerTestBase<
-      ::test_transitivedependenciescompose::Top>() = default;
+  virtual ~WireSyncEventHandlerTestBase<::test_transitivedependenciescompose::Top>() = default;
   virtual void NotImplemented_(const std::string& name) = 0;
 };
 }  // namespace testing

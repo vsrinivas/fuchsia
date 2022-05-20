@@ -32,18 +32,13 @@ __LOCAL extern "C" const fidl_type_t test_bottom_BottomGetFooTopResponseTable;
 }  // namespace _internal
 class Top_ResponseEncoder {
  public:
-  static ::fidl::HLCPPOutgoingMessage GetFoo(::fidl::MessageEncoder* _encoder,
-                                             ::test::bottom::Foo* foo) {
+  static ::fidl::HLCPPOutgoingMessage GetFoo(::fidl::MessageEncoder* _encoder, ::test::bottom::Foo* foo) {
     fidl_trace(WillHLCPPEncode);
 
     _encoder->Alloc(4);
     ::fidl::Encode(_encoder, foo, 0 + sizeof(fidl_message_header_t));
 
-    fidl_trace(DidHLCPPEncode,
-               &::test::transitivedependenciescompose::_internal::
-                   test_bottom_BottomGetFooTopResponseTable,
-               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-               _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode, &::test::transitivedependenciescompose::_internal::test_bottom_BottomGetFooTopResponseTable, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -72,8 +67,7 @@ class Top_SyncProxy;
 
 namespace internal {
 constexpr uint64_t kTop_GetFoo_Ordinal = 0x245770d9d719c667lu;
-constexpr ::fidl::MessageDynamicFlags kTop_GetFoo_DynamicFlags =
-    ::fidl::MessageDynamicFlags::kStrictMethod;
+constexpr ::fidl::MessageDynamicFlags kTop_GetFoo_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 }  // namespace internal
 #endif  // __Fuchsia__
 
@@ -86,7 +80,8 @@ class Top {
   using EventSender_ = ::test::transitivedependenciescompose::Top_EventSender;
   using Sync_ = ::test::transitivedependenciescompose::Top_Sync;
   virtual ~Top();
-  using GetFooCallback = fit::function<void(::test::bottom::Foo)>;
+  using GetFooCallback =
+      fit::function<void(::test::bottom::Foo)>;
 
   virtual void GetFoo(GetFooCallback callback) = 0;
 };
@@ -130,19 +125,15 @@ class Top_Proxy final : public ::fidl::internal::Proxy, public Top {
 
  private:
   Top_Proxy(const ::test::transitivedependenciescompose::Top_Proxy&) = delete;
-  Top_Proxy& operator=(
-      const ::test::transitivedependenciescompose::Top_Proxy&) = delete;
+  Top_Proxy& operator=(const ::test::transitivedependenciescompose::Top_Proxy&) = delete;
 
   ::fidl::internal::ProxyController* controller_;
 };
 
-class Top_Stub final
-    : public ::fidl::internal::Stub,
-      public ::test::transitivedependenciescompose::Top_EventSender {
+class Top_Stub final : public ::fidl::internal::Stub, public ::test::transitivedependenciescompose::Top_EventSender {
  public:
   typedef class ::test::transitivedependenciescompose::Top Top_clazz;
-  explicit Top_Stub(
-      ::test::transitivedependenciescompose::Top_Stub::Top_clazz* impl);
+  explicit Top_Stub(::test::transitivedependenciescompose::Top_Stub::Top_clazz* impl);
   ~Top_Stub() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,

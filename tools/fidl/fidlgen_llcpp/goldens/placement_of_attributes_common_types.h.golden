@@ -24,15 +24,9 @@ class ExampleBits final {
   const static ExampleBits kMask;
 
   explicit constexpr inline operator uint32_t() const { return value_; }
-  explicit constexpr inline operator bool() const {
-    return static_cast<bool>(value_);
-  }
-  constexpr inline bool operator==(const ExampleBits& other) const {
-    return value_ == other.value_;
-  }
-  constexpr inline bool operator!=(const ExampleBits& other) const {
-    return value_ != other.value_;
-  }
+  explicit constexpr inline operator bool() const { return static_cast<bool>(value_); }
+  constexpr inline bool operator==(const ExampleBits& other) const { return value_ == other.value_; }
+  constexpr inline bool operator!=(const ExampleBits& other) const { return value_ != other.value_; }
   constexpr inline ExampleBits operator~() const;
   constexpr inline ExampleBits operator|(const ExampleBits& other) const;
   constexpr inline ExampleBits operator&(const ExampleBits& other) const;
@@ -62,34 +56,25 @@ class ExampleBits final {
 };
 constexpr const ::test_placementofattributes::ExampleBits ExampleBits::kMember =
     ::test_placementofattributes::ExampleBits(1u);
-constexpr const ::test_placementofattributes::ExampleBits ExampleBits::kMask =
-    ::test_placementofattributes::ExampleBits(1u);
+constexpr const ::test_placementofattributes::ExampleBits ExampleBits::kMask = ::test_placementofattributes::ExampleBits(1u);
 
-constexpr inline ::test_placementofattributes::ExampleBits
-ExampleBits::operator~() const {
-  return ::test_placementofattributes::ExampleBits(
-      static_cast<uint32_t>(~this->value_ & kMask.value_));
+constexpr inline ::test_placementofattributes::ExampleBits ExampleBits::operator~() const {
+  return ::test_placementofattributes::ExampleBits(static_cast<uint32_t>(~this->value_ & kMask.value_));
 }
 
-constexpr inline ::test_placementofattributes::ExampleBits
-ExampleBits::operator|(
+constexpr inline ::test_placementofattributes::ExampleBits ExampleBits::operator|(
     const ::test_placementofattributes::ExampleBits& other) const {
-  return ::test_placementofattributes::ExampleBits(
-      static_cast<uint32_t>(this->value_ | other.value_));
+  return ::test_placementofattributes::ExampleBits(static_cast<uint32_t>(this->value_ | other.value_));
 }
 
-constexpr inline ::test_placementofattributes::ExampleBits
-ExampleBits::operator&(
+constexpr inline ::test_placementofattributes::ExampleBits ExampleBits::operator&(
     const ::test_placementofattributes::ExampleBits& other) const {
-  return ::test_placementofattributes::ExampleBits(
-      static_cast<uint32_t>(this->value_ & other.value_));
+  return ::test_placementofattributes::ExampleBits(static_cast<uint32_t>(this->value_ & other.value_));
 }
 
-constexpr inline ::test_placementofattributes::ExampleBits
-ExampleBits::operator^(
+constexpr inline ::test_placementofattributes::ExampleBits ExampleBits::operator^(
     const ::test_placementofattributes::ExampleBits& other) const {
-  return ::test_placementofattributes::ExampleBits(
-      static_cast<uint32_t>(this->value_ ^ other.value_));
+  return ::test_placementofattributes::ExampleBits(static_cast<uint32_t>(this->value_ ^ other.value_));
 }
 
 constexpr inline void ExampleBits::operator|=(
@@ -115,28 +100,21 @@ enum class ExampleEnum : uint32_t {
 }  // namespace test_placementofattributes
 template <>
 struct fidl::internal::DisplayError<::test_placementofattributes::ExampleEnum> {
-  static size_t Format(const ::test_placementofattributes::ExampleEnum& value,
-                       char* destination, size_t capacity);
+  static size_t Format(const ::test_placementofattributes::ExampleEnum& value, char* destination, size_t capacity);
 };
 
 namespace fidl {
 
 template <>
-struct IsFidlType<::test_placementofattributes::ExampleBits>
-    : public std::true_type {};
+struct IsFidlType<::test_placementofattributes::ExampleBits> : public std::true_type {};
 template <>
-struct ContainsHandle<::test_placementofattributes::ExampleBits>
-    : public std::false_type {};
-static_assert(
-    std::is_standard_layout_v<::test_placementofattributes::ExampleBits>);
-static_assert(sizeof(::test_placementofattributes::ExampleBits) ==
-              sizeof(uint32_t));
+struct ContainsHandle<::test_placementofattributes::ExampleBits> : public std::false_type {};
+static_assert(std::is_standard_layout_v<::test_placementofattributes::ExampleBits>);
+static_assert(sizeof(::test_placementofattributes::ExampleBits) == sizeof(uint32_t));
 
 template <>
-struct IsFidlType<::test_placementofattributes::ExampleEnum>
-    : public std::true_type {};
+struct IsFidlType<::test_placementofattributes::ExampleEnum> : public std::true_type {};
 template <>
-struct ContainsHandle<::test_placementofattributes::ExampleEnum>
-    : public std::false_type {};
+struct ContainsHandle<::test_placementofattributes::ExampleEnum> : public std::false_type {};
 
 }  // namespace fidl

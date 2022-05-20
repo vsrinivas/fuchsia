@@ -17,24 +17,17 @@ namespace internal {
 #ifdef __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocols::wire::WithProtocolEndsServerEndsTopResponse,
-    ::test_protocols::WithProtocolEndsServerEndsTopResponse> {
-  static ::test_protocols::WithProtocolEndsServerEndsTopResponse ToNatural(
-      ::test_protocols::wire::WithProtocolEndsServerEndsTopResponse src);
-  static ::test_protocols::wire::WithProtocolEndsServerEndsTopResponse ToWire(
-      fidl::AnyArena& arena,
-      ::test_protocols::WithProtocolEndsServerEndsTopResponse src);
+struct WireNaturalConversionTraits<::test_protocols::wire::WithProtocolEndsServerEndsTopResponse, ::test_protocols::WithProtocolEndsServerEndsTopResponse> {
+  static ::test_protocols::WithProtocolEndsServerEndsTopResponse ToNatural(::test_protocols::wire::WithProtocolEndsServerEndsTopResponse src);
+  static ::test_protocols::wire::WithProtocolEndsServerEndsTopResponse ToWire(fidl::AnyArena& arena, ::test_protocols::WithProtocolEndsServerEndsTopResponse src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocols::wire::WithProtocolEndsServerEndsTopResponse> {
+struct NaturalTypeForWireType<::test_protocols::wire::WithProtocolEndsServerEndsTopResponse> {
   using type = ::test_protocols::WithProtocolEndsServerEndsTopResponse;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocols::WithProtocolEndsServerEndsTopResponse> {
+struct WireTypeForNaturalType<::test_protocols::WithProtocolEndsServerEndsTopResponse> {
   using type = ::test_protocols::wire::WithProtocolEndsServerEndsTopResponse;
 };
 
@@ -43,24 +36,17 @@ struct WireTypeForNaturalType<
 #ifdef __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocols::wire::WithProtocolEndsServerEndsRequest,
-    ::test_protocols::WithProtocolEndsServerEndsRequest> {
-  static ::test_protocols::WithProtocolEndsServerEndsRequest ToNatural(
-      ::test_protocols::wire::WithProtocolEndsServerEndsRequest src);
-  static ::test_protocols::wire::WithProtocolEndsServerEndsRequest ToWire(
-      fidl::AnyArena& arena,
-      ::test_protocols::WithProtocolEndsServerEndsRequest src);
+struct WireNaturalConversionTraits<::test_protocols::wire::WithProtocolEndsServerEndsRequest, ::test_protocols::WithProtocolEndsServerEndsRequest> {
+  static ::test_protocols::WithProtocolEndsServerEndsRequest ToNatural(::test_protocols::wire::WithProtocolEndsServerEndsRequest src);
+  static ::test_protocols::wire::WithProtocolEndsServerEndsRequest ToWire(fidl::AnyArena& arena, ::test_protocols::WithProtocolEndsServerEndsRequest src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocols::wire::WithProtocolEndsServerEndsRequest> {
+struct NaturalTypeForWireType<::test_protocols::wire::WithProtocolEndsServerEndsRequest> {
   using type = ::test_protocols::WithProtocolEndsServerEndsRequest;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocols::WithProtocolEndsServerEndsRequest> {
+struct WireTypeForNaturalType<::test_protocols::WithProtocolEndsServerEndsRequest> {
   using type = ::test_protocols::wire::WithProtocolEndsServerEndsRequest;
 };
 
@@ -69,24 +55,17 @@ struct WireTypeForNaturalType<
 #ifdef __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocols::wire::WithProtocolEndsClientEndsTopResponse,
-    ::test_protocols::WithProtocolEndsClientEndsTopResponse> {
-  static ::test_protocols::WithProtocolEndsClientEndsTopResponse ToNatural(
-      ::test_protocols::wire::WithProtocolEndsClientEndsTopResponse src);
-  static ::test_protocols::wire::WithProtocolEndsClientEndsTopResponse ToWire(
-      fidl::AnyArena& arena,
-      ::test_protocols::WithProtocolEndsClientEndsTopResponse src);
+struct WireNaturalConversionTraits<::test_protocols::wire::WithProtocolEndsClientEndsTopResponse, ::test_protocols::WithProtocolEndsClientEndsTopResponse> {
+  static ::test_protocols::WithProtocolEndsClientEndsTopResponse ToNatural(::test_protocols::wire::WithProtocolEndsClientEndsTopResponse src);
+  static ::test_protocols::wire::WithProtocolEndsClientEndsTopResponse ToWire(fidl::AnyArena& arena, ::test_protocols::WithProtocolEndsClientEndsTopResponse src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocols::wire::WithProtocolEndsClientEndsTopResponse> {
+struct NaturalTypeForWireType<::test_protocols::wire::WithProtocolEndsClientEndsTopResponse> {
   using type = ::test_protocols::WithProtocolEndsClientEndsTopResponse;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocols::WithProtocolEndsClientEndsTopResponse> {
+struct WireTypeForNaturalType<::test_protocols::WithProtocolEndsClientEndsTopResponse> {
   using type = ::test_protocols::wire::WithProtocolEndsClientEndsTopResponse;
 };
 
@@ -95,95 +74,66 @@ struct WireTypeForNaturalType<
 #ifdef __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocols::wire::WithProtocolEndsClientEndsRequest,
-    ::test_protocols::WithProtocolEndsClientEndsRequest> {
-  static ::test_protocols::WithProtocolEndsClientEndsRequest ToNatural(
-      ::test_protocols::wire::WithProtocolEndsClientEndsRequest src);
-  static ::test_protocols::wire::WithProtocolEndsClientEndsRequest ToWire(
-      fidl::AnyArena& arena,
-      ::test_protocols::WithProtocolEndsClientEndsRequest src);
+struct WireNaturalConversionTraits<::test_protocols::wire::WithProtocolEndsClientEndsRequest, ::test_protocols::WithProtocolEndsClientEndsRequest> {
+  static ::test_protocols::WithProtocolEndsClientEndsRequest ToNatural(::test_protocols::wire::WithProtocolEndsClientEndsRequest src);
+  static ::test_protocols::wire::WithProtocolEndsClientEndsRequest ToWire(fidl::AnyArena& arena, ::test_protocols::WithProtocolEndsClientEndsRequest src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocols::wire::WithProtocolEndsClientEndsRequest> {
+struct NaturalTypeForWireType<::test_protocols::wire::WithProtocolEndsClientEndsRequest> {
   using type = ::test_protocols::WithProtocolEndsClientEndsRequest;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocols::WithProtocolEndsClientEndsRequest> {
+struct WireTypeForNaturalType<::test_protocols::WithProtocolEndsClientEndsRequest> {
   using type = ::test_protocols::wire::WithProtocolEndsClientEndsRequest;
 };
 
 #endif  // __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse,
-    ::test_protocols::WithErrorSyntaxResponseAsStructResponse> {
-  static ::test_protocols::WithErrorSyntaxResponseAsStructResponse ToNatural(
-      ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse src);
-  static ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse ToWire(
-      fidl::AnyArena& arena,
-      ::test_protocols::WithErrorSyntaxResponseAsStructResponse src);
+struct WireNaturalConversionTraits<::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse, ::test_protocols::WithErrorSyntaxResponseAsStructResponse> {
+  static ::test_protocols::WithErrorSyntaxResponseAsStructResponse ToNatural(::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse src);
+  static ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse ToWire(fidl::AnyArena& arena, ::test_protocols::WithErrorSyntaxResponseAsStructResponse src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse> {
+struct NaturalTypeForWireType<::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse> {
   using type = ::test_protocols::WithErrorSyntaxResponseAsStructResponse;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocols::WithErrorSyntaxResponseAsStructResponse> {
+struct WireTypeForNaturalType<::test_protocols::WithErrorSyntaxResponseAsStructResponse> {
   using type = ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocols::wire::WithErrorSyntaxResponseAsStructTopResponse,
-    ::test_protocols::WithErrorSyntaxResponseAsStructTopResponse> {
-  static ::test_protocols::WithErrorSyntaxResponseAsStructTopResponse ToNatural(
-      ::test_protocols::wire::WithErrorSyntaxResponseAsStructTopResponse src);
-  static ::test_protocols::wire::WithErrorSyntaxResponseAsStructTopResponse
-  ToWire(fidl::AnyArena& arena,
-         ::test_protocols::WithErrorSyntaxResponseAsStructTopResponse src);
+struct WireNaturalConversionTraits<::test_protocols::wire::WithErrorSyntaxResponseAsStructTopResponse, ::test_protocols::WithErrorSyntaxResponseAsStructTopResponse> {
+  static ::test_protocols::WithErrorSyntaxResponseAsStructTopResponse ToNatural(::test_protocols::wire::WithErrorSyntaxResponseAsStructTopResponse src);
+  static ::test_protocols::wire::WithErrorSyntaxResponseAsStructTopResponse ToWire(fidl::AnyArena& arena, ::test_protocols::WithErrorSyntaxResponseAsStructTopResponse src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocols::wire::WithErrorSyntaxResponseAsStructTopResponse> {
+struct NaturalTypeForWireType<::test_protocols::wire::WithErrorSyntaxResponseAsStructTopResponse> {
   using type = ::test_protocols::WithErrorSyntaxResponseAsStructTopResponse;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocols::WithErrorSyntaxResponseAsStructTopResponse> {
-  using type =
-      ::test_protocols::wire::WithErrorSyntaxResponseAsStructTopResponse;
+struct WireTypeForNaturalType<::test_protocols::WithErrorSyntaxResponseAsStructTopResponse> {
+  using type = ::test_protocols::wire::WithErrorSyntaxResponseAsStructTopResponse;
 };
 
 #ifdef __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse,
-    ::test_protocols::WithErrorSyntaxHandleInResultResponse> {
-  static ::test_protocols::WithErrorSyntaxHandleInResultResponse ToNatural(
-      ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse src);
-  static ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse ToWire(
-      fidl::AnyArena& arena,
-      ::test_protocols::WithErrorSyntaxHandleInResultResponse src);
+struct WireNaturalConversionTraits<::test_protocols::wire::WithErrorSyntaxHandleInResultResponse, ::test_protocols::WithErrorSyntaxHandleInResultResponse> {
+  static ::test_protocols::WithErrorSyntaxHandleInResultResponse ToNatural(::test_protocols::wire::WithErrorSyntaxHandleInResultResponse src);
+  static ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse ToWire(fidl::AnyArena& arena, ::test_protocols::WithErrorSyntaxHandleInResultResponse src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse> {
+struct NaturalTypeForWireType<::test_protocols::wire::WithErrorSyntaxHandleInResultResponse> {
   using type = ::test_protocols::WithErrorSyntaxHandleInResultResponse;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocols::WithErrorSyntaxHandleInResultResponse> {
+struct WireTypeForNaturalType<::test_protocols::WithErrorSyntaxHandleInResultResponse> {
   using type = ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse;
 };
 
@@ -192,332 +142,180 @@ struct WireTypeForNaturalType<
 #ifdef __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocols::wire::WithErrorSyntaxHandleInResultTopResponse,
-    ::test_protocols::WithErrorSyntaxHandleInResultTopResponse> {
-  static ::test_protocols::WithErrorSyntaxHandleInResultTopResponse ToNatural(
-      ::test_protocols::wire::WithErrorSyntaxHandleInResultTopResponse src);
-  static ::test_protocols::wire::WithErrorSyntaxHandleInResultTopResponse
-  ToWire(fidl::AnyArena& arena,
-         ::test_protocols::WithErrorSyntaxHandleInResultTopResponse src);
+struct WireNaturalConversionTraits<::test_protocols::wire::WithErrorSyntaxHandleInResultTopResponse, ::test_protocols::WithErrorSyntaxHandleInResultTopResponse> {
+  static ::test_protocols::WithErrorSyntaxHandleInResultTopResponse ToNatural(::test_protocols::wire::WithErrorSyntaxHandleInResultTopResponse src);
+  static ::test_protocols::wire::WithErrorSyntaxHandleInResultTopResponse ToWire(fidl::AnyArena& arena, ::test_protocols::WithErrorSyntaxHandleInResultTopResponse src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocols::wire::WithErrorSyntaxHandleInResultTopResponse> {
+struct NaturalTypeForWireType<::test_protocols::wire::WithErrorSyntaxHandleInResultTopResponse> {
   using type = ::test_protocols::WithErrorSyntaxHandleInResultTopResponse;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocols::WithErrorSyntaxHandleInResultTopResponse> {
+struct WireTypeForNaturalType<::test_protocols::WithErrorSyntaxHandleInResultTopResponse> {
   using type = ::test_protocols::wire::WithErrorSyntaxHandleInResultTopResponse;
 };
 
 #endif  // __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse,
-    ::test_protocols::WithErrorSyntaxErrorAsPrimitiveResponse> {
-  static ::test_protocols::WithErrorSyntaxErrorAsPrimitiveResponse ToNatural(
-      ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse src);
-  static ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse ToWire(
-      fidl::AnyArena& arena,
-      ::test_protocols::WithErrorSyntaxErrorAsPrimitiveResponse src);
+struct WireNaturalConversionTraits<::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse, ::test_protocols::WithErrorSyntaxErrorAsPrimitiveResponse> {
+  static ::test_protocols::WithErrorSyntaxErrorAsPrimitiveResponse ToNatural(::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse src);
+  static ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse ToWire(fidl::AnyArena& arena, ::test_protocols::WithErrorSyntaxErrorAsPrimitiveResponse src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse> {
+struct NaturalTypeForWireType<::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse> {
   using type = ::test_protocols::WithErrorSyntaxErrorAsPrimitiveResponse;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocols::WithErrorSyntaxErrorAsPrimitiveResponse> {
+struct WireTypeForNaturalType<::test_protocols::WithErrorSyntaxErrorAsPrimitiveResponse> {
   using type = ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveTopResponse,
-    ::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse> {
-  static ::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse ToNatural(
-      ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveTopResponse src);
-  static ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveTopResponse
-  ToWire(fidl::AnyArena& arena,
-         ::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse src);
+struct WireNaturalConversionTraits<::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveTopResponse, ::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse> {
+  static ::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse ToNatural(::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveTopResponse src);
+  static ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveTopResponse ToWire(fidl::AnyArena& arena, ::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveTopResponse> {
+struct NaturalTypeForWireType<::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveTopResponse> {
   using type = ::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse> {
-  using type =
-      ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveTopResponse;
+struct WireTypeForNaturalType<::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse> {
+  using type = ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveTopResponse;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse,
-    ::test_protocols::WithErrorSyntaxErrorAsEnumResponse> {
-  static ::test_protocols::WithErrorSyntaxErrorAsEnumResponse ToNatural(
-      ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse src);
-  static ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse ToWire(
-      fidl::AnyArena& arena,
-      ::test_protocols::WithErrorSyntaxErrorAsEnumResponse src);
+struct WireNaturalConversionTraits<::test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse, ::test_protocols::WithErrorSyntaxErrorAsEnumResponse> {
+  static ::test_protocols::WithErrorSyntaxErrorAsEnumResponse ToNatural(::test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse src);
+  static ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse ToWire(fidl::AnyArena& arena, ::test_protocols::WithErrorSyntaxErrorAsEnumResponse src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse> {
+struct NaturalTypeForWireType<::test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse> {
   using type = ::test_protocols::WithErrorSyntaxErrorAsEnumResponse;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocols::WithErrorSyntaxErrorAsEnumResponse> {
+struct WireTypeForNaturalType<::test_protocols::WithErrorSyntaxErrorAsEnumResponse> {
   using type = ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocols::wire::
-        WithAndWithoutRequestResponseWithRequestWithResponseTopResponse,
-    ::test_protocols::
-        WithAndWithoutRequestResponseWithRequestWithResponseTopResponse> {
-  static ::test_protocols::
-      WithAndWithoutRequestResponseWithRequestWithResponseTopResponse
-      ToNatural(
-          ::test_protocols::wire::
-              WithAndWithoutRequestResponseWithRequestWithResponseTopResponse
-                  src);
-  static ::test_protocols::wire::
-      WithAndWithoutRequestResponseWithRequestWithResponseTopResponse
-      ToWire(fidl::AnyArena& arena,
-             ::test_protocols::
-                 WithAndWithoutRequestResponseWithRequestWithResponseTopResponse
-                     src);
+struct WireNaturalConversionTraits<::test_protocols::wire::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse, ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse> {
+  static ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse ToNatural(::test_protocols::wire::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse src);
+  static ::test_protocols::wire::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse ToWire(fidl::AnyArena& arena, ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocols::wire::
-        WithAndWithoutRequestResponseWithRequestWithResponseTopResponse> {
-  using type = ::test_protocols::
-      WithAndWithoutRequestResponseWithRequestWithResponseTopResponse;
+struct NaturalTypeForWireType<::test_protocols::wire::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse> {
+  using type = ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocols::
-        WithAndWithoutRequestResponseWithRequestWithResponseTopResponse> {
-  using type = ::test_protocols::wire::
-      WithAndWithoutRequestResponseWithRequestWithResponseTopResponse;
+struct WireTypeForNaturalType<::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse> {
+  using type = ::test_protocols::wire::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocols::wire::
-        WithAndWithoutRequestResponseWithRequestWithResponseRequest,
-    ::test_protocols::
-        WithAndWithoutRequestResponseWithRequestWithResponseRequest> {
-  static ::test_protocols::
-      WithAndWithoutRequestResponseWithRequestWithResponseRequest
-      ToNatural(
-          ::test_protocols::wire::
-              WithAndWithoutRequestResponseWithRequestWithResponseRequest src);
-  static ::test_protocols::wire::
-      WithAndWithoutRequestResponseWithRequestWithResponseRequest
-      ToWire(
-          fidl::AnyArena& arena,
-          ::test_protocols::
-              WithAndWithoutRequestResponseWithRequestWithResponseRequest src);
+struct WireNaturalConversionTraits<::test_protocols::wire::WithAndWithoutRequestResponseWithRequestWithResponseRequest, ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseRequest> {
+  static ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseRequest ToNatural(::test_protocols::wire::WithAndWithoutRequestResponseWithRequestWithResponseRequest src);
+  static ::test_protocols::wire::WithAndWithoutRequestResponseWithRequestWithResponseRequest ToWire(fidl::AnyArena& arena, ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseRequest src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocols::wire::
-        WithAndWithoutRequestResponseWithRequestWithResponseRequest> {
-  using type = ::test_protocols::
-      WithAndWithoutRequestResponseWithRequestWithResponseRequest;
+struct NaturalTypeForWireType<::test_protocols::wire::WithAndWithoutRequestResponseWithRequestWithResponseRequest> {
+  using type = ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseRequest;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocols::
-        WithAndWithoutRequestResponseWithRequestWithResponseRequest> {
-  using type = ::test_protocols::wire::
-      WithAndWithoutRequestResponseWithRequestWithResponseRequest;
+struct WireTypeForNaturalType<::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseRequest> {
+  using type = ::test_protocols::wire::WithAndWithoutRequestResponseWithRequestWithResponseRequest;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocols::wire::
-        WithAndWithoutRequestResponseWithRequestNoResponseRequest,
-    ::test_protocols::
-        WithAndWithoutRequestResponseWithRequestNoResponseRequest> {
-  static ::test_protocols::
-      WithAndWithoutRequestResponseWithRequestNoResponseRequest
-      ToNatural(
-          ::test_protocols::wire::
-              WithAndWithoutRequestResponseWithRequestNoResponseRequest src);
-  static ::test_protocols::wire::
-      WithAndWithoutRequestResponseWithRequestNoResponseRequest
-      ToWire(fidl::AnyArena& arena,
-             ::test_protocols::
-                 WithAndWithoutRequestResponseWithRequestNoResponseRequest src);
+struct WireNaturalConversionTraits<::test_protocols::wire::WithAndWithoutRequestResponseWithRequestNoResponseRequest, ::test_protocols::WithAndWithoutRequestResponseWithRequestNoResponseRequest> {
+  static ::test_protocols::WithAndWithoutRequestResponseWithRequestNoResponseRequest ToNatural(::test_protocols::wire::WithAndWithoutRequestResponseWithRequestNoResponseRequest src);
+  static ::test_protocols::wire::WithAndWithoutRequestResponseWithRequestNoResponseRequest ToWire(fidl::AnyArena& arena, ::test_protocols::WithAndWithoutRequestResponseWithRequestNoResponseRequest src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocols::wire::
-        WithAndWithoutRequestResponseWithRequestNoResponseRequest> {
-  using type = ::test_protocols::
-      WithAndWithoutRequestResponseWithRequestNoResponseRequest;
+struct NaturalTypeForWireType<::test_protocols::wire::WithAndWithoutRequestResponseWithRequestNoResponseRequest> {
+  using type = ::test_protocols::WithAndWithoutRequestResponseWithRequestNoResponseRequest;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocols::
-        WithAndWithoutRequestResponseWithRequestNoResponseRequest> {
-  using type = ::test_protocols::wire::
-      WithAndWithoutRequestResponseWithRequestNoResponseRequest;
+struct WireTypeForNaturalType<::test_protocols::WithAndWithoutRequestResponseWithRequestNoResponseRequest> {
+  using type = ::test_protocols::wire::WithAndWithoutRequestResponseWithRequestNoResponseRequest;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocols::wire::
-        WithAndWithoutRequestResponseWithRequestEmptyResponseRequest,
-    ::test_protocols::
-        WithAndWithoutRequestResponseWithRequestEmptyResponseRequest> {
-  static ::test_protocols::
-      WithAndWithoutRequestResponseWithRequestEmptyResponseRequest
-      ToNatural(
-          ::test_protocols::wire::
-              WithAndWithoutRequestResponseWithRequestEmptyResponseRequest src);
-  static ::test_protocols::wire::
-      WithAndWithoutRequestResponseWithRequestEmptyResponseRequest
-      ToWire(
-          fidl::AnyArena& arena,
-          ::test_protocols::
-              WithAndWithoutRequestResponseWithRequestEmptyResponseRequest src);
+struct WireNaturalConversionTraits<::test_protocols::wire::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest, ::test_protocols::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest> {
+  static ::test_protocols::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest ToNatural(::test_protocols::wire::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest src);
+  static ::test_protocols::wire::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest ToWire(fidl::AnyArena& arena, ::test_protocols::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocols::wire::
-        WithAndWithoutRequestResponseWithRequestEmptyResponseRequest> {
-  using type = ::test_protocols::
-      WithAndWithoutRequestResponseWithRequestEmptyResponseRequest;
+struct NaturalTypeForWireType<::test_protocols::wire::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest> {
+  using type = ::test_protocols::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocols::
-        WithAndWithoutRequestResponseWithRequestEmptyResponseRequest> {
-  using type = ::test_protocols::wire::
-      WithAndWithoutRequestResponseWithRequestEmptyResponseRequest;
+struct WireTypeForNaturalType<::test_protocols::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest> {
+  using type = ::test_protocols::wire::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocols::wire::WithAndWithoutRequestResponseOnWithResponseRequest,
-    ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest> {
-  static ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest
-  ToNatural(
-      ::test_protocols::wire::WithAndWithoutRequestResponseOnWithResponseRequest
-          src);
-  static ::test_protocols::wire::
-      WithAndWithoutRequestResponseOnWithResponseRequest
-      ToWire(
-          fidl::AnyArena& arena,
-          ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest
-              src);
+struct WireNaturalConversionTraits<::test_protocols::wire::WithAndWithoutRequestResponseOnWithResponseRequest, ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest> {
+  static ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest ToNatural(::test_protocols::wire::WithAndWithoutRequestResponseOnWithResponseRequest src);
+  static ::test_protocols::wire::WithAndWithoutRequestResponseOnWithResponseRequest ToWire(fidl::AnyArena& arena, ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocols::wire::
-        WithAndWithoutRequestResponseOnWithResponseRequest> {
-  using type =
-      ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest;
+struct NaturalTypeForWireType<::test_protocols::wire::WithAndWithoutRequestResponseOnWithResponseRequest> {
+  using type = ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest> {
-  using type = ::test_protocols::wire::
-      WithAndWithoutRequestResponseOnWithResponseRequest;
+struct WireTypeForNaturalType<::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest> {
+  using type = ::test_protocols::wire::WithAndWithoutRequestResponseOnWithResponseRequest;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocols::wire::
-        WithAndWithoutRequestResponseNoRequestWithResponseTopResponse,
-    ::test_protocols::
-        WithAndWithoutRequestResponseNoRequestWithResponseTopResponse> {
-  static ::test_protocols::
-      WithAndWithoutRequestResponseNoRequestWithResponseTopResponse
-      ToNatural(
-          ::test_protocols::wire::
-              WithAndWithoutRequestResponseNoRequestWithResponseTopResponse
-                  src);
-  static ::test_protocols::wire::
-      WithAndWithoutRequestResponseNoRequestWithResponseTopResponse
-      ToWire(fidl::AnyArena& arena,
-             ::test_protocols::
-                 WithAndWithoutRequestResponseNoRequestWithResponseTopResponse
-                     src);
+struct WireNaturalConversionTraits<::test_protocols::wire::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse, ::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse> {
+  static ::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse ToNatural(::test_protocols::wire::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse src);
+  static ::test_protocols::wire::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse ToWire(fidl::AnyArena& arena, ::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocols::wire::
-        WithAndWithoutRequestResponseNoRequestWithResponseTopResponse> {
-  using type = ::test_protocols::
-      WithAndWithoutRequestResponseNoRequestWithResponseTopResponse;
+struct NaturalTypeForWireType<::test_protocols::wire::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse> {
+  using type = ::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocols::
-        WithAndWithoutRequestResponseNoRequestWithResponseTopResponse> {
-  using type = ::test_protocols::wire::
-      WithAndWithoutRequestResponseNoRequestWithResponseTopResponse;
+struct WireTypeForNaturalType<::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse> {
+  using type = ::test_protocols::wire::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocols::wire::TransitionalRequestTopResponse,
-    ::test_protocols::TransitionalRequestTopResponse> {
-  static ::test_protocols::TransitionalRequestTopResponse ToNatural(
-      ::test_protocols::wire::TransitionalRequestTopResponse src);
-  static ::test_protocols::wire::TransitionalRequestTopResponse ToWire(
-      fidl::AnyArena& arena,
-      ::test_protocols::TransitionalRequestTopResponse src);
+struct WireNaturalConversionTraits<::test_protocols::wire::TransitionalRequestTopResponse, ::test_protocols::TransitionalRequestTopResponse> {
+  static ::test_protocols::TransitionalRequestTopResponse ToNatural(::test_protocols::wire::TransitionalRequestTopResponse src);
+  static ::test_protocols::wire::TransitionalRequestTopResponse ToWire(fidl::AnyArena& arena, ::test_protocols::TransitionalRequestTopResponse src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocols::wire::TransitionalRequestTopResponse> {
+struct NaturalTypeForWireType<::test_protocols::wire::TransitionalRequestTopResponse> {
   using type = ::test_protocols::TransitionalRequestTopResponse;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocols::TransitionalRequestTopResponse> {
+struct WireTypeForNaturalType<::test_protocols::TransitionalRequestTopResponse> {
   using type = ::test_protocols::wire::TransitionalRequestTopResponse;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocols::wire::TransitionalRequestRequest,
-    ::test_protocols::TransitionalRequestRequest> {
-  static ::test_protocols::TransitionalRequestRequest ToNatural(
-      ::test_protocols::wire::TransitionalRequestRequest src);
-  static ::test_protocols::wire::TransitionalRequestRequest ToWire(
-      fidl::AnyArena& arena, ::test_protocols::TransitionalRequestRequest src);
+struct WireNaturalConversionTraits<::test_protocols::wire::TransitionalRequestRequest, ::test_protocols::TransitionalRequestRequest> {
+  static ::test_protocols::TransitionalRequestRequest ToNatural(::test_protocols::wire::TransitionalRequestRequest src);
+  static ::test_protocols::wire::TransitionalRequestRequest ToWire(fidl::AnyArena& arena, ::test_protocols::TransitionalRequestRequest src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocols::wire::TransitionalRequestRequest> {
+struct NaturalTypeForWireType<::test_protocols::wire::TransitionalRequestRequest> {
   using type = ::test_protocols::TransitionalRequestRequest;
 };
 template <>
@@ -526,18 +324,13 @@ struct WireTypeForNaturalType<::test_protocols::TransitionalRequestRequest> {
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocols::wire::TransitionalOneWayRequest,
-    ::test_protocols::TransitionalOneWayRequest> {
-  static ::test_protocols::TransitionalOneWayRequest ToNatural(
-      ::test_protocols::wire::TransitionalOneWayRequest src);
-  static ::test_protocols::wire::TransitionalOneWayRequest ToWire(
-      fidl::AnyArena& arena, ::test_protocols::TransitionalOneWayRequest src);
+struct WireNaturalConversionTraits<::test_protocols::wire::TransitionalOneWayRequest, ::test_protocols::TransitionalOneWayRequest> {
+  static ::test_protocols::TransitionalOneWayRequest ToNatural(::test_protocols::wire::TransitionalOneWayRequest src);
+  static ::test_protocols::wire::TransitionalOneWayRequest ToWire(fidl::AnyArena& arena, ::test_protocols::TransitionalOneWayRequest src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocols::wire::TransitionalOneWayRequest> {
+struct NaturalTypeForWireType<::test_protocols::wire::TransitionalOneWayRequest> {
   using type = ::test_protocols::TransitionalOneWayRequest;
 };
 template <>
@@ -546,18 +339,13 @@ struct WireTypeForNaturalType<::test_protocols::TransitionalOneWayRequest> {
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocols::wire::TransitionalEventRequest,
-    ::test_protocols::TransitionalEventRequest> {
-  static ::test_protocols::TransitionalEventRequest ToNatural(
-      ::test_protocols::wire::TransitionalEventRequest src);
-  static ::test_protocols::wire::TransitionalEventRequest ToWire(
-      fidl::AnyArena& arena, ::test_protocols::TransitionalEventRequest src);
+struct WireNaturalConversionTraits<::test_protocols::wire::TransitionalEventRequest, ::test_protocols::TransitionalEventRequest> {
+  static ::test_protocols::TransitionalEventRequest ToNatural(::test_protocols::wire::TransitionalEventRequest src);
+  static ::test_protocols::wire::TransitionalEventRequest ToWire(fidl::AnyArena& arena, ::test_protocols::TransitionalEventRequest src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocols::wire::TransitionalEventRequest> {
+struct NaturalTypeForWireType<::test_protocols::wire::TransitionalEventRequest> {
   using type = ::test_protocols::TransitionalEventRequest;
 };
 template <>
@@ -566,41 +354,28 @@ struct WireTypeForNaturalType<::test_protocols::TransitionalEventRequest> {
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocols::wire::MethodWithUnionUnionMethodRequest,
-    ::test_protocols::MethodWithUnionUnionMethodRequest> {
-  static ::test_protocols::MethodWithUnionUnionMethodRequest ToNatural(
-      ::test_protocols::wire::MethodWithUnionUnionMethodRequest src);
-  static ::test_protocols::wire::MethodWithUnionUnionMethodRequest ToWire(
-      fidl::AnyArena& arena,
-      ::test_protocols::MethodWithUnionUnionMethodRequest src);
+struct WireNaturalConversionTraits<::test_protocols::wire::MethodWithUnionUnionMethodRequest, ::test_protocols::MethodWithUnionUnionMethodRequest> {
+  static ::test_protocols::MethodWithUnionUnionMethodRequest ToNatural(::test_protocols::wire::MethodWithUnionUnionMethodRequest src);
+  static ::test_protocols::wire::MethodWithUnionUnionMethodRequest ToWire(fidl::AnyArena& arena, ::test_protocols::MethodWithUnionUnionMethodRequest src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocols::wire::MethodWithUnionUnionMethodRequest> {
+struct NaturalTypeForWireType<::test_protocols::wire::MethodWithUnionUnionMethodRequest> {
   using type = ::test_protocols::MethodWithUnionUnionMethodRequest;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocols::MethodWithUnionUnionMethodRequest> {
+struct WireTypeForNaturalType<::test_protocols::MethodWithUnionUnionMethodRequest> {
   using type = ::test_protocols::wire::MethodWithUnionUnionMethodRequest;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocols::wire::SyscallProtocolMethodCRequest,
-    ::test_protocols::SyscallProtocolMethodCRequest> {
-  static ::test_protocols::SyscallProtocolMethodCRequest ToNatural(
-      ::test_protocols::wire::SyscallProtocolMethodCRequest src);
-  static ::test_protocols::wire::SyscallProtocolMethodCRequest ToWire(
-      fidl::AnyArena& arena,
-      ::test_protocols::SyscallProtocolMethodCRequest src);
+struct WireNaturalConversionTraits<::test_protocols::wire::SyscallProtocolMethodCRequest, ::test_protocols::SyscallProtocolMethodCRequest> {
+  static ::test_protocols::SyscallProtocolMethodCRequest ToNatural(::test_protocols::wire::SyscallProtocolMethodCRequest src);
+  static ::test_protocols::wire::SyscallProtocolMethodCRequest ToWire(fidl::AnyArena& arena, ::test_protocols::SyscallProtocolMethodCRequest src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocols::wire::SyscallProtocolMethodCRequest> {
+struct NaturalTypeForWireType<::test_protocols::wire::SyscallProtocolMethodCRequest> {
   using type = ::test_protocols::SyscallProtocolMethodCRequest;
 };
 template <>
@@ -611,12 +386,9 @@ struct WireTypeForNaturalType<::test_protocols::SyscallProtocolMethodCRequest> {
 #ifdef __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<::test_protocols::wire::ProtocolEnds,
-                                   ::test_protocols::ProtocolEnds> {
-  static ::test_protocols::ProtocolEnds ToNatural(
-      ::test_protocols::wire::ProtocolEnds src);
-  static ::test_protocols::wire::ProtocolEnds ToWire(
-      fidl::AnyArena& arena, ::test_protocols::ProtocolEnds src);
+struct WireNaturalConversionTraits<::test_protocols::wire::ProtocolEnds, ::test_protocols::ProtocolEnds> {
+  static ::test_protocols::ProtocolEnds ToNatural(::test_protocols::wire::ProtocolEnds src);
+  static ::test_protocols::wire::ProtocolEnds ToWire(fidl::AnyArena& arena, ::test_protocols::ProtocolEnds src);
 };
 
 template <>
@@ -633,29 +405,18 @@ struct WireTypeForNaturalType<::test_protocols::ProtocolEnds> {
 #ifdef __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocols::wire::WithProtocolEndsStructContainingEndsTopResponse,
-    ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse> {
-  static ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse
-  ToNatural(
-      ::test_protocols::wire::WithProtocolEndsStructContainingEndsTopResponse
-          src);
-  static ::test_protocols::wire::WithProtocolEndsStructContainingEndsTopResponse
-  ToWire(fidl::AnyArena& arena,
-         ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse src);
+struct WireNaturalConversionTraits<::test_protocols::wire::WithProtocolEndsStructContainingEndsTopResponse, ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse> {
+  static ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse ToNatural(::test_protocols::wire::WithProtocolEndsStructContainingEndsTopResponse src);
+  static ::test_protocols::wire::WithProtocolEndsStructContainingEndsTopResponse ToWire(fidl::AnyArena& arena, ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocols::wire::WithProtocolEndsStructContainingEndsTopResponse> {
-  using type =
-      ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse;
+struct NaturalTypeForWireType<::test_protocols::wire::WithProtocolEndsStructContainingEndsTopResponse> {
+  using type = ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse> {
-  using type =
-      ::test_protocols::wire::WithProtocolEndsStructContainingEndsTopResponse;
+struct WireTypeForNaturalType<::test_protocols::WithProtocolEndsStructContainingEndsTopResponse> {
+  using type = ::test_protocols::wire::WithProtocolEndsStructContainingEndsTopResponse;
 };
 
 #endif  // __Fuchsia__
@@ -663,45 +424,30 @@ struct WireTypeForNaturalType<
 #ifdef __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocols::wire::WithProtocolEndsStructContainingEndsRequest,
-    ::test_protocols::WithProtocolEndsStructContainingEndsRequest> {
-  static ::test_protocols::WithProtocolEndsStructContainingEndsRequest
-  ToNatural(
-      ::test_protocols::wire::WithProtocolEndsStructContainingEndsRequest src);
-  static ::test_protocols::wire::WithProtocolEndsStructContainingEndsRequest
-  ToWire(fidl::AnyArena& arena,
-         ::test_protocols::WithProtocolEndsStructContainingEndsRequest src);
+struct WireNaturalConversionTraits<::test_protocols::wire::WithProtocolEndsStructContainingEndsRequest, ::test_protocols::WithProtocolEndsStructContainingEndsRequest> {
+  static ::test_protocols::WithProtocolEndsStructContainingEndsRequest ToNatural(::test_protocols::wire::WithProtocolEndsStructContainingEndsRequest src);
+  static ::test_protocols::wire::WithProtocolEndsStructContainingEndsRequest ToWire(fidl::AnyArena& arena, ::test_protocols::WithProtocolEndsStructContainingEndsRequest src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocols::wire::WithProtocolEndsStructContainingEndsRequest> {
+struct NaturalTypeForWireType<::test_protocols::wire::WithProtocolEndsStructContainingEndsRequest> {
   using type = ::test_protocols::WithProtocolEndsStructContainingEndsRequest;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocols::WithProtocolEndsStructContainingEndsRequest> {
-  using type =
-      ::test_protocols::wire::WithProtocolEndsStructContainingEndsRequest;
+struct WireTypeForNaturalType<::test_protocols::WithProtocolEndsStructContainingEndsRequest> {
+  using type = ::test_protocols::wire::WithProtocolEndsStructContainingEndsRequest;
 };
 
 #endif  // __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocols::wire::ManyParametersFifteenRequest,
-    ::test_protocols::ManyParametersFifteenRequest> {
-  static ::test_protocols::ManyParametersFifteenRequest ToNatural(
-      ::test_protocols::wire::ManyParametersFifteenRequest src);
-  static ::test_protocols::wire::ManyParametersFifteenRequest ToWire(
-      fidl::AnyArena& arena,
-      ::test_protocols::ManyParametersFifteenRequest src);
+struct WireNaturalConversionTraits<::test_protocols::wire::ManyParametersFifteenRequest, ::test_protocols::ManyParametersFifteenRequest> {
+  static ::test_protocols::ManyParametersFifteenRequest ToNatural(::test_protocols::wire::ManyParametersFifteenRequest src);
+  static ::test_protocols::wire::ManyParametersFifteenRequest ToWire(fidl::AnyArena& arena, ::test_protocols::ManyParametersFifteenRequest src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocols::wire::ManyParametersFifteenRequest> {
+struct NaturalTypeForWireType<::test_protocols::wire::ManyParametersFifteenRequest> {
   using type = ::test_protocols::ManyParametersFifteenRequest;
 };
 template <>
@@ -712,28 +458,18 @@ struct WireTypeForNaturalType<::test_protocols::ManyParametersFifteenRequest> {
 #ifdef __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocols::wire::HandleRightsProtocolResponseMethodTopResponse,
-    ::test_protocols::HandleRightsProtocolResponseMethodTopResponse> {
-  static ::test_protocols::HandleRightsProtocolResponseMethodTopResponse
-  ToNatural(
-      ::test_protocols::wire::HandleRightsProtocolResponseMethodTopResponse
-          src);
-  static ::test_protocols::wire::HandleRightsProtocolResponseMethodTopResponse
-  ToWire(fidl::AnyArena& arena,
-         ::test_protocols::HandleRightsProtocolResponseMethodTopResponse src);
+struct WireNaturalConversionTraits<::test_protocols::wire::HandleRightsProtocolResponseMethodTopResponse, ::test_protocols::HandleRightsProtocolResponseMethodTopResponse> {
+  static ::test_protocols::HandleRightsProtocolResponseMethodTopResponse ToNatural(::test_protocols::wire::HandleRightsProtocolResponseMethodTopResponse src);
+  static ::test_protocols::wire::HandleRightsProtocolResponseMethodTopResponse ToWire(fidl::AnyArena& arena, ::test_protocols::HandleRightsProtocolResponseMethodTopResponse src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocols::wire::HandleRightsProtocolResponseMethodTopResponse> {
+struct NaturalTypeForWireType<::test_protocols::wire::HandleRightsProtocolResponseMethodTopResponse> {
   using type = ::test_protocols::HandleRightsProtocolResponseMethodTopResponse;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocols::HandleRightsProtocolResponseMethodTopResponse> {
-  using type =
-      ::test_protocols::wire::HandleRightsProtocolResponseMethodTopResponse;
+struct WireTypeForNaturalType<::test_protocols::HandleRightsProtocolResponseMethodTopResponse> {
+  using type = ::test_protocols::wire::HandleRightsProtocolResponseMethodTopResponse;
 };
 
 #endif  // __Fuchsia__
@@ -741,26 +477,18 @@ struct WireTypeForNaturalType<
 #ifdef __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocols::wire::HandleRightsProtocolResponseMethodRequest,
-    ::test_protocols::HandleRightsProtocolResponseMethodRequest> {
-  static ::test_protocols::HandleRightsProtocolResponseMethodRequest ToNatural(
-      ::test_protocols::wire::HandleRightsProtocolResponseMethodRequest src);
-  static ::test_protocols::wire::HandleRightsProtocolResponseMethodRequest
-  ToWire(fidl::AnyArena& arena,
-         ::test_protocols::HandleRightsProtocolResponseMethodRequest src);
+struct WireNaturalConversionTraits<::test_protocols::wire::HandleRightsProtocolResponseMethodRequest, ::test_protocols::HandleRightsProtocolResponseMethodRequest> {
+  static ::test_protocols::HandleRightsProtocolResponseMethodRequest ToNatural(::test_protocols::wire::HandleRightsProtocolResponseMethodRequest src);
+  static ::test_protocols::wire::HandleRightsProtocolResponseMethodRequest ToWire(fidl::AnyArena& arena, ::test_protocols::HandleRightsProtocolResponseMethodRequest src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocols::wire::HandleRightsProtocolResponseMethodRequest> {
+struct NaturalTypeForWireType<::test_protocols::wire::HandleRightsProtocolResponseMethodRequest> {
   using type = ::test_protocols::HandleRightsProtocolResponseMethodRequest;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocols::HandleRightsProtocolResponseMethodRequest> {
-  using type =
-      ::test_protocols::wire::HandleRightsProtocolResponseMethodRequest;
+struct WireTypeForNaturalType<::test_protocols::HandleRightsProtocolResponseMethodRequest> {
+  using type = ::test_protocols::wire::HandleRightsProtocolResponseMethodRequest;
 };
 
 #endif  // __Fuchsia__
@@ -768,27 +496,18 @@ struct WireTypeForNaturalType<
 #ifdef __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocols::wire::HandleRightsProtocolNoResponseMethodRequest,
-    ::test_protocols::HandleRightsProtocolNoResponseMethodRequest> {
-  static ::test_protocols::HandleRightsProtocolNoResponseMethodRequest
-  ToNatural(
-      ::test_protocols::wire::HandleRightsProtocolNoResponseMethodRequest src);
-  static ::test_protocols::wire::HandleRightsProtocolNoResponseMethodRequest
-  ToWire(fidl::AnyArena& arena,
-         ::test_protocols::HandleRightsProtocolNoResponseMethodRequest src);
+struct WireNaturalConversionTraits<::test_protocols::wire::HandleRightsProtocolNoResponseMethodRequest, ::test_protocols::HandleRightsProtocolNoResponseMethodRequest> {
+  static ::test_protocols::HandleRightsProtocolNoResponseMethodRequest ToNatural(::test_protocols::wire::HandleRightsProtocolNoResponseMethodRequest src);
+  static ::test_protocols::wire::HandleRightsProtocolNoResponseMethodRequest ToWire(fidl::AnyArena& arena, ::test_protocols::HandleRightsProtocolNoResponseMethodRequest src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocols::wire::HandleRightsProtocolNoResponseMethodRequest> {
+struct NaturalTypeForWireType<::test_protocols::wire::HandleRightsProtocolNoResponseMethodRequest> {
   using type = ::test_protocols::HandleRightsProtocolNoResponseMethodRequest;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocols::HandleRightsProtocolNoResponseMethodRequest> {
-  using type =
-      ::test_protocols::wire::HandleRightsProtocolNoResponseMethodRequest;
+struct WireTypeForNaturalType<::test_protocols::HandleRightsProtocolNoResponseMethodRequest> {
+  using type = ::test_protocols::wire::HandleRightsProtocolNoResponseMethodRequest;
 };
 
 #endif  // __Fuchsia__
@@ -796,72 +515,51 @@ struct WireTypeForNaturalType<
 #ifdef __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocols::wire::HandleRightsProtocolAnEventRequest,
-    ::test_protocols::HandleRightsProtocolAnEventRequest> {
-  static ::test_protocols::HandleRightsProtocolAnEventRequest ToNatural(
-      ::test_protocols::wire::HandleRightsProtocolAnEventRequest src);
-  static ::test_protocols::wire::HandleRightsProtocolAnEventRequest ToWire(
-      fidl::AnyArena& arena,
-      ::test_protocols::HandleRightsProtocolAnEventRequest src);
+struct WireNaturalConversionTraits<::test_protocols::wire::HandleRightsProtocolAnEventRequest, ::test_protocols::HandleRightsProtocolAnEventRequest> {
+  static ::test_protocols::HandleRightsProtocolAnEventRequest ToNatural(::test_protocols::wire::HandleRightsProtocolAnEventRequest src);
+  static ::test_protocols::wire::HandleRightsProtocolAnEventRequest ToWire(fidl::AnyArena& arena, ::test_protocols::HandleRightsProtocolAnEventRequest src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocols::wire::HandleRightsProtocolAnEventRequest> {
+struct NaturalTypeForWireType<::test_protocols::wire::HandleRightsProtocolAnEventRequest> {
   using type = ::test_protocols::HandleRightsProtocolAnEventRequest;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocols::HandleRightsProtocolAnEventRequest> {
+struct WireTypeForNaturalType<::test_protocols::HandleRightsProtocolAnEventRequest> {
   using type = ::test_protocols::wire::HandleRightsProtocolAnEventRequest;
 };
 
 #endif  // __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocols::wire::WithErrorSyntaxErrorAsEnumTopResponse,
-    ::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse> {
-  static ::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse ToNatural(
-      ::test_protocols::wire::WithErrorSyntaxErrorAsEnumTopResponse src);
-  static ::test_protocols::wire::WithErrorSyntaxErrorAsEnumTopResponse ToWire(
-      fidl::AnyArena& arena,
-      ::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse src);
+struct WireNaturalConversionTraits<::test_protocols::wire::WithErrorSyntaxErrorAsEnumTopResponse, ::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse> {
+  static ::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse ToNatural(::test_protocols::wire::WithErrorSyntaxErrorAsEnumTopResponse src);
+  static ::test_protocols::wire::WithErrorSyntaxErrorAsEnumTopResponse ToWire(fidl::AnyArena& arena, ::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocols::wire::WithErrorSyntaxErrorAsEnumTopResponse> {
+struct NaturalTypeForWireType<::test_protocols::wire::WithErrorSyntaxErrorAsEnumTopResponse> {
   using type = ::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse> {
+struct WireTypeForNaturalType<::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse> {
   using type = ::test_protocols::wire::WithErrorSyntaxErrorAsEnumTopResponse;
 };
 
 #ifdef __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocols::wire::ChannelProtocolTakeHandleRequest,
-    ::test_protocols::ChannelProtocolTakeHandleRequest> {
-  static ::test_protocols::ChannelProtocolTakeHandleRequest ToNatural(
-      ::test_protocols::wire::ChannelProtocolTakeHandleRequest src);
-  static ::test_protocols::wire::ChannelProtocolTakeHandleRequest ToWire(
-      fidl::AnyArena& arena,
-      ::test_protocols::ChannelProtocolTakeHandleRequest src);
+struct WireNaturalConversionTraits<::test_protocols::wire::ChannelProtocolTakeHandleRequest, ::test_protocols::ChannelProtocolTakeHandleRequest> {
+  static ::test_protocols::ChannelProtocolTakeHandleRequest ToNatural(::test_protocols::wire::ChannelProtocolTakeHandleRequest src);
+  static ::test_protocols::wire::ChannelProtocolTakeHandleRequest ToWire(fidl::AnyArena& arena, ::test_protocols::ChannelProtocolTakeHandleRequest src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocols::wire::ChannelProtocolTakeHandleRequest> {
+struct NaturalTypeForWireType<::test_protocols::wire::ChannelProtocolTakeHandleRequest> {
   using type = ::test_protocols::ChannelProtocolTakeHandleRequest;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocols::ChannelProtocolTakeHandleRequest> {
+struct WireTypeForNaturalType<::test_protocols::ChannelProtocolTakeHandleRequest> {
   using type = ::test_protocols::wire::ChannelProtocolTakeHandleRequest;
 };
 
@@ -870,24 +568,17 @@ struct WireTypeForNaturalType<
 #ifdef __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocols::wire::ChannelProtocolMutateSocketTopResponse,
-    ::test_protocols::ChannelProtocolMutateSocketTopResponse> {
-  static ::test_protocols::ChannelProtocolMutateSocketTopResponse ToNatural(
-      ::test_protocols::wire::ChannelProtocolMutateSocketTopResponse src);
-  static ::test_protocols::wire::ChannelProtocolMutateSocketTopResponse ToWire(
-      fidl::AnyArena& arena,
-      ::test_protocols::ChannelProtocolMutateSocketTopResponse src);
+struct WireNaturalConversionTraits<::test_protocols::wire::ChannelProtocolMutateSocketTopResponse, ::test_protocols::ChannelProtocolMutateSocketTopResponse> {
+  static ::test_protocols::ChannelProtocolMutateSocketTopResponse ToNatural(::test_protocols::wire::ChannelProtocolMutateSocketTopResponse src);
+  static ::test_protocols::wire::ChannelProtocolMutateSocketTopResponse ToWire(fidl::AnyArena& arena, ::test_protocols::ChannelProtocolMutateSocketTopResponse src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocols::wire::ChannelProtocolMutateSocketTopResponse> {
+struct NaturalTypeForWireType<::test_protocols::wire::ChannelProtocolMutateSocketTopResponse> {
   using type = ::test_protocols::ChannelProtocolMutateSocketTopResponse;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocols::ChannelProtocolMutateSocketTopResponse> {
+struct WireTypeForNaturalType<::test_protocols::ChannelProtocolMutateSocketTopResponse> {
   using type = ::test_protocols::wire::ChannelProtocolMutateSocketTopResponse;
 };
 
@@ -896,65 +587,45 @@ struct WireTypeForNaturalType<
 #ifdef __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocols::wire::ChannelProtocolMutateSocketRequest,
-    ::test_protocols::ChannelProtocolMutateSocketRequest> {
-  static ::test_protocols::ChannelProtocolMutateSocketRequest ToNatural(
-      ::test_protocols::wire::ChannelProtocolMutateSocketRequest src);
-  static ::test_protocols::wire::ChannelProtocolMutateSocketRequest ToWire(
-      fidl::AnyArena& arena,
-      ::test_protocols::ChannelProtocolMutateSocketRequest src);
+struct WireNaturalConversionTraits<::test_protocols::wire::ChannelProtocolMutateSocketRequest, ::test_protocols::ChannelProtocolMutateSocketRequest> {
+  static ::test_protocols::ChannelProtocolMutateSocketRequest ToNatural(::test_protocols::wire::ChannelProtocolMutateSocketRequest src);
+  static ::test_protocols::wire::ChannelProtocolMutateSocketRequest ToWire(fidl::AnyArena& arena, ::test_protocols::ChannelProtocolMutateSocketRequest src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocols::wire::ChannelProtocolMutateSocketRequest> {
+struct NaturalTypeForWireType<::test_protocols::wire::ChannelProtocolMutateSocketRequest> {
   using type = ::test_protocols::ChannelProtocolMutateSocketRequest;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocols::ChannelProtocolMutateSocketRequest> {
+struct WireTypeForNaturalType<::test_protocols::ChannelProtocolMutateSocketRequest> {
   using type = ::test_protocols::wire::ChannelProtocolMutateSocketRequest;
 };
 
 #endif  // __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocols::wire::ChannelProtocolMethodBTopResponse,
-    ::test_protocols::ChannelProtocolMethodBTopResponse> {
-  static ::test_protocols::ChannelProtocolMethodBTopResponse ToNatural(
-      ::test_protocols::wire::ChannelProtocolMethodBTopResponse src);
-  static ::test_protocols::wire::ChannelProtocolMethodBTopResponse ToWire(
-      fidl::AnyArena& arena,
-      ::test_protocols::ChannelProtocolMethodBTopResponse src);
+struct WireNaturalConversionTraits<::test_protocols::wire::ChannelProtocolMethodBTopResponse, ::test_protocols::ChannelProtocolMethodBTopResponse> {
+  static ::test_protocols::ChannelProtocolMethodBTopResponse ToNatural(::test_protocols::wire::ChannelProtocolMethodBTopResponse src);
+  static ::test_protocols::wire::ChannelProtocolMethodBTopResponse ToWire(fidl::AnyArena& arena, ::test_protocols::ChannelProtocolMethodBTopResponse src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocols::wire::ChannelProtocolMethodBTopResponse> {
+struct NaturalTypeForWireType<::test_protocols::wire::ChannelProtocolMethodBTopResponse> {
   using type = ::test_protocols::ChannelProtocolMethodBTopResponse;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocols::ChannelProtocolMethodBTopResponse> {
+struct WireTypeForNaturalType<::test_protocols::ChannelProtocolMethodBTopResponse> {
   using type = ::test_protocols::wire::ChannelProtocolMethodBTopResponse;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocols::wire::ChannelProtocolMethodBRequest,
-    ::test_protocols::ChannelProtocolMethodBRequest> {
-  static ::test_protocols::ChannelProtocolMethodBRequest ToNatural(
-      ::test_protocols::wire::ChannelProtocolMethodBRequest src);
-  static ::test_protocols::wire::ChannelProtocolMethodBRequest ToWire(
-      fidl::AnyArena& arena,
-      ::test_protocols::ChannelProtocolMethodBRequest src);
+struct WireNaturalConversionTraits<::test_protocols::wire::ChannelProtocolMethodBRequest, ::test_protocols::ChannelProtocolMethodBRequest> {
+  static ::test_protocols::ChannelProtocolMethodBRequest ToNatural(::test_protocols::wire::ChannelProtocolMethodBRequest src);
+  static ::test_protocols::wire::ChannelProtocolMethodBRequest ToWire(fidl::AnyArena& arena, ::test_protocols::ChannelProtocolMethodBRequest src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocols::wire::ChannelProtocolMethodBRequest> {
+struct NaturalTypeForWireType<::test_protocols::wire::ChannelProtocolMethodBRequest> {
   using type = ::test_protocols::ChannelProtocolMethodBRequest;
 };
 template <>
@@ -963,19 +634,13 @@ struct WireTypeForNaturalType<::test_protocols::ChannelProtocolMethodBRequest> {
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocols::wire::ChannelProtocolMethodARequest,
-    ::test_protocols::ChannelProtocolMethodARequest> {
-  static ::test_protocols::ChannelProtocolMethodARequest ToNatural(
-      ::test_protocols::wire::ChannelProtocolMethodARequest src);
-  static ::test_protocols::wire::ChannelProtocolMethodARequest ToWire(
-      fidl::AnyArena& arena,
-      ::test_protocols::ChannelProtocolMethodARequest src);
+struct WireNaturalConversionTraits<::test_protocols::wire::ChannelProtocolMethodARequest, ::test_protocols::ChannelProtocolMethodARequest> {
+  static ::test_protocols::ChannelProtocolMethodARequest ToNatural(::test_protocols::wire::ChannelProtocolMethodARequest src);
+  static ::test_protocols::wire::ChannelProtocolMethodARequest ToWire(fidl::AnyArena& arena, ::test_protocols::ChannelProtocolMethodARequest src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocols::wire::ChannelProtocolMethodARequest> {
+struct NaturalTypeForWireType<::test_protocols::wire::ChannelProtocolMethodARequest> {
   using type = ::test_protocols::ChannelProtocolMethodARequest;
 };
 template <>
@@ -984,19 +649,13 @@ struct WireTypeForNaturalType<::test_protocols::ChannelProtocolMethodARequest> {
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocols::wire::ChannelProtocolEventARequest,
-    ::test_protocols::ChannelProtocolEventARequest> {
-  static ::test_protocols::ChannelProtocolEventARequest ToNatural(
-      ::test_protocols::wire::ChannelProtocolEventARequest src);
-  static ::test_protocols::wire::ChannelProtocolEventARequest ToWire(
-      fidl::AnyArena& arena,
-      ::test_protocols::ChannelProtocolEventARequest src);
+struct WireNaturalConversionTraits<::test_protocols::wire::ChannelProtocolEventARequest, ::test_protocols::ChannelProtocolEventARequest> {
+  static ::test_protocols::ChannelProtocolEventARequest ToNatural(::test_protocols::wire::ChannelProtocolEventARequest src);
+  static ::test_protocols::wire::ChannelProtocolEventARequest ToWire(fidl::AnyArena& arena, ::test_protocols::ChannelProtocolEventARequest src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocols::wire::ChannelProtocolEventARequest> {
+struct NaturalTypeForWireType<::test_protocols::wire::ChannelProtocolEventARequest> {
   using type = ::test_protocols::ChannelProtocolEventARequest;
 };
 template <>
@@ -1005,148 +664,94 @@ struct WireTypeForNaturalType<::test_protocols::ChannelProtocolEventARequest> {
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocols::wire::WithErrorSyntaxResponseAsStructResult,
-    ::test_protocols::WithErrorSyntaxResponseAsStructResult> {
-  static ::test_protocols::WithErrorSyntaxResponseAsStructResult ToNatural(
-      ::test_protocols::wire::WithErrorSyntaxResponseAsStructResult src);
-  static ::test_protocols::wire::WithErrorSyntaxResponseAsStructResult ToWire(
-      fidl::AnyArena& arena,
-      ::test_protocols::WithErrorSyntaxResponseAsStructResult src);
+struct WireNaturalConversionTraits<::test_protocols::wire::WithErrorSyntaxResponseAsStructResult, ::test_protocols::WithErrorSyntaxResponseAsStructResult> {
+  static ::test_protocols::WithErrorSyntaxResponseAsStructResult ToNatural(::test_protocols::wire::WithErrorSyntaxResponseAsStructResult src);
+  static ::test_protocols::wire::WithErrorSyntaxResponseAsStructResult ToWire(fidl::AnyArena& arena, ::test_protocols::WithErrorSyntaxResponseAsStructResult src);
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocols::wire::WithErrorSyntaxResponseAsStructResult,
-    std::unique_ptr<::test_protocols::WithErrorSyntaxResponseAsStructResult>> {
-  static std::unique_ptr<
-      ::test_protocols::WithErrorSyntaxResponseAsStructResult>
-  ToNatural(::test_protocols::wire::WithErrorSyntaxResponseAsStructResult src);
-  static ::test_protocols::wire::WithErrorSyntaxResponseAsStructResult ToWire(
-      fidl::AnyArena& arena,
-      std::unique_ptr<::test_protocols::WithErrorSyntaxResponseAsStructResult>
-          src);
+struct WireNaturalConversionTraits<::test_protocols::wire::WithErrorSyntaxResponseAsStructResult, std::unique_ptr<::test_protocols::WithErrorSyntaxResponseAsStructResult>> {
+  static std::unique_ptr<::test_protocols::WithErrorSyntaxResponseAsStructResult> ToNatural(::test_protocols::wire::WithErrorSyntaxResponseAsStructResult src);
+  static ::test_protocols::wire::WithErrorSyntaxResponseAsStructResult ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_protocols::WithErrorSyntaxResponseAsStructResult> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocols::wire::WithErrorSyntaxResponseAsStructResult> {
-  using type =
-      std::unique_ptr<::test_protocols::WithErrorSyntaxResponseAsStructResult>;
+struct NaturalTypeForWireType<::test_protocols::wire::WithErrorSyntaxResponseAsStructResult> {
+  using type = std::unique_ptr<::test_protocols::WithErrorSyntaxResponseAsStructResult>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocols::WithErrorSyntaxResponseAsStructResult> {
+struct WireTypeForNaturalType<::test_protocols::WithErrorSyntaxResponseAsStructResult> {
   using type = ::test_protocols::wire::WithErrorSyntaxResponseAsStructResult;
 };
 template <>
-struct WireTypeForNaturalType<
-    std::unique_ptr<::test_protocols::WithErrorSyntaxResponseAsStructResult>> {
+struct WireTypeForNaturalType<std::unique_ptr<::test_protocols::WithErrorSyntaxResponseAsStructResult>> {
   using type = ::test_protocols::wire::WithErrorSyntaxResponseAsStructResult;
 };
 
 #ifdef __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocols::wire::WithErrorSyntaxHandleInResultResult,
-    ::test_protocols::WithErrorSyntaxHandleInResultResult> {
-  static ::test_protocols::WithErrorSyntaxHandleInResultResult ToNatural(
-      ::test_protocols::wire::WithErrorSyntaxHandleInResultResult src);
-  static ::test_protocols::wire::WithErrorSyntaxHandleInResultResult ToWire(
-      fidl::AnyArena& arena,
-      ::test_protocols::WithErrorSyntaxHandleInResultResult src);
+struct WireNaturalConversionTraits<::test_protocols::wire::WithErrorSyntaxHandleInResultResult, ::test_protocols::WithErrorSyntaxHandleInResultResult> {
+  static ::test_protocols::WithErrorSyntaxHandleInResultResult ToNatural(::test_protocols::wire::WithErrorSyntaxHandleInResultResult src);
+  static ::test_protocols::wire::WithErrorSyntaxHandleInResultResult ToWire(fidl::AnyArena& arena, ::test_protocols::WithErrorSyntaxHandleInResultResult src);
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocols::wire::WithErrorSyntaxHandleInResultResult,
-    std::unique_ptr<::test_protocols::WithErrorSyntaxHandleInResultResult>> {
-  static std::unique_ptr<::test_protocols::WithErrorSyntaxHandleInResultResult>
-  ToNatural(::test_protocols::wire::WithErrorSyntaxHandleInResultResult src);
-  static ::test_protocols::wire::WithErrorSyntaxHandleInResultResult ToWire(
-      fidl::AnyArena& arena,
-      std::unique_ptr<::test_protocols::WithErrorSyntaxHandleInResultResult>
-          src);
+struct WireNaturalConversionTraits<::test_protocols::wire::WithErrorSyntaxHandleInResultResult, std::unique_ptr<::test_protocols::WithErrorSyntaxHandleInResultResult>> {
+  static std::unique_ptr<::test_protocols::WithErrorSyntaxHandleInResultResult> ToNatural(::test_protocols::wire::WithErrorSyntaxHandleInResultResult src);
+  static ::test_protocols::wire::WithErrorSyntaxHandleInResultResult ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_protocols::WithErrorSyntaxHandleInResultResult> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocols::wire::WithErrorSyntaxHandleInResultResult> {
-  using type =
-      std::unique_ptr<::test_protocols::WithErrorSyntaxHandleInResultResult>;
+struct NaturalTypeForWireType<::test_protocols::wire::WithErrorSyntaxHandleInResultResult> {
+  using type = std::unique_ptr<::test_protocols::WithErrorSyntaxHandleInResultResult>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocols::WithErrorSyntaxHandleInResultResult> {
+struct WireTypeForNaturalType<::test_protocols::WithErrorSyntaxHandleInResultResult> {
   using type = ::test_protocols::wire::WithErrorSyntaxHandleInResultResult;
 };
 template <>
-struct WireTypeForNaturalType<
-    std::unique_ptr<::test_protocols::WithErrorSyntaxHandleInResultResult>> {
+struct WireTypeForNaturalType<std::unique_ptr<::test_protocols::WithErrorSyntaxHandleInResultResult>> {
   using type = ::test_protocols::wire::WithErrorSyntaxHandleInResultResult;
 };
 
 #endif  // __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult,
-    ::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult> {
-  static ::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult ToNatural(
-      ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult src);
-  static ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult ToWire(
-      fidl::AnyArena& arena,
-      ::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult src);
+struct WireNaturalConversionTraits<::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult, ::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult> {
+  static ::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult ToNatural(::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult src);
+  static ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult ToWire(fidl::AnyArena& arena, ::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult src);
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult,
-    std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult>> {
-  static std::unique_ptr<
-      ::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult>
-  ToNatural(::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult src);
-  static ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult ToWire(
-      fidl::AnyArena& arena,
-      std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult>
-          src);
+struct WireNaturalConversionTraits<::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult, std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult>> {
+  static std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult> ToNatural(::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult src);
+  static ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult> {
-  using type =
-      std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult>;
+struct NaturalTypeForWireType<::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult> {
+  using type = std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult> {
+struct WireTypeForNaturalType<::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult> {
   using type = ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult;
 };
 template <>
-struct WireTypeForNaturalType<
-    std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult>> {
+struct WireTypeForNaturalType<std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult>> {
   using type = ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult;
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_protocols::wire::TheUnion,
-                                   ::test_protocols::TheUnion> {
-  static ::test_protocols::TheUnion ToNatural(
-      ::test_protocols::wire::TheUnion src);
-  static ::test_protocols::wire::TheUnion ToWire(
-      fidl::AnyArena& arena, ::test_protocols::TheUnion src);
+struct WireNaturalConversionTraits<::test_protocols::wire::TheUnion, ::test_protocols::TheUnion> {
+  static ::test_protocols::TheUnion ToNatural(::test_protocols::wire::TheUnion src);
+  static ::test_protocols::wire::TheUnion ToWire(fidl::AnyArena& arena, ::test_protocols::TheUnion src);
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocols::wire::TheUnion,
-    std::unique_ptr<::test_protocols::TheUnion>> {
-  static std::unique_ptr<::test_protocols::TheUnion> ToNatural(
-      ::test_protocols::wire::TheUnion src);
-  static ::test_protocols::wire::TheUnion ToWire(
-      fidl::AnyArena& arena, std::unique_ptr<::test_protocols::TheUnion> src);
+struct WireNaturalConversionTraits<::test_protocols::wire::TheUnion, std::unique_ptr<::test_protocols::TheUnion>> {
+  static std::unique_ptr<::test_protocols::TheUnion> ToNatural(::test_protocols::wire::TheUnion src);
+  static ::test_protocols::wire::TheUnion ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_protocols::TheUnion> src);
 };
 
 template <>
@@ -1163,1276 +768,704 @@ struct WireTypeForNaturalType<std::unique_ptr<::test_protocols::TheUnion>> {
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult,
-    ::test_protocols::WithErrorSyntaxErrorAsEnumResult> {
-  static ::test_protocols::WithErrorSyntaxErrorAsEnumResult ToNatural(
-      ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult src);
-  static ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult ToWire(
-      fidl::AnyArena& arena,
-      ::test_protocols::WithErrorSyntaxErrorAsEnumResult src);
+struct WireNaturalConversionTraits<::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult, ::test_protocols::WithErrorSyntaxErrorAsEnumResult> {
+  static ::test_protocols::WithErrorSyntaxErrorAsEnumResult ToNatural(::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult src);
+  static ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult ToWire(fidl::AnyArena& arena, ::test_protocols::WithErrorSyntaxErrorAsEnumResult src);
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult,
-    std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsEnumResult>> {
-  static std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsEnumResult>
-  ToNatural(::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult src);
-  static ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult ToWire(
-      fidl::AnyArena& arena,
-      std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsEnumResult> src);
+struct WireNaturalConversionTraits<::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult, std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsEnumResult>> {
+  static std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsEnumResult> ToNatural(::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult src);
+  static ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsEnumResult> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult> {
-  using type =
-      std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsEnumResult>;
+struct NaturalTypeForWireType<::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult> {
+  using type = std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsEnumResult>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::test_protocols::WithErrorSyntaxErrorAsEnumResult> {
+struct WireTypeForNaturalType<::test_protocols::WithErrorSyntaxErrorAsEnumResult> {
   using type = ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult;
 };
 template <>
-struct WireTypeForNaturalType<
-    std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsEnumResult>> {
+struct WireTypeForNaturalType<std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsEnumResult>> {
   using type = ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult;
 };
 
 #ifdef __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireRequest<
-        ::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>,
-    ::fidl::Request<
-        ::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>> {
-  static ::fidl::Request<
-      ::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>
-  ToNatural(
-      ::fidl::WireRequest<
-          ::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>
-          src);
-  static ::fidl::WireRequest<
-      ::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>
-  ToWire(
-      fidl::AnyArena& arena,
-      ::fidl::Request<
-          ::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>
-          src);
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>, ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>> {
+  static ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse> ToNatural(::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse> src);
+  static ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse> src);
 };
 
 template <>
-struct NaturalTypeForWireType<::fidl::WireRequest<
-    ::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>> {
-  using type = ::fidl::Request<
-      ::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>;
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>> {
+  using type = ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>;
 };
 template <>
-struct WireTypeForNaturalType<::fidl::Request<
-    ::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>> {
-  using type = ::fidl::WireRequest<
-      ::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>;
+struct WireTypeForNaturalType<::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>> {
+  using type = ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::
-                            NoRequestEmptyResponse>,
-    ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::
-                        NoRequestEmptyResponse>> {
-  static ::fidl::Request<
-      ::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>
-  ToNatural(
-      ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::
-                              NoRequestEmptyResponse>
-          src);
-  static ::fidl::WireRequest<
-      ::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>
-  ToWire(fidl::AnyArena& arena,
-         ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::
-                             NoRequestEmptyResponse>
-             src);
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>, ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>> {
+  static ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse> ToNatural(::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse> src);
+  static ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse> src);
 };
 
 template <>
-struct NaturalTypeForWireType<::fidl::WireRequest<
-    ::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>> {
-  using type = ::fidl::Request<
-      ::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>;
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>> {
+  using type = ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>;
 };
 template <>
-struct WireTypeForNaturalType<::fidl::Request<
-    ::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>> {
-  using type = ::fidl::WireRequest<
-      ::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>;
+struct WireTypeForNaturalType<::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>> {
+  using type = ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireRequest<
-        ::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>,
-    ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::
-                        NoRequestWithResponse>> {
-  static ::fidl::Request<
-      ::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>
-  ToNatural(
-      ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::
-                              NoRequestWithResponse>
-          src);
-  static ::fidl::WireRequest<
-      ::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>
-  ToWire(fidl::AnyArena& arena,
-         ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::
-                             NoRequestWithResponse>
-             src);
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>, ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>> {
+  static ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse> ToNatural(::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse> src);
+  static ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse> src);
 };
 
 template <>
-struct NaturalTypeForWireType<::fidl::WireRequest<
-    ::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>> {
-  using type = ::fidl::Request<
-      ::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>;
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>> {
+  using type = ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>;
 };
 template <>
-struct WireTypeForNaturalType<::fidl::Request<
-    ::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>> {
-  using type = ::fidl::WireRequest<
-      ::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>;
+struct WireTypeForNaturalType<::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>> {
+  using type = ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireRequest<
-        ::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>,
-    ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::
-                        WithRequestNoResponse>> {
-  static ::fidl::Request<
-      ::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>
-  ToNatural(
-      ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::
-                              WithRequestNoResponse>
-          src);
-  static ::fidl::WireRequest<
-      ::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>
-  ToWire(fidl::AnyArena& arena,
-         ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::
-                             WithRequestNoResponse>
-             src);
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>, ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>> {
+  static ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse> ToNatural(::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse> src);
+  static ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse> src);
 };
 
 template <>
-struct NaturalTypeForWireType<::fidl::WireRequest<
-    ::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>> {
-  using type = ::fidl::Request<
-      ::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>;
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>> {
+  using type = ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>;
 };
 template <>
-struct WireTypeForNaturalType<::fidl::Request<
-    ::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>> {
-  using type = ::fidl::WireRequest<
-      ::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>;
+struct WireTypeForNaturalType<::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>> {
+  using type = ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::
-                            WithRequestEmptyResponse>,
-    ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::
-                        WithRequestEmptyResponse>> {
-  static ::fidl::Request<
-      ::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>
-  ToNatural(
-      ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::
-                              WithRequestEmptyResponse>
-          src);
-  static ::fidl::WireRequest<
-      ::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>
-  ToWire(fidl::AnyArena& arena,
-         ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::
-                             WithRequestEmptyResponse>
-             src);
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>, ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>> {
+  static ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse> ToNatural(::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse> src);
+  static ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::
-                            WithRequestEmptyResponse>> {
-  using type = ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::
-                                   WithRequestEmptyResponse>;
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>> {
+  using type = ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::
-                        WithRequestEmptyResponse>> {
-  using type =
-      ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::
-                              WithRequestEmptyResponse>;
+struct WireTypeForNaturalType<::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>> {
+  using type = ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::
-                            WithRequestWithResponse>,
-    ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::
-                        WithRequestWithResponse>> {
-  static ::fidl::Request<
-      ::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>
-  ToNatural(
-      ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::
-                              WithRequestWithResponse>
-          src);
-  static ::fidl::WireRequest<
-      ::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>
-  ToWire(fidl::AnyArena& arena,
-         ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::
-                             WithRequestWithResponse>
-             src);
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>, ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>> {
+  static ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse> ToNatural(::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse> src);
+  static ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse> src);
 };
 
 template <>
-struct NaturalTypeForWireType<::fidl::WireRequest<
-    ::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>> {
-  using type = ::fidl::Request<
-      ::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>;
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>> {
+  using type = ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>;
 };
 template <>
-struct WireTypeForNaturalType<::fidl::Request<
-    ::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>> {
-  using type = ::fidl::WireRequest<
-      ::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>;
+struct WireTypeForNaturalType<::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>> {
+  using type = ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::
-                             NoRequestEmptyResponse>,
-    ::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::
-                         NoRequestEmptyResponse>> {
-  static ::fidl::Response<
-      ::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>
-  ToNatural(
-      ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::
-                               NoRequestEmptyResponse>
-          src);
-  static ::fidl::WireResponse<
-      ::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>
-  ToWire(fidl::AnyArena& arena,
-         ::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::
-                              NoRequestEmptyResponse>
-             src);
+struct WireNaturalConversionTraits<::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>, ::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>> {
+  static ::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse> ToNatural(::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse> src);
+  static ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse> ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse> src);
 };
 
 template <>
-struct NaturalTypeForWireType<::fidl::WireResponse<
-    ::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>> {
-  using type = ::fidl::Response<
-      ::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>;
+struct NaturalTypeForWireType<::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>> {
+  using type = ::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>;
 };
 template <>
-struct WireTypeForNaturalType<::fidl::Response<
-    ::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>> {
-  using type = ::fidl::WireResponse<
-      ::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>;
+struct WireTypeForNaturalType<::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>> {
+  using type = ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireResponse<
-        ::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>,
-    ::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::
-                         NoRequestWithResponse>> {
-  static ::fidl::Response<
-      ::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>
-  ToNatural(
-      ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::
-                               NoRequestWithResponse>
-          src);
-  static ::fidl::WireResponse<
-      ::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>
-  ToWire(fidl::AnyArena& arena,
-         ::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::
-                              NoRequestWithResponse>
-             src);
+struct WireNaturalConversionTraits<::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>, ::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>> {
+  static ::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse> ToNatural(::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse> src);
+  static ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse> ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse> src);
 };
 
 template <>
-struct NaturalTypeForWireType<::fidl::WireResponse<
-    ::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>> {
-  using type = ::fidl::Response<
-      ::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>;
+struct NaturalTypeForWireType<::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>> {
+  using type = ::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>;
 };
 template <>
-struct WireTypeForNaturalType<::fidl::Response<
-    ::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>> {
-  using type = ::fidl::WireResponse<
-      ::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>;
+struct WireTypeForNaturalType<::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>> {
+  using type = ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::
-                             WithRequestEmptyResponse>,
-    ::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::
-                         WithRequestEmptyResponse>> {
-  static ::fidl::Response<
-      ::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>
-  ToNatural(
-      ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::
-                               WithRequestEmptyResponse>
-          src);
-  static ::fidl::WireResponse<
-      ::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>
-  ToWire(fidl::AnyArena& arena,
-         ::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::
-                              WithRequestEmptyResponse>
-             src);
+struct WireNaturalConversionTraits<::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>, ::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>> {
+  static ::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse> ToNatural(::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse> src);
+  static ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse> ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::
-                             WithRequestEmptyResponse>> {
-  using type =
-      ::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::
-                           WithRequestEmptyResponse>;
+struct NaturalTypeForWireType<::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>> {
+  using type = ::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::
-                         WithRequestEmptyResponse>> {
-  using type =
-      ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::
-                               WithRequestEmptyResponse>;
+struct WireTypeForNaturalType<::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>> {
+  using type = ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::
-                             WithRequestWithResponse>,
-    ::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::
-                         WithRequestWithResponse>> {
-  static ::fidl::Response<
-      ::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>
-  ToNatural(
-      ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::
-                               WithRequestWithResponse>
-          src);
-  static ::fidl::WireResponse<
-      ::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>
-  ToWire(fidl::AnyArena& arena,
-         ::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::
-                              WithRequestWithResponse>
-             src);
+struct WireNaturalConversionTraits<::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>, ::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>> {
+  static ::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse> ToNatural(::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse> src);
+  static ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse> ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse> src);
 };
 
 template <>
-struct NaturalTypeForWireType<::fidl::WireResponse<
-    ::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>> {
-  using type = ::fidl::Response<
-      ::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>;
+struct NaturalTypeForWireType<::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>> {
+  using type = ::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>;
 };
 template <>
-struct WireTypeForNaturalType<::fidl::Response<
-    ::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>> {
-  using type = ::fidl::WireResponse<
-      ::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>;
+struct WireTypeForNaturalType<::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>> {
+  using type = ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireEvent<
-        ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>,
-    ::fidl::Event<
-        ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>> {
-  static ::fidl::Event<
-      ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>
-  ToNatural(::fidl::WireEvent<
-            ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>
-                src);
-  static ::fidl::WireEvent<
-      ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>
-  ToWire(fidl::AnyArena& arena,
-         ::fidl::Event<
-             ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>
-             src);
+struct WireNaturalConversionTraits<::fidl::WireEvent<::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>, ::fidl::Event<::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>> {
+  static ::fidl::Event<::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse> ToNatural(::fidl::WireEvent<::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse> src);
+  static ::fidl::WireEvent<::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse> ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse> src);
 };
 
 template <>
-struct NaturalTypeForWireType<::fidl::WireEvent<
-    ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>> {
-  using type = ::fidl::Event<
-      ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>;
+struct NaturalTypeForWireType<::fidl::WireEvent<::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>> {
+  using type = ::fidl::Event<::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>;
 };
 template <>
-struct WireTypeForNaturalType<::fidl::Event<
-    ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>> {
-  using type = ::fidl::WireEvent<
-      ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>;
+struct WireTypeForNaturalType<::fidl::Event<::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>> {
+  using type = ::fidl::WireEvent<::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireEvent<
-        ::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>,
-    ::fidl::Event<
-        ::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>> {
-  static ::fidl::Event<
-      ::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>
-  ToNatural(::fidl::WireEvent<
-            ::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>
-                src);
-  static ::fidl::WireEvent<
-      ::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>
-  ToWire(fidl::AnyArena& arena,
-         ::fidl::Event<
-             ::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>
-             src);
+struct WireNaturalConversionTraits<::fidl::WireEvent<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>, ::fidl::Event<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>> {
+  static ::fidl::Event<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse> ToNatural(::fidl::WireEvent<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse> src);
+  static ::fidl::WireEvent<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse> ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse> src);
 };
 
 template <>
-struct NaturalTypeForWireType<::fidl::WireEvent<
-    ::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>> {
-  using type = ::fidl::Event<
-      ::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>;
+struct NaturalTypeForWireType<::fidl::WireEvent<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>> {
+  using type = ::fidl::Event<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>;
 };
 template <>
-struct WireTypeForNaturalType<::fidl::Event<
-    ::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>> {
-  using type = ::fidl::WireEvent<
-      ::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>;
+struct WireTypeForNaturalType<::fidl::Event<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>> {
+  using type = ::fidl::WireEvent<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireRequest<::test_protocols::Transitional::Request>,
-    ::fidl::Request<::test_protocols::Transitional::Request>> {
-  static ::fidl::Request<::test_protocols::Transitional::Request> ToNatural(
-      ::fidl::WireRequest<::test_protocols::Transitional::Request> src);
-  static ::fidl::WireRequest<::test_protocols::Transitional::Request> ToWire(
-      fidl::AnyArena& arena,
-      ::fidl::Request<::test_protocols::Transitional::Request> src);
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_protocols::Transitional::Request>, ::fidl::Request<::test_protocols::Transitional::Request>> {
+  static ::fidl::Request<::test_protocols::Transitional::Request> ToNatural(::fidl::WireRequest<::test_protocols::Transitional::Request> src);
+  static ::fidl::WireRequest<::test_protocols::Transitional::Request> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocols::Transitional::Request> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireRequest<::test_protocols::Transitional::Request>> {
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_protocols::Transitional::Request>> {
   using type = ::fidl::Request<::test_protocols::Transitional::Request>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Request<::test_protocols::Transitional::Request>> {
+struct WireTypeForNaturalType<::fidl::Request<::test_protocols::Transitional::Request>> {
   using type = ::fidl::WireRequest<::test_protocols::Transitional::Request>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireRequest<::test_protocols::Transitional::OneWay>,
-    ::fidl::Request<::test_protocols::Transitional::OneWay>> {
-  static ::fidl::Request<::test_protocols::Transitional::OneWay> ToNatural(
-      ::fidl::WireRequest<::test_protocols::Transitional::OneWay> src);
-  static ::fidl::WireRequest<::test_protocols::Transitional::OneWay> ToWire(
-      fidl::AnyArena& arena,
-      ::fidl::Request<::test_protocols::Transitional::OneWay> src);
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_protocols::Transitional::OneWay>, ::fidl::Request<::test_protocols::Transitional::OneWay>> {
+  static ::fidl::Request<::test_protocols::Transitional::OneWay> ToNatural(::fidl::WireRequest<::test_protocols::Transitional::OneWay> src);
+  static ::fidl::WireRequest<::test_protocols::Transitional::OneWay> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocols::Transitional::OneWay> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireRequest<::test_protocols::Transitional::OneWay>> {
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_protocols::Transitional::OneWay>> {
   using type = ::fidl::Request<::test_protocols::Transitional::OneWay>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Request<::test_protocols::Transitional::OneWay>> {
+struct WireTypeForNaturalType<::fidl::Request<::test_protocols::Transitional::OneWay>> {
   using type = ::fidl::WireRequest<::test_protocols::Transitional::OneWay>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireResponse<::test_protocols::Transitional::Request>,
-    ::fidl::Response<::test_protocols::Transitional::Request>> {
-  static ::fidl::Response<::test_protocols::Transitional::Request> ToNatural(
-      ::fidl::WireResponse<::test_protocols::Transitional::Request> src);
-  static ::fidl::WireResponse<::test_protocols::Transitional::Request> ToWire(
-      fidl::AnyArena& arena,
-      ::fidl::Response<::test_protocols::Transitional::Request> src);
+struct WireNaturalConversionTraits<::fidl::WireResponse<::test_protocols::Transitional::Request>, ::fidl::Response<::test_protocols::Transitional::Request>> {
+  static ::fidl::Response<::test_protocols::Transitional::Request> ToNatural(::fidl::WireResponse<::test_protocols::Transitional::Request> src);
+  static ::fidl::WireResponse<::test_protocols::Transitional::Request> ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_protocols::Transitional::Request> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireResponse<::test_protocols::Transitional::Request>> {
+struct NaturalTypeForWireType<::fidl::WireResponse<::test_protocols::Transitional::Request>> {
   using type = ::fidl::Response<::test_protocols::Transitional::Request>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Response<::test_protocols::Transitional::Request>> {
+struct WireTypeForNaturalType<::fidl::Response<::test_protocols::Transitional::Request>> {
   using type = ::fidl::WireResponse<::test_protocols::Transitional::Request>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireEvent<::test_protocols::Transitional::Event>,
-    ::fidl::Event<::test_protocols::Transitional::Event>> {
-  static ::fidl::Event<::test_protocols::Transitional::Event> ToNatural(
-      ::fidl::WireEvent<::test_protocols::Transitional::Event> src);
-  static ::fidl::WireEvent<::test_protocols::Transitional::Event> ToWire(
-      fidl::AnyArena& arena,
-      ::fidl::Event<::test_protocols::Transitional::Event> src);
+struct WireNaturalConversionTraits<::fidl::WireEvent<::test_protocols::Transitional::Event>, ::fidl::Event<::test_protocols::Transitional::Event>> {
+  static ::fidl::Event<::test_protocols::Transitional::Event> ToNatural(::fidl::WireEvent<::test_protocols::Transitional::Event> src);
+  static ::fidl::WireEvent<::test_protocols::Transitional::Event> ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_protocols::Transitional::Event> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireEvent<::test_protocols::Transitional::Event>> {
+struct NaturalTypeForWireType<::fidl::WireEvent<::test_protocols::Transitional::Event>> {
   using type = ::fidl::Event<::test_protocols::Transitional::Event>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Event<::test_protocols::Transitional::Event>> {
+struct WireTypeForNaturalType<::fidl::Event<::test_protocols::Transitional::Event>> {
   using type = ::fidl::WireEvent<::test_protocols::Transitional::Event>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod>,
-    ::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod>> {
-  static ::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod>
-  ToNatural(
-      ::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod> src);
-  static ::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod>
-  ToWire(fidl::AnyArena& arena,
-         ::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod> src);
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod>, ::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod>> {
+  static ::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod> ToNatural(::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod> src);
+  static ::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod>> {
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod>> {
   using type = ::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod>> {
-  using type =
-      ::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod>;
+struct WireTypeForNaturalType<::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod>> {
+  using type = ::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireRequest<::test_protocols::WithProtocolEnds::ClientEnds>,
-    ::fidl::Request<::test_protocols::WithProtocolEnds::ClientEnds>> {
-  static ::fidl::Request<::test_protocols::WithProtocolEnds::ClientEnds>
-  ToNatural(
-      ::fidl::WireRequest<::test_protocols::WithProtocolEnds::ClientEnds> src);
-  static ::fidl::WireRequest<::test_protocols::WithProtocolEnds::ClientEnds>
-  ToWire(fidl::AnyArena& arena,
-         ::fidl::Request<::test_protocols::WithProtocolEnds::ClientEnds> src);
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_protocols::WithProtocolEnds::ClientEnds>, ::fidl::Request<::test_protocols::WithProtocolEnds::ClientEnds>> {
+  static ::fidl::Request<::test_protocols::WithProtocolEnds::ClientEnds> ToNatural(::fidl::WireRequest<::test_protocols::WithProtocolEnds::ClientEnds> src);
+  static ::fidl::WireRequest<::test_protocols::WithProtocolEnds::ClientEnds> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocols::WithProtocolEnds::ClientEnds> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireRequest<::test_protocols::WithProtocolEnds::ClientEnds>> {
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_protocols::WithProtocolEnds::ClientEnds>> {
   using type = ::fidl::Request<::test_protocols::WithProtocolEnds::ClientEnds>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Request<::test_protocols::WithProtocolEnds::ClientEnds>> {
-  using type =
-      ::fidl::WireRequest<::test_protocols::WithProtocolEnds::ClientEnds>;
+struct WireTypeForNaturalType<::fidl::Request<::test_protocols::WithProtocolEnds::ClientEnds>> {
+  using type = ::fidl::WireRequest<::test_protocols::WithProtocolEnds::ClientEnds>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireRequest<::test_protocols::WithProtocolEnds::ServerEnds>,
-    ::fidl::Request<::test_protocols::WithProtocolEnds::ServerEnds>> {
-  static ::fidl::Request<::test_protocols::WithProtocolEnds::ServerEnds>
-  ToNatural(
-      ::fidl::WireRequest<::test_protocols::WithProtocolEnds::ServerEnds> src);
-  static ::fidl::WireRequest<::test_protocols::WithProtocolEnds::ServerEnds>
-  ToWire(fidl::AnyArena& arena,
-         ::fidl::Request<::test_protocols::WithProtocolEnds::ServerEnds> src);
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_protocols::WithProtocolEnds::ServerEnds>, ::fidl::Request<::test_protocols::WithProtocolEnds::ServerEnds>> {
+  static ::fidl::Request<::test_protocols::WithProtocolEnds::ServerEnds> ToNatural(::fidl::WireRequest<::test_protocols::WithProtocolEnds::ServerEnds> src);
+  static ::fidl::WireRequest<::test_protocols::WithProtocolEnds::ServerEnds> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocols::WithProtocolEnds::ServerEnds> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireRequest<::test_protocols::WithProtocolEnds::ServerEnds>> {
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_protocols::WithProtocolEnds::ServerEnds>> {
   using type = ::fidl::Request<::test_protocols::WithProtocolEnds::ServerEnds>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Request<::test_protocols::WithProtocolEnds::ServerEnds>> {
-  using type =
-      ::fidl::WireRequest<::test_protocols::WithProtocolEnds::ServerEnds>;
+struct WireTypeForNaturalType<::fidl::Request<::test_protocols::WithProtocolEnds::ServerEnds>> {
+  using type = ::fidl::WireRequest<::test_protocols::WithProtocolEnds::ServerEnds>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireRequest<
-        ::test_protocols::WithProtocolEnds::StructContainingEnds>,
-    ::fidl::Request<::test_protocols::WithProtocolEnds::StructContainingEnds>> {
-  static ::fidl::Request<
-      ::test_protocols::WithProtocolEnds::StructContainingEnds>
-  ToNatural(::fidl::WireRequest<
-            ::test_protocols::WithProtocolEnds::StructContainingEnds>
-                src);
-  static ::fidl::WireRequest<
-      ::test_protocols::WithProtocolEnds::StructContainingEnds>
-  ToWire(
-      fidl::AnyArena& arena,
-      ::fidl::Request<::test_protocols::WithProtocolEnds::StructContainingEnds>
-          src);
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_protocols::WithProtocolEnds::StructContainingEnds>, ::fidl::Request<::test_protocols::WithProtocolEnds::StructContainingEnds>> {
+  static ::fidl::Request<::test_protocols::WithProtocolEnds::StructContainingEnds> ToNatural(::fidl::WireRequest<::test_protocols::WithProtocolEnds::StructContainingEnds> src);
+  static ::fidl::WireRequest<::test_protocols::WithProtocolEnds::StructContainingEnds> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocols::WithProtocolEnds::StructContainingEnds> src);
 };
 
 template <>
-struct NaturalTypeForWireType<::fidl::WireRequest<
-    ::test_protocols::WithProtocolEnds::StructContainingEnds>> {
-  using type =
-      ::fidl::Request<::test_protocols::WithProtocolEnds::StructContainingEnds>;
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_protocols::WithProtocolEnds::StructContainingEnds>> {
+  using type = ::fidl::Request<::test_protocols::WithProtocolEnds::StructContainingEnds>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Request<::test_protocols::WithProtocolEnds::StructContainingEnds>> {
-  using type = ::fidl::WireRequest<
-      ::test_protocols::WithProtocolEnds::StructContainingEnds>;
+struct WireTypeForNaturalType<::fidl::Request<::test_protocols::WithProtocolEnds::StructContainingEnds>> {
+  using type = ::fidl::WireRequest<::test_protocols::WithProtocolEnds::StructContainingEnds>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds>,
-    ::fidl::Response<::test_protocols::WithProtocolEnds::ClientEnds>> {
-  static ::fidl::Response<::test_protocols::WithProtocolEnds::ClientEnds>
-  ToNatural(
-      ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds> src);
-  static ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds>
-  ToWire(fidl::AnyArena& arena,
-         ::fidl::Response<::test_protocols::WithProtocolEnds::ClientEnds> src);
+struct WireNaturalConversionTraits<::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds>, ::fidl::Response<::test_protocols::WithProtocolEnds::ClientEnds>> {
+  static ::fidl::Response<::test_protocols::WithProtocolEnds::ClientEnds> ToNatural(::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds> src);
+  static ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds> ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_protocols::WithProtocolEnds::ClientEnds> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds>> {
+struct NaturalTypeForWireType<::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds>> {
   using type = ::fidl::Response<::test_protocols::WithProtocolEnds::ClientEnds>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Response<::test_protocols::WithProtocolEnds::ClientEnds>> {
-  using type =
-      ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds>;
+struct WireTypeForNaturalType<::fidl::Response<::test_protocols::WithProtocolEnds::ClientEnds>> {
+  using type = ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds>,
-    ::fidl::Response<::test_protocols::WithProtocolEnds::ServerEnds>> {
-  static ::fidl::Response<::test_protocols::WithProtocolEnds::ServerEnds>
-  ToNatural(
-      ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds> src);
-  static ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds>
-  ToWire(fidl::AnyArena& arena,
-         ::fidl::Response<::test_protocols::WithProtocolEnds::ServerEnds> src);
+struct WireNaturalConversionTraits<::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds>, ::fidl::Response<::test_protocols::WithProtocolEnds::ServerEnds>> {
+  static ::fidl::Response<::test_protocols::WithProtocolEnds::ServerEnds> ToNatural(::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds> src);
+  static ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds> ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_protocols::WithProtocolEnds::ServerEnds> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds>> {
+struct NaturalTypeForWireType<::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds>> {
   using type = ::fidl::Response<::test_protocols::WithProtocolEnds::ServerEnds>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Response<::test_protocols::WithProtocolEnds::ServerEnds>> {
-  using type =
-      ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds>;
+struct WireTypeForNaturalType<::fidl::Response<::test_protocols::WithProtocolEnds::ServerEnds>> {
+  using type = ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireResponse<
-        ::test_protocols::WithProtocolEnds::StructContainingEnds>,
-    ::fidl::Response<
-        ::test_protocols::WithProtocolEnds::StructContainingEnds>> {
-  static ::fidl::Response<
-      ::test_protocols::WithProtocolEnds::StructContainingEnds>
-  ToNatural(::fidl::WireResponse<
-            ::test_protocols::WithProtocolEnds::StructContainingEnds>
-                src);
-  static ::fidl::WireResponse<
-      ::test_protocols::WithProtocolEnds::StructContainingEnds>
-  ToWire(
-      fidl::AnyArena& arena,
-      ::fidl::Response<::test_protocols::WithProtocolEnds::StructContainingEnds>
-          src);
+struct WireNaturalConversionTraits<::fidl::WireResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>, ::fidl::Response<::test_protocols::WithProtocolEnds::StructContainingEnds>> {
+  static ::fidl::Response<::test_protocols::WithProtocolEnds::StructContainingEnds> ToNatural(::fidl::WireResponse<::test_protocols::WithProtocolEnds::StructContainingEnds> src);
+  static ::fidl::WireResponse<::test_protocols::WithProtocolEnds::StructContainingEnds> ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_protocols::WithProtocolEnds::StructContainingEnds> src);
 };
 
 template <>
-struct NaturalTypeForWireType<::fidl::WireResponse<
-    ::test_protocols::WithProtocolEnds::StructContainingEnds>> {
-  using type = ::fidl::Response<
-      ::test_protocols::WithProtocolEnds::StructContainingEnds>;
+struct NaturalTypeForWireType<::fidl::WireResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>> {
+  using type = ::fidl::Response<::test_protocols::WithProtocolEnds::StructContainingEnds>;
 };
 template <>
-struct WireTypeForNaturalType<::fidl::Response<
-    ::test_protocols::WithProtocolEnds::StructContainingEnds>> {
-  using type = ::fidl::WireResponse<
-      ::test_protocols::WithProtocolEnds::StructContainingEnds>;
+struct WireTypeForNaturalType<::fidl::Response<::test_protocols::WithProtocolEnds::StructContainingEnds>> {
+  using type = ::fidl::WireResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireRequest<::test_protocols::ManyParameters::Fifteen>,
-    ::fidl::Request<::test_protocols::ManyParameters::Fifteen>> {
-  static ::fidl::Request<::test_protocols::ManyParameters::Fifteen> ToNatural(
-      ::fidl::WireRequest<::test_protocols::ManyParameters::Fifteen> src);
-  static ::fidl::WireRequest<::test_protocols::ManyParameters::Fifteen> ToWire(
-      fidl::AnyArena& arena,
-      ::fidl::Request<::test_protocols::ManyParameters::Fifteen> src);
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_protocols::ManyParameters::Fifteen>, ::fidl::Request<::test_protocols::ManyParameters::Fifteen>> {
+  static ::fidl::Request<::test_protocols::ManyParameters::Fifteen> ToNatural(::fidl::WireRequest<::test_protocols::ManyParameters::Fifteen> src);
+  static ::fidl::WireRequest<::test_protocols::ManyParameters::Fifteen> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocols::ManyParameters::Fifteen> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireRequest<::test_protocols::ManyParameters::Fifteen>> {
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_protocols::ManyParameters::Fifteen>> {
   using type = ::fidl::Request<::test_protocols::ManyParameters::Fifteen>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Request<::test_protocols::ManyParameters::Fifteen>> {
+struct WireTypeForNaturalType<::fidl::Request<::test_protocols::ManyParameters::Fifteen>> {
   using type = ::fidl::WireRequest<::test_protocols::ManyParameters::Fifteen>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireRequest<
-        ::test_protocols::HandleRightsProtocol::NoResponseMethod>,
-    ::fidl::Request<::test_protocols::HandleRightsProtocol::NoResponseMethod>> {
-  static ::fidl::Request<
-      ::test_protocols::HandleRightsProtocol::NoResponseMethod>
-  ToNatural(::fidl::WireRequest<
-            ::test_protocols::HandleRightsProtocol::NoResponseMethod>
-                src);
-  static ::fidl::WireRequest<
-      ::test_protocols::HandleRightsProtocol::NoResponseMethod>
-  ToWire(
-      fidl::AnyArena& arena,
-      ::fidl::Request<::test_protocols::HandleRightsProtocol::NoResponseMethod>
-          src);
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_protocols::HandleRightsProtocol::NoResponseMethod>, ::fidl::Request<::test_protocols::HandleRightsProtocol::NoResponseMethod>> {
+  static ::fidl::Request<::test_protocols::HandleRightsProtocol::NoResponseMethod> ToNatural(::fidl::WireRequest<::test_protocols::HandleRightsProtocol::NoResponseMethod> src);
+  static ::fidl::WireRequest<::test_protocols::HandleRightsProtocol::NoResponseMethod> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocols::HandleRightsProtocol::NoResponseMethod> src);
 };
 
 template <>
-struct NaturalTypeForWireType<::fidl::WireRequest<
-    ::test_protocols::HandleRightsProtocol::NoResponseMethod>> {
-  using type =
-      ::fidl::Request<::test_protocols::HandleRightsProtocol::NoResponseMethod>;
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_protocols::HandleRightsProtocol::NoResponseMethod>> {
+  using type = ::fidl::Request<::test_protocols::HandleRightsProtocol::NoResponseMethod>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Request<::test_protocols::HandleRightsProtocol::NoResponseMethod>> {
-  using type = ::fidl::WireRequest<
-      ::test_protocols::HandleRightsProtocol::NoResponseMethod>;
+struct WireTypeForNaturalType<::fidl::Request<::test_protocols::HandleRightsProtocol::NoResponseMethod>> {
+  using type = ::fidl::WireRequest<::test_protocols::HandleRightsProtocol::NoResponseMethod>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireRequest<::test_protocols::HandleRightsProtocol::ResponseMethod>,
-    ::fidl::Request<::test_protocols::HandleRightsProtocol::ResponseMethod>> {
-  static ::fidl::Request<::test_protocols::HandleRightsProtocol::ResponseMethod>
-  ToNatural(::fidl::WireRequest<
-            ::test_protocols::HandleRightsProtocol::ResponseMethod>
-                src);
-  static ::fidl::WireRequest<
-      ::test_protocols::HandleRightsProtocol::ResponseMethod>
-  ToWire(fidl::AnyArena& arena,
-         ::fidl::Request<::test_protocols::HandleRightsProtocol::ResponseMethod>
-             src);
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_protocols::HandleRightsProtocol::ResponseMethod>, ::fidl::Request<::test_protocols::HandleRightsProtocol::ResponseMethod>> {
+  static ::fidl::Request<::test_protocols::HandleRightsProtocol::ResponseMethod> ToNatural(::fidl::WireRequest<::test_protocols::HandleRightsProtocol::ResponseMethod> src);
+  static ::fidl::WireRequest<::test_protocols::HandleRightsProtocol::ResponseMethod> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocols::HandleRightsProtocol::ResponseMethod> src);
 };
 
 template <>
-struct NaturalTypeForWireType<::fidl::WireRequest<
-    ::test_protocols::HandleRightsProtocol::ResponseMethod>> {
-  using type =
-      ::fidl::Request<::test_protocols::HandleRightsProtocol::ResponseMethod>;
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_protocols::HandleRightsProtocol::ResponseMethod>> {
+  using type = ::fidl::Request<::test_protocols::HandleRightsProtocol::ResponseMethod>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Request<::test_protocols::HandleRightsProtocol::ResponseMethod>> {
-  using type = ::fidl::WireRequest<
-      ::test_protocols::HandleRightsProtocol::ResponseMethod>;
+struct WireTypeForNaturalType<::fidl::Request<::test_protocols::HandleRightsProtocol::ResponseMethod>> {
+  using type = ::fidl::WireRequest<::test_protocols::HandleRightsProtocol::ResponseMethod>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireResponse<
-        ::test_protocols::HandleRightsProtocol::ResponseMethod>,
-    ::fidl::Response<::test_protocols::HandleRightsProtocol::ResponseMethod>> {
-  static ::fidl::Response<
-      ::test_protocols::HandleRightsProtocol::ResponseMethod>
-  ToNatural(::fidl::WireResponse<
-            ::test_protocols::HandleRightsProtocol::ResponseMethod>
-                src);
-  static ::fidl::WireResponse<
-      ::test_protocols::HandleRightsProtocol::ResponseMethod>
-  ToWire(
-      fidl::AnyArena& arena,
-      ::fidl::Response<::test_protocols::HandleRightsProtocol::ResponseMethod>
-          src);
+struct WireNaturalConversionTraits<::fidl::WireResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>, ::fidl::Response<::test_protocols::HandleRightsProtocol::ResponseMethod>> {
+  static ::fidl::Response<::test_protocols::HandleRightsProtocol::ResponseMethod> ToNatural(::fidl::WireResponse<::test_protocols::HandleRightsProtocol::ResponseMethod> src);
+  static ::fidl::WireResponse<::test_protocols::HandleRightsProtocol::ResponseMethod> ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_protocols::HandleRightsProtocol::ResponseMethod> src);
 };
 
 template <>
-struct NaturalTypeForWireType<::fidl::WireResponse<
-    ::test_protocols::HandleRightsProtocol::ResponseMethod>> {
-  using type =
-      ::fidl::Response<::test_protocols::HandleRightsProtocol::ResponseMethod>;
+struct NaturalTypeForWireType<::fidl::WireResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>> {
+  using type = ::fidl::Response<::test_protocols::HandleRightsProtocol::ResponseMethod>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Response<::test_protocols::HandleRightsProtocol::ResponseMethod>> {
-  using type = ::fidl::WireResponse<
-      ::test_protocols::HandleRightsProtocol::ResponseMethod>;
+struct WireTypeForNaturalType<::fidl::Response<::test_protocols::HandleRightsProtocol::ResponseMethod>> {
+  using type = ::fidl::WireResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireEvent<::test_protocols::HandleRightsProtocol::AnEvent>,
-    ::fidl::Event<::test_protocols::HandleRightsProtocol::AnEvent>> {
-  static ::fidl::Event<::test_protocols::HandleRightsProtocol::AnEvent>
-  ToNatural(
-      ::fidl::WireEvent<::test_protocols::HandleRightsProtocol::AnEvent> src);
-  static ::fidl::WireEvent<::test_protocols::HandleRightsProtocol::AnEvent>
-  ToWire(fidl::AnyArena& arena,
-         ::fidl::Event<::test_protocols::HandleRightsProtocol::AnEvent> src);
+struct WireNaturalConversionTraits<::fidl::WireEvent<::test_protocols::HandleRightsProtocol::AnEvent>, ::fidl::Event<::test_protocols::HandleRightsProtocol::AnEvent>> {
+  static ::fidl::Event<::test_protocols::HandleRightsProtocol::AnEvent> ToNatural(::fidl::WireEvent<::test_protocols::HandleRightsProtocol::AnEvent> src);
+  static ::fidl::WireEvent<::test_protocols::HandleRightsProtocol::AnEvent> ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_protocols::HandleRightsProtocol::AnEvent> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireEvent<::test_protocols::HandleRightsProtocol::AnEvent>> {
+struct NaturalTypeForWireType<::fidl::WireEvent<::test_protocols::HandleRightsProtocol::AnEvent>> {
   using type = ::fidl::Event<::test_protocols::HandleRightsProtocol::AnEvent>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Event<::test_protocols::HandleRightsProtocol::AnEvent>> {
-  using type =
-      ::fidl::WireEvent<::test_protocols::HandleRightsProtocol::AnEvent>;
+struct WireTypeForNaturalType<::fidl::Event<::test_protocols::HandleRightsProtocol::AnEvent>> {
+  using type = ::fidl::WireEvent<::test_protocols::HandleRightsProtocol::AnEvent>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireRequest<::test_protocols::WithErrorSyntax::ResponseAsStruct>,
-    ::fidl::Request<::test_protocols::WithErrorSyntax::ResponseAsStruct>> {
-  static ::fidl::Request<::test_protocols::WithErrorSyntax::ResponseAsStruct>
-  ToNatural(
-      ::fidl::WireRequest<::test_protocols::WithErrorSyntax::ResponseAsStruct>
-          src);
-  static ::fidl::WireRequest<
-      ::test_protocols::WithErrorSyntax::ResponseAsStruct>
-  ToWire(
-      fidl::AnyArena& arena,
-      ::fidl::Request<::test_protocols::WithErrorSyntax::ResponseAsStruct> src);
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_protocols::WithErrorSyntax::ResponseAsStruct>, ::fidl::Request<::test_protocols::WithErrorSyntax::ResponseAsStruct>> {
+  static ::fidl::Request<::test_protocols::WithErrorSyntax::ResponseAsStruct> ToNatural(::fidl::WireRequest<::test_protocols::WithErrorSyntax::ResponseAsStruct> src);
+  static ::fidl::WireRequest<::test_protocols::WithErrorSyntax::ResponseAsStruct> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocols::WithErrorSyntax::ResponseAsStruct> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireRequest<::test_protocols::WithErrorSyntax::ResponseAsStruct>> {
-  using type =
-      ::fidl::Request<::test_protocols::WithErrorSyntax::ResponseAsStruct>;
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_protocols::WithErrorSyntax::ResponseAsStruct>> {
+  using type = ::fidl::Request<::test_protocols::WithErrorSyntax::ResponseAsStruct>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Request<::test_protocols::WithErrorSyntax::ResponseAsStruct>> {
-  using type =
-      ::fidl::WireRequest<::test_protocols::WithErrorSyntax::ResponseAsStruct>;
+struct WireTypeForNaturalType<::fidl::Request<::test_protocols::WithErrorSyntax::ResponseAsStruct>> {
+  using type = ::fidl::WireRequest<::test_protocols::WithErrorSyntax::ResponseAsStruct>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireRequest<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>,
-    ::fidl::Request<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> {
-  static ::fidl::Request<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>
-  ToNatural(
-      ::fidl::WireRequest<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>
-          src);
-  static ::fidl::WireRequest<
-      ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>
-  ToWire(
-      fidl::AnyArena& arena,
-      ::fidl::Request<::test_protocols::WithErrorSyntax::ErrorAsPrimitive> src);
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>, ::fidl::Request<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> {
+  static ::fidl::Request<::test_protocols::WithErrorSyntax::ErrorAsPrimitive> ToNatural(::fidl::WireRequest<::test_protocols::WithErrorSyntax::ErrorAsPrimitive> src);
+  static ::fidl::WireRequest<::test_protocols::WithErrorSyntax::ErrorAsPrimitive> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocols::WithErrorSyntax::ErrorAsPrimitive> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireRequest<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> {
-  using type =
-      ::fidl::Request<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>;
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> {
+  using type = ::fidl::Request<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Request<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> {
-  using type =
-      ::fidl::WireRequest<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>;
+struct WireTypeForNaturalType<::fidl::Request<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> {
+  using type = ::fidl::WireRequest<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireRequest<::test_protocols::WithErrorSyntax::ErrorAsEnum>,
-    ::fidl::Request<::test_protocols::WithErrorSyntax::ErrorAsEnum>> {
-  static ::fidl::Request<::test_protocols::WithErrorSyntax::ErrorAsEnum>
-  ToNatural(
-      ::fidl::WireRequest<::test_protocols::WithErrorSyntax::ErrorAsEnum> src);
-  static ::fidl::WireRequest<::test_protocols::WithErrorSyntax::ErrorAsEnum>
-  ToWire(fidl::AnyArena& arena,
-         ::fidl::Request<::test_protocols::WithErrorSyntax::ErrorAsEnum> src);
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_protocols::WithErrorSyntax::ErrorAsEnum>, ::fidl::Request<::test_protocols::WithErrorSyntax::ErrorAsEnum>> {
+  static ::fidl::Request<::test_protocols::WithErrorSyntax::ErrorAsEnum> ToNatural(::fidl::WireRequest<::test_protocols::WithErrorSyntax::ErrorAsEnum> src);
+  static ::fidl::WireRequest<::test_protocols::WithErrorSyntax::ErrorAsEnum> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocols::WithErrorSyntax::ErrorAsEnum> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireRequest<::test_protocols::WithErrorSyntax::ErrorAsEnum>> {
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_protocols::WithErrorSyntax::ErrorAsEnum>> {
   using type = ::fidl::Request<::test_protocols::WithErrorSyntax::ErrorAsEnum>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Request<::test_protocols::WithErrorSyntax::ErrorAsEnum>> {
-  using type =
-      ::fidl::WireRequest<::test_protocols::WithErrorSyntax::ErrorAsEnum>;
+struct WireTypeForNaturalType<::fidl::Request<::test_protocols::WithErrorSyntax::ErrorAsEnum>> {
+  using type = ::fidl::WireRequest<::test_protocols::WithErrorSyntax::ErrorAsEnum>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireRequest<::test_protocols::WithErrorSyntax::HandleInResult>,
-    ::fidl::Request<::test_protocols::WithErrorSyntax::HandleInResult>> {
-  static ::fidl::Request<::test_protocols::WithErrorSyntax::HandleInResult>
-  ToNatural(
-      ::fidl::WireRequest<::test_protocols::WithErrorSyntax::HandleInResult>
-          src);
-  static ::fidl::WireRequest<::test_protocols::WithErrorSyntax::HandleInResult>
-  ToWire(
-      fidl::AnyArena& arena,
-      ::fidl::Request<::test_protocols::WithErrorSyntax::HandleInResult> src);
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_protocols::WithErrorSyntax::HandleInResult>, ::fidl::Request<::test_protocols::WithErrorSyntax::HandleInResult>> {
+  static ::fidl::Request<::test_protocols::WithErrorSyntax::HandleInResult> ToNatural(::fidl::WireRequest<::test_protocols::WithErrorSyntax::HandleInResult> src);
+  static ::fidl::WireRequest<::test_protocols::WithErrorSyntax::HandleInResult> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocols::WithErrorSyntax::HandleInResult> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireRequest<::test_protocols::WithErrorSyntax::HandleInResult>> {
-  using type =
-      ::fidl::Request<::test_protocols::WithErrorSyntax::HandleInResult>;
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_protocols::WithErrorSyntax::HandleInResult>> {
+  using type = ::fidl::Request<::test_protocols::WithErrorSyntax::HandleInResult>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Request<::test_protocols::WithErrorSyntax::HandleInResult>> {
-  using type =
-      ::fidl::WireRequest<::test_protocols::WithErrorSyntax::HandleInResult>;
+struct WireTypeForNaturalType<::fidl::Request<::test_protocols::WithErrorSyntax::HandleInResult>> {
+  using type = ::fidl::WireRequest<::test_protocols::WithErrorSyntax::HandleInResult>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>,
-    ::fidl::Response<::test_protocols::WithErrorSyntax::ResponseAsStruct>> {
-  static ::fidl::Response<::test_protocols::WithErrorSyntax::ResponseAsStruct>
-  ToNatural(
-      ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>
-          src);
-  static ::fidl::WireResponse<
-      ::test_protocols::WithErrorSyntax::ResponseAsStruct>
-  ToWire(fidl::AnyArena& arena,
-         ::fidl::Response<::test_protocols::WithErrorSyntax::ResponseAsStruct>
-             src);
+struct WireNaturalConversionTraits<::fidl::WireResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>, ::fidl::Response<::test_protocols::WithErrorSyntax::ResponseAsStruct>> {
+  static ::fidl::Response<::test_protocols::WithErrorSyntax::ResponseAsStruct> ToNatural(::fidl::WireResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct> src);
+  static ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct> ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_protocols::WithErrorSyntax::ResponseAsStruct> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>> {
-  using type =
-      ::fidl::Response<::test_protocols::WithErrorSyntax::ResponseAsStruct>;
+struct NaturalTypeForWireType<::fidl::WireResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>> {
+  using type = ::fidl::Response<::test_protocols::WithErrorSyntax::ResponseAsStruct>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Response<::test_protocols::WithErrorSyntax::ResponseAsStruct>> {
-  using type =
-      ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>;
+struct WireTypeForNaturalType<::fidl::Response<::test_protocols::WithErrorSyntax::ResponseAsStruct>> {
+  using type = ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>,
-    ::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> {
-  static ::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>
-  ToNatural(
-      ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>
-          src);
-  static ::fidl::WireResponse<
-      ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>
-  ToWire(fidl::AnyArena& arena,
-         ::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>
-             src);
+struct WireNaturalConversionTraits<::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>, ::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> {
+  static ::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsPrimitive> ToNatural(::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive> src);
+  static ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive> ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsPrimitive> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> {
-  using type =
-      ::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>;
+struct NaturalTypeForWireType<::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> {
+  using type = ::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> {
-  using type =
-      ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>;
+struct WireTypeForNaturalType<::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> {
+  using type = ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>,
-    ::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsEnum>> {
-  static ::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsEnum>
-  ToNatural(
-      ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum> src);
-  static ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>
-  ToWire(fidl::AnyArena& arena,
-         ::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsEnum> src);
+struct WireNaturalConversionTraits<::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>, ::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsEnum>> {
+  static ::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsEnum> ToNatural(::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum> src);
+  static ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum> ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsEnum> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>> {
+struct NaturalTypeForWireType<::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>> {
   using type = ::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsEnum>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsEnum>> {
-  using type =
-      ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>;
+struct WireTypeForNaturalType<::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsEnum>> {
+  using type = ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireResponse<::test_protocols::WithErrorSyntax::HandleInResult>,
-    ::fidl::Response<::test_protocols::WithErrorSyntax::HandleInResult>> {
-  static ::fidl::Response<::test_protocols::WithErrorSyntax::HandleInResult>
-  ToNatural(
-      ::fidl::WireResponse<::test_protocols::WithErrorSyntax::HandleInResult>
-          src);
-  static ::fidl::WireResponse<::test_protocols::WithErrorSyntax::HandleInResult>
-  ToWire(
-      fidl::AnyArena& arena,
-      ::fidl::Response<::test_protocols::WithErrorSyntax::HandleInResult> src);
+struct WireNaturalConversionTraits<::fidl::WireResponse<::test_protocols::WithErrorSyntax::HandleInResult>, ::fidl::Response<::test_protocols::WithErrorSyntax::HandleInResult>> {
+  static ::fidl::Response<::test_protocols::WithErrorSyntax::HandleInResult> ToNatural(::fidl::WireResponse<::test_protocols::WithErrorSyntax::HandleInResult> src);
+  static ::fidl::WireResponse<::test_protocols::WithErrorSyntax::HandleInResult> ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_protocols::WithErrorSyntax::HandleInResult> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireResponse<::test_protocols::WithErrorSyntax::HandleInResult>> {
-  using type =
-      ::fidl::Response<::test_protocols::WithErrorSyntax::HandleInResult>;
+struct NaturalTypeForWireType<::fidl::WireResponse<::test_protocols::WithErrorSyntax::HandleInResult>> {
+  using type = ::fidl::Response<::test_protocols::WithErrorSyntax::HandleInResult>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Response<::test_protocols::WithErrorSyntax::HandleInResult>> {
-  using type =
-      ::fidl::WireResponse<::test_protocols::WithErrorSyntax::HandleInResult>;
+struct WireTypeForNaturalType<::fidl::Response<::test_protocols::WithErrorSyntax::HandleInResult>> {
+  using type = ::fidl::WireResponse<::test_protocols::WithErrorSyntax::HandleInResult>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireRequest<::test_protocols::DiscoverableProtocol::Method>,
-    ::fidl::Request<::test_protocols::DiscoverableProtocol::Method>> {
-  static ::fidl::Request<::test_protocols::DiscoverableProtocol::Method>
-  ToNatural(
-      ::fidl::WireRequest<::test_protocols::DiscoverableProtocol::Method> src);
-  static ::fidl::WireRequest<::test_protocols::DiscoverableProtocol::Method>
-  ToWire(fidl::AnyArena& arena,
-         ::fidl::Request<::test_protocols::DiscoverableProtocol::Method> src);
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_protocols::DiscoverableProtocol::Method>, ::fidl::Request<::test_protocols::DiscoverableProtocol::Method>> {
+  static ::fidl::Request<::test_protocols::DiscoverableProtocol::Method> ToNatural(::fidl::WireRequest<::test_protocols::DiscoverableProtocol::Method> src);
+  static ::fidl::WireRequest<::test_protocols::DiscoverableProtocol::Method> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocols::DiscoverableProtocol::Method> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireRequest<::test_protocols::DiscoverableProtocol::Method>> {
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_protocols::DiscoverableProtocol::Method>> {
   using type = ::fidl::Request<::test_protocols::DiscoverableProtocol::Method>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Request<::test_protocols::DiscoverableProtocol::Method>> {
-  using type =
-      ::fidl::WireRequest<::test_protocols::DiscoverableProtocol::Method>;
+struct WireTypeForNaturalType<::fidl::Request<::test_protocols::DiscoverableProtocol::Method>> {
+  using type = ::fidl::WireRequest<::test_protocols::DiscoverableProtocol::Method>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodA>,
-    ::fidl::Request<::test_protocols::ChannelProtocol::MethodA>> {
-  static ::fidl::Request<::test_protocols::ChannelProtocol::MethodA> ToNatural(
-      ::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodA> src);
-  static ::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodA> ToWire(
-      fidl::AnyArena& arena,
-      ::fidl::Request<::test_protocols::ChannelProtocol::MethodA> src);
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodA>, ::fidl::Request<::test_protocols::ChannelProtocol::MethodA>> {
+  static ::fidl::Request<::test_protocols::ChannelProtocol::MethodA> ToNatural(::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodA> src);
+  static ::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodA> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocols::ChannelProtocol::MethodA> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodA>> {
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodA>> {
   using type = ::fidl::Request<::test_protocols::ChannelProtocol::MethodA>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Request<::test_protocols::ChannelProtocol::MethodA>> {
+struct WireTypeForNaturalType<::fidl::Request<::test_protocols::ChannelProtocol::MethodA>> {
   using type = ::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodA>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodB>,
-    ::fidl::Request<::test_protocols::ChannelProtocol::MethodB>> {
-  static ::fidl::Request<::test_protocols::ChannelProtocol::MethodB> ToNatural(
-      ::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodB> src);
-  static ::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodB> ToWire(
-      fidl::AnyArena& arena,
-      ::fidl::Request<::test_protocols::ChannelProtocol::MethodB> src);
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodB>, ::fidl::Request<::test_protocols::ChannelProtocol::MethodB>> {
+  static ::fidl::Request<::test_protocols::ChannelProtocol::MethodB> ToNatural(::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodB> src);
+  static ::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodB> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocols::ChannelProtocol::MethodB> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodB>> {
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodB>> {
   using type = ::fidl::Request<::test_protocols::ChannelProtocol::MethodB>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Request<::test_protocols::ChannelProtocol::MethodB>> {
+struct WireTypeForNaturalType<::fidl::Request<::test_protocols::ChannelProtocol::MethodB>> {
   using type = ::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodB>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireRequest<::test_protocols::ChannelProtocol::TakeHandle>,
-    ::fidl::Request<::test_protocols::ChannelProtocol::TakeHandle>> {
-  static ::fidl::Request<::test_protocols::ChannelProtocol::TakeHandle>
-  ToNatural(
-      ::fidl::WireRequest<::test_protocols::ChannelProtocol::TakeHandle> src);
-  static ::fidl::WireRequest<::test_protocols::ChannelProtocol::TakeHandle>
-  ToWire(fidl::AnyArena& arena,
-         ::fidl::Request<::test_protocols::ChannelProtocol::TakeHandle> src);
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_protocols::ChannelProtocol::TakeHandle>, ::fidl::Request<::test_protocols::ChannelProtocol::TakeHandle>> {
+  static ::fidl::Request<::test_protocols::ChannelProtocol::TakeHandle> ToNatural(::fidl::WireRequest<::test_protocols::ChannelProtocol::TakeHandle> src);
+  static ::fidl::WireRequest<::test_protocols::ChannelProtocol::TakeHandle> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocols::ChannelProtocol::TakeHandle> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireRequest<::test_protocols::ChannelProtocol::TakeHandle>> {
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_protocols::ChannelProtocol::TakeHandle>> {
   using type = ::fidl::Request<::test_protocols::ChannelProtocol::TakeHandle>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Request<::test_protocols::ChannelProtocol::TakeHandle>> {
-  using type =
-      ::fidl::WireRequest<::test_protocols::ChannelProtocol::TakeHandle>;
+struct WireTypeForNaturalType<::fidl::Request<::test_protocols::ChannelProtocol::TakeHandle>> {
+  using type = ::fidl::WireRequest<::test_protocols::ChannelProtocol::TakeHandle>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireRequest<::test_protocols::ChannelProtocol::MutateSocket>,
-    ::fidl::Request<::test_protocols::ChannelProtocol::MutateSocket>> {
-  static ::fidl::Request<::test_protocols::ChannelProtocol::MutateSocket>
-  ToNatural(
-      ::fidl::WireRequest<::test_protocols::ChannelProtocol::MutateSocket> src);
-  static ::fidl::WireRequest<::test_protocols::ChannelProtocol::MutateSocket>
-  ToWire(fidl::AnyArena& arena,
-         ::fidl::Request<::test_protocols::ChannelProtocol::MutateSocket> src);
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_protocols::ChannelProtocol::MutateSocket>, ::fidl::Request<::test_protocols::ChannelProtocol::MutateSocket>> {
+  static ::fidl::Request<::test_protocols::ChannelProtocol::MutateSocket> ToNatural(::fidl::WireRequest<::test_protocols::ChannelProtocol::MutateSocket> src);
+  static ::fidl::WireRequest<::test_protocols::ChannelProtocol::MutateSocket> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocols::ChannelProtocol::MutateSocket> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireRequest<::test_protocols::ChannelProtocol::MutateSocket>> {
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_protocols::ChannelProtocol::MutateSocket>> {
   using type = ::fidl::Request<::test_protocols::ChannelProtocol::MutateSocket>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Request<::test_protocols::ChannelProtocol::MutateSocket>> {
-  using type =
-      ::fidl::WireRequest<::test_protocols::ChannelProtocol::MutateSocket>;
+struct WireTypeForNaturalType<::fidl::Request<::test_protocols::ChannelProtocol::MutateSocket>> {
+  using type = ::fidl::WireRequest<::test_protocols::ChannelProtocol::MutateSocket>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireResponse<::test_protocols::ChannelProtocol::MethodB>,
-    ::fidl::Response<::test_protocols::ChannelProtocol::MethodB>> {
-  static ::fidl::Response<::test_protocols::ChannelProtocol::MethodB> ToNatural(
-      ::fidl::WireResponse<::test_protocols::ChannelProtocol::MethodB> src);
-  static ::fidl::WireResponse<::test_protocols::ChannelProtocol::MethodB>
-  ToWire(fidl::AnyArena& arena,
-         ::fidl::Response<::test_protocols::ChannelProtocol::MethodB> src);
+struct WireNaturalConversionTraits<::fidl::WireResponse<::test_protocols::ChannelProtocol::MethodB>, ::fidl::Response<::test_protocols::ChannelProtocol::MethodB>> {
+  static ::fidl::Response<::test_protocols::ChannelProtocol::MethodB> ToNatural(::fidl::WireResponse<::test_protocols::ChannelProtocol::MethodB> src);
+  static ::fidl::WireResponse<::test_protocols::ChannelProtocol::MethodB> ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_protocols::ChannelProtocol::MethodB> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireResponse<::test_protocols::ChannelProtocol::MethodB>> {
+struct NaturalTypeForWireType<::fidl::WireResponse<::test_protocols::ChannelProtocol::MethodB>> {
   using type = ::fidl::Response<::test_protocols::ChannelProtocol::MethodB>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Response<::test_protocols::ChannelProtocol::MethodB>> {
+struct WireTypeForNaturalType<::fidl::Response<::test_protocols::ChannelProtocol::MethodB>> {
   using type = ::fidl::WireResponse<::test_protocols::ChannelProtocol::MethodB>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireResponse<::test_protocols::ChannelProtocol::TakeHandle>,
-    ::fidl::Response<::test_protocols::ChannelProtocol::TakeHandle>> {
-  static ::fidl::Response<::test_protocols::ChannelProtocol::TakeHandle>
-  ToNatural(
-      ::fidl::WireResponse<::test_protocols::ChannelProtocol::TakeHandle> src);
-  static ::fidl::WireResponse<::test_protocols::ChannelProtocol::TakeHandle>
-  ToWire(fidl::AnyArena& arena,
-         ::fidl::Response<::test_protocols::ChannelProtocol::TakeHandle> src);
+struct WireNaturalConversionTraits<::fidl::WireResponse<::test_protocols::ChannelProtocol::TakeHandle>, ::fidl::Response<::test_protocols::ChannelProtocol::TakeHandle>> {
+  static ::fidl::Response<::test_protocols::ChannelProtocol::TakeHandle> ToNatural(::fidl::WireResponse<::test_protocols::ChannelProtocol::TakeHandle> src);
+  static ::fidl::WireResponse<::test_protocols::ChannelProtocol::TakeHandle> ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_protocols::ChannelProtocol::TakeHandle> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireResponse<::test_protocols::ChannelProtocol::TakeHandle>> {
+struct NaturalTypeForWireType<::fidl::WireResponse<::test_protocols::ChannelProtocol::TakeHandle>> {
   using type = ::fidl::Response<::test_protocols::ChannelProtocol::TakeHandle>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Response<::test_protocols::ChannelProtocol::TakeHandle>> {
-  using type =
-      ::fidl::WireResponse<::test_protocols::ChannelProtocol::TakeHandle>;
+struct WireTypeForNaturalType<::fidl::Response<::test_protocols::ChannelProtocol::TakeHandle>> {
+  using type = ::fidl::WireResponse<::test_protocols::ChannelProtocol::TakeHandle>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>,
-    ::fidl::Response<::test_protocols::ChannelProtocol::MutateSocket>> {
-  static ::fidl::Response<::test_protocols::ChannelProtocol::MutateSocket>
-  ToNatural(
-      ::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>
-          src);
-  static ::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>
-  ToWire(fidl::AnyArena& arena,
-         ::fidl::Response<::test_protocols::ChannelProtocol::MutateSocket> src);
+struct WireNaturalConversionTraits<::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>, ::fidl::Response<::test_protocols::ChannelProtocol::MutateSocket>> {
+  static ::fidl::Response<::test_protocols::ChannelProtocol::MutateSocket> ToNatural(::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket> src);
+  static ::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket> ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_protocols::ChannelProtocol::MutateSocket> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>> {
-  using type =
-      ::fidl::Response<::test_protocols::ChannelProtocol::MutateSocket>;
+struct NaturalTypeForWireType<::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>> {
+  using type = ::fidl::Response<::test_protocols::ChannelProtocol::MutateSocket>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Response<::test_protocols::ChannelProtocol::MutateSocket>> {
-  using type =
-      ::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>;
+struct WireTypeForNaturalType<::fidl::Response<::test_protocols::ChannelProtocol::MutateSocket>> {
+  using type = ::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>;
 };
 
 template <>
-struct WireNaturalConversionTraits<
-    ::fidl::WireEvent<::test_protocols::ChannelProtocol::EventA>,
-    ::fidl::Event<::test_protocols::ChannelProtocol::EventA>> {
-  static ::fidl::Event<::test_protocols::ChannelProtocol::EventA> ToNatural(
-      ::fidl::WireEvent<::test_protocols::ChannelProtocol::EventA> src);
-  static ::fidl::WireEvent<::test_protocols::ChannelProtocol::EventA> ToWire(
-      fidl::AnyArena& arena,
-      ::fidl::Event<::test_protocols::ChannelProtocol::EventA> src);
+struct WireNaturalConversionTraits<::fidl::WireEvent<::test_protocols::ChannelProtocol::EventA>, ::fidl::Event<::test_protocols::ChannelProtocol::EventA>> {
+  static ::fidl::Event<::test_protocols::ChannelProtocol::EventA> ToNatural(::fidl::WireEvent<::test_protocols::ChannelProtocol::EventA> src);
+  static ::fidl::WireEvent<::test_protocols::ChannelProtocol::EventA> ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_protocols::ChannelProtocol::EventA> src);
 };
 
 template <>
-struct NaturalTypeForWireType<
-    ::fidl::WireEvent<::test_protocols::ChannelProtocol::EventA>> {
+struct NaturalTypeForWireType<::fidl::WireEvent<::test_protocols::ChannelProtocol::EventA>> {
   using type = ::fidl::Event<::test_protocols::ChannelProtocol::EventA>;
 };
 template <>
-struct WireTypeForNaturalType<
-    ::fidl::Event<::test_protocols::ChannelProtocol::EventA>> {
+struct WireTypeForNaturalType<::fidl::Event<::test_protocols::ChannelProtocol::EventA>> {
   using type = ::fidl::WireEvent<::test_protocols::ChannelProtocol::EventA>;
 };
 #endif  // __Fuchsia__

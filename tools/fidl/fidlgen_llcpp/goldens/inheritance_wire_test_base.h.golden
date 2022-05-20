@@ -7,42 +7,36 @@ namespace fidl {
 namespace testing {
 
 template <>
-class WireTestBase<::test_inheritance::Super>
-    : public ::fidl::WireServer<::test_inheritance::Super> {
+class WireTestBase<::test_inheritance::Super> : public ::fidl::WireServer<::test_inheritance::Super> {
  public:
   virtual ~WireTestBase<::test_inheritance::Super>() = default;
-  virtual void NotImplemented_(const std::string& name,
-                               ::fidl::CompleterBase& completer) = 0;
-  virtual void Foo(FooRequestView request,
-                   FooCompleter::Sync& completer) override {
+  virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
+  virtual void Foo(
+      FooRequestView request, FooCompleter::Sync& completer) override {
     NotImplemented_("Foo", completer);
   }
 };
 
 template <>
-class ::fidl::testing::WireSyncEventHandlerTestBase<::test_inheritance::Super>
-    : public ::fidl::WireSyncEventHandler<::test_inheritance::Super> {
+class ::fidl::testing::WireSyncEventHandlerTestBase<::test_inheritance::Super> : public ::fidl::WireSyncEventHandler<::test_inheritance::Super> {
  public:
   virtual ~WireSyncEventHandlerTestBase<::test_inheritance::Super>() = default;
   virtual void NotImplemented_(const std::string& name) = 0;
 };
 
 template <>
-class WireTestBase<::test_inheritance::Sub>
-    : public ::fidl::WireServer<::test_inheritance::Sub> {
+class WireTestBase<::test_inheritance::Sub> : public ::fidl::WireServer<::test_inheritance::Sub> {
  public:
   virtual ~WireTestBase<::test_inheritance::Sub>() = default;
-  virtual void NotImplemented_(const std::string& name,
-                               ::fidl::CompleterBase& completer) = 0;
-  virtual void Foo(FooRequestView request,
-                   FooCompleter::Sync& completer) override {
+  virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
+  virtual void Foo(
+      FooRequestView request, FooCompleter::Sync& completer) override {
     NotImplemented_("Foo", completer);
   }
 };
 
 template <>
-class ::fidl::testing::WireSyncEventHandlerTestBase<::test_inheritance::Sub>
-    : public ::fidl::WireSyncEventHandler<::test_inheritance::Sub> {
+class ::fidl::testing::WireSyncEventHandlerTestBase<::test_inheritance::Sub> : public ::fidl::WireSyncEventHandler<::test_inheritance::Sub> {
  public:
   virtual ~WireSyncEventHandlerTestBase<::test_inheritance::Sub>() = default;
   virtual void NotImplemented_(const std::string& name) = 0;

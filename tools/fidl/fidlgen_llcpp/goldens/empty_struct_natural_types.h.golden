@@ -40,8 +40,7 @@ class Empty {
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |Empty| only if all of its members are default
-  // constructible.
+  // Default constructs a |Empty| only if all of its members are default constructible.
   Empty() = default;
 #pragma clang diagnostic pop
 
@@ -54,22 +53,24 @@ class Empty {
   }
 
   bool operator==(const Empty& other) const noexcept {
-    return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_emptystruct::Empty, 1>::Equal(this, &other);
+    return ::fidl::internal::NaturalStructCodingTraits<::test_emptystruct::Empty, 1>::Equal(this, &other);
   }
   bool operator!=(const Empty& other) const noexcept {
-    return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_emptystruct::Empty, 1>::Equal(this, &other);
+    return !::fidl::internal::NaturalStructCodingTraits<::test_emptystruct::Empty, 1>::Equal(this, &other);
   }
 
-  uint8_t __reserved() const { return storage_.__reserved; }
+  uint8_t
+  __reserved() const {
+    return storage_.__reserved;
+  }
 
-  uint8_t& __reserved() { return storage_.__reserved; }
+  uint8_t& __reserved() {
+    return storage_.__reserved;
+  }
 
-  Empty(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : Empty(Storage_{
-            .__reserved = 0u,
-        }) {}
+  Empty(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Empty(Storage_{
+                                                                          .__reserved = 0u,
+                                                                      }) {}
 
  private:
   struct Storage_ final {
@@ -79,13 +80,10 @@ class Empty {
   Storage_ storage_;
   Storage_ CloneStorage_() const;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_emptystruct::Empty, 1>;
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_emptystruct::Empty, 1>;
   friend struct ::fidl::internal::MemberVisitor<::test_emptystruct::Empty>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<
-          Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::__reserved, 0});
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{
+      &Storage_::__reserved, 0});
   static constexpr auto kPadding = std::make_tuple();
 };
 
@@ -96,47 +94,43 @@ class EmptyProtocolSendRequest {
   struct Storage_;
 
  public:
-  EmptyProtocolSendRequest(Storage_ storage) noexcept
-      : storage_(std::move(storage)) {}
+  EmptyProtocolSendRequest(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   EmptyProtocolSendRequest(::test_emptystruct::Empty e) noexcept
       : storage_({.e = std::move(e)}) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |EmptyProtocolSendRequest| only if all of its members
-  // are default constructible.
+  // Default constructs a |EmptyProtocolSendRequest| only if all of its members are default constructible.
   EmptyProtocolSendRequest() = default;
 #pragma clang diagnostic pop
 
   EmptyProtocolSendRequest(EmptyProtocolSendRequest&&) noexcept = default;
-  EmptyProtocolSendRequest& operator=(EmptyProtocolSendRequest&&) noexcept =
-      default;
-  EmptyProtocolSendRequest(const EmptyProtocolSendRequest& other) noexcept
-      : EmptyProtocolSendRequest(other.CloneStorage_()) {}
-  EmptyProtocolSendRequest& operator=(
-      const EmptyProtocolSendRequest& other) noexcept {
+  EmptyProtocolSendRequest& operator=(EmptyProtocolSendRequest&&) noexcept = default;
+  EmptyProtocolSendRequest(const EmptyProtocolSendRequest& other) noexcept : EmptyProtocolSendRequest(other.CloneStorage_()) {}
+  EmptyProtocolSendRequest& operator=(const EmptyProtocolSendRequest& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
   }
 
   bool operator==(const EmptyProtocolSendRequest& other) const noexcept {
-    return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_emptystruct::EmptyProtocolSendRequest, 1>::Equal(this, &other);
+    return ::fidl::internal::NaturalStructCodingTraits<::test_emptystruct::EmptyProtocolSendRequest, 1>::Equal(this, &other);
   }
   bool operator!=(const EmptyProtocolSendRequest& other) const noexcept {
-    return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_emptystruct::EmptyProtocolSendRequest, 1>::Equal(this, &other);
+    return !::fidl::internal::NaturalStructCodingTraits<::test_emptystruct::EmptyProtocolSendRequest, 1>::Equal(this, &other);
   }
 
-  const ::test_emptystruct::Empty& e() const { return storage_.e; }
+  const ::test_emptystruct::Empty&
+  e() const {
+    return storage_.e;
+  }
 
-  ::test_emptystruct::Empty& e() { return storage_.e; }
+  ::test_emptystruct::Empty& e() {
+    return storage_.e;
+  }
 
-  EmptyProtocolSendRequest(
-      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : EmptyProtocolSendRequest(Storage_{
-            .e = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
-        }) {}
+  EmptyProtocolSendRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : EmptyProtocolSendRequest(Storage_{
+                                                                                             .e = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+                                                                                         }) {}
 
  private:
   struct Storage_ final {
@@ -146,72 +140,57 @@ class EmptyProtocolSendRequest {
   Storage_ storage_;
   Storage_ CloneStorage_() const;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_emptystruct::EmptyProtocolSendRequest, 1>;
-  friend struct ::fidl::internal::MemberVisitor<
-      ::test_emptystruct::EmptyProtocolSendRequest>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::test_emptystruct::Empty,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::e, 0});
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_emptystruct::EmptyProtocolSendRequest, 1>;
+  friend struct ::fidl::internal::MemberVisitor<::test_emptystruct::EmptyProtocolSendRequest>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::test_emptystruct::Empty, fidl::internal::NaturalCodingConstraintEmpty>{
+      &Storage_::e, 0});
   static constexpr auto kPadding = std::make_tuple();
 };
 
-extern "C" const fidl_type_t
-    test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
+extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
 
 class EmptyProtocolSendAndReceiveTopResponse {
  private:
   struct Storage_;
 
  public:
-  EmptyProtocolSendAndReceiveTopResponse(Storage_ storage) noexcept
-      : storage_(std::move(storage)) {}
+  EmptyProtocolSendAndReceiveTopResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   EmptyProtocolSendAndReceiveTopResponse(::test_emptystruct::Empty e) noexcept
       : storage_({.e = std::move(e)}) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |EmptyProtocolSendAndReceiveTopResponse| only if all
-  // of its members are default constructible.
+  // Default constructs a |EmptyProtocolSendAndReceiveTopResponse| only if all of its members are default constructible.
   EmptyProtocolSendAndReceiveTopResponse() = default;
 #pragma clang diagnostic pop
 
-  EmptyProtocolSendAndReceiveTopResponse(
-      EmptyProtocolSendAndReceiveTopResponse&&) noexcept = default;
-  EmptyProtocolSendAndReceiveTopResponse& operator=(
-      EmptyProtocolSendAndReceiveTopResponse&&) noexcept = default;
-  EmptyProtocolSendAndReceiveTopResponse(
-      const EmptyProtocolSendAndReceiveTopResponse& other) noexcept
-      : EmptyProtocolSendAndReceiveTopResponse(other.CloneStorage_()) {}
-  EmptyProtocolSendAndReceiveTopResponse& operator=(
-      const EmptyProtocolSendAndReceiveTopResponse& other) noexcept {
+  EmptyProtocolSendAndReceiveTopResponse(EmptyProtocolSendAndReceiveTopResponse&&) noexcept = default;
+  EmptyProtocolSendAndReceiveTopResponse& operator=(EmptyProtocolSendAndReceiveTopResponse&&) noexcept = default;
+  EmptyProtocolSendAndReceiveTopResponse(const EmptyProtocolSendAndReceiveTopResponse& other) noexcept : EmptyProtocolSendAndReceiveTopResponse(other.CloneStorage_()) {}
+  EmptyProtocolSendAndReceiveTopResponse& operator=(const EmptyProtocolSendAndReceiveTopResponse& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
   }
 
-  bool operator==(
-      const EmptyProtocolSendAndReceiveTopResponse& other) const noexcept {
-    return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse,
-        1>::Equal(this, &other);
+  bool operator==(const EmptyProtocolSendAndReceiveTopResponse& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse, 1>::Equal(this, &other);
   }
-  bool operator!=(
-      const EmptyProtocolSendAndReceiveTopResponse& other) const noexcept {
-    return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse,
-        1>::Equal(this, &other);
+  bool operator!=(const EmptyProtocolSendAndReceiveTopResponse& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse, 1>::Equal(this, &other);
   }
 
-  const ::test_emptystruct::Empty& e() const { return storage_.e; }
+  const ::test_emptystruct::Empty&
+  e() const {
+    return storage_.e;
+  }
 
-  ::test_emptystruct::Empty& e() { return storage_.e; }
+  ::test_emptystruct::Empty& e() {
+    return storage_.e;
+  }
 
-  EmptyProtocolSendAndReceiveTopResponse(
-      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : EmptyProtocolSendAndReceiveTopResponse(Storage_{
-            .e = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
-        }) {}
+  EmptyProtocolSendAndReceiveTopResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : EmptyProtocolSendAndReceiveTopResponse(Storage_{
+                                                                                                           .e = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+                                                                                                       }) {}
 
  private:
   struct Storage_ final {
@@ -221,72 +200,57 @@ class EmptyProtocolSendAndReceiveTopResponse {
   Storage_ storage_;
   Storage_ CloneStorage_() const;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse, 1>;
-  friend struct ::fidl::internal::MemberVisitor<
-      ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::test_emptystruct::Empty,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::e, 0});
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse, 1>;
+  friend struct ::fidl::internal::MemberVisitor<::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::test_emptystruct::Empty, fidl::internal::NaturalCodingConstraintEmpty>{
+      &Storage_::e, 0});
   static constexpr auto kPadding = std::make_tuple();
 };
 
-extern "C" const fidl_type_t
-    test_emptystruct_EmptyProtocolSendAndReceiveRequestTable;
+extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendAndReceiveRequestTable;
 
 class EmptyProtocolSendAndReceiveRequest {
  private:
   struct Storage_;
 
  public:
-  EmptyProtocolSendAndReceiveRequest(Storage_ storage) noexcept
-      : storage_(std::move(storage)) {}
+  EmptyProtocolSendAndReceiveRequest(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   EmptyProtocolSendAndReceiveRequest(::test_emptystruct::Empty e) noexcept
       : storage_({.e = std::move(e)}) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |EmptyProtocolSendAndReceiveRequest| only if all of
-  // its members are default constructible.
+  // Default constructs a |EmptyProtocolSendAndReceiveRequest| only if all of its members are default constructible.
   EmptyProtocolSendAndReceiveRequest() = default;
 #pragma clang diagnostic pop
 
-  EmptyProtocolSendAndReceiveRequest(
-      EmptyProtocolSendAndReceiveRequest&&) noexcept = default;
-  EmptyProtocolSendAndReceiveRequest& operator=(
-      EmptyProtocolSendAndReceiveRequest&&) noexcept = default;
-  EmptyProtocolSendAndReceiveRequest(
-      const EmptyProtocolSendAndReceiveRequest& other) noexcept
-      : EmptyProtocolSendAndReceiveRequest(other.CloneStorage_()) {}
-  EmptyProtocolSendAndReceiveRequest& operator=(
-      const EmptyProtocolSendAndReceiveRequest& other) noexcept {
+  EmptyProtocolSendAndReceiveRequest(EmptyProtocolSendAndReceiveRequest&&) noexcept = default;
+  EmptyProtocolSendAndReceiveRequest& operator=(EmptyProtocolSendAndReceiveRequest&&) noexcept = default;
+  EmptyProtocolSendAndReceiveRequest(const EmptyProtocolSendAndReceiveRequest& other) noexcept : EmptyProtocolSendAndReceiveRequest(other.CloneStorage_()) {}
+  EmptyProtocolSendAndReceiveRequest& operator=(const EmptyProtocolSendAndReceiveRequest& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
   }
 
-  bool operator==(
-      const EmptyProtocolSendAndReceiveRequest& other) const noexcept {
-    return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_emptystruct::EmptyProtocolSendAndReceiveRequest,
-        1>::Equal(this, &other);
+  bool operator==(const EmptyProtocolSendAndReceiveRequest& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<::test_emptystruct::EmptyProtocolSendAndReceiveRequest, 1>::Equal(this, &other);
   }
-  bool operator!=(
-      const EmptyProtocolSendAndReceiveRequest& other) const noexcept {
-    return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_emptystruct::EmptyProtocolSendAndReceiveRequest,
-        1>::Equal(this, &other);
+  bool operator!=(const EmptyProtocolSendAndReceiveRequest& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<::test_emptystruct::EmptyProtocolSendAndReceiveRequest, 1>::Equal(this, &other);
   }
 
-  const ::test_emptystruct::Empty& e() const { return storage_.e; }
+  const ::test_emptystruct::Empty&
+  e() const {
+    return storage_.e;
+  }
 
-  ::test_emptystruct::Empty& e() { return storage_.e; }
+  ::test_emptystruct::Empty& e() {
+    return storage_.e;
+  }
 
-  EmptyProtocolSendAndReceiveRequest(
-      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : EmptyProtocolSendAndReceiveRequest(Storage_{
-            .e = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
-        }) {}
+  EmptyProtocolSendAndReceiveRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : EmptyProtocolSendAndReceiveRequest(Storage_{
+                                                                                                       .e = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+                                                                                                   }) {}
 
  private:
   struct Storage_ final {
@@ -296,14 +260,10 @@ class EmptyProtocolSendAndReceiveRequest {
   Storage_ storage_;
   Storage_ CloneStorage_() const;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_emptystruct::EmptyProtocolSendAndReceiveRequest, 1>;
-  friend struct ::fidl::internal::MemberVisitor<
-      ::test_emptystruct::EmptyProtocolSendAndReceiveRequest>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::test_emptystruct::Empty,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::e, 0});
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_emptystruct::EmptyProtocolSendAndReceiveRequest, 1>;
+  friend struct ::fidl::internal::MemberVisitor<::test_emptystruct::EmptyProtocolSendAndReceiveRequest>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::test_emptystruct::Empty, fidl::internal::NaturalCodingConstraintEmpty>{
+      &Storage_::e, 0});
   static constexpr auto kPadding = std::make_tuple();
 };
 
@@ -314,49 +274,43 @@ class EmptyProtocolReceiveRequest {
   struct Storage_;
 
  public:
-  EmptyProtocolReceiveRequest(Storage_ storage) noexcept
-      : storage_(std::move(storage)) {}
+  EmptyProtocolReceiveRequest(Storage_ storage) noexcept : storage_(std::move(storage)) {}
   EmptyProtocolReceiveRequest(::test_emptystruct::Empty e) noexcept
       : storage_({.e = std::move(e)}) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |EmptyProtocolReceiveRequest| only if all of its
-  // members are default constructible.
+  // Default constructs a |EmptyProtocolReceiveRequest| only if all of its members are default constructible.
   EmptyProtocolReceiveRequest() = default;
 #pragma clang diagnostic pop
 
   EmptyProtocolReceiveRequest(EmptyProtocolReceiveRequest&&) noexcept = default;
-  EmptyProtocolReceiveRequest& operator=(
-      EmptyProtocolReceiveRequest&&) noexcept = default;
-  EmptyProtocolReceiveRequest(const EmptyProtocolReceiveRequest& other) noexcept
-      : EmptyProtocolReceiveRequest(other.CloneStorage_()) {}
-  EmptyProtocolReceiveRequest& operator=(
-      const EmptyProtocolReceiveRequest& other) noexcept {
+  EmptyProtocolReceiveRequest& operator=(EmptyProtocolReceiveRequest&&) noexcept = default;
+  EmptyProtocolReceiveRequest(const EmptyProtocolReceiveRequest& other) noexcept : EmptyProtocolReceiveRequest(other.CloneStorage_()) {}
+  EmptyProtocolReceiveRequest& operator=(const EmptyProtocolReceiveRequest& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
   }
 
   bool operator==(const EmptyProtocolReceiveRequest& other) const noexcept {
-    return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_emptystruct::EmptyProtocolReceiveRequest, 1>::Equal(this,
-                                                                   &other);
+    return ::fidl::internal::NaturalStructCodingTraits<::test_emptystruct::EmptyProtocolReceiveRequest, 1>::Equal(this, &other);
   }
   bool operator!=(const EmptyProtocolReceiveRequest& other) const noexcept {
-    return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_emptystruct::EmptyProtocolReceiveRequest, 1>::Equal(this,
-                                                                   &other);
+    return !::fidl::internal::NaturalStructCodingTraits<::test_emptystruct::EmptyProtocolReceiveRequest, 1>::Equal(this, &other);
   }
 
-  const ::test_emptystruct::Empty& e() const { return storage_.e; }
+  const ::test_emptystruct::Empty&
+  e() const {
+    return storage_.e;
+  }
 
-  ::test_emptystruct::Empty& e() { return storage_.e; }
+  ::test_emptystruct::Empty& e() {
+    return storage_.e;
+  }
 
-  EmptyProtocolReceiveRequest(
-      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : EmptyProtocolReceiveRequest(Storage_{
-            .e = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
-        }) {}
+  EmptyProtocolReceiveRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : EmptyProtocolReceiveRequest(Storage_{
+                                                                                                .e = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+                                                                                            }) {}
 
  private:
   struct Storage_ final {
@@ -366,14 +320,10 @@ class EmptyProtocolReceiveRequest {
   Storage_ storage_;
   Storage_ CloneStorage_() const;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_emptystruct::EmptyProtocolReceiveRequest, 1>;
-  friend struct ::fidl::internal::MemberVisitor<
-      ::test_emptystruct::EmptyProtocolReceiveRequest>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::test_emptystruct::Empty,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::e, 0});
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_emptystruct::EmptyProtocolReceiveRequest, 1>;
+  friend struct ::fidl::internal::MemberVisitor<::test_emptystruct::EmptyProtocolReceiveRequest>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::test_emptystruct::Empty, fidl::internal::NaturalCodingConstraintEmpty>{
+      &Storage_::e, 0});
   static constexpr auto kPadding = std::make_tuple();
 };
 
@@ -386,64 +336,43 @@ template <>
 struct IsFidlType<::test_emptystruct::Empty> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<
-    ::test_emptystruct::Empty, ::fidl::internal::NaturalCodingConstraintEmpty>
-    final : public ::fidl::internal::NaturalEmptyStructCodingTraits<
-                ::test_emptystruct::Empty> {};
+struct internal::NaturalCodingTraits<::test_emptystruct::Empty, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalEmptyStructCodingTraits<::test_emptystruct::Empty> {};
 
 extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendRequestTable;
 
 template <>
-struct IsFidlType<::test_emptystruct::EmptyProtocolSendRequest>
-    : public std::true_type {};
+struct IsFidlType<::test_emptystruct::EmptyProtocolSendRequest> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<
-    ::test_emptystruct::EmptyProtocolSendRequest,
-    ::fidl::internal::NaturalCodingConstraintEmpty>
-    final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_emptystruct::EmptyProtocolSendRequest, 1> {};
+struct internal::NaturalCodingTraits<::test_emptystruct::EmptyProtocolSendRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_emptystruct::EmptyProtocolSendRequest, 1> {};
 
-extern "C" const fidl_type_t
-    test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
+extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
 
 template <>
-struct IsFidlType<::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse>
-    : public std::true_type {};
+struct IsFidlType<::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<
-    ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse,
-    ::fidl::internal::NaturalCodingConstraintEmpty>
-    final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse, 1> {
-};
+struct internal::NaturalCodingTraits<::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse, 1> {};
 
-extern "C" const fidl_type_t
-    test_emptystruct_EmptyProtocolSendAndReceiveRequestTable;
+extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendAndReceiveRequestTable;
 
 template <>
-struct IsFidlType<::test_emptystruct::EmptyProtocolSendAndReceiveRequest>
-    : public std::true_type {};
+struct IsFidlType<::test_emptystruct::EmptyProtocolSendAndReceiveRequest> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<
-    ::test_emptystruct::EmptyProtocolSendAndReceiveRequest,
-    ::fidl::internal::NaturalCodingConstraintEmpty>
-    final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_emptystruct::EmptyProtocolSendAndReceiveRequest, 1> {};
+struct internal::NaturalCodingTraits<::test_emptystruct::EmptyProtocolSendAndReceiveRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_emptystruct::EmptyProtocolSendAndReceiveRequest, 1> {};
 
 extern "C" const fidl_type_t test_emptystruct_EmptyProtocolReceiveRequestTable;
 
 template <>
-struct IsFidlType<::test_emptystruct::EmptyProtocolReceiveRequest>
-    : public std::true_type {};
+struct IsFidlType<::test_emptystruct::EmptyProtocolReceiveRequest> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<
-    ::test_emptystruct::EmptyProtocolReceiveRequest,
-    ::fidl::internal::NaturalCodingConstraintEmpty>
-    final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_emptystruct::EmptyProtocolReceiveRequest, 1> {};
+struct internal::NaturalCodingTraits<::test_emptystruct::EmptyProtocolReceiveRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_emptystruct::EmptyProtocolReceiveRequest, 1> {};
 
 }  // namespace fidl

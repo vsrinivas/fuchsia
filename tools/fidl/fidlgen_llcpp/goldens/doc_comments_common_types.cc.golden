@@ -6,8 +6,7 @@ namespace test_doccomments {
 extern "C" const fidl_type_t test_doccomments_MyStrictEnumTable;
 }  // namespace test_doccomments
 size_t fidl::internal::DisplayError<::test_doccomments::MyStrictEnum>::Format(
-    const ::test_doccomments::MyStrictEnum& value, char* destination,
-    size_t capacity) {
+    const ::test_doccomments::MyStrictEnum& value, char* destination, size_t capacity) {
   const char* name = [&]() -> const char* {
     switch (static_cast<uint32_t>(value)) {
       case 1u:
@@ -19,17 +18,14 @@ size_t fidl::internal::DisplayError<::test_doccomments::MyStrictEnum>::Format(
     }
   }();
   return ::fidl::internal::FormatApplicationError(
-      static_cast<uint32_t>(value), name,
-      &::test_doccomments::test_doccomments_MyStrictEnumTable, destination,
-      capacity);
+      static_cast<uint32_t>(value), name, &::test_doccomments::test_doccomments_MyStrictEnumTable, destination, capacity);
 }
 
 namespace test_doccomments {
 extern "C" const fidl_type_t test_doccomments_MyFlexibleEnumTable;
 }  // namespace test_doccomments
 size_t fidl::internal::DisplayError<::test_doccomments::MyFlexibleEnum>::Format(
-    const ::test_doccomments::MyFlexibleEnum& value, char* destination,
-    size_t capacity) {
+    const ::test_doccomments::MyFlexibleEnum& value, char* destination, size_t capacity) {
   const char* name = [&]() -> const char* {
     switch (static_cast<uint32_t>(value)) {
       case 1u:
@@ -41,7 +37,5 @@ size_t fidl::internal::DisplayError<::test_doccomments::MyFlexibleEnum>::Format(
     }
   }();
   return ::fidl::internal::FormatApplicationError(
-      static_cast<uint32_t>(value), name,
-      &::test_doccomments::test_doccomments_MyFlexibleEnumTable, destination,
-      capacity);
+      static_cast<uint32_t>(value), name, &::test_doccomments::test_doccomments_MyFlexibleEnumTable, destination, capacity);
 }

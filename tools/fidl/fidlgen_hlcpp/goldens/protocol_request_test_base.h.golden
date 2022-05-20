@@ -16,12 +16,10 @@ class Parent_TestBase : public ::test::protocolrequest::Parent {
   void GetChildRequest(GetChildRequestCallback callback) override {
     NotImplemented_("GetChildRequest");
   }
-  void TakeChild(
-      ::fidl::InterfaceHandle<::test::protocolrequest::Child> c) override {
+  void TakeChild(::fidl::InterfaceHandle<::test::protocolrequest::Child> c) override {
     NotImplemented_("TakeChild");
   }
-  void TakeChildRequest(
-      ::fidl::InterfaceRequest<::test::protocolrequest::Child> r) override {
+  void TakeChildRequest(::fidl::InterfaceRequest<::test::protocolrequest::Child> r) override {
     NotImplemented_("TakeChildRequest");
   }
 };
