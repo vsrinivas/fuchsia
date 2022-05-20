@@ -45,13 +45,11 @@ struct ::fidl::internal::WireServerDispatcher<::test_bindingsdenylist::Allowed>
   static ::fidl::DispatchResult TryDispatch(
       ::fidl::WireServer<::test_bindingsdenylist::Allowed>* impl,
       ::fidl::IncomingMessage& msg,
-      internal::IncomingTransportContext transport_context,
-      ::fidl::Transaction* txn);
+      internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn);
   static void Dispatch(
       ::fidl::WireServer<::test_bindingsdenylist::Allowed>* impl,
       ::fidl::IncomingMessage&& msg,
-      internal::IncomingTransportContext transport_context,
-      ::fidl::Transaction* txn);
+      internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn);
 
  private:
   static const ::fidl::internal::MethodEntry entries_[];
@@ -111,7 +109,7 @@ class ::fidl::internal::WireEventDispatcher<::test_bindingsdenylist::Allowed>
  private:
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
-      ::fidl::internal::IncomingTransportContext transport_context) override;
+      ::fidl::internal::MessageStorageViewBase* storage_view) override;
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
@@ -162,7 +160,7 @@ class ::fidl::WireServer<::test_bindingsdenylist::Allowed>
  private:
   void dispatch_message(
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-      ::fidl::internal::IncomingTransportContext transport_context) final;
+      ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 namespace fidl {
 #endif  // __Fuchsia__
@@ -194,13 +192,11 @@ struct ::fidl::internal::WireServerDispatcher<
   static ::fidl::DispatchResult TryDispatch(
       ::fidl::WireServer<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>* impl,
       ::fidl::IncomingMessage& msg,
-      internal::IncomingTransportContext transport_context,
-      ::fidl::Transaction* txn);
+      internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn);
   static void Dispatch(
       ::fidl::WireServer<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>* impl,
       ::fidl::IncomingMessage&& msg,
-      internal::IncomingTransportContext transport_context,
-      ::fidl::Transaction* txn);
+      internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn);
 
  private:
   static const ::fidl::internal::MethodEntry entries_[];
@@ -562,7 +558,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
           ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
               LibfuzzerNeedsNonemptyProtocol>>&& decoded,
-      ::fidl::internal::IncomingTransportContext context)
+      ::fidl::internal::MessageStorageViewBase* storage_view)
       : fidl::Status(decoded) {
     if (decoded.ok()) {
       decoded_ = decoded.Take();
@@ -635,7 +631,7 @@ class ::fidl::internal::WireEventDispatcher<
  private:
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
-      ::fidl::internal::IncomingTransportContext transport_context) override;
+      ::fidl::internal::MessageStorageViewBase* storage_view) override;
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
@@ -778,7 +774,7 @@ class ::fidl::WireServer<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>
  private:
   void dispatch_message(
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-      ::fidl::internal::IncomingTransportContext transport_context) final;
+      ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 namespace fidl {
 #endif  // __Fuchsia__
@@ -802,13 +798,11 @@ struct ::fidl::internal::WireServerDispatcher<
   static ::fidl::DispatchResult TryDispatch(
       ::fidl::WireServer<::test_bindingsdenylist::OnlyCppAndDeps>* impl,
       ::fidl::IncomingMessage& msg,
-      internal::IncomingTransportContext transport_context,
-      ::fidl::Transaction* txn);
+      internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn);
   static void Dispatch(
       ::fidl::WireServer<::test_bindingsdenylist::OnlyCppAndDeps>* impl,
       ::fidl::IncomingMessage&& msg,
-      internal::IncomingTransportContext transport_context,
-      ::fidl::Transaction* txn);
+      internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn);
 
  private:
   static const ::fidl::internal::MethodEntry entries_[];
@@ -870,7 +864,7 @@ class ::fidl::internal::WireEventDispatcher<
  private:
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
-      ::fidl::internal::IncomingTransportContext transport_context) override;
+      ::fidl::internal::MessageStorageViewBase* storage_view) override;
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
@@ -923,7 +917,7 @@ class ::fidl::WireServer<::test_bindingsdenylist::OnlyCppAndDeps>
  private:
   void dispatch_message(
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-      ::fidl::internal::IncomingTransportContext transport_context) final;
+      ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 namespace fidl {
 #endif  // __Fuchsia__
@@ -961,13 +955,11 @@ struct ::fidl::internal::WireServerDispatcher<
   static ::fidl::DispatchResult TryDispatch(
       ::fidl::WireServer<::test_bindingsdenylist::ImportsSameNameContext>* impl,
       ::fidl::IncomingMessage& msg,
-      internal::IncomingTransportContext transport_context,
-      ::fidl::Transaction* txn);
+      internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn);
   static void Dispatch(
       ::fidl::WireServer<::test_bindingsdenylist::ImportsSameNameContext>* impl,
       ::fidl::IncomingMessage&& msg,
-      internal::IncomingTransportContext transport_context,
-      ::fidl::Transaction* txn);
+      internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn);
 
  private:
   static const ::fidl::internal::MethodEntry entries_[];
@@ -1339,7 +1331,7 @@ class ::fidl::internal::WireEventDispatcher<
  private:
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
-      ::fidl::internal::IncomingTransportContext transport_context) override;
+      ::fidl::internal::MessageStorageViewBase* storage_view) override;
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
@@ -1470,7 +1462,7 @@ class ::fidl::WireServer<::test_bindingsdenylist::ImportsSameNameContext>
  private:
   void dispatch_message(
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-      ::fidl::internal::IncomingTransportContext transport_context) final;
+      ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 namespace fidl {
 #endif  // __Fuchsia__
@@ -1547,13 +1539,11 @@ struct ::fidl::internal::WireServerDispatcher<
   static ::fidl::DispatchResult TryDispatch(
       ::fidl::WireServer<::test_bindingsdenylist::DenyEachBinding>* impl,
       ::fidl::IncomingMessage& msg,
-      internal::IncomingTransportContext transport_context,
-      ::fidl::Transaction* txn);
+      internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn);
   static void Dispatch(
       ::fidl::WireServer<::test_bindingsdenylist::DenyEachBinding>* impl,
       ::fidl::IncomingMessage&& msg,
-      internal::IncomingTransportContext transport_context,
-      ::fidl::Transaction* txn);
+      internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn);
 
  private:
   static const ::fidl::internal::MethodEntry entries_[];
@@ -3914,7 +3904,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
   explicit WireUnownedResult(
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>&& decoded,
-      ::fidl::internal::IncomingTransportContext context)
+      ::fidl::internal::MessageStorageViewBase* storage_view)
       : fidl::Status(decoded) {
     if (decoded.ok()) {
       decoded_ = decoded.Take();
@@ -4134,7 +4124,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
   explicit WireUnownedResult(
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>&& decoded,
-      ::fidl::internal::IncomingTransportContext context)
+      ::fidl::internal::MessageStorageViewBase* storage_view)
       : fidl::Status(decoded) {
     if (decoded.ok()) {
       decoded_ = decoded.Take();
@@ -4361,7 +4351,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>>&&
           decoded,
-      ::fidl::internal::IncomingTransportContext context)
+      ::fidl::internal::MessageStorageViewBase* storage_view)
       : fidl::Status(decoded) {
     if (decoded.ok()) {
       decoded_ = decoded.Take();
@@ -4585,7 +4575,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
   explicit WireUnownedResult(
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>&& decoded,
-      ::fidl::internal::IncomingTransportContext context)
+      ::fidl::internal::MessageStorageViewBase* storage_view)
       : fidl::Status(decoded) {
     if (decoded.ok()) {
       decoded_ = decoded.Take();
@@ -4812,7 +4802,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>>&&
           decoded,
-      ::fidl::internal::IncomingTransportContext context)
+      ::fidl::internal::MessageStorageViewBase* storage_view)
       : fidl::Status(decoded) {
     if (decoded.ok()) {
       decoded_ = decoded.Take();
@@ -4963,7 +4953,7 @@ class ::fidl::internal::WireEventDispatcher<
  private:
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
-      ::fidl::internal::IncomingTransportContext transport_context) override;
+      ::fidl::internal::MessageStorageViewBase* storage_view) override;
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
@@ -5424,7 +5414,7 @@ class ::fidl::WireServer<::test_bindingsdenylist::DenyEachBinding>
  private:
   void dispatch_message(
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-      ::fidl::internal::IncomingTransportContext transport_context) final;
+      ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 namespace fidl {
 #endif  // __Fuchsia__

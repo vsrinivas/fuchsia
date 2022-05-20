@@ -51,14 +51,12 @@ struct ::fidl::internal::WireServerDispatcher<
       ::fidl::WireServer<::test_foreigntypeinresponseusedthroughcompose::Top>*
           impl,
       ::fidl::IncomingMessage& msg,
-      internal::IncomingTransportContext transport_context,
-      ::fidl::Transaction* txn);
+      internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn);
   static void Dispatch(
       ::fidl::WireServer<::test_foreigntypeinresponseusedthroughcompose::Top>*
           impl,
       ::fidl::IncomingMessage&& msg,
-      internal::IncomingTransportContext transport_context,
-      ::fidl::Transaction* txn);
+      internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn);
 
  private:
   static const ::fidl::internal::MethodEntry entries_[];
@@ -546,7 +544,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
           ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>&&
           decoded,
-      ::fidl::internal::IncomingTransportContext context)
+      ::fidl::internal::MessageStorageViewBase* storage_view)
       : fidl::Status(decoded) {
     if (decoded.ok()) {
       decoded_ = decoded.Take();
@@ -688,7 +686,7 @@ class ::fidl::internal::WireEventDispatcher<
  private:
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
-      ::fidl::internal::IncomingTransportContext transport_context) override;
+      ::fidl::internal::MessageStorageViewBase* storage_view) override;
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
@@ -819,7 +817,7 @@ class ::fidl::WireServer<::test_foreigntypeinresponseusedthroughcompose::Top>
  private:
   void dispatch_message(
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-      ::fidl::internal::IncomingTransportContext transport_context) final;
+      ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 namespace fidl {
 #endif  // __Fuchsia__

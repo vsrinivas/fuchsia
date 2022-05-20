@@ -25,9 +25,7 @@ TEST(ChannelTransport, Success) {
   fidl::internal::ChannelWaiter waiter(
       ch1.get(), dispatcher,
       [&success](fidl::IncomingMessage&,
-                 const fidl::internal::IncomingTransportContext transport_context) {
-        success = true;
-      },
+                 const fidl::internal::MessageStorageViewBase* storage_view) { success = true; },
       [](fidl::UnbindInfo) { ZX_PANIC("shouldn't get here"); });
   ASSERT_OK(waiter.Begin());
 
@@ -46,7 +44,7 @@ TEST(ChannelTransport, Failure) {
   std::optional<fidl::UnbindInfo> failure;
   fidl::internal::ChannelWaiter waiter(
       ch1.get(), dispatcher,
-      [](fidl::IncomingMessage&, const fidl::internal::IncomingTransportContext) {
+      [](fidl::IncomingMessage&, fidl::internal::MessageStorageViewBase*) {
         ZX_PANIC("shouldn't get here");
       },
       [&failure](fidl::UnbindInfo info) { failure = info; });

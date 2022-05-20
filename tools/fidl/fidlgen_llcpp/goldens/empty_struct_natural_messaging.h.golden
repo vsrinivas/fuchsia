@@ -172,7 +172,7 @@ class ::fidl::internal::NaturalEventDispatcher<
  private:
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
-      internal::IncomingTransportContext transport_context) override;
+      internal::MessageStorageViewBase* storage_view) override;
 };
 #endif  // __Fuchsia__
 
@@ -284,7 +284,7 @@ class ::fidl::Server<::test_emptystruct::EmptyProtocol>
  private:
   void dispatch_message(
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-      ::fidl::internal::IncomingTransportContext transport_context) final;
+      ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 
 #ifdef __Fuchsia__
@@ -296,7 +296,7 @@ struct ::fidl::internal::NaturalServerDispatcher<
   NaturalServerDispatcher() = delete;
   static void Dispatch(::fidl::Server<::test_emptystruct::EmptyProtocol>* impl,
                        ::fidl::IncomingMessage&& msg,
-                       internal::IncomingTransportContext transport_context,
+                       internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
  private:

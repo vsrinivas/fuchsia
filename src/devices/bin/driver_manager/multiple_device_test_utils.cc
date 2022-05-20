@@ -91,9 +91,13 @@ void MultipleDeviceTestCase::CheckCreateDeviceReceived(
   uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
   zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
   fidl_channel_handle_metadata_t handle_metadata[ZX_CHANNEL_MAX_MSG_HANDLES];
-  fidl::IncomingMessage msg =
-      fidl::MessageRead(devhost_controller.channel(), fidl::BufferSpan(bytes, std::size(bytes)),
-                        handles, handle_metadata, ZX_CHANNEL_MAX_MSG_HANDLES);
+  fidl::IncomingMessage msg = fidl::MessageRead(
+      devhost_controller.channel(), fidl::ChannelMessageStorageView{
+                                        .bytes = fidl::BufferSpan(bytes, std::size(bytes)),
+                                        .handles = handles,
+                                        .handle_metadata = handle_metadata,
+                                        .handle_capacity = ZX_CHANNEL_MAX_MSG_HANDLES,
+                                    });
   ASSERT_TRUE(msg.ok());
 
   auto* header = msg.header();
@@ -114,9 +118,13 @@ void DeviceState::Dispatch() {
   uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
   zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
   fidl_channel_handle_metadata_t handle_metadata[ZX_CHANNEL_MAX_MSG_HANDLES];
-  fidl::IncomingMessage msg =
-      fidl::MessageRead(controller_server.channel(), fidl::BufferSpan(bytes, std::size(bytes)),
-                        handles, handle_metadata, ZX_CHANNEL_MAX_MSG_HANDLES);
+  fidl::IncomingMessage msg = fidl::MessageRead(
+      controller_server.channel(), fidl::ChannelMessageStorageView{
+                                       .bytes = fidl::BufferSpan(bytes, std::size(bytes)),
+                                       .handles = handles,
+                                       .handle_metadata = handle_metadata,
+                                       .handle_capacity = ZX_CHANNEL_MAX_MSG_HANDLES,
+                                   });
   ASSERT_TRUE(msg.ok());
 
   auto* header = msg.header();

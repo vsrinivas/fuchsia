@@ -221,26 +221,8 @@ class OutgoingMessage : public ::fidl::Status {
           std::move(options));
   }
 
-  // Makes a call on a transport whose messages read are associated with their
-  // own buffers, then decodes them.
-  // TODO(fxbug.dev/100472): To support both wire and natural types using the
-  // same calling mechanism, decoding should be domain object family-specific
-  // and moved out of |Call|.
-  template <typename FidlType, typename TransportObject,
-            typename = std::enable_if_t<
-                internal::AssociatedTransport<TransportObject>::kTransportProvidesReadBuffer>>
-  void Call(TransportObject&& transport, uint8_t** out_bytes, uint32_t* out_num_bytes,
-            CallOptions options = {}) {
-    CallImplForTransportProvidedBuffer(
-        internal::MakeAnyUnownedTransport(std::forward<TransportObject>(transport)),
-        internal::TopLevelCodingTraits<FidlType>::inline_size,
-        fidl::TypeTraits<FidlType>::kHasEnvelope, internal::MakeTopLevelDecodeFn<FidlType>(),
-        fidl::TypeTraits<FidlType>::kHasResponseBody, out_bytes, out_num_bytes, std::move(options));
-  }
-
   // Makes a call and returns the response read from the transport, without
   // decoding.
-  // TODO(fxbug.dev/100472): Move every user to this overload of |Call|.
   template <typename TransportObject>
   auto Call(TransportObject&& transport,
             typename internal::AssociatedTransport<TransportObject>::MessageStorageView storage,
@@ -269,25 +251,6 @@ class OutgoingMessage : public ::fidl::Status {
   explicit OutgoingMessage(InternalIovecConstructorArgs args);
   explicit OutgoingMessage(InternalByteBackedConstructorArgs args);
   explicit OutgoingMessage(const fidl_outgoing_msg_t* msg, bool is_transactional);
-
-  void DecodeImplForCall(size_t inline_size, bool contains_envelope,
-                         internal::TopLevelDecodeFn decode_fn,
-                         const internal::CodingConfig& coding_config, uint8_t* bytes,
-                         uint32_t* in_out_num_bytes, fidl_handle_t* handles,
-                         fidl_handle_metadata_t* handle_metadata, uint32_t num_handles);
-
-  void CallImplForCallerProvidedBuffer(internal::AnyUnownedTransport transport, size_t inline_size,
-                                       bool contains_envelope, internal::TopLevelDecodeFn decode_fn,
-                                       bool has_response_body, uint8_t* result_bytes,
-                                       uint32_t result_byte_capacity, fidl_handle_t* result_handles,
-                                       fidl_handle_metadata_t* result_handle_metadata,
-                                       uint32_t result_handle_capacity, CallOptions options);
-
-  void CallImplForTransportProvidedBuffer(internal::AnyUnownedTransport transport,
-                                          size_t inline_size, bool contains_envelope,
-                                          internal::TopLevelDecodeFn decode_fn,
-                                          bool has_response_body, uint8_t** out_bytes,
-                                          uint32_t* out_num_bytes, CallOptions options);
 
   fidl::IncomingMessage CallImpl(internal::AnyUnownedTransport transport,
                                  internal::MessageStorageViewBase& storage, CallOptions options);
@@ -520,6 +483,13 @@ class IncomingMessage : public ::fidl::Status {
   // |OutgoingMessage| may create an |IncomingMessage| with a dynamic transport during a call.
   friend class OutgoingMessage;
 
+  // |MessageRead| may create an |IncomingMessage| with a dynamic transport after a read.
+  template <typename TransportObject>
+  friend IncomingMessage MessageRead(
+      TransportObject&& transport,
+      typename internal::AssociatedTransport<TransportObject>::MessageStorageView storage,
+      const ReadOptions& options);
+
   // Decodes the message using |decode_fn| for the specified |wire_format_version|. If this
   // operation succeed, |status()| is ok and |bytes()| contains the decoded object.
   //
@@ -564,28 +534,51 @@ class IncomingMessage : public ::fidl::Status {
   bool is_transactional_ = false;
 };
 
-// Reads a transactional message from |transport| using the |bytes_storage| and
-// |handles_storage| buffers as needed.
+// Reads a transactional message from |transport| using the |storage| as needed.
+//
+// |storage| must be a subclass of |fidl::internal::MessageStorageViewBase|, and
+// is specific to the transport. For example, the Zircon channel transport uses
+// |fidl::ChannelMessageStorageView| which points to bytes and handles:
+//
+//     fidl::IncomingMessage message = fidl::MessageRead(
+//         zx::unowned_channel(...),
+//         fidl::ChannelMessageStorageView{...});
 //
 // Error information is embedded in the returned |IncomingMessage| in case of
 // failures.
 template <typename TransportObject>
-IncomingMessage MessageRead(TransportObject&& transport, ::fidl::BufferSpan bytes_storage,
-                            fidl_handle_t* handle_storage,
-                            typename internal::AssociatedTransport<TransportObject>::HandleMetadata*
-                                handle_metadata_storage,
-                            uint32_t handle_capacity, const ReadOptions& options = {}) {
+IncomingMessage MessageRead(
+    TransportObject&& transport,
+    typename internal::AssociatedTransport<TransportObject>::MessageStorageView storage,
+    const ReadOptions& options) {
   auto type_erased_transport =
       internal::MakeAnyUnownedTransport(std::forward<TransportObject>(transport));
-  uint32_t num_bytes, num_handles;
-  zx_status_t status = type_erased_transport.read(
-      options, bytes_storage.data, bytes_storage.capacity, handle_storage, handle_metadata_storage,
-      handle_capacity, &num_bytes, &num_handles);
+  uint8_t* result_bytes;
+  fidl_handle_t* result_handles;
+  fidl_handle_metadata_t* result_handle_metadata;
+  uint32_t actual_num_bytes = 0u;
+  uint32_t actual_num_handles = 0u;
+  zx_status_t status =
+      type_erased_transport.read(options, internal::ReadArgs{
+                                              .storage_view = &storage,
+                                              .out_data = reinterpret_cast<void**>(&result_bytes),
+                                              .out_handles = &result_handles,
+                                              .out_handle_metadata = &result_handle_metadata,
+                                              .out_data_actual_count = &actual_num_bytes,
+                                              .out_handles_actual_count = &actual_num_handles,
+                                          });
   if (status != ZX_OK) {
     return IncomingMessage::Create(fidl::Status::TransportError(status));
   }
-  return IncomingMessage::Create(bytes_storage.data, num_bytes, handle_storage,
-                                 handle_metadata_storage, num_handles);
+  return IncomingMessage(type_erased_transport.vtable(), result_bytes, actual_num_bytes,
+                         result_handles, result_handle_metadata, actual_num_handles);
+}
+
+template <typename TransportObject>
+IncomingMessage MessageRead(
+    TransportObject&& transport,
+    typename internal::AssociatedTransport<TransportObject>::MessageStorageView storage) {
+  return MessageRead(std::forward<TransportObject>(transport), storage, {});
 }
 
 namespace internal {

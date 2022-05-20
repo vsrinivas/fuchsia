@@ -5,6 +5,7 @@
 #ifndef LIB_FIDL_DRIVER_INCLUDE_LIB_FIDL_DRIVER_CPP_TRANSPORT_H_
 #define LIB_FIDL_DRIVER_INCLUDE_LIB_FIDL_DRIVER_CPP_TRANSPORT_H_
 
+#include <lib/fdf/cpp/arena.h>
 #include <lib/fdf/cpp/channel.h>
 #include <lib/fdf/cpp/channel_read.h>
 #include <lib/fdf/cpp/dispatcher.h>
@@ -39,11 +40,12 @@ namespace internal {
 
 struct DriverHandleMetadata {};
 
+struct DriverMessageStorageView;
+
 struct DriverTransport {
   using OwnedType = fdf::Channel;
   using UnownedType = fdf::UnownedChannel;
   using HandleMetadata = DriverHandleMetadata;
-  using IncomingTransportContextType = fdf_arena_t;
   using OutgoingTransportContextType = fdf_arena_t;
   template <typename Protocol>
   using ClientEnd = fdf::ClientEnd<Protocol>;
@@ -57,6 +59,7 @@ struct DriverTransport {
   using WireUnownedResult = fdf::WireUnownedResult<FidlMethod>;
   template <typename FidlMethod>
   using Result = fdf::Result<FidlMethod>;
+  using MessageStorageView = DriverMessageStorageView;
 
   static constexpr bool kTransportProvidesReadBuffer = true;
   static constexpr uint32_t kNumIovecs = 1;
@@ -102,6 +105,29 @@ class DriverWaiter : public TransportWaiter {
     std::optional<fdf::ChannelRead> channel_read;
   };
   State state_;
+};
+
+// A view into an object providing storage for messages read from a driver channel.
+struct DriverMessageStorageView : public MessageStorageViewBase {
+  fdf::Arena* arena;
+};
+
+inline fdf::Arena TakeDriverArenaFromStorage(MessageStorageViewBase* storage_view) {
+  return std::move(*static_cast<DriverMessageStorageView*>(storage_view)->arena);
+}
+
+// Base class with common functionality for bytes and handles storage classes
+// backing messages read from a driver channel.
+template <typename Derived>
+struct DriverMessageStorageBase {
+  // |arena| backs both bytes and handles.
+  fdf::Arena arena;
+
+  DriverMessageStorageView view() {
+    return DriverMessageStorageView{
+        .arena = &arena,
+    };
+  }
 };
 
 }  // namespace internal

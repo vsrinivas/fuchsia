@@ -89,7 +89,7 @@ class ::fidl::internal::NaturalEventDispatcher<
  private:
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
-      internal::IncomingTransportContext transport_context) override;
+      internal::MessageStorageViewBase* storage_view) override;
 };
 #endif  // __Fuchsia__
 
@@ -156,7 +156,7 @@ class ::fidl::Server<::test_inheritancewithrecursivedecl::Parent>
  private:
   void dispatch_message(
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-      ::fidl::internal::IncomingTransportContext transport_context) final;
+      ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 
 #ifdef __Fuchsia__
@@ -169,8 +169,7 @@ struct ::fidl::internal::NaturalServerDispatcher<
   static void Dispatch(
       ::fidl::Server<::test_inheritancewithrecursivedecl::Parent>* impl,
       ::fidl::IncomingMessage&& msg,
-      internal::IncomingTransportContext transport_context,
-      ::fidl::Transaction* txn);
+      internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn);
 
  private:
   static const ::fidl::internal::MethodEntry entries_[];
@@ -262,7 +261,7 @@ class ::fidl::internal::NaturalEventDispatcher<
  private:
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
-      internal::IncomingTransportContext transport_context) override;
+      internal::MessageStorageViewBase* storage_view) override;
 };
 #endif  // __Fuchsia__
 
@@ -359,7 +358,7 @@ class ::fidl::Server<::test_inheritancewithrecursivedecl::Child>
  private:
   void dispatch_message(
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-      ::fidl::internal::IncomingTransportContext transport_context) final;
+      ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 
 #ifdef __Fuchsia__
@@ -372,8 +371,7 @@ struct ::fidl::internal::NaturalServerDispatcher<
   static void Dispatch(
       ::fidl::Server<::test_inheritancewithrecursivedecl::Child>* impl,
       ::fidl::IncomingMessage&& msg,
-      internal::IncomingTransportContext transport_context,
-      ::fidl::Transaction* txn);
+      internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn);
 
  private:
   static const ::fidl::internal::MethodEntry entries_[];

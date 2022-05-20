@@ -72,7 +72,7 @@ class ::fidl::internal::NaturalEventDispatcher<::test_versions::OtherProtocol>
  private:
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
-      internal::IncomingTransportContext transport_context) override;
+      internal::MessageStorageViewBase* storage_view) override;
 };
 #endif  // __Fuchsia__
 
@@ -107,7 +107,7 @@ class ::fidl::Server<::test_versions::OtherProtocol>
  private:
   void dispatch_message(
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-      ::fidl::internal::IncomingTransportContext transport_context) final;
+      ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 
 #ifdef __Fuchsia__
@@ -118,7 +118,7 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_versions::OtherProtocol>
   NaturalServerDispatcher() = delete;
   static void Dispatch(::fidl::Server<::test_versions::OtherProtocol>* impl,
                        ::fidl::IncomingMessage&& msg,
-                       internal::IncomingTransportContext transport_context,
+                       internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
  private:
@@ -186,7 +186,7 @@ class ::fidl::internal::NaturalEventDispatcher<::test_versions::Protocol> final
  private:
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
-      internal::IncomingTransportContext transport_context) override;
+      internal::MessageStorageViewBase* storage_view) override;
 };
 #endif  // __Fuchsia__
 
@@ -242,7 +242,7 @@ class ::fidl::Server<::test_versions::Protocol>
  private:
   void dispatch_message(
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-      ::fidl::internal::IncomingTransportContext transport_context) final;
+      ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 
 #ifdef __Fuchsia__
@@ -253,7 +253,7 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_versions::Protocol>
   NaturalServerDispatcher() = delete;
   static void Dispatch(::fidl::Server<::test_versions::Protocol>* impl,
                        ::fidl::IncomingMessage&& msg,
-                       internal::IncomingTransportContext transport_context,
+                       internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
  private:

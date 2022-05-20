@@ -896,10 +896,15 @@ fidl::WireSyncEventHandler<::test_protocols::WithAndWithoutRequestResponse>::
   // TODO(fxbug.dev/85734) Remove this channel-specific allocation.
   std::array<fidl_channel_handle_metadata_t, kHandleAllocSize>
       read_handle_metadata;
-  ::fidl::IncomingMessage msg = ::fidl::MessageRead(
-      zx::unowned_channel(client_end.handle()), read_storage.view(),
-      read_handles.data(), read_handle_metadata.data(), kHandleAllocSize,
-      ReadOptions{.discardable = true});
+  ::fidl::IncomingMessage msg =
+      ::fidl::MessageRead(zx::unowned_channel(client_end.handle()),
+                          ::fidl::ChannelMessageStorageView{
+                              .bytes = read_storage.view(),
+                              .handles = read_handles.data(),
+                              .handle_metadata = read_handle_metadata.data(),
+                              .handle_capacity = kHandleAllocSize,
+                          },
+                          ReadOptions{.discardable = true});
   if (msg.status() == ZX_ERR_BUFFER_TOO_SMALL) {
     // Message size is unexpectedly larger than calculated.
     // This can only be due to a newer version of the protocol defining a new
@@ -961,9 +966,8 @@ fidl::WireSyncEventHandler<::test_protocols::WithAndWithoutRequestResponse>::
 
 std::optional<::fidl::UnbindInfo> fidl::internal::WireEventDispatcher<
     ::test_protocols::WithAndWithoutRequestResponse>::
-    DispatchEvent(
-        ::fidl::IncomingMessage& msg,
-        ::fidl::internal::IncomingTransportContext transport_context) {
+    DispatchEvent(::fidl::IncomingMessage& msg,
+                  ::fidl::internal::MessageStorageViewBase* storage_view) {
   switch (msg.header()->ordinal) {
     case ::test_protocols::
         kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal: {
@@ -1011,7 +1015,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
         ::test_protocols::
             kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::IncomingTransportContext transport_context,
+           internal::MessageStorageViewBase* storage_view,
            ::fidl::Transaction* txn) {
           ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::
                                   NoRequestNoResponse>
@@ -1030,7 +1034,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
         ::test_protocols::
             kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::IncomingTransportContext transport_context,
+           internal::MessageStorageViewBase* storage_view,
            ::fidl::Transaction* txn) {
           ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::
                                   NoRequestEmptyResponse>
@@ -1049,7 +1053,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
         ::test_protocols::
             kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::IncomingTransportContext transport_context,
+           internal::MessageStorageViewBase* storage_view,
            ::fidl::Transaction* txn) {
           ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::
                                   NoRequestWithResponse>
@@ -1068,7 +1072,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
         ::test_protocols::
             kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::IncomingTransportContext transport_context,
+           internal::MessageStorageViewBase* storage_view,
            ::fidl::Transaction* txn) {
           ::fidl::unstable::DecodedMessage<
               ::fidl::internal::TransactionalRequest<
@@ -1092,7 +1096,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
         ::test_protocols::
             kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::IncomingTransportContext transport_context,
+           internal::MessageStorageViewBase* storage_view,
            ::fidl::Transaction* txn) {
           ::fidl::unstable::DecodedMessage<
               ::fidl::internal::TransactionalRequest<
@@ -1116,7 +1120,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
         ::test_protocols::
             kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::IncomingTransportContext transport_context,
+           internal::MessageStorageViewBase* storage_view,
            ::fidl::Transaction* txn) {
           ::fidl::unstable::DecodedMessage<
               ::fidl::internal::TransactionalRequest<
@@ -1147,10 +1151,10 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<
     TryDispatch(::fidl::WireServer<
                     ::test_protocols::WithAndWithoutRequestResponse>* impl,
                 ::fidl::IncomingMessage& msg,
-                internal::IncomingTransportContext transport_context,
+                internal::MessageStorageViewBase* storage_view,
                 ::fidl::Transaction* txn) {
-  return ::fidl::internal::TryDispatch(impl, msg, std::move(transport_context),
-                                       txn, entries_, entries_end_);
+  return ::fidl::internal::TryDispatch(impl, msg, storage_view, txn, entries_,
+                                       entries_end_);
 }
 
 void fidl::internal::WireServerDispatcher<
@@ -1158,18 +1162,19 @@ void fidl::internal::WireServerDispatcher<
     Dispatch(::fidl::WireServer<
                  ::test_protocols::WithAndWithoutRequestResponse>* impl,
              ::fidl::IncomingMessage&& msg,
-             internal::IncomingTransportContext transport_context,
+             internal::MessageStorageViewBase* storage_view,
              ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, std::move(transport_context), txn,
-                             entries_, entries_end_);
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_,
+                             entries_end_);
 }
 void fidl::WireServer<::test_protocols::WithAndWithoutRequestResponse>::
-    dispatch_message(
-        ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-        ::fidl::internal::IncomingTransportContext transport_context) {
+    dispatch_message(::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+                     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<
-      ::test_protocols::WithAndWithoutRequestResponse>::
-      Dispatch(this, std::move(msg), std::move(transport_context), txn);
+      ::test_protocols::WithAndWithoutRequestResponse>::Dispatch(this,
+                                                                 std::move(msg),
+                                                                 storage_view,
+                                                                 txn);
 }
 #endif  // __Fuchsia__
 
@@ -1907,10 +1912,15 @@ fidl::WireSyncEventHandler<::test_protocols::Transitional>::HandleOneEvent(
   // TODO(fxbug.dev/85734) Remove this channel-specific allocation.
   std::array<fidl_channel_handle_metadata_t, kHandleAllocSize>
       read_handle_metadata;
-  ::fidl::IncomingMessage msg = ::fidl::MessageRead(
-      zx::unowned_channel(client_end.handle()), read_storage.view(),
-      read_handles.data(), read_handle_metadata.data(), kHandleAllocSize,
-      ReadOptions{.discardable = true});
+  ::fidl::IncomingMessage msg =
+      ::fidl::MessageRead(zx::unowned_channel(client_end.handle()),
+                          ::fidl::ChannelMessageStorageView{
+                              .bytes = read_storage.view(),
+                              .handles = read_handles.data(),
+                              .handle_metadata = read_handle_metadata.data(),
+                              .handle_capacity = kHandleAllocSize,
+                          },
+                          ReadOptions{.discardable = true});
   if (msg.status() == ZX_ERR_BUFFER_TOO_SMALL) {
     // Message size is unexpectedly larger than calculated.
     // This can only be due to a newer version of the protocol defining a new
@@ -1951,7 +1961,7 @@ fidl::WireSyncEventHandler<::test_protocols::Transitional>::HandleOneEvent(
 std::optional<::fidl::UnbindInfo> fidl::internal::
     WireEventDispatcher<::test_protocols::Transitional>::DispatchEvent(
         ::fidl::IncomingMessage& msg,
-        ::fidl::internal::IncomingTransportContext transport_context) {
+        ::fidl::internal::MessageStorageViewBase* storage_view) {
   switch (msg.header()->ordinal) {
     case ::test_protocols::kTransitional_Event_Ordinal: {
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<
@@ -1980,7 +1990,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
     {
         ::test_protocols::kTransitional_Request_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::IncomingTransportContext transport_context,
+           internal::MessageStorageViewBase* storage_view,
            ::fidl::Transaction* txn) {
           ::fidl::unstable::DecodedMessage<
               ::fidl::internal::TransactionalRequest<
@@ -2001,7 +2011,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
     {
         ::test_protocols::kTransitional_OneWay_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::IncomingTransportContext transport_context,
+           internal::MessageStorageViewBase* storage_view,
            ::fidl::Transaction* txn) {
           ::fidl::unstable::DecodedMessage<
               ::fidl::internal::TransactionalRequest<
@@ -2028,27 +2038,26 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<
     WireServerDispatcher<::test_protocols::Transitional>::TryDispatch(
         ::fidl::WireServer<::test_protocols::Transitional>* impl,
         ::fidl::IncomingMessage& msg,
-        internal::IncomingTransportContext transport_context,
+        internal::MessageStorageViewBase* storage_view,
         ::fidl::Transaction* txn) {
-  return ::fidl::internal::TryDispatch(impl, msg, std::move(transport_context),
-                                       txn, entries_, entries_end_);
+  return ::fidl::internal::TryDispatch(impl, msg, storage_view, txn, entries_,
+                                       entries_end_);
 }
 
 void fidl::internal::WireServerDispatcher<::test_protocols::Transitional>::
     Dispatch(::fidl::WireServer<::test_protocols::Transitional>* impl,
              ::fidl::IncomingMessage&& msg,
-             internal::IncomingTransportContext transport_context,
+             internal::MessageStorageViewBase* storage_view,
              ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, std::move(transport_context), txn,
-                             entries_, entries_end_);
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_,
+                             entries_end_);
 }
 void fidl::WireServer<::test_protocols::Transitional>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-    ::fidl::internal::IncomingTransportContext transport_context) {
+    ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<
       ::test_protocols::Transitional>::Dispatch(this, std::move(msg),
-                                                std::move(transport_context),
-                                                txn);
+                                                storage_view, txn);
 }
 #endif  // __Fuchsia__
 
@@ -2321,10 +2330,15 @@ fidl::WireSyncEventHandler<::test_protocols::MethodWithUnion>::HandleOneEvent(
   // TODO(fxbug.dev/85734) Remove this channel-specific allocation.
   std::array<fidl_channel_handle_metadata_t, kHandleAllocSize>
       read_handle_metadata;
-  ::fidl::IncomingMessage msg = ::fidl::MessageRead(
-      zx::unowned_channel(client_end.handle()), read_storage.view(),
-      read_handles.data(), read_handle_metadata.data(), kHandleAllocSize,
-      ReadOptions{.discardable = true});
+  ::fidl::IncomingMessage msg =
+      ::fidl::MessageRead(zx::unowned_channel(client_end.handle()),
+                          ::fidl::ChannelMessageStorageView{
+                              .bytes = read_storage.view(),
+                              .handles = read_handles.data(),
+                              .handle_metadata = read_handle_metadata.data(),
+                              .handle_capacity = kHandleAllocSize,
+                          },
+                          ReadOptions{.discardable = true});
   if (msg.status() == ZX_ERR_BUFFER_TOO_SMALL) {
     // Message size is unexpectedly larger than calculated.
     // This can only be due to a newer version of the protocol defining a new
@@ -2348,7 +2362,7 @@ fidl::WireSyncEventHandler<::test_protocols::MethodWithUnion>::HandleOneEvent(
 std::optional<::fidl::UnbindInfo> fidl::internal::
     WireEventDispatcher<::test_protocols::MethodWithUnion>::DispatchEvent(
         ::fidl::IncomingMessage& msg,
-        ::fidl::internal::IncomingTransportContext transport_context) {
+        ::fidl::internal::MessageStorageViewBase* storage_view) {
   switch (msg.header()->ordinal) {
     default:
       break;
@@ -2364,7 +2378,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
     {
         ::test_protocols::kMethodWithUnion_UnionMethod_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::IncomingTransportContext transport_context,
+           internal::MessageStorageViewBase* storage_view,
            ::fidl::Transaction* txn) {
           ::fidl::unstable::DecodedMessage<
               ::fidl::internal::TransactionalRequest<
@@ -2392,27 +2406,26 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<
     WireServerDispatcher<::test_protocols::MethodWithUnion>::TryDispatch(
         ::fidl::WireServer<::test_protocols::MethodWithUnion>* impl,
         ::fidl::IncomingMessage& msg,
-        internal::IncomingTransportContext transport_context,
+        internal::MessageStorageViewBase* storage_view,
         ::fidl::Transaction* txn) {
-  return ::fidl::internal::TryDispatch(impl, msg, std::move(transport_context),
-                                       txn, entries_, entries_end_);
+  return ::fidl::internal::TryDispatch(impl, msg, storage_view, txn, entries_,
+                                       entries_end_);
 }
 
 void fidl::internal::WireServerDispatcher<::test_protocols::MethodWithUnion>::
     Dispatch(::fidl::WireServer<::test_protocols::MethodWithUnion>* impl,
              ::fidl::IncomingMessage&& msg,
-             internal::IncomingTransportContext transport_context,
+             internal::MessageStorageViewBase* storage_view,
              ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, std::move(transport_context), txn,
-                             entries_, entries_end_);
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_,
+                             entries_end_);
 }
 void fidl::WireServer<::test_protocols::MethodWithUnion>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-    ::fidl::internal::IncomingTransportContext transport_context) {
+    ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<
       ::test_protocols::MethodWithUnion>::Dispatch(this, std::move(msg),
-                                                   std::move(transport_context),
-                                                   txn);
+                                                   storage_view, txn);
 }
 #endif  // __Fuchsia__
 
@@ -2871,10 +2884,15 @@ fidl::WireSyncEventHandler<::test_protocols::WithProtocolEnds>::HandleOneEvent(
   // TODO(fxbug.dev/85734) Remove this channel-specific allocation.
   std::array<fidl_channel_handle_metadata_t, kHandleAllocSize>
       read_handle_metadata;
-  ::fidl::IncomingMessage msg = ::fidl::MessageRead(
-      zx::unowned_channel(client_end.handle()), read_storage.view(),
-      read_handles.data(), read_handle_metadata.data(), kHandleAllocSize,
-      ReadOptions{.discardable = true});
+  ::fidl::IncomingMessage msg =
+      ::fidl::MessageRead(zx::unowned_channel(client_end.handle()),
+                          ::fidl::ChannelMessageStorageView{
+                              .bytes = read_storage.view(),
+                              .handles = read_handles.data(),
+                              .handle_metadata = read_handle_metadata.data(),
+                              .handle_capacity = kHandleAllocSize,
+                          },
+                          ReadOptions{.discardable = true});
   if (msg.status() == ZX_ERR_BUFFER_TOO_SMALL) {
     // Message size is unexpectedly larger than calculated.
     // This can only be due to a newer version of the protocol defining a new
@@ -2898,7 +2916,7 @@ fidl::WireSyncEventHandler<::test_protocols::WithProtocolEnds>::HandleOneEvent(
 std::optional<::fidl::UnbindInfo> fidl::internal::
     WireEventDispatcher<::test_protocols::WithProtocolEnds>::DispatchEvent(
         ::fidl::IncomingMessage& msg,
-        ::fidl::internal::IncomingTransportContext transport_context) {
+        ::fidl::internal::MessageStorageViewBase* storage_view) {
   switch (msg.header()->ordinal) {
     default:
       break;
@@ -2914,7 +2932,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
     {
         ::test_protocols::kWithProtocolEnds_ClientEnds_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::IncomingTransportContext transport_context,
+           internal::MessageStorageViewBase* storage_view,
            ::fidl::Transaction* txn) {
           ::fidl::unstable::DecodedMessage<
               ::fidl::internal::TransactionalRequest<
@@ -2937,7 +2955,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
     {
         ::test_protocols::kWithProtocolEnds_ServerEnds_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::IncomingTransportContext transport_context,
+           internal::MessageStorageViewBase* storage_view,
            ::fidl::Transaction* txn) {
           ::fidl::unstable::DecodedMessage<
               ::fidl::internal::TransactionalRequest<
@@ -2960,7 +2978,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
     {
         ::test_protocols::kWithProtocolEnds_StructContainingEnds_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::IncomingTransportContext transport_context,
+           internal::MessageStorageViewBase* storage_view,
            ::fidl::Transaction* txn) {
           ::fidl::unstable::DecodedMessage<
               ::fidl::internal::TransactionalRequest<
@@ -2989,25 +3007,26 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<
     WireServerDispatcher<::test_protocols::WithProtocolEnds>::TryDispatch(
         ::fidl::WireServer<::test_protocols::WithProtocolEnds>* impl,
         ::fidl::IncomingMessage& msg,
-        internal::IncomingTransportContext transport_context,
+        internal::MessageStorageViewBase* storage_view,
         ::fidl::Transaction* txn) {
-  return ::fidl::internal::TryDispatch(impl, msg, std::move(transport_context),
-                                       txn, entries_, entries_end_);
+  return ::fidl::internal::TryDispatch(impl, msg, storage_view, txn, entries_,
+                                       entries_end_);
 }
 
 void fidl::internal::WireServerDispatcher<::test_protocols::WithProtocolEnds>::
     Dispatch(::fidl::WireServer<::test_protocols::WithProtocolEnds>* impl,
              ::fidl::IncomingMessage&& msg,
-             internal::IncomingTransportContext transport_context,
+             internal::MessageStorageViewBase* storage_view,
              ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, std::move(transport_context), txn,
-                             entries_, entries_end_);
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_,
+                             entries_end_);
 }
 void fidl::WireServer<::test_protocols::WithProtocolEnds>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-    ::fidl::internal::IncomingTransportContext transport_context) {
-  ::fidl::internal::WireServerDispatcher<::test_protocols::WithProtocolEnds>::
-      Dispatch(this, std::move(msg), std::move(transport_context), txn);
+    ::fidl::internal::MessageStorageViewBase* storage_view) {
+  ::fidl::internal::WireServerDispatcher<
+      ::test_protocols::WithProtocolEnds>::Dispatch(this, std::move(msg),
+                                                    storage_view, txn);
 }
 #endif  // __Fuchsia__
 
@@ -3336,10 +3355,15 @@ fidl::WireSyncEventHandler<::test_protocols::ManyParameters>::HandleOneEvent(
   // TODO(fxbug.dev/85734) Remove this channel-specific allocation.
   std::array<fidl_channel_handle_metadata_t, kHandleAllocSize>
       read_handle_metadata;
-  ::fidl::IncomingMessage msg = ::fidl::MessageRead(
-      zx::unowned_channel(client_end.handle()), read_storage.view(),
-      read_handles.data(), read_handle_metadata.data(), kHandleAllocSize,
-      ReadOptions{.discardable = true});
+  ::fidl::IncomingMessage msg =
+      ::fidl::MessageRead(zx::unowned_channel(client_end.handle()),
+                          ::fidl::ChannelMessageStorageView{
+                              .bytes = read_storage.view(),
+                              .handles = read_handles.data(),
+                              .handle_metadata = read_handle_metadata.data(),
+                              .handle_capacity = kHandleAllocSize,
+                          },
+                          ReadOptions{.discardable = true});
   if (msg.status() == ZX_ERR_BUFFER_TOO_SMALL) {
     // Message size is unexpectedly larger than calculated.
     // This can only be due to a newer version of the protocol defining a new
@@ -3363,7 +3387,7 @@ fidl::WireSyncEventHandler<::test_protocols::ManyParameters>::HandleOneEvent(
 std::optional<::fidl::UnbindInfo> fidl::internal::
     WireEventDispatcher<::test_protocols::ManyParameters>::DispatchEvent(
         ::fidl::IncomingMessage& msg,
-        ::fidl::internal::IncomingTransportContext transport_context) {
+        ::fidl::internal::MessageStorageViewBase* storage_view) {
   switch (msg.header()->ordinal) {
     default:
       break;
@@ -3379,7 +3403,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
     {
         ::test_protocols::kManyParameters_Fifteen_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::IncomingTransportContext transport_context,
+           internal::MessageStorageViewBase* storage_view,
            ::fidl::Transaction* txn) {
           ::fidl::unstable::DecodedMessage<
               ::fidl::internal::TransactionalRequest<
@@ -3406,27 +3430,26 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<
     WireServerDispatcher<::test_protocols::ManyParameters>::TryDispatch(
         ::fidl::WireServer<::test_protocols::ManyParameters>* impl,
         ::fidl::IncomingMessage& msg,
-        internal::IncomingTransportContext transport_context,
+        internal::MessageStorageViewBase* storage_view,
         ::fidl::Transaction* txn) {
-  return ::fidl::internal::TryDispatch(impl, msg, std::move(transport_context),
-                                       txn, entries_, entries_end_);
+  return ::fidl::internal::TryDispatch(impl, msg, storage_view, txn, entries_,
+                                       entries_end_);
 }
 
 void fidl::internal::WireServerDispatcher<::test_protocols::ManyParameters>::
     Dispatch(::fidl::WireServer<::test_protocols::ManyParameters>* impl,
              ::fidl::IncomingMessage&& msg,
-             internal::IncomingTransportContext transport_context,
+             internal::MessageStorageViewBase* storage_view,
              ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, std::move(transport_context), txn,
-                             entries_, entries_end_);
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_,
+                             entries_end_);
 }
 void fidl::WireServer<::test_protocols::ManyParameters>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-    ::fidl::internal::IncomingTransportContext transport_context) {
+    ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<
       ::test_protocols::ManyParameters>::Dispatch(this, std::move(msg),
-                                                  std::move(transport_context),
-                                                  txn);
+                                                  storage_view, txn);
 }
 #endif  // __Fuchsia__
 
@@ -3730,10 +3753,15 @@ fidl::WireSyncEventHandler<::test_protocols::HandleRightsProtocol>::
   // TODO(fxbug.dev/85734) Remove this channel-specific allocation.
   std::array<fidl_channel_handle_metadata_t, kHandleAllocSize>
       read_handle_metadata;
-  ::fidl::IncomingMessage msg = ::fidl::MessageRead(
-      zx::unowned_channel(client_end.handle()), read_storage.view(),
-      read_handles.data(), read_handle_metadata.data(), kHandleAllocSize,
-      ReadOptions{.discardable = true});
+  ::fidl::IncomingMessage msg =
+      ::fidl::MessageRead(zx::unowned_channel(client_end.handle()),
+                          ::fidl::ChannelMessageStorageView{
+                              .bytes = read_storage.view(),
+                              .handles = read_handles.data(),
+                              .handle_metadata = read_handle_metadata.data(),
+                              .handle_capacity = kHandleAllocSize,
+                          },
+                          ReadOptions{.discardable = true});
   if (msg.status() == ZX_ERR_BUFFER_TOO_SMALL) {
     // Message size is unexpectedly larger than calculated.
     // This can only be due to a newer version of the protocol defining a new
@@ -3774,7 +3802,7 @@ fidl::WireSyncEventHandler<::test_protocols::HandleRightsProtocol>::
 std::optional<::fidl::UnbindInfo> fidl::internal::
     WireEventDispatcher<::test_protocols::HandleRightsProtocol>::DispatchEvent(
         ::fidl::IncomingMessage& msg,
-        ::fidl::internal::IncomingTransportContext transport_context) {
+        ::fidl::internal::MessageStorageViewBase* storage_view) {
   switch (msg.header()->ordinal) {
     case ::test_protocols::kHandleRightsProtocol_AnEvent_Ordinal: {
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<
@@ -3803,7 +3831,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
     {
         ::test_protocols::kHandleRightsProtocol_NoResponseMethod_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::IncomingTransportContext transport_context,
+           internal::MessageStorageViewBase* storage_view,
            ::fidl::Transaction* txn) {
           ::fidl::unstable::DecodedMessage<
               ::fidl::internal::TransactionalRequest<
@@ -3826,7 +3854,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
     {
         ::test_protocols::kHandleRightsProtocol_ResponseMethod_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::IncomingTransportContext transport_context,
+           internal::MessageStorageViewBase* storage_view,
            ::fidl::Transaction* txn) {
           ::fidl::unstable::DecodedMessage<
               ::fidl::internal::TransactionalRequest<
@@ -3855,29 +3883,27 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<
     WireServerDispatcher<::test_protocols::HandleRightsProtocol>::TryDispatch(
         ::fidl::WireServer<::test_protocols::HandleRightsProtocol>* impl,
         ::fidl::IncomingMessage& msg,
-        internal::IncomingTransportContext transport_context,
+        internal::MessageStorageViewBase* storage_view,
         ::fidl::Transaction* txn) {
-  return ::fidl::internal::TryDispatch(impl, msg, std::move(transport_context),
-                                       txn, entries_, entries_end_);
+  return ::fidl::internal::TryDispatch(impl, msg, storage_view, txn, entries_,
+                                       entries_end_);
 }
 
 void fidl::internal::
     WireServerDispatcher<::test_protocols::HandleRightsProtocol>::Dispatch(
         ::fidl::WireServer<::test_protocols::HandleRightsProtocol>* impl,
         ::fidl::IncomingMessage&& msg,
-        internal::IncomingTransportContext transport_context,
+        internal::MessageStorageViewBase* storage_view,
         ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, std::move(transport_context), txn,
-                             entries_, entries_end_);
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_,
+                             entries_end_);
 }
 void fidl::WireServer<::test_protocols::HandleRightsProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-    ::fidl::internal::IncomingTransportContext transport_context) {
+    ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<
       ::test_protocols::HandleRightsProtocol>::Dispatch(this, std::move(msg),
-                                                        std::move(
-                                                            transport_context),
-                                                        txn);
+                                                        storage_view, txn);
 }
 #endif  // __Fuchsia__
 
@@ -4676,10 +4702,15 @@ fidl::WireSyncEventHandler<::test_protocols::WithErrorSyntax>::HandleOneEvent(
   // TODO(fxbug.dev/85734) Remove this channel-specific allocation.
   std::array<fidl_channel_handle_metadata_t, kHandleAllocSize>
       read_handle_metadata;
-  ::fidl::IncomingMessage msg = ::fidl::MessageRead(
-      zx::unowned_channel(client_end.handle()), read_storage.view(),
-      read_handles.data(), read_handle_metadata.data(), kHandleAllocSize,
-      ReadOptions{.discardable = true});
+  ::fidl::IncomingMessage msg =
+      ::fidl::MessageRead(zx::unowned_channel(client_end.handle()),
+                          ::fidl::ChannelMessageStorageView{
+                              .bytes = read_storage.view(),
+                              .handles = read_handles.data(),
+                              .handle_metadata = read_handle_metadata.data(),
+                              .handle_capacity = kHandleAllocSize,
+                          },
+                          ReadOptions{.discardable = true});
   if (msg.status() == ZX_ERR_BUFFER_TOO_SMALL) {
     // Message size is unexpectedly larger than calculated.
     // This can only be due to a newer version of the protocol defining a new
@@ -4703,7 +4734,7 @@ fidl::WireSyncEventHandler<::test_protocols::WithErrorSyntax>::HandleOneEvent(
 std::optional<::fidl::UnbindInfo> fidl::internal::
     WireEventDispatcher<::test_protocols::WithErrorSyntax>::DispatchEvent(
         ::fidl::IncomingMessage& msg,
-        ::fidl::internal::IncomingTransportContext transport_context) {
+        ::fidl::internal::MessageStorageViewBase* storage_view) {
   switch (msg.header()->ordinal) {
     default:
       break;
@@ -4719,7 +4750,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
     {
         ::test_protocols::kWithErrorSyntax_ResponseAsStruct_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::IncomingTransportContext transport_context,
+           internal::MessageStorageViewBase* storage_view,
            ::fidl::Transaction* txn) {
           ::fidl::WireRequest<
               ::test_protocols::WithErrorSyntax::ResponseAsStruct>
@@ -4737,7 +4768,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
     {
         ::test_protocols::kWithErrorSyntax_ErrorAsPrimitive_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::IncomingTransportContext transport_context,
+           internal::MessageStorageViewBase* storage_view,
            ::fidl::Transaction* txn) {
           ::fidl::WireRequest<
               ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>
@@ -4755,7 +4786,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
     {
         ::test_protocols::kWithErrorSyntax_ErrorAsEnum_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::IncomingTransportContext transport_context,
+           internal::MessageStorageViewBase* storage_view,
            ::fidl::Transaction* txn) {
           ::fidl::WireRequest<::test_protocols::WithErrorSyntax::ErrorAsEnum>
               empty_request;
@@ -4772,7 +4803,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
     {
         ::test_protocols::kWithErrorSyntax_HandleInResult_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::IncomingTransportContext transport_context,
+           internal::MessageStorageViewBase* storage_view,
            ::fidl::Transaction* txn) {
           ::fidl::WireRequest<::test_protocols::WithErrorSyntax::HandleInResult>
               empty_request;
@@ -4795,27 +4826,26 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<
     WireServerDispatcher<::test_protocols::WithErrorSyntax>::TryDispatch(
         ::fidl::WireServer<::test_protocols::WithErrorSyntax>* impl,
         ::fidl::IncomingMessage& msg,
-        internal::IncomingTransportContext transport_context,
+        internal::MessageStorageViewBase* storage_view,
         ::fidl::Transaction* txn) {
-  return ::fidl::internal::TryDispatch(impl, msg, std::move(transport_context),
-                                       txn, entries_, entries_end_);
+  return ::fidl::internal::TryDispatch(impl, msg, storage_view, txn, entries_,
+                                       entries_end_);
 }
 
 void fidl::internal::WireServerDispatcher<::test_protocols::WithErrorSyntax>::
     Dispatch(::fidl::WireServer<::test_protocols::WithErrorSyntax>* impl,
              ::fidl::IncomingMessage&& msg,
-             internal::IncomingTransportContext transport_context,
+             internal::MessageStorageViewBase* storage_view,
              ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, std::move(transport_context), txn,
-                             entries_, entries_end_);
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_,
+                             entries_end_);
 }
 void fidl::WireServer<::test_protocols::WithErrorSyntax>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-    ::fidl::internal::IncomingTransportContext transport_context) {
+    ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<
       ::test_protocols::WithErrorSyntax>::Dispatch(this, std::move(msg),
-                                                   std::move(transport_context),
-                                                   txn);
+                                                   storage_view, txn);
 }
 #endif  // __Fuchsia__
 
@@ -5334,10 +5364,15 @@ fidl::WireSyncEventHandler<::test_protocols::DiscoverableProtocol>::
   // TODO(fxbug.dev/85734) Remove this channel-specific allocation.
   std::array<fidl_channel_handle_metadata_t, kHandleAllocSize>
       read_handle_metadata;
-  ::fidl::IncomingMessage msg = ::fidl::MessageRead(
-      zx::unowned_channel(client_end.handle()), read_storage.view(),
-      read_handles.data(), read_handle_metadata.data(), kHandleAllocSize,
-      ReadOptions{.discardable = true});
+  ::fidl::IncomingMessage msg =
+      ::fidl::MessageRead(zx::unowned_channel(client_end.handle()),
+                          ::fidl::ChannelMessageStorageView{
+                              .bytes = read_storage.view(),
+                              .handles = read_handles.data(),
+                              .handle_metadata = read_handle_metadata.data(),
+                              .handle_capacity = kHandleAllocSize,
+                          },
+                          ReadOptions{.discardable = true});
   if (msg.status() == ZX_ERR_BUFFER_TOO_SMALL) {
     // Message size is unexpectedly larger than calculated.
     // This can only be due to a newer version of the protocol defining a new
@@ -5361,7 +5396,7 @@ fidl::WireSyncEventHandler<::test_protocols::DiscoverableProtocol>::
 std::optional<::fidl::UnbindInfo> fidl::internal::
     WireEventDispatcher<::test_protocols::DiscoverableProtocol>::DispatchEvent(
         ::fidl::IncomingMessage& msg,
-        ::fidl::internal::IncomingTransportContext transport_context) {
+        ::fidl::internal::MessageStorageViewBase* storage_view) {
   switch (msg.header()->ordinal) {
     default:
       break;
@@ -5377,7 +5412,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
     {
         ::test_protocols::kDiscoverableProtocol_Method_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::IncomingTransportContext transport_context,
+           internal::MessageStorageViewBase* storage_view,
            ::fidl::Transaction* txn) {
           ::fidl::WireRequest<::test_protocols::DiscoverableProtocol::Method>
               empty_request;
@@ -5401,29 +5436,27 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<
     WireServerDispatcher<::test_protocols::DiscoverableProtocol>::TryDispatch(
         ::fidl::WireServer<::test_protocols::DiscoverableProtocol>* impl,
         ::fidl::IncomingMessage& msg,
-        internal::IncomingTransportContext transport_context,
+        internal::MessageStorageViewBase* storage_view,
         ::fidl::Transaction* txn) {
-  return ::fidl::internal::TryDispatch(impl, msg, std::move(transport_context),
-                                       txn, entries_, entries_end_);
+  return ::fidl::internal::TryDispatch(impl, msg, storage_view, txn, entries_,
+                                       entries_end_);
 }
 
 void fidl::internal::
     WireServerDispatcher<::test_protocols::DiscoverableProtocol>::Dispatch(
         ::fidl::WireServer<::test_protocols::DiscoverableProtocol>* impl,
         ::fidl::IncomingMessage&& msg,
-        internal::IncomingTransportContext transport_context,
+        internal::MessageStorageViewBase* storage_view,
         ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, std::move(transport_context), txn,
-                             entries_, entries_end_);
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_,
+                             entries_end_);
 }
 void fidl::WireServer<::test_protocols::DiscoverableProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-    ::fidl::internal::IncomingTransportContext transport_context) {
+    ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<
       ::test_protocols::DiscoverableProtocol>::Dispatch(this, std::move(msg),
-                                                        std::move(
-                                                            transport_context),
-                                                        txn);
+                                                        storage_view, txn);
 }
 #endif  // __Fuchsia__
 
@@ -5977,10 +6010,15 @@ fidl::WireSyncEventHandler<::test_protocols::ChannelProtocol>::HandleOneEvent(
   // TODO(fxbug.dev/85734) Remove this channel-specific allocation.
   std::array<fidl_channel_handle_metadata_t, kHandleAllocSize>
       read_handle_metadata;
-  ::fidl::IncomingMessage msg = ::fidl::MessageRead(
-      zx::unowned_channel(client_end.handle()), read_storage.view(),
-      read_handles.data(), read_handle_metadata.data(), kHandleAllocSize,
-      ReadOptions{.discardable = true});
+  ::fidl::IncomingMessage msg =
+      ::fidl::MessageRead(zx::unowned_channel(client_end.handle()),
+                          ::fidl::ChannelMessageStorageView{
+                              .bytes = read_storage.view(),
+                              .handles = read_handles.data(),
+                              .handle_metadata = read_handle_metadata.data(),
+                              .handle_capacity = kHandleAllocSize,
+                          },
+                          ReadOptions{.discardable = true});
   if (msg.status() == ZX_ERR_BUFFER_TOO_SMALL) {
     // Message size is unexpectedly larger than calculated.
     // This can only be due to a newer version of the protocol defining a new
@@ -6021,7 +6059,7 @@ fidl::WireSyncEventHandler<::test_protocols::ChannelProtocol>::HandleOneEvent(
 std::optional<::fidl::UnbindInfo> fidl::internal::
     WireEventDispatcher<::test_protocols::ChannelProtocol>::DispatchEvent(
         ::fidl::IncomingMessage& msg,
-        ::fidl::internal::IncomingTransportContext transport_context) {
+        ::fidl::internal::MessageStorageViewBase* storage_view) {
   switch (msg.header()->ordinal) {
     case ::test_protocols::kChannelProtocol_EventA_Ordinal: {
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<
@@ -6050,7 +6088,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
     {
         ::test_protocols::kChannelProtocol_MethodA_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::IncomingTransportContext transport_context,
+           internal::MessageStorageViewBase* storage_view,
            ::fidl::Transaction* txn) {
           ::fidl::unstable::DecodedMessage<
               ::fidl::internal::TransactionalRequest<
@@ -6071,7 +6109,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
     {
         ::test_protocols::kChannelProtocol_MethodB_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::IncomingTransportContext transport_context,
+           internal::MessageStorageViewBase* storage_view,
            ::fidl::Transaction* txn) {
           ::fidl::unstable::DecodedMessage<
               ::fidl::internal::TransactionalRequest<
@@ -6092,7 +6130,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
     {
         ::test_protocols::kChannelProtocol_TakeHandle_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::IncomingTransportContext transport_context,
+           internal::MessageStorageViewBase* storage_view,
            ::fidl::Transaction* txn) {
           ::fidl::unstable::DecodedMessage<
               ::fidl::internal::TransactionalRequest<
@@ -6114,7 +6152,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
     {
         ::test_protocols::kChannelProtocol_MutateSocket_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::IncomingTransportContext transport_context,
+           internal::MessageStorageViewBase* storage_view,
            ::fidl::Transaction* txn) {
           ::fidl::unstable::DecodedMessage<
               ::fidl::internal::TransactionalRequest<
@@ -6142,27 +6180,26 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<
     WireServerDispatcher<::test_protocols::ChannelProtocol>::TryDispatch(
         ::fidl::WireServer<::test_protocols::ChannelProtocol>* impl,
         ::fidl::IncomingMessage& msg,
-        internal::IncomingTransportContext transport_context,
+        internal::MessageStorageViewBase* storage_view,
         ::fidl::Transaction* txn) {
-  return ::fidl::internal::TryDispatch(impl, msg, std::move(transport_context),
-                                       txn, entries_, entries_end_);
+  return ::fidl::internal::TryDispatch(impl, msg, storage_view, txn, entries_,
+                                       entries_end_);
 }
 
 void fidl::internal::WireServerDispatcher<::test_protocols::ChannelProtocol>::
     Dispatch(::fidl::WireServer<::test_protocols::ChannelProtocol>* impl,
              ::fidl::IncomingMessage&& msg,
-             internal::IncomingTransportContext transport_context,
+             internal::MessageStorageViewBase* storage_view,
              ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, std::move(transport_context), txn,
-                             entries_, entries_end_);
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_,
+                             entries_end_);
 }
 void fidl::WireServer<::test_protocols::ChannelProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-    ::fidl::internal::IncomingTransportContext transport_context) {
+    ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<
       ::test_protocols::ChannelProtocol>::Dispatch(this, std::move(msg),
-                                                   std::move(transport_context),
-                                                   txn);
+                                                   storage_view, txn);
 }
 #endif  // __Fuchsia__
 

@@ -32,9 +32,15 @@ class WireUnownedResult;
 template <typename FidlMethod>
 class Result;
 
-namespace internal {
+// A view into an object providing storage for messages read from a Zircon channel.
+struct ChannelMessageStorageView : public internal::MessageStorageViewBase {
+  fidl::BufferSpan bytes;
+  zx_handle_t* handles;
+  fidl_channel_handle_metadata_t* handle_metadata;
+  uint32_t handle_capacity;
+};
 
-struct ChannelMessageStorageView;
+namespace internal {
 
 struct ChannelTransport {
   using OwnedType = zx::channel;
@@ -52,7 +58,6 @@ struct ChannelTransport {
   template <typename FidlMethod>
   using Result = fidl::Result<FidlMethod>;
   using HandleMetadata = fidl_channel_handle_metadata_t;
-  using IncomingTransportContextType = struct {};
   using OutgoingTransportContextType = struct {};
   using MessageStorageView = ChannelMessageStorageView;
 
@@ -118,14 +123,6 @@ class ChannelWaiter : private async_wait_t, public TransportWaiter {
   async_dispatcher_t* dispatcher_;
   TransportWaitSuccessHandler success_handler_;
   TransportWaitFailureHandler failure_handler_;
-};
-
-// A view into an object providing storage for messages read from a Zircon channel.
-struct ChannelMessageStorageView : public MessageStorageViewBase {
-  fidl::BufferSpan bytes;
-  zx_handle_t* handles;
-  fidl_channel_handle_metadata_t* handle_metadata;
-  uint32_t handle_capacity;
 };
 
 // Base class with common functionality for bytes and handles storage classes

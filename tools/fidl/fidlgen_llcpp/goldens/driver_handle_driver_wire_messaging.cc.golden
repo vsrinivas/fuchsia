@@ -42,7 +42,7 @@ extern "C" const fidl_type_t
               fidl::internal::DriverTransport>(arena.get()),
   };
   outgoing.Write(client_end.handle(), std::move(write_options));
-  ::fidl::Status::operator=(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_driverhandle {
 #endif  // __Fuchsia__
@@ -113,7 +113,7 @@ fidl::WireSyncEventHandler<::test_driverhandle::HandlesInProtocol>::
 std::optional<::fidl::UnbindInfo> fidl::internal::
     WireEventDispatcher<::test_driverhandle::HandlesInProtocol>::DispatchEvent(
         fidl::IncomingMessage& msg,
-        internal::IncomingTransportContext transport_context) {
+        internal::MessageStorageViewBase* storage_view) {
   ZX_PANIC("events not supported for transport 'Driver'");
 }
 #endif  // __Fuchsia__
@@ -125,7 +125,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
     {
         ::test_driverhandle::kHandlesInProtocol_SendHandles_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::IncomingTransportContext transport_context,
+           internal::MessageStorageViewBase* storage_view,
            ::fidl::Transaction* txn) {
           ::fidl::unstable::DecodedMessage<
               ::fidl::internal::TransactionalRequest<
@@ -139,7 +139,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
               ::test_driverhandle::HandlesInProtocol::SendHandles>::Sync
               completer(txn);
           fdf::Arena arena(
-              transport_context.release<::fidl::internal::DriverTransport>());
+              ::fidl::internal::TakeDriverArenaFromStorage(storage_view));
           reinterpret_cast<
               ::fdf::WireServer<::test_driverhandle::HandlesInProtocol>*>(
               interface)
@@ -156,29 +156,27 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<
     WireServerDispatcher<::test_driverhandle::HandlesInProtocol>::TryDispatch(
         ::fdf::WireServer<::test_driverhandle::HandlesInProtocol>* impl,
         ::fidl::IncomingMessage& msg,
-        internal::IncomingTransportContext transport_context,
+        internal::MessageStorageViewBase* storage_view,
         ::fidl::Transaction* txn) {
-  return ::fidl::internal::TryDispatch(impl, msg, std::move(transport_context),
-                                       txn, entries_, entries_end_);
+  return ::fidl::internal::TryDispatch(impl, msg, storage_view, txn, entries_,
+                                       entries_end_);
 }
 
 void fidl::internal::
     WireServerDispatcher<::test_driverhandle::HandlesInProtocol>::Dispatch(
         ::fdf::WireServer<::test_driverhandle::HandlesInProtocol>* impl,
         ::fidl::IncomingMessage&& msg,
-        internal::IncomingTransportContext transport_context,
+        internal::MessageStorageViewBase* storage_view,
         ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, std::move(transport_context), txn,
-                             entries_, entries_end_);
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_,
+                             entries_end_);
 }
 void fdf::WireServer<::test_driverhandle::HandlesInProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-    ::fidl::internal::IncomingTransportContext transport_context) {
+    ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<
       ::test_driverhandle::HandlesInProtocol>::Dispatch(this, std::move(msg),
-                                                        std::move(
-                                                            transport_context),
-                                                        txn);
+                                                        storage_view, txn);
 }
 #endif  // __Fuchsia__
 
@@ -206,7 +204,7 @@ fidl::WireSyncEventHandler<::test_driverhandle::DriverProtocol>::HandleOneEvent(
 std::optional<::fidl::UnbindInfo> fidl::internal::
     WireEventDispatcher<::test_driverhandle::DriverProtocol>::DispatchEvent(
         fidl::IncomingMessage& msg,
-        internal::IncomingTransportContext transport_context) {
+        internal::MessageStorageViewBase* storage_view) {
   ZX_PANIC("events not supported for transport 'Driver'");
 }
 #endif  // __Fuchsia__
@@ -223,24 +221,25 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<
     WireServerDispatcher<::test_driverhandle::DriverProtocol>::TryDispatch(
         ::fdf::WireServer<::test_driverhandle::DriverProtocol>* impl,
         ::fidl::IncomingMessage& msg,
-        internal::IncomingTransportContext transport_context,
+        internal::MessageStorageViewBase* storage_view,
         ::fidl::Transaction* txn) {
-  return ::fidl::internal::TryDispatch(impl, msg, std::move(transport_context),
-                                       txn, entries_, entries_end_);
+  return ::fidl::internal::TryDispatch(impl, msg, storage_view, txn, entries_,
+                                       entries_end_);
 }
 
 void fidl::internal::WireServerDispatcher<::test_driverhandle::DriverProtocol>::
     Dispatch(::fdf::WireServer<::test_driverhandle::DriverProtocol>* impl,
              ::fidl::IncomingMessage&& msg,
-             internal::IncomingTransportContext transport_context,
+             internal::MessageStorageViewBase* storage_view,
              ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, std::move(transport_context), txn,
-                             entries_, entries_end_);
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_,
+                             entries_end_);
 }
 void fdf::WireServer<::test_driverhandle::DriverProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-    ::fidl::internal::IncomingTransportContext transport_context) {
-  ::fidl::internal::WireServerDispatcher<::test_driverhandle::DriverProtocol>::
-      Dispatch(this, std::move(msg), std::move(transport_context), txn);
+    ::fidl::internal::MessageStorageViewBase* storage_view) {
+  ::fidl::internal::WireServerDispatcher<
+      ::test_driverhandle::DriverProtocol>::Dispatch(this, std::move(msg),
+                                                     storage_view, txn);
 }
 #endif  // __Fuchsia__

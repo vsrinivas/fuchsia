@@ -61,7 +61,7 @@ class {{ .WireEventDispatcher }} final :
  private:
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
-      ::fidl::internal::IncomingTransportContext transport_context) override;
+      ::fidl::internal::MessageStorageViewBase* storage_view) override;
 };
 {{- EndifFuchsia }}
 {{- end }}
@@ -99,10 +99,12 @@ class {{ .WireEventDispatcher }} final :
   std::array<fidl_channel_handle_metadata_t, kHandleAllocSize> read_handle_metadata;
   ::fidl::IncomingMessage msg = ::fidl::MessageRead(
       zx::unowned_channel(client_end.handle()),
-      read_storage.view(),
-      read_handles.data(),
-      read_handle_metadata.data(),
-      kHandleAllocSize,
+      ::fidl::ChannelMessageStorageView{
+          .bytes = read_storage.view(),
+          .handles = read_handles.data(),
+          .handle_metadata = read_handle_metadata.data(),
+          .handle_capacity = kHandleAllocSize,
+      },
       ReadOptions{.discardable = true}
   );
   if (msg.status() == ZX_ERR_BUFFER_TOO_SMALL) {
@@ -147,7 +149,7 @@ class {{ .WireEventDispatcher }} final :
 std::optional<::fidl::UnbindInfo>
 {{ .WireEventDispatcher.NoLeading }}::DispatchEvent(
     ::fidl::IncomingMessage& msg,
-    ::fidl::internal::IncomingTransportContext transport_context) {
+    ::fidl::internal::MessageStorageViewBase* storage_view) {
   switch (msg.header()->ordinal) {
   {{- range .Events }}
     case {{ .OrdinalName }}:
@@ -182,7 +184,7 @@ std::optional<::fidl::UnbindInfo>
 std::optional<::fidl::UnbindInfo>
 {{ .WireEventDispatcher.NoLeading }}::DispatchEvent(
     fidl::IncomingMessage& msg,
-    internal::IncomingTransportContext transport_context) {
+    internal::MessageStorageViewBase* storage_view) {
       ZX_PANIC("events not supported for transport '{{ .Transport.Name }}'");
 }
 {{- end }}
@@ -227,7 +229,7 @@ class {{ .NaturalEventDispatcher }} final :
  private:
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
-      internal::IncomingTransportContext transport_context) override;
+      internal::MessageStorageViewBase* storage_view) override;
 };
 {{- EndifFuchsia }}
 {{- end }}
@@ -240,7 +242,7 @@ class {{ .NaturalEventDispatcher }} final :
 std::optional<::fidl::UnbindInfo>
 {{ .NaturalEventDispatcher.NoLeading }}::DispatchEvent(
     ::fidl::IncomingMessage& msg,
-    ::fidl::internal::IncomingTransportContext transport_context) {
+    ::fidl::internal::MessageStorageViewBase* storage_view) {
   {{- if .Events }}
   switch (msg.header()->ordinal) {
   {{- range .Events }}

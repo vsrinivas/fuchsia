@@ -295,8 +295,7 @@ class OnCanceledTestResponseContext : public internal::ResponseContext {
   explicit OnCanceledTestResponseContext(sync_completion_t* done)
       : internal::ResponseContext(0), done_(done) {}
   std::optional<fidl::UnbindInfo> OnRawResult(
-      fidl::IncomingMessage&& msg,
-      fidl::internal::IncomingTransportContext transport_context) override {
+      fidl::IncomingMessage&& msg, fidl::internal::MessageStorageViewBase* storage_view) override {
     if (!msg.ok() && msg.reason() == fidl::Reason::kUnbind) {
       // We expect cancellation.
       sync_completion_signal(done_);
@@ -335,8 +334,7 @@ class OnErrorTestResponseContext : public internal::ResponseContext {
   explicit OnErrorTestResponseContext(sync_completion_t* done, fidl::Reason expected_reason)
       : internal::ResponseContext(0), done_(done), expected_reason_(expected_reason) {}
   std::optional<fidl::UnbindInfo> OnRawResult(
-      fidl::IncomingMessage&& msg,
-      fidl::internal::IncomingTransportContext transport_context) override {
+      fidl::IncomingMessage&& msg, fidl::internal::MessageStorageViewBase* storage_view) override {
     EXPECT_TRUE(!msg.ok());
     EXPECT_EQ(expected_reason_, msg.error().reason());
     sync_completion_signal(done_);

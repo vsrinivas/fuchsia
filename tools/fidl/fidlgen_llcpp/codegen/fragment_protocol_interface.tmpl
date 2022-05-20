@@ -51,7 +51,7 @@ class {{ .WireServer }} : public ::fidl::internal::IncomingMessageDispatcher {
   {{- /* Note that this implementation is snake_case to avoid name conflicts. */}}
   void dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-    ::fidl::internal::IncomingTransportContext transport_context) final;
+    ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 {{- end }}
 
@@ -100,7 +100,7 @@ class {{ .NaturalServer }} : public ::fidl::internal::IncomingMessageDispatcher 
   {{- /* Note that this implementation is snake_case to avoid name conflicts. */}}
   void dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-    ::fidl::internal::IncomingTransportContext transport_context) final;
+    ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 {{- end }}
 

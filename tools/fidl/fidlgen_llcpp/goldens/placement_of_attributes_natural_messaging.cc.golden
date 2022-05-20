@@ -59,9 +59,8 @@ namespace test_placementofattributes {
 
 std::optional<::fidl::UnbindInfo> fidl::internal::NaturalEventDispatcher<
     ::test_placementofattributes::ExampleProtocol>::
-    DispatchEvent(
-        ::fidl::IncomingMessage& msg,
-        ::fidl::internal::IncomingTransportContext transport_context) {
+    DispatchEvent(::fidl::IncomingMessage& msg,
+                  ::fidl::internal::MessageStorageViewBase* storage_view) {
   return ::fidl::UnbindInfo::UnknownOrdinal();
 }
 #endif  // __Fuchsia__
@@ -77,7 +76,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     {
         ::test_placementofattributes::kExampleProtocol_Method_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::IncomingTransportContext transport_context,
+           internal::MessageStorageViewBase* storage_view,
            ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
               ::test_placementofattributes::ExampleProtocolMethodRequest>(
@@ -110,17 +109,18 @@ void fidl::internal::NaturalServerDispatcher<
     Dispatch(
         ::fidl::Server<::test_placementofattributes::ExampleProtocol>* impl,
         ::fidl::IncomingMessage&& msg,
-        internal::IncomingTransportContext transport_context,
+        internal::MessageStorageViewBase* storage_view,
         ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, std::move(transport_context), txn,
-                             entries_, entries_end_);
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_,
+                             entries_end_);
 }
 void fidl::Server<::test_placementofattributes::ExampleProtocol>::
-    dispatch_message(
-        ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-        ::fidl::internal::IncomingTransportContext transport_context) {
+    dispatch_message(::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+                     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<
-      ::test_placementofattributes::ExampleProtocol>::
-      Dispatch(this, std::move(msg), std::move(transport_context), txn);
+      ::test_placementofattributes::ExampleProtocol>::Dispatch(this,
+                                                               std::move(msg),
+                                                               storage_view,
+                                                               txn);
 }
 #endif  // __Fuchsia__

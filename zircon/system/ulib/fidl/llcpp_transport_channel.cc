@@ -17,101 +17,116 @@ namespace internal {
 
 namespace {
 
-zx_status_t channel_write(fidl_handle_t handle, WriteOptions write_options, const void* data,
-                          uint32_t data_count, const fidl_handle_t* handles,
-                          const void* handle_metadata, uint32_t handles_count) {
-  zx_handle_disposition_t hds[ZX_CHANNEL_MAX_MSG_HANDLES];
-  const fidl_channel_handle_metadata_t* metadata =
-      static_cast<const fidl_channel_handle_metadata_t*>(handle_metadata);
-  for (uint32_t i = 0; i < handles_count; i++) {
-    hds[i] = zx_handle_disposition_t{
-        .operation = ZX_HANDLE_OP_MOVE,
-        .handle = handles[i],
-        .type = metadata[i].obj_type,
-        .rights = metadata[i].rights,
-        .result = ZX_OK,
-    };
+class HandleDisposition {
+ public:
+  explicit HandleDisposition(const WriteArgs& args) {
+    const fidl_channel_handle_metadata_t* metadata =
+        reinterpret_cast<const fidl_channel_handle_metadata_t*>(args.handle_metadata);
+    for (uint32_t i = 0; i < args.handles_count; i++) {
+      hds_[i] = zx_handle_disposition_t{
+          .operation = ZX_HANDLE_OP_MOVE,
+          .handle = args.handles[i],
+          .type = metadata[i].obj_type,
+          .rights = metadata[i].rights,
+          .result = ZX_OK,
+      };
+    }
   }
-  return zx_channel_write_etc(handle, ZX_CHANNEL_WRITE_USE_IOVEC, data, data_count,
-                              reinterpret_cast<zx_handle_disposition_t*>(hds), handles_count);
+
+  zx_handle_disposition_t* get() { return hds_; }
+
+ private:
+  zx_handle_disposition_t hds_[ZX_CHANNEL_MAX_MSG_HANDLES];
+};
+
+class HandleInfo {
+ public:
+  void Read(const ReadArgs& args) {
+    auto* rd_metadata =
+        reinterpret_cast<fidl_channel_handle_metadata_t*>(*args.out_handle_metadata);
+    zx_handle_t* rd_handles = *args.out_handles;
+    for (uint32_t i = 0; i < *args.out_handles_actual_count; i++) {
+      rd_handles[i] = his_[i].handle;
+      rd_metadata[i] = fidl_channel_handle_metadata_t{
+          .obj_type = his_[i].type,
+          .rights = his_[i].rights,
+      };
+    }
+  }
+
+  zx_handle_info_t* get() { return his_; }
+
+ private:
+  zx_handle_info_t his_[ZX_CHANNEL_MAX_MSG_HANDLES];
+};
+
+zx_status_t channel_write(fidl_handle_t handle, WriteOptions write_options, const WriteArgs& args) {
+  HandleDisposition disposition(args);
+  return zx_channel_write_etc(handle, ZX_CHANNEL_WRITE_USE_IOVEC, args.data, args.data_count,
+                              disposition.get(), args.handles_count);
 }
 
-zx_status_t channel_read(fidl_handle_t handle, const ReadOptions& read_options, void* data,
-                         uint32_t data_capacity, fidl_handle_t* handles, void* handle_metadata,
-                         uint32_t handles_capacity, uint32_t* out_data_actual_count,
-                         uint32_t* out_handles_actual_count) {
+zx_status_t channel_read(fidl_handle_t handle, const ReadOptions& read_options,
+                         const ReadArgs& args) {
+  ZX_DEBUG_ASSERT(args.storage_view != nullptr);
+  ZX_DEBUG_ASSERT(args.out_data != nullptr);
+  ChannelMessageStorageView* rd_view = static_cast<ChannelMessageStorageView*>(args.storage_view);
+
   uint32_t options = 0;
   if (read_options.discardable) {
     options |= ZX_CHANNEL_READ_MAY_DISCARD;
   }
 
-  *out_data_actual_count = 0;
-  *out_handles_actual_count = 0;
-  zx_handle_info_t his[ZX_CHANNEL_MAX_MSG_HANDLES];
-  zx_status_t status =
-      zx_channel_read_etc(handle, options, data, his, data_capacity, handles_capacity,
-                          out_data_actual_count, out_handles_actual_count);
-  fidl_channel_handle_metadata_t* metadata =
-      static_cast<fidl_channel_handle_metadata_t*>(handle_metadata);
-  for (uint32_t i = 0; i < *out_handles_actual_count; i++) {
-    handles[i] = his[i].handle;
-    metadata[i] = fidl_channel_handle_metadata_t{
-        .obj_type = his[i].type,
-        .rights = his[i].rights,
-    };
+  *args.out_data_actual_count = 0;
+  *args.out_handles_actual_count = 0;
+  HandleInfo info;
+  zx_status_t status = zx_channel_read_etc(
+      handle, options, rd_view->bytes.data, info.get(), rd_view->bytes.capacity,
+      rd_view->handle_capacity, args.out_data_actual_count, args.out_handles_actual_count);
+  if (status != ZX_OK) {
+    return status;
   }
-  return status;
+
+  *args.out_data = rd_view->bytes.data;
+  *args.out_handles = rd_view->handles;
+  *args.out_handle_metadata = reinterpret_cast<fidl_handle_metadata_t*>(rd_view->handle_metadata);
+  info.Read(args);
+  return ZX_OK;
 }
 
 zx_status_t channel_call(fidl_handle_t handle, CallOptions call_options,
-                         const CallMethodArgs& cargs, uint32_t* out_data_actual_count,
-                         uint32_t* out_handles_actual_count) {
-  ZX_DEBUG_ASSERT(cargs.rd_view != nullptr);
-  ZX_DEBUG_ASSERT(cargs.out_rd_data != nullptr);
-  ZX_DEBUG_ASSERT(cargs.rd_data == nullptr);
-  ChannelMessageStorageView* rd_view = static_cast<ChannelMessageStorageView*>(cargs.rd_view);
+                         const CallMethodArgs& args) {
+  ZX_DEBUG_ASSERT(args.rd.storage_view != nullptr);
+  ZX_DEBUG_ASSERT(args.rd.out_data != nullptr);
+  ChannelMessageStorageView* rd_view =
+      static_cast<ChannelMessageStorageView*>(args.rd.storage_view);
 
-  zx_handle_disposition_t hds[ZX_CHANNEL_MAX_MSG_HANDLES];
-  const fidl_channel_handle_metadata_t* wr_metadata =
-      reinterpret_cast<const fidl_channel_handle_metadata_t*>(cargs.wr_handle_metadata);
-  for (uint32_t i = 0; i < cargs.wr_handles_count; i++) {
-    hds[i] = zx_handle_disposition_t{
-        .operation = ZX_HANDLE_OP_MOVE,
-        .handle = cargs.wr_handles[i],
-        .type = wr_metadata[i].obj_type,
-        .rights = wr_metadata[i].rights,
-        .result = ZX_OK,
-    };
-  }
-  zx_handle_info_t his[ZX_CHANNEL_MAX_MSG_HANDLES];
-  zx_channel_call_etc_args_t args = {
-      .wr_bytes = cargs.wr_data,
-      .wr_handles = hds,
+  HandleDisposition disposition(args.wr);
+  HandleInfo info;
+  zx_channel_call_etc_args_t zircon_args = {
+      .wr_bytes = args.wr.data,
+      .wr_handles = disposition.get(),
       .rd_bytes = rd_view->bytes.data,
-      .rd_handles = his,
-      .wr_num_bytes = cargs.wr_data_count,
-      .wr_num_handles = cargs.wr_handles_count,
+      .rd_handles = info.get(),
+      .wr_num_bytes = args.wr.data_count,
+      .wr_num_handles = args.wr.handles_count,
       .rd_num_bytes = rd_view->bytes.capacity,
       .rd_num_handles = rd_view->handle_capacity,
   };
 
   zx_status_t status =
-      zx_channel_call_etc(handle, ZX_CHANNEL_WRITE_USE_IOVEC, call_options.deadline, &args,
-                          out_data_actual_count, out_handles_actual_count);
-  *cargs.out_rd_data = rd_view->bytes.data;
-  *cargs.out_rd_handles = rd_view->handles;
-  *cargs.out_rd_handle_metadata =
-      reinterpret_cast<fidl_handle_metadata_t*>(rd_view->handle_metadata);
-  fidl_channel_handle_metadata_t* rd_metadata = rd_view->handle_metadata;
-  zx_handle_t* rd_handles = rd_view->handles;
-  for (uint32_t i = 0; i < *out_handles_actual_count; i++) {
-    rd_handles[i] = his[i].handle;
-    rd_metadata[i] = fidl_channel_handle_metadata_t{
-        .obj_type = his[i].type,
-        .rights = his[i].rights,
-    };
+      zx_channel_call_etc(handle, ZX_CHANNEL_WRITE_USE_IOVEC, call_options.deadline, &zircon_args,
+                          args.rd.out_data_actual_count, args.rd.out_handles_actual_count);
+  if (status != ZX_OK) {
+    return status;
   }
-  return status;
+
+  *args.rd.out_data = rd_view->bytes.data;
+  *args.rd.out_handles = rd_view->handles;
+  *args.rd.out_handle_metadata =
+      reinterpret_cast<fidl_handle_metadata_t*>(rd_view->handle_metadata);
+  info.Read(args.rd);
+  return ZX_OK;
 }
 
 zx_status_t channel_create_waiter(fidl_handle_t handle, async_dispatcher_t* dispatcher,
@@ -159,15 +174,20 @@ void ChannelWaiter::HandleWaitFinished(async_dispatcher_t* dispatcher, zx_status
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT fidl_channel_handle_metadata_t
       handle_metadata[ZX_CHANNEL_MAX_MSG_HANDLES];
+  ChannelMessageStorageView storage_view{
+      .bytes = bytes.view(),
+      .handles = handles,
+      .handle_metadata = handle_metadata,
+      .handle_capacity = ZX_CHANNEL_MAX_MSG_HANDLES,
+  };
   fidl_trace(WillLLCPPAsyncChannelRead);
-  IncomingMessage msg = fidl::MessageRead(zx::unowned_channel(async_wait_t::object), bytes.view(),
-                                          handles, handle_metadata, ZX_CHANNEL_MAX_MSG_HANDLES);
+  IncomingMessage msg = fidl::MessageRead(zx::unowned_channel(async_wait_t::object), storage_view);
   if (!msg.ok()) {
     return failure_handler_(fidl::UnbindInfo{msg});
   }
   fidl_trace(DidLLCPPAsyncChannelRead, nullptr /* type */, bytes.data(), msg.byte_actual(),
              msg.handle_actual());
-  return success_handler_(msg, IncomingTransportContext());
+  return success_handler_(msg, &storage_view);
 }
 
 namespace {

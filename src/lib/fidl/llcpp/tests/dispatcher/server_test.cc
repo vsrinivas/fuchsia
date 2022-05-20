@@ -51,7 +51,7 @@ class ::fidl::WireServer<fidl_test::TestProtocol>
 
  private:
   void dispatch_message(::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-                        internal::IncomingTransportContext transport_context) final {
+                        internal::MessageStorageViewBase* storage_view) final {
     std::move(msg).CloseHandles();
     txn->InternalError(::fidl::UnbindInfo::UnknownOrdinal(), ::fidl::ErrorOrigin::kReceive);
   }
@@ -156,8 +156,8 @@ TEST(TryDispatchTestCase, MessageStatusNotOk) {
   {
     auto msg = fidl::IncomingMessage::Create(fidl::Status::TransportError(ZX_ERR_BAD_HANDLE));
     MockTransaction txn;
-    fidl::DispatchResult result = fidl::internal::TryDispatch(
-        nullptr, msg, fidl::internal::IncomingTransportContext(), &txn, nullptr, nullptr);
+    fidl::DispatchResult result =
+        fidl::internal::TryDispatch(nullptr, msg, nullptr, &txn, nullptr, nullptr);
     EXPECT_EQ(fidl::DispatchResult::kFound, result);
     EXPECT_TRUE(txn.errored());
   }
@@ -165,8 +165,7 @@ TEST(TryDispatchTestCase, MessageStatusNotOk) {
   {
     auto msg = fidl::IncomingMessage::Create(fidl::Status::TransportError(ZX_ERR_BAD_HANDLE));
     MockTransaction txn;
-    fidl::internal::Dispatch(nullptr, msg, fidl::internal::IncomingTransportContext(), &txn,
-                             nullptr, nullptr);
+    fidl::internal::Dispatch(nullptr, msg, nullptr, &txn, nullptr, nullptr);
     EXPECT_TRUE(txn.errored());
   }
 }

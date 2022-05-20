@@ -171,7 +171,7 @@ TEST(BasicTypesTest, RawChannelCallStruct) {
 
   FIDL_ALIGNDECL uint8_t response_storage[512];
   // Do the call and decode the received response.
-  fidl::internal::ChannelMessageStorageView response_storage_view{
+  fidl::ChannelMessageStorageView response_storage_view{
       .bytes = fidl::BufferSpan(response_storage, sizeof(response_storage)),
       .handles = nullptr,
       .handle_metadata = nullptr,
@@ -210,7 +210,7 @@ TEST(BasicTypesTest, RawChannelCallStructWithTimeout) {
 
   FIDL_ALIGNDECL uint8_t response_storage[512];
   // Do the call and decode the received response.
-  fidl::internal::ChannelMessageStorageView response_storage_view{
+  fidl::ChannelMessageStorageView response_storage_view{
       .bytes = fidl::BufferSpan(response_storage, sizeof(response_storage)),
       .handles = nullptr,
       .handle_metadata = nullptr,

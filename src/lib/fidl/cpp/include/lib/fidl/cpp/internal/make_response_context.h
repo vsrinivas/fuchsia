@@ -103,7 +103,7 @@ ResponseContext* MakeResponseContext(uint64_t ordinal,
    private:
     std::optional<::fidl::UnbindInfo> OnRawResult(
         ::fidl::IncomingMessage&& result,
-        ::fidl::internal::IncomingTransportContext transport_context) override {
+        ::fidl::internal::MessageStorageViewBase* storage_view) override {
       std::optional<fidl::UnbindInfo> maybe_unbind;
       ResultType value = DecodeResponseAndFoldError<FidlMethod>(std::move(result), &maybe_unbind);
       callback_(value);

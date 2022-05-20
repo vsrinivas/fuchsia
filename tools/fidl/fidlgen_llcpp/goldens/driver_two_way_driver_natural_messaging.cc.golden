@@ -58,7 +58,7 @@ namespace test_drivertwoway {
 std::optional<::fidl::UnbindInfo> fidl::internal::
     NaturalEventDispatcher<::test_drivertwoway::TwoWay>::DispatchEvent(
         ::fidl::IncomingMessage& msg,
-        ::fidl::internal::IncomingTransportContext transport_context) {
+        ::fidl::internal::MessageStorageViewBase* storage_view) {
   return ::fidl::UnbindInfo::UnknownOrdinal();
 }
 #endif  // __Fuchsia__
@@ -96,7 +96,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     {
         ::test_drivertwoway::kTwoWay_Add_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::IncomingTransportContext transport_context,
+           internal::MessageStorageViewBase* storage_view,
            ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
               ::test_drivertwoway::TwoWayAddRequest>(std::move(msg));
@@ -122,16 +122,16 @@ const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<
 void fidl::internal::NaturalServerDispatcher<::test_drivertwoway::TwoWay>::
     Dispatch(::fdf::Server<::test_drivertwoway::TwoWay>* impl,
              ::fidl::IncomingMessage&& msg,
-             internal::IncomingTransportContext transport_context,
+             internal::MessageStorageViewBase* storage_view,
              ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, std::move(transport_context), txn,
-                             entries_, entries_end_);
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_,
+                             entries_end_);
 }
 void fdf::Server<::test_drivertwoway::TwoWay>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-    ::fidl::internal::IncomingTransportContext transport_context) {
+    ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<
-      ::test_drivertwoway::TwoWay>::Dispatch(this, std::move(msg),
-                                             std::move(transport_context), txn);
+      ::test_drivertwoway::TwoWay>::Dispatch(this, std::move(msg), storage_view,
+                                             txn);
 }
 #endif  // __Fuchsia__

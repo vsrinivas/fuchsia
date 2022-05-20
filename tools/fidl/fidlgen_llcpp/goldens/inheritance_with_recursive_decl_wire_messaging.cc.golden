@@ -136,10 +136,15 @@ fidl::WireSyncEventHandler<::test_inheritancewithrecursivedecl::Parent>::
   // TODO(fxbug.dev/85734) Remove this channel-specific allocation.
   std::array<fidl_channel_handle_metadata_t, kHandleAllocSize>
       read_handle_metadata;
-  ::fidl::IncomingMessage msg = ::fidl::MessageRead(
-      zx::unowned_channel(client_end.handle()), read_storage.view(),
-      read_handles.data(), read_handle_metadata.data(), kHandleAllocSize,
-      ReadOptions{.discardable = true});
+  ::fidl::IncomingMessage msg =
+      ::fidl::MessageRead(zx::unowned_channel(client_end.handle()),
+                          ::fidl::ChannelMessageStorageView{
+                              .bytes = read_storage.view(),
+                              .handles = read_handles.data(),
+                              .handle_metadata = read_handle_metadata.data(),
+                              .handle_capacity = kHandleAllocSize,
+                          },
+                          ReadOptions{.discardable = true});
   if (msg.status() == ZX_ERR_BUFFER_TOO_SMALL) {
     // Message size is unexpectedly larger than calculated.
     // This can only be due to a newer version of the protocol defining a new
@@ -162,9 +167,8 @@ fidl::WireSyncEventHandler<::test_inheritancewithrecursivedecl::Parent>::
 
 std::optional<::fidl::UnbindInfo> fidl::internal::WireEventDispatcher<
     ::test_inheritancewithrecursivedecl::Parent>::
-    DispatchEvent(
-        ::fidl::IncomingMessage& msg,
-        ::fidl::internal::IncomingTransportContext transport_context) {
+    DispatchEvent(::fidl::IncomingMessage& msg,
+                  ::fidl::internal::MessageStorageViewBase* storage_view) {
   switch (msg.header()->ordinal) {
     default:
       break;
@@ -180,7 +184,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
     {
         ::test_inheritancewithrecursivedecl::kParent_First_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::IncomingTransportContext transport_context,
+           internal::MessageStorageViewBase* storage_view,
            ::fidl::Transaction* txn) {
           ::fidl::unstable::DecodedMessage<
               ::fidl::internal::TransactionalRequest<
@@ -210,28 +214,28 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<
     TryDispatch(
         ::fidl::WireServer<::test_inheritancewithrecursivedecl::Parent>* impl,
         ::fidl::IncomingMessage& msg,
-        internal::IncomingTransportContext transport_context,
+        internal::MessageStorageViewBase* storage_view,
         ::fidl::Transaction* txn) {
-  return ::fidl::internal::TryDispatch(impl, msg, std::move(transport_context),
-                                       txn, entries_, entries_end_);
+  return ::fidl::internal::TryDispatch(impl, msg, storage_view, txn, entries_,
+                                       entries_end_);
 }
 
 void fidl::internal::
     WireServerDispatcher<::test_inheritancewithrecursivedecl::Parent>::Dispatch(
         ::fidl::WireServer<::test_inheritancewithrecursivedecl::Parent>* impl,
         ::fidl::IncomingMessage&& msg,
-        internal::IncomingTransportContext transport_context,
+        internal::MessageStorageViewBase* storage_view,
         ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, std::move(transport_context), txn,
-                             entries_, entries_end_);
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_,
+                             entries_end_);
 }
 void fidl::WireServer<::test_inheritancewithrecursivedecl::Parent>::
-    dispatch_message(
-        ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-        ::fidl::internal::IncomingTransportContext transport_context) {
+    dispatch_message(::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+                     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<
-      ::test_inheritancewithrecursivedecl::Parent>::
-      Dispatch(this, std::move(msg), std::move(transport_context), txn);
+      ::test_inheritancewithrecursivedecl::Parent>::Dispatch(this,
+                                                             std::move(msg),
+                                                             storage_view, txn);
 }
 #endif  // __Fuchsia__
 
@@ -481,10 +485,15 @@ fidl::WireSyncEventHandler<::test_inheritancewithrecursivedecl::Child>::
   // TODO(fxbug.dev/85734) Remove this channel-specific allocation.
   std::array<fidl_channel_handle_metadata_t, kHandleAllocSize>
       read_handle_metadata;
-  ::fidl::IncomingMessage msg = ::fidl::MessageRead(
-      zx::unowned_channel(client_end.handle()), read_storage.view(),
-      read_handles.data(), read_handle_metadata.data(), kHandleAllocSize,
-      ReadOptions{.discardable = true});
+  ::fidl::IncomingMessage msg =
+      ::fidl::MessageRead(zx::unowned_channel(client_end.handle()),
+                          ::fidl::ChannelMessageStorageView{
+                              .bytes = read_storage.view(),
+                              .handles = read_handles.data(),
+                              .handle_metadata = read_handle_metadata.data(),
+                              .handle_capacity = kHandleAllocSize,
+                          },
+                          ReadOptions{.discardable = true});
   if (msg.status() == ZX_ERR_BUFFER_TOO_SMALL) {
     // Message size is unexpectedly larger than calculated.
     // This can only be due to a newer version of the protocol defining a new
@@ -507,9 +516,8 @@ fidl::WireSyncEventHandler<::test_inheritancewithrecursivedecl::Child>::
 
 std::optional<::fidl::UnbindInfo> fidl::internal::WireEventDispatcher<
     ::test_inheritancewithrecursivedecl::Child>::
-    DispatchEvent(
-        ::fidl::IncomingMessage& msg,
-        ::fidl::internal::IncomingTransportContext transport_context) {
+    DispatchEvent(::fidl::IncomingMessage& msg,
+                  ::fidl::internal::MessageStorageViewBase* storage_view) {
   switch (msg.header()->ordinal) {
     default:
       break;
@@ -525,7 +533,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
     {
         ::test_inheritancewithrecursivedecl::kChild_First_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::IncomingTransportContext transport_context,
+           internal::MessageStorageViewBase* storage_view,
            ::fidl::Transaction* txn) {
           ::fidl::unstable::DecodedMessage<
               ::fidl::internal::TransactionalRequest<
@@ -548,7 +556,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
     {
         ::test_inheritancewithrecursivedecl::kChild_Second_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::IncomingTransportContext transport_context,
+           internal::MessageStorageViewBase* storage_view,
            ::fidl::Transaction* txn) {
           ::fidl::unstable::DecodedMessage<
               ::fidl::internal::TransactionalRequest<
@@ -578,28 +586,28 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<
     TryDispatch(
         ::fidl::WireServer<::test_inheritancewithrecursivedecl::Child>* impl,
         ::fidl::IncomingMessage& msg,
-        internal::IncomingTransportContext transport_context,
+        internal::MessageStorageViewBase* storage_view,
         ::fidl::Transaction* txn) {
-  return ::fidl::internal::TryDispatch(impl, msg, std::move(transport_context),
-                                       txn, entries_, entries_end_);
+  return ::fidl::internal::TryDispatch(impl, msg, storage_view, txn, entries_,
+                                       entries_end_);
 }
 
 void fidl::internal::
     WireServerDispatcher<::test_inheritancewithrecursivedecl::Child>::Dispatch(
         ::fidl::WireServer<::test_inheritancewithrecursivedecl::Child>* impl,
         ::fidl::IncomingMessage&& msg,
-        internal::IncomingTransportContext transport_context,
+        internal::MessageStorageViewBase* storage_view,
         ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, std::move(transport_context), txn,
-                             entries_, entries_end_);
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_,
+                             entries_end_);
 }
 void fidl::WireServer<::test_inheritancewithrecursivedecl::Child>::
-    dispatch_message(
-        ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-        ::fidl::internal::IncomingTransportContext transport_context) {
+    dispatch_message(::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+                     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<
-      ::test_inheritancewithrecursivedecl::Child>::
-      Dispatch(this, std::move(msg), std::move(transport_context), txn);
+      ::test_inheritancewithrecursivedecl::Child>::Dispatch(this,
+                                                            std::move(msg),
+                                                            storage_view, txn);
 }
 #endif  // __Fuchsia__
 

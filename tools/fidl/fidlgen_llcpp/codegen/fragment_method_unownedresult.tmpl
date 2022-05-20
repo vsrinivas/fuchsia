@@ -32,7 +32,7 @@ class [[nodiscard]] {{ .WireUnownedResult }} final : public ::fidl::Status {
 
     explicit {{ .WireUnownedResult.Self }}(
         ::fidl::unstable::DecodedMessage<{{ .WireTransactionalResponse }}>&& decoded,
-        ::fidl::internal::IncomingTransportContext context
+        ::fidl::internal::MessageStorageViewBase* storage_view
     ) : fidl::Status(decoded) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();

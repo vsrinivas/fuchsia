@@ -78,8 +78,6 @@ struct {{ .WireOrdinal }} final { static constexpr uint64_t value = {{ .Ordinal 
 
 {{- EnsureNamespace "" }}
 {{- range .TwoWayMethods -}}
-  {{/* TODO(fxbug.dev/100472): Add a specialization for driver transport,
-       containing an arena which backs both the bytes and handles. */}}
   {{- if eq .Transport.Name "Channel" }}
     template<>
     struct {{ .IncomingHandleStorageForResponse }} final
@@ -97,6 +95,11 @@ struct {{ .WireOrdinal }} final { static constexpr uint64_t value = {{ .Ordinal 
       {{ .Response.ClientAllocationV1.BackingBufferType }} bytes_;
       {{ .IncomingHandleStorageForResponse }} handles_storage_;
     };
+  {{- end }}
+  {{- if eq .Transport.Name "Driver" }}
+    template<>
+    struct {{ .IncomingMessageStorageForResponse }} final
+        : public ::fidl::internal::DriverMessageStorageBase<{{ .IncomingMessageStorageForResponse }}> {};
   {{- end }}
 {{- end }}
 

@@ -143,10 +143,10 @@ template<>
 struct ::fidl::internal::WireServerDispatcher<::test_protocollayouts::MainProtocol> final {
   WireServerDispatcher() = delete;
   static ::fidl::DispatchResult TryDispatch(::fidl::WireServer<::test_protocollayouts::MainProtocol>* impl, ::fidl::IncomingMessage& msg,
-                                            internal::IncomingTransportContext transport_context,
+                                            internal::MessageStorageViewBase* storage_view,
                                             ::fidl::Transaction* txn);
   static void Dispatch(::fidl::WireServer<::test_protocollayouts::MainProtocol>* impl, ::fidl::IncomingMessage&& msg,
-                       internal::IncomingTransportContext transport_context,
+                       internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
  private:
@@ -4704,7 +4704,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtoc
 
     explicit WireUnownedResult(
         ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>>&& decoded,
-        ::fidl::internal::IncomingTransportContext context
+        ::fidl::internal::MessageStorageViewBase* storage_view
     ) : fidl::Status(decoded) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
@@ -4813,7 +4813,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtoc
 
     explicit WireUnownedResult(
         ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>>&& decoded,
-        ::fidl::internal::IncomingTransportContext context
+        ::fidl::internal::MessageStorageViewBase* storage_view
     ) : fidl::Status(decoded) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
@@ -4951,7 +4951,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtoc
 
     explicit WireUnownedResult(
         ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>>&& decoded,
-        ::fidl::internal::IncomingTransportContext context
+        ::fidl::internal::MessageStorageViewBase* storage_view
     ) : fidl::Status(decoded) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
@@ -5060,7 +5060,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtoc
 
     explicit WireUnownedResult(
         ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>>&& decoded,
-        ::fidl::internal::IncomingTransportContext context
+        ::fidl::internal::MessageStorageViewBase* storage_view
     ) : fidl::Status(decoded) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
@@ -5198,7 +5198,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtoc
 
     explicit WireUnownedResult(
         ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayImport>>&& decoded,
-        ::fidl::internal::IncomingTransportContext context
+        ::fidl::internal::MessageStorageViewBase* storage_view
     ) : fidl::Status(decoded) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
@@ -5307,7 +5307,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtoc
 
     explicit WireUnownedResult(
         ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayImportWithError>>&& decoded,
-        ::fidl::internal::IncomingTransportContext context
+        ::fidl::internal::MessageStorageViewBase* storage_view
     ) : fidl::Status(decoded) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
@@ -5445,7 +5445,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtoc
 
     explicit WireUnownedResult(
         ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>>&& decoded,
-        ::fidl::internal::IncomingTransportContext context
+        ::fidl::internal::MessageStorageViewBase* storage_view
     ) : fidl::Status(decoded) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
@@ -5554,7 +5554,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtoc
 
     explicit WireUnownedResult(
         ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>>&& decoded,
-        ::fidl::internal::IncomingTransportContext context
+        ::fidl::internal::MessageStorageViewBase* storage_view
     ) : fidl::Status(decoded) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
@@ -5692,7 +5692,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtoc
 
     explicit WireUnownedResult(
         ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>>&& decoded,
-        ::fidl::internal::IncomingTransportContext context
+        ::fidl::internal::MessageStorageViewBase* storage_view
     ) : fidl::Status(decoded) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
@@ -5801,7 +5801,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtoc
 
     explicit WireUnownedResult(
         ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>>&& decoded,
-        ::fidl::internal::IncomingTransportContext context
+        ::fidl::internal::MessageStorageViewBase* storage_view
     ) : fidl::Status(decoded) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
@@ -5911,7 +5911,7 @@ class ::fidl::internal::WireEventDispatcher<::test_protocollayouts::MainProtocol
  private:
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
-      ::fidl::internal::IncomingTransportContext transport_context) override;
+      ::fidl::internal::MessageStorageViewBase* storage_view) override;
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
@@ -6575,7 +6575,7 @@ class ::fidl::WireServer<::test_protocollayouts::MainProtocol> : public ::fidl::
   private:
   void dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-    ::fidl::internal::IncomingTransportContext transport_context) final;
+    ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };namespace fidl {
 #endif  // __Fuchsia__
 

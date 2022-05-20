@@ -99,7 +99,7 @@ class ResponseContext : public fidl::internal_wavl::WAVLTreeContainable<Response
   // Invoked when a response has been received or an error was detected for this
   // context. |OnRawResult| is allowed to consume the current object.
   //
-  // ## If |result| respresents a success
+  // ## If |result| represents a success
   //
   // |result| references the incoming message in encoded form.
   //
@@ -127,12 +127,10 @@ class ResponseContext : public fidl::internal_wavl::WAVLTreeContainable<Response
   //
   // See |WireResponseContext<FidlMethod>::OnResult| for more details.
   virtual std::optional<fidl::UnbindInfo> OnRawResult(
-      ::fidl::IncomingMessage&& result, internal::IncomingTransportContext transport_context) = 0;
+      ::fidl::IncomingMessage&& result, internal::MessageStorageViewBase* storage_view) = 0;
 
   // A helper around |OnRawResult| to directly notify an error to the context.
-  void OnError(::fidl::Status error) {
-    OnRawResult(fidl::IncomingMessage::Create(error), internal::IncomingTransportContext());
-  }
+  void OnError(::fidl::Status error) { OnRawResult(fidl::IncomingMessage::Create(error), nullptr); }
 
  private:
   friend class ResponseContextAsyncErrorTask<ResponseContext>;
@@ -229,7 +227,7 @@ class WireResponseContext : public internal::ResponseContext {
 
  private:
   ::std::optional<::fidl::UnbindInfo> OnRawResult(
-      ::fidl::IncomingMessage&& msg, internal::IncomingTransportContext transport_context) final {
+      ::fidl::IncomingMessage&& msg, internal::MessageStorageViewBase* storage_view) final {
     if (unlikely(!msg.ok())) {
       ::fidl::internal::WireUnownedResultType<FidlMethod> result{msg.error()};
       OnResult(result);
@@ -238,8 +236,7 @@ class WireResponseContext : public internal::ResponseContext {
     ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<FidlMethod>> decoded{
         std::move(msg)};
     ::fidl::Status maybe_error = decoded;
-    ::fidl::internal::WireUnownedResultType<FidlMethod> result(std::move(decoded),
-                                                               std::move(transport_context));
+    ::fidl::internal::WireUnownedResultType<FidlMethod> result(std::move(decoded), storage_view);
     OnResult(result);
     if (unlikely(!maybe_error.ok())) {
       return ::fidl::UnbindInfo(maybe_error);
@@ -357,7 +354,7 @@ class ClientBase final : public std::enable_shared_from_this<ClientBase> {
   // |UnbindInfo| describing the error. Otherwise, it will return
   // |std::nullopt|.
   std::optional<UnbindInfo> Dispatch(fidl::IncomingMessage& msg,
-                                     internal::IncomingTransportContext transport_context);
+                                     internal::MessageStorageViewBase* storage_view);
 
   // Returns a weak pointer representing the lifetime of client objects exposed
   // to the user, e.g. |fidl::WireClient|.

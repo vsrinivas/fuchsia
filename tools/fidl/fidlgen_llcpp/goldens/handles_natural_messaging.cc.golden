@@ -15,7 +15,7 @@
 std::optional<::fidl::UnbindInfo> fidl::internal::
     NaturalEventDispatcher<::test_handles::SomeProtocol>::DispatchEvent(
         ::fidl::IncomingMessage& msg,
-        ::fidl::internal::IncomingTransportContext transport_context) {
+        ::fidl::internal::MessageStorageViewBase* storage_view) {
   return ::fidl::UnbindInfo::UnknownOrdinal();
 }
 #endif  // __Fuchsia__
@@ -35,17 +35,16 @@ const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<
 void fidl::internal::NaturalServerDispatcher<::test_handles::SomeProtocol>::
     Dispatch(::fidl::Server<::test_handles::SomeProtocol>* impl,
              ::fidl::IncomingMessage&& msg,
-             internal::IncomingTransportContext transport_context,
+             internal::MessageStorageViewBase* storage_view,
              ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, std::move(transport_context), txn,
-                             entries_, entries_end_);
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_,
+                             entries_end_);
 }
 void fidl::Server<::test_handles::SomeProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-    ::fidl::internal::IncomingTransportContext transport_context) {
+    ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<
       ::test_handles::SomeProtocol>::Dispatch(this, std::move(msg),
-                                              std::move(transport_context),
-                                              txn);
+                                              storage_view, txn);
 }
 #endif  // __Fuchsia__

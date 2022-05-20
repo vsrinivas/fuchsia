@@ -75,7 +75,7 @@ class ::fidl::internal::NaturalEventDispatcher<::test_bindingsdenylist::Allowed>
  private:
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
-      internal::IncomingTransportContext transport_context) override;
+      internal::MessageStorageViewBase* storage_view) override;
 };
 #endif  // __Fuchsia__
 
@@ -110,7 +110,7 @@ class ::fidl::Server<::test_bindingsdenylist::Allowed>
  private:
   void dispatch_message(
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-      ::fidl::internal::IncomingTransportContext transport_context) final;
+      ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 
 #ifdef __Fuchsia__
@@ -122,7 +122,7 @@ struct ::fidl::internal::NaturalServerDispatcher<
   NaturalServerDispatcher() = delete;
   static void Dispatch(::fidl::Server<::test_bindingsdenylist::Allowed>* impl,
                        ::fidl::IncomingMessage&& msg,
-                       internal::IncomingTransportContext transport_context,
+                       internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
  private:
@@ -246,7 +246,7 @@ class ::fidl::internal::NaturalEventDispatcher<
  private:
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
-      internal::IncomingTransportContext transport_context) override;
+      internal::MessageStorageViewBase* storage_view) override;
 };
 #endif  // __Fuchsia__
 
@@ -325,7 +325,7 @@ class ::fidl::Server<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>
  private:
   void dispatch_message(
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-      ::fidl::internal::IncomingTransportContext transport_context) final;
+      ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 
 #ifdef __Fuchsia__
@@ -338,8 +338,7 @@ struct ::fidl::internal::NaturalServerDispatcher<
   static void Dispatch(
       ::fidl::Server<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>* impl,
       ::fidl::IncomingMessage&& msg,
-      internal::IncomingTransportContext transport_context,
-      ::fidl::Transaction* txn);
+      internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn);
 
  private:
   static const ::fidl::internal::MethodEntry entries_[];
@@ -410,7 +409,7 @@ class ::fidl::internal::NaturalEventDispatcher<
  private:
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
-      internal::IncomingTransportContext transport_context) override;
+      internal::MessageStorageViewBase* storage_view) override;
 };
 #endif  // __Fuchsia__
 
@@ -447,7 +446,7 @@ class ::fidl::Server<::test_bindingsdenylist::OnlyCppAndDeps>
  private:
   void dispatch_message(
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-      ::fidl::internal::IncomingTransportContext transport_context) final;
+      ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 
 #ifdef __Fuchsia__
@@ -460,8 +459,7 @@ struct ::fidl::internal::NaturalServerDispatcher<
   static void Dispatch(
       ::fidl::Server<::test_bindingsdenylist::OnlyCppAndDeps>* impl,
       ::fidl::IncomingMessage&& msg,
-      internal::IncomingTransportContext transport_context,
-      ::fidl::Transaction* txn);
+      internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn);
 
  private:
   static const ::fidl::internal::MethodEntry entries_[];
@@ -540,7 +538,7 @@ class ::fidl::internal::NaturalEventDispatcher<
  private:
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
-      internal::IncomingTransportContext transport_context) override;
+      internal::MessageStorageViewBase* storage_view) override;
 };
 #endif  // __Fuchsia__
 
@@ -634,7 +632,7 @@ class ::fidl::Server<::test_bindingsdenylist::ImportsSameNameContext>
  private:
   void dispatch_message(
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-      ::fidl::internal::IncomingTransportContext transport_context) final;
+      ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 
 #ifdef __Fuchsia__
@@ -647,8 +645,7 @@ struct ::fidl::internal::NaturalServerDispatcher<
   static void Dispatch(
       ::fidl::Server<::test_bindingsdenylist::ImportsSameNameContext>* impl,
       ::fidl::IncomingMessage&& msg,
-      internal::IncomingTransportContext transport_context,
-      ::fidl::Transaction* txn);
+      internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn);
 
  private:
   static const ::fidl::internal::MethodEntry entries_[];
@@ -1258,7 +1255,7 @@ class ::fidl::internal::NaturalEventDispatcher<
  private:
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
-      internal::IncomingTransportContext transport_context) override;
+      internal::MessageStorageViewBase* storage_view) override;
 };
 #endif  // __Fuchsia__
 
@@ -1523,7 +1520,7 @@ class ::fidl::Server<::test_bindingsdenylist::DenyEachBinding>
  private:
   void dispatch_message(
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-      ::fidl::internal::IncomingTransportContext transport_context) final;
+      ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 
 #ifdef __Fuchsia__
@@ -1536,8 +1533,7 @@ struct ::fidl::internal::NaturalServerDispatcher<
   static void Dispatch(
       ::fidl::Server<::test_bindingsdenylist::DenyEachBinding>* impl,
       ::fidl::IncomingMessage&& msg,
-      internal::IncomingTransportContext transport_context,
-      ::fidl::Transaction* txn);
+      internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn);
 
  private:
   static const ::fidl::internal::MethodEntry entries_[];

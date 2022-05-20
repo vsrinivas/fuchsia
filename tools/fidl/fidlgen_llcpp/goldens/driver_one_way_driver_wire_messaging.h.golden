@@ -44,11 +44,10 @@ struct ::fidl::internal::WireServerDispatcher<::test_driveroneway::OneWay>
   static ::fidl::DispatchResult TryDispatch(
       ::fdf::WireServer<::test_driveroneway::OneWay>* impl,
       ::fidl::IncomingMessage& msg,
-      internal::IncomingTransportContext transport_context,
-      ::fidl::Transaction* txn);
+      internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn);
   static void Dispatch(::fdf::WireServer<::test_driveroneway::OneWay>* impl,
                        ::fidl::IncomingMessage&& msg,
-                       internal::IncomingTransportContext transport_context,
+                       internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
  private:
@@ -224,6 +223,7 @@ static_assert(offsetof(::fidl::WireRequest<::test_driveroneway::OneWay::Send>,
                        payload) == 0);
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 class [[nodiscard]] ::fdf::WireUnownedResult<::test_driveroneway::OneWay::Send>
     final : public ::fidl::Status {
@@ -233,13 +233,13 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_driveroneway::OneWay::Send>
       const ::fdf::Arena& arena,
       ::fidl::internal::TransactionalRequest<::test_driveroneway::OneWay::Send>*
           request);
+
   explicit WireUnownedResult(const ::fidl::Status& result)
       : ::fidl::Status(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
   WireUnownedResult(const WireUnownedResult&) = delete;
   WireUnownedResult* operator=(WireUnownedResult&&) = delete;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
-  ~WireUnownedResult() = default;
 };
 template <>
 class ::fidl::internal::WireEventHandlerInterface<::test_driveroneway::OneWay> {
@@ -286,7 +286,7 @@ class ::fidl::internal::WireEventDispatcher<::test_driveroneway::OneWay> final
  private:
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
-      ::fidl::internal::IncomingTransportContext transport_context) override;
+      ::fidl::internal::MessageStorageViewBase* storage_view) override;
 };
 
 template <>
@@ -336,7 +336,7 @@ class ::fdf::WireServer<::test_driveroneway::OneWay>
  private:
   void dispatch_message(
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-      ::fidl::internal::IncomingTransportContext transport_context) final;
+      ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 namespace fidl {
 #endif  // __Fuchsia__

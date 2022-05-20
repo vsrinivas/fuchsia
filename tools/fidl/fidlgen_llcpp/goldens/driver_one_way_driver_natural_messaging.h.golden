@@ -58,7 +58,7 @@ class ::fidl::internal::NaturalEventDispatcher<::test_driveroneway::OneWay>
  private:
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
-      internal::IncomingTransportContext transport_context) override;
+      internal::MessageStorageViewBase* storage_view) override;
 };
 #endif  // __Fuchsia__
 
@@ -102,7 +102,7 @@ class ::fdf::Server<::test_driveroneway::OneWay>
  private:
   void dispatch_message(
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-      ::fidl::internal::IncomingTransportContext transport_context) final;
+      ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 #ifdef __Fuchsia__
 
@@ -112,7 +112,7 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_driveroneway::OneWay>
   NaturalServerDispatcher() = delete;
   static void Dispatch(::fdf::Server<::test_driveroneway::OneWay>* impl,
                        ::fidl::IncomingMessage&& msg,
-                       internal::IncomingTransportContext transport_context,
+                       internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
  private:

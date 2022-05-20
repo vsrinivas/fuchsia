@@ -31,21 +31,23 @@ extern "C" const fidl_type_t test_drivertwoway_TwoWayAddTopResponseTable;
       fidl::internal::DriverTransport>
       request_message(buffer, buffer_size, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  ::fidl::internal::IncomingTransportContext incoming_context;
+  ::fidl::internal::IncomingMessageStorage<
+      ::fidl::internal::TransactionalResponse<::test_drivertwoway::TwoWay::Add>>
+      response_storage;
   ::fidl::CallOptions call_options = {
       .outgoing_transport_context =
           ::fidl::internal::OutgoingTransportContext::Create<
               fidl::internal::DriverTransport>(arena.get()),
-      .out_incoming_transport_context = &incoming_context,
   };
-  uint32_t call_result_num_bytes;
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_drivertwoway::TwoWay::Add>>(client_end.handle(), &bytes_,
-                                         &call_result_num_bytes,
-                                         std::move(call_options));
-  arena_ =
-      fdf::Arena(incoming_context.release<fidl::internal::DriverTransport>());
-  ::fidl::Status::operator=(outgoing);
+  ::fidl::unstable::DecodedMessage<
+      ::fidl::internal::TransactionalResponse<::test_drivertwoway::TwoWay::Add>>
+      decoded{outgoing.Call(client_end.handle(), response_storage.view(),
+                            std::move(call_options))};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
+  arena_ = std::move(response_storage.arena);
 }
 namespace test_drivertwoway {
 #endif  // __Fuchsia__
@@ -98,7 +100,7 @@ fidl::WireSyncEventHandler<::test_drivertwoway::TwoWay>::HandleOneEvent(
 std::optional<::fidl::UnbindInfo>
 fidl::internal::WireEventDispatcher<::test_drivertwoway::TwoWay>::DispatchEvent(
     fidl::IncomingMessage& msg,
-    internal::IncomingTransportContext transport_context) {
+    internal::MessageStorageViewBase* storage_view) {
   ZX_PANIC("events not supported for transport 'Driver'");
 }
 #endif  // __Fuchsia__
@@ -110,7 +112,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
     {
         ::test_drivertwoway::kTwoWay_Add_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::IncomingTransportContext transport_context,
+           internal::MessageStorageViewBase* storage_view,
            ::fidl::Transaction* txn) {
           ::fidl::unstable::DecodedMessage<
               ::fidl::internal::TransactionalRequest<
@@ -123,7 +125,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
           ::fidl::internal::WireCompleter<
               ::test_drivertwoway::TwoWay::Add>::Sync completer(txn);
           fdf::Arena arena(
-              transport_context.release<::fidl::internal::DriverTransport>());
+              ::fidl::internal::TakeDriverArenaFromStorage(storage_view));
           reinterpret_cast<::fdf::WireServer<::test_drivertwoway::TwoWay>*>(
               interface)
               ->Add(primary, arena, completer);
@@ -139,25 +141,24 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<
 fidl::internal::WireServerDispatcher<::test_drivertwoway::TwoWay>::TryDispatch(
     ::fdf::WireServer<::test_drivertwoway::TwoWay>* impl,
     ::fidl::IncomingMessage& msg,
-    internal::IncomingTransportContext transport_context,
-    ::fidl::Transaction* txn) {
-  return ::fidl::internal::TryDispatch(impl, msg, std::move(transport_context),
-                                       txn, entries_, entries_end_);
+    internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+  return ::fidl::internal::TryDispatch(impl, msg, storage_view, txn, entries_,
+                                       entries_end_);
 }
 
 void fidl::internal::WireServerDispatcher<::test_drivertwoway::TwoWay>::
     Dispatch(::fdf::WireServer<::test_drivertwoway::TwoWay>* impl,
              ::fidl::IncomingMessage&& msg,
-             internal::IncomingTransportContext transport_context,
+             internal::MessageStorageViewBase* storage_view,
              ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, std::move(transport_context), txn,
-                             entries_, entries_end_);
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_,
+                             entries_end_);
 }
 void fdf::WireServer<::test_drivertwoway::TwoWay>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-    ::fidl::internal::IncomingTransportContext transport_context) {
+    ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<::test_drivertwoway::TwoWay>::Dispatch(
-      this, std::move(msg), std::move(transport_context), txn);
+      this, std::move(msg), storage_view, txn);
 }
 #endif  // __Fuchsia__
 

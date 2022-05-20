@@ -38,11 +38,10 @@ struct ::fidl::internal::WireServerDispatcher<::test_handles::DriverProtocol>
   static ::fidl::DispatchResult TryDispatch(
       ::fdf::WireServer<::test_handles::DriverProtocol>* impl,
       ::fidl::IncomingMessage& msg,
-      internal::IncomingTransportContext transport_context,
-      ::fidl::Transaction* txn);
+      internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn);
   static void Dispatch(::fdf::WireServer<::test_handles::DriverProtocol>* impl,
                        ::fidl::IncomingMessage&& msg,
-                       internal::IncomingTransportContext transport_context,
+                       internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
  private:
@@ -102,7 +101,7 @@ class ::fidl::internal::WireEventDispatcher<::test_handles::DriverProtocol>
  private:
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
-      ::fidl::internal::IncomingTransportContext transport_context) override;
+      ::fidl::internal::MessageStorageViewBase* storage_view) override;
 };
 
 template <>
@@ -134,7 +133,7 @@ class ::fdf::WireServer<::test_handles::DriverProtocol>
  private:
   void dispatch_message(
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-      ::fidl::internal::IncomingTransportContext transport_context) final;
+      ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 namespace fidl {
 #endif  // __Fuchsia__

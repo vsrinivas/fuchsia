@@ -34,7 +34,7 @@ class SyncTransaction final : public Transaction {
   SyncTransaction& operator=(SyncTransaction&& other) noexcept = delete;
 
   std::optional<DispatchError> Dispatch(fidl::IncomingMessage&& msg,
-                                        internal::IncomingTransportContext transport_context);
+                                        internal::MessageStorageViewBase* storage_view);
 
   zx_status_t Reply(fidl::OutgoingMessage* message, WriteOptions write_options) final;
 

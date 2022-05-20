@@ -204,123 +204,15 @@ void OutgoingMessage::Write(internal::AnyUnownedTransport transport, WriteOption
   }
   ZX_ASSERT(transport_type() == transport.type());
   ZX_ASSERT(is_transactional());
-  zx_status_t status = transport.write(std::move(options), iovecs(), iovec_actual(), handles(),
-                                       message_.iovec.handle_metadata, handle_actual());
+  zx_status_t status = transport.write(
+      std::move(options), internal::WriteArgs{.data = iovecs(),
+                                              .handles = handles(),
+                                              .handle_metadata = message_.iovec.handle_metadata,
+                                              .data_count = iovec_actual(),
+                                              .handles_count = handle_actual()});
   ReleaseHandles();
   if (status != ZX_OK) {
     SetStatus(fidl::Status::TransportError(status));
-  }
-}
-
-// TODO(fxbug.dev/100472): Replace usages with |DecodedMessage|.
-void OutgoingMessage::DecodeImplForCall(size_t inline_size, bool contains_envelope,
-                                        internal::TopLevelDecodeFn decode_fn,
-                                        const internal::CodingConfig& coding_config, uint8_t* bytes,
-                                        uint32_t* in_out_num_bytes, fidl_handle_t* handles,
-                                        fidl_handle_metadata_t* handle_metadata,
-                                        uint32_t num_handles) {
-  fidl_message_header_t& header = reinterpret_cast<fidl_message_header_t&>(*bytes);
-  if (unlikely(*in_out_num_bytes <= sizeof(fidl_message_header_t))) {
-    SetStatus(fidl::Status::DecodeError(ZX_ERR_BUFFER_TOO_SMALL,
-                                        "non-nullptr response_type must be larger than 16 bytes"));
-    return;
-  }
-
-  // Old versions of the C bindings will send wire format V1 payloads that are compatible
-  // with wire format V2 (they don't contain envelopes). Confirm that V1 payloads don't
-  // contain envelopes and are compatible with V2.
-  if ((header.at_rest_flags[0] & FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2) == 0 &&
-      contains_envelope) {
-    SetStatus(fidl::Status::DecodeError(
-        ZX_ERR_INVALID_ARGS, "wire format v1 header received with unsupported envelope"));
-    return;
-  }
-
-  fidl::Status decode_status =
-      internal::WireDecode(inline_size, decode_fn, transport_vtable_->encoding_configuration, bytes,
-                           *in_out_num_bytes, handles, handle_metadata, num_handles);
-  if (!decode_status.ok()) {
-    SetStatus(decode_status);
-  }
-}
-
-void OutgoingMessage::CallImplForTransportProvidedBuffer(
-    internal::AnyUnownedTransport transport, size_t inline_size, bool contains_envelope,
-    internal::TopLevelDecodeFn decode_fn, bool has_response_body, uint8_t** out_bytes,
-    uint32_t* out_num_bytes, CallOptions options) {
-  if (status() != ZX_OK) {
-    return;
-  }
-  ZX_ASSERT(transport_type() == transport.type());
-  ZX_ASSERT(is_transactional());
-
-  fidl_handle_t* result_handles;
-  fidl_handle_metadata_t* result_handle_metadata;
-  uint32_t result_num_handles;
-  internal::CallMethodArgs args = {
-      .wr_data = iovecs(),
-      .wr_handles = handles(),
-      .wr_handle_metadata = message_.iovec.handle_metadata,
-      .wr_data_count = iovec_actual(),
-      .wr_handles_count = handle_actual(),
-      .out_rd_data = reinterpret_cast<void**>(out_bytes),
-      .out_rd_handles = &result_handles,
-      .out_rd_handle_metadata = &result_handle_metadata,
-  };
-
-  zx_status_t status = transport.call(std::move(options), args, out_num_bytes, &result_num_handles);
-  ReleaseHandles();
-  if (status != ZX_OK) {
-    SetStatus(fidl::Status::TransportError(status));
-    return;
-  }
-
-  if (has_response_body) {
-    DecodeImplForCall(inline_size, contains_envelope, decode_fn,
-                      *transport.vtable()->encoding_configuration, *out_bytes, out_num_bytes,
-                      result_handles, result_handle_metadata, result_num_handles);
-  }
-}
-
-void OutgoingMessage::CallImplForCallerProvidedBuffer(
-    internal::AnyUnownedTransport transport, size_t inline_size, bool contains_envelope,
-    internal::TopLevelDecodeFn decode_fn, bool has_response_body, uint8_t* result_bytes,
-    uint32_t result_byte_capacity, fidl_handle_t* result_handles,
-    fidl_handle_metadata_t* result_handle_metadata, uint32_t result_handle_capacity,
-    CallOptions options) {
-  if (status() != ZX_OK) {
-    return;
-  }
-  ZX_ASSERT(transport_type() == transport.type());
-  ZX_ASSERT(is_transactional());
-
-  uint32_t actual_num_bytes = 0u;
-  uint32_t actual_num_handles = 0u;
-  internal::CallMethodArgs args = {
-      .wr_data = iovecs(),
-      .wr_handles = handles(),
-      .wr_handle_metadata = message_.iovec.handle_metadata,
-      .wr_data_count = iovec_actual(),
-      .wr_handles_count = handle_actual(),
-      .rd_data = result_bytes,
-      .rd_handles = result_handles,
-      .rd_handle_metadata = result_handle_metadata,
-      .rd_data_capacity = result_byte_capacity,
-      .rd_handles_capacity = result_handle_capacity,
-  };
-
-  zx_status_t status =
-      transport.call(std::move(options), args, &actual_num_bytes, &actual_num_handles);
-  ReleaseHandles();
-  if (status != ZX_OK) {
-    SetStatus(fidl::Status::TransportError(status));
-    return;
-  }
-
-  if (has_response_body) {
-    DecodeImplForCall(inline_size, contains_envelope, decode_fn,
-                      *transport.vtable()->encoding_configuration, result_bytes, &actual_num_bytes,
-                      result_handles, result_handle_metadata, actual_num_handles);
   }
 }
 
@@ -339,19 +231,26 @@ IncomingMessage OutgoingMessage::CallImpl(internal::AnyUnownedTransport transpor
   uint32_t actual_num_bytes = 0u;
   uint32_t actual_num_handles = 0u;
   internal::CallMethodArgs args = {
-      .wr_data = iovecs(),
-      .wr_handles = handles(),
-      .wr_handle_metadata = message_.iovec.handle_metadata,
-      .wr_data_count = iovec_actual(),
-      .wr_handles_count = handle_actual(),
-      .out_rd_data = reinterpret_cast<void**>(&result_bytes),
-      .out_rd_handles = &result_handles,
-      .out_rd_handle_metadata = &result_handle_metadata,
-      .rd_view = &storage,
+      .wr =
+          internal::WriteArgs{
+              .data = iovecs(),
+              .handles = handles(),
+              .handle_metadata = message_.iovec.handle_metadata,
+              .data_count = iovec_actual(),
+              .handles_count = handle_actual(),
+          },
+      .rd =
+          internal::ReadArgs{
+              .storage_view = &storage,
+              .out_data = reinterpret_cast<void**>(&result_bytes),
+              .out_handles = &result_handles,
+              .out_handle_metadata = &result_handle_metadata,
+              .out_data_actual_count = &actual_num_bytes,
+              .out_handles_actual_count = &actual_num_handles,
+          },
   };
 
-  zx_status_t status =
-      transport.call(std::move(options), args, &actual_num_bytes, &actual_num_handles);
+  zx_status_t status = transport.call(std::move(options), args);
   ReleaseHandles();
   if (status != ZX_OK) {
     SetStatus(fidl::Status::TransportError(status));

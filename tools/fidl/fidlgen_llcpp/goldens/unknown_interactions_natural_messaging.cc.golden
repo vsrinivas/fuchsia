@@ -175,7 +175,7 @@ fidl::internal::NaturalSyncClientImpl<
 std::optional<::fidl::UnbindInfo> fidl::internal::
     NaturalEventDispatcher<::test_unknowninteractions::Example>::DispatchEvent(
         ::fidl::IncomingMessage& msg,
-        ::fidl::internal::IncomingTransportContext transport_context) {
+        ::fidl::internal::MessageStorageViewBase* storage_view) {
   switch (msg.header()->ordinal) {
     case ::test_unknowninteractions::kExample_StrictEvent_Ordinal: {
       ::fitx::result decoded =
@@ -290,7 +290,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     {
         ::test_unknowninteractions::kExample_StrictOneWay_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::IncomingTransportContext transport_context,
+           internal::MessageStorageViewBase* storage_view,
            ::fidl::Transaction* txn) {
           ::fitx::result decoded =
               ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
@@ -311,7 +311,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     {
         ::test_unknowninteractions::kExample_FlexibleOneWay_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::IncomingTransportContext transport_context,
+           internal::MessageStorageViewBase* storage_view,
            ::fidl::Transaction* txn) {
           ::fitx::result decoded =
               ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
@@ -332,7 +332,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     {
         ::test_unknowninteractions::kExample_StrictTwoWay_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::IncomingTransportContext transport_context,
+           internal::MessageStorageViewBase* storage_view,
            ::fidl::Transaction* txn) {
           ::fitx::result decoded =
               ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
@@ -353,7 +353,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     {
         ::test_unknowninteractions::kExample_FlexibleTwoWay_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::IncomingTransportContext transport_context,
+           internal::MessageStorageViewBase* storage_view,
            ::fidl::Transaction* txn) {
           ::fitx::result decoded =
               ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
@@ -380,18 +380,16 @@ void fidl::internal::
     NaturalServerDispatcher<::test_unknowninteractions::Example>::Dispatch(
         ::fidl::Server<::test_unknowninteractions::Example>* impl,
         ::fidl::IncomingMessage&& msg,
-        internal::IncomingTransportContext transport_context,
+        internal::MessageStorageViewBase* storage_view,
         ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, std::move(transport_context), txn,
-                             entries_, entries_end_);
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_,
+                             entries_end_);
 }
 void fidl::Server<::test_unknowninteractions::Example>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-    ::fidl::internal::IncomingTransportContext transport_context) {
+    ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<
       ::test_unknowninteractions::Example>::Dispatch(this, std::move(msg),
-                                                     std::move(
-                                                         transport_context),
-                                                     txn);
+                                                     storage_view, txn);
 }
 #endif  // __Fuchsia__

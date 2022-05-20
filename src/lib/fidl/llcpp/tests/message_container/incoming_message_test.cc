@@ -174,15 +174,23 @@ TEST_F(IncomingMessageChannelReadEtcTest, ReadFromChannel) {
   fidl::InitTxnHeader(hdr, /* txid */ 1, /* ordinal */ 1, fidl::MessageDynamicFlags::kStrictMethod);
   sink.write(0, bytes, std::size(bytes), nullptr, 0);
 
-  auto incoming = fidl::MessageRead(source, byte_buffer_view(), handle_data(),
-                                    handle_metadata_data(), handle_buffer_size());
+  auto incoming = fidl::MessageRead(source, fidl::ChannelMessageStorageView{
+                                                .bytes = byte_buffer_view(),
+                                                .handles = handle_data(),
+                                                .handle_metadata = handle_metadata_data(),
+                                                .handle_capacity = handle_buffer_size(),
+                                            });
   EXPECT_EQ(ZX_OK, incoming.status());
   EXPECT_EQ(incoming.byte_actual(), sizeof(fidl_message_header_t));
   EXPECT_EQ(0, memcmp(incoming.bytes(), bytes, incoming.byte_actual()));
   EXPECT_EQ(0u, incoming.handle_actual());
 
-  auto incoming2 = fidl::MessageRead(source, byte_buffer_view(), handle_data(),
-                                     handle_metadata_data(), handle_buffer_size());
+  auto incoming2 = fidl::MessageRead(source, fidl::ChannelMessageStorageView{
+                                                 .bytes = byte_buffer_view(),
+                                                 .handles = handle_data(),
+                                                 .handle_metadata = handle_metadata_data(),
+                                                 .handle_capacity = handle_buffer_size(),
+                                             });
   EXPECT_EQ(ZX_ERR_SHOULD_WAIT, incoming2.status());
   EXPECT_EQ(fidl::Reason::kTransportError, incoming2.reason());
   EXPECT_EQ(
@@ -196,8 +204,12 @@ TEST_F(IncomingMessageChannelReadEtcTest, ReadFromClosedChannel) {
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &source, &sink));
 
   sink.reset();
-  auto incoming = fidl::MessageRead(source, byte_buffer_view(), handle_data(),
-                                    handle_metadata_data(), handle_buffer_size());
+  auto incoming = fidl::MessageRead(source, fidl::ChannelMessageStorageView{
+                                                .bytes = byte_buffer_view(),
+                                                .handles = handle_data(),
+                                                .handle_metadata = handle_metadata_data(),
+                                                .handle_capacity = handle_buffer_size(),
+                                            });
   EXPECT_EQ(ZX_ERR_PEER_CLOSED, incoming.status());
   EXPECT_EQ(fidl::Reason::kPeerClosed, incoming.reason());
 }
@@ -213,8 +225,12 @@ TEST_F(IncomingMessageChannelReadEtcTest, ReadFromChannelInvalidMessage) {
                       fidl::MessageDynamicFlags::kStrictMethod);
   sink.write(0, bytes, std::size(bytes), nullptr, 0);
 
-  auto incoming = fidl::MessageRead(source, byte_buffer_view(), handle_data(),
-                                    handle_metadata_data(), handle_buffer_size());
+  auto incoming = fidl::MessageRead(source, fidl::ChannelMessageStorageView{
+                                                .bytes = byte_buffer_view(),
+                                                .handles = handle_data(),
+                                                .handle_metadata = handle_metadata_data(),
+                                                .handle_capacity = handle_buffer_size(),
+                                            });
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, incoming.status());
   EXPECT_EQ(fidl::Reason::kUnexpectedMessage, incoming.reason());
   EXPECT_EQ(

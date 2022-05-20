@@ -871,7 +871,7 @@ fidl::internal::NaturalSyncClientImpl<::test_protocollayouts::MainProtocol>::
 std::optional<::fidl::UnbindInfo> fidl::internal::
     NaturalEventDispatcher<::test_protocollayouts::MainProtocol>::DispatchEvent(
         ::fidl::IncomingMessage& msg,
-        ::fidl::internal::IncomingTransportContext transport_context) {
+        ::fidl::internal::MessageStorageViewBase* storage_view) {
   switch (msg.header()->ordinal) {
     case ::test_protocollayouts::kMainProtocol_OnAnonComposed_Ordinal: {
       ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
@@ -1502,7 +1502,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     {
         ::test_protocollayouts::kMainProtocol_OneWayAnonComposed_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::IncomingTransportContext transport_context,
+           internal::MessageStorageViewBase* storage_view,
            ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
               ::test_protocollayouts_imported::
@@ -1528,7 +1528,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     {
         ::test_protocollayouts::kMainProtocol_TwoWayAnonComposed_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::IncomingTransportContext transport_context,
+           internal::MessageStorageViewBase* storage_view,
            ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
               ::test_protocollayouts_imported::
@@ -1555,7 +1555,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         ::test_protocollayouts::
             kMainProtocol_TwoWayAnonComposedWithError_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::IncomingTransportContext transport_context,
+           internal::MessageStorageViewBase* storage_view,
            ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
               ::test_protocollayouts_imported::
@@ -1582,7 +1582,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     {
         ::test_protocollayouts::kMainProtocol_OneWayNamedComposed_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::IncomingTransportContext transport_context,
+           internal::MessageStorageViewBase* storage_view,
            ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
               ::test_protocollayouts_imported::ImportTablePayload>(
@@ -1608,7 +1608,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     {
         ::test_protocollayouts::kMainProtocol_TwoWayNamedComposed_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::IncomingTransportContext transport_context,
+           internal::MessageStorageViewBase* storage_view,
            ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
               ::test_protocollayouts_imported::ImportUnionPayload>(
@@ -1635,7 +1635,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         ::test_protocollayouts::
             kMainProtocol_TwoWayNamedComposedWithError_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::IncomingTransportContext transport_context,
+           internal::MessageStorageViewBase* storage_view,
            ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
               ::test_protocollayouts_imported::ImportTablePayload>(
@@ -1661,7 +1661,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     {
         ::test_protocollayouts::kMainProtocol_OneWayImport_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::IncomingTransportContext transport_context,
+           internal::MessageStorageViewBase* storage_view,
            ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
               ::test_protocollayouts_imported::ImportTablePayload>(
@@ -1686,7 +1686,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     {
         ::test_protocollayouts::kMainProtocol_TwoWayImport_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::IncomingTransportContext transport_context,
+           internal::MessageStorageViewBase* storage_view,
            ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
               ::test_protocollayouts_imported::ImportUnionPayload>(
@@ -1711,7 +1711,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     {
         ::test_protocollayouts::kMainProtocol_TwoWayImportWithError_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::IncomingTransportContext transport_context,
+           internal::MessageStorageViewBase* storage_view,
            ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
               ::test_protocollayouts_imported::ImportTablePayload>(
@@ -1737,7 +1737,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     {
         ::test_protocollayouts::kMainProtocol_OneWayLocal_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::IncomingTransportContext transport_context,
+           internal::MessageStorageViewBase* storage_view,
            ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
               ::test_protocollayouts::LocalTablePayload>(std::move(msg));
@@ -1761,7 +1761,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     {
         ::test_protocollayouts::kMainProtocol_TwoWayLocal_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::IncomingTransportContext transport_context,
+           internal::MessageStorageViewBase* storage_view,
            ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
               ::test_protocollayouts::LocalUnionPayload>(std::move(msg));
@@ -1785,7 +1785,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     {
         ::test_protocollayouts::kMainProtocol_TwoWayLocalWithError_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::IncomingTransportContext transport_context,
+           internal::MessageStorageViewBase* storage_view,
            ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
               ::test_protocollayouts::LocalTablePayload>(std::move(msg));
@@ -1810,7 +1810,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     {
         ::test_protocollayouts::kMainProtocol_OneWayAnon_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::IncomingTransportContext transport_context,
+           internal::MessageStorageViewBase* storage_view,
            ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
               ::test_protocollayouts::MainProtocolOneWayAnonRequest>(
@@ -1835,7 +1835,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     {
         ::test_protocollayouts::kMainProtocol_TwoWayAnon_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::IncomingTransportContext transport_context,
+           internal::MessageStorageViewBase* storage_view,
            ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
               ::test_protocollayouts::MainProtocolTwoWayAnonRequest>(
@@ -1860,7 +1860,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     {
         ::test_protocollayouts::kMainProtocol_TwoWayAnonWithError_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::IncomingTransportContext transport_context,
+           internal::MessageStorageViewBase* storage_view,
            ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
               ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorRequest>(
@@ -1892,18 +1892,16 @@ void fidl::internal::
     NaturalServerDispatcher<::test_protocollayouts::MainProtocol>::Dispatch(
         ::fidl::Server<::test_protocollayouts::MainProtocol>* impl,
         ::fidl::IncomingMessage&& msg,
-        internal::IncomingTransportContext transport_context,
+        internal::MessageStorageViewBase* storage_view,
         ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, std::move(transport_context), txn,
-                             entries_, entries_end_);
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_,
+                             entries_end_);
 }
 void fidl::Server<::test_protocollayouts::MainProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-    ::fidl::internal::IncomingTransportContext transport_context) {
+    ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<
       ::test_protocollayouts::MainProtocol>::Dispatch(this, std::move(msg),
-                                                      std::move(
-                                                          transport_context),
-                                                      txn);
+                                                      storage_view, txn);
 }
 #endif  // __Fuchsia__

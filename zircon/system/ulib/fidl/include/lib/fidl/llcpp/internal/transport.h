@@ -56,29 +56,6 @@ class TransportContextBase {
   void* data_ = nullptr;
 };
 
-class IncomingTransportContext final : public TransportContextBase {
- public:
-  IncomingTransportContext() = default;
-  IncomingTransportContext(IncomingTransportContext&&) = default;
-  IncomingTransportContext& operator=(IncomingTransportContext&&) = default;
-  ~IncomingTransportContext();
-
-  template <typename Transport>
-  static IncomingTransportContext Create(typename Transport::IncomingTransportContextType* value) {
-    return IncomingTransportContext(&Transport::VTable, value);
-  }
-
-  template <typename Transport>
-  typename Transport::IncomingTransportContextType* release() {
-    return static_cast<typename Transport::IncomingTransportContextType*>(
-        TransportContextBase::release(&Transport::VTable));
-  }
-
- private:
-  IncomingTransportContext(const TransportVTable* vtable, void* data)
-      : TransportContextBase(vtable, data) {}
-};
-
 class OutgoingTransportContext final : public TransportContextBase {
  public:
   OutgoingTransportContext() = default;
@@ -118,8 +95,6 @@ struct WriteOptions {
 // Options passed from the user-facing read API to transport read().
 struct ReadOptions {
   bool discardable = false;
-  // Transport specific context populated by read.
-  internal::IncomingTransportContext* out_incoming_transport_context;
 };
 
 // Options passed from the user-facing call API to transport call().
@@ -128,39 +103,49 @@ struct CallOptions {
 
   // Transport specific context.
   internal::OutgoingTransportContext outgoing_transport_context;
-  // Transport specific context populated by call.
-  internal::IncomingTransportContext* out_incoming_transport_context;
 };
 
 class IncomingMessage;
 
 namespace internal {
 
-struct CallMethodArgs {
-  const void* wr_data;
-  const fidl_handle_t* wr_handles;
-  const fidl_handle_metadata_t* wr_handle_metadata;
-  uint32_t wr_data_count;
-  uint32_t wr_handles_count;
+struct WriteArgs {
+  const void* data;
+  const fidl_handle_t* handles;
 
-  // Exactly one of rd_* or out_rd_* will be populated.
-  // If Transport::TransportProvidesReadBuffer is true, the out_rd_* will be populated.
-  // Otherwise, rd_* will be populated.
-  // TODO(fxbug.dev/100472): move |rd_*| and |out_rd_*| to |rd_view|.
+  // |handle_metadata| contains transport-specific metadata produced by
+  // EncodingConfiguration::decode_process_handle.
+  const fidl_handle_metadata_t* handle_metadata;
+  uint32_t data_count;
+  uint32_t handles_count;
+};
 
-  void* rd_data;
-  fidl_handle_t* rd_handles;
-  fidl_handle_metadata_t* rd_handle_metadata;
-  uint32_t rd_data_capacity;
-  uint32_t rd_handles_capacity;
-
-  void** out_rd_data;
-  fidl_handle_t** out_rd_handles;
-  fidl_handle_metadata_t** out_rd_handle_metadata;
-
-  // TODO(fxbug.dev/100472): all callers should use this field.
+struct ReadArgs {
   // A transport-specific view into the storage for receiving the response of the call.
-  MessageStorageViewBase* rd_view = nullptr;
+  // See documentation on concrete |MessageStorageViewBase| subclasses.
+  MessageStorageViewBase* storage_view = nullptr;
+
+  // Returns the pointer to response data.
+  void** out_data;
+
+  // Returns the pointer to response handles.
+  fidl_handle_t** out_handles;
+
+  // Returns the pointer to response handle metadata, which contains
+  // transport-specific metadata and will be passed to
+  // EncodingConfiguration::decode_process_handle.
+  fidl_handle_metadata_t** out_handle_metadata;
+
+  // Returns the number of response bytes.
+  uint32_t* out_data_actual_count;
+
+  // Returns the number of response handles.
+  uint32_t* out_handles_actual_count;
+};
+
+struct CallMethodArgs {
+  WriteArgs wr;
+  ReadArgs rd;
 };
 
 // Generic interface for waiting on a transport (for new messages, peer close, etc).
@@ -206,7 +191,7 @@ using AnyTransportWaiter =
 
 // Function receiving notification of successful waits on a TransportWaiter.
 using TransportWaitSuccessHandler =
-    fit::inline_function<void(fidl::IncomingMessage&, IncomingTransportContext transport_context)>;
+    fit::inline_function<void(fidl::IncomingMessage&, MessageStorageViewBase* storage_view)>;
 
 // Function receiving notification of failing waits on a TransportWaiter.
 using TransportWaitFailureHandler = fit::inline_function<void(UnbindInfo)>;
@@ -218,25 +203,15 @@ struct TransportVTable {
   const CodingConfig* encoding_configuration;
 
   // Write to the transport.
-  // |handle_metadata| contains transport-specific metadata produced by
-  // EncodingConfiguration::decode_process_handle.
-  zx_status_t (*write)(fidl_handle_t handle, WriteOptions options, const void* data,
-                       uint32_t data_count, const fidl_handle_t* handles,
-                       const void* handle_metadata, uint32_t handles_count);
+  zx_status_t (*write)(fidl_handle_t handle, WriteOptions options, const WriteArgs& args);
 
   // Read from the transport.
-  // This populates |handle_metadata|, which contains transport-specific metadata and will be
-  // passed to EncodingConfiguration::decode_process_handle.
-  zx_status_t (*read)(fidl_handle_t handle, const ReadOptions& options, void* data,
-                      uint32_t data_capacity, fidl_handle_t* handles, void* handle_metadata,
-                      uint32_t handles_capacity, uint32_t* out_data_actual_count,
-                      uint32_t* out_handles_actual_count);
+  zx_status_t (*read)(fidl_handle_t handle, const ReadOptions& options, const ReadArgs& args);
 
   // Perform a call on the transport.
-  // The arguments are formatted in |cargs|, with the write direction args corresponding to
-  // those in |write| and the read direction args corresponding to those in |read|.
-  zx_status_t (*call)(fidl_handle_t handle, CallOptions options, const CallMethodArgs& cargs,
-                      uint32_t* out_data_actual_count, uint32_t* out_handles_actual_count);
+  // The arguments are formatted in |args|, with the write direction args corresponding to
+  // those in |wr| and the read direction args corresponding to those in |rd|.
+  zx_status_t (*call)(fidl_handle_t handle, CallOptions options, const CallMethodArgs& args);
 
   // Create a waiter object to wait for messages on the transport.
   // No waits are started initially on the waiter. Call Begin() to start waiting.
@@ -254,7 +229,6 @@ struct TransportVTable {
 
   // Closes incoming/outgoing transport context contents.
   // Set to nullptr if no close function is needed.
-  void (*close_incoming_transport_context)(void*);
   void (*close_outgoing_transport_context)(void*);
 };
 
@@ -287,24 +261,16 @@ class AnyUnownedTransport {
 
   fidl_transport_type type() const { return vtable_->type; }
 
-  zx_status_t write(WriteOptions options, const void* data, uint32_t data_count,
-                    const fidl_handle_t* handles, const void* handle_metadata,
-                    uint32_t handles_count) const {
-    return vtable_->write(handle_, std::move(options), data, data_count, handles, handle_metadata,
-                          handles_count);
+  zx_status_t write(WriteOptions options, const WriteArgs& args) const {
+    return vtable_->write(handle_, std::move(options), args);
   }
 
-  zx_status_t read(const ReadOptions& options, void* data, uint32_t data_capacity,
-                   fidl_handle_t* handles, void* handle_metadata, uint32_t handles_capacity,
-                   uint32_t* out_data_actual_count, uint32_t* out_handles_actual_count) const {
-    return vtable_->read(handle_, options, data, data_capacity, handles, handle_metadata,
-                         handles_capacity, out_data_actual_count, out_handles_actual_count);
+  zx_status_t read(const ReadOptions& options, const ReadArgs& args) const {
+    return vtable_->read(handle_, options, args);
   }
 
-  zx_status_t call(CallOptions options, const CallMethodArgs& cargs,
-                   uint32_t* out_data_actual_count, uint32_t* out_handles_actual_count) const {
-    return vtable_->call(handle_, std::move(options), cargs, out_data_actual_count,
-                         out_handles_actual_count);
+  zx_status_t call(CallOptions options, const CallMethodArgs& args) const {
+    return vtable_->call(handle_, std::move(options), args);
   }
 
   zx_status_t create_waiter(async_dispatcher_t* dispatcher,
@@ -376,24 +342,16 @@ class AnyTransport {
 
   fidl_transport_type type() const { return vtable_->type; }
 
-  zx_status_t write(WriteOptions options, const void* data, uint32_t data_count,
-                    const fidl_handle_t* handles, const void* handle_metadata,
-                    uint32_t handles_count) const {
-    return vtable_->write(handle_, std::move(options), data, data_count, handles, handle_metadata,
-                          handles_count);
+  zx_status_t write(WriteOptions options, const WriteArgs& args) const {
+    return vtable_->write(handle_, std::move(options), args);
   }
 
-  zx_status_t read(const ReadOptions& options, void* data, uint32_t data_capacity,
-                   fidl_handle_t* handles, void* handle_metadata, uint32_t handles_capacity,
-                   uint32_t* out_data_actual_count, uint32_t* out_handles_actual_count) const {
-    return vtable_->read(handle_, options, data, data_capacity, handles, handle_metadata,
-                         handles_capacity, out_data_actual_count, out_handles_actual_count);
+  zx_status_t read(const ReadOptions& options, const ReadArgs& args) const {
+    return vtable_->read(handle_, options, args);
   }
 
-  zx_status_t call(CallOptions options, const CallMethodArgs& cargs,
-                   uint32_t* out_data_actual_count, uint32_t* out_handles_actual_count) const {
-    return vtable_->call(handle_, std::move(options), cargs, out_data_actual_count,
-                         out_handles_actual_count);
+  zx_status_t call(CallOptions options, const CallMethodArgs& args) const {
+    return vtable_->call(handle_, std::move(options), args);
   }
 
   zx_status_t create_waiter(async_dispatcher_t* dispatcher,

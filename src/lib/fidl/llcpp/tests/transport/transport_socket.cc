@@ -18,13 +18,11 @@ namespace internal {
 
 namespace {
 
-zx_status_t socket_write(fidl_handle_t handle, WriteOptions write_options, const void* data,
-                         uint32_t data_count, const fidl_handle_t* handles,
-                         const void* handle_metadata, uint32_t handles_count) {
-  ZX_ASSERT(handles_count == 0);
-  ZX_ASSERT(data_count == 1);  // 1 iovec
+zx_status_t socket_write(fidl_handle_t handle, WriteOptions write_options, const WriteArgs& args) {
+  ZX_ASSERT(args.handles_count == 0);
+  ZX_ASSERT(args.data_count == 1);  // 1 iovec
   size_t actual;
-  zx_channel_iovec_t iovec = static_cast<const zx_channel_iovec_t*>(data)[0];
+  zx_channel_iovec_t iovec = static_cast<const zx_channel_iovec_t*>(args.data)[0];
   zx_status_t status = zx_socket_write(handle, 0, iovec.buffer, iovec.capacity, &actual);
   if (status != ZX_OK) {
     return status;
@@ -33,17 +31,23 @@ zx_status_t socket_write(fidl_handle_t handle, WriteOptions write_options, const
   return ZX_OK;
 }
 
-zx_status_t socket_read(fidl_handle_t handle, const ReadOptions& read_options, void* data,
-                        uint32_t data_capacity, fidl_handle_t* handles, void* handle_metadata,
-                        uint32_t handles_capacity, uint32_t* out_data_actual_count,
-                        uint32_t* out_handles_actual_count) {
+zx_status_t socket_read(fidl_handle_t handle, const ReadOptions& read_options,
+                        const ReadArgs& args) {
+  ZX_DEBUG_ASSERT(args.storage_view != nullptr);
+  ZX_DEBUG_ASSERT(args.out_data != nullptr);
+  SocketMessageStorageView* rd_view = static_cast<SocketMessageStorageView*>(args.storage_view);
+
   size_t actual;
-  zx_status_t status = zx_socket_read(handle, 0, data, data_capacity, &actual);
+  zx_status_t status =
+      zx_socket_read(handle, 0, rd_view->bytes.data, rd_view->bytes.capacity, &actual);
   if (status != ZX_OK) {
     return status;
   }
-  *out_data_actual_count = static_cast<uint32_t>(actual);
-  *out_handles_actual_count = 0;
+  *args.out_data = rd_view->bytes.data;
+  *args.out_data_actual_count = static_cast<uint32_t>(actual);
+  *args.out_handles = nullptr;
+  *args.out_handle_metadata = nullptr;
+  *args.out_handles_actual_count = 0;
   return ZX_OK;
 }
 
@@ -88,12 +92,13 @@ void SocketWaiter::HandleWaitFinished(async_dispatcher_t* dispatcher, zx_status_
   }
 
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT InlineMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes;
-  IncomingMessage msg = fidl::MessageRead(zx::unowned_socket(async_wait_t::object), bytes.view(),
-                                          nullptr, nullptr, 0);
+  IncomingMessage msg =
+      fidl::MessageRead(zx::unowned_socket(async_wait_t::object),
+                        fidl::internal::SocketMessageStorageView{.bytes = bytes.view()});
   if (!msg.ok()) {
     return failure_handler_(fidl::UnbindInfo{msg});
   }
-  return success_handler_(msg, internal::IncomingTransportContext());
+  return success_handler_(msg, nullptr);
 }
 
 const CodingConfig SocketTransport::EncodingConfiguration = {

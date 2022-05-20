@@ -122,7 +122,7 @@ class ::fidl::internal::NaturalEventDispatcher<::test_inheritance::Super> final
  private:
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
-      internal::IncomingTransportContext transport_context) override;
+      internal::MessageStorageViewBase* storage_view) override;
 };
 #endif  // __Fuchsia__
 
@@ -193,7 +193,7 @@ class ::fidl::Server<::test_inheritance::Super>
  private:
   void dispatch_message(
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-      ::fidl::internal::IncomingTransportContext transport_context) final;
+      ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 
 #ifdef __Fuchsia__
@@ -204,7 +204,7 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_inheritance::Super>
   NaturalServerDispatcher() = delete;
   static void Dispatch(::fidl::Server<::test_inheritance::Super>* impl,
                        ::fidl::IncomingMessage&& msg,
-                       internal::IncomingTransportContext transport_context,
+                       internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
  private:
@@ -315,7 +315,7 @@ class ::fidl::internal::NaturalEventDispatcher<::test_inheritance::Sub> final
  private:
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
-      internal::IncomingTransportContext transport_context) override;
+      internal::MessageStorageViewBase* storage_view) override;
 };
 #endif  // __Fuchsia__
 
@@ -386,7 +386,7 @@ class ::fidl::Server<::test_inheritance::Sub>
  private:
   void dispatch_message(
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-      ::fidl::internal::IncomingTransportContext transport_context) final;
+      ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 
 #ifdef __Fuchsia__
@@ -397,7 +397,7 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_inheritance::Sub>
   NaturalServerDispatcher() = delete;
   static void Dispatch(::fidl::Server<::test_inheritance::Sub>* impl,
                        ::fidl::IncomingMessage&& msg,
-                       internal::IncomingTransportContext transport_context,
+                       internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
  private:

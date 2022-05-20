@@ -9,7 +9,7 @@ namespace fidl {
 namespace internal {
 
 ::fidl::DispatchResult TryDispatch(void* impl, ::fidl::IncomingMessage& msg,
-                                   fidl::internal::IncomingTransportContext transport_context,
+                                   fidl::internal::MessageStorageViewBase* storage_view,
                                    ::fidl::Transaction* txn, const MethodEntry* begin,
                                    const MethodEntry* end) {
   if (!msg.ok()) {
@@ -22,8 +22,7 @@ namespace internal {
   auto* hdr = msg.header();
   while (begin < end) {
     if (hdr->ordinal == begin->ordinal) {
-      fidl::Status decode_status =
-          begin->dispatch(impl, std::move(msg), std::move(transport_context), txn);
+      fidl::Status decode_status = begin->dispatch(impl, std::move(msg), storage_view, txn);
       if (unlikely(!decode_status.ok())) {
         ZX_DEBUG_ASSERT(decode_status.reason() == fidl::Reason::kDecodeError);
         txn->InternalError(UnbindInfo{decode_status}, fidl::ErrorOrigin::kReceive);
@@ -36,10 +35,9 @@ namespace internal {
 }
 
 void Dispatch(void* impl, ::fidl::IncomingMessage& msg,
-              fidl::internal::IncomingTransportContext transport_context, ::fidl::Transaction* txn,
+              fidl::internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn,
               const MethodEntry* begin, const MethodEntry* end) {
-  ::fidl::DispatchResult result =
-      TryDispatch(impl, msg, std::move(transport_context), txn, begin, end);
+  ::fidl::DispatchResult result = TryDispatch(impl, msg, storage_view, txn, begin, end);
   switch (result) {
     case ::fidl::DispatchResult::kNotFound:
       std::move(msg).CloseHandles();

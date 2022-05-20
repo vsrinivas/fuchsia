@@ -19,12 +19,6 @@ void* TransportContextBase::release(const TransportVTable* vtable) {
   return data;
 }
 
-IncomingTransportContext::~IncomingTransportContext() {
-  if (vtable_ && vtable_->close_incoming_transport_context) {
-    vtable_->close_incoming_transport_context(data_);
-  }
-}
-
 OutgoingTransportContext::~OutgoingTransportContext() {
   if (vtable_ && vtable_->close_outgoing_transport_context) {
     vtable_->close_outgoing_transport_context(data_);

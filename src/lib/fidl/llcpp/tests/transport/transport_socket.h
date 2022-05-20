@@ -27,13 +27,17 @@ class ServerBindingRef;
 
 namespace internal {
 
+// A view into an object providing storage for messages read from a Zircon socket.
+struct SocketMessageStorageView : public MessageStorageViewBase {
+  fidl::BufferSpan bytes;
+};
+
 struct SocketHandleMetadata {};
 
 struct SocketTransport {
   using OwnedType = zx::socket;
   using UnownedType = zx::unowned_socket;
   using HandleMetadata = SocketHandleMetadata;
-  using IncomingTransportContextType = struct {};
   using OutgoingTransportContextType = struct {};
   template <typename Protocol>
   using ClientEnd = fidl::socket::ClientEnd<Protocol>;
@@ -43,6 +47,7 @@ struct SocketTransport {
   using ServerEnd = fidl::socket::ServerEnd<Protocol>;
   template <typename Protocol>
   using ServerBindingRef = fidl::socket::ServerBindingRef<Protocol>;
+  using MessageStorageView = SocketMessageStorageView;
 
   static constexpr bool kTransportProvidesReadBuffer = false;
   static constexpr uint32_t kNumIovecs = 1;

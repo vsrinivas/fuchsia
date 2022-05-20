@@ -154,8 +154,8 @@ void ClientBase::TryAsyncDeliverError(::fidl::Status error, ResponseContext* con
   }
 }
 
-std::optional<UnbindInfo> ClientBase::Dispatch(
-    fidl::IncomingMessage& msg, internal::IncomingTransportContext transport_context) {
+std::optional<UnbindInfo> ClientBase::Dispatch(fidl::IncomingMessage& msg,
+                                               internal::MessageStorageViewBase* storage_view) {
   if (fit::nullable epitaph = msg.maybe_epitaph(); unlikely(epitaph)) {
     return UnbindInfo::PeerClosed((*epitaph)->error);
   }
@@ -163,7 +163,7 @@ std::optional<UnbindInfo> ClientBase::Dispatch(
   auto* hdr = msg.header();
   if (hdr->txid == 0) {
     // Dispatch events (received messages with no txid).
-    return event_dispatcher_->DispatchEvent(msg, std::move(transport_context));
+    return event_dispatcher_->DispatchEvent(msg, storage_view);
   }
 
   // If this is a response, look up the corresponding ResponseContext based on the txid.
@@ -179,7 +179,7 @@ std::optional<UnbindInfo> ClientBase::Dispatch(
           Status::UnexpectedMessage(ZX_ERR_NOT_FOUND, fidl::internal::kErrorUnknownTxId)};
     }
   }
-  return context->OnRawResult(std::move(msg), std::move(transport_context));
+  return context->OnRawResult(std::move(msg), storage_view);
 }
 
 void ClientController::Bind(AnyTransport client_end, async_dispatcher_t* dispatcher,

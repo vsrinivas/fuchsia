@@ -196,8 +196,12 @@ bool Connection::OnMessage() {
   zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
   fidl_channel_handle_metadata_t handle_metadata[ZX_CHANNEL_MAX_MSG_HANDLES];
   fidl::IncomingMessage msg =
-      fidl::MessageRead(binding->channel(), fidl::BufferSpan(bytes, std::size(bytes)), handles,
-                        handle_metadata, ZX_CHANNEL_MAX_MSG_HANDLES);
+      fidl::MessageRead(binding->channel(), fidl::ChannelMessageStorageView{
+                                                .bytes = fidl::BufferSpan(bytes, sizeof(bytes)),
+                                                .handles = handles,
+                                                .handle_metadata = handle_metadata,
+                                                .handle_capacity = ZX_CHANNEL_MAX_MSG_HANDLES,
+                                            });
   if (!msg.ok()) {
     return false;
   }

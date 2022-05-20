@@ -76,8 +76,13 @@ class FakeClientImpl {
   fidl::IncomingMessage ReadFromServer() {
     return fidl::MessageRead(
         server_end_.channel(),
-        fidl::BufferSpan(read_buffer_.data(), static_cast<uint32_t>(read_buffer_.size())), nullptr,
-        nullptr, 0);
+        fidl::ChannelMessageStorageView{
+            .bytes =
+                fidl::BufferSpan(read_buffer_.data(), static_cast<uint32_t>(read_buffer_.size())),
+            .handles = nullptr,
+            .handle_metadata = nullptr,
+            .handle_capacity = 0,
+        });
   }
 
  private:
@@ -93,8 +98,7 @@ class FakeWireEventDispatcher
 
  private:
   std::optional<fidl::UnbindInfo> DispatchEvent(
-      fidl::IncomingMessage& msg,
-      fidl::internal::IncomingTransportContext transport_context) override {
+      fidl::IncomingMessage& msg, fidl::internal::MessageStorageViewBase* storage_view) override {
     ZX_PANIC("Never used in this test");
   }
 };
@@ -106,7 +110,7 @@ class MockResponseContext : public fidl::internal::ResponseContext {
 
   std::optional<fidl::UnbindInfo> OnRawResult(
       ::fidl::IncomingMessage&& msg,
-      fidl::internal::IncomingTransportContext transport_context) override {
+      fidl::internal::MessageStorageViewBase* storage_view) override {
     if (msg.ok()) {
       // We never get a response from the server in this test.
       ZX_PANIC("Never used in this test");

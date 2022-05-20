@@ -6,123 +6,110 @@
 
 {{- define "driver/Method:UnownedResult:MessagingHeader" }}
 {{- EnsureNamespace "" }}
+
 template<>
 class [[nodiscard]] {{ .WireUnownedResult }} final : public ::fidl::Status {
  public:
   {{- if .Transport.HasSyncClient }}
-  {{- $args := (printf "::%s::UnownedClientEnd<%s> client_end" .Transport.Namespace .Protocol) }}
-  {{- $args = (List $args "const ::fdf::Arena& arena") }}
-  {{- $args = (List $args (printf "%s* request" .WireTransactionalRequest)) }}
-  explicit {{ .WireUnownedResult.Self }}({{ RenderParams $args }});
+    {{- $args := (printf "::%s::UnownedClientEnd<%s> client_end" .Transport.Namespace .Protocol) }}
+    {{- $args = (List $args "const ::fdf::Arena& arena") }}
+    {{- $args = (List $args (printf "%s* request" .WireTransactionalRequest)) }}
+    explicit {{ .WireUnownedResult.Self }}({{ RenderParams $args }});
   {{- end }}
+
   {{- if .HasResponse }}
-  explicit {{ .WireUnownedResult.Self }}({{ .WireTransactionalResponse }}* response)
-      : bytes_(reinterpret_cast<uint8_t*>(response)) {
-    {{- if .Result }}
-    auto* raw_response = reinterpret_cast<{{ .WireResponse }} *>(
-        bytes_ + sizeof(fidl_message_header_t));
-    if (raw_response->result.is_err()) {
-      result_ = fitx::error(raw_response->result.err());
-    } else {
-      result_ = fitx::ok({{ if .Result.ValueParameters }}&(raw_response->result.response()){{ end }});
-    }
-    {{- end }}
-  }
-  {{- end }}
-  explicit {{ .WireUnownedResult.Self }}(const ::fidl::Status& result) : ::fidl::Status(result) {}
-  {{- if .HasResponse }}
-  explicit {{ .WireUnownedResult.Self }}(
-    ::fidl::unstable::DecodedMessage<{{ .WireTransactionalResponse }}>&& decoded,
-    ::fidl::internal::IncomingTransportContext context)
-      : ::fidl::Status(decoded), arena_(context.release<::fidl::internal::DriverTransport>())
-        {
-    if (decoded.ok()) {
-      bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
+    explicit {{ .WireUnownedResult.Self }}({{ .WireTransactionalResponse }}* response)
+        : fidl::Status(fidl::Status::Ok()), decoded_(response) {
       {{- if .Result }}
-      auto* raw_response = reinterpret_cast<{{ .WireResponse }} *>(
-          bytes_ + sizeof(fidl_message_header_t));
-      if (raw_response->result.is_err()) {
-        result_ = fitx::error(raw_response->result.err());
-      } else if (raw_response->result.is_response()) {
-        result_ = fitx::ok(
-          {{- if .Result.ValueParameters -}}
-            &(raw_response->result.response())
-          {{- end -}}
-        );
-      }
+      auto* raw_response = &decoded_.Value()->body;
+        if (raw_response->result.is_err()) {
+          result_ = fitx::error(raw_response->result.err());
+        } else {
+          result_ = fitx::ok({{ if .Result.ValueParameters }}&(raw_response->result.response()){{ end }});
+        }
       {{- end }}
-    } else {
-      bytes_ = nullptr;
     }
-    decoded.ReleasePrimaryObject();
-  }
+
+    explicit {{ .WireUnownedResult.Self }}(
+      ::fidl::unstable::DecodedMessage<{{ .WireTransactionalResponse }}>&& decoded,
+      ::fidl::internal::MessageStorageViewBase* storage_view
+    ) : ::fidl::Status(decoded), arena_(::fidl::internal::TakeDriverArenaFromStorage(storage_view)) {
+      if (decoded.ok()) {
+        decoded_ = decoded.Take();
+        {{- if .Result }}
+        auto* raw_response = &decoded_.Value()->body;
+        if (raw_response->result.is_err()) {
+          result_ = fitx::error(raw_response->result.err());
+        } else if (raw_response->result.is_response()) {
+          result_ = fitx::ok(
+            {{- if .Result.ValueParameters -}}
+              &(raw_response->result.response())
+            {{- end -}}
+          );
+        }
+        {{- end }}
+      }
+    }
   {{- end }}
+
+  explicit {{ .WireUnownedResult.Self }}(const ::fidl::Status& result) : ::fidl::Status(result) {}
   {{ .WireUnownedResult.Self }}({{ .WireUnownedResult.Self }}&&) = delete;
   {{ .WireUnownedResult.Self }}(const {{ .WireUnownedResult.Self }}&) = delete;
   {{ .WireUnownedResult.Self }}* operator=({{ .WireUnownedResult.Self }}&&) = delete;
   {{ .WireUnownedResult.Self }}* operator=(const {{ .WireUnownedResult.Self }}&) = delete;
-  {{- if and .HasResponse .Response.IsResource }}
-  ~{{ .WireUnownedResult.Self }}() {
-    if (ok()) {
-      Unwrap()->_CloseHandles();
-    }
-  }
-  {{- else }}
-  ~{{ .WireUnownedResult.Self }}() = default;
-  {{- end }}
-  {{- if .HasResponse }}
 
   {{- if .ResponseArgs }}
-  {{ .WireResponse }}* Unwrap() {
-    ZX_DEBUG_ASSERT(ok());
-    return &(reinterpret_cast<{{ .WireTransactionalResponse }}*>(bytes_)->body);
-  }
-  const {{ .WireResponse }}* Unwrap() const {
-    ZX_DEBUG_ASSERT(ok());
-    return &(reinterpret_cast<const {{ .WireTransactionalResponse }}*>(bytes_)->body);
-  }
+    {{ .WireResponse }}* Unwrap() {
+      ZX_ASSERT(ok());
+      return &decoded_.Value()->body;
+    }
+    const {{ .WireResponse }}* Unwrap() const {
+      ZX_ASSERT(ok());
+      return &decoded_.Value()->body;
+    }
 
-  {{ .WireResultBase }}* Unwrap_NEW() {
-    {{- if .Result }}
-      return &result_.value();
-    {{- else }}
-    ZX_DEBUG_ASSERT(ok());
-    return &(reinterpret_cast<{{ .WireTransactionalResponse }}*>(bytes_)->body);
-    {{- end }}
-  }
-  const {{ .WireResultBase }}* Unwrap_NEW() const {
-    {{- if .Result }}
-      return &result_.value();
-    {{- else }}
-    ZX_DEBUG_ASSERT(ok());
-    return &(reinterpret_cast<const {{ .WireTransactionalResponse }}*>(bytes_)->body);
-    {{- end }}
-  }
+    {{ .WireResultBase }}* Unwrap_NEW() {
+      {{- if .Result }}
+        return &result_.value();
+      {{- else }}
+        ZX_ASSERT(ok());
+        return &decoded_.Value()->body;
+      {{- end }}
+    }
+    const {{ .WireResultBase }}* Unwrap_NEW() const {
+      {{- if .Result }}
+        return &result_.value();
+      {{- else }}
+        ZX_ASSERT(ok());
+        return &decoded_.Value()->body;
+      {{- end }}
+    }
 
-  {{ .WireResponse }}& value() { return *Unwrap(); }
-  const {{ .WireResponse }}& value() const { return *Unwrap(); }
+    {{ .WireResponse }}& value() { return *Unwrap(); }
+    const {{ .WireResponse }}& value() const { return *Unwrap(); }
 
-  {{ .WireResultBase }}& value_NEW() { return *Unwrap_NEW(); }
-  const {{ .WireResultBase }}& value_NEW() const { return *Unwrap_NEW(); }
+    {{ .WireResultBase }}& value_NEW() { return *Unwrap_NEW(); }
+    const {{ .WireResultBase }}& value_NEW() const { return *Unwrap_NEW(); }
 
-  {{ .WireResponse }}* operator->() { return &value(); }
-  const {{ .WireResponse }}* operator->() const { return &value(); }
+    {{ .WireResponse }}* operator->() { return &value(); }
+    const {{ .WireResponse }}* operator->() const { return &value(); }
 
-  {{ .WireResponse }}& operator*() { return value(); }
-  const {{ .WireResponse }}& operator*() const { return value(); }
+    {{ .WireResponse }}& operator*() { return value(); }
+    const {{ .WireResponse }}& operator*() const { return value(); }
   {{- end }}
 
-  fdf::Arena& arena() {
-    ZX_DEBUG_ASSERT(ok());
-    return arena_;
-  }
+  {{- if .HasResponse }}
+    fdf::Arena& arena() {
+      ZX_ASSERT(ok());
+      return arena_;
+    }
 
- private:
-  uint8_t* bytes_;
-  fdf::Arena arena_;
-  {{- if .Result }}
-  std::optional<{{ .WireResultBase }}> result_ = std::nullopt;
-  {{- end }}
+   private:
+    ::fidl::internal::DecodedValue<{{ .WireTransactionalResponse }}> decoded_;
+    ::fdf::Arena arena_;
+    {{- if .Result }}
+      std::optional<{{ .WireResultBase }}> result_ = std::nullopt;
+    {{- end }}
   {{- end }}
 };
 {{- end }}
@@ -148,42 +135,45 @@ class [[nodiscard]] {{ .WireUnownedResult }} final : public ::fidl::Status {
   ::fidl::unstable::UnownedEncodedMessage<{{ .WireTransactionalRequest }}, fidl::internal::DriverTransport> request_message(
       buffer, buffer_size, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-{{- if .HasResponse }}
-  ::fidl::internal::IncomingTransportContext incoming_context;
-  ::fidl::CallOptions call_options = {
-    .outgoing_transport_context =
-     ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
-       arena.get()),
-    .out_incoming_transport_context = &incoming_context,
-  };
-  uint32_t call_result_num_bytes;
-  outgoing.Call<{{ .WireTransactionalResponse }}>(
-    client_end.handle(), &bytes_, &call_result_num_bytes, std::move(call_options));
-  arena_ = fdf::Arena(incoming_context.release<fidl::internal::DriverTransport>());
-  {{- if .Result }}
-  if (outgoing.ok()) {
-    auto* raw_response = reinterpret_cast<{{ .WireResponse }} *>(
-        bytes_ + sizeof(fidl_message_header_t));
-    if (raw_response->result.is_err()) {
-      result_ = fitx::error(raw_response->result.err());
-    } else if (raw_response->result.is_response()) {
-      result_ = fitx::ok(
-        {{- if .Result.ValueParameters -}}
-          &(raw_response->result.response())
-        {{- end -}}
-      );
+
+  {{- if .HasResponse }}
+    {{ .IncomingMessageStorageForResponse }} response_storage;
+    ::fidl::CallOptions call_options = {
+        .outgoing_transport_context =
+            ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
+                arena.get()),
+    };
+    ::fidl::unstable::DecodedMessage<{{ .WireTransactionalResponse }}> decoded{
+        outgoing.Call(client_end.handle(), response_storage.view(), std::move(call_options))
+    };
+    SetStatus(decoded);
+    if (ok()) {
+      decoded_ = decoded.Take();
     }
-  }
+    arena_ = std::move(response_storage.arena);
+    {{- if .Result }}
+      if (ok()) {
+        auto* raw_response = &decoded_.Value()->body;
+        if (raw_response->result.is_err()) {
+          result_ = fitx::error(raw_response->result.err());
+        } else if (raw_response->result.is_response()) {
+          result_ = fitx::ok(
+            {{- if .Result.ValueParameters -}}
+              &(raw_response->result.response())
+            {{- end -}}
+          );
+        }
+      }
+    {{- end }}
+  {{- else }}
+    ::fidl::WriteOptions write_options = {
+        .outgoing_transport_context =
+            ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
+                arena.get()),
+    };
+    outgoing.Write(client_end.handle(), std::move(write_options));
+    SetStatus(outgoing);
   {{- end }}
-{{- else }}
-  ::fidl::WriteOptions write_options = {
-    .outgoing_transport_context =
-     ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
-       arena.get()),
-  };
-  outgoing.Write(client_end.handle(), std::move(write_options));
-{{- end }}
-  ::fidl::Status::operator=(outgoing);
 }
 {{- EndifFuchsia -}}
 {{- end }}
