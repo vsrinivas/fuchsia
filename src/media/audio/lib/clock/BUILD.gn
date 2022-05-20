@@ -11,10 +11,15 @@ source_set("clock") {
     "audio_clock.h",
     "audio_clock_coefficients.h",
     "audio_clock_factory.h",
+    "clock.h",
     "clone_mono.cc",
     "clone_mono.h",
     "pid_control.cc",
     "pid_control.h",
+    "real_clock.cc",
+    "real_clock.h",
+    "synthetic_clock.cc",
+    "synthetic_clock.h",
     "utils.cc",
     "utils.h",
   ]
@@ -28,6 +33,7 @@ source_set("clock") {
     "//src/media/audio/lib/timeline",
     "//third_party/googletest:gtest_prod",
     "//zircon/system/ulib/affine",
+    "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zx",
   ]
 }
@@ -41,6 +47,8 @@ executable("unittest_bin") {
     "audio_clock_unittest.cc",
     "clone_mono_unittest.cc",
     "pid_control_unittest.cc",
+    "real_clock_unittest.cc",
+    "synthetic_clock_unittest.cc",
     "utils_unittest.cc",
   ]
 
