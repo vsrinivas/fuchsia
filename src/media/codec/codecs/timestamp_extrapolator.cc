@@ -28,7 +28,7 @@ std::optional<uint64_t> TimestampExtrapolator::Extrapolate(size_t offset) {
                       last_information.offset);
 
   if (!timebase_) {
-    if (offset == last_information_->offset) {
+    if (offset == last_information.offset) {
       return last_information.timestamp;
     } else {
       return std::nullopt;
