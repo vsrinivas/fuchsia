@@ -15,6 +15,26 @@ use tracing::Event;
 use tracing_core::field::{Field, Visit};
 use tracing_log::NormalizeEvent;
 
+/// Arguments to create a record for testing purposes.
+pub struct TestRecordArgs<'a> {
+    /// Severity of the log
+    pub severity: Severity,
+    /// Tags associated with the log record.
+    pub tags: Option<&'a [String]>,
+    /// Process that emitted the log.
+    pub pid: zx::Koid,
+    /// Thread that emitted the log.
+    pub tid: zx::Koid,
+    /// File that emitted the log.
+    pub file: &'a str,
+    /// Line in the file that emitted the log.
+    pub line: u32,
+    /// Number of logs that were dropped before this record.
+    pub dropped: u32,
+    /// Additional record arguments.
+    pub record_arguments: Vec<Argument>,
+}
+
 /// An `Encoder` wraps any value implementing `BufMutShared` and writes diagnostic stream records
 /// into it.
 pub struct Encoder<B> {
@@ -62,30 +82,21 @@ where
 
     /// Writes a `Record` to the buffer, including extra fields to match the behavior for recording
     /// an event.
-    pub fn write_record_for_test(
-        &mut self,
-        record: &Record,
-        tags: Option<&[String]>,
-        pid: zx::Koid,
-        tid: zx::Koid,
-        file: &str,
-        line: u32,
-        dropped: u32,
-    ) -> Result<(), EncodingError> {
+    pub fn write_record_for_test(&mut self, args: TestRecordArgs<'_>) -> Result<(), EncodingError> {
         let mut builder = RecordBuilder::new(
-            record.severity,
-            pid.raw_koid() as u64,
-            tid.raw_koid() as u64,
-            Some(file),
-            Some(line),
-            dropped,
+            args.severity,
+            args.pid.raw_koid() as u64,
+            args.tid.raw_koid() as u64,
+            Some(args.file),
+            Some(args.line),
+            args.dropped,
         );
-        if let Some(tags) = tags {
+        if let Some(tags) = args.tags {
             for tag in tags {
                 builder.add_tag(tag.as_ref());
             }
         }
-        builder.inner.arguments.extend(record.arguments.iter().cloned());
+        builder.inner.arguments.extend(args.record_arguments.into_iter());
         self.write_record(&builder.inner)
     }
 
@@ -210,10 +221,7 @@ impl RecordBuilder {
         dropped: u32,
     ) -> Self {
         let timestamp = zx::Time::get_monotonic().into_nanos();
-        let mut arguments = vec![];
-
-        arguments.push(arg!("pid", UnsignedInt(pid)));
-        arguments.push(arg!("tid", UnsignedInt(tid)));
+        let mut arguments = vec![arg!("pid", UnsignedInt(pid)), arg!("tid", UnsignedInt(tid))];
 
         if dropped > 0 {
             arguments.push(arg!("num_dropped", UnsignedInt(dropped)));
@@ -277,7 +285,6 @@ impl Visit for RecordBuilder {
     }
 }
 
-#[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99062)
 /// Analogous to `bytes::BufMut`, but immutably-sized and appropriate for use in shared memory.
 pub trait BufMutShared {
     /// Returns the number of total bytes this container can store. Shared memory buffers are not
@@ -288,11 +295,17 @@ pub trait BufMutShared {
     /// Returns the current position into which the next write is expected.
     fn cursor(&self) -> usize;
 
-    /// Advance the write cursor by `n` bytes. This is marked unsafe because a malformed caller may
+    /// Advance the write cursor by `n` bytes.
+    ///
+    /// # Safety
+    ///
+    /// This is marked unsafe because a malformed caller may
     /// cause a subsequent out-of-bounds write.
     unsafe fn advance_cursor(&mut self, n: usize);
 
     /// Write a copy of the `src` slice into the buffer, starting at the provided offset.
+    ///
+    /// # Safety
     ///
     /// Implementations are not expected to bounds check the requested copy, although they may do
     /// so and still satisfy this trait's contract.
@@ -335,7 +348,7 @@ pub trait BufMutShared {
     /// # Panics
     ///
     /// This function panics if there is not enough remaining capacity in `self`.
-    fn put_slice(&mut self, src: &[u8]) -> Result<(), ()> {
+    fn put_slice(&mut self, src: &[u8]) -> Result<(), EncodingError> {
         if self.has_remaining(src.len()) {
             unsafe {
                 self.put_slice_at(src, self.cursor());
@@ -343,7 +356,7 @@ pub trait BufMutShared {
             }
             Ok(())
         } else {
-            Err(())
+            Err(EncodingError::NoCapacity)
         }
     }
 
@@ -364,7 +377,7 @@ pub trait BufMutShared {
     /// # Panics
     ///
     /// This function panics if there is not enough remaining capacity in `self`.
-    fn put_u64_le(&mut self, n: u64) -> Result<(), ()> {
+    fn put_u64_le(&mut self, n: u64) -> Result<(), EncodingError> {
         self.put_slice(&n.to_le_bytes())
     }
 
@@ -385,7 +398,7 @@ pub trait BufMutShared {
     /// # Panics
     ///
     /// This function panics if there is not enough remaining capacity in `self`.
-    fn put_i64_le(&mut self, n: i64) -> Result<(), ()> {
+    fn put_i64_le(&mut self, n: i64) -> Result<(), EncodingError> {
         self.put_slice(&n.to_le_bytes())
     }
 
@@ -406,7 +419,7 @@ pub trait BufMutShared {
     /// # Panics
     ///
     /// This function panics if there is not enough remaining capacity in `self`.
-    fn put_f64(&mut self, n: f64) -> Result<(), ()> {
+    fn put_f64(&mut self, n: f64) -> Result<(), EncodingError> {
         self.put_slice(&n.to_bits().to_ne_bytes())
     }
 }
@@ -502,6 +515,10 @@ pub enum EncodingError {
     /// the Fuchsia Tracing format.
     #[error("unsupported value type")]
     Unsupported,
+
+    /// We attempted to write to a buffer with no remaining capacity.
+    #[error("the buffer has no remaining capacity")]
+    NoCapacity,
 }
 
 impl From<TryFromSliceError> for EncodingError {

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 use crate::PublishError;
-use diagnostics_log_encoding::encode::{BufMutShared, Encoder, EncodingError};
+use diagnostics_log_encoding::encode::{BufMutShared, Encoder, EncodingError, TestRecordArgs};
 use fidl_fuchsia_diagnostics_stream::Record;
 use fidl_fuchsia_logger::{LogSinkProxy, MAX_DATAGRAM_LEN_BYTES};
 use fuchsia_runtime as rt;
@@ -75,15 +75,16 @@ impl Sink {
 
     pub fn event_for_testing(&self, file: &str, line: u32, record: Record) {
         self.encode_and_send(move |encoder, previously_dropped| {
-            encoder.write_record_for_test(
-                &record,
-                self.tags.as_ref().map(|t| t.as_ref()),
-                *PROCESS_ID,
-                THREAD_ID.with(|t| *t),
+            encoder.write_record_for_test(TestRecordArgs {
+                severity: record.severity,
+                record_arguments: record.arguments,
+                tags: self.tags.as_ref().map(|t| t.as_ref()),
+                pid: *PROCESS_ID,
+                tid: THREAD_ID.with(|t| *t),
                 file,
                 line,
-                previously_dropped,
-            )
+                dropped: previously_dropped,
+            })
         });
     }
 }
