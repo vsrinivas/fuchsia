@@ -7,7 +7,6 @@ import("//build/rust/rustc_binary.gni")
 import("//build/sdk/sdk_host_tool.gni")
 
 rustc_binary("fake-omaha-client") {
-  output_name = "fake-omaha-client"
   with_unit_tests = true
   edition = "2018"
 

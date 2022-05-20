@@ -5,7 +5,6 @@
 import("//build/rust/rustc_binary.gni")
 
 rustc_binary("bt-le-battery-service") {
-  output_name = "bt-le-battery-service"
   deps = [
     "//sdk/fidl/fuchsia.bluetooth.gatt:fuchsia.bluetooth.gatt-rustc",
     "//sdk/fidl/fuchsia.power.battery:fuchsia.power.battery-rustc",
