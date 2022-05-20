@@ -232,6 +232,10 @@ zx_status_t Device::WlanphyImplDestroyIface(uint16_t iface_id) {
         return ZX_ERR_NOT_FOUND;
       }
       wireless_dev* wdev = client_interface_->take_wdev();
+      // Remove the network device port so no additional frames are queued up for transmission. Do
+      // this before the TX queue is flushed as part of deleting the interface. That way no stray
+      // TX frames can sneak into the TX queue between flushing the queue and removing the port.
+      client_interface_->RemovePort();
       if ((status = brcmf_cfg80211_del_iface(brcmf_pub_->config, wdev)) != ZX_OK) {
         BRCMF_ERR("Device::WlanphyImplDestroyIface() failed to cleanup STA interface, %s",
                   zx_status_get_string(status));
@@ -250,6 +254,10 @@ zx_status_t Device::WlanphyImplDestroyIface(uint16_t iface_id) {
         return ZX_ERR_NOT_FOUND;
       }
       wireless_dev* wdev = ap_interface_->take_wdev();
+      // Remove the network device port so no additional frames are queued up for transmission. Do
+      // this before the TX queue is flushed as part of deleting the interface. That way no stray
+      // TX frames can sneak into the TX queue between flushing the queue and removing the port.
+      ap_interface_->RemovePort();
       if ((status = brcmf_cfg80211_del_iface(brcmf_pub_->config, wdev)) != ZX_OK) {
         BRCMF_ERR("Device::WlanphyImplDestroyIface() failed to destroy AP interface, %s",
                   zx_status_get_string(status));
