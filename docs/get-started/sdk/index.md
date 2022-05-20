@@ -3,7 +3,7 @@
 This guide provides step-by-step instructions on setting up the
 Fuchsia SDK development environment on your host machine. The guide then walks
 you through the basic workflows of building, running, debugging, and testing
-Fuchsia components using [the Fuchsia SDK][using-the-sdk].
+Fuchsia components using the [Fuchsia SDK][using-the-sdk].
 
 Important: The Fuchsia SDK is in active development. At the moment, Fuchsia
 does not support general public usage of the Fuchsia SDK. The APIs in the

@@ -1,13 +1,14 @@
 # Get started with driver development
 
 This guide provides step-by-step instructions that walk you through the basic
-workflows of building, running, debugging, and updating a driver component using
-the [Fuchsia SDK][using-the-sdk].
+workflows of building, running, debugging, and updating
+[drivers][driver-concepts] in a Fuchsia system using the
+[Fuchsia SDK][using-the-sdk].
 
 Important: This guide is the driver equivalent of the
-[_Get started with the Fuchsia SDK_][get-started-sdk] guide. If you
-haven't already, it's strongly recommended that you complete the _Get started
-with the Fuchsia SDK_ guide first.
+[_Get started with the Fuchsia SDK_][get-started-sdk] guide. If you haven't
+already, it's strongly recommended that you complete the _Get started with the
+Fuchsia SDK_ guide first.
 
 Complete the following sections:
 
@@ -211,7 +212,7 @@ Do the following:
 ## 3. Start the emulator {:#start-the-emulator}
 
 Start the Fuchsia emulator on the host machine while configuring the emulator
-instance to use Fuchsia’s new driver framework.
+instance to use Fuchsia’s new [driver framework][driver-framework] (DFv2).
 
 The tasks include:
 
@@ -308,7 +309,7 @@ Do the following:
 
 ## 4. Build and load the sample driver {:#build-and-load-the-sample-driver}
 
-The Workstation image (launched in the [Start the emulator](#start-the-emulator)
+The Fuchsia emulator (launched in the [Start the emulator](#start-the-emulator)
 section above) is configured to create a virtual device named
 [`edu`][edu-device], which  is an educational device for writing drivers.
 In the previous section, when the emulator started, Fuchsia’s driver framework
@@ -534,8 +535,8 @@ Do the following:
 
 ## 6. Debug the sample driver {:#debug-the-sample-driver}
 
-Use the Fuchsia debugger (`zxdb`) to step through the sample driver’s code as
-the driver is running on the emulator instance.
+Use the Fuchsia debugger ([`zxdb`][zxdb-user-guide]) to step through the
+sample driver’s code as the driver is running on the emulator instance.
 
 The tasks include:
 
@@ -849,6 +850,11 @@ Do the following:
 
 **Congratulations! You’re now all set with the Fuchsia driver development!**
 
+## Next steps {:#next-steps}
+
+Learn more about how the `qemu_edu` driver works in the
+[Driver sample walkthrough: qemu_edu][driver-sample-walkthrough] guide.
+
 ## Appendices
 
 ### Clean up the environment {:#clean-up-the-environment}
@@ -939,3 +945,6 @@ killall pm
 [qemu-edu]: https://fuchsia.googlesource.com/sdk-samples/drivers/+/refs/heads/main/src/qemu_edu/
 [eductl-cml]: https://fuchsia.googlesource.com/sdk-samples/drivers/+/refs/heads/main/src/qemu_edu/meta/eductl.cml
 [zxdb-user-guide]: /docs/development/debugger/README.md
+[driver-concepts]: /docs/concepts/drivers/README.md
+[driver-sample-walkthrough]: /docs/development/sdk/driver-sample-qemu-edu.md
+[driver-framework]: /docs/concepts/drivers/driver_framework.md
