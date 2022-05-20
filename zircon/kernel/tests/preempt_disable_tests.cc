@@ -451,6 +451,9 @@ static bool test_local_preempt_pending() {
   // 3. arch_blocking_disallowed() should cause a preemption event to become pending.
   EXPECT_TRUE(setup_and_run_with([](Event& event) {
     BEGIN_TEST;
+    // The fault handler may use the blocking disallowed state as a recursion check so be sure to
+    // keep interrupts disabled when we've got blocking set to disallowed.
+    InterruptDisableGuard irqd;
     arch_set_blocking_disallowed(true);
     auto cleanup = fit::defer([]() { arch_set_blocking_disallowed(false); });
     // Unblock the |waiter|.  Because blocking is disallowed, a preemption event for the local CPU
