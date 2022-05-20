@@ -36,8 +36,6 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_RS_NG_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_RS_NG_H_
 
-#include <fuchsia/hardware/wlan/phyinfo/c/banjo.h>
-
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/API_rates.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/_rateScaleMng.h"

@@ -18,7 +18,6 @@
 #include "mac.h"
 
 #include <fuchsia/hardware/wlan/associnfo/c/banjo.h>
-#include <fuchsia/hardware/wlan/phyinfo/c/banjo.h>
 #include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/internal/c/banjo.h>
 #include <stdlib.h>

@@ -53,7 +53,6 @@ source_set("core") {
     "//zircon/system/ulib/sync",
   ]
   public_deps = [
-    "//sdk/banjo/fuchsia.hardware.wlan.phyinfo:fuchsia.hardware.wlan.phyinfo_banjo_c",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform",
     "//zircon/system/public",
   ]

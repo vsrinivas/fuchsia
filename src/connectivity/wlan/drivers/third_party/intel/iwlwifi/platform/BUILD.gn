@@ -46,7 +46,6 @@ source_set("platform") {
     "//zircon/system/ulib/async:async-cpp",
   ]
   public_deps = [
-    "//sdk/banjo/fuchsia.hardware.wlan.phyinfo:fuchsia.hardware.wlan.phyinfo_banjo_c",
     "//sdk/banjo/fuchsia.hardware.wlan.softmac:fuchsia.hardware.wlan.softmac_banjo_c",
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_banjo_c",
     "//src/connectivity/wlan/lib/common/cpp:common",
@@ -117,7 +116,6 @@ source_set("fuchsia_device") {
     ":fuchsia_bind_header",
     ":platform",
     ":rcu_manager",
-    "//sdk/banjo/fuchsia.hardware.wlan.phyinfo:fuchsia.hardware.wlan.phyinfo_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.wlan.softmac:fuchsia.hardware.wlan.softmac_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.wlanphyimpl:fuchsia.hardware.wlanphyimpl_banjo_cpp",
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_banjo_cpp",

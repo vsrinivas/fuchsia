@@ -34,7 +34,6 @@
  *****************************************************************************/
 
 #include <fuchsia/hardware/wlan/associnfo/c/banjo.h>
-#include <fuchsia/hardware/wlan/phyinfo/c/banjo.h>
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/fw-api.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
