@@ -19,7 +19,6 @@
 
 #include "src/developer/forensics/feedback_data/attachments/types.h"
 #include "src/developer/forensics/feedback_data/log_source.h"
-#include "src/developer/forensics/utils/fit/timeout.h"
 #include "src/developer/forensics/utils/redact/redactor.h"
 #include "src/developer/forensics/utils/storage_size.h"
 #include "src/lib/fxl/memory/weak_ptr.h"

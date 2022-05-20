@@ -22,7 +22,6 @@
 #include "src/developer/forensics/feedback_data/inspect_data_budget.h"
 #include "src/developer/forensics/utils/cobalt/logger.h"
 #include "src/developer/forensics/utils/cobalt/metrics.h"
-#include "src/developer/forensics/utils/fit/timeout.h"
 #include "src/developer/forensics/utils/previous_boot_file.h"
 #include "src/developer/forensics/utils/redact/redactor.h"
 #include "src/lib/timekeeper/system_clock.h"
@@ -64,7 +63,6 @@ class Datastore {
   ::fpromise::promise<Attachment> BuildAttachment(const AttachmentKey& key, zx::duration timeout);
   ::fpromise::promise<AttachmentValue> BuildAttachmentValue(const AttachmentKey& key,
                                                             zx::duration timeout);
-  fit::Timeout MakeCobaltTimeout(cobalt::TimedOutData data, zx::duration timeout);
 
   async_dispatcher_t* dispatcher_;
   const std::shared_ptr<sys::ServiceDirectory> services_;

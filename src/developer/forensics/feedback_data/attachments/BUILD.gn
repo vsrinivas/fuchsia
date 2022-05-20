@@ -2,42 +2,46 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-visibility = [ "//src/developer/forensics/feedback_data/*" ]
-
 ###############################################################################
 # SOURCES
 ###############################################################################
-source_set("attachment_providers") {
+source_set("attachments") {
   sources = [
-    "inspect.cc",
-    "inspect.h",
-    "kernel_log.cc",
-    "kernel_log.h",
-    "screenshot_ptr.cc",
-    "screenshot_ptr.h",
-    "system_log.cc",
-    "system_log.h",
+    "metrics.cc",
+    "metrics.h",
+    "static_attachments.cc",
+    "static_attachments.h",
+    "types.h",
   ]
 
   public_deps = [
-    ":types",
-    "//sdk/fidl/fuchsia.boot",
+    "//sdk/lib/syslog/cpp",
+    "//src/developer/forensics/utils:errors",
+    "//src/developer/forensics/utils/cobalt",
+  ]
+
+  deps = [
+    "//src/developer/forensics/feedback_data:constants",
+    "//src/lib/files",
+    "//src/lib/fxl",
+  ]
+}
+
+source_set("inspect") {
+  sources = [
+    "inspect.cc",
+    "inspect.h",
+  ]
+
+  public_deps = [
+    ":attachments",
     "//sdk/fidl/fuchsia.diagnostics",
-    "//sdk/fidl/fuchsia.images",
-    "//sdk/fidl/fuchsia.logger",
-    "//sdk/fidl/fuchsia.ui.scenic",
-    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/fit",
     "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
-    "//src/developer/forensics/feedback_data:inspect_budget",
-    "//src/developer/forensics/feedback_data:log_source",
-    "//src/developer/forensics/utils:archive",
-    "//src/developer/forensics/utils:errors",
-    "//src/developer/forensics/utils:sized_data",
-    "//src/developer/forensics/utils/fidl:oneshot_ptr",
-    "//src/developer/forensics/utils/redact",
+    "//src/lib/backoff",
+    "//src/lib/fxl",
     "//zircon/system/ulib/async",
-    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/zx",
   ]
 
@@ -45,51 +49,82 @@ source_set("attachment_providers") {
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/feedback_data:constants",
     "//src/developer/forensics/utils:errors",
-    "//src/developer/forensics/utils:logs",
-    "//src/developer/forensics/utils/fit",
-    "//src/lib/diagnostics/accessor2logger",
     "//src/lib/fsl",
   ]
 }
 
-source_set("metrics") {
+source_set("kernel_log") {
   sources = [
-    "metrics.cc",
-    "metrics.h",
+    "kernel_log.cc",
+    "kernel_log.h",
   ]
 
   public_deps = [
-    ":types",
-    "//src/developer/forensics/utils/cobalt",
+    ":attachments",
+    "//sdk/fidl/fuchsia.boot",
+    "//sdk/lib/fit-promise",
+    "//sdk/lib/sys/cpp",
+    "//src/developer/forensics/utils/redact",
+    "//src/lib/backoff",
+    "//src/lib/fxl",
+    "//zircon/system/ulib/zx",
   ]
-
-  deps = [ "//src/developer/forensics/feedback_data:constants" ]
-}
-
-source_set("static_attachments") {
-  sources = [
-    "static_attachments.cc",
-    "static_attachments.h",
-  ]
-
-  public_deps = [ ":types" ]
 
   deps = [
     "//sdk/lib/syslog/cpp",
-    "//src/developer/forensics/feedback_data:constants",
     "//src/developer/forensics/utils:errors",
-    "//src/lib/files",
-    "//src/lib/fxl",
   ]
 }
 
-source_set("types") {
-  sources = [ "types.h" ]
+source_set("screenshot") {
+  sources = [
+    "screenshot_ptr.cc",
+    "screenshot_ptr.h",
+  ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/lib/fit-promise",
+    "//sdk/lib/sys/cpp",
+    "//src/developer/forensics/utils/fidl:oneshot_ptr",
+    "//src/developer/forensics/utils/fit",
+    "//src/lib/fxl",
+    "//zircon/system/ulib/async",
+  ]
+
+  deps = [
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/utils:errors",
   ]
+}
 
-  visibility += [ "//src/developer/forensics/testing:gpretty_printers" ]
+source_set("system_log") {
+  sources = [
+    "system_log.cc",
+    "system_log.h",
+  ]
+
+  public_deps = [
+    ":attachments",
+    "//sdk/lib/fit",
+    "//sdk/lib/fit-promise",
+    "//sdk/lib/sys/cpp",
+    "//src/developer/forensics/feedback_data:log_source",
+    "//src/developer/forensics/utils:storage_size",
+    "//src/developer/forensics/utils/redact",
+    "//src/lib/fxl",
+    "//src/lib/timekeeper",
+    "//zircon/system/ulib/async",
+    "//zircon/system/ulib/zx",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.logger",
+    "//sdk/lib/syslog/cpp",
+    "//src/developer/forensics/feedback_data:constants",
+    "//src/developer/forensics/utils:errors",
+    "//src/developer/forensics/utils:logs",
+    "//src/lib/backoff",
+    "//src/lib/diagnostics/accessor2logger",
+  ]
 }

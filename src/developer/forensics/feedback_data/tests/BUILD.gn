@@ -44,7 +44,7 @@ executable("data_provider_unittest_exe") {
     "//src/developer/forensics/feedback_data:constants",
     "//src/developer/forensics/feedback_data:data_provider",
     "//src/developer/forensics/feedback_data:metadata",
-    "//src/developer/forensics/feedback_data/attachments:types",
+    "//src/developer/forensics/feedback_data/attachments",
     "//src/developer/forensics/testing:gmatchers",
     "//src/developer/forensics/testing:gpretty_printers",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
@@ -94,8 +94,7 @@ executable("datastore_unittest_exe") {
     "//sdk/lib/fit-promise",
     "//src/developer/forensics/feedback_data:constants",
     "//src/developer/forensics/feedback_data:datastore",
-    "//src/developer/forensics/feedback_data/attachments:attachment_providers",
-    "//src/developer/forensics/feedback_data/attachments:types",
+    "//src/developer/forensics/feedback_data/attachments",
     "//src/developer/forensics/testing:gmatchers",
     "//src/developer/forensics/testing:gpretty_printers",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
@@ -164,8 +163,8 @@ executable("inspect_unittest_exe") {
   deps = [
     "//sdk/lib/sys/cpp/testing:cpp",
     "//src/developer/forensics/feedback_data:constants",
-    "//src/developer/forensics/feedback_data/attachments:attachment_providers",
-    "//src/developer/forensics/feedback_data/attachments:types",
+    "//src/developer/forensics/feedback_data/attachments",
+    "//src/developer/forensics/feedback_data/attachments:inspect",
     "//src/developer/forensics/testing:gpretty_printers",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",
@@ -206,7 +205,7 @@ executable("metadata_unittest_exe") {
     "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/feedback_data:constants",
     "//src/developer/forensics/feedback_data:metadata",
-    "//src/developer/forensics/feedback_data/attachments:types",
+    "//src/developer/forensics/feedback_data/attachments",
     "//src/developer/forensics/testing:unit_test_fixture",
     "//src/developer/forensics/utils:errors",
     "//src/developer/forensics/utils/redact",
@@ -229,7 +228,7 @@ executable("metrics_unittest_exe") {
 
   deps = [
     "//src/developer/forensics/feedback_data:constants",
-    "//src/developer/forensics/feedback_data/attachments:metrics",
+    "//src/developer/forensics/feedback_data/attachments",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",
     "//src/developer/forensics/testing/stubs:cobalt",
@@ -247,8 +246,8 @@ executable("kernel_log_ptr_integration_test_exe") {
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
-    "//src/developer/forensics/feedback_data/attachments:attachment_providers",
-    "//src/developer/forensics/feedback_data/attachments:types",
+    "//src/developer/forensics/feedback_data/attachments",
+    "//src/developer/forensics/feedback_data/attachments:kernel_log",
     "//src/developer/forensics/utils:errors",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
@@ -269,7 +268,7 @@ executable("screenshot_ptr_unittest_exe") {
 
   deps = [
     "//sdk/fidl/fuchsia.ui.scenic",
-    "//src/developer/forensics/feedback_data/attachments:attachment_providers",
+    "//src/developer/forensics/feedback_data/attachments:screenshot",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",
     "//src/developer/forensics/testing/stubs:scenic",
@@ -288,8 +287,8 @@ executable("system_log_unittest_exe") {
 
   deps = [
     "//src/developer/forensics/feedback_data:constants",
-    "//src/developer/forensics/feedback_data/attachments:attachment_providers",
-    "//src/developer/forensics/feedback_data/attachments:types",
+    "//src/developer/forensics/feedback_data/attachments",
+    "//src/developer/forensics/feedback_data/attachments:system_log",
     "//src/developer/forensics/testing:gpretty_printers",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",

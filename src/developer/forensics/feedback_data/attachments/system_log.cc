@@ -23,8 +23,6 @@
 
 #include "src/developer/forensics/feedback_data/constants.h"
 #include "src/developer/forensics/utils/errors.h"
-#include "src/developer/forensics/utils/fit/promise.h"
-#include "src/developer/forensics/utils/fit/timeout.h"
 #include "src/developer/forensics/utils/log_format.h"
 #include "src/lib/backoff/exponential_backoff.h"
 #include "src/lib/diagnostics/accessor2logger/log_message.h"

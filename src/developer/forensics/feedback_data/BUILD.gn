@@ -16,7 +16,7 @@ source_set("config") {
   ]
 
   public_deps = [
-    "//src/developer/forensics/feedback_data/attachments:types",
+    "//src/developer/forensics/feedback_data/attachments",
     "//zircon/system/ulib/zx",
   ]
 
@@ -69,8 +69,8 @@ source_set("data_provider") {
     "//sdk/fidl/fuchsia.mem",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/lib/syslog/cpp",
-    "//src/developer/forensics/feedback_data/attachments:attachment_providers",
-    "//src/developer/forensics/feedback_data/attachments:types",
+    "//src/developer/forensics/feedback_data/attachments",
+    "//src/developer/forensics/feedback_data/attachments:screenshot",
     "//src/developer/forensics/utils:archive",
     "//src/developer/forensics/utils/fit",
     "//src/lib/fostr/fidl/fuchsia.images",
@@ -109,9 +109,10 @@ source_set("datastore") {
     "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
     "//src/developer/forensics/feedback:redactor_factory",
-    "//src/developer/forensics/feedback_data/attachments:attachment_providers",
-    "//src/developer/forensics/feedback_data/attachments:metrics",
-    "//src/developer/forensics/feedback_data/attachments:types",
+    "//src/developer/forensics/feedback_data/attachments",
+    "//src/developer/forensics/feedback_data/attachments:inspect",
+    "//src/developer/forensics/feedback_data/attachments:kernel_log",
+    "//src/developer/forensics/feedback_data/attachments:system_log",
     "//src/developer/forensics/utils:previous_boot_file",
     "//src/developer/forensics/utils/cobalt",
     "//src/developer/forensics/utils/redact",
@@ -122,7 +123,6 @@ source_set("datastore") {
   deps = [
     ":constants",
     "//sdk/lib/syslog/cpp",
-    "//src/developer/forensics/feedback_data/attachments:static_attachments",
   ]
 }
 
@@ -204,7 +204,7 @@ source_set("metadata") {
 
   public_deps = [
     "//sdk/lib/fit-promise",
-    "//src/developer/forensics/feedback_data/attachments:types",
+    "//src/developer/forensics/feedback_data/attachments",
     "//src/developer/forensics/utils:utc_time_provider",
     "//src/developer/forensics/utils/redact",
   ]

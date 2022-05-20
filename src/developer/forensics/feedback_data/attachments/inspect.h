@@ -13,7 +13,6 @@
 #include <memory>
 
 #include "src/developer/forensics/feedback_data/attachments/types.h"
-#include "src/developer/forensics/utils/fit/timeout.h"
 #include "src/lib/backoff/backoff.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
