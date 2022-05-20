@@ -203,35 +203,27 @@ impl BlockServer {
             status.into_raw()
         }
 
-        if (request.op_code
-            & (remote_block_device::BLOCK_FL_BARRIER_BEFORE
-                | remote_block_device::BLOCK_FL_BARRIER_AFTER))
-            > 0
-        {
-            zx::sys::ZX_ERR_NOT_SUPPORTED
-        } else {
-            match request.op_code & remote_block_device::BLOCK_OP_MASK {
-                remote_block_device::BLOCKIO_CLOSE_VMO => {
-                    let mut vmos = self.vmos.lock().unwrap();
-                    match vmos.remove(&request.vmoid) {
-                        Some(_vmo) => zx::sys::ZX_OK,
-                        None => zx::sys::ZX_ERR_NOT_FOUND,
-                    }
+        match request.op_code & remote_block_device::BLOCK_OP_MASK {
+            remote_block_device::BLOCKIO_CLOSE_VMO => {
+                let mut vmos = self.vmos.lock().unwrap();
+                match vmos.remove(&request.vmoid) {
+                    Some(_vmo) => zx::sys::ZX_OK,
+                    None => zx::sys::ZX_ERR_NOT_FOUND,
                 }
-                remote_block_device::BLOCKIO_WRITE => {
-                    into_raw_status(self.handle_blockio_write(&request).await)
-                }
-                remote_block_device::BLOCKIO_READ => {
-                    into_raw_status(self.handle_blockio_read(&request).await)
-                }
-                // TODO(fxbug.dev/89873): simply returning ZX_OK since we're
-                // writing to device and no need to flush cache, but need to
-                // check that flush goes down the stack
-                remote_block_device::BLOCKIO_FLUSH => zx::sys::ZX_OK,
-                // TODO(fxbug.dev/89873)
-                remote_block_device::BLOCKIO_TRIM => zx::sys::ZX_OK,
-                _ => panic!("Unexpected message, request {:?}", request.op_code),
             }
+            remote_block_device::BLOCKIO_WRITE => {
+                into_raw_status(self.handle_blockio_write(&request).await)
+            }
+            remote_block_device::BLOCKIO_READ => {
+                into_raw_status(self.handle_blockio_read(&request).await)
+            }
+            // TODO(fxbug.dev/89873): simply returning ZX_OK since we're
+            // writing to device and no need to flush cache, but need to
+            // check that flush goes down the stack
+            remote_block_device::BLOCKIO_FLUSH => zx::sys::ZX_OK,
+            // TODO(fxbug.dev/89873)
+            remote_block_device::BLOCKIO_TRIM => zx::sys::ZX_OK,
+            _ => panic!("Unexpected message, request {:?}", request.op_code),
         }
     }
 

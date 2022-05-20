@@ -133,8 +133,9 @@ void RunBlockMetrics(const char* path, const StorageMetricOptions options) {
     if (!block_stats.is_ok()) {
       fprintf(stderr, "storage-metrics could not retrieve block metrics for %s: %s\n", path,
               block_stats.status_string());
+    } else {
+      PrintBlockMetrics(path, *block_stats);
     }
-    PrintBlockMetrics(path, *block_stats);
   }
 }
 

@@ -144,7 +144,6 @@ typedef uint16_t groupid_t;
 #define BLOCKIO_WRITE 0x00000002
 
 // Writes any cached data to nonvolatile storage.
-// Implies BARRIER_BEFORE and BARRIER_AFTER.
 #define BLOCKIO_FLUSH 0x00000003
 
 // Marks data on the backing storage as invalid.
@@ -153,13 +152,6 @@ typedef uint16_t groupid_t;
 // Detaches the VMO from the block device.
 #define BLOCKIO_CLOSE_VMO 0x00000005
 #define BLOCKIO_OP_MASK 0x000000FF
-
-// Require that this operation will not begin until all prior operations
-// have completed.
-#define BLOCKIO_BARRIER_BEFORE 0x00000100
-
-// Require that this operation must complete before additional operations begin.
-#define BLOCKIO_BARRIER_AFTER 0x00000200
 
 // Associate the following request with |group|.
 #define BLOCKIO_GROUP_ITEM 0x00000400

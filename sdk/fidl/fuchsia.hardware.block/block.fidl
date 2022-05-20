@@ -57,12 +57,6 @@ type BlockStats = struct {
 
     /// The stats about flush commands.
     flush storage_metrics.CallStat;
-
-    /// The stats about barrier before commands.
-    barrier_before storage_metrics.CallStat;
-
-    /// The stats about barrier after commands.
-    barrier_after storage_metrics.CallStat;
 };
 
 /// A client-identifier to a VMO.

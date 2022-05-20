@@ -45,7 +45,7 @@ void BlockCompleteCb(void* cookie, zx_status_t status, block_op_t* bop) {
 }
 
 uint32_t OpcodeToCommand(uint32_t opcode) {
-  const uint32_t shared = BLOCK_OP_MASK | BLOCK_FL_BARRIER_BEFORE | BLOCK_FL_BARRIER_AFTER;
+  const uint32_t shared = BLOCK_OP_MASK;
   return opcode & shared;
 }
 
@@ -388,11 +388,6 @@ zx_status_t Server::ProcessTrimRequest(block_fifo_request_t* request) {
 }
 
 void Server::ProcessRequest(block_fifo_request_t* request) {
-  if (request->opcode & (BLOCK_FL_BARRIER_BEFORE | BLOCK_FL_BARRIER_AFTER)) {
-    zxlogf(WARNING, "Barriers not supported");
-    FinishTransaction(ZX_ERR_NOT_SUPPORTED, request->reqid, request->group);
-    return;
-  }
   TRACE_DURATION("storage", "Server::ProcessRequest", "opcode", request->opcode);
   if (request->trace_flow_id) {
     TRACE_FLOW_STEP("storage", "BlockOp", request->trace_flow_id);

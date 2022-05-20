@@ -25,9 +25,7 @@ bool CallStatEqual(const CallStatFidl& lhs, const CallStatFidl& rhs) {
 
 bool BlockStatEqual(const BlockStatFidl& lhs, const BlockStatFidl& rhs) {
   return CallStatEqual(lhs.read, rhs.read) && CallStatEqual(lhs.write, rhs.write) &&
-         CallStatEqual(lhs.trim, rhs.trim) && CallStatEqual(lhs.flush, rhs.flush) &&
-         CallStatEqual(lhs.barrier_before, rhs.barrier_before) &&
-         CallStatEqual(lhs.barrier_after, rhs.barrier_after);
+         CallStatEqual(lhs.trim, rhs.trim) && CallStatEqual(lhs.flush, rhs.flush);
 }
 
 CallStat::CallStatRaw::CallStatRaw() { Reset(); }
@@ -215,8 +213,6 @@ BlockDeviceMetrics::BlockDeviceMetrics(const BlockStatFidl* metrics) {
   write_.CopyFromFidl(&metrics->write);
   trim_.CopyFromFidl(&metrics->trim);
   flush_.CopyFromFidl(&metrics->flush);
-  barrier_before_.CopyFromFidl(&metrics->barrier_before);
-  barrier_after_.CopyFromFidl(&metrics->barrier_after);
 
   SetEnable(true);
 }
@@ -226,8 +222,6 @@ BlockDeviceMetrics::BlockDeviceMetrics(const fuchsia_hardware_block_BlockStats* 
   write_.CopyFromFidl(&metrics->write);
   trim_.CopyFromFidl(&metrics->trim);
   flush_.CopyFromFidl(&metrics->flush);
-  barrier_before_.CopyFromFidl(&metrics->barrier_before);
-  barrier_after_.CopyFromFidl(&metrics->barrier_after);
 
   SetEnable(true);
 }
@@ -237,8 +231,6 @@ void BlockDeviceMetrics::CopyToFidl(BlockStatFidl* metrics) const {
   write_.CopyToFidl(&metrics->write);
   trim_.CopyToFidl(&metrics->trim);
   flush_.CopyToFidl(&metrics->flush);
-  barrier_before_.CopyToFidl(&metrics->barrier_before);
-  barrier_after_.CopyToFidl(&metrics->barrier_after);
 }
 
 void BlockDeviceMetrics::CopyToFidl(fuchsia_hardware_block_BlockStats* metrics) const {
@@ -246,18 +238,14 @@ void BlockDeviceMetrics::CopyToFidl(fuchsia_hardware_block_BlockStats* metrics) 
   write_.CopyToFidl(&metrics->write);
   trim_.CopyToFidl(&metrics->trim);
   flush_.CopyToFidl(&metrics->flush);
-  barrier_before_.CopyToFidl(&metrics->barrier_before);
-  barrier_after_.CopyToFidl(&metrics->barrier_after);
 }
 
 uint64_t BlockDeviceMetrics::TotalCalls(std::optional<bool> success) const {
-  // Barriers are modifiers of a command so we don't count them here
   return read_.total_calls(success) + write_.total_calls(success) + trim_.total_calls(success) +
          flush_.total_calls(success);
 }
 
 uint64_t BlockDeviceMetrics::TotalBytesTransferred(std::optional<bool> success) const {
-  // Barriers are modifiers of a command so we don't count their bytes
   return read_.bytes_transferred(success) + write_.bytes_transferred(success) +
          trim_.bytes_transferred(success) + flush_.bytes_transferred(success);
 }
@@ -267,8 +255,6 @@ void BlockDeviceMetrics::Dump(FILE* stream, std::optional<bool> success) const {
   write_.Dump(stream, "write", success);
   trim_.Dump(stream, "trim", success);
   flush_.Dump(stream, "flush", success);
-  barrier_before_.Dump(stream, "barrier_before", success);
-  barrier_after_.Dump(stream, "barrier_after", success);
 }
 
 void BlockDeviceMetrics::UpdateStats(bool success, const zx::ticks start_tick,
@@ -283,14 +269,6 @@ void BlockDeviceMetrics::UpdateStats(bool success, const zx::ticks start_tick,
     UpdateFlushStat(success, duration.get(), bytes_transfered);
   } else if (block_operation(command) == BLOCK_OP_TRIM) {
     UpdateTrimStat(success, duration.get(), bytes_transfered);
-  }
-
-  if ((command & BLOCK_FL_BARRIER_BEFORE) == BLOCK_FL_BARRIER_BEFORE) {
-    UpdateBarrierBeforeStat(success, duration.get(), bytes_transfered);
-  }
-
-  if ((command & BLOCK_FL_BARRIER_AFTER) == BLOCK_FL_BARRIER_AFTER) {
-    UpdateBarrierAfterStat(success, duration.get(), bytes_transfered);
   }
 }
 

@@ -68,8 +68,6 @@ void UpdateAllBlockDeviceMetricsRaw(storage_metrics::BlockDeviceMetrics& metrics
   metrics.UpdateWriteStat(success, delta, bytes_transferred);
   metrics.UpdateTrimStat(success, delta, bytes_transferred);
   metrics.UpdateFlushStat(success, delta, bytes_transferred);
-  metrics.UpdateBarrierBeforeStat(success, delta, bytes_transferred);
-  metrics.UpdateBarrierAfterStat(success, delta, bytes_transferred);
 }
 
 // Updates both success and failure stats with (|minimum_latency|, |bytes_transferred1|)
@@ -93,8 +91,6 @@ void CompareFidlBlockDeviceStatAll(
   ExpectMetricsMatchCallStat(fidl_block_device_metrics.write, fidl_call_stat);
   ExpectMetricsMatchCallStat(fidl_block_device_metrics.flush, fidl_call_stat);
   ExpectMetricsMatchCallStat(fidl_block_device_metrics.trim, fidl_call_stat);
-  ExpectMetricsMatchCallStat(fidl_block_device_metrics.barrier_before, fidl_call_stat);
-  ExpectMetricsMatchCallStat(fidl_block_device_metrics.barrier_after, fidl_call_stat);
 }
 
 // Expects if |fidl_fs_metrics| is properly initialized.
@@ -447,36 +443,6 @@ TEST(BlockDeviceMetricsTest, UpdateTrimStats) {
   ASSERT_EQ(1, fidl_block_metrics.trim.failure.total_calls);
   ASSERT_EQ(10, fidl_block_metrics.trim.failure.bytes_transferred);
   ASSERT_LT(0, fidl_block_metrics.trim.failure.total_time_spent);
-}
-
-TEST(BlockDeviceMetricsTest, UpdateBarrierStats) {
-  storage_metrics::BlockDeviceMetrics metrics;
-  fuchsia_hardware_block_BlockStats fidl_block_metrics;
-
-  metrics.UpdateStats(true, zx::ticks(0), BLOCK_OP_READ | BLOCK_FL_BARRIER_BEFORE, 100);
-  metrics.UpdateStats(false, zx::ticks(0), BLOCK_OP_WRITE | BLOCK_FL_BARRIER_AFTER, 10);
-  metrics.UpdateStats(true, zx::ticks(0),
-                      BLOCK_OP_TRIM | BLOCK_FL_BARRIER_AFTER | BLOCK_FL_BARRIER_BEFORE, 20);
-  metrics.CopyToFidl(&fidl_block_metrics);
-
-  ASSERT_EQ(1, fidl_block_metrics.read.success.total_calls);
-  ASSERT_EQ(1, fidl_block_metrics.write.failure.total_calls);
-  ASSERT_EQ(1, fidl_block_metrics.trim.success.total_calls);
-  ASSERT_EQ(2, fidl_block_metrics.barrier_before.success.total_calls);
-  ASSERT_EQ(1, fidl_block_metrics.barrier_after.failure.total_calls);
-  ASSERT_EQ(1, fidl_block_metrics.barrier_after.success.total_calls);
-
-  ASSERT_EQ(100, fidl_block_metrics.read.success.bytes_transferred);
-  ASSERT_EQ(10, fidl_block_metrics.write.failure.bytes_transferred);
-  ASSERT_EQ(20, fidl_block_metrics.trim.success.bytes_transferred);
-  ASSERT_EQ(120, fidl_block_metrics.barrier_before.success.bytes_transferred);
-  ASSERT_EQ(10, fidl_block_metrics.barrier_after.failure.bytes_transferred);
-  ASSERT_EQ(20, fidl_block_metrics.barrier_after.success.bytes_transferred);
-
-  ASSERT_LT(0, fidl_block_metrics.barrier_before.success.total_time_spent);
-  ASSERT_EQ(0, fidl_block_metrics.barrier_before.failure.total_time_spent);
-  ASSERT_LT(0, fidl_block_metrics.barrier_after.success.total_time_spent);
-  ASSERT_LT(0, fidl_block_metrics.barrier_after.failure.total_time_spent);
 }
 
 }  // namespace

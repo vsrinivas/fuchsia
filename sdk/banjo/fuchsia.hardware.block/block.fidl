@@ -109,7 +109,6 @@ const BLOCK_GUID_LEN uint32 = 16;
 /// starting at `vmo_offset` blocks.  If the transaction is out of range, for
 /// example if `length` is too large or if `dev_offset` is beyond the end of the
 /// device, `ZX_ERR_OUT_OF_RANGE` is returned.
-
 const MAX_TXN_GROUP_COUNT uint32 = 8;
 
 /// The Request ID allowing callers to correspond requests with responses. This
@@ -195,10 +194,7 @@ type BlockOp = strict resource union {
 const BLOCK_OP_READ uint32 = 0x00000001;
 const BLOCK_OP_WRITE uint32 = 0x00000002;
 
-/// Write any controller or device cached data to nonvolatile storage. This
-/// operation always implies `BLOCK_FL_BARRIER_BEFORE` and
-/// `BLOCK_FL_BARRIER_AFTER`, meaning that previous operations will complete
-/// before it starts and later operations will not start until it is done.
+/// Write any controller or device cached data to nonvolatile storage.
 const BLOCK_OP_FLUSH uint32 = 0x00000003;
 
 /// Instructs the device to invalidate a number of blocks, making them  usable
@@ -217,18 +213,6 @@ const BLOCK_OP_MASK uint32 = 0x000000FF;
 /// it should not complete until the data is written to the non-volatile
 /// medium (write), and that reads should bypass any on-device caches.
 const BLOCK_FL_FORCE_ACCESS uint32 = 0x00001000;
-
-/// Require that this operation will not begin until all previous operations
-/// have completed.
-///
-/// Prevents earlier operations from being reordered after this one.
-const BLOCK_FL_BARRIER_BEFORE uint32 = 0x00000100;
-
-/// Require that this operation complete before any subsequent operations are
-/// started.
-///
-/// Prevents later operations from being reordered before this one.
-const BLOCK_FL_BARRIER_AFTER uint32 = 0x00000200;
 
 /// Associate the following request with `group`.
 const BLOCK_GROUP_ITEM uint32 = 0x00000400;

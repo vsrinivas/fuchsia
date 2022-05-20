@@ -18,8 +18,8 @@ namespace storage_metrics {
 
 using BlockStatFidl = fuchsia_hardware_block::wire::BlockStats;
 
-// Compares block stat for read, write, trim, flush, barrier_before and
-// barrier_after. Returns false if the stats dont match.
+// Compares block stat for read, write, trim, flush. Returns false if the stats
+// dont match.
 bool BlockStatEqual(const BlockStatFidl& lhs, const BlockStatFidl& rhs);
 
 class BlockDeviceMetrics : public storage_metrics::Metrics {
@@ -76,20 +76,6 @@ class BlockDeviceMetrics : public storage_metrics::Metrics {
     flush_.UpdateCallStat(success, delta_time, bytes_transferred);
   }
 
-  void UpdateBarrierBeforeStat(bool success, zx_ticks_t delta_time, uint64_t bytes_transferred) {
-    if (Enabled() == false) {
-      return;
-    }
-    barrier_before_.UpdateCallStat(success, delta_time, bytes_transferred);
-  }
-
-  void UpdateBarrierAfterStat(bool success, zx_ticks_t delta_time, uint64_t bytes_transferred) {
-    if (Enabled() == false) {
-      return;
-    }
-    barrier_after_.UpdateCallStat(success, delta_time, bytes_transferred);
-  }
-
   void UpdateStats(bool success, const zx::ticks start_tick, const uint32_t command,
                    const uint64_t bytes_transferred);
 
@@ -106,17 +92,13 @@ class BlockDeviceMetrics : public storage_metrics::Metrics {
     write_.Reset();
     trim_.Reset();
     flush_.Reset();
-    barrier_before_.Reset();
-    barrier_after_.Reset();
   }
 
  private:
-  CallStat read_ = {};            // stats for read
-  CallStat write_ = {};           // stats for write
-  CallStat trim_ = {};            // stats for trim
-  CallStat flush_ = {};           // stats for flush
-  CallStat barrier_before_ = {};  // stats for barrier before
-  CallStat barrier_after_ = {};   // stats for barrier after
+  CallStat read_ = {};   // stats for read
+  CallStat write_ = {};  // stats for write
+  CallStat trim_ = {};   // stats for trim
+  CallStat flush_ = {};  // stats for flush
 };
 
 }  // namespace storage_metrics
