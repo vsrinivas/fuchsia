@@ -5,11 +5,7 @@
 import("//build/config.gni")
 import("//build/json/validate_json.gni")
 import("//build/sdk/sdk_data.gni")
-
-declare_args() {
-  # Indicates whether to start basemgr.cmx on boot.
-  launch_basemgr_on_boot = false
-}
+import("//src/modular/build/args.gni")
 
 # Validates a modular framework configuration file against a schema
 #
