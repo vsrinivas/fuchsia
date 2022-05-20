@@ -13,6 +13,7 @@ use crate::intl::types::{HourCycle, IntlInfo, LocaleId, TemperatureUnit};
 use async_trait::async_trait;
 use fuchsia_syslog::fx_log_err;
 use rust_icu_uenum as uenum;
+use rust_icu_uloc as uloc;
 use std::collections::HashSet;
 
 impl DeviceStorageCompatible for IntlInfo {
@@ -105,6 +106,34 @@ impl IntlController {
                     "timezone id".into(),
                     time_zone_id.into(),
                 ));
+            }
+        }
+
+        if let Some(time_zone_locale) = info.locales {
+            for locale in time_zone_locale {
+                // NB: `try_from` doesn't actually do validation, `for_language_tag` does but doesn't
+                // actually generate an error, it just ends up falling back to an empty string.
+                let loc = uloc::ULoc::for_language_tag(locale.id.as_str());
+                match loc {
+                    Ok(parsed) => {
+                        if parsed.label().is_empty() {
+                            fx_log_err!("Locale is invalid: {:?}", locale.id);
+                            return Err(ControllerError::InvalidArgument(
+                                SettingType::Intl,
+                                "locale id".into(),
+                                locale.id.into(),
+                            ));
+                        }
+                    }
+                    Err(err) => {
+                        fx_log_err!("Error loading locale: {:?}", err);
+                        return Err(ControllerError::InvalidArgument(
+                            SettingType::Intl,
+                            "locale id".into(),
+                            locale.id.into(),
+                        ));
+                    }
+                }
             }
         }
 

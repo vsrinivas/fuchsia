@@ -70,6 +70,7 @@ rustc_library("lib") {
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:rust_icu_ucal",
     "//third_party/rust_crates:rust_icu_uenum",
+    "//third_party/rust_crates:rust_icu_uloc",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tempfile",

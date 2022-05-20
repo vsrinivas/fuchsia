@@ -188,6 +188,34 @@ async fn test_intl_invalid_timezone() {
 }
 
 #[fuchsia_async::run_until_stalled(test)]
+async fn test_intl_invalid_locale() {
+    const INITIAL_LOCALE: &str = "sr-Cyrl-RS-u-ca-hebrew-fw-monday-ms-ussystem-nu-deva-tz-usnyc";
+
+    let factory = InMemoryStorageFactory::new();
+    let intl_service = create_test_intl_env(Arc::new(factory)).await;
+
+    // Set a real value.
+    let mut intl_settings = fidl_fuchsia_settings::IntlSettings::EMPTY;
+    intl_settings.locales =
+        Some(vec![fidl_fuchsia_intl::LocaleId { id: INITIAL_LOCALE.to_string() }]);
+    intl_service.set(intl_settings).await.expect("set completed").expect("set successful");
+
+    // Set with an invalid locale.
+    let mut intl_settings = fidl_fuchsia_settings::IntlSettings::EMPTY;
+    let updated_locale = "nope nope nope";
+    intl_settings.locales =
+        Some(vec![fidl_fuchsia_intl::LocaleId { id: updated_locale.to_string() }]);
+    let _ = intl_service.set(intl_settings).await.expect("set completed").expect_err("invalid");
+
+    // Verify the returned setting when watching hasn't changed.
+    let settings = intl_service.watch().await.expect("watch completed");
+    assert_eq!(
+        settings.locales,
+        Some(vec![fidl_fuchsia_intl::LocaleId { id: INITIAL_LOCALE.to_string() }])
+    );
+}
+
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_channel_failure_watch() {
     let intl_service =
         create_intl_test_env_with_failures(Arc::new(InMemoryStorageFactory::new())).await;
