@@ -783,6 +783,28 @@ struct FinWait2<R: ReceiveBuffer> {
 
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq, Eq))]
+/// Per RFC 793 (https://tools.ietf.org/html/rfc793#page-21):
+///
+/// CLOSING - represents waiting for a connection termination request
+/// acknowledgment from the remote TCP
+///
+/// Allowed operations:
+///   - recv
+/// Disallowed operations:
+///   - send
+///   - shutdown
+///   - accept
+///   - listen
+///   - connect
+struct Closing<I: Instant, R, S: SendBuffer> {
+    snd: Send<I, S, { FinQueued::YES }>,
+    rcv_residual: R,
+    last_ack: SeqNum,
+    last_wnd: WindowSize,
+}
+
+#[derive(Debug)]
+#[cfg_attr(test, derive(PartialEq, Eq))]
 enum State<I: Instant, R: ReceiveBuffer, S: SendBuffer> {
     Closed(Closed<UserError>),
     Listen(Listen),
@@ -793,8 +815,8 @@ enum State<I: Instant, R: ReceiveBuffer, S: SendBuffer> {
     LastAck(LastAck<I, R::Residual, S>),
     FinWait1(FinWait1<I, R, S>),
     FinWait2(FinWait2<R>),
+    Closing(Closing<I, R::Residual, S>),
     // TODO(https://fxbug.dev/96563): Implement active close.
-    Closing,
     TimeWait,
 }
 
@@ -848,12 +870,13 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer> State<I, R, S> {
             State::CloseWait(CloseWait { snd, rcv_residual: _, last_ack, last_wnd }) => {
                 (*last_ack, *last_wnd, snd.nxt)
             }
-            State::LastAck(LastAck { snd, rcv_residual: _, last_ack, last_wnd }) => {
+            State::LastAck(LastAck { snd, rcv_residual: _, last_ack, last_wnd })
+            | State::Closing(Closing { snd, rcv_residual: _, last_ack, last_wnd }) => {
                 (*last_ack, *last_wnd, snd.nxt)
             }
             State::FinWait1(FinWait1 { rcv, snd }) => (rcv.nxt(), rcv.wnd(), snd.nxt),
             State::FinWait2(FinWait2 { last_seq, rcv }) => (rcv.nxt(), rcv.wnd(), *last_seq),
-            State::Closing | State::TimeWait => {
+            State::TimeWait => {
                 todo!("https://fxbug.dev/96563: Implement active close")
             }
         };
@@ -987,7 +1010,21 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer> State<I, R, S> {
                     }
                 }
                 State::FinWait2(_) => {}
-                State::Closing | State::TimeWait => {
+                State::Closing(Closing { snd, rcv_residual: _, last_ack: _, last_wnd: _ }) => {
+                    let fin_seq = snd.una + snd.buffer.len() + 1;
+                    if let Some(ack) =
+                        snd.process_ack(seg_seq, seg_ack, seg_wnd, rcv_nxt, rcv_wnd, now)
+                    {
+                        return Some(ack);
+                    } else if seg_ack == fin_seq {
+                        // Per RFC 793 (https://tools.ietf.org/html/rfc793#page-73):
+                        //   In addition to the processing for the ESTABLISHED state, if
+                        //   the ACK acknowledges our FIN then enter the TIME-WAIT state,
+                        //   otherwise ignore the segment.
+                        *self = State::TimeWait;
+                    }
+                }
+                State::TimeWait => {
                     todo!("https://fxbug.dev/96563: Implement active close")
                 }
             },
@@ -1036,13 +1073,13 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer> State<I, R, S> {
                     rcv_nxt = rcv.nxt();
                     Some(Segment::ack(snd_nxt, rcv.nxt(), rcv.wnd()))
                 }
-                State::CloseWait(_) | State::LastAck(_) => {
+                State::CloseWait(_) | State::LastAck(_) | State::Closing(_) => {
                     // Per RFC 793 (https://tools.ietf.org/html/rfc793#page-75):
                     //   This should not occur, since a FIN has been received from the
                     //   remote side.  Ignore the segment text.
                     None
                 }
-                State::Closing | State::TimeWait => {
+                State::TimeWait => {
                     todo!("https://fxbug.dev/96563: Implement active close")
                 }
             }
@@ -1076,12 +1113,26 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer> State<I, R, S> {
                     });
                     Some(Segment::ack(snd_nxt, last_ack, last_wnd))
                 }
-                State::CloseWait(_) | State::LastAck(_) => None,
-                State::FinWait1(FinWait1 { snd: _, rcv }) => {
-                    let ack = rcv.nxt() + 1;
-                    let wnd = rcv.wnd().checked_sub(1).unwrap_or(WindowSize::ZERO);
-                    *self = State::Closing;
-                    Some(Segment::ack(snd_nxt, ack, wnd))
+                State::CloseWait(_) | State::LastAck(_) | State::Closing(_) => {
+                    // Per RFC 793 (https://tools.ietf.org/html/rfc793#page-75):
+                    //   CLOSE-WAIT STATE
+                    //     Remain in the CLOSE-WAIT state.
+                    //   CLOSING STATE
+                    //     Remain in the CLOSING state.
+                    //   LAST-ACK STATE
+                    //     Remain in the LAST-ACK state.
+                    None
+                }
+                State::FinWait1(FinWait1 { snd, rcv }) => {
+                    let last_ack = rcv.nxt() + 1;
+                    let last_wnd = rcv.wnd().checked_sub(1).unwrap_or(WindowSize::ZERO);
+                    *self = State::Closing(Closing {
+                        snd: snd.take(),
+                        rcv_residual: rcv.buffer.take().into(),
+                        last_ack,
+                        last_wnd,
+                    });
+                    Some(Segment::ack(snd_nxt, last_ack, last_wnd))
                 }
                 State::FinWait2(FinWait2 { last_seq: _, rcv }) => {
                     let ack = rcv.nxt() + 1;
@@ -1089,7 +1140,7 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer> State<I, R, S> {
                     *self = State::TimeWait;
                     Some(Segment::ack(snd_nxt, ack, wnd))
                 }
-                State::Closing | State::TimeWait => {
+                State::TimeWait => {
                     todo!("https://fxbug.dev/96563: Implement active close")
                 }
             }
@@ -1126,12 +1177,13 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer> State<I, R, S> {
             State::CloseWait(CloseWait { snd, rcv_residual: _, last_ack, last_wnd }) => {
                 snd.poll_send(*last_ack, *last_wnd, mss, now)
             }
-            State::LastAck(LastAck { snd, rcv_residual: _, last_ack, last_wnd }) => {
+            State::LastAck(LastAck { snd, rcv_residual: _, last_ack, last_wnd })
+            | State::Closing(Closing { snd, rcv_residual: _, last_ack, last_wnd }) => {
                 snd.poll_send(*last_ack, *last_wnd, mss, now)
             }
             State::FinWait1(FinWait1 { snd, rcv }) => snd.poll_send(rcv.nxt(), rcv.wnd(), mss, now),
             State::Closed(_) | State::Listen(_) | State::FinWait2(_) => None,
-            State::Closing | State::TimeWait => {
+            State::TimeWait => {
                 todo!("https://fxbug.dev/96563: Implement active close")
             }
         }
@@ -1163,7 +1215,8 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer> State<I, R, S> {
                     SendTimer::Retrans(RetransTimer { at, rto: _ }) => Some(at),
                 }
             }
-            State::LastAck(LastAck { snd, rcv_residual: _, last_ack: _, last_wnd: _ }) => {
+            State::LastAck(LastAck { snd, rcv_residual: _, last_ack: _, last_wnd: _ })
+            | State::Closing(Closing { snd, rcv_residual: _, last_ack: _, last_wnd: _ }) => {
                 match snd.timer? {
                     SendTimer::Retrans(RetransTimer { at, rto: _ }) => Some(at),
                 }
@@ -1174,7 +1227,7 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer> State<I, R, S> {
             State::SynRcvd(syn_rcvd) => Some(syn_rcvd.retrans_timer.at),
             State::SynSent(syn_sent) => Some(syn_sent.retrans_timer.at),
             State::Closed(_) | State::Listen(_) | State::FinWait2(_) => None,
-            State::Closing | State::TimeWait => {
+            State::TimeWait => {
                 todo!("https://fxbug.dev/96563: Implement active close")
             }
         }
@@ -1234,8 +1287,10 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer> State<I, R, S> {
                 });
                 Ok(())
             }
-            State::LastAck(_) | State::FinWait1(_) | State::FinWait2(_) => Err(CloseError::Closing),
-            State::Closing | State::TimeWait => {
+            State::LastAck(_) | State::FinWait1(_) | State::FinWait2(_) | State::Closing(_) => {
+                Err(CloseError::Closing)
+            }
+            State::TimeWait => {
                 todo!("https://fxbug.dev/96563: Implement active close")
             }
         }
@@ -1344,12 +1399,13 @@ mod test {
                 }
                 State::Established(e) => e.rcv.buffer.read_with(f),
                 State::CloseWait(CloseWait { snd: _, rcv_residual, last_ack: _, last_wnd: _ })
-                | State::LastAck(LastAck { snd: _, rcv_residual, last_ack: _, last_wnd: _ }) => {
+                | State::LastAck(LastAck { snd: _, rcv_residual, last_ack: _, last_wnd: _ })
+                | State::Closing(Closing { snd: _, rcv_residual, last_ack: _, last_wnd: _ }) => {
                     rcv_residual.read_with(f)
                 }
                 State::FinWait1(FinWait1 { snd: _, rcv })
                 | State::FinWait2(FinWait2 { last_seq: _, rcv }) => rcv.buffer.read_with(f),
-                State::Closing | State::TimeWait => {
+                State::TimeWait => {
                     todo!("https://fxbug.dev/96563: Implement active close")
                 }
             }
@@ -2046,7 +2102,7 @@ mod test {
             | State::LastAck(_)
             | State::FinWait1(_)
             | State::FinWait2(_)
-            | State::Closing
+            | State::Closing(_)
             | State::TimeWait => {
                 panic!("expected that we have entered established state, but got {:?}", state)
             }
@@ -2427,6 +2483,81 @@ mod test {
             ),
             Some(Segment::ack(ISS_1 + 2, ISS_2 + 2, WindowSize::new(BUFFER_SIZE - 1).unwrap())),
         );
+        assert_eq!(state, State::TimeWait);
+    }
+
+    #[test]
+    fn simultaneous_close() {
+        let clock = DummyInstantCtx::default();
+        let mut send_buffer = RingBuffer::new(BUFFER_SIZE);
+        assert_eq!(send_buffer.enqueue_data(TEST_BYTES), 5);
+        // Set up the state machine to start with Established.
+        let mut state = State::Established(Established {
+            snd: Send {
+                nxt: ISS_1 + 1,
+                max: ISS_1 + 1,
+                una: ISS_1 + 1,
+                wnd: WindowSize::DEFAULT,
+                buffer: send_buffer.clone(),
+                wl1: ISS_2,
+                wl2: ISS_1,
+                last_seq_ts: None,
+                rtt_estimator: Estimator::default(),
+                timer: None,
+            },
+            rcv: Recv {
+                buffer: RingBuffer::new(BUFFER_SIZE),
+                assembler: Assembler::new(ISS_1 + 1),
+            },
+        });
+        assert_eq!(state.close(), Ok(()));
+        assert_matches!(state, State::FinWait1(_));
+        assert_eq!(state.close(), Err(CloseError::Closing));
+
+        let fin = state.poll_send(u32::MAX, clock.now());
+        assert_eq!(
+            fin,
+            Some(Segment::piggybacked_fin(
+                ISS_1 + 1,
+                ISS_1 + 1,
+                WindowSize::new(BUFFER_SIZE).unwrap(),
+                SendPayload::Contiguous(TEST_BYTES),
+            ))
+        );
+        assert_eq!(
+            state.on_segment(
+                Segment::piggybacked_fin(
+                    ISS_1 + 1,
+                    ISS_1 + 1,
+                    WindowSize::new(BUFFER_SIZE).unwrap(),
+                    SendPayload::Contiguous(TEST_BYTES),
+                ),
+                clock.now()
+            ),
+            Some(Segment::ack(
+                ISS_1 + TEST_BYTES.len() + 2,
+                ISS_1 + TEST_BYTES.len() + 2,
+                WindowSize::new(BUFFER_SIZE - TEST_BYTES.len() - 1).unwrap()
+            ))
+        );
+
+        // We have a self connection, feeding the FIN packet we generated should
+        // make us transition to CLOSING.
+        assert_matches!(state, State::Closing(_));
+        assert_eq!(
+            state.on_segment(
+                Segment::ack(
+                    ISS_1 + TEST_BYTES.len() + 2,
+                    ISS_1 + TEST_BYTES.len() + 2,
+                    WindowSize::new(BUFFER_SIZE - TEST_BYTES.len() - 1).unwrap()
+                ),
+                clock.now()
+            ),
+            None
+        );
+
+        // And feeding the ACK we produced for FIN should make us transition to
+        // TIME-WAIT.
         assert_eq!(state, State::TimeWait);
     }
 }
