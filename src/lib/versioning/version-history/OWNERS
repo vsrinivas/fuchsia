@@ -1,12 +1,3 @@
-aaronwood@google.com
-awolter@google.com
-etryzelaar@google.com
-galbanum@google.com
-jbuckland@google.com
-kevinwells@google.com
-nolivia@google.com
-senj@google.com
-viktard@google.com
-wittrock@google.com
+include /src/sys/pkg/OWNERS
 
 # COMPONENT: Packages
