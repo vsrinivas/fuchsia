@@ -110,6 +110,7 @@ source_set("datastore") {
     "//sdk/lib/sys/cpp",
     "//src/developer/forensics/feedback:redactor_factory",
     "//src/developer/forensics/feedback_data/attachments:attachment_providers",
+    "//src/developer/forensics/feedback_data/attachments:metrics",
     "//src/developer/forensics/feedback_data/attachments:types",
     "//src/developer/forensics/utils:previous_boot_file",
     "//src/developer/forensics/utils/cobalt",

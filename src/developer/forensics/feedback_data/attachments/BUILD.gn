@@ -52,6 +52,20 @@ source_set("attachment_providers") {
   ]
 }
 
+source_set("metrics") {
+  sources = [
+    "metrics.cc",
+    "metrics.h",
+  ]
+
+  public_deps = [
+    ":types",
+    "//src/developer/forensics/utils/cobalt",
+  ]
+
+  deps = [ "//src/developer/forensics/feedback_data:constants" ]
+}
+
 source_set("static_attachments") {
   sources = [
     "static_attachments.cc",

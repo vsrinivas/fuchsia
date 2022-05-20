@@ -16,6 +16,7 @@
 #include "src/developer/forensics/feedback/annotations/types.h"
 #include "src/developer/forensics/feedback_data/attachments/inspect.h"
 #include "src/developer/forensics/feedback_data/attachments/kernel_log.h"
+#include "src/developer/forensics/feedback_data/attachments/metrics.h"
 #include "src/developer/forensics/feedback_data/attachments/system_log.h"
 #include "src/developer/forensics/feedback_data/attachments/types.h"
 #include "src/developer/forensics/feedback_data/inspect_data_budget.h"
@@ -76,6 +77,7 @@ class Datastore {
 
   InspectDataBudget* inspect_data_budget_;
 
+  AttachmentMetrics attachment_metrics_;
   KernelLog kernel_log_;
   SystemLog system_log_;
   Inspect inspect_;

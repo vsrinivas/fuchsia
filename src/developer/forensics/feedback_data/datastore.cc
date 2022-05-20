@@ -34,6 +34,7 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
       attachment_allowlist_(attachment_allowlist),
       static_attachments_(feedback_data::GetStaticAttachments(attachment_allowlist_)),
       inspect_data_budget_(inspect_data_budget),
+      attachment_metrics_(cobalt_),
       kernel_log_(dispatcher_, services_,
                   std::make_unique<backoff::ExponentialBackoff>(zx::min(1), 2u, zx::hour(1)),
                   redactor_),
@@ -61,6 +62,7 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
       // Somewhat risky, but the AnnotationManager depends on a bunch of stuff and this constructor
       // is intended for tests.
       static_attachments_({}),
+      attachment_metrics_(cobalt_),
       kernel_log_(dispatcher_, services_, nullptr, redactor_),
       system_log_(dispatcher_, services_, &clock_, redactor_, zx::sec(30)),
       inspect_(dispatcher_, services_, nullptr, std::nullopt) {}
@@ -107,6 +109,8 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
           }
         }
 
+        attachment_metrics_.LogMetrics(ok_attachments);
+
         return ::fpromise::ok(ok_attachments);
       });
 }
@@ -122,26 +126,11 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
 ::fpromise::promise<AttachmentValue> Datastore::BuildAttachmentValue(const AttachmentKey& key,
                                                                      const zx::duration timeout) {
   if (key == kAttachmentLogKernel) {
-    return kernel_log_.Get(timeout).and_then([this](AttachmentValue& log) {
-      if (log.HasError() && log.Error() == Error::kTimeout) {
-        cobalt_->LogOccurrence(cobalt::TimedOutData::kKernelLog);
-      }
-      return ::fpromise::ok(std::move(log));
-    });
+    return kernel_log_.Get(timeout);
   } else if (key == kAttachmentLogSystem) {
-    return system_log_.Get(timeout).and_then([this](AttachmentValue& log) {
-      if (log.HasError() && log.Error() == Error::kTimeout) {
-        cobalt_->LogOccurrence(cobalt::TimedOutData::kSystemLog);
-      }
-      return ::fpromise::ok(std::move(log));
-    });
+    return system_log_.Get(timeout);
   } else if (key == kAttachmentInspect) {
-    return inspect_.Get(timeout).and_then([this](AttachmentValue& inspect) {
-      if (inspect.HasError() && inspect.Error() == Error::kTimeout) {
-        cobalt_->LogOccurrence(cobalt::TimedOutData::kInspect);
-      }
-      return ::fpromise::ok(std::move(inspect));
-    });
+    return inspect_.Get(timeout);
   }
 
   // There are static attachments in the allowlist that we just skip here.
