@@ -83,12 +83,6 @@ zx_status_t VnodeF2fs::GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo *out_vmo
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  // TODO: We should consider inline data.
-  if (TestBit(static_cast<int>(InodeInfoFlag::kInlineData), &fi_.flags)) {
-    FX_LOGS(WARNING) << "mmap for vnode with inline data is not supported.";
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
   size_t rounded_size = fbl::round_up(size_, static_cast<size_t>(PAGE_SIZE));
   ZX_DEBUG_ASSERT(rounded_size >= size_);
   if (rounded_size == 0) {
@@ -172,8 +166,11 @@ void VnodeF2fs::VmoRead(uint64_t offset, uint64_t length) {
   ZX_DEBUG_ASSERT(length);
   ZX_DEBUG_ASSERT(length % kBlockSize == 0);
 
+  // It tries to create and populate a vmo with locked Pages first.
+  // The mmap flag for the Pages will be cleared in RecycleNode() when there is no reference to
+  // |this|.
+  auto vmo_or = PopulateAndGetMmappedVmo(offset, length);
   fs::SharedLock rlock(mutex_);
-
   if (!paged_vmo()) {
     // Races with calling FreePagedVmo() on another thread can result in stale read requests. Ignore
     // them if the VMO is gone.
@@ -181,11 +178,10 @@ void VnodeF2fs::VmoRead(uint64_t offset, uint64_t length) {
     return;
   }
 
-  auto vmo_or = PopulateAndGetMmappedVmo(offset, length);
   if (vmo_or.is_error()) {
     FX_LOGS(ERROR) << "Failed to read a VMO at " << offset << " + " << length << ", "
                    << vmo_or.status_string();
-    ReportPagerError(offset, length, vmo_or.status_value());
+    ReportPagerError(offset, length, ZX_ERR_BAD_STATE);
     return;
   }
 
@@ -194,7 +190,7 @@ void VnodeF2fs::VmoRead(uint64_t offset, uint64_t length) {
       ret.is_error()) {
     FX_LOGS(ERROR) << "Failed to supply a VMO to " << offset << " + " << length << ", "
                    << vmo_or.status_string();
-    ReportPagerError(offset, length, ret.status_value());
+    ReportPagerError(offset, length, ZX_ERR_BAD_STATE);
   }
 }
 
@@ -203,6 +199,14 @@ zx::status<zx::vmo> VnodeF2fs::PopulateAndGetMmappedVmo(const size_t offset, con
   // It creates a zero-filled vmo, so we don't need to fill an invalidated area with zero.
   if (auto status = vmo.create(length, 0, &vmo); status != ZX_OK) {
     return zx::error(status);
+  }
+
+  // Populate |vmo| from its node block if it has inline data.
+  if (TestFlag(InodeInfoFlag::kInlineData)) {
+    if (auto ret = PopulateVmoWithInlineData(vmo); ret.is_error()) {
+      return zx::error(ret.status_value());
+    }
+    return zx::ok(std::move(vmo));
   }
 
   pgoff_t block_index = safemath::CheckDiv<pgoff_t>(offset, kBlockSize).ValueOrDie();
@@ -369,8 +373,8 @@ void VnodeF2fs::RecycleNode() {
     std::lock_guard lock(mutex_);
     ZX_ASSERT_MSG(open_count() == 0, "RecycleNode[%s:%u]: open_count must be zero (%lu)",
                   GetNameView().data(), GetKey(), open_count());
-    ReleasePagedVmoUnsafe();
   }
+  ReleasePagedVmo();
   if (GetNlink()) {
     // f2fs removes the last reference to a dirty vnode from the dirty vnode list
     // when there is no dirty Page for the vnode at checkpoint time.
@@ -777,17 +781,32 @@ void VnodeF2fs::TruncateToSize() {
 }
 
 void VnodeF2fs::ReleasePagedVmo() {
-  std::lock_guard lock(mutex_);
-  ReleasePagedVmoUnsafe();
+  zx::status<bool> valid_vmo_or;
+  {
+    std::lock_guard lock(mutex_);
+    valid_vmo_or = ReleasePagedVmoUnsafe();
+    ZX_DEBUG_ASSERT(valid_vmo_or.is_ok());
+  }
+  // If necessary, clear the mmap flag in its node Page after releasing its paged VMO.
+  if (valid_vmo_or.value() && TestFlag(InodeInfoFlag::kInlineData)) {
+    LockedPage inline_page;
+    if (zx_status_t ret = Vfs()->GetNodeManager().GetNodePage(Ino(), &inline_page); ret == ZX_OK) {
+      inline_page->ClearMmapped();
+    } else {
+      FX_LOGS(WARNING) << "Failed to get the inline data page. " << ret;
+    }
+  }
 }
 
-void VnodeF2fs::ReleasePagedVmoUnsafe() {
+zx::status<bool> VnodeF2fs::ReleasePagedVmoUnsafe() {
 #ifdef __Fuchsia__
   if (paged_vmo()) {
     fbl::RefPtr<fs::Vnode> pager_reference = FreePagedVmo();
     ZX_DEBUG_ASSERT(!pager_reference);
+    return zx::ok(true);
   }
 #endif
+  return zx::ok(false);
 }
 
 // Called at Recycle if nlink_ is zero

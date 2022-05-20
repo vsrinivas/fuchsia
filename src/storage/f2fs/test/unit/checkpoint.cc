@@ -921,8 +921,9 @@ TEST_F(CheckpointTestF, CpError) {
     ASSERT_EQ(fs_->GrabMetaPage(fault_lba, &page), ZX_OK);
     page->SetDirty();
   }
+  // The appended data is written in the node page of |root_dir_|
+  // since the inline_data option is enabled by default.
   ASSERT_EQ(fs_->GetSuperblockInfo().GetPageCount(CountType::kDirtyNodes), 1);
-  ASSERT_EQ(fs_->GetSuperblockInfo().GetPageCount(CountType::kDirtyData), 1);
   ASSERT_EQ(fs_->GetSuperblockInfo().GetPageCount(CountType::kDirtyMeta), 1);
   ASSERT_FALSE(fs_->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag));
 

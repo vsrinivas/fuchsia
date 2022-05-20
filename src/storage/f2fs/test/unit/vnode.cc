@@ -111,10 +111,12 @@ TEST_F(VnodeTest, Advise) {
 TEST_F(VnodeTest, EmptyOverridenMethods) {
   char buf[kPageSize];
   size_t out, end;
+  zx::vmo vmo;
   ASSERT_EQ(root_dir_->Read(buf, 0, kPageSize, &out), ZX_ERR_NOT_SUPPORTED);
   ASSERT_EQ(root_dir_->Write(buf, 0, kPageSize, &out), ZX_ERR_NOT_SUPPORTED);
   ASSERT_EQ(root_dir_->Append(buf, kPageSize, &end, &out), ZX_ERR_NOT_SUPPORTED);
   ASSERT_EQ(root_dir_->Truncate(0), ZX_ERR_NOT_SUPPORTED);
+  ASSERT_EQ(root_dir_->PopulateVmoWithInlineData(vmo).status_value(), ZX_ERR_NOT_SUPPORTED);
 }
 
 TEST_F(VnodeTest, Mode) {

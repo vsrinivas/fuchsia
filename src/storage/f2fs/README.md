@@ -7,7 +7,7 @@ For more information see: https://www.usenix.org/conference/fast15/technical-ses
 
 Limitations
 =============
-* Features under development: mmap, gc, roll-forward recovery, xattr, fallocate, inline data
+* Features under development: mmap(shared), gc, roll-forward recovery, xattr, fallocate
 * fsync() triggers checkpointing after flushing dirty Pages from a file cache.
 * We use LFS for new blocks but enforce SSR/IPU for rewritten blocks until gc is available.
 

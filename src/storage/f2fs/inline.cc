@@ -398,6 +398,25 @@ uint8_t *File::InlineDataPtr(Page *page) {
       &ri.i_addr[GetExtraISize() / sizeof(uint32_t) + kInlineStartOffset]);
 }
 
+#ifdef __Fuchsia__
+zx::status<> File::PopulateVmoWithInlineData(zx::vmo &vmo) {
+  LockedPage inline_page;
+  if (zx_status_t ret = Vfs()->GetNodeManager().GetNodePage(Ino(), &inline_page); ret != ZX_OK) {
+    return zx::error(ret);
+  }
+  // Fill |vmo| only when it has valid inline data.
+  if (TestFlag(InodeInfoFlag::kDataExist)) {
+    uint8_t *inline_data = InlineDataPtr(inline_page.get());
+    size_t size = GetSize();
+    if (size) {
+      vmo.write(inline_data, 0, size);
+    }
+  }
+  inline_page->SetMmapped();
+  return zx::ok();
+}
+#endif  // __Fuchsia__
+
 zx_status_t File::ReadInline(void *data, size_t len, size_t off, size_t *out_actual) {
   LockedPage inline_page;
   if (zx_status_t ret = Vfs()->GetNodeManager().GetNodePage(Ino(), &inline_page); ret != ZX_OK) {
@@ -450,7 +469,10 @@ zx_status_t File::ConvertInlineData() {
 
   ipage->WaitOnWriteback();
   ipage->ZeroUserSegment(InlineDataOffset(), InlineDataOffset() + MaxInlineData());
+  // Clear regarding flags since we moved inline data to a data Page.
+  ipage->ClearMmapped();
   ClearFlag(InodeInfoFlag::kInlineData);
+  ClearFlag(InodeInfoFlag::kDataExist);
 
   UpdateInode(ipage);
 
@@ -467,6 +489,10 @@ zx_status_t File::WriteInline(const void *data, size_t len, size_t offset, size_
 
   uint8_t *inline_data = InlineDataPtr(inline_page.get());
   memcpy(inline_data + offset, static_cast<const uint8_t *>(data), len);
+  if (inline_page->IsMapped()) {
+    // Apply changes to its paged VMO.
+    ZX_ASSERT(WritePagedVmo(inline_data + offset, offset, len) == ZX_OK);
+  }
 
   SetSize(std::max(static_cast<size_t>(GetSize()), offset + len));
   SetFlag(InodeInfoFlag::kDataExist);
@@ -494,7 +520,12 @@ zx_status_t File::TruncateInline(size_t len) {
 
     uint8_t *inline_data = InlineDataPtr(inline_page.get());
     size_t size_diff = (len > GetSize()) ? (len - GetSize()) : (GetSize() - len);
-    memset(inline_data + ((len > GetSize()) ? GetSize() : len), 0, size_diff);
+    size_t offset = ((len > GetSize()) ? GetSize() : len);
+    memset(inline_data + offset, 0, size_diff);
+    if (inline_page->IsMapped()) {
+      // Apply changes to its paged VMO.
+      ZX_ASSERT(WritePagedVmo(inline_data + offset, offset, size_diff) == ZX_OK);
+    }
 
     SetSize(len);
     if (GetSize() == 0) {

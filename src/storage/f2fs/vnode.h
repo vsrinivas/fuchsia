@@ -78,8 +78,10 @@ class VnodeF2fs : public fs::Vnode,
 
   F2fs *Vfs() __TA_EXCLUDES(mutex_) {
     fs::SharedLock lock(mutex_);
-    return reinterpret_cast<F2fs *>(vfs());
+    return VfsUnsafe();
   }
+  F2fs *VfsUnsafe() __TA_REQUIRES_SHARED(mutex_) { return reinterpret_cast<F2fs *>(vfs()); }
+
   ino_t Ino() const { return ino_; }
 
   zx_status_t GetAttributes(fs::VnodeAttributes *a) final __TA_EXCLUDES(mutex_);
@@ -99,15 +101,19 @@ class VnodeF2fs : public fs::Vnode,
   void VmoDirty(uint64_t offset, uint64_t length) final {
     FX_LOGS(ERROR) << "Unsupported VmoDirty in VnodeF2fs.";
   }
-  zx::status<zx::vmo> PopulateAndGetMmappedVmo(const size_t offset, const size_t length);
+  zx::status<zx::vmo> PopulateAndGetMmappedVmo(const size_t offset, const size_t length)
+      __TA_EXCLUDES(mutex_);
   void OnNoPagedVmoClones() final __TA_REQUIRES(mutex_);
+  virtual zx::status<> PopulateVmoWithInlineData(zx::vmo &vmo) __TA_EXCLUDES(mutex_) {
+    return zx::error(ZX_ERR_NOT_SUPPORTED);
+  }
 #endif  // __Fuchsia__
 
   zx_status_t InvalidatePagedVmo(uint64_t offset, size_t len) __TA_EXCLUDES(mutex_);
   zx_status_t WritePagedVmo(const void *buffer_address, uint64_t offset, size_t len)
       __TA_EXCLUDES(mutex_);
   void ReleasePagedVmo() __TA_EXCLUDES(mutex_);
-  void ReleasePagedVmoUnsafe() __TA_REQUIRES(mutex_);
+  zx::status<bool> ReleasePagedVmoUnsafe() __TA_REQUIRES(mutex_);
 
 #if 0  // porting needed
   // void F2fsSetInodeFlags();
