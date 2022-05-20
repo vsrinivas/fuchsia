@@ -15,6 +15,7 @@ use {
     fuchsia_async as fasync, fuchsia_scenic as scenic, fuchsia_scenic,
     fuchsia_syslog::{fx_log_err, fx_log_warn},
     futures::channel::mpsc::{UnboundedReceiver, UnboundedSender},
+    futures::channel::oneshot,
     futures::future::TryFutureExt,
     futures::prelude::*,
     input_pipeline::input_pipeline::InputPipelineAssembly,
@@ -27,6 +28,11 @@ pub enum PresentationMessage {
     /// Request a present call.
     // TODO(fxbug.dev/86837): delete this message type when Gfx is removed.
     RequestPresent,
+    // Requests a present call; also, provides a channel that will get a ping back
+    // when the next frame has been presented on screen.
+    //
+    // TODO(fxbug.dev/86837): delete this message type when Gfx is removed.
+    RequestPresentWithPingback(oneshot::Sender<()>),
     /// Submit a present call.
     Present,
 }
@@ -114,6 +120,16 @@ pub trait SceneManager: Send {
         a11y_viewport_creation_token: ui_views::ViewportCreationToken,
     ) -> Result<ui_views::ViewportCreationToken, Error>;
 
+    /// Sets the transform for screen magnification, applied after the camera projection.
+    ///
+    /// # Notes
+    /// In gfx, this won't return until the next frame has rendered.
+    /// Not implemented in flatland.
+    async fn set_camera_clip_space_transform(&mut self, x: f32, y: f32, scale: f32);
+
+    /// Resets the transform for screen magnification to the default.
+    fn reset_camera_clip_space_transform(&mut self);
+
     /// Sets the position of the cursor in the current scene. If no cursor has been created it will
     /// create one using default settings.
     ///
@@ -171,10 +187,21 @@ pub fn start_presentation_loop(
             event_stream
         };
         let mut present_requested = false;
+        let mut channels_awaiting_pingback: Vec<oneshot::Sender<()>> = Vec::new();
 
         while let Some(message) = receiver.next().await {
             match message {
                 PresentationMessage::RequestPresent => {
+                    // Queue a present if not already queued.
+                    if !present_requested {
+                        sender
+                            .unbounded_send(PresentationMessage::Present)
+                            .expect("failed to send Present message");
+                        present_requested = true;
+                    }
+                }
+                PresentationMessage::RequestPresentWithPingback(channel) => {
+                    channels_awaiting_pingback.push(channel);
                     // Queue a present if not already queued.
                     if !present_requested {
                         sender
@@ -201,6 +228,10 @@ pub fn start_presentation_loop(
                                     frame_presented_info: _,
                                 } => break,
                             }
+                        }
+
+                        for channel in channels_awaiting_pingback.drain(0..) {
+                            _ = channel.send(());
                         }
                     } else {
                         break;
@@ -248,6 +279,10 @@ pub fn start_flatland_presentation_loop(
                 PresentationMessage::RequestPresent => {
                     // TODO(fxbug.dev/86837): delete this message type when Gfx is removed.
                     panic!("PresentationMessage::RequestPresent is not allowed.");
+                }
+                PresentationMessage::RequestPresentWithPingback(_) => {
+                    // TODO(fxbug.dev/86837): delete this message type when Gfx is removed.
+                    panic!("PresentationMessage::RequestPresentWithPingback is not allowed.");
                 }
                 PresentationMessage::Present => {
                     match weak_flatland.upgrade() {

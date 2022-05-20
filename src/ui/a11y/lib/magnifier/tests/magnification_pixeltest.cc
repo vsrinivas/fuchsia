@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/accessibility/cpp/fidl.h>
+#include <lib/async/cpp/task.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
@@ -51,12 +52,14 @@ constexpr scenic::Color kCenterColor = {0, 255, 0, 255};
 // |________________|________________|
 //
 // These are rough integration tests to supplement the |ScenicPixelTest| clip-space transform tests.
-class MagnificationPixelTest : public gtest::RealLoopFixture {
+class MagnificationPixelTest
+    : public gtest::RealLoopFixture,
+      public ::testing::WithParamInterface<ui_testing::UITestManager::SceneOwnerType> {
  protected:
   // |testing::Test|
   void SetUp() override {
     ui_testing::UITestManager::Config config;
-    config.scene_owner = ui_testing::UITestManager::SceneOwnerType::ROOT_PRESENTER;
+    config.scene_owner = GetParam();
     config.accessibility_owner = ui_testing::UITestManager::AccessibilityOwnerType::FAKE;
     config.use_input = true;
     config.ui_to_client_services = {fuchsia::ui::scenic::Scenic::Name_};
@@ -118,7 +121,12 @@ class MagnificationPixelTest : public gtest::RealLoopFixture {
   test::accessibility::MagnifierPtr fake_magnifier_;
 };
 
-TEST_F(MagnificationPixelTest, Identity) {
+INSTANTIATE_TEST_SUITE_P(
+    MagnificationPixelTestWithParams, MagnificationPixelTest,
+    ::testing::Values(ui_testing::UITestManager::SceneOwnerType::ROOT_PRESENTER,
+                      ui_testing::UITestManager::SceneOwnerType::SCENE_MANAGER));
+
+TEST_P(MagnificationPixelTest, Identity) {
   SetClipSpaceTransform(/* scale = */ 1, /* translation_x = */ 0, /* translation_y = */ 0);
 
   RunLoopUntil([this]() {
@@ -132,7 +140,7 @@ TEST_F(MagnificationPixelTest, Identity) {
   });
 }
 
-TEST_F(MagnificationPixelTest, Center) {
+TEST_P(MagnificationPixelTest, Center) {
   SetClipSpaceTransform(/* scale = */ 4, /* translation_x = */ 0, /* translation_y = */ 0);
 
   RunLoopUntil([this]() {
@@ -145,7 +153,7 @@ TEST_F(MagnificationPixelTest, Center) {
   });
 }
 
-TEST_F(MagnificationPixelTest, RotatedUpperLeft) {
+TEST_P(MagnificationPixelTest, RotatedUpperLeft) {
   SetClipSpaceTransform(/* scale = */ 2, /* translation_x = */ 1, /* translation_y = */ 1);
 
   RunLoopUntil([this]() {

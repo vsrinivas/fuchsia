@@ -316,6 +316,14 @@ impl SceneManager for FlatlandSceneManager {
         panic!("unimplemented")
     }
 
+    async fn set_camera_clip_space_transform(&mut self, _x: f32, _y: f32, _scale: f32) {
+        panic!("unimplemented")
+    }
+
+    fn reset_camera_clip_space_transform(&mut self) {
+        panic!("unimplemented")
+    }
+
     fn get_pointerinjection_view_refs(&self) -> (ui_views::ViewRef, ui_views::ViewRef) {
         (
             scenic::duplicate_view_ref(&self.context_view_ref).expect("failed to copy ViewRef"),

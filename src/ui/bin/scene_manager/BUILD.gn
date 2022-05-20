@@ -17,6 +17,7 @@ rustc_binary("scene_manager_bin") {
   edition = "2018"
 
   deps = [
+    "//sdk/fidl/fuchsia.accessibility:fuchsia.accessibility-rustc",
     "//sdk/fidl/fuchsia.input.injection:fuchsia.input.injection-rustc",
     "//sdk/fidl/fuchsia.session:fuchsia.session-rustc",
     "//sdk/fidl/fuchsia.session.scene:fuchsia.session.scene-rustc",

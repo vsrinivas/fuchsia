@@ -8,11 +8,16 @@ use {
     crate::scene_manager::{self, PresentationMessage, PresentationSender, SceneManager},
     anyhow::Error,
     async_trait::async_trait,
-    fidl, fidl_fuchsia_ui_app as ui_app, fidl_fuchsia_ui_gfx as ui_gfx,
+    fidl,
+    fidl_fuchsia_accessibility::{MagnificationHandlerRequest, MagnificationHandlerRequestStream},
+    fidl_fuchsia_ui_app as ui_app, fidl_fuchsia_ui_gfx as ui_gfx,
     fidl_fuchsia_ui_scenic as ui_scenic, fidl_fuchsia_ui_views as ui_views,
     fuchsia_async as fasync, fuchsia_scenic as scenic, fuchsia_scenic,
-    fuchsia_syslog::{fx_log_info, fx_log_warn},
+    fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
     futures::channel::mpsc::unbounded,
+    futures::channel::oneshot,
+    futures::lock::Mutex,
+    futures::TryStreamExt,
     input_pipeline::{
         gfx_touch_handler::GfxTouchHandler, input_pipeline::InputPipelineAssembly, Size,
     },
@@ -48,6 +53,9 @@ pub struct GfxSceneManager {
 
     /// The metrics for the display presenting the scene.
     pub display_metrics: DisplayMetrics,
+
+    /// The camera of the scene.
+    camera: scenic::Camera,
 
     /// The view holder [`scenic::EntityNodes`], which have been added to the Scene.
     views: Vec<scenic::EntityNode>,
@@ -88,7 +96,6 @@ pub struct GfxSceneManager {
 /// If the resources are dropped, they are automatically removed from the Scenic session.
 struct ScenicResources {
     _ambient_light: scenic::AmbientLight,
-    _camera: scenic::Camera,
     _compositor: scenic::DisplayCompositor,
     _layer: scenic::Layer,
     _layer_stack: scenic::LayerStack,
@@ -225,6 +232,15 @@ impl SceneManager for GfxSceneManager {
         _a11y_viewport_creation_token: ui_views::ViewportCreationToken,
     ) -> Result<ui_views::ViewportCreationToken, Error> {
         Err(anyhow::anyhow!("A11y should be configured to use Gfx, not Flatland"))
+    }
+
+    async fn set_camera_clip_space_transform(&mut self, x: f32, y: f32, scale: f32) {
+        self.camera.set_camera_clip_space_transform(x, y, scale);
+        GfxSceneManager::request_present_and_await_next_frame(&self.presentation_sender).await;
+    }
+
+    fn reset_camera_clip_space_transform(&mut self) {
+        _ = self.set_camera_clip_space_transform(0.0, 0.0, 1.0);
     }
 
     fn get_pointerinjection_view_refs(&self) -> (ui_views::ViewRef, ui_views::ViewRef) {
@@ -366,7 +382,6 @@ impl GfxSceneManager {
 
         let resources = ScenicResources {
             _ambient_light: ambient_light,
-            _camera: camera,
             _compositor: compositor,
             _layer: layer,
             _layer_stack: layer_stack,
@@ -394,6 +409,7 @@ impl GfxSceneManager {
             display_size: ScreenSize::from_size(&size_in_pixels, display_metrics),
             compositor_id,
             _resources: resources,
+            camera,
             views: vec![],
             a11y_proxy_view_holder,
             a11y_proxy_view,
@@ -405,6 +421,45 @@ impl GfxSceneManager {
             presentation_sender: sender,
             a11y_proxy_presentation_sender: a11y_proxy_sender,
         })
+    }
+
+    pub fn handle_magnification_handler_request_stream(
+        mut request_stream: MagnificationHandlerRequestStream,
+        scene_manager: Arc<Mutex<Box<dyn SceneManager>>>,
+    ) {
+        fasync::Task::local(async move {
+            loop {
+                let request = request_stream.try_next().await;
+                match request {
+                    Ok(Some(MagnificationHandlerRequest::SetClipSpaceTransform {
+                        x,
+                        y,
+                        scale,
+                        responder,
+                    })) => {
+                        { scene_manager.lock().await.set_camera_clip_space_transform(x, y, scale) }
+                            .await;
+                        if let Err(e) = responder.send() {
+                            fx_log_warn!(
+                                "Failed to send MagnificationHandlerRequest() response: {}",
+                                e
+                            );
+                        }
+                    }
+                    Ok(None) => {
+                        return;
+                    }
+                    Err(e) => {
+                        {
+                            scene_manager.lock().await.reset_camera_clip_space_transform()
+                        }
+                        fx_log_err!("Error obtaining MagnificationHandlerRequest: {}", e);
+                        return;
+                    }
+                }
+            }
+        })
+        .detach()
     }
 
     /// Creates a new Scenic session.
@@ -613,6 +668,19 @@ impl GfxSceneManager {
         presentation_sender
             .unbounded_send(PresentationMessage::RequestPresent)
             .expect("failed to send RequestPresent message");
+    }
+
+    /// Requests that all previously enqueued operations are presented.
+    ///
+    /// # Notes
+    /// Returns only once the next frame has been rendered.
+    async fn request_present_and_await_next_frame(presentation_sender: &PresentationSender) {
+        let (sender, receiver) = oneshot::channel::<()>();
+        presentation_sender
+            .unbounded_send(PresentationMessage::RequestPresentWithPingback(sender))
+            .expect("failed to send RequestPresentWithPingback message");
+
+        _ = receiver.await
     }
 
     /// Sets the image to use for the scene's cursor.

@@ -85,6 +85,17 @@
             from: "#scene_manager",
             to: [ "#a11y_manager" ],
         },
+        {
+            protocol: [
+                // TODO(fxbug.dev/100268) Magnifier is only used by gfx, not
+                // flatland. Maybe we should split this manifest into
+                // gfx/flatland versions.
+                "fuchsia.accessibility.Magnifier",
+            ],
+            from: "#a11y_manager",
+            to: [ "#scene_manager" ],
+            dependency: "weak",
+        },
     ],
     expose: [
         {

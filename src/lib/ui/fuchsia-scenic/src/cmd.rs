@@ -7,8 +7,9 @@ use fidl_fuchsia_ui_gfx::{
     AddChildCmd, AddLayerCmd, AddPartCmd, ColorRgb, ColorRgbValue, ColorRgba, ColorRgbaValue,
     CreateResourceCmd, DetachCmd, DetachLightCmd, DetachLightsCmd, Quaternion, QuaternionValue,
     ReleaseResourceCmd, RemoveAllLayersCmd, RemoveLayerCmd, ResourceArgs, SceneAddAmbientLightCmd,
-    SceneAddDirectionalLightCmd, SceneAddPointLightCmd, SetAnchorCmd, SetCameraCmd, SetClipCmd,
-    SetColorCmd, SetDisplayRotationCmdHack, SetEventMaskCmd, SetLayerStackCmd, SetLightColorCmd,
+    SceneAddDirectionalLightCmd, SceneAddPointLightCmd, SetAnchorCmd,
+    SetCameraClipSpaceTransformCmd, SetCameraCmd, SetClipCmd, SetColorCmd,
+    SetDisplayRotationCmdHack, SetEventMaskCmd, SetLayerStackCmd, SetLightColorCmd,
     SetLightDirectionCmd, SetMaterialCmd, SetRendererCmd, SetRotationCmd, SetScaleCmd, SetShapeCmd,
     SetSizeCmd, SetTextureCmd, SetTranslationCmd, SetViewPropertiesCmd, Vec2, Vec3, Vector2Value,
     Vector3Value, ViewProperties,
@@ -138,6 +139,11 @@ pub fn set_renderer(layer_id: u32, renderer_id: u32) -> Command {
 pub fn set_camera(renderer_id: u32, camera_id: u32) -> Command {
     let cmd = SetCameraCmd { renderer_id, camera_id };
     Command::Gfx(GfxCommand::SetCamera(cmd))
+}
+
+pub fn set_camera_clip_space_transform(camera_id: u32, x: f32, y: f32, scale: f32) -> Command {
+    let cmd = SetCameraClipSpaceTransformCmd { camera_id, translation: Vec2 { x, y }, scale };
+    Command::Gfx(GfxCommand::SetCameraClipSpaceTransform(cmd))
 }
 
 pub fn set_light_color(light_id: u32, value: ColorRgb) -> Command {

@@ -5,6 +5,7 @@
 use {
     anyhow::Error,
     fidl::prelude::*,
+    fidl_fuchsia_accessibility::{MagnificationHandlerMarker, MagnifierMarker},
     fidl_fuchsia_input_injection::InputDeviceRegistryRequestStream,
     fidl_fuchsia_session_scene::{
         ManagerRequest as SceneManagerRequest, ManagerRequestStream as SceneManagerRequestStream,
@@ -82,9 +83,13 @@ async fn main() -> Result<(), Error> {
         )))
     } else {
         let view_ref_installed = connect_to_protocol::<ui_views::ViewRefInstalledMarker>()?;
-        Arc::new(Mutex::new(Box::new(
+        let gfx_scene_manager: Arc<Mutex<Box<dyn SceneManager>>> = Arc::new(Mutex::new(Box::new(
             scene_management::GfxSceneManager::new(scenic, view_ref_installed, None, None).await?,
-        )))
+        )));
+        if let Err(e) = register_gfx_as_magnifier(Arc::clone(&gfx_scene_manager)) {
+            fx_log_warn!("failed to register as the magnification handler: {:?}", e);
+        }
+        gfx_scene_manager
     };
 
     // Create a node under root to hang all input pipeline inspect data off of.
@@ -219,6 +224,20 @@ pub async fn handle_accessibility_view_registry_request_stream(
             }
         };
     }
+}
+
+fn register_gfx_as_magnifier(
+    scene_manager: Arc<Mutex<Box<dyn SceneManager>>>,
+) -> Result<(), anyhow::Error> {
+    let (magnification_handler_client, magnification_handler_server) =
+        fidl::endpoints::create_request_stream::<MagnificationHandlerMarker>()?;
+    scene_management::GfxSceneManager::handle_magnification_handler_request_stream(
+        magnification_handler_server,
+        scene_manager,
+    );
+    let magnifier_proxy = connect_to_protocol::<MagnifierMarker>()?;
+    magnifier_proxy.register_handler(magnification_handler_client)?;
+    Ok(())
 }
 
 #[cfg(test)]

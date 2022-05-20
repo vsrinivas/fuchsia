@@ -31,6 +31,9 @@
         },
         {
             protocol: [
+                // Used to register with the a11y service as the magnification handler.
+                "fuchsia.accessibility.Magnifier",
+
                 // Used by the input pipeline library which is linked into the
                 // scene manager.
                 "fuchsia.settings.Keyboard",

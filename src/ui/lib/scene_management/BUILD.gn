@@ -11,6 +11,7 @@ rustc_library("scene_management") {
   edition = "2018"
 
   deps = [
+    "//sdk/fidl/fuchsia.accessibility:fuchsia.accessibility-rustc",
     "//sdk/fidl/fuchsia.images:fuchsia.images-rustc",
     "//sdk/fidl/fuchsia.math:fuchsia.math-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
