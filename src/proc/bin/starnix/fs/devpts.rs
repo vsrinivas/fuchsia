@@ -135,36 +135,38 @@ impl FileOps for DevPtmxFile {
     fn read(
         &self,
         _file: &FileObject,
-        _current_task: &CurrentTask,
-        _data: &[UserBuffer],
+        current_task: &CurrentTask,
+        data: &[UserBuffer],
     ) -> Result<usize, Errno> {
-        error!(EOPNOTSUPP)
+        self.terminal.write().main_read(current_task, data)
     }
 
     fn write(
         &self,
         _file: &FileObject,
-        _current_task: &CurrentTask,
-        _data: &[UserBuffer],
+        current_task: &CurrentTask,
+        data: &[UserBuffer],
     ) -> Result<usize, Errno> {
-        error!(EOPNOTSUPP)
+        self.terminal.write().main_write(current_task, data)
     }
 
     fn wait_async(
         &self,
         _file: &FileObject,
         _current_task: &CurrentTask,
-        _waiter: &Arc<Waiter>,
-        _events: FdEvents,
-        _handler: EventHandler,
+        waiter: &Arc<Waiter>,
+        events: FdEvents,
+        handler: EventHandler,
     ) -> WaitKey {
-        WaitKey::empty()
+        self.terminal.write().main_wait_async(waiter, events, handler)
     }
 
-    fn cancel_wait(&self, _current_task: &CurrentTask, _waiter: &Arc<Waiter>, _key: WaitKey) {}
+    fn cancel_wait(&self, _current_task: &CurrentTask, _waiter: &Arc<Waiter>, key: WaitKey) {
+        self.terminal.write().main_cancel_wait(key);
+    }
 
     fn query_events(&self, _current_task: &CurrentTask) -> FdEvents {
-        FdEvents::empty()
+        self.terminal.read().main_query_events()
     }
 
     fn fcntl(
@@ -265,36 +267,38 @@ impl FileOps for DevPtsFile {
     fn read(
         &self,
         _file: &FileObject,
-        _current_task: &CurrentTask,
-        _data: &[UserBuffer],
+        current_task: &CurrentTask,
+        data: &[UserBuffer],
     ) -> Result<usize, Errno> {
-        error!(EOPNOTSUPP)
+        self.terminal.write().replica_read(current_task, data)
     }
 
     fn write(
         &self,
         _file: &FileObject,
-        _current_task: &CurrentTask,
-        _data: &[UserBuffer],
+        current_task: &CurrentTask,
+        data: &[UserBuffer],
     ) -> Result<usize, Errno> {
-        error!(EOPNOTSUPP)
+        self.terminal.write().replica_write(current_task, data)
     }
 
     fn wait_async(
         &self,
         _file: &FileObject,
         _current_task: &CurrentTask,
-        _waiter: &Arc<Waiter>,
-        _events: FdEvents,
-        _handler: EventHandler,
+        waiter: &Arc<Waiter>,
+        events: FdEvents,
+        handler: EventHandler,
     ) -> WaitKey {
-        WaitKey::empty()
+        self.terminal.write().replica_wait_async(waiter, events, handler)
     }
 
-    fn cancel_wait(&self, _current_task: &CurrentTask, _waiter: &Arc<Waiter>, _key: WaitKey) {}
+    fn cancel_wait(&self, _current_task: &CurrentTask, _waiter: &Arc<Waiter>, key: WaitKey) {
+        self.terminal.write().replica_cancel_wait(key);
+    }
 
     fn query_events(&self, _current_task: &CurrentTask) -> FdEvents {
-        FdEvents::empty()
+        self.terminal.read().replica_query_events()
     }
 
     fn fcntl(
@@ -328,6 +332,12 @@ fn shared_ioctl(
     user_addr: UserAddress,
 ) -> Result<SyscallResult, Errno> {
     match request {
+        FIONREAD => {
+            // Get the main terminal available bytes for reading.
+            let value = terminal.read().get_available_read_size(is_main) as u32;
+            current_task.mm.write_object(UserRef::<u32>::new(user_addr), &value)?;
+            Ok(SUCCESS)
+        }
         TIOCSCTTY => {
             // Make the given terminal the controlling terminal of the calling process.
             let steal = !user_addr.is_null();
@@ -400,26 +410,25 @@ fn shared_ioctl(
         TCGETS => {
             // N.B. TCGETS on the main terminal actually returns the configuration of the replica
             // end.
-            current_task
-                .mm
-                .write_object(UserRef::<uapi::termios>::new(user_addr), &terminal.read().termios)?;
+            current_task.mm.write_object(
+                UserRef::<uapi::termios>::new(user_addr),
+                terminal.read().termios(),
+            )?;
             Ok(SUCCESS)
         }
         TCSETS => {
             // N.B. TCSETS on the main terminal actually affects the configuration of the replica
             // end.
-            current_task.mm.read_object(
-                UserRef::<uapi::termios>::new(user_addr),
-                &mut terminal.write().termios,
-            )?;
+            let mut termios: uapi::termios = Default::default();
+            current_task.mm.read_object(UserRef::<uapi::termios>::new(user_addr), &mut termios)?;
+            terminal.write().set_termios(termios);
             Ok(SUCCESS)
         }
         TCSETSW => {
             // TODO(qsr): This should drain the output queue first.
-            current_task.mm.read_object(
-                UserRef::<uapi::termios>::new(user_addr),
-                &mut terminal.write().termios,
-            )?;
+            let mut termios: uapi::termios = Default::default();
+            current_task.mm.read_object(UserRef::<uapi::termios>::new(user_addr), &mut termios)?;
+            terminal.write().set_termios(termios);
             Ok(SUCCESS)
         }
         _ => {
@@ -850,5 +859,50 @@ mod tests {
             .read()
             .controlling_terminal
             .is_none());
+    }
+
+    #[::fuchsia::test]
+    fn test_send_data_back_and_forth() {
+        let (kernel, task) = create_kernel_and_task();
+        let fs = dev_pts_fs(&kernel);
+        let ptmx = open_ptmx_and_unlock(&task, &fs).expect("ptmx");
+        let pts = open_file(&task, &fs, b"0").expect("open file");
+
+        let mm = &task.mm;
+        let addr = map_memory(&task, UserAddress::default(), 4096);
+        let mut buffer = vec![0; 4096];
+        let get_buffer = |size: usize| [UserBuffer { address: addr, length: size }];
+
+        let has_data_ready_to_read = |fd: &FileHandle| fd.query_events(&task) & FdEvents::POLLIN;
+
+        let write_and_assert = |fd: &FileHandle, data: &[u8]| {
+            mm.write_all(&get_buffer(data.len()), data).expect("write_all");
+            assert_eq!(fd.write(&task, &get_buffer(data.len())).expect("write"), data.len());
+        };
+
+        let mut read_and_check = |fd: &FileHandle, data: &[u8]| {
+            assert!(has_data_ready_to_read(fd));
+            assert_eq!(fd.read(&task, &get_buffer(data.len() + 1)).expect("read"), data.len());
+            mm.read_all(&get_buffer(data.len()), &mut buffer).expect("read_all");
+
+            assert_eq!(data, buffer[..data.len()].to_vec());
+        };
+
+        let hello_buffer = b"hello\n";
+        let hello_transformed_buffer = b"hello\r\n";
+
+        // Main to replica
+        write_and_assert(&ptmx, hello_buffer);
+        read_and_check(&pts, hello_buffer);
+
+        // Data has been echoed
+        read_and_check(&ptmx, hello_transformed_buffer);
+
+        // Replica to main
+        write_and_assert(&pts, hello_buffer);
+        read_and_check(&ptmx, hello_transformed_buffer);
+
+        // Data has not been echoed
+        assert!(!has_data_ready_to_read(&pts));
     }
 }

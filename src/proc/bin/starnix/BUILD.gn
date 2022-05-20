@@ -89,6 +89,7 @@ if (target_cpu == "x64") {
       "//third_party/rust_crates:serde_json",
       "//third_party/rust_crates:slab",
       "//third_party/rust_crates:tracing",
+      "//third_party/rust_crates:utf8parse",
       "//third_party/rust_crates:vk-sys",
     ]
 

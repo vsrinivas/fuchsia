@@ -2,6 +2,6 @@
     include: [ "//src/proc/tests/android/gvisor/meta/gvisor.shard.cml" ],
     program: {
         binary: "data/tests/pty_test",
-        args: [ "--gunit_filter=PtyTrunc.*:BasicPtyTest.*:JobControlTest.*:PtyTest.*WindowSize:PtyTest.DefaultTermios:PtyTest.TermiosAffectsReplica" ],
+        args: [ "--gunit_filter=-PtyTest.PartialBadBuffer" ],
     },
 }
