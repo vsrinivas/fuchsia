@@ -33,7 +33,7 @@ type MagmaConnection = u64;
 type BufferMap = HashMap<magma_buffer_t, BufferInfo>;
 
 /// A `ConnectionMap` stores the `BufferMap`s associated with each magma connection.
-type ConnectionMap = HashMap<MagmaConnection, BufferMap>;
+pub type ConnectionMap = HashMap<MagmaConnection, BufferMap>;
 pub struct MagmaFile {
     // TODO(fxbug.dev/12731): The lifecycle of the device channels should be handled by magma.
     devices: Arc<Mutex<Vec<zx::Channel>>>,
@@ -131,11 +131,8 @@ impl FileOps for MagmaFile {
                     virtio_magma_create_connection2_resp_t,
                 ) = read_control_and_response(current_task, &command)?;
 
-                let mut connection_out: magma_connection_t = 0;
-                response.result_return =
-                    unsafe { magma_create_connection2(control.device, &mut connection_out) as u64 };
+                create_connection(control, &mut response);
 
-                response.connection_out = connection_out;
                 response.hdr.type_ =
                     virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_CREATE_CONNECTION2 as u32;
                 current_task.mm.write_object(UserRef::new(response_address), &response)
@@ -146,12 +143,7 @@ impl FileOps for MagmaFile {
                     virtio_magma_release_connection_resp_t,
                 ) = read_control_and_response(current_task, &command)?;
 
-                let connection = control.connection as magma_connection_t;
-                let mut connections = self.connections.lock();
-                if connections.contains_key(&connection) {
-                    unsafe { magma_release_connection(connection) };
-                    connections.remove(&connection);
-                }
+                release_connection(control, &mut *self.connections.lock());
 
                 response.hdr.type_ =
                     virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_RELEASE_CONNECTION as u32;

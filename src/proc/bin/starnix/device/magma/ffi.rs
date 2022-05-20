@@ -8,6 +8,7 @@ use fuchsia_zircon::{self as zx, AsHandleRef};
 use magma::*;
 use zerocopy::{AsBytes, FromBytes};
 
+use crate::device::magma::file::ConnectionMap;
 use crate::fs::{anon_fs, Anon, FdFlags, VmoFileObject};
 use crate::task::CurrentTask;
 use crate::types::*;
@@ -41,6 +42,25 @@ where
         current_task.mm.read_objects(user_ref, &mut items)?;
     }
     Ok(items)
+}
+
+/// Creates a connection for a given device.
+///
+/// # Parameters
+///   - `control`: The control struct containing the device to create a connection to.
+///   - `response`: The struct that will be filled out to contain the response. This struct can be
+///                 written back to userspace.
+///
+/// SAFETY: Makes an FFI call to populate the fields of `response`.
+pub fn create_connection(
+    control: virtio_magma_create_connection2_ctrl,
+    response: &mut virtio_magma_create_connection2_resp_t,
+) {
+    let mut connection_out: magma_connection_t = 0;
+    response.result_return =
+        unsafe { magma_create_connection2(control.device, &mut connection_out) as u64 };
+
+    response.connection_out = connection_out;
 }
 
 /// Imports a device to magma.
@@ -196,4 +216,24 @@ pub fn query(
     response.result_out = result_out;
 
     Ok(())
+}
+
+/// Releases the provided `control.connection`.
+///
+/// # Parameters
+///   - `control`: The control message that contains the connection to remove.
+///   - `connections`: The starnix-magma connection map, which is used to determine whether or not
+///                    to call into magma to release the connection.
+///
+/// SAFETY: Makes an FFI call to populate the fields of `response`.
+
+pub fn release_connection(
+    control: virtio_magma_release_connection_ctrl_t,
+    connections: &mut ConnectionMap,
+) {
+    let connection = control.connection as magma_connection_t;
+    if connections.contains_key(&connection) {
+        unsafe { magma_release_connection(connection) };
+        connections.remove(&connection);
+    }
 }
