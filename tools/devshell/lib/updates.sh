@@ -76,13 +76,39 @@ function check-if-we-can-start-package-server {
     configured_mode="$(package-server-mode)"
     if [[ "${configured_mode}" == "ffx" ]]; then
       fx-error "Even though we are trying to start a pm package server, it appears"
-      fx-error "that there may be an ffx server running that could block the pm"
-      fx-error "package server from listening on ${expected_port}."
+      fx-error "we are configured to use the ffx repository server. Try shutting it"
+      fx-error "down with:"
       fx-error ""
-      fx-error "You probably need to either stop serve-updates, or explicitly shut"
-      fx-error "the ffx server with \"$ ffx repository server stop\" and start a new"
-      fx-error "one with \"fx serve\"."
+      fx-error "$ ffx repository server stop"
+      fx-error "$ ffx config set repository.server.mode pm"
+      fx-error "$ fx serve"
+      return 1
     else
+      # Check if the ffx package repository server is enabled. If so, shut it
+      # down if it's configured to use the port we're trying to use.
+      local ffx_enabled=$(ffx-repository-server-enabled)
+      local err=$?
+      if [[ "${err}" -eq 0 && "${ffx_enabled}" == "true" ]]; then
+        local ffx_port=$(ffx-repository-server-port)
+        err=$?
+        if [[ "${err}" -eq 0 && "${ffx_port}" == "${expected_port}" ]]; then
+          fx-warn "The ffx repository server may be running, and is configured"
+          fx-warn "to run on ${expected_port}. Trying to shut it down..."
+
+          fx-command-run ffx repository server stop
+          err=$?
+          if [[ "${err}" -ne 0 ]]; then
+            fx-warn "Failed to stop ffx repository server. Checking if the port"
+            fx-warn "freed up anyway."
+          fi
+
+          if ! is-listening-on-port "${expected_port}"; then
+            fx-info "ffx repository server shut down"
+            return 0
+          fi
+        fi
+      fi
+
       fx-error "It looks like some process is listening on ${port}."
       fx-error "You probably need to stop that and start a new one here with \"fx serve\""
     fi
@@ -280,6 +306,26 @@ function ffx-register-repository {
   return 0
 }
 
+function ffx-repository-server-enabled {
+  local enabled=$(fx-command-run ffx config get repository.server.enabled)
+  err=$?
+  if [[ "${err}" -ne 0 ]]; then
+    fx-error "Unable to get the configured repository server enabled."
+    return "${err}"
+  fi
+
+  case "${enabled}" in
+    "true") echo true ;;
+    "false") echo false ;;
+    "null") echo false ;;
+    *)
+      fx-error "Unknown repository.server.enabled: ${enabled}"
+      return 1
+  esac
+
+  return 0
+}
+
 function ffx-repository-server-address {
   local addr=$(fx-command-run ffx config get repository.server.listen)
   err=$?
@@ -298,6 +344,24 @@ function ffx-repository-server-address {
       fx-error "could not parse ffx server address: ${addr}"
       return 1
     fi
+  fi
+
+  return 0
+}
+
+function ffx-repository-server-port {
+  local addr=$(ffx-repository-server-address)
+  err=$?
+  if [[ "${err}" -ne 0 ]]; then
+    fx-error "Unable to get the configured repository server address."
+    return "${err}"
+  fi
+
+  if [[ ${addr} =~ .*:([0-9]+) ]]; then
+    echo "${BASH_REMATCH[1]}"
+  else
+    fx-error "could not parse port from ffx server address: $addr"
+    return 1
   fi
 
   return 0
