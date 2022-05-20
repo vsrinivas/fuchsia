@@ -13,7 +13,11 @@ library fuchsia.input;
 ///
 /// The descriptions for each value in the enum assume a US English keyboard layout.
 /// Actual behavior varies by layout.
-type Key = strict enum : uint32 {
+type Key = flexible enum : uint32 {
+    /// Used when the value of Key is not known.
+    @unknown
+    UNKNOWN = 0;
+
     /// Keyboard a and A
     A = 0x00070004;
 

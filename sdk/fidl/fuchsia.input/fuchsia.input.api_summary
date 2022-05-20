@@ -102,13 +102,14 @@ enum/member fuchsia.input/Key.SPACE 458796
 enum/member fuchsia.input/Key.T 458775
 enum/member fuchsia.input/Key.TAB 458795
 enum/member fuchsia.input/Key.U 458776
+enum/member fuchsia.input/Key.UNKNOWN 0
 enum/member fuchsia.input/Key.UP 458834
 enum/member fuchsia.input/Key.V 458777
 enum/member fuchsia.input/Key.W 458778
 enum/member fuchsia.input/Key.X 458779
 enum/member fuchsia.input/Key.Y 458780
 enum/member fuchsia.input/Key.Z 458781
-strict enum fuchsia.input/Key uint32
+flexible enum fuchsia.input/Key uint32
 enum/member fuchsia.input/KeymapId.FR_AZERTY 1
 enum/member fuchsia.input/KeymapId.US_DVORAK 2
 enum/member fuchsia.input/KeymapId.US_QWERTY 0
