@@ -6,41 +6,22 @@
 
 #include <fuchsia/kernel/cpp/fidl.h>
 #include <fuchsia/net/stack/cpp/fidl.h>
+#include <fuchsia/net/virtualization/cpp/fidl.h>
 #include <fuchsia/netemul/guest/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
+#include <fuchsia/scheduler/cpp/fidl.h>
 #include <fuchsia/sysinfo/cpp/fidl.h>
+#include <fuchsia/sysmem/cpp/fidl.h>
+#include <fuchsia/tracing/provider/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/sys/cpp/file_descriptor.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <src/virtualization/tests/guest_console.h>
 
+#include "fuchsia/logger/cpp/fidl.h"
+#include "fuchsia/virtualization/cpp/fidl.h"
 #include "src/lib/testing/predicates/status.h"
-
-static constexpr char kGuestManagerUrl[] =
-    "fuchsia-pkg://fuchsia.com/guest_manager#meta/guest_manager.cmx";
-static constexpr char kDebianGuestUrl[] =
-    "fuchsia-pkg://fuchsia.com/debian_guest#meta/debian_guest.cmx";
-
-GuestInteractionTest::GuestInteractionTest() {
-  realm_.set_error_handler([this](zx_status_t status) { realm_error_ = status; });
-
-  // Add Netstack services.
-  fake_netstack_.Install(*services_);
-
-  // Add guest service.
-  services_->AddServiceWithLaunchInfo(
-      {
-          .url = kGuestManagerUrl,
-          .out = sys::CloneFileDescriptor(STDOUT_FILENO),
-          .err = sys::CloneFileDescriptor(STDERR_FILENO),
-      },
-      fuchsia::virtualization::Manager::Name_);
-
-  // Allow services required for virtualization.
-  services_->AllowParentService(fuchsia::kernel::HypervisorResource::Name_);
-  services_->AllowParentService(fuchsia::kernel::VmexResource::Name_);
-  services_->AllowParentService(fuchsia::sysinfo::SysInfo::Name_);
-}
 
 static fit::closure MakeRecurringTask(async_dispatcher_t* dispatcher, fit::closure cb,
                                       zx::duration frequency) {
@@ -51,25 +32,67 @@ static fit::closure MakeRecurringTask(async_dispatcher_t* dispatcher, fit::closu
   };
 }
 
-void GuestInteractionTest::SetUp() {
-  ASSERT_NE(services_, nullptr);
-  ASSERT_EQ(env_, nullptr);
+void GuestInteractionTest::GetHostVsockEndpoint(
+    ::fidl::InterfaceRequest<::fuchsia::virtualization::HostVsockEndpoint> endpoint) {
+  guest_manager_->GetHostVsockEndpoint(std::move(endpoint));
+}
 
-  env_ = CreateNewEnclosingEnvironment("GuestInteractionEnvironment", std::move(services_));
+void GuestInteractionTest::SetUp() {
+  using component_testing::ChildRef;
+  using component_testing::Directory;
+  using component_testing::ParentRef;
+  using component_testing::Protocol;
+  using component_testing::RealmBuilder;
+  using component_testing::RealmRoot;
+  using component_testing::Route;
 
   // Launch the Debian guest
+  constexpr auto kFakeNetstackComponentName = "fake_netstack";
+  constexpr auto kDebianGuestManagerUrl = "#meta/debian_guest_manager.cm";
+
+  constexpr auto kGuestManagerName = "guest_manager";
+
   fuchsia::virtualization::GuestConfig cfg;
   cfg.set_virtio_gpu(false);
 
-  fuchsia::virtualization::ManagerPtr manager;
-  fuchsia::virtualization::GuestPtr guest;
+  auto realm_builder = RealmBuilder::Create();
+  realm_builder.AddChild(kGuestManagerName, kDebianGuestManagerUrl);
+  realm_builder.AddLocalChild(kFakeNetstackComponentName, &fake_netstack_);
 
-  env_->ConnectToService(manager.NewRequest());
-  manager->Create(fuchsia::netemul::guest::DEFAULT_REALM, realm_.NewRequest());
-  realm_->LaunchInstance(kDebianGuestUrl, kGuestLabel, std::move(cfg), guest.NewRequest(),
-                         [this](uint32_t cid) { cid_ = cid; });
-  RunLoopUntil([this]() { return realm_error_.has_value() || cid_.has_value(); });
-  ASSERT_FALSE(realm_error_.has_value()) << zx_status_get_string(realm_error_.value());
+  realm_builder
+      .AddRoute(Route{.capabilities =
+                          {
+                              Protocol{fuchsia::logger::LogSink::Name_},
+                              Protocol{fuchsia::kernel::HypervisorResource::Name_},
+                              Protocol{fuchsia::kernel::IrqResource::Name_},
+                              Protocol{fuchsia::kernel::MmioResource::Name_},
+                              Protocol{fuchsia::kernel::VmexResource::Name_},
+                              Protocol{fuchsia::sysinfo::SysInfo::Name_},
+                              Protocol{fuchsia::sysmem::Allocator::Name_},
+                              Protocol{fuchsia::tracing::provider::Registry::Name_},
+                              Protocol{fuchsia::scheduler::ProfileProvider::Name_},
+                          },
+                      .source = {ParentRef()},
+                      .targets = {ChildRef{kGuestManagerName}}})
+      .AddRoute(Route{.capabilities =
+                          {
+                              Protocol{fuchsia::net::virtualization::Control::Name_},
+                          },
+                      .source = {ChildRef{kFakeNetstackComponentName}},
+                      .targets = {ChildRef{kGuestManagerName}}})
+      .AddRoute(Route{.capabilities =
+                          {
+                              Protocol{fuchsia::virtualization::DebianGuestManager::Name_},
+                          },
+                      .source = ChildRef{kGuestManagerName},
+                      .targets = {ParentRef()}});
+
+  realm_root_ = std::make_unique<RealmRoot>(realm_builder.Build(dispatcher()));
+  fuchsia::virtualization::GuestManager_LaunchGuest_Result res;
+  guest_manager_ = realm_root_->ConnectSync<fuchsia::virtualization::DebianGuestManager>();
+
+  fuchsia::virtualization::GuestPtr guest;
+  ASSERT_OK(guest_manager_->LaunchGuest(std::move(cfg), guest.NewRequest(), &res));
 
   // Start a GuestConsole.  When the console starts, it waits until it
   // receives some sensible output from the guest to ensure that the guest is

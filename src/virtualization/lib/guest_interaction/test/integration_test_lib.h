@@ -6,11 +6,9 @@
 #define SRC_VIRTUALIZATION_LIB_GUEST_INTERACTION_TEST_INTEGRATION_TEST_LIB_H_
 
 #include <fuchsia/virtualization/cpp/fidl.h>
-#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 
+#include <src/lib/testing/loop_fixture/real_loop_fixture.h>
 #include <src/virtualization/tests/fake_netstack.h>
-
-static constexpr char kGuestLabel[] = "debian_guest";
 
 // The host will copy kTestScriptSource to kGuestScriptDestination on the
 // guest.  The host will then ask the guest to exec kGuestScriptDestination
@@ -26,22 +24,16 @@ static constexpr char kTestScriptInput[] = "hello world\n";
 static constexpr char kGuestFileOutputLocation[] = "/root/output/script_output.txt";
 static constexpr char kHostOuputCopyLocation[] = "/tmp/copy";
 
-class GuestInteractionTest : public gtest::TestWithEnvironmentFixture {
+class GuestInteractionTest : public gtest::RealLoopFixture {
  protected:
-  GuestInteractionTest();
   void SetUp() override;
 
-  uint32_t cid() const { return cid_.value(); }
-  const fuchsia::virtualization::RealmPtr& realm() const { return realm_; }
-  sys::testing::EnvironmentServices& services() { return *services_; }
-  sys::testing::EnclosingEnvironment& env() { return *env_; }
+  void GetHostVsockEndpoint(
+      ::fidl::InterfaceRequest<::fuchsia::virtualization::HostVsockEndpoint> endpoint);
 
  private:
-  std::optional<uint32_t> cid_;
-  fuchsia::virtualization::RealmPtr realm_;
-  std::optional<zx_status_t> realm_error_;
-  std::unique_ptr<sys::testing::EnvironmentServices> services_ = CreateServices();
-  std::unique_ptr<sys::testing::EnclosingEnvironment> env_;
+  std::unique_ptr<component_testing::RealmRoot> realm_root_;
+  fuchsia::virtualization::DebianGuestManagerSyncPtr guest_manager_;
   FakeNetstack fake_netstack_;
 };
 

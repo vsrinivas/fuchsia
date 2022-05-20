@@ -56,7 +56,7 @@ static void ConvertSocketToNonBlockingFd(zx::socket socket, fbl::unique_fd& fd) 
 TEST_F(GuestInteractionTest, GrpcExecScriptTest) {
   // Connect the gRPC client to the guest under test.
   fuchsia::virtualization::HostVsockEndpointPtr ep;
-  realm()->GetHostVsockEndpoint(ep.NewRequest());
+  GetHostVsockEndpoint(ep.NewRequest());
 
   zx::socket local_socket;
   std::optional<zx_status_t> status;
@@ -221,7 +221,7 @@ TEST_F(GuestInteractionTest, GrpcExecScriptTest) {
 TEST_F(GuestInteractionTest, GrpcPutGetTest) {
   // Connect the gRPC client to the guest under test.
   fuchsia::virtualization::HostVsockEndpointPtr ep;
-  realm()->GetHostVsockEndpoint(ep.NewRequest());
+  GetHostVsockEndpoint(ep.NewRequest());
 
   zx::socket local_socket;
   std::optional<zx_status_t> status;

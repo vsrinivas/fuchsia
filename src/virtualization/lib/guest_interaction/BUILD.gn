@@ -93,6 +93,11 @@ source_set("integration_test_lib") {
     "test/integration_test_lib.h",
   ]
   public_deps = [
+    "//sdk/fidl/fuchsia.logger",
+    "//sdk/fidl/fuchsia.net.virtualization",
+    "//sdk/fidl/fuchsia.scheduler",
+    "//sdk/fidl/fuchsia.sysmem",
+    "//sdk/fidl/fuchsia.tracing.provider",
     "//sdk/fidl/fuchsia.virtualization",
     "//sdk/lib/sys/component/cpp/testing:cpp",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
@@ -166,9 +171,10 @@ fuchsia_test_component("server_daemon_test_cmp") {
   deps = [
     ":server_daemon_test",
     ":test_script",
+    "//src/virtualization/bin/guest_manager:debian_guest_manager_cmp",
   ]
   component_name = "server_daemon_test"
-  manifest = "meta/server_daemon_test.cmx"
+  manifest = "meta/server_daemon_test.cml"
 }
 
 fuchsia_test_package("guest_interaction_tests") {

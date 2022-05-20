@@ -86,19 +86,34 @@ executable("bin_v2") {
   ]
 }
 
-fuchsia_package_with_single_component("zircon_guest_manager") {
+fuchsia_package("zircon_guest_manager") {
+  deps = [ ":zircon_guest_manager_cmp" ]
+}
+
+fuchsia_component("zircon_guest_manager_cmp") {
   manifest = "meta/zircon_guest_manager.cml"
   deps = [ ":bin_v2" ]
+  component_name = "zircon_guest_manager"
 }
 
-fuchsia_package_with_single_component("debian_guest_manager") {
+fuchsia_package("debian_guest_manager") {
+  deps = [ ":debian_guest_manager_cmp" ]
+}
+
+fuchsia_component("debian_guest_manager_cmp") {
   manifest = "meta/debian_guest_manager.cml"
   deps = [ ":bin_v2" ]
+  component_name = "debian_guest_manager"
 }
 
-fuchsia_package_with_single_component("termina_guest_manager") {
+fuchsia_package("termina_guest_manager") {
+  deps = [ ":termina_guest_manager_cmp" ]
+}
+
+fuchsia_component("termina_guest_manager_cmp") {
   manifest = "meta/termina_guest_manager.cml"
   deps = [ ":bin_v2" ]
+  component_name = "termina_guest_manager"
 }
 
 executable("guest_manager_test_bin") {
