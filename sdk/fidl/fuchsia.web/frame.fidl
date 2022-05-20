@@ -367,6 +367,7 @@ protocol Frame {
     }) -> ();
 
     @deprecated("use fuchsia.web.Frame.SetMediaSettings instead")
+    @transitional
     SetMediaSessionId(struct {
         session_id uint64;
     });
@@ -442,6 +443,7 @@ protocol Frame {
     /// the [`fuchsia.settings.Display`] service. If the service is not available, the [`Frame`]
     /// will disconnect with `ZX_ERR_INVALID_ARGS`.
     @deprecated("use fuchsia.web.Frame.SetContentAreaSettings instead")
+    @transitional
     SetPreferredTheme(struct {
         theme fuchsia.settings.ThemeType;
     });
@@ -459,6 +461,7 @@ protocol Frame {
     /// scroll bars and default mouse cursor, are not scaled. User may zoom the page further when
     /// pinch-zoom is enabled (see [`InputTypes.GESTURE_PINCH`]).
     @deprecated("use fuchsia.web.Frame.SetContentAreaSettings instead")
+    @transitional
     SetPageScale(struct {
         scale float32;
     });
