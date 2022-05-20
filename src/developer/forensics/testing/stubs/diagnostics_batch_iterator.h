@@ -68,6 +68,9 @@ class DiagnosticsBatchIteratorReturnsError : public DiagnosticsBatchIteratorBase
 
   // |fuchsia::diagnostics::BatchIterator|
   void GetNext(GetNextCallback callback) override;
+
+ private:
+  bool returned_error_{false};
 };
 
 class DiagnosticsBatchIteratorDelayedBatches : public DiagnosticsBatchIterator {

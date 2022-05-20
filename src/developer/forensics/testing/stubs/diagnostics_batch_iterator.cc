@@ -59,7 +59,12 @@ void DiagnosticsBatchIteratorNeverRespondsAfterOneBatch::GetNext(GetNextCallback
 }
 
 void DiagnosticsBatchIteratorReturnsError::GetNext(GetNextCallback callback) {
-  callback(::fpromise::error(fuchsia::diagnostics::ReaderError::IO));
+  if (!returned_error_) {
+    callback(::fpromise::error(fuchsia::diagnostics::ReaderError::IO));
+    returned_error_ = true;
+  } else {
+    callback(::fpromise::ok(ToVmo({})));
+  }
 }
 
 void DiagnosticsBatchIteratorDelayedBatches::GetNext(GetNextCallback callback) {

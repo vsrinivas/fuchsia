@@ -14,6 +14,7 @@
 
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/developer/forensics/feedback/annotations/types.h"
+#include "src/developer/forensics/feedback_data/attachments/inspect.h"
 #include "src/developer/forensics/feedback_data/attachments/system_log.h"
 #include "src/developer/forensics/feedback_data/attachments/types.h"
 #include "src/developer/forensics/feedback_data/inspect_data_budget.h"
@@ -72,9 +73,10 @@ class Datastore {
 
   Attachments static_attachments_;
 
-  SystemLog system_log_;
-
   InspectDataBudget* inspect_data_budget_;
+
+  SystemLog system_log_;
+  Inspect inspect_;
 };
 
 }  // namespace feedback_data

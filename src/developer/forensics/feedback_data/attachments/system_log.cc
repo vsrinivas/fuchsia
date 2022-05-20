@@ -21,7 +21,6 @@
 #include <string>
 #include <vector>
 
-#include "src/developer/forensics/feedback_data/archive_accessor_ptr.h"
 #include "src/developer/forensics/feedback_data/constants.h"
 #include "src/developer/forensics/utils/errors.h"
 #include "src/developer/forensics/utils/fit/promise.h"

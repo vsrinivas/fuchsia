@@ -10,26 +10,6 @@ visibility = [ ":*" ]
 ###############################################################################
 # EXECUTABLES
 ###############################################################################
-executable("archive_accessor_ptr_unittest_exe") {
-  testonly = true
-
-  sources = [ "archive_accessor_ptr_unittest.cc" ]
-
-  deps = [
-    "//sdk/lib/sys/cpp/testing:cpp",
-    "//src/developer/forensics/feedback_data:constants",
-    "//src/developer/forensics/feedback_data/attachments:attachment_providers",
-    "//src/developer/forensics/feedback_data/attachments:types",
-    "//src/developer/forensics/testing:gpretty_printers",
-    "//src/developer/forensics/testing:gtest_with_syslog_main",
-    "//src/developer/forensics/testing:unit_test_fixture",
-    "//src/developer/forensics/testing/stubs:diagnostics",
-    "//src/developer/forensics/utils:errors",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-  ]
-}
-
 executable("config_unittest_exe") {
   testonly = true
 
@@ -285,7 +265,6 @@ executable("system_log_unittest_exe") {
   sources = [ "system_log_unittest.cc" ]
 
   deps = [
-    "//src/developer/forensics/feedback_data:archive_accessor",
     "//src/developer/forensics/feedback_data:constants",
     "//src/developer/forensics/feedback_data/attachments:attachment_providers",
     "//src/developer/forensics/feedback_data/attachments:types",
@@ -326,10 +305,6 @@ resource("test_image") {
 ###############################################################################
 # COMPONENTS
 ###############################################################################
-fuchsia_unittest_component("archive_accessor_ptr_unittest") {
-  deps = [ ":archive_accessor_ptr_unittest_exe" ]
-}
-
 fuchsia_unittest_component("config_unittest") {
   deps = [
     ":config_unittest_exe",
@@ -422,7 +397,6 @@ fuchsia_unittest_component("system_log_unittest") {
 ###############################################################################
 fuchsia_test_package("feedback-data-tests") {
   test_components = [
-    ":archive_accessor_ptr_unittest",
     ":config_unittest",
     ":data_provider_unittest",
     ":data_provider_controller_unittest",

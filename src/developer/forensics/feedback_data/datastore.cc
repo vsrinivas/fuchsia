@@ -33,8 +33,11 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
       redactor_(redactor),
       attachment_allowlist_(attachment_allowlist),
       static_attachments_(feedback_data::GetStaticAttachments(attachment_allowlist_)),
+      inspect_data_budget_(inspect_data_budget),
       system_log_(dispatcher_, services_, &clock_, redactor_, kActiveLoggingPeriod),
-      inspect_data_budget_(inspect_data_budget) {
+      inspect_(dispatcher_, services_,
+               std::make_unique<backoff::ExponentialBackoff>(zx::min(1), 2u, zx::hour(1)),
+               inspect_data_budget_->SizeInBytes()) {
   if (attachment_allowlist_.empty()) {
     FX_LOGS(WARNING)
         << "Attachment allowlist is empty, no platform attachments will be collected or returned";
@@ -55,7 +58,8 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
       // Somewhat risky, but the AnnotationManager depends on a bunch of stuff and this constructor
       // is intended for tests.
       static_attachments_({}),
-      system_log_(dispatcher_, services_, &clock_, redactor_, zx::sec(30)) {}
+      system_log_(dispatcher_, services_, &clock_, redactor_, zx::sec(30)),
+      inspect_(dispatcher_, services_, nullptr, std::nullopt) {}
 
 ::fpromise::promise<Attachments> Datastore::GetAttachments(const zx::duration timeout) {
   if (attachment_allowlist_.empty()) {
@@ -125,10 +129,14 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
       return ::fpromise::ok(std::move(log));
     });
   } else if (key == kAttachmentInspect) {
-    return CollectInspectData(dispatcher_, services_,
-                              MakeCobaltTimeout(cobalt::TimedOutData::kInspect, timeout),
-                              inspect_data_budget_->SizeInBytes());
+    return inspect_.Get(timeout).and_then([this](AttachmentValue& inspect) {
+      if (inspect.HasError() && inspect.Error() == Error::kTimeout) {
+        cobalt_->LogOccurrence(cobalt::TimedOutData::kInspect);
+      }
+      return ::fpromise::ok(std::move(inspect));
+    });
   }
+
   // There are static attachments in the allowlist that we just skip here.
   return ::fpromise::make_result_promise<AttachmentValue>(::fpromise::error());
 }

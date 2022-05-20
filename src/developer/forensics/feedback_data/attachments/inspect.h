@@ -1,10 +1,11 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #ifndef SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_ATTACHMENTS_INSPECT_H_
 #define SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_ATTACHMENTS_INSPECT_H_
 
+#include <fuchsia/diagnostics/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fpromise/promise.h>
 #include <lib/sys/cpp/service_directory.h>
@@ -13,18 +14,33 @@
 
 #include "src/developer/forensics/feedback_data/attachments/types.h"
 #include "src/developer/forensics/utils/fit/timeout.h"
+#include "src/lib/backoff/backoff.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
-namespace forensics {
-namespace feedback_data {
+namespace forensics::feedback_data {
 
 // Collects the Inspect data.
 //
-// fuchsia.diagnostics.Archive is expected to be in |services|.
-::fpromise::promise<AttachmentValue> CollectInspectData(
-    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-    fit::Timeout timeout, std::optional<size_t> data_budget);
+// fuchsia.diagnostics.FeedbackArchiveAccessor is expected to be in |services|.
+class Inspect {
+ public:
+  Inspect(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
+          std::unique_ptr<backoff::Backoff> backoff,
+          std::optional<size_t> data_budget = std::nullopt);
 
-}  // namespace feedback_data
-}  // namespace forensics
+  ::fpromise::promise<AttachmentValue> Get(zx::duration timeout);
+
+ private:
+  async_dispatcher_t* dispatcher_;
+  std::shared_ptr<sys::ServiceDirectory> services_;
+  std::unique_ptr<backoff::Backoff> backoff_;
+  std::optional<size_t> data_budget_;
+
+  fuchsia::diagnostics::ArchiveAccessorPtr archive_accessor_;
+
+  fxl::WeakPtrFactory<Inspect> ptr_factory_{this};
+};
+
+}  // namespace forensics::feedback_data
 
 #endif  // SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_ATTACHMENTS_INSPECT_H_

@@ -29,7 +29,6 @@ source_set("attachment_providers") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
-    "//src/developer/forensics/feedback_data:archive_accessor",
     "//src/developer/forensics/feedback_data:inspect_budget",
     "//src/developer/forensics/feedback_data:log_source",
     "//src/developer/forensics/utils:archive",
