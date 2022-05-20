@@ -36,6 +36,7 @@ source_set("src") {
     "tcp.c",
     "utf_conversion.c",
     "util.c",
+    "variable.c",
     "zircon.c",
   ]
   include_dirs = [ "." ]
@@ -95,6 +96,8 @@ if (!is_mac) {
       "utf_conversion.c",
       "util.c",
       "util_test.cc",
+      "variable.c",
+      "variable_test.cc",
     ]
     include_dirs = [ "." ]
     deps = [

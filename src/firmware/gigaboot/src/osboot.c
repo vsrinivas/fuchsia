@@ -32,11 +32,14 @@
 #include "bootbyte.h"
 #include "diskio.h"
 #include "mdns.h"
+#include "variable.h"
 
 #define DEFAULT_TIMEOUT 10
 
 #define KBUFSIZE (32 * 1024 * 1024)
 #define RBUFSIZE (512 * 1024 * 1024)
+
+static const char16_t kDfv2VariableName[] = L"use_dfv2";
 
 static nbfile nbzbi;
 static nbfile nbcmdline;
@@ -331,13 +334,18 @@ void do_netboot(void) {
 // Args:
 //   have_network: true if we have a working network interface.
 //   have_fb: true if we have a framebuffer.
+//   use_dfv2: updated if user toggles DFv2.
 //
 // Returns the user's selection.
-static BootAction main_boot_menu(bool have_network, bool have_fb) {
+static BootAction main_boot_menu(bool have_network, bool have_fb, bool* use_dfv2_p) {
   int timeout_s = cmdline_get_uint32("bootloader.timeout", DEFAULT_TIMEOUT);
+  bool use_dfv2 = false;
+  if (use_dfv2_p != NULL) {
+    use_dfv2 = *use_dfv2_p;
+  }
 
   while (1) {
-#define VALID_KEYS_COMMON "\r\nbf1m2rz"
+#define VALID_KEYS_COMMON "\r\nbf1m2rzd"
     const char* valid_keys = VALID_KEYS_COMMON;
     printf(
         "\n"
@@ -347,7 +355,9 @@ static BootAction main_boot_menu(bool have_network, bool have_fb) {
         "  f) fastboot\n"
         "  1) set A slot active and boot (alternate: m)\n"
         "  2) set B slot active and boot\n"
-        "  r) one-time boot R slot (alternate: z)\n");
+        "  r) one-time boot R slot (alternate: z)\n"
+        "  d) %sable DFv2\n",
+        (use_dfv2 ? "dis" : "en"));
     if (have_network) {
       valid_keys = VALID_KEYS_COMMON "n";
       printf("  n) network boot\n");
@@ -378,11 +388,17 @@ static BootAction main_boot_menu(bool have_network, bool have_fb) {
       case 'r':
       case 'z':
         return kBootActionSlotR;
+      case 'd':
+        use_dfv2 = !use_dfv2;
+        if (use_dfv2_p) {
+          *use_dfv2_p = use_dfv2;
+        }
+        break;
     }
   }
 }
 
-BootAction get_boot_action(bool have_network, bool have_fb) {
+BootAction get_boot_action(bool have_network, bool have_fb, bool* is_dfv2) {
   // 1. Bootbyte.
   // Ignore the reboot count, we have a more robust mechanism now in the A/B/R
   // retry count.
@@ -395,14 +411,14 @@ BootAction get_boot_action(bool have_network, bool have_fb) {
   }
 
   // 2. Boot menu.
-  BootAction boot_action = main_boot_menu(have_network, have_fb);
+  BootAction boot_action = main_boot_menu(have_network, have_fb, is_dfv2);
 
   // 3. Commandline, options are "local", "zedboot", or "network".
   if (boot_action == kBootActionDefault) {
     // If no commandline, default to network (TODO: Is this still needed?).
     const char* defboot = cmdline_get("bootloader.default", "network");
     if (strcmp(defboot, "local") == 0) {
-      return kBootActionDefault;
+      return boot_action;
     } else if (strcmp(defboot, "zedboot") == 0) {
       return kBootActionSlotR;
     } else if (strcmp(defboot, "network") == 0) {
@@ -410,7 +426,7 @@ BootAction get_boot_action(bool have_network, bool have_fb) {
         return kBootActionNetboot;
       } else {
         LOG("No network, skipping netboot and booting from disk");
-        return kBootActionDefault;
+        return boot_action;
       }
     } else {
       WLOG("Ignoring unknown bootloader.default: '%s'", defboot);
@@ -650,7 +666,26 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
   gBS->SetWatchdogTimer(0, 0x10000, 0, NULL);
 
   bool force_recovery = false;
-  BootAction boot_action = get_boot_action(have_network, have_fb);
+  bool use_dfv2 = false;
+
+  status = get_bool(sys->RuntimeServices, (char16_t*)kDfv2VariableName, &use_dfv2);
+  if (status != EFI_SUCCESS) {
+    LOG("Failed to get use_dfv2: %zu. Assuming use_dfv2=false", status);
+  }
+  bool new_dfv2_state = use_dfv2;
+
+  BootAction boot_action = get_boot_action(have_network, have_fb, &new_dfv2_state);
+  if (new_dfv2_state != use_dfv2) {
+    status = set_bool(sys->RuntimeServices, (char16_t*)kDfv2VariableName, new_dfv2_state);
+    if (status != EFI_SUCCESS) {
+      LOG("Failed to store use_dfv2: %zu. It will not be persisted.", status);
+    }
+  }
+
+  if (new_dfv2_state) {
+    LOG("Booting with DFv2 enabled.");
+    cmdline_append(DFV2_CMDLINE, sizeof(DFV2_CMDLINE));
+  }
   switch (boot_action) {
     case kBootActionDefault:
       break;

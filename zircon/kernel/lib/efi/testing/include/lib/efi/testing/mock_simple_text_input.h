@@ -33,6 +33,17 @@ class MockSimpleTextInputProtocol
       return EFI_SUCCESS;
     });
   }
+
+  void ExpectReadKeyStrokes(const char** input) {
+    EXPECT_CALL(*this, ReadKeyStroke)
+        .Times(static_cast<int>(strlen(*input)))
+        .WillRepeatedly([input](efi_input_key* key) mutable {
+          key->ScanCode = 0;
+          key->UnicodeChar = **input;
+          (*input)++;
+          return EFI_SUCCESS;
+        });
+  }
 };
 
 }  // namespace efi

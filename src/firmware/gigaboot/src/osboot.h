@@ -24,7 +24,11 @@ __BEGIN_CDECLS
 
 // Space for extra ZBI items.
 #define EXTRA_ZBI_ITEM_SPACE (8 * PAGE_SIZE)
-
+// TODO(fxbug.dev/93333): Remove this once DFv2 is the default.
+#define DFV2_CMDLINE                                                  \
+  "devmgr.enable-ephemeral=true "                                     \
+  "driver_manager.root-driver=fuchsia-boot:///#meta/platform-bus.cm " \
+  "driver_manager.use_driver_framework_v2=true"
 uint64_t find_acpi_root(efi_handle img, efi_system_table* sys);
 uint64_t find_smbios(efi_handle img, efi_system_table* sys);
 
@@ -53,7 +57,7 @@ typedef enum {
   kBootActionNetboot,
   kBootActionSlotA,
   kBootActionSlotB,
-  kBootActionSlotR
+  kBootActionSlotR,
 } BootAction;
 
 // Determines what boot action to take.
@@ -66,9 +70,10 @@ typedef enum {
 // Args:
 //   have_network: true if we have a working network interface.
 //   have_fb: true if we have a framebuffer.
+//   use_dfv2: updated by get_boot_action, true if boot should be done with DFv2.
 //
 // Returns the chosen boot action.
-BootAction get_boot_action(bool have_network, bool have_fb);
+BootAction get_boot_action(bool have_network, bool have_fb, bool* use_dfv2);
 
 __END_CDECLS
 

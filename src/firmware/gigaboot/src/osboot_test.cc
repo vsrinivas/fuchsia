@@ -92,53 +92,61 @@ class GetBootActionTest : public Test {
 
 TEST_F(GetBootActionTest, BootbyteRecovery) {
   bootbyte_set_recovery();
-  EXPECT_EQ(kBootActionSlotR, get_boot_action(true, true));
+  EXPECT_EQ(kBootActionSlotR, get_boot_action(true, true, nullptr));
 }
 
 TEST_F(GetBootActionTest, BootbyteBootloader) {
   bootbyte_set_bootloader();
-  EXPECT_EQ(kBootActionFastboot, get_boot_action(true, true));
+  EXPECT_EQ(kBootActionFastboot, get_boot_action(true, true, nullptr));
 }
 
 TEST_F(GetBootActionTest, BootbyteNormal) {
   bootbyte_set_normal();
-  EXPECT_EQ(kFallthroughBootAction, get_boot_action(true, true));
+  EXPECT_EQ(kFallthroughBootAction, get_boot_action(true, true, nullptr));
 }
 
 TEST_F(GetBootActionTest, BootbyteDefault) {
   bootbyte_clear();
-  EXPECT_EQ(kFallthroughBootAction, get_boot_action(true, true));
+  EXPECT_EQ(kFallthroughBootAction, get_boot_action(true, true, nullptr));
 }
 
 TEST_F(GetBootActionTest, BootbyteWithCount) {
   // Make sure we ignore the count value in the upper bits.
   bootbyte_set_for_test(0x30 | RTC_BOOT_BOOTLOADER);
-  EXPECT_EQ(kBootActionFastboot, get_boot_action(true, true));
+  EXPECT_EQ(kBootActionFastboot, get_boot_action(true, true, nullptr));
 }
 
 TEST_F(GetBootActionTest, MenuSelectA) {
   SetUserInput('1');
-  EXPECT_EQ(kBootActionSlotA, get_boot_action(true, true));
+  EXPECT_EQ(kBootActionSlotA, get_boot_action(true, true, nullptr));
 }
 
 TEST_F(GetBootActionTest, MenuSelectB) {
   SetUserInput('2');
-  EXPECT_EQ(kBootActionSlotB, get_boot_action(true, true));
+  EXPECT_EQ(kBootActionSlotB, get_boot_action(true, true, nullptr));
 }
 
 TEST_F(GetBootActionTest, MenuSelectRecovery) {
   SetUserInput('r');
-  EXPECT_EQ(kBootActionSlotR, get_boot_action(true, true));
+  EXPECT_EQ(kBootActionSlotR, get_boot_action(true, true, nullptr));
 }
 
 TEST_F(GetBootActionTest, MenuSelectFastboot) {
   SetUserInput('f');
-  EXPECT_EQ(kBootActionFastboot, get_boot_action(true, true));
+  EXPECT_EQ(kBootActionFastboot, get_boot_action(true, true, nullptr));
+}
+
+TEST_F(GetBootActionTest, MenuSelectDfv2) {
+  const char* input = "d1";
+  mock_input_.ExpectReadKeyStrokes(&input);
+  bool use_dfv2 = false;
+  EXPECT_EQ(kBootActionSlotA, get_boot_action(true, true, &use_dfv2));
+  EXPECT_TRUE(use_dfv2);
 }
 
 TEST_F(GetBootActionTest, MenuSelectNetboot) {
   SetUserInput('n');
-  EXPECT_EQ(kBootActionNetboot, get_boot_action(true, true));
+  EXPECT_EQ(kBootActionNetboot, get_boot_action(true, true, nullptr));
 }
 
 TEST_F(GetBootActionTest, MenuSelectNetbootRequiresNetwork) {
@@ -146,39 +154,39 @@ TEST_F(GetBootActionTest, MenuSelectNetbootRequiresNetwork) {
   // to whatever the bootloader.default commandline arg has.
   cmdline_set("bootloader.default", "local");
   SetUserInput('n');
-  EXPECT_EQ(kBootActionDefault, get_boot_action(false, true));
+  EXPECT_EQ(kBootActionDefault, get_boot_action(false, true, nullptr));
 }
 
 TEST_F(GetBootActionTest, CommandlineLocal) {
   cmdline_set("bootloader.default", "local");
-  EXPECT_EQ(kBootActionDefault, get_boot_action(true, true));
+  EXPECT_EQ(kBootActionDefault, get_boot_action(true, true, nullptr));
 }
 
 TEST_F(GetBootActionTest, CommandlineNetwork) {
   cmdline_set("bootloader.default", "network");
-  EXPECT_EQ(kBootActionNetboot, get_boot_action(true, true));
+  EXPECT_EQ(kBootActionNetboot, get_boot_action(true, true, nullptr));
 }
 
 TEST_F(GetBootActionTest, CommandlineNetworkRequiresNetwork) {
   // If commandline tries to select network but isn't connected, we should fall
   // back to a boot from disk.
   cmdline_set("bootloader.default", "network");
-  EXPECT_EQ(kBootActionDefault, get_boot_action(false, true));
+  EXPECT_EQ(kBootActionDefault, get_boot_action(false, true, nullptr));
 }
 
 TEST_F(GetBootActionTest, CommandlineZedboot) {
   cmdline_set("bootloader.default", "zedboot");
-  EXPECT_EQ(kBootActionSlotR, get_boot_action(true, true));
+  EXPECT_EQ(kBootActionSlotR, get_boot_action(true, true, nullptr));
 }
 
 TEST_F(GetBootActionTest, CommandlineUnknown) {
   // If "bootloader.default" is an unknown value, default to local.
   cmdline_set("bootloader.default", "foo");
-  EXPECT_EQ(kBootActionDefault, get_boot_action(true, true));
+  EXPECT_EQ(kBootActionDefault, get_boot_action(true, true, nullptr));
 }
 
 TEST_F(GetBootActionTest, CommandlineDefault) {
-  EXPECT_EQ(kFallthroughBootAction, get_boot_action(true, true));
+  EXPECT_EQ(kFallthroughBootAction, get_boot_action(true, true, nullptr));
 }
 
 TEST_F(GetBootActionTest, CommandlineDefaultRequiresNetwork) {
@@ -188,7 +196,7 @@ TEST_F(GetBootActionTest, CommandlineDefaultRequiresNetwork) {
 
   // If network is unavailable we should fall back to a boot from disk
   // (required for GCE).
-  EXPECT_EQ(kBootActionDefault, get_boot_action(false, true));
+  EXPECT_EQ(kBootActionDefault, get_boot_action(false, true, nullptr));
 }
 
 TEST_F(GetBootActionTest, BootbyteFirst) {
@@ -196,14 +204,14 @@ TEST_F(GetBootActionTest, BootbyteFirst) {
   bootbyte_set_bootloader();
   EXPECT_CALL(mock_input_, ReadKeyStroke).Times(0);
   cmdline_set("bootloader.default", "local");
-  EXPECT_EQ(kBootActionFastboot, get_boot_action(true, true));
+  EXPECT_EQ(kBootActionFastboot, get_boot_action(true, true, nullptr));
 }
 
 TEST_F(GetBootActionTest, MenuSelectSecond) {
   // Make the user menu is given priority over the commandline.
   SetUserInput('f');
   cmdline_set("bootloader.default", "local");
-  EXPECT_EQ(kBootActionFastboot, get_boot_action(true, true));
+  EXPECT_EQ(kBootActionFastboot, get_boot_action(true, true, nullptr));
 }
 
 }  // namespace
