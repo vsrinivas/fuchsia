@@ -352,7 +352,7 @@ impl Checksum {
             ($step: literal, $ty: ident, $bytes: expr) => {
                 let (s, c) = sum
                     .overflowing_add($ty::from_ne_bytes($bytes.try_into().unwrap()) as Accumulator);
-                sum = s + (carry as Accumulator);
+                sum = s.wrapping_add(carry as Accumulator);
                 carry = c;
                 bytes = &bytes[$step..];
             };
@@ -782,4 +782,17 @@ mod tests {
             0x05, 0x6e, 0xc0, 0xa8, 0x01, 0x0f,
         ],
     ];
+
+    // This test checks that an input, found by a fuzzer, no longer causes a crash due to addition
+    // overflow.
+    #[test]
+    fn test_large_buffer_addition_overflow() {
+        let mut sum = Checksum { sum: 0, trailing_byte: None };
+        let bytes = [
+            0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+            255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+        ];
+        sum.add_bytes(&bytes[..]);
+    }
 }
