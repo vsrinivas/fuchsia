@@ -53,7 +53,9 @@ class Guest : public vm_tools::StartupListener::Service,
                                     GuestInfoCallback callback, std::unique_ptr<Guest>* guest);
 
   Guest(sys::ComponentContext* context, GuestConfig config, GuestInfoCallback callback,
-        fuchsia::virtualization::RealmPtr env);
+        fuchsia::virtualization::RealmPtr env_v1,
+        fuchsia::virtualization::TerminaGuestManagerPtr env_v2);
+
   ~Guest();
 
   // Retry the container startup workflow.
@@ -148,9 +150,10 @@ class Guest : public vm_tools::StartupListener::Service,
   GuestInfoCallback callback_;
   std::unique_ptr<GrpcVsockServer> grpc_server_;
   fuchsia::virtualization::HostVsockEndpointPtr socket_endpoint_;
-  fuchsia::virtualization::RealmPtr guest_env_;
+  fuchsia::virtualization::RealmPtr guest_env_v1_;
+  fuchsia::virtualization::TerminaGuestManagerPtr guest_env_v2_;
   fuchsia::virtualization::GuestPtr guest_controller_;
-  uint32_t guest_cid_ = 0;
+  uint32_t guest_cid_ = fuchsia::virtualization::DEFAULT_GUEST_CID;
   std::unique_ptr<vm_tools::Maitred::Stub> maitred_;
   std::unique_ptr<vm_tools::tremplin::Tremplin::Stub> tremplin_;
   std::unique_ptr<vm_tools::container::Garcon::Stub> garcon_;

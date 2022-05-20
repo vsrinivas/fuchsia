@@ -219,6 +219,18 @@
             from: "#starnix_manager",
         },
         {
+            protocol: "fuchsia.virtualization.ZirconGuestManager",
+            from: "#zircon-guest-manager",
+        },
+        {
+            protocol: "fuchsia.virtualization.TerminaGuestManager",
+            from: "#termina-guest-manager",
+        },
+        {
+            protocol: "fuchsia.virtualization.DebianGuestManager",
+            from: "#debian-guest-manager",
+        },
+        {
             protocol: "fuchsia.hardware.serial.NewDeviceProxy",
             from: "#debug_serial",
         },

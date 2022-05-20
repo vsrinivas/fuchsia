@@ -503,7 +503,7 @@ static bool init_shell(const zx::socket& usock, std::vector<std::string> args) {
 zx_status_t handle_vsh(std::optional<uint32_t> o_env_id, std::optional<uint32_t> o_cid,
                        std::optional<uint32_t> o_port, std::vector<std::string> args,
                        async::Loop* loop, sys::ComponentContext* context) {
-  uint32_t env_id, cid, port = o_port.value_or(vsh::kVshPort);
+  uint32_t cid, port = o_port.value_or(vsh::kVshPort);
   std::optional<std::string_view> linux_env_name;
   std::optional<uint32_t> linux_guest_cid;
 
@@ -565,69 +565,78 @@ zx_status_t handle_vsh(std::optional<uint32_t> o_env_id, std::optional<uint32_t>
       }
     }
   }
+  constexpr auto kUseCFV1 = USE_CFV1;
+  fuchsia::virtualization::HostVsockEndpointSyncPtr vsock_endpoint;
 
-  // Connect to the manager.
-  zx::status<fuchsia::virtualization::ManagerSyncPtr> manager = ConnectToManager(context);
-  if (manager.is_error()) {
-    return manager.error_value();
-  }
+  if (kUseCFV1) {
+    uint32_t env_id;
+    // Connect to the manager.
+    zx::status<fuchsia::virtualization::ManagerSyncPtr> manager = ConnectToManager(context);
+    if (manager.is_error()) {
+      return manager.error_value();
+    }
 
-  std::vector<fuchsia::virtualization::EnvironmentInfo> env_infos;
-  zx_status_t status = manager->List(&env_infos);
-  if (status != ZX_OK) {
-    std::cerr << "Could not fetch list of environments: " << zx_status_get_string(status) << ".\n";
-    return status;
-  }
-  if (env_infos.empty()) {
-    std::cerr << "Unable to find any environments.\n";
-    return ZX_ERR_NOT_FOUND;
-  }
-  std::optional<uint32_t> linux_env_id;
-  if (linux_env_name.has_value()) {
-    for (auto info : env_infos) {
-      if (info.label == *linux_env_name) {
-        linux_env_id = info.id;
-        break;
+    std::vector<fuchsia::virtualization::EnvironmentInfo> env_infos;
+    zx_status_t status = manager->List(&env_infos);
+    if (status != ZX_OK) {
+      std::cerr << "Could not fetch list of environments: " << zx_status_get_string(status)
+                << ".\n";
+      return status;
+    }
+    if (env_infos.empty()) {
+      std::cerr << "Unable to find any environments.\n";
+      return ZX_ERR_NOT_FOUND;
+    }
+    std::optional<uint32_t> linux_env_id;
+    if (linux_env_name.has_value()) {
+      for (auto info : env_infos) {
+        if (info.label == *linux_env_name) {
+          linux_env_id = info.id;
+          break;
+        }
       }
     }
-  }
-  // Fallback to Linux environment if available.
-  env_id = o_env_id.value_or(linux_env_id.value_or(env_infos[0].id));
+    // Fallback to Linux environment if available.
+    env_id = o_env_id.value_or(linux_env_id.value_or(env_infos[0].id));
 
-  fuchsia::virtualization::RealmSyncPtr realm;
-  manager->Connect(env_id, realm.NewRequest());
-  std::vector<fuchsia::virtualization::InstanceInfo> instances;
-  status = realm->ListInstances(&instances);
-  if (status != ZX_OK) {
-    std::cerr << "Could not fetch list of instances: " << zx_status_get_string(status) << ".\n";
-    return status;
-  }
-  if (instances.empty()) {
-    std::cerr << "Unable to find any instances in environment " << env_id << '\n';
-    return ZX_ERR_NOT_FOUND;
-  }
-  // Fallback to Linux guest CID when using a Linux environment.
-  if (std::optional<uint32_t>(env_id) == linux_env_id) {
-    cid = o_cid.value_or(linux_guest_cid.value_or(instances[0].cid));
+    fuchsia::virtualization::RealmSyncPtr realm;
+    manager->Connect(env_id, realm.NewRequest());
+    std::vector<fuchsia::virtualization::InstanceInfo> instances;
+    status = realm->ListInstances(&instances);
+    if (status != ZX_OK) {
+      std::cerr << "Could not fetch list of instances: " << zx_status_get_string(status) << ".\n";
+      return status;
+    }
+    if (instances.empty()) {
+      std::cerr << "Unable to find any instances in environment " << env_id << '\n';
+      return ZX_ERR_NOT_FOUND;
+    }
+    // Fallback to Linux guest CID when using a Linux environment.
+    if (std::optional<uint32_t>(env_id) == linux_env_id) {
+      cid = o_cid.value_or(linux_guest_cid.value_or(instances[0].cid));
+    } else {
+      cid = o_cid.value_or(instances[0].cid);
+    }
+
+    // Verify the environment and instance specified exist
+    if (std::find_if(env_infos.begin(), env_infos.end(),
+                     [env_id](auto ei) { return ei.id == env_id; }) == env_infos.end()) {
+      std::cerr << "No existing environment with id " << env_id << '\n';
+      return ZX_ERR_NOT_FOUND;
+    }
+    if (std::find_if(instances.begin(), instances.end(),
+                     [cid](auto in) { return in.cid == cid; }) == instances.end()) {
+      std::cerr << "No existing instances in env " << env_id << " with cid " << cid << '\n';
+      return ZX_ERR_NOT_FOUND;
+    }
+    realm->GetHostVsockEndpoint(vsock_endpoint.NewRequest());
   } else {
-    cid = o_cid.value_or(instances[0].cid);
+    fuchsia::virtualization::TerminaGuestManagerPtr manager;
+    context->svc()->Connect(manager.NewRequest());
+    cid = fuchsia::virtualization::DEFAULT_GUEST_CID;
+    // TODO(fxbug.dev/72386): Check that vmm is up and running
+    manager->GetHostVsockEndpoint(vsock_endpoint.NewRequest());
   }
-
-  // Verify the environment and instance specified exist
-  if (std::find_if(env_infos.begin(), env_infos.end(),
-                   [env_id](auto ei) { return ei.id == env_id; }) == env_infos.end()) {
-    std::cerr << "No existing environment with id " << env_id << '\n';
-    return ZX_ERR_NOT_FOUND;
-  }
-  if (std::find_if(instances.begin(), instances.end(), [cid](auto in) { return in.cid == cid; }) ==
-      instances.end()) {
-    std::cerr << "No existing instances in env " << env_id << " with cid " << cid << '\n';
-    return ZX_ERR_NOT_FOUND;
-  }
-
-  fuchsia::virtualization::HostVsockEndpointSyncPtr vsock_endpoint;
-  realm->GetHostVsockEndpoint(vsock_endpoint.NewRequest());
-
   HostVsockEndpoint_Connect2_Result result;
   vsock_endpoint->Connect2(port, &result);
   if (result.is_err()) {

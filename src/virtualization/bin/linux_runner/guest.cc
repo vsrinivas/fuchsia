@@ -39,8 +39,7 @@
 #include <grpc++/server_posix.h>
 
 namespace {
-
-constexpr const char kLinuxGuestPackage[] =
+[[maybe_unused]] constexpr const char kLinuxGuestPackage[] =
     "fuchsia-pkg://fuchsia.com/termina_guest#meta/termina_guest.cmx";
 constexpr const char kContainerName[] = "penguin";
 constexpr const char kContainerImageAlias[] = "debian/bullseye";
@@ -306,28 +305,43 @@ void MaitredBringUpNetwork(vm_tools::Maitred::Stub& maitred, uint32_t address, u
 
 namespace linux_runner {
 
+constexpr auto kUseCFV1 = USE_CFV1;
 // static
 zx_status_t Guest::CreateAndStart(sys::ComponentContext* context, GuestConfig config,
                                   GuestInfoCallback callback, std::unique_ptr<Guest>* guest) {
   TRACE_DURATION("linux_runner", "Guest::CreateAndStart");
-  fuchsia::virtualization::ManagerPtr guestmgr;
-  context->svc()->Connect(guestmgr.NewRequest());
-  fuchsia::virtualization::RealmPtr guest_env;
-  guestmgr->Create(config.env_label, guest_env.NewRequest());
 
-  *guest = std::make_unique<Guest>(context, config, std::move(callback), std::move(guest_env));
+  fuchsia::virtualization::TerminaGuestManagerPtr termina_guest_manager;
+  fuchsia::virtualization::RealmPtr realm;
+
+  if (kUseCFV1) {
+    fuchsia::virtualization::ManagerPtr guestmgr;
+    context->svc()->Connect(guestmgr.NewRequest());
+    guestmgr->Create(config.env_label, realm.NewRequest());
+
+  } else {
+    context->svc()->Connect(termina_guest_manager.NewRequest());
+  }
+  *guest = std::make_unique<Guest>(context, config, std::move(callback), std::move(realm),
+                                   std::move(termina_guest_manager));
   return ZX_OK;
 }
 
 Guest::Guest(sys::ComponentContext* context, GuestConfig config, GuestInfoCallback callback,
-             fuchsia::virtualization::RealmPtr env)
+             fuchsia::virtualization::RealmPtr env_v1,
+             fuchsia::virtualization::TerminaGuestManagerPtr env_v2)
     : async_(async_get_default_dispatcher()),
       executor_(async_),
       config_(config),
       callback_(std::move(callback)),
-      guest_env_(std::move(env)),
+      guest_env_v1_(std::move(env_v1)),
+      guest_env_v2_(std::move(env_v2)),
       wayland_dispatcher_(context, kWaylandBridgePackage) {
-  guest_env_->GetHostVsockEndpoint(socket_endpoint_.NewRequest());
+  if (kUseCFV1) {
+    guest_env_v1_->GetHostVsockEndpoint(socket_endpoint_.NewRequest());
+  } else {
+    guest_env_v2_->GetHostVsockEndpoint(socket_endpoint_.NewRequest());
+  }
   executor_.schedule_task(Start());
 }
 
@@ -356,7 +370,12 @@ fpromise::promise<> Guest::Start() {
 fpromise::promise<std::unique_ptr<GrpcVsockServer>, zx_status_t> Guest::StartGrpcServer() {
   TRACE_DURATION("linux_runner", "Guest::StartGrpcServer");
   fuchsia::virtualization::HostVsockEndpointPtr socket_endpoint;
-  guest_env_->GetHostVsockEndpoint(socket_endpoint.NewRequest());
+
+  if (kUseCFV1) {
+    guest_env_v1_->GetHostVsockEndpoint(socket_endpoint.NewRequest());
+  } else {
+    guest_env_v2_->GetHostVsockEndpoint(socket_endpoint.NewRequest());
+  }
   GrpcVsockServerBuilder builder(std::move(socket_endpoint));
 
   // CrashListener
@@ -454,16 +473,31 @@ void Guest::StartGuest() {
 
   auto vm_create_nonce = TRACE_NONCE();
   TRACE_FLOW_BEGIN("linux_runner", "LaunchInstance", vm_create_nonce);
-  guest_env_->LaunchInstance(
-      kLinuxGuestPackage, cpp17::nullopt, std::move(cfg), guest_controller_.NewRequest(),
-      [this, vm_create_nonce](uint32_t cid) {
-        TRACE_DURATION("linux_runner", "LaunchInstance Callback");
-        TRACE_FLOW_END("linux_runner", "LaunchInstance", vm_create_nonce);
-        FX_LOGS(INFO) << "Guest launched with CID " << cid;
-        guest_cid_ = cid;
-        PostContainerStatus(fuchsia::virtualization::ContainerStatus::LAUNCHING_GUEST);
-        TRACE_FLOW_BEGIN("linux_runner", "TerminaBoot", vm_ready_nonce_);
-      });
+  if (kUseCFV1) {
+    guest_env_v1_->LaunchInstance(
+        kLinuxGuestPackage, cpp17::nullopt, std::move(cfg), guest_controller_.NewRequest(),
+        [this, vm_create_nonce](uint32_t cid) {
+          TRACE_DURATION("linux_runner", "LaunchInstance Callback");
+          TRACE_FLOW_END("linux_runner", "LaunchInstance", vm_create_nonce);
+          FX_LOGS(INFO) << "Guest launched with CID " << cid;
+          guest_cid_ = cid;
+          PostContainerStatus(fuchsia::virtualization::ContainerStatus::LAUNCHING_GUEST);
+          TRACE_FLOW_BEGIN("linux_runner", "TerminaBoot", vm_ready_nonce_);
+        });
+  } else {
+    guest_env_v2_->LaunchGuest(
+        std::move(cfg), guest_controller_.NewRequest(), [this, vm_create_nonce](auto res) {
+          if (res.is_err()) {
+            FX_PLOGS(INFO, res.err()) << "Termina Guest failed to launch";
+          } else {
+            TRACE_DURATION("linux_runner", "LaunchInstance Callback");
+            TRACE_FLOW_END("linux_runner", "LaunchInstance", vm_create_nonce);
+            FX_LOGS(INFO) << "Termina Guest launched";
+            PostContainerStatus(fuchsia::virtualization::ContainerStatus::LAUNCHING_GUEST);
+            TRACE_FLOW_BEGIN("linux_runner", "TerminaBoot", vm_ready_nonce_);
+          }
+        });
+  }
 }
 
 void Guest::MountVmTools() {

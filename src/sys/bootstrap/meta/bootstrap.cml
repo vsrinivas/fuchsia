@@ -196,8 +196,12 @@
         },
         {
             protocol: [
+                "fuchsia.virtualization.DebianGuestManager",
+
                 // Allow launching / managing guests from the console.
                 "fuchsia.virtualization.Manager",
+                "fuchsia.virtualization.TerminaGuestManager",
+                "fuchsia.virtualization.ZirconGuestManager",
             ],
             from: "parent",
             to: "#console-launcher",

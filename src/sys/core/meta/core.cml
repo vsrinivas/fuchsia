@@ -203,6 +203,21 @@
             url: "fuchsia-pkg://fuchsia.com/agis#meta/agis.cm",
             environment: "#full-resolver-env",
         },
+        {
+            name: "termina-guest-manager",
+            url: "fuchsia-pkg://fuchsia.com/termina_guest_manager#meta/termina_guest_manager.cm",
+            environment: "#full-resolver-env",
+        },
+        {
+            name: "zircon-guest-manager",
+            url: "fuchsia-pkg://fuchsia.com/zircon_guest_manager#meta/zircon_guest_manager.cm",
+            environment: "#full-resolver-env",
+        },
+        {
+            name: "debian-guest-manager",
+            url: "fuchsia-pkg://fuchsia.com/debian_guest_manager#meta/debian_guest_manager.cm",
+            environment: "#full-resolver-env",
+        },
     ], // children
     capabilities: [
         // Note: `data`, `cache`, and `temp` storage capabilities are defined in a shard and
@@ -341,7 +356,12 @@
             directory: "dev",
             from: "parent",
             as: "dev-class-ethernet",
-            to: [ "#network" ],
+            to: [
+                "#debian-guest-manager",
+                "#network",
+                "#termina-guest-manager",
+                "#zircon-guest-manager",
+            ],
             subdir: "class/ethernet",
         },
         {
@@ -440,6 +460,7 @@
                 "#brightness_manager",
                 "#cobalt",
                 "#cobalt_system_metrics",
+                "#debian-guest-manager",
                 "#debug_serial",
                 "#detect",
                 "#device_settings",
@@ -470,9 +491,11 @@
                 "#system-metrics-logger",
                 "#system-update-committer",
                 "#temperature-logger",
+                "#termina-guest-manager",
                 "#text_manager",
                 "#universe-resolver",
                 "#vulkan_loader",
+                "#zircon-guest-manager",
             ],
         },
         {
@@ -492,7 +515,12 @@
         {
             protocol: [ "fuchsia.kernel.VmexResource" ],
             from: "parent",
-            to: "#starnix_manager",
+            to: [
+                "#debian-guest-manager",
+                "#starnix_manager",
+                "#termina-guest-manager",
+                "#zircon-guest-manager",
+            ],
         },
         {
             protocol: [
@@ -514,8 +542,11 @@
             protocol: [ "fuchsia.sysmem.Allocator" ],
             from: "#sysmem_connector",
             to: [
+                "#debian-guest-manager",
                 "#session-manager",
                 "#starnix_manager",
+                "#termina-guest-manager",
+                "#zircon-guest-manager",
             ],
         },
         {
@@ -917,8 +948,11 @@
             protocol: [ "fuchsia.media.Audio" ],
             from: "self",
             to: [
+                "#debian-guest-manager",
                 "#session-manager",
                 "#soundplayer",
+                "#termina-guest-manager",
+                "#zircon-guest-manager",
             ],
             dependency: "weak_for_migration",
         },
@@ -927,8 +961,11 @@
             from: "#vulkan_loader",
             to: [
                 "#agis",
+                "#debian-guest-manager",
                 "#session-manager",
                 "#starnix_manager",
+                "#termina-guest-manager",
+                "#zircon-guest-manager",
             ],
         },
         {
@@ -942,8 +979,11 @@
             from: "parent",
             as: "dev-gpu",
             to: [
+                "#debian-guest-manager",
                 "#starnix_manager",
+                "#termina-guest-manager",
                 "#vulkan_loader",
+                "#zircon-guest-manager",
             ],
             subdir: "class/gpu",
         },
@@ -1107,6 +1147,54 @@
             from: "parent",
             to: "#mdns",
             subdir: "mdns",
+        },
+        {
+            protocol: [
+                "fuchsia.kernel.HypervisorResource",
+                "fuchsia.kernel.IrqResource",
+                "fuchsia.kernel.MmioResource",
+                "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.sysinfo.SysInfo",
+            ],
+            from: "parent",
+            to: [
+                "#debian-guest-manager",
+                "#termina-guest-manager",
+                "#zircon-guest-manager",
+            ],
+        },
+        {
+            protocol: [ "fuchsia.ui.input.ImeService" ],
+            from: "#text_manager",
+            to: [
+                "#debian-guest-manager",
+                "#termina-guest-manager",
+                "#zircon-guest-manager",
+            ],
+        },
+        {
+            protocol: [
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.policy.Presenter",
+                "fuchsia.ui.scenic.Scenic",
+            ],
+            from: "self",
+            to: [
+                "#debian-guest-manager",
+                "#termina-guest-manager",
+                "#zircon-guest-manager",
+            ],
+            dependency: "weak_for_migration",
+        },
+        {
+            protocol: [ "fuchsia.net.virtualization.Control" ],
+            from: "#network",
+            to: [
+                "#debian-guest-manager",
+                "#termina-guest-manager",
+                "#zircon-guest-manager",
+            ],
         },
     ],
     expose: [

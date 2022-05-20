@@ -17,11 +17,11 @@
             "packages"
         ],
         "services": [
-            "fuchsia.hardware.power.statecontrol.Admin",
-            "fuchsia.hardware.pty.Device",
             "fuchsia.bluetooth.sys.Access",
             "fuchsia.bluetooth.sys.HostWatcher",
             "fuchsia.device.NameProvider",
+            "fuchsia.hardware.power.statecontrol.Admin",
+            "fuchsia.hardware.pty.Device",
             "fuchsia.logger.Log",
             "fuchsia.media.Audio",
             "fuchsia.net.name.Lookup",
@@ -45,10 +45,13 @@
             "fuchsia.ui.input3.KeyEventInjector",
             "fuchsia.ui.input3.Keyboard",
             "fuchsia.ui.scenic.Scenic",
-            "fuchsia.update.channelcontrol.ChannelControl",
             "fuchsia.update.Manager",
+            "fuchsia.update.channelcontrol.ChannelControl",
+            "fuchsia.virtualization.DebianGuestManager",
             "fuchsia.virtualization.LinuxManager",
-            "fuchsia.virtualization.Manager"
+            "fuchsia.virtualization.Manager",
+            "fuchsia.virtualization.TerminaGuestManager",
+            "fuchsia.virtualization.ZirconGuestManager"
         ]
     }
 }
