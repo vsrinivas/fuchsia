@@ -34,6 +34,29 @@ template("ffx") {
 
   rustc_binary(ffx_name + "_bin_unversioned") {
     output_name = ffx_name + "_unversioned"
+
+    # As ffx is a tool that's used by subsequent build actions, speeding up its
+    # compilation allows other tasks to be started more quickly, lowering
+    # overall drag on the graph.
+
+    # These options cause it to fail in RBE
+    disable_rbe = true
+
+    # Use up to 16 threads for codegen
+    configs += [ "//build/config/rust:codegen_units_16" ]
+
+    if (is_debug) {
+      # Disable lto for debug builds, as the additional codegen units imply the
+      # use of thin-local lto
+      configs += [ "//build/config/rust:lto_disabled" ]
+    } else {
+      # Use thin lto (instead of implied thin-local), to run (thin) lto across
+      # the entire set of dependency crates, to minimize final binary size
+      # without spending an undue amount of time (this is still faster than
+      # using codegen_units=1)
+      configs += [ "//build/config/rust:lto_thin" ]
+    }
+
     deps = ffx_deps + [
              ":" + suite_name + "_args",
              ":" + suite_name + "_sub_command",
