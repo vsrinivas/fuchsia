@@ -63,12 +63,17 @@ zx::status<std::unique_ptr<fs::ManagedVfs>> MountAndServe(const MountOptions& mo
                                                           fit::closure on_unmount) {
   TRACE_DURATION("minfs", "MountAndServe");
 
-  fbl::RefPtr<VnodeMinfs> data_root;
-  auto fs_or = Mount(dispatcher, std::move(bcache), mount_options, &data_root);
+  auto fs_or = Minfs::Create(dispatcher, std::move(bcache), mount_options);
   if (fs_or.is_error()) {
     return std::move(fs_or);
   }
   std::unique_ptr<Minfs> fs = std::move(fs_or).value();
+
+  auto data_root_or = fs->OpenRootNode();
+  if (data_root_or.is_error()) {
+    return data_root_or.take_error();
+  }
+  fbl::RefPtr<fs::Vnode> data_root = std::move(data_root_or.value());
 
   fs->SetUnmountCallback(std::move(on_unmount));
 

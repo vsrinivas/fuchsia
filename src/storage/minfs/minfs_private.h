@@ -214,6 +214,9 @@ class Minfs :
   fbl::RefPtr<VnodeMinfs> VnodeLookup(uint32_t ino) __TA_EXCLUDES(hash_lock_);
   void VnodeRelease(VnodeMinfs* vn) __TA_EXCLUDES(hash_lock_);
 
+  // Opens the root inode. This is a special-case of VnodeGet for filesystem bootstrapping.
+  zx::status<fbl::RefPtr<VnodeMinfs>> OpenRootNode();
+
   // Allocate a new data block.
   void BlockNew(PendingWork* transaction, blk_t* out_bno) const;
 
@@ -480,13 +483,6 @@ void DumpInfo(const Superblock& info);
 void DumpInode(const Inode* inode, ino_t ino);
 zx_time_t GetTimeUTC();
 void InitializeDirectory(void* bdata, ino_t ino_self, ino_t ino_parent);
-
-// Given an input bcache, initialize the filesystem and return a reference to the
-// root node.
-[[nodiscard]] zx::status<std::unique_ptr<Minfs>> Mount(FuchsiaDispatcher* dispatcher,
-                                                       std::unique_ptr<minfs::Bcache> bc,
-                                                       const MountOptions& options,
-                                                       fbl::RefPtr<VnodeMinfs>* root_out);
 
 }  // namespace minfs
 

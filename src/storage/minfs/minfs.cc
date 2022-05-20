@@ -1311,19 +1311,8 @@ void Minfs::InitializeInspectTree() {
 
 #endif
 
-zx::status<std::unique_ptr<Minfs>> Mount(FuchsiaDispatcher* dispatcher,
-                                         std::unique_ptr<minfs::Bcache> bc,
-                                         const MountOptions& options,
-                                         fbl::RefPtr<VnodeMinfs>* root_out) {
-  TRACE_DURATION("minfs", "minfs_mount");
-
-  auto fs_or = Minfs::Create(dispatcher, std::move(bc), options);
-  if (fs_or.is_error()) {
-    FX_LOGS(ERROR) << "failed to create filesystem object " << fs_or.error_value();
-    return fs_or.take_error();
-  }
-
-  auto vn_or = fs_or->VnodeGet(kMinfsRootIno);
+zx::status<fbl::RefPtr<VnodeMinfs>> Minfs::OpenRootNode() {
+  auto vn_or = VnodeGet(kMinfsRootIno);
   if (vn_or.is_error()) {
     FX_LOGS(ERROR) << "cannot find root inode: " << vn_or.is_error();
     return vn_or.take_error();
@@ -1331,8 +1320,7 @@ zx::status<std::unique_ptr<Minfs>> Mount(FuchsiaDispatcher* dispatcher,
 
   ZX_DEBUG_ASSERT(vn_or->IsDirectory());
 
-  *root_out = std::move(vn_or.value());
-  return zx::ok(std::move(fs_or.value()));
+  return zx::ok(std::move(vn_or.value()));
 }
 
 #ifdef __Fuchsia__
