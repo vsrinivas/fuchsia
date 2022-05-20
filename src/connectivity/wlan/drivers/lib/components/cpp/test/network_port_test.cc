@@ -56,6 +56,23 @@ TEST(NetworkPortTest, Init) {
   port_ifc.removed_.VerifyAndClear();
 }
 
+TEST(NetworkPortTest, RemovePort) {
+  TestNetworkPortInterface port_ifc;
+  TestNetworkDeviceIfc netdev_ifc;
+  constexpr uint8_t kPortId = 13;
+
+  NetworkPort port_(netdev_ifc.GetProto(), port_ifc, kPortId);
+
+  netdev_ifc.remove_port_.ExpectCall(kPortId);
+  port_ifc.removed_.ExpectCall();
+
+  port_.Init(NetworkPort::Role::Client);
+  port_.RemovePort();
+
+  netdev_ifc.remove_port_.VerifyAndClear();
+  port_ifc.removed_.VerifyAndClear();
+}
+
 TEST(NetworkPortTest, Destructor) {
   TestNetworkPortInterface port_ifc;
   TestNetworkDeviceIfc netdev_ifc;

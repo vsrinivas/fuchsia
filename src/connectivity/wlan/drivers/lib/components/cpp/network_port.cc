@@ -13,7 +13,14 @@ NetworkPort::NetworkPort(network_device_ifc_protocol_t netdev_ifc, Callbacks& if
                          uint8_t port_id)
     : iface_(iface), netdev_ifc_(&netdev_ifc), port_id_(port_id) {}
 
-NetworkPort::~NetworkPort() {
+NetworkPort::~NetworkPort() { RemovePort(); }
+
+void NetworkPort::Init(Role role) {
+  role_ = role;
+  netdev_ifc_.AddPort(port_id_, this, &network_port_protocol_ops_);
+}
+
+void NetworkPort::RemovePort() {
   if (netdev_ifc_.is_valid()) {
     netdev_ifc_.RemovePort(port_id_);
     zx_status_t status = port_removed_.Wait();
@@ -21,11 +28,6 @@ NetworkPort::~NetworkPort() {
       zxlogf(ERROR, "Failed to wait for port removed completion: %s", zx_status_get_string(status));
     }
   }
-}
-
-void NetworkPort::Init(Role role) {
-  role_ = role;
-  netdev_ifc_.AddPort(port_id_, this, &network_port_protocol_ops_);
 }
 
 void NetworkPort::SetPortOnline(bool online) {

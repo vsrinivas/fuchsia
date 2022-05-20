@@ -67,6 +67,9 @@ class NetworkPort : public ::ddk::NetworkPortProtocol<NetworkPort>,
   virtual ~NetworkPort();
 
   void Init(Role role);
+  // Remove the port, this synchronously waits for the close to complete. After this no further
+  // operations on the port are valid.
+  void RemovePort();
 
   void SetPortOnline(bool online) __TA_EXCLUDES(online_mutex_);
   bool IsOnline() const __TA_EXCLUDES(online_mutex_);
