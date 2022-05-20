@@ -93,6 +93,11 @@ func TestConversion(t *testing.T) {
 								NotCovered: 7,
 								Percent:    56.25,
 							},
+							Branches: llvm.Counts{
+								Count:   12,
+								Covered: 5,
+								Percent: 41.66,
+							},
 						},
 					},
 				},
@@ -117,6 +122,11 @@ func TestConversion(t *testing.T) {
 						Covered:    9,
 						NotCovered: 7,
 						Percent:    56.25,
+					},
+					Branches: llvm.Counts{
+						Count:   12,
+						Covered: 5,
+						Percent: 41.66,
 					},
 				},
 			},
@@ -190,6 +200,11 @@ func TestConversion(t *testing.T) {
 					Name:    "line",
 					Covered: int32(9),
 					Total:   int32(10),
+				},
+				{
+					Name:    "branch",
+					Covered: int32(5),
+					Total:   int32(12),
 				},
 			},
 		},
@@ -273,6 +288,11 @@ func TestSummary(t *testing.T) {
 					Covered: int32(9),
 					Total:   int32(10),
 				},
+				{
+					Name:    "branch",
+					Covered: int32(5),
+					Total:   int32(12),
+				},
 			},
 		},
 		{
@@ -340,6 +360,11 @@ func TestSummary(t *testing.T) {
 					Covered: int32(9),
 					Total:   int32(10),
 				},
+				{
+					Name:    "branch",
+					Covered: int32(5),
+					Total:   int32(12),
+				},
 			},
 		},
 	}
@@ -367,6 +392,11 @@ func TestSummary(t *testing.T) {
 							Covered: int32(18),
 							Total:   int32(20),
 						},
+						{
+							Name:    "branch",
+							Covered: int32(10),
+							Total:   int32(24),
+						},
 					},
 				},
 			},
@@ -385,6 +415,11 @@ func TestSummary(t *testing.T) {
 					Name:    "line",
 					Covered: int32(18),
 					Total:   int32(20),
+				},
+				{
+					Name:    "branch",
+					Covered: int32(10),
+					Total:   int32(24),
 				},
 			},
 		},
@@ -410,6 +445,11 @@ func TestSummary(t *testing.T) {
 							Covered: int32(9),
 							Total:   int32(10),
 						},
+						{
+							Name:    "branch",
+							Covered: int32(5),
+							Total:   int32(12),
+						},
 					},
 				},
 				{
@@ -431,6 +471,11 @@ func TestSummary(t *testing.T) {
 							Covered: int32(9),
 							Total:   int32(10),
 						},
+						{
+							Name:    "branch",
+							Covered: int32(5),
+							Total:   int32(12),
+						},
 					},
 				},
 			},
@@ -449,6 +494,11 @@ func TestSummary(t *testing.T) {
 					Name:    "line",
 					Covered: int32(18),
 					Total:   int32(20),
+				},
+				{
+					Name:    "branch",
+					Covered: int32(10),
+					Total:   int32(24),
 				},
 			},
 		},
@@ -469,6 +519,11 @@ func TestSummary(t *testing.T) {
 			Name:    "line",
 			Covered: int32(18),
 			Total:   int32(20),
+		},
+		{
+			Name:    "branch",
+			Covered: int32(10),
+			Total:   int32(24),
 		},
 	}
 
@@ -517,6 +572,11 @@ func TestSave(t *testing.T) {
 						},
 						{
 							Name:    "line",
+							Covered: 0,
+							Total:   0,
+						},
+						{
+							Name:    "branch",
 							Covered: 0,
 							Total:   0,
 						},

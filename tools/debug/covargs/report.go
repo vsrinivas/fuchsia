@@ -262,6 +262,11 @@ func convertFile(file llvm.File, base string, mapping *DiffMapping) (*codecovera
 				Covered: int32(file.Summary.Lines.Covered),
 				Total:   int32(file.Summary.Lines.Count),
 			},
+			{
+				Name:    "branch",
+				Covered: int32(file.Summary.Branches.Covered),
+				Total:   int32(file.Summary.Branches.Count),
+			},
 		},
 		Revision:  revision,
 		Timestamp: timestamp,
@@ -282,6 +287,11 @@ func mergeSummaries(summaries ...[]*codecoverage.Metric) []*codecoverage.Metric 
 		},
 		{
 			Name:    "line",
+			Covered: 0,
+			Total:   0,
+		},
+		{
+			Name:    "branch",
 			Covered: 0,
 			Total:   0,
 		},
