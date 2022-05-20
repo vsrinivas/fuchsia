@@ -157,9 +157,9 @@ class DataProviderTest : public UnitTestFixture {
     }
     annotation_manager_ =
         std::make_unique<feedback::AnnotationManager>(dispatcher(), allowlist, startup_annotations);
-    attachment_manager_ =
-        std::make_unique<AttachmentManager>(dispatcher(), services(), cobalt_.get(), &redactor_,
-                                            attachment_allowlist, inspect_data_budget_.get());
+    attachment_manager_ = std::make_unique<AttachmentManager>(
+        dispatcher(), services(), &clock_, cobalt_.get(), &redactor_, attachment_allowlist,
+        inspect_data_budget_.get());
     data_provider_ = std::make_unique<DataProvider>(
         dispatcher(), services(), &clock_, &redactor_, /*is_first_instance=*/true,
         annotation_allowlist, attachment_allowlist, cobalt_.get(), annotation_manager_.get(),

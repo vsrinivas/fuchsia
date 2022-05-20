@@ -9,6 +9,7 @@ source_set("attachments") {
   sources = [
     "metrics.cc",
     "metrics.h",
+    "provider.h",
     "static_attachments.cc",
     "static_attachments.h",
     "types.h",

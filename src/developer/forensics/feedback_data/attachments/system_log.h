@@ -17,6 +17,7 @@
 #include <optional>
 #include <string>
 
+#include "src/developer/forensics/feedback_data/attachments/provider.h"
 #include "src/developer/forensics/feedback_data/attachments/types.h"
 #include "src/developer/forensics/feedback_data/log_source.h"
 #include "src/developer/forensics/utils/redact/redactor.h"
@@ -85,12 +86,12 @@ class LogBuffer : public LogSink {
 // |active_period_| past the end of the call elapses.
 //
 // fuchsia.diagnostics.FeedbackArchiveAccessor is expected to be in |services|.
-class SystemLog {
+class SystemLog : public AttachmentProvider {
  public:
   SystemLog(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
             timekeeper::Clock* clock, RedactorBase* redactor, zx::duration active_period);
 
-  ::fpromise::promise<AttachmentValue> Get(zx::duration timeout);
+  ::fpromise::promise<AttachmentValue> Get(zx::duration timeout) override;
 
  private:
   // Terminates the stream and flushes the in-memory buffer.

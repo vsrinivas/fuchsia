@@ -439,7 +439,7 @@ fuchsia_test_package("feedback-data-tests") {
 
   test_specs = {
     log_settings = {
-      max_severity = "ERROR"
+      max_severity = "FATAL"
     }
   }
 }

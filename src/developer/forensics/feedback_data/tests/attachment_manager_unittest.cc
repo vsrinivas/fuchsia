@@ -38,6 +38,7 @@
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/timekeeper/async_test_clock.h"
 #include "src/lib/timekeeper/test_clock.h"
 
 namespace forensics {
@@ -48,6 +49,7 @@ using testing::BuildLogMessage;
 using ::testing::Contains;
 using ::testing::ElementsAreArray;
 using ::testing::Eq;
+using ::testing::HasSubstr;
 using ::testing::IsEmpty;
 using ::testing::Not;
 using ::testing::Pair;
@@ -63,7 +65,7 @@ const AttachmentKeys kDefaultAttachmentsToAvoidSpuriousLogs = {
 
 class AttachmentManagerTest : public UnitTestFixture {
  public:
-  AttachmentManagerTest() : executor_(dispatcher()) {}
+  AttachmentManagerTest() : executor_(dispatcher()), clock_(dispatcher()) {}
 
   void SetUp() override {
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
@@ -84,9 +86,9 @@ class AttachmentManagerTest : public UnitTestFixture {
     for (const auto& [k, _] : startup_annotations) {
       allowlist.insert(k);
     }
-    attachment_manager_ =
-        std::make_unique<AttachmentManager>(dispatcher(), services(), cobalt_.get(), &redactor_,
-                                            attachment_allowlist, inspect_data_budget_.get());
+    attachment_manager_ = std::make_unique<AttachmentManager>(
+        dispatcher(), services(), &clock_, cobalt_.get(), &redactor_, attachment_allowlist,
+        inspect_data_budget_.get());
   }
 
   void SetUpDiagnosticsServer(const std::string& inspect_chunk) {
@@ -132,7 +134,7 @@ class AttachmentManagerTest : public UnitTestFixture {
 
  private:
   async::Executor executor_;
-  timekeeper::TestClock clock_;
+  timekeeper::AsyncTestClock clock_;
   std::unique_ptr<cobalt::Logger> cobalt_;
   IdentityRedactor redactor_{inspect::BoolProperty()};
 
@@ -252,18 +254,15 @@ TEST_F(AttachmentManagerTest, GetAttachments_FailOn_EmptyAttachmentAllowlist) {
   SetUpAttachmentManager({});
 
   ::fpromise::result<Attachments> attachments = GetAttachments();
-  ASSERT_TRUE(attachments.is_error());
+  ASSERT_FALSE(attachments.is_error());
 
+  EXPECT_THAT(attachments.value(), IsEmpty());
   EXPECT_THAT(GetStaticAttachments(), IsEmpty());
 }
 
 TEST_F(AttachmentManagerTest, GetAttachments_FailOn_OnlyUnknownAttachmentInAllowlist) {
-  SetUpAttachmentManager({"unknown.attachment"});
-
-  ::fpromise::result<Attachments> attachments = GetAttachments();
-  ASSERT_TRUE(attachments.is_error());
-
-  EXPECT_THAT(GetStaticAttachments(), IsEmpty());
+  ASSERT_DEATH({ SetUpAttachmentManager({"unknown.attachment"}); },
+               HasSubstr("Attachment \"unknown.attachment\" collected by 0 providers"));
 }
 
 TEST_F(AttachmentManagerTest, GetAttachments_CobaltLogsTimeouts) {

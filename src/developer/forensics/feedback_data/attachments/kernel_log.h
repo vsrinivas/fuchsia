@@ -12,6 +12,7 @@
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/debuglog.h>
 
+#include "src/developer/forensics/feedback_data/attachments/provider.h"
 #include "src/developer/forensics/feedback_data/attachments/types.h"
 #include "src/developer/forensics/utils/redact/redactor.h"
 #include "src/lib/backoff/backoff.h"
@@ -22,12 +23,12 @@ namespace forensics::feedback_data {
 // Retrieves the kernel log.
 //
 // fuchsia.boot.ReadOnlyLog is expected to be in |services|.
-class KernelLog {
+class KernelLog : public AttachmentProvider {
  public:
   KernelLog(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
             std::unique_ptr<backoff::Backoff> backoff, RedactorBase* redactor);
 
-  ::fpromise::promise<AttachmentValue> Get(zx::duration timeout);
+  ::fpromise::promise<AttachmentValue> Get(zx::duration timeout) override;
 
  private:
   async_dispatcher_t* dispatcher_;

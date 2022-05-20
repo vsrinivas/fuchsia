@@ -12,14 +12,30 @@
 #include "src/developer/forensics/feedback_data/attachments/static_attachments.h"
 #include "src/developer/forensics/feedback_data/attachments/types.h"
 #include "src/developer/forensics/feedback_data/constants.h"
+#include "src/lib/timekeeper/clock.h"
 
 namespace forensics {
 namespace feedback_data {
+namespace {
+
+template <typename T>
+void EraseNotAllowlisted(std::map<std::string, T>& c, const std::set<std::string>& allowlist) {
+  for (auto it = c.begin(); it != c.end();) {
+    if (allowlist.count(it->first) == 0) {
+      FX_LOGS(INFO) << "Attachment \"" << it->first << "\" not allowlisted, dropping";
+      c.erase(it++);
+    } else {
+      ++it;
+    }
+  }
+}
+
+}  // namespace
 
 AttachmentManager::AttachmentManager(async_dispatcher_t* dispatcher,
                                      std::shared_ptr<sys::ServiceDirectory> services,
-                                     cobalt::Logger* cobalt, RedactorBase* redactor,
-                                     const AttachmentKeys& allowlist,
+                                     timekeeper::Clock* clock, cobalt::Logger* cobalt,
+                                     RedactorBase* redactor, const AttachmentKeys& allowlist,
                                      InspectDataBudget* inspect_data_budget)
     : allowlist_(allowlist),
       static_attachments_(feedback_data::GetStaticAttachments(allowlist_)),
@@ -27,84 +43,61 @@ AttachmentManager::AttachmentManager(async_dispatcher_t* dispatcher,
       kernel_log_(dispatcher, services,
                   std::make_unique<backoff::ExponentialBackoff>(zx::min(1), 2u, zx::hour(1)),
                   redactor),
-      system_log_(dispatcher, services, &clock_, redactor, kActiveLoggingPeriod),
+      system_log_(dispatcher, services, clock, redactor, kActiveLoggingPeriod),
       inspect_(dispatcher, services,
                std::make_unique<backoff::ExponentialBackoff>(zx::min(1), 2u, zx::hour(1)),
-               inspect_data_budget->SizeInBytes()) {
+               inspect_data_budget->SizeInBytes()),
+
+      providers_({
+          {kAttachmentLogKernel, &kernel_log_},
+          {kAttachmentLogSystem, &system_log_},
+          {kAttachmentInspect, &inspect_},
+      }) {
   if (allowlist_.empty()) {
     FX_LOGS(WARNING)
         << "Attachment allowlist is empty, no platform attachments will be collected or returned";
   }
+
+  // Remove any static attachments or providers that return attachments not in |allowlist_|.
+  EraseNotAllowlisted(static_attachments_, allowlist);
+  EraseNotAllowlisted(providers_, allowlist);
+
+  for (const auto& k : allowlist_) {
+    const auto num_providers = static_attachments_.count(k) + providers_.count(k);
+
+    FX_CHECK(num_providers == 1) << "Attachment \"" << k << "\" collected by " << num_providers
+                                 << " providers";
+  }
 }
 
 ::fpromise::promise<Attachments> AttachmentManager::GetAttachments(const zx::duration timeout) {
-  if (allowlist_.empty()) {
-    return ::fpromise::make_result_promise<Attachments>(::fpromise::error());
+  std::vector<std::string> keys;
+  std::vector<::fpromise::promise<AttachmentValue>> promises;
+
+  for (auto& [k, p] : providers_) {
+    keys.push_back(k);
+    promises.push_back(p->Get(timeout));
   }
 
-  std::vector<::fpromise::promise<Attachment>> attachments;
-  for (const auto& key : allowlist_) {
-    attachments.push_back(BuildAttachment(key, timeout));
-  }
+  auto join = ::fpromise::join_promise_vector(std::move(promises));
+  using result_t = decltype(join)::value_type;
 
-  return ::fpromise::join_promise_vector(std::move(attachments))
-      .and_then([this](std::vector<::fpromise::result<Attachment>>& attachments)
-                    -> ::fpromise::result<Attachments> {
-        // We seed the returned attachments with the static ones.
-        Attachments ok_attachments(static_attachments_.begin(), static_attachments_.end());
+  // Start with the static attachments and the add the dynamically collected values to them.
+  return join.and_then([this, keys, attachments = static_attachments_](result_t& results) mutable {
+    for (size_t i = 0; i < results.size(); ++i) {
+      attachments.insert({keys[i], results[i].take_value()});
 
-        // We then augment them with the dynamic ones.
-        for (auto& result : attachments) {
-          if (result.is_ok()) {
-            Attachment attachment = result.take_value();
-            ok_attachments.insert({attachment.first, attachment.second});
-          }
-        }
+      // Consider any attachments without content as missing attachments.
+      if (auto& attachment = attachments.at(keys[i]);
+          attachment.HasValue() && attachment.Value().empty()) {
+        attachment = attachment.HasError() ? attachment.Error() : Error::kMissingValue;
+      }
+    }
 
-        if (ok_attachments.empty()) {
-          return ::fpromise::error();
-        }
+    attachment_metrics_.LogMetrics(attachments);
 
-        // Make sure all attachments are correctly categorized. Any complete or partial attachments
-        // that have empty values should be categorized as missing to not be included in the final
-        // snapshot and marked as such in the integrity manifest.
-        for (auto& [_, attachment] : ok_attachments) {
-          if (attachment.HasValue() && attachment.Value().empty()) {
-            // In case there is an error and a value, i.e. a partial attachment, preserve the error.
-            if (attachment.HasError()) {
-              attachment = AttachmentValue(attachment.Error());
-            } else {
-              attachment = AttachmentValue(Error::kMissingValue);
-            }
-          }
-        }
-
-        attachment_metrics_.LogMetrics(ok_attachments);
-
-        return ::fpromise::ok(ok_attachments);
-      });
-}
-
-::fpromise::promise<Attachment> AttachmentManager::BuildAttachment(const AttachmentKey& key,
-                                                                   const zx::duration timeout) {
-  return BuildAttachmentValue(key, timeout)
-      .and_then([key](AttachmentValue& value) -> ::fpromise::result<Attachment> {
-        return ::fpromise::ok(Attachment(key, value));
-      });
-}
-
-::fpromise::promise<AttachmentValue> AttachmentManager::BuildAttachmentValue(
-    const AttachmentKey& key, const zx::duration timeout) {
-  if (key == kAttachmentLogKernel) {
-    return kernel_log_.Get(timeout);
-  } else if (key == kAttachmentLogSystem) {
-    return system_log_.Get(timeout);
-  } else if (key == kAttachmentInspect) {
-    return inspect_.Get(timeout);
-  }
-
-  // There are static attachments in the allowlist that we just skip here.
-  return ::fpromise::make_result_promise<AttachmentValue>(::fpromise::error());
+    return ::fpromise::ok(std::move(attachments));
+  });
 }
 
 void AttachmentManager::DropStaticAttachment(const AttachmentKey& key, const Error error) {

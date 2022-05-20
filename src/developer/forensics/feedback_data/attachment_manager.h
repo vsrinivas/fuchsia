@@ -15,11 +15,12 @@
 #include "src/developer/forensics/feedback_data/attachments/inspect.h"
 #include "src/developer/forensics/feedback_data/attachments/kernel_log.h"
 #include "src/developer/forensics/feedback_data/attachments/metrics.h"
+#include "src/developer/forensics/feedback_data/attachments/provider.h"
 #include "src/developer/forensics/feedback_data/attachments/system_log.h"
 #include "src/developer/forensics/feedback_data/attachments/types.h"
 #include "src/developer/forensics/feedback_data/inspect_data_budget.h"
 #include "src/developer/forensics/utils/redact/redactor.h"
-#include "src/lib/timekeeper/system_clock.h"
+#include "src/lib/timekeeper/clock.h"
 
 namespace forensics {
 namespace feedback_data {
@@ -31,8 +32,8 @@ namespace feedback_data {
 class AttachmentManager {
  public:
   AttachmentManager(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-                    cobalt::Logger* cobalt, RedactorBase* redactor, const AttachmentKeys& allowlist,
-                    InspectDataBudget* inspect_data_budget);
+                    timekeeper::Clock* clock, cobalt::Logger* cobalt, RedactorBase* redactor,
+                    const AttachmentKeys& allowlist, InspectDataBudget* inspect_data_budget);
 
   ::fpromise::promise<Attachments> GetAttachments(zx::duration timeout);
 
@@ -41,11 +42,6 @@ class AttachmentManager {
   void DropStaticAttachment(const AttachmentKey& key, Error error);
 
  private:
-  ::fpromise::promise<Attachment> BuildAttachment(const AttachmentKey& key, zx::duration timeout);
-  ::fpromise::promise<AttachmentValue> BuildAttachmentValue(const AttachmentKey& key,
-                                                            zx::duration timeout);
-
-  timekeeper::SystemClock clock_;
   AttachmentKeys allowlist_;
 
   Attachments static_attachments_;
@@ -54,6 +50,8 @@ class AttachmentManager {
   KernelLog kernel_log_;
   SystemLog system_log_;
   Inspect inspect_;
+
+  std::map<std::string, AttachmentProvider*> providers_;
 };
 
 }  // namespace feedback_data

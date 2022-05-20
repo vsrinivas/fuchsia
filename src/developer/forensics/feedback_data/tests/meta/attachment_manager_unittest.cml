@@ -13,7 +13,10 @@
     },
     use: [
         {
-            protocol: [ "fuchsia.sysinfo.SysInfo" ],
+            protocol: [
+                "fuchsia.process.Launcher",
+                "fuchsia.sysinfo.SysInfo",
+            ],
         },
         {
             directory: "build-info",
