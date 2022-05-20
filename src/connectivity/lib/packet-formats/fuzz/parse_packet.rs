@@ -89,8 +89,34 @@ where
     }
 }
 
+fn init_logging() {
+    static LOGGER_ONCE: core::sync::atomic::AtomicBool = core::sync::atomic::AtomicBool::new(true);
+    if LOGGER_ONCE.swap(false, core::sync::atomic::Ordering::AcqRel) {
+        struct StderrLogger;
+        impl log::Log for StderrLogger {
+            fn enabled(&self, _metadata: &log::Metadata<'_>) -> bool {
+                true
+            }
+            fn log(&self, record: &log::Record<'_>) {
+                eprintln!(
+                    "[{}][{}] {}",
+                    record.module_path().unwrap_or("_unknown_"),
+                    record.level(),
+                    record.args()
+                );
+            }
+            fn flush(&self) {}
+        }
+        static LOGGER: StderrLogger = StderrLogger;
+        log::set_logger(&LOGGER).expect("logging setup failed");
+        log::set_max_level(log::LevelFilter::Debug);
+    }
+}
+
 #[fuzz]
 fn fuzz_parse_packet(input: &[u8]) {
+    init_logging();
+
     let mut unstructured = Unstructured::new(input);
 
     #[derive(Arbitrary)]
