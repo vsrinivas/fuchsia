@@ -600,7 +600,7 @@ mod tests {
         super::{Flushable, FlushableData, StorageReservation, WritebackCache},
         crate::{
             data_buffer::MemDataBuffer,
-            filesystem::Mutations,
+            filesystem::JournalingObject,
             object_store::{
                 allocator::{Allocator, AllocatorInfo, Reservation, ReservationOwner},
                 transaction::Transaction,
@@ -731,7 +731,7 @@ mod tests {
             unimplemented!();
         }
 
-        fn as_mutations(self: Arc<Self>) -> Arc<dyn Mutations> {
+        fn as_journaling_object(self: Arc<Self>) -> Arc<dyn JournalingObject> {
             unreachable!();
         }
 

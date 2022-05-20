@@ -6,7 +6,7 @@ use {
     crate::{
         crypt::Crypt,
         errors::FxfsError,
-        filesystem::{ApplyContext, ApplyMode, Mutations},
+        filesystem::{ApplyContext, ApplyMode, JournalingObject},
         metrics::{traits::Metric as _, traits::NumericMetric as _, UintMetric},
         object_handle::INVALID_OBJECT_ID,
         object_store::{
@@ -370,9 +370,9 @@ impl ObjectManager {
                 }
             }
             if object_id == inner.allocator_object_id {
-                Some(inner.allocator.clone().unwrap().as_mutations())
+                Some(inner.allocator.clone().unwrap().as_journaling_object())
             } else {
-                inner.stores.get(&object_id).map(|x| x.clone() as Arc<dyn Mutations>)
+                inner.stores.get(&object_id).map(|x| x.clone() as Arc<dyn JournalingObject>)
             }
         }
         .unwrap_or_else(|| {
@@ -566,12 +566,12 @@ impl ObjectManager {
         Ok(())
     }
 
-    fn object(&self, object_id: u64) -> Option<Arc<dyn Mutations>> {
+    fn object(&self, object_id: u64) -> Option<Arc<dyn JournalingObject>> {
         let inner = self.inner.read().unwrap();
         if object_id == inner.allocator_object_id {
-            Some(inner.allocator.clone().unwrap().as_mutations())
+            Some(inner.allocator.clone().unwrap().as_journaling_object())
         } else {
-            inner.stores.get(&object_id).map(|x| x.clone() as Arc<dyn Mutations>)
+            inner.stores.get(&object_id).map(|x| x.clone() as Arc<dyn JournalingObject>)
         }
     }
 

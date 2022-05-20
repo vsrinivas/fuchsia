@@ -5,7 +5,7 @@
 use {
     crate::{
         errors::FxfsError,
-        filesystem::{ApplyContext, ApplyMode, Mutations},
+        filesystem::{ApplyContext, ApplyMode, JournalingObject},
         lsm_tree::types::LayerIterator,
         metrics::{traits::Metric as _, UintMetric},
         object_handle::BootstrapObjectHandle,

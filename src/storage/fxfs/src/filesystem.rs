@@ -104,7 +104,7 @@ impl ApplyMode<'_, '_> {
 }
 
 #[async_trait]
-pub trait Mutations: Send + Sync {
+pub trait JournalingObject: Send + Sync {
     /// Objects that use the journaling system to track mutations should implement this trait.  This
     /// method will get called when the transaction commits, which can either be during live
     /// operation or during journal replay, in which case transaction will be None.  Also see

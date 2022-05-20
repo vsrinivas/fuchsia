@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        filesystem::{ApplyContext, Mutations},
+        filesystem::{ApplyContext, JournalingObject},
         object_store::{
             allocator::{Allocator, AllocatorInfo, Reservation, ReservationOwner},
             transaction::{AssocObj, Mutation, Transaction},
@@ -89,7 +89,7 @@ impl Allocator for FakeAllocator {
         unimplemented!();
     }
 
-    fn as_mutations(self: Arc<Self>) -> Arc<dyn Mutations> {
+    fn as_journaling_object(self: Arc<Self>) -> Arc<dyn JournalingObject> {
         self
     }
 
@@ -126,7 +126,7 @@ impl ReservationOwner for FakeAllocator {
 }
 
 #[async_trait]
-impl Mutations for FakeAllocator {
+impl JournalingObject for FakeAllocator {
     async fn apply_mutation(
         &self,
         _mutation: Mutation,

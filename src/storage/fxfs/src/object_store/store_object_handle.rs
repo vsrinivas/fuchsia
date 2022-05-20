@@ -1238,7 +1238,7 @@ mod tests {
     use {
         crate::{
             crypt::{insecure::InsecureCrypt, Crypt},
-            filesystem::{Filesystem, FxFilesystem, Mutations, OpenFxFilesystem},
+            filesystem::{Filesystem, FxFilesystem, JournalingObject, OpenFxFilesystem},
             lsm_tree::types::{ItemRef, LayerIterator},
             object_handle::{
                 GetProperties, ObjectHandle, ObjectProperties, ReadObjectHandle, WriteObjectHandle,

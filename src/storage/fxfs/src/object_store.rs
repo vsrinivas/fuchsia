@@ -31,7 +31,7 @@ use {
         data_buffer::{DataBuffer, MemDataBuffer},
         errors::FxfsError,
         ff1::Ff1,
-        filesystem::{ApplyContext, ApplyMode, Filesystem, FxFilesystem, Mutations},
+        filesystem::{ApplyContext, ApplyMode, Filesystem, FxFilesystem, JournalingObject},
         lsm_tree::{
             types::{Item, ItemRef, LayerIterator},
             LSMTree,
@@ -1370,7 +1370,7 @@ impl ObjectStore {
 }
 
 #[async_trait]
-impl Mutations for ObjectStore {
+impl JournalingObject for ObjectStore {
     async fn apply_mutation(
         &self,
         mutation: Mutation,
@@ -1483,7 +1483,9 @@ mod tests {
         crate::{
             crypt::{insecure::InsecureCrypt, Crypt},
             errors::FxfsError,
-            filesystem::{Filesystem, FxFilesystem, Mutations, OpenFxFilesystem, SyncOptions},
+            filesystem::{
+                Filesystem, FxFilesystem, JournalingObject, OpenFxFilesystem, SyncOptions,
+            },
             fsck::fsck,
             lsm_tree::types::{Item, ItemRef, LayerIterator},
             object_handle::{ObjectHandle, ReadObjectHandle, WriteObjectHandle, INVALID_OBJECT_ID},

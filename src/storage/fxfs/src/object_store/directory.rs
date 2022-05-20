@@ -495,7 +495,7 @@ mod tests {
         super::remove,
         crate::{
             errors::FxfsError,
-            filesystem::{Filesystem, FxFilesystem, Mutations, SyncOptions},
+            filesystem::{Filesystem, FxFilesystem, JournalingObject, SyncOptions},
             object_handle::{ObjectHandle, ReadObjectHandle, WriteObjectHandle},
             object_store::{
                 directory::{replace_child, Directory, ReplacedChild},

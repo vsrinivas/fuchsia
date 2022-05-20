@@ -8,7 +8,7 @@ use {
     crate::{
         debug_assert_not_too_long,
         errors::FxfsError,
-        filesystem::{ApplyContext, ApplyMode, Filesystem, Mutations, SyncOptions},
+        filesystem::{ApplyContext, ApplyMode, Filesystem, JournalingObject, SyncOptions},
         lsm_tree::{
             layers_from_handles,
             skip_list_layer::SkipListLayer,
@@ -97,7 +97,7 @@ pub trait Allocator: ReservationOwner {
     async fn mark_for_deletion(&self, transaction: &mut Transaction<'_>, owner_object_id: u64);
 
     /// Cast to super-trait.
-    fn as_mutations(self: Arc<Self>) -> Arc<dyn Mutations>;
+    fn as_journaling_object(self: Arc<Self>) -> Arc<dyn JournalingObject>;
 
     fn as_any(self: Arc<Self>) -> Arc<dyn Any + Send + Sync>;
 
@@ -842,7 +842,7 @@ impl Allocator for SimpleAllocator {
         );
     }
 
-    fn as_mutations(self: Arc<Self>) -> Arc<dyn Mutations> {
+    fn as_journaling_object(self: Arc<Self>) -> Arc<dyn JournalingObject> {
         self
     }
 
@@ -922,7 +922,7 @@ impl ReservationOwner for SimpleAllocator {
 }
 
 #[async_trait]
-impl Mutations for SimpleAllocator {
+impl JournalingObject for SimpleAllocator {
     async fn apply_mutation(
         &self,
         mutation: Mutation,
@@ -1247,7 +1247,7 @@ impl LayerIterator<AllocatorKey, AllocatorValue> for CoalescingIterator<'_> {
 mod tests {
     use {
         crate::{
-            filesystem::{Filesystem, Mutations},
+            filesystem::{Filesystem, JournalingObject},
             lsm_tree::{
                 skip_list_layer::SkipListLayer,
                 types::{Item, ItemRef, Layer, LayerIterator, MutableLayer},
