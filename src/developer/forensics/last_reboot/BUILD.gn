@@ -24,21 +24,6 @@ source_set("last_reboot_info_provider") {
   deps = [ "//sdk/lib/syslog/cpp" ]
 }
 
-source_set("main") {
-  sources = [
-    "main.cc",
-    "main.h",
-  ]
-
-  deps = [
-    "//sdk/lib/syslog/cpp",
-    "//src/developer/forensics/feedback/fidl:fuchsia.feedback.internal",
-    "//src/developer/forensics/feedback/migration/shell:main",
-  ]
-
-  visibility += [ "//src/developer/forensics:*" ]
-}
-
 source_set("reboot_watcher") {
   sources = [
     "reboot_watcher.cc",

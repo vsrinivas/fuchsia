@@ -8,7 +8,6 @@
 group("tests") {
   testonly = true
   deps = [
-    "migration:tests",
     "reboot_log/tests",
     "tests",
   ]
@@ -59,8 +58,6 @@ source_set("main") {
     "reboot_log",
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/crash_reports:default_annotations",
-    "//src/developer/forensics/feedback/fidl:fuchsia.feedback.internal",
-    "//src/developer/forensics/feedback/migration/utils",
     "//src/developer/forensics/feedback_data:default_annotations",
     "//src/developer/forensics/utils/component",
     "//src/lib/files",

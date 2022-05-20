@@ -31,9 +31,7 @@ namespace component {
 // namespace.
 class Component {
  public:
-  // Set |lazy_outgoing_dir| to true if the component should wait to publish its outgoing directory
-  // until the first call to |AddPublicService|.
-  explicit Component(bool lazy_outgoing_dir = false);
+  explicit Component();
 
   async_dispatcher_t* Dispatcher();
   std::shared_ptr<sys::ServiceDirectory> Services();
@@ -46,12 +44,6 @@ class Component {
   template <typename Interface>
   zx_status_t AddPublicService(::fidl::InterfaceRequestHandler<Interface> handler,
                                std::string service_name = Interface::Name_) {
-    if (!serving_outgoing_) {
-      FX_LOGS(INFO) << "Serving outgoing directory";
-      context_->outgoing()->ServeFromStartupInfo(dispatcher_);
-      serving_outgoing_ = true;
-    }
-
     return context_->outgoing()->AddPublicService(std::move(handler), std::move(service_name));
   }
 
@@ -69,8 +61,7 @@ class Component {
 
  protected:
   // Constructor for testing when the component should run on a different loop than |loop_|.
-  Component(async_dispatcher_t* dispatcher, std::unique_ptr<sys::ComponentContext> context,
-            bool serving_outgoing);
+  Component(async_dispatcher_t* dispatcher, std::unique_ptr<sys::ComponentContext> context);
 
  private:
   size_t InitialInstanceIndex() const;
@@ -82,8 +73,6 @@ class Component {
   sys::ComponentInspector inspector_;
   timekeeper::SystemClock clock_;
   size_t instance_index_;
-
-  bool serving_outgoing_;
 
   std::unique_ptr<fuchsia::process::lifecycle::Lifecycle> lifecycle_;
   std::unique_ptr<::fidl::Binding<fuchsia::process::lifecycle::Lifecycle>> lifecycle_connection_;

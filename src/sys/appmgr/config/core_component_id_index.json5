@@ -80,33 +80,8 @@
             moniker: "/core/wlandevicemonitor",
         },
         {
-            // TODO(fxbug.dev/73132): Entry needed to preserve /cache across the v2 migration.
-            instance_id: "fd81549e77f2f3b199d4dca16131c3525428140828f0843a0fd30e7c0d2e2631",
-            appmgr_moniker: {
-                url: "fuchsia-pkg://fuchsia.com/forensics#meta/crash_reports.cmx",
-                realm_path: [
-                    "app",
-                    "sys",
-                ],
-            },
-        },
-        {
             instance_id: "eb345fb7dcaa4260ee0c65bb73ef0ec5341b15a4f603f358d6631c4be6bf7080",
             moniker: "/core/feedback",
-        },
-        {
-            instance_id: "796fc46a1898539f901c909c1ccf61c98660692fa45dabe474afaec84be6d720",
-            appmgr_moniker: {
-                url: "fuchsia-pkg://fuchsia.com/forensics#meta/feedback_data.cmx",
-                realm_path: [
-                    "app",
-                    "sys",
-                ],
-            },
-        },
-        {
-            instance_id: "de3e6f95d17b22bcc6b8bb5389301dc9fa60a16e2c5a4d35eb4a35dd9ac571c3",
-            moniker: "/core/last_reboot",
         },
         {
             instance_id: "bf29aeef2be5779e9181fcd68a3f6de53db15d8cc952407030063086671f2904",

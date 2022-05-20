@@ -25,10 +25,6 @@
             on_terminate: "reboot",
         },
         {
-            name: "last_reboot",
-            url: "fuchsia-pkg://fuchsia.com/forensics#meta/last_reboot.cm",
-        },
-        {
             name: "exceptions",
             url: "fuchsia-pkg://fuchsia.com/forensics#meta/exceptions.cm",
         },
@@ -315,7 +311,6 @@
             to: [
                 "#exceptions",
                 "#feedback",
-                "#last_reboot",
                 "#mdns",
                 "#remote-control",
             ],
@@ -470,7 +465,6 @@
                 "#feedback",
                 "#font_provider",
                 "#hwinfo",
-                "#last_reboot",
                 "#log-stats",
                 "#mdns",
                 "#metrics-logger",
@@ -915,19 +909,10 @@
             storage: "data",
             from: "self",
             to: [
-                "#last_reboot",
                 "#stash",
                 "#stash2",
                 "#stash_secure",
             ],
-        },
-        {
-            storage: [
-                "cache",
-                "tmp",
-            ],
-            from: "self",
-            to: "#last_reboot",
         },
         {
             storage: [ "tmp" ],
@@ -1106,8 +1091,6 @@
         {
             protocol: [
                 "fuchsia.feedback.DeviceIdProvider",
-                "fuchsia.feedback.internal.CrashReportsDirectoryMigrator",
-                "fuchsia.feedback.internal.FeedbackDataDirectoryMigrator",
                 "fuchsia.intl.PropertyProvider",
                 "fuchsia.settings.Privacy",
                 "fuchsia.tracing.provider.Registry",
@@ -1135,11 +1118,6 @@
         {
             directory: "boot",
             from: "parent",
-            to: "#feedback",
-        },
-        {
-            protocol: [ "fuchsia.feedback.internal.LastRebootDirectoryMigrator" ],
-            from: "#last_reboot",
             to: "#feedback",
         },
         {

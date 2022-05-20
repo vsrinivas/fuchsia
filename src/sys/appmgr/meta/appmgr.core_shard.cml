@@ -274,12 +274,6 @@
             ],
             from: "#mdns",
         },
-
-        // TODO(fxbug.dev/71830): Remove once the Feedback migration has completed.
-        {
-            protocol: "fuchsia.feedback.internal.LastRebootDirectoryMigrator",
-            from: "#last_reboot",
-        },
         {
             protocol: "fuchsia.stash.Store",
             from: "#stash",
