@@ -40,8 +40,8 @@ includes:
 There are unittests in `kazoo-test` which are in the source tree next to the rest of the
 implementation.
 
-To run these tests, use `--with-host=zircon/tools/kazoo:tests` with your `fx set` command, and then
-use `fx test` to run the tests, e.g.:
+To run these tests, use `--with-host=//zircon/tools/kazoo:tests` with your `fx set` command, and
+then use `fx test` to run the tests, e.g.:
 
 ```
 $ fx set core.x64 --with-host=//zircon/tools/kazoo:tests

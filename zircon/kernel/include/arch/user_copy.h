@@ -61,7 +61,8 @@ struct UserCopyCaptureFaultsResult {
  * @param src The source buffer.
  * @param len The number of bytes to copy.
  *
- * @return ZX_OK on success
+ * @return ZX_OK on success, or ZX_ERR_INVALID_ARGS on failure.
+ *         Changes to the return value are observable by user-space.
  */
 ARCH_COPY_ACCESS zx_status_t arch_copy_from_user(void *dst, const void *src, size_t len);
 
@@ -78,7 +79,8 @@ ARCH_COPY_ACCESS zx_status_t arch_copy_from_user(void *dst, const void *src, siz
  * @param pf_va Virtual address of any fault that occurs, undefined on success.
  * @param pf_flags Flag information of any fault that occurs, undefined on success.
  *
- * @return ZX_OK on success
+ * @return ZX_OK on success, or ZX_ERR_INVALID_ARGS on failure.
+ *         Changes to the return value are observable by user-space.
  */
 [[nodiscard]] ARCH_COPY_ACCESS UserCopyCaptureFaultsResult
 arch_copy_from_user_capture_faults(void *dst, const void *src, size_t len);
@@ -93,7 +95,8 @@ arch_copy_from_user_capture_faults(void *dst, const void *src, size_t len);
  * @param src The source buffer.
  * @param len The number of bytes to copy.
  *
- * @return ZX_OK on success
+ * @return ZX_OK on success, or ZX_ERR_INVALID_ARGS on failure.
+ *         Changes to the return value are observable by user-space.
  */
 ARCH_COPY_ACCESS zx_status_t arch_copy_to_user(void *dst, const void *src, size_t len);
 
@@ -110,7 +113,8 @@ ARCH_COPY_ACCESS zx_status_t arch_copy_to_user(void *dst, const void *src, size_
  * @param pf_va Virtual address of any fault that occurs, undefined on success.
  * @param pf_flags Flag information of any fault that occurs, undefined on success.
  *
- * @return ZX_OK on success
+ * @return ZX_OK on success, or ZX_ERR_INVALID_ARGS on failure.
+ *         Changes to the return value are observable by user-space.
  */
 [[nodiscard]] ARCH_COPY_ACCESS UserCopyCaptureFaultsResult
 arch_copy_to_user_capture_faults(void *dst, const void *src, size_t len);

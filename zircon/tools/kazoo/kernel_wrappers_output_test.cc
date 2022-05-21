@@ -65,8 +65,9 @@ syscall_result wrapper_kwrap_output_handle(SafeSyscallArgument<zx_handle_t*>::Ra
         auto result = sys_kwrap_output_handle(&out_handle_event);
         if (result != ZX_OK)
             return result;
-        if (out_handle_event.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(event))))
-            return ZX_ERR_INVALID_ARGS;
+        result = out_handle_event.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(event)));
+        if (result != ZX_OK)
+            return result;
         out_handle_event.finish_copyout(current_process);
         return result;
     });
@@ -80,10 +81,12 @@ syscall_result wrapper_kwrap_two_output_handle(SafeSyscallArgument<zx_handle_t*>
         auto result = sys_kwrap_two_output_handle(&out_handle_out0, &out_handle_out1);
         if (result != ZX_OK)
             return result;
-        if (out_handle_out0.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out0))))
-            return ZX_ERR_INVALID_ARGS;
-        if (out_handle_out1.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out1))))
-            return ZX_ERR_INVALID_ARGS;
+        result = out_handle_out0.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out0)));
+        if (result != ZX_OK)
+            return result;
+        result = out_handle_out1.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out1)));
+        if (result != ZX_OK)
+            return result;
         out_handle_out0.finish_copyout(current_process);
         out_handle_out1.finish_copyout(current_process);
         return result;
@@ -163,8 +166,9 @@ syscall_result wrapper_kwrap_output_handle(SafeSyscallArgument<zx_handle_t*>::Ra
         auto result = sys_kwrap_output_handle(&out_handle_event);
         if (result != ZX_OK)
             return result;
-        if (out_handle_event.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(event))))
-            return ZX_ERR_INVALID_ARGS;
+        result = out_handle_event.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(event)));
+        if (result != ZX_OK)
+            return result;
         out_handle_event.finish_copyout(current_process);
         return result;
     });
@@ -178,10 +182,12 @@ syscall_result wrapper_kwrap_two_output_handle(SafeSyscallArgument<zx_handle_t*>
         auto result = sys_kwrap_two_output_handle(&out_handle_out0, &out_handle_out1);
         if (result != ZX_OK)
             return result;
-        if (out_handle_out0.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out0))))
-            return ZX_ERR_INVALID_ARGS;
-        if (out_handle_out1.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out1))))
-            return ZX_ERR_INVALID_ARGS;
+        result = out_handle_out0.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out0)));
+        if (result != ZX_OK)
+            return result;
+        result = out_handle_out1.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out1)));
+        if (result != ZX_OK)
+            return result;
         out_handle_out0.finish_copyout(current_process);
         out_handle_out1.finish_copyout(current_process);
         return result;

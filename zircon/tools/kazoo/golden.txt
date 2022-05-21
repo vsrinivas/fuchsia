@@ -21232,8 +21232,9 @@ syscall_result wrapper_bti_create(SafeSyscallArgument<zx_handle_t>::RawType iomm
         auto result = sys_bti_create(SafeSyscallArgument<zx_handle_t>::Sanitize(iommu), SafeSyscallArgument<uint32_t>::Sanitize(options), SafeSyscallArgument<uint64_t>::Sanitize(bti_id), &out_handle_out);
         if (result != ZX_OK)
             return result;
-        if (out_handle_out.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out))))
-            return ZX_ERR_INVALID_ARGS;
+        result = out_handle_out.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out)));
+        if (result != ZX_OK)
+            return result;
         out_handle_out.finish_copyout(current_process);
         return result;
     });
@@ -21246,8 +21247,9 @@ syscall_result wrapper_bti_pin(SafeSyscallArgument<zx_handle_t>::RawType handle,
         auto result = sys_bti_pin(SafeSyscallArgument<zx_handle_t>::Sanitize(handle), SafeSyscallArgument<uint32_t>::Sanitize(options), SafeSyscallArgument<zx_handle_t>::Sanitize(vmo), SafeSyscallArgument<uint64_t>::Sanitize(offset), SafeSyscallArgument<uint64_t>::Sanitize(size), make_user_out_ptr(SafeSyscallArgument<zx_paddr_t*>::Sanitize(addrs)), SafeSyscallArgument<size_t>::Sanitize(num_addrs), &out_handle_pmt);
         if (result != ZX_OK)
             return result;
-        if (out_handle_pmt.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(pmt))))
-            return ZX_ERR_INVALID_ARGS;
+        result = out_handle_pmt.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(pmt)));
+        if (result != ZX_OK)
+            return result;
         out_handle_pmt.finish_copyout(current_process);
         return result;
     });
@@ -21269,10 +21271,12 @@ syscall_result wrapper_channel_create(SafeSyscallArgument<uint32_t>::RawType opt
         auto result = sys_channel_create(SafeSyscallArgument<uint32_t>::Sanitize(options), &out_handle_out0, &out_handle_out1);
         if (result != ZX_OK)
             return result;
-        if (out_handle_out0.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out0))))
-            return ZX_ERR_INVALID_ARGS;
-        if (out_handle_out1.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out1))))
-            return ZX_ERR_INVALID_ARGS;
+        result = out_handle_out0.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out0)));
+        if (result != ZX_OK)
+            return result;
+        result = out_handle_out1.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out1)));
+        if (result != ZX_OK)
+            return result;
         out_handle_out0.finish_copyout(current_process);
         out_handle_out1.finish_copyout(current_process);
         return result;
@@ -21358,8 +21362,9 @@ syscall_result wrapper_clock_create(SafeSyscallArgument<uint64_t>::RawType optio
         auto result = sys_clock_create(SafeSyscallArgument<uint64_t>::Sanitize(options), make_user_in_ptr(SafeSyscallArgument<const void*>::Sanitize(args)), &out_handle_out);
         if (result != ZX_OK)
             return result;
-        if (out_handle_out.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out))))
-            return ZX_ERR_INVALID_ARGS;
+        result = out_handle_out.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out)));
+        if (result != ZX_OK)
+            return result;
         out_handle_out.finish_copyout(current_process);
         return result;
     });
@@ -21436,8 +21441,9 @@ syscall_result wrapper_debuglog_create(SafeSyscallArgument<zx_handle_t>::RawType
         auto result = sys_debuglog_create(SafeSyscallArgument<zx_handle_t>::Sanitize(resource), SafeSyscallArgument<uint32_t>::Sanitize(options), &out_handle_out);
         if (result != ZX_OK)
             return result;
-        if (out_handle_out.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out))))
-            return ZX_ERR_INVALID_ARGS;
+        result = out_handle_out.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out)));
+        if (result != ZX_OK)
+            return result;
         out_handle_out.finish_copyout(current_process);
         return result;
     });
@@ -21466,8 +21472,9 @@ syscall_result wrapper_event_create(SafeSyscallArgument<uint32_t>::RawType optio
         auto result = sys_event_create(SafeSyscallArgument<uint32_t>::Sanitize(options), &out_handle_out);
         if (result != ZX_OK)
             return result;
-        if (out_handle_out.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out))))
-            return ZX_ERR_INVALID_ARGS;
+        result = out_handle_out.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out)));
+        if (result != ZX_OK)
+            return result;
         out_handle_out.finish_copyout(current_process);
         return result;
     });
@@ -21481,10 +21488,12 @@ syscall_result wrapper_eventpair_create(SafeSyscallArgument<uint32_t>::RawType o
         auto result = sys_eventpair_create(SafeSyscallArgument<uint32_t>::Sanitize(options), &out_handle_out0, &out_handle_out1);
         if (result != ZX_OK)
             return result;
-        if (out_handle_out0.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out0))))
-            return ZX_ERR_INVALID_ARGS;
-        if (out_handle_out1.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out1))))
-            return ZX_ERR_INVALID_ARGS;
+        result = out_handle_out0.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out0)));
+        if (result != ZX_OK)
+            return result;
+        result = out_handle_out1.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out1)));
+        if (result != ZX_OK)
+            return result;
         out_handle_out0.finish_copyout(current_process);
         out_handle_out1.finish_copyout(current_process);
         return result;
@@ -21498,8 +21507,9 @@ syscall_result wrapper_exception_get_thread(SafeSyscallArgument<zx_handle_t>::Ra
         auto result = sys_exception_get_thread(SafeSyscallArgument<zx_handle_t>::Sanitize(handle), &out_handle_out);
         if (result != ZX_OK)
             return result;
-        if (out_handle_out.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out))))
-            return ZX_ERR_INVALID_ARGS;
+        result = out_handle_out.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out)));
+        if (result != ZX_OK)
+            return result;
         out_handle_out.finish_copyout(current_process);
         return result;
     });
@@ -21512,8 +21522,9 @@ syscall_result wrapper_exception_get_process(SafeSyscallArgument<zx_handle_t>::R
         auto result = sys_exception_get_process(SafeSyscallArgument<zx_handle_t>::Sanitize(handle), &out_handle_out);
         if (result != ZX_OK)
             return result;
-        if (out_handle_out.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out))))
-            return ZX_ERR_INVALID_ARGS;
+        result = out_handle_out.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out)));
+        if (result != ZX_OK)
+            return result;
         out_handle_out.finish_copyout(current_process);
         return result;
     });
@@ -21527,10 +21538,12 @@ syscall_result wrapper_fifo_create(SafeSyscallArgument<size_t>::RawType elem_cou
         auto result = sys_fifo_create(SafeSyscallArgument<size_t>::Sanitize(elem_count), SafeSyscallArgument<size_t>::Sanitize(elem_size), SafeSyscallArgument<uint32_t>::Sanitize(options), &out_handle_out0, &out_handle_out1);
         if (result != ZX_OK)
             return result;
-        if (out_handle_out0.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out0))))
-            return ZX_ERR_INVALID_ARGS;
-        if (out_handle_out1.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out1))))
-            return ZX_ERR_INVALID_ARGS;
+        result = out_handle_out0.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out0)));
+        if (result != ZX_OK)
+            return result;
+        result = out_handle_out1.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out1)));
+        if (result != ZX_OK)
+            return result;
         out_handle_out0.finish_copyout(current_process);
         out_handle_out1.finish_copyout(current_process);
         return result;
@@ -21625,10 +21638,12 @@ syscall_result wrapper_guest_create(SafeSyscallArgument<zx_handle_t>::RawType re
         auto result = sys_guest_create(SafeSyscallArgument<zx_handle_t>::Sanitize(resource), SafeSyscallArgument<uint32_t>::Sanitize(options), &out_handle_guest_handle, &out_handle_vmar_handle);
         if (result != ZX_OK)
             return result;
-        if (out_handle_guest_handle.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(guest_handle))))
-            return ZX_ERR_INVALID_ARGS;
-        if (out_handle_vmar_handle.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(vmar_handle))))
-            return ZX_ERR_INVALID_ARGS;
+        result = out_handle_guest_handle.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(guest_handle)));
+        if (result != ZX_OK)
+            return result;
+        result = out_handle_vmar_handle.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(vmar_handle)));
+        if (result != ZX_OK)
+            return result;
         out_handle_guest_handle.finish_copyout(current_process);
         out_handle_vmar_handle.finish_copyout(current_process);
         return result;
@@ -21666,8 +21681,9 @@ syscall_result wrapper_handle_duplicate(SafeSyscallArgument<zx_handle_t>::RawTyp
         auto result = sys_handle_duplicate(SafeSyscallArgument<zx_handle_t>::Sanitize(handle), SafeSyscallArgument<zx_rights_t>::Sanitize(rights), &out_handle_out);
         if (result != ZX_OK)
             return result;
-        if (out_handle_out.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out))))
-            return ZX_ERR_INVALID_ARGS;
+        result = out_handle_out.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out)));
+        if (result != ZX_OK)
+            return result;
         out_handle_out.finish_copyout(current_process);
         return result;
     });
@@ -21680,8 +21696,9 @@ syscall_result wrapper_handle_replace(SafeSyscallArgument<zx_handle_t>::RawType 
         auto result = sys_handle_replace(SafeSyscallArgument<zx_handle_t>::Sanitize(handle), SafeSyscallArgument<zx_rights_t>::Sanitize(rights), &out_handle_out);
         if (result != ZX_OK)
             return result;
-        if (out_handle_out.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out))))
-            return ZX_ERR_INVALID_ARGS;
+        result = out_handle_out.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out)));
+        if (result != ZX_OK)
+            return result;
         out_handle_out.finish_copyout(current_process);
         return result;
     });
@@ -21694,8 +21711,9 @@ syscall_result wrapper_interrupt_create(SafeSyscallArgument<zx_handle_t>::RawTyp
         auto result = sys_interrupt_create(SafeSyscallArgument<zx_handle_t>::Sanitize(src_obj), SafeSyscallArgument<uint32_t>::Sanitize(src_num), SafeSyscallArgument<uint32_t>::Sanitize(options), &out_handle_out_handle);
         if (result != ZX_OK)
             return result;
-        if (out_handle_out_handle.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out_handle))))
-            return ZX_ERR_INVALID_ARGS;
+        result = out_handle_out_handle.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out_handle)));
+        if (result != ZX_OK)
+            return result;
         out_handle_out_handle.finish_copyout(current_process);
         return result;
     });
@@ -21756,8 +21774,9 @@ syscall_result wrapper_iommu_create(SafeSyscallArgument<zx_handle_t>::RawType re
         auto result = sys_iommu_create(SafeSyscallArgument<zx_handle_t>::Sanitize(resource), SafeSyscallArgument<uint32_t>::Sanitize(type), make_user_in_ptr(SafeSyscallArgument<const void*>::Sanitize(desc)), SafeSyscallArgument<size_t>::Sanitize(desc_size), &out_handle_out);
         if (result != ZX_OK)
             return result;
-        if (out_handle_out.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out))))
-            return ZX_ERR_INVALID_ARGS;
+        result = out_handle_out.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out)));
+        if (result != ZX_OK)
+            return result;
         out_handle_out.finish_copyout(current_process);
         return result;
     });
@@ -21786,8 +21805,9 @@ syscall_result wrapper_job_create(SafeSyscallArgument<zx_handle_t>::RawType pare
         auto result = sys_job_create(SafeSyscallArgument<zx_handle_t>::Sanitize(parent_job), SafeSyscallArgument<uint32_t>::Sanitize(options), &out_handle_out);
         if (result != ZX_OK)
             return result;
-        if (out_handle_out.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out))))
-            return ZX_ERR_INVALID_ARGS;
+        result = out_handle_out.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out)));
+        if (result != ZX_OK)
+            return result;
         out_handle_out.finish_copyout(current_process);
         return result;
     });
@@ -21856,8 +21876,9 @@ syscall_result wrapper_msi_allocate(SafeSyscallArgument<zx_handle_t>::RawType ha
         auto result = sys_msi_allocate(SafeSyscallArgument<zx_handle_t>::Sanitize(handle), SafeSyscallArgument<uint32_t>::Sanitize(count), &out_handle_out_allocation);
         if (result != ZX_OK)
             return result;
-        if (out_handle_out_allocation.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out_allocation))))
-            return ZX_ERR_INVALID_ARGS;
+        result = out_handle_out_allocation.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out_allocation)));
+        if (result != ZX_OK)
+            return result;
         out_handle_out_allocation.finish_copyout(current_process);
         return result;
     });
@@ -21870,8 +21891,9 @@ syscall_result wrapper_msi_create(SafeSyscallArgument<zx_handle_t>::RawType hand
         auto result = sys_msi_create(SafeSyscallArgument<zx_handle_t>::Sanitize(handle), SafeSyscallArgument<uint32_t>::Sanitize(options), SafeSyscallArgument<uint32_t>::Sanitize(msi_id), SafeSyscallArgument<zx_handle_t>::Sanitize(vmo), SafeSyscallArgument<size_t>::Sanitize(vmo_offset), &out_handle_out_interrupt);
         if (result != ZX_OK)
             return result;
-        if (out_handle_out_interrupt.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out_interrupt))))
-            return ZX_ERR_INVALID_ARGS;
+        result = out_handle_out_interrupt.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out_interrupt)));
+        if (result != ZX_OK)
+            return result;
         out_handle_out_interrupt.finish_copyout(current_process);
         return result;
     });
@@ -21956,8 +21978,9 @@ syscall_result wrapper_object_get_child(SafeSyscallArgument<zx_handle_t>::RawTyp
         auto result = sys_object_get_child(SafeSyscallArgument<zx_handle_t>::Sanitize(handle), SafeSyscallArgument<uint64_t>::Sanitize(koid), SafeSyscallArgument<zx_rights_t>::Sanitize(rights), &out_handle_out);
         if (result != ZX_OK)
             return result;
-        if (out_handle_out.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out))))
-            return ZX_ERR_INVALID_ARGS;
+        result = out_handle_out.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out)));
+        if (result != ZX_OK)
+            return result;
         out_handle_out.finish_copyout(current_process);
         return result;
     });
@@ -21978,8 +22001,9 @@ syscall_result wrapper_pager_create(SafeSyscallArgument<uint32_t>::RawType optio
         auto result = sys_pager_create(SafeSyscallArgument<uint32_t>::Sanitize(options), &out_handle_out);
         if (result != ZX_OK)
             return result;
-        if (out_handle_out.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out))))
-            return ZX_ERR_INVALID_ARGS;
+        result = out_handle_out.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out)));
+        if (result != ZX_OK)
+            return result;
         out_handle_out.finish_copyout(current_process);
         return result;
     });
@@ -21992,8 +22016,9 @@ syscall_result wrapper_pager_create_vmo(SafeSyscallArgument<zx_handle_t>::RawTyp
         auto result = sys_pager_create_vmo(SafeSyscallArgument<zx_handle_t>::Sanitize(pager), SafeSyscallArgument<uint32_t>::Sanitize(options), SafeSyscallArgument<zx_handle_t>::Sanitize(port), SafeSyscallArgument<uint64_t>::Sanitize(key), SafeSyscallArgument<uint64_t>::Sanitize(size), &out_handle_out);
         if (result != ZX_OK)
             return result;
-        if (out_handle_out.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out))))
-            return ZX_ERR_INVALID_ARGS;
+        result = out_handle_out.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out)));
+        if (result != ZX_OK)
+            return result;
         out_handle_out.finish_copyout(current_process);
         return result;
     });
@@ -22046,8 +22071,9 @@ syscall_result wrapper_pci_get_nth_device(SafeSyscallArgument<zx_handle_t>::RawT
         auto result = sys_pci_get_nth_device(SafeSyscallArgument<zx_handle_t>::Sanitize(handle), SafeSyscallArgument<uint32_t>::Sanitize(index), make_user_out_ptr(SafeSyscallArgument<zx_pcie_device_info_t*>::Sanitize(out_info)), &out_handle_out_handle);
         if (result != ZX_OK)
             return result;
-        if (out_handle_out_handle.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out_handle))))
-            return ZX_ERR_INVALID_ARGS;
+        result = out_handle_out_handle.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out_handle)));
+        if (result != ZX_OK)
+            return result;
         out_handle_out_handle.finish_copyout(current_process);
         return result;
     });
@@ -22100,8 +22126,9 @@ syscall_result wrapper_pci_get_bar(SafeSyscallArgument<zx_handle_t>::RawType han
         auto result = sys_pci_get_bar(SafeSyscallArgument<zx_handle_t>::Sanitize(handle), SafeSyscallArgument<uint32_t>::Sanitize(bar_num), make_user_out_ptr(SafeSyscallArgument<zx_pci_bar_t*>::Sanitize(out_bar)), &out_handle_out_handle);
         if (result != ZX_OK)
             return result;
-        if (out_handle_out_handle.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out_handle))))
-            return ZX_ERR_INVALID_ARGS;
+        result = out_handle_out_handle.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out_handle)));
+        if (result != ZX_OK)
+            return result;
         out_handle_out_handle.finish_copyout(current_process);
         return result;
     });
@@ -22114,8 +22141,9 @@ syscall_result wrapper_pci_map_interrupt(SafeSyscallArgument<zx_handle_t>::RawTy
         auto result = sys_pci_map_interrupt(SafeSyscallArgument<zx_handle_t>::Sanitize(handle), SafeSyscallArgument<int32_t>::Sanitize(which_irq), &out_handle_out_handle);
         if (result != ZX_OK)
             return result;
-        if (out_handle_out_handle.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out_handle))))
-            return ZX_ERR_INVALID_ARGS;
+        result = out_handle_out_handle.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out_handle)));
+        if (result != ZX_OK)
+            return result;
         out_handle_out_handle.finish_copyout(current_process);
         return result;
     });
@@ -22168,8 +22196,9 @@ syscall_result wrapper_port_create(SafeSyscallArgument<uint32_t>::RawType option
         auto result = sys_port_create(SafeSyscallArgument<uint32_t>::Sanitize(options), &out_handle_out);
         if (result != ZX_OK)
             return result;
-        if (out_handle_out.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out))))
-            return ZX_ERR_INVALID_ARGS;
+        result = out_handle_out.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out)));
+        if (result != ZX_OK)
+            return result;
         out_handle_out.finish_copyout(current_process);
         return result;
     });
@@ -22216,10 +22245,12 @@ syscall_result wrapper_process_create(SafeSyscallArgument<zx_handle_t>::RawType 
         auto result = sys_process_create(SafeSyscallArgument<zx_handle_t>::Sanitize(job), make_user_in_ptr(SafeSyscallArgument<const char*>::Sanitize(name)), SafeSyscallArgument<size_t>::Sanitize(name_size), SafeSyscallArgument<uint32_t>::Sanitize(options), &out_handle_proc_handle, &out_handle_vmar_handle);
         if (result != ZX_OK)
             return result;
-        if (out_handle_proc_handle.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(proc_handle))))
-            return ZX_ERR_INVALID_ARGS;
-        if (out_handle_vmar_handle.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(vmar_handle))))
-            return ZX_ERR_INVALID_ARGS;
+        result = out_handle_proc_handle.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(proc_handle)));
+        if (result != ZX_OK)
+            return result;
+        result = out_handle_vmar_handle.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(vmar_handle)));
+        if (result != ZX_OK)
+            return result;
         out_handle_proc_handle.finish_copyout(current_process);
         out_handle_vmar_handle.finish_copyout(current_process);
         return result;
@@ -22257,8 +22288,9 @@ syscall_result wrapper_profile_create(SafeSyscallArgument<zx_handle_t>::RawType 
         auto result = sys_profile_create(SafeSyscallArgument<zx_handle_t>::Sanitize(root_job), SafeSyscallArgument<uint32_t>::Sanitize(options), make_user_in_ptr(SafeSyscallArgument<const zx_profile_info_t*>::Sanitize(profile)), &out_handle_out);
         if (result != ZX_OK)
             return result;
-        if (out_handle_out.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out))))
-            return ZX_ERR_INVALID_ARGS;
+        result = out_handle_out.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out)));
+        if (result != ZX_OK)
+            return result;
         out_handle_out.finish_copyout(current_process);
         return result;
     });
@@ -22271,8 +22303,9 @@ syscall_result wrapper_resource_create(SafeSyscallArgument<zx_handle_t>::RawType
         auto result = sys_resource_create(SafeSyscallArgument<zx_handle_t>::Sanitize(parent_rsrc), SafeSyscallArgument<uint32_t>::Sanitize(options), SafeSyscallArgument<uint64_t>::Sanitize(base), SafeSyscallArgument<size_t>::Sanitize(size), make_user_in_ptr(SafeSyscallArgument<const char*>::Sanitize(name)), SafeSyscallArgument<size_t>::Sanitize(name_size), &out_handle_resource_out);
         if (result != ZX_OK)
             return result;
-        if (out_handle_resource_out.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(resource_out))))
-            return ZX_ERR_INVALID_ARGS;
+        result = out_handle_resource_out.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(resource_out)));
+        if (result != ZX_OK)
+            return result;
         out_handle_resource_out.finish_copyout(current_process);
         return result;
     });
@@ -22294,10 +22327,12 @@ syscall_result wrapper_socket_create(SafeSyscallArgument<uint32_t>::RawType opti
         auto result = sys_socket_create(SafeSyscallArgument<uint32_t>::Sanitize(options), &out_handle_out0, &out_handle_out1);
         if (result != ZX_OK)
             return result;
-        if (out_handle_out0.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out0))))
-            return ZX_ERR_INVALID_ARGS;
-        if (out_handle_out1.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out1))))
-            return ZX_ERR_INVALID_ARGS;
+        result = out_handle_out0.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out0)));
+        if (result != ZX_OK)
+            return result;
+        result = out_handle_out1.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out1)));
+        if (result != ZX_OK)
+            return result;
         out_handle_out0.finish_copyout(current_process);
         out_handle_out1.finish_copyout(current_process);
         return result;
@@ -22335,8 +22370,9 @@ syscall_result wrapper_stream_create(SafeSyscallArgument<uint32_t>::RawType opti
         auto result = sys_stream_create(SafeSyscallArgument<uint32_t>::Sanitize(options), SafeSyscallArgument<zx_handle_t>::Sanitize(vmo), SafeSyscallArgument<zx_off_t>::Sanitize(seek), &out_handle_out_stream);
         if (result != ZX_OK)
             return result;
-        if (out_handle_out_stream.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out_stream))))
-            return ZX_ERR_INVALID_ARGS;
+        result = out_handle_out_stream.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out_stream)));
+        if (result != ZX_OK)
+            return result;
         out_handle_out_stream.finish_copyout(current_process);
         return result;
     });
@@ -22477,8 +22513,9 @@ syscall_result wrapper_syscall_test_handle_create(SafeSyscallArgument<zx_status_
         auto result = sys_syscall_test_handle_create(SafeSyscallArgument<zx_status_t>::Sanitize(return_value), &out_handle_out);
         if (result != ZX_OK)
             return result;
-        if (out_handle_out.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out))))
-            return ZX_ERR_INVALID_ARGS;
+        result = out_handle_out.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out)));
+        if (result != ZX_OK)
+            return result;
         out_handle_out.finish_copyout(current_process);
         return result;
     });
@@ -22523,8 +22560,9 @@ syscall_result wrapper_system_get_event(SafeSyscallArgument<zx_handle_t>::RawTyp
         auto result = sys_system_get_event(SafeSyscallArgument<zx_handle_t>::Sanitize(root_job), SafeSyscallArgument<uint32_t>::Sanitize(kind), &out_handle_event);
         if (result != ZX_OK)
             return result;
-        if (out_handle_event.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(event))))
-            return ZX_ERR_INVALID_ARGS;
+        result = out_handle_event.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(event)));
+        if (result != ZX_OK)
+            return result;
         out_handle_event.finish_copyout(current_process);
         return result;
     });
@@ -22577,8 +22615,9 @@ syscall_result wrapper_task_suspend(SafeSyscallArgument<zx_handle_t>::RawType ha
         auto result = sys_task_suspend(SafeSyscallArgument<zx_handle_t>::Sanitize(handle), &out_handle_token);
         if (result != ZX_OK)
             return result;
-        if (out_handle_token.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(token))))
-            return ZX_ERR_INVALID_ARGS;
+        result = out_handle_token.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(token)));
+        if (result != ZX_OK)
+            return result;
         out_handle_token.finish_copyout(current_process);
         return result;
     });
@@ -22591,8 +22630,9 @@ syscall_result wrapper_task_suspend_token(SafeSyscallArgument<zx_handle_t>::RawT
         auto result = sys_task_suspend_token(SafeSyscallArgument<zx_handle_t>::Sanitize(handle), &out_handle_token);
         if (result != ZX_OK)
             return result;
-        if (out_handle_token.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(token))))
-            return ZX_ERR_INVALID_ARGS;
+        result = out_handle_token.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(token)));
+        if (result != ZX_OK)
+            return result;
         out_handle_token.finish_copyout(current_process);
         return result;
     });
@@ -22605,8 +22645,9 @@ syscall_result wrapper_task_create_exception_channel(SafeSyscallArgument<zx_hand
         auto result = sys_task_create_exception_channel(SafeSyscallArgument<zx_handle_t>::Sanitize(handle), SafeSyscallArgument<uint32_t>::Sanitize(options), &out_handle_out);
         if (result != ZX_OK)
             return result;
-        if (out_handle_out.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out))))
-            return ZX_ERR_INVALID_ARGS;
+        result = out_handle_out.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out)));
+        if (result != ZX_OK)
+            return result;
         out_handle_out.finish_copyout(current_process);
         return result;
     });
@@ -22636,8 +22677,9 @@ syscall_result wrapper_thread_create(SafeSyscallArgument<zx_handle_t>::RawType p
         auto result = sys_thread_create(SafeSyscallArgument<zx_handle_t>::Sanitize(process), make_user_in_ptr(SafeSyscallArgument<const char*>::Sanitize(name)), SafeSyscallArgument<size_t>::Sanitize(name_size), SafeSyscallArgument<uint32_t>::Sanitize(options), &out_handle_out);
         if (result != ZX_OK)
             return result;
-        if (out_handle_out.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out))))
-            return ZX_ERR_INVALID_ARGS;
+        result = out_handle_out.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out)));
+        if (result != ZX_OK)
+            return result;
         out_handle_out.finish_copyout(current_process);
         return result;
     });
@@ -22682,8 +22724,9 @@ syscall_result wrapper_timer_create(SafeSyscallArgument<uint32_t>::RawType optio
         auto result = sys_timer_create(SafeSyscallArgument<uint32_t>::Sanitize(options), SafeSyscallArgument<zx_clock_t>::Sanitize(clock_id), &out_handle_out);
         if (result != ZX_OK)
             return result;
-        if (out_handle_out.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out))))
-            return ZX_ERR_INVALID_ARGS;
+        result = out_handle_out.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out)));
+        if (result != ZX_OK)
+            return result;
         out_handle_out.finish_copyout(current_process);
         return result;
     });
@@ -22712,8 +22755,9 @@ syscall_result wrapper_vcpu_create(SafeSyscallArgument<zx_handle_t>::RawType gue
         auto result = sys_vcpu_create(SafeSyscallArgument<zx_handle_t>::Sanitize(guest), SafeSyscallArgument<uint32_t>::Sanitize(options), SafeSyscallArgument<zx_vaddr_t>::Sanitize(entry), &out_handle_out);
         if (result != ZX_OK)
             return result;
-        if (out_handle_out.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out))))
-            return ZX_ERR_INVALID_ARGS;
+        result = out_handle_out.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out)));
+        if (result != ZX_OK)
+            return result;
         out_handle_out.finish_copyout(current_process);
         return result;
     });
@@ -22766,8 +22810,9 @@ syscall_result wrapper_vmar_allocate(SafeSyscallArgument<zx_handle_t>::RawType p
         auto result = sys_vmar_allocate(SafeSyscallArgument<zx_handle_t>::Sanitize(parent_vmar), SafeSyscallArgument<zx_vm_option_t>::Sanitize(options), SafeSyscallArgument<size_t>::Sanitize(offset), SafeSyscallArgument<size_t>::Sanitize(size), &out_handle_child_vmar, make_user_out_ptr(SafeSyscallArgument<zx_vaddr_t*>::Sanitize(child_addr)));
         if (result != ZX_OK)
             return result;
-        if (out_handle_child_vmar.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(child_vmar))))
-            return ZX_ERR_INVALID_ARGS;
+        result = out_handle_child_vmar.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(child_vmar)));
+        if (result != ZX_OK)
+            return result;
         out_handle_child_vmar.finish_copyout(current_process);
         return result;
     });
@@ -22820,8 +22865,9 @@ syscall_result wrapper_vmo_create(SafeSyscallArgument<uint64_t>::RawType size, S
         auto result = sys_vmo_create(SafeSyscallArgument<uint64_t>::Sanitize(size), SafeSyscallArgument<uint32_t>::Sanitize(options), &out_handle_out);
         if (result != ZX_OK)
             return result;
-        if (out_handle_out.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out))))
-            return ZX_ERR_INVALID_ARGS;
+        result = out_handle_out.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out)));
+        if (result != ZX_OK)
+            return result;
         out_handle_out.finish_copyout(current_process);
         return result;
     });
@@ -22874,8 +22920,9 @@ syscall_result wrapper_vmo_create_child(SafeSyscallArgument<zx_handle_t>::RawTyp
         auto result = sys_vmo_create_child(SafeSyscallArgument<zx_handle_t>::Sanitize(handle), SafeSyscallArgument<uint32_t>::Sanitize(options), SafeSyscallArgument<uint64_t>::Sanitize(offset), SafeSyscallArgument<uint64_t>::Sanitize(size), &out_handle_out);
         if (result != ZX_OK)
             return result;
-        if (out_handle_out.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out))))
-            return ZX_ERR_INVALID_ARGS;
+        result = out_handle_out.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out)));
+        if (result != ZX_OK)
+            return result;
         out_handle_out.finish_copyout(current_process);
         return result;
     });
@@ -22896,8 +22943,9 @@ syscall_result wrapper_vmo_replace_as_executable(SafeSyscallArgument<zx_handle_t
         auto result = sys_vmo_replace_as_executable(SafeSyscallArgument<zx_handle_t>::Sanitize(handle), SafeSyscallArgument<zx_handle_t>::Sanitize(vmex), &out_handle_out);
         if (result != ZX_OK)
             return result;
-        if (out_handle_out.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out))))
-            return ZX_ERR_INVALID_ARGS;
+        result = out_handle_out.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out)));
+        if (result != ZX_OK)
+            return result;
         out_handle_out.finish_copyout(current_process);
         return result;
     });
@@ -22910,8 +22958,9 @@ syscall_result wrapper_vmo_create_contiguous(SafeSyscallArgument<zx_handle_t>::R
         auto result = sys_vmo_create_contiguous(SafeSyscallArgument<zx_handle_t>::Sanitize(bti), SafeSyscallArgument<size_t>::Sanitize(size), SafeSyscallArgument<uint32_t>::Sanitize(alignment_log2), &out_handle_out);
         if (result != ZX_OK)
             return result;
-        if (out_handle_out.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out))))
-            return ZX_ERR_INVALID_ARGS;
+        result = out_handle_out.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out)));
+        if (result != ZX_OK)
+            return result;
         out_handle_out.finish_copyout(current_process);
         return result;
     });
@@ -22924,8 +22973,9 @@ syscall_result wrapper_vmo_create_physical(SafeSyscallArgument<zx_handle_t>::Raw
         auto result = sys_vmo_create_physical(SafeSyscallArgument<zx_handle_t>::Sanitize(resource), SafeSyscallArgument<zx_paddr_t>::Sanitize(paddr), SafeSyscallArgument<size_t>::Sanitize(size), &out_handle_out);
         if (result != ZX_OK)
             return result;
-        if (out_handle_out.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out))))
-            return ZX_ERR_INVALID_ARGS;
+        result = out_handle_out.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(out)));
+        if (result != ZX_OK)
+            return result;
         out_handle_out.finish_copyout(current_process);
         return result;
     });

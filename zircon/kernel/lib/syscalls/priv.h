@@ -48,10 +48,14 @@ class user_out_handle final {
   // These methods are called by the kazoo-generated wrapper_* functions
   // (syscall-kernel-wrappers.inc).  See KernelWrapperGenerator::syscall.
 
-  bool begin_copyout(ProcessDispatcher* current_process, user_out_ptr<zx_handle_t> out) const {
+  zx_status_t begin_copyout(ProcessDispatcher* current_process,
+                            user_out_ptr<zx_handle_t> out) const {
+    // The result of `copy_to_user` will be propagated to the syscall wrapper.
+    // Changing the status values returned will result in a user-observable
+    // change of behaviour.
     if (h_)
       return out.copy_to_user(current_process->handle_table().MapHandleToValue(h_));
-    return false;
+    return ZX_ERR_INVALID_ARGS;
   }
 
   void finish_copyout(ProcessDispatcher* current_process) {

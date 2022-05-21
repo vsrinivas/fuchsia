@@ -104,9 +104,10 @@ bool KernelWrappersOutput(const SyscallLibrary& library, Writer* writer) {
 
       for (const StructMember& arg : out_handle_args) {
         writer->Printf(
-            "%s%sif (out_handle_%s.begin_copyout(current_process, make_user_out_ptr(%s)))\n",
+            "%s%sresult = out_handle_%s.begin_copyout(current_process, make_user_out_ptr(%s));\n",
             indent, indent, arg.name().c_str(), ArgumentExpr(arg).c_str());
-        writer->Printf("%s%s%sreturn ZX_ERR_INVALID_ARGS;\n", indent, indent, indent);
+        writer->Printf("%s%sif (result != ZX_OK)\n", indent, indent);
+        writer->Printf("%s%s%sreturn result;\n", indent, indent, indent);
       }
 
       for (const StructMember& arg : out_handle_args) {
