@@ -1,5 +1,8 @@
 {
-    include: [ "syslog/client.shard.cml" ],
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
     program: {
         runner: "elf",
         binary: "bin/fake_a11y_manager",
@@ -8,6 +11,7 @@
         {
             protocol: [
                 "fuchsia.accessibility.Magnifier",
+                "fuchsia.accessibility.scene.Provider",
                 "fuchsia.accessibility.semantics.SemanticsManager",
 
                 // Allows clients to control the GFX clip space transform directly.
@@ -17,13 +21,18 @@
     ],
     use: [
         {
-            protocol: [ "fuchsia.logger.LogSink" ],
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.scenic.Scenic",
+            ],
         },
     ],
     expose: [
         {
             protocol: [
                 "fuchsia.accessibility.Magnifier",
+                "fuchsia.accessibility.scene.Provider",
                 "fuchsia.accessibility.semantics.SemanticsManager",
                 "test.accessibility.Magnifier",
             ],

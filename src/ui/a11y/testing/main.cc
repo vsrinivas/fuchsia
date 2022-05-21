@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/ui/composition/cpp/fidl.h>
+#include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/sys/cpp/component_context.h>
@@ -9,6 +11,7 @@
 
 #include <cstring>
 
+#include "src/ui/a11y/lib/view/flatland_accessibility_view.h"
 #include "src/ui/a11y/testing/fake_a11y_manager.h"
 
 namespace {
@@ -16,7 +19,25 @@ namespace {
 int run_a11y_manager(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
+  auto context = sys::ComponentContext::Create();
+
+  // For flatland scenes, we need to serve
+  // `fuchsia.accessibility.scene.Provider`.
+  //
+  // First, query scenic to determine which composition API to use. Then, if
+  // we're using flatland, create an accessibility view object.
+  fuchsia::ui::scenic::ScenicSyncPtr scenic;
+  context->svc()->Connect<fuchsia::ui::scenic::Scenic>(scenic.NewRequest());
+
+  bool use_flatland = false;
+  scenic->UsesFlatland(&use_flatland);
+
+  std::unique_ptr<a11y::FlatlandAccessibilityView> maybe_a11y_view;
+  if (use_flatland) {
+    auto flatland = context->svc()->Connect<fuchsia::ui::composition::Flatland>();
+    maybe_a11y_view = std::make_unique<a11y::FlatlandAccessibilityView>(std::move(flatland));
+    context->outgoing()->AddPublicService(maybe_a11y_view->GetHandler());
+  }
 
   a11y_testing::FakeA11yManager fake_a11y_manager;
   context->outgoing()->AddPublicService(fake_a11y_manager.GetHandler());
@@ -24,6 +45,8 @@ int run_a11y_manager(int argc, const char** argv) {
   a11y_testing::FakeMagnifier fake_magnifier;
   context->outgoing()->AddPublicService(fake_magnifier.GetTestMagnifierHandler());
   context->outgoing()->AddPublicService(fake_magnifier.GetMagnifierHandler());
+
+  context->outgoing()->ServeFromStartupInfo();
 
   loop.Run();
   return 0;

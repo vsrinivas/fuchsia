@@ -6,6 +6,7 @@ use {
     anyhow::Error,
     fidl::prelude::*,
     fidl_fuchsia_accessibility::{MagnificationHandlerMarker, MagnifierMarker},
+    fidl_fuchsia_accessibility_scene as a11y_view,
     fidl_fuchsia_input_injection::InputDeviceRegistryRequestStream,
     fidl_fuchsia_session_scene::{
         ManagerRequest as SceneManagerRequest, ManagerRequestStream as SceneManagerRequestStream,
@@ -70,6 +71,7 @@ async fn main() -> Result<(), Error> {
         let pointerinjector_flatland = connect_to_protocol::<fland::FlatlandMarker>()?;
         let a11y_flatland = connect_to_protocol::<fland::FlatlandMarker>()?;
         let cursor_view_provider = connect_to_protocol::<ui_app::ViewProviderMarker>()?;
+        let a11y_view_provider = connect_to_protocol::<a11y_view::ProviderMarker>()?;
         Arc::new(Mutex::new(Box::new(
             scene_management::FlatlandSceneManager::new(
                 scenic,
@@ -78,6 +80,7 @@ async fn main() -> Result<(), Error> {
                 root_flatland,
                 a11y_flatland,
                 cursor_view_provider,
+                a11y_view_provider,
             )
             .await?,
         )))

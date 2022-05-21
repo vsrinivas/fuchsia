@@ -10,8 +10,6 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/sys/component/cpp/testing/realm_builder_types.h>
-#include <lib/ui/scenic/cpp/resources.h>
-#include <lib/ui/scenic/cpp/session.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 
 #include <optional>
@@ -45,6 +43,9 @@ class TestView : public fuchsia::ui::app::ViewProvider, public component_testing
   // |component_testing::LocalComponent|
   void Start(std::unique_ptr<component_testing::LocalComponentHandles> mock_handles) override;
 
+  const std::optional<fuchsia::ui::views::ViewRef>& view_ref() { return view_ref_; }
+  std::optional<zx_koid_t> GetViewRefKoid();
+
   // |fuchsia::ui::app::ViewProvider|
   void CreateViewWithViewRef(zx::eventpair token,
                              fuchsia::ui::views::ViewRefControl view_ref_control,
@@ -57,30 +58,29 @@ class TestView : public fuchsia::ui::app::ViewProvider, public component_testing
   // |fuchsia.ui.app.ViewProvider|
   void CreateView2(fuchsia::ui::app::CreateView2Args args) override;
 
-  const std::optional<fuchsia::ui::views::ViewRef>& view_ref() { return view_ref_; }
-  std::optional<zx_koid_t> GetViewRefKoid();
+  virtual uint32_t width() = 0;
+  virtual uint32_t height() = 0;
 
-  float width();
-  float height();
-
- private:
+ protected:
   // Helper methods to add content to the view.
   void DrawSimpleBackground();
   void DrawCoordinateGrid();
   void DrawContent();
 
+  // Helper method to draw a rectangle.
+  // (x, y, z) specifies the translation.
+  // (width, height) specifies the dimensions.
+  // (red, green, blue, alpha) specifies the color.
+  virtual void DrawRectangle(int32_t x, int32_t y, int32_t z, uint32_t width, uint32_t height,
+                             uint8_t red, uint8_t green, uint8_t blue, uint8_t alpha) = 0;
+
+  virtual void PresentChanges() = 0;
+
   async_dispatcher_t* dispatcher_ = nullptr;
   std::optional<ContentType> content_type_;
   std::unique_ptr<component_testing::LocalComponentHandles> mock_handles_;
   fidl::BindingSet<fuchsia::ui::app::ViewProvider> view_provider_bindings_;
-
-  // Scenic session resources.
-  fuchsia::ui::scenic::ScenicPtr scenic_;
-  std::unique_ptr<scenic::Session> session_;
-
   std::optional<fuchsia::ui::views::ViewRef> view_ref_;
-  std::unique_ptr<scenic::View> test_view_;
-  std::optional<fuchsia::ui::gfx::ViewProperties> test_view_properties_ = std::nullopt;
 };
 
 }  // namespace ui_testing

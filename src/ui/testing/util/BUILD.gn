@@ -10,6 +10,10 @@ group("util") {
 source_set("test_view") {
   testonly = true
   sources = [
+    "flatland_test_view.cc",
+    "flatland_test_view.h",
+    "gfx_test_view.cc",
+    "gfx_test_view.h",
     "test_view.cc",
     "test_view.h",
   ]

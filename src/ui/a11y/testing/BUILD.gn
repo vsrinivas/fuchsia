@@ -12,8 +12,11 @@ executable("bin") {
 
   deps = [
     ":lib",
+    "//sdk/fidl/fuchsia.ui.composition",
+    "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
+    "//src/ui/a11y/lib/view",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]

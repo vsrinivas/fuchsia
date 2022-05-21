@@ -12,6 +12,7 @@ rustc_library("scene_management") {
 
   deps = [
     "//sdk/fidl/fuchsia.accessibility:fuchsia.accessibility-rustc",
+    "//sdk/fidl/fuchsia.accessibility.scene:fuchsia.accessibility.scene-rustc",
     "//sdk/fidl/fuchsia.images:fuchsia.images-rustc",
     "//sdk/fidl/fuchsia.math:fuchsia.math-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",

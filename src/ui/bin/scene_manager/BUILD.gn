@@ -18,6 +18,7 @@ rustc_binary("scene_manager_bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.accessibility:fuchsia.accessibility-rustc",
+    "//sdk/fidl/fuchsia.accessibility.scene:fuchsia.accessibility.scene-rustc",
     "//sdk/fidl/fuchsia.input.injection:fuchsia.input.injection-rustc",
     "//sdk/fidl/fuchsia.session:fuchsia.session-rustc",
     "//sdk/fidl/fuchsia.session.scene:fuchsia.session.scene-rustc",

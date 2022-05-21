@@ -57,6 +57,7 @@ constexpr auto kSceneManagerSceneUrl = "#meta/scene_manager_scene.cm";
 constexpr auto kSceneManagerSceneWithInputUrl = "#meta/scene_manager_scene_with_input.cm";
 
 // System component urls.
+constexpr auto kRealA11yManagerUrl = "#meta/a11y-manager.cm";
 constexpr auto kFakeA11yManagerUrl = "#meta/fake-a11y-manager.cm";
 
 constexpr auto kClientSubrealmName = "client-subrealm";
@@ -298,31 +299,42 @@ void UITestManager::ConfigureClientSubrealm() {
 }
 
 void UITestManager::ConfigureAccessibility() {
-  if (!config_.accessibility_owner) {
+  std::string a11y_manager_url;
+  // Add real a11y manager to the test realm, if requested.
+  // Otherwise, add fake a11y manager if it's requested, OR if the test uses
+  // `FlatlandSceneManager` (which will only render a client view if the a11y
+  // view is present).
+  if (config_.accessibility_owner == UITestManager::AccessibilityOwnerType::REAL) {
+    a11y_manager_url = kRealA11yManagerUrl;
+  } else if (config_.accessibility_owner == UITestManager::AccessibilityOwnerType::FAKE ||
+             (config_.scene_owner == UITestManager::SceneOwnerType::SCENE_MANAGER &&
+              config_.use_flatland)) {
+    a11y_manager_url = kFakeA11yManagerUrl;
+  } else {
     return;
   }
 
-  FX_CHECK(config_.accessibility_owner == UITestManager::AccessibilityOwnerType::FAKE)
-      << "Real a11y manager not currently supported";
-
-  realm_builder_.AddChild(kA11yManagerName, kFakeA11yManagerUrl);
+  realm_builder_.AddChild(kA11yManagerName, a11y_manager_url);
   RouteServices({fuchsia::logger::LogSink::Name_},
                 /* source = */ ParentRef(),
+                /* targets = */ {ChildRef{kA11yManagerName}});
+  RouteServices({fuchsia::ui::composition::Flatland::Name_, fuchsia::ui::scenic::Scenic::Name_},
+                /* source = */ ChildRef{kScenicName},
                 /* targets = */ {ChildRef{kA11yManagerName}});
   RouteServices({fuchsia::accessibility::semantics::SemanticsManager::Name_,
                  test::accessibility::Magnifier::Name_},
                 /* source = */ ChildRef{kA11yManagerName},
-                /* target = */ {ParentRef()});
+                /* targets = */ {ParentRef()});
 
   if (config_.scene_owner) {
     if (config_.use_flatland) {
       RouteServices({fuchsia::accessibility::scene::Provider::Name_},
                     /* source = */ ChildRef{kA11yManagerName},
-                    /* target = */ {ChildRef{SceneOwnerName(config_)}});
+                    /* targets = */ {ChildRef{SceneOwnerName(config_)}});
     } else {
       RouteServices({fuchsia::accessibility::Magnifier::Name_},
                     /* source = */ ChildRef{kA11yManagerName},
-                    /* target = */ {ChildRef{SceneOwnerName(config_)}});
+                    /* targets = */ {ChildRef{SceneOwnerName(config_)}});
     }
   }
 }

@@ -16,7 +16,8 @@ use {
     async_utils::hanging_get::server as hanging_get,
     fidl,
     fidl::endpoints::create_proxy,
-    fidl_fuchsia_math as fmath, fidl_fuchsia_ui_app as ui_app,
+    fidl_fuchsia_accessibility_scene as a11y_scene, fidl_fuchsia_math as fmath,
+    fidl_fuchsia_ui_app as ui_app,
     fidl_fuchsia_ui_composition::{self as ui_comp, ContentId, TransformId},
     fidl_fuchsia_ui_scenic as ui_scenic, fidl_fuchsia_ui_views as ui_views,
     fuchsia_scenic as scenic, fuchsia_scenic,
@@ -45,6 +46,7 @@ fn physical_cursor_size(value: u32) -> u32 {
 
 pub type FlatlandPtr = Arc<Mutex<ui_comp::FlatlandProxy>>;
 
+#[derive(Clone)]
 pub struct TransformContentIdPair {
     transform_id: TransformId,
     content_id: ContentId,
@@ -122,11 +124,14 @@ impl FlatlandInstance {
 //      P*             P*:  root transform of |pointerinjector_flatland|,
 //      |                   and also the corresponding view/view-ref (see below)
 //      |
-//      Pa             Pa:  transform with viewport linking either to |scene_flatland|, or to
-//      |                        an external Flatland instance owned by the A11y Manager.
+//      Pa             Pa:  transform with viewport linking to an external Flatland instance
+//      |                   owned by a11y manager.
 //      |
-//      =              =:   indicates possible insertion of an intermediary view/viewport between
-//      |                   |pointerinjector_flatland| and |scene_flatland|, via insert_a11y_view2()
+//      A*             A*:  root transform of |a11y_flatland| (owned by a11y manager),
+//      |                   and also the corresponding view/view-ref (see below).
+//      |
+//      As             As:  transform with viewport linking to |scene_flatland|.
+//      |
 //      |
 //      S*             S*:  root transform of |scene_flatland|,
 //      |                   and also the corresponding view/view-ref (see below)
@@ -166,9 +171,8 @@ pub struct FlatlandSceneManager {
     _pointerinjector_flatland: FlatlandInstance,
 
     // Flatland instance that embeds the system shell (i.e. via the SetRootView() FIDL API).  Its
-    // root view is attached to a viewport in |pointerinjector_flatland| by default, or a viewport
-    // owned by the accessibility manager (via fuchsia.ui.accessibility.view.Registry API, see
-    // insert_a11y_view2() ).
+    // root view is attached to a viewport owned by the accessibility manager (via
+    // fuchsia.ui.accessibility.scene.Provider, create_view()).
     scene_flatland: FlatlandInstance,
 
     // These are the ViewRefs returned by get_pointerinjection_view_refs().  They are used to
@@ -308,12 +312,13 @@ impl SceneManager for FlatlandSceneManager {
         Err(anyhow::anyhow!("A11y should be configured to use Flatland, not Gfx"))
     }
 
-    // TODO(fxbug.dev/592501): implement.
     fn insert_a11y_view2(
         &mut self,
         _a11y_viewport_creation_token: ui_views::ViewportCreationToken,
     ) -> Result<ui_views::ViewportCreationToken, Error> {
-        panic!("unimplemented")
+        Err(anyhow::anyhow!(
+            "Scene manager should use fuchsia.accessibility.scene.Provider to insert a11y view."
+        ))
     }
 
     async fn set_camera_clip_space_transform(&mut self, _x: f32, _y: f32, _scale: f32) {
@@ -401,6 +406,7 @@ impl FlatlandSceneManager {
         pointerinjector_flatland: ui_comp::FlatlandProxy,
         scene_flatland: ui_comp::FlatlandProxy,
         cursor_view_provider: ui_app::ViewProviderProxy,
+        a11y_view_provider: a11y_scene::ProviderProxy,
     ) -> Result<Self, Error> {
         let mut id_generator = scenic::flatland::IdGenerator::new();
 
@@ -530,10 +536,11 @@ impl FlatlandSceneManager {
             )?;
         }
 
-        // Bridge the pointerinjector and scene Flatland instances.
-        //
-        // This direct connection may later be replaced by interposing a Flatland sub-scene owned by
-        // the a11y manager.
+        let mut a11y_view_creation_pair = scenic::flatland::ViewCreationTokenPair::new()?;
+
+        // Bridge the pointerinjector and a11y Flatland instances.
+        let (a11y_view_watcher, a11y_view_watcher_request) =
+            create_proxy::<ui_comp::ChildViewWatcherMarker>()?;
         {
             let flatland = pointerinjector_flatland.flatland.lock();
             flatland.create_transform(&mut &mut a11y_viewport_transform_id.clone())?;
@@ -547,20 +554,23 @@ impl FlatlandSceneManager {
                 ..ui_comp::ViewportProperties::EMPTY
             };
 
-            let (_, child_view_watcher_request) =
-                create_proxy::<ui_comp::ChildViewWatcherMarker>()?;
-
             flatland.create_viewport(
                 &mut a11y_viewport_content_id.clone(),
-                &mut scene_view_creation_pair.viewport_creation_token,
+                &mut a11y_view_creation_pair.viewport_creation_token,
                 link_properties,
-                child_view_watcher_request,
+                a11y_view_watcher_request,
             )?;
             flatland.set_content(
                 &mut a11y_viewport_transform_id.clone(),
                 &mut a11y_viewport_content_id.clone(),
             )?;
         }
+
+        // Request for the a11y manager to create its view.
+        a11y_view_provider.create_view(
+            &mut a11y_view_creation_pair.view_creation_token,
+            &mut scene_view_creation_pair.viewport_creation_token,
+        )?;
 
         // Start Present() loops for both Flatland instances, and request that both be presented.
         let (root_flatland_presentation_sender, root_receiver) = unbounded();
@@ -578,10 +588,17 @@ impl FlatlandSceneManager {
             scene_receiver,
             Arc::downgrade(&scene_flatland.flatland),
         );
+
         root_flatland_presentation_sender.unbounded_send(PresentationMessage::Present)?;
         pointerinjector_flatland_presentation_sender
             .unbounded_send(PresentationMessage::Present)?;
         scene_flatland_presentation_sender.unbounded_send(PresentationMessage::Present)?;
+
+        // Wait for a11y view to attach before proceeding.
+        let a11y_view_status = a11y_view_watcher.get_status().await?;
+        match a11y_view_status {
+            ui_comp::ChildViewStatus::ContentHasPresented => {}
+        }
 
         let viewport_hanging_get: Arc<Mutex<InjectorViewportHangingGet>> = {
             let notify_fn: InjectorViewportChangeFn = Box::new(|viewport_spec, responder| {

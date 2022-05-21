@@ -13,6 +13,7 @@ group("integration-tests") {
   testonly = true
   public_deps = [
     ":flatland-a11y-view-test",
+    ":flatland-scene-integration-test",
     ":gfx-a11y-view-test",
   ]
 }
@@ -130,6 +131,54 @@ fuchsia_test_component("flatland-a11y-view-test-component") {
 
 fuchsia_test_package("flatland-a11y-view-test") {
   test_components = [ ":flatland-a11y-view-test-component" ]
+  test_specs = {
+    log_settings = {
+      # TODO(fxbug.dev/93081): Investigate flakes and remove allowing ERROR severity.
+      max_severity = "ERROR"
+    }
+    environments = [
+      {
+        dimensions = {
+          # Ensure the device has Vulkan.
+          device_type = "AEMU"
+        }
+      },
+    ]
+  }
+}
+
+executable("flatland-scene-integration-test-bin") {
+  testonly = true
+  sources = [ "flatland_scene_integration_test.cc" ]
+  output_name = "flatland-scene-integration-test"
+  deps = [
+    "//sdk/fidl/fuchsia.accessibility.scene",
+    "//sdk/fidl/fuchsia.logger",
+    "//sdk/fidl/fuchsia.tracing.provider",
+    "//sdk/fidl/fuchsia.ui.app",
+    "//sdk/fidl/fuchsia.ui.composition",
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/ui/scenic/cpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+    "//src/ui/testing/ui_test_manager",
+    "//src/ui/testing/util",
+    "//third_party/googletest:gtest",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+fuchsia_test_component("flatland-scene-integration-test-component") {
+  testonly = true
+  manifest = "meta/flatland-scene-integration-test.cml"
+  deps = [ ":flatland-scene-integration-test-bin" ]
+}
+
+fuchsia_test_package("flatland-scene-integration-test") {
+  test_components = [ ":flatland-scene-integration-test-component" ]
   test_specs = {
     log_settings = {
       # TODO(fxbug.dev/93081): Investigate flakes and remove allowing ERROR severity.

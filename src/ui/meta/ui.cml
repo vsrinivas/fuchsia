@@ -91,6 +91,7 @@
                 // flatland. Maybe we should split this manifest into
                 // gfx/flatland versions.
                 "fuchsia.accessibility.Magnifier",
+                "fuchsia.accessibility.scene.Provider",
             ],
             from: "#a11y_manager",
             to: [ "#scene_manager" ],

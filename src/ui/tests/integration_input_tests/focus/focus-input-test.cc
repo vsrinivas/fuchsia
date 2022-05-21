@@ -30,7 +30,7 @@
 #include <test/focus/cpp/fidl.h>
 
 #include "src/ui/testing/ui_test_manager/ui_test_manager.h"
-#include "src/ui/testing/util/test_view.h"
+#include "src/ui/testing/util/gfx_test_view.h"
 
 namespace {
 
@@ -65,7 +65,7 @@ class FocusInputTest : public gtest::RealLoopFixture {
     realm_ = std::make_unique<Realm>(ui_test_manager_->AddSubrealm());
 
     // Add a test view provider.
-    test_view_ = std::make_unique<ui_testing::TestView>(
+    test_view_ = std::make_unique<ui_testing::GfxTestView>(
         dispatcher(), ui_testing::TestView::ContentType::COORDINATE_GRID);
     realm_->AddLocalChild(kViewProvider, test_view_.get());
     realm_->AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::app::ViewProvider::Name_}},
