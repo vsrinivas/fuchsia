@@ -126,7 +126,7 @@ class PointerInjector {
                 : EventPhase.cancel;
 
     final sample = PointerSample(
-      pointerId: pointer.device,
+      pointerId: ((pointer.device << 32) >> 32),
       phase: phase,
       positionInViewport: Float32List.fromList([x, y]),
     );
