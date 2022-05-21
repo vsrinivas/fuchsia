@@ -1,0 +1,36 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/sys/test_runners/gtest/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/profile_store_example_tests",
+    },
+    children: [
+        {
+            name: "profile_store",
+            url: "#meta/profile_store.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.examples.diagnostics.ProfileStore",
+            from: "#profile_store",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: "#profile_store",
+        },
+        {
+            storage: "data",
+            from: "parent",
+            to: [ "#profile_store" ],
+        },
+    ],
+}

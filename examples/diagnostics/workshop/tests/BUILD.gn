@@ -1,0 +1,47 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/test.gni")
+
+executable("test_bin") {
+  testonly = true
+  output_name = "profile_store_example_tests"
+
+  sources = [ "example_integration_test.cc" ]
+
+  deps = [
+    "//examples/diagnostics/workshop/fidl:fuchsia.examples.diagnostics",
+    "//sdk/lib/sys/cpp:cpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+fuchsia_test_component("profile_store_example_tests_cmp") {
+  component_name = "profile_store_example_tests"
+  deps = [ ":test_bin" ]
+  manifest = "meta/profile_store_example_tests.cml"
+}
+
+fuchsia_test_package("profile_store_example_tests") {
+  test_components = [ ":profile_store_example_tests_cmp" ]
+  deps = [ "//examples/diagnostics/workshop:profile_store" ]
+  test_specs = {
+    # control the parallelism
+    parallel = 5
+  }
+}
+
+group("tests") {
+  testonly = true
+
+  # flaky test
+  # deps = [ ":profile_store_example_tests" ]
+
+  # make sure flaky test builds.
+  deps = [ ":test_bin" ]
+}

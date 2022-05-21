@@ -152,5 +152,8 @@ group("workshop") {
 
 group("tests") {
   testonly = true
-  deps = [ ":profile_store_example_unittests" ]
+  deps = [
+    ":profile_store_example_unittests",
+    "tests",
+  ]
 }
