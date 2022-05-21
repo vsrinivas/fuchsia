@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/component/decl/cpp/fidl.h>
+#include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/tracing/provider/cpp/fidl.h>
 #include <fuchsia/vulkan/loader/cpp/fidl.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
@@ -18,17 +20,36 @@
 namespace accessibility_test {
 namespace {
 
+using component_testing::ChildOptions;
 using component_testing::ChildRef;
 using component_testing::LocalComponent;
 using component_testing::ParentRef;
 using component_testing::Protocol;
 using component_testing::Route;
+using component_testing::StartupMode;
 
 class FlutterSemanticsTests : public SemanticsIntegrationTestV2 {
  public:
-  static constexpr auto kFlutter = "flutter";
-  static constexpr auto kFlutterRef = ChildRef{kFlutter};
-  static constexpr auto kClientUrl = "fuchsia-pkg://fuchsia.com/a11y-demo#meta/a11y-demo.cmx";
+  static constexpr auto kFlutterJitRunner = "flutter_jit_runner";
+  static constexpr auto kFlutterJitRunnerRef = ChildRef{kFlutterJitRunner};
+  static constexpr auto kFlutterJitRunnerUrl =
+      "fuchsia-pkg://fuchsia.com/flutter_jit_runner#meta/flutter_jit_runner.cm";
+  static constexpr auto kFlutterJitProductRunner = "flutter_jit_product_runner";
+  static constexpr auto kFlutterJitProductRunnerRef = ChildRef{kFlutterJitProductRunner};
+  static constexpr auto kFlutterJitProductRunnerUrl =
+      "fuchsia-pkg://fuchsia.com/flutter_jit_product_runner#meta/flutter_jit_product_runner.cm";
+  static constexpr auto kFlutterAotRunner = "flutter_aot_runner";
+  static constexpr auto kFlutterAotRunnerRef = ChildRef{kFlutterAotRunner};
+  static constexpr auto kFlutterAotRunnerUrl =
+      "fuchsia-pkg://fuchsia.com/flutter_aot_runner#meta/flutter_aot_runner.cm";
+  static constexpr auto kFlutterAotProductRunner = "flutter_aot_product_runner";
+  static constexpr auto kFlutterAotProductRunnerRef = ChildRef{kFlutterAotProductRunner};
+  static constexpr auto kFlutterAotProductRunnerUrl =
+      "fuchsia-pkg://fuchsia.com/flutter_aot_product_runner#meta/flutter_aot_product_runner.cm";
+  static constexpr auto kA11yDemo = "flutter";
+  static constexpr auto kA11yDemoRef = ChildRef{kA11yDemo};
+  static constexpr auto kA11yDemoUrl = "#meta/a11y-demo.cm";
+  static constexpr auto kFlutterRunnerEnvironment = "flutter_runner_env";
 
   FlutterSemanticsTests() = default;
   ~FlutterSemanticsTests() override = default;
@@ -46,27 +67,81 @@ class FlutterSemanticsTests : public SemanticsIntegrationTestV2 {
   }
 
   void ConfigureRealm() override {
-    // First, add all child components of this test suite.
-    realm()->AddLegacyChild(kFlutter, kClientUrl);
+    // First, add the flutter runner(s) as children.
+    realm()->AddChild(kFlutterJitRunner, kFlutterJitRunnerUrl);
+    realm()->AddChild(kFlutterJitProductRunner, kFlutterJitProductRunnerUrl);
+    realm()->AddChild(kFlutterAotRunner, kFlutterAotRunnerUrl);
+    realm()->AddChild(kFlutterAotProductRunner, kFlutterAotProductRunnerUrl);
 
-    // Second, add all necessary routing.
-    realm()->AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::app::ViewProvider::Name_}},
-                            .source = kFlutterRef,
-                            .targets = {ParentRef()}});
-    realm()->AddRoute(Route{
-        .capabilities = {Protocol{fuchsia::accessibility::semantics::SemanticsManager::Name_}},
-        .source = kSemanticsManagerRef,
-        .targets = {kFlutterRef}});
+    // Then, add an environment providing them.
+    fuchsia::component::decl::Environment flutter_runner_environment;
+    flutter_runner_environment.set_name(kFlutterRunnerEnvironment);
+    flutter_runner_environment.set_extends(fuchsia::component::decl::EnvironmentExtends::REALM);
+    flutter_runner_environment.set_runners({});
+    auto environment_runners = flutter_runner_environment.mutable_runners();
+    fuchsia::component::decl::RunnerRegistration flutter_jit_runner_reg;
+    flutter_jit_runner_reg.set_source(fuchsia::component::decl::Ref::WithChild(
+        fuchsia::component::decl::ChildRef{.name = kFlutterJitRunner}));
+    flutter_jit_runner_reg.set_source_name(kFlutterJitRunner);
+    flutter_jit_runner_reg.set_target_name(kFlutterJitRunner);
+    environment_runners->push_back(std::move(flutter_jit_runner_reg));
+    fuchsia::component::decl::RunnerRegistration flutter_jit_product_runner_reg;
+    flutter_jit_product_runner_reg.set_source(fuchsia::component::decl::Ref::WithChild(
+        fuchsia::component::decl::ChildRef{.name = kFlutterJitProductRunner}));
+    flutter_jit_product_runner_reg.set_source_name(kFlutterJitProductRunner);
+    flutter_jit_product_runner_reg.set_target_name(kFlutterJitProductRunner);
+    environment_runners->push_back(std::move(flutter_jit_product_runner_reg));
+    fuchsia::component::decl::RunnerRegistration flutter_aot_runner_reg;
+    flutter_aot_runner_reg.set_source(fuchsia::component::decl::Ref::WithChild(
+        fuchsia::component::decl::ChildRef{.name = kFlutterAotRunner}));
+    flutter_aot_runner_reg.set_source_name(kFlutterAotRunner);
+    flutter_aot_runner_reg.set_target_name(kFlutterAotRunner);
+    environment_runners->push_back(std::move(flutter_aot_runner_reg));
+    fuchsia::component::decl::RunnerRegistration flutter_aot_product_runner_reg;
+    flutter_aot_product_runner_reg.set_source(fuchsia::component::decl::Ref::WithChild(
+        fuchsia::component::decl::ChildRef{.name = kFlutterAotProductRunner}));
+    flutter_aot_product_runner_reg.set_source_name(kFlutterAotProductRunner);
+    flutter_aot_product_runner_reg.set_target_name(kFlutterAotProductRunner);
+    environment_runners->push_back(std::move(flutter_aot_product_runner_reg));
+    auto realm_decl = realm()->GetRealmDecl();
+    if (!realm_decl.has_environments()) {
+      realm_decl.set_environments({});
+    }
+    auto realm_environments = realm_decl.mutable_environments();
+    realm_environments->push_back(std::move(flutter_runner_environment));
+    realm()->ReplaceRealmDecl(std::move(realm_decl));
 
+    // Then, add all child components of this test suite.
+    realm()->AddChild(kA11yDemo, kA11yDemoUrl,
+                      ChildOptions{
+                          .environment = kFlutterRunnerEnvironment,
+                      });
+
+    // Finally, add all necessary routing.
     // Required services are routed through ui test manager realm to client
     // subrealm. Consume them from parent.
-    realm()->AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_},
-                                             Protocol{fuchsia::sys::Environment::Name_},
-                                             Protocol{fuchsia::vulkan::loader::Loader::Name_},
-                                             Protocol{fuchsia::tracing::provider::Registry::Name_},
-                                             Protocol{fuchsia::sysmem::Allocator::Name_}},
-                            .source = ParentRef(),
-                            .targets = {kFlutterRef}});
+    realm()->AddRoute(Route{.capabilities =
+                                {
+                                    Protocol{fuchsia::logger::LogSink::Name_},
+                                    Protocol{fuchsia::sysmem::Allocator::Name_},
+                                    Protocol{fuchsia::tracing::provider::Registry::Name_},
+                                    Protocol{fuchsia::ui::scenic::Scenic::Name_},
+                                    Protocol{fuchsia::vulkan::loader::Loader::Name_},
+                                },
+                            .source = ParentRef{},
+                            .targets = {kFlutterJitRunnerRef, kFlutterJitProductRunnerRef,
+                                        kFlutterAotRunnerRef, kFlutterAotProductRunnerRef}});
+    realm()->AddRoute(
+        Route{.capabilities =
+                  {
+                      Protocol{fuchsia::accessibility::semantics::SemanticsManager::Name_},
+                  },
+              .source = kSemanticsManagerRef,
+              .targets = {kFlutterJitRunnerRef, kFlutterJitProductRunnerRef, kFlutterAotRunnerRef,
+                          kFlutterAotProductRunnerRef}});
+    realm()->AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::app::ViewProvider::Name_}},
+                            .source = kA11yDemoRef,
+                            .targets = {ParentRef()}});
   }
 };
 

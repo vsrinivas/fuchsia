@@ -16,7 +16,7 @@ dart_library("lib") {
 }
 
 flutter_component("component") {
-  manifest = "meta/a11y-demo.cmx"
+  manifest = "meta/a11y-demo.cml"
   main_package = "a11y-demo"
   component_name = "a11y-demo"
   deps = [ ":lib" ]

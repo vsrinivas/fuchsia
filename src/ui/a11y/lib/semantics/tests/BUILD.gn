@@ -69,15 +69,12 @@ group("integration") {
   testonly = true
   public_deps = [
     ":semantics-integration-tests",
-    "//garnet/packages/prod:scenic",
     "//src/chromium:web_engine",
     "//src/cobalt/bin/testing/mock_cobalt",
     "//src/flutter",
     "//src/fonts:downstream_test_deps",
-    "//src/graphics/bin/vulkan_loader",
-    "//src/ui/a11y/bin/demo:a11y-demo",
+    "//src/ui:runtime_with_root_presenter",
     "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider",
-    "//src/ui/bin/text:text_manager",
   ]
 }
 
@@ -123,7 +120,10 @@ executable("semantics_tests") {
 
 fuchsia_component("flutter_semantics_tests") {
   testonly = true
-  deps = [ ":flutter_semantics_tests_bin" ]
+  deps = [
+    ":flutter_semantics_tests_bin",
+    "//src/ui/a11y/bin/demo:component",
+  ]
   manifest = "meta/flutter-semantics-tests-v2.cml"
 }
 
@@ -195,10 +195,7 @@ executable("flutter_semantics_tests_bin") {
   public_deps = [
     "//sdk/fidl/fuchsia.tracing.provider",
     "//sdk/fidl/fuchsia.vulkan.loader",
-    "//src/ui/a11y/bin/demo:a11y-demo",
   ]
-
-  data_deps = [ "//src/ui/a11y/bin/demo:a11y-demo" ]
 }
 
 executable("web_semantics_tests_bin") {

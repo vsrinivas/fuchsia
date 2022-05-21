@@ -2,23 +2,18 @@
 
 ## Running the tests
 
-The semantics integration tests must be run on a product without a graphical base shell,
-such as `core` because it starts and stops an instance of Scenic with access to the real
-Vulkan loader service.
-
 To run all of the semantics tests, build with a configuration such as
 ```
-fx set core.<board> --with //src/flutter --with //src/ui/a11y/bundles:tests \
-  --with-base //topaz/bundles:buildbot
+fx set workstation.<board> --with //src/ui/a11y/bundles:tests
 ```
 
 And run the tests using
 ```
 # Run the integration tests
-fx test fuchsia-pkg://fuchsia.com/semantics-integration-tests#meta/flutter_semantics_tests.cmx
-fx test fuchsia-pkg://fuchsia.com/semantics-integration-tests#meta/web_semantics_tests.cmx
+ffx test run fuchsia-pkg://fuchsia.com/semantics-integration-tests#meta/flutter_semantics_tests.cm
+ffx test run fuchsia-pkg://fuchsia.com/semantics-integration-tests#meta/web_semantics_tests.cm
 # Run the unit tests
-fx test fuchsia-pkg://fuchsia.com/a11y_lib_tests#meta/semantics_tests.cmx
+ffx test run fuchsia-pkg://fuchsia.com/a11y_lib_tests#meta/semantics_tests.cm
 ```
 
 ## Integration test internals
