@@ -1289,6 +1289,25 @@ void Thread::SetPriority(int priority) {
   canary_.Assert();
   ASSERT(priority >= LOWEST_PRIORITY && priority <= HIGHEST_PRIORITY);
 
+  // It is not sufficient to simply hold the thread lock while changing the
+  // profile of a thread. Doing so runs the risk that a change to a PI graph
+  // results in another thread becoming "more runnable" than we are, and then
+  // immediately context switching to that thread.
+  //
+  // Basically, when we interact with the scheduler, we cannot always think of
+  // the thread lock as a lock.  While we cannot take any interrupts, and no
+  // other threads can access our object's state, we _can_ accidentally give up
+  // our timeslice to another thread, and the thread lock as well in the
+  // process.  That thread can then (rarely) end up calling back into object
+  // state we are modifying (like, an OwnedWaitQueue) which could end up being
+  // Very Bad.
+  //
+  // By adding an AutoPreemptDisabler, we can make the thread_lock behave more
+  // like a real lock (at least for the OWQ state).  Interactions with the
+  // scheduler might result in another thread needing to run, but at least we
+  // will have have deferred that until we are finished interacting with our
+  // queue and have dropped the thread lock.
+  AutoPreemptDisabler apd;
   Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
   Scheduler::ChangePriority(this, priority);
 }
@@ -1307,6 +1326,8 @@ void Thread::SetDeadline(const zx_sched_deadline_params_t& params) {
   ASSERT(params.capacity > 0 && params.capacity <= params.relative_deadline &&
          params.relative_deadline <= params.period);
 
+  // See the comment in Thread::SetPriority
+  AutoPreemptDisabler apd;
   Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
   Scheduler::ChangeDeadline(this, params);
 }
