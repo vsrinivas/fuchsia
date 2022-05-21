@@ -110,9 +110,7 @@ group("tests") {
   if (host_os != "mac") {
     _flutter_tester_tests += [
       "//sdk/dart/fuchsia_internationalization_flutter:tests($host_toolchain)",
-      "//sdk/dart/fuchsia_modular:fuchsia_modular_package_unittests($host_toolchain)",
       "//sdk/dart/fuchsia_scenic_flutter:fuchsia_scenic_flutter_unittests($host_toolchain)",
-      "//sdk/dart/fuchsia_services:fuchsia_services_package_unittests($host_toolchain)",
       "//sdk/dart/fuchsia_inspect_flutter:inspect_flutter_test($host_toolchain)",
     ]
   }
@@ -129,8 +127,10 @@ group("tests") {
                   "//src/modular/bundles:integration_testing",
                   "//src/fonts",
 
-                  "//sdk/dart/fuchsia_inspect:tests",
                   "//sdk/dart/fuchsia_component_test:tests",
+                  "//sdk/dart/fuchsia_inspect:tests",
+                  "//sdk/dart/fuchsia_modular:fuchsia_modular_package_unittests",
+                  "//sdk/dart/fuchsia_services:fuchsia_services_package_unittests",
 
                   # TODO(fxb/38305): Re-enable test when unblocked and inspect paths are corrected
                   # "//sdk/dart/fuchsia_inspect/test/inspect_flutter_integration_tester:inspect-dart-integration-test-driver",

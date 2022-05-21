@@ -12,16 +12,9 @@ group("dart") {
 
 group("tests") {
   testonly = true
-
-  # TODO(fxb/41505): Temporarily disable flutter_tester tests on mac hosts.
-  _flutter_tester_tests = []
-  if (host_os != "mac") {
-    _flutter_tester_tests += [ "//examples/dart/fuchsia_inspect_flutter/torus15:torus15_flutter_test($host_toolchain)" ]
-  }
-
-  public_deps =
-      [
-        "//examples/dart/fuchsia_inspect_flutter/torus15",
-        "//examples/dart/fuchsia_inspect_flutter/torus15:torus15-dart-test",
-      ] + _flutter_tester_tests
+  deps = [
+    "//examples/dart/fuchsia_inspect_flutter/torus15",
+    "//examples/dart/fuchsia_inspect_flutter/torus15:torus15-dart-test",
+    "//examples/dart/fuchsia_inspect_flutter/torus15:torus15_flutter_test",
+  ]
 }
