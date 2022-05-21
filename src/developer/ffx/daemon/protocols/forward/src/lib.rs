@@ -383,6 +383,13 @@ mod tests {
         ) -> Result<(bridge::TargetInfo, fidl::Channel)> {
             unimplemented!()
         }
+
+        async fn get_target_info(
+            &self,
+            _target_identifier: Option<String>,
+        ) -> Result<bridge::TargetInfo> {
+            unimplemented!()
+        }
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

@@ -216,13 +216,20 @@ impl DaemonProtocolProvider for FakeDaemon {
         // assumption that any target being added is going to be looked up later for
         // a test.
         Ok((
-            bridge::TargetInfo::from(
-                &*self
-                    .target_collection
-                    .get(target_identifier.clone())
-                    .ok_or(anyhow!("couldn't find target for query: {:?}", target_identifier))?,
-            ),
+            self.get_target_info(target_identifier).await?,
             self.open_protocol(protocol_name).await?,
+        ))
+    }
+
+    async fn get_target_info(
+        &self,
+        target_identifier: Option<String>,
+    ) -> Result<bridge::TargetInfo> {
+        Ok(bridge::TargetInfo::from(
+            &*self
+                .target_collection
+                .get(target_identifier.clone())
+                .ok_or(anyhow!("couldn't find target for query: {:?}", target_identifier))?,
         ))
     }
 

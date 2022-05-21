@@ -41,6 +41,11 @@ pub trait DaemonProtocolProvider {
         protocol_selector: diagnostics::Selector,
     ) -> Result<(bridge::TargetInfo, fidl::Channel)>;
 
+    async fn get_target_info(
+        &self,
+        target_identifier: Option<String>,
+    ) -> Result<bridge::TargetInfo>;
+
     async fn get_target_event_queue(
         &self,
         _target_identifier: Option<String>,
@@ -102,6 +107,13 @@ impl Context {
             fidl::AsyncChannel::from_channel(channel).context("making async channel")?,
         );
         Ok((info, proxy))
+    }
+
+    pub async fn get_target_info(
+        &self,
+        target_identifier: Option<String>,
+    ) -> Result<bridge::TargetInfo> {
+        self.inner.get_target_info(target_identifier).await
     }
 
     /// Returns a copy of the target event queue, as well as a reference to the

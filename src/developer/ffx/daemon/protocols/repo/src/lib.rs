@@ -32,7 +32,6 @@ use {
     },
     protocols::prelude::*,
     std::{
-        collections::HashSet,
         convert::{TryFrom, TryInto},
         net::SocketAddr,
         rc::Rc,
@@ -484,62 +483,6 @@ async fn create_aliases(
     Ok(())
 }
 
-async fn remove_aliases(
-    cx: &Context,
-    repo_name: &str,
-    target_nodename: &str,
-    aliases: &[String],
-) -> Result<(), bridge::RepositoryError> {
-    let alias_rules = aliases_to_rules(repo_name, &aliases)?.into_iter().collect::<HashSet<_>>();
-
-    let rewrite_proxy = match cx
-        .open_target_proxy::<EngineMarker>(
-            Some(target_nodename.to_string()),
-            REWRITE_PROTOCOL_SELECTOR,
-        )
-        .await
-    {
-        Ok(p) => p,
-        Err(err) => {
-            log::warn!(
-                "Failed to open Rewrite Engine target proxy with target name {:?}: {:#?}",
-                target_nodename,
-                err
-            );
-            return Err(bridge::RepositoryError::TargetCommunicationFailure);
-        }
-    };
-
-    do_transaction(&rewrite_proxy, |transaction| async {
-        // Prepend the alias rules to the front so they take priority.
-        let mut rules = transaction.list_dynamic().await?;
-
-        // Clear the list, since we'll be adding it back later.
-        transaction.reset_all()?;
-
-        // Remove duplicated rules while preserving order.
-        rules.dedup();
-
-        // Add the rules back into the transaction. We do it in reverse, because `.add()`
-        // always inserts rules into the front of the list.
-        for rule in rules.into_iter().rev() {
-            // Only add the rule if it doesn't match our alias rule.
-            if alias_rules.get(&rule).is_none() {
-                transaction.add(rule).await?
-            }
-        }
-
-        Ok(transaction)
-    })
-    .await
-    .map_err(|err| {
-        log::warn!("failed to create transactions: {:#?}", err);
-        bridge::RepositoryError::RewriteEngineError
-    })?;
-
-    Ok(())
-}
-
 impl RepoInner {
     async fn start_server(&mut self) -> Result<Option<SocketAddr>, anyhow::Error> {
         // Exit early if the server is disabled.
@@ -654,35 +597,14 @@ impl<T: EventHandlerProvider> Repo<T> {
     ) -> Result<(), bridge::RepositoryError> {
         log::info!("Deregistering repository {:?} from target {:?}", repo_name, target_identifier);
 
-        let repo = self
-            .inner
-            .read()
-            .await
-            .manager
-            .get(&repo_name)
-            .ok_or_else(|| bridge::RepositoryError::NoMatchingRepository)?;
-
-        // Connect to the target. Error out if we can't connect, since we can't remove the registration
-        // from it.
-        let (target, proxy) = futures::select! {
-            res = cx.open_target_proxy_with_info::<RepositoryManagerMarker>(
-                target_identifier.clone(),
-                REPOSITORY_MANAGER_SELECTOR,
-            ).fuse() => {
-                res.map_err(|err| {
-                    log::warn!(
-                        "Failed to open target proxy with target name {:?}: {:#?}",
-                        target_identifier,
-                        err
-                    );
-                    bridge::RepositoryError::TargetCommunicationFailure
-                })?
-            },
-            _ = fasync::Timer::new(TARGET_CONNECT_TIMEOUT).fuse() => {
-                log::error!("Timed out connecting to target name {:?}", target_identifier);
-                return Err(bridge::RepositoryError::TargetCommunicationFailure);
-            }
-        };
+        let target = cx.get_target_info(target_identifier.clone()).await.map_err(|err| {
+            log::warn!(
+                "Failed to look up target info with target name {:?}: {:#?}",
+                target_identifier,
+                err
+            );
+            bridge::RepositoryError::TargetCommunicationFailure
+        })?;
 
         let target_nodename = target.nodename.ok_or_else(|| {
             log::warn!("Target {:?} does not have a nodename", target_identifier);
@@ -690,8 +612,8 @@ impl<T: EventHandlerProvider> Repo<T> {
         })?;
 
         // Look up the the registration info. Error out if we don't have any registrations for this
-        // device.
-        let registration_info = pkg::config::get_registration(&repo_name, &target_nodename)
+        // repository on this device.
+        let _registration_info = pkg::config::get_registration(&repo_name, &target_nodename)
             .await
             .map_err(|err| {
                 log::warn!(
@@ -703,30 +625,6 @@ impl<T: EventHandlerProvider> Repo<T> {
                 bridge::RepositoryError::InternalError
             })?
             .ok_or_else(|| bridge::RepositoryError::NoMatchingRegistration)?;
-
-        // Check if we created any aliases. If so, remove them from the device before removing the
-        // repository.
-        if !registration_info.aliases.is_empty() {
-            let () = remove_aliases(cx, repo.name(), &target_nodename, &registration_info.aliases)
-                .await?;
-        }
-
-        // Remove the repository from the device.
-        match proxy.remove(&repo.repo_url()).await {
-            Ok(Ok(())) => {}
-            Ok(Err(err)) => {
-                log::warn!(
-                    "failed to deregister repo {:?}: {:?}",
-                    repo_name,
-                    Status::from_raw(err)
-                );
-                return Err(bridge::RepositoryError::InternalError);
-            }
-            Err(err) => {
-                log::warn!("Failed to remove repo: {:?}", err);
-                return Err(bridge::RepositoryError::TargetCommunicationFailure);
-            }
-        }
 
         // Finally, remove the registration config from the ffx config.
         pkg::config::remove_registration(&repo_name, &target_nodename).await.map_err(|err| {
@@ -2130,16 +2028,8 @@ mod tests {
 
             assert!(proxy.remove_repository(REPO_NAME).await.expect("communicated with proxy"));
 
-            // We should have removed the alias from the repository manager.
-            assert_eq!(
-                fake_engine.take_events(),
-                vec![
-                    EngineEvent::ListDynamic,
-                    EngineEvent::IteratorNext,
-                    EngineEvent::ResetAll,
-                    EngineEvent::EditTransactionCommit,
-                ]
-            );
+            // We should not have communicated with the device.
+            assert_eq!(fake_engine.take_events(), vec![]);
 
             assert_eq!(get_target_registrations(&proxy).await, vec![]);
 
@@ -2255,24 +2145,10 @@ mod tests {
                 .expect("communicated with proxy")
                 .expect("target unregistration to succeed");
 
-            // We should have removed the alias from the repository manager.
-            assert_eq!(
-                fake_engine.take_events(),
-                vec![
-                    EngineEvent::ListDynamic,
-                    EngineEvent::IteratorNext,
-                    EngineEvent::ResetAll,
-                    EngineEvent::EditTransactionCommit,
-                ]
-            );
+            // We should not have communicated with the device.
+            assert_eq!(fake_engine.take_events(), vec![]);
 
-            assert_eq!(
-                get_target_registrations(&proxy).await,
-                vec![
-                    /*
-                    */
-                ]
-            );
+            assert_eq!(get_target_registrations(&proxy).await, vec![]);
 
             // The registration should have been cleared from the config.
             assert_matches!(
@@ -2830,7 +2706,7 @@ mod tests {
                     .await
                     .unwrap()
                     .unwrap_err(),
-                bridge::RepositoryError::NoMatchingRepository
+                bridge::RepositoryError::NoMatchingRegistration
             );
 
             // Make sure we didn't communicate with the device.

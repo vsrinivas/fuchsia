@@ -188,6 +188,18 @@ impl DaemonProtocolProvider for Daemon {
         Ok((target.as_ref().into(), client))
     }
 
+    async fn get_target_info(
+        &self,
+        target_identifier: Option<String>,
+    ) -> Result<bridge::TargetInfo> {
+        let target = self
+            .get_target(target_identifier)
+            .await
+            .map_err(|e| anyhow!("{:#?}", e))
+            .context("getting target")?;
+        Ok(target.as_ref().into())
+    }
+
     async fn open_remote_control(
         &self,
         target_identifier: Option<String>,
