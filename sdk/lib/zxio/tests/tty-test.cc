@@ -25,13 +25,6 @@ class WindowSizeTtyServer : public fidl::testing::WireTestBase<fuchsia_hardware_
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void CloseDeprecated(CloseDeprecatedRequestView request,
-                       CloseDeprecatedCompleter::Sync& completer) final {
-    completer.Reply(ZX_OK);
-    // After the reply, we should close the connection.
-    completer.Close(ZX_OK);
-  }
-
   void Close(CloseRequestView request, CloseCompleter::Sync& completer) final {
     completer.ReplySuccess();
     // After the reply, we should close the connection.

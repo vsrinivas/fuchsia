@@ -33,20 +33,10 @@ class StreamFileConnection final : public FileConnection {
   // |fuchsia.io/File| operations.
   //
 
-  void ReadDeprecated(ReadDeprecatedRequestView request,
-                      ReadDeprecatedCompleter::Sync& completer) final;
   void Read(ReadRequestView request, ReadCompleter::Sync& completer) final;
-  void ReadAtDeprecated(ReadAtDeprecatedRequestView request,
-                        ReadAtDeprecatedCompleter::Sync& completer) final;
   void ReadAt(ReadAtRequestView request, ReadAtCompleter::Sync& completer) final;
-  void WriteDeprecated(WriteDeprecatedRequestView request,
-                       WriteDeprecatedCompleter::Sync& completer) final;
   void Write(WriteRequestView request, WriteCompleter::Sync& completer) final;
-  void WriteAtDeprecated(WriteAtDeprecatedRequestView request,
-                         WriteAtDeprecatedCompleter::Sync& completer) final;
   void WriteAt(WriteAtRequestView request, WriteAtCompleter::Sync& completer) final;
-  void SeekDeprecated(SeekDeprecatedRequestView request,
-                      SeekDeprecatedCompleter::Sync& completer) final;
   void Seek(SeekRequestView request, SeekCompleter::Sync& completer) final;
   void QueryFilesystem(QueryFilesystemRequestView request,
                        QueryFilesystemCompleter::Sync& completer) final;

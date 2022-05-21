@@ -42,16 +42,6 @@ void FileConnection::Clone(CloneRequestView request, CloneCompleter::Sync& compl
   Connection::NodeClone(request->flags, std::move(request->object));
 }
 
-void FileConnection::CloseDeprecated(CloseDeprecatedRequestView request,
-                                     CloseDeprecatedCompleter::Sync& completer) {
-  zx::status result = Connection::NodeClose();
-  if (result.is_error()) {
-    completer.Reply(result.status_value());
-  } else {
-    completer.Reply(ZX_OK);
-  }
-}
-
 void FileConnection::Close(CloseRequestView request, CloseCompleter::Sync& completer) {
   zx::status result = Connection::NodeClose();
   if (result.is_error()) {
@@ -77,14 +67,7 @@ void FileConnection::Describe2(Describe2RequestView request, Describe2Completer:
     return;
   }
   ConnectionInfoConverter converter(std::move(result).value());
-  completer.Reply(std::move(converter.info));
-}
-
-void FileConnection::SyncDeprecated(SyncDeprecatedRequestView request,
-                                    SyncDeprecatedCompleter::Sync& completer) {
-  Connection::NodeSync([completer = completer.ToAsync()](zx_status_t sync_status) mutable {
-    completer.Reply(sync_status);
-  });
+  completer.Reply(converter.info);
 }
 
 void FileConnection::Sync(SyncRequestView request, SyncCompleter::Sync& completer) {
@@ -128,12 +111,6 @@ zx_status_t FileConnection::ResizeInternal(uint64_t length) {
   return vnode()->Truncate(length);
 }
 
-void FileConnection::TruncateDeprecatedUseResize(
-    TruncateDeprecatedUseResizeRequestView request,
-    TruncateDeprecatedUseResizeCompleter::Sync& completer) {
-  completer.Reply(ResizeInternal(request->length));
-}
-
 void FileConnection::Resize(ResizeRequestView request, ResizeCompleter::Sync& completer) {
   zx_status_t result = ResizeInternal(request->length);
   if (result != ZX_OK) {
@@ -158,32 +135,24 @@ zx_status_t FileConnection::GetBackingMemoryInternal(fuchsia_io::wire::VmoFlags 
                                                      zx::vmo* out_vmo, size_t* out_size) {
   if (options().flags.node_reference) {
     return ZX_ERR_BAD_HANDLE;
-  } else if ((flags & fio::wire::VmoFlags::kPrivateClone) &&
-             (flags & fio::wire::VmoFlags::kSharedBuffer)) {
-    return ZX_ERR_INVALID_ARGS;
-  } else if (options().flags.append && (flags & fio::wire::VmoFlags::kWrite)) {
-    return ZX_ERR_ACCESS_DENIED;
-  } else if (!options().rights.write && (flags & fio::wire::VmoFlags::kWrite)) {
-    return ZX_ERR_ACCESS_DENIED;
-  } else if (!options().rights.execute && (flags & fio::wire::VmoFlags::kExecute)) {
-    return ZX_ERR_ACCESS_DENIED;
-  } else if (!options().rights.read) {
-    return ZX_ERR_ACCESS_DENIED;
-  } else {
-    return vnode()->GetVmo(flags, out_vmo, out_size);
   }
-}
-
-void FileConnection::GetBufferDeprecatedUseGetBackingMemory(
-    GetBufferDeprecatedUseGetBackingMemoryRequestView request,
-    GetBufferDeprecatedUseGetBackingMemoryCompleter::Sync& completer) {
-  FS_PRETTY_TRACE_DEBUG("[FileGetBuffer] our options: ", options(),
-                        ", incoming flags: ", request->flags);
-  fuchsia_mem::wire::Buffer buffer;
-  zx_status_t status = GetBackingMemoryInternal(request->flags, &buffer.vmo, &buffer.size);
-  completer.Reply(status, status == ZX_OK
-                              ? fidl::ObjectView<fuchsia_mem::wire::Buffer>::FromExternal(&buffer)
-                              : nullptr);
+  if ((flags & fio::wire::VmoFlags::kPrivateClone) &&
+      (flags & fio::wire::VmoFlags::kSharedBuffer)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (options().flags.append && (flags & fio::wire::VmoFlags::kWrite)) {
+    return ZX_ERR_ACCESS_DENIED;
+  }
+  if (!options().rights.write && (flags & fio::wire::VmoFlags::kWrite)) {
+    return ZX_ERR_ACCESS_DENIED;
+  }
+  if (!options().rights.execute && (flags & fio::wire::VmoFlags::kExecute)) {
+    return ZX_ERR_ACCESS_DENIED;
+  }
+  if (!options().rights.read) {
+    return ZX_ERR_ACCESS_DENIED;
+  }
+  return vnode()->GetVmo(flags, out_vmo, out_size);
 }
 
 void FileConnection::GetBackingMemory(GetBackingMemoryRequestView request,

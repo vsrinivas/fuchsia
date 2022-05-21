@@ -337,25 +337,21 @@ class _FileConnection extends File {
   }
 
   @override
-  Future<int> closeDeprecated() async {
+  Future<void> close() async {
     if (_isClosed) {
+      return;
+    }
+    final status = () {
+      if (file._writeFn != null && _wasWritten) {
+        return file._writeFn!(_buffer.buffer.asUint8List(0, _currentLen));
+      }
       return ZX.OK;
-    }
-    var status = ZX.OK;
-    if (file._writeFn != null && _wasWritten) {
-      status = file._writeFn!(_buffer.buffer.asUint8List(0, _currentLen));
-    }
+    }();
     // no more read/write operations should be possible
     scheduleMicrotask(() {
       file._onClose(this);
     });
     _isClosed = true;
-    return status;
-  }
-
-  @override
-  Future<void> close() async {
-    final status = await closeDeprecated();
     if (status != ZX.OK) {
       throw fidl.MethodException(status);
     }
@@ -388,87 +384,52 @@ class _FileConnection extends File {
   }
 
   @override
-  Future<File$GetBufferDeprecatedUseGetBackingMemory$Response>
-      getBufferDeprecatedUseGetBackingMemory(VmoFlags flags) async {
-    return File$GetBufferDeprecatedUseGetBackingMemory$Response(
-        ZX.ERR_NOT_SUPPORTED, null);
-  }
-
-  @override
   Future<Vmo> getBackingMemory(VmoFlags flags) async {
     throw fidl.MethodException(ZX.ERR_NOT_SUPPORTED);
   }
 
   @override
-  Future<File$ReadDeprecated$Response> readDeprecated(int count) async {
-    final response = _handleRead(count, seekPos);
-    if (response.s == ZX.OK) {
-      seekPos += response.data.length;
-    }
+  Future<Uint8List> read(int count) async {
+    final response = await readAt(count, seekPos);
+    seekPos += response.length;
     return response;
   }
 
   @override
-  Future<Uint8List> read(int count) async {
-    final response = _handleRead(count, seekPos);
-    if (response.s != ZX.OK) {
-      throw fidl.MethodException(response.s);
-    }
-    seekPos += response.data.length;
-    return response.data;
-  }
-
-  @override
-  Future<File$ReadAtDeprecated$Response> readAtDeprecated(
-      int count, int offset) async {
-    final response = _handleRead(count, offset);
-    return File$ReadAtDeprecated$Response(response.s, response.data);
-  }
-
-  @override
   Future<Uint8List> readAt(int count, int offset) async {
-    final response = _handleRead(count, offset);
-    if (response.s != ZX.OK) {
-      throw fidl.MethodException(response.s);
+    if ((flags & OpenFlags.rightReadable) == OpenFlags.$none) {
+      throw fidl.MethodException(ZX.ERR_ACCESS_DENIED);
     }
-    return response.data;
+    if (file._readFn == null) {
+      throw fidl.MethodException(ZX.ERR_NOT_SUPPORTED);
+    }
+    if (offset > _currentLen) {
+      throw fidl.MethodException(ZX.ERR_OUT_OF_RANGE);
+    }
+    final c = min(count, _currentLen - offset);
+    return Uint8List.view(_buffer.buffer, offset, c);
   }
 
   @override
-  Future<File$SeekDeprecated$Response> seekDeprecated(
-      int offset, SeekOrigin seek) async {
-    return _handleSeek(seek, offset);
-  }
-
-  @override
-  Future<int> seek(SeekOrigin seek, int offset) async {
-    final response = _handleSeek(seek, offset);
-    if (response.s != ZX.OK) {
-      throw fidl.MethodException(response.s);
+  Future<int> seek(SeekOrigin origin, int offset) async {
+    final offsetFromStart = offset +
+        (() {
+          switch (origin) {
+            case SeekOrigin.start:
+              return 0;
+            case SeekOrigin.current:
+              return seekPos;
+            case SeekOrigin.end:
+              return _currentLen - 1;
+            default:
+              throw fidl.MethodException(ZX.ERR_INVALID_ARGS);
+          }
+        })();
+    if (offsetFromStart > _currentLen || offsetFromStart < 0) {
+      throw fidl.MethodException(ZX.ERR_OUT_OF_RANGE);
     }
-    return response.offset;
-  }
-
-  File$SeekDeprecated$Response _handleSeek(SeekOrigin origin, int offset) {
-    var calculatedOffset = offset;
-    switch (origin) {
-      case SeekOrigin.start:
-        calculatedOffset = offset;
-        break;
-      case SeekOrigin.current:
-        calculatedOffset = seekPos + offset;
-        break;
-      case SeekOrigin.end:
-        calculatedOffset = (_currentLen - 1) + offset;
-        break;
-      default:
-        return File$SeekDeprecated$Response(ZX.ERR_INVALID_ARGS, 0);
-    }
-    if (calculatedOffset > _currentLen || calculatedOffset < 0) {
-      return File$SeekDeprecated$Response(ZX.ERR_OUT_OF_RANGE, seekPos);
-    }
-    seekPos = calculatedOffset;
-    return File$SeekDeprecated$Response(ZX.OK, seekPos);
+    seekPos = offsetFromStart;
+    return offsetFromStart;
   }
 
   @override
@@ -483,124 +444,58 @@ class _FileConnection extends File {
   }
 
   @override
-  Future<int> syncDeprecated() async {
-    return ZX.ERR_NOT_SUPPORTED;
-  }
-
-  @override
   Future<void> sync() async {
     throw fidl.MethodException(ZX.ERR_NOT_SUPPORTED);
   }
 
   @override
-  Future<int> truncateDeprecatedUseResize(int length) async {
-    return _handleResize(length);
-  }
-
-  @override
   Future<void> resize(int length) async {
-    int status = _handleResize(length);
-    if (status != ZX.OK) {
-      throw fidl.MethodException(status);
-    }
-  }
-
-  int _handleResize(int length) {
     if ((flags & OpenFlags.rightWritable) == OpenFlags.$none) {
-      return ZX.ERR_ACCESS_DENIED;
+      throw fidl.MethodException(ZX.ERR_ACCESS_DENIED);
     }
     if (file._writeFn == null) {
-      return ZX.ERR_NOT_SUPPORTED;
+      throw fidl.MethodException(ZX.ERR_NOT_SUPPORTED);
     }
     if (length > _currentLen) {
-      return ZX.ERR_OUT_OF_RANGE;
+      throw fidl.MethodException(ZX.ERR_OUT_OF_RANGE);
     }
 
     _currentLen = length;
     seekPos = min(seekPos, _currentLen);
     _wasWritten = true;
-    return ZX.OK;
-  }
-
-  @override
-  Future<File$WriteDeprecated$Response> writeDeprecated(Uint8List data) async {
-    final response = _handleWrite(seekPos, data);
-    if (response.s == ZX.OK) {
-      seekPos += response.actual;
-    }
-    return response;
   }
 
   @override
   Future<int> write(Uint8List data) async {
-    final response = _handleWrite(seekPos, data);
-    if (response.s != ZX.OK) {
-      throw fidl.MethodException(response.s);
-    }
-    seekPos += response.actual;
-    return response.actual;
-  }
-
-  @override
-  Future<File$WriteAtDeprecated$Response> writeAtDeprecated(
-      Uint8List data, int offset) async {
-    final response = _handleWrite(offset, data);
-    return File$WriteAtDeprecated$Response(response.s, response.actual);
+    final actual = _handleWrite(seekPos, data);
+    seekPos += actual;
+    return actual;
   }
 
   @override
   Future<int> writeAt(Uint8List data, int offset) async {
-    final response = _handleWrite(offset, data);
-    if (response.s != ZX.OK) {
-      throw fidl.MethodException(response.s);
-    }
-    return response.actual;
+    return _handleWrite(offset, data);
   }
 
-  File$ReadDeprecated$Response _handleRead(int count, int offset) {
-    if ((flags & OpenFlags.rightReadable) == OpenFlags.$none) {
-      return File$ReadDeprecated$Response(ZX.ERR_ACCESS_DENIED, Uint8List(0));
-    }
-    if (file._readFn == null) {
-      return File$ReadDeprecated$Response(ZX.ERR_NOT_SUPPORTED, Uint8List(0));
-    }
-    if (offset == _currentLen) {
-      return File$ReadDeprecated$Response(ZX.OK, Uint8List(0));
-    }
-    if (offset > _currentLen) {
-      return File$ReadDeprecated$Response(ZX.ERR_OUT_OF_RANGE, Uint8List(0));
-    }
-
-    var c = count;
-    if (count + offset > _currentLen) {
-      c = _currentLen - offset;
-      if (c < 0) {
-        c = 0;
-      }
-    }
-    final b = Uint8List.view(_buffer.buffer, offset, c);
-    return File$ReadDeprecated$Response(ZX.OK, b);
-  }
-
-  File$WriteDeprecated$Response _handleWrite(int offset, Uint8List data) {
+  int _handleWrite(int offset, Uint8List data) {
     if ((flags & OpenFlags.rightWritable) == OpenFlags.$none) {
-      return File$WriteDeprecated$Response(ZX.ERR_ACCESS_DENIED, 0);
+      throw fidl.MethodException(ZX.ERR_ACCESS_DENIED);
     }
     if (file._writeFn == null) {
-      return File$WriteDeprecated$Response(ZX.ERR_NOT_SUPPORTED, 0);
+      throw fidl.MethodException(ZX.ERR_NOT_SUPPORTED);
     }
     if (offset >= capacity) {
-      return File$WriteDeprecated$Response(ZX.ERR_OUT_OF_RANGE, 0);
+      throw fidl.MethodException(ZX.ERR_OUT_OF_RANGE);
     }
     if (offset > _currentLen) {
-      return File$WriteDeprecated$Response(ZX.ERR_OUT_OF_RANGE, 0);
+      throw fidl.MethodException(ZX.ERR_OUT_OF_RANGE);
     }
 
     final actual = min(data.length, capacity - offset);
     _buffer.setRange(offset, offset + actual, data.getRange(0, actual));
     _wasWritten = true;
     _currentLen = offset + actual;
-    return File$WriteDeprecated$Response(ZX.OK, actual);
+    return actual;
   }
 
   @override

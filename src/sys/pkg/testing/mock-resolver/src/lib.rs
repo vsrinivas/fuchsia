@@ -11,7 +11,6 @@ use {
         PackageResolverResolveResponder,
     },
     fuchsia_async as fasync,
-    fuchsia_zircon::Status,
     futures::{channel::oneshot, prelude::*},
     parking_lot::Mutex,
     std::{
@@ -129,10 +128,6 @@ pub fn handle_package_directory_stream(
                                 .expect("rewind to package_contents dir"),
                         )
                         .expect("could send Rewind Response");
-                }
-                fio::DirectoryRequest::CloseDeprecated { responder } => {
-                    // Don't do anything with this for now.
-                    responder.send(Status::OK.into_raw()).expect("send Close response")
                 }
                 fio::DirectoryRequest::Close { responder } => {
                     // Don't do anything with this for now.

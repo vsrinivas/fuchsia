@@ -61,18 +61,6 @@ zx_status_t StreamFileConnection::ReadInternal(void* data, size_t len, size_t* o
   return status;
 }
 
-void StreamFileConnection::ReadDeprecated(ReadDeprecatedRequestView request,
-                                          ReadDeprecatedCompleter::Sync& completer) {
-  uint8_t data[fio::wire::kMaxBuf];
-  size_t actual = 0;
-  zx_status_t status = ReadInternal(data, request->count, &actual);
-  if (status != ZX_OK) {
-    completer.Reply(status, fidl::VectorView<uint8_t>());
-  } else {
-    completer.Reply(status, fidl::VectorView<uint8_t>::FromExternal(data, actual));
-  }
-}
-
 void StreamFileConnection::Read(ReadRequestView request, ReadCompleter::Sync& completer) {
   uint8_t data[fio::wire::kMaxBuf];
   size_t actual = 0;
@@ -108,18 +96,6 @@ zx_status_t StreamFileConnection::ReadAtInternal(void* data, size_t len, size_t 
   return status;
 }
 
-void StreamFileConnection::ReadAtDeprecated(ReadAtDeprecatedRequestView request,
-                                            ReadAtDeprecatedCompleter::Sync& completer) {
-  uint8_t data[fio::wire::kMaxBuf];
-  size_t actual = 0;
-  zx_status_t status = ReadAtInternal(data, request->count, request->offset, &actual);
-  if (status != ZX_OK) {
-    completer.Reply(status, fidl::VectorView<uint8_t>());
-  } else {
-    completer.Reply(status, fidl::VectorView<uint8_t>::FromExternal(data, actual));
-  }
-}
-
 void StreamFileConnection::ReadAt(ReadAtRequestView request, ReadAtCompleter::Sync& completer) {
   uint8_t data[fio::wire::kMaxBuf];
   size_t actual = 0;
@@ -151,13 +127,6 @@ zx_status_t StreamFileConnection::WriteInternal(const void* data, size_t len, si
     vnode()->DidModifyStream();
   }
   return status;
-}
-
-void StreamFileConnection::WriteDeprecated(WriteDeprecatedRequestView request,
-                                           WriteDeprecatedCompleter::Sync& completer) {
-  size_t actual = 0u;
-  zx_status_t status = WriteInternal(request->data.data(), request->data.count(), &actual);
-  completer.Reply(status, actual);
 }
 
 void StreamFileConnection::Write(WriteRequestView request, WriteCompleter::Sync& completer) {
@@ -192,14 +161,6 @@ zx_status_t StreamFileConnection::WriteAtInternal(const void* data, size_t len, 
   return status;
 }
 
-void StreamFileConnection::WriteAtDeprecated(WriteAtDeprecatedRequestView request,
-                                             WriteAtDeprecatedCompleter::Sync& completer) {
-  size_t actual = 0;
-  zx_status_t status =
-      WriteAtInternal(request->data.data(), request->data.count(), request->offset, &actual);
-  completer.Reply(status, actual);
-}
-
 void StreamFileConnection::WriteAt(WriteAtRequestView request, WriteAtCompleter::Sync& completer) {
   size_t actual = 0;
   zx_status_t status =
@@ -209,21 +170,6 @@ void StreamFileConnection::WriteAt(WriteAtRequestView request, WriteAtCompleter:
   } else {
     completer.ReplySuccess(actual);
   }
-}
-
-void StreamFileConnection::SeekDeprecated(SeekDeprecatedRequestView request,
-                                          SeekDeprecatedCompleter::Sync& completer) {
-  FS_PRETTY_TRACE_DEBUG("[FileSeek] options: ", options());
-
-  if (options().flags.node_reference) {
-    completer.Reply(ZX_ERR_BAD_HANDLE, 0u);
-    return;
-  }
-
-  zx_off_t seek = 0u;
-  zx_status_t status =
-      stream_.seek(static_cast<zx_stream_seek_origin_t>(request->start), request->offset, &seek);
-  completer.Reply(status, seek);
 }
 
 void StreamFileConnection::Seek(SeekRequestView request, SeekCompleter::Sync& completer) {

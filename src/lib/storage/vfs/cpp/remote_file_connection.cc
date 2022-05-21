@@ -58,18 +58,6 @@ zx_status_t RemoteFileConnection::ReadInternal(void* data, size_t len, size_t* o
   return status;
 }
 
-void RemoteFileConnection::ReadDeprecated(ReadDeprecatedRequestView request,
-                                          ReadDeprecatedCompleter::Sync& completer) {
-  uint8_t data[fio::wire::kMaxBuf];
-  size_t actual = 0;
-  zx_status_t status = ReadInternal(data, request->count, &actual);
-  if (status != ZX_OK) {
-    completer.Reply(status, fidl::VectorView<uint8_t>());
-  } else {
-    completer.Reply(status, fidl::VectorView<uint8_t>::FromExternal(data, actual));
-  }
-}
-
 void RemoteFileConnection::Read(ReadRequestView request, ReadCompleter::Sync& completer) {
   uint8_t data[fio::wire::kMaxBuf];
   size_t actual = 0;
@@ -99,18 +87,6 @@ zx_status_t RemoteFileConnection::ReadAtInternal(void* data, size_t len, size_t 
     ZX_DEBUG_ASSERT(*out_actual <= len);
   }
   return status;
-}
-
-void RemoteFileConnection::ReadAtDeprecated(ReadAtDeprecatedRequestView request,
-                                            ReadAtDeprecatedCompleter::Sync& completer) {
-  uint8_t data[fio::wire::kMaxBuf];
-  size_t actual = 0;
-  zx_status_t status = ReadAtInternal(data, request->count, request->offset, &actual);
-  if (status != ZX_OK) {
-    completer.Reply(status, fidl::VectorView<uint8_t>());
-  } else {
-    completer.Reply(status, fidl::VectorView<uint8_t>::FromExternal(data, actual));
-  }
 }
 
 void RemoteFileConnection::ReadAt(ReadAtRequestView request, ReadAtCompleter::Sync& completer) {
@@ -152,15 +128,8 @@ zx_status_t RemoteFileConnection::WriteInternal(const void* data, size_t len, si
   return status;
 }
 
-void RemoteFileConnection::WriteDeprecated(WriteDeprecatedRequestView request,
-                                           WriteDeprecatedCompleter::Sync& completer) {
-  size_t actual = 0u;
-  zx_status_t status = WriteInternal(request->data.data(), request->data.count(), &actual);
-  completer.Reply(status, actual);
-}
-
 void RemoteFileConnection::Write(WriteRequestView request, WriteCompleter::Sync& completer) {
-  size_t actual = 0u;
+  size_t actual;
   zx_status_t status = WriteInternal(request->data.data(), request->data.count(), &actual);
   if (status != ZX_OK) {
     completer.ReplyError(status);
@@ -184,14 +153,6 @@ zx_status_t RemoteFileConnection::WriteAtInternal(const void* data, size_t len, 
     ZX_DEBUG_ASSERT(*out_actual <= len);
   }
   return status;
-}
-
-void RemoteFileConnection::WriteAtDeprecated(WriteAtDeprecatedRequestView request,
-                                             WriteAtDeprecatedCompleter::Sync& completer) {
-  size_t actual = 0;
-  zx_status_t status =
-      WriteAtInternal(request->data.data(), request->data.count(), request->offset, &actual);
-  completer.Reply(status, actual);
 }
 
 void RemoteFileConnection::WriteAt(WriteAtRequestView request, WriteAtCompleter::Sync& completer) {
@@ -262,16 +223,6 @@ zx_status_t RemoteFileConnection::SeekInternal(fuchsia_io::wire::SeekOrigin orig
   }
   offset_ = n;
   return ZX_OK;
-}
-
-void RemoteFileConnection::SeekDeprecated(SeekDeprecatedRequestView request,
-                                          SeekDeprecatedCompleter::Sync& completer) {
-  zx_status_t status = SeekInternal(request->start, request->offset);
-  if (status == ZX_ERR_STOP) {
-    completer.Close(ZX_ERR_INTERNAL);
-  } else {
-    completer.Reply(status, offset_);
-  }
 }
 
 void RemoteFileConnection::Seek(SeekRequestView request, SeekCompleter::Sync& completer) {

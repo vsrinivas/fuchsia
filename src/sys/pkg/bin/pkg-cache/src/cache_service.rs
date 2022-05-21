@@ -842,23 +842,6 @@ async fn serve_write_blob(
     let task = async {
         while let Some(request) = stream.try_next().await.map_err(ServeWriteBlobError::Fidl)? {
             state = match (request, state) {
-                (
-                    fio::FileRequest::TruncateDeprecatedUseResize { length, responder },
-                    State::ExpectTruncate(blob),
-                ) => {
-                    let res = blob.truncate(length).await;
-
-                    // Interpret responding errors as the stream closing unexpectedly.
-                    let _: Result<(), fidl::Error> =
-                        responder.send(truncate_result_to_status(&res).into_raw());
-
-                    // The empty blob needs no data and is complete after it is truncated.
-                    match res? {
-                        TruncateSuccess::Done(_) => State::ExpectClose,
-                        TruncateSuccess::NeedsData(blob) => State::ExpectData(blob),
-                    }
-                }
-
                 (fio::FileRequest::Resize { length, responder }, State::ExpectTruncate(blob)) => {
                     let res = blob.truncate(length).await;
 
@@ -873,21 +856,6 @@ async fn serve_write_blob(
                     match res? {
                         TruncateSuccess::Done(_) => State::ExpectClose,
                         TruncateSuccess::NeedsData(blob) => State::ExpectData(blob),
-                    }
-                }
-
-                (
-                    fio::FileRequest::WriteDeprecated { data, responder },
-                    State::ExpectData(blob),
-                ) => {
-                    let res = blob.write(&data).await;
-
-                    let _: Result<(), fidl::Error> =
-                        responder.send(write_result_to_status(&res).into_raw(), data.len() as u64);
-
-                    match res? {
-                        WriteSuccess::MoreToWrite(blob) => State::ExpectData(blob),
-                        WriteSuccess::Done(_blob) => State::ExpectClose,
                     }
                 }
 
@@ -908,14 +876,6 @@ async fn serve_write_blob(
 
                 // Close is allowed in any state, but the blob is only written if we were expecting
                 // a close.
-                (fio::FileRequest::CloseDeprecated { responder }, state) => {
-                    let () = close().await;
-                    let _: Result<(), fidl::Error> = responder.send(Status::OK.into_raw());
-                    return match state {
-                        State::ExpectClose => Ok(()),
-                        _ => Err(ServeWriteBlobError::UnexpectedClose),
-                    };
-                }
                 (fio::FileRequest::Close { responder }, state) => {
                     let () = close().await;
                     let _: Result<(), fidl::Error> = responder.send(&mut Ok(()));

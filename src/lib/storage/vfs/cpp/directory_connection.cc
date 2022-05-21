@@ -102,16 +102,6 @@ void DirectoryConnection::Clone(CloneRequestView request, CloneCompleter::Sync& 
   Connection::NodeClone(request->flags, std::move(request->object));
 }
 
-void DirectoryConnection::CloseDeprecated(CloseDeprecatedRequestView request,
-                                          CloseDeprecatedCompleter::Sync& completer) {
-  zx::status result = Connection::NodeClose();
-  if (result.is_error()) {
-    completer.Reply(result.status_value());
-  } else {
-    completer.Reply(ZX_OK);
-  }
-}
-
 void DirectoryConnection::Close(CloseRequestView request, CloseCompleter::Sync& completer) {
   zx::status result = Connection::NodeClose();
   if (result.is_error()) {
@@ -141,13 +131,6 @@ void DirectoryConnection::Describe2(Describe2RequestView request,
   }
   ConnectionInfoConverter converter(std::move(result).value());
   completer.Reply(std::move(converter.info));
-}
-
-void DirectoryConnection::SyncDeprecated(SyncDeprecatedRequestView request,
-                                         SyncDeprecatedCompleter::Sync& completer) {
-  Connection::NodeSync([completer = completer.ToAsync()](zx_status_t sync_status) mutable {
-    completer.Reply(sync_status);
-  });
 }
 
 void DirectoryConnection::Sync(SyncRequestView request, SyncCompleter::Sync& completer) {

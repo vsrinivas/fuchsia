@@ -4,12 +4,7 @@
 
 library fuchsia.io;
 
-using fuchsia.mem;
 using zx;
-
-/// The maximal buffer size which can be transmitted for buffered operations.
-/// This capacity is currently set somewhat arbitrarily.
-const MAX_BUF uint64 = 8192;
 
 protocol File {
     compose File1;
@@ -20,44 +15,13 @@ protocol File {
 protocol File1 {
     compose Node1;
 
-    /// Reads up to `count` bytes at the seek offset.
-    /// The seek offset is moved forward by the number of bytes read.
-    ///
-    /// This method requires the following rights: `OpenFlags.RIGHT_READABLE`, otherwise returns
-    /// `ZX_ERR_BAD_HANDLE`.
-    ///
-    /// Returns `ZX_ERR_OUT_OF_RANGE` if `count` is greater than `MAX_BUF`.
-    @selector("fuchsia.io1/File.Read")
-    @deprecated("replaced by File2.Read")
-    ReadDeprecated(struct {
-        count uint64;
-    }) -> (struct {
-        s zx.status;
-        data vector<uint8>:MAX_BUF;
-    });
-
-    /// Reads up to `count` bytes at the provided offset.
-    /// Does not affect the seek offset.
-    ///
-    /// This method requires the following rights: `OpenFlags.RIGHT_READABLE`, otherwise returns
-    /// `ZX_ERR_BAD_HANDLE`.
-    ///
-    /// Returns `ZX_ERR_OUT_OF_RANGE` if `count` is greater than `MAX_BUF`.
-    @selector("fuchsia.io1/File.ReadAt")
-    @deprecated("replaced by File2.ReadAt")
-    ReadAtDeprecated(struct {
-        count uint64;
-        offset uint64;
-    }) -> (struct {
-        s zx.status;
-        data vector<uint8>:MAX_BUF;
-    });
-
     /// Writes data at the seek offset.
     /// The seek offset is moved forward by the number of bytes written.
     ///
     /// This method requires following rights: `OpenFlags.RIGHT_WRITABLE`, otherwise returns
     /// `ZX_ERR_BAD_HANDLE`.
+    // TODO(https://fxbug.dev/88872): Remove this method when pkgfs has been deleted.
+    @transitional("only implemented by pkgfs")
     @selector("fuchsia.io1/File.Write")
     @deprecated("replaced by File2.Write")
     WriteDeprecated(struct {
@@ -65,63 +29,5 @@ protocol File1 {
     }) -> (struct {
         s zx.status;
         actual uint64;
-    });
-
-    /// Writes data to the provided offset.
-    /// Does not affect the seek offset.
-    ///
-    /// This method requires following rights: `OpenFlags.RIGHT_WRITABLE`, otherwise returns
-    /// `ZX_ERR_BAD_HANDLE`.
-    @selector("fuchsia.io1/File.WriteAt")
-    @deprecated("replaced by File2.WriteAt")
-    WriteAtDeprecated(struct {
-        data vector<uint8>:MAX_BUF;
-        offset uint64;
-    }) -> (struct {
-        s zx.status;
-        actual uint64;
-    });
-
-    /// Moves the offset at which the next invocation of `Read()` or `Write()` will
-    /// occur.
-    ///
-    /// This method does not require any rights.
-    @selector("fuchsia.io1/File.Seek")
-    @deprecated("replaced by File2.Seek")
-    SeekDeprecated(struct {
-        offset int64;
-        start SeekOrigin;
-    }) -> (struct {
-        s zx.status;
-        offset uint64;
-    });
-
-    /// Shrinks the file size to 'length' bytes.
-    ///
-    /// This method requires following rights: `OpenFlags.RIGHT_WRITABLE`, otherwise returns
-    /// `ZX_ERR_BAD_HANDLE`.
-    @selector("fuchsia.io1/File.Truncate")
-    @deprecated("replaced by File2.Resize")
-    TruncateDeprecatedUseResize(struct {
-        length uint64;
-    }) -> (struct {
-        s zx.status;
-    });
-
-    /// Acquires a buffer representing this file, if there is one, with the
-    /// requested access rights.
-    ///
-    /// This method requires following rights:
-    ///
-    /// - `OpenFlags.RIGHT_WRITABLE` if `flags` includes `VmoFlags.WRITE`.
-    /// - `OpenFlags.RIGHT_READABLE` if `flags` includes `VmoFlags.READ` or `VmoFlags.EXECUTE`.
-    /// - `OpenFlags.RIGHT_EXECUTABLE` if `flags` includes `VmoFlags.EXECUTE`.
-    @selector("fuchsia.io1/File.GetBuffer")
-    @deprecated("replaced by File2.GetBackingMemory")
-    GetBufferDeprecatedUseGetBackingMemory(struct {
-        flags VmoFlags;
-    }) -> (resource struct {
-        s zx.status;
-        buffer box<fuchsia.mem.Buffer>;
     });
 };

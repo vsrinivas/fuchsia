@@ -153,15 +153,6 @@ protocol Node1 {
         object server_end:Node;
     });
 
-    /// Terminates connection with object.
-    ///
-    /// This method does not require any rights.
-    @selector("fuchsia.io1/Node.Close")
-    @deprecated("replaced by Node2.Close")
-    CloseDeprecated() -> (struct {
-        s zx.status;
-    });
-
     /// Returns extra information about the type of the object.
     /// If the `Describe` operation fails, the connection is closed.
     ///
@@ -180,15 +171,6 @@ protocol Node1 {
     -> OnOpen(resource struct {
         s zx.status;
         info NodeInfo:optional;
-    });
-
-    /// Synchronizes updates to the node to the underlying media, if it exists.
-    ///
-    /// This method does not require any rights.
-    @selector("fuchsia.io1/Node.Sync")
-    @deprecated("replaced by Node2.Sync")
-    SyncDeprecated() -> (struct {
-        s zx.status;
     });
 
     /// Acquires information about the node.

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_BUILTIN_DEVNODES_H_
-#define SRC_DEVICES_BIN_DRIVER_MANAGER_BUILTIN_DEVNODES_H_
+#ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_BUILTIN_DEVICES_H_
+#define SRC_DEVICES_BIN_DRIVER_MANAGER_BUILTIN_DEVICES_H_
 
 #include <lib/async/dispatcher.h>
 
@@ -68,15 +68,7 @@ class BuiltinDevVnode : public fs::Vnode, public fidl::WireServer<fuchsia_io::Di
   void Clone(CloneRequestView request, CloneCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
-  void CloseDeprecated(CloseDeprecatedRequestView request,
-                       CloseDeprecatedCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
   void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-  void SyncDeprecated(SyncDeprecatedRequestView request,
-                      SyncDeprecatedCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
   void GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) override {
@@ -142,4 +134,4 @@ class BuiltinDevices {
   fs::ManagedVfs vfs_;
 };
 
-#endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_BUILTIN_DEVNODES_H_
+#endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_BUILTIN_DEVICES_H_

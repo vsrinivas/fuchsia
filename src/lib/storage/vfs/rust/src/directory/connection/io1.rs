@@ -181,12 +181,6 @@ where
                 let _ = object_request;
                 todo!("https://fxbug.dev/77623: options={:?}", options);
             }
-            fio::DirectoryRequest::CloseDeprecated { responder } => {
-                fuchsia_trace::duration!("storage", "Directory::CloseDeprecated");
-                let status: zx::Status = self.directory.close().into();
-                responder.send(status.into_raw())?;
-                return Ok(ConnectionState::Closed);
-            }
             fio::DirectoryRequest::Close { responder } => {
                 fuchsia_trace::duration!("storage", "Directory::Close");
                 responder.send(&mut self.directory.close().map_err(|status| status.into_raw()))?;
@@ -324,9 +318,6 @@ where
                 responder.send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw()))?;
             }
             fio::DirectoryRequest::SetAttr { flags: _, attributes: _, responder } => {
-                responder.send(zx::Status::NOT_SUPPORTED.into_raw())?;
-            }
-            fio::DirectoryRequest::SyncDeprecated { responder } => {
                 responder.send(zx::Status::NOT_SUPPORTED.into_raw())?;
             }
             fio::DirectoryRequest::Sync { responder } => {

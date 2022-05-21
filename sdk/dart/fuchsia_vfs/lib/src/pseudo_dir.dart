@@ -368,12 +368,6 @@ class _DirConnection extends Directory {
   }
 
   @override
-  Future<int> closeDeprecated() async {
-    await close();
-    return ZX.OK;
-  }
-
-  @override
   Future<void> close() async {
     if (!_isClosed) {
       _isClosed = true;
@@ -522,11 +516,6 @@ class _DirConnection extends Directory {
   @override
   Future<int> setAttr(
       NodeAttributeFlags flags, NodeAttributes attributes) async {
-    return ZX.ERR_NOT_SUPPORTED;
-  }
-
-  @override
-  Future<int> syncDeprecated() async {
     return ZX.ERR_NOT_SUPPORTED;
   }
 

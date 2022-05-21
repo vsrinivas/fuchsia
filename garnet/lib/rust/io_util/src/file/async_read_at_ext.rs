@@ -157,7 +157,7 @@ mod tests {
         super::*,
         crate::file::{self, AsyncFile},
         fidl::endpoints,
-        fidl_fuchsia_io as fio, fuchsia_async as fasync, fuchsia_zircon_status as zx_status,
+        fidl_fuchsia_io as fio, fuchsia_async as fasync,
         futures::{
             future::{self},
             StreamExt as _,
@@ -221,31 +221,19 @@ mod tests {
             assert_eq!(buffer, contents);
         };
         let handle_requests = async {
-            match stream.next().await.unwrap().unwrap() {
-                fio::FileRequest::ReadAtDeprecated { count, offset, responder } => {
-                    assert_eq!(count, 50);
-                    assert_eq!(offset, 20);
-                    responder.send(zx_status::Status::OK.into_raw(), &contents[..20]).unwrap();
-                }
-                fio::FileRequest::ReadAt { count, offset, responder } => {
-                    assert_eq!(count, 50);
-                    assert_eq!(offset, 20);
-                    responder.send(&mut Ok(contents[..20].to_vec())).unwrap();
-                }
-                req => panic!("unhandled request {:?}", req),
+            {
+                let (count, offset, responder) =
+                    stream.next().await.unwrap().unwrap().into_read_at().unwrap();
+                assert_eq!(count, 50);
+                assert_eq!(offset, 20);
+                responder.send(&mut Ok(contents[..20].to_vec())).unwrap();
             }
-            match stream.next().await.unwrap().unwrap() {
-                fio::FileRequest::ReadAtDeprecated { count, offset, responder } => {
-                    assert_eq!(count, 30);
-                    assert_eq!(offset, 40);
-                    responder.send(zx_status::Status::OK.into_raw(), &contents[20..]).unwrap();
-                }
-                fio::FileRequest::ReadAt { count, offset, responder } => {
-                    assert_eq!(count, 30);
-                    assert_eq!(offset, 40);
-                    responder.send(&mut Ok(contents[20..].to_vec())).unwrap();
-                }
-                req => panic!("unhandled request {:?}", req),
+            {
+                let (count, offset, responder) =
+                    stream.next().await.unwrap().unwrap().into_read_at().unwrap();
+                assert_eq!(count, 30);
+                assert_eq!(offset, 40);
+                responder.send(&mut Ok(contents[20..].to_vec())).unwrap();
             }
         };
         future::join(read_at_exact, handle_requests).await;

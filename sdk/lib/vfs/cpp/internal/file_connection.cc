@@ -5,6 +5,7 @@
 #include <lib/vfs/cpp/flags.h>
 #include <lib/vfs/cpp/internal/file.h>
 #include <lib/vfs/cpp/internal/file_connection.h>
+#include <zircon/errors.h>
 
 #include <utility>
 
@@ -38,10 +39,6 @@ void FileConnection::Clone(fuchsia::io::OpenFlags flags,
   Connection::Clone(vn_, flags, object.TakeChannel(), binding_.dispatcher());
 }
 
-void FileConnection::CloseDeprecated(CloseDeprecatedCallback callback) {
-  Connection::CloseDeprecated(vn_, std::move(callback));
-}
-
 void FileConnection::Close(CloseCallback callback) { Connection::Close(vn_, std::move(callback)); }
 
 void FileConnection::Describe(DescribeCallback callback) {
@@ -50,10 +47,6 @@ void FileConnection::Describe(DescribeCallback callback) {
 
 void FileConnection::Describe2(fuchsia::io::ConnectionInfoQuery query, Describe2Callback callback) {
   Connection::Describe2(vn_, query, std::move(callback));
-}
-
-void FileConnection::SyncDeprecated(SyncDeprecatedCallback callback) {
-  Connection::SyncDeprecated(vn_, std::move(callback));
 }
 
 void FileConnection::Sync(SyncCallback callback) { Connection::Sync(vn_, std::move(callback)); }
@@ -67,164 +60,102 @@ void FileConnection::SetAttr(fuchsia::io::NodeAttributeFlags flags,
   Connection::SetAttr(vn_, flags, attributes, std::move(callback));
 }
 
-void FileConnection::ReadDeprecated(uint64_t count, ReadDeprecatedCallback callback) {
-  std::vector<uint8_t> data;
-  if (!Flags::IsReadable(flags())) {
-    callback(ZX_ERR_BAD_HANDLE, std::move(data));
-    return;
-  }
-  zx_status_t status = vn_->ReadAt(count, offset(), &data);
-  if (status == ZX_OK) {
-    set_offset(offset() + data.size());
-  }
-  callback(status, std::move(data));
-}
-
 void FileConnection::Read(uint64_t count, ReadCallback callback) {
-  ReadDeprecated(count,
-                 [callback = std::move(callback)](zx_status_t status, std::vector<uint8_t> data) {
-                   if (status != ZX_OK) {
-                     callback(fpromise::error(status));
-                   } else {
-                     callback(fuchsia::io::File2_Read_Result::WithResponse(
-                         fuchsia::io::File2_Read_Response(std::move(data))));
-                   }
-                 });
-}
-
-void FileConnection::ReadAtDeprecated(uint64_t count, uint64_t offset,
-                                      ReadAtDeprecatedCallback callback) {
-  std::vector<uint8_t> data;
   if (!Flags::IsReadable(flags())) {
-    callback(ZX_ERR_BAD_HANDLE, std::move(data));
+    callback(fpromise::error(ZX_ERR_BAD_HANDLE));
     return;
   }
-  zx_status_t status = vn_->ReadAt(count, offset, &data);
-  callback(status, std::move(data));
+  std::vector<uint8_t> data;
+  zx_status_t status = vn_->ReadAt(count, offset(), &data);
+  if (status != ZX_OK) {
+    callback(fpromise::error(status));
+    return;
+  }
+  set_offset(offset() + data.size());
+  callback(fuchsia::io::File2_Read_Result::WithResponse(
+      fuchsia::io::File2_Read_Response(std::move(data))));
 }
 
 void FileConnection::ReadAt(uint64_t count, uint64_t offset, ReadAtCallback callback) {
-  ReadAtDeprecated(count, offset,
-                   [callback = std::move(callback)](zx_status_t status, std::vector<uint8_t> data) {
-                     if (status != ZX_OK) {
-                       callback(fpromise::error(status));
-                     } else {
-                       callback(fuchsia::io::File2_ReadAt_Result::WithResponse(
-                           fuchsia::io::File2_ReadAt_Response(std::move(data))));
-                     }
-                   });
-}
-
-void FileConnection::WriteDeprecated(std::vector<uint8_t> data, WriteDeprecatedCallback callback) {
-  if (!Flags::IsWritable(flags())) {
-    callback(ZX_ERR_BAD_HANDLE, 0);
+  if (!Flags::IsReadable(flags())) {
+    callback(fpromise::error(ZX_ERR_BAD_HANDLE));
     return;
   }
-  uint64_t actual = 0u;
-  zx_status_t status = vn_->WriteAt(std::move(data), offset(), &actual);
-  if (status == ZX_OK) {
-    set_offset(offset() + actual);
+  std::vector<uint8_t> data;
+  zx_status_t status = vn_->ReadAt(count, offset, &data);
+  if (status != ZX_OK) {
+    callback(fpromise::error(status));
+    return;
   }
-  callback(status, actual);
+  callback(fuchsia::io::File2_ReadAt_Result::WithResponse(
+      fuchsia::io::File2_ReadAt_Response(std::move(data))));
 }
 
 void FileConnection::Write(std::vector<uint8_t> data, WriteCallback callback) {
-  WriteDeprecated(data, [callback = std::move(callback)](zx_status_t status, uint64_t actual) {
-    if (status != ZX_OK) {
-      callback(fpromise::error(status));
-    } else {
-      callback(
-          fuchsia::io::File2_Write_Result::WithResponse(fuchsia::io::File2_Write_Response(actual)));
-    }
-  });
-}
-
-void FileConnection::WriteAtDeprecated(std::vector<uint8_t> data, uint64_t offset,
-                                       WriteAtDeprecatedCallback callback) {
   if (!Flags::IsWritable(flags())) {
-    callback(ZX_ERR_BAD_HANDLE, 0);
+    callback(fpromise::error(ZX_ERR_BAD_HANDLE));
     return;
   }
-  uint64_t actual = 0u;
-  zx_status_t status = vn_->WriteAt(std::move(data), offset, &actual);
-  callback(status, actual);
+  uint64_t actual;
+  zx_status_t status = vn_->WriteAt(std::move(data), offset(), &actual);
+  if (status != ZX_OK) {
+    callback(fpromise::error(status));
+    return;
+  }
+  set_offset(offset() + actual);
+  callback(
+      fuchsia::io::File2_Write_Result::WithResponse(fuchsia::io::File2_Write_Response(actual)));
 }
 
 void FileConnection::WriteAt(std::vector<uint8_t> data, uint64_t offset, WriteAtCallback callback) {
-  WriteAtDeprecated(data, offset,
-                    [callback = std::move(callback)](zx_status_t status, uint64_t actual) {
-                      if (status != ZX_OK) {
-                        callback(fpromise::error(status));
-                      } else {
-                        callback(fuchsia::io::File2_WriteAt_Result::WithResponse(
-                            fuchsia::io::File2_WriteAt_Response(actual)));
-                      }
-                    });
-}
-
-void FileConnection::SeekDeprecated(int64_t new_offset, fuchsia::io::SeekOrigin seek,
-                                    SeekDeprecatedCallback callback) {
-  int64_t cur_len = vn_->GetLength();
-  size_t capacity = vn_->GetCapacity();
-  uint64_t calculated_offset = 0u;
-  // TODO: This code does not appear to handle overflow.
-  switch (seek) {
-    case fuchsia::io::SeekOrigin::START:
-      calculated_offset = new_offset;
-      break;
-    case fuchsia::io::SeekOrigin::CURRENT:
-      calculated_offset = offset() + new_offset;
-      break;
-    case fuchsia::io::SeekOrigin::END:
-      calculated_offset = cur_len + new_offset;
-      break;
-    default:
-      callback(ZX_ERR_INVALID_ARGS, 0u);
-      return;
-  }
-
-  if (static_cast<size_t>(calculated_offset) > capacity) {
-    callback(ZX_ERR_OUT_OF_RANGE, offset());
+  if (!Flags::IsWritable(flags())) {
+    callback(fpromise::error(ZX_ERR_BAD_HANDLE));
     return;
   }
-  set_offset(calculated_offset);
-  callback(ZX_OK, offset());
+  uint64_t actual;
+  zx_status_t status = vn_->WriteAt(std::move(data), offset, &actual);
+  if (status != ZX_OK) {
+    callback(fpromise::error(status));
+    return;
+  }
+  callback(
+      fuchsia::io::File2_WriteAt_Result::WithResponse(fuchsia::io::File2_WriteAt_Response(actual)));
 }
 
 void FileConnection::Seek(fuchsia::io::SeekOrigin origin, int64_t offset, SeekCallback callback) {
-  SeekDeprecated(offset, origin,
-                 [callback = std::move(callback)](zx_status_t status, int64_t offset_from_start) {
-                   if (status != ZX_OK) {
-                     callback(fpromise::error(status));
-                   } else {
-                     callback(fuchsia::io::File2_Seek_Result::WithResponse(
-                         fuchsia::io::File2_Seek_Response(offset_from_start)));
-                   }
-                 });
-}
+  // TODO: This code does not appear to negative offsets.
+  // TODO: This code does not appear to handle overflow.
+  uint64_t offset_from_start = offset + ([origin, this]() -> uint64_t {
+                                 switch (origin) {
+                                   case fuchsia::io::SeekOrigin::START:
+                                     return 0;
+                                   case fuchsia::io::SeekOrigin::CURRENT:
+                                     return this->offset();
+                                   case fuchsia::io::SeekOrigin::END:
+                                     return vn_->GetLength();
+                                 }
+                               })();
 
-void FileConnection::TruncateDeprecatedUseResize(uint64_t length,
-                                                 TruncateDeprecatedUseResizeCallback callback) {
-  if (!Flags::IsWritable(flags())) {
-    callback(ZX_ERR_BAD_HANDLE);
+  if (offset_from_start > vn_->GetCapacity()) {
+    callback(fpromise::error(ZX_ERR_OUT_OF_RANGE));
     return;
   }
-  callback(vn_->Truncate(length));
+  set_offset(offset_from_start);
+  callback(fuchsia::io::File2_Seek_Result::WithResponse(
+      fuchsia::io::File2_Seek_Response(offset_from_start)));
 }
 
 void FileConnection::Resize(uint64_t length, ResizeCallback callback) {
-  TruncateDeprecatedUseResize(length, [callback = std::move(callback)](zx_status_t status) {
-    if (status != ZX_OK) {
-      callback(fpromise::error(status));
-    } else {
-      callback(fpromise::ok());
-    }
-  });
-}
-
-void FileConnection::GetBufferDeprecatedUseGetBackingMemory(
-    fuchsia::io::VmoFlags flags, GetBufferDeprecatedUseGetBackingMemoryCallback callback) {
-  callback(ZX_ERR_NOT_SUPPORTED, nullptr);
+  if (!Flags::IsWritable(flags())) {
+    callback(fpromise::error(ZX_ERR_BAD_HANDLE));
+    return;
+  }
+  zx_status_t status = vn_->Truncate(length);
+  if (status != ZX_OK) {
+    callback(fpromise::error(status));
+    return;
+  }
+  callback(fpromise::ok());
 }
 
 void FileConnection::GetBackingMemory(fuchsia::io::VmoFlags flags,

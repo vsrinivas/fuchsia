@@ -1196,10 +1196,6 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                 let _ = object_request;
                 todo!("https://fxbug.dev/77623: options={:?}", options);
             }
-            fio::DirectoryRequest::CloseDeprecated { responder } => {
-                responder.send(zx::sys::ZX_OK)?;
-                return Ok((None, ConnectionState::Closed));
-            }
             fio::DirectoryRequest::Close { responder } => {
                 responder.send(&mut Ok(()))?;
                 return Ok((None, ConnectionState::Closed));
@@ -1313,7 +1309,6 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                 let _ = responder;
                 todo!("https://fxbug.dev/77623: attributes={:?}", attributes);
             }
-            fio::DirectoryRequest::SyncDeprecated { responder } => unsupported!(responder)?,
             fio::DirectoryRequest::Sync { responder } => unsupported2!(responder)?,
             fio::DirectoryRequest::Unlink { name: _, options: _, responder } => {
                 unsupported2!(responder)?
@@ -1461,10 +1456,6 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                 let _ = object_request;
                 todo!("https://fxbug.dev/77623: options={:?}", options);
             }
-            fio::FileRequest::CloseDeprecated { responder } => {
-                responder.send(zx::sys::ZX_OK)?;
-                return Ok(ConnectionState::Closed);
-            }
             fio::FileRequest::Close { responder } => {
                 responder.send(&mut Ok(()))?;
                 return Ok(ConnectionState::Closed);
@@ -1477,7 +1468,6 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                 let _ = responder;
                 todo!("https://fxbug.dev/77623: query={:?}", query);
             }
-            fio::FileRequest::SyncDeprecated { responder } => unsupported!(responder)?,
             fio::FileRequest::Sync { responder } => unsupported2!(responder)?,
             fio::FileRequest::GetAttr { responder } => {
                 let mut attrs = self.node_attrs(connection.position);
@@ -1495,26 +1485,10 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                 todo!("https://fxbug.dev/77623: attributes={:?}", attributes);
             }
             // FIXME(cramertj) enforce READ rights
-            fio::FileRequest::ReadDeprecated { count, responder } => {
-                let result = self.handle_read_request(connection, count);
-                match result {
-                    Ok(data) => {
-                        responder.send(zx::sys::ZX_OK, &data)?;
-                    }
-                    Err(s) => responder.send(s.into_raw(), &[])?,
-                }
-            }
             fio::FileRequest::Read { count, responder } => {
                 responder.send(
                     &mut self.handle_read_request(connection, count).map_err(zx::Status::into_raw),
                 )?;
-            }
-            fio::FileRequest::ReadAtDeprecated { count, offset, responder } => {
-                let result = self.handle_read_at_request(connection, count, offset);
-                match result {
-                    Ok(data) => responder.send(zx::sys::ZX_OK, &data)?,
-                    Err(s) => responder.send(s.into_raw(), &[])?,
-                }
             }
             fio::FileRequest::ReadAt { count, offset, responder } => {
                 responder.send(
@@ -1525,31 +1499,18 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
             }
             fio::FileRequest::WriteDeprecated { data: _, responder } => unsupported!(responder, 0)?,
             fio::FileRequest::Write { data: _, responder } => unsupported2!(responder)?,
-            fio::FileRequest::WriteAtDeprecated { data: _, offset: _, responder } => {
-                unsupported!(responder, 0)?
-            }
             fio::FileRequest::WriteAt { data: _, offset: _, responder } => {
                 unsupported2!(responder)?
-            }
-            fio::FileRequest::SeekDeprecated { offset, start, responder } => {
-                let new_offset = self.handle_seek_request(connection, start, offset);
-                responder.send(zx::sys::ZX_OK, new_offset)?;
             }
             fio::FileRequest::Seek { origin, offset, responder } => {
                 let new_offset = self.handle_seek_request(connection, origin, offset);
                 responder.send(&mut Ok(new_offset))?;
-            }
-            fio::FileRequest::TruncateDeprecatedUseResize { length: _, responder } => {
-                unsupported!(responder)?
             }
             fio::FileRequest::Resize { length: _, responder } => unsupported2!(responder)?,
             fio::FileRequest::GetFlags { responder } => {
                 unsupported!(responder, fio::OpenFlags::empty())?
             }
             fio::FileRequest::SetFlags { flags: _, responder } => unsupported!(responder)?,
-            fio::FileRequest::GetBufferDeprecatedUseGetBackingMemory { flags: _, responder } => {
-                unsupported!(responder, None)?
-            }
             fio::FileRequest::GetBackingMemory { flags: _, responder } => unsupported2!(responder)?,
             fio::FileRequest::AdvisoryLock { request: _, responder } => unsupported2!(responder)?,
             fio::FileRequest::QueryFilesystem { responder } => unsupported!(responder, None)?,
@@ -1578,10 +1539,6 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                 let _ = object_request;
                 todo!("https://fxbug.dev/77623: options={:?}", options);
             }
-            fio::NodeRequest::CloseDeprecated { responder } => {
-                responder.send(zx::sys::ZX_OK)?;
-                return Ok(ConnectionState::Closed);
-            }
             fio::NodeRequest::Close { responder } => {
                 responder.send(&mut Ok(()))?;
                 return Ok(ConnectionState::Closed);
@@ -1594,7 +1551,6 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                 let _ = responder;
                 todo!("https://fxbug.dev/77623: query={:?}", query);
             }
-            fio::NodeRequest::SyncDeprecated { responder } => unsupported!(responder)?,
             fio::NodeRequest::Sync { responder } => unsupported2!(responder)?,
             fio::NodeRequest::GetAttr { responder } => {
                 let mut attrs = self.node_attrs(connection.position);

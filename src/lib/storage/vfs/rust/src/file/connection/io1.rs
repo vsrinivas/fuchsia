@@ -23,7 +23,7 @@ use {
     },
     futures::{channel::oneshot, select, stream::StreamExt},
     static_assertions::assert_eq_size,
-    std::sync::Arc,
+    std::{convert::TryInto as _, sync::Arc},
 };
 
 /// Represents a FIDL connection to a file.
@@ -222,14 +222,6 @@ impl<T: 'static + File> FileConnection<T> {
                 let _ = object_request;
                 todo!("https://fxbug.dev/77623: options={:?}", options);
             }
-            fio::FileRequest::CloseDeprecated { responder } => {
-                fuchsia_trace::duration!("storage", "File::CloseDeprecated");
-                let status = self.file.close().await.err().unwrap_or(zx::Status::OK);
-                // We are going to close the connection anyways, so there is no way to handle this
-                // error.  TODO We may want to send it in an epitaph.
-                let _ = responder.send(status.into_raw());
-                return Ok(ConnectionState::Closed);
-            }
             fio::FileRequest::Close { responder } => {
                 fuchsia_trace::duration!("storage", "File::Close");
                 responder.send(&mut self.file.close().await.map_err(|status| status.into_raw()))?;
@@ -243,11 +235,6 @@ impl<T: 'static + File> FileConnection<T> {
                 fuchsia_trace::duration!("storage", "File::Describe2");
                 let _ = responder;
                 todo!("https://fxbug.dev/77623: query={:?}", query);
-            }
-            fio::FileRequest::SyncDeprecated { responder } => {
-                fuchsia_trace::duration!("storage", "File::SyncDeprecated");
-                let status = self.file.sync().await.err().unwrap_or(zx::Status::OK);
-                responder.send(status.into_raw())?;
             }
             fio::FileRequest::Sync { responder } => {
                 fuchsia_trace::duration!("storage", "File::Sync");
@@ -273,48 +260,16 @@ impl<T: 'static + File> FileConnection<T> {
                 let _ = responder;
                 todo!("https://fxbug.dev/77623: attributes={:?}", attributes);
             }
-            fio::FileRequest::ReadDeprecated { count, responder } => {
-                fuchsia_trace::duration!("storage", "File::Read", "bytes" => count);
-                let advance = match self.handle_read_at(self.seek, count).await {
-                    Ok((buffer, bytes_read)) => {
-                        responder
-                            .send(zx::Status::OK.into_raw(), &buffer[..bytes_read as usize])?;
-                        bytes_read
-                    }
-                    Err(status) => {
-                        responder.send(status.into_raw(), &[0u8; 0])?;
-                        0u64
-                    }
-                };
-                self.seek += advance;
-            }
             fio::FileRequest::Read { count, responder } => {
                 fuchsia_trace::duration!("storage", "File::Read", "bytes" => count);
-                let advance = match self.handle_read_at(self.seek, count).await {
-                    Ok((buffer, bytes_read)) => {
-                        responder.send(&mut Ok(buffer[..bytes_read as usize].to_vec()))?;
-                        bytes_read
-                    }
-                    Err(status) => {
-                        responder.send(&mut Err(status.into_raw()))?;
-                        0u64
-                    }
-                };
-                self.seek += advance;
-            }
-            fio::FileRequest::ReadAtDeprecated { offset, count, responder } => {
-                fuchsia_trace::duration!(
-                    "storage",
-                    "File::ReadAtDeprecated",
-                    "offset" => offset,
-                    "bytes" => count
-                );
-                match self.handle_read_at(offset, count).await {
-                    Ok((buffer, bytes_read)) => {
-                        responder.send(zx::Status::OK.into_raw(), &buffer[..bytes_read as usize])?
-                    }
-                    Err(status) => responder.send(status.into_raw(), &[0u8; 0])?,
+                let result = async {
+                    let buffer = self.handle_read_at(self.seek, count).await?;
+                    let count: u64 = buffer.len().try_into().unwrap();
+                    self.seek += count;
+                    Ok(buffer)
                 }
+                .await;
+                let () = responder.send(&mut result.map_err(zx::Status::into_raw))?;
             }
             fio::FileRequest::ReadAt { offset, count, responder } => {
                 fuchsia_trace::duration!(
@@ -323,36 +278,22 @@ impl<T: 'static + File> FileConnection<T> {
                     "offset" => offset,
                     "bytes" => count
                 );
-                match self.handle_read_at(offset, count).await {
-                    Ok((buffer, bytes_read)) => {
-                        responder.send(&mut Ok(buffer[..bytes_read as usize].to_vec()))?
-                    }
-                    Err(status) => responder.send(&mut Err(status.into_raw()))?,
-                }
+                let result = self.handle_read_at(offset, count).await;
+                let () = responder.send(&mut result.map_err(zx::Status::into_raw))?;
             }
             fio::FileRequest::WriteDeprecated { data, responder } => {
                 fuchsia_trace::duration!("storage", "File::WriteDeprecated", "bytes" => data.len() as u64);
-                let (status, actual) = self.handle_write(&data).await;
+                let result = self.handle_write(&data).await;
+                let (status, actual) = match result {
+                    Ok(actual) => (zx::Status::OK, actual),
+                    Err(status) => (status, 0),
+                };
                 responder.send(status.into_raw(), actual)?;
             }
             fio::FileRequest::Write { data, responder } => {
                 fuchsia_trace::duration!("storage", "File::Write", "bytes" => data.len() as u64);
-                let (status, actual) = self.handle_write(&data).await;
-                if status == zx::Status::OK {
-                    responder.send(&mut Ok(actual))?;
-                } else {
-                    responder.send(&mut Err(status.into_raw()))?;
-                }
-            }
-            fio::FileRequest::WriteAtDeprecated { offset, data, responder } => {
-                fuchsia_trace::duration!(
-                    "storage",
-                    "File::WriteAtDeprecated",
-                    "offset" => offset,
-                    "bytes" => data.len() as u64
-                );
-                let (status, actual) = self.handle_write_at(offset, &data).await;
-                responder.send(status.into_raw(), actual)?;
+                let result = self.handle_write(&data).await;
+                responder.send(&mut result.map_err(zx::Status::into_raw))?;
             }
             fio::FileRequest::WriteAt { offset, data, responder } => {
                 fuchsia_trace::duration!(
@@ -361,40 +302,18 @@ impl<T: 'static + File> FileConnection<T> {
                     "offset" => offset,
                     "bytes" => data.len() as u64
                 );
-                let (status, actual) = self.handle_write_at(offset, &data).await;
-                if status == zx::Status::OK {
-                    responder.send(&mut Ok(actual))?;
-                } else {
-                    responder.send(&mut Err(status.into_raw()))?;
-                }
-            }
-            fio::FileRequest::SeekDeprecated { offset, start, responder } => {
-                fuchsia_trace::duration!("storage", "File::SeekDeprecated");
-                let (status, seek) = self.handle_seek(offset, start).await;
-                responder.send(status.into_raw(), seek)?;
+                let result = self.handle_write_at(offset, &data).await;
+                responder.send(&mut result.map_err(zx::Status::into_raw))?;
             }
             fio::FileRequest::Seek { origin, offset, responder } => {
                 fuchsia_trace::duration!("storage", "File::Seek");
-                let (status, seek) = self.handle_seek(offset, origin).await;
-                if status == zx::Status::OK {
-                    responder.send(&mut Ok(seek))?;
-                } else {
-                    responder.send(&mut Err(status.into_raw()))?;
-                }
-            }
-            fio::FileRequest::TruncateDeprecatedUseResize { length, responder } => {
-                fuchsia_trace::duration!("storage", "File::Truncate", "length" => length);
-                let status = self.handle_truncate(length).await;
-                responder.send(status.into_raw())?;
+                let result = self.handle_seek(offset, origin).await;
+                responder.send(&mut result.map_err(zx::Status::into_raw))?;
             }
             fio::FileRequest::Resize { length, responder } => {
                 fuchsia_trace::duration!("storage", "File::Resize", "length" => length);
-                let status = self.handle_truncate(length).await;
-                if status == zx::Status::OK {
-                    responder.send(&mut Ok(()))?;
-                } else {
-                    responder.send(&mut Err(status.into_raw()))?;
-                }
+                let result = self.handle_truncate(length).await;
+                responder.send(&mut result.map_err(zx::Status::into_raw))?;
             }
             fio::FileRequest::GetFlags { responder } => {
                 fuchsia_trace::duration!("storage", "File::GetFlags");
@@ -406,24 +325,13 @@ impl<T: 'static + File> FileConnection<T> {
                     (self.flags & !fio::OpenFlags::APPEND) | (flags & fio::OpenFlags::APPEND);
                 responder.send(ZX_OK)?;
             }
-            fio::FileRequest::GetBufferDeprecatedUseGetBackingMemory { flags, responder } => {
-                fuchsia_trace::duration!("storage", "File::GetBuffer");
-                let (status, mut buffer) = match self.handle_get_buffer(flags).await {
-                    Ok(buffer) => (zx::Status::OK, Some(buffer)),
-                    Err(status) => (status, None),
-                };
-                responder.send(status.into_raw(), buffer.as_mut())?;
-            }
             fio::FileRequest::GetBackingMemory { flags, responder } => {
                 fuchsia_trace::duration!("storage", "File::GetBackingMemory");
-                match self.handle_get_buffer(flags).await {
-                    Ok(buffer) => {
-                        responder.send(&mut Ok(buffer.vmo))?;
-                    }
-                    Err(status) => {
-                        responder.send(&mut Err(status.into_raw()))?;
-                    }
-                }
+                let result = self
+                    .handle_get_buffer(flags)
+                    .await
+                    .map(|fidl_fuchsia_mem::Buffer { vmo, size: _ }| vmo);
+                responder.send(&mut result.map_err(zx::Status::into_raw))?;
             }
             fio::FileRequest::AdvisoryLock { request: _, responder } => {
                 fuchsia_trace::duration!("storage", "File::AdvisoryLock");
@@ -479,11 +387,7 @@ impl<T: 'static + File> FileConnection<T> {
         (zx::Status::OK, attributes)
     }
 
-    async fn handle_read_at(
-        &mut self,
-        offset: u64,
-        count: u64,
-    ) -> Result<(Vec<u8>, u64), zx::Status> {
+    async fn handle_read_at(&mut self, offset: u64, count: u64) -> Result<Vec<u8>, zx::Status> {
         if !self.flags.intersects(fio::OpenFlags::RIGHT_READABLE) {
             return Err(zx::Status::BAD_HANDLE);
         }
@@ -493,72 +397,67 @@ impl<T: 'static + File> FileConnection<T> {
         }
 
         let mut buffer = vec![0u8; count as usize];
-        self.file.read_at(offset, &mut buffer[..]).await.map(|count| (buffer, count))
+        let count = self.file.read_at(offset, &mut buffer[..]).await?;
+        let () = buffer.resize_with(count.try_into().unwrap(), || {
+            panic!("unexpected call on vector trimming")
+        });
+        Ok(buffer)
     }
 
-    async fn handle_write(&mut self, content: &[u8]) -> (zx::Status, u64) {
+    async fn handle_write(&mut self, content: &[u8]) -> Result<u64, zx::Status> {
         if !self.flags.intersects(fio::OpenFlags::RIGHT_WRITABLE) {
-            return (zx::Status::BAD_HANDLE, 0);
+            return Err(zx::Status::BAD_HANDLE);
         }
 
         if self.flags.intersects(fio::OpenFlags::APPEND) {
-            match self.file.append(content).await {
-                Ok((bytes, offset)) => {
-                    self.seek = offset;
-                    (zx::Status::OK, bytes)
-                }
-                Err(e) => (e, 0),
-            }
+            let (bytes, offset) = self.file.append(content).await?;
+            self.seek = offset;
+            Ok(bytes)
         } else {
-            let (status, actual) = self.handle_write_at(self.seek, content).await;
-            assert_eq_size!(usize, u64);
+            let actual = self.handle_write_at(self.seek, content).await?;
             self.seek += actual;
-            (status, actual)
+            Ok(actual)
         }
     }
 
-    async fn handle_write_at(&mut self, offset: u64, content: &[u8]) -> (zx::Status, u64) {
+    async fn handle_write_at(&mut self, offset: u64, content: &[u8]) -> Result<u64, zx::Status> {
         if !self.flags.intersects(fio::OpenFlags::RIGHT_WRITABLE) {
-            return (zx::Status::BAD_HANDLE, 0);
+            return Err(zx::Status::BAD_HANDLE);
         }
 
-        match self.file.write_at(offset, content).await {
-            Ok(bytes) => (zx::Status::OK, bytes),
-            Err(e) => (e, 0),
-        }
+        self.file.write_at(offset, content).await
     }
 
     /// Move seek position to byte `offset` relative to the origin specified by `start`.
-    async fn handle_seek(&mut self, offset: i64, start: fio::SeekOrigin) -> (zx::Status, u64) {
+    async fn handle_seek(
+        &mut self,
+        offset: i64,
+        start: fio::SeekOrigin,
+    ) -> Result<u64, zx::Status> {
         if self.flags.intersects(fio::OpenFlags::NODE_REFERENCE) {
-            return (zx::Status::BAD_HANDLE, 0);
+            return Err(zx::Status::BAD_HANDLE);
         }
 
-        let (status, new_seek) = match start {
-            fio::SeekOrigin::Start => (zx::Status::OK, offset as i128),
-
+        let new_seek = match start {
+            fio::SeekOrigin::Start => offset as i128,
             fio::SeekOrigin::Current => {
                 assert_eq_size!(usize, i64);
-                (zx::Status::OK, self.seek as i128 + offset as i128)
+                self.seek as i128 + offset as i128
             }
-
             fio::SeekOrigin::End => {
-                let size = self.file.get_size().await;
+                let size = self.file.get_size().await?;
                 assert_eq_size!(usize, i64, u64);
-                match size {
-                    Ok(size) => (zx::Status::OK, size as i128 + offset as i128),
-                    Err(e) => (e, self.seek as i128),
-                }
+                size as i128 + offset as i128
             }
         };
 
-        return if new_seek < 0 {
+        if new_seek < 0 {
             // Can't seek to before the end of a file.
-            (zx::Status::OUT_OF_RANGE, self.seek)
+            Err(zx::Status::OUT_OF_RANGE)
         } else {
             self.seek = new_seek as u64;
-            (status, self.seek)
-        };
+            Ok(self.seek)
+        }
     }
 
     async fn handle_set_attr(
@@ -576,15 +475,12 @@ impl<T: 'static + File> FileConnection<T> {
         }
     }
 
-    async fn handle_truncate(&mut self, length: u64) -> zx::Status {
+    async fn handle_truncate(&mut self, length: u64) -> Result<(), zx::Status> {
         if !self.flags.intersects(fio::OpenFlags::RIGHT_WRITABLE) {
-            return zx::Status::BAD_HANDLE;
+            return Err(zx::Status::BAD_HANDLE);
         }
 
-        match self.file.truncate(length).await {
-            Ok(()) => zx::Status::OK,
-            Err(status) => status,
-        }
+        self.file.truncate(length).await
     }
 
     async fn handle_get_buffer(

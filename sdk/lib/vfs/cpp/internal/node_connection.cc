@@ -33,10 +33,6 @@ void NodeConnection::Clone(fuchsia::io::OpenFlags flags,
   Connection::Clone(vn_, flags, object.TakeChannel(), binding_.dispatcher());
 }
 
-void NodeConnection::CloseDeprecated(CloseDeprecatedCallback callback) {
-  Connection::CloseDeprecated(vn_, std::move(callback));
-}
-
 void NodeConnection::Close(CloseCallback callback) { Connection::Close(vn_, std::move(callback)); }
 
 void NodeConnection::Describe(DescribeCallback callback) {
@@ -44,11 +40,7 @@ void NodeConnection::Describe(DescribeCallback callback) {
 }
 
 void NodeConnection::Describe2(fuchsia::io::ConnectionInfoQuery query, Describe2Callback callback) {
-  Connection::Describe2(vn_, std::move(query), std::move(callback));
-}
-
-void NodeConnection::SyncDeprecated(SyncDeprecatedCallback callback) {
-  Connection::SyncDeprecated(vn_, std::move(callback));
+  Connection::Describe2(vn_, query, std::move(callback));
 }
 
 void NodeConnection::Sync(SyncCallback callback) { Connection::Sync(vn_, std::move(callback)); }

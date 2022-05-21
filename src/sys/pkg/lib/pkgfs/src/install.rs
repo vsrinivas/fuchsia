@@ -208,10 +208,6 @@ impl MockBlob {
 
     async fn handle_write(&mut self, status: Status) -> Vec<u8> {
         match self.stream.next().await {
-            Some(Ok(fio::FileRequest::WriteDeprecated { data, responder })) => {
-                responder.send(status.into_raw(), data.len() as u64).unwrap();
-                data
-            }
             Some(Ok(fio::FileRequest::Write { data, responder })) => {
                 if status == Status::OK {
                     responder.send(&mut Ok(data.len() as u64)).unwrap();
@@ -280,9 +276,6 @@ impl MockBlob {
 
         match self.stream.next().await {
             None => {}
-            Some(Ok(fio::FileRequest::CloseDeprecated { responder })) => {
-                let _ = responder.send(Status::OK.into_raw());
-            }
             Some(Ok(fio::FileRequest::Close { responder })) => {
                 let _ = responder.send(&mut Ok(()));
             }
@@ -314,9 +307,6 @@ impl MockBlob {
             }
 
             match self.stream.next().await {
-                Some(Ok(fio::FileRequest::CloseDeprecated { responder })) => {
-                    responder.send(Status::OK.into_raw()).unwrap();
-                }
                 Some(Ok(fio::FileRequest::Close { responder })) => {
                     responder.send(&mut Ok(())).unwrap();
                 }

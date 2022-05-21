@@ -41,16 +41,6 @@ void NodeConnection::Clone(CloneRequestView request, CloneCompleter::Sync& compl
   Connection::NodeClone(request->flags, std::move(request->object));
 }
 
-void NodeConnection::CloseDeprecated(CloseDeprecatedRequestView request,
-                                     CloseDeprecatedCompleter::Sync& completer) {
-  zx::status result = Connection::NodeClose();
-  if (result.is_error()) {
-    completer.Reply(result.status_value());
-  } else {
-    completer.Reply(ZX_OK);
-  }
-}
-
 void NodeConnection::Close(CloseRequestView request, CloseCompleter::Sync& completer) {
   zx::status result = Connection::NodeClose();
   if (result.is_error()) {
@@ -78,13 +68,6 @@ void NodeConnection::Describe2(Describe2RequestView request, Describe2Completer:
   }
   ConnectionInfoConverter converter(std::move(result).value());
   completer.Reply(std::move(converter.info));
-}
-
-void NodeConnection::SyncDeprecated(SyncDeprecatedRequestView request,
-                                    SyncDeprecatedCompleter::Sync& completer) {
-  Connection::NodeSync([completer = completer.ToAsync()](zx_status_t sync_status) mutable {
-    completer.Reply(sync_status);
-  });
 }
 
 void NodeConnection::Sync(SyncRequestView request, SyncCompleter::Sync& completer) {

@@ -1239,18 +1239,10 @@ where
                             let _ = object_request;
                             todo!("https://fxbug.dev/77623: options={:?}", options);
                         }
-                        fposix_socket::SynchronousDatagramSocketRequest::CloseDeprecated { responder } => {
-                            let () = self.make_handler().await.close();
-                            responder_send!(responder, zx::Status::OK.into_raw());
-                            return Ok(());
-                        }
                         fposix_socket::SynchronousDatagramSocketRequest::Close { responder } => {
                             let () = self.make_handler().await.close();
                             responder_send!(responder, &mut Ok(()));
                             return Ok(());
-                        }
-                        fposix_socket::SynchronousDatagramSocketRequest::SyncDeprecated { responder } => {
-                            responder_send!(responder, zx::Status::NOT_SUPPORTED.into_raw());
                         }
                         fposix_socket::SynchronousDatagramSocketRequest::Sync { responder } => {
                             responder_send!(

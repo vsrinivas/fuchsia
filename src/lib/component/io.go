@@ -96,10 +96,6 @@ func (s *Service) Reopen(ctx fidl.Context, options io.ConnectionOptions, channel
 	return nil
 }
 
-func (*Service) CloseDeprecated(fidl.Context) (int32, error) {
-	return int32(zx.ErrOk), nil
-}
-
 func (*Service) Close(fidl.Context) (io.Node2CloseResult, error) {
 	return io.Node2CloseResultWithResponse(io.Node2CloseResponse{}), nil
 }
@@ -125,10 +121,6 @@ func (*Service) Describe2(_ fidl.Context, query io.ConnectionInfoQuery) (io.Conn
 		connectionInfo.SetAvailableOperations(io.OperationsConnect)
 	}
 	return connectionInfo, nil
-}
-
-func (*Service) SyncDeprecated(fidl.Context) (int32, error) {
-	return int32(zx.ErrNotSupported), nil
 }
 
 func (*Service) Sync(fidl.Context) (io.Node2SyncResult, error) {
@@ -256,10 +248,6 @@ func (dirState *directoryState) Reopen(ctx fidl.Context, options io.ConnectionOp
 	return nil
 }
 
-func (*directoryState) CloseDeprecated(fidl.Context) (int32, error) {
-	return int32(zx.ErrOk), nil
-}
-
 func (*directoryState) Close(fidl.Context) (io.Node2CloseResult, error) {
 	return io.Node2CloseResultWithResponse(io.Node2CloseResponse{}), nil
 }
@@ -285,10 +273,6 @@ func (*directoryState) Describe2(_ fidl.Context, query io.ConnectionInfoQuery) (
 		connectionInfo.SetAvailableOperations(abilities & rights)
 	}
 	return connectionInfo, nil
-}
-
-func (*directoryState) SyncDeprecated(fidl.Context) (int32, error) {
-	return int32(zx.ErrNotSupported), nil
 }
 
 func (*directoryState) Sync(fidl.Context) (io.Node2SyncResult, error) {
@@ -553,10 +537,6 @@ func (fState *fileState) Reopen(ctx fidl.Context, options io.ConnectionOptions, 
 	return nil
 }
 
-func (*fileState) CloseDeprecated(fidl.Context) (int32, error) {
-	return int32(zx.ErrOk), nil
-}
-
 func (fState *fileState) Close(fidl.Context) (io.Node2CloseResult, error) {
 	return io.Node2CloseResultWithResponse(io.Node2CloseResponse{}), nil
 }
@@ -614,10 +594,6 @@ func (fState *fileState) Describe2(_ fidl.Context, query io.ConnectionInfoQuery)
 	return connectionInfo, nil
 }
 
-func (*fileState) SyncDeprecated(fidl.Context) (int32, error) {
-	return int32(zx.ErrNotSupported), nil
-}
-
 func (*fileState) Sync(fidl.Context) (io.Node2SyncResult, error) {
 	return io.Node2SyncResultWithErr(int32(zx.ErrNotSupported)), nil
 }
@@ -645,58 +621,34 @@ func (*fileState) UpdateAttributes(fidl.Context, io.NodeAttributes2) (io.Node2Up
 	return io.Node2UpdateAttributesResultWithErr(int32(zx.ErrNotSupported)), nil
 }
 
-func (fState *fileState) read(count uint64) (int32, []uint8, error) {
+func (fState *fileState) Read(_ fidl.Context, count uint64) (io.File2ReadResult, error) {
 	if l := fState.size; l < count {
 		count = l
 	}
 	b := make([]byte, count)
 	n, err := fState.reader.Read(b)
 	if err != nil && err != stdio.EOF {
-		return 0, nil, err
+		return io.File2ReadResult{}, err
 	}
 	b = b[:n]
-	return int32(zx.ErrOk), b, nil
-}
-
-func (fState *fileState) ReadDeprecated(_ fidl.Context, count uint64) (int32, []uint8, error) {
-	return fState.read(count)
-}
-
-func (fState *fileState) Read(_ fidl.Context, count uint64) (io.File2ReadResult, error) {
-	s, b, err := fState.read(count)
-	if s != int32(zx.ErrOk) {
-		return io.File2ReadResultWithErr(s), err
-	}
 	return io.File2ReadResultWithResponse(io.File2ReadResponse{
 		Data: b,
-	}), err
+	}), nil
 }
 
-func (fState *fileState) readAt(count uint64, offset uint64) (int32, []uint8, error) {
+func (fState *fileState) ReadAt(_ fidl.Context, count uint64, offset uint64) (io.File2ReadAtResult, error) {
 	if l := fState.size - offset; l < count {
 		count = l
 	}
 	b := make([]byte, count)
 	n, err := fState.reader.ReadAt(b, int64(offset))
 	if err != nil && err != stdio.EOF {
-		return 0, nil, err
+		return io.File2ReadAtResult{}, err
 	}
 	b = b[:n]
-	return int32(zx.ErrOk), b, nil
-}
-
-func (fState *fileState) ReadAtDeprecated(_ fidl.Context, count uint64, offset uint64) (int32, []uint8, error) {
-	return fState.readAt(count, offset)
-}
-
-func (fState *fileState) ReadAt(_ fidl.Context, count uint64, offset uint64) (io.File2ReadAtResult, error) {
-	s, b, err := fState.readAt(count, offset)
-	if s != int32(zx.ErrOk) {
-		return io.File2ReadAtResultWithErr(s), err
-	}
 	return io.File2ReadAtResultWithResponse(io.File2ReadAtResponse{
 		Data: b,
-	}), err
+	}), nil
 }
 
 func (*fileState) WriteDeprecated(_ fidl.Context, data []uint8) (int32, uint64, error) {
@@ -707,17 +659,8 @@ func (*fileState) Write(_ fidl.Context, data []uint8) (io.File2WriteResult, erro
 	return io.File2WriteResultWithErr(int32(zx.ErrNotSupported)), nil
 }
 
-func (*fileState) WriteAtDeprecated(_ fidl.Context, data []uint8, offset uint64) (int32, uint64, error) {
-	return int32(zx.ErrNotSupported), 0, nil
-}
-
 func (*fileState) WriteAt(_ fidl.Context, data []uint8, offset uint64) (io.File2WriteAtResult, error) {
 	return io.File2WriteAtResultWithErr(int32(zx.ErrNotSupported)), nil
-}
-
-func (fState *fileState) SeekDeprecated(_ fidl.Context, offset int64, start io.SeekOrigin) (int32, uint64, error) {
-	n, err := fState.reader.Seek(offset, int(start))
-	return int32(zx.ErrOk), uint64(n), err
 }
 
 func (fState *fileState) Seek(_ fidl.Context, origin io.SeekOrigin, offset int64) (io.File2SeekResult, error) {
@@ -726,10 +669,6 @@ func (fState *fileState) Seek(_ fidl.Context, origin io.SeekOrigin, offset int64
 		io.File2SeekResponse{
 			OffsetFromStart: uint64(n),
 		}), err
-}
-
-func (*fileState) TruncateDeprecatedUseResize(_ fidl.Context, length uint64) (int32, error) {
-	return int32(zx.ErrNotSupported), nil
 }
 
 func (*fileState) Resize(_ fidl.Context, length uint64) (io.File2ResizeResult, error) {
@@ -750,10 +689,6 @@ func (*fileState) QueryFilesystem(_ fidl.Context) (int32, *io.FilesystemInfo, er
 
 func (fState *fileState) AdvisoryLock(fidl.Context, io.AdvisoryLockRequest) (io.AdvisoryLockingAdvisoryLockResult, error) {
 	return io.AdvisoryLockingAdvisoryLockResult{}, &zx.Error{Status: zx.ErrNotSupported, Text: fmt.Sprintf("%T", fState)}
-}
-
-func (*fileState) GetBufferDeprecatedUseGetBackingMemory(_ fidl.Context, flags io.VmoFlags) (int32, *mem.Buffer, error) {
-	return int32(zx.ErrNotSupported), nil, nil
 }
 
 func (*fileState) GetBackingMemory(_ fidl.Context, flags io.VmoFlags) (io.File2GetBackingMemoryResult, error) {

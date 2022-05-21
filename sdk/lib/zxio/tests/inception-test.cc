@@ -309,12 +309,6 @@ class TestServiceNodeServer : public fidl::testing::WireTestBase<fuchsia_io::Nod
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void CloseDeprecated(CloseDeprecatedRequestView request,
-                       CloseDeprecatedCompleter::Sync& completer) final {
-    completer.Reply(ZX_OK);
-    // After the reply, we should close the connection.
-    completer.Close(ZX_OK);
-  }
   void Close(CloseRequestView request, CloseCompleter::Sync& completer) final {
     completer.ReplySuccess();
     // After the reply, we should close the connection.
@@ -362,12 +356,6 @@ class TestTtyServer : public fidl::testing::WireTestBase<fuchsia_hardware_pty::D
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void CloseDeprecated(CloseDeprecatedRequestView request,
-                       CloseDeprecatedCompleter::Sync& completer) final {
-    completer.Reply(ZX_OK);
-    // After the reply, we should close the connection.
-    completer.Close(ZX_OK);
-  }
   void Close(CloseRequestView request, CloseCompleter::Sync& completer) final {
     completer.ReplySuccess();
     // After the reply, we should close the connection.

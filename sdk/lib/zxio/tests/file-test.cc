@@ -28,13 +28,6 @@ class CloseCountingFileServer : public zxio_tests::TestFileServerBase {
   ~CloseCountingFileServer() override = default;
 
   // Exercised by |zxio_close|.
-  void CloseDeprecated(CloseDeprecatedRequestView request,
-                       CloseDeprecatedCompleter::Sync& completer) final {
-    num_close_.fetch_add(1);
-    zxio_tests::TestFileServerBase::CloseDeprecated(request, completer);
-  }
-
-  // Exercised by |zxio_close|.
   void Close(CloseRequestView request, CloseCompleter::Sync& completer) final {
     num_close_.fetch_add(1);
     zxio_tests::TestFileServerBase::Close(request, completer);

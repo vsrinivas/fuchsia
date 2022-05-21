@@ -363,12 +363,6 @@ func (ep *endpoint) decRef() bool {
 	return doClose
 }
 
-func (ep *endpoint) SyncDeprecated(fidl.Context) (int32, error) {
-	_ = syslog.DebugTf("Sync", "%p", ep)
-
-	return 0, &zx.Error{Status: zx.ErrNotSupported, Text: fmt.Sprintf("%T", ep)}
-}
-
 func (ep *endpoint) Sync(fidl.Context) (fidlio.Node2SyncResult, error) {
 	_ = syslog.DebugTf("Sync", "%p", ep)
 
@@ -1983,12 +1977,6 @@ func (s *synchronousDatagramSocket) close() {
 	s.cancel()
 }
 
-func (s *synchronousDatagramSocket) CloseDeprecated(fidl.Context) (int32, error) {
-	_ = syslog.DebugTf("Close", "%p", s.endpointWithEvent)
-	s.close()
-	return int32(zx.ErrOk), nil
-}
-
 func (s *synchronousDatagramSocket) Close(fidl.Context) (fidlio.Node2CloseResult, error) {
 	_ = syslog.DebugTf("Close", "%p", s.endpointWithEvent)
 	s.close()
@@ -2317,12 +2305,6 @@ func (s *streamSocketImpl) close() {
 			}
 		}
 	}
-}
-
-func (s *streamSocketImpl) CloseDeprecated(fidl.Context) (int32, error) {
-	_ = syslog.DebugTf("Close", "%p", s.endpointWithSocket)
-	s.close()
-	return int32(zx.ErrOk), nil
 }
 
 func (s *streamSocketImpl) Close(fidl.Context) (fidlio.Node2CloseResult, error) {

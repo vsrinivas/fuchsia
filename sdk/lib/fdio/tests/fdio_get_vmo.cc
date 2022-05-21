@@ -43,12 +43,6 @@ class TestServer final : public fidl::testing::WireTestBase<fuchsia_io::File> {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void CloseDeprecated(CloseDeprecatedRequestView request,
-                       CloseDeprecatedCompleter::Sync& completer) override {
-    completer.Reply(ZX_OK);
-    completer.Close(ZX_OK);
-  }
-
   void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
     completer.ReplySuccess();
     completer.Close(ZX_OK);
@@ -102,14 +96,6 @@ class TestServer final : public fidl::testing::WireTestBase<fuchsia_io::File> {
       return;
     }
     completer.ReplySuccess(fidl::VectorView<uint8_t>::FromExternal(buffer.data(), actual));
-  }
-
-  void SeekDeprecated(SeekDeprecatedRequestView request,
-                      SeekDeprecatedCompleter::Sync& completer) override {
-    if (!context->supports_seek) {
-      completer.Reply(ZX_ERR_NOT_SUPPORTED, 0);
-    }
-    completer.Reply(ZX_OK, 0);
   }
 
   void Seek(SeekRequestView request, SeekCompleter::Sync& completer) override {

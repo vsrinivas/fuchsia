@@ -19,12 +19,6 @@ void Connection::Clone(Node* vn, fuchsia::io::OpenFlags flags, zx::channel reque
   vn->Clone(flags, flags_, std::move(request), dispatcher);
 }
 
-void Connection::CloseDeprecated(Node* vn, fuchsia::io::Node::CloseDeprecatedCallback callback) {
-  callback(vn->PreClose(this));
-  vn->Close(this);
-  // |this| is destroyed at this point.
-}
-
 void Connection::Close(Node* vn, fuchsia::io::Node::CloseCallback callback) {
   zx_status_t status = vn->PreClose(this);
   if (status == ZX_OK) {
@@ -59,11 +53,6 @@ zx_status_t Connection::Bind(zx::channel request, async_dispatcher_t* dispatcher
     SendOnOpenEvent(status);
   }  // can't send status as binding failed and request object is gone.
   return status;
-}
-
-void Connection::SyncDeprecated(Node* vn, fuchsia::io::Node::SyncDeprecatedCallback callback) {
-  // TODO: Check flags.
-  callback(vn->Sync());
 }
 
 void Connection::Sync(Node* vn, fuchsia::io::Node::SyncCallback callback) {

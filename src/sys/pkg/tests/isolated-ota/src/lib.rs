@@ -537,9 +537,6 @@ async fn serve_failing_blobfs(
                 let _ = object_request;
                 todo!("https://fxbug.dev/77623: options={:?}", options);
             }
-            fio::DirectoryRequest::CloseDeprecated { responder } => {
-                responder.send(zx::Status::IO.into_raw()).context("failing close")?
-            }
             fio::DirectoryRequest::Close { responder } => {
                 responder.send(&mut Err(zx::Status::IO.into_raw())).context("failing close")?
             }
@@ -549,9 +546,6 @@ async fn serve_failing_blobfs(
             fio::DirectoryRequest::Describe2 { query, responder } => {
                 let _ = responder;
                 todo!("https://fxbug.dev/77623: query={:?}", query);
-            }
-            fio::DirectoryRequest::SyncDeprecated { responder } => {
-                responder.send(zx::Status::IO.into_raw()).context("failing sync")?
             }
             fio::DirectoryRequest::Sync { responder } => {
                 responder.send(&mut Err(zx::Status::IO.into_raw())).context("failing sync")?

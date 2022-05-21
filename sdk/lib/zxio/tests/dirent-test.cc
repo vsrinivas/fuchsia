@@ -29,12 +29,6 @@ class TestServer final : public zxio_tests::TestDirectoryServerBase {
   constexpr static int kEntryCount = 1000;
 
   // Exercised by |zxio_close|.
-  void CloseDeprecated(CloseDeprecatedRequestView request,
-                       CloseDeprecatedCompleter::Sync& completer) final {
-    num_close_.fetch_add(1);
-    completer.Reply(ZX_OK);
-  }
-
   void Close(CloseRequestView request, CloseCompleter::Sync& completer) final {
     num_close_.fetch_add(1);
     completer.ReplySuccess();

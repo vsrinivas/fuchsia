@@ -38,10 +38,6 @@ void DirectoryConnection::Clone(fuchsia::io::OpenFlags flags,
   Connection::Clone(vn_, flags, object.TakeChannel(), binding_.dispatcher());
 }
 
-void DirectoryConnection::CloseDeprecated(CloseDeprecatedCallback callback) {
-  Connection::CloseDeprecated(vn_, std::move(callback));
-}
-
 void DirectoryConnection::Close(CloseCallback callback) {
   Connection::Close(vn_, std::move(callback));
 }
@@ -53,10 +49,6 @@ void DirectoryConnection::Describe(DescribeCallback callback) {
 void DirectoryConnection::Describe2(fuchsia::io::ConnectionInfoQuery query,
                                     Describe2Callback callback) {
   Connection::Describe2(vn_, query, std::move(callback));
-}
-
-void DirectoryConnection::SyncDeprecated(SyncDeprecatedCallback callback) {
-  Connection::SyncDeprecated(vn_, std::move(callback));
 }
 
 void DirectoryConnection::Sync(SyncCallback callback) {

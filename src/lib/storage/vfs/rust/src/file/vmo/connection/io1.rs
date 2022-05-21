@@ -378,17 +378,6 @@ impl VmoFileConnection {
                 let _ = object_request;
                 todo!("https://fxbug.dev/77623: options={:?}", options);
             }
-            fio::FileRequest::CloseDeprecated { responder } => {
-                // We are going to close the connection anyways, so there is no way to handle this
-                // error.  TODO We may want to send it in an epitaph.
-                let status = match self.handle_close().await {
-                    Ok(()) => zx::Status::OK,
-                    Err(status) => status,
-                };
-                responder.send(status.into_raw())?;
-
-                return Ok(ConnectionState::Closed);
-            }
             fio::FileRequest::Close { responder } => {
                 // We are going to close the connection anyways, so there is no way to handle this
                 // error.
@@ -406,10 +395,6 @@ impl VmoFileConnection {
             fio::FileRequest::Describe2 { query, responder } => {
                 let _ = responder;
                 todo!("https://fxbug.dev/77623: query={:?}", query);
-            }
-            fio::FileRequest::SyncDeprecated { responder } => {
-                // VMOs are always in sync.
-                responder.send(ZX_OK)?;
             }
             fio::FileRequest::Sync { responder } => {
                 // VMOs are always in sync.
@@ -433,23 +418,9 @@ impl VmoFileConnection {
                 let _ = responder;
                 todo!("https://fxbug.dev/77623: attributes={:?}", attributes);
             }
-            fio::FileRequest::ReadDeprecated { count, responder } => {
-                let (status, data) = match self.handle_read(count).await {
-                    Ok(data) => (zx::Status::OK, data),
-                    Err(status) => (status, Vec::new()),
-                };
-                responder.send(status.into_raw(), &data)?;
-            }
             fio::FileRequest::Read { count, responder } => {
                 let result = self.handle_read(count).await;
                 responder.send(&mut result.map_err(zx::Status::into_raw))?;
-            }
-            fio::FileRequest::ReadAtDeprecated { count, offset, responder } => {
-                let (status, data) = match self.handle_read_at(offset, count).await {
-                    Ok(data) => (zx::Status::OK, data),
-                    Err(status) => (status, Vec::new()),
-                };
-                responder.send(status.into_raw(), &data)?;
             }
             fio::FileRequest::ReadAt { count, offset, responder } => {
                 let result = self.handle_read_at(offset, count).await;
@@ -466,34 +437,13 @@ impl VmoFileConnection {
                 let result = self.handle_write(&data).await;
                 responder.send(&mut result.map_err(zx::Status::into_raw))?;
             }
-            fio::FileRequest::WriteAtDeprecated { offset, data, responder } => {
-                let (status, count) = match self.handle_write_at(offset, &data).await {
-                    Ok(count) => (zx::Status::OK, count),
-                    Err(status) => (status, 0),
-                };
-                responder.send(status.into_raw(), count)?;
-            }
             fio::FileRequest::WriteAt { offset, data, responder } => {
                 let result = self.handle_write_at(offset, &data).await;
                 responder.send(&mut result.map_err(zx::Status::into_raw))?;
             }
-            fio::FileRequest::SeekDeprecated { offset, start, responder } => {
-                let (status, offset) = match self.handle_seek(offset, start).await {
-                    Ok(offset) => (zx::Status::OK, offset),
-                    Err(status) => (status, self.seek),
-                };
-                responder.send(status.into_raw(), offset)?;
-            }
             fio::FileRequest::Seek { origin, offset, responder } => {
                 let result = self.handle_seek(offset, origin).await;
                 responder.send(&mut result.map_err(zx::Status::into_raw))?;
-            }
-            fio::FileRequest::TruncateDeprecatedUseResize { length, responder } => {
-                let status = match self.handle_truncate(length).await {
-                    Ok(()) => zx::Status::OK,
-                    Err(status) => status,
-                };
-                responder.send(status.into_raw())?;
             }
             fio::FileRequest::Resize { length, responder } => {
                 let result = self.handle_truncate(length).await;
@@ -507,13 +457,6 @@ impl VmoFileConnection {
                 // via this call according to fuchsia.io. It would be nice to have that explicitly
                 // encoded in the API instead, I guess.
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
-            }
-            fio::FileRequest::GetBufferDeprecatedUseGetBackingMemory { flags, responder } => {
-                let (status, mut buffer) = match self.handle_get_buffer(flags).await {
-                    Ok(buffer) => (zx::Status::OK, Some(buffer)),
-                    Err(status) => (status, None),
-                };
-                responder.send(status.into_raw(), buffer.as_mut())?;
             }
             fio::FileRequest::GetBackingMemory { flags, responder } => {
                 let result = self.handle_get_buffer(flags).await.map(|Buffer { vmo, size: _ }| vmo);

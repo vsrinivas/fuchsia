@@ -137,10 +137,6 @@ impl Connection {
                 let _ = object_request;
                 todo!("https://fxbug.dev/77623: options={:?}", options);
             }
-            fio::FileRequest::CloseDeprecated { responder } => {
-                responder.send(ZX_OK)?;
-                return Ok(ConnectionState::Closed);
-            }
             fio::FileRequest::Close { responder } => {
                 responder.send(&mut Ok(()))?;
                 return Ok(ConnectionState::Closed);
@@ -155,9 +151,6 @@ impl Connection {
                     ..fio::ConnectionInfo::EMPTY
                 };
                 responder.send(info)?;
-            }
-            fio::FileRequest::SyncDeprecated { responder } => {
-                responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
             fio::FileRequest::Sync { responder } => {
                 responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
@@ -197,14 +190,8 @@ impl Connection {
             fio::FileRequest::AdvisoryLock { request: _, responder } => {
                 responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
             }
-            fio::FileRequest::ReadDeprecated { count: _, responder } => {
-                responder.send(ZX_ERR_ACCESS_DENIED, &[])?;
-            }
             fio::FileRequest::Read { count: _, responder } => {
                 responder.send(&mut Err(ZX_ERR_ACCESS_DENIED))?;
-            }
-            fio::FileRequest::ReadAtDeprecated { offset: _, count: _, responder } => {
-                responder.send(ZX_ERR_ACCESS_DENIED, &[])?;
             }
             fio::FileRequest::ReadAt { offset: _, count: _, responder } => {
                 responder.send(&mut Err(ZX_ERR_ACCESS_DENIED))?;
@@ -215,27 +202,14 @@ impl Connection {
             fio::FileRequest::Write { data: _, responder } => {
                 responder.send(&mut Err(ZX_ERR_ACCESS_DENIED))?;
             }
-            fio::FileRequest::WriteAtDeprecated { offset: _, data: _, responder } => {
-                responder.send(ZX_ERR_ACCESS_DENIED, 0)?;
-            }
             fio::FileRequest::WriteAt { offset: _, data: _, responder } => {
                 responder.send(&mut Err(ZX_ERR_ACCESS_DENIED))?;
-            }
-            fio::FileRequest::SeekDeprecated { offset: _, start: _, responder } => {
-                responder.send(ZX_ERR_ACCESS_DENIED, 0)?;
             }
             fio::FileRequest::Seek { origin: _, offset: _, responder } => {
                 responder.send(&mut Err(ZX_ERR_ACCESS_DENIED))?;
             }
-            fio::FileRequest::TruncateDeprecatedUseResize { length: _, responder } => {
-                responder.send(ZX_ERR_ACCESS_DENIED)?;
-            }
             fio::FileRequest::Resize { length: _, responder } => {
                 responder.send(&mut Err(ZX_ERR_ACCESS_DENIED))?;
-            }
-            fio::FileRequest::GetBufferDeprecatedUseGetBackingMemory { flags: _, responder } => {
-                // There is no backing VMO.
-                responder.send(ZX_ERR_NOT_SUPPORTED, None)?;
             }
             fio::FileRequest::GetBackingMemory { flags: _, responder } => {
                 // There is no backing VMO.

@@ -18,7 +18,6 @@ import (
 	"unsafe"
 
 	"fidl/fuchsia/io"
-	"fidl/fuchsia/mem"
 
 	"go.fuchsia.dev/fuchsia/src/lib/component"
 	"go.fuchsia.dev/fuchsia/src/lib/thinfs/fs"
@@ -159,15 +158,6 @@ func (d *directoryWrapper) Reopen(ctx fidl.Context, options io.ConnectionOptions
 	return nil
 }
 
-func (d *directoryWrapper) CloseDeprecated(fidl.Context) (int32, error) {
-	err := d.dir.Close()
-
-	d.cancel()
-	d.clearCookie()
-
-	return int32(errorToZx(err)), nil
-}
-
 func (d *directoryWrapper) Close(fidl.Context) (io.Node2CloseResult, error) {
 	status := int32(errorToZx(d.dir.Close()))
 
@@ -206,10 +196,6 @@ func (*directoryWrapper) Describe2(_ fidl.Context, query io.ConnectionInfoQuery)
 		connectionInfo.SetAvailableOperations(abilities & rights)
 	}
 	return connectionInfo, nil
-}
-
-func (d *directoryWrapper) SyncDeprecated(fidl.Context) (int32, error) {
-	return int32(errorToZx(d.dir.Sync())), nil
 }
 
 func (d *directoryWrapper) Sync(fidl.Context) (io.Node2SyncResult, error) {
@@ -508,14 +494,6 @@ func (f *fileWrapper) Reopen(ctx fidl.Context, options io.ConnectionOptions, cha
 	return nil
 }
 
-func (f *fileWrapper) CloseDeprecated(fidl.Context) (int32, error) {
-	err := f.file.Close()
-
-	f.cancel()
-
-	return int32(errorToZx(err)), nil
-}
-
 func (f *fileWrapper) Close(fidl.Context) (io.Node2CloseResult, error) {
 	status := int32(errorToZx(f.file.Close()))
 
@@ -555,10 +533,6 @@ func (*fileWrapper) Describe2(_ fidl.Context, query io.ConnectionInfoQuery) (io.
 		connectionInfo.SetAvailableOperations(abilities & rights)
 	}
 	return connectionInfo, nil
-}
-
-func (f *fileWrapper) SyncDeprecated(fidl.Context) (int32, error) {
-	return int32(errorToZx(f.file.Sync())), nil
 }
 
 func (f *fileWrapper) Sync(fidl.Context) (io.Node2SyncResult, error) {
@@ -604,15 +578,6 @@ func (f *fileWrapper) UpdateAttributes(_ fidl.Context, attributes io.NodeAttribu
 	return io.Node2UpdateAttributesResultWithErr(int32(zx.ErrNotSupported)), nil
 }
 
-func (f *fileWrapper) ReadDeprecated(_ fidl.Context, count uint64) (int32, []uint8, error) {
-	buf := make([]byte, count)
-	r, err := f.file.Read(buf, 0, fs.WhenceFromCurrent)
-	if zxErr := errorToZx(err); zxErr != zx.ErrOk {
-		return int32(zxErr), nil, nil
-	}
-	return int32(zx.ErrOk), buf[:r], nil
-}
-
 func (f *fileWrapper) Read(_ fidl.Context, count uint64) (io.File2ReadResult, error) {
 	buf := make([]byte, count)
 	r, err := f.file.Read(buf, 0, fs.WhenceFromCurrent)
@@ -620,15 +585,6 @@ func (f *fileWrapper) Read(_ fidl.Context, count uint64) (io.File2ReadResult, er
 		return io.File2ReadResultWithErr(int32(zxErr)), nil
 	}
 	return io.File2ReadResultWithResponse(io.File2ReadResponse{Data: buf[:r]}), nil
-}
-
-func (f *fileWrapper) ReadAtDeprecated(_ fidl.Context, count, offset uint64) (int32, []uint8, error) {
-	buf := make([]byte, count)
-	r, err := f.file.Read(buf, int64(offset), fs.WhenceFromStart)
-	if zxErr := errorToZx(err); zxErr != zx.ErrOk {
-		return int32(zxErr), nil, nil
-	}
-	return int32(zx.ErrOk), buf[:r], nil
 }
 
 func (f *fileWrapper) ReadAt(_ fidl.Context, count, offset uint64) (io.File2ReadAtResult, error) {
@@ -653,11 +609,6 @@ func (f *fileWrapper) Write(_ fidl.Context, data []uint8) (io.File2WriteResult, 
 	return io.File2WriteResultWithResponse(io.File2WriteResponse{ActualCount: uint64(r)}), nil
 }
 
-func (f *fileWrapper) WriteAtDeprecated(_ fidl.Context, data []uint8, offset uint64) (int32, uint64, error) {
-	r, err := f.file.Write(data, int64(offset), fs.WhenceFromStart)
-	return int32(errorToZx(err)), uint64(r), nil
-}
-
 func (f *fileWrapper) WriteAt(_ fidl.Context, data []uint8, offset uint64) (io.File2WriteAtResult, error) {
 	r, err := f.file.Write(data, int64(offset), fs.WhenceFromStart)
 	if zxErr := errorToZx(err); zxErr != zx.ErrOk {
@@ -666,21 +617,12 @@ func (f *fileWrapper) WriteAt(_ fidl.Context, data []uint8, offset uint64) (io.F
 	return io.File2WriteAtResultWithResponse(io.File2WriteAtResponse{ActualCount: uint64(r)}), nil
 }
 
-func (f *fileWrapper) SeekDeprecated(_ fidl.Context, offset int64, start io.SeekOrigin) (int32, uint64, error) {
-	r, err := f.file.Seek(offset, int(start))
-	return int32(errorToZx(err)), uint64(r), nil
-}
-
 func (f *fileWrapper) Seek(_ fidl.Context, origin io.SeekOrigin, offset int64) (io.File2SeekResult, error) {
 	r, err := f.file.Seek(offset, int(origin))
 	if zxErr := errorToZx(err); zxErr != zx.ErrOk {
 		return io.File2SeekResultWithErr(int32(zxErr)), nil
 	}
 	return io.File2SeekResultWithResponse(io.File2SeekResponse{OffsetFromStart: uint64(r)}), nil
-}
-
-func (f *fileWrapper) TruncateDeprecatedUseResize(_ fidl.Context, length uint64) (int32, error) {
-	return int32(errorToZx(f.file.Truncate(length))), nil
 }
 
 func (f *fileWrapper) Resize(_ fidl.Context, length uint64) (io.File2ResizeResult, error) {
@@ -715,21 +657,6 @@ func (f *fileWrapper) SetFlags(ctx fidl.Context, flags io.OpenFlags) (int32, err
 }
 
 func (d *fileWrapper) QueryFilesystem(fidl.Context) (int32, *io.FilesystemInfo, error) {
-	return int32(zx.ErrNotSupported), nil, nil
-}
-
-func (f *fileWrapper) GetBufferDeprecatedUseGetBackingMemory(_ fidl.Context, flags io.VmoFlags) (int32, *mem.Buffer, error) {
-	if file, ok := f.file.(fs.FileWithBackingMemory); ok {
-		vmo, size, err := file.GetBackingMemory(flags)
-		var buffer *mem.Buffer
-		if vmo != nil {
-			buffer = &mem.Buffer{
-				Vmo:  *vmo,
-				Size: size,
-			}
-		}
-		return int32(errorToZx(err)), buffer, nil
-	}
 	return int32(zx.ErrNotSupported), nil, nil
 }
 

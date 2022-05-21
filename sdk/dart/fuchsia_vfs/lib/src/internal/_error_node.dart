@@ -44,11 +44,6 @@ class ErrorNodeForSendingEvent extends Node {
   }
 
   @override
-  Future<int> closeDeprecated() async {
-    return ZX.ERR_NOT_SUPPORTED;
-  }
-
-  @override
   Future<void> close() async {
     throw MethodException(ZX.ERR_NOT_SUPPORTED);
   }
@@ -72,11 +67,6 @@ class ErrorNodeForSendingEvent extends Node {
   @override
   Future<int> setAttr(
       NodeAttributeFlags flags, NodeAttributes attributes) async {
-    return ZX.ERR_NOT_SUPPORTED;
-  }
-
-  @override
-  Future<int> syncDeprecated() async {
     return ZX.ERR_NOT_SUPPORTED;
   }
 

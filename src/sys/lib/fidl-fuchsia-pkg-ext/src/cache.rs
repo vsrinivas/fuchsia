@@ -1030,9 +1030,6 @@ mod tests {
 
         async fn expect_close(mut self) {
             match self.stream.next().await {
-                Some(Ok(fio::FileRequest::CloseDeprecated { responder })) => {
-                    responder.send(Status::OK.into_raw()).unwrap();
-                }
                 Some(Ok(fio::FileRequest::Close { responder })) => {
                     responder.send(&mut Ok(())).unwrap();
                 }

@@ -472,10 +472,6 @@ impl BlockServer {
             // TODO(fxbug.dev/89873)
             VolumeAndNodeRequest::Reopen { options: _, object_request: _, control_handle: _ } => {}
             // TODO(fxbug.dev/89873)
-            VolumeAndNodeRequest::CloseDeprecated { responder } => {
-                responder.send(zx::sys::ZX_OK)?;
-            }
-            // TODO(fxbug.dev/89873)
             VolumeAndNodeRequest::Close { responder } => {
                 responder.send(&mut Ok(()))?;
             }
@@ -491,10 +487,6 @@ impl BlockServer {
                     ..fio::ConnectionInfo::EMPTY
                 };
                 responder.send(info)?;
-            }
-            // TODO(fxbug.dev/89873)
-            VolumeAndNodeRequest::SyncDeprecated { responder } => {
-                responder.send(zx::sys::ZX_ERR_NOT_SUPPORTED)?;
             }
             // TODO(fxbug.dev/89873)
             VolumeAndNodeRequest::Sync { responder } => {

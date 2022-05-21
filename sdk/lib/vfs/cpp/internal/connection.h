@@ -90,12 +90,10 @@ class Connection {
 
   void Clone(Node* vn, fuchsia::io::OpenFlags flags, zx::channel request,
              async_dispatcher_t* dispatcher);
-  void CloseDeprecated(Node* vn, fuchsia::io::Node::CloseDeprecatedCallback callback);
   void Close(Node* vn, fuchsia::io::Node::CloseCallback callback);
   void Describe(Node* vn, fuchsia::io::Node::DescribeCallback callback);
   void Describe2(Node* vn, fuchsia::io::ConnectionInfoQuery query,
                  fuchsia::io::Node::Describe2Callback callback);
-  void SyncDeprecated(Node* vn, fuchsia::io::Node::SyncDeprecatedCallback callback);
   void Sync(Node* vn, fuchsia::io::Node::SyncCallback callback);
   void GetAttr(Node* vn, fuchsia::io::Node::GetAttrCallback callback);
   void SetAttr(Node* vn, fuchsia::io::NodeAttributeFlags flags,

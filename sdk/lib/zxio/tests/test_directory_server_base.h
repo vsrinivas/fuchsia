@@ -25,14 +25,6 @@ class TestDirectoryServerBase : public fidl::testing::WireTestBase<fuchsia_io::D
   }
 
   // Exercised by |zxio_close|.
-  void CloseDeprecated(CloseDeprecatedRequestView request,
-                       CloseDeprecatedCompleter::Sync& completer) override {
-    completer.Reply(ZX_OK);
-    // After the reply, we should close the connection.
-    completer.Close(ZX_OK);
-  }
-
-  // Exercised by |zxio_close|.
   void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
     completer.ReplySuccess();
     // After the reply, we should close the connection.

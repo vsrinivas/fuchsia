@@ -26,14 +26,6 @@ class Server final : public fidl::testing::WireTestBase<fuchsia_io::Node> {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void CloseDeprecated(CloseDeprecatedRequestView request,
-                       CloseDeprecatedCompleter::Sync& completer) override {
-    completer.Reply(ZX_OK);
-    EXPECT_OK(completer.result_of_reply().status());
-    // FDIO expects the channel to be closed after replying.
-    completer.Close(ZX_OK);
-  }
-
   void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
     completer.ReplySuccess();
     EXPECT_OK(completer.result_of_reply().status());

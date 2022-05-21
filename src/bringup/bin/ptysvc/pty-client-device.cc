@@ -85,17 +85,8 @@ void PtyClientDevice::ReadEvents(ReadEventsRequestView request,
 
 // Assert in all of these, since these should be handled by fs::Connection before our
 // HandleFsSpecificMessage() is called.
-void PtyClientDevice::ReadDeprecated(ReadDeprecatedRequestView request,
-                                     ReadDeprecatedCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
 
 void PtyClientDevice::Read(ReadRequestView request, ReadCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
-
-void PtyClientDevice::WriteDeprecated(WriteDeprecatedRequestView request,
-                                      WriteDeprecatedCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
@@ -109,11 +100,6 @@ void PtyClientDevice::AdvisoryLock(AdvisoryLockRequestView request,
 }
 
 void PtyClientDevice::Clone(CloneRequestView request, CloneCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
-
-void PtyClientDevice::CloseDeprecated(CloseDeprecatedRequestView request,
-                                      CloseDeprecatedCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
@@ -133,17 +119,7 @@ void PtyClientDevice::GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync
   ZX_ASSERT(false);
 }
 
-void PtyClientDevice::ReadAtDeprecated(ReadAtDeprecatedRequestView request,
-                                       ReadAtDeprecatedCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
-
 void PtyClientDevice::ReadAt(ReadAtRequestView request, ReadAtCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
-
-void PtyClientDevice::WriteAtDeprecated(WriteAtDeprecatedRequestView request,
-                                        WriteAtDeprecatedCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
@@ -151,18 +127,7 @@ void PtyClientDevice::WriteAt(WriteAtRequestView request, WriteAtCompleter::Sync
   ZX_ASSERT(false);
 }
 
-void PtyClientDevice::SeekDeprecated(SeekDeprecatedRequestView request,
-                                     SeekDeprecatedCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
-
 void PtyClientDevice::Seek(SeekRequestView request, SeekCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
-
-void PtyClientDevice::TruncateDeprecatedUseResize(
-    TruncateDeprecatedUseResizeRequestView request,
-    TruncateDeprecatedUseResizeCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
@@ -170,19 +135,8 @@ void PtyClientDevice::Resize(ResizeRequestView request, ResizeCompleter::Sync& c
   ZX_ASSERT(false);
 }
 
-void PtyClientDevice::GetBufferDeprecatedUseGetBackingMemory(
-    GetBufferDeprecatedUseGetBackingMemoryRequestView request,
-    GetBufferDeprecatedUseGetBackingMemoryCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
-
 void PtyClientDevice::GetBackingMemory(GetBackingMemoryRequestView request,
                                        GetBackingMemoryCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
-
-void PtyClientDevice::SyncDeprecated(SyncDeprecatedRequestView request,
-                                     SyncDeprecatedCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 

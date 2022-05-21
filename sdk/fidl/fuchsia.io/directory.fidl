@@ -111,6 +111,9 @@ const MODE_TYPE_FILE uint32 = 0x08000;
 const MODE_TYPE_SOCKET uint32 = 0x0C000;
 const MODE_TYPE_SERVICE uint32 = 0x10000;
 
+/// The maximal buffer size which can be transmitted for buffered operations.
+/// This capacity is currently set somewhat arbitrarily.
+const MAX_BUF uint64 = 8192;
 /// The maximum length, in bytes, of a filesystem string.
 // TODO(smklein): Update to 4095. +1 is for null-terminator, which shouldn't be
 // part of the FIDL length.

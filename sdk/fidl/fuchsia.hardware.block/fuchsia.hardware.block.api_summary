@@ -10,7 +10,6 @@ protocol fuchsia.hardware.block/Block
 protocol/member fuchsia.hardware.block/BlockAndNode.AttachVmo(zx/handle:VMO vmo) -> (int32 status,box<fuchsia.hardware.block/VmoId> vmoid)
 protocol/member fuchsia.hardware.block/BlockAndNode.Clone(fuchsia.io/OpenFlags flags,server_end:fuchsia.io/Node object)
 protocol/member fuchsia.hardware.block/BlockAndNode.Close() -> (fuchsia.io/Node2_Close_Result result)
-protocol/member fuchsia.hardware.block/BlockAndNode.CloseDeprecated() -> (int32 s)
 protocol/member fuchsia.hardware.block/BlockAndNode.CloseFifo() -> (int32 status)
 protocol/member fuchsia.hardware.block/BlockAndNode.Describe() -> (fuchsia.io/NodeInfo info)
 protocol/member fuchsia.hardware.block/BlockAndNode.Describe2(fuchsia.io/ConnectionInfoQuery query) -> (fuchsia.io/ConnectionInfo info)
@@ -29,7 +28,6 @@ protocol/member fuchsia.hardware.block/BlockAndNode.Reopen(fuchsia.io/Connection
 protocol/member fuchsia.hardware.block/BlockAndNode.SetAttr(fuchsia.io/NodeAttributeFlags flags,fuchsia.io/NodeAttributes attributes) -> (int32 s)
 protocol/member fuchsia.hardware.block/BlockAndNode.SetFlags(fuchsia.io/OpenFlags flags) -> (int32 s)
 protocol/member fuchsia.hardware.block/BlockAndNode.Sync() -> (fuchsia.io/Node2_Sync_Result result)
-protocol/member fuchsia.hardware.block/BlockAndNode.SyncDeprecated() -> (int32 s)
 protocol/member fuchsia.hardware.block/BlockAndNode.UpdateAttributes(fuchsia.io/NodeAttributes2 attributes) -> (fuchsia.io/Node2_UpdateAttributes_Result result)
 protocol/member fuchsia.hardware.block/BlockAndNode.WriteBlocks(zx/handle:VMO vmo,uint64 length,uint64 dev_offset,uint64 vmo_offset) -> (int32 status)
 protocol fuchsia.hardware.block/BlockAndNode

@@ -26,23 +26,19 @@ class FileConnection : public Connection, public fidl::WireServer<fuchsia_io::Fi
   FileConnection(fs::FuchsiaVfs* vfs, fbl::RefPtr<fs::Vnode> vnode, VnodeProtocol protocol,
                  VnodeConnectionOptions options);
 
-  ~FileConnection() = default;
+  ~FileConnection() override = default;
 
  protected:
-  void OnTeardown();
+  void OnTeardown() override;
 
   //
   // |fuchsia.io/Node| operations.
   //
 
   void Clone(CloneRequestView request, CloneCompleter::Sync& completer) final;
-  void CloseDeprecated(CloseDeprecatedRequestView request,
-                       CloseDeprecatedCompleter::Sync& completer) final;
   void Close(CloseRequestView request, CloseCompleter::Sync& completer) final;
   void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) final;
   void Describe2(Describe2RequestView request, Describe2Completer::Sync& completer) final;
-  void SyncDeprecated(SyncDeprecatedRequestView request,
-                      SyncDeprecatedCompleter::Sync& completer) final;
   void Sync(SyncRequestView request, SyncCompleter::Sync& completer) final;
   void GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) final;
   void SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) final;
@@ -53,12 +49,7 @@ class FileConnection : public Connection, public fidl::WireServer<fuchsia_io::Fi
   // |fuchsia.io/File| operations.
   //
 
-  void TruncateDeprecatedUseResize(TruncateDeprecatedUseResizeRequestView request,
-                                   TruncateDeprecatedUseResizeCompleter::Sync& completer) final;
   void Resize(ResizeRequestView request, ResizeCompleter::Sync& completer) final;
-  void GetBufferDeprecatedUseGetBackingMemory(
-      GetBufferDeprecatedUseGetBackingMemoryRequestView request,
-      GetBufferDeprecatedUseGetBackingMemoryCompleter::Sync& completer) final;
   void GetBackingMemory(GetBackingMemoryRequestView request,
                         GetBackingMemoryCompleter::Sync& completer) final;
 

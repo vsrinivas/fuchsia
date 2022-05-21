@@ -67,17 +67,8 @@ void NullPtyDeviceImpl::SetWindowSize(SetWindowSizeRequestView request,
 // We need to provide these methods because |fuchsia.hardware.pty.Device| composes |fuchsia.io|.
 // Assert in all of these, since these should be handled by fs::Connection before our
 // HandleFsSpecificMessage() is called.
-void NullPtyDeviceImpl::ReadDeprecated(ReadDeprecatedRequestView request,
-                                       ReadDeprecatedCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
 
 void NullPtyDeviceImpl::Read(ReadRequestView request, ReadCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
-
-void NullPtyDeviceImpl::WriteDeprecated(WriteDeprecatedRequestView request,
-                                        WriteDeprecatedCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
@@ -91,11 +82,6 @@ void NullPtyDeviceImpl::AdvisoryLock(AdvisoryLockRequestView request,
 }
 
 void NullPtyDeviceImpl::Clone(CloneRequestView request, CloneCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
-
-void NullPtyDeviceImpl::CloseDeprecated(CloseDeprecatedRequestView request,
-                                        CloseDeprecatedCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
@@ -116,17 +102,7 @@ void NullPtyDeviceImpl::GetAttr(GetAttrRequestView request, GetAttrCompleter::Sy
   ZX_ASSERT(false);
 }
 
-void NullPtyDeviceImpl::ReadAtDeprecated(ReadAtDeprecatedRequestView request,
-                                         ReadAtDeprecatedCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
-
 void NullPtyDeviceImpl::ReadAt(ReadAtRequestView request, ReadAtCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
-
-void NullPtyDeviceImpl::WriteAtDeprecated(WriteAtDeprecatedRequestView request,
-                                          WriteAtDeprecatedCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
@@ -134,18 +110,7 @@ void NullPtyDeviceImpl::WriteAt(WriteAtRequestView request, WriteAtCompleter::Sy
   ZX_ASSERT(false);
 }
 
-void NullPtyDeviceImpl::SeekDeprecated(SeekDeprecatedRequestView request,
-                                       SeekDeprecatedCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
-
 void NullPtyDeviceImpl::Seek(SeekRequestView request, SeekCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
-
-void NullPtyDeviceImpl::TruncateDeprecatedUseResize(
-    TruncateDeprecatedUseResizeRequestView request,
-    TruncateDeprecatedUseResizeCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
@@ -153,19 +118,8 @@ void NullPtyDeviceImpl::Resize(ResizeRequestView request, ResizeCompleter::Sync&
   ZX_ASSERT(false);
 }
 
-void NullPtyDeviceImpl::GetBufferDeprecatedUseGetBackingMemory(
-    GetBufferDeprecatedUseGetBackingMemoryRequestView request,
-    GetBufferDeprecatedUseGetBackingMemoryCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
-
 void NullPtyDeviceImpl::GetBackingMemory(GetBackingMemoryRequestView request,
                                          GetBackingMemoryCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
-
-void NullPtyDeviceImpl::SyncDeprecated(SyncDeprecatedRequestView request,
-                                       SyncDeprecatedCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 

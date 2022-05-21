@@ -268,22 +268,6 @@ impl FailingWriteFileStreamHandler {
         self.writes_should_fail.load(std::sync::atomic::Ordering::SeqCst)
     }
 
-    async fn handle_write_deprecated(
-        self: &Arc<Self>,
-        data: Vec<u8>,
-        responder: fio::FileWriteDeprecatedResponder,
-    ) {
-        if self.writes_should_fail() {
-            self.write_fail_count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-            responder.send(Status::NO_MEMORY.into_raw(), 0u64).expect("send on write");
-            return;
-        }
-
-        // Don't fail, actually do the write.
-        let (status, bytes_written) = self.backing_file.write_deprecated(&data).await.unwrap();
-        responder.send(status, bytes_written).unwrap();
-    }
-
     async fn handle_write(self: &Arc<Self>, data: Vec<u8>, responder: fio::FileWriteResponder) {
         if self.writes_should_fail() {
             self.write_fail_count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
@@ -327,9 +311,6 @@ impl FailingWriteFileStreamHandler {
 
             while let Some(req) = stream.next().await {
                 match req.unwrap() {
-                    fio::FileRequest::WriteDeprecated { data, responder } => {
-                        self.handle_write_deprecated(data, responder).await
-                    }
                     fio::FileRequest::Write { data, responder } => {
                         self.handle_write(data, responder).await
                     }
@@ -337,19 +318,9 @@ impl FailingWriteFileStreamHandler {
                         let (status, mut attrs) = self.backing_file.get_attr().await.unwrap();
                         responder.send(status, &mut attrs).unwrap();
                     }
-                    fio::FileRequest::ReadDeprecated { count, responder } => {
-                        let (status, data) =
-                            self.backing_file.read_deprecated(count).await.unwrap();
-                        responder.send(status, &data).unwrap();
-                    }
                     fio::FileRequest::Read { count, responder } => {
                         let mut result = self.backing_file.read(count).await.unwrap();
                         responder.send(&mut result).unwrap();
-                    }
-                    fio::FileRequest::CloseDeprecated { responder } => {
-                        let backing_file_close_response =
-                            self.backing_file.close_deprecated().await.unwrap();
-                        responder.send(backing_file_close_response).unwrap();
                     }
                     fio::FileRequest::Close { responder } => {
                         let mut backing_file_close_response =
@@ -433,10 +404,6 @@ impl OpenRequestHandler for RenameFailOrTempFs {
                     fio::DirectoryRequest::GetAttr { responder } => {
                         let (status, mut attrs) = tempdir_proxy.get_attr().await.unwrap();
                         responder.send(status, &mut attrs).unwrap();
-                    }
-                    fio::DirectoryRequest::CloseDeprecated { responder } => {
-                        let status = tempdir_proxy.close_deprecated().await.unwrap();
-                        responder.send(status).unwrap();
                     }
                     fio::DirectoryRequest::Close { responder } => {
                         let mut result = tempdir_proxy.close().await.unwrap();

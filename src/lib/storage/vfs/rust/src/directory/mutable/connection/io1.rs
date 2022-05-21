@@ -176,11 +176,6 @@ impl MutableConnection {
                 };
                 responder.send(status.into_raw())?;
             }
-            fio::DirectoryRequest::SyncDeprecated { responder } => {
-                responder.send(
-                    self.base.directory.sync().await.err().unwrap_or(zx::Status::OK).into_raw(),
-                )?;
-            }
             fio::DirectoryRequest::Sync { responder } => {
                 responder
                     .send(&mut self.base.directory.sync().await.map_err(zx::Status::into_raw))?;
@@ -197,7 +192,6 @@ impl MutableConnection {
             | fio::DirectoryRequest::AdvisoryLock { .. }
             | fio::DirectoryRequest::Clone { .. }
             | fio::DirectoryRequest::Close { .. }
-            | fio::DirectoryRequest::CloseDeprecated { .. }
             | fio::DirectoryRequest::Describe { .. }
             | fio::DirectoryRequest::Describe2 { .. }
             | fio::DirectoryRequest::Enumerate { .. }

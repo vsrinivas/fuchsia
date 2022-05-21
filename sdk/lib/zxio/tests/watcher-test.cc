@@ -30,12 +30,6 @@ class Server final : public fidl::testing::WireTestBase<fuchsia_io::Directory> {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void CloseDeprecated(CloseDeprecatedRequestView request,
-                       CloseDeprecatedCompleter::Sync& completer) override {
-    completer.Reply(ZX_OK);
-    completer.Close(ZX_OK);
-  }
-
   void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
     completer.ReplySuccess();
     completer.Close(ZX_OK);
