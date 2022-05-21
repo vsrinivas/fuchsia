@@ -170,6 +170,7 @@ executable("inspect_unittest_exe") {
     "//src/developer/forensics/testing:unit_test_fixture",
     "//src/developer/forensics/testing/stubs:diagnostics",
     "//src/developer/forensics/utils:errors",
+    "//src/lib/timekeeper:testing",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]

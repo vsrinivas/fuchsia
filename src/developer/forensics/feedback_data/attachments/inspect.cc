@@ -27,7 +27,7 @@
 namespace forensics::feedback_data {
 
 Inspect::Inspect(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-                 std::unique_ptr<backoff::Backoff> backoff, std::optional<size_t> data_budget)
+                 std::unique_ptr<backoff::Backoff> backoff, InspectDataBudget* data_budget)
     : dispatcher_(dispatcher),
       services_(std::move(services)),
       backoff_(std::move(backoff)),
@@ -163,9 +163,9 @@ void InspectCollector::Run() {
       .set_client_selector_configuration(
           fuchsia::diagnostics::ClientSelectorConfiguration::WithSelectAll(true));
 
-  if (data_budget_.has_value()) {
+  if (const auto budget = data_budget_->SizeInBytes(); budget.has_value()) {
     fuchsia::diagnostics::PerformanceConfiguration performance;
-    performance.set_max_aggregate_content_size_bytes(*data_budget_);
+    performance.set_max_aggregate_content_size_bytes(*budget);
     params.set_performance_configuration(std::move(performance));
   }
 

@@ -46,7 +46,7 @@ AttachmentManager::AttachmentManager(async_dispatcher_t* dispatcher,
       system_log_(dispatcher, services, clock, redactor, kActiveLoggingPeriod),
       inspect_(dispatcher, services,
                std::make_unique<backoff::ExponentialBackoff>(zx::min(1), 2u, zx::hour(1)),
-               inspect_data_budget->SizeInBytes()),
+               inspect_data_budget),
 
       providers_({
           {kAttachmentLogKernel, &kernel_log_},

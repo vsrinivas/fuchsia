@@ -40,6 +40,7 @@ source_set("inspect") {
     "//sdk/lib/fit",
     "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/inspect/cpp",
     "//src/lib/backoff",
     "//src/lib/fxl",
     "//zircon/system/ulib/async",
@@ -49,6 +50,7 @@ source_set("inspect") {
   deps = [
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/feedback_data:constants",
+    "//src/developer/forensics/feedback_data:inspect_budget",
     "//src/developer/forensics/utils:errors",
     "//src/lib/fsl",
   ]

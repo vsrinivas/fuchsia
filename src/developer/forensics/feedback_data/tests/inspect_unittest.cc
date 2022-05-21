@@ -23,7 +23,9 @@
 #include "src/developer/forensics/testing/stubs/diagnostics_archive.h"
 #include "src/developer/forensics/testing/stubs/diagnostics_batch_iterator.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
+#include "src/developer/forensics/utils/cobalt/logger.h"
 #include "src/developer/forensics/utils/errors.h"
+#include "src/lib/timekeeper/async_test_clock.h"
 
 namespace forensics::feedback_data {
 namespace {
@@ -41,7 +43,13 @@ class MonotonicBackoff : public backoff::Backoff {
 
 class InspectTest : public UnitTestFixture {
  public:
-  InspectTest() : executor_(dispatcher()) {}
+  InspectTest()
+      : executor_(dispatcher()),
+        clock_(dispatcher()),
+        cobalt_(dispatcher(), services(), &clock_),
+        inspect_node_manager_(&InspectRoot()),
+        inspect_data_budget_(
+            std::make_unique<InspectDataBudget>(true, &inspect_node_manager_, &cobalt_)) {}
 
  protected:
   void SetUpInspectServer(std::unique_ptr<stubs::DiagnosticsArchiveBase> server) {
@@ -49,6 +57,11 @@ class InspectTest : public UnitTestFixture {
     if (inspect_server_) {
       InjectServiceProvider(inspect_server_.get(), kArchiveAccessorName);
     }
+  }
+
+  void DisableDataBudget() {
+    inspect_data_budget_ =
+        std::make_unique<InspectDataBudget>(false, &inspect_node_manager_, &cobalt_);
   }
 
   AttachmentValue Run(::fpromise::promise<AttachmentValue> promise,
@@ -67,8 +80,14 @@ class InspectTest : public UnitTestFixture {
     return attachment;
   }
 
+  InspectDataBudget* DataBudget() { return inspect_data_budget_.get(); }
+
  private:
   async::Executor executor_;
+  timekeeper::AsyncTestClock clock_;
+  cobalt::Logger cobalt_;
+  InspectNodeManager inspect_node_manager_;
+  std::unique_ptr<InspectDataBudget> inspect_data_budget_;
   std::unique_ptr<stubs::DiagnosticsArchiveBase> inspect_server_;
 };
 
@@ -76,8 +95,8 @@ TEST_F(InspectTest, DataBudget) {
   fuchsia::diagnostics::StreamParameters parameters;
   SetUpInspectServer(std::make_unique<stubs::DiagnosticsArchiveCaptureParameters>(&parameters));
 
-  const size_t kBudget = 1024u;
-  Inspect inspect(dispatcher(), services(), MonotonicBackoff::Make(), kBudget);
+  const size_t kBudget = DataBudget()->SizeInBytes().value();
+  Inspect inspect(dispatcher(), services(), MonotonicBackoff::Make(), DataBudget());
 
   inspect.Get(zx::duration::infinite());
   RunLoopUntilIdle();
@@ -92,7 +111,8 @@ TEST_F(InspectTest, NoDataBudget) {
   fuchsia::diagnostics::StreamParameters parameters;
   SetUpInspectServer(std::make_unique<stubs::DiagnosticsArchiveCaptureParameters>(&parameters));
 
-  Inspect inspect(dispatcher(), services(), MonotonicBackoff::Make());
+  DisableDataBudget();
+  Inspect inspect(dispatcher(), services(), MonotonicBackoff::Make(), DataBudget());
 
   inspect.Get(zx::duration::infinite());
   RunLoopUntilIdle();
@@ -108,7 +128,7 @@ TEST_F(InspectTest, Get) {
           {},
       }))));
 
-  Inspect inspect(dispatcher(), services(), MonotonicBackoff::Make());
+  Inspect inspect(dispatcher(), services(), MonotonicBackoff::Make(), DataBudget());
   const auto attachment = Run(inspect.Get(zx::duration::infinite()));
 
   EXPECT_FALSE(attachment.HasError());
@@ -126,7 +146,7 @@ TEST_F(InspectTest, GetTimeout) {
       std::make_unique<stubs::DiagnosticsBatchIteratorNeverRespondsAfterOneBatch>(
           std::vector<std::string>({"foo1", "foo2"}))));
 
-  Inspect inspect(dispatcher(), services(), MonotonicBackoff::Make());
+  Inspect inspect(dispatcher(), services(), MonotonicBackoff::Make(), DataBudget());
   const auto attachment = Run(inspect.Get(zx::sec(10)), zx::sec(10));
 
   ASSERT_TRUE(attachment.HasError());
@@ -142,7 +162,7 @@ foo2
 TEST_F(InspectTest, GetConnectionError) {
   SetUpInspectServer(std::make_unique<stubs::DiagnosticsArchiveClosesIteratorConnection>());
 
-  Inspect inspect(dispatcher(), services(), MonotonicBackoff::Make());
+  Inspect inspect(dispatcher(), services(), MonotonicBackoff::Make(), DataBudget());
   const auto attachment = Run(inspect.Get(zx::duration::infinite()));
 
   ASSERT_TRUE(attachment.HasError());
@@ -155,7 +175,7 @@ TEST_F(InspectTest, GetIteratorReturnsError) {
   SetUpInspectServer(std::make_unique<stubs::DiagnosticsArchive>(
       std::make_unique<stubs::DiagnosticsBatchIteratorReturnsError>()));
 
-  Inspect inspect(dispatcher(), services(), MonotonicBackoff::Make());
+  Inspect inspect(dispatcher(), services(), MonotonicBackoff::Make(), DataBudget());
   const auto attachment = Run(inspect.Get(zx::duration::infinite()));
 
   ASSERT_TRUE(attachment.HasError());
@@ -170,7 +190,7 @@ TEST_F(InspectTest, Reconnects) {
 
   InjectServiceProvider(archive.get(), kArchiveAccessorName);
 
-  Inspect inspect(dispatcher(), services(), MonotonicBackoff::Make());
+  Inspect inspect(dispatcher(), services(), MonotonicBackoff::Make(), DataBudget());
   RunLoopUntilIdle();
 
   EXPECT_TRUE(archive->IsBound());
