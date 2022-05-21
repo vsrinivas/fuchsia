@@ -95,9 +95,10 @@ def main():
 
 # To deduplicate lints, use the message, code, and all top level spans
 def fingerprint_diagnostic(lint):
+    code = lint.get("code")
     return (
         lint["message"],
-        lint["code"]["code"] if "code" in lint else None,
+        code.get("code") if code else None,
         frozenset(
             (x["file_name"], x["byte_start"], x["byte_end"]) for x in lint["spans"]
         ),
