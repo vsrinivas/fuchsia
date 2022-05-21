@@ -51,6 +51,8 @@ test("aml-spi-test-bin") {
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp_mock",
     "//src/devices/bus/testing/fake-pdev",
     "//src/devices/registers/testing/mock-registers",
+    "//src/devices/testing/fake-bti",
+    "//src/devices/testing/fake-mmio-reg",
     "//src/devices/testing/fake_ddk",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/zxtest",

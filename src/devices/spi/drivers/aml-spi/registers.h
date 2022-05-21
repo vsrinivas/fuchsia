@@ -76,12 +76,16 @@ class DmaReg : public hwreg::RegisterBase<DmaReg, uint32_t, hwreg::EnablePrinter
 
 class StatReg : public hwreg::RegisterBase<StatReg, uint32_t, hwreg::EnablePrinter> {
  public:
-  DEF_BIT(7, tc);
-  DEF_BIT(5, rf);
-  DEF_BIT(3, rr);
-  DEF_BIT(2, tf);
-  DEF_BIT(0, te);
+  DEF_BIT(7, tc);  // Transfer complete (RW, W1C)
+  DEF_BIT(6, ro);  // RX FIFO overflow (RO)
+  DEF_BIT(5, rf);  // RX FIFO full (RO)
+  DEF_BIT(4, rh);  // RX FIFO half full (RO)
+  DEF_BIT(3, rr);  // RX FIFO ready (RO)
+  DEF_BIT(2, tf);  // TX FIFO full (RO)
+  DEF_BIT(1, th);  // TX FIFO half full (RO)
+  DEF_BIT(0, te);  // TX FIFO empty (RO)
 
+  bool rx_fifo_empty() const { return !rh() && !rr() && !rf(); }
   static auto Get() { return hwreg::RegisterAddr<StatReg>(AML_SPI_STATREG); }
 };
 

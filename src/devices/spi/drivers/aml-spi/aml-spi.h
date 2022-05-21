@@ -5,6 +5,8 @@
 #include <fidl/fuchsia.hardware.registers/cpp/wire.h>
 #include <fuchsia/hardware/gpio/cpp/banjo.h>
 #include <fuchsia/hardware/spiimpl/cpp/banjo.h>
+#include <lib/fzl/pinned-vmo.h>
+#include <lib/fzl/vmo-mapper.h>
 #include <lib/mmio/mmio.h>
 #include <lib/stdcompat/span.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -68,10 +70,20 @@ class AmlSpi : public DeviceType, public ddk::SpiImplProtocol<AmlSpi, ddk::base_
     std::optional<SpiVmoStore> registered_vmos;
   };
 
+  // DmaBuffer holds a contiguous VMO that is both pinned and mapped.
+  struct DmaBuffer {
+    static zx_status_t Create(const zx::bti& bti, size_t size, DmaBuffer* out_dma_buffer);
+
+    zx::vmo vmo;
+    fzl::PinnedVmo pinned;
+    fzl::VmoMapper mapped;
+  };
+
   AmlSpi(zx_device_t* device, fdf::MmioBuffer mmio,
          fidl::WireSyncClient<fuchsia_hardware_registers::Device> reset, uint32_t reset_mask,
          fbl::Array<ChipInfo> chips, zx::profile thread_profile, zx::interrupt interrupt,
-         const amlogic_spi::amlspi_config_t& config)
+         const amlogic_spi::amlspi_config_t& config, zx::bti bti, DmaBuffer tx_buffer,
+         DmaBuffer rx_buffer)
       : DeviceType(device),
         mmio_(std::move(mmio)),
         reset_(std::move(reset)),
@@ -79,7 +91,10 @@ class AmlSpi : public DeviceType, public ddk::SpiImplProtocol<AmlSpi, ddk::base_
         chips_(std::move(chips)),
         thread_profile_(std::move(thread_profile)),
         interrupt_(std::move(interrupt)),
-        config_(config) {}
+        config_(config),
+        bti_(std::move(bti)),
+        tx_buffer_(std::move(tx_buffer)),
+        rx_buffer_(std::move(rx_buffer)) {}
 
   static fbl::Array<ChipInfo> InitChips(amlogic_spi::amlspi_config_t* config, zx_device_t* device);
   void DumpState() TA_REQ(bus_lock_);
@@ -90,6 +105,7 @@ class AmlSpi : public DeviceType, public ddk::SpiImplProtocol<AmlSpi, ddk::base_
   void SetThreadProfile();
 
   void WaitForTransferComplete() TA_REQ(bus_lock_);
+  void WaitForDmaTransferComplete() TA_REQ(bus_lock_);
 
   void InitRegisters() TA_REQ(bus_lock_);
 
@@ -99,6 +115,13 @@ class AmlSpi : public DeviceType, public ddk::SpiImplProtocol<AmlSpi, ddk::base_
   zx::status<cpp20::span<uint8_t>> GetVmoSpan(uint32_t chip_select, uint32_t vmo_id,
                                               uint64_t offset, uint64_t size, uint32_t right)
       TA_REQ(vmo_lock_);
+
+  zx_status_t ExchangeDma(const uint8_t* txdata, uint8_t* out_rxdata, uint64_t size)
+      TA_REQ(bus_lock_);
+
+  size_t DoDmaTransfer(size_t words_remaining) TA_REQ(bus_lock_);
+
+  bool UseDma(size_t size) const TA_REQ(bus_lock_);
 
   // Shims to support thread annotations on ChipInfo members.
   const ddk::GpioProtocolClient& gpio(uint32_t chip_select) TA_REQ(bus_lock_) {
@@ -117,10 +140,13 @@ class AmlSpi : public DeviceType, public ddk::SpiImplProtocol<AmlSpi, ddk::base_
   zx::profile thread_profile_;
   zx::interrupt interrupt_;
   const amlogic_spi::amlspi_config_t config_;
-  // Protects mmio_ and need_reset_.
+  // Protects mmio_, need_reset_, and the DMA buffers.
   fbl::Mutex bus_lock_;
   // Protects registered_vmos members of chips_.
   fbl::Mutex vmo_lock_;
+  zx::bti bti_;
+  DmaBuffer tx_buffer_ TA_GUARDED(bus_lock_);
+  DmaBuffer rx_buffer_ TA_GUARDED(bus_lock_);
 };
 
 }  // namespace spi

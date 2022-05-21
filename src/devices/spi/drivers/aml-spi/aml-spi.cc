@@ -22,6 +22,7 @@
 
 #include <memory>
 
+#include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 
@@ -30,8 +31,13 @@
 
 namespace spi {
 
-constexpr size_t kBurstMaxBytes = 16;
-constexpr size_t kBurstMaxDoubleWords = 16;
+constexpr size_t kNelsonRadarBurstSize = 23224;
+
+// The TX and RX buffer size to allocate for DMA (only if a BTI is provided). This value is set to
+// support the Selina driver on Nelson.
+constexpr size_t kDmaBufferSize = fbl::round_up<size_t, size_t>(kNelsonRadarBurstSize, PAGE_SIZE);
+
+constexpr size_t kFifoSizeWords = 16;
 
 constexpr size_t kReset6RegisterOffset = 0x1c;
 constexpr uint32_t kSpi0ResetMask = 1 << 1;
@@ -89,7 +95,7 @@ void AmlSpi::Exchange8(const uint8_t* txdata, uint8_t* out_rxdata, size_t size) 
 
   while (size > 0) {
     // Burst size in words (with one byte per word).
-    const uint32_t burst_size = std::min(kBurstMaxBytes, size);
+    const uint32_t burst_size = std::min(kFifoSizeWords, size);
 
     // fill fifo
     if (txdata) {
@@ -109,16 +115,20 @@ void AmlSpi::Exchange8(const uint8_t* txdata, uint8_t* out_rxdata, size_t size) 
 
     WaitForTransferComplete();
 
-    // read
+    // The RX FIFO may not be full immediately after receiving the transfer complete interrupt.
+    // Poll until the FIFO has at least one word that can be read.
+    for (uint32_t i = 0; i < burst_size; i++) {
+      while (StatReg::Get().ReadFrom(&mmio_).rx_fifo_empty()) {
+      }
+
+      const uint8_t data = mmio_.Read32(AML_SPI_RXDATA) & 0xff;
+      if (out_rxdata) {
+        out_rxdata[i] = data;
+      }
+    }
+
     if (out_rxdata) {
-      for (uint32_t i = 0; i < burst_size; i++) {
-        out_rxdata[i] = static_cast<uint8_t>(mmio_.Read32(AML_SPI_RXDATA));
-      }
       out_rxdata += burst_size;
-    } else {
-      for (uint32_t i = 0; i < burst_size; i++) {
-        mmio_.Read32(AML_SPI_RXDATA);
-      }
     }
 
     size -= burst_size;
@@ -127,7 +137,7 @@ void AmlSpi::Exchange8(const uint8_t* txdata, uint8_t* out_rxdata, size_t size) 
 
 void AmlSpi::Exchange64(const uint8_t* txdata, uint8_t* out_rxdata, size_t size) {
   constexpr size_t kBytesPerWord = sizeof(uint64_t);
-  constexpr size_t kMaxBytesPerBurst = kBytesPerWord * kBurstMaxDoubleWords;
+  constexpr size_t kMaxBytesPerBurst = kBytesPerWord * kFifoSizeWords;
 
   auto conreg = ConReg::Get()
                     .ReadFrom(&mmio_)
@@ -163,20 +173,22 @@ void AmlSpi::Exchange64(const uint8_t* txdata, uint8_t* out_rxdata, size_t size)
 
     WaitForTransferComplete();
 
+    // Same as Exchange8 -- poll until the FIFO has a word that can be read.
+    for (uint32_t i = 0; i < burst_size_words; i++) {
+      while (StatReg::Get().ReadFrom(&mmio_).rx_fifo_empty()) {
+      }
+
+      uint64_t value = mmio_.Read32(AML_SPI_RXDATA);
+      value = (value << 32) | mmio_.Read32(AML_SPI_RXDATA);
+      value = be64toh(value);
+
+      if (out_rxdata) {
+        memcpy(reinterpret_cast<uint64_t*>(out_rxdata) + i, &value, sizeof(value));
+      }
+    }
+
     if (out_rxdata) {
-      uint64_t* const rx = reinterpret_cast<uint64_t*>(out_rxdata);
-      for (uint32_t i = 0; i < burst_size_words; i++) {
-        uint64_t value = mmio_.Read32(AML_SPI_RXDATA);
-        value = (value << 32) | mmio_.Read32(AML_SPI_RXDATA);
-        value = be64toh(value);
-        memcpy(&rx[i], &value, sizeof(value));
-      }
       out_rxdata += burst_size_words * kBytesPerWord;
-    } else {
-      for (uint32_t i = 0; i < burst_size_words; i++) {
-        mmio_.Read32(AML_SPI_RXDATA);
-        mmio_.Read32(AML_SPI_RXDATA);
-      }
     }
 
     size -= burst_size_words * kBytesPerWord;
@@ -212,6 +224,22 @@ void AmlSpi::WaitForTransferComplete() {
   }
 
   statreg.WriteTo(&mmio_);
+}
+
+void AmlSpi::WaitForDmaTransferComplete() {
+  auto statreg = StatReg::Get().FromValue(0);
+  while (!statreg.te()) {
+    interrupt_.wait(nullptr);
+    // Clear the transfer complete bit (all others are read-only).
+    statreg.set_reg_value(0).set_tc(1).WriteTo(&mmio_).ReadFrom(&mmio_);
+  }
+
+  // Wait for the enable bit in DMAREG to be cleared. The TX FIFO empty interrupt apparently
+  // indicates this, however in some cases enable is still set after receiving it. Returning
+  // without waiting for enable to be cleared leads to data loss, so just poll after the interrupt
+  // to make sure.
+  while (DmaReg::Get().ReadFrom(&mmio_).enable()) {
+  }
 }
 
 void AmlSpi::InitRegisters() {
@@ -263,12 +291,17 @@ zx_status_t AmlSpi::SpiImplExchange(uint32_t cs, const uint8_t* txdata, size_t t
 
   const size_t exchange_size = txdata_size ? txdata_size : rxdata_size;
 
+  const bool use_dma = UseDma(exchange_size);
+
   // There seems to be a hardware issue where transferring an odd number of bytes corrupts the TX
   // FIFO, but only for subsequent transfers that use 64-bit words. Resetting the IP avoids the
-  // problem.
-  if (need_reset_ && reset_ && exchange_size >= sizeof(uint64_t)) {
-    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
-    (void)reset_->WriteRegister32(kReset6RegisterOffset, reset_mask_, reset_mask_);
+  // problem. DMA transfers do not seem to be affected.
+  if (need_reset_ && reset_ && !use_dma && exchange_size >= sizeof(uint64_t)) {
+    auto result = reset_->WriteRegister32(kReset6RegisterOffset, reset_mask_, reset_mask_);
+    if (!result.ok() || result->result.is_err()) {
+      zxlogf(WARNING, "Failed to reset SPI controller");
+    }
+
     InitRegisters();  // The registers must be reinitialized after resetting the IP.
     need_reset_ = false;
   } else {
@@ -291,8 +324,12 @@ zx_status_t AmlSpi::SpiImplExchange(uint32_t cs, const uint8_t* txdata, size_t t
     gpio(cs).Write(0);
   }
 
-  // Only use 64-bit words if we will be able to reset the controller.
-  if (reset_) {
+  zx_status_t status = ZX_OK;
+
+  if (use_dma) {
+    status = ExchangeDma(txdata, out_rxdata, exchange_size);
+  } else if (reset_) {
+    // Only use 64-bit words if we will be able to reset the controller.
     Exchange64(txdata, out_rxdata, exchange_size);
   } else {
     Exchange8(txdata, out_rxdata, exchange_size);
@@ -312,7 +349,7 @@ zx_status_t AmlSpi::SpiImplExchange(uint32_t cs, const uint8_t* txdata, size_t t
     need_reset_ = true;
   }
 
-  return ZX_OK;
+  return status;
 }
 
 zx_status_t AmlSpi::SpiImplRegisterVmo(uint32_t chip_select, uint32_t vmo_id, zx::vmo vmo,
@@ -429,15 +466,136 @@ zx_status_t AmlSpi::SpiImplExchangeVmo(uint32_t chip_select, uint32_t tx_vmo_id,
   return SpiImplExchange(chip_select, tx_buffer->data(), size, rx_buffer->data(), size, nullptr);
 }
 
-fbl::Array<AmlSpi::ChipInfo> AmlSpi::InitChips(amlogic_spi::amlspi_config_t* map,
+zx_status_t AmlSpi::ExchangeDma(const uint8_t* txdata, uint8_t* out_rxdata, uint64_t size) {
+  constexpr size_t kBytesPerWord = sizeof(uint64_t);
+
+  if (txdata) {
+    // Copy the TX data into the pinned VMO and reverse the endianness.
+    auto* tx_vmo = static_cast<uint64_t*>(tx_buffer_.mapped.start());
+    for (size_t offset = 0; offset < size; offset += kBytesPerWord) {
+      uint64_t tmp;
+      memcpy(&tmp, &txdata[offset], sizeof(tmp));
+      *tx_vmo++ = be64toh(tmp);
+    }
+  } else {
+    memset(tx_buffer_.mapped.start(), 0xff, size);
+  }
+
+  zx_status_t status = tx_buffer_.vmo.op_range(ZX_VMO_OP_CACHE_CLEAN, 0, size, nullptr, 0);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to clean cache: %s", zx_status_get_string(status));
+    return status;
+  }
+
+  if (out_rxdata) {
+    status = rx_buffer_.vmo.op_range(ZX_VMO_OP_CACHE_CLEAN, 0, size, nullptr, 0);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "Failed to clean cache: %s", zx_status_get_string(status));
+      return status;
+    }
+  }
+
+  ConReg::Get().ReadFrom(&mmio_).set_bits_per_word((kBytesPerWord * CHAR_BIT) - 1).WriteTo(&mmio_);
+
+  const fzl::PinnedVmo::Region tx_region = tx_buffer_.pinned.region(0);
+  const fzl::PinnedVmo::Region rx_region = rx_buffer_.pinned.region(0);
+
+  mmio_.Write32(tx_region.phys_addr, AML_SPI_DRADDR);
+  mmio_.Write32(rx_region.phys_addr, AML_SPI_DWADDR);
+  mmio_.Write32(0, AML_SPI_PERIODREG);
+
+  DmaReg::Get().FromValue(0).WriteTo(&mmio_);
+
+  // The SPI controller issues requests to DDR to fill the TX FIFO/drain the RX FIFO. The reference
+  // driver uses requests up to the FIFO size (16 words) when that many words are remaining, or 2-8
+  // word requests otherwise. 16-word requests didn't seem to work in testing, and only 8-word
+  // requests are used by default here for simplicity.
+  for (size_t words_remaining = size / kBytesPerWord; words_remaining > 0;) {
+    const size_t transfer_size = DoDmaTransfer(words_remaining);
+
+    // Enable the TX FIFO empty interrupt and set the start mode control bit on the first run
+    // through the loop.
+    if (words_remaining == (size / kBytesPerWord)) {
+      IntReg::Get().FromValue(0).set_teen(1).WriteTo(&mmio_);
+      ConReg::Get().ReadFrom(&mmio_).set_smc(1).WriteTo(&mmio_);
+    }
+
+    WaitForDmaTransferComplete();
+
+    words_remaining -= transfer_size;
+  }
+
+  DmaReg::Get().ReadFrom(&mmio_).set_enable(0).WriteTo(&mmio_);
+  IntReg::Get().FromValue(0).WriteTo(&mmio_);
+  LdCntl0::Get().FromValue(0).WriteTo(&mmio_);
+  ConReg::Get().ReadFrom(&mmio_).set_smc(0).WriteTo(&mmio_);
+
+  if (out_rxdata) {
+    status = rx_buffer_.vmo.op_range(ZX_VMO_OP_CACHE_CLEAN_INVALIDATE, 0, size, nullptr, 0);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "Failed to invalidate cache: %s", zx_status_get_string(status));
+      return status;
+    }
+
+    const auto* rx_vmo = static_cast<uint64_t*>(rx_buffer_.mapped.start());
+    for (size_t offset = 0; offset < size; offset += kBytesPerWord) {
+      uint64_t tmp = htobe64(*rx_vmo++);
+      memcpy(&out_rxdata[offset], &tmp, sizeof(tmp));
+    }
+  }
+
+  return ZX_OK;
+}
+
+size_t AmlSpi::DoDmaTransfer(size_t words_remaining) {
+  // These are the limits used by the reference driver, although request sizes up to the FIFO size
+  // should work, and the read/write counters are 16 bits wide.
+  constexpr size_t kDefaultRequestSizeWords = 8;
+  constexpr size_t kMaxRequestCount = 0xfff;
+
+  // TODO(fxbug.dev/100830): It may be possible to complete the transfer in fewer iterations by
+  // using request sizes 2-7 instead of 8, like the reference driver does.
+  const size_t request_size =
+      words_remaining < kFifoSizeWords ? words_remaining : kDefaultRequestSizeWords;
+  const size_t request_count = std::min(words_remaining / request_size, kMaxRequestCount);
+
+  LdCntl0::Get().FromValue(0).set_read_counter_enable(1).set_write_counter_enable(1).WriteTo(
+      &mmio_);
+  LdCntl1::Get()
+      .FromValue(0)
+      .set_dma_read_counter(request_count)
+      .set_dma_write_counter(request_count)
+      .WriteTo(&mmio_);
+
+  DmaReg::Get()
+      .FromValue(0)
+      .set_enable(1)
+      // No explanation for these -- see the reference driver.
+      .set_urgent(1)
+      .set_txfifo_threshold(kFifoSizeWords + 1 - request_size)
+      .set_read_request_burst_size(request_size - 1)
+      .set_rxfifo_threshold(request_size - 1)
+      .set_write_request_burst_size(request_size - 1)
+      .WriteTo(&mmio_);
+
+  return request_size * request_count;
+}
+
+bool AmlSpi::UseDma(size_t size) const {
+  // TODO(fxbug.dev/100830): Support DMA transfers greater than the pre-allocated buffer size.
+  return interrupt_.is_valid() && size % sizeof(uint64_t) == 0 &&
+         size <= tx_buffer_.mapped.size() && size <= rx_buffer_.mapped.size();
+}
+
+fbl::Array<AmlSpi::ChipInfo> AmlSpi::InitChips(amlogic_spi::amlspi_config_t* config,
                                                zx_device_t* device) {
-  fbl::Array<ChipInfo> chips(new ChipInfo[map->cs_count], map->cs_count);
+  fbl::Array<ChipInfo> chips(new ChipInfo[config->cs_count], config->cs_count);
   if (!chips) {
     return chips;
   }
 
-  for (uint32_t i = 0; i < map->cs_count; i++) {
-    uint32_t index = map->cs[i];
+  for (uint32_t i = 0; i < config->cs_count; i++) {
+    uint32_t index = config->cs[i];
     if (index == amlogic_spi::amlspi_config_t::kCsClientManaged) {
       continue;
     }
@@ -461,16 +619,9 @@ zx_status_t AmlSpi::Create(void* ctx, zx_device_t* device) {
     return ZX_ERR_NO_RESOURCES;
   }
 
-  pdev_device_info_t info;
-  zx_status_t status = pdev.GetDeviceInfo(&info);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to get device info: %d", status);
-    return status;
-  }
-
   size_t actual;
   amlogic_spi::amlspi_config_t config = {};
-  status =
+  zx_status_t status =
       device_get_metadata(device, DEVICE_METADATA_AMLSPI_CONFIG, &config, sizeof config, &actual);
   if ((status != ZX_OK) || (actual != sizeof config)) {
     zxlogf(ERROR, "Failed to read config metadata");
@@ -510,6 +661,20 @@ zx_status_t AmlSpi::Create(void* ctx, zx_device_t* device) {
   zx::interrupt interrupt;
   pdev.GetInterrupt(0, &interrupt);  // Supplying an interrupt is optional.
 
+  zx::bti bti;
+  status = pdev.GetBti(0, &bti);  // Supplying a BTI is optional.
+
+  DmaBuffer tx_buffer, rx_buffer;
+  if (status == ZX_OK) {
+    if ((status = DmaBuffer::Create(bti, kDmaBufferSize, &tx_buffer)) != ZX_OK) {
+      return status;
+    }
+    if ((status = DmaBuffer::Create(bti, kDmaBufferSize, &rx_buffer)) != ZX_OK) {
+      return status;
+    }
+    zxlogf(DEBUG, "Got BTI and contiguous buffers, DMA may be used");
+  }
+
   fbl::Array<ChipInfo> chips = InitChips(&config, device);
   if (!chips) {
     return ZX_ERR_NO_RESOURCES;
@@ -534,7 +699,8 @@ zx_status_t AmlSpi::Create(void* ctx, zx_device_t* device) {
   fbl::AllocChecker ac;
   std::unique_ptr<AmlSpi> spi(
       new (&ac) AmlSpi(device, *std::move(mmio), std::move(reset_fidl_client), reset_mask,
-                       std::move(chips), std::move(thread_profile), std::move(interrupt), config));
+                       std::move(chips), std::move(thread_profile), std::move(interrupt), config,
+                       std::move(bti), std::move(tx_buffer), std::move(rx_buffer)));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -560,6 +726,33 @@ zx_status_t AmlSpi::Create(void* ctx, zx_device_t* device) {
   }
 
   __UNUSED auto* _ = spi.release();
+
+  return ZX_OK;
+}
+
+zx_status_t AmlSpi::DmaBuffer::Create(const zx::bti& bti, size_t size, DmaBuffer* out_dma_buffer) {
+  zx_status_t status;
+  if ((status = zx::vmo::create_contiguous(bti, size, 0, &out_dma_buffer->vmo)) != ZX_OK) {
+    zxlogf(ERROR, "Failed to create DMA VMO: %s", zx_status_get_string(status));
+    return status;
+  }
+
+  status = out_dma_buffer->pinned.Pin(out_dma_buffer->vmo, bti,
+                                      ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE | ZX_BTI_CONTIGUOUS);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to pin DMA VMO: %s", zx_status_get_string(status));
+    return status;
+  }
+  if (out_dma_buffer->pinned.region_count() != 1) {
+    zxlogf(ERROR, "Invalid region count for contiguous VMO: %u",
+           out_dma_buffer->pinned.region_count());
+    return status;
+  }
+
+  if ((status = out_dma_buffer->mapped.Map(out_dma_buffer->vmo)) != ZX_OK) {
+    zxlogf(ERROR, "Failed to map DMA VMO: %s", zx_status_get_string(status));
+    return status;
+  }
 
   return ZX_OK;
 }

@@ -4,10 +4,12 @@
 
 #include "aml-spi.h"
 
+#include <endian.h>
 #include <fuchsia/hardware/gpio/cpp/banjo-mock.h>
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/ddk/metadata.h>
+#include <lib/fake-bti/bti.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/clock.h>
@@ -16,6 +18,7 @@
 #include <memory>
 #include <vector>
 
+#include <fake-mmio-reg/fake-mmio-reg.h>
 #include <zxtest/zxtest.h>
 
 #include "registers.h"
@@ -34,7 +37,10 @@ class FakeDdkSpi : public fake_ddk::Bind {
   static FakeDdkSpi* instance() { return static_cast<FakeDdkSpi*>(instance_); }
 
   explicit FakeDdkSpi(bool add_reset_fragment = true)
-      : loop_(&kAsyncLoopConfigNeverAttachToThread), registers_(loop_.dispatcher()) {
+      : loop_(&kAsyncLoopConfigNeverAttachToThread),
+        registers_(loop_.dispatcher()),
+        mmio_region_(mmio_registers_, sizeof(uint32_t),
+                     sizeof(uint32_t) * std::size(mmio_registers_)) {
     fbl::Array<fake_ddk::FragmentEntry> fragments;
     if (add_reset_fragment) {
       fragments = fbl::Array(new fake_ddk::FragmentEntry[5], 5);
@@ -86,6 +92,12 @@ class FakeDdkSpi : public fake_ddk::Bind {
 
     ASSERT_OK(interrupt_.duplicate(ZX_RIGHT_SAME_RIGHTS, &dut_interrupt));
     pdev_.set_interrupt(0, std::move(dut_interrupt));
+
+    interrupt_.trigger(0, zx::clock::get_monotonic());
+
+    // Set the transfer complete bit so the driver doesn't get stuck waiting on the interrupt.
+    mmio_region_[AML_SPI_STATREG].SetReadCallback(
+        []() { return StatReg::Get().FromValue(0).set_tc(1).set_te(1).set_rr(1).reg_value(); });
   }
 
   ~FakeDdkSpi() override {
@@ -96,8 +108,9 @@ class FakeDdkSpi : public fake_ddk::Bind {
   }
 
   const std::vector<ChildDevice>& children() { return children_; }
-  uint32_t* mmio() { return reinterpret_cast<uint32_t*>(mmio_mapper_.start()); }
   ddk::MockGpio& gpio() { return gpio_; }
+  ddk_fake::FakeMmioRegRegion& mmio() { return mmio_region_; }
+  fake_pdev::FakePDev& pdev() { return pdev_; }
 
   zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
                         zx_device_t** out) override {
@@ -192,6 +205,8 @@ class FakeDdkSpi : public fake_ddk::Bind {
   ddk::MockGpio gpio_;
   fake_pdev::FakePDev pdev_;
   zx::interrupt interrupt_;
+  ddk_fake::FakeMmioReg mmio_registers_[17];
+  ddk_fake::FakeMmioRegRegion mmio_region_;
 };
 
 }  // namespace spi
@@ -206,14 +221,7 @@ zx_status_t PDevMakeMmioBufferWeak(const pdev_mmio_t& pdev_mmio, std::optional<M
     return ZX_ERR_BAD_STATE;
   }
 
-  const mmio_buffer_t mmio_buffer = {
-      .vaddr = reinterpret_cast<MMIO_PTR void*>(reinterpret_cast<uintptr_t>(instance->mmio())),
-      .offset = pdev_mmio.offset,
-      .size = pdev_mmio.size,
-      .vmo = pdev_mmio.vmo,
-  };
-
-  mmio->emplace(mmio_buffer);
+  mmio->emplace(instance->mmio().GetMmioBuffer());
   return ZX_OK;
 }
 
@@ -265,10 +273,10 @@ TEST(AmlSpiTest, Exchange) {
   ASSERT_EQ(bind.children().size(), 1);
   AmlSpi& spi0 = *bind.children()[0].device;
 
-  // Zero out rxcnt and txcnt just in case.
-  bind.mmio()[AML_SPI_TESTREG / sizeof(uint32_t)] = 0;
+  bind.mmio()[AML_SPI_RXDATA].SetReadCallback([]() { return kExpectedRxData[0]; });
 
-  bind.mmio()[AML_SPI_RXDATA / sizeof(uint32_t)] = kExpectedRxData[0];
+  uint64_t tx_data = 0;
+  bind.mmio()[AML_SPI_TXDATA].SetWriteCallback([&tx_data](uint64_t value) { tx_data = value; });
 
   bind.gpio().ExpectWrite(ZX_OK, 0).ExpectWrite(ZX_OK, 1);
 
@@ -278,7 +286,7 @@ TEST(AmlSpiTest, Exchange) {
 
   EXPECT_EQ(rx_actual, sizeof(rxbuf));
   EXPECT_BYTES_EQ(rxbuf, kExpectedRxData, rx_actual);
-  EXPECT_EQ(bind.mmio()[AML_SPI_TXDATA / sizeof(uint32_t)], kTxData[0]);
+  EXPECT_EQ(tx_data, kTxData[0]);
 
   EXPECT_FALSE(bind.ControllerReset());
 
@@ -296,9 +304,10 @@ TEST(AmlSpiTest, ExchangeCsManagedByClient) {
   ASSERT_EQ(bind.children().size(), 1);
   AmlSpi& spi0 = *bind.children()[0].device;
 
-  bind.mmio()[AML_SPI_TESTREG / sizeof(uint32_t)] = 0;
+  bind.mmio()[AML_SPI_RXDATA].SetReadCallback([]() { return kExpectedRxData[0]; });
 
-  bind.mmio()[AML_SPI_RXDATA / sizeof(uint32_t)] = kExpectedRxData[0];
+  uint64_t tx_data = 0;
+  bind.mmio()[AML_SPI_TXDATA].SetWriteCallback([&tx_data](uint64_t value) { tx_data = value; });
 
   uint8_t rxbuf[sizeof(kTxData)] = {};
   size_t rx_actual;
@@ -306,7 +315,7 @@ TEST(AmlSpiTest, ExchangeCsManagedByClient) {
 
   EXPECT_EQ(rx_actual, sizeof(rxbuf));
   EXPECT_BYTES_EQ(rxbuf, kExpectedRxData, rx_actual);
-  EXPECT_EQ(bind.mmio()[AML_SPI_TXDATA / sizeof(uint32_t)], kTxData[0]);
+  EXPECT_EQ(tx_data, kTxData[0]);
 
   EXPECT_FALSE(bind.ControllerReset());
 
@@ -371,15 +380,16 @@ TEST(AmlSpiTest, Transmit) {
         spi1.SpiImplRegisterVmo(0, 1, std::move(vmo), 256, PAGE_SIZE - 256, SPI_VMO_RIGHT_READ));
   }
 
-  bind.mmio()[AML_SPI_TESTREG / sizeof(uint32_t)] = 0;
-
   bind.gpio().ExpectWrite(ZX_OK, 0).ExpectWrite(ZX_OK, 1);
 
   EXPECT_OK(test_vmo.write(kTxData, 512, sizeof(kTxData)));
 
+  uint64_t tx_data = 0;
+  bind.mmio()[AML_SPI_TXDATA].SetWriteCallback([&tx_data](uint64_t value) { tx_data = value; });
+
   EXPECT_OK(spi1.SpiImplTransmitVmo(0, 1, 256, sizeof(kTxData)));
 
-  EXPECT_EQ(bind.mmio()[AML_SPI_TXDATA / sizeof(uint32_t)], kTxData[0]);
+  EXPECT_EQ(tx_data, kTxData[0]);
 
   EXPECT_FALSE(bind.ControllerReset());
 
@@ -406,9 +416,7 @@ TEST(AmlSpiTest, ReceiveVmo) {
                                       SPI_VMO_RIGHT_READ | SPI_VMO_RIGHT_WRITE));
   }
 
-  bind.mmio()[AML_SPI_TESTREG / sizeof(uint32_t)] = 0;
-
-  bind.mmio()[AML_SPI_RXDATA / sizeof(uint32_t)] = kExpectedRxData[0];
+  bind.mmio()[AML_SPI_RXDATA].SetReadCallback([]() { return kExpectedRxData[0]; });
 
   bind.gpio().ExpectWrite(ZX_OK, 0).ExpectWrite(ZX_OK, 1);
 
@@ -444,9 +452,10 @@ TEST(AmlSpiTest, ExchangeVmo) {
                                       SPI_VMO_RIGHT_READ | SPI_VMO_RIGHT_WRITE));
   }
 
-  bind.mmio()[AML_SPI_TESTREG / sizeof(uint32_t)] = 0;
+  bind.mmio()[AML_SPI_RXDATA].SetReadCallback([]() { return kExpectedRxData[0]; });
 
-  bind.mmio()[AML_SPI_RXDATA / sizeof(uint32_t)] = kExpectedRxData[0];
+  uint64_t tx_data = 0;
+  bind.mmio()[AML_SPI_TXDATA].SetWriteCallback([&tx_data](uint64_t value) { tx_data = value; });
 
   bind.gpio().ExpectWrite(ZX_OK, 0).ExpectWrite(ZX_OK, 1);
 
@@ -458,7 +467,7 @@ TEST(AmlSpiTest, ExchangeVmo) {
   EXPECT_OK(test_vmo.read(rx_buffer, 768, sizeof(rx_buffer)));
   EXPECT_BYTES_EQ(rx_buffer, kExpectedRxData, sizeof(rx_buffer));
 
-  EXPECT_EQ(bind.mmio()[AML_SPI_TXDATA / sizeof(uint32_t)], kTxData[0]);
+  EXPECT_EQ(tx_data, kTxData[0]);
 
   EXPECT_FALSE(bind.ControllerReset());
 
@@ -482,8 +491,6 @@ TEST(AmlSpiTest, TransfersOutOfRange) {
     EXPECT_OK(spi0.SpiImplRegisterVmo(1, 1, std::move(vmo), PAGE_SIZE - 4, 4,
                                       SPI_VMO_RIGHT_READ | SPI_VMO_RIGHT_WRITE));
   }
-
-  bind.mmio()[AML_SPI_TESTREG / sizeof(uint32_t)] = 0;
 
   bind.gpio().ExpectWrite(ZX_OK, 0).ExpectWrite(ZX_OK, 1);
 
@@ -537,8 +544,6 @@ TEST(AmlSpiTest, VmoBadRights) {
                                       SPI_VMO_RIGHT_READ | SPI_VMO_RIGHT_WRITE));
   }
 
-  bind.mmio()[AML_SPI_TESTREG / sizeof(uint32_t)] = 0;
-
   bind.gpio().ExpectWrite(ZX_OK, 0).ExpectWrite(ZX_OK, 1);
 
   EXPECT_OK(spi1.SpiImplExchangeVmo(0, 1, 0, 2, 128, 128));
@@ -566,11 +571,11 @@ TEST(AmlSpiTest, Exchange64BitWords) {
   ASSERT_EQ(bind.children().size(), 1);
   AmlSpi& spi0 = *bind.children()[0].device;
 
-  // Zero out rxcnt and txcnt just in case.
-  bind.mmio()[AML_SPI_TESTREG / sizeof(uint32_t)] = 0;
-
   // First (and only) word of kExpectedRxData with bytes swapped.
-  bind.mmio()[AML_SPI_RXDATA / sizeof(uint32_t)] = 0xea2b'8f8f;
+  bind.mmio()[AML_SPI_RXDATA].SetReadCallback([]() { return 0xea2b'8f8f; });
+
+  uint64_t tx_data = 0;
+  bind.mmio()[AML_SPI_TXDATA].SetWriteCallback([&tx_data](uint64_t value) { tx_data = value; });
 
   bind.gpio().ExpectWrite(ZX_OK, 0).ExpectWrite(ZX_OK, 1);
 
@@ -581,7 +586,7 @@ TEST(AmlSpiTest, Exchange64BitWords) {
   EXPECT_EQ(rx_actual, sizeof(rxbuf));
   EXPECT_BYTES_EQ(rxbuf, kExpectedRxData, rx_actual);
   // Last word of kTxData with bytes swapped.
-  EXPECT_EQ(bind.mmio()[AML_SPI_TXDATA / sizeof(uint32_t)], 0xbaf1'4900);
+  EXPECT_EQ(tx_data, 0xbaf1'4900);
 
   EXPECT_FALSE(bind.ControllerReset());
 
@@ -605,9 +610,10 @@ TEST(AmlSpiTest, Exchange64Then8BitWords) {
   ASSERT_EQ(bind.children().size(), 1);
   AmlSpi& spi0 = *bind.children()[0].device;
 
-  bind.mmio()[AML_SPI_TESTREG / sizeof(uint32_t)] = 0;
+  bind.mmio()[AML_SPI_RXDATA].SetReadCallback([]() { return 0xea; });
 
-  bind.mmio()[AML_SPI_RXDATA / sizeof(uint32_t)] = 0xea;
+  uint64_t tx_data = 0;
+  bind.mmio()[AML_SPI_TXDATA].SetWriteCallback([&tx_data](uint64_t value) { tx_data = value; });
 
   bind.gpio().ExpectWrite(ZX_OK, 0).ExpectWrite(ZX_OK, 1);
 
@@ -617,7 +623,7 @@ TEST(AmlSpiTest, Exchange64Then8BitWords) {
 
   EXPECT_EQ(rx_actual, sizeof(rxbuf));
   EXPECT_BYTES_EQ(rxbuf, kExpectedRxData, rx_actual);
-  EXPECT_EQ(bind.mmio()[AML_SPI_TXDATA / sizeof(uint32_t)], 0xba);
+  EXPECT_EQ(tx_data, 0xba);
 
   EXPECT_FALSE(bind.ControllerReset());
 
@@ -632,7 +638,6 @@ TEST(AmlSpiTest, ExchangeResetsController) {
   ASSERT_EQ(bind.children().size(), 1);
   AmlSpi& spi0 = *bind.children()[0].device;
 
-  bind.mmio()[AML_SPI_TESTREG / sizeof(uint32_t)] = 0;
   bind.gpio().ExpectWrite(ZX_OK, 0).ExpectWrite(ZX_OK, 1);
 
   uint8_t buf[17] = {};
@@ -641,7 +646,6 @@ TEST(AmlSpiTest, ExchangeResetsController) {
   EXPECT_EQ(rx_actual, 17);
   EXPECT_FALSE(bind.ControllerReset());
 
-  bind.mmio()[AML_SPI_TESTREG / sizeof(uint32_t)] = 0;
   bind.gpio().ExpectWrite(ZX_OK, 0).ExpectWrite(ZX_OK, 1);
 
   // Controller should be reset because a 64-bit transfer was preceded by a transfer of an odd
@@ -650,21 +654,18 @@ TEST(AmlSpiTest, ExchangeResetsController) {
   EXPECT_EQ(rx_actual, 16);
   EXPECT_TRUE(bind.ControllerReset());
 
-  bind.mmio()[AML_SPI_TESTREG / sizeof(uint32_t)] = 0;
   bind.gpio().ExpectWrite(ZX_OK, 0).ExpectWrite(ZX_OK, 1);
 
   EXPECT_OK(spi0.SpiImplExchange(0, buf, 3, buf, 3, &rx_actual));
   EXPECT_EQ(rx_actual, 3);
   EXPECT_FALSE(bind.ControllerReset());
 
-  bind.mmio()[AML_SPI_TESTREG / sizeof(uint32_t)] = 0;
   bind.gpio().ExpectWrite(ZX_OK, 0).ExpectWrite(ZX_OK, 1);
 
   EXPECT_OK(spi0.SpiImplExchange(0, buf, 6, buf, 6, &rx_actual));
   EXPECT_EQ(rx_actual, 6);
   EXPECT_FALSE(bind.ControllerReset());
 
-  bind.mmio()[AML_SPI_TESTREG / sizeof(uint32_t)] = 0;
   bind.gpio().ExpectWrite(ZX_OK, 0).ExpectWrite(ZX_OK, 1);
 
   EXPECT_OK(spi0.SpiImplExchange(0, buf, 8, buf, 8, &rx_actual));
@@ -682,7 +683,6 @@ TEST(AmlSpiTest, ExchangeWithNoResetFragment) {
   ASSERT_EQ(bind.children().size(), 1);
   AmlSpi& spi0 = *bind.children()[0].device;
 
-  bind.mmio()[AML_SPI_TESTREG / sizeof(uint32_t)] = 0;
   bind.gpio().ExpectWrite(ZX_OK, 0).ExpectWrite(ZX_OK, 1);
 
   uint8_t buf[17] = {};
@@ -691,7 +691,6 @@ TEST(AmlSpiTest, ExchangeWithNoResetFragment) {
   EXPECT_EQ(rx_actual, 17);
   EXPECT_FALSE(bind.ControllerReset());
 
-  bind.mmio()[AML_SPI_TESTREG / sizeof(uint32_t)] = 0;
   bind.gpio().ExpectWrite(ZX_OK, 0).ExpectWrite(ZX_OK, 1);
 
   // Controller should not be reset because no reset fragment was provided.
@@ -699,21 +698,18 @@ TEST(AmlSpiTest, ExchangeWithNoResetFragment) {
   EXPECT_EQ(rx_actual, 16);
   EXPECT_FALSE(bind.ControllerReset());
 
-  bind.mmio()[AML_SPI_TESTREG / sizeof(uint32_t)] = 0;
   bind.gpio().ExpectWrite(ZX_OK, 0).ExpectWrite(ZX_OK, 1);
 
   EXPECT_OK(spi0.SpiImplExchange(0, buf, 3, buf, 3, &rx_actual));
   EXPECT_EQ(rx_actual, 3);
   EXPECT_FALSE(bind.ControllerReset());
 
-  bind.mmio()[AML_SPI_TESTREG / sizeof(uint32_t)] = 0;
   bind.gpio().ExpectWrite(ZX_OK, 0).ExpectWrite(ZX_OK, 1);
 
   EXPECT_OK(spi0.SpiImplExchange(0, buf, 6, buf, 6, &rx_actual));
   EXPECT_EQ(rx_actual, 6);
   EXPECT_FALSE(bind.ControllerReset());
 
-  bind.mmio()[AML_SPI_TESTREG / sizeof(uint32_t)] = 0;
   bind.gpio().ExpectWrite(ZX_OK, 0).ExpectWrite(ZX_OK, 1);
 
   EXPECT_OK(spi0.SpiImplExchange(0, buf, 8, buf, 8, &rx_actual));
@@ -789,9 +785,22 @@ TEST(AmlSpiTest, NormalClockMode) {
   FakeDdkSpi bind;
   bind.SetMetadata(DEVICE_METADATA_AMLSPI_CONFIG, kTestSpiConfig, sizeof(kTestSpiConfig));
 
+  auto conreg = ConReg::Get().FromValue(0);
+  bind.mmio()[AML_SPI_CONREG].SetWriteCallback(
+      [&conreg](uint32_t value) { conreg.set_reg_value(value); });
+
+  bind.mmio()[AML_SPI_CONREG].SetReadCallback([&conreg]() { return conreg.reg_value(); });
+
+  auto enhanced_cntl = EnhanceCntl::Get().FromValue(0);
+  bind.mmio()[AML_SPI_ENHANCE_CNTL].SetWriteCallback(
+      [&enhanced_cntl](uint32_t value) { enhanced_cntl.set_reg_value(value); });
+
+  auto testreg = TestReg::Get().FromValue(0);
+  bind.mmio()[AML_SPI_TESTREG].SetWriteCallback(
+      [&testreg](uint32_t value) { testreg.set_reg_value(value); });
+
   EXPECT_OK(AmlSpi::Create(nullptr, fake_ddk::kFakeParent));
 
-  const auto conreg = ConReg::Get().FromValue(bind.mmio()[AML_SPI_CONREG / sizeof(uint32_t)]);
   EXPECT_EQ(conreg.data_rate(), 0x5);
   EXPECT_EQ(conreg.drctl(), 0);
   EXPECT_EQ(conreg.ssctl(), 0);
@@ -800,11 +809,8 @@ TEST(AmlSpiTest, NormalClockMode) {
   EXPECT_EQ(conreg.mode(), ConReg::kModeMaster);
   EXPECT_EQ(conreg.en(), 1);
 
-  const auto enhanced_cntl =
-      EnhanceCntl::Get().FromValue(bind.mmio()[AML_SPI_ENHANCE_CNTL / sizeof(uint32_t)]);
   EXPECT_EQ(enhanced_cntl.reg_value(), 0);
 
-  const auto testreg = TestReg::Get().FromValue(bind.mmio()[AML_SPI_TESTREG / sizeof(uint32_t)]);
   EXPECT_EQ(testreg.dlyctl(), 0x15);
   EXPECT_EQ(testreg.clk_free_en(), 1);
 }
@@ -823,9 +829,22 @@ TEST(AmlSpiTest, EnhancedClockMode) {
   FakeDdkSpi bind;
   bind.SetMetadata(DEVICE_METADATA_AMLSPI_CONFIG, kTestSpiConfig, sizeof(kTestSpiConfig));
 
+  auto conreg = ConReg::Get().FromValue(0);
+  bind.mmio()[AML_SPI_CONREG].SetWriteCallback(
+      [&conreg](uint32_t value) { conreg.set_reg_value(value); });
+
+  bind.mmio()[AML_SPI_CONREG].SetReadCallback([&conreg]() { return conreg.reg_value(); });
+
+  auto enhanced_cntl = EnhanceCntl::Get().FromValue(0);
+  bind.mmio()[AML_SPI_ENHANCE_CNTL].SetWriteCallback(
+      [&enhanced_cntl](uint32_t value) { enhanced_cntl.set_reg_value(value); });
+
+  auto testreg = TestReg::Get().FromValue(0);
+  bind.mmio()[AML_SPI_TESTREG].SetWriteCallback(
+      [&testreg](uint32_t value) { testreg.set_reg_value(value); });
+
   EXPECT_OK(AmlSpi::Create(nullptr, fake_ddk::kFakeParent));
 
-  const auto conreg = ConReg::Get().FromValue(bind.mmio()[AML_SPI_CONREG / sizeof(uint32_t)]);
   EXPECT_EQ(conreg.data_rate(), 0);
   EXPECT_EQ(conreg.drctl(), 0);
   EXPECT_EQ(conreg.ssctl(), 0);
@@ -834,8 +853,6 @@ TEST(AmlSpiTest, EnhancedClockMode) {
   EXPECT_EQ(conreg.mode(), ConReg::kModeMaster);
   EXPECT_EQ(conreg.en(), 1);
 
-  const auto enhanced_cntl =
-      EnhanceCntl::Get().FromValue(bind.mmio()[AML_SPI_ENHANCE_CNTL / sizeof(uint32_t)]);
   EXPECT_EQ(enhanced_cntl.main_clock_always_on(), 0);
   EXPECT_EQ(enhanced_cntl.clk_cs_delay_enable(), 1);
   EXPECT_EQ(enhanced_cntl.cs_oen_enhance_enable(), 1);
@@ -845,7 +862,6 @@ TEST(AmlSpiTest, EnhancedClockMode) {
   EXPECT_EQ(enhanced_cntl.enhance_clk_div(), 0xa5);
   EXPECT_EQ(enhanced_cntl.clk_cs_delay(), 0);
 
-  const auto testreg = TestReg::Get().FromValue(bind.mmio()[AML_SPI_TESTREG / sizeof(uint32_t)]);
   EXPECT_EQ(testreg.dlyctl(), 0x15);
   EXPECT_EQ(testreg.clk_free_en(), 1);
 }
@@ -882,6 +898,143 @@ TEST(AmlSpiTest, EnhancedClockModeInvalidDivider) {
   bind.SetMetadata(DEVICE_METADATA_AMLSPI_CONFIG, kTestSpiConfig, sizeof(kTestSpiConfig));
 
   EXPECT_EQ(AmlSpi::Create(nullptr, fake_ddk::kFakeParent), ZX_ERR_INVALID_ARGS);
+}
+
+TEST(AmlSpiTest, ExchangeDma) {
+  constexpr uint8_t kTxData[24] = {
+      0x3c, 0xa7, 0x5f, 0xc8, 0x4b, 0x0b, 0xdf, 0xef, 0xb9, 0xa0, 0xcb, 0xbd,
+      0xd4, 0xcf, 0xa8, 0xbf, 0x85, 0xf2, 0x6a, 0xe3, 0xba, 0xf1, 0x49, 0x00,
+  };
+  constexpr uint8_t kExpectedRxData[24] = {
+      0xea, 0x2b, 0x8f, 0x8f, 0xea, 0x2b, 0x8f, 0x8f, 0xea, 0x2b, 0x8f, 0x8f,
+      0xea, 0x2b, 0x8f, 0x8f, 0xea, 0x2b, 0x8f, 0x8f, 0xea, 0x2b, 0x8f, 0x8f,
+  };
+
+  uint8_t reversed_tx_data[24];
+  for (size_t i = 0; i < sizeof(kTxData); i += sizeof(uint64_t)) {
+    uint64_t tmp;
+    memcpy(&tmp, kTxData + i, sizeof(tmp));
+    tmp = htobe64(tmp);
+    memcpy(reversed_tx_data + i, &tmp, sizeof(tmp));
+  }
+
+  uint8_t reversed_expected_rx_data[24];
+  for (size_t i = 0; i < sizeof(kExpectedRxData); i += sizeof(uint64_t)) {
+    uint64_t tmp;
+    memcpy(&tmp, kExpectedRxData + i, sizeof(tmp));
+    tmp = htobe64(tmp);
+    memcpy(reversed_expected_rx_data + i, &tmp, sizeof(tmp));
+  }
+
+  FakeDdkSpi bind(true);
+
+  constexpr zx_paddr_t kDmaPaddrs[] = {0x1212'0000, 0xabab'000};
+
+  zx::bti bti;
+  ASSERT_OK(
+      fake_bti_create_with_paddrs(kDmaPaddrs, std::size(kDmaPaddrs), bti.reset_and_get_address()));
+
+  zx::unowned_bti bti_local = bti.borrow();
+  bind.pdev().set_bti(0, std::move(bti));
+
+  EXPECT_OK(AmlSpi::Create(nullptr, fake_ddk::kFakeParent));
+
+  ASSERT_EQ(bind.children().size(), 1);
+  AmlSpi& spi0 = *bind.children()[0].device;
+
+  fake_bti_pinned_vmo_info_t dma_vmos[2] = {};
+  size_t actual_vmos = 0;
+  EXPECT_OK(
+      fake_bti_get_pinned_vmos(bti_local->get(), dma_vmos, std::size(dma_vmos), &actual_vmos));
+  EXPECT_EQ(actual_vmos, std::size(dma_vmos));
+
+  zx::vmo tx_dma_vmo(dma_vmos[0].vmo);
+  zx::vmo rx_dma_vmo(dma_vmos[1].vmo);
+
+  // Copy the reversed expected RX data to the RX VMO. The driver should copy this to the user
+  // output buffer with the correct endianness.
+  rx_dma_vmo.write(reversed_expected_rx_data, 0, sizeof(reversed_expected_rx_data));
+
+  zx_paddr_t tx_paddr = 0;
+  zx_paddr_t rx_paddr = 0;
+
+  bind.mmio()[AML_SPI_DRADDR].SetWriteCallback([&tx_paddr](uint64_t value) { tx_paddr = value; });
+  bind.mmio()[AML_SPI_DWADDR].SetWriteCallback([&rx_paddr](uint64_t value) { rx_paddr = value; });
+
+  bind.gpio().ExpectWrite(ZX_OK, 0).ExpectWrite(ZX_OK, 1);
+
+  uint8_t buf[24] = {};
+  memcpy(buf, kTxData, sizeof(buf));
+
+  size_t rx_actual;
+  EXPECT_OK(spi0.SpiImplExchange(0, buf, sizeof(buf), buf, sizeof(buf), &rx_actual));
+  EXPECT_EQ(rx_actual, sizeof(buf));
+  EXPECT_BYTES_EQ(kExpectedRxData, buf, sizeof(buf));
+
+  // Verify that the driver wrote the TX data to the TX VMO.
+  EXPECT_OK(tx_dma_vmo.read(buf, 0, sizeof(buf)));
+  EXPECT_BYTES_EQ(reversed_tx_data, buf, sizeof(buf));
+
+  EXPECT_EQ(tx_paddr, kDmaPaddrs[0]);
+  EXPECT_EQ(rx_paddr, kDmaPaddrs[1]);
+
+  EXPECT_FALSE(bind.ControllerReset());
+}
+
+TEST(AmlSpiTest, ExchangeFallBackToPio) {
+  constexpr uint8_t kTxData[15] = {
+      0x3c, 0xa7, 0x5f, 0xc8, 0x4b, 0x0b, 0xdf, 0xef, 0xb9, 0xa0, 0xcb, 0xbd, 0xd4, 0xcf, 0xa8,
+  };
+  constexpr uint8_t kExpectedRxData[15] = {
+      0xea, 0x2b, 0x8f, 0x8f, 0xea, 0x2b, 0x8f, 0x8f, 0x8f, 0x8f, 0x8f, 0x8f, 0x8f, 0x8f, 0x8f,
+  };
+
+  FakeDdkSpi bind(true);
+
+  zx::bti bti;
+  ASSERT_OK(fake_bti_create(bti.reset_and_get_address()));
+
+  zx::unowned_bti bti_local = bti.borrow();
+  bind.pdev().set_bti(0, std::move(bti));
+
+  EXPECT_OK(AmlSpi::Create(nullptr, fake_ddk::kFakeParent));
+
+  ASSERT_EQ(bind.children().size(), 1);
+  AmlSpi& spi0 = *bind.children()[0].device;
+
+  fake_bti_pinned_vmo_info_t dma_vmos[2] = {};
+  size_t actual_vmos = 0;
+  EXPECT_OK(
+      fake_bti_get_pinned_vmos(bti_local->get(), dma_vmos, std::size(dma_vmos), &actual_vmos));
+  EXPECT_EQ(actual_vmos, std::size(dma_vmos));
+
+  zx_paddr_t tx_paddr = 0;
+  zx_paddr_t rx_paddr = 0;
+
+  bind.mmio()[AML_SPI_DRADDR].SetWriteCallback([&tx_paddr](uint64_t value) { tx_paddr = value; });
+  bind.mmio()[AML_SPI_DWADDR].SetWriteCallback([&rx_paddr](uint64_t value) { rx_paddr = value; });
+
+  bind.mmio()[AML_SPI_RXDATA].SetReadCallback([]() { return 0xea2b'8f8f; });
+
+  uint64_t tx_data = 0;
+  bind.mmio()[AML_SPI_TXDATA].SetWriteCallback([&tx_data](uint64_t value) { tx_data = value; });
+
+  bind.gpio().ExpectWrite(ZX_OK, 0).ExpectWrite(ZX_OK, 1);
+
+  uint8_t buf[15] = {};
+  memcpy(buf, kTxData, sizeof(buf));
+
+  size_t rx_actual;
+  EXPECT_OK(spi0.SpiImplExchange(0, buf, sizeof(buf), buf, sizeof(buf), &rx_actual));
+  EXPECT_EQ(rx_actual, sizeof(buf));
+  EXPECT_BYTES_EQ(kExpectedRxData, buf, sizeof(buf));
+  EXPECT_EQ(tx_data, kTxData[14]);
+
+  // Verify that DMA was not used.
+  EXPECT_EQ(tx_paddr, 0);
+  EXPECT_EQ(rx_paddr, 0);
+
+  EXPECT_FALSE(bind.ControllerReset());
 }
 
 }  // namespace spi
