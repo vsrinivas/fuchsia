@@ -1,0 +1,38 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "syslog/client.shard.cml" ],
+    children: [
+        {
+            name: "profile_store",
+            url: "fuchsia-pkg://fuchsia.com/profile_store_example#meta/profile_store.cm",
+        },
+    ],
+    collections: [
+        {
+            name: "clients",
+            durability: "transient",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [
+                "#clients",
+                "#profile_store",
+            ],
+        },
+        {
+            protocol: [ "fuchsia.examples.diagnostics.ProfileStore" ],
+            from: "#profile_store",
+            to: "#clients",
+        },
+        {
+            storage: "data",
+            from: "parent",
+            to: [ "#profile_store" ],
+        },
+    ],
+}

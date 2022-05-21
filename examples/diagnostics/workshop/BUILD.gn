@@ -35,13 +35,88 @@ executable("example_profile_store_bin") {
   ]
 }
 
+executable("example_profile_writer") {
+  sources = [ "profile_writer.cc" ]
+
+  deps = [
+    "fidl:fuchsia.examples.diagnostics",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+    "//src/lib/fxl",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+executable("example_profile_reader") {
+  sources = [ "profile_reader.cc" ]
+
+  deps = [
+    "fidl:fuchsia.examples.diagnostics",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+    "//src/lib/fxl",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+fuchsia_component("add_olive") {
+  deps = [ ":example_profile_writer" ]
+  manifest = "meta/add_olive.cml"
+}
+
+fuchsia_component("add_jane") {
+  deps = [ ":example_profile_writer" ]
+  manifest = "meta/add_jane.cml"
+}
+
+fuchsia_component("add_balance_olive") {
+  deps = [ ":example_profile_writer" ]
+  manifest = "meta/add_balance_olive.cml"
+}
+
+fuchsia_component("withdraw_balance_olive") {
+  deps = [ ":example_profile_writer" ]
+  manifest = "meta/withdraw_balance_olive.cml"
+}
+
+fuchsia_component("delete_olive") {
+  deps = [ ":example_profile_writer" ]
+  manifest = "meta/delete_olive.cml"
+}
+
+fuchsia_component("profile_reader") {
+  deps = [ ":example_profile_reader" ]
+  manifest = "meta/profile_reader.cml"
+}
+
 fuchsia_component("profile_store") {
   deps = [ ":example_profile_store_bin" ]
   manifest = "meta/profile_store.cml"
 }
 
+fuchsia_component("laboratory_server") {
+  manifest = "meta/laboratory_server.cml"
+}
+
 fuchsia_package("profile_store_example") {
-  deps = [ ":profile_store" ]
+  deps = [
+    ":add_balance_olive",
+    ":add_jane",
+    ":add_olive",
+    ":delete_olive",
+    ":laboratory_server",
+    ":profile_reader",
+    ":profile_store",
+    ":withdraw_balance_olive",
+  ]
 }
 
 executable("test_bin") {
