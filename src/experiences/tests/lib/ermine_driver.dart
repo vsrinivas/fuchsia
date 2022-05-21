@@ -95,7 +95,7 @@ class ErmineDriver {
   Future<void> tearDown() async {
     final result = await sl4f.ssh.run('session_control restart');
     if (result.exitCode != 0) {
-      fail('failed to restart workstation session: ${result.exitCode},' +
+      fail('failed to restart workstation session: ${result.exitCode},'
           ' stderr: ${result.stderr}, stdout: ${result.stdout}');
     }
     await _driver?.close();

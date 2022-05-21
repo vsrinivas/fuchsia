@@ -12,7 +12,7 @@ class Details extends StatelessWidget {
   final Widget? scrollableContent;
   final List<ButtonStyleButton> buttons;
 
-  Details(
+  const Details(
       {required this.title,
       required this.description,
       required this.buttons,

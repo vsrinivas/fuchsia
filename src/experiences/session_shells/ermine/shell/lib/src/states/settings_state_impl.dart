@@ -75,7 +75,6 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
   @override
   final Map<String, Set<String>> shortcutBindings;
 
-  @override
   DisplayDialogCallback displayDialog;
 
   @override
@@ -259,7 +258,7 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
     required this.channelService,
     required this.volumeService,
     required this.wifiService,
-  })   : _timezones = _loadTimezones(),
+  })  : _timezones = _loadTimezones(),
         _selectedTimezone = timezoneService.timezone.asObservable() {
     dataSharingConsentService.onChanged =
         (consent) => runInAction(() => dataSharingConsentEnabled = consent);
@@ -272,8 +271,8 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
           final addresses = interfaces
               .expand((interface) => interface.addresses)
               .toList(growable: false)
-                ..sort((addr1, addr2) =>
-                    addr1.type == InternetAddressType.IPv4 ? -1 : 0);
+            ..sort((addr1, addr2) =>
+                addr1.type == InternetAddressType.IPv4 ? -1 : 0);
 
           runInAction(() => networkAddresses
             ..clear()

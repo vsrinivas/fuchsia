@@ -196,9 +196,10 @@ void main() {
       // Try to restart SL4F
       await sl4f.startServer();
       expect(await sl4f.isRunning(), isTrue);
+      //ignore: avoid_catches_without_on_clauses
     } catch (e, s) {
-      print("exception: $e");
-      print("stack trace: $s");
+      print('exception: $e');
+      print('stack trace: $s');
     }
   }, timeout: Timeout(Duration(minutes: 2)));
 }
