@@ -43,8 +43,7 @@ Prior to building a custom Rust toolchain for Fuchsia, you need to do the follow
    ```posix-terminal
    # You may want to: rm -rf $DEV_ROOT/sysroot
    mkdir -p $DEV_ROOT/sysroot
-   cipd install fuchsia/sysroot/linux-amd64 latest -root $DEV_ROOT/sysroot/linux-x64
-   cipd install fuchsia/sysroot/linux-arm64 latest -root $DEV_ROOT/sysroot/linux-arm64
+   cipd install fuchsia/third_party/sysroot/linux latest -root $DEV_ROOT/sysroot/linux
    ```
 
 1. If you haven't already, clone the Rust source. The
@@ -69,7 +68,7 @@ Prior to building a custom Rust toolchain for Fuchsia, you need to do the follow
      $DEV_ROOT/infra/fuchsia/recipes/recipes/contrib/rust_toolchain.resources/generate_config.py \
        config_toml \
        --clang-prefix=$DEV_ROOT/fuchsia/prebuilt/third_party/clang/linux-x64 \
-       --host-sysroot=$DEV_ROOT/fuchsia/prebuilt/third_party/sysroot/linux \
+       --host-sysroot=$DEV_ROOT/sysroot/linux \
        --prefix=$(pwd)/install/fuchsia-rust \
       | tee fuchsia-config.toml
 
@@ -79,8 +78,8 @@ Prior to building a custom Rust toolchain for Fuchsia, you need to do the follow
          --eval \
          --clang-prefix=$DEV_ROOT/fuchsia/prebuilt/third_party/clang/linux-x64 \
          --sdk-dir=$DEV_ROOT/sdk \
-         --linux-amd64-sysroot=$DEV_ROOT/sysroot/linux-x64 \
-         --linux-arm64-sysroot=$DEV_ROOT/sysroot/linux-arm64 \
+         --linux-amd64-sysroot=$DEV_ROOT/sysroot/linux \
+         --linux-arm64-sysroot=$DEV_ROOT/sysroot/linux \
       | tee fuchsia-env.sh
    ```
 
