@@ -97,6 +97,9 @@
         },
         {
             protocol: [
+                "fuchsia.accessibility.semantics.SemanticsManager",
+                "fuchsia.fonts.Provider",
+                "fuchsia.intl.PropertyProvider",
                 "fuchsia.logger.LogSink",
                 "fuchsia.media.Audio",
                 "fuchsia.sys.Launcher",
@@ -104,8 +107,10 @@
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.composition.Allocator",
                 "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.input.ImeService",
                 "fuchsia.ui.input3.Keyboard",
                 "fuchsia.ui.scenic.Scenic",
+                "fuchsia.vulkan.loader.Loader",
             ],
             from: "parent",
             to: "#element_manager",
