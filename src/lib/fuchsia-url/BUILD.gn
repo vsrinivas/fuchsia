@@ -26,12 +26,18 @@ rustc_library("fuchsia-url") {
   ]
 
   sources = [
+    "src/absolute_component_url.rs",
+    "src/absolute_package_url.rs",
     "src/boot_url.rs",
     "src/errors.rs",
+    "src/host.rs",
     "src/lib.rs",
     "src/parse.rs",
+    "src/pinned_absolute_package_url.rs",
     "src/pkg_url.rs",
+    "src/repository_url.rs",
     "src/test.rs",
+    "src/unpinned_absolute_package_url.rs",
   ]
 }
 

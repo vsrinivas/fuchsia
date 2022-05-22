@@ -30,6 +30,9 @@ pub enum ParseError {
     #[error("invalid name")]
     InvalidName(#[source] PackagePathSegmentError),
 
+    #[error("URL path must start with '/'")]
+    PathMustHaveLeadingSlash,
+
     #[error("missing name")]
     MissingName,
 
@@ -38,6 +41,9 @@ pub enum ParseError {
 
     #[error("missing hash")]
     MissingHash,
+
+    #[error("missing resource")]
+    MissingResource,
 
     #[error("invalid hash")]
     InvalidHash(#[source] fuchsia_hash::ParseHashError),
@@ -48,11 +54,17 @@ pub enum ParseError {
     #[error("multiple hash query parameters")]
     MultipleHashes,
 
+    #[error("cannot contain hash")]
+    CannotContainHash,
+
     #[error("resource path failed to percent decode")]
     ResourcePathPercentDecode(#[source] std::str::Utf8Error),
 
     #[error("invalid resource path")]
     InvalidResourcePath(#[source] ResourcePathError),
+
+    #[error("cannot contain a resource path (a URL fragment)")]
+    CannotContainResource,
 
     #[error("extra path segments")]
     ExtraPathSegments,
