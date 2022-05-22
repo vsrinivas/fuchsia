@@ -29,7 +29,7 @@ bool CompareRecords(const fbl::Vector<trace::Record>& records, size_t start_reco
       {"koid\\([0-9]+\\)", "koid(<>)"},
       {"koid: [0-9]+", "koid: <>"},
       {"ts: [0-9]+", "ts: <>"},
-      {"end_ts: (0-9]+", "end_ts: <>"},
+      {"end_ts: [0-9]+", "end_ts: <>"},
       {"0x[0-9a-f]+", "<>"},
   });
   ZX_DEBUG_ASSERT(squelcher);
