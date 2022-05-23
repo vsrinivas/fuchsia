@@ -280,4 +280,7 @@ fuchsia_package("starnix_package") {
   package_name = "starnix"
 
   deps = [ ":starnix_manager" ]
+  if (target_cpu == "x64") {
+    deps += [ ":starnix_runner_bin" ]
+  }
 }

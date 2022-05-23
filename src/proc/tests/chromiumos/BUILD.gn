@@ -22,6 +22,11 @@ group("tests") {
   }
 }
 
+# Tests that use starmium_test_runner should depend on this.
+expect_includes("starmium_test") {
+  includes = [ "starmium_test.shard.cml" ]
+}
+
 fuchsia_component("sh_test") {
   testonly = true
   check_references = false

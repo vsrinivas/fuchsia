@@ -53,6 +53,9 @@ template("starnix_toolchain_test_component") {
     if (!defined(deps)) {
       deps = []
     }
-    deps += [ ":${target_name}_resource" ]
+    deps += [
+      ":${target_name}_resource",
+      "//src/proc/tests/chromiumos:starmium_test",
+    ]
   }
 }

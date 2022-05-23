@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//tools/cmc/build/expect_includes.gni")
 
 group("tests") {
   testonly = true
@@ -14,6 +15,14 @@ group("tests") {
       "wayland",
     ]
   }
+}
+
+# Tests that use stardroid_test_runner should depend on this.
+expect_includes("stardroid_test") {
+  includes = [ "stardroid_test.shard.cml" ]
+
+  # stardroid_test_runner depends on starnix_runner.
+  deps = [ "//src/proc/bin/starnix" ]
 }
 
 fuchsia_component("init") {
@@ -37,7 +46,10 @@ resource("binder_smoke_test_bin") {
 
 fuchsia_test_component("binder_smoke_test") {
   manifest = "meta/binder_smoke_test.cml"
-  deps = [ ":binder_smoke_test_bin" ]
+  deps = [
+    ":binder_smoke_test_bin",
+    ":stardroid_test",
+  ]
 }
 
 resource("binder_test_script") {
@@ -47,21 +59,27 @@ resource("binder_test_script") {
 
 fuchsia_test_component("binder_test") {
   manifest = "meta/binder_test.cml"
-  deps = [ ":binder_test_script" ]
+  deps = [
+    ":binder_test_script",
+    ":stardroid_test",
+  ]
 }
 
 fuchsia_test_component("libutils_test") {
   manifest = "meta/libutils_test.cml"
+  deps = [ ":stardroid_test" ]
 }
 
 fuchsia_test_component("java_hello_world") {
   manifest = "meta/java_hello_world.cml"
+  deps = [ ":stardroid_test" ]
 }
 
 fuchsia_component("sh_test") {
   testonly = true
   check_references = false
   manifest = "meta/sh_test.cml"
+  deps = [ ":stardroid_test" ]
 }
 
 fuchsia_component("boringssl_self_test64") {

@@ -26,6 +26,9 @@ template("starnix_test_component") {
       deps = []
     }
 
-    deps += [ ":${test_name}_bin" ]
+    deps += [
+      ":${test_name}_bin",
+      "//src/proc/tests/android:stardroid_test",
+    ]
   }
 }

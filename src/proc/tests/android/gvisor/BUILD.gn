@@ -10,6 +10,14 @@ group("gvisor") {
   deps = [ ":starnix_gvisor_tests" ]
 }
 
+# Gvisor tests should depend on this.
+expect_includes("gvisor_test") {
+  includes = [ "meta/gvisor.shard.cml" ]
+
+  # Uses stardroid_test_runner
+  deps = [ "//src/proc/tests/android:stardroid_test" ]
+}
+
 template("gvisor_test_component") {
   # Without this gn gives an error: `You set the variable "invoker" here and it was unused before it
   # went out of scope.`
@@ -18,6 +26,7 @@ template("gvisor_test_component") {
   test_dir = "linux"
   meta_dir = "//src/proc/tests/android/gvisor/meta"
   starnix_test_component(target_name) {
+    deps = [ ":gvisor_test" ]
   }
 }
 
