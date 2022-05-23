@@ -455,9 +455,11 @@ class VmCowPages final
   zx_status_t ReplacePageWithLoaned(vm_page_t* before_page, uint64_t offset) TA_EXCL(lock_);
 
   // If page is still at offset, replace it with a different page.  If with_loaned is true, replace
-  // with a loaned page.  If with_loaned is false, replace with a non-loaned page.
+  // with a loaned page.  If with_loaned is false, replace with a non-loaned page and a page_request
+  // is required to be provided.
   zx_status_t ReplacePageLocked(vm_page_t* before_page, uint64_t offset, bool with_loaned,
-                                vm_page_t** after_page) TA_REQ(lock_);
+                                vm_page_t** after_page, LazyPageRequest* page_request)
+      TA_REQ(lock_);
 
   // Attempts to dedup the given page at the specified offset with the zero page. The only
   // correctness requirement for this is that `page` must be *some* valid vm_page_t, meaning that

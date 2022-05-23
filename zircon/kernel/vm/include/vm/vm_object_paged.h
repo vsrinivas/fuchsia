@@ -279,10 +279,6 @@ class VmObjectPaged final : public VmObject {
     cow_pages_locked()->MarkAsLatencySensitiveLocked();
   }
 
-  zx_status_t ReplacePageLocked(vm_page_t* page, uint64_t offset, bool with_loaned) TA_REQ(lock_) {
-    return cow_pages_locked()->ReplacePageLocked(page, offset, with_loaned, nullptr);
-  }
-
  private:
   // private constructor (use Create())
   VmObjectPaged(uint32_t options, fbl::RefPtr<VmHierarchyState> root_state);

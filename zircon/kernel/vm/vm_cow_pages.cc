@@ -2155,7 +2155,8 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags,
       // dirty pages.
       if (pmm_is_loaned(p)) {
         DEBUG_ASSERT(is_page_clean(p));
-        zx_status_t status = ReplacePageLocked(p, offset, /*with_loaned=*/false, &p);
+        DEBUG_ASSERT(page_request);
+        zx_status_t status = ReplacePageLocked(p, offset, /*with_loaned=*/false, &p, page_request);
         if (status != ZX_OK) {
           return status;
         }
@@ -3302,7 +3303,46 @@ void VmCowPages::ProtectRangeFromReclamationLocked(uint64_t offset, uint64_t len
         LookupPagesLocked(cur_offset, VMM_PF_FLAG_SW_FAULT, DirtyTrackingAction::None, 1, nullptr,
                           &page_request, &lookup);
 
-    // We need to wait for the page to be faulted in. We will drop the lock as we wait.
+    if (status == ZX_OK) {
+      // If we reached here, we successfully found a page at the current offset.
+      DEBUG_ASSERT(lookup.num_pages == 1);
+      vm_page_t* page = paddr_to_vm_page(lookup.paddrs[0]);
+
+      // The root might have gone away when the lock was dropped while waiting above. Compute the
+      // root again and check if we still have a page source backing it before applying the hint.
+      if (!can_root_source_evict_locked()) {
+        // Hinting is not applicable anymore. No more pages to hint.
+        return;
+      }
+
+      // Check to see if the page is owned by the root VMO. Hints only apply to the root.
+      VmCowPages* owner = reinterpret_cast<VmCowPages*>(page->object.get_object());
+      if (owner != GetRootLocked()) {
+        // Hinting is not applicable to this page, but it might apply to following ones.
+        continue;
+      }
+
+      // If the page is loaned, replace it with a non-loaned page. Loaned pages are reclaimed by
+      // eviction, and hinted pages should not be evicted.
+      if (pmm_is_loaned(page)) {
+        DEBUG_ASSERT(is_page_clean(page));
+        AssertHeld(owner->lock_);
+        status = owner->ReplacePageLocked(page, page->object.get_page_offset(),
+                                          /*with_loaned=*/false, &page, &page_request);
+        // Let the status fall through below to have success, waiting and errors handled.
+      }
+
+      if (status == ZX_OK) {
+        DEBUG_ASSERT(!pmm_is_loaned(page));
+        page->object.always_need = 1;
+        // Nothing more to do beyond marking the page always_need true. The lookup must have already
+        // marked the page accessed, moving it to the head of the first page queue.
+        continue;
+      }
+    }
+
+    // We need to wait for the page to be faulted in or available for allocation.
+    // We will drop the lock as we wait.
     if (status == ZX_ERR_SHOULD_WAIT) {
       guard->CallUnlocked([&status, &page_request]() { status = page_request->Wait(); });
 
@@ -3323,50 +3363,12 @@ void VmCowPages::ProtectRangeFromReclamationLocked(uint64_t offset, uint64_t len
       // case of failure, simply continue on to the next page, as hints are best effort only.
       if (status == ZX_OK) {
         cur_offset -= PAGE_SIZE;
-      }
-      continue;
-    }
-
-    // Can't really do anything in case an error is encountered while looking up the page. Simply
-    // ignore it and move on to the next page. Hints are best effort anyway.
-    if (status != ZX_OK) {
-      continue;
-    }
-
-    // If we reached here, we successfully found a page at the current offset.
-    DEBUG_ASSERT(lookup.num_pages == 1);
-    vm_page_t* page = paddr_to_vm_page(lookup.paddrs[0]);
-
-    // The root might have gone away when the lock was dropped while waiting above. Compute the root
-    // again and check if we still have a page source backing it before applying the hint.
-    if (!can_root_source_evict_locked()) {
-      // Hinting is not applicable anymore. No more pages to hint.
-      return;
-    }
-
-    // Check to see if the page is owned by the root VMO. Hints only apply to the root.
-    VmCowPages* owner = reinterpret_cast<VmCowPages*>(page->object.get_object());
-    if (owner != GetRootLocked()) {
-      // Hinting is not applicable to this page, but it might apply to following ones.
-      continue;
-    }
-
-    // If the page is loaned, replace it with a non-loaned page. Loaned pages are reclaimed by
-    // eviction, and hinted pages should not be evicted.
-    if (pmm_is_loaned(page)) {
-      DEBUG_ASSERT(is_page_clean(page));
-      AssertHeld(owner->lock_);
-      status = owner->ReplacePageLocked(page, page->object.get_page_offset(), /*with_loaned=*/false,
-                                        &page);
-      if (status != ZX_OK) {
-        // Ignore the failure. Hints are best effort. We can't mark a loaned page always_need true.
         continue;
       }
     }
-    DEBUG_ASSERT(!pmm_is_loaned(page));
-    page->object.always_need = 1;
-    // Nothing more to do beyond marking the page always_need true. The lookup must have already
-    // marked the page accessed, moving it to the head of the first page queue.
+
+    // Getting here indicates an error was encountered for this page. Simply ignore it and move on
+    // to the next page. Hints are best effort anyway.
   }
 }
 
@@ -4949,11 +4951,14 @@ void VmCowPages::SwapPageLocked(uint64_t offset, vm_page_t* old_page, vm_page_t*
 
 zx_status_t VmCowPages::ReplacePageWithLoaned(vm_page_t* before_page, uint64_t offset) {
   Guard<Mutex> guard{&lock_};
-  return ReplacePageLocked(before_page, offset, true, nullptr);
+  return ReplacePageLocked(before_page, offset, true, nullptr, nullptr);
 }
 
 zx_status_t VmCowPages::ReplacePageLocked(vm_page_t* before_page, uint64_t offset, bool with_loaned,
-                                          vm_page_t** after_page) {
+                                          vm_page_t** after_page, LazyPageRequest* page_request) {
+  // If not replacing with loaned it is required that a page_request be provided.
+  DEBUG_ASSERT(with_loaned || page_request);
+
   const VmPageOrMarker* p = page_list_.Lookup(offset);
   if (!p) {
     return ZX_ERR_NOT_FOUND;
