@@ -92,8 +92,6 @@ class VmoBuffer {
   fbl::RefPtr<VmObjectPaged> vmo_;
 };
 
-using namespace userboot;
-
 constexpr const char kStackVmoName[] = "userboot-initial-stack";
 constexpr const char kCrashlogVmoName[] = "crashlog";
 constexpr const char kBootOptionsVmoname[] = "boot-options.txt";
@@ -232,7 +230,7 @@ void bootstrap_vmos(Handle** handles) {
   zx_status_t status = VmObjectPaged::CreateFromWiredPages(rbase, rsize, true, &rootfs_vmo);
   ASSERT(status == ZX_OK);
   rootfs_vmo->set_name(kZbiVmoName, sizeof(kZbiVmoName) - 1);
-  status = get_vmo_handle(rootfs_vmo, false, rsize, nullptr, &handles[kZbi]);
+  status = get_vmo_handle(rootfs_vmo, false, rsize, nullptr, &handles[userboot::kZbi]);
   ASSERT(status == ZX_OK);
 
   // Crashlog.
@@ -240,7 +238,8 @@ void bootstrap_vmos(Handle** handles) {
   size_t crashlog_size = 0;
   status = crashlog_to_vmo(&crashlog_vmo, &crashlog_size);
   ASSERT(status == ZX_OK);
-  status = get_vmo_handle(crashlog_vmo, true, crashlog_size, nullptr, &handles[kCrashlog]);
+  status =
+      get_vmo_handle(crashlog_vmo, true, crashlog_size, nullptr, &handles[userboot::kCrashlog]);
   ASSERT(status == ZX_OK);
 
   // Boot options.
@@ -250,7 +249,7 @@ void bootstrap_vmos(Handle** handles) {
     gBootOptions->Show(/*defaults=*/false, &boot_options_file);
     boot_options.vmo()->set_name(kBootOptionsVmoname, sizeof(kBootOptionsVmoname) - 1);
     status = get_vmo_handle(boot_options.vmo(), false, boot_options.content_size(), nullptr,
-                            &handles[kBootOptions]);
+                            &handles[userboot::kBootOptions]);
     ZX_ASSERT(status == ZX_OK);
   }
 
@@ -270,7 +269,7 @@ void bootstrap_vmos(Handle** handles) {
   kcountdesc_vmo->set_name(counters::DescriptorVmo::kVmoName,
                            sizeof(counters::DescriptorVmo::kVmoName) - 1);
   status = get_vmo_handle(ktl::move(kcountdesc_vmo), true, CounterDesc().VmoContentSize(), nullptr,
-                          &handles[kCounterNames]);
+                          &handles[userboot::kCounterNames]);
   ASSERT(status == ZX_OK);
 
   // kcounters live data.
@@ -281,10 +280,10 @@ void bootstrap_vmos(Handle** handles) {
   kcounters_vmo_ref = kcounters_vmo;
   kcounters_vmo->set_name(counters::kArenaVmoName, sizeof(counters::kArenaVmoName) - 1);
   status = get_vmo_handle(ktl::move(kcounters_vmo), true, CounterArena().VmoContentSize(), nullptr,
-                          &handles[kCounters]);
+                          &handles[userboot::kCounters]);
   ASSERT(status == ZX_OK);
 
-  status = InstrumentationData::GetVmos(&handles[kFirstInstrumentationData]);
+  status = InstrumentationData::GetVmos(&handles[userboot::kFirstInstrumentationData]);
   ASSERT(status == ZX_OK);
 }
 
@@ -339,13 +338,13 @@ void userboot_init(uint) {
   KernelHandle<VmObjectDispatcher> vdso_kernel_handles[kVariants];
   const VDso* vdso = VDso::Create(vdso_kernel_handles);
   for (int i = 0; i < kVariants; ++i) {
-    handles[kFirstVdso + i] =
+    handles[userboot::kFirstVdso + i] =
         Handle::Make(ktl::move(vdso_kernel_handles[i]), vdso->vmo_rights()).release();
-    ASSERT(handles[kFirstVdso + i]);
+    ASSERT(handles[userboot::kFirstVdso + i]);
   }
-  DEBUG_ASSERT(handles[kFirstVdso + 1]->dispatcher() == vdso->vmo());
+  DEBUG_ASSERT(handles[userboot::kFirstVdso + 1]->dispatcher() == vdso->vmo());
   if (gBootOptions->always_use_next_vdso) {
-    std::swap(handles[kFirstVdso], handles[kFirstVdso + 1]);
+    std::swap(handles[userboot::kFirstVdso], handles[userboot::kFirstVdso + 1]);
   }
   bootstrap_vmos(handles);
 
