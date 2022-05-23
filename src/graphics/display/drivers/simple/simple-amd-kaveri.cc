@@ -13,7 +13,7 @@
 
 static zx_status_t kaveri_disp_bind(void* ctx, zx_device_t* dev) {
   // framebuffer bar seems to be 0
-  return bind_simple_pci_display_bootloader(dev, "amd", 0u);
+  return bind_simple_pci_display_bootloader(dev, "amd", 0u, false);
 }
 
 static zx_driver_ops_t kaveri_disp_driver_ops = {

@@ -11,7 +11,7 @@
 
 static zx_status_t vmware_disp_bind(void* ctx, zx_device_t* dev) {
   // framebuffer bar seems to be 1
-  return bind_simple_pci_display_bootloader(dev, "vmware", 1u);
+  return bind_simple_pci_display_bootloader(dev, "vmware", 1u, /*use_fidl=*/false);
 }
 
 static zx_driver_ops_t vmware_disp_driver_ops = {

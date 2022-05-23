@@ -110,7 +110,12 @@ zx_status_t bind_simple_pci_display(zx_device_t* dev, const char* name, uint32_t
                                     uint32_t width, uint32_t height, uint32_t stride,
                                     zx_pixel_format_t format);
 
-zx_status_t bind_simple_pci_display_bootloader(zx_device_t* dev, const char* name, uint32_t bar);
+zx_status_t bind_simple_fidl_pci_display(zx_device_t* dev, const char* name, uint32_t bar,
+                                         uint32_t width, uint32_t height, uint32_t stride,
+                                         zx_pixel_format_t format);
+
+zx_status_t bind_simple_pci_display_bootloader(zx_device_t* dev, const char* name, uint32_t bar,
+                                               bool use_fidl);
 __END_CDECLS
 
 #endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_SIMPLE_SIMPLE_DISPLAY_H_

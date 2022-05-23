@@ -5,6 +5,7 @@
 #include "simple-display.h"
 
 #include <assert.h>
+#include <fidl/fuchsia.hardware.pci/cpp/wire.h>
 #include <fidl/fuchsia.sysmem/cpp/wire.h>
 #include <fuchsia/hardware/display/controller/cpp/banjo.h>
 #include <fuchsia/hardware/pci/c/banjo.h>
@@ -408,7 +409,8 @@ void SimpleDisplay::OnPeriodicVSync() {
       loop_.dispatcher(), [this]() { OnPeriodicVSync(); }, next_vsync_time_);
 }
 
-zx_status_t bind_simple_pci_display_bootloader(zx_device_t* dev, const char* name, uint32_t bar) {
+zx_status_t bind_simple_pci_display_bootloader(zx_device_t* dev, const char* name, uint32_t bar,
+                                               bool use_fidl) {
   uint32_t format, width, height, stride;
   // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   zx_status_t status =
@@ -418,6 +420,9 @@ zx_status_t bind_simple_pci_display_bootloader(zx_device_t* dev, const char* nam
     return ZX_ERR_NOT_SUPPORTED;
   }
 
+  if (use_fidl) {
+    return bind_simple_fidl_pci_display(dev, name, bar, width, height, stride, format);
+  }
   return bind_simple_pci_display(dev, name, bar, width, height, stride, format);
 }
 
@@ -452,6 +457,62 @@ zx_status_t bind_simple_pci_display(zx_device_t* dev, const char* name, uint32_t
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
+
+  return display->Bind(name, &display);
+}
+
+zx_status_t bind_simple_fidl_pci_display(zx_device_t* dev, const char* name, uint32_t bar,
+                                         uint32_t width, uint32_t height, uint32_t stride,
+                                         zx_pixel_format_t format) {
+  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_pci::Device>();
+  if (endpoints.is_error()) {
+    zxlogf(ERROR, "%s: could not create FIDL endpoints: %s", name, endpoints.status_string());
+    return endpoints.status_value();
+  }
+
+  zx_status_t status = device_connect_fragment_fidl_protocol(
+      dev, "pci", fidl::DiscoverableProtocolName<fuchsia_hardware_pci::Device>,
+      endpoints->server.TakeHandle().release());
+  if (status != ZX_OK) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  fidl::WireSyncClient<fuchsia_hardware_pci::Device> pci(std::move(endpoints->client));
+  sysmem_protocol_t sysmem;
+  if ((status = device_get_fragment_protocol(dev, "sysmem", ZX_PROTOCOL_SYSMEM, &sysmem)) !=
+      ZX_OK) {
+    zxlogf(ERROR, "%s: could not get SYSMEM protocol: %d", name, status);
+    return status;
+  }
+
+  fidl::WireResult<fuchsia_hardware_pci::Device::GetBar> bar_result = pci->GetBar(bar);
+  if (!bar_result.ok()) {
+    zxlogf(ERROR, "Failed to send map PCI bar %d: %s", bar, bar_result.FormatDescription().data());
+    return bar_result.status();
+  }
+
+  if (bar_result->result.is_err()) {
+    zxlogf(ERROR, "Failed to map PCI bar %d: %s", bar,
+           zx_status_get_string(bar_result->result.err()));
+    return bar_result->result.err();
+  }
+
+  if (!bar_result->result.response().result.result.is_vmo()) {
+    zxlogf(ERROR, "PCI bar %u is not an MMIO BAR!", bar);
+    return ZX_ERR_WRONG_TYPE;
+  }
+
+  // map framebuffer window
+  auto mmio = fdf::MmioBuffer::Create(0, bar_result->result.response().result.size,
+                                      std::move(bar_result->result.response().result.result.vmo()),
+                                      ZX_CACHE_POLICY_WRITE_COMBINING);
+  if (mmio.is_error()) {
+    printf("%s: failed to map pci bar %d: %s\n", name, bar, mmio.status_string());
+    return mmio.status_value();
+  }
+
+  auto display = std::make_unique<SimpleDisplay>(dev, std::move(sysmem), std::move(*mmio), width,
+                                                 height, stride, format);
 
   return display->Bind(name, &display);
 }
