@@ -9,7 +9,7 @@
 namespace media {
 
 H264BitReader::H264BitReader()
-    : data_(nullptr),
+    : data_(NULL),
       bytes_left_(0),
       curr_byte_(0),
       num_remaining_bits_in_curr_byte_(0),

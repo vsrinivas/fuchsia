@@ -22,7 +22,6 @@ namespace media {
 
 class V4L2H264Picture;
 class VaapiH264Picture;
-class D3D11H264Picture;
 
 // A picture (a frame or a field) in the H.264 spec sense.
 // See spec at http://www.itu.int/rec/T-REC-H.264
@@ -38,13 +37,9 @@ class MEDIA_GPU_EXPORT H264Picture : public CodecPicture {
 
   H264Picture();
 
-  H264Picture(const H264Picture&) = delete;
-  H264Picture& operator=(const H264Picture&) = delete;
-
 #if CHROMIUM_CODE
   virtual V4L2H264Picture* AsV4L2H264Picture();
   virtual VaapiH264Picture* AsVaapiH264Picture();
-  virtual D3D11H264Picture* AsD3D11H264Picture();
 #endif
 
   // Values calculated per H.264 specification or taken from slice header.
@@ -72,8 +67,8 @@ class MEDIA_GPU_EXPORT H264Picture : public CodecPicture {
   bool idr;        // IDR picture?
   int idr_pic_id;  // Valid only if idr == true.
   bool ref;        // reference picture?
-  int ref_pic_list_modification_flag_l0;
-  int abs_diff_pic_num_minus1;
+  int ref_pic_list_modification_flag_l0;  // Fuchsia: only for encoding
+  int abs_diff_pic_num_minus1;            // Fuchsia: only for encoding.
   bool long_term;  // long term reference picture?
   bool outputted;
   // Does memory management op 5 needs to be executed after this
@@ -98,6 +93,9 @@ class MEDIA_GPU_EXPORT H264Picture : public CodecPicture {
   std::optional<H264Metadata> metadata_for_encoding;
 
   ~H264Picture() override;
+
+ private:
+  DISALLOW_COPY_AND_ASSIGN(H264Picture);
 };
 
 // DPB - Decoded Picture Buffer.
@@ -106,10 +104,6 @@ class MEDIA_GPU_EXPORT H264Picture : public CodecPicture {
 class H264DPB {
  public:
   H264DPB();
-
-  H264DPB(const H264DPB&) = delete;
-  H264DPB& operator=(const H264DPB&) = delete;
-
   ~H264DPB();
 
   void set_max_num_pics(size_t max_num_pics);
@@ -119,8 +113,8 @@ class H264DPB {
   // and free it.
   void DeleteUnused();
 
-  // Remove a picture from DPB and free it.
-  void Delete(scoped_refptr<H264Picture> pic);
+  // Remove a picture by its pic_order_cnt and free it.
+  void DeleteByPOC(int poc);
 
   // Clear DPB.
   void Clear();
@@ -180,6 +174,8 @@ class H264DPB {
 
   H264Picture::Vector pics_;
   size_t max_num_pics_;
+
+  DISALLOW_COPY_AND_ASSIGN(H264DPB);
 };
 
 }  // namespace media

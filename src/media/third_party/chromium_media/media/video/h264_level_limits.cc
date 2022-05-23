@@ -141,7 +141,7 @@ bool CheckH264LevelLimits(VideoCodecProfile profile,
   return true;
 }
 
-std::optional<uint8_t> FindValidH264Level(VideoCodecProfile profile,
+base::Optional<uint8_t> FindValidH264Level(VideoCodecProfile profile,
                                            uint32_t bitrate,
                                            uint32_t framerate,
                                            uint32_t framesize_in_mbs) {
@@ -161,7 +161,7 @@ std::optional<uint8_t> FindValidH264Level(VideoCodecProfile profile,
       return level;
     }
   }
-  return std::nullopt;
+  return base::nullopt;
 }
 
 }  // namespace media

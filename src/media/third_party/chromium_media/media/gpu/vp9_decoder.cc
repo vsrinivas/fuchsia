@@ -406,9 +406,12 @@ VideoCodecProfile VP9Decoder::GetProfile() const {
   return profile_;
 }
 
+// Fuchsia change: currently only support 8-bit color depth
+#if 0
 uint8_t VP9Decoder::GetBitDepth() const {
   return bit_depth_;
 }
+#endif
 
 size_t VP9Decoder::GetRequiredNumOfPictures() const {
   constexpr size_t kPicsInPipeline = limits::kMaxVideoFrames + 1;

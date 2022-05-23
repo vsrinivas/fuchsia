@@ -6,7 +6,6 @@
 
 #include <algorithm>
 #include <iomanip>
-#include <cstring>
 #include <limits>
 #include <memory>
 
@@ -107,7 +106,7 @@ H264SPS::H264SPS() {
 
 // Based on T-REC-H.264 7.4.2.1.1, "Sequence parameter set data semantics",
 // available from http://www.itu.int/rec/T-REC-H.264.
-std::optional<gfx::Size> H264SPS::GetCodedSize() const {
+base::Optional<gfx::Size> H264SPS::GetCodedSize() const {
   // Interlaced frames are twice the height of each field.
   const int mb_unit = 16;
   int map_unit = frame_mbs_only_flag ? 16 : 32;
@@ -121,7 +120,7 @@ std::optional<gfx::Size> H264SPS::GetCodedSize() const {
   if (pic_width_in_mbs_minus1 > max_mb_minus1 ||
       pic_height_in_map_units_minus1 > max_map_units_minus1) {
     DVLOG(1) << "Coded size is too large.";
-    return std::nullopt;
+    return base::nullopt;
   }
 
   return gfx::Size(mb_unit * (pic_width_in_mbs_minus1 + 1),
@@ -129,10 +128,10 @@ std::optional<gfx::Size> H264SPS::GetCodedSize() const {
 }
 
 // Also based on section 7.4.2.1.1.
-std::optional<gfx::Rect> H264SPS::GetVisibleRect() const {
-  std::optional<gfx::Size> coded_size = GetCodedSize();
+base::Optional<gfx::Rect> H264SPS::GetVisibleRect() const {
+  base::Optional<gfx::Size> coded_size = GetCodedSize();
   if (!coded_size)
-    return std::nullopt;
+    return base::nullopt;
 
   if (!frame_cropping_flag)
     return gfx::Rect(coded_size.value());
@@ -161,7 +160,7 @@ std::optional<gfx::Rect> H264SPS::GetVisibleRect() const {
       coded_size->height() / crop_unit_y < frame_crop_top_offset ||
       coded_size->height() / crop_unit_y < frame_crop_bottom_offset) {
     DVLOG(1) << "Frame cropping exceeds coded size.";
-    return std::nullopt;
+    return base::nullopt;
   }
   int crop_left = crop_unit_x * frame_crop_left_offset;
   int crop_right = crop_unit_x * frame_crop_right_offset;
@@ -174,7 +173,7 @@ std::optional<gfx::Rect> H264SPS::GetVisibleRect() const {
   if (coded_size->width() - crop_left <= crop_right ||
       coded_size->height() - crop_top <= crop_bottom) {
     DVLOG(1) << "Frame cropping excludes entire frame.";
-    return std::nullopt;
+    return base::nullopt;
   }
 
   return gfx::Rect(crop_left, crop_top,
@@ -296,7 +295,7 @@ static const int kTableSarWidth[] = {0,  1,  12, 10, 16,  40, 24, 20, 32,
                                      80, 18, 15, 64, 160, 4,  3,  2};
 static const int kTableSarHeight[] = {0,  1,  11, 11, 11, 33, 11, 11, 11,
                                       33, 11, 11, 33, 99, 3,  2,  1};
-static_assert(std::size(kTableSarWidth) == std::size(kTableSarHeight),
+static_assert(base::size(kTableSarWidth) == base::size(kTableSarHeight),
               "sar tables must have the same size");
 
 H264Parser::H264Parser() {
@@ -306,7 +305,7 @@ H264Parser::H264Parser() {
 H264Parser::~H264Parser() = default;
 
 void H264Parser::Reset() {
-  stream_ = nullptr;
+  stream_ = NULL;
   bytes_left_ = 0;
   encrypted_ranges_.clear();
   previous_nalu_range_.clear();
@@ -810,8 +809,9 @@ H264Parser::Result H264Parser::ParseSPSScalingLists(H264SPS* sps) {
     READ_BOOL_OR_RETURN(&seq_scaling_list_present_flag);
 
     if (seq_scaling_list_present_flag) {
-      res = ParseScalingList(static_cast<int>(std::size(sps->scaling_list4x4[i])),
-                             sps->scaling_list4x4[i], &use_default);
+      res = ParseScalingList(
+          static_cast<int>(base::size(sps->scaling_list4x4[i])),
+          sps->scaling_list4x4[i], &use_default);
       if (res != kOk)
         return res;
 
@@ -829,8 +829,9 @@ H264Parser::Result H264Parser::ParseSPSScalingLists(H264SPS* sps) {
     READ_BOOL_OR_RETURN(&seq_scaling_list_present_flag);
 
     if (seq_scaling_list_present_flag) {
-      res = ParseScalingList(static_cast<int>(std::size(sps->scaling_list8x8[i])),
-                             sps->scaling_list8x8[i], &use_default);
+      res = ParseScalingList(
+          static_cast<int>(base::size(sps->scaling_list8x8[i])),
+          sps->scaling_list8x8[i], &use_default);
       if (res != kOk)
         return res;
 
@@ -857,8 +858,9 @@ H264Parser::Result H264Parser::ParsePPSScalingLists(const H264SPS& sps,
     READ_BOOL_OR_RETURN(&pic_scaling_list_present_flag);
 
     if (pic_scaling_list_present_flag) {
-      res = ParseScalingList(static_cast<int>(std::size(pps->scaling_list4x4[i])),
-                             pps->scaling_list4x4[i], &use_default);
+      res = ParseScalingList(
+          static_cast<int>(base::size(pps->scaling_list4x4[i])),
+          pps->scaling_list4x4[i], &use_default);
       if (res != kOk)
         return res;
 
@@ -883,8 +885,9 @@ H264Parser::Result H264Parser::ParsePPSScalingLists(const H264SPS& sps,
       READ_BOOL_OR_RETURN(&pic_scaling_list_present_flag);
 
       if (pic_scaling_list_present_flag) {
-        res = ParseScalingList(static_cast<int>(std::size(pps->scaling_list8x8[i])),
-                               pps->scaling_list8x8[i], &use_default);
+        res = ParseScalingList(
+            static_cast<int>(base::size(pps->scaling_list8x8[i])),
+            pps->scaling_list8x8[i], &use_default);
         if (res != kOk)
           return res;
 
@@ -940,7 +943,7 @@ H264Parser::Result H264Parser::ParseVUIParameters(H264SPS* sps) {
       READ_BITS_OR_RETURN(16, &sps->sar_width);
       READ_BITS_OR_RETURN(16, &sps->sar_height);
     } else {
-      const int max_aspect_ratio_idc = std::size(kTableSarWidth) - 1;
+      const int max_aspect_ratio_idc = base::size(kTableSarWidth) - 1;
       IN_RANGE_OR_RETURN(aspect_ratio_idc, 0, max_aspect_ratio_idc);
       sps->sar_width = kTableSarWidth[aspect_ratio_idc];
       sps->sar_height = kTableSarHeight[aspect_ratio_idc];
@@ -1228,17 +1231,7 @@ H264Parser::Result H264Parser::ParsePPS(int* pps_id) {
   READ_BOOL_OR_RETURN(&pps->constrained_intra_pred_flag);
   READ_BOOL_OR_RETURN(&pps->redundant_pic_cnt_present_flag);
 
-  bool pps_remainder_unencrypted = true;
-  if (encrypted_ranges_.size()) {
-    Ranges<const uint8_t*> pps_range;
-    // Only check that the next byte is unencrypted, not the rest of the NALU.
-    const uint8_t* next_byte =
-        previous_nalu_range_.end(0) - br_.NumBitsLeft() / 8;
-    pps_range.Add(next_byte, next_byte + 1);
-    pps_remainder_unencrypted =
-        (encrypted_ranges_.IntersectionWith(pps_range).size() == 0);
-  }
-  if (pps_remainder_unencrypted && br_.HasMoreRBSPData()) {
+  if (br_.HasMoreRBSPData()) {
     READ_BOOL_OR_RETURN(&pps->transform_8x8_mode_flag);
     READ_BOOL_OR_RETURN(&pps->pic_scaling_matrix_present_flag);
 
@@ -1451,7 +1444,7 @@ H264Parser::Result H264Parser::ParseDecRefPicMarking(H264SliceHeader* shdr) {
     H264DecRefPicMarking* marking;
     if (shdr->adaptive_ref_pic_marking_mode_flag) {
       size_t i;
-      for (i = 0; i < std::size(shdr->ref_pic_marking); ++i) {
+      for (i = 0; i < base::size(shdr->ref_pic_marking); ++i) {
         marking = &shdr->ref_pic_marking[i];
 
         READ_UE_OR_RETURN(&marking->memory_mgmnt_control_operation);
@@ -1476,7 +1469,7 @@ H264Parser::Result H264Parser::ParseDecRefPicMarking(H264SliceHeader* shdr) {
           return kInvalidStream;
       }
 
-      if (i == std::size(shdr->ref_pic_marking)) {
+      if (i == base::size(shdr->ref_pic_marking)) {
         DVLOG(1) << "Ran out of dec ref pic marking fields";
         return kUnsupportedStream;
       }
