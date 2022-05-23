@@ -253,6 +253,10 @@ impl fmt::Debug for EventErrorPayload {
 /// component manager events. Hooks block the flow of a task, and can mutate, decorate and replace
 /// capabilities. This permits `Hook` to serve as a point of extensibility for the component
 /// manager.
+/// IMPORTANT: Hooks must not block on completion of an Action since Hooks are often called while
+/// executing an Action. Waiting on an Action in a Hook could cause a deadlock.
+/// IMPORTANT: Hooks should avoid causing event dispatch because we do not guarantee serialization
+/// between Hooks. Therefore the order a receiver see events in may be unexpected.
 #[async_trait]
 pub trait Hook: Send + Sync {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError>;
