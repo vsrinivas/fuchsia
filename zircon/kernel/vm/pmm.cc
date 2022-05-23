@@ -172,6 +172,12 @@ zx_status_t pmm_init_reclamation(const uint64_t* watermarks, uint8_t watermark_c
   return pmm_node.InitReclamation(watermarks, watermark_count, debounce, context, callback);
 }
 
+zx_status_t pmm_wait_till_should_retry_single_alloc(const Deadline& deadline) {
+  return pmm_node.WaitTillShouldRetrySingleAlloc(deadline);
+}
+
+void pmm_stop_returning_should_wait() { pmm_node.StopReturningShouldWait(); }
+
 void pmm_checker_check_all_free_pages() { pmm_node.CheckAllFreePages(); }
 
 #if __has_feature(address_sanitizer)

@@ -51,6 +51,11 @@ class PmmNode {
   zx_status_t InitReclamation(const uint64_t* watermarks, uint8_t watermark_count,
                               uint64_t debounce, void* context,
                               mem_avail_state_updated_callback_t callback);
+  zx_status_t WaitTillShouldRetrySingleAlloc(const Deadline& deadline) {
+    return free_pages_evt_.Wait(deadline);
+  }
+
+  void StopReturningShouldWait();
 
   uint64_t CountFreePages() const;
   uint64_t CountLoanedFreePages() const;
@@ -212,6 +217,12 @@ class PmmNode {
   // Free pages where loaned && !loan_cancelled.
   list_node free_loaned_list_ TA_GUARDED(lock_) = LIST_INITIAL_VALUE(free_loaned_list_);
 
+  // Tracks whether we should honor PMM_ALLOC_FLAG_CAN_WAIT requests or not. When true we will
+  // always attempt to perform the allocation, or fail with ZX_ERR_NO_MEMORY.
+  bool never_return_should_wait_ TA_GUARDED(lock_) = false;
+
+  // Event is signaled either when there are pages available that can be allocated without entering
+  // the OOM state, or if |never_return_should_wait_| is true.
   Event free_pages_evt_;
 
   uint64_t mem_avail_state_watermarks_[MAX_WATERMARK_COUNT] TA_GUARDED(lock_);

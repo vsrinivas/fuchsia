@@ -34,6 +34,7 @@ using pretty::FormattedBytes;
 
 // The number of PMM allocation calls that have failed.
 KCOUNTER(pmm_alloc_failed, "vm.pmm.alloc.failed")
+KCOUNTER(pmm_alloc_delayed, "vm.pmm.alloc.delayed")
 
 namespace {
 
@@ -174,7 +175,9 @@ void PmmNode::FillFreePagesAndArm() {
   }
 
   vm_page* page;
-  list_for_every_entry (&free_list_, page, vm_page, queue_node) { checker_.FillPattern(page); }
+  list_for_every_entry (&free_list_, page, vm_page, queue_node) {
+    checker_.FillPattern(page);
+  }
   list_for_every_entry (&free_loaned_list_, page, vm_page, queue_node) {
     checker_.FillPattern(page);
   }
@@ -263,22 +266,24 @@ zx_status_t PmmNode::AllocPage(uint alloc_flags, vm_page_t** page_out, paddr_t* 
   AutoPreemptDisabler preempt_disable;
   Guard<Mutex> guard{&lock_};
 
-  if (unlikely(InOomStateLocked())) {
-    if (alloc_flags & PMM_ALLOC_DELAY_OK) {
-      // TODO(stevensd): Differentiate 'cannot allocate now' from 'can never allocate'
-      return ZX_ERR_NO_MEMORY;
-    }
-  }
-
   // If the caller sets PMM_ALLOC_FLAG_MUST_BORROW, the caller must also set
-  // PMM_ALLOC_FLAG_CAN_BORROW.
+  // PMM_ALLOC_FLAG_CAN_BORROW, and must not set PMM_ALLOC_FLAG_CAN_WAIT.
   DEBUG_ASSERT(
-      !((alloc_flags & PMM_ALLOC_FLAG_MUST_BORROW) && !(alloc_flags & PMM_ALLOC_FLAG_CAN_BORROW)));
+      !(alloc_flags & PMM_ALLOC_FLAG_MUST_BORROW) ||
+      ((alloc_flags & PMM_ALLOC_FLAG_CAN_BORROW) && !((alloc_flags & PMM_ALLOC_FLAG_CAN_WAIT))));
   const bool can_borrow = pmm_physical_page_borrowing_config()->is_any_borrowing_enabled() &&
                           !!(alloc_flags & PMM_ALLOC_FLAG_CAN_BORROW);
   const bool must_borrow = can_borrow && !!(alloc_flags & PMM_ALLOC_FLAG_MUST_BORROW);
   const bool use_loaned_list = can_borrow && (!list_is_empty(&free_loaned_list_) || must_borrow);
   list_node* const which_list = use_loaned_list ? &free_loaned_list_ : &free_list_;
+
+  // Note that we do not care if the allocation is happening from the loaned list or not since if
+  // we are in the OOM state we still want to preference those loaned pages to allocations that
+  // cannot be delayed.
+  if ((alloc_flags & PMM_ALLOC_FLAG_CAN_WAIT) && InOomStateLocked() && !never_return_should_wait_) {
+    pmm_alloc_delayed.Add(1);
+    return ZX_ERR_SHOULD_WAIT;
+  }
 
   vm_page* page = list_remove_head_type(which_list, vm_page, queue_node);
   if (!page) {
@@ -327,8 +332,11 @@ zx_status_t PmmNode::AllocPages(size_t count, uint alloc_flags, list_node* list)
     return status;
   }
 
+  // If the caller sets PMM_ALLOC_FLAG_MUST_BORROW, the caller must also set
+  // PMM_ALLOC_FLAG_CAN_BORROW, and must not set PMM_ALLOC_FLAG_CAN_WAIT.
   DEBUG_ASSERT(
-      !((alloc_flags & PMM_ALLOC_FLAG_MUST_BORROW) && !(alloc_flags & PMM_ALLOC_FLAG_CAN_BORROW)));
+      !(alloc_flags & PMM_ALLOC_FLAG_MUST_BORROW) ||
+      ((alloc_flags & PMM_ALLOC_FLAG_CAN_BORROW) && !((alloc_flags & PMM_ALLOC_FLAG_CAN_WAIT))));
   const bool can_borrow = pmm_physical_page_borrowing_config()->is_any_borrowing_enabled() &&
                           !!(alloc_flags & PMM_ALLOC_FLAG_CAN_BORROW);
   const bool must_borrow = can_borrow && !!(alloc_flags & PMM_ALLOC_FLAG_MUST_BORROW);
@@ -348,7 +356,12 @@ zx_status_t PmmNode::AllocPages(size_t count, uint alloc_flags, list_node* list)
     free_loaned_count = free_loaned_count_.load(ktl::memory_order_relaxed);
     available_count += free_loaned_count;
   }
+
   if (unlikely(count > available_count)) {
+    if ((alloc_flags & PMM_ALLOC_FLAG_CAN_WAIT) && !never_return_should_wait_) {
+      pmm_alloc_delayed.Add(1);
+      return ZX_ERR_SHOULD_WAIT;
+    }
     if (!must_borrow) {
       // Allocation failures from the regular free list are likely to become user-visible.
       ReportAllocFailure();
@@ -364,12 +377,15 @@ zx_status_t PmmNode::AllocPages(size_t count, uint alloc_flags, list_node* list)
 
   DecrementFreeCountLocked(from_free);
 
-  if (unlikely(InOomStateLocked())) {
-    if (alloc_flags & PMM_ALLOC_DELAY_OK) {
-      IncrementFreeCountLocked(from_free);
-      // TODO(stevensd): Differentiate 'cannot allocate now' from 'can never allocate'
-      return ZX_ERR_NO_MEMORY;
-    }
+  // For simplicity of oom state detection we do this check after decrementing the free count, since
+  // the error case is unlikely and not performance critical.
+  // Even if no pages are being requested from the regular free list (if loaned pages can be used)
+  // we still fail in the oom state since we would prefer those loaned pages to be used to fulfill
+  // allocations that cannot be delayed.
+  if ((alloc_flags & PMM_ALLOC_FLAG_CAN_WAIT) && InOomStateLocked() && !never_return_should_wait_) {
+    IncrementFreeCountLocked(from_free);
+    pmm_alloc_delayed.Add(1);
+    return ZX_ERR_SHOULD_WAIT;
   }
 
   DecrementFreeLoanedCountLocked(from_loaned_free);
@@ -486,7 +502,8 @@ zx_status_t PmmNode::AllocContiguous(const size_t count, uint alloc_flags, uint8
     alignment_log2 = PAGE_SIZE_SHIFT;
   }
 
-  DEBUG_ASSERT(!(alloc_flags & (PMM_ALLOC_FLAG_CAN_BORROW | PMM_ALLOC_FLAG_MUST_BORROW)));
+  DEBUG_ASSERT(!(alloc_flags & (PMM_ALLOC_FLAG_CAN_BORROW | PMM_ALLOC_FLAG_MUST_BORROW |
+                                PMM_ALLOC_FLAG_CAN_WAIT)));
   // pa and list must be valid pointers
   DEBUG_ASSERT(pa);
   DEBUG_ASSERT(list);
@@ -776,7 +793,9 @@ void PmmNode::SetMemAvailStateLocked(uint8_t mem_avail_state) {
   mem_avail_state_cur_index_ = mem_avail_state;
 
   if (mem_avail_state_cur_index_ == 0) {
-    free_pages_evt_.Unsignal();
+    if (likely(!never_return_should_wait_)) {
+      free_pages_evt_.Unsignal();
+    }
   } else {
     free_pages_evt_.Signal();
   }
@@ -847,6 +866,12 @@ void PmmNode::DebugMemAvailStateCallback(uint8_t mem_state_idx) const {
   // Invoke callback for the requested state without allocating additional memory, or messing with
   // any of the internal memory state tracking counters.
   mem_avail_state_callback_(mem_avail_state_context_, mem_state_idx);
+}
+
+void PmmNode::StopReturningShouldWait() {
+  Guard<Mutex> guard{&lock_};
+  never_return_should_wait_ = true;
+  free_pages_evt_.Signal();
 }
 
 int64_t PmmNode::get_alloc_failed_count() { return pmm_alloc_failed.SumAcrossAllCpus(); }

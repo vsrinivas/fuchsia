@@ -52,9 +52,12 @@ zx_status_t pmm_get_arena_info(size_t count, uint64_t i, pmm_arena_info_t* buffe
 // flags for allocation routines below
 #define PMM_ALLOC_FLAG_ANY (0 << 0)     // no restrictions on which arena to allocate from
 #define PMM_ALLOC_FLAG_LO_MEM (1 << 0)  // allocate only from arenas marked LO_MEM
-// the caller can handle allocation failures at low memory levels even if pages are technically
-// available.
-#define PMM_ALLOC_DELAY_OK (1 << 1)
+// The caller is able to wait and retry this allocation and so pmm allocation functions are allowed
+// to return ZX_ERR_SHOULD_WAIT, as opposed to ZX_ERR_NO_MEMORY, to indicate that the caller should
+// wait and try again. This is intended for the PMM to tell callers who are able to wait that memory
+// is low. The caller should not infer anything about memory state if it is told to wait, as the PMM
+// may tell it to wait for any reason.
+#define PMM_ALLOC_FLAG_CAN_WAIT (1 << 1)
 // The default (flag not set) is to not allocate a loaned page, so that we don't end up with loaned
 // pages allocated for arbitrary purposes that prevent us from getting the loaned page back quickly.
 #define PMM_ALLOC_FLAG_CAN_BORROW (1 << 2)
@@ -62,11 +65,16 @@ zx_status_t pmm_get_arena_info(size_t count, uint64_t i, pmm_arena_info_t* buffe
 #define PMM_ALLOC_FLAG_MUST_BORROW (1 << 3)
 
 // Debugging flag that can be used to induce artificial delayed page allocation by randomly
-// rejecting some fraction of the synchronous allocations which have PMM_ALLOC_DELAY_OK set.
+// rejecting some fraction of the synchronous allocations which have PMM_ALLOC_FLAG_CAN_WAIT set.
 #define RANDOM_DELAYED_ALLOC 0
 
 // Allocate count pages of physical memory, adding to the tail of the passed list.
 // The list must be initialized.
+// Note that if PMM_ALLOC_FLAG_CAN_WAIT is passed in then this could always return
+// ZX_ERR_SHOULD_WAIT. Since there is no way to wait until an arbitrary number of pages can be
+// allocated (see comment on |pmm_wait_till_should_retry_single_alloc|) passing
+// PMM_ALLOC_FLAG_CAN_WAIT here should be used as an optimistic fast path, and the caller should
+// have a fallback of allocating single pages.
 zx_status_t pmm_alloc_pages(size_t count, uint alloc_flags, list_node* list) __NONNULL((3));
 
 // Allocate a single page of physical memory.
@@ -186,6 +194,19 @@ typedef void (*mem_avail_state_updated_callback_t)(void* context, uint8_t cur_st
 zx_status_t pmm_init_reclamation(const uint64_t* watermarks, uint8_t watermark_count,
                                  uint64_t debounce, void* context,
                                  mem_avail_state_updated_callback_t callback);
+
+// This is intended to be used if an allocation function returns ZX_ERR_SHOULD_WAIT and blocks
+// until such a time as it is appropriate to retry a single allocation for a single page. Due to
+// current implementation limitations, this only waits until single page allocations should be
+// retried, and cannot be used to wait for multi page allocations.
+// Returns the same set of values as Event::Wait.
+zx_status_t pmm_wait_till_should_retry_single_alloc(const Deadline& deadline);
+
+// Tells the PMM that it should never return ZX_ERR_SHOULD_WAIT (even in the presence of
+// PMM_ALLOC_FLAG_CAN_WAIT) and from now on must either succeed an allocation, or fail with
+// ZX_ERR_NO_MEMORY.
+// There is no way to re-enable this as disabling is intended for use in the panic/shutdown path.
+void pmm_stop_returning_should_wait();
 
 // Should be called after the kernel command line has been parsed.
 void pmm_checker_init_from_cmdline();

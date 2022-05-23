@@ -34,6 +34,10 @@ const char* PressureLevelToString(MemoryWatchdog::PressureLevel level) {
 }
 
 void HandleOnOomReboot() {
+  // Notify the pmm that although we are out of memory, we would like to never wait for memory.
+  // This ensures that if userspace needs to allocate to do a graceful shutdown it is able to.
+  pmm_stop_returning_should_wait();
+
   if (!HaltToken::Get().Take()) {
     // We failed to acquire the token.  Someone else must have it.  That's OK.  We'll rely on them
     // to halt/reboot.  Nothing left for us to do but wait.

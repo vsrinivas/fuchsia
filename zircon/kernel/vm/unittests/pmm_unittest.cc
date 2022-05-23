@@ -526,13 +526,13 @@ static bool pmm_node_oom_sync_alloc_failure_test() {
   EXPECT_EQ(node.cur_level(), 0);
 
   vm_page_t* page;
-  status = node.node().AllocPage(PMM_ALLOC_DELAY_OK, &page, nullptr);
-  EXPECT_EQ(status, ZX_ERR_NO_MEMORY);
+  status = node.node().AllocPage(PMM_ALLOC_FLAG_CAN_WAIT, &page, nullptr);
+  EXPECT_EQ(status, ZX_ERR_SHOULD_WAIT);
 
   // Free the list and make sure allocations work again.
   node.node().FreeList(&list);
 
-  status = node.node().AllocPage(PMM_ALLOC_DELAY_OK, &page, nullptr);
+  status = node.node().AllocPage(PMM_ALLOC_FLAG_CAN_WAIT, &page, nullptr);
   EXPECT_EQ(ZX_OK, status);
 
   node.node().FreePage(page);
@@ -1174,7 +1174,7 @@ static bool kasan_detects_use_after_free() {
 
   vm_page_t* page;
   paddr_t paddr;
-  zx_status_t status = node.node().AllocPage(PMM_ALLOC_DELAY_OK, &page, &paddr);
+  zx_status_t status = node.node().AllocPage(PMM_ALLOC_FLAG_ANY, &page, &paddr);
   ASSERT_EQ(ZX_OK, status, "pmm_alloc_page one page");
   ASSERT_NE(paddr, 0UL);
   EXPECT_EQ(0UL, asan_region_is_poisoned(reinterpret_cast<uintptr_t>(paddr_to_physmap(paddr)),
