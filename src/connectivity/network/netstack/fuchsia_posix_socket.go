@@ -2029,7 +2029,7 @@ func (s *synchronousDatagramSocketImpl) Reopen(ctx fidl.Context, options fidlio.
 	// TODO(https://fxbug.dev/77623): Implement.
 	_ = channel.Close()
 
-	_ = syslog.DebugTf("Clone", "%p: options=%#v", s.endpointWithEvent, options)
+	_ = syslog.DebugTf("Reopen", "%p: options=%#v", s.endpointWithEvent, options)
 
 	return nil
 }
@@ -2355,7 +2355,7 @@ func (s *streamSocketImpl) Reopen(ctx fidl.Context, options fidlio.ConnectionOpt
 	// TODO(https://fxbug.dev/77623): Implement.
 	_ = channel.Close()
 
-	_ = syslog.DebugTf("Clone", "%p: options=%#v", s.endpointWithSocket, options)
+	_ = syslog.DebugTf("Reopen", "%p: options=%#v", s.endpointWithSocket, options)
 
 	return nil
 }
@@ -3079,7 +3079,7 @@ func (s *rawSocketImpl) Reopen(ctx fidl.Context, options fidlio.ConnectionOption
 	// TODO(https://fxbug.dev/77623): Implement.
 	_ = channel.Close()
 
-	_ = syslog.DebugTf("Clone", "%p: options=%#v", s.endpointWithEvent, options)
+	_ = syslog.DebugTf("Reopen", "%p: options=%#v", s.endpointWithEvent, options)
 
 	return nil
 }
@@ -3417,7 +3417,7 @@ func (s *packetSocketImpl) Reopen(ctx fidl.Context, options fidlio.ConnectionOpt
 	// TODO(https://fxbug.dev/77623): Implement.
 	_ = channel.Close()
 
-	_ = syslog.DebugTf("Clone", "%p: options=%#v", s.endpointWithEvent, options)
+	_ = syslog.DebugTf("Reopen", "%p: options=%#v", s.endpointWithEvent, options)
 
 	return nil
 }
