@@ -79,13 +79,6 @@ type WlanGi = strict enum : uint8 {
     G_1600NS = 0x20;
 };
 
-// Temporarily redeclare above with old names to transition.
-const WLAN_GI__800NS uint8 = 0x1;
-const WLAN_GI__400NS uint8 = 0x2;
-const WLAN_GI__200NS uint8 = 0x4;
-const WLAN_GI__3200NS uint8 = 0x10;
-const WLAN_GI__1600NS uint8 = 0x20;
-
 /// Access category
 /// WFA WMM v1.2, 2.2.2 Table 6
 type WlanAc = strict enum {

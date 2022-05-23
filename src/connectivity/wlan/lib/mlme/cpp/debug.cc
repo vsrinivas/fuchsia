@@ -170,15 +170,15 @@ const char* Describe(const wlan_phy_type_t& phy) {
 
 std::string Describe(const wlan_gi_t& gi) {
   switch (gi) {
-    case WLAN_GI__800NS:
+    case WLAN_GI_G_800NS:
       return "GI800";
-    case WLAN_GI__400NS:
+    case WLAN_GI_G_400NS:
       return "GI400";
-    case WLAN_GI__200NS:
+    case WLAN_GI_G_200NS:
       return "GI200";
-    case WLAN_GI__1600NS:
+    case WLAN_GI_G_1600NS:
       return "GI1600";
-    case WLAN_GI__3200NS:
+    case WLAN_GI_G_3200NS:
       return "GI3200";
     default:
       return "GI---";

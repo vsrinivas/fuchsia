@@ -33,7 +33,7 @@ zx_status_t TxVector::FromSupportedRate(const SupportedRate& erp_rate, TxVector*
     return ZX_ERR_INVALID_ARGS;
   }
   *tx_vec = TxVector{
-      .gi = WLAN_GI__800NS,
+      .gi = WLAN_GI_G_800NS,
       .cbw = CHANNEL_BANDWIDTH_CBW20,
       .nss = 1,
   };
@@ -140,7 +140,7 @@ zx_status_t TxVector::FromIdx(tx_vec_idx_t idx, TxVector* tx_vec) {
   switch (phy) {
     case WLAN_PHY_TYPE_HT: {
       uint8_t group_idx = (idx - kHtStartIdx) / kHtNumMcs;
-      wlan_gi_t gi = ((group_idx / kHtNumCbw) % kHtNumGi == 1 ? WLAN_GI__400NS : WLAN_GI__800NS);
+      wlan_gi_t gi = ((group_idx / kHtNumCbw) % kHtNumGi == 1 ? WLAN_GI_G_400NS : WLAN_GI_G_800NS);
       channel_bandwidth_t cbw =
           (group_idx % kHtNumCbw == 0 ? CHANNEL_BANDWIDTH_CBW20 : CHANNEL_BANDWIDTH_CBW40);
       uint8_t mcs_idx = (idx - kHtStartIdx) % kHtNumMcs;
@@ -157,7 +157,7 @@ zx_status_t TxVector::FromIdx(tx_vec_idx_t idx, TxVector* tx_vec) {
     case WLAN_PHY_TYPE_ERP:
       *tx_vec = TxVector{
           .phy = phy,
-          .gi = WLAN_GI__800NS,
+          .gi = WLAN_GI_G_800NS,
           .cbw = CHANNEL_BANDWIDTH_CBW20,
           .nss = 1,
           .mcs_idx = static_cast<uint8_t>(idx - kErpStartIdx),
@@ -167,7 +167,7 @@ zx_status_t TxVector::FromIdx(tx_vec_idx_t idx, TxVector* tx_vec) {
     case WLAN_PHY_TYPE_HR:
       *tx_vec = TxVector{
           .phy = phy,
-          .gi = WLAN_GI__800NS,
+          .gi = WLAN_GI_G_800NS,
           .cbw = CHANNEL_BANDWIDTH_CBW20,
           .nss = 1,
           .mcs_idx = static_cast<uint8_t>(idx - kDsssCckStartIdx),
@@ -192,7 +192,7 @@ bool TxVector::IsValid() const {
     case WLAN_PHY_TYPE_HR:
       return mcs_idx == 2 || mcs_idx == 3;
     case WLAN_PHY_TYPE_HT:
-      if (!(gi == WLAN_GI__800NS || gi == WLAN_GI__400NS)) {
+      if (!(gi == WLAN_GI_G_800NS || gi == WLAN_GI_G_400NS)) {
         return false;
       }
       if (!(cbw == CHANNEL_BANDWIDTH_CBW20 || cbw == CHANNEL_BANDWIDTH_CBW40 ||
@@ -217,7 +217,7 @@ zx_status_t TxVector::ToIdx(tx_vec_idx_t* idx) const {
   switch (phy) {
     case WLAN_PHY_TYPE_HT: {
       uint8_t group_idx = 0;
-      if (gi == WLAN_GI__400NS) {
+      if (gi == WLAN_GI_G_400NS) {
         group_idx = kHtNumCbw;
       }
       if (cbw == CHANNEL_BANDWIDTH_CBW40 || cbw == CHANNEL_BANDWIDTH_CBW40 ||
