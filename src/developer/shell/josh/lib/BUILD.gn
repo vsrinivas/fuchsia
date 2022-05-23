@@ -106,7 +106,6 @@ source_set("tests") {
     "//src/developer/shell/josh/console",
     "//src/lib/fidl_codec:json_for_test",
     "//src/storage/memfs",
-    "//src/sys/component_index/fidl:index",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

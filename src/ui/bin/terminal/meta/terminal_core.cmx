@@ -36,7 +36,6 @@
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
             "fuchsia.sys.Loader",
-            "fuchsia.sys.index.FuzzySearch",
             "fuchsia.tracing.provider.Registry",
             "fuchsia.update.Manager"
         ]

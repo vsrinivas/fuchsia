@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
-import("//src/sys/component_index/component_index.gni")
 
 fuchsia_component("vulkaninfo-cmp") {
   manifest = "meta/vulkaninfo.cmx"
@@ -16,14 +15,6 @@ fuchsia_component("vulkaninfo-cmp") {
   ]
 }
 
-add_to_component_index("component-index") {
-  package_name = "vulkaninfo"
-  manifest = "meta/vulkaninfo.cmx"
-}
-
 fuchsia_package("vulkaninfo") {
-  deps = [
-    ":component-index",
-    ":vulkaninfo-cmp",
-  ]
+  deps = [ ":vulkaninfo-cmp" ]
 }

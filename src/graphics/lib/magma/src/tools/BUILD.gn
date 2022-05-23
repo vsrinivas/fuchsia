@@ -4,7 +4,6 @@
 
 import("//build/components.gni")
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
-import("//src/sys/component_index/component_index.gni")
 
 group("tools") {
   testonly = true
@@ -32,16 +31,8 @@ fuchsia_component("magma-info-cmp") {
   manifest = "meta/magma-info.cmx"
 }
 
-add_to_component_index("component-index") {
-  package_name = "magma-info"
-  manifest = "meta/magma-info.cmx"
-}
-
 fuchsia_package("magma-info") {
-  deps = [
-    ":component-index",
-    ":magma-info-cmp",
-  ]
+  deps = [ ":magma-info-cmp" ]
 }
 
 fuchsia_test_package("magma-info-test") {

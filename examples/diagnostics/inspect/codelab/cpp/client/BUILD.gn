@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
-import("//src/sys/component_index/component_index.gni")
 
 executable("bin") {
   output_name = "inspect_cpp_codelab_client"

@@ -29,7 +29,6 @@ import("//build/security/verifier/verify_component_resolvers.gni")
 import("//build/security/verifier/verify_routes.gni")
 import("//build/zbi/zbi_input.gni")
 import("//build/zircon/tools.gni")
-import("//src/sys/component_index/component_index.gni")
 import("//src/sys/pkg/bin/pm/pm.gni")
 import("//src/sys/pkg/bin/system-updater/epoch/generate_epoch.gni")
 
@@ -1110,48 +1109,6 @@ action("all_package_manifests.list") {
   }
 }
 
-component_index_metadata = "$target_out_dir/component_index_metadata"
-generate_component_index("component_index_metadata") {
-  visibility = [
-    "//build/images:*",
-    "//src/sys/component_index:*",
-  ]
-  testonly = fuchsia_zbi_testonly
-
-  outputs = [ component_index_metadata ]
-
-  deps = [
-    ":universe_packages",
-    labels.base_packages,
-    labels.cache_packages,
-  ]
-
-  metadata = {
-    # Don't collect all expect_includes() in the universe
-    expect_includes_barrier = []
-  }
-}
-
-resource("component_index_txt") {
-  visibility = [
-    "//build/images:*",
-    "//src/sys/component_index:*",
-  ]
-  testonly = fuchsia_zbi_testonly
-  sources = get_target_outputs(":component_index_metadata")
-  outputs = [ "data/component_index.txt" ]
-  deps = [ ":component_index_metadata" ]
-}
-
-# We copy the metatdata to the root dir so that it can easily be used by host
-# tools
-copy("root_component_index_metadata") {
-  testonly = true
-  sources = [ component_index_metadata ]
-  outputs = [ "$root_out_dir/component_index_metadata" ]
-  deps = [ ":component_index_metadata" ]
-}
-
 # initialize and prepare the package repository.
 pm_prepare_publish("prepare_publish") {
   testonly = true
@@ -1172,7 +1129,6 @@ group("updates") {
   deps = [
     ":package_lists",
     ":publish",
-    ":root_component_index_metadata",
   ]
 
   if (!is_coverage) {
@@ -1437,7 +1393,6 @@ group("default-images") {
   if (!bootfs_only) {
     deps += [
       ":record_filesystem_sizes",
-      ":root_component_index_metadata",
       ":updates",
     ]
 

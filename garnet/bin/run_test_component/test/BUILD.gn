@@ -6,7 +6,6 @@ import("//build/components.gni")
 import("//build/config.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/test.gni")
-import("//src/sys/component_index/component_index.gni")
 
 group("test") {
   testonly = true

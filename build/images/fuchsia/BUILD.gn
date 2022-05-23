@@ -72,7 +72,7 @@ if (is_fuchsia) {
     ]
 
     # Include the product-defined meta package labels.
-    meta_packages = meta_package_labels + [ "//src/sys/component_index" ]
+    meta_packages = meta_package_labels
 
     # Add the base package labels for the selected SWD policy.
     if (defined(policy_labels.swd)) {

@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
-import("//src/sys/component_index/component_index.gni")
 import("//src/sys/core/build/core_shard.gni")
 
 executable("bin") {

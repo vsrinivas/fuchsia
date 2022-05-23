@@ -4,7 +4,6 @@
 
 #include "garnet/bin/run_test_component/run_test_component.h"
 
-#include <fuchsia/sys/index/cpp/fidl.h>
 #include <glob.h>
 #include <lib/fit/defer.h>
 #include <lib/fitx/result.h>
@@ -19,12 +18,6 @@
 #include "src/lib/pkg_url/fuchsia_pkg_url.h"
 
 namespace run {
-
-using fuchsia::sys::index::ComponentIndex_FuzzySearch_Result;
-using fuchsia::sys::index::ComponentIndexSyncPtr;
-
-static constexpr char kComponentIndexerUrl[] =
-    "fuchsia-pkg://fuchsia.com/component_index#meta/component_index.cmx";
 
 static constexpr char kLabelArgPrefix[] = "--realm-label=";
 static constexpr char kTimeoutArgPrefix[] = "--timeout=";
@@ -130,58 +123,6 @@ ParseArgsResult ParseArgs(const std::shared_ptr<sys::ServiceDirectory>& services
 
     url = argument;
     break;
-  }
-
-  if (!component::FuchsiaPkgUrl::IsFuchsiaPkgScheme(url)) {
-    fuchsia::sys::LaunchInfo index_launch_info;
-    index_launch_info.url = kComponentIndexerUrl;
-    auto index_provider =
-        sys::ServiceDirectory::CreateWithRequest(&index_launch_info.directory_request);
-
-    // Connect to the Launcher service through our static environment.
-    fuchsia::sys::LauncherSyncPtr launcher;
-    services->Connect(launcher.NewRequest());
-    fuchsia::sys::ComponentControllerPtr component_index_controller;
-    launcher->CreateComponent(std::move(index_launch_info),
-                              component_index_controller.NewRequest());
-
-    ComponentIndexSyncPtr index;
-    index_provider->Connect(index.NewRequest());
-
-    std::string test_name = url;
-    ComponentIndex_FuzzySearch_Result fuzzy_search_result;
-    zx_status_t status = index->FuzzySearch(test_name, &fuzzy_search_result);
-    if (status != ZX_OK) {
-      result.error = true;
-      result.error_msg = fxl::StringPrintf(
-          "\"%s\" is not a valid URL. Attempted to match to a URL with "
-          "fuchsia.sys.index.FuzzySearch, but the service is not available.",
-          test_name.c_str());
-      return result;
-    }
-
-    if (fuzzy_search_result.is_err()) {
-      result.error = true;
-      result.error_msg = fxl::StringPrintf(
-          "\"%s\" contains unsupported characters for fuzzy "
-          "matching. Valid characters are [A-Z a-z 0-9 / _ - .].\n",
-          test_name.c_str());
-      return result;
-    }
-    std::vector<std::string> uris = fuzzy_search_result.response().uris;
-    if (uris.empty()) {
-      result.error = true;
-      result.error_msg =
-          fxl::StringPrintf("\"%s\" did not match any components.\n", test_name.c_str());
-      return result;
-    }
-    for (auto& uri : uris) {
-      result.matching_urls.push_back(uri);
-    }
-    if (uris.size() > 1) {
-      return result;
-    }
-    url = uris[0];
   }
 
   result.launch_info.url = url;

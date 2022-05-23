@@ -126,14 +126,6 @@ TEST(RunTest, ParseArgs) {
   }
 
   {
-    std::vector<const char*> argv = {
-        kBinName, "--unknown-argument=gives_error", component_url, "--", "myarg1", "myarg2"};
-    int argc = static_cast<int>(argv.size());
-    auto result = ParseArgs(env_services, argc, argv.data());
-    EXPECT_TRUE(result.error);
-  }
-
-  {
     std::vector<const char*> argv = {kBinName,
                                      "--realm-label=kittens",
                                      "--min-severity-logs=WARN",
@@ -218,13 +210,6 @@ TEST(RunTest, ParseArgs) {
     EXPECT_EQ("", result.realm_label);
     EXPECT_EQ(FX_LOG_TRACE, result.min_log_severity);
     EXPECT_EQ(FX_LOG_ERROR, result.max_log_severity);
-  }
-
-  {
-    std::vector<const char*> argv = {kBinName, "run_test_component_test_invalid_matcher"};
-    int argc = static_cast<int>(argv.size());
-    auto result = ParseArgs(env_services, argc, argv.data());
-    EXPECT_TRUE(result.error);
   }
 
   // check that for time being we can pass tets args without using option delimiter(--).

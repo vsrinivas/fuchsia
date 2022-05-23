@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
-import("//src/sys/component_index/component_index.gni")
 
 # Test `run` with a stubbed launcher implementation
 executable("run_tests_bin") {
@@ -50,18 +49,10 @@ executable("run_test_exiter_bin") {
   deps = [ "//zircon/system/ulib/zx" ]
 }
 
-add_to_component_index("index") {
-  package_name = "run_tests"
-  manifest = "meta/run_test_exiter.cmx"
-}
-
 fuchsia_component("run_test_exiter") {
   testonly = true
   manifest = "meta/run_test_exiter.cmx"
-  deps = [
-    ":index",
-    ":run_test_exiter_bin",
-  ]
+  deps = [ ":run_test_exiter_bin" ]
 }
 
 fuchsia_component("run_return_value_test") {

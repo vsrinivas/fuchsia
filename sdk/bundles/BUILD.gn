@@ -31,7 +31,6 @@ group("core-tools") {
     "//src/developer/memory/mem",
     "//src/graphics/lib/magma:magma-tools",
     "//src/recovery/factory_reset:tools",
-    "//src/sys/locate",
     "//src/sys/pkg/bin/pm:host",
     "//src/sys/tools/runmany",
     "//src/ui/tools/tiles_ctl",
