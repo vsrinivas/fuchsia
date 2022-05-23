@@ -11,6 +11,7 @@ use euclid::default::Transform2D;
 use fidl::endpoints::create_proxy;
 use fidl_fuchsia_input_report as hid_input_report;
 use fuchsia_async::{self as fasync, Time, TimeoutExt};
+use fuchsia_syslog::fx_log_warn;
 use fuchsia_vfs_watcher as vfs_watcher;
 use fuchsia_zircon::{self as zx, Duration};
 use futures::{TryFutureExt, TryStreamExt};
@@ -318,11 +319,18 @@ pub struct Event {
 }
 
 fn device_id_for_event(event: &fidl_fuchsia_ui_input::PointerEvent) -> DeviceId {
+    #[allow(unreachable_patterns)]
     let id_string = match event.type_ {
         fidl_fuchsia_ui_input::PointerEventType::Touch => "touch",
         fidl_fuchsia_ui_input::PointerEventType::Mouse => "mouse",
         fidl_fuchsia_ui_input::PointerEventType::Stylus => "stylus",
         fidl_fuchsia_ui_input::PointerEventType::InvertedStylus => "inverted-stylus",
+        _ => {
+            // If you see this log line, it means that the list of pointer event
+            // types has been expanded and needs to be added above.
+            fx_log_warn!("unknown pointer event type");
+            "unknown"
+        }
     };
     DeviceId(format!("{}-{}", id_string, event.device_id))
 }
