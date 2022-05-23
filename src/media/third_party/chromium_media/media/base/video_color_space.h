@@ -28,6 +28,10 @@ namespace media {
 // Described in ISO 23001-8:2016
 class MEDIA_EXPORT VideoColorSpace {
  public:
+  // These values are persisted to logs. Entries should not be renumbered or
+  // removed and numeric values should never be reused.
+  // Please keep in sync with "VideoColorSpace.PrimaryID"
+  // in src/tools/metrics/histograms/enums.xml.
   // Table 2
   enum class PrimaryID : uint8_t {
     INVALID = 0,
@@ -42,9 +46,14 @@ class MEDIA_EXPORT VideoColorSpace {
     SMPTEST428_1 = 10,
     SMPTEST431_2 = 11,
     SMPTEST432_1 = 12,
-    EBU_3213_E = 22
+    EBU_3213_E = 22,
+    kMaxValue = EBU_3213_E,
   };
 
+  // These values are persisted to logs. Entries should not be renumbered or
+  // removed and numeric values should never be reused.
+  // Please keep in sync with "VideoColorSpace.TransferID"
+  // in src/tools/metrics/histograms/enums.xml.
   // Table 3
   enum class TransferID : uint8_t {
     INVALID = 0,
@@ -67,6 +76,8 @@ class MEDIA_EXPORT VideoColorSpace {
 
     // Not yet standardized
     ARIB_STD_B67 = 18,  // AKA hybrid-log gamma, HLG.
+
+    kMaxValue = ARIB_STD_B67,
   };
 
   // Table 4
@@ -83,6 +94,7 @@ class MEDIA_EXPORT VideoColorSpace {
     BT2020_CL = 10,
     YDZDX = 11,
     INVALID = 255,
+    kMaxValue = INVALID,
   };
 
   VideoColorSpace();
@@ -112,6 +124,10 @@ class MEDIA_EXPORT VideoColorSpace {
   static VideoColorSpace JPEG();
 
   gfx::ColorSpace ToGfxColorSpace() const;
+
+#ifdef CHROMIUM_CODE
+  static VideoColorSpace FromGfxColorSpace(const gfx::ColorSpace& color_space);
+  #endif
 
   // Note, these are public variables.
   PrimaryID primaries = PrimaryID::INVALID;

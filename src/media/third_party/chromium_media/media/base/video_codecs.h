@@ -5,9 +5,10 @@
 #ifndef MEDIA_BASE_VIDEO_CODECS_H_
 #define MEDIA_BASE_VIDEO_CODECS_H_
 
-#include "chromium_utils.h"
-
+#include <stdint.h>
 #include <string>
+
+#include "chromium_utils.h"
 
 namespace media {
 
@@ -69,6 +70,9 @@ enum VideoCodecProfile {
 };
 
 std::string MEDIA_EXPORT GetProfileName(VideoCodecProfile profile);
+std::string MEDIA_EXPORT BuildH264MimeSuffix(VideoCodecProfile profile,
+                                             uint8_t level);
+
 
 }  // namespace media
 

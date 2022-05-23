@@ -136,8 +136,7 @@ class MEDIA_GPU_EXPORT VP9Decoder : public AcceleratedVideoDecoder {
   gfx::Size GetPicSize() const override;
   gfx::Rect GetVisibleRect() const override;
   VideoCodecProfile GetProfile() const override;
-  // Fuchsia change: currently only support 8-bit color depth
-  // uint8_t GetBitDepth() const override;
+  uint8_t GetBitDepth() const override;
   size_t GetRequiredNumOfPictures() const override;
   size_t GetNumReferenceFrames() const override;
 
