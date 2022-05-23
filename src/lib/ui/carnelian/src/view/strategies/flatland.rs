@@ -198,12 +198,15 @@ pub(crate) struct FlatlandViewStrategy {
     flatland: flatland::FlatlandProxy,
     allocator: flatland::AllocatorProxy,
     view_key: ViewKey,
-    pending_present_count: usize,
     last_presentation_time: i64,
     future_presentation_times: Vec<PresentationTime>,
     custom_render_offset: Option<i64>,
     present_interval: i64,
+    // The number of `Flatland.Present()` calls we're authorized to make.  Initial value is 1.
+    // Decremented whenever `Present()` is called, and incremented whenever Scenic authorizes us to.
     num_presents_allowed: usize,
+    // Only used for tracing, does not affect behavior.
+    pending_present_count: usize,
     render_timer_scheduled: bool,
     missed_frame: bool,
     app_sender: UnboundedSender<MessageInternal>,
@@ -260,12 +263,12 @@ impl FlatlandViewStrategy {
             allocator,
             view_key: key,
             app_sender: app_sender.clone(),
-            pending_present_count: 1,
             last_presentation_time: fasync::Time::now().into_nanos(),
             future_presentation_times: Vec::new(),
             custom_render_offset: None,
             present_interval: DEFAULT_PRESENT_INTERVAL,
             num_presents_allowed: 1,
+            pending_present_count: 0,
             render_timer_scheduled: false,
             missed_frame: false,
             plumber: None,
@@ -634,10 +637,6 @@ impl FlatlandViewStrategy {
         }
     }
 
-    fn present_allowed(&self) -> bool {
-        self.pending_present_count <= self.num_presents_allowed
-    }
-
     fn listen_for_key_events(
         mut view_ref: ViewRef,
         app_sender: &UnboundedSender<MessageInternal>,
@@ -720,17 +719,18 @@ impl ViewStrategy for FlatlandViewStrategy {
         view_assistant: &mut ViewAssistantPtr,
     ) -> bool {
         let size = view_details.physical_size.floor().to_u32();
-        duration!("gfx", "FlatlandViewStrategy::render", "width" => size.width, "height" => size.height);
+        duration!("gfx", "FlatlandViewStrategy::render",
+            "width" => size.width,
+            "height" => size.height);
 
         self.render_timer_scheduled = false;
         if size.width > 0 && size.height > 0 {
-            if !self.present_allowed() {
-                instant!(
-                    "gfx",
-                    "FlatlandViewStrategy::present_is_not_allowed",
+            if self.num_presents_allowed == 0 {
+                instant!("gfx", "FlatlandViewStrategy::present_is_not_allowed",
                     fuchsia_trace::Scope::Process,
-                    "counts" => format!("{} pending {} allowed", self.pending_present_count, self.num_presents_allowed).as_str()
-                );
+                    "counts" => format!("{} pending {} allowed",
+                        self.pending_present_count,
+                        self.num_presents_allowed).as_str());
                 self.missed_frame = true;
                 return false;
             }
@@ -756,6 +756,7 @@ impl ViewStrategy for FlatlandViewStrategy {
     fn present(&mut self, _view_details: &ViewDetails) {
         duration!("gfx", "FlatlandViewStrategy::present");
         if !self.missed_frame {
+            assert!(self.num_presents_allowed > 0);
             let release_event = self.previous_present_release_event.take();
             let presentation_time = self.next_presentation_time();
             Self::do_present(
@@ -781,7 +782,6 @@ impl ViewStrategy for FlatlandViewStrategy {
         let num_presents_handled = info.presentation_infos.len();
         assert!(self.pending_present_count >= num_presents_handled);
         self.pending_present_count -= num_presents_handled;
-        self.retry_missed_frame();
         instant!(
             "gfx",
             "FlatlandViewStrategy::present_done",
@@ -903,5 +903,8 @@ impl ViewStrategy for FlatlandViewStrategy {
                 latch_point: t.latch_point.expect("latch_point"),
             }),
         );
+
+        // Now that we have incremented `self.num_presents_allowed`, a missed frame might succeed.
+        self.retry_missed_frame();
     }
 }
