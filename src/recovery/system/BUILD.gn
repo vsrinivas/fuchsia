@@ -232,6 +232,7 @@ rustc_binary("bin_installer") {
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block-rustc",
     "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition-rustc",
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume-rustc",
+    "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display-rustc",
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",

@@ -19,6 +19,7 @@ use carnelian::{
 };
 use euclid::{point2, size2};
 use fidl_fuchsia_boot::ArgumentsMarker;
+use fidl_fuchsia_hardware_display::VirtconMode;
 use fuchsia_async::{self as fasync};
 use fuchsia_watch::PathEvent;
 use fuchsia_zircon::Event;
@@ -129,7 +130,10 @@ impl AppAssistant for InstallerAppAssistant {
     }
 
     fn filter_config(&mut self, config: &mut Config) {
+        config.view_mode = carnelian::app::ViewMode::Direct;
+        config.virtcon_mode = Some(VirtconMode::Forced);
         config.display_rotation = self.display_rotation;
+        config.buffer_count = Some(1);
     }
 }
 
