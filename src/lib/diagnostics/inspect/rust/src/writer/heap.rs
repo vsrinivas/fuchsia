@@ -10,7 +10,7 @@ use crate::writer::Error;
 use inspect_format::{constants, utils, Block, BlockType};
 use mapped_vmo::Mapping;
 use num_traits::ToPrimitive;
-use std::{cmp::min, sync::Arc};
+use std::{cmp::min, convert::TryInto, sync::Arc};
 
 /// The inspect heap.
 #[derive(Debug)]
@@ -21,6 +21,7 @@ pub struct Heap {
     allocated_blocks: usize,
     deallocated_blocks: usize,
     failed_allocations: usize,
+    header: Option<Block<Arc<Mapping>>>,
 }
 
 impl Heap {
@@ -33,6 +34,7 @@ impl Heap {
             allocated_blocks: 0,
             deallocated_blocks: 0,
             failed_allocations: 0,
+            header: None,
         };
         heap.grow_heap(constants::PAGE_SIZE_BYTES)?;
         Ok(heap)
@@ -137,6 +139,12 @@ impl Heap {
         result
     }
 
+    pub fn set_header_block(&mut self, header: &Block<Arc<Mapping>>) -> Result<(), Error> {
+        header.set_header_size(self.current_size_bytes.try_into().unwrap())?;
+        self.header = Some(header.clone());
+        Ok(())
+    }
+
     fn grow_heap(&mut self, requested_size: usize) -> Result<(), Error> {
         let mapping_size = self.mapping.len() as usize;
         if requested_size > mapping_size {
@@ -164,6 +172,9 @@ impl Heap {
         }
         self.free_head_per_order[constants::NUM_ORDERS - 1] = last_index;
         self.current_size_bytes = new_size;
+        if let Some(header) = self.header.as_ref() {
+            header.set_header_size(self.current_size_bytes.try_into().unwrap())?;
+        }
         Ok(())
     }
 
@@ -258,6 +269,7 @@ mod tests {
         let heap = Heap::new(Arc::new(mapping)).unwrap();
         assert_eq!(heap.current_size_bytes, 4096);
         assert_eq!(heap.free_head_per_order, [0; 8]);
+        assert!(heap.header.is_none());
 
         let expected = [
             BlockDebug { index: 0, order: 7, block_type: BlockType::Free },
@@ -371,7 +383,7 @@ mod tests {
     }
 
     #[fuchsia::test]
-    fn allocatation_counters_work() {
+    fn allocation_counters_work() {
         let (mapping, _) = Mapping::allocate(4096).unwrap();
         let mut heap = Heap::new(Arc::new(mapping)).unwrap();
 
@@ -574,6 +586,72 @@ mod tests {
             BlockDebug { index: 32, order: 5, block_type: BlockType::Free },
             BlockDebug { index: 64, order: 6, block_type: BlockType::Free },
             BlockDebug { index: 128, order: 7, block_type: BlockType::Free },
+        ];
+        validate(&expected, &heap);
+    }
+
+    #[fuchsia::test]
+    fn update_header_size() {
+        let (mapping, _) = Mapping::allocate(3 * 4096).unwrap();
+        let mut heap = Heap::new(Arc::new(mapping)).unwrap();
+        let mut block = heap
+            .allocate_block(inspect_format::utils::order_to_size(constants::HEADER_ORDER as usize))
+            .unwrap();
+        assert!(block.become_header(heap.current_size()).is_ok());
+        assert!(heap.set_header_block(&block).is_ok());
+
+        assert_eq!(block.header_size().unwrap() as usize, heap.current_size());
+        let b = heap.allocate_block(2048).unwrap();
+        assert_eq!(b.index(), 128);
+        assert_eq!(block.header_size().unwrap() as usize, heap.current_size());
+        let b = heap.allocate_block(2048).unwrap();
+        assert_eq!(b.index(), 256);
+        assert_eq!(block.header_size().unwrap() as usize, heap.current_size());
+        let b = heap.allocate_block(2048).unwrap();
+        assert_eq!(b.index(), 384);
+        assert_eq!(block.header_size().unwrap() as usize, heap.current_size());
+
+        let expected = [
+            BlockDebug { index: 0, order: 1, block_type: BlockType::Header },
+            BlockDebug { index: 2, order: 1, block_type: BlockType::Free },
+            BlockDebug { index: 4, order: 2, block_type: BlockType::Free },
+            BlockDebug { index: 8, order: 3, block_type: BlockType::Free },
+            BlockDebug { index: 16, order: 4, block_type: BlockType::Free },
+            BlockDebug { index: 32, order: 5, block_type: BlockType::Free },
+            BlockDebug { index: 64, order: 6, block_type: BlockType::Free },
+            BlockDebug { index: 128, order: 7, block_type: BlockType::Reserved },
+            BlockDebug { index: 256, order: 7, block_type: BlockType::Reserved },
+            BlockDebug { index: 384, order: 7, block_type: BlockType::Reserved },
+        ];
+        validate(&expected, &heap);
+
+        let b = heap.allocate_block(2048).unwrap();
+        assert_eq!(b.index(), 512);
+        assert_eq!(block.header_size().unwrap() as usize, heap.current_size());
+        let b = heap.allocate_block(2048).unwrap();
+        assert_eq!(b.index(), 640);
+        assert_eq!(block.header_size().unwrap() as usize, heap.current_size());
+        assert_eq!(heap.failed_allocations, 0);
+        assert!(heap.allocate_block(2048).is_err());
+        assert_eq!(block.header_size().unwrap() as usize, heap.current_size());
+        assert_eq!(heap.failed_allocations, 1);
+
+        assert!(heap.free_block(heap.get_block(128).unwrap()).is_ok());
+        assert!(heap.free_block(heap.get_block(256).unwrap()).is_ok());
+        assert!(heap.free_block(heap.get_block(384).unwrap()).is_ok());
+        assert!(heap.free_block(heap.get_block(512).unwrap()).is_ok());
+        assert!(heap.free_block(heap.get_block(640).unwrap()).is_ok());
+        assert_eq!(block.header_size().unwrap() as usize, heap.current_size());
+
+        assert!(heap.free_block(heap.get_block(0).unwrap()).is_ok());
+
+        let expected = [
+            BlockDebug { index: 0, order: 7, block_type: BlockType::Free },
+            BlockDebug { index: 128, order: 7, block_type: BlockType::Free },
+            BlockDebug { index: 256, order: 7, block_type: BlockType::Free },
+            BlockDebug { index: 384, order: 7, block_type: BlockType::Free },
+            BlockDebug { index: 512, order: 7, block_type: BlockType::Free },
+            BlockDebug { index: 640, order: 7, block_type: BlockType::Free },
         ];
         validate(&expected, &heap);
     }

@@ -258,6 +258,7 @@ impl State {
             constants::HEADER_ORDER as usize,
         ))?;
         block.become_header(heap.current_size())?;
+        heap.set_header_block(&block)?;
         let inner = Arc::new(Mutex::new(InnerState::new(heap, vmo)));
         Ok(Self { inner, header: block })
     }
@@ -1933,7 +1934,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn test_link() {
-        // Intialize state and create a link block.
+        // Initialize state and create a link block.
         let state = get_state(4096);
         let block = {
             let mut state_guard = state.try_lock().expect("lock state");
@@ -2021,8 +2022,8 @@ mod tests {
 
     #[fuchsia::test]
     async fn stats() {
-        // Intialize state and create a link block.
-        let state = get_state(12288);
+        // Initialize state and create a link block.
+        let state = get_state(3 * 4096);
         let mut state_guard = state.try_lock().expect("lock state");
         let _block1 = state_guard
             .create_lazy_node("link-name", 0, LinkNodeDisposition::Inline, || {
@@ -2039,7 +2040,7 @@ mod tests {
             state_guard.stats(),
             Stats {
                 total_dynamic_children: 1,
-                maximum_size: 12288,
+                maximum_size: 3 * 4096,
                 current_size: 4096,
                 allocated_blocks: 6, /* HEADER, state_guard, _block1 (and content),
                                      // "link-name", _block2, "test" */
@@ -2084,5 +2085,43 @@ mod tests {
         assert!(state.header.check_locked(true).is_ok());
         assert_eq!(state.header.header_generation_count().unwrap(), 3);
         assert_eq!(lock_guard2.inner_lock.transaction_count, 0);
+    }
+
+    #[fuchsia::test]
+    async fn update_header_size() {
+        let core_state = get_state(3 * 4096);
+        assert_eq!(core_state.header.header_size().unwrap(), 4096);
+        let block1 = {
+            let mut state = core_state.try_lock().expect("lock state");
+
+            let chars = ['a', 'b', 'c', 'd', 'e', 'f', 'g'];
+            let data = chars.iter().cycle().take(6000).collect::<String>();
+            let block =
+                state.create_property("test", data.as_bytes(), PropertyFormat::String, 0).unwrap();
+            assert_eq!(state.header.header_size().unwrap(), 2 * 4096);
+
+            block
+        };
+
+        let block2 = {
+            let mut state = core_state.try_lock().expect("lock state");
+
+            let chars = ['a', 'b', 'c', 'd', 'e', 'f', 'g'];
+            let data = chars.iter().cycle().take(3000).collect::<String>();
+            let block =
+                state.create_property("test", data.as_bytes(), PropertyFormat::String, 0).unwrap();
+            assert_eq!(state.header.header_size().unwrap(), 3 * 4096);
+
+            block
+        };
+        // Free properties.
+        {
+            let mut state = core_state.try_lock().expect("lock state");
+            assert!(state.free_property(block1.index()).is_ok());
+            assert!(state.free_property(block2.index()).is_ok());
+        }
+        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
+        let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
+        assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
     }
 }
