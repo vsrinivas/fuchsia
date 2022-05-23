@@ -12,31 +12,36 @@ import (
 // upload to GCS.
 type Upload struct {
 	// Source is the path to the local file to upload.
-	Source string
+	Source string `json:"source,omitempty"`
 
 	// Destination is the path to upload to relative to a gcs bucket and namespace.
-	Destination string
+	Destination string `json:"destination"`
 
 	// Compress is a directive to gzip the object before uploading.
-	Compress bool
+	Compress bool `json:"compress,omitempty"`
 
 	// Contents contains the contents to upload to Destination. This field
 	// will only be used if Source is empty.
-	Contents []byte
+	Contents []byte `json:"contents,omitempty"`
 
 	// Deduplicate gives a collision strategy. If true, then an upload should
 	// not fail in the event of a collision, allowing for deduplication of, for
 	// example, content-addressed uploads.
-	Deduplicate bool
+	Deduplicate bool `json:"deduplicate,omitempty"`
 
 	// Recursive tells whether to recursively upload all files in Source if
 	// Source is a directory.
-	Recursive bool
+	Recursive bool `json:"recursive,omitempty"`
+
+	// Signed determines whether the object should be signed, provided that a
+	// private key is provided.
+	Signed bool `json:"signed,omitempty"`
 
 	// Metadata contains the metadata to be uploaded with the file.
-	Metadata map[string]string
+	// TODO(fxbug.dev/92697): Remove.
+	Metadata map[string]string `json:"-"`
 
 	// TarHeader tells whether or not to compress with tar and contains the
 	// associated header.
-	TarHeader *tar.Header
+	TarHeader *tar.Header `json:"tar_header,omitempty"`
 }

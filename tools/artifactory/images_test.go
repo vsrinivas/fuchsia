@@ -88,31 +88,37 @@ func TestImageUploads(t *testing.T) {
 		{
 			Source:      "BUILD_DIR/IMAGE_MANIFEST",
 			Destination: "namespace/IMAGE_MANIFEST",
+			Signed:      true,
 		},
 		{
 			Source:      filepath.Join(dir, "bootloader"),
 			Destination: "namespace/bootloader",
 			Compress:    true,
+			Signed:      true,
 		},
 		{
 			Source:      filepath.Join(dir, "zedboot.zbi"),
 			Destination: "namespace/zedboot.zbi",
 			Compress:    true,
+			Signed:      true,
 		},
 		{
 			Source:      filepath.Join(dir, "fuchsia.zbi"),
 			Destination: "namespace/fuchsia.zbi",
 			Compress:    true,
+			Signed:      true,
 		},
 		{
 			Source:      filepath.Join(dir, "qemu-kernel.bin"),
 			Destination: "namespace/qemu-kernel.bin",
 			Compress:    true,
+			Signed:      true,
 		},
 		{
 			Source:      name,
 			Destination: filepath.Join("namespace", gceUploadName),
 			Compress:    true,
+			Signed:      true,
 			TarHeader: &tar.Header{
 				Format: tar.FormatGNU,
 				Name:   gceImageName,

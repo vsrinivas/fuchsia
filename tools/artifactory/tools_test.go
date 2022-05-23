@@ -64,14 +64,17 @@ func TestToolUploads(t *testing.T) {
 		{
 			Source:      filepath.Join("BUILD_DIR", "host_arm64", "A"),
 			Destination: "namespace/linux-arm64/A",
+			Signed:      true,
 		},
 		{
 			Source:      filepath.Join("BUILD_DIR", "host_x64", "A"),
 			Destination: "namespace/linux-x64/A",
+			Signed:      true,
 		},
 		{
 			Source:      filepath.Join("BUILD_DIR", "host_x64", "C"),
 			Destination: "namespace/linux-x64/C_dest",
+			Signed:      true,
 		},
 	}
 

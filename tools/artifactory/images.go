@@ -37,6 +37,7 @@ func imageUploads(mods imgModules, namespace string) ([]Upload, error) {
 		{
 			Source:      mods.ImageManifest(),
 			Destination: path.Join(namespace, manifestName),
+			Signed:      true,
 		},
 	}
 
@@ -60,6 +61,7 @@ func imageUploads(mods imgModules, namespace string) ([]Upload, error) {
 					Source:      srcPath,
 					Destination: path.Join(namespace, dest),
 					Compress:    true,
+					Signed:      true,
 					TarHeader: &tar.Header{
 						Format: tar.FormatGNU,
 						Name:   gceImageName,
@@ -72,6 +74,8 @@ func imageUploads(mods imgModules, namespace string) ([]Upload, error) {
 					Source:      filepath.Join(mods.BuildDir(), img.Path),
 					Destination: path.Join(namespace, img.Path),
 					Compress:    true,
+					// Images should be signed for release builds.
+					Signed: true,
 				})
 			}
 			seen[img.Path] = struct{}{}

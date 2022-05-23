@@ -24,6 +24,8 @@ func buildAPIModuleUploads(mods apiModules, namespace string) []Upload {
 		uploads = append(uploads, Upload{
 			Source:      filepath.Join(mods.BuildDir(), apiFilename),
 			Destination: path.Join(namespace, apiFilename),
+			// Build APIs should be signed for release builds.
+			Signed: true,
 		})
 	}
 	return uploads

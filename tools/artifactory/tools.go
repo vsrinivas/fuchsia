@@ -45,6 +45,8 @@ func toolUploads(mods toolModules, allowlist map[string]string, namespace string
 		uploads = append(uploads, Upload{
 			Source:      filepath.Join(mods.BuildDir(), tool.Path),
 			Destination: path.Join(namespace, fmt.Sprintf("%s-%s", tool.OS, tool.CPU), allowlist[tool.Name]),
+			// Tools should be signed for release builds.
+			Signed: true,
 		})
 	}
 	return uploads

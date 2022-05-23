@@ -31,14 +31,17 @@ func TestAPIUploads(t *testing.T) {
 		{
 			Source:      filepath.Join("BUILD_DIR", "a.json"),
 			Destination: "namespace/a.json",
+			Signed:      true,
 		},
 		{
 			Source:      filepath.Join("BUILD_DIR", "b.json"),
 			Destination: "namespace/b.json",
+			Signed:      true,
 		},
 		{
 			Source:      filepath.Join("BUILD_DIR", "c.json"),
 			Destination: "namespace/c.json",
+			Signed:      true,
 		},
 	}
 	actual := buildAPIModuleUploads(m, "namespace")
