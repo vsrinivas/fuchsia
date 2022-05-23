@@ -21,6 +21,6 @@ async fn main() -> Result<(), anyhow::Error> {
     tracing::trace!("Initialized.");
     let dev_proxy = open_directory_in_namespace("/dev/class/codec", OpenFlags::RIGHT_READABLE)?;
     let configurator = DefaultConfigurator::new();
-    discover::find_codecs(dev_proxy, false, configurator).await?;
+    discover::find_codecs(dev_proxy, 0, configurator).await?;
     unreachable!();
 }

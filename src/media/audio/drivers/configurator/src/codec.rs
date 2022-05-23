@@ -149,7 +149,7 @@ mod tests {
     async fn test_codec_api() -> Result<()> {
         let (_realm_instance, dev_proxy) = get_dev_proxy().await?;
         let configurator = TestConfigurator::new();
-        find_codecs(dev_proxy, true, configurator).await?;
+        find_codecs(dev_proxy, 2, configurator).await?;
         Ok(())
     }
 }

@@ -97,7 +97,7 @@ mod tests {
     async fn test_default_configurator_process_new_codec() -> Result<()> {
         let (_realm_instance, dev_proxy) = get_dev_proxy().await?;
         let configurator = DefaultConfigurator::new();
-        find_codecs(dev_proxy, true, configurator).await?;
+        find_codecs(dev_proxy, 2, configurator).await?;
         Ok(())
     }
 }

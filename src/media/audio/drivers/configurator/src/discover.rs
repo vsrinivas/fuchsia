@@ -4,23 +4,23 @@
 
 use crate::codec::CodecInterface;
 use crate::configurator::Configurator;
-use anyhow::{format_err, Error};
+use anyhow::Error;
 use fidl_fuchsia_io as fio;
 use futures::TryStreamExt;
 use std::path::Path;
 
 /// Finds any codec devices and calls the `process_new_codec` Configurator callback.
-/// If `break_on_idle` is true then not finding a codec is an error.
+/// If `break_count` is non-zero then once `break_count` codecs are found return.
 /// If `dev_proxy` can't be cloned an error is returned.
 pub async fn find_codecs<T: Configurator>(
     dev_proxy: fio::DirectoryProxy,
-    break_on_idle: bool,
+    break_count: u32,
     mut configurator: T,
 ) -> Result<(), Error> {
     let dev_proxy_local = io_util::clone_directory(&dev_proxy, fio::OpenFlags::empty())?;
     let mut watcher = fuchsia_vfs_watcher::Watcher::new(dev_proxy_local).await?;
 
-    let mut found_codec = false;
+    let mut codecs_found = 0;
 
     while let Some(msg) = watcher.try_next().await? {
         match msg.event {
@@ -33,18 +33,12 @@ pub async fn find_codecs<T: Configurator>(
                         tracing::info!("Found new codec in devfs node: {:?}", path);
                         let interface = CodecInterface::new(local, &path);
                         configurator.process_new_codec(interface).await;
-                        found_codec = true;
+                        codecs_found += 1;
+                        if codecs_found == break_count {
+                            return Ok(());
+                        }
                     }
                     Err(e) => tracing::warn!("Error in devfs proxy: {}", e),
-                }
-            }
-            fuchsia_vfs_watcher::WatchEvent::IDLE => {
-                if break_on_idle {
-                    if !found_codec {
-                        return Err(format_err!("No codec found and breaking on idle"));
-                    } else {
-                        return Ok(());
-                    }
                 }
             }
             _ => (),
@@ -64,7 +58,7 @@ mod tests {
     async fn test_find_codecs() -> Result<()> {
         let (_realm_instance, dev_proxy) = get_dev_proxy().await?;
         let configurator = NullConfigurator::new();
-        find_codecs(dev_proxy, true, configurator).await?;
+        find_codecs(dev_proxy, 2, configurator).await?;
         Ok(())
     }
 }
