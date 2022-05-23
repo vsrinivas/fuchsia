@@ -33,11 +33,10 @@ class AttachmentManager {
  public:
   AttachmentManager(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
                     timekeeper::Clock* clock, cobalt::Logger* cobalt, RedactorBase* redactor,
-                    const AttachmentKeys& allowlist, InspectDataBudget* inspect_data_budget);
+                    const AttachmentKeys& allowlist, Attachments static_attachments,
+                    InspectDataBudget* inspect_data_budget);
 
   ::fpromise::promise<Attachments> GetAttachments(zx::duration timeout);
-
-  const Attachments& GetStaticAttachments() const { return static_attachments_; }
 
   void DropStaticAttachment(const AttachmentKey& key, Error error);
 

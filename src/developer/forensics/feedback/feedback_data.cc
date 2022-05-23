@@ -14,6 +14,7 @@
 #include <memory>
 
 #include "src/developer/forensics/feedback/constants.h"
+#include "src/developer/forensics/feedback_data/attachments/static_attachments.h"
 #include "src/developer/forensics/feedback_data/constants.h"
 #include "src/lib/files/path.h"
 
@@ -31,7 +32,8 @@ FeedbackData::FeedbackData(async_dispatcher_t* dispatcher,
       inspect_node_manager_(inspect_root),
       inspect_data_budget_(options.limit_inspect_data, &inspect_node_manager_, cobalt_),
       attachment_manager_(dispatcher_, services_, clock_, cobalt_, redactor,
-                          options.config.attachment_allowlist, &inspect_data_budget_),
+                          options.config.attachment_allowlist,
+                          feedback_data::GetStaticAttachments(), &inspect_data_budget_),
       data_provider_(dispatcher_, services_, clock_, redactor, options.is_first_instance,
                      options.config.annotation_allowlist, options.config.attachment_allowlist,
                      cobalt_, annotation_manager, &attachment_manager_, &inspect_data_budget_),

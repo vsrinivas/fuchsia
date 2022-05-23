@@ -111,6 +111,7 @@ source_set("main_service") {
     "//src/developer/forensics/feedback_data:data_provider",
     "//src/developer/forensics/feedback_data:data_provider_controller",
     "//src/developer/forensics/feedback_data:inspect_budget",
+    "//src/developer/forensics/feedback_data/attachments",
     "//src/developer/forensics/last_reboot:last_reboot_info_provider",
     "//src/developer/forensics/last_reboot:reboot_watcher",
     "//src/developer/forensics/last_reboot:reporter",

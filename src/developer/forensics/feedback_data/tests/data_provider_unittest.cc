@@ -56,9 +56,6 @@ using testing::UnorderedElementsAreArray;
 const std::set<std::string> kDefaultAnnotations = {
     feedback::kBuildBoardKey, feedback::kBuildLatestCommitDateKey, feedback::kBuildProductKey,
     feedback::kBuildVersionKey, feedback::kDeviceBoardNameKey};
-const AttachmentKeys kDefaultAttachments = {
-    kAttachmentBuildSnapshot,
-};
 
 constexpr bool kSuccess = true;
 constexpr bool kFailure = false;
@@ -149,8 +146,9 @@ class DataProviderTest : public UnitTestFixture {
  protected:
   void SetUpDataProvider(
       const std::set<std::string>& annotation_allowlist = kDefaultAnnotations,
-      const AttachmentKeys& attachment_allowlist = kDefaultAttachments,
-      const std::map<std::string, ErrorOr<std::string>>& startup_annotations = {}) {
+      const AttachmentKeys& attachment_allowlist = {},
+      const std::map<std::string, ErrorOr<std::string>>& startup_annotations = {},
+      const std::map<std::string, AttachmentValue>& static_attachments = {}) {
     std::set<std::string> allowlist;
     for (const auto& [k, v] : startup_annotations) {
       allowlist.insert(k);
@@ -159,7 +157,7 @@ class DataProviderTest : public UnitTestFixture {
         std::make_unique<feedback::AnnotationManager>(dispatcher(), allowlist, startup_annotations);
     attachment_manager_ = std::make_unique<AttachmentManager>(
         dispatcher(), services(), &clock_, cobalt_.get(), &redactor_, attachment_allowlist,
-        inspect_data_budget_.get());
+        static_attachments, inspect_data_budget_.get());
     data_provider_ = std::make_unique<DataProvider>(
         dispatcher(), services(), &clock_, &redactor_, /*is_first_instance=*/true,
         annotation_allowlist, attachment_allowlist, cobalt_.get(), annotation_manager_.get(),

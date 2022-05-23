@@ -281,6 +281,22 @@ executable("screenshot_ptr_unittest_exe") {
   ]
 }
 
+executable("static_attachments_unittest_exe") {
+  testonly = true
+
+  sources = [ "static_attachments_unittest.cc" ]
+
+  deps = [
+    "//src/developer/forensics/feedback_data:constants",
+    "//src/developer/forensics/feedback_data/attachments",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:scoped_memfs_manager",
+    "//src/lib/files",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
 executable("system_log_unittest_exe") {
   testonly = true
 
@@ -414,6 +430,10 @@ fuchsia_component("screenshot_ptr_unittest") {
   deps = [ ":screenshot_ptr_unittest_exe" ]
 }
 
+fuchsia_unittest_component("static_attachments_unittest") {
+  deps = [ ":static_attachments_unittest_exe" ]
+}
+
 fuchsia_unittest_component("system_log_unittest") {
   deps = [ ":system_log_unittest_exe" ]
 }
@@ -435,6 +455,7 @@ fuchsia_test_package("feedback-data-tests") {
     ":metrics_unittest",
     ":kernel_log_ptr_integration_test",
     ":screenshot_ptr_unittest",
+    ":static_attachments_unittest",
     ":system_log_unittest",
   ]
 

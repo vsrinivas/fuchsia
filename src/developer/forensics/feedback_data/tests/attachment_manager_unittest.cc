@@ -57,12 +57,6 @@ using ::testing::UnorderedElementsAreArray;
 
 constexpr zx::duration kTimeout = zx::sec(30);
 
-// Allowlist to use in test cases where the attachments don't matter, but where we want to avoid
-// spurious logs due to empty attachment allowlist.
-const AttachmentKeys kDefaultAttachmentsToAvoidSpuriousLogs = {
-    kAttachmentBuildSnapshot,
-};
-
 class AttachmentManagerTest : public UnitTestFixture {
  public:
   AttachmentManagerTest() : executor_(dispatcher()), clock_(dispatcher()) {}
@@ -79,15 +73,10 @@ class AttachmentManagerTest : public UnitTestFixture {
   void TearDown() override { FX_CHECK(files::DeletePath(kCurrentLogsDir, /*recursive=*/true)); }
 
  protected:
-  void SetUpAttachmentManager(
-      const AttachmentKeys& attachment_allowlist,
-      const std::map<std::string, ErrorOr<std::string>>& startup_annotations = {}) {
-    std::set<std::string> allowlist;
-    for (const auto& [k, _] : startup_annotations) {
-      allowlist.insert(k);
-    }
+  void SetUpAttachmentManager(const AttachmentKeys& allowlist,
+                              const Attachments& static_attachments = {}) {
     attachment_manager_ = std::make_unique<AttachmentManager>(
-        dispatcher(), services(), &clock_, cobalt_.get(), &redactor_, attachment_allowlist,
+        dispatcher(), services(), &clock_, cobalt_.get(), &redactor_, allowlist, static_attachments,
         inspect_data_budget_.get());
   }
 
@@ -130,8 +119,6 @@ class AttachmentManagerTest : public UnitTestFixture {
     return result;
   }
 
-  Attachments GetStaticAttachments() { return attachment_manager_->GetStaticAttachments(); }
-
  private:
   async::Executor executor_;
   timekeeper::AsyncTestClock clock_;
@@ -149,6 +136,27 @@ class AttachmentManagerTest : public UnitTestFixture {
   std::unique_ptr<stubs::DiagnosticsArchiveBase> diagnostics_server_;
 };
 
+TEST_F(AttachmentManagerTest, GetAttachments_Static) {
+  SetUpAttachmentManager({"static"}, {{"static", AttachmentValue("value")}});
+
+  ::fpromise::result<Attachments> attachments = GetAttachments();
+  ASSERT_TRUE(attachments.is_ok());
+  EXPECT_THAT(attachments.take_value(),
+              ElementsAreArray({Pair("static", AttachmentValue("value"))}));
+}
+
+TEST_F(AttachmentManagerTest, GetAttachments_DropStatic) {
+  SetUpAttachmentManager({"static"}, {{"static", AttachmentValue("value")}});
+
+  attachment_manager_->DropStaticAttachment("static", Error::kConnectionError);
+  attachment_manager_->DropStaticAttachment("unused", Error::kConnectionError);
+
+  ::fpromise::result<Attachments> attachments = GetAttachments();
+  ASSERT_TRUE(attachments.is_ok());
+  EXPECT_THAT(attachments.take_value(),
+              ElementsAreArray({Pair("static", AttachmentValue(Error::kConnectionError))}));
+}
+
 TEST_F(AttachmentManagerTest, GetAttachments_Inspect) {
   // CollectInspectData() has its own set of unit tests so we only cover one chunk of Inspect data
   // here to check that we are attaching the Inspect data.
@@ -159,60 +167,6 @@ TEST_F(AttachmentManagerTest, GetAttachments_Inspect) {
   ASSERT_TRUE(attachments.is_ok());
   EXPECT_THAT(attachments.take_value(),
               ElementsAreArray({Pair(kAttachmentInspect, AttachmentValue("[\nfoo\n]"))}));
-
-  EXPECT_THAT(GetStaticAttachments(), IsEmpty());
-}
-
-TEST_F(AttachmentManagerTest, GetAttachments_PreviousSyslogAlreadyCached) {
-  const std::string previous_log_contents = "LAST SYSTEM LOG";
-  WriteFile(kPreviousLogsFilePath, previous_log_contents);
-  SetUpAttachmentManager({kAttachmentLogSystemPrevious});
-
-  ::fpromise::result<Attachments> attachments = GetAttachments();
-  ASSERT_TRUE(attachments.is_ok());
-  EXPECT_THAT(attachments.take_value(),
-              ElementsAreArray(
-                  {Pair(kAttachmentLogSystemPrevious, AttachmentValue(previous_log_contents))}));
-
-  EXPECT_THAT(GetStaticAttachments(),
-              ElementsAreArray(
-                  {Pair(kAttachmentLogSystemPrevious, AttachmentValue(previous_log_contents))}));
-
-  ASSERT_TRUE(files::DeletePath(kPreviousLogsFilePath, /*recursive=*/false));
-}
-
-TEST_F(AttachmentManagerTest, GetAttachments_PreviousSyslogIsEmpty) {
-  const std::string previous_log_contents = "";
-  WriteFile(kPreviousLogsFilePath, previous_log_contents);
-  SetUpAttachmentManager({kAttachmentLogSystemPrevious});
-
-  ::fpromise::result<Attachments> attachments = GetAttachments();
-  ASSERT_TRUE(attachments.is_ok());
-  EXPECT_THAT(attachments.take_value(),
-              ElementsAreArray(
-                  {Pair(kAttachmentLogSystemPrevious, AttachmentValue(Error::kMissingValue))}));
-
-  EXPECT_THAT(GetStaticAttachments(),
-              ElementsAreArray(
-                  {Pair(kAttachmentLogSystemPrevious, AttachmentValue(Error::kMissingValue))}));
-
-  ASSERT_TRUE(files::DeletePath(kPreviousLogsFilePath, /*recursive=*/false));
-}
-
-TEST_F(AttachmentManagerTest, GetAttachments_DropPreviousSyslog) {
-  const std::string previous_log_contents = "LAST SYSTEM LOG";
-  WriteFile(kPreviousLogsFilePath, previous_log_contents);
-  SetUpAttachmentManager({kAttachmentLogSystemPrevious});
-
-  attachment_manager_->DropStaticAttachment(kAttachmentLogSystemPrevious, Error::kCustom);
-
-  ::fpromise::result<Attachments> attachments = GetAttachments();
-  ASSERT_TRUE(attachments.is_ok());
-
-  EXPECT_THAT(
-      GetStaticAttachments(),
-      ElementsAreArray({Pair(kAttachmentLogSystemPrevious, AttachmentValue(Error::kCustom))}));
-  ASSERT_TRUE(files::DeletePath(kPreviousLogsFilePath, /*recursive=*/false));
 }
 
 TEST_F(AttachmentManagerTest, GetAttachments_SysLog) {
@@ -246,8 +200,6 @@ TEST_F(AttachmentManagerTest, GetAttachments_SysLog) {
               ElementsAreArray(
                   {Pair(kAttachmentLogSystem,
                         AttachmentValue("[15604.000][07559][07687][foo] INFO: log message\n"))}));
-
-  EXPECT_THAT(GetStaticAttachments(), IsEmpty());
 }
 
 TEST_F(AttachmentManagerTest, GetAttachments_FailOn_EmptyAttachmentAllowlist) {
@@ -257,7 +209,6 @@ TEST_F(AttachmentManagerTest, GetAttachments_FailOn_EmptyAttachmentAllowlist) {
   ASSERT_FALSE(attachments.is_error());
 
   EXPECT_THAT(attachments.value(), IsEmpty());
-  EXPECT_THAT(GetStaticAttachments(), IsEmpty());
 }
 
 TEST_F(AttachmentManagerTest, GetAttachments_FailOn_OnlyUnknownAttachmentInAllowlist) {
