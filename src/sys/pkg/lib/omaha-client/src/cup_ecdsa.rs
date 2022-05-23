@@ -10,7 +10,7 @@ use rand::{thread_rng, Rng};
 use serde::{Deserialize, Deserializer, Serialize};
 use sha2::{digest, Digest, Sha256};
 use signature::Signature;
-use std::{collections::HashMap, convert::TryInto, fmt::Debug};
+use std::{collections::HashMap, convert::TryInto, fmt, fmt::Debug};
 
 /// Error enum listing different kinds of CUPv2 decoration errors.
 #[derive(Debug, thiserror::Error)]
@@ -73,7 +73,28 @@ pub struct PublicKeys {
     pub historical: Vec<PublicKeyAndId>,
 }
 
-pub type Nonce = [u8; 32];
+#[derive(PartialEq, Eq, Debug, Copy, Clone)]
+pub struct Nonce([u8; 32]);
+
+impl From<[u8; 32]> for Nonce {
+    fn from(array: [u8; 32]) -> Self {
+        Nonce(array)
+    }
+}
+
+impl Nonce {
+    pub fn new() -> Nonce {
+        let mut nonce_bits = [0_u8; 32];
+        thread_rng().fill(&mut nonce_bits[..]);
+        Nonce(nonce_bits)
+    }
+}
+
+impl fmt::Display for Nonce {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", hex::encode(self.0))
+    }
+}
 
 /// Request decoration return type, containing request internals. Clients of this
 /// library can call .hash() and store/retrieve the hash, or they can inspect the
@@ -170,14 +191,10 @@ impl Cupv2RequestHandler for StandardCupv2Handler {
 
         let public_key_id: PublicKeyId = self.latest_public_key_id;
 
-        let mut nonce: Nonce = [0_u8; 32];
-        thread_rng().fill(&mut nonce[..]);
+        let nonce = Nonce::new();
 
         let uri: Uri = request.get_uri().parse()?;
-        let uri = uri.append_query_parameter(
-            "cup2key",
-            &format!("{}:{}", public_key_id, hex::encode(nonce)),
-        )?;
+        let uri = uri.append_query_parameter("cup2key", &format!("{}:{}", public_key_id, nonce))?;
         request.set_uri(uri.to_string());
 
         Ok(RequestMetadata { request_body: request.get_serialized_body()?, public_key_id, nonce })
@@ -245,7 +262,7 @@ pub fn make_transaction_hash(
 ) -> digest::Output<Sha256> {
     let request_hash = Sha256::digest(request_body);
     let response_hash = Sha256::digest(response_body);
-    let cup2_urlparam = format!("{}:{}", public_key_id, hex::encode(nonce));
+    let cup2_urlparam = format!("{}:{}", public_key_id, nonce);
 
     let mut hasher = Sha256::new();
     hasher.update(&request_hash);
@@ -340,7 +357,7 @@ pub mod test_support {
                 None => Ok(RequestMetadata {
                     request_body: vec![],
                     public_key_id: 0.try_into().unwrap(),
-                    nonce: [0u8; 32],
+                    nonce: [0u8; 32].into(),
                 }),
             }
         }
@@ -434,9 +451,9 @@ mod tests {
 
         let (public_key_decimal, nonce_hex) = cup2key_value.split_once(':').unwrap();
         assert_eq!(public_key_decimal, public_key_id.to_string());
-        assert_eq!(nonce_hex, hex::encode(request_metadata.nonce));
+        assert_eq!(nonce_hex, request_metadata.nonce.to_string());
         // Assert that the nonce is being generated randomly inline (i.e. not the default value).
-        assert_ne!(request_metadata.nonce, [0_u8; 32]);
+        assert_ne!(request_metadata.nonce, [0_u8; 32].into());
 
         Ok(())
     }
@@ -458,15 +475,11 @@ mod tests {
 
         assert_eq!(
             intermediate.uri,
-            format!(
-                "http://[::1%eth0]/?cup2key={}:{}",
-                public_key_id,
-                hex::encode(request_metadata.nonce)
-            )
+            format!("http://[::1%eth0]/?cup2key={}:{}", public_key_id, request_metadata.nonce,)
         );
 
         // Assert that the nonce is being generated randomly inline (i.e. not the default value).
-        assert_ne!(request_metadata.nonce, [0_u8; 32]);
+        assert_ne!(request_metadata.nonce, [0_u8; 32].into());
 
         Ok(())
     }
@@ -529,7 +542,7 @@ mod tests {
         let expected_request_metadata = RequestMetadata {
             request_body: intermediate.serialize_body()?,
             public_key_id: correct_public_key_id,
-            nonce: request_metadata.nonce,
+            nonce: request_metadata.nonce.clone(),
         };
 
         let expected_hash = Sha256::digest(&request_metadata.request_body);
