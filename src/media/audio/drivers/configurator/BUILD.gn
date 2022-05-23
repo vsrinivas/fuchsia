@@ -88,7 +88,7 @@ fuchsia_unittest_package("configurator-unittests") {
   deps = [
     ":bin_test",
     "//src/devices/misc/drivers/test-parent",
-    "//src/media/audio/drivers/codecs/test:test-codec",
-    "//src/media/audio/drivers/codecs/test:test-codec2",
+    "//src/media/audio/drivers/tests/realm:test-codec",
+    "//src/media/audio/drivers/tests/realm:test-codec2",
   ]
 }

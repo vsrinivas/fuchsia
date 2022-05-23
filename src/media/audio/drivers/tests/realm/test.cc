@@ -1,4 +1,4 @@
-// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -14,10 +14,10 @@
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 
-#include "src/media/audio/drivers/codecs/test/codec_test2-bind.h"
+#include "src/media/audio/drivers/tests/realm/codec_test-bind.h"
 
 namespace audio {
-// Codec with bad behavior.
+// Codec with good behavior.
 class Test : public SimpleCodecServer {
  public:
   static zx_status_t Create(zx_device_t* parent);
@@ -44,7 +44,14 @@ class Test : public SimpleCodecServer {
   bool IsBridgeable() override { return false; }
   void SetBridgedMode(bool enable_bridged_mode) override {}
   DaiSupportedFormats GetDaiFormats() override {
-    return {};  // No valid DAI formats returned to test drivers/configurator handling.
+    return {
+        .number_of_channels = {2, 4, 6, 8},
+        .sample_formats = {SampleFormat::PCM_SIGNED},
+        .frame_formats = {FrameFormat::I2S, FrameFormat::TDM1},
+        .frame_rates = {24'000, 48'000, 96'000},
+        .bits_per_slot = {16, 32},
+        .bits_per_sample = {16, 24, 32},
+    };
   }
   zx::status<CodecFormatInfo> SetDaiFormat(const DaiFormat& format) override {
     return zx::ok(CodecFormatInfo{});
@@ -67,4 +74,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace audio
 
-ZIRCON_DRIVER(codec_test2, audio::driver_ops, "zircon", "0.1");
+ZIRCON_DRIVER(codec_test, audio::driver_ops, "zircon", "0.1");
