@@ -177,11 +177,11 @@ protocol Socket {
         want_control bool;
         flags fuchsia.posix.socket.RecvMsgFlags;
     }) -> (struct {
-        packet_info @generated_name("RecvPacketInfo") struct {
+        packet_info box<@generated_name("RecvPacketInfo") struct {
             packet_info PacketInfo;
             packet_type PacketType;
             interface_type HardwareType;
-        } :optional;
+        }>;
         data bytes;
         control @generated_name("RecvControlData") table {
             /// Socket level ancillary data.
@@ -197,7 +197,7 @@ protocol Socket {
     /// + request `control` ancillary data.
     /// + request `flags` flags for the send request.
     SendMsg(struct {
-        packet_info PacketInfo:optional;
+        packet_info box<PacketInfo>;
         data bytes:MAX;
         control @generated_name("SendControlData") table {
             /// Socket level ancillary data.

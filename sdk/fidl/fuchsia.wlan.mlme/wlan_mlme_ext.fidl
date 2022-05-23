@@ -34,8 +34,8 @@ type BandCapability = struct {
     /// the device supports transmitting and receiving.
     basic_rates vector<uint8>:internal.MAX_SUPPORTED_BASIC_RATES;
 
-    ht_cap internal.HtCapabilities:optional;
-    vht_cap internal.VhtCapabilities:optional;
+    ht_cap box<internal.HtCapabilities>;
+    vht_cap box<internal.VhtCapabilities>;
 
     /// A list of operating channels considered valid by hardware, in the context of
     /// regulatory information known to the device driver, at the time of its

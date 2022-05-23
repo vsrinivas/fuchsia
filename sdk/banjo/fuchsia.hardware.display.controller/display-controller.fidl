@@ -163,7 +163,7 @@ protocol DisplayControllerInterface {
     OnDisplayVsync(struct {
         display_id uint64;
         timestamp zx.time;
-        config_stamp ConfigStamp:optional;
+        config_stamp box<ConfigStamp>;
     }) -> ();
 
     GetAudioFormat(struct {

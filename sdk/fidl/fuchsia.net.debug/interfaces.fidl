@@ -31,7 +31,7 @@ protocol Interfaces {
     GetMac(struct {
         id fuchsia.net.interface_id;
     }) -> (struct {
-        mac fuchsia.net.MacAddress:optional;
+        mac box<fuchsia.net.MacAddress>;
     }) error strict enum {
         /// `id` does not identify an interface.
         NOT_FOUND = 1;

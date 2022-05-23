@@ -52,7 +52,7 @@ type ResolvedState = resource struct {
     exposes vector<fuchsia.component.decl.Expose>:MAX;
 
     /// The resolved structured configuration of this component instance.
-    config fuchsia.component.config.ResolvedConfig:optional;
+    config box<fuchsia.component.config.ResolvedConfig>;
 
     /// The package directory containing the component manifest, if one exists.
     /// This directory has the same permissions given by the package resolver
@@ -60,7 +60,7 @@ type ResolvedState = resource struct {
     pkg_dir client_end:<fuchsia.io.Directory, optional>;
 
     /// The execution state of this instance.
-    started StartedState:optional;
+    started box<StartedState>;
 };
 
 /// The detailed started state of a component instance
@@ -100,7 +100,7 @@ protocol RealmQuery {
 
         /// Detailed information about the resolved component instance.
         /// If this object does not exist, the instance is not resolved.
-        resolved ResolvedState:optional;
+        resolved box<ResolvedState>;
     }) error fuchsia.component.Error;
 };
 

@@ -119,7 +119,7 @@ protocol ClientConfigurator {
     Get(struct {
         client_type fuchsia.power.clientlevel.ClientType;
     }) -> (struct {
-        config ClientConfig:optional;
+        config box<ClientConfig>;
     });
 
     /// Sets the power configuration for the given [`ClientType`].

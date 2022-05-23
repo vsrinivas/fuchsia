@@ -86,6 +86,7 @@ def main():
     response_file = []
 
     response_file.append('--experimental new_syntax_only')
+    response_file.append('--experimental no_optional_structs')
 
     response_file.append(
         "--available {platform}:{api_level}".format(

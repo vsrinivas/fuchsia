@@ -88,7 +88,7 @@ type Packet = struct {
     /// value must be provided for every packet in an encrypted
     /// stream, and may not be provided for any packet in an
     /// unencrypted stream.
-    encryption_properties PacketEncryptionProperties:optional;
+    encryption_properties box<PacketEncryptionProperties>;
 };
 
 /// Describes a packet payload.
