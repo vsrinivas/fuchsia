@@ -67,12 +67,14 @@ impl Filesystem for FakeFilesystem {
         &self.object_manager
     }
 
-    async fn sync(&self, _: SyncOptions<'_>) -> Result<(), Error> {
+    async fn sync(&self, options: SyncOptions<'_>) -> Result<(), Error> {
         self.num_syncs.fetch_add(1u64, Ordering::Relaxed);
         // We don't have a journal so the flush log offset here is entirely bogus
         // but if we don't trigger did_flush_device, we can never reuse extents that have been
         // previously allocated.
-        self.object_manager.allocator().did_flush_device(i64::MAX as u64).await;
+        if options.flush_device {
+            self.object_manager.allocator().did_flush_device(i64::MAX as u64).await;
+        }
         Ok(())
     }
 

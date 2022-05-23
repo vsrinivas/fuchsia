@@ -16,10 +16,7 @@ use {
         },
         object_handle::{ObjectHandle, Writer, INVALID_OBJECT_ID},
         object_store::{
-            allocator::{
-                filter_tombstones, AllocatorKey, AllocatorValue, CoalescingIterator,
-                SimpleAllocator,
-            },
+            allocator::{AllocatorKey, AllocatorValue, CoalescingIterator, SimpleAllocator},
             directory::Directory,
             transaction::{self, Options, TransactionHandler},
             volume::root_volume,
@@ -453,11 +450,7 @@ async fn test_allocation_mismatch() {
         let range = {
             let layer_set = allocator.tree().layer_set();
             let mut merger = layer_set.merger();
-            let iter = filter_tombstones(Box::new(
-                merger.seek(Bound::Unbounded).await.expect("seek failed"),
-            ))
-            .await
-            .expect("filter failed");
+            let iter = allocator.iter(&mut merger, Bound::Unbounded).await.expect("iter failed");
             let ItemRef { key: AllocatorKey { device_range }, .. } =
                 iter.get().expect("missing item");
             device_range.clone()
@@ -488,15 +481,8 @@ async fn test_missing_allocation() {
         let key = {
             let layer_set = allocator.tree().layer_set();
             let mut merger = layer_set.merger();
-            let iter = CoalescingIterator::new(
-                filter_tombstones(Box::new(
-                    merger.seek(Bound::Unbounded).await.expect("seek failed"),
-                ))
-                .await
-                .expect("filter failed"),
-            )
-            .await
-            .expect("new failed");
+            let iter = allocator.iter(&mut merger, Bound::Unbounded).await.expect("iter failed");
+            let iter = CoalescingIterator::new(iter).await.expect("filter failed");
             let ItemRef { key, .. } = iter.get().expect("missing item");
             // 'key' points at the first allocation record, which will be for the super blocks.
             key.clone()

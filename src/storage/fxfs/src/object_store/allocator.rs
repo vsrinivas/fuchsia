@@ -11,12 +11,13 @@ use {
         filesystem::{ApplyContext, ApplyMode, Filesystem, JournalingObject, SyncOptions},
         lsm_tree::{
             layers_from_handles,
+            merge::Merger,
             skip_list_layer::SkipListLayer,
             types::{
-                BoxedLayerIterator, Item, ItemRef, Layer, LayerIterator, LayerIteratorFilter,
-                MutableLayer, NextKey, OrdLowerBound, OrdUpperBound, RangeKey,
+                BoxedLayerIterator, Item, ItemRef, Layer, LayerIterator, MutableLayer, NextKey,
+                OrdLowerBound, OrdUpperBound, RangeKey,
             },
-            LSMTree,
+            LSMTree, LayerSet,
         },
         metrics::{traits::Metric as _, UintMetric},
         object_handle::{ObjectHandle, ObjectHandleExt, INVALID_OBJECT_ID},
@@ -34,13 +35,13 @@ use {
     anyhow::{anyhow, bail, ensure, Error},
     async_trait::async_trait,
     either::Either::{Left, Right},
-    merge::merge,
+    merge::{filter_marked_for_deletion, filter_tombstones, merge},
     serde::{Deserialize, Serialize},
     std::{
         any::Any,
         borrow::Borrow,
         cmp::min,
-        collections::{BTreeMap, VecDeque},
+        collections::{BTreeMap, HashSet, VecDeque},
         convert::TryInto,
         marker::PhantomData,
         ops::{Bound, Range},
@@ -91,9 +92,9 @@ pub trait Allocator: ReservationOwner {
         device_range: Range<u64>,
     ) -> Result<(), Error>;
 
-    /// Marks allocations associated with a given |owner_object_id| for deletion at next compaction.
-    ///
-    /// Extents will not be reused and will remain 'allocated_bytes' until compaction.
+    /// Marks allocations associated with a given |owner_object_id| for deletion.
+    /// Does not necessarily perform the deletion stratight away but if this is the case,
+    /// implementation should be invisible to the caller.
     async fn mark_for_deletion(&self, transaction: &mut Transaction<'_>, owner_object_id: u64);
 
     /// Cast to super-trait.
@@ -347,21 +348,30 @@ pub enum AllocatorValue {
 
 pub type AllocatorItem = Item<AllocatorKey, AllocatorValue>;
 
-/// Wraps the iterator in a filter that removes tombstone records.
-/// This is only valid if the iterator we're wrapping represents all tree layers.
-/// If the iterator has data below it, removing tombstones may incorrectly "revive"
-/// deleted allocations.
-pub async fn filter_tombstones(
-    iter: BoxedLayerIterator<'_, AllocatorKey, AllocatorValue>,
-) -> Result<BoxedLayerIterator<'_, AllocatorKey, AllocatorValue>, Error> {
-    Ok(Box::new(iter.filter(|i| *i.value != AllocatorValue::None).await?))
+#[derive(Deserialize, Serialize, Versioned)]
+pub struct AllocatorInfoV1 {
+    pub layers: Vec<u64>,
+    pub allocated_bytes: BTreeMap<u64, u64>,
 }
+
+impl From<AllocatorInfoV1> for AllocatorInfo {
+    fn from(other: AllocatorInfoV1) -> Self {
+        Self {
+            layers: other.layers,
+            allocated_bytes: other.allocated_bytes,
+            marked_for_deletion: HashSet::new(),
+        }
+    }
+}
+
 #[derive(Debug, Default, Clone, Deserialize, Serialize, Versioned)]
 pub struct AllocatorInfo {
     /// Holds the set of layer file object_id for the LSM tree (newest first).
     pub layers: Vec<u64>,
     /// Maps from owner_object_id to bytes allocated.
     pub allocated_bytes: BTreeMap<u64, u64>,
+    /// Set of owner_object_id that we should ignore if found in layer files.
+    pub marked_for_deletion: HashSet<u64>,
 }
 
 const MAX_ALLOCATOR_INFO_SERIALIZED_SIZE: usize = 131_072;
@@ -427,9 +437,11 @@ struct Inner {
     committed_deallocated: VecDeque<(u64, Range<u64>)>,
     // The total number of committed deallocated bytes.
     committed_deallocated_bytes: u64,
-    // A map of of |owner_object_id| to bytes allocated. We should filter out
-    // data for these owners and free up bytes at next major compaction time.
-    marked_for_deletion: BTreeMap<u64, i64>,
+    // A map of of |owner_object_id| to log offset and bytes allocated.
+    // Once the journal has been flushed beyond 'log_offset', we replace entries here with
+    // an entry in AllocatorInfo to have all iterators ignore owner_object_id. That entry is
+    // then cleaned up at next (major) compaction time.
+    committed_marked_for_deletion: BTreeMap<u64, (/*log_offset:*/ u64, /*bytes:*/ u64)>,
 }
 
 impl Inner {
@@ -441,6 +453,7 @@ impl Inner {
         self.allocated_bytes.values().sum::<i64>() as u64
             + self.uncommitted_allocated_bytes
             + self.committed_deallocated_bytes
+            + self.committed_marked_for_deletion.values().map(|(_, x)| x).sum::<u64>()
     }
 
     // Returns the total number of bytes that are taken either from reservations, allocations or
@@ -472,7 +485,7 @@ impl SimpleAllocator {
                 reserved_bytes: 0,
                 committed_deallocated: VecDeque::new(),
                 committed_deallocated_bytes: 0,
-                marked_for_deletion: BTreeMap::new(),
+                committed_marked_for_deletion: BTreeMap::new(),
             }),
             allocation_mutex: futures::lock::Mutex::new(()),
             stats: SimpleAllocatorStats::new(max_extent_size_bytes),
@@ -481,6 +494,31 @@ impl SimpleAllocator {
 
     pub fn tree(&self) -> &LSMTree<AllocatorKey, AllocatorValue> {
         &self.tree
+    }
+
+    /// Returns the layer set for all layers and reservations.
+    pub fn layer_set(&self) -> LayerSet<AllocatorKey, AllocatorValue> {
+        let tree = &self.tree;
+        let mut layer_set = tree.empty_layer_set();
+        layer_set.layers.push((self.reserved_allocations.clone() as Arc<dyn Layer<_, _>>).into());
+        tree.add_all_layers_to_layer_set(&mut layer_set);
+        layer_set
+    }
+
+    /// Returns an iterator that yields all allocations, filtering out tombstones and any
+    /// owner_object_id that have been marked as deleted.
+    pub async fn iter<'a>(
+        &'a self,
+        merger: &'a mut Merger<'_, AllocatorKey, AllocatorValue>,
+        bound: Bound<&AllocatorKey>,
+    ) -> Result<Box<dyn LayerIterator<AllocatorKey, AllocatorValue> + 'a>, Error> {
+        let marked_for_deletion = self.inner.lock().unwrap().info.marked_for_deletion.clone();
+        let iter = filter_marked_for_deletion(
+            filter_tombstones(Box::new(merger.seek(bound).await?)).await?,
+            marked_for_deletion,
+        )
+        .await?;
+        Ok(iter)
     }
 
     /// Creates a new (empty) allocator.
@@ -678,15 +716,9 @@ impl Allocator for SimpleAllocator {
         }
 
         let result = {
-            let tree = &self.tree;
-            let mut layer_set = tree.empty_layer_set();
-            layer_set
-                .layers
-                .push((self.reserved_allocations.clone() as Arc<dyn Layer<_, _>>).into());
-            tree.add_all_layers_to_layer_set(&mut layer_set);
+            let layer_set = self.layer_set();
             let mut merger = layer_set.merger();
-            let mut iter =
-                filter_tombstones(Box::new(merger.seek(Bound::Unbounded).await?)).await?;
+            let mut iter = self.iter(&mut merger, Bound::Unbounded).await?;
             let mut last_offset = 0;
             loop {
                 match iter.get() {
@@ -777,9 +809,6 @@ impl Allocator for SimpleAllocator {
 
         ensure!(dealloc_range.valid(), FxfsError::InvalidArgs);
 
-        // We need to determine whether this deallocation actually frees the range or is just a
-        // reference count adjustment.  We separate the two kinds into two different mutation types
-        // so that we can adjust our counts correctly at commit time.
         let layer_set = self.tree.layer_set();
         let mut merger = layer_set.merger();
         // The precise search key that we choose here is important.  We need to perform a full merge
@@ -788,12 +817,12 @@ impl Allocator for SimpleAllocator {
         // iterators until it encounters a key whose lower-bound is not greater than the search
         // key).  The upper bound is used to search each individual layer, and we want to start with
         // an extent that covers the first byte of the range we're deallocating.
-        let mut iter = filter_tombstones(Box::new(
-            merger
-                .seek(Bound::Included(&AllocatorKey { device_range: 0..dealloc_range.start + 1 }))
-                .await?,
-        ))
-        .await?;
+        let mut iter = self
+            .iter(
+                &mut merger,
+                Bound::Included(&AllocatorKey { device_range: 0..dealloc_range.start + 1 }),
+            )
+            .await?;
         let mut deallocated = 0;
         let mut mutation = None;
         while let Some(ItemRef { key: AllocatorKey { device_range, .. }, value, .. }) = iter.get() {
@@ -833,6 +862,24 @@ impl Allocator for SimpleAllocator {
         Ok(deallocated)
     }
 
+    /// This is used as part of deleting encrypted volumes (ObjectStore) without having the keys.
+    ///
+    /// MarkForDeletion mutations eventually manipulates allocator metadata (AllocatorInfo) instead
+    /// of the mutable layer but we must be careful not to do this too early and risk premature
+    /// reuse of extents.
+    ///
+    /// Applying the mutation moves byte count for the owner_object_id from 'allocated_bytes' to
+    /// 'committed_marked_for_deletion'.
+    ///
+    /// Replay is not guaranteed until the *device* gets flushed, so we cannot reuse the deleted
+    /// extents until we receive a `did_flush_device` callback.
+    ///
+    /// At this point, the mutation is guaranteed so the 'committed_marked_for_deletion' entry is
+    /// removed and the owner_object_id is added to the 'marked_for_deletion' set. This set
+    /// of owner_object_id are filtered out of all iterators used by the allocator.
+    ///
+    /// After an allocator.flush() (i.e. a major compaction), we know that there is no data left
+    /// in the layer files for this owner_object_id and we are able to clear `marked_for_deletion`.
     async fn mark_for_deletion(&self, transaction: &mut Transaction<'_>, owner_object_id: u64) {
         // Note that because the actual time of deletion (the next major compaction) is undefined,
         // |owner_object_id| should not be reused after this call.
@@ -851,33 +898,47 @@ impl Allocator for SimpleAllocator {
     }
 
     async fn did_flush_device(&self, flush_log_offset: u64) {
+        let mut total = 0;
+
         // First take out the deallocations that we now know to be flushed.  The list is maintained
         // in order, so we can stop on the first entry that we find that should not be unreserved
         // yet.
         #[allow(clippy::never_loop)] // Loop used as a for {} else {}.
-        let deallocs = 'outer: loop {
+        let deallocs = 'deallocs_outer: loop {
             let mut inner = self.inner.lock().unwrap();
             for (index, (dealloc_log_offset, _)) in inner.committed_deallocated.iter().enumerate() {
                 if *dealloc_log_offset >= flush_log_offset {
                     let mut deallocs = inner.committed_deallocated.split_off(index);
                     // Swap because we want the opposite of what split_off does.
                     std::mem::swap(&mut inner.committed_deallocated, &mut deallocs);
-                    break 'outer deallocs;
+                    break 'deallocs_outer deallocs;
                 }
             }
             break std::mem::take(&mut inner.committed_deallocated);
         };
         // Now we can erase those elements from reserved_allocations (whilst we're not holding the
         // lock on inner).
-        let mut total = 0;
         for (_, device_range) in deallocs {
             total += device_range.length().unwrap();
             self.reserved_allocations.erase(&AllocatorKey { device_range }).await;
         }
+
+        let mut inner = self.inner.lock().unwrap();
         // This *must* come after we've removed the records from reserved reservations because the
         // allocator uses this value to decide whether or not a device-flush is required and it must
         // be possible to find free space if it thinks no device-flush is required.
-        self.inner.lock().unwrap().committed_deallocated_bytes -= total;
+        inner.committed_deallocated_bytes -= total;
+
+        // We can now reuse any marked_for_deletion extents that have been committed to journal.
+        let committed_marked_for_deletion =
+            std::mem::take(&mut inner.committed_marked_for_deletion);
+        for (owner_object_id, (log_offset, bytes)) in committed_marked_for_deletion {
+            if log_offset >= flush_log_offset {
+                inner.committed_marked_for_deletion.insert(owner_object_id, (log_offset, bytes));
+            } else {
+                inner.info.marked_for_deletion.insert(owner_object_id);
+            }
+        }
     }
 
     fn reserve(self: Arc<Self>, amount: u64) -> Option<Reservation> {
@@ -933,7 +994,18 @@ impl JournalingObject for SimpleAllocator {
             Mutation::Allocator(AllocatorMutation::MarkForDeletion(owner_object_id)) => {
                 let mut inner = self.inner.lock().unwrap();
                 if let Some(bytes) = inner.allocated_bytes.remove(&owner_object_id) {
-                    inner.marked_for_deletion.insert(owner_object_id, bytes);
+                    // If live, we haven't serialized this yet so we track the commitment in RAM.
+                    // If we're replaying the journal, we know this is already on storage and
+                    // MUST happen so we can update the StoreInfo (to be written at next allocator
+                    // flush time).
+                    if context.mode.is_replay() {
+                        inner.info.marked_for_deletion.insert(owner_object_id);
+                    } else {
+                        inner.committed_marked_for_deletion.insert(
+                            owner_object_id,
+                            (context.checkpoint.file_offset, bytes as u64),
+                        );
+                    }
                 }
             }
             Mutation::Allocator(AllocatorMutation::Allocate { device_range, owner_object_id }) => {
@@ -1101,26 +1173,10 @@ impl JournalingObject for SimpleAllocator {
         transaction.add(self.object_id(), Mutation::BeginFlush);
         transaction.commit().await?;
 
-        let marked_for_deletion =
-            std::mem::replace(&mut self.inner.lock().unwrap().marked_for_deletion, BTreeMap::new());
-
         let layer_set = self.tree.immutable_layer_set();
         {
             let mut merger = layer_set.merger();
-            let iter = filter_tombstones(Box::new(merger.seek(Bound::Unbounded).await?)).await?;
-            let iter = Box::new(
-                iter.filter(|x| match x {
-                    ItemRef { value: AllocatorValue::Abs { owner_object_id, .. }, .. } => {
-                        if marked_for_deletion.contains_key(&owner_object_id) {
-                            false
-                        } else {
-                            true
-                        }
-                    }
-                    _ => true,
-                })
-                .await?,
-            );
+            let iter = self.iter(&mut merger, Bound::Unbounded).await?;
             let iter = CoalescingIterator::new(iter).await?;
             self.tree
                 .compact_with_iterator(
@@ -1139,17 +1195,28 @@ impl JournalingObject for SimpleAllocator {
         let reservation_update;
         let mut transaction = filesystem.clone().new_transaction(&[], txn_options).await?;
         let mut serialized_info = Vec::new();
-        {
-            let mut inner = self.inner.lock().unwrap();
+
+        // We must be careful to take a copy AllocatorInfo here rather than manipulate the
+        // live one. If we remove marked_for_deletion entries prematurely, we may fail any
+        // allocate() calls that are performed before the new version makes it to disk.
+        // Specifically, txn_write() below must allocate space and may fail if we prematurely
+        // clear marked_for_deletion.
+        let new_info = {
+            let mut info = self.inner.lock().unwrap().info.clone();
+
+            // After compaction, all new layers have marked_for_deletion objects removed.
+            info.marked_for_deletion.clear();
 
             // Move all the existing layers to the graveyard.
-            for object_id in &inner.info.layers {
+            for object_id in &info.layers {
                 root_store.add_to_graveyard(&mut transaction, *object_id);
             }
 
-            inner.info.layers = vec![object_id];
-            inner.info.serialize_with_version(&mut serialized_info)?;
-        }
+            info.layers = vec![object_id];
+            info
+        };
+        new_info.serialize_with_version(&mut serialized_info)?;
+
         let mut buf = object_handle.allocate_buffer(serialized_info.len());
         buf.as_mut_slice()[..serialized_info.len()].copy_from_slice(&serialized_info[..]);
         object_handle.txn_write(&mut transaction, 0u64, buf.as_ref()).await?;
@@ -1170,6 +1237,10 @@ impl JournalingObject for SimpleAllocator {
         let layers =
             layers_from_handles(Box::new([CachingObjectHandle::new(layer_object_handle)])).await?;
         transaction.commit_with_callback(|_| self.tree.set_layers(layers)).await?;
+
+        // At this point we've committed the new layers to disk so we can start using them.
+        // This means we can also switch to the new ALlocatorInfo which clears marked_for_deletion.
+        self.inner.lock().unwrap().info = new_info;
 
         // Now close the layers and purge them.
         for layer in layer_set.layers {
@@ -1255,8 +1326,8 @@ mod tests {
             },
             object_store::{
                 allocator::{
-                    filter_tombstones, merge::merge, Allocator, AllocatorKey, AllocatorValue,
-                    CoalescingIterator, SimpleAllocator,
+                    merge::merge, Allocator, AllocatorKey, AllocatorValue, CoalescingIterator,
+                    SimpleAllocator,
                 },
                 testing::fake_filesystem::FakeFilesystem,
                 transaction::{Options, TransactionHandler},
@@ -1396,10 +1467,7 @@ mod tests {
     async fn check_allocations(allocator: &SimpleAllocator, expected_allocations: &[Range<u64>]) {
         let layer_set = allocator.tree.layer_set();
         let mut merger = layer_set.merger();
-        let mut iter =
-            filter_tombstones(Box::new(merger.seek(Bound::Unbounded).await.expect("seek failed")))
-                .await
-                .expect("filter failed");
+        let mut iter = allocator.iter(&mut merger, Bound::Unbounded).await.expect("build iterator");
         let mut found = 0;
         while let Some(ItemRef { key: AllocatorKey { device_range }, .. }) = iter.get() {
             let mut l = device_range.length().expect("Invalid range");
@@ -1558,46 +1626,69 @@ mod tests {
         let (fs, allocator, _) = test_fs().await;
 
         // Allocate some stuff.
-        let initial_allocated_bytes = allocator.get_allocated_bytes();
+        assert_eq!(0, allocator.get_allocated_bytes());
         let mut device_ranges = Vec::new();
         let mut transaction =
             fs.clone().new_transaction(&[], Options::default()).await.expect("new failed");
-        device_ranges.push(
-            allocator
-                .allocate(&mut transaction, STORE_OBJECT_ID, 100 * fs.block_size())
-                .await
-                .expect("allocate failed"),
-        );
-        device_ranges.push(
-            allocator
-                .allocate(&mut transaction, STORE_OBJECT_ID, 100 * fs.block_size())
-                .await
-                .expect("allocate2 failed"),
-        );
+        // Note we have a cap on individual allocation length so we allocate over multiple mutation.
+        for _ in 0..15 {
+            device_ranges.push(
+                allocator
+                    .allocate(&mut transaction, STORE_OBJECT_ID, 100 * fs.block_size())
+                    .await
+                    .expect("allocate failed"),
+            );
+            device_ranges.push(
+                allocator
+                    .allocate(&mut transaction, STORE_OBJECT_ID, 100 * fs.block_size())
+                    .await
+                    .expect("allocate2 failed"),
+            );
+        }
         transaction.commit().await.expect("commit failed");
         check_allocations(&allocator, &device_ranges).await;
+
+        assert_eq!(fs.block_size() * 3000, allocator.get_allocated_bytes());
 
         // Mark for deletion.
         let mut transaction =
             fs.clone().new_transaction(&[], Options::default()).await.expect("new failed");
-        assert_eq!(
-            initial_allocated_bytes + fs.block_size() * 200,
-            allocator.get_allocated_bytes()
-        );
         allocator.mark_for_deletion(&mut transaction, STORE_OBJECT_ID).await;
         transaction.commit().await.expect("commit failed");
 
-        // Expect that deallocation hasn't happened yet -- it happens at flush time.
-        assert_eq!(initial_allocated_bytes, allocator.get_allocated_bytes());
+        // Expect that allocated bytes is updated immediately but device ranges are still allocated.
+        assert_eq!(0, allocator.get_allocated_bytes());
         check_allocations(&allocator, &device_ranges).await;
 
+        // Allocate more space than we have until we deallocate the mark_for_deletion space.
+        // This should force a flush on allocate(). (1500 * 3 > test_fs size of 4096 blocks).
+        device_ranges.clear();
+
+        let mut transaction =
+            fs.clone().new_transaction(&[], Options::default()).await.expect("new failed");
+        let target_bytes = 1500 * fs.block_size();
+        while device_ranges.iter().map(|x| x.length().unwrap()).sum::<u64>() != target_bytes {
+            let len = std::cmp::min(
+                target_bytes - device_ranges.iter().map(|x| x.length().unwrap()).sum::<u64>(),
+                100 * fs.block_size(),
+            );
+            device_ranges.push(
+                allocator.allocate(&mut transaction, 100, len).await.expect("allocate failed"),
+            );
+        }
+        transaction.commit().await.expect("commit failed");
+
+        // Have the deleted ranges cleaned up.
         allocator.flush().await.expect("flush failed");
 
-        // The flush above seems to trigger a two block allocation for the allocator itself.
-        assert_eq!(fs.block_size() * 2, allocator.get_allocated_bytes());
-        device_ranges.clear();
-        device_ranges.push(fs.block_size() * 200..fs.block_size() * (200 + 2));
-        check_allocations(&allocator, &device_ranges).await;
+        // The flush above seems to trigger an allocation for the allocator itself.
+        // We will just check that we have the right size for the owner we care about.
+
+        assert_eq!(*allocator.get_owner_allocated_bytes().entry(99).or_default() as u64, 0);
+        assert_eq!(
+            *allocator.get_owner_allocated_bytes().entry(100).or_default() as u64,
+            1500 * fs.block_size()
+        );
     }
 
     #[fasync::run_singlethreaded(test)]

@@ -2,15 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{
-    lsm_tree::{
-        merge::{
-            ItemOp::{Discard, Keep, Replace},
-            MergeLayerIterator, MergeResult,
+use {
+    crate::{
+        lsm_tree::{
+            merge::{
+                ItemOp::{Discard, Keep, Replace},
+                MergeLayerIterator, MergeResult,
+            },
+            types::{Item, LayerIteratorFilter},
         },
-        types::Item,
+        object_store::allocator::{AllocatorKey, AllocatorValue, BoxedLayerIterator},
     },
-    object_store::allocator::{AllocatorKey, AllocatorValue},
+    anyhow::Error,
+    std::collections::HashSet,
 };
 
 pub fn merge(
@@ -134,6 +138,28 @@ pub fn merge(
     }
 }
 
+pub async fn filter_tombstones(
+    iter: BoxedLayerIterator<'_, AllocatorKey, AllocatorValue>,
+) -> Result<BoxedLayerIterator<'_, AllocatorKey, AllocatorValue>, Error> {
+    Ok(Box::new(iter.filter(|i| *i.value != AllocatorValue::None).await?))
+}
+
+pub async fn filter_marked_for_deletion(
+    iter: BoxedLayerIterator<'_, AllocatorKey, AllocatorValue>,
+    marked_for_deletion: HashSet<u64>,
+) -> Result<BoxedLayerIterator<'_, AllocatorKey, AllocatorValue>, Error> {
+    Ok(Box::new(
+        iter.filter(move |i| {
+            if let AllocatorValue::Abs { owner_object_id, .. } = i.value {
+                !marked_for_deletion.contains(owner_object_id)
+            } else {
+                true
+            }
+        })
+        .await?,
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use {
@@ -144,7 +170,9 @@ mod tests {
             },
             object_handle::INVALID_OBJECT_ID,
             object_store::allocator::{
-                filter_tombstones, merge::merge, AllocatorKey, AllocatorValue, AllocatorValue::Abs,
+                merge::{filter_tombstones, merge},
+                AllocatorKey, AllocatorValue,
+                AllocatorValue::Abs,
             },
         },
         fuchsia_async as fasync,

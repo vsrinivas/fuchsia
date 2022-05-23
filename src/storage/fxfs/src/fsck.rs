@@ -17,8 +17,7 @@ use {
         object_handle::{ObjectHandle, ObjectHandleExt, INVALID_OBJECT_ID},
         object_store::{
             allocator::{
-                filter_tombstones, Allocator, AllocatorKey, AllocatorValue, CoalescingIterator,
-                SimpleAllocator,
+                Allocator, AllocatorKey, AllocatorValue, CoalescingIterator, SimpleAllocator,
             },
             journal::super_block::SuperBlockInstance,
             transaction::{LockKey, TransactionHandler},
@@ -177,8 +176,10 @@ pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
     fsck.verbose("Verifying allocations...");
     let layer_set = allocator.tree().layer_set();
     let mut merger = layer_set.merger();
-    let iter = filter_tombstones(Box::new(merger.seek(Bound::Unbounded).await?)).await?;
-    let mut actual = CoalescingIterator::new(Box::new(iter)).await?;
+    let mut actual = CoalescingIterator::new(allocator.iter(&mut merger, Bound::Unbounded).await?)
+        .await
+        .expect("filter failed");
+
     let mut expected =
         CoalescingIterator::new(fsck.allocations.seek(Bound::Unbounded).await?).await?;
     let mut expected_owner_allocated_bytes = BTreeMap::new();

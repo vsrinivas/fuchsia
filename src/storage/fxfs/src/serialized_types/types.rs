@@ -5,9 +5,9 @@
 use crate::{
     lsm_tree::LayerInfo,
     object_store::{
-        transaction::Mutation, AllocatorInfo, AllocatorKey, AllocatorValue, EncryptedMutations,
-        JournalRecord, ObjectKey, ObjectValue, StoreInfo, StoreInfoV1, SuperBlock,
-        SuperBlockRecord,
+        transaction::Mutation, AllocatorInfo, AllocatorInfoV1, AllocatorKey, AllocatorValue,
+        EncryptedMutations, JournalRecord, ObjectKey, ObjectValue, StoreInfo, StoreInfoV1,
+        SuperBlock, SuperBlockRecord,
     },
     serialized_types::{versioned_type, Version, Versioned, VersionedLatest},
 };
@@ -16,10 +16,11 @@ use crate::{
 ///
 /// If all layer files are compacted the the journal flushed, and super-block
 /// both rewritten, all versions should match this value.
-pub const LATEST_VERSION: Version = Version { major: 17, minor: 0 };
+pub const LATEST_VERSION: Version = Version { major: 18, minor: 0 };
 
 versioned_type! {
-    16.. => AllocatorInfo,
+    18.. => AllocatorInfo,
+    16.. => AllocatorInfoV1,
 }
 versioned_type! {
     1.. => AllocatorKey,
