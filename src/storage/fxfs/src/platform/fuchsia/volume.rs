@@ -24,7 +24,9 @@ use {
     },
     anyhow::{bail, Error},
     async_trait::async_trait,
-    fidl_fuchsia_io as fio, fuchsia_async as fasync,
+    fidl_fuchsia_io as fio,
+    fs_inspect::{FsInspect, InfoData, UsageData, VolumeData},
+    fuchsia_async as fasync,
     fuchsia_zircon::Status,
     futures::{self, channel::oneshot, FutureExt},
     std::{
@@ -36,7 +38,6 @@ use {
     vfs::{
         execution_scope::ExecutionScope,
         filesystem::{Filesystem, FilesystemRename},
-        inspect::{FsInspect, InfoData, UsageData, VolumeData},
         path::Path,
         registry::token_registry,
     },

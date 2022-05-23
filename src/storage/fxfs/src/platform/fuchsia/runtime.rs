@@ -13,6 +13,7 @@ use {
     fidl_fuchsia_fs::{AdminRequest, AdminRequestStream},
     fidl_fuchsia_fxfs::{VolumesRequest, VolumesRequestStream},
     fidl_fuchsia_io as fio,
+    fs_inspect::FsInspectTree,
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon as zx,
     futures::{
@@ -24,7 +25,7 @@ use {
         atomic::{self, AtomicBool},
         Arc,
     },
-    vfs::{directory::entry::DirectoryEntry, inspect::FsInspectTree, path::Path},
+    vfs::{directory::entry::DirectoryEntry, path::Path},
 };
 
 // The correct number here is arguably u64::MAX - 1 (because node 0 is reserved). There's a bug

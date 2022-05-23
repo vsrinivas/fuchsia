@@ -20,7 +20,6 @@ pub mod registry;
 pub mod directory;
 pub mod file;
 pub mod filesystem;
-pub mod inspect;
 pub mod remote;
 pub mod service;
 

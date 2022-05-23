@@ -24,7 +24,9 @@ use {
     },
     fidl_fuchsia_fxfs::CryptProxy,
     fidl_fuchsia_hardware_block::BlockMarker,
-    fidl_fuchsia_io as fio, fuchsia_async as fasync,
+    fidl_fuchsia_io as fio,
+    fs_inspect::{FsInspect, FsInspectTree},
+    fuchsia_async as fasync,
     fuchsia_component::server::MissingStartupHandle,
     fuchsia_runtime::HandleType,
     fuchsia_zircon as zx,
@@ -36,7 +38,6 @@ use {
     vfs::{
         directory::{entry::DirectoryEntry, helper::DirectlyMutable},
         execution_scope::ExecutionScope,
-        inspect::{FsInspect, FsInspectTree},
         path::Path,
         registry::token_registry,
         remote::remote_boxed_with_type,
