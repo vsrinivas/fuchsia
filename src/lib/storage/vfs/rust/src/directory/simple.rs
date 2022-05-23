@@ -6,6 +6,7 @@
 //! Use [`mod@crate::directory::immutable::simple`]
 //! to construct actual instances.  See [`Simple`] for details.
 
+#[allow(unused_imports)]
 use crate::{
     common::{rights_to_posix_mode_bits, send_on_open_with_error},
     directory::{
@@ -33,7 +34,6 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io as fio,
     fuchsia_zircon::Status,
-    parking_lot::Mutex,
     static_assertions::assert_eq_size,
     std::{
         boxed::Box,
@@ -45,7 +45,7 @@ use {
         iter,
         marker::PhantomData,
         ops::DerefMut,
-        sync::Arc,
+        sync::{Arc, Mutex},
     },
 };
 
@@ -61,28 +61,6 @@ where
     Connection: DerivedConnection + 'static,
 {
     inner: Mutex<Inner>,
-
-    // I wish this field would not be here.  A directory instance already knows the type of the
-    // connections that connect to it - it is in the `Connection` type.  So we should just be able
-    // to use that.  But, unfortunately, I could not write `DirectoryEntry::open()` implementation.
-    // The compiler is confused when it needs to convert `self` into an `Arc<dyn
-    // ImmutableConnectionClient>` or `Arc<dyn MutableConnectionClient>`.  I have tried a few
-    // tricks to add the necessary constraints, but I was not able to write it correctly.
-    // Essentially the constraint should be something like this:
-    //
-    //     impl<Connection> DirectoryEntry for Simple<Connection>
-    //     where
-    //         Connection: DerivedConnection + 'static,
-    //         Arc<Self>: IsConvertibleTo<
-    //             Type = Arc<
-    //                 <Connection as DerivedConnection>::Directory
-    //             >
-    //         >
-    //
-    // The problem is that I do not know how to write this `IsConvertibleTo` trait.  Compiler seems
-    // to be following some special rules when you say `A as Arc<B>` (when `A` is an `Arc`), as it
-    // allows subtyping, but I do not know how to express the same constraint.
-    mutable: bool,
 
     // The inode for this directory. This should either be unique within this VFS, or INO_UNKNOWN.
     inode: u64,
@@ -104,10 +82,9 @@ impl<Connection> Simple<Connection>
 where
     Connection: DerivedConnection + 'static,
 {
-    pub(super) fn new(mutable: bool, inode: u64) -> Arc<Self> {
+    pub(super) fn new(inode: u64) -> Arc<Self> {
         Arc::new(Simple {
             inner: Mutex::new(Inner { entries: BTreeMap::new(), watchers: Watchers::new() }),
-            mutable,
             _connection: PhantomData,
             inode,
             fs: SimpleFilesystem::new(),
@@ -123,7 +100,7 @@ where
         name: &str,
         path: &Path,
     ) -> Result<Arc<dyn DirectoryEntry>, Status> {
-        let mut this = self.inner.lock();
+        let mut this = self.inner.lock().unwrap();
 
         match this.entries.get(name) {
             Some(entry) => {
@@ -154,7 +131,7 @@ where
         self: Arc<Self>,
         handler: Box<dyn FnMut(&str) + Send + Sync + 'static>,
     ) {
-        let mut this = self.not_found_handler.lock();
+        let mut this = self.not_found_handler.lock().unwrap();
         this.replace(handler);
     }
 
@@ -165,7 +142,7 @@ where
             return Err(Status::INVALID_ARGS);
         }
 
-        let this = self.inner.lock();
+        let this = self.inner.lock().unwrap();
         match this.entries.get(name) {
             Some(entry) => Ok(entry.clone()),
             None => Err(Status::NOT_FOUND),
@@ -190,8 +167,7 @@ where
         let (name, path_ref) = match path.next_with_ref() {
             (path_ref, Some(name)) => (name, path_ref),
             (_, None) => {
-                // See comment above `Simple::mutable` as to why this selection is necessary.
-                if self.mutable {
+                if Connection::mutable() {
                     MutableConnection::create_connection(scope, self, flags, server_end);
                 } else {
                     ImmutableConnection::create_connection(scope, self, flags, server_end);
@@ -204,11 +180,11 @@ where
         let ref_copy = self.clone();
         let name_copy = name.to_string();
 
-        // Do not hold the mutex more than necessary.  Plus, [`parking_lot::Mutex`] is not
-        // re-entrant.  So we need to make sure to release the lock before we call `open()` is it
-        // may turn out to be a recursive call, in case the directory contains itself directly or
-        // through a number of other directories.  `get_entry` is responsible for locking `self`
-        // and it will unlock it before returning.
+        // Do not hold the mutex more than necessary and the Mutex is not re-entrant.  So we need to
+        // make sure to release the lock before we call `open()` is it may turn out to be a
+        // recursive call, in case the directory contains itself directly or through a number of
+        // other directories.  `get_entry` is responsible for locking `self` and it will unlock it
+        // before returning.
         let found = match self.get_or_insert_entry(scope.clone(), flags, mode, name, path_ref) {
             Err(status) => {
                 send_on_open_with_error(flags, server_end, status);
@@ -221,7 +197,7 @@ where
         };
 
         if !found {
-            let mut handler = ref_copy.not_found_handler.lock();
+            let mut handler = ref_copy.not_found_handler.lock().unwrap();
             if let Some(handler) = handler.as_mut() {
                 handler(&name_copy);
             }
@@ -245,7 +221,7 @@ where
     ) -> Result<(TraversalPosition, Box<dyn dirents_sink::Sealed>), Status> {
         use dirents_sink::AppendResult;
 
-        let this = self.inner.lock();
+        let this = self.inner.lock().unwrap();
 
         let (mut sink, entries_iter) = match pos {
             TraversalPosition::Start => {
@@ -304,7 +280,7 @@ where
         mask: fio::WatchMask,
         watcher: DirectoryWatcher,
     ) -> Result<(), Status> {
-        let mut this = self.inner.lock();
+        let mut this = self.inner.lock().unwrap();
 
         let mut names = StaticVecEventProducer::existing({
             let entry_names = this.entries.keys();
@@ -319,7 +295,7 @@ where
     }
 
     fn unregister_watcher(self: Arc<Self>, key: usize) {
-        let mut this = self.inner.lock();
+        let mut this = self.inner.lock().unwrap();
         this.watchers.remove(key);
     }
 
@@ -328,7 +304,7 @@ where
             mode: fio::MODE_TYPE_DIRECTORY
                 | rights_to_posix_mode_bits(
                     /*r*/ true,
-                    /*w*/ self.mutable,
+                    /*w*/ Connection::mutable(),
                     /*x*/ true,
                 ),
             id: self.inode,
@@ -363,7 +339,7 @@ where
             return Err(Status::INVALID_ARGS);
         }
 
-        let mut this = self.inner.lock();
+        let mut this = self.inner.lock().unwrap();
 
         if !overwrite && this.entries.contains_key(&name) {
             return Err(Status::ALREADY_EXISTS);
@@ -385,7 +361,7 @@ where
             return Err(Status::INVALID_ARGS);
         }
 
-        let mut this = self.inner.lock();
+        let mut this = self.inner.lock().unwrap();
 
         match this.entries.entry(name) {
             Entry::Vacant(_) => Ok(None),
@@ -412,7 +388,7 @@ where
             return Err(Status::INVALID_ARGS);
         }
 
-        let mut this = self.inner.lock();
+        let mut this = self.inner.lock().unwrap();
 
         let Inner { entries, watchers, .. } = this.deref_mut();
 
@@ -438,7 +414,7 @@ where
             return Err(Status::INVALID_ARGS);
         }
 
-        let mut this = self.inner.lock();
+        let mut this = self.inner.lock().unwrap();
 
         let entry = from()?;
 
@@ -453,7 +429,7 @@ where
             return Err(Status::INVALID_ARGS);
         }
 
-        let mut this = self.inner.lock();
+        let mut this = self.inner.lock().unwrap();
 
         // If src doesn't exist, don't do the other stuff.
         if !this.entries.contains_key(&src) {

@@ -38,6 +38,10 @@ pub struct ImmutableConnection {
 impl DerivedConnection for ImmutableConnection {
     type Directory = dyn ImmutableConnectionClient;
 
+    fn mutable() -> bool {
+        false
+    }
+
     fn new(
         scope: ExecutionScope,
         directory: OpenDirectory<Self::Directory>,

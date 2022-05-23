@@ -25,7 +25,6 @@ rustc_library("vfs") {
     "//third_party/rust_crates:itertools",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:libc",
-    "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:pin-project",
     "//third_party/rust_crates:pin-utils",
     "//third_party/rust_crates:slab",

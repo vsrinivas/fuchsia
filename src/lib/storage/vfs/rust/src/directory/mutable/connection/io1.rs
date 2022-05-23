@@ -67,6 +67,10 @@ pub struct MutableConnection {
 impl DerivedConnection for MutableConnection {
     type Directory = dyn MutableConnectionClient;
 
+    fn mutable() -> bool {
+        true
+    }
+
     fn new(
         scope: ExecutionScope,
         directory: OpenDirectory<Self::Directory>,

@@ -24,9 +24,9 @@ pub type Simple = simple::Simple<Connection>;
 /// sense that a specific listing (and, potentially, the entries themselves) are generated only
 /// when requested.
 pub fn simple() -> Arc<Simple> {
-    Simple::new(false, fio::INO_UNKNOWN)
+    Simple::new(fio::INO_UNKNOWN)
 }
 
 pub fn simple_with_inode(inode: u64) -> Arc<Simple> {
-    Simple::new(false, inode)
+    Simple::new(inode)
 }

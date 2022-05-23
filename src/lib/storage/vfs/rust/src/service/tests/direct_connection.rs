@@ -16,7 +16,7 @@ use {
         channel::{mpsc, oneshot},
         stream::StreamExt,
     },
-    parking_lot::Mutex,
+    std::sync::Mutex,
 };
 
 async fn echo_server(
@@ -106,8 +106,8 @@ fn server_state_checking() {
         host(move |requests| {
             echo_server(
                 requests,
-                Some(on_message_tx.lock().take().unwrap()),
-                Some(done_tx.lock().take().unwrap()),
+                Some(on_message_tx.lock().unwrap().take().unwrap()),
+                Some(done_tx.lock().unwrap().take().unwrap()),
             )
         }),
         |node_proxy| {

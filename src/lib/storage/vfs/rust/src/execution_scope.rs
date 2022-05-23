@@ -27,10 +27,13 @@ use {
         task::{self, Context, Poll},
         Future, FutureExt,
     },
-    parking_lot::Mutex,
     pin_project::pin_project,
     slab::Slab,
-    std::{ops::Drop, pin::Pin, sync::Arc},
+    std::{
+        ops::Drop,
+        pin::Pin,
+        sync::{Arc, Mutex},
+    },
 };
 
 pub type SpawnError = task::SpawnError;
@@ -135,14 +138,14 @@ impl ExecutionScope {
     }
 
     pub fn shutdown(&self) {
-        let mut this = self.executor.lock();
+        let mut this = self.executor.lock().unwrap();
         this.shutdown();
     }
 
     /// Wait for all tasks to complete.
     pub async fn wait(&self) {
         let receiver = {
-            let mut this = self.executor.lock();
+            let mut this = self.executor.lock().unwrap();
             if this.running.is_empty() {
                 None
             } else {
@@ -252,12 +255,12 @@ impl Executor {
         task: F,
         shutdown: oneshot::Sender<()>,
     ) {
-        let mut this = executor.lock();
+        let mut this = executor.lock().unwrap();
 
         let task_id = this.running.insert(Some(shutdown));
         let executor_clone = executor.clone();
-        let task =
-            task.then(move |_| async move { executor_clone.lock().task_did_finish(task_id) });
+        let task = task
+            .then(move |_| async move { executor_clone.lock().unwrap().task_did_finish(task_id) });
         fuchsia_async::Task::spawn(task).detach();
     }
 

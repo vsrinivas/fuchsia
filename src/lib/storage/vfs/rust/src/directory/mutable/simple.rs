@@ -31,7 +31,7 @@ pub type Simple = simple::Simple<Connection>;
 /// [`crate::directory::helper::DirectlyMutable::remove_entry()`] methods.  These directories
 /// content can be modified by the client.  It uses [`Connection`] type for the connection objects.
 pub fn simple() -> Arc<Simple> {
-    Simple::new(true, fio::INO_UNKNOWN)
+    Simple::new(fio::INO_UNKNOWN)
 }
 
 /// Creates an [`EntryConstructor`] that will insert empty mutable directories when asked to create
