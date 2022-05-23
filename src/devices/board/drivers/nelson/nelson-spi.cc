@@ -180,6 +180,13 @@ zx_status_t Nelson::Spi1Init() {
       },
   };
 
+  static const pbus_bti_t spi_1_btis[] = {
+      {
+          .iommu_index = 0,
+          .bti_id = BTI_SPI1,
+      },
+  };
+
   static const spi_channel_t spi_1_channels[] = {
       // Radar sensor head.
       {
@@ -196,9 +203,9 @@ zx_status_t Nelson::Spi1Init() {
       .period = 0,
       .bus_id = NELSON_SPICC1,
       .cs_count = 1,
-      .cs = {0},                          // index into fragments list
-      .clock_divider_register_value = 0,  // SCLK = core clock / 4 = 25 MHz
-      .use_enhanced_clock_mode = false,
+      .cs = {0},                                     // index into fragments list
+      .clock_divider_register_value = (4 >> 1) - 1,  // SCLK = core clock / 4 = 25 MHz
+      .use_enhanced_clock_mode = true,
   };
 
   static pbus_dev_t spi_1_dev = []() {
@@ -212,6 +219,8 @@ zx_status_t Nelson::Spi1Init() {
     dev.mmio_count = std::size(spi_1_mmios);
     dev.irq_list = spi_1_irqs;
     dev.irq_count = std::size(spi_1_irqs);
+    dev.bti_list = spi_1_btis;
+    dev.bti_count = std::size(spi_1_btis);
     return dev;
   }();
 

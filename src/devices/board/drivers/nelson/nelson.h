@@ -39,6 +39,7 @@ enum {
   BTI_NNA,
   BTI_AUDIO_BT_IN,
   BTI_AUDIO_BT_OUT,
+  BTI_SPI1,
 };
 
 // MAC address metadata indices
