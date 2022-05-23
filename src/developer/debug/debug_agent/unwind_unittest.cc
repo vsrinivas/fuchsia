@@ -123,17 +123,11 @@ void DoUnwindTest() {
     ASSERT_TRUE(regs);
 
     // Find the module information.
-    uintptr_t debug_addr = 0;
-    zx_status_t status = zx::process::self()->get_property(ZX_PROP_PROCESS_DEBUG_ADDR, &debug_addr,
-                                                           sizeof(debug_addr));
-    ASSERT_EQ(ZX_OK, status);
-    ASSERT_NE(0u, debug_addr);
-
     ModuleList modules;
-    modules.Update(process, debug_addr);
+    modules.Update(process);
 
     // Do the unwinding.
-    status = UnwindStack(process, modules, *data.thread, *regs, 16, &stack);
+    zx_status_t status = UnwindStack(process, modules, *data.thread, *regs, 16, &stack);
     ASSERT_EQ(ZX_OK, status);
 
     data.backtrace_done = true;

@@ -38,12 +38,17 @@ debug::Status MockProcessHandle::Attach(ProcessHandleObserver* observer) {
 
 void MockProcessHandle::Detach() { is_attached_ = false; }
 
+uint64_t MockProcessHandle::GetLoaderBreakpointAddress() {
+  // Not currently implemented in this mock.
+  return 0;
+}
+
 std::vector<debug_ipc::AddressRegion> MockProcessHandle::GetAddressSpace(uint64_t address) const {
   // Not currently implemented in this mock.
   return {};
 }
 
-std::vector<debug_ipc::Module> MockProcessHandle::GetModules(uint64_t dl_debug_addr) const {
+std::vector<debug_ipc::Module> MockProcessHandle::GetModules() const {
   // Not currently implemented in this mock.
   return {};
 }

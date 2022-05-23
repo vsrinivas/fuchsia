@@ -26,6 +26,39 @@ namespace debug_agent {
 class ProcessHandleObserver;
 class ThreadHandle;
 
+// DEBUGGER INTERFACE IN DYNAMIC LOADER
+//
+// Unlike other libcs that use standard debugger interface (https://gbenson.net/r_debug/,
+// https://sourceware.org/gdb/wiki/LinkerInterface), Fuchsia and its libc are more cooperative for
+// debuggers in that
+//   * ZX_PROP_PROCESS_DEBUG_ADDR is used instead of DT_DEBUG in the dynamic table.
+//   * ZX_PROP_PROCESS_BREAK_ON_LOAD is used to ask the dynamic loader to issue a breakpoint on
+//     module changes proactively instead of requiring debuggers to install a breakpoint on r_brk.
+//
+// The overall process looks like
+//   * When a process starts, it'll set the value of ZX_PROP_PROCESS_DEBUG_ADDR to the r_debug
+//     struct and read the value of ZX_PROP_PROCESS_BREAK_ON_LOAD.
+//   * If the value of ZX_PROP_PROCESS_BREAK_ON_LOAD is non-zero, it means a debugger is attached
+//     and the process should issue a breakpoint upon
+//     * The first time ZX_PROP_PROCESS_DEBUG_ADDR is set.
+//     * Each dlopen() and dlclose() that changes the module list.
+//   * To distinguish the above dynamic loading breakpoint from other user-provided breakpoints
+//     (e.g., __buildin_debugtrap()), the process also set the value of
+//     ZX_PROP_PROCESS_BREAK_ON_LOAD to the address of the breakpoint instruction before the
+//     exception is issued, so that the debugger could compare the address of an exception with
+//     this value.
+//
+// When a debugger attaches to a process
+//   * It should first check whether ZX_PROP_PROCESS_BREAK_ON_LOAD is set. If so it should refuse
+//     to attach because another debugger has already attached. It's not possible today because
+//     there can be at most one debugger channel for each process.
+//   * It should set ZX_PROP_PROCESS_BREAK_ON_LOAD to a non-zero value, e.g., 1.
+//   * It should check whether ZX_PROP_PROCESS_DEBUG_ADDR is set and read the module list from it.
+//
+// When a debugger handles a software breakpoint, it should check whether the breakpoint address
+// matches the value of ZX_PROP_PROCESS_BREAK_ON_LOAD. If so, it should update the module list and
+// continue the execution.
+
 class ProcessHandle {
  public:
   virtual ~ProcessHandle() = default;
@@ -50,13 +83,17 @@ class ProcessHandle {
   virtual int64_t GetReturnCode() const = 0;
 
   // Registers for process notifications on the given interface. The pointer must outlive this class
-  // or until Detach() is called. The observer nust not be null (use Detach() instead). Calling
+  // or until Detach() is called. The observer must not be null (use Detach() instead). Calling
   // multiple times will replace the observer pointer.
   virtual debug::Status Attach(ProcessHandleObserver* observer) = 0;
 
   // Unregisters for process notifications. See Attach(). It is legal to call Detach() multiple
   // times or when not already attached.
   virtual void Detach() = 0;
+
+  // Get the address of the dynamic loader's special breakpoint that notifies a module list change.
+  // See "DEBUGGER INTERFACE IN DYNAMIC LOADER" above.
+  virtual uint64_t GetLoaderBreakpointAddress() = 0;
 
   // Returns the address space information. If the address is non-null, only the regions covering
   // that address will be returned. Otherwise all regions will be returned.
@@ -66,9 +103,7 @@ class ProcessHandle {
   // failure.
   //
   // Prefer this version to calling the elf_utils variant because this one allows mocking.
-  //
-  // TODO(brettw) consider moving dl_debug_addr to be internally managed by ZirconProcessInfo.
-  virtual std::vector<debug_ipc::Module> GetModules(uint64_t dl_debug_addr) const = 0;
+  virtual std::vector<debug_ipc::Module> GetModules() const = 0;
 
   // Returns the handles opened by the process.
   virtual fitx::result<debug::Status, std::vector<debug_ipc::InfoHandle>> GetHandles() const = 0;

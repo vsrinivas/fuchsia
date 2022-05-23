@@ -303,13 +303,6 @@ fuchsia_unittest_package("debug_agent_integration_tests") {
     # actual behaviour against zircon.
     "test_data:test_executables",
   ]
-
-  # TODO(https://fxbug.dev/47485): Get this test passing on arm64 and remove.
-  if (target_cpu == "arm64") {
-    test_specs = {
-      environments = []
-    }
-  }
 }
 
 # Helper Executables ---------------------------------------------------------

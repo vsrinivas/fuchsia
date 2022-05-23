@@ -532,21 +532,6 @@ DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
   if (SoftwareBreakpoint* found_bp = process_->FindSoftwareBreakpoint(breakpoint_address)) {
     LogHitBreakpoint(FROM_HERE, this, found_bp, breakpoint_address);
 
-    switch (process_->HandleSpecialBreakpoint(found_bp)) {
-      case DebuggedProcess::SpecialBreakpointResult::kContinue: {
-        DEBUG_LOG(Thread) << ThreadPreamble(this) << "Loader breakpoint, internally resuming.";
-        current_breakpoint_ = found_bp;
-        return OnStop::kResume;
-      }
-      case DebuggedProcess::SpecialBreakpointResult::kKeepSuspended: {
-        DEBUG_LOG(Thread) << ThreadPreamble(this) << "Loader breakpoint, keeping stopped.";
-        current_breakpoint_ = found_bp;
-        return OnStop::kIgnore;
-      }
-      case DebuggedProcess::SpecialBreakpointResult::kNotSpecial:
-        break;
-    }
-
     // When hitting a breakpoint, we need to check if indeed this exception should apply to this
     // thread or not.
     if (!found_bp->ShouldHitThread(koid())) {
@@ -562,19 +547,19 @@ DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
   } else if (IsBreakpointInstructionAtAddress(breakpoint_address)) {
     // Hit a software breakpoint that doesn't correspond to any current breakpoint.
 
-    switch (process_->HandleSpecialBreakpoint(nullptr)) {
-      case DebuggedProcess::SpecialBreakpointResult::kContinue: {
+    switch (process_->HandleLoaderBreakpoint(breakpoint_address)) {
+      case DebuggedProcess::LoaderBreakpointResult::kContinue: {
         DEBUG_LOG(Thread) << ThreadPreamble(this)
                           << "Hardcoded loader breakpoint, internally resuming.";
         return OnStop::kResume;
       }
-      case DebuggedProcess::SpecialBreakpointResult::kKeepSuspended: {
+      case DebuggedProcess::LoaderBreakpointResult::kKeepSuspended: {
         DEBUG_LOG(Thread) << ThreadPreamble(this)
                           << "Hardcoded loader breakpoint, keeping stopped.";
         current_breakpoint_ = nullptr;
         return OnStop::kIgnore;
       }
-      case DebuggedProcess::SpecialBreakpointResult::kNotSpecial:
+      case DebuggedProcess::LoaderBreakpointResult::kNotLoader:
         break;
     }
   } else {
@@ -583,7 +568,6 @@ DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
     // breakpoint.
     DEBUG_LOG(Thread) << ThreadPreamble(this) << "Hit non debugger SW breakpoint on 0x" << std::hex
                       << breakpoint_address;
-    regs.set_ip(breakpoint_address);
 
     // Don't automatically continue execution here. A race for this should be unusual and maybe
     // something weird happened that caused an exception we're not set up to handle. Err on the

@@ -19,7 +19,7 @@ class ModuleList {
   using ModuleVector = std::vector<debug_ipc::Module>;
 
   // Returns true if there were any changes, false if there were none.
-  bool Update(const ProcessHandle& process, uint64_t dl_debug_addr);
+  bool Update(const ProcessHandle& process);
 
   // This vector will always be sorted by load address.
   const ModuleVector& modules() const { return modules_; }

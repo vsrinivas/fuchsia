@@ -63,10 +63,6 @@ class DebuggedProcess : public ProcessHandleObserver {
   const ProcessHandle& process_handle() const { return *process_handle_; }
   ProcessHandle& process_handle() { return *process_handle_; }
 
-  // TODO(brettw) remove this and have all callers use thread_handle().
-  zx::process& handle() { return process_handle_->GetNativeHandle(); }
-  const zx::process& handle() const { return process_handle_->GetNativeHandle(); }
-
   const ModuleList& module_list() const { return module_list_; }
 
   // Returns true on success. On failure, the object may not be used further.
@@ -109,13 +105,11 @@ class DebuggedProcess : public ProcessHandleObserver {
   // Returns the information for all current threads. This gets minimal stacks.
   std::vector<debug_ipc::ThreadRecord> GetThreadRecords() const;
 
-  // Checks if this breakpoint is a special internal one. If it is, handles it and returns true.
-  // If it's not special, does nothing and returns false. The parameter indicates the breakpoint
-  // that was hit. If the breakpoint was a hardcoded one, the parameter should be null.
-  //
-  // This will check for the different types of loader breakpoints.
-  enum class SpecialBreakpointResult { kNotSpecial, kContinue, kKeepSuspended };
-  SpecialBreakpointResult HandleSpecialBreakpoint(ProcessBreakpoint* optional_bp);
+  // Checks if this breakpoint is the loader's internal one. If it is, handles it and returns
+  // either kContinue or kKeepSuspended depending on whether the module list changes.
+  // If it's not, does nothing and returns kNotLoader.
+  enum class LoaderBreakpointResult { kNotLoader, kContinue, kKeepSuspended };
+  LoaderBreakpointResult HandleLoaderBreakpoint(uint64_t address);
 
   // If the process can know its modules, suspend all thread and send the module list. This does not
   // refresh the module list.
@@ -221,12 +215,6 @@ class DebuggedProcess : public ProcessHandleObserver {
   // addition to the normal pruning behavior.
   void PruneStepOverQueue(DebuggedThread* optional_thread);
 
-  // Attempts to load the debug_state_ value from the
-  // ZX_PROP_PROCESS_DEBUG_ADDR of the debugged process. Returns true if it
-  // is now set. False means it remains unset. Normally the first time this
-  // returns true would need to be followed up with a SendModuleNotification.
-  bool RegisterDebugState();
-
   debug::Status RegisterSoftwareBreakpoint(Breakpoint* bp, uint64_t address);
   void UnregisterSoftwareBreakpoint(Breakpoint* bp, uint64_t address);
   debug::Status RegisterHardwareBreakpoint(Breakpoint* bp, uint64_t address);
@@ -236,15 +224,8 @@ class DebuggedProcess : public ProcessHandleObserver {
 
   std::unique_ptr<ProcessHandle> process_handle_;
 
-  // Address in the debugged program of the dl_debug_state in ld.so.
-  uint64_t dl_debug_addr_ = 0;
-
   // Current modules loaded in the process.
   ModuleList module_list_;
-
-  // Breakpoint used to catch shared library loads. This will be set when the dl_debug_addr_ is
-  // known.
-  std::unique_ptr<Breakpoint> loader_breakpoint_;
 
   std::map<zx_koid_t, std::unique_ptr<DebuggedThread>> threads_;
 

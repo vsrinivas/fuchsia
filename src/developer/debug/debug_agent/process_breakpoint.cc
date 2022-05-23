@@ -90,9 +90,8 @@ void ProcessBreakpoint::OnHit(DebuggedThread* hitting_thread,
 
     breakpoint->OnHit();
 
-    // The breakpoint stats are for the client, don't tell it about our internal ones.
-    if (!breakpoint->is_debug_agent_internal())
-      hit_breakpoints.push_back(breakpoint->stats());
+    // The breakpoint stats are for the client.
+    hit_breakpoints.push_back(breakpoint->stats());
 
     if (static_cast<uint32_t>(breakpoint->settings().stop) > static_cast<uint32_t>(max_stop))
       max_stop = breakpoint->settings().stop;

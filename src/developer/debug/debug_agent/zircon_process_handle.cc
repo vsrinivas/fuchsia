@@ -71,7 +71,23 @@ debug::Status ZirconProcessHandle::Attach(ProcessHandleObserver* observer) {
     config.process_handle = process_.get();
     config.process_koid = GetKoid();
     config.watcher = this;
-    return debug::ZxStatus(loop->WatchProcessExceptions(std::move(config), &process_watch_handle_));
+    if (auto status = debug::ZxStatus(
+            loop->WatchProcessExceptions(std::move(config), &process_watch_handle_));
+        status.has_error()) {
+      return status;
+    }
+
+    // Check and set ZX_PROP_PROCESS_BREAK_ON_LOAD.
+    uintptr_t break_on_load;
+    zx_status_t status =
+        process_.get_property(ZX_PROP_PROCESS_BREAK_ON_LOAD, &break_on_load, sizeof(break_on_load));
+    FX_CHECK(status == ZX_OK);
+    // This check should never fail because the debug exception channel obtained above is exclusive.
+    FX_CHECK(break_on_load == 0);
+    break_on_load = 1;
+    status =
+        process_.set_property(ZX_PROP_PROCESS_BREAK_ON_LOAD, &break_on_load, sizeof(break_on_load));
+    FX_CHECK(status == ZX_OK);
   }
   return debug::Status();
 }
@@ -79,8 +95,20 @@ debug::Status ZirconProcessHandle::Attach(ProcessHandleObserver* observer) {
 void ZirconProcessHandle::Detach() {
   observer_ = nullptr;
 
+  // Unset ZX_PROP_PROCESS_BREAK_ON_LOAD.
+  uintptr_t break_on_load = 0;
+  FX_CHECK(process_.set_property(ZX_PROP_PROCESS_BREAK_ON_LOAD, &break_on_load,
+                                 sizeof(break_on_load)) == ZX_OK);
+
   // Unbind from the exception port.
   process_watch_handle_.StopWatching();
+}
+
+uint64_t ZirconProcessHandle::GetLoaderBreakpointAddress() {
+  uintptr_t break_on_load;
+  FX_CHECK(process_.get_property(ZX_PROP_PROCESS_BREAK_ON_LOAD, &break_on_load,
+                                 sizeof(break_on_load)) == ZX_OK);
+  return break_on_load;
 }
 
 std::vector<debug_ipc::AddressRegion> ZirconProcessHandle::GetAddressSpace(uint64_t address) const {
@@ -111,7 +139,13 @@ std::vector<debug_ipc::AddressRegion> ZirconProcessHandle::GetAddressSpace(uint6
   return regions;
 }
 
-std::vector<debug_ipc::Module> ZirconProcessHandle::GetModules(uint64_t dl_debug_addr) const {
+std::vector<debug_ipc::Module> ZirconProcessHandle::GetModules() const {
+  uintptr_t dl_debug_addr;
+  FX_CHECK(process_.get_property(ZX_PROP_PROCESS_DEBUG_ADDR, &dl_debug_addr,
+                                 sizeof(dl_debug_addr)) == ZX_OK);
+  if (!dl_debug_addr) {
+    return {};
+  }
   return GetElfModulesForProcess(*this, dl_debug_addr);
 }
 

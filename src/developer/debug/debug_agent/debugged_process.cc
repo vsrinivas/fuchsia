@@ -125,7 +125,8 @@ debug::Status DebuggedProcess::Init() {
   if (debug::Status status = process_handle_->Attach(this); status.has_error())
     return status;
 
-  RegisterDebugState();
+  // Update module list.
+  module_list_.Update(process_handle());
 
   // Binding stdout/stderr.
   // We bind |this| into the callbacks. This is OK because the DebuggedProcess
@@ -243,100 +244,25 @@ std::vector<debug_ipc::ThreadRecord> DebuggedProcess::GetThreadRecords() const {
   return result;
 }
 
-bool DebuggedProcess::RegisterDebugState() {
-  // HOW REGISTRATION WITH THE LOADER WORKS.
-  //
-  // Upon process initialization and before executing the normal program code, ld.so sets the
-  // ZX_PROP_PROCESS_DEBUG_ADDR property on its own process to the address of a known struct defined
-  // in <link.h> containing the state of the loader. Debuggers can come along later, get the address
-  // from this property, and inspect the state of the dynamic loader for this process (get the
-  // loaded libraries, set breakpoints for loads, etc.).
-  //
-  // When launching a process in a debugger, the debugger needs to know when this property has been
-  // set or there will be a race to know when it's valid. To resolve this, the debuggers sets a
-  // known magic value to the property before startup. The loader checks for this value when setting
-  // the property, and if it had the magic value, issues a hardcoded software breakpoint. The
-  // debugger catches this breakpoint exception, reads the now-valid address from the property, and
-  // continues initialization.
-  //
-  // It's also possible that the property has been properly set up prior to starting the process.
-  // In Posix this can happen with a fork() where the entire process is duplicated, including the
-  // loader state and all dynamically loaded libraries. In Zircon this can happen if the creator
-  // of the process maps a valid loader state when it creates the process (possibly it's trying
-  // to emulate fork, or it could be injecting libraries itself for some reason). So we also need
-  // to handle the rare case that the propery is set before startup.
-  if (dl_debug_addr_)
-    return true;  // Previously set.
+DebuggedProcess::LoaderBreakpointResult DebuggedProcess::HandleLoaderBreakpoint(uint64_t address) {
+  // The loader breakpoint is a hardcodeed breakpoint with a known address.
+  if (address != process_handle().GetLoaderBreakpointAddress())
+    return LoaderBreakpointResult::kNotLoader;
 
-  uintptr_t debug_addr = 0;
-  if (handle().get_property(ZX_PROP_PROCESS_DEBUG_ADDR, &debug_addr, sizeof(debug_addr)) != ZX_OK ||
-      debug_addr == 0) {
-    // Register for sets on the debug addr by setting the magic value.
-    const intptr_t kMagicValue = ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET;
-    handle().set_property(ZX_PROP_PROCESS_DEBUG_ADDR, &kMagicValue, sizeof(kMagicValue));
-    return false;
-  }
-  if (debug_addr == ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET)
-    return false;  // Still not set.
-
-  dl_debug_addr_ = debug_addr;
-
-  // Register a breakpoint for dynamic loads.
-  if (auto load_addr = GetLoaderBreakpointAddress(process_handle(), dl_debug_addr_)) {
-    loader_breakpoint_ = std::make_unique<Breakpoint>(debug_agent_, true);
-    if (loader_breakpoint_
-            ->SetSettings("Internal shared library load breakpoint", koid(), load_addr)
-            .has_error()) {
-      DEBUG_LOG(Process) << LogPreamble(this) << "Could not set shared library load breakpoint at "
-                         << std::hex << load_addr;
-      // Continue even in the error case: we can continue with most things working even if the
-      // loader breakpoint fails for some reason.
-    }
+  if (module_list_.Update(process_handle())) {
+    // The debugged process could be multithreaded and have just dynamically loaded a new
+    // module. Suspend all threads so the client can resolve breakpoint addresses before
+    // continuing.
+    SuspendAndSendModulesIfKnown();
+    return LoaderBreakpointResult::kKeepSuspended;
   }
 
-  module_list_.Update(process_handle(), dl_debug_addr_);
-
-  return true;
-}
-
-DebuggedProcess::SpecialBreakpointResult DebuggedProcess::HandleSpecialBreakpoint(
-    ProcessBreakpoint* optional_bp) {
-  // The special Fuchsia loader breakpoint will be a hardcodeed breakpoint (so no input
-  // ProcessBreakpoint object) before we've seen the dl_debug_addr_.
-  if (!dl_debug_addr_ && !optional_bp) {
-    if (RegisterDebugState()) {
-      // The initial loader breakpoint will happen very early in the process startup so it
-      // will be single threaded. Since the one thread is already stopped, we can skip suspending
-      // the threads and just notify the client, keeping the calling one suspended.
-      SendModuleNotification();
-      return SpecialBreakpointResult::kKeepSuspended;
-    }
-  }
-
-  // Our special loader breakpoint is a breakpoint we've inserted for every shared library load.
-  if (optional_bp) {
-    const auto& breakpoints = optional_bp->breakpoints();
-    if (std::find(breakpoints.begin(), breakpoints.end(), loader_breakpoint_.get()) !=
-        breakpoints.end()) {
-      if (module_list_.Update(process_handle(), dl_debug_addr_)) {
-        // The debugged process could be multithreaded and have just dynamically loaded a new
-        // module. Suspend all threads so the client can resolve breakpoint addresses before
-        // continuing.
-        SuspendAndSendModulesIfKnown();
-        return SpecialBreakpointResult::kKeepSuspended;
-      }
-
-      // Modules haven't changed, resume.
-      return SpecialBreakpointResult::kContinue;
-    }
-  }
-
-  // Not one of our special breakpoints.
-  return SpecialBreakpointResult::kNotSpecial;
+  // Modules haven't changed, resume.
+  return LoaderBreakpointResult::kContinue;
 }
 
 void DebuggedProcess::SuspendAndSendModulesIfKnown() {
-  if (dl_debug_addr_) {
+  if (!module_list_.modules().empty()) {
     // This process' modules can be known. Send them.
     //
     // Suspend all threads while the module list is being sent. The client will resume the threads
@@ -622,13 +548,10 @@ void DebuggedProcess::OnAddressSpace(const debug_ipc::AddressSpaceRequest& reque
 }
 
 void DebuggedProcess::OnModules(debug_ipc::ModulesReply* reply) {
-  // Modules can only be read after the debug state is set.
-  if (dl_debug_addr_) {
-    // Since the client requested the modules explicitly, force update our cache in case something
-    // changed unexpectedly.
-    module_list_.Update(process_handle(), dl_debug_addr_);
-    reply->modules = module_list_.modules();
-  }
+  // Since the client requested the modules explicitly, force update our cache in case something
+  // changed unexpectedly.
+  module_list_.Update(process_handle());
+  reply->modules = module_list_.modules();
 }
 
 void DebuggedProcess::OnWriteMemory(const debug_ipc::WriteMemoryRequest& request,

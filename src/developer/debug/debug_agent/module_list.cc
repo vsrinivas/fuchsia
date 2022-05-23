@@ -20,8 +20,8 @@ bool operator==(const Module& a, const Module& b) {
 
 namespace debug_agent {
 
-bool ModuleList::Update(const ProcessHandle& process, uint64_t dl_debug_addr) {
-  ModuleVector new_ones = process.GetModules(dl_debug_addr);
+bool ModuleList::Update(const ProcessHandle& process) {
+  ModuleVector new_ones = process.GetModules();
   std::sort(new_ones.begin(), new_ones.end(), [](auto& a, auto& b) { return a.base < b.base; });
 
   if (modules_ == new_ones)

@@ -240,7 +240,7 @@ void DebugAgent::OnDetach(const debug_ipc::DetachRequest& request, debug_ipc::De
       }
 
       auto debug_process = GetDebuggedProcess(request.koid);
-      if (debug_process && debug_process->handle().is_valid()) {
+      if (debug_process) {
         RemoveDebuggedProcess(request.koid);
         reply->status = debug::Status();
       } else {
