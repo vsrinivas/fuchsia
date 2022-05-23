@@ -50,7 +50,6 @@ go_library("lib") {
     "binaries_test.go",
     "blobs.go",
     "blobs_test.go",
-    "checkout_artifacts.go",
     "host_tests.go",
     "host_tests_test.go",
     "images.go",

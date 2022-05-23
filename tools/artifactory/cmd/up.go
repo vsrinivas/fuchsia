@@ -360,12 +360,6 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 		Destination: path.Join(buildsNamespaceDir, buildIDsToLabelsManifestName),
 	})
 
-	snapshot, err := artifactory.JiriSnapshotUpload(m, buildsNamespaceDir)
-	if err != nil {
-		return err
-	}
-	files = append(files, *snapshot)
-
 	if pkey != nil {
 		publicKey, err := artifactory.PublicKeyUpload(buildsNamespaceDir, pkey.Public().(ed25519.PublicKey))
 		if err != nil {
