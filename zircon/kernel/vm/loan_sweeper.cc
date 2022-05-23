@@ -188,10 +188,11 @@ uint64_t LoanSweeper::SynchronousSweepInternal() {
       // Else GetCowWithReplaceablePage wouldn't have set the optional backlink.
       DEBUG_ASSERT(vmo_backlink.cow_container);
       auto& cow_container = vmo_backlink.cow_container;
+      // TODO(fxbug.dev/99890): Implement way to replace loaned with non-loaned that supports
+      // delayed allocations.
+      ASSERT(ppb_enabled);
       // vmo_backlink.offset is offset in cow
-      zx_status_t replace_result =
-          cow_container->ReplacePage(page, vmo_backlink.offset,
-                                     /*with_loaned=*/ppb_enabled ? true : false);
+      zx_status_t replace_result = cow_container->ReplacePageWithLoaned(page, vmo_backlink.offset);
       if (replace_result == ZX_ERR_NOT_FOUND) {
         // No longer owned by cow or no longer replaceable.  Go around again to figure out which and
         // continue chasing it down.  We limit the iteration count however, since it's not critical

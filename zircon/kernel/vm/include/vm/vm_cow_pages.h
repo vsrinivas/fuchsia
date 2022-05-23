@@ -451,9 +451,11 @@ class VmCowPages final
   // remove the old_page from pmm_page_queues() and free the old_page.
   void SwapPageLocked(uint64_t offset, vm_page_t* old_page, vm_page_t* new_page) TA_REQ(lock_);
 
+  // If page is still at offset, replace it with a loaned page.
+  zx_status_t ReplacePageWithLoaned(vm_page_t* before_page, uint64_t offset) TA_EXCL(lock_);
+
   // If page is still at offset, replace it with a different page.  If with_loaned is true, replace
   // with a loaned page.  If with_loaned is false, replace with a non-loaned page.
-  zx_status_t ReplacePage(vm_page_t* before_page, uint64_t offset, bool with_loaned) TA_EXCL(lock_);
   zx_status_t ReplacePageLocked(vm_page_t* before_page, uint64_t offset, bool with_loaned,
                                 vm_page_t** after_page) TA_REQ(lock_);
 
@@ -1308,7 +1310,7 @@ class VmCowPagesContainer : public fbl::RefCountedUpgradeable<VmCowPagesContaine
   bool RemovePageForEviction(vm_page_t* page, uint64_t offset,
                              VmCowPages::EvictionHintAction hint_action);
 
-  zx_status_t ReplacePage(vm_page_t* page, uint64_t offset, bool with_loaned);
+  zx_status_t ReplacePageWithLoaned(vm_page_t* page, uint64_t offset);
 
  private:
   friend class VmCowPages;

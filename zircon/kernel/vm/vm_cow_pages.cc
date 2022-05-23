@@ -4947,9 +4947,9 @@ void VmCowPages::SwapPageLocked(uint64_t offset, vm_page_t* old_page, vm_page_t*
   DEBUG_ASSERT(released_page.has_value() && released_page.value() == old_page);
 }
 
-zx_status_t VmCowPages::ReplacePage(vm_page_t* before_page, uint64_t offset, bool with_loaned) {
+zx_status_t VmCowPages::ReplacePageWithLoaned(vm_page_t* before_page, uint64_t offset) {
   Guard<Mutex> guard{&lock_};
-  return ReplacePageLocked(before_page, offset, with_loaned, nullptr);
+  return ReplacePageLocked(before_page, offset, true, nullptr);
 }
 
 zx_status_t VmCowPages::ReplacePageLocked(vm_page_t* before_page, uint64_t offset, bool with_loaned,
@@ -5845,11 +5845,11 @@ bool VmCowPagesContainer::RemovePageForEviction(vm_page_t* page, uint64_t offset
   return cow().RemovePageForEviction(page, offset, hint_action);
 }
 
-zx_status_t VmCowPagesContainer::ReplacePage(vm_page_t* page, uint64_t offset, bool with_loaned) {
+zx_status_t VmCowPagesContainer::ReplacePageWithLoaned(vm_page_t* page, uint64_t offset) {
   // While the caller must have a ref on VmCowPagesContainer, the caller doesn't need to have a ref
   // on VmCowPages, for ReplacePage() in particular.
   DEBUG_ASSERT(ref_count_debug() >= 1);
-  return cow().ReplacePage(page, offset, with_loaned);
+  return cow().ReplacePageWithLoaned(page, offset);
 }
 
 template <class... Args>
