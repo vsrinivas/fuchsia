@@ -26,8 +26,16 @@ following command:
 $ fx run-recovery -g
 ```
 
-The easiest way to run recovery on hardware is to netboot a device into a newly
-built recovery image:
+The easiest way to run recovery on hardware is to boot the newly built
+recovery image with fastboot:
+
+```sh
+$ cat out/default/obj/build/images/recovery/recovery-eng/recovery-eng.{zbi,vbmeta} > \
+      out/default/obj/build/images/recovery/recovery-eng/recovery-eng.boot
+$ fastboot boot out/default/obj/build/images/recovery/recovery-eng/recovery-eng.boot
+```
+
+Alternatively, you can netboot a device into a newly built recovery image:
 
 ```sh
 $ out/default/host-tools/bootserver --board-name device-name --boot out/default/obj/build/images/recovery/recovery-eng/recovery-eng.zbi
