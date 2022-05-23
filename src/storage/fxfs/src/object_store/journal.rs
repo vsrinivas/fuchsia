@@ -172,8 +172,6 @@ pub struct Journal {
 
 struct Inner {
     super_block: SuperBlock,
-    // This manages access to the A/B SuperBlocks. (It will soon be moved up to FxFilesystem.)
-    // Must be Option<> so we can take it without holding the lock on Inner across an await.
 
     // This event is used when we are waiting for a compaction to free up journal space.
     reclaim_event: Option<Event>,
