@@ -841,11 +841,12 @@ class VmCowPages final
   // will be dirty when this call returns, i.e. prepared for the write to proceed, where
   // |dirty_len_out| <= |len|.
   //
-  // This function will forward a DIRTY page request to the page source if pages are not already
-  // dirty and need to transition to dirty, in which case ZX_ERR_SHOULD_WAIT will be returned and
-  // the caller should wait on |page_request|. If no page requests need to be generated, i.e. the
-  // pages are already dirty, or if they do not require the dirty transition to be trapped, ZX_OK is
-  // returned.
+  // If the specified range starts with pages that are not already dirty and need to request the
+  // page source before transitioning to dirty, a DIRTY page request will be forwarded to the page
+  // source. In this case |dirty_len_out| will be set to 0, ZX_ERR_SHOULD_WAIT will be returned and
+  // the caller should wait on |page_request|. If no page requests need to be generated, i.e. we
+  // could find some pages that are already dirty at the start of the range, or if the VMO does not
+  // require dirty transitions to be trapped, ZX_OK is returned.
   //
   // |offset| and |len| should be page-aligned.
   zx_status_t PrepareForWriteLocked(LazyPageRequest* page_request, uint64_t offset, uint64_t len,

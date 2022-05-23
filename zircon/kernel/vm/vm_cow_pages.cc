@@ -1840,9 +1840,11 @@ zx_status_t VmCowPages::PrepareForWriteLocked(LazyPageRequest* page_request, uin
           return ZX_ERR_STOP;
         },
         start_offset, end_offset);
+    // We don't expect a failure from the traversal.
+    DEBUG_ASSERT(status == ZX_OK);
 
     *dirty_len_out = dirty_len;
-    return status;
+    return ZX_OK;
   }
 
   // Otherwise, generate a DIRTY page request for pages in the range which need to transition to
@@ -1871,54 +1873,75 @@ zx_status_t VmCowPages::PrepareForWriteLocked(LazyPageRequest* page_request, uin
   //    write to the page is treated the same as before supply_zero_offset_. It must be trapped so
   //    that the filesystem can acknowledge it again (it might need to reserve additional space
   //    again).
-  uint64_t pages_to_dirty_start = start_offset;
   uint64_t pages_to_dirty_len = 0;
-  bool found_gap = false;
+
+  // Helper lambda used in the page list traversal below. Try to add page at |dirty_page_offset| to
+  // the run of dirty pages being tracked. Return codes are the same as those used by
+  // VmPageList::ForEveryPageAndGapInRange to continue or terminate traversal.
+  auto accumulate_dirty_page = [&pages_to_dirty_len, &dirty_len,
+                                start_offset](uint64_t dirty_page_offset) -> zx_status_t {
+    // Bail if we were tracking a non-zero run of pages to be dirtied as we cannot extend
+    // pages_to_dirty_len anymore.
+    if (pages_to_dirty_len > 0) {
+      return ZX_ERR_STOP;
+    }
+    // Append the page to the dirty range being tracked if it immediately follows it.
+    if (start_offset + dirty_len == dirty_page_offset) {
+      dirty_len += PAGE_SIZE;
+      return ZX_ERR_NEXT;
+    }
+    // Otherwise we cannot accumulate any more contiguous dirty pages.
+    return ZX_ERR_STOP;
+  };
+
+  // Helper lambda used in the page list traversal below. Try to add pages in the range
+  // [to_dirty_start, to_dirty_end) to the run of to-be-dirtied pages being tracked. Return codes
+  // are the same as those used by VmPageList::ForEveryPageAndGapInRange to continue or terminate
+  // traversal.
+  auto accumulate_pages_to_dirty = [&pages_to_dirty_len, &dirty_len, start_offset](
+                                       uint64_t to_dirty_start,
+                                       uint64_t to_dirty_end) -> zx_status_t {
+    // Bail if we were already accumulating a non-zero run of Dirty pages.
+    if (dirty_len > 0) {
+      return ZX_ERR_STOP;
+    }
+    // Append the pages to the range being tracked if they immediately follow it.
+    if (start_offset + pages_to_dirty_len == to_dirty_start) {
+      pages_to_dirty_len += (to_dirty_end - to_dirty_start);
+      return ZX_ERR_NEXT;
+    }
+    // Otherwise we cannot accumulate any more contiguous to-dirty pages.
+    return ZX_ERR_STOP;
+  };
 
   // First consider the portion of the range that ends before supply_zero_offset_.
   // We don't have a range to consider here if offset was greater than supply_zero_offset_.
   if (start_offset < supply_zero_offset_) {
     const uint64_t end = ktl::min(supply_zero_offset_, end_offset);
     zx_status_t status = page_list_.ForEveryPageAndGapInRange(
-        [&pages_to_dirty_start, &pages_to_dirty_len, &dirty_len, start_offset](
-            const VmPageOrMarker* p, uint64_t off) {
+        [&accumulate_dirty_page, &accumulate_pages_to_dirty](const VmPageOrMarker* p,
+                                                             uint64_t off) {
           if (p->IsPage()) {
             vm_page_t* page = p->Page();
             DEBUG_ASSERT(is_page_dirty_tracked(page));
             // VMOs that trap dirty transitions should not have loaned pages.
             DEBUG_ASSERT(!pmm_is_loaned(page));
-            // Page is already dirty.
+            // Page is already dirty. Try to add it to the dirty run.
             if (is_page_dirty(page)) {
-              // Bail if we were tracking a non-zero run of pages to be dirtied as we cannot extend
-              // pages_to_dirty_len anymore.
-              if (pages_to_dirty_len > 0) {
-                return ZX_ERR_STOP;
-              }
-              // pages_to_dirty_len was zero, so all we've found so far are dirty pages. Add this
-              // page as well.
-              DEBUG_ASSERT(start_offset + dirty_len == off);
-              dirty_len += PAGE_SIZE;
-              return ZX_ERR_NEXT;
+              return accumulate_dirty_page(off);
             }
           }
-          // If we weren't tracking a to-dirty range yet, begin one.
-          if (pages_to_dirty_len == 0) {
-            pages_to_dirty_start = off;
-          }
           // This is a either a zero page marker (which represents a clean zero page) or a committed
-          // page which is not already Dirty. Increment pages_to_dirty_len.
-          DEBUG_ASSERT(pages_to_dirty_start + pages_to_dirty_len == off);
-          pages_to_dirty_len += PAGE_SIZE;
-          return ZX_ERR_NEXT;
+          // page which is not already Dirty. Try to add it to the range of pages to be dirtied.
+          return accumulate_pages_to_dirty(off, off + PAGE_SIZE);
         },
-        [&found_gap](uint64_t start, uint64_t end) {
+        [](uint64_t start, uint64_t end) {
           // We found a gap. End the traversal.
-          found_gap = true;
           return ZX_ERR_STOP;
         },
         start_offset, end);
 
-    // We don't expect an error from the traversal above. If an already dirty non-contiguous page or
+    // We don't expect an error from the traversal above. If an incompatible contiguous page or
     // a gap is encountered, we will simply terminate early.
     DEBUG_ASSERT(status == ZX_OK);
   }
@@ -1927,14 +1950,11 @@ zx_status_t VmCowPages::PrepareForWriteLocked(LazyPageRequest* page_request, uin
   // can extend an already existing to-dirty range, or start a new one. [offset, offset + len) might
   // have fallen entirely before supply_zero_offset_, in which case we have no remaining portion to
   // consider here.
-  // Proceed only if we did not encounter a gap in the traversal above; gaps before
-  // supply_zero_offset_ will need to be supplied by the user pager first, so it might be premature
-  // to generate DIRTY requests for a later range before those READ requests have been resolved.
-  if (!found_gap && supply_zero_offset_ < end_offset) {
+  if (supply_zero_offset_ < end_offset) {
     const uint64_t start = ktl::max(start_offset, supply_zero_offset_);
     zx_status_t status = page_list_.ForEveryPageAndGapInRange(
-        [&dirty_len, &pages_to_dirty_start, &pages_to_dirty_len, start_offset](
-            const VmPageOrMarker* p, uint64_t off) {
+        [&accumulate_dirty_page, &accumulate_pages_to_dirty](const VmPageOrMarker* p,
+                                                             uint64_t off) {
           // We can only find un-Clean committed pages beyond supply_zero_offset_. There can be no
           // markers as well as they represent Clean zero pages.
           ASSERT(p->IsPage());
@@ -1943,52 +1963,21 @@ zx_status_t VmCowPages::PrepareForWriteLocked(LazyPageRequest* page_request, uin
           ASSERT(!is_page_clean(page));
           DEBUG_ASSERT(!pmm_is_loaned(page));
 
-          // Page is already Dirty.
+          // Page is already dirty. Try to add it to the dirty run.
           if (is_page_dirty(page)) {
-            // Bail if we were tracking a non-zero run of pages to be dirtied as we cannot extend
-            // pages_to_dirty_len anymore.
-            if (pages_to_dirty_len > 0) {
-              return ZX_ERR_STOP;
-            }
-            // pages_to_dirty_len was zero, so all we could have found so far are dirty pages. Add
-            // this page to the contiguous run of dirty pages.
-            DEBUG_ASSERT(start_offset + dirty_len == off);
-            dirty_len += PAGE_SIZE;
-            return ZX_ERR_NEXT;
+            return accumulate_dirty_page(off);
           }
 
           // This page was not Dirty, the only other state a page beyond supply_zero_offset_ could
           // be in is AwaitingClean.
           ASSERT(is_page_awaiting_clean(page));
-
-          // We need to request a Dirty transition for this page.
-          // If we weren't tracking a to-dirty range yet, begin one.
-          if (pages_to_dirty_len == 0) {
-            pages_to_dirty_start = off;
-          }
-          // Append the page to the range being tracked if it immediately follows it.
-          if (pages_to_dirty_start + pages_to_dirty_len == off) {
-            pages_to_dirty_len += PAGE_SIZE;
-            return ZX_ERR_NEXT;
-          }
-          // Otherwise we cannot accumulate any more contiguous to-dirty pages.
-          return ZX_ERR_STOP;
+          // Try to add this page to the range of pages to be dirtied.
+          return accumulate_pages_to_dirty(off, off + PAGE_SIZE);
         },
-        [&pages_to_dirty_start, &pages_to_dirty_len](uint64_t start, uint64_t end) {
-          // The entire gap needs to request a transition to Dirty.
-          // If we weren't tracking a to-dirty range yet, begin one at the start of the gap.
-          if (pages_to_dirty_len == 0) {
-            pages_to_dirty_start = start;
-          }
-          // Append the gap to the range being tracked if it immediately follows it.
-          if (pages_to_dirty_start + pages_to_dirty_len == start) {
-            pages_to_dirty_len += (end - start);
-            // Proceed to see if we can accumulate any more AwaitingClean pages in the to-dirty
-            // range.
-            return ZX_ERR_NEXT;
-          }
-          // Otherwise we cannot accumulate any more contiguous pages / gaps for a DIRTY request.
-          return ZX_ERR_STOP;
+        [&accumulate_pages_to_dirty](uint64_t start, uint64_t end) {
+          // We need to request a Dirty transition for the gap. Try to add it to the range of pages
+          // to be dirtied.
+          return accumulate_pages_to_dirty(start, end);
         },
         start, end_offset);
 
@@ -1997,12 +1986,11 @@ zx_status_t VmCowPages::PrepareForWriteLocked(LazyPageRequest* page_request, uin
     DEBUG_ASSERT(status == ZX_OK);
   }
 
-  // If we found any pages that need to transition to Dirty they should fall immediately after the
-  // end of the dirty pages run.
-  DEBUG_ASSERT(pages_to_dirty_len == 0 || start_offset + dirty_len == pages_to_dirty_start);
+  // We should either have found dirty pages or pages that need to be dirtied, but not both.
+  DEBUG_ASSERT(dirty_len == 0 || pages_to_dirty_len == 0);
   // Check that dirty_len and pages_to_dirty_len both specify valid ranges.
   DEBUG_ASSERT(start_offset + dirty_len <= end_offset);
-  DEBUG_ASSERT(pages_to_dirty_len == 0 || pages_to_dirty_start + pages_to_dirty_len <= end_offset);
+  DEBUG_ASSERT(pages_to_dirty_len == 0 || start_offset + pages_to_dirty_len <= end_offset);
 
   *dirty_len_out = dirty_len;
 
@@ -2017,8 +2005,8 @@ zx_status_t VmCowPages::PrepareForWriteLocked(LazyPageRequest* page_request, uin
   AssertHeld(paged_ref_->lock_ref());
   VmoDebugInfo vmo_debug_info = {.vmo_ptr = reinterpret_cast<uintptr_t>(paged_ref_),
                                  .vmo_id = paged_ref_->user_id_locked()};
-  zx_status_t status = page_source_->RequestDirtyTransition(
-      page_request->get(), pages_to_dirty_start, pages_to_dirty_len, vmo_debug_info);
+  zx_status_t status = page_source_->RequestDirtyTransition(page_request->get(), start_offset,
+                                                            pages_to_dirty_len, vmo_debug_info);
   // The page source will never succeed synchronously.
   DEBUG_ASSERT(status != ZX_OK);
   return status;
@@ -2170,8 +2158,8 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags,
       zx_status_t status =
           PrepareForWriteLocked(page_request, offset, max_out_pages * PAGE_SIZE, &dirty_len);
       if (status != ZX_OK) {
-        // Some pages must exist in the range that could not be dirtied.
-        DEBUG_ASSERT(dirty_len < max_out_pages * PAGE_SIZE);
+        // We were not able to dirty any pages.
+        DEBUG_ASSERT(dirty_len == 0);
         // No pages to return.
         out->num_pages = 0;
         return status;

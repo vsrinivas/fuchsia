@@ -583,7 +583,12 @@ TEST(PagerWriteback, DirtyRequestsOverlap) {
   ranges.back().length = 8;
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, ranges.data(), ranges.size()));
 
-  ASSERT_TRUE(check_buffer_data(vmo, 0, kNumPages, expected.data(), true));
+  // The contents of page 15 can vary depending on which of t3 or t4 wrote to it last, as both were
+  // blocked on a dirty request for it at the same time, so there's a race.
+  bool outcome1 = check_buffer_data(vmo, 0, kNumPages, expected.data(), true);
+  memset(expected.data() + 15 * zx_system_get_page_size(), 0xcc, zx_system_get_page_size());
+  bool outcome2 = check_buffer_data(vmo, 0, kNumPages, expected.data(), true);
+  ASSERT_TRUE(outcome1 || outcome2);
 
   // No remaining requests.
   ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));

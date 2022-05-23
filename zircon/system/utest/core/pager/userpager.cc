@@ -35,6 +35,8 @@ bool Vmo::CheckVmar(uint64_t offset, uint64_t len, const void* expected) {
     std::atomic_thread_fence(std::memory_order_seq_cst);
     uint64_t expected_val = expected ? static_cast<const uint64_t*>(expected)[i] : base_val_ + i;
     if (actual_val != expected_val) {
+      printf("mismatch at byte %zu: expected %zx, actual %zx\n", i * sizeof(actual_val),
+             expected_val, actual_val);
       return false;
     }
   }
