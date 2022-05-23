@@ -15,6 +15,9 @@ import("//build/images/args.gni")
 #     This is placed in the flash manifest to ensure partitions are not
 #     flashed to the wrong hardware.
 #
+#   esp_image_path (optional)
+#     [string] The path on host to the ESP bootloader.
+#
 #   bootstrap_partitions (optional)
 #     [list] List of OEM images to flash when using:
 #       ffx target flash --product fuchsia
@@ -86,6 +89,17 @@ template("generated_partitions_config") {
         partition.name = firmware.partition
       }
       _bootloader_partitions += [ partition ]
+    }
+
+    # Add the ESP partition if necessary.
+    if (defined(invoker.esp_image_path)) {
+      _bootloader_partitions += [
+        {
+          name = "fuchsia-esp"
+          type = "esp"
+          image = rebase_path("${invoker.esp_image_path}", root_build_dir)
+        },
+      ]
     }
 
     # Aggregate all the non-bootloader partitions.

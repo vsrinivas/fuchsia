@@ -467,10 +467,16 @@ if (is_fuchsia) {
 
   partitions_config = "$target_out_dir/partitions_config.json"
   generated_partitions_config("partitions_config") {
+    testonly = fuchsia_zbi_testonly
     output_path = partitions_config
     hw_revision = board_name
     bootstrap_partitions = bootstrap_files
     unlock_credentials = board_fastboot_unlock_credentials
+
+    if (use_gigaboot) {
+      esp_image_path = "${root_build_dir}/fuchsia.esp.blk"
+      deps = [ "//build/images:esp" ]
+    }
   }
 
   update_package("update") {
