@@ -71,7 +71,6 @@ if (bootfs_only) {
     args = [
       "--create",
       "--force",
-      "--new-installer",
       "--cgpt-path",
       "host-tools/cgpt",
       "--images",

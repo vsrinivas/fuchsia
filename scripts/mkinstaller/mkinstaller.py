@@ -67,6 +67,13 @@ class ManifestImage:
 # This is the list of Fuchsia build images we write to the final image,
 # and the partition types they will have (passed to cgpt)
 IMAGES = [
+    # The recovery image for chromebook-x64.
+    ManifestImage('recovery-installer.signed', ['kernel'], 'zbi.signed', 'zircon-r'),
+
+    # The recovery image and a bootloader for x64.
+    ManifestImage('recovery-installer', [ZIRCON_R_GPT_GUID], 'zbi', 'zircon-r'),
+    ManifestImage('fuchsia.esp', ['efi'], 'blk'),
+
     # Standard x64 partitions
     # This is the EFI system partition that will be installed to the target.
     ManifestImage('fuchsia.esp', [WORKSTATION_INSTALLER_GPT_GUID], 'blk'),
@@ -81,22 +88,6 @@ IMAGES = [
 
     # Common partitions - installed everywhere.
     ManifestImage('storage-sparse', [WORKSTATION_INSTALLER_GPT_GUID], 'blk'),
-]
-
-# TODO(fxbug.dev/93616): remove this when the old installer is gone.
-OLD_INSTALLER_IMAGES = [
-    # This is the zedboot image on x64, which is actually booted.
-    ManifestImage('zedboot-efi', ['efi'], 'blk'),
-    # This is the zedboot image on chromebook-x64, which is actually booted.
-    ManifestImage('zircon-r.signed', ['kernel'], 'zbi.signed'),
-]
-
-NEW_INSTALLER_IMAGES = [
-    # The recovery image for chromebook-x64.
-    ManifestImage('recovery-installer.signed', ['kernel'], 'zbi.signed', 'zircon-r'),
-    # TODO(fxbug.dev/93616): verify installer on x64/UEFI and generate a suitable image.
-    ManifestImage('recovery-installer', [ZIRCON_R_GPT_GUID], 'zbi', 'zircon-r'),
-    ManifestImage('fuchsia.esp', ['efi'], 'blk'),
 ]
 
 def ParseSize(size):
@@ -323,7 +314,7 @@ class Image:
     logging.info('Done.')
     self.file.close()
 
-def GetPartitions(build_dir, images_file, new_installer):
+def GetPartitions(build_dir, images_file):
   """Get all partitions to be written to the output image.
 
   The list of partitions is currently determined by the IMAGES dict
@@ -351,10 +342,6 @@ def GetPartitions(build_dir, images_file, new_installer):
   ret = []
   is_bootable = False
   target_images = IMAGES
-  if new_installer:
-    target_images += NEW_INSTALLER_IMAGES
-  else:
-    target_images += OLD_INSTALLER_IMAGES
   for image in target_images:
     if image.unique_name() not in images:
       logging.debug("Skipping image that wasn't built: {}".format(image.unique_name()))
@@ -447,7 +434,7 @@ def Main(args):
   build_dir = args.build_dir
   if build_dir == '':
     build_dir = paths.FUCHSIA_BUILD_DIR
-  parts = GetPartitions(build_dir, args.images, args.new_installer)
+  parts = GetPartitions(build_dir, args.images)
   if not parts:
     return 1
 
@@ -509,7 +496,7 @@ if __name__ == '__main__':
   parser.add_argument(
       '--new-installer',
       action='store_true',
-      help='Use the new, graphical installer image.',
+      help='DEPRECATED. Has no effect.'
   )
   parser.add_argument('FILE', help='Path to USB device or installer image')
   argv = parser.parse_args()

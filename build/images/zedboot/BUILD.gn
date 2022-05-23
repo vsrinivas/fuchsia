@@ -62,14 +62,12 @@ assemble_system("zedboot_assembly") {
     "//bundles/drivers:utils",
     "//src/sys/component_manager:component_manager_bootfs_config",
     "//src/diagnostics/archivist:default-service-config",
-    "//src/sys/installer:bin",
   ]
 
   # Needed for installer runs.
   bootfs_labels += [
     "//src/storage/bin/disk-pave:install-disk-image",
     "//src/storage/bin/mount",
-    "//src/sys/installer:bin",
   ]
 
   # For debugging.

@@ -506,7 +506,6 @@ group("cmx_allowlist") {
     "//src/sys/component_manager/tests/shutdown:*",
     "//src/sys/component_manager/tests/utc-time:*",
     "//src/sys/component_test_runner:*",
-    "//src/sys/installer:*",
     "//src/sys/lib/cm_fidl_validator:*",
     "//src/sys/lib/cm_json:*",
     "//src/sys/lib/cm_rust:*",
