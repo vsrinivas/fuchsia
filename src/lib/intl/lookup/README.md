@@ -15,9 +15,9 @@ class Lookup {
     UNAVAILABLE = 1,
     ARGUMENT_ERROR = 2,
   };
-  static fit::result<std::unique_ptr<Lookup>, Lookup::Status> New(
+  static fpromise::result<std::unique_ptr<Lookup>, Lookup::Status> New(
       const std::vector<std::string>& locale_ids);
-  fit::result<std::string_view, Lookup::Status> String(uint64_t message_id);
+  fpromise::result<std::string_view, Lookup::Status> String(uint64_t message_id);
 };
 
 };  // namespace intl

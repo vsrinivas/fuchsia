@@ -377,10 +377,10 @@ a value. The callback function is invoked when the property value is read.
     a.GetRoot().CreateLazy{Node,Values}("lazy", [] {
       Inspector b;
       b.GetRoot().CreateInt("value", 10, &b);
-      return fit::make_ok_promise(std::move(b));
+      return fpromise::make_ok_promise(std::move(b));
     }, &a);
 
-    return fit::make_ok_promise(std::move(a));
+    return fpromise::make_ok_promise(std::move(a));
   });
   ```
 
@@ -446,7 +446,7 @@ a value. The callback function is invoked when the property value is read.
           // promise containing the value we created.
           // You can alternatively return a promise that is completed by
           // some asynchronous task.
-          return fit::make_ok_promise(std::move(inspector));
+          return fpromise::make_ok_promise(std::move(inspector));
         });
       }
 

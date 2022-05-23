@@ -375,8 +375,8 @@ target language.
 
 For example, languages that provide some form of a "result" type (i.e. a union
 type that contains a "success" variant and an "error" variant), such as Rust's
-`result::Result`, or `fit::result` in C++ MAY provide automatic conversions to
-and from these types when receiving or sending method responses with an error
+`result::Result`, or `fpromise::result` in C++ MAY provide automatic conversions
+to and from these types when receiving or sending method responses with an error
 type.
 
 Languages with exceptions can have the generated protocol method code optionally

@@ -107,11 +107,11 @@ These sections explain why certain features are in FIT.
 - Case study: fit::defer has a need to store a closure that may be nullable.
   We were able to replace its hand-rolled lifetime management code with
   fit::nullable thereby vastly simplifying its implementation.
-- Case study: fit::future has a need to track its own validity along with
+- Case study: fpromise::future has a need to track its own validity along with
   a continuation that may or not be present.
 - Case study: We have previously observed bugs where developers were
   surprised when assigning a null closure to wrappers such as fit::function
-  fit::defer, or fit::future left these objects in a supposedly "valid"
+  fit::defer, or fpromise::future left these objects in a supposedly "valid"
   but uninvocable state.  These objects therefore take care to detect
   null closures and enter an "invalid" state.  Using fit::is_null and
   fit::nullable makes it easier to eliminate this redundant state and

@@ -75,7 +75,7 @@ Definitions](#type-definitions)). For a nullable user-defined type `T`,
 ### Request, response, and event parameters {#request-response-event-parameters}
 
 Whenever FIDL needs to generate a single type representing parameters for a
-request, response, or event (e.g. when generating [`fit::result` compatible result types](#protocols-results)),
+request, response, or event (e.g. when generating [`fpromise::result` compatible result types](#protocols-results)),
 it uses the following rules:
 
 * Multiple arguments are generated as an `std::tuple` of the parameter types.
@@ -554,23 +554,24 @@ protocol TicTacToe {
 };
 ```
 
-FIDL generates code so that clients and servers can use `fit::result` in place
-of the generated `MakeMove` response type. This is done by generating a
+FIDL generates code so that clients and servers can use `fpromise::result` in
+place of the generated `MakeMove` response type. This is done by generating a
 `TicTacToe_MakeMove_Result` class to represent the response that is
-interchangeable with `fit::result<GameState, MoveError>`. Using this feature, an
-example implementation of `MakeMove` on the server side could look like:
+interchangeable with `fpromise::result<GameState, MoveError>`. Using this
+feature, an example implementation of `MakeMove` on the server side could look
+like:
 
 ```c++
 void  MakeMove(MakeMoveCallback callback) override {
-    callback(fit::ok(game_state_.state()));
-    // or, in the error case: callback(fit::error(Error::kInvalid);
+    callback(fpromise::ok(game_state_.state()));
+    // or, in the error case: callback(fpromise::error(Error::kInvalid);
 }
 ```
 
 An example of using this on the client side, in the async case would be:
 
 ```c++
-async_game->MakeMove([&](fit::result<GameState, MoveError>> response) { ... });
+async_game->MakeMove([&](fpromise::result<GameState, MoveError>> response) { ... });
 ```
 
 When generating code, the FIDL toolchain treats `TicTacToe_MakeMove_Result` as a
@@ -578,23 +579,23 @@ When generating code, the FIDL toolchain treats `TicTacToe_MakeMove_Result` as a
 below, and `err`, which is the error type (in this case `uint32`), which means
 that it provides all the methods available to a [regular union](#unions). In
 addition, `TicTacToe_MakeMove_Result` provides methods that allow interop with
-`fit::result`:
+`fpromise::result`:
 
-* `TicTacToe_MakeMove_Result(fit::result<GameState, MoveError>&& result)`: Move
-  constructor from a `fit::result`.
-* `TicTacToe_MakeMove_Result(fit::ok_result<GameState>&& result)`: Move
-  constructor from a `fit::ok_result`.
-* `TicTacToe_MakeMove_Result(fit::error_result<MoveError>&& result)`: Move
-  constructor from a `fit::error_result`.
-* `operator fit::result<GameState, MoveError>() &&`: Conversion to a
-  `fit::result`.
+* `TicTacToe_MakeMove_Result(fpromise::result<GameState, MoveError>&& result)`: Move
+  constructor from a `fpromise::result`.
+* `TicTacToe_MakeMove_Result(fpromise::ok_result<GameState>&& result)`: Move
+  constructor from a `fpromise::ok_result`.
+* `TicTacToe_MakeMove_Result(fpromise::error_result<MoveError>&& result)`: Move
+  constructor from a `fpromise::error_result`.
+* `operator fpromise::result<GameState, MoveError>() &&`: Conversion to a
+  `fpromise::result`.
 
-Note that the successful result type parameter of the `fit::result` follows the
+Note that the successful result type parameter of the `fpromise::result` follows the
 [parameter type conversion rules](#protocol-and-method-attributes): if
 `MakeMove` returned multiple values on success, the result type would be a tuple
-of the response parameters `fit::result<std::tuple<...>, ...>`, and if
+of the response parameters `fpromise::result<std::tuple<...>, ...>`, and if
 `MakeMove` returned an empty response, the result type would be
-`fit::result<void, ...>`.
+`fpromise::result<void, ...>`.
 
 The FIDL toolchain also generates a `TicTacToe_MakeMove_Response` class, which
 is the type of the `response` variant of `TicTacToe_MakeMove_Result`. This class
