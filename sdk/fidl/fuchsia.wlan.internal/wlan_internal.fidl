@@ -28,22 +28,6 @@ type BssConfig = struct {
 // IEEE Std 802.11-2016, 9.4.1.4
 alias CapabilityInfo = uint16;
 
-// IEEE Std 802.11-2016 9.4.2.56
-@namespaced
-const HT_CAP_LEN uint8 = 26;
-
-// IEEE Std 802.11-2016 9.4.2.57
-@namespaced
-const HT_OP_LEN uint8 = 22;
-
-// IEEE Std 802.11-2016 9.5.2.158
-@namespaced
-const VHT_CAP_LEN uint8 = 12;
-
-// IEEE Std 802.11-2016 9.5.2.159
-@namespaced
-const VHT_OP_LEN uint8 = 5;
-
 // IEEE Std 802.11-2016 defines 12 values in dot11SupportedDataRatesRxTable.
 // It is never necessary to report more than 12 basic rates.
 //
@@ -63,22 +47,22 @@ const MAX_ASSOC_BASIC_RATES uint8 = 14;
 
 // IEEE Std 802.11-2016 9.4.2.56
 type HtCapabilities = struct {
-    bytes array<uint8, HT_CAP_LEN>;
+    bytes array<uint8, ieee80211.HT_CAP_LEN>;
 };
 
 // IEEE Std 802.11-2016 9.4.2.57
 type HtOperation = struct {
-    bytes array<uint8, HT_OP_LEN>;
+    bytes array<uint8, ieee80211.HT_OP_LEN>;
 };
 
 // IEEE Std 802.11-2016 9.5.2.158
 type VhtCapabilities = struct {
-    bytes array<uint8, VHT_CAP_LEN>;
+    bytes array<uint8, ieee80211.VHT_CAP_LEN>;
 };
 
 // IEEE Std 802.11-2016 9.5.2.159
 type VhtOperation = struct {
-    bytes array<uint8, VHT_OP_LEN>;
+    bytes array<uint8, ieee80211.VHT_OP_LEN>;
 };
 
 // IEEE Std 802.11-2016 6.3.3.3.2

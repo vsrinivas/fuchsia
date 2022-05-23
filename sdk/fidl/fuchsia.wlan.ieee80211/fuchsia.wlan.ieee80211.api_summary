@@ -21,6 +21,8 @@ enum/member fuchsia.wlan.ieee80211/CipherSuiteType.USE_GROUP 0
 enum/member fuchsia.wlan.ieee80211/CipherSuiteType.WEP_104 5
 enum/member fuchsia.wlan.ieee80211/CipherSuiteType.WEP_40 1
 flexible enum fuchsia.wlan.ieee80211/CipherSuiteType uint32
+const fuchsia.wlan.ieee80211/HT_CAP_LEN uint8 26
+const fuchsia.wlan.ieee80211/HT_OP_LEN uint8 22
 struct/member fuchsia.wlan.ieee80211/HtCapabilitiesFields.ampdu_params uint8
 struct/member fuchsia.wlan.ieee80211/HtCapabilitiesFields.asel_capabilities uint8
 struct/member fuchsia.wlan.ieee80211/HtCapabilitiesFields.ht_capability_info uint16
@@ -206,6 +208,8 @@ enum/member fuchsia.wlan.ieee80211/StatusCode.U_APSD_COEXISTANCE_NOT_SUPPORTED 7
 enum/member fuchsia.wlan.ieee80211/StatusCode.U_APSD_COEX_MODE_NOT_SUPPORTED 74
 strict enum fuchsia.wlan.ieee80211/StatusCode uint16
 const fuchsia.wlan.ieee80211/TIDS_MAX uint32 16
+const fuchsia.wlan.ieee80211/VHT_CAP_LEN uint8 12
+const fuchsia.wlan.ieee80211/VHT_OP_LEN uint8 5
 struct/member fuchsia.wlan.ieee80211/VhtCapabilitiesFields.supported_vht_mcs_and_nss_set uint64
 struct/member fuchsia.wlan.ieee80211/VhtCapabilitiesFields.vht_capability_info uint32
 struct fuchsia.wlan.ieee80211/VhtCapabilitiesFields

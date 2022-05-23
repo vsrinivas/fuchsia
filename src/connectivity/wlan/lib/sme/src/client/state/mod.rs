@@ -1431,44 +1431,51 @@ fn now() -> zx::Time {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use anyhow::format_err;
-    use fuchsia_inspect::{assert_data_tree, testing::AnyProperty, Inspector};
-    use futures::channel::mpsc;
-    use ieee80211::Ssid;
-    use link_state::{EstablishingRsna, LinkUp};
-    use std::{convert::TryFrom, sync::Arc};
-    use wlan_common::{
-        assert_variant,
-        bss::Protection as BssProtection,
-        channel::{Cbw, Channel},
-        fake_bss_description,
-        hasher::WlanHasher,
-        ie::{
-            fake_ies::{fake_probe_resp_wsc_ie_bytes, get_vendor_ie_bytes_for_wsc_ie},
-            rsn::rsne::Rsne,
+    use {
+        super::*,
+        anyhow::format_err,
+        fuchsia_inspect::{assert_data_tree, testing::AnyProperty, Inspector},
+        futures::channel::mpsc,
+        ieee80211::Ssid,
+        link_state::{EstablishingRsna, LinkUp},
+        std::{convert::TryFrom, sync::Arc},
+        wlan_common::{
+            assert_variant,
+            bss::Protection as BssProtection,
+            channel::{Cbw, Channel},
+            fake_bss_description,
+            hasher::WlanHasher,
+            ie::{
+                fake_ies::{fake_probe_resp_wsc_ie_bytes, get_vendor_ie_bytes_for_wsc_ie},
+                rsn::rsne::Rsne,
+            },
+            test_utils::{
+                fake_features::{fake_mac_sublayer_support, fake_security_support},
+                fake_stas::IesOverrides,
+            },
+            timer,
         },
-        test_utils::{
-            fake_features::{fake_mac_sublayer_support, fake_security_support},
-            fake_stas::IesOverrides,
+        wlan_rsn::{
+            key::exchange::Key,
+            rsna::{SecAssocStatus, SecAssocUpdate, UpdateSink},
+            NegotiatedProtection,
         },
-        timer,
-    };
-    use wlan_rsn::{key::exchange::Key, rsna::SecAssocStatus};
-    use wlan_rsn::{
-        rsna::{SecAssocUpdate, UpdateSink},
-        NegotiatedProtection,
     };
 
-    use crate::client::test_utils::{
-        create_assoc_conf, create_auth_conf, create_connect_conf, create_join_conf,
-        create_on_wmm_status_resp, expect_stream_empty, fake_wmm_param, mock_psk_supplicant,
-        MockSupplicant, MockSupplicantController,
+    use crate::{
+        client::{
+            inspect,
+            rsn::Rsna,
+            test_utils::{
+                create_assoc_conf, create_auth_conf, create_connect_conf, create_join_conf,
+                create_on_wmm_status_resp, expect_stream_empty, fake_wmm_param,
+                mock_psk_supplicant, MockSupplicant, MockSupplicantController,
+            },
+            ConnectTransactionStream, TimeStream,
+        },
+        test_utils::{self, make_wpa1_ie},
+        MlmeStream,
     };
-    use crate::client::{inspect, rsn::Rsna, ConnectTransactionStream, TimeStream};
-    use crate::test_utils::make_wpa1_ie;
-
-    use crate::{test_utils, MlmeStream};
 
     #[test]
     fn connect_happy_path_unprotected() {

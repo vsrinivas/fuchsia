@@ -16,7 +16,8 @@ use {
         mac::CapabilityInfo,
     },
     anyhow::format_err,
-    fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_sme as fidl_sme,
+    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_internal as fidl_internal,
+    fidl_fuchsia_wlan_sme as fidl_sme,
     ieee80211::{Bssid, Ssid},
     static_assertions::assert_eq_size,
     std::{
@@ -183,7 +184,7 @@ impl BssDescription {
     }
 
     pub fn raw_ht_cap(&self) -> Option<fidl_internal::HtCapabilities> {
-        type HtCapArray = [u8; fidl_internal::HT_CAP_LEN as usize];
+        type HtCapArray = [u8; fidl_ieee80211::HT_CAP_LEN as usize];
         self.ht_cap().map(|ht_cap| {
             assert_eq_size!(ie::HtCapabilities, HtCapArray);
             let bytes: HtCapArray = ht_cap.as_bytes().try_into().unwrap();
@@ -210,7 +211,7 @@ impl BssDescription {
     }
 
     pub fn raw_ht_op(&self) -> Option<fidl_internal::HtOperation> {
-        type HtOpArray = [u8; fidl_internal::HT_OP_LEN as usize];
+        type HtOpArray = [u8; fidl_ieee80211::HT_OP_LEN as usize];
         self.ht_op().map(|ht_op| {
             assert_eq_size!(ie::HtOperation, HtOpArray);
             let bytes: HtOpArray = ht_op.as_bytes().try_into().unwrap();
@@ -226,7 +227,7 @@ impl BssDescription {
     }
 
     pub fn raw_vht_cap(&self) -> Option<fidl_internal::VhtCapabilities> {
-        type VhtCapArray = [u8; fidl_internal::VHT_CAP_LEN as usize];
+        type VhtCapArray = [u8; fidl_ieee80211::VHT_CAP_LEN as usize];
         self.vht_cap().map(|vht_cap| {
             assert_eq_size!(ie::VhtCapabilities, VhtCapArray);
             let bytes: VhtCapArray = vht_cap.as_bytes().try_into().unwrap();
@@ -242,7 +243,7 @@ impl BssDescription {
     }
 
     pub fn raw_vht_op(&self) -> Option<fidl_internal::VhtOperation> {
-        type VhtOpArray = [u8; fidl_internal::VHT_OP_LEN as usize];
+        type VhtOpArray = [u8; fidl_ieee80211::VHT_OP_LEN as usize];
         self.vht_op().map(|vht_op| {
             assert_eq_size!(ie::VhtOperation, VhtOpArray);
             let bytes: VhtOpArray = vht_op.as_bytes().try_into().unwrap();
@@ -889,8 +890,8 @@ mod tests {
     fn test_latest_standard_ac() {
         let bss = fake_bss_description!(Open,
             ies_overrides: IesOverrides::new()
-                .set(IeType::VHT_CAPABILITIES, vec![0; fidl_internal::VHT_CAP_LEN as usize])
-                .set(IeType::VHT_OPERATION, vec![0; fidl_internal::VHT_OP_LEN as usize]),
+                .set(IeType::VHT_CAPABILITIES, vec![0; fidl_ieee80211::VHT_CAP_LEN as usize])
+                .set(IeType::VHT_OPERATION, vec![0; fidl_ieee80211::VHT_OP_LEN as usize]),
         );
         assert_eq!(Standard::Dot11Ac, bss.latest_standard());
     }
@@ -899,8 +900,8 @@ mod tests {
     fn test_latest_standard_n() {
         let bss = fake_bss_description!(Open,
             ies_overrides: IesOverrides::new()
-                .set(IeType::HT_CAPABILITIES, vec![0; fidl_internal::HT_CAP_LEN as usize])
-                .set(IeType::HT_OPERATION, vec![0; fidl_internal::HT_OP_LEN as usize])
+                .set(IeType::HT_CAPABILITIES, vec![0; fidl_ieee80211::HT_CAP_LEN as usize])
+                .set(IeType::HT_OPERATION, vec![0; fidl_ieee80211::HT_OP_LEN as usize])
                 .remove(IeType::VHT_CAPABILITIES)
                 .remove(IeType::VHT_OPERATION),
         );

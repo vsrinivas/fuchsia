@@ -51,8 +51,8 @@ pub const DEFAULT_AUTO_DEAUTH_TIMEOUT_BEACON_COUNT: u32 = 100;
 /// Number of beacon intervals between association status check (signal report or auto-deatuh).
 pub const ASSOCIATION_STATUS_TIMEOUT_BEACON_COUNT: u32 = 10;
 
-type HtOpByteArray = [u8; fidl_internal::HT_OP_LEN as usize];
-type VhtOpByteArray = [u8; fidl_internal::VHT_OP_LEN as usize];
+type HtOpByteArray = [u8; fidl_ieee80211::HT_OP_LEN as usize];
+type VhtOpByteArray = [u8; fidl_ieee80211::VHT_OP_LEN as usize];
 
 /// Client joined a BSS (synchronized timers and prepared its underlying hardware).
 /// At this point the Client is able to listen to frames on the BSS' channel.

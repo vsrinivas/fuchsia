@@ -1469,7 +1469,8 @@ mod tests {
         fidl_internal::HtCapabilities {
             bytes: fake_ht_capabilities().as_bytes().try_into().expect("HT Cap to FIDL"),
         };
-        let fidl = fidl_internal::HtCapabilities { bytes: [0; fidl_internal::HT_CAP_LEN as usize] };
+        let fidl =
+            fidl_internal::HtCapabilities { bytes: [0; fidl_ieee80211::HT_CAP_LEN as usize] };
         assert!(parse_ht_capabilities(&fidl.bytes[..]).is_ok());
     }
 
@@ -1479,7 +1480,7 @@ mod tests {
             bytes: fake_vht_capabilities().as_bytes().try_into().expect("VHT Cap to FIDL"),
         };
         let fidl =
-            fidl_internal::VhtCapabilities { bytes: [0; fidl_internal::VHT_CAP_LEN as usize] };
+            fidl_internal::VhtCapabilities { bytes: [0; fidl_ieee80211::VHT_CAP_LEN as usize] };
         assert!(parse_vht_capabilities(&fidl.bytes[..]).is_ok());
     }
 
@@ -1488,7 +1489,7 @@ mod tests {
         fidl_internal::HtOperation {
             bytes: fake_ht_operation().as_bytes().try_into().expect("HT Op to FIDL"),
         };
-        let fidl = fidl_internal::HtOperation { bytes: [0; fidl_internal::HT_OP_LEN as usize] };
+        let fidl = fidl_internal::HtOperation { bytes: [0; fidl_ieee80211::HT_OP_LEN as usize] };
         assert!(parse_ht_operation(&fidl.bytes[..]).is_ok());
     }
 
@@ -1497,7 +1498,7 @@ mod tests {
         fidl_internal::VhtOperation {
             bytes: fake_vht_operation().as_bytes().try_into().expect("VHT Op to FIDL"),
         };
-        let fidl = fidl_internal::VhtOperation { bytes: [0; fidl_internal::VHT_OP_LEN as usize] };
+        let fidl = fidl_internal::VhtOperation { bytes: [0; fidl_ieee80211::VHT_OP_LEN as usize] };
         assert!(parse_vht_operation(&fidl.bytes[..]).is_ok());
     }
 }

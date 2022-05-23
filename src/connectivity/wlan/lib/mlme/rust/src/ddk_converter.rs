@@ -31,8 +31,8 @@ pub fn build_ddk_assoc_ctx(
     aid: Aid,
     channel: banjo_common::WlanChannel,
     negotiated_capabilities: StaCapabilities,
-    ht_op: Option<[u8; fidl_internal::HT_OP_LEN as usize]>,
-    vht_op: Option<[u8; fidl_internal::VHT_OP_LEN as usize]>,
+    ht_op: Option<[u8; fidl_ieee80211::HT_OP_LEN as usize]>,
+    vht_op: Option<[u8; fidl_ieee80211::VHT_OP_LEN as usize]>,
 ) -> banjo_wlan_associnfo::WlanAssocCtx {
     let mut rates = [0; banjo_wlan_associnfo::WLAN_MAC_MAX_RATES as usize];
     rates[..negotiated_capabilities.rates.len()]
@@ -41,16 +41,16 @@ pub fn build_ddk_assoc_ctx(
     let has_vht_cap = negotiated_capabilities.vht_cap.is_some();
     let ht_cap = negotiated_capabilities.ht_cap.map(|cap| cap.into()).unwrap_or(
         // Safe to unwrap because the size of the byte array follows wire format
-        { *ie::parse_ht_capabilities(&[0; fidl_internal::HT_CAP_LEN as usize][..]).unwrap() }
+        { *ie::parse_ht_capabilities(&[0; fidl_ieee80211::HT_CAP_LEN as usize][..]).unwrap() }
             .into(),
     );
     let vht_cap = negotiated_capabilities.vht_cap.map(|cap| cap.into()).unwrap_or(
         // Safe to unwrap because the size of the byte array follows wire format
-        { *ie::parse_vht_capabilities(&[0; fidl_internal::VHT_CAP_LEN as usize][..]).unwrap() }
+        { *ie::parse_vht_capabilities(&[0; fidl_ieee80211::VHT_CAP_LEN as usize][..]).unwrap() }
             .into(),
     );
-    let ht_op_bytes = ht_op.unwrap_or([0; fidl_internal::HT_OP_LEN as usize]);
-    let vht_op_bytes = vht_op.unwrap_or([0; fidl_internal::VHT_OP_LEN as usize]);
+    let ht_op_bytes = ht_op.unwrap_or([0; fidl_ieee80211::HT_OP_LEN as usize]);
+    let vht_op_bytes = vht_op.unwrap_or([0; fidl_ieee80211::VHT_OP_LEN as usize]);
     banjo_wlan_associnfo::WlanAssocCtx {
         bssid: bssid.0,
         aid,

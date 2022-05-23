@@ -73,3 +73,20 @@ const CCMP_PN_LEN uint32 = 6;
 const CCMP_128_MIC_LEN uint32 = 8;
 @namespaced
 const CCMP_256_MIC_LEN uint32 = 16;
+
+
+// IEEE Std 802.11-2016 9.4.2.56
+@namespaced
+const HT_CAP_LEN uint8 = 26;
+
+// IEEE Std 802.11-2016 9.4.2.57
+@namespaced
+const HT_OP_LEN uint8 = 22;
+
+// IEEE Std 802.11-2016 9.5.2.158
+@namespaced
+const VHT_CAP_LEN uint8 = 12;
+
+// IEEE Std 802.11-2016 9.5.2.159
+@namespaced
+const VHT_OP_LEN uint8 = 5;
