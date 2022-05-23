@@ -111,14 +111,7 @@ mod tests {
     }
 
     fn fake_query_iface_response() -> QueryIfaceResponse {
-        QueryIfaceResponse {
-            role: Client,
-            id: 0,
-            phy_id: 0,
-            phy_assigned_id: 0,
-            sta_addr: [0; 6],
-            driver_features: Vec::new(),
-        }
+        QueryIfaceResponse { role: Client, id: 0, phy_id: 0, phy_assigned_id: 0, sta_addr: [0; 6] }
     }
 
     fn test_matching_iface_id<F: Fn(&QueryIfaceResponse) -> bool>(

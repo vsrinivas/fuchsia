@@ -924,7 +924,6 @@ mod tests {
             phy_id: phy_id,
             phy_assigned_id: phy_assigned_id,
             sta_addr: mac,
-            driver_features: Vec::new(),
         }
     }
 

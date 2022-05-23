@@ -3051,7 +3051,6 @@ mod tests {
                         phy_id: 0,
                         phy_assigned_id: 0,
                         sta_addr: [0; 6],
-                        driver_features: Vec::new(),
                     };
                     responder
                         .send(fuchsia_zircon::sys::ZX_OK, Some(&mut response))
@@ -3732,7 +3731,6 @@ mod tests {
                         phy_id: 0,
                         phy_assigned_id: 0,
                         sta_addr: [0; 6],
-                        driver_features: Vec::new(),
                     };
                     responder
                         .send(fuchsia_zircon::sys::ZX_OK, Some(&mut response))
@@ -3828,7 +3826,6 @@ mod tests {
                         phy_id: 0,
                         phy_assigned_id: 0,
                         sta_addr: [0; 6],
-                        driver_features: Vec::new(),
                     };
                     responder
                         .send(fuchsia_zircon::sys::ZX_OK, Some(&mut response))
@@ -3937,7 +3934,6 @@ mod tests {
                         phy_id: 0,
                         phy_assigned_id: 0,
                         sta_addr: [0; 6],
-                        driver_features: Vec::new(),
                     };
                     responder
                         .send(fuchsia_zircon::sys::ZX_OK, Some(&mut response))
@@ -3982,7 +3978,6 @@ mod tests {
                         phy_id: 0,
                         phy_assigned_id: 0,
                         sta_addr: [0; 6],
-                        driver_features: Vec::new(),
                     };
                     responder
                         .send(fuchsia_zircon::sys::ZX_OK, Some(&mut response))
@@ -4529,7 +4524,6 @@ mod tests {
                     phy_id: 0,
                     phy_assigned_id: 0,
                     sta_addr: [0; 6],
-                    driver_features: Vec::new(),
                 };
                 responder
                     .send(fuchsia_zircon::sys::ZX_OK, Some(&mut response))

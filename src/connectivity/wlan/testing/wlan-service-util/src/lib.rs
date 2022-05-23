@@ -104,14 +104,7 @@ mod tests {
         sta_addr: [u8; 6],
         role: fidl_fuchsia_wlan_common::WlanMacRole,
     ) -> QueryIfaceResponse {
-        QueryIfaceResponse {
-            role,
-            id: 0,
-            phy_id: 0,
-            phy_assigned_id: 0,
-            sta_addr,
-            driver_features: Vec::new(),
-        }
+        QueryIfaceResponse { role, id: 0, phy_id: 0, phy_assigned_id: 0, sta_addr }
     }
 
     pub fn respond_to_query_iface_list_request(

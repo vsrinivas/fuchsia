@@ -183,15 +183,7 @@ fn query_iface(ifaces: &IfaceMap, id: u16) -> Result<fidl_svc::QueryIfaceRespons
     let phy_id = iface.phy_ownership.phy_id;
     let phy_assigned_id = iface.phy_ownership.phy_assigned_id;
     let sta_addr = iface.device_info.sta_addr;
-    let driver_features = iface.device_info.driver_features.clone();
-    Ok(fidl_svc::QueryIfaceResponse {
-        role,
-        id,
-        sta_addr,
-        phy_id,
-        phy_assigned_id,
-        driver_features,
-    })
+    Ok(fidl_svc::QueryIfaceResponse { role, id, sta_addr, phy_id, phy_assigned_id })
 }
 
 async fn query_discovery_support(
@@ -529,7 +521,6 @@ mod tests {
         assert_eq!(response.role, fidl_common::WlanMacRole::Client);
         assert_eq!(response.sta_addr, expected.sta_addr);
         assert_eq!(response.id, 10);
-        assert_eq!(response.driver_features, expected.driver_features);
     }
 
     #[test]
@@ -1421,16 +1412,12 @@ mod tests {
             role: fidl_common::WlanMacRole::Client,
             bands: vec![],
             sta_addr: [0xAC; 6],
-            driver_features: vec![
-                fidl_common::DriverFeature::ScanOffload,
-                fidl_common::DriverFeature::SaeSmeAuth,
-            ],
             softmac_hardware_capability: 0,
             qos_capable: false,
+            driver_features: Vec::new(),
         }
     }
 
-    // Features match relevant driver_features in fake_device_info above.
     fn fake_discovery_support() -> fidl_common::DiscoverySupport {
         fidl_common::DiscoverySupport {
             scan_offload: fidl_common::ScanOffloadExtension { supported: true },
@@ -1438,7 +1425,6 @@ mod tests {
         }
     }
 
-    // Features match relevant driver_features in fake_device_info above.
     fn fake_mac_sublayer_support() -> fidl_common::MacSublayerSupport {
         fidl_common::MacSublayerSupport {
             rate_selection_offload: fidl_common::RateSelectionOffloadExtension { supported: false },
@@ -1453,7 +1439,6 @@ mod tests {
         }
     }
 
-    // Features match relevant driver_features in fake_device_info above.
     fn fake_security_support() -> fidl_common::SecuritySupport {
         fidl_common::SecuritySupport {
             sae: fidl_common::SaeFeature {
@@ -1464,7 +1449,6 @@ mod tests {
         }
     }
 
-    // Features match relevant driver_features in fake_device_info above.
     fn fake_spectrum_management_support() -> fidl_common::SpectrumManagementSupport {
         fidl_common::SpectrumManagementSupport { dfs: fidl_common::DfsFeature { supported: false } }
     }

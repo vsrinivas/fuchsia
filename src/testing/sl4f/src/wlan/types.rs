@@ -206,7 +206,6 @@ pub(crate) struct QueryIfaceResponseDef {
     pub phy_id: u16,
     pub phy_assigned_id: u16,
     pub sta_addr: [u8; 6],
-    pub driver_features: Vec<DriverFeatureWrapper>,
 }
 
 #[derive(Serialize)]
@@ -220,11 +219,6 @@ impl From<fidl_fuchsia_wlan_device_service::QueryIfaceResponse> for QueryIfaceRe
             phy_id: resp.phy_id,
             phy_assigned_id: resp.phy_assigned_id,
             sta_addr: resp.sta_addr,
-            driver_features: resp
-                .driver_features
-                .iter()
-                .map(|df| DriverFeatureWrapper(*df))
-                .collect(),
         }
     }
 }

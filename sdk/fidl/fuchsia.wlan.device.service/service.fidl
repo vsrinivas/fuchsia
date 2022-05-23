@@ -26,8 +26,6 @@ type QueryIfaceResponse = struct {
     phy_assigned_id uint16;
     /// The iface's MAC.
     sta_addr ieee80211.MacAddr;
-    /// The driver features supported on this iface.
-    driver_features vector<fuchsia.wlan.common.DriverFeature>:32;
 };
 
 type ListIfacesResponse = struct {
