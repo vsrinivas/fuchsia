@@ -456,6 +456,7 @@ mod tests {
         omaha_client::cup_ecdsa::{PublicKey, PublicKeyAndId, PublicKeys},
         p256::ecdsa::SigningKey,
         signature::rand_core::OsRng,
+        typed_builder::TypedBuilder,
     };
 
     fn make_public_keys_for_test() -> PublicKeys {
@@ -534,10 +535,37 @@ mod tests {
         (package_resolver, dir)
     }
 
-    fn get_test_cup_data() -> CupData {
-        get_test_cup_data_with_name(&format!("package?hash={TEST_HASH}"))
+    #[derive(Clone, Debug, Eq, PartialEq, TypedBuilder)]
+    struct CupDataForTest {
+        #[builder(default, setter(into))]
+        pub request: Option<Vec<u8>>,
+        #[builder(default, setter(into))]
+        pub key_id: Option<u64>,
+        #[builder(default, setter(into))]
+        pub nonce: Option<String>,
+        #[builder(default=Some(get_default_cup_response()), setter(into))]
+        pub response: Option<Vec<u8>>,
+        #[builder(default, setter(into))]
+        pub signature: Option<Vec<u8>>,
     }
-    fn get_test_cup_data_with_name(package_name: &str) -> CupData {
+
+    impl From<CupDataForTest> for CupData {
+        fn from(c: CupDataForTest) -> Self {
+            CupData {
+                request: c.request,
+                key_id: c.key_id,
+                nonce: c.nonce,
+                response: c.response,
+                signature: c.signature,
+                ..CupData::EMPTY
+            }
+        }
+    }
+
+    fn get_default_cup_response() -> Vec<u8> {
+        get_cup_response_with_name(&format!("package?hash={TEST_HASH}"))
+    }
+    fn get_cup_response_with_name(package_name: &str) -> Vec<u8> {
         let response = serde_json::json!({"response":{
           "server": "prod",
           "protocol": "3.0",
@@ -570,8 +598,7 @@ mod tests {
             }
           }],
         }});
-        let response = serde_json::to_vec(&response).unwrap();
-        CupData { response: Some(response), ..CupData::EMPTY }
+        serde_json::to_vec(&response).unwrap()
     }
 
     async fn write_persistent_fidl(
@@ -756,9 +783,15 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
         .unwrap();
-        let cup = get_test_cup_data();
+        let cup: CupData = CupDataForTest::builder().build().into();
         // this will fail to resolve because hash doesn't match
-        let cup2 = get_test_cup_data_with_name(&format!("package2?hash={}", "1".repeat(64)));
+        let cup2: CupData = CupDataForTest::builder()
+            .response(Some(get_cup_response_with_name(&format!(
+                "package2?hash={}",
+                "1".repeat(64)
+            ))))
+            .build()
+            .into();
         write_persistent_fidl(
             &data_proxy,
             [
@@ -819,7 +852,7 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt
         )
         .await
         .unwrap();
-        let cup = get_test_cup_data();
+        let cup: CupData = CupDataForTest::builder().build().into();
         manager.cup_write(&PackageUrl { url: TEST_PINNED_URL.into() }, cup.clone()).await.unwrap();
         assert!(manager.packages[&url].package_directory.is_some());
         assert_eq!(manager.packages[&url].cup, Some(cup.clone()));
@@ -852,7 +885,7 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt
             EagerPackageManager::from_config(config, package_resolver, pkg_cache, None)
                 .await
                 .unwrap();
-        let cup = get_test_cup_data();
+        let cup: CupData = CupDataForTest::builder().build().into();
         assert_matches!(
             manager.cup_write(&PackageUrl { url: TEST_PINNED_URL.into() }, cup).await,
             Err(CupWriteError::Persist(_))
@@ -878,7 +911,7 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt
             EagerPackageManager::from_config(config, package_resolver, pkg_cache, None)
                 .await
                 .unwrap();
-        let cup = get_test_cup_data();
+        let cup: CupData = CupDataForTest::builder().build().into();
         assert_matches!(
             manager
                 .cup_write(&PackageUrl { url: format!("{url}?hash=beefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdead") }, cup)
@@ -906,7 +939,7 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt
             EagerPackageManager::from_config(config, package_resolver, pkg_cache, None)
                 .await
                 .unwrap();
-        let cup = get_test_cup_data();
+        let cup: CupData = CupDataForTest::builder().build().into();
         assert_matches!(
             manager.cup_write(&PackageUrl { url: TEST_PINNED_URL.into() }, cup).await,
             Err(CupWriteError::UnknownURL(_))
@@ -932,7 +965,8 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt
             EagerPackageManager::from_config(config, package_resolver, pkg_cache, None)
                 .await
                 .unwrap();
-        manager.packages.get_mut(&url).unwrap().cup = Some(get_test_cup_data());
+        let cup: CupData = CupDataForTest::builder().build().into();
+        manager.packages.get_mut(&url).unwrap().cup = Some(cup);
         let (version, channel) =
             manager.cup_get_info(&PackageUrl { url: TEST_URL.into() }).await.unwrap();
         assert_eq!(version, "1.2.3.4");
@@ -978,7 +1012,8 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt
             EagerPackageManager::from_config(config, package_resolver, pkg_cache, None)
                 .await
                 .unwrap();
-        manager.packages.get_mut(&url).unwrap().cup = Some(get_test_cup_data());
+        let cup: CupData = CupDataForTest::builder().build().into();
+        manager.packages.get_mut(&url).unwrap().cup = Some(cup);
         assert_matches!(
             manager
                 .cup_get_info(&PackageUrl { url: "fuchsia-pkg://example.com/package2".into() })
@@ -1004,7 +1039,8 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt
             EagerPackageManager::from_config(config, package_resolver, pkg_cache, None)
                 .await
                 .unwrap();
-        manager.packages.get_mut(&url).unwrap().cup = Some(get_test_cup_data());
+        let cup: CupData = CupDataForTest::builder().build().into();
+        manager.packages.get_mut(&url).unwrap().cup = Some(cup);
         assert_matches!(
             manager
                 .cup_get_info(&PackageUrl { url: "fuchsia-pkg://example.com/package2".into() })

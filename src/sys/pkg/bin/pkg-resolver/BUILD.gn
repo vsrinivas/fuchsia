@@ -74,6 +74,7 @@ rustc_library("lib") {
     "//third_party/rust_crates:p256",
     "//third_party/rust_crates:signature",
     "//third_party/rust_crates:tempfile",
+    "//third_party/rust_crates:typed-builder",
   ]
 
   source_root = "src/main.rs"
