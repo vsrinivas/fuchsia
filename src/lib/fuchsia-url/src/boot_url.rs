@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-pub use crate::errors::ParseError;
-pub use crate::parse::{validate_package_path_segment, validate_resource_path};
-use percent_encoding::percent_decode;
-use std::fmt;
-use url::Url;
+pub use crate::{
+    errors::ParseError,
+    parse::{validate_package_path_segment, validate_resource_path},
+};
+use crate::{validate_path, Scheme, UrlParts};
 
 /// Decoded representation of a fuchsia-boot URL.
 ///
@@ -19,52 +19,25 @@ pub struct BootUrl {
 
 impl BootUrl {
     pub fn parse(input: &str) -> Result<Self, ParseError> {
-        let url = Url::parse(input)?;
+        Self::try_from_parts(UrlParts::parse(input)?)
+    }
 
-        let scheme = url.scheme();
-        if scheme != "fuchsia-boot" {
+    fn try_from_parts(
+        UrlParts { scheme, host, path, hash, resource }: UrlParts,
+    ) -> Result<Self, ParseError> {
+        if scheme != Scheme::FuchsiaBoot {
             return Err(ParseError::InvalidScheme);
         }
 
-        let host = url.host().map(|h| h.to_string()).ok_or(ParseError::InvalidHost)?;
-        if !host.is_empty() {
+        if host.is_some() {
             return Err(ParseError::HostMustBeEmpty);
         }
 
-        let path = url.path().to_string();
-
-        // Validate that all path segments are valid.
-        // Since host must be empty, first character of path must be '/'. Trim it.
-        let check_path = &path[1..];
-        if !check_path.is_empty() {
-            let mut iter = check_path.split('/');
-            while let Some(s) = iter.next() {
-                validate_package_path_segment(s).map_err(ParseError::InvalidPathSegment)?
-            }
+        if hash.is_some() {
+            return Err(ParseError::CannotContainHash);
         }
 
-        if url.query().is_some() {
-            return Err(ParseError::CannotContainQueryParameters);
-        }
-
-        let resource = match url.fragment() {
-            Some(resource) => {
-                let resource = percent_decode(resource.as_bytes())
-                    .decode_utf8()
-                    .map_err(ParseError::ResourcePathPercentDecode)?;
-
-                if resource.is_empty() {
-                    None
-                } else {
-                    let () = validate_resource_path(&resource)
-                        .map_err(ParseError::InvalidResourcePath)?;
-                    Some(resource.into())
-                }
-            }
-            None => None,
-        };
-
-        Ok(BootUrl { path, resource })
+        Ok(Self { path, resource })
     }
 
     pub fn path(&self) -> &str {
@@ -79,20 +52,20 @@ impl BootUrl {
         BootUrl { path: self.path.clone(), resource: None }
     }
 
-    pub fn new_path(path: String) -> Result<BootUrl, ParseError> {
-        Ok(BootUrl { path: path.clone(), resource: None })
+    pub fn new_path(path: String) -> Result<Self, ParseError> {
+        let () = validate_path(&path)?;
+        Ok(Self { path, resource: None })
     }
 
     pub fn new_resource(path: String, resource: String) -> Result<BootUrl, ParseError> {
-        let mut url = BootUrl::new_path(path)?;
+        let () = validate_path(&path)?;
         let () = validate_resource_path(&resource).map_err(ParseError::InvalidResourcePath)?;
-        url.resource = Some(resource);
-        Ok(url)
+        Ok(Self { path, resource: Some(resource) })
     }
 }
 
-impl fmt::Display for BootUrl {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl std::fmt::Display for BootUrl {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "fuchsia-boot://{}", self.path)?;
         if let Some(ref resource) = self.resource {
             write!(f, "#{}", percent_encoding::utf8_percent_encode(resource, crate::FRAGMENT))?;
@@ -225,10 +198,20 @@ mod tests {
             path = "/".to_string(),
             resource = None,
         }
+        test_parse_root_resource => {
+            url = "fuchsia-boot:///#resource",
+            path = "/".to_string(),
+            resource = Some("resource".to_string()),
+        }
         test_parse_empty_root_empty_resource => {
             url = "fuchsia-boot://#",
             path = "/".to_string(),
             resource = None,
+        }
+        test_parse_empty_root_present_resource => {
+            url = "fuchsia-boot://#meta/root.cm",
+            path = "/".to_string(),
+            resource = Some("meta/root.cm".to_string()),
         }
         test_parse_large_path_segments => {
             url = format!(
@@ -295,9 +278,6 @@ mod tests {
         test_parse_host_must_be_empty => {
             urls = [
                 "fuchsia-boot://hello",
-                "fuchsia-boot://user@fuchsia.com",
-                "fuchsia-boot://user:password@fuchsia.com",
-                "fuchsia-boot://:password@fuchsia.com",
             ],
             err = ParseError::HostMustBeEmpty,
         }
@@ -343,7 +323,7 @@ mod tests {
             urls = [
                 "fuchsia-boot:///package?foo=bar",
             ],
-            err = ParseError::CannotContainQueryParameters,
+            err = ParseError::ExtraQueryParameters,
         }
     }
 

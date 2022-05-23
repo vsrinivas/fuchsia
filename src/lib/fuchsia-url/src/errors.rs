@@ -81,9 +81,6 @@ pub enum ParseError {
     #[error("cannot contain password")]
     CannotContainPassword,
 
-    #[error("cannot contain query parameters")]
-    CannotContainQueryParameters,
-
     #[error("invalid repository URI")]
     InvalidRepository,
 
