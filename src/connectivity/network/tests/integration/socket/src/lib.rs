@@ -13,6 +13,7 @@ use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_interfaces as fnet_interfaces;
 use fidl_fuchsia_net_interfaces_ext as fnet_interfaces_ext;
 use fidl_fuchsia_net_stack_ext::FidlReturn as _;
+use fidl_fuchsia_posix as fposix;
 use fidl_fuchsia_posix_socket as fposix_socket;
 use fuchsia_async::{
     self as fasync,
@@ -24,11 +25,16 @@ use futures::{
     future, io::AsyncReadExt as _, io::AsyncWriteExt as _, Future, FutureExt as _, StreamExt as _,
     TryFutureExt as _, TryStreamExt as _,
 };
-use net_declare::{fidl_ip, fidl_ip_v4, fidl_ip_v6, fidl_mac, fidl_subnet};
+use net_declare::{
+    fidl_ip, fidl_ip_v4, fidl_ip_v4_with_prefix, fidl_ip_v6, fidl_mac, fidl_subnet, std_ip_v4,
+    std_socket_addr,
+};
 use netemul::{RealmTcpListener as _, RealmTcpStream as _, RealmUdpSocket as _, TestInterface};
 use netstack_testing_common::{
     ping,
-    realms::{Netstack, Netstack2, Netstack2WithFastUdp, Netstack3, TestSandboxExt as _},
+    realms::{
+        Netstack, Netstack2, Netstack2WithFastUdp, Netstack3, NetstackVersion, TestSandboxExt as _,
+    },
     Result,
 };
 use netstack_testing_macros::variants_test;
@@ -804,6 +810,49 @@ async fn udpv6_loopback<N: Netstack>(name: &str) {
 
     const IPV6_LOOPBACK: fnet::IpAddress = fidl_ip!("::1");
     run_udp_socket_test(&realm, IPV6_LOOPBACK, &realm, IPV6_LOOPBACK).await
+}
+
+#[variants_test]
+async fn udp_sendto_unroutable_leaves_socket_bound<N: Netstack + TestNetstackExt>(name: &str) {
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let network = sandbox.create_network("net").await.expect("failed to create network");
+    let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
+    let _interface = join_network::<netemul::Ethernet, N, _>(
+        &realm,
+        &network,
+        "stack",
+        fidl_ip_v4_with_prefix!("192.168.1.10/16"),
+    )
+    .await
+    .expect("join network failed");
+
+    let socket = realm
+        .datagram_socket(fposix_socket::Domain::Ipv4, fposix_socket::DatagramSocketProtocol::Udp)
+        .await
+        .and_then(|d| DatagramSocket::new_from_socket(d).map_err(Into::into))
+        .expect("create UDP datagram socket");
+
+    let addr = std_socket_addr!("8.8.8.8:8080");
+    let buf = [0; 8];
+    let send_result = socket
+        .send_to(&buf, addr.into())
+        .await
+        .map_err(|e| e.raw_os_error().and_then(fposix::Errno::from_primitive));
+    assert_eq!(
+        send_result,
+        Err(Some(if N::VERSION == NetstackVersion::Netstack3 {
+            // TODO(https://fxbug.dev/100939): Figure out what code is expected
+            // here and make Netstack2 and Netstack3 return codes consistent.
+            fposix::Errno::Enetunreach
+        } else {
+            fposix::Errno::Ehostunreach
+        }))
+    );
+
+    let bound_addr = socket.local_addr().expect("should be bound");
+    let bound_ipv4 = bound_addr.as_socket_ipv4().expect("must be IPv4");
+    assert_eq!(bound_ipv4.ip(), &std_ip_v4!("0.0.0.0"));
+    assert_ne!(bound_ipv4.port(), 0);
 }
 
 #[async_trait]

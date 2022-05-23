@@ -1915,9 +1915,29 @@ where
                 Err(fposix::Errno::Ealready)
             }
         }?;
-        let local_addr = sockaddr.get_specified_addr();
-        let local_port = T::LocalIdentifier::from_u16(sockaddr.port());
+        self.bind_inner(
+            unbound_id,
+            sockaddr.get_specified_addr(),
+            T::LocalIdentifier::from_u16(sockaddr.port()),
+        )
+        .map(|_: <T as Transport<I>>::ListenerId| ())
+    }
 
+    /// Helper function for common functionality to self.bind() and self.send_msg().
+    fn bind_inner(
+        &mut self,
+        unbound_id: <T as Transport<I>>::UnboundId,
+        local_addr: Option<SpecifiedAddr<I::Addr>>,
+        local_port: Option<
+            <T as TransportState<
+                I,
+                Ctx<
+                    <C as RequestHandlerContext<I, T>>::Dispatcher,
+                    <C as LockableContext>::Context,
+                >,
+            >>::LocalIdentifier,
+        >,
+    ) -> Result<<T as Transport<I>>::ListenerId, fposix::Errno> {
         let listener_id =
             T::listen_on_unbound(self.ctx.deref_mut(), unbound_id, local_addr, local_port)
                 .map_err(IntoErrno::into_errno)?;
@@ -1928,7 +1948,7 @@ where
                 .insert(&listener_id, self.binding_id),
             None
         );
-        Ok(())
+        Ok(listener_id)
     }
 
     /// Handles a [POSIX socket get_sock_name request].
@@ -2175,11 +2195,19 @@ where
         let len = data.len() as i64;
         let body = Buf::new(data, ..);
         match self.get_state().info.state {
-            SocketState::Unbound { unbound_id: _ } => {
-                // TODO(brunodalbo) if destination address is set, we should
-                // auto-bind here (check POSIX compliance).
-                Err(fposix::Errno::Edestaddrreq)
-            }
+            SocketState::Unbound { unbound_id } => match remote {
+                Some((addr, port)) => {
+                    // On Linux, sending on an unbound socket is equivalent to
+                    // first binding to a system-selected port for all IPs, then
+                    // sending from that socket. Emulate that here by binding
+                    // with an unspecified IP and port.
+                    self.bind_inner(unbound_id, None, None).and_then(|listener_id| {
+                        T::send_listener(self.ctx.deref_mut(), listener_id, None, addr, port, body)
+                            .map_err(|(_body, err)| err.into_errno())
+                    })
+                }
+                None => Err(fposix::Errno::Edestaddrreq),
+            },
             SocketState::BoundConnect { conn_id, shutdown_write, .. } => {
                 if shutdown_write {
                     return Err(fposix::Errno::Epipe);
