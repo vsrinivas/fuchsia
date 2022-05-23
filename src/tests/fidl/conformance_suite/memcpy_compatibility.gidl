@@ -149,3 +149,38 @@ decode_failure("TwoLayerStructInnerBoolBadValue") {
     },
     err = INVALID_BOOLEAN,
 }
+
+success("CorrectArrayWithInternalPadding") {
+    value = ArrayWithInternalPadding{
+        v: [
+            OneLayerStructWithPaddingAlign4{
+                a: 1,
+                b: 2,
+                c: 3,
+            },
+            OneLayerStructWithPaddingAlign4{
+                a: 4,
+                b: 5,
+                c: 6,
+            },
+        ],
+    },
+    bytes = {
+        v1, v2 = [
+            num(1):2, num(2):1, padding:1, num(3):4,
+            num(4):2, num(5):1, padding:1, num(6):4,
+        ],
+    },
+}
+
+decode_failure("BadPaddedArrayWithInternalPadding") {
+    type = ArrayWithInternalPadding,
+    bytes = {
+        v1, v2 = [
+            // 0xee is the bad padding byte.
+            num(1):2, num(2):1, padding:1, num(3):4,
+            num(4):2, num(5):1, 0xee, num(6):4,
+        ],
+    },
+    err = INVALID_PADDING_BYTE,
+}

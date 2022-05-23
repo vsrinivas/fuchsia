@@ -64,3 +64,7 @@ type TwoLayerStructInnerBool = struct {
     s OneLayerStructWithBool;
     a uint64;
 };
+
+type ArrayWithInternalPadding = struct {
+    v array<OneLayerStructWithPaddingAlign4, 2>;
+};
