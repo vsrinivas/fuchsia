@@ -201,6 +201,8 @@ class IntelI2cController : public IntelI2cControllerType,
   zx_status_t AddSubordinates();
   zx_status_t AddSubordinate(const uint8_t width, const uint16_t address);
 
+  void GetAcpiConfiguration(const char* name, uint16_t* scl_hcnt, uint16_t* scl_lcnt,
+                            uint16_t* sda_hold);
   static uint32_t ComputeSclHcnt(const uint32_t controller_freq, const uint32_t t_high_nanos,
                                  const uint32_t t_r_nanos);
 
@@ -223,16 +225,18 @@ class IntelI2cController : public IntelI2cControllerType,
   uint32_t bus_freq_;
 
   // Bus parameters
-  uint16_t sda_hold_;
   // Standard speed parameters
   uint16_t ss_scl_hcnt_;
   uint16_t ss_scl_lcnt_;
+  uint16_t ss_sda_hold_;
   // Fast mode speed parameters
   uint16_t fs_scl_hcnt_;
   uint16_t fs_scl_lcnt_;
+  uint16_t fs_sda_hold_;
   // Fast mode plus speed parameters
   uint16_t fmp_scl_hcnt_;
   uint16_t fmp_scl_lcnt_;
+  uint16_t fmp_sda_hold_;
 
   uint8_t tx_fifo_depth_;
 

@@ -8,6 +8,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fidl/fuchsia.hardware.acpi/cpp/wire.h>
+#include <fidl/fuchsia.hardware.acpi/cpp/wire_types.h>
 #include <fidl/fuchsia.hardware.i2c.businfo/cpp/wire.h>
 #include <fuchsia/hardware/i2c/c/banjo.h>
 #include <fuchsia/hardware/i2cimpl/c/banjo.h>
@@ -161,28 +162,9 @@ zx_status_t IntelI2cController::Init() {
     return status;
   }
 
-  // Temporary hack until we have routed through the FMCN ACPI tables.
-  if (vendor_id == INTEL_VID && device_id == INTEL_SUNRISE_POINT_SERIALIO_I2C0_DID) {
-    // TODO: These should all be extracted from FPCN in the ACPI tables.
-    fmp_scl_lcnt_ = 0x0042;
-    fmp_scl_hcnt_ = 0x001b;
-    sda_hold_ = 0x24;
-  } else if (vendor_id == INTEL_VID && device_id == INTEL_SUNRISE_POINT_SERIALIO_I2C1_DID) {
-    // TODO(yky): These should all be extracted from FMCN in the ACPI tables.
-    fs_scl_lcnt_ = 0x00b6;
-    fs_scl_hcnt_ = 0x0059;
-    sda_hold_ = 0x24;
-  } else if (vendor_id == INTEL_VID && device_id == INTEL_SUNRISE_POINT_SERIALIO_I2C2_DID) {
-    // TODO: These should all be extracted from FMCN in the ACPI tables.
-    fs_scl_lcnt_ = 0x00ba;
-    fs_scl_hcnt_ = 0x005d;
-    sda_hold_ = 0x24;
-  } else if (vendor_id == INTEL_VID && device_id == INTEL_SUNRISE_POINT_SERIALIO_I2C4_DID) {
-    // TODO: These should all be extracted from FMCN in the ACPI tables.
-    fs_scl_lcnt_ = 0x005a;
-    fs_scl_hcnt_ = 0x00a6;
-    sda_hold_ = 0x24;
-  }
+  GetAcpiConfiguration("FPCN", &fmp_scl_hcnt_, &fmp_scl_lcnt_, &fmp_sda_hold_);
+  GetAcpiConfiguration("FMCN", &fs_scl_hcnt_, &fs_scl_lcnt_, &fs_sda_hold_);
+  GetAcpiConfiguration("SSCN", &ss_scl_hcnt_, &ss_scl_lcnt_, &ss_sda_hold_);
 
   // Configure the I2C controller.
   fbl::AutoLock lock(&mutex_);
@@ -212,6 +194,33 @@ zx_status_t IntelI2cController::Init() {
          regs_, mmio_->get_size());
 
   return ZX_OK;
+}
+
+void IntelI2cController::GetAcpiConfiguration(const char* name, uint16_t* scl_hcnt,
+                                              uint16_t* scl_lcnt, uint16_t* sda_hold) {
+  auto result =
+      acpi_->EvaluateObject(fidl::StringView::FromExternal(name),
+                            fuchsia_hardware_acpi::wire::EvaluateObjectMode::kPlainObject, {});
+  if (!result.ok()) {
+    zxlogf(WARNING, "FIDL call to EvaluateObject('%s') failed: %s.", name,
+           result.FormatDescription().data());
+    return;
+  }
+
+  if (result->result.is_err()) {
+    if (result->result.err() != fuchsia_hardware_acpi::wire::Status::kNotFound) {
+      zxlogf(WARNING, "EvaluateObject('%s') failed: %d", name, int(result->result.err()));
+    }
+    return;
+  }
+
+  auto& obj = result->result.response().result.object();
+  if (obj.is_package_val() && obj.package_val().value.count() == 3) {
+    auto& package = obj.package_val().value;
+    *scl_hcnt = package[0].integer_val();
+    *scl_lcnt = package[1].integer_val();
+    *sda_hold = package[2].integer_val();
+  }
 }
 
 void IntelI2cController::DdkInit(ddk::InitTxn txn) {
@@ -376,7 +385,7 @@ zx_status_t IntelI2cController::ComputeBusTiming() {
   fs_scl_lcnt_ = static_cast<uint16_t>(fs_lcnt);
   ss_scl_hcnt_ = static_cast<uint16_t>(ss_hcnt);
   ss_scl_lcnt_ = static_cast<uint16_t>(ss_lcnt);
-  sda_hold_ = 1;
+  ss_sda_hold_ = fs_sda_hold_ = fmp_sda_hold_ = 1;
   return ZX_OK;
 }
 
@@ -653,7 +662,17 @@ zx_status_t IntelI2cController::Reset() {
   }
   RmwReg32(&regs_->ss_scl_hcnt, 0, 16, ss_scl_hcnt_);
   RmwReg32(&regs_->ss_scl_lcnt, 0, 16, ss_scl_lcnt_);
-  RmwReg32(&regs_->sda_hold, 0, 16, sda_hold_);
+  switch (bus_freq_) {
+    case kI2cMaxFastPlusSpeedHz:
+      RmwReg32(&regs_->sda_hold, 0, 16, fmp_sda_hold_);
+      break;
+    case kI2cMaxFastSpeedHz:
+      RmwReg32(&regs_->sda_hold, 0, 16, fs_sda_hold_);
+      break;
+    case kI2cMaxStandardSpeedHz:
+      RmwReg32(&regs_->sda_hold, 0, 16, ss_sda_hold_);
+      break;
+  }
 
   uint32_t speed = kCtlSpeedStandard;
   if (bus_freq_ == kI2cMaxFastSpeedHz || bus_freq_ == kI2cMaxFastPlusSpeedHz) {
