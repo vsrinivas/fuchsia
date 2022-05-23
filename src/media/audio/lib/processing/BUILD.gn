@@ -10,7 +10,16 @@ group("tests") {
 }
 
 source_set("processing") {
-  sources = [ "gain.h" ]
+  sources = [
+    "gain.h",
+    "gain_control.cc",
+    "gain_control.h",
+  ]
+
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//zircon/system/ulib/zx",
+  ]
 }
 
 executable("unittest-bin") {
@@ -18,7 +27,10 @@ executable("unittest-bin") {
   testonly = true
   output_name = "audio-libprocessing-unittests"
 
-  sources = [ "gain_unittest.cc" ]
+  sources = [
+    "gain_control_unittest.cc",
+    "gain_unittest.cc",
+  ]
 
   deps = [
     ":processing",
