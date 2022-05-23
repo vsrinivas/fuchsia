@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_AML_DSI_H_
-#define SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_AML_DSI_H_
+#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_DSI_H_
+#define SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_DSI_H_
 
 // TOP MIPI_DSI AML Registers
 #include <algorithm>
@@ -67,8 +67,6 @@
 #define FIN_FREQ_KHZ (24 * 1000)
 #define MIN_PLL_VCO_KHZ (3000 * 1000)
 #define MAX_PLL_VCO_KHZ (6000 * 1000)
-#define MIN_PLL_FREQ_KHZ (MIN_PLL_VCO_KHZ / 16)
-#define MAX_PLL_FREQ_KHZ (MAX_PLL_VCO_KHZ)
 #define MAX_PIXEL_CLK_KHZ (200 * 1000)
 #define MAX_OD_SEL (3)
 #define PLL_FRAC_RANGE (1 << 17)
@@ -127,11 +125,11 @@
 
 // Time that the transmitter drives the Data Lane LP-00 Line state immediately
 // before the HS-0 Line state starting the HS transmission (40+4*ui, 85+6*ui)
-#define DPHY_TIME_HS_PREPARE(ui) (((40+85) * UI_X_100 + (4+6)*(ui)) / 2)
+#define DPHY_TIME_HS_PREPARE(ui) (((40 + 85) * UI_X_100 + (4 + 6) * (ui)) / 2)
 
 // HS_PREPARE + time that the transmitter drives the HS-0 state prior to transmitting
 // the Sync sequence  (>145+10*ui)
-#define DPHY_TIME_HS_ZERO(ui) (145 * UI_X_100 + 10 * (ui) - DPHY_TIME_HS_PREPARE(ui))
+#define DPHY_TIME_HS_ZERO(ui) (145 * UI_X_100 + 10 * (ui)-DPHY_TIME_HS_PREPARE(ui))
 
 // Time that the transmitter drives the flipped differential state after last
 // payload data bit of a HS transmission burst  max(n*8*ui, 60+n*4*ui) <n = 1>
@@ -201,6 +199,9 @@ struct PllConfig {  // unit: kHz
   uint32_t pll_od3_sel;
   uint32_t pll_frac;
   uint32_t pll_fout;
+
+  // divisor parameters
+  uint32_t clock_factor;
 };
 
-#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_AML_DSI_H_
+#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_DSI_H_

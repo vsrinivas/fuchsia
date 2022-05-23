@@ -54,7 +54,7 @@ void DumpLcdTiming(const LcdTiming& lcd_timing) {
 
 void DumpDisplaySettings(const display_setting_t& settings) {
   DISP_INFO("#############################");
-  DISP_INFO("Dumping the last valid display_setting structure:");
+  DISP_INFO("Dumping display_setting structure:");
   DISP_INFO("#############################");
   DISP_INFO("lcd_clock = 0x%x (%u)", settings.lcd_clock, settings.lcd_clock);
   DISP_INFO("clock_factor = 0x%x (%u)", settings.clock_factor, settings.clock_factor);
@@ -138,65 +138,86 @@ zx::status<PllConfig> Clock::GenerateHPLL(const display_setting_t& d) {
   uint32_t pll_fout;
   // Requested Pixel clock
   pll_cfg.fout = d.lcd_clock / kKHZ;  // KHz
-  // Desired PLL Frequency based on pixel clock needed
-  pll_fout = pll_cfg.fout * d.clock_factor;
-
-  // Make sure all clocks are within range
-  // If these values are not within range, we will not have a valid display
-  if ((pll_cfg.fout > MAX_PIXEL_CLK_KHZ) || (pll_fout < MIN_PLL_FREQ_KHZ) ||
-      (pll_fout > MAX_PLL_FREQ_KHZ)) {
-    DISP_ERROR("Calculated clocks out of range!");
-    DumpPllCfg(pll_cfg);
-    DumpDisplaySettings(d);
+  if (pll_cfg.fout > MAX_PIXEL_CLK_KHZ) {
+    DISP_ERROR("Pixel clock out of range (%u KHz)", pll_cfg.fout);
     return zx::error(ZX_ERR_OUT_OF_RANGE);
   }
 
-  // Now that we have valid frequency ranges, let's calculated all the PLL-related
-  // multipliers/dividers
-  // [fin] * [m/n] = [pll_vco]
-  // [pll_vco] / [od1] / [od2] / [od3] = pll_fout
-  // [fvco] --->[OD1] --->[OD2] ---> [OD3] --> pll_fout
-  uint32_t od3, od2, od1;
-  od3 = (1 << (MAX_OD_SEL - 1));
-  while (od3) {
-    uint32_t fod3 = pll_fout * od3;
-    od2 = od3;
-    while (od2) {
-      uint32_t fod2 = fod3 * od2;
-      od1 = od2;
-      while (od1) {
-        uint32_t fod1 = fod2 * od1;
-        if ((fod1 >= MIN_PLL_VCO_KHZ) && (fod1 <= MAX_PLL_VCO_KHZ)) {
-          // within range!
-          pll_cfg.pll_od1_sel = od1 >> 1;
-          pll_cfg.pll_od2_sel = od2 >> 1;
-          pll_cfg.pll_od3_sel = od3 >> 1;
-          pll_cfg.pll_fout = pll_fout;
-          DISP_TRACE("od1=%d, od2=%d, od3=%d", (od1 >> 1), (od2 >> 1), (od3 >> 1));
-          DISP_TRACE("pll_fvco=%d", fod1);
-          pll_cfg.pll_fvco = fod1;
-          // for simplicity, assume n = 1
-          // calculate m such that fin x m = fod1
-          uint32_t m;
-          uint32_t pll_frac;
-          fod1 = fod1 / 1;
-          m = fod1 / FIN_FREQ_KHZ;
-          pll_frac = (fod1 % FIN_FREQ_KHZ) * PLL_FRAC_RANGE / FIN_FREQ_KHZ;
-          pll_cfg.pll_m = m;
-          pll_cfg.pll_n = 1;
-          pll_cfg.pll_frac = pll_frac;
-          DISP_TRACE("m=%d, n=%d, frac=0x%x", m, 1, pll_frac);
-          pll_cfg.bitrate = pll_fout * kKHZ;  // Hz
-          return zx::ok(std::move(pll_cfg));
-        }
-        od1 >>= 1;
-      }
-      od2 >>= 1;
+  constexpr uint32_t kMinClockFactor = 1u;
+  constexpr uint32_t kMaxClockFactor = 255u;
+
+  // If clock factor is not specified in display panel configuration, the driver
+  // will find the first valid clock factor in between kMinClockFactor and
+  // kMaxClockFactor (both inclusive).
+  uint32_t clock_factor_min = kMinClockFactor;
+  uint32_t clock_factor_max = kMaxClockFactor;
+  if (d.clock_factor) {
+    clock_factor_min = clock_factor_max = d.clock_factor;
+  }
+
+  for (uint32_t clock_factor = clock_factor_min; clock_factor <= clock_factor_max; clock_factor++) {
+    pll_cfg.clock_factor = clock_factor;
+
+    // Desired PLL Frequency based on pixel clock needed
+    pll_fout = pll_cfg.fout * pll_cfg.clock_factor;
+
+    // Make sure all clocks are within range
+    // If these values are not within range, we will not have a valid display
+    uint32_t dsi_bit_rate_max_khz = d.bit_rate_max * 1000; // change to KHz
+    uint32_t dsi_bit_rate_min_khz = dsi_bit_rate_max_khz - pll_cfg.fout;
+    if ((pll_fout < dsi_bit_rate_min_khz) || (pll_fout > dsi_bit_rate_max_khz)) {
+      DISP_TRACE("Calculated clocks out of range for xd = %u, skipped", clock_factor);
+      continue;
     }
-    od3 >>= 1;
+
+    // Now that we have valid frequency ranges, let's calculated all the PLL-related
+    // multipliers/dividers
+    // [fin] * [m/n] = [pll_vco]
+    // [pll_vco] / [od1] / [od2] / [od3] = pll_fout
+    // [fvco] --->[OD1] --->[OD2] ---> [OD3] --> pll_fout
+    uint32_t od3, od2, od1;
+    od3 = (1 << (MAX_OD_SEL - 1));
+    while (od3) {
+      uint32_t fod3 = pll_fout * od3;
+      od2 = od3;
+      while (od2) {
+        uint32_t fod2 = fod3 * od2;
+        od1 = od2;
+        while (od1) {
+          uint32_t fod1 = fod2 * od1;
+          if ((fod1 >= MIN_PLL_VCO_KHZ) && (fod1 <= MAX_PLL_VCO_KHZ)) {
+            // within range!
+            pll_cfg.pll_od1_sel = od1 >> 1;
+            pll_cfg.pll_od2_sel = od2 >> 1;
+            pll_cfg.pll_od3_sel = od3 >> 1;
+            pll_cfg.pll_fout = pll_fout;
+            DISP_TRACE("od1=%d, od2=%d, od3=%d", (od1 >> 1), (od2 >> 1), (od3 >> 1));
+            DISP_TRACE("pll_fvco=%d", fod1);
+            pll_cfg.pll_fvco = fod1;
+            // for simplicity, assume n = 1
+            // calculate m such that fin x m = fod1
+            uint32_t m;
+            uint32_t pll_frac;
+            fod1 = fod1 / 1;
+            m = fod1 / FIN_FREQ_KHZ;
+            pll_frac = (fod1 % FIN_FREQ_KHZ) * PLL_FRAC_RANGE / FIN_FREQ_KHZ;
+            pll_cfg.pll_m = m;
+            pll_cfg.pll_n = 1;
+            pll_cfg.pll_frac = pll_frac;
+            DISP_TRACE("m=%d, n=%d, frac=0x%x", m, 1, pll_frac);
+            pll_cfg.bitrate = pll_fout * kKHZ;  // Hz
+            return zx::ok(std::move(pll_cfg));
+          }
+          od1 >>= 1;
+        }
+        od2 >>= 1;
+      }
+      od3 >>= 1;
+    }
   }
 
   DISP_ERROR("Could not generate correct PLL values!");
+  DumpDisplaySettings(d);
   return zx::error(ZX_ERR_INTERNAL);
 }
 
@@ -289,7 +310,7 @@ zx_status_t Clock::Enable(const display_setting_t& d) {
   SET_BIT32(HHI, HHI_MIPIDSI_PHY_CLK_CNTL, 0, 0, 7);
 
   // setup the XD divider value
-  SET_BIT32(HHI, HHI_VIID_CLK_DIV, (d.clock_factor - 1), VCLK2_XD, 8);
+  SET_BIT32(HHI, HHI_VIID_CLK_DIV, (pll_cfg_.clock_factor - 1), VCLK2_XD, 8);
   zx_nanosleep(zx_deadline_after(ZX_USEC(5)));
 
   // select vid_pll_clk
