@@ -6,6 +6,7 @@ group("tests") {
   testonly = true
   deps = [
     "configurable-netstack:tests",
+    "doc:tests",
     "network-context:tests",
     "runner:tests",
     "service:tests",

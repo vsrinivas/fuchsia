@@ -1,0 +1,48 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":netemul-example-tests" ]
+}
+
+fuchsia_test_component("example-sandbox-test") {
+  manifest = "sandbox-test/meta/sandbox-test.cml"
+  deps = [
+    "sandbox-test",
+    "//src/connectivity/network/netstack:component-debug",
+    "//src/connectivity/network/testing/netemul/service:netemul-sandbox",
+  ]
+}
+
+fuchsia_test_component("client-component") {
+  component_name = "client"
+  manifest = "runner-test/meta/client.cml"
+  deps = [ "runner-test:client" ]
+}
+
+fuchsia_test_component("server-component") {
+  component_name = "server"
+  manifest = "runner-test/meta/server.cml"
+  deps = [ "runner-test:server" ]
+}
+
+fuchsia_test_component("example-runner-test") {
+  manifest = "runner-test/meta/runner-test.cml"
+  deps = [
+    ":client-component",
+    ":server-component",
+    "//src/connectivity/network/testing/netemul/configurable-netstack",
+    "//src/connectivity/network/testing/netemul/sync-manager",
+  ]
+}
+
+fuchsia_test_package("netemul-example-tests") {
+  test_components = [
+    ":example-sandbox-test",
+    ":example-runner-test",
+  ]
+}
