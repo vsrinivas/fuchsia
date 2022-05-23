@@ -261,7 +261,7 @@ zx_status_t Nelson::Spi1Init() {
   spi_1_dev.metadata_count = spi_1_metadata.size();
 
   zx_status_t status = pbus_.AddComposite(&spi_1_dev, reinterpret_cast<uint64_t>(spi_1_fragments),
-                                          std::size(spi_1_fragments), "pdev");
+                                          std::size(spi_1_fragments), "gpio-cs-0");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd failed %d", __func__, status);
     return status;
