@@ -70,7 +70,11 @@ static const pbus_irq_t gpio_irqs[] = {
     },
 };
 
-// GPIOs to expose from generic GPIO driver.
+// GPIOs to expose from generic GPIO driver. Do not expose H bank GPIOs here, as they are managed by
+// the GPIO H device below. The two GPIO devices are not capable of synchronizing accesses to the
+// interrupt registers, so H bank GPIOs that are used for interrupts must be exposed by the main
+// device (only GPIO_SOC_SELINA_IRQ_OUT). All pins can be used in calls from the board driver,
+// regardless of bank.
 static const gpio_pin_t gpio_pins[] = {
     {GPIO_INRUSH_EN_SOC},
     {GPIO_SOC_I2S_SCLK},
@@ -128,12 +132,10 @@ static const gpio_pin_t gpio_pins[] = {
     {GPIO_SOC_BT_REG_ON},
     {GPIO_BT_SOC_WAKE},
     {GPIO_SOC_BT_WAKE},
-    {GPIO_SOC_SELINA_RESET},
+    // Selina is responsible for not making concurrent calls to this GPIO and the GPIO H device (or
+    // other clients of that device, namely SPI1). Calls may be made on the interrupt object (and
+    // interrupts may be received) at any time, as there is no GPIO driver involvement in that case.
     {GPIO_SOC_SELINA_IRQ_OUT},
-    {GPIO_SOC_SPI_B_MOSI},
-    {GPIO_SOC_SPI_B_MISO},
-    {GPIO_SOC_SPI_B_SS0},
-    {GPIO_SOC_SPI_B_SCLK},
     {GPIO_SOC_DEBUG_UARTAO_TX},
     {GPIO_SOC_DEBUG_UARTAO_RX},
     {GPIO_SOC_SENSORS_I2C_SCL},
@@ -185,6 +187,37 @@ static pbus_dev_t gpio_dev = []() {
   return dev;
 }();
 
+// The GPIO H device won't be able to provide interrupts for the pins it exposes, so
+// GPIO_SOC_SELINA_IRQ_OUT must be be exposed by the main GPIO device (see the list of pins above)
+// instead of this one.
+static const gpio_pin_t gpio_h_pins[] = {{GPIO_SOC_SELINA_RESET},
+                                         {GPIO_SOC_SPI_B_MOSI},
+                                         {GPIO_SOC_SPI_B_MISO},
+                                         {GPIO_SOC_SPI_B_SS0},
+                                         {GPIO_SOC_SPI_B_SCLK}};
+
+static const pbus_metadata_t gpio_h_metadata[] = {
+    {
+        .type = DEVICE_METADATA_GPIO_PINS,
+        .data_buffer = reinterpret_cast<const uint8_t*>(&gpio_h_pins),
+        .data_size = sizeof(gpio_h_pins),
+    },
+};
+
+static pbus_dev_t gpio_h_dev = []() {
+  pbus_dev_t dev = {};
+  dev.name = "gpio-h";
+  dev.vid = PDEV_VID_AMLOGIC;
+  dev.pid = PDEV_PID_AMLOGIC_S905D3;
+  dev.did = PDEV_DID_AMLOGIC_GPIO;
+  dev.instance_id = 1;
+  dev.mmio_list = gpio_mmios;
+  dev.mmio_count = std::size(gpio_mmios);
+  dev.metadata_list = gpio_h_metadata;
+  dev.metadata_count = std::size(gpio_h_metadata);
+  return dev;
+}();
+
 zx_status_t Nelson::GpioInit() {
   zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_GPIO_IMPL, &gpio_dev);
   if (status != ZX_OK) {
@@ -202,6 +235,12 @@ zx_status_t Nelson::GpioInit() {
   status = gpio_impl_.ConfigOut(GPIO_AMBER_LED_PWM, 1);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: ConfigOut failed: %d", __func__, status);
+  }
+
+  status = pbus_.DeviceAdd(&gpio_h_dev);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to add GPIOH device: %d", status);
+    return status;
   }
 
 #ifdef GPIO_TEST

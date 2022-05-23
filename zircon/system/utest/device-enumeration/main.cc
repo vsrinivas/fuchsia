@@ -297,6 +297,7 @@ TEST_F(DeviceEnumerationTest, NelsonTest) {
   static const char* kDevicePaths[] = {
       "sys/platform/platform-passthrough/nelson",
       "sys/platform/05:05:1/aml-axg-gpio",
+      "sys/platform/05:05:1:1/aml-axg-gpio",
       "nelson-buttons/hid-buttons",
       "class/bt-transport/000",
       "class/bt-hci/000",
