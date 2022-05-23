@@ -56,12 +56,20 @@ struct DefaultConstructPossiblyInvalidObject {
 template <typename E, size_t N>
 struct DefaultConstructPossiblyInvalidObject<std::array<E, N>> {
   static constexpr std::array<E, N> Make() {
-    if constexpr (std::is_default_constructible_v<E>) {
-      // Shortcut for default constructible arrays.
-      return std::array<E, N>{};
+    if constexpr (std::is_trivially_default_constructible_v<E>) {
+      // Shortcut for arrays of primitives etc. This does not guarantee copy
+      // elision, but eliminates zero initialization. Experimentation shows that
+      // usually the compiler can eliminate the copy of `t`.
+      std::array<E, N> t;
+      return t;
     } else {
-      return ArrayMaker<N>::MakeArray(
-          [] { return E{DefaultConstructPossiblyInvalidObject<E>::Make()}; });
+      if constexpr (std::is_default_constructible_v<E>) {
+        // Shortcut for default constructible arrays.
+        return std::array<E, N>{};
+      } else {
+        return ArrayMaker<N>::MakeArray(
+            [] { return E{DefaultConstructPossiblyInvalidObject<E>::Make()}; });
+      }
     }
   }
 
