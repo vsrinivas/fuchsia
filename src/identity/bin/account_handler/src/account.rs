@@ -2,17 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::auth_provider_supplier::AuthProviderSupplier;
 use crate::common::AccountLifetime;
 use crate::inspect;
 use crate::lock_request;
 use crate::persona::{Persona, PersonaContext};
 use crate::stored_account::StoredAccount;
-use crate::TokenManager;
-use account_common::{AccountManagerError, FidlPersonaId, PersonaId, ResultExt};
+use account_common::{AccountManagerError, FidlPersonaId, PersonaId};
 use anyhow::Error;
 use fidl::endpoints::{ClientEnd, ServerEnd};
-use fidl_fuchsia_auth::AuthenticationContextProviderProxy;
 use fidl_fuchsia_identity_account::{
     AccountRequest, AccountRequestStream, AuthChangeGranularity, AuthListenerMarker, AuthState,
     Error as ApiError, Lifetime, PersonaMarker, Scenario,
@@ -26,16 +23,11 @@ use scopeguard;
 use std::fs;
 use std::sync::Arc;
 
-/// The file name to use for a token manager database. The location is supplied
-/// by `AccountHandlerContext.GetAccountPath()`
-const TOKEN_DB: &str = "tokens.json";
-
 /// The context that a particular request to an Account should be executed in, capturing
 /// information that was supplied upon creation of the channel.
 pub struct AccountContext {
-    /// An `AuthenticationContextProviderProxy` capable of generating new `AuthenticationUiContext`
-    /// channels.
-    pub auth_ui_context_provider: AuthenticationContextProviderProxy,
+    // Note: The per-channel account context is currently empty. It was needed in the past for
+    // authentication UI and is likely to be needed again in the future as the API expands.
 }
 
 /// Information about the Account that this AccountHandler instance is responsible for.
@@ -59,8 +51,7 @@ pub struct Account {
     inspect: inspect::Account,
     // TODO(jsankey): Once the system and API surface can support more than a single persona, add
     // additional state here to store these personae. This will most likely be a hashmap from
-    // PersonaId to Persona struct, and changing default_persona from a struct to an ID. We
-    // will also need to store Arc<TokenManager> at the account level.
+    // PersonaId to Persona struct, and changing default_persona from a struct to an ID.
 }
 
 impl Account {
@@ -68,30 +59,15 @@ impl Account {
     async fn new(
         persona_id: PersonaId,
         lifetime: AccountLifetime,
-        context_proxy: AccountHandlerContextProxy,
+        _context_proxy: AccountHandlerContextProxy,
         lock_request_sender: lock_request::Sender,
         inspect_parent: &Node,
     ) -> Result<Account, AccountManagerError> {
         let task_group = TaskGroup::new();
-        let token_manager_task_group = task_group
-            .create_child()
-            .await
-            .map_err(|_| AccountManagerError::new(ApiError::RemovalInProgress))?;
         let default_persona_task_group = task_group
             .create_child()
             .await
             .map_err(|_| AccountManagerError::new(ApiError::RemovalInProgress))?;
-        let auth_provider_supplier = AuthProviderSupplier::new(context_proxy);
-        let token_manager = Arc::new(match &lifetime {
-            AccountLifetime::Ephemeral => {
-                TokenManager::new_in_memory(auth_provider_supplier, token_manager_task_group)
-            }
-            AccountLifetime::Persistent { account_dir } => {
-                let token_db_path = account_dir.join(TOKEN_DB);
-                TokenManager::new(&token_db_path, auth_provider_supplier, token_manager_task_group)
-                    .account_manager_error(ApiError::Unknown)?
-            }
-        });
         let lifetime = Arc::new(lifetime);
         let account_inspect = inspect::Account::new(inspect_parent);
         Ok(Self {
@@ -99,7 +75,6 @@ impl Account {
             default_persona: Arc::new(Persona::new(
                 persona_id,
                 lifetime,
-                token_manager,
                 default_persona_task_group,
                 inspect_parent,
             )),
@@ -160,13 +135,6 @@ impl Account {
         match self.lifetime.as_ref() {
             AccountLifetime::Ephemeral => Ok(()),
             AccountLifetime::Persistent { account_dir } => {
-                let token_db_path = &account_dir.join(TOKEN_DB);
-                if token_db_path.exists() {
-                    fs::remove_file(token_db_path).map_err(|err| {
-                        warn!("Failed to delete token db: {:?}", err);
-                        AccountManagerError::new(ApiError::Resource).with_cause(err)
-                    })?;
-                }
                 let to_remove = StoredAccount::path(&account_dir.clone());
                 fs::remove_file(to_remove).map_err(|err| {
                     warn!("Failed to delete account doc: {:?}", err);
@@ -286,12 +254,11 @@ impl Account {
 
     async fn get_default_persona<'a>(
         &'a self,
-        context: &'a AccountContext,
+        _context: &'a AccountContext,
         persona_server_end: ServerEnd<PersonaMarker>,
     ) -> Result<FidlPersonaId, ApiError> {
         let persona_clone = Arc::clone(&self.default_persona);
-        let persona_context =
-            PersonaContext { auth_ui_context_provider: context.auth_ui_context_provider.clone() };
+        let persona_context = PersonaContext {};
         let stream = persona_server_end.into_stream().map_err(|err| {
             error!("Error opening Persona channel: {:?}", err);
             ApiError::Resource
@@ -347,7 +314,6 @@ mod tests {
     use super::*;
     use crate::test_util::*;
     use fidl::endpoints::create_endpoints;
-    use fidl_fuchsia_auth::AuthenticationContextProviderMarker;
     use fidl_fuchsia_identity_account::{AccountMarker, AccountProxy, Scenario, ThreatScenario};
     use fidl_fuchsia_identity_internal::AccountHandlerContextMarker;
     use fuchsia_async as fasync;
@@ -439,12 +405,7 @@ mod tests {
                 create_endpoints::<AccountMarker>().unwrap();
             let account_proxy = account_client_end.into_proxy().unwrap();
             let request_stream = account_server_end.into_stream().unwrap();
-
-            let (ui_context_provider_client_end, _) =
-                create_endpoints::<AuthenticationContextProviderMarker>().unwrap();
-            let context = AccountContext {
-                auth_ui_context_provider: ui_context_provider_client_end.into_proxy().unwrap(),
-            };
+            let context = AccountContext {};
 
             let task_group = TaskGroup::new();
 

@@ -21,7 +21,6 @@ rustc_binary("bin") {
     "//src/identity/fidl:account-rustc",
     "//src/identity/lib/account_common",
     "//src/identity/lib/identity_common",
-    "//src/identity/lib/token_manager",
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fidl/rust/fidl",
@@ -47,7 +46,6 @@ rustc_binary("bin") {
   sources = [
     "src/account.rs",
     "src/account_handler.rs",
-    "src/auth_provider_supplier.rs",
     "src/common.rs",
     "src/fake_account_handler_context.rs",
     "src/fake_authenticator.rs",

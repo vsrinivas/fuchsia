@@ -10,7 +10,6 @@
 
 mod account;
 mod account_handler;
-mod auth_provider_supplier;
 mod common;
 mod inspect;
 mod lock_request;
@@ -37,8 +36,6 @@ use fuchsia_inspect::Inspector;
 use futures::StreamExt;
 use log::{error, info};
 use std::sync::Arc;
-
-type TokenManager = token_manager::TokenManager<auth_provider_supplier::AuthProviderSupplier>;
 
 const DATA_DIR: &str = "/data";
 

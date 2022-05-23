@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 library fuchsia.identity.account;
 
-using fuchsia.auth;
-using fuchsia.sys;
 using fuchsia.io;
 
 /// A protocol to receive events when the authentication state of an account
@@ -183,21 +181,4 @@ protocol Persona {
     GetLifetime() -> (struct {
         lifetime Lifetime;
     });
-
-    /// Connects a channel to acquire and revoke authentication tokens for
-    /// service provider (aka cloud service) accounts that are visible through
-    /// this persona.
-    ///
-    /// `application_url` A url for the Fuchsia agent that this channel will be
-    ///                   used by. Applications are only allowed to access
-    ///                   tokens that they created.
-    /// `token_manager` The server end of a `TokenManager` channel
-    GetTokenManager // TODO(fxbug.dev/560): Migrate token manager to a more appropriate form
-    // of software identity. This is likely to be some verifiable
-    // representation of the organization that wrote the software, such as
-    // a URL domain.
-    (resource struct {
-        application_url fuchsia.sys.component_url;
-        token_manager server_end:fuchsia.auth.TokenManager;
-    }) -> (struct {}) error Error;
 };

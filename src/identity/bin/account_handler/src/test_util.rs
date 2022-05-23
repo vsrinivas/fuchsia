@@ -7,7 +7,6 @@
 
 use crate::common::AccountLifetime;
 use account_common::{AccountId, PersonaId};
-use fidl_fuchsia_auth::AppConfig;
 use lazy_static::lazy_static;
 use std::path::PathBuf;
 use tempfile::TempDir;
@@ -17,21 +16,7 @@ lazy_static! {
     pub static ref TEST_PERSONA_ID: PersonaId = PersonaId::new(222222);
 }
 
-pub static TEST_APPLICATION_URL: &str = "test_app_url";
-
 pub static TEST_ACCOUNT_ID_UINT: u64 = 111111;
-
-// TODO(jsankey): If fidl calls ever accept non-mutable structs, move this to a lazy_static.
-// Currently FIDL requires mutable access to a type that doesn't support clone, so we just create a
-// fresh instance each time.
-pub fn create_dummy_app_config() -> AppConfig {
-    AppConfig {
-        auth_provider_type: "dummy_auth_provider".to_string(),
-        client_id: None,
-        client_secret: None,
-        redirect_uri: None,
-    }
-}
 
 pub struct TempLocation {
     /// A fresh temp directory that will be deleted when this object is dropped.
@@ -50,6 +35,7 @@ impl TempLocation {
 
     /// Returns a path to a static test path inside the temporary location which does not exist by
     /// default.
+    #[allow(unused)]
     pub fn test_path(&self) -> PathBuf {
         self.path.join("test_path")
     }

@@ -11,12 +11,9 @@ using fuchsia.auth;
 const MAX_PASSWORD_SIZE uint32 = 128;
 
 /// AccountManager manages the overall state of system accounts and personae on
-/// a Fuchsia device, installation of the AuthProviders that are used to obtain
-/// authentication tokens for these accounts, and access to TokenManagers for
-/// these accounts.
-///
-/// The AccountManager is the most powerful protocol in the authentication
-/// system and is intended only for use by the most trusted parts of the system.
+/// a Fuchsia device. The AccountManager is the most powerful protocol in the
+/// account system and is intended only for use by the most trusted parts of the
+/// system.
 @discoverable
 protocol AccountManager {
     /// Returns a vector of all accounts provisioned on the current device.

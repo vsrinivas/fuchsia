@@ -4,11 +4,9 @@
 
 use crate::common::AccountLifetime;
 use crate::inspect;
-use crate::TokenManager;
 use account_common::PersonaId;
 use anyhow::Error;
-use fidl::endpoints::{ClientEnd, ServerEnd};
-use fidl_fuchsia_auth::{AuthenticationContextProviderProxy, TokenManagerMarker};
+use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_identity_account::{
     AuthChangeGranularity, AuthListenerMarker, AuthState, Error as ApiError, Lifetime,
     PersonaRequest, PersonaRequestStream, Scenario,
@@ -16,16 +14,14 @@ use fidl_fuchsia_identity_account::{
 use fuchsia_inspect::{Node, NumericProperty};
 use futures::prelude::*;
 use identity_common::{cancel_or, TaskGroup, TaskGroupCancel};
-use log::{error, warn};
+use log::warn;
 use std::sync::Arc;
-use token_manager::TokenManagerContext;
 
 /// The context that a particular request to a Persona should be executed in, capturing
 /// information that was supplied upon creation of the channel.
 pub struct PersonaContext {
-    /// An `AuthenticationContextProviderProxy` capable of generating new `AuthenticationUiContext`
-    /// channels.
-    pub auth_ui_context_provider: AuthenticationContextProviderProxy,
+    // Note: The per-channel persona context is currently empty. It was needed in the past for
+    // authentication UI and is likely to be needed again in the future as the API expands.
 }
 
 /// Information about one of the Personae withing the Account that this AccountHandler instance is
@@ -34,17 +30,14 @@ pub struct PersonaContext {
 /// This state is only available once the Handler has been initialized to a particular account via
 /// the AccountHandlerControl channel.
 // TODO(dnordstrom): Factor out items that are accessed by both account and persona into its own
-// type so they don't need to be individually copied or Arc-wrapped. Here, `token_manager`,
-// `lifetime` and `account_id` are candidates.
+// type so they don't need to be individually copied or Arc-wrapped. Here, `lifetime` and
+// `account_id` are candidates.
 pub struct Persona {
     /// An identifier for this persona.
     id: PersonaId,
 
     /// Lifetime for this persona's account (ephemeral or persistent with a path).
     lifetime: Arc<AccountLifetime>,
-
-    /// The token manager to be used for authentication token requests.
-    token_manager: Arc<TokenManager>,
 
     /// Collection of tasks that are using this instance.
     task_group: TaskGroup,
@@ -63,12 +56,11 @@ impl Persona {
     pub fn new(
         id: PersonaId,
         lifetime: Arc<AccountLifetime>,
-        token_manager: Arc<TokenManager>,
         task_group: TaskGroup,
         inspect_parent: &Node,
     ) -> Persona {
         let persona_inspect = inspect::Persona::new(inspect_parent, &id);
-        Self { id, lifetime, token_manager, task_group, inspect: persona_inspect }
+        Self { id, lifetime, task_group, inspect: persona_inspect }
     }
 
     /// Returns the identifier for this persona.
@@ -99,7 +91,7 @@ impl Persona {
     /// based on its type.
     pub async fn handle_request<'a>(
         &'a self,
-        context: &'a PersonaContext,
+        _context: &'a PersonaContext,
         req: PersonaRequest,
     ) -> Result<(), fidl::Error> {
         match req {
@@ -120,11 +112,6 @@ impl Persona {
             } => {
                 let mut response =
                     self.register_auth_listener(scenario, listener, initial_state, granularity);
-                responder.send(&mut response)?;
-            }
-            PersonaRequest::GetTokenManager { application_url, token_manager, responder } => {
-                let mut response =
-                    self.get_token_manager(context, application_url, token_manager).await;
                 responder.send(&mut response)?;
             }
         }
@@ -151,45 +138,14 @@ impl Persona {
         warn!("RegisterAuthListener not yet implemented");
         Err(ApiError::UnsupportedOperation)
     }
-
-    async fn get_token_manager<'a>(
-        &'a self,
-        context: &'a PersonaContext,
-        application_url: String,
-        token_manager_server_end: ServerEnd<TokenManagerMarker>,
-    ) -> Result<(), ApiError> {
-        let token_manager_clone = Arc::clone(&self.token_manager);
-        let token_manager_context = TokenManagerContext {
-            application_url,
-            auth_ui_context_provider: context.auth_ui_context_provider.clone(),
-        };
-        let stream = token_manager_server_end.into_stream().map_err(|err| {
-            error!("Error opening TokenManager channel: {:?}", err);
-            ApiError::Resource
-        })?;
-        self.token_manager
-            .task_group()
-            .spawn(|cancel| async move {
-                token_manager_clone
-                    .handle_requests_from_stream(&token_manager_context, stream, cancel)
-                    .await
-                    .unwrap_or_else(|e| error!("Error handling TokenManager channel: {:?}", e))
-            })
-            .await
-            .map_err(|_| ApiError::RemovalInProgress)?;
-        Ok(())
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::auth_provider_supplier::AuthProviderSupplier;
     use crate::test_util::*;
-    use fidl::endpoints::{create_endpoints, create_proxy, create_proxy_and_stream};
-    use fidl_fuchsia_auth::AuthenticationContextProviderMarker;
+    use fidl::endpoints::{create_endpoints, create_proxy_and_stream};
     use fidl_fuchsia_identity_account::{PersonaMarker, PersonaProxy, ThreatScenario};
-    use fidl_fuchsia_identity_internal::AccountHandlerContextMarker;
     use fuchsia_async as fasync;
     use fuchsia_inspect::Inspector;
     use std::path::PathBuf;
@@ -197,101 +153,65 @@ mod tests {
     const DEFAULT_SCENARIO: Scenario =
         Scenario { include_test: false, threat_scenario: ThreatScenario::None };
 
-    /// Type to hold the common state require during construction of test objects and execution
-    /// of a test, including an async executor and a temporary location in the filesystem.
-    struct Test {
-        _location: TempLocation,
-        token_manager: Arc<TokenManager>,
+    fn create_persona() -> Persona {
+        let inspector = Inspector::new();
+        Persona::new(
+            TEST_PERSONA_ID.clone(),
+            Arc::new(AccountLifetime::Persistent { account_dir: PathBuf::from("/nowhere") }),
+            TaskGroup::new(),
+            inspector.root(),
+        )
     }
 
-    impl Test {
-        fn new() -> Test {
-            let location = TempLocation::new();
-            let (account_handler_context_proxy, _) =
-                create_proxy::<AccountHandlerContextMarker>().unwrap();
-            let token_manager = Arc::new(
-                TokenManager::new(
-                    &location.test_path(),
-                    AuthProviderSupplier::new(account_handler_context_proxy),
-                    TaskGroup::new(),
-                )
-                .unwrap(),
-            );
-            Test { _location: location, token_manager }
-        }
+    fn create_ephemeral_persona() -> Persona {
+        let inspector = Inspector::new();
+        Persona::new(
+            TEST_PERSONA_ID.clone(),
+            Arc::new(AccountLifetime::Ephemeral),
+            TaskGroup::new(),
+            inspector.root(),
+        )
+    }
 
-        fn create_persona(&self) -> Persona {
-            let inspector = Inspector::new();
-            Persona::new(
-                TEST_PERSONA_ID.clone(),
-                Arc::new(AccountLifetime::Persistent { account_dir: PathBuf::from("/nowhere") }),
-                Arc::clone(&self.token_manager),
-                TaskGroup::new(),
-                inspector.root(),
-            )
-        }
+    async fn run_test<TestFn, Fut>(test_object: Persona, test_fn: TestFn)
+    where
+        TestFn: FnOnce(PersonaProxy) -> Fut,
+        Fut: Future<Output = Result<(), Error>>,
+    {
+        let (persona_proxy, request_stream) = create_proxy_and_stream::<PersonaMarker>().unwrap();
+        let persona_context = PersonaContext {};
 
-        fn create_ephemeral_persona(&self) -> Persona {
-            let inspector = Inspector::new();
-            Persona::new(
-                TEST_PERSONA_ID.clone(),
-                Arc::new(AccountLifetime::Ephemeral),
-                Arc::clone(&self.token_manager),
-                TaskGroup::new(),
-                inspector.root(),
-            )
-        }
-
-        async fn run<TestFn, Fut>(&mut self, test_object: Persona, test_fn: TestFn)
-        where
-            TestFn: FnOnce(PersonaProxy) -> Fut,
-            Fut: Future<Output = Result<(), Error>>,
-        {
-            let (persona_proxy, request_stream) =
-                create_proxy_and_stream::<PersonaMarker>().unwrap();
-
-            let (auth_ui_context_provider, _) =
-                create_proxy::<AuthenticationContextProviderMarker>().unwrap();
-            let persona_context = PersonaContext { auth_ui_context_provider };
-
-            let task_group = TaskGroup::new();
-            task_group
-                .spawn(|cancel| async move {
-                    test_object
-                        .handle_requests_from_stream(&persona_context, request_stream, cancel)
-                        .await
-                        .unwrap_or_else(|err| {
-                            panic!("Fatal error handling test request: {:?}", err)
-                        });
-                })
-                .await
-                .expect("Unable to spawn task");
-            test_fn(persona_proxy).await.expect("Failed running test fn.")
-        }
+        let task_group = TaskGroup::new();
+        task_group
+            .spawn(|cancel| async move {
+                test_object
+                    .handle_requests_from_stream(&persona_context, request_stream, cancel)
+                    .await
+                    .unwrap_or_else(|err| panic!("Fatal error handling test request: {:?}", err));
+            })
+            .await
+            .expect("Unable to spawn task");
+        test_fn(persona_proxy).await.expect("Failed running test fn.")
     }
 
     #[fasync::run_until_stalled(test)]
     async fn test_id() {
-        let test = Test::new();
-        assert_eq!(test.create_persona().id(), &*TEST_PERSONA_ID);
+        assert_eq!(create_persona().id(), &*TEST_PERSONA_ID);
     }
 
     #[fasync::run_until_stalled(test)]
     async fn test_get_lifetime_persistent() {
-        let test = Test::new();
-        assert_eq!(test.create_persona().get_lifetime(), Lifetime::Persistent);
+        assert_eq!(create_persona().get_lifetime(), Lifetime::Persistent);
     }
 
     #[fasync::run_until_stalled(test)]
     async fn test_get_lifetime_ephemeral() {
-        let test = Test::new();
-        assert_eq!(test.create_ephemeral_persona().get_lifetime(), Lifetime::Ephemeral);
+        assert_eq!(create_ephemeral_persona().get_lifetime(), Lifetime::Ephemeral);
     }
 
     #[fasync::run_until_stalled(test)]
     async fn test_get_auth_state() {
-        let mut test = Test::new();
-        test.run(test.create_persona(), |proxy| async move {
+        run_test(create_persona(), |proxy| async move {
             assert_eq!(
                 proxy.get_auth_state(&mut DEFAULT_SCENARIO.clone()).await?,
                 Err(ApiError::UnsupportedOperation)
@@ -303,8 +223,7 @@ mod tests {
 
     #[fasync::run_until_stalled(test)]
     async fn test_register_auth_listener() {
-        let mut test = Test::new();
-        test.run(test.create_persona(), |proxy| {
+        run_test(create_persona(), |proxy| {
             async move {
                 let (auth_listener_client_end, _) = create_endpoints().unwrap();
                 assert_eq!(
@@ -322,32 +241,6 @@ mod tests {
                         .await?,
                     Err(ApiError::UnsupportedOperation)
                 );
-                Ok(())
-            }
-        })
-        .await;
-    }
-
-    #[fasync::run_until_stalled(test)]
-    async fn test_get_token_manager() {
-        let mut test = Test::new();
-        test.run(test.create_persona(), |proxy| {
-            async move {
-                let (token_manager_proxy, token_manager_server_end) = create_proxy().unwrap();
-                assert_eq!(
-                    proxy
-                        .get_token_manager(&TEST_APPLICATION_URL, token_manager_server_end)
-                        .await?,
-                    Ok(())
-                );
-
-                // The token manager channel should now be usable.
-                let mut app_config = create_dummy_app_config();
-                assert_eq!(
-                    token_manager_proxy.list_profile_ids(&mut app_config).await?,
-                    (fidl_fuchsia_auth::Status::Ok, vec![])
-                );
-
                 Ok(())
             }
         })

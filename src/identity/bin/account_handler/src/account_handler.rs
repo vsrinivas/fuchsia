@@ -9,9 +9,8 @@ use crate::lock_request;
 use crate::pre_auth;
 use account_common::{AccountId, AccountManagerError};
 use anyhow::format_err;
-use fidl::endpoints::{create_proxy, ClientEnd, ServerEnd};
+use fidl::endpoints::{create_proxy, ServerEnd};
 use fidl::prelude::*;
-use fidl_fuchsia_auth::AuthenticationContextProviderMarker;
 use fidl_fuchsia_identity_account::{AccountMarker, Error as ApiError};
 use fidl_fuchsia_identity_authentication::{Enrollment, StorageUnlockMechanismProxy};
 use fidl_fuchsia_identity_internal::{
@@ -150,11 +149,11 @@ impl AccountHandler {
                 responder.send(&mut response)?;
             }
             AccountHandlerControlRequest::GetAccount {
-                auth_context_provider,
+                auth_context_provider: _,
                 account,
                 responder,
             } => {
-                let mut response = self.get_account(auth_context_provider, account).await;
+                let mut response = self.get_account(account).await;
                 responder.send(&mut response)?;
             }
             AccountHandlerControlRequest::Terminate { control_handle } => {
@@ -384,7 +383,6 @@ impl AccountHandler {
     /// served by this handler.
     async fn get_account(
         &self,
-        auth_context_provider_client_end: ClientEnd<AuthenticationContextProviderMarker>,
         account_server_end: ServerEnd<AccountMarker>,
     ) -> Result<(), ApiError> {
         let account_arc = match &*self.state.lock().await {
@@ -395,11 +393,7 @@ impl AccountHandler {
             }
         };
 
-        let acp = auth_context_provider_client_end.into_proxy().map_err(|err| {
-            warn!("Error using AuthenticationContextProvider {:?}", err);
-            ApiError::InvalidRequest
-        })?;
-        let context = AccountContext { auth_ui_context_provider: acp };
+        let context = AccountContext {};
         let stream = account_server_end.into_stream().map_err(|err| {
             warn!("Error opening Account channel {:?}", err);
             ApiError::Resource
