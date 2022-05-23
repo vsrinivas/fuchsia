@@ -333,6 +333,9 @@ pub struct ComponentInstance {
     /// should only be present for components that run in collections with a
     /// `SingleRun` durability.
     pub numbered_handles: Mutex<Option<Vec<fprocess::HandleInfo>>>,
+    /// Whether to persist isolated storage data of this component instance after it has been
+    /// destroyed.
+    pub persistent_storage: bool,
 
     /// The context this instance is under.
     context: WeakModelContext,
@@ -366,6 +369,7 @@ impl ComponentInstance {
             WeakExtendedInstance::AboveRoot(component_manager_instance),
             Arc::new(Hooks::new()),
             None,
+            false,
         )
     }
 
@@ -380,6 +384,7 @@ impl ComponentInstance {
         parent: WeakExtendedInstance,
         hooks: Arc<Hooks>,
         numbered_handles: Option<Vec<fprocess::HandleInfo>>,
+        persistent_storage: bool,
     ) -> Arc<Self> {
         let abs_moniker = instanced_moniker.without_instance_ids();
         Arc::new(Self {
@@ -397,6 +402,7 @@ impl ComponentInstance {
             hooks,
             task_scope: TaskScope::new(),
             numbered_handles: Mutex::new(numbered_handles),
+            persistent_storage,
         })
     }
 
@@ -878,6 +884,9 @@ impl ComponentInstance {
     // TODO: Need to:
     // - Delete the instance's persistent marker, if it was a persistent dynamic instance
     pub async fn destroy_instance(self: &Arc<Self>) -> Result<(), ModelError> {
+        if self.persistent_storage {
+            return Ok(());
+        }
         // Clean up isolated storage.
         let decl = {
             let state = self.lock_state().await;
@@ -1107,6 +1116,19 @@ impl ComponentInstance {
             }
         }
     }
+
+    /// Returns the effective persistent storage setting for a child.
+    /// If the CollectionDecl exists and the `persistent_storage` field is set, return the setting.
+    /// Otherwise, if the CollectionDecl or its `persistent_storage` field is not set, return
+    /// `self.persistent_storage` as a default value for the child to inherit.
+    fn persistent_storage_for_child(&self, collection: Option<&CollectionDecl>) -> bool {
+        let default_persistent_storage = self.persistent_storage;
+        if let Some(collection) = collection {
+            collection.persistent_storage.unwrap_or(default_persistent_storage)
+        } else {
+            default_persistent_storage
+        }
+    }
 }
 
 /// Extracts a mutable reference to the `target` field of an `OfferDecl`, or
@@ -1190,6 +1212,10 @@ impl ComponentInstanceInterface for ComponentInstance {
 
     fn new_route_mapper() -> NoopRouteMapper {
         NoopRouteMapper
+    }
+
+    fn persistent_storage(&self) -> bool {
+        self.persistent_storage
     }
 }
 
@@ -1663,6 +1689,7 @@ impl ResolvedInstanceState {
             WeakExtendedInstance::Component(WeakComponentInstance::from(component)),
             component.hooks.clone(),
             numbered_handles,
+            component.persistent_storage_for_child(collection),
         );
         self.children.insert(instanced_moniker, child.clone());
         self.live_children.insert(child_moniker, (instance_id, child.clone()));
@@ -3136,6 +3163,7 @@ pub mod tests {
             WeakExtendedInstanceInterface::AboveRoot(Weak::new()),
             Arc::new(Hooks::new()),
             None,
+            false,
         )
     }
 

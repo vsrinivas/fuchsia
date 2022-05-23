@@ -370,9 +370,10 @@ mod tests {
                     .add_collection(CollectionDecl {
                         name: "my_coll".to_string(),
                         durability: fdecl::Durability::Transient,
+                        environment: None,
                         allowed_offers: cm_types::AllowedOffers::StaticOnly,
                         allow_long_names: false,
-                        environment: None,
+                        persistent_storage: None,
                     })
                     .build(),
             ),

@@ -211,15 +211,27 @@ async fn open_storage_root(
 /// it is based on the provided relative moniker.
 pub async fn open_isolated_storage(
     storage_source_info: StorageCapabilitySource,
+    persistent_storage: bool,
     relative_moniker: InstancedRelativeMoniker,
     instance_id: Option<&ComponentInstanceId>,
     open_mode: u32,
     start_reason: &StartReason,
 ) -> Result<fio::DirectoryProxy, ModelError> {
     let root_dir = open_storage_root(&storage_source_info, open_mode, start_reason).await?;
-    let storage_path = instance_id
-        .map(|id| generate_instance_id_based_storage_path(id))
-        .unwrap_or_else(|| generate_moniker_based_storage_path(&relative_moniker));
+    let storage_path = match instance_id {
+        Some(id) => generate_instance_id_based_storage_path(id),
+        // if persistent_storage is `true`, generate a moniker-based storage path that ignores
+        // instance ids.
+        None => {
+            if persistent_storage {
+                generate_moniker_based_storage_path(
+                    &relative_moniker.with_zero_value_instance_ids(),
+                )
+            } else {
+                generate_moniker_based_storage_path(&relative_moniker)
+            }
+        }
+    };
 
     io_util::create_sub_directories(&root_dir, &storage_path).map_err(|e| {
         ModelError::from(StorageError::open(
@@ -257,6 +269,7 @@ pub async fn open_isolated_storage_by_id(
 /// `dir_source_path` are the component hosting the directory and its capability path.
 pub async fn delete_isolated_storage(
     storage_source_info: StorageCapabilitySource,
+    persistent_storage: bool,
     relative_moniker: InstancedRelativeMoniker,
     instance_id: Option<&ComponentInstanceId>,
 ) -> Result<(), ModelError> {
@@ -306,7 +319,11 @@ pub async fn delete_isolated_storage(
         };
         (dir, file_name)
     } else {
-        let storage_path = generate_moniker_based_storage_path(&relative_moniker);
+        let storage_path = if persistent_storage {
+            generate_moniker_based_storage_path(&relative_moniker.with_zero_value_instance_ids())
+        } else {
+            generate_moniker_based_storage_path(&relative_moniker)
+        };
         // We want to strip off the "data" portion of the path, and then one more level to get to the
         // directory holding the target component's storage.
         if storage_path.parent().and_then(|p| p.parent()).is_none() {
@@ -474,6 +491,7 @@ mod tests {
                 backing_directory_subdir: None,
                 storage_subdir: None,
             },
+            false,
             relative_moniker.clone(),
             None,
             0,
@@ -493,6 +511,7 @@ mod tests {
                 backing_directory_subdir: None,
                 storage_subdir: None,
             },
+            false,
             relative_moniker.clone(),
             None,
             0,
@@ -514,6 +533,7 @@ mod tests {
                 backing_directory_subdir: None,
                 storage_subdir: None,
             },
+            false,
             relative_moniker.clone(),
             None,
             0,
@@ -565,6 +585,7 @@ mod tests {
                 backing_directory_subdir: None,
                 storage_subdir: None,
             },
+            false,
             relative_moniker.clone(),
             instance_id.as_ref(),
             0,
@@ -601,6 +622,7 @@ mod tests {
                 backing_directory_subdir: None,
                 storage_subdir: None,
             },
+            false,
             relative_moniker.clone(),
             instance_id.as_ref(),
             0,
@@ -636,6 +658,7 @@ mod tests {
                 backing_directory_subdir: None,
                 storage_subdir: None,
             },
+            false,
             relative_moniker.clone(),
             None,
             0,
@@ -689,6 +712,7 @@ mod tests {
                 backing_directory_subdir: None,
                 storage_subdir: None,
             },
+            false,
             child_moniker.clone(),
             None,
             0,
@@ -708,6 +732,7 @@ mod tests {
                 backing_directory_subdir: None,
                 storage_subdir: None,
             },
+            false,
             parent_moniker.clone(),
             None,
             0,
@@ -727,6 +752,7 @@ mod tests {
                 backing_directory_subdir: None,
                 storage_subdir: None,
             },
+            false,
             child_moniker.clone(),
             None,
         )
@@ -741,6 +767,7 @@ mod tests {
                 backing_directory_subdir: None,
                 storage_subdir: None,
             },
+            false,
             parent_moniker.clone(),
             None,
             0,
@@ -764,6 +791,7 @@ mod tests {
                 backing_directory_subdir: None,
                 storage_subdir: None,
             },
+            false,
             child_moniker,
             None,
         )
@@ -815,6 +843,7 @@ mod tests {
                 backing_directory_subdir: None,
                 storage_subdir: None,
             },
+            false,
             child_moniker.clone(),
             instance_id.as_ref(),
             0,
@@ -843,6 +872,7 @@ mod tests {
                 backing_directory_subdir: None,
                 storage_subdir: None,
             },
+            false,
             child_moniker.clone(),
             instance_id.as_ref(),
         )
@@ -862,6 +892,7 @@ mod tests {
                 backing_directory_subdir: None,
                 storage_subdir: None,
             },
+            false,
             child_moniker,
             instance_id.as_ref(),
         )

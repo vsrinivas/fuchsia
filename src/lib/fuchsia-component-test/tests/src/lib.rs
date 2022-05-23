@@ -679,6 +679,7 @@ async fn mock_component_with_a_relative_dynamic_child() -> Result<(), Error> {
         environment: None,
         allowed_offers: cm_types::AllowedOffers::StaticOnly,
         allow_long_names: false,
+        persistent_storage: None,
     });
     echo_client_decl.capabilities.push(cm_rust::CapabilityDecl::Protocol(cm_rust::ProtocolDecl {
         name: "fidl.examples.routing.echo.Echo".into(),

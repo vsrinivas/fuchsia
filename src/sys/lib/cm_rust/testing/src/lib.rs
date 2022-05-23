@@ -235,6 +235,7 @@ impl CollectionDeclBuilder {
             environment: None,
             allowed_offers: cm_types::AllowedOffers::StaticOnly,
             allow_long_names: false,
+            persistent_storage: None,
         })
     }
 
@@ -277,6 +278,12 @@ impl CollectionDeclBuilder {
     // limit.
     pub fn allow_long_names(mut self, allow_long_names: bool) -> Self {
         self.0.allow_long_names = allow_long_names;
+        self
+    }
+
+    // Sets the flag to persist isolated storage data of the collection and its descendents.
+    pub fn persistent_storage(mut self, persistent_storage: bool) -> Self {
+        self.0.persistent_storage = Some(persistent_storage);
         self
     }
 

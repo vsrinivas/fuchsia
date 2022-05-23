@@ -32,6 +32,20 @@ type Collection = table {
     /// Only components using the `allow_long_names` restricted feature may set
     /// this field.
     5: allow_long_names bool;
+
+    /// Whether the data in isolated storage used by dynamic child instances and
+    /// their descendants will persist after the instances are destroyed. New
+    /// dynamic instances inherit the previous instances' data stores.
+    ///
+    /// This setting can be overridden by a lower-level collection that is a
+    /// descendant of a collection that enables/disables this setting.
+    ///
+    /// This setting applies to all storage capabilities consumed by the
+    /// collection components and their descendants.
+    ///
+    /// The default is the value inherited from an ancestral collection if set,
+    /// otherwise `false`.
+    6: persistent_storage bool;
 };
 
 /// The durability of component instances created in a collection.

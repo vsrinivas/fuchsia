@@ -840,6 +840,8 @@ pub struct CollectionDecl {
     pub allowed_offers: cm_types::AllowedOffers,
     #[fidl_decl(default)]
     pub allow_long_names: bool,
+
+    pub persistent_storage: Option<bool>,
 }
 
 #[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
@@ -2463,6 +2465,7 @@ mod tests {
                          environment: None,
                          allowed_offers: Some(fdecl::AllowedOffers::StaticOnly),
                          allow_long_names: Some(true),
+                         persistent_storage: None,
                          ..fdecl::Collection::EMPTY
                      },
                      fdecl::Collection {
@@ -2471,6 +2474,7 @@ mod tests {
                          environment: Some("test_env".to_string()),
                          allowed_offers: Some(fdecl::AllowedOffers::StaticAndDynamic),
                          allow_long_names: Some(true),
+                         persistent_storage: Some(true),
                          ..fdecl::Collection::EMPTY
                      },
                 ]),
@@ -2798,6 +2802,7 @@ mod tests {
                             environment: None,
                             allowed_offers: cm_types::AllowedOffers::StaticOnly,
                             allow_long_names: true,
+                            persistent_storage: None,
                         },
                         CollectionDecl {
                             name: "tests".to_string(),
@@ -2805,6 +2810,7 @@ mod tests {
                             environment: Some("test_env".to_string()),
                             allowed_offers: cm_types::AllowedOffers::StaticAndDynamic,
                             allow_long_names: true,
+                            persistent_storage: Some(true),
                         },
                     ],
                     facets: Some(fdata::Dictionary {
@@ -3059,6 +3065,7 @@ mod tests {
                          environment: None,
                          allowed_offers: None,
                          allow_long_names: None,
+                         persistent_storage: None,
                          ..fdecl::Collection::EMPTY
                      },
                      fdecl::Collection {
@@ -3067,6 +3074,7 @@ mod tests {
                          environment: Some("test_env".to_string()),
                          allowed_offers: Some(fdecl::AllowedOffers::StaticOnly),
                          allow_long_names: None,
+                         persistent_storage: Some(false),
                          ..fdecl::Collection::EMPTY
                      },
                      fdecl::Collection {
@@ -3074,6 +3082,7 @@ mod tests {
                          durability: Some(fdecl::Durability::Transient),
                          allowed_offers: Some(fdecl::AllowedOffers::StaticAndDynamic),
                          allow_long_names: None,
+                         persistent_storage: Some(true),
                          ..fdecl::Collection::EMPTY
                      },
                  fdecl::Collection {
@@ -3081,6 +3090,7 @@ mod tests {
                          durability: Some(fdecl::Durability::Transient),
                          allowed_offers: None,
                          allow_long_names: Some(true),
+                         persistent_storage: None,
                          ..fdecl::Collection::EMPTY
                      },
                 ]),
@@ -3112,6 +3122,7 @@ mod tests {
                             environment: None,
                             allowed_offers: cm_types::AllowedOffers::StaticOnly,
                             allow_long_names: false,
+                            persistent_storage: None,
                         },
                         CollectionDecl {
                             name: "tests".to_string(),
@@ -3119,6 +3130,7 @@ mod tests {
                             environment: Some("test_env".to_string()),
                             allowed_offers: cm_types::AllowedOffers::StaticOnly,
                             allow_long_names: false,
+                            persistent_storage: Some(false),
                         },
                         CollectionDecl {
                             name: "dyn_offers".to_string(),
@@ -3126,6 +3138,7 @@ mod tests {
                             environment: None,
                             allowed_offers: cm_types::AllowedOffers::StaticAndDynamic,
                             allow_long_names: false,
+                            persistent_storage: Some(true),
                         },
                         CollectionDecl {
                             name: "long_child_names".to_string(),
@@ -3133,6 +3146,7 @@ mod tests {
                             environment: None,
                             allowed_offers: cm_types::AllowedOffers::StaticOnly,
                             allow_long_names: true,
+                            persistent_storage: None,
                         },
                     ],
                     facets: Some(fdata::Dictionary{

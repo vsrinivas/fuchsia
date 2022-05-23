@@ -29,7 +29,7 @@
 /// Display notation: ".", "./down1", ".\up1/down1", ".\up1\up2/down1", ...
 use {
     crate::instanced_child_moniker::InstancedChildMoniker,
-    moniker::{ChildMoniker, MonikerError, RelativeMoniker, RelativeMonikerBase},
+    moniker::{ChildMoniker, ChildMonikerBase, MonikerError, RelativeMoniker, RelativeMonikerBase},
     std::{convert::TryFrom, fmt},
 };
 
@@ -44,10 +44,38 @@ impl InstancedRelativeMoniker {
     /// from this instanced moniker
     pub fn without_instance_ids(&self) -> RelativeMoniker {
         let up_path: Vec<ChildMoniker> =
-            self.up_path().iter().map(|p| p.without_instance_id()).collect();
+            self.up_path().iter().map(|c| c.without_instance_id()).collect();
         let down_path: Vec<ChildMoniker> =
-            self.down_path().iter().map(|p| p.without_instance_id()).collect();
+            self.down_path().iter().map(|c| c.without_instance_id()).collect();
         RelativeMoniker::new(up_path, down_path)
+    }
+
+    /// Transforms an `InstancedRelativeMoniker` into a representation where all dynamic children
+    /// have `0` value instance ids.
+    pub fn with_zero_value_instance_ids(&self) -> InstancedRelativeMoniker {
+        let up_path = self
+            .up_path()
+            .iter()
+            .map(|c| {
+                InstancedChildMoniker::new(
+                    c.name().to_string(),
+                    c.collection().map(|coll| coll.to_string()),
+                    0,
+                )
+            })
+            .collect();
+        let down_path = self
+            .down_path()
+            .iter()
+            .map(|c| {
+                InstancedChildMoniker::new(
+                    c.name().to_string(),
+                    c.collection().map(|coll| coll.to_string()),
+                    0,
+                )
+            })
+            .collect();
+        InstancedRelativeMoniker::new(up_path, down_path)
     }
 }
 

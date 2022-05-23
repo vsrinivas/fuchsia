@@ -30,6 +30,7 @@ table/member fuchsia.component.decl/Collection.allowed_offers fuchsia.component.
 table/member fuchsia.component.decl/Collection.durability fuchsia.component.decl/Durability
 table/member fuchsia.component.decl/Collection.environment string:100
 table/member fuchsia.component.decl/Collection.name string:100
+table/member fuchsia.component.decl/Collection.persistent_storage bool
 table fuchsia.component.decl/Collection
 struct/member fuchsia.component.decl/CollectionRef.name string:100
 struct fuchsia.component.decl/CollectionRef

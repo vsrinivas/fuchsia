@@ -621,7 +621,7 @@ impl RoutingTest {
         moniker: &AbsoluteMoniker,
         reason: StartReason,
         wait_for_start: bool,
-    ) -> Result<Arc<ComponentInstance>, ModelError> {
+    ) -> Result<(Arc<ComponentInstance>, String), ModelError> {
         let instance = self.model.start_instance(moniker, &reason).await?;
         let component_name = match moniker.path().last() {
             Some(part) => part.name().to_string(),
@@ -632,7 +632,7 @@ impl RoutingTest {
             self.mock_runner.wait_for_url(&resolved_url).await;
         }
 
-        Ok(instance)
+        Ok((instance, component_name))
     }
 
     /// Wait for the given component to start running.
@@ -677,8 +677,8 @@ impl RoutingTestModel for RoutingTest {
     type C = ComponentInstance;
 
     async fn check_use(&self, moniker: AbsoluteMoniker, check: CheckUse) {
-        let component_name = self
-            .start_instance_and_wait_start(&moniker)
+        let (component, component_name) = self
+            .start_and_get_instance(&moniker, StartReason::Eager, true)
             .await
             .expect(&format!("start instance failed for `{}`", moniker));
         let component_resolved_url = Self::resolved_url(&component_name);
@@ -739,6 +739,7 @@ impl RoutingTestModel for RoutingTest {
                         .expect("failed to open /tmp");
                         let res = capability_util::check_file_in_storage(
                             storage_subdir,
+                            component.persistent_storage,
                             relative_moniker,
                             instance_id.as_ref(),
                             &tmp_proxy,
@@ -751,6 +752,7 @@ impl RoutingTestModel for RoutingTest {
                         // Check for the file in the test's isolated test directory
                         let res = capability_util::check_file_in_storage(
                             storage_subdir,
+                            component.persistent_storage,
                             relative_moniker,
                             instance_id.as_ref(),
                             &self.test_dir_proxy,
@@ -822,6 +824,7 @@ impl RoutingTestModel for RoutingTest {
                     };
                     capability_util::check_file_in_storage(
                         storage_subdir.clone(),
+                        component.persistent_storage,
                         storage_relation.clone(),
                         component_instance_id.as_ref(),
                         &storage_dir,
@@ -835,6 +838,7 @@ impl RoutingTestModel for RoutingTest {
                         .expect("error encountered while deleting component storage");
                     capability_util::confirm_storage_is_deleted_for_component(
                         storage_subdir,
+                        component.persistent_storage,
                         storage_relation,
                         component_instance_id.as_ref(),
                         &storage_dir,
@@ -1093,10 +1097,13 @@ pub mod capability_util {
 
     pub async fn check_file_in_storage(
         storage_subdir: Option<String>,
+        persistent_storage: bool,
         relation: InstancedRelativeMoniker,
         instance_id: Option<&ComponentInstanceId>,
         test_dir_proxy: &fio::DirectoryProxy,
     ) -> Result<(), anyhow::Error> {
+        let relation =
+            if persistent_storage { relation.with_zero_value_instance_ids() } else { relation };
         let mut dir_path = generate_storage_path(storage_subdir, &relation, instance_id);
         dir_path.push("hippos");
         let file_proxy =
@@ -1113,10 +1120,13 @@ pub mod capability_util {
 
     pub async fn confirm_storage_is_deleted_for_component(
         storage_subdir: Option<String>,
+        persistent_storage: bool,
         relation: InstancedRelativeMoniker,
         instance_id: Option<&ComponentInstanceId>,
         test_dir_proxy: &fio::DirectoryProxy,
     ) {
+        let relation =
+            if persistent_storage { relation.with_zero_value_instance_ids() } else { relation };
         let dir_path = generate_storage_path(storage_subdir, &relation, instance_id);
         let res = io_util::directory::open_directory(
             &test_dir_proxy,

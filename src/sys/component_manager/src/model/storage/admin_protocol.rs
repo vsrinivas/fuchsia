@@ -217,6 +217,7 @@ impl StorageAdmin {
 
                     let dir_proxy = storage::open_isolated_storage(
                         storage_capability_source_info.clone(),
+                        component.persistent_storage,
                         instanced_relative_moniker,
                         instance_id.as_ref(),
                         mode,
@@ -308,6 +309,7 @@ impl StorageAdmin {
                                 .cloned();
                             let res = storage::delete_isolated_storage(
                                 storage_capability_source_info.clone(),
+                                component.persistent_storage,
                                 instanced_relative_moniker,
                                 instance_id.as_ref(),
                             )

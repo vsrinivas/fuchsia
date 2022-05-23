@@ -404,6 +404,7 @@ pub(super) async fn route_and_delete_storage(
 
     storage::delete_isolated_storage(
         storage_source_info,
+        target.persistent_storage,
         relative_moniker,
         target.instance_id().as_ref(),
     )
@@ -457,6 +458,7 @@ async fn open_storage_capability(
         OpenOptions::Storage(OpenStorageOptions { open_mode, server_chan, start_reason }) => {
             let storage_dir_proxy = storage::open_isolated_storage(
                 source,
+                target.persistent_storage,
                 relative_moniker,
                 target.instance_id().as_ref(),
                 open_mode,

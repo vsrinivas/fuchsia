@@ -16,10 +16,14 @@ use {
     cm_rust::*,
     cm_rust_testing::*,
     component_id_index::gen_instance_id,
-    fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_io as fio, fuchsia_zircon as zx,
+    fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
+    fuchsia_zircon as zx,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase, RelativeMonikerBase},
     routing::{error::RoutingError, RouteRequest},
-    std::{convert::TryInto, path::PathBuf},
+    std::{
+        convert::TryInto,
+        path::{Path, PathBuf},
+    },
 };
 
 #[fuchsia::test]
@@ -625,7 +629,7 @@ async fn use_restricted_storage_open_failure() {
         .await;
 
     let parent_consumer_moniker = AbsoluteMoniker::parse_str("/parent_consumer").unwrap();
-    let parent_consumer_instance = test
+    let (parent_consumer_instance, _) = test
         .start_and_get_instance(&parent_consumer_moniker, StartReason::Eager, false)
         .await
         .expect("could not resolve state");
@@ -649,7 +653,7 @@ async fn use_restricted_storage_open_failure() {
     .expect("Unable to route.  oh no!!");
 
     // now modify StorageDecl so that it restricts storage
-    let provider_instance = test
+    let (provider_instance, _) = test
         .start_and_get_instance(&AbsoluteMoniker::root(), StartReason::Eager, false)
         .await
         .expect("could not resolve state");
@@ -685,4 +689,868 @@ async fn use_restricted_storage_open_failure() {
         result,
         Err(ModelError::RoutingError { err: RoutingError::ComponentNotInIdIndex { moniker: _ } })
     ));
+}
+
+///   a
+///   |
+///   b
+///   |
+///  coll-persistent_storage: "true"
+///   |
+/// [c:1]
+///
+/// Test that storage data persists after destroy for a collection with a moniker-based storage
+/// path. The persistent storage data can be deleted through a
+/// StorageAdminRequest::DeleteComponentStorage request.
+/// The following storage paths are used:
+///  - moniker path with instance ids cleared
+#[fuchsia::test]
+async fn storage_persistence_relative_moniker_path() {
+    let components = vec![
+        (
+            "a",
+            ComponentDeclBuilder::new()
+                .directory(
+                    DirectoryDeclBuilder::new("minfs")
+                        .path("/data")
+                        .rights(*routing::rights::READ_RIGHTS | *routing::rights::WRITE_RIGHTS)
+                        .build(),
+                )
+                .storage(StorageDecl {
+                    name: "data".into(),
+                    backing_dir: "minfs".try_into().unwrap(),
+                    source: StorageDirectorySource::Self_,
+                    subdir: None,
+                    storage_id: fdecl::StorageId::StaticInstanceIdOrMoniker,
+                })
+                .offer(OfferDecl::Storage(OfferStorageDecl {
+                    source: OfferSource::Self_,
+                    target: OfferTarget::static_child("b".to_string()),
+                    source_name: "data".into(),
+                    target_name: "data".into(),
+                }))
+                .offer(OfferDecl::Protocol(OfferProtocolDecl {
+                    source: OfferSource::Capability("data".into()),
+                    source_name: "fuchsia.sys2.StorageAdmin".try_into().unwrap(),
+                    target_name: "fuchsia.sys2.StorageAdmin".try_into().unwrap(),
+                    target: OfferTarget::static_child("b".to_string()),
+                    dependency_type: DependencyType::Strong,
+                }))
+                .add_lazy_child("b")
+                .build(),
+        ),
+        (
+            "b",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source: UseSource::Framework,
+                    source_name: "fuchsia.component.Realm".try_into().unwrap(),
+                    target_path: "/svc/fuchsia.component.Realm".try_into().unwrap(),
+                    dependency_type: DependencyType::Strong,
+                }))
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source: UseSource::Parent,
+                    source_name: "fuchsia.sys2.StorageAdmin".try_into().unwrap(),
+                    target_path: "/svc/fuchsia.sys2.StorageAdmin".try_into().unwrap(),
+                    dependency_type: DependencyType::Strong,
+                }))
+                .use_(UseDecl::Storage(UseStorageDecl {
+                    source_name: "data".into(),
+                    target_path: "/data".try_into().unwrap(),
+                }))
+                .offer(OfferDecl::Storage(OfferStorageDecl {
+                    source: OfferSource::Parent,
+                    target: OfferTarget::Collection("persistent_coll".to_string()),
+                    source_name: "data".into(),
+                    target_name: "data".into(),
+                }))
+                .add_collection(
+                    CollectionDeclBuilder::new_transient_collection("persistent_coll")
+                        .persistent_storage(true),
+                )
+                .build(),
+        ),
+        (
+            "c",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Storage(UseStorageDecl {
+                    source_name: "data".into(),
+                    target_path: "/data".try_into().unwrap(),
+                }))
+                .build(),
+        ),
+    ];
+
+    let test = RoutingTestBuilder::new("a", components).build().await;
+
+    // create [c:1] under the storage persistent collection
+    test.create_dynamic_child(
+        vec!["b"].into(),
+        "persistent_coll",
+        ChildDecl {
+            name: "c".into(),
+            url: "test:///c".to_string(),
+            startup: fdecl::StartupMode::Lazy,
+            environment: None,
+            on_terminate: None,
+        },
+    )
+    .await;
+
+    // write to [c:1] storage
+    test.create_static_file(&Path::new("b:0/children/persistent_coll:c:0/data/c1"), "hippos")
+        .await
+        .unwrap();
+
+    // destroy [c:1]
+    test.destroy_dynamic_child(vec!["b"].into(), "persistent_coll", "c").await;
+
+    // expect the [c:1] storage and data to persist
+    test.check_test_subdir_contents(
+        "b:0/children/persistent_coll:c:0/data",
+        vec!["c1".to_string()],
+    )
+    .await;
+
+    // recreate dynamic child [c:2]
+    test.create_dynamic_child(
+        vec!["b"].into(),
+        "persistent_coll",
+        ChildDecl {
+            name: "c".into(),
+            url: "test:///c".to_string(),
+            startup: fdecl::StartupMode::Lazy,
+            environment: None,
+            on_terminate: None,
+        },
+    )
+    .await;
+
+    // write to [c:2] storage
+    test.create_static_file(&Path::new("b:0/children/persistent_coll:c:0/data/c2"), "sharks")
+        .await
+        .unwrap();
+
+    // destroy [c:2]
+    test.destroy_dynamic_child(vec!["b"].into(), "persistent_coll", "c").await;
+
+    // expect the [c:1] and [c:2] storage and data to persist
+    test.check_test_subdir_contents(
+        "b:0/children/persistent_coll:c:0/data",
+        vec!["c1".to_string(), "c2".to_string()],
+    )
+    .await;
+
+    // check that the file can be destroyed by storage admin
+    let namespace = test.bind_and_get_namespace(vec!["b"].into()).await;
+    let storage_admin_proxy = capability_util::connect_to_svc_in_namespace::<
+        fsys::StorageAdminMarker,
+    >(
+        &namespace, &"/svc/fuchsia.sys2.StorageAdmin".try_into().unwrap()
+    )
+    .await;
+    let _ = storage_admin_proxy
+        // the instance ids in the moniker for the request to destroy persistent storage do not matter
+        .delete_component_storage("./b:0/persistent_coll:c:0")
+        .await
+        .unwrap()
+        .unwrap();
+
+    // expect persistent_coll storage to be destroyed
+    capability_util::confirm_storage_is_deleted_for_component(
+        None,
+        true,
+        InstancedRelativeMoniker::new(vec![], vec!["b:0".into(), "persistent_coll:c:0".into()]),
+        None,
+        &test.test_dir_proxy,
+    )
+    .await;
+}
+
+///   a
+///   |
+///   b
+///   |
+///  coll-persistent_storage: "true" / instance_id
+///   |
+/// [c:1]
+///
+/// Test that storage data persists after destroy for a collection with an instance-id-based
+/// storage path. The persistent storage data can be deleted through a
+/// StorageAdminRequest::DeleteComponentStorage request.
+/// The following storage paths are used:
+///   - indexed path
+#[fuchsia::test]
+async fn storage_persistence_instance_id_path() {
+    let components = vec![
+        (
+            "a",
+            ComponentDeclBuilder::new()
+                .directory(
+                    DirectoryDeclBuilder::new("minfs")
+                        .path("/data")
+                        .rights(*routing::rights::READ_RIGHTS | *routing::rights::WRITE_RIGHTS)
+                        .build(),
+                )
+                .storage(StorageDecl {
+                    name: "data".into(),
+                    backing_dir: "minfs".try_into().unwrap(),
+                    source: StorageDirectorySource::Self_,
+                    subdir: None,
+                    storage_id: fdecl::StorageId::StaticInstanceIdOrMoniker,
+                })
+                .offer(OfferDecl::Storage(OfferStorageDecl {
+                    source: OfferSource::Self_,
+                    target: OfferTarget::static_child("b".to_string()),
+                    source_name: "data".into(),
+                    target_name: "data".into(),
+                }))
+                .offer(OfferDecl::Protocol(OfferProtocolDecl {
+                    source: OfferSource::Capability("data".into()),
+                    source_name: "fuchsia.sys2.StorageAdmin".try_into().unwrap(),
+                    target_name: "fuchsia.sys2.StorageAdmin".try_into().unwrap(),
+                    target: OfferTarget::static_child("b".to_string()),
+                    dependency_type: DependencyType::Strong,
+                }))
+                .add_lazy_child("b")
+                .build(),
+        ),
+        (
+            "b",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source: UseSource::Framework,
+                    source_name: "fuchsia.component.Realm".try_into().unwrap(),
+                    target_path: "/svc/fuchsia.component.Realm".try_into().unwrap(),
+                    dependency_type: DependencyType::Strong,
+                }))
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source: UseSource::Parent,
+                    source_name: "fuchsia.sys2.StorageAdmin".try_into().unwrap(),
+                    target_path: "/svc/fuchsia.sys2.StorageAdmin".try_into().unwrap(),
+                    dependency_type: DependencyType::Strong,
+                }))
+                .use_(UseDecl::Storage(UseStorageDecl {
+                    source_name: "data".into(),
+                    target_path: "/data".try_into().unwrap(),
+                }))
+                .offer(OfferDecl::Storage(OfferStorageDecl {
+                    source: OfferSource::Parent,
+                    target: OfferTarget::Collection("persistent_coll".to_string()),
+                    source_name: "data".into(),
+                    target_name: "data".into(),
+                }))
+                .add_collection(
+                    CollectionDeclBuilder::new_transient_collection("persistent_coll")
+                        .persistent_storage(true),
+                )
+                .build(),
+        ),
+        (
+            "c",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Storage(UseStorageDecl {
+                    source_name: "data".into(),
+                    target_path: "/data".try_into().unwrap(),
+                }))
+                .build(),
+        ),
+    ];
+
+    // set instance_id for "b/persistent_coll:c" components
+    let instance_id = gen_instance_id(&mut rand::thread_rng());
+    let component_id_index_path = make_index_file(component_id_index::Index {
+        instances: vec![component_id_index::InstanceIdEntry {
+            instance_id: Some(instance_id.clone()),
+            appmgr_moniker: None,
+            moniker: Some(vec!["b".into(), "persistent_coll:c".into()].into()),
+        }],
+        ..component_id_index::Index::default()
+    })
+    .unwrap();
+
+    let test = RoutingTestBuilder::new("a", components)
+        .set_component_id_index_path(component_id_index_path.path().to_str().unwrap().to_string())
+        .build()
+        .await;
+
+    // create [c:1] under the storage persistent collection
+    test.create_dynamic_child(
+        vec!["b"].into(),
+        "persistent_coll",
+        ChildDecl {
+            name: "c".into(),
+            url: "test:///c".to_string(),
+            startup: fdecl::StartupMode::Lazy,
+            environment: None,
+            on_terminate: None,
+        },
+    )
+    .await;
+
+    // write to [c:1] storage
+    test.create_static_file(&Path::new(&format!("{}/c1", instance_id)), "hippos").await.unwrap();
+
+    // destroy [c:1]
+    test.destroy_dynamic_child(vec!["b"].into(), "persistent_coll", "c").await;
+
+    // expect the [c:1] storage and data to persist
+    test.check_test_subdir_contents(&instance_id, vec!["c1".to_string()]).await;
+
+    // recreate dynamic child [c:2]
+    test.create_dynamic_child(
+        vec!["b"].into(),
+        "persistent_coll",
+        ChildDecl {
+            name: "c".into(),
+            url: "test:///c".to_string(),
+            startup: fdecl::StartupMode::Lazy,
+            environment: None,
+            on_terminate: None,
+        },
+    )
+    .await;
+
+    // write to [c:2] storage
+    test.create_static_file(&Path::new(&format!("{}/c2", instance_id)), "sharks").await.unwrap();
+
+    // destroy [c:2]
+    test.destroy_dynamic_child(vec!["b"].into(), "persistent_coll", "c").await;
+
+    // expect the [c:1] and [c:2] storage and data to persist
+    test.check_test_subdir_contents(&instance_id, vec!["c1".to_string(), "c2".to_string()]).await;
+
+    // destroy the persistent storage with a storage admin request
+    let namespace = test.bind_and_get_namespace(vec!["b"].into()).await;
+    let storage_admin_proxy = capability_util::connect_to_svc_in_namespace::<
+        fsys::StorageAdminMarker,
+    >(
+        &namespace, &"/svc/fuchsia.sys2.StorageAdmin".try_into().unwrap()
+    )
+    .await;
+    let _ =
+        storage_admin_proxy.delete_component_storage("./b:0/persistent_coll:c:0").await.unwrap();
+
+    // expect persistent_coll storage to be destroyed
+    capability_util::confirm_storage_is_deleted_for_component(
+        None,
+        true,
+        InstancedRelativeMoniker::new(vec![], vec!["b:0".into(), "persistent_coll:c:0".into()]),
+        Some(&instance_id),
+        &test.test_dir_proxy,
+    )
+    .await;
+}
+
+///   a
+///   |
+///   b
+///   |
+///  coll-persistent_storage: "true" / instance_id
+///   |
+/// [c:1]
+///  / \
+/// d  [coll]
+///      |
+///     [e:1]
+///
+/// Test that storage persistence behavior is inherited by descendents with a different storage
+/// path.
+/// The following storage paths are used:
+///   - indexed path
+///   - moniker path with instance ids cleared
+#[fuchsia::test]
+async fn storage_persistence_inheritance() {
+    let components = vec![
+        (
+            "a",
+            ComponentDeclBuilder::new()
+                .directory(
+                    DirectoryDeclBuilder::new("minfs")
+                        .path("/data")
+                        .rights(*routing::rights::READ_RIGHTS | *routing::rights::WRITE_RIGHTS)
+                        .build(),
+                )
+                .storage(StorageDecl {
+                    name: "data".into(),
+                    backing_dir: "minfs".try_into().unwrap(),
+                    source: StorageDirectorySource::Self_,
+                    subdir: None,
+                    storage_id: fdecl::StorageId::StaticInstanceIdOrMoniker,
+                })
+                .offer(OfferDecl::Storage(OfferStorageDecl {
+                    source: OfferSource::Self_,
+                    target: OfferTarget::static_child("b".to_string()),
+                    source_name: "data".into(),
+                    target_name: "data".into(),
+                }))
+                .add_lazy_child("b")
+                .build(),
+        ),
+        (
+            "b",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source: UseSource::Framework,
+                    source_name: "fuchsia.component.Realm".try_into().unwrap(),
+                    target_path: "/svc/fuchsia.component.Realm".try_into().unwrap(),
+                    dependency_type: DependencyType::Strong,
+                }))
+                .use_(UseDecl::Storage(UseStorageDecl {
+                    source_name: "data".into(),
+                    target_path: "/data".try_into().unwrap(),
+                }))
+                .offer(OfferDecl::Storage(OfferStorageDecl {
+                    source: OfferSource::Parent,
+                    target: OfferTarget::Collection("persistent_coll".to_string()),
+                    source_name: "data".into(),
+                    target_name: "data".into(),
+                }))
+                .add_collection(
+                    CollectionDeclBuilder::new_transient_collection("persistent_coll")
+                        .persistent_storage(true),
+                )
+                .build(),
+        ),
+        (
+            "c",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source: UseSource::Framework,
+                    source_name: "fuchsia.component.Realm".try_into().unwrap(),
+                    target_path: "/svc/fuchsia.component.Realm".try_into().unwrap(),
+                    dependency_type: DependencyType::Strong,
+                }))
+                .use_(UseDecl::Storage(UseStorageDecl {
+                    source_name: "data".into(),
+                    target_path: "/data".try_into().unwrap(),
+                }))
+                .offer(OfferDecl::Storage(OfferStorageDecl {
+                    source: OfferSource::Parent,
+                    target: OfferTarget::static_child("d".to_string()),
+                    source_name: "data".into(),
+                    target_name: "data".into(),
+                }))
+                .offer(OfferDecl::Storage(OfferStorageDecl {
+                    source: OfferSource::Parent,
+                    target: OfferTarget::Collection("lower_coll".to_string()),
+                    source_name: "data".into(),
+                    target_name: "data".into(),
+                }))
+                .add_lazy_child("d")
+                .add_transient_collection("lower_coll")
+                .build(),
+        ),
+        (
+            "d",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Storage(UseStorageDecl {
+                    source_name: "data".into(),
+                    target_path: "/data".try_into().unwrap(),
+                }))
+                .build(),
+        ),
+        (
+            "e",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Storage(UseStorageDecl {
+                    source_name: "data".into(),
+                    target_path: "/data".try_into().unwrap(),
+                }))
+                .build(),
+        ),
+    ];
+
+    // set instance_id for "b/persistent_coll:c" components
+    let instance_id = gen_instance_id(&mut rand::thread_rng());
+    let component_id_index_path = make_index_file(component_id_index::Index {
+        instances: vec![component_id_index::InstanceIdEntry {
+            instance_id: Some(instance_id.clone()),
+            appmgr_moniker: None,
+            moniker: Some(vec!["b".into(), "persistent_coll:c".into()].into()),
+        }],
+        ..component_id_index::Index::default()
+    })
+    .unwrap();
+
+    let test = RoutingTestBuilder::new("a", components)
+        .set_component_id_index_path(component_id_index_path.path().to_str().unwrap().to_string())
+        .build()
+        .await;
+
+    // create [c:1] under the storage persistent collection
+    test.create_dynamic_child(
+        vec!["b"].into(),
+        "persistent_coll",
+        ChildDecl {
+            name: "c".into(),
+            url: "test:///c".to_string(),
+            startup: fdecl::StartupMode::Lazy,
+            environment: None,
+            on_terminate: None,
+        },
+    )
+    .await;
+
+    // write to [c:1] storage
+    test.check_use(
+        vec!["b", "persistent_coll:c"].into(),
+        CheckUse::Storage {
+            path: "/data".try_into().unwrap(),
+            storage_relation: Some(InstancedRelativeMoniker::new(
+                vec![],
+                vec!["b:0".into(), "persistent_coll:c:1".into()],
+            )),
+            from_cm_namespace: false,
+            storage_subdir: None,
+            expected_res: ExpectedResult::Ok,
+        },
+    )
+    .await;
+
+    // start d:0 and write to storage
+    test.check_use(
+        vec!["b", "persistent_coll:c", "d"].into(),
+        CheckUse::Storage {
+            path: "/data".try_into().unwrap(),
+            storage_relation: Some(InstancedRelativeMoniker::new(
+                vec![],
+                vec!["b:0".into(), "persistent_coll:c:1".into(), "d:0".into()],
+            )),
+            from_cm_namespace: false,
+            storage_subdir: None,
+            expected_res: ExpectedResult::Ok,
+        },
+    )
+    .await;
+
+    // create [e:1] under the lower collection
+    test.create_dynamic_child(
+        vec!["b", "persistent_coll:c"].into(),
+        "lower_coll",
+        ChildDecl {
+            name: "e".into(),
+            url: "test:///e".to_string(),
+            startup: fdecl::StartupMode::Lazy,
+            environment: None,
+            on_terminate: None,
+        },
+    )
+    .await;
+
+    // write to [e:1] storage
+    test.check_use(
+        vec!["b", "persistent_coll:c", "lower_coll:e"].into(),
+        CheckUse::Storage {
+            path: "/data".try_into().unwrap(),
+            storage_relation: Some(InstancedRelativeMoniker::new(
+                vec![],
+                vec!["b:0".into(), "persistent_coll:c:1".into(), "lower_coll:e:1".into()],
+            )),
+            from_cm_namespace: false,
+            storage_subdir: None,
+            expected_res: ExpectedResult::Ok,
+        },
+    )
+    .await;
+
+    // test that [c:1] wrote to instance id path
+    test.check_test_subdir_contents(&instance_id, vec!["hippos".to_string()]).await;
+    // test that d:0 wrote to moniker based path with instance ids cleared
+    test.check_test_subdir_contents(
+        "b:0/children/persistent_coll:c:0/children/d:0/data",
+        vec!["hippos".to_string()],
+    )
+    .await;
+    // test that [e:1] wrote to moniker based path with instance ids cleared
+    test.check_test_subdir_contents(
+        "b:0/children/persistent_coll:c:0/children/lower_coll:e:0/data",
+        vec!["hippos".to_string()],
+    )
+    .await;
+
+    // destroy [c:1], which will also shutdown d:0 and lower_coll:e:1
+    test.destroy_dynamic_child(vec!["b"].into(), "persistent_coll", "c").await;
+
+    // expect [c:1], d:0, and [e:1] storage and data to persist
+    test.check_test_subdir_contents(&instance_id, vec!["hippos".to_string()]).await;
+    test.check_test_subdir_contents(
+        "b:0/children/persistent_coll:c:0/children/d:0/data",
+        vec!["hippos".to_string()],
+    )
+    .await;
+    test.check_test_subdir_contents(
+        "b:0/children/persistent_coll:c:0/children/lower_coll:e:0/data",
+        vec!["hippos".to_string()],
+    )
+    .await;
+}
+
+///    a
+///    |
+///    b
+///    |
+///   coll-persistent_storage: "true" / instance_id
+///   |
+///  [c:1]
+///   / \
+///  d  coll-persistent_storage: "false"
+///      |
+///     [e:1]
+///
+///  Test that storage persistence can be disabled by a lower-level collection.
+///  The following storage paths are used:
+///   - indexed path
+///   - moniker path with instance ids cleared
+///   - moniker path with instance ids visible
+#[fuchsia::test]
+async fn storage_persistence_disablement() {
+    let components = vec![
+        (
+            "a",
+            ComponentDeclBuilder::new()
+                .directory(
+                    DirectoryDeclBuilder::new("minfs")
+                        .path("/data")
+                        .rights(*routing::rights::READ_RIGHTS | *routing::rights::WRITE_RIGHTS)
+                        .build(),
+                )
+                .storage(StorageDecl {
+                    name: "data".into(),
+                    backing_dir: "minfs".try_into().unwrap(),
+                    source: StorageDirectorySource::Self_,
+                    subdir: None,
+                    storage_id: fdecl::StorageId::StaticInstanceIdOrMoniker,
+                })
+                .offer(OfferDecl::Storage(OfferStorageDecl {
+                    source: OfferSource::Self_,
+                    target: OfferTarget::static_child("b".to_string()),
+                    source_name: "data".into(),
+                    target_name: "data".into(),
+                }))
+                .add_lazy_child("b")
+                .build(),
+        ),
+        (
+            "b",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source: UseSource::Framework,
+                    source_name: "fuchsia.component.Realm".try_into().unwrap(),
+                    target_path: "/svc/fuchsia.component.Realm".try_into().unwrap(),
+                    dependency_type: DependencyType::Strong,
+                }))
+                .use_(UseDecl::Storage(UseStorageDecl {
+                    source_name: "data".into(),
+                    target_path: "/data".try_into().unwrap(),
+                }))
+                .offer(OfferDecl::Storage(OfferStorageDecl {
+                    source: OfferSource::Parent,
+                    target: OfferTarget::Collection("persistent_coll".to_string()),
+                    source_name: "data".into(),
+                    target_name: "data".into(),
+                }))
+                .add_collection(
+                    CollectionDeclBuilder::new_transient_collection("persistent_coll")
+                        .persistent_storage(true),
+                )
+                .build(),
+        ),
+        (
+            "c",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source: UseSource::Framework,
+                    source_name: "fuchsia.component.Realm".try_into().unwrap(),
+                    target_path: "/svc/fuchsia.component.Realm".try_into().unwrap(),
+                    dependency_type: DependencyType::Strong,
+                }))
+                .use_(UseDecl::Storage(UseStorageDecl {
+                    source_name: "data".into(),
+                    target_path: "/data".try_into().unwrap(),
+                }))
+                .offer(OfferDecl::Storage(OfferStorageDecl {
+                    source: OfferSource::Parent,
+                    target: OfferTarget::static_child("d".to_string()),
+                    source_name: "data".into(),
+                    target_name: "data".into(),
+                }))
+                .offer(OfferDecl::Storage(OfferStorageDecl {
+                    source: OfferSource::Parent,
+                    target: OfferTarget::Collection("non_persistent_coll".to_string()),
+                    source_name: "data".into(),
+                    target_name: "data".into(),
+                }))
+                .add_lazy_child("d")
+                .add_collection(
+                    CollectionDeclBuilder::new_transient_collection("non_persistent_coll")
+                        .persistent_storage(false),
+                )
+                .build(),
+        ),
+        (
+            "d",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source: UseSource::Framework,
+                    source_name: "fuchsia.component.Realm".try_into().unwrap(),
+                    target_path: "/svc/fuchsia.component.Realm".try_into().unwrap(),
+                    dependency_type: DependencyType::Strong,
+                }))
+                .use_(UseDecl::Storage(UseStorageDecl {
+                    source_name: "data".into(),
+                    target_path: "/data".try_into().unwrap(),
+                }))
+                .build(),
+        ),
+        (
+            "e",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Storage(UseStorageDecl {
+                    source_name: "data".into(),
+                    target_path: "/data".try_into().unwrap(),
+                }))
+                .build(),
+        ),
+    ];
+
+    // set instance_id for "b/persistent_coll:c" components
+    let instance_id = gen_instance_id(&mut rand::thread_rng());
+    let component_id_index_path = make_index_file(component_id_index::Index {
+        instances: vec![component_id_index::InstanceIdEntry {
+            instance_id: Some(instance_id.clone()),
+            appmgr_moniker: None,
+            moniker: Some(vec!["b".into(), "persistent_coll:c".into()].into()),
+        }],
+        ..component_id_index::Index::default()
+    })
+    .unwrap();
+
+    let test = RoutingTestBuilder::new("a", components)
+        .set_component_id_index_path(component_id_index_path.path().to_str().unwrap().to_string())
+        .build()
+        .await;
+
+    // create [c:1] under the storage persistent collection
+    test.create_dynamic_child(
+        vec!["b"].into(),
+        "persistent_coll",
+        ChildDecl {
+            name: "c".into(),
+            url: "test:///c".to_string(),
+            startup: fdecl::StartupMode::Lazy,
+            environment: None,
+            on_terminate: None,
+        },
+    )
+    .await;
+
+    // write to [c:1] storage
+    test.check_use(
+        vec!["b", "persistent_coll:c"].into(),
+        CheckUse::Storage {
+            path: "/data".try_into().unwrap(),
+            storage_relation: Some(InstancedRelativeMoniker::new(
+                vec![],
+                vec!["b:0".into(), "persistent_coll:c:1".into()],
+            )),
+            from_cm_namespace: false,
+            storage_subdir: None,
+            expected_res: ExpectedResult::Ok,
+        },
+    )
+    .await;
+
+    // start d:0 and write to storage
+    test.check_use(
+        vec!["b", "persistent_coll:c", "d"].into(),
+        CheckUse::Storage {
+            path: "/data".try_into().unwrap(),
+            storage_relation: Some(InstancedRelativeMoniker::new(
+                vec![],
+                vec!["b:0".into(), "persistent_coll:c:1".into(), "d:0".into()],
+            )),
+            from_cm_namespace: false,
+            storage_subdir: None,
+            expected_res: ExpectedResult::Ok,
+        },
+    )
+    .await;
+
+    // create [e:1] under the non persistent collection
+    test.create_dynamic_child(
+        vec!["b", "persistent_coll:c"].into(),
+        "non_persistent_coll",
+        ChildDecl {
+            name: "e".into(),
+            url: "test:///e".to_string(),
+            startup: fdecl::StartupMode::Lazy,
+            environment: None,
+            on_terminate: None,
+        },
+    )
+    .await;
+
+    // write to [e:1] storage
+    test.check_use(
+        vec!["b", "persistent_coll:c", "non_persistent_coll:e"].into(),
+        CheckUse::Storage {
+            path: "/data".try_into().unwrap(),
+            storage_relation: Some(InstancedRelativeMoniker::new(
+                vec![],
+                vec!["b:0".into(), "persistent_coll:c:1".into(), "non_persistent_coll:e:1".into()],
+            )),
+            from_cm_namespace: false,
+            storage_subdir: None,
+            expected_res: ExpectedResult::Ok,
+        },
+    )
+    .await;
+
+    // test that [c:1] wrote to instance id path
+    test.check_test_subdir_contents(&instance_id, vec!["hippos".to_string()]).await;
+    // test that b:0 children includes:
+    // 1. persistent_coll:c:0 used by persistent storage
+    // 2. persistent_coll:c:1 used by non persistent storage
+    test.check_test_subdir_contents(
+        "b:0/children",
+        vec!["persistent_coll:c:0".to_string(), "persistent_coll:c:1".to_string()],
+    )
+    .await;
+    // test that d:0 wrote to moniker based path with instance ids cleared
+    test.check_test_subdir_contents(
+        "b:0/children/persistent_coll:c:0/children/d:0/data",
+        vec!["hippos".to_string()],
+    )
+    .await;
+    // test that [e:1] wrote to moniker based path with all instance ids visible
+    test.check_test_subdir_contents(
+        "b:0/children/persistent_coll:c:1/children/non_persistent_coll:e:1/data",
+        vec!["hippos".to_string()],
+    )
+    .await;
+
+    // destroy [c:1], which will shutdown d:0 and destroy [e:1]
+    test.destroy_dynamic_child(vec!["b"].into(), "persistent_coll", "c").await;
+
+    // expect [c:1], d:0 storage and data to persist
+    test.check_test_subdir_contents(&instance_id, vec!["hippos".to_string()]).await;
+    test.check_test_subdir_contents(
+        "b:0/children/persistent_coll:c:0/children/d:0/data",
+        vec!["hippos".to_string()],
+    )
+    .await;
+
+    // expect non_persistent_coll storage and data to be destroyed (only persistent_coll exists)
+    capability_util::confirm_storage_is_deleted_for_component(
+        None,
+        false,
+        InstancedRelativeMoniker::new(
+            vec![],
+            vec!["b:0".into(), "persistent_coll:c:1".into(), "non_persistent_coll:e:1".into()],
+        ),
+        None,
+        &test.test_dir_proxy,
+    )
+    .await;
 }
