@@ -7,8 +7,9 @@ workflows of building, running, debugging, and updating
 
 Important: This guide is the driver equivalent of the
 [_Get started with the Fuchsia SDK_][get-started-sdk] guide. If you haven't
-already, it's strongly recommended that you complete the _Get started with the
-Fuchsia SDK_ guide first.
+already, it's strongly recommended that you first complete the _Get started
+with the Fuchsia SDK_ guide to become familiar with the comprehensive set of
+Fuchsia SDK-based workflows.
 
 Complete the following sections:
 
