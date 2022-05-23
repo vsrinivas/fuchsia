@@ -12,6 +12,8 @@ source_set("chromium") {
     "h264_vaapi_video_encoder_delegate.h",
     "vaapi_video_encoder_delegate.cc",
     "vaapi_video_encoder_delegate.h",
+    "vaapi_wrapper.cc",
+    "vaapi_wrapper.h",
   ]
   public_deps = [
     "../..:vaapi_utils",

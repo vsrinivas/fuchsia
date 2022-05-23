@@ -28,6 +28,7 @@ executable("vaapi_tests") {
   testonly = true
 
   sources = [
+    "h264_encoder_test.cc",
     "h264_vaapi_test.cc",
     "vp9_vaapi_test.cc",
   ]

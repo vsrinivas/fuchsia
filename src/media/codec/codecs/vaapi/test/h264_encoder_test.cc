@@ -1,4 +1,4 @@
-// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -12,20 +12,12 @@
 
 #include "src/lib/files/file.h"
 #include "src/media/codec/codecs/test/test_codec_packets.h"
-#include "src/media/codec/codecs/vaapi/codec_adapter_vaapi_decoder.h"
+#include "src/media/codec/codecs/vaapi/codec_adapter_vaapi_encoder.h"
 #include "src/media/codec/codecs/vaapi/codec_runner_app.h"
 #include "src/media/codec/codecs/vaapi/vaapi_utils.h"
 #include "vaapi_stubs.h"
 
-static int global_display_ptr;
-
-VADisplay vaGetDisplayMagma(magma_device_t device) { return &global_display_ptr; }
-
 namespace {
-
-constexpr uint32_t kBearVideoWidth = 320u;
-constexpr uint32_t kBearVideoHeight = 192u;
-constexpr uint32_t kBearUncompressedFrameBytes = kBearVideoWidth * kBearVideoHeight * 3 / 2;
 
 class FakeCodecAdapterEvents : public CodecAdapterEvents {
  public:
@@ -51,21 +43,22 @@ class FakeCodecAdapterEvents : public CodecAdapterEvents {
   void onCoreCodecResetStreamAfterCurrentFrame() override {}
 
   void onCoreCodecMidStreamOutputConstraintsChange(bool output_re_config_required) override {
-    {
-      std::lock_guard lock(lock_);
-      // Test a representative value.
-      output_constraints_ = codec_adapter_->CoreCodecGetBufferCollectionConstraints(
-          CodecPort::kOutputPort, fuchsia::media::StreamBufferConstraints(),
-          fuchsia::media::StreamBufferPartialSettings());
-      EXPECT_TRUE(output_constraints_.buffer_memory_constraints.cpu_domain_supported);
-      EXPECT_EQ(kBearVideoWidth,
-                output_constraints_.image_format_constraints[0].required_min_coded_width);
-      output_constraints_set_ = true;
-      cond_.notify_all();
-    }
-    if (reconfigure_in_constraints_change_) {
-      ReconfigureBuffers();
-    }
+    // Test a representative value.
+    auto output_constraints = codec_adapter_->CoreCodecGetBufferCollectionConstraints(
+        CodecPort::kOutputPort, fuchsia::media::StreamBufferConstraints(),
+        fuchsia::media::StreamBufferPartialSettings());
+    EXPECT_TRUE(output_constraints.buffer_memory_constraints.cpu_domain_supported);
+
+    std::unique_lock<std::mutex> lock(lock_);
+    // Wait for buffer initialization to complete to ensure all buffers are staged to be loaded.
+    cond_.wait(lock, [&]() { return buffer_initialization_completed_; });
+
+    // Fake out the client setting buffer constraints on sysmem
+    fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
+    buffer_collection.settings.image_format_constraints =
+        output_constraints.image_format_constraints.at(0);
+    codec_adapter_->CoreCodecSetBufferCollectionInfo(CodecPort::kOutputPort, buffer_collection);
+    codec_adapter_->CoreCodecMidStreamOutputBufferReConfigFinish();
   }
 
   void onCoreCodecOutputFormatChange() override {}
@@ -80,9 +73,7 @@ class FakeCodecAdapterEvents : public CodecAdapterEvents {
                                bool error_detected_during) override {
     auto output_format = codec_adapter_->CoreCodecGetOutputFormat(1u, 1u);
     // Test a representative value.
-    EXPECT_EQ(
-        kBearVideoWidth,
-        output_format.format_details().domain().video().uncompressed().image_format.coded_width);
+    EXPECT_TRUE(output_format.format_details().domain().video().is_compressed());
 
     std::lock_guard lock(lock_);
     output_packets_done_.push_back(packet);
@@ -132,29 +123,6 @@ class FakeCodecAdapterEvents : public CodecAdapterEvents {
     codec_adapter_->CoreCodecRecycleOutputPacket(packet);
   }
 
-  void ReconfigureBuffers() {
-    std::unique_lock<std::mutex> lock(lock_);
-    EXPECT_TRUE(output_constraints_set_);
-    // Wait for buffer initialization to complete to ensure all buffers are staged to be loaded.
-    cond_.wait(lock, [&]() { return buffer_initialization_completed_; });
-
-    // Fake out the client setting buffer constraints on sysmem
-    fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
-    buffer_collection.settings.image_format_constraints =
-        output_constraints_.image_format_constraints.at(0);
-    codec_adapter_->CoreCodecSetBufferCollectionInfo(CodecPort::kOutputPort, buffer_collection);
-    codec_adapter_->CoreCodecMidStreamOutputBufferReConfigFinish();
-  }
-
-  void set_reconfigure_in_constraints_change(bool reconfig) {
-    reconfigure_in_constraints_change_ = reconfig;
-  }
-
-  void WaitForOutputConstraintsSet() {
-    std::unique_lock<std::mutex> lock(lock_);
-    cond_.wait(lock, [&]() { return output_constraints_set_; });
-  }
-
  private:
   CodecAdapter *codec_adapter_ = nullptr;
   uint64_t fail_codec_count_{};
@@ -166,25 +134,22 @@ class FakeCodecAdapterEvents : public CodecAdapterEvents {
   std::vector<CodecPacket *> input_packets_done_;
   std::vector<CodecPacket *> output_packets_done_;
   bool buffer_initialization_completed_ = false;
-  bool reconfigure_in_constraints_change_ = true;
-  fuchsia::sysmem::BufferCollectionConstraints output_constraints_;
-  bool output_constraints_set_ = false;
 };
 
-class H264VaapiTestFixture : public ::testing::Test {
+class H264EncoderTestFixture : public ::testing::Test {
  protected:
-  H264VaapiTestFixture() = default;
-  ~H264VaapiTestFixture() override { decoder_.reset(); }
+  H264EncoderTestFixture() = default;
+  ~H264EncoderTestFixture() override { encoder_.reset(); }
 
   void SetUp() override {
     EXPECT_TRUE(VADisplayWrapper::InitializeSingletonForTesting());
 
     vaDefaultStubSetReturn();
 
-    // Have to defer the construction of decoder_ until
+    // Have to defer the construction of encoder_ until
     // VADisplayWrapper::InitializeSingletonForTesting is called
-    decoder_ = std::make_unique<CodecAdapterVaApiDecoder>(lock_, &events_);
-    events_.set_codec_adapter(decoder_.get());
+    encoder_ = std::make_unique<CodecAdapterVaApiEncoder>(lock_, &events_);
+    events_.set_codec_adapter(encoder_.get());
   }
 
   void TearDown() override { vaDefaultStubSetReturn(); }
@@ -193,34 +158,27 @@ class H264VaapiTestFixture : public ::testing::Test {
     fuchsia::media::FormatDetails format_details;
     format_details.set_format_details_version_ordinal(1);
     format_details.set_mime_type("video/h264");
-    decoder_->CoreCodecInit(format_details);
 
-    auto input_constraints = decoder_->CoreCodecGetBufferCollectionConstraints(
+    fuchsia::media::DomainFormat domain_format;
+    domain_format.video().uncompressed().image_format.display_width = 10;
+    domain_format.video().uncompressed().image_format.display_height = 10;
+    domain_format.video().uncompressed().image_format.coded_width = 10;
+    domain_format.video().uncompressed().image_format.coded_height = 10;
+    format_details.set_domain(std::move(domain_format));
+    encoder_->CoreCodecInit(format_details);
+
+    auto input_constraints = encoder_->CoreCodecGetBufferCollectionConstraints(
         CodecPort::kInputPort, fuchsia::media::StreamBufferConstraints(),
         fuchsia::media::StreamBufferPartialSettings());
     EXPECT_TRUE(input_constraints.buffer_memory_constraints.cpu_domain_supported);
 
-    decoder_->CoreCodecStartStream();
-    decoder_->CoreCodecQueueInputFormatDetails(format_details);
+    encoder_->CoreCodecStartStream();
+    encoder_->CoreCodecQueueInputFormatDetails(format_details);
   }
 
   void CodecStreamStop() {
-    decoder_->CoreCodecStopStream();
-    decoder_->CoreCodecEnsureBuffersNotConfigured(CodecPort::kOutputPort);
-  }
-
-  void ParseFileIntoInputPackets(const std::string &file_name) {
-    std::vector<uint8_t> result;
-    ASSERT_TRUE(files::ReadFileToVector(file_name, &result));
-
-    input_buffer_ = std::make_unique<CodecBufferForTest>(result.size(), 0, false);
-    std::memcpy(input_buffer_->base(), result.data(), result.size());
-
-    input_packet_ = std::make_unique<CodecPacketForTest>(0);
-    input_packet_->SetStartOffset(0);
-    input_packet_->SetValidLengthBytes(static_cast<uint32_t>(result.size()));
-    input_packet_->SetBuffer(input_buffer_.get());
-    decoder_->CoreCodecQueueInputPacket(input_packet_.get());
+    encoder_->CoreCodecStopStream();
+    encoder_->CoreCodecEnsureBuffersNotConfigured(CodecPort::kOutputPort);
   }
 
   void ConfigureOutputBuffers(uint32_t output_packet_count, size_t output_packet_size) {
@@ -231,59 +189,96 @@ class H264VaapiTestFixture : public ::testing::Test {
     for (size_t i = 0; i < output_packet_count; i++) {
       auto &packet = test_packets.packets[i];
       test_packets_[i] = std::move(packet);
-      decoder_->CoreCodecAddBuffer(CodecPort::kOutputPort, test_buffers_.buffers[i].get());
+      encoder_->CoreCodecAddBuffer(CodecPort::kOutputPort, test_buffers_.buffers[i].get());
     }
 
-    decoder_->CoreCodecConfigureBuffers(CodecPort::kOutputPort, test_packets_);
+    encoder_->CoreCodecConfigureBuffers(CodecPort::kOutputPort, test_packets_);
     for (size_t i = 0; i < output_packet_count; i++) {
-      decoder_->CoreCodecRecycleOutputPacket(test_packets_[i].get());
+      encoder_->CoreCodecRecycleOutputPacket(test_packets_[i].get());
     }
 
-    decoder_->CoreCodecConfigureBuffers(CodecPort::kOutputPort, test_packets_);
+    encoder_->CoreCodecConfigureBuffers(CodecPort::kOutputPort, test_packets_);
   }
 
   std::mutex lock_;
   FakeCodecAdapterEvents events_;
-  std::unique_ptr<CodecAdapterVaApiDecoder> decoder_;
+  std::unique_ptr<CodecAdapterVaApiEncoder> encoder_;
   std::unique_ptr<CodecPacketForTest> input_packet_;
   std::unique_ptr<CodecBufferForTest> input_buffer_;
   TestBuffers test_buffers_;
   std::vector<std::unique_ptr<CodecPacket>> test_packets_;
 };
 
-TEST_F(H264VaapiTestFixture, MimeTypeMismatchFailure) {
+TEST_F(H264EncoderTestFixture, InvalidFormat) {
   constexpr uint64_t kExpectedNumOfCodecFailures = 1u;
 
   fuchsia::media::FormatDetails format_details;
   format_details.set_format_details_version_ordinal(1);
   format_details.set_mime_type("video/h264");
-  decoder_->CoreCodecInit(format_details);
-  decoder_->CoreCodecStartStream();
-
-  fuchsia::media::FormatDetails format_details_mismatch;
-  format_details_mismatch.set_format_details_version_ordinal(1);
-  format_details_mismatch.set_mime_type("video/vp9");
-  decoder_->CoreCodecQueueInputFormatDetails(format_details_mismatch);
-
-  events_.SetBufferInitializationCompleted();
+  encoder_->CoreCodecInit(format_details);
   events_.WaitForCodecFailure(kExpectedNumOfCodecFailures);
-
-  CodecStreamStop();
 
   EXPECT_EQ(kExpectedNumOfCodecFailures, events_.fail_codec_count());
   EXPECT_EQ(0u, events_.fail_stream_count());
 }
 
-TEST_F(H264VaapiTestFixture, DecodeBasic) {
-  constexpr uint32_t kExpectedOutputPackets = 29;
+TEST_F(H264EncoderTestFixture, Resize) {
+  constexpr uint32_t kExpectedOutputPackets = 2;
 
   CodecAndStreamInit();
 
   // Should be enough to handle a large fraction of bear.h264 output without recycling.
   constexpr uint32_t kOutputPacketCount = 35;
-  constexpr size_t kOutputPacketSize = kBearUncompressedFrameBytes;
+  // Nothing writes to the output packet so its size doesn't matter.
+  constexpr size_t kOutputPacketSize = 4096;
+  {
+    auto input_constraints = encoder_->CoreCodecGetBufferCollectionConstraints(
+        CodecPort::kInputPort, fuchsia::media::StreamBufferConstraints(),
+        fuchsia::media::StreamBufferPartialSettings());
+    EXPECT_TRUE(input_constraints.buffer_memory_constraints.cpu_domain_supported);
 
-  ParseFileIntoInputPackets("/pkg/data/bear.h264");
+    // Fake out the client setting buffer constraints on sysmem
+    fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
+    buffer_collection.settings.image_format_constraints =
+        input_constraints.image_format_constraints.at(0);
+    encoder_->CoreCodecSetBufferCollectionInfo(CodecPort::kInputPort, buffer_collection);
+  }
+
+  constexpr uint32_t kInputStride = 16;
+  constexpr uint32_t kInputBufferSize = kInputStride * 12 * 3 / 2;
+
+  input_buffer_ = std::make_unique<CodecBufferForTest>(kInputBufferSize, 0, false);
+
+  std::vector<std::unique_ptr<CodecPacketForTest>> input_packets;
+  {
+    auto input_packet = std::make_unique<CodecPacketForTest>(0);
+    input_packet->SetStartOffset(0);
+    input_packet->SetValidLengthBytes(kInputBufferSize);
+    input_packet->SetBuffer(input_buffer_.get());
+    encoder_->CoreCodecQueueInputPacket(input_packet.get());
+    input_packets.push_back(std::move(input_packet));
+  }
+  {
+    fuchsia::media::FormatDetails format_details;
+    format_details.set_format_details_version_ordinal(2);
+    format_details.set_mime_type("video/h264");
+
+    fuchsia::media::DomainFormat domain_format;
+    domain_format.video().uncompressed().image_format.display_width = 12;
+    domain_format.video().uncompressed().image_format.display_height = 10;
+    domain_format.video().uncompressed().image_format.coded_width = 12;
+    domain_format.video().uncompressed().image_format.coded_height = 10;
+    format_details.set_domain(std::move(domain_format));
+    encoder_->CoreCodecQueueInputFormatDetails(format_details);
+  }
+  {
+    auto input_packet = std::make_unique<CodecPacketForTest>(0);
+    input_packet->SetStartOffset(0);
+    input_packet->SetValidLengthBytes(kInputBufferSize);
+    input_packet->SetBuffer(input_buffer_.get());
+    encoder_->CoreCodecQueueInputPacket(input_packet.get());
+    input_packets.push_back(std::move(input_packet));
+  }
   ConfigureOutputBuffers(kOutputPacketCount, kOutputPacketSize);
 
   events_.SetBufferInitializationCompleted();
@@ -300,27 +295,45 @@ TEST_F(H264VaapiTestFixture, DecodeBasic) {
   EXPECT_EQ(0u, events_.fail_stream_count());
 }
 
-// Check that delaying the output buffer configuration for a while doesn't cause a crash when
-// outputting frames.
-TEST_F(H264VaapiTestFixture, DelayedConfiguration) {
+TEST_F(H264EncoderTestFixture, EncodeBasic) {
   constexpr uint32_t kExpectedOutputPackets = 29;
-
-  events_.set_reconfigure_in_constraints_change(false);
 
   CodecAndStreamInit();
 
   // Should be enough to handle a large fraction of bear.h264 output without recycling.
   constexpr uint32_t kOutputPacketCount = 35;
-  constexpr size_t kOutputPacketSize = kBearUncompressedFrameBytes;
+  // Nothing writes to the output packet so its size doesn't matter.
+  constexpr size_t kOutputPacketSize = 4096;
+  {
+    auto input_constraints = encoder_->CoreCodecGetBufferCollectionConstraints(
+        CodecPort::kInputPort, fuchsia::media::StreamBufferConstraints(),
+        fuchsia::media::StreamBufferPartialSettings());
+    EXPECT_TRUE(input_constraints.buffer_memory_constraints.cpu_domain_supported);
 
-  ParseFileIntoInputPackets("/pkg/data/bear.h264");
+    // Fake out the client setting buffer constraints on sysmem
+    fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
+    buffer_collection.settings.image_format_constraints =
+        input_constraints.image_format_constraints.at(0);
+    encoder_->CoreCodecSetBufferCollectionInfo(CodecPort::kInputPort, buffer_collection);
+  }
 
-  sleep(1);
+  constexpr uint32_t kInputStride = 16;
+  constexpr uint32_t kInputBufferSize = kInputStride * 10 * 3 / 2;
 
-  events_.WaitForOutputConstraintsSet();
+  input_buffer_ = std::make_unique<CodecBufferForTest>(kInputBufferSize, 0, false);
+
+  std::vector<std::unique_ptr<CodecPacketForTest>> input_packets;
+  for (size_t i = 0; i < 29; i++) {
+    auto input_packet = std::make_unique<CodecPacketForTest>(0);
+    input_packet->SetStartOffset(0);
+    input_packet->SetValidLengthBytes(kInputBufferSize);
+    input_packet->SetBuffer(input_buffer_.get());
+    encoder_->CoreCodecQueueInputPacket(input_packet.get());
+    input_packets.push_back(std::move(input_packet));
+  }
   ConfigureOutputBuffers(kOutputPacketCount, kOutputPacketSize);
+
   events_.SetBufferInitializationCompleted();
-  events_.ReconfigureBuffers();
   events_.WaitForInputPacketsDone();
   events_.WaitForOutputPacketCount(kExpectedOutputPackets);
   events_.ReturnLastOutputPacket();
@@ -332,17 +345,10 @@ TEST_F(H264VaapiTestFixture, DelayedConfiguration) {
 
   EXPECT_EQ(0u, events_.fail_codec_count());
   EXPECT_EQ(0u, events_.fail_stream_count());
-}
-
-TEST(H264Vaapi, CodecList) {
-  EXPECT_TRUE(VADisplayWrapper::InitializeSingletonForTesting());
-  auto codec_list = GetCodecList();
-  // video/h264 decode, video/h264-multi decode, video/vp9 decode, video/h264 encode
-  EXPECT_EQ(4u, codec_list.size());
 }
 
 // Test that we can connect using the CodecFactory.
-TEST(H264Vaapi, Init) {
+TEST(H264Encoder, Init) {
   EXPECT_TRUE(VADisplayWrapper::InitializeSingletonForTesting());
   fidl::InterfaceRequest<fuchsia::io::Directory> directory_request;
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
@@ -350,7 +356,7 @@ TEST(H264Vaapi, Init) {
   auto codec_services = sys::ServiceDirectory::CreateWithRequest(&directory_request);
 
   std::thread codec_thread([directory_request = std::move(directory_request)]() mutable {
-    CodecRunnerApp<CodecAdapterVaApiDecoder, NoAdapter> runner_app;
+    CodecRunnerApp<NoAdapter, CodecAdapterVaApiEncoder> runner_app;
     runner_app.Init();
     fidl::InterfaceHandle<fuchsia::io::Directory> outgoing_directory;
     EXPECT_EQ(ZX_OK, runner_app.component_context()->outgoing()->Serve(
@@ -363,12 +369,18 @@ TEST(H264Vaapi, Init) {
   fuchsia::mediacodec::CodecFactorySyncPtr codec_factory;
   codec_services->Connect(codec_factory.NewRequest());
   fuchsia::media::StreamProcessorPtr stream_processor;
-  fuchsia::mediacodec::CreateDecoder_Params params;
+  fuchsia::mediacodec::CreateEncoder_Params params;
   fuchsia::media::FormatDetails input_details;
   input_details.set_mime_type("video/h264");
+  input_details.set_format_details_version_ordinal(1);
+
+  fuchsia::media::DomainFormat domain_format;
+  domain_format.video().uncompressed().image_format.display_width = 10;
+  domain_format.video().uncompressed().image_format.display_height = 10;
+  input_details.set_domain(std::move(domain_format));
   params.set_input_details(std::move(input_details));
   params.set_require_hw(true);
-  EXPECT_EQ(ZX_OK, codec_factory->CreateDecoder(std::move(params), stream_processor.NewRequest()));
+  EXPECT_EQ(ZX_OK, codec_factory->CreateEncoder(std::move(params), stream_processor.NewRequest()));
 
   stream_processor.set_error_handler([&](zx_status_t status) {
     loop.Quit();

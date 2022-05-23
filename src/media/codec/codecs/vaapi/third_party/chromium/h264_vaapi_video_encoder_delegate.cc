@@ -281,6 +281,9 @@ bool H264VaapiVideoEncoderDelegate::Initialize(
           ? num_temporal_layers_ - 1
           : std::min(kMaxRefIdxL0Size, ave_config.max_num_ref_frames & 0xffff);
   curr_params_.max_num_ref_frames = curr_params_.max_ref_pic_list0_size;
+  if (config.gop_length) {
+    curr_params_.gop_length = *config.gop_length;
+  }
 
   bool submit_packed_sps = false;
   bool submit_packed_pps = false;
@@ -411,7 +414,7 @@ bool H264VaapiVideoEncoderDelegate::PrepareEncodeJob(EncodeJob& encode_job) {
   }
 
   num_encoded_frames_++;
-  num_encoded_frames_ %= kIDRPeriod;
+  num_encoded_frames_ %= std::min(kIDRPeriod, curr_params_.gop_length);
   return true;
 }
 
@@ -756,7 +759,7 @@ H264VaapiVideoEncoderDelegate::GeneratePackedSliceHeader(
     const H264Picture& pic) {
   DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
 
-  auto packed_slice_header = std::shared_ptr<H264BitstreamBuffer>();
+  auto packed_slice_header = std::make_shared<H264BitstreamBuffer>();
   const bool is_idr = !!pic_param.pic_fields.bits.idr_pic_flag;
   const bool is_ref = !!pic_param.pic_fields.bits.reference_pic_flag;
   // IDR:3, Non-IDR I slice:2, P slice:1, non ref frame: 0.

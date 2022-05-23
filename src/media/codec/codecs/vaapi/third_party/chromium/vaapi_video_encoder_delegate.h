@@ -26,11 +26,18 @@
 namespace media {
 struct BitstreamBufferMetadata;
 class CodecPicture;
+
 // Fuchsia addition:
 class VideoFrame {
  public:
   base::TimeDelta timestamp() { return base::TimeDelta(); }
+  gfx::Size display_size;
+  gfx::Size coded_size;
+  size_t stride{};
+  uint8_t* base{};
+  size_t size_bytes{};
 };
+
 class VaapiWrapper;
 
 // An VaapiVideoEncoderDelegate  performs high-level, platform-independent

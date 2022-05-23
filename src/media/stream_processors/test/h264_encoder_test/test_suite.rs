@@ -179,8 +179,26 @@ impl H264EncoderTestCase {
             expected_terminal_output: Output::Eos { stream_lifetime_ordinal: 1 },
         }));
 
+        let format_constraints = sysmem::ImageFormatConstraints {
+            pixel_format: self.input_format.pixel_format,
+            color_spaces_count: 1,
+            color_space: [sysmem::ColorSpace { type_: sysmem::ColorSpaceType::Rec709 }; 32],
+            required_max_coded_width: self.input_format.coded_width,
+            required_max_coded_height: self.input_format.coded_height,
+            ..IMAGE_FORMAT_CONSTRAINTS_DEFAULT
+        };
+
+        let stream_options = Some(StreamOptions {
+            input_buffer_collection_constraints: Some(sysmem::BufferCollectionConstraints {
+                image_format_constraints_count: 1,
+                image_format_constraints: [format_constraints; 32],
+                ..BUFFER_COLLECTION_CONSTRAINTS_DEFAULT
+            }),
+            ..StreamOptions::default()
+        });
+
         let case =
-            TestCase { name: "Terminates with EOS test", stream, validators, stream_options: None };
+            TestCase { name: "Terminates with EOS test", stream, validators, stream_options };
 
         let spec = TestSpec {
             cases: vec![case],

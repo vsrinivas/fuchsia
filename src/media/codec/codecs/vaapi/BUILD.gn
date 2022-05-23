@@ -40,6 +40,7 @@ source_set("codec_runner_vaapi") {
   sources = [
     "buffer_pool.cc",
     "codec_adapter_vaapi_decoder.cc",
+    "codec_adapter_vaapi_encoder.cc",
     "h264_accelerator.cc",
     "local_single_codec_factory.h",
     "vp9_accelerator.cc",
@@ -48,6 +49,7 @@ source_set("codec_runner_vaapi") {
   public = [
     "buffer_pool.h",
     "codec_adapter_vaapi_decoder.h",
+    "codec_adapter_vaapi_encoder.h",
     "codec_runner_app.h",
     "h264_accelerator.h",
     "vp9_accelerator.h",

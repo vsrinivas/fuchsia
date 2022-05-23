@@ -54,15 +54,16 @@
 #define DVLOG_IF(verbose_level, condition)               \
   FX_LAZY_STREAM(FX_VLOG_STREAM(verbose_level, nullptr), \
                  FX_VLOG_IS_ON(verbose_level) && (condition))
+#define DVLOGF(verbosity) FX_DVLOGS(verbosity)
 #else
 // These force logging to be enabled:
 #define DVLOG(verbosity) \
   FX_LAZY_STREAM(FX_LOG_STREAM(ERROR, ""), (verbosity) <= 4)
 #define DVLOG_IF(verbose_level, condition) \
   FX_LAZY_STREAM(FX_LOG_STREAM(ERROR, ""), (condition))
+#define DVLOGF(verbosity) FX_LOGS(ERROR)
 #endif
 
-#define DVLOGF(verbosity) FX_DVLOGS(verbosity)
 #define VLOGF(verbosity) FX_VLOGS(verbosity)
 
 #define NOTREACHED FX_NOTREACHED

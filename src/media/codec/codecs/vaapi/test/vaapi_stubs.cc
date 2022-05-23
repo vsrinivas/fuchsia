@@ -15,6 +15,16 @@ void vaDefaultStubSetReturn() {
   vaCreateSurfacesReturn = VA_STATUS_SUCCESS;
 }
 
+struct FakeBuffer {
+  VABufferType type{};
+  size_t size{};
+  std::unique_ptr<std::vector<uint8_t>> mapped_buffer;
+  std::unique_ptr<VACodedBufferSegment> coded_segment;
+};
+
+static std::map<VABufferID, FakeBuffer> fake_buffer_map_;
+static VABufferID next_buffer_id_;
+
 void vaCreateConfigStubSetReturn(VAStatus status) { vaCreateConfigReturn = status; }
 
 void vaCreateContextStubSetReturn(VAStatus status) { vaCreateContextReturn = status; }
@@ -25,14 +35,29 @@ int vaMaxNumEntrypoints(VADisplay dpy) { return 2; }
 VAStatus vaQueryConfigEntrypoints(VADisplay dpy, VAProfile profile, VAEntrypoint *entrypoint_list,
                                   int *num_entrypoints) {
   entrypoint_list[0] = VAEntrypointVLD;
-  *num_entrypoints = 1;
+  entrypoint_list[1] = VAEntrypointEncSliceLP;
+  *num_entrypoints = 2;
   return VA_STATUS_SUCCESS;
 }
 VAStatus vaGetConfigAttributes(VADisplay dpy, VAProfile profile, VAEntrypoint entrypoint,
                                VAConfigAttrib *attrib_list, int num_attribs) {
   EXPECT_EQ(1, num_attribs);
-  EXPECT_EQ(VAConfigAttribRTFormat, attrib_list[0].type);
-  attrib_list[0].value = VA_RT_FORMAT_YUV420;
+  uint32_t &value = attrib_list[0].value;
+  switch (attrib_list[0].type) {
+    case VAConfigAttribRTFormat:
+      value = VA_RT_FORMAT_YUV420;
+      break;
+    case VAConfigAttribEncPackedHeaders:
+      value =
+          VA_ENC_PACKED_HEADER_SEQUENCE | VA_ENC_PACKED_HEADER_PICTURE | VA_ENC_PACKED_HEADER_SLICE;
+      break;
+    case VAConfigAttribEncMaxRefFrames:
+      value = 1;
+      break;
+    default:
+      EXPECT_TRUE(false) << "Unexpected attrib type " << attrib_list[0].type;
+      break;
+  }
   return VA_STATUS_SUCCESS;
 }
 VAStatus vaDestroyConfig(VADisplay dpy, VAConfigID config_id) {
@@ -84,22 +109,61 @@ VAStatus vaGetImage(VADisplay dpy, VASurfaceID surface, int x, int y, unsigned i
                     unsigned int height, VAImageID image) {
   return VA_STATUS_SUCCESS;
 }
+
 VAStatus vaDeriveImage(VADisplay dpy, VASurfaceID surface, VAImage *image) {
+  // Arbitrary dimensions that match those in the H264 Encoder tests.
+  constexpr uint32_t kImageBufferSize = 12 * 12 * 3 / 2;
+  fake_buffer_map_[next_buffer_id_].size = kImageBufferSize;
+  image->buf = next_buffer_id_++;
+  image->offsets[0] = 0;
+  image->pitches[0] = 10;
+  image->offsets[1] = 10 * 10;
+  image->pitches[1] = 10;
+
   return VA_STATUS_SUCCESS;
 }
+
 VAStatus vaDestroyImage(VADisplay dpy, VAImageID image) { return VA_STATUS_SUCCESS; }
+
 VAStatus vaCreateBuffer(VADisplay dpy, VAContextID context, VABufferType type, unsigned int size,
                         unsigned int num_elements, void *data, VABufferID *buf_id) {
+  FakeBuffer &fake_buffer = fake_buffer_map_[next_buffer_id_];
+  fake_buffer.size = size;
+  fake_buffer.type = type;
+  *buf_id = next_buffer_id_++;
+
   return VA_STATUS_SUCCESS;
 }
-VAStatus vaDestroyBuffer(VADisplay dpy, VABufferID buffer_id) { return VA_STATUS_SUCCESS; }
+VAStatus vaDestroyBuffer(VADisplay dpy, VABufferID buffer_id) {
+  fake_buffer_map_.erase(buffer_id);
+  return VA_STATUS_SUCCESS;
+}
+
 VAStatus vaInitialize(VADisplay dpy, int *major_version, int *minor_version) {
   *major_version = VA_MAJOR_VERSION;
   *minor_version = VA_MINOR_VERSION;
   return VA_STATUS_SUCCESS;
 }
-VAStatus vaMapBuffer(VADisplay dpy, VABufferID buf_id, void **pbuf) { return VA_STATUS_SUCCESS; }
+
+VAStatus vaMapBuffer(VADisplay dpy, VABufferID buf_id, void **pbuf) {
+  FakeBuffer &buf = fake_buffer_map_[buf_id];
+  buf.mapped_buffer = std::make_unique<std::vector<uint8_t>>(buf.size);
+
+  if (buf.type == VAEncCodedBufferType) {
+    buf.coded_segment = std::make_unique<VACodedBufferSegment>();
+    *pbuf = buf.coded_segment.get();
+    buf.coded_segment->size = 10;
+    buf.coded_segment->buf = buf.mapped_buffer->data();
+    buf.coded_segment->next = nullptr;
+  } else {
+    *pbuf = buf.mapped_buffer->data();
+  }
+
+  return VA_STATUS_SUCCESS;
+}
+
 VAStatus vaUnmapBuffer(VADisplay dpy, VABufferID buf_id) { return VA_STATUS_SUCCESS; }
+
 const char *vaErrorStr(VAStatus error_status) {
   switch (error_status) {
     case VA_STATUS_SUCCESS:

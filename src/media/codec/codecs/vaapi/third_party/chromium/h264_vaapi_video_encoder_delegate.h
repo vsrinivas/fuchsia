@@ -51,22 +51,22 @@ class H264VaapiVideoEncoderDelegate : public VaapiVideoEncoderDelegate {
 
     // Maximum size of reference picture list 0.
     size_t max_ref_pic_list0_size;
+
+    uint32_t gop_length{};
   };
 
   H264VaapiVideoEncoderDelegate(scoped_refptr<VaapiWrapper> vaapi_wrapper,
                                 base::RepeatingClosure error_cb);
 
   H264VaapiVideoEncoderDelegate(const H264VaapiVideoEncoderDelegate&) = delete;
-  H264VaapiVideoEncoderDelegate& operator=(
-      const H264VaapiVideoEncoderDelegate&) = delete;
+  H264VaapiVideoEncoderDelegate& operator=(const H264VaapiVideoEncoderDelegate&) = delete;
 
   ~H264VaapiVideoEncoderDelegate() override;
 
   // VaapiVideoEncoderDelegate implementation.
   bool Initialize(const VideoEncodeAccelerator::Config& config,
                   const VaapiVideoEncoderDelegate::Config& ave_config) override;
-  bool UpdateRates(const VideoBitrateAllocation& bitrate_allocation,
-                   uint32_t framerate) override;
+  bool UpdateRates(const VideoBitrateAllocation& bitrate_allocation, uint32_t framerate) override;
   gfx::Size GetCodedSize() const override;
   size_t GetMaxNumOfRefFrames() const override;
   std::vector<gfx::Size> GetSVCLayerResolutions() override;
@@ -77,8 +77,7 @@ class H264VaapiVideoEncoderDelegate : public VaapiVideoEncoderDelegate {
   friend class H264VaapiVideoEncoderDelegateTest;
 
   bool PrepareEncodeJob(EncodeJob& encode_job) override;
-  BitstreamBufferMetadata GetMetadata(const EncodeJob& encode_job,
-                                      size_t payload_size) override;
+  BitstreamBufferMetadata GetMetadata(const EncodeJob& encode_job, size_t payload_size) override;
 
   // Fill current_sps_ and current_pps_ with current encoding state parameters.
   void UpdateSPS();
@@ -92,8 +91,7 @@ class H264VaapiVideoEncoderDelegate : public VaapiVideoEncoderDelegate {
   // Generate packed slice header from |pic_param|, |slice_param| and |pic|.
   scoped_refptr<H264BitstreamBuffer> GeneratePackedSliceHeader(
       const VAEncPictureParameterBufferH264& pic_param,
-      const VAEncSliceParameterBufferH264& sliice_param,
-      const H264Picture& pic);
+      const VAEncSliceParameterBufferH264& sliice_param, const H264Picture& pic);
 
   // Check if |bitrate| and |framerate| and current coded size are supported by
   // current profile and level.
@@ -103,9 +101,7 @@ class H264VaapiVideoEncoderDelegate : public VaapiVideoEncoderDelegate {
   bool SubmitH264BitstreamBuffer(const H264BitstreamBuffer& buffer);
   // Submits a VAEncMiscParameterBuffer |data| whose size and type are |size|
   // and |type| to the driver.
-  bool SubmitVAEncMiscParamBuffer(VAEncMiscParameterType type,
-                                  const void* data,
-                                  size_t size);
+  bool SubmitVAEncMiscParamBuffer(VAEncMiscParameterType type, const void* data, size_t size);
 
   bool SubmitPackedHeaders(scoped_refptr<H264BitstreamBuffer> packed_sps,
                            scoped_refptr<H264BitstreamBuffer> packed_pps);
