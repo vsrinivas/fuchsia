@@ -271,6 +271,64 @@ success("StructOfOptionalUnionOfHandleAbsent") {
     },
 }
 
+// When a failure is encountered, bindings must ensure that handles located
+// both before and after the failure are closed. A third handle is included
+// in the test to ensure that there are no double-closes in encoders that
+// do not exit early upon failure.
+encode_failure("HandlesBeforeAndAfterFailureAreClosed") {
+    // TODO(96626): Should close handles in some constraint violation cases.
+    bindings_denylist = [hlcpp, go, rust, dart],
+    handle_defs = {
+        #0 = event(),
+        #1 = event(),
+        #2 = event(),
+    },
+    value = AlternatingHandlesAndFailures{
+        h1: #0,
+        failure_trigger1: "abc",
+        h2: #1,
+        failure_trigger2: "abc",
+        h3: #2,
+    },
+    err = STRING_TOO_LONG,
+}
+
+// When a failure is encountered, bindings must ensure that handles located
+// both before and after the failure are closed. A third handle is included
+// in the test to ensure that there are no double-closes in encoders that
+// do not exit early upon failure.
+decode_failure("HandlesBeforeAndAfterFailureAreClosed") {
+    // TODO(fxbug.dev/100931) In rust, this is failing for an unknown reason.
+    // TODO(fxbug.dev/100945) In dart, this is failing for an unknown reason.
+    bindings_denylist = [rust, dart],
+    handle_defs = {
+        #0 = event(),
+        #1 = event(),
+        #2 = event(),
+    },
+    type = AlternatingHandlesAndFailures,
+    bytes = {
+        v1, v2 = [
+            repeat(0xff):4, padding:4, // h1
+            num(3):8, // failure_trigger1
+            repeat(0xff):8,
+            repeat(0xff):4, padding:4, // h2
+            num(3):8, // failure_trigger2
+            repeat(0xff):8,
+            repeat(0xff):4, padding:4, // h3
+
+            0x61, 0x62, 0x63, padding:5,
+            0x61, 0x62, 0x63, padding:5,
+        ],
+    },
+    handles = {
+        v1, v2 = [
+            #0, #1, #2,
+        ],
+    },
+    err = STRING_TOO_LONG,
+}
+
 // Handles inside the vector should be closed even if the vector itself
 // has a constraint error.
 encode_failure("TooManyHandlesInVector") {
