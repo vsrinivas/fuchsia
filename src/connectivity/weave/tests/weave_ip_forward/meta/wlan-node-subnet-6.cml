@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    include: [ "syslog/elf_stdio.shard.cml" ],
+    include: [
+        "//src/connectivity/network/testing/netemul/sync-manager/meta/client.shard.cml",
+        "syslog/elf_stdio.shard.cml",
+    ],
     program: {
         binary: "bin/weave_ip_forward",
         args: [
@@ -13,12 +16,6 @@
         ],
     },
     use: [
-        {
-            protocol: [
-                "fuchsia.netemul.sync.SyncManager",
-                "fuchsia.posix.socket.Provider",
-            ],
-            from: "parent",
-        },
+        { protocol: "fuchsia.posix.socket.Provider" },
     ],
 }

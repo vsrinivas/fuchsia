@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 {
     include: [
+        "//src/connectivity/network/testing/netemul/sync-manager/meta/client.shard.cml",
         "sys/testing/elf_test_runner.shard.cml",
         "syslog/client.shard.cml",
     ],
@@ -15,9 +16,7 @@
             protocol: [
                 "fuchsia.net.interfaces.State",
                 "fuchsia.net.stack.Stack",
-                "fuchsia.netemul.sync.SyncManager",
             ],
-            from: "parent",
         },
     ],
 }

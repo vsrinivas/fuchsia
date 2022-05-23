@@ -4,7 +4,7 @@
 
 #![cfg(test)]
 
-use configurable_netstack_test::{server_ips, Bus, REQUEST, RESPONSE, SERVER_NAME};
+use configurable_netstack_test::{server_ips, BUS_NAME, REQUEST, RESPONSE, SERVER_NAME};
 use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_debug as fnet_debug;
 use fidl_fuchsia_net_ext as fnet_ext;
@@ -25,7 +25,11 @@ pub const CLIENT_NAME: &str = "client";
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn connect_to_server() {
-    Bus::subscribe(CLIENT_NAME).wait_for_client(SERVER_NAME).await;
+    netemul_sync::Bus::subscribe(BUS_NAME, CLIENT_NAME)
+        .expect("subscribe to bus")
+        .wait_for_client(SERVER_NAME)
+        .await
+        .expect("wait for server to join bus");
 
     for addr in server_ips() {
         let mut stream = std::net::TcpStream::connect(&addr).expect("connect to server");

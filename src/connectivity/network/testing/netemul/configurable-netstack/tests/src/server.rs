@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use configurable_netstack_test::{server_ips, Bus, REQUEST, RESPONSE, SERVER_NAME};
+use configurable_netstack_test::{server_ips, BUS_NAME, REQUEST, RESPONSE, SERVER_NAME};
 use log::info;
 use std::io::{Read as _, Write as _};
 
@@ -16,7 +16,7 @@ async fn main() {
         .collect::<Vec<_>>();
     info!("waiting for connections...");
     // Let the client know that we are listening for incoming connections.
-    let _bus = Bus::subscribe(SERVER_NAME);
+    let _bus = netemul_sync::Bus::subscribe(BUS_NAME, SERVER_NAME).expect("subscribe to bus");
 
     for listener in listeners {
         let (mut stream, remote) = listener.accept().expect("accept incoming connection");

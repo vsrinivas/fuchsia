@@ -12,7 +12,6 @@ rustc_library("lib") {
   testonly = true
   deps = [
     "//src/connectivity/lib/net-declare",
-    "//src/connectivity/network/testing/netemul/sync-manager/fidl:sync-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-component",
   ]
@@ -33,6 +32,7 @@ rustc_test("client") {
     "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
     "//src/connectivity/lib/net-declare",
     "//src/connectivity/lib/net-types",
+    "//src/connectivity/network/testing/netemul/sync-manager/rust:lib",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/network/fidl_fuchsia_net_ext",
@@ -49,6 +49,7 @@ rustc_binary("server") {
   testonly = true
   deps = [
     ":lib",
+    "//src/connectivity/network/testing/netemul/sync-manager/rust:lib",
     "//src/lib/diagnostics/log/rust",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:log",

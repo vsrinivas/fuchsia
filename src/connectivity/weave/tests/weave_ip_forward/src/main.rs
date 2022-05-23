@@ -6,11 +6,9 @@ use {
     fidl_fuchsia_net_interfaces as fnet_interfaces,
     fidl_fuchsia_net_interfaces_ext as fnet_interfaces_ext,
     fidl_fuchsia_net_stack::StackMarker,
-    fidl_fuchsia_netemul_sync::{BusMarker, BusProxy, Event, SyncManagerMarker},
     fuchsia_async as fasync,
     fuchsia_component::client,
-    fuchsia_syslog::{fx_log_err, fx_log_info},
-    futures::TryStreamExt as _,
+    fuchsia_syslog::fx_log_info,
     net_declare::fidl_subnet,
     prettytable::{cell, format, row, Table},
     std::collections::HashMap,
@@ -31,61 +29,6 @@ const HELLO_MSG_RSP: &str = "Hello World from TCP Server!";
 const WEAVE_SERVER_NODE_DONE: i32 = 1;
 const WPAN_SERVER_NODE_DONE: i32 = 2;
 const ENTRY_METRICS: u32 = 256;
-
-pub struct BusConnection {
-    bus: BusProxy,
-}
-
-impl BusConnection {
-    pub fn new(client: &str) -> Result<BusConnection, Error> {
-        let busm = client::connect_to_protocol::<SyncManagerMarker>()
-            .context("SyncManager not available")?;
-        let (bus, busch) = fidl::endpoints::create_proxy::<BusMarker>()?;
-        busm.bus_subscribe(BUS_NAME, client, busch)?;
-        Ok(BusConnection { bus })
-    }
-
-    pub async fn wait_for_client(&mut self, expect: &'static str) -> Result<(), Error> {
-        let _ = self.bus.wait_for_clients(&mut vec![expect].drain(..), 0).await?;
-        Ok(())
-    }
-
-    pub fn publish_code(&self, code: i32) -> Result<(), Error> {
-        self.bus.publish(Event {
-            code: Some(code),
-            message: None,
-            arguments: None,
-            ..Event::EMPTY
-        })?;
-        Ok(())
-    }
-
-    pub async fn wait_for_event(&self, mut code_vec: Vec<i32>) -> Result<(), Error> {
-        let mut stream = self.bus.take_event_stream();
-        loop {
-            match stream.try_next().await? {
-                Some(fidl_fuchsia_netemul_sync::BusEvent::OnBusData { data }) => match data.code {
-                    Some(rcv_code) => {
-                        if code_vec.contains(&rcv_code) {
-                            code_vec.retain(|&x| x != rcv_code);
-                        } else {
-                            fx_log_err!("unexpected rcv_code: {:?}", rcv_code);
-                            return Err(format_err!("unexpected rcv_code in wait_for_event"));
-                        }
-                    }
-                    None => {
-                        return Err(format_err!("data.code contains no event"));
-                    }
-                },
-                _ => {}
-            };
-            if code_vec.is_empty() {
-                break;
-            }
-        }
-        Ok(())
-    }
-}
 
 fn get_interface_id(
     want_name: &str,
@@ -190,9 +133,14 @@ async fn run_fuchsia_node() -> Result<(), Error> {
 
     fx_log_info!("{}", t.printstd());
 
-    let bus = BusConnection::new(FUCHSIA_NODE_NAME)?;
+    let bus = netemul_sync::Bus::subscribe(BUS_NAME, FUCHSIA_NODE_NAME)?;
     fx_log_info!("waiting for server to finish...");
-    let () = bus.wait_for_event(vec![WEAVE_SERVER_NODE_DONE, WPAN_SERVER_NODE_DONE]).await?;
+    let () = bus
+        .wait_for_events(vec![
+            netemul_sync::Event::from_code(WEAVE_SERVER_NODE_DONE),
+            netemul_sync::Event::from_code(WPAN_SERVER_NODE_DONE),
+        ])
+        .await?;
     fx_log_info!("fuchsia node exited");
     Ok(())
 }
@@ -226,7 +174,7 @@ async fn run_server_node(
         listener_vec.push(TcpListener::bind(listen_addr).context("Can't bind to address")?);
     }
     fx_log_info!("server {} for connections...", node_name);
-    let bus = BusConnection::new(node_name)?;
+    let bus = netemul_sync::Bus::subscribe(BUS_NAME, node_name)?;
 
     for listener_idx in 0..listener_vec.len() {
         let mut handler_futs = Vec::new();
@@ -239,7 +187,7 @@ async fn run_server_node(
         }
     }
 
-    let () = bus.publish_code(node_code)?;
+    let () = bus.publish(netemul_sync::Event::from_code(node_code))?;
 
     fx_log_info!("server {} exited successfully", node_name);
 
@@ -274,7 +222,7 @@ async fn run_client_node(
     node_name: &str,
     server_node_names: Vec<&'static str>,
 ) -> Result<(), Error> {
-    let mut bus = BusConnection::new(node_name)?;
+    let bus = netemul_sync::Bus::subscribe(BUS_NAME, node_name)?;
     fx_log_info!("client {} is up and for fuchsia node to start", node_name);
     let () = bus.wait_for_client(FUCHSIA_NODE_NAME).await?;
     for server_node_name in server_node_names {
