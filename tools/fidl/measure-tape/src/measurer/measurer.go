@@ -205,11 +205,11 @@ func (m *Measurer) createStructMeasuringTape(decl fidlgen.Struct) (*MeasuringTap
 		kind:             Struct,
 		name:             fidlgen.MustReadName(string(decl.Name)),
 		decl:             decl,
-		inlineNumBytes:   decl.TypeShapeV1.InlineSize,
+		inlineNumBytes:   decl.TypeShapeV2.InlineSize,
 		members:          membersMt,
-		hasHandles:       decl.TypeShapeV1.MaxHandles != 0,
-		hasOutOfLine:     decl.TypeShapeV1.Depth > 0,
-		inlineNumHandles: decl.TypeShapeV1.MaxHandles,
+		hasHandles:       decl.TypeShapeV2.MaxHandles != 0,
+		hasOutOfLine:     decl.TypeShapeV2.Depth > 0,
+		inlineNumHandles: decl.TypeShapeV2.MaxHandles,
 	}, nil
 }
 
@@ -235,7 +235,7 @@ func (m *Measurer) createTableMeasuringTape(decl fidlgen.Table) (*MeasuringTape,
 		name:           fidlgen.MustReadName(string(decl.Name)),
 		decl:           decl,
 		members:        membersMt,
-		hasHandles:     decl.TypeShapeV1.MaxHandles != 0,
+		hasHandles:     decl.TypeShapeV2.MaxHandles != 0,
 		hasOutOfLine:   true,
 		inlineNumBytes: 16, // sizeof(fidl_vector_t)
 	}, nil
@@ -266,9 +266,9 @@ func (m *Measurer) createUnionMeasuringTape(decl fidlgen.Union) (*MeasuringTape,
 		decl:           decl,
 		members:        membersMt,
 		isFlexible:     decl.Strictness == fidlgen.IsFlexible,
-		hasHandles:     decl.TypeShapeV1.MaxHandles != 0,
+		hasHandles:     decl.TypeShapeV2.MaxHandles != 0,
 		hasOutOfLine:   true,
-		inlineNumBytes: 24, // sizeof(fidl_xunion_t)
+		inlineNumBytes: 16, // sizeof(fidl_xunion_v2_t)
 	}, nil
 }
 

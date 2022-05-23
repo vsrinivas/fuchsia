@@ -7,7 +7,8 @@ using zx;
 
 // 24 bytes + selected member size
 type TopLevelUnion = strict resource union {
-    1: primitive uint64;
+    1: primitive8 uint64;
+   24: primitive4 uint32;
     2: handle zx.handle;
     3: struct_with_string StructWithString;
     4: struct_with_opt_string StructWithOptString;
@@ -47,22 +48,24 @@ type StructWithOptString = struct {
     opt_string string:optional;
 };
 
-// 16 bytes + max_set_ordinal * 16 + sum of all set members
+// 16 bytes + max_set_ordinal * 16 + sum of all set member out of line data
 type Table = resource table {
-    5: primitive uint32;
+    6: primitive8 uint64;
+    5: primitive4 uint32;
     2: reserved;
     1: reserved;
     3: string string;
     4: handle zx.handle;
 };
 
-// 24 bytes + selected member size
+// 24 bytes + selected member out of line size
 type Union = strict union {
-    1: primitive uint64;
+    1: primitive8 uint64;
+    2: primitive4 uint32;
 };
 
 type FlexibleUnion = flexible union {
-    1: primitive uint64;
+    1: primitive8 uint64;
 };
 
 // 64 bytes, i.e. 12 + 4 (padding) + 3 * 16

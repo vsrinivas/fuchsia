@@ -79,7 +79,7 @@ class MeasuringTape {
   }
 
   void Measure(const ::fuchsia::ui::gfx::CircleArgs& value) {
-    num_bytes_ += FIDL_ALIGN(24);
+    num_bytes_ += FIDL_ALIGN(16);
     MeasureOutOfLine(value);
   }
 
@@ -108,7 +108,7 @@ class MeasuringTape {
   }
 
   void Measure(const ::fuchsia::ui::gfx::Command& value) {
-    num_bytes_ += 24;
+    num_bytes_ += 16;
     MeasureOutOfLine(value);
   }
 
@@ -146,22 +146,18 @@ class MeasuringTape {
       }
       case ::fuchsia::ui::gfx::Command::Tag::kDetach: {
         __attribute__((unused)) auto const& _detach = value.detach();
-        Measure(_detach);
         break;
       }
       case ::fuchsia::ui::gfx::Command::Tag::kDetachChildren: {
         __attribute__((unused)) auto const& _detach_children = value.detach_children();
-        Measure(_detach_children);
         break;
       }
       case ::fuchsia::ui::gfx::Command::Tag::kDetachLight: {
         __attribute__((unused)) auto const& _detach_light = value.detach_light();
-        Measure(_detach_light);
         break;
       }
       case ::fuchsia::ui::gfx::Command::Tag::kDetachLights: {
         __attribute__((unused)) auto const& _detach_lights = value.detach_lights();
-        Measure(_detach_lights);
         break;
       }
       case ::fuchsia::ui::gfx::Command::Tag::kExportResource: {
@@ -176,12 +172,10 @@ class MeasuringTape {
       }
       case ::fuchsia::ui::gfx::Command::Tag::kReleaseResource: {
         __attribute__((unused)) auto const& _release_resource = value.release_resource();
-        Measure(_release_resource);
         break;
       }
       case ::fuchsia::ui::gfx::Command::Tag::kRemoveAllLayers: {
         __attribute__((unused)) auto const& _remove_all_layers = value.remove_all_layers();
-        Measure(_remove_all_layers);
         break;
       }
       case ::fuchsia::ui::gfx::Command::Tag::kRemoveLayer: {
@@ -266,7 +260,6 @@ class MeasuringTape {
       }
       case ::fuchsia::ui::gfx::Command::Tag::kSetDisplayMinimumRgb: {
         __attribute__((unused)) auto const& _set_display_minimum_rgb = value.set_display_minimum_rgb();
-        Measure(_set_display_minimum_rgb);
         break;
       }
       case ::fuchsia::ui::gfx::Command::Tag::kSetDisplayRotation: {
@@ -291,7 +284,6 @@ class MeasuringTape {
       }
       case ::fuchsia::ui::gfx::Command::Tag::kSetImportFocus: {
         __attribute__((unused)) auto const& _set_import_focus = value.set_import_focus();
-        Measure(_set_import_focus);
         break;
       }
       case ::fuchsia::ui::gfx::Command::Tag::kSetLabel: {
@@ -416,7 +408,7 @@ class MeasuringTape {
   }
 
   void Measure(const ::fuchsia::ui::gfx::CreateResourceCmd& value) {
-    num_bytes_ += FIDL_ALIGN(32);
+    num_bytes_ += FIDL_ALIGN(24);
     MeasureOutOfLine(value);
   }
 
@@ -554,7 +546,7 @@ class MeasuringTape {
   }
 
   void Measure(const ::fuchsia::ui::gfx::RectangleArgs& value) {
-    num_bytes_ += FIDL_ALIGN(48);
+    num_bytes_ += FIDL_ALIGN(32);
     MeasureOutOfLine(value);
   }
 
@@ -580,7 +572,7 @@ class MeasuringTape {
   }
 
   void Measure(const ::fuchsia::ui::gfx::RendererParam& value) {
-    num_bytes_ += 24;
+    num_bytes_ += 16;
     MeasureOutOfLine(value);
   }
 
@@ -588,17 +580,14 @@ class MeasuringTape {
     switch (value.Which()) {
       case ::fuchsia::ui::gfx::RendererParam::Tag::kEnableDebugging: {
         __attribute__((unused)) auto const& _enable_debugging = value.enable_debugging();
-        num_bytes_ += 8;
         break;
       }
       case ::fuchsia::ui::gfx::RendererParam::Tag::kReserved: {
         __attribute__((unused)) auto const& _reserved = value.reserved();
-        num_bytes_ += 8;
         break;
       }
       case ::fuchsia::ui::gfx::RendererParam::Tag::kShadowTechnique: {
         __attribute__((unused)) auto const& _shadow_technique = value.shadow_technique();
-        num_bytes_ += 8;
         break;
       }
       case ::fuchsia::ui::gfx::RendererParam::Tag::Invalid: {
@@ -609,7 +598,7 @@ class MeasuringTape {
   }
 
   void Measure(const ::fuchsia::ui::gfx::ResourceArgs& value) {
-    num_bytes_ += 24;
+    num_bytes_ += 16;
     MeasureOutOfLine(value);
   }
 
@@ -617,7 +606,6 @@ class MeasuringTape {
     switch (value.Which()) {
       case ::fuchsia::ui::gfx::ResourceArgs::Tag::kAmbientLight: {
         __attribute__((unused)) auto const& _ambient_light = value.ambient_light();
-        Measure(_ambient_light);
         break;
       }
       case ::fuchsia::ui::gfx::ResourceArgs::Tag::kBuffer: {
@@ -627,7 +615,6 @@ class MeasuringTape {
       }
       case ::fuchsia::ui::gfx::ResourceArgs::Tag::kCamera: {
         __attribute__((unused)) auto const& _camera = value.camera();
-        Measure(_camera);
         break;
       }
       case ::fuchsia::ui::gfx::ResourceArgs::Tag::kCircle: {
@@ -637,27 +624,22 @@ class MeasuringTape {
       }
       case ::fuchsia::ui::gfx::ResourceArgs::Tag::kClipNode: {
         __attribute__((unused)) auto const& _clip_node = value.clip_node();
-        Measure(_clip_node);
         break;
       }
       case ::fuchsia::ui::gfx::ResourceArgs::Tag::kCompositor: {
         __attribute__((unused)) auto const& _compositor = value.compositor();
-        Measure(_compositor);
         break;
       }
       case ::fuchsia::ui::gfx::ResourceArgs::Tag::kDirectionalLight: {
         __attribute__((unused)) auto const& _directional_light = value.directional_light();
-        Measure(_directional_light);
         break;
       }
       case ::fuchsia::ui::gfx::ResourceArgs::Tag::kDisplayCompositor: {
         __attribute__((unused)) auto const& _display_compositor = value.display_compositor();
-        Measure(_display_compositor);
         break;
       }
       case ::fuchsia::ui::gfx::ResourceArgs::Tag::kEntityNode: {
         __attribute__((unused)) auto const& _entity_node = value.entity_node();
-        Measure(_entity_node);
         break;
       }
       case ::fuchsia::ui::gfx::ResourceArgs::Tag::kImage: {
@@ -677,22 +659,18 @@ class MeasuringTape {
       }
       case ::fuchsia::ui::gfx::ResourceArgs::Tag::kImagePipe2: {
         __attribute__((unused)) auto const& _image_pipe2 = value.image_pipe2();
-        Measure(_image_pipe2);
         break;
       }
       case ::fuchsia::ui::gfx::ResourceArgs::Tag::kLayer: {
         __attribute__((unused)) auto const& _layer = value.layer();
-        Measure(_layer);
         break;
       }
       case ::fuchsia::ui::gfx::ResourceArgs::Tag::kLayerStack: {
         __attribute__((unused)) auto const& _layer_stack = value.layer_stack();
-        Measure(_layer_stack);
         break;
       }
       case ::fuchsia::ui::gfx::ResourceArgs::Tag::kMaterial: {
         __attribute__((unused)) auto const& _material = value.material();
-        Measure(_material);
         break;
       }
       case ::fuchsia::ui::gfx::ResourceArgs::Tag::kMemory: {
@@ -702,17 +680,14 @@ class MeasuringTape {
       }
       case ::fuchsia::ui::gfx::ResourceArgs::Tag::kMesh: {
         __attribute__((unused)) auto const& _mesh = value.mesh();
-        Measure(_mesh);
         break;
       }
       case ::fuchsia::ui::gfx::ResourceArgs::Tag::kOpacityNode: {
         __attribute__((unused)) auto const& _opacity_node = value.opacity_node();
-        Measure(_opacity_node);
         break;
       }
       case ::fuchsia::ui::gfx::ResourceArgs::Tag::kPointLight: {
         __attribute__((unused)) auto const& _point_light = value.point_light();
-        Measure(_point_light);
         break;
       }
       case ::fuchsia::ui::gfx::ResourceArgs::Tag::kRectangle: {
@@ -722,7 +697,6 @@ class MeasuringTape {
       }
       case ::fuchsia::ui::gfx::ResourceArgs::Tag::kRenderer: {
         __attribute__((unused)) auto const& _renderer = value.renderer();
-        Measure(_renderer);
         break;
       }
       case ::fuchsia::ui::gfx::ResourceArgs::Tag::kRoundedRectangle: {
@@ -732,17 +706,14 @@ class MeasuringTape {
       }
       case ::fuchsia::ui::gfx::ResourceArgs::Tag::kScene: {
         __attribute__((unused)) auto const& _scene = value.scene();
-        Measure(_scene);
         break;
       }
       case ::fuchsia::ui::gfx::ResourceArgs::Tag::kShapeNode: {
         __attribute__((unused)) auto const& _shape_node = value.shape_node();
-        Measure(_shape_node);
         break;
       }
       case ::fuchsia::ui::gfx::ResourceArgs::Tag::kStereoCamera: {
         __attribute__((unused)) auto const& _stereo_camera = value.stereo_camera();
-        Measure(_stereo_camera);
         break;
       }
       case ::fuchsia::ui::gfx::ResourceArgs::Tag::kVariable: {
@@ -773,7 +744,7 @@ class MeasuringTape {
   }
 
   void Measure(const ::fuchsia::ui::gfx::RoundedRectangleArgs& value) {
-    num_bytes_ += FIDL_ALIGN(144);
+    num_bytes_ += FIDL_ALIGN(96);
     MeasureOutOfLine(value);
   }
 
@@ -921,7 +892,7 @@ class MeasuringTape {
   }
 
   void Measure(const ::fuchsia::ui::gfx::SetRendererParamCmd& value) {
-    num_bytes_ += FIDL_ALIGN(32);
+    num_bytes_ += FIDL_ALIGN(24);
     MeasureOutOfLine(value);
   }
 
@@ -991,7 +962,7 @@ class MeasuringTape {
   }
 
   void Measure(const ::fuchsia::ui::gfx::Value& value) {
-    num_bytes_ += 24;
+    num_bytes_ += 16;
     MeasureOutOfLine(value);
   }
 
@@ -1004,12 +975,10 @@ class MeasuringTape {
       }
       case ::fuchsia::ui::gfx::Value::Tag::kColorRgba: {
         __attribute__((unused)) auto const& _color_rgba = value.color_rgba();
-        Measure(_color_rgba);
         break;
       }
       case ::fuchsia::ui::gfx::Value::Tag::kDegrees: {
         __attribute__((unused)) auto const& _degrees = value.degrees();
-        num_bytes_ += 8;
         break;
       }
       case ::fuchsia::ui::gfx::Value::Tag::kMatrix4x4: {
@@ -1029,12 +998,10 @@ class MeasuringTape {
       }
       case ::fuchsia::ui::gfx::Value::Tag::kVariableId: {
         __attribute__((unused)) auto const& _variable_id = value.variable_id();
-        num_bytes_ += 8;
         break;
       }
       case ::fuchsia::ui::gfx::Value::Tag::kVector1: {
         __attribute__((unused)) auto const& _vector1 = value.vector1();
-        num_bytes_ += 8;
         break;
       }
       case ::fuchsia::ui::gfx::Value::Tag::kVector2: {
@@ -1060,7 +1027,7 @@ class MeasuringTape {
   }
 
   void Measure(const ::fuchsia::ui::gfx::VariableArgs& value) {
-    num_bytes_ += FIDL_ALIGN(32);
+    num_bytes_ += FIDL_ALIGN(24);
     MeasureOutOfLine(value);
   }
 
@@ -1147,7 +1114,7 @@ class MeasuringTape {
   }
 
   void Measure(const ::fuchsia::ui::input::Command& value) {
-    num_bytes_ += 24;
+    num_bytes_ += 16;
     MeasureOutOfLine(value);
   }
 
@@ -1165,12 +1132,10 @@ class MeasuringTape {
       }
       case ::fuchsia::ui::input::Command::Tag::kSetHardKeyboardDelivery: {
         __attribute__((unused)) auto const& _set_hard_keyboard_delivery = value.set_hard_keyboard_delivery();
-        Measure(_set_hard_keyboard_delivery);
         break;
       }
       case ::fuchsia::ui::input::Command::Tag::kSetParallelDispatch: {
         __attribute__((unused)) auto const& _set_parallel_dispatch = value.set_parallel_dispatch();
-        Measure(_set_parallel_dispatch);
         break;
       }
       case ::fuchsia::ui::input::Command::Tag::Invalid: {
@@ -1205,7 +1170,7 @@ class MeasuringTape {
   }
 
   void Measure(const ::fuchsia::ui::scenic::Command& value) {
-    num_bytes_ += 24;
+    num_bytes_ += 16;
     MeasureOutOfLine(value);
   }
 
@@ -1234,7 +1199,7 @@ class MeasuringTape {
   }
 
   void Measure(const ::fuchsia::ui::views::Command& value) {
-    num_bytes_ += 24;
+    num_bytes_ += 16;
     MeasureOutOfLine(value);
   }
 
@@ -1242,7 +1207,6 @@ class MeasuringTape {
     switch (value.Which()) {
       case ::fuchsia::ui::views::Command::Tag::kEmpty: {
         __attribute__((unused)) auto const& _empty = value.empty();
-        num_bytes_ += 8;
         break;
       }
       case ::fuchsia::ui::views::Command::Tag::Invalid: {

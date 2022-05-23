@@ -269,7 +269,15 @@ func (cg *CodeGenerator) writeUnionOutOfLine(mt *MeasuringTape, expr Expression,
 			Local: local,
 			Body:  &variantBody,
 		}
-		cg.writeInvoke(member, local, &variantBody, inlineAndOutOfLine)
+		invokeKind := inlineAndOutOfLine
+		if member.mt.inlineNumBytes <= 4 {
+			invokeKind = outOfLineOnly
+		}
+		if member.mt.kind == Handle {
+			// TODO(fxbug.dev/49488): Conditionally increase for nullable handles.
+			variantBody.emitAddNumHandles(exprNum(1))
+		}
+		cg.writeInvoke(member, local, &variantBody, invokeKind)
 	}
 
 	// unknown
@@ -291,11 +299,19 @@ func (cg *CodeGenerator) writeTableOutOfLine(mt *MeasuringTape, expr Expression,
 		body.emitGuard(
 			exprHasMember(expr, member.name),
 			&guardBody)
+		invokeKind := inlineAndOutOfLine
+		if member.mt.inlineNumBytes <= 4 {
+			invokeKind = outOfLineOnly
+		}
+		if member.mt.kind == Handle {
+			// TODO(fxbug.dev/49488): Conditionally increase for nullable handles.
+			guardBody.emitAddNumHandles(exprNum(1))
+		}
 		cg.writeInvoke(
 			member,
 			exprMemberOf(expr, member.name, member.mt.kind, member.mt.nullable),
-			&guardBody, inlineAndOutOfLine)
+			&guardBody, invokeKind)
 		guardBody.emitSetMaxOrdinal(maxOrdinalLocal, member.ordinal)
 	}
-	body.emitAddNumBytes(exprMult(exprNum(16), maxOrdinalLocal))
+	body.emitAddNumBytes(exprMult(exprNum(8), maxOrdinalLocal))
 }

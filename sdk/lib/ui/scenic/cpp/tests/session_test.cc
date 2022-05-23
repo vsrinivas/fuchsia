@@ -63,7 +63,7 @@ TEST_F(ScenicSessionFlushTest, AddOneInputCommand) {
   EXPECT_EQ(session_->num_commands(), 0u);
   EXPECT_EQ(session_->num_bytes(),
             // See commands_sizing_test.cc for details.
-            scenic::kEnqueueRequestBaseNumBytes + 104u);
+            scenic::kEnqueueRequestBaseNumBytes + 88u);
   EXPECT_EQ(session_->num_handles(),
             // See commands_sizing_test.cc for details.
             0u);
@@ -89,7 +89,7 @@ TEST_F(ScenicSessionFlushTest, AddTwoInputCommands) {
   // command's size.
   EXPECT_EQ(session_->num_bytes(),
             // See commands_sizing_test.cc for details.
-            scenic::kEnqueueRequestBaseNumBytes + 2 * 104u);
+            scenic::kEnqueueRequestBaseNumBytes + 2 * 88u);
   EXPECT_EQ(session_->num_handles(),
             // See commands_sizing_test.cc for details.
             0u);
@@ -97,18 +97,18 @@ TEST_F(ScenicSessionFlushTest, AddTwoInputCommands) {
 
 TEST_F(ScenicSessionFlushTest, AddTenNonInputCommandsThenOneInputCommand) {
   for (int64_t i = 0; i < 10; ++i) {
-    fuchsia::ui::gfx::MemoryArgs memory_args;
+    fuchsia::ui::gfx::MemoryArgs memory_args;  // 24 bytes
 
-    fuchsia::ui::gfx::ResourceArgs resource_args;
+    fuchsia::ui::gfx::ResourceArgs resource_args;  // 16 + 24 bytes
     resource_args.set_memory(std::move(memory_args));
 
-    fuchsia::ui::gfx::CreateResourceCmd create_resource_cmd;
+    fuchsia::ui::gfx::CreateResourceCmd create_resource_cmd;  // 8 + 16 + 24 bytes
     create_resource_cmd.resource = std::move(resource_args);
 
-    fuchsia::ui::gfx::Command gfx_cmd;
+    fuchsia::ui::gfx::Command gfx_cmd;  // 16 + 8 + 16 + 24 bytes
     gfx_cmd.set_create_resource(std::move(create_resource_cmd));
 
-    fuchsia::ui::scenic::Command cmd;
+    fuchsia::ui::scenic::Command cmd;  // 16 + 16 + 8 + 16 + 24 bytes
     cmd.set_gfx(std::move(gfx_cmd));
 
     session_->Enqueue(std::move(cmd));
@@ -119,18 +119,18 @@ TEST_F(ScenicSessionFlushTest, AddTenNonInputCommandsThenOneInputCommand) {
   EXPECT_EQ(session_->num_commands(), 10u);
   EXPECT_EQ(session_->num_bytes(),
             // See commands_sizing_test.cc for details.
-            scenic::kEnqueueRequestBaseNumBytes + 10 * 104u);
+            scenic::kEnqueueRequestBaseNumBytes + 10 * 80u);
   EXPECT_EQ(session_->num_handles(),
             // See commands_sizing_test.cc for details.
             10 * 1u);
 
   {
-    fuchsia::ui::input::SendPointerInputCmd send_pointer_input_cmd;
+    fuchsia::ui::input::SendPointerInputCmd send_pointer_input_cmd;  // 56 bytes
 
-    fuchsia::ui::input::Command input_cmd;
+    fuchsia::ui::input::Command input_cmd;  // 16 + 56 bytes
     input_cmd.set_send_pointer_input(send_pointer_input_cmd);
 
-    fuchsia::ui::scenic::Command cmd;
+    fuchsia::ui::scenic::Command cmd;  // 16 + 16 + 56 bytes
     cmd.set_input(std::move(input_cmd));
 
     session_->Enqueue(std::move(cmd));
@@ -142,7 +142,7 @@ TEST_F(ScenicSessionFlushTest, AddTenNonInputCommandsThenOneInputCommand) {
   EXPECT_EQ(session_->num_commands(), 0u);
   EXPECT_EQ(session_->num_bytes(),
             // See commands_sizing_test.cc for details.
-            scenic::kEnqueueRequestBaseNumBytes + 11 * 104u);
+            scenic::kEnqueueRequestBaseNumBytes + 10 * 80u + 88u);
   EXPECT_EQ(session_->num_handles(),
             // See commands_sizing_test.cc for details.
             10 * 1u);

@@ -25,12 +25,21 @@ static_assert(sizeof(kHelloWorldEs) == 12 + 1);
 static_assert(sizeof(kHelloWorldRu) == 20 + 1);
 static_assert(sizeof(kHelloWorldZh) == 16 + 1);
 
-TEST(MeasureTape, Primitive) {
+TEST(MeasureTape, Primitive8) {
   ::test::measuretape::TopLevelUnion value;
-  value.set_primitive(5);
+  value.set_primitive8(5);
 
   auto size = Measure(value);
-  EXPECT_EQ(size.num_bytes, 24 + 8);
+  EXPECT_EQ(size.num_bytes, 16 + 8);
+  EXPECT_EQ(size.num_handles, 0);
+}
+
+TEST(MeasureTape, Primitive4) {
+  ::test::measuretape::TopLevelUnion value;
+  value.set_primitive4(5);
+
+  auto size = Measure(value);
+  EXPECT_EQ(size.num_bytes, 16);
   EXPECT_EQ(size.num_handles, 0);
 }
 
@@ -40,7 +49,7 @@ TEST(MeasureTape, Handle) {
   value.set_handle(std::move(h));
 
   auto size = Measure(value);
-  EXPECT_EQ(size.num_bytes, 24 + 8);
+  EXPECT_EQ(size.num_bytes, 16);
   EXPECT_EQ(size.num_handles, 1);
 }
 
@@ -51,7 +60,7 @@ TEST(MeasureTape, StructWithString) {
   value.set_struct_with_string(std::move(struct_with_string));
 
   auto size = Measure(value);
-  EXPECT_EQ(size.num_bytes, 24 + 16 + 16);
+  EXPECT_EQ(size.num_bytes, 16 + 16 + 16);
   EXPECT_EQ(size.num_handles, 0);
 }
 
@@ -61,7 +70,7 @@ TEST(MeasureTape, StructWithOptString_NoString) {
   value.set_struct_with_opt_string(std::move(struct_with_opt_string));
 
   auto size = Measure(value);
-  EXPECT_EQ(size.num_bytes, 24 + 16);
+  EXPECT_EQ(size.num_bytes, 16 + 16);
   EXPECT_EQ(size.num_handles, 0);
 }
 
@@ -72,7 +81,7 @@ TEST(MeasureTape, StructWithOptString_HasString) {
   value.set_struct_with_opt_string(std::move(struct_with_opt_string));
 
   auto size = Measure(value);
-  EXPECT_EQ(size.num_bytes, 24 + 16 + 24);
+  EXPECT_EQ(size.num_bytes, 16 + 16 + 24);
   EXPECT_EQ(size.num_handles, 0);
 }
 
@@ -82,18 +91,29 @@ TEST(MeasureTape, Table_Empty) {
   value.set_table(std::move(table));
 
   auto size = Measure(value);
-  EXPECT_EQ(size.num_bytes, 24 + 16);
+  EXPECT_EQ(size.num_bytes, 16 + 16);
   EXPECT_EQ(size.num_handles, 0);
 }
 
 TEST(MeasureTape, Table_OnlyMaxOrdinalIsSet) {
   ::test::measuretape::TopLevelUnion value;
   ::test::measuretape::Table table;
-  table.set_primitive(42);
+  table.set_primitive4(42);
   value.set_table(std::move(table));
 
   auto size = Measure(value);
-  EXPECT_EQ(size.num_bytes, 24 + 16 + (5 * 16) + 8);
+  EXPECT_EQ(size.num_bytes, 16 + 16 + (5 * 8));
+  EXPECT_EQ(size.num_handles, 0);
+}
+
+TEST(MeasureTape, Table_Primitive8) {
+  ::test::measuretape::TopLevelUnion value;
+  ::test::measuretape::Table table;
+  table.set_primitive8(42);
+  value.set_table(std::move(table));
+
+  auto size = Measure(value);
+  EXPECT_EQ(size.num_bytes, 16 + 16 + (6 * 8) + 8);
   EXPECT_EQ(size.num_handles, 0);
 }
 
@@ -104,7 +124,7 @@ TEST(MeasureTape, Table_StringIsSet) {
   value.set_table(std::move(table));
 
   auto size = Measure(value);
-  EXPECT_EQ(size.num_bytes, 24 + 16 + (3 * 16) + 16 + 16);
+  EXPECT_EQ(size.num_bytes, 16 + 16 + (3 * 8) + 16 + 16);
   EXPECT_EQ(size.num_handles, 0);
 }
 
@@ -114,7 +134,7 @@ TEST(MeasureTape, ArrayOfTwelveBytes) {
   value.set_array_of_twelve_bytes(std::move(array_of_twelve_bytes));
 
   auto size = Measure(value);
-  EXPECT_EQ(size.num_bytes, 24 + 16);
+  EXPECT_EQ(size.num_bytes, 16 + 16);
   EXPECT_EQ(size.num_handles, 0);
 }
 
@@ -128,7 +148,7 @@ TEST(MeasureTape, ArrayOfThreeStrings) {
   value.set_array_of_three_strings(std::move(array_of_three_strings));
 
   auto size = Measure(value);
-  EXPECT_EQ(size.num_bytes, 24 + (3 * 16) + 16 + 24 + 16);
+  EXPECT_EQ(size.num_bytes, 16 + (3 * 16) + 16 + 24 + 16);
   EXPECT_EQ(size.num_handles, 0);
 }
 
@@ -138,7 +158,7 @@ TEST(MeasureTape, ArrayOfThreeHandles) {
   value.set_array_of_three_handles(std::move(array_of_three_handles));
 
   auto size = Measure(value);
-  EXPECT_EQ(size.num_bytes, 24 + 16);
+  EXPECT_EQ(size.num_bytes, 16 + 16);
   EXPECT_EQ(size.num_handles, 3);
 }
 
@@ -148,14 +168,14 @@ TEST(MeasureTape, ArrayOfTwoTables_BothEmpty) {
   value.set_array_of_two_tables(std::move(array_of_two_tables));
 
   auto size = Measure(value);
-  EXPECT_EQ(size.num_bytes, 24 + (2 * 16));
+  EXPECT_EQ(size.num_bytes, 16 + (2 * 16));
   EXPECT_EQ(size.num_handles, 0);
 }
 
 TEST(MeasureTape, ArrayOfTwoTables_Mixed) {
   ::test::measuretape::TopLevelUnion value;
   ::test::measuretape::Table t1;
-  t1.set_primitive(27);
+  t1.set_primitive4(27);
   ::test::measuretape::Table t2;
   zx::handle handle;
   t2.set_handle(std::move(handle));
@@ -166,16 +186,16 @@ TEST(MeasureTape, ArrayOfTwoTables_Mixed) {
   value.set_array_of_two_tables(std::move(array_of_two_tables));
 
   auto size = Measure(value);
-  EXPECT_EQ(size.num_bytes, 24 + (2 * 16) + (5 * 16) + 8 + (4 * 16) + 8);
+  EXPECT_EQ(size.num_bytes, 16 + (2 * 16) + (5 * 8) + (4 * 8));
   EXPECT_EQ(size.num_handles, 1);
 }
 
 TEST(MeasureTape, ArrayOfTwoUnions) {
   ::test::measuretape::TopLevelUnion value;
   ::test::measuretape::Union u1;
-  u1.set_primitive(654321);
+  u1.set_primitive8(654321);
   ::test::measuretape::Union u2;
-  u2.set_primitive(123456);
+  u2.set_primitive4(123456);
   std::array<::test::measuretape::Union, 2> array_of_two_unions = {
       std::move(u1),
       std::move(u2),
@@ -183,7 +203,7 @@ TEST(MeasureTape, ArrayOfTwoUnions) {
   value.set_array_of_two_unions(std::move(array_of_two_unions));
 
   auto size = Measure(value);
-  EXPECT_EQ(size.num_bytes, 24 + (2 * 24) + 8 + 8);
+  EXPECT_EQ(size.num_bytes, 16 + (2 * 16) + 8);
   EXPECT_EQ(size.num_handles, 0);
 }
 
@@ -193,7 +213,7 @@ TEST(MeasureTape, StructWithTwoArrays) {
   value.set_struct_with_two_arrays(std::move(struct_with_two_arrays));
 
   auto size = Measure(value);
-  EXPECT_EQ(size.num_bytes, 24 + 64);
+  EXPECT_EQ(size.num_bytes, 16 + 64);
   EXPECT_EQ(size.num_handles, 0);
 }
 
@@ -205,7 +225,7 @@ TEST(MeasureTape, ArrayOfThreeStructsWithOneHandle) {
       std::move(array_of_three_structs_with_one_handle));
 
   auto size = Measure(value);
-  EXPECT_EQ(size.num_bytes, 24 + (3 * 12 + 4));
+  EXPECT_EQ(size.num_bytes, 16 + (3 * 12 + 4));
   EXPECT_EQ(size.num_handles, 3);
 }
 
@@ -217,7 +237,7 @@ TEST(MeasureTape, ArrayOfThreeStructsWithTwoHandles) {
       std::move(array_of_three_structs_with_two_handles));
 
   auto size = Measure(value);
-  EXPECT_EQ(size.num_bytes, 24 + (3 * 12 + 4));
+  EXPECT_EQ(size.num_bytes, 16 + (3 * 12 + 4));
   EXPECT_EQ(size.num_handles, 6);
 }
 
@@ -227,7 +247,7 @@ TEST(MeasureTape, VectorOfBytes_ThreeBytes) {
   value.set_vector_of_bytes(std::move(vector_of_bytes));
 
   auto size = Measure(value);
-  EXPECT_EQ(size.num_bytes, 24 + 16 + 8);
+  EXPECT_EQ(size.num_bytes, 16 + 16 + 8);
   EXPECT_EQ(size.num_handles, 0);
 }
 
@@ -237,7 +257,7 @@ TEST(MeasureTape, VectorOfBytes_NineBytes) {
   value.set_vector_of_bytes(std::move(vector_of_bytes));
 
   auto size = Measure(value);
-  EXPECT_EQ(size.num_bytes, 24 + 16 + 16);
+  EXPECT_EQ(size.num_bytes, 16 + 16 + 16);
   EXPECT_EQ(size.num_handles, 0);
 }
 
@@ -251,7 +271,7 @@ TEST(MeasureTape, VectorOfStrings) {
   value.set_vector_of_strings(std::move(vector_of_strings));
 
   auto size = Measure(value);
-  EXPECT_EQ(size.num_bytes, 24 + 16 + (3 * 16) + 16 + 24 + 16);
+  EXPECT_EQ(size.num_bytes, 16 + 16 + (3 * 16) + 16 + 24 + 16);
   EXPECT_EQ(size.num_handles, 0);
 }
 
@@ -261,7 +281,7 @@ TEST(MeasureTape, VectorOfHandles_Empty) {
   value.set_vector_of_handles(std::move(vector_of_handles));
 
   auto size = Measure(value);
-  EXPECT_EQ(size.num_bytes, 24 + 16);
+  EXPECT_EQ(size.num_bytes, 16 + 16);
   EXPECT_EQ(size.num_handles, 0);
 }
 
@@ -278,7 +298,7 @@ TEST(MeasureTape, VectorOfHandles_ThreeHandles) {
   value.set_vector_of_handles(std::move(vector_of_handles));
 
   auto size = Measure(value);
-  EXPECT_EQ(size.num_bytes, 24 + 16 + 16);
+  EXPECT_EQ(size.num_bytes, 16 + 16 + 16);
   EXPECT_EQ(size.num_handles, 3);
 }
 
@@ -292,7 +312,7 @@ TEST(MeasureTape, VectorOfTables_TwoEmptyTables) {
   value.set_vector_of_tables(std::move(vector_of_tables));
 
   auto size = Measure(value);
-  EXPECT_EQ(size.num_bytes, 24 + 16 + (2 * 16));
+  EXPECT_EQ(size.num_bytes, 16 + 16 + (2 * 16));
   EXPECT_EQ(size.num_handles, 0);
 }
 
@@ -300,7 +320,7 @@ TEST(MeasureTape, VectorOfTables_Mixed) {
   ::test::measuretape::TopLevelUnion value;
   std::vector<::test::measuretape::Table> vector_of_tables;
   ::test::measuretape::Table t1;
-  t1.set_primitive(27);
+  t1.set_primitive4(27);
   vector_of_tables.push_back(std::move(t1));
   ::test::measuretape::Table t2;
   zx::handle handle;
@@ -309,7 +329,7 @@ TEST(MeasureTape, VectorOfTables_Mixed) {
   value.set_vector_of_tables(std::move(vector_of_tables));
 
   auto size = Measure(value);
-  EXPECT_EQ(size.num_bytes, 24 + 16 + (2 * 16) + (5 * 16) + 8 + (4 * 16) + 8);
+  EXPECT_EQ(size.num_bytes, 16 + 16 + (2 * 16) + (5 * 8) + (4 * 8));
   EXPECT_EQ(size.num_handles, 1);
 }
 
@@ -317,15 +337,15 @@ TEST(MeasureTape, VectorOfUnions) {
   ::test::measuretape::TopLevelUnion value;
   std::vector<::test::measuretape::Union> vector_of_unions;
   ::test::measuretape::Union u1;
-  u1.set_primitive(654321);
+  u1.set_primitive8(654321);
   vector_of_unions.push_back(std::move(u1));
   ::test::measuretape::Union u2;
-  u2.set_primitive(123456);
+  u2.set_primitive4(123456);
   vector_of_unions.push_back(std::move(u2));
   value.set_vector_of_unions(std::move(vector_of_unions));
 
   auto size = Measure(value);
-  EXPECT_EQ(size.num_bytes, 24 + 16 + (2 * 24) + 8 + 8);
+  EXPECT_EQ(size.num_bytes, 16 + 16 + (2 * 16) + 8);
   EXPECT_EQ(size.num_handles, 0);
 }
 
@@ -337,7 +357,7 @@ TEST(MeasureTape, StructWithTwoVectors_BothNull) {
   value.set_struct_with_two_vectors(std::move(struct_with_two_vectors));
 
   auto size = Measure(value);
-  EXPECT_EQ(size.num_bytes, 24 + 32);
+  EXPECT_EQ(size.num_bytes, 16 + 32);
   EXPECT_EQ(size.num_handles, 0);
 }
 
@@ -356,7 +376,7 @@ TEST(MeasureTape, StructWithTwoVectors_ThreeBytesInFirstTwoStringsInSecond) {
   value.set_struct_with_two_vectors(std::move(struct_with_two_vectors));
 
   auto size = Measure(value);
-  EXPECT_EQ(size.num_bytes, 24 + 32 + 8 + (2 * 16) + 24 + 16);
+  EXPECT_EQ(size.num_bytes, 16 + 32 + 8 + (2 * 16) + 24 + 16);
   EXPECT_EQ(size.num_handles, 0);
 }
 
@@ -372,7 +392,7 @@ TEST(MeasureTape, VectorOfStructsWithOneHandle) {
   value.set_vector_of_structs_with_one_handle(std::move(vector_of_structs_with_one_handle));
 
   auto size = Measure(value);
-  EXPECT_EQ(size.num_bytes, 24 + 16 + (3 * 12 + 4));
+  EXPECT_EQ(size.num_bytes, 16 + 16 + (3 * 12 + 4));
   EXPECT_EQ(size.num_handles, 3);
 }
 
@@ -388,7 +408,7 @@ TEST(MeasureTape, VectorOfStructsWithTwoHandles) {
   value.set_vector_of_structs_with_two_handles(std::move(vector_of_structs_with_two_handles));
 
   auto size = Measure(value);
-  EXPECT_EQ(size.num_bytes, 24 + 16 + (3 * 12 + 4));
+  EXPECT_EQ(size.num_bytes, 16 + 16 + (3 * 12 + 4));
   EXPECT_EQ(size.num_handles, 6);
 }
 
