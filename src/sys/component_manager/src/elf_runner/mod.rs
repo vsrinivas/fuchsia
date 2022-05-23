@@ -19,7 +19,10 @@ use {
         runtime_dir::RuntimeDirBuilder,
         stdout::bind_streams_to_syslog,
     },
-    crate::builtin::{crash_introspect::CrashRecords, runner::BuiltinRunnerFactory},
+    crate::{
+        builtin::{crash_introspect::CrashRecords, runner::BuiltinRunnerFactory},
+        builtin_environment::get_next_vdso_vmo,
+    },
     ::routing::{config::RuntimeConfig, policy::ScopedPolicyChecker},
     anyhow::{format_err, Context as _},
     async_trait::async_trait,
@@ -30,7 +33,7 @@ use {
     fidl_fuchsia_diagnostics_types::{
         ComponentDiagnostics, ComponentTasks, Task as DiagnosticsTask,
     },
-    fidl_fuchsia_io as fio, fidl_fuchsia_mem as fmem, fidl_fuchsia_process as fproc,
+    fidl_fuchsia_mem as fmem, fidl_fuchsia_process as fproc,
     fidl_fuchsia_process_lifecycle::LifecycleMarker,
     fuchsia_async::{self as fasync, TimeoutExt},
     fuchsia_runtime::{duplicate_utc_clock_handle, job_default, HandleInfo, HandleType},
@@ -39,7 +42,6 @@ use {
         Time, Vmo,
     },
     futures::channel::oneshot,
-    io_util,
     log::warn,
     moniker::AbsoluteMoniker,
     runner::component::ChannelEpitaph,
@@ -115,26 +117,6 @@ impl TransformClock for zx::ClockTransformation {
             self.rate.reference_ticks,
         )
     }
-}
-
-const NEXT_VDSO_PATH: &str = "/boot/kernel/vdso/next";
-
-async fn get_next_vdso_vmo() -> Result<zx::Vmo, zx::Status> {
-    let (vdso_file, server_end) =
-        fidl::endpoints::create_proxy::<fio::FileMarker>().map_err(|_| zx::Status::NO_MEMORY)?;
-    io_util::node::connect_in_namespace(
-        NEXT_VDSO_PATH,
-        io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_EXECUTABLE,
-        server_end.into_channel(),
-    )?;
-    let vmo = vdso_file
-        .get_backing_memory(
-            fio::VmoFlags::SHARED_BUFFER | fio::VmoFlags::READ | fio::VmoFlags::EXECUTE,
-        )
-        .await
-        .map_err(|_| zx::Status::IO)?
-        .map_err(zx::Status::from_raw)?;
-    vmo.duplicate_handle(zx::Rights::SAME_RIGHTS)
 }
 
 // Builds and serves the runtime directory
@@ -421,11 +403,8 @@ impl ElfRunner {
         }
 
         let mut custom_vdso = None;
-        // If the component uses the "next" VDSO, we need to grab that vDSO from
-        // /boot/kernel/vdso/next and pass it along to the launcher.
         if program_config.should_use_next_vdso() {
             let next_vdso = get_next_vdso_vmo()
-                .await
                 .map_err(|e| ElfRunnerError::component_next_vdso_error(resolved_url.clone(), e))?;
             custom_vdso = Some(next_vdso);
         }
@@ -707,6 +686,7 @@ mod tests {
         fidl_fuchsia_diagnostics_types::{
             ComponentDiagnostics, ComponentTasks, Task as DiagnosticsTask,
         },
+        fidl_fuchsia_io as fio,
         fidl_fuchsia_logger::LogSinkRequest,
         fidl_fuchsia_process_lifecycle::LifecycleMarker,
         fidl_fuchsia_process_lifecycle::LifecycleProxy,
