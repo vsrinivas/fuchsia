@@ -1008,6 +1008,20 @@ decode_failure("EnvelopeByteCountExceedsMessageByteCount") {
 }
 
 decode_failure("EnvelopeHandleCountExceedsMessageHandleCount") {
+    // TODO(fxbug.dev/88705) Fix in Dart.
+    // TODO(fxbug.dev/100924) Fix in Go.
+    bindings_denylist = [dart, go],
+    type = EnvelopeInliningTestUnionStruct,
+    bytes = {
+        v2 = [
+            num(1):8, // small
+            num(0):4, num(1):2, num(1):2,
+        ],
+    },
+    err = ENVELOPE_HANDLES_EXCEED_MESSAGE_LENGTH,
+}
+
+decode_failure("EnvelopeHandleCountExceedsMessageHandleCountUnknown") {
     // TODO(fxbug.dev/88704) Fix in Rust.
     // TODO(fxbug.dev/88705) Fix in Dart.
     bindings_denylist = [rust, dart],
