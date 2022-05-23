@@ -35,7 +35,7 @@ class TestTransceiver : public Mdns::Transceiver {
 
   bool HasInterfaces() override { return true; }
 
-  void SendMessage(DnsMessage message, const ReplyAddress& reply_address) override {}
+  void SendMessage(const DnsMessage& message, const ReplyAddress& reply_address) override {}
 
   void LogTraffic() override {}
 };

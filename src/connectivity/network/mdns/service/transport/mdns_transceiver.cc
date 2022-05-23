@@ -57,14 +57,14 @@ MdnsInterfaceTransceiver* MdnsTransceiver::GetInterfaceTransceiver(const inet::I
   return iter == interface_transceivers_by_address_.end() ? nullptr : iter->second.get();
 }
 
-void MdnsTransceiver::SendMessage(DnsMessage message, const ReplyAddress& reply_address) {
+void MdnsTransceiver::SendMessage(const DnsMessage& message, const ReplyAddress& reply_address) {
   if (reply_address.is_multicast_placeholder()) {
     for (const auto& [address, interface] : interface_transceivers_by_address_) {
       FX_DCHECK(interface);
       if ((reply_address.media() == Media::kBoth || reply_address.media() == interface->media()) &&
           (reply_address.ip_versions() == IpVersions::kBoth ||
            reply_address.ip_versions() == interface->IpVersions())) {
-        interface->SendMessage(&message, reply_address.socket_address());
+        interface->SendMessage(message, reply_address.socket_address());
       }
     }
 
@@ -73,7 +73,7 @@ void MdnsTransceiver::SendMessage(DnsMessage message, const ReplyAddress& reply_
 
   auto interface_transceiver = GetInterfaceTransceiver(reply_address.interface_address());
   if (interface_transceiver != nullptr) {
-    interface_transceiver->SendMessage(&message, reply_address.socket_address());
+    interface_transceiver->SendMessage(message, reply_address.socket_address());
   }
 }
 

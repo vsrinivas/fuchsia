@@ -57,11 +57,11 @@ class MdnsInterfaceTransceiver {
   void SetAlternateAddress(const inet::IpAddress& alternate_address);
 
   // Sends a message to the specified address. A V6 interface will send to
-  // |MdnsAddresses::V6Multicast| if |reply_address| is
-  // |MdnsAddresses::V4Multicast|. This method expects there to be at most two
-  // address records per record vector and, if there are two, that they are
-  // adjacent. The same constraints will apply when this method returns.
-  void SendMessage(DnsMessage* message, const inet::SocketAddress& address);
+  // |MdnsAddresses::V6Multicast| if |address| is |MdnsAddresses::V4Multicast|. If any resource
+  // section of the message contains one or more address placeholders, those placeholders will be
+  // replaced by address resource records for this interface (|address_| and, if valid,
+  // |alternate_address_|).
+  void SendMessage(const DnsMessage& message, const inet::SocketAddress& address);
 
   // Sends a message containing only an address resource for this interface.
   void SendAddress(const std::string& host_full_name);
@@ -111,15 +111,11 @@ class MdnsInterfaceTransceiver {
   // address contained in |address_|, which must be valid.
   std::shared_ptr<DnsResource> GetAlternateAddressResource(const std::string& host_full_name);
 
-  // Makes an address resource (A/AAAA) record with the given name and address.
-  std::shared_ptr<DnsResource> MakeAddressResource(const std::string& host_full_name,
-                                                   const inet::IpAddress& address);
-
-  // Fixes up the address records in the vector. This method expects there to
-  // be at most two address records in the vector and, if there are two, that
-  // they are adjacent. The same constraints will apply when this method
-  // returns.
-  void FixUpAddresses(std::vector<std::shared_ptr<DnsResource>>* resources);
+  // Returns a new vector with the same resources as |resources| except that any placeholder address
+  // records have been replaced by address records for |address_| and, if it's valid,
+  // |alternate_address_|.
+  std::vector<std::shared_ptr<DnsResource>> FixUpAddresses(
+      const std::vector<std::shared_ptr<DnsResource>>& resources);
 
   inet::IpAddress address_;
   inet::IpAddress alternate_address_;

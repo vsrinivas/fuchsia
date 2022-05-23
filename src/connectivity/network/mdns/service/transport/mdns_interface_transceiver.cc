@@ -95,19 +95,21 @@ void MdnsInterfaceTransceiver::SetAlternateAddress(const inet::IpAddress& altern
   alternate_address_ = alternate_address;
 }
 
-void MdnsInterfaceTransceiver::SendMessage(DnsMessage* message,
+void MdnsInterfaceTransceiver::SendMessage(const DnsMessage& message,
                                            const inet::SocketAddress& address) {
-  FX_DCHECK(message);
   FX_DCHECK(address.is_valid());
   FX_DCHECK(address.family() == address_.family() || address == MdnsAddresses::v4_multicast());
 
-  FixUpAddresses(&message->answers_);
-  FixUpAddresses(&message->authorities_);
-  FixUpAddresses(&message->additionals_);
-  message->UpdateCounts();
+  DnsMessage fixed_up_message;
+  fixed_up_message.header_ = message.header_;
+  fixed_up_message.questions_ = message.questions_;
+  fixed_up_message.answers_ = FixUpAddresses(message.answers_);
+  fixed_up_message.authorities_ = FixUpAddresses(message.authorities_);
+  fixed_up_message.additionals_ = FixUpAddresses(message.additionals_);
+  fixed_up_message.UpdateCounts();
 
   PacketWriter writer(std::move(outbound_buffer_));
-  writer << *message;
+  writer << fixed_up_message;
   size_t packet_size = writer.position();
   outbound_buffer_ = writer.GetPacket();
 
@@ -127,16 +129,16 @@ void MdnsInterfaceTransceiver::SendAddress(const std::string& host_full_name) {
   DnsMessage message;
   message.answers_.push_back(GetAddressResource(host_full_name));
 
-  SendMessage(&message, MdnsAddresses::v4_multicast());
+  SendMessage(message, MdnsAddresses::v4_multicast());
 }
 
 void MdnsInterfaceTransceiver::SendAddressGoodbye(const std::string& host_full_name) {
   DnsMessage message;
   // Not using |GetAddressResource| here, because we want to modify the ttl.
-  message.answers_.push_back(MakeAddressResource(host_full_name, address_));
+  message.answers_.push_back(std::make_shared<DnsResource>(host_full_name, address_));
   message.answers_.back()->time_to_live_ = 0;
 
-  SendMessage(&message, MdnsAddresses::v4_multicast());
+  SendMessage(message, MdnsAddresses::v4_multicast());
 }
 
 void MdnsInterfaceTransceiver::LogTraffic() {
@@ -229,7 +231,7 @@ std::shared_ptr<DnsResource> MdnsInterfaceTransceiver::GetAddressResource(
   FX_DCHECK(address_.is_valid());
 
   if (!address_resource_ || address_resource_->name_.dotted_string_ != host_full_name) {
-    address_resource_ = MakeAddressResource(host_full_name, address_);
+    address_resource_ = std::make_shared<DnsResource>(host_full_name, address_);
   }
 
   return address_resource_;
@@ -241,107 +243,55 @@ std::shared_ptr<DnsResource> MdnsInterfaceTransceiver::GetAlternateAddressResour
 
   if (!alternate_address_resource_ ||
       alternate_address_resource_->name_.dotted_string_ != host_full_name) {
-    alternate_address_resource_ = MakeAddressResource(host_full_name, alternate_address_);
+    alternate_address_resource_ = std::make_shared<DnsResource>(host_full_name, alternate_address_);
   }
 
   return alternate_address_resource_;
 }
 
-std::shared_ptr<DnsResource> MdnsInterfaceTransceiver::MakeAddressResource(
-    const std::string& host_full_name, const inet::IpAddress& address) {
-  std::shared_ptr<DnsResource> resource;
-
-  if (address.is_v4()) {
-    resource = std::make_shared<DnsResource>(host_full_name, DnsType::kA);
-    resource->a_.address_.address_ = address;
-  } else {
-    resource = std::make_shared<DnsResource>(host_full_name, DnsType::kAaaa);
-    resource->aaaa_.address_.address_ = address;
-  }
-
-  return resource;
-}
-
-void MdnsInterfaceTransceiver::FixUpAddresses(
-    std::vector<std::shared_ptr<DnsResource>>* resources) {
-  FX_DCHECK(resources);
-
-  // This method is called from |SendMessage| to 'fix up' address resources in
-  // a DNS message. |SendMessage| calls this method once for each of the three
-  // resource lists in a message.
-  //
-  // If the resource list passed to this method contains no A or AAAA resources,
-  // this method returns without making any modifications to the list.
-  //
-  // If the resource list does contain A or AAAA resources, those resources are
-  // replaced with one or two new A or AAAA resources. The first of those new
-  // resources contains the address bound by this instance (A if the address is
-  // v4, AAAA if the address is v6). This address resource is returned by
-  // |GetAddressResource|. If there is an 'alternate' address, a second new
-  // address resource is added for that alternate address. That address resource
-  // is returned by |GetAlternateAddressResource|.
-  //
-  // A/AAAA addresses in the original message come from two sources:
-  // 1) The agent that sent the message may insert a placeholder A message that
-  //    contains an invalid address.
-  // 2) A different transceiver that sent the message previously may have
-  //    inserted its own A/AAAA message(s). Because the mutated message is
-  //    reused, we have to allow for this.
-
+std::vector<std::shared_ptr<DnsResource>> MdnsInterfaceTransceiver::FixUpAddresses(
+    const std::vector<std::shared_ptr<DnsResource>>& resources) {
   std::string name;
+  std::vector<std::shared_ptr<DnsResource>> result;
+  std::copy_if(resources.begin(), resources.end(), std::back_inserter(result),
+               [&name](std::shared_ptr<DnsResource> resource) {
+                 switch (resource->type_) {
+                   case DnsType::kA:
+                     if (resource->a_.address_.address_.is_valid()) {
+                       // Not a placeholder.
+                       return true;
+                     }
+                     break;
+                   case DnsType::kAaaa:
+                     if (resource->aaaa_.address_.address_.is_valid()) {
+                       // Not a placeholder.
+                       return true;
+                     }
+                     break;
+                   default:
+                     // Not an address.
+                     return true;
+                 }
 
-  // Move A/AAAA resources to the end of the vector.
-  auto iter = std::remove_if(resources->begin(), resources->end(),
-                             [&name](const std::shared_ptr<DnsResource>& resource) {
-                               if (resource->type_ == DnsType::kA) {
-                                 if (resource->a_.address_.address_.is_valid()) {
-                                   // Don't fix up valid addresses.
-                                   return false;
-                                 }
-                               } else if (resource->type_ == DnsType::kAaaa) {
-                                 if (resource->aaaa_.address_.address_.is_valid()) {
-                                   // Don't fix up valid addresses.
-                                   return false;
-                                 }
-                               } else {
-                                 // Not an address resource.
-                                 return false;
-                               }
+                 if (name.empty()) {
+                   name = resource->name_.dotted_string_;
+                 }
 
-                               name = resource->name_.dotted_string_;
-                               return true;
-                             });
+                 return false;
+               });
 
-  if (iter == resources->end()) {
-    // No address resources found/moved.
-    return;
+  if (name.empty()) {
+    // No address records found.
+    return result;
   }
 
-  FX_DCHECK(!name.empty());
+  result.push_back(GetAddressResource(name));
 
-  // There is at least one open slot. Fill it with the first A/AAAA resource
-  // with the address resource for this interface.
-  *iter++ = GetAddressResource(name);
-
-  if (!alternate_address_.is_valid()) {
-    // No alternate address. Clean up the remainder of the vector, and we're
-    // done.
-    resources->erase(iter, resources->end());
-    return;
+  if (alternate_address_.is_valid()) {
+    result.push_back(GetAlternateAddressResource(name));
   }
 
-  if (iter == resources->end()) {
-    // We're at the end of the vector. Push the alternate address resource to
-    // the back of the vector, and we're done.
-    resources->push_back(GetAlternateAddressResource(name));
-    return;
-  }
-
-  // Replace the second A/AAAA resource with the alternate address resource.
-  *iter++ = GetAlternateAddressResource(name);
-
-  // Clean up the remainder of the vector, and we're done.
-  resources->erase(iter, resources->end());
+  return result;
 }
 
 }  // namespace mdns
