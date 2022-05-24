@@ -140,6 +140,8 @@ void Mutex::Acquire(zx_duration_t spin_max_duration) {
   uintptr_t old_mutex_state = STATE_FREE;
   if (likely(val_.compare_exchange_weak(old_mutex_state, new_mutex_state, ktl::memory_order_acquire,
                                         ktl::memory_order_relaxed))) {
+    RecordInitialAssignedCpu();
+
     // Don't bother to update the ownership of the wait queue. If another thread
     // attempts to acquire the mutex and discovers it to be already locked, it
     // will take care of updating the wait queue ownership while it is inside of
@@ -158,8 +160,44 @@ __NO_INLINE void Mutex::AcquireContendedMutex(zx_duration_t spin_max_duration,
   // Remember the last call to current_ticks.
   zx_ticks_t now_ticks = current_ticks();
 
-  // Spin on the mutex until it is either released, contested, or
-  // the max spin time is reached.
+  // It looks like the mutex is most likely contested (at least, it was when we
+  // just checked). Enter the adaptive mutex spin phase, where we spin on the
+  // mutex hoping that the thread which owns the mutex is running on a different
+  // CPU, and will release the mutex shortly.
+  //
+  // If we manage to acquire the mutex during the spin phase, we can simply
+  // exit, having achieved our goal.  Otherwise, there are 3 reasons we may end
+  // up terminating the spin phase and dropping into a block operation.
+  //
+  // 1) We exceed the system's configured |spin_max_duration|.
+  // 2) The mutex is marked as CONTESTED, meaning that at least one other thread
+  //    has dropped out of its spin phase and blocked on the mutex.
+  // 3) We think that there is a reasonable chance that the owner of this mutex
+  //    was assigned to the same core that we are running on.
+  //
+  // Notes about #3:
+  //
+  // In order to implement this behavior, the Mutex class maintains a variable
+  // called |maybe_acquired_on_cpu_|.  This is the system's best guess as to
+  // which CPU the owner of the mutex may currently be assigned to. The value of
+  // the variable is set when a thread successfully acquires the mutex, and
+  // cleared when the thread releases the mutex later on.
+  //
+  // This behavior is best effort; the guess is just a guess and could be wrong
+  // for several legitimate reasons.  The owner of the mutex will assign the
+  // variable to the value of the CPU is it running on immediately after it
+  // successfully mutates the mutex state to indicate that it owns the mutex.
+  //
+  // A spinning thread my observe:
+  // 1) A value of INVALID_CPU, either because of weak memory ordering, or
+  //    because the thread was preempted after updating the mutex state, but
+  //    before recording the assigned CPU guess.
+  // 2) An incorrect value of the assigned CPU, again either because of weak
+  //    memory ordering, or because the thread either moved to a different CPU
+  //    or blocked after the guess was recorded.
+  //
+  // So, it is possible to keep spinning when we probably shouldn't, and also
+  // possible to drop out of a spin when we might want to stay in it.
   //
   // TODO(fxbug.dev/34646): Optimize cache pressure of spinners and default spin max.
   const affine::Ratio time_to_ticks = platform_get_ticks_to_time_ratio().Inverse();
@@ -172,8 +210,11 @@ __NO_INLINE void Mutex::AcquireContendedMutex(zx_duration_t spin_max_duration,
     // We use the weak form of compare exchange here: it saves an extra
     // conditional branch on ARM, and if it fails spuriously, we'll just
     // loop around and try again.
+    //
     if (likely(val_.compare_exchange_weak(old_mutex_state, new_mutex_state,
                                           ktl::memory_order_acquire, ktl::memory_order_relaxed))) {
+      RecordInitialAssignedCpu();
+
       // Same as above in the fastest path: leave accounting to later contending
       // threads.
       KTracer{}.KernelMutexUncontestedAcquire(this);
@@ -183,6 +224,12 @@ __NO_INLINE void Mutex::AcquireContendedMutex(zx_duration_t spin_max_duration,
     // Stop spinning if the mutex is or becomes contested. All spinners convert
     // to blocking when the first one reaches the max spin duration.
     if (old_mutex_state & STATE_FLAG_CONTESTED) {
+      break;
+    }
+
+    // Stop spinning if it looks like we might be running on the same CPU which
+    // was assigned to the owner of the mutex.
+    if (arch_curr_cpu_num() == maybe_acquired_on_cpu_.load(ktl::memory_order_relaxed)) {
       break;
     }
 
@@ -222,6 +269,7 @@ __NO_INLINE void Mutex::AcquireContendedMutex(zx_duration_t spin_max_duration,
         // Therefore we can just take the mutex, and remove the queued
         // flag.
         val_.store(new_mutex_state, ktl::memory_order_relaxed);
+        RecordInitialAssignedCpu();
         return;
       }
     }
@@ -340,6 +388,9 @@ void Mutex::Release() {
   magic_.Assert();
   DEBUG_ASSERT(!arch_blocking_disallowed());
   Thread* current_thread = Thread::Current::Get();
+
+  ClearInitialAssignedCpu();
+
   if (const uintptr_t old_mutex_state = TryRelease(current_thread); old_mutex_state != STATE_FREE) {
     // Disable preemption to prevent switching to the woken thread inside of
     // WakeThreads() if it is assigned to this CPU. If the woken thread is
@@ -358,6 +409,9 @@ void Mutex::ReleaseThreadLocked() {
   DEBUG_ASSERT(!Thread::Current::Get()->preemption_state().PreemptIsEnabled());
   thread_lock.AssertHeld();
   Thread* current_thread = Thread::Current::Get();
+
+  ClearInitialAssignedCpu();
+
   if (const uintptr_t old_mutex_state = TryRelease(current_thread); old_mutex_state != STATE_FREE) {
     ReleaseContendedMutex(current_thread, old_mutex_state);
   }

@@ -82,6 +82,14 @@ class TA_CAP("mutex") Mutex {
   // stack set up, tear down in the |Release| fastpath small.
   void ReleaseContendedMutex(Thread* current_thread, uintptr_t old_mutex_state) TA_REQ(thread_lock);
 
+  void RecordInitialAssignedCpu() {
+    maybe_acquired_on_cpu_.store(arch_curr_cpu_num(), ktl::memory_order_relaxed);
+  }
+
+  void ClearInitialAssignedCpu() {
+    maybe_acquired_on_cpu_.store(INVALID_CPU, ktl::memory_order_relaxed);
+  }
+
   static constexpr uint32_t MAGIC = 0x6D757478;  // 'mutx'
   static constexpr uintptr_t STATE_FREE = 0u;
   static constexpr uintptr_t STATE_FLAG_CONTESTED = 1u;
@@ -96,6 +104,11 @@ class TA_CAP("mutex") Mutex {
   Thread* holder() const { return holder_from_val(val()); }
 
   fbl::Canary<MAGIC> magic_;
+
+  // See the comment near the start of AcquireContendedMutex for details about
+  // this variable, and how it affects the spin phase behavior of
+  // Mutex::AcquireContendedMutex
+  ktl::atomic<cpu_num_t> maybe_acquired_on_cpu_{INVALID_CPU};
   ktl::atomic<uintptr_t> val_{STATE_FREE};
   OwnedWaitQueue wait_;
 };
