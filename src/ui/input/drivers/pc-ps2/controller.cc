@@ -134,16 +134,15 @@ void Controller::DdkInit(ddk::InitTxn txn) {
       test_result = SendControllerCommand(kCmdPort2Test, {});
       if (test_result.is_error() || test_result->empty()) {
         status = test_result.is_error() ? test_result.status_value() : ZX_ERR_IO;
-        zxlogf(INFO, "Send port 2 self-test failed: %s", zx_status_get_string(status));
-        return;
+        zxlogf(INFO, "Send port 2 self-test failed: %s, disabling", zx_status_get_string(status));
+        has_port2_ = false;
       }
     }
     if (has_port2_) {
       data = test_result.value()[0];
       if (data != 0x00) {
         zxlogf(ERROR, "Port 2 self-test failed: 0x%0x", data);
-        status = ZX_ERR_INTERNAL;
-        return;
+        has_port2_ = false;
       }
     }
 
