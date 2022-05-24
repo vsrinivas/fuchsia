@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::driver::srp_proxy::LOCAL_DOMAIN;
-use crate::prelude::*;
+use super::*;
 use fidl::endpoints::create_endpoints;
 use fidl_fuchsia_net_mdns::*;
 use fuchsia_async::Task;
@@ -85,13 +84,16 @@ impl AdvertisingProxy {
                   update_id: ot::SrpServerServiceUpdateId,
                   host: &ot::SrpServerHost,
                   timeout: u32| {
-                info!("srp_server_set_service_update: Update for {:?}, timeout: {}", host, timeout);
+                debug!(
+                    "srp_server_set_service_update: Update for {:?}, timeout: {}",
+                    host, timeout
+                );
                 let result = inner.lock().push_srp_host_changes(instance, host);
 
                 if let Err(err) = &result {
                     warn!("srp_server_set_service_update: Error publishing {:?}: {:?}", host, err);
                 } else {
-                    info!("srp_server_set_service_update: Finished publishing {:?}", host);
+                    debug!("srp_server_set_service_update: Finished publishing {:?}", host);
                 }
 
                 ot_instance.srp_server_handle_service_update_result(
@@ -144,7 +146,7 @@ impl AdvertisingProxyInner {
             self.hosts.get_mut(srp_host.full_name_cstr())
         {
             // Use the existing host.
-            info!(
+            debug!(
                 "Updating advertisement of {:?} on {:?}",
                 srp_host.full_name_cstr(),
                 LOCAL_DOMAIN
@@ -160,12 +162,16 @@ impl AdvertisingProxyInner {
                 .trim_end_matches(&self.srp_domain)
                 .trim_end_matches('.');
 
-            info!(
+            debug!(
                 "Advertising host {:?} on {:?} as {:?}",
                 srp_host.full_name_cstr(),
                 LOCAL_DOMAIN,
                 local_name
             );
+
+            if local_name.len() > MAX_DNSSD_HOST_LEN {
+                bail!("Host {:?} is too long (max {} chars)", local_name, MAX_DNSSD_HOST_LEN);
+            }
 
             let (client, server) = create_endpoints::<ServiceInstancePublisherMarker>()
                 .context("Failed to create FIDL endpoints")?;
@@ -244,7 +250,7 @@ impl AdvertisingProxyInner {
 
             if srp_service.is_deleted() {
                 // Delete the service.
-                info!(
+                debug!(
                     "No longer advertising service {:?} on {:?}",
                     srp_service.full_name_cstr(),
                     LOCAL_DOMAIN
@@ -263,12 +269,26 @@ impl AdvertisingProxyInner {
                 continue;
             }
 
-            info!(
+            debug!(
                 "Advertising service {:?} on {:?} as {:?}",
-                srp_service.full_name_cstr(),
-                LOCAL_DOMAIN,
-                local_instance_name
+                local_service_name, LOCAL_DOMAIN, local_instance_name
             );
+
+            if local_service_name.len() > MAX_DNSSD_SERVICE_LEN {
+                error!(
+                    "Unable publish service instance {:?}: Service too long (max {} chars)",
+                    local_service_name, MAX_DNSSD_SERVICE_LEN
+                );
+                continue;
+            }
+
+            if local_instance_name.len() > MAX_DNSSD_INSTANCE_LEN {
+                error!(
+                    "Unable publish service instance {:?}: Instance name too long (max {} chars)",
+                    local_instance_name, MAX_DNSSD_INSTANCE_LEN
+                );
+                continue;
+            }
 
             // (Re-)Add the service.
 

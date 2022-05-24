@@ -23,6 +23,12 @@ const LOCAL_DOMAIN: &str = "local.";
 /// this to be a typical TTL value.
 const DEFAULT_MDNS_TTL: u32 = 120;
 
+const MAX_DNSSD_SERVICE_LEN: usize = 22;
+
+const MAX_DNSSD_HOST_LEN: usize = 255;
+
+const MAX_DNSSD_INSTANCE_LEN: usize = 63;
+
 /// Converts an optional vector of strings and to a single string.
 fn flatten_txt(txt: Option<Vec<String>>) -> String {
     ot::dnssd_flatten_txt(txt.into_iter().flat_map(IntoIterator::into_iter))
