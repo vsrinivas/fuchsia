@@ -189,6 +189,7 @@ TEST(TopByteIgnoreTests, TaggedFARWatchpoint) {
   uintptr_t tagged_ptr = AddTag(watched_addr, kTestTag);
   zx_exception_report_t report = {};
   ASSERT_NO_FATAL_FAILURE(CatchCrash(DerefTaggedPtrCrash, tagged_ptr, SetupWatchpoint, &report));
+  ASSERT_EQ(report.header.type, ZX_EXCP_HW_BREAKPOINT);
   ASSERT_EQ(report.context.arch.u.arm_64.far, tagged_ptr);
 }
 
