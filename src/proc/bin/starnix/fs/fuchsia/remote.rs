@@ -209,6 +209,7 @@ fn zxio_wait_async(
     waiter: &Arc<Waiter>,
     events: FdEvents,
     handler: EventHandler,
+    options: WaitAsyncOptions,
 ) -> WaitKey {
     let zxio_clone = zxio.clone();
     let signal_handler = move |signals: zx::Signals| {
@@ -218,9 +219,8 @@ fn zxio_wait_async(
     };
 
     let (handle, signals) = zxio.wait_begin(get_zxio_signals_from_events(events));
-
     // unwrap OK here as errors are only generated from misuse
-    waiter.wake_on_signals(&handle, signals, Box::new(signal_handler)).unwrap()
+    waiter.wake_on_signals(&handle, signals, Box::new(signal_handler), options).unwrap()
 }
 
 fn zxio_cancel_wait(zxio: &Arc<Zxio>, waiter: &Arc<Waiter>, key: WaitKey) -> bool {
@@ -448,8 +448,9 @@ impl FileOps for RemoteFileObject {
         waiter: &Arc<Waiter>,
         events: FdEvents,
         handler: EventHandler,
+        options: WaitAsyncOptions,
     ) -> WaitKey {
-        zxio_wait_async(&self.zxio, waiter, events, handler)
+        zxio_wait_async(&self.zxio, waiter, events, handler, options)
     }
 
     fn cancel_wait(&self, _current_task: &CurrentTask, waiter: &Arc<Waiter>, key: WaitKey) {
@@ -503,8 +504,9 @@ impl FileOps for RemotePipeObject {
         waiter: &Arc<Waiter>,
         events: FdEvents,
         handler: EventHandler,
+        options: WaitAsyncOptions,
     ) -> WaitKey {
-        zxio_wait_async(&self.zxio, waiter, events, handler)
+        zxio_wait_async(&self.zxio, waiter, events, handler, options)
     }
 
     fn cancel_wait(&self, _current_task: &CurrentTask, waiter: &Arc<Waiter>, key: WaitKey) {

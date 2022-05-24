@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use bitflags::bitflags;
 use fuchsia_zircon as zx;
 use std::fmt;
 use std::sync::Arc;
@@ -16,6 +17,13 @@ use crate::types::as_any::*;
 use crate::types::*;
 
 pub const MAX_LFS_FILESIZE: usize = 0x7fffffffffffffff;
+
+bitflags! {
+    pub struct WaitAsyncOptions: u32 {
+        // Ignore events active at the time of the call to wait_async().
+        const EDGE_TRIGGERED = 1;
+    }
+}
 
 pub enum SeekOrigin {
     SET,
@@ -157,8 +165,9 @@ pub trait FileOps: Send + Sync + AsAny {
     }
 
     /// Establish a one-shot, asynchronous wait for the given FdEvents for the given file and task.
-    /// If the events are already active at the time of calling, handler will be called on immediately
-    /// on the next wait.
+    /// If no options are set and the events are already active at the time of calling, handler
+    /// will be called on immediately on the next wait. If `WaitAsyncOptions::EDGE_TRIGGERED` is
+    /// specified as an option, active events are not considered.
     fn wait_async(
         &self,
         _file: &FileObject,
@@ -166,6 +175,7 @@ pub trait FileOps: Send + Sync + AsAny {
         _waiter: &Arc<Waiter>,
         _events: FdEvents,
         _handler: EventHandler,
+        _options: WaitAsyncOptions,
     ) -> WaitKey;
 
     /// Cancel a wait set up by wait_async.
@@ -385,6 +395,7 @@ macro_rules! fileops_impl_nonblocking {
             _waiter: &std::sync::Arc<crate::task::Waiter>,
             _events: crate::fs::FdEvents,
             _handler: crate::task::EventHandler,
+            _options: crate::fs::WaitAsyncOptions,
         ) -> crate::task::WaitKey {
             crate::task::WaitKey::empty()
         }
@@ -611,7 +622,14 @@ impl FileObject {
 
         let waiter = Waiter::new();
         loop {
-            self.ops().wait_async(self, current_task, &waiter, events, WaitCallback::none());
+            self.ops().wait_async(
+                self,
+                current_task,
+                &waiter,
+                events,
+                WaitCallback::none(),
+                WaitAsyncOptions::empty(),
+            );
             match op() {
                 Err(errno) if errno == EAGAIN => waiter
                     .wait_until(current_task, deadline.unwrap_or(zx::Time::INFINITE))
@@ -802,14 +820,18 @@ impl FileObject {
     }
 
     /// Wait on the specified events and call the EventHandler when ready
+    ///
+    /// - `options`: Can be 0 or EPOLLET, which will ignore events active
+    ///              at the time of the call to `wait_async()`.
     pub fn wait_async(
         &self,
         current_task: &CurrentTask,
         waiter: &Arc<Waiter>,
         events: FdEvents,
         handler: EventHandler,
+        options: WaitAsyncOptions,
     ) -> WaitKey {
-        self.ops().wait_async(self, current_task, waiter, events, handler)
+        self.ops().wait_async(self, current_task, waiter, events, handler, options)
     }
 
     // Cancel a wait set up with wait_async

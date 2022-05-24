@@ -762,6 +762,7 @@ pub struct zx_packet_signal_t {
 }
 
 pub const ZX_WAIT_ASYNC_TIMESTAMP: u32 = 1;
+pub const ZX_WAIT_ASYNC_EDGE: u32 = 2;
 
 // Actually a union of different integer types, but this should be good enough.
 pub type zx_packet_user_t = [u8; 32];

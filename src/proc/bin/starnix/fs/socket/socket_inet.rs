@@ -81,6 +81,7 @@ impl SocketOps for InetSocket {
         _waiter: &Arc<Waiter>,
         _events: FdEvents,
         _handler: EventHandler,
+        _options: WaitAsyncOptions,
     ) -> WaitKey {
         not_implemented!("InetSocket::wait_async is stubbed");
         WaitKey::empty()

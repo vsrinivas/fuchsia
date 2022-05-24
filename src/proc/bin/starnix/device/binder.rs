@@ -8,7 +8,7 @@ use crate::device::DeviceOps;
 use crate::fs::devtmpfs::dev_tmp_fs;
 use crate::fs::{
     FdEvents, FdNumber, FileObject, FileOps, FileSystem, FileSystemHandle, FileSystemOps, FsNode,
-    FsStr, NamespaceNode, ROMemoryDirectory, SeekOrigin, SpecialNode,
+    FsStr, NamespaceNode, ROMemoryDirectory, SeekOrigin, SpecialNode, WaitAsyncOptions,
 };
 use crate::lock::{Mutex, MutexGuard, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use crate::logging::not_implemented;
@@ -85,13 +85,14 @@ impl FileOps for BinderDevInstance {
         waiter: &Arc<Waiter>,
         events: FdEvents,
         handler: EventHandler,
+        options: WaitAsyncOptions,
     ) -> WaitKey {
         let binder_thread = self
             .proc
             .thread_pool
             .write()
             .find_or_register_thread(&self.proc, current_task.get_tid());
-        self.driver.wait_async(&self.proc, &binder_thread, waiter, events, handler)
+        self.driver.wait_async(&self.proc, &binder_thread, waiter, events, handler, options)
     }
 
     fn cancel_wait(&self, _current_task: &CurrentTask, _waiter: &Arc<Waiter>, key: WaitKey) {
@@ -2031,6 +2032,7 @@ impl BinderDriver {
         waiter: &Arc<Waiter>,
         events: FdEvents,
         handler: EventHandler,
+        _options: WaitAsyncOptions,
     ) -> WaitKey {
         // THREADING: Always acquire the [`BinderProcess::command_queue`] lock before the
         // [`BinderThread::state`] lock or else it may lead to deadlock.

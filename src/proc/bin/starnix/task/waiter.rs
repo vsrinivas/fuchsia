@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use crate::fs::FdEvents;
+use crate::fs::WaitAsyncOptions;
 use crate::lock::Mutex;
 use crate::logging::*;
 use crate::task::*;
@@ -246,10 +247,16 @@ impl Waiter {
         handle: &dyn zx::AsHandleRef,
         signals: zx::Signals,
         handler: SignalHandler,
+        options: WaitAsyncOptions,
     ) -> Result<WaitKey, zx::Status> {
         let callback = WaitCallback::SignalHandler(handler);
         let key = self.register_callback(callback);
-        handle.wait_async_handle(&self.port, key, signals, zx::WaitAsyncOpts::empty())?;
+        let zx_options = if options.contains(WaitAsyncOptions::EDGE_TRIGGERED) {
+            zx::WaitAsyncOpts::EDGE_TRIGGERED
+        } else {
+            zx::WaitAsyncOpts::empty()
+        };
+        handle.wait_async_handle(&self.port, key, signals, zx_options)?;
         Ok(WaitKey { key })
     }
 
@@ -487,7 +494,13 @@ mod tests {
             COUNTER.store(FINAL_VAL, Ordering::Relaxed);
         });
         let waiter = Waiter::new();
-        pipe.wait_async(&current_task, &waiter, FdEvents::POLLIN, report_packet);
+        pipe.wait_async(
+            &current_task,
+            &waiter,
+            FdEvents::POLLIN,
+            report_packet,
+            WaitAsyncOptions::empty(),
+        );
         let test_string_clone = test_string.clone();
 
         let thread = std::thread::spawn(move || {
@@ -525,7 +538,13 @@ mod tests {
             let handler = move |_observed: FdEvents| {
                 callback_count_clone.fetch_add(1, Ordering::Relaxed);
             };
-            let key = event.wait_async(&current_task, &waiter, FdEvents::POLLIN, Box::new(handler));
+            let key = event.wait_async(
+                &current_task,
+                &waiter,
+                FdEvents::POLLIN,
+                Box::new(handler),
+                WaitAsyncOptions::empty(),
+            );
             if do_cancel {
                 event.cancel_wait(&current_task, &waiter, key);
             }

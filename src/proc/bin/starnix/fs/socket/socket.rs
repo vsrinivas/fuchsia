@@ -102,6 +102,7 @@ pub trait SocketOps: Send + Sync + AsAny {
         waiter: &Arc<Waiter>,
         events: FdEvents,
         handler: EventHandler,
+        options: WaitAsyncOptions,
     ) -> WaitKey;
 
     /// Cancel a wait previously set up with `wait_async`.
@@ -325,8 +326,9 @@ impl Socket {
         waiter: &Arc<Waiter>,
         events: FdEvents,
         handler: EventHandler,
+        options: WaitAsyncOptions,
     ) -> WaitKey {
-        self.ops.wait_async(self, current_task, waiter, events, handler)
+        self.ops.wait_async(self, current_task, waiter, events, handler, options)
     }
 
     pub fn cancel_wait(&self, current_task: &CurrentTask, waiter: &Arc<Waiter>, key: WaitKey) {

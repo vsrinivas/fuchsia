@@ -215,9 +215,10 @@ state_implementation!(Terminal, TerminalMutableState, {
         waiter: &Arc<Waiter>,
         events: FdEvents,
         handler: EventHandler,
+        options: WaitAsyncOptions,
     ) -> WaitKey {
         let current_events = self.main_query_events();
-        if current_events & events {
+        if current_events & events && !options.contains(WaitAsyncOptions::EDGE_TRIGGERED) {
             waiter.wake_immediately(current_events.mask(), handler)
         } else {
             self.main_wait_queue.wait_async_events(waiter, events, handler)
@@ -272,9 +273,10 @@ state_implementation!(Terminal, TerminalMutableState, {
         waiter: &Arc<Waiter>,
         events: FdEvents,
         handler: EventHandler,
+        options: WaitAsyncOptions,
     ) -> WaitKey {
         let current_events = self.replica_query_events();
-        if current_events & events {
+        if current_events & events && !options.contains(WaitAsyncOptions::EDGE_TRIGGERED) {
             waiter.wake_immediately(current_events.mask(), handler)
         } else {
             self.replica_wait_queue.wait_async_events(waiter, events, handler)

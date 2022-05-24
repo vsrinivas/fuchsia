@@ -324,10 +324,11 @@ impl FileOps for PipeFileObject {
         waiter: &Arc<Waiter>,
         events: FdEvents,
         handler: EventHandler,
+        options: WaitAsyncOptions,
     ) -> WaitKey {
         let mut pipe = self.pipe.lock();
         let present_events = pipe.query_events();
-        if events & present_events {
+        if events & present_events && !options.contains(WaitAsyncOptions::EDGE_TRIGGERED) {
             waiter.wake_immediately(present_events.mask(), handler)
         } else {
             pipe.waiters.wait_async_mask(waiter, events.mask(), handler)

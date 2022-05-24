@@ -2,6 +2,6 @@
     include: [ "//src/proc/tests/android/gvisor/meta/gvisor.shard.cml" ],
     program: {
         binary: "data/tests/epoll_test",
-        args: [ "--gunit_filter=*.*Writable:*.*Readable:*.Timeout:*.WaitThenUnblock:*.TimeoutNoFds:*.UnblockWithNewFD" ],
+        args: [ "--gunit_filter=*.*Writable:*.*Readable:*.Timeout:*.WaitThenUnblock:*.TimeoutNoFds:*.UnblockWithNewFD:*.EdgeTriggered" ],
     },
 }

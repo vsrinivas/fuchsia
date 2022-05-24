@@ -93,6 +93,16 @@ impl EpollFileObject {
         key: EpollKey,
         wait_object: &mut WaitObject,
     ) -> Result<(), Errno> {
+        self.wait_on_file_with_options(current_task, key, wait_object, WaitAsyncOptions::empty())
+    }
+
+    fn wait_on_file_with_options(
+        &self,
+        current_task: &CurrentTask,
+        key: EpollKey,
+        wait_object: &mut WaitObject,
+        options: WaitAsyncOptions,
+    ) -> Result<(), Errno> {
         let state = self.state.clone();
         let handler = move |observed: FdEvents| {
             state.write().trigger_list.push_back(ReadyObject { key, observed })
@@ -103,6 +113,7 @@ impl EpollFileObject {
             &self.waiter,
             wait_object.events,
             Box::new(handler),
+            options,
         );
         Ok(())
     }
@@ -215,7 +226,7 @@ impl EpollFileObject {
             // multiple threads to call EpollFileObject::wait
             // simultaneously.  We break early if the max_events
             // is reached, leaving items on the trigger list for
-            //the next wait.
+            // the next wait.
             let mut state = self.state.write();
             if let Some(pending) = state.trigger_list.pop_front() {
                 if let Some(wait) = state.wait_objects.get_mut(&pending.key) {
@@ -234,20 +245,27 @@ impl EpollFileObject {
             }
         }
 
-        // Process the pening list and add processed ReadyObject
+        // Process the pending list and add processed ReadyObject
         // enties to the rearm_list for the next wait.
         let mut result = vec![];
         let mut state = self.state.write();
         for pending_event in pending_list.iter() {
             // The wait could have been deleted by here,
             // so ignore the None case.
-            if let Some(wait) = state.wait_objects.get(&pending_event.key) {
+            if let Some(wait) = state.wait_objects.get_mut(&pending_event.key) {
                 let reported_events = pending_event.observed.mask() & wait.events.mask();
                 result.push(EpollEvent { events: reported_events, data: wait.data });
-                // TODO When edge-triggered epoll, EPOLLET, is
-                // implemented, we would enable to wait here,
-                // instead of adding it to the rearm list.
-                state.rearm_list.push(pending_event.clone());
+
+                if wait.events.mask() & EPOLLET != 0 {
+                    self.wait_on_file_with_options(
+                        current_task,
+                        pending_event.key,
+                        wait,
+                        WaitAsyncOptions::EDGE_TRIGGERED,
+                    )?;
+                } else {
+                    state.rearm_list.push(pending_event.clone());
+                }
             }
         }
 
@@ -284,6 +302,7 @@ impl FileOps for EpollFileObject {
         _waiter: &Arc<Waiter>,
         _events: FdEvents,
         _handler: EventHandler,
+        _options: WaitAsyncOptions,
     ) -> WaitKey {
         panic!("waiting on epoll unimplemnted")
     }
@@ -430,7 +449,13 @@ mod tests {
             let handler = move |_observed: FdEvents| {
                 callback_count_clone.fetch_add(1, Ordering::Relaxed);
             };
-            let key = event.wait_async(&current_task, &waiter, FdEvents::POLLIN, Box::new(handler));
+            let key = event.wait_async(
+                &current_task,
+                &waiter,
+                FdEvents::POLLIN,
+                Box::new(handler),
+                WaitAsyncOptions::empty(),
+            );
             if do_cancel {
                 event.cancel_wait(&current_task, &waiter, key);
             }

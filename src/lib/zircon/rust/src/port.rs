@@ -371,6 +371,9 @@ bitflags! {
     pub struct WaitAsyncOpts: u32 {
         /// When set, causes the system to capture a timestamp when the wait triggered.
         const TIMESTAMP = sys::ZX_WAIT_ASYNC_TIMESTAMP;
+        // When set, causes the port to not enqueue a packet for signals active at
+        // the time of the zx_object_wait_async() call.
+        const EDGE_TRIGGERED = sys::ZX_WAIT_ASYNC_EDGE;
     }
 }
 
