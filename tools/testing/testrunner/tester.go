@@ -172,20 +172,9 @@ func (t *SubprocessTester) Test(ctx context.Context, test testsharder.Test, stdo
 	profileAbs := filepath.Join(t.localOutputDir, profileRel)
 	os.MkdirAll(filepath.Dir(profileAbs), os.ModePerm)
 
-	tmpOutDir, err := ioutil.TempDir("", "")
-	if err != nil {
-		testResult.FailReason = err.Error()
-		return testResult, nil
-	}
-	defer os.RemoveAll(tmpOutDir)
 	r := newRunner(t.dir, append(
 		t.env,
-		// Set the TestOutDirEnvKey to a temp directory which we will move to the
-		// actual outDir once the test completes. Otherwise, when run in a swarming
-		// task, a test that doesn't properly clean up its processes could still be
-		// writing to the out dir as we try to upload the contents with the swarming
-		// task outputs which will result in the swarming bot failing with BOT_DIED.
-		fmt.Sprintf("%s=%s", constants.TestOutDirEnvKey, tmpOutDir),
+		fmt.Sprintf("%s=%s", constants.TestOutDirEnvKey, outDir),
 		// When host-side tests are instrumented for profiling, executing
 		// them will write a profile to the location under this environment variable.
 		fmt.Sprintf("%s=%s", llvmProfileEnvKey, profileAbs),
@@ -323,36 +312,13 @@ func (t *SubprocessTester) Test(ctx context.Context, test testsharder.Test, stdo
 			}
 		*/
 	}
-	err = r.Run(ctx, testCmd, stdout, stderr)
+	err := r.Run(ctx, testCmd, stdout, stderr)
 	if err == nil {
 		testResult.Result = runtests.TestSuccess
 	} else if errors.Is(err, context.DeadlineExceeded) {
 		testResult.Result = runtests.TestAborted
 	} else {
 		testResult.FailReason = err.Error()
-	}
-
-	// Move the contents of tmpOutDir to the original designated output directory for the test.
-	if err := filepath.Walk(tmpOutDir, func(path string, info fs.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if !info.IsDir() {
-			pathRel, err := filepath.Rel(tmpOutDir, path)
-			if err != nil {
-				return fmt.Errorf("failed to get relative path of %s to %s: %w", path, tmpOutDir, err)
-			}
-			newPathAbs := filepath.Join(outDir, pathRel)
-			if err := os.MkdirAll(filepath.Dir(newPathAbs), os.ModePerm); err != nil {
-				return fmt.Errorf("failed to create parent dirs of %s: %w", newPathAbs, err)
-			}
-			if err := os.Rename(path, newPathAbs); err != nil {
-				return fmt.Errorf("failed to move %s to %s: %w", path, newPathAbs, err)
-			}
-		}
-		return nil
-	}); err != nil {
-		logger.Errorf(ctx, "failed to move test outputs: %s", err)
 	}
 
 	if exists, profileErr := osmisc.FileExists(profileAbs); profileErr != nil {

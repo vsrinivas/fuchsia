@@ -33,6 +33,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/environment"
 	"go.fuchsia.dev/fuchsia/tools/lib/ffxutil"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
+	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/streams"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 	"go.fuchsia.dev/fuchsia/tools/testing/tap"
@@ -523,14 +524,35 @@ func runAndOutputTests(
 		}
 
 		runIndex := test.previousRuns
-		outDir := filepath.Join(globalOutDir, url.PathEscape(strings.ReplaceAll(test.Name, ":", "")), strconv.Itoa(runIndex))
-		result, err := runTestOnce(ctx, test.Test, t, outDir)
+
+		// Use a temp directory for the output directory which we will move to the
+		// actual outDir once the test completes. Otherwise, when run in a swarming
+		// task, a test that doesn't properly clean up its processes could still be
+		// writing to the out dir as we try to upload the contents with the swarming
+		// task outputs which will result in the swarming bot failing with BOT_DIED.
+		tmpOutDir, err := ioutil.TempDir("", "")
+		if err != nil {
+			return err
+		}
+		defer os.RemoveAll(tmpOutDir)
+		result, err := runTestOnce(ctx, test.Test, t, tmpOutDir)
 		if err != nil {
 			return err
 		}
 		result.RunIndex = runIndex
 		if err := outputs.Record(ctx, *result); err != nil {
 			return err
+		}
+		// At this point, outputs.Record() should have moved all important output
+		// files to somewhere within the outputs.OutDir, so the rest of the contents
+		// of tmpOutDir can be moved to the designated output directory for the test
+		// within globalOutDir so they can be uploaded with the swarming task outputs.
+		outDir := filepath.Join(globalOutDir, url.PathEscape(strings.ReplaceAll(test.Name, ":", "")), strconv.Itoa(runIndex))
+		if err := os.MkdirAll(outDir, 0o700); err != nil {
+			return err
+		}
+		if err := osmisc.CopyDir(tmpOutDir, outDir); err != nil {
+			return fmt.Errorf("failed to move test outputs: %w", err)
 		}
 
 		test.previousRuns++
