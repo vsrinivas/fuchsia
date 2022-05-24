@@ -57,7 +57,7 @@ class Clock {
 
   struct ToClockMonoSnapshot {
     media::TimelineFunction to_clock_mono;
-    int64_t generation;
+    int64_t generation = -1;
   };
 
   // Returns a function that translates from this clock's local time, a.k.a. "reference time", to
@@ -88,12 +88,12 @@ class Clock {
   // Shorthand for to_clock_mono_snapshot().timeline_function.
   media::TimelineFunction to_clock_mono() const { return to_clock_mono_snapshot().to_clock_mono; }
 
-  // Returns reference time equivalent to the given system monotonic time.
+  // Returns the reference time equivalent to the given system monotonic time.
   zx::time ReferenceTimeFromMonotonicTime(zx::time mono_time) const {
     return zx::time(to_clock_mono().ApplyInverse(mono_time.get()));
   }
 
-  // Returns system monotonic time equivalent to the given reference time.
+  // Returns the system monotonic time equivalent to the given reference time.
   zx::time MonotonicTimeFromReferenceTime(zx::time ref_time) const {
     return zx::time(to_clock_mono().Apply(ref_time.get()));
   }

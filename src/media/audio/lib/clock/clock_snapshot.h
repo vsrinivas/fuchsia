@@ -1,0 +1,61 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#ifndef SRC_MEDIA_AUDIO_LIB_CLOCK_CLOCK_SNAPSHOT_H_
+#define SRC_MEDIA_AUDIO_LIB_CLOCK_CLOCK_SNAPSHOT_H_
+
+#include <memory>
+#include <string>
+
+#include "src/media/audio/lib/clock/clock.h"
+
+namespace media_audio {
+
+// A snapshot of a clock at a single moment in time. The API is similar to that of a `const Clock`.
+// This is a value type that supports copy and assignment.
+class ClockSnapshot {
+ public:
+  // Create a snapshot of the given clock at the given monotonic time.
+  ClockSnapshot(const std::shared_ptr<const Clock>& clock, zx::time mono_time)
+      : backing_clock_(clock),
+        to_clock_mono_snapshot_(clock->to_clock_mono_snapshot()),
+        mono_now_(mono_time),
+        // Use `to_clock_mono_snapshot_` to ensure a consistent snapshot.
+        ref_now_(zx::time(to_clock_mono_snapshot_.to_clock_mono.ApplyInverse(mono_time.get()))) {}
+
+  std::string_view name() const { return backing_clock_->name(); }
+  zx_koid_t koid() const { return backing_clock_->koid(); }
+  uint32_t domain() const { return backing_clock_->domain(); }
+
+  // Returns when the snapshot was taken according to the snapshotted clock.
+  zx::time now() const { return ref_now_; }
+
+  // Returns when the snapshot was taken according to the system monotonic clock.
+  zx::time mono_now() const { return mono_now_; }
+
+  // Returns the TimelineFunction for the current snapshot.
+  Clock::ToClockMonoSnapshot to_clock_mono_snapshot() const { return to_clock_mono_snapshot_; }
+  media::TimelineFunction to_clock_mono() const { return to_clock_mono_snapshot().to_clock_mono; }
+
+  // Returns the reference time equivalent to the given system monotonic time.
+  zx::time ReferenceTimeFromMonotonicTime(zx::time mono_time) const {
+    return zx::time(to_clock_mono().ApplyInverse(mono_time.get()));
+  }
+
+  // Returns the system monotonic time equivalent to the given reference time.
+  zx::time MonotonicTimeFromReferenceTime(zx::time ref_time) const {
+    return zx::time(to_clock_mono().Apply(ref_time.get()));
+  }
+
+ private:
+  // Hold a shared_ptr to the clock, rather than copying state, to avoid copying the name.
+  std::shared_ptr<const Clock> backing_clock_;
+  Clock::ToClockMonoSnapshot to_clock_mono_snapshot_;
+  zx::time mono_now_;
+  zx::time ref_now_;
+};
+
+}  // namespace media_audio
+
+#endif  // SRC_MEDIA_AUDIO_LIB_CLOCK_CLOCK_SNAPSHOT_H_

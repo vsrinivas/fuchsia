@@ -12,6 +12,7 @@ source_set("clock") {
     "audio_clock_coefficients.h",
     "audio_clock_factory.h",
     "clock.h",
+    "clock_snapshot.h",
     "clone_mono.cc",
     "clone_mono.h",
     "logging.cc",
@@ -48,7 +49,7 @@ executable("unittest_bin") {
   output_name = "audio-libclock-unittests"
 
   sources = [
-    "audio_clock_unittest.cc",
+    "clock_snapshot_unittest.cc",
     "clone_mono_unittest.cc",
     "pid_control_unittest.cc",
     "real_clock_unittest.cc",
@@ -63,6 +64,7 @@ executable("unittest_bin") {
     "//src/lib/fxl/test:gtest_main",
     "//src/media/audio/lib/clock/testing",
     "//src/zircon/lib/zircon",
+    "//zircon/system/ulib/sync:sync-cpp",
   ]
 }
 
