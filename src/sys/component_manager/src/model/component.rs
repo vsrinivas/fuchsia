@@ -984,9 +984,10 @@ impl ComponentInstance {
         match &*state {
             InstanceState::Resolved(resolved_instance_state) => {
                 let exposed_dir = &resolved_instance_state.exposed_dir;
-                // TODO(fxbug.dev/36541): Until directory capabilities specify rights, we always
-                // open directories using OPEN_FLAG_POSIX_WRITABLE and OPEN_FLAG_POSIX_EXECUTABLE
-                // which expands the new connection's rights to those of the parent connection.
+                // TODO(fxbug.dev/81010): open_exposed does not have a rights input parameter, so
+                // this makes use of the POSIX_[WRITABLE|EXECUTABLE] flags to open a connection
+                // with those rights if available from the parent directory connection but without
+                // failing if not available.
                 let flags = fio::OpenFlags::RIGHT_READABLE
                     | fio::OpenFlags::POSIX_WRITABLE
                     | fio::OpenFlags::POSIX_EXECUTABLE;
