@@ -298,10 +298,13 @@ int boot_zircon(efi_handle img, efi_system_table* sys, void* image, size_t isz, 
     }
   }
 
-  // Assemble the CPU topology.
   acpi_madt_t* madt = (acpi_madt_t*)load_table_with_signature(rsdp, (uint8_t*)kMadtSignature);
   uint8_t num_cpu_nodes = 0;
+  dcfg_arm_gicv2_driver_t v2_gic_cfg;
+  dcfg_arm_gicv3_driver_t v3_gic_cfg;
+  uint8_t gic_version = 0;
   if (madt != 0) {
+    // Assemble CPU topology.
     zbi_topology_node_t nodes[MAX_CPU_COUNT];
     num_cpu_nodes = topology_from_madt(madt, nodes, MAX_CPU_COUNT);
     if (num_cpu_nodes != 0) {
@@ -312,23 +315,21 @@ int boot_zircon(efi_handle img, efi_system_table* sys, void* image, size_t isz, 
         return -1;
       }
     }
-  }
 
-  // Assemble a GIC config if one exists.
-  dcfg_arm_gicv2_driver_t v2_gic_cfg;
-  dcfg_arm_gicv3_driver_t v3_gic_cfg;
-  uint8_t gic_version = gic_driver_from_madt(madt, &v2_gic_cfg, &v3_gic_cfg);
-  if (gic_version == 2) {
-    result = zbi_create_entry_with_payload(ramdisk, rsz, ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GIC_V2, 0,
-                                           &v2_gic_cfg, sizeof(v2_gic_cfg));
-    if (result != ZBI_RESULT_OK) {
-      return -1;
-    }
-  } else if (gic_version == 3) {
-    result = zbi_create_entry_with_payload(ramdisk, rsz, ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GIC_V3, 0,
-                                           &v3_gic_cfg, sizeof(v3_gic_cfg));
-    if (result != ZBI_RESULT_OK) {
-      return -1;
+    // Assemble a GIC config if one exists.
+    gic_version = gic_driver_from_madt(madt, &v2_gic_cfg, &v3_gic_cfg);
+    if (gic_version == 2) {
+      result = zbi_create_entry_with_payload(ramdisk, rsz, ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GIC_V2,
+                                             0, &v2_gic_cfg, sizeof(v2_gic_cfg));
+      if (result != ZBI_RESULT_OK) {
+        return -1;
+      }
+    } else if (gic_version == 3) {
+      result = zbi_create_entry_with_payload(ramdisk, rsz, ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GIC_V3,
+                                             0, &v3_gic_cfg, sizeof(v3_gic_cfg));
+      if (result != ZBI_RESULT_OK) {
+        return -1;
+      }
     }
   }
 
