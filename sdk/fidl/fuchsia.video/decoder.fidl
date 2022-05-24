@@ -42,7 +42,7 @@ protocol Decoder {
     /// This method responds when the connection is ready or the connect attempt fails.
     ConnectInputStream(resource struct {
         buffer_collection_token zx.handle:EVENTPAIR;
-        timestamp_units fuchsia.media2.PacketTimestampUnits:optional;
+        timestamp_units box<fuchsia.media2.PacketTimestampUnits>;
         stream_sink_server_end server_end:fuchsia.media2.StreamSink;
     }) -> (struct {}) error fuchsia.media2.ConnectionError;
 
@@ -53,7 +53,7 @@ protocol Decoder {
     /// expected to call `ConnectOutputStream` immediately after this event is signaled.
     -> OnNewOutputStreamAvailable(struct {
         format fuchsia.mediastreams.VideoFormat;
-        timestamp_units fuchsia.media2.PacketTimestampUnits:optional;
+        timestamp_units box<fuchsia.media2.PacketTimestampUnits>;
     });
 
     /// Connects an output stream in response to a `OnNewOutputStreamAvailable` event.

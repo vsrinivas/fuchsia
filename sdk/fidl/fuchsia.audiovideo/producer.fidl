@@ -81,7 +81,7 @@ protocol Producer {
         producer_stream_server_end server_end:ProducerStream;
     }) -> (struct {
         format fuchsia.mediastreams.MediaFormat;
-        compression fuchsia.mediastreams.Compression:optional;
+        compression box<fuchsia.mediastreams.Compression>;
     }) error fuchsia.media2.ConnectionError;
 };
 
