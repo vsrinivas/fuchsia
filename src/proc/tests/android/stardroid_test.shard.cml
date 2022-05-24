@@ -11,4 +11,7 @@
             from: "self",
         },
     ],
+    facets: {
+        "fuchsia.test": { type: "starnix" },
+    },
 }

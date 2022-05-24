@@ -110,6 +110,11 @@
             environment: "#legacy-test-env",
             durability: "transient",
         },
+        {
+            name: "starnix-tests",
+            environment: "#test-env",
+            durability: "transient",
+        },
     ],
     capabilities: [
         {
@@ -181,6 +186,7 @@
             ],
             from: "parent",
             to: [
+                "#starnix-tests",
                 "#system-tests",
                 "#tests",
                 "#tier-2-tests",
@@ -378,6 +384,7 @@
                 "#gtest_runner",
                 "#gunit_runner",
                 "#rust_test_runner",
+                "#starnix-tests",
                 "#starnix_test_runners",
                 "#system-tests",
                 "#tests",
@@ -414,6 +421,7 @@
             storage: "tmp",
             from: "self",
             to: [
+                "#starnix-tests",
                 "#system-tests",
                 "#tests",
                 "#tier-2-tests",
@@ -423,6 +431,7 @@
             storage: "cache",
             from: "self",
             to: [
+                "#starnix-tests",
                 "#system-tests",
                 "#tests",
                 "#tier-2-tests",
@@ -432,6 +441,7 @@
             storage: "custom_artifacts",
             from: "self",
             to: [
+                "#starnix-tests",
                 "#system-tests",
                 "#tests",
                 "#tier-2-tests",
