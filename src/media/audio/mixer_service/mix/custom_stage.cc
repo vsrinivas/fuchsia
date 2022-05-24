@@ -99,7 +99,8 @@ void CustomStage::AdvanceImpl(Fixed frame) {
   }
 }
 
-std::optional<PipelineStage::Packet> CustomStage::ReadImpl(Fixed start_frame, int64_t frame_count) {
+std::optional<PipelineStage::Packet> CustomStage::ReadImpl(MixJobContext& ctx, Fixed start_frame,
+                                                           int64_t frame_count) {
   // `ReadImpl` should not be called until we've `Advance`'d past the last cached packet. Also see
   // comments in `PipelineStage::MakeCachedPacket` for more information.
   FX_CHECK(!output_);
@@ -131,7 +132,7 @@ std::optional<PipelineStage::Packet> CustomStage::ReadImpl(Fixed start_frame, in
   // Process next `frame_count` frames.
   while (frame_count > 0) {
     source_buffer_.Reset(start_frame + latency_frames_processed_);
-    const int64_t frames_processed = Process(frame_count);
+    const int64_t frames_processed = Process(ctx, frame_count);
     next_frame_to_process_ += frames_processed;
     if (output_) {
       FX_CHECK(frames_processed > 0);
@@ -147,7 +148,7 @@ std::optional<PipelineStage::Packet> CustomStage::ReadImpl(Fixed start_frame, in
   return std::nullopt;
 }
 
-int64_t CustomStage::Process(int64_t frame_count) {
+int64_t CustomStage::Process(MixJobContext& ctx, int64_t frame_count) {
   // Make sure to read enough frames to compensate for `latency_frames_`.
   int64_t latency_frames_to_process = latency_frames_ - latency_frames_processed_;
   frame_count += latency_frames_to_process;
@@ -162,7 +163,7 @@ int64_t CustomStage::Process(int64_t frame_count) {
   while (source_buffer_.length() < frame_count) {
     const Fixed read_start_frame = source_buffer_.end();
     const int64_t read_frame_count = frame_count - source_buffer_.length();
-    const auto packet = source_.Read(read_start_frame, read_frame_count);
+    const auto packet = source_.Read(ctx, read_start_frame, read_frame_count);
     if (packet) {
       // SampleAndHold: source frame 1.X overlaps dest frame 2.0, so always round up.
       source_buffer_.AppendData(Fixed(packet->start().Ceiling()), packet->length(),
@@ -181,7 +182,7 @@ int64_t CustomStage::Process(int64_t frame_count) {
 
   // Process this buffer via FIDL connection, the result will be filled into `fidl_buffers_.output`.
   FX_CHECK(source_buffer_.length() == frame_count);
-  CallFidlProcess();
+  CallFidlProcess(ctx);
 
   if (latency_frames_to_process >= frame_count) {
     // The process buffer has not reached to contain any target output frames yet. This could happen
@@ -197,25 +198,60 @@ int64_t CustomStage::Process(int64_t frame_count) {
   return frame_count - latency_frames_to_process;
 }
 
-void CustomStage::CallFidlProcess() {
-  // TODO(fxbug.dev/87651): Add traces and stage metrics.
+void CustomStage::CallFidlProcess(MixJobContext& ctx) {
+  // TODO(fxbug.dev/87651): Do we need to populate the `options`?
   const int64_t frame_count = source_buffer_.length();
 
   // The source data needs to be copied into the pre-negotiated input buffer.
   std::memmove(fidl_buffers_.input, source_buffer_.payload(),
                frame_count * static_cast<int64_t>(source_.format().bytes_per_frame()));
 
-  // TODO(fxbug.dev/87651): Do we need to populate the `options`?
+  // Synchronous IPC.
+  MixJobSubtask subtask("CustomStage::Process");
+
   const auto result =
       fidl_processor_.buffer(fidl_process_buffer_.view())->Process(frame_count, /*options=*/{});
+
+  subtask.Done();
+  ctx.AddSubtaskMetrics(subtask.FinalMetrics());
 
   auto status = result.status();
   if (result.ok() && result->result.is_err()) {
     status = result->result.err();
   }
+
   // Zero fill the output buffer on failure.
   if (status != ZX_OK) {
     std::memset(fidl_buffers_.output, 0, fidl_buffers_.output_size);
+    return;
+  }
+
+  // On success, update our metrics.
+  auto& server_metrics = result->result.response().per_stage_metrics;
+  for (size_t k = 0; k < server_metrics.count(); k++) {
+    MixJobSubtask::Metrics metrics;
+    if (server_metrics[k].has_name()) {
+      metrics.name.Append(server_metrics[k].name().get());
+    } else {
+      metrics.name.AppendPrintf("CustomStage::task%lu", k);
+    }
+    if (server_metrics[k].has_wall_time()) {
+      metrics.wall_time = zx::nsec(server_metrics[k].wall_time());
+    }
+    if (server_metrics[k].has_cpu_time()) {
+      metrics.cpu_time = zx::nsec(server_metrics[k].cpu_time());
+    }
+    if (server_metrics[k].has_queue_time()) {
+      metrics.queue_time = zx::nsec(server_metrics[k].queue_time());
+    }
+    if (server_metrics[k].has_page_fault_time()) {
+      metrics.page_fault_time = zx::nsec(server_metrics[k].page_fault_time());
+    }
+    if (server_metrics[k].has_kernel_lock_contention_time()) {
+      metrics.kernel_lock_contention_time =
+          zx::nsec(server_metrics[k].kernel_lock_contention_time());
+    }
+    ctx.AddSubtaskMetrics(metrics);
   }
 }
 

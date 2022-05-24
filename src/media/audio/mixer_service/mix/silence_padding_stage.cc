@@ -19,7 +19,8 @@ void SilencePaddingStage::AdvanceImpl(Fixed frame) {
   }
 }
 
-std::optional<PipelineStage::Packet> SilencePaddingStage::ReadImpl(Fixed start_frame,
+std::optional<PipelineStage::Packet> SilencePaddingStage::ReadImpl(MixJobContext& ctx,
+                                                                   Fixed start_frame,
                                                                    int64_t frame_count) {
   // Read the next packet from `source_`.
   std::optional<PipelineStage::Packet> next_packet = std::nullopt;
@@ -42,7 +43,7 @@ std::optional<PipelineStage::Packet> SilencePaddingStage::ReadImpl(Fixed start_f
     }
     if (const int64_t source_frame_count = Fixed(source_end_frame - source_start_frame).Floor();
         source_frame_count > 0) {
-      next_packet = source_->Read(source_start_frame, source_frame_count);
+      next_packet = source_->Read(ctx, source_start_frame, source_frame_count);
     }
   }
 

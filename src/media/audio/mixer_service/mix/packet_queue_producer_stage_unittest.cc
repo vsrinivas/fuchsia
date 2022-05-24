@@ -15,6 +15,7 @@
 
 #include "src/media/audio/mixer_service/common/basic_types.h"
 #include "src/media/audio/mixer_service/mix/packet_view.h"
+#include "src/media/audio/mixer_service/mix/testing/defaults.h"
 
 namespace media_audio_mixer_service {
 namespace {
@@ -77,7 +78,7 @@ TEST_F(PacketQueueProducerStageTest, Read) {
   // Now pop the packets one by one.
   {
     // Packet #0:
-    const auto buffer = packet_queue.Read(Fixed(0), 20);
+    const auto buffer = packet_queue.Read(kDefaultCtx, Fixed(0), 20);
     ASSERT_TRUE(buffer);
     EXPECT_EQ(0, buffer->start());
     EXPECT_EQ(20, buffer->length());
@@ -90,7 +91,7 @@ TEST_F(PacketQueueProducerStageTest, Read) {
 
   {
     // Packet #1:
-    const auto buffer = packet_queue.Read(Fixed(20), 20);
+    const auto buffer = packet_queue.Read(kDefaultCtx, Fixed(20), 20);
     ASSERT_TRUE(buffer);
     EXPECT_EQ(20, buffer->start());
     EXPECT_EQ(20, buffer->length());
@@ -103,7 +104,7 @@ TEST_F(PacketQueueProducerStageTest, Read) {
 
   {
     // Packet #2:
-    const auto buffer = packet_queue.Read(Fixed(40), 20);
+    const auto buffer = packet_queue.Read(kDefaultCtx, Fixed(40), 20);
     ASSERT_TRUE(buffer);
     EXPECT_EQ(40, buffer->start());
     EXPECT_EQ(20, buffer->length());
@@ -129,7 +130,7 @@ TEST_F(PacketQueueProducerStageTest, ReadMultiplePerPacket) {
 
   {
     // Read the first 10 bytes of the packet.
-    const auto buffer = packet_queue.Read(Fixed(0), 10);
+    const auto buffer = packet_queue.Read(kDefaultCtx, Fixed(0), 10);
     ASSERT_TRUE(buffer);
     EXPECT_EQ(0, buffer->start());
     EXPECT_EQ(10, buffer->length());
@@ -142,7 +143,7 @@ TEST_F(PacketQueueProducerStageTest, ReadMultiplePerPacket) {
 
   {
     // Read the next 10 bytes of the packet.
-    const auto buffer = packet_queue.Read(Fixed(10), 10);
+    const auto buffer = packet_queue.Read(kDefaultCtx, Fixed(10), 10);
     ASSERT_TRUE(buffer);
     EXPECT_EQ(10, buffer->start());
     EXPECT_EQ(10, buffer->length());
@@ -169,7 +170,7 @@ TEST_F(PacketQueueProducerStageTest, ReadNotFullyConsumed) {
 
   {
     // Pop, consume 0/20 bytes.
-    auto buffer = packet_queue.Read(Fixed(0), 20);
+    auto buffer = packet_queue.Read(kDefaultCtx, Fixed(0), 20);
     ASSERT_TRUE(buffer);
     EXPECT_EQ(0, buffer->start());
     EXPECT_EQ(20, buffer->length());
@@ -180,7 +181,7 @@ TEST_F(PacketQueueProducerStageTest, ReadNotFullyConsumed) {
 
   {
     // Pop, consume 5/20 bytes.
-    auto buffer = packet_queue.Read(Fixed(0), 20);
+    auto buffer = packet_queue.Read(kDefaultCtx, Fixed(0), 20);
     ASSERT_TRUE(buffer);
     EXPECT_EQ(0, buffer->start());
     EXPECT_EQ(20, buffer->length());
@@ -191,7 +192,7 @@ TEST_F(PacketQueueProducerStageTest, ReadNotFullyConsumed) {
 
   {
     // Pop again, consume 10/15 bytes.
-    auto buffer = packet_queue.Read(Fixed(5), 20);
+    auto buffer = packet_queue.Read(kDefaultCtx, Fixed(5), 20);
     ASSERT_TRUE(buffer);
     EXPECT_EQ(5, buffer->start());
     EXPECT_EQ(15, buffer->length());
@@ -202,7 +203,7 @@ TEST_F(PacketQueueProducerStageTest, ReadNotFullyConsumed) {
 
   {
     // Pop again, this time consume it fully.
-    auto buffer = packet_queue.Read(Fixed(15), 20);
+    auto buffer = packet_queue.Read(kDefaultCtx, Fixed(15), 20);
     ASSERT_TRUE(buffer);
     EXPECT_EQ(15, buffer->start());
     EXPECT_EQ(5, buffer->length());
@@ -231,7 +232,7 @@ TEST_F(PacketQueueProducerStageTest, ReadSkipsOverPacket) {
 
   {
     // Ask for packet 0.
-    const auto buffer = packet_queue.Read(Fixed(0), 20);
+    const auto buffer = packet_queue.Read(kDefaultCtx, Fixed(0), 20);
     ASSERT_TRUE(buffer);
     EXPECT_EQ(0, buffer->start());
     EXPECT_EQ(20, buffer->length());
@@ -242,7 +243,7 @@ TEST_F(PacketQueueProducerStageTest, ReadSkipsOverPacket) {
 
   {
     // Ask for packet 2, skipping over packet 1.
-    const auto buffer = packet_queue.Read(Fixed(40), 20);
+    const auto buffer = packet_queue.Read(kDefaultCtx, Fixed(40), 20);
     ASSERT_TRUE(buffer);
     EXPECT_EQ(40, buffer->start());
     EXPECT_EQ(20, buffer->length());
@@ -258,7 +259,7 @@ TEST_F(PacketQueueProducerStageTest, ReadNulloptThenClear) {
   EXPECT_TRUE(released_packets().empty());
 
   // Since the queue is empty, this should return nullopt.
-  const auto buffer = packet_queue.Read(Fixed(0), 10);
+  const auto buffer = packet_queue.Read(kDefaultCtx, Fixed(0), 10);
   EXPECT_FALSE(buffer.has_value());
 
   // Push some packets, then flush them immediately.
@@ -327,7 +328,7 @@ TEST_F(PacketQueueProducerStageTest, ReportUnderflow) {
 
   {
     // Advance to t=20ms.
-    const auto buffer = packet_queue.Read(Fixed(0), 2 * kPacketSize);
+    const auto buffer = packet_queue.Read(kDefaultCtx, Fixed(0), 2 * kPacketSize);
     EXPECT_FALSE(buffer);
     EXPECT_TRUE(reported_underflows.empty());
   }
@@ -339,7 +340,7 @@ TEST_F(PacketQueueProducerStageTest, ReportUnderflow) {
   {
     // The next `Read` advances to t=25ms, returning part of the queued packet.
     reported_underflows.clear();
-    const auto buffer = packet_queue.Read(Fixed(kFrameAt20ms), kPacketSize);
+    const auto buffer = packet_queue.Read(kDefaultCtx, Fixed(kFrameAt20ms), kPacketSize);
     ASSERT_TRUE(buffer);
     EXPECT_EQ(kFrameAt20ms, buffer->start());
     EXPECT_EQ(kPacketSize / 2, buffer->length());

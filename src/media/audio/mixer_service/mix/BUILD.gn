@@ -13,6 +13,7 @@ source_set("mix") {
   visibility = [
     ":*",
     "//src/media/audio/mixer_service/fidl:*",
+    "//src/media/audio/mixer_service/mix/testing:*",
   ]
 
   sources = [
@@ -20,6 +21,9 @@ source_set("mix") {
     "custom_stage.h",
     "detached_thread.cc",
     "detached_thread.h",
+    "mix_job_context.h",
+    "mix_job_subtask.cc",
+    "mix_job_subtask.h",
     "mix_thread.cc",
     "mix_thread.h",
     "packet_queue_producer_stage.cc",
@@ -47,6 +51,7 @@ source_set("mix") {
   deps = [
     "//sdk/lib/fit",
     "//sdk/lib/syslog/cpp",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zx",
   ]
 }
@@ -69,6 +74,7 @@ executable("mix_unittests") {
     "//sdk/fidl/fuchsia.audio.effects",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
+    "//src/media/audio/mixer_service/mix/testing",
     "//third_party/googletest:gmock",
   ]
 }

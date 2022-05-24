@@ -14,7 +14,8 @@
 
 namespace media_audio_mixer_service {
 
-std::optional<PipelineStage::Packet> RingBufferProducerStage::ReadImpl(Fixed start_frame,
+std::optional<PipelineStage::Packet> RingBufferProducerStage::ReadImpl(MixJobContext& ctx,
+                                                                       Fixed start_frame,
                                                                        int64_t frame_count) {
   const int64_t requested_start_frame = start_frame.Floor();
   const int64_t requested_end_frame = requested_start_frame + frame_count;

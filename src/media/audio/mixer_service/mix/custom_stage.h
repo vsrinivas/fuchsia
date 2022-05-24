@@ -34,7 +34,7 @@ class CustomStage : public PipelineStage {
 
  protected:
   void AdvanceImpl(Fixed frame) final;
-  std::optional<Packet> ReadImpl(Fixed start_frame, int64_t frame_count) final;
+  std::optional<Packet> ReadImpl(MixJobContext& ctx, Fixed start_frame, int64_t frame_count) final;
 
  private:
   friend class CustomStageTestProcessor;
@@ -56,10 +56,10 @@ class CustomStage : public PipelineStage {
   };
 
   // Processes next `frame_count` frames.
-  int64_t Process(int64_t frame_count);
+  int64_t Process(MixJobContext& ctx, int64_t frame_count);
 
   // Calls FIDL `Process`.
-  void CallFidlProcess();
+  void CallFidlProcess(MixJobContext& ctx);
 
   const int64_t block_size_frames_;
   const int64_t latency_frames_;

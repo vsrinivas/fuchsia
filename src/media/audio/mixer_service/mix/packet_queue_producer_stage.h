@@ -46,7 +46,7 @@ class PacketQueueProducerStage : public ProducerStage {
  protected:
   // Implements `PipelineStage`.
   void AdvanceImpl(Fixed frame) final;
-  std::optional<Packet> ReadImpl(Fixed start_frame, int64_t frame_count) final;
+  std::optional<Packet> ReadImpl(MixJobContext& ctx, Fixed start_frame, int64_t frame_count) final;
 
  private:
   class PendingPacket : public PacketView {

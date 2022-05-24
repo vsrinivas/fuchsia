@@ -24,7 +24,8 @@ void PacketQueueProducerStage::AdvanceImpl(Fixed frame) {
   }
 }
 
-std::optional<PipelineStage::Packet> PacketQueueProducerStage::ReadImpl(Fixed start_frame,
+std::optional<PipelineStage::Packet> PacketQueueProducerStage::ReadImpl(MixJobContext& ctx,
+                                                                        Fixed start_frame,
                                                                         int64_t frame_count) {
   // Clean up pending packets before `start_frame`.
   while (!pending_packet_queue_.empty()) {

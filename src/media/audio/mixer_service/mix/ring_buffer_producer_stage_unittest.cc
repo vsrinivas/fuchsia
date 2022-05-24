@@ -12,6 +12,7 @@
 
 #include "src/media/audio/mixer_service/common/basic_types.h"
 #include "src/media/audio/mixer_service/mix/packet_view.h"
+#include "src/media/audio/mixer_service/mix/testing/defaults.h"
 
 namespace media_audio_mixer_service {
 namespace {
@@ -44,7 +45,7 @@ class RingBufferProducerStageTest : public ::testing::Test {
 TEST_F(RingBufferProducerStageTest, ReadBeyondSafeReadFrame) {
   auto& ring_buffer = ring_buffer_producer_stage();
 
-  const auto packet = ring_buffer.Read(Fixed(0), 1);
+  const auto packet = ring_buffer.Read(kDefaultCtx, Fixed(0), 1);
   EXPECT_FALSE(packet.has_value());
 }
 
@@ -55,7 +56,7 @@ TEST_F(RingBufferProducerStageTest, ReadFullyExpiredPacket) {
   SetSafeReadFrame(959);
 
   // The first 480 frames should be now unavailable.
-  const auto packet = ring_buffer.Read(Fixed(0), 480);
+  const auto packet = ring_buffer.Read(kDefaultCtx, Fixed(0), 480);
   EXPECT_FALSE(packet.has_value());
 }
 
@@ -66,7 +67,7 @@ TEST_F(RingBufferProducerStageTest, ReadNotYetAvailablePacket) {
   SetSafeReadFrame(479);
 
   // The frames after 480 should not be available yet.
-  const auto packet = ring_buffer.Read(Fixed(480), 1);
+  const auto packet = ring_buffer.Read(kDefaultCtx, Fixed(480), 1);
   EXPECT_FALSE(packet.has_value());
 }
 
@@ -77,7 +78,7 @@ TEST_F(RingBufferProducerStageTest, ReadFullyAvailableRegion) {
   SetSafeReadFrame(47);
 
   // All 48 frames should be returned.
-  const auto packet = ring_buffer.Read(Fixed(0), 48);
+  const auto packet = ring_buffer.Read(kDefaultCtx, Fixed(0), 48);
   ASSERT_TRUE(packet);
   EXPECT_EQ(packet->start(), Fixed(0));
   EXPECT_EQ(packet->length(), 48);
@@ -90,7 +91,7 @@ TEST_F(RingBufferProducerStageTest, ReadPartiallyAvailableRegion) {
   SetSafeReadFrame(47);
 
   // Only the first 48 frames of 96 requested frames should be returned.
-  const auto packet = ring_buffer.Read(Fixed(0), 96);
+  const auto packet = ring_buffer.Read(kDefaultCtx, Fixed(0), 96);
   ASSERT_TRUE(packet);
   EXPECT_EQ(packet->start(), Fixed(0));
   EXPECT_EQ(packet->length(), 48);
@@ -103,7 +104,7 @@ TEST_F(RingBufferProducerStageTest, ReadSkipsExpiredFrames) {
   SetSafeReadFrame(527);
 
   // The first 48 expired frames should be skipped.
-  const auto packet = ring_buffer.Read(Fixed(0), 96);
+  const auto packet = ring_buffer.Read(kDefaultCtx, Fixed(0), 96);
   ASSERT_TRUE(packet);
   EXPECT_EQ(packet->start(), Fixed(48));
   EXPECT_EQ(packet->length(), 48);
@@ -117,14 +118,14 @@ TEST_F(RingBufferProducerStageTest, ReadAfterTruncatePacketAtEndOfTheRing) {
 
   // The returned packet should be truncated beyond the end of the ring.
   {
-    const auto packet = ring_buffer.Read(Fixed(432), 96);
+    const auto packet = ring_buffer.Read(kDefaultCtx, Fixed(432), 96);
     ASSERT_TRUE(packet);
     EXPECT_EQ(packet->start(), Fixed(432));
     EXPECT_EQ(packet->length(), 48);
   }
   // Now read that last 48 frames at the start of the ring.
   {
-    const auto packet = ring_buffer.Read(Fixed(480), 48);
+    const auto packet = ring_buffer.Read(kDefaultCtx, Fixed(480), 48);
     ASSERT_TRUE(packet);
     EXPECT_EQ(packet->start(), Fixed(480));
     EXPECT_EQ(packet->length(), 48);
@@ -138,7 +139,7 @@ TEST_F(RingBufferProducerStageTest, ReadNegativeFrames) {
   SetSafeReadFrame(-481);
 
   // All 10 frames should be available and returned.
-  const auto packet = ring_buffer.Read(Fixed(-500), 10);
+  const auto packet = ring_buffer.Read(kDefaultCtx, Fixed(-500), 10);
   ASSERT_TRUE(packet);
   EXPECT_EQ(packet->start(), Fixed(-500));
   EXPECT_EQ(packet->length(), 10);
@@ -148,7 +149,7 @@ TEST_F(RingBufferProducerStageTest, ReadNegativeThroughPositiveFrames) {
   auto& ring_buffer = ring_buffer_producer_stage();
 
   // First 5 frames should be available and returned.
-  const auto packet = ring_buffer.Read(Fixed(-5), 10);
+  const auto packet = ring_buffer.Read(kDefaultCtx, Fixed(-5), 10);
   ASSERT_TRUE(packet);
   EXPECT_EQ(packet->start(), Fixed(-5));
   EXPECT_EQ(packet->length(), 5);

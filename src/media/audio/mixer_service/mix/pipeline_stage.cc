@@ -29,7 +29,8 @@ void PipelineStage::Advance(Fixed frame) {
   AdvanceImpl(frame);
 }
 
-std::optional<PipelineStage::Packet> PipelineStage::Read(Fixed start_frame, int64_t frame_count) {
+std::optional<PipelineStage::Packet> PipelineStage::Read(MixJobContext& ctx, Fixed start_frame,
+                                                         int64_t frame_count) {
   // TODO(fxbug.dev/87651): Add more logging and tracing etc (similar to `ReadableStream`).
   FX_CHECK(!is_locked_);
 
@@ -47,7 +48,7 @@ std::optional<PipelineStage::Packet> PipelineStage::Read(Fixed start_frame, int6
   }
   cached_packet_ = std::nullopt;
 
-  auto packet = ReadImpl(start_frame, frame_count);
+  auto packet = ReadImpl(ctx, start_frame, frame_count);
   if (!packet) {
     Advance(start_frame + Fixed(frame_count));
     return std::nullopt;

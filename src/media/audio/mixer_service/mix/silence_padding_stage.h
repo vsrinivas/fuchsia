@@ -102,7 +102,7 @@ class SilencePaddingStage : public PipelineStage {
 
  protected:
   void AdvanceImpl(Fixed frame) final;
-  std::optional<Packet> ReadImpl(Fixed start_frame, int64_t frame_count) final;
+  std::optional<Packet> ReadImpl(MixJobContext& ctx, Fixed start_frame, int64_t frame_count) final;
 
  private:
   const int64_t silence_frame_count_;

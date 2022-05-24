@@ -15,6 +15,7 @@
 #include <string_view>
 
 #include "src/media/audio/mixer_service/common/basic_types.h"
+#include "src/media/audio/mixer_service/mix/mix_job_context.h"
 #include "src/media/audio/mixer_service/mix/packet_view.h"
 #include "src/media/audio/mixer_service/mix/ptr_decls.h"
 #include "src/media/audio/mixer_service/mix/thread.h"
@@ -129,7 +130,7 @@ class PipelineStage {
   // `start_frame` that is not lesser than the last advanced frame.
   //
   // TODO(fxbug.dev/87651): Pass in `context` for metrics etc (similar to `ReadableStream`).
-  std::optional<Packet> Read(Fixed start_frame, int64_t frame_count);
+  std::optional<Packet> Read(MixJobContext& ctx, Fixed start_frame, int64_t frame_count);
 
   // Returns the stage's name. This is used for diagnostics only.
   // The name may not be a unique identifier.
@@ -164,7 +165,8 @@ class PipelineStage {
   virtual void AdvanceImpl(Fixed frame) = 0;
 
   // Stage specific implementation of `Read`.
-  virtual std::optional<Packet> ReadImpl(Fixed start_frame, int64_t frame_count) = 0;
+  virtual std::optional<Packet> ReadImpl(MixJobContext& ctx, Fixed start_frame,
+                                         int64_t frame_count) = 0;
 
   // `ReadImpl` should use this to create a cached packet. If the packet is not fully consumed after
   // one `Read`, the next `Read` call will return the same packet without asking `ReadImpl` to
