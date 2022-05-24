@@ -46,7 +46,7 @@ template("generated_partitions_config") {
     foreach(part, invoker.bootstrap_partitions) {
       bootstrap += [
         {
-          image = part.path
+          image = rebase_path(part.path, root_build_dir)
           name = part.partition
           condition = part.condition
         },
@@ -56,7 +56,9 @@ template("generated_partitions_config") {
 
   credentials = []
   if (defined(invoker.unlock_credentials)) {
-    credentials += invoker.unlock_credentials
+    foreach(cred, invoker.unlock_credentials) {
+      credentials += [ rebase_path(cred, root_build_dir) ]
+    }
   }
 
   generated_file(target_name) {
