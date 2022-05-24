@@ -7,6 +7,7 @@ group("tools") {
     "audio-capture-timestamp-validator",
     "audio-driver-ctl",
     "audio-effects-ctl",
+    "audio_listener",
     "signal_generator",
     "virtual_audio_util",
     "vol",
