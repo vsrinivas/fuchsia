@@ -12,19 +12,17 @@ use {
     std::convert::TryFrom,
 };
 
-// A connection key uniquely identifies a connection based on the hash of both the source and
-// destination port and context IDs.
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+// A connection key uniquely identifies a connection based on the hash of the source and
+// destination port.
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub struct VsockConnectionKey {
-    host_cid: u32,
-    host_port: u32,
-    guest_cid: u32,
-    guest_port: u32,
+    pub host_port: u32,
+    pub guest_port: u32,
 }
 
 impl VsockConnectionKey {
-    pub fn new(host_cid: u32, host_port: u32, guest_cid: u32, guest_port: u32) -> Self {
-        VsockConnectionKey { host_cid, host_port, guest_cid, guest_port }
+    pub fn new(host_port: u32, guest_port: u32) -> Self {
+        VsockConnectionKey { host_port, guest_port }
     }
 }
 
@@ -148,7 +146,7 @@ mod tests {
 
         let async_remote = fasync::Socket::from_socket(remote)?;
         let mut connection =
-            VsockConnection::new(VsockConnectionKey::new(1, 2, 3, 4), async_remote, None);
+            VsockConnection::new(VsockConnectionKey::new(1, 2), async_remote, None);
 
         // Use a mock tx_count, which is normally incremented when the guest transfers data to the
         // device. This is a running total of bytes received by the device, and the difference
@@ -178,7 +176,7 @@ mod tests {
 
         let async_remote = fasync::Socket::from_socket(remote)?;
         let mut connection =
-            VsockConnection::new(VsockConnectionKey::new(1, 2, 3, 4), async_remote, None);
+            VsockConnection::new(VsockConnectionKey::new(1, 2), async_remote, None);
 
         // The tx_count being equal to the bytes pending on the socket means that no data has been
         // actually transferred to the client.

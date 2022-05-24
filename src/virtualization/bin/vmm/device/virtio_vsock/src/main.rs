@@ -4,6 +4,7 @@
 
 mod connection;
 mod device;
+mod port_manager;
 mod wire;
 
 use {

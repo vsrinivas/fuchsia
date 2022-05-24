@@ -92,13 +92,13 @@ impl VsockDevice {
 
     fn accept_guest_connection(
         &self,
-        host_cid: u32,
+        _host_cid: u32,
         host_port: u32,
         guest_port: u32,
         socket: zx::Socket,
         responder: GuestVsockAcceptorAcceptResponder,
     ) -> Result<(), fidl::Error> {
-        let key = VsockConnectionKey::new(host_cid, host_port, self.guest_cid(), guest_port);
+        let key = VsockConnectionKey::new(host_port, guest_port);
         if self.connections.borrow().contains_key(&key) {
             syslog::fx_log_err!("Connection already exists: {:?}", key);
             responder.send(&mut Err(zx::Status::ALREADY_BOUND.into_raw()))?;

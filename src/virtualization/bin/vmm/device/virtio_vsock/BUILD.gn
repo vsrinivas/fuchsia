@@ -19,6 +19,7 @@ rustc_binary("virtio_vsock_bin") {
     "src/connection.rs",
     "src/device.rs",
     "src/main.rs",
+    "src/port_manager.rs",
     "src/wire.rs",
   ]
 
