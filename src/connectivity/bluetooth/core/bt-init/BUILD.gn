@@ -7,44 +7,6 @@ import("//build/config.gni")
 import("//build/rust/rustc_binary.gni")
 import("//src/sys/core/build/core_shard.gni")
 
-rustc_binary("bin") {
-  output_name = "bt_init"
-  with_unit_tests = true
-
-  deps = [
-    "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
-    "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",
-    "//sdk/fidl/fuchsia.bluetooth.gatt:fuchsia.bluetooth.gatt-rustc",
-    "//sdk/fidl/fuchsia.bluetooth.le:fuchsia.bluetooth.le-rustc",
-    "//sdk/fidl/fuchsia.bluetooth.rfcomm.test:fuchsia.bluetooth.rfcomm.test-rustc",
-    "//sdk/fidl/fuchsia.bluetooth.snoop:fuchsia.bluetooth.snoop-rustc",
-    "//sdk/fidl/fuchsia.bluetooth.sys:fuchsia.bluetooth.sys-rustc",
-    "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
-    "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
-    "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
-    "//src/lib/fdio/rust:fdio",
-    "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component",
-    "//src/lib/syslog/rust:syslog",
-    "//src/lib/zircon/rust:fuchsia-zircon",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:serde",
-    "//third_party/rust_crates:serde_json",
-    "//third_party/rust_crates:thiserror",
-    "//third_party/rust_crates:tracing",
-  ]
-
-  sources = [
-    "src/config.rs",
-    "src/main.rs",
-  ]
-
-  configs -= [ "//build/config/rust:allow_unused_results" ]
-}
-
 rustc_binary("bin_v2") {
   name = "bt_init_v2"
   edition = "2018"
@@ -87,15 +49,6 @@ resource("default-config") {
   outputs = [ "data/bt-init-default.json" ]
 }
 
-fuchsia_package_with_single_component("bt-init-legacy") {
-  component_name = "bt-init"
-  deps = [
-    ":bin",
-    ":default-config",
-  ]
-  manifest = "meta/bt-init.cmx"
-}
-
 fuchsia_package_with_single_component("bt-init") {
   deps = [
     ":bin_v2",
@@ -125,16 +78,6 @@ core_shard("bt-init-testonly-core-shard") {
   shard_file = "meta/bt-init-testonly.core_shard.cml"
 }
 
-fuchsia_unittest_package("tests-v1") {
-  component_name = "bt-init-unittests"
-  package_name = "bt-init-unittests"
-
-  deps = [
-    ":bin_test",
-    ":default-config",
-  ]
-}
-
 fuchsia_unittest_package("tests-v2") {
   component_name = "bt-init-unittests-v2"
   package_name = "bt-init-unittests-v2"
@@ -147,8 +90,5 @@ fuchsia_unittest_package("tests-v2") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":tests-v1",
-    ":tests-v2",
-  ]
+  deps = [ ":tests-v2" ]
 }
