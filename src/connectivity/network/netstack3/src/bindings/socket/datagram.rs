@@ -27,7 +27,7 @@ use fidl::{
 use fuchsia_async as fasync;
 use fuchsia_zircon::{self as zx, prelude::HandleBased as _, Peered as _};
 use futures::{StreamExt as _, TryFutureExt as _};
-use log::{error, trace};
+use log::{error, trace, warn};
 use net_types::{
     ip::{Ip, IpVersion, Ipv4, Ipv6},
     SpecifiedAddr,
@@ -35,12 +35,12 @@ use net_types::{
 use netstack3_core::{
     connect_udp, create_udp_unbound, get_udp_conn_info, get_udp_listener_info, icmp, listen_udp,
     remove_udp_conn, remove_udp_listener, remove_udp_unbound, send_udp, send_udp_conn,
-    send_udp_listener, set_bound_udp_device, set_unbound_udp_device, BlanketCoreContext,
-    BufferDispatcher, BufferUdpContext, BufferUdpStateContext, Ctx, EventDispatcher, IdMap,
-    IdMapCollection, IdMapCollectionKey, IpDeviceIdContext, IpExt, IpSockCreationError,
-    IpSockSendError, LocalAddressError, TransportIpContext, UdpBoundId, UdpConnId, UdpConnInfo,
-    UdpContext, UdpListenerId, UdpListenerInfo, UdpSendError, UdpSendListenerError,
-    UdpSockCreationError, UdpStateContext, UdpUnboundId,
+    send_udp_listener, set_bound_udp_device, set_udp_posix_reuse_port, set_unbound_udp_device,
+    BlanketCoreContext, BufferDispatcher, BufferUdpContext, BufferUdpStateContext, Ctx,
+    EventDispatcher, IdMap, IdMapCollection, IdMapCollectionKey, IpDeviceIdContext, IpExt,
+    IpSockCreationError, IpSockSendError, LocalAddressError, TransportIpContext, UdpBoundId,
+    UdpConnId, UdpConnInfo, UdpContext, UdpListenerId, UdpListenerInfo, UdpSendError,
+    UdpSendListenerError, UdpSockCreationError, UdpStateContext, UdpUnboundId,
 };
 use packet::{Buf, BufferMut, SerializeError};
 use packet_formats::{
@@ -257,6 +257,8 @@ pub(crate) trait TransportState<I: Ip, C: IpDeviceIdContext<I>>: Transport<I> {
         id: SocketId<I, Self>,
         device: Option<C::DeviceId>,
     ) -> Result<(), Self::SetSocketDeviceError>;
+
+    fn set_reuse_port(ctx: &mut C, id: Self::UnboundId, reuse_port: bool);
 }
 
 /// An abstraction over transport protocols that allows data to be sent via the Core.
@@ -404,6 +406,10 @@ impl<I: IpExt, C: UdpStateContext<I>> TransportState<I, C> for Udp {
             }
             SocketId::Bound(id) => set_bound_udp_device(ctx, &mut (), id.into(), device),
         }
+    }
+
+    fn set_reuse_port(ctx: &mut C, id: Self::UnboundId, reuse_port: bool) {
+        set_udp_posix_reuse_port(ctx, id, reuse_port)
     }
 }
 
@@ -795,6 +801,10 @@ impl<I: IcmpEchoIpExt, D: EventDispatcher, C: BlanketCoreContext> TransportState
         _id: SocketId<I, Self>,
         _device: Option<<Ctx<D, C> as IpDeviceIdContext<I>>::DeviceId>,
     ) -> Result<(), Self::SetSocketDeviceError> {
+        todo!("https://fxbug.dev/47321: needs Core implementation")
+    }
+
+    fn set_reuse_port(_ctx: &mut Ctx<D, C>, _id: Self::UnboundId, _reuse_port: bool) {
         todo!("https://fxbug.dev/47321: needs Core implementation")
     }
 }
@@ -1421,10 +1431,12 @@ where
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
                         fposix_socket::SynchronousDatagramSocketRequest::SetReusePort {
-                            value: _,
+                            value,
                             responder,
                         } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
+                            responder_send!(responder, {
+                                &mut self.make_handler().await.set_reuse_port(value)
+                            });
                         }
                         fposix_socket::SynchronousDatagramSocketRequest::GetReusePort { responder } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
@@ -2268,6 +2280,19 @@ where
         };
 
         T::set_socket_device(self.ctx.deref_mut(), id, device).map_err(IntoErrno::into_errno)
+    }
+
+    fn set_reuse_port(mut self, reuse_port: bool) -> Result<(), fposix::Errno> {
+        match self.get_state_mut().info.state {
+            SocketState::Unbound { unbound_id } => {
+                T::set_reuse_port(self.ctx.deref_mut(), unbound_id, reuse_port);
+                Ok(())
+            }
+            SocketState::BoundListen { .. } | SocketState::BoundConnect { .. } => {
+                warn!("tried to set SO_REUSEPORT on a bound socket; see https://fxbug.dev/100840");
+                Err(fposix::Errno::Eopnotsupp)
+            }
+        }
     }
 
     fn shutdown(mut self, how: fposix_socket::ShutdownMode) -> Result<(), fposix::Errno> {

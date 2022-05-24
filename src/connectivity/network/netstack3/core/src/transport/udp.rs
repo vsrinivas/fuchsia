@@ -4,10 +4,11 @@
 
 //! The User Datagram Protocol (UDP).
 
-use alloc::collections::HashSet;
+use alloc::collections::{hash_map::DefaultHasher, HashSet};
 use core::{
     convert::Infallible as Never,
     fmt::Debug,
+    hash::{Hash, Hasher},
     marker::PhantomData,
     mem,
     num::{NonZeroU16, NonZeroUsize},
@@ -129,10 +130,16 @@ struct UdpConnectionState<I: Ip, D: IpDeviceId, S> {
 }
 
 #[derive(Debug, Derivative)]
-#[derivative(Default(bound = ""))]
 #[cfg_attr(test, derive(PartialEq))]
 struct UnboundSocketState<D> {
     device: Option<D>,
+    sharing: PosixSharingOptions,
+}
+
+impl<D> Default for UnboundSocketState<D> {
+    fn default() -> Self {
+        UnboundSocketState { device: None, sharing: PosixSharingOptions::Exclusive }
+    }
 }
 
 /// Produces an iterator over eligible receiving socket addresses.
@@ -144,22 +151,27 @@ fn iter_receiving_addrs<I: Ip, D: IpDeviceId, S>(
 }
 
 #[derive(Debug, Eq, PartialEq)]
-struct ListenerState {}
+struct ListenerState {
+    sharing: PosixSharingOptions,
+}
 
 #[derive(Debug, Eq, PartialEq)]
-struct ConnState<S>(S);
+struct ConnState<S> {
+    socket: S,
+    sharing: PosixSharingOptions,
+}
 
 impl ToPosixSharingOptions for ListenerState {
     fn to_sharing_options(&self) -> PosixSharingOptions {
-        let Self {} = self;
-        PosixSharingOptions::Exclusive
+        let Self { sharing } = self;
+        *sharing
     }
 }
 
 impl<S> ToPosixSharingOptions for ConnState<S> {
     fn to_sharing_options(&self) -> PosixSharingOptions {
-        let Self(_) = self;
-        PosixSharingOptions::Exclusive
+        let Self { socket: _, sharing } = self;
+        *sharing
     }
 }
 
@@ -190,7 +202,7 @@ struct SocketSelectorParams<I: Ip, A: AsRef<I::Addr>> {
 }
 
 impl<'a, I: Ip, D: IpDeviceId, S> LookupResult<'a, I, D, S> {
-    fn select_receiver<A: AsRef<I::Addr>>(
+    fn select_receiver<A: AsRef<I::Addr> + Hash>(
         &self,
         selector: SocketSelectorParams<I, A>,
     ) -> UdpBoundId<I> {
@@ -202,14 +214,17 @@ impl<'a, I: Ip, D: IpDeviceId, S> LookupResult<'a, I, D, S> {
 }
 
 impl<T: Debug> PosixAddrState<T> {
-    fn select_receiver<I: Ip, A: AsRef<I::Addr>>(
+    fn select_receiver<I: Ip, A: AsRef<I::Addr> + Hash>(
         &self,
-        _selector: SocketSelectorParams<I, A>,
+        selector: SocketSelectorParams<I, A>,
     ) -> &T {
         match self {
             PosixAddrState::Exclusive(id) => id,
             PosixAddrState::ReusePort(ids) => {
-                unreachable!("UDP sockets can't have ReusePort set yet; found {:?}", ids)
+                let mut hasher = DefaultHasher::new();
+                selector.hash(&mut hasher);
+                let index: usize = hasher.finish() as usize % ids.len();
+                &ids[index]
             }
         }
     }
@@ -921,11 +936,19 @@ pub fn send_udp<I: IpExt, B: BufferMut, SC: BufferUdpStateContext<I, B>, C>(
 ) -> Result<(), (B, UdpSendError)> {
     // TODO(brunodalbo) this can be faster if we just perform the checks but
     // don't actually create a UDP connection.
-    let tmp_conn =
-        match create_udp_conn(sync_ctx, ctx, local_ip, local_port, None, remote_ip, remote_port) {
-            Ok(conn) => conn,
-            Err(err) => return Err((body, UdpSendError::CreateSock(err))),
-        };
+    let tmp_conn = match create_udp_conn(
+        sync_ctx,
+        ctx,
+        local_ip,
+        local_port,
+        None,
+        remote_ip,
+        remote_port,
+        PosixSharingOptions::Exclusive,
+    ) {
+        Ok(conn) => conn,
+        Err(err) => return Err((body, UdpSendError::CreateSock(err))),
+    };
 
     // Not using `?` here since we need to `remove_udp_conn` even in the case of failure.
     let ret = send_udp_conn(sync_ctx, ctx, tmp_conn, body)
@@ -965,8 +988,9 @@ pub fn send_udp_conn<I: IpExt, B: BufferMut, SC: BufferUdpStateContext<I, B>, C>
 ) -> Result<(), (B, IpSockSendError)> {
     let state = sync_ctx.get_first_state();
     let UdpConnectionState { ref bound } = state.conn_state;
-    let (ConnState(sock), addr) = bound.get_conn_by_id(&conn).expect("no such connection");
-    let sock = sock.clone();
+    let (ConnState { socket, sharing: _ }, addr) =
+        bound.get_conn_by_id(&conn).expect("no such connection");
+    let sock = socket.clone();
     let ConnAddr {
         ip: ConnIpAddr { local_ip, local_identifier: local_port, remote: (remote_ip, remote_port) },
         device: _,
@@ -1027,10 +1051,10 @@ pub fn send_udp_listener<I: IpExt, B: BufferMut, SC: BufferUdpStateContext<I, B>
     // probably fail and `send_udp` must be used instead.
     let state = sync_ctx.get_first_state();
     let UdpConnectionState { ref bound } = state.conn_state;
-    let (
-        ListenerState {},
-        ListenerAddr { ip: ListenerIpAddr { addr: local_ip, identifier: local_port }, device },
-    ) = *bound.get_listener_by_id(&listener).expect("specified listener not found");
+    let (_, addr): &(ListenerState, _) =
+        bound.get_listener_by_id(&listener).expect("specified listener not found");
+    let ListenerAddr { ip: ListenerIpAddr { addr: local_ip, identifier: local_port }, device } =
+        *addr;
 
     let sock = match sync_ctx.new_ip_socket(
         device,
@@ -1115,23 +1139,22 @@ pub fn connect_udp<I: IpExt, SC: UdpStateContext<I>, C>(
     // First remove the unbound socket being promoted.
     let UdpState { conn_state: _, unbound, lazy_port_alloc: _, send_port_unreachable: _ } =
         sync_ctx.get_first_state_mut();
-    let UnboundSocketState { device } =
+    let UnboundSocketState { device, sharing } =
         unbound.remove(id.into()).unwrap_or_else(|| panic!("unbound socket {:?} not found", id));
 
-    create_udp_conn(sync_ctx, ctx, local_ip, local_port, device, remote_ip, remote_port).map_err(
-        |e| {
+    create_udp_conn(sync_ctx, ctx, local_ip, local_port, device, remote_ip, remote_port, sharing)
+        .map_err(|e| {
             assert_matches::assert_matches!(
                 sync_ctx
                     .get_first_state_mut()
                     .unbound
-                    .insert(id.into(), UnboundSocketState { device }),
+                    .insert(id.into(), UnboundSocketState { device, sharing }),
                 None,
                 "just-cleared-entry for {:?} is occupied",
                 id
             );
             e
-        },
-    )
+        })
 }
 
 fn create_udp_conn<I: IpExt, SC: UdpStateContext<I>, C>(
@@ -1142,6 +1165,7 @@ fn create_udp_conn<I: IpExt, SC: UdpStateContext<I>, C>(
     device: Option<SC::DeviceId>,
     remote_ip: SpecifiedAddr<I::Addr>,
     remote_port: NonZeroU16,
+    sharing: PosixSharingOptions,
 ) -> Result<UdpConnId<I>, UdpSockCreationError> {
     let ip_sock = sync_ctx
         .new_ip_socket(
@@ -1170,7 +1194,7 @@ fn create_udp_conn<I: IpExt, SC: UdpStateContext<I>, C>(
         device,
     };
     bound
-        .try_insert_conn(c, ConnState(ip_sock))
+        .try_insert_conn(c, ConnState { socket: ip_sock, sharing })
         .map_err(|_: InsertError| UdpSockCreationError::SockAddrConflict)
 }
 
@@ -1185,7 +1209,7 @@ pub fn set_unbound_udp_device<I: IpExt, SC: UdpStateContext<I>, C>(
     id: UdpUnboundId<I>,
     device_id: Option<SC::DeviceId>,
 ) {
-    let UnboundSocketState { ref mut device } = sync_ctx
+    let UnboundSocketState { ref mut device, sharing: _ } = sync_ctx
         .get_first_state_mut()
         .unbound
         .get_mut(id.into())
@@ -1222,6 +1246,23 @@ pub fn set_bound_udp_device<I: IpExt, SC: UdpStateContext<I>, C>(
             })
             .map_err(|ExistsError| LocalAddressError::AddressInUse),
     }
+}
+
+/// Sets the POSIX `SO_REUSEPORT` option for the specified socket.
+///
+/// # Panics
+///
+/// `set_udp_posix_reuse_port` panics if `id` is not a valid `UdpUnboundId`.
+pub fn set_udp_posix_reuse_port<I: IpExt, C: UdpStateContext<I>>(
+    sync_ctx: &mut C,
+    id: UdpUnboundId<I>,
+    reuse_port: bool,
+) {
+    let unbound = &mut sync_ctx.get_first_state_mut().unbound;
+    let UnboundSocketState { device: _, sharing } =
+        unbound.get_mut(id.into()).expect("unbound UDP socket not found");
+    *sharing =
+        if reuse_port { PosixSharingOptions::ReusePort } else { PosixSharingOptions::Exclusive };
 }
 
 /// Removes a previously registered UDP connection.
@@ -1306,12 +1347,12 @@ pub fn listen_udp<I: IpExt, SC: UdpStateContext<I>, C>(
         IdMapEntry::Occupied(o) => o,
     };
 
-    let UnboundSocketState { device } = unbound_entry.get();
+    let UnboundSocketState { device, sharing } = unbound_entry.get();
     let UdpConnectionState { ref mut bound } = conn_state;
     let listener = bound
         .try_insert_listener(
             ListenerAddr { ip: ListenerIpAddr { addr, identifier: port }, device: *device },
-            ListenerState {},
+            ListenerState { sharing: *sharing },
         )
         .map_err(|_: InsertError| LocalAddressError::AddressInUse)?;
 
@@ -1350,7 +1391,8 @@ pub fn get_udp_listener_info<I: IpExt, SC: UdpStateContext<I>, C>(
     id: UdpListenerId<I>,
 ) -> UdpListenerInfo<I::Addr> {
     let UdpConnectionState { ref bound } = sync_ctx.get_first_state().conn_state;
-    let (ListenerState {}, addr) = bound.get_listener_by_id(&id).expect("UDP listener not found");
+    let (_, addr): &(ListenerState, _) =
+        bound.get_listener_by_id(&id).expect("UDP listener not found");
     addr.clone().into()
 }
 
@@ -3019,14 +3061,74 @@ mod tests {
         let conn_state =
             &DualStateContext::<UdpState<I, DummyDeviceId>, _>::get_first_state(&ctx).conn_state;
         let wildcard_port = assert_matches!(conn_state.bound.get_listener_by_id(&wildcard_list),
-            Some((ListenerState {}, ListenerAddr{ ip: ListenerIpAddr {identifier, addr: None}, device: None})) => identifier);
+            Some((
+                ListenerState {..},
+                ListenerAddr{ ip: ListenerIpAddr {identifier, addr: None}, device: None}
+            )) => identifier);
         let specified_port = assert_matches!(conn_state.bound.get_listener_by_id(&specified_list),
-            Some((ListenerState {}, ListenerAddr{ ip: ListenerIpAddr {identifier, addr: _}, device: None})) => identifier);
+            Some((
+                ListenerState {..},
+                ListenerAddr{ ip: ListenerIpAddr {identifier, addr: _}, device: None}
+            )) => identifier);
         assert!(UdpConnectionState::<I, DummyDeviceId, IpSock<I, DummyDeviceId>>::EPHEMERAL_RANGE
             .contains(&wildcard_port.get()));
         assert!(UdpConnectionState::<I, DummyDeviceId, IpSock<I, DummyDeviceId>>::EPHEMERAL_RANGE
             .contains(&specified_port.get()));
         assert_ne!(wildcard_port, specified_port);
+    }
+
+    #[ip_test]
+    fn test_bind_multiple_reuse_port<I: Ip + TestIpExt>()
+    where
+        DummyCtx<I>: DummyCtxBound<I>,
+    {
+        let local_port = NonZeroU16::new(100).unwrap();
+
+        let mut ctx = DummyCtx::<I>::default();
+        let listeners = [(), ()].map(|()| {
+            let unbound = create_udp_unbound(&mut ctx);
+            set_udp_posix_reuse_port(&mut ctx, unbound, true);
+            listen_udp(&mut ctx, &mut (), unbound, None, Some(local_port))
+                .expect("listen_udp failed")
+        });
+
+        let expected_addr = ListenerAddr {
+            ip: ListenerIpAddr { addr: None, identifier: local_port },
+            device: None,
+        };
+        let conn_state =
+            &DualStateContext::<UdpState<I, DummyDeviceId>, _>::get_first_state(&ctx).conn_state;
+        for listener in listeners {
+            assert_matches!(conn_state.bound.get_listener_by_id(&listener),
+                Some(( ListenerState {..}, addr)) => assert_eq!(addr, &expected_addr));
+        }
+    }
+
+    #[ip_test]
+    fn test_set_unset_reuse_port<I: Ip + TestIpExt>()
+    where
+        DummyCtx<I>: DummyCtxBound<I>,
+    {
+        let local_port = NonZeroU16::new(100).unwrap();
+
+        let mut ctx = DummyCtx::<I>::default();
+        let _listener = {
+            let unbound = create_udp_unbound(&mut ctx);
+            set_udp_posix_reuse_port(&mut ctx, unbound, true);
+            set_udp_posix_reuse_port(&mut ctx, unbound, false);
+            listen_udp(&mut ctx, &mut (), unbound, None, Some(local_port))
+                .expect("listen_udp failed")
+        };
+
+        // Because there is already a listener bound without `SO_REUSEPORT` set,
+        // the next bind to the same address should fail.
+        assert_eq!(
+            {
+                let unbound = create_udp_unbound(&mut ctx);
+                listen_udp(&mut ctx, &mut (), unbound, None, Some(local_port))
+            },
+            Err(LocalAddressError::AddressInUse)
+        );
     }
 
     /// Tests [`remove_udp_conn`]
