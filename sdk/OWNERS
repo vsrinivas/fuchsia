@@ -1,2 +1,19 @@
+# SDK approvers
+#
+# There are two concerns covered here, ownership of what's in the Fuchsia SDK
+# and ownership of how the SDK is constructed.
+#
+# If you'd like to...
+
+# Change a lib:
+#   That's "what" the Fuchsia SDK is, but there should be a more specific OWNERS
+#   file. If there isn't a more specific file, please create a CL to add an
+#   OWNERS file and send that CL to abarth@.
+#
+# Add a lib/API:
+#   That's "what" the Fuchsia SDK is, ask
 abarth@google.com
+
+# Add/Change how the SDK is built:
+#   That's "how" the SDK is made, ask
 dschuyler@google.com
