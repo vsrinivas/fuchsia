@@ -598,8 +598,6 @@ void App::InitializeHeartbeat() {
     // used to build the ViewTreeSnapshot.
     // We create one per compositor.
     std::vector<view_tree::SubtreeSnapshotGenerator> subtrees_generator_callbacks;
-    subtrees_generator_callbacks.emplace_back(
-        [this] { return engine_->scene_graph()->view_tree().Snapshot(); });
     subtrees_generator_callbacks.emplace_back([this] {
       if (auto display = flatland_manager_->GetPrimaryFlatlandDisplayForRendering()) {
         return flatland_engine_->GenerateViewTreeSnapshot(display->root_transform());
@@ -607,6 +605,14 @@ void App::InitializeHeartbeat() {
         return view_tree::SubtreeSnapshot{};  // Empty snapshot.
       }
     });
+    // The i_can_haz_flatland flag is about eager-forcing of Flatland.
+    // If true, then we KNOW that GFX should *not* run. Workstation is true.
+    // if false, then either system could legitimately run. This flag is false for tests and
+    // GFX-based products.
+    if (!config_values_.i_can_haz_flatland) {
+      subtrees_generator_callbacks.emplace_back(
+          [this] { return engine_->scene_graph()->view_tree().Snapshot(); });
+    }
 
     // All subscriber callbacks get called with the new snapshot every time one is generated (once
     // per frame).
