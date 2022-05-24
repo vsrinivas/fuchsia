@@ -7,6 +7,7 @@ anonymous_driver_wire.h.golden
 anonymous_driver_wire_messaging.cc.golden
 anonymous_driver_wire_messaging.h.golden
 anonymous_fidl.h.golden
+anonymous_hlcpp_conversion.h.golden
 anonymous_markers.h.golden
 anonymous_natural_messaging.cc.golden
 anonymous_natural_messaging.h.golden
@@ -29,6 +30,7 @@ arrays_driver_wire.h.golden
 arrays_driver_wire_messaging.cc.golden
 arrays_driver_wire_messaging.h.golden
 arrays_fidl.h.golden
+arrays_hlcpp_conversion.h.golden
 arrays_markers.h.golden
 arrays_natural_messaging.cc.golden
 arrays_natural_messaging.h.golden
@@ -51,6 +53,7 @@ bindings_denylist_driver_wire.h.golden
 bindings_denylist_driver_wire_messaging.cc.golden
 bindings_denylist_driver_wire_messaging.h.golden
 bindings_denylist_fidl.h.golden
+bindings_denylist_hlcpp_conversion.h.golden
 bindings_denylist_markers.h.golden
 bindings_denylist_natural_messaging.cc.golden
 bindings_denylist_natural_messaging.h.golden
@@ -75,6 +78,7 @@ bits_constants_driver_wire.h.golden
 bits_constants_driver_wire_messaging.cc.golden
 bits_constants_driver_wire_messaging.h.golden
 bits_constants_fidl.h.golden
+bits_constants_hlcpp_conversion.h.golden
 bits_constants_markers.h.golden
 bits_constants_natural_messaging.cc.golden
 bits_constants_natural_messaging.h.golden
@@ -95,6 +99,7 @@ bits_driver_wire.h.golden
 bits_driver_wire_messaging.cc.golden
 bits_driver_wire_messaging.h.golden
 bits_fidl.h.golden
+bits_hlcpp_conversion.h.golden
 bits_markers.h.golden
 bits_natural_messaging.cc.golden
 bits_natural_messaging.h.golden
@@ -117,6 +122,7 @@ byte_and_bytes_driver_wire.h.golden
 byte_and_bytes_driver_wire_messaging.cc.golden
 byte_and_bytes_driver_wire_messaging.h.golden
 byte_and_bytes_fidl.h.golden
+byte_and_bytes_hlcpp_conversion.h.golden
 byte_and_bytes_markers.h.golden
 byte_and_bytes_natural_messaging.cc.golden
 byte_and_bytes_natural_messaging.h.golden
@@ -139,6 +145,7 @@ consts_driver_wire.h.golden
 consts_driver_wire_messaging.cc.golden
 consts_driver_wire_messaging.h.golden
 consts_fidl.h.golden
+consts_hlcpp_conversion.h.golden
 consts_markers.h.golden
 consts_natural_messaging.cc.golden
 consts_natural_messaging.h.golden
@@ -161,6 +168,7 @@ doc_comments_driver_wire.h.golden
 doc_comments_driver_wire_messaging.cc.golden
 doc_comments_driver_wire_messaging.h.golden
 doc_comments_fidl.h.golden
+doc_comments_hlcpp_conversion.h.golden
 doc_comments_markers.h.golden
 doc_comments_natural_messaging.cc.golden
 doc_comments_natural_messaging.h.golden
@@ -183,6 +191,7 @@ driver_handle_driver_wire.h.golden
 driver_handle_driver_wire_messaging.cc.golden
 driver_handle_driver_wire_messaging.h.golden
 driver_handle_fidl.h.golden
+driver_handle_hlcpp_conversion.h.golden
 driver_handle_markers.h.golden
 driver_handle_natural_messaging.cc.golden
 driver_handle_natural_messaging.h.golden
@@ -205,6 +214,7 @@ driver_one_way_driver_wire.h.golden
 driver_one_way_driver_wire_messaging.cc.golden
 driver_one_way_driver_wire_messaging.h.golden
 driver_one_way_fidl.h.golden
+driver_one_way_hlcpp_conversion.h.golden
 driver_one_way_markers.h.golden
 driver_one_way_natural_messaging.cc.golden
 driver_one_way_natural_messaging.h.golden
@@ -227,6 +237,7 @@ driver_two_way_driver_wire.h.golden
 driver_two_way_driver_wire_messaging.cc.golden
 driver_two_way_driver_wire_messaging.h.golden
 driver_two_way_fidl.h.golden
+driver_two_way_hlcpp_conversion.h.golden
 driver_two_way_markers.h.golden
 driver_two_way_natural_messaging.cc.golden
 driver_two_way_natural_messaging.h.golden
@@ -249,6 +260,7 @@ empty_struct_driver_wire.h.golden
 empty_struct_driver_wire_messaging.cc.golden
 empty_struct_driver_wire_messaging.h.golden
 empty_struct_fidl.h.golden
+empty_struct_hlcpp_conversion.h.golden
 empty_struct_markers.h.golden
 empty_struct_natural_messaging.cc.golden
 empty_struct_natural_messaging.h.golden
@@ -271,6 +283,7 @@ encapsulated_structs_driver_wire.h.golden
 encapsulated_structs_driver_wire_messaging.cc.golden
 encapsulated_structs_driver_wire_messaging.h.golden
 encapsulated_structs_fidl.h.golden
+encapsulated_structs_hlcpp_conversion.h.golden
 encapsulated_structs_markers.h.golden
 encapsulated_structs_natural_messaging.cc.golden
 encapsulated_structs_natural_messaging.h.golden
@@ -293,6 +306,7 @@ enum_driver_wire.h.golden
 enum_driver_wire_messaging.cc.golden
 enum_driver_wire_messaging.h.golden
 enum_fidl.h.golden
+enum_hlcpp_conversion.h.golden
 enum_markers.h.golden
 enum_natural_messaging.cc.golden
 enum_natural_messaging.h.golden
@@ -315,6 +329,7 @@ error_driver_wire.h.golden
 error_driver_wire_messaging.cc.golden
 error_driver_wire_messaging.h.golden
 error_fidl.h.golden
+error_hlcpp_conversion.h.golden
 error_markers.h.golden
 error_natural_messaging.cc.golden
 error_natural_messaging.h.golden
@@ -329,6 +344,7 @@ error_syntax_driver_wire.h.golden
 error_syntax_driver_wire_messaging.cc.golden
 error_syntax_driver_wire_messaging.h.golden
 error_syntax_fidl.h.golden
+error_syntax_hlcpp_conversion.h.golden
 error_syntax_markers.h.golden
 error_syntax_natural_messaging.cc.golden
 error_syntax_natural_messaging.h.golden
@@ -359,6 +375,7 @@ escaping_driver_wire.h.golden
 escaping_driver_wire_messaging.cc.golden
 escaping_driver_wire_messaging.h.golden
 escaping_fidl.h.golden
+escaping_hlcpp_conversion.h.golden
 escaping_markers.h.golden
 escaping_natural_messaging.cc.golden
 escaping_natural_messaging.h.golden
@@ -381,6 +398,7 @@ foreign_type_in_response_used_through_compose_driver_wire.h.golden
 foreign_type_in_response_used_through_compose_driver_wire_messaging.cc.golden
 foreign_type_in_response_used_through_compose_driver_wire_messaging.h.golden
 foreign_type_in_response_used_through_compose_fidl.h.golden
+foreign_type_in_response_used_through_compose_hlcpp_conversion.h.golden
 foreign_type_in_response_used_through_compose_markers.h.golden
 foreign_type_in_response_used_through_compose_natural_messaging.cc.golden
 foreign_type_in_response_used_through_compose_natural_messaging.h.golden
@@ -403,6 +421,7 @@ handles_driver_wire.h.golden
 handles_driver_wire_messaging.cc.golden
 handles_driver_wire_messaging.h.golden
 handles_fidl.h.golden
+handles_hlcpp_conversion.h.golden
 handles_in_types_common_types.cc.golden
 handles_in_types_common_types.h.golden
 handles_in_types_driver_fidl.h.golden
@@ -412,6 +431,7 @@ handles_in_types_driver_wire.h.golden
 handles_in_types_driver_wire_messaging.cc.golden
 handles_in_types_driver_wire_messaging.h.golden
 handles_in_types_fidl.h.golden
+handles_in_types_hlcpp_conversion.h.golden
 handles_in_types_markers.h.golden
 handles_in_types_natural_messaging.cc.golden
 handles_in_types_natural_messaging.h.golden
@@ -447,6 +467,7 @@ imported_const_values_driver_wire.h.golden
 imported_const_values_driver_wire_messaging.cc.golden
 imported_const_values_driver_wire_messaging.h.golden
 imported_const_values_fidl.h.golden
+imported_const_values_hlcpp_conversion.h.golden
 imported_const_values_markers.h.golden
 imported_const_values_natural_messaging.cc.golden
 imported_const_values_natural_messaging.h.golden
@@ -469,6 +490,7 @@ inheritance_driver_wire.h.golden
 inheritance_driver_wire_messaging.cc.golden
 inheritance_driver_wire_messaging.h.golden
 inheritance_fidl.h.golden
+inheritance_hlcpp_conversion.h.golden
 inheritance_markers.h.golden
 inheritance_natural_messaging.cc.golden
 inheritance_natural_messaging.h.golden
@@ -491,6 +513,7 @@ inheritance_with_recursive_decl_driver_wire.h.golden
 inheritance_with_recursive_decl_driver_wire_messaging.cc.golden
 inheritance_with_recursive_decl_driver_wire_messaging.h.golden
 inheritance_with_recursive_decl_fidl.h.golden
+inheritance_with_recursive_decl_hlcpp_conversion.h.golden
 inheritance_with_recursive_decl_markers.h.golden
 inheritance_with_recursive_decl_natural_messaging.cc.golden
 inheritance_with_recursive_decl_natural_messaging.h.golden
@@ -513,6 +536,7 @@ nullable_driver_wire.h.golden
 nullable_driver_wire_messaging.cc.golden
 nullable_driver_wire_messaging.h.golden
 nullable_fidl.h.golden
+nullable_hlcpp_conversion.h.golden
 nullable_markers.h.golden
 nullable_natural_messaging.cc.golden
 nullable_natural_messaging.h.golden
@@ -535,6 +559,7 @@ padding_driver_wire.h.golden
 padding_driver_wire_messaging.cc.golden
 padding_driver_wire_messaging.h.golden
 padding_fidl.h.golden
+padding_hlcpp_conversion.h.golden
 padding_markers.h.golden
 padding_natural_messaging.cc.golden
 padding_natural_messaging.h.golden
@@ -557,6 +582,7 @@ placement_of_attributes_driver_wire.h.golden
 placement_of_attributes_driver_wire_messaging.cc.golden
 placement_of_attributes_driver_wire_messaging.h.golden
 placement_of_attributes_fidl.h.golden
+placement_of_attributes_hlcpp_conversion.h.golden
 placement_of_attributes_markers.h.golden
 placement_of_attributes_natural_messaging.cc.golden
 placement_of_attributes_natural_messaging.h.golden
@@ -579,6 +605,7 @@ protocol_layouts_driver_wire.h.golden
 protocol_layouts_driver_wire_messaging.cc.golden
 protocol_layouts_driver_wire_messaging.h.golden
 protocol_layouts_fidl.h.golden
+protocol_layouts_hlcpp_conversion.h.golden
 protocol_layouts_markers.h.golden
 protocol_layouts_natural_messaging.cc.golden
 protocol_layouts_natural_messaging.h.golden
@@ -601,6 +628,7 @@ protocol_payloads_driver_wire.h.golden
 protocol_payloads_driver_wire_messaging.cc.golden
 protocol_payloads_driver_wire_messaging.h.golden
 protocol_payloads_fidl.h.golden
+protocol_payloads_hlcpp_conversion.h.golden
 protocol_payloads_markers.h.golden
 protocol_payloads_natural_messaging.cc.golden
 protocol_payloads_natural_messaging.h.golden
@@ -623,6 +651,7 @@ protocol_request_driver_wire.h.golden
 protocol_request_driver_wire_messaging.cc.golden
 protocol_request_driver_wire_messaging.h.golden
 protocol_request_fidl.h.golden
+protocol_request_hlcpp_conversion.h.golden
 protocol_request_markers.h.golden
 protocol_request_natural_messaging.cc.golden
 protocol_request_natural_messaging.h.golden
@@ -645,6 +674,7 @@ protocols_driver_wire.h.golden
 protocols_driver_wire_messaging.cc.golden
 protocols_driver_wire_messaging.h.golden
 protocols_fidl.h.golden
+protocols_hlcpp_conversion.h.golden
 protocols_markers.h.golden
 protocols_natural_messaging.cc.golden
 protocols_natural_messaging.h.golden
@@ -667,6 +697,7 @@ request_flexible_envelope_driver_wire.h.golden
 request_flexible_envelope_driver_wire_messaging.cc.golden
 request_flexible_envelope_driver_wire_messaging.h.golden
 request_flexible_envelope_fidl.h.golden
+request_flexible_envelope_hlcpp_conversion.h.golden
 request_flexible_envelope_markers.h.golden
 request_flexible_envelope_natural_messaging.cc.golden
 request_flexible_envelope_natural_messaging.h.golden
@@ -689,6 +720,7 @@ service_driver_wire.h.golden
 service_driver_wire_messaging.cc.golden
 service_driver_wire_messaging.h.golden
 service_fidl.h.golden
+service_hlcpp_conversion.h.golden
 service_markers.h.golden
 service_natural_messaging.cc.golden
 service_natural_messaging.h.golden
@@ -713,6 +745,7 @@ struct_default_value_enum_library_reference_driver_wire.h.golden
 struct_default_value_enum_library_reference_driver_wire_messaging.cc.golden
 struct_default_value_enum_library_reference_driver_wire_messaging.h.golden
 struct_default_value_enum_library_reference_fidl.h.golden
+struct_default_value_enum_library_reference_hlcpp_conversion.h.golden
 struct_default_value_enum_library_reference_markers.h.golden
 struct_default_value_enum_library_reference_natural_messaging.cc.golden
 struct_default_value_enum_library_reference_natural_messaging.h.golden
@@ -733,6 +766,7 @@ struct_driver_wire.h.golden
 struct_driver_wire_messaging.cc.golden
 struct_driver_wire_messaging.h.golden
 struct_fidl.h.golden
+struct_hlcpp_conversion.h.golden
 struct_markers.h.golden
 struct_natural_messaging.cc.golden
 struct_natural_messaging.h.golden
@@ -755,6 +789,7 @@ table_driver_wire.h.golden
 table_driver_wire_messaging.cc.golden
 table_driver_wire_messaging.h.golden
 table_fidl.h.golden
+table_hlcpp_conversion.h.golden
 table_markers.h.golden
 table_natural_messaging.cc.golden
 table_natural_messaging.h.golden
@@ -779,6 +814,7 @@ transitive_dependencies_compose_driver_wire.h.golden
 transitive_dependencies_compose_driver_wire_messaging.cc.golden
 transitive_dependencies_compose_driver_wire_messaging.h.golden
 transitive_dependencies_compose_fidl.h.golden
+transitive_dependencies_compose_hlcpp_conversion.h.golden
 transitive_dependencies_compose_markers.h.golden
 transitive_dependencies_compose_natural_messaging.cc.golden
 transitive_dependencies_compose_natural_messaging.h.golden
@@ -799,6 +835,7 @@ transitive_dependencies_driver_wire.h.golden
 transitive_dependencies_driver_wire_messaging.cc.golden
 transitive_dependencies_driver_wire_messaging.h.golden
 transitive_dependencies_fidl.h.golden
+transitive_dependencies_hlcpp_conversion.h.golden
 transitive_dependencies_markers.h.golden
 transitive_dependencies_natural_messaging.cc.golden
 transitive_dependencies_natural_messaging.h.golden
@@ -821,6 +858,7 @@ type_aliases_driver_wire.h.golden
 type_aliases_driver_wire_messaging.cc.golden
 type_aliases_driver_wire_messaging.h.golden
 type_aliases_fidl.h.golden
+type_aliases_hlcpp_conversion.h.golden
 type_aliases_markers.h.golden
 type_aliases_natural_messaging.cc.golden
 type_aliases_natural_messaging.h.golden
@@ -843,6 +881,7 @@ union_driver_wire.h.golden
 union_driver_wire_messaging.cc.golden
 union_driver_wire_messaging.h.golden
 union_fidl.h.golden
+union_hlcpp_conversion.h.golden
 union_markers.h.golden
 union_natural_messaging.cc.golden
 union_natural_messaging.h.golden
@@ -857,6 +896,7 @@ union_sandwich_driver_wire.h.golden
 union_sandwich_driver_wire_messaging.cc.golden
 union_sandwich_driver_wire_messaging.h.golden
 union_sandwich_fidl.h.golden
+union_sandwich_hlcpp_conversion.h.golden
 union_sandwich_markers.h.golden
 union_sandwich_natural_messaging.cc.golden
 union_sandwich_natural_messaging.h.golden
@@ -887,6 +927,7 @@ unknown_interactions_driver_wire.h.golden
 unknown_interactions_driver_wire_messaging.cc.golden
 unknown_interactions_driver_wire_messaging.h.golden
 unknown_interactions_fidl.h.golden
+unknown_interactions_hlcpp_conversion.h.golden
 unknown_interactions_markers.h.golden
 unknown_interactions_natural_messaging.cc.golden
 unknown_interactions_natural_messaging.h.golden
@@ -909,6 +950,7 @@ vectors_driver_wire.h.golden
 vectors_driver_wire_messaging.cc.golden
 vectors_driver_wire_messaging.h.golden
 vectors_fidl.h.golden
+vectors_hlcpp_conversion.h.golden
 vectors_markers.h.golden
 vectors_natural_messaging.cc.golden
 vectors_natural_messaging.h.golden
@@ -931,6 +973,7 @@ versions_driver_wire.h.golden
 versions_driver_wire_messaging.cc.golden
 versions_driver_wire_messaging.h.golden
 versions_fidl.h.golden
+versions_hlcpp_conversion.h.golden
 versions_markers.h.golden
 versions_natural_messaging.cc.golden
 versions_natural_messaging.h.golden

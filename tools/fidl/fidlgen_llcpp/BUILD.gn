@@ -34,6 +34,7 @@ if (is_host) {
       "codegen/driver/fragment_protocol_client_impl.tmpl",
       "codegen/file_common_types_header.tmpl",
       "codegen/file_common_types_source.tmpl",
+      "codegen/file_hlcpp_conversion.tmpl",
       "codegen/file_markers.tmpl",
       "codegen/file_natural_messaging_header.tmpl",
       "codegen/file_natural_messaging_source.tmpl",
@@ -163,6 +164,10 @@ if (is_host) {
           {
             golden = "${info.name}_type_conversions.cc.golden"
             generated = "$gen_dir/$include_path/type_conversions.cc"
+          },
+          {
+            golden = "${info.name}_hlcpp_conversion.h.golden"
+            generated = "$gen_dir/$include_path/hlcpp_conversion.h"
           },
           {
             golden = "${info.name}_fidl.h.golden"
