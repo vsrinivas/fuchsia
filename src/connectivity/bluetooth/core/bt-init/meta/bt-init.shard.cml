@@ -83,6 +83,7 @@
                 "fuchsia.bluetooth.sys.Bootstrap",
                 "fuchsia.bluetooth.sys.Configuration",
                 "fuchsia.bluetooth.sys.HostWatcher",
+                "fuchsia.bluetooth.sys.Pairing",
             ],
             from: "#bt-gap",
         },

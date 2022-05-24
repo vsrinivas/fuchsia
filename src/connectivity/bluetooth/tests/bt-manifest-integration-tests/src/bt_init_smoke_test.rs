@@ -11,7 +11,7 @@ use {
     fidl_fuchsia_bluetooth_snoop::{SnoopMarker, SnoopRequestStream},
     fidl_fuchsia_bluetooth_sys::{
         AccessMarker, AccessProxy, BootstrapMarker, BootstrapProxy, ConfigurationMarker,
-        ConfigurationProxy, HostWatcherMarker, HostWatcherProxy,
+        ConfigurationProxy, HostWatcherMarker, HostWatcherProxy, PairingMarker, PairingProxy,
     },
     fidl_fuchsia_device::{NameProviderMarker, NameProviderRequestStream},
     fidl_fuchsia_io as fio,
@@ -49,6 +49,7 @@ enum Event {
     Bootstrap(Option<BootstrapProxy>),
     Config(Option<ConfigurationProxy>),
     HostWatcher(Option<HostWatcherProxy>),
+    Pairing(Option<PairingProxy>),
     RfcommTest(Option<RfcommTestProxy>),
     Snoop(Option<SnoopRequestStream>),
     NameProvider(Option<NameProviderRequestStream>),
@@ -58,7 +59,7 @@ enum Event {
     SecureStore,
 }
 
-const NUMBER_OF_EVENTS: usize = 12;
+const NUMBER_OF_EVENTS: usize = 13;
 
 impl From<SnoopRequestStream> for Event {
     fn from(src: SnoopRequestStream) -> Self {
@@ -124,6 +125,9 @@ async fn mock_client(
         .send(Event::HostWatcher(Some(host_watcher_svc)))
         .await
         .expect("failed sending ack to test");
+
+    let pairing_svc = handles.connect_to_protocol::<PairingMarker>()?;
+    sender.send(Event::Pairing(Some(pairing_svc))).await.expect("failed sending ack to test");
 
     let rfcomm_test_svc = handles.connect_to_protocol::<RfcommTestMarker>()?;
     sender
@@ -225,6 +229,7 @@ async fn bt_init_component_topology() {
     route_from_bt_init_to_mock_client::<BootstrapMarker>(&builder).await;
     route_from_bt_init_to_mock_client::<ConfigurationMarker>(&builder).await;
     route_from_bt_init_to_mock_client::<HostWatcherMarker>(&builder).await;
+    route_from_bt_init_to_mock_client::<PairingMarker>(&builder).await;
     route_from_bt_init_to_mock_client::<RfcommTestMarker>(&builder).await;
 
     // Add proxy route between secure store and mock provider
@@ -305,6 +310,7 @@ async fn bt_init_component_topology() {
         Event::Bootstrap(None),
         Event::Config(None),
         Event::HostWatcher(None),
+        Event::Pairing(None),
         Event::RfcommTest(None),
         Event::Snoop(None),
         Event::NameProvider(None),
