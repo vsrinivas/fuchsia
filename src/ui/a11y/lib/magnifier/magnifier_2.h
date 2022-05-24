@@ -20,8 +20,29 @@
 
 namespace a11y {
 
-class Magnifier2 : public fuchsia::accessibility::Magnifier {
+class Magnifier2 {
  public:
+  // The entity that interacts directly with scenic to effect visible
+  // magnification changes to the scene.
+  class Delegate {
+   public:
+    using SetMagnificationTransformCallback = fit::function<void()>;
+
+    virtual ~Delegate() = default;
+
+    // scale: Scale factor applied to the scene. Must be between kMinScale and
+    // kMaxScale (defined below).
+    //
+    // x: X component of translation applied to the scene.
+    //
+    // y: Y component of translation applied to the scene.
+    //
+    // callback: Invoked once changes to the magnification transform have reached
+    // the display.
+    virtual void SetMagnificationTransform(float scale, float x, float y,
+                                           SetMagnificationTransformCallback callback) = 0;
+  };
+
   // Transition over .2 s @ 60 fps.
   static constexpr zx::duration kTransitionPeriod = zx::msec(200);
   static constexpr float kTransitionRate = 1 / (kTransitionPeriod.to_msecs() * .060f);
@@ -29,12 +50,8 @@ class Magnifier2 : public fuchsia::accessibility::Magnifier {
   static constexpr float kMinScale = 1, kMaxScale = 20;
   static constexpr float kDefaultScale = 4;
 
-  Magnifier2();
-  ~Magnifier2() override = default;
-
-  // |fuchsia::accessibility::Magnifier|
-  void RegisterHandler(
-      fidl::InterfaceHandle<fuchsia::accessibility::MagnificationHandler> handler) override;
+  explicit Magnifier2(std::unique_ptr<Delegate> delegate);
+  ~Magnifier2() = default;
 
   // Method to register recognizers in a gesture recognition arena.
   void BindGestures(a11y::GestureHandler* gesture_handler);
@@ -145,9 +162,8 @@ class Magnifier2 : public fuchsia::accessibility::Magnifier {
   // Magnifier state.
   State state_;
 
-  fuchsia::accessibility::MagnificationHandlerPtr handler_;
-
-  callback::ScopedTaskRunner handler_scope_;
+  // Interfaces with scenic on behalf of the magnifier.
+  std::unique_ptr<Delegate> delegate_;
 };
 
 }  // namespace a11y

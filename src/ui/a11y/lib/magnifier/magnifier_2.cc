@@ -8,15 +8,7 @@
 
 namespace a11y {
 
-Magnifier2::Magnifier2() {}
-
-void Magnifier2::RegisterHandler(
-    fidl::InterfaceHandle<fuchsia::accessibility::MagnificationHandler> handler) {
-  handler_scope_.Reset();
-  state_.update_in_progress = state_.update_pending = false;
-  handler_ = handler.Bind();
-  // TODO(fxb/69730): Update transform here.
-}
+Magnifier2::Magnifier2(std::unique_ptr<Delegate> delegate) : delegate_(std::move(delegate)) {}
 
 void Magnifier2::ZoomOutIfMagnified() {
   if (state_.mode != Mode::UNMAGNIFIED) {
@@ -115,8 +107,8 @@ void Magnifier2::UpdateTransform() {
   bool& update_pending = state_.update_pending;
   bool& update_in_progress = state_.update_in_progress;
 
-  if (!handler_) {
-    FX_LOGS(WARNING) << "No magnification handler registered.";
+  if (!delegate_) {
+    FX_LOGS(WARNING) << "No magnification delegate registered.";
 
     // If there's no handler, don't bother animating.
     if (transition_rate > 0) {
@@ -157,14 +149,13 @@ void Magnifier2::UpdateTransform() {
     auto translation_y = transition_progress * state_.translation.y;
     auto scale = 1 + transition_progress * (state_.scale - 1);
 
-    handler_->SetClipSpaceTransform(translation_x, translation_y, scale,
-                                    handler_scope_.MakeScoped([this] {
-                                      state_.update_in_progress = false;
-                                      if (state_.update_pending) {
-                                        state_.update_pending = false;
-                                        UpdateTransform();
-                                      }
-                                    }));
+    delegate_->SetMagnificationTransform(scale, translation_x, translation_y, [this] {
+      state_.update_in_progress = false;
+      if (state_.update_pending) {
+        state_.update_pending = false;
+        UpdateTransform();
+      }
+    });
   }
 }
 

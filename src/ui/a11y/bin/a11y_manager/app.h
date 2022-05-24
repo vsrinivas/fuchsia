@@ -97,7 +97,7 @@ class App {
                a11y::GestureListenerRegistry* gesture_listener_registry,
                a11y::BootInfoManager* boot_info_manager,
                a11y::ScreenReaderContextFactory* screen_reader_context_factory,
-               inspect::Node inspect_node = inspect::Node());
+               inspect::Node inspect_node = inspect::Node(), bool use_flatland = false);
   ~App();
 
   // Sets the a11y manager to the given configuration. Visible for testing.
@@ -169,7 +169,7 @@ class App {
   // for pointer events, and destroyed when the listener disconnects.
   std::unique_ptr<a11y::GestureManager> gesture_manager_;
   GestureState gesture_state_;
-  a11y::Magnifier2 magnifier_;
+  std::unique_ptr<a11y::Magnifier2> magnifier_;
 
   fidl::BindingSet<fuchsia::accessibility::semantics::SemanticsManager> semantics_manager_bindings_;
   fidl::BindingSet<fuchsia::accessibility::virtualkeyboard::Registry>

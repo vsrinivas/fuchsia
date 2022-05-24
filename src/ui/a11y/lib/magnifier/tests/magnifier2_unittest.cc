@@ -2,72 +2,87 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/ui/input/accessibility/cpp/fidl.h>
-#include <lib/zx/time.h>
-
-#include <limits>
-#include <optional>
-
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/ui/a11y/lib/gesture_manager/tests/mocks/mock_gesture_handler.h"
 #include "src/ui/a11y/lib/magnifier/magnifier_2.h"
-#include "src/ui/a11y/lib/magnifier/tests/mocks/mock_magnification_handler.h"
-#include "src/ui/a11y/lib/testing/formatting.h"
-#include "src/ui/a11y/lib/testing/input.h"
-
-#include <glm/glm.hpp>
-#include <glm/gtc/epsilon.hpp>
 
 namespace accessibility_test {
 namespace {
 
-constexpr zx::duration kTestTransitionPeriod = a11y::Magnifier2::kTransitionPeriod + kFramePeriod;
-
 using GestureType = a11y::GestureHandler::GestureType;
 using testing::ElementsAre;
 
-class Magnifier2Test : public gtest::RealLoopFixture {
+class MockMagnifierDelegate : public a11y::Magnifier2::Delegate {
+ public:
+  MockMagnifierDelegate() = default;
+  ~MockMagnifierDelegate() override = default;
+
+  void SetMagnificationTransform(float scale, float x, float y,
+                                 SetMagnificationTransformCallback callback) override {
+    scale_ = scale;
+    x_ = x;
+    y_ = y;
+    callback();
+  }
+
+  float scale() { return scale_; }
+  float x() { return x_; }
+  float y() { return y_; }
+
+ private:
+  // Current state of the transform.
+  float scale_ = 1.f;
+  float x_ = 0.f;
+  float y_ = 0.f;
+};
+
+class Magnifier2Test : public ::testing::Test {
  public:
   Magnifier2Test() = default;
   ~Magnifier2Test() override = default;
 
   a11y::Magnifier2* magnifier() { return magnifier_.get(); }
 
-  MockMagnificationHandler* mock_magnification_handler() {
-    return mock_magnification_handler_.get();
-  }
+  MockMagnifierDelegate* mock_magnifier_delegate() { return mock_magnifier_delegate_; }
+
   MockGestureHandler* mock_gesture_handler() { return mock_gesture_handler_.get(); }
 
   void SetUp() override {
     mock_gesture_handler_ = std::make_unique<MockGestureHandler>();
-    mock_magnification_handler_ = std::make_unique<MockMagnificationHandler>();
-    magnifier_ = std::make_unique<a11y::Magnifier2>();
+    auto mock_magnifier_delegate = std::make_unique<MockMagnifierDelegate>();
+    mock_magnifier_delegate_ = mock_magnifier_delegate.get();
+    magnifier_ = std::make_unique<a11y::Magnifier2>(std::move(mock_magnifier_delegate));
     magnifier_->BindGestures(mock_gesture_handler_.get());
-    magnifier_->RegisterHandler(mock_magnification_handler_->NewBinding());
   }
 
-  void RunLoopUntilTransformIs(float x, float y, float scale) {
-    // Run loop until each element of the transform is equal to the specified
-    // values, accounting for potential float rounding error.
-    RunLoopUntil([this, x, y, scale]() {
-      const auto& transform = mock_magnification_handler()->transform();
-      return std::abs(transform.x - x) < scale * std::numeric_limits<float>::epsilon() &&
-             std::abs(transform.y - y) < scale * std::numeric_limits<float>::epsilon() &&
-             std::abs(transform.scale - scale) < std::numeric_limits<float>::epsilon();
-    });
+  void ExpectThatTransformIs(float x, float y, float scale) {
+    auto true_x = mock_magnifier_delegate_->x();
+    auto true_y = mock_magnifier_delegate_->y();
+    auto true_scale = mock_magnifier_delegate_->scale();
+    FX_LOGS(INFO) << "true_x: " << true_x << " true_y: " << true_y << " true_scale: " << true_scale;
+    FX_LOGS(INFO) << "expected_x: " << x << " expected_y: " << y << " expected_scale: " << scale;
+    FX_LOGS(INFO) << "Difference: " << std::abs(true_x - x) << " " << std::abs(true_y - y) << " "
+                  << std::abs(true_scale - scale) << " epsilon "
+                  << scale * std::numeric_limits<float>::epsilon();
+    EXPECT_FLOAT_EQ(mock_magnifier_delegate_->x(), x);
+    EXPECT_FLOAT_EQ(mock_magnifier_delegate_->y(), y);
+    EXPECT_FLOAT_EQ(mock_magnifier_delegate_->scale(), scale);
   }
 
  private:
   std::unique_ptr<MockGestureHandler> mock_gesture_handler_;
-  std::unique_ptr<MockMagnificationHandler> mock_magnification_handler_;
   std::unique_ptr<a11y::Magnifier2> magnifier_;
+
+  // Owned by magnifier_.
+  MockMagnifierDelegate* mock_magnifier_delegate_;
 };
 
 TEST_F(Magnifier2Test, RegisterHandler) {
-  EXPECT_EQ(mock_magnification_handler()->transform(), ClipSpaceTransform::identity());
+  EXPECT_EQ(mock_magnifier_delegate()->x(), 0.f);
+  EXPECT_EQ(mock_magnifier_delegate()->y(), 0.f);
+  EXPECT_EQ(mock_magnifier_delegate()->scale(), 1.f);
 }
 
 TEST_F(Magnifier2Test, GestureHandlersAreRegisteredIntheRightOrder) {
@@ -83,12 +98,12 @@ TEST_F(Magnifier2Test, OneFingerTripleTapTogglesMagnification) {
   gesture_context.current_pointer_locations[1].ndc_point.x = 0.4f;
   gesture_context.current_pointer_locations[1].ndc_point.y = 0.5f;
   mock_gesture_handler()->TriggerGesture(GestureType::kOneFingerTripleTap, gesture_context);
-  RunLoopUntilTransformIs(-.4f * (a11y::Magnifier2::kDefaultScale - 1),  // x translation
-                          -.5f * (a11y::Magnifier2::kDefaultScale - 1),  // y translation
-                          a11y::Magnifier2::kDefaultScale);
+  ExpectThatTransformIs(-.4f * (a11y::Magnifier2::kDefaultScale - 1),  // x translation
+                        -.5f * (a11y::Magnifier2::kDefaultScale - 1),  // y translation
+                        a11y::Magnifier2::kDefaultScale);
 
   mock_gesture_handler()->TriggerGesture(GestureType::kOneFingerTripleTap);
-  RunLoopUntilTransformIs(0 /* x */, 0 /* y */, 1 /* scale */);
+  ExpectThatTransformIs(0 /* x */, 0 /* y */, 1 /* scale */);
 }
 
 TEST_F(Magnifier2Test, ThreeFingerDoubleTapTogglesMagnification) {
@@ -100,12 +115,12 @@ TEST_F(Magnifier2Test, ThreeFingerDoubleTapTogglesMagnification) {
   gesture_context.current_pointer_locations[3].ndc_point.x = 0.5f;
   gesture_context.current_pointer_locations[3].ndc_point.y = 0.6f;
   mock_gesture_handler()->TriggerGesture(GestureType::kThreeFingerDoubleTap, gesture_context);
-  RunLoopUntilTransformIs(-.4f * (a11y::Magnifier2::kDefaultScale - 1),  // x translation
-                          -.5f * (a11y::Magnifier2::kDefaultScale - 1),  // y translation
-                          a11y::Magnifier2::kDefaultScale);
+  ExpectThatTransformIs(-.4f * (a11y::Magnifier2::kDefaultScale - 1),  // x translation
+                        -.5f * (a11y::Magnifier2::kDefaultScale - 1),  // y translation
+                        a11y::Magnifier2::kDefaultScale);
 
   mock_gesture_handler()->TriggerGesture(GestureType::kThreeFingerDoubleTap);
-  RunLoopUntilTransformIs(0 /* x */, 0 /* y */, 1 /* scale */);
+  ExpectThatTransformIs(0 /* x */, 0 /* y */, 1 /* scale */);
 }
 
 TEST_F(Magnifier2Test, ThreeFingerDoubleTapDragTogglesTemporaryMagnification) {
@@ -120,9 +135,9 @@ TEST_F(Magnifier2Test, ThreeFingerDoubleTapDragTogglesTemporaryMagnification) {
     mock_gesture_handler()->TriggerGestureRecognize(GestureType::kThreeFingerDoubleTapDrag,
                                                     gesture_context);
 
-    RunLoopUntilTransformIs(-.4f * (a11y::Magnifier2::kDefaultScale - 1),  // x translation
-                            -.5f * (a11y::Magnifier2::kDefaultScale - 1),  // y translation
-                            a11y::Magnifier2::kDefaultScale);
+    ExpectThatTransformIs(-.4f * (a11y::Magnifier2::kDefaultScale - 1),  // x translation
+                          -.5f * (a11y::Magnifier2::kDefaultScale - 1),  // y translation
+                          a11y::Magnifier2::kDefaultScale);
   }
 
   {
@@ -136,14 +151,14 @@ TEST_F(Magnifier2Test, ThreeFingerDoubleTapDragTogglesTemporaryMagnification) {
     mock_gesture_handler()->TriggerGestureUpdate(GestureType::kThreeFingerDoubleTapDrag,
                                                  gesture_context);
 
-    RunLoopUntilTransformIs(-.2f * (a11y::Magnifier2::kDefaultScale - 1),  // x translation
-                            -.3f * (a11y::Magnifier2::kDefaultScale - 1),  // y translation
-                            a11y::Magnifier2::kDefaultScale);
+    ExpectThatTransformIs(-.2f * (a11y::Magnifier2::kDefaultScale - 1),  // x translation
+                          -.3f * (a11y::Magnifier2::kDefaultScale - 1),  // y translation
+                          a11y::Magnifier2::kDefaultScale);
   }
 
   mock_gesture_handler()->TriggerGestureComplete(GestureType::kThreeFingerDoubleTapDrag);
 
-  RunLoopUntilTransformIs(0 /* x */, 0 /* y */, 1 /* scale */);
+  ExpectThatTransformIs(0 /* x */, 0 /* y */, 1 /* scale */);
 }
 
 TEST_F(Magnifier2Test, OneFingerTripleTapDragTogglesTemporaryMagnification) {
@@ -154,9 +169,9 @@ TEST_F(Magnifier2Test, OneFingerTripleTapDragTogglesTemporaryMagnification) {
     mock_gesture_handler()->TriggerGestureRecognize(GestureType::kOneFingerTripleTapDrag,
                                                     gesture_context);
 
-    RunLoopUntilTransformIs(-.3f * (a11y::Magnifier2::kDefaultScale - 1),  // x translation
-                            -.4f * (a11y::Magnifier2::kDefaultScale - 1),  // y translation
-                            a11y::Magnifier2::kDefaultScale);
+    ExpectThatTransformIs(-.3f * (a11y::Magnifier2::kDefaultScale - 1),  // x translation
+                          -.4f * (a11y::Magnifier2::kDefaultScale - 1),  // y translation
+                          a11y::Magnifier2::kDefaultScale);
   }
 
   {
@@ -166,14 +181,14 @@ TEST_F(Magnifier2Test, OneFingerTripleTapDragTogglesTemporaryMagnification) {
     mock_gesture_handler()->TriggerGestureUpdate(GestureType::kOneFingerTripleTapDrag,
                                                  gesture_context);
 
-    RunLoopUntilTransformIs(-.1f * (a11y::Magnifier2::kDefaultScale - 1),  // x translation
-                            -.2f * (a11y::Magnifier2::kDefaultScale - 1),  // y translation
-                            a11y::Magnifier2::kDefaultScale);
+    ExpectThatTransformIs(-.1f * (a11y::Magnifier2::kDefaultScale - 1),  // x translation
+                          -.2f * (a11y::Magnifier2::kDefaultScale - 1),  // y translation
+                          a11y::Magnifier2::kDefaultScale);
   }
 
   mock_gesture_handler()->TriggerGestureComplete(GestureType::kOneFingerTripleTapDrag);
 
-  RunLoopUntilTransformIs(0 /* x */, 0 /* y */, 1 /* scale */);
+  ExpectThatTransformIs(0 /* x */, 0 /* y */, 1 /* scale */);
 }
 
 TEST_F(Magnifier2Test, TwoFingerDrag) {
@@ -184,9 +199,9 @@ TEST_F(Magnifier2Test, TwoFingerDrag) {
     gesture_context.current_pointer_locations[1].ndc_point.y = 0.5f;
     mock_gesture_handler()->TriggerGesture(GestureType::kOneFingerTripleTap, gesture_context);
 
-    RunLoopUntilTransformIs(-.4f * (a11y::Magnifier2::kDefaultScale - 1),  // x translation
-                            -.5f * (a11y::Magnifier2::kDefaultScale - 1),  // y translation
-                            a11y::Magnifier2::kDefaultScale);
+    ExpectThatTransformIs(-.4f * (a11y::Magnifier2::kDefaultScale - 1),  // x translation
+                          -.5f * (a11y::Magnifier2::kDefaultScale - 1),  // y translation
+                          a11y::Magnifier2::kDefaultScale);
   }
 
   // Begin two-finger drag at a point different from the current magnification
@@ -199,9 +214,9 @@ TEST_F(Magnifier2Test, TwoFingerDrag) {
     gesture_context.current_pointer_locations[2].ndc_point.y = 0.5f;
     mock_gesture_handler()->TriggerGestureRecognize(GestureType::kTwoFingerDrag, gesture_context);
 
-    RunLoopUntilTransformIs(-.4f * (a11y::Magnifier2::kDefaultScale - 1),  // x translation
-                            -.5f * (a11y::Magnifier2::kDefaultScale - 1),  // y translation
-                            a11y::Magnifier2::kDefaultScale);
+    ExpectThatTransformIs(-.4f * (a11y::Magnifier2::kDefaultScale - 1),  // x translation
+                          -.5f * (a11y::Magnifier2::kDefaultScale - 1),  // y translation
+                          a11y::Magnifier2::kDefaultScale);
   }
 
   // Scale and pan.
@@ -230,7 +245,7 @@ TEST_F(Magnifier2Test, TwoFingerDrag) {
     // in the NDC space. Since the new scale is kDefaultScale * 2 = 8, we can
     // solve for the new translation solving this equation for new_translation:
     // (.2, .3) = 8 * (.375, .475) + new_translation
-    RunLoopUntilTransformIs(-2.8f /* x */, -3.5f /* y */, new_scale);
+    ExpectThatTransformIs(-2.8f /* x */, -3.5f /* y */, new_scale);
   }
 }
 
@@ -240,13 +255,13 @@ TEST_F(Magnifier2Test, ZoomOutIfMagnified) {
   gesture_context.current_pointer_locations[1].ndc_point.x = 0.4f;
   gesture_context.current_pointer_locations[1].ndc_point.y = 0.5f;
   mock_gesture_handler()->TriggerGesture(GestureType::kOneFingerTripleTap, gesture_context);
-  RunLoopUntilTransformIs(-.4f * (a11y::Magnifier2::kDefaultScale - 1),  // x translation
-                          -.5f * (a11y::Magnifier2::kDefaultScale - 1),  // y translation
-                          a11y::Magnifier2::kDefaultScale);
+  ExpectThatTransformIs(-.4f * (a11y::Magnifier2::kDefaultScale - 1),  // x translation
+                        -.5f * (a11y::Magnifier2::kDefaultScale - 1),  // y translation
+                        a11y::Magnifier2::kDefaultScale);
 
   // Call ZoomOutIfMagnified() to ensure that we return to "normal" zoom state.
   magnifier()->ZoomOutIfMagnified();
-  RunLoopUntilTransformIs(0 /* x */, 0 /* y */, 1 /* scale */);
+  ExpectThatTransformIs(0 /* x */, 0 /* y */, 1 /* scale */);
 }
 
 TEST_F(Magnifier2Test, ClampPan) {
@@ -258,9 +273,9 @@ TEST_F(Magnifier2Test, ClampPan) {
     gesture_context.current_pointer_locations[1].ndc_point.y = 1.f;
     mock_gesture_handler()->TriggerGesture(GestureType::kOneFingerTripleTap, gesture_context);
 
-    RunLoopUntilTransformIs(-1.f * (a11y::Magnifier2::kDefaultScale - 1),  // x translation
-                            -1.f * (a11y::Magnifier2::kDefaultScale - 1),  // y translation
-                            a11y::Magnifier2::kDefaultScale);
+    ExpectThatTransformIs(-1.f * (a11y::Magnifier2::kDefaultScale - 1),  // x translation
+                          -1.f * (a11y::Magnifier2::kDefaultScale - 1),  // y translation
+                          a11y::Magnifier2::kDefaultScale);
   }
 
   // Begin a two-finger drag.
@@ -271,8 +286,6 @@ TEST_F(Magnifier2Test, ClampPan) {
     gesture_context.current_pointer_locations[2].ndc_point.x = .9f;
     gesture_context.current_pointer_locations[2].ndc_point.y = .9f;
     mock_gesture_handler()->TriggerGestureRecognize(GestureType::kTwoFingerDrag, gesture_context);
-
-    RunLoopUntilIdle();
   }
 
   // Drag down and to the left. Since the focus is already on the top right
@@ -285,9 +298,9 @@ TEST_F(Magnifier2Test, ClampPan) {
     gesture_context.current_pointer_locations[2].ndc_point.y = 0.0f;
     mock_gesture_handler()->TriggerGestureUpdate(GestureType::kTwoFingerDrag, gesture_context);
 
-    RunLoopUntilTransformIs(-1.f * (a11y::Magnifier2::kDefaultScale - 1),  // x translation
-                            -1.f * (a11y::Magnifier2::kDefaultScale - 1),  // y translation
-                            a11y::Magnifier2::kDefaultScale);
+    ExpectThatTransformIs(-1.f * (a11y::Magnifier2::kDefaultScale - 1),  // x translation
+                          -1.f * (a11y::Magnifier2::kDefaultScale - 1),  // y translation
+                          a11y::Magnifier2::kDefaultScale);
   }
 }
 
@@ -299,7 +312,7 @@ TEST_F(Magnifier2Test, ClampZoom) {
     gesture_context.current_pointer_locations[1].ndc_point.y = 0;
     mock_gesture_handler()->TriggerGesture(GestureType::kOneFingerTripleTap, gesture_context);
 
-    RunLoopUntilTransformIs(0 /* x */, 0 /* y */, a11y::Magnifier2::kDefaultScale);
+    ExpectThatTransformIs(0 /* x */, 0 /* y */, a11y::Magnifier2::kDefaultScale);
   }
 
   // Begin a two-finger drag with fingers very close together.
@@ -310,8 +323,6 @@ TEST_F(Magnifier2Test, ClampZoom) {
     gesture_context.current_pointer_locations[2].ndc_point.x = -.01f;
     gesture_context.current_pointer_locations[2].ndc_point.y = -.01f;
     mock_gesture_handler()->TriggerGestureRecognize(GestureType::kTwoFingerDrag, gesture_context);
-
-    RunLoopUntilIdle();
   }
 
   // Spread fingers far apart. The scale should be capped at kMaxScale.
@@ -323,7 +334,7 @@ TEST_F(Magnifier2Test, ClampZoom) {
     gesture_context.current_pointer_locations[2].ndc_point.y = -1.f;
     mock_gesture_handler()->TriggerGestureUpdate(GestureType::kTwoFingerDrag, gesture_context);
 
-    RunLoopUntilTransformIs(0 /* x */, 0 /* x */, a11y::Magnifier2::kMaxScale);
+    ExpectThatTransformIs(0 /* x */, 0 /* x */, a11y::Magnifier2::kMaxScale);
   }
 }
 
@@ -342,9 +353,7 @@ TEST_F(Magnifier2Test, TwoFingerDragOnlyWorksInPersistentMode) {
     gesture_context.current_pointer_locations[2].ndc_point.y = 0.5f;
     mock_gesture_handler()->TriggerGestureRecognize(GestureType::kTwoFingerDrag, gesture_context);
 
-    RunLoopWithTimeout(kTestTransitionPeriod);
-
-    EXPECT_EQ(mock_magnification_handler()->transform(), ClipSpaceTransform::identity());
+    ExpectThatTransformIs(0 /* x */, 0 /* x */, 1.f);
   }
 
   // Try to scale and pan, and again, verify that the transform does not change.
@@ -358,9 +367,7 @@ TEST_F(Magnifier2Test, TwoFingerDragOnlyWorksInPersistentMode) {
     gesture_context.current_pointer_locations[2].ndc_point.y = 0.5f;
     mock_gesture_handler()->TriggerGestureUpdate(GestureType::kTwoFingerDrag, gesture_context);
 
-    RunLoopWithTimeout(kTestTransitionPeriod);
-
-    EXPECT_EQ(mock_magnification_handler()->transform(), ClipSpaceTransform::identity());
+    ExpectThatTransformIs(0 /* x */, 0 /* x */, 1.f);
   }
 }
 
@@ -375,9 +382,9 @@ TEST_F(Magnifier2Test, TapDragOnlyWorksInUnmagnifiedMode) {
     gesture_context.current_pointer_locations[1].ndc_point.x = 0.4f;
     gesture_context.current_pointer_locations[1].ndc_point.y = 0.5f;
     mock_gesture_handler()->TriggerGesture(GestureType::kOneFingerTripleTap, gesture_context);
-    RunLoopUntilTransformIs(-.4f * (a11y::Magnifier2::kDefaultScale - 1),  // x translation
-                            -.5f * (a11y::Magnifier2::kDefaultScale - 1),  // y translation
-                            a11y::Magnifier2::kDefaultScale);
+    ExpectThatTransformIs(-.4f * (a11y::Magnifier2::kDefaultScale - 1),  // x translation
+                          -.5f * (a11y::Magnifier2::kDefaultScale - 1),  // y translation
+                          a11y::Magnifier2::kDefaultScale);
   }
 
   // Attempt a one-finger-triple-tap-drag at a different location. The
@@ -389,29 +396,11 @@ TEST_F(Magnifier2Test, TapDragOnlyWorksInUnmagnifiedMode) {
     mock_gesture_handler()->TriggerGestureRecognize(GestureType::kOneFingerTripleTapDrag,
                                                     gesture_context);
 
-    RunLoopWithTimeout(kTestTransitionPeriod);
-
     // Check that the translation has not changed. X and Y translations are
     // updated together, so checking one of them is sufficient.
-    const auto& transform = mock_magnification_handler()->transform();
-    EXPECT_LT(std::abs(transform.x - (-1.2f)),
+    EXPECT_LT(std::abs(mock_magnifier_delegate()->x() - (-1.2f)),
               a11y::Magnifier2::kDefaultScale * std::numeric_limits<float>::epsilon());
   }
-}
-
-TEST_F(Magnifier2Test, NoHandlerRegistered) {
-  // The puprose of this test case is to ensure that the magnifier does not
-  // crash if no handler is registered.
-  a11y::Magnifier2 magnifier;
-  MockGestureHandler gesture_handler;
-  magnifier.BindGestures(&gesture_handler);
-
-  a11y::GestureContext gesture_context;
-  gesture_context.current_pointer_locations[1].ndc_point.x = 0.4f;
-  gesture_context.current_pointer_locations[1].ndc_point.y = 0.5f;
-  gesture_handler.TriggerGesture(GestureType::kOneFingerTripleTap, gesture_context);
-
-  RunLoopWithTimeout(kTestTransitionPeriod);
 }
 
 }  // namespace

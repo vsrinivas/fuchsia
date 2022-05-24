@@ -70,10 +70,10 @@ int run_a11y_manager(int argc, const char** argv) {
         std::make_unique<a11y::A11ySemanticsEventManager>(), std::move(a11y_view), context.get(),
         context->outgoing()->debug_dir());
 
-    app = std::make_unique<a11y_manager::App>(context.get(), view_manager.get(), &tts_manager,
-                                              &color_transform_manager, &gesture_listener_registry,
-                                              &boot_info_manager, &screen_reader_context_factory,
-                                              inspector->root().CreateChild("a11y_manager_app"));
+    app = std::make_unique<a11y_manager::App>(
+        context.get(), view_manager.get(), &tts_manager, &color_transform_manager,
+        &gesture_listener_registry, &boot_info_manager, &screen_reader_context_factory,
+        inspector->root().CreateChild("a11y_manager_app"), flatland_enabled);
     context->outgoing()->ServeFromStartupInfo();
   });
 

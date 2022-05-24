@@ -18,22 +18,19 @@ executable("magnifier_tests") {
   testonly = true
 
   sources = [
+    "gfx_magnifier_delegate_unittest.cc",
     "magnifier2_unittest.cc",
     "magnifier_util_test.cc",
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.ui.input.accessibility",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
-    "//src/ui/a11y/lib/gesture_manager/arena",
     "//src/ui/a11y/lib/gesture_manager/arena/tests/mocks",
     "//src/ui/a11y/lib/gesture_manager/tests/mocks",
     "//src/ui/a11y/lib/magnifier",
     "//src/ui/a11y/lib/magnifier/tests/mocks:mock_magnification_handler",
-    "//src/ui/a11y/lib/testing",
-    "//third_party/glm",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/zx",

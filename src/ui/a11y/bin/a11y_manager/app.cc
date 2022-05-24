@@ -7,6 +7,7 @@
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
+#include "src/ui/a11y/lib/magnifier/gfx_magnifier_delegate.h"
 #include "src/ui/a11y/lib/screen_reader/focus/a11y_focus_manager.h"
 #include "src/ui/a11y/lib/screen_reader/screen_reader_context.h"
 
@@ -19,14 +20,13 @@ App::App(sys::ComponentContext* context, a11y::ViewManager* view_manager,
          a11y::GestureListenerRegistry* gesture_listener_registry,
          a11y::BootInfoManager* boot_info_manager,
          a11y::ScreenReaderContextFactory* screen_reader_context_factory,
-         inspect::Node inspect_node)
+         inspect::Node inspect_node, bool use_flatland)
     : context_(context),
       view_manager_(view_manager),
       tts_manager_(tts_manager),
       color_transform_manager_(color_transform_manager),
       gesture_listener_registry_(gesture_listener_registry),
       screen_reader_context_factory_(screen_reader_context_factory),
-      magnifier_(),
       inspect_node_(std::move(inspect_node)),
       inspect_property_intl_property_provider_disconnected_(
           inspect_node_.CreateBool(kIntlPropertyProviderDisconnectedInspectName, false)) {
@@ -44,9 +44,17 @@ App::App(sys::ComponentContext* context, a11y::ViewManager* view_manager,
   context->outgoing()->AddPublicService(semantics_manager_bindings_.GetHandler(view_manager_));
   context->outgoing()->AddPublicService(
       virtualkeyboard_registry_bindings_.GetHandler(view_manager_));
-  context->outgoing()->AddPublicService(magnifier_bindings_.GetHandler(&magnifier_));
   context->outgoing()->AddPublicService(
       gesture_listener_registry_bindings_.GetHandler(gesture_listener_registry_));
+
+  if (!use_flatland) {
+    auto magnifier_delegate = std::make_unique<a11y::GfxMagnifierDelegate>();
+    context->outgoing()->AddPublicService(magnifier_bindings_.GetHandler(magnifier_delegate.get()));
+    magnifier_ = std::make_unique<a11y::Magnifier2>(std::move(magnifier_delegate));
+  } else {
+    // TODO(fxbug.dev/98158): Pass a flatland delegate here.
+    magnifier_ = std::make_unique<a11y::Magnifier2>(nullptr);
+  }
 
   // Inits Focus Chain focuser support / listening Focus Chain updates.
   focus_chain_manager_ =
@@ -143,7 +151,7 @@ void App::UpdateScreenReaderState() {
 
 void App::UpdateMagnifierState() {
   if (!state_.magnifier_enabled()) {
-    magnifier_.ZoomOutIfMagnified();
+    magnifier_->ZoomOutIfMagnified();
   }
 }
 
@@ -188,7 +196,7 @@ void App::UpdateGestureManagerState() {
 
     // The ordering of these recognizers is significant, as it signifies priority.
     if (gesture_state_.magnifier_gestures) {
-      magnifier_.BindGestures(gesture_manager_->gesture_handler());
+      magnifier_->BindGestures(gesture_manager_->gesture_handler());
     }
 
     if (gesture_state_.screen_reader_gestures) {
