@@ -116,7 +116,7 @@
     {
         "event_code": 46,
         "name": "Feedback",
-        "process": "feedback_data\\.cmx",
+        "process": "feedback\\.cm",
         "vmo": ""
     },
     {

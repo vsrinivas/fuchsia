@@ -350,16 +350,6 @@
         moniker: "core/sysmem_connector",
     },
     {
-        id: 171,
-        label: "Crash Reports",
-        moniker: "crash_reports.cmx",
-    },
-    {
-        id: 172,
-        label: "Feedback Data",
-        moniker: "feedback_data.cmx",
-    },
-    {
         id: 173,
         label: "Screen Saver",
         moniker: "screensaver.cmx",
@@ -388,11 +378,6 @@
         id: 178,
         label: "Configurator",
         moniker: "core/configurator",
-    },
-    {
-        id: 179,
-        label: "Last Reboot",
-        moniker: "core/last_reboot",
     },
     {
         id: 180,
