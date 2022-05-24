@@ -182,6 +182,6 @@ zx_status_t StorageWatchdog::GetFilesystemInfo(zx_handle_t directory,
   auto result =
       fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io::Directory>(directory))->QueryFilesystem();
   if (result.ok())
-    *out_info = *result->info;
-  return !result.ok() ? result.status() : result->s;
+    *out_info = *result.value_NEW().info;
+  return !result.ok() ? result.status() : result.value_NEW().s;
 }

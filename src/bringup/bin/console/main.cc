@@ -32,7 +32,7 @@ zx::resource GetDebugResource() {
            zx_status_get_string(result.status()));
     return {};
   }
-  return std::move(result->resource);
+  return std::move(result.Unwrap_NEW()->resource);
 }
 
 zx_status_t ConnectListener(fidl::ClientEnd<fuchsia_logger::LogListenerSafe> listener,

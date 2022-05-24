@@ -147,18 +147,18 @@ void BlockDeviceAdapter::WriteAt(const fbl::Array<uint8_t>& data, uint64_t offse
   const fidl::WireResult result =
       fidl::WireCall<fuchsia_io::File>(device()->channel())->WriteAt(ToFidlVector(data), offset);
   ASSERT_OK(result.status(), "Failed to communicate with block device.");
-  const fidl::WireResponse response = result.value();
-  ASSERT_TRUE(response.result.is_response(), "%s", zx_status_get_string(response.result.err()));
-  ASSERT_EQ(data.size(), response.result.response().actual_count);
+  const fitx::result response = result.value_NEW();
+  ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+  ASSERT_EQ(data.size(), response.value()->actual_count);
 }
 
 void BlockDeviceAdapter::ReadAt(uint64_t offset, fbl::Array<uint8_t>* out_data) {
   const fidl::WireResult result =
       fidl::WireCall<fuchsia_io::File>(device()->channel())->ReadAt(out_data->size(), offset);
   ASSERT_OK(result.status(), "Failed to communicate with block device.");
-  const fidl::WireResponse response = result.value();
-  ASSERT_TRUE(response.result.is_response(), "%s", zx_status_get_string(response.result.err()));
-  const fidl::VectorView data = response.result.response().data;
+  const fitx::result response = result.value_NEW();
+  ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+  const fidl::VectorView data = response.value()->data;
   memcpy(out_data->data(), data.data(), data.count());
 }
 
@@ -283,8 +283,8 @@ std::unique_ptr<FvmAdapter> FvmAdapter::CreateGrowable(const fbl::unique_fd& dev
       fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(device->channel()->get()))
           ->Bind(::fidl::StringView(kFvmDriverLib));
   zx_status_t fidl_status = resp.status();
-  if (resp->result.is_err()) {
-    status = resp->result.err();
+  if (resp.Unwrap_NEW()->is_error()) {
+    status = resp.Unwrap_NEW()->error_value();
   }
 
   if (fidl_status != ZX_OK || status != ZX_OK) {
@@ -329,8 +329,8 @@ zx_status_t FvmAdapter::AddPartition(const fbl::unique_fd& devfs_root, const std
     return response.status();
   }
 
-  if (response->status != ZX_OK) {
-    return response->status;
+  if (response.value_NEW().status != ZX_OK) {
+    return response.value_NEW().status;
   }
 
   auto vpartition = VPartitionAdapter::Create(devfs_root, name, guid, type);
@@ -361,8 +361,8 @@ zx_status_t FvmAdapter::Rebind(fbl::Vector<VPartitionAdapter*> vpartitions) {
                   ->Bind(::fidl::StringView(kFvmDriverLib));
   zx_status_t fidl_status = resp.status();
   status = ZX_OK;
-  if (resp->result.is_err()) {
-    status = resp->result.err();
+  if (resp.Unwrap_NEW()->is_error()) {
+    status = resp.Unwrap_NEW()->error_value();
   }
 
   // Bind the FVM to the block device.

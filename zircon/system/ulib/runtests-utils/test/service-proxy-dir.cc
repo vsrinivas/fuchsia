@@ -113,7 +113,7 @@ TEST(ServiceProxyDirTest, Simple) {
                                                        endpoints->client.channel().borrow()})
                                         ->EchoString(kTestString);
     ASSERT_OK(result.status());
-    const fidl::WireResponse response = result.value();
+    const fidl::WireResponse response = result.value_NEW();
     ASSERT_EQ(response.response.get(), kProxyEchoString);
   }
 
@@ -152,7 +152,7 @@ TEST(ServiceProxyDirTest, Simple) {
                                                        endpoints->client.channel().borrow()})
                                         ->EchoString(kTestString);
     ASSERT_OK(result.status());
-    const fidl::WireResponse response = result.value();
+    const fidl::WireResponse response = result.value_NEW();
     ASSERT_EQ(response.response.get(), kEchoString);
   }
 

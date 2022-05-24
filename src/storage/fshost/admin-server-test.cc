@@ -80,8 +80,8 @@ TEST_F(AdminServerTest, MountAndUnmount) {
   auto result = fidl::WireCall(*fshost_or)->GetDevicePath(buf.f_fsid);
   ASSERT_TRUE(result.ok());
 
-  ASSERT_TRUE(result->result.is_response());
-  EXPECT_EQ(result->result.response().path.get(), device_path);
+  ASSERT_TRUE(result.Unwrap_NEW()->is_ok());
+  EXPECT_EQ(result.Unwrap_NEW()->value()->path.get(), device_path);
 
   zx::process umount_process;
   ASSERT_EQ(fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, kUmountBinPath,

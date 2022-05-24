@@ -76,8 +76,8 @@ class TestMagmaFidl : public gtest::RealLoopFixture {
         auto wire_result = device_->Query(fuchsia_gpu_magma::wire::QueryId::kVendorId);
         ASSERT_TRUE(wire_result.ok());
 
-        ASSERT_TRUE(wire_result.Unwrap()->result.response().is_simple_result());
-        vendor_id_ = wire_result.Unwrap()->result.response().simple_result();
+        ASSERT_TRUE(wire_result.Unwrap_NEW()->value()->is_simple_result());
+        vendor_id_ = wire_result.Unwrap_NEW()->value()->simple_result();
       }
 
       if (gVendorId == 0 || vendor_id_ == gVendorId) {
@@ -93,8 +93,8 @@ class TestMagmaFidl : public gtest::RealLoopFixture {
       auto wire_result = device_->Query(fuchsia_gpu_magma::wire::QueryId::kMaximumInflightParams);
       ASSERT_TRUE(wire_result.ok());
 
-      ASSERT_TRUE(wire_result.Unwrap()->result.response().is_simple_result());
-      uint64_t params = wire_result.Unwrap()->result.response().simple_result();
+      ASSERT_TRUE(wire_result.Unwrap_NEW()->value()->is_simple_result());
+      uint64_t params = wire_result.Unwrap_NEW()->value()->simple_result();
       max_inflight_messages_ = static_cast<uint32_t>(params >> 32);
     }
 
@@ -168,33 +168,33 @@ TEST_F(TestMagmaFidl, QueryReturnsBuffer) {
   const uint64_t query_id = static_cast<uint64_t>(fuchsia_gpu_magma::wire::QueryId::kVendorId);
   auto wire_result = device_->QueryReturnsBuffer(query_id);
   EXPECT_TRUE(wire_result.ok());
-  EXPECT_TRUE(wire_result.Unwrap()->result.is_err());
+  EXPECT_TRUE(wire_result.Unwrap_NEW()->is_error());
 }
 
 TEST_F(TestMagmaFidl, Query) {
   {
     auto wire_response = device_->Query(fuchsia_gpu_magma::wire::QueryId::kVendorId);
     EXPECT_TRUE(wire_response.ok());
-    EXPECT_TRUE(wire_response->result.response().is_simple_result());
-    EXPECT_FALSE(wire_response->result.response().is_buffer_result());
+    EXPECT_TRUE(wire_response.value_NEW().value()->is_simple_result());
+    EXPECT_FALSE(wire_response.value_NEW().value()->is_buffer_result());
   }
   {
     auto wire_response = device_->Query(fuchsia_gpu_magma::wire::QueryId::kDeviceId);
     EXPECT_TRUE(wire_response.ok());
-    EXPECT_TRUE(wire_response->result.response().is_simple_result());
-    EXPECT_FALSE(wire_response->result.response().is_buffer_result());
+    EXPECT_TRUE(wire_response.value_NEW().value()->is_simple_result());
+    EXPECT_FALSE(wire_response.value_NEW().value()->is_buffer_result());
   }
   {
     auto wire_response = device_->Query(fuchsia_gpu_magma::wire::QueryId::kIsTotalTimeSupported);
     EXPECT_TRUE(wire_response.ok());
-    EXPECT_TRUE(wire_response->result.response().is_simple_result());
-    EXPECT_FALSE(wire_response->result.response().is_buffer_result());
+    EXPECT_TRUE(wire_response.value_NEW().value()->is_simple_result());
+    EXPECT_FALSE(wire_response.value_NEW().value()->is_buffer_result());
   }
   {
     auto wire_response = device_->Query(fuchsia_gpu_magma::wire::QueryId::kMaximumInflightParams);
     EXPECT_TRUE(wire_response.ok());
-    EXPECT_TRUE(wire_response->result.response().is_simple_result());
-    EXPECT_FALSE(wire_response->result.response().is_buffer_result());
+    EXPECT_TRUE(wire_response.value_NEW().value()->is_simple_result());
+    EXPECT_FALSE(wire_response.value_NEW().value()->is_buffer_result());
   }
 }
 
@@ -521,7 +521,7 @@ TEST_F(TestMagmaFidl, EnablePerformanceCounters) {
     {
       auto wire_result = perf_counter_access->GetPerformanceCountToken();
       ASSERT_TRUE(wire_result.ok());
-      access_token = std::move(wire_result.Unwrap()->access_token);
+      access_token = std::move(wire_result.Unwrap_NEW()->access_token);
     }
 
     {
@@ -533,7 +533,7 @@ TEST_F(TestMagmaFidl, EnablePerformanceCounters) {
       auto wire_result = primary_.sync()->IsPerformanceCounterAccessAllowed();
       ASSERT_TRUE(wire_result.ok());
       // Should be enabled if the gpu-performance-counters device matches the device under test
-      if (wire_result.Unwrap()->enabled) {
+      if (wire_result.Unwrap_NEW()->enabled) {
         success = true;
         break;
       }

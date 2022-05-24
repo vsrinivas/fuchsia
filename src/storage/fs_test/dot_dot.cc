@@ -111,8 +111,8 @@ TEST_P(DotDotTest, RawOpenDotDirectoryCreate) {
 
   const fidl::WireResult close_result = fidl::WireCall<fio::Directory>(local.borrow())->Close();
   ASSERT_EQ(close_result.status(), ZX_OK);
-  const fidl::WireResponse close_response = close_result.value();
-  ASSERT_TRUE(close_response.result.is_response()) << close_response.result.err();
+  const fitx::result close_response = close_result.value_NEW();
+  ASSERT_TRUE(close_response.is_ok()) << close_response.error_value();
 }
 
 TEST_P(DotDotTest, RawOpenDotDirectoryCreateIfAbsent) {

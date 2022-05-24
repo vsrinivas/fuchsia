@@ -25,7 +25,7 @@ zx::status<std::unique_ptr<StreamReader>> StreamReader::Create(zx::channel strea
   }
   auto result = fidl::WireCall<fuchsia_paver::PayloadStream>(zx::unowned(stream))
                     ->RegisterVmo(std::move(dup));
-  status = zx::make_status(result.ok() ? result.value().status : result.status());
+  status = zx::make_status(result.ok() ? result.value_NEW().status : result.status());
   if (status.is_error()) {
     ERROR("Unable to register vmo: %d\n", status.error_value());
     return status.take_error();
@@ -39,7 +39,7 @@ zx_status_t StreamReader::Read(void* buf, size_t buf_size, size_t* size_actual) 
     if (call_result.status() != ZX_OK) {
       return call_result.status();
     }
-    const fuchsia_paver::wire::ReadResult& read_result = call_result.value().result;
+    const fuchsia_paver::wire::ReadResult& read_result = call_result.value_NEW().result;
     switch (read_result.Which()) {
       case fuchsia_paver::wire::ReadResult::Tag::kErr:
         return read_result.err();

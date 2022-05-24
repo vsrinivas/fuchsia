@@ -62,7 +62,7 @@ zx_status_t SimpleCodecClient::SetProtocol(ddk::CodecProtocolClient proto_client
     return response.status();
   }
 
-  auto mutable_response = response.value();
+  auto mutable_response = response.value_NEW();
   // Update the stored gain state, and start a hanging get to receive further gain state changes.
   UpdateGainState(&mutable_response);
 
@@ -79,10 +79,10 @@ zx_status_t SimpleCodecClient::SetProtocol(ddk::CodecProtocolClient proto_client
     return result.status();
   }
   auto pes = signal_processing_->GetElements();
-  if (!pes.ok() || pes->result.is_err()) {
+  if (!pes.ok() || pes.Unwrap_NEW()->is_error()) {
     return ZX_OK;  // We allow servers not supporting signal processing.
   }
-  for (auto& pe : pes->result.response().processing_elements) {
+  for (auto& pe : pes.Unwrap_NEW()->value()->processing_elements) {
     if (pe.type() ==
         fuchsia_hardware_audio_signalprocessing::wire::ElementType::kAutomaticGainLimiter) {
       if (pe.has_id()) {
@@ -110,7 +110,7 @@ zx::status<Info> SimpleCodecClient::GetInfo() {
     return zx::error(result.status());
   }
 
-  const fuchsia_hardware_audio::wire::CodecInfo& llcpp_info = result.value().info;
+  const fuchsia_hardware_audio::wire::CodecInfo& llcpp_info = result.value_NEW().info;
 
   Info info;
   info.unique_id = std::string(llcpp_info.unique_id.data(), llcpp_info.unique_id.size());
@@ -122,7 +122,7 @@ zx::status<Info> SimpleCodecClient::GetInfo() {
 zx::status<bool> SimpleCodecClient::IsBridgeable() {
   const auto result = codec_.sync()->IsBridgeable();
   if (result.ok()) {
-    return zx::ok(result.value().supports_bridged_mode);
+    return zx::ok(result.value_NEW().supports_bridged_mode);
   }
   return zx::error(result.status());
 }
@@ -136,12 +136,12 @@ zx::status<DaiSupportedFormats> SimpleCodecClient::GetDaiFormats() {
   if (!result.ok()) {
     return zx::error(result.status());
   }
-  if (result.value().result.is_err()) {
-    return zx::error(result.value().result.err());
+  if (result.Unwrap_NEW()->is_error()) {
+    return zx::error(result.Unwrap_NEW()->error_value());
   }
 
-  ZX_ASSERT(result.value().result.response().formats.count() == 1);
-  const auto& llcpp_formats = result.value().result.response().formats[0];
+  ZX_ASSERT(result.Unwrap_NEW()->value()->formats.count() == 1);
+  const auto& llcpp_formats = result.Unwrap_NEW()->value()->formats[0];
 
   DaiSupportedFormats formats;
   formats.number_of_channels = std::vector(llcpp_formats.number_of_channels.cbegin(),
@@ -182,18 +182,18 @@ zx::status<CodecFormatInfo> SimpleCodecClient::SetDaiFormat(DaiFormat format) {
   if (!ret.ok()) {
     return zx::error(ret.status());
   }
-  if (ret->result.is_err()) {
-    return zx::error(ret->result.err());
+  if (ret.Unwrap_NEW()->is_error()) {
+    return zx::error(ret.Unwrap_NEW()->error_value());
   }
   CodecFormatInfo format_info = {};
-  if (ret->result.response().state.has_external_delay()) {
-    format_info.set_external_delay(ret->result.response().state.external_delay());
+  if (ret.Unwrap_NEW()->value()->state.has_external_delay()) {
+    format_info.set_external_delay(ret.Unwrap_NEW()->value()->state.external_delay());
   }
-  if (ret->result.response().state.has_turn_on_delay()) {
-    format_info.set_turn_on_delay(ret->result.response().state.turn_on_delay());
+  if (ret.Unwrap_NEW()->value()->state.has_turn_on_delay()) {
+    format_info.set_turn_on_delay(ret.Unwrap_NEW()->value()->state.turn_on_delay());
   }
-  if (ret->result.response().state.has_turn_off_delay()) {
-    format_info.set_turn_off_delay(ret->result.response().state.turn_off_delay());
+  if (ret.Unwrap_NEW()->value()->state.has_turn_off_delay()) {
+    format_info.set_turn_off_delay(ret.Unwrap_NEW()->value()->state.turn_off_delay());
   }
   return zx::ok(std::move(format_info));
 }
@@ -204,7 +204,7 @@ zx::status<GainFormat> SimpleCodecClient::GetGainFormat() {
     return zx::error(result.status());
   }
 
-  const fuchsia_hardware_audio::wire::GainFormat& format = result.value().gain_format;
+  const fuchsia_hardware_audio::wire::GainFormat& format = result.value_NEW().gain_format;
 
   // Only decibels in simple codec.
   ZX_ASSERT(format.type() == fuchsia_hardware_audio::wire::GainType::kDecibels);
@@ -268,7 +268,7 @@ void SimpleCodecClient::UpdateGainState(
         if (!result.ok()) {
           return;
         }
-        UpdateGainState(result.Unwrap());
+        UpdateGainState(result.Unwrap_NEW());
       });
 }
 

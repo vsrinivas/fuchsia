@@ -99,11 +99,12 @@ zx_status_t SimpleDisplay::DisplayControllerImplImportImage(image_t* image,
     zxlogf(ERROR, "failed to wait for buffers allocated, %s", result.FormatDescription().c_str());
     return result.status();
   }
-  if (result->status != ZX_OK) {
-    return result->status;
+  if (result.value_NEW().status != ZX_OK) {
+    return result.value_NEW().status;
   }
 
-  fuchsia_sysmem::wire::BufferCollectionInfo2& collection_info = result->buffer_collection_info;
+  fuchsia_sysmem::wire::BufferCollectionInfo2& collection_info =
+      result.value_NEW().buffer_collection_info;
 
   if (!collection_info.settings.has_image_format_constraints) {
     zxlogf(ERROR, "no image format constraints");

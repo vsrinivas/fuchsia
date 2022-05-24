@@ -91,7 +91,7 @@ class OSImpl : public OS, public TaskEnumerator {
     if (result.status() != ZX_OK) {
       return result.status();
     }
-    const auto& stats = result.Unwrap()->stats;
+    const auto& stats = result.Unwrap_NEW()->stats;
     kmem->total_bytes = stats.total_bytes();
     kmem->free_bytes = stats.free_bytes();
     kmem->wired_bytes = stats.wired_bytes();
@@ -115,7 +115,7 @@ class OSImpl : public OS, public TaskEnumerator {
     if (result.status() != ZX_OK) {
       return result.status();
     }
-    const auto& stats = result.Unwrap()->stats;
+    const auto& stats = result.Unwrap_NEW()->stats;
     kmem_ext->total_bytes = stats.total_bytes();
     kmem_ext->free_bytes = stats.free_bytes();
     kmem_ext->wired_bytes = stats.wired_bytes();

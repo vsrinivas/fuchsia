@@ -27,11 +27,11 @@ zx::status<std::unique_ptr<EthClient>> EthClient::Create(
     fprintf(stderr, "%s: failed to get fifos: %s\n", __FUNCTION__, r.status_string());
     return zx::error(r.status());
   }
-  if (zx_status_t status = r.value().status; status != ZX_OK) {
+  if (zx_status_t status = r.value_NEW().status; status != ZX_OK) {
     fprintf(stderr, "%s: GetFifos error: %s\n", __FUNCTION__, zx_status_get_string(status));
     return zx::error(status);
   }
-  fuchsia_hardware_ethernet::wire::Fifos& fifos = *r.value().info;
+  fuchsia_hardware_ethernet::wire::Fifos& fifos = *r.value_NEW().info;
 
   {
     fidl::WireResult result = eth->SetIoBuffer(std::move(io_vmo));
@@ -39,7 +39,7 @@ zx::status<std::unique_ptr<EthClient>> EthClient::Create(
       fprintf(stderr, "%s: failed to set iobuf: %s\n", __FUNCTION__, result.status_string());
       return zx::error(result.status());
     }
-    if (zx_status_t status = result.value().status; status != ZX_OK) {
+    if (zx_status_t status = result.value_NEW().status; status != ZX_OK) {
       fprintf(stderr, "%s: set iobuf error: %s\n", __FUNCTION__, zx_status_get_string(status));
       return zx::error(status);
     }
@@ -51,7 +51,7 @@ zx::status<std::unique_ptr<EthClient>> EthClient::Create(
       fprintf(stderr, "%s: failed to set client name %s\n", __FUNCTION__, result.status_string());
       return zx::error(result.status());
     }
-    if (zx_status_t status = result.value().status; status != ZX_OK) {
+    if (zx_status_t status = result.value_NEW().status; status != ZX_OK) {
       fprintf(stderr, "%s: set client name error %s\n", __FUNCTION__, zx_status_get_string(status));
       return zx::error(status);
     }
@@ -63,7 +63,7 @@ zx::status<std::unique_ptr<EthClient>> EthClient::Create(
       fprintf(stderr, "%s: failed to start device %s\n", __FUNCTION__, result.status_string());
       return zx::error(result.status());
     }
-    if (zx_status_t status = result.value().status; status != ZX_OK) {
+    if (zx_status_t status = result.value_NEW().status; status != ZX_OK) {
       fprintf(stderr, "%s: device error %s\n", __FUNCTION__, result.status_string());
       return zx::error(status);
     }
@@ -175,5 +175,5 @@ zx::status<fuchsia_hardware_ethernet::wire::DeviceStatus> EthClient::GetStatus()
   if (!result.ok()) {
     return zx::error(result.status());
   }
-  return zx::ok(result.value().device_status);
+  return zx::ok(result.value_NEW().device_status);
 }

@@ -151,7 +151,7 @@ zx::status<fdio_ptr> fdio::create_with_describe(fidl::ClientEnd<fio::Node> node)
   if (status != ZX_OK) {
     return zx::error(status);
   }
-  return fdio::create(std::move(node), std::move(response.value().info));
+  return fdio::create(std::move(node), std::move(response.value_NEW().info));
 }
 
 zx::status<fdio_ptr> fdio::create_with_on_open(fidl::ClientEnd<fio::Node> node) {

@@ -79,17 +79,17 @@ zx_status_t IntelThermal::Bind() {
     return description.status();
   }
 
-  if (description->result.is_err()) {
-    zxlogf(ERROR, "EvaluateObject failed: %d", int(description->result.err()));
+  if (description.value_NEW().is_error()) {
+    zxlogf(ERROR, "EvaluateObject failed: %d", int(description.value_NEW().error_value()));
     return ZX_ERR_INTERNAL;
   }
 
-  if (!description->result.response().result.is_object() ||
-      !description->result.response().result.object().is_buffer_val()) {
+  if (!description.Unwrap_NEW()->value()->result.is_object() ||
+      !description.Unwrap_NEW()->value()->result.object().is_buffer_val()) {
     zxlogf(ERROR, "EvaluateObject returned a bad type, expected a buffer.");
     return ZX_ERR_WRONG_TYPE;
   }
-  auto& buf = description->result.response().result.object().buffer_val();
+  auto& buf = description.Unwrap_NEW()->value()->result.object().buffer_val();
 
   /* The description is a UTF16 string. Use iconv(3) to convert between UTF16 and ASCII. */
   char dest_buf[256];
@@ -130,8 +130,8 @@ void IntelThermal::DdkInit(ddk::InitTxn txn) {
     return;
   }
 
-  if (result->result.is_err()) {
-    zxlogf(ERROR, "InstallNotifyHandler failed: %d", int(result->result.err()));
+  if (result.value_NEW().is_error()) {
+    zxlogf(ERROR, "InstallNotifyHandler failed: %d", int(result.value_NEW().error_value()));
     txn.Reply(ZX_ERR_INTERNAL);
     return;
   }
@@ -252,8 +252,8 @@ void IntelThermal::SetTripCelsius(SetTripCelsiusRequestView request,
     completer.Reply(result.status());
     return;
   }
-  if (result->result.is_err()) {
-    zxlogf(ERROR, "Failed to call PAT0: %d", int(result->result.err()));
+  if (result.value_NEW().is_error()) {
+    zxlogf(ERROR, "Failed to call PAT0: %d", int(result.value_NEW().error_value()));
     completer.Reply(ZX_ERR_INTERNAL);
     return;
   }
@@ -278,18 +278,18 @@ zx::status<uint64_t> IntelThermal::EvaluateInteger(const char* name) {
     return zx::error(result.status());
   }
 
-  if (result->result.is_err()) {
-    zxlogf(ERROR, "EvaluateObject(%s) failed: %d", name, int(result->result.err()));
+  if (result.value_NEW().is_error()) {
+    zxlogf(ERROR, "EvaluateObject(%s) failed: %d", name, int(result.value_NEW().error_value()));
     return zx::error(ZX_ERR_INTERNAL);
   }
 
-  if (!result->result.response().result.is_object() ||
-      !result->result.response().result.object().is_integer_val()) {
+  if (!result.Unwrap_NEW()->value()->result.is_object() ||
+      !result.Unwrap_NEW()->value()->result.object().is_integer_val()) {
     zxlogf(ERROR, "EvaluateObject(%s) returned the wrong type", name);
     return zx::error(ZX_ERR_WRONG_TYPE);
   }
 
-  return zx::ok(result->result.response().result.object().integer_val());
+  return zx::ok(result.Unwrap_NEW()->value()->result.object().integer_val());
 }
 
 static zx_driver_ops_t intel_thermal_driver_ops{

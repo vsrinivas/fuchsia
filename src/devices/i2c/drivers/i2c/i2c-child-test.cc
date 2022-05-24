@@ -117,7 +117,7 @@ TEST_F(I2cChildTest, Write3BytesOnce) {
   auto read = client_wrap->Transfer(transactions);
 
   ASSERT_OK(read.status());
-  ASSERT_FALSE(read->result.is_err());
+  ASSERT_FALSE(read.Unwrap_NEW()->is_error());
 }
 
 TEST_F(I2cChildTest, Read3BytesOnce) {
@@ -161,9 +161,9 @@ TEST_F(I2cChildTest, Read3BytesOnce) {
 
   auto read = client_wrap->Transfer(transactions);
   ASSERT_OK(read.status());
-  ASSERT_FALSE(read->result.is_err());
+  ASSERT_FALSE(read.Unwrap_NEW()->is_error());
 
-  auto& read_data = read->result.response().read_data;
+  auto& read_data = read.Unwrap_NEW()->value()->read_data;
   ASSERT_EQ(read_data[0].data()[0], kTestRead0);
   ASSERT_EQ(read_data[1].data()[0], kTestRead1);
   ASSERT_EQ(read_data[2].data()[0], kTestRead2);
@@ -229,9 +229,9 @@ TEST_F(I2cChildTest, Write1ByteOnceRead1Byte3Times) {
 
   auto read = client_wrap->Transfer(transactions);
   ASSERT_OK(read.status());
-  ASSERT_FALSE(read->result.is_err());
+  ASSERT_FALSE(read.Unwrap_NEW()->is_error());
 
-  auto& read_data = read->result.response().read_data;
+  auto& read_data = read.Unwrap_NEW()->value()->read_data;
   ASSERT_EQ(read_data[0].data()[0], kTestRead0);
   ASSERT_EQ(read_data[1].data()[0], kTestRead1);
   ASSERT_EQ(read_data[2].data()[0], kTestRead2);
@@ -293,7 +293,7 @@ TEST_F(I2cChildTest, StopFlagPropagates) {
 
   auto read = client_wrap->Transfer(transactions);
   ASSERT_OK(read.status());
-  ASSERT_FALSE(read->result.is_err());
+  ASSERT_FALSE(read.value_NEW().is_error());
 }
 
 TEST_F(I2cChildTest, BadTransfers) {
@@ -311,7 +311,7 @@ TEST_F(I2cChildTest, BadTransfers) {
 
     auto read = client_wrap->Transfer(transactions);
     ASSERT_OK(read.status());
-    ASSERT_TRUE(read->result.is_err());
+    ASSERT_TRUE(read.Unwrap_NEW()->is_error());
   }
 
   {
@@ -327,7 +327,7 @@ TEST_F(I2cChildTest, BadTransfers) {
 
     auto read = client_wrap->Transfer(transactions);
     ASSERT_OK(read.status());
-    ASSERT_TRUE(read->result.is_err());
+    ASSERT_TRUE(read.Unwrap_NEW()->is_error());
   }
 
   {
@@ -343,7 +343,7 @@ TEST_F(I2cChildTest, BadTransfers) {
 
     auto read = client_wrap->Transfer(transactions);
     ASSERT_OK(read.status());
-    ASSERT_TRUE(read->result.is_err());
+    ASSERT_TRUE(read.Unwrap_NEW()->is_error());
   }
 
   {
@@ -366,7 +366,7 @@ TEST_F(I2cChildTest, BadTransfers) {
 
     auto read = client_wrap->Transfer(transactions);
     ASSERT_OK(read.status());
-    ASSERT_TRUE(read->result.is_err());
+    ASSERT_TRUE(read.Unwrap_NEW()->is_error());
   }
 }
 

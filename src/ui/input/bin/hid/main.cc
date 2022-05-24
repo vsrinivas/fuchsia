@@ -138,7 +138,8 @@ static zx_status_t print_hid_protocol(input_args_t* args) {
   if (result.status() != ZX_OK) {
     lprintf("hid: could not get protocol from %s (status=%d)\n", args->devpath, result.status());
   } else {
-    lprintf("hid: %s proto=%d\n", args->devpath, static_cast<uint32_t>(result->protocol));
+    lprintf("hid: %s proto=%d\n", args->devpath,
+            static_cast<uint32_t>(result.value_NEW().protocol));
   }
   return ZX_OK;
 }
@@ -151,13 +152,13 @@ static zx_status_t print_report_desc(input_args_t* args) {
     return result.status();
   }
 
-  lprintf("hid: %s report descriptor len=%zu\n", args->devpath, result->desc.count());
+  lprintf("hid: %s report descriptor len=%zu\n", args->devpath, result.value_NEW().desc.count());
 
   mtx_lock(&print_lock);
   printf("hid: %s report descriptor:\n", args->devpath);
-  print_hex(result->desc.data(), result->desc.count());
+  print_hex(result.value_NEW().desc.data(), result.value_NEW().desc.count());
   if (verbose) {
-    print_report_descriptor(result->desc.data(), result->desc.count());
+    print_report_descriptor(result.value_NEW().desc.data(), result.value_NEW().desc.count());
   }
   mtx_unlock(&print_lock);
   return ZX_OK;
@@ -179,8 +180,8 @@ static zx_status_t print_hid_status(input_args_t* args) {
     if (result.status() != ZX_OK) {
       return result.status();
     }
-    auto parse_result =
-        hid::ParseReportDescriptor(result->desc.data(), result->desc.count(), &dev_desc);
+    auto parse_result = hid::ParseReportDescriptor(result.value_NEW().desc.data(),
+                                                   result.value_NEW().desc.count(), &dev_desc);
     if (parse_result != hid::ParseResult::kParseOk) {
       return ZX_ERR_INTERNAL;
     }
@@ -225,16 +226,16 @@ static zx_status_t hid_input_read_report(input_args_t* args, const zx::event& re
     if (result.status() != ZX_OK) {
       return result.status();
     }
-    if (result->status == ZX_ERR_SHOULD_WAIT) {
+    if (result.value_NEW().status == ZX_ERR_SHOULD_WAIT) {
       report_event.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite(), nullptr);
       continue;
     }
-    if (result->data.count() > report_size) {
+    if (result.value_NEW().data.count() > report_size) {
       return ZX_ERR_BUFFER_TOO_SMALL;
     }
 
-    *returned_size = result->data.count();
-    memcpy(report_data, result->data.data(), result->data.count());
+    *returned_size = result.value_NEW().data.count();
+    memcpy(report_data, result.value_NEW().data.data(), result.value_NEW().data.count());
 
     return ZX_OK;
   }
@@ -248,13 +249,14 @@ static int hid_read_reports(input_args_t* args) {
 
   zx::event report_event;
   auto result = args->sync_client->GetReportsEvent();
-  if ((result.status() != ZX_OK) || (result->status != ZX_OK)) {
+  if ((result.status() != ZX_OK) || (result.value_NEW().status != ZX_OK)) {
     mtx_lock(&print_lock);
-    printf("read returned error: (call_status=%d) (status=%d)\n", result.status(), result->status);
+    printf("read returned error: (call_status=%d) (status=%d)\n", result.status(),
+           result.value_NEW().status);
     mtx_unlock(&print_lock);
     return ZX_ERR_INTERNAL;
   }
-  report_event = std::move(result->event);
+  report_event = std::move(result.value_NEW().event);
 
   std::vector<uint8_t> report(fuchsia_hardware_input::wire::kMaxReportLen);
   for (uint32_t i = 0; i < args->num_reads; i++) {
@@ -347,13 +349,13 @@ int watch_all_devices(Command command) {
 // Get a single report from the device with a given report id and then print it.
 int get_report(input_args_t* args) {
   auto result = args->sync_client->GetReport(args->report_type, args->report_id);
-  if (result.status() != ZX_OK || result->status != ZX_OK) {
-    printf("hid: could not get report: %d, %d\n", result.status(), result->status);
+  if (result.status() != ZX_OK || result.value_NEW().status != ZX_OK) {
+    printf("hid: could not get report: %d, %d\n", result.status(), result.value_NEW().status);
     return -1;
   }
 
-  printf("hid: got %zu bytes\n", result->report.count());
-  print_hex(result->report.data(), result->report.count());
+  printf("hid: got %zu bytes\n", result.value_NEW().report.count());
+  print_hex(result.value_NEW().report.data(), result.value_NEW().report.count());
   return 0;
 }
 
@@ -374,8 +376,8 @@ int set_report(input_args_t* args) {
 
   auto report_view = fidl::VectorView<uint8_t>::FromExternal(report.get(), args->data_size);
   auto res = args->sync_client->SetReport(args->report_type, args->report_id, report_view);
-  if (res.status() != ZX_OK || res->status != ZX_OK) {
-    printf("hid: could not set report: %d, %d\n", res.status(), res->status);
+  if (res.status() != ZX_OK || res.value_NEW().status != ZX_OK) {
+    printf("hid: could not set report: %d, %d\n", res.status(), res.value_NEW().status);
     return -1;
   }
 

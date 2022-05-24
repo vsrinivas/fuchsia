@@ -59,7 +59,7 @@ int ParseArgs(int argc, char** argv, fidl::UnownedClientEnd<fuchsia_io::Director
       fidl::WireCall(client_end.value())
           ->GetStrings(fidl::VectorView<fidl::StringView>::FromExternal(string_keys));
   if (string_resp.ok()) {
-    auto& values = string_resp->values;
+    auto& values = string_resp.Unwrap_NEW()->values;
     out->interface = std::string{values[0].data(), values[0].size()};
     out->nodename = std::string{values[1].data(), values[1].size()};
     namegen_str = std::string{values[2].data(), values[2].size()};

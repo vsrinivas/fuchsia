@@ -47,7 +47,7 @@ void CreateTestDevice(const IsolatedDevmgr& devmgr, const char* driver_name,
   auto result =
       test_root->CreateDevice(fidl::StringView::FromExternal(driver_name), std::move(remote));
   ASSERT_OK(result.status());
-  ASSERT_OK(result->status);
+  ASSERT_OK(result.value_NEW().status);
   *dev_channel = std::move(local);
 }
 
@@ -71,16 +71,16 @@ TEST(DeviceControllerIntegrationTest, TestDuplicateBindSameDriver) {
   auto resp = fidl::WireCall<fuchsia_device::Controller>(zx::unowned(dev_channel))
                   ->Bind(::fidl::StringView(libpath, len));
   ASSERT_OK(resp.status());
-  if (resp->result.is_err()) {
-    call_status = resp->result.err();
+  if (resp.value_NEW().is_error()) {
+    call_status = resp.value_NEW().error_value();
   }
   ASSERT_OK(call_status);
   call_status = ZX_OK;
   auto resp2 = fidl::WireCall<fuchsia_device::Controller>(zx::unowned(dev_channel))
                    ->Bind(::fidl::StringView(libpath, len));
   ASSERT_OK(resp2.status());
-  if (resp2->result.is_err()) {
-    call_status = resp2->result.err();
+  if (resp2.value_NEW().is_error()) {
+    call_status = resp2.value_NEW().error_value();
   }
   ASSERT_OK(resp2.status());
   ASSERT_EQ(call_status, ZX_ERR_ALREADY_BOUND);
@@ -106,8 +106,8 @@ TEST(DeviceControllerIntegrationTest, TestRebindNoChildrenManualBind) {
   auto resp = fidl::WireCall<fuchsia_device::Controller>(zx::unowned(dev_channel))
                   ->Rebind(::fidl::StringView(libpath, len));
   ASSERT_OK(resp.status());
-  if (resp->result.is_err()) {
-    call_status = resp->result.err();
+  if (resp.value_NEW().is_error()) {
+    call_status = resp.value_NEW().error_value();
   }
   ASSERT_OK(call_status);
 
@@ -150,8 +150,8 @@ TEST(DeviceControllerIntegrationTest, TestRebindChildrenAutoBind) {
   auto resp = fidl::WireCall<fuchsia_device::Controller>(zx::unowned(parent_channel))
                   ->Rebind(::fidl::StringView(""));
   ASSERT_OK(resp.status());
-  if (resp->result.is_err()) {
-    call_status = resp->result.err();
+  if (resp.value_NEW().is_error()) {
+    call_status = resp.value_NEW().error_value();
   }
   ASSERT_OK(call_status);
   ASSERT_OK(device_watcher::RecursiveWaitForFile(
@@ -195,8 +195,8 @@ TEST(DeviceControllerIntegrationTest, TestRebindChildrenManualBind) {
   auto resp = fidl::WireCall<fuchsia_device::Controller>(zx::unowned(parent_channel))
                   ->Rebind(::fidl::StringView(libpath, len));
   ASSERT_OK(resp.status());
-  if (resp->result.is_err()) {
-    call_status = resp->result.err();
+  if (resp.value_NEW().is_error()) {
+    call_status = resp.value_NEW().error_value();
   }
   ASSERT_OK(call_status);
 
@@ -237,8 +237,8 @@ TEST(DeviceControllerIntegrationTest, TestUnbindChildrenSuccess) {
   auto resp =
       fidl::WireCall<fuchsia_device::Controller>(zx::unowned(parent_channel))->UnbindChildren();
   ASSERT_OK(resp.status());
-  if (resp->result.is_err()) {
-    call_status = resp->result.err();
+  if (resp.value_NEW().is_error()) {
+    call_status = resp.value_NEW().error_value();
   }
   ASSERT_OK(call_status);
   ASSERT_OK(device_watcher::RecursiveWaitForFile(
@@ -265,8 +265,8 @@ TEST(DeviceControllerIntegrationTest, TestDuplicateBindDifferentDriver) {
   auto resp = fidl::WireCall<fuchsia_device::Controller>(zx::unowned(dev_channel))
                   ->Bind(::fidl::StringView(libpath, len));
   ASSERT_OK(resp.status());
-  if (resp->result.is_err()) {
-    call_status = resp->result.err();
+  if (resp.value_NEW().is_error()) {
+    call_status = resp.value_NEW().error_value();
   }
   ASSERT_OK(call_status);
 
@@ -275,8 +275,8 @@ TEST(DeviceControllerIntegrationTest, TestDuplicateBindDifferentDriver) {
   auto resp2 = fidl::WireCall<fuchsia_device::Controller>(zx::unowned(dev_channel))
                    ->Bind(::fidl::StringView(libpath, len));
   ASSERT_OK(resp2.status());
-  if (resp2->result.is_err()) {
-    call_status = resp2->result.err();
+  if (resp2.value_NEW().is_error()) {
+    call_status = resp2.value_NEW().error_value();
   }
   ASSERT_OK(resp2.status());
   ASSERT_EQ(call_status, ZX_ERR_ALREADY_BOUND);
@@ -304,8 +304,8 @@ TEST(DeviceControllerIntegrationTest, AllTestsEnabledBind) {
   auto resp = fidl::WireCall<fuchsia_device::Controller>(zx::unowned(dev_channel))
                   ->Bind(::fidl::StringView(libpath, len));
   ASSERT_OK(resp.status());
-  if (resp->result.is_err()) {
-    call_status = resp->result.err();
+  if (resp.value_NEW().is_error()) {
+    call_status = resp.value_NEW().error_value();
   }
   ASSERT_OK(call_status);
 
@@ -332,8 +332,8 @@ TEST(DeviceControllerIntegrationTest, AllTestsEnabledBindFail) {
   auto resp = fidl::WireCall<fuchsia_device::Controller>(zx::unowned(dev_channel))
                   ->Bind(::fidl::StringView(libpath, len));
   ASSERT_OK(resp.status());
-  if (resp->result.is_err()) {
-    call_status = resp->result.err();
+  if (resp.value_NEW().is_error()) {
+    call_status = resp.value_NEW().error_value();
   }
   ASSERT_EQ(call_status, ZX_ERR_BAD_STATE);
 
@@ -361,8 +361,8 @@ TEST(DeviceControllerIntegrationTest, SpecificTestEnabledBindFail) {
   auto resp = fidl::WireCall<fuchsia_device::Controller>(zx::unowned(dev_channel))
                   ->Bind(::fidl::StringView(libpath, len));
   ASSERT_OK(resp.status());
-  if (resp->result.is_err()) {
-    call_status = resp->result.err();
+  if (resp.value_NEW().is_error()) {
+    call_status = resp.value_NEW().error_value();
   }
   ASSERT_EQ(call_status, ZX_ERR_BAD_STATE);
   // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
@@ -387,8 +387,8 @@ TEST(DeviceControllerIntegrationTest, DefaultTestsDisabledBind) {
   auto resp = fidl::WireCall<fuchsia_device::Controller>(zx::unowned(dev_channel))
                   ->Bind(::fidl::StringView(libpath, len));
   ASSERT_OK(resp.status());
-  if (resp->result.is_err()) {
-    call_status = resp->result.err();
+  if (resp.value_NEW().is_error()) {
+    call_status = resp.value_NEW().error_value();
   }
   ASSERT_OK(call_status);
 
@@ -417,8 +417,8 @@ TEST(DeviceControllerIntegrationTest, SpecificTestDisabledBind) {
   auto resp = fidl::WireCall<fuchsia_device::Controller>(zx::unowned(dev_channel))
                   ->Bind(::fidl::StringView(libpath, len));
   ASSERT_OK(resp.status());
-  if (resp->result.is_err()) {
-    call_status = resp->result.err();
+  if (resp.value_NEW().is_error()) {
+    call_status = resp.value_NEW().error_value();
   }
   ASSERT_OK(call_status);
   // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
@@ -456,8 +456,8 @@ TEST(DeviceControllerIntegrationTest, TestRebindWithInit_Success) {
   auto resp = fidl::WireCall<fuchsia_device::Controller>(zx::unowned(parent_channel))
                   ->Rebind(::fidl::StringView(""));
   ASSERT_OK(resp.status());
-  if (resp->result.is_err()) {
-    call_status = resp->result.err();
+  if (resp.value_NEW().is_error()) {
+    call_status = resp.value_NEW().error_value();
   }
   ASSERT_OK(call_status);
 
@@ -499,8 +499,8 @@ TEST(DeviceControllerIntegrationTest, TestRebindWithInit_Failure) {
   auto resp = fidl::WireCall<fuchsia_device::Controller>(zx::unowned(parent_channel))
                   ->Rebind(::fidl::StringView(""));
   ASSERT_OK(resp.status());
-  if (resp->result.is_err()) {
-    call_status = resp->result.err();
+  if (resp.value_NEW().is_error()) {
+    call_status = resp.value_NEW().error_value();
   }
   ASSERT_EQ(call_status, ZX_ERR_IO);
 

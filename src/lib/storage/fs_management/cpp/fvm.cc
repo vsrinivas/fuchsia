@@ -155,8 +155,8 @@ zx_status_t FvmAllocatePartitionImpl(int fvm_fd, const alloc_req_t* request) {
   if (response.status() != ZX_OK) {
     return response.status();
   }
-  if (response->status != ZX_OK) {
-    return response->status;
+  if (response.value_NEW().status != ZX_OK) {
+    return response.value_NEW().status;
   }
   return ZX_OK;
 }
@@ -275,11 +275,12 @@ bool PartitionMatches(zx::unowned_channel& partition_channel, const PartitionMat
     auto resp = fidl::WireCall<fuchsia_device::Controller>(
                     fidl::UnownedClientEnd<fuchsia_device::Controller>(partition_channel))
                     ->GetTopologicalPath();
-    if (!resp.ok() || resp->result.is_err()) {
+    if (!resp.ok() || resp.Unwrap_NEW()->is_error()) {
       return false;
     }
 
-    std::string_view path(resp->result.response().path.data(), resp->result.response().path.size());
+    std::string_view path(resp.Unwrap_NEW()->value()->path.data(),
+                          resp.Unwrap_NEW()->value()->path.size());
 
     if (!cpp20::starts_with(path, matcher.parent_device)) {
       return false;
@@ -455,11 +456,11 @@ zx::status<fuchsia_hardware_block_volume_VolumeManagerInfo> FvmQuery(int fvm_fd)
 
   if (response.status() != ZX_OK)
     return zx::error(response.status());
-  if (response->status != ZX_OK)
-    return zx::error(response->status);
+  if (response.value_NEW().status != ZX_OK)
+    return zx::error(response.value_NEW().status);
 
-  return zx::ok(
-      reinterpret_cast<fuchsia_hardware_block_volume_VolumeManagerInfo&>(*response->info));
+  return zx::ok(reinterpret_cast<fuchsia_hardware_block_volume_VolumeManagerInfo&>(
+      *response.value_NEW().info));
 }
 
 __EXPORT

@@ -114,15 +114,14 @@ TEST(ConnectionRightsTest, RightsBehaveAsExpected) {
       const fidl::WireResult result =
           fidl::WireCall(file->client)->GetBackingMemory(row.request_flags);
       EXPECT_TRUE(result.ok(), "%s", result.FormatDescription().c_str());
-      const auto& response = result.value();
+      const auto& response = result.value_NEW();
 
       // Verify that the result matches the value in our test table.
       if (row.expected_result == ZX_OK) {
-        EXPECT_TRUE(response.result.is_response(), "%s",
-                    zx_status_get_string(response.result.err()));
+        EXPECT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
       } else {
-        EXPECT_TRUE(response.result.is_err());
-        EXPECT_STATUS(response.result.err(), row.expected_result);
+        EXPECT_TRUE(response.is_error());
+        EXPECT_STATUS(response.error_value(), row.expected_result);
       }
     }
   }

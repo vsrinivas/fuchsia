@@ -424,12 +424,12 @@ TEST_F(AmlCpuTestFixture, TestGetPerformanceStateInfo) {
     ASSERT_OK(pstateInfo.status());
 
     // Then make sure that the driver accepted the call.
-    ASSERT_FALSE(pstateInfo->result.is_err());
+    ASSERT_FALSE(pstateInfo.Unwrap_NEW()->is_error());
 
     // Then make sure that we're getting the accepted frequency and voltage values.
-    EXPECT_EQ(pstateInfo->result.response().info.frequency_hz,
+    EXPECT_EQ(pstateInfo.Unwrap_NEW()->value()->info.frequency_hz,
               kFakeOperatingPoints.opp[kFakeOperatingPoints.count - i - 1].freq_hz);
-    EXPECT_EQ(pstateInfo->result.response().info.voltage_uv,
+    EXPECT_EQ(pstateInfo.Unwrap_NEW()->value()->info.voltage_uv,
               kFakeOperatingPoints.opp[kFakeOperatingPoints.count - i - 1].volt_uv);
   }
 
@@ -443,7 +443,7 @@ TEST_F(AmlCpuTestFixture, TestGetPerformanceStateInfo) {
     ASSERT_OK(pstateInfo.status());
 
     // Make sure that the driver returns an error, however.
-    EXPECT_TRUE(pstateInfo->result.is_err());
+    EXPECT_TRUE(pstateInfo.Unwrap_NEW()->is_error());
   }
 }
 
@@ -509,7 +509,7 @@ TEST_F(AmlCpuTestFixture, TestGetNumLogicalCores) {
 
   ASSERT_OK(resp.status());
 
-  EXPECT_EQ(resp->count, kBigClusterCoreCount);
+  EXPECT_EQ(resp.value_NEW().count, kBigClusterCoreCount);
 }
 
 }  // namespace amlogic_cpu

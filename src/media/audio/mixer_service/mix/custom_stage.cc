@@ -216,8 +216,8 @@ void CustomStage::CallFidlProcess(MixJobContext& ctx) {
   ctx.AddSubtaskMetrics(subtask.FinalMetrics());
 
   auto status = result.status();
-  if (result.ok() && result->result.is_err()) {
-    status = result->result.err();
+  if (result.ok() && result.value_NEW().is_error()) {
+    status = result.value_NEW().error_value();
   }
 
   // Zero fill the output buffer on failure.

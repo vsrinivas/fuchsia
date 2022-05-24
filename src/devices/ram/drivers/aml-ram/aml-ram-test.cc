@@ -118,8 +118,8 @@ TEST_F(AmlRamDeviceTest, MalformedRequests) {
     ram_metrics::wire::BandwidthMeasurementConfig config = {(200), {1, 0, 0, 0, 0, 0}};
     auto info = client->MeasureBandwidth(config);
     ASSERT_TRUE(info.ok());
-    ASSERT_TRUE(info->result.is_err());
-    EXPECT_EQ(info->result.err(), ZX_ERR_INVALID_ARGS);
+    ASSERT_TRUE(info.Unwrap_NEW()->is_error());
+    EXPECT_EQ(info.Unwrap_NEW()->error_value(), ZX_ERR_INVALID_ARGS);
   }
 
   // Invalid cycles (too high).
@@ -127,8 +127,8 @@ TEST_F(AmlRamDeviceTest, MalformedRequests) {
     ram_metrics::wire::BandwidthMeasurementConfig config = {(0x100000000ull), {1, 0, 0, 0, 0, 0}};
     auto info = client->MeasureBandwidth(config);
     ASSERT_TRUE(info.ok());
-    ASSERT_TRUE(info->result.is_err());
-    EXPECT_EQ(info->result.err(), ZX_ERR_INVALID_ARGS);
+    ASSERT_TRUE(info.Unwrap_NEW()->is_error());
+    EXPECT_EQ(info.Unwrap_NEW()->error_value(), ZX_ERR_INVALID_ARGS);
   }
 
   // Invalid channel (above channel 3).
@@ -136,8 +136,8 @@ TEST_F(AmlRamDeviceTest, MalformedRequests) {
     ram_metrics::wire::BandwidthMeasurementConfig config = {(1024 * 1024 * 10), {0, 0, 0, 0, 1}};
     auto info = client->MeasureBandwidth(config);
     ASSERT_TRUE(info.ok());
-    ASSERT_TRUE(info->result.is_err());
-    EXPECT_EQ(info->result.err(), ZX_ERR_INVALID_ARGS);
+    ASSERT_TRUE(info.Unwrap_NEW()->is_error());
+    EXPECT_EQ(info.Unwrap_NEW()->error_value(), ZX_ERR_INVALID_ARGS);
   }
 }
 
@@ -220,18 +220,18 @@ TEST_F(AmlRamDeviceTest, ValidRequest) {
   fidl::WireSyncClient<ram_metrics::Device> client{std::move(ddk_.FidlClient())};
   auto info = client->MeasureBandwidth(config);
   ASSERT_TRUE(info.ok());
-  ASSERT_FALSE(info->result.is_err());
+  ASSERT_FALSE(info.Unwrap_NEW()->is_error());
 
   // Check All mmio reads and writes happened.
   EXPECT_EQ(step, 5);
 
-  EXPECT_GT(info->result.response().info.timestamp, 0u);
-  EXPECT_EQ(info->result.response().info.frequency, 24000000u);
-  EXPECT_EQ(info->result.response().info.bytes_per_cycle, 16u);
+  EXPECT_GT(info.Unwrap_NEW()->value()->info.timestamp, 0u);
+  EXPECT_EQ(info.Unwrap_NEW()->value()->info.frequency, 24000000u);
+  EXPECT_EQ(info.Unwrap_NEW()->value()->info.bytes_per_cycle, 16u);
 
   // Check FIDL result makes sense. AML hw does not support read or write only counters.
   int ix = 0;
-  for (auto& c : info->result.response().info.channels) {
+  for (auto& c : info.Unwrap_NEW()->value()->info.channels) {
     if (ix < 4) {
       EXPECT_EQ(c.readwrite_cycles, kReadCycles[ix]);
     } else {
@@ -241,7 +241,7 @@ TEST_F(AmlRamDeviceTest, ValidRequest) {
     EXPECT_EQ(c.read_cycles, 0u);
     ++ix;
   }
-  EXPECT_EQ(info->result.response().info.total.readwrite_cycles,
+  EXPECT_EQ(info.Unwrap_NEW()->value()->info.total.readwrite_cycles,
             kReadCycles[0] + kReadCycles[1] + kReadCycles[2] + kReadCycles[3]);
 }
 

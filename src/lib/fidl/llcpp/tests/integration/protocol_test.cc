@@ -89,31 +89,31 @@ TEST_F(ResultTest, OwnedPrimitiveError) {
   auto client = TakeClient();
   auto resp = client->NoArgsPrimitiveError(true);
   ASSERT_OK(resp.status());
-  ASSERT_TRUE(resp->result.is_err());
-  EXPECT_EQ(resp->result.err(), kErrorStatus);
+  ASSERT_TRUE(resp.Unwrap_NEW()->is_error());
+  EXPECT_EQ(resp.Unwrap_NEW()->error_value(), kErrorStatus);
 }
 
 TEST_F(ResultTest, OwnedCustomError) {
   auto client = TakeClient();
   auto resp = client->ManyArgsCustomError(true);
   ASSERT_OK(resp.status());
-  ASSERT_TRUE(resp->result.is_err());
-  EXPECT_EQ(resp->result.err(), test::wire::MyError::kReallyBadError);
+  ASSERT_TRUE(resp.Unwrap_NEW()->is_error());
+  EXPECT_EQ(resp.Unwrap_NEW()->error_value(), test::wire::MyError::kReallyBadError);
 }
 
 TEST_F(ResultTest, OwnedSuccessNoArgs) {
   auto client = TakeClient();
   auto resp = client->NoArgsPrimitiveError(false);
   ASSERT_OK(resp.status());
-  ASSERT_TRUE(resp->result.is_response());
+  ASSERT_TRUE(resp.Unwrap_NEW()->is_ok());
 }
 
 TEST_F(ResultTest, OwnedSuccessManyArgs) {
   auto client = TakeClient();
   auto resp = client->ManyArgsCustomError(false);
   ASSERT_OK(resp.status());
-  ASSERT_TRUE(resp->result.is_response());
-  const auto& success = resp->result.response();
+  ASSERT_TRUE(resp.Unwrap_NEW()->is_ok());
+  const auto& success = *resp.Unwrap_NEW()->value();
   ASSERT_EQ(success.a, 1);
   ASSERT_EQ(success.b, 2);
   ASSERT_EQ(success.c, 3);

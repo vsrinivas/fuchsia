@@ -59,7 +59,7 @@ zx::status<zx::job> GetRootJob(const zx::channel& svc_root) {
     fprintf(stderr, "svchost: unable to get root job\n");
     return zx::error(job_result.status());
   }
-  return zx::ok(std::move(job_result->job));
+  return zx::ok(std::move(job_result.Unwrap_NEW()->job));
 }
 zx::status<zx::resource> GetRootResource(const zx::channel& svc_root) {
   zx::channel local, remote;
@@ -82,7 +82,7 @@ zx::status<zx::resource> GetRootResource(const zx::channel& svc_root) {
     fprintf(stderr, "svchost: unable to get root resource\n");
     return zx::error(result.status());
   }
-  return zx::ok(std::move(result->resource));
+  return zx::ok(std::move(result.Unwrap_NEW()->resource));
 }
 }  // namespace
 

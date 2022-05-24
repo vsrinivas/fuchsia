@@ -243,7 +243,7 @@ TEST_F(SimpleAudioTest, SetAndGetGain) {
 
   auto gain_state = stream_client->WatchGainState();
   ASSERT_OK(gain_state.status());
-  ASSERT_EQ(MockSimpleAudio::kTestGain, gain_state->gain_state.gain_db());
+  ASSERT_EQ(MockSimpleAudio::kTestGain, gain_state.value_NEW().gain_state.gain_db());
   server->DdkAsyncRemove();
   EXPECT_TRUE(ddk_.Ok());
   server->DdkRelease();
@@ -266,7 +266,7 @@ TEST_F(SimpleAudioTest, WatchGainAndCloseStreamBeforeReply) {
   // One watch for initial reply.
   auto gain_state = stream_client->WatchGainState();
   ASSERT_OK(gain_state.status());
-  ASSERT_EQ(MockSimpleAudio::kTestGain, gain_state->gain_state.gain_db());
+  ASSERT_EQ(MockSimpleAudio::kTestGain, gain_state.value_NEW().gain_state.gain_db());
 
   // A second watch with no reply since there is no change of gain.
   auto f = [](void* arg) -> int {
@@ -306,7 +306,7 @@ TEST_F(SimpleAudioTest, SetAndGetAgc) {
 
   auto gain_state1 = stream_client->WatchGainState();
   ASSERT_OK(gain_state1.status());
-  ASSERT_TRUE(gain_state1->gain_state.agc_enabled());
+  ASSERT_TRUE(gain_state1.value_NEW().gain_state.agc_enabled());
 
   {
     fidl::Arena allocator;
@@ -318,7 +318,7 @@ TEST_F(SimpleAudioTest, SetAndGetAgc) {
 
   auto gain_state2 = stream_client->WatchGainState();
   ASSERT_OK(gain_state2.status());
-  ASSERT_FALSE(gain_state2->gain_state.agc_enabled());
+  ASSERT_FALSE(gain_state2.value_NEW().gain_state.agc_enabled());
   server->DdkAsyncRemove();
   EXPECT_TRUE(ddk_.Ok());
   server->DdkRelease();
@@ -340,7 +340,7 @@ TEST_F(SimpleAudioTest, SetAndGetMute) {
 
   auto gain_state1 = stream_client->WatchGainState();
   ASSERT_OK(gain_state1.status());
-  ASSERT_TRUE(gain_state1->gain_state.muted());
+  ASSERT_TRUE(gain_state1.value_NEW().gain_state.muted());
 
   {
     fidl::Arena allocator;
@@ -352,7 +352,7 @@ TEST_F(SimpleAudioTest, SetAndGetMute) {
 
   auto gain_state2 = stream_client->WatchGainState();
   ASSERT_OK(gain_state2.status());
-  ASSERT_FALSE(gain_state2->gain_state.muted());
+  ASSERT_FALSE(gain_state2.value_NEW().gain_state.muted());
   server->DdkAsyncRemove();
   EXPECT_TRUE(ddk_.Ok());
   server->DdkRelease();
@@ -382,7 +382,7 @@ TEST_F(SimpleAudioTest, SetMuteWhenDisabled) {
 
   auto gain_state1 = stream_client->WatchGainState();
   ASSERT_OK(gain_state1.status());
-  ASSERT_FALSE(gain_state1->gain_state.has_muted());
+  ASSERT_FALSE(gain_state1.value_NEW().gain_state.has_muted());
   server->DdkAsyncRemove();
   EXPECT_TRUE(ddk_.Ok());
   server->DdkRelease();
@@ -396,7 +396,7 @@ TEST_F(SimpleAudioTest, Enumerate1) {
   ASSERT_TRUE(stream_client.is_valid());
 
   auto ret = stream_client->GetSupportedFormats();
-  auto& supported_formats = ret->supported_formats;
+  auto& supported_formats = ret.value_NEW().supported_formats;
   auto& formats = supported_formats[0].pcm_supported_formats();
   ASSERT_EQ(1, formats.channel_sets().count());
   ASSERT_EQ(2, formats.channel_sets()[0].attributes().count());
@@ -457,7 +457,7 @@ TEST_F(SimpleAudioTest, Enumerate2) {
   ASSERT_TRUE(stream_client.is_valid());
 
   auto ret = stream_client->GetSupportedFormats();
-  auto& supported_formats = ret->supported_formats;
+  auto& supported_formats = ret.value_NEW().supported_formats;
   ASSERT_EQ(2, supported_formats.count());
 
   auto& formats1 = supported_formats[0].pcm_supported_formats();
@@ -517,7 +517,7 @@ TEST_F(SimpleAudioTest, CreateRingBuffer1) {
 
   auto result = fidl::WireCall<audio_fidl::RingBuffer>(local)->GetProperties();
   ASSERT_OK(result.status());
-  ASSERT_EQ(result->properties.fifo_depth(), MockSimpleAudio::kTestFifoDepth);
+  ASSERT_EQ(result.value_NEW().properties.fifo_depth(), MockSimpleAudio::kTestFifoDepth);
   server->DdkAsyncRemove();
   EXPECT_TRUE(ddk_.Ok());
   server->DdkRelease();
@@ -564,7 +564,7 @@ TEST_F(SimpleAudioTest, CreateRingBuffer2) {
 
   auto result = fidl::WireCall<audio_fidl::RingBuffer>(local)->GetProperties();
   ASSERT_OK(result.status());
-  ASSERT_EQ(result->properties.fifo_depth(), MockSimpleAudio::kTestFifoDepth);
+  ASSERT_EQ(result.value_NEW().properties.fifo_depth(), MockSimpleAudio::kTestFifoDepth);
   server->DdkAsyncRemove();
   EXPECT_TRUE(ddk_.Ok());
   server->DdkRelease();
@@ -644,11 +644,11 @@ TEST_F(SimpleAudioTest, GetIds) {
   ASSERT_OK(result.status());
 
   audio_stream_unique_id_t mic = AUDIO_STREAM_UNIQUE_ID_BUILTIN_MICROPHONE;
-  ASSERT_BYTES_EQ(result->properties.unique_id().data(), mic.data,
+  ASSERT_BYTES_EQ(result.value_NEW().properties.unique_id().data(), mic.data,
                   strlen(reinterpret_cast<char*>(mic.data)));
-  ASSERT_BYTES_EQ(result->properties.manufacturer().data(), "Bike Sheds, Inc.",
+  ASSERT_BYTES_EQ(result.value_NEW().properties.manufacturer().data(), "Bike Sheds, Inc.",
                   strlen("Bike Sheds, Inc."));
-  ASSERT_EQ(result->properties.clock_domain(), MockSimpleAudio::kTestClockDomain);
+  ASSERT_EQ(result.value_NEW().properties.clock_domain(), MockSimpleAudio::kTestClockDomain);
   server->DdkAsyncRemove();
   EXPECT_TRUE(ddk_.Ok());
   server->DdkRelease();
@@ -679,17 +679,17 @@ TEST_F(SimpleAudioTest, MultipleChannelsPlugDetectState) {
   ASSERT_OK(prop1.status());
   ASSERT_OK(prop2.status());
 
-  ASSERT_EQ(prop1->properties.plug_detect_capabilities(),
+  ASSERT_EQ(prop1.value_NEW().properties.plug_detect_capabilities(),
             audio_fidl::wire::PlugDetectCapabilities::kCanAsyncNotify);
-  ASSERT_EQ(prop2->properties.plug_detect_capabilities(),
+  ASSERT_EQ(prop2.value_NEW().properties.plug_detect_capabilities(),
             audio_fidl::wire::PlugDetectCapabilities::kCanAsyncNotify);
 
   auto state1 = stream_client1->WatchPlugState();
   auto state2 = stream_client2->WatchPlugState();
   ASSERT_OK(state1.status());
   ASSERT_OK(state2.status());
-  ASSERT_FALSE(state1->plug_state.plugged());
-  ASSERT_FALSE(state2->plug_state.plugged());
+  ASSERT_FALSE(state1.value_NEW().plug_state.plugged());
+  ASSERT_FALSE(state2.value_NEW().plug_state.plugged());
   server->DdkAsyncRemove();
   EXPECT_TRUE(ddk_.Ok());
   server->DdkRelease();
@@ -720,9 +720,9 @@ TEST_F(SimpleAudioTest, WatchPlugDetectAndCloseStreamBeforeReply) {
   ASSERT_OK(prop1.status());
   ASSERT_OK(prop2.status());
 
-  ASSERT_EQ(prop1->properties.plug_detect_capabilities(),
+  ASSERT_EQ(prop1.value_NEW().properties.plug_detect_capabilities(),
             audio_fidl::wire::PlugDetectCapabilities::kCanAsyncNotify);
-  ASSERT_EQ(prop2->properties.plug_detect_capabilities(),
+  ASSERT_EQ(prop2.value_NEW().properties.plug_detect_capabilities(),
             audio_fidl::wire::PlugDetectCapabilities::kCanAsyncNotify);
 
   // Watch each channel for initial reply.
@@ -730,8 +730,8 @@ TEST_F(SimpleAudioTest, WatchPlugDetectAndCloseStreamBeforeReply) {
   auto state2 = stream_client2->WatchPlugState();
   ASSERT_OK(state1.status());
   ASSERT_OK(state2.status());
-  ASSERT_FALSE(state1->plug_state.plugged());
-  ASSERT_FALSE(state2->plug_state.plugged());
+  ASSERT_FALSE(state1.value_NEW().plug_state.plugged());
+  ASSERT_FALSE(state2.value_NEW().plug_state.plugged());
 
   // Secondary watches with no reply since there is no change of plug detect state.
   auto f = [](void* arg) -> int {
@@ -792,9 +792,9 @@ TEST_F(SimpleAudioTest, MultipleChannelsPlugDetectNotify) {
   ASSERT_OK(state1a.status());
   ASSERT_OK(state2a.status());
   ASSERT_OK(state3a.status());
-  ASSERT_FALSE(state1a->plug_state.plugged());
-  ASSERT_FALSE(state2a->plug_state.plugged());
-  ASSERT_FALSE(state3a->plug_state.plugged());
+  ASSERT_FALSE(state1a.value_NEW().plug_state.plugged());
+  ASSERT_FALSE(state2a.value_NEW().plug_state.plugged());
+  ASSERT_FALSE(state3a.value_NEW().plug_state.plugged());
 
   server->PostSetPlugState(true, zx::duration(zx::msec(100)));
 
@@ -804,9 +804,9 @@ TEST_F(SimpleAudioTest, MultipleChannelsPlugDetectNotify) {
   ASSERT_OK(state1b.status());
   ASSERT_OK(state2b.status());
   ASSERT_OK(state3b.status());
-  ASSERT_TRUE(state1b->plug_state.plugged());
-  ASSERT_TRUE(state2b->plug_state.plugged());
-  ASSERT_TRUE(state3b->plug_state.plugged());
+  ASSERT_TRUE(state1b.value_NEW().plug_state.plugged());
+  ASSERT_TRUE(state2b.value_NEW().plug_state.plugged());
+  ASSERT_TRUE(state3b.value_NEW().plug_state.plugged());
   server->DdkAsyncRemove();
   EXPECT_TRUE(ddk_.Ok());
   server->DdkRelease();
@@ -835,8 +835,8 @@ TEST_F(SimpleAudioTest, MultipleChannelsGainState) {
   auto state2 = stream_client2->WatchGainState();
   ASSERT_OK(state1.status());
   ASSERT_OK(state2.status());
-  ASSERT_EQ(0.f, state1->gain_state.gain_db());
-  ASSERT_EQ(0.f, state2->gain_state.gain_db());
+  ASSERT_EQ(0.f, state1.value_NEW().gain_state.gain_db());
+  ASSERT_EQ(0.f, state2.value_NEW().gain_state.gain_db());
   server->DdkAsyncRemove();
   EXPECT_TRUE(ddk_.Ok());
   server->DdkRelease();
@@ -873,9 +873,9 @@ TEST_F(SimpleAudioTest, MultipleChannelsGainStateNotify) {
   ASSERT_OK(state1a.status());
   ASSERT_OK(state2a.status());
   ASSERT_OK(state3a.status());
-  ASSERT_EQ(0.f, state1a->gain_state.gain_db());
-  ASSERT_EQ(0.f, state2a->gain_state.gain_db());
-  ASSERT_EQ(0.f, state3a->gain_state.gain_db());
+  ASSERT_EQ(0.f, state1a.value_NEW().gain_state.gain_db());
+  ASSERT_EQ(0.f, state2a.value_NEW().gain_state.gain_db());
+  ASSERT_EQ(0.f, state3a.value_NEW().gain_state.gain_db());
 
   auto f = [](void* arg) -> int {
     zx::nanosleep(zx::deadline_after(zx::msec(100)));
@@ -898,9 +898,9 @@ TEST_F(SimpleAudioTest, MultipleChannelsGainStateNotify) {
   ASSERT_OK(state1b.status());
   ASSERT_OK(state2b.status());
   ASSERT_OK(state3b.status());
-  ASSERT_EQ(MockSimpleAudio::kTestGain, state1b->gain_state.gain_db());
-  ASSERT_EQ(MockSimpleAudio::kTestGain, state2b->gain_state.gain_db());
-  ASSERT_EQ(MockSimpleAudio::kTestGain, state3b->gain_state.gain_db());
+  ASSERT_EQ(MockSimpleAudio::kTestGain, state1b.value_NEW().gain_state.gain_db());
+  ASSERT_EQ(MockSimpleAudio::kTestGain, state2b.value_NEW().gain_state.gain_db());
+  ASSERT_EQ(MockSimpleAudio::kTestGain, state3b.value_NEW().gain_state.gain_db());
 
   int result = -1;
   thrd_join(th, &result);
@@ -939,7 +939,7 @@ TEST_F(SimpleAudioTest, RingBufferTests) {
   auto active_channels =
       fidl::WireCall<audio_fidl::RingBuffer>(local)->SetActiveChannels(kSomeActiveChannelsMask);
   ASSERT_OK(active_channels.status());
-  ASSERT_EQ(active_channels->result.err(), ZX_ERR_NOT_SUPPORTED);
+  ASSERT_EQ(active_channels.Unwrap_NEW()->error_value(), ZX_ERR_NOT_SUPPORTED);
 
   // Check inspect state.
   {
@@ -970,7 +970,7 @@ TEST_F(SimpleAudioTest, RingBufferTests) {
   }
 
   auto position = fidl::WireCall<audio_fidl::RingBuffer>(local)->WatchClockRecoveryPositionInfo();
-  ASSERT_EQ(MockSimpleAudio::kTestPositionNotify, position->position_info.position);
+  ASSERT_EQ(MockSimpleAudio::kTestPositionNotify, position.value_NEW().position_info.position);
 
   auto stop = fidl::WireCall<audio_fidl::RingBuffer>(local)->Stop();
   ASSERT_OK(stop.status());

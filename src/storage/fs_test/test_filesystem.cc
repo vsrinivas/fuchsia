@@ -95,10 +95,10 @@ zx::status<fuchsia_io::wire::FilesystemInfo> TestFilesystem::GetFsInfo() const {
   if (!result.ok()) {
     return zx::error(result.status());
   }
-  if (result.value().s != ZX_OK) {
-    return zx::error(result.value().s);
+  if (result.value_NEW().s != ZX_OK) {
+    return zx::error(result.value_NEW().s);
   }
-  return zx::ok(*result.value().info);
+  return zx::ok(*result.value_NEW().info);
 }
 
 }  // namespace fs_test

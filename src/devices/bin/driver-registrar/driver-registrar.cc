@@ -38,9 +38,9 @@ int main(int argc, char* argv[]) {
     fprintf(stderr, "Failed to call DriverRegistrar::Register for driver package %s\n", argv[1]);
     return -1;
   }
-  if (resp->result.is_err()) {
+  if (resp.value_NEW().is_error()) {
     fprintf(stderr, "DriverRegistrar::Register returned err %d for driver package %s\n",
-            resp->result.err(), argv[1]);
+            resp.value_NEW().error_value(), argv[1]);
     return -1;
   }
   printf("DriverRegistrar::Register successfully registered driver package %s\n", argv[1]);

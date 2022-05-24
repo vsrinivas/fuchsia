@@ -213,7 +213,7 @@ bool LatencyTest(perftest::RepeatState* state, const uint16_t buffer_count) {
   fidl::WireSyncClient port = fidl::BindSyncClient((std::move(port_endpoints->client)));
   fidl::WireResult port_info_result = port->GetInfo();
   ZX_ASSERT_OK(port_info_result.status(), "failed to get port info");
-  const network::netdev::wire::PortInfo& port_info = port_info_result->info;
+  const network::netdev::wire::PortInfo& port_info = port_info_result.Unwrap_NEW()->info;
   ZX_ASSERT_MSG(port_info.has_id(), "port id missing");
   const network::netdev::wire::PortId& port_id = port_info.id();
 

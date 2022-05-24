@@ -116,11 +116,11 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t* data, size_t size) {
   // allocated yet.
   auto check_result_1_fail = collection_1->CheckBuffersAllocated();
   LOGRTN(check_result_1_fail.status(), "Failed BufferCollectionCheckBuffersAllocated 1.\n");
-  LOGRTNC(check_result_1_fail->status != ZX_OK,
+  LOGRTNC(check_result_1_fail.value_NEW().status != ZX_OK,
           "BufferCollection allocated when shouldn't be. 1\n");
   auto check_result_2_fail = collection_2->CheckBuffersAllocated();
   LOGRTN(check_result_2_fail.status(), "Failed BufferCollectionCheckBuffersAllocated 2.\n");
-  LOGRTNC(check_result_2_fail->status != ZX_OK,
+  LOGRTNC(check_result_2_fail.value_NEW().status != ZX_OK,
           "BufferCollection allocated when shouldn't be. 2\n");
 
   auto set_constraints_2_result = collection_2->SetConstraints(true, std::move(constraints_2));
@@ -134,25 +134,27 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t* data, size_t size) {
   // This is the first round-trip to/from sysmem.  A failure here can be due
   // to any step above failing async.
   LOGRTN(allocate_result.status(), "WaitForBuffersAllocated, collection 1 failed.\n");
-  LOGRTN(allocate_result->status,
+  LOGRTN(allocate_result.value_NEW().status,
          "WaitForBuffersAllocated, allocation_status collection 1 failed.\n");
 
   auto check_result_1 = collection_1->CheckBuffersAllocated();
   LOGRTN(check_result_1.status(), "CheckBuffersAllocated, collection 1 failed.\n");
-  LOGRTN(check_result_1->status, "CheckBuffersAllocated, check_status collection 1 failed.\n");
+  LOGRTN(check_result_1.value_NEW().status,
+         "CheckBuffersAllocated, check_status collection 1 failed.\n");
 
   auto check_result_2 = collection_2->CheckBuffersAllocated();
   LOGRTN(check_result_2.status(), "CheckBuffersAllocated, collection 2 failed.\n");
-  LOGRTN(check_result_2->status, "CheckBuffersAllocated, check_status collection 2 failed.\n");
+  LOGRTN(check_result_2.value_NEW().status,
+         "CheckBuffersAllocated, check_status collection 2 failed.\n");
 
   auto allocate_result_2 = collection_2->WaitForBuffersAllocated();
   LOGRTN(allocate_result_2.status(), "WaitForBuffersAllocated, collection 2 failed.\n");
-  LOGRTN(allocate_result_2->status,
+  LOGRTN(allocate_result_2.value_NEW().status,
          "WaitForBuffersAllocated, allocation_status collection 2 failed.\n");
 
   auto allocate_result_3 = collection_3->WaitForBuffersAllocated();
   LOGRTN(allocate_result_3.status(), "WaitForBuffersAllocated, collection 3 failed.\n");
-  LOGRTN(allocate_result_3->status,
+  LOGRTN(allocate_result_3.value_NEW().status,
          "WaitForBuffersAllocated, allocation_status collection 3 failed.\n");
 
   // Close to ensure grabbing null constraints from a closed collection

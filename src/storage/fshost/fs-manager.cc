@@ -64,9 +64,9 @@ zx::status<uint64_t> GetFsId(fidl::UnownedClientEnd<fuchsia_io::Directory> root)
   auto result = fidl::WireCall(root)->QueryFilesystem();
   if (!result.ok())
     return zx::error(result.status());
-  if (result->s != ZX_OK)
-    return zx::error(result->s);
-  return zx::ok(result->info->fs_id);
+  if (result.value_NEW().s != ZX_OK)
+    return zx::error(result.value_NEW().s);
+  return zx::ok(result.value_NEW().info->fs_id);
 }
 
 }  // namespace
@@ -489,9 +489,9 @@ void FsManager::FileReport(fs_management::DiskFormat format, ReportReason reason
     auto res = client->File(report);
     if (!res.ok()) {
       FX_LOGS(WARNING) << "Unable to send crash report (fidl error): " << res.status_string();
-    } else if (res->result.is_err()) {
+    } else if (res.Unwrap_NEW()->is_error()) {
       FX_LOGS(WARNING) << "Failed to file crash report: "
-                       << zx_status_get_string(res->result.err());
+                       << zx_status_get_string(res.Unwrap_NEW()->error_value());
     } else {
       FX_LOGS(INFO) << "Crash report successfully filed";
     }

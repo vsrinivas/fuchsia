@@ -125,18 +125,18 @@ zx_status_t AcpiPwrsrc::CheckOnline() {
     return result.status();
   }
 
-  if (result->result.is_err()) {
-    zxlogf(ERROR, "_PSR call failed: %d", int(result->result.err()));
+  if (result.value_NEW().is_error()) {
+    zxlogf(ERROR, "_PSR call failed: %d", int(result.value_NEW().error_value()));
     return ZX_ERR_INTERNAL;
   }
 
-  if (!result->result.response().result.is_object() ||
-      !result->result.response().result.object().is_integer_val()) {
+  if (!result.Unwrap_NEW()->value()->result.is_object() ||
+      !result.Unwrap_NEW()->value()->result.object().is_integer_val()) {
     zxlogf(ERROR, "_PSR call returned wrong type");
     return ZX_ERR_INTERNAL;
   }
 
-  uint64_t online = result->result.response().result.object().integer_val();
+  uint64_t online = result.Unwrap_NEW()->value()->result.object().integer_val();
   {
     std::scoped_lock lock(lock_);
     if (online_ != online) {

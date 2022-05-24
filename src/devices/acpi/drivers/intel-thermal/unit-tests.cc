@@ -140,8 +140,8 @@ TEST_F(IntelThermalTest, InspectTest) {
 TEST_F(IntelThermalTest, NotifysOnTrip) {
   auto result = thermal_client_->GetStateChangeEvent();
   ASSERT_OK(result.status());
-  ASSERT_OK(result->status);
-  zx::event event = std::move(result->handle);
+  ASSERT_OK(result.value_NEW().status);
+  zx::event event = std::move(result.value_NEW().handle);
   zx_signals_t pending;
   ASSERT_STATUS(event.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite_past(), &pending),
                 ZX_ERR_TIMED_OUT);
@@ -161,25 +161,25 @@ TEST_F(IntelThermalTest, NotifysOnTrip) {
 TEST_F(IntelThermalTest, GetCurrentTemp) {
   auto temp = thermal_client_->GetTemperatureCelsius();
   ASSERT_OK(temp.status());
-  ASSERT_OK(temp->status);
+  ASSERT_OK(temp.value_NEW().status);
 
-  ASSERT_FLOAT_EQ(temp->temp, 12.05f);
+  ASSERT_FLOAT_EQ(temp.value_NEW().temp, 12.05f);
 }
 
 TEST_F(IntelThermalTest, GetInfo) {
   {
     auto info = thermal_client_->GetInfo();
     ASSERT_OK(info.status());
-    ASSERT_OK(info->status);
+    ASSERT_OK(info.value_NEW().status);
 
-    ASSERT_FLOAT_EQ(info->info->critical_temp_celsius, 80.05f);
-    ASSERT_FLOAT_EQ(info->info->passive_temp_celsius, 20.05f);
-    ASSERT_EQ(info->info->max_trip_count, kTripPointCount);
+    ASSERT_FLOAT_EQ(info.value_NEW().info->critical_temp_celsius, 80.05f);
+    ASSERT_FLOAT_EQ(info.value_NEW().info->passive_temp_celsius, 20.05f);
+    ASSERT_EQ(info.value_NEW().info->max_trip_count, kTripPointCount);
     fidl::Array<float, fuchsia_hardware_thermal::wire::kMaxTripPoints> trip_points{0};
-    ASSERT_EQ(memcmp(trip_points.data(), info->info->active_trip.data(),
+    ASSERT_EQ(memcmp(trip_points.data(), info.value_NEW().info->active_trip.data(),
                      trip_points.size() * sizeof(float)),
               0);
-    ASSERT_EQ(info->info->state, fuchsia_hardware_thermal::wire::kThermalStateNormal);
+    ASSERT_EQ(info.value_NEW().info->state, fuchsia_hardware_thermal::wire::kThermalStateNormal);
   }
 
   /* Try setting a trip point and triggering it. */
@@ -190,13 +190,14 @@ TEST_F(IntelThermalTest, GetInfo) {
   {
     auto info = thermal_client_->GetInfo();
     ASSERT_OK(info.status());
-    ASSERT_OK(info->status);
+    ASSERT_OK(info.value_NEW().status);
 
-    ASSERT_FLOAT_EQ(info->info->critical_temp_celsius, 80.05f);
-    ASSERT_FLOAT_EQ(info->info->passive_temp_celsius, 20.05f);
-    ASSERT_EQ(info->info->max_trip_count, kTripPointCount);
-    ASSERT_FLOAT_EQ(info->info->active_trip[0], 22.05f);
-    ASSERT_EQ(info->info->state, fuchsia_hardware_thermal::wire::kThermalStateTripViolation);
+    ASSERT_FLOAT_EQ(info.value_NEW().info->critical_temp_celsius, 80.05f);
+    ASSERT_FLOAT_EQ(info.value_NEW().info->passive_temp_celsius, 20.05f);
+    ASSERT_EQ(info.value_NEW().info->max_trip_count, kTripPointCount);
+    ASSERT_FLOAT_EQ(info.value_NEW().info->active_trip[0], 22.05f);
+    ASSERT_EQ(info.value_NEW().info->state,
+              fuchsia_hardware_thermal::wire::kThermalStateTripViolation);
   }
 }
 }  // namespace intel_thermal

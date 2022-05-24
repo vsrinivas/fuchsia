@@ -151,8 +151,9 @@ zx_status_t CreateProxyDevice(const fbl::RefPtr<Device>& dev, fbl::RefPtr<Driver
                      result.error().FormatDescription().c_str());
                 return;
               }
-              if (result->status != ZX_OK) {
-                LOGF(ERROR, "Failed to create device: %s", zx_status_get_string(result->status));
+              if (result.value_NEW().status != ZX_OK) {
+                LOGF(ERROR, "Failed to create device: %s",
+                     zx_status_get_string(result.value_NEW().status));
               }
             });
   } else {
@@ -168,8 +169,9 @@ zx_status_t CreateProxyDevice(const fbl::RefPtr<Device>& dev, fbl::RefPtr<Driver
                      result.error().FormatDescription().c_str());
                 return;
               }
-              if (result->status != ZX_OK) {
-                LOGF(ERROR, "Failed to create device: %s", zx_status_get_string(result->status));
+              if (result.value_NEW().status != ZX_OK) {
+                LOGF(ERROR, "Failed to create device: %s",
+                     zx_status_get_string(result.value_NEW().status));
               }
             });
   }
@@ -200,8 +202,9 @@ zx_status_t CreateNewProxyDevice(const fbl::RefPtr<Device>& dev, fbl::RefPtr<Dri
                    result.error().FormatDescription().c_str());
               return;
             }
-            if (result->status != ZX_OK) {
-              LOGF(ERROR, "Failed to create device: %s", zx_status_get_string(result->status));
+            if (result.value_NEW().status != ZX_OK) {
+              LOGF(ERROR, "Failed to create device: %s",
+                   zx_status_get_string(result.value_NEW().status));
             }
           });
 
@@ -225,9 +228,9 @@ zx_status_t BindDriverToDevice(const fbl::RefPtr<Device>& dev, const char* libna
           dev->flags &= (~DEV_CTX_BOUND);
           return;
         }
-        if (result->status != ZX_OK) {
+        if (result.value_NEW().status != ZX_OK) {
           LOGF(ERROR, "Failed to bind driver '%s': %s", dev->name().data(),
-               zx_status_get_string(result->status));
+               zx_status_get_string(result.value_NEW().status));
           dev->flags &= (~DEV_CTX_BOUND);
           return;
         }
@@ -367,8 +370,8 @@ void Coordinator::RegisterWithPowerManager(
               return;
             }
 
-            if (result->result.is_err()) {
-              fpm::wire::RegistrationError err = result->result.err();
+            if (result.Unwrap_NEW()->is_error()) {
+              fpm::wire::RegistrationError err = result.Unwrap_NEW()->error_value();
               if (err == fpm::wire::RegistrationError::kInvalidHandle) {
                 LOGF(ERROR, "Failed to register with power_manager. Invalid handle.\n");
                 completion(ZX_ERR_BAD_HANDLE);
@@ -473,7 +476,7 @@ zx_status_t Coordinator::NewDriverHost(const char* name, fbl::RefPtr<DriverHost>
   }
 
   std::vector<std::string> strings;
-  for (auto& entry : driver_host_env->results) {
+  for (auto& entry : driver_host_env.value_NEW().results) {
     strings.emplace_back(entry.data(), entry.size());
   }
 
@@ -485,7 +488,7 @@ zx_status_t Coordinator::NewDriverHost(const char* name, fbl::RefPtr<DriverHost>
     return backstop_env.status();
   }
 
-  auto backstop_env_value = std::move(backstop_env.value().value);
+  auto backstop_env_value = std::move(backstop_env.value_NEW().value);
   if (!backstop_env_value.is_null()) {
     strings.push_back(std::string("clock.backstop=") +
                       std::string(backstop_env_value.data(), backstop_env_value.size()));
@@ -787,13 +790,13 @@ zx_status_t Coordinator::SetMexecZbis(zx::vmo kernel_zbi, zx::vmo data_zbi) {
     fsl::SizedVmo payload;
     if (auto result = items->Get(type, 0); !result.ok()) {
       return result.status();
-    } else if (!result->payload.is_valid()) {
+    } else if (!result.value_NEW().payload.is_valid()) {
       // Absence is signified with an empty result value.
       LOGF(INFO, "No %.*s item (%#xu) present to append to mexec data ZBI",
            static_cast<int>(name.size()), name.data(), type);
       continue;
     } else {
-      payload = {std::move(result->payload), result->length};
+      payload = {std::move(result.value_NEW().payload), result.value_NEW().length};
     }
 
     std::vector<char> contents;

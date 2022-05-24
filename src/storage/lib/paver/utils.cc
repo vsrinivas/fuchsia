@@ -45,8 +45,9 @@ BlockWatcherPauser::~BlockWatcherPauser() {
     auto result = watcher_->Resume();
     if (result.status() != ZX_OK) {
       ERROR("Failed to unpause the block watcher: %s\n", zx_status_get_string(result.status()));
-    } else if (result->status != ZX_OK) {
-      ERROR("Failed to unpause the block watcher: %s\n", zx_status_get_string(result->status));
+    } else if (result.value_NEW().status != ZX_OK) {
+      ERROR("Failed to unpause the block watcher: %s\n",
+            zx_status_get_string(result.value_NEW().status));
     }
   }
 }
@@ -68,7 +69,7 @@ zx::status<BlockWatcherPauser> BlockWatcherPauser::Create(
 
 zx::status<> BlockWatcherPauser::Pause() {
   auto result = watcher_->Pause();
-  auto status = zx::make_status(result.ok() ? result->status : result.status());
+  auto status = zx::make_status(result.ok() ? result.value_NEW().status : result.status());
 
   valid_ = status.is_ok();
   return status;
@@ -139,7 +140,7 @@ zx::status<fidl::ClientEnd<partition::Partition>> OpenBlockPartition(
       if (!result.ok()) {
         return true;
       }
-      auto& response = result.value();
+      auto& response = result.value_NEW();
       if (response.status != ZX_OK || type_guid != Uuid(response.guid->value.data())) {
         return true;
       }
@@ -149,7 +150,7 @@ zx::status<fidl::ClientEnd<partition::Partition>> OpenBlockPartition(
       if (!result.ok()) {
         return true;
       }
-      const auto& response = result.value();
+      const auto& response = result.value_NEW();
       if (response.status != ZX_OK || unique_guid != Uuid(response.guid->value.data())) {
         return true;
       }
@@ -169,7 +170,7 @@ zx::status<fidl::ClientEnd<skipblock::SkipBlock>> OpenSkipBlockPartition(
     if (!result.ok()) {
       return true;
     }
-    const auto& response = result.value();
+    const auto& response = result.value_NEW();
     if (response.status != ZX_OK ||
         type_guid != Uuid(response.partition_info.partition_guid.data())) {
       return true;
@@ -247,11 +248,12 @@ zx::status<> IsBoard(const fbl::unique_fd& devfs_root, std::string_view board_na
   }
 
   auto result = fidl::WireCall<fuchsia_sysinfo::SysInfo>(zx::unowned(local))->GetBoardName();
-  status = zx::make_status(result.ok() ? result->status : result.status());
+  status = zx::make_status(result.ok() ? result.value_NEW().status : result.status());
   if (status.is_error()) {
     return status.take_error();
   }
-  if (strncmp(result->name.data(), board_name.data(), result->name.size()) == 0) {
+  if (strncmp(result.value_NEW().name.data(), board_name.data(), result.value_NEW().name.size()) ==
+      0) {
     return zx::ok();
   }
 
@@ -273,11 +275,12 @@ zx::status<> IsBootloader(const fbl::unique_fd& devfs_root, std::string_view ven
   }
 
   auto result = fidl::WireCall<fuchsia_sysinfo::SysInfo>(zx::unowned(local))->GetBootloaderVendor();
-  status = zx::make_status(result.ok() ? result->status : result.status());
+  status = zx::make_status(result.ok() ? result.value_NEW().status : result.status());
   if (status.is_error()) {
     return status.take_error();
   }
-  if (strncmp(result->vendor.data(), vendor.data(), result->vendor.size()) == 0) {
+  if (strncmp(result.value_NEW().vendor.data(), vendor.data(), result.value_NEW().vendor.size()) ==
+      0) {
     return zx::ok();
   }
 

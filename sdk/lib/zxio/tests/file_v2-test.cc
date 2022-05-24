@@ -88,7 +88,7 @@ class FileV2 : public zxtest::Test {
     if (!result.ok()) {
       return result.status();
     }
-    fio::wire::ConnectionInfo& info = result.value().info;
+    fio::wire::ConnectionInfo& info = result.value_NEW().info;
 
     zx::event observer;
     zx::stream stream;

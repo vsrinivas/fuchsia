@@ -50,11 +50,11 @@ void AdminServer::Mount(MountRequestView request, MountCompleter::Sync& complete
       result.status() != ZX_OK) {
     FX_LOGS(WARNING) << "Unable to get device topological path (FIDL error): "
                      << zx_status_get_string(result.status());
-  } else if (result->result.is_err()) {
+  } else if (result.Unwrap_NEW()->is_error()) {
     FX_LOGS(WARNING) << "Unable to get device topological path: "
-                     << zx_status_get_string(result->result.err());
+                     << zx_status_get_string(result.Unwrap_NEW()->error_value());
   } else {
-    device_path = result->result.response().path.get();
+    device_path = result.Unwrap_NEW()->value()->path.get();
   }
 
   fbl::unique_fd fd;

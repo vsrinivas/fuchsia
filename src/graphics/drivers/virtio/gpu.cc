@@ -90,12 +90,14 @@ zx_status_t GpuDevice::GetVmoAndStride(image_t* image, zx_unowned_handle_t handl
     zxlogf(ERROR, "%s: failed to WaitForBuffersAllocated %d", tag(), wait_result.status());
     return wait_result.status();
   }
-  if (wait_result->status != ZX_OK) {
-    zxlogf(ERROR, "%s: failed to WaitForBuffersAllocated call %d", tag(), wait_result->status);
-    return wait_result->status;
+  if (wait_result.value_NEW().status != ZX_OK) {
+    zxlogf(ERROR, "%s: failed to WaitForBuffersAllocated call %d", tag(),
+           wait_result.value_NEW().status);
+    return wait_result.value_NEW().status;
   }
 
-  sysmem::wire::BufferCollectionInfo2& collection_info = wait_result->buffer_collection_info;
+  sysmem::wire::BufferCollectionInfo2& collection_info =
+      wait_result.value_NEW().buffer_collection_info;
 
   if (!collection_info.settings.has_image_format_constraints) {
     zxlogf(ERROR, "%s: bad image format constraints", tag());

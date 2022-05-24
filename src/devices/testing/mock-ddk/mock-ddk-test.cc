@@ -575,7 +575,7 @@ TEST(MockDdk, SetFidlProtocol) {
   client->EchoString(fidl::StringView::FromExternal(kInput))
       .ThenExactlyOnce([&](fidl::WireUnownedResult<fidl_examples_echo::Echo::EchoString>& result) {
         EXPECT_OK(result.status());
-        EXPECT_EQ(result->response.get(), kInput);
+        EXPECT_EQ(result.value_NEW().response.get(), kInput);
       });
   EXPECT_OK(loop.RunUntilIdle());
 

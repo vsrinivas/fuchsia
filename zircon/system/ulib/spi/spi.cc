@@ -15,8 +15,8 @@ zx_status_t spilib_transmit(zx_handle_t channel, void* data, size_t length) {
   if (result.status() != ZX_OK) {
     return result.status();
   }
-  if (result->status != ZX_OK) {
-    return result->status;
+  if (result.Unwrap_NEW()->status != ZX_OK) {
+    return result.Unwrap_NEW()->status;
   }
   return ZX_OK;
 }
@@ -27,10 +27,10 @@ zx_status_t spilib_receive(zx_handle_t channel, void* data, size_t length) {
   if (result.status() != ZX_OK) {
     return result.status();
   }
-  if (result->status != ZX_OK) {
-    return result->status;
+  if (result.Unwrap_NEW()->status != ZX_OK) {
+    return result.Unwrap_NEW()->status;
   }
-  memcpy(data, result->data.data(), result->data.count());
+  memcpy(data, result.Unwrap_NEW()->data.data(), result.Unwrap_NEW()->data.count());
   return ZX_OK;
 }
 
@@ -41,10 +41,10 @@ zx_status_t spilib_exchange(zx_handle_t channel, void* txdata, void* rxdata, siz
   if (result.status() != ZX_OK) {
     return result.status();
   }
-  if (result->status != ZX_OK) {
-    return result->status;
+  if (result.Unwrap_NEW()->status != ZX_OK) {
+    return result.Unwrap_NEW()->status;
   }
-  memcpy(rxdata, result->rxdata.data(), result->rxdata.count());
+  memcpy(rxdata, result.Unwrap_NEW()->rxdata.data(), result.Unwrap_NEW()->rxdata.count());
   return ZX_OK;
 }
 

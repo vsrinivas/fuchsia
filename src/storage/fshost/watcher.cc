@@ -63,9 +63,9 @@ zx_status_t Watcher::ReinitWatcher() {
     FX_LOGS(ERROR) << "failed to send watch: " << result.error();
     return result.status();
   }
-  if (result->s != ZX_OK) {
-    FX_LOGS(ERROR) << "watch failed: " << zx_status_get_string(result->s);
-    return result->s;
+  if (result.value_NEW().s != ZX_OK) {
+    FX_LOGS(ERROR) << "watch failed: " << zx_status_get_string(result.value_NEW().s);
+    return result.value_NEW().s;
   }
 
   return ZX_OK;

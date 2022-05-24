@@ -398,14 +398,15 @@ const std::vector<MatchedDriver> DriverLoader::MatchPropertiesDriverIndex(
     }
   }
   // If there's no driver to match then DriverIndex will return ZX_ERR_NOT_FOUND.
-  if (result->result.is_err()) {
-    if (result->result.err() != ZX_ERR_NOT_FOUND) {
-      LOGF(ERROR, "DriverIndex: MatchDriversV1 returned error: %d", result->result.err());
+  if (result.Unwrap_NEW()->is_error()) {
+    if (result.Unwrap_NEW()->error_value() != ZX_ERR_NOT_FOUND) {
+      LOGF(ERROR, "DriverIndex: MatchDriversV1 returned error: %d",
+           result.Unwrap_NEW()->error_value());
     }
     return matched_drivers;
   }
 
-  const auto& drivers = result->result.response().drivers;
+  const auto& drivers = result.Unwrap_NEW()->value()->drivers;
 
   for (auto driver : drivers) {
     if (driver.is_device_group()) {
@@ -521,12 +522,12 @@ zx::status<std::vector<fuchsia_driver_development::wire::DriverInfo>> DriverLoad
            next_result.FormatDescription().c_str());
       break;
     }
-    if (next_result->drivers.count() == 0) {
+    if (next_result.value_NEW().drivers.count() == 0) {
       // When we receive 0 responses, we are done iterating.
       break;
     }
     // Go through each driver info and create a copy.
-    for (auto& driver : next_result->drivers) {
+    for (auto& driver : next_result.value_NEW().drivers) {
       info.push_back(CopyDriverInfo(allocator, driver));
     }
   }
@@ -569,11 +570,11 @@ std::vector<const Driver*> DriverLoader::GetAllDriverIndexDrivers() {
            next_result.FormatDescription().c_str());
       break;
     }
-    if (next_result->drivers.count() == 0) {
+    if (next_result.value_NEW().drivers.count() == 0) {
       // When we receive 0 responses, we are done iterating.
       break;
     }
-    for (auto driver : next_result->drivers) {
+    for (auto driver : next_result.value_NEW().drivers) {
       if (!driver.has_libname()) {
         continue;
       }

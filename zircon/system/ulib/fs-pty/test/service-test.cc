@@ -108,15 +108,15 @@ TEST_F(PtyTestCase, Describe) {
   ASSERT_NO_FATAL_FAILURE(Connect(&client));
   auto result = client->Describe();
   ASSERT_OK(result.status());
-  ASSERT_TRUE(result->info.is_tty());
+  ASSERT_TRUE(result.value_NEW().info.is_tty());
 
   // Check that we got back the handle we expected.
   zx_info_handle_basic_t local_info = {};
   zx_info_handle_basic_t remote_info = {};
   ASSERT_OK(
       local.get_info(ZX_INFO_HANDLE_BASIC, &local_info, sizeof(local_info), nullptr, nullptr));
-  ASSERT_OK(result->info.tty().event.get_info(ZX_INFO_HANDLE_BASIC, &remote_info,
-                                              sizeof(remote_info), nullptr, nullptr));
+  ASSERT_OK(result.value_NEW().info.tty().event.get_info(ZX_INFO_HANDLE_BASIC, &remote_info,
+                                                         sizeof(remote_info), nullptr, nullptr));
   ASSERT_EQ(local_info.related_koid, remote_info.koid);
 
   // We should not have seen an ordinal dispatch
@@ -139,9 +139,9 @@ TEST_F(PtyTestCase, Read) {
   ASSERT_NO_FATAL_FAILURE(Connect(&client));
   const fidl::WireResult result = client->Read(sizeof(kResponse));
   ASSERT_OK(result.status());
-  const fidl::WireResponse response = result.value();
-  ASSERT_TRUE(response.result.is_response(), "%s", zx_status_get_string(response.result.err()));
-  const fidl::VectorView data = response.result.response().data;
+  const fitx::result response = result.value_NEW();
+  ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+  const fidl::VectorView data = response.value()->data;
   ASSERT_EQ(std::string_view(reinterpret_cast<const char*>(data.data()), data.count()),
             std::string_view(reinterpret_cast<const char*>(kResponse), sizeof(kResponse)));
 
@@ -167,9 +167,9 @@ TEST_F(PtyTestCase, Write) {
   const fidl::WireResult result =
       client->Write(fidl::VectorView<uint8_t>::FromExternal(kWrittenData));
   ASSERT_OK(result.status());
-  const fidl::WireResponse response = result.value();
-  ASSERT_TRUE(response.result.is_response(), "%s", zx_status_get_string(response.result.err()));
-  ASSERT_EQ(response.result.response().actual_count, sizeof(kWrittenData));
+  const fitx::result response = result.value_NEW();
+  ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+  ASSERT_EQ(response.value()->actual_count, sizeof(kWrittenData));
 
   // We should not have seen an ordinal dispatch
   ASSERT_EQ(state()->last_seen_ordinal.load(), 0);

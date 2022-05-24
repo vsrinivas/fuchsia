@@ -27,8 +27,8 @@ zx_status_t BindVerityDriver(zx::unowned_channel block_dev_chan) {
                   ->Bind(::fidl::StringView::FromExternal(kDriverLib));
   rc = resp.status();
   if (rc == ZX_OK) {
-    if (resp->result.is_err()) {
-      rc = resp->result.err();
+    if (resp.Unwrap_NEW()->is_error()) {
+      rc = resp.Unwrap_NEW()->error_value();
     }
   }
   return rc;
@@ -45,10 +45,10 @@ zx_status_t RelativeTopologicalPath(zx::unowned_channel channel, fbl::String* ou
                   ->GetTopologicalPath();
   rc = resp.status();
   if (rc == ZX_OK) {
-    if (resp->result.is_err()) {
-      rc = resp->result.err();
+    if (resp.Unwrap_NEW()->is_error()) {
+      rc = resp.Unwrap_NEW()->error_value();
     } else {
-      auto& r = resp->result.response();
+      auto& r = *resp.Unwrap_NEW()->value();
       path_len = r.path.size();
       memcpy(path.data(), r.path.data(), r.path.size());
     }
@@ -159,8 +159,8 @@ zx_status_t VerifiedVolumeClient::OpenForAuthoring(const zx::duration& timeout,
   if (open_resp.status() != ZX_OK) {
     return open_resp.status();
   }
-  if (open_resp->result.is_err()) {
-    return open_resp->result.err();
+  if (open_resp.Unwrap_NEW()->is_error()) {
+    return open_resp.Unwrap_NEW()->error_value();
   }
 
   // Compute path of expected `mutable` child device via relative topological path
@@ -207,8 +207,8 @@ zx_status_t VerifiedVolumeClient::Close() {
   if (close_resp.status() != ZX_OK) {
     return close_resp.status();
   }
-  if (close_resp->result.is_err()) {
-    return close_resp->result.err();
+  if (close_resp.Unwrap_NEW()->is_error()) {
+    return close_resp.Unwrap_NEW()->error_value();
   }
 
   return ZX_OK;
@@ -216,7 +216,7 @@ zx_status_t VerifiedVolumeClient::Close() {
 
 zx_status_t VerifiedVolumeClient::CloseAndGenerateSeal(
     fidl::AnyArena& arena,
-    fuchsia_hardware_block_verified::wire::DeviceManagerCloseAndGenerateSealResult* out) {
+    fuchsia_hardware_block_verified::wire::DeviceManagerCloseAndGenerateSealResponse* out) {
   // We use the caller-provided buffer FIDL call style because the caller
   // needs to do something with the seal returned, so we need to keep the
   // response object alive so that the caller can interact with it after this
@@ -228,11 +228,11 @@ zx_status_t VerifiedVolumeClient::CloseAndGenerateSeal(
   if (seal_resp.status() != ZX_OK) {
     return seal_resp.status();
   }
-  if (seal_resp->result.is_err()) {
-    return seal_resp->result.err();
+  if (seal_resp.Unwrap_NEW()->is_error()) {
+    return seal_resp.Unwrap_NEW()->error_value();
   }
 
-  *out = seal_resp->result;
+  *out = *seal_resp.value_NEW().value();
   return ZX_OK;
 }
 
@@ -259,8 +259,8 @@ zx_status_t VerifiedVolumeClient::OpenForVerifiedRead(const digest::Digest& expe
   if (open_resp.status() != ZX_OK) {
     return open_resp.status();
   }
-  if (open_resp->result.is_err()) {
-    return open_resp->result.err();
+  if (open_resp.Unwrap_NEW()->is_error()) {
+    return open_resp.Unwrap_NEW()->error_value();
   }
 
   // Compute path of expected `verified` child device via relative topological path

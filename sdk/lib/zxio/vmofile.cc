@@ -58,14 +58,11 @@ static zx_status_t zxio_vmofile_release(zxio_t* io, zx_handle_t* out_handle) {
   if (!result.ok()) {
     return ZX_ERR_BAD_STATE;
   }
-  const auto& response = result.value();
-  switch (response.result.Which()) {
-    case fio::wire::File2SeekResult::Tag::kErr:
-      return ZX_ERR_BAD_STATE;
-    case fio::wire::File2SeekResult::Tag::kResponse:
-      *out_handle = file->control.TakeClientEnd().TakeChannel().release();
-      return ZX_OK;
+  if (result.Unwrap_NEW()->is_error()) {
+    return ZX_ERR_BAD_STATE;
   }
+  *out_handle = file->control.TakeClientEnd().TakeChannel().release();
+  return ZX_OK;
 }
 
 static zx_status_t zxio_vmofile_reopen(zxio_t* io, zxio_reopen_flags_t zxio_flags,

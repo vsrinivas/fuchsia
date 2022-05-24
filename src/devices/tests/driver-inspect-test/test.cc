@@ -85,7 +85,7 @@ TEST_F(InspectTestCase, ReadInspectData) {
   // Call test-driver to modify inspect data
   auto result = fidl::WireCall<TestInspect>(channel())->ModifyInspect();
   ASSERT_OK(result.status());
-  ASSERT_FALSE(result->result.is_err());
+  ASSERT_FALSE(result.Unwrap_NEW()->is_error());
 
   // Verify new inspect data is reflected
   out_vmo = ZX_HANDLE_INVALID;

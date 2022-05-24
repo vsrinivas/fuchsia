@@ -90,12 +90,11 @@ zx_status_t zxio_remote_v2_close(zxio_t* io) {
     if (!result.ok()) {
       return result.status();
     }
-    const auto& response = result.value();
-    switch (response.result.Which()) {
-      case fio::wire::Node2CloseResult::Tag::kErr:
-        return response.result.err();
-      case fio::wire::Node2CloseResult::Tag::kResponse:
-        return ZX_OK;
+    const auto* res = result.Unwrap_NEW();
+    if (res->is_error()) {
+      return res->error_value();
+    } else if (res->is_ok()) {
+      return ZX_OK;
     }
     return rio.control()->wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), nullptr);
   }();
@@ -193,13 +192,11 @@ zx_status_t zxio_remote_sync(zxio_t* io) {
   if (!result.ok()) {
     return result.status();
   }
-  const auto& response = result.value();
-  switch (response.result.Which()) {
-    case fio::wire::Node2SyncResult::Tag::kErr:
-      return response.result.err();
-    case fio::wire::Node2SyncResult::Tag::kResponse:
-      return ZX_OK;
+  const auto* res = result.Unwrap_NEW();
+  if (res->is_error()) {
+    return res->error_value();
   }
+  return ZX_OK;
 }
 
 zx_status_t zxio_remote_v2_attr_get(zxio_t* io, zxio_node_attributes_t* out_attr) {
@@ -209,15 +206,14 @@ zx_status_t zxio_remote_v2_attr_get(zxio_t* io, zxio_node_attributes_t* out_attr
   if (!result.ok()) {
     return result.status();
   }
-  const auto& response = result.value();
-  switch (response.result.Which()) {
-    case fio::wire::Node2GetAttributesResult::Tag::kErr:
-      return response.result.err();
-    case fio::wire::Node2GetAttributesResult::Tag::kResponse:
-      const fio::wire::NodeAttributes2& attributes = response.result.response().attributes;
-      *out_attr = ToZxioNodeAttributes(attributes);
-      return ZX_OK;
+
+  const auto* res = result.Unwrap_NEW();
+  if (res->is_error()) {
+    return res->error_value();
   }
+  const fio::wire::NodeAttributes2& attributes = res->value()->attributes;
+  *out_attr = ToZxioNodeAttributes(attributes);
+  return ZX_OK;
 }
 
 zx_status_t zxio_remote_v2_attr_set(zxio_t* io, const zxio_node_attributes_t* attr) {
@@ -228,13 +224,11 @@ zx_status_t zxio_remote_v2_attr_set(zxio_t* io, const zxio_node_attributes_t* at
   if (!result.ok()) {
     return result.status();
   }
-  const auto& response = result.value();
-  switch (response.result.Which()) {
-    case fio::wire::Node2UpdateAttributesResult::Tag::kErr:
-      return response.result.err();
-    case fio::wire::Node2UpdateAttributesResult::Tag::kResponse:
-      return ZX_OK;
+  const auto* res = result.Unwrap_NEW();
+  if (res->is_error()) {
+    return res->error_value();
   }
+  return ZX_OK;
 }
 
 }  // namespace
@@ -384,20 +378,18 @@ zx_status_t zxio_remote_v2_readv(zxio_t* io, const zx_iovec_t* vector, size_t ve
         if (!result.ok()) {
           return result.status();
         }
-        const auto& response = result.value();
-        switch (response.result.Which()) {
-          case fio::wire::File2ReadResult::Tag::kErr:
-            return response.result.err();
-          case fio::wire::File2ReadResult::Tag::kResponse:
-            const fidl::VectorView data = response.result.response().data;
-            const size_t actual = data.count();
-            if (actual > capacity) {
-              return ZX_ERR_IO;
-            }
-            memcpy(buffer, data.begin(), actual);
-            *out_actual = actual;
-            return ZX_OK;
+        const auto* res = result.Unwrap_NEW();
+        if (res->is_error()) {
+          return res->error_value();
         }
+        const fidl::VectorView data = res->value()->data;
+        const size_t actual = data.count();
+        if (actual > capacity) {
+          return ZX_ERR_IO;
+        }
+        memcpy(buffer, data.begin(), actual);
+        *out_actual = actual;
+        return ZX_OK;
       });
 }
 
@@ -423,21 +415,19 @@ zx_status_t zxio_remote_v2_readv_at(zxio_t* io, zx_off_t offset, const zx_iovec_
         if (!result.ok()) {
           return result.status();
         }
-        const auto& response = result.value();
-        switch (response.result.Which()) {
-          case fio::wire::File2ReadAtResult::Tag::kErr:
-            return response.result.err();
-          case fio::wire::File2ReadAtResult::Tag::kResponse:
-            const fidl::VectorView data = response.result.response().data;
-            const size_t actual = data.count();
-            if (actual > capacity) {
-              return ZX_ERR_IO;
-            }
-            offset += actual;
-            memcpy(buffer, data.begin(), actual);
-            *out_actual = actual;
-            return ZX_OK;
+        const auto* res = result.Unwrap_NEW();
+        if (res->is_error()) {
+          return res->error_value();
         }
+        const fidl::VectorView data = res->value()->data;
+        const size_t actual = data.count();
+        if (actual > capacity) {
+          return ZX_ERR_IO;
+        }
+        offset += actual;
+        memcpy(buffer, data.begin(), actual);
+        *out_actual = actual;
+        return ZX_OK;
       });
 }
 
@@ -464,18 +454,16 @@ zx_status_t zxio_remote_v2_writev(zxio_t* io, const zx_iovec_t* vector, size_t v
         if (!result.ok()) {
           return result.status();
         }
-        const auto& response = result.value();
-        switch (response.result.Which()) {
-          case fio::wire::File2WriteResult::Tag::kErr:
-            return response.result.err();
-          case fio::wire::File2WriteResult::Tag::kResponse:
-            const size_t actual = response.result.response().actual_count;
-            if (actual > capacity) {
-              return ZX_ERR_IO;
-            }
-            *out_actual = actual;
-            return ZX_OK;
+        const auto* res = result.Unwrap_NEW();
+        if (res->is_error()) {
+          return res->error_value();
         }
+        const size_t actual = res->value()->actual_count;
+        if (actual > capacity) {
+          return ZX_ERR_IO;
+        }
+        *out_actual = actual;
+        return ZX_OK;
       });
 }
 
@@ -502,19 +490,17 @@ zx_status_t zxio_remote_v2_writev_at(zxio_t* io, zx_off_t offset, const zx_iovec
         if (!result.ok()) {
           return result.status();
         }
-        const auto& response = result.value();
-        switch (response.result.Which()) {
-          case fio::wire::File2WriteAtResult::Tag::kErr:
-            return response.result.err();
-          case fio::wire::File2WriteAtResult::Tag::kResponse:
-            const size_t actual = response.result.response().actual_count;
-            if (actual > capacity) {
-              return ZX_ERR_IO;
-            }
-            offset += actual;
-            *out_actual = actual;
-            return ZX_OK;
+        const auto* res = result.Unwrap_NEW();
+        if (res->is_error()) {
+          return res->error_value();
         }
+        const size_t actual = res->value()->actual_count;
+        if (actual > capacity) {
+          return ZX_ERR_IO;
+        }
+        offset += actual;
+        *out_actual = actual;
+        return ZX_OK;
       });
 }
 
@@ -530,14 +516,12 @@ zx_status_t zxio_remote_v2_seek(zxio_t* io, zxio_seek_origin_t start, int64_t of
   if (!result.ok()) {
     return result.status();
   }
-  const auto& response = result.value();
-  switch (response.result.Which()) {
-    case fio::wire::File2SeekResult::Tag::kErr:
-      return response.result.err();
-    case fio::wire::File2SeekResult::Tag::kResponse:
-      *out_offset = response.result.response().offset_from_start;
-      return ZX_OK;
+  const auto* res = result.Unwrap_NEW();
+  if (res->is_error()) {
+    return res->error_value();
   }
+  *out_offset = res->value()->offset_from_start;
+  return ZX_OK;
 }
 
 }  // namespace

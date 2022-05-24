@@ -90,7 +90,7 @@ TEST_F(LoaderServiceTest, OpenConnectionsKeepLoaderAlive) {
   ASSERT_OK(zx::channel::create(0, &client_chan, &server_chan));
   auto result = client2->Clone(std::move(server_chan));
   ASSERT_TRUE(result.ok());
-  ASSERT_OK(result.Unwrap()->rv);
+  ASSERT_OK(result.Unwrap_NEW()->rv);
   fidl::WireSyncClient<fldsvc::Loader> client3(std::move(client_chan));
 
   EXPECT_NO_FATAL_FAILURE(LoadObject(client1, "libfoo.so", zx::ok("science")));
@@ -207,7 +207,7 @@ TEST_F(LoaderServiceTest, ClonedConnectionHasDefaultConfig) {
   ASSERT_OK(zx::channel::create(0, &client_chan, &server_chan));
   auto result = client->Clone(std::move(server_chan));
   ASSERT_TRUE(result.ok());
-  ASSERT_OK(result.Unwrap()->rv);
+  ASSERT_OK(result.Unwrap_NEW()->rv);
   {
     fidl::WireSyncClient<fldsvc::Loader> client(std::move(client_chan));
     EXPECT_NO_FATAL_FAILURE(LoadObject(client, "libfoo.so", zx::error(ZX_ERR_NOT_FOUND)));

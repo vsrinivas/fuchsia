@@ -60,7 +60,7 @@ int main(int argc, const char** argv) {
       [&](fidl::WireUnownedResult<fuchsia_examples::Echo::EchoString>& result) {
         ZX_ASSERT_MSG(result.ok(), "EchoString failed: %s",
                       result.error().FormatDescription().c_str());
-        auto* response = result.Unwrap();
+        auto* response = result.Unwrap_NEW();
         std::string reply(response->response.data(), response->response.size());
         std::cout << "Got response (result callback): " << reply << std::endl;
         loop.Quit();

@@ -19,8 +19,8 @@ fpromise::promise<void, fdf::wire::NodeError> AddChild(
       completer.complete_error(fdf::wire::NodeError::kInternal);
       return;
     }
-    if (result->result.is_err()) {
-      completer.complete_error(result->result.err());
+    if (result.Unwrap_NEW()->is_error()) {
+      completer.complete_error(result.Unwrap_NEW()->error_value());
       return;
     }
     completer.complete_ok();

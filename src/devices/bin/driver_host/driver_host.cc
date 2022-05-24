@@ -442,14 +442,14 @@ zx_status_t DriverHostContext::DriverManagerAdd(const fbl::RefPtr<zx_device_t>& 
       std::move(outgoing_dir));
   zx_status_t status = response.status();
   if (status == ZX_OK) {
-    if (response.Unwrap()->result.is_response()) {
-      device_id = response.Unwrap()->result.response().local_device_id;
+    if (response.Unwrap_NEW()->is_ok()) {
+      device_id = response.Unwrap_NEW()->value()->local_device_id;
       if (child->ops()->init) {
         // Mark child as invisible until the init function is replied.
         child->set_flag(DEV_FLAG_INVISIBLE);
       }
     } else {
-      call_status = response.Unwrap()->result.err();
+      call_status = response.Unwrap_NEW()->error_value();
     }
   }
 
@@ -1007,14 +1007,14 @@ zx_status_t DriverHostContext::GetTopoPath(const fbl::RefPtr<zx_device_t>& dev, 
   }
 
   VLOGD(1, *remote_dev, "get-topo-path");
-  auto response = client.sync()->GetTopologicalPath();
-  zx_status_t status = response.status();
+  auto result = client.sync()->GetTopologicalPath();
+  zx_status_t status = result.status();
   zx_status_t call_status = ZX_OK;
   if (status == ZX_OK) {
-    if (response.Unwrap()->result.is_err()) {
-      call_status = response.Unwrap()->result.err();
+    if (result.Unwrap_NEW()->is_error()) {
+      call_status = result.Unwrap_NEW()->error_value();
     } else {
-      auto& r = response.Unwrap()->result.response();
+      auto& r = *result.Unwrap_NEW()->value();
       memcpy(path, r.path.data(), r.path.size());
       *actual = r.path.size();
     }
@@ -1049,8 +1049,8 @@ zx_status_t DriverHostContext::DeviceBind(const fbl::RefPtr<zx_device_t>& dev,
   auto response = client.sync()->BindDevice(std::move(driver_path));
   zx_status_t status = response.status();
   zx_status_t call_status = ZX_OK;
-  if (status == ZX_OK && response.Unwrap()->result.is_err()) {
-    call_status = response.Unwrap()->result.err();
+  if (status == ZX_OK && response.Unwrap_NEW()->is_error()) {
+    call_status = response.Unwrap_NEW()->error_value();
   }
   log_rpc_result(dev, "bind-device", status, call_status);
   if (status != ZX_OK) {
@@ -1078,13 +1078,13 @@ zx_status_t DriverHostContext::LoadFirmware(const zx_driver_t* drv,
   auto response = client.sync()->LoadFirmware(std::move(drv_libname), std::move(str_path));
   zx_status_t status = response.status();
   zx_status_t call_status = ZX_OK;
-  auto result = std::move(response.Unwrap()->result);
-  if (result.is_err()) {
-    call_status = result.err();
+  auto result = std::move(response.Unwrap_NEW());
+  if (result->is_error()) {
+    call_status = result->error_value();
   } else {
-    auto resp = std::move(result.response());
-    *size = resp.size;
-    vmo = std::move(resp.vmo);
+    auto resp = std::move(result->value());
+    *size = resp->size;
+    vmo = std::move(resp->vmo);
   }
   log_rpc_result(dev, "load-firmware", status, call_status);
   if (status != ZX_OK) {
@@ -1123,10 +1123,10 @@ void DriverHostContext::LoadFirmwareAsync(const zx_driver_t* drv,
             size_t size = 0;
             zx::vmo vmo;
 
-            if (result->result.is_err()) {
-              call_status = result->result.err();
+            if (result.Unwrap_NEW()->is_error()) {
+              call_status = result.Unwrap_NEW()->error_value();
             } else {
-              auto& resp = result->result.response();
+              auto& resp = *result.Unwrap_NEW()->value();
               size = resp.size;
               vmo = std::move(resp.vmo);
             }
@@ -1150,12 +1150,12 @@ zx_status_t DriverHostContext::GetMetadata(const fbl::RefPtr<zx_device_t>& dev, 
     return ZX_ERR_IO_REFUSED;
   }
   VLOGD(1, *dev, "get-metadata");
-  auto response = client.sync()->GetMetadata(type);
-  zx_status_t status = response.status();
+  auto result = client.sync()->GetMetadata(type);
+  zx_status_t status = result.status();
   zx_status_t call_status = ZX_OK;
   if (status == ZX_OK) {
-    if (response->result.is_response()) {
-      const auto& r = response.Unwrap()->result.response();
+    if (result.Unwrap_NEW()->is_ok()) {
+      const auto& r = *result.Unwrap_NEW()->value();
       if (r.data.count() > buflen) {
         return ZX_ERR_BUFFER_TOO_SMALL;
       }
@@ -1164,7 +1164,7 @@ zx_status_t DriverHostContext::GetMetadata(const fbl::RefPtr<zx_device_t>& dev, 
         *actual = r.data.count();
       }
     } else {
-      call_status = response->result.err();
+      call_status = result.Unwrap_NEW()->error_value();
     }
   }
   return log_rpc_result(dev, "get-metadata", status, call_status);
@@ -1181,10 +1181,10 @@ zx_status_t DriverHostContext::GetMetadataSize(const fbl::RefPtr<zx_device_t>& d
   zx_status_t status = response.status();
   zx_status_t call_status = ZX_OK;
   if (status == ZX_OK) {
-    if (response->result.is_response()) {
-      *out_length = response->result.response().size;
+    if (response.Unwrap_NEW()->is_ok()) {
+      *out_length = response.Unwrap_NEW()->value()->size;
     } else {
-      call_status = response->result.err();
+      call_status = response.Unwrap_NEW()->error_value();
     }
   }
   return log_rpc_result(dev, "get-metadata-size", status, call_status);
@@ -1205,8 +1205,8 @@ zx_status_t DriverHostContext::AddMetadata(const fbl::RefPtr<zx_device_t>& dev, 
                 reinterpret_cast<uint8_t*>(const_cast<void*>(data)), length));
   zx_status_t status = response.status();
   zx_status_t call_status = ZX_OK;
-  if (status == ZX_OK && response->result.is_err()) {
-    call_status = response->result.err();
+  if (status == ZX_OK && response.Unwrap_NEW()->is_error()) {
+    call_status = response.Unwrap_NEW()->error_value();
   }
   return log_rpc_result(dev, "add-metadata", status, call_status);
 }
@@ -1300,8 +1300,8 @@ zx_status_t DriverHostContext::DeviceAddComposite(const fbl::RefPtr<zx_device_t>
                                                     std::move(comp_dev));
   zx_status_t status = response.status();
   zx_status_t call_status = ZX_OK;
-  if (status == ZX_OK && response->result.is_err()) {
-    call_status = response->result.err();
+  if (status == ZX_OK && response.Unwrap_NEW()->is_error()) {
+    call_status = response.Unwrap_NEW()->error_value();
   }
   return log_rpc_result(dev, "create-composite", status, call_status);
 }
@@ -1372,7 +1372,9 @@ zx_status_t DriverHostContext::DeviceAddGroup(const fbl::RefPtr<zx_device_t>& de
 
   auto response = client.sync()->AddDeviceGroup(fidl::StringView(allocator, name), std::move(desc));
   auto status = response.status();
-  auto call_status = status == ZX_OK && response->result.is_err() ? response->result.err() : ZX_OK;
+  auto call_status = status == ZX_OK && response.Unwrap_NEW()->is_error()
+                         ? response.Unwrap_NEW()->error_value()
+                         : ZX_OK;
 
   return log_rpc_result(dev, "add-device-group", status, call_status);
 }

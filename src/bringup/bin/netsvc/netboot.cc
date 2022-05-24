@@ -263,8 +263,8 @@ static zx_status_t do_dmctl_mexec() {
   if (response.status() != ZX_OK) {
     return response.status();
   }
-  if (response->result.is_err()) {
-    return response->result.err();
+  if (response.value_NEW().is_error()) {
+    return response.value_NEW().error_value();
   }
   // Wait for the world to end.
   zx_nanosleep(ZX_TIME_INFINITE);
@@ -281,8 +281,8 @@ static zx_status_t reboot() {
   if (response.status() != ZX_OK) {
     return response.status();
   }
-  if (response->result.is_err()) {
-    return response->result.err();
+  if (response.value_NEW().is_error()) {
+    return response.value_NEW().error_value();
   }
   // Wait for the world to end.
   zx_nanosleep(ZX_TIME_INFINITE);

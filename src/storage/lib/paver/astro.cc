@@ -46,7 +46,7 @@ bool GetBool(fidl::WireSyncClient<fuchsia_boot::Arguments>& client, ::fidl::Stri
           default_on_missing_or_failure);
     return default_on_missing_or_failure;
   }
-  return result->value;
+  return result.value_NEW().value;
 }
 
 }  // namespace

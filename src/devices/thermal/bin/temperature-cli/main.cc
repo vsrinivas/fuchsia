@@ -49,10 +49,10 @@ int main(int argc, char** argv) {
 
     auto response = client->GetTemperatureCelsius();
     if (response.ok()) {
-      if (!response->status) {
-        printf("temperature = %f\n", response->temp);
+      if (!response.Unwrap_NEW()->status) {
+        printf("temperature = %f\n", response.Unwrap_NEW()->temp);
       } else {
-        printf("GetTemperatureCelsius failed: status = %d\n", response->status);
+        printf("GetTemperatureCelsius failed: status = %d\n", response.Unwrap_NEW()->status);
       }
     }
   } else {
@@ -61,10 +61,10 @@ int main(int argc, char** argv) {
     if (strcmp(argv[2], "resolution") == 0) {
       auto response = client->GetResolution();
       if (response.ok()) {
-        if (response->result.is_err()) {
-          printf("GetResolution failed: status = %d\n", response->result.err());
+        if (response.Unwrap_NEW()->is_error()) {
+          printf("GetResolution failed: status = %d\n", response.Unwrap_NEW()->error_value());
         } else {
-          printf("adc resolution  = %u\n", response->result.response().resolution);
+          printf("adc resolution  = %u\n", response.Unwrap_NEW()->value()->resolution);
         }
       } else {
         printf("GetResolution fidl call failed: status = %d\n", response.status());
@@ -72,10 +72,10 @@ int main(int argc, char** argv) {
     } else if (strcmp(argv[2], "read") == 0) {
       auto response = client->GetSample();
       if (response.ok()) {
-        if (response->result.is_err()) {
-          printf("GetSample failed: status = %d\n", response->result.err());
+        if (response.Unwrap_NEW()->is_error()) {
+          printf("GetSample failed: status = %d\n", response.Unwrap_NEW()->error_value());
         } else {
-          printf("Value = %u\n", response->result.response().value);
+          printf("Value = %u\n", response.Unwrap_NEW()->value()->value);
         }
       } else {
         printf("GetSample fidl call failed: status = %d\n", response.status());
@@ -83,10 +83,10 @@ int main(int argc, char** argv) {
     } else if (strcmp(argv[2], "readnorm") == 0) {
       auto response = client->GetNormalizedSample();
       if (response.ok()) {
-        if (response->result.is_err()) {
-          printf("GetSampleNormalized failed: status = %d\n", response->result.err());
+        if (response.Unwrap_NEW()->is_error()) {
+          printf("GetSampleNormalized failed: status = %d\n", response.Unwrap_NEW()->error_value());
         } else {
-          printf("Value  = %f\n", response->result.response().value);
+          printf("Value  = %f\n", response.Unwrap_NEW()->value()->value);
         }
       } else {
         printf("GetSampleNormalized fidl call failed: status = %d\n", response.status());

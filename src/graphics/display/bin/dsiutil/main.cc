@@ -76,8 +76,8 @@ int main(int argc, char* argv[]) {
     return -1;
   }
 
-  if (response.value().result.is_err()) {
-    printf("Invalid Command Sent (%d)\n", response.value().result.err());
+  if (response.Unwrap_NEW()->is_error()) {
+    printf("Invalid Command Sent (%d)\n", response.Unwrap_NEW()->error_value());
     return -1;
   }
 

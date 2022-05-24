@@ -61,7 +61,7 @@ void USBVirtualBusBase::InitPeripheral() {
 
   auto enable_result = virtual_bus_->Enable();
   ASSERT_EQ(enable_result.status(), ZX_OK);
-  ASSERT_EQ(enable_result.value().status, ZX_OK);
+  ASSERT_EQ(enable_result.value_NEW().status, ZX_OK);
 
   char peripheral_str[] = "usb-peripheral";
   fd.reset(openat(devfs_root().get(), "class", O_RDONLY));
@@ -143,7 +143,7 @@ void USBVirtualBusBase::SetupPeripheralDevice(DeviceDescriptor&& device_desc,
       std::move(device_desc),
       fidl::VectorView<ConfigurationDescriptor>::FromExternal(config_descs));
   ASSERT_EQ(set_config.status(), ZX_OK);
-  ASSERT_FALSE(set_config->result.is_err());
+  ASSERT_FALSE(set_config.Unwrap_NEW()->is_error());
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   EventWatcher watcher(&loop, std::move(state_change_sender), function_descs.size());
@@ -152,7 +152,7 @@ void USBVirtualBusBase::SetupPeripheralDevice(DeviceDescriptor&& device_desc,
 
   auto connect_result = virtual_bus_->Connect();
   ASSERT_EQ(connect_result.status(), ZX_OK);
-  ASSERT_EQ(connect_result.value().status, ZX_OK);
+  ASSERT_EQ(connect_result.value_NEW().status, ZX_OK);
 }
 
 void USBVirtualBusBase::ClearPeripheralDeviceFunctions() {

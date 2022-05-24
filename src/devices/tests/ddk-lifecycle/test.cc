@@ -60,7 +60,7 @@ class LifecycleTest : public zxtest::Test {
 
     auto result = fidl::WireCall<TestDevice>(chan_)->SubscribeToLifecycle(std::move(remote));
     ASSERT_OK(result.status());
-    ASSERT_FALSE(result->result.is_err());
+    ASSERT_FALSE(result.Unwrap_NEW()->is_error());
     lifecycle_chan_ = std::move(local);
   }
 
@@ -106,15 +106,15 @@ TEST_F(LifecycleTest, ChildPreRelease) {
     auto result = fidl::WireCall<TestDevice>(chan_)->AddChild(true /* complete_init */,
                                                               ZX_OK /* init_status */);
     ASSERT_OK(result.status());
-    ASSERT_FALSE(result->result.is_err());
-    child_ids.push_back(result->result.response().child_id);
+    ASSERT_FALSE(result.Unwrap_NEW()->is_error());
+    child_ids.push_back(result.Unwrap_NEW()->value()->child_id);
   }
 
   // Remove the child devices and check the test device received the pre-release notifications.
   for (auto child_id : child_ids) {
     auto result = fidl::WireCall<TestDevice>(chan_)->RemoveChild(child_id);
     ASSERT_OK(result.status());
-    ASSERT_FALSE(result->result.is_err());
+    ASSERT_FALSE(result.Unwrap_NEW()->is_error());
 
     // Wait for the child pre-release notification.
     ASSERT_NO_FATAL_FAILURE(WaitPreRelease(child_id));
@@ -127,16 +127,16 @@ TEST_F(LifecycleTest, Init) {
   auto result = fidl::WireCall<TestDevice>(chan_)->AddChild(false /* complete_init */,
                                                             ZX_OK /* init_status */);
   ASSERT_OK(result.status());
-  ASSERT_FALSE(result->result.is_err());
-  child_id = result->result.response().child_id;
+  ASSERT_FALSE(result.Unwrap_NEW()->is_error());
+  child_id = result.Unwrap_NEW()->value()->child_id;
 
   auto remove_result = fidl::WireCall<TestDevice>(chan_)->RemoveChild(child_id);
   ASSERT_OK(remove_result.status());
-  ASSERT_FALSE(remove_result->result.is_err());
+  ASSERT_FALSE(remove_result.Unwrap_NEW()->is_error());
 
   auto init_result = fidl::WireCall<TestDevice>(chan_)->CompleteChildInit(child_id);
   ASSERT_OK(init_result.status());
-  ASSERT_FALSE(init_result->result.is_err());
+  ASSERT_FALSE(init_result.Unwrap_NEW()->is_error());
 
   // Wait for the child pre-release notification.
   ASSERT_NO_FATAL_FAILURE(WaitPreRelease(child_id));
@@ -147,8 +147,8 @@ TEST_F(LifecycleTest, CloseAllConnectionsOnInstanceUnbind) {
   auto result = fidl::WireCall<TestDevice>(chan_)->AddChild(true /* complete_init */,
                                                             ZX_OK /* init_status */);
   ASSERT_OK(result.status());
-  ASSERT_FALSE(result->result.is_err());
-  auto child_id = result->result.response().child_id;
+  ASSERT_FALSE(result.Unwrap_NEW()->is_error());
+  auto child_id = result.Unwrap_NEW()->value()->child_id;
   fbl::unique_fd fd;
   ASSERT_OK(device_watcher::RecursiveWaitForFile(
       devmgr_.devfs_root(), "sys/platform/11:10:0/ddk-lifecycle-test/ddk-lifecycle-test-child-0",
@@ -168,8 +168,8 @@ TEST_F(LifecycleTest, ReadCallFailsDuringUnbind) {
   auto result = fidl::WireCall<TestDevice>(chan_)->AddChild(true /* complete_init */,
                                                             ZX_OK /* init_status */);
   ASSERT_OK(result.status());
-  ASSERT_FALSE(result->result.is_err());
-  auto child_id = result->result.response().child_id;
+  ASSERT_FALSE(result.Unwrap_NEW()->is_error());
+  auto child_id = result.Unwrap_NEW()->value()->child_id;
   fbl::unique_fd fd;
 
   ASSERT_OK(device_watcher::RecursiveWaitForFile(
@@ -183,18 +183,18 @@ TEST_F(LifecycleTest, ReadCallFailsDuringUnbind) {
   {
     const fidl::WireResult read_result = fidl::WireCall<File>(chan)->Read(10);
     ASSERT_OK(read_result.status());
-    const fidl::WireResponse response = read_result.value();
-    ASSERT_TRUE(response.result.is_err());
-    ASSERT_STATUS(response.result.err(), ZX_ERR_IO_NOT_PRESENT);
+    const fitx::result response = read_result.value_NEW();
+    ASSERT_TRUE(response.is_error());
+    ASSERT_STATUS(response.error_value(), ZX_ERR_IO_NOT_PRESENT);
   }
   {
     std::array<uint8_t, 5> array;
     const fidl::WireResult write_result =
         fidl::WireCall<File>(chan)->Write(fidl::VectorView<uint8_t>::FromExternal(array));
     ASSERT_OK(write_result.status());
-    const fidl::WireResponse response = write_result.value();
-    ASSERT_TRUE(response.result.is_err());
-    ASSERT_STATUS(response.result.err(), ZX_ERR_IO_NOT_PRESENT);
+    const fitx::result response = write_result.value_NEW();
+    ASSERT_TRUE(response.is_error());
+    ASSERT_STATUS(response.error_value(), ZX_ERR_IO_NOT_PRESENT);
   }
   int fd2 = open("sys/platform/11:10:0/ddk-lifecycle-test/ddk-lifecycle-test-child-0", O_RDWR);
   ASSERT_EQ(fd2, -1);
@@ -236,8 +236,8 @@ TEST_F(LifecycleTest, FailedInit) {
   auto result = fidl::WireCall<TestDevice>(chan_)->AddChild(true /* complete_init */,
                                                             ZX_ERR_BAD_STATE /* init_status */);
   ASSERT_OK(result.status());
-  ASSERT_FALSE(result->result.is_err());
-  child_id = result->result.response().child_id;
+  ASSERT_FALSE(result.Unwrap_NEW()->is_error());
+  child_id = result.Unwrap_NEW()->value()->child_id;
 
   // Wait for the child pre-release notification.
   ASSERT_NO_FATAL_FAILURE(WaitPreRelease(child_id));

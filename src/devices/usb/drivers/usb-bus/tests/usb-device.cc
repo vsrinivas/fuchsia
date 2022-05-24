@@ -551,14 +551,14 @@ TEST_F(DeviceTest, FidlGetSpeed) {
   auto& fidl = get_fidl();
   auto result = fidl->GetDeviceSpeed();
   ASSERT_TRUE(result.ok());
-  ASSERT_EQ(result->speed, kDeviceSpeed);
+  ASSERT_EQ(result.value_NEW().speed, kDeviceSpeed);
 }
 
 TEST_F(DeviceTest, FidlGetDescriptor) {
   auto& fidl = get_fidl();
   auto result = fidl->GetDeviceDescriptor();
   usb_device_descriptor_t* descriptor =
-      reinterpret_cast<usb_device_descriptor_t*>(result->desc.data());
+      reinterpret_cast<usb_device_descriptor_t*>(result.value_NEW().desc.data());
   ASSERT_EQ(descriptor->id_vendor, kVendorId);
   ASSERT_EQ(descriptor->id_product, kProductId);
   ASSERT_EQ(descriptor->b_device_class, kDeviceClass);
@@ -570,16 +570,16 @@ TEST_F(DeviceTest, FidlGetConfigurationDescriptorSize) {
   auto& fidl = get_fidl();
   auto result = fidl->GetConfigurationDescriptorSize(1);
   ASSERT_TRUE(result.ok());
-  ASSERT_OK(result->s);
-  ASSERT_EQ(result->size, sizeof(usb_configuration_descriptor_t));
+  ASSERT_OK(result.value_NEW().s);
+  ASSERT_EQ(result.value_NEW().size, sizeof(usb_configuration_descriptor_t));
 }
 
 TEST_F(DeviceTest, FidlGetConfigurationDescriptorSize_Nullptr) {
   auto& fidl = get_fidl();
   auto result = fidl->GetConfigurationDescriptorSize(99);  // <-- intentionally bad index.
   ASSERT_TRUE(result.ok());
-  ASSERT_EQ(result->s, ZX_ERR_INVALID_ARGS);
-  ASSERT_EQ(result->size, 0);
+  ASSERT_EQ(result.value_NEW().s, ZX_ERR_INVALID_ARGS);
+  ASSERT_EQ(result.value_NEW().size, 0);
 }
 
 TEST_F(DeviceTest, FidlGetConfigurationDescriptor) {
@@ -587,9 +587,10 @@ TEST_F(DeviceTest, FidlGetConfigurationDescriptor) {
   const usb_configuration_descriptor_t* descriptor;
   auto result = fidl->GetConfigurationDescriptor(1);
   ASSERT_TRUE(result.ok());
-  ASSERT_OK(result->s);
-  ASSERT_EQ(result->desc.count(), sizeof(*descriptor));
-  descriptor = reinterpret_cast<const usb_configuration_descriptor_t*>(result->desc.data());
+  ASSERT_OK(result.value_NEW().s);
+  ASSERT_EQ(result.value_NEW().desc.count(), sizeof(*descriptor));
+  descriptor =
+      reinterpret_cast<const usb_configuration_descriptor_t*>(result.value_NEW().desc.data());
   ASSERT_EQ(descriptor->b_configuration_value, 1);
   ASSERT_EQ(descriptor->w_total_length, sizeof(*descriptor));
 }
@@ -602,8 +603,8 @@ TEST_F(DeviceTest, FidlGetStringDescriptor_Empty) {
                 reinterpret_cast<uint8_t*>(golden), &dest_len);
   SetEmptyState(true);
   auto result = fidl->GetStringDescriptor(1, MakeConstant<uint16_t, 2>("EN"));
-  ASSERT_TRUE(result->desc.empty());
-  ASSERT_EQ(result->s, ZX_ERR_INTERNAL);
+  ASSERT_TRUE(result.value_NEW().desc.empty());
+  ASSERT_EQ(result.value_NEW().s, ZX_ERR_INTERNAL);
 }
 
 TEST_F(DeviceTest, FidlGetStringDescriptor) {
@@ -616,10 +617,10 @@ TEST_F(DeviceTest, FidlGetStringDescriptor) {
     auto expected = MakeConstant<uint16_t, 2>("EN");
     auto result = fidl->GetStringDescriptor(1, MakeConstant<uint16_t, 2>("EN"));
     ASSERT_TRUE(result.ok());
-    ASSERT_OK(result->s);
-    ASSERT_EQ(result->actual_lang_id, expected);
-    ASSERT_EQ(result->desc.size(), dest_len);  // this is way off for some reason
-    ASSERT_EQ(memcmp(result->desc.data(), golden, dest_len), 0);
+    ASSERT_OK(result.value_NEW().s);
+    ASSERT_EQ(result.value_NEW().actual_lang_id, expected);
+    ASSERT_EQ(result.value_NEW().desc.size(), dest_len);  // this is way off for some reason
+    ASSERT_EQ(memcmp(result.value_NEW().desc.data(), golden, dest_len), 0);
   }
 
   {
@@ -629,10 +630,10 @@ TEST_F(DeviceTest, FidlGetStringDescriptor) {
     auto expected = MakeConstant<uint16_t, 2>("ES");
     auto result = fidl->GetStringDescriptor(1, MakeConstant<uint16_t, 2>("ES"));
     ASSERT_TRUE(result.ok());
-    ASSERT_OK(result->s);
-    ASSERT_EQ(result->actual_lang_id, expected);
-    ASSERT_EQ(result->desc.size(), dest_len);
-    ASSERT_EQ(memcmp(result->desc.data(), golden, dest_len), 0);
+    ASSERT_OK(result.value_NEW().s);
+    ASSERT_EQ(result.value_NEW().actual_lang_id, expected);
+    ASSERT_EQ(result.value_NEW().desc.size(), dest_len);
+    ASSERT_EQ(memcmp(result.value_NEW().desc.data(), golden, dest_len), 0);
   }
 
   {
@@ -642,10 +643,10 @@ TEST_F(DeviceTest, FidlGetStringDescriptor) {
     auto expected = MakeConstant<uint16_t, 2>("EN");
     auto result = fidl->GetStringDescriptor(2, MakeConstant<uint16_t, 2>("EN"));
     ASSERT_TRUE(result.ok());
-    ASSERT_OK(result->s);
-    ASSERT_EQ(result->actual_lang_id, expected);
-    ASSERT_EQ(result->desc.size(), dest_len);
-    ASSERT_EQ(memcmp(result->desc.data(), golden, dest_len), 0);
+    ASSERT_OK(result.value_NEW().s);
+    ASSERT_EQ(result.value_NEW().actual_lang_id, expected);
+    ASSERT_EQ(result.value_NEW().desc.size(), dest_len);
+    ASSERT_EQ(memcmp(result.value_NEW().desc.data(), golden, dest_len), 0);
   }
 
   {
@@ -655,10 +656,10 @@ TEST_F(DeviceTest, FidlGetStringDescriptor) {
     auto expected = MakeConstant<uint16_t, 2>("ES");
     auto result = fidl->GetStringDescriptor(2, MakeConstant<uint16_t, 2>("ES"));
     ASSERT_TRUE(result.ok());
-    ASSERT_OK(result->s);
-    ASSERT_EQ(result->actual_lang_id, expected);
-    ASSERT_EQ(result->desc.size(), dest_len);
-    ASSERT_EQ(memcmp(result->desc.data(), golden, dest_len), 0);
+    ASSERT_OK(result.value_NEW().s);
+    ASSERT_EQ(result.value_NEW().actual_lang_id, expected);
+    ASSERT_EQ(result.value_NEW().desc.size(), dest_len);
+    ASSERT_EQ(memcmp(result.value_NEW().desc.data(), golden, dest_len), 0);
   }
 }
 
@@ -696,35 +697,35 @@ TEST_F(DeviceTest, FidlSetInterface) {
   });
   auto result = fidl->SetInterface(98, 5);
   ASSERT_TRUE(result.ok());
-  ASSERT_OK(result->s);
+  ASSERT_OK(result.value_NEW().s);
 }
 
 TEST_F(DeviceTest, FidlGetDeviceId) {
   auto& fidl = get_fidl();
   auto result = fidl->GetDeviceId();
   ASSERT_TRUE(result.ok());
-  ASSERT_EQ(result->device_id, kDeviceId);
+  ASSERT_EQ(result.value_NEW().device_id, kDeviceId);
 }
 
 TEST_F(DeviceTest, FidlGetHubDeviceId) {
   auto& fidl = get_fidl();
   auto result = fidl->GetHubDeviceId();
   ASSERT_TRUE(result.ok());
-  ASSERT_EQ(result->hub_device_id, kHubId);
+  ASSERT_EQ(result.value_NEW().hub_device_id, kHubId);
 }
 
 TEST_F(DeviceTest, FidlGetConfiguration) {
   auto& fidl = get_fidl();
   auto result = fidl->GetConfiguration();
   ASSERT_TRUE(result.ok());
-  ASSERT_EQ(result->configuration, 1);
+  ASSERT_EQ(result.value_NEW().configuration, 1);
 }
 
 TEST_F(DeviceTest, FidlSetConfiguration) {
   auto& fidl = get_fidl();
   auto result = fidl->SetConfiguration(2);
   ASSERT_TRUE(result.ok());
-  ASSERT_OK(result->s);
+  ASSERT_OK(result.value_NEW().s);
   ASSERT_EQ(get_configuration(), 2);
 }
 

@@ -34,7 +34,7 @@ int main(int argc, const char** argv) {
         [&](fidl::WireUnownedResult<fuchsia_examples::Echo::EchoString>& result) {
           if (!result.ok())
             return;
-          auto* response = result.Unwrap();
+          auto* response = result.Unwrap_NEW();
           std::string reply(response->response.data(), response->response.size());
           std::cout << "Got response after " << time(nullptr) - start << " seconds" << std::endl;
           if (++num_responses == kNumEchoes) {

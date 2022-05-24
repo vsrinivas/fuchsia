@@ -334,12 +334,12 @@ zx::status<> Fastboot::WriteFirmware(fuchsia_paver::wire::Configuration config,
                         zx::error(ret.status()));
   }
 
-  if (ret->result.is_status() && ret->result.status() != ZX_OK) {
+  if (ret.value_NEW().result.is_status() && ret.value_NEW().result.status() != ZX_OK) {
     return SendResponse(ResponseType::kFail, "Failed to write bootloader", transport,
-                        zx::error(ret->result.status()));
+                        zx::error(ret.value_NEW().result.status()));
   }
 
-  if (ret->result.is_unsupported() && ret->result.unsupported()) {
+  if (ret.value_NEW().result.is_unsupported() && ret.value_NEW().result.unsupported()) {
     return SendResponse(ResponseType::kFail, "Firmware type is not supported", transport);
   }
 
@@ -353,7 +353,7 @@ zx::status<> Fastboot::WriteAsset(fuchsia_paver::wire::Configuration config,
   buf.size = download_vmo_mapper_.size();
   buf.vmo = download_vmo_mapper_.Release();
   auto ret = data_sink->WriteAsset(config, asset, std::move(buf));
-  zx_status_t status = ret.status() == ZX_OK ? ret.value().status : ret.status();
+  zx_status_t status = ret.status() == ZX_OK ? ret.value_NEW().status : ret.status();
   if (status != ZX_OK) {
     return SendResponse(ResponseType::kFail, "Failed to flash asset", transport, zx::error(status));
   }
@@ -417,7 +417,7 @@ zx::status<> Fastboot::Flash(const std::string& command, Transport* transport) {
     loop.StartThread("fastboot-payload-stream");
 
     auto result = data_sink->WriteVolumes(std::move(client));
-    zx_status_t status = result.ok() ? result.value().status : result.status();
+    zx_status_t status = result.ok() ? result.value_NEW().status : result.status();
     if (status != ZX_OK) {
       return SendResponse(ResponseType::kFail, "Failed to write fvm", transport, zx::error(status));
     }
@@ -473,7 +473,7 @@ zx::status<> Fastboot::SetActive(const std::string& command, Transport* transpor
   }
 
   auto result = boot_manager_res.value()->SetConfigurationActive(config);
-  zx_status_t status = result.ok() ? result->status : result.status();
+  zx_status_t status = result.ok() ? result.value_NEW().status : result.status();
   if (status != ZX_OK) {
     return SendResponse(ResponseType::kFail, "Failed to set configuration active: ", transport,
                         zx::error(status));
@@ -598,7 +598,7 @@ zx::status<> Fastboot::OemAddStagedBootloaderFile(const std::string& command,
   buf.vmo = download_vmo_mapper_.Release();
   auto ret = data_sink->WriteDataFile(
       fidl::StringView::FromExternal(sshd_host::kAuthorizedKeyPathInData), std::move(buf));
-  zx_status_t status = ret.ok() ? ret.value().status : ret.status();
+  zx_status_t status = ret.ok() ? ret.value_NEW().status : ret.status();
   if (status != ZX_OK) {
     return SendResponse(ResponseType::kFail, "Failed to write ssh key", transport,
                         zx::error(status));

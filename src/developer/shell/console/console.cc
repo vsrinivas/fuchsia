@@ -100,8 +100,8 @@ void Console::WaitForInterruptAsynchronously() {
         uint32_t events = 0;
         auto end = fidl::UnownedClientEnd<fpty::Device>(fdio_unsafe_borrow_channel(tty_));
         auto result = fidl::WireCall(end)->ReadEvents();
-        if (result.status() == ZX_OK && result->status == ZX_OK) {
-          events = result->events;
+        if (result.status() == ZX_OK && result.Unwrap_NEW()->status == ZX_OK) {
+          events = result.Unwrap_NEW()->events;
         }
         WaitForInterruptAsynchronously();
         if (events & fpty::wire::kEventInterrupt) {

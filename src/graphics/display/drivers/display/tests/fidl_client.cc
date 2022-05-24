@@ -94,13 +94,14 @@ zx::status<uint64_t> TestFidlClient::CreateLayerLocked() {
   if (!reply.ok()) {
     zxlogf(ERROR, "Failed to create layer (fidl=%d)", reply.status());
     return zx::error(reply.status());
-  } else if (reply->res != ZX_OK) {
-    zxlogf(ERROR, "Failed to create layer (res=%d)", reply->res);
-    return zx::error(reply->res);
+  } else if (reply.value_NEW().res != ZX_OK) {
+    zxlogf(ERROR, "Failed to create layer (res=%d)", reply.value_NEW().res);
+    return zx::error(reply.value_NEW().res);
   }
-  EXPECT_EQ(dc_->SetLayerPrimaryConfig(reply->layer_id, displays_[0].image_config_).status(),
-            ZX_OK);
-  return zx::ok(reply->layer_id);
+  EXPECT_EQ(
+      dc_->SetLayerPrimaryConfig(reply.value_NEW().layer_id, displays_[0].image_config_).status(),
+      ZX_OK);
+  return zx::ok(reply.value_NEW().layer_id);
 }
 
 zx::status<TestFidlClient::EventInfo> TestFidlClient::CreateEventLocked() {
@@ -279,7 +280,7 @@ zx_status_t TestFidlClient::PresentLayers(std::vector<PresentLayerInfo> present_
   }
 
   if (auto reply = dc_->CheckConfig(false);
-      !reply.ok() || reply->res != fhd::wire::ConfigResult::kOk) {
+      !reply.ok() || reply.value_NEW().res != fhd::wire::ConfigResult::kOk) {
     return reply.ok() ? ZX_ERR_INVALID_ARGS : reply.status();
   }
   return dc_->ApplyConfig().status();
@@ -290,7 +291,7 @@ fuchsia_hardware_display::wire::ConfigStamp TestFidlClient::GetRecentAppliedConf
   EXPECT_TRUE(dc_);
   auto result = dc_->GetLatestAppliedConfigStamp();
   EXPECT_TRUE(result.ok());
-  return result->stamp;
+  return result.value_NEW().stamp;
 }
 
 zx::status<uint64_t> TestFidlClient::ImportImageWithSysmem(
@@ -340,20 +341,19 @@ zx::status<uint64_t> TestFidlClient::ImportImageWithSysmemLocked(
     return zx::error(result.status());
   }
   if (auto result = dc_->ImportBufferCollection(display_collection_id, std::move(display_token));
-      !result.ok() || result->res != ZX_OK) {
+      !result.ok() || result.value_NEW().res != ZX_OK) {
     zxlogf(ERROR, "Failed to import buffer collection %lu (fidl=%d, res=%d)", display_collection_id,
-           result.status(), result->res);
-    return zx::error(result.ok() ? result->res : result.status());
+           result.status(), result.value_NEW().res);
+    return zx::error(result.ok() ? result.value_NEW().res : result.status());
   }
 
   auto set_constraints_result =
       dc_->SetBufferCollectionConstraints(display_collection_id, image_config);
-  if (!set_constraints_result.ok() || set_constraints_result->res != ZX_OK) {
+  if (!set_constraints_result.ok() || set_constraints_result.value_NEW().res != ZX_OK) {
     zxlogf(ERROR, "Setting buffer (%dx%d) collection constraints failed: %s", image_config.width,
            image_config.height, set_constraints_result.FormatDescription().c_str());
-    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
     (void)dc_->ReleaseBufferCollection(display_collection_id);
-    return zx::error(set_constraints_result.ok() ? set_constraints_result->res
+    return zx::error(set_constraints_result.ok() ? set_constraints_result.value_NEW().res
                                                  : set_constraints_result.status());
   }
 
@@ -387,28 +387,28 @@ zx::status<uint64_t> TestFidlClient::ImportImageWithSysmemLocked(
   }
   // Wait for the buffers to be allocated.
   auto info_result = sysmem_collection->WaitForBuffersAllocated();
-  if (!info_result.ok() || info_result->status != ZX_OK) {
+  if (!info_result.ok() || info_result.value_NEW().status != ZX_OK) {
     zxlogf(ERROR, "Waiting for buffers failed (fidl=%d res=%d)", info_result.status(),
-           info_result->status);
-    return zx::error(info_result.ok() ? info_result->status : info_result.status());
+           info_result.value_NEW().status);
+    return zx::error(info_result.ok() ? info_result.value_NEW().status : info_result.status());
   }
 
-  auto& info = info_result->buffer_collection_info;
+  auto& info = info_result.value_NEW().buffer_collection_info;
   if (info.buffer_count < 1) {
     zxlogf(ERROR, "Incorrect buffer collection count %d", info.buffer_count);
     return zx::error(ZX_ERR_NO_MEMORY);
   }
 
   auto import_result = dc_->ImportImage(image_config, display_collection_id, 0);
-  if (!import_result.ok() || import_result->res != ZX_OK) {
+  if (!import_result.ok() || import_result.value_NEW().res != ZX_OK) {
     zxlogf(ERROR, "Importing image failed (fidl=%d, res=%d)", import_result.status(),
-           import_result->res);
-    return zx::error(import_result.ok() ? import_result->res : import_result.status());
+           import_result.value_NEW().res);
+    return zx::error(import_result.ok() ? import_result.value_NEW().res : import_result.status());
   }
 
   // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
   (void)sysmem_collection->Close();
-  return zx::ok(import_result->image_id);
+  return zx::ok(import_result.value_NEW().image_id);
 }
 
 }  // namespace display

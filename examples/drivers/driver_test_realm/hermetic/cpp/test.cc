@@ -53,6 +53,6 @@ TEST_F(DriverTestRealmTest, DriversExist) {
   std::string_view sent_string = "hello";
   auto result = client->EchoString(fidl::StringView::FromExternal(sent_string));
   ASSERT_EQ(ZX_OK, result.status());
-  ASSERT_EQ(sent_string, result->response.get());
+  ASSERT_EQ(sent_string, result.value_NEW().response.get());
 }
 // [END example]

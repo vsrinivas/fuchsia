@@ -31,7 +31,7 @@ TEST(PayloadStreamerTest, RegisterVmo) {
   ASSERT_OK(zx::vmo::create(1, 0, &vmo));
   auto result = client->RegisterVmo(std::move(vmo));
   ASSERT_OK(result.status());
-  EXPECT_OK(result.value().status);
+  EXPECT_OK(result.value_NEW().status);
 }
 
 TEST(PayloadStreamerTest, RegisterVmoAgainErrorsOut) {
@@ -53,7 +53,7 @@ TEST(PayloadStreamerTest, RegisterVmoAgainErrorsOut) {
     ASSERT_OK(zx::vmo::create(1, 0, &vmo));
     auto result = client->RegisterVmo(std::move(vmo));
     ASSERT_OK(result.status());
-    EXPECT_OK(result.value().status);
+    EXPECT_OK(result.value_NEW().status);
   }
 
   {
@@ -61,7 +61,7 @@ TEST(PayloadStreamerTest, RegisterVmoAgainErrorsOut) {
     ASSERT_OK(zx::vmo::create(1, 0, &vmo));
     auto result = client->RegisterVmo(std::move(vmo));
     ASSERT_OK(result.status());
-    EXPECT_EQ(result.value().status, ZX_ERR_ALREADY_BOUND);
+    EXPECT_EQ(result.value_NEW().status, ZX_ERR_ALREADY_BOUND);
   }
 }
 
@@ -84,21 +84,22 @@ TEST(PayloadStreamerTest, ReadData) {
   ASSERT_OK(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
   auto register_result = client->RegisterVmo(std::move(dup));
   ASSERT_OK(register_result.status());
-  EXPECT_OK(register_result.value().status);
+  EXPECT_OK(register_result.value_NEW().status);
 
   auto read_result = client->ReadData();
   ASSERT_OK(read_result.status());
-  ASSERT_TRUE(read_result->result.is_info());
+  ASSERT_TRUE(read_result.value_NEW().result.is_info());
 
   char buffer[sizeof(data)] = {};
-  ASSERT_EQ(read_result->result.info().size, sizeof(buffer));
-  ASSERT_OK(vmo.read(buffer, read_result->result.info().offset, read_result->result.info().size));
+  ASSERT_EQ(read_result.value_NEW().result.info().size, sizeof(buffer));
+  ASSERT_OK(vmo.read(buffer, read_result.value_NEW().result.info().offset,
+                     read_result.value_NEW().result.info().size));
   ASSERT_EQ(memcmp(data, buffer, sizeof(data)), 0);
 
   // eof is returned if continue to read.
   auto eof_result = client->ReadData();
   ASSERT_OK(eof_result.status());
-  ASSERT_TRUE(eof_result->result.is_eof());
+  ASSERT_TRUE(eof_result.value_NEW().result.is_eof());
 }
 
 }  // namespace

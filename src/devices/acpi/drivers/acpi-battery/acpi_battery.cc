@@ -89,8 +89,8 @@ void AcpiBattery::DdkInit(ddk::InitTxn txn) {
     return;
   }
 
-  if (result->result.is_err()) {
-    zxlogf(ERROR, "Failed to InstallNotifyHandler: %d", int(result->result.err()));
+  if (result.value_NEW().is_error()) {
+    zxlogf(ERROR, "Failed to InstallNotifyHandler: %d", int(result.value_NEW().error_value()));
     status = ZX_ERR_INTERNAL;
     return;
   }
@@ -121,19 +121,19 @@ zx_status_t AcpiBattery::CheckAcpiState() {
     return result.status();
   }
 
-  if (result->result.is_err()) {
-    zxlogf(ERROR, "EvaluateObject failed: %d", int(result->result.err()));
+  if (result.value_NEW().is_error()) {
+    zxlogf(ERROR, "EvaluateObject failed: %d", int(result.value_NEW().error_value()));
     return ZX_ERR_INTERNAL;
   }
 
-  if (!result->result.response().result.is_object() ||
-      !result->result.response().result.object().is_integer_val()) {
+  if (!result.Unwrap_NEW()->value()->result.is_object() ||
+      !result.Unwrap_NEW()->value()->result.object().is_integer_val()) {
     zxlogf(ERROR, "Unexpected response from EvaluateObject");
     return ZX_ERR_INTERNAL;
   }
 
   std::scoped_lock lock(lock_);
-  uint64_t state = result->result.response().result.object().integer_val();
+  uint64_t state = result.Unwrap_NEW()->value()->result.object().integer_val();
   uint8_t old = source_info_.state;
   if (state & kStaBatteryPresent) {
     source_info_.state |= fpower::kPowerStateOnline;
@@ -156,20 +156,21 @@ zx_status_t AcpiBattery::CheckAcpiBatteryInformation() {
     return result.status();
   }
 
-  if (result->result.is_err()) {
-    zxlogf(ERROR, "EvaluateObject failed: %d", int(result->result.err()));
+  if (result.value_NEW().is_error()) {
+    zxlogf(ERROR, "EvaluateObject failed: %d", int(result.value_NEW().error_value()));
     return ZX_ERR_INTERNAL;
   }
 
-  if (!result->result.response().result.is_object() ||
-      !result->result.response().result.object().is_package_val() ||
-      result->result.response().result.object().package_val().value.count() < BifFields::kBifMax) {
+  if (!result.Unwrap_NEW()->value()->result.is_object() ||
+      !result.Unwrap_NEW()->value()->result.object().is_package_val() ||
+      result.Unwrap_NEW()->value()->result.object().package_val().value.count() <
+          BifFields::kBifMax) {
     zxlogf(ERROR, "Unexpected response from EvaluateObject");
     return ZX_ERR_INTERNAL;
   }
 
   // Validate the _BIF package elements' types.
-  auto& elements = result->result.response().result.object().package_val().value;
+  auto& elements = result.Unwrap_NEW()->value()->result.object().package_val().value;
   for (size_t i = 0; i < BifFields::kModelNumber; i++) {
     if (!elements[i].is_integer_val()) {
       zxlogf(ERROR, "_BIF expected field %zu to be an integer", i);
@@ -215,20 +216,21 @@ zx_status_t AcpiBattery::CheckAcpiBatteryState() {
     return result.status();
   }
 
-  if (result->result.is_err()) {
-    zxlogf(ERROR, "EvaluateObject failed: %d", int(result->result.err()));
+  if (result.value_NEW().is_error()) {
+    zxlogf(ERROR, "EvaluateObject failed: %d", int(result.value_NEW().error_value()));
     return ZX_ERR_INTERNAL;
   }
 
-  if (!result->result.response().result.is_object() ||
-      !result->result.response().result.object().is_package_val() ||
-      result->result.response().result.object().package_val().value.count() < BstFields::kBstMax) {
+  if (!result.Unwrap_NEW()->value()->result.is_object() ||
+      !result.Unwrap_NEW()->value()->result.object().is_package_val() ||
+      result.Unwrap_NEW()->value()->result.object().package_val().value.count() <
+          BstFields::kBstMax) {
     zxlogf(ERROR, "Unexpected response from EvaluateObject");
     return ZX_ERR_INTERNAL;
   }
 
   // Validate the _BST package elements' types.
-  auto& elements = result->result.response().result.object().package_val().value;
+  auto& elements = result.Unwrap_NEW()->value()->result.object().package_val().value;
   for (size_t i = 0; i < BstFields::kBstMax; i++) {
     if (!elements[i].is_integer_val()) {
       zxlogf(ERROR, "_BST expected field %zu to be an integer", i);

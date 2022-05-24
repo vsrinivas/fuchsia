@@ -86,7 +86,7 @@ class RadarIntegrationTest : public zxtest::Test {
 
     const auto result = provider_client->Connect(std::move(server_end));
     ASSERT_TRUE(result.ok());
-    ASSERT_TRUE(result->result.is_response());
+    ASSERT_TRUE(result.Unwrap_NEW()->is_ok());
 
     std::promise<void> client_torn_down_promise;
     *out_client_torn_down = client_torn_down_promise.get_future();
@@ -126,7 +126,7 @@ TEST_F(RadarIntegrationTest, BurstSize) {
 
   auto result = client.sync()->GetBurstSize();
   ASSERT_OK(result.status());
-  EXPECT_EQ(result->burst_size, kBurstSize);
+  EXPECT_EQ(result.Unwrap_NEW()->burst_size, kBurstSize);
 }
 
 TEST_F(RadarIntegrationTest, Reconnect) {
@@ -137,7 +137,7 @@ TEST_F(RadarIntegrationTest, Reconnect) {
   {
     const auto result = client1.sync()->GetBurstSize();
     ASSERT_OK(result.status());
-    EXPECT_EQ(result->burst_size, kBurstSize);
+    EXPECT_EQ(result.Unwrap_NEW()->burst_size, kBurstSize);
   }
 
   // Unbind and close our end of the channel. We should eventually be able to reconnect, after the
@@ -151,7 +151,7 @@ TEST_F(RadarIntegrationTest, Reconnect) {
   {
     const auto result = client2.sync()->GetBurstSize();
     ASSERT_OK(result.status());
-    EXPECT_EQ(result->burst_size, kBurstSize);
+    EXPECT_EQ(result.Unwrap_NEW()->burst_size, kBurstSize);
   }
 }
 
@@ -185,7 +185,7 @@ TEST_F(RadarIntegrationTest, BurstFormat) {
 
     const auto result = client.sync()->RegisterVmos(vmo_id, vmo_dup);
     ASSERT_OK(result.status());
-    ASSERT_TRUE(result->result.is_response());
+    ASSERT_TRUE(result.Unwrap_NEW()->is_ok());
   }
 
   EXPECT_OK(client->StartBursts().status());
@@ -206,9 +206,9 @@ TEST_F(RadarIntegrationTest, BurstFormat) {
 
     const auto result = client.sync()->UnregisterVmos(vmo_id);
     ASSERT_OK(result.status());
-    ASSERT_TRUE(result->result.is_response());
-    ASSERT_EQ(result->result.response().vmos.count(), 1);
-    EXPECT_TRUE(result->result.response().vmos[0].is_valid());
+    ASSERT_TRUE(result.Unwrap_NEW()->is_ok());
+    ASSERT_EQ(result.Unwrap_NEW()->value()->vmos.count(), 1);
+    EXPECT_TRUE(result.Unwrap_NEW()->value()->vmos[0].is_valid());
   }
 }
 
@@ -249,7 +249,7 @@ TEST_F(RadarIntegrationTest, ReadManyBursts) {
 
     const auto result = client.sync()->RegisterVmos(vmo_ids, vmo_dups);
     ASSERT_OK(result.status());
-    ASSERT_TRUE(result->result.is_response());
+    ASSERT_TRUE(result.Unwrap_NEW()->is_ok());
   }
 
   EXPECT_OK(client->StartBursts().status());
@@ -268,10 +268,10 @@ TEST_F(RadarIntegrationTest, ReadManyBursts) {
 
     const auto result = client.sync()->UnregisterVmos(vmo_ids);
     ASSERT_OK(result.status());
-    ASSERT_TRUE(result->result.is_response());
-    ASSERT_EQ(result->result.response().vmos.count(), kVmoCount);
+    ASSERT_TRUE(result.Unwrap_NEW()->is_ok());
+    ASSERT_EQ(result.Unwrap_NEW()->value()->vmos.count(), kVmoCount);
     for (size_t i = 0; i < kVmoCount; i++) {
-      EXPECT_TRUE(result->result.response().vmos[i].is_valid());
+      EXPECT_TRUE(result.Unwrap_NEW()->value()->vmos[i].is_valid());
     }
   }
 }
@@ -314,7 +314,7 @@ TEST_F(RadarIntegrationTest, ReadManyBurstsMultipleClients) {
 
     const auto result = client.client.sync()->RegisterVmos(vmo_ids, vmo_dups);
     ASSERT_OK(result.status());
-    ASSERT_TRUE(result->result.is_response());
+    ASSERT_TRUE(result.Unwrap_NEW()->is_ok());
   }
 
   for (auto& client : clients) {
@@ -341,10 +341,10 @@ TEST_F(RadarIntegrationTest, ReadManyBurstsMultipleClients) {
 
     const auto result = client.client.sync()->UnregisterVmos(vmo_ids);
     ASSERT_OK(result.status());
-    ASSERT_TRUE(result->result.is_response());
-    ASSERT_EQ(result->result.response().vmos.count(), kVmoCount);
+    ASSERT_TRUE(result.Unwrap_NEW()->is_ok());
+    ASSERT_EQ(result.Unwrap_NEW()->value()->vmos.count(), kVmoCount);
     for (size_t i = 0; i < kVmoCount; i++) {
-      EXPECT_TRUE(result->result.response().vmos[i].is_valid());
+      EXPECT_TRUE(result.Unwrap_NEW()->value()->vmos[i].is_valid());
     }
   }
 }

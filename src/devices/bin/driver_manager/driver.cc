@@ -46,7 +46,7 @@ bool is_driver_disabled(fidl::WireSyncClient<fuchsia_boot::Arguments>* boot_args
   // driver.<driver_name>.disable
   auto option = fbl::StringPrintf("driver.%s.disable", name);
   auto disabled = (*boot_args)->GetBool(fidl::StringView::FromExternal(option), false);
-  return disabled.ok() && disabled->value;
+  return disabled.ok() && disabled.value_NEW().value;
 }
 
 bool is_driver_eager_fallback(fidl::WireSyncClient<fuchsia_boot::Arguments>* boot_args,
@@ -56,8 +56,8 @@ bool is_driver_eager_fallback(fidl::WireSyncClient<fuchsia_boot::Arguments>* boo
   }
   std::vector<fbl::String> eager_fallback_drivers;
   auto drivers = (*boot_args)->GetString("devmgr.bind-eager");
-  if (drivers.ok() && !drivers->value.is_null() && !drivers->value.empty()) {
-    std::string list(drivers->value.data(), drivers->value.size());
+  if (drivers.ok() && !drivers.value_NEW().value.is_null() && !drivers.value_NEW().value.empty()) {
+    std::string list(drivers.value_NEW().value.data(), drivers.value_NEW().value.size());
     size_t pos;
     while ((pos = list.find(',')) != std::string::npos) {
       eager_fallback_drivers.emplace_back(list.substr(0, pos));

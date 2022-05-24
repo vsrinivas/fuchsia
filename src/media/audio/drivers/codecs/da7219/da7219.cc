@@ -325,15 +325,15 @@ zx_status_t Da7219::Bind(void* ctx, zx_device_t* dev) {
     }
 
     auto result = client->borrow()->MapInterrupt(0);
-    if (!result.ok() || result->result.is_err()) {
+    if (!result.ok() || result.value_NEW().is_error()) {
       zxlogf(WARNING, "Could not get IRQ: %s",
-             result.ok() ? zx_status_get_string(result->result.err())
+             result.ok() ? zx_status_get_string(result.value_NEW().error_value())
                          : result.FormatDescription().data());
       return ZX_ERR_NO_RESOURCES;
     }
 
     return SimpleCodecServer::CreateAndAddToDdk<Da7219>(dev, std::move(endpoints->client),
-                                                        std::move(result->result.response().irq));
+                                                        std::move(result.value_NEW().value()->irq));
   }
   return ZX_ERR_NOT_SUPPORTED;
 }

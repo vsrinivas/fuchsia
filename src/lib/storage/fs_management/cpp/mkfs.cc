@@ -79,8 +79,8 @@ zx::status<> MkfsComponentFs(fidl::UnownedClientEnd<fuchsia_io::Directory> expos
   auto res = startup_client->Format(std::move(*device), options.as_format_options());
   if (!res.ok())
     return zx::error(res.status());
-  if (res->result.is_err())
-    return zx::error(res->result.err());
+  if (res.Unwrap_NEW()->is_error())
+    return zx::error(res.Unwrap_NEW()->error_value());
 
   return zx::ok();
 }

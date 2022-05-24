@@ -36,7 +36,7 @@ zx_status_t get_root_job(zx::job* root_job) {
   if (!result.ok()) {
     return result.status();
   }
-  *root_job = std::move(result.value().job);
+  *root_job = std::move(result.value_NEW().job);
   return ZX_OK;
 }
 

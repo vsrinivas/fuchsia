@@ -66,9 +66,10 @@ TEST_F(FvmVPartitionLoadTest, LoadPartitionWithPlaceHolderGuidIsUpdated) {
   auto topo_result =
       fidl::WireCall<fuchsia_device::Controller>(vpartition->channel())->GetTopologicalPath();
   ASSERT_TRUE(topo_result.ok());
-  ASSERT_TRUE(topo_result->result.is_response());
-  auto partition_path = std::string(topo_result->result.response().path.begin() + strlen("/dev/"),
-                                    topo_result->result.response().path.end());
+  ASSERT_TRUE(topo_result.Unwrap_NEW()->is_ok());
+  auto partition_path =
+      std::string(topo_result.Unwrap_NEW()->value()->path.begin() + strlen("/dev/"),
+                  topo_result.Unwrap_NEW()->value()->path.end());
   std::vector<uint8_t> partition_guid(kGuidSize, 0);
   {
     // After rebind the instance guid should not be kPlaceHolderGUID.
@@ -82,10 +83,10 @@ TEST_F(FvmVPartitionLoadTest, LoadPartitionWithPlaceHolderGuidIsUpdated) {
         fidl::WireCall<fuchsia_hardware_block_partition::Partition>(caller.channel()->borrow())
             ->GetInstanceGuid();
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
-    EXPECT_FALSE(memcmp(result->guid.get(), kPlaceHolderInstanceGuid.data(),
+    ASSERT_OK(result.value_NEW().status);
+    EXPECT_FALSE(memcmp(result.value_NEW().guid.get(), kPlaceHolderInstanceGuid.data(),
                         kPlaceHolderInstanceGuid.size()) == 0);
-    memcpy(partition_guid.data(), result->guid.get(), kGuidSize);
+    memcpy(partition_guid.data(), result.value_NEW().guid.get(), kGuidSize);
   }
   {
     // One more time to check that the UUID persisted, so it doesn't change between 'reboot'.
@@ -99,9 +100,9 @@ TEST_F(FvmVPartitionLoadTest, LoadPartitionWithPlaceHolderGuidIsUpdated) {
         fidl::WireCall<fuchsia_hardware_block_partition::Partition>(caller.channel()->borrow())
             ->GetInstanceGuid();
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
-    EXPECT_TRUE(
-        memcmp(result->guid.get(), partition_guid.data(), kPlaceHolderInstanceGuid.size()) == 0);
+    ASSERT_OK(result.value_NEW().status);
+    EXPECT_TRUE(memcmp(result.value_NEW().guid.get(), partition_guid.data(),
+                       kPlaceHolderInstanceGuid.size()) == 0);
   }
 }
 

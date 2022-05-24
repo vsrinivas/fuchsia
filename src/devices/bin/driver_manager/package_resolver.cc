@@ -85,12 +85,12 @@ zx::status<fidl::WireSyncClient<fio::Directory>> PackageResolver::Resolve(
   auto result = resolver_client_->Resolve(
       ::fidl::StringView(fidl::StringView::FromExternal(package_url.package_path())),
       std::move(endpoints->server));
-  if (!result.ok() || result.Unwrap()->result.is_err()) {
+  if (!result.ok() || result.Unwrap_NEW()->is_error()) {
     LOGF(ERROR, "Failed to resolve package");
     if (!result.ok()) {
       return zx::error(ZX_ERR_INTERNAL);
     } else {
-      switch (result.Unwrap()->result.err()) {
+      switch (result.Unwrap_NEW()->error_value()) {
         case fuchsia_pkg::wire::ResolveError::kIo:
           return zx::error(ZX_ERR_IO);
         case fuchsia_pkg::wire::ResolveError::kAccessDenied:
@@ -141,14 +141,12 @@ zx::status<zx::vmo> PackageResolver::LoadDriver(
     LOGF(ERROR, "Failed to get driver vmo: %s", file_res.FormatDescription().c_str());
     return zx::error(ZX_ERR_INTERNAL);
   }
-  auto& file_resp = file_res.value();
-  switch (file_resp.result.Which()) {
-    case fio::wire::File2GetBackingMemoryResult::Tag::kErr:
-      LOGF(ERROR, "Failed to get driver vmo: %s", zx_status_get_string(file_resp.result.err()));
-      return zx::error(ZX_ERR_INTERNAL);
-    case fio::wire::File2GetBackingMemoryResult::Tag::kResponse:
-      return zx::ok(std::move(file_resp.result.response().vmo));
+  const auto* res = file_res.Unwrap_NEW();
+  if (res->is_error()) {
+    LOGF(ERROR, "Failed to get driver vmo: %s", zx_status_get_string(res->error_value()));
+    return zx::error(ZX_ERR_INTERNAL);
   }
+  return zx::ok(std::move(res->value()->vmo));
 }
 
 }  // namespace internal

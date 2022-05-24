@@ -107,7 +107,7 @@ TEST(FidlTestCase, Basic) {
     ASSERT_OK(fdio_service_connect("/dev/class", endpoints->server.channel().release()));
     const fidl::WireResult result = fidl::WireCall(endpoints->client)->Describe();
     ASSERT_OK(result.status());
-    const auto& response = result.value();
+    const auto& response = result.value_NEW();
     ASSERT_TRUE(response.info.is_directory());
   }
 
@@ -117,7 +117,7 @@ TEST(FidlTestCase, Basic) {
     ASSERT_OK(fdio_service_connect("/dev/zero", endpoints->server.channel().release()));
     const fidl::WireResult result = fidl::WireCall(endpoints->client)->Describe();
     ASSERT_OK(result.status());
-    const auto& response = result.value();
+    const auto& response = result.value_NEW();
     ASSERT_TRUE(response.info.is_device());
   }
 }
@@ -177,7 +177,7 @@ TEST(FidlTestCase, DirectoryWatcherExisting) {
       fidl::WireCall(endpoints->client)
           ->Watch(fio::wire::WatchMask::kMask, 0, std::move(watcher_endpoints->server));
   ASSERT_OK(result.status());
-  const auto& response = result.value();
+  const auto& response = result.value_NEW();
   ASSERT_OK(response.s);
 
   watch_buffer_t wb = {};
@@ -212,7 +212,7 @@ TEST(FidlTestCase, DirectoryWatcherWithClosedHalf) {
         fidl::WireCall(endpoints->client)
             ->Watch(fio::wire::WatchMask::kMask, 0, std::move(watcher_endpoints->server));
     ASSERT_OK(result.status());
-    const auto& response = result.value();
+    const auto& response = result.value_NEW();
     ASSERT_OK(response.s);
     // If we're here and usermode didn't crash, we didn't hit the bug.
   }
@@ -226,7 +226,7 @@ TEST(FidlTestCase, DirectoryWatcherWithClosedHalf) {
         fidl::WireCall(endpoints->client)
             ->Watch(fio::wire::WatchMask::kMask, 0, std::move(watcher_endpoints->server));
     ASSERT_OK(result.status());
-    const auto& response = result.value();
+    const auto& response = result.value_NEW();
     ASSERT_OK(response.s);
 
     watch_buffer_t wb = {};

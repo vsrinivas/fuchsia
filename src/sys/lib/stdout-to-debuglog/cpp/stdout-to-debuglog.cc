@@ -24,7 +24,7 @@ zx_status_t Init() {
   if (result.status() != ZX_OK) {
     return result.status();
   }
-  zx::debuglog log = std::move(result.Unwrap()->log);
+  zx::debuglog log = std::move(result.Unwrap_NEW()->log);
   for (int fd = 1; fd <= 2; ++fd) {
     zx::debuglog dup;
     zx_status_t status = log.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);

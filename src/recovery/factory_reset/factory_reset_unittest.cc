@@ -218,8 +218,8 @@ class FactoryResetTest : public Test {
     if (io_status != ZX_OK) {
       return io_status;
     }
-    if (resp->result.is_err()) {
-      call_status = resp->result.err();
+    if (resp.Unwrap_NEW()->is_error()) {
+      call_status = resp.Unwrap_NEW()->error_value();
     }
     return call_status;
   }
@@ -256,7 +256,7 @@ class FactoryResetTest : public Test {
             ->AllocatePartition(req.slice_count, type_guid, instance_guid,
                                 fidl::StringView::FromExternal(kDataName), req.flags);
     ASSERT_EQ(response.status(), ZX_OK);
-    ASSERT_EQ(response->status, ZX_OK);
+    ASSERT_EQ(response.value_NEW().status, ZX_OK);
 
     fvm_block_path_ = fvm_path;
     fvm_block_path_.append("/");

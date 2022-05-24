@@ -259,8 +259,9 @@ fpromise::promise<void, zx_status_t> ChromiumosEcCore::BindFidlClients(
                 zxlogf(ERROR, "Failed to install notify handler: %s",
                        result.FormatDescription().data());
                 completer.complete_error(result.status());
-              } else if (result->result.is_err()) {
-                zxlogf(ERROR, "Failed to install notify handler: %u", int(result->result.err()));
+              } else if (result.Unwrap_NEW()->is_error()) {
+                zxlogf(ERROR, "Failed to install notify handler: %u",
+                       int(result.Unwrap_NEW()->error_value()));
                 completer.complete_error(ZX_ERR_INTERNAL);
               } else {
                 completer.complete_ok();
@@ -346,18 +347,18 @@ fpromise::promise<CommandResult, zx_status_t> ChromiumosEcCore::IssueRawCommand(
           return;
         }
 
-        if (response->result.is_err()) {
+        if (response.Unwrap_NEW()->is_error()) {
           zxlogf(ERROR, "Failed to execute EC command %u version %u: %s", command, version,
-                 zx_status_get_string(response->result.err()));
-          completer.complete_error(response->result.err());
+                 zx_status_get_string(response.Unwrap_NEW()->error_value()));
+          completer.complete_error(response.Unwrap_NEW()->error_value());
           return;
         }
 
         CommandResult ret;
-        auto& view = response->result.response().data;
+        auto& view = response.Unwrap_NEW()->value()->data;
         ret.data.assign(view.begin(), view.end());
 
-        ret.status = response->result.response().result;
+        ret.status = response.Unwrap_NEW()->value()->result;
         completer.complete_ok(std::move(ret));
       });
 

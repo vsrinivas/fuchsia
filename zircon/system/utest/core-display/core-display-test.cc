@@ -58,7 +58,7 @@ class CoreDisplayTest : public zxtest::Test {
   void SetUp() override;
   void TearDown() override;
   bool IsCaptureSupported() {
-    return (dc_client_->IsCaptureSupported().value().result.response().supported);
+    return (dc_client_->IsCaptureSupported().Unwrap_NEW()->value()->supported);
   }
   void ImportEvent();
   void CreateToken();
@@ -263,11 +263,11 @@ uint64_t CoreDisplayTest::ImportCaptureImage() const {
   if (importcap_resp.status() != ZX_OK) {
     return INVALID_ID;
   }
-  if (importcap_resp.value().result.is_err()) {
-    return importcap_resp.value().result.err();
+  if (importcap_resp.Unwrap_NEW()->is_error()) {
+    return importcap_resp.Unwrap_NEW()->error_value();
   }
 
-  return importcap_resp.value().result.response().image_id;
+  return importcap_resp.Unwrap_NEW()->value()->image_id;
 }
 
 zx_status_t CoreDisplayTest::StartCapture(uint64_t id, uint64_t e) const {
@@ -275,8 +275,8 @@ zx_status_t CoreDisplayTest::StartCapture(uint64_t id, uint64_t e) const {
   if (!startcap_resp.ok()) {
     return startcap_resp.status();
   }
-  if (startcap_resp.value().result.is_err()) {
-    return (startcap_resp.value().result.err());
+  if (startcap_resp.Unwrap_NEW()->is_error()) {
+    return (startcap_resp.Unwrap_NEW()->error_value());
   }
   return ZX_OK;
 }
@@ -286,8 +286,8 @@ zx_status_t CoreDisplayTest::ReleaseCapture(uint64_t id) const {
   if (!releasecap_resp.ok()) {
     return releasecap_resp.status();
   }
-  if (releasecap_resp.value().result.is_err()) {
-    return (releasecap_resp.value().result.err());
+  if (releasecap_resp.Unwrap_NEW()->is_error()) {
+    return (releasecap_resp.Unwrap_NEW()->error_value());
   }
   return ZX_OK;
 }
@@ -509,15 +509,15 @@ TEST_F(CoreDisplayTest, CaptureNotSupported) {
   fhd::wire::ImageConfig image_config = {};
   auto import_resp = dc_client_->ImportImageForCapture(image_config, 0, 0);
   EXPECT_TRUE(import_resp.ok());
-  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, import_resp.value().result.err());
+  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, import_resp.Unwrap_NEW()->error_value());
 
   auto start_resp = dc_client_->StartCapture(0, 0);
   EXPECT_TRUE(start_resp.ok());
-  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, start_resp.value().result.err());
+  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, start_resp.Unwrap_NEW()->error_value());
 
   auto release_resp = dc_client_->ReleaseCapture(0);
   EXPECT_TRUE(release_resp.ok());
-  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, release_resp.value().result.err());
+  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, release_resp.Unwrap_NEW()->error_value());
 }
 
 TEST_F(CoreDisplayTest, CreateLayerNoResource) {

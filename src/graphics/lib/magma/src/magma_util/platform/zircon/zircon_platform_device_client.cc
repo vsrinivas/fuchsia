@@ -52,23 +52,23 @@ class ZirconPlatformDeviceClient : public PlatformDeviceClient {
     if (result.status() != ZX_OK)
       return DRET_MSG(result.status(), "magma_DeviceQuery failed");
 
-    if (result->result.is_err())
-      return DRET_MSG(result->result.err(), "Got error response");
+    if (result.Unwrap_NEW()->is_error())
+      return DRET_MSG(result.Unwrap_NEW()->error_value(), "Got error response");
 
-    if (result->result.response().is_buffer_result()) {
+    if (result.Unwrap_NEW()->value()->is_buffer_result()) {
       if (!result_buffer_out)
         return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Can't return query result buffer");
 
-      *result_buffer_out = result->result.response().buffer_result().release();
+      *result_buffer_out = result.Unwrap_NEW()->value()->buffer_result().release();
 
       return MAGMA_STATUS_OK;
     }
 
-    if (result->result.response().is_simple_result()) {
+    if (result.Unwrap_NEW()->value()->is_simple_result()) {
       if (!result_out)
         return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Can't return query simple result");
 
-      *result_out = result->result.response().simple_result();
+      *result_out = result.Unwrap_NEW()->value()->simple_result();
 
       if (result_buffer_out)
         *result_buffer_out = ZX_HANDLE_INVALID;

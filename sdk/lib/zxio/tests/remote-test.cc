@@ -226,7 +226,7 @@ TEST_F(CloneTest, Clone) {
   const fidl::WireResult describe_response = fidl::WireCall(clone_client)->Describe();
   ASSERT_EQ(ZX_OK, describe_response.status());
 
-  EXPECT_TRUE(describe_response.value().info.is_file());
+  EXPECT_TRUE(describe_response.value_NEW().info.is_file());
 }
 
 TEST_F(CloneTest, Reopen) {

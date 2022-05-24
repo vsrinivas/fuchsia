@@ -82,7 +82,7 @@ void USBVirtualBusBase::SetupPeripheralDevice(DeviceDescriptor&& device_desc,
       std::move(device_desc),
       fidl::VectorView<ConfigurationDescriptor>::FromExternal(config_descs));
   ASSERT_OK(set_config.status());
-  ASSERT_FALSE(set_config->result.is_err());
+  ASSERT_FALSE(set_config.Unwrap_NEW()->is_error());
 
   async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
   usb_peripheral_utils::EventWatcher watcher(&loop, std::move(handles[0]), 1);

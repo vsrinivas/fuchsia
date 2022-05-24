@@ -142,7 +142,7 @@ TEST_F(ServerTest, ConnectsToDefaultMember) {
   fidl::WireResult<Echo::EchoString> echo_result = client->EchoString(fidl::StringView("hello"));
   ASSERT_TRUE(echo_result.ok());
 
-  auto response = echo_result.Unwrap();
+  auto response = echo_result.Unwrap_NEW();
 
   std::string result_string(response->response.data(), response->response.size());
   ASSERT_EQ(result_string, "default-foo: hello");
@@ -172,7 +172,7 @@ TEST_F(ServerTest, ConnectsToOtherMember) {
   fidl::WireResult<Echo::EchoString> echo_result = client->EchoString(fidl::StringView("hello"));
   ASSERT_TRUE(echo_result.ok());
 
-  auto response = echo_result.Unwrap();
+  auto response = echo_result.Unwrap_NEW();
 
   std::string result_string(response->response.data(), response->response.size());
   ASSERT_EQ(result_string, "other-foo: hello");

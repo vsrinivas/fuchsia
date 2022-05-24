@@ -215,8 +215,8 @@ TEST_F(Cr50SpiTest, TestTpmRead) {
   ExpectMessage(false, fuchsia_hardware_tpmimpl::wire::RegisterAddress::kTpmSts, {}, expected);
   auto read = client->Read(0, fuchsia_hardware_tpmimpl::wire::RegisterAddress::kTpmSts, 4);
   ASSERT_TRUE(read.ok());
-  ASSERT_TRUE(read->result.is_response());
-  auto& view = read->result.response().data;
+  ASSERT_TRUE(read.Unwrap_NEW()->is_ok());
+  auto& view = read.Unwrap_NEW()->value()->data;
   ASSERT_EQ(view.count(), expected.size());
   ASSERT_BYTES_EQ(view.data(), expected.data(), expected.size());
   ASSERT_EQ(messages_.size(), 0);
@@ -239,6 +239,6 @@ TEST_F(Cr50SpiTest, TestTpmWrite) {
   auto read = client->Write(0, fuchsia_hardware_tpmimpl::wire::RegisterAddress::kTpmSts,
                             fidl::VectorView<uint8_t>::FromExternal(expected));
   ASSERT_TRUE(read.ok());
-  ASSERT_TRUE(read->result.is_response());
+  ASSERT_TRUE(read.Unwrap_NEW()->is_ok());
   ASSERT_EQ(messages_.size(), 0);
 }

@@ -63,7 +63,7 @@ TEST(LauncherTest, OutgoingServices) {
 
   auto result = fidl::BindSyncClient(std::move(*local))->DumpTree(std::move(vmo_dup));
   ASSERT_OK(result.status());
-  ASSERT_OK(result->status);
+  ASSERT_OK(result.value_NEW().status);
 
   fbl::unique_fd fd;
   ASSERT_OK(device_watcher::RecursiveWaitForFile(devmgr.devfs_root(), "sys/test/test", &fd));

@@ -49,7 +49,7 @@ zx::status<zx::resource> GetResource() {
   if (!result.ok()) {
     return zx::error(result.status());
   }
-  return zx::ok(std::move(result->resource));
+  return zx::ok(std::move(result.value_NEW().resource));
 }
 
 // Return true if the platform we are running on supports running guests.

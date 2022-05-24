@@ -42,15 +42,15 @@ zx::status<ResolvedProcess> ResolveName(std::string_view name) {
     return zx::error(ZX_ERR_INTERNAL);
   }
 
-  status = response->status;
+  status = response.value_NEW().status;
   if (status != ZX_OK) {
     LOGF(WARNING, "failed to resolve %.*s: %d (%s)", static_cast<int>(name.size()), name.data(),
          status, zx_status_get_string(status));
     return zx::error(status);
   }
 
-  ResolvedProcess resolved = {.executable = std::move(response->executable),
-                              .ldsvc = std::move(response->ldsvc.channel())};
+  ResolvedProcess resolved = {.executable = std::move(response.value_NEW().executable),
+                              .ldsvc = std::move(response.value_NEW().ldsvc.channel())};
 
   return zx::ok(std::move(resolved));
 }

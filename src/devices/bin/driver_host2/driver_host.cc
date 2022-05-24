@@ -258,6 +258,7 @@ void DriverHost::Start(StartRequest& request, StartCompleter::Sync& completer) {
       return;
     }
     zx::vmo vmo = std::move(result->vmo());
+
     // Give the driver's VMO a name. We can't fit the entire URL in the name, so
     // use the name of the manifest from the URL.
     auto manifest = GetManifest(url);

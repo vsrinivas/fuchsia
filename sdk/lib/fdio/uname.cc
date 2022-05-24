@@ -29,12 +29,12 @@ extern "C" __EXPORT int uname(utsname* uts) {
     return ERROR(response.status());
   }
 
-  auto result = std::move(response.Unwrap()->result);
-  if (result.is_err()) {
-    return ERROR(result.err());
+  auto* result = response.Unwrap_NEW();
+  if (result->is_error()) {
+    return ERROR(result->error_value());
   }
 
-  const fidl::StringView& nodename = result.response().name;
+  const fidl::StringView& nodename = result->value()->name;
   const auto size = std::min(nodename.size(), sizeof(uts->nodename) - 1);
   memcpy(uts->nodename, nodename.data(), size);
   uts->nodename[size] = '\0';

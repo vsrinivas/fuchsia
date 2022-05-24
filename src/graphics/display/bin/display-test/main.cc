@@ -117,9 +117,9 @@ static bool bind_display(const char* controller, fbl::Vector<Display>* displays)
     printf("Failed to call service handle: %s\n", open_response.FormatDescription().c_str());
     return false;
   }
-  if (open_response->s != ZX_OK) {
-    printf("Failed to open controller %d (%s)\n", open_response->s,
-           zx_status_get_string(open_response->s));
+  if (open_response.value_NEW().s != ZX_OK) {
+    printf("Failed to open controller %d (%s)\n", open_response.value_NEW().s,
+           zx_status_get_string(open_response.value_NEW().s));
     return false;
   }
 
@@ -233,9 +233,9 @@ std::optional<fhd::wire::ConfigStamp> apply_config() {
     return std::nullopt;
   }
 
-  if (result->res != fhd::wire::ConfigResult::kOk) {
-    printf("Config not valid (%d)\n", static_cast<uint32_t>(result->res));
-    for (const auto& op : result->ops) {
+  if (result.value_NEW().res != fhd::wire::ConfigResult::kOk) {
+    printf("Config not valid (%d)\n", static_cast<uint32_t>(result.value_NEW().res));
+    for (const auto& op : result.value_NEW().ops) {
       printf("Client composition op (display %ld, layer %ld): %hhu\n", op.display_id, op.layer_id,
              static_cast<uint8_t>(op.opcode));
     }
@@ -253,7 +253,7 @@ std::optional<fhd::wire::ConfigStamp> apply_config() {
     return std::nullopt;
   }
 
-  return config_stamp_result->stamp;
+  return config_stamp_result.value_NEW().stamp;
 }
 
 zx_status_t wait_for_vsync(fhd::wire::ConfigStamp expected_stamp) {
@@ -319,7 +319,7 @@ zx_status_t capture_setup() {
     printf("%s: %s\n", __func__, support_resp.FormatDescription().c_str());
     return ZX_ERR_NOT_SUPPORTED;
   }
-  if (!support_resp.value().result.response().supported) {
+  if (!support_resp.Unwrap_NEW()->value()->supported) {
     return ZX_ERR_NOT_SUPPORTED;
   }
   // Import event used to get notified once capture is completed
@@ -469,7 +469,7 @@ zx_status_t capture_setup() {
     return wait_resp.status();
   }
 
-  capture_vmo = std::move(wait_resp.value().buffer_collection_info.buffers[0].vmo);
+  capture_vmo = std::move(wait_resp.value_NEW().buffer_collection_info.buffers[0].vmo);
   // import image for capture
   fhd::wire::ImageConfig capture_cfg = {};  // will contain a handle
   auto importcap_resp = dc->ImportImageForCapture(capture_cfg, kCollectionId, 0);
@@ -477,11 +477,11 @@ zx_status_t capture_setup() {
     printf("Failed to start capture: %s\n", importcap_resp.FormatDescription().c_str());
     return importcap_resp.status();
   }
-  if (importcap_resp.value().result.is_err()) {
-    printf("Could not import image for capture %d\n", importcap_resp.value().result.err());
-    return importcap_resp.value().result.err();
+  if (importcap_resp.Unwrap_NEW()->is_error()) {
+    printf("Could not import image for capture %d\n", importcap_resp.Unwrap_NEW()->error_value());
+    return importcap_resp.Unwrap_NEW()->error_value();
   }
-  capture_id = importcap_resp.value().result.response().image_id;
+  capture_id = importcap_resp.Unwrap_NEW()->value()->image_id;
   return ZX_OK;
 }
 
@@ -665,14 +665,14 @@ Platforms GetPlatform() {
   }
   fdio_cpp::FdioCaller caller_sysinfo(std::move(sysinfo_fd));
   auto result = fidl::WireCall<sysinfo::SysInfo>(caller_sysinfo.channel())->GetBoardName();
-  if (!result.ok() || result.value().status != ZX_OK) {
+  if (!result.ok() || result.value_NEW().status != ZX_OK) {
     return UNKNOWN_PLATFORM;
   }
 
   board_name.Clear();
-  board_name.Append(result.value().name.data(), result.value().name.size());
+  board_name.Append(result.value_NEW().name.data(), result.value_NEW().name.size());
 
-  printf("Found board %.*s\n", static_cast<int>(board_name.size()), result.value().name.data());
+  printf("Found board %.*s\n", static_cast<int>(board_name.size()), result.value_NEW().name.data());
 
   auto board_name_cmp = std::string_view(board_name.data(), board_name.size());
   if (board_name_cmp == "x64" || board_name_cmp == "chromebook-x64" || board_name_cmp == "Eve" ||

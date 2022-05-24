@@ -313,7 +313,7 @@ TEST_F(NetworkDeviceTest, GetInfo) {
   fidl::WireSyncClient connection = OpenConnection();
   fidl::WireResult rsp = connection->GetInfo();
   ASSERT_OK(rsp.status());
-  auto& info = rsp.value().info;
+  auto& info = rsp.value_NEW().info;
   ASSERT_TRUE(info.has_tx_depth());
   EXPECT_EQ(info.tx_depth(), impl_.info().tx_depth * 2);
   ASSERT_TRUE(info.has_rx_depth());
@@ -348,7 +348,7 @@ TEST_F(NetworkDeviceTest, OptionalMaxBufferLength) {
   fidl::WireSyncClient connection = OpenConnection();
   fidl::WireResult rsp = connection->GetInfo();
   ASSERT_OK(rsp.status());
-  auto& info = rsp.value().info;
+  auto& info = rsp.value_NEW().info;
   ASSERT_FALSE(info.has_max_buffer_length())
       << "Unexpected buffer length " << info.max_buffer_length();
 }
@@ -1227,8 +1227,8 @@ TEST_F(NetworkDeviceTest, ObserveStatus) {
   {
     fidl::WireResult result = watcher->WatchStatus();
     ASSERT_OK(result.status());
-    ASSERT_EQ(result.value().port_status.mtu(), port13_.status().mtu);
-    ASSERT_EQ(result.value().port_status.flags(), StatusFlags());
+    ASSERT_EQ(result.value_NEW().port_status.mtu(), port13_.status().mtu);
+    ASSERT_EQ(result.value_NEW().port_status.flags(), StatusFlags());
   }
   // Set online, then set offline (watcher is buffered, we should be able to observe both).
   port13_.SetOnline(true);
@@ -1236,14 +1236,14 @@ TEST_F(NetworkDeviceTest, ObserveStatus) {
   {
     fidl::WireResult result = watcher->WatchStatus();
     ASSERT_OK(result.status());
-    ASSERT_EQ(result.value().port_status.mtu(), port13_.status().mtu);
-    ASSERT_EQ(result.value().port_status.flags(), StatusFlags::kOnline);
+    ASSERT_EQ(result.value_NEW().port_status.mtu(), port13_.status().mtu);
+    ASSERT_EQ(result.value_NEW().port_status.flags(), StatusFlags::kOnline);
   }
   {
     fidl::WireResult result = watcher->WatchStatus();
     ASSERT_OK(result.status());
-    ASSERT_EQ(result.value().port_status.mtu(), port13_.status().mtu);
-    ASSERT_EQ(result.value().port_status.flags(), StatusFlags());
+    ASSERT_EQ(result.value_NEW().port_status.mtu(), port13_.status().mtu);
+    ASSERT_EQ(result.value_NEW().port_status.flags(), StatusFlags());
   }
 
   DiscardDeviceSync();
@@ -1952,7 +1952,7 @@ TEST_F(NetworkDeviceTest, PortGetInfo) {
   ASSERT_OK(port.status_value());
   fidl::WireResult result = port->GetInfo();
   ASSERT_OK(result.status());
-  const netdev::wire::PortInfo& port_info = result.value().info;
+  const netdev::wire::PortInfo& port_info = result.value_NEW().info;
   const port_info_t& impl_info = port13_.port_info();
   ASSERT_TRUE(port_info.has_id());
   const netdev::wire::PortId& port_id = port_info.id();
@@ -2005,7 +2005,7 @@ TEST_F(NetworkDeviceTest, PortGetStatus) {
     port13_.SetStatus(t.status);
     fidl::WireResult result = port->GetStatus();
     ASSERT_OK(result.status());
-    const netdev::wire::PortStatus& status = result.value().status;
+    const netdev::wire::PortStatus& status = result.value_NEW().status;
     ASSERT_TRUE(status.has_mtu());
     ASSERT_EQ(status.mtu(), port13_.status().mtu);
     ASSERT_TRUE(status.has_flags());
@@ -2031,7 +2031,7 @@ TEST_F(NetworkDeviceTest, PortGetMac) {
   auto mac = fidl::BindSyncClient(std::move(client_end));
   fidl::WireResult result = mac->GetUnicastAddress();
   ASSERT_OK(result.status());
-  fuchsia_net::wire::MacAddress& addr = result.value().address;
+  fuchsia_net::wire::MacAddress& addr = result.value_NEW().address;
   decltype(addr.octets) octets;
   kMockMacOps.get_address(nullptr, octets.data());
   EXPECT_TRUE(std::equal(addr.octets.begin(), addr.octets.end(), octets.begin()));
@@ -2269,7 +2269,7 @@ TEST_F(NetworkDeviceTest, PortWatcher) {
       if (!watch.ok()) {
         return zx::error(watch.status());
       }
-      netdev::wire::DevicePortEvent& e = watch.value().event;
+      netdev::wire::DevicePortEvent& e = watch.value_NEW().event;
       PortEvent event = {.which = e.Which()};
       switch (e.Which()) {
         case netdev::wire::DevicePortEvent::Tag::kIdle:
@@ -2396,7 +2396,7 @@ TEST_F(NetworkDeviceTest, PortWatcherEnforcesQueueLimit) {
   // adding ports will happen.
   fidl::WireResult result = fidl::WireCall(watcher)->Watch();
   ASSERT_OK(result.status());
-  ASSERT_EQ(result.value().event.Which(), netdev::wire::DevicePortEvent::Tag::kIdle);
+  ASSERT_EQ(result.value_NEW().event.Which(), netdev::wire::DevicePortEvent::Tag::kIdle);
 
   // Add and remove ports until we've used up all the event queue.
   std::unique_ptr<FakeNetworkPortImpl> port;
@@ -2784,7 +2784,7 @@ TEST_F(NetworkDeviceTest, CanUpdatePortStatusWithinSetActive) {
   {
     fidl::WireResult result = watcher->WatchStatus();
     ASSERT_OK(result.status());
-    ASSERT_EQ(result.value().port_status.flags(), netdev::wire::StatusFlags());
+    ASSERT_EQ(result.value_NEW().port_status.flags(), netdev::wire::StatusFlags());
   }
 
   TestSession session;
@@ -2796,7 +2796,7 @@ TEST_F(NetworkDeviceTest, CanUpdatePortStatusWithinSetActive) {
     ASSERT_OK(AttachSessionPort(session, port13_));
     fidl::WireResult result = watcher->WatchStatus();
     ASSERT_OK(result.status());
-    ASSERT_EQ(result.value().port_status.flags(), netdev::wire::StatusFlags::kOnline);
+    ASSERT_EQ(result.value_NEW().port_status.flags(), netdev::wire::StatusFlags::kOnline);
     ASSERT_EQ(set_active_call_counter, 1u);
   }
 
@@ -2805,7 +2805,7 @@ TEST_F(NetworkDeviceTest, CanUpdatePortStatusWithinSetActive) {
     ASSERT_OK(session.DetachPort(GetSaltedPortId(kPort13)));
     fidl::WireResult result = watcher->WatchStatus();
     ASSERT_OK(result.status());
-    ASSERT_EQ(result.value().port_status.flags(), netdev::wire::StatusFlags());
+    ASSERT_EQ(result.value_NEW().port_status.flags(), netdev::wire::StatusFlags());
     ASSERT_EQ(set_active_call_counter, 2u);
   }
 }
@@ -2862,7 +2862,7 @@ TEST_F(NetworkDeviceTest, CloneDevice) {
   fidl::WireSyncClient connection2 = fidl::BindSyncClient(std::move(client_end));
   fidl::WireResult result = connection2->GetInfo();
   ASSERT_OK(result.status());
-  ASSERT_EQ(result.value().info.min_rx_buffer_length(), impl_.info().min_rx_buffer_length);
+  ASSERT_EQ(result.value_NEW().info.min_rx_buffer_length(), impl_.info().min_rx_buffer_length);
 }
 
 TEST_F(NetworkDeviceTest, ClonePort) {
@@ -2880,12 +2880,12 @@ TEST_F(NetworkDeviceTest, ClonePort) {
   {
     fidl::WireResult result = connection1->GetInfo();
     ASSERT_OK(result.status());
-    salted_id1 = result.value().info.id();
+    salted_id1 = result.value_NEW().info.id();
   }
   {
     fidl::WireResult result = connection2->GetInfo();
     ASSERT_OK(result.status());
-    salted_id2 = result.value().info.id();
+    salted_id2 = result.value_NEW().info.id();
   }
   EXPECT_EQ(salted_id1.base, salted_id2.base);
   EXPECT_EQ(salted_id1.salt, salted_id2.salt);
@@ -2904,7 +2904,7 @@ TEST_F(NetworkDeviceTest, PortGetDevice) {
   fidl::WireSyncClient device_connection = fidl::BindSyncClient(std::move(client_end));
   fidl::WireResult result = device_connection->GetInfo();
   ASSERT_OK(result.status());
-  ASSERT_EQ(result.value().info.min_rx_buffer_length(), impl_.info().min_rx_buffer_length);
+  ASSERT_EQ(result.value_NEW().info.min_rx_buffer_length(), impl_.info().min_rx_buffer_length);
 }
 
 TEST_F(NetworkDeviceTest, PortIdSaltChangesOnFlap) {
@@ -2930,7 +2930,7 @@ TEST_F(NetworkDeviceTest, PortIdSaltChangesOnFlap) {
       fidl::WireSyncClient port = std::move(status.value());
       fidl::WireResult result = port->GetInfo();
       ASSERT_OK(result.status());
-      const netdev::wire::PortInfo& info = result.value().info;
+      const netdev::wire::PortInfo& info = result.value_NEW().info;
       ASSERT_TRUE(info.has_id());
       const netdev::wire::PortId id = info.id();
       EXPECT_EQ(id.base, kPort13);

@@ -143,9 +143,10 @@ TEST_F(ChromiumosEcLpcTest, SendCommand) {
   uint8_t kOutData[2] = {0x11, 0x22};
   auto result = client_->RunCommand(0xaa, 0xbb, fidl::VectorView<uint8_t>::FromExternal(kData, 2));
   ASSERT_TRUE(result.ok());
-  ASSERT_FALSE(result->result.is_err(), "Failed: %s", zx_status_get_string(result->result.err()));
-  ASSERT_EQ(int(result->result.response().result), 1);
-  ASSERT_BYTES_EQ(result->result.response().data.data(), kOutData, 2);
+  ASSERT_FALSE(result.Unwrap_NEW()->is_error(), "Failed: %s",
+               zx_status_get_string(result.Unwrap_NEW()->error_value()));
+  ASSERT_EQ(int(result.Unwrap_NEW()->value()->result), 1);
+  ASSERT_BYTES_EQ(result.Unwrap_NEW()->value()->data.data(), kOutData, 2);
 }
 
 }  // namespace chromiumos_ec_lpc

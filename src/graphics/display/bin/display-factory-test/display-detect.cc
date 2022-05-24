@@ -52,12 +52,12 @@ Boards GetBoard() {
   }
   fdio_cpp::FdioCaller caller_sysinfo(std::move(sysinfo_fd));
   auto result = fidl::WireCall(caller_sysinfo.borrow_as<sysinfo::SysInfo>())->GetBoardName();
-  if (!result.ok() || result.value().status != ZX_OK) {
+  if (!result.ok() || result.value_NEW().status != ZX_OK) {
     return UNKNOWN_BOARD;
   }
 
   board_name.Clear();
-  board_name.Append(result.value().name.data(), result.value().name.size());
+  board_name.Append(result.value_NEW().name.data(), result.value_NEW().name.size());
 
   auto board_name_cmp = std::string_view(board_name.data(), board_name.size());
   if (board_name_cmp.find("sherlock") != std::string_view::npos) {
@@ -76,11 +76,11 @@ uint8_t GetGpioValue(const char* gpio_path) {
   }
   auto client = fidl::BindSyncClient(std::move(*client_end));
   auto res = client->Read();
-  if (!res.ok() || res.value().result.is_err()) {
+  if (!res.ok() || res.Unwrap_NEW()->is_error()) {
     return -1;
   }
 
-  return res.value().result.response().value;
+  return res.Unwrap_NEW()->value()->value;
 }
 
 int main(int argc, const char* argv[]) {

@@ -56,7 +56,7 @@ static zx_status_t write_bytes(fidl::WireSyncClient<fuchsia_hardware_i2c::Device
 
   auto read = client->Transfer(transactions);
   auto status = read.status();
-  if (status == ZX_OK && read->result.is_err()) {
+  if (status == ZX_OK && read.Unwrap_NEW()->is_error()) {
     status = ZX_ERR_INTERNAL;
   }
   return status;
@@ -77,10 +77,14 @@ static zx::status<uint8_t> read_byte(fidl::WireSyncClient<fuchsia_hardware_i2c::
                         .Build();
 
   auto read = client->Transfer(transactions);
-  if (read.ok() && read->result.is_response()) {
-    return zx::ok(read->result.response().read_data[0].data()[0]);
+  auto status = read.status();
+  if (status != ZX_OK) {
+    return zx::error(read.status());
   }
-  return zx::error(read.ok() ? read->result.err() : read.status());
+  if (read.Unwrap_NEW()->is_error()) {
+    return zx::error(read.Unwrap_NEW()->error_value());
+  }
+  return zx::ok(read.Unwrap_NEW()->value()->read_data[0].data()[0]);
 }
 
 static zx_status_t transact(fidl::WireSyncClient<fuchsia_hardware_i2c::Device> client, int argc,
@@ -189,10 +193,10 @@ static zx_status_t transact(fidl::WireSyncClient<fuchsia_hardware_i2c::Device> c
   auto read = client->Transfer(transactions);
   auto status = read.status();
   if (status == ZX_OK) {
-    if (read->result.is_err()) {
+    if (read.Unwrap_NEW()->is_error()) {
       return ZX_ERR_INTERNAL;
     } else {
-      auto& read_data = read->result.response().read_data;
+      auto& read_data = read.Unwrap_NEW()->value()->read_data;
       if (read_data.count() != 0) {
         printf("Reads:");
         for (auto& i : read_data) {

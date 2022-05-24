@@ -164,13 +164,13 @@ TEST(SvchostTest, FuchsiaKernelStatsPresent) {
       stats_client->GetMemoryStats();
   ASSERT_EQ(ZX_OK, mem_result.status(), "GetMemoryStats failed");
 
-  auto mem_stats = mem_result.Unwrap();
+  auto mem_stats = mem_result.Unwrap_NEW();
   ASSERT_GT(mem_stats->stats.total_bytes(), 0);
 
   fidl::WireResult<fuchsia_kernel::Stats::GetCpuStats> cpu_result = stats_client->GetCpuStats();
   ASSERT_EQ(ZX_OK, cpu_result.status(), "GetCpuStats failed");
 
-  auto cpu_stats = cpu_result.Unwrap();
+  auto cpu_stats = cpu_result.Unwrap_NEW();
   ASSERT_GT(cpu_stats->stats.actual_num_cpus, 0);
   ASSERT_EQ(cpu_stats->stats.actual_num_cpus, cpu_stats->stats.per_cpu_stats.count());
 }

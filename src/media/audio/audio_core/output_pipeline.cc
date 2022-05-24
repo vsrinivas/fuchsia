@@ -117,11 +117,12 @@ std::shared_ptr<ReadableStream> OutputPipelineImpl::State::CreateMixStage(
     FX_CHECK(effects_loader_v2) << "PipelineConfig has V2 effects; need EffectsLoaderV2";
     auto config_result =
         effects_loader_v2->GetProcessorConfiguration(spec.effects_v2->instance_name);
-    if (!config_result.ok() || config_result->result.is_err()) {
-      auto status = !config_result.ok() ? config_result.status() : config_result->result.err();
+    if (!config_result.ok() || config_result.Unwrap_NEW()->is_error()) {
+      auto status =
+          !config_result.ok() ? config_result.status() : config_result.Unwrap_NEW()->error_value();
       FX_PLOGS(ERROR, status) << "Failed to get config for V2 effect";
     } else if (auto effect = EffectsStageV2::Create(
-                   std::move(config_result->result.response().processor_configuration), root);
+                   std::move(config_result.Unwrap_NEW()->value()->processor_configuration), root);
                effect.is_ok()) {
       root = effect.value();
     } else {

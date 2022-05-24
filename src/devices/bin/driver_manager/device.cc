@@ -347,7 +347,7 @@ void Device::SendInit(InitCompletion completion) {
           dev->CompleteInit(result.status());
           return;
         }
-        auto* response = result.Unwrap();
+        auto* response = result.Unwrap_NEW();
         VLOGF(1, "Initialized device %p '%s': %s", dev.get(), dev->name().data(),
               zx_status_get_string(response->status));
         dev->CompleteInit(response->status);
@@ -391,7 +391,7 @@ void Device::SendSuspend(uint32_t flags, SuspendCompletion completion) {
           dev->CompleteSuspend(result.status());
           return;
         }
-        auto* response = result.Unwrap();
+        auto* response = result.Unwrap_NEW();
         if (response->status == ZX_OK) {
           LOGF(DEBUG, "Suspended device %p '%s' successfully", dev.get(), dev->name().data());
         } else {
@@ -420,7 +420,7 @@ void Device::SendResume(uint32_t target_system_state, ResumeCompletion completio
               dev->CompleteResume(result.status());
               return;
             }
-            auto* response = result.Unwrap();
+            auto* response = result.Unwrap_NEW();
             LOGF(INFO, "Resumed device %p '%s': %s", dev.get(), dev->name().data(),
                  zx_status_get_string(response->status));
             dev->CompleteResume(response->status);
@@ -513,9 +513,9 @@ void Device::SendUnbind(UnbindCompletion& completion) {
           dev->CompleteUnbind(result.status());
           return;
         }
-        auto* response = result.Unwrap();
+        auto* response = result.Unwrap_NEW();
         LOGF(INFO, "Unbound device %p '%s': %s", dev.get(), dev->name().data(),
-             zx_status_get_string(response->result.is_err() ? response->result.err() : ZX_OK));
+             zx_status_get_string(response->is_error() ? response->error_value() : ZX_OK));
         dev->CompleteUnbind();
       });
   unbind_completion_ = std::move(completion);
@@ -539,9 +539,9 @@ void Device::SendCompleteRemove(RemoveCompletion& completion) {
           dev->DropRemoveTask();
           return;
         }
-        auto* response = result.Unwrap();
+        auto* response = result.Unwrap_NEW();
         LOGF(INFO, "Removed device %p '%s': %s", dev.get(), dev->name().data(),
-             zx_status_get_string(response->result.is_err() ? response->result.err() : ZX_OK));
+             zx_status_get_string(response->is_error() ? response->error_value() : ZX_OK));
         dev->CompleteRemove();
       });
   remove_completion_ = std::move(completion);

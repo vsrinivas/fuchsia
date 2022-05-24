@@ -92,14 +92,12 @@ class DirentIteratorImpl {
     if (!result.ok()) {
       return result.status();
     }
-    const auto& response = result.value();
-    switch (response.result.Which()) {
-      case fio::wire::DirectoryIteratorGetNextResult::Tag::kErr:
-        return response.result.err();
-      case fio::wire::DirectoryIteratorGetNextResult::Tag::kResponse:
-        fidl_entries_ = response.result.response().entries;
-        return ZX_OK;
+    const auto& res = result.value_NEW();
+    if (res.is_error()) {
+      return res.error_value();
     }
+    fidl_entries_ = res.value()->entries;
+    return ZX_OK;
   }
 
   zxio_remote_v2_t* io_;

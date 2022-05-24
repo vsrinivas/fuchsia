@@ -721,8 +721,8 @@ int main(int argc, const char** argv) {
     return res;
 
   if (!stream->IsStreamBufChannelConnected()) {
-      printf("No driver found\n");
-      return ZX_ERR_BAD_STATE;
+    printf("No driver found\n");
+    return ZX_ERR_BAD_STATE;
   }
 
   if (!channels.has_value()) {
@@ -731,13 +731,14 @@ int main(int argc, const char** argv) {
       printf("Error getting formats from the driver\n");
       return ZX_ERR_BAD_STATE;
     }
-    if (formats->supported_formats.count() < 1 ||
-        formats->supported_formats[0].pcm_supported_formats().channel_sets().count() < 1) {
+    if (formats.value_NEW().supported_formats.count() < 1 ||
+        formats.value_NEW().supported_formats[0].pcm_supported_formats().channel_sets().count() <
+            1) {
       printf("No valid format reported by driver\n");
       return ZX_ERR_BAD_STATE;
     }
     // Use the first number of channels value reported.
-    auto& pcm = formats->supported_formats[0].pcm_supported_formats();
+    auto& pcm = formats.value_NEW().supported_formats[0].pcm_supported_formats();
     channels = static_cast<uint32_t>(pcm.channel_sets()[0].attributes().count());
   }
 

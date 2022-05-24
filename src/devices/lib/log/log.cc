@@ -30,7 +30,7 @@ zx_status_t log_to_debuglog() {
       .tags = &tag,
       .num_tags = 1,
   };
-  zx_status_t status = fdio_fd_create(result->log.release(), &logger_config.console_fd);
+  zx_status_t status = fdio_fd_create(result.value_NEW().log.release(), &logger_config.console_fd);
   if (status != ZX_OK) {
     return status;
   }

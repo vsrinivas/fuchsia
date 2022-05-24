@@ -80,18 +80,18 @@ bool Uart16550::NotifyCallbackSet() {
 zx_status_t Uart16550::Init() {
   zx::resource io_port;
   auto pio = acpi_fidl_.borrow()->GetPio(kPioIndex);
-  if (!pio.ok() || pio->result.is_err()) {
+  if (!pio.ok() || pio.Unwrap_NEW()->is_error()) {
     zxlogf(DEBUG, "%s: acpi_.GetPio failed", __func__);
-    return pio.ok() ? pio->result.err() : pio.status();
+    return pio.ok() ? pio.Unwrap_NEW()->error_value() : pio.status();
   }
-  io_port.reset(pio->result.response().pio.release());
+  io_port.reset(pio.Unwrap_NEW()->value()->pio.release());
 
   auto irq = acpi_fidl_.borrow()->MapInterrupt(kIrqIndex);
-  if (!irq.ok() || irq->result.is_err()) {
+  if (!irq.ok() || irq.Unwrap_NEW()->is_error()) {
     zxlogf(ERROR, "%s: acpi_.MapInterrupt failed", __func__);
-    return irq.ok() ? irq->result.err() : irq.status();
+    return irq.ok() ? irq.Unwrap_NEW()->error_value() : irq.status();
   }
-  interrupt_.reset(irq->result.response().irq.release());
+  interrupt_.reset(irq.Unwrap_NEW()->value()->irq.release());
 
   zx_info_resource_t resource_info;
   zx_status_t status =

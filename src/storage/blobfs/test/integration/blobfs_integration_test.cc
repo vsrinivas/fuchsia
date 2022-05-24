@@ -462,8 +462,8 @@ void QueryInfo(fs_test::TestFilesystem& fs, size_t expected_nodes, size_t expect
                                    zx::unowned_channel(root_connection.borrow_channel())))
                     ->QueryFilesystem();
   ASSERT_TRUE(result.ok()) << result.FormatDescription();
-  ASSERT_EQ(result.value().s, ZX_OK) << zx_status_get_string(result.value().s);
-  const auto& info = *result.value().info;
+  ASSERT_EQ(result.value_NEW().s, ZX_OK) << zx_status_get_string(result.value_NEW().s);
+  const auto& info = *result.value_NEW().info;
 
   constexpr std::string_view kFsName = "blobfs";
   const char* name = reinterpret_cast<const char*>(info.name.data());

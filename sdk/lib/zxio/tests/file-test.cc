@@ -80,7 +80,7 @@ class File : public zxtest::Test {
     if (result.status() != ZX_OK) {
       return result.status();
     }
-    auto& response = result.value();
+    auto& response = result.value_NEW();
     EXPECT_TRUE(response.info.is_file());
     fio::wire::FileObject& file = response.info.file();
 

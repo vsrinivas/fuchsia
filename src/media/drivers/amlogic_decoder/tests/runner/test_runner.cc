@@ -31,9 +31,9 @@ class TestDeviceBase {
     auto res = fidl::WireCall<fuchsia_device::Controller>(channel())->GetTopologicalPath();
 
     EXPECT_EQ(ZX_OK, res.status());
-    EXPECT_TRUE(res->result.is_response());
+    EXPECT_TRUE(res.Unwrap_NEW()->is_ok());
 
-    auto& response = res->result.response();
+    auto& response = *res.Unwrap_NEW()->value();
     EXPECT_LE(response.path.size(), fuchsia_device::wire::kMaxDevicePathLen);
 
     memcpy(path, response.path.data(), response.path.size());
@@ -53,7 +53,7 @@ class TestDeviceBase {
     auto res = fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(parent_device))
                    ->UnbindChildren();
     EXPECT_EQ(ZX_OK, res.status());
-    EXPECT_TRUE(res->result.is_response());
+    EXPECT_TRUE(res.Unwrap_NEW()->is_ok());
   }
 
   static bool BindDriver(const zx::channel& parent_device, std::string path) {
@@ -72,13 +72,13 @@ class TestDeviceBase {
       auto res = fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(parent_device))
                      ->Bind(fidl::StringView::FromExternal(path));
       EXPECT_EQ(ZX_OK, res.status());
-      if (res->result.is_err() && res->result.err() == ZX_ERR_ALREADY_BOUND) {
+      if (res.Unwrap_NEW()->is_error() && res.Unwrap_NEW()->error_value() == ZX_ERR_ALREADY_BOUND) {
         zx::nanosleep(zx::deadline_after(zx::msec(10)));
         continue;
       }
       // This only returns true if the test driver finished binding, which means it successfully ran
       // its built-in tests.  Else the test driver won't succeed binding.
-      return res->result.is_response();
+      return res.Unwrap_NEW()->is_ok();
     }
     fprintf(stderr, "Timed out rebinding driver\n");
     return false;
@@ -121,7 +121,7 @@ TEST(TestRunner, RunTests) {
       fidl::WireCall<fuchsia_hardware_mediacodec::Tester>(test_device2->channel())->RunTests();
   EXPECT_OK(res.status());
   if (res.ok())
-    EXPECT_OK(res->result);
+    EXPECT_OK(res.value_NEW().result);
 
   // UnbindChildren seems to block for some reason.
   test_device2->Unbind();

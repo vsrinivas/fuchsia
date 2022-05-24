@@ -127,8 +127,8 @@ static zx_status_t InputDeviceAdded(int dirfd, int event, const char* name, void
   }
 
   hid::DeviceDescriptor* desc;
-  if (hid::ParseReportDescriptor(result->desc.data(), result->desc.count(), &desc) !=
-      hid::kParseOk) {
+  if (hid::ParseReportDescriptor(result.Unwrap_NEW()->desc.data(),
+                                 result.Unwrap_NEW()->desc.count(), &desc) != hid::kParseOk) {
     return ZX_OK;
   }
   auto cleanup_desc = fit::defer([desc]() { hid::FreeDeviceDescriptor(desc); });
@@ -185,11 +185,11 @@ zx_status_t get_button_report_event(zx::event* event_out, PowerButtonInfo* info_
     printf("pwrbtn-monitor: failed to get report event: %d\n", result.status());
     return result.status();
   }
-  if (result->status != ZX_OK) {
-    printf("pwrbtn-monitor: failed to get report event: %d\n", result->status);
-    return result->status;
+  if (result.Unwrap_NEW()->status != ZX_OK) {
+    printf("pwrbtn-monitor: failed to get report event: %d\n", result.Unwrap_NEW()->status);
+    return result.Unwrap_NEW()->status;
   }
-  *event_out = std::move(result->event);
+  *event_out = std::move(result.Unwrap_NEW()->event);
   return ZX_OK;
 }
 
@@ -208,14 +208,14 @@ void process_power_event(
     loop->Quit();
     return;
   }
-  if (result->status != ZX_OK) {
-    printf("pwrbtn-monitor: failed to read report: %d\n", result->status);
+  if (result.Unwrap_NEW()->status != ZX_OK) {
+    printf("pwrbtn-monitor: failed to read report: %d\n", result.Unwrap_NEW()->status);
     loop->Quit();
     return;
   }
 
   // Ignore reports from different report IDs
-  const fidl::VectorView<uint8_t>& report = result->data;
+  const fidl::VectorView<uint8_t>& report = result.Unwrap_NEW()->data;
   if (info->has_report_id_byte && report[0] != info->report_id) {
     printf("pwrbtn-monitor: input-watcher: wrong id\n");
     return;

@@ -48,9 +48,9 @@ void QueryInfo(const TestFilesystem& fs, fuchsia_io::wire::FilesystemInfo* info)
   fdio_cpp::FdioCaller caller(std::move(root_fd));
   auto result = fidl::WireCall<fuchsia_io::Directory>(caller.channel())->QueryFilesystem();
   ASSERT_EQ(result.status(), ZX_OK);
-  ASSERT_EQ(result.Unwrap()->s, ZX_OK);
-  ASSERT_NE(result.Unwrap()->info, nullptr);
-  *info = *(result.Unwrap()->info);
+  ASSERT_EQ(result.Unwrap_NEW()->s, ZX_OK);
+  ASSERT_NE(result.Unwrap_NEW()->info, nullptr);
+  *info = *(result.Unwrap_NEW()->info);
 
   // For now, info->name.data is a fixed size array.
   const char* kFsName = "minfs";
@@ -141,9 +141,9 @@ class MinfsFvmTest : public BaseFilesystemTest {
             ->GetInstanceGuid();
     if (response.status() != ZX_OK)
       return zx::error(response.status());
-    if (response->status != ZX_OK)
-      return zx::error(response->status);
-    return zx::ok(*response->guid);
+    if (response.value_NEW().status != ZX_OK)
+      return zx::error(response.value_NEW().status);
+    return zx::ok(*response.value_NEW().guid);
   }
 
   zx::status<fuchsia_hardware_block_volume::wire::VolumeManagerInfo> GetVolumeManagerInfo() {
@@ -157,9 +157,9 @@ class MinfsFvmTest : public BaseFilesystemTest {
             ->GetInfo();
     if (response.status() != ZX_OK)
       return zx::error(response.status());
-    if (response->status != ZX_OK)
-      return zx::error(response->status);
-    return zx::ok(*response->info);
+    if (response.value_NEW().status != ZX_OK)
+      return zx::error(response.value_NEW().status);
+    return zx::ok(*response.value_NEW().info);
   }
 
   zx_status_t SetPartitionLimit(uint64_t slice_limit) {
@@ -176,8 +176,8 @@ class MinfsFvmTest : public BaseFilesystemTest {
             ->SetPartitionLimit(*guid_or, slice_limit);
     if (set_response.status() != ZX_OK)
       return set_response.status();
-    if (set_response->status != ZX_OK)
-      return set_response->status;
+    if (set_response.value_NEW().status != ZX_OK)
+      return set_response.value_NEW().status;
 
     // Query the partition limit to make sure it worked.
     auto get_response =
@@ -186,10 +186,10 @@ class MinfsFvmTest : public BaseFilesystemTest {
             ->GetPartitionLimit(*guid_or);
     if (get_response.status() != ZX_OK)
       return get_response.status();
-    if (get_response->status != ZX_OK)
-      return get_response->status;
+    if (get_response.value_NEW().status != ZX_OK)
+      return get_response.value_NEW().status;
 
-    EXPECT_EQ(slice_limit, get_response->slice_count);
+    EXPECT_EQ(slice_limit, get_response.value_NEW().slice_count);
     return ZX_OK;
   }
 

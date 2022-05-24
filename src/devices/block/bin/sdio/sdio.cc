@@ -121,12 +121,12 @@ int Info(SdioClient client) {
     fprintf(stderr, "FIDL call GetDevHwInfo failed: %d\n", result.status());
     return 1;
   }
-  if (result->result.is_err()) {
-    fprintf(stderr, "GetDevHwInfo failed: %d\n", result->result.err());
+  if (result.Unwrap_NEW()->is_error()) {
+    fprintf(stderr, "GetDevHwInfo failed: %d\n", result.Unwrap_NEW()->error_value());
     return 1;
   }
 
-  const SdioHwInfo& info = result->result.response().hw_info;
+  const SdioHwInfo& info = result.Unwrap_NEW()->value()->hw_info;
   const SdioDeviceHwInfo& dev_info = info.dev_hw_info;
   printf("Host:\n    Max transfer size: %u\n", info.host_max_transfer_size);
   printf("Card:\n");
@@ -172,12 +172,12 @@ int ReadByte(SdioClient client, uint32_t address, int argc, const char** argv) {
     fprintf(stderr, "FIDL call DoRwByte failed: %d\n", result.status());
     return 1;
   }
-  if (result->result.is_err()) {
-    fprintf(stderr, "DoRwByte failed: %d\n", result->result.err());
+  if (result.Unwrap_NEW()->is_error()) {
+    fprintf(stderr, "DoRwByte failed: %d\n", result.Unwrap_NEW()->error_value());
     return 1;
   }
 
-  printf("0x%02x\n", result->result.response().read_byte);
+  printf("0x%02x\n", result.Unwrap_NEW()->value()->read_byte);
   return 0;
 }
 
@@ -198,8 +198,8 @@ int WriteByte(SdioClient client, uint32_t address, int argc, const char** argv) 
     fprintf(stderr, "FIDL call DoRwByte failed: %d\n", result.status());
     return 1;
   }
-  if (result->result.is_err()) {
-    fprintf(stderr, "DoRwByte failed: %d\n", result->result.err());
+  if (result.Unwrap_NEW()->is_error()) {
+    fprintf(stderr, "DoRwByte failed: %d\n", result.Unwrap_NEW()->error_value());
     return 1;
   }
 
@@ -273,12 +273,12 @@ int ReadStress(SdioClient client, uint32_t address, int argc, const char** argv)
       fprintf(stderr, "FIDL call DoRwTxn failed: %d\n", result.status());
       return 1;
     }
-    if (result->result.is_err()) {
-      fprintf(stderr, "DoRwTxn failed: %d\n", result->result.err());
+    if (result.Unwrap_NEW()->is_error()) {
+      fprintf(stderr, "DoRwTxn failed: %d\n", result.Unwrap_NEW()->error_value());
       return 1;
     }
 
-    dma_vmo = std::move(result->result.response().txn.dma_vmo);
+    dma_vmo = std::move(result.Unwrap_NEW()->value()->txn.dma_vmo);
   }
 
   const zx::duration elapsed = zx::clock::get_monotonic() - start;

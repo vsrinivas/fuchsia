@@ -335,11 +335,11 @@ TEST_F(AmlCpuTestFixture, TestGetPerformanceStateInfo) {
     ASSERT_OK(pstateInfo.status());
 
     // Then make sure that the driver accepted the call.
-    ASSERT_FALSE(pstateInfo->result.is_err());
+    ASSERT_FALSE(pstateInfo.Unwrap_NEW()->is_error());
 
     // Then make sure that we're getting the expected frequency and voltage values.
-    EXPECT_EQ(pstateInfo->result.response().info.frequency_hz, kTestOperatingPoints[i].freq_hz);
-    EXPECT_EQ(pstateInfo->result.response().info.voltage_uv, kTestOperatingPoints[i].volt_uv);
+    EXPECT_EQ(pstateInfo.Unwrap_NEW()->value()->info.frequency_hz, kTestOperatingPoints[i].freq_hz);
+    EXPECT_EQ(pstateInfo.Unwrap_NEW()->value()->info.voltage_uv, kTestOperatingPoints[i].volt_uv);
   }
 
   // Make sure that we can't get any information about pstates that don't
@@ -353,7 +353,7 @@ TEST_F(AmlCpuTestFixture, TestGetPerformanceStateInfo) {
     ASSERT_OK(pstateInfo.status());
 
     // Make sure that the driver returns an error, however.
-    EXPECT_TRUE(pstateInfo->result.is_err());
+    EXPECT_TRUE(pstateInfo.Unwrap_NEW()->is_error());
   }
 
   ASSERT_NO_FATAL_FAILURE(VerifyAll());
@@ -415,7 +415,7 @@ TEST_F(AmlCpuTestFixture, TestGetLogicalCoreCount) {
 
   ASSERT_OK(coreCountResp.status());
 
-  EXPECT_EQ(coreCountResp->count, kTestCoreCount);
+  EXPECT_EQ(coreCountResp.value_NEW().count, kTestCoreCount);
 }
 
 }  // namespace amlogic_cpu

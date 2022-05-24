@@ -354,13 +354,13 @@ TEST(UsbAudioTest, GetStreamProperties) {
   auto result = stream_client->GetProperties();
   ASSERT_OK(result.status());
 
-  ASSERT_EQ(result->properties.clock_domain(), 0);
-  ASSERT_EQ(result->properties.min_gain_db(), -37.);
-  ASSERT_EQ(result->properties.max_gain_db(), 0.);
-  ASSERT_EQ(result->properties.gain_step_db(), 1.);
-  ASSERT_EQ(result->properties.can_mute(), true);
-  ASSERT_EQ(result->properties.can_agc(), false);
-  ASSERT_EQ(result->properties.plug_detect_capabilities(),
+  ASSERT_EQ(result.value_NEW().properties.clock_domain(), 0);
+  ASSERT_EQ(result.value_NEW().properties.min_gain_db(), -37.);
+  ASSERT_EQ(result.value_NEW().properties.max_gain_db(), 0.);
+  ASSERT_EQ(result.value_NEW().properties.gain_step_db(), 1.);
+  ASSERT_EQ(result.value_NEW().properties.can_mute(), true);
+  ASSERT_EQ(result.value_NEW().properties.can_agc(), false);
+  ASSERT_EQ(result.value_NEW().properties.plug_detect_capabilities(),
             audio_fidl::wire::PlugDetectCapabilities::kHardwired);
 
   fake_device.DdkAsyncRemove();
@@ -430,7 +430,7 @@ TEST(UsbAudioTest, SetAndGetGain) {
   auto gain_state = stream_client->WatchGainState();
   ASSERT_OK(gain_state.status());
 
-  ASSERT_EQ(kTestGain, gain_state->gain_state.gain_db());
+  ASSERT_EQ(kTestGain, gain_state.value_NEW().gain_state.gain_db());
 
   fake_device.DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());
@@ -447,7 +447,7 @@ TEST(UsbAudioTest, Enumerate) {
   ASSERT_TRUE(stream_client.is_valid());
 
   auto ret = stream_client->GetSupportedFormats();
-  auto& supported_formats = ret->supported_formats;
+  auto& supported_formats = ret.value_NEW().supported_formats;
   ASSERT_EQ(2, supported_formats.count());
 
   auto& formats1 = supported_formats[0].pcm_supported_formats();
@@ -543,7 +543,7 @@ TEST_F(UsbAudioTest, EnumerateWithDescriptorIncludingContinuousFrameRatesRange) 
   // We get the formats from the first interface in the descriptor.
   auto ret2 = stream_client->GetSupportedFormats();
   ASSERT_TRUE(ret2.ok());
-  auto& supported_formats = ret2->supported_formats;
+  auto& supported_formats = ret2.value_NEW().supported_formats;
   ASSERT_EQ(4, supported_formats.count());
 
   ASSERT_EQ(1, supported_formats[0].pcm_supported_formats().frame_rates().count());
@@ -679,9 +679,9 @@ TEST(UsbAudioTest, DISABLED_RingBufferPropertiesAndStartOk) {
 
   auto result = fidl::WireCall<audio_fidl::RingBuffer>(local)->GetProperties();
   ASSERT_OK(result.status());
-  ASSERT_EQ(result->properties.external_delay(), 0);
-  ASSERT_EQ(result->properties.fifo_depth(), 576);  // Changes with frame rate.
-  ASSERT_EQ(result->properties.needs_cache_flush_or_invalidate(), true);
+  ASSERT_EQ(result.value_NEW().properties.external_delay(), 0);
+  ASSERT_EQ(result.value_NEW().properties.fifo_depth(), 576);  // Changes with frame rate.
+  ASSERT_EQ(result.value_NEW().properties.needs_cache_flush_or_invalidate(), true);
 
   constexpr uint32_t kNumberOfPositionNotifications = 5;
   constexpr uint32_t kMinFrames = 10;
@@ -876,9 +876,9 @@ TEST(UsbAudioTest, Unplug) {
 
   auto result = fidl::WireCall<audio_fidl::RingBuffer>(local)->GetProperties();
   ASSERT_OK(result.status());
-  ASSERT_EQ(result->properties.external_delay(), 0);
-  ASSERT_EQ(result->properties.fifo_depth(), 576);  // Changes with frame rate.
-  ASSERT_EQ(result->properties.needs_cache_flush_or_invalidate(), true);
+  ASSERT_EQ(result.value_NEW().properties.external_delay(), 0);
+  ASSERT_EQ(result.value_NEW().properties.fifo_depth(), 576);  // Changes with frame rate.
+  ASSERT_EQ(result.value_NEW().properties.needs_cache_flush_or_invalidate(), true);
 
   constexpr uint32_t kNumberOfPositionNotifications = 5;
   constexpr uint32_t kMinFrames = 10;

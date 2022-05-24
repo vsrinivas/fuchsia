@@ -31,17 +31,15 @@ void TryFilesystemOperations(fidl::UnownedClientEnd<fio::File> client_end) {
                   reinterpret_cast<uint8_t*>(const_cast<char*>(payload.data())), payload.size()),
               0);
   ASSERT_EQ(write_result.status(), ZX_OK);
-  const fidl::WireResponse write_response = write_result.value();
-  ASSERT_TRUE(write_response.result.is_response(), "%s",
-              zx_status_get_string(write_response.result.err()));
-  ASSERT_EQ(write_response.result.response().actual_count, payload.size());
+  const fitx::result write_response = write_result.value_NEW();
+  ASSERT_TRUE(write_response.is_ok(), "%s", zx_status_get_string(write_response.error_value()));
+  ASSERT_EQ(write_response.value()->actual_count, payload.size());
 
   const fidl::WireResult read_result = fidl::WireCall(client_end)->ReadAt(256, 0);
   ASSERT_OK(read_result.status());
-  const fidl::WireResponse read_response = read_result.value();
-  ASSERT_TRUE(read_response.result.is_response(), "%s",
-              zx_status_get_string(read_response.result.err()));
-  const fidl::VectorView data = read_result->result.response().data;
+  const fitx::result read_response = read_result.value_NEW();
+  ASSERT_TRUE(read_response.is_ok(), "%s", zx_status_get_string(read_response.error_value()));
+  const fidl::VectorView data = read_result.Unwrap_NEW()->value()->data;
   ASSERT_EQ(std::string_view(reinterpret_cast<const char*>(data.data()), data.count()), payload);
 }
 

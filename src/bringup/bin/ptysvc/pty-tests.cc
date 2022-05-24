@@ -48,8 +48,8 @@ class PtyTestCase : public zxtest::Test {
     if (result.status() != ZX_OK) {
       return zx::error(ZX_ERR_BAD_STATE);
     }
-    if (result->s != ZX_OK) {
-      return zx::error(result->s);
+    if (result.Unwrap_NEW()->s != ZX_OK) {
+      return zx::error(result.Unwrap_NEW()->s);
     }
     return zx::ok(Connection(std::move(endpoints->client)));
   }
@@ -81,7 +81,7 @@ zx::eventpair GetEvent(Connection& conn) {
   if (result.status() != ZX_OK) {
     return {};
   }
-  zx::eventpair event = std::move(result->info.tty().event);
+  zx::eventpair event = std::move(result.Unwrap_NEW()->info.tty().event);
   return event;
 }
 
@@ -89,9 +89,9 @@ void WriteCtrlC(Connection& conn) {
   uint8_t data[] = {0x03};
   const fidl::WireResult result = conn->Write(fidl::VectorView<uint8_t>::FromExternal(data));
   ASSERT_OK(result.status());
-  const fidl::WireResponse response = result.value();
-  ASSERT_TRUE(response.result.is_response(), "%s", zx_status_get_string(response.result.err()));
-  ASSERT_EQ(response.result.response().actual_count, std::size(data));
+  const fitx::result response = result.value_NEW();
+  ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+  ASSERT_EQ(response.value()->actual_count, std::size(data));
 }
 
 // Make sure the server connections describe appropriately
@@ -99,15 +99,15 @@ TEST_F(PtyTestCase, ServerDescribe) {
   Connection server{take_server()};
   auto result = server->Describe();
   ASSERT_OK(result.status());
-  ASSERT_TRUE(result->info.is_tty());
-  ASSERT_TRUE(result->info.tty().event.is_valid());
+  ASSERT_TRUE(result.Unwrap_NEW()->info.is_tty());
+  ASSERT_TRUE(result.Unwrap_NEW()->info.tty().event.is_valid());
 }  // namespace
 
 TEST_F(PtyTestCase, ServerSetWindowSize) {
   Connection server{take_server()};
   auto result = server->SetWindowSize({.width = 80, .height = 24});
   ASSERT_OK(result.status());
-  ASSERT_OK(result->status);
+  ASSERT_OK(result.Unwrap_NEW()->status);
 }  // namespace
 
 TEST_F(PtyTestCase, ServerClrSetFeature) {
@@ -115,7 +115,7 @@ TEST_F(PtyTestCase, ServerClrSetFeature) {
   auto result = server->ClrSetFeature(0, 0);
   ASSERT_OK(result.status());
   // ClrSetFeature is only meaningful on clients
-  ASSERT_STATUS(result->status, ZX_ERR_NOT_SUPPORTED);
+  ASSERT_STATUS(result.Unwrap_NEW()->status, ZX_ERR_NOT_SUPPORTED);
 }
 
 TEST_F(PtyTestCase, ServerGetWindowSize) {
@@ -125,7 +125,7 @@ TEST_F(PtyTestCase, ServerGetWindowSize) {
   // Our original implementation didn't support this, so preserve that behavior.
   // It's not clear why, though.  If this is causing problems, we should
   // probably just implement it.
-  ASSERT_STATUS(result->status, ZX_ERR_NOT_SUPPORTED);
+  ASSERT_STATUS(result.Unwrap_NEW()->status, ZX_ERR_NOT_SUPPORTED);
 }
 
 TEST_F(PtyTestCase, ServerMakeActive) {
@@ -133,7 +133,7 @@ TEST_F(PtyTestCase, ServerMakeActive) {
   auto result = server->MakeActive(0);
   ASSERT_OK(result.status());
   // MakeActive is only meaningful on clients
-  ASSERT_STATUS(result->status, ZX_ERR_NOT_SUPPORTED);
+  ASSERT_STATUS(result.Unwrap_NEW()->status, ZX_ERR_NOT_SUPPORTED);
 }
 
 TEST_F(PtyTestCase, ServerReadEvents) {
@@ -141,7 +141,7 @@ TEST_F(PtyTestCase, ServerReadEvents) {
   auto result = server->ReadEvents();
   ASSERT_OK(result.status());
   // ReadEvents is only meaningful on clients
-  ASSERT_STATUS(result->status, ZX_ERR_NOT_SUPPORTED);
+  ASSERT_STATUS(result.Unwrap_NEW()->status, ZX_ERR_NOT_SUPPORTED);
 }
 
 // Basic test of opening a client
@@ -202,9 +202,9 @@ TEST_F(PtyTestCase, ServerWithNoClientsInitialConditions) {
     {
       const fidl::WireResult result = server->Read(10);
       ASSERT_OK(result.status());
-      const fidl::WireResponse response = result.value();
-      ASSERT_TRUE(response.result.is_response(), "%s", zx_status_get_string(response.result.err()));
-      const fidl::VectorView data = response.result.response().data;
+      const fitx::result response = result.value_NEW();
+      ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+      const fidl::VectorView data = response.value()->data;
       ASSERT_EQ(std::string_view(reinterpret_cast<const char*>(data.data()), data.count()),
                 std::string_view());
     }
@@ -214,9 +214,9 @@ TEST_F(PtyTestCase, ServerWithNoClientsInitialConditions) {
       uint8_t data[16] = {};
       const fidl::WireResult result = server->Write(fidl::VectorView<uint8_t>::FromExternal(data));
       ASSERT_OK(result.status());
-      const fidl::WireResponse response = result.value();
-      ASSERT_TRUE(response.result.is_err());
-      ASSERT_STATUS(response.result.err(), ZX_ERR_PEER_CLOSED);
+      const fitx::result response = result.value_NEW();
+      ASSERT_TRUE(response.is_error());
+      ASSERT_STATUS(response.error_value(), ZX_ERR_PEER_CLOSED);
     }
   };
 
@@ -256,24 +256,24 @@ TEST_F(PtyTestCase, ServerWithClientInitialConditions) {
   {
     const fidl::WireResult result = server->Read(10);
     ASSERT_OK(result.status());
-    const fidl::WireResponse response = result.value();
-    ASSERT_TRUE(response.result.is_err());
-    ASSERT_STATUS(response.result.err(), ZX_ERR_SHOULD_WAIT);
+    const fitx::result response = result.value_NEW();
+    ASSERT_TRUE(response.is_error());
+    ASSERT_STATUS(response.error_value(), ZX_ERR_SHOULD_WAIT);
   }
   {
     const fidl::WireResult result = client->Read(10);
     ASSERT_OK(result.status());
-    const fidl::WireResponse response = result.value();
-    ASSERT_TRUE(response.result.is_err());
-    ASSERT_STATUS(response.result.err(), ZX_ERR_SHOULD_WAIT);
+    const fitx::result response = result.value_NEW();
+    ASSERT_TRUE(response.is_error());
+    ASSERT_STATUS(response.error_value(), ZX_ERR_SHOULD_WAIT);
   }
 
   // Client should be in cooked mode
   {
     auto result = client->ClrSetFeature(0, 0);
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
-    ASSERT_EQ(result->features, 0);
+    ASSERT_OK(result.Unwrap_NEW()->status);
+    ASSERT_EQ(result.Unwrap_NEW()->features, 0);
   }
 }
 
@@ -285,9 +285,9 @@ TEST_F(PtyTestCase, ServerEmpty0ByteRead) {
 
   const fidl::WireResult result = server->Read(0);
   ASSERT_OK(result.status());
-  const fidl::WireResponse response = result.value();
-  ASSERT_TRUE(response.result.is_response(), "%s", zx_status_get_string(response.result.err()));
-  const fidl::VectorView data = response.result.response().data;
+  const fitx::result response = result.value_NEW();
+  ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+  const fidl::VectorView data = response.value()->data;
   ASSERT_EQ(std::string_view(reinterpret_cast<const char*>(data.data()), data.count()),
             std::string_view());
 }
@@ -304,19 +304,19 @@ TEST_F(PtyTestCase, ClientFull0ByteServerWrite) {
     uint8_t buf[256] = {};
     const fidl::WireResult result = server->Write(fidl::VectorView<uint8_t>::FromExternal(buf));
     ASSERT_OK(result.status());
-    const fidl::WireResponse response = result.value();
-    if (response.result.is_err()) {
-      ASSERT_STATUS(response.result.err(), ZX_ERR_SHOULD_WAIT);
+    const fitx::result response = result.value_NEW();
+    if (response.is_error()) {
+      ASSERT_STATUS(response.error_value(), ZX_ERR_SHOULD_WAIT);
       break;
     }
-    ASSERT_GT(response.result.response().actual_count, 0);
+    ASSERT_GT(response.value()->actual_count, 0);
   }
 
   const fidl::WireResult result = server->Write({});
   ASSERT_OK(result.status());
-  const fidl::WireResponse response = result.value();
-  ASSERT_TRUE(response.result.is_response(), "%s", zx_status_get_string(response.result.err()));
-  ASSERT_EQ(response.result.response().actual_count, 0);
+  const fitx::result response = result.value_NEW();
+  ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+  ASSERT_EQ(response.value()->actual_count, 0);
 }
 
 // Verify a write by a client for 0 bytes when the client isn't active returns
@@ -330,9 +330,9 @@ TEST_F(PtyTestCase, ClientInactive0ByteClientWrite) {
 
   const fidl::WireResult result = inactive_client->Write({});
   ASSERT_OK(result.status());
-  const fidl::WireResponse response = result.value();
-  ASSERT_TRUE(response.result.is_err());
-  ASSERT_STATUS(response.result.err(), ZX_ERR_SHOULD_WAIT);
+  const fitx::result response = result.value_NEW();
+  ASSERT_TRUE(response.is_error());
+  ASSERT_STATUS(response.error_value(), ZX_ERR_SHOULD_WAIT);
 }
 
 // Make sure the client connections describe appropriately
@@ -343,8 +343,8 @@ TEST_F(PtyTestCase, ClientDescribe) {
 
   auto result = client->Describe();
   ASSERT_OK(result.status());
-  ASSERT_TRUE(result->info.is_tty());
-  ASSERT_TRUE(result->info.tty().event.is_valid());
+  ASSERT_TRUE(result.Unwrap_NEW()->info.is_tty());
+  ASSERT_TRUE(result.Unwrap_NEW()->info.tty().event.is_valid());
 }
 
 TEST_F(PtyTestCase, ClientWindowSize) {
@@ -355,26 +355,26 @@ TEST_F(PtyTestCase, ClientWindowSize) {
   {
     auto result = server->SetWindowSize({.width = 80, .height = 24});
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
+    ASSERT_OK(result.Unwrap_NEW()->status);
   }
   {
     auto result = client->GetWindowSize();
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
-    ASSERT_EQ(result->size.width, 80);
-    ASSERT_EQ(result->size.height, 24);
+    ASSERT_OK(result.Unwrap_NEW()->status);
+    ASSERT_EQ(result.Unwrap_NEW()->size.width, 80);
+    ASSERT_EQ(result.Unwrap_NEW()->size.height, 24);
   }
   {
     auto result = client->SetWindowSize({.width = 5, .height = 32});
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
+    ASSERT_OK(result.Unwrap_NEW()->status);
   }
   {
     auto result = client->GetWindowSize();
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
-    ASSERT_EQ(result->size.width, 5);
-    ASSERT_EQ(result->size.height, 32);
+    ASSERT_OK(result.Unwrap_NEW()->status);
+    ASSERT_EQ(result.Unwrap_NEW()->size.width, 5);
+    ASSERT_EQ(result.Unwrap_NEW()->size.height, 32);
   }
 }
 
@@ -386,32 +386,32 @@ TEST_F(PtyTestCase, ClientClrSetFeature) {
   {
     auto result = client->ClrSetFeature(0, 0);
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
-    ASSERT_EQ(result->features, 0);
+    ASSERT_OK(result.Unwrap_NEW()->status);
+    ASSERT_EQ(result.Unwrap_NEW()->features, 0);
   }
 
   // Make sure we can set bits
   {
     auto result = client->ClrSetFeature(0, fuchsia_hardware_pty::wire::kFeatureRaw);
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
-    ASSERT_EQ(result->features, fuchsia_hardware_pty::wire::kFeatureRaw);
+    ASSERT_OK(result.Unwrap_NEW()->status);
+    ASSERT_EQ(result.Unwrap_NEW()->features, fuchsia_hardware_pty::wire::kFeatureRaw);
   }
 
   // If we don't change any bits, we should see the new settings
   {
     auto result = client->ClrSetFeature(0, 0);
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
-    ASSERT_EQ(result->features, fuchsia_hardware_pty::wire::kFeatureRaw);
+    ASSERT_OK(result.Unwrap_NEW()->status);
+    ASSERT_EQ(result.Unwrap_NEW()->features, fuchsia_hardware_pty::wire::kFeatureRaw);
   }
 
   // Make sure we can clear bits
   {
     auto result = client->ClrSetFeature(fuchsia_hardware_pty::wire::kFeatureRaw, 0);
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
-    ASSERT_EQ(result->features, 0);
+    ASSERT_OK(result.Unwrap_NEW()->status);
+    ASSERT_EQ(result.Unwrap_NEW()->features, 0);
   }
 }
 
@@ -423,15 +423,15 @@ TEST_F(PtyTestCase, ClientClrSetFeatureInvalidBit) {
   {
     auto result = client->ClrSetFeature(0, 0x2);
     ASSERT_OK(result.status());
-    ASSERT_STATUS(result->status, ZX_ERR_NOT_SUPPORTED);
-    ASSERT_EQ(result->features, 0);
+    ASSERT_STATUS(result.Unwrap_NEW()->status, ZX_ERR_NOT_SUPPORTED);
+    ASSERT_EQ(result.Unwrap_NEW()->features, 0);
   }
 
   {
     auto result = client->ClrSetFeature(0x2, 0);
     ASSERT_OK(result.status());
-    ASSERT_STATUS(result->status, ZX_ERR_NOT_SUPPORTED);
-    ASSERT_EQ(result->features, 0);
+    ASSERT_STATUS(result.Unwrap_NEW()->status, ZX_ERR_NOT_SUPPORTED);
+    ASSERT_EQ(result.Unwrap_NEW()->features, 0);
   }
 }
 
@@ -442,9 +442,9 @@ TEST_F(PtyTestCase, ClientGetWindowSizeServerNeverSet) {
 
   auto result = client->GetWindowSize();
   ASSERT_OK(result.status());
-  ASSERT_OK(result->status);
-  ASSERT_EQ(result->size.width, 0);
-  ASSERT_EQ(result->size.height, 0);
+  ASSERT_OK(result.Unwrap_NEW()->status);
+  ASSERT_EQ(result.Unwrap_NEW()->size.width, 0);
+  ASSERT_EQ(result.Unwrap_NEW()->size.height, 0);
 }
 
 // Each client should have its own feature flags
@@ -458,16 +458,16 @@ TEST_F(PtyTestCase, ClientIndependentFeatureFlags) {
   {
     auto result = client->ClrSetFeature(0, fuchsia_hardware_pty::wire::kFeatureRaw);
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
-    ASSERT_EQ(result->features, fuchsia_hardware_pty::wire::kFeatureRaw);
+    ASSERT_OK(result.Unwrap_NEW()->status);
+    ASSERT_EQ(result.Unwrap_NEW()->features, fuchsia_hardware_pty::wire::kFeatureRaw);
   }
 
   {
     // Client 2 shouldn't see the changes
     auto result = client2->ClrSetFeature(0, 0);
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
-    ASSERT_EQ(result->features, 0);
+    ASSERT_OK(result.Unwrap_NEW()->status);
+    ASSERT_EQ(result.Unwrap_NEW()->features, 0);
   }
 }
 
@@ -483,31 +483,31 @@ TEST_F(PtyTestCase, ClientMakeActive) {
     ASSERT_OK(result.status());
     // This client is not the controlling client (id=0), so it cannot change the
     // active client
-    ASSERT_STATUS(result->status, ZX_ERR_ACCESS_DENIED);
+    ASSERT_STATUS(result.Unwrap_NEW()->status, ZX_ERR_ACCESS_DENIED);
   }
   {
     auto result = client2->MakeActive(1);
     ASSERT_OK(result.status());
     // This client is the controlling client (id=0), so it can.
-    ASSERT_OK(result->status);
+    ASSERT_OK(result.Unwrap_NEW()->status);
   }
   {
     // Changing the active client to the existing active client should be fine
     auto result = client2->MakeActive(1);
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
+    ASSERT_OK(result.Unwrap_NEW()->status);
   }
   {
     // Changing the active client to the control client should be fine
     auto result = client2->MakeActive(0);
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
+    ASSERT_OK(result.Unwrap_NEW()->status);
   }
   {
     // Changing the active client to a non-existent client should fail
     auto result = client2->MakeActive(2);
     ASSERT_OK(result.status());
-    ASSERT_STATUS(result->status, ZX_ERR_NOT_FOUND);
+    ASSERT_STATUS(result.Unwrap_NEW()->status, ZX_ERR_NOT_FOUND);
   }
 }
 
@@ -522,15 +522,15 @@ TEST_F(PtyTestCase, ClientReadEvents) {
     auto result = client->ReadEvents();
     ASSERT_OK(result.status());
     // This client is not the controlling client (id=0), so it cannot read events
-    ASSERT_STATUS(result->status, ZX_ERR_ACCESS_DENIED);
+    ASSERT_STATUS(result.Unwrap_NEW()->status, ZX_ERR_ACCESS_DENIED);
   }
 
   {
     auto result = client2->ReadEvents();
     ASSERT_OK(result.status());
     // This client is the controlling client (id=0), so it can read events
-    ASSERT_OK(result->status);
-    ASSERT_EQ(result->events, 0);
+    ASSERT_OK(result.Unwrap_NEW()->status);
+    ASSERT_EQ(result.Unwrap_NEW()->events, 0);
   }
 }
 
@@ -560,8 +560,8 @@ TEST_F(PtyTestCase, ClientReadEventsClears) {
   {
     auto result = control_client->ReadEvents();
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
-    ASSERT_EQ(result->events, fuchsia_hardware_pty::wire::kEventInterrupt);
+    ASSERT_OK(result.Unwrap_NEW()->status);
+    ASSERT_EQ(result.Unwrap_NEW()->events, fuchsia_hardware_pty::wire::kEventInterrupt);
   }
 
   // Signal should have cleared
@@ -574,8 +574,8 @@ TEST_F(PtyTestCase, ClientReadEventsClears) {
   {
     auto result = control_client->ReadEvents();
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
-    ASSERT_EQ(result->events, 0);
+    ASSERT_OK(result.Unwrap_NEW()->status);
+    ASSERT_EQ(result.Unwrap_NEW()->events, 0);
   }
 }
 
@@ -599,8 +599,8 @@ TEST_F(PtyTestCase, EventsSentWithNoControllingClient) {
   {
     auto result = control_client->ReadEvents();
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
-    ASSERT_EQ(result->events, fuchsia_hardware_pty::wire::kEventInterrupt);
+    ASSERT_OK(result.Unwrap_NEW()->status);
+    ASSERT_EQ(result.Unwrap_NEW()->events, fuchsia_hardware_pty::wire::kEventInterrupt);
   }
 }
 
@@ -619,15 +619,15 @@ TEST_F(PtyTestCase, SetWindowSizeSendsEvent) {
   {
     auto result = control_client->ReadEvents();
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
-    ASSERT_EQ(result->events, 0);
+    ASSERT_OK(result.Unwrap_NEW()->status);
+    ASSERT_EQ(result.Unwrap_NEW()->events, 0);
   }
 
   // SetWindowSize which should trigger an event
   {
     auto result = server->SetWindowSize({.width = 123, .height = 45});
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
+    ASSERT_OK(result.Unwrap_NEW()->status);
   }
 
   ASSERT_OK(
@@ -636,8 +636,8 @@ TEST_F(PtyTestCase, SetWindowSizeSendsEvent) {
   {
     auto result = control_client->ReadEvents();
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
-    ASSERT_EQ(result->events, fuchsia_hardware_pty::wire::kEventWindowSize);
+    ASSERT_OK(result.Unwrap_NEW()->status);
+    ASSERT_EQ(result.Unwrap_NEW()->events, fuchsia_hardware_pty::wire::kEventWindowSize);
   }
 }
 
@@ -669,7 +669,7 @@ TEST_F(PtyTestCase, ActiveClientCloses) {
     ASSERT_OK(active_client.status_value());
     auto result = control_client->MakeActive(1);
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
+    ASSERT_OK(result.Unwrap_NEW()->status);
   }
 
   zx::eventpair control_event = GetEvent(control_client.value());
@@ -687,8 +687,8 @@ TEST_F(PtyTestCase, ActiveClientCloses) {
 
   auto result = control_client->ReadEvents();
   ASSERT_OK(result.status());
-  ASSERT_OK(result->status);
-  ASSERT_EQ(result->events, fuchsia_hardware_pty::wire::kEventHangup);
+  ASSERT_OK(result.Unwrap_NEW()->status);
+  ASSERT_EQ(result.Unwrap_NEW()->events, fuchsia_hardware_pty::wire::kEventHangup);
 }
 
 // Makes sure nothing goes wrong when the active client is the controling
@@ -718,9 +718,9 @@ TEST_F(PtyTestCase, ServerClosesWhenClientPresent) {
     const fidl::WireResult result =
         server->Write(fidl::VectorView<uint8_t>::FromExternal(kTestData));
     ASSERT_OK(result.status());
-    const fidl::WireResponse response = result.value();
-    ASSERT_TRUE(response.result.is_response(), "%s", zx_status_get_string(response.result.err()));
-    ASSERT_EQ(response.result.response().actual_count, std::size(kTestData));
+    const fitx::result response = result.value_NEW();
+    ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+    ASSERT_EQ(response.value()->actual_count, std::size(kTestData));
   }
 
   server = {};
@@ -739,8 +739,8 @@ TEST_F(PtyTestCase, ServerClosesWhenClientPresent) {
   {
     auto result = client->ReadEvents();
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
-    ASSERT_EQ(result->events, fuchsia_hardware_pty::wire::kEventHangup);
+    ASSERT_OK(result.Unwrap_NEW()->status);
+    ASSERT_EQ(result.Unwrap_NEW()->events, fuchsia_hardware_pty::wire::kEventHangup);
   }
 
   // Attempts to drain the buffer should succeed
@@ -748,9 +748,9 @@ TEST_F(PtyTestCase, ServerClosesWhenClientPresent) {
     // Request more bytes than are present
     const fidl::WireResult result = client->Read(std::size(kTestData) + 10);
     ASSERT_OK(result.status());
-    const fidl::WireResponse response = result.value();
-    ASSERT_TRUE(response.result.is_response(), "%s", zx_status_get_string(response.result.err()));
-    const fidl::VectorView data = response.result.response().data;
+    const fitx::result response = result.value_NEW();
+    ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+    const fidl::VectorView data = response.value()->data;
     ASSERT_EQ(std::string_view(reinterpret_cast<const char*>(data.data()), data.count()),
               std::string_view(reinterpret_cast<char*>(kTestData), std::size(kTestData)));
   }
@@ -759,9 +759,9 @@ TEST_F(PtyTestCase, ServerClosesWhenClientPresent) {
   {
     const fidl::WireResult result = client->Read(10);
     ASSERT_OK(result.status());
-    const fidl::WireResponse response = result.value();
-    ASSERT_TRUE(response.result.is_err());
-    ASSERT_STATUS(response.result.err(), ZX_ERR_PEER_CLOSED);
+    const fitx::result response = result.value_NEW();
+    ASSERT_TRUE(response.is_error());
+    ASSERT_STATUS(response.error_value(), ZX_ERR_PEER_CLOSED);
   }
 
   // Attempts to write should fail with ZX_ERR_PEER_CLOSED
@@ -769,9 +769,9 @@ TEST_F(PtyTestCase, ServerClosesWhenClientPresent) {
     uint8_t data[16] = {};
     const fidl::WireResult result = client->Write(fidl::VectorView<uint8_t>::FromExternal(data));
     ASSERT_OK(result.status());
-    const fidl::WireResponse response = result.value();
-    ASSERT_TRUE(response.result.is_err());
-    ASSERT_STATUS(response.result.err(), ZX_ERR_PEER_CLOSED);
+    const fitx::result response = result.value_NEW();
+    ASSERT_TRUE(response.is_error());
+    ASSERT_STATUS(response.error_value(), ZX_ERR_PEER_CLOSED);
   }
 }
 
@@ -789,9 +789,9 @@ TEST_F(PtyTestCase, ServerReadClientCooked) {
     const fidl::WireResult result =
         client->Write(fidl::VectorView<uint8_t>::FromExternal(kTestData));
     ASSERT_OK(result.status());
-    const fidl::WireResponse response = result.value();
-    ASSERT_TRUE(response.result.is_response(), "%s", zx_status_get_string(response.result.err()));
-    ASSERT_EQ(response.result.response().actual_count, std::size(kTestData));
+    const fitx::result response = result.value_NEW();
+    ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+    ASSERT_EQ(response.value()->actual_count, std::size(kTestData));
   }
 
   zx::eventpair event = GetEvent(server);
@@ -800,9 +800,9 @@ TEST_F(PtyTestCase, ServerReadClientCooked) {
   {
     const fidl::WireResult result = server->Read(std::size(kExpectedReadback) + 10);
     ASSERT_OK(result.status());
-    const fidl::WireResponse response = result.value();
-    ASSERT_TRUE(response.result.is_response(), "%s", zx_status_get_string(response.result.err()));
-    const fidl::VectorView data = response.result.response().data;
+    const fitx::result response = result.value_NEW();
+    ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+    const fidl::VectorView data = response.value()->data;
     ASSERT_EQ(std::string_view(reinterpret_cast<const char*>(data.data()), data.count()),
               std::string_view(reinterpret_cast<const char*>(kExpectedReadback),
                                std::size(kExpectedReadback)));
@@ -829,10 +829,10 @@ TEST_F(PtyTestCase, ServerWriteClientCooked) {
     const fidl::WireResult result =
         server->Write(fidl::VectorView<uint8_t>::FromExternal(kTestData));
     ASSERT_OK(result.status());
-    const fidl::WireResponse response = result.value();
-    ASSERT_TRUE(response.result.is_response(), "%s", zx_status_get_string(response.result.err()));
+    const fitx::result response = result.value_NEW();
+    ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
     // We expect to see the written count to include the ^C
-    ASSERT_EQ(response.result.response().actual_count, std::size(kExpectedReadbackWithNul) - 1 + 1);
+    ASSERT_EQ(response.value()->actual_count, std::size(kExpectedReadbackWithNul) - 1 + 1);
   }
 
   zx::eventpair event = GetEvent(client.value());
@@ -841,9 +841,9 @@ TEST_F(PtyTestCase, ServerWriteClientCooked) {
   {
     const fidl::WireResult result = client->Read(std::size(kExpectedReadbackWithNul) + 10);
     ASSERT_OK(result.status());
-    const fidl::WireResponse response = result.value();
-    ASSERT_TRUE(response.result.is_response(), "%s", zx_status_get_string(response.result.err()));
-    const fidl::VectorView data = response.result.response().data;
+    const fitx::result response = result.value_NEW();
+    ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+    const fidl::VectorView data = response.value()->data;
     ASSERT_EQ(std::string_view(reinterpret_cast<const char*>(data.data()), data.count()),
               std::string_view(reinterpret_cast<const char*>(kExpectedReadbackWithNul),
                                std::size(kExpectedReadbackWithNul) - 1));
@@ -864,7 +864,7 @@ TEST_F(PtyTestCase, ServerReadClientRaw) {
   {
     auto result = client->ClrSetFeature(0, fuchsia_hardware_pty::wire::kFeatureRaw);
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
+    ASSERT_OK(result.Unwrap_NEW()->status);
   }
 
   // In raw mode, client writes should be untouched.
@@ -873,9 +873,9 @@ TEST_F(PtyTestCase, ServerReadClientRaw) {
     const fidl::WireResult result =
         client->Write(fidl::VectorView<uint8_t>::FromExternal(kTestData));
     ASSERT_OK(result.status());
-    const fidl::WireResponse response = result.value();
-    ASSERT_TRUE(response.result.is_response(), "%s", zx_status_get_string(response.result.err()));
-    ASSERT_EQ(response.result.response().actual_count, std::size(kTestData));
+    const fitx::result response = result.value_NEW();
+    ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+    ASSERT_EQ(response.value()->actual_count, std::size(kTestData));
   }
 
   zx::eventpair event = GetEvent(server);
@@ -884,9 +884,9 @@ TEST_F(PtyTestCase, ServerReadClientRaw) {
   {
     const fidl::WireResult result = server->Read(std::size(kTestData) + 10);
     ASSERT_OK(result.status());
-    const fidl::WireResponse response = result.value();
-    ASSERT_TRUE(response.result.is_response(), "%s", zx_status_get_string(response.result.err()));
-    const fidl::VectorView data = response.result.response().data;
+    const fitx::result response = result.value_NEW();
+    ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+    const fidl::VectorView data = response.value()->data;
     ASSERT_EQ(std::string_view(reinterpret_cast<const char*>(data.data()), data.count()),
               std::string_view(reinterpret_cast<char*>(kTestData), std::size(kTestData)));
   }
@@ -908,7 +908,7 @@ TEST_F(PtyTestCase, ServerWriteClientRaw) {
   {
     auto result = client->ClrSetFeature(0, fuchsia_hardware_pty::wire::kFeatureRaw);
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
+    ASSERT_OK(result.Unwrap_NEW()->status);
   }
 
   // In raw mode, server writes should be untouched.
@@ -917,9 +917,9 @@ TEST_F(PtyTestCase, ServerWriteClientRaw) {
     const fidl::WireResult result =
         server->Write(fidl::VectorView<uint8_t>::FromExternal(kTestData));
     ASSERT_OK(result.status());
-    const fidl::WireResponse response = result.value();
-    ASSERT_TRUE(response.result.is_response(), "%s", zx_status_get_string(response.result.err()));
-    ASSERT_EQ(response.result.response().actual_count, std::size(kTestData));
+    const fitx::result response = result.value_NEW();
+    ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+    ASSERT_EQ(response.value()->actual_count, std::size(kTestData));
   }
 
   zx::eventpair event = GetEvent(client.value());
@@ -928,9 +928,9 @@ TEST_F(PtyTestCase, ServerWriteClientRaw) {
   {
     const fidl::WireResult result = client->Read(std::size(kTestData) + 10);
     ASSERT_OK(result.status());
-    const fidl::WireResponse response = result.value();
-    ASSERT_TRUE(response.result.is_response(), "%s", zx_status_get_string(response.result.err()));
-    const fidl::VectorView data = response.result.response().data;
+    const fitx::result response = result.value_NEW();
+    ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+    const fidl::VectorView data = response.value()->data;
     ASSERT_EQ(std::string_view(reinterpret_cast<const char*>(data.data()), data.count()),
               std::string_view(reinterpret_cast<char*>(kTestData), std::size(kTestData)));
   }
@@ -944,8 +944,8 @@ TEST_F(PtyTestCase, ServerWriteClientRaw) {
   {
     auto result = control_client->ReadEvents();
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
-    ASSERT_EQ(result->events, 0);
+    ASSERT_OK(result.Unwrap_NEW()->status);
+    ASSERT_EQ(result.Unwrap_NEW()->events, 0);
   }
 }
 
@@ -965,10 +965,10 @@ TEST_F(PtyTestCase, ServerFillsClientFifo) {
     const fidl::WireResult result = server->Write(
         fidl::VectorView<uint8_t>::FromExternal(kTestString, std::size(kTestString) - 1));
     ASSERT_OK(result.status());
-    const fidl::WireResponse response = result.value();
-    ASSERT_TRUE(response.result.is_response(), "%s", zx_status_get_string(response.result.err()));
-    ASSERT_GT(response.result.response().actual_count, 0);
-    total_written += response.result.response().actual_count;
+    const fitx::result response = result.value_NEW();
+    ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+    ASSERT_GT(response.value()->actual_count, 0);
+    total_written += response.value()->actual_count;
   }
 
   // Trying to write when full gets SHOULD_WAIT
@@ -976,9 +976,9 @@ TEST_F(PtyTestCase, ServerFillsClientFifo) {
     const fidl::WireResult result = server->Write(
         fidl::VectorView<uint8_t>::FromExternal(kTestString, std::size(kTestString) - 1));
     ASSERT_OK(result.status());
-    const fidl::WireResponse response = result.value();
-    ASSERT_TRUE(response.result.is_err());
-    ASSERT_STATUS(response.result.err(), ZX_ERR_SHOULD_WAIT);
+    const fitx::result response = result.value_NEW();
+    ASSERT_TRUE(response.is_error());
+    ASSERT_STATUS(response.error_value(), ZX_ERR_SHOULD_WAIT);
   }
 
   // Client can read FIFO contents back out
@@ -989,9 +989,9 @@ TEST_F(PtyTestCase, ServerFillsClientFifo) {
         nullptr));
     const fidl::WireResult result = client->Read(std::size(kTestString) - 1);
     ASSERT_OK(result.status());
-    const fidl::WireResponse response = result.value();
-    ASSERT_TRUE(response.result.is_response(), "%s", zx_status_get_string(response.result.err()));
-    const fidl::VectorView data = response.result.response().data;
+    const fitx::result response = result.value_NEW();
+    ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+    const fidl::VectorView data = response.value()->data;
     ASSERT_EQ(data.count(), std::min(std::size(kTestString) - 1, total_written - total_read));
     ASSERT_EQ(std::string_view(reinterpret_cast<const char*>(data.data()), data.count()),
               std::string_view(reinterpret_cast<char*>(kTestString), data.count()));
@@ -1020,10 +1020,10 @@ TEST_F(PtyTestCase, ClientFillsServerFifo) {
     const fidl::WireResult result = client->Write(
         fidl::VectorView<uint8_t>::FromExternal(kTestString, std::size(kTestString) - 1));
     ASSERT_OK(result.status());
-    const fidl::WireResponse response = result.value();
-    ASSERT_TRUE(response.result.is_response(), "%s", zx_status_get_string(response.result.err()));
-    ASSERT_GT(response.result.response().actual_count, 0);
-    total_written += response.result.response().actual_count;
+    const fitx::result response = result.value_NEW();
+    ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+    ASSERT_GT(response.value()->actual_count, 0);
+    total_written += response.value()->actual_count;
   }
 
   // Trying to write when full gets SHOULD_WAIT
@@ -1031,9 +1031,9 @@ TEST_F(PtyTestCase, ClientFillsServerFifo) {
     const fidl::WireResult result = client->Write(
         fidl::VectorView<uint8_t>::FromExternal(kTestString, std::size(kTestString) - 1));
     ASSERT_OK(result.status());
-    const fidl::WireResponse response = result.value();
-    ASSERT_TRUE(response.result.is_err());
-    ASSERT_STATUS(response.result.err(), ZX_ERR_SHOULD_WAIT);
+    const fitx::result response = result.value_NEW();
+    ASSERT_TRUE(response.is_error());
+    ASSERT_STATUS(response.error_value(), ZX_ERR_SHOULD_WAIT);
   }
 
   // Server can read FIFO contents back out
@@ -1044,9 +1044,9 @@ TEST_F(PtyTestCase, ClientFillsServerFifo) {
         nullptr));
     const fidl::WireResult result = server->Read(std::size(kTestString) - 1);
     ASSERT_OK(result.status());
-    const fidl::WireResponse response = result.value();
-    ASSERT_TRUE(response.result.is_response(), "%s", zx_status_get_string(response.result.err()));
-    const fidl::VectorView data = response.result.response().data;
+    const fitx::result response = result.value_NEW();
+    ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+    const fidl::VectorView data = response.value()->data;
     ASSERT_EQ(data.count(), std::min(std::size(kTestString) - 1, total_written - total_read));
     ASSERT_EQ(std::string_view(reinterpret_cast<const char*>(data.data()), data.count()),
               std::string_view(reinterpret_cast<char*>(kTestString), data.count()));
@@ -1077,9 +1077,9 @@ TEST_F(PtyTestCase, NonActiveClientsCantWrite) {
     const fidl::WireResult result =
         other_client->Write(fidl::VectorView<uint8_t>::FromExternal(&byte, 1));
     ASSERT_OK(result.status());
-    const fidl::WireResponse response = result.value();
-    ASSERT_TRUE(response.result.is_err());
-    ASSERT_STATUS(response.result.err(), ZX_ERR_SHOULD_WAIT);
+    const fitx::result response = result.value_NEW();
+    ASSERT_TRUE(response.is_error());
+    ASSERT_STATUS(response.error_value(), ZX_ERR_SHOULD_WAIT);
   }
 }
 
@@ -1098,16 +1098,16 @@ TEST_F(PtyTestCase, ClientsHaveIndependentFifos) {
     const fidl::WireResult result =
         server->Write(fidl::VectorView<uint8_t>::FromExternal(&kControlClientByte, 1));
     ASSERT_OK(result.status());
-    const fidl::WireResponse response = result.value();
-    ASSERT_TRUE(response.result.is_response(), "%s", zx_status_get_string(response.result.err()));
-    ASSERT_EQ(response.result.response().actual_count, 1);
+    const fitx::result response = result.value_NEW();
+    ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+    ASSERT_EQ(response.value()->actual_count, 1);
   }
 
   // Switch active clients
   {
     auto result = control_client->MakeActive(1);
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
+    ASSERT_OK(result.Unwrap_NEW()->status);
   }
 
   // This should go to the other client's FIFO
@@ -1115,9 +1115,9 @@ TEST_F(PtyTestCase, ClientsHaveIndependentFifos) {
     const fidl::WireResult result =
         server->Write(fidl::VectorView<uint8_t>::FromExternal(&kOtherClientByte, 1));
     ASSERT_OK(result.status());
-    const fidl::WireResponse response = result.value();
-    ASSERT_TRUE(response.result.is_response(), "%s", zx_status_get_string(response.result.err()));
-    ASSERT_EQ(response.result.response().actual_count, 1);
+    const fitx::result response = result.value_NEW();
+    ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+    ASSERT_EQ(response.value()->actual_count, 1);
   }
 
   auto check_client = [&](Connection& client, uint8_t expected_value) {
@@ -1129,9 +1129,9 @@ TEST_F(PtyTestCase, ClientsHaveIndependentFifos) {
 
     const fidl::WireResult result = client->Read(10);
     ASSERT_OK(result.status());
-    const fidl::WireResponse response = result.value();
-    ASSERT_TRUE(response.result.is_response(), "%s", zx_status_get_string(response.result.err()));
-    const fidl::VectorView data = response.result.response().data;
+    const fitx::result response = result.value_NEW();
+    ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+    const fidl::VectorView data = response.value()->data;
     ASSERT_EQ(data.count(), 1);
     ASSERT_EQ(data.data()[0], expected_value);
 

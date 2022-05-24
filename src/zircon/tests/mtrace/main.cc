@@ -33,7 +33,7 @@ zx::status<zx::resource> GetRootResource() {
     printf("mtrace: Could not retrieve RootResource: %s\n", zx_status_get_string(result.status()));
     return zx::error(result.status());
   }
-  return zx::ok(std::move(result.Unwrap()->resource));
+  return zx::ok(std::move(result.Unwrap_NEW()->resource));
 }
 
 std::optional<uint8_t> IntelArchitecturalPMUVersion() {

@@ -756,7 +756,7 @@ reader_ctx::OnResult(fidl::WireUnownedResult<FIR::InputReportsReader::ReadInputR
   //
   // Get the reports vector view
   //
-  auto const & reports = result.Unwrap()->result.response().reports;
+  auto const & reports = result.Unwrap_NEW()->value()->reports;
 
   for (auto const & report : reports)
     {

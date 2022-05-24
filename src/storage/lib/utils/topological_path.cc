@@ -14,10 +14,10 @@ zx::status<std::string> GetTopologicalPath(
   auto result = fidl::WireCall(channel)->GetTopologicalPath();
   if (!result.ok())
     return zx::error(result.status());
-  if (result->result.is_err())
-    return zx::error(result->result.err());
-  return zx::ok(
-      std::string(result->result.response().path.data(), result->result.response().path.size()));
+  if (result.Unwrap_NEW()->is_error())
+    return zx::error(result.Unwrap_NEW()->error_value());
+  return zx::ok(std::string(result.Unwrap_NEW()->value()->path.data(),
+                            result.Unwrap_NEW()->value()->path.size()));
 }
 
 zx::status<std::string> GetTopologicalPath(const std::string& path) {

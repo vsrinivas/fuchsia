@@ -89,7 +89,7 @@ zx_status_t AmlUsbPhy::InitPhy() {
   auto level_result =
       reset_register_->WriteRegister32(RESET1_LEVEL_OFFSET, aml_registers::USB_RESET1_LEVEL_MASK,
                                        aml_registers::USB_RESET1_LEVEL_MASK);
-  if ((level_result.status() != ZX_OK) || level_result->result.is_err()) {
+  if ((level_result.status() != ZX_OK) || level_result.Unwrap_NEW()->is_error()) {
     zxlogf(ERROR, "%s: Reset Level Write failed\n", __func__);
     return ZX_ERR_INTERNAL;
   }
@@ -98,7 +98,7 @@ zx_status_t AmlUsbPhy::InitPhy() {
   auto register_result1 = reset_register_->WriteRegister32(
       RESET1_REGISTER_OFFSET, aml_registers::USB_RESET1_REGISTER_UNKNOWN_1_MASK,
       aml_registers::USB_RESET1_REGISTER_UNKNOWN_1_MASK);
-  if ((register_result1.status() != ZX_OK) || register_result1->result.is_err()) {
+  if ((register_result1.status() != ZX_OK) || register_result1.Unwrap_NEW()->is_error()) {
     zxlogf(ERROR, "%s: Reset Register Write on 1 << 2 failed\n", __func__);
     return ZX_ERR_INTERNAL;
   }
@@ -127,7 +127,7 @@ zx_status_t AmlUsbPhy::InitPhy() {
     auto register_result2 = reset_register_->WriteRegister32(
         RESET1_REGISTER_OFFSET, aml_registers::USB_RESET1_REGISTER_UNKNOWN_2_MASK,
         aml_registers::USB_RESET1_REGISTER_UNKNOWN_2_MASK);
-    if ((register_result2.status() != ZX_OK) || register_result2->result.is_err()) {
+    if ((register_result2.status() != ZX_OK) || register_result2.Unwrap_NEW()->is_error()) {
       zxlogf(ERROR, "%s: Reset Register Write on 1 << 16 failed\n", __func__);
       return ZX_ERR_INTERNAL;
     }

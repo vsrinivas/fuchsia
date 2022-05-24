@@ -188,7 +188,7 @@ void HdmiHost::ConfigureOd3Div(uint32_t div_sel) {
     usleep(1);
     /* TODO(fxb/69679): Add in Resets
     auto result = display->reset_register_.WriteRegister32(PRESET0_REGISTER, 1 << 7, 1 << 7);
-    if ((result.status() != ZX_OK) || result->result.is_err()) {
+    if ((result.status() != ZX_OK) || result.Unwrap_NEW()->is_error()) {
       zxlogf(ERROR, "Reset0 Set failed\n");
     }
     */

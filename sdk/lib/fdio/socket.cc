@@ -596,9 +596,9 @@ struct SockOptResult {
     if (response.status() != ZX_OK) {
       return SockOptResult::Zx(response.status());
     }
-    const auto& result = response.value().result;
-    if (result.is_err()) {
-      return SockOptResult::Errno(static_cast<int16_t>(result.err()));
+    const auto& result = response.value_NEW();
+    if (result.is_error()) {
+      return SockOptResult::Errno(static_cast<int16_t>(result.error_value()));
     }
     return SockOptResult::Ok();
   }
@@ -613,11 +613,11 @@ class GetSockOptProcessor {
     if (response.status() != ZX_OK) {
       return SockOptResult::Zx(response.status());
     }
-    auto& value = response.value();
-    if (value.result.is_err()) {
-      return SockOptResult::Errno(static_cast<int16_t>(value.result.err()));
+    const auto& result = response.value_NEW();
+    if (result.is_error()) {
+      return SockOptResult::Errno(static_cast<int16_t>(result.error_value()));
     }
-    return StoreOption(getter(value.result.response()));
+    return StoreOption(getter(*result.value()));
   }
 
   template <typename T>
@@ -1110,9 +1110,9 @@ struct BaseSocket {
           return SockOptResult::Zx(response.status());
         }
         int32_t error_code = 0;
-        auto& value = response.value();
-        if (value.result.is_err()) {
-          error_code = static_cast<int32_t>(value.result.err());
+        const auto& result = response.value_NEW();
+        if (result.is_error()) {
+          error_code = static_cast<int32_t>(result.error_value());
         }
         return proc.StoreOption(error_code);
       }
@@ -1258,9 +1258,9 @@ struct BaseNetworkSocket : public BaseSocket<T> {
     if (status != ZX_OK) {
       return status;
     }
-    auto const& result = response.Unwrap()->result;
-    if (result.is_err()) {
-      *out_code = static_cast<int16_t>(result.err());
+    auto const& result = response.value_NEW();
+    if (result.is_error()) {
+      *out_code = static_cast<int16_t>(result.error_value());
       return ZX_OK;
     }
     *out_code = 0;
@@ -1275,9 +1275,9 @@ struct BaseNetworkSocket : public BaseSocket<T> {
       if (status != ZX_OK) {
         return status;
       }
-      const auto& result = response.Unwrap()->result;
-      if (result.is_err()) {
-        *out_code = static_cast<int16_t>(result.err());
+      const auto& result = response.value_NEW();
+      if (result.is_error()) {
+        *out_code = static_cast<int16_t>(result.error_value());
       } else {
         *out_code = 0;
       }
@@ -1296,9 +1296,9 @@ struct BaseNetworkSocket : public BaseSocket<T> {
     if (status != ZX_OK) {
       return status;
     }
-    auto const& result = response.Unwrap()->result;
-    if (result.is_err()) {
-      *out_code = static_cast<int16_t>(result.err());
+    auto const& result = response.value_NEW();
+    if (result.is_error()) {
+      *out_code = static_cast<int16_t>(result.error_value());
       return ZX_OK;
     }
     *out_code = 0;
@@ -1311,9 +1311,9 @@ struct BaseNetworkSocket : public BaseSocket<T> {
     if (status != ZX_OK) {
       return status;
     }
-    auto const& result = response.Unwrap()->result;
-    if (result.is_err()) {
-      *out_code = static_cast<int16_t>(result.err());
+    auto const& result = response.value_NEW();
+    if (result.is_error()) {
+      *out_code = static_cast<int16_t>(result.error_value());
       return ZX_OK;
     }
     if (addrlen == nullptr || (*addrlen != 0 && addr == nullptr)) {
@@ -1321,7 +1321,7 @@ struct BaseNetworkSocket : public BaseSocket<T> {
       return ZX_OK;
     }
     *out_code = 0;
-    auto const& out = result.response().addr;
+    auto const& out = result.value()->addr;
     *addrlen = fidl_to_sockaddr(out, addr, *addrlen);
     return ZX_OK;
   }
@@ -1721,9 +1721,9 @@ struct BaseNetworkSocket : public BaseSocket<T> {
     if (status != ZX_OK) {
       return status;
     }
-    auto const& result = response.Unwrap()->result;
-    if (result.is_err()) {
-      *out_code = static_cast<int16_t>(result.err());
+    auto const& result = response.value_NEW();
+    if (result.is_error()) {
+      *out_code = static_cast<int16_t>(result.error_value());
       return ZX_OK;
     }
     *out_code = 0;
@@ -1764,14 +1764,14 @@ Errno zxsio_posix_ioctl(int req, va_list va, F fallback) {
       if (status != ZX_OK) {
         return Errno(fdio_status_to_errno(status));
       }
-      auto const& result = response.Unwrap()->result;
-      if (result.is_err()) {
-        if (result.err() == ZX_ERR_NOT_FOUND) {
+      auto const& result = response.value_NEW();
+      if (result.is_error()) {
+        if (result.error_value() == ZX_ERR_NOT_FOUND) {
           return Errno(ENODEV);
         }
-        return Errno(fdio_status_to_errno(result.err()));
+        return Errno(fdio_status_to_errno(result.error_value()));
       }
-      auto const& if_name = result.response().name;
+      auto const& if_name = result.value()->name;
       const size_t len = std::min(if_name.size(), std::size(ifr->ifr_name));
       auto it = std::copy_n(if_name.begin(), len, std::begin(ifr->ifr_name));
       if (it != std::end(ifr->ifr_name)) {
@@ -1796,14 +1796,14 @@ Errno zxsio_posix_ioctl(int req, va_list va, F fallback) {
         }
         return Errno(fdio_status_to_errno(status));
       }
-      auto const& result = response.Unwrap()->result;
-      if (result.is_err()) {
-        if (result.err() == ZX_ERR_NOT_FOUND) {
+      auto const& result = response.value_NEW();
+      if (result.is_error()) {
+        if (result.error_value() == ZX_ERR_NOT_FOUND) {
           return Errno(ENODEV);
         }
-        return Errno(fdio_status_to_errno(result.err()));
+        return Errno(fdio_status_to_errno(result.error_value()));
       }
-      ifr->ifr_ifindex = static_cast<int>(result.response().index);
+      ifr->ifr_ifindex = static_cast<int>(result.value()->index);
       return Errno(Errno::Ok);
     }
     case SIOCGIFFLAGS: {
@@ -1823,15 +1823,15 @@ Errno zxsio_posix_ioctl(int req, va_list va, F fallback) {
         }
         return Errno(fdio_status_to_errno(status));
       }
-      auto const& result = response.Unwrap()->result;
-      if (result.is_err()) {
-        if (result.err() == ZX_ERR_NOT_FOUND) {
+      auto const& result = response.value_NEW();
+      if (result.is_error()) {
+        if (result.error_value() == ZX_ERR_NOT_FOUND) {
           return Errno(ENODEV);
         }
-        return Errno(fdio_status_to_errno(result.err()));
+        return Errno(fdio_status_to_errno(result.error_value()));
       }
       ifr->ifr_flags =
-          static_cast<uint16_t>(result.response().flags);  // NOLINT(bugprone-narrowing-conversions)
+          static_cast<uint16_t>(result.value()->flags);  // NOLINT(bugprone-narrowing-conversions)
       return Errno(Errno::Ok);
     }
     case SIOCGIFCONF: {
@@ -1850,7 +1850,7 @@ Errno zxsio_posix_ioctl(int req, va_list va, F fallback) {
       if (status != ZX_OK) {
         return Errno(fdio_status_to_errno(status));
       }
-      const auto& interfaces = response.Unwrap()->interfaces;
+      const auto& interfaces = response.value_NEW().interfaces;
 
       // If `ifc_req` is NULL, return the necessary buffer size in bytes for
       // receiving all available addresses in `ifc_len`.
@@ -2016,6 +2016,19 @@ struct PacketSocket {
   }
 };
 
+template <typename R, typename = int>
+struct FitxResultHasValue : std::false_type {};
+template <typename R>
+struct FitxResultHasValue<R, decltype(&R::value, 0)> : std::true_type {};
+template <typename T, typename R>
+typename std::enable_if<FitxResultHasValue<R>::value>::type HandleSendMsgResponse(const R& result,
+                                                                                  size_t total) {
+  T::handle_sendmsg_response(*result->value(), total);
+}
+template <typename T, typename R>
+typename std::enable_if<!FitxResultHasValue<T>::value>::type HandleSendMsgResponse(const R& result,
+                                                                                   size_t total) {}
+
 template <typename T, typename = std::enable_if_t<std::is_same_v<T, SynchronousDatagramSocket> ||
                                                   std::is_same_v<T, RawSocket> ||
                                                   std::is_same_v<T, PacketSocket>>>
@@ -2086,17 +2099,17 @@ struct base_socket_with_event : public zxio {
     if (status != ZX_OK) {
       return status;
     }
-    auto const& result = response.Unwrap()->result;
-    if (result.is_err()) {
-      *out_code = static_cast<int16_t>(result.err());
+    auto const& result = response.value_NEW();
+    if (result.is_error()) {
+      *out_code = static_cast<int16_t>(result.error_value());
       return ZX_OK;
     }
     *out_code = 0;
 
-    T::recvmsg_populate_msgname(result.response(), msg->msg_name, msg->msg_namelen);
+    T::recvmsg_populate_msgname(*result.value(), msg->msg_name, msg->msg_namelen);
 
     {
-      auto const& out = result.response().data;
+      auto const& out = result.value()->data;
 
       const uint8_t* data = out.begin();
       size_t remaining = out.count();
@@ -2112,21 +2125,21 @@ struct base_socket_with_event : public zxio {
           return ZX_OK;
         }
       }
-      if (result.response().truncated != 0) {
+      if (result.value()->truncated != 0) {
         msg->msg_flags |= MSG_TRUNC;
       } else {
         msg->msg_flags &= ~MSG_TRUNC;
       }
       size_t actual = out.count() - remaining;
       if ((flags & MSG_TRUNC) != 0) {
-        actual += result.response().truncated;
+        actual += result.value()->truncated;
       }
       *out_actual = actual;
     }
 
     if (want_cmsg) {
       FidlControlDataProcessor proc(msg->msg_control, msg->msg_controllen);
-      msg->msg_controllen = proc.Store(result.response().control);
+      msg->msg_controllen = proc.Store(result.value()->control);
     } else {
       msg->msg_controllen = 0;
     }
@@ -2199,12 +2212,12 @@ struct base_socket_with_event : public zxio {
     if (status != ZX_OK) {
       return status;
     }
-    auto const& result = response.Unwrap()->result;
-    if (result.is_err()) {
-      *out_code = static_cast<int16_t>(result.err());
+    auto const& result = response.value_NEW();
+    if (result.is_error()) {
+      *out_code = static_cast<int16_t>(result.error_value());
       return ZX_OK;
     }
-    T::handle_sendmsg_response(result.response(), total);
+    HandleSendMsgResponse<T, decltype(result)>(result, total);
 
     *out_code = 0;
     // SendMsg does not perform partial writes.
@@ -2543,9 +2556,9 @@ struct stream_socket : public zxio {
     if (status != ZX_OK) {
       return status;
     }
-    auto const& result = response.Unwrap()->result;
-    if (result.is_err()) {
-      *out_code = static_cast<int16_t>(result.err());
+    auto const& result = response.value_NEW();
+    if (result.is_error()) {
+      *out_code = static_cast<int16_t>(result.error_value());
       return ZX_OK;
     }
     {
@@ -2564,14 +2577,14 @@ struct stream_socket : public zxio {
     if (status != ZX_OK) {
       return status;
     }
-    auto& result = response.Unwrap()->result;
-    if (result.is_err()) {
-      *out_code = static_cast<int16_t>(result.err());
+    const auto& result = response.value_NEW();
+    if (result.is_error()) {
+      *out_code = static_cast<int16_t>(result.error_value());
       return ZX_OK;
     }
     *out_code = 0;
-    *out_handle = result.response().s.channel().release();
-    auto const& out = result.response().addr;
+    *out_handle = result.value()->s.channel().release();
+    auto const& out = result.value()->addr;
     // Result address has invalid tag when it's not provided by the server (when want_addr
     // is false).
     // TODO(https://fxbug.dev/58503): Use better representation of nullable union when available.
@@ -2727,13 +2740,11 @@ struct stream_socket : public zxio {
     if (!response.ok()) {
       return zx::error(response.status());
     }
-    fsocket::wire::BaseSocketGetErrorResult result = response.value().result;
-    switch (result.Which()) {
-      case fsocket::wire::BaseSocketGetErrorResult::Tag::kResponse:
-        return zx::ok(0);
-      case fsocket::wire::BaseSocketGetErrorResult::Tag::kErr:
-        return zx::ok(static_cast<int32_t>(result.err()));
+    const auto& result = response.value_NEW();
+    if (result.is_error()) {
+      return zx::ok(static_cast<int32_t>(result.error_value()));
     }
+    return zx::ok(0);
   }
 
   std::mutex state_lock_;
@@ -2862,9 +2873,9 @@ struct packet_socket : public base_socket_with_event<PacketSocket> {
     if (status != ZX_OK) {
       return status;
     }
-    const fpacketsocket::wire::SocketBindResult& result = response.Unwrap()->result;
-    if (result.is_err()) {
-      *out_code = static_cast<int16_t>(result.err());
+    const auto& result = response.value_NEW();
+    if (result.is_error()) {
+      *out_code = static_cast<int16_t>(result.error_value());
       return ZX_OK;
     }
     *out_code = 0;
@@ -2886,14 +2897,14 @@ struct packet_socket : public base_socket_with_event<PacketSocket> {
     if (status != ZX_OK) {
       return status;
     }
-    const fpacketsocket::wire::SocketGetInfoResult result = response.Unwrap()->result;
-    if (result.is_err()) {
-      *out_code = static_cast<int16_t>(result.err());
+    const auto& result = response.value_NEW();
+    if (result.is_error()) {
+      *out_code = static_cast<int16_t>(result.error_value());
       return ZX_OK;
     }
     *out_code = 0;
 
-    const fpacketsocket::wire::SocketGetInfoResponse& info = result.response();
+    const fpacketsocket::wire::SocketGetInfoResponse& info = *result.value();
     sockaddr_ll sll = {
         .sll_family = AF_PACKET,
         .sll_protocol = htons(fidl_protoassoc_to_protocol(info.protocol)),

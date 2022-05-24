@@ -92,7 +92,7 @@ zx_status_t CreateVirtualConsoles(const console_launcher::ConsoleLauncher& launc
       FX_PLOGS(ERROR, result.status()) << "failed to create virtcon session";
       return result.status();
     }
-    const fidl::WireResponse response = result.value();
+    const fidl::WireResponse response = result.value_NEW();
     if (response.status != ZX_OK) {
       FX_PLOGS(ERROR, response.status) << "failed to create virtcon session";
       return response.status;

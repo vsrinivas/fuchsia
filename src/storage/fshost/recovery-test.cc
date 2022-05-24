@@ -73,7 +73,7 @@ TEST_F(FsRecoveryTest, EmptyPartitionRecoveryTest) {
   auto client = fidl::BindSyncClient(std::move(*client_end));
   auto res = client->WatchFile();
   ASSERT_EQ(res.status(), ZX_OK);
-  ASSERT_EQ(res->num_filed, 0ul);
+  ASSERT_EQ(res.value_NEW().num_filed, 0ul);
 }
 
 TEST_F(FsRecoveryTest, CorruptDataRecoveryTest) {
@@ -150,7 +150,7 @@ TEST_F(FsRecoveryTest, CorruptDataRecoveryTest) {
     auto client = fidl::BindSyncClient(std::move(*client_end));
     auto res = client->WatchFile();
     ASSERT_EQ(res.status(), ZX_OK);
-    num_crashes += res->num_filed;
+    num_crashes += res.value_NEW().num_filed;
 
     // We need to restart fshost between each test case, because fshost won't bind multiple FVM
     // instances.

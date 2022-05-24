@@ -91,7 +91,7 @@ TEST_F(LoaderTest, LoadObject) {
   // Test that loading a random library fetches a VMO from the backing loader.
   client->LoadObject("mylib.so").Then([mylib_koid](auto& result) {
     ASSERT_EQ(ZX_OK, result.status());
-    auto* response = result.Unwrap();
+    auto* response = result.Unwrap_NEW();
     EXPECT_EQ(ZX_OK, response->rv);
     zx_koid_t actual_koid = GetKoid(response->object);
     EXPECT_EQ(mylib_koid, actual_koid);
@@ -102,7 +102,7 @@ TEST_F(LoaderTest, LoadObject) {
   // Test that loading the driver library fetches a VMO from the compat loader.
   client->LoadObject(compat::kLibDriverName).Then([loader_koid](auto& result) {
     ASSERT_EQ(ZX_OK, result.status());
-    auto* response = result.Unwrap();
+    auto* response = result.Unwrap_NEW();
     EXPECT_EQ(ZX_OK, response->rv);
     zx_koid_t actual_koid = GetKoid(response->object);
     EXPECT_EQ(loader_koid, actual_koid);
@@ -114,7 +114,7 @@ TEST_F(LoaderTest, LoadObject) {
   // only see a single request for the driver library by the dynamic loader.
   client->LoadObject(compat::kLibDriverName).Then([](auto& result) {
     ASSERT_EQ(ZX_OK, result.status());
-    auto* response = result.Unwrap();
+    auto* response = result.Unwrap_NEW();
     EXPECT_EQ(ZX_ERR_NOT_FOUND, response->rv);
   });
 
@@ -169,7 +169,7 @@ TEST_F(LoaderTest, ConfigSucceeds) {
   // Test that config returns success.
   client->Config("").Then([](auto& result) {
     ASSERT_EQ(ZX_OK, result.status());
-    auto* response = result.Unwrap();
+    auto* response = result.Unwrap_NEW();
     EXPECT_EQ(ZX_OK, response->rv);
   });
 
@@ -197,7 +197,7 @@ TEST_F(LoaderTest, CloneSucceeds) {
   endpoints = fidl::CreateEndpoints<fldsvc::Loader>();
   client->Clone(std::move(endpoints->server)).Then([](auto& result) {
     ASSERT_EQ(ZX_OK, result.status());
-    auto* response = result.Unwrap();
+    auto* response = result.Unwrap_NEW();
     EXPECT_EQ(ZX_OK, response->rv);
   });
 
@@ -223,12 +223,12 @@ TEST_F(LoaderTest, NoBackingLoader) {
   // Test that functions that call the backing loader fail.
   client->LoadObject("mylib.so").Then([](auto& result) {
     ASSERT_EQ(ZX_OK, result.status());
-    auto* response = result.Unwrap();
+    auto* response = result.Unwrap_NEW();
     EXPECT_EQ(ZX_ERR_CANCELED, response->rv);
   });
   client->Config("").Then([](auto& result) {
     ASSERT_EQ(ZX_OK, result.status());
-    auto* response = result.Unwrap();
+    auto* response = result.Unwrap_NEW();
     EXPECT_EQ(ZX_ERR_CANCELED, response->rv);
   });
 

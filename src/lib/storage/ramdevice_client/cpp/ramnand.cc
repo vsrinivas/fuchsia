@@ -109,8 +109,8 @@ RamNand::~RamNand() {
     fdio_cpp::FdioCaller caller(std::move(fd_));
     auto resp = fidl::WireCall(caller.borrow_as<fuchsia_device::Controller>())->ScheduleUnbind();
     zx_status_t status = resp.status();
-    if (status == ZX_OK && resp->result.is_err()) {
-      status = resp->result.err();
+    if (status == ZX_OK && resp.Unwrap_NEW()->is_error()) {
+      status = resp.Unwrap_NEW()->error_value();
     }
     if (status != ZX_OK) {
       fprintf(stderr, "Could not unbind ram_nand, %d\n", status);

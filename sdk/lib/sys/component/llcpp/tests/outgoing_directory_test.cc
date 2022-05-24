@@ -172,7 +172,7 @@ TEST_F(OutgoingDirectoryTest, AddProtocolWireServer) {
       .ThenExactlyOnce([&reply_received, quit_loop = QuitLoopClosure()](
                            fidl::WireUnownedResult<fuchsia_examples::Echo::EchoString>& result) {
         ASSERT_TRUE(result.ok()) << "EchoString failed: " << result.error();
-        auto* response = result.Unwrap();
+        auto* response = result.Unwrap_NEW();
         reply_received = std::string(response->response.data(), response->response.size());
         quit_loop();
       });
@@ -244,7 +244,7 @@ TEST_F(OutgoingDirectoryTest, AddServiceServesAllMembers) {
             [quit_loop = QuitLoopClosure(), &message_echoed, expected_reply = expected_reply](
                 fidl::WireUnownedResult<fuchsia_examples::Echo::EchoString>& reply) {
               EXPECT_TRUE(reply.ok()) << "Reply failed with: " << reply.error().status_string();
-              EXPECT_EQ(reply.value().response.get(), cpp17::string_view(expected_reply));
+              EXPECT_EQ(reply.value_NEW().response.get(), cpp17::string_view(expected_reply));
               message_echoed = true;
               quit_loop();
             });
@@ -291,7 +291,7 @@ TEST_F(OutgoingDirectoryTest, AddProtocolCanServeMultipleProtocols) {
         .ThenExactlyOnce([&reply_received, quit_loop = QuitLoopClosure()](
                              fidl::WireUnownedResult<fuchsia_examples::Echo::EchoString>& result) {
           ASSERT_TRUE(result.ok()) << "EchoString failed: " << result.error();
-          auto* response = result.Unwrap();
+          auto* response = result.Unwrap_NEW();
           reply_received = std::string(response->response.data(), response->response.size());
           quit_loop();
         });
@@ -378,7 +378,7 @@ TEST_F(OutgoingDirectoryTest, AddProtocolAtServesProtocol) {
       .ThenExactlyOnce([&reply_received, quit_loop = QuitLoopClosure()](
                            fidl::WireUnownedResult<fuchsia_examples::Echo::EchoString>& result) {
         ASSERT_TRUE(result.ok()) << "EchoString failed: " << result.error().FormatDescription();
-        auto* response = result.Unwrap();
+        auto* response = result.Unwrap_NEW();
         reply_received = std::string(response->response.data(), response->response.size());
         quit_loop();
       });
@@ -476,7 +476,7 @@ TEST_F(OutgoingDirectoryTest, ServeCanYieldMultipleConnections) {
         .ThenExactlyOnce([&reply_received, quit_loop = QuitLoopClosure()](
                              fidl::WireUnownedResult<fuchsia_examples::Echo::EchoString>& result) {
           ASSERT_TRUE(result.ok()) << "EchoString failed: " << result.error();
-          auto* response = result.Unwrap();
+          auto* response = result.Unwrap_NEW();
           reply_received = std::string(response->response.data(), response->response.size());
           quit_loop();
         });

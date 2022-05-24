@@ -32,12 +32,12 @@ void FshostIntegrationTest::SetUp() {
   fuchsia_component_decl::wire::CollectionRef collection_ref{.name = kTestFshostCollection};
   fuchsia_component::wire::CreateChildArgs child_args;
   auto create_res = realm_->CreateChild(collection_ref, child_decl, child_args);
-  ASSERT_TRUE(create_res.ok() && !create_res->result.is_err());
+  ASSERT_TRUE(create_res.ok() && !create_res.Unwrap_NEW()->is_error());
 
   auto exposed_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
   ASSERT_EQ(exposed_endpoints.status_value(), ZX_OK);
   auto open_res = realm_->OpenExposedDir(kFshostChildRef, std::move(exposed_endpoints->server));
-  ASSERT_TRUE(open_res.ok() && !open_res->result.is_err());
+  ASSERT_TRUE(open_res.ok() && !open_res.Unwrap_NEW()->is_error());
   exposed_dir_ = fidl::BindSyncClient(std::move(exposed_endpoints->client));
 
   auto watcher_client_end =
@@ -48,7 +48,7 @@ void FshostIntegrationTest::SetUp() {
 
 void FshostIntegrationTest::TearDown() {
   auto destroy_res = realm_->DestroyChild(kFshostChildRef);
-  ASSERT_TRUE(destroy_res.ok() && !destroy_res->result.is_err());
+  ASSERT_TRUE(destroy_res.ok() && !destroy_res.Unwrap_NEW()->is_error());
 }
 
 void FshostIntegrationTest::ResetFshost() {
@@ -59,13 +59,13 @@ void FshostIntegrationTest::ResetFshost() {
 void FshostIntegrationTest::PauseWatcher() const {
   auto res = block_watcher_->Pause();
   ASSERT_EQ(res.status(), ZX_OK);
-  ASSERT_EQ(res->status, ZX_OK);
+  ASSERT_EQ(res.value_NEW().status, ZX_OK);
 }
 
 void FshostIntegrationTest::ResumeWatcher() const {
   auto res = block_watcher_->Resume();
   ASSERT_EQ(res.status(), ZX_OK);
-  ASSERT_EQ(res->status, ZX_OK);
+  ASSERT_EQ(res.value_NEW().status, ZX_OK);
 }
 
 std::pair<fbl::unique_fd, uint64_t> FshostIntegrationTest::WaitForMount(const std::string& name) {

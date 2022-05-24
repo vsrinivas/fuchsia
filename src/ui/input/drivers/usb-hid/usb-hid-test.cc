@@ -78,7 +78,7 @@ void USBVirtualBus::Unbind(fbl::String devpath) {
           ->GetTopologicalPath();
   ASSERT_OK(hid_device_path_response.status());
   zx::channel usbhid_channel;
-  std::string hid_device_path = hid_device_path_response->result.response().path.data();
+  std::string hid_device_path = hid_device_path_response.Unwrap_NEW()->value()->path.data();
   std::string DEV_CONST = "@/dev/";
   std::string usb_hid_path = hid_device_path.substr(
       DEV_CONST.length(), hid_device_path.find_last_of("/") - DEV_CONST.length());
@@ -166,8 +166,8 @@ TEST_F(UsbOneEndpointTest, GetDeviceIdsVidPid) {
   // Check USB device descriptor VID/PID plumbing.
   auto result = sync_client_->GetDeviceIds();
   ASSERT_OK(result.status());
-  EXPECT_EQ(0x18d1, result->ids.vendor_id);
-  EXPECT_EQ(0xaf10, result->ids.product_id);
+  EXPECT_EQ(0x18d1, result.value_NEW().ids.vendor_id);
+  EXPECT_EQ(0xaf10, result.value_NEW().ids.product_id);
 }
 
 TEST_F(UsbOneEndpointTest, SetAndGetReport) {
@@ -178,15 +178,15 @@ TEST_F(UsbOneEndpointTest, SetAndGetReport) {
   auto get_result = sync_client_->GetReport(fuchsia_hardware_input::wire::ReportType::kInput, 0);
 
   ASSERT_OK(set_result.status());
-  ASSERT_OK(set_result->status);
+  ASSERT_OK(set_result.value_NEW().status);
 
   ASSERT_OK(get_result.status());
-  ASSERT_OK(get_result->status);
+  ASSERT_OK(get_result.value_NEW().status);
 
-  ASSERT_EQ(get_result->report.count(), sizeof(hid_boot_mouse_report_t));
-  ASSERT_EQ(0xab, get_result->report[0]);
-  ASSERT_EQ(0xbc, get_result->report[1]);
-  ASSERT_EQ(0xde, get_result->report[2]);
+  ASSERT_EQ(get_result.value_NEW().report.count(), sizeof(hid_boot_mouse_report_t));
+  ASSERT_EQ(0xab, get_result.value_NEW().report[0]);
+  ASSERT_EQ(0xbc, get_result.value_NEW().report[1]);
+  ASSERT_EQ(0xde, get_result.value_NEW().report[2]);
 }
 
 TEST_F(UsbOneEndpointTest, UnBind) { ASSERT_NO_FATAL_FAILURE(bus_.Unbind(devpath_)); }
@@ -199,15 +199,15 @@ TEST_F(UsbTwoEndpointTest, SetAndGetReport) {
   auto get_result = sync_client_->GetReport(fuchsia_hardware_input::wire::ReportType::kInput, 0);
 
   ASSERT_OK(set_result.status());
-  ASSERT_OK(set_result->status);
+  ASSERT_OK(set_result.value_NEW().status);
 
   ASSERT_OK(get_result.status());
-  ASSERT_OK(get_result->status);
+  ASSERT_OK(get_result.value_NEW().status);
 
-  ASSERT_EQ(get_result->report.count(), sizeof(hid_boot_mouse_report_t));
-  ASSERT_EQ(0xab, get_result->report[0]);
-  ASSERT_EQ(0xbc, get_result->report[1]);
-  ASSERT_EQ(0xde, get_result->report[2]);
+  ASSERT_EQ(get_result.value_NEW().report.count(), sizeof(hid_boot_mouse_report_t));
+  ASSERT_EQ(0xab, get_result.value_NEW().report[0]);
+  ASSERT_EQ(0xbc, get_result.value_NEW().report[1]);
+  ASSERT_EQ(0xde, get_result.value_NEW().report[2]);
 }
 
 TEST_F(UsbTwoEndpointTest, UnBind) { ASSERT_NO_FATAL_FAILURE(bus_.Unbind(devpath_)); }

@@ -119,7 +119,7 @@ class WatchClient {
           if (!result.ok()) {
             return;
           }
-          auto* resp = result.Unwrap();
+          auto* resp = result.Unwrap_NEW();
           fbl::AutoLock lock(&lock_);
           EXPECT_OK(event_.signal(0, kEvent));
           observed_status_.emplace(resp->port_status);

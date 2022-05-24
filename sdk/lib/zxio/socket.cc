@@ -39,13 +39,12 @@ class BaseSocket {
     if (!result.ok()) {
       return result.status();
     }
-    const auto& response = result.value();
-    switch (response.result.Which()) {
-      case fio::wire::Node2CloseResult::Tag::kErr:
-        return response.result.err();
-      case fio::wire::Node2CloseResult::Tag::kResponse:
-        return client_.client_end().channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(),
-                                                       nullptr);
+    const auto& response = result.value_NEW();
+    if (response.is_error()) {
+      return response.error_value();
+    } else {
+      return client_.client_end().channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(),
+                                                     nullptr);
     }
   }
 

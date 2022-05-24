@@ -62,7 +62,7 @@ zx_status_t SysInfo::GetBoardName(std::string *board_name) {
     printf("sysinfo: Could not GetBoardName: %s\n", result.FormatDescription().c_str());
     return result.status();
   }
-  *board_name = std::string(result->name.cbegin(), result->name.size());
+  *board_name = std::string(result.Unwrap_NEW()->name.cbegin(), result.Unwrap_NEW()->name.size());
 
   return status;
 }
@@ -80,7 +80,7 @@ zx_status_t SysInfo::GetBoardRevision(uint32_t *board_revision) {
     printf("sysinfo: Could not GetBoardRevision: %s\n", result.FormatDescription().c_str());
     return result.status();
   }
-  *board_revision = result->revision;
+  *board_revision = result.Unwrap_NEW()->revision;
 
   return status;
 }
@@ -98,7 +98,8 @@ zx_status_t SysInfo::GetBootloaderVendor(std::string *bootloader_vendor) {
     printf("sysinfo: Could not GetBootloaderVendor: %s\n", result.FormatDescription().c_str());
     return result.status();
   }
-  *bootloader_vendor = std::string(result->vendor.cbegin(), result->vendor.size());
+  *bootloader_vendor =
+      std::string(result.Unwrap_NEW()->vendor.cbegin(), result.Unwrap_NEW()->vendor.size());
 
   return status;
 }
@@ -118,7 +119,7 @@ zx_status_t SysInfo::GetInterruptControllerInfo(
            result.FormatDescription().c_str());
     return result.status();
   }
-  info->type = result->info->type;
+  info->type = result.Unwrap_NEW()->info->type;
   return status;
 }
 

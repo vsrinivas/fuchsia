@@ -48,9 +48,9 @@ zx::vmo GetVmo(std::string_view path) {
   EXPECT_EQ(status, ZX_OK) << zx_status_get_string(status);
   fidl::WireResult result = fidl::WireCall(endpoints->client)->GetBackingMemory(kVmoFlags);
   EXPECT_TRUE(result.ok()) << result.FormatDescription();
-  fidl::WireResponse<fio::File::GetBackingMemory>& response = result.value();
-  EXPECT_TRUE(response.result.is_response()) << zx_status_get_string(response.result.err());
-  return std::move(response.result.response().vmo);
+  const auto& response = result.value_NEW();
+  EXPECT_TRUE(response.is_ok()) << zx_status_get_string(response.error_value());
+  return std::move(response.value()->vmo);
 }
 
 class TestNode : public fidl::testing::WireTestBase<fdf::Node> {

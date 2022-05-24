@@ -180,7 +180,7 @@ TEST_F(ChromeosAcpiTest, NvdataVersionTestV2) {
 
   auto result = fidl_client_->GetNvdataVersion();
   ASSERT_OK(result.status());
-  ASSERT_EQ(result->result.response().version, 2);
+  ASSERT_EQ(result.Unwrap_NEW()->value()->version, 2);
 }
 
 TEST_F(ChromeosAcpiTest, NvdataVersionTestV1) {
@@ -198,7 +198,7 @@ TEST_F(ChromeosAcpiTest, NvdataVersionTestV1) {
 
   auto result = fidl_client_->GetNvdataVersion();
   ASSERT_OK(result.status());
-  ASSERT_EQ(result->result.response().version, 1);
+  ASSERT_EQ(result.Unwrap_NEW()->value()->version, 1);
 }
 
 TEST_F(ChromeosAcpiTest, ActiveAPFirmwareTest) {
@@ -208,7 +208,7 @@ TEST_F(ChromeosAcpiTest, ActiveAPFirmwareTest) {
 
   auto result = fidl_client_->GetActiveApFirmware();
   ASSERT_OK(result.status());
-  ASSERT_EQ(result->result.response().slot, fuchsia_acpi_chromeos::wire::BootSlot::kA);
+  ASSERT_EQ(result.Unwrap_NEW()->value()->slot, fuchsia_acpi_chromeos::wire::BootSlot::kA);
 }
 
 }  // namespace chromeos_acpi

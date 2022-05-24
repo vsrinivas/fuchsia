@@ -47,8 +47,8 @@ zx_status_t BindVerityDriver(zx::unowned_channel ramdisk_chan) {
                   ->Bind(::fidl::StringView::FromExternal(kDriverLib));
   rc = resp.status();
   if (rc == ZX_OK) {
-    if (resp->result.is_err()) {
-      rc = resp->result.err();
+    if (resp.Unwrap_NEW()->is_error()) {
+      rc = resp.Unwrap_NEW()->error_value();
     }
   }
   return rc;
@@ -80,7 +80,7 @@ class BlockVerityTest : public zxtest::Test {
   }
 
   void CloseAndGenerateSeal(
-      fuchsia_hardware_block_verified::wire::DeviceManagerCloseAndGenerateSealResult* out) {
+      fuchsia_hardware_block_verified::wire::DeviceManagerCloseAndGenerateSealResponse* out) {
     ASSERT_OK(vvc_->CloseAndGenerateSeal(seal_arena_, out));
   }
 
@@ -193,9 +193,8 @@ TEST_F(BlockVerityTest, BasicSeal) {
   OpenForAuthoring(mutable_block_fd);
 
   // Close and generate a seal over the all-zeroes data section.
-  fuchsia_hardware_block_verified::wire::DeviceManagerCloseAndGenerateSealResult result;
+  fuchsia_hardware_block_verified::wire::DeviceManagerCloseAndGenerateSealResponse result;
   CloseAndGenerateSeal(&result);
-  ASSERT_TRUE(result.is_response());
 
   // Verify contents of the integrity section.  For our 8126 data blocks of all-zeros,
   // we expect to find:
@@ -324,7 +323,7 @@ TEST_F(BlockVerityTest, BasicSeal) {
   uint8_t expected_seal[32] = {0x79, 0x66, 0xa2, 0x81, 0x27, 0x55, 0xbc, 0x70, 0xba, 0x70, 0x58,
                                0xbe, 0x1f, 0xbb, 0xf1, 0xc4, 0xd8, 0x06, 0xf1, 0xd4, 0x0b, 0x16,
                                0x00, 0xaa, 0xc2, 0x96, 0x33, 0x32, 0xbf, 0x78, 0x1e, 0x28};
-  auto& actual_seal = result.response().seal;
+  auto& actual_seal = result.seal;
   ASSERT_FALSE(actual_seal.has_invalid_tag());
   ASSERT_TRUE(actual_seal.is_sha256());
   auto actual_seal_data = actual_seal.sha256().superblock_hash.data();
@@ -343,11 +342,10 @@ TEST_F(BlockVerityTest, SealAndVerifiedRead) {
   OpenForAuthoring(mutable_block_fd);
 
   // Close and generate a seal over the all-zeroes data section.
-  fuchsia_hardware_block_verified::wire::DeviceManagerCloseAndGenerateSealResult result;
+  fuchsia_hardware_block_verified::wire::DeviceManagerCloseAndGenerateSealResponse result;
   CloseAndGenerateSeal(&result);
-  ASSERT_TRUE(result.is_response());
 
-  const fuchsia_hardware_block_verified::wire::Seal& seal = result.response().seal;
+  const fuchsia_hardware_block_verified::wire::Seal& seal = result.seal;
   fbl::unique_fd verified_block_fd;
 
   // Prepare to read every block.

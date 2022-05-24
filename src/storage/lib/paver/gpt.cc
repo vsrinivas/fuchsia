@@ -108,8 +108,9 @@ zx::status<> RebindGptDriver(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_r
   }
   auto result = fidl::WireCall<fuchsia_device::Controller>(std::move(chan))
                     ->Rebind(fidl::StringView("gpt.so"));
-  return zx::make_status(result.ok() ? (result->result.is_err() ? result->result.err() : ZX_OK)
-                                     : result.status());
+  return zx::make_status(
+      result.ok() ? (result.Unwrap_NEW()->is_error() ? result.Unwrap_NEW()->error_value() : ZX_OK)
+                  : result.status());
 }
 
 bool GptDevicePartitioner::FindGptDevices(const fbl::unique_fd& devfs_root, GptDevices* out) {
@@ -139,7 +140,7 @@ bool GptDevicePartitioner::FindGptDevices(const fbl::unique_fd& devfs_root, GptD
     if (!result.ok()) {
       continue;
     }
-    const auto& response = result.value();
+    const auto& response = result.value_NEW();
     if (response.status != ZX_OK) {
       continue;
     }
@@ -150,13 +151,13 @@ bool GptDevicePartitioner::FindGptDevices(const fbl::unique_fd& devfs_root, GptD
     if (result2.status() != ZX_OK) {
       continue;
     }
-    const auto& response2 = result2.value();
-    if (response2.result.is_err()) {
+    const auto& response2 = result2.value_NEW();
+    if (response2.is_error()) {
       continue;
     }
 
-    std::string path_str(response2.result.response().path.data(),
-                         static_cast<size_t>(response2.result.response().path.size()));
+    std::string path_str(response2.value()->path.data(),
+                         static_cast<size_t>(response2.value()->path.size()));
 
     // The GPT which will be a non-removable block device that isn't a partition or fvm created
     // partition itself.
@@ -189,7 +190,7 @@ zx::status<std::unique_ptr<GptDevicePartitioner>> GptDevicePartitioner::Initiali
     ERROR("Warning: Could not acquire GPT block info: %s\n", zx_status_get_string(result.status()));
     return zx::error(result.status());
   }
-  const auto& response = result.value();
+  const auto& response = result.value_NEW();
   if (response.status != ZX_OK) {
     ERROR("Warning: Could not acquire GPT block info: %s\n", zx_status_get_string(response.status));
     return zx::error(response.status);
@@ -252,7 +253,7 @@ zx::status<GptDevicePartitioner::InitializeGptResult> GptDevicePartitioner::Init
             zx_status_get_string(result.status()));
       return zx::error(result.status());
     }
-    const auto& response = result.value();
+    const auto& response = result.value_NEW();
     if (response.status != ZX_OK) {
       ERROR("Warning: Could not acquire GPT block info: %s\n",
             zx_status_get_string(response.status));

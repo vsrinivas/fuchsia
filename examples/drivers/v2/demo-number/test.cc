@@ -57,9 +57,9 @@ TEST(DriverTestRealmTest, DriversExist) {
   // Send a FIDL request.
   auto result = client->GetNumber();
   ASSERT_EQ(ZX_OK, result.status());
-  ASSERT_EQ(0u, result->response);
+  ASSERT_EQ(0u, result.value_NEW().response);
 
   auto result2 = client->GetNumber();
   ASSERT_EQ(ZX_OK, result2.status());
-  ASSERT_EQ(1u, result2->response);
+  ASSERT_EQ(1u, result2.value_NEW().response);
 }

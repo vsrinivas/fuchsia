@@ -46,7 +46,7 @@ int main(int argc, char** argv) {
     auto result = fidl::WireCall<fuchsia_hardware_serial::Device>(
                       zx::unowned_channel(fdio_unsafe_borrow_channel(fdio)))
                       ->GetClass();
-    fuchsia_hardware_serial::wire::Class device_class = result->device_class;
+    fuchsia_hardware_serial::wire::Class device_class = result.Unwrap_NEW()->device_class;
     fdio_unsafe_release(fdio);
     if (!result.ok() || device_class != fuchsia_hardware_serial::wire::Class::kGeneric) {
       close(fd);

@@ -107,7 +107,7 @@ void RunPingPongBenchmark(fidl::WireSyncClient<fuchsia_hardware_goldfish::Pipe>&
     auto result = pipe->SetBufferSize(size);
     ZX_ASSERT(result.ok());
 
-    if (skip_if_out_of_memory && result.value().res == ZX_ERR_NO_MEMORY) {
+    if (skip_if_out_of_memory && result.value_NEW().res == ZX_ERR_NO_MEMORY) {
       fprintf(stderr,
               "Failed to allocate memory (ZX_ERR_NO_MEMORY). "
               "buffer size: %u (bytes). Test skipped.\n",
@@ -115,14 +115,14 @@ void RunPingPongBenchmark(fidl::WireSyncClient<fuchsia_hardware_goldfish::Pipe>&
       return;
     }
 
-    ZX_ASSERT(result.value().res == ZX_OK);
+    ZX_ASSERT(result.value_NEW().res == ZX_OK);
   }
 
   zx::vmo vmo;
   {
     auto result = pipe->GetBuffer();
-    ZX_ASSERT(result.ok() && result.value().res == ZX_OK);
-    vmo = std::move(result.value().vmo);
+    ZX_ASSERT(result.ok() && result.value_NEW().res == ZX_OK);
+    vmo = std::move(result.value_NEW().vmo);
   }
 
   {
@@ -139,8 +139,8 @@ void RunPingPongBenchmark(fidl::WireSyncClient<fuchsia_hardware_goldfish::Pipe>&
     auto result = pipe->DoCall(size, 0, size, 0);
     // For the test purpose we expect the buffer is small enough
     // so that we can finish in one write-read round trip.
-    ZX_ASSERT(result.ok() && result.value().res == ZX_OK);
-    ZX_ASSERT(result.value().actual == 2 * size);
+    ZX_ASSERT(result.ok() && result.value_NEW().res == ZX_OK);
+    ZX_ASSERT(result.value_NEW().actual == 2 * size);
   });
 }
 
@@ -165,8 +165,8 @@ int main(int argc, char** argv) {
 
   {
     auto result = pipe->GetBuffer();
-    ZX_ASSERT(result.ok() && result.value().res == ZX_OK);
-    vmo = std::move(result.value().vmo);
+    ZX_ASSERT(result.ok() && result.value_NEW().res == ZX_OK);
+    vmo = std::move(result.value_NEW().vmo);
   }
 
   // Connect to pingpong service.
@@ -176,8 +176,8 @@ int main(int argc, char** argv) {
 
   {
     auto result = pipe->Write(bytes, 0);
-    ZX_ASSERT(result.ok() && result.value().res == ZX_OK);
-    ZX_ASSERT(result.value().actual == bytes);
+    ZX_ASSERT(result.ok() && result.value_NEW().res == ZX_OK);
+    ZX_ASSERT(result.value_NEW().actual == bytes);
   }
 
   if (argc > 1) {

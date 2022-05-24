@@ -149,7 +149,7 @@ zx_status_t AudioOutput::PlayToCompletion(AudioSource& source) {
 
     auto position = fidl::WireCall(rb_ch_)->WatchClockRecoveryPositionInfo();
 
-    rd = position->position_info.position;
+    rd = position.value_NEW().position_info.position;
 
     // rd has moved.  If the source has finished and rd has moved at least
     // the playout distance, we are finshed.

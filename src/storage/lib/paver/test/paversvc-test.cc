@@ -501,8 +501,8 @@ TEST_F(PaverServiceSkipBlockTest, QueryActiveConfigurationBothPriority0) {
 
   auto result = boot_manager_->QueryActiveConfiguration();
   ASSERT_OK(result.status());
-  ASSERT_TRUE(result->result.is_err());
-  ASSERT_STATUS(result->result.err(), ZX_ERR_NOT_SUPPORTED);
+  ASSERT_TRUE(result.Unwrap_NEW()->is_error());
+  ASSERT_STATUS(result.Unwrap_NEW()->error_value(), ZX_ERR_NOT_SUPPORTED);
 }
 
 TEST_F(PaverServiceSkipBlockTest, QueryActiveConfigurationSlotB) {
@@ -516,8 +516,8 @@ TEST_F(PaverServiceSkipBlockTest, QueryActiveConfigurationSlotB) {
 
   auto result = boot_manager_->QueryActiveConfiguration();
   ASSERT_OK(result.status());
-  ASSERT_TRUE(result->result.is_response());
-  ASSERT_EQ(result->result.response().configuration, fuchsia_paver::wire::Configuration::kB);
+  ASSERT_TRUE(result.Unwrap_NEW()->is_ok());
+  ASSERT_EQ(result.Unwrap_NEW()->value()->configuration, fuchsia_paver::wire::Configuration::kB);
 }
 
 TEST_F(PaverServiceSkipBlockTest, QueryActiveConfigurationSlotA) {
@@ -533,8 +533,8 @@ TEST_F(PaverServiceSkipBlockTest, QueryActiveConfigurationSlotA) {
 
   auto result = boot_manager_->QueryActiveConfiguration();
   ASSERT_OK(result.status());
-  ASSERT_TRUE(result->result.is_response());
-  ASSERT_EQ(result->result.response().configuration, fuchsia_paver::wire::Configuration::kA);
+  ASSERT_TRUE(result.Unwrap_NEW()->is_ok());
+  ASSERT_EQ(result.Unwrap_NEW()->value()->configuration, fuchsia_paver::wire::Configuration::kA);
 }
 
 void PaverServiceSkipBlockTest::TestQueryConfigurationLastSetActive(
@@ -551,73 +551,73 @@ void PaverServiceSkipBlockTest::TestQueryConfigurationLastSetActive(
   {
     auto result = boot_manager_->SetConfigurationActive(other_slot);
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
+    ASSERT_OK(result.value_NEW().status);
   }
 
   {
     auto result = boot_manager_->SetConfigurationActive(this_slot);
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
+    ASSERT_OK(result.value_NEW().status);
   }
 
   // Marking the slot successful shall not change the result.
   {
     auto result = boot_manager_->SetConfigurationHealthy(this_slot);
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
+    ASSERT_OK(result.value_NEW().status);
 
     auto get_result = boot_manager_->QueryConfigurationLastSetActive();
     ASSERT_OK(get_result.status());
-    ASSERT_TRUE(get_result->result.is_response());
-    ASSERT_EQ(get_result->result.response().configuration, this_slot);
+    ASSERT_TRUE(get_result.Unwrap_NEW()->is_ok());
+    ASSERT_EQ(get_result.Unwrap_NEW()->value()->configuration, this_slot);
   }
 
   // Marking the slot unbootable shall not change the result.
   {
     auto result = boot_manager_->SetConfigurationUnbootable(this_slot);
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
+    ASSERT_OK(result.value_NEW().status);
 
     auto get_result = boot_manager_->QueryConfigurationLastSetActive();
     ASSERT_OK(get_result.status());
-    ASSERT_TRUE(get_result->result.is_response());
-    ASSERT_EQ(get_result->result.response().configuration, this_slot);
+    ASSERT_TRUE(get_result.Unwrap_NEW()->is_ok());
+    ASSERT_EQ(get_result.Unwrap_NEW()->value()->configuration, this_slot);
   }
 
   // Marking the other slot successful shall not change the result.
   {
     auto result = boot_manager_->SetConfigurationHealthy(other_slot);
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
+    ASSERT_OK(result.value_NEW().status);
 
     auto get_result = boot_manager_->QueryConfigurationLastSetActive();
     ASSERT_OK(get_result.status());
-    ASSERT_TRUE(get_result->result.is_response());
-    ASSERT_EQ(get_result->result.response().configuration, this_slot);
+    ASSERT_TRUE(get_result.Unwrap_NEW()->is_ok());
+    ASSERT_EQ(get_result.Unwrap_NEW()->value()->configuration, this_slot);
   }
 
   // Marking the other slot unbootable shall not change the result.
   {
     auto result = boot_manager_->SetConfigurationUnbootable(other_slot);
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
+    ASSERT_OK(result.value_NEW().status);
 
     auto get_result = boot_manager_->QueryConfigurationLastSetActive();
     ASSERT_OK(get_result.status());
-    ASSERT_TRUE(get_result->result.is_response());
-    ASSERT_EQ(get_result->result.response().configuration, this_slot);
+    ASSERT_TRUE(get_result.Unwrap_NEW()->is_ok());
+    ASSERT_EQ(get_result.Unwrap_NEW()->value()->configuration, this_slot);
   }
 
   // Marking the other slot active does change the result.
   {
     auto result = boot_manager_->SetConfigurationActive(other_slot);
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
+    ASSERT_OK(result.value_NEW().status);
 
     auto get_result = boot_manager_->QueryConfigurationLastSetActive();
     ASSERT_OK(get_result.status());
-    ASSERT_TRUE(get_result->result.is_response());
-    ASSERT_EQ(get_result->result.response().configuration, other_slot);
+    ASSERT_TRUE(get_result.Unwrap_NEW()->is_ok());
+    ASSERT_EQ(get_result.Unwrap_NEW()->value()->configuration, other_slot);
   }
 }
 
@@ -642,8 +642,8 @@ TEST_F(PaverServiceSkipBlockTest, QueryCurrentConfigurationSlotA) {
 
   auto result = boot_manager_->QueryCurrentConfiguration();
   ASSERT_OK(result.status());
-  ASSERT_TRUE(result->result.is_response());
-  ASSERT_EQ(result->result.response().configuration, fuchsia_paver::wire::Configuration::kA);
+  ASSERT_TRUE(result.Unwrap_NEW()->is_ok());
+  ASSERT_EQ(result.Unwrap_NEW()->value()->configuration, fuchsia_paver::wire::Configuration::kA);
 }
 
 TEST_F(PaverServiceSkipBlockTest, QueryCurrentConfigurationSlotB) {
@@ -658,8 +658,8 @@ TEST_F(PaverServiceSkipBlockTest, QueryCurrentConfigurationSlotB) {
 
   auto result = boot_manager_->QueryCurrentConfiguration();
   ASSERT_OK(result.status());
-  ASSERT_TRUE(result->result.is_response());
-  ASSERT_EQ(result->result.response().configuration, fuchsia_paver::wire::Configuration::kB);
+  ASSERT_TRUE(result.Unwrap_NEW()->is_ok());
+  ASSERT_EQ(result.Unwrap_NEW()->value()->configuration, fuchsia_paver::wire::Configuration::kB);
 }
 
 TEST_F(PaverServiceSkipBlockTest, QueryCurrentConfigurationSlotR) {
@@ -674,8 +674,9 @@ TEST_F(PaverServiceSkipBlockTest, QueryCurrentConfigurationSlotR) {
 
   auto result = boot_manager_->QueryCurrentConfiguration();
   ASSERT_OK(result.status());
-  ASSERT_TRUE(result->result.is_response());
-  ASSERT_EQ(result->result.response().configuration, fuchsia_paver::wire::Configuration::kRecovery);
+  ASSERT_TRUE(result.Unwrap_NEW()->is_ok());
+  ASSERT_EQ(result.Unwrap_NEW()->value()->configuration,
+            fuchsia_paver::wire::Configuration::kRecovery);
 }
 
 TEST_F(PaverServiceSkipBlockTest, QueryCurrentConfigurationSlotInvalid) {
@@ -703,8 +704,9 @@ TEST_F(PaverServiceSkipBlockTest, QueryConfigurationStatusHealthy) {
 
   auto result = boot_manager_->QueryConfigurationStatus(fuchsia_paver::wire::Configuration::kB);
   ASSERT_OK(result.status());
-  ASSERT_TRUE(result->result.is_response());
-  ASSERT_EQ(result->result.response().status, fuchsia_paver::wire::ConfigurationStatus::kHealthy);
+  ASSERT_TRUE(result.Unwrap_NEW()->is_ok());
+  ASSERT_EQ(result.Unwrap_NEW()->value()->status,
+            fuchsia_paver::wire::ConfigurationStatus::kHealthy);
 }
 
 TEST_F(PaverServiceSkipBlockTest, QueryConfigurationStatusPending) {
@@ -719,8 +721,9 @@ TEST_F(PaverServiceSkipBlockTest, QueryConfigurationStatusPending) {
 
   auto result = boot_manager_->QueryConfigurationStatus(fuchsia_paver::wire::Configuration::kB);
   ASSERT_OK(result.status());
-  ASSERT_TRUE(result->result.is_response());
-  ASSERT_EQ(result->result.response().status, fuchsia_paver::wire::ConfigurationStatus::kPending);
+  ASSERT_TRUE(result.Unwrap_NEW()->is_ok());
+  ASSERT_EQ(result.Unwrap_NEW()->value()->status,
+            fuchsia_paver::wire::ConfigurationStatus::kPending);
 }
 
 TEST_F(PaverServiceSkipBlockTest, QueryConfigurationStatusUnbootable) {
@@ -733,8 +736,8 @@ TEST_F(PaverServiceSkipBlockTest, QueryConfigurationStatusUnbootable) {
 
   auto result = boot_manager_->QueryConfigurationStatus(fuchsia_paver::wire::Configuration::kA);
   ASSERT_OK(result.status());
-  ASSERT_TRUE(result->result.is_response());
-  ASSERT_EQ(result->result.response().status,
+  ASSERT_TRUE(result.Unwrap_NEW()->is_ok());
+  ASSERT_EQ(result.Unwrap_NEW()->value()->status,
             fuchsia_paver::wire::ConfigurationStatus::kUnbootable);
 }
 
@@ -754,13 +757,13 @@ TEST_F(PaverServiceSkipBlockTest, SetConfigurationActive) {
   {
     auto result = boot_manager_->SetConfigurationActive(fuchsia_paver::wire::Configuration::kA);
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
+    ASSERT_OK(result.value_NEW().status);
   }
 
   {
     auto result = boot_manager_->Flush();
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
+    ASSERT_OK(result.value_NEW().status);
   }
 
   auto actual = GetAbr();
@@ -785,13 +788,13 @@ TEST_F(PaverServiceSkipBlockTest, SetConfigurationActiveRollover) {
   {
     auto result = boot_manager_->SetConfigurationActive(fuchsia_paver::wire::Configuration::kA);
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
+    ASSERT_OK(result.value_NEW().status);
   }
 
   {
     auto result = boot_manager_->Flush();
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
+    ASSERT_OK(result.value_NEW().status);
   }
   auto actual = GetAbr();
   ASSERT_BYTES_EQ(&abr_data, &actual, sizeof(abr_data));
@@ -815,13 +818,13 @@ TEST_F(PaverServiceSkipBlockTest, SetConfigurationUnbootableSlotA) {
   {
     auto result = boot_manager_->SetConfigurationUnbootable(fuchsia_paver::wire::Configuration::kA);
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
+    ASSERT_OK(result.value_NEW().status);
   }
 
   {
     auto result = boot_manager_->Flush();
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
+    ASSERT_OK(result.value_NEW().status);
   }
 
   auto actual = GetAbr();
@@ -845,13 +848,13 @@ TEST_F(PaverServiceSkipBlockTest, SetConfigurationUnbootableSlotB) {
   {
     auto result = boot_manager_->SetConfigurationUnbootable(fuchsia_paver::wire::Configuration::kB);
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
+    ASSERT_OK(result.value_NEW().status);
   }
 
   {
     auto result = boot_manager_->Flush();
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
+    ASSERT_OK(result.value_NEW().status);
   }
 
   auto actual = GetAbr();
@@ -875,13 +878,13 @@ TEST_F(PaverServiceSkipBlockTest, SetConfigurationHealthySlotA) {
   {
     auto result = boot_manager_->SetConfigurationHealthy(fuchsia_paver::wire::Configuration::kA);
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
+    ASSERT_OK(result.value_NEW().status);
   }
 
   {
     auto result = boot_manager_->Flush();
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
+    ASSERT_OK(result.value_NEW().status);
   }
 
   auto actual = GetAbr();
@@ -901,13 +904,13 @@ TEST_F(PaverServiceSkipBlockTest, SetConfigurationHealthySlotB) {
   {
     auto result = boot_manager_->SetConfigurationHealthy(fuchsia_paver::wire::Configuration::kB);
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
+    ASSERT_OK(result.value_NEW().status);
   }
 
   {
     auto result = boot_manager_->Flush();
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
+    ASSERT_OK(result.value_NEW().status);
   }
 
   auto actual = GetAbr();
@@ -925,7 +928,7 @@ TEST_F(PaverServiceSkipBlockTest, SetConfigurationHealthySlotR) {
   auto result =
       boot_manager_->SetConfigurationHealthy(fuchsia_paver::wire::Configuration::kRecovery);
   ASSERT_OK(result.status());
-  ASSERT_EQ(result->status, ZX_ERR_INVALID_ARGS);
+  ASSERT_EQ(result.value_NEW().status, ZX_ERR_INVALID_ARGS);
 }
 
 TEST_F(PaverServiceSkipBlockTest, SetConfigurationHealthyBothUnknown) {
@@ -950,13 +953,13 @@ TEST_F(PaverServiceSkipBlockTest, SetConfigurationHealthyBothUnknown) {
   {
     auto result = boot_manager_->SetConfigurationHealthy(fuchsia_paver::wire::Configuration::kA);
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
+    ASSERT_OK(result.value_NEW().status);
   }
 
   {
     auto result = boot_manager_->Flush();
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
+    ASSERT_OK(result.value_NEW().status);
   }
 
   auto actual = GetAbr();
@@ -986,13 +989,13 @@ TEST_F(PaverServiceSkipBlockTest, SetConfigurationHealthyOtherHealthy) {
   {
     auto result = boot_manager_->SetConfigurationHealthy(fuchsia_paver::wire::Configuration::kB);
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
+    ASSERT_OK(result.value_NEW().status);
   }
 
   {
     auto result = boot_manager_->Flush();
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
+    ASSERT_OK(result.value_NEW().status);
   }
 
   auto actual = GetAbr();
@@ -1009,7 +1012,7 @@ TEST_F(PaverServiceSkipBlockTest, SetUnbootableConfigurationHealthy) {
 
   auto result = boot_manager_->SetConfigurationHealthy(fuchsia_paver::wire::Configuration::kA);
   ASSERT_OK(result.status());
-  ASSERT_EQ(result->status, ZX_ERR_INVALID_ARGS);
+  ASSERT_EQ(result.value_NEW().status, ZX_ERR_INVALID_ARGS);
 }
 
 TEST_F(PaverServiceSkipBlockTest, BootManagerBuffered) {
@@ -1027,20 +1030,20 @@ TEST_F(PaverServiceSkipBlockTest, BootManagerBuffered) {
   {
     auto result = boot_manager_->QueryActiveConfiguration();
     ASSERT_OK(result.status());
-    ASSERT_TRUE(result->result.is_response());
-    ASSERT_EQ(result->result.response().configuration, fuchsia_paver::wire::Configuration::kA);
+    ASSERT_TRUE(result.Unwrap_NEW()->is_ok());
+    ASSERT_EQ(result.Unwrap_NEW()->value()->configuration, fuchsia_paver::wire::Configuration::kA);
   }
 
   {
     auto result = boot_manager_->SetConfigurationHealthy(fuchsia_paver::wire::Configuration::kA);
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
+    ASSERT_OK(result.value_NEW().status);
   }
 
   {
     auto result = boot_manager_->SetConfigurationUnbootable(fuchsia_paver::wire::Configuration::kB);
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
+    ASSERT_OK(result.value_NEW().status);
   }
 
   // haven't flushed yet, storage shall stay the same.
@@ -1050,7 +1053,7 @@ TEST_F(PaverServiceSkipBlockTest, BootManagerBuffered) {
   {
     auto result = boot_manager_->Flush();
     ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
+    ASSERT_OK(result.value_NEW().status);
   }
 
   abr_data.slot_data[0].tries_remaining = 0;
@@ -1073,7 +1076,7 @@ TEST_F(PaverServiceSkipBlockTest, WriteAssetKernelConfigA) {
   auto result = data_sink_->WriteAsset(fuchsia_paver::wire::Configuration::kA,
                                        fuchsia_paver::wire::Asset::kKernel, std::move(payload));
   ASSERT_OK(result.status());
-  ASSERT_OK(result->status);
+  ASSERT_OK(result.value_NEW().status);
   ValidateWritten(8, 2);
   ValidateUnwritten(10, 4);
 }
@@ -1088,7 +1091,7 @@ TEST_F(PaverServiceSkipBlockTest, WriteAssetKernelConfigB) {
   auto result = data_sink_->WriteAsset(fuchsia_paver::wire::Configuration::kB,
                                        fuchsia_paver::wire::Asset::kKernel, std::move(payload));
   ASSERT_OK(result.status());
-  ASSERT_OK(result.value().status);
+  ASSERT_OK(result.value_NEW().status);
   ValidateUnwritten(8, 2);
   ValidateWritten(10, 2);
   ValidateUnwritten(12, 2);
@@ -1104,7 +1107,7 @@ TEST_F(PaverServiceSkipBlockTest, WriteAssetKernelConfigRecovery) {
   auto result = data_sink_->WriteAsset(fuchsia_paver::wire::Configuration::kRecovery,
                                        fuchsia_paver::wire::Asset::kKernel, std::move(payload));
   ASSERT_OK(result.status());
-  ASSERT_OK(result.value().status);
+  ASSERT_OK(result.value_NEW().status);
   ValidateUnwritten(8, 4);
   ValidateWritten(12, 2);
 }
@@ -1120,11 +1123,11 @@ TEST_F(PaverServiceSkipBlockTest, WriteAssetVbMetaConfigA) {
       data_sink_->WriteAsset(fuchsia_paver::wire::Configuration::kA,
                              fuchsia_paver::wire::Asset::kVerifiedBootMetadata, std::move(payload));
   ASSERT_OK(result.status());
-  ASSERT_OK(result.value().status);
+  ASSERT_OK(result.value_NEW().status);
 
   auto sync_result = data_sink_->Flush();
   ASSERT_OK(sync_result.status());
-  ASSERT_OK(sync_result.value().status);
+  ASSERT_OK(sync_result.value_NEW().status);
 
   ValidateWrittenPages(14 * kPagesPerBlock + 32, 32);
 }
@@ -1140,11 +1143,11 @@ TEST_F(PaverServiceSkipBlockTest, WriteAssetVbMetaConfigB) {
       data_sink_->WriteAsset(fuchsia_paver::wire::Configuration::kB,
                              fuchsia_paver::wire::Asset::kVerifiedBootMetadata, std::move(payload));
   ASSERT_OK(result.status());
-  ASSERT_OK(result.value().status);
+  ASSERT_OK(result.value_NEW().status);
 
   auto sync_result = data_sink_->Flush();
   ASSERT_OK(sync_result.status());
-  ASSERT_OK(sync_result.value().status);
+  ASSERT_OK(sync_result.value_NEW().status);
 
   ValidateWrittenPages(14 * kPagesPerBlock + 64, 32);
 }
@@ -1160,11 +1163,11 @@ TEST_F(PaverServiceSkipBlockTest, WriteAssetVbMetaConfigRecovery) {
       data_sink_->WriteAsset(fuchsia_paver::wire::Configuration::kRecovery,
                              fuchsia_paver::wire::Asset::kVerifiedBootMetadata, std::move(payload));
   ASSERT_OK(result.status());
-  ASSERT_OK(result.value().status);
+  ASSERT_OK(result.value_NEW().status);
 
   auto sync_result = data_sink_->Flush();
   ASSERT_OK(sync_result.status());
-  ASSERT_OK(sync_result.value().status);
+  ASSERT_OK(sync_result.value_NEW().status);
 
   ValidateWrittenPages(14 * kPagesPerBlock + 96, 32);
 }
@@ -1192,8 +1195,8 @@ TEST_F(PaverServiceSkipBlockTest, AbrWearLevelingLayoutNotUpdated) {
   {
     auto result = boot_manager_->QueryActiveConfiguration();
     ASSERT_OK(result.status());
-    ASSERT_TRUE(result->result.is_response());
-    ASSERT_EQ(result->result.response().configuration, fuchsia_paver::wire::Configuration::kB);
+    ASSERT_TRUE(result.Unwrap_NEW()->is_ok());
+    ASSERT_EQ(result.Unwrap_NEW()->value()->configuration, fuchsia_paver::wire::Configuration::kB);
   }
 
   {
@@ -1206,7 +1209,7 @@ TEST_F(PaverServiceSkipBlockTest, AbrWearLevelingLayoutNotUpdated) {
     // Validate that it is correct.
     auto result = boot_manager_->QueryActiveConfiguration();
     ASSERT_OK(result.status());
-    ASSERT_EQ(result->result.response().configuration, fuchsia_paver::wire::Configuration::kB);
+    ASSERT_EQ(result.Unwrap_NEW()->value()->configuration, fuchsia_paver::wire::Configuration::kB);
   }
 
   {
@@ -1223,7 +1226,7 @@ TEST_F(PaverServiceSkipBlockTest, AbrWearLevelingLayoutNotUpdated) {
   {
     auto result_sync = boot_manager_->Flush();
     ASSERT_OK(result_sync.status());
-    ASSERT_OK(result_sync->status);
+    ASSERT_OK(result_sync.value_NEW().status);
   }
 
   // Expected result: unbootable slot a, successful active slot b
@@ -1270,8 +1273,8 @@ TEST_F(PaverServiceSkipBlockTest, AbrWearLevelingLayoutUpdated) {
   {
     auto result = boot_manager_->QueryActiveConfiguration();
     ASSERT_OK(result.status());
-    ASSERT_TRUE(result->result.is_response());
-    ASSERT_EQ(result->result.response().configuration, fuchsia_paver::wire::Configuration::kB);
+    ASSERT_TRUE(result.Unwrap_NEW()->is_ok());
+    ASSERT_EQ(result.Unwrap_NEW()->value()->configuration, fuchsia_paver::wire::Configuration::kB);
   }
 
   {
@@ -1284,7 +1287,7 @@ TEST_F(PaverServiceSkipBlockTest, AbrWearLevelingLayoutUpdated) {
     // Validate that it is correct.
     auto result = boot_manager_->QueryActiveConfiguration();
     ASSERT_OK(result.status());
-    ASSERT_EQ(result->result.response().configuration, fuchsia_paver::wire::Configuration::kA);
+    ASSERT_EQ(result.Unwrap_NEW()->value()->configuration, fuchsia_paver::wire::Configuration::kA);
   }
 
   // Haven't flushed yet. abr data in storage should stayed the same.
@@ -1296,7 +1299,7 @@ TEST_F(PaverServiceSkipBlockTest, AbrWearLevelingLayoutUpdated) {
   {
     auto result_sync = boot_manager_->Flush();
     ASSERT_OK(result_sync.status());
-    ASSERT_OK(result_sync->status);
+    ASSERT_OK(result_sync.value_NEW().status);
   }
 
   // Expected result: successful slot a, active slot b with max tries and priority.
@@ -1329,13 +1332,13 @@ TEST_F(PaverServiceSkipBlockTest, WriteAssetBuffered) {
     auto result = data_sink_->WriteAsset(config, fuchsia_paver::wire::Asset::kVerifiedBootMetadata,
                                          std::move(payload));
     ASSERT_OK(result.status());
-    ASSERT_OK(result.value().status);
+    ASSERT_OK(result.value_NEW().status);
   }
   ValidateUnwrittenPages(14 * kPagesPerBlock + 32, 96);
 
   auto sync_result = data_sink_->Flush();
   ASSERT_OK(sync_result.status());
-  ASSERT_OK(sync_result.value().status);
+  ASSERT_OK(sync_result.value_NEW().status);
   ValidateWrittenPages(14 * kPagesPerBlock + 32, 96);
 }
 
@@ -1350,7 +1353,7 @@ TEST_F(PaverServiceSkipBlockTest, WriteAssetTwice) {
     auto result = data_sink_->WriteAsset(fuchsia_paver::wire::Configuration::kA,
                                          fuchsia_paver::wire::Asset::kKernel, std::move(payload));
     ASSERT_OK(result.status());
-    ASSERT_OK(result.value().status);
+    ASSERT_OK(result.value_NEW().status);
     CreatePayload(2 * kPagesPerBlock, &payload);
     ValidateWritten(8, 2);
     ValidateUnwritten(10, 4);
@@ -1359,7 +1362,7 @@ TEST_F(PaverServiceSkipBlockTest, WriteAssetTwice) {
     auto result = data_sink_->WriteAsset(fuchsia_paver::wire::Configuration::kA,
                                          fuchsia_paver::wire::Asset::kKernel, std::move(payload));
     ASSERT_OK(result.status());
-    ASSERT_OK(result.value().status);
+    ASSERT_OK(result.value_NEW().status);
     ValidateWritten(8, 2);
     ValidateUnwritten(10, 4);
   }
@@ -1374,8 +1377,8 @@ TEST_F(PaverServiceSkipBlockTest, ReadFirmwareConfigA) {
   auto result = data_sink_->ReadFirmware(fuchsia_paver::wire::Configuration::kA,
                                          fidl::StringView::FromExternal(kFirmwareTypeBootloader));
   ASSERT_OK(result.status());
-  ASSERT_TRUE(result->result.is_response());
-  ValidateWritten(result->result.response().firmware, kBootloaderBlocks * kPagesPerBlock);
+  ASSERT_TRUE(result.value_NEW().is_ok());
+  ValidateWritten(result.value_NEW().value()->firmware, kBootloaderBlocks * kPagesPerBlock);
 }
 
 TEST_F(PaverServiceSkipBlockTest, ReadFirmwareUnsupportedConfigBFallBackToA) {
@@ -1387,8 +1390,8 @@ TEST_F(PaverServiceSkipBlockTest, ReadFirmwareUnsupportedConfigBFallBackToA) {
   auto result = data_sink_->ReadFirmware(fuchsia_paver::wire::Configuration::kB,
                                          fidl::StringView::FromExternal(kFirmwareTypeBootloader));
   ASSERT_OK(result.status());
-  ASSERT_TRUE(result->result.is_response());
-  ValidateWritten(result->result.response().firmware, kBootloaderBlocks * kPagesPerBlock);
+  ASSERT_TRUE(result.value_NEW().is_ok());
+  ValidateWritten(result.value_NEW().value()->firmware, kBootloaderBlocks * kPagesPerBlock);
 }
 
 TEST_F(PaverServiceSkipBlockTest, ReadFirmwareUnsupportedConfigR) {
@@ -1398,7 +1401,7 @@ TEST_F(PaverServiceSkipBlockTest, ReadFirmwareUnsupportedConfigR) {
   auto result = data_sink_->ReadFirmware(fuchsia_paver::wire::Configuration::kRecovery,
                                          fidl::StringView::FromExternal(kFirmwareTypeBootloader));
   ASSERT_OK(result.status());
-  ASSERT_TRUE(result->result.is_err());
+  ASSERT_TRUE(result.value_NEW().is_error());
 }
 
 TEST_F(PaverServiceSkipBlockTest, ReadFirmwareUnsupportedType) {
@@ -1408,7 +1411,7 @@ TEST_F(PaverServiceSkipBlockTest, ReadFirmwareUnsupportedType) {
   auto result = data_sink_->ReadFirmware(fuchsia_paver::wire::Configuration::kA,
                                          fidl::StringView::FromExternal(kFirmwareTypeUnsupported));
   ASSERT_OK(result.status());
-  ASSERT_TRUE(result->result.is_err());
+  ASSERT_TRUE(result.value_NEW().is_error());
 }
 
 TEST_F(PaverServiceSkipBlockTest, WriteFirmwareConfigASupported) {
@@ -1421,8 +1424,8 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmwareConfigASupported) {
                                           fidl::StringView::FromExternal(kFirmwareTypeBootloader),
                                           std::move(payload));
   ASSERT_OK(result.status());
-  ASSERT_TRUE(result->result.is_status());
-  ASSERT_OK(result->result.status());
+  ASSERT_TRUE(result.value_NEW().result.is_status());
+  ASSERT_OK(result.value_NEW().result.status());
   ValidateWritten(kBootloaderFirstBlock, 4);
   WriteData(kBootloaderFirstBlock, 4 * kPagesPerBlock, 0xff);
 }
@@ -1437,8 +1440,8 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmwareUnsupportedConfigBFallBackToA) {
                                           fidl::StringView::FromExternal(kFirmwareTypeBootloader),
                                           std::move(payload));
   ASSERT_OK(result.status());
-  ASSERT_TRUE(result->result.is_status());
-  ASSERT_OK(result->result.status());
+  ASSERT_TRUE(result.value_NEW().result.is_status());
+  ASSERT_OK(result.value_NEW().result.status());
   ValidateWritten(kBootloaderFirstBlock, 4);
   WriteData(kBootloaderFirstBlock, 4 * kPagesPerBlock, 0xff);
 }
@@ -1453,8 +1456,8 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmwareUnsupportedConfigR) {
                                           fidl::StringView::FromExternal(kFirmwareTypeBootloader),
                                           std::move(payload));
   ASSERT_OK(result.status());
-  ASSERT_TRUE(result->result.is_unsupported());
-  ASSERT_TRUE(result->result.unsupported());
+  ASSERT_TRUE(result.value_NEW().result.is_unsupported());
+  ASSERT_TRUE(result.value_NEW().result.unsupported());
   ValidateUnwritten(kBootloaderFirstBlock, 4);
 }
 
@@ -1473,8 +1476,8 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmwareBl2ConfigASupported) {
                                           fidl::StringView::FromExternal(kFirmwareTypeBl2),
                                           std::move(payload));
   ASSERT_OK(result.status());
-  ASSERT_TRUE(result->result.is_status());
-  ASSERT_OK(result->result.status());
+  ASSERT_TRUE(result.value_NEW().result.is_status());
+  ASSERT_OK(result.value_NEW().result.status());
 }
 
 TEST_F(PaverServiceSkipBlockTest, WriteFirmwareBl2UnsupportedConfigBFallBackToA) {
@@ -1492,8 +1495,8 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmwareBl2UnsupportedConfigBFallBackToA)
                                           fidl::StringView::FromExternal(kFirmwareTypeBl2),
                                           std::move(payload));
   ASSERT_OK(result.status());
-  ASSERT_TRUE(result->result.is_status());
-  ASSERT_OK(result->result.status());
+  ASSERT_TRUE(result.value_NEW().result.is_status());
+  ASSERT_OK(result.value_NEW().result.status());
 }
 
 TEST_F(PaverServiceSkipBlockTest, WriteFirmwareBl2UnsupportedConfigR) {
@@ -1511,8 +1514,8 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmwareBl2UnsupportedConfigR) {
                                           fidl::StringView::FromExternal(kFirmwareTypeBl2),
                                           std::move(payload));
   ASSERT_OK(result.status());
-  ASSERT_TRUE(result->result.is_unsupported());
-  ASSERT_TRUE(result->result.unsupported());
+  ASSERT_TRUE(result.value_NEW().result.is_unsupported());
+  ASSERT_TRUE(result.value_NEW().result.unsupported());
 }
 
 TEST_F(PaverServiceSkipBlockTest, WriteFirmwareUnsupportedType) {
@@ -1531,8 +1534,8 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmwareUnsupportedType) {
     auto result = data_sink_->WriteFirmware(
         config, fidl::StringView::FromExternal(kFirmwareTypeUnsupported), std::move(payload));
     ASSERT_OK(result.status());
-    ASSERT_TRUE(result->result.is_unsupported());
-    ASSERT_TRUE(result->result.unsupported());
+    ASSERT_TRUE(result.value_NEW().result.is_unsupported());
+    ASSERT_TRUE(result.value_NEW().result.unsupported());
     ValidateUnwritten(kBootloaderFirstBlock, 4);
     ValidateUnwritten(kBl2FirstBlock, 1);
   }
@@ -1552,8 +1555,8 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmwareError) {
                                           fidl::StringView::FromExternal(kFirmwareTypeBootloader),
                                           std::move(payload));
   ASSERT_OK(result.status());
-  ASSERT_TRUE(result->result.is_status());
-  ASSERT_NOT_OK(result->result.status());
+  ASSERT_TRUE(result.value_NEW().result.is_status());
+  ASSERT_NOT_OK(result.value_NEW().result.status());
   ValidateUnwritten(kBootloaderFirstBlock, 4);
 }
 
@@ -1566,8 +1569,8 @@ TEST_F(PaverServiceSkipBlockTest, ReadAssetKernelConfigA) {
   auto result = data_sink_->ReadAsset(fuchsia_paver::wire::Configuration::kA,
                                       fuchsia_paver::wire::Asset::kKernel);
   ASSERT_OK(result.status());
-  ASSERT_TRUE(result->result.is_response());
-  ValidateWritten(result->result.response().asset, 2 * kPagesPerBlock);
+  ASSERT_TRUE(result.Unwrap_NEW()->is_ok());
+  ValidateWritten(result.Unwrap_NEW()->value()->asset, 2 * kPagesPerBlock);
 }
 
 TEST_F(PaverServiceSkipBlockTest, ReadAssetKernelConfigB) {
@@ -1579,8 +1582,8 @@ TEST_F(PaverServiceSkipBlockTest, ReadAssetKernelConfigB) {
   auto result = data_sink_->ReadAsset(fuchsia_paver::wire::Configuration::kB,
                                       fuchsia_paver::wire::Asset::kKernel);
   ASSERT_OK(result.status());
-  ASSERT_TRUE(result->result.is_response());
-  ValidateWritten(result->result.response().asset, 2 * kPagesPerBlock);
+  ASSERT_TRUE(result.Unwrap_NEW()->is_ok());
+  ValidateWritten(result.Unwrap_NEW()->value()->asset, 2 * kPagesPerBlock);
 }
 
 TEST_F(PaverServiceSkipBlockTest, ReadAssetKernelConfigRecovery) {
@@ -1592,8 +1595,8 @@ TEST_F(PaverServiceSkipBlockTest, ReadAssetKernelConfigRecovery) {
   auto result = data_sink_->ReadAsset(fuchsia_paver::wire::Configuration::kRecovery,
                                       fuchsia_paver::wire::Asset::kKernel);
   ASSERT_OK(result.status());
-  ASSERT_TRUE(result->result.is_response());
-  ValidateWritten(result->result.response().asset, 2 * kPagesPerBlock);
+  ASSERT_TRUE(result.Unwrap_NEW()->is_ok());
+  ValidateWritten(result.Unwrap_NEW()->value()->asset, 2 * kPagesPerBlock);
 }
 
 TEST_F(PaverServiceSkipBlockTest, ReadAssetVbMetaConfigA) {
@@ -1605,8 +1608,8 @@ TEST_F(PaverServiceSkipBlockTest, ReadAssetVbMetaConfigA) {
   auto result = data_sink_->ReadAsset(fuchsia_paver::wire::Configuration::kA,
                                       fuchsia_paver::wire::Asset::kVerifiedBootMetadata);
   ASSERT_OK(result.status());
-  ASSERT_TRUE(result->result.is_response());
-  ValidateWritten(result->result.response().asset, 32);
+  ASSERT_TRUE(result.Unwrap_NEW()->is_ok());
+  ValidateWritten(result.Unwrap_NEW()->value()->asset, 32);
 }
 
 TEST_F(PaverServiceSkipBlockTest, ReadAssetVbMetaConfigB) {
@@ -1618,8 +1621,8 @@ TEST_F(PaverServiceSkipBlockTest, ReadAssetVbMetaConfigB) {
   auto result = data_sink_->ReadAsset(fuchsia_paver::wire::Configuration::kB,
                                       fuchsia_paver::wire::Asset::kVerifiedBootMetadata);
   ASSERT_OK(result.status());
-  ASSERT_TRUE(result->result.is_response());
-  ValidateWritten(result->result.response().asset, 32);
+  ASSERT_TRUE(result.Unwrap_NEW()->is_ok());
+  ValidateWritten(result.Unwrap_NEW()->value()->asset, 32);
 }
 
 TEST_F(PaverServiceSkipBlockTest, ReadAssetVbMetaConfigRecovery) {
@@ -1631,8 +1634,8 @@ TEST_F(PaverServiceSkipBlockTest, ReadAssetVbMetaConfigRecovery) {
   auto result = data_sink_->ReadAsset(fuchsia_paver::wire::Configuration::kRecovery,
                                       fuchsia_paver::wire::Asset::kVerifiedBootMetadata);
   ASSERT_OK(result.status());
-  ASSERT_TRUE(result->result.is_response());
-  ValidateWritten(result->result.response().asset, 32);
+  ASSERT_TRUE(result.Unwrap_NEW()->is_ok());
+  ValidateWritten(result.Unwrap_NEW()->value()->asset, 32);
 }
 
 TEST_F(PaverServiceSkipBlockTest, ReadAssetZbiSize) {
@@ -1652,8 +1655,8 @@ TEST_F(PaverServiceSkipBlockTest, ReadAssetZbiSize) {
   auto result = data_sink_->ReadAsset(fuchsia_paver::wire::Configuration::kA,
                                       fuchsia_paver::wire::Asset::kKernel);
   ASSERT_OK(result.status());
-  ASSERT_TRUE(result->result.is_response());
-  ASSERT_EQ(result->result.response().asset.size, sizeof(container));
+  ASSERT_TRUE(result.Unwrap_NEW()->is_ok());
+  ASSERT_EQ(result.Unwrap_NEW()->value()->asset.size, sizeof(container));
 }
 
 TEST_F(PaverServiceSkipBlockTest, WriteBootloader) {
@@ -1665,7 +1668,7 @@ TEST_F(PaverServiceSkipBlockTest, WriteBootloader) {
   ASSERT_NO_FATAL_FAILURE(FindDataSink());
   auto result = data_sink_->WriteBootloader(std::move(payload));
   ASSERT_OK(result.status());
-  ASSERT_OK(result.value().status);
+  ASSERT_OK(result.value_NEW().status);
   ValidateWritten(4, 4);
 }
 
@@ -1684,7 +1687,7 @@ TEST_F(PaverServiceSkipBlockTest, WriteBootloaderNotAligned) {
   ASSERT_NO_FATAL_FAILURE(FindDataSink());
   auto result = data_sink_->WriteBootloader(std::move(payload));
   ASSERT_OK(result.status());
-  ASSERT_OK(result.value().status);
+  ASSERT_OK(result.value_NEW().status);
   ValidateWrittenPages(4 * kPagesPerBlock, 4 * kPagesPerBlock - 1);
   ValidateUnwrittenPages(8 * kPagesPerBlock - 1, 1);
 }
@@ -1703,16 +1706,16 @@ TEST_F(PaverServiceSkipBlockTest, WipeVolumeEmptyFvm) {
   ASSERT_NO_FATAL_FAILURE(FindDataSink());
   auto result = data_sink_->WipeVolume();
   ASSERT_OK(result.status());
-  ASSERT_TRUE(result->result.is_response());
-  ASSERT_TRUE(result->result.response().volume);
+  ASSERT_TRUE(result.Unwrap_NEW()->is_ok());
+  ASSERT_TRUE(result.Unwrap_NEW()->value()->volume);
 }
 
 void CheckGuid(const fbl::unique_fd& device, const uint8_t type[GPT_GUID_LEN]) {
   fdio_cpp::UnownedFdioCaller caller(device.get());
   auto result = fidl::WireCall<partition::Partition>(caller.channel())->GetTypeGuid();
   ASSERT_OK(result.status());
-  ASSERT_OK(result.value().status);
-  auto* guid = result.value().guid.get();
+  ASSERT_OK(result.value_NEW().status);
+  auto* guid = result.value_NEW().guid.get();
   EXPECT_BYTES_EQ(type, guid, GPT_GUID_LEN);
 }
 
@@ -1727,14 +1730,14 @@ TEST_F(PaverServiceSkipBlockTest, WipeVolumeCreatesFvm) {
   ASSERT_NO_FATAL_FAILURE(FindDataSink());
   auto result = data_sink_->WipeVolume();
   ASSERT_OK(result.status());
-  ASSERT_TRUE(result->result.is_response());
-  ASSERT_TRUE(result->result.response().volume);
+  ASSERT_TRUE(result.Unwrap_NEW()->is_ok());
+  ASSERT_TRUE(result.Unwrap_NEW()->value()->volume);
 
   EXPECT_EQ(kBufferSize, pread(fvm_.get(), buffer, kBufferSize, 0));
   EXPECT_BYTES_EQ(fs_management::kFvmMagic, buffer, sizeof(fs_management::kFvmMagic));
 
   fidl::ClientEnd<fuchsia_hardware_block_volume::VolumeManager> volume_client =
-      std::move(result->result.response().volume);
+      std::move(result.Unwrap_NEW()->value()->volume);
   // This force-casts the protocol type from
   // |fuchsia.hardware.block.volume/VolumeManager| into
   // |fuchsia.device/Controller|. It only works because protocols hosted
@@ -1773,8 +1776,8 @@ void PaverServiceSkipBlockTest::TestSysconfigWriteBufferedClient(uint32_t offset
   {
     auto result = sysconfig_->GetPartitionSize();
     ASSERT_OK(result.status());
-    ASSERT_TRUE(result->result.is_response());
-    ASSERT_EQ(result->result.response().size, sysconfig_pages * kPageSize);
+    ASSERT_TRUE(result.Unwrap_NEW()->is_ok());
+    ASSERT_EQ(result.Unwrap_NEW()->value()->size, sysconfig_pages * kPageSize);
   }
 
   {
@@ -1782,7 +1785,7 @@ void PaverServiceSkipBlockTest::TestSysconfigWriteBufferedClient(uint32_t offset
     CreatePayload(sysconfig_pages, &payload);
     auto result = sysconfig_->Write(std::move(payload));
     ASSERT_OK(result.status());
-    ASSERT_OK(result.value().status);
+    ASSERT_OK(result.value_NEW().status);
     // Without flushing, data in the storage should remain unchanged.
     ASSERT_NO_FATAL_FAILURE(
         ValidateUnwrittenPages(14 * kPagesPerBlock + offset_in_pages, sysconfig_pages));
@@ -1791,7 +1794,7 @@ void PaverServiceSkipBlockTest::TestSysconfigWriteBufferedClient(uint32_t offset
   {
     auto result = sysconfig_->Flush();
     ASSERT_OK(result.status());
-    ASSERT_OK(result.value().status);
+    ASSERT_OK(result.value_NEW().status);
     ASSERT_NO_FATAL_FAILURE(
         ValidateWrittenPages(14 * kPagesPerBlock + offset_in_pages, sysconfig_pages));
   }
@@ -1800,8 +1803,8 @@ void PaverServiceSkipBlockTest::TestSysconfigWriteBufferedClient(uint32_t offset
     // Validate read.
     auto result = sysconfig_->Read();
     ASSERT_OK(result.status());
-    ASSERT_TRUE(result->result.is_response());
-    ASSERT_NO_FATAL_FAILURE(ValidateWritten(result->result.response().data, sysconfig_pages));
+    ASSERT_TRUE(result.Unwrap_NEW()->is_ok());
+    ASSERT_NO_FATAL_FAILURE(ValidateWritten(result.Unwrap_NEW()->value()->data, sysconfig_pages));
   }
 }
 
@@ -1835,7 +1838,7 @@ void PaverServiceSkipBlockTest::TestSysconfigWipeBufferedClient(uint32_t offset_
   {
     auto result = sysconfig_->Wipe();
     ASSERT_OK(result.status());
-    ASSERT_OK(result.value().status);
+    ASSERT_OK(result.value_NEW().status);
     // Without flushing, data in the storage should remain unchanged.
     ASSERT_NO_FATAL_FAILURE(
         ValidateUnwrittenPages(14 * kPagesPerBlock + offset_in_pages, sysconfig_pages));
@@ -1844,7 +1847,7 @@ void PaverServiceSkipBlockTest::TestSysconfigWipeBufferedClient(uint32_t offset_
   {
     auto result = sysconfig_->Flush();
     ASSERT_OK(result.status());
-    ASSERT_OK(result.value().status);
+    ASSERT_OK(result.value_NEW().status);
     ASSERT_NO_FATAL_FAILURE(AssertContents(14 * kSkipBlockSize + offset_in_pages * kPageSize,
                                            sysconfig_pages * kPageSize, 0));
   }
@@ -1926,7 +1929,7 @@ TEST_F(PaverServiceBlockTest, DISABLED_InitializePartitionTables) {
 
   auto result = data_sink_->InitializePartitionTables();
   ASSERT_OK(result.status());
-  ASSERT_OK(result->status);
+  ASSERT_OK(result.value_NEW().status);
 }
 
 TEST_F(PaverServiceBlockTest, DISABLED_InitializePartitionTablesMultipleDevices) {
@@ -1945,7 +1948,7 @@ TEST_F(PaverServiceBlockTest, DISABLED_InitializePartitionTablesMultipleDevices)
 
   auto result = data_sink_->InitializePartitionTables();
   ASSERT_OK(result.status());
-  ASSERT_OK(result->status);
+  ASSERT_OK(result.value_NEW().status);
 }
 
 TEST_F(PaverServiceBlockTest, DISABLED_WipePartitionTables) {
@@ -1962,11 +1965,11 @@ TEST_F(PaverServiceBlockTest, DISABLED_WipePartitionTables) {
 
   auto result = data_sink_->InitializePartitionTables();
   ASSERT_OK(result.status());
-  ASSERT_OK(result->status);
+  ASSERT_OK(result.value_NEW().status);
 
   auto wipe_result = data_sink_->WipePartitionTables();
   ASSERT_OK(wipe_result.status());
-  ASSERT_OK(wipe_result->status);
+  ASSERT_OK(wipe_result.value_NEW().status);
 }
 
 TEST_F(PaverServiceBlockTest, DISABLED_WipeVolume) {
@@ -1983,11 +1986,11 @@ TEST_F(PaverServiceBlockTest, DISABLED_WipeVolume) {
 
   auto result = data_sink_->InitializePartitionTables();
   ASSERT_OK(result.status());
-  ASSERT_OK(result->status);
+  ASSERT_OK(result.value_NEW().status);
 
   auto wipe_result = data_sink_->WipeVolume();
   ASSERT_OK(wipe_result.status());
-  ASSERT_FALSE(wipe_result->result.is_err());
+  ASSERT_FALSE(wipe_result.Unwrap_NEW()->is_error());
 }
 #endif
 
@@ -2062,7 +2065,7 @@ class PaverServiceGptDeviceTest : public PaverServiceTest {
     auto result = fidl::WireCall<fuchsia_device::Controller>(caller.channel())
                       ->Rebind(fidl::StringView("gpt.so"));
     ASSERT_TRUE(result.ok());
-    ASSERT_FALSE(result->result.is_err());
+    ASSERT_FALSE(result.Unwrap_NEW()->is_error());
   }
 
   uint8_t* GetRandomGuid() {
@@ -2144,7 +2147,7 @@ TEST_F(PaverServiceLuisTest, WriteDataFileIgnoreDataPartitionFromOtherBlockDevic
   // UseBlockDevice(). Even though there is one on the other GPT device. Expected error should
   // be ZX_ERR_TIMED_OUT, as OpenPartitionWithDevfs() should eventually timed out waiting for the
   // data partition.
-  ASSERT_EQ(result.value().status, ZX_ERR_TIMED_OUT);
+  ASSERT_EQ(result.value_NEW().status, ZX_ERR_TIMED_OUT);
 }
 
 TEST_F(PaverServiceLuisTest, FindGPTDevicesIgnoreFvmPartitions) {

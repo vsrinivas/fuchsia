@@ -36,7 +36,7 @@ void EnableStats(DirtyCacheTest* fs) {
   fdio_cpp::FdioCaller caller(std::move(fd));
   auto res = fidl::WireCall(caller.borrow_as<fuchsia_minfs::Minfs>())->ToggleMetrics(true);
   EXPECT_EQ(res.status(), ZX_OK);
-  EXPECT_EQ(res->status, ZX_OK);
+  EXPECT_EQ(res.value_NEW().status, ZX_OK);
 }
 
 class BufferedFile {
@@ -152,9 +152,9 @@ void CheckDirtyStats(std::string mount_path, uint64_t dirty_bytes) {
   fdio_cpp::FdioCaller caller(std::move(fd));
   auto metrics_or = fidl::WireCall<fuchsia_minfs::Minfs>(caller.channel())->GetMetrics();
   ASSERT_TRUE(metrics_or.ok());
-  ASSERT_EQ(metrics_or.value().status, ZX_OK);
-  ASSERT_NE(metrics_or.value().metrics, nullptr);
-  auto metrics = *metrics_or.value().metrics;
+  ASSERT_EQ(metrics_or.value_NEW().status, ZX_OK);
+  ASSERT_NE(metrics_or.value_NEW().metrics, nullptr);
+  auto metrics = *metrics_or.value_NEW().metrics;
   ASSERT_EQ(metrics.dirty_bytes, dirty_bytes);
 }
 

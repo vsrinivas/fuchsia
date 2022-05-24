@@ -115,8 +115,8 @@ int MemoryPressureCommand(fxl::CommandLine command_line, bool sleep) {
     LogError("Lost connection to sysmem services, error %d\n", res.status());
     return 1;
   }
-  if (res->status != ZX_OK) {
-    LogError("Allocation error %d\n", res->status);
+  if (res.value_NEW().status != ZX_OK) {
+    LogError("Allocation error %d\n", res.value_NEW().status);
     return 1;
   }
   Log("Allocated %ld bytes. Sleeping forever\n", size);

@@ -494,10 +494,10 @@ class LibGptTest {
     auto info_res =
         fidl::WireCall(disk_caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
     ASSERT_OK(info_res.status());
-    ASSERT_OK(info_res->status);
+    ASSERT_OK(info_res.value_NEW().status);
 
-    blk_size_ = info_res->info->block_size;
-    blk_count_ = info_res->info->block_count;
+    blk_size_ = info_res.value_NEW().info->block_size;
+    blk_count_ = info_res.value_NEW().info->block_count;
 
     ASSERT_GE(GetDiskSize(), kAcceptableMinimumSize, "Insufficient disk space for tests");
     fd_ = std::move(fd);

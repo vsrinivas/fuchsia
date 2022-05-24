@@ -167,11 +167,11 @@ zx_status_t AmlogicDisplay::DisplayControllerImplImportImage(image_t* image,
   if (!result.ok()) {
     return result.status();
   }
-  if (result->status != ZX_OK) {
-    return result->status;
+  if (result.value_NEW().status != ZX_OK) {
+    return result.value_NEW().status;
   }
 
-  sysmem::wire::BufferCollectionInfo2& collection_info = result->buffer_collection_info;
+  sysmem::wire::BufferCollectionInfo2& collection_info = result.value_NEW().buffer_collection_info;
 
   if (!collection_info.settings.has_image_format_constraints ||
       index >= collection_info.buffer_count) {
@@ -617,11 +617,11 @@ zx_status_t AmlogicDisplay::DisplayCaptureImplImportImageForCapture(zx_unowned_h
   if (!result.ok()) {
     return result.status();
   }
-  if (result->status != ZX_OK) {
-    return result->status;
+  if (result.value_NEW().status != ZX_OK) {
+    return result.value_NEW().status;
   }
 
-  sysmem::wire::BufferCollectionInfo2& collection_info = result->buffer_collection_info;
+  sysmem::wire::BufferCollectionInfo2& collection_info = result.value_NEW().buffer_collection_info;
 
   if (!collection_info.settings.has_image_format_constraints ||
       index >= collection_info.buffer_count) {

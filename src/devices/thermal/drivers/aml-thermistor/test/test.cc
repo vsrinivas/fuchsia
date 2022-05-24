@@ -139,20 +139,20 @@ TEST_F(ThermistorDeviceTest, GetTemperatureCelsius) {
     uint32_t ntc_idx = 10;
     adc_->SetReadValue(0, CalcSampleValue(ntc_info[0], ntc_idx, kPullupValue));
     auto result = client->GetTemperatureCelsius();
-    EXPECT_OK(result->status);
-    EXPECT_TRUE(FloatNear(result->temp, ntc_info[0].profile[ntc_idx].temperature_c));
+    EXPECT_OK(result.value_NEW().status);
+    EXPECT_TRUE(FloatNear(result.value_NEW().temp, ntc_info[0].profile[ntc_idx].temperature_c));
   }
 
   {  // set read value to 0, which should be out of range of the ntc table
     adc_->SetReadValue(0, 0);
     auto result = client->GetTemperatureCelsius();
-    EXPECT_NOT_OK(result->status);
+    EXPECT_NOT_OK(result.value_NEW().status);
   }
 
   {  // set read value to max, which should be out of range of ntc table
     adc_->SetReadValue(0, (1 << adc_->Resolution()) - 1);
     auto result = client->GetTemperatureCelsius();
-    EXPECT_NOT_OK(result->status);
+    EXPECT_NOT_OK(result.value_NEW().status);
   }
 }
 

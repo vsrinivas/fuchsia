@@ -346,8 +346,8 @@ zx_status_t VolumeManager::OpenClientWithCaller(fdio_cpp::UnownedFdioCaller& cal
             ->Bind(::fidl::StringView::FromExternal(kDriverLib));
     rc = resp.status();
     if (rc == ZX_OK) {
-      if (resp->result.is_err()) {
-        rc = resp->result.err();
+      if (resp.Unwrap_NEW()->is_error()) {
+        rc = resp.Unwrap_NEW()->error_value();
       }
     }
     if (rc != ZX_OK) {
@@ -390,10 +390,10 @@ zx_status_t VolumeManager::RelativeTopologicalPath(fdio_cpp::UnownedFdioCaller& 
           ->GetTopologicalPath();
   rc = resp.status();
   if (rc == ZX_OK) {
-    if (resp->result.is_err()) {
-      rc = resp->result.err();
+    if (resp.Unwrap_NEW()->is_error()) {
+      rc = resp.Unwrap_NEW()->error_value();
     } else {
-      auto& r = resp->result.response();
+      auto& r = *resp.Unwrap_NEW()->value();
       path_len = r.path.size();
       memcpy(path.data(), r.path.data(), r.path.size());
     }

@@ -24,9 +24,9 @@ zx::status<fbl::unique_fd> StartDriverTestRealm() {
   if (!fidl_result.ok()) {
     return zx::error(fidl_result.status());
   }
-  const fuchsia_driver_test::wire::RealmStartResult& result = fidl_result.value().result;
-  if (result.is_err()) {
-    return zx::error(result.err());
+  const fitx::result result = fidl_result.value_NEW();
+  if (result.is_error()) {
+    return zx::error(result.error_value());
   }
 
   // Wait for the driver to be enumerated in '/dev'.

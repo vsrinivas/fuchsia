@@ -55,7 +55,7 @@ class VerifiedVolumeClient {
   // can persist it somewhere.
   zx_status_t CloseAndGenerateSeal(
       fidl::AnyArena& arena,
-      fuchsia_hardware_block_verified::wire::DeviceManagerCloseAndGenerateSealResult* out);
+      fuchsia_hardware_block_verified::wire::DeviceManagerCloseAndGenerateSealResponse* out);
 
   // Requests that the volume be opened for verified reads, with the expectation
   // that the volume superblock matches the seal provided.  If successful,

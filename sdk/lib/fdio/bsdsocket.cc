@@ -104,12 +104,13 @@ int socket(int domain, int type, int protocol) {
         }
         return ERROR(status);
       }
-      if (socket_result->result.is_err()) {
-        return ERRNO(static_cast<int32_t>(socket_result->result.err()));
+      if (socket_result.Unwrap_NEW()->is_error()) {
+        return ERRNO(static_cast<int32_t>(socket_result.Unwrap_NEW()->error_value()));
       }
 
       zx::status create_node_result = create_node(
-          type, fidl::ClientEnd<fio::Node>(socket_result->result.response().socket.TakeChannel()));
+          type,
+          fidl::ClientEnd<fio::Node>(socket_result.Unwrap_NEW()->value()->socket.TakeChannel()));
       if (create_node_result.is_error()) {
         return ERROR(create_node_result.error_value());
       }
@@ -151,10 +152,10 @@ int socket(int domain, int type, int protocol) {
           if (result.status() != ZX_OK) {
             return ERROR(result.status());
           }
-          if (result->result.is_err()) {
-            return ERRNO(static_cast<int32_t>(result->result.err()));
+          if (result.Unwrap_NEW()->is_error()) {
+            return ERRNO(static_cast<int32_t>(result.Unwrap_NEW()->error_value()));
           }
-          client_end.channel() = result->result.response().s.TakeChannel();
+          client_end.channel() = result.Unwrap_NEW()->value()->s.TakeChannel();
         } break;
         default:
           return ERRNO(EPROTONOSUPPORT);
@@ -192,10 +193,10 @@ int socket(int domain, int type, int protocol) {
       if (result.status() != ZX_OK) {
         return ERROR(result.status());
       }
-      if (result->result.is_err()) {
-        return ERRNO(static_cast<int32_t>(result->result.err()));
+      if (result.Unwrap_NEW()->is_error()) {
+        return ERRNO(static_cast<int32_t>(result.Unwrap_NEW()->error_value()));
       }
-      client_end.channel() = result->result.response().s.TakeChannel();
+      client_end.channel() = result.Unwrap_NEW()->value()->s.TakeChannel();
     } break;
     case SOCK_RAW: {
       if (protocol == 0) {
@@ -233,10 +234,10 @@ int socket(int domain, int type, int protocol) {
         }
         return ERROR(status);
       }
-      if (result->result.is_err()) {
-        return ERRNO(static_cast<int32_t>(result->result.err()));
+      if (result.Unwrap_NEW()->is_error()) {
+        return ERRNO(static_cast<int32_t>(result.Unwrap_NEW()->error_value()));
       }
-      client_end.channel() = result->result.response().s.TakeChannel();
+      client_end.channel() = result.Unwrap_NEW()->value()->s.TakeChannel();
     } break;
     default:
       return ERRNO(EPROTONOSUPPORT);
@@ -449,55 +450,52 @@ int _getaddrinfo_from_dns(struct address buf[MAXADDRS], char canon[256], const c
     errno = fdio_status_to_errno(fidl_result.status());
     return EAI_SYSTEM;
   }
-  const fnet_name::wire::LookupLookupIpResult& wire_result = fidl_result.value().result;
-  switch (wire_result.Which()) {
-    case fnet_name::wire::LookupLookupIpResult::Tag::kResponse: {
-      const fnet_name::wire::LookupResult& result = wire_result.response().result;
-      if (!result.has_addresses()) {
-        return 0;
-      }
-      ZX_ASSERT_MSG(result.addresses().count() <= MAXADDRS,
-                    "%lu addresses in DNS response, maximum is %d", result.addresses().count(),
-                    MAXADDRS);
-      int count = 0;
-      for (const fnet::wire::IpAddress& addr : result.addresses()) {
-        address& address = buf[count++];
-        switch (addr.Which()) {
-          case fnet::wire::IpAddress::Tag::kIpv4: {
-            address = {
-                .family = AF_INET,
-            };
-            const auto& octets = addr.ipv4().addr;
-            static_assert(sizeof(address.addr) >= sizeof(octets));
-            std::copy(octets.begin(), octets.end(), address.addr);
-          } break;
-          case fnet::wire::IpAddress::Tag::kIpv6: {
-            // TODO(https://fxbug.dev/21415): Figure out a way to expose scope ID for IPv6
-            // addresses.
-            address = {
-                .family = AF_INET6,
-            };
-            const auto& octets = addr.ipv6().addr;
-            static_assert(sizeof(address.addr) >= sizeof(octets));
-            std::copy(octets.begin(), octets.end(), address.addr);
-          } break;
-        }
-      }
-      return count;
+  const auto* wire_result = fidl_result.Unwrap_NEW();
+  if (wire_result->is_error()) {
+    switch (wire_result->error_value()) {
+      case fnet_name::wire::LookupError::kNotFound:
+        return EAI_NONAME;
+      case fnet_name::wire::LookupError::kTransient:
+        return EAI_AGAIN;
+      case fnet_name::wire::LookupError::kInvalidArgs:
+        return EAI_FAIL;
+      case fnet_name::wire::LookupError::kInternalError:
+        errno = EIO;
+        return EAI_SYSTEM;
     }
-    case fnet_name::wire::LookupLookupIpResult::Tag::kErr:
-      switch (wire_result.err()) {
-        case fnet_name::wire::LookupError::kNotFound:
-          return EAI_NONAME;
-        case fnet_name::wire::LookupError::kTransient:
-          return EAI_AGAIN;
-        case fnet_name::wire::LookupError::kInvalidArgs:
-          return EAI_FAIL;
-        case fnet_name::wire::LookupError::kInternalError:
-          errno = EIO;
-          return EAI_SYSTEM;
-      }
   }
+  const fnet_name::wire::LookupResult& result = wire_result->value()->result;
+  if (!result.has_addresses()) {
+    return 0;
+  }
+  ZX_ASSERT_MSG(result.addresses().count() <= MAXADDRS,
+                "%lu addresses in DNS response, maximum is %d", result.addresses().count(),
+                MAXADDRS);
+  int count = 0;
+  for (const fnet::wire::IpAddress& addr : result.addresses()) {
+    address& address = buf[count++];
+    switch (addr.Which()) {
+      case fnet::wire::IpAddress::Tag::kIpv4: {
+        address = {
+            .family = AF_INET,
+        };
+        const auto& octets = addr.ipv4().addr;
+        static_assert(sizeof(address.addr) >= sizeof(octets));
+        std::copy(octets.begin(), octets.end(), address.addr);
+      } break;
+      case fnet::wire::IpAddress::Tag::kIpv6: {
+        // TODO(https://fxbug.dev/21415): Figure out a way to expose scope ID for IPv6
+        // addresses.
+        address = {
+            .family = AF_INET6,
+        };
+        const auto& octets = addr.ipv6().addr;
+        static_assert(sizeof(address.addr) >= sizeof(octets));
+        std::copy(octets.begin(), octets.end(), address.addr);
+      } break;
+    }
+  }
+  return count;
 }
 
 template <typename F>
@@ -664,7 +662,7 @@ int getifaddrs(struct ifaddrs** ifap) {
     return ERROR(status);
   }
 
-  for (const auto& iface : response.Unwrap()->interfaces) {
+  for (const auto& iface : response.Unwrap_NEW()->interfaces) {
     if (!iface.has_name() || !iface.has_addresses()) {
       continue;
     }

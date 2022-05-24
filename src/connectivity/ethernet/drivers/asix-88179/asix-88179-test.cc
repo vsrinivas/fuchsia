@@ -98,10 +98,10 @@ class UsbAx88179Test : public zxtest::Test {
     // Get device information
     auto get_info_result = ethernet_client_->GetInfo();
     ASSERT_OK(get_info_result.status());
-    auto info = get_info_result.Unwrap()->info;
+    auto info = get_info_result.Unwrap_NEW()->info;
     auto get_fifos_result = ethernet_client_->GetFifos();
     ASSERT_OK(get_fifos_result.status());
-    auto fifos = get_fifos_result.Unwrap()->info.get();
+    auto fifos = get_fifos_result.Unwrap_NEW()->info.get();
     // Calculate optimal size of VMO, and set up RX and TX buffers.
     size_t optimal_vmo_size = (fifos->rx_depth * info.mtu) + (fifos->tx_depth * info.mtu);
     zx::vmo vmo;
@@ -131,14 +131,14 @@ class UsbAx88179Test : public zxtest::Test {
 
     auto online_result = test_client->SetOnline(true);
     ASSERT_OK(online_result.status());
-    auto result = online_result.Unwrap()->status;
+    auto result = online_result.Unwrap_NEW()->status;
     ASSERT_OK(result);
   }
 
   ethernet::wire::DeviceStatus GetDeviceStatus() {
     auto status_result = ethernet_client_->GetStatus();
     ZX_ASSERT(status_result.status() == ZX_OK);
-    return status_result.Unwrap()->device_status;
+    return status_result.Unwrap_NEW()->device_status;
   }
 
   void ExpectStatusOnline() {

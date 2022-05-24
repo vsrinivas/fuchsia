@@ -55,10 +55,10 @@ void OtStackApp::RadioAllowanceInit() {
     Shutdown();
     return;
   }
-  auto& result = fidl_result.value().result;
-  if (result.is_err()) {
+  const auto& result = fidl_result.value_NEW();
+  if (result.is_error()) {
     FX_LOGS(DEBUG) << "ot-stack: radio returned err in spinel Open(): "
-                   << static_cast<uint32_t>(result.err());
+                   << static_cast<uint32_t>(result.error_value());
     return;
   }
   // send inbound allowance
@@ -167,7 +167,7 @@ void OtStackApp::LowpanSpinelDeviceFidlImpl::Close(CloseRequestView request,
     app_.Shutdown();
     return;
   }
-  completer.Reply(std::move(fidl_result.value().result));
+  completer.ReplySuccess();
 }
 
 void OtStackApp::LowpanSpinelDeviceFidlImpl::GetMaxFrameSize(
@@ -183,7 +183,7 @@ void OtStackApp::LowpanSpinelDeviceFidlImpl::GetMaxFrameSize(
     app_.Shutdown();
     return;
   }
-  completer.Reply(fidl_result.value().size);
+  completer.Reply(fidl_result.value_NEW().size);
 }
 
 void OtStackApp::PushFrameToOtLib() {
@@ -544,9 +544,10 @@ zx_status_t OtStackApp::SetupOtRadioDev() {
     return fidl_result.status();
   }
 
-  auto& result = fidl_result.value().result;
-  if (result.is_err()) {
-    FX_LOGS(ERROR) << "Cannot set the channel to device: " << static_cast<uint32_t>(result.err());
+  const auto& result = fidl_result.value_NEW();
+  if (result.is_error()) {
+    FX_LOGS(ERROR) << "Cannot set the channel to device: "
+                   << static_cast<uint32_t>(result.error_value());
     return ZX_ERR_INTERNAL;
   }
   FX_LOGS(INFO) << "successfully connected to driver";

@@ -36,12 +36,13 @@ uint32_t PipelineConfig::OutputChannels(EffectsLoaderV2* effects_loader_v2) cons
     // but simpler than trying to memoize this config so it can be loaded just once.
     const std::string& name = root_.effects_v2->instance_name;
     auto config_result = effects_loader_v2->GetProcessorConfiguration(name);
-    if (!config_result.ok() || config_result->result.is_err()) {
-      auto status = !config_result.ok() ? config_result.status() : config_result->result.err();
+    if (!config_result.ok() || config_result.Unwrap_NEW()->is_error()) {
+      auto status =
+          !config_result.ok() ? config_result.status() : config_result.Unwrap_NEW()->error_value();
       FX_PLOGS(ERROR, status) << "Cannot load V2 effect '" << name << "'";
       return default_output_channels;
     }
-    auto& config = config_result->result.response().processor_configuration;
+    auto& config = config_result.Unwrap_NEW()->value()->processor_configuration;
     if (!config.has_outputs() || config.outputs().count() != 1 ||
         !config.outputs()[0].has_format()) {
       FX_LOGS(ERROR) << "V2 effect '" << name << "'"

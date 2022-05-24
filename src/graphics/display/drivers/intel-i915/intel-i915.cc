@@ -730,11 +730,12 @@ zx_status_t Controller::DisplayControllerImplImportImage(image_t* image, zx_unow
     zxlogf(ERROR, "Failed to wait for buffers allocated, %s", result.FormatDescription().c_str());
     return result.status();
   }
-  if (result->status != ZX_OK) {
-    return result->status;
+  if (result.value_NEW().status != ZX_OK) {
+    return result.value_NEW().status;
   }
 
-  fuchsia_sysmem::wire::BufferCollectionInfo2& collection_info = result->buffer_collection_info;
+  fuchsia_sysmem::wire::BufferCollectionInfo2& collection_info =
+      result.value_NEW().buffer_collection_info;
 
   if (!collection_info.settings.has_image_format_constraints) {
     zxlogf(ERROR, "No image format constraints");

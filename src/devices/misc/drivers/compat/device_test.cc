@@ -567,10 +567,9 @@ TEST_F(DeviceTest, DevfsVnodeGetTopologicalPath) {
           FAIL() << result.error();
           return;
         }
-        auto* response = result.Unwrap();
-        ASSERT_TRUE(response->result.is_response());
-        std::string path(response->result.response().path.data(),
-                         response->result.response().path.size());
+        ASSERT_TRUE(result.Unwrap_NEW()->is_ok());
+        std::string path(result.Unwrap_NEW()->value()->path.data(),
+                         result.Unwrap_NEW()->value()->path.size());
         EXPECT_STREQ("/dev/second-device", path.data());
         callback_called = true;
       });
@@ -667,8 +666,7 @@ TEST_F(DeviceTest, DevfsVnodeTestBind) {
           FAIL() << result.error();
           return;
         }
-        auto* response = result.Unwrap();
-        ASSERT_TRUE(response->result.is_response());
+        ASSERT_TRUE(result.Unwrap_NEW()->is_ok());
         callback_called = true;
       });
 
@@ -704,9 +702,8 @@ TEST_F(DeviceTest, DevfsVnodeTestBindAlreadyBound) {
           FAIL() << "Bind failed: " << result.error();
           return;
         }
-        auto* response = result.Unwrap();
-        ASSERT_TRUE(response->result.is_err());
-        ASSERT_EQ(ZX_ERR_ALREADY_BOUND, response->result.err());
+        ASSERT_TRUE(result.Unwrap_NEW()->is_error());
+        ASSERT_EQ(ZX_ERR_ALREADY_BOUND, result.Unwrap_NEW()->error_value());
         got_reply = true;
       });
 
@@ -759,8 +756,7 @@ TEST_F(DeviceTest, DevfsVnodeTestRebind) {
           FAIL() << "Rebind failed: " << result.error();
           return;
         }
-        auto* response = result.Unwrap();
-        ASSERT_TRUE(response->result.is_response());
+        ASSERT_TRUE(result.Unwrap_NEW()->is_ok());
         got_reply = true;
       });
 

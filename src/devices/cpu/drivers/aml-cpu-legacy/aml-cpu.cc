@@ -128,7 +128,7 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
     return device_info.status();
   }
 
-  const fuchsia_thermal::wire::ThermalDeviceInfo* info = device_info->info.get();
+  const fuchsia_thermal::wire::ThermalDeviceInfo* info = device_info.value_NEW().info.get();
 
   // Ensure there is at least one non-empty power domain. We expect one to exist if this function
   // has been called.
@@ -249,7 +249,7 @@ zx_status_t AmlCpu::DdkSetPerformanceState(uint32_t requested_state, uint32_t* o
   const auto result =
       thermal_client_->SetDvfsOperatingPoint(pstate, static_cast<PowerDomain>(power_domain_index_));
 
-  if (!result.ok() || result->status != ZX_OK) {
+  if (!result.ok() || result.value_NEW().status != ZX_OK) {
     zxlogf(ERROR, "%s: failed to set dvfs operating point.", __func__);
     return ZX_ERR_INTERNAL;
   }
@@ -292,12 +292,12 @@ void AmlCpu::GetPerformanceStateInfo(GetPerformanceStateInfoRequestView request,
 
 zx_status_t AmlCpu::GetThermalOperatingPoints(fuchsia_thermal::wire::OperatingPoint* out) {
   auto result = thermal_client_->GetDeviceInfo();
-  if (!result.ok() || result->status != ZX_OK) {
+  if (!result.ok() || result.value_NEW().status != ZX_OK) {
     zxlogf(ERROR, "%s: Failed to get thermal device info", __func__);
     return ZX_ERR_INTERNAL;
   }
 
-  fuchsia_thermal::wire::ThermalDeviceInfo* info = result->info.get();
+  fuchsia_thermal::wire::ThermalDeviceInfo* info = result.value_NEW().info.get();
 
   memcpy(out, &info->opps[power_domain_index_], sizeof(*out));
   return ZX_OK;

@@ -77,13 +77,13 @@ static void populate_topo_path(fidl::UnownedClientEnd<fuchsia_device::Controller
 
   auto resp = fidl::WireCall(client)->GetTopologicalPath();
 
-  if (resp.status() != ZX_OK || resp->result.is_err()) {
+  if (resp.status() != ZX_OK || resp.Unwrap_NEW()->is_error()) {
     strcpy(info->topo, "UNKNOWN");
     return;
   }
 
-  path_len = resp->result.response().path.size();
-  auto& r = resp->result.response();
+  path_len = resp.Unwrap_NEW()->value()->path.size();
+  auto& r = *resp.Unwrap_NEW()->value();
   memcpy(info->topo, r.path.data(), r.path.size());
 
   info->topo[path_len] = '\0';
@@ -120,25 +120,26 @@ static int cmd_list_blk(void) {
 
     auto info_resp = fidl::WireCall(caller.borrow_as<fuchsia_block::Block>())->GetInfo();
 
-    if (info_resp.ok() && info_resp->status == ZX_OK && info_resp->info) {
-      block_info = *info_resp->info;
-      size_to_cstring(info.sizestr, sizeof(info.sizestr),
-                      info_resp->info->block_size * info_resp->info->block_count);
+    if (info_resp.ok() && info_resp.value_NEW().status == ZX_OK && info_resp.value_NEW().info) {
+      block_info = *info_resp.value_NEW().info;
+      size_to_cstring(
+          info.sizestr, sizeof(info.sizestr),
+          info_resp.value_NEW().info->block_size * info_resp.value_NEW().info->block_count);
     }
 
     std::string type;
     auto guid_resp =
         fidl::WireCall(caller.borrow_as<fuchsia_partition::Partition>())->GetTypeGuid();
-    if (guid_resp.ok() && guid_resp->status == ZX_OK && guid_resp->guid) {
-      type = gpt::KnownGuid::TypeDescription(guid_resp->guid->value.data());
+    if (guid_resp.ok() && guid_resp.value_NEW().status == ZX_OK && guid_resp.value_NEW().guid) {
+      type = gpt::KnownGuid::TypeDescription(guid_resp.value_NEW().guid->value.data());
     }
 
     auto name_resp = fidl::WireCall(caller.borrow_as<fuchsia_partition::Partition>())->GetName();
-    if (name_resp.ok() && name_resp->status == ZX_OK) {
-      size_t truncated_name_len = name_resp->name.size() <= sizeof(info.label) - 1
-                                      ? name_resp->name.size()
+    if (name_resp.ok() && name_resp.value_NEW().status == ZX_OK) {
+      size_t truncated_name_len = name_resp.value_NEW().name.size() <= sizeof(info.label) - 1
+                                      ? name_resp.value_NEW().name.size()
                                       : sizeof(info.label) - 1;
-      strncpy(info.label, name_resp->name.begin(), truncated_name_len);
+      strncpy(info.label, name_resp.value_NEW().name.begin(), truncated_name_len);
       info.label[truncated_name_len] = '\0';
     } else {
       info.label[0] = '\0';
@@ -185,11 +186,12 @@ static int cmd_list_skip_blk(void) {
     std::string type;
     auto result =
         fidl::WireCall(caller.borrow_as<fuchsia_skipblock::SkipBlock>())->GetPartitionInfo();
-    if (result.ok() && result->status == ZX_OK) {
-      size_to_cstring(
-          info.sizestr, sizeof(info.sizestr),
-          result->partition_info.block_size_bytes * result->partition_info.partition_block_count);
-      type = gpt::KnownGuid::TypeDescription(result->partition_info.partition_guid.data());
+    if (result.ok() && result.value_NEW().status == ZX_OK) {
+      size_to_cstring(info.sizestr, sizeof(info.sizestr),
+                      result.value_NEW().partition_info.block_size_bytes *
+                          result.value_NEW().partition_info.partition_block_count);
+      type =
+          gpt::KnownGuid::TypeDescription(result.value_NEW().partition_info.partition_guid.data());
     }
 
     printf("%-3s %4s %-16s %-20s %-6s %s\n", de->d_name, info.sizestr, type.c_str(), "", "",
@@ -209,10 +211,10 @@ static int try_read_skip_blk(const fdio_cpp::UnownedFdioCaller& caller, off_t of
   if (result.status() != ZX_OK) {
     return result.status();
   }
-  if (result.value().status != ZX_OK) {
-    return result.value().status;
+  if (result.value_NEW().status != ZX_OK) {
+    return result.value_NEW().status;
   }
-  blksize = result->partition_info.block_size_bytes;
+  blksize = result.value_NEW().partition_info.block_size_bytes;
   if (count % blksize) {
     fprintf(stderr, "Bytes read must be a multiple of blksize=%" PRIu64 "\n", blksize);
     return -1;
@@ -252,7 +254,7 @@ static int try_read_skip_blk(const fdio_cpp::UnownedFdioCaller& caller, off_t of
   if (read_result.status() != ZX_OK) {
     status = read_result.status();
   } else {
-    status = read_result.value().status;
+    status = read_result.value_NEW().status;
   }
   if (status != ZX_OK) {
     fprintf(stderr, "Error %d in SkipBlockRead()\n", status);
@@ -327,11 +329,11 @@ static int cmd_stats(const char* dev, bool clear) {
   }
   fdio_cpp::FdioCaller caller(std::move(fd));
   auto result = fidl::WireCall(caller.borrow_as<fuchsia_block::Block>())->GetStats(clear);
-  if (!result.ok() || result->status != ZX_OK) {
+  if (!result.ok() || result.value_NEW().status != ZX_OK) {
     fprintf(stderr, "Error getting stats for %s\n", dev);
     return -1;
   }
-  storage_metrics::BlockDeviceMetrics metrics(result->stats.get());
+  storage_metrics::BlockDeviceMetrics metrics(result.value_NEW().stats.get());
   metrics.Dump(stdout);
   return 0;
 }

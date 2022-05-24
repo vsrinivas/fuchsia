@@ -27,12 +27,11 @@ zx_status_t TestSession::Open(fidl::WireSyncClient<netdev::Device>& netdevice, c
   if (res.status() != ZX_OK) {
     return res.status();
   }
-  if (res.value().result.is_err()) {
-    return res.value().result.err();
+  if (res.Unwrap_NEW()->is_error()) {
+    return res.Unwrap_NEW()->error_value();
   }
 
-  Setup(std::move(res.value().result.response().session),
-        std::move(res.value().result.response().fifos));
+  Setup(std::move(res.Unwrap_NEW()->value()->session), std::move(res.Unwrap_NEW()->value()->fifos));
 
   return ZX_OK;
 }
@@ -93,13 +92,12 @@ zx_status_t TestSession::AttachPort(netdev::wire::PortId port_id,
   if (!wire_result.ok()) {
     return wire_result.status();
   }
-  const auto& result = wire_result.value().result;
-  switch (result.Which()) {
-    case netdev::wire::SessionAttachResult::Tag::kResponse:
-      return ZX_OK;
-    case netdev::wire::SessionAttachResult::Tag::kErr:
-      return result.err();
+
+  const auto* res = wire_result.Unwrap_NEW();
+  if (res->is_error()) {
+    return res->error_value();
   }
+  return ZX_OK;
 }
 
 zx_status_t TestSession::DetachPort(netdev::wire::PortId port_id) {
@@ -107,13 +105,12 @@ zx_status_t TestSession::DetachPort(netdev::wire::PortId port_id) {
   if (!wire_result.ok()) {
     return wire_result.status();
   }
-  const auto& result = wire_result.value().result;
-  switch (result.Which()) {
-    case netdev::wire::SessionDetachResult::Tag::kResponse:
-      return ZX_OK;
-    case netdev::wire::SessionDetachResult::Tag::kErr:
-      return result.err();
+
+  const auto* res = wire_result.Unwrap_NEW();
+  if (res->is_error()) {
+    return res->error_value();
   }
+  return ZX_OK;
 }
 
 zx_status_t TestSession::Close() { return session_->Close().status(); }

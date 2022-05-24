@@ -93,11 +93,11 @@ zx_status_t FindSysconfigPartition(const fbl::unique_fd& devfs_root,
     }
     fidl::WireSyncClient<skipblock::SkipBlock> skip_block(std::move(local));
     auto result = skip_block->GetPartitionInfo();
-    status = result.ok() ? result.value().status : result.status();
+    status = result.ok() ? result.value_NEW().status : result.status();
     if (status != ZX_OK) {
       return ZX_OK;
     }
-    const auto& response = result.value();
+    const auto& response = result.value_NEW();
     const uint8_t type[] = GUID_SYS_CONFIG_VALUE;
     if (memcmp(response.partition_info.partition_guid.data(), type, skipblock::wire::kGuidLen) !=
         0) {
@@ -131,11 +131,11 @@ zx_status_t CheckIfAstro(const fbl::unique_fd& devfs_root) {
     return ZX_ERR_IO;
   }
   auto result = fidl::WireCall<fuchsia_sysinfo::SysInfo>(caller.channel())->GetBoardName();
-  zx_status_t status = result.ok() ? result->status : result.status();
+  zx_status_t status = result.ok() ? result.value_NEW().status : result.status();
   if (status != ZX_OK) {
     return status;
   }
-  if (strncmp(result->name.data(), "astro", result->name.size()) == 0) {
+  if (strncmp(result.value_NEW().name.data(), "astro", result.value_NEW().name.size()) == 0) {
     return ZX_OK;
   }
 
@@ -395,7 +395,7 @@ zx_status_t SyncClient::Write(size_t offset, size_t len, const zx::vmo& vmo, zx_
   };
   printf("sysconfig: ADDING ERASE CYCLE TO SYSCONFIG\n");
   auto result = skip_block_->WriteBytes(std::move(operation));
-  return result.ok() ? result.value().status : result.status();
+  return result.ok() ? result.value_NEW().status : result.status();
 }
 
 zx_status_t SyncClient::WriteBytesWithoutErase(size_t offset, size_t len, const zx::vmo& vmo,
@@ -414,16 +414,16 @@ zx_status_t SyncClient::WriteBytesWithoutErase(size_t offset, size_t len, const 
       .mode = skipblock::wire::WriteBytesMode::kReadModifyEraseWrite,
   };
   auto result = skip_block_->WriteBytesWithoutErase(std::move(operation));
-  return result.ok() ? result.value().status : result.status();
+  return result.ok() ? result.value_NEW().status : result.status();
 }
 
 zx_status_t SyncClient::InitializeReadMapper() {
   auto result = skip_block_->GetPartitionInfo();
-  zx_status_t status = result.ok() ? result.value().status : result.status();
+  zx_status_t status = result.ok() ? result.value_NEW().status : result.status();
   if (status != ZX_OK) {
     return status;
   }
-  const uint64_t block_size = result.value().partition_info.block_size_bytes;
+  const uint64_t block_size = result.value_NEW().partition_info.block_size_bytes;
 
   return read_mapper_.CreateAndMap(fbl::round_up(block_size, zx_system_get_page_size()),
                                    "sysconfig read");
@@ -472,7 +472,7 @@ zx_status_t SyncClient::LoadFromStorage() {
       .block_count = 1,
   };
   auto result = skip_block_->Read(std::move(operation));
-  zx_status_t status = result.ok() ? result.value().status : result.status();
+  zx_status_t status = result.ok() ? result.value_NEW().status : result.status();
   if (status != ZX_OK) {
     return status;
   }

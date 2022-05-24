@@ -91,18 +91,19 @@ class AcpiPwrsrcTest : public zxtest::Test {
 TEST_F(AcpiPwrsrcTest, TestGetInfo) {
   auto info = source_client_->GetPowerInfo();
   ASSERT_OK(info.status());
-  ASSERT_OK(info->status);
-  ASSERT_EQ(info->info.type, fuchsia_hardware_power::wire::PowerType::kAc);
-  ASSERT_EQ(info->info.state, 0);
+  ASSERT_OK(info.value_NEW().status);
+  ASSERT_EQ(info.value_NEW().info.type, fuchsia_hardware_power::wire::PowerType::kAc);
+  ASSERT_EQ(info.value_NEW().info.state, 0);
 }
 
 TEST_F(AcpiPwrsrcTest, TestNotify) {
   auto event = source_client_->GetStateChangeEvent();
   ASSERT_OK(event.status());
-  ASSERT_OK(event->status);
+  ASSERT_OK(event.value_NEW().status);
 
-  ASSERT_STATUS(event->handle.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite_past(), nullptr),
-                ZX_ERR_TIMED_OUT);
+  ASSERT_STATUS(
+      event.value_NEW().handle.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite_past(), nullptr),
+      ZX_ERR_TIMED_OUT);
 
   // Try a spurious notification, where the state doesn't actually change.
   sync_completion_reset(&psr_called_);
@@ -111,20 +112,22 @@ TEST_F(AcpiPwrsrcTest, TestNotify) {
 
   sync_completion_wait_deadline(&psr_called_, ZX_TIME_INFINITE);
   loop_.RunUntilIdle();
-  ASSERT_STATUS(event->handle.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite_past(), nullptr),
-                ZX_ERR_TIMED_OUT);
+  ASSERT_STATUS(
+      event.value_NEW().handle.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite_past(), nullptr),
+      ZX_ERR_TIMED_OUT);
 
   online_ = true;
   // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
   (void)notify_client_->Handle(kPowerSourceStateChanged);
-  ASSERT_OK(event->handle.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite(), nullptr));
+  ASSERT_OK(event.value_NEW().handle.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite(), nullptr));
 
   // And calling GetPowerInfo should clear the event.
   auto info = source_client_->GetPowerInfo();
   ASSERT_OK(info.status());
-  ASSERT_OK(info->status);
-  ASSERT_STATUS(event->handle.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite_past(), nullptr),
-                ZX_ERR_TIMED_OUT);
+  ASSERT_OK(info.value_NEW().status);
+  ASSERT_STATUS(
+      event.value_NEW().handle.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite_past(), nullptr),
+      ZX_ERR_TIMED_OUT);
 }
 
 }  // namespace acpi_pwrsrc

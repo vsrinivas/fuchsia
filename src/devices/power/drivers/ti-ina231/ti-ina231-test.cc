@@ -86,24 +86,24 @@ TEST(TiIna231Test, GetPowerWatts) {
     fake_i2c.set_power(4792);
     auto response = client->GetPowerWatts();
     ASSERT_TRUE(response.ok());
-    ASSERT_FALSE(response.value().result.is_err());
-    EXPECT_TRUE(FloatNear(response.value().result.response().power, 29.95f));
+    ASSERT_FALSE(response.Unwrap_NEW()->is_error());
+    EXPECT_TRUE(FloatNear(response.Unwrap_NEW()->value()->power, 29.95f));
   }
 
   {
     fake_i2c.set_power(0);
     auto response = client->GetPowerWatts();
     ASSERT_TRUE(response.ok());
-    ASSERT_FALSE(response.value().result.is_err());
-    EXPECT_TRUE(FloatNear(response.value().result.response().power, 0.0f));
+    ASSERT_FALSE(response.Unwrap_NEW()->is_error());
+    EXPECT_TRUE(FloatNear(response.Unwrap_NEW()->value()->power, 0.0f));
   }
 
   {
     fake_i2c.set_power(65535);
     auto response = client->GetPowerWatts();
     ASSERT_TRUE(response.ok());
-    ASSERT_FALSE(response.value().result.is_err());
-    EXPECT_TRUE(FloatNear(response.value().result.response().power, 409.59375f));
+    ASSERT_FALSE(response.Unwrap_NEW()->is_error());
+    EXPECT_TRUE(FloatNear(response.Unwrap_NEW()->value()->power, 409.59375f));
   }
 }
 
@@ -162,15 +162,15 @@ TEST(TiIna231Test, BanjoClients) {
   {
     auto response = client1->GetPowerWatts();
     ASSERT_TRUE(response.ok());
-    ASSERT_FALSE(response.value().result.is_err());
-    EXPECT_TRUE(FloatNear(response.value().result.response().power, 29.95f));
+    ASSERT_FALSE(response.Unwrap_NEW()->is_error());
+    EXPECT_TRUE(FloatNear(response.Unwrap_NEW()->value()->power, 29.95f));
   }
 
   {
     auto response = client2->GetPowerWatts();
     ASSERT_TRUE(response.ok());
-    ASSERT_FALSE(response.value().result.is_err());
-    EXPECT_TRUE(FloatNear(response.value().result.response().power, 29.95f));
+    ASSERT_FALSE(response.Unwrap_NEW()->is_error());
+    EXPECT_TRUE(FloatNear(response.Unwrap_NEW()->value()->power, 29.95f));
   }
 }
 
@@ -201,24 +201,24 @@ TEST(TiIna231Test, GetVoltageVolts) {
     fake_i2c.set_bus_voltage(9200);
     auto response = client->GetVoltageVolts();
     ASSERT_TRUE(response.ok());
-    ASSERT_FALSE(response.value().result.is_err());
-    EXPECT_TRUE(FloatNear(response.value().result.response().voltage, 11.5f));
+    ASSERT_FALSE(response.Unwrap_NEW()->is_error());
+    EXPECT_TRUE(FloatNear(response.Unwrap_NEW()->value()->voltage, 11.5f));
   }
 
   {
     fake_i2c.set_bus_voltage(0);
     auto response = client->GetVoltageVolts();
     ASSERT_TRUE(response.ok());
-    ASSERT_FALSE(response.value().result.is_err());
-    EXPECT_TRUE(FloatNear(response.value().result.response().voltage, 0.0f));
+    ASSERT_FALSE(response.Unwrap_NEW()->is_error());
+    EXPECT_TRUE(FloatNear(response.Unwrap_NEW()->value()->voltage, 0.0f));
   }
 
   {
     fake_i2c.set_bus_voltage(65535);
     auto response = client->GetVoltageVolts();
     ASSERT_TRUE(response.ok());
-    ASSERT_FALSE(response.value().result.is_err());
-    EXPECT_TRUE(FloatNear(response.value().result.response().voltage, 81.91875f));
+    ASSERT_FALSE(response.Unwrap_NEW()->is_error());
+    EXPECT_TRUE(FloatNear(response.Unwrap_NEW()->value()->voltage, 81.91875f));
   }
 }
 

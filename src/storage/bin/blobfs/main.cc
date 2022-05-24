@@ -48,7 +48,8 @@ zx::resource AttemptToGetVmexResource() {
     FX_LOGS(WARNING) << "fuchsia.kernel.VmexResource.Get() failed: " << result.error();
     return zx::resource();
   }
-  return std::move(result->resource);
+
+  return std::move(result.value_NEW().resource);
 }
 
 zx_status_t Mount(std::unique_ptr<BlockDevice> device, const Options& options) {

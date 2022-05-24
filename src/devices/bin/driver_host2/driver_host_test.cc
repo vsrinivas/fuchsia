@@ -66,16 +66,12 @@ class TestFile : public fio::testing::File_TestBase {
     fidl::WireSyncClient<fuchsia_io::File> file(std::move(endpoints->client));
     fidl::WireResult result = file->GetBackingMemory(fuchsia_io::wire::VmoFlags(uint32_t(flags)));
     EXPECT_TRUE(result.ok()) << result.FormatDescription();
-    auto& response = result.value();
-    switch (response.result.Which()) {
-      case fuchsia_io::wire::File2GetBackingMemoryResult::Tag::kErr:
-        callback(fio::File2_GetBackingMemory_Result::WithErr(std::move(response.result.err())));
-        break;
-      case fuchsia_io::wire::File2GetBackingMemoryResult::Tag::kResponse:
-        callback(fio::File2_GetBackingMemory_Result::WithResponse(
-            fio::File2_GetBackingMemory_Response(std::move(response.result.response().vmo))));
-        break;
+    auto* res = result.Unwrap_NEW();
+    if (res->is_error()) {
+      callback(fio::File2_GetBackingMemory_Result::WithErr(std::move(res->error_value())));
     }
+    callback(fio::File2_GetBackingMemory_Result::WithResponse(
+        fio::File2_GetBackingMemory_Response(std::move(res->value()->vmo))));
   }
 
   void NotImplemented_(const std::string& name) override {

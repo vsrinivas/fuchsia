@@ -201,8 +201,8 @@ zx_status_t set_system_state_transition_behavior(statecontrol_fidl::wire::System
             resp.FormatDescription().c_str());
     return resp.status();
   }
-  if (resp->result.is_err()) {
-    return resp->result.err();
+  if (resp.Unwrap_NEW()->is_error()) {
+    return resp.Unwrap_NEW()->error_value();
   }
   return ZX_OK;
 }
@@ -225,8 +225,8 @@ zx_status_t SetMexecZbis(zx::vmo kernel_zbi, zx::vmo data_zbi) {
             resp.FormatDescription().c_str());
     return resp.status();
   }
-  if (resp->result.is_err()) {
-    return resp->result.err();
+  if (resp.Unwrap_NEW()->is_error()) {
+    return resp.Unwrap_NEW()->error_value();
   }
   return ZX_OK;
 }
@@ -309,8 +309,8 @@ zx_status_t send_command(fidl::WireSyncClient<statecontrol_fidl::Admin> statecon
       auto resp = statecontrol_client->Reboot(*reboot_reason);
       if (resp.status() != ZX_OK) {
         return ZX_ERR_UNAVAILABLE;
-      } else if (resp->result.is_err()) {
-        return resp->result.err();
+      } else if (resp.Unwrap_NEW()->is_error()) {
+        return resp.Unwrap_NEW()->error_value();
       } else {
         return ZX_OK;
       }
@@ -319,8 +319,8 @@ zx_status_t send_command(fidl::WireSyncClient<statecontrol_fidl::Admin> statecon
       auto resp = statecontrol_client->Reboot(*reboot_reason);
       if (resp.status() != ZX_OK) {
         return ZX_ERR_UNAVAILABLE;
-      } else if (resp->result.is_err()) {
-        return resp->result.err();
+      } else if (resp.value_NEW().is_error()) {
+        return resp.value_NEW().error_value();
       } else {
         return ZX_OK;
       }
@@ -329,8 +329,8 @@ zx_status_t send_command(fidl::WireSyncClient<statecontrol_fidl::Admin> statecon
       auto resp = statecontrol_client->RebootToBootloader();
       if (resp.status() != ZX_OK) {
         return ZX_ERR_UNAVAILABLE;
-      } else if (resp->result.is_err()) {
-        return resp->result.err();
+      } else if (resp.Unwrap_NEW()->is_error()) {
+        return resp.Unwrap_NEW()->error_value();
       } else {
         return ZX_OK;
       }
@@ -339,8 +339,8 @@ zx_status_t send_command(fidl::WireSyncClient<statecontrol_fidl::Admin> statecon
       auto resp = statecontrol_client->RebootToRecovery();
       if (resp.status() != ZX_OK) {
         return ZX_ERR_UNAVAILABLE;
-      } else if (resp->result.is_err()) {
-        return resp->result.err();
+      } else if (resp.Unwrap_NEW()->is_error()) {
+        return resp.Unwrap_NEW()->error_value();
       } else {
         return ZX_OK;
       }
@@ -349,8 +349,8 @@ zx_status_t send_command(fidl::WireSyncClient<statecontrol_fidl::Admin> statecon
       auto resp = statecontrol_client->Poweroff();
       if (resp.status() != ZX_OK) {
         return ZX_ERR_UNAVAILABLE;
-      } else if (resp->result.is_err()) {
-        return resp->result.err();
+      } else if (resp.Unwrap_NEW()->is_error()) {
+        return resp.Unwrap_NEW()->error_value();
       } else {
         return ZX_OK;
       }
@@ -364,8 +364,8 @@ zx_status_t send_command(fidl::WireSyncClient<statecontrol_fidl::Admin> statecon
                                              std::move((*mexec_request)->data_zbi));
       if (resp.status() != ZX_OK) {
         return ZX_ERR_UNAVAILABLE;
-      } else if (resp->result.is_err()) {
-        return resp->result.err();
+      } else if (resp.Unwrap_NEW()->is_error()) {
+        return resp.Unwrap_NEW()->error_value();
       } else {
         return ZX_OK;
       }
@@ -374,8 +374,8 @@ zx_status_t send_command(fidl::WireSyncClient<statecontrol_fidl::Admin> statecon
       auto resp = statecontrol_client->SuspendToRam();
       if (resp.status() != ZX_OK) {
         return ZX_ERR_UNAVAILABLE;
-      } else if (resp->result.is_err()) {
-        return resp->result.err();
+      } else if (resp.Unwrap_NEW()->is_error()) {
+        return resp.Unwrap_NEW()->error_value();
       } else {
         return ZX_OK;
       }

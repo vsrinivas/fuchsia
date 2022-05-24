@@ -32,9 +32,9 @@ TEST(DeviceWatcherTest, WatchUSBDevice) {
   // This response should return an error because response two is already waiting.
   client->NextDevice().ThenExactlyOnce([&loop](fidl::WireUnownedResult<NextDevice>& result) {
     ASSERT_EQ(result.status(), ZX_OK);
-    auto* response = result.Unwrap();
-    ASSERT_TRUE(response->result.is_err());
-    ASSERT_EQ(response->result.err(), ZX_ERR_ALREADY_BOUND);
+    auto* response = result.Unwrap_NEW();
+    ASSERT_TRUE(response->is_error());
+    ASSERT_EQ(response->error_value(), ZX_ERR_ALREADY_BOUND);
     loop.Quit();
   });
 

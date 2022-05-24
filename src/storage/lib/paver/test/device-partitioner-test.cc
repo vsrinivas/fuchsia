@@ -430,7 +430,7 @@ class GptDevicePartitionerTests : public zxtest::Test {
     auto result = fidl::WireCall<fuchsia_device::Controller>(caller.channel())
                       ->Rebind(fidl::StringView("gpt.so"));
     ASSERT_TRUE(result.ok());
-    ASSERT_FALSE(result->result.is_err());
+    ASSERT_FALSE(result.Unwrap_NEW()->is_error());
   }
 
   void ReadBlocks(const BlockDevice* blk_dev, size_t offset_in_blocks, size_t size_in_blocks,
@@ -705,7 +705,7 @@ TEST_F(EfiDevicePartitionerTests, FindOldBootloaderPartitionName) {
   auto result = fidl::WireCall<fuchsia_device::Controller>(caller.channel())
                     ->Rebind(fidl::StringView("gpt.so"));
   ASSERT_TRUE(result.ok());
-  ASSERT_FALSE(result->result.is_err());
+  ASSERT_FALSE(result.Unwrap_NEW()->is_error());
 
   fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
   auto partitioner = CreatePartitioner(std::move(gpt_fd));
@@ -1232,7 +1232,7 @@ TEST_F(SherlockPartitionerTests, InitializePartitionTable) {
   auto result = fidl::WireCall<fuchsia_device::Controller>(caller.channel())
                     ->Rebind(fidl::StringView("gpt.so"));
   ASSERT_TRUE(result.ok());
-  ASSERT_FALSE(result->result.is_err());
+  ASSERT_FALSE(result.Unwrap_NEW()->is_error());
 
   fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
   auto status = CreatePartitioner(std::move(gpt_fd));

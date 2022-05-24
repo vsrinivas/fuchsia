@@ -112,9 +112,9 @@ enum class ExtentKind {
 //
 // let options: ExtractorOptions = Default::default();
 // let mut extractor = Extractor::new(in_file, options, out_file);
-// extractor.add(10..11, default_properties(), None).unwrap();
-// extractor.add(12..14, default_properties(), None).unwrap();
-// extractor.write().unwrap();
+// extractor.add(10..11, default_properties(), None).Unwrap_NEW();
+// extractor.add(12..14, default_properties(), None).Unwrap_NEW();
+// extractor.write().Unwrap_NEW();
 // ```
 struct ExtractorRust;
 

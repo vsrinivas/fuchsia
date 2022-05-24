@@ -107,7 +107,7 @@ void InstanceLifecycleTest::VerifyPostOpenLifecycleViaRemove(
   {
     auto result = fidl::WireCall(instance_client)->SubscribeToLifecycle(std::move(remote));
     ASSERT_OK(result.status());
-    ASSERT_FALSE(result->result.is_err());
+    ASSERT_FALSE(result.Unwrap_NEW()->is_error());
   }
 
   // There shouldn't be anymore pending events yet
@@ -138,7 +138,7 @@ void InstanceLifecycleTest::VerifyPostOpenLifecycleViaClose(
   {
     auto result = fidl::WireCall(instance_client)->SubscribeToLifecycle(std::move(remote));
     ASSERT_OK(result.status());
-    ASSERT_FALSE(result->result.is_err());
+    ASSERT_FALSE(result.Unwrap_NEW()->is_error());
   }
 
   // There shouldn't be anymore pending events yet
@@ -161,7 +161,7 @@ TEST_F(InstanceLifecycleTest, NonPipelinedClientClose) {
 
   auto result = fidl::WireCall(device_)->CreateDevice(std::move(remote), zx::channel{});
   ASSERT_OK(result.status());
-  ASSERT_FALSE(result->result.is_err());
+  ASSERT_FALSE(result.Unwrap_NEW()->is_error());
 
   // There shouldn't be any pending events yet
   ASSERT_FALSE(AreEventsPending(lifecycle_chan));
@@ -194,7 +194,7 @@ TEST_F(InstanceLifecycleTest, PipelinedClientClose) {
   auto result = fidl::WireCall(device_)->CreateDevice(std::move(lifecycle_remote),
                                                       instance_client_remote.TakeChannel());
   ASSERT_OK(result.status());
-  ASSERT_FALSE(result->result.is_err());
+  ASSERT_FALSE(result.Unwrap_NEW()->is_error());
 
   ASSERT_NO_FATAL_FAILURE(
       VerifyPostOpenLifecycleViaClose(lifecycle_chan, std::move(instance_client)));
@@ -209,7 +209,7 @@ TEST_F(InstanceLifecycleTest, NonPipelinedClientRemoveAndClose) {
 
   auto result = fidl::WireCall(device_)->CreateDevice(std::move(remote), zx::channel{});
   ASSERT_OK(result.status());
-  ASSERT_FALSE(result->result.is_err());
+  ASSERT_FALSE(result.Unwrap_NEW()->is_error());
 
   // There shouldn't be any pending events yet
   ASSERT_FALSE(AreEventsPending(lifecycle_chan));
@@ -242,7 +242,7 @@ TEST_F(InstanceLifecycleTest, PipelinedClientRemoveAndClose) {
   auto result = fidl::WireCall(device_)->CreateDevice(std::move(lifecycle_remote),
                                                       instance_client_remote.TakeChannel());
   ASSERT_OK(result.status());
-  ASSERT_FALSE(result->result.is_err());
+  ASSERT_FALSE(result.Unwrap_NEW()->is_error());
 
   ASSERT_NO_FATAL_FAILURE(
       VerifyPostOpenLifecycleViaRemove(lifecycle_chan, std::move(instance_client)));

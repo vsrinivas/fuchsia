@@ -269,12 +269,12 @@ class FakeBootResolver final : public fidl::WireServer<fuchsia_component_resolut
       completer.ReplyError(fuchsia_component_resolution::wire::ResolverError::kIo);
       return;
     }
-    auto& response = result.value();
-    if (response.result.is_err()) {
+    auto& response = result.value_NEW();
+    if (response.is_error()) {
       completer.ReplyError(fuchsia_component_resolution::wire::ResolverError::kIo);
       return;
     }
-    zx::vmo& vmo = response.result.response().vmo;
+    zx::vmo& vmo = response.value()->vmo;
     uint64_t size;
     status = vmo.get_prop_content_size(&size);
     if (status != ZX_OK) {

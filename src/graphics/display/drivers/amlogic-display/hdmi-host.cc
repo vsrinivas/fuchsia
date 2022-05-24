@@ -74,7 +74,7 @@ zx_status_t HdmiHost::Init() {
   }
 
   auto res = hdmi_->PowerUp(1);  // only supports 1 display for now.
-  if ((res.status() != ZX_OK) || res->result.is_err()) {
+  if ((res.status() != ZX_OK) || res.Unwrap_NEW()->is_error()) {
     zxlogf(ERROR, "Power Up failed\n");
     return ZX_ERR_INTERNAL;
   }
@@ -103,7 +103,7 @@ zx_status_t HdmiHost::HostOn() {
   HhiMemPdReg0::Get().ReadFrom(&(*hhi_mmio_)).set_hdmi(0).WriteTo(&(*hhi_mmio_));
 
   auto res = hdmi_->Reset(1);  // only supports 1 display for now
-  if ((res.status() != ZX_OK) || res->result.is_err()) {
+  if ((res.status() != ZX_OK) || res.Unwrap_NEW()->is_error()) {
     zxlogf(ERROR, "Reset failed\n");
     return ZX_ERR_INTERNAL;
   }
@@ -148,7 +148,7 @@ zx_status_t HdmiHost::ModeSet(const display_mode_t& mode) {
   DisplayMode translated_mode(allocator);
   TranslateDisplayMode(allocator, mode, color_, &translated_mode);
   auto res = hdmi_->ModeSet(1, translated_mode);  // only supports 1 display for now
-  if ((res.status() != ZX_OK) || res->result.is_err()) {
+  if ((res.status() != ZX_OK) || res.Unwrap_NEW()->is_error()) {
     DISP_ERROR("Unable to initialize interface\n");
     return ZX_ERR_INTERNAL;
   }
@@ -216,12 +216,12 @@ zx_status_t HdmiHost::EdidTransfer(uint32_t bus_id, const i2c_impl_op_t* op_list
   auto all_reads = fidl::VectorView<uint8_t>::FromExternal(reads.get(), read_cnt);
 
   auto res = hdmi_->EdidTransfer(all_ops, all_writes, all_reads);
-  if ((res.status() != ZX_OK) || res->result.is_err()) {
+  if ((res.status() != ZX_OK) || res.Unwrap_NEW()->is_error()) {
     DISP_ERROR("Unable to perform Edid Transfer\n");
     return ZX_ERR_INTERNAL;
   }
 
-  auto read = res->result.response().read_segments_data;
+  auto read = res.Unwrap_NEW()->value()->read_segments_data;
   read_cnt = 0;
   for (size_t i = 0; i < op_count; ++i) {
     if (!op_list[i].is_read) {

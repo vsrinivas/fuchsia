@@ -209,8 +209,8 @@ bool NandBroker::LoadBroker() {
                   zx::unowned_channel(fdio_unsafe_borrow_channel(io)))
                   ->Bind(::fidl::StringView(kBroker));
   auto status = resp.status();
-  if (resp->result.is_err()) {
-    call_status = resp->result.err();
+  if (resp.Unwrap_NEW()->is_error()) {
+    call_status = resp.Unwrap_NEW()->error_value();
   }
 
   fdio_unsafe_release(io);

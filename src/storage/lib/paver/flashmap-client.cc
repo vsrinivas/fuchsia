@@ -35,13 +35,13 @@ static zx::status<fidl::ClientEnd<fuchsia_nand::Broker>> ConnectToBroker(
   // Get the topological path of the NAND device so we can figure out where the broker is.
   auto path = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_device::Controller>(device.borrow()))
                   ->GetTopologicalPath();
-  if (!path.ok() || path->result.is_err()) {
-    return zx::error(path.ok() ? path->result.err() : path.status());
+  if (!path.ok() || path.Unwrap_NEW()->is_error()) {
+    return zx::error(path.ok() ? path.Unwrap_NEW()->error_value() : path.status());
   }
 
   // Strip the leading "/dev/" from GetTopologicalPath's response.
   auto broker_path =
-      std::string(path->result.response().path.data(), path->result.response().path.size())
+      std::string(path.Unwrap_NEW()->value()->path.data(), path.Unwrap_NEW()->value()->path.size())
           .substr(5)
           .append("/broker");
 
@@ -192,7 +192,7 @@ zx::status<> FlashmapPartitionClient::Init() {
     return zx::error(areas.status());
   }
 
-  for (auto& area : areas->areas) {
+  for (auto& area : areas.value_NEW().areas) {
     areas_.emplace_back(FlashmapArea(area));
   }
 
@@ -200,7 +200,7 @@ zx::status<> FlashmapPartitionClient::Init() {
   if (!erase_block_size.ok()) {
     return zx::error(erase_block_size.status());
   }
-  erase_block_size_ = erase_block_size->erase_block_size;
+  erase_block_size_ = erase_block_size.value_NEW().erase_block_size;
 
   return zx::ok();
 }
@@ -240,21 +240,21 @@ zx::status<> FlashmapPartitionClient::Write(const zx::vmo& vmo, size_t vmo_size)
   if (!current_gbb.ok()) {
     return zx::error(current_gbb.status());
   }
-  if (current_gbb->result.is_err()) {
-    return zx::error(current_gbb->result.err());
+  if (current_gbb.Unwrap_NEW()->is_error()) {
+    return zx::error(current_gbb.Unwrap_NEW()->error_value());
   }
 
   // Map in the current GBB.
   fzl::VmoMapper gbb_mapper;
-  status = gbb_mapper.Map(current_gbb->result.response().range.vmo);
+  status = gbb_mapper.Map(current_gbb.Unwrap_NEW()->value()->range.vmo);
   if (status != ZX_OK) {
     return zx::error(status);
   }
   // Make sure that the current GBB is actually valid.
   GoogleBinaryBlockHeader* cur_gbb =
       reinterpret_cast<GoogleBinaryBlockHeader*>(reinterpret_cast<uintptr_t>(gbb_mapper.start()) +
-                                                 current_gbb->result.response().range.offset);
-  status = ValidateGbb(cur_gbb, current_gbb->result.response().range.size);
+                                                 current_gbb.Unwrap_NEW()->value()->range.offset);
+  status = ValidateGbb(cur_gbb, current_gbb.Unwrap_NEW()->value()->range.size);
   if (status != ZX_OK) {
     return zx::error(status);
   }
@@ -290,18 +290,19 @@ zx::status<> FlashmapPartitionClient::Write(const zx::vmo& vmo, size_t vmo_size)
 zx::status<> FlashmapPartitionClient::ABUpdate(fzl::VmoMapper& new_image) {
   // First: determine which slot we booted from.
   auto active_slot = cros_acpi_->GetActiveApFirmware();
-  if (!active_slot.ok() || active_slot->result.is_err()) {
+  if (!active_slot.ok() || active_slot.Unwrap_NEW()->is_error()) {
     ERROR("Failed to send active firmware slot request: %s\n",
-          active_slot.ok() ? zx_status_get_string(active_slot->result.err())
+          active_slot.ok() ? zx_status_get_string(active_slot.Unwrap_NEW()->error_value())
                            : active_slot.FormatDescription().data());
-    return zx::error(active_slot.ok() ? active_slot->result.err() : active_slot.status());
+    return zx::error(active_slot.ok() ? active_slot.Unwrap_NEW()->error_value()
+                                      : active_slot.status());
   }
 
   bool install_to_b = false;
   const char* source_slot;
   const char* install_slot;
   using BootSlot = fuchsia_acpi_chromeos::wire::BootSlot;
-  switch (active_slot->result.response().slot) {
+  switch (active_slot.Unwrap_NEW()->value()->slot) {
     case BootSlot::kA:
       // If we booted from slot A, install to slot B.
       install_to_b = true;
@@ -362,18 +363,20 @@ zx::status<> FlashmapPartitionClient::ABUpdate(fzl::VmoMapper& new_image) {
   // "EraseAndWrite" call that will erase only required blocks.
   auto erase_result =
       flashmap_->Erase(fidl::StringView::FromExternal(install_area->name), 0, install_area->size);
-  if (!erase_result.ok() || erase_result->result.is_err()) {
+  if (!erase_result.ok() || erase_result.Unwrap_NEW()->is_error()) {
     ERROR("Erase failed\n");
-    return zx::error(erase_result.ok() ? erase_result->result.err() : erase_result.status());
+    return zx::error(erase_result.ok() ? erase_result.Unwrap_NEW()->error_value()
+                                       : erase_result.status());
   }
   auto write_result = flashmap_->Write(fidl::StringView::FromExternal(install_area->name), 0,
                                        fuchsia_mem::wire::Buffer{
                                            .vmo = std::move(to_install),
                                            .size = install_area->size,
                                        });
-  if (!write_result.ok() || write_result->result.is_err()) {
+  if (!write_result.ok() || write_result.Unwrap_NEW()->is_error()) {
     ERROR("write failed\n");
-    return zx::error(write_result.ok() ? write_result->result.err() : write_result.status());
+    return zx::error(write_result.ok() ? write_result.Unwrap_NEW()->error_value()
+                                       : write_result.status());
   }
 
   // Verify that the write succeeded.
@@ -388,11 +391,12 @@ zx::status<> FlashmapPartitionClient::ABUpdate(fzl::VmoMapper& new_image) {
   }
 
   auto set_result = fwparam_->Set(fuchsia_vboot::wire::Key::kTryNext, install_to_b);
-  if (!set_result.ok() || set_result->result.is_err()) {
+  if (!set_result.ok() || set_result.Unwrap_NEW()->is_error()) {
     ERROR("Failed while setting TryNext parameter: %s\n",
-          set_result.ok() ? zx_status_get_string(set_result->result.err())
+          set_result.ok() ? zx_status_get_string(set_result.Unwrap_NEW()->error_value())
                           : set_result.FormatDescription().data());
-    return zx::error(set_result.ok() ? set_result->result.err() : set_result.status());
+    return zx::error(set_result.ok() ? set_result.Unwrap_NEW()->error_value()
+                                     : set_result.status());
   }
 
   // We set TryCount to zero to indicate a "successful boot".
@@ -406,11 +410,12 @@ zx::status<> FlashmapPartitionClient::ABUpdate(fzl::VmoMapper& new_image) {
   // https://source.chromium.org/chromiumos/_/chromium/chromiumos/platform/vboot_reference/+/1a7c57ce7fa5aa1c8cdc6bffffbfe3f8dbece664:firmware/2lib/2misc.c;l=345;drc=51879dc24aea94851fc28ffc2f68cba1b58f3db8
   // for the vboot logic.
   auto set_result2 = fwparam_->Set(fuchsia_vboot::wire::Key::kTryCount, 0);
-  if (!set_result2.ok() || set_result2->result.is_err()) {
+  if (!set_result2.ok() || set_result2.Unwrap_NEW()->is_error()) {
     ERROR("Failed while setting TryCount parameter: %s\n",
-          set_result2.ok() ? zx_status_get_string(set_result2->result.err())
+          set_result2.ok() ? zx_status_get_string(set_result2.Unwrap_NEW()->error_value())
                            : set_result2.FormatDescription().data());
-    return zx::error(set_result2.ok() ? set_result2->result.err() : set_result2.status());
+    return zx::error(set_result2.ok() ? set_result2.Unwrap_NEW()->error_value()
+                                      : set_result2.status());
   }
 
   LOG("Successfully did a firmware update!\n");
@@ -465,14 +470,14 @@ std::optional<FlashmapArea> FlashmapPartitionClient::FindArea(const char* name) 
 zx::status<bool> FlashmapPartitionClient::NeedsUpdate(const fzl::VmoMapper& new_image,
                                                       const FlashmapArea& region) {
   auto result = flashmap_->Read(fidl::StringView::FromExternal(region.name), 0, region.size);
-  if (!result.ok() || result->result.is_err()) {
+  if (!result.ok() || result.Unwrap_NEW()->is_error()) {
     ERROR("Failed to read section '%s': %s\n", region.name.data(),
-          result.ok() ? zx_status_get_string(result->result.err())
+          result.ok() ? zx_status_get_string(result.Unwrap_NEW()->error_value())
                       : result.FormatDescription().data());
-    return zx::error(result.ok() ? result->result.err() : result.status());
+    return zx::error(result.ok() ? result.Unwrap_NEW()->error_value() : result.status());
   }
 
-  auto& range = result->result.response().range;
+  auto& range = result.Unwrap_NEW()->value()->range;
   fzl::VmoMapper cur_section;
   zx_status_t status = cur_section.Map(range.vmo);
   if (status != ZX_OK) {

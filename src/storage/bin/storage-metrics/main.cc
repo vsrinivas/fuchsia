@@ -57,14 +57,14 @@ zx::status<fuchsia_hardware_block::wire::BlockStats> GetBlockStats(const char* d
   fidl::WireSyncClient client(std::move(client_end.value()));
 
   auto result = client->GetStats(clear);
-  zx_status_t status = !result.ok() ? result.error().status() : result.value().status;
+  zx_status_t status = !result.ok() ? result.error().status() : result.value_NEW().status;
 
   if (status != ZX_OK) {
     fprintf(stderr, "Error getting stats for %s: %s\n", dev, zx_status_get_string(status));
     return zx::error(status);
   }
 
-  return zx::ok(*result.value().stats);
+  return zx::ok(*result.value_NEW().stats);
 }
 
 void ParseCommandLineArguments(int argc, char** argv, StorageMetricOptions* options) {
@@ -101,16 +101,16 @@ void RunBlockMetrics(const char* path, const StorageMetricOptions options) {
   std::string device_path;
   fdio_cpp::FdioCaller caller(std::move(fd));
   auto result = fidl::WireCall(caller.directory())->QueryFilesystem();
-  if (result.ok() && result->s == ZX_OK) {
+  if (result.ok() && result.value_NEW().s == ZX_OK) {
     std::string fshost_path(fshost::kHubAdminServicePath);
     auto fshost_or = service::Connect<fuchsia_fshost::Admin>(fshost_path.c_str());
     if (fshost_or.is_error()) {
       fprintf(stderr, "Error connecting to fshost (@ %s): %s\n", fshost_path.c_str(),
               fshost_or.status_string());
     } else {
-      auto path_result = fidl::WireCall(*fshost_or)->GetDevicePath(result->info->fs_id);
-      if (path_result.ok() && path_result->result.is_response()) {
-        device_path = std::string(path_result->result.response().path.get());
+      auto path_result = fidl::WireCall(*fshost_or)->GetDevicePath(result.value_NEW().info->fs_id);
+      if (path_result.ok() && path_result.Unwrap_NEW()->is_ok()) {
+        device_path = std::string(path_result.Unwrap_NEW()->value()->path.get());
       }
     }
   }

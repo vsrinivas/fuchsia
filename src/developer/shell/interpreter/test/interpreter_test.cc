@@ -68,11 +68,12 @@ void InterpreterTest::Finish(FinishAction action, const std::vector<std::string>
   auto errors = shell()->Shutdown();
   // Checks if the errors are what we expected.
   bool ok = true;
-  if (expected_errors.size() != errors->errors.count()) {
+  if (expected_errors.size() != errors.value_NEW().errors.count()) {
     ok = false;
   } else {
     for (size_t i = 0; i < expected_errors.size(); ++i) {
-      if (expected_errors[i] != std::string(errors->errors[i].data(), errors->errors[i].size())) {
+      if (expected_errors[i] !=
+          std::string(errors.value_NEW().errors[i].data(), errors.value_NEW().errors[i].size())) {
         ok = false;
         break;
       }
@@ -85,13 +86,13 @@ void InterpreterTest::Finish(FinishAction action, const std::vector<std::string>
       for (const auto& error : expected_errors) {
         std::cout << "  " << error << '\n';
       }
-      if (errors->errors.empty()) {
+      if (errors.value_NEW().errors.empty()) {
         std::cout << "Got no error\n";
       } else {
         std::cout << "Got:\n";
       }
     }
-    for (const auto& error : errors->errors) {
+    for (const auto& error : errors.value_NEW().errors) {
       std::cout << "  " << std::string(error.data(), error.size()) << '\n';
     }
     ASSERT_TRUE(ok);

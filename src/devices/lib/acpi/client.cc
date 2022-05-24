@@ -74,16 +74,16 @@ zx::status<Object> Client::CallDsm(Uuid uuid, uint64_t revision, uint64_t func_i
     return zx::error(result.status());
   }
 
-  if (result->result.is_err()) {
-    return zx::ok(Object(result->result.err()));
+  if (result.Unwrap_NEW()->is_error()) {
+    return zx::ok(Object(result.Unwrap_NEW()->error_value()));
   }
 
-  if (!result->result.response().result.is_object()) {
+  if (!result.Unwrap_NEW()->value()->result.is_object()) {
     // We called EvaluateObject with mode == PlainObject, so don't expect anything else back.
     return zx::error(ZX_ERR_INTERNAL);
   }
 
-  return zx::ok(Object(result->result.response().result.object()));
+  return zx::ok(Object(result.Unwrap_NEW()->value()->result.object()));
 }
 
 }  // namespace acpi

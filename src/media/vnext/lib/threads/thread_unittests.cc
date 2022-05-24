@@ -127,8 +127,8 @@ TEST_F(ThreadTest, NewThread) {
           .then(
               [this, under_test](const fpromise::result<zx_packet_signal_t, zx_status_t>& result) {
                 EXPECT_TRUE(result.is_ok());
-                EXPECT_EQ(result.value().trigger, ZX_EVENT_SIGNALED);
-                EXPECT_EQ(result.value().observed, ZX_EVENT_SIGNALED);
+                EXPECT_EQ(result.value_NEW().trigger, ZX_EVENT_SIGNALED);
+                EXPECT_EQ(result.value_NEW().observed, ZX_EVENT_SIGNALED);
                 EXPECT_TRUE(under_test.is_current());
                 DoneLooping();
               }));
@@ -224,8 +224,8 @@ TEST_F(ThreadTest, ForLoop) {
           .then(
               [this, under_test](const fpromise::result<zx_packet_signal_t, zx_status_t>& result) {
                 EXPECT_TRUE(result.is_ok());
-                EXPECT_EQ(result.value().trigger, ZX_EVENT_SIGNALED);
-                EXPECT_EQ(result.value().observed, ZX_EVENT_SIGNALED);
+                EXPECT_EQ(result.value_NEW().trigger, ZX_EVENT_SIGNALED);
+                EXPECT_EQ(result.value_NEW().observed, ZX_EVENT_SIGNALED);
                 EXPECT_TRUE(under_test.is_current());
                 DoneLooping();
               }));

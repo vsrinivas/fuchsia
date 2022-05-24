@@ -42,20 +42,20 @@ class BindCompilerV2Test : public testing::Test {
                                             endpoints->server.TakeChannel());
 
     ASSERT_EQ(result.status(), ZX_OK);
-    ASSERT_EQ(result->status, ZX_OK);
+    ASSERT_EQ(result.value_NEW().status, ZX_OK);
 
-    ASSERT_GE(result->path.size(), kDevPrefix.size());
-    ASSERT_EQ(strncmp(result->path.data(), kDevPrefix.c_str(), kDevPrefix.size()), 0);
-    relative_device_path_ = std::string(result->path.data() + kDevPrefix.size(),
-                                        result->path.size() - kDevPrefix.size());
+    ASSERT_GE(result.value_NEW().path.size(), kDevPrefix.size());
+    ASSERT_EQ(strncmp(result.value_NEW().path.data(), kDevPrefix.c_str(), kDevPrefix.size()), 0);
+    relative_device_path_ = std::string(result.value_NEW().path.data() + kDevPrefix.size(),
+                                        result.value_NEW().path.size() - kDevPrefix.size());
 
     // Bind the test driver to the new device.
     auto response =
         fidl::WireCall(endpoints->client)->Bind(::fidl::StringView::FromExternal(kDriverLibname));
     status = response.status();
     if (status == ZX_OK) {
-      if (response->result.is_err()) {
-        status = response->result.err();
+      if (response.Unwrap_NEW()->is_error()) {
+        status = response.Unwrap_NEW()->error_value();
       }
     }
     ASSERT_EQ(status, ZX_OK);

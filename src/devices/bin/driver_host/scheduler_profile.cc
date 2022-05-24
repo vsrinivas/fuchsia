@@ -35,7 +35,7 @@ zx_status_t get_scheduler_profile(uint32_t priority, const char* name, zx_handle
   if (!result.ok()) {
     return result.status();
   }
-  fidl::WireResponse response = std::move(result.value());
+  fidl::WireResponse response = std::move(result.value_NEW());
   if (response.status != ZX_OK) {
     return response.status;
   }
@@ -52,7 +52,7 @@ zx_status_t get_scheduler_deadline_profile(uint64_t capacity, uint64_t deadline,
   if (!result.ok()) {
     return result.status();
   }
-  fidl::WireResponse response = std::move(result.value());
+  fidl::WireResponse response = std::move(result.value_NEW());
   if (response.status != ZX_OK) {
     return response.status;
   }
@@ -75,7 +75,7 @@ zx_status_t set_scheduler_profile_by_role(zx_handle_t thread, const char* role, 
   if (!result.ok()) {
     return result.status();
   }
-  fidl::WireResponse response = std::move(result.value());
+  fidl::WireResponse response = std::move(result.value_NEW());
   if (response.status != ZX_OK) {
     return response.status;
   }

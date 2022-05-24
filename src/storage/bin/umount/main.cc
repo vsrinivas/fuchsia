@@ -94,8 +94,9 @@ int main(int argc, char** argv) {
     fprintf(stderr, "Error unmounting, fidl error: %s\n", result.FormatDescription().c_str());
     return EXIT_FAILURE;
   }
-  if (result->result.is_err()) {
-    fprintf(stderr, "Error unmounting: %s\n", zx_status_get_string(result->result.err()));
+  if (result.Unwrap_NEW()->is_error()) {
+    fprintf(stderr, "Error unmounting: %s\n",
+            zx_status_get_string(result.Unwrap_NEW()->error_value()));
     return EXIT_FAILURE;
   }
 

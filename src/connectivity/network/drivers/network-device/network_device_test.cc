@@ -107,7 +107,7 @@ class NetDeviceDriverTest : public ::testing::Test {
       if (!result.ok()) {
         return zx::error(result.status());
       }
-      const netdev::wire::DevicePortEvent& event = result.value().event;
+      const netdev::wire::DevicePortEvent& event = result.value_NEW().event;
 
       netdev::wire::PortId id;
       switch (event.Which()) {

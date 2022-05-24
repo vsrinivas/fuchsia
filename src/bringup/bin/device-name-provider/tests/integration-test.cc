@@ -32,17 +32,15 @@ TEST(NameProviderTest, GetDeviceName) {
 
   fidl::WireResult response = fidl::WireCall(client_end.value())->GetDeviceName();
   ASSERT_OK(response.status());
-  fuchsia_device::wire::NameProviderGetDeviceNameResult& result = response.value().result;
-  switch (result.Which()) {
-    case fuchsia_device::wire::NameProviderGetDeviceNameResult::Tag::kErr:
-      FAIL() << zx_status_get_string(result.err());
-    case fuchsia_device::wire::NameProviderGetDeviceNameResult::Tag::kResponse: {
-      const fidl::StringView& name = result.response().name;
-      // regression test: ensure that no additional data is present past the last null byte
-      EXPECT_EQ(name.size(), strlen(fuchsia_device::wire::kDefaultDeviceName));
-      EXPECT_EQ(memcmp(name.data(), fuchsia_device::wire::kDefaultDeviceName, name.size()), 0);
-    }
+  const auto* res = response.Unwrap_NEW();
+  if (res->is_error()) {
+    FAIL() << zx_status_get_string(res->error_value());
   }
+
+  const fidl::StringView& name = res->value()->name;
+  // regression test: ensure that no additional data is present past the last null byte
+  EXPECT_EQ(name.size(), strlen(fuchsia_device::wire::kDefaultDeviceName));
+  EXPECT_EQ(memcmp(name.data(), fuchsia_device::wire::kDefaultDeviceName, name.size()), 0);
 }
 
 }  // namespace

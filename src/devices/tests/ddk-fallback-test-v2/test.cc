@@ -32,7 +32,7 @@ int main(int argc, char **argv) {
   if (response.status() != ZX_OK) {
     return 1;
   }
-  if (response->result.is_err()) {
+  if (response.Unwrap_NEW()->is_error()) {
     return 1;
   }
 

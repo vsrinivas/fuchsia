@@ -11,7 +11,7 @@ zx_status_t ParseArgs(fidl::WireSyncClient<fuchsia_boot::Arguments>& client, Arg
   if (!result.ok()) {
     return result.status();
   }
-  out->require_system = result->value;
+  out->require_system = result.Unwrap_NEW()->value;
   return ZX_OK;
 }
 

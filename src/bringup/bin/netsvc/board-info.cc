@@ -16,11 +16,12 @@ namespace {
 [[maybe_unused]] zx::status<bool> IsChromebook(
     fidl::UnownedClientEnd<fuchsia_sysinfo::SysInfo> sysinfo) {
   fidl::WireResult result = fidl::WireCall(sysinfo)->GetBootloaderVendor();
-  zx_status_t status = result.ok() ? result->status : result.status();
+  zx_status_t status = result.ok() ? result.Unwrap_NEW()->status : result.status();
   if (status != ZX_OK) {
     return zx::error(status);
   }
-  return zx::ok(strncmp(result->vendor.data(), "coreboot", result->vendor.size()) == 0);
+  return zx::ok(strncmp(result.Unwrap_NEW()->vendor.data(), "coreboot",
+                        result.Unwrap_NEW()->vendor.size()) == 0);
 }
 
 zx::status<> GetBoardName(fidl::UnownedClientEnd<fuchsia_sysinfo::SysInfo> sysinfo,
@@ -29,7 +30,7 @@ zx::status<> GetBoardName(fidl::UnownedClientEnd<fuchsia_sysinfo::SysInfo> sysin
   if (!result.ok()) {
     return zx::error(result.status());
   }
-  const auto& response = result.value();
+  const auto& response = result.value_NEW();
   if (response.status != ZX_OK) {
     return zx::error(response.status);
   }
@@ -64,7 +65,7 @@ zx::status<uint32_t> GetBoardRevision(fidl::UnownedClientEnd<fuchsia_sysinfo::Sy
   if (!result.ok()) {
     return zx::error(result.status());
   }
-  const auto& response = result.value();
+  const auto& response = result.value_NEW();
   if (response.status != ZX_OK) {
     return zx::error(response.status);
   }

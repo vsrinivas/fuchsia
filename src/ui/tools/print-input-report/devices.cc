@@ -21,12 +21,12 @@ zx_status_t PrintFeatureReports(std::string filename, Printer* printer,
         if (!call_result.ok()) {
           return;
         }
-        auto* result = call_result.Unwrap();
-        if (result->result.is_err()) {
+        auto* result = call_result.Unwrap_NEW();
+        if (result->is_error()) {
           callback();
           return;
         }
-        auto& report = result->result.response().report;
+        auto& report = result->value()->report;
 
         printer->SetIndent(0);
         printer->Print("Feature Report from file: %s\n", filename.c_str());
@@ -109,7 +109,7 @@ zx_status_t PrintInputDescriptor(std::string filename, Printer* printer,
         if (!call_result.ok()) {
           return;
         }
-        auto* result = call_result.Unwrap();
+        auto* result = call_result.Unwrap_NEW();
         printer->SetIndent(0);
         printer->Print("Descriptor from file: %s\n", filename.c_str());
         if (result->descriptor.has_mouse()) {
@@ -313,13 +313,13 @@ void PrintInputReports(std::string filename, Printer* printer,
         if (!call_result.ok()) {
           return;
         }
-        auto* result = call_result.Unwrap();
+        auto* result = call_result.Unwrap_NEW();
         size_t reads_left = num_reads;
-        if (result->result.is_err()) {
+        if (result->is_error()) {
           callback();
           return;
         }
-        auto& reports = result->result.response().reports;
+        auto& reports = result->value()->reports;
         TRACE_DURATION("input", "print-input-report ReadReports");
         for (auto& report : reports) {
           if (reads_left == 0) {
@@ -372,12 +372,12 @@ void GetAndPrintInputReport(std::string filename,
             if (!call_result.ok()) {
               return;
             }
-            auto* result = call_result.Unwrap();
-            if (result->result.is_err()) {
+            auto* result = call_result.Unwrap_NEW();
+            if (result->is_error()) {
               callback();
               return;
             }
-            auto& report = result->result.response().report;
+            auto& report = result->value()->report;
             TRACE_DURATION("input", "print-input-report GetReport");
             printer->SetIndent(0);
             printer->Print("Report from file: %s\n", filename.c_str());

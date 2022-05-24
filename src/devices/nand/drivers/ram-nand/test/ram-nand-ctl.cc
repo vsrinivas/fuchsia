@@ -116,8 +116,8 @@ int main(int argc, char** argv) {
     fprintf(stderr, "Failed to call to Realm:Start: %d", wire_result.status());
     return 1;
   }
-  if (wire_result->result.is_err()) {
-    fprintf(stderr, "Realm:Start failed: %d", wire_result->result.err());
+  if (wire_result.Unwrap_NEW()->is_error()) {
+    fprintf(stderr, "Realm:Start failed: %d", wire_result.Unwrap_NEW()->error_value());
     return 1;
   }
   fbl::unique_fd dir_fd;

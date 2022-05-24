@@ -11,7 +11,7 @@
 //   #[cfg(fuzz)]
 //   #[no_mangle]
 //   pub extern "C" fn fuzz_main() {
-//     main().unwrap();
+//     main().Unwrap_NEW();
 //   }
 
 extern "C" void fuzz_main();

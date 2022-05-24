@@ -25,7 +25,7 @@ zx::status<zx::debuglog> GetDebugLogHandle() {
   if (!response.ok()) {
     return zx::error(response.status());
   }
-  return zx::ok(zx::debuglog(std::move(response.value().log)));
+  return zx::ok(zx::debuglog(std::move(response.value_NEW().log)));
 }
 
 TEST(DebugLog, Create) {

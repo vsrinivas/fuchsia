@@ -43,11 +43,12 @@ zx::status<uint64_t> GetFvmSliceSize(fidl::ClientEnd<VolumeManager> &fvm_client)
     fprintf(stderr, "Failed to get fvm slice size: %s\n", response.status_string());
     return zx::error(response.status());
   }
-  if (response->status != ZX_OK) {
-    fprintf(stderr, "Failed to get fvm slice size: %s\n", zx_status_get_string(response->status));
-    return zx::error(response->status);
+  if (response.value_NEW().status != ZX_OK) {
+    fprintf(stderr, "Failed to get fvm slice size: %s\n",
+            zx_status_get_string(response.value_NEW().status));
+    return zx::error(response.value_NEW().status);
   }
-  return zx::ok(response->info->slice_size);
+  return zx::ok(response.value_NEW().info->slice_size);
 }
 
 // Returns the number of slices required to create a volume of |volume_size| in fvm.
@@ -172,8 +173,9 @@ FvmVolume::~FvmVolume() {
     fprintf(stderr, "Failed to destroy volume: %s\n", response.status_string());
     return;
   }
-  if (response->status != ZX_OK) {
-    fprintf(stderr, "Failed to destroy volume: %s\n", zx_status_get_string(response->status));
+  if (response.value_NEW().status != ZX_OK) {
+    fprintf(stderr, "Failed to destroy volume: %s\n",
+            zx_status_get_string(response.value_NEW().status));
   }
 }
 
@@ -196,9 +198,10 @@ zx::status<FvmVolume> FvmVolume::Create(fidl::ClientEnd<VolumeManager> &fvm_clie
     fprintf(stderr, "Failed to create volume: %s\n", response.status_string());
     return zx::error(response.status());
   }
-  if (response->status != ZX_OK) {
-    fprintf(stderr, "Failed to create volume: %s\n", zx_status_get_string(response->status));
-    return zx::error(response->status);
+  if (response.value_NEW().status != ZX_OK) {
+    fprintf(stderr, "Failed to create volume: %s\n",
+            zx_status_get_string(response.value_NEW().status));
+    return zx::error(response.value_NEW().status);
   }
 
   fs_management::PartitionMatcher matcher{

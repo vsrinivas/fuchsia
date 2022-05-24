@@ -85,8 +85,8 @@ fpromise::promise<void, zx_status_t> DevfsExporter::ExportImpl(std::string_view 
                       fidl::WireUnownedResult<fdfs::Exporter::Export>& response) mutable {
     if (!response.ok()) {
       completer.complete_error(response.status());
-    } else if (response->result.is_err()) {
-      completer.complete_error(response->result.err());
+    } else if (response.Unwrap_NEW()->is_error()) {
+      completer.complete_error(response.Unwrap_NEW()->error_value());
     } else {
       completer.complete_ok();
     }
