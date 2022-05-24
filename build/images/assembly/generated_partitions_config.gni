@@ -122,6 +122,15 @@ template("generated_partitions_config") {
         },
       ]
     }
+    if (zircon_r_partition != "") {
+      _partitions += [
+        {
+          name = zircon_r_partition
+          type = "ZBI"
+          slot = "R"
+        },
+      ]
+    }
     if (vbmeta_a_partition != "") {
       _partitions += [
         {
@@ -137,6 +146,15 @@ template("generated_partitions_config") {
           name = vbmeta_b_partition
           type = "VBMeta"
           slot = "B"
+        },
+      ]
+    }
+    if (vbmeta_r_partition != "") {
+      _partitions += [
+        {
+          name = vbmeta_r_partition
+          type = "VBMeta"
+          slot = "R"
         },
       ]
     }
