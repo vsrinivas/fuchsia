@@ -3916,7 +3916,6 @@ static void brcmf_send_eapol_confirm(net_device* ndev, const wlan_fullmac_eapol_
   confirm.result_code =
       result == ZX_OK ? WLAN_EAPOL_RESULT_SUCCESS : WLAN_EAPOL_RESULT_TRANSMISSION_FAILURE;
   std::memcpy(confirm.dst_addr, req->dst_addr, ETH_ALEN);
-  zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
   BRCMF_IFDBG(WLANIF, ndev, "Sending EAPOL xmit confirm to SME. result: %s",
               confirm.result_code == WLAN_EAPOL_RESULT_SUCCESS                ? "success"
               : confirm.result_code == WLAN_EAPOL_RESULT_TRANSMISSION_FAILURE ? "failure"
