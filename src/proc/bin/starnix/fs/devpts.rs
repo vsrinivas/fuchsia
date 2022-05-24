@@ -6,7 +6,6 @@ use std::sync::Arc;
 
 use crate::device::terminal::*;
 use crate::device::DeviceOps;
-use crate::device::WithStaticDeviceId;
 use crate::fs::tmpfs::*;
 use crate::fs::*;
 use crate::syscalls::*;
@@ -58,11 +57,18 @@ fn init_devpts(kernel: &Arc<Kernel>) -> FileSystemHandle {
         // Register /dev/pts/X device type
         for n in 0..DEVPTS_MAJOR_COUNT {
             registry
-                .register_default_chrdev(DevPts::new(state.clone()), DEVPTS_FIRST_MAJOR + n)
+                .register_default_chrdev(
+                    DevPtsDevice::new(fs.clone(), state.clone()),
+                    DEVPTS_FIRST_MAJOR + n,
+                )
                 .unwrap();
         }
+        // Register tty device type
+        registry
+            .register_chrdev(DevPtsDevice::new(fs.clone(), state.clone()), DeviceType::TTY)
+            .unwrap();
         // Register ptmx device type
-        registry.register_chrdev(DevPtmx::new(fs.clone(), state), DeviceType::PTMX).unwrap();
+        registry.register_chrdev(DevPtsDevice::new(fs.clone(), state), DeviceType::PTMX).unwrap();
     }
 
     fs
@@ -81,32 +87,71 @@ fn unlink_ptr_node_if_exists(fs: &FileSystemHandle, id: u32) -> Result<(), Errno
     }
 }
 
-struct DevPtmx {
+struct DevPtsDevice {
     fs: FileSystemHandle,
     state: Arc<TTYState>,
 }
 
-impl DevPtmx {
+impl DevPtsDevice {
     pub fn new(fs: FileSystemHandle, state: Arc<TTYState>) -> Self {
         Self { fs, state }
     }
 }
 
-impl WithStaticDeviceId for DevPtmx {
-    const ID: DeviceType = DeviceType::PTMX;
-}
-
-impl DeviceOps for DevPtmx {
+impl DeviceOps for DevPtsDevice {
     fn open(
         &self,
         current_task: &CurrentTask,
-        _id: DeviceType,
+        id: DeviceType,
         _node: &FsNode,
-        _flags: OpenFlags,
+        flags: OpenFlags,
     ) -> Result<Box<dyn FileOps>, Errno> {
-        let terminal = self.state.get_next_terminal(current_task)?;
+        match id {
+            // /dev/ptmx
+            DeviceType::PTMX => {
+                let terminal = self.state.get_next_terminal(current_task)?;
 
-        Ok(Box::new(DevPtmxFile::new(self.fs.clone(), terminal)))
+                Ok(Box::new(DevPtmxFile::new(self.fs.clone(), terminal)))
+            }
+            // /dev/tty
+            DeviceType::TTY => {
+                let terminal = current_task
+                    .thread_group
+                    .read()
+                    .process_group
+                    .session
+                    .read()
+                    .controlling_terminal
+                    .as_ref()
+                    .map(|ct| Arc::clone(&ct.terminal));
+                if let Some(terminal) = terminal {
+                    Ok(Box::new(DevPtsFile::new(terminal)))
+                } else {
+                    error!(EIO)
+                }
+            }
+            // /dev/pts/??
+            _ => {
+                let pts_id = (id.major() - DEVPTS_FIRST_MAJOR) * 256 + id.minor();
+                let terminal =
+                    self.state.terminals.read().get(&pts_id).ok_or(EIO)?.upgrade().ok_or(EIO)?;
+                if terminal.read().locked {
+                    return error!(EIO);
+                }
+                if !flags.contains(OpenFlags::NOCTTY) {
+                    // Opening a replica sets the process' controlling TTY when possible. An error indicates it cannot
+                    // be set, and is ignored silently.
+                    let _ = current_task.thread_group.set_controlling_terminal(
+                        current_task,
+                        &terminal,
+                        false, /* is_main */
+                        false, /* steal */
+                        flags.can_read(),
+                    );
+                }
+                Ok(Box::new(DevPtsFile::new(terminal)))
+            }
+        }
     }
 }
 
@@ -207,44 +252,6 @@ impl FileOps for DevPtmxFile {
             }
             _ => shared_ioctl(&self.terminal, true, _file, current_task, request, user_addr),
         }
-    }
-}
-
-struct DevPts {
-    state: Arc<TTYState>,
-}
-
-impl DevPts {
-    pub fn new(state: Arc<TTYState>) -> Self {
-        Self { state }
-    }
-}
-
-impl DeviceOps for DevPts {
-    fn open(
-        &self,
-        current_task: &CurrentTask,
-        id: DeviceType,
-        _node: &FsNode,
-        flags: OpenFlags,
-    ) -> Result<Box<dyn FileOps>, Errno> {
-        let pts_id = (id.major() - DEVPTS_FIRST_MAJOR) * 256 + id.minor();
-        let terminal = self.state.terminals.read().get(&pts_id).ok_or(EIO)?.upgrade().ok_or(EIO)?;
-        if terminal.read().locked {
-            return error!(EIO);
-        }
-        if !flags.contains(OpenFlags::NOCTTY) {
-            // Opening a replica sets the process' controlling TTY when possible. An error indicates it cannot
-            // be set, and is ignored silently.
-            let _ = current_task.thread_group.set_controlling_terminal(
-                current_task,
-                &terminal,
-                false, /* is_main */
-                false, /* steal */
-                flags.can_read(),
-            );
-        }
-        Ok(Box::new(DevPtsFile::new(terminal)))
     }
 }
 

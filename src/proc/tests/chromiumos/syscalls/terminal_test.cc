@@ -7,6 +7,7 @@
 #include <sys/ioctl.h>
 #include <sys/prctl.h>
 #include <sys/syscall.h>
+#include <sys/sysmacros.h>
 
 #include <gtest/gtest.h>
 
@@ -218,6 +219,49 @@ TEST(Pty, SigWinch) {
       SAFE_SYSCALL(ioctl(main_terminal, TIOCSWINSZ, &ws));
 
       ASSERT_EQ(0, reap_children());
+    }
+
+    // Ensure all forked process will exit and not reach back to gtest.
+    exit(0);
+  } else {
+    // Wait for all children to die.
+    ASSERT_EQ(0, reap_children());
+  }
+}
+
+TEST(Pty, OpenDevTTY) {
+  // Reap children.
+  prctl(PR_SET_CHILD_SUBREAPER, 1);
+
+  if (SAFE_SYSCALL(fork()) == 0) {
+    // Create a new session here, and associate it with the new terminal.
+    SAFE_SYSCALL(setsid());
+    int main_terminal = open_main_terminal();
+    SAFE_SYSCALL(ioctl(main_terminal, TIOCSCTTY, 0));
+
+    SAFE_SYSCALL(open("/dev/tty", O_RDWR));
+    int other_terminal = SAFE_SYSCALL(open("/dev/tty", O_RDWR));
+    struct stat stats;
+    SAFE_SYSCALL(fstat(other_terminal, &stats));
+
+    if (major(stats.st_rdev) != 5 || minor(stats.st_rdev) != 0) {
+      fprintf(stderr, "Unexpected device identifier, expected 5, 0 but got %d, %d\n",
+              major(stats.st_rdev), minor(stats.st_rdev));
+      exit(1);
+    }
+
+    if (write(other_terminal, "h\n", 2) != 2) {
+      fprintf(stderr, "Unable to write 2 bytes to /dev/tty\n");
+      exit(1);
+    }
+    char buf[20];
+    if (read(main_terminal, buf, 20) != 3) {
+      fprintf(stderr, "Unable to read 2 bytes from main terminal.\n");
+      exit(1);
+    }
+    if (strncmp(buf, "h\r\n", 3) != 0) {
+      fprintf(stderr, "Unexpected buffer.\n");
+      exit(1);
     }
 
     // Ensure all forked process will exit and not reach back to gtest.
