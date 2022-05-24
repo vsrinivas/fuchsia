@@ -10,8 +10,8 @@ use {
     fuchsia_pkg_testing::{PackageBuilder, RepositoryBuilder, SystemImageBuilder},
     fuchsia_url::pkg_url::PkgUrl,
     lib::{
-        get_test_cup_data, make_pkg_with_extra_blobs, pkgfs_with_system_image_and_pkg,
-        MountsBuilder, TestEnvBuilder, EMPTY_REPO_PATH,
+        get_cup_response_with_name, make_pkg_with_extra_blobs, pkgfs_with_system_image_and_pkg,
+        CupDataForTest, MountsBuilder, TestEnvBuilder, EMPTY_REPO_PATH,
     },
     std::sync::Arc,
 };
@@ -208,7 +208,12 @@ async fn test_cup_write() {
     assert_matches!(env.cup_get_info(&url_no_hash).await, Err(GetInfoError::NotAvailable));
     assert_matches!(env.resolve_package(&url_no_hash).await, Err(ResolveError::PackageNotFound));
 
-    env.cup_write(&url, get_test_cup_data(&pkg_url)).await.unwrap();
+    env.cup_write(
+        &url,
+        CupDataForTest::builder().response(get_cup_response_with_name(&pkg_url)).build().into(),
+    )
+    .await
+    .unwrap();
 
     // now get info and resolve works
     let (version, channel) = env.cup_get_info(&url_no_hash).await.unwrap();

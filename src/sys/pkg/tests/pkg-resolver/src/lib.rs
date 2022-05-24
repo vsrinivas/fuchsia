@@ -51,6 +51,7 @@ use {
         time::Duration,
     },
     tempfile::TempDir,
+    typed_builder::TypedBuilder,
     vfs::directory::{entry::DirectoryEntry as _, helper::DirectlyMutable as _},
 };
 
@@ -273,7 +274,10 @@ impl Mounts {
                         .into_iter()
                         .map(|url| {
                             let pkg_url = PkgUrl::parse(&url.into()).unwrap();
-                            let cup = get_test_cup_data(&pkg_url);
+                            let cup = CupDataForTest::builder()
+                                .response(get_cup_response_with_name(&pkg_url))
+                                .build()
+                                .into();
                             PersistentEagerPackage {
                                 url: Some(PackageUrl { url: pkg_url.strip_hash().to_string() }),
                                 cup: Some(cup),
@@ -1195,39 +1199,63 @@ pub async fn get_rules(rewrite_engine: &RewriteEngineProxy) -> Vec<Rule> {
     }
 }
 
-pub fn get_test_cup_data(package_url: &PkgUrl) -> CupData {
+#[derive(Clone, Debug, Eq, PartialEq, TypedBuilder)]
+pub struct CupDataForTest {
+    #[builder(default, setter(into))]
+    pub request: Option<Vec<u8>>,
+    #[builder(default, setter(into))]
+    pub key_id: Option<u64>,
+    #[builder(default, setter(into))]
+    pub nonce: Option<String>,
+    #[builder(default, setter(into))]
+    pub response: Option<Vec<u8>>,
+    #[builder(default, setter(into))]
+    pub signature: Option<Vec<u8>>,
+}
+impl From<CupDataForTest> for CupData {
+    fn from(c: CupDataForTest) -> Self {
+        CupData {
+            request: c.request,
+            key_id: c.key_id,
+            nonce: c.nonce,
+            response: c.response,
+            signature: c.signature,
+            ..CupData::EMPTY
+        }
+    }
+}
+pub fn get_cup_response_with_name(package_url: &PkgUrl) -> Vec<u8> {
     let response = serde_json::json!({"response":{
-        "server": "prod",
-        "protocol": "3.0",
-        "app": [{
-            "appid": "appid",
-            "cohortname": "stable",
-            "status": "ok",
-            "updatecheck": {
-                "status": "ok",
-                "urls":{
-                    "url":[
-                        {"codebase": format!("{}/", package_url.repo()) },
-                    ]
-                },
-                "manifest": {
-                    "version": "1.2.3.4",
-                    "actions": {
-                        "action": [],
-                    },
-                    "packages": {
-                        "package": [
-                            {
-                                "name": format!("{}?hash={}", package_url.name(), package_url.package_hash().unwrap()),
-                                "required": true,
-                                "fp": "",
-                            }
-                        ],
-                    },
+      "server": "prod",
+      "protocol": "3.0",
+      "app": [{
+        "appid": "appid",
+        "cohortname": "stable",
+        "status": "ok",
+        "updatecheck": {
+          "status": "ok",
+          "urls":{
+            "url":[
+                {"codebase": format!("{}/", package_url.repo()) },
+            ]
+          },
+          "manifest": {
+            "version": "1.2.3.4",
+            "actions": {
+              "action": [],
+            },
+            "packages": {
+              "package": [
+                {
+                 "name": format!("{}?hash={}", package_url.name(), package_url.package_hash().unwrap()),
+                 "required": true,
+                 "fp": "",
                 }
-            }
-        }],
+              ],
+            },
+          }
+        }
+      }],
     }});
-    let response = serde_json::to_vec(&response).unwrap();
-    CupData { response: Some(response), ..CupData::EMPTY }
+    serde_json::to_vec(&response).unwrap()
 }
