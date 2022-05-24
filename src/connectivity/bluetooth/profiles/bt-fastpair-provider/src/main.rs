@@ -10,6 +10,7 @@ mod config;
 mod error;
 mod gatt_service;
 mod host_watcher;
+mod keys;
 mod provider;
 mod types;
 

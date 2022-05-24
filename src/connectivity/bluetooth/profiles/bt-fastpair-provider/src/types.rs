@@ -34,10 +34,10 @@ impl From<ModelId> for [u8; 3] {
 
 /// A key that allows the Provider to be recognized as belonging to a certain user account.
 // TODO(fxbug.dev/97271): Define a full-fledged Account Key type.
+#[derive(Debug, PartialEq)]
 pub struct AccountKey([u8; 16]);
 
 impl AccountKey {
-    #[cfg(test)]
     pub fn new(bytes: [u8; 16]) -> Self {
         Self(bytes)
     }
