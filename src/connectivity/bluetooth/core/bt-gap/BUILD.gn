@@ -92,7 +92,7 @@ resource("default-config") {
   outputs = [ "data/bt-gap-default.json" ]
 }
 
-fuchsia_component("component-v2") {
+fuchsia_component("component") {
   component_name = "bt-gap"
   manifest = "meta/bt-gap.cml"
   deps = [
@@ -102,7 +102,7 @@ fuchsia_component("component-v2") {
 }
 
 fuchsia_package("bt-gap") {
-  deps = [ ":component-v2" ]
+  deps = [ ":component" ]
 }
 
 fuchsia_test_component("test-stash-secure") {

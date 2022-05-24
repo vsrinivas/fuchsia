@@ -25,7 +25,7 @@
     ],
     program: {
         runner: "elf",
-        binary: "bin/bt_init_v2",
+        binary: "bin/bt_init",
     },
     capabilities: [
         {

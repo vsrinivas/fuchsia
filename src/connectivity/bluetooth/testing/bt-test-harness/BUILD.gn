@@ -85,8 +85,8 @@ rustc_library("bt-test-harness") {
 fuchsia_component("test-bt-init") {
   manifest = "meta/test-bt-init.cml"
   deps = [
-    "//src/connectivity/bluetooth/core/bt-gap:component-v2",
-    "//src/connectivity/bluetooth/core/bt-init:bin_v2",
+    "//src/connectivity/bluetooth/core/bt-gap:component",
+    "//src/connectivity/bluetooth/core/bt-init:bin",
     "//src/connectivity/bluetooth/core/bt-init:default-config",
     "//src/connectivity/bluetooth/profiles/bt-rfcomm:component-v2",
   ]

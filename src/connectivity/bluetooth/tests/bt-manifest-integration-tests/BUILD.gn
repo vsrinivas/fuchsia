@@ -286,8 +286,8 @@ rustc_test("bt_init_smoke_test_bin") {
 fuchsia_component("test-bt-init") {
   manifest = "meta/test-bt-init.cml"
   deps = [
-    "//src/connectivity/bluetooth/core/bt-gap:component-v2",
-    "//src/connectivity/bluetooth/core/bt-init:bin_v2",
+    "//src/connectivity/bluetooth/core/bt-gap:component",
+    "//src/connectivity/bluetooth/core/bt-init:bin",
     "//src/connectivity/bluetooth/core/bt-init:default-config",
     "//src/connectivity/bluetooth/profiles/bt-rfcomm:component-v2",
   ]
@@ -343,7 +343,7 @@ fuchsia_test_component("bt-gap-smoke-test-component") {
 fuchsia_test_package("bt-gap-smoke-test") {
   test_components = [ ":bt-gap-smoke-test-component" ]
   deps = [
-    "//src/connectivity/bluetooth/core/bt-gap:component-v2",
+    "//src/connectivity/bluetooth/core/bt-gap:component",
     "//src/sys/stash:stash_secure_v2",
   ]
 }

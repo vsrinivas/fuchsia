@@ -7,10 +7,10 @@ import("//build/config.gni")
 import("//build/rust/rustc_binary.gni")
 import("//src/sys/core/build/core_shard.gni")
 
-rustc_binary("bin_v2") {
-  name = "bt_init_v2"
+rustc_binary("bin") {
+  name = "bt_init"
   edition = "2018"
-  source_root = "src/main_v2.rs"
+  source_root = "src/main.rs"
   with_unit_tests = true
 
   deps = [
@@ -38,7 +38,7 @@ rustc_binary("bin_v2") {
 
   sources = [
     "src/config.rs",
-    "src/main_v2.rs",
+    "src/main.rs",
   ]
 
   configs -= [ "//build/config/rust:allow_unused_results" ]
@@ -51,7 +51,7 @@ resource("default-config") {
 
 fuchsia_package_with_single_component("bt-init") {
   deps = [
-    ":bin_v2",
+    ":bin",
     ":default-config",
   ]
   manifest = "meta/bt-init.cml"
@@ -59,7 +59,7 @@ fuchsia_package_with_single_component("bt-init") {
 
 fuchsia_package_with_single_component("bt-init-testonly") {
   deps = [
-    ":bin_v2",
+    ":bin",
     ":default-config",
   ]
   manifest = "meta/bt-init-testonly.cml"
@@ -78,17 +78,12 @@ core_shard("bt-init-testonly-core-shard") {
   shard_file = "meta/bt-init-testonly.core_shard.cml"
 }
 
-fuchsia_unittest_package("tests-v2") {
-  component_name = "bt-init-unittests-v2"
-  package_name = "bt-init-unittests-v2"
+fuchsia_unittest_package("tests") {
+  component_name = "bt-init-unittests"
+  package_name = "bt-init-unittests"
 
   deps = [
-    ":bin_v2_test",
+    ":bin_test",
     ":default-config",
   ]
-}
-
-group("tests") {
-  testonly = true
-  deps = [ ":tests-v2" ]
 }
