@@ -2,11 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::format_err;
-use fidl::endpoints::Proxy;
-use fidl_fuchsia_device::ControllerMarker;
-use fidl_fuchsia_io as fio;
-use fuchsia_async::futures::TryStreamExt;
+use {
+    anyhow::{format_err, Context, Result},
+    fidl::endpoints::Proxy,
+    fidl_fuchsia_device::ControllerMarker,
+    fidl_fuchsia_io as fio,
+    fuchsia_vfs_watcher::{WatchEvent, Watcher},
+    futures::stream::{Stream, TryStreamExt},
+    std::path::{Path, PathBuf},
+};
 
 /// Waits for a device to appear within `dev_dir` that has a topological path
 /// that matches `topo_path`. Returns the path of the found device within
@@ -47,7 +51,31 @@ pub async fn wait_for_device_topo_path(
     unreachable!();
 }
 
-async fn wait_for_file(dir: &fio::DirectoryProxy, name: &str) -> Result<(), anyhow::Error> {
+/// Returns a stream that contains the paths of any existing files and
+/// directories in `dir` and any new files or directories created after this
+/// function was invoked. These paths are relative to `dir`.
+pub async fn watch_for_files(
+    dir: &fio::DirectoryProxy,
+) -> Result<impl Stream<Item = Result<PathBuf>>> {
+    let watcher = Watcher::new(io_util::clone_directory(dir, fio::OpenFlags::RIGHT_READABLE)?)
+        .await
+        .context("Failed to create watcher")?;
+    Ok(watcher
+        .map_err(|err| anyhow::anyhow!("Failed to get watcher event: {}", err))
+        .try_filter_map(|msg| async move {
+            match msg.event {
+                WatchEvent::EXISTING | WatchEvent::ADD_FILE => {
+                    if msg.filename == Path::new(".") {
+                        return Ok(None);
+                    }
+                    Ok(Some(msg.filename))
+                }
+                _ => Ok(None),
+            }
+        }))
+}
+
+async fn wait_for_file(dir: &fio::DirectoryProxy, name: &str) -> Result<()> {
     let mut watcher = fuchsia_vfs_watcher::Watcher::new(io_util::clone_directory(
         dir,
         fio::OpenFlags::RIGHT_READABLE,
@@ -74,7 +102,7 @@ pub async fn recursive_wait_and_open_node_with_flags(
     name: &str,
     flags: fio::OpenFlags,
     mode: u32,
-) -> Result<fio::NodeProxy, anyhow::Error> {
+) -> Result<fio::NodeProxy> {
     let mut dir = io_util::clone_directory(initial_dir, flags)?;
     let path = std::path::Path::new(name);
     let components = path.components().collect::<Vec<_>>();
@@ -105,7 +133,7 @@ pub async fn recursive_wait_and_open_node_with_flags(
 pub async fn recursive_wait_and_open_node(
     initial_dir: &fio::DirectoryProxy,
     name: &str,
-) -> Result<fio::NodeProxy, anyhow::Error> {
+) -> Result<fio::NodeProxy> {
     recursive_wait_and_open_node_with_flags(
         initial_dir,
         name,
@@ -117,13 +145,15 @@ pub async fn recursive_wait_and_open_node(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use fidl_fuchsia_device as fdev;
-    use fuchsia_async as fasync;
-    use std::sync::Arc;
-    use vfs::{
-        directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
-        file::vmo::read_only_static,
+    use {
+        super::*,
+        fidl_fuchsia_device as fdev, fuchsia_async as fasync,
+        futures::StreamExt,
+        std::{collections::HashSet, str::FromStr, sync::Arc},
+        vfs::{
+            directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
+            file::vmo::read_only_static,
+        },
     };
 
     fn create_controller_service(topo_path: String) -> Arc<vfs::service::Service> {
@@ -161,6 +191,36 @@ mod tests {
 
         let path = wait_for_device_topo_path(&dir_proxy, "/dev/test2/x/dev").await.unwrap();
         assert_eq!("x", path);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn watch_for_two_files() {
+        let dir = vfs::pseudo_directory! {
+          "a" => read_only_static(b"/a"),
+          "b" => read_only_static(b"/b"),
+        };
+
+        let (dir_proxy, remote) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
+        let scope = ExecutionScope::new();
+        dir.open(
+            scope,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::MODE_TYPE_DIRECTORY,
+            vfs::path::Path::dot(),
+            fidl::endpoints::ServerEnd::new(remote.into_channel()),
+        );
+
+        let stream = watch_for_files(&dir_proxy).await.unwrap();
+        futures::pin_mut!(stream);
+        let actual: HashSet<PathBuf> =
+            vec![stream.next().await.unwrap().unwrap(), stream.next().await.unwrap().unwrap()]
+                .into_iter()
+                .collect();
+        let expected: HashSet<PathBuf> =
+            vec![PathBuf::from_str("a").unwrap(), PathBuf::from_str("b").unwrap()]
+                .into_iter()
+                .collect();
+        assert_eq!(actual, expected);
     }
 
     #[fasync::run_singlethreaded(test)]
