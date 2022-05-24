@@ -29,12 +29,12 @@ namespace scheduling {
 DefaultFrameScheduler::DefaultFrameScheduler(std::shared_ptr<const VsyncTiming> vsync_timing,
                                              std::unique_ptr<FramePredictor> predictor,
                                              inspect::Node inspect_node,
-                                             std::shared_ptr<cobalt::CobaltLogger> cobalt_logger)
+                                             metrics::Metrics* metrics_logger)
     : dispatcher_(async_get_default_dispatcher()),
       vsync_timing_(vsync_timing),
       frame_predictor_(std::move(predictor)),
       inspect_node_(std::move(inspect_node)),
-      stats_(inspect_node_.CreateChild("Frame Stats"), std::move(cobalt_logger)),
+      stats_(inspect_node_.CreateChild("Frame Stats"), metrics_logger),
       weak_factory_(this) {
   FX_DCHECK(vsync_timing_);
   FX_DCHECK(frame_predictor_);

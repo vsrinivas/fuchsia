@@ -35,6 +35,7 @@
 #include "src/ui/scenic/lib/screen_capture/screen_capture_manager.h"
 #include "src/ui/scenic/lib/shutdown/lifecycle_controller_impl.h"
 #include "src/ui/scenic/lib/shutdown/shutdown_manager.h"
+#include "src/ui/scenic/lib/utils/metrics_impl.h"
 #include "src/ui/scenic/lib/view_tree/geometry_provider_manager.h"
 #include "src/ui/scenic/lib/view_tree/observer_registry.h"
 #include "src/ui/scenic/lib/view_tree/view_ref_installed_impl.h"
@@ -97,7 +98,7 @@ class App {
   const ConfigValues config_values_;
 
   std::shared_ptr<ShutdownManager> shutdown_manager_;
-  std::shared_ptr<cobalt::CobaltLogger> cobalt_logger_;
+  metrics::MetricsImpl metrics_logger_;
 
   gfx::Sysmem sysmem_;
   std::unique_ptr<display::DisplayManager> display_manager_;

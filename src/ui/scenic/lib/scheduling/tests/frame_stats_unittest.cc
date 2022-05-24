@@ -22,7 +22,6 @@
 #include "lib/inspect/service/cpp/reader.h"
 #include "lib/inspect/service/cpp/service.h"
 #include "lib/inspect/testing/cpp/inspect.h"
-#include "src/lib/cobalt/cpp/testing/mock_cobalt_logger.h"
 #include "src/ui/scenic/lib/gfx/tests/mocks/mocks.h"
 
 namespace scheduling {
@@ -35,7 +34,6 @@ using testing::IsEmpty;
 using testing::SizeIs;
 using testing::UnorderedElementsAre;
 using namespace inspect::testing;
-using cobalt::LogMethod::kLogIntHistogram;
 
 constexpr char kFrameStatsNodeName[] = "FrameStatsTest";
 
@@ -169,6 +167,29 @@ FrameStatsHierarchyPointers GetFrameStatsHierarchyPointers(inspect::Hierarchy* r
 
   return ret;
 }
+
+struct MetricCounts {
+  uint32_t log_rare_event_count = 0;
+  uint32_t log_latch_to_actual_presentation_count = 0;
+};
+class MockMetrics final : public metrics::Metrics {
+ public:
+  explicit MockMetrics(MetricCounts* counts) : counts_(counts) {}
+
+  void LogRareEvent(cobalt_registry::ScenicRareEventMigratedMetricDimensionEvent event) override {
+    counts_->log_rare_event_count += 1;
+  }
+
+  void LogLatchToActualPresentation(
+      std::optional<cobalt_registry::ScenicLatchToActualPresentationMetricDimensionFrameStatus>
+          frame_status,
+      std::vector<fuchsia_metrics::HistogramBucket> histogram) override {
+    counts_->log_latch_to_actual_presentation_count += 1;
+  }
+
+ private:
+  MetricCounts* counts_;
+};
 
 }  // anonymous namespace
 
@@ -389,11 +410,12 @@ TEST_F(FrameStatsTest, HistoryPopulatedOverTime) {
   }
 }
 
-class FrameStatsCobaltTest : public gtest::TestLoopFixture {};
+class FrameStatsMetricsTest : public gtest::TestLoopFixture {};
 
-TEST_F(FrameStatsCobaltTest, LogFrameTimes) {
-  cobalt::CallCountMap cobalt_call_counts;
-  FrameStats stats(Node(), std::make_unique<cobalt::MockCobaltLogger>(&cobalt_call_counts));
+TEST_F(FrameStatsMetricsTest, LogFrameTimes) {
+  MetricCounts metric_counts;
+  MockMetrics metrics(&metric_counts);
+  FrameStats stats(Node(), &metrics);
 
   const zx::duration vsync_interval = zx::msec(16);
   FrameStats::Timestamps ontime_frame_times = {
@@ -420,17 +442,17 @@ TEST_F(FrameStatsCobaltTest, LogFrameTimes) {
 
   // No frame recorded. No logging needed.
   EXPECT_TRUE(RunLoopFor(FrameStats::kCobaltDataCollectionInterval));
-  EXPECT_TRUE(cobalt_call_counts.empty());
+  EXPECT_EQ(metric_counts.log_latch_to_actual_presentation_count, (uint32_t)0);
 
   stats.RecordFrame(ontime_frame_times, vsync_interval);
   // Histograms will be flushed into Cobalt. One for on time latch to actual presentation time,
   // one for rendering times
   EXPECT_TRUE(RunLoopFor(FrameStats::kCobaltDataCollectionInterval));
-  EXPECT_EQ(cobalt_call_counts[kLogIntHistogram], (uint32_t)2);
+  EXPECT_EQ(metric_counts.log_latch_to_actual_presentation_count, (uint32_t)2);
 
   // Since histograms were emptied, there should be no additional cobalt call count.
   EXPECT_TRUE(RunLoopFor(FrameStats::kCobaltDataCollectionInterval));
-  EXPECT_EQ(cobalt_call_counts[kLogIntHistogram], (uint32_t)2);
+  EXPECT_EQ(metric_counts.log_latch_to_actual_presentation_count, (uint32_t)2);
 
   stats.RecordFrame(ontime_frame_times, vsync_interval);
   stats.RecordFrame(ontime_frame_times, vsync_interval);
@@ -440,7 +462,7 @@ TEST_F(FrameStatsCobaltTest, LogFrameTimes) {
   // Expect 4 histograms to be flushed into cobalt. One for rendering times,
   // three for latch to actual presentation times (for ontime, dropped and delayed).
   EXPECT_TRUE(RunLoopFor(FrameStats::kCobaltDataCollectionInterval));
-  EXPECT_EQ(cobalt_call_counts[kLogIntHistogram], (uint32_t)(2 + 4));
+  EXPECT_EQ(metric_counts.log_latch_to_actual_presentation_count, (uint32_t)(2 + 4));
 }
 
 }  // namespace test

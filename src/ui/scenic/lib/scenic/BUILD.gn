@@ -71,6 +71,7 @@ source_set("system") {
   ]
   public_deps = [
     ":command_dispatcher",
+    "//sdk/lib/sys/cpp",
     "//zircon/system/ulib/inspect",
   ]
   deps = [

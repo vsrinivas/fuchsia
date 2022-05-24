@@ -12,8 +12,8 @@
 #include <functional>
 
 #include "lib/inspect/cpp/inspect.h"
-#include "src/lib/cobalt/cpp/cobalt_logger.h"
 #include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
+#include "src/ui/scenic/lib/utils/metrics.h"
 #include "third_party/cobalt/src/lib/client/cpp/buckets_config.h"
 
 namespace scheduling {
@@ -22,7 +22,7 @@ namespace scheduling {
 // inspect.
 class FrameStats {
  public:
-  FrameStats(inspect::Node inspect_node, std::shared_ptr<cobalt::CobaltLogger> cobalt_logger);
+  FrameStats(inspect::Node inspect_node, metrics::Metrics* metrics_logger);
 
   struct Timestamps {
     zx::time latch_point_time;
@@ -126,7 +126,7 @@ class FrameStats {
 
   // Helper function to convert histograms in unordered_map format to Cobalt-readable
   // vector of histogram buckets.
-  std::vector<fuchsia::cobalt::HistogramBucket> CreateCobaltBucketsFromHistogram(
+  std::vector<fuchsia_metrics::HistogramBucket> CreateMetricsBucketsFromHistogram(
       const CobaltFrameHistogram& histogram);
 
   uint64_t frame_count_ = 0;
@@ -155,7 +155,7 @@ class FrameStats {
   // Used for getting the cobalt histogram bucket number given a frame time number.
   std::unique_ptr<cobalt::config::IntegerBucketConfig> frame_times_bucket_config_;
 
-  std::shared_ptr<cobalt::CobaltLogger> cobalt_logger_;
+  metrics::Metrics* metrics_logger_;
 
   async::TaskClosureMethod<FrameStats, &FrameStats::LogFrameTimes> cobalt_logging_task_{this};
 };

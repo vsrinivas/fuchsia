@@ -37,8 +37,8 @@
         },
         {
             protocol: [
-                "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.hardware.display.Provider",
+                "fuchsia.metrics.MetricEventLoggerFactory",
                 "fuchsia.scheduler.ProfileProvider",
             ],
         },

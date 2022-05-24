@@ -20,7 +20,7 @@
 using cobalt_registry::kScenicLatchToActualPresentationMetricId;
 using cobalt_registry::kScenicRenderTimeMetricId;
 using CobaltFrameStatus =
-    cobalt_registry::ScenicLatchToActualPresentationMetricDimensionFrameStatus;
+    cobalt_registry::ScenicLatchToActualPresentationMigratedMetricDimensionFrameStatus;
 using cobalt_registry::kScenicRenderTimeIntBucketsFloor;
 using cobalt_registry::kScenicRenderTimeIntBucketsNumBuckets;
 using cobalt_registry::kScenicRenderTimeIntBucketsStepSize;
@@ -33,9 +33,8 @@ uint64_t TimestampsToMinuteKey(const FrameStats::Timestamps& timestamps) {
 }
 }  // anonymous namespace
 
-FrameStats::FrameStats(inspect::Node inspect_node,
-                       std::shared_ptr<cobalt::CobaltLogger> cobalt_logger)
-    : inspect_node_(std::move(inspect_node)), cobalt_logger_(std::move(cobalt_logger)) {
+FrameStats::FrameStats(inspect::Node inspect_node, metrics::Metrics* metrics_logger)
+    : inspect_node_(std::move(inspect_node)), metrics_logger_(metrics_logger) {
   inspect_frame_stats_dump_ = inspect_node_.CreateLazyValues("Aggregate Stats", [this] {
     inspect::Inspector insp;
     ReportStats(&insp);
@@ -140,46 +139,43 @@ void FrameStats::AddHistory(const HistoryStats& stats) {
 
 void FrameStats::LogFrameTimes() {
   TRACE_DURATION("gfx", "FrameStats::LogFrameTimes");
-  if (unlikely(cobalt_logger_ == nullptr)) {
-    FX_LOGS(ERROR) << "Cobalt logger in Scenic is not initialized!";
+  if (unlikely(metrics_logger_ == nullptr)) {
+    FX_LOGS(ERROR) << "Metrics logger in Scenic is not initialized!";
     // Stop logging frame times into Cobalt;
     return;
   }
   if (!cobalt_on_time_frame_times_histogram_.empty()) {
-    cobalt_logger_->LogIntHistogram(
-        kScenicLatchToActualPresentationMetricId, CobaltFrameStatus::OnTime, "" /*component*/,
-        CreateCobaltBucketsFromHistogram(cobalt_on_time_frame_times_histogram_));
+    metrics_logger_->LogLatchToActualPresentation(
+        CobaltFrameStatus::OnTime,
+        CreateMetricsBucketsFromHistogram(cobalt_on_time_frame_times_histogram_));
     cobalt_on_time_frame_times_histogram_.clear();
   }
   if (!cobalt_dropped_frame_times_histogram_.empty()) {
-    cobalt_logger_->LogIntHistogram(
-        kScenicLatchToActualPresentationMetricId, CobaltFrameStatus::Dropped, "" /*component*/,
-        CreateCobaltBucketsFromHistogram(cobalt_dropped_frame_times_histogram_));
+    metrics_logger_->LogLatchToActualPresentation(
+        CobaltFrameStatus::Dropped,
+        CreateMetricsBucketsFromHistogram(cobalt_on_time_frame_times_histogram_));
     cobalt_dropped_frame_times_histogram_.clear();
   }
   if (!cobalt_delayed_frame_times_histogram_.empty()) {
-    cobalt_logger_->LogIntHistogram(
-        kScenicLatchToActualPresentationMetricId, CobaltFrameStatus::Delayed, "" /*component*/,
-        CreateCobaltBucketsFromHistogram(cobalt_delayed_frame_times_histogram_));
+    metrics_logger_->LogLatchToActualPresentation(
+        CobaltFrameStatus::Delayed,
+        CreateMetricsBucketsFromHistogram(cobalt_on_time_frame_times_histogram_));
     cobalt_delayed_frame_times_histogram_.clear();
   }
   if (!cobalt_render_times_histogram_.empty()) {
-    cobalt_logger_->LogIntHistogram(
-        kScenicRenderTimeMetricId, 0, "" /*component*/,
-        CreateCobaltBucketsFromHistogram(cobalt_render_times_histogram_));
+    metrics_logger_->LogLatchToActualPresentation(
+        std::nullopt, CreateMetricsBucketsFromHistogram(cobalt_on_time_frame_times_histogram_));
     cobalt_render_times_histogram_.clear();
   }
   cobalt_logging_task_.PostDelayed(async_get_default_dispatcher(), kCobaltDataCollectionInterval);
 }
 
-std::vector<fuchsia::cobalt::HistogramBucket> FrameStats::CreateCobaltBucketsFromHistogram(
+std::vector<fuchsia_metrics::HistogramBucket> FrameStats::CreateMetricsBucketsFromHistogram(
     const CobaltFrameHistogram& histogram) {
   TRACE_DURATION("gfx", "FrameStats::CreateCobaltBucketsFromHistogram");
-  std::vector<fuchsia::cobalt::HistogramBucket> buckets;
+  std::vector<fuchsia_metrics::HistogramBucket> buckets;
   for (const auto& pair : histogram) {
-    fuchsia::cobalt::HistogramBucket bucket;
-    bucket.index = pair.first;
-    bucket.count = pair.second;
+    fuchsia_metrics::HistogramBucket bucket({.index = pair.first, .count = pair.second});
     buckets.push_back(std::move(bucket));
   }
   return buckets;

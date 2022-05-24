@@ -10,8 +10,8 @@
 
 #include <optional>
 
+#include "lib/service/llcpp/service.h"
 #include "rapidjson/document.h"
-#include "src/lib/cobalt/cpp/cobalt_logger.h"
 #include "src/lib/files/file.h"
 #include "src/ui/lib/escher/vk/pipeline_builder.h"
 #include "src/ui/scenic/lib/display/display_power_manager.h"
@@ -24,6 +24,7 @@
 #include "src/ui/scenic/lib/screen_capture/screen_capture.h"
 #include "src/ui/scenic/lib/screen_capture/screen_capture_buffer_collection_importer.h"
 #include "src/ui/scenic/lib/utils/helpers.h"
+#include "src/ui/scenic/lib/utils/metrics_impl.h"
 #include "src/ui/scenic/lib/view_tree/snapshot_dump.h"
 
 namespace {
@@ -212,6 +213,9 @@ App::App(std::unique_ptr<sys::ComponentContext> app_context, inspect::Node inspe
       // themselves. It is preferable to cleanly shutdown using destructors only, if possible.
       shutdown_manager_(
           ShutdownManager::New(async_get_default_dispatcher(), std::move(quit_callback))),
+      metrics_logger_(
+          async_get_default_dispatcher(),
+          fidl::ClientEnd<fuchsia_io::Directory>(service::OpenServiceRoot()->TakeChannel())),
       scenic_(std::make_shared<Scenic>(
           app_context_.get(), std::move(inspect_node),
           [weak = std::weak_ptr<ShutdownManager>(shutdown_manager_)] {
@@ -333,12 +337,6 @@ void App::InitializeServices(escher::EscherUniquePtr escher,
 
   escher_ = std::move(escher);
 
-  cobalt_logger_ = cobalt::NewCobaltLoggerFromProjectId(
-      async_get_default_dispatcher(), app_context_->svc(), cobalt_registry::kProjectId);
-  if (!cobalt_logger_) {
-    FX_LOGS(ERROR) << "CobaltLogger creation failed!";
-  }
-
   CreateFrameScheduler(display->vsync_timing());
   InitializeGraphics(display);
   InitializeInput();
@@ -361,7 +359,7 @@ void App::CreateFrameScheduler(std::shared_ptr<const scheduling::VsyncTiming> vs
           config_values_.min_predicted_frame_duration,
           scheduling::DefaultFrameScheduler::kInitialRenderDuration,
           scheduling::DefaultFrameScheduler::kInitialUpdateDuration),
-      scenic_->inspect_node()->CreateChild("FrameScheduler"), cobalt_logger_);
+      scenic_->inspect_node()->CreateChild("FrameScheduler"), &metrics_logger_);
 }
 
 void App::InitializeGraphics(std::shared_ptr<display::Display> display) {
@@ -377,8 +375,8 @@ void App::InitializeGraphics(std::shared_ptr<display::Display> display) {
   {
     auto pipeline_builder = std::make_unique<escher::PipelineBuilder>(escher_->vk_device());
     pipeline_builder->set_log_pipeline_creation_callback(
-        [cobalt_logger = cobalt_logger_](const vk::GraphicsPipelineCreateInfo* graphics_info,
-                                         const vk::ComputePipelineCreateInfo* compute_info) {
+        [metrics_logger = &metrics_logger_](const vk::GraphicsPipelineCreateInfo* graphics_info,
+                                            const vk::ComputePipelineCreateInfo* compute_info) {
           // TODO(fxbug.dev/49972): pre-warm compute pipelines in addition to graphics pipelines.
           if (compute_info) {
             FX_LOGS(WARNING) << "Unexpected lazy creation of Vulkan compute pipeline.";
@@ -392,9 +390,8 @@ void App::InitializeGraphics(std::shared_ptr<display::Display> display) {
 #endif
               << "Unexpected lazy creation of Vulkan pipeline.";
 
-          cobalt_logger->LogEvent(
-              cobalt_registry::kScenicRareEventMetricId,
-              cobalt_registry::ScenicRareEventMetricDimensionEvent_LazyPipelineCreation);
+          metrics_logger->LogRareEvent(
+              cobalt_registry::ScenicRareEventMigratedMetricDimensionEvent::LazyPipelineCreation);
         });
     escher_->set_pipeline_builder(std::move(pipeline_builder));
   }

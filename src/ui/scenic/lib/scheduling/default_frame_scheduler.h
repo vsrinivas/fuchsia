@@ -13,7 +13,6 @@
 #include <queue>
 
 #include "lib/inspect/cpp/inspect.h"
-#include "src/lib/cobalt/cpp/cobalt_logger.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/ui/scenic/lib/scheduling/frame_predictor.h"
@@ -30,7 +29,7 @@ class DefaultFrameScheduler final : public FrameScheduler {
   explicit DefaultFrameScheduler(std::shared_ptr<const VsyncTiming> vsync_timing,
                                  std::unique_ptr<FramePredictor> predictor,
                                  inspect::Node inspect_node = inspect::Node(),
-                                 std::shared_ptr<cobalt::CobaltLogger> cobalt_logger = nullptr);
+                                 metrics::Metrics* metrics_logger = nullptr);
   ~DefaultFrameScheduler();
 
   // Set the renderer and session updaters to be used. Can only be called once.
