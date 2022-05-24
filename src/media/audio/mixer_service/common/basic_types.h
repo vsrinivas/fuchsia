@@ -20,7 +20,7 @@ namespace media_audio_mixer_service {
 // FIDL IDs.
 using NodeId = uint64_t;
 using ThreadId = uint64_t;
-using GainStageId = uint64_t;
+using GainControlId = uint64_t;
 
 // This ID shall not be used.
 constexpr uint64_t kInvalidId = fuchsia_audio_mixer::kInvalidId;

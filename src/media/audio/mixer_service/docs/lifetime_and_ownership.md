@@ -18,14 +18,13 @@ no synchronous waiting across threads. If an object is managed by a
 
 Top-level FIDL servers (FidlGraphCreator and FidlGraph) are owned by FIDL
 channels. A server is automatically destroyed when its underlying FIDL channel
-is closed.
-
-Each FidlGraph server owns all objects created by a `Graph.CreateX` call,
-including DAG Nodes, Threads, and GainStages. Lifetimes are fully controlled by
-CreateX and DeleteX FIDL calls -- there is no need for reference counting. These
-objects are fully reclaimed when the FidlGraph server is destroyed. Most other
-objects are directly owned by one of these objects. Key parts of FidlGraphs'
-ownership tree are summarized below:
+is closed. Each FidlGraph server owns all objects created by a `Graph.CreateX`
+call, including DAG Nodes, Threads, and GainControls. Lifetimes are fully
+controlled by CreateX and DeleteX FIDL calls -- although we use `shared_ptr` to
+avoid accidental use-after-free bugs, there is no strict need for reference
+counting. These objects are fully reclaimed when the FidlGraph server is
+destroyed. Most other objects are directly owned by one of these objects. Key
+parts of FidlGraphs' ownership tree are summarized below:
 
 *   FidlGraph
 

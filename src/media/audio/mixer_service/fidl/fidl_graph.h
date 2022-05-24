@@ -40,10 +40,10 @@ class FidlGraph : public fidl::WireServer<fuchsia_audio_mixer::Graph> {
                     CreateThreadCompleter::Sync& completer) override;
   void DeleteThread(DeleteThreadRequestView request,
                     DeleteThreadCompleter::Sync& completer) override;
-  void CreateGainStage(CreateGainStageRequestView request,
-                       CreateGainStageCompleter::Sync& completer) override;
-  void DeleteGainStage(DeleteGainStageRequestView request,
-                       DeleteGainStageCompleter::Sync& completer) override;
+  void CreateGainControl(CreateGainControlRequestView request,
+                         CreateGainControlCompleter::Sync& completer) override;
+  void DeleteGainControl(DeleteGainControlRequestView request,
+                         DeleteGainControlCompleter::Sync& completer) override;
   void CreateGraphControlledReferenceClock(
       CreateGraphControlledReferenceClockRequestView request,
       CreateGraphControlledReferenceClockCompleter::Sync& completer) override;

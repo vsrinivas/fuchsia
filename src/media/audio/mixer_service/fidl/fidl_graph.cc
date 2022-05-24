@@ -99,15 +99,15 @@ void FidlGraph::DeleteThread(DeleteThreadRequestView request,
   FX_CHECK(false) << "not implemented";
 }
 
-void FidlGraph::CreateGainStage(CreateGainStageRequestView request,
-                                CreateGainStageCompleter::Sync& completer) {
-  TRACE_DURATION("audio", "Graph:::CreateGainStage");
+void FidlGraph::CreateGainControl(CreateGainControlRequestView request,
+                                  CreateGainControlCompleter::Sync& completer) {
+  TRACE_DURATION("audio", "Graph:::CreateGainControl");
   FX_CHECK(false) << "not implemented";
 }
 
-void FidlGraph::DeleteGainStage(DeleteGainStageRequestView request,
-                                DeleteGainStageCompleter::Sync& completer) {
-  TRACE_DURATION("audio", "Graph:::DeleteGainStage");
+void FidlGraph::DeleteGainControl(DeleteGainControlRequestView request,
+                                  DeleteGainControlCompleter::Sync& completer) {
+  TRACE_DURATION("audio", "Graph:::DeleteGainControl");
   FX_CHECK(false) << "not implemented";
 }
 
