@@ -125,7 +125,13 @@ impl Facade for BluetoothSysFacade {
                 Ok(to_value(result)?)
             }
             "BluetoothConnectDevice" => {
-                let identifier = parse_arg!(args, as_u64, "identifier")?;
+                let identifier_string = parse_arg!(args, as_str, "identifier")?;
+                let identifier = match identifier_string.parse::<u64>() {
+                    Ok(val) => val,
+                    Err(e) => {
+                        bail!("Could not parse into u64: {}, {}", identifier_string, format_err!(e))
+                    }
+                };
                 let result = self.connect(identifier).await?;
                 Ok(to_value(result)?)
             }
@@ -153,7 +159,13 @@ impl Facade for BluetoothSysFacade {
                 Ok(to_value(result)?)
             }
             "BluetoothPairDevice" => {
-                let identifier = parse_arg!(args, as_u64, "identifier")?;
+                let identifier_string = parse_arg!(args, as_str, "identifier")?;
+                let identifier = match identifier_string.parse::<u64>() {
+                    Ok(val) => val,
+                    Err(e) => {
+                        bail!("Could not parse into u64: {}, {}", identifier_string, format_err!(e))
+                    }
+                };
                 let pairing_security_level =
                     match parse_arg!(args, as_u64, "pairing_security_level") {
                         Ok(v) => Some(v),
