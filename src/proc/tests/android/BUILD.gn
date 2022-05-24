@@ -25,18 +25,6 @@ expect_includes("stardroid_test") {
   deps = [ "//src/proc/bin/starnix" ]
 }
 
-fuchsia_component("init") {
-  manifest = "meta/init.cml"
-}
-
-fuchsia_component("sh") {
-  manifest = "meta/sh.cml"
-}
-
-fuchsia_component("adbd") {
-  manifest = "meta/adbd.cml"
-}
-
 resource("binder_smoke_test_bin") {
   sources = [
     "//prebuilt/starnix/tests/syscalls/linux-amd64/android/binder_smoke_test",
@@ -88,17 +76,7 @@ fuchsia_component("boringssl_self_test64") {
   manifest = "meta/boringssl_self_test64.cml"
 }
 
-fuchsia_package("android_shell") {
-  deps = [ ":sh" ]
-}
-
 fuchsia_test_package("test_android_distro") {
-  deps = [
-    ":adbd",
-    ":init",
-    ":sh",
-  ]
-
   test_components = [
     ":boringssl_self_test64",
     ":java_hello_world",

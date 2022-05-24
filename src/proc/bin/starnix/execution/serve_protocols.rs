@@ -76,6 +76,6 @@ async fn start_shell(
         ..fcomponent::CreateChildArgs::EMPTY
     };
 
-    create_child_component("fuchsia-pkg://fuchsia.com/android_shell#meta/sh.cm".to_string(), args)
+    create_child_component("fuchsia-pkg://fuchsia.com/starnix_android#meta/sh.cm".to_string(), args)
         .await
 }
