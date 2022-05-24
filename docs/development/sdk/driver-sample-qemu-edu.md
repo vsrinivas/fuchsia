@@ -122,7 +122,6 @@ fuchsia_driver_bytecode_bind_rules(
     output = "qemu_edu.bindbc",
     rules = "qemu_edu.bind",
     deps = [
-        "@fuchsia_sdk//bind/fuchsia.acpi",
         "@fuchsia_sdk//bind/fuchsia.pci",
     ],
 )
@@ -170,7 +169,7 @@ fuchsia_fidl_llcpp_library(
     visibility = ["//visibility:public"],
     deps = [
         "@fuchsia_sdk//fidl/zx:zx_llcpp_cc",
-        "@fuchsia_sdk//pkg/fidl-llcpp-experimental-driver-only",
+        "@fuchsia_sdk//pkg/fidl-llcpp",
     ],
 )
 ```
@@ -209,11 +208,11 @@ cc_binary(
         "@fuchsia_sdk//fidl/zx:zx_cc",
         "@fuchsia_sdk//pkg/driver2-llcpp",
         "@fuchsia_sdk//pkg/driver_runtime_cpp",
-        "@fuchsia_sdk//pkg/fidl-llcpp-experimental-driver-only",
+        "@fuchsia_sdk//pkg/fidl-llcpp",
         {{ '<strong>' }}"@fuchsia_sdk//pkg/hwreg",{{ '</strong>' }}
         {{ '<strong>' }}"@fuchsia_sdk//pkg/mmio",{{ '</strong>' }}
         "@fuchsia_sdk//pkg/sys_component_llcpp",
-        "@fuchsia_sdk//pkg/zx-experimental-driver-only",
+        "@fuchsia_sdk//pkg/zx-status",
     ],
 )
 ```
@@ -323,32 +322,25 @@ can provide the device’s services to other components in the system.
 Below are the bind rules of the `qemu_edu` driver:
 
 ```none {:.devsite-disable-click-to-copy}
-using fuchsia.acpi;
 using fuchsia.pci;
 
-if fuchsia.BIND_FIDL_PROTOCOL == fuchsia.pci.BIND_FIDL_PROTOCOL.DEVICE {
-	fuchsia.BIND_PCI_VID == 0x1234;
-	fuchsia.BIND_PCI_DID == 0x11e8;
-} else {
-	fuchsia.acpi.hid == "GOOG0002";
-}
+fuchsia.BIND_FIDL_PROTOCOL == fuchsia.pci.BIND_FIDL_PROTOCOL.DEVICE;
+fuchsia.BIND_PCI_VID == 0x1234;
+fuchsia.BIND_PCI_DID == 0x11e8;
 ```
 
-The lines `using fuchsia.acpi;` and `using fuchsia.pci;` indicate the bind
-libraries necessary to generate the bind rules into bytecode. These bind
-libraries are also specified in the
+The line `using fuchsia.pci;` indicates the bind library necessary to generate
+the bind rules into bytecode. This bind library is also specified in the
 [`fuchsia_driver_bytecode_bind_rules`](#fuchsia_driver_bytecode_bind_rules) rule
 in `BUILD.bazel`.
 
 The bind rules for the `qemu_edu` driver say the following:
 
-*   If the device is a PCI device:
-    *   The vendor ID (`BIND_PCI_VID`) needs to be `0x1234`, which is a globally
-        unique ID that identifies the vendor.
-    *   The device ID (`BIND_PCI_DID`) needs to be `0x11e8`, which is a globally
-        unique ID that the vendor has assigned to the device.
-*   If the device is not a PCI device (but is an ACPI device):
-    *   The `hid` of the device needs to be `GOOG0002`.
+*   The device is a PCI device.
+*   The vendor ID (`BIND_PCI_VID`) needs to be `0x1234`, which is a globally
+    unique ID that identifies the vendor.
+*   The device ID (`BIND_PCI_DID`) needs to be `0x11e8`, which is a globally
+    unique ID that the vendor has assigned to the device.
 
 Note: For more information on the bind rules, see the
 [Driver Binding][driver-binding-dfv1],
