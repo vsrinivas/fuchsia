@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_FSHOST_MOCK_BLOCK_DEVICE_H_
-#define SRC_STORAGE_FSHOST_MOCK_BLOCK_DEVICE_H_
+#ifndef SRC_STORAGE_FSHOST_TESTING_MOCK_BLOCK_DEVICE_H_
+#define SRC_STORAGE_FSHOST_TESTING_MOCK_BLOCK_DEVICE_H_
 
 #include <zircon/hw/gpt.h>
 
@@ -14,7 +14,7 @@
 #include "src/storage/fshost/block-device-interface.h"
 #include "src/storage/fshost/constants.h"
 
-namespace fshost {
+namespace fshost::testing {
 
 class MockBlockDevice : public BlockDeviceInterface {
  public:
@@ -324,6 +324,6 @@ class MockMinfsDevice : public MockBlockDevice {
   bool mounted_ = false;
 };
 
-}  // namespace fshost
+}  // namespace fshost::testing
 
-#endif  // SRC_STORAGE_FSHOST_MOCK_BLOCK_DEVICE_H_
+#endif  // SRC_STORAGE_FSHOST_TESTING_MOCK_BLOCK_DEVICE_H_

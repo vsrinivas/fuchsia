@@ -24,8 +24,8 @@
 #include "src/storage/fshost/constants.h"
 #include "src/storage/fshost/filesystem-mounter.h"
 #include "src/storage/fshost/fs-manager.h"
-#include "src/storage/fshost/fshost_integration_test.h"
-#include "src/storage/fshost/mock-block-device.h"
+#include "src/storage/fshost/testing/fshost_integration_test.h"
+#include "src/storage/fshost/testing/mock-block-device.h"
 #include "src/storage/testing/fvm.h"
 #include "src/storage/testing/ram_disk.h"
 
@@ -34,10 +34,14 @@ namespace {
 
 namespace volume = fuchsia_hardware_block_volume;
 
+using ::fshost::testing::MockBlobfsDevice;
+using ::fshost::testing::MockBlockDevice;
+using ::fshost::testing::MockMinfsDevice;
+using ::fshost::testing::MockZxcryptDevice;
 using ::testing::ContainerEq;
 
 // For tests that want the full integration test suite.
-using BlockDeviceManagerIntegration = FshostIntegrationTest;
+using BlockDeviceManagerIntegration = testing::FshostIntegrationTest;
 
 TEST(BlockDeviceManager, BlobfsLimit) {
   auto config = DefaultConfig();

@@ -17,7 +17,7 @@
 #include "src/storage/fshost/block-device-manager.h"
 #include "src/storage/fshost/config.h"
 #include "src/storage/fshost/constants.h"
-#include "src/storage/fshost/fshost_integration_test.h"
+#include "src/storage/fshost/testing/fshost_integration_test.h"
 #include "src/storage/minfs/format.h"
 #include "src/storage/testing/fvm.h"
 #include "src/storage/testing/ram_disk.h"
@@ -31,7 +31,7 @@ constexpr uint32_t kBlockSize = 512;
 constexpr uint32_t kSliceSize = 32'768;
 constexpr size_t kDeviceSize = kBlockCount * kBlockSize;
 
-using FsRecoveryTest = FshostIntegrationTest;
+using FsRecoveryTest = testing::FshostIntegrationTest;
 
 TEST_F(FsRecoveryTest, EmptyPartitionRecoveryTest) {
   PauseWatcher();  // Pause whilst we create a ramdisk.

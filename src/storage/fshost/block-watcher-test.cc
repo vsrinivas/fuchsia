@@ -24,12 +24,20 @@
 #include "src/storage/fshost/config.h"
 #include "src/storage/fshost/constants.h"
 #include "src/storage/fshost/encrypted-volume-interface.h"
-#include "src/storage/fshost/fshost_integration_test.h"
-#include "src/storage/fshost/mock-block-device.h"
+#include "src/storage/fshost/testing/fshost_integration_test.h"
+#include "src/storage/fshost/testing/mock-block-device.h"
 #include "src/storage/testing/ram_disk.h"
 
 namespace fshost {
 namespace {
+
+using ::fshost::testing::MockBlobfsDevice;
+using ::fshost::testing::MockBlockDevice;
+using ::fshost::testing::MockBlockVerityDevice;
+using ::fshost::testing::MockFactoryfsDevice;
+using ::fshost::testing::MockMinfsDevice;
+using ::fshost::testing::MockSealedBlockVerityDevice;
+using ::fshost::testing::MockZxcryptDevice;
 
 fshost_config::Config FactoryOptions() {
   auto options = fshost::DefaultConfig();
@@ -729,7 +737,7 @@ TEST(AddDeviceTestCase, MultipleGptDevicesWithGptAllOptionMatch) {
   }
 }
 
-class BlockWatcherTest : public FshostIntegrationTest {
+class BlockWatcherTest : public testing::FshostIntegrationTest {
  protected:
   storage::RamDisk CreateGptRamdisk() {
     zx::vmo ramdisk_vmo;

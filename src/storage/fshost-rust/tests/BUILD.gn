@@ -100,7 +100,7 @@ fuchsia_test_package("fshost_integration_tests") {
     ":fshost_cpp_integration_test_component",
     ":fshost_rust_integration_test_component",
     ":test-fshost-rust",
-    "//src/storage/fshost:test-fshost",
+    "//src/storage/fshost/testing:test-fshost",
   ]
 }
 

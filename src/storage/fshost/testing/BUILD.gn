@@ -1,0 +1,137 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/dist/component_manifest_resources.gni")
+import("//build/test.gni")
+import("//src/storage/fshost/generated_fshost_config.gni")
+import("//tools/cmc/build/cmc.gni")
+
+source_set("integration_test_fixture") {
+  testonly = true
+  sources = [
+    "fshost_integration_test.cc",
+    "fshost_integration_test.h",
+    "mock-block-device.h",
+  ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.component:fuchsia.component_llcpp",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_llcpp",
+    "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp_testing",
+    "//sdk/lib/fdio",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/storage/fshost:headers",
+  ]
+  deps = [ "//zircon/system/ulib/service:service-llcpp" ]
+  data_deps = [ ":test-fshost" ]
+}
+
+cmc_merge("test-fshost.cml") {
+  sources = [
+    "//src/storage/fshost/meta/base_fshost.cml",
+    "//src/storage/fshost/meta/config.cml",
+    "//src/storage/fshost/meta/core_fshost.cml",
+    "//src/storage/fshost/meta/cpp_fshost.cml",
+    "//src/storage/fshost/meta/no_fxfs_fshost.cml",
+  ]
+}
+
+fuchsia_component_manifest("test-fshost-manifest") {
+  testonly = true
+  component_name = "test-fshost"
+  manifest_outputs = get_target_outputs(":test-fshost.cml")
+  manifest = manifest_outputs[0]
+  deps = [ ":test-fshost.cml" ]
+}
+
+# This is a test version of fshost, not a component with fshost tests.
+fuchsia_component("test-fshost-comp") {
+  testonly = true
+
+  deps = [
+    "//src/security/policy/zxcrypt:null",
+    "//src/storage/fshost",
+  ]
+  cm_label = ":test-fshost-manifest"
+}
+
+group("test-fshost") {
+  testonly = true
+  deps = [
+    ":integration_test_config",
+    ":test-fshost-comp",
+  ]
+}
+
+cmc_merge("test-fshost-no-watcher.cml") {
+  sources = [
+    "//src/storage/fshost/meta/base_fshost.cml",
+    "//src/storage/fshost/meta/config.cml",
+    "//src/storage/fshost/meta/core_fshost.cml",
+    "//src/storage/fshost/meta/cpp_fshost.cml",
+    "//src/storage/fshost/meta/fxfs_fshost.cml",
+    "//src/storage/fshost/testing/meta/no_watcher.cml",
+  ]
+}
+
+fuchsia_component_manifest("test-fshost-no-watcher-manifest") {
+  testonly = true
+  component_name = "test-fshost-no-watcher"
+  manifest_outputs = get_target_outputs(":test-fshost-no-watcher.cml")
+  manifest = manifest_outputs[0]
+  deps = [ ":test-fshost-no-watcher.cml" ]
+}
+
+# This is a test version of fshost with no block watcher.
+fuchsia_component("test-fshost-no-watcher-comp") {
+  testonly = true
+
+  deps = [
+    "//src/security/policy/zxcrypt:null",
+    "//src/storage/fshost",
+  ]
+  cm_label = ":test-fshost-no-watcher-manifest"
+}
+
+group("test-fshost-no-watcher") {
+  testonly = true
+  deps = [
+    ":integration_test_config_no_watcher",
+    ":test-fshost-no-watcher-comp",
+  ]
+}
+
+integration_test_config = {
+  # Some of the tests require us to be able to match against multiple GPT devices.
+  gpt_all = true
+
+  # The test BlockDeviceManagerIntegration.MaxSize verifies that the minfs "max runtime bytes" gets
+  # applied correctly. It checks that the max size in FVM is set to this value. The
+  # "apply_limits_to_ramdisk" flag is required to apply the minfs limit even to a ramdisk which is
+  # used in tests (normally the limits apply only to physical devices).  This number applies to all
+  # tests in the fshost integration test, so all minfs partitions created must be smaller than this
+  # value, but all disks should be larger than this value.
+  minfs_maximum_runtime_bytes_override = 117440512
+
+  apply_limits_to_ramdisk = true
+  check_filesystems = true
+
+  # The BlockDeviceManagerIntegration.SetPartitionName test needs this.
+  allow_legacy_data_partition_names = true
+
+  # TODO(fxbug.dev/100264) For now, the integration tests only pass if the data filesystem format is
+  # minfs.
+  data_filesystem_format = ""
+}
+
+generated_fshost_config("integration_test_config") {
+  component_name = "test-fshost"
+  forward_variables_from(integration_test_config, "*")
+}
+
+generated_fshost_config("integration_test_config_no_watcher") {
+  component_name = "test-fshost-no-watcher"
+  forward_variables_from(integration_test_config, "*")
+}

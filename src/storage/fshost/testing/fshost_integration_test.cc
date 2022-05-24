@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/storage/fshost/fshost_integration_test.h"
+#include "src/storage/fshost/testing/fshost_integration_test.h"
 
+#include <fidl/fuchsia.component.decl/cpp/wire_types.h>
 #include <lib/fdio/vfs.h>
 #include <lib/service/llcpp/service.h>
 #include <sys/statfs.h>
 
-namespace fshost {
+namespace fshost::testing {
 
 static const char kTestFshostName[] = "test-fshost";
 static const char kTestFshostCollection[] = "fshost-collection";
@@ -23,11 +24,12 @@ void FshostIntegrationTest::SetUp() {
   realm_ = fidl::BindSyncClient(std::move(*realm_client_end));
 
   fidl::Arena allocator;
+  auto child_decl = fuchsia_component_decl::wire::Child::Builder(allocator)
+                        .name(kTestFshostName)
+                        .url(kTestFshostUrl)
+                        .startup(fuchsia_component_decl::wire::StartupMode::kLazy)
+                        .Build();
   fuchsia_component_decl::wire::CollectionRef collection_ref{.name = kTestFshostCollection};
-  fuchsia_component_decl::wire::Child child_decl(allocator);
-  child_decl.set_name(allocator, allocator, kTestFshostName)
-      .set_url(allocator, allocator, kTestFshostUrl)
-      .set_startup(fuchsia_component_decl::wire::StartupMode::kLazy);
   fuchsia_component::wire::CreateChildArgs child_args;
   auto create_res = realm_->CreateChild(collection_ref, child_decl, child_args);
   ASSERT_TRUE(create_res.ok() && !create_res->result.is_err());
@@ -101,4 +103,4 @@ std::pair<fbl::unique_fd, uint64_t> FshostIntegrationTest::WaitForMount(const st
   return std::make_pair(fbl::unique_fd(), 0);
 }
 
-}  // namespace fshost
+}  // namespace fshost::testing

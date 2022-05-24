@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_FSHOST_FSHOST_INTEGRATION_TEST_H_
-#define SRC_STORAGE_FSHOST_FSHOST_INTEGRATION_TEST_H_
+#ifndef SRC_STORAGE_FSHOST_TESTING_FSHOST_INTEGRATION_TEST_H_
+#define SRC_STORAGE_FSHOST_TESTING_FSHOST_INTEGRATION_TEST_H_
 
 #include <fidl/fuchsia.component/cpp/wire.h>
 #include <fidl/fuchsia.fshost/cpp/wire.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fdio/directory.h>
 
 #include <string_view>
@@ -14,9 +15,9 @@
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
 
-namespace fshost {
+namespace fshost::testing {
 
-class FshostIntegrationTest : public testing::Test {
+class FshostIntegrationTest : public ::testing::Test {
  public:
   void SetUp() override;
   void TearDown() override;
@@ -44,6 +45,6 @@ class FshostIntegrationTest : public testing::Test {
   fidl::WireSyncClient<fuchsia_fshost::BlockWatcher> block_watcher_;
 };
 
-}  // namespace fshost
+}  // namespace fshost::testing
 
-#endif  // SRC_STORAGE_FSHOST_FSHOST_INTEGRATION_TEST_H_
+#endif  // SRC_STORAGE_FSHOST_TESTING_FSHOST_INTEGRATION_TEST_H_

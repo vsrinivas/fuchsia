@@ -373,7 +373,6 @@ config("fidl-wire-deprecated-mutable-tables") {
     "//src/storage/blobfs/test:blobfs_unittest",
     "//src/storage/blobfs/test/integration:blobfs_verifier_service",
     "//src/storage/fshost:fshost-registry",
-    "//src/storage/fshost:fshost_integration_test",
     "//src/storage/testing/driver_test_realm:bin",
     "//src/tests/benchmarks/fidl/driver_cpp:*",
     "//src/tests/benchmarks/fidl/driver_llcpp:*",

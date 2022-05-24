@@ -13,14 +13,14 @@
 #include "sdk/lib/fdio/include/lib/fdio/spawn.h"
 #include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/storage/fshost/constants.h"
-#include "src/storage/fshost/fshost_integration_test.h"
+#include "src/storage/fshost/testing/fshost_integration_test.h"
 #include "src/storage/testing/fvm.h"
 #include "src/storage/testing/ram_disk.h"
 
 namespace fshost {
 namespace {
 
-using AdminServerTest = FshostIntegrationTest;
+using AdminServerTest = testing::FshostIntegrationTest;
 
 constexpr const char* kFshostSvcPath =
     "/hub/children/fshost-collection:test-fshost/exec/out/svc/fuchsia.fshost.Admin";
