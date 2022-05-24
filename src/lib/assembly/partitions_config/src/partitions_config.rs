@@ -55,7 +55,7 @@ pub struct BootstrapPartition {
     pub image: PathBuf,
 
     /// The condition that must be met before attempting to flash.
-    pub condition: BootstrapCondition,
+    pub condition: Option<BootstrapCondition>,
 }
 
 /// The fastboot variable condition that must equal the value before a bootstrap partition should
@@ -63,10 +63,10 @@ pub struct BootstrapPartition {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct BootstrapCondition {
     /// The name of the fastboot variable.
-    variable: String,
+    pub variable: String,
 
     /// The expected value.
-    value: String,
+    pub value: String,
 }
 
 /// A single bootloader partition, which is not slot-specific.
@@ -114,7 +114,7 @@ pub enum Partition {
 }
 
 /// The slots available for flashing or OTAing.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialOrd, Ord, PartialEq, Eq, Clone, Copy)]
 pub enum Slot {
     /// Primary slot.
     A,

@@ -27,6 +27,7 @@ import("//build/sdk/virtual_device.gni")
 import("//build/security.gni")
 import("//build/security/verifier/verify_component_resolvers.gni")
 import("//build/security/verifier/verify_routes.gni")
+import("//build/testing/verify_files_match.gni")
 import("//build/zbi/zbi_input.gni")
 import("//build/zircon/tools.gni")
 import("//src/sys/pkg/bin/pm/pm.gni")
@@ -47,6 +48,8 @@ files = {
   gendir = "${outdir}/gen"
   minfs = "${outdir}/data.blk"
   blobfs = "${root_out_dir}/obj/build/images/blob.blk"
+  flash_manifest =
+      "${root_out_dir}/obj/build/images/fuchsia/flash_manifest/flash.json"
 
   # TODO(https://fxbug.dev/98480) move these to image-relative paths along with tools' usages
   base_package_manifests = "$root_build_dir/base_package_manifests.list"
@@ -702,7 +705,21 @@ generated_file("fastboot_manifest") {
   }
 }
 
-default_image_deps += [ ":fastboot_manifest" ]
+verify_files_match("flash_manifest_matches") {
+  testonly = true
+  deps = [
+    ":fastboot_manifest",
+    labels.images,
+  ]
+  first = fastboot_manifest_file
+  second = files.flash_manifest
+  display_text_diff_on_failure = true
+}
+
+default_image_deps += [
+  ":fastboot_manifest",
+  ":flash_manifest_matches",
+]
 
 default_image_deps += [ recovery_label ]
 
@@ -1371,6 +1388,15 @@ group("default-images") {
     ":qemu-kernel",
     recovery_label,
   ]
+
+  # Only verify that the flash manifest matches for non-bringup builds, because
+  # this will accidentally pull into the bringup.zbi into the images.json, but
+  # we can only have one zircon-a zbi in the images.json at a time.
+  # TODO(fxbug.dev/97966): Delete this check after switching to the new flash
+  # manifest.
+  if (!bootfs_only) {
+    deps += [ ":flash_manifest_matches" ]
+  }
 
   if (size_checker_input != {
       }) {
