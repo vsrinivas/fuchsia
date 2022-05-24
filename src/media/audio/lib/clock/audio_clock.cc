@@ -243,7 +243,7 @@ AudioClock::AudioClock(zx::clock clock, Source source, bool adjustable, uint32_t
                             (details.mono_to_synthetic.rate.reference_ticks ==
                              details.mono_to_synthetic.rate.synthetic_ticks);
 
-      feedback_control_ = is_adjustable() ? audio::clock::PidControl(kPidFactorsAdjustClientClock)
+      feedback_control_ = is_adjustable() ? audio::clock::PidControl(kPidFactorsClockChasesClock)
                                           : audio::clock::PidControl(kPidFactorsMicroSrc);
       break;
     case Source::Device:
@@ -251,7 +251,7 @@ AudioClock::AudioClock(zx::clock clock, Source source, bool adjustable, uint32_t
       // permanently locked to CLOCK_MONOTONIC
       is_clock_monotonic_ = (domain_ == kMonotonicDomain);
 
-      feedback_control_ = is_adjustable() ? audio::clock::PidControl(kPidFactorsAdjustDeviceClock)
+      feedback_control_ = is_adjustable() ? audio::clock::PidControl(kPidFactorsClockChasesDevice)
                                           : audio::clock::PidControl(kPidFactorsMicroSrc);
       break;
   }  // no default, to catch logic errors if an enum is added
