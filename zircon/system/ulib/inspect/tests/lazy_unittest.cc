@@ -96,6 +96,67 @@ TEST(LazyNode, SimpleLazy) {
   }
 }
 
+TEST(LazyNode, Record) {
+  Inspector inspector;
+  inspector.GetRoot().RecordLazyNode("node", []() {
+    auto content = inspect::Inspector();
+    content.GetRoot().RecordInt("a", 1234);
+    return fpromise::make_ok_promise(content);
+  });
+  inspector.GetRoot().RecordLazyValues("vals", []() {
+    auto content = inspect::Inspector();
+    content.GetRoot().RecordInt("b", 1234);
+    return fpromise::make_ok_promise(content);
+  });
+
+  fpromise::result<Inspector> node, vals;
+
+  fpromise::single_threaded_executor exec;
+  exec.schedule_task(inspector.OpenChild("node-0").and_then(TakeInspector(&node)));
+  exec.schedule_task(inspector.OpenChild("vals-1").and_then(TakeInspector(&vals)));
+  exec.run();
+
+  auto parsed = inspect::ReadFromVmo(inspector.DuplicateVmo()).take_value();
+  ASSERT_EQ(2, parsed.node().links().size());
+  const inspect::LinkValue *node_ptr = nullptr, *vals_ptr = nullptr;
+  for (const auto& l : parsed.node().links()) {
+    if (l.name() == "node") {
+      node_ptr = &l;
+    } else if (l.name() == "vals") {
+      vals_ptr = &l;
+    }
+  }
+  ASSERT_NE(nullptr, node_ptr);
+  ASSERT_NE(nullptr, vals_ptr);
+  EXPECT_EQ("node-0", node_ptr->content());
+  EXPECT_EQ(inspect::LinkDisposition::kChild, node_ptr->disposition());
+  EXPECT_EQ("vals-1", vals_ptr->content());
+  EXPECT_EQ(inspect::LinkDisposition::kInline, vals_ptr->disposition());
+
+  {
+    ASSERT_TRUE(node.is_ok());
+    parsed = inspect::ReadFromVmo(node.value().DuplicateVmo()).take_value();
+    ASSERT_EQ(0, parsed.node().links().size());
+    ASSERT_EQ(1, parsed.node().properties().size());
+    ASSERT_TRUE(parsed.node().properties()[0].Contains<inspect::IntPropertyValue>());
+    auto& prop = parsed.node().properties()[0];
+    auto& val = prop.Get<inspect::IntPropertyValue>();
+    EXPECT_EQ("a", prop.name());
+    EXPECT_EQ(1234, val.value());
+  }
+  {
+    ASSERT_TRUE(vals.is_ok());
+    parsed = inspect::ReadFromVmo(vals.value().DuplicateVmo()).take_value();
+    ASSERT_EQ(0, parsed.node().links().size());
+    ASSERT_EQ(1, parsed.node().properties().size());
+    ASSERT_TRUE(parsed.node().properties()[0].Contains<inspect::IntPropertyValue>());
+    auto& prop = parsed.node().properties()[0];
+    auto& val = prop.Get<inspect::IntPropertyValue>();
+    EXPECT_EQ("b", prop.name());
+    EXPECT_EQ(1234, val.value());
+  }
+}
+
 TEST(LazyNode, LazyRemoval) {
   Inspector inspector;
   {

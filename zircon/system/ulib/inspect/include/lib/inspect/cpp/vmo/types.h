@@ -764,6 +764,10 @@ class Node final {
   LazyNode CreateLazyNode(BorrowedStringValue name,
                           LazyNodeCallbackFn callback) __WARN_UNUSED_RESULT;
 
+  // Create a new |LazyNode| with the given name that is a child of this node.
+  // The new child lifetime will be the same as the parent node.
+  void RecordLazyNode(BorrowedStringValue name, LazyNodeCallbackFn callback);
+
   // Same as CreateLazyNode, but emplaces the value in the given container.
   //
   // The type of |list| must have method emplace(LazyNode).
@@ -772,6 +776,10 @@ class Node final {
   void CreateLazyNode(BorrowedStringValue name, F callback, T* list) {
     list->emplace(CreateLazyNode(name, std::move(callback)));
   }
+
+  // Create a new |LazyNode| with the given name that is a child of this node.
+  // The new child lifetime will be the same as the parent node.
+  void RecordLazyValues(BorrowedStringValue name, LazyNodeCallbackFn callback);
 
   // Create a new |LazyNode| whose children and properties are added to this node on demand.
   //

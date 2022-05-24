@@ -551,11 +551,21 @@ LazyNode Node::CreateLazyNode(BorrowedStringValue name, LazyNodeCallbackFn callb
   return LazyNode();
 }
 
+void Node::RecordLazyNode(BorrowedStringValue name, LazyNodeCallbackFn callback) {
+  auto node = CreateLazyNode(name, std::move(callback));
+  value_list_.emplace(std::move(node));
+}
+
 LazyNode Node::CreateLazyValues(BorrowedStringValue name, LazyNodeCallbackFn callback) {
   if (state_) {
     return state_->CreateLazyValues(name, value_index_, std::move(callback));
   }
   return LazyNode();
+}
+
+void Node::RecordLazyValues(BorrowedStringValue name, LazyNodeCallbackFn callback) {
+  auto node = CreateLazyValues(name, std::move(callback));
+  value_list_.emplace(std::move(node));
 }
 
 void Node::AtomicUpdate(AtomicUpdateCallbackFn callback) {
