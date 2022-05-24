@@ -36,59 +36,105 @@ if (recovery_is_zedboot) {
 # A list of partitions for the flash json manifest that will be
 # generated.  The first item should be the partition name and the
 # second should be the path to the image for the partition.
-parts = [
-  {
-    name = zircon_a_partition
-    path = rebase_path(image, root_build_dir)
-  },
-  {
-    name = zircon_b_partition
-    path = rebase_path(image, root_build_dir)
-  },
-  {
-    name = zircon_r_partition
-    path = rebase_path(recovery_image, root_build_dir)
-  },
-  {
-    name = vbmeta_a_partition
-    path = rebase_path(vbmeta, root_build_dir)
-  },
-  {
-    name = vbmeta_b_partition
-    path = rebase_path(vbmeta, root_build_dir)
-  },
-  {
-    name = vbmeta_r_partition
-    path = rebase_path(recovery_vbmeta, root_build_dir)
-  },
-]
+parts = []
+if (zircon_a_partition != "") {
+  parts += [
+    {
+      name = zircon_a_partition
+      path = rebase_path(image, root_build_dir)
+    },
+  ]
+}
+if (zircon_b_partition != "") {
+  parts += [
+    {
+      name = zircon_b_partition
+      path = rebase_path(image, root_build_dir)
+    },
+  ]
+}
+if (zircon_r_partition != "") {
+  parts += [
+    {
+      name = zircon_r_partition
+      path = rebase_path(recovery_image, root_build_dir)
+    },
+  ]
+}
+if (vbmeta_a_partition != "") {
+  parts += [
+    {
+      name = vbmeta_a_partition
+      path = rebase_path(vbmeta, root_build_dir)
+    },
+  ]
+}
+if (vbmeta_b_partition != "") {
+  parts += [
+    {
+      name = vbmeta_b_partition
+      path = rebase_path(vbmeta, root_build_dir)
+    },
+  ]
+}
+if (vbmeta_r_partition != "") {
+  parts += [
+    {
+      name = vbmeta_r_partition
+      path = rebase_path(recovery_vbmeta, root_build_dir)
+    },
+  ]
+}
 
-recovery_parts = [
-  {
-    name = zircon_a_partition
-    path = rebase_path(recovery_image, root_build_dir)
-  },
-  {
-    name = zircon_b_partition
-    path = rebase_path(recovery_image, root_build_dir)
-  },
-  {
-    name = zircon_r_partition
-    path = rebase_path(recovery_image, root_build_dir)
-  },
-  {
-    name = vbmeta_a_partition
-    path = rebase_path(recovery_vbmeta, root_build_dir)
-  },
-  {
-    name = vbmeta_b_partition
-    path = rebase_path(recovery_vbmeta, root_build_dir)
-  },
-  {
-    name = vbmeta_r_partition
-    path = rebase_path(recovery_vbmeta, root_build_dir)
-  },
-]
+recovery_parts = []
+if (zircon_a_partition != "") {
+  recovery_parts += [
+    {
+      name = zircon_a_partition
+      path = rebase_path(recovery_image, root_build_dir)
+    },
+  ]
+}
+if (zircon_b_partition != "") {
+  recovery_parts += [
+    {
+      name = zircon_b_partition
+      path = rebase_path(recovery_image, root_build_dir)
+    },
+  ]
+}
+if (zircon_r_partition != "") {
+  recovery_parts += [
+    {
+      name = zircon_r_partition
+      path = rebase_path(recovery_image, root_build_dir)
+    },
+  ]
+}
+if (vbmeta_a_partition != "") {
+  recovery_parts += [
+    {
+      name = vbmeta_a_partition
+      path = rebase_path(recovery_vbmeta, root_build_dir)
+    },
+  ]
+}
+if (vbmeta_b_partition != "") {
+  recovery_parts += [
+    {
+      name = vbmeta_b_partition
+      path = rebase_path(recovery_vbmeta, root_build_dir)
+    },
+  ]
+}
+if (vbmeta_r_partition != "") {
+  recovery_parts += [
+    {
+      name = vbmeta_r_partition
+      path = rebase_path(recovery_vbmeta, root_build_dir)
+    },
+  ]
+}
 
 archive_image_suffix = "zbi"
 if (custom_signing_script != "") {

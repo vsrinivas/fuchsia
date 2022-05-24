@@ -27,18 +27,20 @@ use {
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct FlashManifest {
     pub hw_revision: String,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub credentials: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub products: Vec<Product>,
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Product {
     pub name: String,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub bootloader_partitions: Vec<Partition>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub partitions: Vec<Partition>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub oem_files: Vec<ExplicitOemFile>,
     #[serde(default)]
     pub requires_unlock: bool,
@@ -48,7 +50,7 @@ pub struct Product {
 pub struct Partition {
     pub name: String,
     pub path: String,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub condition: Option<Condition>,
 }
 

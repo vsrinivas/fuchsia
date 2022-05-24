@@ -49,8 +49,8 @@ pub struct Image {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ManifestFile {
-    version: u64,
     manifest: Value,
+    version: u64,
 }
 
 pub enum FlashManifestVersion {
@@ -369,12 +369,10 @@ mod test {
         assert_eq!(
             str,
             r#"{
-  "version": 3,
   "manifest": {
-    "credentials": [],
-    "hw_revision": "board",
-    "products": []
-  }
+    "hw_revision": "board"
+  },
+  "version": 3
 }"#
         );
         Ok(())
