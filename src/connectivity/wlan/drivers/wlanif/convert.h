@@ -88,9 +88,9 @@ void ConvertWmmStatus(const wlan_wmm_params_t* params_in,
                       ::fuchsia::wlan::internal::WmmStatusResponse* resp);
 
 // The following functions are only exposed for convenience in unit tests.
-void ConvertHtCapabilities(::fuchsia::wlan::internal::HtCapabilities* fidl_ht_cap,
+void ConvertHtCapabilities(::fuchsia::wlan::ieee80211::HtCapabilities* fidl_ht_cap,
                            const ht_capabilities_fields_t& ht_cap);
-void ConvertVhtCapabilities(::fuchsia::wlan::internal::VhtCapabilities* fidl_vht_cap,
+void ConvertVhtCapabilities(::fuchsia::wlan::ieee80211::VhtCapabilities* fidl_vht_cap,
                             const vht_capabilities_fields_t& vht_cap);
 
 }  // namespace wlanif

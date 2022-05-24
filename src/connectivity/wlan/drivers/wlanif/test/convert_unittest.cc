@@ -179,7 +179,7 @@ TEST(ConvertTest, ToFidlHtCapabilities) {
   log_seed(seed);
 
   ht_capabilities_fields_t ht_cap = fake_ht_cap(rng);
-  auto fidl_ht_cap = std::make_unique<wlan_internal::HtCapabilities>();
+  auto fidl_ht_cap = std::make_unique<wlan_ieee80211::HtCapabilities>();
   ConvertHtCapabilities(fidl_ht_cap.get(), ht_cap);
   static_assert(sizeof(ht_cap) == sizeof(fidl_ht_cap->bytes));
   // TODO(fxbug.dev/95240): We may wish to change the FIDL definition in the future
@@ -193,7 +193,7 @@ TEST(ConvertTest, ToFidlVhtCapabilities) {
   log_seed(seed);
 
   vht_capabilities_fields_t vht_cap = fake_vht_cap(rng);
-  auto fidl_vht_cap = std::make_unique<wlan_internal::VhtCapabilities>();
+  auto fidl_vht_cap = std::make_unique<wlan_ieee80211::VhtCapabilities>();
   ConvertVhtCapabilities(fidl_vht_cap.get(), vht_cap);
   // TODO(fxbug.dev/95240): We may wish to change the FIDL definition in the future
   // so this memcmp() is more obviously correct.
@@ -207,11 +207,11 @@ TEST(ConvertTest, ToFidlBandCapability) {
   log_seed(seed);
 
   ht_capabilities_fields_t ht_cap = fake_ht_cap(rng);
-  auto fidl_ht_cap = std::make_unique<wlan_internal::HtCapabilities>();
+  auto fidl_ht_cap = std::make_unique<wlan_ieee80211::HtCapabilities>();
   ConvertHtCapabilities(fidl_ht_cap.get(), ht_cap);
 
   vht_capabilities_fields_t vht_cap = fake_vht_cap(rng);
-  auto fidl_vht_cap = std::make_unique<wlan_internal::VhtCapabilities>();
+  auto fidl_vht_cap = std::make_unique<wlan_ieee80211::VhtCapabilities>();
   ConvertVhtCapabilities(fidl_vht_cap.get(), vht_cap);
 
   wlan_mlme::BandCapability fidl_band_capability = {};
@@ -268,11 +268,11 @@ TEST(ConvertTest, ToFidlDeviceInfo) {
   const std::array<uint8_t, 6> expected_sta_addr{1, 2, 3, 4, 5, 6};
 
   ht_capabilities_fields_t ht_cap = fake_ht_cap(rng);
-  auto fidl_ht_cap = std::make_unique<wlan_internal::HtCapabilities>();
+  auto fidl_ht_cap = std::make_unique<wlan_ieee80211::HtCapabilities>();
   ConvertHtCapabilities(fidl_ht_cap.get(), ht_cap);
 
   vht_capabilities_fields_t vht_cap = fake_vht_cap(rng);
-  auto fidl_vht_cap = std::make_unique<wlan_internal::VhtCapabilities>();
+  auto fidl_vht_cap = std::make_unique<wlan_ieee80211::VhtCapabilities>();
   ConvertVhtCapabilities(fidl_vht_cap.get(), vht_cap);
 
   wlan_fullmac_query_info_t query_info = {.sta_addr = {1, 2, 3, 4, 5, 6},

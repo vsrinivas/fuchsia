@@ -229,8 +229,8 @@ type AssociateRequest = struct {
     rates bytes:internal.MAX_ASSOC_BASIC_RATES;
     qos_capable bool;
     qos_info QosInfo;
-    ht_cap box<internal.HtCapabilities>;
-    vht_cap box<internal.VhtCapabilities>;
+    ht_cap box<ieee80211.HtCapabilities>;
+    vht_cap box<ieee80211.VhtCapabilities>;
     rsne bytes:optional;
     // Serialized list of vendor IEs to be appended after all other associate request IEs.
     vendor_ies bytes:optional;
@@ -262,8 +262,8 @@ type AssociateConfirm = struct {
     capability_info internal.CapabilityInfo;
     rates bytes:internal.MAX_ASSOC_BASIC_RATES;
     wmm_param box<WmmParameter>;
-    ht_cap box<internal.HtCapabilities>;
-    vht_cap box<internal.VhtCapabilities>;
+    ht_cap box<ieee80211.HtCapabilities>;
+    vht_cap box<ieee80211.VhtCapabilities>;
 
     // etc
 };
@@ -504,10 +504,10 @@ type MeshPeeringCommon = struct {
     mesh_id bytes:32;
     rates vector<uint8>;
     mesh_config MeshConfiguration;
-    ht_cap box<internal.HtCapabilities>;
-    ht_op box<internal.HtOperation>;
-    vht_cap box<internal.VhtCapabilities>;
-    vht_op box<internal.VhtOperation>;
+    ht_cap box<ieee80211.HtCapabilities>;
+    ht_op box<ieee80211.HtOperation>;
+    vht_cap box<ieee80211.VhtCapabilities>;
+    vht_op box<ieee80211.VhtOperation>;
 };
 
 // IEEE Std 802.11-2016, 9.6.16.2.2

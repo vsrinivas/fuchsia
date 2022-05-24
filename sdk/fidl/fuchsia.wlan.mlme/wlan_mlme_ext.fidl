@@ -34,8 +34,8 @@ type BandCapability = struct {
     /// the device supports transmitting and receiving.
     basic_rates vector<uint8>:internal.MAX_SUPPORTED_BASIC_RATES;
 
-    ht_cap box<internal.HtCapabilities>;
-    vht_cap box<internal.VhtCapabilities>;
+    ht_cap box<ieee80211.HtCapabilities>;
+    vht_cap box<ieee80211.VhtCapabilities>;
 
     /// A list of operating channels considered valid by hardware, in the context of
     /// regulatory information known to the device driver, at the time of its
@@ -163,8 +163,8 @@ type NegotiatedCapabilities = struct {
     capability_info internal.CapabilityInfo;
     rates bytes:internal.MAX_ASSOC_BASIC_RATES;
     wmm_param box<WmmParameter>;
-    ht_cap box<internal.HtCapabilities>;
-    vht_cap box<internal.VhtCapabilities>;
+    ht_cap box<ieee80211.HtCapabilities>;
+    vht_cap box<ieee80211.VhtCapabilities>;
 };
 
 type PmkInfo = struct {

@@ -18,7 +18,7 @@ use {
         mac::CapabilityInfo,
     },
     anyhow::{format_err, Context as _, Error},
-    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_internal as fidl_internal,
+    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
     fidl_fuchsia_wlan_mlme as fidl_mlme,
 };
 
@@ -99,8 +99,8 @@ pub fn derive_join_capabilities(
 /// Wrapper function to convert FIDL {HT,VHT}Capabilities into byte arrays, taking into account the
 /// limitations imposed by the channel bandwidth.
 fn override_ht_vht(
-    fidl_ht_cap: Option<&Box<fidl_internal::HtCapabilities>>,
-    fidl_vht_cap: Option<&Box<fidl_internal::VhtCapabilities>>,
+    fidl_ht_cap: Option<&Box<fidl_ieee80211::HtCapabilities>>,
+    fidl_vht_cap: Option<&Box<fidl_ieee80211::VhtCapabilities>>,
     cbw: Cbw,
 ) -> Result<(Option<HtCapabilities>, Option<VhtCapabilities>), Error> {
     if fidl_ht_cap.is_none() && fidl_vht_cap.is_some() {

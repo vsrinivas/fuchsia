@@ -183,12 +183,12 @@ impl BssDescription {
         })
     }
 
-    pub fn raw_ht_cap(&self) -> Option<fidl_internal::HtCapabilities> {
+    pub fn raw_ht_cap(&self) -> Option<fidl_ieee80211::HtCapabilities> {
         type HtCapArray = [u8; fidl_ieee80211::HT_CAP_LEN as usize];
         self.ht_cap().map(|ht_cap| {
             assert_eq_size!(ie::HtCapabilities, HtCapArray);
             let bytes: HtCapArray = ht_cap.as_bytes().try_into().unwrap();
-            fidl_internal::HtCapabilities { bytes }
+            fidl_ieee80211::HtCapabilities { bytes }
         })
     }
 
@@ -210,12 +210,12 @@ impl BssDescription {
         self.ext_cap_range.clone().map(|range| ie::parse_ext_capabilities(&self.ies[range]))
     }
 
-    pub fn raw_ht_op(&self) -> Option<fidl_internal::HtOperation> {
+    pub fn raw_ht_op(&self) -> Option<fidl_ieee80211::HtOperation> {
         type HtOpArray = [u8; fidl_ieee80211::HT_OP_LEN as usize];
         self.ht_op().map(|ht_op| {
             assert_eq_size!(ie::HtOperation, HtOpArray);
             let bytes: HtOpArray = ht_op.as_bytes().try_into().unwrap();
-            fidl_internal::HtOperation { bytes }
+            fidl_ieee80211::HtOperation { bytes }
         })
     }
 
@@ -226,12 +226,12 @@ impl BssDescription {
         })
     }
 
-    pub fn raw_vht_cap(&self) -> Option<fidl_internal::VhtCapabilities> {
+    pub fn raw_vht_cap(&self) -> Option<fidl_ieee80211::VhtCapabilities> {
         type VhtCapArray = [u8; fidl_ieee80211::VHT_CAP_LEN as usize];
         self.vht_cap().map(|vht_cap| {
             assert_eq_size!(ie::VhtCapabilities, VhtCapArray);
             let bytes: VhtCapArray = vht_cap.as_bytes().try_into().unwrap();
-            fidl_internal::VhtCapabilities { bytes }
+            fidl_ieee80211::VhtCapabilities { bytes }
         })
     }
 
@@ -242,12 +242,12 @@ impl BssDescription {
         })
     }
 
-    pub fn raw_vht_op(&self) -> Option<fidl_internal::VhtOperation> {
+    pub fn raw_vht_op(&self) -> Option<fidl_ieee80211::VhtOperation> {
         type VhtOpArray = [u8; fidl_ieee80211::VHT_OP_LEN as usize];
         self.vht_op().map(|vht_op| {
             assert_eq_size!(ie::VhtOperation, VhtOpArray);
             let bytes: VhtOpArray = vht_op.as_bytes().try_into().unwrap();
-            fidl_internal::VhtOperation { bytes }
+            fidl_ieee80211::VhtOperation { bytes }
         })
     }
 

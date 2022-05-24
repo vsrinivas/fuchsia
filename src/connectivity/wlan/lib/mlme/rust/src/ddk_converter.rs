@@ -8,7 +8,7 @@ use {
     banjo_fuchsia_hardware_wlan_softmac as banjo_wlan_softmac,
     banjo_fuchsia_wlan_common as banjo_common, banjo_fuchsia_wlan_ieee80211 as banjo_ieee80211,
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
-    fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_mlme as fidl_mlme,
+    fidl_fuchsia_wlan_mlme as fidl_mlme,
     ieee80211::Bssid,
     wlan_common::{capabilities::StaCapabilities, ie, mac::Aid},
     zerocopy::AsBytes,
@@ -214,7 +214,7 @@ fn convert_ddk_band_cap(
         let caps = wlan_common::ie::HtCapabilities::from(band_cap.ht_caps);
         let mut bytes = [0u8; 26];
         bytes.copy_from_slice(caps.as_bytes());
-        Some(Box::new(fidl_internal::HtCapabilities { bytes }))
+        Some(Box::new(fidl_ieee80211::HtCapabilities { bytes }))
     } else {
         None
     };
@@ -222,7 +222,7 @@ fn convert_ddk_band_cap(
         let caps = wlan_common::ie::VhtCapabilities::from(band_cap.vht_caps);
         let mut bytes = [0u8; 12];
         bytes.copy_from_slice(caps.as_bytes());
-        Some(Box::new(fidl_internal::VhtCapabilities { bytes }))
+        Some(Box::new(fidl_ieee80211::VhtCapabilities { bytes }))
     } else {
         None
     };

@@ -395,8 +395,8 @@ pub struct ServingApInfo {
     pub signal_report_time: zx::Time,
     pub channel: wlan_common::channel::Channel,
     pub protection: BssProtection,
-    pub ht_cap: Option<fidl_internal::HtCapabilities>,
-    pub vht_cap: Option<fidl_internal::VhtCapabilities>,
+    pub ht_cap: Option<fidl_ieee80211::HtCapabilities>,
+    pub vht_cap: Option<fidl_ieee80211::VhtCapabilities>,
     pub probe_resp_wsc: Option<wsc::ProbeRespWsc>,
     pub wmm_param: Option<ie::WmmParam>,
 }

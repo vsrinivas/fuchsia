@@ -379,10 +379,7 @@ pub fn parse_vendor_ie<B: ByteSlice>(raw_body: B) -> FrameParseResult<VendorIe<B
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*, crate::assert_variant, fidl_fuchsia_wlan_internal as fidl_internal,
-        std::convert::TryInto, zerocopy::AsBytes,
-    };
+    use {super::*, crate::assert_variant, std::convert::TryInto, zerocopy::AsBytes};
 
     #[test]
     pub fn ssid_ok() {
@@ -1466,39 +1463,39 @@ mod tests {
 
     #[test]
     fn to_and_from_fidl_ht_cap() {
-        fidl_internal::HtCapabilities {
+        fidl_ieee80211::HtCapabilities {
             bytes: fake_ht_capabilities().as_bytes().try_into().expect("HT Cap to FIDL"),
         };
         let fidl =
-            fidl_internal::HtCapabilities { bytes: [0; fidl_ieee80211::HT_CAP_LEN as usize] };
+            fidl_ieee80211::HtCapabilities { bytes: [0; fidl_ieee80211::HT_CAP_LEN as usize] };
         assert!(parse_ht_capabilities(&fidl.bytes[..]).is_ok());
     }
 
     #[test]
     fn to_and_from_fidl_vht_cap() {
-        fidl_internal::VhtCapabilities {
+        fidl_ieee80211::VhtCapabilities {
             bytes: fake_vht_capabilities().as_bytes().try_into().expect("VHT Cap to FIDL"),
         };
         let fidl =
-            fidl_internal::VhtCapabilities { bytes: [0; fidl_ieee80211::VHT_CAP_LEN as usize] };
+            fidl_ieee80211::VhtCapabilities { bytes: [0; fidl_ieee80211::VHT_CAP_LEN as usize] };
         assert!(parse_vht_capabilities(&fidl.bytes[..]).is_ok());
     }
 
     #[test]
     fn to_and_from_fidl_ht_op() {
-        fidl_internal::HtOperation {
+        fidl_ieee80211::HtOperation {
             bytes: fake_ht_operation().as_bytes().try_into().expect("HT Op to FIDL"),
         };
-        let fidl = fidl_internal::HtOperation { bytes: [0; fidl_ieee80211::HT_OP_LEN as usize] };
+        let fidl = fidl_ieee80211::HtOperation { bytes: [0; fidl_ieee80211::HT_OP_LEN as usize] };
         assert!(parse_ht_operation(&fidl.bytes[..]).is_ok());
     }
 
     #[test]
     fn to_and_from_fidl_vht_op() {
-        fidl_internal::VhtOperation {
+        fidl_ieee80211::VhtOperation {
             bytes: fake_vht_operation().as_bytes().try_into().expect("VHT Op to FIDL"),
         };
-        let fidl = fidl_internal::VhtOperation { bytes: [0; fidl_ieee80211::VHT_OP_LEN as usize] };
+        let fidl = fidl_ieee80211::VhtOperation { bytes: [0; fidl_ieee80211::VHT_OP_LEN as usize] };
         assert!(parse_vht_operation(&fidl.bytes[..]).is_ok());
     }
 }

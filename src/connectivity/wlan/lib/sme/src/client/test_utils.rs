@@ -35,8 +35,8 @@ pub fn fake_serving_ap_info() -> ServingApInfo {
         signal_report_time: zx::Time::ZERO,
         channel: channel::Channel { primary: 1, cbw: channel::Cbw::Cbw20 },
         protection: Protection::Wpa2Personal,
-        ht_cap: Some(fidl_internal::HtCapabilities { bytes: fake_ht_cap_bytes() }),
-        vht_cap: Some(fidl_internal::VhtCapabilities { bytes: fake_vht_cap_bytes() }),
+        ht_cap: Some(fidl_ieee80211::HtCapabilities { bytes: fake_ht_cap_bytes() }),
+        vht_cap: Some(fidl_ieee80211::VhtCapabilities { bytes: fake_vht_cap_bytes() }),
         probe_resp_wsc: None,
         wmm_param: None,
     }
@@ -109,8 +109,10 @@ pub fn create_assoc_conf(result_code: fidl_ieee80211::StatusCode) -> fidl_mlme::
             rates: vec![0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c],
             // TODO(fxbug.dev/43938): mock with fake WMM param
             wmm_param: None,
-            ht_cap: Some(Box::new(fidl_internal::HtCapabilities { bytes: fake_ht_cap_bytes() })),
-            vht_cap: Some(Box::new(fidl_internal::VhtCapabilities { bytes: fake_vht_cap_bytes() })),
+            ht_cap: Some(Box::new(fidl_ieee80211::HtCapabilities { bytes: fake_ht_cap_bytes() })),
+            vht_cap: Some(Box::new(fidl_ieee80211::VhtCapabilities {
+                bytes: fake_vht_cap_bytes(),
+            })),
         },
     }
 }

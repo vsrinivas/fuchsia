@@ -522,7 +522,7 @@ wlan_common::WlanMacRole ConvertMacRole(wlan_mac_role_t role) {
   }
 }
 
-void ConvertHtCapabilities(wlan_internal::HtCapabilities* fidl_ht_cap,
+void ConvertHtCapabilities(wlan_ieee80211::HtCapabilities* fidl_ht_cap,
                            const ht_capabilities_fields_t& ht_cap) {
   *fidl_ht_cap = {};
   static_assert(sizeof(fidl_ht_cap->bytes) == sizeof(ht_cap));
@@ -533,7 +533,7 @@ void ConvertHtCapabilities(wlan_internal::HtCapabilities* fidl_ht_cap,
   memcpy(fidl_ht_cap->bytes.data(), &ht_cap, sizeof(ht_cap));
 }
 
-void ConvertVhtCapabilities(wlan_internal::VhtCapabilities* fidl_vht_cap,
+void ConvertVhtCapabilities(wlan_ieee80211::VhtCapabilities* fidl_vht_cap,
                             const vht_capabilities_fields_t& vht_cap) {
   *fidl_vht_cap = {};
   static_assert(sizeof(fidl_vht_cap->bytes) == sizeof(vht_cap));
@@ -560,12 +560,12 @@ void ConvertBandCapability(wlan_mlme::BandCapability* fidl_band,
                                        band.operating_channel_list + band.operating_channel_count);
 
   if (band.ht_supported) {
-    fidl_band->ht_cap = std::make_unique<wlan_internal::HtCapabilities>();
+    fidl_band->ht_cap = std::make_unique<wlan_ieee80211::HtCapabilities>();
     ConvertHtCapabilities(fidl_band->ht_cap.get(), band.ht_caps);
   }
 
   if (band.vht_supported) {
-    fidl_band->vht_cap = std::make_unique<wlan_internal::VhtCapabilities>();
+    fidl_band->vht_cap = std::make_unique<wlan_ieee80211::VhtCapabilities>();
     ConvertVhtCapabilities(fidl_band->vht_cap.get(), band.vht_caps);
   }
 }

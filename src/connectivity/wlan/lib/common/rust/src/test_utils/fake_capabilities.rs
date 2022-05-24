@@ -8,7 +8,7 @@ use {
         ie,
         mac::CapabilityInfo,
     },
-    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_internal as fidl_internal,
+    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
     fidl_fuchsia_wlan_mlme as fidl_mlme,
     std::convert::TryInto,
     zerocopy::AsBytes,
@@ -17,7 +17,7 @@ use {
 pub fn fake_5ghz_band_capability_ht_cbw(chanwidth: ie::ChanWidthSet) -> fidl_mlme::BandCapability {
     let bc = fake_5ghz_band_capability();
     fidl_mlme::BandCapability {
-        ht_cap: Some(Box::new(fidl_internal::HtCapabilities {
+        ht_cap: Some(Box::new(fidl_ieee80211::HtCapabilities {
             bytes: fake_ht_capabilities_cbw(chanwidth).as_bytes().try_into().unwrap(),
         })),
         ..bc
@@ -27,10 +27,10 @@ pub fn fake_5ghz_band_capability_ht_cbw(chanwidth: ie::ChanWidthSet) -> fidl_mlm
 pub fn fake_5ghz_band_capability_vht(chanwidth: ie::ChanWidthSet) -> fidl_mlme::BandCapability {
     let bc = fake_5ghz_band_capability();
     fidl_mlme::BandCapability {
-        ht_cap: Some(Box::new(fidl_internal::HtCapabilities {
+        ht_cap: Some(Box::new(fidl_ieee80211::HtCapabilities {
             bytes: fake_ht_capabilities_cbw(chanwidth).as_bytes().try_into().unwrap(),
         })),
-        vht_cap: Some(Box::new(fidl_internal::VhtCapabilities {
+        vht_cap: Some(Box::new(fidl_ieee80211::VhtCapabilities {
             bytes: ie::fake_vht_capabilities().as_bytes().try_into().unwrap(),
         })),
         ..bc
@@ -72,13 +72,13 @@ pub fn fake_5ghz_band_capability() -> fidl_mlme::BandCapability {
 
 pub fn fake_2ghz_band_capability_vht() -> fidl_mlme::BandCapability {
     fidl_mlme::BandCapability {
-        ht_cap: Some(Box::new(fidl_internal::HtCapabilities {
+        ht_cap: Some(Box::new(fidl_ieee80211::HtCapabilities {
             bytes: fake_ht_capabilities_cbw(ie::ChanWidthSet::TWENTY_FORTY)
                 .as_bytes()
                 .try_into()
                 .unwrap(),
         })),
-        vht_cap: Some(Box::new(fidl_internal::VhtCapabilities {
+        vht_cap: Some(Box::new(fidl_ieee80211::VhtCapabilities {
             bytes: ie::fake_vht_capabilities().as_bytes().try_into().unwrap(),
         })),
         ..fake_2ghz_band_capability()

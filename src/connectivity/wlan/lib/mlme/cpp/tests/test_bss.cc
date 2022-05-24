@@ -208,13 +208,13 @@ wlan_mlme::NegotiatedCapabilities CreateFinalizeAssociationRequest(const wlan_as
   negotiated_capabilities.capability_info = ac.capability_info;
   negotiated_capabilities.rates.assign(ac.rates, ac.rates + ac.rates_cnt);
   if (ac.has_ht_cap) {
-    negotiated_capabilities.ht_cap = wlan_internal::HtCapabilities::New();
+    negotiated_capabilities.ht_cap = wlan_ieee80211::HtCapabilities::New();
     static_assert(sizeof(negotiated_capabilities.ht_cap->bytes) == sizeof(ac.ht_cap));
     memcpy(negotiated_capabilities.ht_cap->bytes.data(), &ac.ht_cap, sizeof(ac.ht_cap));
   }
 
   if (ac.has_vht_cap) {
-    negotiated_capabilities.vht_cap = wlan_internal::VhtCapabilities::New();
+    negotiated_capabilities.vht_cap = wlan_ieee80211::VhtCapabilities::New();
     static_assert(sizeof(negotiated_capabilities.vht_cap->bytes) == sizeof(ac.vht_cap));
     memcpy(negotiated_capabilities.vht_cap->bytes.data(), &ac.vht_cap, sizeof(ac.vht_cap));
   }
