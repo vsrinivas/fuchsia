@@ -498,5 +498,6 @@ group("tests") {
     ":sample-setui-config-test",
     ":setui-config-test",
     ":setui_service_tests",
+    "integration_tests",
   ]
 }

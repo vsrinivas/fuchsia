@@ -1,0 +1,19 @@
+{
+    "devices": [
+        {
+            "device_name": "camera",
+            "device_type": "CAMERA",
+            "source_states": [
+                {
+                    "source": "HARDWARE",
+                    "state": 1
+                },
+                {
+                    "source": "SOFTWARE",
+                    "state": 1
+                }
+            ],
+            "mutable_toggle_state": 12
+        }
+    ]
+}
