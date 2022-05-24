@@ -9,6 +9,7 @@
 
 #include "src/media/audio/audio_core/mixer/constants.h"
 #include "src/media/audio/audio_core/mixer/gain.h"
+#include "src/media/audio/lib/processing/gain.h"
 
 namespace media::audio::mixer {
 
@@ -16,43 +17,6 @@ namespace media::audio::mixer {
 // be used by mixer implementations and expanded/optimized at compile time in
 // order to produce efficient inner mixing loops for all of the different
 // variations of source/destination sample type/channel counts.
-
-//
-// ScalerType
-//
-// Enum used to differentiate between different scaling optimization types.
-enum class ScalerType {
-  MUTED,     // Massive attenuation. Just skip data.
-  NE_UNITY,  // Non-unity non-zero gain. Scaling is needed.
-  EQ_UNITY,  // Unity gain. Scaling is not needed.
-  RAMPING,   // Scaling is needed, using a non-constant scaler value
-};
-
-//
-// SampleScaler
-//
-// Template used to scale normalized sample vals by supplied amplitude scalers.
-template <ScalerType ScaleType, typename Enable = void>
-class SampleScaler;
-
-template <ScalerType ScaleType>
-class SampleScaler<ScaleType, typename std::enable_if_t<(ScaleType == ScalerType::MUTED)>> {
- public:
-  static inline float Scale(float, Gain::AScale) { return 0.0f; }
-};
-
-template <ScalerType ScaleType>
-class SampleScaler<ScaleType, typename std::enable_if_t<(ScaleType == ScalerType::NE_UNITY) ||
-                                                        (ScaleType == ScalerType::RAMPING)>> {
- public:
-  static inline float Scale(float val, Gain::AScale scale) { return scale * val; }
-};
-
-template <ScalerType ScaleType>
-class SampleScaler<ScaleType, typename std::enable_if_t<(ScaleType == ScalerType::EQ_UNITY)>> {
- public:
-  static inline float Scale(float val, Gain::AScale) { return val; }
-};
 
 //
 // Interpolation variants
@@ -69,22 +33,22 @@ inline float LinearInterpolate(float A, float B, float alpha) { return ((B - A) 
 //
 // Template to mix normalized destination samples with normalized source samples
 // based on scaling and accumulation policy.
-template <ScalerType ScaleType, bool DoAccumulate, typename Enable = void>
+template <media_audio::GainType GainType, bool DoAccumulate, typename Enable = void>
 class DestMixer;
 
-template <ScalerType ScaleType, bool DoAccumulate>
-class DestMixer<ScaleType, DoAccumulate, typename std::enable_if_t<DoAccumulate == false>> {
+template <media_audio::GainType GainType, bool DoAccumulate>
+class DestMixer<GainType, DoAccumulate, typename std::enable_if_t<DoAccumulate == false>> {
  public:
   static inline constexpr float Mix(float, float sample, Gain::AScale scale) {
-    return SampleScaler<ScaleType>::Scale(sample, scale);
+    return media_audio::ApplyGain<GainType>(sample, scale);
   }
 };
 
-template <ScalerType ScaleType, bool DoAccumulate>
-class DestMixer<ScaleType, DoAccumulate, typename std::enable_if_t<DoAccumulate == true>> {
+template <media_audio::GainType GainType, bool DoAccumulate>
+class DestMixer<GainType, DoAccumulate, typename std::enable_if_t<DoAccumulate == true>> {
  public:
   static inline constexpr float Mix(float dest, float sample, Gain::AScale scale) {
-    return SampleScaler<ScaleType>::Scale(sample, scale) + dest;
+    return media_audio::ApplyGain<GainType>(sample, scale) + dest;
   }
 };
 

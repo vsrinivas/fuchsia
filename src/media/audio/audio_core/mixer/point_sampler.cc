@@ -73,7 +73,7 @@ class PointSamplerImpl : public PointSampler {
     return frac_position >> Fixed::Format::FractionalBits;
   }
 
-  template <ScalerType ScaleType, bool DoAccumulate>
+  template <media_audio::GainType GainType, bool DoAccumulate>
   static inline void Mix(float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr,
                          const void* source_void_ptr, int64_t source_frames,
                          Fixed* source_offset_ptr, Bookkeeping* info);
@@ -104,25 +104,25 @@ class NxNPointSamplerImpl : public PointSampler {
     return frac_position >> Fixed::Format::FractionalBits;
   }
 
-  template <ScalerType ScaleType, bool DoAccumulate>
+  template <media_audio::GainType GainType, bool DoAccumulate>
   static inline void Mix(float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr,
                          const void* source_void_ptr, int64_t source_frames,
                          Fixed* source_offset_ptr, Bookkeeping* info, int32_t chan_count);
   int32_t chan_count_ = 0;
 };
 
-// If upper layers call with ScaleType MUTED, they must set DoAccumulate=TRUE. They guarantee new
+// If upper layers call with GainType MUTED, they must set DoAccumulate=TRUE. They guarantee new
 // buffers are cleared before usage; we optimize accordingly.
 template <int32_t DestChanCount, typename SourceSampleType, int32_t SourceChanCount>
-template <ScalerType ScaleType, bool DoAccumulate>
+template <media_audio::GainType GainType, bool DoAccumulate>
 inline void PointSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::Mix(
     float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr, const void* source_void_ptr,
     int64_t source_frames, Fixed* source_offset_ptr, Bookkeeping* info) {
   TRACE_DURATION("audio", "PointSamplerImpl::MixInternal");
-  static_assert(ScaleType != ScalerType::MUTED || DoAccumulate == true,
+  static_assert(GainType != media_audio::GainType::kSilent || DoAccumulate == true,
                 "Mixing muted streams without accumulation is explicitly unsupported");
 
-  using DM = DestMixer<ScaleType, DoAccumulate>;
+  using DM = DestMixer<GainType, DoAccumulate>;
   auto dest_offset = *dest_offset_ptr;
 
   using SR = SourceReader<SourceSampleType, SourceChanCount, DestChanCount>;
@@ -143,9 +143,9 @@ inline void PointSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::
   const auto frames_to_mix =
       std::min<int64_t>(Ceiling(frac_source_end - frac_source_offset), dest_frames - dest_offset);
 
-  if constexpr (ScaleType != ScalerType::MUTED) {
+  if constexpr (GainType != media_audio::GainType::kSilent) {
     Gain::AScale amplitude_scale = media_audio::kUnityGainScale;
-    if constexpr (ScaleType == ScalerType::NE_UNITY) {
+    if constexpr (GainType == media_audio::GainType::kNonUnity) {
       amplitude_scale = info->gain.GetGainScale();
     }
 
@@ -154,7 +154,7 @@ inline void PointSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::
     float* out = dest_ptr + (dest_offset * DestChanCount);
 
     for (auto frame_num = 0; frame_num < frames_to_mix; ++frame_num) {
-      if constexpr (ScaleType == ScalerType::RAMPING) {
+      if constexpr (GainType == media_audio::GainType::kRamping) {
         amplitude_scale = info->scale_arr[frame_num];
       }
 
@@ -176,11 +176,12 @@ inline void PointSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::
   *dest_offset_ptr = dest_offset + static_cast<uint32_t>(frames_to_mix);
 }
 
-// Regarding ScalerType::MUTED - in that specialization, the mixer simply skips over the appropriate
-// range in the destination buffer, leaving whatever data is already there. We do not take further
-// effort to clear the buffer if 'accumulate' is false. In fact, we IGNORE 'accumulate' if MUTED.
-// The caller is responsible for clearing the destination buffer before Mix is initially called.
-// DoAccumulate is still valuable in the non-mute case, as it saves a read+FADD per sample.
+// Regarding media_audio::GainType::kSilent - in that specialization, the mixer simply skips over
+// the appropriate range in the destination buffer, leaving whatever data is already there. We do
+// not take further effort to clear the buffer if 'accumulate' is false. In fact, we IGNORE
+// 'accumulate' if MUTED. The caller is responsible for clearing the destination buffer before Mix
+// is initially called. DoAccumulate is still valuable in the non-mute case, as it saves a read+FADD
+// per sample.
 //
 template <int32_t DestChanCount, typename SourceSampleType, int32_t SourceChanCount>
 void PointSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::Mix(
@@ -199,50 +200,54 @@ void PointSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::Mix(
                                   info);
 
   if (info->gain.IsUnity()) {
-    return accumulate ? Mix<ScalerType::EQ_UNITY, true>(dest_ptr, dest_frames, dest_offset_ptr,
-                                                        source_void_ptr, source_frames,
-                                                        source_offset_ptr, info)
-                      : Mix<ScalerType::EQ_UNITY, false>(dest_ptr, dest_frames, dest_offset_ptr,
-                                                         source_void_ptr, source_frames,
-                                                         source_offset_ptr, info);
+    return accumulate
+               ? Mix<media_audio::GainType::kUnity, true>(dest_ptr, dest_frames, dest_offset_ptr,
+                                                          source_void_ptr, source_frames,
+                                                          source_offset_ptr, info)
+               : Mix<media_audio::GainType::kUnity, false>(dest_ptr, dest_frames, dest_offset_ptr,
+                                                           source_void_ptr, source_frames,
+                                                           source_offset_ptr, info);
   }
 
   if (info->gain.IsSilent()) {
-    return Mix<ScalerType::MUTED, true>(dest_ptr, dest_frames, dest_offset_ptr, source_void_ptr,
-                                        source_frames, source_offset_ptr, info);
+    return Mix<media_audio::GainType::kSilent, true>(dest_ptr, dest_frames, dest_offset_ptr,
+                                                     source_void_ptr, source_frames,
+                                                     source_offset_ptr, info);
   }
 
   if (info->gain.IsRamping()) {
     dest_frames = std::min(dest_frames, *dest_offset_ptr + Bookkeeping::kScaleArrLen);
-    return accumulate ? Mix<ScalerType::RAMPING, true>(dest_ptr, dest_frames, dest_offset_ptr,
-                                                       source_void_ptr, source_frames,
-                                                       source_offset_ptr, info)
-                      : Mix<ScalerType::RAMPING, false>(dest_ptr, dest_frames, dest_offset_ptr,
-                                                        source_void_ptr, source_frames,
-                                                        source_offset_ptr, info);
+    return accumulate
+               ? Mix<media_audio::GainType::kRamping, true>(dest_ptr, dest_frames, dest_offset_ptr,
+                                                            source_void_ptr, source_frames,
+                                                            source_offset_ptr, info)
+               : Mix<media_audio::GainType::kRamping, false>(dest_ptr, dest_frames, dest_offset_ptr,
+                                                             source_void_ptr, source_frames,
+                                                             source_offset_ptr, info);
   }
 
-  return accumulate ? Mix<ScalerType::NE_UNITY, true>(dest_ptr, dest_frames, dest_offset_ptr,
-                                                      source_void_ptr, source_frames,
-                                                      source_offset_ptr, info)
-                    : Mix<ScalerType::NE_UNITY, false>(dest_ptr, dest_frames, dest_offset_ptr,
-                                                       source_void_ptr, source_frames,
-                                                       source_offset_ptr, info);
+  return accumulate
+             ? Mix<media_audio::GainType::kNonUnity, true>(dest_ptr, dest_frames, dest_offset_ptr,
+                                                           source_void_ptr, source_frames,
+                                                           source_offset_ptr, info)
+             : Mix<media_audio::GainType::kNonUnity, false>(dest_ptr, dest_frames, dest_offset_ptr,
+                                                            source_void_ptr, source_frames,
+                                                            source_offset_ptr, info);
 }
 
-// If upper layers call with ScaleType MUTED, they must set DoAccumulate=TRUE. They guarantee new
+// If upper layers call with GainType MUTED, they must set DoAccumulate=TRUE. They guarantee new
 // buffers are cleared before usage; we optimize accordingly.
 template <typename SourceSampleType>
-template <ScalerType ScaleType, bool DoAccumulate>
+template <media_audio::GainType GainType, bool DoAccumulate>
 inline void NxNPointSamplerImpl<SourceSampleType>::Mix(
     float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr, const void* source_void_ptr,
     int64_t source_frames, Fixed* source_offset_ptr, Bookkeeping* info, int32_t chan_count) {
   TRACE_DURATION("audio", "NxNPointSamplerImpl::MixInternal");
-  static_assert(ScaleType != ScalerType::MUTED || DoAccumulate == true,
+  static_assert(GainType != media_audio::GainType::kSilent || DoAccumulate == true,
                 "Mixing muted streams without accumulation is explicitly unsupported");
 
   using SR = SourceReader<SourceSampleType, 1, 1>;
-  using DM = DestMixer<ScaleType, DoAccumulate>;
+  using DM = DestMixer<GainType, DoAccumulate>;
   auto dest_offset = *dest_offset_ptr;
 
   auto frac_source_offset = source_offset_ptr->raw_value();
@@ -262,9 +267,9 @@ inline void NxNPointSamplerImpl<SourceSampleType>::Mix(
   const auto frames_to_mix =
       std::min<int64_t>(Ceiling(frac_source_end - frac_source_offset), dest_frames - dest_offset);
 
-  if constexpr (ScaleType != ScalerType::MUTED) {
+  if constexpr (GainType != media_audio::GainType::kSilent) {
     Gain::AScale amplitude_scale = media_audio::kUnityGainScale;
-    if constexpr (ScaleType == ScalerType::NE_UNITY) {
+    if constexpr (GainType == media_audio::GainType::kNonUnity) {
       amplitude_scale = info->gain.GetGainScale();
     }
 
@@ -272,7 +277,7 @@ inline void NxNPointSamplerImpl<SourceSampleType>::Mix(
     float* out = dest_ptr + (dest_offset * chan_count);
 
     for (auto frame_num = 0; frame_num < frames_to_mix; ++frame_num) {
-      if constexpr (ScaleType == ScalerType::RAMPING) {
+      if constexpr (GainType == media_audio::GainType::kRamping) {
         amplitude_scale = info->scale_arr[frame_num];
       }
 
@@ -311,35 +316,39 @@ void NxNPointSamplerImpl<SourceSampleType>::Mix(float* dest_ptr, int64_t dest_fr
                                   info);
 
   if (info->gain.IsUnity()) {
-    return accumulate ? Mix<ScalerType::EQ_UNITY, true>(dest_ptr, dest_frames, dest_offset_ptr,
-                                                        source_void_ptr, source_frames,
-                                                        source_offset_ptr, info, chan_count_)
-                      : Mix<ScalerType::EQ_UNITY, false>(dest_ptr, dest_frames, dest_offset_ptr,
-                                                         source_void_ptr, source_frames,
-                                                         source_offset_ptr, info, chan_count_);
+    return accumulate
+               ? Mix<media_audio::GainType::kUnity, true>(dest_ptr, dest_frames, dest_offset_ptr,
+                                                          source_void_ptr, source_frames,
+                                                          source_offset_ptr, info, chan_count_)
+               : Mix<media_audio::GainType::kUnity, false>(dest_ptr, dest_frames, dest_offset_ptr,
+                                                           source_void_ptr, source_frames,
+                                                           source_offset_ptr, info, chan_count_);
   }
 
   if (info->gain.IsSilent()) {
-    return Mix<ScalerType::MUTED, true>(dest_ptr, dest_frames, dest_offset_ptr, source_void_ptr,
-                                        source_frames, source_offset_ptr, info, chan_count_);
+    return Mix<media_audio::GainType::kSilent, true>(dest_ptr, dest_frames, dest_offset_ptr,
+                                                     source_void_ptr, source_frames,
+                                                     source_offset_ptr, info, chan_count_);
   }
 
   if (info->gain.IsRamping()) {
     dest_frames = std::min(dest_frames, *dest_offset_ptr + Bookkeeping::kScaleArrLen);
-    return accumulate ? Mix<ScalerType::RAMPING, true>(dest_ptr, dest_frames, dest_offset_ptr,
-                                                       source_void_ptr, source_frames,
-                                                       source_offset_ptr, info, chan_count_)
-                      : Mix<ScalerType::RAMPING, false>(dest_ptr, dest_frames, dest_offset_ptr,
-                                                        source_void_ptr, source_frames,
-                                                        source_offset_ptr, info, chan_count_);
+    return accumulate
+               ? Mix<media_audio::GainType::kRamping, true>(dest_ptr, dest_frames, dest_offset_ptr,
+                                                            source_void_ptr, source_frames,
+                                                            source_offset_ptr, info, chan_count_)
+               : Mix<media_audio::GainType::kRamping, false>(dest_ptr, dest_frames, dest_offset_ptr,
+                                                             source_void_ptr, source_frames,
+                                                             source_offset_ptr, info, chan_count_);
   }
 
-  return accumulate ? Mix<ScalerType::NE_UNITY, true>(dest_ptr, dest_frames, dest_offset_ptr,
-                                                      source_void_ptr, source_frames,
-                                                      source_offset_ptr, info, chan_count_)
-                    : Mix<ScalerType::NE_UNITY, false>(dest_ptr, dest_frames, dest_offset_ptr,
-                                                       source_void_ptr, source_frames,
-                                                       source_offset_ptr, info, chan_count_);
+  return accumulate
+             ? Mix<media_audio::GainType::kNonUnity, true>(dest_ptr, dest_frames, dest_offset_ptr,
+                                                           source_void_ptr, source_frames,
+                                                           source_offset_ptr, info, chan_count_)
+             : Mix<media_audio::GainType::kNonUnity, false>(dest_ptr, dest_frames, dest_offset_ptr,
+                                                            source_void_ptr, source_frames,
+                                                            source_offset_ptr, info, chan_count_);
 }
 
 // Templates used to expand the combinations of possible PointSampler configurations.

@@ -4,10 +4,56 @@
 
 #include "src/media/audio/lib/processing/gain.h"
 
+#include <vector>
+
 #include <gtest/gtest.h>
 
 namespace media_audio {
 namespace {
+
+TEST(GainTest, ApplyGainSilent) {
+  const std::vector<float> values = {-0.5f, 0.2f, 1.0f, 2.0f};
+  const std::vector<float> scales = {0.0f, 0.5f, 1.0f, 1.5f};
+
+  for (const float value : values) {
+    for (const float scale : scales) {
+      EXPECT_FLOAT_EQ(ApplyGain<GainType::kSilent>(value, scale), 0.0f);
+    }
+  }
+}
+
+TEST(GainTest, ApplyGainNonUnity) {
+  const std::vector<float> values = {-1.0f, -0.25f, 0.5f, 1.5f};
+  const std::vector<float> scales = {0.0f, 0.5f, 1.0f, 1.5f};
+
+  for (const float value : values) {
+    for (const float scale : scales) {
+      EXPECT_FLOAT_EQ(ApplyGain<GainType::kNonUnity>(value, scale), value * scale);
+    }
+  }
+}
+
+TEST(GainTest, ApplyGainUnity) {
+  const std::vector<float> values = {-0.1f, 0.2f, -0.3f, 1.0f};
+  const std::vector<float> scales = {0.0f, 0.5f, 1.0f, 0.5f};
+
+  for (const float value : values) {
+    for (const float scale : scales) {
+      EXPECT_FLOAT_EQ(ApplyGain<GainType::kUnity>(value, scale), value);
+    }
+  }
+}
+
+TEST(GainTest, ApplyGainRamping) {
+  const std::vector<float> values = {-0.5f, 0.2f, 1.0f, 2.0f};
+  const std::vector<float> scales = {0.0f, 0.5f, 1.0f, 1.5f};
+
+  for (const float value : values) {
+    for (const float scale : scales) {
+      EXPECT_FLOAT_EQ(ApplyGain<GainType::kRamping>(value, scale), value * scale);
+    }
+  }
+}
 
 TEST(GainTest, DbToScale) {
   const float gain_db = -6.0f;

@@ -80,7 +80,7 @@ class SincSamplerImpl : public SincSampler {
 
   static constexpr int64_t kDataCacheFracLength = kDataCacheLength << Fixed::Format::FractionalBits;
 
-  template <ScalerType ScaleType, bool DoAccumulate>
+  template <media_audio::GainType GainType, bool DoAccumulate>
   inline void Mix(float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr,
                   const void* source_void_ptr, int64_t source_frames, Fixed* source_offset_ptr);
 
@@ -128,20 +128,20 @@ SincSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::PopulateFrame
   }
 }
 
-// If upper layers call with ScaleType MUTED, they must set DoAccumulate=TRUE. They guarantee new
+// If upper layers call with GainType MUTED, they must set DoAccumulate=TRUE. They guarantee new
 // buffers are cleared before usage; we optimize accordingly.
 template <int32_t DestChanCount, typename SourceSampleType, int32_t SourceChanCount>
-template <ScalerType ScaleType, bool DoAccumulate>
+template <media_audio::GainType GainType, bool DoAccumulate>
 inline void SincSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::Mix(
     float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr, const void* source_void_ptr,
     int64_t source_frames, Fixed* source_offset_ptr) {
   TRACE_DURATION("audio", "SincSamplerImpl::MixInternal", "source_rate", source_rate_, "dest_rate",
                  dest_rate_, "source_chans", SourceChanCount, "dest_chans", DestChanCount);
 
-  static_assert(ScaleType != ScalerType::MUTED || DoAccumulate == true,
+  static_assert(GainType != media_audio::GainType::kSilent || DoAccumulate == true,
                 "Mixing muted streams without accumulation is explicitly unsupported");
 
-  using DM = DestMixer<ScaleType, DoAccumulate>;
+  using DM = DestMixer<GainType, DoAccumulate>;
 
   auto info = &bookkeeping();
   auto frac_source_offset = source_offset_ptr->raw_value();
@@ -171,7 +171,7 @@ inline void SincSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::M
 
       // Calculate and store the last few source frames to start of channel_strip, for next time.
       // If muted, this is unnecessary because we've already shifted in zeroes (silence).
-      if constexpr (ScaleType != ScalerType::MUTED) {
+      if constexpr (GainType != media_audio::GainType::kSilent) {
         PopulateFramesToChannelStrip(source_void_ptr, next_source_idx_to_copy, frames_needed,
                                      &working_data_, next_cache_idx_to_fill);
       }
@@ -179,10 +179,10 @@ inline void SincSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::M
     return;
   }
 
-  if constexpr (ScaleType != ScalerType::MUTED) {
+  if constexpr (GainType != media_audio::GainType::kSilent) {
     Gain::AScale amplitude_scale;
     int64_t dest_ramp_start;  // only used when ramping
-    if constexpr (ScaleType != ScalerType::RAMPING) {
+    if constexpr (GainType != media_audio::GainType::kRamping) {
       amplitude_scale = info->gain.GetGainScale();
     } else {
       dest_ramp_start = position_.dest_offset();
@@ -212,7 +212,7 @@ inline void SincSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::M
       while (position_.FrameCanBeMixed() &&
              frac_cache_offset + pos_filter_width().raw_value() < kDataCacheFracLength) {
         auto dest_frame = position_.CurrentDestFrame();
-        if constexpr (ScaleType == ScalerType::RAMPING) {
+        if constexpr (GainType == media_audio::GainType::kRamping) {
           amplitude_scale = info->scale_arr[position_.dest_offset() - dest_ramp_start];
         }
 
@@ -266,17 +266,17 @@ void SincSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::Mix(
                                   source_offset_ptr->raw_value(), frac_filter_length_, info);
 
   if (info->gain.IsUnity()) {
-    return accumulate
-               ? Mix<ScalerType::EQ_UNITY, true>(dest_ptr, dest_frames, dest_offset_ptr,
-                                                 source_void_ptr, source_frames, source_offset_ptr)
-               : Mix<ScalerType::EQ_UNITY, false>(dest_ptr, dest_frames, dest_offset_ptr,
-                                                  source_void_ptr, source_frames,
-                                                  source_offset_ptr);
+    return accumulate ? Mix<media_audio::GainType::kUnity, true>(dest_ptr, dest_frames,
+                                                                 dest_offset_ptr, source_void_ptr,
+                                                                 source_frames, source_offset_ptr)
+                      : Mix<media_audio::GainType::kUnity, false>(dest_ptr, dest_frames,
+                                                                  dest_offset_ptr, source_void_ptr,
+                                                                  source_frames, source_offset_ptr);
   }
 
   if (info->gain.IsSilent()) {
-    return Mix<ScalerType::MUTED, true>(dest_ptr, dest_frames, dest_offset_ptr, source_void_ptr,
-                                        source_frames, source_offset_ptr);
+    return Mix<media_audio::GainType::kSilent, true>(
+        dest_ptr, dest_frames, dest_offset_ptr, source_void_ptr, source_frames, source_offset_ptr);
   }
 
   if (info->gain.IsRamping()) {
@@ -285,18 +285,20 @@ void SincSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::Mix(
       dest_frames = max_frames;
     }
 
-    return accumulate
-               ? Mix<ScalerType::RAMPING, true>(dest_ptr, dest_frames, dest_offset_ptr,
-                                                source_void_ptr, source_frames, source_offset_ptr)
-               : Mix<ScalerType::RAMPING, false>(dest_ptr, dest_frames, dest_offset_ptr,
-                                                 source_void_ptr, source_frames, source_offset_ptr);
+    return accumulate ? Mix<media_audio::GainType::kRamping, true>(dest_ptr, dest_frames,
+                                                                   dest_offset_ptr, source_void_ptr,
+                                                                   source_frames, source_offset_ptr)
+                      : Mix<media_audio::GainType::kRamping, false>(
+                            dest_ptr, dest_frames, dest_offset_ptr, source_void_ptr, source_frames,
+                            source_offset_ptr);
   }
 
-  return accumulate
-             ? Mix<ScalerType::NE_UNITY, true>(dest_ptr, dest_frames, dest_offset_ptr,
-                                               source_void_ptr, source_frames, source_offset_ptr)
-             : Mix<ScalerType::NE_UNITY, false>(dest_ptr, dest_frames, dest_offset_ptr,
-                                                source_void_ptr, source_frames, source_offset_ptr);
+  return accumulate ? Mix<media_audio::GainType::kNonUnity, true>(dest_ptr, dest_frames,
+                                                                  dest_offset_ptr, source_void_ptr,
+                                                                  source_frames, source_offset_ptr)
+                    : Mix<media_audio::GainType::kNonUnity, false>(
+                          dest_ptr, dest_frames, dest_offset_ptr, source_void_ptr, source_frames,
+                          source_offset_ptr);
 }
 
 // Templates used to expand  the different combinations of possible SincSampler configurations.

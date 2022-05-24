@@ -18,6 +18,26 @@ inline constexpr float kMinGainScale = 10e-9f;  // equivalent to `DbToScale(kMin
 inline constexpr float kUnityGainDb = 0.0f;
 inline constexpr float kUnityGainScale = 1.0f;  // equivalent to `DbToScale(kUnityGainDb)`
 
+// Gain type to differentiate between different optimization methods while processing.
+enum class GainType {
+  kSilent,    // Gain is effectively silent (either due to muting or massive attenuation).
+  kNonUnity,  // Constant non-unity and non-silent gain.
+  kUnity,     // Constant unity gain.
+  kRamping,   // Non-constant ramping gain.
+};
+
+// Applies gain `scale` to `value` with `Type` specific optimizations.
+template <GainType Type>
+inline float ApplyGain(float value, float scale) {
+  if constexpr (Type == GainType::kSilent) {
+    return 0.0f;
+  } else if constexpr (Type == GainType::kUnity) {
+    return value;
+  } else {
+    return scale * value;
+  }
+}
+
 // Converts gain `db` to scale.
 inline float DbToScale(float db) {
   return (db > kMinGainDb) ? static_cast<float>(std::pow(10.0, static_cast<double>(db) * 0.05))
