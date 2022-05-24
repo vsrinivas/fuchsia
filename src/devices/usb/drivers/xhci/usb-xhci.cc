@@ -869,7 +869,7 @@ void UsbXhci::UsbHciNormalRequestQueue(Request request) {
     return;
   }
   auto* control = reinterpret_cast<uint32_t*>(state.GetInputContext()->virt());
-  auto endpoint_context = reinterpret_cast<EndpointContext*>(
+  auto* endpoint_context = reinterpret_cast<EndpointContext*>(
       reinterpret_cast<unsigned char*>(control) + (slot_size_bytes_ * (2 + (index + 1))));
   if (!state.GetTransferRing((index)).active()) {
     return;
@@ -891,6 +891,14 @@ void UsbXhci::UsbHciNormalRequestQueue(Request request) {
   pending_transfer.slot = state.GetSlot();
 
   if (pending_transfer.is_isochronous_transfer) {
+    // Isoc endpoints of the default interface (i.e. b_alternate_setting=0) are required to have a
+    // w_max_packet_size=0 to prevent enumerated devices from reserving bandwidth by default. We'll
+    // consider any request for a zero-length pipe as invalid (see USB 2.0 spec. 5.6.2).
+    if (pending_transfer.max_packet_size == 0) {
+      request.Complete(ZX_ERR_IO_INVALID, 0);
+      return;
+    }
+
     // Release the lock while we're sleeping to avoid blocking
     // other operations.
     state.transaction_lock().Release();
