@@ -43,17 +43,13 @@ test("demo_number_test") {
   sources = [ "test.cc" ]
   deps = [
     ":fuchsia.hardware.demo_llcpp",
-    "//examples/drivers/driver_test_realm/sample-driver:fuchsia.hardware.sample_llcpp",
     "//sdk/fidl/fuchsia.driver.test",
     "//sdk/fidl/fuchsia.io",
     "//sdk/lib/device-watcher/cpp",
     "//sdk/lib/driver_test_realm/realm_builder/cpp",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/lib/testing/loop_fixture",
-    "//zircon/system/ulib/async-loop",
+    "//sdk/lib/sys/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/service:service-llcpp",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

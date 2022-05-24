@@ -3,26 +3,26 @@
 // found in the LICENSE file.
 
 #include <fidl/fuchsia.hardware.demo/cpp/wire.h>
-#include <fidl/fuchsia.hardware.sample/cpp/wire.h>
 #include <fuchsia/driver/test/cpp/fidl.h>
+#include <fuchsia/io/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/driver_test_realm/realm_builder/cpp/lib.h>
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
-#include <lib/fidl/cpp/synchronous_interface_ptr.h>
-#include <lib/gtest/test_loop_fixture.h>
+#include <lib/fdio/directory.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/sys/component/cpp/testing/realm_builder_types.h>
+#include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/global.h>
 
 #include <sdk/lib/device-watcher/cpp/device-watcher.h>
+#include <zxtest/zxtest.h>
 
-class DriverTestRealmTest : public gtest::TestLoopFixture {};
+TEST(DriverTestRealmTest, DriversExist) {
+  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
 
-TEST_F(DriverTestRealmTest, DriversExist) {
   // Create and build the realm.
   auto realm_builder = component_testing::RealmBuilder::Create();
   driver_test_realm::Setup(realm_builder);
-  auto realm = realm_builder.Build(dispatcher());
+  auto realm = realm_builder.Build(loop.dispatcher());
 
   // Start DriverTestRealm.
   fidl::SynchronousInterfacePtr<fuchsia::driver::test::Realm> driver_test_realm;
