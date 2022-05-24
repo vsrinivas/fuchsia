@@ -38,6 +38,8 @@ var diagnosticCmds = []Command{
 	// Invoke the threads command twice to identify hanging processes.
 	{[]string{"threads", "--all-processes"}, 5 * time.Minute},
 	{[]string{"threads", "--all-processes"}, 5 * time.Minute},
+	// Print netstack goroutines to see if it's deadlocked.
+	{[]string{"cat", "hub-v2/children/core/children/network/children/netstack/exec/out/debug/goroutines"}, 1 * time.Minute},
 }
 
 type SerialSocket struct {
