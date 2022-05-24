@@ -23,6 +23,7 @@ mod writer;
 
 use {
     crate::{
+        checksum::Checksum,
         debug_assert_not_too_long,
         errors::FxfsError,
         filesystem::{ApplyContext, ApplyMode, Filesystem, SyncOptions},
@@ -53,7 +54,6 @@ use {
     },
     anyhow::{anyhow, bail, Context, Error},
     async_utils::event::Event,
-    byteorder::{ByteOrder, LittleEndian},
     futures::{self, future::poll_fn, FutureExt},
     once_cell::sync::OnceCell,
     rand::Rng,
@@ -96,8 +96,6 @@ pub const RESERVED_SPACE: u64 = 1_048_576;
 // seed for the next journal block.
 const RESET_XOR: u64 = 0xffffffffffffffff;
 
-type Checksum = u64;
-
 // To keep track of offsets within a journal file, we need both the file offset and the check-sum of
 // the preceding block, since the check-sum of the preceding block is an input to the check-sum of
 // every block.
@@ -113,18 +111,6 @@ pub struct JournalCheckpoint {
     // This can change across reset events so we store it along with the offset and checksum to
     // know which version to deserialize.
     pub version: Version,
-}
-
-// All journal blocks are covered by a fletcher64 checksum as the last 8 bytes in a block.
-pub fn fletcher64(buf: &[u8], previous: u64) -> u64 {
-    assert!(buf.len() % 4 == 0);
-    let mut lo = previous as u32;
-    let mut hi = (previous >> 32) as u32;
-    for chunk in buf.chunks(4) {
-        lo = lo.wrapping_add(LittleEndian::read_u32(chunk));
-        hi = hi.wrapping_add(lo);
-    }
-    (hi as u64) << 32 | lo as u64
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Versioned)]

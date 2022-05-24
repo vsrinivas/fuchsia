@@ -4,9 +4,10 @@
 
 use {
     crate::{
+        checksum::{fletcher64, Checksum},
         metrics::{traits::Metric as _, UintMetric},
         object_handle::ObjectHandle,
-        object_store::journal::{fletcher64, Checksum, JournalCheckpoint},
+        object_store::journal::JournalCheckpoint,
         serialized_types::{Versioned, LATEST_VERSION},
     },
     byteorder::{LittleEndian, WriteBytesExt},
@@ -155,8 +156,9 @@ mod tests {
     use {
         super::JournalWriter,
         crate::{
+            checksum::{fletcher64, Checksum},
             object_handle::{ObjectHandle, ReadObjectHandle, WriteObjectHandle},
-            object_store::journal::{fletcher64, Checksum, JournalCheckpoint},
+            object_store::journal::JournalCheckpoint,
             serialized_types::*,
             testing::fake_object::{FakeObject, FakeObjectHandle},
         },

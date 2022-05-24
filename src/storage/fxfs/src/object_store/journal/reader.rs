@@ -4,8 +4,9 @@
 
 use {
     crate::{
+        checksum::{fletcher64, Checksum},
         object_handle::{ObjectHandle, ReadObjectHandle},
-        object_store::journal::{fletcher64, Checksum, JournalCheckpoint, RESET_XOR},
+        object_store::journal::{JournalCheckpoint, RESET_XOR},
         serialized_types::{Version, Versioned, VersionedLatest},
     },
     anyhow::{bail, Error},

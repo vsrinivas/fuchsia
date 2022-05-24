@@ -4,6 +4,7 @@
 
 use {
     crate::{
+        checksum::fletcher64,
         crypt::{UnwrappedKeys, XtsCipherSet},
         errors::FxfsError,
         lsm_tree::types::{ItemRef, LayerIterator},
@@ -13,7 +14,6 @@ use {
         },
         object_store::{
             extent_record::{Checksums, ExtentKey, ExtentValue},
-            journal::fletcher64,
             object_manager::ObjectManager,
             object_record::{
                 AttributeKey, ObjectAttributes, ObjectItem, ObjectKey, ObjectKeyData, ObjectKind,

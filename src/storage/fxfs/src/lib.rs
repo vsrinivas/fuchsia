@@ -10,6 +10,7 @@
 //! Where possible, Fxfs code tries to be target agnostic.
 //! Fuchsia specific bindings are primarily found under [server].
 
+pub mod checksum;
 pub mod crypt;
 mod data_buffer;
 pub mod errors;

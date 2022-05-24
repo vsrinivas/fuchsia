@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{object_store::journal::fletcher64, range::RangeExt},
+    crate::{checksum::fletcher64, range::RangeExt},
     anyhow::Error,
     std::{
         collections::{btree_map::Entry, BTreeMap},
@@ -147,7 +147,7 @@ impl ChecksumList {
 mod tests {
     use {
         super::ChecksumList,
-        crate::object_store::journal::fletcher64,
+        crate::checksum::fletcher64,
         fuchsia_async as fasync,
         storage_device::{fake_device::FakeDevice, Device},
     };
