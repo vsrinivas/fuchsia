@@ -205,8 +205,8 @@
     "reportAnIssue": [
         {
             "char": "i",
-            "chord": "Shift + Ctrl + i",
-            "modifier": "shift + control",
+            "chord": "Ctrl + Alt + i",
+            "modifier": "control + alt",
             "exclusive": false,
             "description": "Report an Issue",
             "localizedDescription": "reportAnIssueKeyboardShortcut"

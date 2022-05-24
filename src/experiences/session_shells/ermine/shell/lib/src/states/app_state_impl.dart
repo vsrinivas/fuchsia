@@ -437,6 +437,20 @@ class AppStateImpl with Disposable implements AppState {
   @override
   void launchFeedback() => launch(Strings.feedback, kFeedbackUrl);
 
+  /// A flag to remember the previous overlays visibility status before showing
+  /// "Report an Issue" screen to set the overlays status back as it were.
+  ///
+  /// Usecase 1: The user opens "Report an Issue" using the keyboard shortcut
+  /// while using a full-screen chromium app -> "Report an Issue"(overlay) comes
+  /// up on the top -> The user closes user feedback -> The full-screen chromium
+  /// comes back to the top.
+  ///
+  /// Usecase 2: The user opens overlays(sidebar, app bar) while using a full-
+  /// screen chromium app -> The user clicks "Report an Issue" on Quick Settings
+  /// -> The user closes "Report an Issue" -> The app bar and side bar still
+  /// remain on top of the chromium view.
+  bool _wasOverlayVisible = true;
+
   @override
   void showUserFeedback() async {
     if (!settingsState.dataSharingConsentEnabled) {
@@ -451,7 +465,9 @@ class AppStateImpl with Disposable implements AppState {
 
     runInAction(() {
       // TODO(fxb/97464): Take a screenshot here when the bug is fixed.
+      _wasOverlayVisible = overlaysVisible;
       userFeedbackVisibility.value = true;
+      showOverlay();
 
       if (preferencesService.showUserFeedbackStartUpDialog.value) {
         _feedbackPage.value = FeedbackPage.scrim;
@@ -485,6 +501,9 @@ class AppStateImpl with Disposable implements AppState {
   void closeUserFeedback() {
     runInAction(() {
       userFeedbackVisibility.value = false;
+      if (!_wasOverlayVisible) {
+        hideOverlay();
+      }
       _feedbackPage.value = FeedbackPage.preparing;
       _feedbackUuid.value = '';
     });
