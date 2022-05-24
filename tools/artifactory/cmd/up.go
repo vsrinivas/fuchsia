@@ -355,13 +355,9 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 		return err
 	}
 	files = append(files, debugBinaries...)
-	buildIDManifest, err := createBuildIDManifest(buildIDs)
-	if err != nil {
-		return err
-	}
-	defer os.Remove(buildIDManifest)
+
 	files = append(files, artifactory.Upload{
-		Source:      buildIDManifest,
+		Contents:    []byte(strings.Join(buildIDs, "\n")),
 		Destination: path.Join(buildsNamespaceDir, buildIDsTxt),
 	})
 	buildIDsToLabelsJSON, err := json.MarshalIndent(buildIDsToLabels, "", "  ")
@@ -419,16 +415,6 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 	// TODO(fxbug.dev/92697): Remove this call and all associated code in favor
 	// of emitting the upload manifest.
 	return uploadFiles(ctx, files, sink, cmd.j, buildsNamespaceDir)
-}
-
-func createBuildIDManifest(buildIDs []string) (string, error) {
-	manifest, err := ioutil.TempFile("", buildIDsTxt)
-	if err != nil {
-		return "", err
-	}
-	defer manifest.Close()
-	_, err = io.WriteString(manifest, strings.Join(buildIDs, "\n"))
-	return manifest.Name(), err
 }
 
 // DataSink is an abstract data sink, providing a mockable interface to
