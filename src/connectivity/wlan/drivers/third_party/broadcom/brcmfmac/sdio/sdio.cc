@@ -1293,7 +1293,7 @@ static zx_status_t brcmf_sdio_prepare_rxglom_frames(struct brcmf_sdio* bus) {
       brcmf_sdio_acquire_rx_space(bus, num_entries);
   if (glom_frames.size() != num_entries) {
     BRCMF_ERR("Failed to acquire RX space for %u glom entries", num_entries);
-    ++bus->sdcnt.rx_nobufs;
+    ++bus->sdcnt.rx_outofbufs;
     return ZX_ERR_NO_RESOURCES;
   }
 
@@ -1613,7 +1613,7 @@ static uint32_t brcmf_sdio_read_frames(struct brcmf_sdio* bus, uint32_t max_fram
       if (!frame) {
         BRCMF_ERR("Failed to acquire frame for RX");
         ++bus->sdcnt.rx_hdrfail;
-        ++bus->sdcnt.rx_nobufs;
+        ++bus->sdcnt.rx_outofbufs;
         brcmf_sdio_rxfail(bus, false, false);
         continue;
       }
@@ -1652,7 +1652,7 @@ static uint32_t brcmf_sdio_read_frames(struct brcmf_sdio* bus, uint32_t max_fram
       if (!frame) {
         BRCMF_ERR("Failed to acquire rx frame");
         brcmf_sdio_rxfail(bus, false, false);
-        ++bus->sdcnt.rx_nobufs;
+        ++bus->sdcnt.rx_outofbufs;
         break;
       }
     }
@@ -3241,10 +3241,12 @@ void brcmf_sdio_log_stats(struct brcmf_bus* bus_if) {
 
   zxlogf(INFO,
          "SDIO bus stats: FC: %x FC_ChangeCnt: %u TxSeq: %u TxMax: %u TxCtlCnt: %lu TxCtlErr: %lu,"
-         " RxCtlCnt: %lu, RxCtlErr: %lu, Intrs: %u, HdrRead: %u, PktReads: %u, PktWrites: %u",
+         " RxCtlCnt: %lu, RxCtlErr: %lu, RxOutOfBufs: %u, Intrs: %u, HdrRead: %u, PktReads: %u, "
+         "PktWrites: %u",
          bus->flowcontrol, bus->sdcnt.fc_rcvd, bus->tx_seq, bus->tx_max, bus->sdcnt.tx_ctlpkts,
-         bus->sdcnt.tx_ctlerrs, bus->sdcnt.rx_ctlpkts, bus->sdcnt.rx_ctlerrs, bus->sdcnt.intrcount,
-         bus->sdcnt.f2rxhdrs, bus->sdcnt.f2rxdata, bus->sdcnt.f2txdata);
+         bus->sdcnt.tx_ctlerrs, bus->sdcnt.rx_ctlpkts, bus->sdcnt.rx_ctlerrs,
+         bus->sdcnt.rx_outofbufs, bus->sdcnt.intrcount, bus->sdcnt.f2rxhdrs, bus->sdcnt.f2rxdata,
+         bus->sdcnt.f2txdata);
   std::lock_guard lock(bus->tx_queue->txq_lock);
   zxlogf(INFO,
          "SDIO txq stats: EnqueueCnt: %lu QFullCnt: %u QLen: %lu PerPrecLen [0]: %lu [1]: %lu [2]: "
