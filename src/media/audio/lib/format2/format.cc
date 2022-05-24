@@ -10,10 +10,11 @@
 
 #include <sdk/lib/fidl/cpp/enum.h>
 
+#include "src/media/audio/lib/format2/fixed.h"
+
 namespace media_audio {
 
 using AudioSampleFormat = fuchsia_mediastreams::wire::AudioSampleFormat;
-using Fixed = media::audio::Fixed;
 using TimelineRate = media::TimelineRate;
 
 fpromise::result<Format, std::string> Format::Create(fuchsia_mediastreams::wire::AudioFormat fidl) {

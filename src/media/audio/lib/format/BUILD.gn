@@ -34,7 +34,10 @@ source_set("format") {
 
 source_set("constants") {
   sources = [ "constants.h" ]
-  public_deps = [ "//zircon/system/ulib/ffl" ]
+  public_deps = [
+    "//src/media/audio/lib/format2:fixed",
+    "//zircon/system/ulib/ffl",
+  ]
 }
 
 executable("unittest-bin") {

@@ -6,8 +6,9 @@
 
 #include <gtest/gtest.h>
 
+#include "src/media/audio/lib/format2/fixed.h"
+
 using AudioSampleFormat = fuchsia_mediastreams::wire::AudioSampleFormat;
-using Fixed = media::audio::Fixed;
 
 namespace media_audio {
 

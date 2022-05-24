@@ -34,7 +34,6 @@ source_set("common") {
     "//sdk/lib/syslog/cpp",
     "//src/lib/fidl/cpp",
     "//src/media/audio/lib/clock",
-    "//src/media/audio/lib/format:constants",
     "//src/media/audio/lib/format2",
     "//src/media/audio/lib/timeline",
     "//zircon/system/ulib/zircon-internal",

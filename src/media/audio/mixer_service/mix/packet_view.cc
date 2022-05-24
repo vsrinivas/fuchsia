@@ -6,6 +6,8 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include <ffl/string.h>
+
 namespace media_audio_mixer_service {
 
 PacketView::PacketView(Args args)

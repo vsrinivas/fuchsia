@@ -4,6 +4,8 @@
 
 #include "src/media/audio/mixer_service/mix/reusable_buffer.h"
 
+#include <ffl/string.h>
+
 #include "src/media/audio/mixer_service/common/basic_types.h"
 
 namespace media_audio_mixer_service {

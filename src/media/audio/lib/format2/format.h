@@ -12,7 +12,7 @@
 
 #include <string>
 
-#include "src/media/audio/lib/format/constants.h"
+#include "src/media/audio/lib/format2/fixed.h"
 #include "src/media/audio/lib/timeline/timeline_rate.h"
 
 namespace media_audio {
@@ -54,9 +54,9 @@ class Format {
 
   // Computes the number of fractional frames for the given duration.
   // Rounds up by default.
-  ::media::audio::Fixed frac_frames_per(zx::duration duration,
-                                        media::TimelineRate::RoundingMode rounding_mode =
-                                            ::media::TimelineRate::RoundingMode::Ceiling) const;
+  Fixed frac_frames_per(zx::duration duration,
+                        media::TimelineRate::RoundingMode rounding_mode =
+                            ::media::TimelineRate::RoundingMode::Ceiling) const;
 
   // Computes the number of bytes for the given duration.
   // Rounds up by default.

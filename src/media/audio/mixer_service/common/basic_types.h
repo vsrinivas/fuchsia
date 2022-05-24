@@ -10,7 +10,7 @@
 #include <limits>
 
 #include "src/media/audio/lib/clock/audio_clock.h"
-#include "src/media/audio/lib/format/constants.h"
+#include "src/media/audio/lib/format2/fixed.h"
 #include "src/media/audio/lib/format2/format.h"
 #include "src/media/audio/lib/timeline/timeline_function.h"
 #include "src/media/audio/lib/timeline/timeline_rate.h"
@@ -31,8 +31,8 @@ static_assert(kAnyThreadId != kInvalidId);
 
 // Alias common types into this namespace.
 using AudioClock = ::media::audio::AudioClock;
+using Fixed = ::media_audio::Fixed;
 using Format = ::media_audio::Format;
-using Fixed = ::media::audio::Fixed;
 using TimelineFunction = ::media::TimelineFunction;
 using TimelineRate = ::media::TimelineRate;
 

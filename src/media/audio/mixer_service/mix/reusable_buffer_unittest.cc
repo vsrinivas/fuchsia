@@ -4,6 +4,7 @@
 
 #include "src/media/audio/mixer_service/mix/reusable_buffer.h"
 
+#include <ffl/string.h>
 #include <gtest/gtest.h>
 
 #include "src/lib/fxl/strings/string_printf.h"

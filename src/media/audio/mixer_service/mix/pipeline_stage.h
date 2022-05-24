@@ -14,6 +14,8 @@
 #include <string>
 #include <string_view>
 
+#include <ffl/string.h>
+
 #include "src/media/audio/mixer_service/common/basic_types.h"
 #include "src/media/audio/mixer_service/mix/mix_job_context.h"
 #include "src/media/audio/mixer_service/mix/packet_view.h"

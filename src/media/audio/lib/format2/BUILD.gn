@@ -9,6 +9,11 @@ group("tests") {
   deps = [ ":audio-libformat2-unittests" ]
 }
 
+source_set("fixed") {
+  sources = [ "fixed.h" ]
+  public_deps = [ "//zircon/system/ulib/ffl" ]
+}
+
 source_set("format2") {
   sources = [
     "channel_mapper.h",
@@ -18,11 +23,11 @@ source_set("format2") {
   ]
 
   public_deps = [
+    ":fixed",
     "//sdk/fidl/fuchsia.mediastreams:fuchsia.mediastreams_llcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/fit-promise",
     "//src/lib/fidl/cpp",
-    "//src/media/audio/lib/format:constants",
     "//src/media/audio/lib/timeline",
   ]
 
