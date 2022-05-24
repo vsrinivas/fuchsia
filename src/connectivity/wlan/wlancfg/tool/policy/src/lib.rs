@@ -162,8 +162,8 @@ async fn run_proxy_command<'a, T>(fut: BoxFuture<'a, Result<T, fidl::Error>>) ->
                 "Failed to obtain a WLAN policy controller. Your command was not executed.\n\n\
                 Help: Only one component may hold a policy controller at once. You can try killing\n\
                 other holders with one of the following:\n\
-                * killall basemgr.cmx\n\
-                * ffx component destroy /core/session-manager/session:session\n"
+                * ffx component destroy /core/session-manager/session:session\n\
+                * [older product versions only] killall basemgr.cmx\n"
             ),
             e => format_err!("{}", e)
         }
