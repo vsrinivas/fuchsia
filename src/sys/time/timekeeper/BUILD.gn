@@ -113,10 +113,12 @@ resource("testdata") {
 }
 
 fuchsia_unittest_package("timekeeper-tests") {
-  manifest = "meta/unittests.cmx"
+  manifest = "meta/unittests.cml"
   deps = [
     ":bin_test",
     ":testdata",
+    "//src/connectivity/network/dns:component",
+    "//src/connectivity/network/netstack:component",
   ]
   test_specs = {
     environments = [ nuc_env ]

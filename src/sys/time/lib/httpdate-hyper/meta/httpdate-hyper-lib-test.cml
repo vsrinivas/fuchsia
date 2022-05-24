@@ -1,0 +1,52 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/lib/fuchsia-hyper/hyper_testing.shard.cml",
+
+        // This test depends on root ssl certificate which is a system capability.
+        "//src/sys/test_manager/system-test.shard.cml",
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/httpdate_hyper_lib_test",
+    },
+    children: [
+        {
+            name: "netstack",
+            url: "#meta/netstack.cm",
+        },
+        {
+            name: "dns_resolver",
+            url: "#meta/dns_resolver.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: [ "fuchsia.net.name.Lookup" ],
+            from: "#dns_resolver",
+        },
+        {
+            protocol: [ "fuchsia.posix.socket.Provider" ],
+            from: "#netstack",
+        },
+        {
+            directory: "root-ssl-certificates",
+            rights: [ "r*" ],
+            path: "/config/ssl",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#dns_resolver",
+                "#netstack",
+            ],
+        },
+    ],
+}
