@@ -16,12 +16,18 @@ class Policy(Enum):
     # the current golden. This is useful for batch updates.
     update_golden = 'update_golden'
 
+    # ack_changes is the same as 'no_changes' but communicates the intent
+    # better in places where this script is called.
+    ack_changes = 'ack_changes'
+
     # no_breaking_changes tells this script to fail if breaking changes
     # are detected, or if any changes are detected to prevent a stale
     # golden.
     no_breaking_changes = 'no_breaking_changes'
 
     # no_changes tells this script to fail if any changes are detected.
+    # It will tell the user how to update the golden to acknowledge the
+    # changes.
     no_changes = 'no_changes'
 
     def __str__(self):
@@ -56,6 +62,8 @@ def main():
     elif args.policy == Policy.no_breaking_changes:
         ret = fail_on_breaking_changes(args)
     elif args.policy == Policy.no_changes:
+        ret = fail_on_changes(args)
+    elif args.policy == Policy.ack_changes:
         ret = fail_on_changes(args)
     else:
         raise ValueError("unknown policy: {}".format(args.policy))
@@ -97,9 +105,9 @@ def fail_on_breaking_changes(args):
 
 
 def fail_on_changes(args):
-    """Fails if current and golden aren't identical"""
+    """Fails if current and golden aren't identical."""
     if not filecmp.cmp(args.golden, args.current):
-        print("Warning: Golden file mismatch")
+        print("Error: Detected changes to API level {}".format(args.api_level))
         print("Please acknowledge this change by updating the golden.\n")
         print("You can rebuild with `bless_goldens=true` in your GN args,")
         print("or you can run this command:")

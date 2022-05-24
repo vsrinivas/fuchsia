@@ -6,47 +6,18 @@ import("//build/fidl/fidl_summary.gni")
 import("//build/testing/config.gni")
 
 template("fidl_api_compatibility_test") {
-  assert(defined(invoker.fidl_target_name), "fidl_target_name is required")
-  assert(defined(invoker.fidl_library_name), "fidl_library_name is required")
   assert(defined(invoker.target_api_level), "target_api_level is required")
-  assert(defined(invoker.golden_summary_json),
-         "golden_summary_json is required")
+  assert(defined(invoker.golden), "golden is required")
+  assert(defined(invoker.current), "current is required")
 
   policy = "no_breaking_changes"
   if (defined(invoker.policy)) {
     policy = invoker.policy
   }
 
-  gen_dir = "$target_gen_dir/${invoker.target_api_level}"
-  if (defined(invoker.gen_dir)) {
-    gen_dir = invoker.gen_dir
-  }
-
   # Let command-line build args override values from target declarations.
   if (bless_goldens) {
     policy = "update_golden"
-  }
-
-  # Generate a new JSON summary to diff against the golden one.
-  summary_file_json = "$gen_dir/$target_name.api_summary.json"
-  fidl_ir_target_name = "${target_name}_fidlc"
-  fidl_ir(fidl_ir_target_name) {
-    forward_variables_from(invoker,
-                           [
-                             "deps",
-                             "fidl_deps",
-                             "fidl_target_name",
-                             "fidl_library_name",
-                             "target_api_level",
-                             "target_api_platform",
-                             "public_deps",
-                             "sources",
-                             "testonly",
-                           ])
-
-    gen_dir = gen_dir
-    json_representation = "$gen_dir/$target_name.fidl.json"
-    out_json_summary = summary_file_json
   }
 
   # Run the test.
@@ -56,8 +27,8 @@ template("fidl_api_compatibility_test") {
     script = "//sdk/cts/build/scripts/fidl_api_compatibility_test.py"
     stamp_file = "$target_gen_dir/$target_name.verified"
 
-    current_summary = summary_file_json
-    golden_summary = golden_summary_json
+    current_summary = current
+    golden_summary = golden
 
     inputs = [
       current_summary,
@@ -69,7 +40,7 @@ template("fidl_api_compatibility_test") {
 
     args = [
       "--api-level",
-      "${invoker.target_api_level}",
+      "$target_api_level",
       "--golden",
       rebase_path(golden_summary, root_build_dir),
       "--current",
@@ -82,9 +53,6 @@ template("fidl_api_compatibility_test") {
       policy,
     ]
 
-    deps += [
-      ":$fidl_ir_target_name",
-      "//tools/fidl/fidl_api_diff:host",
-    ]
+    deps += [ "//tools/fidl/fidl_api_diff:host" ]
   }
 }

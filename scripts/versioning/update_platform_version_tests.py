@@ -25,7 +25,11 @@ FAKE_VERSION_HISTORY_FILE_CONTENT = """{
 }
 """
 
+OLD_API_LEVEL = 1
+OLD_SUPPORTED_API_LEVELS = [1]
+
 NEW_API_LEVEL = 2
+NEW_SUPPORTED_API_LEVELS = [1, 2]
 
 
 class TestUpdatePlatformVersionMethods(unittest.TestCase):
@@ -40,7 +44,11 @@ class TestUpdatePlatformVersionMethods(unittest.TestCase):
         self.fake_milestone_version_file = os.path.join(
             self.test_dir, 'platform_version.json')
         with open(self.fake_milestone_version_file, 'w') as f:
-            f.write('1')
+            pv = {
+                'current_fuchsia_api_level': OLD_API_LEVEL,
+                'supported_fuchsia_api_levels': OLD_SUPPORTED_API_LEVELS,
+            }
+            json.dump(pv, f)
         update_platform_version.PLATFORM_VERSION_PATH = self.fake_milestone_version_file
 
     def tearDown(self):
@@ -63,16 +71,23 @@ class TestUpdatePlatformVersionMethods(unittest.TestCase):
         self.assertFalse(
             update_platform_version.update_version_history(NEW_API_LEVEL))
 
-    def _get_current_platform_version(self):
+    def _get_platform_version(self):
         with open(self.fake_milestone_version_file) as f:
-            version = int(f.read())
-            return version
+            return json.load(f)
 
     def test_update_platform_version(self):
-        self.assertNotEqual(NEW_API_LEVEL, self._get_current_platform_version())
+        pv = self._get_platform_version()
+        self.assertNotEqual(NEW_API_LEVEL, pv['current_fuchsia_api_level'])
+        self.assertNotEqual(
+            NEW_SUPPORTED_API_LEVELS, pv['supported_fuchsia_api_levels'])
+
         self.assertTrue(
             update_platform_version.update_platform_version(NEW_API_LEVEL))
-        self.assertEqual(NEW_API_LEVEL, self._get_current_platform_version())
+
+        pv = self._get_platform_version()
+        self.assertEqual(NEW_API_LEVEL, pv['current_fuchsia_api_level'])
+        self.assertEqual(
+            NEW_SUPPORTED_API_LEVELS, pv['supported_fuchsia_api_levels'])
 
 
 if __name__ == '__main__':

@@ -195,24 +195,56 @@ template("fidl_library") {
   # Enforce compatibility checks for all published SDK FIDLs.
   if (is_sdk_publishable) {
     if (api_compatibility_testing) {
-      # Test for backward compatibility with the current API level.
-      compatibility_test_target_name = "${target_name}_compatibility_test"
-      fidl_api_compatibility_test(compatibility_test_target_name) {
-        forward_variables_from(invoker,
-                               [
-                                 "deps",
-                                 "sources",
-                                 "fidl_deps",
-                                 "public_deps",
-                                 "experimental_flags",
-                                 "testonly",
-                               ])
-        fidl_target_name = main_target_name
-        fidl_library_name = library_name
+      # Ensure changes to API level HEAD are acknowledged.
+      test_target = "${target_name}_compatibility_test"
+      fidl_api_compatibility_test(test_target) {
+        forward_variables_from(invoker, [ "testonly" ])
         target_api_level = "HEAD"
-        golden_summary_json = "$library_name.api_summary.json"
+        golden = "$library_name.api_summary.json"
+        current = summary_file_json
+        deps = [ ":$compilation_target_name" ]
+        policy = "ack_changes"
       }
-      sdk_atom_deps += [ ":$compatibility_test_target_name" ]
+      sdk_atom_deps += [ ":$test_target" ]
+
+      # Check for compatibility with supported API levels.
+      foreach(level, platform_version.supported_fuchsia_api_levels) {
+        fidl_ir("${main_target_name}_compile_$level") {
+          forward_variables_from(invoker,
+                                 [
+                                   "deps",
+                                   "fidl_deps",
+                                   "public_deps",
+                                   "sources",
+                                   "experimental_flags",
+                                   "testonly",
+                                 ])
+          fidl_target_name = main_target_name
+          fidl_library_name = library_name
+          target_api_level = "$level"
+
+          # Avoid clobbering existing FIDL sources.
+          gen_dir = "$target_gen_dir/$level"
+          out_json_summary = "$gen_dir/$library_name.api_summary.json"
+          json_representation = "$gen_dir/$target_name.fidl.json"
+          deps = non_fidl_deps
+        }
+
+        test_target = "${target_name}_${level}_compatibility_test"
+        fidl_api_compatibility_test(test_target) {
+          forward_variables_from(invoker, [ "testonly" ])
+          target_api_level = "$level"
+          golden = "//sdk/history/$level/$library_name.api_summary.json"
+          current = "$target_gen_dir/$level/$library_name.api_summary.json"
+          if (level == platform_version.current_fuchsia_api_level) {
+            policy = "no_breaking_changes"
+          } else {
+            policy = "no_changes"
+          }
+          deps = [ ":${main_target_name}_compile_$level" ]
+        }
+        sdk_atom_deps += [ ":$test_target" ]
+      }
     } else {
       # A kill switch for API summarization. Set to true to permit compilations
       # that have summary errors.
