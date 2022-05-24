@@ -1000,6 +1000,11 @@ func (t *FuchsiaSSHTester) RunSnapshot(ctx context.Context, snapshotFile string)
 	defer snapshotOutFile.Close()
 	if err := t.runSSHCommandWithRetry(ctx, []string{"/bin/snapshot"}, snapshotOutFile, os.Stderr); err != nil {
 		logger.Errorf(ctx, "%s: %s", constants.FailedToRunSnapshotMsg, err)
+		if sshutil.IsConnectionError(err) {
+			if err := t.serialSocket.runDiagnostics(ctx); err != nil {
+				logger.Warningf(ctx, "failed to run serial diagnostics: %s", err)
+			}
+		}
 	}
 	logger.Debugf(ctx, "ran snapshot in %s", clock.Now(ctx).Sub(startTime))
 	return err
