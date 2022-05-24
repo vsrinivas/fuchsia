@@ -7,7 +7,7 @@
 use alloc::collections::HashSet;
 use core::{
     convert::Infallible as Never,
-    hash::Hash,
+    fmt::Debug,
     marker::PhantomData,
     mem,
     num::{NonZeroU16, NonZeroUsize},
@@ -47,7 +47,7 @@ use crate::{
     socket::{
         posix::{
             ConnAddr, ConnIpAddr, ListenerAddr, ListenerIpAddr, PosixAddrState, PosixAddrVecIter,
-            PosixSocketMapSpec,
+            PosixSharingOptions, PosixSocketMapSpec, ToPosixSharingOptions,
         },
         AddrVec, BoundSocketMap, InsertError,
     },
@@ -149,6 +149,20 @@ struct ListenerState {}
 #[derive(Debug, Eq, PartialEq)]
 struct ConnState<S>(S);
 
+impl ToPosixSharingOptions for ListenerState {
+    fn to_sharing_options(&self) -> PosixSharingOptions {
+        let Self {} = self;
+        PosixSharingOptions::Exclusive
+    }
+}
+
+impl<S> ToPosixSharingOptions for ConnState<S> {
+    fn to_sharing_options(&self) -> PosixSharingOptions {
+        let Self(_) = self;
+        PosixSharingOptions::Exclusive
+    }
+}
+
 impl<I: Ip, D: IpDeviceId, S> PosixSocketMapSpec for Udp<I, D, S> {
     type IpAddress = I::Addr;
     type DeviceId = D;
@@ -166,10 +180,37 @@ enum LookupResult<'a, I: Ip, D: IpDeviceId, S> {
     Listener(&'a PosixAddrState<UdpListenerId<I>>, ListenerAddr<Udp<I, D, S>>),
 }
 
-impl<T> PosixAddrState<T> {
-    fn select_receiver(&self) -> &T {
+#[derive(Hash)]
+struct SocketSelectorParams<I: Ip, A: AsRef<I::Addr>> {
+    src_ip: A,
+    dst_ip: A,
+    src_port: u16,
+    dst_port: u16,
+    _ip: IpVersionMarker<I>,
+}
+
+impl<'a, I: Ip, D: IpDeviceId, S> LookupResult<'a, I, D, S> {
+    fn select_receiver<A: AsRef<I::Addr>>(
+        &self,
+        selector: SocketSelectorParams<I, A>,
+    ) -> UdpBoundId<I> {
+        match self {
+            LookupResult::Listener(state, _) => state.select_receiver(selector).clone().into(),
+            LookupResult::Conn(state, _) => state.select_receiver(selector).clone().into(),
+        }
+    }
+}
+
+impl<T: Debug> PosixAddrState<T> {
+    fn select_receiver<I: Ip, A: AsRef<I::Addr>>(
+        &self,
+        _selector: SocketSelectorParams<I, A>,
+    ) -> &T {
         match self {
             PosixAddrState::Exclusive(id) => id,
+            PosixAddrState::ReusePort(ids) => {
+                unreachable!("UDP sockets can't have ReusePort set yet; found {:?}", ids)
+            }
         }
     }
 }
@@ -744,10 +785,13 @@ impl<I: IpExt, C: UdpStateContext<I>> IpTransportContext<I, C> for UdpIpTranspor
                 .conn_state
                 .lookup(src_ip, dst_ip, src_port, dst_port, device)
             {
-                let id = match lookup_result {
-                    LookupResult::Conn(state, _) => (*state.select_receiver()).into(),
-                    LookupResult::Listener(state, _) => (*state.select_receiver()).into(),
-                };
+                let id = lookup_result.select_receiver(SocketSelectorParams {
+                    src_ip,
+                    dst_ip,
+                    src_port: src_port.get(),
+                    dst_port: dst_port.get(),
+                    _ip: IpVersionMarker::default(),
+                });
                 sync_ctx.receive_icmp_error(id, err);
             } else {
                 trace!("UdpIpTransportContext::receive_icmp_error: Got ICMP error message for nonexistent UDP socket; either the socket responsible has since been removed, or the error message was sent in error or corrupted");
@@ -781,11 +825,21 @@ impl<I: IpExt, B: BufferMut, C: BufferUdpStateContext<I, B>> BufferIpTransportCo
 
         let state = sync_ctx.get_first_state();
 
-        if let Some(lookup_result) = SpecifiedAddr::new(src_ip)
+        if let Some((lookup_result, selector)) = SpecifiedAddr::new(src_ip)
             .and_then(|src_ip| packet.src_port().map(|src_port| (src_ip, src_port)))
             .and_then(|(src_ip, src_port)| {
                 let dst_port = packet.dst_port();
-                state.conn_state.lookup(dst_ip, src_ip, dst_port, src_port, device)
+                let selector = SocketSelectorParams::<I, _> {
+                    src_ip,
+                    dst_ip,
+                    src_port: src_port.get(),
+                    dst_port: dst_port.get(),
+                    _ip: IpVersionMarker::default(),
+                };
+                state
+                    .conn_state
+                    .lookup(dst_ip, src_ip, dst_port, src_port, device)
+                    .map(|result| (result, selector))
             })
         {
             match lookup_result {
@@ -801,12 +855,12 @@ impl<I: IpExt, B: BufferMut, C: BufferUdpStateContext<I, B>> BufferIpTransportCo
                         device: _,
                     },
                 ) => {
-                    let id = *lookup_result.select_receiver();
+                    let id = *lookup_result.select_receiver(selector);
                     mem::drop(packet);
                     sync_ctx.receive_udp_from_conn(id, remote_ip.get(), remote_port, buffer)
                 }
                 LookupResult::Listener(lookup_result, _) => {
-                    let id = *lookup_result.select_receiver();
+                    let id = *lookup_result.select_receiver(selector);
                     let src_port = packet.src_port();
                     mem::drop(packet);
                     sync_ctx.receive_udp_from_listen(id, src_ip, dst_ip.get(), src_port, buffer)

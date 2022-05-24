@@ -6,16 +6,18 @@
 //! of [`SocketMapSpec`] that can be used to implement multiple types of
 //! sockets.
 
-use alloc::vec::Vec;
+use alloc::{vec, vec::Vec};
 use core::{fmt::Debug, hash::Hash, num::NonZeroUsize};
-use either::Either;
 
 use derivative::Derivative;
 use net_types::{ip::IpAddress, SpecifiedAddr};
 
 use crate::{
     data_structures::socketmap::{IterShadows, SocketMap, Tagged},
-    socket::{AddrVec, Bound, InsertError, RemoveResult, SocketMapAddrStateSpec, SocketMapSpec},
+    socket::{
+        AddrVec, Bound, IncompatibleError, InsertError, RemoveResult, SocketMapAddrStateSpec,
+        SocketMapSpec,
+    },
 };
 
 /// Describes the data types associated with types of network POSIX sockets.
@@ -38,9 +40,9 @@ pub(crate) trait PosixSocketMapSpec {
     type ConnId: Clone + Into<usize> + From<usize> + Debug + PartialEq;
 
     /// The state for a listening socket.
-    type ListenerState;
+    type ListenerState: ToPosixSharingOptions;
     /// The state for a connected socket.
-    type ConnState;
+    type ConnState: ToPosixSharingOptions;
 }
 
 /// The address vector of a listening socket.
@@ -275,6 +277,9 @@ impl<P: PosixSocketMapSpec> IterShadows for AddrVec<P> {
 #[derive(Debug)]
 pub(crate) enum PosixAddrState<T> {
     Exclusive(T),
+    // TODO(https://fxbug.dev/97822): Remove this when Bindings support for setting this is added.
+    #[cfg_attr(not(test), allow(unused))]
+    ReusePort(Vec<T>),
 }
 
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
@@ -300,18 +305,39 @@ impl<'a, P: PosixSocketMapSpec> From<&'a ConnIpAddr<P>> for PosixAddrType {
 }
 
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
+pub(crate) enum PosixSharingOptions {
+    Exclusive,
+    ReusePort,
+}
+
+impl PosixSharingOptions {
+    fn is_shareable_with_new_state(&self, new_state: PosixSharingOptions) -> bool {
+        match (self, new_state) {
+            (PosixSharingOptions::Exclusive, PosixSharingOptions::Exclusive) => false,
+            (PosixSharingOptions::Exclusive, PosixSharingOptions::ReusePort) => false,
+            (PosixSharingOptions::ReusePort, PosixSharingOptions::Exclusive) => false,
+            (PosixSharingOptions::ReusePort, PosixSharingOptions::ReusePort) => true,
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
 pub(crate) struct PosixAddrVecTag {
     has_device: bool,
     addr_type: PosixAddrType,
+    sharing: PosixSharingOptions,
 }
 
 impl<T, P: PosixSocketMapSpec> Tagged<ListenerAddr<P>> for PosixAddrState<T> {
     type Tag = PosixAddrVecTag;
 
     fn tag(&self, address: &ListenerAddr<P>) -> Self::Tag {
-        let PosixAddrState::Exclusive(_) = self;
         let ListenerAddr { ip, device } = address;
-        PosixAddrVecTag { has_device: device.is_some(), addr_type: ip.into() }
+        PosixAddrVecTag {
+            has_device: device.is_some(),
+            addr_type: ip.into(),
+            sharing: self.to_sharing_options(),
+        }
     }
 }
 
@@ -319,9 +345,32 @@ impl<T, P: PosixSocketMapSpec> Tagged<ConnAddr<P>> for PosixAddrState<T> {
     type Tag = PosixAddrVecTag;
 
     fn tag(&self, address: &ConnAddr<P>) -> Self::Tag {
-        let PosixAddrState::Exclusive(_) = self;
         let ConnAddr { ip, device } = address;
-        PosixAddrVecTag { has_device: device.is_some(), addr_type: ip.into() }
+        PosixAddrVecTag {
+            has_device: device.is_some(),
+            addr_type: ip.into(),
+            sharing: self.to_sharing_options(),
+        }
+    }
+}
+
+pub(crate) trait ToPosixSharingOptions {
+    fn to_sharing_options(&self) -> PosixSharingOptions;
+}
+
+impl ToPosixSharingOptions for PosixAddrVecTag {
+    fn to_sharing_options(&self) -> PosixSharingOptions {
+        let PosixAddrVecTag { has_device: _, addr_type: _, sharing } = self;
+        *sharing
+    }
+}
+
+impl<T> ToPosixSharingOptions for PosixAddrState<T> {
+    fn to_sharing_options(&self) -> PosixSharingOptions {
+        match self {
+            PosixAddrState::Exclusive(_) => PosixSharingOptions::Exclusive,
+            PosixAddrState::ReusePort(_) => PosixSharingOptions::ReusePort,
+        }
     }
 }
 
@@ -345,40 +394,37 @@ impl<P: PosixSocketMapSpec> SocketMapSpec for P {
     type ConnAddrState = PosixAddrState<P::ConnId>;
 }
 
-impl<'a, P: PosixSocketMapSpec> From<&'a AddrVec<P>>
-    for Either<&'a ListenerAddr<P>, &'a ConnAddr<P>>
-{
-    fn from(p: &'a AddrVec<P>) -> Self {
-        match p {
-            AddrVec::Listen(l) => Self::Left(l),
-            AddrVec::Conn(c) => Self::Right(c),
-        }
-    }
-}
-
 impl<A, St, I, P> SocketMapAddrStateSpec<A, St, I, P> for PosixAddrState<I>
 where
+    A: Into<AddrVec<P>> + Clone,
     P: PosixSocketMapSpec,
-    A: Clone + Into<AddrVec<P>>,
-    I: PartialEq,
+    St: ToPosixSharingOptions,
+    I: PartialEq + Debug,
 {
     fn check_for_conflicts(
-        _new_state: &St,
+        new_state: &St,
         addr: &A,
         socketmap: &SocketMap<AddrVec<P>, Bound<P>>,
     ) -> Result<(), InsertError> {
+        let new_sharing = new_state.to_sharing_options();
         let dest = addr.clone().into();
-        // Having a value present at a shadowed address is immediately
-        // disqualifying.
-        if dest.iter_shadows().any(|a| socketmap.get(&a).is_some()) {
+        // Having a value present at a shadowed address is disqualifying, unless
+        // both the new and existing sockets allow port sharing.
+        if dest.iter_shadows().any(|a| {
+            socketmap.get(&a).map_or(false, |bound| {
+                !bound.tag(&a).to_sharing_options().is_shareable_with_new_state(new_sharing)
+            })
+        }) {
             return Err(InsertError::ShadowAddrExists);
         }
 
         // Likewise, the presence of a value that shadows the target address is
-        // disqualifying.
+        // disqualifying unless both allow port sharing.
         match &dest {
             AddrVec::Conn(ConnAddr { ip: _, device: None }) | AddrVec::Listen(_) => {
-                if socketmap.descendant_counts(&dest).len() != 0 {
+                if socketmap.descendant_counts(&dest).any(|(tag, _): &(_, NonZeroUsize)| {
+                    !tag.to_sharing_options().is_shareable_with_new_state(new_sharing)
+                }) {
                     return Err(InsertError::ShadowerExists);
                 }
             }
@@ -400,66 +446,146 @@ where
         // from the other in the socketmap without a linear scan. Instead. we
         // rely on the fact that the tag values in the socket map have different
         // values for entries with and without device IDs specified.
-        let conflict_exists = |addr, conflicting_tags: &[PosixAddrVecTag]| {
-            socketmap
-                .descendant_counts(&addr)
-                .any(|(tag, _): &(_, NonZeroUsize)| conflicting_tags.contains(tag))
-        };
-        let found_conflict = match dest {
-            // An any-IP listener with a device conflicts with a listening or
-            // connected socket without a device.
+        fn conflict_exists<P: PosixSocketMapSpec>(
+            new_sharing: PosixSharingOptions,
+            socketmap: &SocketMap<AddrVec<P>, Bound<P>>,
+            addr: impl Into<AddrVec<P>>,
+            mut is_conflicting: impl FnMut(&PosixAddrVecTag) -> bool,
+        ) -> bool {
+            socketmap.descendant_counts(&addr.into()).any(|(tag, _): &(_, NonZeroUsize)| {
+                is_conflicting(tag)
+                    && !tag.to_sharing_options().is_shareable_with_new_state(new_sharing)
+            })
+        }
+
+        let found_indirect_conflict = match dest {
             AddrVec::Listen(ListenerAddr {
                 ip: ListenerIpAddr { addr: None, identifier },
                 device: Some(_device),
-            }) => conflict_exists(
-                ListenerAddr { ip: ListenerIpAddr { addr: None, identifier }, device: None }.into(),
-                &[
-                    PosixAddrVecTag { has_device: false, addr_type: PosixAddrType::SpecificListener },
-                    PosixAddrVecTag { has_device: false, addr_type: PosixAddrType::Connected },
-                ],
-            ),
-            // A listener on a specific IP address with a device conflicts with
-            // a connected socket without a device.
+            }) => {
+                // An address with a device will shadow an any-IP listener
+                // `dest` with a device so we only need to check for addresses
+                // without a device. Likewise, an any-IP listener will directly
+                // shadow `dest`, so an indirect conflict can only come from a
+                // specific listener or connected socket (without a device).
+                conflict_exists(
+                    new_sharing,
+                    socketmap,
+                    ListenerAddr { ip: ListenerIpAddr { addr: None, identifier }, device: None },
+                    |PosixAddrVecTag { has_device, addr_type, sharing: _ }| {
+                        !*has_device
+                            && match addr_type {
+                                PosixAddrType::SpecificListener | PosixAddrType::Connected => true,
+                                PosixAddrType::AnyListener => false,
+                            }
+                    },
+                )
+            }
             AddrVec::Listen(ListenerAddr {
                 ip: ListenerIpAddr { addr: Some(ip), identifier },
                 device: Some(_device),
-            }) => conflict_exists(
-                ListenerAddr { ip: ListenerIpAddr { addr: Some(ip), identifier }, device: None }
-                    .into(),
-                &[PosixAddrVecTag { has_device: false, addr_type: PosixAddrType::Connected }],
-            ),
-            // A listener on a specific IP without a device conflicts with an
-            // any-IP listener with a device.
+            }) => {
+                // A specific-IP listener `dest` with a device will be shadowed
+                // by a connected socket with a device and will shadow
+                // specific-IP addresses without a device and any-IP listeners
+                // with and without devices. That means an indirect conflict can
+                // only come from a connected socket without a device.
+                conflict_exists(
+                    new_sharing,
+                    socketmap,
+                    ListenerAddr {
+                        ip: ListenerIpAddr { addr: Some(ip), identifier },
+                        device: None,
+                    },
+                    |PosixAddrVecTag { has_device, addr_type, sharing: _ }| {
+                        !*has_device
+                            && match addr_type {
+                                PosixAddrType::Connected => true,
+                                PosixAddrType::AnyListener | PosixAddrType::SpecificListener => {
+                                    false
+                                }
+                            }
+                    },
+                )
+            }
             AddrVec::Listen(ListenerAddr {
                 ip: ListenerIpAddr { addr: Some(_), identifier },
                 device: None,
-            }) => conflict_exists(
-                ListenerAddr { ip: ListenerIpAddr { addr: None, identifier }, device: None }.into(),
-                &[PosixAddrVecTag { has_device: true, addr_type: PosixAddrType::AnyListener }],
-            ),
-            // A connected socket without a device conflicts with an any-IP or
-            // specified-IP listening socket with a device.
+            }) => {
+                // A specific-IP listener `dest` without a device will be
+                // shadowed by a specific-IP listener with a device and by any
+                // connected socket (with or without a device).  It will also
+                // shadow an any-IP listener without a device, which means an
+                // indirect conflict can only come from an any-IP listener with
+                // a device.
+                conflict_exists(
+                    new_sharing,
+                    socketmap,
+                    ListenerAddr { ip: ListenerIpAddr { addr: None, identifier }, device: None },
+                    |PosixAddrVecTag { has_device, addr_type, sharing: _ }| {
+                        *has_device
+                            && match addr_type {
+                                PosixAddrType::AnyListener => true,
+                                PosixAddrType::SpecificListener | PosixAddrType::Connected => false,
+                            }
+                    },
+                )
+            }
             AddrVec::Conn(ConnAddr {
                 ip: ConnIpAddr { local_ip, local_identifier, remote: _ },
                 device: None,
             }) => {
+                // A connected socket `dest` without a device shadows listeners
+                // without devices, and is shadowed by a connected socket with
+                // a device. It can indirectly conflict with listening sockets
+                // with devices.
+
+                // Check for specific-IP listeners with devices, which would
+                // indirectly conflict.
                 conflict_exists(
+                    new_sharing,
+                    socketmap,
                     ListenerAddr {
                         ip: ListenerIpAddr {
                             addr: Some(local_ip),
                             identifier: local_identifier.clone(),
                         },
                         device: None,
-                    }
-                    .into(),
-                    &[PosixAddrVecTag { has_device: true, addr_type: PosixAddrType::SpecificListener }],
-                ) || conflict_exists(
+                    },
+                    |PosixAddrVecTag { has_device, addr_type, sharing: _ }| {
+                        *has_device
+                            && match addr_type {
+                                PosixAddrType::SpecificListener => true,
+                                PosixAddrType::AnyListener | PosixAddrType::Connected => false,
+                            }
+                    },
+                ) ||
+                // Check for any-IP listeners with devices since they conflict.
+                // Note that this check cannot be combined with the one above
+                // since they examine tag counts for different addresses. While
+                // the counts of tags matched above *will* also be propagated to
+                // the any-IP listener entry, they would be indistinguishable
+                // from non-conflicting counts. For a connected address with
+                // `Some(local_ip)`, the descendant counts at the listener
+                // address with `addr = None` would include any
+                // `SpecificListener` tags for both addresses with
+                // `Some(local_ip)` and `Some(other_local_ip)`. The former
+                // indirectly conflicts with `dest` but the latter does not,
+                // hence this second distinct check.
+                conflict_exists(
+                    new_sharing,
+                    socketmap,
                     ListenerAddr {
                         ip: ListenerIpAddr { addr: None, identifier: local_identifier },
                         device: None,
-                    }
-                    .into(),
-                    &[PosixAddrVecTag { has_device: true, addr_type: PosixAddrType::AnyListener }],
+                    },
+                    |PosixAddrVecTag { has_device, addr_type, sharing: _ }| {
+                        *has_device
+                            && match addr_type {
+                                PosixAddrType::AnyListener => true,
+                                PosixAddrType::SpecificListener | PosixAddrType::Connected => false,
+                            }
+                    },
                 )
             }
             AddrVec::Listen(ListenerAddr {
@@ -468,26 +594,45 @@ where
             }) => false,
             AddrVec::Conn(ConnAddr { ip: _, device: Some(_device) }) => false,
         };
-        if found_conflict {
+        if found_indirect_conflict {
             Err(InsertError::IndirectConflict)
         } else {
             Ok(())
         }
     }
 
-    fn try_get_dest<'a, 'b>(&'b mut self, _new_state: &'a St) -> Result<&'b mut Vec<I>, ()> {
+    fn try_get_dest<'a, 'b>(
+        &'b mut self,
+        new_state: &'a St,
+    ) -> Result<&'b mut Vec<I>, IncompatibleError> {
         match self {
-            PosixAddrState::Exclusive(_) => Err(()),
+            PosixAddrState::Exclusive(_) => Err(IncompatibleError),
+            PosixAddrState::ReusePort(ids) => match new_state.to_sharing_options() {
+                PosixSharingOptions::Exclusive => Err(IncompatibleError),
+                PosixSharingOptions::ReusePort => Ok(ids),
+            },
         }
     }
 
-    fn new_addr_state(_new_state: &St, id: I) -> Self {
-        Self::Exclusive(id)
+    fn new_addr_state(new_state: &St, id: I) -> Self {
+        match new_state.to_sharing_options() {
+            PosixSharingOptions::Exclusive => Self::Exclusive(id),
+            PosixSharingOptions::ReusePort => Self::ReusePort(vec![id]),
+        }
     }
 
-    fn remove_by_id(&mut self, _id: I) -> RemoveResult {
+    fn remove_by_id(&mut self, id: I) -> RemoveResult {
         match self {
             PosixAddrState::Exclusive(_) => RemoveResult::IsLast,
+            PosixAddrState::ReusePort(ids) => {
+                let index = ids.iter().position(|i| i == &id).expect("couldn't find ID to remove");
+                assert_eq!(ids.swap_remove(index), id);
+                if ids.is_empty() {
+                    RemoveResult::IsLast
+                } else {
+                    RemoveResult::Success
+                }
+            }
         }
     }
 }
@@ -496,6 +641,8 @@ where
 mod tests {
     use core::{convert::Infallible as Never, num::NonZeroU16};
 
+    use assert_matches::assert_matches;
+    use itertools::Itertools as _;
     use net_declare::net_ip_v4 as ip_v4;
     use net_types::ip::{Ip, IpVersionMarker, Ipv4};
     use test_case::test_case;
@@ -509,6 +656,12 @@ mod tests {
     struct TransportSocketPosixSpec<I: Ip> {
         _ip: IpVersionMarker<I>,
         _never: Never,
+    }
+
+    impl ToPosixSharingOptions for PosixSharingOptions {
+        fn to_sharing_options(&self) -> PosixSharingOptions {
+            *self
+        }
     }
 
     #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
@@ -545,8 +698,8 @@ mod tests {
         type DeviceId = DummyDeviceId;
         type ListenerId = ListenerId;
         type ConnId = ConnId;
-        type ListenerState = ();
-        type ConnState = ();
+        type ListenerState = PosixSharingOptions;
+        type ConnState = PosixSharingOptions;
     }
 
     fn listen<I: Ip>(ip: I::Addr, port: u16) -> AddrVec<TransportSocketPosixSpec<I>> {
@@ -592,46 +745,72 @@ mod tests {
     }
 
     #[test_case([
-        listen(ip_v4!("0.0.0.0"), 1),
-        listen(ip_v4!("0.0.0.0"), 2)],
+        (listen(ip_v4!("0.0.0.0"), 1), PosixSharingOptions::Exclusive),
+        (listen(ip_v4!("0.0.0.0"), 2), PosixSharingOptions::Exclusive)],
             Ok(()); "listen_any_ip_different_port")]
     #[test_case([
-        listen(ip_v4!("0.0.0.0"), 1),
-        listen(ip_v4!("0.0.0.0"), 1)],
+        (listen(ip_v4!("0.0.0.0"), 1), PosixSharingOptions::Exclusive),
+        (listen(ip_v4!("0.0.0.0"), 1), PosixSharingOptions::Exclusive)],
             Err(InsertError::Exists); "any_ip_same_port")]
     #[test_case([
-        listen(ip_v4!("1.1.1.1"), 1),
-        listen(ip_v4!("1.1.1.1"), 1)],
+        (listen(ip_v4!("1.1.1.1"), 1), PosixSharingOptions::Exclusive),
+        (listen(ip_v4!("1.1.1.1"), 1), PosixSharingOptions::Exclusive)],
             Err(InsertError::Exists); "listen_same_specific_ip")]
     #[test_case([
-        listen(ip_v4!("1.1.1.1"), 1),
-        conn(ip_v4!("1.1.1.1"), 1, ip_v4!("2.2.2.2"), 2)],
+        (listen(ip_v4!("1.1.1.1"), 1), PosixSharingOptions::ReusePort),
+        (listen(ip_v4!("1.1.1.1"), 1), PosixSharingOptions::ReusePort)],
+            Ok(()); "listen_same_specific_ip_reuse_port")]
+    #[test_case([
+        (listen(ip_v4!("1.1.1.1"), 1), PosixSharingOptions::Exclusive),
+        (listen(ip_v4!("1.1.1.1"), 1), PosixSharingOptions::ReusePort)],
+            Err(InsertError::Exists); "listen_same_specific_ip_exclusive_reuse_port")]
+    #[test_case([
+        (listen(ip_v4!("1.1.1.1"), 1), PosixSharingOptions::ReusePort),
+        (listen(ip_v4!("1.1.1.1"), 1), PosixSharingOptions::Exclusive)],
+            Err(InsertError::Exists); "listen_same_specific_ip_reuse_port_exclusive")]
+    #[test_case([
+        (listen(ip_v4!("1.1.1.1"), 1), PosixSharingOptions::ReusePort),
+        (conn(ip_v4!("1.1.1.1"), 1, ip_v4!("2.2.2.2"), 2), PosixSharingOptions::ReusePort)],
+            Ok(()); "conn_shadows_listener_reuse_port")]
+    #[test_case([
+        (listen(ip_v4!("1.1.1.1"), 1), PosixSharingOptions::Exclusive),
+        (conn(ip_v4!("1.1.1.1"), 1, ip_v4!("2.2.2.2"), 2), PosixSharingOptions::Exclusive)],
             Err(InsertError::ShadowAddrExists); "conn_shadows_listener_exclusive")]
     #[test_case([
-        listen_device(ip_v4!("1.1.1.1"), 1, DummyDeviceId),
-        conn(ip_v4!("1.1.1.1"), 1, ip_v4!("2.2.2.2"), 2)],
+        (listen(ip_v4!("1.1.1.1"), 1), PosixSharingOptions::Exclusive),
+        (conn(ip_v4!("1.1.1.1"), 1, ip_v4!("2.2.2.2"), 2), PosixSharingOptions::ReusePort)],
+            Err(InsertError::ShadowAddrExists); "conn_shadows_listener_exclusive_reuse_port")]
+    #[test_case([
+        (listen(ip_v4!("1.1.1.1"), 1), PosixSharingOptions::ReusePort),
+        (conn(ip_v4!("1.1.1.1"), 1, ip_v4!("2.2.2.2"), 2), PosixSharingOptions::Exclusive)],
+            Err(InsertError::ShadowAddrExists); "conn_shadows_listener_reuse_port_exclusive")]
+    #[test_case([
+        (listen_device(ip_v4!("1.1.1.1"), 1, DummyDeviceId), PosixSharingOptions::Exclusive),
+        (conn(ip_v4!("1.1.1.1"), 1, ip_v4!("2.2.2.2"), 2), PosixSharingOptions::Exclusive)],
             Err(InsertError::IndirectConflict); "conn_indirect_conflict_specific_listener")]
     #[test_case([
-        listen_device(ip_v4!("0.0.0.0"), 1, DummyDeviceId),
-        conn(ip_v4!("1.1.1.1"), 1, ip_v4!("2.2.2.2"), 2)],
+        (listen_device(ip_v4!("0.0.0.0"), 1, DummyDeviceId), PosixSharingOptions::Exclusive),
+        (conn(ip_v4!("1.1.1.1"), 1, ip_v4!("2.2.2.2"), 2), PosixSharingOptions::Exclusive)],
             Err(InsertError::IndirectConflict); "conn_indirect_conflict_any_listener")]
     #[test_case([
-        conn(ip_v4!("1.1.1.1"), 1, ip_v4!("2.2.2.2"), 2),
-        listen_device(ip_v4!("1.1.1.1"), 1, DummyDeviceId)],
+        (conn(ip_v4!("1.1.1.1"), 1, ip_v4!("2.2.2.2"), 2), PosixSharingOptions::Exclusive),
+        (listen_device(ip_v4!("1.1.1.1"), 1, DummyDeviceId), PosixSharingOptions::Exclusive)],
             Err(InsertError::IndirectConflict); "specific_listener_indirect_conflict_conn")]
     #[test_case([
-        conn(ip_v4!("1.1.1.1"), 1, ip_v4!("2.2.2.2"), 2),
-        listen_device(ip_v4!("0.0.0.0"), 1, DummyDeviceId)],
+        (conn(ip_v4!("1.1.1.1"), 1, ip_v4!("2.2.2.2"), 2), PosixSharingOptions::Exclusive),
+        (listen_device(ip_v4!("0.0.0.0"), 1, DummyDeviceId), PosixSharingOptions::Exclusive)],
             Err(InsertError::IndirectConflict); "any_listener_indirect_conflict_conn")]
-    fn bind_sequence<C: IntoIterator<Item = AddrVec<TransportSocketPosixSpec<Ipv4>>>>(
+    fn bind_sequence<
+        C: IntoIterator<Item = (AddrVec<TransportSocketPosixSpec<Ipv4>>, PosixSharingOptions)>,
+    >(
         spec: C,
         expected: Result<(), InsertError>,
     ) {
         let mut map = BoundSocketMap::<TransportSocketPosixSpec<Ipv4>>::default();
         let mut spec = spec.into_iter().peekable();
-        let mut try_insert = |addr| match addr {
-            AddrVec::Conn(c) => map.try_insert_conn(c, ()).map(|_| ()),
-            AddrVec::Listen(l) => map.try_insert_listener(l, ()).map(|_| ()),
+        let mut try_insert = |(addr, options)| match addr {
+            AddrVec::Conn(c) => map.try_insert_conn(c, options).map(|_| ()),
+            AddrVec::Listen(l) => map.try_insert_listener(l, options).map(|_| ()),
         };
         let last = loop {
             let one_spec = spec.next().expect("empty list of test cases");
@@ -644,5 +823,60 @@ mod tests {
 
         let result = try_insert(last);
         assert_eq!(result, expected);
+    }
+
+    #[test_case([
+            (listen(ip_v4!("1.1.1.1"), 1), PosixSharingOptions::Exclusive),
+            (listen(ip_v4!("2.2.2.2"), 2), PosixSharingOptions::Exclusive),
+        ]; "distinct")]
+    #[test_case([
+            (listen(ip_v4!("1.1.1.1"), 1), PosixSharingOptions::ReusePort),
+            (listen(ip_v4!("1.1.1.1"), 1), PosixSharingOptions::ReusePort),
+        ]; "listen_reuse_port")]
+    #[test_case([
+            (conn(ip_v4!("1.1.1.1"), 1, ip_v4!("2.2.2.2"), 3), PosixSharingOptions::ReusePort),
+            (conn(ip_v4!("1.1.1.1"), 1, ip_v4!("2.2.2.2"), 3), PosixSharingOptions::ReusePort),
+        ]; "conn_reuse_port")]
+    fn remove_sequence<I>(spec: I)
+    where
+        I: IntoIterator<Item = (AddrVec<TransportSocketPosixSpec<Ipv4>>, PosixSharingOptions)>,
+        I::IntoIter: ExactSizeIterator,
+    {
+        enum Socket<T: PosixSocketMapSpec> {
+            Listener(ListenerId, ListenerAddr<T>),
+            Conn(ConnId, ConnAddr<T>),
+        }
+        let spec = spec.into_iter();
+        let spec_len = spec.len();
+        for spec in spec.permutations(spec_len) {
+            let mut map = BoundSocketMap::<TransportSocketPosixSpec<Ipv4>>::default();
+            let sockets = spec
+                .into_iter()
+                .map(|(addr, options)| {
+                    match addr {
+                        AddrVec::Conn(c) => {
+                            map.try_insert_conn(c.clone(), options).map(|id| Socket::Conn(id, c))
+                        }
+                        AddrVec::Listen(l) => map
+                            .try_insert_listener(l.clone(), options)
+                            .map(|id| Socket::Listener(id, l)),
+                    }
+                    .expect("insert_failed")
+                })
+                .collect::<Vec<_>>();
+
+            for socket in sockets {
+                match socket {
+                    Socket::Listener(l, addr) => {
+                        assert_matches!(map.remove_listener_by_id(l),
+                                        Some((_, a)) => assert_eq!(a, addr));
+                    }
+                    Socket::Conn(c, addr) => {
+                        assert_matches!(map.remove_conn_by_id(c),
+                                        Some((_, a)) => assert_eq!(a, addr));
+                    }
+                }
+            }
+        }
     }
 }

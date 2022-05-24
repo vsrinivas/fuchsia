@@ -161,6 +161,9 @@ pub(crate) trait SocketMapSpec {
     type ConnAddrState: SocketMapAddrStateSpec<Self::ConnAddr, Self::ConnState, Self::ConnId, Self>;
 }
 
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub(crate) struct IncompatibleError;
+
 pub(crate) trait SocketMapAddrStateSpec<Addr, State, Id, S: SocketMapSpec + ?Sized> {
     /// Checks whether a new socket with the provided state can be inserted at
     /// the given address in the existing socket map, returning an error
@@ -183,7 +186,10 @@ pub(crate) trait SocketMapAddrStateSpec<Addr, State, Id, S: SocketMapSpec + ?Siz
     /// If the new state is incompatible with the existing socket(s),
     /// implementations of this function should return `Err(())`.  If `Ok(dest)`
     /// is returned, the new socket ID will be appended to `dest`.
-    fn try_get_dest<'a, 'b>(&'b mut self, new_state: &'a State) -> Result<&'b mut Vec<Id>, ()>;
+    fn try_get_dest<'a, 'b>(
+        &'b mut self,
+        new_state: &'a State,
+    ) -> Result<&'b mut Vec<Id>, IncompatibleError>;
 
     /// Creates a new `Self` holding the provided socket with the given new
     /// state at the specified address.
@@ -239,9 +245,6 @@ where
 /// The result of attempting to remove a socket from a collection of sockets.
 pub(crate) enum RemoveResult {
     /// The value was removed successfully.
-    ///
-    /// TODO(https://fxbug.dev/97822): remove #[cfg(test)].
-    #[cfg(test)]
     Success,
     /// The value is the last value in the collection so the entire collection
     /// should be removed.
@@ -378,7 +381,7 @@ where
                             index
                         })
                     })
-                    .map_err(|()| InsertError::Exists)?;
+                    .map_err(|IncompatibleError| InsertError::Exists)?;
                 Ok(id.into())
             }
             Entry::Vacant(v) => {
@@ -503,8 +506,6 @@ where
                 Entry::Occupied(o) => o,
             };
             match entry.map_mut(|value| remove_from_state(value, id)) {
-                // TODO(https://fxbug.dev/97822): remove #[cfg(test)].
-                #[cfg(test)]
                 RemoveResult::Success => (),
                 RemoveResult::IsLast => {
                     let _: Bound<S> = entry.remove();
@@ -653,9 +654,12 @@ mod tests {
             }
         }
 
-        fn try_get_dest<'a, 'b>(&'b mut self, new_state: &'a char) -> Result<&'b mut Vec<I>, ()> {
+        fn try_get_dest<'a, 'b>(
+            &'b mut self,
+            new_state: &'a char,
+        ) -> Result<&'b mut Vec<I>, IncompatibleError> {
             let Self(c, v) = self;
-            (new_state == c).then(|| v).ok_or(())
+            (new_state == c).then(|| v).ok_or(IncompatibleError)
         }
 
         fn new_addr_state(new_state: &char, id: I) -> Self {
