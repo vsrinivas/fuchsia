@@ -12,18 +12,15 @@
 
 namespace {
 
-#define _STRINGIFY(x) #x
-#define STRINGIFY(x) _STRINGIFY(x)
-
-#define SAFE_SYSCALL(X)                    \
-  ({                                       \
-    int retval;                            \
-    retval = (X);                          \
-    if (retval < 0) {                      \
-      perror(STRINGIFY(__LINE__) ": " #X); \
-      exit(retval);                        \
-    };                                     \
-    retval;                                \
+#define SAFE_SYSCALL(X)                                                                         \
+  ({                                                                                            \
+    int retval;                                                                                 \
+    retval = (X);                                                                               \
+    if (retval < 0) {                                                                           \
+      fprintf(stderr, "Error at %s:%d: %s (%d)\n", __FILE__, __LINE__, strerror(errno), errno); \
+      exit(retval);                                                                             \
+    };                                                                                          \
+    retval;                                                                                     \
   })
 
 int received_signal = -1;
@@ -105,7 +102,6 @@ TEST(JobControl, BackgroundProcessGroupDoNotUpdateOnDeath) {
         exit(-1);
       }
     } else {
-      SAFE_SYSCALL(setpgid(child_pid, child_pid));
       if (reap_children() != 0) {
         exit(-1);
       }
