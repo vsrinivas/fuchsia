@@ -23,6 +23,10 @@ import("//build/flutter/internal/flutter_dart_component.gni")
 #     The path to the component manifest
 #     Type: path
 #
+#   test_runtime_shard (optional)
+#     The path to the dart test shard.
+#     Type: path
+#
 #   sources (required)
 #     The list of test sources. These sources must be within the test/ directory.
 #     Type: List of paths
@@ -191,6 +195,7 @@ template("flutter_dart_test_component") {
                              "language_version",
                              "component_name",
                              "build_cfg",
+                             "test_runtime_shard",
                            ])
 
     main_package = _generated_test_package

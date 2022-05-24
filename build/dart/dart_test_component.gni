@@ -80,5 +80,10 @@ template("dart_test_component") {
     forward_variables_from(invoker, "*", [ "build_cfg" ])
 
     build_cfg = _build_cfg
+
+    # Add test shard that exposes the suite protocol from test component.
+    if (get_path_info(invoker.manifest, "extension") == "cml") {
+      test_runtime_shard = "//build/dart/meta/test_runtime.shard.cml"
+    }
   }
 }

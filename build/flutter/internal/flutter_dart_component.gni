@@ -114,6 +114,10 @@ template("_flutter_asset_manifest") {
 #     The component manifest
 #     Type: path
 #
+#   test_runtime_shard (optional)
+#     The path to the dart test shard.
+#     Type: path
+#
 #   main_package (required)
 #     The name of the package containing the main_dart
 #     Type: string
@@ -175,10 +179,17 @@ template("flutter_dart_component") {
   _manifest_extension = get_path_info(invoker.manifest, "extension")
   _merged_target_name = "${target_name}_merged.${_manifest_extension}"
 
+  _merge_manifests = [ invoker.manifest ]
   if (_manifest_extension == "cml") {
-    _runtime_meta = build_cfg.runtime_meta_v2
+    _merge_manifests += [ rebase_path(build_cfg.runtime_meta_v2, ".") ]
   } else {
-    _runtime_meta = build_cfg.runtime_meta
+    _merge_manifests += [ rebase_path(build_cfg.runtime_meta, ".") ]
+  }
+
+  # Add test runtime shard to make sure test component's fuchsia.test.Suite
+  # protocol is exposed for the test_manager to use.
+  if (defined(invoker.test_runtime_shard)) {
+    _merge_manifests += [ rebase_path(invoker.test_runtime_shard, ".") ]
   }
 
   cmc_merge(_merged_target_name) {
@@ -187,10 +198,7 @@ template("flutter_dart_component") {
                              "testonly",
                              "visibility",
                            ])
-    sources = [
-      invoker.manifest,
-      rebase_path(_runtime_meta, "."),
-    ]
+    sources = _merge_manifests
   }
 
   _merged_outputs = get_target_outputs(":$_merged_target_name")

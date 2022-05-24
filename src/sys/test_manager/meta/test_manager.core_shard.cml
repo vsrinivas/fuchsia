@@ -43,6 +43,8 @@
         },
         {
             protocol: [
+                "fuchsia.feedback.CrashReporter",
+                "fuchsia.intl.PropertyProvider",
                 "fuchsia.media.ProfileProvider",
                 "fuchsia.sys.Environment",
                 "fuchsia.sys.Loader",

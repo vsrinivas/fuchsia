@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/dart/dart_test_component.gni")
 import("//src/dart/testing/dart_test_wrapper_component.gni")
 
 group("tests") {
@@ -21,12 +22,6 @@ fuchsia_component("cpp-component") {
   manifest = "cpp/meta/sample_realm.cml"
   component_name = "cpp"
   deps = [ "cpp:bin" ]
-}
-
-dart_test_wrapper_component("dart-test-wrapper-component") {
-  wrapper_binary = "sample_realm_dart_test_wrapper"
-  manifest = "dart/meta/sample_realm_dart_test_wrapper.cml"
-  dart_test_component_name = "dart-sample-test"
 }
 
 fuchsia_component("rust-component") {
@@ -60,12 +55,39 @@ fuchsia_component("echo_server_legacy_component") {
   deps = [ "//examples/components/routing/rust/echo_server" ]
 }
 
+dart_test_component("dart-sample-test") {
+  package_root = "dart/"
+  manifest = "dart/meta/sample_realm.cml"
+
+  null_safe = true
+
+  sources = [ "sample.dart" ]
+
+  # [START realm_builder_dep_dart]
+  deps = [
+    "//sdk/dart/fuchsia_component_test",
+
+    # [START_EXCLUDE]
+    "//examples/components/routing/fidl:echo",
+    "//sdk/dart/fidl",
+    "//sdk/dart/fuchsia_logger",
+    "//sdk/dart/fuchsia_services",
+    "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.logger",
+    "//third_party/dart-pkg/pub/test",
+
+    # [END_EXCLUDE]
+  ]
+
+  # [END realm_builder_dep_dart]
+}
+
 # Run with `fx test realm-builder-examples`.
 fuchsia_test_package("package") {
   package_name = "realm-builder-examples"
   test_components = [
     ":cpp-component",
-    ":dart-test-wrapper-component",
+    ":dart-sample-test",
     ":rust-component",
   ]
 
@@ -74,6 +96,5 @@ fuchsia_test_package("package") {
     ":echo_client_legacy_component",
     ":echo_server_component",
     ":echo_server_legacy_component",
-    "dart:dart-sample-test",
   ]
 }

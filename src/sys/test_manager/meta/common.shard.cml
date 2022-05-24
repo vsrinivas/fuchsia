@@ -16,6 +16,14 @@
     },
     children: [
         {
+            name: "dart_aot_runner",
+            url: "fuchsia-pkg://fuchsia.com/dart_aot_runner#meta/dart_aot_runner.cm",
+        },
+        {
+            name: "dart_jit_runner",
+            url: "fuchsia-pkg://fuchsia.com/dart_jit_runner#meta/dart_jit_runner.cm",
+        },
+        {
             name: "elf_test_runner",
             url: "fuchsia-pkg://fuchsia.com/elf-test-runner#meta/elf-test-runner.cm",
         },
@@ -176,6 +184,26 @@
                 "#system-tests",
                 "#tests",
                 "#tier-2-tests",
+            ],
+        },
+        {
+            protocol: [
+                "fuchsia.device.NameProvider",
+                "fuchsia.feedback.CrashReporter",
+                "fuchsia.intl.PropertyProvider",
+                "fuchsia.logger.LogSink",
+                "fuchsia.net.name.Lookup",
+                "fuchsia.posix.socket.Provider",
+
+                // TODO(99511) Remove |Environment| and |Loader| once it is removed from the dart_*_runner cml.
+                "fuchsia.sys.Environment",
+                "fuchsia.sys.Loader",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+            to: [
+                "#dart_aot_runner",
+                "#dart_jit_runner",
             ],
         },
         {
@@ -375,7 +403,12 @@
         {
             directory: "config-data",
             from: "parent",
-            to: [ "#system-tests" ],
+            to: [
+                // TODO(99511) Remove dependence on config-data once it is removed from the dart_*_runner cml.
+                "#dart_aot_runner",
+                "#dart_jit_runner",
+                "#system-tests",
+            ],
         },
         {
             storage: "tmp",

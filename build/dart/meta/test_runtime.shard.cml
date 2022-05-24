@@ -1,0 +1,15 @@
+{
+    // This program is run by the Dart runner.
+    program: {
+        args: [ "--is_test=true" ],
+    },
+    capabilities: [
+        { protocol: "fuchsia.test.Suite" },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "self",
+        },
+    ],
+}

@@ -1,0 +1,12 @@
+{
+    // Enable system logging capabilities
+    include: [
+        "//src/sys/test_manager/system-test.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+
+    // Information about the program to run
+    program: {
+        data: "data/hello-world-dart-test",
+    },
+}

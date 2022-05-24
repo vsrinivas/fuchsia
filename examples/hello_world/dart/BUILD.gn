@@ -5,10 +5,11 @@
 import("//build/components.gni")
 import("//build/dart/dart_component.gni")
 import("//build/dart/dart_library.gni")
+import("//build/dart/dart_test_component.gni")
 
 group("tests") {
   testonly = true
-  deps = [ ":hello-world-dart" ]
+  deps = [ ":hello-world-dart-test" ]
 }
 
 dart_library("lib") {
@@ -27,6 +28,23 @@ dart_component("hello-world-dart-component") {
   manifest = "meta/hello_world_dart.cmx"
   main_package = "hello-world"
   deps = [ ":lib" ]
+}
+
+# Dart test component executed by dart_runner.
+dart_test_component("hello-world-dart-test-component") {
+  component_name = "hello-world-dart-test"
+  manifest = "meta/hello_world_dart_test.cml"
+  sources = [ "hello_world.dart" ]
+
+  deps = [
+    ":lib",
+    "//sdk/dart/fuchsia",
+    "//third_party/dart-pkg/pub/test",
+  ]
+}
+
+fuchsia_test_package("hello-world-dart-test") {
+  test_components = [ ":hello-world-dart-test-component" ]
 }
 
 fuchsia_package("hello-world-dart") {
