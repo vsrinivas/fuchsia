@@ -772,8 +772,11 @@ func TestMain(t *testing.T) {
 		deviceConfiguration                  string
 		ffxTargetList                        string
 		ffxTargetDefault                     string
+		ffxConfigServerEnabled               bool
+		ffxConfigServerListen                string
 		ffxConfigServerMode                  string
 		ffxTargetGetSSHAddress               string
+		ffxRepositoryServerListen            string
 		expectedPMArgs                       string
 		expectedAddSrcArgs                   string
 		expectedRuleReplaceArgs              string
@@ -969,6 +972,32 @@ func TestMain(t *testing.T) {
 			expectedRuleReplaceArgs: fmt.Sprintf(`-F %s/sshconfig -v ::1f pkgctl rule replace json '{"version":"1","content":[{"host_match":"fuchsia.com","host_replacement":"devhost","path_prefix_match":"/","path_prefix_replacement":"/"}]}'`, dataDir),
 		},
 		{
+			testName:                            "server mode pm shuts down ffx repository server",
+			args:                                []string{os.Args[0], "-data-path", dataDir, "--image", "test-image", "--version", "1.0.0", "--level", "debug"},
+			ffxTargetList:                       `[{"nodename":"some-device","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
+			ffxTargetGetSSHAddress:              `[::1f]:22`,
+			ffxConfigServerEnabled:              true,
+			ffxConfigServerListen:               "\"[::]:8083\"",
+			ffxConfigServerMode:                 "\"pm\"",
+			expectedPMArgs:                      "serve -repo " + filepath.Join(dataDir, "some-device/packages/amber-files") + " -c 2 -l :8083",
+			expectedFFXRepositoryServerStopArgs: "--config ffx_repository=true repository server stop",
+			expectedAddSrcArgs:                  fmt.Sprintf("-F %s/sshconfig -v ::1f pkgctl repo add url -n devhost http://[fe80::c0ff:eeee:fefe:c000%%25eth1]:8083/config.json", dataDir),
+			expectedRuleReplaceArgs:             fmt.Sprintf(`-F %s/sshconfig -v ::1f pkgctl rule replace json '{"version":"1","content":[{"host_match":"fuchsia.com","host_replacement":"devhost","path_prefix_match":"/","path_prefix_replacement":"/"}]}'`, dataDir),
+		},
+		{
+			testName:                            "server mode pm does not shut down ffx repository server if on different port",
+			args:                                []string{os.Args[0], "-data-path", dataDir, "--image", "test-image", "--version", "1.0.0", "--level", "debug"},
+			ffxTargetList:                       `[{"nodename":"some-device","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
+			ffxTargetGetSSHAddress:              `[::1f]:22`,
+			ffxConfigServerEnabled:              true,
+			ffxConfigServerListen:               "\"[::]:8084\"",
+			ffxConfigServerMode:                 "\"pm\"",
+			expectedPMArgs:                      "serve -repo " + filepath.Join(dataDir, "some-device/packages/amber-files") + " -c 2 -l :8083",
+			expectedFFXRepositoryServerStopArgs: "--config ffx_repository=true repository server stop",
+			expectedAddSrcArgs:                  fmt.Sprintf("-F %s/sshconfig -v ::1f pkgctl repo add url -n devhost http://[fe80::c0ff:eeee:fefe:c000%%25eth1]:8083/config.json", dataDir),
+			expectedRuleReplaceArgs:             fmt.Sprintf(`-F %s/sshconfig -v ::1f pkgctl rule replace json '{"version":"1","content":[{"host_match":"fuchsia.com","host_replacement":"devhost","path_prefix_match":"/","path_prefix_replacement":"/"}]}'`, dataDir),
+		},
+		{
 			testName:                             "server mode ffx works from ffx config",
 			args:                                 []string{os.Args[0], "-data-path", dataDir, "--image", "test-image", "--version", "1.0.0", "--level", "debug"},
 			ffxTargetList:                        `[{"nodename":"test-device","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
@@ -1154,6 +1183,12 @@ func TestMain(t *testing.T) {
 			os.Setenv("_FAKE_FFX_DEVICE_CONFIG_DATA", test.deviceConfiguration)
 			os.Setenv("_FAKE_FFX_TARGET_DEFAULT", test.ffxTargetDefault)
 			os.Setenv("_FAKE_FFX_TARGET_LIST", test.ffxTargetList)
+			if test.ffxConfigServerEnabled {
+				os.Setenv("_FAKE_FFX_CONFIG_GET_SERVER_ENABLED", "true")
+			} else {
+				os.Setenv("_FAKE_FFX_CONFIG_GET_SERVER_ENABLED", "false")
+			}
+			os.Setenv("_FAKE_FFX_CONFIG_GET_SERVER_LISTEN", test.ffxConfigServerListen)
 			os.Setenv("_FAKE_FFX_CONFIG_GET_SERVER_MODE", test.ffxConfigServerMode)
 			os.Setenv("_FAKE_FFX_GET_SSH_ADDRESS", test.ffxTargetGetSSHAddress)
 			flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
@@ -1292,6 +1327,20 @@ func fakeFFX(args []string) {
 		} else if args[2] == "DeviceConfiguration.remote-target-name" || args[2] == "device_config.remote-target-name" {
 			fmt.Println(`{"bucket":"","device-ip":"","device-name":"remote-target-name","image":"","package-port":"","package-repo":"/some/custom/repo/path","ssh-port":""}`)
 			os.Exit(0)
+		} else if args[2] == ffxConfigServerEnabledKey {
+			if v, ok := os.LookupEnv("_FAKE_FFX_CONFIG_GET_SERVER_ENABLED"); ok {
+				fmt.Printf(v)
+				os.Exit(0)
+			} else {
+				os.Exit(2)
+			}
+		} else if args[2] == ffxConfigServerListenKey {
+			if v, ok := os.LookupEnv("_FAKE_FFX_CONFIG_GET_SERVER_LISTEN"); ok {
+				fmt.Printf(v)
+				os.Exit(0)
+			} else {
+				os.Exit(2)
+			}
 		} else if args[2] == ffxConfigServerModeKey {
 			if v, ok := os.LookupEnv("_FAKE_FFX_CONFIG_GET_SERVER_MODE"); ok {
 				fmt.Printf(v)

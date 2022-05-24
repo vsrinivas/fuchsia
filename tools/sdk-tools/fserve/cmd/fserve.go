@@ -39,7 +39,9 @@ var (
 )
 
 const (
-	ffxConfigServerModeKey string = "repository.server.mode"
+	ffxConfigServerEnabledKey string = "repository.server.enabled"
+	ffxConfigServerListenKey  string = "repository.server.listen"
+	ffxConfigServerModeKey    string = "repository.server.mode"
 
 	defaultServerMode string = "pm"
 )
@@ -196,6 +198,11 @@ func main() {
 		if err = killPMServers(ctx, *repoPortFlag); err != nil {
 			log.Fatalf("Could not kill existing package servers: %v\n", err)
 		}
+
+		if err = killFFXServerIfRunningOnPort(ctx, sdk, *repoPortFlag); err != nil {
+			log.Fatalf("Could not kill existing ffx repository server: %v\n", err)
+		}
+
 		if *killFlag {
 			osExit(0)
 			// this return is needed for tests that overload osExit to not exit.
@@ -316,6 +323,29 @@ type pmServer struct {
 	sshPort       string
 }
 
+func getServerEnabledFromConfig(sdk sdkProvider) (bool, error) {
+	args := []string{"config", "get", ffxConfigServerEnabledKey}
+	output, err := sdk.RunFFX(args, false)
+	if err != nil {
+		// Exit code of 2 means no value was found.
+		if exiterr, ok := err.(*exec.ExitError); ok && exiterr.ExitCode() == 2 {
+			return false, nil
+		}
+		return false, fmt.Errorf("Error reading %s: %w %v", ffxConfigServerEnabledKey, err, output)
+	}
+
+	if len(output) == 0 {
+		return false, nil
+	}
+
+	var serverEnabled bool
+	if err := json.Unmarshal([]byte(output), &serverEnabled); err != nil {
+		return false, err
+	}
+
+	return serverEnabled, nil
+}
+
 func getServerModeFromConfig(sdk sdkProvider) (string, error) {
 	args := []string{"config", "get", ffxConfigServerModeKey}
 	output, err := sdk.RunFFX(args, false)
@@ -337,6 +367,35 @@ func getServerModeFromConfig(sdk sdkProvider) (string, error) {
 	}
 
 	return serverMode, nil
+}
+
+func getServerPortFromConfig(sdk sdkProvider) (string, error) {
+	args := []string{"config", "get", ffxConfigServerListenKey}
+	output, err := sdk.RunFFX(args, false)
+	if err != nil {
+		// Exit code of 2 means no value was found.
+		if exiterr, ok := err.(*exec.ExitError); ok && exiterr.ExitCode() == 2 {
+			return "", nil
+		}
+		return "", fmt.Errorf("Error reading %s: %w %v", ffxConfigServerListenKey, err, output)
+	}
+
+	// Empty string also will disable the server.
+	if len(output) == 0 {
+		return "", nil
+	}
+
+	var serverListen string
+	if err := json.Unmarshal([]byte(output), &serverListen); err != nil {
+		return "", err
+	}
+
+	_, port, err := net.SplitHostPort(serverListen)
+	if err != nil {
+		return "", err
+	}
+
+	return port, nil
 }
 
 // startServer starts the `pm serve` command and returns the command object.
@@ -366,6 +425,41 @@ func killFFXServer(ctx context.Context, sdk sdkProvider) error {
 			return fmt.Errorf("Error removing repository %v: %w", string(exitError.Stderr), err)
 		}
 	}
+	return nil
+}
+
+func killFFXServerIfRunningOnPort(ctx context.Context, sdk sdkProvider, repoPort string) error {
+	// Even though the server mode is 'pm', the ffx repository
+	// server could still be configured to run on our port. Try to
+	// stop it so it won't occupy our port.
+	serverEnabled, err := getServerEnabledFromConfig(sdk)
+	if err != nil {
+		log.Fatalf("Error reading the server enabled from FFX config: %v", err)
+	}
+
+	// The server doesn't appear to be running so don't try to stop it.
+	if !serverEnabled {
+		return nil
+	}
+
+	serverPort, err := getServerPortFromConfig(sdk)
+	if err != nil {
+		log.Fatalf("Error reading the server listen from FFX config: %v", err)
+	}
+
+	// Even if the server is enabled, if the port is empty then the server
+	// is probably not running so we can exit.
+	if serverPort == "" {
+		return nil
+	}
+
+	// Only stop the server if it's configured to run on the port we're trying to use.
+	if repoPort == serverPort {
+		if err = killFFXServer(ctx, sdk); err != nil {
+			log.Fatalf("Could not kill existing ffx repository server: %v\n", err)
+		}
+	}
+
 	return nil
 }
 
