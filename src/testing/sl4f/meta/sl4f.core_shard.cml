@@ -58,11 +58,6 @@
             to: "#sl4f",
         },
         {
-            protocol: "fuchsia.buildinfo.Provider",
-            from: "#build-info",
-            to: "#sl4f",
-        },
-        {
             protocol: "fuchsia.location.namedplace.RegulatoryRegionConfigurator",
             from: "#regulatory_region",
             to: "#sl4f",

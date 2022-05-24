@@ -129,18 +129,9 @@ void main(List<String> arguments) {
 
   setUpAll(() async {
     sl4fDriver = sl4f.Sl4f.fromEnvironment();
-    stderr.write('start sl4f server\n');
-
-    /// The default value for tries is 150. Because each try can take 7 seconds, by default,
-    /// startServer can take 1050 seconds to fail which is more than the 5 minute timeout we
-    /// have. Use 10 tries (which should be enough): if startServer can't start after 10 tries,
-    /// there are no reasons it could start after more tries.
-    await sl4fDriver.startServer(tries: 10);
-    stderr.write('sl4f server started\n');
   });
 
   tearDownAll(() async {
-    await sl4fDriver.stopServer();
     sl4fDriver.close();
   });
 

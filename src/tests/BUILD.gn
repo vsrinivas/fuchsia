@@ -25,7 +25,6 @@ group("tests") {
     "end_to_end/package_manager:tests",
     "end_to_end/perf:tests",
     "end_to_end/snapshot:tests",
-    "end_to_end/time_sync:test",
     "femu:tests",
     "intl:tests",
     "kernel_cprng:tests",

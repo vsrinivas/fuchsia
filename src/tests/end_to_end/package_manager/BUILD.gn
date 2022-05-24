@@ -97,6 +97,5 @@ group("tests") {
   deps = [
     ":gather_package_deps_test($host_toolchain)",
     ":package_manager_test($host_toolchain)",
-    "//src/testing/sl4f:sl4f",  # SL4F is not included in core image.
   ]
 }

@@ -107,7 +107,6 @@ rustc_library("lib") {
     "//src/testing/sl4f/fidl:fuchsia.testing.proxy-rustc",
     "//src/testing/system-metrics-logger/fuchsia.systemmetrics.test:fuchsia.systemmetrics.test-rustc",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:argh",
     "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:async-channel",
     "//third_party/rust_crates:async-trait",
@@ -323,28 +322,13 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
 }
 
-# V1
-# TODO(http://fxbug.dev/77056) Delete once all sl4f products moved to V2
 fuchsia_component("sl4f_comp") {
-  component_name = "sl4f"
-  manifest = "meta/sl4f.cmx"
-  deps = [ ":bin" ]
-}
-
-fuchsia_component("data_proxy_comp") {
-  component_name = "data_proxy"
-  manifest = "proxy/meta/data_proxy.cmx"
-  deps = [ "proxy:bin" ]
-}
-
-# V2
-fuchsia_component("sl4f_comp_v2") {
   component_name = "sl4f"
   manifest = "meta/sl4f.cml"
   deps = [ ":bin" ]
 }
 
-fuchsia_component("data_proxy_comp_v2") {
+fuchsia_component("data_proxy_comp") {
   component_name = "data_proxy"
   manifest = "proxy/meta/data_proxy.cml"
   deps = [ "proxy:bin" ]
@@ -360,11 +344,10 @@ core_shard("sl4f_terminal_core_shard") {
 
 # WARNING: Known to infrastructure.
 fuchsia_package("sl4f") {
+  package_name = "sl4f"
   deps = [
     ":data_proxy_comp",
-    ":data_proxy_comp_v2",
     ":sl4f_comp",
-    ":sl4f_comp_v2",
   ]
 }
 

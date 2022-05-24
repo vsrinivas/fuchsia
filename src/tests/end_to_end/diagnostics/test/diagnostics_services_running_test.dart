@@ -14,14 +14,12 @@ void main(List<String> arguments) {
 
   setUpAll(() async {
     sl4fDriver = sl4f.Sl4f.fromEnvironment();
-    await sl4fDriver.startServer();
     // TODO(fxbug.dev/69468): Get this information from lifecycle streams instead.
     final result = await sl4fDriver.ssh.run('ps');
     psOutput = result.stdout;
   });
 
   tearDownAll(() async {
-    await sl4fDriver.stopServer();
     sl4fDriver.close();
   });
 

@@ -56,7 +56,6 @@ void main() {
       ..level = Level.ALL
       ..onRecord.listen((rec) => print('[${rec.level}]: ${rec.message}'));
     sl4fDriver = sl4f.Sl4f.fromEnvironment();
-    await sl4fDriver.startServer();
 
     hostAddress = await formattedHostAddress(sl4fDriver);
 
@@ -81,7 +80,6 @@ void main() {
   });
 
   tearDownAll(() async {
-    await sl4fDriver.stopServer();
     sl4fDriver.close();
 
     printErrorHelp();

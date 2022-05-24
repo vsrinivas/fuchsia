@@ -32,8 +32,5 @@ dart_test("time_sync_test") {
 group("test") {
   testonly = true
 
-  deps = [
-    ":time_sync_test($host_toolchain)",
-    "//src/testing/sl4f",  # SL4F is not included in the core image.
-  ]
+  deps = [ ":time_sync_test($host_toolchain)" ]
 }

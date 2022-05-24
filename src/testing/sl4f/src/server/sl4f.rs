@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use anyhow::{Context as _, Error};
-use argh::FromArgs;
 use fidl_fuchsia_testing_sl4f::{
     FacadeIteratorMarker, FacadeIteratorSynchronousProxy, FacadeProviderMarker, FacadeProviderProxy,
 };
@@ -142,14 +141,6 @@ use crate::wlan_policy::facade::WlanPolicyFacade;
 // Wpan related includes
 use crate::wpan::facade::WpanFacade;
 
-/// SL4F args
-#[derive(Debug, FromArgs)]
-pub struct Args {
-    /// running as v1
-    #[argh(switch)]
-    v1: bool,
-}
-
 /// Sl4f stores state for all facades and has access to information for all connected clients.
 ///
 /// To add support for a new Facade implementation, see the hashmap in `Sl4f::new`.
@@ -175,7 +166,6 @@ impl Sl4f {
         fn to_arc_trait_object<'a, T: Facade + 'a>(facade: T) -> Arc<dyn Facade + 'a> {
             Arc::new(facade) as Arc<dyn Facade>
         }
-        let args: Args = argh::from_env();
         // To add support for a new facade, define a new submodule with the Facade implementation
         // and construct an instance and include it in the mapping below. The key is used to route
         // requests to the appropriate Facade. Facade constructors should generally not fail, as a
@@ -213,7 +203,7 @@ impl Sl4f {
                 "rfcomm_facade" => RfcommFacade::new()?,
                 "paver" => PaverFacade::new(),
                 "profile_server_facade" => ProfileServerFacade::new(),
-                "proxy_facade" => ProxyFacade::new(args.v1),
+                "proxy_facade" => ProxyFacade::new(),
                 "scenic_facade" => ScenicFacade::new(),
                 "setui_facade" => SetUiFacade::new(),
                 "system_metrics_facade" => SystemMetricsFacade::new(),
