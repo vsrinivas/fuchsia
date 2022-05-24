@@ -732,14 +732,6 @@
               "type": "VariableDeclarationImpl",
               "varType": "int"
             },
-            "DEFAULT_IO_MAPPING_RIGHTS": {
-              "isConst": true,
-              "isFinal": false,
-              "isLate": false,
-              "name": "DEFAULT_IO_MAPPING_RIGHTS",
-              "type": "VariableDeclarationImpl",
-              "varType": "int"
-            },
             "DEFAULT_JOB_RIGHTS": {
               "isConst": true,
               "isFinal": false,
