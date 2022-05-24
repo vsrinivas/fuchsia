@@ -215,12 +215,7 @@ void AmlSpi::SetThreadProfile() {
 void AmlSpi::WaitForTransferComplete() {
   auto statreg = StatReg::Get().FromValue(0);
   while (!statreg.ReadFrom(&mmio_).tc()) {
-    if (interrupt_.is_valid()) {
-      interrupt_.wait(nullptr);
-    }
-    // TODO(fxbug.dev/74692): Add a small delay here if there is no interrupt to wait on. Check with
-    // other users of this driver to make sure the performance impact is acceptable, or see if they
-    // can switch to using interrupts instead.
+    interrupt_.wait(nullptr);
   }
 
   statreg.WriteTo(&mmio_);
@@ -316,9 +311,7 @@ zx_status_t AmlSpi::SpiImplExchange(uint32_t cs, const uint8_t* txdata, size_t t
     mmio_.Read32(AML_SPI_RXDATA);
   }
 
-  if (interrupt_.is_valid()) {
-    IntReg::Get().FromValue(0).set_tcen(1).WriteTo(&mmio_);
-  }
+  IntReg::Get().FromValue(0).set_tcen(1).WriteTo(&mmio_);
 
   if (gpio(cs).is_valid()) {
     gpio(cs).Write(0);
@@ -583,8 +576,8 @@ size_t AmlSpi::DoDmaTransfer(size_t words_remaining) {
 
 bool AmlSpi::UseDma(size_t size) const {
   // TODO(fxbug.dev/100830): Support DMA transfers greater than the pre-allocated buffer size.
-  return interrupt_.is_valid() && size % sizeof(uint64_t) == 0 &&
-         size <= tx_buffer_.mapped.size() && size <= rx_buffer_.mapped.size();
+  return size % sizeof(uint64_t) == 0 && size <= tx_buffer_.mapped.size() &&
+         size <= rx_buffer_.mapped.size();
 }
 
 fbl::Array<AmlSpi::ChipInfo> AmlSpi::InitChips(amlogic_spi::amlspi_config_t* config,
@@ -659,7 +652,10 @@ zx_status_t AmlSpi::Create(void* ctx, zx_device_t* device) {
   }
 
   zx::interrupt interrupt;
-  pdev.GetInterrupt(0, &interrupt);  // Supplying an interrupt is optional.
+  if ((status = pdev.GetInterrupt(0, &interrupt)) != ZX_OK) {
+    zxlogf(ERROR, "Failed to get SPI interrupt: %d", status);
+    return status;
+  }
 
   zx::bti bti;
   status = pdev.GetBti(0, &bti);  // Supplying a BTI is optional.

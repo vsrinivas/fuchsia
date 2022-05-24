@@ -36,7 +36,7 @@ class FakeDdkSpi : public fake_ddk::Bind {
 
   static FakeDdkSpi* instance() { return static_cast<FakeDdkSpi*>(instance_); }
 
-  explicit FakeDdkSpi(bool add_reset_fragment = true)
+  explicit FakeDdkSpi(bool add_reset_fragment = true, bool add_interrupt = true)
       : loop_(&kAsyncLoopConfigNeverAttachToThread),
         registers_(loop_.dispatcher()),
         mmio_region_(mmio_registers_, sizeof(uint32_t),
@@ -72,7 +72,7 @@ class FakeDdkSpi : public fake_ddk::Bind {
 
     pdev_.set_device_info(pdev_device_info_t{
         .mmio_count = 1,
-        .irq_count = 1,
+        .irq_count = add_interrupt ? 1u : 0u,
     });
 
     zx::vmo dup;
@@ -87,13 +87,15 @@ class FakeDdkSpi : public fake_ddk::Bind {
     EXPECT_OK(loop_.StartThread("aml-spi-test-registers-thread"));
     registers_.fidl_service()->ExpectWrite<uint32_t>(0x1c, 1 << 1, 1 << 1);
 
-    ASSERT_OK(zx::interrupt::create({}, 0, ZX_INTERRUPT_VIRTUAL, &interrupt_));
-    zx::interrupt dut_interrupt;
+    if (add_interrupt) {
+      ASSERT_OK(zx::interrupt::create({}, 0, ZX_INTERRUPT_VIRTUAL, &interrupt_));
+      zx::interrupt dut_interrupt;
 
-    ASSERT_OK(interrupt_.duplicate(ZX_RIGHT_SAME_RIGHTS, &dut_interrupt));
-    pdev_.set_interrupt(0, std::move(dut_interrupt));
+      ASSERT_OK(interrupt_.duplicate(ZX_RIGHT_SAME_RIGHTS, &dut_interrupt));
+      pdev_.set_interrupt(0, std::move(dut_interrupt));
 
-    interrupt_.trigger(0, zx::clock::get_monotonic());
+      interrupt_.trigger(0, zx::clock::get_monotonic());
+    }
 
     // Set the transfer complete bit so the driver doesn't get stuck waiting on the interrupt.
     mmio_region_[AML_SPI_STATREG].SetReadCallback(
@@ -1035,6 +1037,13 @@ TEST(AmlSpiTest, ExchangeFallBackToPio) {
   EXPECT_EQ(rx_paddr, 0);
 
   EXPECT_FALSE(bind.ControllerReset());
+}
+
+TEST(AmlSpiTest, InterruptRequired) {
+  FakeDdkSpi bind(/*add_reset_fragment=*/true, /*add_interrupt=*/false);
+
+  // Bind should fail if no interrupt was provided.
+  EXPECT_NOT_OK(AmlSpi::Create(nullptr, fake_ddk::kFakeParent));
 }
 
 }  // namespace spi
