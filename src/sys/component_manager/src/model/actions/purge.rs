@@ -4,10 +4,7 @@
 
 use {
     crate::model::{
-        actions::{
-            Action, ActionKey, ActionSet, DestroyChildAction, DiscoverAction, PurgeChildAction,
-            ResolveAction, StartAction,
-        },
+        actions::{Action, ActionKey, ActionSet, PurgeChildAction, ResolveAction, StartAction},
         component::{ComponentInstance, InstanceState, StartReason},
         error::ModelError,
     },
@@ -47,7 +44,7 @@ async fn do_purge(component: &Arc<ComponentInstance>) -> Result<(), ModelError> 
         }
     }
 
-    // It is always expected that the component shut down first.
+    // Component should have been shut down.
     {
         let execution = component.lock_execution().await;
         assert!(
@@ -57,10 +54,6 @@ async fn do_purge(component: &Arc<ComponentInstance>) -> Result<(), ModelError> 
         );
     }
 
-    // Require the component to be discovered before purging it so a Purged event is always
-    // preceded by a Discovered.
-    ActionSet::register(component.clone(), DiscoverAction::new()).await?;
-
     let nfs = {
         match *component.lock_state().await {
             InstanceState::Resolved(ref s) => {
@@ -69,8 +62,6 @@ async fn do_purge(component: &Arc<ComponentInstance>) -> Result<(), ModelError> 
                     let component = component.clone();
                     let m = m.clone();
                     let nf = async move {
-                        ActionSet::register(component.clone(), DestroyChildAction::new(m.clone()))
-                            .await?;
                         ActionSet::register(component, PurgeChildAction::new(m)).await
                     };
                     nfs.push(nf);
@@ -126,7 +117,7 @@ pub mod tests {
         crate::model::{
             actions::{
                 test_utils::{is_child_deleted, is_destroyed, is_executing, is_purged},
-                ActionNotifier, ShutdownAction,
+                ActionNotifier, DiscoverAction, ShutdownAction,
             },
             component::StartReason,
             events::{registry::EventSubscription, stream::EventStream},
@@ -363,11 +354,7 @@ pub mod tests {
         };
         let (f, delete_handle) = {
             let component_root = component_root.clone();
-            let component_a = component_a.clone();
             async move {
-                ActionSet::register(component_a, ShutdownAction::new())
-                    .await
-                    .expect("shutdown failed");
                 ActionSet::register(component_root, PurgeChildAction::new("a:0".into()))
                     .await
                     .expect("purge failed");
@@ -403,18 +390,51 @@ pub mod tests {
     #[fuchsia::test]
     async fn purge_blocks_on_discover() {
         let (test, mut event_stream) = setup_purge_blocks_test(vec![EventType::Discovered]).await;
-        run_purge_blocks_test(
-            &test,
-            &mut event_stream,
-            EventType::Discovered,
-            DiscoverAction::new(),
-            // expected_ref_count:
-            // - 1 for the ActionSet
-            // - 1 for PurgeAction to wait on the action
-            // (the task that registers the action does not wait on it
-            2,
-        )
-        .await;
+
+        let event =
+            event_stream.wait_until(EventType::Discovered, vec!["a:0"].into()).await.unwrap();
+
+        // Register purge child action, while `action` is stalled.
+        let component_root = test.look_up(vec![].into()).await;
+        let component_a = match *component_root.lock_state().await {
+            InstanceState::Resolved(ref s) => {
+                s.get_live_child(&ChildMoniker::from("a")).expect("child a not found")
+            }
+            _ => panic!("not resolved"),
+        };
+        let (f, delete_handle) = {
+            let component_root = component_root.clone();
+            async move {
+                ActionSet::register(component_root, PurgeChildAction::new("a:0".into()))
+                    .await
+                    .expect("purge failed");
+            }
+            .remote_handle()
+        };
+        fasync::Task::spawn(f).detach();
+
+        // Check that `action` is being waited on. DestroyChild, not Purge, blocks on Discover.
+        loop {
+            let actions = component_a.lock_actions().await;
+            assert!(actions.contains(&ActionKey::Discover));
+            let rx = &actions.rep[&ActionKey::Discover];
+            let rx = rx
+                .downcast_ref::<ActionNotifier<<DiscoverAction as Action>::Output>>()
+                .expect("action notifier has unexpected type");
+            let refcount = rx.refcount.load(Ordering::Relaxed);
+            if refcount == 2 {
+                let actions = component_root.lock_actions().await;
+                assert!(actions.contains(&ActionKey::DestroyChild("a:0".into())));
+                break;
+            }
+            drop(actions);
+            fasync::Timer::new(fasync::Time::after(zx::Duration::from_millis(100))).await;
+        }
+
+        // Resuming the action should allow deletion to proceed.
+        event.resume();
+        delete_handle.await;
+        assert!(is_child_deleted(&component_root, &component_a).await);
     }
 
     #[fuchsia::test]

@@ -5,8 +5,8 @@
 use {
     crate::model::{
         actions::{
-            shutdown, start, ActionSet, DestroyChildAction, DiscoverAction, PurgeChildAction,
-            ResolveAction, StartAction, StopAction, UnresolveAction,
+            shutdown, start, ActionSet, DiscoverAction, PurgeChildAction,
+            ResolveAction, StartAction, StopAction, UnresolveAction
         },
         context::{ModelContext, WeakModelContext},
         environment::Environment,
@@ -52,9 +52,7 @@ use {
     fuchsia_component::client,
     fuchsia_zircon as zx,
     futures::{
-        future::{
-            join_all, AbortHandle, Abortable, BoxFuture, Either, Future, FutureExt, TryFutureExt,
-        },
+        future::{join_all, AbortHandle, Abortable, BoxFuture, Either, FutureExt, TryFutureExt},
         lock::{MappedMutexGuard, Mutex, MutexGuard},
     },
     log::{error, warn},
@@ -694,7 +692,7 @@ impl ComponentInstance {
     pub async fn remove_dynamic_child(
         self: &Arc<Self>,
         child_moniker: &ChildMoniker,
-    ) -> Result<impl Future<Output = Result<(), ModelError>>, ModelError> {
+    ) -> Result<(), ModelError> {
         let tup = {
             let state = self.lock_resolved_state().await?;
             state.live_children.get(&child_moniker).map(|t| t.clone())
@@ -703,11 +701,7 @@ impl ComponentInstance {
             let (instance, _) = tup;
             let instanced_moniker =
                 InstancedChildMoniker::from_child_moniker(child_moniker, instance);
-            ActionSet::register(self.clone(), DestroyChildAction::new(instanced_moniker.clone()))
-                .await?;
-            let mut actions = self.lock_actions().await;
-            let nf = actions.register_no_wait(self, PurgeChildAction::new(instanced_moniker));
-            Ok(nf)
+            ActionSet::register(self.clone(), PurgeChildAction::new(instanced_moniker)).await
         } else {
             Err(ModelError::instance_not_found_in_realm(
                 self.abs_moniker.clone(),
@@ -833,7 +827,7 @@ impl ComponentInstance {
                 fasync::Task::spawn(async move {
                     match ActionSet::register(
                         component.clone(),
-                        DestroyChildAction::new(instanced_moniker.clone()),
+                        PurgeChildAction::new(instanced_moniker.clone()),
                     )
                     .await
                     {
@@ -845,11 +839,6 @@ impl ComponentInstance {
                             );
                         }
                     }
-                    let mut actions = component.lock_actions().await;
-
-                    // This returns a Future that does not need to be polled.
-                    let _ = actions
-                        .register_no_wait(&component, PurgeChildAction::new(instanced_moniker.clone()));
                 })
                 .detach();
             }
@@ -881,8 +870,6 @@ impl ComponentInstance {
 
     /// Destroys this component instance.
     /// REQUIRES: All children have already been destroyed.
-    // TODO: Need to:
-    // - Delete the instance's persistent marker, if it was a persistent dynamic instance
     pub async fn destroy_instance(self: &Arc<Self>) -> Result<(), ModelError> {
         if self.persistent_storage {
             return Ok(());
@@ -952,7 +939,6 @@ impl ComponentInstance {
             // above.
             if let Some(coll) = m.collection() {
                 if transient_colls.contains(coll) {
-                    ActionSet::register(self.clone(), DestroyChildAction::new(m.clone())).await?;
                     let nf = ActionSet::register(self.clone(), PurgeChildAction::new(m));
                     futures.push(nf);
                 }
@@ -2032,7 +2018,7 @@ pub mod tests {
     use {
         super::*,
         crate::model::{
-            actions::{test_utils::is_discovered, ShutdownAction},
+            actions::{ShutdownAction, DestroyChildAction, test_utils::is_discovered},
             events::{registry::EventSubscription, stream::EventStream},
             hooks::EventType,
             starter::Starter,

@@ -467,13 +467,7 @@ mod tests {
         assert!(resolved.started.is_none());
 
         let child_moniker = ChildMoniker::parse("my_coll:a").unwrap();
-        let purge_fut = component_root.remove_dynamic_child(&child_moniker).await.unwrap();
-
-        // `a` should be destroyed before purge
-        let err = query.get_instance_info("./my_coll:a").await.unwrap().unwrap_err();
-        assert_eq!(err, fcomponent::Error::InstanceNotFound);
-
-        purge_fut.await.unwrap();
+        component_root.remove_dynamic_child(&child_moniker).await.unwrap();
 
         // `a` should be destroyed after purge
         let err = query.get_instance_info("./my_coll:a").await.unwrap().unwrap_err();

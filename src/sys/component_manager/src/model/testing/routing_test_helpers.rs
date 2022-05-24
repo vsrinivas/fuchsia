@@ -402,10 +402,7 @@ impl RoutingTest {
             .await
             .expect("start instance failed");
         let child_moniker = ChildMoniker::new(name.to_string(), Some(collection.to_string()));
-        let nf =
-            component.remove_dynamic_child(&child_moniker).await.expect("failed to remove child");
-        // Wait for destruction to fully complete.
-        nf.await.expect("failed to destroy child");
+        component.remove_dynamic_child(&child_moniker).await.expect("failed to remove child");
     }
 
     pub async fn bind_and_get_namespace(&self, moniker: AbsoluteMoniker) -> Arc<ManagedNamespace> {

@@ -271,21 +271,14 @@ impl RealmCapabilityHost {
         let component = component.upgrade().map_err(|_| fcomponent::Error::InstanceDied)?;
         child.collection.as_ref().ok_or(fcomponent::Error::InvalidArguments)?;
         let child_moniker = ChildMoniker::new(child.name, child.collection);
-        let destroy_fut =
-            component.remove_dynamic_child(&child_moniker).await.map_err(|e| match e {
-                ModelError::InstanceNotFoundInRealm { .. } => fcomponent::Error::InstanceNotFound,
-                ModelError::Unsupported { .. } => fcomponent::Error::Unsupported,
-                e => {
-                    error!("remove_dynamic_child() failed: {}", e);
-                    fcomponent::Error::Internal
-                }
-            })?;
-        // This function returns as soon as the child is marked deleted, while actual destruction
-        // proceeds in the background.
-        fasync::Task::spawn(async move {
-            destroy_fut.await.unwrap_or_else(|e| debug!("error waiting on destroy_fut: {}", e));
-        })
-        .detach();
+        component.remove_dynamic_child(&child_moniker).await.map_err(|e| match e {
+            ModelError::InstanceNotFoundInRealm { .. } => fcomponent::Error::InstanceNotFound,
+            ModelError::Unsupported { .. } => fcomponent::Error::Unsupported,
+            e => {
+                error!("remove_dynamic_child() failed: {}", e);
+                fcomponent::Error::Internal
+            }
+        })?;
         Ok(())
     }
 
@@ -1079,16 +1072,20 @@ mod tests {
             assert!(!execution_is_shut_down(&child_b).await);
         }
 
-        // The destruction of "a" was arrested during `PreDestroy`. The old "a" should still exist,
+        // The destruction of "a" was arrested during `Destroy`. The old "a" should still exist,
         // although it's not live.
         assert!(has_child(test.component(), "coll:a:1").await);
 
-        // Move past the 'PreDestroy' event for "a", and wait for destroy_child to return.
+        // Move past the `Destroy` event for "a", and wait for `Purged`
         event.resume();
-        let res = destroy_handle.await;
-        res.expect("fidl call failed").expect("failed to destroy child a");
+        let event = event_stream
+            .wait_until(EventType::Purged, vec!["system:0", "coll:a:1"].into())
+            .await
+            .unwrap();
+        event.resume();
 
-        // Child is marked deleted now.
+        // "a" is fully deleted now.
+        assert!(!has_child(test.component(), "coll:a:1").await);
         {
             let actual_children = get_live_children(test.component()).await;
             let mut expected_children: HashSet<ChildMoniker> = HashSet::new();
@@ -1097,14 +1094,8 @@ mod tests {
             assert_eq!("(system(coll:b))", test.hook.print());
         }
 
-        // Wait until 'PostDestroy' event for "a"
-        let event = event_stream
-            .wait_until(EventType::Purged, vec!["system:0", "coll:a:1"].into())
-            .await
-            .unwrap();
-        event.resume();
-
-        assert!(!has_child(test.component(), "coll:a:1").await);
+        let res = destroy_handle.await;
+        res.expect("fidl call failed").expect("failed to destroy child a");
 
         // Recreate "a" and verify "a" is back (but it's a different "a"). The old "a" is gone
         // from the client's point of view, but it hasn't been cleaned up yet.

@@ -4,7 +4,7 @@
 
 use {
     crate::model::{
-        actions::{Action, ActionKey, ActionSet, PurgeAction},
+        actions::{Action, ActionKey, ActionSet, DestroyChildAction, PurgeAction},
         component::{ComponentInstance, InstanceState},
         error::ModelError,
         hooks::{Event, EventPayload},
@@ -52,6 +52,9 @@ async fn do_purge_child(
         }
     };
     if let Some(child) = child {
+        // Mark the child destroyed
+        ActionSet::register(component.clone(), DestroyChildAction::new(moniker.clone())).await?;
+
         // Wait for the child component to be destroyed
         ActionSet::register(child.clone(), PurgeAction::new()).await?;
 

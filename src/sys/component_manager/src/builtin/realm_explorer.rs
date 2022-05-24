@@ -458,12 +458,7 @@ mod tests {
         assert!(info.component_id.is_none());
 
         let child_moniker = ChildMoniker::parse("my_coll:a").unwrap();
-        let purge_fut = component_root.remove_dynamic_child(&child_moniker).await.unwrap();
-
-        // `a` should be destroyed before purge
-        get_instance_info(&explorer, 1, ".").await;
-
-        purge_fut.await.unwrap();
+        component_root.remove_dynamic_child(&child_moniker).await.unwrap();
 
         // `a` should be destroyed after purge
         get_instance_info(&explorer, 1, ".").await;

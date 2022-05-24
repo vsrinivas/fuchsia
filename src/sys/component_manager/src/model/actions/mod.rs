@@ -63,10 +63,16 @@ mod unresolve;
 
 // Re-export the actions
 pub use {
-    destroy_child::DestroyChildAction, discover::DiscoverAction, purge::PurgeAction,
-    purge_child::PurgeChildAction, resolve::ResolveAction, shutdown::ShutdownAction,
-    start::StartAction, stop::StopAction, unresolve::UnresolveAction,
+    discover::DiscoverAction, purge_child::PurgeChildAction, resolve::ResolveAction,
+    shutdown::ShutdownAction, start::StartAction, stop::StopAction,
+    unresolve::UnresolveAction,
 };
+
+// Limit visibility of internal actions
+#[cfg(test)]
+pub use {destroy_child::DestroyChildAction, purge::PurgeAction};
+#[cfg(not(test))]
+pub(self) use {destroy_child::DestroyChildAction, purge::PurgeAction};
 
 use {
     crate::model::component::ComponentInstance,
