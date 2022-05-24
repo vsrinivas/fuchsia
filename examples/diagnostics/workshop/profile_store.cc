@@ -6,11 +6,10 @@
 
 #include <memory>
 
+#include "file_utils.h"
 #include "profile.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
-
-std::string FilepathForKey(std::string& key) { return files::JoinPath("/data", key); }
 
 ProfileStore::ProfileStore(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
 
