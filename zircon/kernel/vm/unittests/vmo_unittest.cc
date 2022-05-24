@@ -2003,9 +2003,7 @@ static bool vmo_attribution_ops_test() {
     EXPECT_EQ(true,
               verify_object_page_attribution(vmo.get(), expected_gen_count, expected_page_count));
 
-    // Zero'ing the range will decommit pages, and should increment the generation count.  In the
-    // case of contiguous VMOs, we don't decommit pages (so far), but we do bump the generation
-    // count.
+    // Zero'ing the range will decommit pages, and should increment the generation count.
     status = vmo->ZeroRange(0, 2 * PAGE_SIZE);
     ASSERT_EQ(ZX_OK, status);
     ++expected_gen_count;
@@ -2017,9 +2015,9 @@ static bool vmo_attribution_ops_test() {
   END_TEST;
 }
 
-// Tests that page attribution caching behaves as expected under various operations performed on the
-// vmo that can change its page list - committing / decommitting pages, reading / writing, zero
-// range, resizing.
+// Tests that page attribution caching behaves as expected under various operations performed on a
+// contiguous vmo that can change its page list - committing / decommitting pages, reading /
+// writing, zero range, resizing.
 static bool vmo_attribution_ops_contiguous_test() {
   BEGIN_TEST;
 
@@ -2164,6 +2162,30 @@ static bool vmo_attribution_ops_contiguous_test() {
     ASSERT_EQ(ZX_OK, status);
     ++expected_gen_count;
     // Zeroing doesn't decommit pages of contiguous VMOs (nor does it commit pages).
+    EXPECT_EQ(true,
+              verify_object_page_attribution(vmo.get(), expected_gen_count, expected_page_count));
+
+    // Decommitting pages should increment the generation count.
+    status = vmo->DecommitRange(0, 2 * PAGE_SIZE);
+    if (!is_ppb_enabled) {
+      ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, status);
+      DEBUG_ASSERT(expected_page_count == 4);
+    } else {
+      ASSERT_EQ(ZX_OK, status);
+      ++expected_gen_count;
+      // We were able to decommit two pages.
+      expected_page_count = 2;
+    }
+    EXPECT_EQ(true,
+              verify_object_page_attribution(vmo.get(), expected_gen_count, expected_page_count));
+
+    // Zero'ing a decommitted range (if is_ppb_enabled is true) should not commit any new pages.
+    // Empty slots in a decommitted contiguous VMO are zero by default, as the physical page
+    // provider will zero these pages on supply.
+    status = vmo->ZeroRange(0, 2 * PAGE_SIZE);
+    ASSERT_EQ(ZX_OK, status);
+    ++expected_gen_count;
+    // The page count should remain unchanged.
     EXPECT_EQ(true,
               verify_object_page_attribution(vmo.get(), expected_gen_count, expected_page_count));
   }
