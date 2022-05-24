@@ -26,13 +26,12 @@ pub fn read_magma_command_and_type(
     current_task: &CurrentTask,
     command_address: UserAddress,
 ) -> Result<(virtmagma_ioctl_args_magma_command, virtio_magma_ctrl_type), Errno> {
-    let command_ref = UserRef::new(command_address);
-    let mut command = virtmagma_ioctl_args_magma_command::default();
-    current_task.mm.read_object(command_ref, &mut command)?;
+    let command: virtmagma_ioctl_args_magma_command =
+        current_task.mm.read_object(UserRef::new(command_address))?;
 
     let request_address = UserAddress::from(command.request_address);
-    let mut header = virtio_magma_ctrl_hdr_t::default();
-    current_task.mm.read_object(UserRef::new(request_address), &mut header)?;
+    let header: virtio_magma_ctrl_hdr_t =
+        current_task.mm.read_object(UserRef::new(request_address))?;
 
     Ok((command, header.type_ as u16))
 }
@@ -47,8 +46,7 @@ pub fn read_control_and_response<C: Default + AsBytes + FromBytes, R: Default>(
     command: &virtmagma_ioctl_args_magma_command,
 ) -> Result<(C, R), Errno> {
     let request_address = UserAddress::from(command.request_address);
-    let mut ctrl = C::default();
-    current_task.mm.read_object(UserRef::new(request_address), &mut ctrl)?;
+    let ctrl = current_task.mm.read_object(UserRef::new(request_address))?;
 
     Ok((ctrl, R::default()))
 }

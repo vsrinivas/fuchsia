@@ -291,8 +291,7 @@ fn write_socket_address(
     user_address_length: UserRef<socklen_t>,
     address_bytes: &[u8],
 ) -> Result<(), Errno> {
-    let mut capacity = 0;
-    task.mm.read_object(user_address_length, &mut capacity)?;
+    let capacity = task.mm.read_object(user_address_length)?;
     if capacity > i32::MAX as socklen_t {
         return error!(EINVAL);
     }
@@ -377,8 +376,7 @@ fn recvmsg_internal(
     flags: u32,
     deadline: Option<zx::Time>,
 ) -> Result<usize, Errno> {
-    let mut message_header = msghdr::default();
-    current_task.mm.read_object(user_message_header.clone(), &mut message_header)?;
+    let mut message_header = current_task.mm.read_object(user_message_header.clone())?;
     let iovec =
         current_task.mm.read_iovec(message_header.msg_iov, message_header.msg_iovlen as i32)?;
 
@@ -460,8 +458,7 @@ pub fn sys_recvmmsg(
     let deadline = if user_timeout.is_null() {
         None
     } else {
-        let mut ts = timespec::default();
-        current_task.mm.read_object(user_timeout, &mut ts)?;
+        let ts = current_task.mm.read_object(user_timeout)?;
         Some(zx::Time::after(duration_from_timespec(ts)?))
     };
 
@@ -541,8 +538,7 @@ fn sendmsg_internal(
     user_message_header: UserRef<msghdr>,
     flags: u32,
 ) -> Result<usize, Errno> {
-    let mut message_header = msghdr::default();
-    current_task.mm.read_object(user_message_header, &mut message_header)?;
+    let message_header = current_task.mm.read_object(user_message_header)?;
 
     let dest_address = maybe_parse_socket_address(
         &current_task,
@@ -680,8 +676,7 @@ pub fn sys_getsockopt(
 
     let opt_value = socket.getsockopt(level, optname)?;
 
-    let mut optlen = 0;
-    current_task.mm.read_object(user_optlen, &mut optlen)?;
+    let optlen = current_task.mm.read_object(user_optlen)?;
     let actual_optlen = opt_value.len() as socklen_t;
     if optlen < actual_optlen {
         return error!(EINVAL);

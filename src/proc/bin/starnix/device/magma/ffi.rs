@@ -139,16 +139,12 @@ pub fn execute_command(
 ) -> Result<(), Errno> {
     let virtmagma_command_descriptor_addr =
         UserRef::<virtmagma_command_descriptor>::new(control.descriptor.into());
-    let mut command_descriptor = virtmagma_command_descriptor::default();
-    current_task.mm.read_object(virtmagma_command_descriptor_addr, &mut command_descriptor)?;
+    let command_descriptor = current_task.mm.read_object(virtmagma_command_descriptor_addr)?;
 
     // Read the virtmagma-internal struct that contains the counts and flags for the magma command
     // descriptor.
-    let mut wire_descriptor = WireDescriptor::default();
-    current_task.mm.read_object(
-        UserAddress::from(command_descriptor.descriptor).into(),
-        &mut wire_descriptor,
-    )?;
+    let wire_descriptor: WireDescriptor =
+        current_task.mm.read_object(UserAddress::from(command_descriptor.descriptor).into())?;
 
     // This is the command descriptor that will be populated from the virtmagma
     // descriptor and subsequently passed to magma_execute_command.

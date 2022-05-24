@@ -139,8 +139,7 @@ pub fn sys_nanosleep(
     user_request: UserRef<timespec>,
     user_remaining: UserRef<timespec>,
 ) -> Result<(), Errno> {
-    let mut request = timespec::default();
-    current_task.mm.read_object(user_request, &mut request)?;
+    let request = current_task.mm.read_object(user_request)?;
     let deadline = zx::Time::after(duration_from_timespec(request)?);
     match Waiter::new().wait_until(&current_task, deadline) {
         Err(err) if err == EINTR => {

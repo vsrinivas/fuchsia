@@ -49,8 +49,7 @@ fn read_c_string_vector(
     let mut user_current = user_vector;
     let mut vector: Vec<CString> = vec![];
     loop {
-        let mut user_string = UserCString::default();
-        mm.read_object(user_current, &mut user_string)?;
+        let user_string = mm.read_object(user_current)?;
         if user_string.is_null() {
             break;
         }
@@ -312,8 +311,7 @@ pub fn sys_setitimer(
     user_new_value: UserRef<itimerval>,
     user_old_value: UserRef<itimerval>,
 ) -> Result<(), Errno> {
-    let mut new_value = itimerval::default();
-    current_task.mm.read_object(user_new_value, &mut new_value)?;
+    let new_value = current_task.mm.read_object(user_new_value)?;
 
     let old_value = current_task.thread_group.set_itimer(which, new_value)?;
 

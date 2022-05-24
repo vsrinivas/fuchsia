@@ -36,14 +36,12 @@ impl FutexTable {
         deadline: zx::Time,
     ) -> Result<(), Errno> {
         let user_current = UserRef::<u32>::new(addr);
-        let mut current = 0;
         let waiter = Waiter::new();
         {
             let waiters = self.get_waiters(addr);
             let mut waiters = waiters.lock();
             // TODO: This read should be atomic.
-            current_task.mm.read_object(user_current, &mut current)?;
-            if current != value {
+            if current_task.mm.read_object(user_current)? != value {
                 return Ok(());
             }
 

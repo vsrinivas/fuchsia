@@ -1145,13 +1145,18 @@ impl MemoryManager {
         state.read_memory(addr, bytes)
     }
 
-    pub fn read_object<T: FromBytes>(&self, user: UserRef<T>, object: &mut T) -> Result<(), Errno> {
+    pub fn read_object<T: FromBytes>(&self, user: UserRef<T>) -> Result<T, Errno> {
         // SAFETY: T is FromBytes, which means that any bit pattern is valid. Interpreting T as u8
         // is safe because T's alignment requirements are larger than u8.
+        let mut object = T::new_zeroed();
         let buffer = unsafe {
-            std::slice::from_raw_parts_mut(object as *mut T as *mut u8, std::mem::size_of::<T>())
+            std::slice::from_raw_parts_mut(
+                &mut object as *mut T as *mut u8,
+                std::mem::size_of::<T>(),
+            )
         };
-        self.read_memory(user.addr(), buffer)
+        self.read_memory(user.addr(), buffer)?;
+        Ok(object)
     }
 
     pub fn read_objects<T: FromBytes>(
@@ -1160,7 +1165,7 @@ impl MemoryManager {
         objects: &mut [T],
     ) -> Result<(), Errno> {
         for (index, object) in objects.iter_mut().enumerate() {
-            self.read_object(user.at(index), object)?;
+            *object = self.read_object(user.at(index))?;
         }
         Ok(())
     }
@@ -1301,8 +1306,7 @@ impl<'a> UserMemoryCursor<'a> {
         if obj_size > self.len {
             return error!(EINVAL);
         }
-        let mut obj: T = T::new_zeroed();
-        self.mm.read_object(UserRef::<T>::new(self.addr), &mut obj)?;
+        let obj: T = self.mm.read_object(UserRef::<T>::new(self.addr))?;
         self.addr += obj_size;
         self.len -= obj_size;
         self.consumed += obj_size;

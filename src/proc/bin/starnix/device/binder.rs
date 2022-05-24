@@ -22,7 +22,7 @@ use fuchsia_zircon as zx;
 use slab::Slab;
 use std::collections::{btree_map::Entry as BTreeMapEntry, BTreeMap, VecDeque};
 use std::sync::{Arc, Weak};
-use zerocopy::{AsBytes, FromBytes};
+use zerocopy::AsBytes;
 
 /// The largest mapping of shared memory allowed by the binder driver.
 const MAX_MMAP_SIZE: usize = 4 * 1024 * 1024;
@@ -1143,9 +1143,8 @@ impl BinderDriver {
                     return error!(EINVAL);
                 }
 
-                let user_ref = UserRef::new(user_arg);
-                let mut input = binder_write_read::new_zeroed();
-                current_task.mm.read_object(user_ref, &mut input)?;
+                let user_ref = UserRef::<binder_write_read>::new(user_arg);
+                let mut input = current_task.mm.read_object(user_ref)?;
 
                 // We will be writing this back to userspace, don't trust what the client gave us.
                 input.write_consumed = 0;

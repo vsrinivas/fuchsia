@@ -1214,9 +1214,7 @@ pub fn sys_timerfd_settime(
     let file = current_task.files.get(fd)?;
     let timer_file = file.downcast_file::<TimerFile>().ok_or_else(|| errno!(EBADF))?;
 
-    let mut new_timer_spec = itimerspec::default();
-    current_task.mm.read_object(user_new_value, &mut new_timer_spec)?;
-
+    let new_timer_spec = current_task.mm.read_object(user_new_value)?;
     let old_timer_spec = timer_file.set_timer_spec(new_timer_spec, flags)?;
     if !user_old_value.is_null() {
         current_task.mm.write_object(user_old_value, &old_timer_spec)?;
@@ -1262,14 +1260,13 @@ pub fn sys_epoll_ctl(
         return error!(ENOSYS);
     }
 
-    let mut epoll_event = EpollEvent { events: 0, data: 0 };
     match op {
         EPOLL_CTL_ADD => {
-            current_task.mm.read_object(event, &mut epoll_event)?;
+            let epoll_event = current_task.mm.read_object(event)?;
             epoll_file.add(&current_task, &ctl_file, epoll_event)?;
         }
         EPOLL_CTL_MOD => {
-            current_task.mm.read_object(event, &mut epoll_event)?;
+            let epoll_event = current_task.mm.read_object(event)?;
             epoll_file.modify(&current_task, &ctl_file, epoll_event)?;
         }
         EPOLL_CTL_DEL => epoll_file.delete(&current_task, &ctl_file)?,
@@ -1304,8 +1301,7 @@ pub fn sys_epoll_pwait(
     let epoll_file = file.downcast_file::<EpollFileObject>().ok_or(errno!(EINVAL))?;
 
     let active_events = if !user_sigmask.is_null() {
-        let mut signal_mask = sigset_t::default();
-        current_task.mm.read_object(user_sigmask, &mut signal_mask)?;
+        let signal_mask = current_task.mm.read_object(user_sigmask)?;
         current_task.wait_with_temporary_mask(signal_mask, |current_task| {
             epoll_file.wait(current_task, max_events, timeout)
         })?
@@ -1339,7 +1335,7 @@ fn poll(
     let epoll_file = file_object.downcast_file::<EpollFileObject>().unwrap();
 
     for (index, poll_descriptor) in pollfds.iter_mut().enumerate() {
-        current_task.mm.read_object(user_pollfds.at(index), poll_descriptor)?;
+        *poll_descriptor = current_task.mm.read_object(user_pollfds.at(index))?;
         if poll_descriptor.fd < 0 {
             continue;
         }
@@ -1375,16 +1371,14 @@ pub fn sys_ppoll(
         // Passing -1 to poll is equivalent to an infinite timeout.
         -1
     } else {
-        let mut ts = timespec::default();
-        current_task.mm.read_object(user_timespec, &mut ts)?;
+        let ts = current_task.mm.read_object(user_timespec)?;
         duration_from_timespec(ts)?.into_millis() as i32
     };
 
     let start_time = zx::Time::get_monotonic();
 
     let mask = if !user_mask.is_null() {
-        let mut mask = sigset_t::default();
-        current_task.mm.read_object(user_mask, &mut mask)?;
+        let mask = current_task.mm.read_object(user_mask)?;
         Some(mask)
     } else {
         None
@@ -1559,8 +1553,7 @@ mod tests {
 
         assert_eq!(sys_statfs(&current_task, user_path, user_stat), Ok(()));
 
-        let mut returned_stat = statfs::default();
-        current_task.mm.read_object(user_stat, &mut returned_stat).expect("failed to read struct");
+        let returned_stat = current_task.mm.read_object(user_stat).expect("failed to read struct");
         assert_eq!(returned_stat, statfs::default());
     }
 }

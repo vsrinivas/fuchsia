@@ -36,8 +36,7 @@ pub fn sys_rt_sigaction(
             return error!(EINVAL);
         }
 
-        let mut signal_action = sigaction_t::default();
-        current_task.mm.read_object(user_action, &mut signal_action)?;
+        let signal_action = current_task.mm.read_object(user_action)?;
         Some(signal_action)
     } else {
         None
@@ -76,7 +75,7 @@ pub fn sys_rt_sigprocmask(
     // since it might point to the same location as `user_set`.
     let mut new_mask = sigset_t::default();
     if !user_set.is_null() {
-        current_task.mm.read_object(user_set, &mut new_mask)?;
+        new_mask = current_task.mm.read_object(user_set)?;
     }
 
     let mut state = current_task.write();
@@ -121,7 +120,7 @@ pub fn sys_sigaltstack(
         if on_signal_stack {
             return error!(EPERM);
         }
-        current_task.mm.read_object(user_ss, &mut ss)?;
+        ss = current_task.mm.read_object(user_ss)?;
         if (ss.ss_flags & !(SS_AUTODISARM | SS_DISABLE)) != 0 {
             return error!(EINVAL);
         }
@@ -157,9 +156,7 @@ pub fn sys_rt_sigsuspend(
     if sigset_size != std::mem::size_of::<sigset_t>() {
         return error!(EINVAL);
     }
-
-    let mut mask = sigset_t::default();
-    current_task.mm.read_object(user_mask, &mut mask)?;
+    let mask = current_task.mm.read_object(user_mask)?;
 
     let waiter = Waiter::new();
     current_task.wait_with_temporary_mask(mask, |current_task| waiter.wait(current_task))?;
@@ -178,13 +175,11 @@ pub fn sys_rt_sigtimedwait(
         return error!(EINVAL);
     }
 
-    let mut mask = sigset_t::default();
-    current_task.mm.read_object(set_addr, &mut mask)?;
+    let mask = current_task.mm.read_object(set_addr)?;
     let deadline = if timeout_addr.is_null() {
         zx::Time::INFINITE
     } else {
-        let mut timeout = timespec::default();
-        current_task.mm.read_object(timeout_addr, &mut timeout)?;
+        let timeout = current_task.mm.read_object(timeout_addr)?;
         zx::Time::after(duration_from_timespec(timeout)?)
     };
 
@@ -230,8 +225,7 @@ pub fn sys_signalfd4(
         return error!(EINVAL);
     }
 
-    let mut mask: sigset_t = 0;
-    current_task.mm.read_object(mask_addr, &mut mask)?;
+    let mask = current_task.mm.read_object(mask_addr)?;
     let signalfd = SignalFd::new(current_task.kernel(), mask, flags);
     let flags = if flags & SFD_CLOEXEC != 0 { FdFlags::CLOEXEC } else { FdFlags::empty() };
     let fd = current_task.files.add_with_flags(signalfd, flags)?;
@@ -653,8 +647,7 @@ mod tests {
 
         // Check that the initial state is disabled.
         sys_sigaltstack(&current_task, nullptr, user_ss).expect("failed to call sigaltstack");
-        let mut ss = sigaltstack_t::default();
-        current_task.mm.read_object(user_ss, &mut ss).expect("failed to read struct");
+        let mut ss = current_task.mm.read_object(user_ss).expect("failed to read struct");
         assert!(ss.ss_flags & SS_DISABLE != 0);
 
         // Install a sigaltstack and read it back out.
@@ -668,8 +661,7 @@ mod tests {
             .write_memory(addr, &[0u8; std::mem::size_of::<sigaltstack_t>()])
             .expect("failed to clear struct");
         sys_sigaltstack(&current_task, nullptr, user_ss).expect("failed to call sigaltstack");
-        let mut another_ss = sigaltstack_t::default();
-        current_task.mm.read_object(user_ss, &mut another_ss).expect("failed to read struct");
+        let another_ss = current_task.mm.read_object(user_ss).expect("failed to read struct");
         assert_eq!(ss, another_ss);
 
         // Disable the sigaltstack and read it back out.
@@ -681,7 +673,7 @@ mod tests {
             .write_memory(addr, &[0u8; std::mem::size_of::<sigaltstack_t>()])
             .expect("failed to clear struct");
         sys_sigaltstack(&current_task, nullptr, user_ss).expect("failed to call sigaltstack");
-        current_task.mm.read_object(user_ss, &mut ss).expect("failed to read struct");
+        let ss = current_task.mm.read_object(user_ss).expect("failed to read struct");
         assert!(ss.ss_flags & SS_DISABLE != 0);
     }
 
@@ -758,8 +750,7 @@ mod tests {
             Ok(())
         );
 
-        let mut old_mask = sigset_t::default();
-        current_task.mm.read_object(old_set, &mut old_mask).expect("failed to read mask");
+        let old_mask = current_task.mm.read_object(old_set).expect("failed to read mask");
         assert_eq!(old_mask, original_mask);
     }
 
@@ -811,8 +802,7 @@ mod tests {
             Ok(())
         );
 
-        let mut old_mask = sigset_t::default();
-        current_task.mm.read_object(old_set, &mut old_mask).expect("failed to read mask");
+        let old_mask = current_task.mm.read_object(old_set).expect("failed to read mask");
         assert_eq!(old_mask, original_mask);
         assert_eq!(current_task.read().signals.mask, new_mask);
     }
@@ -844,8 +834,7 @@ mod tests {
             Ok(())
         );
 
-        let mut old_mask = sigset_t::default();
-        current_task.mm.read_object(old_set, &mut old_mask).expect("failed to read mask");
+        let old_mask = current_task.mm.read_object(old_set).expect("failed to read mask");
         assert_eq!(old_mask, original_mask);
         assert_eq!(current_task.read().signals.mask, new_mask | original_mask);
     }
@@ -877,8 +866,7 @@ mod tests {
             Ok(())
         );
 
-        let mut old_mask = sigset_t::default();
-        current_task.mm.read_object(old_set, &mut old_mask).expect("failed to read mask");
+        let old_mask = current_task.mm.read_object(old_set).expect("failed to read mask");
         assert_eq!(old_mask, original_mask);
         assert_eq!(current_task.read().signals.mask, SIGIO.mask());
     }
@@ -910,8 +898,7 @@ mod tests {
             Ok(())
         );
 
-        let mut old_mask = sigset_t::default();
-        current_task.mm.read_object(old_set, &mut old_mask).expect("failed to read mask");
+        let old_mask = current_task.mm.read_object(old_set).expect("failed to read mask");
         assert_eq!(old_mask, original_mask);
         assert_eq!(current_task.read().signals.mask, original_mask);
     }
@@ -943,8 +930,7 @@ mod tests {
             Ok(())
         );
 
-        let mut old_mask = sigset_t::default();
-        current_task.mm.read_object(old_set, &mut old_mask).expect("failed to read mask");
+        let old_mask = current_task.mm.read_object(old_set).expect("failed to read mask");
         assert_eq!(old_mask, original_mask);
         assert_eq!(current_task.read().signals.mask, original_mask);
     }
@@ -1015,11 +1001,8 @@ mod tests {
             Ok(())
         );
 
-        let mut old_action = sigaction_t::default();
-        current_task
-            .mm
-            .read_object(old_action_ref, &mut old_action)
-            .expect("failed to read action");
+        let old_action =
+            current_task.mm.read_object(old_action_ref).expect("failed to read action");
         assert_eq!(old_action, original_action);
     }
 
@@ -1464,8 +1447,7 @@ mod tests {
             map_memory(&current_task, UserAddress::default(), std::mem::size_of::<i32>() as u64);
         let address_ref = UserRef::<i32>::new(address);
         sys_wait4(&current_task, -1, address_ref, 0, UserRef::default()).expect("wait4");
-        let mut wstatus: i32 = 0;
-        current_task.mm.read_object(address_ref, &mut wstatus).expect("read memory");
+        let wstatus = current_task.mm.read_object(address_ref).expect("read memory");
         assert_eq!(wstatus, SIGKILL.number() as i32);
     }
 
@@ -1483,8 +1465,7 @@ mod tests {
             map_memory(&current_task, UserAddress::default(), std::mem::size_of::<i32>() as u64);
         let address_ref = UserRef::<i32>::new(address);
         sys_wait4(&current_task, -1, address_ref, 0, UserRef::default()).expect("wait4");
-        let mut wstatus: i32 = 0;
-        current_task.mm.read_object(address_ref, &mut wstatus).expect("read memory");
+        let wstatus = current_task.mm.read_object(address_ref).expect("read memory");
         assert_eq!(wstatus, wait_status);
     }
 

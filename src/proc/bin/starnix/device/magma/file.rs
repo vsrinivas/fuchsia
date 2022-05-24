@@ -166,15 +166,12 @@ impl FileOps for MagmaFile {
                     virtio_magma_virt_create_image_resp_t,
                 ) = read_control_and_response(current_task, &command)?;
 
-                let mut create_info_ptr: u64 = 0;
                 let create_info_address = UserAddress::from(control.create_info);
-                current_task
-                    .mm
-                    .read_object(UserRef::new(create_info_address), &mut create_info_ptr)?;
+                let create_info_ptr =
+                    current_task.mm.read_object(UserRef::new(create_info_address))?;
 
-                let mut create_info = magma_image_create_info_t::default();
                 let create_info_address = UserAddress::from(create_info_ptr);
-                current_task.mm.read_object(UserRef::new(create_info_address), &mut create_info)?;
+                let create_info = current_task.mm.read_object(UserRef::new(create_info_address))?;
 
                 let (vmo, token, info) = create_drm_image(0, &create_info).map_err(|e| {
                     tracing::warn!("Error creating drm image: {:?}", e);
@@ -209,8 +206,7 @@ impl FileOps for MagmaFile {
 
                 let image_info_address_ref =
                     UserRef::new(UserAddress::from(control.image_info_out));
-                let mut image_info_ptr = UserAddress::default();
-                current_task.mm.read_object(image_info_address_ref, &mut image_info_ptr)?;
+                let image_info_ptr = current_task.mm.read_object(image_info_address_ref)?;
 
                 match self.get_buffer_info(
                     control.connection as magma_connection_t,
@@ -727,16 +723,15 @@ impl FileOps for MagmaFile {
 
                 // First read the `virtmagma_command_buffer`, this contains pointers to all the
                 // remaining structures needed by `magma_execute_command_buffer_with_resources2`.
-                let virt_command_buffer_ref =
-                    UserRef::new(UserAddress::from(control.command_buffer as u64));
-                let mut virt_command_buffer = virtmagma_command_buffer::default();
-                current_task.mm.read_object(virt_command_buffer_ref, &mut virt_command_buffer)?;
+                let virt_command_buffer_ref = UserRef::<virtmagma_command_buffer>::new(
+                    UserAddress::from(control.command_buffer as u64),
+                );
+                let virt_command_buffer = current_task.mm.read_object(virt_command_buffer_ref)?;
 
                 let command_buffer_ref = UserRef::<magma_command_buffer>::new(UserAddress::from(
                     virt_command_buffer.command_buffer,
                 ));
-                let mut command_buffer = magma_command_buffer::default();
-                current_task.mm.read_object(command_buffer_ref, &mut command_buffer)?;
+                let mut command_buffer = current_task.mm.read_object(command_buffer_ref)?;
 
                 let resources_ref = UserRef::<magma_exec_resource>::new(UserAddress::from(
                     virt_command_buffer.resources as u64,

@@ -44,8 +44,8 @@ pub fn set_process_debug_addr(current_task: &mut CurrentTask) -> Result<(), Errn
     };
 
     // The debug_addres is the pointer located at DT_DEBUG.
-    let mut debug_address = elf_parse::Elf64Dyn::default();
-    current_task.mm.read_object(UserRef::new(dt_debug_address), &mut debug_address)?;
+    let debug_address: elf_parse::Elf64Dyn =
+        current_task.mm.read_object(UserRef::new(dt_debug_address))?;
     if debug_address.value == 0 {
         // The DT_DEBUG entry is present, but has not yet been set by the linker, check next time.
         return Ok(());

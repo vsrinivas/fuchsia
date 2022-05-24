@@ -201,8 +201,7 @@ impl FileOps for DevPtmxFile {
             }
             TIOCSPTLCK => {
                 // Lock/Unlock the terminal.
-                let mut value = 0;
-                current_task.mm.read_object(UserRef::<i32>::new(user_addr), &mut value)?;
+                let value = current_task.mm.read_object(UserRef::<i32>::new(user_addr))?;
                 self.terminal.write().locked = value != 0;
                 Ok(SUCCESS)
             }
@@ -367,9 +366,7 @@ fn shared_ioctl(
         }
         TIOCSPGRP => {
             // Set the foreground process group.
-            let mut pgid = 0;
-            current_task.mm.read_object(UserRef::<pid_t>::new(user_addr), &mut pgid)?;
-
+            let pgid = current_task.mm.read_object(UserRef::<pid_t>::new(user_addr))?;
             current_task.thread_group.set_foreground_process_group(
                 current_task,
                 terminal,
@@ -388,10 +385,8 @@ fn shared_ioctl(
         }
         TIOCSWINSZ => {
             // Set the window size
-            current_task.mm.read_object(
-                UserRef::<uapi::winsize>::new(user_addr),
-                &mut terminal.write().window_size,
-            )?;
+            terminal.write().window_size =
+                current_task.mm.read_object(UserRef::<uapi::winsize>::new(user_addr))?;
 
             // Send a SIGWINCH signal to the foreground process group.
             let foreground_process_group_id = terminal
@@ -419,15 +414,13 @@ fn shared_ioctl(
         TCSETS => {
             // N.B. TCSETS on the main terminal actually affects the configuration of the replica
             // end.
-            let mut termios: uapi::termios = Default::default();
-            current_task.mm.read_object(UserRef::<uapi::termios>::new(user_addr), &mut termios)?;
+            let termios = current_task.mm.read_object(UserRef::<uapi::termios>::new(user_addr))?;
             terminal.write().set_termios(termios);
             Ok(SUCCESS)
         }
         TCSETSW => {
             // TODO(qsr): This should drain the output queue first.
-            let mut termios: uapi::termios = Default::default();
-            current_task.mm.read_object(UserRef::<uapi::termios>::new(user_addr), &mut termios)?;
+            let termios = current_task.mm.read_object(UserRef::<uapi::termios>::new(user_addr))?;
             terminal.write().set_termios(termios);
             Ok(SUCCESS)
         }
@@ -458,9 +451,7 @@ mod tests {
         let address_ref = UserRef::<T>::new(address);
         task.mm.write_object(address_ref, value)?;
         file.ioctl(&task, command, address)?;
-        let mut result = *value;
-        task.mm.read_object(address_ref, &mut result)?;
-        Ok(result)
+        Ok(task.mm.read_object(address_ref)?)
     }
 
     fn set_controlling_terminal(

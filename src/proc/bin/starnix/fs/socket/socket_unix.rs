@@ -601,9 +601,7 @@ impl SocketOps for UnixSocket {
             if user_opt.length < user_ref.len() {
                 return error!(EINVAL);
             }
-            let mut value = T::default();
-            task.mm.read_object(user_ref, &mut value)?;
-            Ok(value)
+            Ok(task.mm.read_object(user_ref)?)
         }
 
         let read_timeval = || {
