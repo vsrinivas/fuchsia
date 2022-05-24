@@ -685,12 +685,10 @@ generated_file("fastboot_manifest") {
     ":flash_script",
   ]
 
-  contents = [
-    {
-      version = flash_manifest_version
-      manifest = flash_manifest_content
-    },
-  ]
+  contents = {
+    version = flash_manifest_version
+    manifest = flash_manifest_content
+  }
 
   metadata = {
     images = [
