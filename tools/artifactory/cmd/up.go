@@ -398,6 +398,11 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 		files = append(files, contents...)
 	}
 
+	files, err = filterNonExistentFiles(ctx, files)
+	if err != nil {
+		return err
+	}
+
 	if cmd.uploadManifestJSONOutput != "" {
 		out, err := os.Create(cmd.uploadManifestJSONOutput)
 		if err != nil {
@@ -657,6 +662,27 @@ func dirToFiles(ctx context.Context, dir artifactory.Upload) ([]artifactory.Uplo
 	return files, nil
 }
 
+// filterNonExistentFiles filters out files which do not exist. The associated
+// artifacts referenced by the build API manifests may not have been created,
+// and this is valid.
+func filterNonExistentFiles(ctx context.Context, files []artifactory.Upload) ([]artifactory.Upload, error) {
+	var filtered []artifactory.Upload
+	for _, f := range files {
+		if len(f.Source) != 0 {
+			_, err := os.Stat(f.Source)
+			if err != nil {
+				if os.IsNotExist(err) {
+					logger.Infof(ctx, "%s does not exist; skipping upload", f.Source)
+					continue
+				}
+				return nil, err
+			}
+		}
+		filtered = append(filtered, f)
+	}
+	return filtered, nil
+}
+
 func uploadFiles(ctx context.Context, files []artifactory.Upload, dest dataSink, j int, buildsNamespaceDir string) error {
 	if j <= 0 {
 		return fmt.Errorf("Concurrency factor j must be a positive number")
@@ -671,11 +697,6 @@ func uploadFiles(ctx context.Context, files []artifactory.Upload, dest dataSink,
 			if len(f.Source) != 0 {
 				fileInfo, err := os.Stat(f.Source)
 				if err != nil {
-					// The associated artifacts might not actually have been created, which is valid.
-					if os.IsNotExist(err) {
-						logger.Infof(ctx, "%s does not exist; skipping upload", f.Source)
-						continue
-					}
 					errs <- err
 					return
 				}

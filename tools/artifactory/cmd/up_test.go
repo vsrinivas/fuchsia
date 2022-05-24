@@ -133,6 +133,21 @@ func getUploadFiles(dir string, fileContents map[string][]byte) []artifactory.Up
 	return files
 }
 
+func TestFilterNonExistentFiles(t *testing.T) {
+	t.Run("non-existent sources are skipped", func(t *testing.T) {
+		dir := t.TempDir()
+		ctx := context.Background()
+		nonexistentFile := artifactory.Upload{Source: filepath.Join(dir, "nonexistent")}
+		files, err := filterNonExistentFiles(ctx, []artifactory.Upload{nonexistentFile})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(files) > 0 {
+			t.Fatal("filtered files should be empty")
+		}
+	})
+}
+
 func TestUploading(t *testing.T) {
 	t.Run("uploads specific files", func(t *testing.T) {
 		actual := map[string][]byte{
@@ -199,26 +214,6 @@ func TestUploading(t *testing.T) {
 		}
 		if !reflect.DeepEqual(files, expected) {
 			t.Fatalf("unexpected files from dir: actual: %v, expected: %v", files, expected)
-		}
-	})
-
-	t.Run("non-existent or empty sources are skipped", func(t *testing.T) {
-		dir := t.TempDir()
-		sink := newMemSink()
-		ctx := context.Background()
-		nonexistentFile := artifactory.Upload{Source: filepath.Join(dir, "nonexistent")}
-		if err := uploadFiles(ctx, []artifactory.Upload{nonexistentFile}, sink, 1, ""); err != nil {
-			t.Fatal(err)
-		}
-		if len(sink.contents) > 0 {
-			t.Fatal("sink should be empty")
-		}
-		// Now check that uploading an empty files list also does not result in an error.
-		if err := uploadFiles(ctx, []artifactory.Upload{}, sink, 1, ""); err != nil {
-			t.Fatal(err)
-		}
-		if len(sink.contents) > 0 {
-			t.Fatal("sink should be empty")
 		}
 	})
 
