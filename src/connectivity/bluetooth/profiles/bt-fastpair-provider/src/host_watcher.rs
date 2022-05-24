@@ -42,8 +42,6 @@ pub struct HostWatcher {
 }
 
 impl HostWatcher {
-    // TODO(fxbug.dev/94166): Remove the allow once this is used by the toplevel FP server.
-    #[allow(unused)]
     /// Returns a HostWatcher that watches for changes in state of the currently active Bluetooth
     /// Host.
     pub fn new(host_watcher: sys::HostWatcherProxy) -> Self {
@@ -149,7 +147,7 @@ impl FusedStream for HostWatcher {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
 
     use async_utils::PollExt;
@@ -172,7 +170,7 @@ mod tests {
             .expect("Watch request")
     }
 
-    fn example_host(id: HostId, active: bool, discoverable: bool) -> sys::HostInfo {
+    pub(crate) fn example_host(id: HostId, active: bool, discoverable: bool) -> sys::HostInfo {
         sys::HostInfo {
             id: Some(id.into()),
             technology: Some(sys::TechnologyType::LowEnergy),

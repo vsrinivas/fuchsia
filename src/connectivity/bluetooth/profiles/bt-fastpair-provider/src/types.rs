@@ -47,19 +47,34 @@ impl AccountKey {
     }
 }
 
-/// The descriptor value associated with the Salt section of the LE advertisement payload.
-/// Formatted as 0bLLLLTTTT, where L (Length) = 0b0001 (always) and T (Type) = 0b0001 (always).
-const SALT_DESCRIPTOR: u8 = 0x11;
+/// The maximum number of Account Keys that can be managed Account Keys will be evicted in an
+/// LRU manner as described in the GFPS specification.
+/// See https://developers.google.com/nearby/fast-pair/specifications/configuration#AccountKeyList
+/// for more details.
+const MAX_ACCOUNT_KEYS: u8 = 10;
 
 /// Manages the set of saved Account Keys.
+/// By default, the maximum number of keys that will be managed is `MAX_ACCOUNT_KEYS`.
 // TODO(fxbug.dev/97271): Define a full-fledged Account Key container that saves the keys to
 // persistent storage.
-#[derive(Default)]
 pub struct AccountKeyList {
+    /// The maximum number of keys that will be maintained.
+    // TODO(fxbug.dev/97271): Use `capacity` to evict in an LRU manner.
+    #[allow(unused)]
+    capacity: u8,
     pub keys: Vec<AccountKey>,
 }
 
 impl AccountKeyList {
+    pub fn new() -> Self {
+        Self { capacity: MAX_ACCOUNT_KEYS, keys: Vec::with_capacity(MAX_ACCOUNT_KEYS.into()) }
+    }
+
+    #[cfg(test)]
+    pub fn with_capacity_and_keys(capacity: u8, keys: Vec<AccountKey>) -> Self {
+        Self { capacity, keys }
+    }
+
     /// Returns the service data payload associated with the current set of Account Keys.
     pub fn service_data(&self) -> Result<Vec<u8>, Error> {
         if self.keys.is_empty() {
@@ -88,7 +103,9 @@ impl AccountKeyList {
         // Next n bytes are the Bloom-filtered Account Key list.
         result.extend(account_keys_bytes);
 
-        // Next byte describes the Salt format.
+        // The descriptor value associated with the Salt section of the LE advertisement payload.
+        // Formatted as 0bLLLLTTTT, where L (Length) = 0b0001 and T (Type) = 0b0001. Both are fixed.
+        const SALT_DESCRIPTOR: u8 = 0x11;
         result.push(SALT_DESCRIPTOR);
 
         // Final byte is the Salt value.
@@ -130,7 +147,7 @@ mod tests {
 
     #[test]
     fn empty_account_key_list_service_data() {
-        let empty = AccountKeyList::default();
+        let empty = AccountKeyList::new();
         let service_data = empty.service_data().expect("can build service data");
         let expected = [0x00];
         assert_eq!(service_data, expected);
@@ -142,7 +159,7 @@ mod tests {
         // In the future, this test will be obsolete as the AccountKeyList will be bounded in its
         // construction.
         let keys = (0..11_u8).map(|i| AccountKey::new([i; 16])).collect();
-        let oversized = AccountKeyList { keys };
+        let oversized = AccountKeyList::with_capacity_and_keys(15, keys);
 
         let result = oversized.service_data();
         assert_matches!(result, Err(Error::InternalError(_)));
@@ -151,7 +168,7 @@ mod tests {
     #[test]
     fn account_key_list_service_data() {
         let example_key = AccountKey::new([1; 16]);
-        let keys = AccountKeyList { keys: vec![example_key] };
+        let keys = AccountKeyList::with_capacity_and_keys(10, vec![example_key]);
 
         let salt = 0x14;
         // Because the service data is generated with a random salt value, we test the internal

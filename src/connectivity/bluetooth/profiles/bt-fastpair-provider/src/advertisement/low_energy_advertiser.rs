@@ -202,15 +202,13 @@ impl LowEnergyAdvertiser {
         Ok(Self::from_proxy(peripheral))
     }
 
-    fn from_proxy(peripheral: PeripheralProxy) -> Self {
+    pub fn from_proxy(peripheral: PeripheralProxy) -> Self {
         Self { peripheral, advertisement: Default::default(), active_connections: FutureMap::new() }
     }
 
     /// Attempts to start advertising the Fast Pair device `model_id` over Low Energy.
     /// Clears the existing advertisement, if set.
     /// Returns Ok on success, or Error if advertising was unable to be started for any reason.
-    // TODO(fxbug.dev/95542): Uncomment when this is used by the toplevel Fast Pair server.
-    #[allow(unused)]
     pub async fn advertise_model_id(&mut self, model_id: ModelId) -> Result<(), Error> {
         let _ = self.stop_advertising().await;
 
@@ -221,8 +219,6 @@ impl LowEnergyAdvertiser {
     /// Attempts to start advertising the set of Fast Pair Account `keys` over Low Energy.
     /// Clears the existing advertisement, if set.
     /// Returns Ok on success, or Error if advertising was unable to be started for any reason.
-    // TODO(fxbug.dev/95542): Uncomment when this is used by the toplevel Fast Pair server.
-    #[allow(unused)]
     pub async fn advertise_account_keys(&mut self, keys: &AccountKeyList) -> Result<(), Error> {
         let _ = self.stop_advertising().await;
 
@@ -419,7 +415,8 @@ mod tests {
         // Make another request to advertise the Account Keys - this time manually because stopping the
         // previous advertisement is async.
         let (_client, _responder) = {
-            let example_account_keys = AccountKeyList { keys: vec![AccountKey::new([1; 16])] };
+            let example_account_keys =
+                AccountKeyList::with_capacity_and_keys(1, vec![AccountKey::new([1; 16])]);
             let adv_fut = advertiser.advertise_account_keys(&example_account_keys);
             pin_mut!(adv_fut);
             let _ =

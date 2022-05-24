@@ -3,29 +3,31 @@
 // found in the LICENSE file.
 
 use anyhow::Error;
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 
 mod advertisement;
 mod config;
 mod error;
 mod gatt_service;
 mod host_watcher;
+mod provider;
 mod types;
 
-use advertisement::LowEnergyAdvertiser;
 use config::Config;
-use gatt_service::GattService;
+use provider::Provider;
 
 #[fuchsia::main(logging_tags = ["bt-fastpair-provider"])]
 async fn main() -> Result<(), Error> {
     let provider_config = Config::load()?;
     debug!("Starting Fast Pair Provider: {:?}", provider_config);
 
-    // TODO(fxbug.dev/95542): Create the GATT service and LE Advertiser in the toplevel FP Provider
-    // server.
-    let _gatt_service = GattService::new(provider_config).await?;
-    let _advertiser = LowEnergyAdvertiser::new()?;
-
+    let server = Provider::new(provider_config).await?;
+    let fast_pair = server.run();
     info!("Fast Pair Provider component running.");
+
+    if let Err(e) = fast_pair.await {
+        warn!("Error in Fast Pair Provider main loop: {:?}", e);
+    }
+
     Ok(())
 }

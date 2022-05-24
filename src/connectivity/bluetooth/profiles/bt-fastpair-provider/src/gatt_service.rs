@@ -126,7 +126,7 @@ impl GattService {
         Self::from_proxy(gatt_server_proxy, config).await
     }
 
-    async fn from_proxy(proxy: Server_Proxy, config: Config) -> Result<Self, Error> {
+    pub async fn from_proxy(proxy: Server_Proxy, config: Config) -> Result<Self, Error> {
         let local_service = Self::publish_service(&proxy).await?;
         Ok(Self { server_svc: proxy, local_service_server: local_service, config })
     }
@@ -356,7 +356,7 @@ impl FusedStream for GattService {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
 
     use anyhow::format_err;
@@ -400,7 +400,7 @@ mod tests {
 
     /// Builds the `GattService` by publishing the Fast Pair Provider service definition.
     /// Returns the `GattService` and the connection to the published local service.
-    async fn setup_gatt_service() -> (GattService, LocalServiceProxy) {
+    pub(crate) async fn setup_gatt_service() -> (GattService, LocalServiceProxy) {
         let (gatt_server_client, mut gatt_server) =
             fidl::endpoints::create_proxy_and_stream::<Server_Marker>().unwrap();
 
