@@ -256,6 +256,11 @@ impl EpollFileObject {
                 let reported_events = pending_event.observed.mask() & wait.events.mask();
                 result.push(EpollEvent { events: reported_events, data: wait.data });
 
+                // Files marked with `EPOLLONESHOT` should only notify
+                // once and need to be rearmed manually with epoll_ctl_mod().
+                if wait.events.mask() & EPOLLONESHOT != 0 {
+                    continue;
+                }
                 if wait.events.mask() & EPOLLET != 0 {
                     self.wait_on_file_with_options(
                         current_task,

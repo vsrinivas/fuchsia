@@ -154,7 +154,8 @@ pub const MSG_CMSG_CLOEXEC: u32 = 0x40000000;
 pub const MSG_EOF: u32 = MSG_FIN;
 pub const MSG_CMSG_COMPAT: u32 = 0;
 
-pub const EPOLLET: u32 = 0x80000000;
+pub const EPOLLONESHOT: u32 = 1 << 30;
+pub const EPOLLET: u32 = 1 << 31;
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone, AsBytes, FromBytes)]
