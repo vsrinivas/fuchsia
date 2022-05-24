@@ -29,7 +29,8 @@ class MixThread : public Thread {
  public:
   // Caller must ensure that `id` is a unique identifier for this thread.
   // The thread takes ownership of all handles in `options`.
-  static MixThreadPtr Create(ThreadId id, fuchsia_audio_mixer::wire::CreateThreadOptions& options,
+  static MixThreadPtr Create(ThreadId id,
+                             fuchsia_audio_mixer::wire::GraphCreateThreadRequest& options,
                              std::shared_ptr<GlobalTaskQueue> global_task_queue,
                              std::shared_ptr<Timer> timer);
 
@@ -59,7 +60,7 @@ class MixThread : public Thread {
   void Shutdown() TA_REQ(checker());
 
  private:
-  MixThread(ThreadId id, fuchsia_audio_mixer::wire::CreateThreadOptions& options,
+  MixThread(ThreadId id, fuchsia_audio_mixer::wire::GraphCreateThreadRequest& options,
             std::shared_ptr<GlobalTaskQueue> global_task_queue, std::shared_ptr<Timer> timer);
 
   static void Run(MixThreadPtr thread);

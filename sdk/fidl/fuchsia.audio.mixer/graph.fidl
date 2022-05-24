@@ -5,6 +5,9 @@
 library fuchsia.audio.mixer;
 
 using zx;
+using fuchsia.mediastreams;
+using fuchsia.audio.effects;
+using fuchsia.audio;
 
 alias NodeId = uint64;
 alias ThreadId = uint64;
@@ -16,13 +19,36 @@ const INVALID_ID uint64 = 0;
 /// Maximum length of a `name` string.
 const MAX_NAME_LENGTH uint32 = 256;
 
+/// Maximum number of GainStages that can be attached to each graph edge.
+const MAX_GAIN_STAGES_PER_EDGE uint32 = 32;
+
 /// A factory for creating [`Graph`] protocols.
 protocol GraphCreator {
     /// Creates a new graph that lives until the channel is closed.
-    Create(resource struct {
-        graph client_end:Graph;
-        options CreateGraphOptions;
-    }) -> (struct {}) error CreateGraphError;
+    Create(resource table {
+        /// Required.
+        1: graph client_end:Graph;
+
+        /// Name of this graph, used for diagnostics only.
+        /// If specified, ideally this should be globally unique and have a
+        /// printable CamelCase format, but this is not validated.
+        ///
+        /// Optional. Empty if not specified.
+        2: name string:MAX_NAME_LENGTH;
+
+        /// Each graph has two threads dedicated to handling FIDL requests: a main
+        /// thread, which handles time-insensitive requests, and a real-time FIDL
+        /// thread, which handles time-sensitive requests. This field provides a
+        /// deadline profile for the real-time FIDL thread.
+        ///
+        /// For example, all `[fuchsia.media2/StreamSink`] servers run on the
+        /// real-time FIDL thread. Packets sent on this protocol must be read
+        /// immediately, otherwise the caller may miss their deadline.
+        ///
+        /// Optional. If not specified, the real-time FIDL thread runs at a normal
+        /// priority.
+        3: realtime_fidl_thread_deadline_profile zx.handle:PROFILE;
+    }) -> (table {}) error CreateGraphError;
 };
 
 /// A mixer Graph.
@@ -123,14 +149,25 @@ protocol Graph {
     /// example, a Producer node might encapsulate audio coming from an
     /// application or from a microphone. Producer nodes cannot have any input
     /// edges but may have one or more output edges.
-    ///
-    /// + `options` Extensible options for creating the node.
-    /// - `id` ID of the newly-created node. Guaranteed to be unique.
-    /// * error Reason the node could not be created.
-    CreateProducer(resource struct {
-        options CreateProducerOptions;
-    }) -> (struct {
-        id NodeId;
+    CreateProducer(resource table {
+        /// Name of this node, used for diagnostics only. See "IDs and names" in the
+        /// comments for [`Graph`].
+        ///
+        /// Optional. Empty if not specified.
+        1: name string:MAX_NAME_LENGTH;
+
+        /// Direction of audio data produced by this node.
+        ///
+        /// Required.
+        2: direction PipelineDirection;
+
+        /// Data source for this producer.
+        ///
+        /// Required.
+        3: data_source ProducerDataSource;
+    }) -> (table {
+        /// ID of the newly-created node. Guaranteed to be unique.
+        1: id NodeId;
     }) error CreateNodeError;
 
     /// Creates a Consumer node with the given options.
@@ -147,14 +184,30 @@ protocol Graph {
     ///
     /// For more details, see "Execution Model" under the description for
     /// [`Graph`].
-    ///
-    /// + `options` Extensible options for creating the node.
-    /// - `id` ID of the newly-created node. Guaranteed to be unique.
-    /// * error Reason the node could not be created.
-    CreateConsumer(resource struct {
-        options CreateConsumerOptions;
-    }) -> (struct {
-        id NodeId;
+    CreateConsumer(resource table {
+        /// Name of this node, used for diagnostics only. See "IDs and names" in the
+        /// comments for [`Graph`].
+        ///
+        /// Optional. Empty if not specified.
+        1: name string:MAX_NAME_LENGTH;
+
+        /// Direction of audio data consumed by this node.
+        ///
+        /// Required.
+        2: direction PipelineDirection;
+
+        /// Data source for this consumer.
+        ///
+        /// Required.
+        3: data_source ConsumerDataSource;
+
+        /// Configuration for the consumer that is common across types.
+        ///
+        /// Required.
+        4: options ConsumerOptions;
+    }) -> (table {
+        /// ID of the newly-created node. Guaranteed to be unique.
+        1: id NodeId;
     }) error CreateNodeError;
 
     /// Creates a Mixer node with the given options.
@@ -162,14 +215,38 @@ protocol Graph {
     /// Mixer nodes combine multiple PCM input streams into a single PCM output
     /// streams. Mixers apply format conversion and sample rate conversion to
     /// the input streams to produce an output stream with a fixed format.
-    ///
-    /// + `options` Extensible options for creating the node.
-    /// - `id` ID of the newly-created node. Guaranteed to be unique.
-    /// * error Reason the node could not be created.
-    CreateMixer(resource struct {
-        options CreateMixerOptions;
-    }) -> (struct {
-        id NodeId;
+    CreateMixer(resource table {
+        /// Name of this node, used for diagnostics only. See "IDs and names" in the
+        /// comments for [`Graph`].
+        ///
+        /// Optional. Empty if not specified.
+        1: name string:MAX_NAME_LENGTH;
+
+        /// Direction of audio data produced by this node.
+        ///
+        /// Required.
+        2: direction PipelineDirection;
+
+        /// Encoding of the Mixer's output stream.
+        ///
+        /// Required.
+        3: output_format fuchsia.mediastreams.AudioFormat;
+
+        /// Clock for this node's output stream. The clock must be
+        /// ZX_CLOCK_OPT_MONOTONIC and ZX_CLOCK_OPT_CONTINUOUS with ZX_RIGHT_READ.
+        /// See "Clocks" under the description for [`Graph`].
+        ///
+        /// Required.
+        4: output_reference_clock zx.handle:CLOCK;
+
+        /// Size of the internal mix buffer. This defines the maximum number of
+        /// output frames that can be mixed at one time.
+        ///
+        /// Optional. If not specified, a default size is used.
+        5: output_buffer_frame_count uint64;
+    }) -> (table {
+        /// ID of the newly-created node. Guaranteed to be unique.
+        1: id NodeId;
     }) error CreateNodeError;
 
     /// Creates a Splitter node with the given options.
@@ -177,14 +254,39 @@ protocol Graph {
     /// Splitter nodes split a single input stream into multiple output streams
     /// that are clones of the input stream. For more details, see "Execution
     /// Model" under the description for [`Graph`].
-    ///
-    /// + `options` Extensible options for creating the node.
-    /// - `id` ID of the newly-created node. Guaranteed to be unique.
-    /// * error Reason the node could not be created.
-    CreateSplitter(resource struct {
-        options CreateSplitterOptions;
-    }) -> (struct {
-        id NodeId;
+    CreateSplitter(resource table {
+        /// Name of this node, used for diagnostics only. See "IDs and names" in the
+        /// comments for [`Graph`].
+        ///
+        /// Optional. Empty if not specified.
+        1: name string:MAX_NAME_LENGTH;
+
+        /// Direction of audio data consumed by this node.
+        ///
+        /// Required.
+        2: direction PipelineDirection;
+
+        /// Encoding of the Splitter's input and output streams.
+        ///
+        /// Required.
+        3: format fuchsia.mediastreams.AudioFormat;
+
+        /// Splitters are composite nodes that process their input through a hidden
+        /// Consumer node. For more details on this behavior, see "Execution Model"
+        /// under the description for [`Graph`].
+        ///
+        /// Required.
+        4: consumer ConsumerOptions;
+
+        /// Clock for this node's input and output streams. The clock must be
+        /// ZX_CLOCK_OPT_MONOTONIC and ZX_CLOCK_OPT_CONTINUOUS with ZX_RIGHT_READ.
+        /// See "Clocks" under the description for [`Graph`].
+        ///
+        /// Required.
+        5: reference_clock zx.handle:CLOCK;
+    }) -> (table {
+        /// ID of the newly-created node. Guaranteed to be unique.
+        1: id NodeId;
     }) error CreateNodeError;
 
     /// Creates a Custom node with the given options.
@@ -208,16 +310,47 @@ protocol Graph {
     /// input and output nodes. The returned `id` cannot be used in
     /// [`CreateEdge`]. Edges must target a specific input or output slot as
     /// described above.
-    ///
-    /// + `options` Extensible options for creating the node.
-    /// - `id` ID of the newly-created node. Guaranteed to be unique.
-    /// - `node_properties` Additional properties of the newly-created node.
-    /// * error Reason the node could not be created.
-    CreateCustom(resource struct {
-        options CreateCustomOptions;
-    }) -> (resource struct {
-        id NodeId;
-        node_properties CustomNodeProperties;
+    CreateCustom(resource table {
+        /// Name of this node, used for diagnostics only. See "IDs and names" in the
+        /// comments for [`Graph`].
+        ///
+        /// Optional. Empty if not specified.
+        1: name string:MAX_NAME_LENGTH;
+
+        /// Direction of audio data consumed and produced by this node.
+        ///
+        /// Required.
+        2: direction PipelineDirection;
+
+        /// Description of the out-of-process effects processor.
+        /// This includes a description of the node's input and output edges.
+        ///
+        /// Required.
+        3: config fuchsia.audio.effects.ProcessorConfiguration;
+
+        /// Configuration of the hidden Consumer node.
+        ///
+        /// If the Custom node has multiple outputs, this field is required. The
+        /// hidden Consumer reads the Custom node's input(s) and writes its outputs.
+        /// It is used to partition the graph as described under "Execution Model"
+        /// under the description for [`Graph`].
+        ///
+        /// If the Custom node has a single output, then a hidden Consumer is not
+        /// used and this field must not be specified.
+        4: consumer ConsumerOptions;
+
+        /// Clock for this node's input and output streams. The clock must be
+        /// ZX_CLOCK_OPT_MONOTONIC and ZX_CLOCK_OPT_CONTINUOUS with ZX_RIGHT_READ.
+        /// See "Clocks" under the description for [`Graph`].
+        ///
+        /// Required.
+        5: reference_clock zx.handle:CLOCK;
+    }) -> (resource table {
+        /// ID of the newly-created node. Guaranteed to be unique.
+        1: id NodeId;
+
+        /// Additional properties of the newly-created node.
+        2: node_properties CustomNodeProperties;
     }) error CreateNodeError;
 
     /// Deletes the given node.
@@ -225,14 +358,10 @@ protocol Graph {
     /// The node must exist. `DeleteNode(x)` will delete all incoming and
     /// outgoing edges of node `x` before deleting the node itself. Once the node
     /// has been deleted it cannot be mentioned by any future method calls.
-    ///
-    /// ## Parameters
-    ///
-    /// + `id` ID of the node to delete.
-    /// * error Reason the node could not be deleted.
-    DeleteNode(struct {
-        id NodeId;
-    }) -> (struct {}) error DeleteNodeError;
+    DeleteNode(table {
+        /// ID of the node to delete.
+        1: id NodeId;
+    }) -> (table {}) error DeleteNodeError;
 
     /// Creates an edge from the source node to the destination node.
     ///
@@ -246,30 +375,38 @@ protocol Graph {
     ///
     /// If the source's direction is `INPUT`, the dest's direction cannot be
     /// `OUTPUT`. See [`PipelineDirection`] for additional discussion.
-    ///
-    /// ## Parameters
-    ///
-    /// + `dest_id` ID of the destination node.
-    /// + `source_id` ID of the source node.
-    /// + `options` Extensible options for creating the edge.
-    /// * error Reason the edge could not be created.
-    CreateEdge(resource struct {
-        dest_id NodeId;
-        source_id NodeId;
-        options CreateEdgeOptions;
-    }) -> (struct {}) error CreateEdgeError;
+    CreateEdge(resource table {
+        /// ID of the destination node.
+        /// Required.
+        1: dest_id NodeId;
+
+        /// ID of the source node.
+        /// Required.
+        2: source_id NodeId;
+
+        /// This selects the sampler to use when performing sample rate conversion
+        /// on the input. Valid only when the dest node is a Mixer.
+        ///
+        /// Optional. If not specified, a default sampler is selected.
+        3: mixer_sampler Sampler;
+
+        /// Gains to apply to this edge. Since gain is applied by Mixer nodes,
+        /// either the source or dest node must be a Mixer.
+        ///
+        /// Optional. If empty, no gain is applied.
+        4: gain_stages vector<GainStageId>:MAX_GAIN_STAGES_PER_EDGE;
+    }) -> (table {}) error CreateEdgeError;
 
     /// Deletes the edge connecting the source node to the destination node.
     ///
     /// The edge must exist.
-    ///
-    /// + `dest_id` ID of the destination node.
-    /// + `source_id` ID of the source node.
-    /// * error Reason the edge could not be deleted.
-    DeleteEdge(struct {
-        dest_id NodeId;
-        source_id NodeId;
-    }) -> (struct {}) error DeleteEdgeError;
+    DeleteEdge(table {
+        /// ID of the destination node.
+        1: dest_id NodeId;
+
+        /// ID of the source node.
+        2: source_id NodeId;
+    }) -> (table {}) error DeleteEdgeError;
 
     /// Creates a thread.
     ///
@@ -279,28 +416,31 @@ protocol Graph {
     ///
     /// For more details, see "Execution Model" under the description for
     /// [`Graph`].
-    ///
-    /// ## Parameters
-    ///
-    /// + `options` Extensible options for creating the thread.
-    /// - `id` ID of the newly-created thread. Guaranteed to be unique.
-    /// * error Reason the thread could not be created.
-    CreateThread(resource struct {
-        options CreateThreadOptions;
-    }) -> (struct {
-        id ThreadId;
+    CreateThread(resource table {
+        /// Name of this thread, used for diagnostics only. See "IDs and names" in the
+        /// comments for [`Graph`].
+        ///
+        /// Optional. Empty if not specified.
+        1: name string:MAX_NAME_LENGTH;
+
+        /// Deadline profile to apply to this thread.
+        ///
+        /// Optional. If not specified, the thread runs at a normal priority.
+        2: deadline_profile zx.handle:PROFILE;
+    }) -> (table {
+        /// ID of the newly-created thread. Guaranteed to be unique.
+        1: id ThreadId;
     }) error CreateThreadError;
 
     /// Deletes the given thread.
     ///
     /// The thread must exist. A thread cannot be deleted until all Consumer
     /// nodes assigned to that thread have been deleted.
-    ///
-    /// + `id` ID of the thread to delete.
-    /// * error Reason the thread could not be deleted.
-    DeleteThread(struct {
-        id ThreadId;
-    }) -> (struct {}) error DeleteThreadError;
+    DeleteThread(table {
+        /// ID of the thread to delete.
+        /// Required.
+        1: id ThreadId;
+    }) -> (table {}) error DeleteThreadError;
 
     /// Creates a GainStage.
     ///
@@ -310,26 +450,31 @@ protocol Graph {
     /// muted.
     ///
     /// By default, a GainStage applies no gain and is not muted.
-    ///
-    /// + `options` Extensible options for creating the GainStage.
-    /// - `id` ID of the newly-created GainStage. Guaranteed to be unique.
-    /// * error Reason the GainStage could not be created.
-    CreateGainStage(resource struct {
-        options CreateGainStageOptions;
-    }) -> (struct {
-        id GainStageId;
+    CreateGainStage(resource table {
+        /// Name of this GainStage, used for diagnostics only. See "IDs and names"
+        /// in the comments for [`Graph`].
+        ///
+        /// Optional. Empty if not specified.
+        1: name string:MAX_NAME_LENGTH;
+
+        /// Interface which controls this GainStage.
+        ///
+        /// Required.
+        2: control server_end:fuchsia.audio.GainControl;
+    }) -> (table {
+        /// ID of the newly-created GainStage. Guaranteed to be unique.
+        1: id GainStageId;
     }) error CreateGainStageError;
 
     /// Deletes the given GainStage.
     ///
     /// The GainStage must exist. A GainStage cannot be deleted until all
     /// associated edges have been deleted.
-    ///
-    /// + `id` ID of the GainStage to delete.
-    /// * error Reason the GainStage could not be deleted.
-    DeleteGainStage(struct {
-        id GainStageId;
-    }) -> (struct {}) error DeleteGainStageError;
+    DeleteGainStage(table {
+        /// ID of the GainStage to delete.
+        /// Required.
+        1: id GainStageId;
+    }) -> (table {}) error DeleteGainStageError;
 
     /// Creates a graph-controlled reference clock.
     ///
@@ -341,10 +486,10 @@ protocol Graph {
     ///
     /// For more details, see "Clocks" under the description for [`Graph`].
     ///
-    /// - `reference_clock` The new clock
     /// * error Error from `zx_clock_create`
-    CreateGraphControlledReferenceClock() -> (resource struct {
-        reference_clock zx.handle:CLOCK;
+    CreateGraphControlledReferenceClock() -> (resource table {
+        /// The new clock.
+        1: reference_clock zx.handle:CLOCK;
     }) error zx.status;
 
     /// Forgets about a graph-controlled reference clock.
@@ -355,12 +500,13 @@ protocol Graph {
     /// this Graph (or by anyone else, since this Graph was the only entity with
     /// `ZX_RIGHT_WRITE`).
     ///
-    /// + `reference_clock` The clock to forget
     /// * error `ZX_ERR_NOT_FOUND` if `reference_clock` was not created by
     /// [`CreateGraphControlledReferenceClock`] or if was already forgotten
-    ForgetGraphControlledReferenceClock(resource struct {
-        reference_clock zx.handle:CLOCK;
-    }) -> (struct {}) error zx.status;
+    ForgetGraphControlledReferenceClock(resource table {
+        /// The clock to forget.
+        /// Required.
+        1: reference_clock zx.handle:CLOCK;
+    }) -> (table {}) error zx.status;
 
     // TODO(fxbug.dev/87651): Start/Stop methods to control Producer and Consumer nodes
     // TODO(fxbug.dev/87651): Watch method to observe delay (aka lead time) of a node

@@ -4,8 +4,6 @@
 
 library fuchsia.audio.mixer;
 
-const MAX_GAIN_STAGES_PER_EDGE uint32 = 32;
-
 /// Ways that a Mixer node can sample from its source stream to produce a
 /// destination stream.
 type Sampler = flexible union {

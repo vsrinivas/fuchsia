@@ -6,11 +6,9 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.audio.mixer") {
   sources = [
-    "create_edge_options.fidl",
-    "create_graph_options.fidl",
-    "create_node_options.fidl",
-    "create_thread_options.fidl",
     "graph.fidl",
+    "node_options.fidl",
+    "sampler_options.fidl",
   ]
 
   public_deps = [

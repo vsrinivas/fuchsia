@@ -12,12 +12,13 @@
 
 namespace media_audio_mixer_service {
 
-MixThreadPtr MixThread::Create(ThreadId id, fuchsia_audio_mixer::wire::CreateThreadOptions& options,
+MixThreadPtr MixThread::Create(ThreadId id,
+                               fuchsia_audio_mixer::wire::GraphCreateThreadRequest& options,
                                std::shared_ptr<GlobalTaskQueue> global_task_queue,
                                std::shared_ptr<Timer> timer) {
   // std::make_shared requires a public ctor, but we hide our ctor to force callers to use Create.
   struct WithPublicCtor : public MixThread {
-    WithPublicCtor(ThreadId id, fuchsia_audio_mixer::wire::CreateThreadOptions& options,
+    WithPublicCtor(ThreadId id, fuchsia_audio_mixer::wire::GraphCreateThreadRequest& options,
                    std::shared_ptr<GlobalTaskQueue> global_task_queue, std::shared_ptr<Timer> timer)
         : MixThread(id, options, std::move(global_task_queue), std::move(timer)) {}
   };
@@ -41,7 +42,7 @@ MixThreadPtr MixThread::Create(ThreadId id, fuchsia_audio_mixer::wire::CreateThr
   return thread;
 }
 
-MixThread::MixThread(ThreadId id, fuchsia_audio_mixer::wire::CreateThreadOptions& options,
+MixThread::MixThread(ThreadId id, fuchsia_audio_mixer::wire::GraphCreateThreadRequest& options,
                      std::shared_ptr<GlobalTaskQueue> global_task_queue,
                      std::shared_ptr<Timer> timer)
     : id_(id),

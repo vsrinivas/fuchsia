@@ -37,24 +37,24 @@ using zx;
 /// TODO(fxbug.dev/94277): scheduling semantics are subject to change
 protocol GainControl {
     /// Sets the gain knob.
-    ///
-    /// + `how` How to update the gain knob.
-    /// + `when` When to apply this update.
-    /// * error Reason for failure.
-    SetGain(struct {
-        how GainUpdateMethod;
-        when GainTimestamp;
-    }) -> (struct {}) error GainError;
+    SetGain(table {
+        /// How to update the gain knob.
+        /// Required.
+        1: how GainUpdateMethod;
+        /// When to apply this update.
+        /// Required.
+        2: when GainTimestamp;
+    }) -> (table {}) error GainError;
 
     /// Set the mute knob.
-    ///
-    /// + `muted` New value of the mute knob.
-    /// + `when` When to apply this update.
-    /// * error Reason for failure.
-    SetMute(struct {
-        muted bool;
-        when GainTimestamp;
-    }) -> (struct {}) error GainError;
+    SetMute(table {
+        /// New value of the mute knob.
+        /// Required.
+        1: muted bool;
+        /// When to apply this update.
+        /// Required.
+        2: when GainTimestamp;
+    }) -> (table {}) error GainError;
 };
 
 /// Type of errors returned by `GainControl`.
