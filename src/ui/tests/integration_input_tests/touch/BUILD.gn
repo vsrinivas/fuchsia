@@ -13,10 +13,7 @@ fidl("test.touch") {
     "response_listener.test.fidl",
     "test_app_launcher.test.fidl",
   ]
-  public_deps = [
-    "//sdk/fidl/fuchsia.sys",
-    "//zircon/vdso/zx",
-  ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }
 
 config_data("touch-input-test-display_rotation") {
@@ -45,7 +42,6 @@ executable("touch-input-test-bin") {
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/fidl/fuchsia.posix.socket",
     "//sdk/fidl/fuchsia.scheduler",
-    "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.tracing.provider",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.input",
@@ -131,7 +127,6 @@ executable("touch-input-test-ip-bin") {
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/fidl/fuchsia.posix.socket",
     "//sdk/fidl/fuchsia.scheduler",
-    "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.tracing.provider",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.input",
@@ -179,6 +174,10 @@ fuchsia_test_package("touch-input-test-ip") {
     "//src/fonts:font_provider_cm",
     "//src/testing/fidl/intl_property_manager:intl_property_manager_component",
     "//src/ui/bin/text:text_manager_comp_v2",
+    "//src/ui/tests/integration_input_tests/touch/embedding-flutter:realm",
+    "//src/ui/tests/integration_input_tests/touch/one-chromium:component",
+    "//src/ui/tests/integration_input_tests/touch/one-flutter:realm",
+    "//src/ui/tests/integration_input_tests/touch/touch-gfx-client:component",
 
     # TODO(fxbug.dev/98509): Remove these deps once we break the explicit dependencies
     # on touch-input-test-ip in wrapped-input-pipeline.cml and wrapped-root-presenter.cml.

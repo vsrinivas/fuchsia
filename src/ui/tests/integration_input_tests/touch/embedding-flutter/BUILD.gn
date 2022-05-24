@@ -14,7 +14,6 @@ dart_library("lib") {
     "//sdk/dart/fuchsia_scenic_flutter",
     "//sdk/dart/fuchsia_services",
     "//sdk/dart/zircon",
-    "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.views",
     "//src/ui/tests/integration_input_tests/touch:test.touch",
@@ -23,14 +22,29 @@ dart_library("lib") {
   ]
 }
 
-flutter_component("embedding-flutter-component") {
+flutter_component("component") {
+  testonly = true
   component_name = "embedding-flutter"
-  manifest = "meta/embedding-flutter.cmx"
+  manifest = "meta/embedding-flutter.cml"
   main_package = "embedding-flutter"
   main_dart = "embedding-flutter.dart"
-  deps = [ ":lib" ]
+  deps = [
+    ":lib",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
+  ]
+}
+
+fuchsia_component("realm") {
+  testonly = true
+  component_name = "embedding-flutter-realm"
+  manifest = "meta/embedding-flutter-realm.cml"
+  deps = [ ":component" ]
 }
 
 fuchsia_package("embedding-flutter") {
-  deps = [ ":embedding-flutter-component" ]
+  testonly = true
+  deps = [
+    ":component",
+    ":realm",
+  ]
 }

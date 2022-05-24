@@ -15,7 +15,6 @@
 #include <fuchsia/netstack/cpp/fidl.h>
 #include <fuchsia/posix/socket/cpp/fidl.h>
 #include <fuchsia/scheduler/cpp/fidl.h>
-#include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/sysmem/cpp/fidl.h>
 #include <fuchsia/tracing/provider/cpp/fidl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
@@ -588,17 +587,19 @@ class TouchInputBase
 
 class FlutterInputTestIp : public TouchInputBase {
  protected:
-  std::vector<std::pair<ChildName, LegacyUrl>> GetTestComponents() override {
+  std::vector<std::pair<ChildName, LegacyUrl>> GetTestV2Components() override {
     return {
-        std::make_pair(kFlutterClient, kFlutterClientUrl),
+        std::make_pair(kFlutterRealm, kFlutterRealmUrl),
+        std::make_pair(kMemoryPressureProvider, kMemoryPressureProviderUrl),
+        std::make_pair(kNetstack, kNetstackUrl),
     };
   }
 
   std::vector<Route> GetTestRoutes() override {
-    return merge({GetFlutterRoutes(ChildRef{kFlutterClient}),
+    return merge({GetFlutterRoutes(ChildRef{kFlutterRealm}),
                   {
                       {.capabilities = {Protocol{fuchsia::ui::app::ViewProvider::Name_}},
-                       .source = ChildRef{kFlutterClient},
+                       .source = ChildRef{kFlutterRealm},
                        .targets = {ParentRef()}},
                   }});
   }
@@ -608,26 +609,30 @@ class FlutterInputTestIp : public TouchInputBase {
     return {{.capabilities = {Protocol{test::touch::ResponseListener::Name_}},
              .source = ChildRef{kMockResponseListener},
              .targets = {target}},
-            {.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
+            {.capabilities = {Protocol{fuchsia::logger::LogSink::Name_},
+                              Protocol{fuchsia::sysmem::Allocator::Name_},
+                              Protocol{fuchsia::tracing::provider::Registry::Name_},
+                              Protocol{fuchsia::ui::scenic::Scenic::Name_},
+                              Protocol{fuchsia::vulkan::loader::Loader::Name_}},
              .source = ParentRef(),
              .targets = {target}},
-            {.capabilities = {Protocol{fuchsia::sys::Environment::Name_}},
-             .source = ParentRef(),
+            {.capabilities = {Protocol{fuchsia::memorypressure::Provider::Name_}},
+             .source = ChildRef{kMemoryPressureProvider},
              .targets = {target}},
-            {.capabilities = {Protocol{fuchsia::vulkan::loader::Loader::Name_}},
-             .source = ParentRef(),
-             .targets = {target}},
-            {.capabilities = {Protocol{fuchsia::tracing::provider::Registry::Name_}},
-             .source = ParentRef(),
-             .targets = {target}},
-            {.capabilities = {Protocol{fuchsia::sysmem::Allocator::Name_}},
-             .source = ParentRef(),
+            {.capabilities = {Protocol{fuchsia::posix::socket::Provider::Name_}},
+             .source = ChildRef{kNetstack},
              .targets = {target}}};
   }
 
-  static constexpr auto kFlutterClient = "flutter_client";
-  static constexpr auto kFlutterClientUrl =
-      "fuchsia-pkg://fuchsia.com/one-flutter#meta/one-flutter.cmx";
+  static constexpr auto kFlutterRealm = "flutter_realm";
+  static constexpr auto kFlutterRealmUrl = "#meta/one-flutter-realm.cm";
+
+ private:
+  static constexpr auto kMemoryPressureProvider = "memory_pressure_provider";
+  static constexpr auto kMemoryPressureProviderUrl = "#meta/memory_monitor.cm";
+
+  static constexpr auto kNetstack = "netstack";
+  static constexpr auto kNetstackUrl = "#meta/netstack.cm";
 };
 
 TEST_F(FlutterInputTestIp, FlutterTap) {
@@ -646,7 +651,7 @@ TEST_F(FlutterInputTestIp, FlutterTap) {
 
 class GfxInputTestIp : public TouchInputBase {
  protected:
-  std::vector<std::pair<ChildName, LegacyUrl>> GetTestComponents() override {
+  std::vector<std::pair<ChildName, LegacyUrl>> GetTestV2Components() override {
     return {std::make_pair(kCppGfxClient, kCppGfxClientUrl)};
   }
 
@@ -661,16 +666,12 @@ class GfxInputTestIp : public TouchInputBase {
         {.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
          .source = ParentRef(),
          .targets = {ChildRef{kCppGfxClient}}},
-        {.capabilities = {Protocol{fuchsia::sys::Environment::Name_}},
-         .source = ParentRef(),
-         .targets = {ChildRef{kCppGfxClient}}},
     };
   }
 
  private:
   static constexpr auto kCppGfxClient = "gfx_client";
-  static constexpr auto kCppGfxClientUrl =
-      "fuchsia-pkg://fuchsia.com/touch-gfx-client#meta/touch-gfx-client.cmx";
+  static constexpr auto kCppGfxClientUrl = "#meta/touch-gfx-client.cm";
 };
 
 TEST_F(GfxInputTestIp, CppGfxClientTap) {
@@ -859,7 +860,6 @@ class WebEngineTestIp : public TouchInputBase {
  protected:
   std::vector<std::pair<ChildName, LegacyUrl>> GetTestComponents() override {
     return {
-        std::make_pair(kOneChromiumClient, kOneChromiumUrl),
         std::make_pair(kWebContextProvider, kWebContextProviderUrl),
     };
   }
@@ -868,11 +868,12 @@ class WebEngineTestIp : public TouchInputBase {
     return {
         std::make_pair(kBuildInfoProvider, kBuildInfoProviderUrl),
         std::make_pair(kFontsProvider, kFontsProviderUrl),
-        std::make_pair(kTextManager, kTextManagerUrl),
         std::make_pair(kIntl, kIntlUrl),
         std::make_pair(kMemoryPressureProvider, kMemoryPressureProviderUrl),
-        std::make_pair(kNetstack, kNetstackUrl),
         std::make_pair(kMockCobalt, kMockCobaltUrl),
+        std::make_pair(kNetstack, kNetstackUrl),
+        std::make_pair(kOneChromiumClient, kOneChromiumUrl),
+        std::make_pair(kTextManager, kTextManagerUrl),
     };
   }
 
@@ -968,13 +969,12 @@ class WebEngineTestIp : public TouchInputBase {
         {.capabilities = {Protocol{fuchsia::memorypressure::Provider::Name_}},
          .source = ChildRef{kMemoryPressureProvider},
          .targets = {target}},
-        {.capabilities = {Protocol{fuchsia::netstack::Netstack::Name_}},
+        {.capabilities = {Protocol{fuchsia::net::interfaces::State::Name_},
+                          Protocol{fuchsia::netstack::Netstack::Name_}},
          .source = ChildRef{kNetstack},
          .targets = {target}},
-        {.capabilities = {Protocol{fuchsia::net::interfaces::State::Name_}},
-         .source = ChildRef{kNetstack},
-         .targets = {target}},
-        {.capabilities = {Protocol{fuchsia::accessibility::semantics::SemanticsManager::Name_}},
+        {.capabilities = {Protocol{fuchsia::accessibility::semantics::SemanticsManager::Name_},
+                          Protocol{fuchsia::ui::scenic::Scenic::Name_}},
          .source = ParentRef(),
          .targets = {target}},
         {.capabilities = {Protocol{fuchsia::web::ContextProvider::Name_}},
@@ -983,31 +983,18 @@ class WebEngineTestIp : public TouchInputBase {
         {.capabilities = {Protocol{fuchsia::tracing::provider::Registry::Name_}},
          .source = ParentRef(),
          .targets = {ChildRef{kFontsProvider}}},
-        {.capabilities = {Protocol{fuchsia::sys::Environment::Name_},
-                          Protocol{fuchsia::logger::LogSink::Name_}},
-         .source = ParentRef(),
-         .targets = {target}},
         {.capabilities = {Protocol{fuchsia::cobalt::LoggerFactory::Name_}},
          .source = ChildRef{kMockCobalt},
          .targets = {ChildRef{kMemoryPressureProvider}}},
         {.capabilities = {Protocol{fuchsia::sysmem::Allocator::Name_}},
          .source = ParentRef(),
          .targets = {ChildRef{kMemoryPressureProvider}, ChildRef{kOneChromiumClient}}},
-        {.capabilities = {Protocol{fuchsia::scheduler::ProfileProvider::Name_}},
+        {.capabilities = {Protocol{fuchsia::kernel::RootJobForInspect::Name_},
+                          Protocol{fuchsia::kernel::Stats::Name_},
+                          Protocol{fuchsia::scheduler::ProfileProvider::Name_},
+                          Protocol{fuchsia::tracing::provider::Registry::Name_}},
          .source = ParentRef(),
          .targets = {ChildRef{kMemoryPressureProvider}}},
-        {.capabilities = {Protocol{fuchsia::kernel::RootJobForInspect::Name_}},
-         .source = ParentRef(),
-         .targets = {ChildRef{kMemoryPressureProvider}}},
-        {.capabilities = {Protocol{fuchsia::kernel::Stats::Name_}},
-         .source = ParentRef(),
-         .targets = {ChildRef{kMemoryPressureProvider}}},
-        {.capabilities = {Protocol{fuchsia::tracing::provider::Registry::Name_}},
-         .source = ParentRef(),
-         .targets = {ChildRef{kMemoryPressureProvider}}},
-        {.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
-         .source = ParentRef(),
-         .targets = {target}},
         {.capabilities = {Protocol{fuchsia::posix::socket::Provider::Name_}},
          .source = ChildRef{kNetstack},
          .targets = {target}},
@@ -1021,8 +1008,7 @@ class WebEngineTestIp : public TouchInputBase {
   }
 
   static constexpr auto kOneChromiumClient = "chromium_client";
-  static constexpr auto kOneChromiumUrl =
-      "fuchsia-pkg://fuchsia.com/one-chromium#meta/one-chromium.cmx";
+  static constexpr auto kOneChromiumUrl = "#meta/one-chromium.cm";
 
  private:
   static constexpr auto kFontsProvider = "fonts_provider";
@@ -1105,10 +1091,8 @@ class EmbeddingFlutterTestIp {
   // Routes needed for Embedding Flutter to run.
   static std::vector<Route> GetEmbeddingFlutterRoutes() {
     return {
-        {.capabilities = {Protocol{test::touch::TestAppLauncher::Name_}},
-         .source = ChildRef{kEmbeddingFlutter},
-         .targets = {ParentRef()}},
-        {.capabilities = {Protocol{fuchsia::ui::app::ViewProvider::Name_}},
+        {.capabilities = {Protocol{fuchsia::ui::app::ViewProvider::Name_},
+                          Protocol{test::touch::TestAppLauncher::Name_}},
          .source = ChildRef{kEmbeddingFlutter},
          .targets = {ParentRef()}},
         {.capabilities = {Protocol{test::touch::ResponseListener::Name_}},
@@ -1118,42 +1102,35 @@ class EmbeddingFlutterTestIp {
          .source = ParentRef(),
          .targets = {ChildRef{kEmbeddingFlutter}}},
 
-        // Needed to launch Embedded Client.
-        {.capabilities = {Protocol{fuchsia::sys::Environment::Name_}},
-         .source = ParentRef(),
-         .targets = {ChildRef{kEmbeddingFlutter}}},
-        {.capabilities = {Protocol{fuchsia::sys::Launcher::Name_}},
-         .source = ParentRef(),
-         .targets = {ChildRef{kEmbeddingFlutter}}},
-
         // Needed for Flutter runner.
-        {.capabilities = {Protocol{fuchsia::vulkan::loader::Loader::Name_}},
-         .source = ParentRef(),
-         .targets = {ChildRef{kEmbeddingFlutter}}},
-        {.capabilities = {Protocol{fuchsia::tracing::provider::Registry::Name_}},
-         .source = ParentRef(),
-         .targets = {ChildRef{kEmbeddingFlutter}}},
-        {.capabilities = {Protocol{fuchsia::sysmem::Allocator::Name_}},
+        {.capabilities = {Protocol{fuchsia::sysmem::Allocator::Name_},
+                          Protocol{fuchsia::tracing::provider::Registry::Name_},
+                          Protocol{fuchsia::vulkan::loader::Loader::Name_}},
          .source = ParentRef(),
          .targets = {ChildRef{kEmbeddingFlutter}}},
     };
   }
 
   static constexpr auto kEmbeddingFlutter = "embedding_flutter";
-  static constexpr auto kEmbeddingFlutterUrl =
-      "fuchsia-pkg://fuchsia.com/embedding-flutter#meta/embedding-flutter.cmx";
+  static constexpr auto kEmbeddingFlutterUrl = "#meta/embedding-flutter-realm.cm";
 };
 
 class FlutterInFlutterTestIp : public FlutterInputTestIp, public EmbeddingFlutterTestIp {
  protected:
-  std::vector<std::pair<ChildName, LegacyUrl>> GetTestComponents() override {
+  std::vector<std::pair<ChildName, LegacyUrl>> GetTestV2Components() override {
     return merge({EmbeddingFlutterTestIp::GetEmbeddingFlutterComponents(),
-                  FlutterInputTestIp::GetTestComponents()});
+                  FlutterInputTestIp::GetTestV2Components()});
   }
 
   std::vector<Route> GetTestRoutes() override {
     return merge({EmbeddingFlutterTestIp::GetEmbeddingFlutterRoutes(),
-                  FlutterInputTestIp::GetFlutterRoutes(ChildRef{kEmbeddingFlutter})});
+                  FlutterInputTestIp::GetFlutterRoutes(ChildRef{kEmbeddingFlutter}),
+                  FlutterInputTestIp::GetFlutterRoutes(ChildRef{kFlutterRealm}),
+                  {
+                      {.capabilities = {Protocol{fuchsia::ui::app::ViewProvider::Name_}},
+                       .source = ChildRef{kFlutterRealm},
+                       .targets = {ChildRef{kEmbeddingFlutter}}},
+                  }});
   }
 };
 
@@ -1162,7 +1139,7 @@ TEST_F(FlutterInFlutterTestIp, FlutterInFlutterTap) {
   zx::basic_time<ZX_CLOCK_MONOTONIC> input_injection_time(0);
 
   // Launch the embedded app.
-  LaunchEmbeddedClient("fuchsia-pkg://fuchsia.com/one-flutter#meta/one-flutter.cmx");
+  LaunchEmbeddedClient("one-flutter");
 
   // Embedded app takes up the left half of the screen. Expect response from it when injecting to
   // the left.
@@ -1177,8 +1154,8 @@ TEST_F(FlutterInFlutterTestIp, FlutterInFlutterTap) {
     RunLoopUntil([&injection_complete] { return injection_complete; });
   }
 
-  // Parent app takes up the right half of the screen. Expect response from it when injecting to the
-  // right.
+  // Parent app takes up the right half of the screen. Expect response from it when injecting to
+  // the right.
   {
     bool injection_complete = false;
     SetResponseExpectations(/*expected_x=*/static_cast<float>(display_height()) * (3.f / 4.f),
@@ -1194,28 +1171,34 @@ TEST_F(FlutterInFlutterTestIp, FlutterInFlutterTap) {
 class WebInFlutterTestIp : public WebEngineTestIp, public EmbeddingFlutterTestIp {
  protected:
   std::vector<std::pair<ChildName, LegacyUrl>> GetTestComponents() override {
-    return merge({
-        GetEmbeddingFlutterComponents(),
-        WebEngineTestIp::GetTestComponents(),
-    });
+    return WebEngineTestIp::GetTestComponents();
   }
 
   std::vector<std::pair<ChildName, LegacyUrl>> GetTestV2Components() override {
-    return WebEngineTestIp::GetTestV2Components();
+    return merge({
+        GetEmbeddingFlutterComponents(),
+        WebEngineTestIp::GetTestV2Components(),
+    });
   }
 
   std::vector<Route> GetTestRoutes() override {
     return merge({EmbeddingFlutterTestIp::GetEmbeddingFlutterRoutes(),
-                  WebEngineTestIp::GetWebEngineRoutes(ChildRef{kEmbeddingFlutter})});
+                  WebEngineTestIp::GetWebEngineRoutes(ChildRef{kEmbeddingFlutter}),
+                  WebEngineTestIp::GetWebEngineRoutes(ChildRef{kOneChromiumClient}),
+                  {
+                      {.capabilities = {Protocol{fuchsia::ui::app::ViewProvider::Name_}},
+                       .source = ChildRef{kOneChromiumClient},
+                       .targets = {ChildRef{kEmbeddingFlutter}}},
+                  }});
   }
 };
 
 TEST_F(WebInFlutterTestIp, WebInFlutterTap) {
   // Launch the embedded app.
-  LaunchEmbeddedClient("fuchsia-pkg://fuchsia.com/one-chromium#meta/one-chromium.cmx");
+  LaunchEmbeddedClient("one-chromium");
 
-  // Parent app takes up the right half of the screen. Expect response from it when injecting to the
-  // right.
+  // Parent app takes up the right half of the screen. Expect response from it when injecting to
+  // the right.
   {
     // Use `ZX_CLOCK_MONOTONIC` to avoid complications due to wall-clock time changes.
     zx::basic_time<ZX_CLOCK_MONOTONIC> input_injection_time(0);

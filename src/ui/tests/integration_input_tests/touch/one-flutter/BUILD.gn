@@ -17,14 +17,29 @@ dart_library("lib") {
   ]
 }
 
-flutter_component("one-flutter-component") {
+flutter_component("component") {
+  testonly = true
   component_name = "one-flutter"
-  manifest = "meta/one-flutter.cmx"
+  manifest = "meta/one-flutter.cml"
   main_package = "one-flutter"
   main_dart = "one-flutter.dart"
-  deps = [ ":lib" ]
+  deps = [
+    ":lib",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
+  ]
+}
+
+fuchsia_component("realm") {
+  testonly = true
+  component_name = "one-flutter-realm"
+  manifest = "meta/one-flutter-realm.cml"
+  deps = [ ":component" ]
 }
 
 fuchsia_package("one-flutter") {
-  deps = [ ":one-flutter-component" ]
+  testonly = true
+  deps = [
+    ":component",
+    ":realm",
+  ]
 }

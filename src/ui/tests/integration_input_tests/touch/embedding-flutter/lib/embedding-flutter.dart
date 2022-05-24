@@ -9,7 +9,6 @@ import 'dart:ui';
 import 'dart:async';
 
 import 'package:fidl/fidl.dart' as fidl;
-import 'package:fidl_fuchsia_sys/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_app/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
 import 'package:flutter/material.dart';
@@ -30,8 +29,8 @@ class _TestAppLauncherImpl extends test_touch.TestAppLauncher {
   _TestAppLauncherImpl(this._onLaunch);
 
   @override
-  Future<void> launch(String componentUrl) {
-    return _onLaunch(componentUrl);
+  Future<void> launch(String debugName) {
+    return _onLaunch(debugName);
   }
 }
 
@@ -56,9 +55,9 @@ class _TestAppState extends State<TestApp> {
   final _backgroundColor = ValueNotifier(_blue);
 
   _TestAppState() {
-    _testAppLauncher = _TestAppLauncherImpl((String componentUrl) {
+    _testAppLauncher = _TestAppLauncherImpl((String debugName) {
       final completer = Completer();
-      _connection.value = FuchsiaViewConnection(_launchApp(componentUrl),
+      _connection.value = FuchsiaViewConnection(_launchApp(debugName),
           onViewStateChanged: (_, state) {
         if (state && !completer.isCompleted) {
           // Notify test that the child view is ready.
@@ -137,33 +136,19 @@ class _TestAppState extends State<TestApp> {
   }
 }
 
-ViewHolderToken _launchApp(String componentUrl) {
-  print('Launching child : $componentUrl');
-  final incomingFromChild = Incoming();
-  final componentController = ComponentControllerProxy();
+ViewHolderToken _launchApp(String debugName) {
+  print('Launching child : $debugName');
 
-  final launcher = LauncherProxy();
-  Incoming.fromSvcPath()
-    ..connectToService(launcher)
-    ..close();
-  launcher.createComponent(
-    LaunchInfo(
-      url: componentUrl,
-      directoryRequest: incomingFromChild.request().passChannel(),
-    ),
-    componentController.ctrl.request(),
-  );
-  launcher.ctrl.close();
-
+  // Call fuchsia.ui.app.ViewProvider::createView to launch the embedded app.
   ViewProviderProxy viewProvider = ViewProviderProxy();
-  incomingFromChild
+  Incoming.fromSvcPath()
     ..connectToService(viewProvider)
     ..close();
 
-  final viewTokens = EventPairPair();
+  EventPairPair viewTokens = EventPairPair();
   assert(viewTokens.status == ZX.OK);
-  final viewHolderToken = ViewHolderToken(value: viewTokens.first);
-  final viewToken = ViewToken(value: viewTokens.second);
+  ViewHolderToken viewHolderToken = ViewHolderToken(value: viewTokens.first);
+  ViewToken viewToken = ViewToken(value: viewTokens.second);
 
   viewProvider.createView(viewToken.value, null, null);
   viewProvider.ctrl.close();

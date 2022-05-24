@@ -1,0 +1,70 @@
+{
+    children: [
+        {
+            name: "flutter_aot_runner", // Needed for release builds.
+            url: "fuchsia-pkg://fuchsia.com/flutter_aot_runner#meta/flutter_aot_runner.cm",
+        },
+        {
+            name: "flutter_jit_runner", // Needed for non-release builds.
+            url: "fuchsia-pkg://fuchsia.com/flutter_jit_runner#meta/flutter_jit_runner.cm",
+        },
+        {
+            name: "embedding_flutter",
+            url: "#meta/embedding-flutter.cm",
+            environment: "#embedding_flutter_env",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.memorypressure.Provider",
+                "fuchsia.posix.socket.Provider",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.scenic.Scenic",
+                "fuchsia.vulkan.loader.Loader",
+            ],
+            from: "parent",
+            to: [
+                "#embedding_flutter",
+                "#flutter_aot_runner",
+                "#flutter_jit_runner",
+            ],
+        },
+        {
+            protocol: [
+                "fuchsia.ui.app.ViewProvider",
+                "test.touch.ResponseListener",
+            ],
+            from: "parent",
+            to: "#embedding_flutter",
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.ui.app.ViewProvider",
+                "test.touch.TestAppLauncher",
+            ],
+            from: "#embedding_flutter",
+            to: "parent",
+        },
+    ],
+    environments: [
+        {
+            name: "embedding_flutter_env",
+            extends: "realm",
+            runners: [
+                {
+                    runner: "flutter_aot_runner",
+                    from: "#flutter_aot_runner",
+                },
+                {
+                    runner: "flutter_jit_runner",
+                    from: "#flutter_jit_runner",
+                },
+            ],
+        },
+    ],
+}

@@ -5,6 +5,7 @@
 import("//build/components.gni")
 
 group("one-chromium") {
+  testonly = true
   deps = [ ":package" ]
 }
 
@@ -12,7 +13,6 @@ executable("bin") {
   output_name = "one-chromium"
   sources = [ "one-chromium.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.web",
     "//sdk/lib/sys/cpp",
@@ -30,12 +30,17 @@ executable("bin") {
 }
 
 fuchsia_component("component") {
+  testonly = true
   component_name = "one-chromium"
-  manifest = rebase_path("meta/one-chromium.cmx")
-  deps = [ ":bin" ]
+  manifest = "meta/one-chromium.cml"
+  deps = [
+    ":bin",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
+  ]
 }
 
 fuchsia_package("package") {
+  testonly = true
   package_name = "one-chromium"
   deps = [ ":component" ]
 }

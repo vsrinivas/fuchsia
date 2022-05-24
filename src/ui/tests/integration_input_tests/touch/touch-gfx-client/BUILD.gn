@@ -4,18 +4,25 @@
 
 import("//build/components.gni")
 
-fuchsia_package_with_single_component("touch-gfx-client") {
+fuchsia_component("component") {
   testonly = true
-  manifest = "meta/touch-gfx-client.cmx"
-  deps = [ ":touch-gfx-client-binary" ]
+  component_name = "touch-gfx-client"
+  manifest = "meta/touch-gfx-client.cml"
+  deps = [
+    ":touch-gfx-client-binary",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
+  ]
+}
+
+fuchsia_package("touch-gfx-client") {
+  testonly = true
+  deps = [ ":component" ]
 }
 
 executable("touch-gfx-client-binary") {
   testonly = true
   output_name = "touch-gfx-client"
-
   sources = [ "touch-gfx-client.cc" ]
-
   deps = [
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.gfx",

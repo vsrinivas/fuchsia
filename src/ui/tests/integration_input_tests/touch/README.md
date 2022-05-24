@@ -59,7 +59,7 @@ $ fx set <product>.<arch> --with //src/ui/tests/integration_input_tests/touch:te
 To record a trace of the test, use this fx invocation:
 
 ```shell
-$ fx traceutil record --duration 20s --categories touch-input-test fuchsia-pkg://fuchsia.com/touch-input-test#meta/touch-input-test.cmx
+$ fx traceutil record --duration 20s --categories touch-input-test fuchsia-pkg://fuchsia.com/touch-input-test#meta/touch-input-test.cm
 ```
 
 Note: The default duration for `traceutil record` is 10 seconds. When running
@@ -83,7 +83,7 @@ fx set <product>.<board> --with //src/session/examples/tiles-session:packages
 To play around with the Flutter client used in the automated test, invoke the client like this:
 
 ```shell
-$ ffx session add fuchsia-pkg://fuchsia.com/one-flutter#meta/one-flutter.cmx
+$ ffx session add fuchsia-pkg://fuchsia.com/one-flutter#meta/one-flutter.cm
 ```
 
 ### Play with the C++ GFX client
@@ -91,7 +91,7 @@ $ ffx session add fuchsia-pkg://fuchsia.com/one-flutter#meta/one-flutter.cmx
 To play around with the C++ GFX client used in the automated test, invoke the client like this:
 
 ```shell
-$ ffx session add fuchsia-pkg://fuchsia.com/touch-gfx-client#meta/touch-gfx-client.cmx
+$ ffx session add fuchsia-pkg://fuchsia.com/touch-gfx-client#meta/touch-gfx-client.cm
 ```
 
 ### Play with the web client
@@ -99,5 +99,5 @@ $ ffx session add fuchsia-pkg://fuchsia.com/touch-gfx-client#meta/touch-gfx-clie
 To play around with the web client used in the automated test, invoke the client like this:
 
 ```shell
-$ ffx session add fuchsia-pkg://fuchsia.com/one-chromium#meta/one-chromium.cmx
+$ ffx session add fuchsia-pkg://fuchsia.com/one-chromium#meta/one-chromium.cm
 ```
