@@ -77,7 +77,7 @@
   .rept 256
     isr.dispatch.define.next
   .endr
-.size _isr_table, _isr_table - .
+.size _isr_table, . - _isr_table
 .popsection
 
 // This is the real function all the macro-generated functions tail-call into.
