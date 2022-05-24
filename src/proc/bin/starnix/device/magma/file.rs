@@ -166,34 +166,9 @@ impl FileOps for MagmaFile {
                     virtio_magma_virt_create_image_resp_t,
                 ) = read_control_and_response(current_task, &command)?;
 
-                let create_info_address = UserAddress::from(control.create_info);
-                let create_info_ptr =
-                    current_task.mm.read_object(UserRef::new(create_info_address))?;
+                let buffer = create_image(current_task, control, &mut response)?;
+                self.add_buffer_info(control.connection, response.image_out, buffer);
 
-                let create_info_address = UserAddress::from(create_info_ptr);
-                let create_info = current_task.mm.read_object(UserRef::new(create_info_address))?;
-
-                let (vmo, token, info) = create_drm_image(0, &create_info).map_err(|e| {
-                    tracing::warn!("Error creating drm image: {:?}", e);
-                    errno!(EINVAL)
-                })?;
-
-                let mut buffer_out = magma_buffer_t::default();
-                response.result_return = unsafe {
-                    magma_import(
-                        control.connection as magma_connection_t,
-                        vmo.into_raw(),
-                        &mut buffer_out,
-                    ) as u64
-                };
-
-                self.add_buffer_info(
-                    control.connection as magma_connection_t,
-                    buffer_out,
-                    BufferInfo::Image(ImageInfo { info, token }),
-                );
-
-                response.image_out = buffer_out;
                 response.hdr.type_ =
                     virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_VIRT_CREATE_IMAGE as u32;
                 current_task.mm.write_object(UserRef::new(response_address), &response)

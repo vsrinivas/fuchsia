@@ -4,11 +4,17 @@
 
 use std::sync::Arc;
 
-use fuchsia_zircon::{self as zx, AsHandleRef};
+use fuchsia_zircon::{self as zx, AsHandleRef, HandleBased};
 use magma::*;
 use zerocopy::{AsBytes, FromBytes};
 
-use crate::device::magma::file::ConnectionMap;
+use crate::device::{
+    magma::{
+        file::{BufferInfo, ConnectionMap},
+        magma::create_drm_image,
+    },
+    wayland::image_file::ImageInfo,
+};
 use crate::fs::{anon_fs, Anon, FdFlags, VmoFileObject};
 use crate::task::CurrentTask;
 use crate::types::*;
@@ -61,6 +67,41 @@ pub fn create_connection(
         unsafe { magma_create_connection2(control.device, &mut connection_out) as u64 };
 
     response.connection_out = connection_out;
+}
+
+/// Creates a DRM image VMO and imports it to magma.
+///
+/// Returns a `BufferInfo` containing the associated `BufferCollectionImportToken` and the magma
+/// image info.
+///
+/// Upon successful completion, `response.image_out` will contain the handle to the magma buffer.
+///
+/// SAFETY: Makes an FFI call which takes ownership of a raw VMO handle. Invalid parameters are
+/// dealt with by magma.
+pub fn create_image(
+    current_task: &CurrentTask,
+    control: virtio_magma_virt_create_image_ctrl_t,
+    response: &mut virtio_magma_virt_create_image_resp_t,
+) -> Result<BufferInfo, Errno> {
+    let create_info_address = UserAddress::from(control.create_info);
+    let create_info_ptr = current_task.mm.read_object(UserRef::new(create_info_address))?;
+
+    let create_info_address = UserAddress::from(create_info_ptr);
+    let create_info = current_task.mm.read_object(UserRef::new(create_info_address))?;
+
+    let (vmo, token, info) = create_drm_image(0, &create_info).map_err(|e| {
+        tracing::warn!("Error creating drm image: {:?}", e);
+        errno!(EINVAL)
+    })?;
+
+    let mut buffer_out = magma_buffer_t::default();
+    response.result_return = unsafe {
+        magma_import(control.connection as magma_connection_t, vmo.into_raw(), &mut buffer_out)
+            as u64
+    };
+
+    response.image_out = buffer_out;
+    Ok(BufferInfo::Image(ImageInfo { info, token }))
 }
 
 /// Imports a device to magma.
