@@ -153,7 +153,40 @@ zx_status_t Da7219::Reset() {
     return status_a.error_value();
   PlugDetected(status_a->jack_insertion_sts());
 
-  return status;
+  // Unmask AAD IRQs.
+  status = AccdetIrqMaskA::Get()
+               .set_m_jack_detect_comp(false)
+               .set_m_jack_removed(false)
+               .set_m_jack_inserted(true)
+               .Write(i2c_);
+  if (status != ZX_OK)
+    return status;
+
+  // Mask all buttons IRQs.
+  status = AccdetIrqMaskB::Get()
+               .set_m_button_a_release(true)
+               .set_m_button_b_release(true)
+               .set_m_button_c_release(true)
+               .set_m_button_d_release(true)
+               .set_m_button_d_pressed(true)
+               .set_m_button_c_pressed(true)
+               .set_m_button_b_pressed(true)
+               .set_m_button_a_pressed(true)
+               .Write(i2c_);
+  if (status != ZX_OK)
+    return status;
+
+  // Clear buttons state.
+  return AccdetIrqEventB::Get()
+      .set_e_button_a_released(true)
+      .set_e_button_b_released(true)
+      .set_e_button_c_released(true)
+      .set_e_button_d_released(true)
+      .set_e_button_d_pressed(true)
+      .set_e_button_c_pressed(true)
+      .set_e_button_b_pressed(true)
+      .set_e_button_a_pressed(true)
+      .Write(i2c_);
 }
 
 Info Da7219::GetInfo() {

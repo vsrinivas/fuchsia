@@ -87,7 +87,10 @@ TEST_F(Da7219Test, Reset) {
       .ExpectWriteStop({0x6b, 0x77}, ZX_OK);  // HP Routing (Left HP disabled).
   mock_i2c_.ExpectWrite({0x6c})
       .ExpectReadStop({0xff}, ZX_OK)
-      .ExpectWriteStop({0x6c, 0x77}, ZX_OK);  // HP Routing (Right HP disabled).
+      .ExpectWriteStop({0x6c, 0x77}, ZX_OK);       // HP Routing (Right HP disabled).
+  mock_i2c_.ExpectWriteStop({0xc4, 0x01}, ZX_OK);  // Unmask AAD (leave insert masked).
+  mock_i2c_.ExpectWriteStop({0xc5, 0xff}, ZX_OK);  // Mask buttons.
+  mock_i2c_.ExpectWriteStop({0xc3, 0xff}, ZX_OK);  // Clear buttons.
 
   auto* child_dev = fake_root_->GetLatestChild();
   auto codec = child_dev->GetDeviceContext<Da7219Codec>();
