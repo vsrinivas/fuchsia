@@ -26,6 +26,7 @@ GTEST_FILTER="$GTEST_FILTER:BinderLibTest.IndirectGetId2"
 GTEST_FILTER="$GTEST_FILTER:BinderLibTest.IndirectGetId3"
 GTEST_FILTER="$GTEST_FILTER:BinderLibTest.Callback"
 GTEST_FILTER="$GTEST_FILTER:BinderLibTest.AddServer"
+GTEST_FILTER="$GTEST_FILTER:BinderLibTest.OnewayQueueing"
 
 # Death notification tests.
 GTEST_FILTER="$GTEST_FILTER:BinderLibTest.DeathNotificationStrongRef"

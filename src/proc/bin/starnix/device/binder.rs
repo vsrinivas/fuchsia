@@ -10,7 +10,7 @@ use crate::fs::{
     FdEvents, FdNumber, FileObject, FileOps, FileSystem, FileSystemHandle, FileSystemOps, FsNode,
     FsStr, NamespaceNode, ROMemoryDirectory, SeekOrigin, SpecialNode,
 };
-use crate::lock::{Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard};
+use crate::lock::{Mutex, MutexGuard, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use crate::logging::not_implemented;
 use crate::mm::vmo::round_up_to_increment;
 use crate::mm::{DesiredAddress, MappedVmo, MappingOptions, MemoryManager, UserMemoryCursor};
@@ -205,7 +205,7 @@ struct BinderProcess {
     waiters: Mutex<WaitQueue>,
     /// Outstanding references to handles within transaction buffers.
     /// When the process frees them with the BC_FREE_BUFFER, they will be released.
-    transaction_refs: Mutex<BTreeMap<UserAddress, TransactionRefs>>,
+    transaction_buffers: Mutex<BTreeMap<UserAddress, TransactionBuffer>>,
     /// The list of processes that should be notified if this process dies.
     death_subscribers: Mutex<Vec<(Weak<BinderProcess>, binder_uintptr_t)>>,
 }
@@ -246,6 +246,22 @@ impl Drop for TransactionRefs {
     }
 }
 
+/// A buffer associated with an ongoing transaction.
+#[derive(Debug)]
+enum TransactionBuffer {
+    /// This buffer serves a oneway transaction.
+    Oneway {
+        /// The temporary strong references held while the transaction buffer is alive.
+        _refs: TransactionRefs,
+        /// The binder object associated with the transaction.
+        object: Weak<BinderObject>,
+    },
+    RequestResponse {
+        /// The temporary strong references held while the transaction buffer is alive.
+        _refs: TransactionRefs,
+    },
+}
+
 impl BinderProcess {
     fn new(pid: pid_t) -> Self {
         Self {
@@ -256,7 +272,7 @@ impl BinderProcess {
             handles: Mutex::new(HandleTable::default()),
             command_queue: Mutex::new(VecDeque::new()),
             waiters: Mutex::new(WaitQueue::default()),
-            transaction_refs: Mutex::new(BTreeMap::new()),
+            transaction_buffers: Mutex::new(BTreeMap::new()),
             death_subscribers: Mutex::new(Vec::new()),
         }
     }
@@ -279,14 +295,13 @@ impl BinderProcess {
                 if let Some(binder_object) = entry.get().upgrade() {
                     binder_object
                 } else {
-                    let binder_object =
-                        Arc::new(BinderObject { owner: Arc::downgrade(self), local });
+                    let binder_object = Arc::new(BinderObject::new(self, local));
                     entry.insert(Arc::downgrade(&binder_object));
                     binder_object
                 }
             }
             BTreeMapEntry::Vacant(entry) => {
-                let binder_object = Arc::new(BinderObject { owner: Arc::downgrade(self), local });
+                let binder_object = Arc::new(BinderObject::new(self, local));
                 entry.insert(Arc::downgrade(&binder_object));
                 binder_object
             }
@@ -369,6 +384,14 @@ impl SharedMemory {
         })
     }
 
+    /// Allocates a buffer large enough to hold the requested data length and offsets length,
+    /// inserting padding between data and offsets as needed.
+    ///
+    /// NOTE: When `data_length` and `offsets_length` are both 0, this will still allocate a minimum
+    /// buffer size of 8 bytes. This is because clients expect their buffer addresses to be uniquely
+    /// associated with a transaction. Returning the same address for different transactions will
+    /// break oneway transactions that have no payload.
+    //
     // This is a temporary implementation of an allocator and should be replaced by something
     // more sophisticated. It currently implements a bump allocator strategy.
     fn allocate_buffer<'a>(
@@ -379,6 +402,10 @@ impl SharedMemory {
         // Round `data_length` up to the nearest multiple of 8, so that the offsets buffer is
         // aligned when we pack it next to the data buffer.
         let data_cap = round_up_to_increment(data_length, std::mem::size_of::<binder_uintptr_t>())?;
+        // Ensure that we allocate at least 8 bytes, so that each buffer returned is uniquely
+        // associated with a transaction. Otherwise, multiple zero-sized allocations will have the
+        // same address and there will be no way of distinguishing which transaction they belong to.
+        let data_cap = std::cmp::max(data_cap, std::mem::size_of::<binder_uintptr_t>());
         // Ensure that the offsets length is valid.
         if offsets_length % std::mem::size_of::<binder_uintptr_t>() != 0 {
             return error!(EINVAL);
@@ -884,6 +911,40 @@ struct BinderObject {
     /// The addresses to the binder (weak and strong) in the owner's address space. These are
     /// treated as opaque identifiers in the driver, and only have meaning to the owning process.
     local: LocalBinderObject,
+    /// Mutable state for the binder object, protected behind a mutex.
+    state: Mutex<BinderObjectMutableState>,
+}
+
+/// Mutable state of a [`BinderObject`], mainly for handling the ordering guarantees of oneway
+/// transactions.
+#[derive(Debug)]
+struct BinderObjectMutableState {
+    /// Command queue for oneway transactions on this binder object. Oneway transactions are
+    /// guaranteed to be dispatched in the order they are submitted to the driver, and one at a
+    /// time.
+    oneway_transactions: VecDeque<Transaction>,
+    /// Whether a binder thread is currently handling a oneway transaction. This will get cleared
+    /// when there are no more transactions in the `oneway_transactions` and a binder thread freed
+    /// the buffer associated with the last oneway transaction.
+    handling_oneway_transaction: bool,
+}
+
+impl BinderObject {
+    fn new(owner: &Arc<BinderProcess>, local: LocalBinderObject) -> Self {
+        Self {
+            owner: Arc::downgrade(owner),
+            local,
+            state: Mutex::new(BinderObjectMutableState {
+                oneway_transactions: VecDeque::new(),
+                handling_oneway_transaction: false,
+            }),
+        }
+    }
+
+    /// Locks the mutable state of the binder object for exclusive access.
+    fn lock<'a>(&'a self) -> MutexGuard<'a, BinderObjectMutableState> {
+        self.state.lock()
+    }
 }
 
 impl Drop for BinderObject {
@@ -903,7 +964,7 @@ impl Drop for BinderObject {
 
 /// A binder object.
 /// All addresses are in the owning process' address space.
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Default, Clone, Eq, PartialEq)]
 struct LocalBinderObject {
     /// Address to the weak ref-count structure. This uniquely identifies a binder object within
     /// a process. Guaranteed to exist.
@@ -1007,6 +1068,13 @@ impl Handle {
             Handle::Object { index } => *index,
         }
     }
+
+    pub fn is_handle_0(&self) -> bool {
+        match self {
+            Handle::SpecialServiceManager => true,
+            Handle::Object { .. } => false,
+        }
+    }
 }
 
 impl From<u32> for Handle {
@@ -1060,7 +1128,7 @@ const BINDER_IOCTL_ENABLE_ONEWAY_SPAM_DETECTION: u32 =
 struct BinderDriver {
     /// The "name server" process that is addressed via the special handle 0 and is responsible
     /// for implementing the binder protocol `IServiceManager`.
-    context_manager: RwLock<Option<Weak<BinderProcess>>>,
+    context_manager: RwLock<Option<Arc<BinderObject>>>,
 
     /// Manages the internal state of each process interacting with the binder driver.
     procs: RwLock<BTreeMap<pid_t, Weak<BinderProcess>>>,
@@ -1100,8 +1168,11 @@ impl BinderDriver {
         (binder_process, binder_thread)
     }
 
-    fn get_context_manager(&self) -> Result<Arc<BinderProcess>, Errno> {
-        self.context_manager.read().as_ref().and_then(Weak::upgrade).ok_or_else(|| errno!(ENOENT))
+    fn get_context_manager(&self) -> Result<(Arc<BinderObject>, Arc<BinderProcess>), Errno> {
+        let context_manager =
+            self.context_manager.read().as_ref().cloned().ok_or_else(|| errno!(ENOENT))?;
+        let proc = context_manager.owner.upgrade().ok_or_else(|| errno!(ENOENT))?;
+        Ok((context_manager, proc))
     }
 
     fn ioctl(
@@ -1133,7 +1204,8 @@ impl BinderDriver {
 
                 // TODO: Read the flat_binder_object when ioctl is BINDER_IOCTL_SET_CONTEXT_MGR_EXT.
 
-                *self.context_manager.write() = Some(Arc::downgrade(&binder_proc));
+                *self.context_manager.write() =
+                    Some(Arc::new(BinderObject::new(&binder_proc, LocalBinderObject::default())));
                 Ok(SUCCESS)
             }
             BINDER_IOCTL_WRITE_READ => {
@@ -1349,7 +1421,38 @@ impl BinderDriver {
         buffer_ptr: UserAddress,
     ) -> Result<(), Errno> {
         // Drop the temporary references held during the transaction.
-        binder_proc.transaction_refs.lock().remove(&buffer_ptr);
+        let removed_buffer = binder_proc.transaction_buffers.lock().remove(&buffer_ptr);
+
+        // Check if the buffer is associated with a oneway transaction and schedule the next oneway
+        // if this is the case.
+        if let Some(TransactionBuffer::Oneway { object, .. }) = removed_buffer {
+            if let Some(object) = object.upgrade() {
+                let mut object_state = object.lock();
+                assert!(
+                    object_state.handling_oneway_transaction,
+                    "freeing a oneway buffer implies that a oneway transaction was being handled"
+                );
+                if let Some(transaction) = object_state.oneway_transactions.pop_front() {
+                    // Drop the lock, as we've completed all mutations and don't want to hold this
+                    // lock while acquiring any others.
+                    drop(object_state);
+
+                    // Schedule the transaction
+                    // Acquire an exclusive lock to prevent a thread from being scheduled twice.
+                    let target_thread_pool = binder_proc.thread_pool.write();
+
+                    // Find a thread to handle the transaction, or use the process' command queue.
+                    if let Some(target_thread) = target_thread_pool.find_available_thread() {
+                        target_thread.write().enqueue_command(Command::Transaction(transaction));
+                    } else {
+                        binder_proc.enqueue_command(Command::Transaction(transaction));
+                    }
+                } else {
+                    // No more oneway transactions queued, mark the queue handling as done.
+                    object_state.handling_oneway_transaction = false;
+                }
+            }
+        }
 
         // Reclaim the memory.
         let mut shared_memory_lock = binder_proc.shared_memory.lock();
@@ -1433,24 +1536,17 @@ impl BinderDriver {
         let handle = unsafe { data.target.handle }.into();
 
         let (object, target_proc) = match handle {
-            Handle::SpecialServiceManager => {
-                // This handle (0) always refers to the context manager, which is always "remote",
-                // even for the context manager itself.
-                (
-                    FlatBinderObject::Remote { handle: Handle::SpecialServiceManager },
-                    self.get_context_manager()?,
-                )
-            }
+            Handle::SpecialServiceManager => self.get_context_manager()?,
             Handle::Object { index } => {
                 let object =
                     binder_proc.handles.lock().get(index).ok_or(TransactionError::Failure)?;
                 let owner = object.owner.upgrade().ok_or(TransactionError::Dead)?;
-                (FlatBinderObject::Local { object: object.local.clone() }, owner)
+                (object, owner)
             }
         };
 
         // Copy the transaction data to the target process.
-        let (data_buffer, offsets_buffer) = self.copy_transaction_buffers(
+        let (data_buffer, offsets_buffer, transaction_refs) = self.copy_transaction_buffers(
             current_task,
             binder_proc,
             binder_thread,
@@ -1458,46 +1554,82 @@ impl BinderDriver {
             &data,
         )?;
 
+        let transaction = Transaction {
+            peer_pid: binder_proc.pid,
+            peer_tid: binder_thread.tid,
+            peer_euid: current_task.read().creds.euid,
+            object: {
+                if handle.is_handle_0() {
+                    // This handle (0) always refers to the context manager, which is always
+                    // "remote", even for the context manager itself.
+                    FlatBinderObject::Remote { handle }
+                } else {
+                    FlatBinderObject::Local { object: object.local.clone() }
+                }
+            },
+            code: data.code,
+            flags: data.flags,
+
+            data_buffer,
+            offsets_buffer,
+        };
+
         if data.flags & transaction_flags_TF_ONE_WAY != 0 {
             // The caller is not expecting a reply.
             binder_thread.write().enqueue_command(Command::TransactionComplete);
+
+            // Register the transaction buffer.
+            target_proc.transaction_buffers.lock().insert(
+                data_buffer.address,
+                TransactionBuffer::Oneway {
+                    _refs: transaction_refs,
+                    object: Arc::downgrade(&object),
+                },
+            );
+
+            // Oneway transactions are enqueued on the binder object and processed one at a time.
+            // This guarantees that oneway transactions are processed in the order they are
+            // submitted, and one at a time.
+            let mut object_state = object.lock();
+            if object_state.handling_oneway_transaction {
+                // Currently, a oneway transaction is being handled. Queue this one so that it is
+                // scheduled when the buffer from the in-progress transaction is freed.
+                object_state.oneway_transactions.push_back(transaction);
+                return Ok(());
+            }
+
+            // No oneway transactions are being handled, which means that no buffer will be
+            // freed, kicking off scheduling from the oneway queue. Instead, we must schedule
+            // the transaction regularly, but mark the object as handling a oneway transaction.
+            object_state.handling_oneway_transaction = true;
         } else {
             // Create a new transaction on the sender so that they can wait on a reply.
             binder_thread.write().transactions.push(Transaction {
                 peer_pid: target_proc.pid,
                 peer_tid: 0,
                 peer_euid: 0,
-
                 object: FlatBinderObject::Remote { handle },
                 code: data.code,
                 flags: data.flags,
-
                 data_buffer: UserBuffer::default(),
                 offsets_buffer: UserBuffer::default(),
             });
+
+            // Register the transaction buffer.
+            target_proc.transaction_buffers.lock().insert(
+                data_buffer.address,
+                TransactionBuffer::RequestResponse { _refs: transaction_refs },
+            );
         }
-
-        let command = Command::Transaction(Transaction {
-            peer_pid: binder_proc.pid,
-            peer_tid: binder_thread.tid,
-            peer_euid: current_task.read().creds.euid,
-
-            object,
-            code: data.code,
-            flags: data.flags,
-
-            data_buffer,
-            offsets_buffer,
-        });
 
         // Acquire an exclusive lock to prevent a thread from being scheduled twice.
         let target_thread_pool = target_proc.thread_pool.write();
 
         // Find a thread to handle the transaction, or use the process' command queue.
         if let Some(target_thread) = target_thread_pool.find_available_thread() {
-            target_thread.write().enqueue_command(command);
+            target_thread.write().enqueue_command(Command::Transaction(transaction));
         } else {
-            target_proc.enqueue_command(command);
+            target_proc.enqueue_command(Command::Transaction(transaction));
         }
         Ok(())
     }
@@ -1523,13 +1655,19 @@ impl BinderDriver {
         };
 
         // Copy the transaction data to the target process.
-        let (data_buffer, offsets_buffer) = self.copy_transaction_buffers(
+        let (data_buffer, offsets_buffer, transaction_refs) = self.copy_transaction_buffers(
             current_task,
             binder_proc,
             binder_thread,
             &target_proc,
             &data,
         )?;
+
+        // Register the transaction buffer.
+        target_proc.transaction_buffers.lock().insert(
+            data_buffer.address,
+            TransactionBuffer::RequestResponse { _refs: transaction_refs },
+        );
 
         // Schedule the transaction on the target process' command queue.
         target_thread.write().enqueue_command(Command::Reply(Transaction {
@@ -1628,7 +1766,7 @@ impl BinderDriver {
         source_thread: &Arc<BinderThread>,
         target_proc: &Arc<BinderProcess>,
         data: &binder_transaction_data,
-    ) -> Result<(UserBuffer, UserBuffer), TransactionError> {
+    ) -> Result<(UserBuffer, UserBuffer, TransactionRefs), TransactionError> {
         // Get the shared memory of the target process.
         let mut shared_memory_lock = target_proc.shared_memory.lock();
         let shared_memory = shared_memory_lock.as_mut().ok_or_else(|| errno!(ENOMEM))?;
@@ -1650,24 +1788,26 @@ impl BinderDriver {
         )?;
 
         // Fix up binder objects.
-        if !offsets_buffer.is_empty() {
+        let transaction_refs = if !offsets_buffer.is_empty() {
             // Translate any handles/fds from the source process' handle table to the target
             // process' handle table.
-            let transaction_refs = self.translate_handles(
+            self.translate_handles(
                 current_task,
                 source_proc,
                 source_thread,
                 target_proc,
                 &offsets_buffer,
                 data_buffer,
-            )?;
-            target_proc
-                .transaction_refs
-                .lock()
-                .insert(shared_buffer.data_user_buffer().address, transaction_refs);
-        }
+            )?
+        } else {
+            TransactionRefs::new(target_proc)
+        };
 
-        Ok((shared_buffer.data_user_buffer(), shared_buffer.offsets_user_buffer()))
+        Ok((
+            shared_buffer.data_user_buffer(),
+            shared_buffer.offsets_user_buffer(),
+            transaction_refs,
+        ))
     }
 
     /// Translates binder object handles from the sending process to the receiver process, patching
@@ -2013,10 +2153,19 @@ mod tests {
     #[fuchsia::test]
     fn handle_0_succeeds_when_context_manager_is_set() {
         let driver = BinderDriver::new();
-        let context_manager = driver.create_process(1);
-        *driver.context_manager.write() = Some(Arc::downgrade(&context_manager));
-        let object = driver.get_context_manager().expect("failed to find handle 0");
-        assert!(Arc::ptr_eq(&context_manager, &object));
+        let context_manager_proc = driver.create_process(1);
+        let context_manager = Arc::new(BinderObject::new(
+            &context_manager_proc,
+            LocalBinderObject {
+                weak_ref_addr: UserAddress::from(0xDEADBEEF),
+                strong_ref_addr: UserAddress::from(0xDEADDEAD),
+            },
+        ));
+        *driver.context_manager.write() = Some(context_manager);
+        let (object, owner) = driver.get_context_manager().expect("failed to find handle 0");
+        assert!(Arc::ptr_eq(&context_manager_proc, &owner));
+        assert_eq!(object.local.weak_ref_addr, UserAddress::from(0xDEADBEEF));
+        assert_eq!(object.local.strong_ref_addr, UserAddress::from(0xDEADDEAD));
     }
 
     #[fuchsia::test]
@@ -2032,13 +2181,13 @@ mod tests {
         let proc_1 = driver.create_process(1);
         let proc_2 = driver.create_process(2);
 
-        let transaction_ref = Arc::new(BinderObject {
-            owner: Arc::downgrade(&proc_1),
-            local: LocalBinderObject {
+        let transaction_ref = Arc::new(BinderObject::new(
+            &proc_1,
+            LocalBinderObject {
                 weak_ref_addr: UserAddress::from(0xffffffffffffffff),
                 strong_ref_addr: UserAddress::from(0x1111111111111111),
             },
-        });
+        ));
 
         // Transactions always take a strong reference to binder objects.
         let handle = proc_2.handles.lock().insert_for_transaction(transaction_ref.clone());
@@ -2062,13 +2211,13 @@ mod tests {
         let proc_1 = driver.create_process(1);
         let proc_2 = driver.create_process(2);
 
-        let transaction_ref = Arc::new(BinderObject {
-            owner: Arc::downgrade(&proc_1),
-            local: LocalBinderObject {
+        let transaction_ref = Arc::new(BinderObject::new(
+            &proc_1,
+            LocalBinderObject {
                 weak_ref_addr: UserAddress::from(0xffffffffffffffff),
                 strong_ref_addr: UserAddress::from(0x1111111111111111),
             },
-        });
+        ));
 
         // The handle starts with a strong ref.
         let handle = proc_2.handles.lock().insert_for_transaction(transaction_ref.clone());
@@ -2219,13 +2368,13 @@ mod tests {
         let driver = BinderDriver::new();
         let proc = driver.create_process(1);
 
-        let object = Arc::new(BinderObject {
-            owner: Arc::downgrade(&proc),
-            local: LocalBinderObject {
+        let object = Arc::new(BinderObject::new(
+            &proc,
+            LocalBinderObject {
                 weak_ref_addr: UserAddress::from(0x0000000000000010),
                 strong_ref_addr: UserAddress::from(0x0000000000000100),
             },
-        });
+        ));
 
         drop(object);
 
@@ -2243,13 +2392,13 @@ mod tests {
         let driver = BinderDriver::new();
         let proc = driver.create_process(1);
 
-        let object = Arc::new(BinderObject {
-            owner: Arc::downgrade(&proc),
-            local: LocalBinderObject {
+        let object = Arc::new(BinderObject::new(
+            &proc,
+            LocalBinderObject {
                 weak_ref_addr: UserAddress::from(0x0000000000000010),
                 strong_ref_addr: UserAddress::from(0x0000000000000100),
             },
-        });
+        ));
 
         let mut handle_table = HandleTable::default();
 
@@ -2347,7 +2496,7 @@ mod tests {
         };
 
         // Copy the data from process 1 to process 2
-        let (data_buffer, offsets_buffer) = driver
+        let (data_buffer, offsets_buffer, _transaction_refs) = driver
             .copy_transaction_buffers(&task1, &proc1, &thread1, &proc2, &transaction)
             .expect("copy data");
 
@@ -2451,10 +2600,10 @@ mod tests {
         };
 
         // Pretend the binder object was given to the sender earlier, so it can be sent back.
-        let handle = sender_proc.handles.lock().insert_for_transaction(Arc::new(BinderObject {
-            owner: Arc::downgrade(&receiver),
-            local: binder_object.clone(),
-        }));
+        let handle = sender_proc
+            .handles
+            .lock()
+            .insert_for_transaction(Arc::new(BinderObject::new(&receiver, binder_object.clone())));
 
         const DATA_PREAMBLE: &[u8; 5] = b"stuff";
 
@@ -2508,21 +2657,18 @@ mod tests {
         const RECEIVING_HANDLE: Handle = Handle::from_raw(2);
 
         // Pretend the binder object was given to the sender earlier.
-        let handle = sender_proc.handles.lock().insert_for_transaction(Arc::new(BinderObject {
-            owner: Arc::downgrade(&owner),
-            local: binder_object.clone(),
-        }));
+        let handle = sender_proc
+            .handles
+            .lock()
+            .insert_for_transaction(Arc::new(BinderObject::new(&owner, binder_object.clone())));
         assert_eq!(SENDING_HANDLE, handle);
 
         // Give the receiver another handle so that the input handle number and output handle
         // number aren't the same.
-        receiver.handles.lock().insert_for_transaction(Arc::new(BinderObject {
-            owner: Arc::downgrade(&owner),
-            local: LocalBinderObject {
-                strong_ref_addr: UserAddress::default(),
-                weak_ref_addr: UserAddress::default(),
-            },
-        }));
+        receiver.handles.lock().insert_for_transaction(Arc::new(BinderObject::new(
+            &owner,
+            LocalBinderObject::default(),
+        )));
 
         const DATA_PREAMBLE: &[u8; 5] = b"stuff";
 
@@ -2975,5 +3121,218 @@ mod tests {
 
         TransactionError::Dead.dispatch(&thread).expect("no error");
         assert_eq!(thread.write().command_queue.pop_front().expect("command"), Command::DeadReply);
+    }
+
+    #[fuchsia::test]
+    fn next_oneway_transaction_scheduled_after_buffer_freed() {
+        let (kernel, sender_task) = create_kernel_and_task();
+        let receiver_task = create_task(&kernel, "test-task2");
+
+        let driver = BinderDriver::new();
+        let (sender_proc, sender_thread) = driver.create_process_and_thread(sender_task.id);
+        let (receiver_proc, _receiver_thread) = driver.create_process_and_thread(receiver_task.id);
+
+        // Initialize the receiver process with shared memory in the driver.
+        mmap_shared_memory(&driver, &receiver_task, &receiver_proc);
+
+        // Insert a binder object for the receiver, and grab a handle to it in the sender.
+        const OBJECT_ADDR: UserAddress = UserAddress::from(0x01);
+        let object = register_binder_object(&receiver_proc, OBJECT_ADDR, OBJECT_ADDR + 1u64);
+        let handle = sender_proc.handles.lock().insert_for_transaction(object.clone());
+
+        // Construct a oneway transaction to send from the sender to the receiver.
+        const FIRST_TRANSACTION_CODE: u32 = 42;
+        let transaction = binder_transaction_data {
+            code: FIRST_TRANSACTION_CODE,
+            flags: transaction_flags_TF_ONE_WAY,
+            target: binder_transaction_data__bindgen_ty_1 { handle: handle.into() },
+            ..binder_transaction_data::default()
+        };
+
+        // Submit the transaction.
+        driver
+            .handle_transaction(&sender_task, &sender_proc, &sender_thread, transaction)
+            .expect("failed to handle the transaction");
+
+        // The thread is ineligible to take the command (not sleeping) so check the process queue.
+        assert_matches!(
+            receiver_proc.command_queue.lock().front(),
+            Some(Command::Transaction(Transaction { code: FIRST_TRANSACTION_CODE, .. }))
+        );
+
+        // The object should not have the transaction queued on it, as it was immediately scheduled.
+        // But it should be marked as handling a oneway.
+        assert!(
+            object.lock().handling_oneway_transaction,
+            "object oneway queue should be marked as being handled"
+        );
+
+        // Queue another transaction.
+        const SECOND_TRANSACTION_CODE: u32 = 43;
+        let transaction = binder_transaction_data {
+            code: SECOND_TRANSACTION_CODE,
+            flags: transaction_flags_TF_ONE_WAY,
+            target: binder_transaction_data__bindgen_ty_1 { handle: handle.into() },
+            ..binder_transaction_data::default()
+        };
+        driver
+            .handle_transaction(&sender_task, &sender_proc, &sender_thread, transaction)
+            .expect("transaction queued");
+
+        // There should now be an entry in the queue.
+        assert_eq!(object.lock().oneway_transactions.len(), 1);
+
+        // The process queue should be unchanged. Simulate dispatching the command.
+        let buffer_addr = match receiver_proc
+            .command_queue
+            .lock()
+            .pop_front()
+            .expect("the first oneway transaction should be queued on the process")
+        {
+            Command::Transaction(Transaction {
+                code: FIRST_TRANSACTION_CODE, data_buffer, ..
+            }) => data_buffer.address,
+            _ => panic!("unexpected command in process queue"),
+        };
+
+        // Now the receiver issues the `BC_FREE_BUFFER` command, which should queue up the next
+        // oneway transaction, guaranteeing sequential execution.
+        driver.handle_free_buffer(&receiver_proc, buffer_addr).expect("failed to free buffer");
+
+        assert!(object.lock().oneway_transactions.is_empty(), "oneway queue should now be empty");
+        assert!(
+            object.lock().handling_oneway_transaction,
+            "object oneway queue should still be marked as being handled"
+        );
+
+        // The process queue should have a new transaction. Simulate dispatching the command.
+        let buffer_addr = match receiver_proc
+            .command_queue
+            .lock()
+            .pop_front()
+            .expect("the second oneway transaction should be queued on the process")
+        {
+            Command::Transaction(Transaction {
+                code: SECOND_TRANSACTION_CODE,
+                data_buffer,
+                ..
+            }) => data_buffer.address,
+            _ => panic!("unexpected command in process queue"),
+        };
+
+        // Now the receiver issues the `BC_FREE_BUFFER` command, which should end oneway handling.
+        driver.handle_free_buffer(&receiver_proc, buffer_addr).expect("failed to free buffer");
+
+        assert!(object.lock().oneway_transactions.is_empty(), "oneway queue should still be empty");
+        assert!(
+            !object.lock().handling_oneway_transaction,
+            "object oneway queue should no longer be marked as being handled"
+        );
+    }
+
+    #[fuchsia::test]
+    fn synchronous_transactions_bypass_oneway_transaction_queue() {
+        let (kernel, sender_task) = create_kernel_and_task();
+        let receiver_task = create_task(&kernel, "test-task2");
+
+        let driver = BinderDriver::new();
+        let (sender_proc, sender_thread) = driver.create_process_and_thread(sender_task.id);
+        let (receiver_proc, _receiver_thread) = driver.create_process_and_thread(receiver_task.id);
+
+        // Initialize the receiver process with shared memory in the driver.
+        mmap_shared_memory(&driver, &receiver_task, &receiver_proc);
+
+        // Insert a binder object for the receiver, and grab a handle to it in the sender.
+        const OBJECT_ADDR: UserAddress = UserAddress::from(0x01);
+        let object = register_binder_object(&receiver_proc, OBJECT_ADDR, OBJECT_ADDR + 1u64);
+        let handle = sender_proc.handles.lock().insert_for_transaction(object.clone());
+
+        // Construct a oneway transaction to send from the sender to the receiver.
+        const ONEWAY_TRANSACTION_CODE: u32 = 42;
+        let transaction = binder_transaction_data {
+            code: ONEWAY_TRANSACTION_CODE,
+            flags: transaction_flags_TF_ONE_WAY,
+            target: binder_transaction_data__bindgen_ty_1 { handle: handle.into() },
+            ..binder_transaction_data::default()
+        };
+
+        // Submit the transaction twice so that the queue is populated.
+        driver
+            .handle_transaction(&sender_task, &sender_proc, &sender_thread, transaction)
+            .expect("failed to handle the transaction");
+        driver
+            .handle_transaction(&sender_task, &sender_proc, &sender_thread, transaction)
+            .expect("failed to handle the transaction");
+
+        // The thread is ineligible to take the command (not sleeping) so check (and dequeue)
+        // the process queue.
+        assert_matches!(
+            receiver_proc.command_queue.lock().pop_front(),
+            Some(Command::Transaction(Transaction { code: ONEWAY_TRANSACTION_CODE, .. }))
+        );
+
+        // The object should also have the second transaction queued on it.
+        assert!(
+            object.lock().handling_oneway_transaction,
+            "object oneway queue should be marked as being handled"
+        );
+        assert_eq!(
+            object.lock().oneway_transactions.len(),
+            1,
+            "object oneway queue should have second transaction queued"
+        );
+
+        // Queue a synchronous (request/response) transaction.
+        const SYNC_TRANSACTION_CODE: u32 = 43;
+        let transaction = binder_transaction_data {
+            code: SYNC_TRANSACTION_CODE,
+            target: binder_transaction_data__bindgen_ty_1 { handle: handle.into() },
+            ..binder_transaction_data::default()
+        };
+        driver
+            .handle_transaction(&sender_task, &sender_proc, &sender_thread, transaction)
+            .expect("sync transaction queued");
+
+        assert_eq!(
+            object.lock().oneway_transactions.len(),
+            1,
+            "oneway queue should not have grown"
+        );
+
+        // The process queue should now have the synchronous transaction queued.
+        assert_matches!(
+            receiver_proc.command_queue.lock().pop_front(),
+            Some(Command::Transaction(Transaction { code: SYNC_TRANSACTION_CODE, .. }))
+        );
+    }
+
+    // Simulates an mmap call on the binder driver, setting up shared memory between the driver and
+    // `proc`.
+    fn mmap_shared_memory(driver: &BinderDriver, task: &CurrentTask, proc: &Arc<BinderProcess>) {
+        driver
+            .mmap(
+                &task,
+                &proc,
+                DesiredAddress::Hint(UserAddress::default()),
+                VMO_LENGTH,
+                zx::VmarFlags::PERM_READ,
+                MappingOptions::empty(),
+                NamespaceNode::new_anonymous(Arc::new(FsNode::new_root(PlaceholderFsNodeOps))),
+            )
+            .expect("mmap");
+    }
+
+    /// Registers a binder object to `owner`.
+    fn register_binder_object(
+        owner: &Arc<BinderProcess>,
+        weak_ref_addr: UserAddress,
+        strong_ref_addr: UserAddress,
+    ) -> Arc<BinderObject> {
+        let object = Arc::new(BinderObject::new(
+            &owner,
+            LocalBinderObject { weak_ref_addr, strong_ref_addr },
+        ));
+        owner.objects.lock().insert(weak_ref_addr, Arc::downgrade(&object));
+        object
     }
 }
