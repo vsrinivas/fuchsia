@@ -17,13 +17,11 @@ pub struct CoverageCommand {
     #[argh(option)]
     pub clang_dir: PathBuf,
 
+    /// path to symbol index json to load symbol index from
+    #[argh(option)]
+    pub symbol_index_json: Option<PathBuf>,
+
     /// paths to source files to show coverage for
     #[argh(positional)]
     pub src_files: Vec<PathBuf>,
-
-    /// paths to instrumented binary files
-    // TODO(https://fxbug.dev/99951): Remove this arg when we can look up binary files with
-    // symbolizer.
-    #[argh(option)]
-    pub bin_file: Vec<PathBuf>,
 }

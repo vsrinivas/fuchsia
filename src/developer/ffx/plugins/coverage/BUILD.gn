@@ -14,6 +14,7 @@ ffx_plugin("ffx_coverage") {
 
   deps = [
     "//src/developer/ffx/core:lib",
+    "//src/developer/ffx/lib/symbol-index",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
     "//third_party/rust_crates:glob",

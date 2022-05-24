@@ -11,7 +11,11 @@ use {
         path::{Path, PathBuf},
         process::{Command, Stdio},
     },
+    symbol_index::{global_symbol_index_path, SymbolIndex},
 };
+
+// The line found right above build ID in `llvm-profdata show --binary-ids` output.
+const BINARY_ID_LINE: &str = "Binary IDs:";
 
 #[ffx_plugin("coverage")]
 pub async fn coverage(cmd: CoverageCommand) -> Result<()> {
@@ -29,8 +33,19 @@ pub async fn coverage(cmd: CoverageCommand) -> Result<()> {
     let merged_profile = cmd.test_output_dir.join("merged.profdata");
     merge_profraws(&llvm_profdata_bin, &profraws, &merged_profile)
         .context("failed to merge profiles")?;
-    // TODO(https://fxbug.dev/99951): add symbolizer binary lookup.
-    show_coverage(&llvm_cov_bin, &merged_profile, &cmd.bin_file, &cmd.src_files)
+
+    let symbol_index_path = match cmd.symbol_index_json {
+        Some(p) => p.to_string_lossy().to_string(),
+        None => global_symbol_index_path()?,
+    };
+    let bin_files = find_binaries(
+        &SymbolIndex::load(&symbol_index_path)?,
+        &llvm_profdata_bin,
+        &profraws,
+        show_binary_id,
+    )?;
+
+    show_coverage(&llvm_cov_bin, &merged_profile, &bin_files, &cmd.src_files)
         .context("failed to show coverage")
 }
 
@@ -54,6 +69,59 @@ fn merge_profraws(
             String::from_utf8_lossy(&merge_cmd.stderr)
         )),
         None => Err(anyhow!("profile merging terminated by signal unexpectedly")),
+    }
+}
+
+/// Calls `llvm-profdata show --binary-ids` to fetch binary ID from input raw profile.
+fn show_binary_id(llvm_profdata_bin: &Path, profraw: &Path) -> Result<String> {
+    let cmd = Command::new(llvm_profdata_bin)
+        .args(["show", "--binary-ids"])
+        .arg(profraw)
+        .output()
+        .context(format!("failed to show binary ID from {:?}", profraw))?;
+    let stdout = String::from_utf8_lossy(&cmd.stdout);
+    let tokens: Vec<&str> = stdout.split(BINARY_ID_LINE).collect();
+    match tokens[..] {
+        [_, binary_id] => Ok(binary_id.trim().to_string()),
+        _ => Err(anyhow!("unexpected llvm-profdata show output")),
+    }
+}
+
+/// Find binary files from .build-id directories to pass. These are needed for `llvm-cov show`.
+fn find_binaries<F: FnMut(&Path, &Path) -> Result<String>>(
+    symbol_index: &SymbolIndex,
+    llvm_profdata_bin: &Path,
+    profraws: &[PathBuf],
+    mut show_id: F, // stubbable in test
+) -> Result<Vec<PathBuf>> {
+    profraws
+        .iter()
+        .map(|profraw| {
+            let binary_id = show_id(llvm_profdata_bin, profraw)?;
+            find_debug_file(symbol_index, &binary_id)
+                .context(anyhow!("failed to find binary file for {:?}", profraw,))
+        })
+        .collect()
+}
+
+/// Finds debug file in local .build-id directories from symbol index.
+//
+// TODO(https://fxbug.dev/100358): replace this with llvm-debuginfod-find when it's available.
+fn find_debug_file(symbol_index: &SymbolIndex, binary_id: &str) -> Result<PathBuf> {
+    if binary_id.len() > 2 {
+        // For simplicity always return the first match. Note this is not always safe.
+        symbol_index
+            .build_id_dirs
+            .iter()
+            .find_map(|dir| {
+                let p = PathBuf::from(&dir.path)
+                    .join(binary_id[..2].to_string())
+                    .join(format!("{}.debug", binary_id[2..].to_string()));
+                p.exists().then_some(p)
+            })
+            .ok_or(anyhow!("no matching debug files found for binary ID {}", binary_id))
+    } else {
+        Err(anyhow!("binary ID must have more than 2 characters, got '{}'", binary_id))
     }
 }
 
@@ -101,6 +169,7 @@ mod tests {
             io::Write,
             os::unix::fs::PermissionsExt,
         },
+        symbol_index::BuildIdDir,
         tempfile::TempDir,
     };
 
@@ -132,12 +201,16 @@ mod tests {
         let test_bin_dir = test_dir_path.join("bin");
         create_dir(&test_bin_dir).unwrap();
 
+        // Create an empty symbol index for testing.
+        let test_symbol_index_json = test_dir.path().join("symbol_index.json");
+        File::create(&test_symbol_index_json).unwrap().write_all(b"{}").unwrap();
+
         // Missing both llvm-profdata and llvm-cov.
         assert!(coverage(CoverageCommand {
             test_output_dir: PathBuf::from(&test_dir_path),
             clang_dir: PathBuf::from(&test_dir_path),
+            symbol_index_json: Some(PathBuf::from(&test_symbol_index_json)),
             src_files: Vec::new(),
-            bin_file: Vec::new(),
         })
         .await
         .is_err());
@@ -150,8 +223,8 @@ mod tests {
         assert!(coverage(CoverageCommand {
             test_output_dir: PathBuf::from(&test_dir_path),
             clang_dir: PathBuf::from(&test_dir_path),
+            symbol_index_json: Some(PathBuf::from(&test_symbol_index_json)),
             src_files: Vec::new(),
-            bin_file: Vec::new(),
         })
         .await
         .is_err());
@@ -163,11 +236,129 @@ mod tests {
             coverage(CoverageCommand {
                 test_output_dir: PathBuf::from(&test_dir_path),
                 clang_dir: PathBuf::from(&test_dir_path),
+                symbol_index_json: Some(PathBuf::from(&test_symbol_index_json)),
                 src_files: Vec::new(),
-                bin_file: Vec::new(),
             })
             .await,
             Ok(())
         );
+    }
+
+    #[test]
+    fn test_find_binaries_single_match() {
+        let test_dir = TempDir::new().unwrap();
+        create_dir(test_dir.path().join("fo")).unwrap();
+        let debug_file = test_dir.path().join("fo").join("obar.debug");
+        File::create(&debug_file).unwrap();
+
+        assert_eq!(
+            find_binaries(
+                &SymbolIndex {
+                    build_id_dirs: vec![BuildIdDir {
+                        path: test_dir.path().to_str().unwrap().to_string(),
+                        build_dir: None,
+                    }],
+                    includes: Vec::new(),
+                    ids_txts: Vec::new(),
+                    gcs_flat: Vec::new(),
+                },
+                &PathBuf::new(),   // llvm_profdata_bin, unused in test
+                &[PathBuf::new()], // profraws, actual values don't matter
+                |_: &Path, _: &Path| Ok("foobar".to_string()),
+            )
+            .unwrap(),
+            vec![debug_file],
+        )
+    }
+
+    #[test]
+    fn test_find_binaries_multiple_matches() {
+        let test_dir1 = TempDir::new().unwrap();
+        create_dir(test_dir1.path().join("fo")).unwrap();
+        let debug_file1 = test_dir1.path().join("fo").join("obar.debug");
+        File::create(&debug_file1).unwrap();
+
+        let test_dir2 = TempDir::new().unwrap();
+        create_dir(test_dir2.path().join("ba")).unwrap();
+        let debug_file2 = test_dir2.path().join("ba").join("rbaz.debug");
+        File::create(&debug_file2).unwrap();
+
+        let mut test_bin_ids = vec!["foobar", "barbaz"];
+        assert_eq!(
+            find_binaries(
+                &SymbolIndex {
+                    build_id_dirs: vec![
+                        BuildIdDir {
+                            path: test_dir1.path().to_str().unwrap().to_string(),
+                            build_dir: None,
+                        },
+                        BuildIdDir {
+                            path: test_dir2.path().to_str().unwrap().to_string(),
+                            build_dir: None,
+                        },
+                    ],
+                    includes: Vec::new(),
+                    ids_txts: Vec::new(),
+                    gcs_flat: Vec::new(),
+                },
+                &PathBuf::new(), // llvm_profdata_bin, unused in test
+                &[PathBuf::new(), PathBuf::new()], // profraws, actual values don't matter
+                |_: &Path, _: &Path| Ok(test_bin_ids.remove(0).to_string()),
+            )
+            .unwrap(),
+            vec![debug_file1, debug_file2],
+        )
+    }
+
+    #[test]
+    fn test_find_binaries_no_matches() {
+        let test_dir = TempDir::new().unwrap();
+        assert!(find_binaries(
+            &SymbolIndex {
+                build_id_dirs: vec![BuildIdDir {
+                    path: test_dir.path().to_str().unwrap().to_string(),
+                    build_dir: None,
+                }],
+                includes: Vec::new(),
+                ids_txts: Vec::new(),
+                gcs_flat: Vec::new(),
+            },
+            &PathBuf::new(),   // llvm_profdata_bin, unused in test
+            &[PathBuf::new()], // profraws, actual values don't matter
+            |_: &Path, _: &Path| Ok("foobar".to_string()),
+        )
+        .is_err())
+    }
+
+    #[test]
+    fn test_find_binaries_show_id_err() {
+        assert!(find_binaries(
+            &SymbolIndex {
+                build_id_dirs: Vec::new(),
+                includes: Vec::new(),
+                ids_txts: Vec::new(),
+                gcs_flat: Vec::new(),
+            },
+            &PathBuf::new(),   // llvm_profdata_bin, unused in test
+            &[PathBuf::new()], // profraws, actual values don't matter
+            |_: &Path, _: &Path| Err(anyhow!("test err")),
+        )
+        .is_err())
+    }
+
+    #[test]
+    fn test_find_binaries_id_too_short() {
+        assert!(find_binaries(
+            &SymbolIndex {
+                build_id_dirs: Vec::new(),
+                includes: Vec::new(),
+                ids_txts: Vec::new(),
+                gcs_flat: Vec::new(),
+            },
+            &PathBuf::new(),   // llvm_profdata_bin, unused in test
+            &[PathBuf::new()], // profraws, actual values don't matter
+            |_: &Path, _: &Path| Ok("a".to_string()),
+        )
+        .is_err())
     }
 }
