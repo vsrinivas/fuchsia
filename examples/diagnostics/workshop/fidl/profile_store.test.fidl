@@ -4,6 +4,7 @@
 
 library fuchsia.examples.diagnostics;
 
+// [START profile_store_fidl]
 @discoverable
 protocol ProfileStore {
     Open(resource struct {
@@ -27,3 +28,4 @@ protocol ProfileStore {
         channel server_end:Profile;
     });
 };
+// [END profile_store_fidl]

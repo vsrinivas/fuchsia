@@ -45,3 +45,9 @@ toc:
     path: /docs/development/diagnostics/test_and_logs.md
 - title: "Analyze with Triage"
   path: /docs/development/diagnostics/triage/codelab.md
+- title: "Diagnostics and Testing Workshop"
+  section:
+  - title: "Overview"
+    path: /docs/development/diagnostics/workshop/README.md
+  - title: "Codelab"
+    path: /docs/development/diagnostics/workshop/codelab.md
