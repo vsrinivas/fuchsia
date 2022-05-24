@@ -288,8 +288,10 @@ impl UnixSocket {
     }
 
     fn peer_cred(&self) -> Option<ucred> {
-        let inner = self.lock();
-        let peer = inner.peer();
+        let peer = {
+            let inner = self.lock();
+            inner.peer().map(|p| p.clone())
+        };
         if let Some(peer) = peer {
             let unix_socket = downcast_socket_to_unix(&peer);
             let unix_socket = unix_socket.lock();
