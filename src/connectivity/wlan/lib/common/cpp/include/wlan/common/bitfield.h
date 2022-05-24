@@ -6,6 +6,7 @@
 #define SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_BITFIELD_H_
 
 #include <stdint.h>
+#include <stdio.h>
 
 #include <array>
 #include <type_traits>
@@ -53,11 +54,23 @@ class BitField {
   ValueType val_ = 0;
 };
 
+/// A bitfield of arbitrary length, mapped onto an underlying byte array.
+/// This bitfield conforms to the definition in IEEE Std 802.11-2016, 9.2.2.
+/// Specifically, the least significant (zero) bit is defined to be the zero
+/// bit of the first byte, i.e. a little endian ordering. This means that the
+/// bit offsets defined in IEEE may be mapped directly into WLAN_BIT_FIELD
+/// definitions.
+///
+/// Example bit ordering for N=2:
+/// [0b00000000, 0b00000000]
+///    ^^^^^^^^    ^^^^^^^^
+///    76543210    fedcba98
+///
 template <size_t N>
-class ByteArrayBitField {
+class LittleEndianBitField {
  public:
-  constexpr explicit ByteArrayBitField(std::array<uint8_t, N> val) : val_(val) {}
-  constexpr ByteArrayBitField() = default;
+  constexpr explicit LittleEndianBitField(std::array<uint8_t, N> val) : val_(val) {}
+  constexpr LittleEndianBitField() = default;
 
   constexpr size_t len() { return N; }
   void clear() { val_ = {}; }
@@ -70,9 +83,11 @@ class ByteArrayBitField {
   uint64_t get_bits() const {
     perform_static_asserts<first_bit_idx, len>();
     uint64_t value = 0;
-    for (size_t cell_idx = first_cell<first_bit_idx, len>();
-         cell_idx <= last_cell<first_bit_idx, len>(); cell_idx++) {
-      value = (value << 8) | val_[cell_idx];
+    size_t range = last_cell<first_bit_idx, len>() - first_cell<first_bit_idx, len>();
+    // We generate a negative range using a subtracted offset to avoid overflow.
+    for (size_t i = 0; i <= range; i++) {
+      size_t idx = last_cell<first_bit_idx, len>() - i;
+      value = (value << 8) | val_[idx];
     }
     return (value >> (first_bit_idx % 8)) & mask<0, len>();
   }
@@ -84,9 +99,8 @@ class ByteArrayBitField {
     uint64_t clear_mask = ~mask<first_bit_idx % 8, len>();
     uint64_t cell_mask = mask<0, 8>();
     // We generate a negative range using a subtracted offset to avoid overflow.
-    for (size_t i = 0; i <= last_cell<first_bit_idx, len>() - first_cell<first_bit_idx, len>();
-         i++) {
-      size_t idx = last_cell<first_bit_idx, len>() - i;
+    for (size_t idx = first_cell<first_bit_idx, len>(); idx <= last_cell<first_bit_idx, len>();
+         idx++) {
       val_[idx] &= static_cast<uint8_t>(clear_mask & cell_mask);
       val_[idx] |= static_cast<uint8_t>(offset_value & cell_mask);
       offset_value >>= 8;
@@ -97,10 +111,11 @@ class ByteArrayBitField {
  private:
   template <unsigned int first_bit_idx, size_t len>
   constexpr static void perform_static_asserts() {
-    static_assert(len > 0, "ByteArrayBitField member length must be positive");
+    static_assert(len > 0, "LittleEndianBitField member length must be positive");
     static_assert(first_bit_idx % 8 + len <= 64,
-                  "ByteArrayBitField member cannot overlap more than 8 bytes");
-    static_assert(first_bit_idx + len <= N * 8, "ByteArrayBitField member cannot overflow array");
+                  "LittleEndianBitField member cannot overlap more than 8 bytes");
+    static_assert(first_bit_idx + len <= N * 8,
+                  "LittleEndianBitField member cannot overflow array");
   }
 
   template <unsigned int first_bit_idx_in_cell, size_t len>
@@ -113,12 +128,12 @@ class ByteArrayBitField {
 
   template <unsigned int first_bit_idx, size_t len>
   constexpr static size_t first_cell() {
-    return N - (len + first_bit_idx - 1) / 8 - 1;
+    return first_bit_idx / 8;
   }
 
   template <unsigned int first_bit_idx, size_t len>
   constexpr static size_t last_cell() {
-    return N - first_bit_idx / 8 - 1;
+    return (len + first_bit_idx - 1) / 8;
   }
 
   std::array<uint8_t, N> val_;

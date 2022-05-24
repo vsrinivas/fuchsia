@@ -387,7 +387,7 @@ fn gap_to_string((start, end): &(usize, usize)) -> String {
 #[derive(Debug, Copy, Clone)]
 enum DataFormat {
     Integer(usize),
-    ByteArray(usize),
+    ByteArrayLE(usize),
 }
 
 impl DataFormat {
@@ -397,7 +397,7 @@ impl DataFormat {
                 let raw = syn::Ident::new(&format!("u{}", len_bits), Span::call_site());
                 quote! { #raw }
             }
-            Self::ByteArray(len) => {
+            Self::ByteArrayLE(len) => {
                 quote! { [u8; #len] }
             }
         }
@@ -406,14 +406,14 @@ impl DataFormat {
     fn len_bits(&self) -> usize {
         match self {
             Self::Integer(len) => *len,
-            Self::ByteArray(len) => 8 * len,
+            Self::ByteArrayLE(len) => 8 * len,
         }
     }
 
     fn debug_format_string(&self) -> String {
         match self {
             Self::Integer(len) => format!("0x{{:0{}x}}", len / 4),
-            Self::ByteArray(_) => "{:?}".to_string(),
+            Self::ByteArrayLE(_) => "{:?}".to_string(),
         }
     }
 
@@ -456,16 +456,16 @@ impl DataFormat {
                     quote! { #int_type },
                 ))
             }
-            Self::ByteArray(len) => {
+            Self::ByteArrayLE(_) => {
                 let int_type = get_field_type_from_bit_len(field_len)?;
-                let first_cell = len - end_value / 8 - 1;
-                let last_cell = len - start_value / 8 - 1;
+                let first_cell = start_value / 8;
+                let last_cell = end_value / 8;
                 let overall_offset = start_value % 8;
                 Ok((
                     quote! {
                         pub fn #raw_getter_fn_name(&self) -> #int_type {
                             let mut value = 0u128;
-                            for idx in #first_cell..=#last_cell {
+                            for idx in (#first_cell..=#last_cell).rev() {
                                 value = (value << 8) | self.0[idx] as u128;
                             }
                             ((value >> #overall_offset) & #mask) as #int_type
@@ -476,7 +476,7 @@ impl DataFormat {
                             let mut offset_value = (value as u128) << #overall_offset;
                             let mut clear_mask = !(#mask << #overall_offset);
                             let cell_mask = !(0u8) as u128;
-                            for idx in (#first_cell..=#last_cell).rev() {
+                            for idx in #first_cell..=#last_cell {
                                 self.0[idx] = (self.0[idx] & ((clear_mask & cell_mask) as u8)) |
                                     ((offset_value & cell_mask) as u8);
                                 offset_value = offset_value >> 8;
@@ -520,10 +520,9 @@ impl DataFormat {
                     quote! { bool },
                 ))
             }
-            Self::ByteArray(len) => {
+            Self::ByteArrayLE(_) => {
                 let index_value = index.base10_parse::<usize>()?;
-                let reverse_index = 8 * len - index_value - 1;
-                let cell_number = reverse_index / 8;
+                let cell_number = index_value / 8;
                 let index_in_cell = index_value % 8;
                 Ok((
                     quote! {
@@ -626,7 +625,7 @@ fn get_data_format_from_type(ty: &Type) -> Option<DataFormat> {
             if cell_width != 8 {
                 return None;
             }
-            DataFormat::ByteArray(len)
+            DataFormat::ByteArrayLE(len)
         }
         _ => return None,
     })

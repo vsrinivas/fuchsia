@@ -124,7 +124,7 @@ mod tests {
 
     #[test]
     pub fn array() {
-        let array = Array([0b01_1_00010, 0b10101111, 0b0000_0000]);
+        let array = Array([0b0000_0000, 0b10101111, 0b01_1_00010]);
         assert_eq!(array.head(), 0b0000);
         assert_eq!(array.middle(), 0b00010_10101111_0000);
         assert!(array.bit());
@@ -140,12 +140,12 @@ mod tests {
 
     #[test]
     pub fn overwrite_array() {
-        let mut array = Array([0b11_1_11100, 0b11100000, 0b0011_1111]);
+        let mut array = Array([0b0011_1111, 0b11100000, 0b11_1_11100]);
         array.set_head(0b1010);
         array.set_middle(0b00011_11111111_0101);
         array.set_bit(false);
         array.set_tail(0b00);
-        assert_eq!(&array.0[..], &[0b00_0_00011, 0b11111111, 0b0101_1010][..])
+        assert_eq!(&array.0[..], &[0b0101_1010, 0b11111111, 0b00_0_00011][..])
     }
 
     #[derive(Debug)]
