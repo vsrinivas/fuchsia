@@ -7,6 +7,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/syslog/cpp/macros.h>
 
+#include "fuchsia/virtualization/cpp/fidl.h"
 #include "src/lib/files/file.h"
 
 GuestManager::GuestManager(sys::ComponentContext* context, std::string config_pkg_dir_path,
@@ -23,12 +24,12 @@ void GuestManager::LaunchGuest(
     fuchsia::virtualization::GuestConfig guest_config,
     fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller,
     fuchsia::virtualization::GuestManager::LaunchGuestCallback callback) {
-  if (guest_launched_) {
+  if (guest_started_) {
     callback(
         fuchsia::virtualization::GuestManager_LaunchGuest_Result::WithErr(ZX_ERR_ALREADY_EXISTS));
     return;
   }
-  guest_launched_ = true;
+  guest_started_ = true;
   guest_config_ = std::move(guest_config);
   // Reads guest config from [zircon|termina|debina]_guest package provided as child in
   // [zircon|termina|debian]_guest_manager component hierarchy. Applies overrides from the
@@ -81,7 +82,7 @@ void GuestManager::LaunchGuest(
 
 void GuestManager::ConnectToGuest(
     fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller) {
-  if (guest_launched_) {
+  if (guest_started_) {
     context_->svc()->Connect(std::move(controller));
   } else {
     FX_LOGS(ERROR) << "Failed to connect to guest. Guest is not running";
@@ -96,6 +97,17 @@ void GuestManager::ConnectToBalloon(
 void GuestManager::GetHostVsockEndpoint(
     fidl::InterfaceRequest<fuchsia::virtualization::HostVsockEndpoint> endpoint) {
   context_->svc()->Connect(std::move(endpoint));
+}
+
+void GuestManager::GetGuestInfo(GetGuestInfoCallback callback) {
+  fuchsia::virtualization::GuestInfo info;
+  if (guest_started_) {
+    info.set_guest_status(::fuchsia::virtualization::GuestStatus::STARTED);
+  } else {
+    info.set_guest_status(::fuchsia::virtualization::GuestStatus::NOT_STARTED);
+  }
+
+  callback(std::move(info));
 }
 
 // |fuchsia::virtualization::GuestConfigProvider|

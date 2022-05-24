@@ -9,6 +9,8 @@
 
 #include <test/placeholders/cpp/fidl.h>
 
+#include "fuchsia/virtualization/cpp/fidl.h"
+
 namespace {
 
 class GuestManagerTest : public gtest::TestLoopFixture {
@@ -100,4 +102,33 @@ TEST_F(GuestManagerTest, DoubleLaunchFail) {
                       });
   ASSERT_TRUE(launch_callback_called);
 }
+
+TEST_F(GuestManagerTest, LaunchAndGetInfo) {
+  bool get_callback_called = false;
+  GuestManager manager(provider_.context(), "/pkg/", "data/configs/valid_guest.cfg");
+
+  manager.GetGuestInfo([&get_callback_called](auto info) {
+    ASSERT_EQ(info.guest_status(), fuchsia::virtualization::GuestStatus::NOT_STARTED);
+    get_callback_called = true;
+  });
+  ASSERT_TRUE(get_callback_called);
+
+  bool launch_callback_called = false;
+  fuchsia::virtualization::GuestConfig user_guest_config;
+  fuchsia::virtualization::GuestPtr guest;
+  manager.LaunchGuest(std::move(user_guest_config), guest.NewRequest(),
+                      [&launch_callback_called](auto res) {
+                        ASSERT_FALSE(res.is_err());
+                        launch_callback_called = true;
+                      });
+  ASSERT_TRUE(launch_callback_called);
+
+  get_callback_called = false;
+  manager.GetGuestInfo([&get_callback_called](auto info) {
+    ASSERT_EQ(info.guest_status(), fuchsia::virtualization::GuestStatus::STARTED);
+    get_callback_called = true;
+  });
+  ASSERT_TRUE(get_callback_called);
+}
+
 }  // namespace

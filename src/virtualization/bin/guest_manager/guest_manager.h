@@ -27,6 +27,8 @@ class GuestManager : public fuchsia::virtualization::GuestManager,
   void GetHostVsockEndpoint(
       fidl::InterfaceRequest<fuchsia::virtualization::HostVsockEndpoint> endpoint) override;
 
+  void GetGuestInfo(GetGuestInfoCallback callback) override;
+
   // |fuchsia::virtualization::GuestConfigProvider|
   void Get(GetCallback callback) override;
 
@@ -37,7 +39,7 @@ class GuestManager : public fuchsia::virtualization::GuestManager,
   fuchsia::virtualization::GuestConfig guest_config_;
   std::string config_pkg_dir_path_;
   std::string config_path_;
-  bool guest_launched_ = false;
+  bool guest_started_ = false;
 };
 
 #endif  // SRC_VIRTUALIZATION_BIN_GUEST_MANAGER_GUEST_MANAGER_H_
