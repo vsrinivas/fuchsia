@@ -230,6 +230,17 @@ pub fn execute_command(
     Ok(())
 }
 
+/// Writes the size of the provided buffer to `response`.
+///
+/// SAFETY: Makes an FFI call to magma. The buffer in `control` is expected to be valid, although
+/// handling invalid buffer handles is left to magma.
+pub fn get_buffer_size(
+    control: virtio_magma_get_buffer_size_ctrl_t,
+    response: &mut virtio_magma_get_buffer_size_resp_t,
+) {
+    response.result_return = unsafe { magma_get_buffer_size(control.buffer) };
+}
+
 /// Runs a magma query.
 ///
 /// This function will create a new file in `current_task.files` if the magma query returns a VMO

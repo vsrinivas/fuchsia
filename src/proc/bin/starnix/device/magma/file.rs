@@ -210,7 +210,8 @@ impl FileOps for MagmaFile {
                     virtio_magma_get_buffer_size_resp_t,
                 ) = read_control_and_response(current_task, &command)?;
 
-                response.result_return = unsafe { magma_get_buffer_size(control.buffer) };
+                get_buffer_size(control, &mut response);
+
                 response.hdr.type_ =
                     virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_GET_BUFFER_SIZE as u32;
                 current_task.mm.write_object(UserRef::new(response_address), &response)
