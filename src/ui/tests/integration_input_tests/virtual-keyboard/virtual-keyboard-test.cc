@@ -233,8 +233,7 @@ class VirtualKeyboardBase : public gtest::RealLoopFixture {
 
   // Launches the test client by connecting to fuchsia.ui.app.ViewProvider protocol.
   // This method should only be invoked if this protocol has been exposed from
-  // the root of the test realm. After establishing a connection, this method
-  // listens for the client is_rendering signal and calls |on_is_rendering| when it arrives.
+  // the root of the test realm.
   void LaunchChromium() {
     auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
@@ -363,7 +362,6 @@ class WebEngineTest : public VirtualKeyboardBase {
         std::make_pair(kWebVirtualKeyboardClient, kWebVirtualKeyboardUrl),
         std::make_pair(kFontsProvider, kFontsProviderUrl),
         std::make_pair(kWebContextProvider, kWebContextProviderUrl),
-        std::make_pair(kSemanticsManager, kSemanticsManagerUrl),
     };
   }
 
@@ -374,6 +372,7 @@ class WebEngineTest : public VirtualKeyboardBase {
         std::make_pair(kIntl, kIntlUrl),
         std::make_pair(kMemoryPressureProvider, kMemoryPressureProviderUrl),
         std::make_pair(kNetstack, kNetstackUrl),
+        std::make_pair(kSemanticsManager, kSemanticsManagerUrl),
     };
   }
 
@@ -492,8 +491,7 @@ class WebEngineTest : public VirtualKeyboardBase {
       "fuchsia-pkg://fuchsia.com/web_engine#meta/context_provider.cmx";
 
   static constexpr auto kSemanticsManager = "semantics_manager";
-  static constexpr auto kSemanticsManagerUrl =
-      "fuchsia-pkg://fuchsia.com/a11y-manager#meta/a11y-manager.cmx";
+  static constexpr auto kSemanticsManagerUrl = "#meta/fake-a11y-manager.cm";
 
   static constexpr auto kBuildInfoProvider = "build_info_provider";
   static constexpr auto kBuildInfoProviderUrl = "#meta/fake_build_info.cm";
