@@ -726,9 +726,10 @@ protocol Flatland {
         rect fuchsia.math.RectF;
     });
 
-    /// The content size for an Image is the size of the rectangle in the parent's space that the
-    /// image occupies. This combined with the global translation of the transform it is attached
-    /// to determines the size and location of where the content is rendered on the display.
+    /// The content size for an Image is the size of the rectangle in the parent's logical
+    /// coordinate space that the image occupies. This combined with the global translation of the
+    /// transform it is attached to determines the size and location of where the content is
+    /// rendered on the display.
     SetImageDestinationSize(struct {
         image_id ContentId;
         size fuchsia.math.SizeU;
