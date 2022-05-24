@@ -1,0 +1,31 @@
+# Copyright 2022 The Fuchsia Authors.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Omaha Client is a special configuration of a smart display device for the
+# purposes of testing the Omaha Client updater. It is identical to the
+# `smart_display_eng_arrested.gni`, except for it replaces
+# `system-update-checker` for `omaha-client`.
+
+import("//products/workstation_eng.gni")
+
+# Omaha requires the build-info package to include a version number in order to
+# work.
+build_info_version = "0.0.0.1"
+
+# Set the update_checker policy, details can be found in
+# //build/security/policies_swd.gni.
+policy_labels.update_checker = "omaha_client"
+
+# Replace system-update-checker with omaha-client.
+core_realm_shards -= [
+  "//src/sys/pkg/bin/system-update-checker:system-update-checker-core-shard",
+]
+legacy_base_package_labels -= [ "//src/sys/pkg:system-update-checker" ]
+core_realm_shards +=
+    [ "//src/sys/pkg/bin/omaha-client:omaha-client-service-core-shard" ]
+legacy_base_package_labels += [
+  "//src/sys/pkg/bin/omaha-client:omaha-client-channels-test-config",
+  "//src/sys/pkg/bin/omaha-client:omaha-client-test-config",
+  "//src/sys/pkg:omaha-client-no-restart",
+]
