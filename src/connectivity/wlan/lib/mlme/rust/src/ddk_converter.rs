@@ -126,7 +126,6 @@ pub fn device_info_from_wlan_softmac_info(
         role,
         bands,
         qos_capable: false,
-        driver_features: Vec::new(),
         softmac_hardware_capability,
     })
 }

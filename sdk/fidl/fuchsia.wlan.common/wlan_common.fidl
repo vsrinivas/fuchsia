@@ -127,22 +127,6 @@ type ScanType = strict enum {
     PASSIVE = 2;
 };
 
-type DriverFeature = strict enum {
-    SCAN_OFFLOAD = 0;
-    RATE_SELECTION = 1;
-    SYNTH = 2;
-    TX_STATUS_REPORT = 3;
-    DFS = 4;
-    PROBE_RESP_OFFLOAD = 5;
-    SAE_SME_AUTH = 6;
-    SAE_DRIVER_AUTH = 7;
-    /// Indicates support for management frame protection and IGTK.
-    MFP = 8;
-    /// Temporary feature flag for driver to indicate this iface a SoftMAC device.
-    /// TODO(fxbug.dev/41640): Remove this flag once FullMAC drivers no longer use SME.
-    TEMP_SOFTMAC = 2718281828;
-};
-
 /// HT and VHT guard interval.
 /// See IEEE 802.11-2016 Table 19-1 and Table 21-1.
 type GuardInterval = strict enum : uint8 {

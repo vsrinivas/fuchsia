@@ -178,26 +178,6 @@ pub(crate) enum WlanMacRoleDef {
     Mesh = 3,
 }
 
-#[allow(clippy::enum_clike_unportable_variant)] // TODO(fxbug.dev/95034)
-#[derive(Serialize)]
-#[serde(remote = "fidl_common::DriverFeature")]
-pub(crate) enum DriverFeatureDef {
-    ScanOffload = 0,
-    RateSelection = 1,
-    Synth = 2,
-    TxStatusReport = 3,
-    Dfs = 4,
-    ProbeRespOffload = 5,
-    SaeSmeAuth = 6,
-    SaeDriverAuth = 7,
-    Mfp = 8,
-    TempSoftmac = 2718281828,
-}
-#[derive(Serialize)]
-pub(crate) struct DriverFeatureWrapper(
-    #[serde(with = "DriverFeatureDef")] pub fidl_common::DriverFeature,
-);
-
 #[derive(Serialize)]
 pub(crate) struct QueryIfaceResponseDef {
     #[serde(with = "WlanMacRoleDef")]

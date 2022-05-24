@@ -19,17 +19,6 @@ struct fuchsia.wlan.common/DfsFeature
 struct/member fuchsia.wlan.common/DiscoverySupport.probe_response_offload fuchsia.wlan.common/ProbeResponseOffloadExtension
 struct/member fuchsia.wlan.common/DiscoverySupport.scan_offload fuchsia.wlan.common/ScanOffloadExtension
 struct fuchsia.wlan.common/DiscoverySupport
-enum/member fuchsia.wlan.common/DriverFeature.DFS 4
-enum/member fuchsia.wlan.common/DriverFeature.MFP 8
-enum/member fuchsia.wlan.common/DriverFeature.PROBE_RESP_OFFLOAD 5
-enum/member fuchsia.wlan.common/DriverFeature.RATE_SELECTION 1
-enum/member fuchsia.wlan.common/DriverFeature.SAE_DRIVER_AUTH 7
-enum/member fuchsia.wlan.common/DriverFeature.SAE_SME_AUTH 6
-enum/member fuchsia.wlan.common/DriverFeature.SCAN_OFFLOAD 0
-enum/member fuchsia.wlan.common/DriverFeature.SYNTH 2
-enum/member fuchsia.wlan.common/DriverFeature.TEMP_SOFTMAC 2718281828
-enum/member fuchsia.wlan.common/DriverFeature.TX_STATUS_REPORT 3
-strict enum fuchsia.wlan.common/DriverFeature uint32
 enum/member fuchsia.wlan.common/GuardInterval.LONG_GI 1
 enum/member fuchsia.wlan.common/GuardInterval.SHORT_GI 2
 strict enum fuchsia.wlan.common/GuardInterval uint8

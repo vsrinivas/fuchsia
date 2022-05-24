@@ -331,7 +331,6 @@ mod tests {
             sta_addr: [0; 6],
             role: fidl_common::WlanMacRole::Client,
             bands: vec![fake_5ghz_band_capability_ht_cbw(ie::ChanWidthSet::TWENTY_FORTY)],
-            driver_features: vec![],
             softmac_hardware_capability: 0,
             qos_capable: true,
         };

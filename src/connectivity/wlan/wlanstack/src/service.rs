@@ -1414,7 +1414,6 @@ mod tests {
             sta_addr: [0xAC; 6],
             softmac_hardware_capability: 0,
             qos_capable: false,
-            driver_features: Vec::new(),
         }
     }
 

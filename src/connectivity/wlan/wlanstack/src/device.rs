@@ -171,13 +171,11 @@ mod tests {
             role: fidl_common::WlanMacRole::Client,
             bands: vec![],
             sta_addr: [0xAC; 6],
-            driver_features: vec![],
             softmac_hardware_capability: 0,
             qos_capable: false,
         }
     }
 
-    // Matches fake_device_info() driver_features field.
     fn fake_mac_sublayer_support() -> fidl_common::MacSublayerSupport {
         fidl_common::MacSublayerSupport {
             rate_selection_offload: fidl_common::RateSelectionOffloadExtension { supported: false },
@@ -192,7 +190,6 @@ mod tests {
         }
     }
 
-    // Matches fake_device_info() driver_features field.
     fn fake_security_support() -> fidl_common::SecuritySupport {
         fidl_common::SecuritySupport {
             mfp: fidl_common::MfpFeature { supported: false },

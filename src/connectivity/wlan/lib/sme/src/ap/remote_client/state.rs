@@ -1157,7 +1157,6 @@ mod tests {
         let mut r_sta = make_remote_client();
         let (mut ctx, mut mlme_stream, _) = make_env();
 
-        ctx.device_info.driver_features = vec![];
         ctx.mac_sublayer_support = fake_mac_sublayer_support();
         ctx.mac_sublayer_support.device.mac_implementation_type =
             fidl_common::MacImplementationType::Fullmac;
