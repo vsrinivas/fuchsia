@@ -24,9 +24,6 @@ config("cortex-a53") {
   ldflags = cflags
   asmflags = cflags
 
-  # Mitigate Cortex-A53 erratum.
-  ldflags += [ "-Wl,--fix-cortex-a53-843419" ]
-
   # TODO(fxbug.dev/87243): consider the below.
   #rustflags = [ "-Ctarget-cpu=cortex-a53" ]
 
