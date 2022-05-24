@@ -15,10 +15,10 @@ namespace internal {
 }
 
 ::test_drivertwoway::TwoWayAddRequest WireNaturalConversionTraits<::test_drivertwoway::wire::TwoWayAddRequest, ::test_drivertwoway::TwoWayAddRequest>::ToNatural(::test_drivertwoway::wire::TwoWayAddRequest src) {
-  return ::test_drivertwoway::TwoWayAddRequest({
+  return ::test_drivertwoway::TwoWayAddRequest{{
       .addend1 = WireNaturalConversionTraits<uint16_t, uint16_t>::ToNatural(std::move(src.addend1)),
       .addend2 = WireNaturalConversionTraits<uint16_t, uint16_t>::ToNatural(std::move(src.addend2)),
-  });
+  }};
 }
 ::test_drivertwoway::wire::TwoWayAddRequest WireNaturalConversionTraits<::test_drivertwoway::wire::TwoWayAddRequest, ::test_drivertwoway::TwoWayAddRequest>::ToWire(fidl::AnyArena& arena, ::test_drivertwoway::TwoWayAddRequest src) {
   return ::test_drivertwoway::wire::TwoWayAddRequest{

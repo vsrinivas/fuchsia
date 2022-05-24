@@ -60,11 +60,11 @@ namespace internal {
 }
 
 ::test_union::UnionSandwich WireNaturalConversionTraits<::test_union::wire::UnionSandwich, ::test_union::UnionSandwich>::ToNatural(::test_union::wire::UnionSandwich src) {
-  return ::test_union::UnionSandwich({
+  return ::test_union::UnionSandwich{{
       .a = WireNaturalConversionTraits<uint32_t, uint32_t>::ToNatural(std::move(src.a)),
       .u = WireNaturalConversionTraits<::test_union::wire::ExplicitXUnion, ::test_union::ExplicitXUnion>::ToNatural(std::move(src.u)),
       .b = WireNaturalConversionTraits<uint32_t, uint32_t>::ToNatural(std::move(src.b)),
-  });
+  }};
 }
 ::test_union::wire::UnionSandwich WireNaturalConversionTraits<::test_union::wire::UnionSandwich, ::test_union::UnionSandwich>::ToWire(fidl::AnyArena& arena, ::test_union::UnionSandwich src) {
   return ::test_union::wire::UnionSandwich{

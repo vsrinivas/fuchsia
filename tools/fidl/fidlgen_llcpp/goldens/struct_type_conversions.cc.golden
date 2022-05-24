@@ -6,10 +6,10 @@ namespace fidl {
 namespace internal {
 
 ::test_struct::Simple WireNaturalConversionTraits<::test_struct::wire::Simple, ::test_struct::Simple>::ToNatural(::test_struct::wire::Simple src) {
-  return ::test_struct::Simple({
+  return ::test_struct::Simple{{
       .f1 = WireNaturalConversionTraits<uint8_t, uint8_t>::ToNatural(std::move(src.f1)),
       .f2 = WireNaturalConversionTraits<bool, bool>::ToNatural(std::move(src.f2)),
-  });
+  }};
 }
 ::test_struct::wire::Simple WireNaturalConversionTraits<::test_struct::wire::Simple, ::test_struct::Simple>::ToWire(fidl::AnyArena& arena, ::test_struct::Simple src) {
   return ::test_struct::wire::Simple{
@@ -19,10 +19,10 @@ namespace internal {
 }
 
 ::test_struct::BasicStruct WireNaturalConversionTraits<::test_struct::wire::BasicStruct, ::test_struct::BasicStruct>::ToNatural(::test_struct::wire::BasicStruct src) {
-  return ::test_struct::BasicStruct({
+  return ::test_struct::BasicStruct{{
       .x = WireNaturalConversionTraits<uint32_t, uint32_t>::ToNatural(std::move(src.x)),
       .y = WireNaturalConversionTraits<::fidl::StringView, ::std::string>::ToNatural(std::move(src.y)),
-  });
+  }};
 }
 ::test_struct::wire::BasicStruct WireNaturalConversionTraits<::test_struct::wire::BasicStruct, ::test_struct::BasicStruct>::ToWire(fidl::AnyArena& arena, ::test_struct::BasicStruct src) {
   return ::test_struct::wire::BasicStruct{

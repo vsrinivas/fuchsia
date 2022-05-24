@@ -15,10 +15,10 @@ namespace internal {
 }
 
 ::test_anonymous::SomeProtocolSomeMethodRequest WireNaturalConversionTraits<::test_anonymous::wire::SomeProtocolSomeMethodRequest, ::test_anonymous::SomeProtocolSomeMethodRequest>::ToNatural(::test_anonymous::wire::SomeProtocolSomeMethodRequest src) {
-  return ::test_anonymous::SomeProtocolSomeMethodRequest({
+  return ::test_anonymous::SomeProtocolSomeMethodRequest{{
       .union_member = WireNaturalConversionTraits<::test_anonymous::wire::UnionMember, ::test_anonymous::UnionMember>::ToNatural(std::move(src.union_member)),
       .table_member = WireNaturalConversionTraits<::test_anonymous::wire::TableMember, ::test_anonymous::TableMember>::ToNatural(std::move(src.table_member)),
-  });
+  }};
 }
 ::test_anonymous::wire::SomeProtocolSomeMethodRequest WireNaturalConversionTraits<::test_anonymous::wire::SomeProtocolSomeMethodRequest, ::test_anonymous::SomeProtocolSomeMethodRequest>::ToWire(fidl::AnyArena& arena, ::test_anonymous::SomeProtocolSomeMethodRequest src) {
   return ::test_anonymous::wire::SomeProtocolSomeMethodRequest{
@@ -28,11 +28,11 @@ namespace internal {
 }
 
 ::test_anonymous::OverrideTest WireNaturalConversionTraits<::test_anonymous::wire::OverrideTest, ::test_anonymous::OverrideTest>::ToNatural(::test_anonymous::wire::OverrideTest src) {
-  return ::test_anonymous::OverrideTest({
+  return ::test_anonymous::OverrideTest{{
       .op = WireNaturalConversionTraits<::test_anonymous::wire::Op, ::test_anonymous::Op>::ToNatural(std::move(src.op)),
       .left = WireNaturalConversionTraits<::test_anonymous::wire::Expression, ::std::unique_ptr<::test_anonymous::Expression>>::ToNatural(std::move(src.left)),
       .right = WireNaturalConversionTraits<::test_anonymous::wire::Expression, ::std::unique_ptr<::test_anonymous::Expression>>::ToNatural(std::move(src.right)),
-  });
+  }};
 }
 ::test_anonymous::wire::OverrideTest WireNaturalConversionTraits<::test_anonymous::wire::OverrideTest, ::test_anonymous::OverrideTest>::ToWire(fidl::AnyArena& arena, ::test_anonymous::OverrideTest src) {
   return ::test_anonymous::wire::OverrideTest{

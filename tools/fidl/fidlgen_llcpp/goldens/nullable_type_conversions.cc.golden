@@ -90,10 +90,10 @@ namespace internal {
 }
 
 ::test_nullable::SimpleProtocolAddRequest WireNaturalConversionTraits<::test_nullable::wire::SimpleProtocolAddRequest, ::test_nullable::SimpleProtocolAddRequest>::ToNatural(::test_nullable::wire::SimpleProtocolAddRequest src) {
-  return ::test_nullable::SimpleProtocolAddRequest({
+  return ::test_nullable::SimpleProtocolAddRequest{{
       .a = WireNaturalConversionTraits<int32_t, int32_t>::ToNatural(std::move(src.a)),
       .b = WireNaturalConversionTraits<int32_t, int32_t>::ToNatural(std::move(src.b)),
-  });
+  }};
 }
 ::test_nullable::wire::SimpleProtocolAddRequest WireNaturalConversionTraits<::test_nullable::wire::SimpleProtocolAddRequest, ::test_nullable::SimpleProtocolAddRequest>::ToWire(fidl::AnyArena& arena, ::test_nullable::SimpleProtocolAddRequest src) {
   return ::test_nullable::wire::SimpleProtocolAddRequest{

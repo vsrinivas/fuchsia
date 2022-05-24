@@ -8,7 +8,7 @@ namespace internal {
 #ifdef __Fuchsia__
 
 ::test_handles::Handles WireNaturalConversionTraits<::test_handles::wire::Handles, ::test_handles::Handles>::ToNatural(::test_handles::wire::Handles src) {
-  return ::test_handles::Handles({
+  return ::test_handles::Handles{{
       .plain_handle = WireNaturalConversionTraits<::zx::handle, ::zx::handle>::ToNatural(std::move(src.plain_handle)),
       .bti_handle = WireNaturalConversionTraits<::zx::bti, ::zx::bti>::ToNatural(std::move(src.bti_handle)),
       .channel_handle = WireNaturalConversionTraits<::zx::channel, ::zx::channel>::ToNatural(std::move(src.channel_handle)),
@@ -41,7 +41,7 @@ namespace internal {
       .aliased_rights_handle_field = WireNaturalConversionTraits<::zx::vmo, ::zx::vmo>::ToNatural(std::move(src.aliased_rights_handle_field)),
       .some_protocol = WireNaturalConversionTraits<::fidl::ClientEnd<::test_handles::SomeProtocol>, ::fidl::ClientEnd<::test_handles::SomeProtocol>>::ToNatural(std::move(src.some_protocol)),
       .request_some_protocol = WireNaturalConversionTraits<::fidl::ServerEnd<::test_handles::SomeProtocol>, ::fidl::ServerEnd<::test_handles::SomeProtocol>>::ToNatural(std::move(src.request_some_protocol)),
-  });
+  }};
 }
 ::test_handles::wire::Handles WireNaturalConversionTraits<::test_handles::wire::Handles, ::test_handles::Handles>::ToWire(fidl::AnyArena& arena, ::test_handles::Handles src) {
   return ::test_handles::wire::Handles{
@@ -85,11 +85,11 @@ namespace internal {
 #ifdef __Fuchsia__
 
 ::test_handles::FdfHandles WireNaturalConversionTraits<::test_handles::wire::FdfHandles, ::test_handles::FdfHandles>::ToNatural(::test_handles::wire::FdfHandles src) {
-  return ::test_handles::FdfHandles({
+  return ::test_handles::FdfHandles{{
       .fdf_channel_handle = WireNaturalConversionTraits<::fdf::Channel, ::fdf::Channel>::ToNatural(std::move(src.fdf_channel_handle)),
       .client_end_driver = WireNaturalConversionTraits<::fdf::ClientEnd<::test_handles::DriverProtocol>, ::fdf::ClientEnd<::test_handles::DriverProtocol>>::ToNatural(std::move(src.client_end_driver)),
       .server_end_driver = WireNaturalConversionTraits<::fdf::ServerEnd<::test_handles::DriverProtocol>, ::fdf::ServerEnd<::test_handles::DriverProtocol>>::ToNatural(std::move(src.server_end_driver)),
-  });
+  }};
 }
 ::test_handles::wire::FdfHandles WireNaturalConversionTraits<::test_handles::wire::FdfHandles, ::test_handles::FdfHandles>::ToWire(fidl::AnyArena& arena, ::test_handles::FdfHandles src) {
   return ::test_handles::wire::FdfHandles{

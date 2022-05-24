@@ -6,10 +6,10 @@ namespace fidl {
 namespace internal {
 
 ::test_vectors::ExampleUseOfVectors WireNaturalConversionTraits<::test_vectors::wire::ExampleUseOfVectors, ::test_vectors::ExampleUseOfVectors>::ToNatural(::test_vectors::wire::ExampleUseOfVectors src) {
-  return ::test_vectors::ExampleUseOfVectors({
+  return ::test_vectors::ExampleUseOfVectors{{
       .vector_of_uint8 = WireNaturalConversionTraits<::fidl::VectorView<uint8_t>, ::std::vector<uint8_t>>::ToNatural(std::move(src.vector_of_uint8)),
       .vector_of_vector_of_bool = WireNaturalConversionTraits<::fidl::VectorView<::fidl::VectorView<bool>>, ::std::vector<::std::vector<bool>>>::ToNatural(std::move(src.vector_of_vector_of_bool)),
-  });
+  }};
 }
 ::test_vectors::wire::ExampleUseOfVectors WireNaturalConversionTraits<::test_vectors::wire::ExampleUseOfVectors, ::test_vectors::ExampleUseOfVectors>::ToWire(fidl::AnyArena& arena, ::test_vectors::ExampleUseOfVectors src) {
   return ::test_vectors::wire::ExampleUseOfVectors{

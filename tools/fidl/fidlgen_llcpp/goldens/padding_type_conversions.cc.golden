@@ -6,10 +6,10 @@ namespace fidl {
 namespace internal {
 
 ::test_padding::Padding7ByteMiddle WireNaturalConversionTraits<::test_padding::wire::Padding7ByteMiddle, ::test_padding::Padding7ByteMiddle>::ToNatural(::test_padding::wire::Padding7ByteMiddle src) {
-  return ::test_padding::Padding7ByteMiddle({
+  return ::test_padding::Padding7ByteMiddle{{
       .a = WireNaturalConversionTraits<uint8_t, uint8_t>::ToNatural(std::move(src.a)),
       .b = WireNaturalConversionTraits<uint64_t, uint64_t>::ToNatural(std::move(src.b)),
-  });
+  }};
 }
 ::test_padding::wire::Padding7ByteMiddle WireNaturalConversionTraits<::test_padding::wire::Padding7ByteMiddle, ::test_padding::Padding7ByteMiddle>::ToWire(fidl::AnyArena& arena, ::test_padding::Padding7ByteMiddle src) {
   return ::test_padding::wire::Padding7ByteMiddle{
@@ -19,10 +19,10 @@ namespace internal {
 }
 
 ::test_padding::Padding7ByteEnd WireNaturalConversionTraits<::test_padding::wire::Padding7ByteEnd, ::test_padding::Padding7ByteEnd>::ToNatural(::test_padding::wire::Padding7ByteEnd src) {
-  return ::test_padding::Padding7ByteEnd({
+  return ::test_padding::Padding7ByteEnd{{
       .a = WireNaturalConversionTraits<uint64_t, uint64_t>::ToNatural(std::move(src.a)),
       .b = WireNaturalConversionTraits<uint8_t, uint8_t>::ToNatural(std::move(src.b)),
-  });
+  }};
 }
 ::test_padding::wire::Padding7ByteEnd WireNaturalConversionTraits<::test_padding::wire::Padding7ByteEnd, ::test_padding::Padding7ByteEnd>::ToWire(fidl::AnyArena& arena, ::test_padding::Padding7ByteEnd src) {
   return ::test_padding::wire::Padding7ByteEnd{
@@ -32,10 +32,10 @@ namespace internal {
 }
 
 ::test_padding::Padding6ByteMiddle WireNaturalConversionTraits<::test_padding::wire::Padding6ByteMiddle, ::test_padding::Padding6ByteMiddle>::ToNatural(::test_padding::wire::Padding6ByteMiddle src) {
-  return ::test_padding::Padding6ByteMiddle({
+  return ::test_padding::Padding6ByteMiddle{{
       .a = WireNaturalConversionTraits<uint16_t, uint16_t>::ToNatural(std::move(src.a)),
       .b = WireNaturalConversionTraits<uint64_t, uint64_t>::ToNatural(std::move(src.b)),
-  });
+  }};
 }
 ::test_padding::wire::Padding6ByteMiddle WireNaturalConversionTraits<::test_padding::wire::Padding6ByteMiddle, ::test_padding::Padding6ByteMiddle>::ToWire(fidl::AnyArena& arena, ::test_padding::Padding6ByteMiddle src) {
   return ::test_padding::wire::Padding6ByteMiddle{
@@ -45,10 +45,10 @@ namespace internal {
 }
 
 ::test_padding::Padding6ByteEnd WireNaturalConversionTraits<::test_padding::wire::Padding6ByteEnd, ::test_padding::Padding6ByteEnd>::ToNatural(::test_padding::wire::Padding6ByteEnd src) {
-  return ::test_padding::Padding6ByteEnd({
+  return ::test_padding::Padding6ByteEnd{{
       .a = WireNaturalConversionTraits<uint64_t, uint64_t>::ToNatural(std::move(src.a)),
       .b = WireNaturalConversionTraits<uint16_t, uint16_t>::ToNatural(std::move(src.b)),
-  });
+  }};
 }
 ::test_padding::wire::Padding6ByteEnd WireNaturalConversionTraits<::test_padding::wire::Padding6ByteEnd, ::test_padding::Padding6ByteEnd>::ToWire(fidl::AnyArena& arena, ::test_padding::Padding6ByteEnd src) {
   return ::test_padding::wire::Padding6ByteEnd{
@@ -58,11 +58,11 @@ namespace internal {
 }
 
 ::test_padding::Padding5ByteMiddle WireNaturalConversionTraits<::test_padding::wire::Padding5ByteMiddle, ::test_padding::Padding5ByteMiddle>::ToNatural(::test_padding::wire::Padding5ByteMiddle src) {
-  return ::test_padding::Padding5ByteMiddle({
+  return ::test_padding::Padding5ByteMiddle{{
       .a = WireNaturalConversionTraits<uint16_t, uint16_t>::ToNatural(std::move(src.a)),
       .b = WireNaturalConversionTraits<uint8_t, uint8_t>::ToNatural(std::move(src.b)),
       .c = WireNaturalConversionTraits<uint64_t, uint64_t>::ToNatural(std::move(src.c)),
-  });
+  }};
 }
 ::test_padding::wire::Padding5ByteMiddle WireNaturalConversionTraits<::test_padding::wire::Padding5ByteMiddle, ::test_padding::Padding5ByteMiddle>::ToWire(fidl::AnyArena& arena, ::test_padding::Padding5ByteMiddle src) {
   return ::test_padding::wire::Padding5ByteMiddle{
@@ -73,11 +73,11 @@ namespace internal {
 }
 
 ::test_padding::Padding5ByteEnd WireNaturalConversionTraits<::test_padding::wire::Padding5ByteEnd, ::test_padding::Padding5ByteEnd>::ToNatural(::test_padding::wire::Padding5ByteEnd src) {
-  return ::test_padding::Padding5ByteEnd({
+  return ::test_padding::Padding5ByteEnd{{
       .a = WireNaturalConversionTraits<uint64_t, uint64_t>::ToNatural(std::move(src.a)),
       .b = WireNaturalConversionTraits<uint16_t, uint16_t>::ToNatural(std::move(src.b)),
       .c = WireNaturalConversionTraits<uint8_t, uint8_t>::ToNatural(std::move(src.c)),
-  });
+  }};
 }
 ::test_padding::wire::Padding5ByteEnd WireNaturalConversionTraits<::test_padding::wire::Padding5ByteEnd, ::test_padding::Padding5ByteEnd>::ToWire(fidl::AnyArena& arena, ::test_padding::Padding5ByteEnd src) {
   return ::test_padding::wire::Padding5ByteEnd{
@@ -88,10 +88,10 @@ namespace internal {
 }
 
 ::test_padding::Padding4ByteMiddle WireNaturalConversionTraits<::test_padding::wire::Padding4ByteMiddle, ::test_padding::Padding4ByteMiddle>::ToNatural(::test_padding::wire::Padding4ByteMiddle src) {
-  return ::test_padding::Padding4ByteMiddle({
+  return ::test_padding::Padding4ByteMiddle{{
       .a = WireNaturalConversionTraits<uint32_t, uint32_t>::ToNatural(std::move(src.a)),
       .b = WireNaturalConversionTraits<uint64_t, uint64_t>::ToNatural(std::move(src.b)),
-  });
+  }};
 }
 ::test_padding::wire::Padding4ByteMiddle WireNaturalConversionTraits<::test_padding::wire::Padding4ByteMiddle, ::test_padding::Padding4ByteMiddle>::ToWire(fidl::AnyArena& arena, ::test_padding::Padding4ByteMiddle src) {
   return ::test_padding::wire::Padding4ByteMiddle{
@@ -101,10 +101,10 @@ namespace internal {
 }
 
 ::test_padding::Padding4ByteEnd WireNaturalConversionTraits<::test_padding::wire::Padding4ByteEnd, ::test_padding::Padding4ByteEnd>::ToNatural(::test_padding::wire::Padding4ByteEnd src) {
-  return ::test_padding::Padding4ByteEnd({
+  return ::test_padding::Padding4ByteEnd{{
       .a = WireNaturalConversionTraits<uint64_t, uint64_t>::ToNatural(std::move(src.a)),
       .b = WireNaturalConversionTraits<uint32_t, uint32_t>::ToNatural(std::move(src.b)),
-  });
+  }};
 }
 ::test_padding::wire::Padding4ByteEnd WireNaturalConversionTraits<::test_padding::wire::Padding4ByteEnd, ::test_padding::Padding4ByteEnd>::ToWire(fidl::AnyArena& arena, ::test_padding::Padding4ByteEnd src) {
   return ::test_padding::wire::Padding4ByteEnd{
@@ -114,12 +114,12 @@ namespace internal {
 }
 
 ::test_padding::Padding4ByteAlignmentLength12 WireNaturalConversionTraits<::test_padding::wire::Padding4ByteAlignmentLength12, ::test_padding::Padding4ByteAlignmentLength12>::ToNatural(::test_padding::wire::Padding4ByteAlignmentLength12 src) {
-  return ::test_padding::Padding4ByteAlignmentLength12({
+  return ::test_padding::Padding4ByteAlignmentLength12{{
       .a = WireNaturalConversionTraits<uint32_t, uint32_t>::ToNatural(std::move(src.a)),
       .b = WireNaturalConversionTraits<uint8_t, uint8_t>::ToNatural(std::move(src.b)),
       .c = WireNaturalConversionTraits<uint16_t, uint16_t>::ToNatural(std::move(src.c)),
       .d = WireNaturalConversionTraits<uint16_t, uint16_t>::ToNatural(std::move(src.d)),
-  });
+  }};
 }
 ::test_padding::wire::Padding4ByteAlignmentLength12 WireNaturalConversionTraits<::test_padding::wire::Padding4ByteAlignmentLength12, ::test_padding::Padding4ByteAlignmentLength12>::ToWire(fidl::AnyArena& arena, ::test_padding::Padding4ByteAlignmentLength12 src) {
   return ::test_padding::wire::Padding4ByteAlignmentLength12{
@@ -131,10 +131,10 @@ namespace internal {
 }
 
 ::test_padding::Padding3ByteMiddle WireNaturalConversionTraits<::test_padding::wire::Padding3ByteMiddle, ::test_padding::Padding3ByteMiddle>::ToNatural(::test_padding::wire::Padding3ByteMiddle src) {
-  return ::test_padding::Padding3ByteMiddle({
+  return ::test_padding::Padding3ByteMiddle{{
       .a = WireNaturalConversionTraits<uint8_t, uint8_t>::ToNatural(std::move(src.a)),
       .b = WireNaturalConversionTraits<uint32_t, uint32_t>::ToNatural(std::move(src.b)),
-  });
+  }};
 }
 ::test_padding::wire::Padding3ByteMiddle WireNaturalConversionTraits<::test_padding::wire::Padding3ByteMiddle, ::test_padding::Padding3ByteMiddle>::ToWire(fidl::AnyArena& arena, ::test_padding::Padding3ByteMiddle src) {
   return ::test_padding::wire::Padding3ByteMiddle{
@@ -144,10 +144,10 @@ namespace internal {
 }
 
 ::test_padding::Padding3ByteEnd WireNaturalConversionTraits<::test_padding::wire::Padding3ByteEnd, ::test_padding::Padding3ByteEnd>::ToNatural(::test_padding::wire::Padding3ByteEnd src) {
-  return ::test_padding::Padding3ByteEnd({
+  return ::test_padding::Padding3ByteEnd{{
       .a = WireNaturalConversionTraits<uint32_t, uint32_t>::ToNatural(std::move(src.a)),
       .b = WireNaturalConversionTraits<uint8_t, uint8_t>::ToNatural(std::move(src.b)),
-  });
+  }};
 }
 ::test_padding::wire::Padding3ByteEnd WireNaturalConversionTraits<::test_padding::wire::Padding3ByteEnd, ::test_padding::Padding3ByteEnd>::ToWire(fidl::AnyArena& arena, ::test_padding::Padding3ByteEnd src) {
   return ::test_padding::wire::Padding3ByteEnd{
@@ -157,10 +157,10 @@ namespace internal {
 }
 
 ::test_padding::Padding2ByteMiddle WireNaturalConversionTraits<::test_padding::wire::Padding2ByteMiddle, ::test_padding::Padding2ByteMiddle>::ToNatural(::test_padding::wire::Padding2ByteMiddle src) {
-  return ::test_padding::Padding2ByteMiddle({
+  return ::test_padding::Padding2ByteMiddle{{
       .a = WireNaturalConversionTraits<uint16_t, uint16_t>::ToNatural(std::move(src.a)),
       .b = WireNaturalConversionTraits<uint32_t, uint32_t>::ToNatural(std::move(src.b)),
-  });
+  }};
 }
 ::test_padding::wire::Padding2ByteMiddle WireNaturalConversionTraits<::test_padding::wire::Padding2ByteMiddle, ::test_padding::Padding2ByteMiddle>::ToWire(fidl::AnyArena& arena, ::test_padding::Padding2ByteMiddle src) {
   return ::test_padding::wire::Padding2ByteMiddle{
@@ -170,10 +170,10 @@ namespace internal {
 }
 
 ::test_padding::Padding2ByteEnd WireNaturalConversionTraits<::test_padding::wire::Padding2ByteEnd, ::test_padding::Padding2ByteEnd>::ToNatural(::test_padding::wire::Padding2ByteEnd src) {
-  return ::test_padding::Padding2ByteEnd({
+  return ::test_padding::Padding2ByteEnd{{
       .a = WireNaturalConversionTraits<uint32_t, uint32_t>::ToNatural(std::move(src.a)),
       .b = WireNaturalConversionTraits<uint16_t, uint16_t>::ToNatural(std::move(src.b)),
-  });
+  }};
 }
 ::test_padding::wire::Padding2ByteEnd WireNaturalConversionTraits<::test_padding::wire::Padding2ByteEnd, ::test_padding::Padding2ByteEnd>::ToWire(fidl::AnyArena& arena, ::test_padding::Padding2ByteEnd src) {
   return ::test_padding::wire::Padding2ByteEnd{
@@ -183,11 +183,11 @@ namespace internal {
 }
 
 ::test_padding::Padding2ByteAlignmentLength6 WireNaturalConversionTraits<::test_padding::wire::Padding2ByteAlignmentLength6, ::test_padding::Padding2ByteAlignmentLength6>::ToNatural(::test_padding::wire::Padding2ByteAlignmentLength6 src) {
-  return ::test_padding::Padding2ByteAlignmentLength6({
+  return ::test_padding::Padding2ByteAlignmentLength6{{
       .a = WireNaturalConversionTraits<uint8_t, uint8_t>::ToNatural(std::move(src.a)),
       .b = WireNaturalConversionTraits<uint16_t, uint16_t>::ToNatural(std::move(src.b)),
       .c = WireNaturalConversionTraits<uint8_t, uint8_t>::ToNatural(std::move(src.c)),
-  });
+  }};
 }
 ::test_padding::wire::Padding2ByteAlignmentLength6 WireNaturalConversionTraits<::test_padding::wire::Padding2ByteAlignmentLength6, ::test_padding::Padding2ByteAlignmentLength6>::ToWire(fidl::AnyArena& arena, ::test_padding::Padding2ByteAlignmentLength6 src) {
   return ::test_padding::wire::Padding2ByteAlignmentLength6{
@@ -198,10 +198,10 @@ namespace internal {
 }
 
 ::test_padding::Padding1ByteMiddle WireNaturalConversionTraits<::test_padding::wire::Padding1ByteMiddle, ::test_padding::Padding1ByteMiddle>::ToNatural(::test_padding::wire::Padding1ByteMiddle src) {
-  return ::test_padding::Padding1ByteMiddle({
+  return ::test_padding::Padding1ByteMiddle{{
       .a = WireNaturalConversionTraits<uint8_t, uint8_t>::ToNatural(std::move(src.a)),
       .b = WireNaturalConversionTraits<uint16_t, uint16_t>::ToNatural(std::move(src.b)),
-  });
+  }};
 }
 ::test_padding::wire::Padding1ByteMiddle WireNaturalConversionTraits<::test_padding::wire::Padding1ByteMiddle, ::test_padding::Padding1ByteMiddle>::ToWire(fidl::AnyArena& arena, ::test_padding::Padding1ByteMiddle src) {
   return ::test_padding::wire::Padding1ByteMiddle{
@@ -211,10 +211,10 @@ namespace internal {
 }
 
 ::test_padding::Padding1ByteEnd WireNaturalConversionTraits<::test_padding::wire::Padding1ByteEnd, ::test_padding::Padding1ByteEnd>::ToNatural(::test_padding::wire::Padding1ByteEnd src) {
-  return ::test_padding::Padding1ByteEnd({
+  return ::test_padding::Padding1ByteEnd{{
       .a = WireNaturalConversionTraits<uint16_t, uint16_t>::ToNatural(std::move(src.a)),
       .b = WireNaturalConversionTraits<uint8_t, uint8_t>::ToNatural(std::move(src.b)),
-  });
+  }};
 }
 ::test_padding::wire::Padding1ByteEnd WireNaturalConversionTraits<::test_padding::wire::Padding1ByteEnd, ::test_padding::Padding1ByteEnd>::ToWire(fidl::AnyArena& arena, ::test_padding::Padding1ByteEnd src) {
   return ::test_padding::wire::Padding1ByteEnd{

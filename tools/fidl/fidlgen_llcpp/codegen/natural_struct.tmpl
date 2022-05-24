@@ -220,11 +220,11 @@ struct WireTypeForNaturalType<{{ .Unified }}> {
   {{- if eq (len .Members) 1 }}
   return {{ .Unified }}({{ range .Members }}WireNaturalConversionTraits<{{ .Type.Wire }}, {{ .Type.Unified }}>::ToNatural(std::move(src.{{ .Name }})){{ end }});
   {{- else }}
-  return {{ .Unified }}({
+  return {{ .Unified }}{ {
   {{- range .Members }}
     .{{ .Name }} = WireNaturalConversionTraits<{{ .Type.Wire }}, {{ .Type.Unified }}>::ToNatural(std::move(src.{{ .Name }})),
   {{- end }}
-  });
+  } };
   {{- end }}
 }
 {{ .Wire }} WireNaturalConversionTraits<{{ .Wire }}, {{ .Unified }}>::ToWire(fidl::AnyArena& arena, {{ .Unified }} src) {

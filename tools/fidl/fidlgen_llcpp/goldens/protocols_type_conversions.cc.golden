@@ -58,11 +58,11 @@ namespace internal {
 #endif  // __Fuchsia__
 
 ::test_protocols::WithErrorSyntaxResponseAsStructResponse WireNaturalConversionTraits<::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse, ::test_protocols::WithErrorSyntaxResponseAsStructResponse>::ToNatural(::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse src) {
-  return ::test_protocols::WithErrorSyntaxResponseAsStructResponse({
+  return ::test_protocols::WithErrorSyntaxResponseAsStructResponse{{
       .a = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.a)),
       .b = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.b)),
       .c = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.c)),
-  });
+  }};
 }
 ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse WireNaturalConversionTraits<::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse, ::test_protocols::WithErrorSyntaxResponseAsStructResponse>::ToWire(fidl::AnyArena& arena, ::test_protocols::WithErrorSyntaxResponseAsStructResponse src) {
   return ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse{
@@ -234,10 +234,10 @@ namespace internal {
 }
 
 ::test_protocols::SyscallProtocolMethodCRequest WireNaturalConversionTraits<::test_protocols::wire::SyscallProtocolMethodCRequest, ::test_protocols::SyscallProtocolMethodCRequest>::ToNatural(::test_protocols::wire::SyscallProtocolMethodCRequest src) {
-  return ::test_protocols::SyscallProtocolMethodCRequest({
+  return ::test_protocols::SyscallProtocolMethodCRequest{{
       .a = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.a)),
       .b = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.b)),
-  });
+  }};
 }
 ::test_protocols::wire::SyscallProtocolMethodCRequest WireNaturalConversionTraits<::test_protocols::wire::SyscallProtocolMethodCRequest, ::test_protocols::SyscallProtocolMethodCRequest>::ToWire(fidl::AnyArena& arena, ::test_protocols::SyscallProtocolMethodCRequest src) {
   return ::test_protocols::wire::SyscallProtocolMethodCRequest{
@@ -249,12 +249,12 @@ namespace internal {
 #ifdef __Fuchsia__
 
 ::test_protocols::ProtocolEnds WireNaturalConversionTraits<::test_protocols::wire::ProtocolEnds, ::test_protocols::ProtocolEnds>::ToNatural(::test_protocols::wire::ProtocolEnds src) {
-  return ::test_protocols::ProtocolEnds({
+  return ::test_protocols::ProtocolEnds{{
       .client = WireNaturalConversionTraits<::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>, ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>>::ToNatural(std::move(src.client)),
       .server = WireNaturalConversionTraits<::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>, ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>>::ToNatural(std::move(src.server)),
       .client_opt = WireNaturalConversionTraits<::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>, ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>>::ToNatural(std::move(src.client_opt)),
       .server_opt = WireNaturalConversionTraits<::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>, ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>>::ToNatural(std::move(src.server_opt)),
-  });
+  }};
 }
 ::test_protocols::wire::ProtocolEnds WireNaturalConversionTraits<::test_protocols::wire::ProtocolEnds, ::test_protocols::ProtocolEnds>::ToWire(fidl::AnyArena& arena, ::test_protocols::ProtocolEnds src) {
   return ::test_protocols::wire::ProtocolEnds{
@@ -294,7 +294,7 @@ namespace internal {
 #endif  // __Fuchsia__
 
 ::test_protocols::ManyParametersFifteenRequest WireNaturalConversionTraits<::test_protocols::wire::ManyParametersFifteenRequest, ::test_protocols::ManyParametersFifteenRequest>::ToNatural(::test_protocols::wire::ManyParametersFifteenRequest src) {
-  return ::test_protocols::ManyParametersFifteenRequest({
+  return ::test_protocols::ManyParametersFifteenRequest{{
       .p1 = WireNaturalConversionTraits<bool, bool>::ToNatural(std::move(src.p1)),
       .p2 = WireNaturalConversionTraits<bool, bool>::ToNatural(std::move(src.p2)),
       .p3 = WireNaturalConversionTraits<bool, bool>::ToNatural(std::move(src.p3)),
@@ -310,7 +310,7 @@ namespace internal {
       .p13 = WireNaturalConversionTraits<bool, bool>::ToNatural(std::move(src.p13)),
       .p14 = WireNaturalConversionTraits<bool, bool>::ToNatural(std::move(src.p14)),
       .p15 = WireNaturalConversionTraits<bool, bool>::ToNatural(std::move(src.p15)),
-  });
+  }};
 }
 ::test_protocols::wire::ManyParametersFifteenRequest WireNaturalConversionTraits<::test_protocols::wire::ManyParametersFifteenRequest, ::test_protocols::ManyParametersFifteenRequest>::ToWire(fidl::AnyArena& arena, ::test_protocols::ManyParametersFifteenRequest src) {
   return ::test_protocols::wire::ManyParametersFifteenRequest{
@@ -442,10 +442,10 @@ namespace internal {
 }
 
 ::test_protocols::ChannelProtocolMethodBRequest WireNaturalConversionTraits<::test_protocols::wire::ChannelProtocolMethodBRequest, ::test_protocols::ChannelProtocolMethodBRequest>::ToNatural(::test_protocols::wire::ChannelProtocolMethodBRequest src) {
-  return ::test_protocols::ChannelProtocolMethodBRequest({
+  return ::test_protocols::ChannelProtocolMethodBRequest{{
       .a = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.a)),
       .b = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.b)),
-  });
+  }};
 }
 ::test_protocols::wire::ChannelProtocolMethodBRequest WireNaturalConversionTraits<::test_protocols::wire::ChannelProtocolMethodBRequest, ::test_protocols::ChannelProtocolMethodBRequest>::ToWire(fidl::AnyArena& arena, ::test_protocols::ChannelProtocolMethodBRequest src) {
   return ::test_protocols::wire::ChannelProtocolMethodBRequest{
@@ -455,10 +455,10 @@ namespace internal {
 }
 
 ::test_protocols::ChannelProtocolMethodARequest WireNaturalConversionTraits<::test_protocols::wire::ChannelProtocolMethodARequest, ::test_protocols::ChannelProtocolMethodARequest>::ToNatural(::test_protocols::wire::ChannelProtocolMethodARequest src) {
-  return ::test_protocols::ChannelProtocolMethodARequest({
+  return ::test_protocols::ChannelProtocolMethodARequest{{
       .a = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.a)),
       .b = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.b)),
-  });
+  }};
 }
 ::test_protocols::wire::ChannelProtocolMethodARequest WireNaturalConversionTraits<::test_protocols::wire::ChannelProtocolMethodARequest, ::test_protocols::ChannelProtocolMethodARequest>::ToWire(fidl::AnyArena& arena, ::test_protocols::ChannelProtocolMethodARequest src) {
   return ::test_protocols::wire::ChannelProtocolMethodARequest{
@@ -468,10 +468,10 @@ namespace internal {
 }
 
 ::test_protocols::ChannelProtocolEventARequest WireNaturalConversionTraits<::test_protocols::wire::ChannelProtocolEventARequest, ::test_protocols::ChannelProtocolEventARequest>::ToNatural(::test_protocols::wire::ChannelProtocolEventARequest src) {
-  return ::test_protocols::ChannelProtocolEventARequest({
+  return ::test_protocols::ChannelProtocolEventARequest{{
       .a = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.a)),
       .b = WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.b)),
-  });
+  }};
 }
 ::test_protocols::wire::ChannelProtocolEventARequest WireNaturalConversionTraits<::test_protocols::wire::ChannelProtocolEventARequest, ::test_protocols::ChannelProtocolEventARequest>::ToWire(fidl::AnyArena& arena, ::test_protocols::ChannelProtocolEventARequest src) {
   return ::test_protocols::wire::ChannelProtocolEventARequest{

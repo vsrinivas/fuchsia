@@ -231,3 +231,9 @@ protocol ErrorSyntax {
     -> EventEmptyPayload(struct {}) error int32;
     -> EventFooPayload(FooEvent) error int32;
 };
+
+type StructOfOptionals = struct {
+    s string:<128, optional>;
+    v vector<uint32>:<128, optional>;
+    t box<CopyableStruct>;
+};
