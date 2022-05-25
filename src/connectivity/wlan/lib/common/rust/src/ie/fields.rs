@@ -502,17 +502,11 @@ pub struct HtOperation {
 
 impl From<HtOperation> for banjo_wlan_associnfo::WlanHtOp {
     fn from(op: HtOperation) -> Self {
-        // TODO(fxbug.dev/82503): Keep these values as a byte array when supported by our bitfields.
-        let rx_mcs_head = op.basic_ht_mcs_set.0 as u64;
-        let rx_mcs_tail = (op.basic_ht_mcs_set.0 >> 64 & 0xFFFF_FFFF_FFFF_FFFF) as u32;
-        let tx_mcs = (op.basic_ht_mcs_set.0 >> 96 & 0xFFFF_FFFF_FFFF_FFFF) as u32;
         Self {
             primary_channel: op.primary_channel,
             head: *&{ op.ht_op_info_head }.raw(),
             tail: *&{ op.ht_op_info_tail }.raw(),
-            rx_mcs_head,
-            rx_mcs_tail,
-            tx_mcs,
+            mcs_set: op.basic_ht_mcs_set.0.to_be_bytes(),
         }
     }
 }
@@ -1423,10 +1417,7 @@ mod tests {
         assert_eq!(ht_op.primary_channel, ddk.primary_channel);
         assert_eq!(ht_op.ht_op_info_head.0, ddk.head);
         assert_eq!(ht_op.ht_op_info_tail.0, ddk.tail);
-        let mcs_set = ((ddk.tx_mcs as u128) << 96)
-            | ((ddk.rx_mcs_tail as u128) << 64)
-            | (ddk.rx_mcs_head as u128);
-        assert_eq!(ht_op.basic_ht_mcs_set.0, mcs_set);
+        assert_eq!(ht_op.basic_ht_mcs_set.0.to_be_bytes(), ddk.mcs_set);
     }
 
     #[test]

@@ -473,13 +473,13 @@ std::string Describe(const AmpduParams& ampdu) {
 std::string Describe(const SupportedMcsSet& mcs_set) {
   char buf[256];
   size_t offset = 0;
-  BUFFER("rx1:0x%016lx", mcs_set.rx_mcs_head.bitmask());
-  BUFFER("rx2:0x%04x", mcs_set.rx_mcs_tail.bitmask());
-  BUFFER("high_rate:%u", mcs_set.rx_mcs_tail.highest_rate());
-  BUFFER("tx_set:%u", mcs_set.tx_mcs.set_defined());
-  BUFFER("tx_rx_diff:%u", mcs_set.tx_mcs.rx_diff());
-  BUFFER("max_ss:%u", mcs_set.tx_mcs.max_ss());
-  BUFFER("ueqm:%u", mcs_set.tx_mcs.ueqm());
+  BUFFER("rx1:0x%016lx", mcs_set.rx_mcs_bitmask1());
+  BUFFER("rx2:0x%04x", mcs_set.rx_mcs_bitmask2());
+  BUFFER("high_rate:%u", mcs_set.rx_highest_rate());
+  BUFFER("tx_set:%u", mcs_set.tx_set_defined());
+  BUFFER("tx_rx_diff:%u", mcs_set.tx_rx_diff());
+  BUFFER("max_ss:%u", mcs_set.tx_max_ss());
+  BUFFER("ueqm:%u", mcs_set.tx_unequal_mod());
   return std::string(buf);
 }
 

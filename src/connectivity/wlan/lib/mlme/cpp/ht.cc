@@ -46,7 +46,7 @@ HtCapabilities BuildHtCapabilities(const HtConfig& config) {
   // ampdu.set_min_start_spacing(AmpduParams::SIXTEEN_USEC);
 
   SupportedMcsSet& mcs = htc.mcs_set;
-  mcs.rx_mcs_head.set_bitmask(0xff);  // MCS 0-7
+  mcs.set_rx_mcs_bitmask1(0xff);  // MCS 0-7
   // mcs.rx_mcs_head.set_bitmask(0xffff);  // MCS 0-15
 
   HtExtCapabilities& hec = htc.ht_ext_cap;
@@ -128,7 +128,7 @@ HtOperation BuildHtOperation(const wlan_channel_t& channel) {
   tail.set_pco_phase(0);
 
   SupportedMcsSet& mcs = hto.basic_mcs_set;
-  mcs.rx_mcs_head.set_bitmask(0xff);  // MCS 0-7
+  mcs.set_rx_mcs_bitmask1(0xff);  // MCS 0-7
 
   return hto;
 }

@@ -23,20 +23,20 @@ SupportedMcsSet IntersectMcs(const SupportedMcsSet& lhs, const SupportedMcsSet& 
   // Perform bitwise-AND on bitmask fields, which represent MCS
   // Take minimum of numeric values
 
+  // TODO(fxbug.dev/100541): Revisit this logic and verify that we're intersecting
+  //                         correctly.
   auto result = SupportedMcsSet{};
-  auto& rx_mcs_head = result.rx_mcs_head;
-  SET_BITFIELD_AND(rx_mcs_head, bitmask);
-
-  auto& rx_mcs_tail = result.rx_mcs_tail;
-  SET_BITFIELD_AND(rx_mcs_tail, bitmask);
-  SET_BITFIELD_MIN(rx_mcs_tail, highest_rate);
-
-  auto& tx_mcs = result.tx_mcs;
-  SET_BITFIELD_AND(tx_mcs, set_defined);
-  SET_BITFIELD_AND(tx_mcs, rx_diff);
-  SET_BITFIELD_MIN(tx_mcs, max_ss);
-  SET_BITFIELD_AND(tx_mcs, ueqm);
-
+  result.set_rx_mcs_bitmask1(lhs.rx_mcs_bitmask1() & rhs.rx_mcs_bitmask1());
+  result.set_rx_mcs_bitmask2(lhs.rx_mcs_bitmask2() & rhs.rx_mcs_bitmask2());
+  result.set_rx_highest_rate(std::min(lhs.rx_highest_rate(), rhs.rx_highest_rate()));
+  result.set_tx_set_defined(lhs.tx_set_defined() & rhs.tx_set_defined());
+  if (result.tx_set_defined()) {
+    result.set_tx_rx_diff(lhs.tx_rx_diff() & rhs.tx_rx_diff());
+    if (result.tx_rx_diff()) {
+      result.set_tx_max_ss(std::min(lhs.tx_max_ss(), rhs.tx_max_ss()));
+      result.set_tx_unequal_mod(lhs.tx_unequal_mod() & rhs.tx_unequal_mod());
+    }
+  }
   return result;
 }
 

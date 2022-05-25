@@ -140,12 +140,8 @@ TEST(WriteElement, HtCapabilities) {
   HtCapabilities ht_caps = {
       .ht_cap_info = HtCapabilityInfo{0xbbaa},
       .ampdu_params = AmpduParams{0x55},
-      .mcs_set =
-          SupportedMcsSet{
-              .rx_mcs_head = SupportedMcsRxMcsHead{0x0706050403020100ul},
-              .rx_mcs_tail = SupportedMcsRxMcsTail{0x0b0a0908u},
-              .tx_mcs = SupportedMcsTxMcs{0x0f0e0d0cu},
-          },
+      .mcs_set = SupportedMcsSet{{0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc,
+                                  0xd, 0xe, 0xf}},
       .ht_ext_cap = HtExtCapabilities{0xeeddu},
       .txbf_cap = TxBfCapability{0x44332211u},
       .asel_cap = AselCapability{0x77},
@@ -165,12 +161,8 @@ TEST(WriteElement, HtOperation) {
       .primary_channel = 36,
       .head = HtOpInfoHead{0x44332211u},
       .tail = HtOpInfoTail{0x55},
-      .basic_mcs_set =
-          SupportedMcsSet{
-              .rx_mcs_head = SupportedMcsRxMcsHead{0x0706050403020100ul},
-              .rx_mcs_tail = SupportedMcsRxMcsTail{0x0b0a0908u},
-              .tx_mcs = SupportedMcsTxMcs{0x0f0e0d0cu},
-          },
+      .basic_mcs_set = SupportedMcsSet{{0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb,
+                                        0xc, 0xd, 0xe, 0xf}},
   };
   WriteHtOperation(&buf.w, ht_op);
   EXPECT_TRUE(equal(expected, buf.w.WrittenData()));

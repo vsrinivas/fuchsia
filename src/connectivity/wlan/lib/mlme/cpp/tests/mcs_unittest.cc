@@ -13,39 +13,48 @@ TEST(McsTest, Intersect) {
   SupportedMcsSet rhs;
   SupportedMcsSet result;
 
-  lhs.rx_mcs_head.set_bitmask(0xffff);
-  rhs.rx_mcs_head.set_bitmask(0x00ff);
-  lhs.rx_mcs_tail.set_bitmask(0x0f0f);
-  rhs.rx_mcs_tail.set_bitmask(0x1fff);
+  lhs.set_rx_mcs_bitmask1(0xffff);
+  rhs.set_rx_mcs_bitmask1(0x00ff);
+  lhs.set_rx_mcs_bitmask2(0x0f0f);
+  rhs.set_rx_mcs_bitmask2(0x1fff);
 
-  lhs.rx_mcs_tail.set_highest_rate(1023);  // Max Mbps defined
-  rhs.rx_mcs_tail.set_highest_rate(543);
+  lhs.set_rx_highest_rate(1023);  // Max Mbps defined
+  rhs.set_rx_highest_rate(543);
 
-  lhs.tx_mcs.set_set_defined(1);
-  rhs.tx_mcs.set_set_defined(1);
+  lhs.set_tx_set_defined(1);
+  rhs.set_tx_set_defined(1);
 
-  lhs.tx_mcs.set_rx_diff(1);
-  rhs.tx_mcs.set_rx_diff(0);
+  lhs.set_tx_rx_diff(1);
+  rhs.set_tx_rx_diff(0);
 
-  lhs.tx_mcs.set_max_ss(3);
-  rhs.tx_mcs.set_max_ss(1);
+  lhs.set_tx_max_ss(3);
+  rhs.set_tx_max_ss(1);
 
-  lhs.tx_mcs.set_ueqm(0);
-  rhs.tx_mcs.set_ueqm(0);
+  lhs.set_tx_unequal_mod(0);
+  rhs.set_tx_unequal_mod(0);
 
   result = IntersectMcs(lhs, rhs);
-  EXPECT_EQ(0xfful, result.rx_mcs_head.bitmask());
-  EXPECT_EQ(0x0f0ful, result.rx_mcs_tail.bitmask());
-  EXPECT_EQ(543, result.rx_mcs_tail.highest_rate());
-  EXPECT_EQ(1, result.tx_mcs.set_defined());
-  EXPECT_EQ(0, result.tx_mcs.rx_diff());
-  EXPECT_EQ(1, result.tx_mcs.max_ss());
-  EXPECT_EQ(0, result.tx_mcs.ueqm());
+  EXPECT_EQ(0xfful, result.rx_mcs_bitmask1());
+  EXPECT_EQ(0x0f0ful, result.rx_mcs_bitmask2());
+  EXPECT_EQ(543, result.rx_highest_rate());
+  EXPECT_EQ(1, result.tx_set_defined());
+  EXPECT_EQ(0, result.tx_rx_diff());
+  EXPECT_EQ(0, result.tx_max_ss());
+  EXPECT_EQ(0, result.tx_unequal_mod());
 
-  lhs.rx_mcs_head.set_bitmask(0xfff0fff);
-  rhs.rx_mcs_head.set_bitmask(0x001fff0);
+  // Tx values only set if tx_rx_diff is true.
+  rhs.set_tx_rx_diff(1);
   result = IntersectMcs(lhs, rhs);
-  EXPECT_EQ(0x0010ff0ul, result.rx_mcs_head.bitmask());
+  EXPECT_EQ(1, result.tx_set_defined());
+  EXPECT_EQ(1, result.tx_rx_diff());
+  EXPECT_EQ(1, result.tx_max_ss());
+  EXPECT_EQ(0, result.tx_unequal_mod());
+
+  // Double check mcs intersection.
+  lhs.set_rx_mcs_bitmask1(0xfff0fff);
+  rhs.set_rx_mcs_bitmask1(0x001fff0);
+  result = IntersectMcs(lhs, rhs);
+  EXPECT_EQ(0x0010ff0ul, result.rx_mcs_bitmask1());
 }
 }  // namespace
 }  // namespace wlan

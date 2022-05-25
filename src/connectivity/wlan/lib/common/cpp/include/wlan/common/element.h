@@ -5,6 +5,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_ELEMENT_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_ELEMENT_H_
 
+#include <endian.h>
 #include <fuchsia/hardware/wlan/associnfo/c/banjo.h>
 #include <fuchsia/wlan/ieee80211/c/banjo.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
@@ -16,7 +17,6 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
-#include <endian.h>
 
 #include <wlan/common/bitfield.h>
 #include <wlan/common/element_id.h>
@@ -524,62 +524,23 @@ class AmpduParams : public common::BitField<uint8_t> {
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.4.2.56.4
-class SupportedMcsRxMcsHead : public common::BitField<uint64_t> {
+class SupportedMcsSet : public common::LittleEndianBitField<16> {
  public:
-  constexpr explicit SupportedMcsRxMcsHead(uint64_t val) : common::BitField<uint64_t>(val) {}
-  constexpr SupportedMcsRxMcsHead() = default;
+  constexpr explicit SupportedMcsSet(std::array<uint8_t, 16> val)
+      : common::LittleEndianBitField<16>(val) {}
+  constexpr SupportedMcsSet() = default;
 
-  bool Support(uint8_t mcs_index) const { return 1 == (1 & (bitmask() >> mcs_index)); }
-
-  // HT-MCS table in IEEE Std 802.11-2016, Annex B.4.17.2
-  // VHT-MCS tables in IEEE Std 802.11-2016, 21.5
-  WLAN_BIT_FIELD(bitmask, 0, 64)
-} __PACKED;
-
-// IEEE Std 802.11-2016, 9.4.2.56.4
-class SupportedMcsRxMcsTail : public common::BitField<uint32_t> {
- public:
-  constexpr explicit SupportedMcsRxMcsTail(uint32_t val) : common::BitField<uint32_t>(val) {}
-  constexpr SupportedMcsRxMcsTail() = default;
-
-  WLAN_BIT_FIELD(bitmask, 0, 13)
-  WLAN_BIT_FIELD(reserved1, 13, 3)
-  WLAN_BIT_FIELD(highest_rate, 16, 10)  // Mbps. Rx Highest Supported Rate.
-  WLAN_BIT_FIELD(reserved2, 26, 6)
-} __PACKED;
-
-// IEEE Std 802.11-2016, 9.4.2.56.4
-class SupportedMcsTxMcs : public common::BitField<uint32_t> {
- public:
-  constexpr explicit SupportedMcsTxMcs(uint32_t chunk) : common::BitField<uint32_t>(chunk) {}
-  constexpr SupportedMcsTxMcs() = default;
-
-  WLAN_BIT_FIELD(set_defined, 0, 1)  // Add 96 for the original bit location
-  WLAN_BIT_FIELD(rx_diff, 1, 1)
-  WLAN_BIT_FIELD(max_ss, 2, 2)
-  WLAN_BIT_FIELD(ueqm, 4, 1)  // Transmit Unequal Modulation.
-  WLAN_BIT_FIELD(reserved, 5, 27)
-
-  uint8_t max_ss_human() const { return max_ss() + 1; }
-  void set_max_ss_human(uint8_t num) {
-    constexpr uint8_t kLowerbound = 1;
-    constexpr uint8_t kUpperbound = 4;
-    if (num < kLowerbound)
-      num = kLowerbound;
-    if (num > kUpperbound)
-      num = kUpperbound;
-    set_max_ss(num - 1);
-  }
-} __PACKED;
-
-// IEEE Std 802.11-2016, 9.4.2.56.4
-struct SupportedMcsSet {
-  // TODO(fxbug.dev/82503): We represent a 128 bit field as several int types
-  //    because our bitset implementation depends on integer-size fields.
-  //    Switch to an array when supported.
-  SupportedMcsRxMcsHead rx_mcs_head;
-  SupportedMcsRxMcsTail rx_mcs_tail;
-  SupportedMcsTxMcs tx_mcs;
+  // IEEE Std 802.11-2016, 9.4.2.56.4.
+  WLAN_BIT_FIELD(rx_mcs_bitmask1, 0, 64)
+  WLAN_BIT_FIELD(rx_mcs_bitmask2, 64, 13)
+  WLAN_BIT_FIELD(reserved1, 77, 3)
+  WLAN_BIT_FIELD(rx_highest_rate, 80, 10)
+  WLAN_BIT_FIELD(reserved2, 90, 6)
+  WLAN_BIT_FIELD(tx_set_defined, 96, 1)
+  WLAN_BIT_FIELD(tx_rx_diff, 97, 1)
+  WLAN_BIT_FIELD(tx_max_ss, 98, 2)
+  WLAN_BIT_FIELD(tx_unequal_mod, 100, 1)
+  WLAN_BIT_FIELD(reserved3, 101, 27)
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.4.2.56.5
@@ -751,9 +712,7 @@ struct HtCapabilities {
     HtCapabilities dst{};
     dst.ht_cap_info.set_val(ddk.ht_capability_info);
     dst.ampdu_params.set_val(ddk.ampdu_params);
-    dst.mcs_set.rx_mcs_head.set_val(betoh64(*reinterpret_cast<const uint64_t*>(ddk.supported_mcs_set)));
-    dst.mcs_set.rx_mcs_tail.set_val(betoh32(*reinterpret_cast<const uint32_t*>(ddk.supported_mcs_set + 8)));
-    dst.mcs_set.tx_mcs.set_val(betoh32(*reinterpret_cast<const uint32_t*>(ddk.supported_mcs_set + 12)));
+    memcpy(dst.mcs_set.mut_val()->data(), &ddk.supported_mcs_set[0], sizeof(dst.mcs_set));
     dst.ht_ext_cap.set_val(ddk.ht_ext_capabilities);
     dst.txbf_cap.set_val(ddk.tx_beamforming_capabilities);
     dst.asel_cap.set_val(ddk.asel_capabilities);
@@ -764,9 +723,7 @@ struct HtCapabilities {
     ht_capabilities_fields_t ddk{};
     ddk.ht_capability_info = ht_cap_info.val();
     ddk.ampdu_params = ampdu_params.val();
-    *reinterpret_cast<uint64_t*>(ddk.supported_mcs_set) = htobe64(mcs_set.rx_mcs_head.val());
-    *reinterpret_cast<uint32_t*>(ddk.supported_mcs_set + 8) = htobe32(mcs_set.rx_mcs_tail.val());
-    *reinterpret_cast<uint32_t*>(ddk.supported_mcs_set + 12) = htobe32(mcs_set.tx_mcs.val());
+    memcpy(&ddk.supported_mcs_set[0], mcs_set.val().data(), sizeof(ddk.supported_mcs_set));
     ddk.ht_ext_capabilities = ht_ext_cap.val();
     ddk.tx_beamforming_capabilities = txbf_cap.val();
     ddk.asel_capabilities = asel_cap.val();
@@ -851,9 +808,7 @@ struct HtOperation {
     dst.primary_channel = ddk.primary_channel;
     dst.head.set_val(ddk.head);
     dst.tail.set_val(ddk.tail);
-    dst.basic_mcs_set.rx_mcs_head.set_val(ddk.rx_mcs_head);
-    dst.basic_mcs_set.rx_mcs_tail.set_val(ddk.rx_mcs_tail);
-    dst.basic_mcs_set.tx_mcs.set_val(ddk.tx_mcs);
+    memcpy(dst.basic_mcs_set.mut_val()->data(), ddk.mcs_set, sizeof(ddk.mcs_set));
     return dst;
   }
 
@@ -862,9 +817,7 @@ struct HtOperation {
     ddk.primary_channel = primary_channel;
     ddk.head = head.val();
     ddk.tail = tail.val();
-    ddk.rx_mcs_head = basic_mcs_set.rx_mcs_head.val();
-    ddk.rx_mcs_tail = basic_mcs_set.rx_mcs_tail.val();
-    ddk.tx_mcs = basic_mcs_set.tx_mcs.val();
+    memcpy(ddk.mcs_set, basic_mcs_set.val().data(), sizeof(ddk.mcs_set));
     return ddk;
   }
 

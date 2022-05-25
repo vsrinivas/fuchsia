@@ -253,9 +253,9 @@ TEST(ParseElement, HtCapabilities) {
   ASSERT_NE(nullptr, h);
   EXPECT_EQ(0xbbaau, h->ht_cap_info.val());
   EXPECT_EQ(0x55u, h->ampdu_params.val());
-  EXPECT_EQ(0x0706050403020100ul, h->mcs_set.rx_mcs_head.val());
-  EXPECT_EQ(0x0b0a0908u, h->mcs_set.rx_mcs_tail.val());
-  EXPECT_EQ(0x0f0e0d0cu, h->mcs_set.tx_mcs.val());
+  std::array<uint8_t, 16> expected_mcs_set = {0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7,
+                                              0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf};
+  EXPECT_EQ(expected_mcs_set, h->mcs_set.val());
   EXPECT_EQ(0xeeddu, h->ht_ext_cap.val());
   EXPECT_EQ(0x44332211u, h->txbf_cap.val());
   EXPECT_EQ(0x77u, h->asel_cap.val());
@@ -281,9 +281,9 @@ TEST(ParseElement, HtOperation) {
   EXPECT_EQ(36, h->primary_channel);
   EXPECT_EQ(0x44332211u, h->head.val());
   EXPECT_EQ(0x55u, h->tail.val());
-  EXPECT_EQ(0x0706050403020100ul, h->basic_mcs_set.rx_mcs_head.val());
-  EXPECT_EQ(0x0b0a0908u, h->basic_mcs_set.rx_mcs_tail.val());
-  EXPECT_EQ(0x0f0e0d0cu, h->basic_mcs_set.tx_mcs.val());
+  std::array<uint8_t, 16> expected_mcs_set = {0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7,
+                                              0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf};
+  EXPECT_EQ(expected_mcs_set, h->basic_mcs_set.val());
 }
 
 TEST(ParseElement, HtOperationTooShort) {

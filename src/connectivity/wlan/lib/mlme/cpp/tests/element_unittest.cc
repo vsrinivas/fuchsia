@@ -131,9 +131,9 @@ TEST(HtCapabilities, DdkConversion) {
   auto ieee = HtCapabilities::FromDdk(ddk);
   EXPECT_EQ(0x016eU, ieee.ht_cap_info.val());
   EXPECT_EQ(0x17U, ieee.ampdu_params.val());
-  EXPECT_EQ(0x00000001000000ffU, ieee.mcs_set.rx_mcs_head.val());
-  EXPECT_EQ(0x01000000U, ieee.mcs_set.rx_mcs_tail.val());
-  EXPECT_EQ(0x00000000U, ieee.mcs_set.tx_mcs.val());
+  std::array<uint8_t, 16> expected_mcs_set = {0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0xff,
+                                              0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+  EXPECT_EQ(expected_mcs_set, ieee.mcs_set.val());
   EXPECT_EQ(0x1234U, ieee.ht_ext_cap.val());
   EXPECT_EQ(0x12345678U, ieee.txbf_cap.val());
   EXPECT_EQ(0xffU, ieee.asel_cap.val());
@@ -154,26 +154,25 @@ TEST(HtOperation, DdkConversion) {
       .primary_channel = 123,
       .head = 0x01020304,
       .tail = 0x05,
-      .rx_mcs_head = 0x00000001000000ff,
-      .rx_mcs_tail = 0x01000000,
-      .tx_mcs = 0x00000000,
+      .mcs_set = {0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0xff, 0x01, 0x00, 0x00, 0x00, 0x00,
+                  0x00, 0x00, 0x00},
   };
 
   auto ieee = HtOperation::FromDdk(ddk);
   EXPECT_EQ(123U, ieee.primary_channel);
   EXPECT_EQ(0x01020304U, ieee.head.val());
   EXPECT_EQ(0x05U, ieee.tail.val());
-  EXPECT_EQ(0x00000001000000ffU, ieee.basic_mcs_set.rx_mcs_head.val());
-  EXPECT_EQ(0x01000000U, ieee.basic_mcs_set.rx_mcs_tail.val());
-  EXPECT_EQ(0x00000000U, ieee.basic_mcs_set.tx_mcs.val());
+  std::array<uint8_t, 16> expected_mcs_set = {0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0xff,
+                                              0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+  EXPECT_EQ(expected_mcs_set, ieee.basic_mcs_set.val());
 
   auto ddk2 = ieee.ToDdk();
   EXPECT_EQ(ddk.primary_channel, ddk2.primary_channel);
   EXPECT_EQ(ddk.head, ddk2.head);
   EXPECT_EQ(ddk.tail, ddk2.tail);
-  EXPECT_EQ(ddk.rx_mcs_head, ddk2.rx_mcs_head);
-  EXPECT_EQ(ddk.rx_mcs_tail, ddk2.rx_mcs_tail);
-  EXPECT_EQ(ddk.tx_mcs, ddk2.tx_mcs);
+  for (size_t i = 0; i < sizeof(ddk.mcs_set); i++) {
+    EXPECT_EQ(ddk.mcs_set[i], ddk2.mcs_set[i]);
+  }
 }
 
 TEST(VhtCapabilities, DdkConversion) {

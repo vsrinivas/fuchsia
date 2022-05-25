@@ -31,9 +31,8 @@ wlan_assoc_ctx_t FakeDdkAssocCtx() {
               .primary_channel = 123,
               .head = 0x01020304,
               .tail = 0x05,
-              .rx_mcs_head = 0x00000001000000ff,
-              .rx_mcs_tail = 0x01000000,
-              .tx_mcs = 0x00000000,
+              .mcs_set = {0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+                          0x00, 0x00, 0x00, 0xff},
           },
       .has_vht_cap = true,
       .vht_cap =
