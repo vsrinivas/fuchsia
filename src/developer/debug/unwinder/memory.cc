@@ -5,6 +5,7 @@
 #include "src/developer/debug/unwinder/memory.h"
 
 #include <cstdint>
+
 #include "src/developer/debug/unwinder/error.h"
 
 namespace unwinder {
@@ -49,7 +50,7 @@ Error Memory::ReadEncoded(uint64_t& addr, uint64_t& res, uint8_t enc, uint64_t d
     return Error("no value");
   }
 
-  switch (enc & 0x70) {
+  switch (enc & 0xF0) {
     case 0x00:  // DW_EH_PE_absptr  Absolute value should only work for non-ptr types.
       res = 0;
       break;
@@ -146,7 +147,7 @@ Error Memory::ReadEncoded(uint64_t& addr, uint64_t& res, uint8_t enc, uint64_t d
       return Error("unsupported encoding: %#x", enc);
   }
 
-  // It's an extension not documented in the spec.
+  // It's an Linux extension not documented in the spec.
   if (enc & 0x80) {  // DW_EH_PE_indirect  indirect read from the pointer.
     int64_t val;
     if (auto err = Read(res, val); err.has_err()) {
@@ -158,9 +159,7 @@ Error Memory::ReadEncoded(uint64_t& addr, uint64_t& res, uint8_t enc, uint64_t d
   return Success();
 }
 
-void BoundedLocalMemory::AddRegion(uint64_t base, uint64_t size) {
-  regions_.emplace(base, size);
-}
+void BoundedLocalMemory::AddRegion(uint64_t base, uint64_t size) { regions_.emplace(base, size); }
 
 Error BoundedLocalMemory::ReadBytes(uint64_t addr, uint64_t size, void* dst) {
   auto it = regions_.upper_bound(addr);

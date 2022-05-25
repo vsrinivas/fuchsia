@@ -119,7 +119,7 @@ MinidumpMemory::MinidumpMemory(const crashpad::ProcessSnapshotMinidump& minidump
 
   std::string home = std::getenv("HOME");
   zxdb::BuildIDIndex build_id_index;
-  build_id_index.AddSymbolIndexFile(home + "/.fuchsia/debug/symbol-index");
+  build_id_index.AddSymbolIndexFile(home + "/.fuchsia/debug/symbol-index.json");
   build_id_index.AddBuildIdDir(home + "/.fuchsia/debug/symbol-cache");
 
   for (const auto& module : minidump.Modules()) {

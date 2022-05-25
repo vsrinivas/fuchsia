@@ -118,7 +118,9 @@ Error DwarfCfi::Load() {
     return Error("not an ELF image");
   }
 
-  // Finds the .eh_frame_hdr section.
+  // ==============================================================================================
+  // Load from the .eh_frame_hdr section.
+  // ==============================================================================================
   eh_frame_hdr_ptr_ = 0;
   pc_begin_ = -1;
   pc_end_ = 0;
@@ -177,7 +179,9 @@ Error DwarfCfi::Load() {
     return Error("empty binary search table");
   }
 
-  // Finds the .debug_frame. Any failure is acceptable here.
+  // ==============================================================================================
+  // Optionally load from the .debug_frame section. Any failure is not an error here.
+  // ==============================================================================================
   debug_frame_ptr_ = 0;
   debug_frame_end_ = 0;
   // if ehdr.e_shstrndx is 0, it means there's no section info, i.e., the binary is stripped.
@@ -229,12 +233,11 @@ Error DwarfCfi::Step(Memory* stack, const Registers& current, Registers& next) {
     }
   }
 
-  DwarfCfiParser cfi_parser(current.arch());
+  DwarfCfiParser cfi_parser(current.arch(), cie.code_alignment_factor, cie.data_alignment_factor);
 
   // Parse instructions in CIE first.
   if (auto err =
-          cfi_parser.ParseInstructions(elf_, cie.code_alignment_factor, cie.data_alignment_factor,
-                                       cie.instructions_begin, cie.instructions_end, -1);
+          cfi_parser.ParseInstructions(elf_, cie.instructions_begin, cie.instructions_end, -1);
       err.has_err()) {
     return err;
   }
@@ -242,9 +245,8 @@ Error DwarfCfi::Step(Memory* stack, const Registers& current, Registers& next) {
   cfi_parser.Snapshot();
 
   // Parse instructions in FDE until pc.
-  if (auto err = cfi_parser.ParseInstructions(elf_, cie.code_alignment_factor,
-                                              cie.data_alignment_factor, fde.instructions_begin,
-                                              fde.instructions_end, pc - fde.pc_begin);
+  if (auto err = cfi_parser.ParseInstructions(elf_, fde.instructions_begin, fde.instructions_end,
+                                              pc - fde.pc_begin);
       err.has_err()) {
     return err;
   }

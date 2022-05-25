@@ -14,6 +14,8 @@ static_library("unwinder") {
     "dwarf_cfi.h",
     "dwarf_cfi_parser.cc",
     "dwarf_cfi_parser.h",
+    "dwarf_expr.cc",
+    "dwarf_expr.h",
     "memory.cc",
     "registers.cc",
     "unwind.cc",
