@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/ui/benchmarks/image_grid_cpp/image_grid_view.h"
+#include "src/ui/benchmarks/image_grid_cpp/image_grid_view.h"
 
 #include <math.h>
 
@@ -109,7 +109,8 @@ void ImageGridView::UpdateScene(uint64_t presentation_time) {
     start_time_ = presentation_time;
     last_update_time_ = presentation_time;
   }
-  spring_.ElapseTime(static_cast<float>(presentation_time - last_update_time_) * kSecondsPerNanosecond);
+  spring_.ElapseTime(static_cast<float>(presentation_time - last_update_time_) *
+                     kSecondsPerNanosecond);
   last_update_time_ = presentation_time;
   x_offset_ = -spring_.GetValue();
 

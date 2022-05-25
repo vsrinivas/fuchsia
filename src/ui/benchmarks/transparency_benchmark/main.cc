@@ -71,9 +71,8 @@ class View : public fuchsia::ui::scenic::SessionListener {
     }
 
     uint8_t* vmo_base;
-    status = zx::vmar::root_self()->map(ZX_VM_PERM_WRITE | ZX_VM_PERM_READ,
-                                        0, image_vmo, 0, image_vmo_bytes,
-                                        reinterpret_cast<uintptr_t*>(&vmo_base));
+    status = zx::vmar::root_self()->map(ZX_VM_PERM_WRITE | ZX_VM_PERM_READ, 0, image_vmo, 0,
+                                        image_vmo_bytes, reinterpret_cast<uintptr_t*>(&vmo_base));
 
     SetBgra8Pixels(vmo_base, image_info);
 
@@ -197,7 +196,8 @@ class View : public fuchsia::ui::scenic::SessionListener {
     }
 
     for (int i = 0; i < kFullScreenLayers; i++) {
-      full_res_textures_.push_back(CreateTexture(static_cast<uint32_t>(view_width_), static_cast<uint32_t>(view_height_)));
+      full_res_textures_.push_back(
+          CreateTexture(static_cast<uint32_t>(view_width_), static_cast<uint32_t>(view_height_)));
     }
 
     state_ = BLANK;
@@ -318,7 +318,8 @@ class View : public fuchsia::ui::scenic::SessionListener {
     uint64_t presentation_time = presentation_info.presentation_time;
     constexpr float kSecondsPerNanosecond = .000'000'001f;
 
-    float t = static_cast<float>(presentation_time - last_presentation_time_) * kSecondsPerNanosecond;
+    float t =
+        static_cast<float>(presentation_time - last_presentation_time_) * kSecondsPerNanosecond;
     if (last_presentation_time_ == 0) {
       t = 0;
     }
