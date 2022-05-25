@@ -31,7 +31,7 @@ protocol GraphCreator {
 
         /// Name of this graph, used for diagnostics only.
         /// If specified, ideally this should be globally unique and have a
-        /// printable CamelCase format, but this is not validated.
+        /// printable CamelCase format, but uniqueness is not required.
         ///
         /// Optional. Empty if not specified.
         2: name string:MAX_NAME_LENGTH;
@@ -48,6 +48,17 @@ protocol GraphCreator {
         /// Optional. If not specified, the real-time FIDL thread runs at a normal
         /// priority.
         3: realtime_fidl_thread_deadline_profile zx.handle:PROFILE;
+
+        /// If specified, the graph will use synthetic clocks that are created
+        /// and controlled over the given channel. This can be used to run the
+        /// graph faster than real time, which is useful in integration tests.
+        ///
+        /// If specified, then ALL clocks used by this graph MUST be created by
+        /// this realm OR by [`Graph.CreateGraphControlledReferenceClock`],
+        /// which will use this realm internally.
+        ///
+        /// Optional. If not specified, the graph uses real clocks.
+        4: synthetic_clock_realm server_end:SyntheticClockRealm;
     }) -> (table {}) error CreateGraphError;
 };
 
@@ -108,10 +119,10 @@ protocol GraphCreator {
 ///
 /// Every object has an optional string `name`. If specified, ideally this name
 /// should be unique within the [`Graph`] and have a printable CamelCase format,
-/// but this is not required. Names are used for developer-visible diagnostics
-/// only -- they do not need to be unique. Duplicate names can at worst lead to
-/// potentially-confusing diagnostics. IDs, not names, should be used when
-/// unique identification is required.
+/// but uniqueness is not required. Names are used for developer-visible
+/// diagnostics only -- they do not need to be unique. Duplicate names can at
+/// worst lead to potentially-confusing diagnostics. IDs, not names, should be
+/// used when unique identification is required.
 ///
 /// ## Clocks
 ///
@@ -516,7 +527,10 @@ protocol Graph {
 type CreateGraphError = flexible enum {};
 
 /// Type of errors return by CreateNode methods.
-type CreateNodeError = flexible enum {};
+type CreateNodeError = flexible enum {
+    /// A provided `zx.handle:CLOCK` was invalid or had incorrect rights.
+    INVALID_CLOCK = 1;
+};
 
 /// Type of errors return by [`DeleteNode`].
 type DeleteNodeError = flexible enum {

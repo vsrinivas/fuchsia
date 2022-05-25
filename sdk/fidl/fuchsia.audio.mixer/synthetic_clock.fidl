@@ -1,0 +1,137 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.audio.mixer;
+
+using zx;
+using fuchsia.hardware.audio;
+
+/// Creates and controls a collection of synthetic clocks. Each realm has its
+/// own, isolated, synthetic monotonic clock, which advances on demand. See
+/// [`SyntheticClockRealm.AdvanceBy`]. Within a realm, all clocks advance
+/// atomically relative to the realm's synthetic montonic clock.
+protocol SyntheticClockRealm {
+    /// Creates a new synthetic clock.
+    CreateClock(resource table {
+        /// Name of this clock, used for diagnostics only.
+        /// If specified, ideally this should be globally unique and have a
+        /// printable CamelCase format, but uniqueness is not required.
+        ///
+        /// Optional. Empty if not specified.
+        1: name string:MAX_NAME_LENGTH;
+
+        /// Domain in which the clock runs. This is isolated from clock domains
+        /// in other realms, including the real-time realm. In particular, a
+        /// value of `CLOCK_DOMAIN_MONOTONIC` means this clock has the same rate
+        /// as the realm's synthetic monotonic clock -- it does NOT mean the
+        /// clock has the same rate as the system-wide monotonic clock.
+        ///
+        /// Required.
+        2: domain fuchsia.hardware.audio.clock_domain;
+
+        /// Whether the clock's rate can be adjusted via the `control` channel.
+        ///
+        /// Required.
+        3: adjustable bool;
+
+        /// A channel that can be used to read and adjust the clock. If the
+        /// client does not need to read or adjust the clock, this may be
+        /// omitted.
+        ///
+        /// Optional.
+        4: control server_end:SyntheticClock;
+    }) -> (resource table {
+        /// A handle for this synthetic clock. This handle may be passed to our
+        /// parent [`Graph`] wherever a `zx.handle:CLOCK` is needed. The
+        /// [`Graph`] will recognized this handle until [`ForgetClock`] is
+        /// called.
+        ///
+        /// This handle has rights `ZX_RIGHTS_DUPLICATE | ZX_RIGHTS_TRANSFER`.
+        /// It does not have `ZX_RIGHTS_READ` or `ZX_RIGHTS_WRITE` and cannot
+        /// be read or updated directly. The clock's value is meaningless. To
+        /// read the clock, use the `control`, below.
+        1: handle zx.handle:CLOCK;
+
+        /// A channel that can be used to read and adjust the clock. If the
+        /// client does not need to read or adjust the clock, this channel can
+        /// be closed immediately.
+        2: control client_end:SyntheticClock;
+    }) error CreateClockError;
+
+    /// Forgets about a synthetic clock. This releases internal resources and
+    /// closes the clock's `SyntheticClock` channel. After this returns, our
+    /// parent [`Graph`] will not recognize this handle.
+    ///
+    /// * error `ZX_ERR_INVALID_ARGS` if missing a required field
+    /// * error `ZX_ERR_NOT_FOUND` if `handle` was not created by
+    ///   [`CreateClock`] or if was already forgotten
+    ForgetClock(resource table {
+        /// The clock to forget.
+        ///
+        /// Required.
+        1: handle zx.handle:CLOCK;
+    }) -> (table {}) error zx.status;
+
+    /// Observes a synthetic clock. This can observe any clock created by this
+    /// realm, including clocks created by [`CreateClock`] as well as clocks
+    /// created by [`Graph.CreateGraphControlledClock`] in the parent [`Graph`].
+    ///
+    /// * error `ZX_ERR_INVALID_ARGS` if missing a required field
+    /// * error `ZX_ERR_NOT_FOUND` if `handle` was not created by this realm or
+    ///   if has been forgotten
+    ObserveClock(resource table {
+        /// The clock to observe.
+        ///
+        /// Required.
+        1: handle zx.handle:CLOCK;
+
+        /// A channel to observe the clock. Since this only observes the clock,
+        /// the only legal method is [`SyntheticClock.Now`] -- it is illegal to
+        /// call [`SyntheticClock.Create`].
+        ///
+        /// Required.
+        2: observe server_end:SyntheticClock;
+    }) -> (table {}) error zx.status;
+
+    /// Reads the current synthetic monotonic time.
+    Now(table {}) -> (table {
+        1: now zx.time;
+    });
+
+    /// Advances synthetic monotonic time by the given duration, which must be
+    /// positive. Does not return until the graph has completed all actions that
+    /// must occur over the given duration.
+    ///
+    /// * error `ZX_ERR_INVALID_ARGS` if the duration is not positive
+    AdvanceBy(table {
+        /// Required.
+        1: duration zx.duration;
+    }) -> (table {}) error zx.status;
+};
+
+/// Reads and adjusts a synthetic clock.
+protocol SyntheticClock {
+    /// Reads the clock's current time.
+    Now(table {}) -> (table {
+        1: now zx.time;
+    });
+
+    /// Sets the clock's rate adjustment, in parts-per-million, relative to the
+    /// realm's synthetic monotonic clock. The semantics are identical to
+    /// `zx_clock_update`.
+    SetRate(table {
+        /// Required.
+        1: rate_adjust_ppm int32;
+    }) -> (table {}) error zx.status;
+};
+
+type CreateClockError = flexible enum {
+    /// Missing a required field.
+    MISSING_FIELD = 1;
+
+    /// CreateClock was called with `domain = MONOTONIC` and `adjustable =
+    /// true`. This is an illegal configuration because the MONOTONIC domain is
+    /// not adjustable, by definition.
+    MONOTONIC_DOMAIN_IS_NOT_ADJUSTABLE = 2;
+};

@@ -9,11 +9,13 @@ fidl("fuchsia.audio.mixer") {
     "graph.fidl",
     "node_options.fidl",
     "sampler_options.fidl",
+    "synthetic_clock.fidl",
   ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.audio",
     "//sdk/fidl/fuchsia.audio.effects",
+    "//sdk/fidl/fuchsia.hardware.audio",
     "//sdk/fidl/fuchsia.media2",
     "//sdk/fidl/fuchsia.mediastreams",
     "//zircon/vdso/zx",
