@@ -16,6 +16,7 @@ use test_output_directory::{
     self as directory,
     testing::{ExpectedDirectory, ExpectedSuite, ExpectedTestCase, ExpectedTestRun},
 };
+use test_util::assert_geq;
 
 /// split and sort output as output can come in any order.
 /// `output` is of type vec<u8> and `expected_output` is a string.
@@ -643,6 +644,42 @@ async fn launch_and_test_huge_test(
     directory::testing::assert_run_result(
         output_dir.path(),
         &ExpectedTestRun::new(directory::Outcome::Passed).with_suite(expected_test_suite),
+    );
+}
+
+#[fuchsia::test]
+async fn launch_and_test_logspam_test() {
+    let (reporter, _output, output_dir) = create_shell_and_dir_reporter();
+    let outcome = run_test_once(
+        reporter,
+        new_test_params(
+            "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/logspam_test.cm",
+        ),
+        None,
+    )
+    .await
+    .expect("Running test should not fail");
+    assert_eq!(outcome, Outcome::Passed);
+
+    directory::testing::assert_run_result(
+        output_dir.path(),
+        &ExpectedTestRun::new(directory::Outcome::Passed).with_suite(
+            ExpectedSuite::new(
+                "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/logspam_test.cm",
+                directory::Outcome::Passed,
+            )
+            .with_case(ExpectedTestCase::new("spam_logs", directory::Outcome::Passed))
+            .with_tag(TestTag::new("internal", "true"))
+            .with_matching_artifact(
+                directory::ArtifactType::Syslog,
+                "syslog.txt".into(),
+                move |contents| {
+                    // The test should produce many more lines, but logs could be dropped due to
+                    // timeouts.
+                    assert_geq!(contents.lines().count(), 1000);
+                },
+            ),
+        ),
     );
 }
 

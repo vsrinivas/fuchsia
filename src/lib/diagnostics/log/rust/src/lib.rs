@@ -6,7 +6,7 @@
 //! Publish diagnostics as a stream of log messages.
 
 use fidl_fuchsia_diagnostics_stream::Record;
-use fidl_fuchsia_logger::LogSinkMarker;
+use fidl_fuchsia_logger::{LogSinkMarker, LogSinkProxy};
 use fuchsia_component::client::connect_to_protocol;
 use fuchsia_zircon::{self as zx};
 use std::{any::TypeId, fmt::Debug, future::Future};
@@ -115,18 +115,26 @@ pub struct Publisher {
 }
 
 impl Publisher {
-    /// Construct a new `Publisher` from the provided `LogSink`. Returns a `Publisher` and a future
+    /// Construct a new `Publisher`. Returns a `Publisher` and a future
     /// which must be polled to listen to interest/severity changes from the environment `LogSink`.
     fn new(options: PublishOptions<'_>) -> Result<(Self, impl Future<Output = ()>), PublishError> {
         let log_sink = connect_to_protocol::<LogSinkMarker>()
             .map_err(|e| e.to_string())
             .map_err(PublishError::LogSinkConnect)?;
+        Self::new_with_proxy(log_sink, options)
+    }
 
-        let mut sink = Sink::new(&log_sink)?;
+    /// Construct a new `Publisher` from the provided `LogSink`. Returns a `Publisher` and a future
+    /// which must be polled to listen to interest/severity changes from the environment `LogSink`.
+    pub fn new_with_proxy(
+        proxy: LogSinkProxy,
+        options: PublishOptions<'_>,
+    ) -> Result<(Self, impl Future<Output = ()>), PublishError> {
+        let mut sink = Sink::new(&proxy)?;
         if let Some(tags) = options.tags {
             sink.set_tags(&tags);
         }
-        let (filter, on_change) = InterestFilter::new(log_sink, options.interest);
+        let (filter, on_change) = InterestFilter::new(proxy, options.interest);
 
         Ok((Self { inner: Registry::default().with(sink).with(filter) }, on_change))
     }
