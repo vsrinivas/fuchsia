@@ -1,0 +1,7 @@
+toc:
+- title: Proposals
+  section:
+  - title: "RFC-0000: Hello world"
+    path: /docs/contribute/governance/rfcs/0000_hello_world.md
+  - title: "RFC-NNNN: Back to the Fuchsia"  # TODO: DO NOT SUBMIT, update.
+    path: /docs/contribute/governance/rfcs/NNNN_back_to_the_fuchsia.md  # TODO: DO NOT SUBMIT, update.

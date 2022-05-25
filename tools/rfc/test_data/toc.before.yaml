@@ -1,0 +1,5 @@
+toc:
+- title: Proposals
+  section:
+  - title: "RFC-0000: Hello world"
+    path: /docs/contribute/governance/rfcs/0000_hello_world.md

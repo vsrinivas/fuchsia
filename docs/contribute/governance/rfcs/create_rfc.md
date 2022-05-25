@@ -17,6 +17,10 @@ Note: You may have additional files if you are including images in your RFC.
 * [Create a markdown file](#create-markdown)
 * [Create a _toc.yaml entry](#toc)
 
+Note: You can use the `fx rfc` tool that automates these three steps. This
+tool helps you to interactively populate the required RFC metadata fields and
+creates a blank RFC markdown file using the [template][rfc-template].
+
 ## Create metadata {#create-metadata}
 
 The metadata of an RFC defines many values that are used to populate the RFC
@@ -149,7 +153,7 @@ To identify your RFC, you need to edit the
           <td><code>status</code></td><td><b>Required</b>
             <p>
               Define the status of your RFC. When you first submit an RFC, this
-              value should be blank. After your RFC is reviewed,
+              value should be <code>Pending</code>. After your RFC is reviewed,
               the status will be changed to <code>Accepted</code> or
               <code>Rejected</code>.
             </p>

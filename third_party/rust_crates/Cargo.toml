@@ -171,6 +171,7 @@ serde_derive = "1.0.116"
 serde_json = "1.0.59"
 serde_json5 = { path = "mirrors/serde_json5" }
 serde_repr = "0.1.7"
+serde_yaml = "0.8.23"
 sha2 = "0.9"
 signature =  "1.4.0"
 slab = "0.4"
@@ -244,7 +245,6 @@ rust_icu_uenum = { version = "2.0.2", default-features = false, features = ["ren
 rust_icu_uloc = { version = "2.0.2", default-features = false, features = ["renaming", "icu_version_in_env", "icu_version_67_plus"] }
 rust_icu_unorm2 = { version = "2.0.2", default-features = false, features = ["renaming", "icu_version_in_env", "icu_version_67_plus"] }
 rust_icu_ustring = { version = "2.0.2", default-features = false, features = ["renaming", "icu_version_in_env"] }
-serde_yaml = "0.8.23"
 tokio-rustls = "0.13.0"
 trust-dns-proto = { version = "0.21.2", default-features = false, features = ["testing"] }
 trust-dns-resolver = { version = "0.21.2", default-features = false, features = ["testing"] }

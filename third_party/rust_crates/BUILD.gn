@@ -776,10 +776,8 @@ group("serde_repr") {
   public_deps = [ ":serde_repr-v0_1_7($host_toolchain)" ]
 }
 
-if (current_os == "fuchsia") {
-  group("serde_yaml") {
-    public_deps = [ ":serde_yaml-v0_8_23" ]
-  }
+group("serde_yaml") {
+  public_deps = [ ":serde_yaml-v0_8_23" ]
 }
 
 if (!(current_os == "fuchsia")) {

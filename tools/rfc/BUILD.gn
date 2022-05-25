@@ -1,0 +1,44 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/host.gni")
+import("//build/rust/rustc_binary.gni")
+
+if (is_host) {
+  rustc_binary("rfc_bin") {
+    name = "rfc"
+    with_unit_tests = true
+    deps = [
+      "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:argh",
+      "//third_party/rust_crates:pretty_assertions",
+      "//third_party/rust_crates:serde",
+      "//third_party/rust_crates:serde_yaml",
+      "//third_party/rust_crates:tempfile",
+    ]
+    sources = [ "src/main.rs" ]
+    inputs = [
+      "test_data/rfcs.before.yaml",
+      "test_data/rfc.golden.md",
+      "test_data/areas.yaml",
+      "//docs/contribute/governance/rfcs/TEMPLATE.md",
+      "test_data/rfcs.golden.yaml",
+      "test_data/toc.golden.yaml",
+      "test_data/toc.before.yaml",
+    ]
+
+    test_deps = [ "//src/lib/fuchsia" ]
+  }
+}
+
+install_host_tools("install") {
+  deps = [ ":rfc_bin" ]
+
+  outputs = [ "rfc" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":rfc_bin_test($host_toolchain)" ]
+}

@@ -146,6 +146,7 @@ start a remote shell on a Fuchsia target
 
 other
   format-code               Format code, usually to prepare for review
+  rfc                       Scaffold RFCs from the template and automatically fills metadata files
 
 example basic workflow using an emulator
   $ fx set core.qemu-x64 --with //examples/hello_world

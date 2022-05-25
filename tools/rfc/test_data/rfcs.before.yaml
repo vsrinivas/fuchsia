@@ -1,0 +1,12 @@
+- name: 'RFC-0000'
+  title: 'Hello world'
+  short_description: 'Bye peridot'
+  authors: ['hello@google.com']
+  file: '0000_hello_world.md'
+  area: ['Magenta']
+  issue: ['0', '1']
+  gerrit_change_id: ['0']
+  status: 'Submitted'
+  reviewers: ['goodbye@google.com']
+  submitted: '01/02/2000'
+  reviewed: '01/01/2000'
