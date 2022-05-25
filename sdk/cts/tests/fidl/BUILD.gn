@@ -9,6 +9,7 @@ group("tests") {
     "fuchsia.driver.test:tests",
     "fuchsia.element:tests",
     "fuchsia.hwinfo:tests",
+    "fuchsia.intl:tests",
     "fuchsia.settings:tests",
   ]
   testonly = true
@@ -26,6 +27,7 @@ sdk_molecule("test_sdks") {
     "fuchsia.driver.test:test_sdks",
     "fuchsia.element:test_sdks",
     "fuchsia.hwinfo:test_sdks",
+    "fuchsia.intl:test_sdks",
     "fuchsia.settings:test_sdks",
   ]
   testonly = true

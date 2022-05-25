@@ -23,10 +23,13 @@
         // These system capabilities are offered for use by the cts tests.
         {
             protocol: [
-                // used for hwinfo cts tests.
+                // Used for hwinfo FCT tests.
                 "fuchsia.hwinfo.Board",
                 "fuchsia.hwinfo.Device",
                 "fuchsia.hwinfo.Product",
+
+                // Used for intl settings FCT tests.
+                "fuchsia.intl.PropertyProvider",
 
                 // Used by DriverTestRealm and fdio tests.
                 "fuchsia.process.Launcher",
@@ -34,7 +37,10 @@
                 // Used by the fdio tests
                 "fuchsia.process.Resolver",
 
-                // used for privacy settings cts tests.
+                // Used for intl settings FCT tests.
+                "fuchsia.settings.Intl",
+
+                // Used for privacy settings FCT tests.
                 "fuchsia.settings.Privacy",
             ],
             from: "parent",
