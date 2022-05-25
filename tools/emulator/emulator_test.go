@@ -14,7 +14,13 @@ import (
 )
 
 func TestCheckForLogMessage(t *testing.T) {
-	logLines := []string{"Some message", "Another message", "First message we're looking for", "Another message", "Second message we're looking for"}
+	logLines := []string{
+		"Some message",
+		"Another message",
+		"First message we're looking for",
+		"Another message",
+		"Second message we're looking for",
+	}
 	testStr := strings.Join(logLines, "\n")
 	// attach a newline, because the reader expects this
 	testStr = fmt.Sprintf("%s\n", testStr)

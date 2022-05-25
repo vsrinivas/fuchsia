@@ -153,14 +153,16 @@ func DefaultVirtualDevice(arch string) *fvdpb.VirtualDevice {
 			CpuCount:  8,
 			EnableKvm: arch == "x64",
 		},
-		KernelArgs: append(arch_kernel_args,
+		KernelArgs: append(
+			arch_kernel_args,
 			"kernel.entropy-mixin=1420bb81dc0396b37cc2d0aa31bb2785dadaf9473d0780ecee1751afb5867564",
 			"kernel.halt-on-panic=true",
-			// Disable lockup detector heartbeats. In emulated environments, virtualized CPUs
-			// may be starved or fail to execute in a timely fashion, resulting in apparent
-			// lockups. See fxbug.dev/65990.
+			// Disable lockup detector heartbeats. In emulated environments, virtualized
+			// CPUs may be starved or fail to execute in a timely fashion, resulting in
+			// apparent lockups. See fxbug.dev/65990.
 			"kernel.lockup-detector.heartbeat-period-ms=0",
-			"kernel.lockup-detector.heartbeat-age-threshold-ms=0"),
+			"kernel.lockup-detector.heartbeat-age-threshold-ms=0",
+		),
 	}
 }
 
@@ -315,7 +317,11 @@ func (d *Distribution) create(
 		// This will get cleaned up by d.Delete().
 		root, err := os.MkdirTemp(d.unpackedPath, "zbi-tmp-dir-*")
 		if err != nil {
-			return nil, fmt.Errorf("error making temp directory in %s: %w", d.unpackedPath, err)
+			return nil, fmt.Errorf(
+				"error making temp directory in %s: %w",
+				d.unpackedPath,
+				err,
+			)
 		}
 
 		if err := runZbi(runZbiArgs{
@@ -418,7 +424,13 @@ func (d *Distribution) RunNonInteractive(
 	if err != nil {
 		return "", "", err
 	}
-	log, logerr, err := d.runNonInteractive(root, toRun, hostPathMinfsBinary, hostPathZbiBinary, fvd)
+	log, logerr, err := d.runNonInteractive(
+		root,
+		toRun,
+		hostPathMinfsBinary,
+		hostPathZbiBinary,
+		fvd,
+	)
 	if err2 := os.RemoveAll(root); err == nil {
 		err = err2
 	}
