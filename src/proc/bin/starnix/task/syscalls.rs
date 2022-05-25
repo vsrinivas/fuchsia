@@ -388,6 +388,14 @@ pub fn sys_prctl(
             not_implemented!("prctl(PR_SET_KEEPCAPS, {})", arg2);
             Ok(().into())
         }
+        PR_SET_NO_NEW_PRIVS => {
+            not_implemented!("prctl(PR_SET_NO_NEW_PRIVS, {})", arg2);
+            Ok(().into())
+        }
+        PR_SET_SECCOMP => {
+            not_implemented!("prctl(PR_SET_SECCOMP, {})", arg2);
+            Ok(().into())
+        }
         _ => {
             not_implemented!("prctl: Unknown option: 0x{:x}", option);
             error!(ENOSYS)
