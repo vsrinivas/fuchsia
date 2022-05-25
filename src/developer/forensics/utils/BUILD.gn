@@ -32,6 +32,21 @@ source_set("errors") {
   public_deps = [ "//sdk/lib/syslog/cpp" ]
 }
 
+source_set("fidl_oneshot") {
+  sources = [ "fidl_oneshot.h" ]
+
+  public_deps = [
+    ":errors",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/fit",
+    "//sdk/lib/fit-promise",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//zircon/system/ulib/async",
+    "//zircon/system/ulib/async:async-cpp",
+  ]
+}
+
 source_set("inspect_node_manager") {
   sources = [
     "inspect_node_manager.cc",

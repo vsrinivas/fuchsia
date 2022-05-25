@@ -30,39 +30,6 @@ executable("archive_unittest_exe") {
   ]
 }
 
-executable("bridge_unittest_exe") {
-  testonly = true
-
-  sources = [ "bridge_unittest.cc" ]
-
-  deps = [
-    "//src/developer/forensics/testing:gtest_with_syslog_main",
-    "//src/developer/forensics/utils:errors",
-    "//src/developer/forensics/utils/fit",
-    "//src/lib/testing/loop_fixture",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-  ]
-}
-
-executable("caching_ptr_unittest_exe") {
-  testonly = true
-
-  sources = [ "caching_ptr_unittest.cc" ]
-
-  deps = [
-    "//src/developer/forensics/testing:gtest_with_syslog_main",
-    "//src/developer/forensics/testing:unit_test_fixture",
-    "//src/developer/forensics/testing/stubs:channel_control",
-    "//src/developer/forensics/utils:errors",
-    "//src/developer/forensics/utils/fidl:caching_ptr",
-    "//src/lib/fxl",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-    "//zircon/system/ulib/async:async-cpp",
-  ]
-}
-
 executable("cobalt_unittest_exe") {
   testonly = true
 
@@ -98,21 +65,22 @@ executable("component_unittest_exe") {
   ]
 }
 
-executable("hanging_get_ptr_unittest_exe") {
+executable("fidl_oneshot_unittest_exe") {
   testonly = true
 
-  sources = [ "hanging_get_ptr_unittest.cc" ]
+  sources = [ "fidl_oneshot_unittest.cc" ]
 
   deps = [
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",
-    "//src/developer/forensics/testing/stubs:device_id_provider",
+    "//src/developer/forensics/testing/stubs:channel_control",
     "//src/developer/forensics/utils:errors",
-    "//src/developer/forensics/utils/fidl:hanging_get_ptr",
+    "//src/developer/forensics/utils:fidl_oneshot",
     "//src/lib/fxl",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -157,25 +125,6 @@ executable("log_format_unittest_exe") {
   ]
 }
 
-executable("oneshot_ptr_unittest_exe") {
-  testonly = true
-
-  sources = [ "oneshot_ptr_unittest.cc" ]
-
-  deps = [
-    "//src/developer/forensics/testing:gtest_with_syslog_main",
-    "//src/developer/forensics/testing:unit_test_fixture",
-    "//src/developer/forensics/testing/stubs:channel_control",
-    "//src/developer/forensics/utils:errors",
-    "//src/developer/forensics/utils/fidl:oneshot_ptr",
-    "//src/lib/fxl",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-    "//zircon/system/ulib/async:async-cpp",
-    "//zircon/system/ulib/zx",
-  ]
-}
-
 executable("previous_boot_file_unittest_exe") {
   testonly = true
 
@@ -186,23 +135,6 @@ executable("previous_boot_file_unittest_exe") {
     "//src/developer/forensics/utils:previous_boot_file",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-  ]
-}
-
-executable("promise_unittest_exe") {
-  testonly = true
-
-  sources = [ "promise_unittest.cc" ]
-
-  deps = [
-    "//sdk/lib/fit-promise",
-    "//src/developer/forensics/testing:gtest_with_syslog_main",
-    "//src/developer/forensics/utils/fit",
-    "//src/lib/fxl",
-    "//src/lib/testing/loop_fixture",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-    "//zircon/system/ulib/async:async-cpp",
   ]
 }
 
@@ -255,14 +187,6 @@ fuchsia_unittest_component("archive_unittest") {
   ]
 }
 
-fuchsia_unittest_component("bridge_unittest") {
-  deps = [ ":bridge_unittest_exe" ]
-}
-
-fuchsia_unittest_component("caching_ptr_unittest") {
-  deps = [ ":caching_ptr_unittest_exe" ]
-}
-
 fuchsia_unittest_component("cobalt_unittest") {
   deps = [ ":cobalt_unittest_exe" ]
 }
@@ -274,8 +198,8 @@ fuchsia_unittest_component("component_unittest") {
   ]
 }
 
-fuchsia_unittest_component("hanging_get_ptr_unittest") {
-  deps = [ ":hanging_get_ptr_unittest_exe" ]
+fuchsia_unittest_component("fidl_oneshot_unittest") {
+  deps = [ ":fidl_oneshot_unittest_exe" ]
 }
 
 fuchsia_component("inspect_node_manager_unittest") {
@@ -294,28 +218,12 @@ fuchsia_unittest_component("log_format_unittest") {
   deps = [ ":log_format_unittest_exe" ]
 }
 
-fuchsia_component("oneshot_ptr_unittest") {
-  testonly = true
-
-  manifest = "meta/oneshot_ptr_unittest.cml"
-
-  deps = [ ":oneshot_ptr_unittest_exe" ]
-}
-
 fuchsia_component("previous_boot_file_unittest") {
   testonly = true
 
   manifest = "meta/previous_boot_file_unittest.cml"
 
   deps = [ ":previous_boot_file_unittest_exe" ]
-}
-
-fuchsia_component("promise_unittest") {
-  testonly = true
-
-  manifest = "meta/promise_unittest.cml"
-
-  deps = [ ":promise_unittest_exe" ]
 }
 
 fuchsia_unittest_component("time_unittest") {
@@ -336,17 +244,13 @@ fuchsia_component("utc_time_provider_unittest") {
 fuchsia_test_package("feedback-utils-tests") {
   test_components = [
     ":archive_unittest",
-    ":bridge_unittest",
-    ":caching_ptr_unittest",
     ":cobalt_unittest",
     ":component_unittest",
-    ":hanging_get_ptr_unittest",
+    ":fidl_oneshot_unittest",
     ":inspect_node_manager_unittest",
     ":inspect_protocol_stats_unittest",
     ":log_format_unittest",
-    ":oneshot_ptr_unittest",
     ":previous_boot_file_unittest",
-    ":promise_unittest",
     ":time_unittest",
     ":utc_time_provider_unittest",
   ]

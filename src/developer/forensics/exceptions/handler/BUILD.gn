@@ -28,7 +28,7 @@ source_set("lib") {
     "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
     "//src/developer/forensics/exceptions/fidl:fuchsia.exception.internal",
-    "//src/developer/forensics/utils/fidl:oneshot_ptr",
+    "//src/developer/forensics/utils:fidl_oneshot",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//third_party/crashpad/minidump",
@@ -42,7 +42,6 @@ source_set("lib") {
   deps = [
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/utils:errors",
-    "//src/developer/forensics/utils/fit",
     "//src/lib/fsl",
   ]
 }

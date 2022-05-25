@@ -14,7 +14,6 @@
 #include "src/developer/forensics/exceptions/handler/component_lookup.h"
 #include "src/developer/forensics/exceptions/handler/minidump.h"
 #include "src/developer/forensics/exceptions/handler/report_builder.h"
-#include "src/developer/forensics/utils/fit/timeout.h"
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/fxl/strings/join_strings.h"
 

@@ -89,8 +89,6 @@ source_set("screenshot") {
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
-    "//src/developer/forensics/utils/fidl:oneshot_ptr",
-    "//src/developer/forensics/utils/fit",
     "//src/lib/fxl",
     "//zircon/system/ulib/async",
   ]
@@ -98,6 +96,7 @@ source_set("screenshot") {
   deps = [
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/utils:errors",
+    "//src/developer/forensics/utils:fidl_oneshot",
   ]
 }
 

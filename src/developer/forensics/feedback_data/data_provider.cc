@@ -24,6 +24,7 @@
 #include "src/developer/forensics/feedback_data/constants.h"
 #include "src/developer/forensics/feedback_data/image_conversion.h"
 #include "src/developer/forensics/utils/archive.h"
+#include "src/developer/forensics/utils/cobalt/metrics.h"
 #include "src/lib/fsl/vmo/sized_vmo.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/uuid/uuid.h"
@@ -212,10 +213,15 @@ bool ServedArchive::Serve(zx::channel server_end, async_dispatcher_t* dispatcher
 
 void DataProvider::GetScreenshot(ImageEncoding encoding, GetScreenshotCallback callback) {
   auto promise =
-      TakeScreenshot(
-          dispatcher_, services_,
-          fit::Timeout(kScreenshotTimeout,
-                       [this] { cobalt_->LogOccurrence(cobalt::TimedOutData::kScreenshot); }))
+      TakeScreenshot(dispatcher_, services_, kScreenshotTimeout)
+          .or_else([this](const Error& error) {
+            if (error != Error::kTimeout) {
+              return ::fpromise::error();
+            }
+
+            cobalt_->LogOccurrence(cobalt::TimedOutData::kScreenshot);
+            return ::fpromise::error();
+          })
           .and_then([encoding](fuchsia::ui::scenic::ScreenshotData& raw_screenshot)
                         -> ::fpromise::result<Screenshot> {
             Screenshot screenshot;

@@ -40,13 +40,13 @@ class TakeScreenshotTest : public UnitTestFixture {
     }
   }
 
-  ::fpromise::result<ScreenshotData> TakeScreenshot(const zx::duration timeout = zx::sec(1)) {
-    ::fpromise::result<ScreenshotData> result;
-    executor_.schedule_task(
-        feedback_data::TakeScreenshot(
-            dispatcher(), services(),
-            fit::Timeout(timeout, /*actions=*/[this] { did_timeout_ = true; }))
-            .then([&result](::fpromise::result<ScreenshotData>& res) { result = std::move(res); }));
+  ::fpromise::result<ScreenshotData, Error> TakeScreenshot(
+      const zx::duration timeout = zx::sec(1)) {
+    ::fpromise::result<ScreenshotData, Error> result;
+    executor_.schedule_task(feedback_data::TakeScreenshot(dispatcher(), services(), timeout)
+                                .then([&result](::fpromise::result<ScreenshotData, Error>& res) {
+                                  result = std::move(res);
+                                }));
     RunLoopFor(timeout);
     return result;
   }
@@ -67,10 +67,10 @@ TEST_F(TakeScreenshotTest, Succeed_CheckerboardScreenshot) {
   scenic->set_take_screenshot_responses(std::move(scenic_server_responses));
   SetUpScenicServer(std::move(scenic));
 
-  ::fpromise::result<ScreenshotData> result = TakeScreenshot();
+  const auto result = TakeScreenshot();
 
   ASSERT_TRUE(result.is_ok());
-  ScreenshotData screenshot = result.take_value();
+  const auto& screenshot = result.value();
   EXPECT_TRUE(screenshot.data.vmo.is_valid());
   EXPECT_EQ(static_cast<size_t>(screenshot.info.height), image_dim_in_px);
   EXPECT_EQ(static_cast<size_t>(screenshot.info.width), image_dim_in_px);
@@ -81,15 +81,10 @@ TEST_F(TakeScreenshotTest, Succeed_CheckerboardScreenshot) {
 TEST_F(TakeScreenshotTest, Fail_ScenicReturningFalse) {
   SetUpScenicServer(std::make_unique<stubs::ScenicAlwaysReturnsFalse>());
 
-  ::fpromise::result<ScreenshotData> result = TakeScreenshot();
+  const auto result = TakeScreenshot();
 
   ASSERT_TRUE(result.is_error());
-}
-
-TEST_F(TakeScreenshotTest, Check_Timeout) {
-  SetUpScenicServer(std::make_unique<stubs::ScenicNeverReturns>());
-  ASSERT_TRUE(TakeScreenshot().is_error());
-  EXPECT_TRUE(did_timeout_);
+  EXPECT_EQ(result.error(), Error::kDefault);
 }
 
 }  // namespace
