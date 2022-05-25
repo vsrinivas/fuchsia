@@ -730,7 +730,7 @@ class VmCowPages final
 
   // LookupPagesLocked helper function that 'forks' the page at |offset| of the current vmo. If
   // this function successfully inserts a page into |offset| of the current vmo, it returns ZX_OK
-  // and populates |out_page|. If a |page_request| is provided and ZX_ERR_SHOULD_WAIT is returned
+  // and populates |out_page|. |page_request| must be provided and if ZX_ERR_SHOULD_WAIT is returned
   // then this indicates a transient failure that should be resolved by waiting on the page_request.
   //
   // The source page that is being forked has already been calculated - it is |page|, which
@@ -767,7 +767,8 @@ class VmCowPages final
   // set the split bits in the parent page as if it had been forked.
   zx_status_t CloneCowPageAsZeroLocked(uint64_t offset, list_node_t* freed_list,
                                        VmCowPages* page_owner, vm_page_t* page,
-                                       uint64_t owner_offset) TA_REQ(lock_);
+                                       uint64_t owner_offset, LazyPageRequest* page_request)
+      TA_REQ(lock_);
 
   // Returns true if |page| (located at |offset| in this vmo) is only accessible by one
   // child, where 'accessible' is defined by ::CloneCowPageLocked.
