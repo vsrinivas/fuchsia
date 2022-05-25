@@ -43,7 +43,7 @@ impl FileOps for DevNullFile {
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
         current_task.mm.read_each(data, |bytes| {
-            tracing::warn!(
+            tracing::debug!(
                 "{:?} write to devnull: {:?}",
                 current_task,
                 String::from_utf8_lossy(bytes)
