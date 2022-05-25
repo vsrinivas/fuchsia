@@ -129,7 +129,7 @@ group("system_tests") {
 }
 
 if (is_linux || is_mac) {
-  system_test_reboot_suite("nuc-release-reboot") {
+  system_test_reboot_suite("workstation-release-reboot") {
     environments = [
       {
         dimensions = {
@@ -143,7 +143,7 @@ if (is_linux || is_mac) {
     cycle_timeout = "2m"
   }
 
-  system_test_reboot_suite("nuc-release-reboot-longevity") {
+  system_test_reboot_suite("workstation-release-reboot-longevity") {
     environments = [
       {
         dimensions = {
@@ -157,7 +157,7 @@ if (is_linux || is_mac) {
     cycle_timeout = "2m"
   }
 
-  system_test_upgrade_suite("nuc-release-upgrade") {
+  system_test_upgrade_suite("workstation-release-upgrade") {
     downgrade_release_builder =
         "fuchsia/global.ci/workstation.x64-release-e2e-isolated"
 
@@ -174,7 +174,7 @@ if (is_linux || is_mac) {
     cycle_timeout = "10m"
   }
 
-  system_test_upgrade_suite("nuc-release-upgrade-longevity") {
+  system_test_upgrade_suite("workstation-release-upgrade-longevity") {
     downgrade_release_builder =
         "fuchsia/global.ci/core.x64-release-nuc_in_basic_envs"
 
@@ -191,16 +191,34 @@ if (is_linux || is_mac) {
     cycle_count = "40"
     cycle_timeout = "10m"
   }
+
+  system_test_upgrade_suite("workstation-release-upgrade-omaha") {
+    downgrade_release_builder =
+        "fuchsia/global.ci/workstation.x64-release-e2e-isolated-omaha"
+    installer = "omaha"
+    environments = [
+      {
+        dimensions = {
+          device_type = "Intel NUC Kit NUC7i5DNHE"
+        }
+        tags = [ "e2e-isolated-omaha" ]
+      },
+    ]
+    pave_timeout = "10m"
+    cycle_count = "1"
+    cycle_timeout = "10m"
+  }
 }
 
 group("tests") {
   testonly = true
   public_deps = [
-    ":nuc-release-reboot($host_toolchain)",
-    ":nuc-release-reboot-longevity($host_toolchain)",
-    ":nuc-release-upgrade($host_toolchain)",
-    ":nuc-release-upgrade-longevity($host_toolchain)",
     ":system_tests",
+    ":workstation-release-reboot($host_toolchain)",
+    ":workstation-release-reboot-longevity($host_toolchain)",
+    ":workstation-release-upgrade($host_toolchain)",
+    ":workstation-release-upgrade-longevity($host_toolchain)",
+    ":workstation-release-upgrade-omaha($host_toolchain)",
     "//src/testing/sl4f",
   ]
 }
