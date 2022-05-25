@@ -16,12 +16,11 @@ namespace fidl {
 
 namespace {
 
-#define ASSERT_FINDINGS(TEST) ASSERT_NO_FATAL_FAILURE(TEST.ExpectFindings())
+#define ASSERT_FINDINGS(TEST) ASSERT_NO_FAILURES(TEST.ExpectFindings())
 
-#define ASSERT_FINDINGS_IN_ANY_POSITION(TEST) \
-  ASSERT_NO_FATAL_FAILURE(TEST.ExpectFindingsInAnyPosition())
+#define ASSERT_FINDINGS_IN_ANY_POSITION(TEST) ASSERT_NO_FAILURES(TEST.ExpectFindingsInAnyPosition())
 
-#define ASSERT_NO_FINDINGS(TEST) ASSERT_NO_FATAL_FAILURE(TEST.ExpectNoFindings())
+#define ASSERT_NO_FINDINGS(TEST) ASSERT_NO_FAILURES(TEST.ExpectNoFindings())
 
 class LintTest {
  public:
@@ -189,7 +188,7 @@ class LintTest {
 
     ASSERT_FALSE((!expect_findings) && (!expected_findings_.empty()), "%s", context.c_str());
 
-    ASSERT_NO_FATAL_FAILURE(ValidTest(), "%s", context.c_str());
+    ASSERT_NO_FAILURES(ValidTest(), "%s", context.c_str());
 
     // The test looks good, so run the linter, and update the context
     // value by replacing "Bad test!" with the FIDL source code.

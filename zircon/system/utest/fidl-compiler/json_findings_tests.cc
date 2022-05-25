@@ -15,8 +15,8 @@ namespace fidl {
 
 namespace {
 
-#define ASSERT_JSON(TEST, JSON)                   \
-  ASSERT_NO_FATAL_FAILURE(TEST.ExpectJson(JSON)); \
+#define ASSERT_JSON(TEST, JSON)              \
+  ASSERT_NO_FAILURES(TEST.ExpectJson(JSON)); \
   TEST.Reset()
 
 void FindingsEmitThisJson(Findings& findings, std::string expected_json) {
@@ -519,7 +519,7 @@ protocol TestProtocol {
   Findings findings;
   ASSERT_FALSE(library.Lint(&findings));
 
-  ASSERT_NO_FATAL_FAILURE(FindingsEmitThisJson(findings, R"JSON([
+  ASSERT_NO_FAILURES(FindingsEmitThisJson(findings, R"JSON([
   {
     "category": "fidl-lint/event-names-must-start-with-on",
     "message": "Event names must start with 'On'",

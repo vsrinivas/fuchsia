@@ -14,7 +14,7 @@ namespace fidl {
 
 namespace {
 
-#define ASSERT_JSON(DIAGS, JSON) ASSERT_NO_FATAL_FAILURE(ExpectJson(DIAGS, JSON))
+#define ASSERT_JSON(DIAGS, JSON) ASSERT_NO_FAILURES(ExpectJson(DIAGS, JSON))
 
 void ExpectJson(std::vector<Diagnostic*> diagnostics, std::string expected_json) {
   std::string actual_json = DiagnosticsJson(diagnostics).Produce().str();
