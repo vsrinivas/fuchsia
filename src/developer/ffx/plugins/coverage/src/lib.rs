@@ -133,10 +133,17 @@ fn show_coverage(
     bin_files: &[PathBuf],
     src_files: &[PathBuf],
 ) -> Result<()> {
+    let bin_file_args = bin_files.iter().fold(Vec::new(), |mut acc, val| {
+        if acc.len() > 0 {
+            acc.push("-object");
+        }
+        acc.push(val.to_str().expect("failed to convert path to string"));
+        acc
+    });
     let show_cmd = Command::new(llvm_cov_bin)
         .args(["show", "-instr-profile"])
         .arg(merged_profile)
-        .args(bin_files)
+        .args(&bin_file_args)
         .args(src_files)
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
