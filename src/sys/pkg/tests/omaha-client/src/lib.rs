@@ -39,13 +39,16 @@ use {
     mock_crash_reporter::{CrashReport, MockCrashReporterService, ThrottleHook},
     mock_installer::MockUpdateInstallerService,
     mock_omaha_server::{
-        OmahaResponse, OmahaServer, OmahaServerBuilder, PrivateKey, PrivateKeyAndId, PrivateKeys,
+        OmahaResponse, OmahaServer, OmahaServerBuilder, PrivateKeyAndId, PrivateKeys,
         ResponseAndMetadata,
     },
     mock_paver::{hooks as mphooks, MockPaverService, MockPaverServiceBuilder, PaverEvent},
     mock_reboot::{MockRebootService, RebootReason},
     mock_resolver::MockResolverService,
     mock_verifier::MockVerifierService,
+    omaha_client::cup_ecdsa::test_support::{
+        make_default_private_key_for_test, RAW_PUBLIC_KEY_FOR_TEST,
+    },
     parking_lot::Mutex,
     serde_json::json,
     std::{
@@ -53,7 +56,6 @@ use {
         convert::TryInto,
         fs::{self, create_dir},
         path::PathBuf,
-        str::FromStr as _,
         sync::Arc,
     },
     tempfile::TempDir,
@@ -115,19 +117,12 @@ struct Proxies {
 // Omaha server and returns eager package config as JSON.
 type EagerPackageConfigBuilder = fn(&str) -> serde_json::Value;
 
-fn make_default_public_key_string() -> String {
-    "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt\n7qCZFgaBN9g5z3/EgaREkjBNfvZqwRe+/oOo0I8VXytS+fYY3URwKQSODw==\n-----END PUBLIC KEY-----".to_string()
-}
-
-const RAW_PRIVATE_KEY: &str = include_str!("test_private_key.pem");
-
-fn make_default_private_key() -> PrivateKey {
-    PrivateKey::from_str(RAW_PRIVATE_KEY).unwrap()
-}
-
 fn make_default_private_keys() -> PrivateKeys {
     PrivateKeys {
-        latest: PrivateKeyAndId { id: 42_i32.try_into().unwrap(), key: make_default_private_key() },
+        latest: PrivateKeyAndId {
+            id: 42_i32.try_into().unwrap(),
+            key: make_default_private_key_for_test(),
+        },
         historical: vec![],
     }
 }
@@ -953,7 +948,7 @@ async fn test_omaha_client_update_multi_app() {
                             "public_keys": {
                                 "latest": {
                                     "id": 42,
-                                    "key": make_default_public_key_string(),
+                                    "key": RAW_PUBLIC_KEY_FOR_TEST,
                                 },
                                 "historical": [],
                             }
@@ -1125,11 +1120,11 @@ async fn test_omaha_client_update_cup_force_historical_key() {
         .private_keys(PrivateKeys {
             latest: PrivateKeyAndId {
                 id: 100_i32.try_into().unwrap(),
-                key: make_default_private_key(),
+                key: make_default_private_key_for_test(),
             },
             historical: vec![PrivateKeyAndId {
                 id: 42_i32.try_into().unwrap(),
-                key: make_default_private_key(),
+                key: make_default_private_key_for_test(),
             }],
         })
         .eager_package_config_builder(|url: &str| {
@@ -1142,7 +1137,7 @@ async fn test_omaha_client_update_cup_force_historical_key() {
                             "public_keys": {
                                 "latest": {
                                     "id": 42,
-                                    "key": make_default_public_key_string(),
+                                    "key": RAW_PUBLIC_KEY_FOR_TEST,
                                 },
                                 "historical": [],
                             }
@@ -1188,7 +1183,7 @@ async fn test_omaha_client_update_cup_key_mismatch() {
         .private_keys(PrivateKeys {
             latest: PrivateKeyAndId {
                 id: 100_i32.try_into().unwrap(),
-                key: make_default_private_key(),
+                key: make_default_private_key_for_test(),
             },
             historical: vec![],
         })
@@ -1202,7 +1197,7 @@ async fn test_omaha_client_update_cup_key_mismatch() {
                             "public_keys": {
                                 "latest": {
                                     "id": 42,
-                                    "key": make_default_public_key_string(),
+                                    "key": RAW_PUBLIC_KEY_FOR_TEST,
                                 },
                                 "historical": [],
                             }
@@ -1236,7 +1231,7 @@ async fn test_omaha_client_update_cup_bad_etag() {
                             "public_keys": {
                                 "latest": {
                                     "id": 42,
-                                    "key": make_default_public_key_string(),
+                                    "key": RAW_PUBLIC_KEY_FOR_TEST,
                                 },
                                 "historical": [],
                             }
@@ -1270,7 +1265,7 @@ async fn test_omaha_client_update_cup_empty_etag() {
                             "public_keys": {
                                 "latest": {
                                     "id": 42,
-                                    "key": make_default_public_key_string(),
+                                    "key": RAW_PUBLIC_KEY_FOR_TEST,
                                 },
                                 "historical": [],
                             }

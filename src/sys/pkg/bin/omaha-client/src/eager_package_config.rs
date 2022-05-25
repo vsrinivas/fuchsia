@@ -74,25 +74,22 @@ mod tests {
     use super::*;
     use crate::channel::ChannelConfig;
     use assert_matches::assert_matches;
-    use omaha_client::cup_ecdsa::{PublicKey, PublicKeyAndId};
+    use omaha_client::cup_ecdsa::{
+        test_support::{make_default_json_public_keys_for_test, make_default_public_key_for_test},
+        PublicKeyAndId,
+    };
     use pretty_assertions::assert_eq;
-    use std::{convert::TryInto, str::FromStr};
+    use std::convert::TryInto;
 
     #[test]
     fn parse_eager_package_configs_json() {
-        let json = br#"
+        let json = serde_json::json!(
         {
-            "eager_package_configs": [ 
+            "eager_package_configs": [
                 {
                     "server": {
                         "service_url": "https://example.com",
-                        "public_keys": {
-                            "latest": {
-                                "id": 123,
-                                "key": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt\n7qCZFgaBN9g5z3/EgaREkjBNfvZqwRe+/oOo0I8VXytS+fYY3URwKQSODw==\n-----END PUBLIC KEY-----"
-                            },
-                            "historical": []
-                        }
+                        "public_keys": make_default_json_public_keys_for_test(),
                     },
                     "packages":
                     [
@@ -142,25 +139,19 @@ mod tests {
                                 }
                         }
                     ]
-                } 
+                }
             ]
-        }"#;
+        });
 
         assert_eq!(
-            EagerPackageConfigs::from_reader(&json[..]).unwrap(),
+            EagerPackageConfigs::from_reader(json.to_string().as_bytes()).unwrap(),
             EagerPackageConfigs {
                 server: Some(OmahaServer {
                     service_url: "https://example.com".into(),
                     public_keys: PublicKeys {
                         latest: PublicKeyAndId {
                             id: 123.try_into().unwrap(),
-                            key: PublicKey::from_str(
-                                r#"-----BEGIN PUBLIC KEY-----
-MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt
-7qCZFgaBN9g5z3/EgaREkjBNfvZqwRe+/oOo0I8VXytS+fYY3URwKQSODw==
------END PUBLIC KEY-----"#,
-                            )
-                            .unwrap()
+                            key: make_default_public_key_for_test(),
                         },
                         historical: vec![],
                     }

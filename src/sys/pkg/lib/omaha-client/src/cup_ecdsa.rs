@@ -293,17 +293,27 @@ impl Cupv2Verifier for StandardCupv2Handler {
 
 pub mod test_support {
     use super::*;
-    use crate::protocol::request::{Request, RequestWrapper};
-    use crate::request_builder::Intermediate;
+    use crate::{
+        protocol::request::{Request, RequestWrapper},
+        request_builder::Intermediate,
+    };
     use p256::ecdsa::SigningKey;
-    use signature::rand_core::OsRng;
-    use std::convert::TryInto;
+    use std::{convert::TryInto, str::FromStr};
+
+    pub const RAW_PRIVATE_KEY_FOR_TEST: &str = include_str!("testing_keys/test_private_key.pem");
+    pub const RAW_PUBLIC_KEY_FOR_TEST: &str = include_str!("testing_keys/test_public_key.pem");
+
+    pub fn make_default_private_key_for_test() -> SigningKey {
+        SigningKey::from_str(RAW_PRIVATE_KEY_FOR_TEST).unwrap()
+    }
+    pub fn make_default_public_key_for_test() -> PublicKey {
+        PublicKey::from_str(RAW_PUBLIC_KEY_FOR_TEST).unwrap()
+    }
 
     pub fn make_keys_for_test() -> (SigningKey, PublicKey) {
-        let signing_key = SigningKey::random(&mut OsRng);
-        let public_key = PublicKey::from(&signing_key);
-        (signing_key, public_key)
+        (make_default_private_key_for_test(), make_default_public_key_for_test())
     }
+
     pub fn make_public_keys_for_test(
         public_key_id: PublicKeyId,
         public_key: PublicKey,
@@ -324,7 +334,7 @@ pub mod test_support {
         serde_json::json!({
             "latest": {
                 "id": 123,
-                "key": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt\n7qCZFgaBN9g5z3/EgaREkjBNfvZqwRe+/oOo0I8VXytS+fYY3URwKQSODw==\n-----END PUBLIC KEY-----"
+                "key": RAW_PUBLIC_KEY_FOR_TEST,
             },
             "historical": []
         })
@@ -723,24 +733,14 @@ mod tests {
 
     #[test]
     fn test_deserialize_public_keys() {
-        use std::str::FromStr;
-
-        let verifying_key = PublicKey::from_str(
-            r#"-----BEGIN PUBLIC KEY-----
-MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt
-7qCZFgaBN9g5z3/EgaREkjBNfvZqwRe+/oOo0I8VXytS+fYY3URwKQSODw==
------END PUBLIC KEY-----"#,
-        )
-        .unwrap();
-
-        let public_key_and_id: PublicKeyAndId = serde_json::from_str(
-            r#"{
+        let public_key_and_id: PublicKeyAndId = serde_json::from_value(serde_json::json!(
+            {
                  "id": 123,
-                 "key": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt\n7qCZFgaBN9g5z3/EgaREkjBNfvZqwRe+/oOo0I8VXytS+fYY3URwKQSODw==\n-----END PUBLIC KEY-----"
-            }"#,
-        )
+                 "key": test_support::RAW_PUBLIC_KEY_FOR_TEST,
+            }
+        ))
         .unwrap();
 
-        assert_eq!(public_key_and_id.key, verifying_key);
+        assert_eq!(public_key_and_id.key, test_support::make_default_public_key_for_test());
     }
 }

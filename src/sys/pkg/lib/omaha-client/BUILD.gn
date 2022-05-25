@@ -40,6 +40,11 @@ rustc_library("omaha-client") {
     "//third_party/rust_crates:url",
   ]
 
+  inputs = [
+    "src/testing_keys/test_private_key.pem",
+    "src/testing_keys/test_public_key.pem",
+  ]
+
   sources = [
     "src/app_set.rs",
     "src/clock.rs",

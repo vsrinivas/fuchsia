@@ -454,7 +454,11 @@ mod tests {
         },
         fuchsia_async as fasync, fuchsia_zircon as zx,
         omaha_client::cup_ecdsa::{
-            test_support::make_default_public_keys_for_test, PublicKey, PublicKeyAndId, PublicKeys,
+            test_support::{
+                make_default_public_key_for_test, make_default_public_keys_for_test,
+                RAW_PUBLIC_KEY_FOR_TEST,
+            },
+            PublicKeyAndId, PublicKeys,
         },
         typed_builder::TypedBuilder,
     };
@@ -621,23 +625,16 @@ mod tests {
     #[test]
     fn parse_eager_package_configs_json() {
         use std::convert::TryInto;
-        use std::str::FromStr;
 
         let public_keys = PublicKeys {
             latest: PublicKeyAndId {
                 id: 123.try_into().unwrap(),
-                key: PublicKey::from_str(
-                    r#"-----BEGIN PUBLIC KEY-----
-MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt
-7qCZFgaBN9g5z3/EgaREkjBNfvZqwRe+/oOo0I8VXytS+fYY3URwKQSODw==
------END PUBLIC KEY-----"#,
-                )
-                .unwrap(),
+                key: make_default_public_key_for_test(),
             },
             historical: vec![],
         };
 
-        let json = br#"
+        let json = serde_json::json!(
         {
             "packages":
             [
@@ -647,7 +644,7 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt
                     "public_keys": {
                         "latest": {
                             "id": 123,
-                            "key": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt\n7qCZFgaBN9g5z3/EgaREkjBNfvZqwRe+/oOo0I8VXytS+fYY3URwKQSODw==\n-----END PUBLIC KEY-----"
+                            "key": RAW_PUBLIC_KEY_FOR_TEST,
                         },
                         "historical": []
                     }
@@ -658,7 +655,7 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt
                     "public_keys": {
                         "latest": {
                             "id": 123,
-                            "key": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt\n7qCZFgaBN9g5z3/EgaREkjBNfvZqwRe+/oOo0I8VXytS+fYY3URwKQSODw==\n-----END PUBLIC KEY-----"
+                            "key": RAW_PUBLIC_KEY_FOR_TEST,
                         },
                         "historical": []
                     }
@@ -668,15 +665,15 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt
                     "public_keys": {
                         "latest": {
                             "id": 123,
-                            "key": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt\n7qCZFgaBN9g5z3/EgaREkjBNfvZqwRe+/oOo0I8VXytS+fYY3URwKQSODw==\n-----END PUBLIC KEY-----"
+                            "key": RAW_PUBLIC_KEY_FOR_TEST,
                         },
                         "historical": []
                     }
                 }
             ]
-        }"#;
+        });
         assert_eq!(
-            serde_json::from_slice::<EagerPackageConfigs>(json).unwrap(),
+            serde_json::from_value::<EagerPackageConfigs>(json).unwrap(),
             EagerPackageConfigs {
                 packages: vec![
                     EagerPackageConfig {

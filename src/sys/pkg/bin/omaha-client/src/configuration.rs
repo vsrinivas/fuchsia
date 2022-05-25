@@ -335,9 +335,9 @@ mod tests {
     use futures::prelude::*;
     use omaha_client::{
         app_set::AppSet,
-        cup_ecdsa::{PublicKey, PublicKeyAndId, PublicKeys},
+        cup_ecdsa::{test_support::make_default_public_key_for_test, PublicKeyAndId, PublicKeys},
     };
-    use std::{collections::HashMap, convert::TryInto, str::FromStr};
+    use std::{collections::HashMap, convert::TryInto};
 
     #[fasync::run_singlethreaded(test)]
     async fn test_get_config() {
@@ -562,13 +562,7 @@ mod tests {
         let public_keys = PublicKeys {
             latest: PublicKeyAndId {
                 id: 123.try_into().unwrap(),
-                key: PublicKey::from_str(
-                    r#"-----BEGIN PUBLIC KEY-----
-MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt
-7qCZFgaBN9g5z3/EgaREkjBNfvZqwRe+/oOo0I8VXytS+fYY3URwKQSODw==
------END PUBLIC KEY-----"#,
-                )
-                .unwrap(),
+                key: make_default_public_key_for_test(),
             },
             historical: vec![],
         };
