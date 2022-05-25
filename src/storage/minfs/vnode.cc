@@ -175,7 +175,6 @@ zx::status<> VnodeMinfs::InitVmo() {
   }
 
   zx_status_t status = fs_->GetMutableBcache()->RunRequests(builder.TakeOperations());
-  ValidateVmoTail(GetSize());
   return zx::make_status(status);
 }
 
@@ -288,24 +287,6 @@ zx::status<> VnodeMinfs::RemoveInodeLink(Transaction* transaction) {
 
   InodeSync(transaction, kMxFsSyncMtime);
   return zx::ok();
-}
-
-void VnodeMinfs::ValidateVmoTail(uint64_t inode_size) const {
-#if defined(MINFS_PARANOID_MODE) && defined(__Fuchsia__)
-  if (!vmo_.is_valid()) {
-    return;
-  }
-
-  // Verify that everything not allocated to "inode_size" in the
-  // last block is filled with zeroes.
-  char buf[fs_->BlockSize()];
-  const size_t vmo_size = fbl::round_up(inode_size, fs_->BlockSize());
-  ZX_ASSERT(vmo_.read(buf, inode_size, vmo_size - inode_size) == ZX_OK);
-  for (size_t i = 0; i < vmo_size - inode_size; i++) {
-    ZX_ASSERT_MSG(buf[i] == 0, "vmo[%" PRIu64 "] != 0 (inode size = %u)\n", inode_size + i,
-                  inode_size);
-  }
-#endif  // MINFS_PARANOID_MODE && __Fuchsia__
 }
 
 void VnodeMinfs::RecycleNode() {
@@ -566,8 +547,6 @@ zx::status<> VnodeMinfs::WriteInternal(Transaction* transaction, const uint8_t* 
   }
 
   *actual = len;
-
-  ValidateVmoTail(GetSize());
   return zx::ok();
 }
 
@@ -835,7 +814,6 @@ zx::status<> VnodeMinfs::TruncateInternal(Transaction* transaction, size_t len) 
   // Setting the size does not ensure the on-disk inode is updated. Ensuring
   // writeback occurs is the responsibility of the caller.
   SetSize(static_cast<uint32_t>(len));
-  ValidateVmoTail(GetSize());
   return zx::ok();
 }
 

@@ -73,7 +73,6 @@ void File::AllocateAndCommitData(std::unique_ptr<Transaction> transaction) {
     if (expected_blocks == 0) {
       if (GetInode()->size != allocation_state_.GetNodeSize()) {
         GetMutableInode()->size = allocation_state_.GetNodeSize();
-        ValidateVmoTail(GetInode()->size);
       }
 
       // Since we may have pending reservations from an expected update, reset the allocation
@@ -127,8 +126,6 @@ void File::AllocateAndCommitData(std::unique_ptr<Transaction> transaction) {
       // accordingly.
       GetMutableInode()->size = allocation_state_.GetNodeSize();
     }
-
-    ValidateVmoTail(GetInode()->size);
 
     // In the future we could resolve on a per state (i.e. reservation) basis, but since swaps
     // are currently only made within a single thread, for now it is okay to resolve

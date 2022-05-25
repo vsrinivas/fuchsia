@@ -64,12 +64,6 @@
 
 constexpr uint32_t kExtentCount = 6;
 
-// A compile-time debug check, which, if enabled, causes
-// inline functions to be expanded to error checking code.
-// Since this may be expensive, it is typically turned
-// off, except for debugging.
-// #define MINFS_PARANOID_MODE
-
 namespace minfs {
 
 #ifdef __Fuchsia__

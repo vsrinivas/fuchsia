@@ -228,15 +228,6 @@ class VnodeMinfs : public fs::Vnode,
   // bnos
   zx::status<> BlocksShrink(PendingWork* transaction, blk_t start);
 
-  // Although file sizes don't need to be block-aligned, the underlying VMO is
-  // always kept at a size which is a multiple of |kMinfsBlockSize|.
-  //
-  // When a Vnode is truncated to a size larger than |inode_.size|, it is
-  // assumed that any space between |inode_.size| and the nearest block is
-  // filled with zeroes in the internal VMO. This function validates that
-  // assumption.
-  void ValidateVmoTail(uint64_t inode_size) const;
-
  protected:
   // fs::Vnode protected interface.
   void RecycleNode() final;
