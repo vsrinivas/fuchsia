@@ -54,9 +54,6 @@ function main {
         fint_params_path="$2"
         shift
         ;;
-      --no-zircon)
-        echo "WARNING: The --no-zircon argument is now obsolete and ignored!"
-        ;;
       # These Ninja switches take an argument.
       -[Cfjkldtw])
         switches+=("$1" "$2")
