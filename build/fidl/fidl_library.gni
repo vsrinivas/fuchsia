@@ -194,11 +194,19 @@ template("fidl_library") {
 
   # Enforce compatibility checks for all published SDK FIDLs.
   if (is_sdk_publishable) {
+    # A kill switch for API summarization and compatibility testing.
+    # Set to true to permit compilations that have summary errors.
+    lenient_api_summary = false
+    if (defined(invoker.lenient_api_summary)) {
+      lenient_api_summary = invoker.lenient_api_summary
+    }
+
     if (api_compatibility_testing) {
       # Ensure changes to API level HEAD are acknowledged.
       test_target = "${target_name}_compatibility_test"
       fidl_api_compatibility_test(test_target) {
         forward_variables_from(invoker, [ "testonly" ])
+        warn_on_changes = lenient_api_summary
         target_api_level = "HEAD"
         golden = "$library_name.api_summary.json"
         current = summary_file_json
@@ -233,6 +241,7 @@ template("fidl_library") {
         test_target = "${target_name}_${level}_compatibility_test"
         fidl_api_compatibility_test(test_target) {
           forward_variables_from(invoker, [ "testonly" ])
+          warn_on_changes = lenient_api_summary
           target_api_level = "$level"
           golden = "//sdk/history/$level/$library_name.api_summary.json"
           current = "$target_gen_dir/$level/$library_name.api_summary.json"
@@ -246,12 +255,6 @@ template("fidl_library") {
         sdk_atom_deps += [ ":$test_target" ]
       }
     } else {
-      # A kill switch for API summarization. Set to true to permit compilations
-      # that have summary errors.
-      lenient_api_summary = false
-      if (defined(invoker.lenient_api_summary)) {
-        lenient_api_summary = invoker.lenient_api_summary
-      }
       verify_api_summary_target_name = "${target_name}_verify_api_summary"
       golden_file(verify_api_summary_target_name) {
         forward_variables_from(invoker, [ "testonly" ])

@@ -34,6 +34,43 @@ class Policy(Enum):
         return self.value
 
 
+class CompatibilityError(Exception):
+    """Exception raised when breaking API changes are detected"""
+
+    def __init__(self, api_level, breaking_changes, current, golden):
+        self.api_level = api_level
+        self.breaking_changes = breaking_changes
+        self.current = current
+        self.golden = golden
+
+    def __str__(self):
+        formatted_breaking_changes = '\n - '.join(breaking_changes)
+        cmd = update_cmd(self.current, self.golden)
+        return (
+            f"These changes are incompatible with API level {self.api_level}\n"
+            f"{formatted_breaking_changes}\n\n"
+            f"If possible, please make a soft transition instead.\n"
+            f"To allow a hard transition please run:\n"
+            f"  {cmd}")
+
+
+class GoldenMismatchError(Exception):
+    """Exception raised when a stale golden file is detected."""
+
+    def __init__(self, api_level, current, golden):
+        self.api_level = api_level
+        self.current = current
+        self.golden = golden
+
+    def __str__(self):
+        cmd = update_cmd(self.current, self.golden)
+        return (
+            f"Detected changes to API level {self.api_level}\n"
+            f"Please acknowledge this change by updating the golden.\n"
+            f"You can rebuild with `--args=bless_goldens=true` or run:\n"
+            f"  {cmd}")
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -54,31 +91,42 @@ def main():
         '--fidl_api_diff_path',
         help='Path to the fidl_api_diff binary',
         required=True)
+    parser.add_argument(
+        '--warn_on_changes',
+        help='Treat compatibility violations as warnings',
+        action='store_true')
     args = parser.parse_args()
 
-    ret = 0
     if args.policy == Policy.update_golden:
-        ret = update_golden(args)
+        err = update_golden(args)
     elif args.policy == Policy.no_breaking_changes:
-        ret = fail_on_breaking_changes(args)
+        err = fail_on_breaking_changes(args)
     elif args.policy == Policy.no_changes:
-        ret = fail_on_changes(args)
+        err = fail_on_changes(args)
     elif args.policy == Policy.ack_changes:
-        ret = fail_on_changes(args)
+        err = fail_on_changes(args)
     else:
         raise ValueError("unknown policy: {}".format(args.policy))
 
     with open(args.stamp, 'w') as stamp_file:
         stamp_file.write('Golden!\n')
 
-    return ret
+    if not err:
+        return 0
+
+    if args.warn_on_changes:
+        print("WARNING: ", err)
+        return 0
+
+    print("ERROR: ", err)
+    return 1
 
 
 def update_golden(args):
     import subprocess
     c = update_cmd(args.current, args.golden)
     subprocess.run(c.split())
-    return 0
+    return None
 
 
 def fail_on_breaking_changes(args):
@@ -90,15 +138,12 @@ def fail_on_breaking_changes(args):
         args.golden, args.current)
 
     if breaking_changes:
-        print("These changes are incompatible with API level " + args.api_level)
-        for breaking_change in breaking_changes:
-            print(" - " + breaking_change)
-        print()
-        print("If possible, please make a soft transition instead.")
-        print("To allow a hard transition please run:")
-        print("  " + update_cmd(args.current, args.golden))
-        print()
-        return 1
+        return CompatibilityError(
+            api_level=args.api_level,
+            breaking_changes=breaking_changes,
+            current=args.current,
+            golden=args.golden,
+        )
 
     # Make the developer acknowledge a stale golden file.
     return fail_on_changes(args)
@@ -107,13 +152,12 @@ def fail_on_breaking_changes(args):
 def fail_on_changes(args):
     """Fails if current and golden aren't identical."""
     if not filecmp.cmp(args.golden, args.current):
-        print("Error: Detected changes to API level {}".format(args.api_level))
-        print("Please acknowledge this change by updating the golden.\n")
-        print("You can rebuild with `bless_goldens=true` in your GN args,")
-        print("or you can run this command:")
-        print("  " + update_cmd(args.current, args.golden))
-        return 1
-    return 0
+        return GoldenMismatchError(
+            api_level=args.api_level,
+            current=args.current,
+            golden=args.golden,
+        )
+    return None
 
 
 def update_cmd(current, golden):
