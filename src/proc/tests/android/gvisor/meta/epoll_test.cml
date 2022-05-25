@@ -2,6 +2,6 @@
     include: [ "//src/proc/tests/android/gvisor/meta/gvisor.shard.cml" ],
     program: {
         binary: "data/tests/epoll_test",
-        args: [ "--gunit_filter=-*.EpollPwait2Timeout:*.DoubleEpollOneShot:*.CycleOfOneDisallowed:*.CycleOfThreeDisallowed:*.CloseFile:*.PipeReaderHupAfterWriterClosed:*.DoubleLayerEpoll:*.RegularFiles:*.ReadyMutexCircularity" ],
+        args: [ "--gunit_filter=-*.EpollPwait2Timeout:*.DoubleEpollOneShot:*.CycleOfOneDisallowed:*.CycleOfThreeDisallowed:*.CloseFile:*.PipeReaderHupAfterWriterClosed:*.DoubleLayerEpoll:*.ReadyMutexCircularity" ],
     },
 }

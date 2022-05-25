@@ -125,6 +125,11 @@ impl EpollFileObject {
         file: &FileHandle,
         mut epoll_event: EpollEvent,
     ) -> Result<(), Errno> {
+        let mode = file.name.entry.node.info().mode;
+        if mode.is_reg() || mode.is_dir() {
+            return error!(EPERM);
+        }
+
         epoll_event.events |= FdEvents::POLLHUP.mask();
         epoll_event.events |= FdEvents::POLLERR.mask();
 
