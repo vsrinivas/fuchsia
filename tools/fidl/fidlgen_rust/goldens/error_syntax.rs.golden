@@ -27,15 +27,14 @@ use {
 
 const _FIDL_TRACE_BINDINGS_RUST: u32 = 6;
 
-pub type ExampleUseOfErrorSyntaxCallWhichMayFailResult = std::result::Result<(i64), u32>;
+pub type ExampleUseOfErrorSyntaxCallWhichMayFailResult = Result<(i64), u32>;
 
 /// Handle-type validating wrapper for ExampleUseOfErrorSyntaxCallWhichMayFailResult responses, used internally by
 /// FIDL bindings to decode method results. This should only be used by
 /// generated APIs, API users should never need to use this type. It is public
 /// because it is shared with composed protocols.
 #[doc(hidden)]
-pub type ExampleUseOfErrorSyntaxCallWhichMayFailResultHandleWrapper =
-    std::result::Result<(i64,), u32>;
+pub type ExampleUseOfErrorSyntaxCallWhichMayFailResultHandleWrapper = Result<(i64,), u32>;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct ExampleUseOfErrorSyntaxMarker;

@@ -237,8 +237,7 @@ fidl_enum! {
     flexible: true,
 }
 
-pub type SomeProtocolSomeMethodResult =
-    std::result::Result<(BitsMember), SomeProtocolSomeMethodError>;
+pub type SomeProtocolSomeMethodResult = Result<(BitsMember), SomeProtocolSomeMethodError>;
 
 /// Handle-type validating wrapper for SomeProtocolSomeMethodResult responses, used internally by
 /// FIDL bindings to decode method results. This should only be used by
@@ -246,7 +245,7 @@ pub type SomeProtocolSomeMethodResult =
 /// because it is shared with composed protocols.
 #[doc(hidden)]
 pub type SomeProtocolSomeMethodResultHandleWrapper =
-    std::result::Result<(BitsMember,), SomeProtocolSomeMethodError>;
+    Result<(BitsMember,), SomeProtocolSomeMethodError>;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expression {

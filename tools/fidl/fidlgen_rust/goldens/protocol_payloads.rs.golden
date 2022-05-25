@@ -27,59 +27,59 @@ use {
 
 const _FIDL_TRACE_BINDINGS_RUST: u32 = 6;
 
-pub type MainProtocolTwoWayLocalWithErrorResult = std::result::Result<(u32, u32), u32>;
+pub type MainProtocolTwoWayLocalWithErrorResult = Result<(u32, u32), u32>;
 
 /// Handle-type validating wrapper for MainProtocolTwoWayLocalWithErrorResult responses, used internally by
 /// FIDL bindings to decode method results. This should only be used by
 /// generated APIs, API users should never need to use this type. It is public
 /// because it is shared with composed protocols.
 #[doc(hidden)]
-pub type MainProtocolTwoWayLocalWithErrorResultHandleWrapper = std::result::Result<(u32, u32), u32>;
+pub type MainProtocolTwoWayLocalWithErrorResultHandleWrapper = Result<(u32, u32), u32>;
 
-pub type MainProtocolOnLocalWithErrorResult = std::result::Result<(u32, u32), u32>;
+pub type MainProtocolOnLocalWithErrorResult = Result<(u32, u32), u32>;
 
 /// Handle-type validating wrapper for MainProtocolOnLocalWithErrorResult responses, used internally by
 /// FIDL bindings to decode method results. This should only be used by
 /// generated APIs, API users should never need to use this type. It is public
 /// because it is shared with composed protocols.
 #[doc(hidden)]
-pub type MainProtocolOnLocalWithErrorResultHandleWrapper = std::result::Result<(u32, u32), u32>;
+pub type MainProtocolOnLocalWithErrorResultHandleWrapper = Result<(u32, u32), u32>;
 
-pub type MainProtocolTwoWayImportWithErrorResult = std::result::Result<(i32), u32>;
+pub type MainProtocolTwoWayImportWithErrorResult = Result<(i32), u32>;
 
 /// Handle-type validating wrapper for MainProtocolTwoWayImportWithErrorResult responses, used internally by
 /// FIDL bindings to decode method results. This should only be used by
 /// generated APIs, API users should never need to use this type. It is public
 /// because it is shared with composed protocols.
 #[doc(hidden)]
-pub type MainProtocolTwoWayImportWithErrorResultHandleWrapper = std::result::Result<(i32,), u32>;
+pub type MainProtocolTwoWayImportWithErrorResultHandleWrapper = Result<(i32,), u32>;
 
-pub type MainProtocolOnImportWithErrorResult = std::result::Result<(i32), u32>;
+pub type MainProtocolOnImportWithErrorResult = Result<(i32), u32>;
 
 /// Handle-type validating wrapper for MainProtocolOnImportWithErrorResult responses, used internally by
 /// FIDL bindings to decode method results. This should only be used by
 /// generated APIs, API users should never need to use this type. It is public
 /// because it is shared with composed protocols.
 #[doc(hidden)]
-pub type MainProtocolOnImportWithErrorResultHandleWrapper = std::result::Result<(i32,), u32>;
+pub type MainProtocolOnImportWithErrorResultHandleWrapper = Result<(i32,), u32>;
 
-pub type MainProtocolTwoWayAnonWithErrorResult = std::result::Result<(u32, u32), u32>;
+pub type MainProtocolTwoWayAnonWithErrorResult = Result<(u32, u32), u32>;
 
 /// Handle-type validating wrapper for MainProtocolTwoWayAnonWithErrorResult responses, used internally by
 /// FIDL bindings to decode method results. This should only be used by
 /// generated APIs, API users should never need to use this type. It is public
 /// because it is shared with composed protocols.
 #[doc(hidden)]
-pub type MainProtocolTwoWayAnonWithErrorResultHandleWrapper = std::result::Result<(u32, u32), u32>;
+pub type MainProtocolTwoWayAnonWithErrorResultHandleWrapper = Result<(u32, u32), u32>;
 
-pub type MainProtocolOnAnonWithErrorResult = std::result::Result<(u32, u32), u32>;
+pub type MainProtocolOnAnonWithErrorResult = Result<(u32, u32), u32>;
 
 /// Handle-type validating wrapper for MainProtocolOnAnonWithErrorResult responses, used internally by
 /// FIDL bindings to decode method results. This should only be used by
 /// generated APIs, API users should never need to use this type. It is public
 /// because it is shared with composed protocols.
 #[doc(hidden)]
-pub type MainProtocolOnAnonWithErrorResultHandleWrapper = std::result::Result<(u32, u32), u32>;
+pub type MainProtocolOnAnonWithErrorResultHandleWrapper = Result<(u32, u32), u32>;
 
 #[derive(
     Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, zerocopy::AsBytes, zerocopy::FromBytes,

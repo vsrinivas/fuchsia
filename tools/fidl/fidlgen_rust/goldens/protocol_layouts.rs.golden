@@ -28,7 +28,7 @@ use {
 const _FIDL_TRACE_BINDINGS_RUST: u32 = 6;
 
 pub type MainProtocolTwoWayImportWithErrorResult =
-    std::result::Result<(fidl_test_protocollayouts_imported::ImportUnionPayload), u32>;
+    Result<(fidl_test_protocollayouts_imported::ImportUnionPayload), u32>;
 
 /// Handle-type validating wrapper for MainProtocolTwoWayImportWithErrorResult responses, used internally by
 /// FIDL bindings to decode method results. This should only be used by
@@ -36,10 +36,10 @@ pub type MainProtocolTwoWayImportWithErrorResult =
 /// because it is shared with composed protocols.
 #[doc(hidden)]
 pub type MainProtocolTwoWayImportWithErrorResultHandleWrapper =
-    std::result::Result<(fidl_test_protocollayouts_imported::ImportUnionPayload,), u32>;
+    Result<(fidl_test_protocollayouts_imported::ImportUnionPayload,), u32>;
 
 pub type MainProtocolOnImportWithErrorResult =
-    std::result::Result<(fidl_test_protocollayouts_imported::ImportTablePayload), u32>;
+    Result<(fidl_test_protocollayouts_imported::ImportTablePayload), u32>;
 
 /// Handle-type validating wrapper for MainProtocolOnImportWithErrorResult responses, used internally by
 /// FIDL bindings to decode method results. This should only be used by
@@ -47,30 +47,28 @@ pub type MainProtocolOnImportWithErrorResult =
 /// because it is shared with composed protocols.
 #[doc(hidden)]
 pub type MainProtocolOnImportWithErrorResultHandleWrapper =
-    std::result::Result<(fidl_test_protocollayouts_imported::ImportTablePayload,), u32>;
+    Result<(fidl_test_protocollayouts_imported::ImportTablePayload,), u32>;
 
-pub type MainProtocolTwoWayLocalWithErrorResult = std::result::Result<(LocalUnionPayload), u32>;
+pub type MainProtocolTwoWayLocalWithErrorResult = Result<(LocalUnionPayload), u32>;
 
 /// Handle-type validating wrapper for MainProtocolTwoWayLocalWithErrorResult responses, used internally by
 /// FIDL bindings to decode method results. This should only be used by
 /// generated APIs, API users should never need to use this type. It is public
 /// because it is shared with composed protocols.
 #[doc(hidden)]
-pub type MainProtocolTwoWayLocalWithErrorResultHandleWrapper =
-    std::result::Result<(LocalUnionPayload,), u32>;
+pub type MainProtocolTwoWayLocalWithErrorResultHandleWrapper = Result<(LocalUnionPayload,), u32>;
 
-pub type MainProtocolOnLocalWithErrorResult = std::result::Result<(LocalTablePayload), u32>;
+pub type MainProtocolOnLocalWithErrorResult = Result<(LocalTablePayload), u32>;
 
 /// Handle-type validating wrapper for MainProtocolOnLocalWithErrorResult responses, used internally by
 /// FIDL bindings to decode method results. This should only be used by
 /// generated APIs, API users should never need to use this type. It is public
 /// because it is shared with composed protocols.
 #[doc(hidden)]
-pub type MainProtocolOnLocalWithErrorResultHandleWrapper =
-    std::result::Result<(LocalTablePayload,), u32>;
+pub type MainProtocolOnLocalWithErrorResultHandleWrapper = Result<(LocalTablePayload,), u32>;
 
 pub type MainProtocolTwoWayAnonWithErrorResult =
-    std::result::Result<(MainProtocolTwoWayAnonWithErrorResponse), u32>;
+    Result<(MainProtocolTwoWayAnonWithErrorResponse), u32>;
 
 /// Handle-type validating wrapper for MainProtocolTwoWayAnonWithErrorResult responses, used internally by
 /// FIDL bindings to decode method results. This should only be used by
@@ -78,10 +76,9 @@ pub type MainProtocolTwoWayAnonWithErrorResult =
 /// because it is shared with composed protocols.
 #[doc(hidden)]
 pub type MainProtocolTwoWayAnonWithErrorResultHandleWrapper =
-    std::result::Result<(MainProtocolTwoWayAnonWithErrorResponse,), u32>;
+    Result<(MainProtocolTwoWayAnonWithErrorResponse,), u32>;
 
-pub type MainProtocolOnAnonWithErrorResult =
-    std::result::Result<(MainProtocolOnAnonWithErrorResponse), u32>;
+pub type MainProtocolOnAnonWithErrorResult = Result<(MainProtocolOnAnonWithErrorResponse), u32>;
 
 /// Handle-type validating wrapper for MainProtocolOnAnonWithErrorResult responses, used internally by
 /// FIDL bindings to decode method results. This should only be used by
@@ -89,7 +86,7 @@ pub type MainProtocolOnAnonWithErrorResult =
 /// because it is shared with composed protocols.
 #[doc(hidden)]
 pub type MainProtocolOnAnonWithErrorResultHandleWrapper =
-    std::result::Result<(MainProtocolOnAnonWithErrorResponse,), u32>;
+    Result<(MainProtocolOnAnonWithErrorResponse,), u32>;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum LocalUnionPayload {

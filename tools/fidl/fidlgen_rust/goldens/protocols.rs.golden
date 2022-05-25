@@ -69,35 +69,34 @@ fidl_enum! {
     min_member: ErrFoo,
 }
 
-pub type WithErrorSyntaxResponseAsStructResult = std::result::Result<(i64, i64, i64), u32>;
+pub type WithErrorSyntaxResponseAsStructResult = Result<(i64, i64, i64), u32>;
 
 /// Handle-type validating wrapper for WithErrorSyntaxResponseAsStructResult responses, used internally by
 /// FIDL bindings to decode method results. This should only be used by
 /// generated APIs, API users should never need to use this type. It is public
 /// because it is shared with composed protocols.
 #[doc(hidden)]
-pub type WithErrorSyntaxResponseAsStructResultHandleWrapper =
-    std::result::Result<(i64, i64, i64), u32>;
+pub type WithErrorSyntaxResponseAsStructResultHandleWrapper = Result<(i64, i64, i64), u32>;
 
-pub type WithErrorSyntaxErrorAsPrimitiveResult = std::result::Result<(), u32>;
+pub type WithErrorSyntaxErrorAsPrimitiveResult = Result<(), u32>;
 
 /// Handle-type validating wrapper for WithErrorSyntaxErrorAsPrimitiveResult responses, used internally by
 /// FIDL bindings to decode method results. This should only be used by
 /// generated APIs, API users should never need to use this type. It is public
 /// because it is shared with composed protocols.
 #[doc(hidden)]
-pub type WithErrorSyntaxErrorAsPrimitiveResultHandleWrapper = std::result::Result<(), u32>;
+pub type WithErrorSyntaxErrorAsPrimitiveResultHandleWrapper = Result<(), u32>;
 
-pub type WithErrorSyntaxErrorAsEnumResult = std::result::Result<(), ErrorEnum>;
+pub type WithErrorSyntaxErrorAsEnumResult = Result<(), ErrorEnum>;
 
 /// Handle-type validating wrapper for WithErrorSyntaxErrorAsEnumResult responses, used internally by
 /// FIDL bindings to decode method results. This should only be used by
 /// generated APIs, API users should never need to use this type. It is public
 /// because it is shared with composed protocols.
 #[doc(hidden)]
-pub type WithErrorSyntaxErrorAsEnumResultHandleWrapper = std::result::Result<(), ErrorEnum>;
+pub type WithErrorSyntaxErrorAsEnumResultHandleWrapper = Result<(), ErrorEnum>;
 
-pub type WithErrorSyntaxHandleInResultResult = std::result::Result<(fidl::Handle), u32>;
+pub type WithErrorSyntaxHandleInResultResult = Result<(fidl::Handle), u32>;
 
 /// Handle-type validating wrapper for WithErrorSyntaxHandleInResultResult responses, used internally by
 /// FIDL bindings to decode method results. This should only be used by
@@ -105,7 +104,7 @@ pub type WithErrorSyntaxHandleInResultResult = std::result::Result<(fidl::Handle
 /// because it is shared with composed protocols.
 #[doc(hidden)]
 pub type WithErrorSyntaxHandleInResultResultHandleWrapper =
-    std::result::Result<(HandleWrapperObjectTypeNONERights2147483648<fidl::Handle>,), u32>;
+    Result<(HandleWrapperObjectTypeNONERights2147483648<fidl::Handle>,), u32>;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TheUnion {

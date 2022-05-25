@@ -29,50 +29,50 @@ const _FIDL_TRACE_BINDINGS_RUST: u32 = 6;
 
 pub const ALL_BINDINGS: u32 = 0;
 
-pub type DenyEachBindingOnlyDenyCppResult = std::result::Result<(i32), u32>;
+pub type DenyEachBindingOnlyDenyCppResult = Result<(i32), u32>;
 
 /// Handle-type validating wrapper for DenyEachBindingOnlyDenyCppResult responses, used internally by
 /// FIDL bindings to decode method results. This should only be used by
 /// generated APIs, API users should never need to use this type. It is public
 /// because it is shared with composed protocols.
 #[doc(hidden)]
-pub type DenyEachBindingOnlyDenyCppResultHandleWrapper = std::result::Result<(i32,), u32>;
+pub type DenyEachBindingOnlyDenyCppResultHandleWrapper = Result<(i32,), u32>;
 
-pub type DenyEachBindingOnlyDenyDartResult = std::result::Result<(i32), u32>;
+pub type DenyEachBindingOnlyDenyDartResult = Result<(i32), u32>;
 
 /// Handle-type validating wrapper for DenyEachBindingOnlyDenyDartResult responses, used internally by
 /// FIDL bindings to decode method results. This should only be used by
 /// generated APIs, API users should never need to use this type. It is public
 /// because it is shared with composed protocols.
 #[doc(hidden)]
-pub type DenyEachBindingOnlyDenyDartResultHandleWrapper = std::result::Result<(i32,), u32>;
+pub type DenyEachBindingOnlyDenyDartResultHandleWrapper = Result<(i32,), u32>;
 
-pub type DenyEachBindingOnlyDenyGoResult = std::result::Result<(i32), u32>;
+pub type DenyEachBindingOnlyDenyGoResult = Result<(i32), u32>;
 
 /// Handle-type validating wrapper for DenyEachBindingOnlyDenyGoResult responses, used internally by
 /// FIDL bindings to decode method results. This should only be used by
 /// generated APIs, API users should never need to use this type. It is public
 /// because it is shared with composed protocols.
 #[doc(hidden)]
-pub type DenyEachBindingOnlyDenyGoResultHandleWrapper = std::result::Result<(i32,), u32>;
+pub type DenyEachBindingOnlyDenyGoResultHandleWrapper = Result<(i32,), u32>;
 
-pub type DenyEachBindingOnlyDenyLibfuzzerResult = std::result::Result<(i32), u32>;
+pub type DenyEachBindingOnlyDenyLibfuzzerResult = Result<(i32), u32>;
 
 /// Handle-type validating wrapper for DenyEachBindingOnlyDenyLibfuzzerResult responses, used internally by
 /// FIDL bindings to decode method results. This should only be used by
 /// generated APIs, API users should never need to use this type. It is public
 /// because it is shared with composed protocols.
 #[doc(hidden)]
-pub type DenyEachBindingOnlyDenyLibfuzzerResultHandleWrapper = std::result::Result<(i32,), u32>;
+pub type DenyEachBindingOnlyDenyLibfuzzerResultHandleWrapper = Result<(i32,), u32>;
 
-pub type DenyEachBindingOnlyDenySyzkallerResult = std::result::Result<(i32), u32>;
+pub type DenyEachBindingOnlyDenySyzkallerResult = Result<(i32), u32>;
 
 /// Handle-type validating wrapper for DenyEachBindingOnlyDenySyzkallerResult responses, used internally by
 /// FIDL bindings to decode method results. This should only be used by
 /// generated APIs, API users should never need to use this type. It is public
 /// because it is shared with composed protocols.
 #[doc(hidden)]
-pub type DenyEachBindingOnlyDenySyzkallerResultHandleWrapper = std::result::Result<(i32,), u32>;
+pub type DenyEachBindingOnlyDenySyzkallerResultHandleWrapper = Result<(i32,), u32>;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct MemberOnlyAppearsInImportingLibrary {

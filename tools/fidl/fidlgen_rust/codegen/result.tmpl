@@ -6,7 +6,7 @@
 
 {{- define "ResultDeclaration" }}
 {{ if .ErrType -}}
-pub type {{ .Name }} = std::result::Result< (
+pub type {{ .Name }} = Result< (
   {{- if gt (len .Ok) 1 }}
     {{- range $ok := .Ok }}
       {{ $ok.Type }},
@@ -23,7 +23,7 @@ pub type {{ .Name }} = std::result::Result< (
 /// generated APIs, API users should never need to use this type. It is public
 /// because it is shared with composed protocols.
 #[doc(hidden)]
-pub type {{ .Name }}HandleWrapper = std::result::Result< (
+pub type {{ .Name }}HandleWrapper = Result< (
   {{- range $ok := .Ok }}
     {{ if $ok.HasHandleMetadata }}
     {{ $ok.HandleWrapperName }}<{{ $ok.Type }}>,
