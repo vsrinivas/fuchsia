@@ -155,7 +155,10 @@ impl PackageManifest {
         Ok(builder.build())
     }
 
-    pub fn from_package(package: Package) -> Result<Self, PackageManifestError> {
+    pub fn from_package(
+        package: Package,
+        repository: Option<String>,
+    ) -> Result<Self, PackageManifestError> {
         let mut blobs = Vec::with_capacity(package.blobs().len());
         for (blob_path, blob_entry) in package.blobs() {
             let source_path = blob_entry.source_path();
@@ -179,7 +182,7 @@ impl PackageManifest {
         let manifest_v1 = PackageManifestV1 {
             package: package_metadata,
             blobs,
-            repository: None,
+            repository,
             blob_sources_relative: Default::default(),
         };
         Ok(PackageManifest(VersionedPackageManifest::Version1(manifest_v1)))
@@ -574,7 +577,7 @@ mod tests {
             1,
         );
         let package = package_builder.build().unwrap();
-        let package_manifest = PackageManifest::from_package(package).unwrap();
+        let package_manifest = PackageManifest::from_package(package, None).unwrap();
         assert_eq!(&"package-name".parse::<PackageName>().unwrap(), package_manifest.name());
     }
 
@@ -623,7 +626,7 @@ mod tests {
 
         let gen_meta_far_path = temp.path().join("meta.far");
         let _package_manifest =
-            crate::build::build(&creation_manifest, &gen_meta_far_path, "package");
+            crate::build::build(&creation_manifest, &gen_meta_far_path, "package", None);
 
         // Compute the meta.far hash, and copy it into the blobs/ directory.
         let meta_far_bytes = std::fs::read(&gen_meta_far_path).unwrap();

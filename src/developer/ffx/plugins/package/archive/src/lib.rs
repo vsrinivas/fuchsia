@@ -79,6 +79,7 @@ mod test {
             &creation_manifest,
             &meta_far_path,
             "test_package",
+            None,
             &file_system,
         )
         .unwrap();

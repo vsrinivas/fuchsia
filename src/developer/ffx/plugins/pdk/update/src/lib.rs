@@ -581,7 +581,8 @@ mod test {
             },
         };
 
-        build_with_file_system(&creation_manifest, &path, "my-package-name", &file_system).unwrap();
+        build_with_file_system(&creation_manifest, &path, "my-package-name", None, &file_system)
+            .unwrap();
     }
 
     fn write_file(path: PathBuf, body: &[u8]) {

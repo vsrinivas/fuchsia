@@ -44,7 +44,7 @@ pub fn cmd_package_build(cmd: BuildCommand) -> Result<()> {
     let creation_manifest = CreationManifest::from_pm_fini(BufReader::new(build_manifest))?;
     create_dir_all(&out_dir)?;
     let meta_far_path = out_dir.join("meta.far");
-    let package_manifest = build(&creation_manifest, &meta_far_path, cmd.published_name)?;
+    let package_manifest = build(&creation_manifest, &meta_far_path, cmd.published_name, None)?;
     let mut file = File::create(package_manifest_path)?;
     file.write_all(serde_json::to_string(&package_manifest)?.as_bytes())?;
     Ok(())

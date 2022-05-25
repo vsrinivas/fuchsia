@@ -395,6 +395,7 @@ class AIBCreator:
             # manifest needs to be rewritten to reflect the new location of the
             # blobs within it.
             new_manifest = PackageManifest(manifest.package, [])
+            new_manifest.repository = manifest.repository
 
             # For each blob in the manifest:
             #  1) add it to set of all blobs

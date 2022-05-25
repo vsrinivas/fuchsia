@@ -63,7 +63,7 @@ fn create_config_data_with_temp_folder(args: ConfigDataArgs, temp_dir: &PathBuf)
     let meta_far_path = out_dir.join("meta.far");
     let package_manifest_path = out_dir.join("package_manifest.json");
 
-    let package_manifest = fuchsia_pkg::build(&manifest, meta_far_path, "config-data")?;
+    let package_manifest = fuchsia_pkg::build(&manifest, meta_far_path, "config-data", None)?;
     let package_manifest_file = File::create(&package_manifest_path)
         .context("Failed to create update_package_manifest.json")?;
     ser::to_writer(package_manifest_file, &package_manifest)?;
@@ -219,7 +219,7 @@ mod tests {
 
         let meta_far_path = data_dir.join("meta.far");
 
-        fuchsia_pkg::build(&manifest, meta_far_path.clone(), "config-data").unwrap();
+        fuchsia_pkg::build(&manifest, meta_far_path.clone(), "config-data", None).unwrap();
 
         meta_far_path
     }

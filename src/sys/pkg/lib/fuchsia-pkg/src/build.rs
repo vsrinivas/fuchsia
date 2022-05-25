@@ -15,8 +15,15 @@ pub fn build(
     creation_manifest: &CreationManifest,
     meta_far_path: impl AsRef<Path>,
     published_name: impl AsRef<str>,
+    repository: Option<String>,
 ) -> Result<PackageManifest, BuildError> {
-    build_with_file_system(creation_manifest, meta_far_path, published_name, &ActualFileSystem {})
+    build_with_file_system(
+        creation_manifest,
+        meta_far_path,
+        published_name,
+        repository,
+        &ActualFileSystem {},
+    )
 }
 
 // Used to mock out native filesystem for testing
@@ -46,6 +53,7 @@ pub fn build_with_file_system<'a>(
     creation_manifest: &CreationManifest,
     meta_far_path: impl AsRef<Path>,
     published_name: impl AsRef<str>,
+    repository: Option<String>,
     file_system: &'a impl FileSystem<'a>,
 ) -> Result<PackageManifest, BuildError> {
     if creation_manifest.far_contents().get("meta/package").is_none() {
@@ -127,7 +135,7 @@ pub fn build_with_file_system<'a>(
     );
 
     let package = package_builder.build()?;
-    let package_manifest = PackageManifest::from_package(package)?;
+    let package_manifest = PackageManifest::from_package(package, repository)?;
     Ok(package_manifest)
 }
 
@@ -243,8 +251,14 @@ mod test_build_with_file_system {
                 "host/meta/package".to_string() => v.clone()
             },
         };
-        build_with_file_system(&creation_manifest, &meta_far_path, "published-name", &file_system)
-            .unwrap();
+        build_with_file_system(
+            &creation_manifest,
+            &meta_far_path,
+            "published-name",
+            None,
+            &file_system,
+        )
+        .unwrap();
         let mut reader = fuchsia_archive::Reader::new(File::open(&meta_far_path).unwrap()).unwrap();
         let actual_meta_package_bytes = reader.read_file("meta/package").unwrap();
         let expected_meta_package_bytes = v.as_slice();
@@ -283,6 +297,7 @@ mod test_build_with_file_system {
             &creation_manifest,
             &meta_far_path,
             "published-name",
+            None,
             &file_system,
         );
         assert_matches!(
@@ -310,6 +325,7 @@ mod test_build_with_file_system {
                 &creation_manifest,
                 &meta_far_path,
                 "published-name",
+                None,
                 &file_system,
             )
                 .unwrap();
@@ -345,6 +361,7 @@ mod test_build_with_file_system {
                 &creation_manifest,
                 &meta_far_path,
                 "published-name",
+                None,
                 &file_system,
             )
                 .unwrap();
@@ -373,6 +390,7 @@ mod test_build_with_file_system {
                 &creation_manifest,
                 &meta_far_path,
                 "published-name",
+                None,
                 &file_system,
             )
                 .unwrap();
@@ -483,6 +501,7 @@ mod test_build {
                 &creation_manifest,
                 &meta_far_path,
                 "published-name",
+                None,
             )
                 .unwrap();
             let mut reader = fuchsia_archive::Reader::new(fs::File::open(&meta_far_path).unwrap()).unwrap();

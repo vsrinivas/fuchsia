@@ -355,6 +355,7 @@ mod tests {
             .unwrap(),
             &meta_far_path,
             "pkgfs-ramdisk-tests",
+            None,
         )
         .unwrap();
 
@@ -389,6 +390,7 @@ mod tests {
             .unwrap(),
             &meta_far_path,
             "pkgfs-ramdisk-tests",
+            None,
         )
         .unwrap();
 

@@ -275,7 +275,8 @@ mod test {
             },
         };
 
-        build_with_file_system(&creation_manifest, &path, "test_package", &file_system).unwrap();
+        build_with_file_system(&creation_manifest, &path, "test_package", None, &file_system)
+            .unwrap();
     }
 
     fn write_file(path: PathBuf, body: &[u8]) {

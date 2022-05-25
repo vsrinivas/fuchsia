@@ -40,7 +40,8 @@ raw_package_manifest_json = """{
             "source_path": "source/path/to/an/empty/file"
         }
     ],
-    "version": "1"
+    "version": "1",
+    "repository": "some_repo"
 }"""
 
 empty_blob_raw_json = """{
@@ -79,7 +80,7 @@ class PackageManifestTest(unittest.TestCase):
                         "15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b",
                         size=0,
                         source_path="source/path/to/an/empty/file"),
-                ]))
+                ], "1", None, "some_repo"))
 
     def test_serialize_json(self):
         manifest = PackageManifest(
@@ -102,7 +103,7 @@ class PackageManifestTest(unittest.TestCase):
                     "15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b",
                     size=0,
                     source_path="source/path/to/an/empty/file"),
-            ])
+            ], "1", None, "some_repo")
 
         serialized_json = serialization.json_dumps(manifest, indent=4)
         self.maxDiff = None

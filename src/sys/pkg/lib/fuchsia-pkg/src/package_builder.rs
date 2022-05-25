@@ -46,6 +46,9 @@ pub struct PackageBuilder {
     /// Optional (possibly different) name to publish the package under.
     /// This changes the name that's placed in the output package manifest.
     published_name: Option<String>,
+
+    /// Optional package repository.
+    repository: Option<String>,
 }
 
 impl PackageBuilder {
@@ -59,6 +62,7 @@ impl PackageBuilder {
             manifest_path: None,
             blob_sources_relative: RelativeTo::default(),
             published_name: None,
+            repository: None,
         }
     }
 
@@ -309,6 +313,11 @@ impl PackageBuilder {
         self.published_name = Some(published_name.as_ref().into());
     }
 
+    /// Set a repository for the package to be included in the generated PackageManifest.
+    pub fn repository(&mut self, repository: impl AsRef<str>) {
+        self.repository = Some(repository.as_ref().into());
+    }
+
     /// Read the contents of a file already added to the builder's meta.far.
     pub fn read_contents_from_far(&self, file_path: &str) -> Result<Vec<u8>> {
         if let Some(p) = self.far_contents.get(file_path) {
@@ -340,6 +349,7 @@ impl PackageBuilder {
             manifest_path,
             blob_sources_relative,
             published_name,
+            repository,
         } = self;
 
         far_contents.insert(
@@ -369,6 +379,7 @@ impl PackageBuilder {
             &creation_manifest,
             metafar_path.as_ref(),
             published_name.as_ref().unwrap_or(&name),
+            repository,
         )?;
 
         Ok(if let Some(manifest_path) = manifest_path {

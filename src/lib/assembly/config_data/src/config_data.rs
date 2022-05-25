@@ -66,6 +66,7 @@ impl ConfigDataBuilder {
 
         package_builder.manifest_path(&manifest_path);
         package_builder.manifest_blobs_relative_to(RelativeTo::File);
+        package_builder.repository("fuchsia.com");
 
         package_builder.build(outdir, &metafar_path).context(format!(
             "Building `config_data` package at path '{}'",

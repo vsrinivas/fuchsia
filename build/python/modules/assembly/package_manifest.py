@@ -79,6 +79,7 @@ class PackageManifest:
     blobs: List[BlobEntry]
     version: str = "1"
     blob_sources_relative: Optional[str] = None
+    repository: Optional[str] = None
 
     def set_blob_sources_relative(self, relative_to_file: bool):
         self.blob_sources_relative = "file" if relative_to_file else "working_dir"
@@ -100,6 +101,11 @@ class PackageManifest:
         if self.package.name != other.package.name:
             errors.append(
                 f"package publishing names differ: {self.package.name} vs. {other.package.name}"
+            )
+
+        if self.repository != other.repository:
+            errors.append(
+                f"package publishing repositories differ: {self.repository} vs. {other.repository}"
             )
 
         self_blobs_by_path = self.blobs_by_path()
