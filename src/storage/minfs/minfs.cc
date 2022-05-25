@@ -886,7 +886,7 @@ void Minfs::StopWriteback() {
     return;
   }
 
-  if (IsReadonly() == false) {
+  if (mount_options_.writability == Writability::Writable) {
     // Ignore errors here since there is nothing we can do.
     [[maybe_unused]] auto _ = UpdateCleanBitAndOldestRevision(/*is_clean=*/true);
   }
@@ -1009,11 +1009,6 @@ void Minfs::BlockNew(PendingWork* transaction, blk_t* out_bno) const {
   size_t allocated_bno = transaction->AllocateBlock();
   *out_bno = static_cast<blk_t>(allocated_bno);
   ValidateBno(*out_bno);
-}
-
-bool Minfs::IsReadonly() {
-  std::lock_guard lock(vfs_lock_);
-  return ReadonlyLocked();
 }
 
 void Minfs::UpdateFlags(PendingWork* transaction, uint32_t flags, bool set) {
@@ -1149,7 +1144,7 @@ zx::status<std::unique_ptr<Minfs>> Minfs::Create(FuchsiaDispatcher* dispatcher,
 
   // Replay the journal before loading any other structures.
   zx::status<fs::JournalSuperblock> journal_superblock_or;
-  if (!options.readonly) {
+  if (options.writability != Writability::ReadOnlyDisk) {
     journal_superblock_or = ReplayJournalReloadSuperblock(bc.get(), &info);
     if (journal_superblock_or.is_error()) {
       return journal_superblock_or.take_error();
@@ -1193,7 +1188,7 @@ zx::status<std::unique_ptr<Minfs>> Minfs::Create(FuchsiaDispatcher* dispatcher,
   out_fs =
       std::unique_ptr<Minfs>(new Minfs(dispatcher, std::move(bc), std::move(sb),
                                        std::move(block_allocator), std::move(inodes), options));
-  if (!options.readonly) {
+  if (options.writability != Writability::ReadOnlyDisk) {
     auto status = out_fs->InitializeJournal(std::move(journal_superblock_or.value()));
     if (status.is_error()) {
       FX_LOGS(ERROR) << "Cannot initialize journal";
@@ -1216,7 +1211,7 @@ zx::status<std::unique_ptr<Minfs>> Minfs::Create(FuchsiaDispatcher* dispatcher,
     }
   }
 
-  if (!options.readonly) {
+  if (options.writability != Writability::ReadOnlyDisk) {
     // On a read-write filesystem we unset the kMinfsFlagClean flag to indicate that the
     // filesystem may begin receiving modifications.
     //
@@ -1233,14 +1228,14 @@ zx::status<std::unique_ptr<Minfs>> Minfs::Create(FuchsiaDispatcher* dispatcher,
       return status.take_error();
     }
 
-    if (options.readonly_after_initialization) {
+    if (options.writability == Writability::ReadOnlyFilesystem) {
       // The filesystem should still be "writable"; we set the dirty bit while
       // purging the unlinked list. Invoking StopWriteback here unsets the dirty bit.
       out_fs->StopWriteback();
     }
   }
 
-  out_fs->SetReadonly(options.readonly || options.readonly_after_initialization);
+  out_fs->SetReadonly(options.writability != Writability::Writable);
 
   out_fs->InitializeInspectTree();
 #else

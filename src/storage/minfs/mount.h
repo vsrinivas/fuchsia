@@ -14,19 +14,18 @@
 
 namespace minfs {
 
+enum class Writability {
+  // Do not write to persistent storage under any circumstances whatsoever.
+  ReadOnlyDisk,
+  // Do not allow users of the filesystem to mutate filesystem state. This state allows the journal
+  // to replay while initializing writeback.
+  ReadOnlyFilesystem,
+  // Permit all operations.
+  Writable,
+};
+
 struct MountOptions {
-  // When true, no changes are made to the file-system, including marking the volume as clean. This
-  // differs from readonly_after_initialization which might replay the journal and mark the volume
-  // as clean.
-  // TODO(fxbug.dev/51056): Unify the readonly and readonly_after_initialization flags.
-  bool readonly = false;
-  // Determines whether the filesystem will be accessible as read-only.
-  // This does not mean that access to the block device is exclusively read-only;
-  // the filesystem can still perform internal operations (like journal replay)
-  // while "read-only".
-  //
-  // The "clean bit" is written to storage if "readonly = false".
-  bool readonly_after_initialization = false;
+  Writability writability = Writability::Writable;
   bool verbose = false;
   // Determines if the filesystem performs actions like replaying the journal, repairing the
   // superblock, etc.

@@ -815,7 +815,8 @@ zx::status<std::unique_ptr<MinfsChecker>> MinfsChecker::Create(FuchsiaDispatcher
   auto fs_or = Minfs::Create(
       dispatcher, std::move(bc),
       MountOptions{
-          .readonly = fsck_options.read_only,
+          .writability = fsck_options.read_only ? minfs::Writability::ReadOnlyDisk
+                                                : minfs::Writability::Writable,
           .repair_filesystem = fsck_options.repair,
           .fsck_after_every_transaction = false,  // Explicit in case the default is overridden.
           .quiet = fsck_options.quiet,

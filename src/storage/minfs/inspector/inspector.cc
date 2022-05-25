@@ -61,7 +61,7 @@ zx_status_t Inspector::GetRoot(std::unique_ptr<disk_inspector::DiskObject>* out)
 zx::status<std::unique_ptr<disk_inspector::DiskObject>> Inspector::CreateRoot(
     std::unique_ptr<Bcache> bc) {
   MountOptions options = {};
-  options.readonly_after_initialization = true;
+  options.writability = minfs::Writability::ReadOnlyFilesystem;
   options.repair_filesystem = false;
 
   auto fs_or = Minfs::Create(dispatcher_, std::move(bc), options);

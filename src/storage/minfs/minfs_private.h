@@ -411,9 +411,6 @@ class Minfs :
   // flushed.
   std::vector<fbl::RefPtr<VnodeMinfs>> GetDirtyVnodes();
 
-  // Check if filesystem is readonly.
-  bool IsReadonly() __TA_EXCLUDES(vfs_lock_);
-
   // Find a free inode, allocate it in the inode bitmap, and write it back to disk
   void InoNew(Transaction* transaction, const Inode* inode, ino_t* out_ino);
 

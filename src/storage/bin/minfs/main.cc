@@ -20,11 +20,13 @@
 
 namespace {
 
-int Fsck(std::unique_ptr<minfs::Bcache> bc, const minfs::MountOptions& options) {
-  if (options.readonly_after_initialization) {
-    return minfs::Fsck(std::move(bc), minfs::FsckOptions()).status_value();
-  }
-  return minfs::Fsck(std::move(bc), minfs::FsckOptions{.repair = true}).status_value();
+int Fsck(std::unique_ptr<minfs::Bcache> bc, const minfs::MountOptions& mount_options) {
+  minfs::FsckOptions options;
+  // If the disk is read only, pass that in.
+  options.read_only = mount_options.writability == minfs::Writability::ReadOnlyDisk;
+  // Only repair if we are fully writable.
+  options.repair = mount_options.writability == minfs::Writability::Writable;
+  return minfs::Fsck(std::move(bc), options).status_value();
 }
 
 // Run the filesystem server on top of the block device |device|.
@@ -91,8 +93,10 @@ int CreateBcacheUpdatingOptions(std::unique_ptr<block_client::RemoteBlockDevice>
     return EXIT_FAILURE;
   }
 
-  options->readonly_after_initialization |= bc_or->is_read_only;
-  options->repair_filesystem &= !bc_or->is_read_only;
+  if (bc_or->is_read_only) {
+    options->writability = minfs::Writability::ReadOnlyDisk;
+    options->repair_filesystem = false;
+  }
   *out_bcache = std::move(bc_or->bcache);
   return 0;
 }
@@ -130,7 +134,7 @@ int main(int argc, char** argv) {
     }
     switch (c) {
       case 'r':
-        options.readonly_after_initialization = true;
+        options.writability = minfs::Writability::ReadOnlyFilesystem;
         break;
       case 'v':
         options.verbose = true;

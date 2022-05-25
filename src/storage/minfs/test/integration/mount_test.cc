@@ -94,7 +94,7 @@ class MountTestTemplate : public testing::Test {
   std::unique_ptr<minfs::Bcache> bcache() { return std::move(bcache_); }
 
   minfs::MountOptions mount_options() const {
-    return minfs::MountOptions{.readonly_after_initialization = false,
+    return minfs::MountOptions{.writability = minfs::Writability::Writable,
                                .verbose = true,
                                .repair_filesystem = repairable,
                                .fvm_data_slices = fs_management::MkfsOptions().fvm_data_slices};
