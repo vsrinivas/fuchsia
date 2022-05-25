@@ -478,7 +478,7 @@ pub fn sys_futex(
     addr: UserAddress,
     op: u32,
     value: u32,
-    _utime: UserRef<timespec>,
+    utime: UserRef<timespec>,
     addr2: UserAddress,
     value3: u32,
 ) -> Result<(), Errno> {
@@ -494,7 +494,12 @@ pub fn sys_futex(
     let cmd = op & (FUTEX_CMD_MASK as u32);
     match cmd {
         FUTEX_WAIT => {
-            let deadline = zx::Time::INFINITE;
+            let deadline = if utime.is_null() {
+                zx::Time::INFINITE
+            } else {
+                let duration = current_task.mm.read_object(utime)?;
+                zx::Time::after(duration_from_timespec(duration)?)
+            };
             current_task.mm.futex.wait(
                 &current_task,
                 addr,
@@ -510,7 +515,14 @@ pub fn sys_futex(
             if value3 == 0 {
                 return error!(EINVAL);
             }
-            let deadline = zx::Time::INFINITE;
+            let deadline = if utime.is_null() {
+                zx::Time::INFINITE
+            } else {
+                // The timeout is interpreted differently by WAIT and WAIT_BITSET: WAIT takes a
+                // timeout and WAIT_BITSET takes a deadline.
+                let deadline = current_task.mm.read_object(utime)?;
+                time_from_timespec(deadline)?
+            };
             current_task.mm.futex.wait(&current_task, addr, value, value3, deadline)?;
         }
         FUTEX_WAKE_BITSET => {
