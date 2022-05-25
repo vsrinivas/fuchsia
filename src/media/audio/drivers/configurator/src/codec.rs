@@ -87,35 +87,37 @@ impl CodecInterface {
 
 #[cfg(test)]
 mod tests {
-    use crate::configurator::Configurator;
-    use crate::discover::find_codecs;
-    use crate::testing::tests::get_dev_proxy;
-    use anyhow::Result;
-    use async_trait::async_trait;
-    use tracing;
+    use {
+        super::*,
+        crate::configurator::Configurator,
+        crate::discover::find_codecs,
+        crate::testing::tests::get_dev_proxy,
+        anyhow::{anyhow, Context},
+        async_trait::async_trait,
+    };
 
     pub struct TestConfigurator {}
 
     #[async_trait]
     impl Configurator for TestConfigurator {
-        fn new() -> Self {
-            Self {}
+        fn new() -> Result<Self, Error> {
+            Ok(Self {})
         }
 
-        async fn process_new_codec(&mut self, mut device: crate::codec::CodecInterface) {
-            if device.connect().is_err() {
-                tracing::warn!("Couldn't connect to codec");
-                return;
-            }
-            let info = device.get_info().await.unwrap();
+        async fn process_new_codec(
+            &mut self,
+            mut device: crate::codec::CodecInterface,
+        ) -> Result<(), Error> {
+            let _ = device.connect().context("Couldn't connect to codec")?;
+            let info = device.get_info().await?;
             assert_eq!(info.unique_id, "123");
             assert_eq!(info.manufacturer, "456");
             assert_eq!(info.product_name, "789");
 
-            let formats = device.get_dai_formats().await.unwrap().unwrap();
+            let formats = device.get_dai_formats().await?.map_err(|e| anyhow!(e.to_string()))?;
             // We have 2 test codecs, one with good behavior (formats listed) and one with bad
             // behavior (empty formats), we only set_dai_formats for the the one that reported
-            // at least one format.
+            // at least one format. Hence, we return Ok(()) here.
             if formats.len() == 0
                 || formats[0].number_of_channels.len() == 0
                 || formats[0].sample_formats.len() == 0
@@ -124,8 +126,7 @@ mod tests {
                 || formats[0].bits_per_slot.len() == 0
                 || formats[0].bits_per_sample.len() == 0
             {
-                tracing::warn!("Codec with bad format reported");
-                return;
+                return Ok(());
             }
 
             // Good test codec checks.
@@ -142,15 +143,21 @@ mod tests {
                 bits_per_sample: formats[0].bits_per_sample[0],
             };
             let _codec_format_info = device.set_dai_format(format).await;
+            Ok(())
         }
 
-        async fn process_new_dai(&mut self, mut _device: crate::dai::DaiInterface) {}
+        async fn process_new_dai(
+            &mut self,
+            mut _device: crate::dai::DaiInterface,
+        ) -> Result<(), Error> {
+            Ok(())
+        }
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_codec_api() -> Result<()> {
+    async fn test_codec_api() -> Result<(), Error> {
         let (_realm_instance, dev_proxy) = get_dev_proxy("class/codec").await?;
-        let configurator = TestConfigurator::new();
+        let configurator = TestConfigurator::new()?;
         find_codecs(dev_proxy, 2, configurator).await?;
         Ok(())
     }

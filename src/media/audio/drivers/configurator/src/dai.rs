@@ -91,30 +91,36 @@ impl DaiInterface {
 mod tests {
     use {
         super::*, crate::configurator::Configurator, crate::discover::find_dais,
-        crate::testing::tests::get_dev_proxy, anyhow::Result, async_trait::async_trait, tracing,
+        crate::testing::tests::get_dev_proxy, anyhow::Context, anyhow::Result,
+        async_trait::async_trait,
     };
 
     pub struct TestConfigurator {}
 
     #[async_trait]
     impl Configurator for TestConfigurator {
-        fn new() -> Self {
-            Self {}
+        fn new() -> Result<Self, Error> {
+            Ok(Self {})
         }
 
-        async fn process_new_codec(&mut self, mut _device: crate::codec::CodecInterface) -> () {}
-        async fn process_new_dai(&mut self, mut device: crate::dai::DaiInterface) -> () {
-            if device.connect().is_err() {
-                tracing::warn!("Couldn't connect to dai");
-                return;
-            }
+        async fn process_new_codec(
+            &mut self,
+            mut _device: crate::codec::CodecInterface,
+        ) -> Result<(), Error> {
+            Ok(())
+        }
+        async fn process_new_dai(
+            &mut self,
+            mut device: crate::dai::DaiInterface,
+        ) -> Result<(), Error> {
+            let _ = device.connect().context("Couldn't connect to DAI")?;
 
-            let info = device.get_properties().await.unwrap();
+            let info = device.get_properties().await?;
             assert_eq!(info.is_input.unwrap(), false);
             assert_eq!(info.manufacturer.unwrap(), "test");
             assert_eq!(info.product_name.unwrap(), "test");
 
-            let _ = device.reset().await.unwrap();
+            let _ = device.reset().await?;
 
             // We test that we can make calls to the DAI driver, no checks on formats.
             let _ring_buffer_formats = device.get_ring_buffer_formats().await.unwrap().unwrap();
@@ -138,15 +144,15 @@ mod tests {
                 bits_per_slot: 24,
                 bits_per_sample: 32,
             };
-            let _ =
-                device.create_ring_buffer(dai_format, ring_buffer_format, theirs).await.unwrap();
+            let _ = device.create_ring_buffer(dai_format, ring_buffer_format, theirs).await?;
+            Ok(())
         }
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dai_api() -> Result<()> {
+    async fn test_dai_api() -> Result<(), Error> {
         let (_realm_instance, dev_proxy) = get_dev_proxy("class/dai").await?;
-        let configurator = TestConfigurator::new();
+        let configurator = TestConfigurator::new()?;
         find_dais(dev_proxy, 1, configurator).await?;
         Ok(())
     }

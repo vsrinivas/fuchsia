@@ -7,7 +7,7 @@
 
 use {
     crate::{codec::CodecInterface, configurator::Configurator, dai::DaiInterface},
-    anyhow::Error,
+    anyhow::{anyhow, Error},
     fidl_fuchsia_io as fio,
     futures::TryStreamExt,
     std::path::Path,
@@ -36,7 +36,15 @@ pub async fn find_codecs<T: Configurator>(
                         let path = Path::new(&msg.filename);
                         tracing::info!("Found new codec in devfs node: {:?}", path);
                         let interface = CodecInterface::new(local, &path);
-                        configurator.process_new_codec(interface).await;
+                        if let Err(e) = configurator.process_new_codec(interface).await {
+                            if break_count != 0 {
+                                // Error when we want to break on count, then report it and exit.
+                                return Err(anyhow!("Codec processing error: {:?}", e));
+                            } else {
+                                // Otherwise we continue finding codecs.
+                                tracing::warn!("Codec processing error: {:?}", e);
+                            }
+                        }
                         codecs_found += 1;
                         if codecs_found == break_count {
                             return Ok(());
@@ -74,7 +82,15 @@ pub async fn find_dais<T: Configurator>(
                         let path = Path::new(&msg.filename);
                         tracing::info!("Found new DAI in devfs node: {:?}", path);
                         let interface = DaiInterface::new(local, &path);
-                        configurator.process_new_dai(interface).await;
+                        if let Err(e) = configurator.process_new_dai(interface).await {
+                            if break_count != 0 {
+                                // Error when we want to break on count, then report it and exit.
+                                return Err(anyhow!("DAI processing error: {:?}", e));
+                            } else {
+                                // Otherwise we continue finding DAIs.
+                                tracing::warn!("DAI processing error: {:?}", e);
+                            }
+                        }
                         dais_found += 1;
                         if dais_found == break_count {
                             return Ok(());
@@ -99,7 +115,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_find_codecs() -> Result<()> {
         let (_realm_instance, dev_proxy) = get_dev_proxy("class/codec").await?;
-        let configurator = NullConfigurator::new();
+        let configurator = NullConfigurator::new()?;
         find_codecs(dev_proxy, 2, configurator).await?;
         Ok(())
     }
@@ -107,7 +123,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_find_dais() -> Result<()> {
         let (_realm_instance, dev_proxy) = get_dev_proxy("class/dai").await?;
-        let configurator = NullConfigurator::new();
+        let configurator = NullConfigurator::new()?;
         find_dais(dev_proxy, 1, configurator).await?;
         Ok(())
     }

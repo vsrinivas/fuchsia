@@ -17,12 +17,21 @@ pub mod tests {
 
     #[async_trait]
     impl Configurator for NullConfigurator {
-        fn new() -> Self {
-            Self {}
+        fn new() -> Result<Self, Error> {
+            Ok(Self {})
         }
-
-        async fn process_new_codec(&mut self, mut _device: crate::codec::CodecInterface) {}
-        async fn process_new_dai(&mut self, mut _device: crate::dai::DaiInterface) {}
+        async fn process_new_codec(
+            &mut self,
+            mut _device: crate::codec::CodecInterface,
+        ) -> Result<(), Error> {
+            Ok(())
+        }
+        async fn process_new_dai(
+            &mut self,
+            mut _device: crate::dai::DaiInterface,
+        ) -> Result<(), Error> {
+            Ok(())
+        }
     }
 
     pub async fn get_dev_proxy(
