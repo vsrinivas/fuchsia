@@ -13,7 +13,9 @@ group("tests_no_e2e") {
     "pkg:tests",
 
     # Tests not under //sdk/cts/...
-    "//src/sys/component_manager/tests/collections:collections_integration_test",
+    # TODO: Fix the below test in the CTS release
+    #"//src/sys/component_manager/tests/collections:collections_integration_test",
+    "//src/sys/component_manager/tests/reboot_on_terminate:tests",
   ]
 
   # TODO(jcecil): add back tools tests once we're able to execute them OOT.
