@@ -5,7 +5,7 @@
 pub mod args;
 
 use {
-    super::common,
+    crate::common,
     anyhow::{format_err, Result},
     args::ListHostsCommand,
     fidl_fuchsia_driver_development as fdd,

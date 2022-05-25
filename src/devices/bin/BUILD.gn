@@ -28,6 +28,7 @@ group("tests") {
     "driver_manager:tests",
     "driver_playground:tests",
     "driver_runtime:tests",
+    "driver_tools:tests",
     "register-util:tests",
   ]
 }

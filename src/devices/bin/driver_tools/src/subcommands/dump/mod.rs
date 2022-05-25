@@ -5,7 +5,7 @@
 pub mod args;
 
 use {
-    super::common::{self, DFv1Device, DFv2Node, Device},
+    crate::common::{self, DFv1Device, DFv2Node, Device},
     anyhow::{format_err, Result},
     args::DumpCommand,
     fidl_fuchsia_driver_development as fdd,

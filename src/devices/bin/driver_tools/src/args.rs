@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    crate::subcommands::{
+    super::subcommands::{
         debug_bind::args::DebugBindCommand, device::args::DeviceCommand, dump::args::DumpCommand,
         list::args::ListCommand, list_devices::args::ListDevicesCommand,
         list_hosts::args::ListHostsCommand, lsblk::args::LsblkCommand, lspci::args::LspciCommand,
-        lsusb::args::LsusbCommand, register::args::RegisterCommand, restart::args::RestartCommand,
+        lsusb::args::LsusbCommand, print_input_report::args::PrintInputReportCommand,
+        register::args::RegisterCommand, restart::args::RestartCommand,
         runtool::args::RunToolCommand,
     },
     argh::FromArgs,
@@ -32,6 +33,7 @@ pub enum DriverSubcommand {
     Lsblk(LsblkCommand),
     Lspci(LspciCommand),
     Lsusb(LsusbCommand),
+    PrintInputReport(PrintInputReportCommand),
     Register(RegisterCommand),
     Restart(RestartCommand),
     RunTool(RunToolCommand),

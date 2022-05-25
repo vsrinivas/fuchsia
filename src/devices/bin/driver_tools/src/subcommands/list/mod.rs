@@ -5,7 +5,7 @@
 pub mod args;
 
 use {
-    super::common::{self, Device},
+    crate::common::{self, Device},
     anyhow::Result,
     args::ListCommand,
     bind::debugger::debug_dump::dump_bind_rules,

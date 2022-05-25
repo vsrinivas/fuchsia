@@ -6,6 +6,7 @@
 extern crate lazy_static;
 
 pub mod args;
+mod common;
 mod subcommands;
 
 use {
@@ -14,7 +15,8 @@ use {
     fidl_fuchsia_device_manager as fdm, fidl_fuchsia_driver_development as fdd,
     fidl_fuchsia_driver_playground as fdp, fidl_fuchsia_driver_registrar as fdr,
     fidl_fuchsia_io as fio,
-    std::io,
+    futures::lock::Mutex,
+    std::{io, sync::Arc},
 };
 
 #[async_trait::async_trait]
@@ -109,6 +111,14 @@ pub async fn driver(cmd: DriverCommand, driver_connector: impl DriverConnector) 
             subcommands::lsusb::lsusb(subcmd, device_watcher_proxy)
                 .await
                 .context("Lsusb subcommand failed")?;
+        }
+        DriverSubcommand::PrintInputReport(ref subcmd) => {
+            let writer = Arc::new(Mutex::new(io::stdout()));
+            let dev =
+                driver_connector.get_dev_proxy(false).await.context("Failed to get dev proxy")?;
+            subcommands::print_input_report::print_input_report(subcmd, writer, dev)
+                .await
+                .context("Print-input-report subcommand failed")?;
         }
         DriverSubcommand::Register(subcmd) => {
             let driver_registrar_proxy = driver_connector

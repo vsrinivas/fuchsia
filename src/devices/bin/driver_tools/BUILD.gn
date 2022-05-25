@@ -6,6 +6,11 @@ import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 
+group("tests") {
+  testonly = true
+  deps = [ ":driver_tools_tests" ]
+}
+
 rustc_library("lib") {
   name = "driver_tools"
   with_unit_tests = true
@@ -21,8 +26,11 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition-rustc",
     "//sdk/fidl/fuchsia.hardware.pci:fuchsia.hardware.pci-rustc",
     "//sdk/fidl/fuchsia.hardware.skipblock:fuchsia.hardware.skipblock-rustc",
+    "//sdk/fidl/fuchsia.input:fuchsia.input-rustc",
+    "//sdk/fidl/fuchsia.input.report:fuchsia.input.report-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
+    "//sdk/lib/device-watcher/rust",
     "//src/developer/ffx/lib/errors:lib",
     "//src/devices/lib/bind",
     "//src/devices/pci/bin/lspci:lib",
@@ -38,14 +46,20 @@ rustc_library("lib") {
     "//third_party/rust_crates:blocking",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:log",
     "//third_party/rust_crates:uuid",
     "//third_party/rust_crates:zstd",
     "//third_party/zstd",
   ]
+  test_deps = [
+    "//src/lib/fdio/rust:fdio",
+    "//src/lib/fuchsia-component",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+  ]
   sources = [
     "src/args.rs",
+    "src/common.rs",
     "src/lib.rs",
-    "src/subcommands/common.rs",
     "src/subcommands/debug_bind/args.rs",
     "src/subcommands/debug_bind/mod.rs",
     "src/subcommands/device/args.rs",
@@ -66,6 +80,17 @@ rustc_library("lib") {
     "src/subcommands/lsusb/args.rs",
     "src/subcommands/lsusb/mod.rs",
     "src/subcommands/mod.rs",
+    "src/subcommands/print_input_report/args.rs",
+    "src/subcommands/print_input_report/mod.rs",
+    "src/subcommands/print_input_report/subcommands/descriptor/args.rs",
+    "src/subcommands/print_input_report/subcommands/descriptor/mod.rs",
+    "src/subcommands/print_input_report/subcommands/feature/args.rs",
+    "src/subcommands/print_input_report/subcommands/feature/mod.rs",
+    "src/subcommands/print_input_report/subcommands/get/args.rs",
+    "src/subcommands/print_input_report/subcommands/get/mod.rs",
+    "src/subcommands/print_input_report/subcommands/mod.rs",
+    "src/subcommands/print_input_report/subcommands/read/args.rs",
+    "src/subcommands/print_input_report/subcommands/read/mod.rs",
     "src/subcommands/register/args.rs",
     "src/subcommands/register/mod.rs",
     "src/subcommands/restart/args.rs",
@@ -74,6 +99,10 @@ rustc_library("lib") {
     "src/subcommands/runtool/mod.rs",
   ]
   inputs = [ "//third_party/pciids/pci.ids.zst" ]
+}
+
+fuchsia_unittest_package("driver_tools_tests") {
+  deps = [ ":lib_test" ]
 }
 
 rustc_binary("driver_tools") {
@@ -93,6 +122,7 @@ rustc_binary("driver_tools") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
     "//third_party/rust_crates:async-trait",
+    "//third_party/rust_crates:futures",
   ]
   sources = [ "src/main.rs" ]
 }
