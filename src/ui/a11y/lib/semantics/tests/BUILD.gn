@@ -26,7 +26,6 @@ source_set("semantics_integration_test_fixture_v2") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//sdk/lib/ui/scenic/cpp",
-    "//src/graphics/bin/vulkan_loader",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/testing/loop_fixture",
@@ -73,6 +72,7 @@ group("integration") {
     "//src/cobalt/bin/testing/mock_cobalt",
     "//src/flutter",
     "//src/fonts:downstream_test_deps",
+    "//src/graphics/bin/vulkan_loader",
     "//src/ui:runtime_with_root_presenter",
     "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider",
   ]
@@ -158,9 +158,15 @@ fuchsia_test_package("semantics-integration-tests") {
     ":dynamic_button",
     ":offscreen_node",
     ":static",
+    "//src/cobalt/bin/testing/mock_cobalt",
     "//src/connectivity/network/netstack:component-legacy",
     "//src/developer/build_info/testing:fake-build-info-component",
-    "//src/ui/bin/root_presenter:component_v1_for_test",
+    "//src/developer/memory/monitor:component",
+    "//src/fonts/fake:fake-fonts-cm",
+    "//src/testing/fidl/intl_property_manager:intl_property_manager_component",
+    "//src/ui/a11y/lib/semantics/tests/web_client:component",
+    "//src/ui/a11y/lib/semantics/tests/web_client:web_client_default_config",
+    "//src/ui/bin/text:text_manager_comp_v2",
   ]
 
   test_specs = {
@@ -208,7 +214,9 @@ executable("web_semantics_tests_bin") {
     "//sdk/fidl/fuchsia.cobalt",
     "//sdk/fidl/fuchsia.component",
     "//sdk/fidl/fuchsia.fonts",
+    "//sdk/fidl/fuchsia.intl",
     "//sdk/fidl/fuchsia.kernel",
+    "//sdk/fidl/fuchsia.logger",
     "//sdk/fidl/fuchsia.memorypressure",
     "//sdk/fidl/fuchsia.net.interfaces",
     "//sdk/fidl/fuchsia.netstack",

@@ -6,7 +6,9 @@
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <fuchsia/component/cpp/fidl.h>
 #include <fuchsia/fonts/cpp/fidl.h>
+#include <fuchsia/intl/cpp/fidl.h>
 #include <fuchsia/kernel/cpp/fidl.h>
+#include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/memorypressure/cpp/fidl.h>
 #include <fuchsia/net/interfaces/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
@@ -82,7 +84,7 @@ static constexpr auto kDynamicHtml = R"(
 </html>
 )";
 
-static constexpr auto kOffscreenNodeHtml = R"(
+static constexpr auto kScrollingHtml = R"(
 <html>
   <head><title>accessibility 1</title></head>
   <body>
@@ -100,284 +102,129 @@ static constexpr auto kOffscreenNodeHtml = R"(
 </html>
 )";
 
-fuchsia::mem::Buffer BufferFromString(const std::string& script) {
-  fuchsia::mem::Buffer buffer;
-  uint64_t num_bytes = script.size();
-
-  zx::vmo vmo;
-  zx_status_t status = zx::vmo::create(num_bytes, 0u, &vmo);
-  FX_CHECK(status >= 0);
-
-  status = vmo.write(script.data(), 0, num_bytes);
-  FX_CHECK(status >= 0);
-  buffer.vmo = std::move(vmo);
-  buffer.size = num_bytes;
-
-  return buffer;
-}
-
-class NavListener : public fuchsia::web::NavigationEventListener {
- public:
-  // |fuchsia::web::NavigationEventListener|
-  void OnNavigationStateChanged(fuchsia::web::NavigationState nav_state,
-                                OnNavigationStateChangedCallback send_ack) override {
-    if (nav_state.has_url()) {
-      FX_VLOGS(1) << "nav_state.url = " << nav_state.url();
-    }
-    if (nav_state.has_page_type()) {
-      FX_VLOGS(1) << "nav_state.page_type = " << static_cast<size_t>(nav_state.page_type());
-    }
-    if (nav_state.has_is_main_document_loaded()) {
-      FX_LOGS(INFO) << "nav_state.is_main_document_loaded = "
-                    << nav_state.is_main_document_loaded();
-    }
-    send_ack();
-  }
-};
-
-// Mock component that will own a web view and route ViewProvider requests through it.
-class WebViewProxy : public fuchsia::ui::app::ViewProvider, public LocalComponent {
- public:
-  explicit WebViewProxy(async_dispatcher_t* dispatcher)
-      : dispatcher_(dispatcher),
-        navigation_event_listener_(),
-        navigation_event_listener_binding_(&navigation_event_listener_) {}
-
-  ~WebViewProxy() override = default;
-
-  void Start(std::unique_ptr<LocalComponentHandles> mock_handles) override {
-    FX_LOGS(INFO) << "Starting WebViewProxy";
-    // Connect to services in the realm.
-    auto svc = mock_handles->svc();
-    auto web_context_provider = svc.Connect<fuchsia::web::ContextProvider>();
-    auto incoming_service_clone = svc.CloneChannel();
-    web_context_provider.set_error_handler([](zx_status_t status) {
-      FX_LOGS(FATAL) << "web_context_provider: " << zx_status_get_string(status);
-    });
-    FX_CHECK(incoming_service_clone.is_valid());
-
-    // Set up web context.
-    fuchsia::web::CreateContextParams params;
-    params.set_service_directory(std::move(incoming_service_clone));
-    web_context_provider->Create(std::move(params), web_context_.NewRequest());
-    web_context_.set_error_handler([](zx_status_t status) {
-      FX_LOGS(FATAL) << "web_context_: " << zx_status_get_string(status);
-    });
-    web_context_->CreateFrame(web_frame_.NewRequest());
-    web_frame_.set_error_handler([](zx_status_t status) {
-      FX_LOGS(FATAL) << "web_frame_: " << zx_status_get_string(status);
-    });
-
-    // Set up navigation affordances.
-    web_frame_->SetNavigationEventListener(navigation_event_listener_binding_.NewBinding());
-    web_frame_->GetNavigationController(navigation_controller_.NewRequest());
-
-    // Publish the ViewProvider service.
-    FX_CHECK(
-        mock_handles->outgoing()->AddPublicService(
-            fidl::InterfaceRequestHandler<fuchsia::ui::app::ViewProvider>([this](auto request) {
-              bindings_.AddBinding(this, std::move(request), dispatcher_);
-            })) == ZX_OK);
-    mock_handles_.emplace_back(std::move(mock_handles));
-
-    LoadHtml();
-  }
-
-  void LoadHtml() {
-    // Load the web page.
-    FX_LOGS(INFO) << "Loading web page";
-    navigation_controller_->LoadUrl("about:blank", fuchsia::web::LoadUrlParams(), [](auto result) {
-      if (result.is_err()) {
-        FX_LOGS(FATAL) << "Error while loading URL: " << static_cast<uint32_t>(result.err());
-      } else {
-        FX_LOGS(INFO) << "Loaded about:blank";
-      }
-    });
-
-    FX_LOGS(INFO) << "Running javascript to inject html";
-    web_frame_->ExecuteJavaScript(
-        {"*"}, BufferFromString(fxl::StringPrintf("document.write(`%s`);", html_.c_str())),
-        [](auto result) {
-          if (result.is_err()) {
-            FX_LOGS(FATAL) << "Error while executing JavaScript: "
-                           << static_cast<uint32_t>(result.err());
-          } else {
-            FX_LOGS(INFO) << "Injected html";
-          }
-        });
-  }
-
-  // |fuchsia::ui::app::ViewProvider|
-  void CreateViewWithViewRef(zx::eventpair token,
-                             fuchsia::ui::views::ViewRefControl view_ref_control,
-                             fuchsia::ui::views::ViewRef view_ref) override {
-    FX_LOGS(INFO) << "CreateViewWithViewRef()";
-    web_frame_->CreateViewWithViewRef(scenic::ToViewToken(std::move(token)),
-                                      std::move(view_ref_control), std::move(view_ref));
-  }
-
-  // |fuchsia.ui.app.ViewProvider|
-  void CreateView(zx::eventpair view_handle, fidl::InterfaceRequest<fuchsia::sys::ServiceProvider>,
-                  fidl::InterfaceHandle<fuchsia::sys::ServiceProvider>) override {
-    FX_LOGS(ERROR) << "CreateView() is not implemented.";
-  }
-
-  // |fuchsia.ui.app.ViewProvider|
-  void CreateView2(fuchsia::ui::app::CreateView2Args args) override {
-    FX_LOGS(ERROR) << "CreateView2() is not implemented.";
-  }
-
-  // Set the html loaded into the web frame.
-  // Only valid before |Start()| has been called.
-  void set_html(std::string html) {
-    FX_CHECK(mock_handles_.empty());
-    FX_CHECK(html_.empty());
-    FX_CHECK(!html.empty());
-    html_ = html;
-  }
-
- private:
-  async_dispatcher_t* dispatcher_ = nullptr;
-  std::vector<std::unique_ptr<LocalComponentHandles>> mock_handles_{};
-  std::unique_ptr<sys::ComponentContext> context_;
-  fidl::BindingSet<fuchsia::ui::app::ViewProvider> bindings_;
-  NavListener navigation_event_listener_;
-  fidl::Binding<fuchsia::web::NavigationEventListener> navigation_event_listener_binding_;
-  fuchsia::web::NavigationControllerPtr navigation_controller_;
-  fuchsia::ui::views::ViewToken view_token_;
-  fuchsia::web::ContextPtr web_context_;
-  fuchsia::web::FramePtr web_frame_;
-  std::string html_;
-};
-
 class WebSemanticsTest : public SemanticsIntegrationTestV2 {
  public:
   static constexpr auto kWebView = "web_view";
   static constexpr auto kWebViewRef = ChildRef{kWebView};
+  static constexpr auto kWebViewUrl = "#meta/semantics-test-web-client.cm";
 
   static constexpr auto kFontsProvider = "fonts_provider";
-  static constexpr auto kFontsProviderRef = ChildRef{kFontsProvider};
   static constexpr auto kFontsProviderUrl = "fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cmx";
 
   static constexpr auto kTextManager = "text_manager";
-  static constexpr auto kTextManagerRef = ChildRef{kTextManager};
-  static constexpr auto kTextManagerUrl =
-      "fuchsia-pkg://fuchsia.com/text_manager#meta/text_manager.cmx";
+  static constexpr auto kTextManagerUrl = "#meta/text_manager.cm";
 
   static constexpr auto kIntl = "intl";
-  static constexpr auto kIntlRef = ChildRef{kIntl};
-  static constexpr auto kIntlUrl =
-      "fuchsia-pkg://fuchsia.com/intl_property_manager#meta/intl_property_manager.cmx";
+  static constexpr auto kIntlUrl = "#meta/intl_property_manager.cm";
 
   static constexpr auto kMemoryPressureProvider = "memory_pressure_provider";
-  static constexpr auto kMemoryPressureProviderRef = ChildRef{kMemoryPressureProvider};
-  static constexpr auto kMemoryPressureProviderUrl =
-      "fuchsia-pkg://fuchsia.com/memory_monitor#meta/memory_monitor.cmx";
+  static constexpr auto kMemoryPressureProviderUrl = "#meta/memory_monitor.cm";
 
   static constexpr auto kNetstack = "netstack";
-  static constexpr auto kNetstackRef = ChildRef{kNetstack};
   static constexpr auto kNetstackUrl =
       "fuchsia-pkg://fuchsia.com/semantics-integration-tests#meta/netstack.cmx";
 
   static constexpr auto kWebContextProvider = "web_context_provider";
-  static constexpr auto kWebContextProviderRef = ChildRef{kWebContextProvider};
   static constexpr auto kWebContextProviderUrl =
       "fuchsia-pkg://fuchsia.com/web_engine#meta/context_provider.cmx";
 
   static constexpr auto kBuildInfoProvider = "build_info_provider";
-  static constexpr auto kBuildInfoProviderRef = ChildRef{kBuildInfoProvider};
-  static constexpr auto kBuildInfoProviderUrl =
-      "fuchsia-pkg://fuchsia.com/semantics-integration-tests#meta/fake_build_info.cm";
+  static constexpr auto kBuildInfoProviderUrl = "#meta/fake_build_info.cm";
 
   static constexpr auto kMockCobalt = "cobalt";
-  static constexpr auto kMockCobaltRef = ChildRef{kMockCobalt};
-  static constexpr auto kMockCobaltUrl =
-      "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx";
+  static constexpr auto kMockCobaltUrl = "#meta/mock_cobalt.cm";
 
   WebSemanticsTest() = default;
   ~WebSemanticsTest() override = default;
 
-  WebViewProxy* web_view_proxy() const { return web_view_proxy_.get(); }
-
   void ConfigureRealm() override {
     // First, add all child components of this test suite.
-    realm()->AddLocalChild(kWebView, web_view_proxy());
+    realm()->AddChild(kWebView, kWebViewUrl);
     realm()->AddLegacyChild(kFontsProvider, kFontsProviderUrl);
-    realm()->AddLegacyChild(kTextManager, kTextManagerUrl);
-    realm()->AddLegacyChild(kIntl, kIntlUrl);
-    realm()->AddLegacyChild(kMemoryPressureProvider, kMemoryPressureProviderUrl);
+    realm()->AddChild(kTextManager, kTextManagerUrl);
+    realm()->AddChild(kIntl, kIntlUrl);
+    realm()->AddChild(kMemoryPressureProvider, kMemoryPressureProviderUrl);
     realm()->AddLegacyChild(kNetstack, kNetstackUrl);
     realm()->AddLegacyChild(kWebContextProvider, kWebContextProviderUrl);
     realm()->AddChild(kBuildInfoProvider, kBuildInfoProviderUrl);
-    realm()->AddLegacyChild(kMockCobalt, kMockCobaltUrl);
+    realm()->AddChild(kMockCobalt, kMockCobaltUrl);
 
     // Second, add all necessary routing.
-    realm()->AddRoute({.capabilities = {Protocol{fuchsia::fonts::Provider::Name_}},
-                       .source = kFontsProviderRef,
-                       .targets = {kWebViewRef}});
-    realm()->AddRoute({.capabilities = {Protocol{fuchsia::ui::input::ImeService::Name_}},
-                       .source = kTextManagerRef,
-                       .targets = {kWebViewRef}});
-    realm()->AddRoute({.capabilities = {Protocol{fuchsia::intl::PropertyProvider::Name_}},
-                       .source = kIntlRef,
-                       .targets = {kWebViewRef}});
-    realm()->AddRoute({.capabilities = {Protocol{fuchsia::memorypressure::Provider::Name_}},
-                       .source = kMemoryPressureProviderRef,
-                       .targets = {kWebViewRef}});
-    realm()->AddRoute({.capabilities = {Protocol{fuchsia::netstack::Netstack::Name_}},
-                       .source = kNetstackRef,
-                       .targets = {kWebViewRef}});
-    realm()->AddRoute({.capabilities = {Protocol{fuchsia::net::interfaces::State::Name_}},
-                       .source = kNetstackRef,
-                       .targets = {kWebViewRef}});
     realm()->AddRoute(
         {.capabilities = {Protocol{fuchsia::accessibility::semantics::SemanticsManager::Name_}},
          .source = kSemanticsManagerRef,
-         .targets = {kWebViewRef, kWebContextProviderRef}});
-    realm()->AddRoute({.capabilities = {Protocol{fuchsia::web::ContextProvider::Name_}},
-                       .source = kWebContextProviderRef,
-                       .targets = {kWebViewRef}});
-    realm()->AddRoute({.capabilities = {Protocol{fuchsia::sys::Environment::Name_}},
+         .targets = {ChildRef{kWebView}}});
+    realm()->AddRoute({.capabilities = {Protocol{fuchsia::fonts::Provider::Name_}},
+                       .source = ChildRef{kFontsProvider},
+                       .targets = {ChildRef{kWebView}}});
+    realm()->AddRoute({.capabilities = {Protocol{fuchsia::ui::input::ImeService::Name_}},
+                       .source = ChildRef{kTextManager},
+                       .targets = {ChildRef{kWebView}}});
+    realm()->AddRoute({.capabilities = {Protocol{fuchsia::memorypressure::Provider::Name_}},
+                       .source = ChildRef{kMemoryPressureProvider},
+                       .targets = {ChildRef{kWebView}}});
+    realm()->AddRoute({.capabilities = {Protocol{fuchsia::net::interfaces::State::Name_},
+                                        Protocol{fuchsia::netstack::Netstack::Name_}},
+                       .source = ChildRef{kNetstack},
+                       .targets = {ChildRef{kWebView}}});
+    realm()->AddRoute({.capabilities = {Protocol{fuchsia::logger::LogSink::Name_},
+                                        Protocol{fuchsia::ui::scenic::Scenic::Name_}},
                        .source = ParentRef(),
-                       .targets = {kWebViewRef}});
+                       .targets = {ChildRef{kWebView}}});
+    realm()->AddRoute({.capabilities = {Protocol{fuchsia::web::ContextProvider::Name_}},
+                       .source = ChildRef{kWebContextProvider},
+                       .targets = {ChildRef{kWebView}}});
+    realm()->AddRoute({.capabilities = {Protocol{fuchsia::logger::LogSink::Name_}},
+                       .source = ParentRef(),
+                       .targets = {ChildRef{kFontsProvider}, ChildRef{kNetstack},
+                                   ChildRef{kWebContextProvider}}});
     realm()->AddRoute({.capabilities = {Protocol{fuchsia::cobalt::LoggerFactory::Name_}},
-                       .source = kMockCobaltRef,
-                       .targets = {kMemoryPressureProviderRef}});
+                       .source = ChildRef{kMockCobalt},
+                       .targets = {ChildRef{kMemoryPressureProvider}}});
     realm()->AddRoute({.capabilities = {Protocol{fuchsia::sysmem::Allocator::Name_}},
                        .source = ParentRef(),
-                       .targets = {kMemoryPressureProviderRef, kWebViewRef}});
-    realm()->AddRoute({.capabilities = {Protocol{fuchsia::scheduler::ProfileProvider::Name_}},
+                       .targets = {ChildRef{kMemoryPressureProvider}, ChildRef{kWebView}}});
+    realm()->AddRoute({.capabilities = {Protocol{fuchsia::kernel::RootJobForInspect::Name_},
+                                        Protocol{fuchsia::kernel::Stats::Name_},
+                                        Protocol{fuchsia::scheduler::ProfileProvider::Name_},
+                                        Protocol{fuchsia::tracing::provider::Registry::Name_}},
                        .source = ParentRef(),
-                       .targets = {kMemoryPressureProviderRef}});
-    realm()->AddRoute({.capabilities = {Protocol{fuchsia::kernel::RootJobForInspect::Name_}},
-                       .source = ParentRef(),
-                       .targets = {kMemoryPressureProviderRef}});
-    realm()->AddRoute({.capabilities = {Protocol{fuchsia::kernel::Stats::Name_}},
-                       .source = ParentRef(),
-                       .targets = {kMemoryPressureProviderRef}});
-    realm()->AddRoute({.capabilities = {Protocol{fuchsia::tracing::provider::Registry::Name_}},
-                       .source = ParentRef(),
-                       .targets = {kFontsProviderRef, kMemoryPressureProviderRef}});
-    realm()->AddRoute({.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
-                       .source = ParentRef(),
-                       .targets = {kWebViewRef}});
+                       .targets = {ChildRef{kMemoryPressureProvider}}});
     realm()->AddRoute({.capabilities = {Protocol{fuchsia::posix::socket::Provider::Name_}},
-                       .source = kNetstackRef,
-                       .targets = {kWebViewRef}});
-    realm()->AddRoute({.capabilities = {Protocol{fuchsia::ui::app::ViewProvider::Name_}},
-                       .source = kWebViewRef,
-                       .targets = {ParentRef()}});
+                       .source = ChildRef{kNetstack},
+                       .targets = {ChildRef{kWebView}}});
     realm()->AddRoute({.capabilities = {Protocol{fuchsia::buildinfo::Provider::Name_}},
-                       .source = kBuildInfoProviderRef,
-                       .targets = {kWebViewRef, kWebContextProviderRef}});
+                       .source = ChildRef{kBuildInfoProvider},
+                       .targets = {ChildRef{kWebView}, ChildRef{kWebContextProvider}}});
+    realm()->AddRoute({.capabilities = {Protocol{fuchsia::intl::PropertyProvider::Name_}},
+                       .source = ChildRef{kIntl},
+                       .targets = {ChildRef{kWebView}}});
+    realm()->AddRoute({.capabilities = {Protocol{fuchsia::ui::app::ViewProvider::Name_}},
+                       .source = ChildRef{kWebView},
+                       .targets = {ParentRef()}});
+    realm()->AddRoute({.capabilities = {Protocol{fuchsia::sys::Environment::Name_}},
+                       .source = ParentRef(),
+                       .targets = {ChildRef{kWebContextProvider}, ChildRef{kWebView}}});
+
+    FX_LOGS(INFO) << "Override html config";
+    // Override "html" config value for web client.
+    realm()->ReplaceConfigValue(kWebView, "html", HtmlForTestCase());
+
+    FX_LOGS(INFO) << "OVerrode html config";
   }
 
   void SetUp() override {
-    web_view_proxy_ = std::make_unique<WebViewProxy>(dispatcher());
-
     SemanticsIntegrationTestV2::SetUp();
 
+    SetupScene();
+
     view_manager()->SetSemanticsEnabled(true);
+
+    FX_LOGS(INFO) << "Wait for root node";
+    RunLoopUntil([this] {
+      auto node = view_manager()->GetSemanticNode(view_ref_koid(), 0u);
+      return node != nullptr;
+    });
   }
 
   bool NodeExistsWithLabel(std::string label) {
@@ -398,32 +245,25 @@ class WebSemanticsTest : public SemanticsIntegrationTestV2 {
                   << " in tree with koid: " << view_ref_koid();
   }
 
-  void LoadHtml(std::string html) {
-    FX_LOGS(INFO) << "Loading html: " << html;
-    web_view_proxy()->set_html(html);
-
-    SetupScene();
-
-    RunLoopUntil([this] {
-      auto node = view_manager()->GetSemanticNode(view_ref_koid(), 0u);
-      return node != nullptr;
-    });
-    FX_LOGS(INFO) << "Finished loading html";
-  }
-
  protected:
-  WebViewProxy* web_view_proxy() { return web_view_proxy_.get(); }
+  // Returns the html to use for this test case.
+  virtual std::string HtmlForTestCase() = 0;
+};
 
- private:
-  std::unique_ptr<WebViewProxy> web_view_proxy_;
+class StaticHtmlTest : public WebSemanticsTest {
+ public:
+  StaticHtmlTest() = default;
+  ~StaticHtmlTest() override = default;
+
+  std::string HtmlForTestCase() override { return kStaticHtml; }
 };
 
 INSTANTIATE_TEST_SUITE_P(
-    WebSemanticsTestWithParams, WebSemanticsTest,
+    StaticHtmlTestWithParams, StaticHtmlTest,
     ::testing::Values(ui_testing::UITestManager::SceneOwnerType::ROOT_PRESENTER,
                       ui_testing::UITestManager::SceneOwnerType::SCENE_MANAGER));
 
-TEST_P(WebSemanticsTest, StaticSemantics) {
+TEST_P(StaticHtmlTest, StaticSemantics) {
   /* The semantic tree for static.html:
    *
    * ID: 0 Label:Title Role: UNKNOWN
@@ -434,16 +274,25 @@ TEST_P(WebSemanticsTest, StaticSemantics) {
    *                     ID: 8 Label:Paragraph Role: UNKNOWN
    *             ID: 5 Label:Button Role: BUTTON
    */
-  LoadHtml(kStaticHtml);
-
   RunLoopUntilNodeExistsWithLabel("Title");
 
   RunLoopUntilNodeExistsWithLabel("Paragraph");
 }
 
-TEST_P(WebSemanticsTest, PerformAction) {
-  LoadHtml(kDynamicHtml);
+class DynamicHtmlTest : public WebSemanticsTest {
+ public:
+  DynamicHtmlTest() = default;
+  ~DynamicHtmlTest() override = default;
 
+  std::string HtmlForTestCase() override { return kDynamicHtml; }
+};
+
+INSTANTIATE_TEST_SUITE_P(
+    DynamicHtmlTestWithParams, DynamicHtmlTest,
+    ::testing::Values(ui_testing::UITestManager::SceneOwnerType::ROOT_PRESENTER,
+                      ui_testing::UITestManager::SceneOwnerType::SCENE_MANAGER));
+
+TEST_P(DynamicHtmlTest, PerformAction) {
   // Find the node with the counter to make sure it still reads 0
   RunLoopUntilNodeExistsWithLabel("0");
   // There shouldn't be a node labeled 1 yet
@@ -462,9 +311,7 @@ TEST_P(WebSemanticsTest, PerformAction) {
 }
 
 // TODO(fxbug.dev/99748): Re-enable once we can stabilize WaitForScaleFactor().
-TEST_P(WebSemanticsTest, DISABLED_HitTesting) {
-  LoadHtml(kStaticHtml);
-
+TEST_P(DynamicHtmlTest, DISABLED_HitTesting) {
   FX_LOGS(INFO) << "Wait for scale factor";
   WaitForScaleFactor();
   FX_LOGS(INFO) << "Received scale factor";
@@ -490,10 +337,21 @@ TEST_P(WebSemanticsTest, DISABLED_HitTesting) {
   ASSERT_EQ(*hit_node, node->node_id());
 }
 
-// TODO(fxbug.dev/99748): Re-enable once we can stabilize WaitForScaleFactor().
-TEST_P(WebSemanticsTest, DISABLED_ScrollToMakeVisible) {
-  LoadHtml(kOffscreenNodeHtml);
+class ScrollingHtmlTest : public WebSemanticsTest {
+ public:
+  ScrollingHtmlTest() = default;
+  ~ScrollingHtmlTest() override = default;
 
+  std::string HtmlForTestCase() override { return kScrollingHtml; }
+};
+
+INSTANTIATE_TEST_SUITE_P(
+    ScrollingHtmlTestWithParams, ScrollingHtmlTest,
+    ::testing::Values(ui_testing::UITestManager::SceneOwnerType::ROOT_PRESENTER,
+                      ui_testing::UITestManager::SceneOwnerType::SCENE_MANAGER));
+
+// TODO(fxbug.dev/99748): Re-enable once we can stabilize WaitForScaleFactor().
+TEST_P(ScrollingHtmlTest, DISABLED_ScrollToMakeVisible) {
   FX_LOGS(INFO) << "Wait for scale factor";
   WaitForScaleFactor();
   FX_LOGS(INFO) << "Received scale factor";
