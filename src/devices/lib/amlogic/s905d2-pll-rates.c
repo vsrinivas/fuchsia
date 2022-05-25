@@ -38,6 +38,15 @@ static const hhi_pll_rate_t s905d2_hiu_pll_rates[] = {
     HHI_PLL_RATE(3072000000, 1, 128, 0, 0), /*DCO=3072M*/
 };
 
+/* PCIE PLL rates, OD is fixed at 9. Adding this to the above sorted HUI PLL table will make this
+the first entry, and hence the default rate for many PLLs. Created new table to avoid changing
+default initial rate for other PLLs.
+fout = 24MHz*m/(n*(1 << od))
+*/
+static const hhi_pll_rate_t s905d2_pcie_pll_rates[] = {
+    HHI_PLL_RATE(100000000, 1, 150, 0, 9), /*DCO=3600M*/
+};
+
 /* Find frequency in the rate table and return pointer to the entry.
    At this point this assumes even integer frequencies. This will be expanded later
    to handle fractional cases.
@@ -57,11 +66,12 @@ zx_status_t s905d2_pll_fetch_rate(aml_pll_dev_t* pll_dev, uint64_t freq,
 const hhi_pll_rate_t* s905d2_pll_get_rate_table(hhi_plls_t pll_num) {
   switch (pll_num) {
     case GP0_PLL:
-    case PCIE_PLL:
     case HIFI_PLL:
     case SYS_PLL:
     case SYS1_PLL:
       return s905d2_hiu_pll_rates;
+    case PCIE_PLL:
+      return s905d2_pcie_pll_rates;
     default:
       return NULL;
   }
@@ -70,11 +80,12 @@ const hhi_pll_rate_t* s905d2_pll_get_rate_table(hhi_plls_t pll_num) {
 size_t s905d2_get_rate_table_count(hhi_plls_t pll_num) {
   switch (pll_num) {
     case GP0_PLL:
-    case PCIE_PLL:
     case HIFI_PLL:
     case SYS_PLL:
     case SYS1_PLL:
       return countof(s905d2_hiu_pll_rates);
+    case PCIE_PLL:
+      return countof(s905d2_pcie_pll_rates);
     default:
       return 0;
   }

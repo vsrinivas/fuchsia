@@ -55,6 +55,7 @@ static pbus_dev_t clk_dev = []() {
   pbus_dev_t dev = {};
   dev.name = "vim3-clk";
   dev.vid = PDEV_VID_AMLOGIC;
+  dev.pid = PDEV_PID_AMLOGIC_A311D;
   dev.did = PDEV_DID_AMLOGIC_G12B_CLK;
   dev.mmio_list = clk_mmios;
   dev.mmio_count = std::size(clk_mmios);

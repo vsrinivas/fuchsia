@@ -110,6 +110,23 @@ static zx_status_t s905d2_pll_init_regs(aml_pll_dev_t* pll_dev) {
     hiu_clk_set_reg(device, HHI_GP0_PLL_CNTL6, G12A_GP0_PLL_CNTL6);
     zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
     return ZX_OK;
+  } else if (pll_dev->pll_num == PCIE_PLL) {
+    // write config values
+    hiu_clk_set_reg(device, HHI_PCIE_PLL_CNTL0, G12A_PCIE_PLL_CNTL0_0);
+    hiu_clk_set_reg(device, HHI_PCIE_PLL_CNTL0, G12A_PCIE_PLL_CNTL0_1);
+    hiu_clk_set_reg(device, HHI_PCIE_PLL_CNTL1, G12A_PCIE_PLL_CNTL1);
+    hiu_clk_set_reg(device, HHI_PCIE_PLL_CNTL2, G12A_PCIE_PLL_CNTL2_0);
+    hiu_clk_set_reg(device, HHI_PCIE_PLL_CNTL3, G12A_PCIE_PLL_CNTL3);
+    hiu_clk_set_reg(device, HHI_PCIE_PLL_CNTL4, G12A_PCIE_PLL_CNTL4_0);
+    hiu_clk_set_reg(device, HHI_PCIE_PLL_CNTL5, G12A_PCIE_PLL_CNTL5_0);
+    hiu_clk_set_reg(device, HHI_PCIE_PLL_CNTL5, G12A_PCIE_PLL_CNTL5_1);
+    zx_nanosleep(zx_deadline_after(ZX_USEC(20)));
+    hiu_clk_set_reg(device, HHI_PCIE_PLL_CNTL4, G12A_PCIE_PLL_CNTL4_1);
+    zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
+    hiu_clk_set_reg(device, HHI_PCIE_PLL_CNTL0, G12A_PCIE_PLL_CNTL0_2);
+    hiu_clk_set_reg(device, HHI_PCIE_PLL_CNTL0, G12A_PCIE_PLL_CNTL0_3);
+    zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
+    hiu_clk_set_reg(device, HHI_PCIE_PLL_CNTL2, G12A_PCIE_PLL_CNTL2_1);
   }
   return ZX_ERR_NOT_SUPPORTED;
 }
@@ -160,6 +177,11 @@ zx_status_t s905d2_pll_ena(aml_pll_dev_t* pll_dev) {
   uint32_t offs = hiu_get_pll_offs(pll_dev);
   uint32_t reg_val = hiu_clk_get_reg(pll_dev->hiu, offs);
 
+  if (reg_val & HHI_PLL_CNTL0_EN) {
+    // Already enabled. Return early.
+    return ZX_OK;
+  }
+
   // Set Enable bit
   reg_val |= HHI_PLL_CNTL0_EN;
   hiu_clk_set_reg(pll_dev->hiu, offs, reg_val);
@@ -200,6 +222,11 @@ zx_status_t s905d2_pll_set_rate(aml_pll_dev_t* pll_dev, uint64_t freq) {
 
   // Initialize the registers to defaults (may not be retained after reset)
   s905d2_pll_init_regs(pll_dev);
+
+  // The rate for PCIE PLL is fixed. No need to change any control regs, so return early.
+  if (pll_dev->pll_num == PCIE_PLL) {
+    return ZX_OK;
+  }
 
   uint32_t offs = hiu_get_pll_offs(pll_dev);
   uint32_t ctl0 = hiu_clk_get_reg(pll_dev->hiu, offs);
