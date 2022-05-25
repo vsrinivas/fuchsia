@@ -21,7 +21,4 @@ zx_host_tool("lz4") {
   include_dirs = [ "$lz4_lib" ]
 
   configs += [ "//build/config:Wno-implicit-fallthrough" ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
