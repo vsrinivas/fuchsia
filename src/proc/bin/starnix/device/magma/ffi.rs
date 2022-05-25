@@ -230,6 +230,13 @@ pub fn execute_command(
     Ok(())
 }
 
+/// Calls flush on the provided `control.connection`.
+///
+/// SAFETY: Makes an FFI call to magma, which is expected to handle invalid connection parameters.
+pub fn flush(control: virtio_magma_flush_ctrl_t, response: &mut virtio_magma_flush_resp_t) {
+    response.result_return = unsafe { magma_flush(control.connection) as u64 };
+}
+
 /// Writes the size of the provided buffer to `response`.
 ///
 /// SAFETY: Makes an FFI call to magma. The buffer in `control` is expected to be valid, although

@@ -222,8 +222,7 @@ impl FileOps for MagmaFile {
                     virtio_magma_flush_resp_t,
                 ) = read_control_and_response(current_task, &command)?;
 
-                response.result_return =
-                    unsafe { magma_flush(control.connection as magma_connection_t) as u64 };
+                flush(control, &mut response);
 
                 response.hdr.type_ = virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_FLUSH as u32;
                 current_task.mm.write_object(UserRef::new(response_address), &response)
