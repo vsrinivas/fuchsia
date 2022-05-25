@@ -4,6 +4,7 @@
 
 #include <cmdline.h>
 #include <inttypes.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/zbi/zbi.h>
 #include <stdio.h>
 #include <string.h>
@@ -280,6 +281,21 @@ int boot_zircon(efi_handle img, efi_system_table* sys, void* image, size_t isz, 
     if (result != ZBI_RESULT_OK) {
       return -1;
     }
+  }
+
+  zbi_platform_id_t platform_id = {
+#ifdef __x86_64__
+      .vid = PDEV_VID_INTEL,
+      .pid = PDEV_PID_X86,
+#elif __aarch64__
+      .vid = PDEV_VID_ARM,
+      .pid = PDEV_PID_ACPI_BOARD,
+#endif
+  };
+  result = zbi_create_entry_with_payload(ramdisk, rsz, ZBI_TYPE_PLATFORM_ID, 0, 0, &platform_id,
+                                         sizeof(platform_id));
+  if (result != ZBI_RESULT_OK) {
+    return -1;
   }
 
   // Assemble a UART config from the ACPI SPCR table if possible.

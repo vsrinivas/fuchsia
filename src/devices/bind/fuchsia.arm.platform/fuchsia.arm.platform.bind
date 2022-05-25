@@ -12,6 +12,7 @@ extend uint fuchsia.BIND_PLATFORM_DEV_PID {
   ARM_ISP = 0x01,
   GDC = 0x02,
   GE2D = 0x03,
+  ACPI_BOARD = 0x04,
 };
 
 extend uint fuchsia.BIND_PLATFORM_DEV_DID {

@@ -48,6 +48,7 @@ source_set("src") {
     "//third_party/android/platform/external/avb",
     "//zircon/kernel/lib/efi",
     "//zircon/system/public",
+    "//zircon/system/ulib/ddk-platform-defs",
     "//zircon/system/ulib/gfx-font",
     "//zircon/system/ulib/tftp",
     "//zircon/third_party/ulib/cksum",
