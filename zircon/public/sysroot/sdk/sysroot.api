@@ -215,7 +215,7 @@
   "include/zircon/process.h": "e890bf8ab56a3b8dd935774112e3fd45",
   "include/zircon/processargs.h": "6dd81da1946cf63db2015215639dfd07",
   "include/zircon/rights.h": "51739c108b8bebf0cd99cbcd1bb59a39",
-  "include/zircon/sanitizer.h": "989dc94a1fbf8e2d0983fb476baba6ac",
+  "include/zircon/sanitizer.h": "b7c33e026916780e24880cf0dba9867c",
   "include/zircon/status.h": "dd933b11e68e1c297bc781074bae511a",
   "include/zircon/string_view.h": "a143924409072ee53142d61494e09c1c",
   "include/zircon/syscalls-next.h": "c1d5888183250d1372b6a1fc0b9b6f9a",
