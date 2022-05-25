@@ -8,9 +8,12 @@
         ],
         "services": [
             "fuchsia.location.namedplace.RegulatoryRegionWatcher",
+            "fuchsia.net.mdns.HostNameResolver",
+            "fuchsia.net.mdns.HostNameSubscriber",
             "fuchsia.net.mdns.ProxyHostPublisher",
             "fuchsia.net.mdns.Publisher",
             "fuchsia.net.mdns.Resolver",
+            "fuchsia.net.mdns.ServiceInstancePublisher",
             "fuchsia.net.mdns.Subscriber"
         ]
     },
