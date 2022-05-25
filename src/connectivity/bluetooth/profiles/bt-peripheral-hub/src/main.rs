@@ -6,6 +6,7 @@ use anyhow::Error;
 use fuchsia_component::server::ServiceFs;
 use std::sync::Arc;
 
+mod error;
 mod fidl_service;
 mod peripheral_state;
 mod reporter;
@@ -18,7 +19,7 @@ use peripheral_state::PeripheralState;
 async fn main() -> Result<(), Error> {
     let fs = ServiceFs::new();
 
-    let shared_state = Arc::new(PeripheralState);
+    let shared_state = Arc::new(PeripheralState::default());
     let service_handler = run_services(fs, shared_state);
 
     service_handler.await
