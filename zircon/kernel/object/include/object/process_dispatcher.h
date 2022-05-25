@@ -30,6 +30,7 @@
 #include <object/handle.h>
 #include <object/handle_table.h>
 #include <object/job_policy.h>
+#include <object/shareable_process_state.h>
 #include <object/thread_dispatcher.h>
 #include <vm/vm_aspace.h>
 
@@ -91,8 +92,8 @@ class ProcessDispatcher final
   zx_status_t Initialize();
 
   // Accessors.
-  HandleTable& handle_table() { return handle_table_; }
-  const HandleTable& handle_table() const { return handle_table_; }
+  HandleTable& handle_table() { return shared_state_->handle_table(); }
+  const HandleTable& handle_table() const { return shared_state_->handle_table(); }
   FutexContext& futex_context() { return futex_context_; }
   State state() const;
   fbl::RefPtr<VmAspace> aspace() { return aspace_; }
@@ -202,7 +203,8 @@ class ProcessDispatcher final
   friend void KillProcess(zx_koid_t id);
   friend void DumpProcessMemoryUsage(const char* prefix, size_t min_pages);
 
-  ProcessDispatcher(fbl::RefPtr<JobDispatcher> job, ktl::string_view name, uint32_t flags);
+  ProcessDispatcher(fbl::RefPtr<ShareableProcessState> shared_state, fbl::RefPtr<JobDispatcher> job,
+                    ktl::string_view name, uint32_t flags);
 
   ProcessDispatcher(const ProcessDispatcher&) = delete;
   ProcessDispatcher& operator=(const ProcessDispatcher&) = delete;
@@ -225,6 +227,8 @@ class ProcessDispatcher final
   // Kill all threads
   void KillAllThreadsLocked() TA_REQ(get_lock());
 
+  const fbl::RefPtr<ShareableProcessState> shared_state_;
+
   // the enclosing job
   const fbl::RefPtr<JobDispatcher> job_;
 
@@ -244,8 +248,6 @@ class ProcessDispatcher final
 
   // our address space
   fbl::RefPtr<VmAspace> aspace_;
-
-  HandleTable handle_table_;
 
   FutexContext futex_context_;
 

@@ -77,8 +77,8 @@ HandleTableArena gHandleTableArena;
 
 void Handle::Init() { gHandleTableArena.arena_.Init("handles", kMaxHandleCount); }
 
-void Handle::set_process_id(zx_koid_t pid) {
-  process_id_.store(pid, ktl::memory_order_relaxed);
+void Handle::set_handle_table_id(zx_koid_t pid) {
+  handle_table_id_.store(pid, ktl::memory_order_relaxed);
   dispatcher_->set_owner(pid);
 }
 
@@ -116,9 +116,9 @@ void* HandleTableArena::Alloc(const fbl::RefPtr<Dispatcher>& dispatcher, const c
   }
 
   dispatcher->increment_handle_count();
-  // checking the process_id_ and dispatcher is really about trying to catch cases where this
+  // checking the handle_table_id_ and dispatcher_ is really about trying to catch cases where this
   // Handle might somehow already be in use.
-  DEBUG_ASSERT(reinterpret_cast<Handle*>(addr)->process_id_ == ZX_KOID_INVALID);
+  DEBUG_ASSERT(reinterpret_cast<Handle*>(addr)->handle_table_id_ == ZX_KOID_INVALID);
   DEBUG_ASSERT(reinterpret_cast<Handle*>(addr)->dispatcher_ == nullptr);
   *base_value = GetNewBaseValue(addr);
   return addr;
@@ -146,7 +146,7 @@ HandleOwner Handle::Make(KernelHandle<Dispatcher> kernel_handle, zx_rights_t rig
 
 // Called only by Make.
 Handle::Handle(fbl::RefPtr<Dispatcher> dispatcher, zx_rights_t rights, uint32_t base_value)
-    : process_id_(ZX_KOID_INVALID),
+    : handle_table_id_(ZX_KOID_INVALID),
       dispatcher_(ktl::move(dispatcher)),
       rights_(rights),
       base_value_(base_value) {}
@@ -163,10 +163,10 @@ HandleOwner Handle::Dup(Handle* source, zx_rights_t rights) {
 
 // Called only by Dup.
 Handle::Handle(Handle* rhs, zx_rights_t rights, uint32_t base_value)
-    // Although this handle is intended to become owned by rhs->process_id at the point of
-    // creation it is stacked owned and may be destroyed without actually being assigned to the
-    // process. If this happens the assert in TearDown would get triggered.
-    : process_id_(ZX_KOID_INVALID),
+    // Although this handle is intended to become owned by rhs->handle_table_id_ at the point of
+    // creation it is stack owned and may be destroyed without actually being assigned to the
+    // handle table. If this happens the assert in TearDown would get triggered.
+    : handle_table_id_(ZX_KOID_INVALID),
       dispatcher_(rhs->dispatcher_),
       rights_(rights),
       base_value_(base_value) {}
@@ -175,10 +175,10 @@ void HandleTableArena::Delete(Handle* handle) {
   fbl::RefPtr<Dispatcher> dispatcher(ktl::move(handle->dispatcher_));
   uint32_t __UNUSED old_base_value = handle->base_value_;
   const uint32_t* __UNUSED base_value = &handle->base_value_;
-  // There may be stale pointers to this slot and they will look at process_id. We expect
-  // process_id to already have been cleared by the process dispatcher before the handle got to
+  // There may be stale pointers to this slot and they will look at handle_table_id. We expect
+  // handle_table_id to already have been cleared by the process dispatcher before the handle got to
   // this point.
-  DEBUG_ASSERT(handle->process_id() == ZX_KOID_INVALID);
+  DEBUG_ASSERT(handle->handle_table_id() == ZX_KOID_INVALID);
 
   if (dispatcher->is_waitable()) {
     dispatcher->Cancel(handle);

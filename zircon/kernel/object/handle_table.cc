@@ -38,7 +38,7 @@ static Handle* map_value_to_handle(zx_handle_t value, uint32_t mixer) {
   return Handle::FromU32(handle_id);
 }
 
-HandleTable::HandleTable(ProcessDispatcher* process) : process_(process) {
+HandleTable::HandleTable() : koid_(KernelObjectId::Generate()) {
   // Generate handle XOR mask with top bit and bottom two bits cleared
   uint32_t secret;
   auto prng = crypto::global_prng::GetInstance();
@@ -59,11 +59,12 @@ void HandleTable::Clean() {
   HandleList to_clean;
   {
     Guard<BrwLockPi, BrwLockPi::Writer> guard{&lock_};
+
     for (auto& cursor : cursors_) {
       cursor.Invalidate();
     }
     for (auto& handle : handles_) {
-      handle.set_process_id(ZX_KOID_INVALID);
+      handle.set_handle_table_id(ZX_KOID_INVALID);
     }
     count_ = 0;
     to_clean.swap(handles_);
@@ -86,8 +87,9 @@ zx_handle_t HandleTable::MapHandleToValue(const HandleOwner& handle) const {
 
 Handle* HandleTable::GetHandleLocked(ProcessDispatcher* caller, zx_handle_t handle_value) {
   auto handle = map_value_to_handle(handle_value, random_value_);
-  if (handle && handle->process_id() == process_->get_koid())
+  if (handle && handle->handle_table_id() == koid_) {
     return handle;
+  }
 
   if (likely(caller)) {
     // Handle lookup failed.  We potentially generate an exception or kill the process,
@@ -111,14 +113,14 @@ void HandleTable::AddHandle(HandleOwner handle) {
 }
 
 void HandleTable::AddHandleLocked(HandleOwner handle) {
-  handle->set_process_id(process_->get_koid());
+  handle->set_handle_table_id(koid_);
   handles_.push_front(handle.release());
   count_++;
 }
 
 HandleOwner HandleTable::RemoveHandleLocked(Handle* handle) {
   DEBUG_ASSERT(count_ > 0);
-  handle->set_process_id(ZX_KOID_INVALID);
+  handle->set_handle_table_id(ZX_KOID_INVALID);
   // Make sure we don't leave any dangling cursors.
   for (auto& cursor : cursors_) {
     // If it points to |handle|, skip over it.

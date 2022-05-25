@@ -29,18 +29,14 @@
 #include <object/thread_dispatcher.h>
 #include <vm/vm_aspace.h>
 
-// A HandleTable is the data structure which associates a Handle to a
-// particular ProcessDispatcher. Each HandleTable is permanently
-// associated with a single ProcessDispatcher.
+// A HandleTable is the data structure which stores the Handles
+// associated with one or more ProcessDispatchers.
 //
 // Methods that require a ProcessDispatcher& |caller| will use to supplied
 // ProcessDispatcher as the target of ZX_POL_BAD_HANDLE job policy.
-
-class ProcessDispatcher;
-
-class HandleTable {
+class HandleTable : public fbl::RefCounted<HandleTable> {
  public:
-  explicit HandleTable(ProcessDispatcher* process) __NONNULL((2));
+  HandleTable();
   ~HandleTable();
 
   HandleTable(const HandleTable&) = delete;
@@ -61,11 +57,12 @@ class HandleTable {
     return GetHandleLocked(&caller, handle_value);
   }
 
+  zx_koid_t get_koid() const { return koid_; }
+
   // Returns the number of outstanding handles in this handle table.
   uint32_t HandleCount() const;
 
-  // Adds |handle| to this handle table. The handle->process_id() is
-  // set to process_'s koid.
+  // Adds |handle| to this handle table.
   void AddHandle(HandleOwner handle);
   void AddHandleLocked(HandleOwner handle) TA_REQ(lock_);
 
@@ -177,7 +174,7 @@ class HandleTable {
 
   zx_status_t GetHandleInfo(fbl::Array<zx_info_handle_extended_t>* handles) const;
 
-  // Called when the containing ProcessDispatcher transitions to the Dead state.
+  // Called when all the containing ProcessDispatchers have transitioned to the Dead state.
   void Clean();
 
   // accessors
@@ -292,6 +289,10 @@ class HandleTable {
   // another process, during the destruction of the handle table.
   mutable DECLARE_BRWLOCK_PI(HandleTable, lockdep::LockFlagsMultiAcquire) lock_;
 
+  // The koid of this handle table. Used to check whether or not a handle belongs to this handle
+  // table (and thus that it belongs to a process associated with this handle table).
+  const zx_koid_t koid_;
+
   // Each handle table provides pseudorandom userspace handle
   // values. This is the per-handle-table pseudorandom state.
   uint32_t random_value_ = 0;
@@ -300,9 +301,6 @@ class HandleTable {
   // advance or invalidate any cursors that might point to the handles being removed.
   uint32_t count_ TA_GUARDED(lock_) = 0;
   HandleList handles_ TA_GUARDED(lock_);
-
-  // The containing ProcessDispatcher.
-  ProcessDispatcher* const process_;
 
   // A list of cursors that contain pointers to elements of handles_.
   fbl::DoublyLinkedList<HandleCursor*> cursors_ TA_GUARDED(lock_);

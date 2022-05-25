@@ -19,6 +19,7 @@
 #include <arch/defines.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
+#include <fbl/ref_ptr.h>
 #include <kernel/thread.h>
 #include <object/diagnostics.h>
 #include <object/futex_context.h>
@@ -68,9 +69,17 @@ zx_status_t ProcessDispatcher::Create(fbl::RefPtr<JobDispatcher> job, ktl::strin
                                       KernelHandle<VmAddressRegionDispatcher>* root_vmar_handle,
                                       zx_rights_t* root_vmar_rights) {
   fbl::AllocChecker ac;
-  KernelHandle new_handle(fbl::AdoptRef(new (&ac) ProcessDispatcher(job, name, flags)));
-  if (!ac.check())
+  fbl::RefPtr<ShareableProcessState> shareable_state =
+      fbl::AdoptRef(new (&ac) ShareableProcessState);
+  if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
+  }
+
+  KernelHandle new_handle(
+      fbl::AdoptRef(new (&ac) ProcessDispatcher(ktl::move(shareable_state), job, name, flags)));
+  if (!ac.check()) {
+    return ZX_ERR_NO_MEMORY;
+  }
 
   zx_status_t result = new_handle.dispatcher()->Initialize();
   if (result != ZX_OK)
@@ -97,15 +106,19 @@ zx_status_t ProcessDispatcher::Create(fbl::RefPtr<JobDispatcher> job, ktl::strin
   return ZX_OK;
 }
 
-ProcessDispatcher::ProcessDispatcher(fbl::RefPtr<JobDispatcher> job, ktl::string_view name,
+ProcessDispatcher::ProcessDispatcher(fbl::RefPtr<ShareableProcessState> shared_state,
+                                     fbl::RefPtr<JobDispatcher> job, ktl::string_view name,
                                      uint32_t flags)
-    : job_(ktl::move(job)),
+    : shared_state_(ktl::move(shared_state)),
+      job_(ktl::move(job)),
       policy_(job_->GetPolicy()),
-      handle_table_(this),
       exceptionate_(ZX_EXCEPTION_CHANNEL_TYPE_PROCESS),
       debug_exceptionate_(ZX_EXCEPTION_CHANNEL_TYPE_DEBUGGER),
       name_(name.data(), name.length()) {
   LTRACE_ENTRY_OBJ;
+
+  [[maybe_unused]] uint32_t count = shared_state_->IncrementShareCount();
+  DEBUG_ASSERT(count == 0);
 
   kcounter_add(dispatcher_process_create_count, 1);
 }
@@ -404,10 +417,9 @@ void ProcessDispatcher::FinishDeadTransition() {
   exceptionate_.Shutdown();
   debug_exceptionate_.Shutdown();
 
-  // clean up the handle table
-  LTRACEF_LEVEL(2, "cleaning up handle table on proc %p\n", this);
-  handle_table_.Clean();
-  LTRACEF_LEVEL(2, "done cleaning up handle table on proc %p\n", this);
+  // clean up shared state, including the handle table
+  LTRACEF_LEVEL(2, "removing shared state reference from proc %p\n", this);
+  shared_state_->DecrementShareCount();
 
   // Tear down the address space. It may not exist if Initialize() failed.
   if (aspace_) {

@@ -43,12 +43,12 @@ class Handle final {
   // Returns the Dispatcher to which this instance points.
   const fbl::RefPtr<Dispatcher>& dispatcher() const { return dispatcher_; }
 
-  // Returns the process that owns this instance. Used to guarantee
-  // that one process may not access a handle owned by a different process.
-  zx_koid_t process_id() const { return process_id_.load(ktl::memory_order_relaxed); }
+  // Returns the handle table that owns this instance. Used to guarantee
+  // that a process may only access handles in its own handle table.
+  zx_koid_t handle_table_id() const { return handle_table_id_.load(ktl::memory_order_relaxed); }
 
-  // Sets the value returned by process_id().
-  void set_process_id(zx_koid_t pid);
+  // Sets the value returned by handle_table_id().
+  void set_handle_table_id(zx_koid_t pid);
 
   // Returns the |rights| parameter that was provided when this instance
   // was created.
@@ -111,10 +111,10 @@ class Handle final {
   // against the arena bounds before being cast to a Handle*.
   static uintptr_t IndexToHandle(uint32_t index);
 
-  // process_id_ is atomic because threads from different processes can
+  // handle_table_id_ is atomic because threads from different processes can
   // access it concurrently, while holding different instances of
   // handle_table_lock_.
-  ktl::atomic<zx_koid_t> process_id_;
+  ktl::atomic<zx_koid_t> handle_table_id_;
   fbl::RefPtr<Dispatcher> dispatcher_;
   const zx_rights_t rights_;
   const uint32_t base_value_;
@@ -146,7 +146,7 @@ class HandleTableArena {
   uint32_t HandleToIndex(Handle* handle);
 
   // Validate that all the fields we need to preserve fit within the preservation window.
-  static_assert(offsetof(Handle, process_id_) + sizeof(Handle::process_id_) <=
+  static_assert(offsetof(Handle, handle_table_id_) + sizeof(Handle::handle_table_id_) <=
                 Handle::PreserveSize);
   static_assert(offsetof(Handle, base_value_) + sizeof(Handle::base_value_) <=
                 Handle::PreserveSize);

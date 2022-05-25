@@ -33,6 +33,7 @@ class ChannelDispatcher final
   zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_CHANNEL; }
 
   // Read from this endpoint's message queue.
+  // |owner| is the handle table koid of the process attempting to read from the channel.
   // |msg_size| and |msg_handle_count| are in-out parameters. As input, they specify the maximum
   // size and handle count, respectively. On ZX_OK or ZX_ERR_BUFFER_TOO_SMALL, they specify the
   // actual size and handle count of the next message. The next message is returned in |*msg| on
@@ -40,14 +41,12 @@ class ChannelDispatcher final
   zx_status_t Read(zx_koid_t owner, uint32_t* msg_size, uint32_t* msg_handle_count,
                    MessagePacketPtr* msg, bool may_disard);
 
-  // Write to the opposing endpoint's message queue. |owner| is the process attempting to
-  // write to the channel, or ZX_KOID_INVALID if kernel is doing it. If |owner| does not
-  // match what was last set by Dispatcher::set_owner() the call will fail.
+  // Write to the opposing endpoint's message queue. |owner| is the handle table koid of the process
+  // attempting to write to the channel, or ZX_KOID_INVALID if kernel is doing it.
   zx_status_t Write(zx_koid_t owner, MessagePacketPtr msg);
 
-  // Perform a transacted Write + Read. |owner| is the process attempting to write
-  // to the channel, or ZX_KOID_INVALID if kernel is doing it. If |owner| does not
-  // match what was last set by Dispatcher::set_owner() the call will fail.
+  // Perform a transacted Write + Read. |owner| is the handle table koid of the process attempting
+  // to write to the channel, or ZX_KOID_INVALID if kernel is doing it.
   zx_status_t Call(zx_koid_t owner, MessagePacketPtr msg, zx_time_t deadline,
                    MessagePacketPtr* reply);
 

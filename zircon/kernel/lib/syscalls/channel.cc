@@ -160,7 +160,7 @@ static zx_status_t channel_read(zx_handle_t handle_value, uint32_t options,
     return ZX_ERR_NOT_SUPPORTED;
 
   MessagePacketPtr msg;
-  result = channel->Read(up->get_koid(), &num_bytes, &num_handles, &msg,
+  result = channel->Read(up->handle_table().get_koid(), &num_bytes, &num_handles, &msg,
                          options & ZX_CHANNEL_READ_MAY_DISCARD);
   if (result != ZX_OK && result != ZX_ERR_BUFFER_TOO_SMALL)
     return result;
@@ -351,7 +351,7 @@ static zx_status_t channel_write(zx_handle_t handle_value, uint32_t options,
 
   cleanup.cancel();
 
-  status = channel->Write(up->get_koid(), ktl::move(msg));
+  status = channel->Write(up->handle_table().get_koid(), ktl::move(msg));
   if (status != ZX_OK)
     return status;
 
@@ -423,7 +423,7 @@ zx_status_t channel_call_noretry(zx_handle_t handle_value, uint32_t options, zx_
 
   // Write message and wait for reply, deadline, or cancellation
   MessagePacketPtr reply;
-  status = channel->Call(up->get_koid(), ktl::move(msg), deadline, &reply);
+  status = channel->Call(up->handle_table().get_koid(), ktl::move(msg), deadline, &reply);
   if (status != ZX_OK)
     return status;
   return channel_call_epilogue(up, ktl::move(reply), &args, actual_bytes, actual_handles);

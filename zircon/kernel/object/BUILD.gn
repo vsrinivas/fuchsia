@@ -133,6 +133,7 @@ source_set("tests") {
     "message_packet_tests.cc",
     "msi_object_tests.cc",
     "root_job_observer_tests.cc",
+    "shareable_process_state_tests.cc",
     "socket_dispatcher_tests.cc",
     "state_tracker_tests.cc",
   ]
