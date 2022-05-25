@@ -40,15 +40,20 @@ pub(crate) fn poll_ot_udp_socket(
                 message.append(&buffer[..len])?;
                 let mut info = ot::message::Info::new(ot_udp_socket.sock_name(), ot_sockaddr);
 
-                // SAFETY: This method (`poll`) is guaranteed to only called from the same
-                //         thread that OpenThread is being serviced on, which is ultimately
-                //         the sole requirement for `PlatformBacking::as_ref()` to be
-                //         considered safe.
-                if let Some(thread_iface) = unsafe { PlatformBacking::as_ref().netif_index_thread }
-                {
+                if ot_udp_socket.get_netif_id() == ot::NetifIdentifier::Backbone {
+                    info.set_host_interface(true);
+                } else if ot_udp_socket.get_netif_id() == ot::NetifIdentifier::Thread {
+                    info.set_host_interface(false);
+                } else if let Some(host_iface) = unsafe {
+                    // SAFETY: This method (`poll`) is guaranteed to only be called from the same
+                    //         thread that OpenThread is being serviced on, which is ultimately
+                    //         the sole requirement for `PlatformBacking::as_ref()` to be
+                    //         considered safe.
+                    PlatformBacking::as_ref().lookup_netif_index(ot::NetifIdentifier::Backbone)
+                } {
                     let scope_id = sock_addr.scope_id();
-                    debug!("inbound scope_id = {}", scope_id);
-                    info.set_host_interface(scope_id != thread_iface);
+                    debug!("inbound scope_id = {}, host_iface = {}", scope_id, host_iface);
+                    info.set_host_interface(scope_id == host_iface);
                 }
 
                 // TODO(fxbug.dev/93438): Set hop count. Figure out how to get this info.
@@ -64,7 +69,27 @@ pub(crate) fn poll_ot_udp_socket(
     Poll::Pending
 }
 
+struct UdpSocketBacking {
+    socket: fasync_net::UdpSocket,
+    netif_id: ot::NetifIdentifier,
+}
+
+/// Returns true if this sockaddr needs a scope.
+fn dest_needs_scope(sockaddr: &std::net::SocketAddrV6) -> bool {
+    let dest_is_unicast_link_local = (sockaddr.ip().segments()[0] & 0xffc0) == 0xfe80;
+    let dest_is_multicast_link_local = sockaddr.ip().segments()[0] == 0xff02;
+    let dest_is_multicast_realm_local = sockaddr.ip().segments()[0] == 0xff03;
+
+    sockaddr.scope_id() == 0
+        && (dest_is_unicast_link_local
+            | dest_is_multicast_link_local
+            | dest_is_multicast_realm_local)
+}
+
 trait UdpSocketHelpers {
+    /// Gets a copy of the underlying ref-counted UdpSocketBacking.
+    fn get_async_udp_socket_backing(&self) -> Option<&UdpSocketBacking>;
+
     /// Gets a copy of the underlying ref-counted UdpSocket.
     fn get_async_udp_socket(&self) -> Option<&fasync_net::UdpSocket>;
 
@@ -73,6 +98,9 @@ trait UdpSocketHelpers {
 
     /// Drops the underlying UDP socket
     fn drop_async_udp_socket(&mut self);
+
+    fn get_netif_id(&self) -> ot::NetifIdentifier;
+    fn set_netif_id(&mut self, netif_id: ot::NetifIdentifier);
 
     fn open(&mut self) -> ot::Result;
     fn close(&mut self) -> ot::Result;
@@ -94,23 +122,47 @@ trait UdpSocketHelpers {
 }
 
 impl UdpSocketHelpers for ot::UdpSocket<'_> {
-    fn get_async_udp_socket(&self) -> Option<&fasync_net::UdpSocket> {
+    fn get_async_udp_socket_backing(&self) -> Option<&UdpSocketBacking> {
         self.get_handle().map(|handle| {
             // SAFETY: The handle pointer always comes from the result from Box::leak(),
             //         so it is safe to cast back into a reference.
-            unsafe { &*(handle.as_ptr() as *mut fasync_net::UdpSocket) }
+            unsafe { &*(handle.as_ptr() as *mut UdpSocketBacking) }
         })
+    }
+
+    fn get_netif_id(&self) -> ot::NetifIdentifier {
+        self.get_async_udp_socket_backing()
+            .map(|x| x.netif_id)
+            .unwrap_or(ot::NetifIdentifier::Unspecified)
+    }
+
+    fn set_netif_id(&mut self, netif_id: ot::NetifIdentifier) {
+        self.get_handle()
+            .map(|handle| {
+                // SAFETY: The handle pointer always comes from the result from Box::leak(),
+                //         so it is safe to cast back into a reference.
+                unsafe { &mut *(handle.as_ptr() as *mut UdpSocketBacking) }
+            })
+            .unwrap()
+            .netif_id = netif_id;
+    }
+
+    fn get_async_udp_socket(&self) -> Option<&fasync_net::UdpSocket> {
+        self.get_async_udp_socket_backing().map(|x| &x.socket)
     }
 
     fn set_async_udp_socket(&mut self, socket: fasync_net::UdpSocket) {
         assert!(self.get_handle().is_none());
 
-        let boxed = Box::new(socket);
+        let socket_backing =
+            UdpSocketBacking { socket, netif_id: ot::NetifIdentifier::Unspecified };
+
+        let boxed = Box::new(socket_backing);
 
         // Get a reference to our socket while "leaking" the containing box, and
         // then convert it to a pointer.
         // We will reconstitute our box to free the memory in `drop_async_udp_socket()`.
-        let socket_ptr = Box::leak(boxed) as *mut fasync_net::UdpSocket;
+        let socket_ptr = Box::leak(boxed) as *mut UdpSocketBacking;
 
         self.set_handle(Some(NonNull::new(socket_ptr as *mut c_void).unwrap()));
     }
@@ -120,7 +172,7 @@ impl UdpSocketHelpers for ot::UdpSocket<'_> {
             // Reconstitute our box from the pointer.
             // SAFETY: The pointer we are passing into `Box::from_raw` came from `Box::leak`.
             let boxed = unsafe {
-                Box::<fasync_net::UdpSocket>::from_raw(handle.as_ptr() as *mut fasync_net::UdpSocket)
+                Box::<UdpSocketBacking>::from_raw(handle.as_ptr() as *mut UdpSocketBacking)
             };
 
             // Explicitly drop the box for clarity.
@@ -169,11 +221,19 @@ impl UdpSocketHelpers for ot::UdpSocket<'_> {
     }
 
     fn bind(&mut self) -> ot::Result {
-        debug!("otPlatUdp:{:?}: Bind to {:?}", self.as_ot_ptr(), self.sock_name());
+        let mut sockaddr: std::net::SocketAddrV6 = self.sock_name().into();
+
+        // SAFETY: Must only be called from the same thread that OpenThread is running on.
+        //         This is guaranteed by the only caller of this method.
+        let platform_backing = unsafe { PlatformBacking::as_ref() };
+
+        if let Some(netif) = platform_backing.lookup_netif_index(self.get_netif_id()) {
+            sockaddr.set_scope_id(netif);
+        }
+
+        debug!("otPlatUdp:{:?}: Bind to {}", self.as_ot_ptr(), sockaddr);
 
         let socket = self.get_async_udp_socket().ok_or(ot::Error::Failed)?;
-        let sockaddr: std::net::SocketAddr = self.sock_name().into();
-
         socket.as_ref().bind(&sockaddr.into()).map_err(move |err| {
             error!("Error: {:?}", err);
             ot::Error::Failed
@@ -188,27 +248,15 @@ impl UdpSocketHelpers for ot::UdpSocket<'_> {
     }
 
     fn bind_to_netif(&mut self, net_if_id: ot::NetifIdentifier) -> ot::Result {
-        debug!(
-            "otPlatUdp:{:?}: Bind to netif={:?} (NOT YET IMPLEMENTED)",
-            self.as_ot_ptr(),
-            net_if_id
-        );
+        debug!("otPlatUdp:{:?}: Bind to netif={:?}", self.as_ot_ptr(), net_if_id);
 
-        let _socket = self.get_async_udp_socket().ok_or(ot::Error::Failed)?;
-
-        // TODO(fxbug.dev/93438): Actually bind to netif! IPV6_BOUND_IF, SO_BINDTODEVICE, etc..
-        //       Would be nice if we could just set the scope id, but this gets
-        //       called before our call to bind, so that does us no good.
+        self.set_netif_id(net_if_id);
 
         Ok(())
     }
 
     fn connect(&mut self) -> ot::Result {
-        debug!(
-            "otPlatUdp:{:?}: Connect to {:?} (NOT YET IMPLEMENTED)",
-            self.as_ot_ptr(),
-            self.peer_name()
-        );
+        debug!("otPlatUdp:{:?}: Connect to {:?}", self.as_ot_ptr(), self.peer_name());
 
         // TODO(fxbug.dev/93438): Investigate implications of leaving this unimplemented.
         //                        It's not entirely clear why we have this call to connect
@@ -249,12 +297,19 @@ impl UdpSocketHelpers for ot::UdpSocket<'_> {
 
         let mut sockaddr: std::net::SocketAddrV6 = info.peer_name().into();
 
-        if info.is_host_interface() {
+        if self.get_netif_id() == ot::NetifIdentifier::Unspecified && dest_needs_scope(&sockaddr) {
+            let netif_id = if info.is_host_interface() {
+                ot::NetifIdentifier::Backbone
+            } else {
+                ot::NetifIdentifier::Thread
+            };
+
             // SAFETY: Must only be called from the same thread that OpenThread is running on.
             //         This is guaranteed by the only caller of this method.
             let platform_backing = unsafe { PlatformBacking::as_ref() };
+
             let netif: ot::NetifIndex = platform_backing
-                .lookup_netif_index(ot::NetifIdentifier::Backbone)
+                .lookup_netif_index(netif_id)
                 .unwrap_or(ot::NETIF_INDEX_UNSPECIFIED);
             sockaddr.set_scope_id(netif);
         }
@@ -305,7 +360,7 @@ impl UdpSocketHelpers for ot::UdpSocket<'_> {
         addr: &ot::Ip6Address,
     ) -> ot::Result {
         debug!(
-            "otPlatUdp:{:?}: JoinMulticastGroup {:?} on netif {:?} (Unimplemented)",
+            "otPlatUdp:{:?}: JoinMulticastGroup {:?} on netif {:?}",
             self.as_ot_ptr(),
             addr,
             netif
@@ -333,7 +388,7 @@ impl UdpSocketHelpers for ot::UdpSocket<'_> {
         addr: &ot::Ip6Address,
     ) -> ot::Result {
         debug!(
-            "otPlatUdp:{:?}: LeaveMulticastGroup {:?} on netif {:?} (Unimplemented)",
+            "otPlatUdp:{:?}: LeaveMulticastGroup {:?} on netif {:?}",
             self.as_ot_ptr(),
             addr,
             netif
@@ -424,4 +479,128 @@ unsafe extern "C" fn otPlatUdpLeaveMulticastGroup(
         .unwrap()
         .leave_mcast_group(net_if_id.into(), ot::Ip6Address::ref_from_ot_ptr(addr).unwrap())
         .into_ot_error()
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use std::net::Ipv6Addr;
+    use std::net::SocketAddrV6;
+
+    #[test]
+    fn test_dest_needs_scope() {
+        assert_eq!(
+            dest_needs_scope(&SocketAddrV6::new(
+                Ipv6Addr::new(0x2001, 0xdb8, 0, 0, 0, 0, 0, 1),
+                8080,
+                0,
+                0
+            )),
+            false
+        );
+        assert_eq!(
+            dest_needs_scope(&SocketAddrV6::new(
+                Ipv6Addr::new(0x2001, 0xdb8, 0, 0, 0, 0, 0, 1),
+                8080,
+                0,
+                1
+            )),
+            false
+        );
+
+        assert_eq!(
+            dest_needs_scope(&SocketAddrV6::new(
+                Ipv6Addr::new(0xfe80, 0xdb8, 0, 0, 0, 0, 0, 1),
+                8080,
+                0,
+                0
+            )),
+            true
+        );
+        assert_eq!(
+            dest_needs_scope(&SocketAddrV6::new(
+                Ipv6Addr::new(0xfe80, 0xdb8, 0, 0, 0, 0, 0, 1),
+                8080,
+                0,
+                1
+            )),
+            false
+        );
+
+        assert_eq!(
+            dest_needs_scope(&SocketAddrV6::new(
+                Ipv6Addr::new(0xff05, 0xdb8, 0, 0, 0, 0, 0, 1),
+                8080,
+                0,
+                0
+            )),
+            false
+        );
+        assert_eq!(
+            dest_needs_scope(&SocketAddrV6::new(
+                Ipv6Addr::new(0xff05, 0xdb8, 0, 0, 0, 0, 0, 1),
+                8080,
+                0,
+                1
+            )),
+            false
+        );
+
+        assert_eq!(
+            dest_needs_scope(&SocketAddrV6::new(
+                Ipv6Addr::new(0xff03, 0xdb8, 0, 0, 0, 0, 0, 1),
+                8080,
+                0,
+                0
+            )),
+            true
+        );
+        assert_eq!(
+            dest_needs_scope(&SocketAddrV6::new(
+                Ipv6Addr::new(0xff03, 0xdb8, 0, 0, 0, 0, 0, 1),
+                8080,
+                0,
+                1
+            )),
+            false
+        );
+
+        assert_eq!(
+            dest_needs_scope(&SocketAddrV6::new(
+                Ipv6Addr::new(0xff02, 0xdb8, 0, 0, 0, 0, 0, 1),
+                8080,
+                0,
+                0
+            )),
+            true
+        );
+        assert_eq!(
+            dest_needs_scope(&SocketAddrV6::new(
+                Ipv6Addr::new(0xff02, 0xdb8, 0, 0, 0, 0, 0, 1),
+                8080,
+                0,
+                1
+            )),
+            false
+        );
+
+        assert_eq!(
+            dest_needs_scope(&SocketAddrV6::new(
+                Ipv6Addr::new(0xff01, 0xdb8, 0, 0, 0, 0, 0, 1),
+                8080,
+                0,
+                0
+            )),
+            false
+        );
+        assert_eq!(
+            dest_needs_scope(&SocketAddrV6::new(
+                Ipv6Addr::new(0xff01, 0xdb8, 0, 0, 0, 0, 0, 1),
+                8080,
+                0,
+                1
+            )),
+            false
+        );
+    }
 }
