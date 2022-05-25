@@ -10,10 +10,10 @@ use {
     fidl_fuchsia_bluetooth_bredr::ProfileMarker,
     fidl_fuchsia_bluetooth_component::LifecycleMarker,
     fidl_fuchsia_bluetooth_internal_a2dp::{ControllerMarker, ControllerRequestStream},
-    fidl_fuchsia_cobalt::LoggerFactoryMarker,
     fidl_fuchsia_media::{AudioDeviceEnumeratorMarker, SessionAudioConsumerFactoryMarker},
     fidl_fuchsia_media_sessions2::PublisherMarker,
     fidl_fuchsia_mediacodec::CodecFactoryMarker,
+    fidl_fuchsia_metrics::MetricEventLoggerFactoryMarker,
     fidl_fuchsia_power_battery::BatteryManagerMarker,
     fidl_fuchsia_settings::AudioMarker,
     fidl_fuchsia_sysmem::AllocatorMarker,
@@ -65,7 +65,7 @@ async fn main() -> Result<(), Error> {
     // Connect to the services A2DP requires.
     let _avrcp_svc = connect_to_protocol::<fidl_avrcp::PeerManagerMarker>()?;
     let _profile_svc = connect_to_protocol::<ProfileMarker>()?;
-    let _cobalt_svc = connect_to_protocol::<LoggerFactoryMarker>()?;
+    let _cobalt_svc = connect_to_protocol::<MetricEventLoggerFactoryMarker>()?;
     let _audio_device_svc = connect_to_protocol::<AudioDeviceEnumeratorMarker>()?;
     let _session_audio_svc = connect_to_protocol::<SessionAudioConsumerFactoryMarker>()?;
     let _publisher_svc = connect_to_protocol::<PublisherMarker>()?;

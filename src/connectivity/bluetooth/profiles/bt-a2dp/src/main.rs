@@ -21,14 +21,13 @@ use {
     fidl_fuchsia_media::{
         AudioChannelId, AudioPcmMode, PcmFormat, SessionAudioConsumerFactoryMarker,
     },
-    fidl_fuchsia_media_sessions2 as sessions2,
+    fidl_fuchsia_media_sessions2 as sessions2, fidl_fuchsia_metrics as cobalt,
     fuchsia_async::{self as fasync, DurationExt},
     fuchsia_bluetooth::{
         assigned_numbers::AssignedNumber,
         profile::{find_profile_descriptors, find_service_classes, profile_descriptor_to_assigned},
         types::{PeerId, Uuid},
     },
-    fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType},
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect as inspect,
     fuchsia_inspect_derive::Inspect,
@@ -108,7 +107,7 @@ fn find_codec_cap<'a>(endpoint: &'a StreamEndpoint) -> Option<&'a ServiceCapabil
 
 #[derive(Clone)]
 struct StreamsBuilder {
-    cobalt_sender: CobaltSender,
+    cobalt_sender: Option<cobalt::MetricEventLoggerProxy>,
     codec_negotiation: CodecNegotiation,
     domain: String,
     aac_available: bool,
@@ -118,7 +117,7 @@ struct StreamsBuilder {
 
 impl StreamsBuilder {
     async fn system_available(
-        cobalt_sender: CobaltSender,
+        cobalt_sender: Option<cobalt::MetricEventLoggerProxy>,
         config: &A2dpConfiguration,
     ) -> Result<Self, Error> {
         if !config.enable_sink && !config.enable_source {
@@ -502,6 +501,31 @@ fn setup_profiles(
     Ok(profile)
 }
 
+// Connects to the MetricEventLoggerFactory service to create a MetricEventLoggerProxy for
+// the caller.
+async fn create_metrics_logger() -> Result<cobalt::MetricEventLoggerProxy, Error> {
+    let factory_proxy =
+        fuchsia_component::client::connect_to_protocol::<cobalt::MetricEventLoggerFactoryMarker>()
+            .context("failed to connect to metrics service")?;
+
+    let (cobalt_proxy, cobalt_server) =
+        fidl::endpoints::create_proxy::<cobalt::MetricEventLoggerMarker>()
+            .context("failed to create MetricEventLoggerMarker endponts")?;
+
+    let project_spec = cobalt::ProjectSpec {
+        customer_id: None, // defaults to fuchsia
+        project_id: Some(metrics::PROJECT_ID),
+        ..cobalt::ProjectSpec::EMPTY
+    };
+
+    factory_proxy
+        .create_metric_event_logger(project_spec, cobalt_server)
+        .await?
+        .map_err(|e| format_err!("error response {:?}", e))?;
+
+    Ok(cobalt_proxy)
+}
+
 /// The number of allowed active streams across the whole profile.
 /// If a peer attempts to start an audio stream and there are already this many active, it will
 /// be suspended immediately.
@@ -541,11 +565,13 @@ async fn main() -> Result<(), Error> {
         None
     };
 
-    let cobalt: CobaltSender = {
-        let (sender, reporter) =
-            CobaltConnector::default().serve(ConnectionType::project_id(metrics::PROJECT_ID));
-        fasync::Task::spawn(reporter).detach();
-        sender
+    // Set up cobalt 1.1 logger.
+    let cobalt = match create_metrics_logger().await {
+        Ok(c) => Some(c),
+        Err(e) => {
+            warn!("Failed to create metrics logger: {}", e);
+            None
+        }
     };
 
     let stream_builder = StreamsBuilder::system_available(cobalt.clone(), &config).await?;
@@ -560,7 +586,7 @@ async fn main() -> Result<(), Error> {
         stream_builder.negotiation(),
         permits.clone(),
         profile_svc.clone(),
-        Some(cobalt.clone()),
+        cobalt,
     );
     if let Err(e) = peers.iattach(&inspect.root(), "connected") {
         warn!("Failed to attach to inspect: {:?}", e);
@@ -660,17 +686,9 @@ mod tests {
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_bluetooth_a2dp as a2dp;
     use fidl_fuchsia_bluetooth_bredr::{ProfileRequest, ProfileRequestStream};
-    use fidl_fuchsia_cobalt::CobaltEvent;
     use fuchsia_bluetooth::types::Channel;
-    use futures::channel::mpsc;
     use futures::{task::Poll, StreamExt};
     use std::{convert::TryInto, iter::FromIterator};
-
-    pub(crate) fn fake_cobalt_sender() -> (CobaltSender, mpsc::Receiver<CobaltEvent>) {
-        const BUFFER_SIZE: usize = 100;
-        let (sender, receiver) = mpsc::channel(BUFFER_SIZE);
-        (CobaltSender::new(sender), receiver)
-    }
 
     fn run_to_stalled(exec: &mut fasync::TestExecutor) {
         let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
@@ -679,13 +697,12 @@ mod tests {
     fn setup_connected_peers() -> (Arc<Mutex<ConnectedPeers>>, ProfileRequestStream) {
         let (proxy, stream) = create_proxy_and_stream::<bredr::ProfileMarker>()
             .expect("Profile proxy should be created");
-        let (cobalt_sender, _) = fake_cobalt_sender();
         let peers = Arc::new(Mutex::new(ConnectedPeers::new(
             stream::Streams::new(),
             CodecNegotiation::build(vec![], avdtp::EndpointType::Sink).unwrap(),
             Permits::new(1),
             proxy,
-            Some(cobalt_sender),
+            None,
         )));
         (peers, stream)
     }
@@ -693,10 +710,9 @@ mod tests {
     #[fuchsia::test]
     fn test_at_least_one_profile_enabled() {
         let mut exec = fasync::TestExecutor::new().expect("executor should build");
-        let (sender, _) = fake_cobalt_sender();
         let config =
             A2dpConfiguration { enable_sink: false, enable_source: false, ..Default::default() };
-        let mut streams_fut = Box::pin(StreamsBuilder::system_available(sender, &config));
+        let mut streams_fut = Box::pin(StreamsBuilder::system_available(None, &config));
 
         let streams = exec.run_singlethreaded(&mut streams_fut);
         assert!(
@@ -711,9 +727,8 @@ mod tests {
     /// MediaPlayer isn't available in the test environment.
     fn test_sbc_unavailable_error() {
         let mut exec = fasync::TestExecutor::new().expect("executor should build");
-        let (sender, _) = fake_cobalt_sender();
         let config = A2dpConfiguration { source: AudioSourceType::BigBen, ..Default::default() };
-        let mut streams_fut = Box::pin(StreamsBuilder::system_available(sender, &config));
+        let mut streams_fut = Box::pin(StreamsBuilder::system_available(None, &config));
 
         let streams = exec.run_singlethreaded(&mut streams_fut);
 
@@ -725,13 +740,12 @@ mod tests {
     /// build local_streams should not include the AAC streams
     fn test_aac_switch() {
         let mut exec = fasync::TestExecutor::new().expect("executor should build");
-        let (sender, _) = fake_cobalt_sender();
         let mut config = A2dpConfiguration {
             source: AudioSourceType::BigBen,
             enable_sink: false,
             ..Default::default()
         };
-        let mut builder_fut = Box::pin(StreamsBuilder::system_available(sender.clone(), &config));
+        let mut builder_fut = Box::pin(StreamsBuilder::system_available(None, &config));
 
         let builder = exec.run_singlethreaded(&mut builder_fut);
 
@@ -743,7 +757,7 @@ mod tests {
 
         config.enable_aac = false;
 
-        let mut builder_fut = Box::pin(StreamsBuilder::system_available(sender.clone(), &config));
+        let mut builder_fut = Box::pin(StreamsBuilder::system_available(None, &config));
 
         let builder = exec.run_singlethreaded(&mut builder_fut);
 

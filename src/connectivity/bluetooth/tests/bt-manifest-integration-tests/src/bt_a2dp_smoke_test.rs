@@ -9,7 +9,6 @@ use {
     fidl_fuchsia_bluetooth_avrcp as fidl_avrcp,
     fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileRequestStream},
     fidl_fuchsia_bluetooth_internal_a2dp::{ControllerMarker, ControllerProxy},
-    fidl_fuchsia_cobalt::{LoggerFactoryMarker, LoggerFactoryRequestStream},
     fidl_fuchsia_media::{
         AudioDeviceEnumeratorMarker, AudioDeviceEnumeratorRequestStream,
         SessionAudioConsumerFactoryMarker, SessionAudioConsumerFactoryRequestStream,
@@ -18,6 +17,7 @@ use {
         DiscoveryMarker, DiscoveryRequestStream, PublisherMarker, PublisherRequestStream,
     },
     fidl_fuchsia_mediacodec::{CodecFactoryMarker, CodecFactoryRequestStream},
+    fidl_fuchsia_metrics::{MetricEventLoggerFactoryMarker, MetricEventLoggerFactoryRequestStream},
     fidl_fuchsia_power_battery::{BatteryManagerMarker, BatteryManagerRequestStream},
     fidl_fuchsia_settings::{AudioMarker, AudioRequestStream},
     fidl_fuchsia_sysmem::{AllocatorMarker, AllocatorRequestStream},
@@ -49,7 +49,7 @@ enum Event {
     Registry(Option<RegistryRequestStream>),
     Session(Option<SessionAudioConsumerFactoryRequestStream>),
     AudioSettings(Option<AudioRequestStream>),
-    Cobalt(Option<LoggerFactoryRequestStream>),
+    Cobalt(Option<MetricEventLoggerFactoryRequestStream>),
     MediaSession(Option<DiscoveryRequestStream>),
     MediaPublisher(Option<PublisherRequestStream>),
     AudioDevice(Option<AudioDeviceEnumeratorRequestStream>),
@@ -93,8 +93,8 @@ impl From<AudioRequestStream> for Event {
     }
 }
 
-impl From<LoggerFactoryRequestStream> for Event {
-    fn from(src: LoggerFactoryRequestStream) -> Self {
+impl From<MetricEventLoggerFactoryRequestStream> for Event {
+    fn from(src: MetricEventLoggerFactoryRequestStream) -> Self {
         Self::Cobalt(Some(src))
     }
 }
@@ -157,7 +157,7 @@ async fn mock_component(
 
     add_fidl_service_handler::<fidl_avrcp::PeerManagerMarker, _>(&mut fs, sender.clone());
     add_fidl_service_handler::<ProfileMarker, _>(&mut fs, sender.clone());
-    add_fidl_service_handler::<LoggerFactoryMarker, _>(&mut fs, sender.clone());
+    add_fidl_service_handler::<MetricEventLoggerFactoryMarker, _>(&mut fs, sender.clone());
     add_fidl_service_handler::<AudioDeviceEnumeratorMarker, _>(&mut fs, sender.clone());
     add_fidl_service_handler::<SessionAudioConsumerFactoryMarker, _>(&mut fs, sender.clone());
     add_fidl_service_handler::<PublisherMarker, _>(&mut fs, sender.clone());
@@ -256,7 +256,7 @@ async fn a2dp_v2_component_topology() {
     // by the A2DP component.
     add_a2dp_dependency_route::<fidl_avrcp::PeerManagerMarker>(&builder).await;
     add_a2dp_dependency_route::<ProfileMarker>(&builder).await;
-    add_a2dp_dependency_route::<LoggerFactoryMarker>(&builder).await;
+    add_a2dp_dependency_route::<MetricEventLoggerFactoryMarker>(&builder).await;
     add_a2dp_dependency_route::<AudioDeviceEnumeratorMarker>(&builder).await;
     add_a2dp_dependency_route::<SessionAudioConsumerFactoryMarker>(&builder).await;
     add_a2dp_dependency_route::<PublisherMarker>(&builder).await;

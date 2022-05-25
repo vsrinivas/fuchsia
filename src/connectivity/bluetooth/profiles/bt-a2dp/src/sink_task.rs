@@ -9,9 +9,8 @@ use {
     bt_avdtp::{self as avdtp, MediaStream},
     fidl::endpoints::create_request_stream,
     fidl_fuchsia_media as media, fidl_fuchsia_media_sessions2 as sessions2,
-    fuchsia_async as fasync,
+    fidl_fuchsia_metrics as cobalt, fuchsia_async as fasync,
     fuchsia_bluetooth::{inspect::DataStreamInspect, types::PeerId},
-    fuchsia_cobalt::CobaltSender,
     fuchsia_trace as trace,
     futures::{
         channel::oneshot,
@@ -29,7 +28,7 @@ use crate::player;
 
 #[derive(Clone)]
 pub struct SinkTaskBuilder {
-    cobalt_sender: CobaltSender,
+    metrics_proxy: Option<cobalt::MetricEventLoggerProxy>,
     publisher: sessions2::PublisherProxy,
     audio_consumer_factory: media::SessionAudioConsumerFactoryProxy,
     domain: String,
@@ -37,12 +36,12 @@ pub struct SinkTaskBuilder {
 
 impl SinkTaskBuilder {
     pub fn new(
-        cobalt_sender: CobaltSender,
+        metrics_proxy: Option<cobalt::MetricEventLoggerProxy>,
         publisher: sessions2::PublisherProxy,
         audio_consumer_factory: media::SessionAudioConsumerFactoryProxy,
         domain: String,
     ) -> Self {
-        Self { cobalt_sender, publisher, audio_consumer_factory, domain }
+        Self { metrics_proxy, publisher, audio_consumer_factory, domain }
     }
 }
 
@@ -160,8 +159,8 @@ impl MediaTaskRunner for ConfiguredSinkTask {
             Err(MediaTaskError::Other(format!("Unrecoverable streaming error: {:?}", err)))
         };
         let codec_type = self.codec_config.codec_type().clone();
-        let cobalt_sender = self.builder.cobalt_sender.clone();
-        let task = RunningSinkTask::start(media_player_fut, cobalt_sender, codec_type);
+        let metrics_proxy = self.builder.metrics_proxy.clone();
+        let task = RunningSinkTask::start(media_player_fut, metrics_proxy, codec_type);
         Ok(Box::new(task))
     }
 
@@ -198,7 +197,7 @@ struct RunningSinkTask {
 impl RunningSinkTask {
     fn start(
         media_task: impl Future<Output = Result<(), MediaTaskError>> + Send + 'static,
-        cobalt_sender: CobaltSender,
+        metrics: Option<cobalt::MetricEventLoggerProxy>,
         codec_type: avdtp::MediaCodecType,
     ) -> Self {
         let (sender, receiver) = oneshot::channel();
@@ -219,11 +218,10 @@ impl RunningSinkTask {
             trace::instant!("bt-a2dp", "Media:Stop", trace::Scope::Thread);
             let end_time = fasync::Time::now();
 
-            report_stream_metrics(
-                cobalt_sender,
-                &codec_type,
-                (end_time - start_time).into_seconds(),
-            );
+            if let Some(sender) = metrics {
+                report_stream_metrics(sender, &codec_type, (end_time - start_time).into_seconds())
+                    .await;
+            }
         })
         .detach();
         Self { media_task: Some(wrapped_media_task), result_fut }
@@ -307,26 +305,32 @@ async fn media_stream_task(
     }
 }
 
-fn report_stream_metrics(
-    mut cobalt_sender: CobaltSender,
+async fn report_stream_metrics(
+    metrics_proxy: cobalt::MetricEventLoggerProxy,
     codec_type: &avdtp::MediaCodecType,
     duration_seconds: i64,
 ) {
     let codec = match codec_type {
         &avdtp::MediaCodecType::AUDIO_SBC => {
-            metrics::A2dpStreamDurationInSecondsMetricDimensionCodec::Sbc
+            metrics::A2dpStreamDurationInSecondsMigratedMetricDimensionCodec::Sbc
         }
         &avdtp::MediaCodecType::AUDIO_AAC => {
-            metrics::A2dpStreamDurationInSecondsMetricDimensionCodec::Aac
+            metrics::A2dpStreamDurationInSecondsMigratedMetricDimensionCodec::Aac
         }
-        _ => metrics::A2dpStreamDurationInSecondsMetricDimensionCodec::Unknown,
+        _ => metrics::A2dpStreamDurationInSecondsMigratedMetricDimensionCodec::Unknown,
     };
 
-    cobalt_sender.log_elapsed_time(
-        metrics::A2DP_STREAM_DURATION_IN_SECONDS_METRIC_ID,
-        codec as u32,
-        duration_seconds,
-    );
+    match metrics_proxy
+        .log_integer(
+            metrics::A2DP_STREAM_DURATION_IN_SECONDS_MIGRATED_METRIC_ID,
+            duration_seconds,
+            &[codec as u32],
+        )
+        .await
+    {
+        Ok(Ok(())) => (),
+        e => warn!("failed to log metrics: {:?}", e),
+    }
 }
 
 #[cfg(all(test, feature = "test_encoding"))]
@@ -335,13 +339,14 @@ mod tests {
 
     use {
         async_test_helpers::run_while,
+        async_utils::PollExt,
         fidl::endpoints::create_proxy_and_stream,
-        fidl_fuchsia_cobalt::{CobaltEvent, EventPayload},
         fidl_fuchsia_media::{
             AudioConsumerRequest, AudioConsumerStatus, SessionAudioConsumerFactoryMarker,
             StreamSinkRequest,
         },
         fidl_fuchsia_media_sessions2::{PublisherMarker, PublisherRequest},
+        fidl_fuchsia_metrics::{MetricEvent, MetricEventLoggerRequest, MetricEventPayload},
         fuchsia_bluetooth::types::Channel,
         fuchsia_inspect as inspect,
         fuchsia_inspect_derive::WithInspect,
@@ -350,19 +355,38 @@ mod tests {
         std::sync::RwLock,
     };
 
-    use crate::tests::fake_cobalt_sender;
+    fn fake_cobalt_sender(
+    ) -> (cobalt::MetricEventLoggerProxy, cobalt::MetricEventLoggerRequestStream) {
+        fidl::endpoints::create_proxy_and_stream::<cobalt::MetricEventLoggerMarker>()
+            .expect("failed to create MetricsEventLogger proxy")
+    }
+
+    fn respond_to_metric_req(
+        request: fidl_fuchsia_metrics::MetricEventLoggerRequest,
+    ) -> fidl_fuchsia_metrics::MetricEvent {
+        match request {
+            MetricEventLoggerRequest::LogInteger { metric_id, value, event_codes, responder } => {
+                assert!(responder.send(&mut Ok(())).is_ok());
+                MetricEvent {
+                    metric_id,
+                    event_codes,
+                    payload: MetricEventPayload::IntegerValue(value),
+                }
+            }
+            _ => panic!("unexpected logging to Cobalt"),
+        }
+    }
 
     #[test]
     fn sink_task_works_without_session() {
         let mut exec = fasync::TestExecutor::new().expect("executor should build");
-        let (send, _recv) = fake_cobalt_sender();
         let (proxy, mut session_requests) =
             fidl::endpoints::create_proxy_and_stream::<PublisherMarker>().unwrap();
         let (audio_consumer_factory_proxy, mut audio_factory_requests) =
             create_proxy_and_stream::<SessionAudioConsumerFactoryMarker>()
                 .expect("proxy pair creation");
         let builder =
-            SinkTaskBuilder::new(send, proxy, audio_consumer_factory_proxy, "Tests".to_string());
+            SinkTaskBuilder::new(None, proxy, audio_consumer_factory_proxy, "Tests".to_string());
 
         let sbc_config = MediaCodecConfig::min_sbc();
         let mut runner = builder
@@ -415,8 +439,12 @@ mod tests {
         let (audio_consumer_factory_proxy, _audio_factory_requests) =
             create_proxy_and_stream::<SessionAudioConsumerFactoryMarker>()
                 .expect("proxy pair creation");
-        let builder =
-            SinkTaskBuilder::new(send, proxy, audio_consumer_factory_proxy, "Tests".to_string());
+        let builder = SinkTaskBuilder::new(
+            Some(send),
+            proxy,
+            audio_consumer_factory_proxy,
+            "Tests".to_string(),
+        );
 
         let sbc_config = MediaCodecConfig::min_sbc();
         let mut runner = builder
@@ -437,12 +465,15 @@ mod tests {
         drop(running_task);
 
         // Should receive a metrics report.
-        match exec.run_singlethreaded(&mut recv.next()) {
-            Some(CobaltEvent {
-                metric_id: metrics::A2DP_STREAM_DURATION_IN_SECONDS_METRIC_ID,
-                ..
-            }) => {}
-            x => panic!("Expected A2DP Duration CobaltEvent, got {:?}", x),
+        match exec.run_until_stalled(&mut recv.next()).expect("should be ready") {
+            Some(Ok(req)) => {
+                let got = respond_to_metric_req(req);
+                assert_eq!(
+                    metrics::A2DP_STREAM_DURATION_IN_SECONDS_MIGRATED_METRIC_ID,
+                    got.metric_id
+                );
+            }
+            x => panic!("should have received request: {:?}", x),
         }
     }
 
@@ -457,24 +488,35 @@ mod tests {
     #[test]
     /// Test that cobalt metrics are sent after stream ends
     fn test_cobalt_metrics() {
+        let mut exec = fasync::TestExecutor::new().expect("executor should build");
         let (send, mut recv) = fake_cobalt_sender();
         const TEST_DURATION: i64 = 1;
 
-        report_stream_metrics(send, &avdtp::MediaCodecType::AUDIO_AAC, TEST_DURATION);
+        let report_fut =
+            report_stream_metrics(send, &avdtp::MediaCodecType::AUDIO_AAC, TEST_DURATION);
+        pin_mut!(report_fut);
+        exec.run_until_stalled(&mut report_fut).expect_pending("should be pending");
 
-        let event = recv.try_next().expect("no stream error").expect("event present");
-
-        assert_eq!(
-            event,
-            CobaltEvent {
-                metric_id: metrics::A2DP_STREAM_DURATION_IN_SECONDS_METRIC_ID,
-                event_codes: vec![
-                    metrics::A2dpStreamDurationInSecondsMetricDimensionCodec::Aac as u32
-                ],
-                component: None,
-                payload: EventPayload::ElapsedMicros(TEST_DURATION),
+        match exec.run_until_stalled(&mut recv.next()).expect("should be ready") {
+            Some(Ok(req)) => {
+                let got = respond_to_metric_req(req);
+                assert_eq!(
+                    metrics::A2DP_STREAM_DURATION_IN_SECONDS_MIGRATED_METRIC_ID,
+                    got.metric_id
+                );
+                assert_eq!(
+                    vec![
+                        metrics::A2dpStreamDurationInSecondsMigratedMetricDimensionCodec::Aac
+                            as u32
+                    ],
+                    got.event_codes
+                );
+                assert_eq!(MetricEventPayload::IntegerValue(TEST_DURATION), got.payload);
             }
-        );
+            x => panic!("should have received request: {:?}", x),
+        }
+
+        assert!(exec.run_until_stalled(&mut report_fut).is_ready());
     }
 
     fn once_player_gen(

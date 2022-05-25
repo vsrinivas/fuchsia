@@ -17,8 +17,8 @@ rustc_test("tests_bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",
-    "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
     "//sdk/fidl/fuchsia.mediacodec:fuchsia.mediacodec-rustc",
+    "//sdk/fidl/fuchsia.metrics:fuchsia.metrics-rustc",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem-rustc",
     "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider-rustc",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",

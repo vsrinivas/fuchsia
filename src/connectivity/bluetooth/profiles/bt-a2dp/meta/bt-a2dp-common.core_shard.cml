@@ -35,7 +35,7 @@
             to: [ "#bt-a2dp" ],
         },
         {
-            protocol: "fuchsia.cobalt.LoggerFactory",
+            protocol: [ "fuchsia.metrics.MetricEventLoggerFactory" ],
             from: "#cobalt",
             to: [ "#bt-a2dp" ],
         },

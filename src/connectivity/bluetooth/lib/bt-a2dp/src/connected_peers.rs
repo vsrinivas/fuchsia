@@ -8,13 +8,12 @@ use {
     fidl_fuchsia_bluetooth_bredr::{
         self as bredr, ChannelParameters, ProfileDescriptor, ProfileProxy,
     },
-    fuchsia_async as fasync,
+    fidl_fuchsia_metrics, fuchsia_async as fasync,
     fuchsia_bluetooth::{
         detachable_map::{DetachableMap, DetachableWeak},
         inspect::DebugExt,
         types::{Channel, PeerId},
     },
-    fuchsia_cobalt::CobaltSender,
     fuchsia_inspect::{self as inspect, NumericProperty, Property},
     fuchsia_inspect_derive::{AttachError, Inspect},
     fuchsia_zircon as zx,
@@ -154,7 +153,7 @@ pub struct ConnectedPeers {
     /// Profile Proxy, used to connect new transport sockets.
     profile: ProfileProxy,
     /// Cobalt logger to use and hand out to peers, if we are using one.
-    cobalt_sender: Option<CobaltSender>,
+    metrics: Option<fidl_fuchsia_metrics::MetricEventLoggerProxy>,
     /// The 'peers' node of the inspect tree. All connected peers own a child node of this node.
     inspect: inspect::Node,
     /// Inspect node for which is the current preferred peer direction.
@@ -172,7 +171,7 @@ impl ConnectedPeers {
         codec_negotiation: CodecNegotiation,
         permits: Permits,
         profile: ProfileProxy,
-        cobalt_sender: Option<CobaltSender>,
+        metrics: Option<fidl_fuchsia_metrics::MetricEventLoggerProxy>,
     ) -> Self {
         Self {
             connected: DetachableMap::new(),
@@ -183,7 +182,7 @@ impl ConnectedPeers {
             permits,
             inspect: inspect::Node::default(),
             inspect_peer_direction: inspect::StringProperty::default(),
-            cobalt_sender,
+            metrics,
             connected_peer_senders: Vec::new(),
             start_stream_tasks: HashMap::new(),
         }
@@ -321,7 +320,7 @@ impl ConnectedPeers {
             self.streams.as_new(),
             Some(self.permits.clone()),
             self.profile.clone(),
-            self.cobalt_sender.clone(),
+            self.metrics.clone(),
         );
 
         self.discovered.connected(id);
@@ -439,9 +438,7 @@ mod tests {
     use fidl_fuchsia_bluetooth_bredr::{
         ProfileMarker, ProfileRequestStream, ServiceClassProfileIdentifier,
     };
-    use fidl_fuchsia_cobalt::CobaltEvent;
     use fuchsia_inspect::assert_data_tree;
-    use futures::channel::mpsc;
     use futures::{self, pin_mut, task::Poll, StreamExt};
     use std::{
         convert::{TryFrom, TryInto},
@@ -449,12 +446,6 @@ mod tests {
     };
 
     use crate::{media_task::tests::TestMediaTaskBuilder, media_types::*, stream::Stream};
-
-    fn fake_cobalt_sender() -> (CobaltSender, mpsc::Receiver<CobaltEvent>) {
-        const BUFFER_SIZE: usize = 100;
-        let (sender, receiver) = mpsc::channel(BUFFER_SIZE);
-        (CobaltSender::new(sender), receiver)
-    }
 
     fn run_to_stalled(exec: &mut fasync::TestExecutor) {
         let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
@@ -500,14 +491,13 @@ mod tests {
         let (proxy, stream) =
             create_proxy_and_stream::<ProfileMarker>().expect("Profile proxy should be created");
         let id = PeerId(1);
-        let (cobalt_sender, _) = fake_cobalt_sender();
 
         let peers = ConnectedPeers::new(
             Streams::new(),
             CodecNegotiation::build(vec![], avdtp::EndpointType::Sink).unwrap(),
             Permits::new(1),
             proxy,
-            Some(cobalt_sender),
+            None,
         );
 
         (exec, id, peers, stream)

@@ -41,11 +41,11 @@
             protocol: [
                 "fuchsia.bluetooth.avrcp.PeerManager",
                 "fuchsia.bluetooth.bredr.Profile",
-                "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.media.AudioDeviceEnumerator",
                 "fuchsia.media.SessionAudioConsumerFactory",
                 "fuchsia.media.sessions2.Publisher",
                 "fuchsia.mediacodec.CodecFactory",
+                "fuchsia.metrics.MetricEventLoggerFactory",
                 "fuchsia.settings.Audio",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",

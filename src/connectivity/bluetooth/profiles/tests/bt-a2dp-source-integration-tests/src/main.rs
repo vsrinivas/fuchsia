@@ -4,8 +4,8 @@
 
 use fidl::encoding::Decodable;
 use fidl_fuchsia_bluetooth_bredr::*;
-use fidl_fuchsia_cobalt::LoggerFactoryMarker;
 use fidl_fuchsia_mediacodec::CodecFactoryMarker;
+use fidl_fuchsia_metrics::MetricEventLoggerFactoryMarker;
 use fidl_fuchsia_sysmem::AllocatorMarker;
 use fidl_fuchsia_tracing_provider::RegistryMarker;
 use fixture::fixture;
@@ -65,7 +65,7 @@ async fn setup_piconet_with_a2dp_source_and_mock_peer() -> A2dpSourceIntegration
     // when the test code becomes more complex.
     let use_capabilities = vec![
         Capability::protocol::<CodecFactoryMarker>().into(),
-        Capability::protocol::<LoggerFactoryMarker>().into(),
+        Capability::protocol::<MetricEventLoggerFactoryMarker>().into(),
         Capability::protocol::<AllocatorMarker>().into(),
         Capability::protocol::<RegistryMarker>().into(),
     ];

@@ -39,7 +39,7 @@
             to: [ "#realm_builder" ],
         },
         {
-            protocol: [ "fuchsia.cobalt.LoggerFactory" ],
+            protocol: [ "fuchsia.metrics.MetricEventLoggerFactory" ],
             from: "#mock-cobalt",
             to: [ "#realm_builder" ],
         },
