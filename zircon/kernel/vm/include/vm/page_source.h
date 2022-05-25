@@ -65,6 +65,7 @@
 
 class PageRequest;
 class PageSource;
+class AnonymousPageRequester;
 
 struct VmoDebugInfo {
   uintptr_t vmo_ptr;
@@ -497,7 +498,11 @@ class PageRequest : public fbl::WAVLTreeContainable<PageRequest*>,
 
   uint64_t GetKey() const { return GetEnd(); }
 
+  // TODO: PageSource and AnonymousPageRequest should not have direct access, but should rather have
+  // their access mediate by the PageRequestInterface class that they derive from.
   friend PageSource;
+  friend AnonymousPageRequester;
+
   friend PageProvider;
   friend fbl::DefaultKeyedObjectTraits<uint64_t, PageRequest>;
 };

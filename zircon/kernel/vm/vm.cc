@@ -25,6 +25,7 @@
 #include <fbl/algorithm.h>
 #include <kernel/thread.h>
 #include <ktl/array.h>
+#include <vm/anonymous_page_requester.h>
 #include <vm/bootalloc.h>
 #include <vm/init.h>
 #include <vm/physmap.h>
@@ -257,6 +258,8 @@ void vm_init_preheap() {
   DEBUG_ASSERT(ptr);
 
   arch_zero_page(ptr);
+
+  AnonymousPageRequester::Init();
 }
 
 void vm_init() {
