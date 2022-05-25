@@ -322,7 +322,14 @@ void InfraNetif::ReceiveIcmp6Message(otInstance *a_instance) {
 
   rval = recvmsg(infra_if_icmp6_socket_, &msg, 0);
   if (rval < 0) {
-    ExitNow(error = OT_ERROR_DROP);
+    int errsv = errno;
+    if (errsv == EAGAIN) {
+      ExitNow(error = OT_ERROR_NONE);
+    } else {
+      otPlatLog(OT_LOG_LEVEL_DEBG, OT_LOG_REGION_PLATFORM, "Unable to recv ICMPv6 message: %s",
+                strerror(errsv));
+      ExitNow(error = OT_ERROR_FAILED);
+    }
   }
   bufferLength = static_cast<uint16_t>(rval);
 
