@@ -51,7 +51,6 @@ use {
         time::Duration,
     },
     tempfile::TempDir,
-    typed_builder::TypedBuilder,
     vfs::directory::{entry::DirectoryEntry as _, helper::DirectlyMutable as _},
 };
 
@@ -271,12 +270,13 @@ impl Mounts {
                     packages
                         .into_iter()
                         .map(|url| {
-                            let cup = CupDataForTest::builder()
+                            let pkg_url = fpkg::PackageUrl { url: url.as_unpinned().to_string() };
+                            let cup = fidl_fuchsia_pkg_ext::CupData::builder()
                                 .response(get_cup_response_with_name(&url))
                                 .build()
                                 .into();
                             PersistentEagerPackage {
-                                url: Some(fpkg::PackageUrl { url: url.as_unpinned().to_string() }),
+                                url: Some(pkg_url),
                                 cup: Some(cup),
                                 ..PersistentEagerPackage::EMPTY
                             }
@@ -1187,31 +1187,6 @@ pub async fn get_rules(rewrite_engine: &RewriteEngineProxy) -> Vec<Rule> {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, TypedBuilder)]
-pub struct CupDataForTest {
-    #[builder(default, setter(into))]
-    pub request: Option<Vec<u8>>,
-    #[builder(default, setter(into))]
-    pub key_id: Option<u64>,
-    #[builder(default, setter(into))]
-    pub nonce: Option<String>,
-    #[builder(default, setter(into))]
-    pub response: Option<Vec<u8>>,
-    #[builder(default, setter(into))]
-    pub signature: Option<Vec<u8>>,
-}
-impl From<CupDataForTest> for CupData {
-    fn from(c: CupDataForTest) -> Self {
-        CupData {
-            request: c.request,
-            key_id: c.key_id,
-            nonce: c.nonce,
-            response: c.response,
-            signature: c.signature,
-            ..CupData::EMPTY
-        }
-    }
-}
 pub fn get_cup_response_with_name(package_url: &PinnedAbsolutePackageUrl) -> Vec<u8> {
     let response = serde_json::json!({"response":{
       "server": "prod",

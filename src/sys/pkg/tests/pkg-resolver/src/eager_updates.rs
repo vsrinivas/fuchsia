@@ -6,12 +6,13 @@
 use {
     assert_matches::assert_matches,
     fidl_fuchsia_pkg::{GetInfoError, ResolveError},
+    fidl_fuchsia_pkg_ext::CupData,
     fuchsia_async as fasync,
     fuchsia_pkg_testing::{PackageBuilder, RepositoryBuilder, SystemImageBuilder},
     fuchsia_url::PinnedAbsolutePackageUrl,
     lib::{
         get_cup_response_with_name, make_pkg_with_extra_blobs, pkgfs_with_system_image_and_pkg,
-        CupDataForTest, MountsBuilder, TestEnvBuilder, EMPTY_REPO_PATH,
+        MountsBuilder, TestEnvBuilder, EMPTY_REPO_PATH,
     },
     omaha_client::cup_ecdsa::test_support::make_default_json_public_keys_for_test,
     std::sync::Arc,
@@ -216,7 +217,7 @@ async fn test_cup_write() {
 
     env.cup_write(
         pkg_url.to_string(),
-        CupDataForTest::builder().response(get_cup_response_with_name(&pkg_url)).build().into(),
+        CupData::builder().response(get_cup_response_with_name(&pkg_url)).build().into(),
     )
     .await
     .unwrap();

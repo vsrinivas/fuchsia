@@ -465,7 +465,6 @@ mod tests {
             },
             PublicKeyAndId, PublicKeys,
         },
-        typed_builder::TypedBuilder,
     };
 
     const TEST_URL: &str = "fuchsia-pkg://example.com/package";
@@ -533,34 +532,6 @@ mod tests {
         });
         (package_resolver, dir)
     }
-
-    #[derive(Clone, Debug, Eq, PartialEq, TypedBuilder)]
-    struct CupDataForTest {
-        #[builder(default, setter(into))]
-        pub request: Option<Vec<u8>>,
-        #[builder(default, setter(into))]
-        pub key_id: Option<u64>,
-        #[builder(default, setter(into))]
-        pub nonce: Option<String>,
-        #[builder(default=Some(get_default_cup_response()), setter(into))]
-        pub response: Option<Vec<u8>>,
-        #[builder(default, setter(into))]
-        pub signature: Option<Vec<u8>>,
-    }
-
-    impl From<CupDataForTest> for CupData {
-        fn from(c: CupDataForTest) -> Self {
-            CupData {
-                request: c.request,
-                key_id: c.key_id,
-                nonce: c.nonce,
-                response: c.response,
-                signature: c.signature,
-                ..CupData::EMPTY
-            }
-        }
-    }
-
     fn get_default_cup_response() -> Vec<u8> {
         get_cup_response_with_name(&format!("package?hash={TEST_HASH}"))
     }
@@ -759,9 +730,12 @@ mod tests {
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
         .unwrap();
-        let cup: CupData = CupDataForTest::builder().build().into();
+        let cup: CupData = fidl_fuchsia_pkg_ext::CupData::builder()
+            .response(get_default_cup_response())
+            .build()
+            .into();
         // this will fail to resolve because hash doesn't match
-        let cup2: CupData = CupDataForTest::builder()
+        let cup2: CupData = fidl_fuchsia_pkg_ext::CupData::builder()
             .response(Some(get_cup_response_with_name(&format!(
                 "package2?hash={}",
                 "1".repeat(64)
@@ -828,7 +802,10 @@ mod tests {
             Some(Clone::clone(&data_proxy)),
         )
         .await;
-        let cup: CupData = CupDataForTest::builder().build().into();
+        let cup: CupData = fidl_fuchsia_pkg_ext::CupData::builder()
+            .response(get_default_cup_response())
+            .build()
+            .into();
         manager
             .cup_write(&fpkg::PackageUrl { url: TEST_PINNED_URL.into() }, cup.clone())
             .await
@@ -861,7 +838,10 @@ mod tests {
 
         let mut manager =
             EagerPackageManager::from_config(config, package_resolver, pkg_cache, None).await;
-        let cup: CupData = CupDataForTest::builder().build().into();
+        let cup: CupData = fidl_fuchsia_pkg_ext::CupData::builder()
+            .response(get_default_cup_response())
+            .build()
+            .into();
         assert_matches!(
             manager.cup_write(&fpkg::PackageUrl { url: TEST_PINNED_URL.into() }, cup).await,
             Err(CupWriteError::Persist(_))
@@ -885,7 +865,10 @@ mod tests {
 
         let mut manager =
             EagerPackageManager::from_config(config, package_resolver, pkg_cache, None).await;
-        let cup: CupData = CupDataForTest::builder().build().into();
+        let cup: CupData = fidl_fuchsia_pkg_ext::CupData::builder()
+            .response(get_default_cup_response())
+            .build()
+            .into();
         assert_matches!(
             manager
                 .cup_write(&fpkg::PackageUrl { url: format!("{url}?hash=beefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdead") }, cup)
@@ -911,7 +894,10 @@ mod tests {
 
         let mut manager =
             EagerPackageManager::from_config(config, package_resolver, pkg_cache, None).await;
-        let cup: CupData = CupDataForTest::builder().build().into();
+        let cup: CupData = fidl_fuchsia_pkg_ext::CupData::builder()
+            .response(get_default_cup_response())
+            .build()
+            .into();
         assert_matches!(
             manager.cup_write(&fpkg::PackageUrl { url: TEST_PINNED_URL.into() }, cup).await,
             Err(CupWriteError::UnknownURL(_))
@@ -935,7 +921,10 @@ mod tests {
 
         let mut manager =
             EagerPackageManager::from_config(config, package_resolver, pkg_cache, None).await;
-        let cup: CupData = CupDataForTest::builder().build().into();
+        let cup: CupData = fidl_fuchsia_pkg_ext::CupData::builder()
+            .response(get_default_cup_response())
+            .build()
+            .into();
         manager.packages.get_mut(&url).unwrap().cup = Some(cup);
         let (version, channel) =
             manager.cup_get_info(&fpkg::PackageUrl { url: TEST_URL.into() }).await.unwrap();
@@ -979,7 +968,10 @@ mod tests {
 
         let mut manager =
             EagerPackageManager::from_config(config, package_resolver, pkg_cache, None).await;
-        let cup: CupData = CupDataForTest::builder().build().into();
+        let cup: CupData = fidl_fuchsia_pkg_ext::CupData::builder()
+            .response(get_default_cup_response())
+            .build()
+            .into();
         manager.packages.get_mut(&url).unwrap().cup = Some(cup);
         assert_matches!(
             manager
@@ -1006,7 +998,10 @@ mod tests {
 
         let mut manager =
             EagerPackageManager::from_config(config, package_resolver, pkg_cache, None).await;
-        let cup: CupData = CupDataForTest::builder().build().into();
+        let cup: CupData = fidl_fuchsia_pkg_ext::CupData::builder()
+            .response(get_default_cup_response())
+            .build()
+            .into();
         manager.packages.get_mut(&url).unwrap().cup = Some(cup);
         assert_matches!(
             manager

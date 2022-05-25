@@ -8,6 +8,7 @@ use {
     proptest_derive::Arbitrary,
     serde::{Deserialize, Serialize},
     std::{fmt, str},
+    typed_builder::TypedBuilder,
 };
 
 pub(crate) const BLOB_ID_SIZE: usize = 32;
@@ -138,6 +139,33 @@ mod hex_serde {
         let value = String::deserialize(deserializer)?;
         <[u8; BLOB_ID_SIZE]>::from_hex(value.as_bytes())
             .map_err(|e| serde::de::Error::custom(format!("bad hex value: {:?}: {}", value, e)))
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, TypedBuilder)]
+pub struct CupData {
+    #[builder(default, setter(into))]
+    pub request: Option<Vec<u8>>,
+    #[builder(default, setter(into))]
+    pub key_id: Option<u64>,
+    #[builder(default, setter(into))]
+    pub nonce: Option<String>,
+    #[builder(default, setter(into))]
+    pub response: Option<Vec<u8>>,
+    #[builder(default, setter(into))]
+    pub signature: Option<Vec<u8>>,
+}
+
+impl From<CupData> for fidl::CupData {
+    fn from(c: CupData) -> Self {
+        fidl::CupData {
+            request: c.request,
+            key_id: c.key_id,
+            nonce: c.nonce,
+            response: c.response,
+            signature: c.signature,
+            ..fidl::CupData::EMPTY
+        }
     }
 }
 
