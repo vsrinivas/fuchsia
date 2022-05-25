@@ -982,7 +982,6 @@ config("Wno-conversion") {
     "//zircon/tools/minfs:*",
     "//zircon/tools/mtd-redundant-storage:*",
     "//zircon/tools/xdc-server:*",
-    "//zircon/tools/zbi:*",
   ]
 }
 
