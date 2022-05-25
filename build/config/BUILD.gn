@@ -919,7 +919,6 @@ config("Wno-conversion") {
     "//zircon/kernel/target/arm64/boot-shim:*",
     "//zircon/kernel/tests:*",
     "//zircon/kernel/vm:*",
-    "//zircon/system/ulib/fbl:*",
     "//zircon/system/ulib/fidl:*",
     "//zircon/system/ulib/hid:*",
     "//zircon/system/ulib/image-format:*",
