@@ -1,5 +1,5 @@
 {
-    "short_description": "Test driver with good Codec behavior for DriverTestRealm integration tests",
+    "short_description": "Test driver with DAI support for DriverTestRealm integration tests",
     "manufacturer": "",
     "families": [],
     "models": [],

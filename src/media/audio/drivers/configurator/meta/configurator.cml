@@ -29,5 +29,10 @@
             rights: [ "rw*" ],
             path: "/dev/class/codec",
         },
+        {
+            directory: "dev-dai",
+            rights: [ "rw*" ],
+            path: "/dev/class/dai",
+        },
     ],
 }

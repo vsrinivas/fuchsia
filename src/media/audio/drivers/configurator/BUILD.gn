@@ -56,6 +56,7 @@ rustc_binary("bin") {
   sources = [
     "src/codec.rs",
     "src/configurator.rs",
+    "src/dai.rs",
     "src/default.rs",
     "src/discover.rs",
     "src/main.rs",
@@ -90,5 +91,6 @@ fuchsia_unittest_package("configurator-unittests") {
     "//src/devices/misc/drivers/test-parent",
     "//src/media/audio/drivers/tests/realm:test-codec",
     "//src/media/audio/drivers/tests/realm:test-codec2",
+    "//src/media/audio/drivers/tests/realm:test-dai",
   ]
 }

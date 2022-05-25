@@ -308,6 +308,7 @@
 //src/media/audio/drivers/intel-hda/controller:intel-hda-driver
 //src/media/audio/drivers/tests/realm:codec-test-driver
 //src/media/audio/drivers/tests/realm:codec-test-driver2
+//src/media/audio/drivers/tests/realm:dai-test-driver
 //src/media/audio/drivers/usb-audio:usb-audio-driver
 //src/media/audio/drivers/virtual_audio:virtual_audio_driver-driver
 //src/storage/fvm/driver:fuchsia_driver

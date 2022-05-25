@@ -22,22 +22,21 @@ pub mod tests {
         }
 
         async fn process_new_codec(&mut self, mut _device: crate::codec::CodecInterface) {}
+        async fn process_new_dai(&mut self, mut _device: crate::dai::DaiInterface) {}
     }
 
-    pub async fn get_dev_proxy() -> Result<(RealmInstance, fio::DirectoryProxy), Error> {
+    pub async fn get_dev_proxy(
+        dev_dir: &str,
+    ) -> Result<(RealmInstance, fio::DirectoryProxy), Error> {
         let realm = RealmBuilder::new().await?;
         let _ = realm.driver_test_realm_setup().await?;
         let instance = realm.build().await?;
         instance.driver_test_realm_start(fidl_fuchsia_driver_test::RealmArgs::EMPTY).await?;
-        let dev_dir = instance.driver_test_realm_connect_to_dev()?;
-        let codecs_dir = io_util::directory::open_directory(
-            &dev_dir,
-            "class/codec",
-            fio::OpenFlags::RIGHT_READABLE,
-        )
-        .await?;
+        let dev = instance.driver_test_realm_connect_to_dev()?;
+        let dir = io_util::directory::open_directory(&dev, dev_dir, fio::OpenFlags::RIGHT_READABLE)
+            .await?;
         // Wait for the first codec node 000.
-        device_watcher::recursive_wait_and_open_node(&codecs_dir, "000").await?;
-        Ok((instance, codecs_dir))
+        device_watcher::recursive_wait_and_open_node(&dir, "000").await?;
+        Ok((instance, dir))
     }
 }

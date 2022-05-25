@@ -9,6 +9,9 @@ pub trait Configurator {
     where
         Self: Sized;
 
-    /// Process a new codoc interface.
+    /// Process a new codec interface.
     async fn process_new_codec(&mut self, mut device: crate::codec::CodecInterface);
+
+    /// Process a new DAI interface.
+    async fn process_new_dai(&mut self, mut device: crate::dai::DaiInterface);
 }

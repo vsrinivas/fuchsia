@@ -6,5 +6,6 @@ group("drivers") {
   deps = [
     "realm:test-codec",
     "realm:test-codec2",
+    "realm:test-dai",
   ]
 }

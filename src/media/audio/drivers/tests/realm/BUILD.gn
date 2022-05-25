@@ -7,15 +7,21 @@ import("//build/components.gni")
 import("//build/drivers.gni")
 
 driver_bind_rules("codec_test-bind") {
-  rules = "test.bind"
+  rules = "test-codec.bind"
   header_output = "codec_test-bind.h"
   bind_output = "codec_test.bindbc"
   deps = [ "//src/devices/bind/fuchsia.test" ]
 }
 driver_bind_rules("codec_test2-bind") {
-  rules = "test2.bind"
+  rules = "test-codec2.bind"
   header_output = "codec_test2-bind.h"
   bind_output = "codec_test2.bindbc"
+  deps = [ "//src/devices/bind/fuchsia.test" ]
+}
+driver_bind_rules("dai_test-bind") {
+  rules = "test-dai.bind"
+  header_output = "dai_test-bind.h"
+  bind_output = "dai_test.bindbc"
   deps = [ "//src/devices/bind/fuchsia.test" ]
 }
 
@@ -25,7 +31,7 @@ fuchsia_driver("codec-test-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  sources = [ "test.cc" ]
+  sources = [ "test-codec.cc" ]
   deps = [
     ":codec_test-bind",
     "//src/devices/lib/driver",
@@ -43,13 +49,34 @@ fuchsia_driver("codec-test-driver2") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  sources = [ "test2.cc" ]
+  sources = [ "test-codec2.cc" ]
   deps = [
     ":codec_test2-bind",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//src/media/audio/lib/simple-codec",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
+fuchsia_driver("dai-test-driver") {
+  output_name = "dai-test-driver"
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:enable_zircon_asserts",
+  ]
+  sources = [ "test-dai.cc" ]
+  deps = [
+    ":dai_test-bind",
+    "//sdk/banjo/fuchsia.hardware.audio:fuchsia.hardware.audio_banjo_cpp",
+    "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_llcpp",
+    "//src/devices/bus/lib/device-protocol-pdev",
+    "//src/devices/lib/driver",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
@@ -67,5 +94,12 @@ fuchsia_driver_component("test-codec2") {
   component_name = "test-codec2"
   deps = [ ":codec-test-driver2" ]
   info = "test-codec2-info.json"
+  colocate = true
+}
+
+fuchsia_driver_component("test-dai") {
+  component_name = "test-dai"
+  deps = [ ":dai-test-driver" ]
+  info = "test-dai-info.json"
   colocate = true
 }

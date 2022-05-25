@@ -84,6 +84,8 @@ impl Configurator for DefaultConfigurator {
         };
         let _codec_format_info = device.set_dai_format(dai_format).await;
     }
+
+    async fn process_new_dai(&mut self, mut _device: crate::dai::DaiInterface) {}
 }
 
 #[cfg(test)]
@@ -95,7 +97,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_default_configurator_process_new_codec() -> Result<()> {
-        let (_realm_instance, dev_proxy) = get_dev_proxy().await?;
+        let (_realm_instance, dev_proxy) = get_dev_proxy("class/codec").await?;
         let configurator = DefaultConfigurator::new();
         find_codecs(dev_proxy, 2, configurator).await?;
         Ok(())

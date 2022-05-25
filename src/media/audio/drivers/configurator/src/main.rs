@@ -8,6 +8,7 @@ use tracing;
 
 mod codec;
 mod configurator;
+mod dai;
 mod default;
 mod discover;
 mod testing;

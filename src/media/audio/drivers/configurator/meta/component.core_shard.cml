@@ -27,5 +27,12 @@
             to: [ "#configurator" ],
             subdir: "class/codec",
         },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-dai",
+            to: [ "#configurator" ],
+            subdir: "class/dai",
+        },
     ],
 }
