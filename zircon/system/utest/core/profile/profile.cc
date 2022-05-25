@@ -215,21 +215,21 @@ TEST(SchedulerProfileTest, SetThreadPriorityIsOk) {
       [](zx::profile first, zx::profile second, zx::profile third, std::atomic<const char*>* error,
          std::atomic<zx_status_t>* result) {
         *result = zx::thread::self()->set_profile(first, 0);
-        if (result != ZX_OK) {
+        if (*result != ZX_OK) {
           *error = "Failed to set first profile on thread";
           return;
         }
         std::this_thread::yield();
 
         *result = zx::thread::self()->set_profile(second, 0);
-        if (result != ZX_OK) {
+        if (*result != ZX_OK) {
           *error = "Failed to set second profile on thread";
           return;
         }
         std::this_thread::yield();
 
         *result = zx::thread::self()->set_profile(third, 0);
-        if (result != ZX_OK) {
+        if (*result != ZX_OK) {
           *error = "Failed to set third profile on thread";
           return;
         }
