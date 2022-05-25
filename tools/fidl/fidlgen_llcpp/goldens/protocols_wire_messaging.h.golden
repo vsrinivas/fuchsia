@@ -1428,8 +1428,8 @@ static_assert(offsetof(::fidl::WireEvent<::test_protocols::WithAndWithoutRequest
 #ifdef __Fuchsia__
 }  // namespace fidl
     template<>
-    struct ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>> final
-        : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>>> {
+    struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>> final
+        : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>>> {
       static constexpr uint32_t kNumHandles =
           fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>, fidl::MessageDirection::kReceiving>();
 
@@ -1441,11 +1441,11 @@ static_assert(offsetof(::fidl::WireEvent<::test_protocols::WithAndWithoutRequest
     struct ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>> final
         : public ::fidl::internal::ChannelMessageStorageBase<::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>>> {
       ::fidl::internal::InlineMessageBuffer<16> bytes_;
-      ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>> handles_storage_;
+      ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>> handles_storage_;
     };
     template<>
-    struct ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>> final
-        : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>>> {
+    struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>> final
+        : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>>> {
       static constexpr uint32_t kNumHandles =
           fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>, fidl::MessageDirection::kReceiving>();
 
@@ -1457,11 +1457,11 @@ static_assert(offsetof(::fidl::WireEvent<::test_protocols::WithAndWithoutRequest
     struct ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>> final
         : public ::fidl::internal::ChannelMessageStorageBase<::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>>> {
       ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
-      ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>> handles_storage_;
+      ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>> handles_storage_;
     };
     template<>
-    struct ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>> final
-        : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>>> {
+    struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>> final
+        : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>>> {
       static constexpr uint32_t kNumHandles =
           fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>, fidl::MessageDirection::kReceiving>();
 
@@ -1473,11 +1473,11 @@ static_assert(offsetof(::fidl::WireEvent<::test_protocols::WithAndWithoutRequest
     struct ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>> final
         : public ::fidl::internal::ChannelMessageStorageBase<::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>>> {
       ::fidl::internal::InlineMessageBuffer<16> bytes_;
-      ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>> handles_storage_;
+      ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>> handles_storage_;
     };
     template<>
-    struct ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>> final
-        : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>>> {
+    struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>> final
+        : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>>> {
       static constexpr uint32_t kNumHandles =
           fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>, fidl::MessageDirection::kReceiving>();
 
@@ -1489,8 +1489,25 @@ static_assert(offsetof(::fidl::WireEvent<::test_protocols::WithAndWithoutRequest
     struct ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>> final
         : public ::fidl::internal::ChannelMessageStorageBase<::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>>> {
       ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
-      ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>> handles_storage_;
+      ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>> handles_storage_;
     };
+  template <>
+  struct ::fidl::internal::IncomingEventsHandleStorage<::test_protocols::WithAndWithoutRequestResponse> final :
+      public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingEventsHandleStorage<::test_protocols::WithAndWithoutRequestResponse>> {
+   public:
+    static constexpr uint32_t kNumHandles = 0;
+
+    ::std::array<zx_handle_t, kNumHandles> handles_;
+    ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+  };
+
+  template <>
+  struct ::fidl::internal::IncomingEventsStorage<::test_protocols::WithAndWithoutRequestResponse> final :
+      public ::fidl::internal::ChannelMessageStorageBase<::fidl::internal::IncomingEventsStorage<::test_protocols::WithAndWithoutRequestResponse>> {
+   public:
+    ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
+    ::fidl::internal::IncomingEventsHandleStorage<::test_protocols::WithAndWithoutRequestResponse> handles_storage_;
+  };
 
 template<>
 class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse> final : public ::fidl::Status {
@@ -1850,7 +1867,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithAndWithoutRe
     ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>> decoded_;
 };
 template<>
-class ::fidl::internal::WireEventHandlerInterface<::test_protocols::WithAndWithoutRequestResponse> {
+class ::fidl::internal::WireEventHandlerInterface<::test_protocols::WithAndWithoutRequestResponse> : public ::fidl::internal::BaseEventHandlerInterface {
 public:
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
@@ -1885,15 +1902,13 @@ class ::fidl::WireSyncEventHandler<::test_protocols::WithAndWithoutRequestRespon
 
 template <>
 class ::fidl::internal::WireEventDispatcher<::test_protocols::WithAndWithoutRequestResponse> final :
-    public ::fidl::internal::IncomingEventDispatcher<::fidl::WireAsyncEventHandler<::test_protocols::WithAndWithoutRequestResponse>> {
+    public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::WireEventHandlerInterface<::test_protocols::WithAndWithoutRequestResponse>> {
  public:
-  explicit WireEventDispatcher(::fidl::WireAsyncEventHandler<::test_protocols::WithAndWithoutRequestResponse>* event_handler)
+  explicit WireEventDispatcher(::fidl::internal::WireEventHandlerInterface<::test_protocols::WithAndWithoutRequestResponse>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      ::fidl::internal::MessageStorageViewBase* storage_view) override;
+    ::fidl::Status DispatchEvent(
+        ::fidl::IncomingMessage& msg,
+        ::fidl::internal::MessageStorageViewBase* storage_view) override;
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
@@ -2724,8 +2739,8 @@ static_assert(offsetof(::fidl::WireEvent<::test_protocols::Transitional::Event>,
 #ifdef __Fuchsia__
 }  // namespace fidl
     template<>
-    struct ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::Transitional::Request>> final
-        : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::Transitional::Request>>> {
+    struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::Transitional::Request>> final
+        : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::Transitional::Request>>> {
       static constexpr uint32_t kNumHandles =
           fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocols::Transitional::Request>, fidl::MessageDirection::kReceiving>();
 
@@ -2737,8 +2752,25 @@ static_assert(offsetof(::fidl::WireEvent<::test_protocols::Transitional::Event>,
     struct ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocols::Transitional::Request>> final
         : public ::fidl::internal::ChannelMessageStorageBase<::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocols::Transitional::Request>>> {
       ::fidl::internal::InlineMessageBuffer<24> bytes_;
-      ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::Transitional::Request>> handles_storage_;
+      ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::Transitional::Request>> handles_storage_;
     };
+  template <>
+  struct ::fidl::internal::IncomingEventsHandleStorage<::test_protocols::Transitional> final :
+      public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingEventsHandleStorage<::test_protocols::Transitional>> {
+   public:
+    static constexpr uint32_t kNumHandles = 0;
+
+    ::std::array<zx_handle_t, kNumHandles> handles_;
+    ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+  };
+
+  template <>
+  struct ::fidl::internal::IncomingEventsStorage<::test_protocols::Transitional> final :
+      public ::fidl::internal::ChannelMessageStorageBase<::fidl::internal::IncomingEventsStorage<::test_protocols::Transitional>> {
+   public:
+    ::fidl::internal::InlineMessageBuffer<24> bytes_;
+    ::fidl::internal::IncomingEventsHandleStorage<::test_protocols::Transitional> handles_storage_;
+  };
 
 template<>
 class [[nodiscard]] ::fidl::WireResult<::test_protocols::Transitional::Request> final : public ::fidl::Status {
@@ -2873,7 +2905,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::Transitional::On
   ~WireUnownedResult() = default;
 };
 template<>
-class ::fidl::internal::WireEventHandlerInterface<::test_protocols::Transitional> {
+class ::fidl::internal::WireEventHandlerInterface<::test_protocols::Transitional> : public ::fidl::internal::BaseEventHandlerInterface {
 public:
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
@@ -2907,15 +2939,13 @@ class ::fidl::WireSyncEventHandler<::test_protocols::Transitional> : public ::fi
 
 template <>
 class ::fidl::internal::WireEventDispatcher<::test_protocols::Transitional> final :
-    public ::fidl::internal::IncomingEventDispatcher<::fidl::WireAsyncEventHandler<::test_protocols::Transitional>> {
+    public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::WireEventHandlerInterface<::test_protocols::Transitional>> {
  public:
-  explicit WireEventDispatcher(::fidl::WireAsyncEventHandler<::test_protocols::Transitional>* event_handler)
+  explicit WireEventDispatcher(::fidl::internal::WireEventHandlerInterface<::test_protocols::Transitional>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      ::fidl::internal::MessageStorageViewBase* storage_view) override;
+    ::fidl::Status DispatchEvent(
+        ::fidl::IncomingMessage& msg,
+        ::fidl::internal::MessageStorageViewBase* storage_view) override;
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
@@ -3192,6 +3222,23 @@ static_assert(sizeof(::fidl::WireRequest<::test_protocols::MethodWithUnion::Unio
 static_assert(offsetof(::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod>, u) == 0);
 #ifdef __Fuchsia__
 }  // namespace fidl
+  template <>
+  struct ::fidl::internal::IncomingEventsHandleStorage<::test_protocols::MethodWithUnion> final :
+      public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingEventsHandleStorage<::test_protocols::MethodWithUnion>> {
+   public:
+    static constexpr uint32_t kNumHandles = 0;
+
+    ::std::array<zx_handle_t, kNumHandles> handles_;
+    ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+  };
+
+  template <>
+  struct ::fidl::internal::IncomingEventsStorage<::test_protocols::MethodWithUnion> final :
+      public ::fidl::internal::ChannelMessageStorageBase<::fidl::internal::IncomingEventsStorage<::test_protocols::MethodWithUnion>> {
+   public:
+    ::fidl::internal::InlineMessageBuffer<16> bytes_;
+    ::fidl::internal::IncomingEventsHandleStorage<::test_protocols::MethodWithUnion> handles_storage_;
+  };
 
 template<>
 class [[nodiscard]] ::fidl::WireResult<::test_protocols::MethodWithUnion::UnionMethod> final : public ::fidl::Status {
@@ -3222,7 +3269,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::MethodWithUnion:
   ~WireUnownedResult() = default;
 };
 template<>
-class ::fidl::internal::WireEventHandlerInterface<::test_protocols::MethodWithUnion> {
+class ::fidl::internal::WireEventHandlerInterface<::test_protocols::MethodWithUnion> : public ::fidl::internal::BaseEventHandlerInterface {
 public:
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
@@ -3253,15 +3300,10 @@ class ::fidl::WireSyncEventHandler<::test_protocols::MethodWithUnion> : public :
 
 template <>
 class ::fidl::internal::WireEventDispatcher<::test_protocols::MethodWithUnion> final :
-    public ::fidl::internal::IncomingEventDispatcher<::fidl::WireAsyncEventHandler<::test_protocols::MethodWithUnion>> {
+    public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::WireEventHandlerInterface<::test_protocols::MethodWithUnion>> {
  public:
-  explicit WireEventDispatcher(::fidl::WireAsyncEventHandler<::test_protocols::MethodWithUnion>* event_handler)
+  explicit WireEventDispatcher(::fidl::internal::WireEventHandlerInterface<::test_protocols::MethodWithUnion>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      ::fidl::internal::MessageStorageViewBase* storage_view) override;
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
@@ -4250,8 +4292,8 @@ static_assert(offsetof(::fidl::WireResponse<::test_protocols::WithProtocolEnds::
 #ifdef __Fuchsia__
 }  // namespace fidl
     template<>
-    struct ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ClientEnds>> final
-        : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ClientEnds>>> {
+    struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ClientEnds>> final
+        : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ClientEnds>>> {
       static constexpr uint32_t kNumHandles =
           fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds>, fidl::MessageDirection::kReceiving>();
 
@@ -4263,11 +4305,11 @@ static_assert(offsetof(::fidl::WireResponse<::test_protocols::WithProtocolEnds::
     struct ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ClientEnds>> final
         : public ::fidl::internal::ChannelMessageStorageBase<::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ClientEnds>>> {
       ::fidl::internal::InlineMessageBuffer<24> bytes_;
-      ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ClientEnds>> handles_storage_;
+      ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ClientEnds>> handles_storage_;
     };
     template<>
-    struct ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ServerEnds>> final
-        : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ServerEnds>>> {
+    struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ServerEnds>> final
+        : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ServerEnds>>> {
       static constexpr uint32_t kNumHandles =
           fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds>, fidl::MessageDirection::kReceiving>();
 
@@ -4279,11 +4321,11 @@ static_assert(offsetof(::fidl::WireResponse<::test_protocols::WithProtocolEnds::
     struct ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ServerEnds>> final
         : public ::fidl::internal::ChannelMessageStorageBase<::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ServerEnds>>> {
       ::fidl::internal::InlineMessageBuffer<24> bytes_;
-      ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ServerEnds>> handles_storage_;
+      ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ServerEnds>> handles_storage_;
     };
     template<>
-    struct ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>> final
-        : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>>> {
+    struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>> final
+        : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>>> {
       static constexpr uint32_t kNumHandles =
           fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>, fidl::MessageDirection::kReceiving>();
 
@@ -4295,8 +4337,25 @@ static_assert(offsetof(::fidl::WireResponse<::test_protocols::WithProtocolEnds::
     struct ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>> final
         : public ::fidl::internal::ChannelMessageStorageBase<::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>>> {
       ::fidl::internal::InlineMessageBuffer<32> bytes_;
-      ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>> handles_storage_;
+      ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>> handles_storage_;
     };
+  template <>
+  struct ::fidl::internal::IncomingEventsHandleStorage<::test_protocols::WithProtocolEnds> final :
+      public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingEventsHandleStorage<::test_protocols::WithProtocolEnds>> {
+   public:
+    static constexpr uint32_t kNumHandles = 0;
+
+    ::std::array<zx_handle_t, kNumHandles> handles_;
+    ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+  };
+
+  template <>
+  struct ::fidl::internal::IncomingEventsStorage<::test_protocols::WithProtocolEnds> final :
+      public ::fidl::internal::ChannelMessageStorageBase<::fidl::internal::IncomingEventsStorage<::test_protocols::WithProtocolEnds>> {
+   public:
+    ::fidl::internal::InlineMessageBuffer<16> bytes_;
+    ::fidl::internal::IncomingEventsHandleStorage<::test_protocols::WithProtocolEnds> handles_storage_;
+  };
 
 template<>
 class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithProtocolEnds::ClientEnds> final : public ::fidl::Status {
@@ -4610,7 +4669,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithProtocolEnds
     ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>> decoded_;
 };
 template<>
-class ::fidl::internal::WireEventHandlerInterface<::test_protocols::WithProtocolEnds> {
+class ::fidl::internal::WireEventHandlerInterface<::test_protocols::WithProtocolEnds> : public ::fidl::internal::BaseEventHandlerInterface {
 public:
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
@@ -4641,15 +4700,10 @@ class ::fidl::WireSyncEventHandler<::test_protocols::WithProtocolEnds> : public 
 
 template <>
 class ::fidl::internal::WireEventDispatcher<::test_protocols::WithProtocolEnds> final :
-    public ::fidl::internal::IncomingEventDispatcher<::fidl::WireAsyncEventHandler<::test_protocols::WithProtocolEnds>> {
+    public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::WireEventHandlerInterface<::test_protocols::WithProtocolEnds>> {
  public:
-  explicit WireEventDispatcher(::fidl::WireAsyncEventHandler<::test_protocols::WithProtocolEnds>* event_handler)
+  explicit WireEventDispatcher(::fidl::internal::WireEventHandlerInterface<::test_protocols::WithProtocolEnds>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      ::fidl::internal::MessageStorageViewBase* storage_view) override;
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
@@ -5021,6 +5075,23 @@ static_assert(offsetof(::fidl::WireRequest<::test_protocols::ManyParameters::Fif
 static_assert(offsetof(::fidl::WireRequest<::test_protocols::ManyParameters::Fifteen>, p15) == 14);
 #ifdef __Fuchsia__
 }  // namespace fidl
+  template <>
+  struct ::fidl::internal::IncomingEventsHandleStorage<::test_protocols::ManyParameters> final :
+      public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingEventsHandleStorage<::test_protocols::ManyParameters>> {
+   public:
+    static constexpr uint32_t kNumHandles = 0;
+
+    ::std::array<zx_handle_t, kNumHandles> handles_;
+    ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+  };
+
+  template <>
+  struct ::fidl::internal::IncomingEventsStorage<::test_protocols::ManyParameters> final :
+      public ::fidl::internal::ChannelMessageStorageBase<::fidl::internal::IncomingEventsStorage<::test_protocols::ManyParameters>> {
+   public:
+    ::fidl::internal::InlineMessageBuffer<16> bytes_;
+    ::fidl::internal::IncomingEventsHandleStorage<::test_protocols::ManyParameters> handles_storage_;
+  };
 
 template<>
 class [[nodiscard]] ::fidl::WireResult<::test_protocols::ManyParameters::Fifteen> final : public ::fidl::Status {
@@ -5051,7 +5122,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::ManyParameters::
   ~WireUnownedResult() = default;
 };
 template<>
-class ::fidl::internal::WireEventHandlerInterface<::test_protocols::ManyParameters> {
+class ::fidl::internal::WireEventHandlerInterface<::test_protocols::ManyParameters> : public ::fidl::internal::BaseEventHandlerInterface {
 public:
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
@@ -5082,15 +5153,10 @@ class ::fidl::WireSyncEventHandler<::test_protocols::ManyParameters> : public ::
 
 template <>
 class ::fidl::internal::WireEventDispatcher<::test_protocols::ManyParameters> final :
-    public ::fidl::internal::IncomingEventDispatcher<::fidl::WireAsyncEventHandler<::test_protocols::ManyParameters>> {
+    public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::WireEventHandlerInterface<::test_protocols::ManyParameters>> {
  public:
-  explicit WireEventDispatcher(::fidl::WireAsyncEventHandler<::test_protocols::ManyParameters>* event_handler)
+  explicit WireEventDispatcher(::fidl::internal::WireEventHandlerInterface<::test_protocols::ManyParameters>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      ::fidl::internal::MessageStorageViewBase* storage_view) override;
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
@@ -5758,8 +5824,8 @@ static_assert(offsetof(::fidl::WireEvent<::test_protocols::HandleRightsProtocol:
 #ifdef __Fuchsia__
 }  // namespace fidl
     template<>
-    struct ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>> final
-        : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>>> {
+    struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>> final
+        : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>>> {
       static constexpr uint32_t kNumHandles =
           fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>, fidl::MessageDirection::kReceiving>();
 
@@ -5771,8 +5837,25 @@ static_assert(offsetof(::fidl::WireEvent<::test_protocols::HandleRightsProtocol:
     struct ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>> final
         : public ::fidl::internal::ChannelMessageStorageBase<::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>>> {
       ::fidl::internal::InlineMessageBuffer<24> bytes_;
-      ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>> handles_storage_;
+      ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>> handles_storage_;
     };
+  template <>
+  struct ::fidl::internal::IncomingEventsHandleStorage<::test_protocols::HandleRightsProtocol> final :
+      public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingEventsHandleStorage<::test_protocols::HandleRightsProtocol>> {
+   public:
+    static constexpr uint32_t kNumHandles = 1;
+
+    ::std::array<zx_handle_t, kNumHandles> handles_;
+    ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+  };
+
+  template <>
+  struct ::fidl::internal::IncomingEventsStorage<::test_protocols::HandleRightsProtocol> final :
+      public ::fidl::internal::ChannelMessageStorageBase<::fidl::internal::IncomingEventsStorage<::test_protocols::HandleRightsProtocol>> {
+   public:
+    ::fidl::internal::InlineMessageBuffer<24> bytes_;
+    ::fidl::internal::IncomingEventsHandleStorage<::test_protocols::HandleRightsProtocol> handles_storage_;
+  };
 
 template<>
 class [[nodiscard]] ::fidl::WireResult<::test_protocols::HandleRightsProtocol::NoResponseMethod> final : public ::fidl::Status {
@@ -5907,7 +5990,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::HandleRightsProt
     ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>> decoded_;
 };
 template<>
-class ::fidl::internal::WireEventHandlerInterface<::test_protocols::HandleRightsProtocol> {
+class ::fidl::internal::WireEventHandlerInterface<::test_protocols::HandleRightsProtocol> : public ::fidl::internal::BaseEventHandlerInterface {
 public:
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
@@ -5940,15 +6023,13 @@ class ::fidl::WireSyncEventHandler<::test_protocols::HandleRightsProtocol> : pub
 
 template <>
 class ::fidl::internal::WireEventDispatcher<::test_protocols::HandleRightsProtocol> final :
-    public ::fidl::internal::IncomingEventDispatcher<::fidl::WireAsyncEventHandler<::test_protocols::HandleRightsProtocol>> {
+    public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::WireEventHandlerInterface<::test_protocols::HandleRightsProtocol>> {
  public:
-  explicit WireEventDispatcher(::fidl::WireAsyncEventHandler<::test_protocols::HandleRightsProtocol>* event_handler)
+  explicit WireEventDispatcher(::fidl::internal::WireEventHandlerInterface<::test_protocols::HandleRightsProtocol>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      ::fidl::internal::MessageStorageViewBase* storage_view) override;
+    ::fidl::Status DispatchEvent(
+        ::fidl::IncomingMessage& msg,
+        ::fidl::internal::MessageStorageViewBase* storage_view) override;
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
@@ -7070,8 +7151,8 @@ static_assert(offsetof(::fidl::WireResponse<::test_protocols::WithErrorSyntax::H
 #ifdef __Fuchsia__
 }  // namespace fidl
     template<>
-    struct ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>> final
-        : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>>> {
+    struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>> final
+        : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>>> {
       static constexpr uint32_t kNumHandles =
           fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>, fidl::MessageDirection::kReceiving>();
 
@@ -7083,11 +7164,11 @@ static_assert(offsetof(::fidl::WireResponse<::test_protocols::WithErrorSyntax::H
     struct ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>> final
         : public ::fidl::internal::ChannelMessageStorageBase<::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>>> {
       ::fidl::internal::InlineMessageBuffer<64> bytes_;
-      ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>> handles_storage_;
+      ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>> handles_storage_;
     };
     template<>
-    struct ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> final
-        : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>>> {
+    struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> final
+        : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>>> {
       static constexpr uint32_t kNumHandles =
           fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>, fidl::MessageDirection::kReceiving>();
 
@@ -7099,11 +7180,11 @@ static_assert(offsetof(::fidl::WireResponse<::test_protocols::WithErrorSyntax::H
     struct ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> final
         : public ::fidl::internal::ChannelMessageStorageBase<::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>>> {
       ::fidl::internal::InlineMessageBuffer<48> bytes_;
-      ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> handles_storage_;
+      ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> handles_storage_;
     };
     template<>
-    struct ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>> final
-        : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>>> {
+    struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>> final
+        : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>>> {
       static constexpr uint32_t kNumHandles =
           fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>, fidl::MessageDirection::kReceiving>();
 
@@ -7115,11 +7196,11 @@ static_assert(offsetof(::fidl::WireResponse<::test_protocols::WithErrorSyntax::H
     struct ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>> final
         : public ::fidl::internal::ChannelMessageStorageBase<::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>>> {
       ::fidl::internal::InlineMessageBuffer<48> bytes_;
-      ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>> handles_storage_;
+      ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>> handles_storage_;
     };
     template<>
-    struct ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::HandleInResult>> final
-        : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::HandleInResult>>> {
+    struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::HandleInResult>> final
+        : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::HandleInResult>>> {
       static constexpr uint32_t kNumHandles =
           fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocols::WithErrorSyntax::HandleInResult>, fidl::MessageDirection::kReceiving>();
 
@@ -7131,8 +7212,25 @@ static_assert(offsetof(::fidl::WireResponse<::test_protocols::WithErrorSyntax::H
     struct ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::HandleInResult>> final
         : public ::fidl::internal::ChannelMessageStorageBase<::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::HandleInResult>>> {
       ::fidl::internal::InlineMessageBuffer<48> bytes_;
-      ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::HandleInResult>> handles_storage_;
+      ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::HandleInResult>> handles_storage_;
     };
+  template <>
+  struct ::fidl::internal::IncomingEventsHandleStorage<::test_protocols::WithErrorSyntax> final :
+      public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingEventsHandleStorage<::test_protocols::WithErrorSyntax>> {
+   public:
+    static constexpr uint32_t kNumHandles = 0;
+
+    ::std::array<zx_handle_t, kNumHandles> handles_;
+    ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+  };
+
+  template <>
+  struct ::fidl::internal::IncomingEventsStorage<::test_protocols::WithErrorSyntax> final :
+      public ::fidl::internal::ChannelMessageStorageBase<::fidl::internal::IncomingEventsStorage<::test_protocols::WithErrorSyntax>> {
+   public:
+    ::fidl::internal::InlineMessageBuffer<16> bytes_;
+    ::fidl::internal::IncomingEventsHandleStorage<::test_protocols::WithErrorSyntax> handles_storage_;
+  };
 
 template<>
 class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithErrorSyntax::ResponseAsStruct> final : public ::fidl::Status {
@@ -7590,7 +7688,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithErrorSyntax:
       std::optional<::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse*>> result_ = std::nullopt;
 };
 template<>
-class ::fidl::internal::WireEventHandlerInterface<::test_protocols::WithErrorSyntax> {
+class ::fidl::internal::WireEventHandlerInterface<::test_protocols::WithErrorSyntax> : public ::fidl::internal::BaseEventHandlerInterface {
 public:
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
@@ -7621,15 +7719,10 @@ class ::fidl::WireSyncEventHandler<::test_protocols::WithErrorSyntax> : public :
 
 template <>
 class ::fidl::internal::WireEventDispatcher<::test_protocols::WithErrorSyntax> final :
-    public ::fidl::internal::IncomingEventDispatcher<::fidl::WireAsyncEventHandler<::test_protocols::WithErrorSyntax>> {
+    public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::WireEventHandlerInterface<::test_protocols::WithErrorSyntax>> {
  public:
-  explicit WireEventDispatcher(::fidl::WireAsyncEventHandler<::test_protocols::WithErrorSyntax>* event_handler)
+  explicit WireEventDispatcher(::fidl::internal::WireEventHandlerInterface<::test_protocols::WithErrorSyntax>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      ::fidl::internal::MessageStorageViewBase* storage_view) override;
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
@@ -8022,6 +8115,23 @@ struct TypeTraits<::fidl::WireRequest<::test_protocols::DiscoverableProtocol::Me
 };
 #ifdef __Fuchsia__
 }  // namespace fidl
+  template <>
+  struct ::fidl::internal::IncomingEventsHandleStorage<::test_protocols::DiscoverableProtocol> final :
+      public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingEventsHandleStorage<::test_protocols::DiscoverableProtocol>> {
+   public:
+    static constexpr uint32_t kNumHandles = 0;
+
+    ::std::array<zx_handle_t, kNumHandles> handles_;
+    ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+  };
+
+  template <>
+  struct ::fidl::internal::IncomingEventsStorage<::test_protocols::DiscoverableProtocol> final :
+      public ::fidl::internal::ChannelMessageStorageBase<::fidl::internal::IncomingEventsStorage<::test_protocols::DiscoverableProtocol>> {
+   public:
+    ::fidl::internal::InlineMessageBuffer<16> bytes_;
+    ::fidl::internal::IncomingEventsHandleStorage<::test_protocols::DiscoverableProtocol> handles_storage_;
+  };
 
 template<>
 class [[nodiscard]] ::fidl::WireResult<::test_protocols::DiscoverableProtocol::Method> final : public ::fidl::Status {
@@ -8052,7 +8162,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::DiscoverableProt
   ~WireUnownedResult() = default;
 };
 template<>
-class ::fidl::internal::WireEventHandlerInterface<::test_protocols::DiscoverableProtocol> {
+class ::fidl::internal::WireEventHandlerInterface<::test_protocols::DiscoverableProtocol> : public ::fidl::internal::BaseEventHandlerInterface {
 public:
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
@@ -8083,15 +8193,10 @@ class ::fidl::WireSyncEventHandler<::test_protocols::DiscoverableProtocol> : pub
 
 template <>
 class ::fidl::internal::WireEventDispatcher<::test_protocols::DiscoverableProtocol> final :
-    public ::fidl::internal::IncomingEventDispatcher<::fidl::WireAsyncEventHandler<::test_protocols::DiscoverableProtocol>> {
+    public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::WireEventHandlerInterface<::test_protocols::DiscoverableProtocol>> {
  public:
-  explicit WireEventDispatcher(::fidl::WireAsyncEventHandler<::test_protocols::DiscoverableProtocol>* event_handler)
+  explicit WireEventDispatcher(::fidl::internal::WireEventHandlerInterface<::test_protocols::DiscoverableProtocol>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      ::fidl::internal::MessageStorageViewBase* storage_view) override;
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
@@ -9245,8 +9350,8 @@ static_assert(offsetof(::fidl::WireResponse<::test_protocols::ChannelProtocol::M
 #ifdef __Fuchsia__
 }  // namespace fidl
     template<>
-    struct ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MethodB>> final
-        : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MethodB>>> {
+    struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MethodB>> final
+        : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MethodB>>> {
       static constexpr uint32_t kNumHandles =
           fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocols::ChannelProtocol::MethodB>, fidl::MessageDirection::kReceiving>();
 
@@ -9258,11 +9363,11 @@ static_assert(offsetof(::fidl::WireResponse<::test_protocols::ChannelProtocol::M
     struct ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MethodB>> final
         : public ::fidl::internal::ChannelMessageStorageBase<::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MethodB>>> {
       ::fidl::internal::InlineMessageBuffer<24> bytes_;
-      ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MethodB>> handles_storage_;
+      ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MethodB>> handles_storage_;
     };
     template<>
-    struct ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::TakeHandle>> final
-        : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::TakeHandle>>> {
+    struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::TakeHandle>> final
+        : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::TakeHandle>>> {
       static constexpr uint32_t kNumHandles =
           fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocols::ChannelProtocol::TakeHandle>, fidl::MessageDirection::kReceiving>();
 
@@ -9274,11 +9379,11 @@ static_assert(offsetof(::fidl::WireResponse<::test_protocols::ChannelProtocol::M
     struct ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::TakeHandle>> final
         : public ::fidl::internal::ChannelMessageStorageBase<::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::TakeHandle>>> {
       ::fidl::internal::InlineMessageBuffer<16> bytes_;
-      ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::TakeHandle>> handles_storage_;
+      ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::TakeHandle>> handles_storage_;
     };
     template<>
-    struct ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MutateSocket>> final
-        : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MutateSocket>>> {
+    struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MutateSocket>> final
+        : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MutateSocket>>> {
       static constexpr uint32_t kNumHandles =
           fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>, fidl::MessageDirection::kReceiving>();
 
@@ -9290,8 +9395,25 @@ static_assert(offsetof(::fidl::WireResponse<::test_protocols::ChannelProtocol::M
     struct ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MutateSocket>> final
         : public ::fidl::internal::ChannelMessageStorageBase<::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MutateSocket>>> {
       ::fidl::internal::InlineMessageBuffer<24> bytes_;
-      ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MutateSocket>> handles_storage_;
+      ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MutateSocket>> handles_storage_;
     };
+  template <>
+  struct ::fidl::internal::IncomingEventsHandleStorage<::test_protocols::ChannelProtocol> final :
+      public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingEventsHandleStorage<::test_protocols::ChannelProtocol>> {
+   public:
+    static constexpr uint32_t kNumHandles = 0;
+
+    ::std::array<zx_handle_t, kNumHandles> handles_;
+    ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+  };
+
+  template <>
+  struct ::fidl::internal::IncomingEventsStorage<::test_protocols::ChannelProtocol> final :
+      public ::fidl::internal::ChannelMessageStorageBase<::fidl::internal::IncomingEventsStorage<::test_protocols::ChannelProtocol>> {
+   public:
+    ::fidl::internal::InlineMessageBuffer<32> bytes_;
+    ::fidl::internal::IncomingEventsHandleStorage<::test_protocols::ChannelProtocol> handles_storage_;
+  };
 
 template<>
 class [[nodiscard]] ::fidl::WireResult<::test_protocols::ChannelProtocol::MethodA> final : public ::fidl::Status {
@@ -9576,7 +9698,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::ChannelProtocol:
     ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MutateSocket>> decoded_;
 };
 template<>
-class ::fidl::internal::WireEventHandlerInterface<::test_protocols::ChannelProtocol> {
+class ::fidl::internal::WireEventHandlerInterface<::test_protocols::ChannelProtocol> : public ::fidl::internal::BaseEventHandlerInterface {
 public:
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
@@ -9609,15 +9731,13 @@ class ::fidl::WireSyncEventHandler<::test_protocols::ChannelProtocol> : public :
 
 template <>
 class ::fidl::internal::WireEventDispatcher<::test_protocols::ChannelProtocol> final :
-    public ::fidl::internal::IncomingEventDispatcher<::fidl::WireAsyncEventHandler<::test_protocols::ChannelProtocol>> {
+    public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::WireEventHandlerInterface<::test_protocols::ChannelProtocol>> {
  public:
-  explicit WireEventDispatcher(::fidl::WireAsyncEventHandler<::test_protocols::ChannelProtocol>* event_handler)
+  explicit WireEventDispatcher(::fidl::internal::WireEventHandlerInterface<::test_protocols::ChannelProtocol>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      ::fidl::internal::MessageStorageViewBase* storage_view) override;
+    ::fidl::Status DispatchEvent(
+        ::fidl::IncomingMessage& msg,
+        ::fidl::internal::MessageStorageViewBase* storage_view) override;
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a

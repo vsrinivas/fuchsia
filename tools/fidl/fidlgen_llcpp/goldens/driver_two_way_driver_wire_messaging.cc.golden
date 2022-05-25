@@ -74,12 +74,6 @@ namespace test_drivertwoway {
     ::fdf::UnownedClientEnd<::test_drivertwoway::TwoWay> client_end) {
   ZX_PANIC("events not supported for transport 'Driver'");
 }
-std::optional<::fidl::UnbindInfo>
-fidl::internal::WireEventDispatcher<::test_drivertwoway::TwoWay>::DispatchEvent(
-    fidl::IncomingMessage& msg,
-    internal::MessageStorageViewBase* storage_view) {
-  ZX_PANIC("events not supported for transport 'Driver'");
-}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__

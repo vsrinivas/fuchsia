@@ -84,7 +84,7 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_inheritance::Super> final
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::internal::NaturalEventHandlerInterface<::test_inheritance::Super> {
+class ::fidl::internal::NaturalEventHandlerInterface<::test_inheritance::Super> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
   NaturalEventHandlerInterface() = default;
   virtual ~NaturalEventHandlerInterface() = default;
@@ -98,15 +98,10 @@ class ::fidl::AsyncEventHandler<::test_inheritance::Super>
 };
 
 template <>
-class ::fidl::internal::NaturalEventDispatcher<::test_inheritance::Super> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::AsyncEventHandler<::test_inheritance::Super>> {
+class ::fidl::internal::NaturalEventDispatcher<::test_inheritance::Super> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_inheritance::Super>> {
  public:
-  explicit NaturalEventDispatcher(::fidl::AsyncEventHandler<::test_inheritance::Super>* event_handler)
+  explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_inheritance::Super>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      internal::MessageStorageViewBase* storage_view) override;
 };
 #endif  // __Fuchsia__
 
@@ -249,7 +244,7 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_inheritance::Sub> final
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::internal::NaturalEventHandlerInterface<::test_inheritance::Sub> {
+class ::fidl::internal::NaturalEventHandlerInterface<::test_inheritance::Sub> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
   NaturalEventHandlerInterface() = default;
   virtual ~NaturalEventHandlerInterface() = default;
@@ -263,15 +258,10 @@ class ::fidl::AsyncEventHandler<::test_inheritance::Sub>
 };
 
 template <>
-class ::fidl::internal::NaturalEventDispatcher<::test_inheritance::Sub> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::AsyncEventHandler<::test_inheritance::Sub>> {
+class ::fidl::internal::NaturalEventDispatcher<::test_inheritance::Sub> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_inheritance::Sub>> {
  public:
-  explicit NaturalEventDispatcher(::fidl::AsyncEventHandler<::test_inheritance::Sub>* event_handler)
+  explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_inheritance::Sub>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      internal::MessageStorageViewBase* storage_view) override;
 };
 #endif  // __Fuchsia__
 

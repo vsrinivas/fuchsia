@@ -362,7 +362,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_drivertwoway::TwoWay::Add> f
   ::fdf::Arena arena_;
 };
 template <>
-class ::fidl::internal::WireEventHandlerInterface<::test_drivertwoway::TwoWay> {
+class ::fidl::internal::WireEventHandlerInterface<::test_drivertwoway::TwoWay> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
@@ -391,15 +391,10 @@ class ::fidl::WireSyncEventHandler<::test_drivertwoway::TwoWay> : public ::fidl:
 };
 
 template <>
-class ::fidl::internal::WireEventDispatcher<::test_drivertwoway::TwoWay> final : public ::fidl::internal::IncomingEventDispatcher<::fdf::WireAsyncEventHandler<::test_drivertwoway::TwoWay>> {
+class ::fidl::internal::WireEventDispatcher<::test_drivertwoway::TwoWay> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::WireEventHandlerInterface<::test_drivertwoway::TwoWay>> {
  public:
-  explicit WireEventDispatcher(::fdf::WireAsyncEventHandler<::test_drivertwoway::TwoWay>* event_handler)
+  explicit WireEventDispatcher(::fidl::internal::WireEventHandlerInterface<::test_drivertwoway::TwoWay>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      ::fidl::internal::MessageStorageViewBase* storage_view) override;
 };
 
 template <>

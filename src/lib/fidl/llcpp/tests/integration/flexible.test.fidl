@@ -45,6 +45,24 @@ protocol ReceiveFlexibleEnvelope {
     GetUnknownTableMoreHandles() -> (resource struct {
         t FlexibleTable;
     });
+
+    /// Receive a xunion with an unknown ordinal (suppose coming from a newer
+    /// server) which contains more bytes than the current max message size.
+    -> OnUnknownXUnionMoreBytes(FlexibleXUnion);
+
+    /// Receive a xunion with an unknown ordinal (suppose coming from a newer
+    /// server) which contains more handles than the current max message handle
+    /// count.
+    -> OnUnknownXUnionMoreHandles(FlexibleXUnion);
+
+    /// Receive a table with an unknown ordinal (suppose coming from a newer
+    /// server) which contains more bytes than the current max message size.
+    -> OnUnknownTableMoreBytes(FlexibleTable);
+
+    /// Receive a table with an unknown ordinal (suppose coming from a newer
+    /// server) which contains more handles than the current max message handle
+    /// count.
+    -> OnUnknownTableMoreHandles(FlexibleTable);
 };
 
 type StrictBoundedXUnion = strict union {

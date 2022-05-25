@@ -52,7 +52,8 @@ class GoodMessage {
 namespace fidl {
 
 template <>
-class WireAsyncEventHandler<TestProtocol> : public fidl::internal::AsyncEventHandler {};
+class WireAsyncEventHandler<TestProtocol> : public fidl::internal::AsyncEventHandler,
+                                            public fidl::internal::BaseEventHandlerInterface {};
 
 }  // namespace fidl
 
@@ -97,8 +98,8 @@ class FakeWireEventDispatcher
   FakeWireEventDispatcher() : IncomingEventDispatcher(nullptr) {}
 
  private:
-  std::optional<fidl::UnbindInfo> DispatchEvent(
-      fidl::IncomingMessage& msg, fidl::internal::MessageStorageViewBase* storage_view) override {
+  fidl::Status DispatchEvent(fidl::IncomingMessage& msg,
+                             fidl::internal::MessageStorageViewBase* storage_view) override {
     ZX_PANIC("Never used in this test");
   }
 };
@@ -145,7 +146,7 @@ class ClientBaseTest : public zxtest::Test {
     fidl::internal::AnyIncomingEventDispatcher event_dispatcher;
     event_dispatcher.emplace<FakeWireEventDispatcher>();
     controller_.Bind(fidl::internal::MakeAnyTransport(endpoints->client.TakeChannel()),
-                     loop_.dispatcher(), std::move(event_dispatcher),
+                     loop_.dispatcher(), std::move(event_dispatcher), nullptr,
                      fidl::AnyTeardownObserver::Noop(),
                      fidl::internal::ThreadingPolicy::kCreateAndTeardownFromDispatcherThread);
 

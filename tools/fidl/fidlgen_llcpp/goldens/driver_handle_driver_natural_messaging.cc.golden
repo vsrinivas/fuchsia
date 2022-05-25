@@ -32,12 +32,6 @@ namespace test_driverhandle {
 }  // namespace test_driverhandle
 #ifdef __Fuchsia__
 
-std::optional<::fidl::UnbindInfo>
-fidl::internal::NaturalEventDispatcher<::test_driverhandle::HandlesInProtocol>::DispatchEvent(
-    ::fidl::IncomingMessage& msg,
-    ::fidl::internal::MessageStorageViewBase* storage_view) {
-  return ::fidl::UnbindInfo::UnknownOrdinal();
-}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -80,12 +74,6 @@ void fdf::Server<::test_driverhandle::HandlesInProtocol>::dispatch_message(
 
 #ifdef __Fuchsia__
 
-std::optional<::fidl::UnbindInfo>
-fidl::internal::NaturalEventDispatcher<::test_driverhandle::DriverProtocol>::DispatchEvent(
-    ::fidl::IncomingMessage& msg,
-    ::fidl::internal::MessageStorageViewBase* storage_view) {
-  return ::fidl::UnbindInfo::UnknownOrdinal();
-}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__

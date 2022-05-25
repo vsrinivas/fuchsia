@@ -146,6 +146,7 @@ if (is_fuchsia) {
       "llcpp_async_binding.cc",
       "llcpp_async_transaction.cc",
       "llcpp_client_base.cc",
+      "llcpp_client_details.cc",
       "llcpp_coding_errors.cc",
       "llcpp_decoding.cc",
       "llcpp_display_error.cc",

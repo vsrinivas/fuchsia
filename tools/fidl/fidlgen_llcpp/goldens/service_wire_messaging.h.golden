@@ -142,6 +142,21 @@ struct TypeTraits<::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSe
 };
 #ifdef __Fuchsia__
 }  // namespace fidl
+template <>
+struct ::fidl::internal::IncomingEventsHandleStorage<::test_service::SecondProtocol> final : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingEventsHandleStorage<::test_service::SecondProtocol>> {
+ public:
+  static constexpr uint32_t kNumHandles = 0;
+
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
+
+template <>
+struct ::fidl::internal::IncomingEventsStorage<::test_service::SecondProtocol> final : public ::fidl::internal::ChannelMessageStorageBase<::fidl::internal::IncomingEventsStorage<::test_service::SecondProtocol>> {
+ public:
+  ::fidl::internal::InlineMessageBuffer<16> bytes_;
+  ::fidl::internal::IncomingEventsHandleStorage<::test_service::SecondProtocol> handles_storage_;
+};
 
 template <>
 class [[nodiscard]] ::fidl::WireResult<::test_service::SecondProtocol::MethodOnSecond> final : public ::fidl::Status {
@@ -171,7 +186,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_service::SecondProtocol::Me
   ~WireUnownedResult() = default;
 };
 template <>
-class ::fidl::internal::WireEventHandlerInterface<::test_service::SecondProtocol> {
+class ::fidl::internal::WireEventHandlerInterface<::test_service::SecondProtocol> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
@@ -200,15 +215,10 @@ class ::fidl::WireSyncEventHandler<::test_service::SecondProtocol> : public ::fi
 };
 
 template <>
-class ::fidl::internal::WireEventDispatcher<::test_service::SecondProtocol> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::WireAsyncEventHandler<::test_service::SecondProtocol>> {
+class ::fidl::internal::WireEventDispatcher<::test_service::SecondProtocol> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::WireEventHandlerInterface<::test_service::SecondProtocol>> {
  public:
-  explicit WireEventDispatcher(::fidl::WireAsyncEventHandler<::test_service::SecondProtocol>* event_handler)
+  explicit WireEventDispatcher(::fidl::internal::WireEventHandlerInterface<::test_service::SecondProtocol>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      ::fidl::internal::MessageStorageViewBase* storage_view) override;
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
@@ -385,6 +395,21 @@ struct TypeTraits<::fidl::WireRequest<::test_service::FirstProtocol::MethodOnFir
 };
 #ifdef __Fuchsia__
 }  // namespace fidl
+template <>
+struct ::fidl::internal::IncomingEventsHandleStorage<::test_service::FirstProtocol> final : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingEventsHandleStorage<::test_service::FirstProtocol>> {
+ public:
+  static constexpr uint32_t kNumHandles = 0;
+
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
+
+template <>
+struct ::fidl::internal::IncomingEventsStorage<::test_service::FirstProtocol> final : public ::fidl::internal::ChannelMessageStorageBase<::fidl::internal::IncomingEventsStorage<::test_service::FirstProtocol>> {
+ public:
+  ::fidl::internal::InlineMessageBuffer<16> bytes_;
+  ::fidl::internal::IncomingEventsHandleStorage<::test_service::FirstProtocol> handles_storage_;
+};
 
 template <>
 class [[nodiscard]] ::fidl::WireResult<::test_service::FirstProtocol::MethodOnFirst> final : public ::fidl::Status {
@@ -414,7 +439,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_service::FirstProtocol::Met
   ~WireUnownedResult() = default;
 };
 template <>
-class ::fidl::internal::WireEventHandlerInterface<::test_service::FirstProtocol> {
+class ::fidl::internal::WireEventHandlerInterface<::test_service::FirstProtocol> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
@@ -443,15 +468,10 @@ class ::fidl::WireSyncEventHandler<::test_service::FirstProtocol> : public ::fid
 };
 
 template <>
-class ::fidl::internal::WireEventDispatcher<::test_service::FirstProtocol> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::WireAsyncEventHandler<::test_service::FirstProtocol>> {
+class ::fidl::internal::WireEventDispatcher<::test_service::FirstProtocol> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::WireEventHandlerInterface<::test_service::FirstProtocol>> {
  public:
-  explicit WireEventDispatcher(::fidl::WireAsyncEventHandler<::test_service::FirstProtocol>* event_handler)
+  explicit WireEventDispatcher(::fidl::internal::WireEventHandlerInterface<::test_service::FirstProtocol>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      ::fidl::internal::MessageStorageViewBase* storage_view) override;
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a

@@ -167,7 +167,7 @@ class [[nodiscard]] Status {
   }
 
   // Constructs a result indicating that the operation cannot proceed
-  // because a unknown message was received. Specifcally, the method or event
+  // because a unknown message was received. Specifically, the method or event
   // ordinal is not recognized by the binding.
   constexpr static Status UnknownOrdinal() {
     return Status(ZX_ERR_NOT_SUPPORTED, ::fidl::Reason::kUnexpectedMessage,

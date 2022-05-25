@@ -47,12 +47,6 @@ namespace test_drivertwoway {
 }  // namespace test_drivertwoway
 #ifdef __Fuchsia__
 
-std::optional<::fidl::UnbindInfo>
-fidl::internal::NaturalEventDispatcher<::test_drivertwoway::TwoWay>::DispatchEvent(
-    ::fidl::IncomingMessage& msg,
-    ::fidl::internal::MessageStorageViewBase* storage_view) {
-  return ::fidl::UnbindInfo::UnknownOrdinal();
-}
 #endif  // __Fuchsia__
 
 void fidl::internal::NaturalCompleterBase<::test_drivertwoway::TwoWay::Add>::Reply(::fidl::Response<::test_drivertwoway::TwoWay::Add>&& response) {

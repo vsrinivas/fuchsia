@@ -48,12 +48,6 @@ fidl::internal::NaturalSyncClientImpl<::test_inheritance::Super>::Foo(::fidl::Re
 
 #ifdef __Fuchsia__
 
-std::optional<::fidl::UnbindInfo>
-fidl::internal::NaturalEventDispatcher<::test_inheritance::Super>::DispatchEvent(
-    ::fidl::IncomingMessage& msg,
-    ::fidl::internal::MessageStorageViewBase* storage_view) {
-  return ::fidl::UnbindInfo::UnknownOrdinal();
-}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -149,12 +143,6 @@ fidl::internal::NaturalSyncClientImpl<::test_inheritance::Sub>::Foo(::fidl::Requ
 
 #ifdef __Fuchsia__
 
-std::optional<::fidl::UnbindInfo>
-fidl::internal::NaturalEventDispatcher<::test_inheritance::Sub>::DispatchEvent(
-    ::fidl::IncomingMessage& msg,
-    ::fidl::internal::MessageStorageViewBase* storage_view) {
-  return ::fidl::UnbindInfo::UnknownOrdinal();
-}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__

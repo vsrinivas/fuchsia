@@ -28,7 +28,7 @@ namespace test_driveroneway {
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::internal::NaturalEventHandlerInterface<::test_driveroneway::OneWay> {
+class ::fidl::internal::NaturalEventHandlerInterface<::test_driveroneway::OneWay> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
   NaturalEventHandlerInterface() = default;
   virtual ~NaturalEventHandlerInterface() = default;
@@ -42,15 +42,10 @@ class ::fdf::AsyncEventHandler<::test_driveroneway::OneWay>
 };
 
 template <>
-class ::fidl::internal::NaturalEventDispatcher<::test_driveroneway::OneWay> final : public ::fidl::internal::IncomingEventDispatcher<::fdf::AsyncEventHandler<::test_driveroneway::OneWay>> {
+class ::fidl::internal::NaturalEventDispatcher<::test_driveroneway::OneWay> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_driveroneway::OneWay>> {
  public:
-  explicit NaturalEventDispatcher(::fdf::AsyncEventHandler<::test_driveroneway::OneWay>* event_handler)
+  explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_driveroneway::OneWay>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      internal::MessageStorageViewBase* storage_view) override;
 };
 #endif  // __Fuchsia__
 

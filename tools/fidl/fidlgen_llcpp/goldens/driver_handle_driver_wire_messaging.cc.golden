@@ -72,12 +72,6 @@ namespace test_driverhandle {
     ::fdf::UnownedClientEnd<::test_driverhandle::HandlesInProtocol> client_end) {
   ZX_PANIC("events not supported for transport 'Driver'");
 }
-std::optional<::fidl::UnbindInfo>
-fidl::internal::WireEventDispatcher<::test_driverhandle::HandlesInProtocol>::DispatchEvent(
-    fidl::IncomingMessage& msg,
-    internal::MessageStorageViewBase* storage_view) {
-  ZX_PANIC("events not supported for transport 'Driver'");
-}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -137,12 +131,6 @@ void ::fidl::internal::TransactionalRequest<::test_driverhandle::HandlesInProtoc
 
 ::fidl::Status fidl::WireSyncEventHandler<::test_driverhandle::DriverProtocol>::HandleOneEvent(
     ::fdf::UnownedClientEnd<::test_driverhandle::DriverProtocol> client_end) {
-  ZX_PANIC("events not supported for transport 'Driver'");
-}
-std::optional<::fidl::UnbindInfo>
-fidl::internal::WireEventDispatcher<::test_driverhandle::DriverProtocol>::DispatchEvent(
-    fidl::IncomingMessage& msg,
-    internal::MessageStorageViewBase* storage_view) {
   ZX_PANIC("events not supported for transport 'Driver'");
 }
 #endif  // __Fuchsia__

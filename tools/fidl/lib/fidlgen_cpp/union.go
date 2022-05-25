@@ -107,10 +107,10 @@ func (c *compiler) compileUnion(val fidlgen.Union) *Union {
 		WireOrdinalEnum:    wireOrdinalEnum,
 		WireInvalidOrdinal: wireOrdinalEnum.nest("Invalid"),
 		BackingBufferTypeV1: computeAllocation(
-			TypeShape{val.TypeShapeV1}.MaxTotalSize(), boundednessBounded).
+			TypeShape{val.TypeShapeV1}.MaxTotalSize(), TypeShape{val.TypeShapeV1}.MaxHandles, boundednessBounded).
 			BackingBufferType(),
 		BackingBufferTypeV2: computeAllocation(
-			TypeShape{val.TypeShapeV2}.MaxTotalSize(), boundednessBounded).
+			TypeShape{val.TypeShapeV2}.MaxTotalSize(), TypeShape{val.TypeShapeV2}.MaxHandles, boundednessBounded).
 			BackingBufferType(),
 	}
 

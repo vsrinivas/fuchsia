@@ -126,12 +126,6 @@ fidl::internal::NaturalSyncClientImpl<::test_protocolrequest::Parent>::TakeChild
 
 #ifdef __Fuchsia__
 
-std::optional<::fidl::UnbindInfo>
-fidl::internal::NaturalEventDispatcher<::test_protocolrequest::Parent>::DispatchEvent(
-    ::fidl::IncomingMessage& msg,
-    ::fidl::internal::MessageStorageViewBase* storage_view) {
-  return ::fidl::UnbindInfo::UnknownOrdinal();
-}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -245,12 +239,6 @@ void fidl::Server<::test_protocolrequest::Parent>::dispatch_message(
 
 #ifdef __Fuchsia__
 
-std::optional<::fidl::UnbindInfo>
-fidl::internal::NaturalEventDispatcher<::test_protocolrequest::Child>::DispatchEvent(
-    ::fidl::IncomingMessage& msg,
-    ::fidl::internal::MessageStorageViewBase* storage_view) {
-  return ::fidl::UnbindInfo::UnknownOrdinal();
-}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__

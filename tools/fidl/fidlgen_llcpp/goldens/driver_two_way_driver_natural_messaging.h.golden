@@ -63,7 +63,7 @@ namespace test_drivertwoway {
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::internal::NaturalEventHandlerInterface<::test_drivertwoway::TwoWay> {
+class ::fidl::internal::NaturalEventHandlerInterface<::test_drivertwoway::TwoWay> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
   NaturalEventHandlerInterface() = default;
   virtual ~NaturalEventHandlerInterface() = default;
@@ -77,15 +77,10 @@ class ::fdf::AsyncEventHandler<::test_drivertwoway::TwoWay>
 };
 
 template <>
-class ::fidl::internal::NaturalEventDispatcher<::test_drivertwoway::TwoWay> final : public ::fidl::internal::IncomingEventDispatcher<::fdf::AsyncEventHandler<::test_drivertwoway::TwoWay>> {
+class ::fidl::internal::NaturalEventDispatcher<::test_drivertwoway::TwoWay> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_drivertwoway::TwoWay>> {
  public:
-  explicit NaturalEventDispatcher(::fdf::AsyncEventHandler<::test_drivertwoway::TwoWay>* event_handler)
+  explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_drivertwoway::TwoWay>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      internal::MessageStorageViewBase* storage_view) override;
 };
 #endif  // __Fuchsia__
 

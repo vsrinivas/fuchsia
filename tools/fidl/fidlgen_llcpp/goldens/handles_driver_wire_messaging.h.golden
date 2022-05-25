@@ -53,7 +53,7 @@ namespace fidl {
 #ifdef __Fuchsia__
 }  // namespace fidl
 template <>
-class ::fidl::internal::WireEventHandlerInterface<::test_handles::DriverProtocol> {
+class ::fidl::internal::WireEventHandlerInterface<::test_handles::DriverProtocol> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
@@ -82,15 +82,10 @@ class ::fidl::WireSyncEventHandler<::test_handles::DriverProtocol> : public ::fi
 };
 
 template <>
-class ::fidl::internal::WireEventDispatcher<::test_handles::DriverProtocol> final : public ::fidl::internal::IncomingEventDispatcher<::fdf::WireAsyncEventHandler<::test_handles::DriverProtocol>> {
+class ::fidl::internal::WireEventDispatcher<::test_handles::DriverProtocol> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::WireEventHandlerInterface<::test_handles::DriverProtocol>> {
  public:
-  explicit WireEventDispatcher(::fdf::WireAsyncEventHandler<::test_handles::DriverProtocol>* event_handler)
+  explicit WireEventDispatcher(::fidl::internal::WireEventHandlerInterface<::test_handles::DriverProtocol>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      ::fidl::internal::MessageStorageViewBase* storage_view) override;
 };
 
 template <>

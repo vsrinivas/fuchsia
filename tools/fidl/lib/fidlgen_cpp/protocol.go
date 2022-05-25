@@ -173,6 +173,8 @@ var (
 	WireServerDispatcher           = internalNs.member("WireServerDispatcher")
 	WireTestBase                   = testingNs.member("WireTestBase")
 	WireSyncEventHandlerTestBase   = testingNs.member("WireSyncEventHandlerTestBase")
+	IncomingEventsStorage          = internalNs.member("IncomingEventsStorage")
+	IncomingEventsHandleStorage    = internalNs.member("IncomingEventsHandleStorage")
 
 	// Method related
 	TransactionalRequest    = internalNs.member("TransactionalRequest")
@@ -195,8 +197,8 @@ var (
 	WireBufferThenable      = internalNs.member("WireBufferThenable")
 
 	// Type related
-	IncomingMessageStorage = internalNs.member("IncomingMessageStorage")
-	IncomingHandleStorage  = internalNs.member("IncomingHandleStorage")
+	IncomingMessageStorage       = internalNs.member("IncomingMessageStorage")
+	IncomingMessageHandleStorage = internalNs.member("IncomingMessageHandleStorage")
 )
 
 type wireTypeNames struct {
@@ -306,6 +308,10 @@ type protocolInner struct {
 	HlMessaging hlMessagingDetails
 	unifiedMessagingDetails
 	wireTypeNames
+
+	// IncomingEventsStorage etc are shared between wire and unified messaging.
+	IncomingEventsStorage       name
+	IncomingEventsHandleStorage name
 
 	// ClientAllocation is the allocation behavior of the client when receiving
 	// FIDL events over this protocol.
@@ -437,15 +443,19 @@ func newMessage(inner messageInner, args []Parameter, wire wireTypeNames,
 		IsResource:   argsWrapper(args).isResource(),
 		ClientAllocationV1: computeAllocation(
 			inner.TypeShapeV1.MaxTotalSize(),
+			inner.TypeShapeV1.MaxHandles,
 			direction.queryBoundedness(clientContext, inner.TypeShapeV1.HasFlexibleEnvelope)),
 		ClientAllocationV2: computeAllocation(
 			inner.TypeShapeV2.MaxTotalSize(),
+			inner.TypeShapeV2.MaxHandles,
 			direction.queryBoundedness(clientContext, inner.TypeShapeV2.HasFlexibleEnvelope)),
 		ServerAllocationV1: computeAllocation(
 			inner.TypeShapeV1.MaxTotalSize(),
+			inner.TypeShapeV1.MaxHandles,
 			direction.queryBoundedness(serverContext, inner.TypeShapeV1.HasFlexibleEnvelope)),
 		ServerAllocationV2: computeAllocation(
 			inner.TypeShapeV2.MaxTotalSize(),
+			inner.TypeShapeV2.MaxHandles,
 			direction.queryBoundedness(serverContext, inner.TypeShapeV2.HasFlexibleEnvelope)),
 	}
 }
@@ -557,9 +567,9 @@ type methodInner struct {
 	wireMethod
 	unifiedMethod
 
-	// IncomingMessageStorageForResponse is shared between wire and unified messaging.
-	IncomingMessageStorageForResponse name
-	IncomingHandleStorageForResponse  name
+	// IncomingMessageStorageForResponse etc are shared between wire and unified messaging.
+	IncomingMessageStorageForResponse       name
+	IncomingMessageHandleStorageForResponse name
 
 	baseCodingTableName string
 	requestTypeShapeV1  TypeShape
@@ -929,17 +939,17 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) *Protocol {
 			protocolName: protocolName,
 			// Using the raw identifier v.Name instead of the name after
 			// reserved words logic, since that's the behavior in fidlc.
-			baseCodingTableName:               codingTableName + string(v.Name),
-			Marker:                            methodMarker,
-			requestTypeShapeV1:                TypeShape{requestTypeShapeV1},
-			requestTypeShapeV2:                TypeShape{requestTypeShapeV2},
-			responseTypeShapeV1:               TypeShape{responseTypeShapeV1},
-			responseTypeShapeV2:               TypeShape{responseTypeShapeV2},
-			wireMethod:                        wireMethod,
-			unifiedMethod:                     unifiedMethod,
-			IncomingMessageStorageForResponse: IncomingMessageStorage.template(wireMethod.WireTransactionalResponse),
-			IncomingHandleStorageForResponse:  IncomingHandleStorage.template(wireMethod.WireTransactionalResponse),
-			Attributes:                        Attributes{v.Attributes},
+			baseCodingTableName:                     codingTableName + string(v.Name),
+			Marker:                                  methodMarker,
+			requestTypeShapeV1:                      TypeShape{requestTypeShapeV1},
+			requestTypeShapeV2:                      TypeShape{requestTypeShapeV2},
+			responseTypeShapeV1:                     TypeShape{responseTypeShapeV1},
+			responseTypeShapeV2:                     TypeShape{responseTypeShapeV2},
+			wireMethod:                              wireMethod,
+			unifiedMethod:                           unifiedMethod,
+			IncomingMessageStorageForResponse:       IncomingMessageStorage.template(wireMethod.WireTransactionalResponse),
+			IncomingMessageHandleStorageForResponse: IncomingMessageHandleStorage.template(wireMethod.WireTransactionalResponse),
+			Attributes:                              Attributes{v.Attributes},
 			// TODO(fxbug.dev/84834): Use the functionality in //tools/fidl/lib/fidlgen/identifiers.go
 			FullyQualifiedName:        fmt.Sprintf("%s.%s", p.Name, v.Name),
 			Ordinal:                   v.Ordinal,
@@ -965,14 +975,31 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) *Protocol {
 		methods = append(methods, method)
 	}
 
-	var maxResponseSizeV1 int
-	var maxResponseSizeV2 int
+	var maxEventSizeV1 int
+	var maxEventSizeV2 int
 	for _, method := range methods {
-		if size := method.responseTypeShapeV1.MaxTotalSize(); size > maxResponseSizeV1 {
-			maxResponseSizeV1 = size
+		if method.HasRequest || !method.HasResponsePayload {
+			continue
 		}
-		if size := method.responseTypeShapeV2.MaxTotalSize(); size > maxResponseSizeV2 {
-			maxResponseSizeV2 = size
+		if size := method.responseTypeShapeV1.MaxTotalSize(); size > maxEventSizeV1 {
+			maxEventSizeV1 = size
+		}
+		if size := method.responseTypeShapeV2.MaxTotalSize(); size > maxEventSizeV2 {
+			maxEventSizeV2 = size
+		}
+	}
+
+	var maxEventNumHandlesV1 int
+	var maxEventNumHandlesV2 int
+	for _, method := range methods {
+		if method.HasRequest || !method.HasResponsePayload {
+			continue
+		}
+		if size := method.responseTypeShapeV1.MaxHandles; size > maxEventNumHandlesV1 {
+			maxEventNumHandlesV1 = size
+		}
+		if size := method.responseTypeShapeV2.MaxHandles; size > maxEventNumHandlesV2 {
+			maxEventNumHandlesV2 = size
 		}
 	}
 
@@ -980,17 +1007,19 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) *Protocol {
 	testBaseNames := protocolName.appendName("_TestBase").appendNamespace("testing")
 	testBaseNames.Wire = WireTestBase.template(protocolName.Wire)
 	r := newProtocol(protocolInner{
-		Attributes:              Attributes{p.Attributes},
-		nameVariants:            protocolName,
-		HlMessaging:             hlMessaging,
-		unifiedMessagingDetails: unifiedMessaging,
-		wireTypeNames:           wireTypeNames,
-		DiscoverableName:        p.GetServiceName(),
+		Attributes:                  Attributes{p.Attributes},
+		nameVariants:                protocolName,
+		HlMessaging:                 hlMessaging,
+		unifiedMessagingDetails:     unifiedMessaging,
+		wireTypeNames:               wireTypeNames,
+		DiscoverableName:            p.GetServiceName(),
+		IncomingEventsStorage:       IncomingEventsStorage.template(protocolName.Wire),
+		IncomingEventsHandleStorage: IncomingEventsHandleStorage.template(protocolName.Wire),
 		SyncEventAllocationV1: computeAllocation(
-			maxResponseSizeV1, messageDirectionResponse.queryBoundedness(
+			maxEventSizeV1, maxEventNumHandlesV1, messageDirectionResponse.queryBoundedness(
 				clientContext, anyEventHasFlexibleEnvelope(methods))),
 		SyncEventAllocationV2: computeAllocation(
-			maxResponseSizeV2, messageDirectionResponse.queryBoundedness(
+			maxEventSizeV2, maxEventNumHandlesV2, messageDirectionResponse.queryBoundedness(
 				clientContext, anyEventHasFlexibleEnvelope(methods))),
 		Methods:     methods,
 		FuzzingName: fuzzingName,
@@ -1060,14 +1089,16 @@ const (
 // zircon/system/ulib/fidl/include/lib/fidl/llcpp/sync_call.h
 const llcppMaxStackAllocSize = 512
 const channelMaxMessageSize = 65536
+const channelMaxHandleCount = 64
 
 // allocation describes the allocation strategy of some operation, such as
 // sending requests, receiving responses, or handling events. Note that the
 // allocation strategy may depend on client/server context, direction of the
 // message, and the content/shape of the message, as we make optimizations.
 type allocation struct {
-	IsStack bool
-	Size    int
+	IsStack    bool
+	StackBytes int
+	NumHandles int
 
 	bufferType bufferType
 	size       string
@@ -1091,28 +1122,40 @@ const (
 	boxedBuffer
 )
 
-func computeAllocation(maxTotalSize int, boundedness boundedness) allocation {
+func computeAllocation(maxTotalSize int, maxTotalNumHandles int, boundedness boundedness) allocation {
 	var sizeString string
-	var size int
-	if boundedness == boundednessUnbounded || maxTotalSize > channelMaxMessageSize {
-		sizeString = "ZX_CHANNEL_MAX_MSG_BYTES"
-		size = channelMaxMessageSize
+	var numBytes int
+	var numHandles int
+	if boundedness == boundednessUnbounded {
+		numBytes = channelMaxMessageSize
+		numHandles = channelMaxHandleCount
 	} else {
-		size = maxTotalSize + kMessageHeaderSize
-		sizeString = fmt.Sprintf("%d", size)
+		numBytes = maxTotalSize + kMessageHeaderSize
+		numHandles = maxTotalNumHandles
+	}
+	if numBytes >= channelMaxMessageSize {
+		numBytes = channelMaxMessageSize
+		sizeString = "ZX_CHANNEL_MAX_MSG_BYTES"
+	} else {
+		sizeString = fmt.Sprintf("%d", numBytes)
+	}
+	if numHandles > channelMaxHandleCount {
+		numHandles = channelMaxHandleCount
 	}
 
-	if size > llcppMaxStackAllocSize {
+	if numBytes > llcppMaxStackAllocSize {
 		return allocation{
 			IsStack:    false,
-			Size:       0,
+			StackBytes: 0,
+			NumHandles: numHandles,
 			bufferType: boxedBuffer,
 			size:       sizeString,
 		}
 	} else {
 		return allocation{
 			IsStack:    true,
-			Size:       size,
+			StackBytes: numBytes,
+			NumHandles: numHandles,
 			bufferType: inlineBuffer,
 			size:       sizeString,
 		}

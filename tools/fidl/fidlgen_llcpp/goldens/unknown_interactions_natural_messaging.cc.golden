@@ -124,7 +124,7 @@ fidl::internal::NaturalSyncClientImpl<::test_unknowninteractions::Example>::Flex
 
 #ifdef __Fuchsia__
 
-std::optional<::fidl::UnbindInfo>
+::fidl::Status
 fidl::internal::NaturalEventDispatcher<::test_unknowninteractions::Example>::DispatchEvent(
     ::fidl::IncomingMessage& msg,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
@@ -132,29 +132,28 @@ fidl::internal::NaturalEventDispatcher<::test_unknowninteractions::Example>::Dis
     case ::test_unknowninteractions::kExample_StrictEvent_Ordinal: {
       ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
       if (decoded.is_error()) {
-        return ::fidl::UnbindInfo(decoded.error_value());
+        return decoded.error_value();
       }
       if (event_handler()) {
         ::fidl::Event<::test_unknowninteractions::Example::StrictEvent> event;
         event_handler()->StrictEvent(event);
       }
-      return std::nullopt;
+      return ::fidl::Status::Ok();
     }
     case ::test_unknowninteractions::kExample_FlexibleEvent_Ordinal: {
       ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
       if (decoded.is_error()) {
-        return ::fidl::UnbindInfo(decoded.error_value());
+        return decoded.error_value();
       }
       if (event_handler()) {
         ::fidl::Event<::test_unknowninteractions::Example::FlexibleEvent> event;
         event_handler()->FlexibleEvent(event);
       }
-      return std::nullopt;
+      return ::fidl::Status::Ok();
     }
     default:
-      break;
+      return ::fidl::Status::UnknownOrdinal();
   }
-  return ::fidl::UnbindInfo::UnknownOrdinal();
 }
 #endif  // __Fuchsia__
 

@@ -542,8 +542,8 @@ static_assert(offsetof(::fidl::WireResponse<::test_requestflexibleenvelope::Prot
 #ifdef __Fuchsia__
 }  // namespace fidl
 template <>
-struct ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>> final
-    : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>>> {
+struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>> final
+    : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>>> {
   static constexpr uint32_t kNumHandles =
       fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>, fidl::MessageDirection::kReceiving>();
 
@@ -555,11 +555,11 @@ template <>
 struct ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>> final
     : public ::fidl::internal::ChannelMessageStorageBase<::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>>> {
   ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
-  ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>> handles_storage_;
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>> handles_storage_;
 };
 template <>
-struct ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>> final
-    : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>>> {
+struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>> final
+    : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>>> {
   static constexpr uint32_t kNumHandles =
       fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>, fidl::MessageDirection::kReceiving>();
 
@@ -571,7 +571,22 @@ template <>
 struct ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>> final
     : public ::fidl::internal::ChannelMessageStorageBase<::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>>> {
   ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
-  ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>> handles_storage_;
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>> handles_storage_;
+};
+template <>
+struct ::fidl::internal::IncomingEventsHandleStorage<::test_requestflexibleenvelope::Protocol> final : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingEventsHandleStorage<::test_requestflexibleenvelope::Protocol>> {
+ public:
+  static constexpr uint32_t kNumHandles = 0;
+
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
+
+template <>
+struct ::fidl::internal::IncomingEventsStorage<::test_requestflexibleenvelope::Protocol> final : public ::fidl::internal::ChannelMessageStorageBase<::fidl::internal::IncomingEventsStorage<::test_requestflexibleenvelope::Protocol>> {
+ public:
+  ::fidl::internal::InlineMessageBuffer<16> bytes_;
+  ::fidl::internal::IncomingEventsHandleStorage<::test_requestflexibleenvelope::Protocol> handles_storage_;
 };
 
 template <>
@@ -782,7 +797,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_requestflexibleenvelope::Pr
   ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>> decoded_;
 };
 template <>
-class ::fidl::internal::WireEventHandlerInterface<::test_requestflexibleenvelope::Protocol> {
+class ::fidl::internal::WireEventHandlerInterface<::test_requestflexibleenvelope::Protocol> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
@@ -811,15 +826,10 @@ class ::fidl::WireSyncEventHandler<::test_requestflexibleenvelope::Protocol> : p
 };
 
 template <>
-class ::fidl::internal::WireEventDispatcher<::test_requestflexibleenvelope::Protocol> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::WireAsyncEventHandler<::test_requestflexibleenvelope::Protocol>> {
+class ::fidl::internal::WireEventDispatcher<::test_requestflexibleenvelope::Protocol> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::WireEventHandlerInterface<::test_requestflexibleenvelope::Protocol>> {
  public:
-  explicit WireEventDispatcher(::fidl::WireAsyncEventHandler<::test_requestflexibleenvelope::Protocol>* event_handler)
+  explicit WireEventDispatcher(::fidl::internal::WireEventHandlerInterface<::test_requestflexibleenvelope::Protocol>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      ::fidl::internal::MessageStorageViewBase* storage_view) override;
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a

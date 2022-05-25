@@ -18,6 +18,9 @@
 namespace fidl {
 namespace internal {
 
+// The base class for all event handler interfaces.
+class BaseEventHandlerInterface {};
+
 // The base class for all asynchronous event handlers, regardless of domain
 // object flavor or protocol type.
 class AsyncEventHandler {
@@ -55,14 +58,16 @@ class AsyncEventHandler {
 // handler to ignore all events.
 class IncomingEventDispatcherBase {
  public:
-  explicit IncomingEventDispatcherBase(AsyncEventHandler* event_handler)
+  explicit IncomingEventDispatcherBase(BaseEventHandlerInterface* event_handler)
       : event_handler_(event_handler) {}
 
   virtual ~IncomingEventDispatcherBase() = default;
 
   // Dispatches an incoming event.
   //
-  // This should be implemented by the generated messaging layer.
+  // This should be implemented by the generated messaging layer. The default
+  // implementation operates with the assumption that no events are defined in
+  // the protocol.
   //
   // ## Handling events
   //
@@ -81,16 +86,15 @@ class IncomingEventDispatcherBase {
   //
   // ## Return value
   //
-  // If errors occur during dispatching, the function will return an
-  // |UnbindInfo| describing the error. Otherwise, it will return
-  // |std::nullopt|.
-  virtual std::optional<UnbindInfo> DispatchEvent(
-      fidl::IncomingMessage& msg, internal::MessageStorageViewBase* storage_view) = 0;
+  // Any errors during dispatching will be returned in a |fidl::Status|.
+  // If not ok, bindings that support it should close the connection.
+  virtual fidl::Status DispatchEvent(fidl::IncomingMessage& msg,
+                                     internal::MessageStorageViewBase* storage_view);
 
-  AsyncEventHandler* event_handler() const { return event_handler_; }
+  BaseEventHandlerInterface* event_handler() const { return event_handler_; }
 
  private:
-  AsyncEventHandler* event_handler_;
+  BaseEventHandlerInterface* event_handler_;
 };
 
 using AnyIncomingEventDispatcher =

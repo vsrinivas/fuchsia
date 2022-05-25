@@ -220,7 +220,7 @@ namespace test_protocollayouts {
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>> handle_storage;
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>> handle_storage;
   ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>> decoded{
       outgoing.Call(
           client.handle(), handle_storage.view(bytes_.view()),
@@ -253,7 +253,7 @@ namespace test_protocollayouts {
   ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>> request_message(
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>> handle_storage;
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>> handle_storage;
   ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>> decoded{
       outgoing.Call(
           client_end.handle(),
@@ -275,7 +275,7 @@ namespace test_protocollayouts {
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>> handle_storage;
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>> handle_storage;
   ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>> decoded{
       outgoing.Call(
           client.handle(), handle_storage.view(bytes_.view()),
@@ -316,7 +316,7 @@ namespace test_protocollayouts {
   ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>> request_message(
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>> handle_storage;
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>> handle_storage;
   ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>> decoded{
       outgoing.Call(
           client_end.handle(),
@@ -383,7 +383,7 @@ namespace test_protocollayouts {
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>> handle_storage;
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>> handle_storage;
   ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>> decoded{
       outgoing.Call(
           client.handle(), handle_storage.view(bytes_.view()),
@@ -416,7 +416,7 @@ namespace test_protocollayouts {
   ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>> request_message(
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>> handle_storage;
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>> handle_storage;
   ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>> decoded{
       outgoing.Call(
           client_end.handle(),
@@ -438,7 +438,7 @@ namespace test_protocollayouts {
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>> handle_storage;
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>> handle_storage;
   ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>> decoded{
       outgoing.Call(
           client.handle(), handle_storage.view(bytes_.view()),
@@ -479,7 +479,7 @@ namespace test_protocollayouts {
   ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>> request_message(
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>> handle_storage;
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>> handle_storage;
   ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>> decoded{
       outgoing.Call(
           client_end.handle(),
@@ -546,7 +546,7 @@ namespace test_protocollayouts {
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayImport>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayImport>> handle_storage;
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayImport>> handle_storage;
   ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayImport>> decoded{
       outgoing.Call(
           client.handle(), handle_storage.view(bytes_.view()),
@@ -579,7 +579,7 @@ namespace test_protocollayouts {
   ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayImport>> request_message(
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayImport>> handle_storage;
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayImport>> handle_storage;
   ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayImport>> decoded{
       outgoing.Call(
           client_end.handle(),
@@ -601,7 +601,7 @@ namespace test_protocollayouts {
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayImportWithError>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayImportWithError>> handle_storage;
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayImportWithError>> handle_storage;
   ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayImportWithError>> decoded{
       outgoing.Call(
           client.handle(), handle_storage.view(bytes_.view()),
@@ -642,7 +642,7 @@ namespace test_protocollayouts {
   ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayImportWithError>> request_message(
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayImportWithError>> handle_storage;
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayImportWithError>> handle_storage;
   ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayImportWithError>> decoded{
       outgoing.Call(
           client_end.handle(),
@@ -709,7 +709,7 @@ namespace test_protocollayouts {
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayLocal>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>> handle_storage;
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>> handle_storage;
   ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>> decoded{
       outgoing.Call(
           client.handle(), handle_storage.view(bytes_.view()),
@@ -742,7 +742,7 @@ namespace test_protocollayouts {
   ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayLocal>> request_message(
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>> handle_storage;
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>> handle_storage;
   ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>> decoded{
       outgoing.Call(
           client_end.handle(),
@@ -764,7 +764,7 @@ namespace test_protocollayouts {
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>> handle_storage;
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>> handle_storage;
   ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>> decoded{
       outgoing.Call(
           client.handle(), handle_storage.view(bytes_.view()),
@@ -805,7 +805,7 @@ namespace test_protocollayouts {
   ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>> request_message(
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>> handle_storage;
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>> handle_storage;
   ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>> decoded{
       outgoing.Call(
           client_end.handle(),
@@ -872,7 +872,7 @@ namespace test_protocollayouts {
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnon>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>> handle_storage;
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>> handle_storage;
   ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>> decoded{
       outgoing.Call(
           client.handle(), handle_storage.view(bytes_.view()),
@@ -905,7 +905,7 @@ namespace test_protocollayouts {
   ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnon>> request_message(
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>> handle_storage;
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>> handle_storage;
   ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>> decoded{
       outgoing.Call(
           client_end.handle(),
@@ -927,7 +927,7 @@ namespace test_protocollayouts {
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>> handle_storage;
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>> handle_storage;
   ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>> decoded{
       outgoing.Call(
           client.handle(), handle_storage.view(bytes_.view()),
@@ -968,7 +968,7 @@ namespace test_protocollayouts {
   ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>> request_message(
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>> handle_storage;
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>> handle_storage;
   ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>> decoded{
       outgoing.Call(
           client_end.handle(),
@@ -1314,216 +1314,27 @@ fidl::internal::WireWeakSyncClientImpl<::test_protocollayouts::MainProtocol>::Tw
   if (status != ZX_OK) {
     return ::fidl::Status::TransportError(status, ::fidl::internal::kErrorWaitOneFailed);
   }
-  constexpr uint32_t kHandleAllocSize = ([]() constexpr {
-    uint32_t x = 0;
-    if (::fidl::TypeTraits<::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnAnonComposed>>::kMaxNumHandles >= x) {
-      x = ::fidl::TypeTraits<::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnAnonComposed>>::kMaxNumHandles;
-    }
-    if (::fidl::TypeTraits<::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnAnonComposedWithError>>::kMaxNumHandles >= x) {
-      x = ::fidl::TypeTraits<::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnAnonComposedWithError>>::kMaxNumHandles;
-    }
-    if (::fidl::TypeTraits<::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnNamedComposed>>::kMaxNumHandles >= x) {
-      x = ::fidl::TypeTraits<::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnNamedComposed>>::kMaxNumHandles;
-    }
-    if (::fidl::TypeTraits<::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnNamedComposedWithError>>::kMaxNumHandles >= x) {
-      x = ::fidl::TypeTraits<::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnNamedComposedWithError>>::kMaxNumHandles;
-    }
-    if (::fidl::TypeTraits<::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnImport>>::kMaxNumHandles >= x) {
-      x = ::fidl::TypeTraits<::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnImport>>::kMaxNumHandles;
-    }
-    if (::fidl::TypeTraits<::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnImportWithError>>::kMaxNumHandles >= x) {
-      x = ::fidl::TypeTraits<::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnImportWithError>>::kMaxNumHandles;
-    }
-    if (::fidl::TypeTraits<::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnLocal>>::kMaxNumHandles >= x) {
-      x = ::fidl::TypeTraits<::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnLocal>>::kMaxNumHandles;
-    }
-    if (::fidl::TypeTraits<::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnLocalWithError>>::kMaxNumHandles >= x) {
-      x = ::fidl::TypeTraits<::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnLocalWithError>>::kMaxNumHandles;
-    }
-    if (::fidl::TypeTraits<::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnAnon>>::kMaxNumHandles >= x) {
-      x = ::fidl::TypeTraits<::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnAnon>>::kMaxNumHandles;
-    }
-    if (::fidl::TypeTraits<::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnAnonWithError>>::kMaxNumHandles >= x) {
-      x = ::fidl::TypeTraits<::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnAnonWithError>>::kMaxNumHandles;
-    }
-    if (x > ZX_CHANNEL_MAX_MSG_HANDLES) {
-      x = ZX_CHANNEL_MAX_MSG_HANDLES;
-    }
-    return x;
-  })();
-  static_assert(kHandleAllocSize <= ZX_CHANNEL_MAX_MSG_HANDLES);
-  ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> read_storage;
-  std::array<zx_handle_t, kHandleAllocSize> read_handles;
-  // TODO(fxbug.dev/85734) Remove this channel-specific allocation.
-  std::array<fidl_channel_handle_metadata_t, kHandleAllocSize> read_handle_metadata;
+  ::fidl::internal::IncomingEventsStorage<::test_protocollayouts::MainProtocol> event_storage;
+  ::fidl::ChannelMessageStorageView storage_view = event_storage.view();
   ::fidl::IncomingMessage msg = ::fidl::MessageRead(
-      zx::unowned_channel(client_end.handle()),
-      ::fidl::ChannelMessageStorageView{
-          .bytes = read_storage.view(),
-          .handles = read_handles.data(),
-          .handle_metadata = read_handle_metadata.data(),
-          .handle_capacity = kHandleAllocSize,
-      },
-      ReadOptions{.discardable = true});
+      zx::unowned_channel(client_end.handle()), storage_view, ReadOptions{.discardable = true});
   if (msg.status() == ZX_ERR_BUFFER_TOO_SMALL) {
-    // Message size is unexpectedly larger than calculated.
-    // This can only be due to a newer version of the protocol defining a new event,
-    // whose size exceeds the maximum of known events in the current protocol.
     return ::fidl::Status::UnexpectedMessage(
         ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorSyncEventBufferTooSmall);
   }
   if (!msg.ok()) {
     return msg;
   }
-  fidl_message_header_t* hdr = msg.header();
-  switch (hdr->ordinal) {
-    case ::test_protocollayouts::kMainProtocol_OnAnonComposed_Ordinal: {
-      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnAnonComposed>> decoded{::std::move(msg)};
-      if (!decoded.ok()) {
-        return ::fidl::Status(decoded);
-      }
-      auto* primary = &decoded.PrimaryObject()->body;
-      got_transitional_ = false;
-      OnAnonComposed(primary);
-      if (got_transitional_) {
-        return ::fidl::Status::UnexpectedMessage(
-            ZX_ERR_NOT_SUPPORTED, ::fidl::internal::kErrorSyncEventUnhandledTransitionalEvent);
-      }
-      return ::fidl::Status::Ok();
-    }
-    case ::test_protocollayouts::kMainProtocol_OnAnonComposedWithError_Ordinal: {
-      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnAnonComposedWithError>> decoded{::std::move(msg)};
-      if (!decoded.ok()) {
-        return ::fidl::Status(decoded);
-      }
-      auto* primary = &decoded.PrimaryObject()->body;
-      got_transitional_ = false;
-      OnAnonComposedWithError(primary);
-      if (got_transitional_) {
-        return ::fidl::Status::UnexpectedMessage(
-            ZX_ERR_NOT_SUPPORTED, ::fidl::internal::kErrorSyncEventUnhandledTransitionalEvent);
-      }
-      return ::fidl::Status::Ok();
-    }
-    case ::test_protocollayouts::kMainProtocol_OnNamedComposed_Ordinal: {
-      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnNamedComposed>> decoded{::std::move(msg)};
-      if (!decoded.ok()) {
-        return ::fidl::Status(decoded);
-      }
-      auto* primary = &decoded.PrimaryObject()->body;
-      got_transitional_ = false;
-      OnNamedComposed(primary);
-      if (got_transitional_) {
-        return ::fidl::Status::UnexpectedMessage(
-            ZX_ERR_NOT_SUPPORTED, ::fidl::internal::kErrorSyncEventUnhandledTransitionalEvent);
-      }
-      return ::fidl::Status::Ok();
-    }
-    case ::test_protocollayouts::kMainProtocol_OnNamedComposedWithError_Ordinal: {
-      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnNamedComposedWithError>> decoded{::std::move(msg)};
-      if (!decoded.ok()) {
-        return ::fidl::Status(decoded);
-      }
-      auto* primary = &decoded.PrimaryObject()->body;
-      got_transitional_ = false;
-      OnNamedComposedWithError(primary);
-      if (got_transitional_) {
-        return ::fidl::Status::UnexpectedMessage(
-            ZX_ERR_NOT_SUPPORTED, ::fidl::internal::kErrorSyncEventUnhandledTransitionalEvent);
-      }
-      return ::fidl::Status::Ok();
-    }
-    case ::test_protocollayouts::kMainProtocol_OnImport_Ordinal: {
-      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnImport>> decoded{::std::move(msg)};
-      if (!decoded.ok()) {
-        return ::fidl::Status(decoded);
-      }
-      auto* primary = &decoded.PrimaryObject()->body;
-      got_transitional_ = false;
-      OnImport(primary);
-      if (got_transitional_) {
-        return ::fidl::Status::UnexpectedMessage(
-            ZX_ERR_NOT_SUPPORTED, ::fidl::internal::kErrorSyncEventUnhandledTransitionalEvent);
-      }
-      return ::fidl::Status::Ok();
-    }
-    case ::test_protocollayouts::kMainProtocol_OnImportWithError_Ordinal: {
-      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnImportWithError>> decoded{::std::move(msg)};
-      if (!decoded.ok()) {
-        return ::fidl::Status(decoded);
-      }
-      auto* primary = &decoded.PrimaryObject()->body;
-      got_transitional_ = false;
-      OnImportWithError(primary);
-      if (got_transitional_) {
-        return ::fidl::Status::UnexpectedMessage(
-            ZX_ERR_NOT_SUPPORTED, ::fidl::internal::kErrorSyncEventUnhandledTransitionalEvent);
-      }
-      return ::fidl::Status::Ok();
-    }
-    case ::test_protocollayouts::kMainProtocol_OnLocal_Ordinal: {
-      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnLocal>> decoded{::std::move(msg)};
-      if (!decoded.ok()) {
-        return ::fidl::Status(decoded);
-      }
-      auto* primary = &decoded.PrimaryObject()->body;
-      got_transitional_ = false;
-      OnLocal(primary);
-      if (got_transitional_) {
-        return ::fidl::Status::UnexpectedMessage(
-            ZX_ERR_NOT_SUPPORTED, ::fidl::internal::kErrorSyncEventUnhandledTransitionalEvent);
-      }
-      return ::fidl::Status::Ok();
-    }
-    case ::test_protocollayouts::kMainProtocol_OnLocalWithError_Ordinal: {
-      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnLocalWithError>> decoded{::std::move(msg)};
-      if (!decoded.ok()) {
-        return ::fidl::Status(decoded);
-      }
-      auto* primary = &decoded.PrimaryObject()->body;
-      got_transitional_ = false;
-      OnLocalWithError(primary);
-      if (got_transitional_) {
-        return ::fidl::Status::UnexpectedMessage(
-            ZX_ERR_NOT_SUPPORTED, ::fidl::internal::kErrorSyncEventUnhandledTransitionalEvent);
-      }
-      return ::fidl::Status::Ok();
-    }
-    case ::test_protocollayouts::kMainProtocol_OnAnon_Ordinal: {
-      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnAnon>> decoded{::std::move(msg)};
-      if (!decoded.ok()) {
-        return ::fidl::Status(decoded);
-      }
-      auto* primary = &decoded.PrimaryObject()->body;
-      got_transitional_ = false;
-      OnAnon(primary);
-      if (got_transitional_) {
-        return ::fidl::Status::UnexpectedMessage(
-            ZX_ERR_NOT_SUPPORTED, ::fidl::internal::kErrorSyncEventUnhandledTransitionalEvent);
-      }
-      return ::fidl::Status::Ok();
-    }
-    case ::test_protocollayouts::kMainProtocol_OnAnonWithError_Ordinal: {
-      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnAnonWithError>> decoded{::std::move(msg)};
-      if (!decoded.ok()) {
-        return ::fidl::Status(decoded);
-      }
-      auto* primary = &decoded.PrimaryObject()->body;
-      got_transitional_ = false;
-      OnAnonWithError(primary);
-      if (got_transitional_) {
-        return ::fidl::Status::UnexpectedMessage(
-            ZX_ERR_NOT_SUPPORTED, ::fidl::internal::kErrorSyncEventUnhandledTransitionalEvent);
-      }
-      return ::fidl::Status::Ok();
-    }
-    default: {
-      return ::fidl::Status::UnknownOrdinal();
-    }
+  got_transitional_ = false;
+  fidl::internal::WireEventDispatcher<::test_protocollayouts::MainProtocol> dispatcher{this};
+  ::fidl::Status dispatch_status = dispatcher.DispatchEvent(msg, &storage_view);
+  if (got_transitional_) {
+    return ::fidl::Status::UnexpectedMessage(
+        ZX_ERR_NOT_SUPPORTED, ::fidl::internal::kErrorSyncEventUnhandledTransitionalEvent);
   }
+  return dispatch_status;
 }
-
-std::optional<::fidl::UnbindInfo>
+::fidl::Status
 fidl::internal::WireEventDispatcher<::test_protocollayouts::MainProtocol>::DispatchEvent(
     ::fidl::IncomingMessage& msg,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
@@ -1531,117 +1342,116 @@ fidl::internal::WireEventDispatcher<::test_protocollayouts::MainProtocol>::Dispa
     case ::test_protocollayouts::kMainProtocol_OnAnonComposed_Ordinal: {
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnAnonComposed>> decoded{std::move(msg)};
       if (!decoded.ok()) {
-        return ::fidl::UnbindInfo{decoded};
+        return decoded;
       }
       if (event_handler()) {
         auto* primary = &decoded.PrimaryObject()->body;
         event_handler()->OnAnonComposed(primary);
       }
-      return std::nullopt;
+      return ::fidl::Status::Ok();
     }
     case ::test_protocollayouts::kMainProtocol_OnAnonComposedWithError_Ordinal: {
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnAnonComposedWithError>> decoded{std::move(msg)};
       if (!decoded.ok()) {
-        return ::fidl::UnbindInfo{decoded};
+        return decoded;
       }
       if (event_handler()) {
         auto* primary = &decoded.PrimaryObject()->body;
         event_handler()->OnAnonComposedWithError(primary);
       }
-      return std::nullopt;
+      return ::fidl::Status::Ok();
     }
     case ::test_protocollayouts::kMainProtocol_OnNamedComposed_Ordinal: {
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnNamedComposed>> decoded{std::move(msg)};
       if (!decoded.ok()) {
-        return ::fidl::UnbindInfo{decoded};
+        return decoded;
       }
       if (event_handler()) {
         auto* primary = &decoded.PrimaryObject()->body;
         event_handler()->OnNamedComposed(primary);
       }
-      return std::nullopt;
+      return ::fidl::Status::Ok();
     }
     case ::test_protocollayouts::kMainProtocol_OnNamedComposedWithError_Ordinal: {
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnNamedComposedWithError>> decoded{std::move(msg)};
       if (!decoded.ok()) {
-        return ::fidl::UnbindInfo{decoded};
+        return decoded;
       }
       if (event_handler()) {
         auto* primary = &decoded.PrimaryObject()->body;
         event_handler()->OnNamedComposedWithError(primary);
       }
-      return std::nullopt;
+      return ::fidl::Status::Ok();
     }
     case ::test_protocollayouts::kMainProtocol_OnImport_Ordinal: {
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnImport>> decoded{std::move(msg)};
       if (!decoded.ok()) {
-        return ::fidl::UnbindInfo{decoded};
+        return decoded;
       }
       if (event_handler()) {
         auto* primary = &decoded.PrimaryObject()->body;
         event_handler()->OnImport(primary);
       }
-      return std::nullopt;
+      return ::fidl::Status::Ok();
     }
     case ::test_protocollayouts::kMainProtocol_OnImportWithError_Ordinal: {
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnImportWithError>> decoded{std::move(msg)};
       if (!decoded.ok()) {
-        return ::fidl::UnbindInfo{decoded};
+        return decoded;
       }
       if (event_handler()) {
         auto* primary = &decoded.PrimaryObject()->body;
         event_handler()->OnImportWithError(primary);
       }
-      return std::nullopt;
+      return ::fidl::Status::Ok();
     }
     case ::test_protocollayouts::kMainProtocol_OnLocal_Ordinal: {
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnLocal>> decoded{std::move(msg)};
       if (!decoded.ok()) {
-        return ::fidl::UnbindInfo{decoded};
+        return decoded;
       }
       if (event_handler()) {
         auto* primary = &decoded.PrimaryObject()->body;
         event_handler()->OnLocal(primary);
       }
-      return std::nullopt;
+      return ::fidl::Status::Ok();
     }
     case ::test_protocollayouts::kMainProtocol_OnLocalWithError_Ordinal: {
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnLocalWithError>> decoded{std::move(msg)};
       if (!decoded.ok()) {
-        return ::fidl::UnbindInfo{decoded};
+        return decoded;
       }
       if (event_handler()) {
         auto* primary = &decoded.PrimaryObject()->body;
         event_handler()->OnLocalWithError(primary);
       }
-      return std::nullopt;
+      return ::fidl::Status::Ok();
     }
     case ::test_protocollayouts::kMainProtocol_OnAnon_Ordinal: {
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnAnon>> decoded{std::move(msg)};
       if (!decoded.ok()) {
-        return ::fidl::UnbindInfo{decoded};
+        return decoded;
       }
       if (event_handler()) {
         auto* primary = &decoded.PrimaryObject()->body;
         event_handler()->OnAnon(primary);
       }
-      return std::nullopt;
+      return ::fidl::Status::Ok();
     }
     case ::test_protocollayouts::kMainProtocol_OnAnonWithError_Ordinal: {
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnAnonWithError>> decoded{std::move(msg)};
       if (!decoded.ok()) {
-        return ::fidl::UnbindInfo{decoded};
+        return decoded;
       }
       if (event_handler()) {
         auto* primary = &decoded.PrimaryObject()->body;
         event_handler()->OnAnonWithError(primary);
       }
-      return std::nullopt;
+      return ::fidl::Status::Ok();
     }
     default:
-      break;
+      return ::fidl::Status::UnknownOrdinal();
   }
-  return ::fidl::UnbindInfo::UnknownOrdinal();
 }
 #endif  // __Fuchsia__
 

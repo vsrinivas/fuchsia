@@ -12,12 +12,6 @@
 
 #ifdef __Fuchsia__
 
-std::optional<::fidl::UnbindInfo>
-fidl::internal::NaturalEventDispatcher<::test_bindingsdenylist::Allowed>::DispatchEvent(
-    ::fidl::IncomingMessage& msg,
-    ::fidl::internal::MessageStorageViewBase* storage_view) {
-  return ::fidl::UnbindInfo::UnknownOrdinal();
-}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -84,12 +78,6 @@ fidl::internal::NaturalSyncClientImpl<::test_bindingsdenylist::OnlyLibfuzzerAndD
 
 #ifdef __Fuchsia__
 
-std::optional<::fidl::UnbindInfo>
-fidl::internal::NaturalEventDispatcher<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>::DispatchEvent(
-    ::fidl::IncomingMessage& msg,
-    ::fidl::internal::MessageStorageViewBase* storage_view) {
-  return ::fidl::UnbindInfo::UnknownOrdinal();
-}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -147,12 +135,6 @@ void fidl::Server<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>::dispatch_messa
 
 #ifdef __Fuchsia__
 
-std::optional<::fidl::UnbindInfo>
-fidl::internal::NaturalEventDispatcher<::test_bindingsdenylist::OnlyCppAndDeps>::DispatchEvent(
-    ::fidl::IncomingMessage& msg,
-    ::fidl::internal::MessageStorageViewBase* storage_view) {
-  return ::fidl::UnbindInfo::UnknownOrdinal();
-}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -233,12 +215,6 @@ fidl::internal::NaturalSyncClientImpl<::test_bindingsdenylist::ImportsSameNameCo
 
 #ifdef __Fuchsia__
 
-std::optional<::fidl::UnbindInfo>
-fidl::internal::NaturalEventDispatcher<::test_bindingsdenylist::ImportsSameNameContext>::DispatchEvent(
-    ::fidl::IncomingMessage& msg,
-    ::fidl::internal::MessageStorageViewBase* storage_view) {
-  return ::fidl::UnbindInfo::UnknownOrdinal();
-}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -472,12 +448,6 @@ fidl::internal::NaturalSyncClientImpl<::test_bindingsdenylist::DenyEachBinding>:
 
 #ifdef __Fuchsia__
 
-std::optional<::fidl::UnbindInfo>
-fidl::internal::NaturalEventDispatcher<::test_bindingsdenylist::DenyEachBinding>::DispatchEvent(
-    ::fidl::IncomingMessage& msg,
-    ::fidl::internal::MessageStorageViewBase* storage_view) {
-  return ::fidl::UnbindInfo::UnknownOrdinal();
-}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__

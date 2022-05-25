@@ -258,8 +258,9 @@ class ClientBase final : public std::enable_shared_from_this<ClientBase> {
   // |teardown_observer| on binding teardown.
   static std::shared_ptr<ClientBase> Create(
       AnyTransport&& transport, async_dispatcher_t* dispatcher,
-      AnyIncomingEventDispatcher&& event_dispatcher, fidl::AnyTeardownObserver&& teardown_observer,
-      ThreadingPolicy threading_policy, std::weak_ptr<ClientControlBlock> client_object_lifetime);
+      AnyIncomingEventDispatcher&& event_dispatcher, AsyncEventHandler* error_handler,
+      fidl::AnyTeardownObserver&& teardown_observer, ThreadingPolicy threading_policy,
+      std::weak_ptr<ClientControlBlock> client_object_lifetime);
 
   // Creates an unbound ClientBase. Only use it with |std::make_shared|.
   ClientBase() = default;
@@ -367,7 +368,7 @@ class ClientBase final : public std::enable_shared_from_this<ClientBase> {
 
  private:
   void Bind(AnyTransport&& transport, async_dispatcher_t* dispatcher,
-            AnyIncomingEventDispatcher&& event_dispatcher,
+            AnyIncomingEventDispatcher&& event_dispatcher, AsyncEventHandler* error_handler,
             fidl::AnyTeardownObserver&& teardown_observer, ThreadingPolicy threading_policy,
             std::weak_ptr<ClientControlBlock> client_object_lifetime);
 
@@ -465,7 +466,7 @@ class ClientController {
   //
   // It is an error to call |Bind| more than once on the same controller.
   void Bind(AnyTransport client_end, async_dispatcher_t* dispatcher,
-            AnyIncomingEventDispatcher&& event_dispatcher,
+            AnyIncomingEventDispatcher&& event_dispatcher, AsyncEventHandler* error_handler,
             fidl::AnyTeardownObserver&& teardown_observer, ThreadingPolicy threading_policy);
 
   // Begins to unbind the transport from the dispatcher. In particular, it

@@ -49,7 +49,7 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_placementofattributes::Exam
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::internal::NaturalEventHandlerInterface<::test_placementofattributes::ExampleProtocol> {
+class ::fidl::internal::NaturalEventHandlerInterface<::test_placementofattributes::ExampleProtocol> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
   NaturalEventHandlerInterface() = default;
   virtual ~NaturalEventHandlerInterface() = default;
@@ -63,15 +63,10 @@ class ::fidl::AsyncEventHandler<::test_placementofattributes::ExampleProtocol>
 };
 
 template <>
-class ::fidl::internal::NaturalEventDispatcher<::test_placementofattributes::ExampleProtocol> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::AsyncEventHandler<::test_placementofattributes::ExampleProtocol>> {
+class ::fidl::internal::NaturalEventDispatcher<::test_placementofattributes::ExampleProtocol> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_placementofattributes::ExampleProtocol>> {
  public:
-  explicit NaturalEventDispatcher(::fidl::AsyncEventHandler<::test_placementofattributes::ExampleProtocol>* event_handler)
+  explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_placementofattributes::ExampleProtocol>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      internal::MessageStorageViewBase* storage_view) override;
 };
 #endif  // __Fuchsia__
 

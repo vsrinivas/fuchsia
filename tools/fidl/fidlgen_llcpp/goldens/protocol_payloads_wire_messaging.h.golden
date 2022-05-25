@@ -3629,8 +3629,8 @@ static_assert(offsetof(::fidl::WireEvent<::test_protocolpayloads::MainProtocol::
 #ifdef __Fuchsia__
 }  // namespace fidl
     template<>
-    struct ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayComposed>> final
-        : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayComposed>>> {
+    struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayComposed>> final
+        : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayComposed>>> {
       static constexpr uint32_t kNumHandles =
           fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayComposed>, fidl::MessageDirection::kReceiving>();
 
@@ -3642,11 +3642,11 @@ static_assert(offsetof(::fidl::WireEvent<::test_protocolpayloads::MainProtocol::
     struct ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayComposed>> final
         : public ::fidl::internal::ChannelMessageStorageBase<::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayComposed>>> {
       ::fidl::internal::InlineMessageBuffer<24> bytes_;
-      ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayComposed>> handles_storage_;
+      ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayComposed>> handles_storage_;
     };
     template<>
-    struct ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>> final
-        : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>>> {
+    struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>> final
+        : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>>> {
       static constexpr uint32_t kNumHandles =
           fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>, fidl::MessageDirection::kReceiving>();
 
@@ -3658,11 +3658,11 @@ static_assert(offsetof(::fidl::WireEvent<::test_protocolpayloads::MainProtocol::
     struct ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>> final
         : public ::fidl::internal::ChannelMessageStorageBase<::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>>> {
       ::fidl::internal::InlineMessageBuffer<48> bytes_;
-      ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>> handles_storage_;
+      ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>> handles_storage_;
     };
     template<>
-    struct ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayLocal>> final
-        : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayLocal>>> {
+    struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayLocal>> final
+        : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayLocal>>> {
       static constexpr uint32_t kNumHandles =
           fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayLocal>, fidl::MessageDirection::kReceiving>();
 
@@ -3674,11 +3674,11 @@ static_assert(offsetof(::fidl::WireEvent<::test_protocolpayloads::MainProtocol::
     struct ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayLocal>> final
         : public ::fidl::internal::ChannelMessageStorageBase<::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayLocal>>> {
       ::fidl::internal::InlineMessageBuffer<24> bytes_;
-      ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayLocal>> handles_storage_;
+      ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayLocal>> handles_storage_;
     };
     template<>
-    struct ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>> final
-        : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>>> {
+    struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>> final
+        : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>>> {
       static constexpr uint32_t kNumHandles =
           fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>, fidl::MessageDirection::kReceiving>();
 
@@ -3690,11 +3690,11 @@ static_assert(offsetof(::fidl::WireEvent<::test_protocolpayloads::MainProtocol::
     struct ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>> final
         : public ::fidl::internal::ChannelMessageStorageBase<::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>>> {
       ::fidl::internal::InlineMessageBuffer<48> bytes_;
-      ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>> handles_storage_;
+      ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>> handles_storage_;
     };
     template<>
-    struct ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayImport>> final
-        : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayImport>>> {
+    struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayImport>> final
+        : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayImport>>> {
       static constexpr uint32_t kNumHandles =
           fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayImport>, fidl::MessageDirection::kReceiving>();
 
@@ -3706,11 +3706,11 @@ static_assert(offsetof(::fidl::WireEvent<::test_protocolpayloads::MainProtocol::
     struct ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayImport>> final
         : public ::fidl::internal::ChannelMessageStorageBase<::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayImport>>> {
       ::fidl::internal::InlineMessageBuffer<24> bytes_;
-      ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayImport>> handles_storage_;
+      ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayImport>> handles_storage_;
     };
     template<>
-    struct ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>> final
-        : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>>> {
+    struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>> final
+        : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>>> {
       static constexpr uint32_t kNumHandles =
           fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>, fidl::MessageDirection::kReceiving>();
 
@@ -3722,11 +3722,11 @@ static_assert(offsetof(::fidl::WireEvent<::test_protocolpayloads::MainProtocol::
     struct ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>> final
         : public ::fidl::internal::ChannelMessageStorageBase<::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>>> {
       ::fidl::internal::InlineMessageBuffer<48> bytes_;
-      ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>> handles_storage_;
+      ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>> handles_storage_;
     };
     template<>
-    struct ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon>> final
-        : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon>>> {
+    struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon>> final
+        : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon>>> {
       static constexpr uint32_t kNumHandles =
           fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon>, fidl::MessageDirection::kReceiving>();
 
@@ -3738,11 +3738,11 @@ static_assert(offsetof(::fidl::WireEvent<::test_protocolpayloads::MainProtocol::
     struct ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon>> final
         : public ::fidl::internal::ChannelMessageStorageBase<::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon>>> {
       ::fidl::internal::InlineMessageBuffer<24> bytes_;
-      ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon>> handles_storage_;
+      ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon>> handles_storage_;
     };
     template<>
-    struct ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>> final
-        : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>>> {
+    struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>> final
+        : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>>> {
       static constexpr uint32_t kNumHandles =
           fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>, fidl::MessageDirection::kReceiving>();
 
@@ -3754,8 +3754,25 @@ static_assert(offsetof(::fidl::WireEvent<::test_protocolpayloads::MainProtocol::
     struct ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>> final
         : public ::fidl::internal::ChannelMessageStorageBase<::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>>> {
       ::fidl::internal::InlineMessageBuffer<48> bytes_;
-      ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>> handles_storage_;
+      ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>> handles_storage_;
     };
+  template <>
+  struct ::fidl::internal::IncomingEventsHandleStorage<::test_protocolpayloads::MainProtocol> final :
+      public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingEventsHandleStorage<::test_protocolpayloads::MainProtocol>> {
+   public:
+    static constexpr uint32_t kNumHandles = 0;
+
+    ::std::array<zx_handle_t, kNumHandles> handles_;
+    ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+  };
+
+  template <>
+  struct ::fidl::internal::IncomingEventsStorage<::test_protocolpayloads::MainProtocol> final :
+      public ::fidl::internal::ChannelMessageStorageBase<::fidl::internal::IncomingEventsStorage<::test_protocolpayloads::MainProtocol>> {
+   public:
+    ::fidl::internal::InlineMessageBuffer<48> bytes_;
+    ::fidl::internal::IncomingEventsHandleStorage<::test_protocolpayloads::MainProtocol> handles_storage_;
+  };
 
 template<>
 class [[nodiscard]] ::fidl::WireResult<::test_protocolpayloads::MainProtocol::OneWayComposed> final : public ::fidl::Status {
@@ -4745,7 +4762,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocolpayloads::MainProto
       std::optional<::fitx::result<uint32_t, ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResponse*>> result_ = std::nullopt;
 };
 template<>
-class ::fidl::internal::WireEventHandlerInterface<::test_protocolpayloads::MainProtocol> {
+class ::fidl::internal::WireEventHandlerInterface<::test_protocolpayloads::MainProtocol> : public ::fidl::internal::BaseEventHandlerInterface {
 public:
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
@@ -4792,15 +4809,13 @@ class ::fidl::WireSyncEventHandler<::test_protocolpayloads::MainProtocol> : publ
 
 template <>
 class ::fidl::internal::WireEventDispatcher<::test_protocolpayloads::MainProtocol> final :
-    public ::fidl::internal::IncomingEventDispatcher<::fidl::WireAsyncEventHandler<::test_protocolpayloads::MainProtocol>> {
+    public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::WireEventHandlerInterface<::test_protocolpayloads::MainProtocol>> {
  public:
-  explicit WireEventDispatcher(::fidl::WireAsyncEventHandler<::test_protocolpayloads::MainProtocol>* event_handler)
+  explicit WireEventDispatcher(::fidl::internal::WireEventHandlerInterface<::test_protocolpayloads::MainProtocol>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      ::fidl::internal::MessageStorageViewBase* storage_view) override;
+    ::fidl::Status DispatchEvent(
+        ::fidl::IncomingMessage& msg,
+        ::fidl::internal::MessageStorageViewBase* storage_view) override;
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a

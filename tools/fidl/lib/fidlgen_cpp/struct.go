@@ -214,10 +214,10 @@ func (c *compiler) compileStruct(val fidlgen.Struct) *Struct {
 		CodingTableType:   codingTableType,
 		Members:           []StructMember{},
 		BackingBufferTypeV1: computeAllocation(
-			TypeShape{val.TypeShapeV1}.MaxTotalSize(), boundednessBounded).
+			TypeShape{val.TypeShapeV1}.MaxTotalSize(), TypeShape{val.TypeShapeV1}.MaxHandles, boundednessBounded).
 			BackingBufferType(),
 		BackingBufferTypeV2: computeAllocation(
-			TypeShape{val.TypeShapeV2}.MaxTotalSize(), boundednessBounded).
+			TypeShape{val.TypeShapeV2}.MaxTotalSize(), TypeShape{val.TypeShapeV2}.MaxHandles, boundednessBounded).
 			BackingBufferType(),
 		IsInResult: false,
 		PaddingV1:  toStructPaddings(val.BuildPaddingMarkers(fidlgen.WireFormatVersionV1)),

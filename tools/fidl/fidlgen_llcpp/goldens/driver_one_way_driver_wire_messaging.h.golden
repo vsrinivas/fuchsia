@@ -179,7 +179,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_driveroneway::OneWay::Send> 
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
 };
 template <>
-class ::fidl::internal::WireEventHandlerInterface<::test_driveroneway::OneWay> {
+class ::fidl::internal::WireEventHandlerInterface<::test_driveroneway::OneWay> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
@@ -208,15 +208,10 @@ class ::fidl::WireSyncEventHandler<::test_driveroneway::OneWay> : public ::fidl:
 };
 
 template <>
-class ::fidl::internal::WireEventDispatcher<::test_driveroneway::OneWay> final : public ::fidl::internal::IncomingEventDispatcher<::fdf::WireAsyncEventHandler<::test_driveroneway::OneWay>> {
+class ::fidl::internal::WireEventDispatcher<::test_driveroneway::OneWay> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::WireEventHandlerInterface<::test_driveroneway::OneWay>> {
  public:
-  explicit WireEventDispatcher(::fdf::WireAsyncEventHandler<::test_driveroneway::OneWay>* event_handler)
+  explicit WireEventDispatcher(::fidl::internal::WireEventHandlerInterface<::test_driveroneway::OneWay>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      ::fidl::internal::MessageStorageViewBase* storage_view) override;
 };
 
 template <>

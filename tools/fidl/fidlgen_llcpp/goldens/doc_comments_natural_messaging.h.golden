@@ -62,7 +62,7 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_doccomments::Interface> fin
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::internal::NaturalEventHandlerInterface<::test_doccomments::Interface> {
+class ::fidl::internal::NaturalEventHandlerInterface<::test_doccomments::Interface> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
   NaturalEventHandlerInterface() = default;
   virtual ~NaturalEventHandlerInterface() = default;
@@ -84,13 +84,11 @@ class ::fidl::AsyncEventHandler<::test_doccomments::Interface>
 };
 
 template <>
-class ::fidl::internal::NaturalEventDispatcher<::test_doccomments::Interface> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::AsyncEventHandler<::test_doccomments::Interface>> {
+class ::fidl::internal::NaturalEventDispatcher<::test_doccomments::Interface> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_doccomments::Interface>> {
  public:
-  explicit NaturalEventDispatcher(::fidl::AsyncEventHandler<::test_doccomments::Interface>* event_handler)
+  explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_doccomments::Interface>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
+  ::fidl::Status DispatchEvent(
       ::fidl::IncomingMessage& msg,
       internal::MessageStorageViewBase* storage_view) override;
 };

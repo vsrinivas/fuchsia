@@ -8,7 +8,7 @@
 {{- EnsureNamespace "" }}
 {{- IfdefFuchsia }}
 template<>
-class {{ .WireEventHandlerInterface }} {
+class {{ .WireEventHandlerInterface }} : public ::fidl::internal::BaseEventHandlerInterface {
 public:
   {{ .WireEventHandlerInterface.Self }}() = default;
   virtual ~{{ .WireEventHandlerInterface.Self }}() = default;
@@ -53,15 +53,16 @@ class {{ .WireSyncEventHandler }} : public {{ .WireEventHandlerInterface }} {
 
 template <>
 class {{ .WireEventDispatcher }} final :
-    public ::fidl::internal::IncomingEventDispatcher<{{ .WireAsyncEventHandler }}> {
+    public ::fidl::internal::IncomingEventDispatcher<{{ .WireEventHandlerInterface }}> {
  public:
-  explicit {{ .WireEventDispatcher.Self }}({{ .WireAsyncEventHandler }}* event_handler)
+  explicit {{ .WireEventDispatcher.Self }}({{ .WireEventHandlerInterface }}* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      ::fidl::internal::MessageStorageViewBase* storage_view) override;
+  {{- if .Events }}
+    ::fidl::Status DispatchEvent(
+        ::fidl::IncomingMessage& msg,
+        ::fidl::internal::MessageStorageViewBase* storage_view) override;
+  {{- end }}
 };
 {{- EndifFuchsia }}
 {{- end }}
@@ -80,114 +81,70 @@ class {{ .WireEventDispatcher }} final :
   if (status != ZX_OK) {
     return ::fidl::Status::TransportError(status, ::fidl::internal::kErrorWaitOneFailed);
   }
-  constexpr uint32_t kHandleAllocSize = ([]() constexpr {
-    uint32_t x = 0;
-    {{- range .Events }}
-    if (::fidl::TypeTraits<{{ .WireTransactionalEvent }}>::kMaxNumHandles >= x) {
-      x = ::fidl::TypeTraits<{{ .WireTransactionalEvent }}>::kMaxNumHandles;
-    }
-    {{- end }}
-    if (x > ZX_CHANNEL_MAX_MSG_HANDLES) {
-      x = ZX_CHANNEL_MAX_MSG_HANDLES;
-    }
-    return x;
-  })();
-  static_assert(kHandleAllocSize <= ZX_CHANNEL_MAX_MSG_HANDLES);
-  {{ .SyncEventAllocationV1.BackingBufferType }} read_storage;
-  std::array<zx_handle_t, kHandleAllocSize> read_handles;
-  // TODO(fxbug.dev/85734) Remove this channel-specific allocation.
-  std::array<fidl_channel_handle_metadata_t, kHandleAllocSize> read_handle_metadata;
+  {{ .IncomingEventsStorage }} event_storage;
+  ::fidl::ChannelMessageStorageView storage_view = event_storage.view();
   ::fidl::IncomingMessage msg = ::fidl::MessageRead(
-      zx::unowned_channel(client_end.handle()),
-      ::fidl::ChannelMessageStorageView{
-          .bytes = read_storage.view(),
-          .handles = read_handles.data(),
-          .handle_metadata = read_handle_metadata.data(),
-          .handle_capacity = kHandleAllocSize,
-      },
-      ReadOptions{.discardable = true}
-  );
+      zx::unowned_channel(client_end.handle()), storage_view, ReadOptions{.discardable = true});
   if (msg.status() == ZX_ERR_BUFFER_TOO_SMALL) {
-    // Message size is unexpectedly larger than calculated.
-    // This can only be due to a newer version of the protocol defining a new event,
-    // whose size exceeds the maximum of known events in the current protocol.
+    {{- /*
+    Message size is unexpectedly larger than calculated.
+    This can only be due to a newer version of the protocol defining a new event,
+    whose size exceeds the maximum of known events in the current protocol.
+    */}}
     return ::fidl::Status::UnexpectedMessage(
         ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorSyncEventBufferTooSmall);
   }
   if (!msg.ok()) {
     return msg;
   }
-  fidl_message_header_t* hdr = msg.header();
-  switch (hdr->ordinal) {
-  {{- range .Events }}
-    case {{ .OrdinalName }}: {
-      ::fidl::unstable::DecodedMessage<{{ .WireTransactionalEvent }}> decoded{::std::move(msg)};
-      if (!decoded.ok()) {
-        return ::fidl::Status(decoded);
-      }
-      {{- if .ResponseArgs }}
-      auto* primary = &decoded.PrimaryObject()->body;
-      {{- else }}
-      {{ .WireEvent }} empty_event;
-      auto* primary = &empty_event;
-      {{- end }}
-      got_transitional_ = false;
-      {{ .Name }}(primary);
-      if (got_transitional_) {
-        return ::fidl::Status::UnexpectedMessage(
-            ZX_ERR_NOT_SUPPORTED, ::fidl::internal::kErrorSyncEventUnhandledTransitionalEvent);
-      }
-      return ::fidl::Status::Ok();
-    }
-  {{- end }}
-    default: {
-      return ::fidl::Status::UnknownOrdinal();
-    }
+  got_transitional_ = false;
+  {{ .WireEventDispatcher.NoLeading }} dispatcher{this};
+  ::fidl::Status dispatch_status = dispatcher.DispatchEvent(msg, &storage_view);
+  if (got_transitional_) {
+    return ::fidl::Status::UnexpectedMessage(
+        ZX_ERR_NOT_SUPPORTED, ::fidl::internal::kErrorSyncEventUnhandledTransitionalEvent);
   }
+  return dispatch_status;
 }
 
-std::optional<::fidl::UnbindInfo>
-{{ .WireEventDispatcher.NoLeading }}::DispatchEvent(
-    ::fidl::IncomingMessage& msg,
-    ::fidl::internal::MessageStorageViewBase* storage_view) {
-  switch (msg.header()->ordinal) {
-  {{- range .Events }}
-    case {{ .OrdinalName }}:
-    {
-      ::fidl::unstable::DecodedMessage<{{ .WireTransactionalEvent }}> decoded{std::move(msg)};
-      if (!decoded.ok()) {
-        return ::fidl::UnbindInfo{decoded};
+{{- if .Events }}
+  ::fidl::Status
+  {{ .WireEventDispatcher.NoLeading }}::DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      ::fidl::internal::MessageStorageViewBase* storage_view) {
+    switch (msg.header()->ordinal) {
+    {{- range .Events }}
+      case {{ .OrdinalName }}:
+      {
+        ::fidl::unstable::DecodedMessage<{{ .WireTransactionalEvent }}> decoded{std::move(msg)};
+        if (!decoded.ok()) {
+          return decoded;
+        }
+        if (event_handler()) {
+          {{- if .ResponseArgs }}
+            auto* primary = &decoded.PrimaryObject()->body;
+          {{- else }}
+            {{ .WireEvent }} empty_event;
+            auto* primary = &empty_event;
+          {{- end }}
+          event_handler()->{{ .Name }}(primary);
+        }
+        return ::fidl::Status::Ok();
       }
-      if (event_handler()) {
-        {{- if .ResponseArgs }}
-        auto* primary = &decoded.PrimaryObject()->body;
-        {{- else }}
-        {{ .WireEvent }} empty_event;
-        auto* primary = &empty_event;
-        {{- end }}
-        event_handler()->{{ .Name }}(primary);
-      }
-      return std::nullopt;
+    {{- end }}
+      default:
+        return ::fidl::Status::UnknownOrdinal();
     }
-  {{- end }}
-    default:
-      break;
   }
-  return ::fidl::UnbindInfo::UnknownOrdinal();
-}
+{{- end }}
 
 {{- else }}{{/* not .Transport.HasEvents */}}
 ::fidl::Status {{ .WireSyncEventHandler.NoLeading }}::HandleOneEvent(
     ::{{ .Transport.Namespace }}::UnownedClientEnd<{{ . }}> client_end) {
       ZX_PANIC("events not supported for transport '{{ .Transport.Name }}'");
 }
-std::optional<::fidl::UnbindInfo>
-{{ .WireEventDispatcher.NoLeading }}::DispatchEvent(
-    fidl::IncomingMessage& msg,
-    internal::MessageStorageViewBase* storage_view) {
-      ZX_PANIC("events not supported for transport '{{ .Transport.Name }}'");
-}
-{{- end }}
+
+{{- end }}{{/* if .Transport.HasEvents */}}
 {{- EndifFuchsia }}
 {{- end }}
 
@@ -197,7 +154,7 @@ std::optional<::fidl::UnbindInfo>
 {{- EnsureNamespace "" }}
 {{- IfdefFuchsia }}
 template<>
-class {{ .NaturalEventHandlerInterface }} {
+class {{ .NaturalEventHandlerInterface }} : public ::fidl::internal::BaseEventHandlerInterface {
  public:
   {{ .NaturalEventHandlerInterface.Self }}() = default;
   virtual ~{{ .NaturalEventHandlerInterface.Self }}() = default;
@@ -221,15 +178,16 @@ class {{ .NaturalAsyncEventHandler }}
 
 template <>
 class {{ .NaturalEventDispatcher }} final :
-    public ::fidl::internal::IncomingEventDispatcher<{{ .NaturalAsyncEventHandler }}> {
+    public ::fidl::internal::IncomingEventDispatcher<{{ .NaturalEventHandlerInterface }}> {
  public:
-  explicit {{ .NaturalEventDispatcher.Self }}({{ .NaturalAsyncEventHandler }}* event_handler)
+  explicit {{ .NaturalEventDispatcher.Self }}({{ .NaturalEventHandlerInterface }}* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      internal::MessageStorageViewBase* storage_view) override;
+  {{- if .Events }}
+    ::fidl::Status DispatchEvent(
+        ::fidl::IncomingMessage& msg,
+        internal::MessageStorageViewBase* storage_view) override;
+  {{- end }}
 };
 {{- EndifFuchsia }}
 {{- end }}
@@ -239,36 +197,36 @@ class {{ .NaturalEventDispatcher }} final :
 {{- define "Protocol:EventHandler:NaturalMessagingSource" }}
 {{- EnsureNamespace "" }}
 {{- IfdefFuchsia }}
-std::optional<::fidl::UnbindInfo>
-{{ .NaturalEventDispatcher.NoLeading }}::DispatchEvent(
-    ::fidl::IncomingMessage& msg,
-    ::fidl::internal::MessageStorageViewBase* storage_view) {
-  {{- if .Events }}
-  switch (msg.header()->ordinal) {
-  {{- range .Events }}
-    case {{ .OrdinalName }}:
-    {
-      ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage
-            {{- if .HasResponsePayload }}<{{ .ResponsePayload }}>{{ end -}}(std::move(msg));
-      if (decoded.is_error()) {
-        return ::fidl::UnbindInfo(decoded.error_value());
+
+{{- if .Events }}
+  ::fidl::Status
+  {{ .NaturalEventDispatcher.NoLeading }}::DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      ::fidl::internal::MessageStorageViewBase* storage_view) {
+    switch (msg.header()->ordinal) {
+    {{- range .Events }}
+      case {{ .OrdinalName }}:
+      {
+        ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage
+              {{- if .HasResponsePayload }}<{{ .ResponsePayload }}>{{ end -}}(std::move(msg));
+        if (decoded.is_error()) {
+          return decoded.error_value();
+        }
+        if (event_handler()) {
+          {{ .NaturalEvent }} event
+          {{- if .HasResponsePayload }}
+              = {{ .NaturalEventConverter }}::FromDomainObject(std::move(decoded.value()))
+          {{- end }};
+          event_handler()->{{ .Name }}(event);
+        }
+        return ::fidl::Status::Ok();
       }
-      if (event_handler()) {
-        {{ .NaturalEvent }} event
-        {{- if .HasResponsePayload }}
-            = {{ .NaturalEventConverter }}::FromDomainObject(std::move(decoded.value()))
-        {{- end }};
-        event_handler()->{{ .Name }}(event);
-      }
-      return std::nullopt;
+    {{- end }}
+      default:
+        return ::fidl::Status::UnknownOrdinal();
     }
-  {{- end }}
-    default:
-      break;
   }
-  {{- end }}
-  return ::fidl::UnbindInfo::UnknownOrdinal();
-}
+{{- end }}
 
 {{- EndifFuchsia }}
 {{- end }}

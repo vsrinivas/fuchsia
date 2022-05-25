@@ -26,7 +26,8 @@ class TestProtocol {
 namespace fidl {
 
 template <>
-class AsyncEventHandler<TestProtocol> : public fidl::internal::AsyncEventHandler {};
+class AsyncEventHandler<TestProtocol> : public fidl::internal::AsyncEventHandler,
+                                        public fidl::internal::BaseEventHandlerInterface {};
 
 namespace internal {
 
@@ -59,8 +60,8 @@ class NaturalEventDispatcher<TestProtocol>
   using IncomingEventDispatcher<fidl::AsyncEventHandler<TestProtocol>>::IncomingEventDispatcher;
 
  private:
-  std::optional<UnbindInfo> DispatchEvent(fidl::IncomingMessage& msg,
-                                          MessageStorageViewBase* storage_view) override {
+  ::fidl::Status DispatchEvent(fidl::IncomingMessage& msg,
+                               MessageStorageViewBase* storage_view) override {
     ZX_PANIC("Not used in this test");
   }
 };

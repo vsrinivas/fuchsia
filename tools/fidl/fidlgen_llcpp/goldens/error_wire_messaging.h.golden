@@ -301,8 +301,8 @@ static_assert(offsetof(::fidl::WireResponse<::test_error::Example::Foo>, result)
 #ifdef __Fuchsia__
 }  // namespace fidl
 template <>
-struct ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_error::Example::Foo>> final
-    : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_error::Example::Foo>>> {
+struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_error::Example::Foo>> final
+    : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_error::Example::Foo>>> {
   static constexpr uint32_t kNumHandles =
       fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_error::Example::Foo>, fidl::MessageDirection::kReceiving>();
 
@@ -314,7 +314,22 @@ template <>
 struct ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_error::Example::Foo>> final
     : public ::fidl::internal::ChannelMessageStorageBase<::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_error::Example::Foo>>> {
   ::fidl::internal::InlineMessageBuffer<48> bytes_;
-  ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_error::Example::Foo>> handles_storage_;
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_error::Example::Foo>> handles_storage_;
+};
+template <>
+struct ::fidl::internal::IncomingEventsHandleStorage<::test_error::Example> final : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingEventsHandleStorage<::test_error::Example>> {
+ public:
+  static constexpr uint32_t kNumHandles = 0;
+
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
+
+template <>
+struct ::fidl::internal::IncomingEventsStorage<::test_error::Example> final : public ::fidl::internal::ChannelMessageStorageBase<::fidl::internal::IncomingEventsStorage<::test_error::Example>> {
+ public:
+  ::fidl::internal::InlineMessageBuffer<16> bytes_;
+  ::fidl::internal::IncomingEventsHandleStorage<::test_error::Example> handles_storage_;
 };
 
 template <>
@@ -431,7 +446,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_error::Example::Foo> final 
   std::optional<::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>> result_ = std::nullopt;
 };
 template <>
-class ::fidl::internal::WireEventHandlerInterface<::test_error::Example> {
+class ::fidl::internal::WireEventHandlerInterface<::test_error::Example> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
@@ -460,15 +475,10 @@ class ::fidl::WireSyncEventHandler<::test_error::Example> : public ::fidl::inter
 };
 
 template <>
-class ::fidl::internal::WireEventDispatcher<::test_error::Example> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::WireAsyncEventHandler<::test_error::Example>> {
+class ::fidl::internal::WireEventDispatcher<::test_error::Example> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::WireEventHandlerInterface<::test_error::Example>> {
  public:
-  explicit WireEventDispatcher(::fidl::WireAsyncEventHandler<::test_error::Example>* event_handler)
+  explicit WireEventDispatcher(::fidl::internal::WireEventHandlerInterface<::test_error::Example>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      ::fidl::internal::MessageStorageViewBase* storage_view) override;
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a

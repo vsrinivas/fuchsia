@@ -91,7 +91,7 @@ class [[nodiscard]] {{ .WireResult }} final : public ::fidl::Status {
   auto& outgoing = request_message.GetOutgoingMessage();
 
   {{- if .HasResponse }}
-    {{ .IncomingHandleStorageForResponse }} handle_storage;
+    {{ .IncomingMessageHandleStorageForResponse }} handle_storage;
     ::fidl::unstable::DecodedMessage<{{ .WireTransactionalResponse }}> decoded{
         outgoing.Call(
             client.handle(), handle_storage.view(bytes_.view()),

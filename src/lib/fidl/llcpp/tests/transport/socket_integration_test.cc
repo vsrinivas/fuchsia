@@ -112,8 +112,8 @@ class MockEventDispatcher : public fidl::internal::IncomingEventDispatcherBase {
   MockEventDispatcher() : IncomingEventDispatcherBase(nullptr) {}
 
  private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg, fidl::internal::MessageStorageViewBase* storage_view) override {
+  fidl::Status DispatchEvent(::fidl::IncomingMessage& msg,
+                             fidl::internal::MessageStorageViewBase* storage_view) override {
     ZX_PANIC("unexpected event");
   }
 };
@@ -124,7 +124,7 @@ class TestClient {
     fidl::internal::AnyIncomingEventDispatcher event_dispatcher;
     event_dispatcher.emplace<MockEventDispatcher>();
     client_controller_.Bind(fidl::internal::MakeAnyTransport(std::move(handle)), dispatcher,
-                            std::move(event_dispatcher), fidl::AnyTeardownObserver::Noop(),
+                            std::move(event_dispatcher), nullptr, fidl::AnyTeardownObserver::Noop(),
                             fidl::internal::ThreadingPolicy::kCreateAndTeardownFromAnyThread);
   }
 

@@ -84,64 +84,27 @@ namespace test_doccomments {
   if (status != ZX_OK) {
     return ::fidl::Status::TransportError(status, ::fidl::internal::kErrorWaitOneFailed);
   }
-  constexpr uint32_t kHandleAllocSize = ([]() constexpr {
-    uint32_t x = 0;
-    if (::fidl::TypeTraits<::fidl::internal::TransactionalEvent<::test_doccomments::Interface::OnEvent>>::kMaxNumHandles >= x) {
-      x = ::fidl::TypeTraits<::fidl::internal::TransactionalEvent<::test_doccomments::Interface::OnEvent>>::kMaxNumHandles;
-    }
-    if (x > ZX_CHANNEL_MAX_MSG_HANDLES) {
-      x = ZX_CHANNEL_MAX_MSG_HANDLES;
-    }
-    return x;
-  })();
-  static_assert(kHandleAllocSize <= ZX_CHANNEL_MAX_MSG_HANDLES);
-  ::fidl::internal::InlineMessageBuffer<16> read_storage;
-  std::array<zx_handle_t, kHandleAllocSize> read_handles;
-  // TODO(fxbug.dev/85734) Remove this channel-specific allocation.
-  std::array<fidl_channel_handle_metadata_t, kHandleAllocSize> read_handle_metadata;
+  ::fidl::internal::IncomingEventsStorage<::test_doccomments::Interface> event_storage;
+  ::fidl::ChannelMessageStorageView storage_view = event_storage.view();
   ::fidl::IncomingMessage msg = ::fidl::MessageRead(
-      zx::unowned_channel(client_end.handle()),
-      ::fidl::ChannelMessageStorageView{
-          .bytes = read_storage.view(),
-          .handles = read_handles.data(),
-          .handle_metadata = read_handle_metadata.data(),
-          .handle_capacity = kHandleAllocSize,
-      },
-      ReadOptions{.discardable = true});
+      zx::unowned_channel(client_end.handle()), storage_view, ReadOptions{.discardable = true});
   if (msg.status() == ZX_ERR_BUFFER_TOO_SMALL) {
-    // Message size is unexpectedly larger than calculated.
-    // This can only be due to a newer version of the protocol defining a new event,
-    // whose size exceeds the maximum of known events in the current protocol.
     return ::fidl::Status::UnexpectedMessage(
         ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorSyncEventBufferTooSmall);
   }
   if (!msg.ok()) {
     return msg;
   }
-  fidl_message_header_t* hdr = msg.header();
-  switch (hdr->ordinal) {
-    case ::test_doccomments::kInterface_OnEvent_Ordinal: {
-      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_doccomments::Interface::OnEvent>> decoded{::std::move(msg)};
-      if (!decoded.ok()) {
-        return ::fidl::Status(decoded);
-      }
-      ::fidl::WireEvent<::test_doccomments::Interface::OnEvent> empty_event;
-      auto* primary = &empty_event;
-      got_transitional_ = false;
-      OnEvent(primary);
-      if (got_transitional_) {
-        return ::fidl::Status::UnexpectedMessage(
-            ZX_ERR_NOT_SUPPORTED, ::fidl::internal::kErrorSyncEventUnhandledTransitionalEvent);
-      }
-      return ::fidl::Status::Ok();
-    }
-    default: {
-      return ::fidl::Status::UnknownOrdinal();
-    }
+  got_transitional_ = false;
+  fidl::internal::WireEventDispatcher<::test_doccomments::Interface> dispatcher{this};
+  ::fidl::Status dispatch_status = dispatcher.DispatchEvent(msg, &storage_view);
+  if (got_transitional_) {
+    return ::fidl::Status::UnexpectedMessage(
+        ZX_ERR_NOT_SUPPORTED, ::fidl::internal::kErrorSyncEventUnhandledTransitionalEvent);
   }
+  return dispatch_status;
 }
-
-std::optional<::fidl::UnbindInfo>
+::fidl::Status
 fidl::internal::WireEventDispatcher<::test_doccomments::Interface>::DispatchEvent(
     ::fidl::IncomingMessage& msg,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
@@ -149,19 +112,18 @@ fidl::internal::WireEventDispatcher<::test_doccomments::Interface>::DispatchEven
     case ::test_doccomments::kInterface_OnEvent_Ordinal: {
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_doccomments::Interface::OnEvent>> decoded{std::move(msg)};
       if (!decoded.ok()) {
-        return ::fidl::UnbindInfo{decoded};
+        return decoded;
       }
       if (event_handler()) {
         ::fidl::WireEvent<::test_doccomments::Interface::OnEvent> empty_event;
         auto* primary = &empty_event;
         event_handler()->OnEvent(primary);
       }
-      return std::nullopt;
+      return ::fidl::Status::Ok();
     }
     default:
-      break;
+      return ::fidl::Status::UnknownOrdinal();
   }
-  return ::fidl::UnbindInfo::UnknownOrdinal();
 }
 #endif  // __Fuchsia__
 

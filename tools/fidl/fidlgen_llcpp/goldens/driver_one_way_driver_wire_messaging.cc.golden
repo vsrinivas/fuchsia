@@ -72,12 +72,6 @@ namespace test_driveroneway {
     ::fdf::UnownedClientEnd<::test_driveroneway::OneWay> client_end) {
   ZX_PANIC("events not supported for transport 'Driver'");
 }
-std::optional<::fidl::UnbindInfo>
-fidl::internal::WireEventDispatcher<::test_driveroneway::OneWay>::DispatchEvent(
-    fidl::IncomingMessage& msg,
-    internal::MessageStorageViewBase* storage_view) {
-  ZX_PANIC("events not supported for transport 'Driver'");
-}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__

@@ -42,7 +42,7 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_bindingsdenylist::Allowed> 
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::internal::NaturalEventHandlerInterface<::test_bindingsdenylist::Allowed> {
+class ::fidl::internal::NaturalEventHandlerInterface<::test_bindingsdenylist::Allowed> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
   NaturalEventHandlerInterface() = default;
   virtual ~NaturalEventHandlerInterface() = default;
@@ -56,15 +56,10 @@ class ::fidl::AsyncEventHandler<::test_bindingsdenylist::Allowed>
 };
 
 template <>
-class ::fidl::internal::NaturalEventDispatcher<::test_bindingsdenylist::Allowed> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::AsyncEventHandler<::test_bindingsdenylist::Allowed>> {
+class ::fidl::internal::NaturalEventDispatcher<::test_bindingsdenylist::Allowed> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_bindingsdenylist::Allowed>> {
  public:
-  explicit NaturalEventDispatcher(::fidl::AsyncEventHandler<::test_bindingsdenylist::Allowed>* event_handler)
+  explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_bindingsdenylist::Allowed>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      internal::MessageStorageViewBase* storage_view) override;
 };
 #endif  // __Fuchsia__
 
@@ -173,7 +168,7 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_bindingsdenylist::OnlyLibfu
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::internal::NaturalEventHandlerInterface<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> {
+class ::fidl::internal::NaturalEventHandlerInterface<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
   NaturalEventHandlerInterface() = default;
   virtual ~NaturalEventHandlerInterface() = default;
@@ -187,15 +182,10 @@ class ::fidl::AsyncEventHandler<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>
 };
 
 template <>
-class ::fidl::internal::NaturalEventDispatcher<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::AsyncEventHandler<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>> {
+class ::fidl::internal::NaturalEventDispatcher<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>> {
  public:
-  explicit NaturalEventDispatcher(::fidl::AsyncEventHandler<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>* event_handler)
+  explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      internal::MessageStorageViewBase* storage_view) override;
 };
 #endif  // __Fuchsia__
 
@@ -298,7 +288,7 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_bindingsdenylist::OnlyCppAn
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::internal::NaturalEventHandlerInterface<::test_bindingsdenylist::OnlyCppAndDeps> {
+class ::fidl::internal::NaturalEventHandlerInterface<::test_bindingsdenylist::OnlyCppAndDeps> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
   NaturalEventHandlerInterface() = default;
   virtual ~NaturalEventHandlerInterface() = default;
@@ -312,15 +302,10 @@ class ::fidl::AsyncEventHandler<::test_bindingsdenylist::OnlyCppAndDeps>
 };
 
 template <>
-class ::fidl::internal::NaturalEventDispatcher<::test_bindingsdenylist::OnlyCppAndDeps> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::AsyncEventHandler<::test_bindingsdenylist::OnlyCppAndDeps>> {
+class ::fidl::internal::NaturalEventDispatcher<::test_bindingsdenylist::OnlyCppAndDeps> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_bindingsdenylist::OnlyCppAndDeps>> {
  public:
-  explicit NaturalEventDispatcher(::fidl::AsyncEventHandler<::test_bindingsdenylist::OnlyCppAndDeps>* event_handler)
+  explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_bindingsdenylist::OnlyCppAndDeps>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      internal::MessageStorageViewBase* storage_view) override;
 };
 #endif  // __Fuchsia__
 
@@ -402,7 +387,7 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_bindingsdenylist::ImportsSa
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::internal::NaturalEventHandlerInterface<::test_bindingsdenylist::ImportsSameNameContext> {
+class ::fidl::internal::NaturalEventHandlerInterface<::test_bindingsdenylist::ImportsSameNameContext> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
   NaturalEventHandlerInterface() = default;
   virtual ~NaturalEventHandlerInterface() = default;
@@ -416,15 +401,10 @@ class ::fidl::AsyncEventHandler<::test_bindingsdenylist::ImportsSameNameContext>
 };
 
 template <>
-class ::fidl::internal::NaturalEventDispatcher<::test_bindingsdenylist::ImportsSameNameContext> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::AsyncEventHandler<::test_bindingsdenylist::ImportsSameNameContext>> {
+class ::fidl::internal::NaturalEventDispatcher<::test_bindingsdenylist::ImportsSameNameContext> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_bindingsdenylist::ImportsSameNameContext>> {
  public:
-  explicit NaturalEventDispatcher(::fidl::AsyncEventHandler<::test_bindingsdenylist::ImportsSameNameContext>* event_handler)
+  explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_bindingsdenylist::ImportsSameNameContext>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      internal::MessageStorageViewBase* storage_view) override;
 };
 #endif  // __Fuchsia__
 
@@ -866,7 +846,7 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_bindingsdenylist::DenyEachB
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::internal::NaturalEventHandlerInterface<::test_bindingsdenylist::DenyEachBinding> {
+class ::fidl::internal::NaturalEventHandlerInterface<::test_bindingsdenylist::DenyEachBinding> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
   NaturalEventHandlerInterface() = default;
   virtual ~NaturalEventHandlerInterface() = default;
@@ -880,15 +860,10 @@ class ::fidl::AsyncEventHandler<::test_bindingsdenylist::DenyEachBinding>
 };
 
 template <>
-class ::fidl::internal::NaturalEventDispatcher<::test_bindingsdenylist::DenyEachBinding> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::AsyncEventHandler<::test_bindingsdenylist::DenyEachBinding>> {
+class ::fidl::internal::NaturalEventDispatcher<::test_bindingsdenylist::DenyEachBinding> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_bindingsdenylist::DenyEachBinding>> {
  public:
-  explicit NaturalEventDispatcher(::fidl::AsyncEventHandler<::test_bindingsdenylist::DenyEachBinding>* event_handler)
+  explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_bindingsdenylist::DenyEachBinding>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      internal::MessageStorageViewBase* storage_view) override;
 };
 #endif  // __Fuchsia__
 

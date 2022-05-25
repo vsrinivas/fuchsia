@@ -235,7 +235,7 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_protocols::WithAndWithoutRe
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::WithAndWithoutRequestResponse> {
+class ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::WithAndWithoutRequestResponse> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
   NaturalEventHandlerInterface() = default;
   virtual ~NaturalEventHandlerInterface() = default;
@@ -253,13 +253,11 @@ class ::fidl::AsyncEventHandler<::test_protocols::WithAndWithoutRequestResponse>
 };
 
 template <>
-class ::fidl::internal::NaturalEventDispatcher<::test_protocols::WithAndWithoutRequestResponse> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::AsyncEventHandler<::test_protocols::WithAndWithoutRequestResponse>> {
+class ::fidl::internal::NaturalEventDispatcher<::test_protocols::WithAndWithoutRequestResponse> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_protocols::WithAndWithoutRequestResponse>> {
  public:
-  explicit NaturalEventDispatcher(::fidl::AsyncEventHandler<::test_protocols::WithAndWithoutRequestResponse>* event_handler)
+  explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_protocols::WithAndWithoutRequestResponse>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
+  ::fidl::Status DispatchEvent(
       ::fidl::IncomingMessage& msg,
       internal::MessageStorageViewBase* storage_view) override;
 };
@@ -569,7 +567,7 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_protocols::Transitional> fi
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::Transitional> {
+class ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::Transitional> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
   NaturalEventHandlerInterface() = default;
   virtual ~NaturalEventHandlerInterface() = default;
@@ -585,13 +583,11 @@ class ::fidl::AsyncEventHandler<::test_protocols::Transitional>
 };
 
 template <>
-class ::fidl::internal::NaturalEventDispatcher<::test_protocols::Transitional> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::AsyncEventHandler<::test_protocols::Transitional>> {
+class ::fidl::internal::NaturalEventDispatcher<::test_protocols::Transitional> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_protocols::Transitional>> {
  public:
-  explicit NaturalEventDispatcher(::fidl::AsyncEventHandler<::test_protocols::Transitional>* event_handler)
+  explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_protocols::Transitional>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
+  ::fidl::Status DispatchEvent(
       ::fidl::IncomingMessage& msg,
       internal::MessageStorageViewBase* storage_view) override;
 };
@@ -733,7 +729,7 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_protocols::MethodWithUnion>
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::MethodWithUnion> {
+class ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::MethodWithUnion> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
   NaturalEventHandlerInterface() = default;
   virtual ~NaturalEventHandlerInterface() = default;
@@ -747,15 +743,10 @@ class ::fidl::AsyncEventHandler<::test_protocols::MethodWithUnion>
 };
 
 template <>
-class ::fidl::internal::NaturalEventDispatcher<::test_protocols::MethodWithUnion> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::AsyncEventHandler<::test_protocols::MethodWithUnion>> {
+class ::fidl::internal::NaturalEventDispatcher<::test_protocols::MethodWithUnion> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_protocols::MethodWithUnion>> {
  public:
-  explicit NaturalEventDispatcher(::fidl::AsyncEventHandler<::test_protocols::MethodWithUnion>* event_handler)
+  explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_protocols::MethodWithUnion>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      internal::MessageStorageViewBase* storage_view) override;
 };
 #endif  // __Fuchsia__
 
@@ -976,7 +967,7 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_protocols::WithProtocolEnds
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::WithProtocolEnds> {
+class ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::WithProtocolEnds> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
   NaturalEventHandlerInterface() = default;
   virtual ~NaturalEventHandlerInterface() = default;
@@ -990,15 +981,10 @@ class ::fidl::AsyncEventHandler<::test_protocols::WithProtocolEnds>
 };
 
 template <>
-class ::fidl::internal::NaturalEventDispatcher<::test_protocols::WithProtocolEnds> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::AsyncEventHandler<::test_protocols::WithProtocolEnds>> {
+class ::fidl::internal::NaturalEventDispatcher<::test_protocols::WithProtocolEnds> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_protocols::WithProtocolEnds>> {
  public:
-  explicit NaturalEventDispatcher(::fidl::AsyncEventHandler<::test_protocols::WithProtocolEnds>* event_handler)
+  explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_protocols::WithProtocolEnds>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      internal::MessageStorageViewBase* storage_view) override;
 };
 #endif  // __Fuchsia__
 
@@ -1174,7 +1160,7 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_protocols::ManyParameters> 
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::ManyParameters> {
+class ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::ManyParameters> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
   NaturalEventHandlerInterface() = default;
   virtual ~NaturalEventHandlerInterface() = default;
@@ -1188,15 +1174,10 @@ class ::fidl::AsyncEventHandler<::test_protocols::ManyParameters>
 };
 
 template <>
-class ::fidl::internal::NaturalEventDispatcher<::test_protocols::ManyParameters> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::AsyncEventHandler<::test_protocols::ManyParameters>> {
+class ::fidl::internal::NaturalEventDispatcher<::test_protocols::ManyParameters> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_protocols::ManyParameters>> {
  public:
-  explicit NaturalEventDispatcher(::fidl::AsyncEventHandler<::test_protocols::ManyParameters>* event_handler)
+  explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_protocols::ManyParameters>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      internal::MessageStorageViewBase* storage_view) override;
 };
 #endif  // __Fuchsia__
 
@@ -1360,7 +1341,7 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_protocols::HandleRightsProt
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::HandleRightsProtocol> {
+class ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::HandleRightsProtocol> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
   NaturalEventHandlerInterface() = default;
   virtual ~NaturalEventHandlerInterface() = default;
@@ -1376,13 +1357,11 @@ class ::fidl::AsyncEventHandler<::test_protocols::HandleRightsProtocol>
 };
 
 template <>
-class ::fidl::internal::NaturalEventDispatcher<::test_protocols::HandleRightsProtocol> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::AsyncEventHandler<::test_protocols::HandleRightsProtocol>> {
+class ::fidl::internal::NaturalEventDispatcher<::test_protocols::HandleRightsProtocol> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_protocols::HandleRightsProtocol>> {
  public:
-  explicit NaturalEventDispatcher(::fidl::AsyncEventHandler<::test_protocols::HandleRightsProtocol>* event_handler)
+  explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_protocols::HandleRightsProtocol>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
+  ::fidl::Status DispatchEvent(
       ::fidl::IncomingMessage& msg,
       internal::MessageStorageViewBase* storage_view) override;
 };
@@ -1780,7 +1759,7 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_protocols::WithErrorSyntax>
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::WithErrorSyntax> {
+class ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::WithErrorSyntax> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
   NaturalEventHandlerInterface() = default;
   virtual ~NaturalEventHandlerInterface() = default;
@@ -1794,15 +1773,10 @@ class ::fidl::AsyncEventHandler<::test_protocols::WithErrorSyntax>
 };
 
 template <>
-class ::fidl::internal::NaturalEventDispatcher<::test_protocols::WithErrorSyntax> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::AsyncEventHandler<::test_protocols::WithErrorSyntax>> {
+class ::fidl::internal::NaturalEventDispatcher<::test_protocols::WithErrorSyntax> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_protocols::WithErrorSyntax>> {
  public:
-  explicit NaturalEventDispatcher(::fidl::AsyncEventHandler<::test_protocols::WithErrorSyntax>* event_handler)
+  explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_protocols::WithErrorSyntax>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      internal::MessageStorageViewBase* storage_view) override;
 };
 #endif  // __Fuchsia__
 
@@ -1992,7 +1966,7 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_protocols::DiscoverableProt
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::DiscoverableProtocol> {
+class ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::DiscoverableProtocol> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
   NaturalEventHandlerInterface() = default;
   virtual ~NaturalEventHandlerInterface() = default;
@@ -2006,15 +1980,10 @@ class ::fidl::AsyncEventHandler<::test_protocols::DiscoverableProtocol>
 };
 
 template <>
-class ::fidl::internal::NaturalEventDispatcher<::test_protocols::DiscoverableProtocol> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::AsyncEventHandler<::test_protocols::DiscoverableProtocol>> {
+class ::fidl::internal::NaturalEventDispatcher<::test_protocols::DiscoverableProtocol> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_protocols::DiscoverableProtocol>> {
  public:
-  explicit NaturalEventDispatcher(::fidl::AsyncEventHandler<::test_protocols::DiscoverableProtocol>* event_handler)
+  explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_protocols::DiscoverableProtocol>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      internal::MessageStorageViewBase* storage_view) override;
 };
 #endif  // __Fuchsia__
 
@@ -2251,7 +2220,7 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_protocols::ChannelProtocol>
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::ChannelProtocol> {
+class ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::ChannelProtocol> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
   NaturalEventHandlerInterface() = default;
   virtual ~NaturalEventHandlerInterface() = default;
@@ -2267,13 +2236,11 @@ class ::fidl::AsyncEventHandler<::test_protocols::ChannelProtocol>
 };
 
 template <>
-class ::fidl::internal::NaturalEventDispatcher<::test_protocols::ChannelProtocol> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::AsyncEventHandler<::test_protocols::ChannelProtocol>> {
+class ::fidl::internal::NaturalEventDispatcher<::test_protocols::ChannelProtocol> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_protocols::ChannelProtocol>> {
  public:
-  explicit NaturalEventDispatcher(::fidl::AsyncEventHandler<::test_protocols::ChannelProtocol>* event_handler)
+  explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_protocols::ChannelProtocol>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
+  ::fidl::Status DispatchEvent(
       ::fidl::IncomingMessage& msg,
       internal::MessageStorageViewBase* storage_view) override;
 };

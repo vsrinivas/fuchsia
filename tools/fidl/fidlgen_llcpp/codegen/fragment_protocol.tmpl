@@ -80,8 +80,8 @@ struct {{ .WireOrdinal }} final { static constexpr uint64_t value = {{ .Ordinal 
 {{- range .TwoWayMethods -}}
   {{- if eq .Transport.Name "Channel" }}
     template<>
-    struct {{ .IncomingHandleStorageForResponse }} final
-        : public ::fidl::internal::ChannelHandleStorageBase<{{ .IncomingHandleStorageForResponse }}> {
+    struct {{ .IncomingMessageHandleStorageForResponse }} final
+        : public ::fidl::internal::ChannelHandleStorageBase<{{ .IncomingMessageHandleStorageForResponse }}> {
       static constexpr uint32_t kNumHandles =
           fidl::internal::ClampedHandleCount<{{ .WireResponse }}, fidl::MessageDirection::kReceiving>();
 
@@ -93,7 +93,7 @@ struct {{ .WireOrdinal }} final { static constexpr uint64_t value = {{ .Ordinal 
     struct {{ .IncomingMessageStorageForResponse }} final
         : public ::fidl::internal::ChannelMessageStorageBase<{{ .IncomingMessageStorageForResponse }}> {
       {{ .Response.ClientAllocationV1.BackingBufferType }} bytes_;
-      {{ .IncomingHandleStorageForResponse }} handles_storage_;
+      {{ .IncomingMessageHandleStorageForResponse }} handles_storage_;
     };
   {{- end }}
   {{- if eq .Transport.Name "Driver" }}
@@ -101,6 +101,26 @@ struct {{ .WireOrdinal }} final { static constexpr uint64_t value = {{ .Ordinal 
     struct {{ .IncomingMessageStorageForResponse }} final
         : public ::fidl::internal::DriverMessageStorageBase<{{ .IncomingMessageStorageForResponse }}> {};
   {{- end }}
+{{- end }}
+
+{{- if eq .Transport.Name "Channel" }}
+  template <>
+  struct {{ .IncomingEventsHandleStorage }} final :
+      public ::fidl::internal::ChannelHandleStorageBase<{{ .IncomingEventsHandleStorage }}> {
+   public:
+    static constexpr uint32_t kNumHandles = {{ .SyncEventAllocationV2.NumHandles }};
+
+    ::std::array<zx_handle_t, kNumHandles> handles_;
+    ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+  };
+
+  template <>
+  struct {{ .IncomingEventsStorage }} final :
+      public ::fidl::internal::ChannelMessageStorageBase<{{ .IncomingEventsStorage }}> {
+   public:
+    {{ .SyncEventAllocationV1.BackingBufferType }} bytes_;
+    {{ .IncomingEventsHandleStorage }} handles_storage_;
+  };
 {{- end }}
 
 

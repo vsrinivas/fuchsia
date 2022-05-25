@@ -873,7 +873,7 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_protocollayouts::MainProtoc
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::internal::NaturalEventHandlerInterface<::test_protocollayouts::MainProtocol> {
+class ::fidl::internal::NaturalEventHandlerInterface<::test_protocollayouts::MainProtocol> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
   NaturalEventHandlerInterface() = default;
   virtual ~NaturalEventHandlerInterface() = default;
@@ -907,13 +907,11 @@ class ::fidl::AsyncEventHandler<::test_protocollayouts::MainProtocol>
 };
 
 template <>
-class ::fidl::internal::NaturalEventDispatcher<::test_protocollayouts::MainProtocol> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::AsyncEventHandler<::test_protocollayouts::MainProtocol>> {
+class ::fidl::internal::NaturalEventDispatcher<::test_protocollayouts::MainProtocol> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_protocollayouts::MainProtocol>> {
  public:
-  explicit NaturalEventDispatcher(::fidl::AsyncEventHandler<::test_protocollayouts::MainProtocol>* event_handler)
+  explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_protocollayouts::MainProtocol>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
+  ::fidl::Status DispatchEvent(
       ::fidl::IncomingMessage& msg,
       internal::MessageStorageViewBase* storage_view) override;
 };

@@ -151,7 +151,7 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_unknowninteractions::Exampl
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::internal::NaturalEventHandlerInterface<::test_unknowninteractions::Example> {
+class ::fidl::internal::NaturalEventHandlerInterface<::test_unknowninteractions::Example> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
   NaturalEventHandlerInterface() = default;
   virtual ~NaturalEventHandlerInterface() = default;
@@ -169,13 +169,11 @@ class ::fidl::AsyncEventHandler<::test_unknowninteractions::Example>
 };
 
 template <>
-class ::fidl::internal::NaturalEventDispatcher<::test_unknowninteractions::Example> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::AsyncEventHandler<::test_unknowninteractions::Example>> {
+class ::fidl::internal::NaturalEventDispatcher<::test_unknowninteractions::Example> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_unknowninteractions::Example>> {
  public:
-  explicit NaturalEventDispatcher(::fidl::AsyncEventHandler<::test_unknowninteractions::Example>* event_handler)
+  explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_unknowninteractions::Example>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
+  ::fidl::Status DispatchEvent(
       ::fidl::IncomingMessage& msg,
       internal::MessageStorageViewBase* storage_view) override;
 };

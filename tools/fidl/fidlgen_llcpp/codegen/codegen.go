@@ -85,20 +85,20 @@ var utilityFuncs = template.FuncMap{
 	"SyncCallTotalStackSizeV1": func(m cpp.Method) int {
 		totalSize := 0
 		if m.Request.ClientAllocationV1.IsStack {
-			totalSize += m.Request.ClientAllocationV1.Size
+			totalSize += m.Request.ClientAllocationV1.StackBytes
 		}
 		if m.Response.ClientAllocationV1.IsStack {
-			totalSize += m.Response.ClientAllocationV1.Size
+			totalSize += m.Response.ClientAllocationV1.StackBytes
 		}
 		return totalSize
 	},
 	"SyncCallTotalStackSizeV2": func(m cpp.Method) int {
 		totalSize := 0
 		if m.Request.ClientAllocationV2.IsStack {
-			totalSize += m.Request.ClientAllocationV2.Size
+			totalSize += m.Request.ClientAllocationV2.StackBytes
 		}
 		if m.Response.ClientAllocationV2.IsStack {
-			totalSize += m.Response.ClientAllocationV2.Size
+			totalSize += m.Response.ClientAllocationV2.StackBytes
 		}
 		return totalSize
 	},

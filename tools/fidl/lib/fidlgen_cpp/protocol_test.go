@@ -91,8 +91,9 @@ func TestWireBindingsAllocation(t *testing.T) {
 			fidl:          "protocol P { Method(struct { a array<uint8, 496>; }); };",
 			actualChooser: func(p *Protocol) allocation { return p.Methods[0].Request.ClientAllocationV1 },
 			expected: allocation{
-				IsStack: true,
-				Size:    512,
+				IsStack:    true,
+				StackBytes: 512,
+				NumHandles: 0,
 			},
 			expectedType: "::fidl::internal::InlineMessageBuffer<512>",
 		},
@@ -101,8 +102,9 @@ func TestWireBindingsAllocation(t *testing.T) {
 			fidl:          "protocol P { Method(struct { a array<uint8, 497>; }); };",
 			actualChooser: func(p *Protocol) allocation { return p.Methods[0].Request.ClientAllocationV1 },
 			expected: allocation{
-				IsStack: false,
-				Size:    0,
+				IsStack:    false,
+				StackBytes: 0,
+				NumHandles: 0,
 			},
 			expectedType: "::fidl::internal::BoxedMessageBuffer<520>",
 		},
@@ -112,8 +114,9 @@ func TestWireBindingsAllocation(t *testing.T) {
 				"protocol P { Method(struct { a Flexible; }); };",
 			actualChooser: func(p *Protocol) allocation { return p.Methods[0].Request.ClientAllocationV1 },
 			expected: allocation{
-				IsStack: true,
-				Size:    48,
+				IsStack:    true,
+				StackBytes: 48,
+				NumHandles: 0,
 			},
 			expectedType: "::fidl::internal::InlineMessageBuffer<48>",
 		},
@@ -123,8 +126,9 @@ func TestWireBindingsAllocation(t *testing.T) {
 				"protocol P { Method() -> (struct { a Flexible; }); };",
 			actualChooser: func(p *Protocol) allocation { return p.Methods[0].Response.ClientAllocationV1 },
 			expected: allocation{
-				IsStack: false,
-				Size:    0,
+				IsStack:    false,
+				StackBytes: 0,
+				NumHandles: 64,
 			},
 			expectedType: "::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES>",
 		},
@@ -133,8 +137,9 @@ func TestWireBindingsAllocation(t *testing.T) {
 			fidl:          "protocol P { Method() -> (struct { a array<uint8, 496>; }); };",
 			actualChooser: func(p *Protocol) allocation { return p.Methods[0].Response.ServerAllocationV1 },
 			expected: allocation{
-				IsStack: true,
-				Size:    512,
+				IsStack:    true,
+				StackBytes: 512,
+				NumHandles: 0,
 			},
 			expectedType: "::fidl::internal::InlineMessageBuffer<512>",
 		},
@@ -143,8 +148,9 @@ func TestWireBindingsAllocation(t *testing.T) {
 			fidl:          "protocol P { Method() -> (struct { a array<uint8, 497>; }); };",
 			actualChooser: func(p *Protocol) allocation { return p.Methods[0].Response.ServerAllocationV1 },
 			expected: allocation{
-				IsStack: false,
-				Size:    0,
+				IsStack:    false,
+				StackBytes: 0,
+				NumHandles: 0,
 			},
 			expectedType: "::fidl::internal::BoxedMessageBuffer<520>",
 		},
@@ -154,8 +160,9 @@ func TestWireBindingsAllocation(t *testing.T) {
 				"protocol P { Method() -> (struct { a Flexible; }); };",
 			actualChooser: func(p *Protocol) allocation { return p.Methods[0].Response.ServerAllocationV1 },
 			expected: allocation{
-				IsStack: true,
-				Size:    48,
+				IsStack:    true,
+				StackBytes: 48,
+				NumHandles: 0,
 			},
 			expectedType: "::fidl::internal::InlineMessageBuffer<48>",
 		},
@@ -167,8 +174,9 @@ func TestWireBindingsAllocation(t *testing.T) {
 				"};",
 			actualChooser: func(p *Protocol) allocation { return p.SyncEventAllocationV1 },
 			expected: allocation{
-				IsStack: true,
-				Size:    24,
+				IsStack:    true,
+				StackBytes: 24,
+				NumHandles: 0,
 			},
 			expectedType: "::fidl::internal::InlineMessageBuffer<24>",
 		},
@@ -180,8 +188,9 @@ func TestWireBindingsAllocation(t *testing.T) {
 				"};",
 			actualChooser: func(p *Protocol) allocation { return p.SyncEventAllocationV1 },
 			expected: allocation{
-				IsStack: false,
-				Size:    0,
+				IsStack:    false,
+				StackBytes: 0,
+				NumHandles: 0,
 			},
 			expectedType: "::fidl::internal::BoxedMessageBuffer<520>",
 		},
@@ -194,8 +203,9 @@ func TestWireBindingsAllocation(t *testing.T) {
 				"};",
 			actualChooser: func(p *Protocol) allocation { return p.SyncEventAllocationV1 },
 			expected: allocation{
-				IsStack: false,
-				Size:    0,
+				IsStack:    false,
+				StackBytes: 0,
+				NumHandles: 64,
 			},
 			expectedType: "::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES>",
 		},
@@ -208,10 +218,40 @@ func TestWireBindingsAllocation(t *testing.T) {
 				"};",
 			actualChooser: func(p *Protocol) allocation { return p.SyncEventAllocationV1 },
 			expected: allocation{
-				IsStack: true,
-				Size:    32,
+				IsStack:    true,
+				StackBytes: 24,
+				NumHandles: 0,
 			},
-			expectedType: "::fidl::internal::InlineMessageBuffer<32>",
+			expectedType: "::fidl::internal::InlineMessageBuffer<24>",
+		},
+		{
+			desc: "client sync event handling with max of two or three handles",
+			fidl: "type Flexible = table {};" +
+				"protocol P {" +
+				"    -> Event1(resource struct { v vector<client_end:P>:2; });" +
+				"    -> Event2(resource struct { v vector<client_end:P>:3; });" +
+				"};",
+			actualChooser: func(p *Protocol) allocation { return p.SyncEventAllocationV1 },
+			expected: allocation{
+				IsStack:    true,
+				StackBytes: 48,
+				NumHandles: 3,
+			},
+			expectedType: "::fidl::internal::InlineMessageBuffer<48>",
+		},
+		{
+			desc: "client sync event handling only counts event sizes",
+			fidl: "protocol P {" +
+				"    -> Event1(struct { a int64; });" +
+				"    Request() -> (resource struct { v vector<client_end:P>; });" +
+				"};",
+			actualChooser: func(p *Protocol) allocation { return p.SyncEventAllocationV1 },
+			expected: allocation{
+				IsStack:    true,
+				StackBytes: 24,
+				NumHandles: 0,
+			},
+			expectedType: "::fidl::internal::InlineMessageBuffer<24>",
 		},
 	}
 	for _, ex := range cases {

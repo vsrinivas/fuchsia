@@ -16,10 +16,11 @@ constexpr uint32_t kUserspaceTxidMask = 0x7FFFFFFF;
 
 std::shared_ptr<ClientBase> ClientBase::Create(
     AnyTransport&& transport, async_dispatcher_t* dispatcher,
-    AnyIncomingEventDispatcher&& event_dispatcher, fidl::AnyTeardownObserver&& teardown_observer,
-    ThreadingPolicy threading_policy, std::weak_ptr<ClientControlBlock> client_object_lifetime) {
+    AnyIncomingEventDispatcher&& event_dispatcher, AsyncEventHandler* error_handler,
+    fidl::AnyTeardownObserver&& teardown_observer, ThreadingPolicy threading_policy,
+    std::weak_ptr<ClientControlBlock> client_object_lifetime) {
   std::shared_ptr client_base = std::make_shared<ClientBase>();
-  client_base->Bind(std::move(transport), dispatcher, std::move(event_dispatcher),
+  client_base->Bind(std::move(transport), dispatcher, std::move(event_dispatcher), error_handler,
                     std::move(teardown_observer), threading_policy,
                     std::move(client_object_lifetime));
   return client_base;
@@ -27,13 +28,13 @@ std::shared_ptr<ClientBase> ClientBase::Create(
 
 void ClientBase::Bind(AnyTransport&& transport, async_dispatcher_t* dispatcher,
                       AnyIncomingEventDispatcher&& event_dispatcher,
-                      AnyTeardownObserver&& teardown_observer, ThreadingPolicy threading_policy,
+                      AsyncEventHandler* error_handler, AnyTeardownObserver&& teardown_observer,
+                      ThreadingPolicy threading_policy,
                       std::weak_ptr<ClientControlBlock> client_object_lifetime) {
   ZX_DEBUG_ASSERT(!binding_.lock());
   auto binding = AsyncClientBinding::Create(
       dispatcher, std::make_shared<fidl::internal::AnyTransport>(std::move(transport)),
-      shared_from_this(), event_dispatcher->event_handler(), std::move(teardown_observer),
-      threading_policy);
+      shared_from_this(), error_handler, std::move(teardown_observer), threading_policy);
   binding_ = binding;
   client_object_lifetime_ = std::move(client_object_lifetime);
   dispatcher_ = dispatcher;
@@ -163,7 +164,11 @@ std::optional<UnbindInfo> ClientBase::Dispatch(fidl::IncomingMessage& msg,
   auto* hdr = msg.header();
   if (hdr->txid == 0) {
     // Dispatch events (received messages with no txid).
-    return event_dispatcher_->DispatchEvent(msg, storage_view);
+    fidl::Status status = event_dispatcher_->DispatchEvent(msg, storage_view);
+    if (status.ok()) {
+      return std::nullopt;
+    }
+    return fidl::UnbindInfo{status};
   }
 
   // If this is a response, look up the corresponding ResponseContext based on the txid.
@@ -184,6 +189,7 @@ std::optional<UnbindInfo> ClientBase::Dispatch(fidl::IncomingMessage& msg,
 
 void ClientController::Bind(AnyTransport client_end, async_dispatcher_t* dispatcher,
                             AnyIncomingEventDispatcher&& event_dispatcher,
+                            AsyncEventHandler* error_handler,
                             AnyTeardownObserver&& teardown_observer,
                             ThreadingPolicy threading_policy) {
   ZX_ASSERT(!client_impl_);
@@ -192,7 +198,7 @@ void ClientController::Bind(AnyTransport client_end, async_dispatcher_t* dispatc
   // references |ClientBase|.
   control_ = std::make_shared<ClientControlBlock>(nullptr);
   client_impl_ = ClientBase::Create(std::move(client_end), dispatcher, std::move(event_dispatcher),
-                                    std::move(teardown_observer), threading_policy,
+                                    error_handler, std::move(teardown_observer), threading_policy,
                                     control_->weak_from_this());
   // Actually fill in the |client_impl_|.
   *control_ = ClientControlBlock{client_impl_};

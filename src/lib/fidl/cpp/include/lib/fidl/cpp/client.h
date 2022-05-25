@@ -183,7 +183,7 @@ class Client {
   void Bind(fidl::ClientEnd<Protocol> client_end, async_dispatcher_t* dispatcher,
             fidl::AsyncEventHandler<Protocol>* event_handler = nullptr) {
     controller_.Bind(fidl::internal::MakeAnyTransport(client_end.TakeChannel()), dispatcher,
-                     internal::MakeAnyEventDispatcher(event_handler),
+                     internal::MakeAnyEventDispatcher(event_handler), event_handler,
                      fidl::AnyTeardownObserver::Noop(),
                      fidl::internal::ThreadingPolicy::kCreateAndTeardownFromDispatcherThread);
     natural_client_impl_.emplace(&controller_.get());
@@ -424,7 +424,8 @@ class SharedClient final {
             fidl::AsyncEventHandler<Protocol>* event_handler,
             fidl::AnyTeardownObserver teardown_observer = fidl::AnyTeardownObserver::Noop()) {
     controller_.Bind(fidl::internal::MakeAnyTransport(client_end.TakeChannel()), dispatcher,
-                     internal::MakeAnyEventDispatcher(event_handler), std::move(teardown_observer),
+                     internal::MakeAnyEventDispatcher(event_handler), event_handler,
+                     std::move(teardown_observer),
                      fidl::internal::ThreadingPolicy::kCreateAndTeardownFromAnyThread);
     natural_client_impl_ = std::make_shared<NaturalClientImpl>(&controller_.get());
   }

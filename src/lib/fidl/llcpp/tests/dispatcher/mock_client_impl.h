@@ -92,7 +92,7 @@ class ClientBaseSpy {
 
 template <>
 class ::fidl::WireAsyncEventHandler<fidl_testing::TestProtocol>
-    : public fidl::internal::AsyncEventHandler {
+    : public fidl::internal::AsyncEventHandler, public fidl::internal::BaseEventHandlerInterface {
  public:
   WireAsyncEventHandler() = default;
   ~WireAsyncEventHandler() override = default;
@@ -118,10 +118,10 @@ class ::fidl::internal::WireEventDispatcher<fidl_testing::TestProtocol>
 
  private:
   // For each event, increment the event count.
-  std::optional<UnbindInfo> DispatchEvent(fidl::IncomingMessage& msg,
-                                          internal::MessageStorageViewBase* storage_view) override {
+  ::fidl::Status DispatchEvent(fidl::IncomingMessage& msg,
+                               internal::MessageStorageViewBase* storage_view) override {
     event_handler()->LogEvent();
-    return {};
+    return ::fidl::Status::Ok();
   }
 };
 

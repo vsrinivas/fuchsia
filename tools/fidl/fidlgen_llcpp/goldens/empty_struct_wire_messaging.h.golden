@@ -525,8 +525,8 @@ static_assert(offsetof(::fidl::WireResponse<::test_emptystruct::EmptyProtocol::S
 #ifdef __Fuchsia__
 }  // namespace fidl
 template <>
-struct ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>> final
-    : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>>> {
+struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>> final
+    : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>>> {
   static constexpr uint32_t kNumHandles =
       fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>, fidl::MessageDirection::kReceiving>();
 
@@ -538,7 +538,22 @@ template <>
 struct ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>> final
     : public ::fidl::internal::ChannelMessageStorageBase<::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>>> {
   ::fidl::internal::InlineMessageBuffer<24> bytes_;
-  ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>> handles_storage_;
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>> handles_storage_;
+};
+template <>
+struct ::fidl::internal::IncomingEventsHandleStorage<::test_emptystruct::EmptyProtocol> final : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingEventsHandleStorage<::test_emptystruct::EmptyProtocol>> {
+ public:
+  static constexpr uint32_t kNumHandles = 0;
+
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
+
+template <>
+struct ::fidl::internal::IncomingEventsStorage<::test_emptystruct::EmptyProtocol> final : public ::fidl::internal::ChannelMessageStorageBase<::fidl::internal::IncomingEventsStorage<::test_emptystruct::EmptyProtocol>> {
+ public:
+  ::fidl::internal::InlineMessageBuffer<24> bytes_;
+  ::fidl::internal::IncomingEventsHandleStorage<::test_emptystruct::EmptyProtocol> handles_storage_;
 };
 
 template <>
@@ -673,7 +688,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_emptystruct::EmptyProtocol:
   ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>> decoded_;
 };
 template <>
-class ::fidl::internal::WireEventHandlerInterface<::test_emptystruct::EmptyProtocol> {
+class ::fidl::internal::WireEventHandlerInterface<::test_emptystruct::EmptyProtocol> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
@@ -704,13 +719,11 @@ class ::fidl::WireSyncEventHandler<::test_emptystruct::EmptyProtocol> : public :
 };
 
 template <>
-class ::fidl::internal::WireEventDispatcher<::test_emptystruct::EmptyProtocol> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::WireAsyncEventHandler<::test_emptystruct::EmptyProtocol>> {
+class ::fidl::internal::WireEventDispatcher<::test_emptystruct::EmptyProtocol> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::WireEventHandlerInterface<::test_emptystruct::EmptyProtocol>> {
  public:
-  explicit WireEventDispatcher(::fidl::WireAsyncEventHandler<::test_emptystruct::EmptyProtocol>* event_handler)
+  explicit WireEventDispatcher(::fidl::internal::WireEventHandlerInterface<::test_emptystruct::EmptyProtocol>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
+  ::fidl::Status DispatchEvent(
       ::fidl::IncomingMessage& msg,
       ::fidl::internal::MessageStorageViewBase* storage_view) override;
 };

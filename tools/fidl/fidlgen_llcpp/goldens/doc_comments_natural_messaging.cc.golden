@@ -40,7 +40,7 @@ fidl::internal::NaturalSyncClientImpl<::test_doccomments::Interface>::Method() {
 
 #ifdef __Fuchsia__
 
-std::optional<::fidl::UnbindInfo>
+::fidl::Status
 fidl::internal::NaturalEventDispatcher<::test_doccomments::Interface>::DispatchEvent(
     ::fidl::IncomingMessage& msg,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
@@ -48,18 +48,17 @@ fidl::internal::NaturalEventDispatcher<::test_doccomments::Interface>::DispatchE
     case ::test_doccomments::kInterface_OnEvent_Ordinal: {
       ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
       if (decoded.is_error()) {
-        return ::fidl::UnbindInfo(decoded.error_value());
+        return decoded.error_value();
       }
       if (event_handler()) {
         ::fidl::Event<::test_doccomments::Interface::OnEvent> event;
         event_handler()->OnEvent(event);
       }
-      return std::nullopt;
+      return ::fidl::Status::Ok();
     }
     default:
-      break;
+      return ::fidl::Status::UnknownOrdinal();
   }
-  return ::fidl::UnbindInfo::UnknownOrdinal();
 }
 #endif  // __Fuchsia__
 

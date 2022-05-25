@@ -143,10 +143,10 @@ func (c *compiler) compileTable(val fidlgen.Table) *Table {
 		Members:           nil,
 		BiggestOrdinal:    0,
 		BackingBufferTypeV1: computeAllocation(
-			TypeShape{val.TypeShapeV1}.MaxTotalSize(), boundednessBounded).
+			TypeShape{val.TypeShapeV1}.MaxTotalSize(), TypeShape{val.TypeShapeV1}.MaxHandles, boundednessBounded).
 			BackingBufferType(),
 		BackingBufferTypeV2: computeAllocation(
-			TypeShape{val.TypeShapeV2}.MaxTotalSize(), boundednessBounded).
+			TypeShape{val.TypeShapeV2}.MaxTotalSize(), TypeShape{val.TypeShapeV2}.MaxHandles, boundednessBounded).
 			BackingBufferType(),
 		WireTableFrame:           WireTableFrame.template(name.Wire),
 		WireTableBuilder:         WireTableBuilder.template(name.Wire),

@@ -70,7 +70,7 @@ namespace test_emptystruct {
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>> handle_storage;
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>> handle_storage;
   ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>> decoded{
       outgoing.Call(
           client.handle(), handle_storage.view(bytes_.view()),
@@ -103,7 +103,7 @@ namespace test_emptystruct {
   ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>> request_message(
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>> handle_storage;
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>> handle_storage;
   ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>> decoded{
       outgoing.Call(
           client_end.handle(),
@@ -172,63 +172,27 @@ fidl::internal::WireWeakSyncClientImpl<::test_emptystruct::EmptyProtocol>::SendA
   if (status != ZX_OK) {
     return ::fidl::Status::TransportError(status, ::fidl::internal::kErrorWaitOneFailed);
   }
-  constexpr uint32_t kHandleAllocSize = ([]() constexpr {
-    uint32_t x = 0;
-    if (::fidl::TypeTraits<::fidl::internal::TransactionalEvent<::test_emptystruct::EmptyProtocol::Receive>>::kMaxNumHandles >= x) {
-      x = ::fidl::TypeTraits<::fidl::internal::TransactionalEvent<::test_emptystruct::EmptyProtocol::Receive>>::kMaxNumHandles;
-    }
-    if (x > ZX_CHANNEL_MAX_MSG_HANDLES) {
-      x = ZX_CHANNEL_MAX_MSG_HANDLES;
-    }
-    return x;
-  })();
-  static_assert(kHandleAllocSize <= ZX_CHANNEL_MAX_MSG_HANDLES);
-  ::fidl::internal::InlineMessageBuffer<24> read_storage;
-  std::array<zx_handle_t, kHandleAllocSize> read_handles;
-  // TODO(fxbug.dev/85734) Remove this channel-specific allocation.
-  std::array<fidl_channel_handle_metadata_t, kHandleAllocSize> read_handle_metadata;
+  ::fidl::internal::IncomingEventsStorage<::test_emptystruct::EmptyProtocol> event_storage;
+  ::fidl::ChannelMessageStorageView storage_view = event_storage.view();
   ::fidl::IncomingMessage msg = ::fidl::MessageRead(
-      zx::unowned_channel(client_end.handle()),
-      ::fidl::ChannelMessageStorageView{
-          .bytes = read_storage.view(),
-          .handles = read_handles.data(),
-          .handle_metadata = read_handle_metadata.data(),
-          .handle_capacity = kHandleAllocSize,
-      },
-      ReadOptions{.discardable = true});
+      zx::unowned_channel(client_end.handle()), storage_view, ReadOptions{.discardable = true});
   if (msg.status() == ZX_ERR_BUFFER_TOO_SMALL) {
-    // Message size is unexpectedly larger than calculated.
-    // This can only be due to a newer version of the protocol defining a new event,
-    // whose size exceeds the maximum of known events in the current protocol.
     return ::fidl::Status::UnexpectedMessage(
         ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorSyncEventBufferTooSmall);
   }
   if (!msg.ok()) {
     return msg;
   }
-  fidl_message_header_t* hdr = msg.header();
-  switch (hdr->ordinal) {
-    case ::test_emptystruct::kEmptyProtocol_Receive_Ordinal: {
-      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_emptystruct::EmptyProtocol::Receive>> decoded{::std::move(msg)};
-      if (!decoded.ok()) {
-        return ::fidl::Status(decoded);
-      }
-      auto* primary = &decoded.PrimaryObject()->body;
-      got_transitional_ = false;
-      Receive(primary);
-      if (got_transitional_) {
-        return ::fidl::Status::UnexpectedMessage(
-            ZX_ERR_NOT_SUPPORTED, ::fidl::internal::kErrorSyncEventUnhandledTransitionalEvent);
-      }
-      return ::fidl::Status::Ok();
-    }
-    default: {
-      return ::fidl::Status::UnknownOrdinal();
-    }
+  got_transitional_ = false;
+  fidl::internal::WireEventDispatcher<::test_emptystruct::EmptyProtocol> dispatcher{this};
+  ::fidl::Status dispatch_status = dispatcher.DispatchEvent(msg, &storage_view);
+  if (got_transitional_) {
+    return ::fidl::Status::UnexpectedMessage(
+        ZX_ERR_NOT_SUPPORTED, ::fidl::internal::kErrorSyncEventUnhandledTransitionalEvent);
   }
+  return dispatch_status;
 }
-
-std::optional<::fidl::UnbindInfo>
+::fidl::Status
 fidl::internal::WireEventDispatcher<::test_emptystruct::EmptyProtocol>::DispatchEvent(
     ::fidl::IncomingMessage& msg,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
@@ -236,18 +200,17 @@ fidl::internal::WireEventDispatcher<::test_emptystruct::EmptyProtocol>::Dispatch
     case ::test_emptystruct::kEmptyProtocol_Receive_Ordinal: {
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_emptystruct::EmptyProtocol::Receive>> decoded{std::move(msg)};
       if (!decoded.ok()) {
-        return ::fidl::UnbindInfo{decoded};
+        return decoded;
       }
       if (event_handler()) {
         auto* primary = &decoded.PrimaryObject()->body;
         event_handler()->Receive(primary);
       }
-      return std::nullopt;
+      return ::fidl::Status::Ok();
     }
     default:
-      break;
+      return ::fidl::Status::UnknownOrdinal();
   }
-  return ::fidl::UnbindInfo::UnknownOrdinal();
 }
 #endif  // __Fuchsia__
 

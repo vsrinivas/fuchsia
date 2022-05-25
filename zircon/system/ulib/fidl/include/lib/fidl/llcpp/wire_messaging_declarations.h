@@ -85,7 +85,7 @@ struct WireOrdinal;
 
 // |IncomingMessageStorage| allocates the necessary storage for receiving a
 // transactional message of type |FidlType| from its corresponding transport.
-// The allocation is be inline if reasonably small. It is useful for allocating
+// The allocation may be inline if reasonably small. It is useful for allocating
 // bespoke amount of memory when the code path is certain what is the message
 // type, such as during synchronous calls.
 //
@@ -96,17 +96,44 @@ struct WireOrdinal;
 template <typename FidlType>
 struct IncomingMessageStorage;
 
-// |IncomingHandleStorage| allocates the necessary storage for receiving the
-// handles for a transactional message of type |FidlType| from its corresponding
-// transport. It is useful for allocating bespoke amount of memory when the code
-// path is certain what is the message type, such as during synchronous calls.
+// |IncomingMessageHandleStorage| allocates the necessary storage for receiving
+// the handles for a transactional message of type |FidlType| from its
+// corresponding transport. It is useful for allocating bespoke amount of memory
+// when the code path is certain what is the message type, such as during
+// synchronous calls.
 //
 // |FidlType| must be a specialization of |TransactionalResponse|.
 //
 // This class is shared between wire and natural types - both receive messages
 // of the same shapes and then perform their own decoding.
 template <typename FidlType>
-struct IncomingHandleStorage;
+struct IncomingMessageHandleStorage;
+
+// |IncomingEventsStorage| allocates the necessary storage for receiving any one
+// of the possible events defined in |FidlProtocol| from its corresponding
+// transport. The allocation may be inline if reasonably small. It is useful for
+// allocating bespoke amount of memory when the code path is certain what is the
+// protocol type, such as during synchronous event handling.
+//
+// |FidlProtocol| must be a protocol marker type.
+//
+// This class is shared between wire and natural types - both receive messages
+// of the same shapes and then perform their own decoding.
+template <typename FidlProtocol>
+struct IncomingEventsStorage;
+
+// |IncomingEventsHandleStorage| allocates the necessary storage for receiving
+// the handles for any one of the possible events defined in |FidlProtocol| from
+// its corresponding transport. It is useful for allocating bespoke amount of
+// memory when the code path is certain what is the protocol type, such as
+// during synchronous event handling.
+//
+// |FidlProtocol| must be a protocol marker type.
+//
+// This class is shared between wire and natural types - both receive messages
+// of the same shapes and then perform their own decoding.
+template <typename FidlProtocol>
+struct IncomingEventsHandleStorage;
 
 #ifdef __Fuchsia__
 

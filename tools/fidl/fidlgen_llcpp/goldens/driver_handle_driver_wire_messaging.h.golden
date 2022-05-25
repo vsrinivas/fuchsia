@@ -196,7 +196,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_driverhandle::HandlesInProto
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
 };
 template <>
-class ::fidl::internal::WireEventHandlerInterface<::test_driverhandle::HandlesInProtocol> {
+class ::fidl::internal::WireEventHandlerInterface<::test_driverhandle::HandlesInProtocol> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
@@ -225,15 +225,10 @@ class ::fidl::WireSyncEventHandler<::test_driverhandle::HandlesInProtocol> : pub
 };
 
 template <>
-class ::fidl::internal::WireEventDispatcher<::test_driverhandle::HandlesInProtocol> final : public ::fidl::internal::IncomingEventDispatcher<::fdf::WireAsyncEventHandler<::test_driverhandle::HandlesInProtocol>> {
+class ::fidl::internal::WireEventDispatcher<::test_driverhandle::HandlesInProtocol> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::WireEventHandlerInterface<::test_driverhandle::HandlesInProtocol>> {
  public:
-  explicit WireEventDispatcher(::fdf::WireAsyncEventHandler<::test_driverhandle::HandlesInProtocol>* event_handler)
+  explicit WireEventDispatcher(::fidl::internal::WireEventHandlerInterface<::test_driverhandle::HandlesInProtocol>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      ::fidl::internal::MessageStorageViewBase* storage_view) override;
 };
 
 template <>
@@ -311,7 +306,7 @@ namespace fidl {
 #ifdef __Fuchsia__
 }  // namespace fidl
 template <>
-class ::fidl::internal::WireEventHandlerInterface<::test_driverhandle::DriverProtocol> {
+class ::fidl::internal::WireEventHandlerInterface<::test_driverhandle::DriverProtocol> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
@@ -340,15 +335,10 @@ class ::fidl::WireSyncEventHandler<::test_driverhandle::DriverProtocol> : public
 };
 
 template <>
-class ::fidl::internal::WireEventDispatcher<::test_driverhandle::DriverProtocol> final : public ::fidl::internal::IncomingEventDispatcher<::fdf::WireAsyncEventHandler<::test_driverhandle::DriverProtocol>> {
+class ::fidl::internal::WireEventDispatcher<::test_driverhandle::DriverProtocol> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::WireEventHandlerInterface<::test_driverhandle::DriverProtocol>> {
  public:
-  explicit WireEventDispatcher(::fdf::WireAsyncEventHandler<::test_driverhandle::DriverProtocol>* event_handler)
+  explicit WireEventDispatcher(::fidl::internal::WireEventHandlerInterface<::test_driverhandle::DriverProtocol>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      ::fidl::internal::MessageStorageViewBase* storage_view) override;
 };
 
 template <>

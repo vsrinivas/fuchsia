@@ -305,8 +305,8 @@ static_assert(offsetof(::fidl::WireResponse<::test_anonymous::SomeProtocol::Some
 #ifdef __Fuchsia__
 }  // namespace fidl
 template <>
-struct ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_anonymous::SomeProtocol::SomeMethod>> final
-    : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_anonymous::SomeProtocol::SomeMethod>>> {
+struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_anonymous::SomeProtocol::SomeMethod>> final
+    : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_anonymous::SomeProtocol::SomeMethod>>> {
   static constexpr uint32_t kNumHandles =
       fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>, fidl::MessageDirection::kReceiving>();
 
@@ -318,7 +318,22 @@ template <>
 struct ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_anonymous::SomeProtocol::SomeMethod>> final
     : public ::fidl::internal::ChannelMessageStorageBase<::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_anonymous::SomeProtocol::SomeMethod>>> {
   ::fidl::internal::InlineMessageBuffer<48> bytes_;
-  ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_anonymous::SomeProtocol::SomeMethod>> handles_storage_;
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_anonymous::SomeProtocol::SomeMethod>> handles_storage_;
+};
+template <>
+struct ::fidl::internal::IncomingEventsHandleStorage<::test_anonymous::SomeProtocol> final : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingEventsHandleStorage<::test_anonymous::SomeProtocol>> {
+ public:
+  static constexpr uint32_t kNumHandles = 0;
+
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
+
+template <>
+struct ::fidl::internal::IncomingEventsStorage<::test_anonymous::SomeProtocol> final : public ::fidl::internal::ChannelMessageStorageBase<::fidl::internal::IncomingEventsStorage<::test_anonymous::SomeProtocol>> {
+ public:
+  ::fidl::internal::InlineMessageBuffer<16> bytes_;
+  ::fidl::internal::IncomingEventsHandleStorage<::test_anonymous::SomeProtocol> handles_storage_;
 };
 
 template <>
@@ -435,7 +450,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_anonymous::SomeProtocol::So
   std::optional<::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>> result_ = std::nullopt;
 };
 template <>
-class ::fidl::internal::WireEventHandlerInterface<::test_anonymous::SomeProtocol> {
+class ::fidl::internal::WireEventHandlerInterface<::test_anonymous::SomeProtocol> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
@@ -464,15 +479,10 @@ class ::fidl::WireSyncEventHandler<::test_anonymous::SomeProtocol> : public ::fi
 };
 
 template <>
-class ::fidl::internal::WireEventDispatcher<::test_anonymous::SomeProtocol> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::WireAsyncEventHandler<::test_anonymous::SomeProtocol>> {
+class ::fidl::internal::WireEventDispatcher<::test_anonymous::SomeProtocol> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::WireEventHandlerInterface<::test_anonymous::SomeProtocol>> {
  public:
-  explicit WireEventDispatcher(::fidl::WireAsyncEventHandler<::test_anonymous::SomeProtocol>* event_handler)
+  explicit WireEventDispatcher(::fidl::internal::WireEventHandlerInterface<::test_anonymous::SomeProtocol>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      ::fidl::internal::MessageStorageViewBase* storage_view) override;
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a

@@ -18,54 +18,25 @@
   if (status != ZX_OK) {
     return ::fidl::Status::TransportError(status, ::fidl::internal::kErrorWaitOneFailed);
   }
-  constexpr uint32_t kHandleAllocSize = ([]() constexpr {
-    uint32_t x = 0;
-    if (x > ZX_CHANNEL_MAX_MSG_HANDLES) {
-      x = ZX_CHANNEL_MAX_MSG_HANDLES;
-    }
-    return x;
-  })();
-  static_assert(kHandleAllocSize <= ZX_CHANNEL_MAX_MSG_HANDLES);
-  ::fidl::internal::InlineMessageBuffer<16> read_storage;
-  std::array<zx_handle_t, kHandleAllocSize> read_handles;
-  // TODO(fxbug.dev/85734) Remove this channel-specific allocation.
-  std::array<fidl_channel_handle_metadata_t, kHandleAllocSize> read_handle_metadata;
+  ::fidl::internal::IncomingEventsStorage<::test_bindingsdenylist::Allowed> event_storage;
+  ::fidl::ChannelMessageStorageView storage_view = event_storage.view();
   ::fidl::IncomingMessage msg = ::fidl::MessageRead(
-      zx::unowned_channel(client_end.handle()),
-      ::fidl::ChannelMessageStorageView{
-          .bytes = read_storage.view(),
-          .handles = read_handles.data(),
-          .handle_metadata = read_handle_metadata.data(),
-          .handle_capacity = kHandleAllocSize,
-      },
-      ReadOptions{.discardable = true});
+      zx::unowned_channel(client_end.handle()), storage_view, ReadOptions{.discardable = true});
   if (msg.status() == ZX_ERR_BUFFER_TOO_SMALL) {
-    // Message size is unexpectedly larger than calculated.
-    // This can only be due to a newer version of the protocol defining a new event,
-    // whose size exceeds the maximum of known events in the current protocol.
     return ::fidl::Status::UnexpectedMessage(
         ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorSyncEventBufferTooSmall);
   }
   if (!msg.ok()) {
     return msg;
   }
-  fidl_message_header_t* hdr = msg.header();
-  switch (hdr->ordinal) {
-    default: {
-      return ::fidl::Status::UnknownOrdinal();
-    }
+  got_transitional_ = false;
+  fidl::internal::WireEventDispatcher<::test_bindingsdenylist::Allowed> dispatcher{this};
+  ::fidl::Status dispatch_status = dispatcher.DispatchEvent(msg, &storage_view);
+  if (got_transitional_) {
+    return ::fidl::Status::UnexpectedMessage(
+        ZX_ERR_NOT_SUPPORTED, ::fidl::internal::kErrorSyncEventUnhandledTransitionalEvent);
   }
-}
-
-std::optional<::fidl::UnbindInfo>
-fidl::internal::WireEventDispatcher<::test_bindingsdenylist::Allowed>::DispatchEvent(
-    ::fidl::IncomingMessage& msg,
-    ::fidl::internal::MessageStorageViewBase* storage_view) {
-  switch (msg.header()->ordinal) {
-    default:
-      break;
-  }
-  return ::fidl::UnbindInfo::UnknownOrdinal();
+  return dispatch_status;
 }
 #endif  // __Fuchsia__
 
@@ -111,7 +82,7 @@ namespace test_bindingsdenylist {
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocol>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocol>> handle_storage;
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocol>> handle_storage;
   ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocol>> decoded{
       outgoing.Call(
           client.handle(), handle_storage.view(bytes_.view()),
@@ -144,7 +115,7 @@ namespace test_bindingsdenylist {
   ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocol>> request_message(
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocol>> handle_storage;
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocol>> handle_storage;
   ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocol>> decoded{
       outgoing.Call(
           client_end.handle(),
@@ -192,54 +163,25 @@ fidl::internal::WireWeakSyncClientImpl<::test_bindingsdenylist::OnlyLibfuzzerAnd
   if (status != ZX_OK) {
     return ::fidl::Status::TransportError(status, ::fidl::internal::kErrorWaitOneFailed);
   }
-  constexpr uint32_t kHandleAllocSize = ([]() constexpr {
-    uint32_t x = 0;
-    if (x > ZX_CHANNEL_MAX_MSG_HANDLES) {
-      x = ZX_CHANNEL_MAX_MSG_HANDLES;
-    }
-    return x;
-  })();
-  static_assert(kHandleAllocSize <= ZX_CHANNEL_MAX_MSG_HANDLES);
-  ::fidl::internal::InlineMessageBuffer<16> read_storage;
-  std::array<zx_handle_t, kHandleAllocSize> read_handles;
-  // TODO(fxbug.dev/85734) Remove this channel-specific allocation.
-  std::array<fidl_channel_handle_metadata_t, kHandleAllocSize> read_handle_metadata;
+  ::fidl::internal::IncomingEventsStorage<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> event_storage;
+  ::fidl::ChannelMessageStorageView storage_view = event_storage.view();
   ::fidl::IncomingMessage msg = ::fidl::MessageRead(
-      zx::unowned_channel(client_end.handle()),
-      ::fidl::ChannelMessageStorageView{
-          .bytes = read_storage.view(),
-          .handles = read_handles.data(),
-          .handle_metadata = read_handle_metadata.data(),
-          .handle_capacity = kHandleAllocSize,
-      },
-      ReadOptions{.discardable = true});
+      zx::unowned_channel(client_end.handle()), storage_view, ReadOptions{.discardable = true});
   if (msg.status() == ZX_ERR_BUFFER_TOO_SMALL) {
-    // Message size is unexpectedly larger than calculated.
-    // This can only be due to a newer version of the protocol defining a new event,
-    // whose size exceeds the maximum of known events in the current protocol.
     return ::fidl::Status::UnexpectedMessage(
         ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorSyncEventBufferTooSmall);
   }
   if (!msg.ok()) {
     return msg;
   }
-  fidl_message_header_t* hdr = msg.header();
-  switch (hdr->ordinal) {
-    default: {
-      return ::fidl::Status::UnknownOrdinal();
-    }
+  got_transitional_ = false;
+  fidl::internal::WireEventDispatcher<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> dispatcher{this};
+  ::fidl::Status dispatch_status = dispatcher.DispatchEvent(msg, &storage_view);
+  if (got_transitional_) {
+    return ::fidl::Status::UnexpectedMessage(
+        ZX_ERR_NOT_SUPPORTED, ::fidl::internal::kErrorSyncEventUnhandledTransitionalEvent);
   }
-}
-
-std::optional<::fidl::UnbindInfo>
-fidl::internal::WireEventDispatcher<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>::DispatchEvent(
-    ::fidl::IncomingMessage& msg,
-    ::fidl::internal::MessageStorageViewBase* storage_view) {
-  switch (msg.header()->ordinal) {
-    default:
-      break;
-  }
-  return ::fidl::UnbindInfo::UnknownOrdinal();
+  return dispatch_status;
 }
 #endif  // __Fuchsia__
 
@@ -337,54 +279,25 @@ void ::fidl::internal::TransactionalResponse<::test_bindingsdenylist::OnlyLibfuz
   if (status != ZX_OK) {
     return ::fidl::Status::TransportError(status, ::fidl::internal::kErrorWaitOneFailed);
   }
-  constexpr uint32_t kHandleAllocSize = ([]() constexpr {
-    uint32_t x = 0;
-    if (x > ZX_CHANNEL_MAX_MSG_HANDLES) {
-      x = ZX_CHANNEL_MAX_MSG_HANDLES;
-    }
-    return x;
-  })();
-  static_assert(kHandleAllocSize <= ZX_CHANNEL_MAX_MSG_HANDLES);
-  ::fidl::internal::InlineMessageBuffer<16> read_storage;
-  std::array<zx_handle_t, kHandleAllocSize> read_handles;
-  // TODO(fxbug.dev/85734) Remove this channel-specific allocation.
-  std::array<fidl_channel_handle_metadata_t, kHandleAllocSize> read_handle_metadata;
+  ::fidl::internal::IncomingEventsStorage<::test_bindingsdenylist::OnlyCppAndDeps> event_storage;
+  ::fidl::ChannelMessageStorageView storage_view = event_storage.view();
   ::fidl::IncomingMessage msg = ::fidl::MessageRead(
-      zx::unowned_channel(client_end.handle()),
-      ::fidl::ChannelMessageStorageView{
-          .bytes = read_storage.view(),
-          .handles = read_handles.data(),
-          .handle_metadata = read_handle_metadata.data(),
-          .handle_capacity = kHandleAllocSize,
-      },
-      ReadOptions{.discardable = true});
+      zx::unowned_channel(client_end.handle()), storage_view, ReadOptions{.discardable = true});
   if (msg.status() == ZX_ERR_BUFFER_TOO_SMALL) {
-    // Message size is unexpectedly larger than calculated.
-    // This can only be due to a newer version of the protocol defining a new event,
-    // whose size exceeds the maximum of known events in the current protocol.
     return ::fidl::Status::UnexpectedMessage(
         ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorSyncEventBufferTooSmall);
   }
   if (!msg.ok()) {
     return msg;
   }
-  fidl_message_header_t* hdr = msg.header();
-  switch (hdr->ordinal) {
-    default: {
-      return ::fidl::Status::UnknownOrdinal();
-    }
+  got_transitional_ = false;
+  fidl::internal::WireEventDispatcher<::test_bindingsdenylist::OnlyCppAndDeps> dispatcher{this};
+  ::fidl::Status dispatch_status = dispatcher.DispatchEvent(msg, &storage_view);
+  if (got_transitional_) {
+    return ::fidl::Status::UnexpectedMessage(
+        ZX_ERR_NOT_SUPPORTED, ::fidl::internal::kErrorSyncEventUnhandledTransitionalEvent);
   }
-}
-
-std::optional<::fidl::UnbindInfo>
-fidl::internal::WireEventDispatcher<::test_bindingsdenylist::OnlyCppAndDeps>::DispatchEvent(
-    ::fidl::IncomingMessage& msg,
-    ::fidl::internal::MessageStorageViewBase* storage_view) {
-  switch (msg.header()->ordinal) {
-    default:
-      break;
-  }
-  return ::fidl::UnbindInfo::UnknownOrdinal();
+  return dispatch_status;
 }
 #endif  // __Fuchsia__
 
@@ -554,54 +467,25 @@ namespace test_bindingsdenylist {
   if (status != ZX_OK) {
     return ::fidl::Status::TransportError(status, ::fidl::internal::kErrorWaitOneFailed);
   }
-  constexpr uint32_t kHandleAllocSize = ([]() constexpr {
-    uint32_t x = 0;
-    if (x > ZX_CHANNEL_MAX_MSG_HANDLES) {
-      x = ZX_CHANNEL_MAX_MSG_HANDLES;
-    }
-    return x;
-  })();
-  static_assert(kHandleAllocSize <= ZX_CHANNEL_MAX_MSG_HANDLES);
-  ::fidl::internal::InlineMessageBuffer<16> read_storage;
-  std::array<zx_handle_t, kHandleAllocSize> read_handles;
-  // TODO(fxbug.dev/85734) Remove this channel-specific allocation.
-  std::array<fidl_channel_handle_metadata_t, kHandleAllocSize> read_handle_metadata;
+  ::fidl::internal::IncomingEventsStorage<::test_bindingsdenylist::ImportsSameNameContext> event_storage;
+  ::fidl::ChannelMessageStorageView storage_view = event_storage.view();
   ::fidl::IncomingMessage msg = ::fidl::MessageRead(
-      zx::unowned_channel(client_end.handle()),
-      ::fidl::ChannelMessageStorageView{
-          .bytes = read_storage.view(),
-          .handles = read_handles.data(),
-          .handle_metadata = read_handle_metadata.data(),
-          .handle_capacity = kHandleAllocSize,
-      },
-      ReadOptions{.discardable = true});
+      zx::unowned_channel(client_end.handle()), storage_view, ReadOptions{.discardable = true});
   if (msg.status() == ZX_ERR_BUFFER_TOO_SMALL) {
-    // Message size is unexpectedly larger than calculated.
-    // This can only be due to a newer version of the protocol defining a new event,
-    // whose size exceeds the maximum of known events in the current protocol.
     return ::fidl::Status::UnexpectedMessage(
         ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorSyncEventBufferTooSmall);
   }
   if (!msg.ok()) {
     return msg;
   }
-  fidl_message_header_t* hdr = msg.header();
-  switch (hdr->ordinal) {
-    default: {
-      return ::fidl::Status::UnknownOrdinal();
-    }
+  got_transitional_ = false;
+  fidl::internal::WireEventDispatcher<::test_bindingsdenylist::ImportsSameNameContext> dispatcher{this};
+  ::fidl::Status dispatch_status = dispatcher.DispatchEvent(msg, &storage_view);
+  if (got_transitional_) {
+    return ::fidl::Status::UnexpectedMessage(
+        ZX_ERR_NOT_SUPPORTED, ::fidl::internal::kErrorSyncEventUnhandledTransitionalEvent);
   }
-}
-
-std::optional<::fidl::UnbindInfo>
-fidl::internal::WireEventDispatcher<::test_bindingsdenylist::ImportsSameNameContext>::DispatchEvent(
-    ::fidl::IncomingMessage& msg,
-    ::fidl::internal::MessageStorageViewBase* storage_view) {
-  switch (msg.header()->ordinal) {
-    default:
-      break;
-  }
-  return ::fidl::UnbindInfo::UnknownOrdinal();
+  return dispatch_status;
 }
 #endif  // __Fuchsia__
 
@@ -716,7 +600,7 @@ extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBindingOnlyDenySyzkal
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>> handle_storage;
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>> handle_storage;
   ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>> decoded{
       outgoing.Call(
           client.handle(), handle_storage.view(bytes_.view()),
@@ -757,7 +641,7 @@ namespace test_bindingsdenylist {
   ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>> request_message(
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>> handle_storage;
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>> handle_storage;
   ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>> decoded{
       outgoing.Call(
           client_end.handle(),
@@ -787,7 +671,7 @@ namespace test_bindingsdenylist {
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>> handle_storage;
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>> handle_storage;
   ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>> decoded{
       outgoing.Call(
           client.handle(), handle_storage.view(bytes_.view()),
@@ -828,7 +712,7 @@ namespace test_bindingsdenylist {
   ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>> request_message(
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>> handle_storage;
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>> handle_storage;
   ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>> decoded{
       outgoing.Call(
           client_end.handle(),
@@ -858,7 +742,7 @@ namespace test_bindingsdenylist {
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>> handle_storage;
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>> handle_storage;
   ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>> decoded{
       outgoing.Call(
           client.handle(), handle_storage.view(bytes_.view()),
@@ -899,7 +783,7 @@ namespace test_bindingsdenylist {
   ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>> request_message(
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>> handle_storage;
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>> handle_storage;
   ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>> decoded{
       outgoing.Call(
           client_end.handle(),
@@ -929,7 +813,7 @@ namespace test_bindingsdenylist {
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>> handle_storage;
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>> handle_storage;
   ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>> decoded{
       outgoing.Call(
           client.handle(), handle_storage.view(bytes_.view()),
@@ -970,7 +854,7 @@ namespace test_bindingsdenylist {
   ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>> request_message(
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>> handle_storage;
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>> handle_storage;
   ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>> decoded{
       outgoing.Call(
           client_end.handle(),
@@ -1000,7 +884,7 @@ namespace test_bindingsdenylist {
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>> handle_storage;
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>> handle_storage;
   ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>> decoded{
       outgoing.Call(
           client.handle(), handle_storage.view(bytes_.view()),
@@ -1041,7 +925,7 @@ namespace test_bindingsdenylist {
   ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>> request_message(
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  ::fidl::internal::IncomingHandleStorage<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>> handle_storage;
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>> handle_storage;
   ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>> decoded{
       outgoing.Call(
           client_end.handle(),
@@ -1181,54 +1065,25 @@ fidl::internal::WireWeakSyncClientImpl<::test_bindingsdenylist::DenyEachBinding>
   if (status != ZX_OK) {
     return ::fidl::Status::TransportError(status, ::fidl::internal::kErrorWaitOneFailed);
   }
-  constexpr uint32_t kHandleAllocSize = ([]() constexpr {
-    uint32_t x = 0;
-    if (x > ZX_CHANNEL_MAX_MSG_HANDLES) {
-      x = ZX_CHANNEL_MAX_MSG_HANDLES;
-    }
-    return x;
-  })();
-  static_assert(kHandleAllocSize <= ZX_CHANNEL_MAX_MSG_HANDLES);
-  ::fidl::internal::InlineMessageBuffer<48> read_storage;
-  std::array<zx_handle_t, kHandleAllocSize> read_handles;
-  // TODO(fxbug.dev/85734) Remove this channel-specific allocation.
-  std::array<fidl_channel_handle_metadata_t, kHandleAllocSize> read_handle_metadata;
+  ::fidl::internal::IncomingEventsStorage<::test_bindingsdenylist::DenyEachBinding> event_storage;
+  ::fidl::ChannelMessageStorageView storage_view = event_storage.view();
   ::fidl::IncomingMessage msg = ::fidl::MessageRead(
-      zx::unowned_channel(client_end.handle()),
-      ::fidl::ChannelMessageStorageView{
-          .bytes = read_storage.view(),
-          .handles = read_handles.data(),
-          .handle_metadata = read_handle_metadata.data(),
-          .handle_capacity = kHandleAllocSize,
-      },
-      ReadOptions{.discardable = true});
+      zx::unowned_channel(client_end.handle()), storage_view, ReadOptions{.discardable = true});
   if (msg.status() == ZX_ERR_BUFFER_TOO_SMALL) {
-    // Message size is unexpectedly larger than calculated.
-    // This can only be due to a newer version of the protocol defining a new event,
-    // whose size exceeds the maximum of known events in the current protocol.
     return ::fidl::Status::UnexpectedMessage(
         ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorSyncEventBufferTooSmall);
   }
   if (!msg.ok()) {
     return msg;
   }
-  fidl_message_header_t* hdr = msg.header();
-  switch (hdr->ordinal) {
-    default: {
-      return ::fidl::Status::UnknownOrdinal();
-    }
+  got_transitional_ = false;
+  fidl::internal::WireEventDispatcher<::test_bindingsdenylist::DenyEachBinding> dispatcher{this};
+  ::fidl::Status dispatch_status = dispatcher.DispatchEvent(msg, &storage_view);
+  if (got_transitional_) {
+    return ::fidl::Status::UnexpectedMessage(
+        ZX_ERR_NOT_SUPPORTED, ::fidl::internal::kErrorSyncEventUnhandledTransitionalEvent);
   }
-}
-
-std::optional<::fidl::UnbindInfo>
-fidl::internal::WireEventDispatcher<::test_bindingsdenylist::DenyEachBinding>::DispatchEvent(
-    ::fidl::IncomingMessage& msg,
-    ::fidl::internal::MessageStorageViewBase* storage_view) {
-  switch (msg.header()->ordinal) {
-    default:
-      break;
-  }
-  return ::fidl::UnbindInfo::UnknownOrdinal();
+  return dispatch_status;
 }
 #endif  // __Fuchsia__
 
