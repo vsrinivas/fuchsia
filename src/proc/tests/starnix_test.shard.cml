@@ -2,6 +2,12 @@
     program: {
         runner: "starnix_test_runner",
     },
+    children: [
+        {
+            name: "scenic",
+            url: "#meta/scenic_realm.cm",
+        },
+    ],
 
     // This collection will contain the starnix runner that will run the linux
     // binary.
@@ -30,13 +36,19 @@
                 "fuchsia.logger.LogSink",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",
+                "fuchsia.vulkan.loader.Loader",
+            ],
+            from: "parent",
+            to: [ "#runners" ],
+        },
+        {
+            protocol: [
                 "fuchsia.ui.composition.Allocator",
                 "fuchsia.ui.composition.Flatland",
                 "fuchsia.ui.input3.Keyboard",
                 "fuchsia.ui.scenic.Scenic",
-                "fuchsia.vulkan.loader.Loader",
             ],
-            from: "parent",
+            from: "#scenic",
             to: [ "#runners" ],
         },
         {
