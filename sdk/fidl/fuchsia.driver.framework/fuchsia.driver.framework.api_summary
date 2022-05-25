@@ -8,16 +8,6 @@ struct/member fuchsia.driver.framework/DeviceGroupProperty.condition fuchsia.dri
 struct/member fuchsia.driver.framework/DeviceGroupProperty.key fuchsia.driver.framework/NodePropertyKey
 struct/member fuchsia.driver.framework/DeviceGroupProperty.values vector<fuchsia.driver.framework/NodePropertyValue>:64
 struct fuchsia.driver.framework/DeviceGroupProperty
-protocol/member fuchsia.driver.framework/Driver.Stop()
-protocol fuchsia.driver.framework/Driver
-protocol/member fuchsia.driver.framework/DriverHost.GetProcessKoid() -> (fuchsia.driver.framework/DriverHost_GetProcessKoid_Result result)
-protocol/member fuchsia.driver.framework/DriverHost.Start(fuchsia.driver.framework/DriverStartArgs start_args,server_end:fuchsia.driver.framework/Driver driver)
-protocol fuchsia.driver.framework/DriverHost
-struct/member fuchsia.driver.framework/DriverHost_GetProcessKoid_Response.koid uint64
-struct fuchsia.driver.framework/DriverHost_GetProcessKoid_Response
-union/member fuchsia.driver.framework/DriverHost_GetProcessKoid_Result.err int32
-union/member fuchsia.driver.framework/DriverHost_GetProcessKoid_Result.response fuchsia.driver.framework/DriverHost_GetProcessKoid_Response
-strict union fuchsia.driver.framework/DriverHost_GetProcessKoid_Result
 table/member fuchsia.driver.framework/DriverStartArgs.config zx/handle:VMO
 table/member fuchsia.driver.framework/DriverStartArgs.node client_end:fuchsia.driver.framework/Node
 table/member fuchsia.driver.framework/DriverStartArgs.ns vector<fuchsia.component.runner/ComponentNamespaceEntry>:32
@@ -26,7 +16,6 @@ table/member fuchsia.driver.framework/DriverStartArgs.program fuchsia.data/Dicti
 table/member fuchsia.driver.framework/DriverStartArgs.symbols vector<fuchsia.driver.framework/NodeSymbol>:64
 table/member fuchsia.driver.framework/DriverStartArgs.url string:4096
 resource table fuchsia.driver.framework/DriverStartArgs
-const fuchsia.driver.framework/MAX_CAPABILITY_COUNT uint8 64
 const fuchsia.driver.framework/MAX_NAMESPACE_COUNT uint32 32
 const fuchsia.driver.framework/MAX_NODE_NAME_LENGTH uint8 128
 const fuchsia.driver.framework/MAX_OFFER_COUNT uint32 128
