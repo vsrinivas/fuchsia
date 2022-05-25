@@ -23,7 +23,6 @@
 #include "src/developer/forensics/feedback/reboot_log/annotations.h"
 #include "src/developer/forensics/feedback/reboot_log/reboot_log.h"
 #include "src/developer/forensics/feedback/redactor_factory.h"
-#include "src/developer/forensics/feedback_data/default_annotations.h"
 #include "src/developer/forensics/utils/cobalt/logger.h"
 #include "src/developer/forensics/utils/component/component.h"
 #include "src/lib/files/file.h"

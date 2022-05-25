@@ -58,7 +58,6 @@ source_set("main") {
     "reboot_log",
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/crash_reports:default_annotations",
-    "//src/developer/forensics/feedback_data:default_annotations",
     "//src/developer/forensics/utils/component",
     "//src/lib/files",
     "//src/lib/uuid",

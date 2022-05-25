@@ -125,24 +125,6 @@ source_set("data_provider_controller") {
   ]
 }
 
-source_set("default_annotations") {
-  sources = [
-    "default_annotations.cc",
-    "default_annotations.h",
-  ]
-
-  public_deps = [
-    "//src/developer/forensics/feedback:constants",
-    "//src/developer/forensics/utils:errors",
-  ]
-
-  deps = [
-    "//sdk/lib/syslog/cpp",
-    "//src/lib/files",
-    "//src/lib/fxl",
-  ]
-}
-
 source_set("errors") {
   sources = [ "errors.h" ]
 

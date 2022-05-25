@@ -118,23 +118,6 @@ executable("data_provider_controller_unittest_exe") {
   ]
 }
 
-executable("default_annotations_unittest_exe") {
-  testonly = true
-
-  # "default_annotations_unittest" is rather generic for the default_output_dir that is set
-  # to root_out_dir so instead we write the binary to target_out_dir.
-  output_dir = target_out_dir
-  sources = [ "default_annotations_unittest.cc" ]
-
-  deps = [
-    "//src/developer/forensics/feedback_data:default_annotations",
-    "//src/lib/files",
-    "//src/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-  ]
-}
-
 executable("inspect_data_budget_unittest_exe") {
   testonly = true
 
@@ -376,13 +359,6 @@ fuchsia_unittest_component("data_provider_controller_unittest") {
   ]
 }
 
-fuchsia_unittest_component("default_annotations_unittest") {
-  deps = [
-    ":default_annotations_unittest_exe",
-    "//src/sys/test_runners:tmp_storage",
-  ]
-}
-
 fuchsia_unittest_component("inspect_data_budget_unittest") {
   deps = [
     ":inspect_data_budget_unittest_exe",
@@ -447,7 +423,6 @@ fuchsia_test_package("feedback-data-tests") {
     ":config_unittest",
     ":data_provider_unittest",
     ":data_provider_controller_unittest",
-    ":default_annotations_unittest",
     ":inspect_data_budget_unittest",
     ":inspect_unittest",
     ":log_source_unittest",
