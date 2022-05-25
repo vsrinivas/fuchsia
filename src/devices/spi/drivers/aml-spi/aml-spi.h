@@ -25,7 +25,7 @@
 namespace spi {
 
 class AmlSpi;
-using DeviceType = ddk::Device<AmlSpi>;
+using DeviceType = ddk::Device<AmlSpi, ddk::Unbindable>;
 
 class AmlSpi : public DeviceType, public ddk::SpiImplProtocol<AmlSpi, ddk::base_protocol> {
  public:
@@ -34,6 +34,8 @@ class AmlSpi : public DeviceType, public ddk::SpiImplProtocol<AmlSpi, ddk::base_
 
   // Device protocol implementation.
   void DdkRelease();
+
+  void DdkUnbind(ddk::UnbindTxn txn);
 
   uint32_t SpiImplGetChipSelectCount() { return static_cast<uint32_t>(chips_.size()); }
   zx_status_t SpiImplExchange(uint32_t cs, const uint8_t* txdata, size_t txdata_size,
@@ -123,6 +125,8 @@ class AmlSpi : public DeviceType, public ddk::SpiImplProtocol<AmlSpi, ddk::base_
 
   bool UseDma(size_t size) const TA_REQ(bus_lock_);
 
+  void Shutdown();
+
   // Shims to support thread annotations on ChipInfo members.
   const ddk::GpioProtocolClient& gpio(uint32_t chip_select) TA_REQ(bus_lock_) {
     return chips_[chip_select].gpio;
@@ -147,6 +151,7 @@ class AmlSpi : public DeviceType, public ddk::SpiImplProtocol<AmlSpi, ddk::base_
   zx::bti bti_;
   DmaBuffer tx_buffer_ TA_GUARDED(bus_lock_);
   DmaBuffer rx_buffer_ TA_GUARDED(bus_lock_);
+  bool shutdown_ TA_GUARDED(bus_lock_) = false;
 };
 
 }  // namespace spi

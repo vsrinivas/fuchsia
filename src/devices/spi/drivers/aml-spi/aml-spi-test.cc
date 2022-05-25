@@ -784,20 +784,22 @@ TEST(AmlSpiTest, NormalClockMode) {
       },
   };
 
+  // Must outlive bind.
+  auto conreg = ConReg::Get().FromValue(0);
+  auto enhanced_cntl = EnhanceCntl::Get().FromValue(0);
+  auto testreg = TestReg::Get().FromValue(0);
+
   FakeDdkSpi bind;
   bind.SetMetadata(DEVICE_METADATA_AMLSPI_CONFIG, kTestSpiConfig, sizeof(kTestSpiConfig));
 
-  auto conreg = ConReg::Get().FromValue(0);
   bind.mmio()[AML_SPI_CONREG].SetWriteCallback(
       [&conreg](uint32_t value) { conreg.set_reg_value(value); });
 
   bind.mmio()[AML_SPI_CONREG].SetReadCallback([&conreg]() { return conreg.reg_value(); });
 
-  auto enhanced_cntl = EnhanceCntl::Get().FromValue(0);
   bind.mmio()[AML_SPI_ENHANCE_CNTL].SetWriteCallback(
       [&enhanced_cntl](uint32_t value) { enhanced_cntl.set_reg_value(value); });
 
-  auto testreg = TestReg::Get().FromValue(0);
   bind.mmio()[AML_SPI_TESTREG].SetWriteCallback(
       [&testreg](uint32_t value) { testreg.set_reg_value(value); });
 
@@ -828,20 +830,22 @@ TEST(AmlSpiTest, EnhancedClockMode) {
       },
   };
 
+  // Must outlive bind.
+  auto conreg = ConReg::Get().FromValue(0);
+  auto enhanced_cntl = EnhanceCntl::Get().FromValue(0);
+  auto testreg = TestReg::Get().FromValue(0);
+
   FakeDdkSpi bind;
   bind.SetMetadata(DEVICE_METADATA_AMLSPI_CONFIG, kTestSpiConfig, sizeof(kTestSpiConfig));
 
-  auto conreg = ConReg::Get().FromValue(0);
   bind.mmio()[AML_SPI_CONREG].SetWriteCallback(
       [&conreg](uint32_t value) { conreg.set_reg_value(value); });
 
   bind.mmio()[AML_SPI_CONREG].SetReadCallback([&conreg]() { return conreg.reg_value(); });
 
-  auto enhanced_cntl = EnhanceCntl::Get().FromValue(0);
   bind.mmio()[AML_SPI_ENHANCE_CNTL].SetWriteCallback(
       [&enhanced_cntl](uint32_t value) { enhanced_cntl.set_reg_value(value); });
 
-  auto testreg = TestReg::Get().FromValue(0);
   bind.mmio()[AML_SPI_TESTREG].SetWriteCallback(
       [&testreg](uint32_t value) { testreg.set_reg_value(value); });
 
@@ -1119,6 +1123,42 @@ TEST(AmlSpiTest, ExchangeDmaClientReversesBuffer) {
   EXPECT_EQ(rx_paddr, kDmaPaddrs[1]);
 
   EXPECT_FALSE(bind.ControllerReset());
+}
+
+TEST(AmlSpiTest, Shutdown) {
+  // Must outlive bind.
+  bool dmareg_cleared = false;
+  bool conreg_cleared = false;
+
+  FakeDdkSpi bind;
+
+  EXPECT_OK(AmlSpi::Create(nullptr, fake_ddk::kFakeParent));
+
+  ASSERT_EQ(bind.children().size(), 1);
+  AmlSpi& spi0 = *bind.children()[0].device;
+
+  bind.gpio().ExpectWrite(ZX_OK, 0).ExpectWrite(ZX_OK, 1);
+
+  uint8_t buf[16] = {};
+  size_t rx_actual;
+  EXPECT_OK(spi0.SpiImplExchange(0, buf, sizeof(buf), buf, sizeof(buf), &rx_actual));
+
+  bind.mmio()[AML_SPI_DMAREG].SetWriteCallback(
+      [&dmareg_cleared](uint64_t value) { dmareg_cleared = value == 0; });
+
+  bind.mmio()[AML_SPI_CONREG].SetWriteCallback(
+      [&conreg_cleared](uint64_t value) { conreg_cleared = value == 0; });
+
+  spi0.DdkUnbind(ddk::UnbindTxn{spi0.zxdev()});
+
+  EXPECT_TRUE(dmareg_cleared);
+  EXPECT_TRUE(conreg_cleared);
+
+  // All SPI devices have been released at this point, so no further calls can be made.
+
+  EXPECT_FALSE(bind.ControllerReset());
+
+  ASSERT_NO_FATAL_FAILURE(bind.gpio().VerifyAndClear());
 }
 
 }  // namespace spi

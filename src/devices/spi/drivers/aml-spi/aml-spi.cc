@@ -43,7 +43,15 @@ constexpr size_t kReset6RegisterOffset = 0x1c;
 constexpr uint32_t kSpi0ResetMask = 1 << 1;
 constexpr uint32_t kSpi1ResetMask = 1 << 6;
 
-void AmlSpi::DdkRelease() { delete this; }
+void AmlSpi::DdkRelease() {
+  Shutdown();
+  delete this;
+}
+
+void AmlSpi::DdkUnbind(ddk::UnbindTxn txn) {
+  Shutdown();
+  txn.Reply();
+}
 
 #define dump_reg(reg) zxlogf(ERROR, "%-21s (+%02x): %08x", #reg, reg, mmio_.Read32(reg))
 
@@ -281,6 +289,9 @@ zx_status_t AmlSpi::SpiImplExchange(uint32_t cs, const uint8_t* txdata, size_t t
   }
 
   fbl::AutoLock lock(&bus_lock_);
+  if (shutdown_) {
+    return ZX_ERR_CANCELED;
+  }
 
   SetThreadProfile();
 
@@ -620,9 +631,20 @@ zx_status_t AmlSpi::Create(void* ctx, zx_device_t* device) {
     return ZX_ERR_NO_RESOURCES;
   }
 
+  std::optional<fdf::MmioBuffer> mmio;
+  zx_status_t status = pdev.MapMmio(0, &mmio);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to map MMIO: %d", status);
+    return status;
+  }
+
+  // Stop DMA in case the driver is restarting and didn't shut down cleanly.
+  DmaReg::Get().FromValue(0).WriteTo(&(*mmio));
+  ConReg::Get().FromValue(0).WriteTo(&(*mmio));
+
   size_t actual;
   amlogic_spi::amlspi_config_t config = {};
-  zx_status_t status =
+  status =
       device_get_metadata(device, DEVICE_METADATA_AMLSPI_CONFIG, &config, sizeof config, &actual);
   if ((status != ZX_OK) || (actual != sizeof config)) {
     zxlogf(ERROR, "Failed to read config metadata");
@@ -635,13 +657,6 @@ zx_status_t AmlSpi::Create(void* ctx, zx_device_t* device) {
     zxlogf(ERROR, "Metadata clock divider value is too large: %u",
            config.clock_divider_register_value);
     return ZX_ERR_INVALID_ARGS;
-  }
-
-  std::optional<fdf::MmioBuffer> mmio;
-  status = pdev.MapMmio(0, &mmio);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to map MMIO: %d", status);
-    return status;
   }
 
   fidl::WireSyncClient<fuchsia_hardware_registers::Device> reset_fidl_client;
@@ -670,6 +685,9 @@ zx_status_t AmlSpi::Create(void* ctx, zx_device_t* device) {
 
   DmaBuffer tx_buffer, rx_buffer;
   if (status == ZX_OK) {
+    // DMA was stopped above, so it's safe to release any quarantined pages.
+    bti.release_quarantine();
+
     if ((status = DmaBuffer::Create(bti, kDmaBufferSize, &tx_buffer)) != ZX_OK) {
       return status;
     }
@@ -759,6 +777,21 @@ zx_status_t AmlSpi::DmaBuffer::Create(const zx::bti& bti, size_t size, DmaBuffer
   }
 
   return ZX_OK;
+}
+
+void AmlSpi::Shutdown() {
+  // Wait for any pending transfer to complete, then stop DMA and disable the controller.
+  fbl::AutoLock lock(&bus_lock_);
+
+  shutdown_ = true;
+
+  DmaReg::Get().FromValue(0).WriteTo(&mmio_);
+  ConReg::Get().FromValue(0).WriteTo(&mmio_);
+
+  // Under normal circumstances these are unpinned when the objects are destroyed. DdkRelease() is
+  // not always called however, so manually unpin here after DMA has been stopped.
+  tx_buffer_.pinned.Unpin();
+  rx_buffer_.pinned.Unpin();
 }
 
 static zx_driver_ops_t driver_ops = []() {
