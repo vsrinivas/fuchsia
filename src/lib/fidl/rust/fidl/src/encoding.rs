@@ -580,7 +580,8 @@ impl<'a> Decoder<'a> {
             return Err(Error::OutOfRange);
         }
         let handle_info = mem::replace(
-            &mut self.handles[self.next_handle],
+            // Safety: The bounds check is done above.
+            unsafe { self.handles.get_unchecked_mut(self.next_handle) },
             HandleInfo {
                 handle: Handle::invalid(),
                 object_type: ObjectType::NONE,
@@ -599,7 +600,8 @@ impl<'a> Decoder<'a> {
             return Err(Error::OutOfRange);
         }
         drop(mem::replace(
-            &mut self.handles[self.next_handle],
+            // Safety: The bounds check is done above.
+            unsafe { self.handles.get_unchecked_mut(self.next_handle) },
             HandleInfo {
                 handle: Handle::invalid(),
                 object_type: ObjectType::NONE,
@@ -675,23 +677,26 @@ impl<'a> Decoder<'a> {
         self.handles.len() - self.next_handle
     }
 
-    /// A convenience method to skip over the specified number of zero bytes used for padding, also
-    /// checking that all those bytes are in fact zeroes.
+    /// Checks that the specified padding bytes are in fact zeroes. Like
+    /// Decodable::decode, the caller is responsible for bounds checks.
     #[inline]
     pub fn check_padding(&self, offset: usize, len: usize) -> Result<()> {
         if len == 0 {
             // Skip body (so it can be optimized out).
             return Ok(());
         }
+        debug_assert!(offset + len <= self.buf.len());
         for i in offset..offset + len {
-            if self.buf[i] != 0 {
+            // Safety: Caller guarantees offset..offset+len is in bounds.
+            if unsafe { *self.buf.get_unchecked(i) } != 0 {
                 return Err(Error::NonZeroPadding { padding_start: offset });
             }
         }
         Ok(())
     }
 
-    /// Checks the padding of the inline value portion of an envelope.
+    /// Checks the padding of the inline value portion of an envelope. Like
+    /// Decodable::decode, the caller is responsible for bounds checks.
     // check_padding could be used instead, but doing so leads to long compilation times which is why
     // this method exists.
     #[inline]
@@ -700,16 +705,21 @@ impl<'a> Decoder<'a> {
         value_offset: usize,
         value_len: usize,
     ) -> Result<()> {
-        let valid_padding = match value_len {
-            1 => {
-                self.buf[value_offset + 1] == 0
-                    && self.buf[value_offset + 2] == 0
-                    && self.buf[value_offset + 3] == 0
+        let valid_padding = unsafe {
+            match value_len {
+                1 => {
+                    *self.buf.get_unchecked(value_offset + 1) == 0
+                        && *self.buf.get_unchecked(value_offset + 2) == 0
+                        && *self.buf.get_unchecked(value_offset + 3) == 0
+                }
+                2 => {
+                    *self.buf.get_unchecked(value_offset + 2) == 0
+                        && *self.buf.get_unchecked(value_offset + 3) == 0
+                }
+                3 => *self.buf.get_unchecked(value_offset + 3) == 0,
+                4 => true,
+                value_len => unreachable!("value_len={}", value_len),
             }
-            2 => self.buf[value_offset + 2] == 0 && self.buf[value_offset + 3] == 0,
-            3 => self.buf[value_offset + 3] == 0,
-            4 => true,
-            value_len => unreachable!("value_len={}", value_len),
         };
         if valid_padding {
             Ok(())
@@ -1510,7 +1520,8 @@ fn decode_string(decoder: &mut Decoder<'_>, string: &mut String, offset: usize) 
     match decode_vector_header(decoder, offset)? {
         None => Ok(false),
         Some(len) => decoder.read_out_of_line(len, |decoder, offset| {
-            let bytes = &decoder.buf[offset..offset + len];
+            // Safety: `read_out_of_line` does this bounds check.
+            let bytes = unsafe { &decoder.buf.get_unchecked(offset..offset + len) };
             let utf8 = str::from_utf8(bytes).map_err(|_| Error::Utf8Error)?;
             let boxed_utf8: Box<str> = utf8.into();
             *string = boxed_utf8.into_string();
@@ -2244,15 +2255,14 @@ impl<T: Autonull> Encodable for Option<Box<T>> {
     }
 }
 
-// Presence indicators always include at least one non-zero byte,
-// while absence indicators should always be entirely zeros.
+// Presence indicators always include at least one non-zero byte, while absence
+// indicators should always be entirely zeros. Like Decodable::decode, the
+// caller is responsible for bounds checks.
 #[inline]
-fn check_for_presence(
-    decoder: &mut Decoder<'_>,
-    offset: usize,
-    inline_size: usize,
-) -> Result<bool> {
-    Ok(decoder.buf[offset..offset + inline_size].iter().any(|byte| *byte != 0))
+fn check_for_presence(decoder: &mut Decoder<'_>, offset: usize, inline_size: usize) -> bool {
+    debug_assert!(offset + inline_size <= decoder.buf.len());
+    let range = unsafe { decoder.buf.get_unchecked(offset..offset + inline_size) };
+    range.iter().any(|byte| *byte != 0)
 }
 
 impl<T: Autonull> Decodable for Option<Box<T>> {
@@ -2265,13 +2275,11 @@ impl<T: Autonull> Decodable for Option<Box<T>> {
         decoder.debug_check_bounds::<Self>(offset);
         if T::naturally_nullable(decoder.context) {
             let inline_size = decoder.inline_size_of::<T>();
-            let present = check_for_presence(decoder, offset, inline_size)?;
+            let present = check_for_presence(decoder, offset, inline_size);
             if present {
                 self.get_or_insert_with(|| Box::new(T::new_empty())).decode(decoder, offset)
             } else {
                 *self = None;
-                // Eat the full `inline_size` bytes including the
-                // ALLOC_ABSENT that we only peeked at before
                 decoder.check_padding(offset, inline_size)?;
                 Ok(())
             }
@@ -4555,7 +4563,7 @@ macro_rules! tuple_impls {
                     // Skip to the start of the next field
                     let member_offset =
                         round_up_to_align(_cur_offset, decoder.inline_align_of::<$ntyp>());
-                    decoder.check_padding(offset + _cur_offset, member_offset - _cur_offset)?;
+                        decoder.check_padding(offset + _cur_offset, member_offset - _cur_offset)?;
                     self.$nidx.decode(decoder, offset + member_offset)?;
                     _cur_offset = member_offset + decoder.inline_size_of::<$ntyp>();
                 )*
