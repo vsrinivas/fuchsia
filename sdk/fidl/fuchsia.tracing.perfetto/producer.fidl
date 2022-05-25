@@ -22,8 +22,8 @@ protocol ProducerConnector {
     /// of ProducerConnector.
     /// Multiple Producers may be connected simultaneously.
     // TODO(fxb/85561): Define error conditions and status codes.
-    ConnnectProducer(resource struct {
+    ConnectProducer(resource struct {
         producer_socket zx.handle:SOCKET;
-        trace_buffer zx.handle:VMO;
+        trace_buffer zx.handle:<VMO, optional>;
     }) -> (struct {}) error zx.status;
 };

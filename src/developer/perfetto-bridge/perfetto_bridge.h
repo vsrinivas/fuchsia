@@ -17,8 +17,8 @@ class PerfettoBridge : public fuchsia::tracing::perfetto::ProducerConnector,
   void operator=(const PerfettoBridge&) = delete;
 
   // fuchsia::tracing::perfetto::ProducerConnector implementation.
-  void ConnnectProducer(::zx::socket producer_socket, ::zx::vmo trace_buffer,
-                        ConnnectProducerCallback callback) final;
+  void ConnectProducer(::zx::socket producer_socket, ::zx::vmo trace_buffer,
+                       ConnectProducerCallback callback) final;
 
   // fuchsia::tracing::perfetto::ConsumerConnector
   void ConnectConsumer(::zx::socket consumer_socket, ConnectConsumerCallback callback) final;
