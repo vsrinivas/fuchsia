@@ -95,7 +95,7 @@ group("test_infra") {
     "//src/storage/bin/fvm",
     "//tools/bootserver",
     "//tools/botanist",
-    "//tools/testing:tools",
+    "//tools/testing/testrunner",
   ]
 
   foreach(tool, linux_x64_only_tools) {
@@ -108,10 +108,15 @@ group("test_infra") {
 
   all_host_toolchains = []
   if (host_os == "linux") {
-    all_host_toolchains += [
-      host_arm64_toolchain,
-      host_x64_toolchain,
-    ]
+    all_host_toolchains += [ host_x64_toolchain ]
+
+    # The infrastructure never uses an arm64 host for x64 target tests. The only
+    # time we need arm64 host tools is when running arm64 target tests. Note
+    # that the inverse is not true; the infrastructure may use an x64 host for
+    # arm64 target tests.
+    if (target_cpu == "arm64") {
+      all_host_toolchains += [ host_arm64_toolchain ]
+    }
   } else if (host_os == "mac") {
     all_host_toolchains += [ host_toolchain ]
   }
