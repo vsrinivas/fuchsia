@@ -3,9 +3,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 """
-Suggests OWNERS for projects in a jiri manifest without owners.
+Suggests OWNERS for projects.
 
-For each project in a given jiri manifest file, do the following:
+For each project in a given jiri manifest file or at a given path, do the
+following:
 1. Check if it has an OWNERS file at the root path. If so, skip.
 2. Find references to the project via `gn refs`. If none, skip.
 3. Find immediate owners for all referrers. If none, for each referrer travel
@@ -14,7 +15,11 @@ For each project in a given jiri manifest file, do the following:
 Example usage:
 $ fx set ...
 $ scripts/owner/suggest_owners.py \
---jiri_manifest integration/third_party/flower
+--jiri_manifest integration/third_party/flower --csv csv.out
+
+$ scripts/owner/suggest_owners.py --path third_party/crashpad --csv csv.out
+
+$ scripts/owner/suggest_owners.py --path third_party/* --csv csv.out
 """
 
 import argparse
@@ -66,7 +71,8 @@ def get_owners(path):
     for line in open(owners_path):
         line = line.strip()
         if line.startswith("include "):
-            owners.update(get_owners(line[len("include /"):]))
+            owners.update(
+                get_owners(line[len("include /"):(len(line) - len("/OWNERS"))]))
         elif line.startswith("per-file "):
             owners.update(
                 line[len("per-file "):].partition("=")[2].strip().split(","))
@@ -79,10 +85,13 @@ def get_owners(path):
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Suggests owners for jiri projects")
-    parser.add_argument(
-        "--jiri_manifest", help="Input jiri manifest file", required=True)
+    parser = argparse.ArgumentParser(description="Suggests owners for projects")
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("--jiri_manifest", help="Input jiri manifest file")
+    group.add_argument(
+        "--path",
+        nargs='+',
+        help="Input project path, relative to fuchsia root")
     parser.add_argument(
         "--csv",
         help="Output csv file",
@@ -97,7 +106,12 @@ def main():
         os.path.abspath(__file__))))
     os.chdir(fuchsia_root)
 
-    project_paths = get_project_paths(args.jiri_manifest)
+    if args.jiri_manifest:
+        project_paths = get_project_paths(args.jiri_manifest)
+    else:
+        project_paths = [
+            project for project in args.path if os.path.isdir(project)
+        ]
     for project_path in project_paths:
         if get_owners(project_path):
             print(f"{project_path} has OWNERS, skipping.")
