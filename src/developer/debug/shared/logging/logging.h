@@ -15,7 +15,7 @@
 namespace debug {
 
 // Use this macro instead of FX_LOGS in zxdb so that console won't be messed up.
-// Only three severities are supported: LOG(Info), LOG(Warn) and Log(Error).
+// Only three severities are supported: LOGS(Info), LOGS(Warn) and LOGS(Error).
 // For Debug, please use DEBUG_LOG. For Fatal, consider using FX_CHECK.
 #define LOGS(severity) ::debug::LogStatement(::debug::LogSeverity::k##severity).stream()
 

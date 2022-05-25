@@ -29,7 +29,7 @@ LogStatement::~LogStatement() {
   if (log_sink) {
     log_sink->WriteLog(severity_, stream_.str());
   } else {
-    std::cerr << SeverityToName(severity_) << ": " << stream_.str();
+    std::cerr << SeverityToName(severity_) << ": " << stream_.str() << std::endl;
   }
 }
 
