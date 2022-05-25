@@ -55,7 +55,7 @@
         "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.ui.input/AxisScale",
-        "strictness": "strict"
+        "strictness": "flexible"
     },
     {
         "declaration": "fuchsia.ui.input/SendKeyboardInputCmd",
@@ -260,7 +260,7 @@
         "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.ui.input/InputMethodAction",
-        "strictness": "strict"
+        "strictness": "flexible"
     },
     {
         "declaration": "(fuchsia.ui.input3/KeyEvent event) -> (bool handled)",
@@ -422,7 +422,7 @@
         "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.ui.input/KeyboardEventPhase",
-        "strictness": "strict"
+        "strictness": "flexible"
     },
     {
         "declaration": "vector<uint32>",
@@ -457,7 +457,7 @@
         "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.ui.input/KeyboardType",
-        "strictness": "strict"
+        "strictness": "flexible"
     },
     {
         "declaration": "uint32",
@@ -839,7 +839,7 @@
         "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.ui.input/SensorLocation",
-        "strictness": "strict"
+        "strictness": "flexible"
     },
     {
         "declaration": "uint16",
@@ -880,7 +880,7 @@
         "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.ui.input/SensorType",
-        "strictness": "strict"
+        "strictness": "flexible"
     },
     {
         "declaration": "bool",

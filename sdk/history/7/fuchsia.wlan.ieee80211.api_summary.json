@@ -120,6 +120,27 @@
     },
     {
         "declaration": "uint8",
+        "kind": "const",
+        "name": "fuchsia.wlan.ieee80211/HT_CAP_LEN",
+        "value": "26"
+    },
+    {
+        "declaration": "uint8",
+        "kind": "const",
+        "name": "fuchsia.wlan.ieee80211/HT_OP_LEN",
+        "value": "22"
+    },
+    {
+        "declaration": "array<uint8,26>",
+        "kind": "struct/member",
+        "name": "fuchsia.wlan.ieee80211/HtCapabilities.bytes"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.wlan.ieee80211/HtCapabilities"
+    },
+    {
+        "declaration": "uint8",
         "kind": "struct/member",
         "name": "fuchsia.wlan.ieee80211/HtCapabilitiesFields.ampdu_params"
     },
@@ -151,6 +172,15 @@
     {
         "kind": "struct",
         "name": "fuchsia.wlan.ieee80211/HtCapabilitiesFields"
+    },
+    {
+        "declaration": "array<uint8,22>",
+        "kind": "struct/member",
+        "name": "fuchsia.wlan.ieee80211/HtOperation.bytes"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.wlan.ieee80211/HtOperation"
     },
     {
         "declaration": "uint8",
@@ -1056,6 +1086,27 @@
         "value": "16"
     },
     {
+        "declaration": "uint8",
+        "kind": "const",
+        "name": "fuchsia.wlan.ieee80211/VHT_CAP_LEN",
+        "value": "12"
+    },
+    {
+        "declaration": "uint8",
+        "kind": "const",
+        "name": "fuchsia.wlan.ieee80211/VHT_OP_LEN",
+        "value": "5"
+    },
+    {
+        "declaration": "array<uint8,12>",
+        "kind": "struct/member",
+        "name": "fuchsia.wlan.ieee80211/VhtCapabilities.bytes"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.wlan.ieee80211/VhtCapabilities"
+    },
+    {
         "declaration": "uint64",
         "kind": "struct/member",
         "name": "fuchsia.wlan.ieee80211/VhtCapabilitiesFields.supported_vht_mcs_and_nss_set"
@@ -1068,6 +1119,15 @@
     {
         "kind": "struct",
         "name": "fuchsia.wlan.ieee80211/VhtCapabilitiesFields"
+    },
+    {
+        "declaration": "array<uint8,5>",
+        "kind": "struct/member",
+        "name": "fuchsia.wlan.ieee80211/VhtOperation.bytes"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.wlan.ieee80211/VhtOperation"
     },
     {
         "declaration": "uint32",

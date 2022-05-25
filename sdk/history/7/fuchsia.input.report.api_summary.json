@@ -58,7 +58,7 @@
         "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.input.report/ConsumerControlButton",
-        "strictness": "strict"
+        "strictness": "flexible"
     },
     {
         "declaration": "fuchsia.input.report/ConsumerControlInputDescriptor",
@@ -232,7 +232,7 @@
         "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.input.report/DeviceType",
-        "strictness": "strict"
+        "strictness": "flexible"
     },
     {
         "declaration": "fuchsia.input.report/SensorFeatureReport",
@@ -542,7 +542,7 @@
         "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.input.report/LedType",
-        "strictness": "strict"
+        "strictness": "flexible"
     },
     {
         "declaration": "uint32",
@@ -844,7 +844,7 @@
         "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.input.report/SensorReportingState",
-        "strictness": "strict"
+        "strictness": "flexible"
     },
     {
         "kind": "enum/member",
@@ -915,7 +915,7 @@
         "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.input.report/SensorType",
-        "strictness": "strict"
+        "strictness": "flexible"
     },
     {
         "declaration": "uint32",
@@ -943,7 +943,7 @@
         "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.input.report/TouchConfigurationInputMode",
-        "strictness": "strict"
+        "strictness": "flexible"
     },
     {
         "declaration": "fuchsia.input.report/TouchFeatureDescriptor",
@@ -1039,7 +1039,7 @@
         "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.input.report/TouchType",
-        "strictness": "strict"
+        "strictness": "flexible"
     },
     {
         "declaration": "int32",
@@ -1124,7 +1124,7 @@
         "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.input.report/UnitType",
-        "strictness": "strict"
+        "strictness": "flexible"
     },
     {
         "kind": "enum/member",
@@ -1152,10 +1152,20 @@
         "value": "2417819651"
     },
     {
+        "kind": "enum/member",
+        "name": "fuchsia.input.report/VendorGoogleProductId.PC_PS2_KEYBOARD",
+        "value": "65539"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input.report/VendorGoogleProductId.PC_PS2_MOUSE",
+        "value": "65540"
+    },
+    {
         "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.input.report/VendorGoogleProductId",
-        "strictness": "strict"
+        "strictness": "flexible"
     },
     {
         "kind": "enum/member",
@@ -1166,7 +1176,7 @@
         "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.input.report/VendorId",
-        "strictness": "strict"
+        "strictness": "flexible"
     },
     {
         "kind": "library",

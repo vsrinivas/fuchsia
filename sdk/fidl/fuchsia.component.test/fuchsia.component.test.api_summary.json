@@ -381,11 +381,6 @@
         "name": "fuchsia.component.test/RealmBuilderFactory.CreateFromRelativeUrl"
     },
     {
-        "declaration": "(fuchsia.io/Directory pkg_dir_handle,server_end:fuchsia.component.test/Realm realm_server_end,server_end:fuchsia.component.test/Builder builder_server_end) -> (fuchsia.component.test/RealmBuilderFactory_CreateWithResult_Result result)",
-        "kind": "protocol/member",
-        "name": "fuchsia.component.test/RealmBuilderFactory.CreateWithResult"
-    },
-    {
         "kind": "protocol",
         "name": "fuchsia.component.test/RealmBuilderFactory"
     },
@@ -406,25 +401,6 @@
     {
         "kind": "union",
         "name": "fuchsia.component.test/RealmBuilderFactory_CreateFromRelativeUrl_Result",
-        "strictness": "strict"
-    },
-    {
-        "kind": "struct",
-        "name": "fuchsia.component.test/RealmBuilderFactory_CreateWithResult_Response"
-    },
-    {
-        "declaration": "fuchsia.component.test/RealmBuilderError2",
-        "kind": "union/member",
-        "name": "fuchsia.component.test/RealmBuilderFactory_CreateWithResult_Result.err"
-    },
-    {
-        "declaration": "fuchsia.component.test/RealmBuilderFactory_CreateWithResult_Response",
-        "kind": "union/member",
-        "name": "fuchsia.component.test/RealmBuilderFactory_CreateWithResult_Result.response"
-    },
-    {
-        "kind": "union",
-        "name": "fuchsia.component.test/RealmBuilderFactory_CreateWithResult_Result",
         "strictness": "strict"
     },
     {

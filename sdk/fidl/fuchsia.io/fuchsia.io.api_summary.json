@@ -263,11 +263,6 @@
         "name": "fuchsia.io/Directory.Close"
     },
     {
-        "declaration": "() -> (int32 s)",
-        "kind": "protocol/member",
-        "name": "fuchsia.io/Directory.CloseDeprecated"
-    },
-    {
         "declaration": "() -> (fuchsia.io/NodeInfo info)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Directory.Describe"
@@ -368,11 +363,6 @@
         "name": "fuchsia.io/Directory.Sync"
     },
     {
-        "declaration": "() -> (int32 s)",
-        "kind": "protocol/member",
-        "name": "fuchsia.io/Directory.SyncDeprecated"
-    },
-    {
         "declaration": "(string:255 name,fuchsia.io/UnlinkOptions options) -> (fuchsia.io/Directory2_Unlink_Result result)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Directory.Unlink"
@@ -400,11 +390,6 @@
         "declaration": "() -> (fuchsia.io/Node2_Close_Result result)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Directory1.Close"
-    },
-    {
-        "declaration": "() -> (int32 s)",
-        "kind": "protocol/member",
-        "name": "fuchsia.io/Directory1.CloseDeprecated"
     },
     {
         "declaration": "() -> (fuchsia.io/NodeInfo info)",
@@ -490,11 +475,6 @@
         "declaration": "() -> (fuchsia.io/Node2_Sync_Result result)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Directory1.Sync"
-    },
-    {
-        "declaration": "() -> (int32 s)",
-        "kind": "protocol/member",
-        "name": "fuchsia.io/Directory1.SyncDeprecated"
     },
     {
         "declaration": "(fuchsia.io/NodeAttributes2 attributes) -> (fuchsia.io/Node2_UpdateAttributes_Result result)",
@@ -742,11 +722,6 @@
         "name": "fuchsia.io/File.Close"
     },
     {
-        "declaration": "() -> (int32 s)",
-        "kind": "protocol/member",
-        "name": "fuchsia.io/File.CloseDeprecated"
-    },
-    {
         "declaration": "() -> (fuchsia.io/NodeInfo info)",
         "kind": "protocol/member",
         "name": "fuchsia.io/File.Describe"
@@ -770,11 +745,6 @@
         "declaration": "(fuchsia.io/VmoFlags flags) -> (fuchsia.io/File2_GetBackingMemory_Result result)",
         "kind": "protocol/member",
         "name": "fuchsia.io/File.GetBackingMemory"
-    },
-    {
-        "declaration": "(fuchsia.io/VmoFlags flags) -> (int32 s,fuchsia.mem/Buffer:optional buffer)",
-        "kind": "protocol/member",
-        "name": "fuchsia.io/File.GetBufferDeprecatedUseGetBackingMemory"
     },
     {
         "declaration": "() -> (int32 s,fuchsia.io/OpenFlags flags)",
@@ -807,16 +777,6 @@
         "name": "fuchsia.io/File.ReadAt"
     },
     {
-        "declaration": "(uint64 count,uint64 offset) -> (int32 s,vector<uint8>:8192 data)",
-        "kind": "protocol/member",
-        "name": "fuchsia.io/File.ReadAtDeprecated"
-    },
-    {
-        "declaration": "(uint64 count) -> (int32 s,vector<uint8>:8192 data)",
-        "kind": "protocol/member",
-        "name": "fuchsia.io/File.ReadDeprecated"
-    },
-    {
         "declaration": "(fuchsia.io/ConnectionOptions options,zx/handle:CHANNEL object_request)",
         "kind": "protocol/member",
         "name": "fuchsia.io/File.Reopen"
@@ -830,11 +790,6 @@
         "declaration": "(fuchsia.io/SeekOrigin origin,int64 offset) -> (fuchsia.io/File2_Seek_Result result)",
         "kind": "protocol/member",
         "name": "fuchsia.io/File.Seek"
-    },
-    {
-        "declaration": "(int64 offset,fuchsia.io/SeekOrigin start) -> (int32 s,uint64 offset)",
-        "kind": "protocol/member",
-        "name": "fuchsia.io/File.SeekDeprecated"
     },
     {
         "declaration": "(fuchsia.io/NodeAttributeFlags flags,fuchsia.io/NodeAttributes attributes) -> (int32 s)",
@@ -852,16 +807,6 @@
         "name": "fuchsia.io/File.Sync"
     },
     {
-        "declaration": "() -> (int32 s)",
-        "kind": "protocol/member",
-        "name": "fuchsia.io/File.SyncDeprecated"
-    },
-    {
-        "declaration": "(uint64 length) -> (int32 s)",
-        "kind": "protocol/member",
-        "name": "fuchsia.io/File.TruncateDeprecatedUseResize"
-    },
-    {
         "declaration": "(fuchsia.io/NodeAttributes2 attributes) -> (fuchsia.io/Node2_UpdateAttributes_Result result)",
         "kind": "protocol/member",
         "name": "fuchsia.io/File.UpdateAttributes"
@@ -875,11 +820,6 @@
         "declaration": "(vector<uint8>:8192 data,uint64 offset) -> (fuchsia.io/File2_WriteAt_Result result)",
         "kind": "protocol/member",
         "name": "fuchsia.io/File.WriteAt"
-    },
-    {
-        "declaration": "(vector<uint8>:8192 data,uint64 offset) -> (int32 s,uint64 actual)",
-        "kind": "protocol/member",
-        "name": "fuchsia.io/File.WriteAtDeprecated"
     },
     {
         "declaration": "(vector<uint8>:8192 data) -> (int32 s,uint64 actual)",
@@ -899,11 +839,6 @@
         "declaration": "() -> (fuchsia.io/Node2_Close_Result result)",
         "kind": "protocol/member",
         "name": "fuchsia.io/File1.Close"
-    },
-    {
-        "declaration": "() -> (int32 s)",
-        "kind": "protocol/member",
-        "name": "fuchsia.io/File1.CloseDeprecated"
     },
     {
         "declaration": "() -> (fuchsia.io/NodeInfo info)",
@@ -926,11 +861,6 @@
         "name": "fuchsia.io/File1.GetAttributes"
     },
     {
-        "declaration": "(fuchsia.io/VmoFlags flags) -> (int32 s,fuchsia.mem/Buffer:optional buffer)",
-        "kind": "protocol/member",
-        "name": "fuchsia.io/File1.GetBufferDeprecatedUseGetBackingMemory"
-    },
-    {
         "declaration": "() -> (int32 s,fuchsia.io/OpenFlags flags)",
         "kind": "protocol/member",
         "name": "fuchsia.io/File1.GetFlags"
@@ -951,24 +881,9 @@
         "name": "fuchsia.io/File1.QueryFilesystem"
     },
     {
-        "declaration": "(uint64 count,uint64 offset) -> (int32 s,vector<uint8>:8192 data)",
-        "kind": "protocol/member",
-        "name": "fuchsia.io/File1.ReadAtDeprecated"
-    },
-    {
-        "declaration": "(uint64 count) -> (int32 s,vector<uint8>:8192 data)",
-        "kind": "protocol/member",
-        "name": "fuchsia.io/File1.ReadDeprecated"
-    },
-    {
         "declaration": "(fuchsia.io/ConnectionOptions options,zx/handle:CHANNEL object_request)",
         "kind": "protocol/member",
         "name": "fuchsia.io/File1.Reopen"
-    },
-    {
-        "declaration": "(int64 offset,fuchsia.io/SeekOrigin start) -> (int32 s,uint64 offset)",
-        "kind": "protocol/member",
-        "name": "fuchsia.io/File1.SeekDeprecated"
     },
     {
         "declaration": "(fuchsia.io/NodeAttributeFlags flags,fuchsia.io/NodeAttributes attributes) -> (int32 s)",
@@ -986,24 +901,9 @@
         "name": "fuchsia.io/File1.Sync"
     },
     {
-        "declaration": "() -> (int32 s)",
-        "kind": "protocol/member",
-        "name": "fuchsia.io/File1.SyncDeprecated"
-    },
-    {
-        "declaration": "(uint64 length) -> (int32 s)",
-        "kind": "protocol/member",
-        "name": "fuchsia.io/File1.TruncateDeprecatedUseResize"
-    },
-    {
         "declaration": "(fuchsia.io/NodeAttributes2 attributes) -> (fuchsia.io/Node2_UpdateAttributes_Result result)",
         "kind": "protocol/member",
         "name": "fuchsia.io/File1.UpdateAttributes"
-    },
-    {
-        "declaration": "(vector<uint8>:8192 data,uint64 offset) -> (int32 s,uint64 actual)",
-        "kind": "protocol/member",
-        "name": "fuchsia.io/File1.WriteAtDeprecated"
     },
     {
         "declaration": "(vector<uint8>:8192 data) -> (int32 s,uint64 actual)",
@@ -1634,11 +1534,6 @@
         "name": "fuchsia.io/Node.Close"
     },
     {
-        "declaration": "() -> (int32 s)",
-        "kind": "protocol/member",
-        "name": "fuchsia.io/Node.CloseDeprecated"
-    },
-    {
         "declaration": "() -> (fuchsia.io/NodeInfo info)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Node.Describe"
@@ -1699,11 +1594,6 @@
         "name": "fuchsia.io/Node.Sync"
     },
     {
-        "declaration": "() -> (int32 s)",
-        "kind": "protocol/member",
-        "name": "fuchsia.io/Node.SyncDeprecated"
-    },
-    {
         "declaration": "(fuchsia.io/NodeAttributes2 attributes) -> (fuchsia.io/Node2_UpdateAttributes_Result result)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Node.UpdateAttributes"
@@ -1721,11 +1611,6 @@
         "declaration": "() -> (fuchsia.io/Node2_Close_Result result)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Node1.Close"
-    },
-    {
-        "declaration": "() -> (int32 s)",
-        "kind": "protocol/member",
-        "name": "fuchsia.io/Node1.CloseDeprecated"
     },
     {
         "declaration": "() -> (fuchsia.io/NodeInfo info)",
@@ -1786,11 +1671,6 @@
         "declaration": "() -> (fuchsia.io/Node2_Sync_Result result)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Node1.Sync"
-    },
-    {
-        "declaration": "() -> (int32 s)",
-        "kind": "protocol/member",
-        "name": "fuchsia.io/Node1.SyncDeprecated"
     },
     {
         "declaration": "(fuchsia.io/NodeAttributes2 attributes) -> (fuchsia.io/Node2_UpdateAttributes_Result result)",

@@ -1,30 +1,5 @@
 [
     {
-        "declaration": "(uint32 state) -> ()",
-        "kind": "protocol/member",
-        "name": "fuchsia.thermal/Actor.SetThermalState"
-    },
-    {
-        "kind": "protocol",
-        "name": "fuchsia.thermal/Actor"
-    },
-    {
-        "kind": "enum/member",
-        "name": "fuchsia.thermal/ActorType.AUDIO",
-        "value": "2"
-    },
-    {
-        "kind": "enum/member",
-        "name": "fuchsia.thermal/ActorType.UNSPECIFIED",
-        "value": "1"
-    },
-    {
-        "declaration": "uint32",
-        "kind": "enum",
-        "name": "fuchsia.thermal/ActorType",
-        "strictness": "strict"
-    },
-    {
         "declaration": "(string:8 client_type,server_end:fuchsia.thermal/ClientStateWatcher watcher)",
         "kind": "protocol/member",
         "name": "fuchsia.thermal/ClientStateConnector.Connect"
@@ -43,74 +18,10 @@
         "name": "fuchsia.thermal/ClientStateWatcher"
     },
     {
-        "declaration": "(client_end:fuchsia.thermal/Actor actor,fuchsia.thermal/ActorType actor_type,vector<fuchsia.thermal/TripPoint>:100 trip_points) -> (fuchsia.thermal/Controller_Subscribe_Result result)",
-        "kind": "protocol/member",
-        "name": "fuchsia.thermal/Controller.Subscribe"
-    },
-    {
-        "kind": "protocol",
-        "name": "fuchsia.thermal/Controller"
-    },
-    {
-        "kind": "struct",
-        "name": "fuchsia.thermal/Controller_Subscribe_Response"
-    },
-    {
-        "declaration": "fuchsia.thermal/Error",
-        "kind": "union/member",
-        "name": "fuchsia.thermal/Controller_Subscribe_Result.err"
-    },
-    {
-        "declaration": "fuchsia.thermal/Controller_Subscribe_Response",
-        "kind": "union/member",
-        "name": "fuchsia.thermal/Controller_Subscribe_Result.response"
-    },
-    {
-        "kind": "union",
-        "name": "fuchsia.thermal/Controller_Subscribe_Result",
-        "strictness": "strict"
-    },
-    {
-        "kind": "enum/member",
-        "name": "fuchsia.thermal/Error.INTERNAL",
-        "value": "1"
-    },
-    {
-        "kind": "enum/member",
-        "name": "fuchsia.thermal/Error.INVALID_ARGUMENTS",
-        "value": "2"
-    },
-    {
-        "declaration": "uint32",
-        "kind": "enum",
-        "name": "fuchsia.thermal/Error",
-        "strictness": "strict"
-    },
-    {
         "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.thermal/MAX_THERMAL_LOAD",
         "value": "100"
-    },
-    {
-        "declaration": "uint32",
-        "kind": "const",
-        "name": "fuchsia.thermal/MAX_TRIP_POINT_COUNT",
-        "value": "100"
-    },
-    {
-        "declaration": "uint32",
-        "kind": "struct/member",
-        "name": "fuchsia.thermal/TripPoint.activate_at"
-    },
-    {
-        "declaration": "uint32",
-        "kind": "struct/member",
-        "name": "fuchsia.thermal/TripPoint.deactivate_below"
-    },
-    {
-        "kind": "struct",
-        "name": "fuchsia.thermal/TripPoint"
     },
     {
         "kind": "library",

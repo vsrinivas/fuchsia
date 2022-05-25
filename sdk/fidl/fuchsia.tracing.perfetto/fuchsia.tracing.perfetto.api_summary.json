@@ -28,9 +28,9 @@
         "strictness": "strict"
     },
     {
-        "declaration": "(zx/handle:SOCKET producer_socket,zx/handle:VMO trace_buffer) -> (fuchsia.tracing.perfetto/ProducerConnector_ConnnectProducer_Result result)",
+        "declaration": "(zx/handle:SOCKET producer_socket,zx/handle:<VMO,optional> trace_buffer) -> (fuchsia.tracing.perfetto/ProducerConnector_ConnectProducer_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.tracing.perfetto/ProducerConnector.ConnnectProducer"
+        "name": "fuchsia.tracing.perfetto/ProducerConnector.ConnectProducer"
     },
     {
         "kind": "protocol",
@@ -38,21 +38,21 @@
     },
     {
         "kind": "struct",
-        "name": "fuchsia.tracing.perfetto/ProducerConnector_ConnnectProducer_Response"
+        "name": "fuchsia.tracing.perfetto/ProducerConnector_ConnectProducer_Response"
     },
     {
         "declaration": "int32",
         "kind": "union/member",
-        "name": "fuchsia.tracing.perfetto/ProducerConnector_ConnnectProducer_Result.err"
+        "name": "fuchsia.tracing.perfetto/ProducerConnector_ConnectProducer_Result.err"
     },
     {
-        "declaration": "fuchsia.tracing.perfetto/ProducerConnector_ConnnectProducer_Response",
+        "declaration": "fuchsia.tracing.perfetto/ProducerConnector_ConnectProducer_Response",
         "kind": "union/member",
-        "name": "fuchsia.tracing.perfetto/ProducerConnector_ConnnectProducer_Result.response"
+        "name": "fuchsia.tracing.perfetto/ProducerConnector_ConnectProducer_Result.response"
     },
     {
         "kind": "union",
-        "name": "fuchsia.tracing.perfetto/ProducerConnector_ConnnectProducer_Result",
+        "name": "fuchsia.tracing.perfetto/ProducerConnector_ConnectProducer_Result",
         "strictness": "strict"
     },
     {

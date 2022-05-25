@@ -252,6 +252,11 @@
         "name": "fuchsia.ui.composition/Flatland.SetImageSampleRegion"
     },
     {
+        "declaration": "(fuchsia.ui.composition/TransformId transform_id,float32 value)",
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.composition/Flatland.SetOpacity"
+    },
+    {
         "declaration": "(fuchsia.ui.composition/TransformId transform_id,fuchsia.ui.composition/Orientation orientation)",
         "kind": "protocol/member",
         "name": "fuchsia.ui.composition/Flatland.SetOrientation"

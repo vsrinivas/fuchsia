@@ -56,6 +56,80 @@
         "strictness": "strict"
     },
     {
+        "declaration": "fuchsia.net/IpAddress",
+        "kind": "struct/member",
+        "name": "fuchsia.net.mdns/HostAddress.address"
+    },
+    {
+        "declaration": "uint64",
+        "kind": "struct/member",
+        "name": "fuchsia.net.mdns/HostAddress.interface"
+    },
+    {
+        "declaration": "int64",
+        "kind": "struct/member",
+        "name": "fuchsia.net.mdns/HostAddress.ttl"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.net.mdns/HostAddress"
+    },
+    {
+        "declaration": "fuchsia.net.mdns/IpVersions",
+        "kind": "table/member",
+        "name": "fuchsia.net.mdns/HostNameResolutionOptions.ip_versions"
+    },
+    {
+        "declaration": "fuchsia.net.mdns/Media",
+        "kind": "table/member",
+        "name": "fuchsia.net.mdns/HostNameResolutionOptions.media"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.net.mdns/HostNameResolutionOptions"
+    },
+    {
+        "declaration": "(string:255 host,int64 timeout,fuchsia.net.mdns/HostNameResolutionOptions options) -> (vector<fuchsia.net.mdns/HostAddress>:64 addresses)",
+        "kind": "protocol/member",
+        "name": "fuchsia.net.mdns/HostNameResolver.ResolveHostName"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.net.mdns/HostNameResolver"
+    },
+    {
+        "declaration": "(string:255 host,fuchsia.net.mdns/HostNameSubscriptionOptions options,client_end:fuchsia.net.mdns/HostNameSubscriptionListener listener)",
+        "kind": "protocol/member",
+        "name": "fuchsia.net.mdns/HostNameSubscriber.SubscribeToHostName"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.net.mdns/HostNameSubscriber"
+    },
+    {
+        "declaration": "(vector<fuchsia.net.mdns/HostAddress>:64 addresses) -> ()",
+        "kind": "protocol/member",
+        "name": "fuchsia.net.mdns/HostNameSubscriptionListener.OnAddressesChanged"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.net.mdns/HostNameSubscriptionListener"
+    },
+    {
+        "declaration": "fuchsia.net.mdns/IpVersions",
+        "kind": "table/member",
+        "name": "fuchsia.net.mdns/HostNameSubscriptionOptions.ip_versions"
+    },
+    {
+        "declaration": "fuchsia.net.mdns/Media",
+        "kind": "table/member",
+        "name": "fuchsia.net.mdns/HostNameSubscriptionOptions.media"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.net.mdns/HostNameSubscriptionOptions"
+    },
+    {
         "kind": "bits/member",
         "name": "fuchsia.net.mdns/IpVersions.V4",
         "value": "1"
@@ -333,6 +407,11 @@
         "strictness": "strict"
     },
     {
+        "declaration": "vector<fuchsia.net/SocketAddress>:64",
+        "kind": "table/member",
+        "name": "fuchsia.net.mdns/ServiceInstance.addresses"
+    },
+    {
         "declaration": "string:63",
         "kind": "table/member",
         "name": "fuchsia.net.mdns/ServiceInstance.instance"
@@ -371,6 +450,11 @@
         "declaration": "vector<string:255>:256",
         "kind": "table/member",
         "name": "fuchsia.net.mdns/ServiceInstance.text"
+    },
+    {
+        "declaration": "vector<vector<uint8>:255>:256",
+        "kind": "table/member",
+        "name": "fuchsia.net.mdns/ServiceInstance.text_strings"
     },
     {
         "kind": "table",
@@ -527,7 +611,21 @@
         "strictness": "strict"
     },
     {
-        "declaration": "(string:22 service,string:63 instance,int64 timeout) -> (fuchsia.net.mdns/ServiceInstance instance)",
+        "declaration": "fuchsia.net.mdns/IpVersions",
+        "kind": "table/member",
+        "name": "fuchsia.net.mdns/ServiceInstanceResolutionOptions.ip_versions"
+    },
+    {
+        "declaration": "fuchsia.net.mdns/Media",
+        "kind": "table/member",
+        "name": "fuchsia.net.mdns/ServiceInstanceResolutionOptions.media"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.net.mdns/ServiceInstanceResolutionOptions"
+    },
+    {
+        "declaration": "(string:22 service,string:63 instance,int64 timeout,fuchsia.net.mdns/ServiceInstanceResolutionOptions options) -> (fuchsia.net.mdns/ServiceInstance instance)",
         "kind": "protocol/member",
         "name": "fuchsia.net.mdns/ServiceInstanceResolver.ResolveServiceInstance"
     },
@@ -558,6 +656,53 @@
     {
         "kind": "protocol",
         "name": "fuchsia.net.mdns/ServiceSubscriber"
+    },
+    {
+        "declaration": "(string:22 service,fuchsia.net.mdns/ServiceSubscriptionOptions options,client_end:fuchsia.net.mdns/ServiceSubscriptionListener listener)",
+        "kind": "protocol/member",
+        "name": "fuchsia.net.mdns/ServiceSubscriber2.SubscribeToService"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.net.mdns/ServiceSubscriber2"
+    },
+    {
+        "declaration": "(fuchsia.net.mdns/ServiceInstance instance) -> ()",
+        "kind": "protocol/member",
+        "name": "fuchsia.net.mdns/ServiceSubscriptionListener.OnInstanceChanged"
+    },
+    {
+        "declaration": "(fuchsia.net.mdns/ServiceInstance instance) -> ()",
+        "kind": "protocol/member",
+        "name": "fuchsia.net.mdns/ServiceSubscriptionListener.OnInstanceDiscovered"
+    },
+    {
+        "declaration": "(string:22 service,string:63 instance) -> ()",
+        "kind": "protocol/member",
+        "name": "fuchsia.net.mdns/ServiceSubscriptionListener.OnInstanceLost"
+    },
+    {
+        "declaration": "(fuchsia.net.mdns/ResourceType resource_type) -> ()",
+        "kind": "protocol/member",
+        "name": "fuchsia.net.mdns/ServiceSubscriptionListener.OnQuery"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.net.mdns/ServiceSubscriptionListener"
+    },
+    {
+        "declaration": "fuchsia.net.mdns/IpVersions",
+        "kind": "table/member",
+        "name": "fuchsia.net.mdns/ServiceSubscriptionOptions.ip_versions"
+    },
+    {
+        "declaration": "fuchsia.net.mdns/Media",
+        "kind": "table/member",
+        "name": "fuchsia.net.mdns/ServiceSubscriptionOptions.media"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.net.mdns/ServiceSubscriptionOptions"
     },
     {
         "declaration": "(string:22 service,client_end:fuchsia.net.mdns/ServiceSubscriber subscriber)",

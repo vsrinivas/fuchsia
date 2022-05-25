@@ -521,6 +521,11 @@
     },
     {
         "kind": "enum/member",
+        "name": "fuchsia.input/Key.UNKNOWN",
+        "value": "0"
+    },
+    {
+        "kind": "enum/member",
         "name": "fuchsia.input/Key.UP",
         "value": "458834"
     },
@@ -553,7 +558,7 @@
         "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.input/Key",
-        "strictness": "strict"
+        "strictness": "flexible"
     },
     {
         "kind": "enum/member",

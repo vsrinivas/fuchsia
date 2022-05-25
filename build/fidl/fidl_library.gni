@@ -201,77 +201,63 @@ template("fidl_library") {
       lenient_api_summary = invoker.lenient_api_summary
     }
 
-    if (api_compatibility_testing) {
-      # Ensure changes to API level HEAD are acknowledged.
-      test_target = "${target_name}_compatibility_test"
+    # Ensure changes to API level HEAD are acknowledged.
+    test_target = "${target_name}_compatibility_test"
+    fidl_api_compatibility_test(test_target) {
+      forward_variables_from(invoker, [ "testonly" ])
+      warn_on_changes = lenient_api_summary
+      target_api_level = "HEAD"
+      golden = "$library_name.api_summary.json"
+      current = summary_file_json
+      deps = [ ":$compilation_target_name" ]
+      policy = "ack_changes"
+    }
+    sdk_atom_deps += [ ":$test_target" ]
+
+    # Check for compatibility with supported API levels.
+    foreach(level, platform_version.supported_fuchsia_api_levels) {
+      fidl_ir("${main_target_name}_compile_$level") {
+        forward_variables_from(invoker,
+                               [
+                                 "deps",
+                                 "fidl_deps",
+                                 "public_deps",
+                                 "sources",
+                                 "experimental_flags",
+                                 "testonly",
+                               ])
+        fidl_target_name = main_target_name
+        fidl_library_name = library_name
+        target_api_level = "$level"
+
+        # Avoid clobbering existing FIDL sources.
+        gen_dir = "$target_gen_dir/$level"
+        out_json_summary = "$gen_dir/$library_name.api_summary.json"
+        json_representation = "$gen_dir/$target_name.fidl.json"
+        deps = non_fidl_deps
+      }
+
+      test_target = "${target_name}_${level}_compatibility_test"
       fidl_api_compatibility_test(test_target) {
         forward_variables_from(invoker, [ "testonly" ])
         warn_on_changes = lenient_api_summary
-        target_api_level = "HEAD"
-        golden = "$library_name.api_summary.json"
-        current = summary_file_json
-        deps = [ ":$compilation_target_name" ]
-        policy = "ack_changes"
+        target_api_level = "$level"
+
+        goldens_dir = "//sdk/history"
+        if (defined(invoker.goldens_dir)) {
+          goldens_dir = invoker.goldens_dir
+        }
+
+        golden = "$goldens_dir/$level/$library_name.api_summary.json"
+        current = "$target_gen_dir/$level/$library_name.api_summary.json"
+        if (level == platform_version.current_fuchsia_api_level) {
+          policy = "no_breaking_changes"
+        } else {
+          policy = "no_changes"
+        }
+        deps = [ ":${main_target_name}_compile_$level" ]
       }
       sdk_atom_deps += [ ":$test_target" ]
-
-      # Check for compatibility with supported API levels.
-      foreach(level, platform_version.supported_fuchsia_api_levels) {
-        fidl_ir("${main_target_name}_compile_$level") {
-          forward_variables_from(invoker,
-                                 [
-                                   "deps",
-                                   "fidl_deps",
-                                   "public_deps",
-                                   "sources",
-                                   "experimental_flags",
-                                   "testonly",
-                                 ])
-          fidl_target_name = main_target_name
-          fidl_library_name = library_name
-          target_api_level = "$level"
-
-          # Avoid clobbering existing FIDL sources.
-          gen_dir = "$target_gen_dir/$level"
-          out_json_summary = "$gen_dir/$library_name.api_summary.json"
-          json_representation = "$gen_dir/$target_name.fidl.json"
-          deps = non_fidl_deps
-        }
-
-        test_target = "${target_name}_${level}_compatibility_test"
-        fidl_api_compatibility_test(test_target) {
-          forward_variables_from(invoker, [ "testonly" ])
-          warn_on_changes = lenient_api_summary
-          target_api_level = "$level"
-
-          goldens_dir = "//sdk/history"
-          if (defined(invoker.goldens_dir)) {
-            goldens_dir = invoker.goldens_dir
-          }
-
-          golden = "$goldens_dir/$level/$library_name.api_summary.json"
-          current = "$target_gen_dir/$level/$library_name.api_summary.json"
-          if (level == platform_version.current_fuchsia_api_level) {
-            policy = "no_breaking_changes"
-          } else {
-            policy = "no_changes"
-          }
-          deps = [ ":${main_target_name}_compile_$level" ]
-        }
-        sdk_atom_deps += [ ":$test_target" ]
-      }
-    } else {
-      verify_api_summary_target_name = "${target_name}_verify_api_summary"
-      golden_file(verify_api_summary_target_name) {
-        forward_variables_from(invoker, [ "testonly" ])
-        warn_on_changes = lenient_api_summary
-        golden = "$library_name.api_summary"
-        current = summary_file
-        deps = [ ":$compilation_target_name" ]
-      }
-
-      # TODO(99710): Add missing goldens for vendor APIs and uncomment.
-      # sdk_atom_deps += [ ":$verify_api_summary_target_name" ]
     }
   }
 
@@ -305,11 +291,6 @@ template("fidl_library") {
       ":$compilation_target_name",
       ":$verification_target_name",
     ]
-
-    # TODO(99710): Delete. See above comment with the same bug number.
-    if (defined(verify_api_summary_target_name)) {
-      deps += [ ":${verify_api_summary_target_name}" ]
-    }
   }
 
   if (defined(invoker.sdk_category) && invoker.sdk_category != "excluded") {

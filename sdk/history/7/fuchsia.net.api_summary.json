@@ -1,20 +1,5 @@
 [
     {
-        "declaration": "fuchsia.net/Ipv4AddressWithPrefix",
-        "kind": "union/member",
-        "name": "fuchsia.net/InterfaceAddress.ipv4"
-    },
-    {
-        "declaration": "fuchsia.net/Ipv6Address",
-        "kind": "union/member",
-        "name": "fuchsia.net/InterfaceAddress.ipv6"
-    },
-    {
-        "kind": "union",
-        "name": "fuchsia.net/InterfaceAddress",
-        "strictness": "strict"
-    },
-    {
         "declaration": "fuchsia.net/Ipv4Address",
         "kind": "union/member",
         "name": "fuchsia.net/IpAddress.ipv4"

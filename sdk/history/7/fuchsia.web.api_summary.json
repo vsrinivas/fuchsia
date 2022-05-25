@@ -626,7 +626,7 @@
     {
         "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.web/FrameMediaSettings.audio_capturer_session_id"
+        "name": "fuchsia.web/FrameMediaSettings.audio_consumer_session_id"
     },
     {
         "declaration": "fuchsia.media/AudioRenderUsage",

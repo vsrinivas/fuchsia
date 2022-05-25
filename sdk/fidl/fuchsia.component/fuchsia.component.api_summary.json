@@ -54,6 +54,11 @@
     },
     {
         "kind": "enum/member",
+        "name": "fuchsia.component/Error.INSTANCE_CANNOT_UNRESOLVE",
+        "value": "13"
+    },
+    {
+        "kind": "enum/member",
         "name": "fuchsia.component/Error.INSTANCE_DIED",
         "value": "11"
     },

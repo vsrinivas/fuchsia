@@ -303,6 +303,11 @@
         "name": "fuchsia.intl/TimeZoneInfo.id"
     },
     {
+        "declaration": "bool",
+        "kind": "table/member",
+        "name": "fuchsia.intl/TimeZoneInfo.in_dst_at_time"
+    },
+    {
         "declaration": "int64",
         "kind": "table/member",
         "name": "fuchsia.intl/TimeZoneInfo.total_offset_at_time"

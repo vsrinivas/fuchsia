@@ -104,62 +104,6 @@
     },
     {
         "kind": "enum/member",
-        "name": "fuchsia.wlan.common/DriverFeature.DFS",
-        "value": "4"
-    },
-    {
-        "kind": "enum/member",
-        "name": "fuchsia.wlan.common/DriverFeature.MFP",
-        "value": "8"
-    },
-    {
-        "kind": "enum/member",
-        "name": "fuchsia.wlan.common/DriverFeature.PROBE_RESP_OFFLOAD",
-        "value": "5"
-    },
-    {
-        "kind": "enum/member",
-        "name": "fuchsia.wlan.common/DriverFeature.RATE_SELECTION",
-        "value": "1"
-    },
-    {
-        "kind": "enum/member",
-        "name": "fuchsia.wlan.common/DriverFeature.SAE_DRIVER_AUTH",
-        "value": "7"
-    },
-    {
-        "kind": "enum/member",
-        "name": "fuchsia.wlan.common/DriverFeature.SAE_SME_AUTH",
-        "value": "6"
-    },
-    {
-        "kind": "enum/member",
-        "name": "fuchsia.wlan.common/DriverFeature.SCAN_OFFLOAD",
-        "value": "0"
-    },
-    {
-        "kind": "enum/member",
-        "name": "fuchsia.wlan.common/DriverFeature.SYNTH",
-        "value": "2"
-    },
-    {
-        "kind": "enum/member",
-        "name": "fuchsia.wlan.common/DriverFeature.TEMP_SOFTMAC",
-        "value": "2718281828"
-    },
-    {
-        "kind": "enum/member",
-        "name": "fuchsia.wlan.common/DriverFeature.TX_STATUS_REPORT",
-        "value": "3"
-    },
-    {
-        "declaration": "uint32",
-        "kind": "enum",
-        "name": "fuchsia.wlan.common/DriverFeature",
-        "strictness": "strict"
-    },
-    {
-        "kind": "enum/member",
         "name": "fuchsia.wlan.common/GuardInterval.LONG_GI",
         "value": "1"
     },

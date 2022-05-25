@@ -10,11 +10,6 @@
         "name": "fuchsia.net.interfaces/Address.valid_until"
     },
     {
-        "declaration": "fuchsia.net/InterfaceAddress",
-        "kind": "table/member",
-        "name": "fuchsia.net.interfaces/Address.value"
-    },
-    {
         "kind": "table",
         "name": "fuchsia.net.interfaces/Address"
     },
