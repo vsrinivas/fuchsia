@@ -276,6 +276,20 @@ void Da7219::HandleIrq(async_dispatcher_t* dispatcher, async::IrqBase* irq, zx_s
     return;
 }
 
+void Da7219::WatchPlugState(fuchsia::hardware::audio::Codec::WatchPlugStateCallback callback) {
+  fuchsia::hardware::audio::PlugState plug_state;
+  plug_state.set_plugged(plugged_);
+  plug_state.set_plug_state_time(plugged_time_.get());
+  if (plug_state_updated_) {
+    plug_state_updated_ = false;
+    callback(std::move(plug_state));
+  } else if (!plug_state_callback_) {
+    plug_state_callback_.emplace(std::move(callback));
+  } else {
+    zxlogf(WARNING, "Client called WatchGainState when another hanging get was pending");
+  }
+}
+
 void Da7219::PlugDetected(bool plugged) {
   zxlogf(INFO, "Plug event: %s", plugged ? "plug" : "unplug");
 
@@ -303,8 +317,21 @@ void Da7219::PlugDetected(bool plugged) {
   if (status != ZX_OK)
     return;
 
-  // No errors, update plugged_.
-  plugged_ = plugged;
+  // No errors, update plug state if we haven't set it yet, or if changed.
+  if (!plugged_time_.get() || plugged_ != plugged) {
+    plugged_ = plugged;
+    plugged_time_ = zx::clock::get_monotonic();
+    if (plug_state_callback_) {
+      plug_state_updated_ = false;
+      fuchsia::hardware::audio::PlugState plug_state;
+      plug_state.set_plugged(plugged_);
+      plug_state.set_plug_state_time(plugged_time_.get());
+      (*plug_state_callback_)(std::move(plug_state));
+      plug_state_callback_.reset();
+    } else {
+      plug_state_updated_ = true;
+    }
+  }
 }
 
 zx_status_t Da7219::Bind(void* ctx, zx_device_t* dev) {

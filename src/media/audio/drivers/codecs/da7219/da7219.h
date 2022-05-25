@@ -39,6 +39,8 @@ class Da7219 : public SimpleCodecServer {
   GainFormat GetGainFormat() override;
   GainState GetGainState() override;
   void SetGainState(GainState state) override;
+  bool SupportsAsyncPlugState() override { return true; }
+  void WatchPlugState(fuchsia::hardware::audio::Codec::WatchPlugStateCallback callback) override;
 
   void HandleIrq(async_dispatcher_t* dispatcher, async::IrqBase* irq, zx_status_t status,
                  const zx_packet_interrupt_t* interrupt);
@@ -48,7 +50,13 @@ class Da7219 : public SimpleCodecServer {
   fidl::ClientEnd<fuchsia_hardware_i2c::Device> i2c_;
   zx::interrupt irq_;
   async::IrqMethod<Da7219, &Da7219::HandleIrq> irq_handler_{this};
+
+  // Plug state. Must reply to the first Watch request, if there is no plug state update before the
+  // first Watch, reply with unplugged at time 0.
   bool plugged_ = false;
+  zx::time plugged_time_;
+  bool plug_state_updated_ = true;
+  std::optional<fuchsia::hardware::audio::Codec::WatchPlugStateCallback> plug_state_callback_;
 };
 
 }  // namespace audio
