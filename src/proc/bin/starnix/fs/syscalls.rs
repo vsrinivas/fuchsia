@@ -792,7 +792,9 @@ fn do_setxattr(
         return error!(E2BIG);
     }
     let mode = node.entry.node.info().mode;
-    if !mode.contains(FileMode::IWUSR) {
+    if !mode.contains(FileMode::IWUSR)
+        && !current_task.read().creds.has_capability(CAP_DAC_OVERRIDE)
+    {
         return error!(EACCES);
     }
     if mode.is_chr() || mode.is_fifo() {
