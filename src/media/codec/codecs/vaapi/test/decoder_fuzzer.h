@@ -4,11 +4,14 @@
 
 #ifndef SRC_MEDIA_CODEC_CODECS_VAAPI_TEST_DECODER_FUZZER_H_
 #define SRC_MEDIA_CODEC_CODECS_VAAPI_TEST_DECODER_FUZZER_H_
+
 #include <lib/fdio/directory.h>
 #include <stdio.h>
 
 #include <memory>
 #include <thread>
+
+#include <fuzzer/FuzzedDataProvider.h>
 
 #include "src/media/codec/codecs/test/test_codec_packets.h"
 #include "src/media/codec/codecs/vaapi/codec_adapter_vaapi_decoder.h"
@@ -18,6 +21,13 @@
 
 class FakeCodecAdapterEvents : public CodecAdapterEvents {
  public:
+  class Owner {
+   public:
+    virtual void onCoreCodecMidStreamOutputConstraintsChange(bool output_re_config_required) = 0;
+  };
+
+  explicit FakeCodecAdapterEvents(Owner *owner) : owner_(owner) {}
+
   void onCoreCodecFailCodec(const char *format, ...) override;
 
   void onCoreCodecFailStream(fuchsia::media::StreamError error) override;
@@ -38,27 +48,25 @@ class FakeCodecAdapterEvents : public CodecAdapterEvents {
   void onCoreCodecLogEvent(
       media_metrics::StreamProcessorEvents2MetricDimensionEvent event_code) override;
 
-  uint64_t fail_codec_count() const { return fail_codec_count_; }
-  uint64_t fail_stream_count() const { return fail_stream_count_; }
-
   void set_codec_adapter(CodecAdapter *codec_adapter) { codec_adapter_ = codec_adapter; }
 
   void SetBufferInitializationCompleted();
-  void WaitForIdle(size_t input_packet_count);
+  void WaitForIdle(size_t input_packet_count, bool set_end_of_stream);
 
  private:
   CodecAdapter *codec_adapter_ = nullptr;
-  uint64_t fail_codec_count_{};
-  uint64_t fail_stream_count_{};
+  Owner *owner_;
+  uint64_t fail_codec_count_ FXL_GUARDED_BY(lock_) = {};
+  uint64_t fail_stream_count_ FXL_GUARDED_BY(lock_) = {};
+  uint64_t end_of_stream_count_ FXL_GUARDED_BY(lock_) = {};
 
   std::mutex lock_;
   std::condition_variable cond_;
 
-  std::vector<CodecPacket *> input_packets_done_;
-  bool buffer_initialization_completed_ = false;
+  std::vector<CodecPacket *> input_packets_done_ FXL_GUARDED_BY(lock_);
 };
 
-class VaapiFuzzerTestFixture {
+class VaapiFuzzerTestFixture : public FakeCodecAdapterEvents::Owner {
  public:
   VaapiFuzzerTestFixture() = default;
   ~VaapiFuzzerTestFixture();
@@ -72,12 +80,14 @@ class VaapiFuzzerTestFixture {
 
   void CodecStreamStop();
 
-  void ParseDataIntoInputPackets(const uint8_t *data, size_t size);
+  void ParseDataIntoInputPackets(FuzzedDataProvider &provider);
 
   void ConfigureOutputBuffers(uint32_t output_packet_count, size_t output_packet_size);
 
+  void onCoreCodecMidStreamOutputConstraintsChange(bool output_re_config_required) override;
+
   std::mutex lock_;
-  FakeCodecAdapterEvents events_;
+  FakeCodecAdapterEvents events_{this};
   std::unique_ptr<CodecAdapterVaApiDecoder> decoder_;
   std::vector<std::unique_ptr<CodecPacketForTest>> input_packets_;
   std::vector<std::unique_ptr<CodecBufferForTest>> input_buffers_;
