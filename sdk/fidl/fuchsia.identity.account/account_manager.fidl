@@ -21,19 +21,6 @@ protocol AccountManager {
         account_ids vector<AccountId>:MAX_ACCOUNTS_PER_DEVICE;
     });
 
-    /// Returns a vector of all accounts provisioned on the current
-    /// device and the current authentication state for each.
-    ///
-    /// `scenario` The scenario to produce authentication states for.
-    ///
-    /// Returns: `account_auth_states` The current authentication state for each
-    ///                                account given the provided scenario.
-    GetAccountAuthStates(struct {
-        scenario Scenario;
-    }) -> (struct {
-        account_auth_states vector<AccountAuthState>:MAX_ACCOUNTS_PER_DEVICE;
-    }) error Error;
-
     /// Returns the metadata for a single account.
     ///
     /// `id` The account's identifier as returned by GetAccountIds()
@@ -170,17 +157,6 @@ type AccountAuthState = struct {
     auth_state AuthState;
 };
 
-/// The initial state of a system account, reported through an `AccountListener`.
-@max_handles("0")
-type InitialAccountState = struct {
-    /// A unique identifier for the account on the current device.
-    account_id AccountId;
-    /// An authentication state for the account. It is only populated if
-    /// `AccountListenerOptions.scenario` was specified when the listener was
-    /// created.
-    auth_state box<AuthState>;
-};
-
 /// The configuration for an AccountListener, defining the set of events that it
 /// will receive.
 @max_handles("0")
@@ -195,9 +171,6 @@ type AccountListenerOptions = struct {
     /// If true, the listener will receive events when an account is removed
     /// from the device.
     remove_account bool;
-    /// The scenario to use for all AuthState data sent to the listener. If
-    /// scenario is not supplied no AuthState data will be populated.
-    scenario box<Scenario>;
     /// An `AuthChangeGranularity` expressing the magnitude of change in
     /// authentication state that will lead to AuthStateChange events.
     /// If granularity is not populated AuthStateChange events will not be
@@ -225,7 +198,7 @@ protocol AccountListener {
     ///
     /// `account_states` The set of initial states.
     OnInitialize(struct {
-        account_states vector<InitialAccountState>:MAX_ACCOUNTS_PER_DEVICE;
+        account_states vector<AccountAuthState>:MAX_ACCOUNTS_PER_DEVICE;
     }) -> ();
 
     /// A method that is called when a new account is added to the device.
@@ -234,7 +207,7 @@ protocol AccountListener {
     ///
     /// `account_state` The initial state for the newly added account.
     OnAccountAdded(struct {
-        account_state InitialAccountState;
+        account_state AccountAuthState;
     }) -> ();
 
     /// A method that is called when a provisioned account is removed.

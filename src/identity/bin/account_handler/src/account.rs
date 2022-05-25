@@ -12,7 +12,7 @@ use anyhow::Error;
 use fidl::endpoints::{ClientEnd, ServerEnd};
 use fidl_fuchsia_identity_account::{
     AccountRequest, AccountRequestStream, AuthChangeGranularity, AuthListenerMarker, AuthState,
-    Error as ApiError, Lifetime, PersonaMarker, Scenario,
+    Error as ApiError, Lifetime, PersonaMarker,
 };
 use fidl_fuchsia_identity_internal::AccountHandlerContextProxy;
 use fuchsia_inspect::{Node, NumericProperty};
@@ -180,19 +180,18 @@ impl Account {
                 let response = self.get_lifetime();
                 responder.send(response)?;
             }
-            AccountRequest::GetAuthState { scenario, responder } => {
-                let mut response = self.get_auth_state(scenario);
+            AccountRequest::GetAuthState { responder } => {
+                let mut response = self.get_auth_state();
                 responder.send(&mut response)?;
             }
             AccountRequest::RegisterAuthListener {
-                scenario,
                 listener,
                 initial_state,
                 granularity,
                 responder,
             } => {
                 let mut response =
-                    self.register_auth_listener(scenario, listener, initial_state, granularity);
+                    self.register_auth_listener(listener, initial_state, granularity);
                 responder.send(&mut response)?;
             }
             AccountRequest::GetPersonaIds { responder } => {
@@ -231,14 +230,13 @@ impl Account {
         Lifetime::from(self.lifetime.as_ref())
     }
 
-    fn get_auth_state(&self, _scenario: Scenario) -> Result<AuthState, ApiError> {
+    fn get_auth_state(&self) -> Result<AuthState, ApiError> {
         // TODO(jsankey): Return real authentication state once authenticators exist to create it.
         Err(ApiError::UnsupportedOperation)
     }
 
     fn register_auth_listener(
         &self,
-        _scenario: Scenario,
         _listener: ClientEnd<AuthListenerMarker>,
         _initial_state: bool,
         _granularity: AuthChangeGranularity,
@@ -314,14 +312,11 @@ mod tests {
     use super::*;
     use crate::test_util::*;
     use fidl::endpoints::create_endpoints;
-    use fidl_fuchsia_identity_account::{AccountMarker, AccountProxy, Scenario, ThreatScenario};
+    use fidl_fuchsia_identity_account::{AccountMarker, AccountProxy};
     use fidl_fuchsia_identity_internal::AccountHandlerContextMarker;
     use fuchsia_async as fasync;
     use fuchsia_inspect::Inspector;
     use futures::channel::oneshot;
-
-    const TEST_SCENARIO: Scenario =
-        Scenario { include_test: false, threat_scenario: ThreatScenario::BasicAttacker };
 
     const TEST_AUTH_MECHANISM_ID: &str = "<AUTH MECHANISM ID>";
 
@@ -499,10 +494,7 @@ mod tests {
     async fn test_get_auth_state() {
         let mut test = Test::new();
         test.run(test.create_persistent_account().await.unwrap(), |proxy| async move {
-            assert_eq!(
-                proxy.get_auth_state(&mut TEST_SCENARIO.clone()).await?,
-                Err(ApiError::UnsupportedOperation)
-            );
+            assert_eq!(proxy.get_auth_state().await?, Err(ApiError::UnsupportedOperation));
             Ok(())
         })
         .await;
@@ -517,7 +509,6 @@ mod tests {
                 assert_eq!(
                     proxy
                         .register_auth_listener(
-                            &mut TEST_SCENARIO.clone(),
                             auth_listener_client_end,
                             true, /* include initial state */
                             &mut AuthChangeGranularity {
@@ -567,7 +558,7 @@ mod tests {
                 // The persona channel should now be usable.
                 let persona_proxy = persona_client_end.into_proxy().unwrap();
                 assert_eq!(
-                    persona_proxy.get_auth_state(&mut TEST_SCENARIO.clone()).await?,
+                    persona_proxy.get_auth_state().await?,
                     Err(ApiError::UnsupportedOperation)
                 );
                 assert_eq!(persona_proxy.get_lifetime().await?, Lifetime::Persistent);
@@ -611,7 +602,7 @@ mod tests {
                 // The persona channel should now be usable.
                 let persona_proxy = persona_client_end.into_proxy().unwrap();
                 assert_eq!(
-                    persona_proxy.get_auth_state(&mut TEST_SCENARIO.clone()).await?,
+                    persona_proxy.get_auth_state().await?,
                     Err(ApiError::UnsupportedOperation)
                 );
 

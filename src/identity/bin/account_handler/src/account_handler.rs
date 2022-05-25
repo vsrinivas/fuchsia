@@ -545,7 +545,6 @@ mod tests {
     use crate::fake_authenticator::{Expected, FakeAuthenticator};
     use crate::test_util::*;
     use fidl::endpoints::{create_endpoints, create_proxy_and_stream};
-    use fidl_fuchsia_identity_account::{Scenario, ThreatScenario};
     use fidl_fuchsia_identity_authentication::{
         AttemptedEvent, Enrollment, Error as AuthenticationApiError,
     };
@@ -558,9 +557,6 @@ mod tests {
     use futures::future::join;
     use lazy_static::lazy_static;
     use std::sync::Arc;
-
-    const DEFAULT_SCENARIO: Scenario =
-        Scenario { include_test: false, threat_scenario: ThreatScenario::None };
 
     const FORCE_REMOVE_ON: bool = true;
     const FORCE_REMOVE_OFF: bool = false;
@@ -768,7 +764,7 @@ mod tests {
                     // The account channel should now be usable.
                     let account_proxy = account_client_end.into_proxy().unwrap();
                     assert_eq!(
-                        account_proxy.get_auth_state(&mut DEFAULT_SCENARIO.clone()).await?,
+                        account_proxy.get_auth_state().await?,
                         Err(ApiError::UnsupportedOperation)
                     );
 
@@ -779,10 +775,7 @@ mod tests {
                             lifecycle: "locked",
                         }
                     });
-                    assert!(account_proxy
-                        .get_auth_state(&mut DEFAULT_SCENARIO.clone())
-                        .await
-                        .is_err());
+                    assert!(account_proxy.get_auth_state().await.is_err());
                     Ok(())
                 }
             },
@@ -1151,10 +1144,7 @@ mod tests {
                     });
 
                     // Make sure that the channel is in fact closed.
-                    assert!(account_proxy
-                        .get_auth_state(&mut DEFAULT_SCENARIO.clone())
-                        .await
-                        .is_err());
+                    assert!(account_proxy.get_auth_state().await.is_err());
 
                     // We cannot remove twice.
                     assert_eq!(
@@ -1227,10 +1217,7 @@ mod tests {
                     assert!(proxy.terminate().is_err());
 
                     // Make sure that the channel closed too.
-                    assert!(account_proxy
-                        .get_auth_state(&mut DEFAULT_SCENARIO.clone())
-                        .await
-                        .is_err());
+                    assert!(account_proxy.get_auth_state().await.is_err());
                     Ok(())
                 }
             },

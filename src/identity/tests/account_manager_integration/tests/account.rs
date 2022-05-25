@@ -5,8 +5,7 @@
 use anyhow::{anyhow, format_err, Error};
 use fidl::endpoints::create_endpoints;
 use fidl_fuchsia_identity_account::{
-    AccountManagerMarker, AccountManagerProxy, AccountProxy, Error as ApiError, Lifetime, Scenario,
-    ThreatScenario,
+    AccountManagerMarker, AccountManagerProxy, AccountProxy, Error as ApiError, Lifetime,
 };
 use fidl_fuchsia_stash::StoreMarker;
 use fuchsia_async::{self as fasync, DurationExt, TimeoutExt};
@@ -39,11 +38,6 @@ lazy_static! {
         "--dev-auth-providers".to_string(),
         "--dev-auth-mechanisms".to_string(),
     ];
-
-    static ref TEST_SCENARIO: Scenario = Scenario {
-        include_test: false,
-        threat_scenario: ThreatScenario::BasicAttacker,
-    };
 
     /// Maximum time between a lock request and when the account is locked
     static ref LOCK_REQUEST_DURATION: zx::Duration = zx::Duration::from_seconds(5);
@@ -155,12 +149,6 @@ async fn test_provision_new_account() -> Result<(), Error> {
     assert!(account_ids.contains(&account_1));
     assert!(account_ids.contains(&account_2));
     assert!(account_ids.contains(&account_3));
-
-    // Auth state is not yet supported
-    assert_eq!(
-        account_manager.get_account_auth_states(&mut TEST_SCENARIO.clone()).await?,
-        Err(ApiError::UnsupportedOperation)
-    );
 
     Ok(())
 }
@@ -302,7 +290,7 @@ async fn get_account_and_persona_helper(lifetime: Lifetime) -> Result<(), Error>
         Ok(())
     );
     let account_proxy = account_client_end.into_proxy()?;
-    let account_auth_state = account_proxy.get_auth_state(&mut TEST_SCENARIO.clone()).await?;
+    let account_auth_state = account_proxy.get_auth_state().await?;
     assert_eq!(account_auth_state, Err(ApiError::UnsupportedOperation));
 
     // Cannot lock account not protected by an auth mechanism
@@ -313,7 +301,7 @@ async fn get_account_and_persona_helper(lifetime: Lifetime) -> Result<(), Error>
     let (persona_client_end, persona_server_end) = create_endpoints()?;
     assert!(account_proxy.get_default_persona(persona_server_end).await?.is_ok());
     let persona_proxy = persona_client_end.into_proxy()?;
-    let persona_auth_state = persona_proxy.get_auth_state(&mut TEST_SCENARIO.clone()).await?;
+    let persona_auth_state = persona_proxy.get_auth_state().await?;
     assert_eq!(persona_auth_state, Err(ApiError::UnsupportedOperation));
     assert_eq!(persona_proxy.get_lifetime().await?, lifetime);
 

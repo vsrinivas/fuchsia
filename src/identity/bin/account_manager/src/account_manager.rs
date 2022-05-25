@@ -7,8 +7,8 @@ use anyhow::Error;
 use fidl::endpoints::{ClientEnd, ServerEnd};
 use fidl_fuchsia_auth::{AuthProviderConfig, AuthenticationContextProviderMarker};
 use fidl_fuchsia_identity_account::{
-    AccountAuthState, AccountListenerMarker, AccountListenerOptions, AccountManagerRequest,
-    AccountManagerRequestStream, AccountMarker, Error as ApiError, Lifetime, Scenario,
+    AccountListenerMarker, AccountListenerOptions, AccountManagerRequest,
+    AccountManagerRequestStream, AccountMarker, Error as ApiError, Lifetime,
 };
 use fuchsia_inspect::{Inspector, Property};
 use futures::lock::Mutex;
@@ -96,10 +96,6 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
                 let response = self.get_account_ids().await;
                 responder.send(&response)?;
             }
-            AccountManagerRequest::GetAccountAuthStates { scenario, responder } => {
-                let mut response = self.get_account_auth_states(scenario).await;
-                responder.send(&mut response)?;
-            }
             AccountManagerRequest::GetAccountMetadata { id: _, responder: _ } => {
                 unimplemented!();
             }
@@ -150,17 +146,6 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
         self.account_map.lock().await.get_account_ids().iter().map(|id| id.clone().into()).collect()
     }
 
-    async fn get_account_auth_states(
-        &self,
-        _scenario: Scenario,
-    ) -> Result<Vec<AccountAuthState>, ApiError> {
-        // TODO(jsankey): Collect authentication state from AccountHandler instances rather than
-        // returning a fixed value. This will involve opening account handler connections (in
-        // parallel) for all of the accounts where encryption keys for the account's data partition
-        // are available.
-        return Err(ApiError::UnsupportedOperation);
-    }
-
     async fn get_account(
         &self,
         id: AccountId,
@@ -187,10 +172,8 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
         listener: ClientEnd<AccountListenerMarker>,
         options: AccountListenerOptions,
     ) -> Result<(), ApiError> {
-        match (&options.scenario, &options.granularity) {
-            (None, Some(_)) => return Err(ApiError::InvalidRequest),
-            (Some(_), _) => return Err(ApiError::UnsupportedOperation),
-            (None, None) => {}
+        if let Some(_) = &options.granularity {
+            return Err(ApiError::InvalidRequest);
         };
         let account_ids = self.account_map.lock().await.get_account_ids();
         let proxy = listener.into_proxy().map_err(|err| {
@@ -298,12 +281,13 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::account_event_emitter::MINIMUM_AUTH_STATE;
     use crate::account_handler_connection::AccountHandlerConnectionImpl;
     use crate::stored_account_list::{StoredAccountList, StoredAccountMetadata};
     use fidl::endpoints::{create_request_stream, RequestStream};
     use fidl_fuchsia_identity_account::{
-        AccountListenerRequest, AccountManagerProxy, AccountManagerRequestStream,
-        AuthChangeGranularity, InitialAccountState, Scenario, ThreatScenario,
+        AccountAuthState, AccountListenerRequest, AccountManagerProxy, AccountManagerRequestStream,
+        AuthChangeGranularity,
     };
     use fuchsia_async as fasync;
     use fuchsia_inspect::{assert_data_tree, Inspector};
@@ -321,9 +305,6 @@ mod tests {
         static ref AUTH_PROVIDER_CONFIG: Vec<AuthProviderConfig> = vec![];
 
         static ref AUTH_MECHANISM_IDS: Vec<String> = vec![];
-
-        static ref TEST_SCENARIO: Scenario =
-            Scenario { include_test: false, threat_scenario: ThreatScenario::BasicAttacker };
 
         static ref TEST_GRANULARITY: AuthChangeGranularity = AuthChangeGranularity {
             engagement_changes: true,
@@ -416,22 +397,6 @@ mod tests {
     }
 
     #[test]
-    fn test_unsupported_scenario() {
-        let data_dir = TempDir::new().unwrap();
-        request_stream_test(
-            create_accounts(vec![], data_dir.path(), &Inspector::new()),
-            |proxy, _test_object| async move {
-                assert_eq!(proxy.get_account_ids().await?.len(), 0);
-                assert_eq!(
-                    proxy.get_account_auth_states(&mut TEST_SCENARIO.clone()).await?,
-                    Err(ApiError::UnsupportedOperation)
-                );
-                Ok(())
-            },
-        );
-    }
-
-    #[test]
     fn test_initially_empty() {
         let data_dir = TempDir::new().unwrap();
         let inspector = Inspector::new();
@@ -488,7 +453,6 @@ mod tests {
             initial_state: true,
             add_account: true,
             remove_account: true,
-            scenario: None,
             granularity: None,
         };
 
@@ -510,8 +474,14 @@ mod tests {
                             assert_eq!(
                                 account_states,
                                 vec![
-                                    InitialAccountState { account_id: 1, auth_state: None },
-                                    InitialAccountState { account_id: 2, auth_state: None },
+                                    AccountAuthState {
+                                        account_id: 1,
+                                        auth_state: MINIMUM_AUTH_STATE
+                                    },
+                                    AccountAuthState {
+                                        account_id: 2,
+                                        auth_state: MINIMUM_AUTH_STATE
+                                    },
                                 ]
                             );
                             responder.send().unwrap();
@@ -546,7 +516,6 @@ mod tests {
             initial_state: true,
             add_account: true,
             remove_account: true,
-            scenario: None,
             granularity: Some(Box::new(TEST_GRANULARITY.clone())),
         };
 
@@ -559,59 +528,6 @@ mod tests {
                 assert_eq!(
                     proxy.register_account_listener(client_end, &mut options).await?,
                     Err(ApiError::InvalidRequest)
-                );
-                Ok(())
-            },
-        );
-    }
-
-    /// Registers an account listener with a scenario, which is currently unsupported.
-    #[test]
-    fn test_account_listener_scenario() {
-        let mut options = AccountListenerOptions {
-            initial_state: true,
-            add_account: true,
-            remove_account: true,
-            scenario: Some(Box::new(TEST_SCENARIO.clone())),
-            granularity: None,
-        };
-
-        let data_dir = TempDir::new().unwrap();
-        let inspector = Inspector::new();
-        request_stream_test(
-            create_accounts(vec![1, 2], data_dir.path(), &inspector),
-            |proxy, _| async move {
-                let (client_end, _) = create_request_stream::<AccountListenerMarker>().unwrap();
-                assert_eq!(
-                    proxy.register_account_listener(client_end, &mut options).await?,
-                    Err(ApiError::UnsupportedOperation)
-                );
-                Ok(())
-            },
-        );
-    }
-
-    /// Registers an account listener with a scenario and a granularity, which is currently
-    /// unsupported.
-    #[test]
-    fn test_account_listener_scenario_granularity() {
-        let mut options = AccountListenerOptions {
-            initial_state: true,
-            add_account: true,
-            remove_account: true,
-            scenario: Some(Box::new(TEST_SCENARIO.clone())),
-            granularity: Some(Box::new(TEST_GRANULARITY.clone())),
-        };
-
-        let data_dir = TempDir::new().unwrap();
-        let inspector = Inspector::new();
-        request_stream_test(
-            create_accounts(vec![1, 2], data_dir.path(), &inspector),
-            |proxy, _| async move {
-                let (client_end, _) = create_request_stream::<AccountListenerMarker>().unwrap();
-                assert_eq!(
-                    proxy.register_account_listener(client_end, &mut options).await?,
-                    Err(ApiError::UnsupportedOperation)
                 );
                 Ok(())
             },

@@ -195,7 +195,7 @@ impl<EB: EncryptedBlockDevice, M: Minfs> Account<EB, M> {
                 let mut result = self.get_data_directory(data_directory).await;
                 responder.send(&mut result).context("sending GetDataDirectory response")?;
             }
-            AccountRequest::GetAuthState { scenario: _, responder } => {
+            AccountRequest::GetAuthState { responder } => {
                 responder
                     .send(&mut Err(faccount::Error::UnsupportedOperation))
                     .context("sending GetAuthState response")?;
@@ -217,7 +217,6 @@ impl<EB: EncryptedBlockDevice, M: Minfs> Account<EB, M> {
                 responder.send(&[]).context("sending GetPersonaIds response")?;
             }
             AccountRequest::RegisterAuthListener {
-                scenario: _,
                 listener: _,
                 initial_state: _,
                 granularity: _,

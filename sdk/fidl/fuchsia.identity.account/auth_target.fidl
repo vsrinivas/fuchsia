@@ -36,12 +36,8 @@ protocol AuthListener {
 protocol AuthTarget {
     /// Returns the current `AuthState` of the target.
     ///
-    /// `scenario` The scenario to produce the authentication state for.
-    ///
     /// Returns: `auth_state` The target's current authentication state.
-    GetAuthState(struct {
-        scenario Scenario;
-    }) -> (struct {
+    GetAuthState() -> (struct {
         auth_state AuthState;
     }) error Error;
 
@@ -55,14 +51,14 @@ protocol AuthTarget {
     ///               change in authentication state than should lead to a
     ///               callback
     RegisterAuthListener(resource struct {
-        scenario Scenario;
         listener client_end:AuthListener;
         initial_state bool;
         granularity AuthChangeGranularity;
     }) -> (struct {}) error Error;
 
-    // TODO(fxbug.dev/562): Add methods that request in increase in the authentication
-    //                 state or authentication for a particular event.
+    // TODO(fxbug.dev/562): Add methods that request in increase in the
+    //                      authentication state or authentication for a
+    //                      particular event.
 };
 
 /// A protocol that exposes information about the personae for a system account
@@ -151,10 +147,10 @@ protocol Account {
     // may still be in use by the client.
     Lock() -> (struct {}) error Error;
 
-    /// Connects a channel to access a data directory of the account. The directory is
-    /// writable, and is initially empty for a newly created account. The
-    /// directory is persisted according to the lifetime of the account and is
-    /// never modified by the account system.
+    /// Connects a channel to access a data directory of the account. The
+    /// directory is writable, and is initially empty for a newly created
+    /// account. The directory is persisted according to the lifetime of the
+    /// account and is never modified by the account system.
     ///
     /// NOTE: This method should only be called by the root session
     /// component instance. Multiple component instance clients are not yet

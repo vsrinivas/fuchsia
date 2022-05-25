@@ -9,7 +9,8 @@
 use account_common::AccountId;
 use fidl::endpoints::Proxy;
 use fidl_fuchsia_identity_account::{
-    AccountListenerOptions, AccountListenerProxy, InitialAccountState,
+    AccountAuthState, AccountListenerOptions, AccountListenerProxy, AuthState, AuthStateSummary,
+    Engagement, Presence,
 };
 use fuchsia_inspect::{Node, NumericProperty, Property};
 use futures::future::*;
@@ -18,7 +19,13 @@ use std::pin::Pin;
 
 use crate::inspect;
 
-// TODO(dnordstrom): Add a mechanism to publicize auth state changes.
+// TODO(jsankey): Add a mechanism to publicize auth state changes rather than this fixed minimum
+// possible value.
+pub const MINIMUM_AUTH_STATE: AuthState = AuthState {
+    summary: AuthStateSummary::Locked,
+    presence: Presence::Absent,
+    engagement: Engagement::Disengaged,
+};
 
 /// Events emitted on account listeners
 pub enum AccountEvent {
@@ -54,8 +61,10 @@ impl Client {
     ) -> impl Future<Output = Result<(), fidl::Error>> {
         match event {
             AccountEvent::AccountAdded(id) => {
-                let mut account_state =
-                    InitialAccountState { account_id: id.clone().into(), auth_state: None };
+                let mut account_state = AccountAuthState {
+                    account_id: id.clone().into(),
+                    auth_state: MINIMUM_AUTH_STATE,
+                };
                 self.listener.on_account_added(&mut account_state)
             }
             AccountEvent::AccountRemoved(id) => self.listener.on_account_removed(id.clone().into()),
@@ -119,7 +128,10 @@ impl AccountEventEmitter {
         let future = if options.initial_state {
             let mut v = initial_account_ids
                 .iter()
-                .map(|id| InitialAccountState { account_id: id.clone().into(), auth_state: None })
+                .map(|id| AccountAuthState {
+                    account_id: id.clone().into(),
+                    auth_state: MINIMUM_AUTH_STATE,
+                })
                 .collect::<Vec<_>>();
             FutureObj::new(Box::pin(listener.on_initialize(&mut v.iter_mut())))
         } else {
@@ -158,7 +170,6 @@ mod tests {
             initial_state: true,
             add_account: true,
             remove_account: true,
-            scenario: None,
             granularity: None,
         };
         let (listener, _) = create_proxy::<AccountListenerMarker>().unwrap();
@@ -173,7 +184,6 @@ mod tests {
             initial_state: false,
             add_account: false,
             remove_account: false,
-            scenario: None,
             granularity: None,
         };
         let (proxy, _) = create_proxy::<AccountListenerMarker>().unwrap();
@@ -188,7 +198,6 @@ mod tests {
             initial_state: true,
             add_account: false,
             remove_account: true,
-            scenario: None,
             granularity: None,
         };
         let (proxy, _) = create_proxy::<AccountListenerMarker>().unwrap();
@@ -203,7 +212,6 @@ mod tests {
             initial_state: false,
             add_account: true,
             remove_account: false,
-            scenario: None,
             granularity: None,
         };
         let (client_end, mut stream) = create_request_stream::<AccountListenerMarker>().unwrap();
@@ -239,14 +247,12 @@ mod tests {
             initial_state: false,
             add_account: true,
             remove_account: false,
-            scenario: None,
             granularity: None,
         };
         let options_2 = AccountListenerOptions {
             initial_state: true,
             add_account: false,
             remove_account: true,
-            scenario: None,
             granularity: None,
         };
         let (client_end_1, mut stream_1) =
@@ -280,9 +286,9 @@ mod tests {
             {
                 assert_eq!(
                     account_states,
-                    vec![InitialAccountState {
+                    vec![AccountAuthState {
                         account_id: TEST_ACCOUNT_ID.clone().into(),
-                        auth_state: None
+                        auth_state: MINIMUM_AUTH_STATE
                     }]
                 );
                 responder.send().unwrap();
@@ -341,7 +347,6 @@ mod tests {
             initial_state: false,
             add_account: true,
             remove_account: true,
-            scenario: None,
             granularity: None,
         };
         let (client_end, mut stream) = create_request_stream::<AccountListenerMarker>().unwrap();

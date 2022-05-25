@@ -35,42 +35,6 @@ type Engagement = strict enum {
     ENGAGED = 4;
 };
 
-/// A type of attacker to consider when creating authentication states.
-type ThreatScenario = strict enum {
-    /// No attackers are considered.
-    NONE = 1;
-
-    /// People that may typically and frequently gain access to a user's device
-    /// are considered. Examples include nefarious roommates, coworkers,
-    /// houseguests, family members, or thieves. We assume limited technical
-    /// skills and/or motivation and commonly available technology.
-    ///
-    /// Additionally, remote abusers performing an (initially untargeted) attack
-    /// are considered. We assume these attackers use the standard tools of
-    /// their trade such as password dumps, phishing toolkits, brute forcing, or
-    /// stolen identities.
-    BASIC_ATTACKER = 2;
-
-    /// Technologically capable people or organizations who are motivated to
-    /// perform a targeted attack on a user are considered. Examples include
-    /// freelance security professionals, organized crime, law enforcement, and
-    /// government agencies.
-    ADVANCED_ATTACKER = 3;
-};
-
-/// Defines the context to consider when creating authentication states.
-@max_handles("0")
-type Scenario = struct {
-    /// If true, experimental or test authenticators are included when creating
-    /// authentication states and MUST NOT be used to hand out sensitive user
-    /// information.
-    include_test bool;
-
-    /// Defines the threat scenario to consider when creating
-    /// authentication states.
-    threat_scenario ThreatScenario;
-};
-
 /// A high level assessment of whether the account owner is present and engaged.
 type AuthStateSummary = strict enum {
 
@@ -95,10 +59,6 @@ type AuthStateSummary = strict enum {
 /// assessment and its timeliness.
 @max_handles("0")
 type AuthState = struct {
-    /// The scenario that was considered when creating this authentication
-    /// state.
-    scenario Scenario;
-
     /// A high level assessment of whether the account owner is present and
     /// engaged.
     summary AuthStateSummary;
