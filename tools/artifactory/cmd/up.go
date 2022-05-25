@@ -234,10 +234,10 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 	keyDir := path.Join(repo, keyDirName)
 	blobDir := path.Join(metadataDir, blobDirName)
 	targetDir := path.Join(metadataDir, targetDirName)
-	// TODO(fxbug.dev/92697): Remove this conditional. The builds namespace will
-	// be determined by the infrastructure, not artifactory. Artifacts will be
-	// uploaded to the builds namespace if not being deduplicated.
-	buildsNamespaceDir := ""
+	buildsNamespaceDir := cmd.namespace
+	// TODO(fxbug.dev/92697): Remove this conditional once using the upload
+	// manifest is the only codepath. The builds/<namespace> namespace will be
+	// entirely determined by the infrastructure, not artifactory.
 	if cmd.uploadManifestJSONOutput == "" {
 		buildsNamespaceDir = path.Join(buildsDirName, cmd.namespace)
 	}
