@@ -284,6 +284,41 @@ pub fn query(
     Ok(())
 }
 
+/// Reads a notification from the connection channel and writes it to `control.buffer`.
+///
+/// Upon completion, `response.more_data_out` will be true if there is more data waiting to be read.
+/// `response.buffer_size_out` contains the size of the returned buffer.
+///
+/// SAFETY: Makes an FFI call to magma with a buffer that is populated with data. The passed in
+/// buffer pointer always points to a valid vector, even if the provided buffer length is 0.
+pub fn read_notification_channel(
+    current_task: &CurrentTask,
+    control: virtio_magma_read_notification_channel2_ctrl_t,
+    response: &mut virtio_magma_read_notification_channel2_resp_t,
+) -> Result<(), Errno> {
+    // Buffer has a min length of 1 to make sure the call to
+    // `magma_read_notification_channel2` uses a valid reference.
+    let mut buffer = vec![0; std::cmp::max(control.buffer_size as usize, 1)];
+    let mut buffer_size_out = 0;
+    let mut more_data_out: u8 = 0;
+
+    response.result_return = unsafe {
+        magma_read_notification_channel2(
+            control.connection as magma_connection_t,
+            &mut buffer[0] as *mut u8 as *mut std::ffi::c_void,
+            control.buffer_size,
+            &mut buffer_size_out,
+            &mut more_data_out as *mut u8,
+        ) as u64
+    };
+
+    response.more_data_out = more_data_out as u64;
+    response.buffer_size_out = buffer_size_out;
+    current_task.mm.write_memory(UserAddress::from(control.buffer), &mut buffer)?;
+
+    Ok(())
+}
+
 /// Releases the provided `control.connection`.
 ///
 /// # Parameters
