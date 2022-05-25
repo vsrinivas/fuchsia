@@ -88,7 +88,7 @@ service SomeService {
 };
 
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNullableServiceMember);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrOptionalServiceMember);
 }
 
 TEST(ServiceTests, BadOnlyProtocolMembers) {

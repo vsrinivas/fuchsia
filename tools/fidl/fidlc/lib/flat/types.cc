@@ -21,7 +21,7 @@ bool ArrayType::ApplyConstraints(TypeResolver* resolver, const TypeConstraints& 
   // specific error
   // TODO(fxbug.dev/75112): actually try to compile the optional constraint
   if (num_constraints == 1)
-    return resolver->Fail(ErrCannotBeNullable, constraints.items[0]->span,
+    return resolver->Fail(ErrCannotBeOptional, constraints.items[0]->span,
                           layout.resolved().name());
   if (num_constraints > 1)
     return resolver->Fail(ErrTooManyConstraints, constraints.span.value(), layout.resolved().name(),
@@ -82,7 +82,7 @@ bool VectorType::ApplyConstraints(TypeResolver* resolver, const TypeConstraints&
   bool is_already_nullable = nullability == types::Nullability::kNullable;
   bool is_nullability_applied = out_params->nullability == types::Nullability::kNullable;
   if (is_already_nullable && is_nullability_applied)
-    return resolver->Fail(ErrCannotIndicateNullabilityTwice, constraints.span.value(),
+    return resolver->Fail(ErrCannotIndicateOptionalTwice, constraints.span.value(),
                           layout.resolved().name());
   auto merged_nullability = is_already_nullable || is_nullability_applied
                                 ? types::Nullability::kNullable
@@ -105,7 +105,7 @@ bool StringType::ApplyConstraints(TypeResolver* resolver, const TypeConstraints&
   bool is_already_nullable = nullability == types::Nullability::kNullable;
   bool is_nullability_applied = out_params->nullability == types::Nullability::kNullable;
   if (is_already_nullable && is_nullability_applied)
-    return resolver->Fail(ErrCannotIndicateNullabilityTwice, constraints.span.value(),
+    return resolver->Fail(ErrCannotIndicateOptionalTwice, constraints.span.value(),
                           layout.resolved().name());
   auto merged_nullability = is_already_nullable || is_nullability_applied
                                 ? types::Nullability::kNullable
@@ -218,7 +218,7 @@ bool HandleType::ApplyConstraints(TypeResolver* resolver, const TypeConstraints&
 
   bool has_nullability = nullability == types::Nullability::kNullable;
   if (has_nullability && out_params->nullability == types::Nullability::kNullable)
-    return resolver->Fail(ErrCannotIndicateNullabilityTwice, applied_nullability_span.value(),
+    return resolver->Fail(ErrCannotIndicateOptionalTwice, applied_nullability_span.value(),
                           layout.resolved().name());
   auto merged_nullability =
       has_nullability || out_params->nullability == types::Nullability::kNullable
@@ -315,7 +315,7 @@ bool TransportSideType::ApplyConstraints(TypeResolver* resolver, const TypeConst
 
   bool has_nullability = nullability == types::Nullability::kNullable;
   if (has_nullability && out_params->nullability == types::Nullability::kNullable)
-    return resolver->Fail(ErrCannotIndicateNullabilityTwice, applied_nullability_span.value(),
+    return resolver->Fail(ErrCannotIndicateOptionalTwice, applied_nullability_span.value(),
                           layout.resolved().name());
   auto merged_nullability =
       has_nullability || out_params->nullability == types::Nullability::kNullable
@@ -343,7 +343,7 @@ bool IdentifierType::ApplyConstraints(TypeResolver* resolver, const TypeConstrai
       // specific error
       // TODO(fxbug.dev/75112): actually try to compile the optional constraint
       if (num_constraints == 1)
-        return resolver->Fail(ErrCannotBeNullable, constraints.items[0]->span,
+        return resolver->Fail(ErrCannotBeOptional, constraints.items[0]->span,
                               layout.resolved().name());
       if (num_constraints > 1) {
         return resolver->Fail(ErrTooManyConstraints, constraints.span.value(),
@@ -407,7 +407,7 @@ bool IdentifierType::ApplyConstraints(TypeResolver* resolver, const TypeConstrai
 
   if (nullability == types::Nullability::kNullable &&
       applied_nullability == types::Nullability::kNullable)
-    return resolver->Fail(ErrCannotIndicateNullabilityTwice, constraints.span.value(),
+    return resolver->Fail(ErrCannotIndicateOptionalTwice, constraints.span.value(),
                           layout.resolved().name());
   auto merged_nullability = nullability;
   if (applied_nullability == types::Nullability::kNullable)
@@ -426,7 +426,7 @@ bool BoxType::ApplyConstraints(TypeResolver* resolver, const TypeConstraints& co
   // specific error
   // TODO(fxbug.dev/75112): actually try to compile the optional constraint
   if (num_constraints == 1)
-    return resolver->Fail(ErrBoxCannotBeNullable, constraints.items[0]->span);
+    return resolver->Fail(ErrBoxCannotBeOptional, constraints.items[0]->span);
   if (num_constraints > 1)
     return resolver->Fail(ErrTooManyConstraints, constraints.span.value(), layout.resolved().name(),
                           0, num_constraints);
@@ -473,7 +473,7 @@ bool PrimitiveType::ApplyConstraints(TypeResolver* resolver, const TypeConstrain
   // specific error
   // TODO(fxbug.dev/75112): actually try to compile the optional constraint
   if (num_constraints == 1)
-    return resolver->Fail(ErrCannotBeNullable, constraints.items[0]->span,
+    return resolver->Fail(ErrCannotBeOptional, constraints.items[0]->span,
                           layout.resolved().name());
   if (num_constraints > 1)
     return resolver->Fail(ErrTooManyConstraints, constraints.span.value(), layout.resolved().name(),

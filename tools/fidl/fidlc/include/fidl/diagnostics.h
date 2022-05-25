@@ -111,8 +111,8 @@ constexpr ErrorDef<std::vector<std::string_view>> ErrUnknownLibrary(
     "Could not find library named {}. Did you include its sources with --files?");
 constexpr ErrorDef<SourceSpan> ErrProtocolComposedMultipleTimes(
     "protocol composed multiple times; previous was at {}");
-constexpr ErrorDef ErrNullableTableMember("Table members cannot be nullable");
-constexpr ErrorDef ErrNullableUnionMember("Union members cannot be nullable");
+constexpr ErrorDef ErrOptionalTableMember("Table members cannot be optional");
+constexpr ErrorDef ErrOptionalUnionMember("Union members cannot be optional");
 
 // ---------------------------------------------------------------------------
 // ResolveStep
@@ -214,7 +214,7 @@ constexpr ErrorDef<std::string_view, std::string_view, SourceSpan, std::string_v
     ErrDuplicateServiceMemberNameCanonical(
         "service member '{}' conflicts with member '{}' from {}; both are "
         "represented by the canonical form '{}'");
-constexpr ErrorDef ErrNullableServiceMember("service members cannot be nullable");
+constexpr ErrorDef ErrOptionalServiceMember("service members cannot be optional");
 constexpr ErrorDef<std::string_view, SourceSpan> ErrDuplicateStructMemberName(
     "multiple struct fields named '{}'; previous was at {}");
 constexpr ErrorDef<std::string_view, std::string_view, SourceSpan, std::string_view>
@@ -377,14 +377,14 @@ constexpr ErrorDef<const flat::AttributeArg *, std::string_view, const flat::Att
 // ---------------------------------------------------------------------------
 // Type Templates
 // ---------------------------------------------------------------------------
-constexpr ErrorDef<flat::Name> ErrCannotBeNullable("{} cannot be nullable");
+constexpr ErrorDef<flat::Name> ErrCannotBeOptional("{} cannot be optional");
 constexpr ErrorDef<flat::Name> ErrMustBeAProtocol("{} must be a protocol");
 constexpr ErrorDef<flat::Name> ErrCannotBoundTwice("{} cannot bound twice");
 constexpr ErrorDef<flat::Name> ErrStructCannotBeOptional(
     "structs can no longer be marked optional; please use the new syntax, "
     "`box<{}>`");
-constexpr ErrorDef<flat::Name> ErrCannotIndicateNullabilityTwice(
-    "{} cannot indicate nullability twice");
+constexpr ErrorDef<flat::Name> ErrCannotIndicateOptionalTwice(
+    "{} is already optional, cannot indicate optionality twice");
 constexpr ErrorDef<flat::Name> ErrMustHaveNonZeroSize("{} must have non-zero size");
 constexpr ErrorDef<flat::Name, size_t, size_t> ErrWrongNumberOfLayoutParameters(
     "{} expected {} layout parameter(s), but got {}");
@@ -397,11 +397,11 @@ constexpr ErrorDef<flat::Name> ErrUnexpectedConstraint("{} failed to resolve con
 constexpr ErrorDef<flat::Name> ErrCannotConstrainTwice("{} cannot add additional constraint");
 constexpr ErrorDef<flat::Name> ErrProtocolConstraintRequired(
     "{} requires a protocol as its first constraint");
-// The same error as ErrCannotBeNullable, but with a more specific message since the
+// The same error as ErrCannotBeOptional, but with a more specific message since the
 // optionality of boxes may be confusing
-constexpr ErrorDef ErrBoxCannotBeNullable(
+constexpr ErrorDef ErrBoxCannotBeOptional(
     "cannot specify optionality for box, boxes are optional by default");
-constexpr ErrorDef ErrBoxedTypeCannotBeNullable(
+constexpr ErrorDef ErrBoxedTypeCannotBeOptional(
     "no double optionality, boxes are already optional");
 constexpr ErrorDef<flat::Name> ErrCannotBeBoxed(
     "type {} cannot be boxed, try using optional instead");

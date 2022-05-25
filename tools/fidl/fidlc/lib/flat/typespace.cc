@@ -345,7 +345,7 @@ const Type* Typespace::Creator::CreateBoxType() {
   }
   const auto* inner = static_cast<const IdentifierType*>(boxed_type);
   if (inner->nullability == types::Nullability::kNullable) {
-    Fail(ErrBoxedTypeCannotBeNullable, parameters_.items[0]->span);
+    Fail(ErrBoxedTypeCannotBeOptional, parameters_.items[0]->span);
     return nullptr;
   }
   // We disallow specifying the boxed type as nullable in FIDL source but

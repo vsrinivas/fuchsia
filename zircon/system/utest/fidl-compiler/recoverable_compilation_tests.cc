@@ -207,7 +207,7 @@ type Foo = table {
   EXPECT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 5);
-  EXPECT_ERR(errors[0], fidl::ErrNullableTableMember);
+  EXPECT_ERR(errors[0], fidl::ErrOptionalTableMember);
   EXPECT_ERR(errors[1], fidl::ErrDuplicateTableFieldOrdinal);
   EXPECT_ERR(errors[2], fidl::ErrWrongNumberOfLayoutParameters);
   EXPECT_ERR(errors[3], fidl::ErrDuplicateTableFieldNameCanonical);
@@ -229,7 +229,7 @@ type Foo = union {
   EXPECT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 5);
-  EXPECT_ERR(errors[0], fidl::ErrNullableUnionMember);
+  EXPECT_ERR(errors[0], fidl::ErrOptionalUnionMember);
   EXPECT_ERR(errors[1], fidl::ErrDuplicateUnionMemberOrdinal);
   EXPECT_ERR(errors[2], fidl::ErrWrongNumberOfLayoutParameters);
   EXPECT_ERR(errors[3], fidl::ErrDuplicateUnionMemberNameCanonical);
@@ -255,7 +255,7 @@ protocol Foo {
   EXPECT_ERR(errors[0], fidl::ErrComposingNonProtocol);
   EXPECT_ERR(errors[1], fidl::ErrInvalidSelectorValue);
   EXPECT_ERR(errors[2], fidl::ErrDuplicateMethodNameCanonical);
-  EXPECT_ERR(errors[3], fidl::ErrCannotBeNullable);
+  EXPECT_ERR(errors[3], fidl::ErrCannotBeOptional);
   EXPECT_ERR(errors[4], fidl::ErrWrongNumberOfLayoutParameters);
 }
 
@@ -279,7 +279,7 @@ service Foo {
   EXPECT_ERR(errors[1], fidl::ErrWrongNumberOfLayoutParameters);
   EXPECT_ERR(errors[2], fidl::ErrOnlyClientEndsInServices);
   EXPECT_ERR(errors[3], fidl::ErrDuplicateServiceMemberNameCanonical);
-  EXPECT_ERR(errors[4], fidl::ErrNullableServiceMember);
+  EXPECT_ERR(errors[4], fidl::ErrOptionalServiceMember);
 }
 
 }  // namespace

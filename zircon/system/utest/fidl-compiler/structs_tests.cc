@@ -323,7 +323,7 @@ type Foo = struct {
   foo box<Foo>:optional;
 };
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrBoxCannotBeNullable);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrBoxCannotBeOptional);
 }
 
 TEST(StructsTests, GoodWithoutFlagStructCanBeOptional) {

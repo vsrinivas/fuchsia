@@ -194,7 +194,7 @@ type Struct = struct {
     not_nullable NotNullable:optional;
 };
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBeNullable)
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBeOptional)
 }
 
 TEST(EnumsTests, BadEnumMultipleConstraints) {

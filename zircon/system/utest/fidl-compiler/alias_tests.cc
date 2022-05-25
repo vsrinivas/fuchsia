@@ -126,7 +126,7 @@ type Bad = struct {
 };
 
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBeNullable);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBeOptional);
 }
 
 TEST(AliasTests, BadMultipleConstraintsOnPrimitive) {
@@ -152,7 +152,7 @@ type Bad = struct {
 };
 
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBeNullable);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBeOptional);
 }
 
 TEST(AliasTests, GoodVectorParameterizedOnDecl) {
@@ -353,7 +353,7 @@ type Message = struct {
 
 alias alias_of_vector_nullable = vector<string>:optional;
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotIndicateNullabilityTwice);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotIndicateOptionalTwice);
 }
 
 TEST(AliasTests, GoodMultiFileAliasReference) {

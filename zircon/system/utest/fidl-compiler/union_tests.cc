@@ -284,7 +284,7 @@ type Foo = strict union {
 };
 
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNullableUnionMember);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrOptionalUnionMember);
 }
 
 TEST(UnionTests, BadNoDirectlyRecursiveUnions) {

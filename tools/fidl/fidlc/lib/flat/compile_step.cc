@@ -1148,7 +1148,7 @@ void CompileStep::CompileService(Service* service_decl) {
       Fail(ErrOnlyClientEndsInServices, member.name);
     }
     if (member.type_ctor->type->nullability != types::Nullability::kNonnullable) {
-      Fail(ErrNullableServiceMember, member.name);
+      Fail(ErrOptionalServiceMember, member.name);
     }
   }
 }
@@ -1228,7 +1228,7 @@ void CompileStep::CompileTable(Table* table_declaration) {
       continue;
     }
     if (member_used.type_ctor->type->nullability != types::Nullability::kNonnullable) {
-      Fail(ErrNullableTableMember, member_used.name);
+      Fail(ErrOptionalTableMember, member_used.name);
     }
     if (i == kMaxTableOrdinals - 1) {
       if (member_used.type_ctor->type->kind != Type::Kind::kIdentifier) {
@@ -1283,7 +1283,7 @@ void CompileStep::CompileUnion(Union* union_declaration) {
       continue;
     }
     if (member_used.type_ctor->type->nullability != types::Nullability::kNonnullable) {
-      Fail(ErrNullableUnionMember, member_used.name);
+      Fail(ErrOptionalUnionMember, member_used.name);
     }
     derive_resourceness.AddType(member_used.type_ctor->type);
   }

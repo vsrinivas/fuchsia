@@ -48,7 +48,7 @@ type Table = table {
   ASSERT_JSON(diagnostics, R"JSON([
   {
     "category": "fidlc/error",
-    "message": "Table members cannot be nullable",
+    "message": "Table members cannot be optional",
     "path": "example.fidl",
     "start_line": 5,
     "start_char": 7,
