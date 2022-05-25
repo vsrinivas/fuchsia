@@ -126,7 +126,7 @@ pub mod for_tests {
         fidl_fuchsia_pkg::PackageResolverMarker,
         fidl_fuchsia_pkg_ext::RepositoryConfigs,
         fuchsia_pkg_testing::{serve::ServedRepository, Repository},
-        fuchsia_url::pkg_url::RepoUrl,
+        fuchsia_url::RepositoryUrl,
     };
 
     const SSL_TEST_CERTS_PATH: &str = "/pkg/data/ssl";
@@ -143,7 +143,7 @@ pub mod for_tests {
         #[cfg(test)]
         pub async fn new(
             repo: Arc<Repository>,
-            repo_url: RepoUrl,
+            repo_url: RepositoryUrl,
             channel: Option<String>,
         ) -> Result<Self, Error> {
             Self::new_with_component(
@@ -171,7 +171,7 @@ pub mod for_tests {
         /// * `cache_url`: fuchsia-pkg:// URL to use when launching the package cache.
         pub async fn new_with_component(
             repo: Arc<Repository>,
-            repo_url: RepoUrl,
+            repo_url: RepositoryUrl,
             channel: Option<String>,
             resolver_url: &str,
             cache_url: &str,

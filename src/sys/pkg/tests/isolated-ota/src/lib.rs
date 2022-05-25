@@ -15,7 +15,6 @@ use {
     fuchsia_pkg_testing::{
         make_epoch_json, serve::ServedRepository, Package, PackageBuilder, RepositoryBuilder,
     },
-    fuchsia_url::pkg_url::RepoUrl,
     fuchsia_zircon as zx,
     futures::prelude::*,
     http::uri::Uri,
@@ -341,7 +340,7 @@ pub async fn test_no_network() -> Result<(), Error> {
         MirrorConfigBuilder::new("http://does-not-exist.fuchsia.com".parse::<Uri>().unwrap())?
             .build();
     let invalid_repo = RepositoryConfigs::Version1(vec![RepositoryConfigBuilder::new(
-        RepoUrl::new("fuchsia.com".to_owned())?,
+        fuchsia_url::RepositoryUrl::parse_host("fuchsia.com".to_owned()).unwrap(),
     )
     .add_mirror(bad_mirror)
     .build()]);

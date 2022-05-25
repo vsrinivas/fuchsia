@@ -30,7 +30,7 @@ use {
         tree_assertion,
     },
     fuchsia_pkg_testing::{make_epoch_json, make_packages_json},
-    fuchsia_url::pkg_url::PkgUrl,
+    fuchsia_url::{PinnedAbsolutePackageUrl, UnpinnedAbsolutePackageUrl},
     fuchsia_zircon as zx,
     futures::{
         channel::{mpsc, oneshot},
@@ -137,7 +137,7 @@ struct TestEnvBuilder {
     eager_package_config_builder: Option<EagerPackageConfigBuilder>,
     omaha_client_config_bool_overrides: Vec<(String, bool)>,
     omaha_client_config_uint16_overrides: Vec<(String, u16)>,
-    cup_info_map: HashMap<PkgUrl, (String, String)>,
+    cup_info_map: HashMap<UnpinnedAbsolutePackageUrl, (String, String)>,
     private_keys: PrivateKeys,
     etag_override: Option<String>,
 }
@@ -752,11 +752,11 @@ pub mod fuchsia_pkg_cup {
 
     #[derive(Debug)]
     pub struct Mock {
-        info_map: HashMap<PkgUrl, (String, String)>,
+        info_map: HashMap<UnpinnedAbsolutePackageUrl, (String, String)>,
     }
 
     impl Mock {
-        pub fn new(info_map: HashMap<PkgUrl, (String, String)>) -> Self {
+        pub fn new(info_map: HashMap<UnpinnedAbsolutePackageUrl, (String, String)>) -> Self {
             Self { info_map }
         }
 
@@ -764,10 +764,10 @@ pub mod fuchsia_pkg_cup {
             while let Some(request) = stream.try_next().await.unwrap() {
                 match request {
                     CupRequest::Write { url, cup: _, responder } => {
-                        let url: PkgUrl = url.url.parse().unwrap();
+                        let url: PinnedAbsolutePackageUrl = url.url.parse().unwrap();
                         assert_eq!(url.host(), "integration.test.fuchsia.com");
                         assert_eq!(
-                            url.package_hash().unwrap().to_string(),
+                            url.hash().to_string(),
                             "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef"
                         );
                         responder.send(&mut Ok(())).unwrap();

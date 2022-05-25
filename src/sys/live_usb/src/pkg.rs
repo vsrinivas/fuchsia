@@ -55,7 +55,7 @@ mod tests {
         },
         fidl_fuchsia_pkg_rewrite_ext::Rule,
         fuchsia_async as fasync,
-        fuchsia_url::pkg_url::PkgUrl,
+        fuchsia_url::AbsolutePackageUrl,
         futures::prelude::*,
         std::convert::TryInto,
     };
@@ -105,7 +105,7 @@ mod tests {
             }
         }
 
-        pub fn apply_rules(&self, url: &PkgUrl) -> PkgUrl {
+        pub fn apply_rules(&self, url: &AbsolutePackageUrl) -> AbsolutePackageUrl {
             self.rules
                 .iter()
                 .fold(url.clone(), |url, rule| rule.apply(&url).unwrap().expect("rule ok"))
@@ -123,7 +123,7 @@ mod tests {
 
         let engine = task.await;
 
-        let update_url = PkgUrl::parse("fuchsia-pkg://fuchsia.com/update").unwrap();
+        let update_url = AbsolutePackageUrl::parse("fuchsia-pkg://fuchsia.com/update").unwrap();
         // Expect that the update url changes.
         assert_ne!(engine.apply_rules(&update_url), update_url);
     }

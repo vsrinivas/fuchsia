@@ -5,7 +5,7 @@
 use {
     super::metrics,
     fidl_fuchsia_update_installer_ext::{Initiator as ExtInitiator, Options},
-    fuchsia_url::pkg_url::PkgUrl,
+    fuchsia_url::AbsolutePackageUrl,
     std::time::{Instant, SystemTime},
 };
 
@@ -13,7 +13,7 @@ use {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Config {
     pub(super) initiator: Initiator,
-    pub update_url: PkgUrl,
+    pub update_url: AbsolutePackageUrl,
     pub should_write_recovery: bool,
     pub(super) start_time: SystemTime,
     pub(super) start_time_mono: Instant,
@@ -21,8 +21,8 @@ pub struct Config {
 }
 
 impl Config {
-    /// Constructs update configuration from PkgUrl and Options.
-    pub fn from_url_and_options(update_url: PkgUrl, options: Options) -> Self {
+    /// Constructs update configuration from AbsolutePackageUrl and Options.
+    pub fn from_url_and_options(update_url: AbsolutePackageUrl, options: Options) -> Self {
         let start_time = SystemTime::now();
         let start_time_mono =
             metrics::system_time_to_monotonic_time(start_time).unwrap_or_else(Instant::now);

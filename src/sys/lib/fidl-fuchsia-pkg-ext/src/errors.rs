@@ -111,10 +111,10 @@ pub enum RepositoryParseError {
     SubscribeMissing,
 
     #[error("invalid repository url")]
-    InvalidRepoUrl(#[source] fuchsia_url::pkg_url::ParseError),
+    InvalidRepoUrl(#[source] fuchsia_url::ParseError),
 
     #[error("invalid update package url")]
-    InvalidUpdatePackageUrl(#[source] fuchsia_url::pkg_url::ParseError),
+    InvalidUpdatePackageUrl(#[source] fuchsia_url::ParseError),
 
     #[error("invalid root version: {0}")]
     InvalidRootVersion(u32),
@@ -132,5 +132,5 @@ pub enum RepositoryParseError {
 #[derive(Error, Debug)]
 pub enum RepositoryUrlParseError {
     #[error("invalid repository url")]
-    InvalidRepoUrl(#[source] fuchsia_url::pkg_url::ParseError),
+    InvalidRepoUrl(#[source] fuchsia_url::ParseError),
 }

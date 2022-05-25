@@ -13,7 +13,7 @@ use fidl_fuchsia_pkg::{
 use fidl_fuchsia_pkg_ext::RepositoryConfig;
 use fuchsia_async as fasync;
 use fuchsia_syslog::{fx_log_err, fx_log_info};
-use fuchsia_url::pkg_url::RepoUrl;
+use fuchsia_url::RepositoryUrl;
 use fuchsia_zircon::Status;
 use futures::prelude::*;
 use std::convert::TryFrom;
@@ -87,7 +87,7 @@ impl RepositoryService {
     async fn serve_remove(&mut self, repo_url: String) -> Result<(), Status> {
         fx_log_info!("removing repository {}", repo_url);
 
-        let repo_url = match RepoUrl::parse(&repo_url) {
+        let repo_url = match RepositoryUrl::parse(&repo_url) {
             Ok(repo_url) => repo_url,
             Err(err) => {
                 fx_log_err!("invalid repository URL: {:#}", anyhow!(err));
@@ -155,7 +155,6 @@ mod tests {
         fidl::endpoints::create_proxy_and_stream,
         fidl_fuchsia_pkg::RepositoryIteratorMarker,
         fidl_fuchsia_pkg_ext::{RepositoryConfig, RepositoryConfigBuilder},
-        fuchsia_url::pkg_url::RepoUrl,
         std::convert::TryInto,
     };
 
@@ -194,7 +193,8 @@ mod tests {
         // First, create a bunch of repo configs we're going to use for testing.
         let configs = (0..200)
             .map(|i| {
-                let url = RepoUrl::parse(&format!("fuchsia-pkg://fuchsia{:04}.com", i)).unwrap();
+                let url =
+                    RepositoryUrl::parse(&format!("fuchsia-pkg://fuchsia{:04}.com", i)).unwrap();
                 RepositoryConfigBuilder::new(url).build()
             })
             .collect::<Vec<_>>();
@@ -226,7 +226,8 @@ mod tests {
         // is cheaper.
         let configs = (0..20)
             .map(|i| {
-                let url = RepoUrl::parse(&format!("fuchsia-pkg://fuchsia{:04}.com", i)).unwrap();
+                let url =
+                    RepositoryUrl::parse(&format!("fuchsia-pkg://fuchsia{:04}.com", i)).unwrap();
                 RepositoryConfigBuilder::new(url).build()
             })
             .collect::<Vec<_>>();
@@ -258,7 +259,7 @@ mod tests {
             .unwrap()
             .build();
         let mut service = RepositoryService::new(Arc::new(RwLock::new(mgr)));
-        let url = RepoUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
+        let url = RepositoryUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
         let config = RepositoryConfigBuilder::new(url).build();
 
         assert_eq!(service.serve_insert(config.into()).await, Err(Status::ACCESS_DENIED));

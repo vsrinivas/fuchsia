@@ -5,7 +5,7 @@
 use anyhow::{bail, Context, Result};
 use fuchsia_hash::Hash;
 use fuchsia_pkg::{PackageManifest, PackagePath};
-use fuchsia_url::pkg_url::PkgUrl;
+use fuchsia_url::{PinnedAbsolutePackageUrl, RepositoryUrl};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 
@@ -28,7 +28,7 @@ use std::collections::BTreeSet;
 pub enum UpdatePackagesManifest {
     /// Version 1.
     #[serde(rename = "1")]
-    V1(BTreeSet<PkgUrl>),
+    V1(BTreeSet<PinnedAbsolutePackageUrl>),
 }
 
 impl Default for UpdatePackagesManifest {
@@ -50,10 +50,15 @@ impl UpdatePackagesManifest {
 
     /// Add a package to be updated by its path and meta far merkle.
     pub fn add(&mut self, path: PackagePath, merkle: Hash) -> Result<()> {
-        let path = format!("/{}", path.to_string());
-        let url = PkgUrl::new_package("fuchsia.com".to_string(), path.clone(), Some(merkle))
-            .context(format!("Failed to create package url for {}", path))?;
-        self.add_by_url(url);
+        let (name, variant) = path.into_name_and_variant();
+        let url = PinnedAbsolutePackageUrl::new(
+            RepositoryUrl::parse_host("fuchsia.com".into())
+                .context("failed to convert 'fuchsia.com' to a RepositoryUrl")?,
+            name,
+            Some(variant),
+            merkle,
+        );
+        let () = self.add_by_url(url);
         Ok(())
     }
 
@@ -69,7 +74,7 @@ impl UpdatePackagesManifest {
     }
 
     /// Add a new package by |url|.
-    fn add_by_url(&mut self, url: PkgUrl) {
+    fn add_by_url(&mut self, url: PinnedAbsolutePackageUrl) {
         match self {
             UpdatePackagesManifest::V1(contents) => contents.insert(url),
         };

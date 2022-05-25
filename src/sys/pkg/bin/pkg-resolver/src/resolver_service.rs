@@ -29,7 +29,7 @@ use {
     fuchsia_pkg::PackageDirectory,
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
     fuchsia_trace as trace,
-    fuchsia_url::pkg_url::{ParseError, PkgUrl},
+    fuchsia_url::{AbsolutePackageUrl, ParseError},
     fuchsia_zircon::Status,
     futures::{future::Future, stream::TryStreamExt as _},
     std::sync::Arc,
@@ -45,7 +45,11 @@ pub use inspect::ResolverService as ResolverServiceInspectState;
 /// packages and terminate its output stream.
 #[derive(Clone, Debug)]
 pub struct QueuedResolver {
-    queue: work_queue::WorkSender<PkgUrl, (), Result<PackageDirectory, Arc<GetPackageError>>>,
+    queue: work_queue::WorkSender<
+        AbsolutePackageUrl,
+        (),
+        Result<PackageDirectory, Arc<GetPackageError>>,
+    >,
     cache: pkg::cache::Client,
     base_package_index: Arc<BasePackageIndex>,
     rewriter: Arc<AsyncRwLock<RewriteManager>>,
@@ -60,7 +64,7 @@ pub struct QueuedResolver {
 pub trait Resolver: std::fmt::Debug + Sync + Sized {
     async fn resolve(
         &self,
-        url: PkgUrl,
+        url: AbsolutePackageUrl,
         eager_package_manager: Option<&AsyncRwLock<EagerPackageManager<Self>>>,
     ) -> Result<PackageDirectory, pkg::ResolveError>;
 }
@@ -69,16 +73,10 @@ pub trait Resolver: std::fmt::Debug + Sync + Sized {
 impl Resolver for QueuedResolver {
     async fn resolve(
         &self,
-        pkg_url: PkgUrl,
+        pkg_url: AbsolutePackageUrl,
         eager_package_manager: Option<&AsyncRwLock<EagerPackageManager<Self>>>,
     ) -> Result<PackageDirectory, pkg::ResolveError> {
         trace::duration_begin!("app", "resolve", "url" => pkg_url.to_string().as_str());
-        // While the fuchsia-pkg:// spec allows resource paths, the package resolver should not be
-        // given one.
-        if pkg_url.resource().is_some() {
-            fx_log_err!("package url should not contain a resource name: {}", pkg_url);
-            return Err(pkg::ResolveError::InvalidUrl);
-        }
 
         // Base pin.
         let package_inspect = self.inspect.resolve(&pkg_url);
@@ -149,8 +147,9 @@ impl QueuedResolver {
         inspect: Arc<ResolverServiceInspectState>,
     ) -> (impl Future<Output = ()>, Self) {
         let cache = cache_client.clone();
-        let (package_fetch_queue, queue) =
-            work_queue::work_queue(max_concurrency, move |rewritten_url: PkgUrl, _: ()| {
+        let (package_fetch_queue, queue) = work_queue::work_queue(
+            max_concurrency,
+            move |rewritten_url: AbsolutePackageUrl, _: ()| {
                 let cache = cache_client.clone();
                 let repo_manager = Arc::clone(&repo_manager);
                 let blob_fetcher = blob_fetcher.clone();
@@ -159,7 +158,8 @@ impl QueuedResolver {
                         .await
                         .map_err(Arc::new)?)
                 }
-            });
+            },
+        );
         let fetcher =
             Self { queue, inspect, base_package_index, cache, rewriter, system_cache_list };
         (package_fetch_queue.into_future(), fetcher)
@@ -168,8 +168,8 @@ impl QueuedResolver {
     async fn handle_cache_fallbacks(
         &self,
         error: Arc<GetPackageError>,
-        pkg_url: &PkgUrl,
-        rewritten_url: &PkgUrl,
+        pkg_url: &AbsolutePackageUrl,
+        rewritten_url: &AbsolutePackageUrl,
     ) -> Result<PackageDirectory, pkg::ResolveError> {
         // NB: Combination of {:#} formatting applied to an `anyhow::Error` allows to print the
         // display impls of all the source errors.
@@ -272,14 +272,18 @@ impl QueuedResolver {
 #[cfg(test)]
 /// Creates a mocked PackageResolver that resolves any url using the given callback.
 pub struct MockResolver {
-    queue: work_queue::WorkSender<PkgUrl, (), Result<PackageDirectory, Arc<GetPackageError>>>,
+    queue: work_queue::WorkSender<
+        AbsolutePackageUrl,
+        (),
+        Result<PackageDirectory, Arc<GetPackageError>>,
+    >,
 }
 
 #[cfg(test)]
 impl MockResolver {
     pub fn new<W, F>(callback: W) -> Self
     where
-        W: Fn(PkgUrl) -> F + Send + 'static,
+        W: Fn(AbsolutePackageUrl) -> F + Send + 'static,
         F: Future<Output = Result<PackageDirectory, Arc<GetPackageError>>> + Send,
     {
         let (package_fetch_queue, queue) =
@@ -294,7 +298,7 @@ impl MockResolver {
 impl Resolver for MockResolver {
     async fn resolve(
         &self,
-        url: PkgUrl,
+        url: AbsolutePackageUrl,
         _eager_package_manager: Option<&AsyncRwLock<EagerPackageManager<Self>>>,
     ) -> Result<PackageDirectory, pkg::ResolveError> {
         let queued_fetch = self.queue.push(url, ());
@@ -394,14 +398,14 @@ pub async fn run_resolver_service(
 
 async fn rewrite_url(
     rewriter: &AsyncRwLock<RewriteManager>,
-    url: &PkgUrl,
-) -> Result<PkgUrl, Status> {
+    url: &AbsolutePackageUrl,
+) -> Result<AbsolutePackageUrl, Status> {
     Ok(rewriter.read().await.rewrite(url))
 }
 
 fn missing_cache_package_disk_fallback(
-    rewritten_url: &PkgUrl,
-    pkg_url: &PkgUrl,
+    rewritten_url: &AbsolutePackageUrl,
+    pkg_url: &AbsolutePackageUrl,
     system_cache_list: &CachePackages,
     inspect: &ResolverServiceInspectState,
 ) -> Option<BlobId> {
@@ -432,7 +436,7 @@ async fn hash_from_base_or_repo_or_cache(
     rewriter: &AsyncRwLock<RewriteManager>,
     base_package_index: &BasePackageIndex,
     system_cache_list: &CachePackages,
-    pkg_url: &PkgUrl,
+    pkg_url: &AbsolutePackageUrl,
     inspect_state: &ResolverServiceInspectState,
     eager_package_manager: Option<&AsyncRwLock<EagerPackageManager<QueuedResolver>>>,
 ) -> Result<BlobId, Status> {
@@ -441,7 +445,7 @@ async fn hash_from_base_or_repo_or_cache(
         return Ok(blob);
     }
 
-    let rewritten_url = rewrite_url(rewriter, &pkg_url).await?;
+    let rewritten_url = rewrite_url(rewriter, pkg_url).await?;
 
     // Attempt to use EagerPackageManager to resolve the package.
     if let Some(eager_package_manager) = eager_package_manager {
@@ -502,8 +506,8 @@ async fn hash_from_base_or_repo_or_cache(
 async fn hash_from_repo_or_cache(
     repo_manager: &AsyncRwLock<RepositoryManager>,
     system_cache_list: &CachePackages,
-    pkg_url: &PkgUrl,
-    rewritten_url: &PkgUrl,
+    pkg_url: &AbsolutePackageUrl,
+    rewritten_url: &AbsolutePackageUrl,
     inspect_state: &ResolverServiceInspectState,
 ) -> Result<HashSource<GetPackageHashError>, GetPackageHashError> {
     // The RwLock created by `.read()` must not exist across the `.await` (to e.g. prevent
@@ -540,7 +544,7 @@ async fn hash_from_repo_or_cache(
 
 async fn package_from_repo(
     repo_manager: &AsyncRwLock<RepositoryManager>,
-    rewritten_url: &PkgUrl,
+    rewritten_url: &AbsolutePackageUrl,
     cache: pkg::cache::Client,
     blob_fetcher: BlobFetcher,
 ) -> Result<PackageDirectory, GetPackageError> {
@@ -571,9 +575,9 @@ async fn package_from_repo(
 // Attempts to lookup the hash of a package from `system_cache_list`, which is populated from the
 // cache_packages manifest of the system_image package. The cache_packages manifest only includes
 // the package path and assumes all hosts are "fuchsia.com", so this fn can only succeed on
-// `PkgUrl`s with a host of "fuchsia.com".
+// `AbsolutePackageUrl`s with a host of "fuchsia.com".
 fn hash_from_cache_packages_manifest<'a>(
-    url: &PkgUrl,
+    url: &AbsolutePackageUrl,
     system_cache_list: &'a CachePackages,
 ) -> Option<BlobId> {
     if url.host() != "fuchsia.com" {
@@ -582,7 +586,7 @@ fn hash_from_cache_packages_manifest<'a>(
     // We are in the process of removing the concept of package variant
     // (generalizing fuchsia-pkg URL paths to be `(first-segment)(/more-segments)*`
     // instead of requiring that paths are `(name)/(variant)`. Towards this goal,
-    // the PkgUrls the pkg-resolver gets from the pkg-cache from `PackageCache.CachePackageIndex`
+    // the URLs the pkg-resolver gets from the pkg-cache from `PackageCache.CachePackageIndex`
     // do not have variants. However, they are intended to match only URLs with variant of "0".
     // Additionally, pkg-resolver allows clients to not specify a variant, in which case a
     // variant of "0" will be assumed. This means that if the URL we are resolving has a
@@ -593,18 +597,22 @@ fn hash_from_cache_packages_manifest<'a>(
         Some(variant) if !variant.is_zero() => {
             return None;
         }
-        Some(_) => url.strip_variant(),
+        Some(_) => {
+            let mut url = url.clone();
+            url.clear_variant();
+            url
+        }
     };
 
     let cache_hash = system_cache_list.hash_for_package(&url).map(Into::into);
-    match (cache_hash, url.package_hash()) {
+    match (cache_hash, url.hash()) {
         // This arm is less useful than (Some, None) b/c generally metadata lookup for pinned URLs
         // succeeds (because generally the package from the pinned URL exists in the repo), and if
         // the blob fetching failed, then even if this fn returns success, the resolve will still
         // end up failing when we try to open the package from pkg-cache. The arm is still useful
         // if initial creation of the TUF client for fuchsia.com fails (e.g. because networking is
         // down/not yet available).
-        (Some(cache), Some(url)) if cache == BlobId::from(*url) => Some(cache),
+        (Some(cache), Some(url)) if cache == BlobId::from(url) => Some(cache),
         (Some(cache), None) => Some(cache),
         _ => None,
     }
@@ -619,13 +627,7 @@ async fn get_hash(
     inspect_state: &ResolverServiceInspectState,
     eager_package_manager: Option<&AsyncRwLock<EagerPackageManager<QueuedResolver>>>,
 ) -> Result<BlobId, Status> {
-    let pkg_url = PkgUrl::parse(url).map_err(|e| handle_bad_package_url(e, url))?;
-    // While the fuchsia-pkg:// spec allows resource paths, the package resolver should not be
-    // given one.
-    if pkg_url.resource().is_some() {
-        fx_log_err!("package url should not contain a resource name: {}", pkg_url);
-        return Err(Status::INVALID_ARGS);
-    }
+    let pkg_url = AbsolutePackageUrl::parse(url).map_err(|e| handle_bad_package_url(e, url))?;
 
     trace::duration_begin!("app", "get-hash", "url" => pkg_url.to_string().as_str());
     let hash_or_status = hash_from_base_or_repo_or_cache(
@@ -649,11 +651,12 @@ async fn resolve_and_reopen(
     dir_request: ServerEnd<fio::DirectoryMarker>,
     eager_package_manager: Option<&AsyncRwLock<EagerPackageManager<QueuedResolver>>>,
 ) -> Result<(), pkg::ResolveError> {
-    let pkg_url = PkgUrl::parse(&url).map_err(|e| handle_bad_package_url_error(e, &url))?;
-    let pkg = package_resolver.resolve(pkg_url.clone(), eager_package_manager).await?;
+    let pkg_url =
+        AbsolutePackageUrl::parse(&url).map_err(|e| handle_bad_package_url_error(e, &url))?;
+    let pkg = package_resolver.resolve(pkg_url, eager_package_manager).await?;
 
-    pkg.reopen(dir_request).map_err(|clone_err| {
-        fx_log_err!("failed to open package url {:?}: {:#}", pkg_url, anyhow!(clone_err));
+    pkg.reopen(dir_request).map_err(|e| {
+        fx_log_err!("failed to re-open directory for package url {}: {:#}", url, anyhow!(e));
         pkg::ResolveError::Internal
     })
 }
@@ -712,9 +715,12 @@ async fn resolve_font<'a>(
     directory_request: ServerEnd<fio::DirectoryMarker>,
     mut cobalt_sender: CobaltSender,
 ) -> Result<(), pkg::ResolveError> {
-    let parsed_package_url =
-        PkgUrl::parse(&package_url).map_err(|e| handle_bad_package_url_error(e, &package_url))?;
-    let is_font_package = font_package_manager.is_font_package(&parsed_package_url);
+    let parsed_package_url = AbsolutePackageUrl::parse(&package_url)
+        .map_err(|e| handle_bad_package_url_error(e, &package_url))?;
+    let is_font_package = match &parsed_package_url {
+        AbsolutePackageUrl::Unpinned(unpinned) => font_package_manager.is_font_package(unpinned),
+        AbsolutePackageUrl::Pinned(_) => false,
+    };
     cobalt_sender.log_event_count(
         metrics::IS_FONT_PACKAGE_CHECK_METRIC_ID,
         if is_font_package {
@@ -856,25 +862,26 @@ fn resolve_result_to_resolve_code(
 
 #[cfg(test)]
 mod tests {
-    use {super::*, fuchsia_url::pkg_url::PinnedPkgUrl};
+    use {super::*, fuchsia_url::PinnedAbsolutePackageUrl};
 
     #[test]
     fn test_hash_from_cache_packages_manifest() {
         let hash =
             "0000000000000000000000000000000000000000000000000000000000000000".parse().unwrap();
-        let cache_packages = CachePackages::from_entries(vec![PinnedPkgUrl::new_package(
-            "fuchsia.com".to_string(),
-            "/potato".to_string(),
+        let cache_packages = CachePackages::from_entries(vec![PinnedAbsolutePackageUrl::new(
+            "fuchsia-pkg://fuchsia.com".parse().unwrap(),
+            "potato".parse().unwrap(),
+            None,
             hash,
-        )
-        .unwrap()]);
+        )]);
         let empty_cache_packages = CachePackages::from_entries(vec![]);
 
-        let fuchsia_url = PkgUrl::parse("fuchsia-pkg://fuchsia.com/potato").unwrap();
+        let fuchsia_url = AbsolutePackageUrl::parse("fuchsia-pkg://fuchsia.com/potato").unwrap();
         let variant_nonzero_fuchsia_url =
-            PkgUrl::parse("fuchsia-pkg://fuchsia.com/potato/1").unwrap();
-        let variant_zero_fuchsia_url = PkgUrl::parse("fuchsia-pkg://fuchsia.com/potato/0").unwrap();
-        let other_repo_url = PkgUrl::parse("fuchsia-pkg://nope.com/potato").unwrap();
+            AbsolutePackageUrl::parse("fuchsia-pkg://fuchsia.com/potato/1").unwrap();
+        let variant_zero_fuchsia_url =
+            AbsolutePackageUrl::parse("fuchsia-pkg://fuchsia.com/potato/0").unwrap();
+        let other_repo_url = AbsolutePackageUrl::parse("fuchsia-pkg://nope.com/potato").unwrap();
         assert_eq!(
             hash_from_cache_packages_manifest(&fuchsia_url, &cache_packages),
             Some(hash.into())
@@ -895,19 +902,20 @@ mod tests {
     fn test_hash_from_cache_packages_manifest_with_zero_variant() {
         let hash =
             "0000000000000000000000000000000000000000000000000000000000000000".parse().unwrap();
-        let cache_packages = CachePackages::from_entries(vec![PinnedPkgUrl::new_package(
-            "fuchsia.com".to_string(),
-            "/potato/0".to_string(),
+        let cache_packages = CachePackages::from_entries(vec![PinnedAbsolutePackageUrl::new(
+            "fuchsia-pkg://fuchsia.com".parse().unwrap(),
+            "potato".parse().unwrap(),
+            Some(fuchsia_url::PackageVariant::zero()),
             hash,
-        )
-        .unwrap()]);
+        )]);
         let empty_cache_packages = CachePackages::from_entries(vec![]);
 
-        let fuchsia_url = PkgUrl::parse("fuchsia-pkg://fuchsia.com/potato").unwrap();
+        let fuchsia_url = AbsolutePackageUrl::parse("fuchsia-pkg://fuchsia.com/potato").unwrap();
         let variant_nonzero_fuchsia_url =
-            PkgUrl::parse("fuchsia-pkg://fuchsia.com/potato/1").unwrap();
-        let variant_zero_fuchsia_url = PkgUrl::parse("fuchsia-pkg://fuchsia.com/potato/0").unwrap();
-        let other_repo_url = PkgUrl::parse("fuchsia-pkg://nope.com/potato/0").unwrap();
+            AbsolutePackageUrl::parse("fuchsia-pkg://fuchsia.com/potato/1").unwrap();
+        let variant_zero_fuchsia_url =
+            AbsolutePackageUrl::parse("fuchsia-pkg://fuchsia.com/potato/0").unwrap();
+        let other_repo_url = AbsolutePackageUrl::parse("fuchsia-pkg://nope.com/potato/0").unwrap();
         // hash_from_cache_packages_manifest removes variant from URL provided, and
         // since CachePackages is initialized with a variant and will only resolve url to a hash
         // if the /0 variant is provided.

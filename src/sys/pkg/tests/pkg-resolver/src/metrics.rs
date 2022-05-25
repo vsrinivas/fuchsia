@@ -518,27 +518,6 @@ async fn font_manager_load_static_registry_failure_parse() {
     env.stop().await;
 }
 
-// We should get a cobalt event for each pkg-url error.
-#[fasync::run_singlethreaded(test)]
-async fn font_manager_load_static_registry_failure_pkg_url() {
-    let json = serde_json::to_string(&json!([
-        "fuchsia-pkg://includes-resource.com/foo#meta/resource.cml"
-    ]))
-    .unwrap();
-    let env = TestEnvBuilder::new()
-        .mounts(MountsBuilder::new().custom_config_data("font_packages.json", json).build())
-        .build()
-        .await;
-
-    env.assert_count_events(
-        metrics::FONT_MANAGER_LOAD_STATIC_REGISTRY_METRIC_ID,
-        vec![metrics::FontManagerLoadStaticRegistryMetricDimensionResult::PkgUrl],
-    )
-    .await;
-
-    env.stop().await;
-}
-
 #[fasync::run_singlethreaded(test)]
 async fn load_repository_for_channel_success_no_rewrite_rule() {
     let env = TestEnvBuilder::new().build().await;

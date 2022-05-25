@@ -8,7 +8,7 @@ use {
     fidl_fuchsia_pkg_rewrite_ext::{Rule, RuleConfig},
     fuchsia_inspect::{self as inspect, Property},
     fuchsia_syslog::fx_log_err,
-    fuchsia_url::pkg_url::PkgUrl,
+    fuchsia_url::AbsolutePackageUrl,
     std::collections::VecDeque,
     thiserror::Error,
 };
@@ -54,10 +54,10 @@ pub enum CommitError {
 }
 
 impl RewriteManager {
-    /// Rewrite the given [PkgUrl] using the first dynamic or static rewrite rule that matches and
-    /// produces a valid [PkgUrl]. If no rewrite rules match or all that do produce invalid
-    /// [PkgUrl]s, return the original, unmodified [PkgUrl].
-    pub fn rewrite(&self, url: &PkgUrl) -> PkgUrl {
+    /// Rewrite the given [AbsolutePackageUrl] using the first dynamic or static rewrite rule that
+    /// matches and produces a valid [AbsolutePackageUrl]. If no rewrite rules match or all that do
+    /// produce invalid [AbsolutePackageUrl]s, return the original, unmodified [AbsolutePackageUrl].
+    pub fn rewrite(&self, url: &AbsolutePackageUrl) -> AbsolutePackageUrl {
         for rule in self.list() {
             match rule.apply(&url) {
                 Some(Ok(res)) => {
@@ -591,7 +591,7 @@ pub(crate) mod tests {
             .unwrap()
             .build();
 
-        let url: PkgUrl = "fuchsia-pkg://fuchsia.com/c".parse().unwrap();
+        let url: AbsolutePackageUrl = "fuchsia-pkg://fuchsia.com/c".parse().unwrap();
         assert_eq!(manager.rewrite(&url), url);
     }
 
@@ -674,7 +674,7 @@ pub(crate) mod tests {
         transaction.add(override_rule.clone());
 
         // new rule is not yet committed and should not be used yet
-        let url: PkgUrl = "fuchsia-pkg://fuchsia.com/a".parse().unwrap();
+        let url: AbsolutePackageUrl = "fuchsia-pkg://fuchsia.com/a".parse().unwrap();
         assert_eq!(manager.rewrite(&url), "fuchsia-pkg://fuchsia.com/b".parse().unwrap());
 
         manager.apply(transaction).await.unwrap();

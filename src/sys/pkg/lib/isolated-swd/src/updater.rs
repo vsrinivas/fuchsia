@@ -18,7 +18,6 @@ use {
         client::{App, AppBuilder},
         server::{NestedEnvironment, ServiceFs, ServiceObj},
     },
-    fuchsia_url::pkg_url::PkgUrl,
     fuchsia_zircon::{self as zx, HandleBased},
     futures::prelude::*,
     std::io::Write,
@@ -110,7 +109,10 @@ impl Updater {
     /// If `update_package` is Some, use the given package URL as the URL for the update package.
     /// Otherwise, `system-updater` uses the default URL.
     /// This will not install any images to the recovery partitions.
-    pub async fn install_update(&mut self, update_package: Option<&PkgUrl>) -> Result<(), Error> {
+    pub async fn install_update(
+        &mut self,
+        update_package: Option<&fuchsia_url::AbsolutePackageUrl>,
+    ) -> Result<(), Error> {
         let update_package = match update_package {
             Some(url) => url.to_owned(),
             None => DEFAULT_UPDATE_PACKAGE_URL.parse().unwrap(),
@@ -198,7 +200,6 @@ pub mod for_tests {
         fuchsia_pkg_testing::{
             Package, PackageBuilder, Repository, RepositoryBuilder, SystemImageBuilder,
         },
-        fuchsia_url::pkg_url::RepoUrl,
         fuchsia_zircon as zx,
         mock_paver::{MockPaverService, MockPaverServiceBuilder, PaverEvent},
         std::collections::HashMap,
@@ -214,7 +215,7 @@ pub mod for_tests {
         paver_builder: MockPaverServiceBuilder,
         packages: Vec<Package>,
         images: HashMap<String, Vec<u8>>,
-        repo_url: RepoUrl,
+        repo_url: fuchsia_url::RepositoryUrl,
     }
 
     impl UpdaterBuilder {
@@ -317,7 +318,7 @@ pub mod for_tests {
         pub paver: Arc<MockPaverService>,
         pub packages: Vec<Package>,
         pub update_merkle_root: Hash,
-        pub repo_url: RepoUrl,
+        pub repo_url: fuchsia_url::RepositoryUrl,
     }
 
     impl UpdaterForTest {

@@ -11,7 +11,7 @@ use crate::{
 use anyhow::{anyhow, Context as _};
 use fidl_connector::{Connect, ServiceReconnector};
 use fidl_fuchsia_hardware_power_statecontrol::RebootReason;
-use fidl_fuchsia_pkg::{CupData, CupMarker, CupProxy, PackageUrl, WriteError};
+use fidl_fuchsia_pkg::{self as fpkg, CupData, CupMarker, CupProxy, WriteError};
 use fidl_fuchsia_update_installer::{
     InstallerMarker, InstallerProxy, RebootControllerMarker, RebootControllerProxy,
 };
@@ -21,7 +21,7 @@ use fidl_fuchsia_update_installer_ext::{
 };
 use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_protocol;
-use fuchsia_url::pkg_url::PkgUrl;
+use fuchsia_url::PinnedAbsolutePackageUrl;
 use fuchsia_zircon as zx;
 use futures::{future::LocalBoxFuture, lock::Mutex as AsyncMutex, prelude::*};
 use log::{info, warn};
@@ -150,7 +150,7 @@ where
 {
     async fn perform_install_system_update<'a>(
         &'a mut self,
-        url: &'a PkgUrl,
+        url: &'a PinnedAbsolutePackageUrl,
         install_source: &'a InstallSource,
         observer: Option<&'a dyn ProgressObserver>,
     ) -> Result<(), FuchsiaInstallError> {
@@ -171,7 +171,8 @@ where
         self.reboot_controller = Some(reboot_controller);
 
         let mut update_attempt =
-            start_update(url, options, &proxy, Some(reboot_controller_server_end)).await?;
+            start_update(&url.clone().into(), options, &proxy, Some(reboot_controller_server_end))
+                .await?;
 
         while let Some(state) = update_attempt.try_next().await? {
             info!("Installer entered state: {}", state.name());
@@ -220,11 +221,11 @@ where
 
     async fn perform_install_eager_package<'a>(
         &'a mut self,
-        url: &'a PkgUrl,
+        url: &'a PinnedAbsolutePackageUrl,
         response_bytes: &'a [u8],
     ) -> Result<(), FuchsiaInstallError> {
         let proxy = self.cup_connector.connect().map_err(FuchsiaInstallError::Connect)?;
-        let mut url = PackageUrl { url: url.to_string() };
+        let mut url = fpkg::PackageUrl { url: url.to_string() };
         let cup = CupData { response: Some(response_bytes.to_vec()), ..CupData::EMPTY };
         proxy.write(&mut url, cup).await?.map_err(FuchsiaInstallError::CupWrite)
     }
@@ -388,11 +389,11 @@ fn try_create_install_plan_impl(
 
         let full_url = url.to_owned() + &package.name;
 
-        let pkg_url = match PkgUrl::parse(&full_url) {
+        let pkg_url = match PinnedAbsolutePackageUrl::parse(&full_url) {
             Ok(pkg_url) => pkg_url,
             Err(err) => {
                 return Err(FuchsiaInstallError::Failure(anyhow!(
-                    "Failed to parse {} to PkgUrl: {}",
+                    "Failed to parse {} to PinnedAbsolutePackageUrl: {}",
                     full_url,
                     err
                 )))
@@ -435,9 +436,10 @@ mod tests {
         std::{convert::TryInto, sync::Arc, task::Poll},
     };
 
-    const TEST_URL: &str = "fuchsia-pkg://fuchsia.com/update/0";
+    const TEST_URL: &str = "fuchsia-pkg://fuchsia.com/update/0?hash=0000000000000000000000000000000000000000000000000000000000000000";
     const TEST_URL_BASE: &str = "fuchsia-pkg://fuchsia.com/";
-    const TEST_PACKAGE_NAME: &str = "update/0";
+    const TEST_PACKAGE_NAME: &str =
+        "update/0?hash=0000000000000000000000000000000000000000000000000000000000000000";
 
     #[derive(Debug, PartialEq)]
     struct Progress {
@@ -877,7 +879,7 @@ mod tests {
         let package1_app = App {
             update_check: Some(UpdateCheck {
                 manifest: Some(Manifest {
-                    packages: Packages::new(vec![Package::with_name("package1")]),
+                    packages: Packages::new(vec![Package::with_name("package1?hash=0000000000000000000000000000000000000000000000000000000000000000")]),
                     ..Manifest::default()
                 }),
                 ..UpdateCheck::ok([TEST_URL_BASE])
@@ -893,7 +895,7 @@ mod tests {
         let package3_app = App {
             update_check: Some(UpdateCheck {
                 manifest: Some(Manifest {
-                    packages: Packages::new(vec![Package::with_name("package3")]),
+                    packages: Packages::new(vec![Package::with_name("package3?hash=0000000000000000000000000000000000000000000000000000000000000000")]),
                     ..Manifest::default()
                 }),
                 ..UpdateCheck::ok([TEST_URL_BASE])
@@ -913,8 +915,8 @@ mod tests {
         assert_eq!(
             install_plan.update_package_urls,
             vec![
-                UpdatePackageUrl::Package(format!("{TEST_URL_BASE}package1").parse().unwrap()),
-                UpdatePackageUrl::Package(format!("{TEST_URL_BASE}package3").parse().unwrap())
+                UpdatePackageUrl::Package(format!("{TEST_URL_BASE}package1?hash=0000000000000000000000000000000000000000000000000000000000000000").parse().unwrap()),
+                UpdatePackageUrl::Package(format!("{TEST_URL_BASE}package3?hash=0000000000000000000000000000000000000000000000000000000000000000").parse().unwrap())
             ]
         );
         assert_eq!(install_plan.install_source, request_params.source);
@@ -937,7 +939,7 @@ mod tests {
         let package_app = App {
             update_check: Some(UpdateCheck {
                 manifest: Some(Manifest {
-                    packages: Packages::new(vec![Package::with_name("some-package")]),
+                    packages: Packages::new(vec![Package::with_name("some-package?hash=0000000000000000000000000000000000000000000000000000000000000000")]),
                     ..Manifest::default()
                 }),
                 ..UpdateCheck::ok([TEST_URL_BASE])
@@ -954,7 +956,7 @@ mod tests {
         assert_eq!(
             install_plan.update_package_urls,
             vec![
-                UpdatePackageUrl::Package(format!("{TEST_URL_BASE}some-package").parse().unwrap()),
+                UpdatePackageUrl::Package(format!("{TEST_URL_BASE}some-package?hash=0000000000000000000000000000000000000000000000000000000000000000").parse().unwrap()),
                 UpdatePackageUrl::System(TEST_URL.parse().unwrap())
             ],
         );

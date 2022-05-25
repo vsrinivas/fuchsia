@@ -22,7 +22,7 @@ use {
         InstallerProxy, MonitorMarker, MonitorRequest, MonitorRequestStream,
         RebootControllerMarker, UpdateNotStartedReason,
     },
-    fuchsia_url::pkg_url::PkgUrl,
+    fuchsia_url::AbsolutePackageUrl,
     futures::{
         prelude::*,
         task::{Context, Poll},
@@ -96,7 +96,7 @@ impl UpdateAttemptMonitor {
 /// Checks if an update can be started and returns the UpdateAttempt containing
 /// the attempt_id and MonitorRequestStream to the client.
 pub async fn start_update(
-    update_url: &PkgUrl,
+    update_url: &AbsolutePackageUrl,
     options: Options,
     installer_proxy: &InstallerProxy,
     reboot_controller_server_end: Option<ServerEnd<RebootControllerMarker>>,
@@ -280,8 +280,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn start_update_forwards_args_and_returns_attempt_id() {
-        let pkgurl =
-            PkgUrl::new_package("fuchsia.com".to_string(), "/update/0".to_string(), None).unwrap();
+        let pkgurl = "fuchsia-pkg://fuchsia.com/update/0".parse().unwrap();
 
         let opts = Options {
             initiator: Initiator::User,
@@ -338,8 +337,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_install_error() {
-        let pkgurl =
-            PkgUrl::new_package("fuchsia.com".to_string(), "/update/0".to_string(), None).unwrap();
+        let pkgurl = "fuchsia-pkg://fuchsia.com/update/0".parse().unwrap();
 
         let opts = Options {
             initiator: Initiator::User,
@@ -385,8 +383,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn start_update_forwards_fidl_error() {
-        let pkgurl =
-            PkgUrl::new_package("fuchsia.com".to_string(), "/update/0".to_string(), None).unwrap();
+        let pkgurl = "fuchsia-pkg://fuchsia.com/update/0".parse().unwrap();
 
         let opts = Options {
             initiator: Initiator::User,
@@ -416,8 +413,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_state_decode_error() {
-        let pkgurl =
-            PkgUrl::new_package("fuchsia.com".to_string(), "/update/0".to_string(), None).unwrap();
+        let pkgurl = "fuchsia-pkg://fuchsia.com/update/0".parse().unwrap();
 
         let opts = Options {
             initiator: Initiator::User,
@@ -479,8 +475,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_server_close_unexpectedly() {
-        let pkgurl =
-            PkgUrl::new_package("fuchsia.com".to_string(), "/update/0".to_string(), None).unwrap();
+        let pkgurl = "fuchsia-pkg://fuchsia.com/update/0".parse().unwrap();
 
         let opts = Options {
             initiator: Initiator::User,

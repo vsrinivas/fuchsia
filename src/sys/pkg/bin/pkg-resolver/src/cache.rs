@@ -11,7 +11,7 @@ use {
     fuchsia_pkg::PackageDirectory,
     fuchsia_syslog::fx_log_info,
     fuchsia_trace as trace,
-    fuchsia_url::pkg_url::PkgUrl,
+    fuchsia_url::AbsolutePackageUrl,
     fuchsia_zircon::Status,
     futures::{lock::Mutex as AsyncMutex, prelude::*, stream::FuturesUnordered},
     http_uri_ext::HttpUriExt as _,
@@ -111,7 +111,7 @@ impl BlobFetchParams {
 pub async fn cache_package<'a>(
     repo: Arc<AsyncMutex<Repository>>,
     config: &'a RepositoryConfig,
-    url: &'a PkgUrl,
+    url: &'a AbsolutePackageUrl,
     cache: &'a pkg::cache::Client,
     blob_fetcher: &'a BlobFetcher,
     cobalt_sender: CobaltSender,
@@ -122,8 +122,8 @@ pub async fn cache_package<'a>(
     // variant exist in the TUF repo.  Note that this doesn't guarantee that the merkle pinned
     // package ever actually existed in the repo or that the merkle pin refers to the named
     // package.
-    let (merkle, size) = if let Some(merkle_pin) = url.package_hash() {
-        (BlobId::from(*merkle_pin), None)
+    let (merkle, size) = if let Some(merkle_pin) = url.hash() {
+        (BlobId::from(merkle_pin), None)
     } else {
         (merkle, Some(size))
     };
@@ -453,13 +453,13 @@ impl From<&MerkleForError> for metrics::MerkleForUrlMetricDimensionResult {
 
 pub async fn merkle_for_url<'a>(
     repo: Arc<AsyncMutex<Repository>>,
-    url: &'a PkgUrl,
+    url: &'a AbsolutePackageUrl,
     mut cobalt_sender: CobaltSender,
 ) -> Result<(BlobId, u64), MerkleForError> {
     let target_path = TargetPath::new(format!(
         "{}/{}",
         url.name(),
-        url.variant().unwrap_or(&fuchsia_url::pkg_url::PackageVariant::zero())
+        url.variant().unwrap_or(&fuchsia_url::PackageVariant::zero())
     ))
     .map_err(MerkleForError::InvalidTargetPath)?;
     let mut repo = repo.lock().await;

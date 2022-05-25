@@ -4,7 +4,7 @@
 
 use {
     cobalt_sw_delivery_registry as metrics,
-    fuchsia_url::pkg_url::PkgUrl,
+    fuchsia_url::UnpinnedAbsolutePackageUrl,
     std::{
         collections::BTreeSet,
         fs, io,
@@ -18,13 +18,13 @@ use {
 #[derive(Debug)]
 pub struct FontPackageManager {
     // A `BTreeSet` is used to preserve alphabetical order for easier debugging.
-    package_urls: BTreeSet<PkgUrl>,
+    package_urls: BTreeSet<UnpinnedAbsolutePackageUrl>,
     // TODO(fxbug.dev/8881): Add and populate Inspect node.
 }
 
 impl FontPackageManager {
-    /// Returns true if the given [PkgUrl] is a known font package.
-    pub fn is_font_package(&self, package_url: &PkgUrl) -> bool {
+    /// Returns true if the given [UnpinnedAbsolutePackageUrl] is a known font package.
+    pub fn is_font_package(&self, package_url: &UnpinnedAbsolutePackageUrl) -> bool {
         self.package_urls.contains(package_url)
     }
 }
@@ -32,7 +32,7 @@ impl FontPackageManager {
 /// Builder for [FontPackageManager].
 #[derive(Debug)]
 pub struct FontPackageManagerBuilder {
-    package_urls: BTreeSet<PkgUrl>,
+    package_urls: BTreeSet<UnpinnedAbsolutePackageUrl>,
 }
 
 impl FontPackageManagerBuilder {
@@ -40,23 +40,15 @@ impl FontPackageManagerBuilder {
         FontPackageManagerBuilder { package_urls: BTreeSet::new() }
     }
 
-    /// Adds a single font [PkgUrl].
+    /// Adds a single font [UnpinnedAbsolutePackageUrl].
     #[cfg(test)]
-    pub fn add_package_url(mut self, package_url: PkgUrl) -> Result<Self, (Self, LoadError)> {
-        match validate_package_url(None::<PathBuf>, &package_url) {
-            Ok(()) => {
-                self.package_urls.insert(package_url);
-                Ok(self)
-            }
-            Err(err) => Err((self, err)),
-        }
+    pub fn add_package_url(mut self, package_url: UnpinnedAbsolutePackageUrl) -> Self {
+        self.package_urls.insert(package_url);
+        self
     }
 
     /// Loads a JSON file containing an array of font package URLs.
-    pub fn add_registry_file<P>(
-        mut self,
-        registry_file_path: P,
-    ) -> Result<Self, (Self, Vec<LoadError>)>
+    pub fn add_registry_file<P>(mut self, registry_file_path: P) -> Result<Self, (Self, LoadError)>
     where
         P: AsRef<Path>,
     {
@@ -67,7 +59,7 @@ impl FontPackageManagerBuilder {
                 }
                 Ok(self)
             }
-            Err(errs) => Err((self, errs)),
+            Err(err) => Err((self, err)),
         }
     }
 
@@ -79,60 +71,18 @@ impl FontPackageManagerBuilder {
 
 /// Loads, parses, and validates a JSON listing of font package URLs from the given file path.
 ///
-/// If the file fails to parse as valid JSON, or any of the listed URLs is invalid, the result will
-/// an [Err][std::result::Result::Err] containing a list of all of the parsing and validation
-/// errors.
-fn load_font_packages_registry<P: AsRef<Path>>(path: P) -> Result<Vec<PkgUrl>, Vec<LoadError>> {
-    let file_path = path.as_ref();
-    match fs::File::open(&file_path) {
-        Ok(f) => match serde_json::from_reader::<_, Vec<PkgUrl>>(io::BufReader::new(f)) {
-            Ok(package_urls) => {
-                validate_package_urls(file_path, &package_urls).map(|()| package_urls)
-            }
-            Err(err) => Err(vec![LoadError::Parse { path: file_path.to_path_buf(), error: err }]),
-        },
-        Err(err) => Err(vec![LoadError::Io { path: file_path.to_path_buf(), error: err }]),
-    }
-}
+/// If the file fails to parse as valid JSON or any of the listed URLs is invalid the result will
+/// be an [Err][std::result::Result::Err] indicating the parsing or validation error.
+fn load_font_packages_registry<P: AsRef<Path>>(
+    path: P,
+) -> Result<Vec<UnpinnedAbsolutePackageUrl>, LoadError> {
+    let path = path.as_ref();
 
-/// Validates a single `PkgUrl` to make sure that it could conceivably be a font package URL.
-/// This means it must not contain a resource.
-fn validate_package_url<P: AsRef<Path>>(
-    file_path: Option<P>,
-    package_url: &PkgUrl,
-) -> Result<(), LoadError> {
-    let valid = package_url.resource().is_none();
-    if valid {
-        Ok(())
-    } else {
-        Err(LoadError::PkgUrl {
-            path: file_path.map(|p| p.as_ref().to_owned()),
-            bad_url: package_url.clone(),
-        })
-    }
-}
+    let f =
+        fs::File::open(&path).map_err(|e| LoadError::Io { path: path.to_path_buf(), error: e })?;
 
-/// Validates a collection of `PkgUrl`s to make sure that they could be font package URLs. If at
-/// least one URL fails validation, the result will be a vector of errors.
-fn validate_package_urls<P: AsRef<Path>>(
-    file_path: P,
-    package_urls: &[PkgUrl],
-) -> Result<(), Vec<LoadError>> {
-    let path = file_path.as_ref();
-    let mut errors = vec![];
-    for url in package_urls {
-        match validate_package_url(Some(path), &url) {
-            Ok(()) => {}
-            Err(err) => {
-                errors.push(err);
-            }
-        }
-    }
-    if errors.is_empty() {
-        Ok(())
-    } else {
-        Err(errors)
-    }
+    serde_json::from_reader::<_, Vec<UnpinnedAbsolutePackageUrl>>(io::BufReader::new(f))
+        .map_err(|e| LoadError::Parse { path: path.to_path_buf(), error: e })
 }
 
 /// Describes the recoverable error conditions that can be encountered when building a
@@ -154,17 +104,6 @@ pub enum LoadError {
         #[source]
         error: serde_json::Error,
     },
-
-    #[error(
-        "semantic problem with a (syntactically valid) PkgUrl possibly obtained from a file. \
-             path: {path:?}, url: {bad_url}"
-    )]
-    PkgUrl {
-        /// The file path from which the URL was read.
-        path: Option<PathBuf>,
-        /// The problematic `PkgUrl`.
-        bad_url: PkgUrl,
-    },
 }
 
 impl LoadError {
@@ -184,9 +123,6 @@ impl From<&LoadError> for metrics::FontManagerLoadStaticRegistryMetricDimensionR
             LoadError::Parse { .. } => {
                 metrics::FontManagerLoadStaticRegistryMetricDimensionResult::Parse
             }
-            LoadError::PkgUrl { .. } => {
-                metrics::FontManagerLoadStaticRegistryMetricDimensionResult::PkgUrl
-            }
         }
     }
 }
@@ -196,20 +132,12 @@ pub mod tests {
     use {
         super::*,
         anyhow::Error,
+        assert_matches::assert_matches,
         serde::Serialize,
         serde_json,
         std::{fs::File, io::Write},
         tempfile::{self, TempDir},
     };
-
-    macro_rules! assert_matches(
-       ($e:expr, $p:pat => $a:expr) => (
-           match $e {
-               $p => $a,
-               ref e => panic!("`{:?}` does not match `{}`", e, stringify!($p)),
-           }
-       )
-   );
 
     fn create_json_file<S: Serialize>(
         file_name: &str,
@@ -225,34 +153,18 @@ pub mod tests {
     }
 
     #[test]
-    fn test_manual_insertion() -> Result<(), Error> {
+    fn test_manual_insertion() {
         let manager = FontPackageManagerBuilder::new()
-            .add_package_url(PkgUrl::parse("fuchsia-pkg://fuchsia.com/font1")?)
-            .unwrap()
-            .add_package_url(PkgUrl::parse("fuchsia-pkg://fuchsia.com/font2")?)
-            .unwrap()
-            .add_package_url(PkgUrl::parse("fuchsia-pkg://fuchsia.com/font3")?)
-            .unwrap()
+            .add_package_url("fuchsia-pkg://fuchsia.com/font1".parse().unwrap())
+            .add_package_url("fuchsia-pkg://fuchsia.com/font2".parse().unwrap())
+            .add_package_url("fuchsia-pkg://fuchsia.com/font3".parse().unwrap())
             .build();
-        assert!(manager.is_font_package(&PkgUrl::parse("fuchsia-pkg://fuchsia.com/font2")?));
-        assert!(!manager.is_font_package(&PkgUrl::parse("fuchsia-pkg://fuchsia.com/font5")?));
-        Ok(())
+        assert!(manager.is_font_package(&"fuchsia-pkg://fuchsia.com/font2".parse().unwrap()));
+        assert!(!manager.is_font_package(&"fuchsia-pkg://fuchsia.com/font5".parse().unwrap()));
     }
 
     #[test]
-    fn test_non_package_urls() -> Result<(), Error> {
-        let resource_url = PkgUrl::parse("fuchsia-pkg://fuchsia.com/foo#meta/foo.cml")?;
-        assert_matches!(
-            FontPackageManagerBuilder::new().add_package_url(resource_url.clone()),
-            Err((_, LoadError::PkgUrl{ path: None, bad_url })) =>
-             assert_eq!(&bad_url, &resource_url)
-        );
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_load_font_packages_registry() -> Result<(), Error> {
+    fn test_load_font_packages_registry() {
         let file_name = "font_packages.json";
         let (_temp_dir, file_path) = create_json_file(
             file_name,
@@ -261,16 +173,23 @@ pub mod tests {
                 "fuchsia-pkg://fuchsia.com/font2",
                 "fuchsia-pkg://fuchsia.com/font3",
             ],
-        )?;
+        )
+        .unwrap();
 
         let manager =
             FontPackageManagerBuilder::new().add_registry_file(&file_path).unwrap().build();
-        assert!(manager.is_font_package(&PkgUrl::parse("fuchsia-pkg://fuchsia.com/font1")?));
-        assert!(manager.is_font_package(&PkgUrl::parse("fuchsia-pkg://fuchsia.com/font2")?));
-        assert!(manager.is_font_package(&PkgUrl::parse("fuchsia-pkg://fuchsia.com/font3")?));
-        assert!(!manager.is_font_package(&PkgUrl::parse("fuchsia-pkg://fuchsia.com/font4")?));
-
-        Ok(())
+        assert!(manager.is_font_package(
+            &UnpinnedAbsolutePackageUrl::parse("fuchsia-pkg://fuchsia.com/font1").unwrap()
+        ));
+        assert!(manager.is_font_package(
+            &UnpinnedAbsolutePackageUrl::parse("fuchsia-pkg://fuchsia.com/font2").unwrap()
+        ));
+        assert!(manager.is_font_package(
+            &UnpinnedAbsolutePackageUrl::parse("fuchsia-pkg://fuchsia.com/font3").unwrap()
+        ));
+        assert!(!manager.is_font_package(
+            &UnpinnedAbsolutePackageUrl::parse("fuchsia-pkg://fuchsia.com/font4").unwrap()
+        ));
     }
 
     #[test]
@@ -284,11 +203,10 @@ pub mod tests {
 
         assert_matches!(
             result,
-            Err((_, errs)) => {
-                assert_eq!(errs.len(), 1);
+            Err((_, err)) => {
                 assert_matches!(
-                    &errs[0],
-                    LoadError::Io { path, error: _ } => assert_eq!(path, &bad_file_path)
+                    err,
+                    LoadError::Io { path, error: _ } => assert_eq!(path, bad_file_path)
                 );
             }
         );
@@ -306,11 +224,10 @@ pub mod tests {
 
         assert_matches!(
             result,
-            Err((_, errs)) => {
-                assert_eq!(errs.len(), 1);
+            Err((_, err)) => {
                 assert_matches!(
-                    &errs[0],
-                    LoadError::Parse { path, error: _ } => assert_eq!(path, &file_path)
+                    err,
+                    LoadError::Parse { path, error: _ } => assert_eq!(path, file_path)
                 );
             }
         );
@@ -319,7 +236,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_load_font_packages_registry_invalid_font_packages() -> Result<(), Error> {
+    fn test_load_font_packages_registry_invalid_font_packages() {
         let file_name = "font_packages.json";
         let (_temp_dir, file_path) = create_json_file(
             file_name,
@@ -327,16 +244,12 @@ pub mod tests {
                 "fuchsia-pkg://fuchsia.com/font1",
                 "fuchsia-pkg://fuchsia.com/font2#meta/font2.cml",
             ],
-        )?;
+        )
+        .unwrap();
 
         let builder = FontPackageManagerBuilder::new();
         let result = builder.add_registry_file(&file_path);
 
-        assert_matches!(
-            result,
-            Err((_, errs)) => assert_eq!(errs.len(), 1)
-        );
-
-        Ok(())
+        assert_matches!(result, Err(_));
     }
 }

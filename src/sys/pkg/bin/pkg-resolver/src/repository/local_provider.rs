@@ -6,7 +6,6 @@ use {
     fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg::LocalMirrorProxy,
     fidl_fuchsia_pkg_ext::RepositoryUrl,
-    fuchsia_url::pkg_url::RepoUrl,
     fuchsia_zircon::Status,
     futures::{future::BoxFuture, prelude::*},
     io_util::file::AsyncReader,
@@ -19,11 +18,11 @@ use {
 
 pub struct LocalMirrorRepositoryProvider {
     proxy: LocalMirrorProxy,
-    url: RepoUrl,
+    url: fuchsia_url::RepositoryUrl,
 }
 
 impl LocalMirrorRepositoryProvider {
-    pub fn new(proxy: LocalMirrorProxy, url: RepoUrl) -> Self {
+    pub fn new(proxy: LocalMirrorProxy, url: fuchsia_url::RepositoryUrl) -> Self {
         Self { proxy, url }
     }
 }
@@ -139,7 +138,7 @@ mod tests {
                 .await
                 .unwrap();
 
-            let url: RepoUrl = "fuchsia-pkg://example.com".parse().unwrap();
+            let url: fuchsia_url::RepositoryUrl = "fuchsia-pkg://example.com".parse().unwrap();
             let mirror = FakePkgLocalMirror::from_repository_and_url(&repo, &url).await;
             let (proxy, stream) =
                 fidl::endpoints::create_proxy_and_stream::<LocalMirrorMarker>().unwrap();

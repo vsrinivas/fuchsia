@@ -205,7 +205,7 @@ async fn latest_system_image_merkle(
         .find(|url| url.path() == "/system_image/0")
         .ok_or(errors::UpdatePackage::MissingSystemImage)?;
     let hash = system_image
-        .package_hash()
+        .hash()
         .ok_or_else(|| errors::UpdatePackage::UnPinnedSystemImage(system_image.clone()))?;
     Ok(hash.to_owned())
 }

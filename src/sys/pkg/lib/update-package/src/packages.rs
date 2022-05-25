@@ -4,7 +4,7 @@
 
 use {
     fidl_fuchsia_io as fio,
-    fuchsia_url::pkg_url::PkgUrl,
+    fuchsia_url::AbsolutePackageUrl,
     serde::{Deserialize, Serialize},
     thiserror::Error,
 };
@@ -60,14 +60,14 @@ where
 // #[serde(tag = "version", content = "content", deny_unknown_fields)]
 // enum Packages {
 //     #[serde(rename = "1")]
-//     V1(Vec<PkgUrl>),
+//     V1(Vec<AbsolutePackageUrl>),
 // }
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 struct Packages {
     #[serde(deserialize_with = "deserialize_string_or_int")]
     version: String,
-    content: Vec<PkgUrl>,
+    content: Vec<AbsolutePackageUrl>,
 }
 
 /// ParsePackageError represents any error which might occur while reading
@@ -103,7 +103,7 @@ pub enum SerializePackageError {
 }
 
 /// Returns structured `packages.json` data based on file contents string.
-pub fn parse_packages_json(contents: &[u8]) -> Result<Vec<PkgUrl>, ParsePackageError> {
+pub fn parse_packages_json(contents: &[u8]) -> Result<Vec<AbsolutePackageUrl>, ParsePackageError> {
     match serde_json::from_slice(&contents).map_err(ParsePackageError::JsonError)? {
         Packages { ref version, content } if version == "1" => Ok(content),
         Packages { version, .. } => Err(ParsePackageError::VersionNotSupported(version)),
@@ -111,7 +111,9 @@ pub fn parse_packages_json(contents: &[u8]) -> Result<Vec<PkgUrl>, ParsePackageE
 }
 
 /// Returns serialized `packages.json` contents based package URLs.
-pub fn serialize_packages_json(pkg_urls: &[PkgUrl]) -> Result<Vec<u8>, SerializePackageError> {
+pub fn serialize_packages_json(
+    pkg_urls: &[AbsolutePackageUrl],
+) -> Result<Vec<u8>, SerializePackageError> {
     serde_json::to_vec(&Packages { version: "1".to_string(), content: pkg_urls.into() })
         .map_err(SerializePackageError::JsonError)
 }
@@ -119,7 +121,7 @@ pub fn serialize_packages_json(pkg_urls: &[PkgUrl]) -> Result<Vec<u8>, Serialize
 /// Returns the list of package urls that go in the universe of this update package.
 pub(crate) async fn packages(
     proxy: &fio::DirectoryProxy,
-) -> Result<Vec<PkgUrl>, ParsePackageError> {
+) -> Result<Vec<AbsolutePackageUrl>, ParsePackageError> {
     let file =
         io_util::directory::open_file(&proxy, "packages.json", fio::OpenFlags::RIGHT_READABLE)
             .await
@@ -133,8 +135,8 @@ pub(crate) async fn packages(
 mod tests {
     use {super::*, crate::TestUpdatePackage, assert_matches::assert_matches, serde_json::json};
 
-    fn pkg_urls(v: Vec<&str>) -> Vec<PkgUrl> {
-        v.into_iter().map(|s| PkgUrl::parse(s).unwrap()).collect()
+    fn pkg_urls(v: Vec<&str>) -> Vec<AbsolutePackageUrl> {
+        v.into_iter().map(|s| AbsolutePackageUrl::parse(s).unwrap()).collect()
     }
 
     // TODO(fxbug.dev/50754) Use the new Packages implementation, which only supports version as a string.

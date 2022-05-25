@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 // Copied from //src/sys/pkg/bin/omaha-client.
 
-use fuchsia_url::pkg_url::PkgUrl;
+use fuchsia_url::PinnedAbsolutePackageUrl;
 use omaha_client::{installer::Plan, protocol::request::InstallSource};
 
 #[derive(Debug, PartialEq)]
 pub struct FuchsiaInstallPlan {
     /// The fuchsia TUF repo URL, e.g. fuchsia-pkg://fuchsia.com/update/0?hash=...
-    pub url: PkgUrl,
+    pub url: PinnedAbsolutePackageUrl,
     pub install_source: InstallSource,
 }
 
@@ -23,17 +23,15 @@ impl Plan for FuchsiaInstallPlan {
 mod tests {
     use super::*;
 
-    const TEST_URL_BASE: &str = "fuchsia-pkg://fuchsia.com/";
-    const TEST_PACKAGE_NAME: &str = "update/0";
+    const TEST_URL: &str = "fuchsia-pkg://fuchsia.com/update/0?hash=0000000000000000000000000000000000000000000000000000000000000000";
 
     #[test]
     fn test_install_plan_id() {
-        let url = TEST_URL_BASE.to_string() + TEST_PACKAGE_NAME;
         let install_plan = FuchsiaInstallPlan {
-            url: PkgUrl::parse(&url).unwrap(),
+            url: PinnedAbsolutePackageUrl::parse(TEST_URL).unwrap(),
             install_source: InstallSource::ScheduledTask,
         };
 
-        assert_eq!(install_plan.id(), url);
+        assert_eq!(install_plan.id(), TEST_URL);
     }
 }

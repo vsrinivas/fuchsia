@@ -178,7 +178,7 @@ async fn handle_active_control_request<N>(
     req: ControlRequest<N>,
     monitor_queue: &mut event_queue::ControlHandle<N>,
     attempt_id: &str,
-    update_url: &fuchsia_url::pkg_url::PkgUrl,
+    update_url: &fuchsia_url::AbsolutePackageUrl,
     should_write_recovery: bool,
 ) where
     N: Notify,

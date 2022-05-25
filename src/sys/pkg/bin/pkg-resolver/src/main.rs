@@ -16,7 +16,6 @@ use {
     fuchsia_syslog::{self, fx_log_err, fx_log_info},
     fuchsia_trace as trace,
     futures::{prelude::*, stream::FuturesUnordered},
-    itertools::Itertools as _,
     parking_lot::RwLock,
     std::{
         io,
@@ -510,31 +509,24 @@ fn load_font_package_manager(mut cobalt_sender: CobaltSender) -> FontPackageMana
                 metrics::FontManagerLoadStaticRegistryMetricDimensionResult::Success
                     .as_event_code(),
                 0,
-                1
+                1,
             );
             builder
         }
-        Err((builder, errs)) => {
-            let err_str = format!("{:#}", errs
-                .into_iter()
-                .filter_map(|err| {
-                    let dimension_result: metrics::FontManagerLoadStaticRegistryMetricDimensionResult = (&err).into();
-                    cobalt_sender.log_event_count(
-                        metrics::FONT_MANAGER_LOAD_STATIC_REGISTRY_METRIC_ID,
-                        dimension_result.as_event_code(),
-                        0,
-                        1
-                    );
-                    if err.is_not_found() {
-                        fx_log_info!("no font package registry present: {:#}", anyhow!(err));
-                        None
-                    } else {
-                        Some(anyhow!(err))
-                    }
-                })
-                .format("; "));
-            if !err_str.is_empty() {
-                fx_log_err!("error(s) loading font package registry: {}", err_str);
+        Err((builder, err)) => {
+            let dimension_result: metrics::FontManagerLoadStaticRegistryMetricDimensionResult =
+                (&err).into();
+            cobalt_sender.log_event_count(
+                metrics::FONT_MANAGER_LOAD_STATIC_REGISTRY_METRIC_ID,
+                dimension_result.as_event_code(),
+                0,
+                1,
+            );
+
+            if err.is_not_found() {
+                fx_log_info!("no font package registry present: {:#}", anyhow!(err));
+            } else {
+                fx_log_err!("error loading font package registry: {:#}", anyhow!(err));
             }
             builder
         }

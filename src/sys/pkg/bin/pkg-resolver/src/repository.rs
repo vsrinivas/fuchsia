@@ -336,7 +336,7 @@ mod tests {
             serve::{responder, HttpResponder, ServedRepository, ServedRepositoryBuilder},
             Package, PackageBuilder, Repository as TestRepository, RepositoryBuilder,
         },
-        fuchsia_url::pkg_url::RepoUrl,
+        fuchsia_url::RepositoryUrl,
         futures::{channel::mpsc, stream::StreamExt},
         http_sse::Event,
         std::{
@@ -440,7 +440,7 @@ mod tests {
 
         fn start(self, repo_url: &str) -> (ServedRepository, RepositoryConfig) {
             let served_repository = self.builder.start().expect("create served repo");
-            let repo_url = RepoUrl::parse(repo_url).expect("created repo url");
+            let repo_url = RepositoryUrl::parse(repo_url).expect("created repo url");
 
             let repo_config = if self.subscribe {
                 served_repository.make_repo_config_with_subscribe(repo_url)
@@ -726,7 +726,7 @@ mod inspect_tests {
         fuchsia_async as fasync,
         fuchsia_inspect::assert_data_tree,
         fuchsia_pkg_testing::{serve::responder, PackageBuilder, RepositoryBuilder},
-        fuchsia_url::pkg_url::RepoUrl,
+        fuchsia_url::RepositoryUrl,
         futures::stream::StreamExt,
         http_sse::Event,
         std::sync::Arc,
@@ -750,7 +750,7 @@ mod inspect_tests {
                 .expect("created repo"),
         );
         let served_repository = repo.server().start().expect("create served repo");
-        let repo_url = RepoUrl::parse(TEST_REPO_URL).expect("created repo url");
+        let repo_url = RepositoryUrl::parse(TEST_REPO_URL).expect("created repo url");
         let repo_config = served_repository.make_repo_config(repo_url);
 
         let repo = Repository::new(
@@ -805,7 +805,7 @@ mod inspect_tests {
                 .expect("created repo"),
         );
         let served_repository = repo.server().start().expect("create served repo");
-        let repo_url = RepoUrl::parse(TEST_REPO_URL).expect("created repo url");
+        let repo_url = RepositoryUrl::parse(TEST_REPO_URL).expect("created repo url");
         let repo_config = served_repository.make_repo_config(repo_url);
 
         let mut repo = Repository::new(
@@ -866,7 +866,7 @@ mod inspect_tests {
             ))
             .start()
             .expect("create served repo");
-        let repo_url = RepoUrl::parse(TEST_REPO_URL).expect("created repo url");
+        let repo_url = RepositoryUrl::parse(TEST_REPO_URL).expect("created repo url");
         let repo_config = served_repository.make_repo_config_with_subscribe(repo_url);
 
         let repo = Repository::new(

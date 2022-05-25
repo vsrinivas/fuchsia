@@ -9,7 +9,7 @@ use {
     anyhow::anyhow,
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_io as fio,
-    fuchsia_url::pkg_url::PkgUrl,
+    fuchsia_url::PinnedAbsolutePackageUrl,
     futures::future::LocalBoxFuture,
     futures::prelude::*,
     log::warn,
@@ -100,8 +100,10 @@ impl Installer for IsolatedInstaller {
 
         async move {
             let mut updater = updater.await.map_err(IsolatedInstallError::Failure)?;
-            let () =
-                updater.install_update(Some(&url)).await.map_err(IsolatedInstallError::Failure)?;
+            let () = updater
+                .install_update(Some(&url.clone().into()))
+                .await
+                .map_err(IsolatedInstallError::Failure)?;
             if let Some(o) = observer.as_ref() {
                 o.receive_progress(None, 1., None, None);
             }
@@ -196,12 +198,12 @@ fn try_create_install_plan(
 
     let full_url = url.to_owned() + &package.name;
 
-    match PkgUrl::parse(&full_url) {
+    match PinnedAbsolutePackageUrl::parse(&full_url) {
         Ok(url) => Ok(FuchsiaInstallPlan { url, install_source: request_params.source.clone() }),
         Err(err) => Err(IsolatedInstallError::InstallPlan(anyhow!(
-            "Failed to parse {} to PkgUrl: {}",
+            "Failed to parse {} to PinnedAbsolutePackageUrl: {:#}",
             full_url,
-            err
+            anyhow!(err),
         ))),
     }
 }
@@ -215,7 +217,8 @@ mod tests {
     };
 
     const TEST_URL_BASE: &str = "fuchsia-pkg://fuchsia.com/";
-    const TEST_PACKAGE_NAME: &str = "update/0";
+    const TEST_PACKAGE_NAME: &str =
+        "update/0?hash=0000000000000000000000000000000000000000000000000000000000000000";
 
     #[test]
     fn test_simple_response() {

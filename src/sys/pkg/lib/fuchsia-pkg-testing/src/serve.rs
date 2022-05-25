@@ -12,7 +12,7 @@ use {
         MirrorConfig, MirrorConfigBuilder, RepositoryConfig, RepositoryStorageType,
     },
     fuchsia_async::{self as fasync, net::TcpListener, Task},
-    fuchsia_url::pkg_url::RepoUrl,
+    fuchsia_url::RepositoryUrl,
     futures::{future::BoxFuture, prelude::*},
     http::Uri,
     http_sse::{Event, EventSender, SseResponseCreator},
@@ -298,25 +298,25 @@ impl ServedRepository {
 
     /// Generate a [`RepositoryConfig`] suitable for configuring a package resolver to use this
     /// served repository.
-    pub fn make_repo_config(&self, url: RepoUrl) -> RepositoryConfig {
+    pub fn make_repo_config(&self, url: RepositoryUrl) -> RepositoryConfig {
         self.repo.make_repo_config(url, Some(self.get_mirror_config(false)), false)
     }
 
     /// Generate a [`RepositoryConfig`] suitable for configuring a package resolver to use this
     /// served repository. Set subscribe on the mirror configs to true.
-    pub fn make_repo_config_with_subscribe(&self, url: RepoUrl) -> RepositoryConfig {
+    pub fn make_repo_config_with_subscribe(&self, url: RepositoryUrl) -> RepositoryConfig {
         self.repo.make_repo_config(url, Some(self.get_mirror_config(true)), false)
     }
 
     /// Generate a [`RepositoryConfig`] suitable for configuring a package resolver to use this
     /// served repository with local mirroring enabled.
     // TODO(fxbug.dev/59827) delete this method once pkg-resolver can fetch metadata from a LocalMirror.
-    pub fn make_repo_config_with_local_mirror(&self, url: RepoUrl) -> RepositoryConfig {
+    pub fn make_repo_config_with_local_mirror(&self, url: RepositoryUrl) -> RepositoryConfig {
         self.repo.make_repo_config(url, Some(self.get_mirror_config(false)), true)
     }
 
     /// Generate a [`RepositoryConfig`] that permits persisting metadata.
-    pub fn make_repo_config_with_persistent_storage(&self, url: RepoUrl) -> RepositoryConfig {
+    pub fn make_repo_config_with_persistent_storage(&self, url: RepositoryUrl) -> RepositoryConfig {
         self.repo
             .make_repo_config_builder(url)
             .add_mirror(self.get_mirror_config(false))

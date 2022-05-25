@@ -10,7 +10,6 @@ use {
     fuchsia_component::client::connect_to_protocol,
     fuchsia_inspect::{self as inspect, Property as _, StringProperty},
     fuchsia_syslog::fx_log_info,
-    fuchsia_url::pkg_url::RepoUrl,
     futures::{future::BoxFuture, prelude::*},
 };
 
@@ -110,7 +109,7 @@ fn create_rewrite_rule_for_tuf_config_name(
     // tuf_config_name could either be the full repo hostname or the name of the channel.
     // In order to (1) verify the corresponding repo is actually registered and (2) obtain
     // full repo name if tuf_config_name is a channel, we will do the following:
-    let repo = RepoUrl::parse(&format!("fuchsia-pkg://{}", tuf_config_name))
+    let repo = fuchsia_url::RepositoryUrl::parse_host(tuf_config_name.to_string())
         .ok()
         .and_then(|url| repo_manager.get(&url))
         .or_else(|| repo_manager.get_repo_for_channel(tuf_config_name))
@@ -214,10 +213,11 @@ mod test {
             ChannelInspectState::new(inspector.root().create_child("omaha_channel"));
 
         // Set up static configs
-        let vbmeta_repo_config =
-            RepositoryConfigBuilder::new(RepoUrl::parse("fuchsia-pkg://repo-from-vbmeta").unwrap())
-                .add_root_key(RepositoryKey::Ed25519(vec![0]))
-                .build();
+        let vbmeta_repo_config = RepositoryConfigBuilder::new(
+            fuchsia_url::RepositoryUrl::parse("fuchsia-pkg://repo-from-vbmeta").unwrap(),
+        )
+        .add_root_key(RepositoryKey::Ed25519(vec![0]))
+        .build();
         let static_dir = crate::test_util::create_dir(vec![(
             "config",
             RepositoryConfigs::Version1(vec![vbmeta_repo_config]),

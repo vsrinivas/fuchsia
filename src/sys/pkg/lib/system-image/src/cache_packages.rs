@@ -8,24 +8,20 @@ use {
         CachePackagesInitError,
     },
     fuchsia_hash::Hash,
-    fuchsia_url::{
-        errors::ParseError,
-        pkg_url::{PinnedPkgUrl, PkgUrl},
-    },
+    fuchsia_url::{AbsolutePackageUrl, ParseError, PinnedAbsolutePackageUrl, RepositoryUrl},
     serde::{Deserialize, Serialize},
-    std::convert::TryFrom,
 };
 
 const DEFAULT_PACKAGE_DOMAIN: &str = "fuchsia.com";
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct CachePackages {
-    contents: Vec<PinnedPkgUrl>,
+    contents: Vec<PinnedAbsolutePackageUrl>,
 }
 
 impl CachePackages {
     /// Create a new instance of `CachePackages` containing entries provided.
-    pub fn from_entries(entries: Vec<PinnedPkgUrl>) -> Self {
+    pub fn from_entries(entries: Vec<PinnedAbsolutePackageUrl>) -> Self {
         CachePackages { contents: entries }
     }
 
@@ -35,14 +31,16 @@ impl CachePackages {
         let contents = mapping
             .into_contents()
             .map(|(path, hash)| {
-                PkgUrl::new_package(
-                    DEFAULT_PACKAGE_DOMAIN.to_string(),
-                    format!("/{}", path),
-                    Some(hash),
+                let (name, variant) = path.into_name_and_variant();
+                PinnedAbsolutePackageUrl::new(
+                    RepositoryUrl::parse_host(DEFAULT_PACKAGE_DOMAIN.to_string())
+                        .expect("parse static string as repository host"),
+                    name,
+                    Some(variant),
+                    hash,
                 )
-                .and_then(PinnedPkgUrl::try_from)
             })
-            .collect::<Result<Vec<_>, _>>()?;
+            .collect::<Vec<_>>();
         Ok(CachePackages { contents })
     }
 
@@ -52,25 +50,24 @@ impl CachePackages {
     }
 
     /// Iterator over the contents of the mapping.
-    pub fn contents(&self) -> impl Iterator<Item = &PinnedPkgUrl> + ExactSizeIterator {
+    pub fn contents(&self) -> impl Iterator<Item = &PinnedAbsolutePackageUrl> + ExactSizeIterator {
         self.contents.iter()
     }
 
     /// Iterator over the contents of the mapping, consuming self.
-    pub fn into_contents(self) -> impl Iterator<Item = PinnedPkgUrl> + ExactSizeIterator {
+    pub fn into_contents(
+        self,
+    ) -> impl Iterator<Item = PinnedAbsolutePackageUrl> + ExactSizeIterator {
         self.contents.into_iter()
     }
 
     /// Get the hash for a package.
-    pub fn hash_for_package(&self, url: &PkgUrl) -> Option<Hash> {
-        let hash = url.package_hash();
-        let url = url.strip_hash();
+    pub fn hash_for_package(&self, pkg: &AbsolutePackageUrl) -> Option<Hash> {
         self.contents.iter().find_map(|candidate| {
-            if url == candidate.strip_hash() {
-                let candidate_hash = candidate.package_hash();
-                match hash {
-                    None => Some(candidate_hash),
-                    Some(hash) if hash == &candidate_hash => Some(candidate_hash),
+            if pkg.as_unpinned() == candidate.as_unpinned() {
+                match pkg.hash() {
+                    None => Some(candidate.hash()),
+                    Some(hash) if hash == candidate.hash() => Some(hash),
                     _ => None,
                 }
             } else {
@@ -84,10 +81,10 @@ impl CachePackages {
 #[serde(deny_unknown_fields)]
 struct Packages {
     version: String,
-    content: Vec<PinnedPkgUrl>,
+    content: Vec<PinnedAbsolutePackageUrl>,
 }
 
-fn parse_json(contents: &[u8]) -> Result<Vec<PinnedPkgUrl>, CachePackagesInitError> {
+fn parse_json(contents: &[u8]) -> Result<Vec<PinnedAbsolutePackageUrl>, CachePackagesInitError> {
     match serde_json::from_slice(&contents).map_err(CachePackagesInitError::JsonError)? {
         Packages { ref version, content } if version == "1" => Ok(content),
         Packages { version, .. } => Err(CachePackagesInitError::VersionNotSupported(version)),
@@ -133,38 +130,48 @@ mod tests {
 
     #[test]
     fn test_hash_for_package_returns_none() {
-        let hash = fuchsia_hash::Hash::from([0; 32]);
-        let packages = CachePackages::from_entries(vec![PinnedPkgUrl::new_package(
-            "foo.bar".to_string(),
-            "/qwe/0".to_string(),
-            hash,
+        let correct_hash = fuchsia_hash::Hash::from([0; 32]);
+        let packages = CachePackages::from_entries(vec![PinnedAbsolutePackageUrl::parse(
+            &format!("fuchsia-pkg://fuchsia.com/name?hash={correct_hash}"),
         )
         .unwrap()]);
+        let wrong_hash = fuchsia_hash::Hash::from([1; 32]);
         assert_eq!(
             None,
             packages.hash_for_package(
-                &PkgUrl::parse(&format!("fuchsia-pkg://foo.bar/rty/0?hash={}", hash)).unwrap()
+                &AbsolutePackageUrl::parse("fuchsia-pkg://fuchsia.com/wrong-name").unwrap()
+            )
+        );
+        assert_eq!(
+            None,
+            packages.hash_for_package(
+                &AbsolutePackageUrl::parse(&format!(
+                    "fuchsia-pkg://fuchsia.com/name?hash={wrong_hash}"
+                ))
+                .unwrap()
             )
         );
     }
 
     #[test]
     fn test_hash_for_package_returns_hashes() {
-        let hashes = vec![fuchsia_hash::Hash::from([0; 32]), fuchsia_hash::Hash::from([1; 32])];
-        let unpinned_urls: Vec<PkgUrl> = vec![
-            PkgUrl::parse(&format!("fuchsia-pkg://foo.bar/qwe/0?hash={}", hashes[0])).unwrap(),
-            PkgUrl::parse(&format!("fuchsia-pkg://foo.bar/rty/0?hash={}", hashes[1])).unwrap(),
-        ];
-        let pinned_urls = unpinned_urls
-            .iter()
-            .cloned()
-            .map(PinnedPkgUrl::try_from)
-            .collect::<Result<Vec<_>, _>>()
-            .unwrap();
-        let packages = CachePackages::from_entries(pinned_urls);
-        assert!(unpinned_urls
-            .iter()
-            .map(|u| packages.hash_for_package(u).unwrap())
-            .eq(hashes.into_iter()));
+        let hash = fuchsia_hash::Hash::from([0; 32]);
+        let packages = CachePackages::from_entries(vec![PinnedAbsolutePackageUrl::parse(
+            &format!("fuchsia-pkg://fuchsia.com/name?hash={hash}"),
+        )
+        .unwrap()]);
+        assert_eq!(
+            Some(hash),
+            packages.hash_for_package(
+                &AbsolutePackageUrl::parse(&format!("fuchsia-pkg://fuchsia.com/name?hash={hash}"))
+                    .unwrap()
+            )
+        );
+        assert_eq!(
+            Some(hash),
+            packages.hash_for_package(
+                &AbsolutePackageUrl::parse(&format!("fuchsia-pkg://fuchsia.com/name")).unwrap()
+            )
+        );
     }
 }

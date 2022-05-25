@@ -4,7 +4,7 @@
 
 use {
     crate::errors::CreationManifestError,
-    fuchsia_url::pkg_url::validate_resource_path,
+    fuchsia_url::validate_resource_path,
     serde::{Deserialize, Serialize},
     std::{
         collections::{btree_map, BTreeMap, HashSet},

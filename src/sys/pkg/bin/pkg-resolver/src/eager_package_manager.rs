@@ -8,13 +8,13 @@ use {
     async_lock::RwLock as AsyncRwLock,
     fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg::{
-        CupData, CupRequest, CupRequestStream, GetInfoError, PackageUrl, WriteError,
+        self as fpkg, CupData, CupRequest, CupRequestStream, GetInfoError, WriteError,
     },
     fidl_fuchsia_pkg_ext::{cache, BlobInfo},
     fidl_fuchsia_pkg_internal::{PersistentEagerPackage, PersistentEagerPackages},
     fuchsia_pkg::PackageDirectory,
     fuchsia_syslog::fx_log_err,
-    fuchsia_url::pkg_url::{Hash, PinnedPkgUrl, PkgUrl},
+    fuchsia_url::{AbsolutePackageUrl, Hash, PinnedAbsolutePackageUrl, UnpinnedAbsolutePackageUrl},
     fuchsia_zircon as zx,
     futures::prelude::*,
     omaha_client::{cup_ecdsa::PublicKeys, protocol::response::Response},
@@ -35,8 +35,7 @@ struct EagerPackage {
 
 #[derive(Debug)]
 pub struct EagerPackageManager<T: Resolver> {
-    // Map from unpinned eager package URL to `EagerPackage`.
-    packages: BTreeMap<PkgUrl, EagerPackage>,
+    packages: BTreeMap<UnpinnedAbsolutePackageUrl, EagerPackage>,
     package_resolver: T,
     data_proxy: Option<fio::DirectoryProxy>,
 }
@@ -49,7 +48,7 @@ impl<T: Resolver> EagerPackageManager<T> {
     ) -> Result<Self, Error> {
         let config =
             EagerPackageConfigs::from_namespace().await.context("loading eager package config")?;
-        Self::from_config(config, package_resolver, pkg_cache, data_proxy).await
+        Ok(Self::from_config(config, package_resolver, pkg_cache, data_proxy).await)
     }
 
     async fn from_config(
@@ -57,18 +56,14 @@ impl<T: Resolver> EagerPackageManager<T> {
         package_resolver: T,
         pkg_cache: cache::Client,
         data_proxy: Option<fio::DirectoryProxy>,
-    ) -> Result<Self, Error> {
+    ) -> Self {
         let mut packages = config
             .packages
             .into_iter()
             .map(|EagerPackageConfig { url, executable, public_keys: _ }| {
-                if url.package_hash().is_none() {
-                    Ok((url, EagerPackage { executable, package_directory: None, cup: None }))
-                } else {
-                    Err(anyhow!("pinned url not allowed in eager package config: '{}'", url))
-                }
+                (url, EagerPackage { executable, package_directory: None, cup: None })
             })
-            .collect::<Result<BTreeMap<PkgUrl, EagerPackage>, _>>()?;
+            .collect();
 
         if let Some(ref data_proxy) = data_proxy {
             if let Err(e) =
@@ -78,11 +73,11 @@ impl<T: Resolver> EagerPackageManager<T> {
             }
         }
 
-        Ok(Self { packages, package_resolver, data_proxy })
+        Self { packages, package_resolver, data_proxy }
     }
 
     async fn load_persistent_eager_packages(
-        packages: &mut BTreeMap<PkgUrl, EagerPackage>,
+        packages: &mut BTreeMap<UnpinnedAbsolutePackageUrl, EagerPackage>,
         pkg_cache: cache::Client,
         data_proxy: &fio::DirectoryProxy,
     ) -> Result<(), Error> {
@@ -121,9 +116,9 @@ impl<T: Resolver> EagerPackageManager<T> {
                     .ok_or_else(|| {
                         anyhow!("could not find pinned url in CUP omaha response for {}", url.url)
                     })?;
-                let pinned_url: PinnedPkgUrl =
+                let pinned_url: PinnedAbsolutePackageUrl =
                     pinned_url.parse().with_context(|| format!("while parsing {}", url.url))?;
-                let unpinned_url = pinned_url.strip_hash();
+                let unpinned_url = pinned_url.as_unpinned();
                 let package = packages
                     .get_mut(&unpinned_url)
                     .ok_or_else(|| anyhow!("unknown pkg url: {}", url.url))?;
@@ -145,11 +140,14 @@ impl<T: Resolver> EagerPackageManager<T> {
 
     // Returns eager package directory.
     // Returns Ok(None) if that's not an eager package, or the package is pinned.
-    pub fn get_package_dir(&self, url: &PkgUrl) -> Result<Option<PackageDirectory>, Error> {
-        if url.package_hash().is_some() {
-            // Optimization: since all URLs in self.packages are unpinned, return early.
-            return Ok(None);
-        }
+    pub fn get_package_dir(
+        &self,
+        url: &AbsolutePackageUrl,
+    ) -> Result<Option<PackageDirectory>, Error> {
+        let url = match url {
+            AbsolutePackageUrl::Unpinned(unpinned) => unpinned,
+            AbsolutePackageUrl::Pinned(_) => return Ok(None),
+        };
         if let Some(eager_package) = self.packages.get(url) {
             if eager_package.package_directory.is_some() {
                 Ok(eager_package.package_directory.clone())
@@ -163,12 +161,10 @@ impl<T: Resolver> EagerPackageManager<T> {
 
     async fn resolve_pinned(
         package_resolver: &T,
-        url: PinnedPkgUrl,
+        url: PinnedAbsolutePackageUrl,
     ) -> Result<PackageDirectory, ResolvePinnedError> {
-        let expected_hash = url.package_hash();
-
+        let expected_hash = url.hash();
         let pkg_dir = package_resolver.resolve(url.into(), None).await?;
-
         let hash = pkg_dir.merkle_root().await?;
         if hash != expected_hash {
             return Err(ResolvePinnedError::HashMismatch(hash));
@@ -178,10 +174,10 @@ impl<T: Resolver> EagerPackageManager<T> {
 
     async fn resolve_pinned_from_cache(
         pkg_cache: &cache::Client,
-        url: PinnedPkgUrl,
+        url: PinnedAbsolutePackageUrl,
     ) -> Result<PackageDirectory, Error> {
         let mut get = pkg_cache
-            .get(BlobInfo { blob_id: url.package_hash().into(), length: 0 })
+            .get(BlobInfo { blob_id: url.hash().into(), length: 0 })
             .context("pkg cache get")?;
         if let Some(_needed_blob) = get.open_meta_blob().await.context("open_meta_blob")? {
             return Err(anyhow!("meta blob missing"));
@@ -193,13 +189,16 @@ impl<T: Resolver> EagerPackageManager<T> {
         Ok(get.finish().await.context("finish")?)
     }
 
-    async fn persist(&self, packages: &BTreeMap<PkgUrl, EagerPackage>) -> Result<(), PersistError> {
+    async fn persist(
+        &self,
+        packages: &BTreeMap<UnpinnedAbsolutePackageUrl, EagerPackage>,
+    ) -> Result<(), PersistError> {
         let data_proxy = self.data_proxy.as_ref().ok_or(PersistError::DataProxyNotAvailable)?;
 
         let packages = packages
             .iter()
             .map(|(url, package)| PersistentEagerPackage {
-                url: Some(PackageUrl { url: url.to_string() }),
+                url: Some(fpkg::PackageUrl { url: url.to_string() }),
                 cup: package.cup.clone(),
                 ..PersistentEagerPackage::EMPTY
             })
@@ -222,7 +221,11 @@ impl<T: Resolver> EagerPackageManager<T> {
         .map_err(PersistError::AtomicWrite)
     }
 
-    async fn cup_write(&mut self, url: &PackageUrl, cup: CupData) -> Result<(), CupWriteError> {
+    async fn cup_write(
+        &mut self,
+        url: &fpkg::PackageUrl,
+        cup: CupData,
+    ) -> Result<(), CupWriteError> {
         // TODO(fxbug.dev/95296): verify CUP signature before parsing.
         let response = parse_omaha_response_from_cup(&cup)?;
         // The full URL must appear in the omaha response.
@@ -237,13 +240,12 @@ impl<T: Resolver> EagerPackageManager<T> {
             })
             .ok_or(CupWriteError::CupResponseURLNotFound)?;
 
-        let pinned_url: PinnedPkgUrl = url.url.parse()?;
-        let unpinned_url = pinned_url.strip_hash();
+        let pinned_url: PinnedAbsolutePackageUrl = url.url.parse()?;
         let mut packages = self.packages.clone();
         // Make sure the url is an eager package before trying to resolve it.
         let package = packages
-            .get_mut(&unpinned_url)
-            .ok_or_else(|| CupWriteError::UnknownURL(unpinned_url))?;
+            .get_mut(pinned_url.as_unpinned())
+            .ok_or_else(|| CupWriteError::UnknownURL(pinned_url.as_unpinned().clone()))?;
         let pkg_dir = Self::resolve_pinned(&self.package_resolver, pinned_url).await?;
         package.package_directory = Some(pkg_dir);
         package.cup = Some(cup);
@@ -254,8 +256,11 @@ impl<T: Resolver> EagerPackageManager<T> {
         Ok(())
     }
 
-    async fn cup_get_info(&self, url: &PackageUrl) -> Result<(String, String), CupGetInfoError> {
-        let pkg_url = PkgUrl::parse(&url.url)?;
+    async fn cup_get_info(
+        &self,
+        url: &fpkg::PackageUrl,
+    ) -> Result<(String, String), CupGetInfoError> {
+        let pkg_url = UnpinnedAbsolutePackageUrl::parse(&url.url)?;
         let package =
             self.packages.get(&pkg_url).ok_or_else(|| CupGetInfoError::UnknownURL(pkg_url))?;
         let cup = package.cup.as_ref().ok_or(CupGetInfoError::CupDataNotAvailable)?;
@@ -315,7 +320,7 @@ enum CupWriteError {
     #[error("while parsing package URL")]
     ParseURL(#[from] fuchsia_url::errors::ParseError),
     #[error("URL is not a known eager package: {0}")]
-    UnknownURL(PkgUrl),
+    UnknownURL(UnpinnedAbsolutePackageUrl),
     #[error("while resolving package")]
     ResolvePinned(#[from] ResolvePinnedError),
     #[error("while parsing CUP omaha response")]
@@ -344,7 +349,7 @@ enum CupGetInfoError {
     #[error("while parsing package URL")]
     ParseURL(#[from] fuchsia_url::errors::ParseError),
     #[error("URL is not a known eager package: {0}")]
-    UnknownURL(PkgUrl),
+    UnknownURL(UnpinnedAbsolutePackageUrl),
     #[error("CUP data is not available for this eager package")]
     CupDataNotAvailable,
     #[error("URL not found in CUP omaha response")]
@@ -378,7 +383,7 @@ struct EagerPackageConfigs {
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
 struct EagerPackageConfig {
-    url: PkgUrl,
+    url: UnpinnedAbsolutePackageUrl,
     #[serde(default)]
     executable: bool,
     public_keys: PublicKeys,
@@ -611,7 +616,7 @@ mod tests {
                 packages
                     .into_iter()
                     .map(|(url, cup)| PersistentEagerPackage {
-                        url: Some(PackageUrl { url: url.to_string() }),
+                        url: Some(fpkg::PackageUrl { url: url.to_string() }),
                         cup: Some(cup),
                         ..PersistentEagerPackage::EMPTY
                     })
@@ -677,17 +682,17 @@ mod tests {
             EagerPackageConfigs {
                 packages: vec![
                     EagerPackageConfig {
-                        url: PkgUrl::parse("fuchsia-pkg://example.com/package").unwrap(),
+                        url: "fuchsia-pkg://example.com/package".parse().unwrap(),
                         executable: true,
                         public_keys: public_keys.clone(),
                     },
                     EagerPackageConfig {
-                        url: PkgUrl::parse("fuchsia-pkg://example.com/package2").unwrap(),
+                        url: "fuchsia-pkg://example.com/package2".parse().unwrap(),
                         executable: false,
                         public_keys: public_keys.clone(),
                     },
                     EagerPackageConfig {
-                        url: PkgUrl::parse("fuchsia-pkg://example.com/package3").unwrap(),
+                        url: "fuchsia-pkg://example.com/package3".parse().unwrap(),
                         executable: false,
                         public_keys,
                     },
@@ -701,9 +706,8 @@ mod tests {
         let config = EagerPackageConfigs { packages: Vec::new() };
         let package_resolver = get_test_package_resolver();
         let (pkg_cache, _) = get_mock_pkg_cache();
-        let manager = EagerPackageManager::from_config(config, package_resolver, pkg_cache, None)
-            .await
-            .unwrap();
+        let manager =
+            EagerPackageManager::from_config(config, package_resolver, pkg_cache, None).await;
 
         assert!(manager.packages.is_empty());
 
@@ -712,31 +716,16 @@ mod tests {
             "fuchsia-pkg://example.com/package3",
             "fuchsia-pkg://example.com/package?hash=deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
         ] {
-            assert_matches!(manager.get_package_dir(&PkgUrl::parse(url).unwrap()), Ok(None));
+            assert_matches!(manager.get_package_dir(&url.parse().unwrap()), Ok(None));
         }
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn config_reject_pinned_urls() {
-        let config = EagerPackageConfigs {
-            packages: vec![EagerPackageConfig {
-                url: PkgUrl::parse(TEST_PINNED_URL).unwrap(),
-                executable: true,
-                public_keys: make_default_public_keys_for_test(),
-            }],
-        };
-        let package_resolver = get_test_package_resolver();
-        let (pkg_cache, _) = get_mock_pkg_cache();
-        assert_matches!(
-            EagerPackageManager::from_config(config, package_resolver, pkg_cache, None).await,
-            Err(_)
-        );
-    }
-
-    #[fasync::run_singlethreaded(test)]
     async fn test_resolve_pinned_hash_mismatch() {
-        let pinned_url =
-            PinnedPkgUrl::from_url_and_hash(TEST_URL.parse().unwrap(), TEST_HASH.parse().unwrap());
+        let pinned_url = PinnedAbsolutePackageUrl::from_unpinned(
+            TEST_URL.parse().unwrap(),
+            TEST_HASH.parse().unwrap(),
+        );
         assert_matches!(
             EagerPackageManager::resolve_pinned(&get_test_package_resolver(), pinned_url).await,
             Err(ResolvePinnedError::HashMismatch(_))
@@ -745,8 +734,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_load_persistent_eager_packages() {
-        let url = PkgUrl::parse(TEST_URL).unwrap();
-        let url2 = PkgUrl::parse("fuchsia-pkg://example.com/package2").unwrap();
+        let url = UnpinnedAbsolutePackageUrl::parse(TEST_URL).unwrap();
+        let url2 = UnpinnedAbsolutePackageUrl::parse("fuchsia-pkg://example.com/package2").unwrap();
         let config = EagerPackageConfigs {
             packages: vec![
                 EagerPackageConfig {
@@ -785,7 +774,10 @@ mod tests {
                 // packages can be out of order
                 (url2.clone(), cup2.clone()),
                 // bad packages won't break loading of other valid packages
-                (PkgUrl::parse("fuchsia-pkg://unknown/package").unwrap(), cup.clone()),
+                (
+                    UnpinnedAbsolutePackageUrl::parse("fuchsia-pkg://unknown/package").unwrap(),
+                    cup.clone(),
+                ),
                 (url.clone(), CupData::EMPTY),
                 (url.clone(), cup.clone()),
             ],
@@ -796,25 +788,23 @@ mod tests {
             handle_pkg_cache(pkg_cache_stream),
         )
         .await;
-        let manager = manager.unwrap();
         assert_matches!(
-            manager.get_package_dir(
-                &PkgUrl::parse("fuchsia-pkg://example.com/non-eager-package").unwrap()
-            ),
+            manager
+                .get_package_dir(&"fuchsia-pkg://example.com/non-eager-package".parse().unwrap()),
             Ok(None)
         );
         assert!(manager.packages[&url].package_directory.is_some());
-        assert!(manager.get_package_dir(&url).unwrap().is_some());
+        assert!(manager.get_package_dir(&url.clone().into()).unwrap().is_some());
         assert_eq!(manager.packages[&url].cup, Some(cup));
         assert!(manager.packages[&url2].package_directory.is_none());
-        assert_matches!(manager.get_package_dir(&url2), Err(_));
+        assert_matches!(manager.get_package_dir(&url2.clone().into()), Err(_));
         // cup is still loaded even if resolve fails
         assert_eq!(manager.packages[&url2].cup, Some(cup2));
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_cup_write() {
-        let url = PkgUrl::parse(TEST_URL).unwrap();
+        let url = UnpinnedAbsolutePackageUrl::parse(TEST_URL).unwrap();
         let config = EagerPackageConfigs {
             packages: vec![EagerPackageConfig {
                 url: url.clone(),
@@ -837,10 +827,12 @@ mod tests {
             pkg_cache.clone(),
             Some(Clone::clone(&data_proxy)),
         )
-        .await
-        .unwrap();
+        .await;
         let cup: CupData = CupDataForTest::builder().build().into();
-        manager.cup_write(&PackageUrl { url: TEST_PINNED_URL.into() }, cup.clone()).await.unwrap();
+        manager
+            .cup_write(&fpkg::PackageUrl { url: TEST_PINNED_URL.into() }, cup.clone())
+            .await
+            .unwrap();
         assert!(manager.packages[&url].package_directory.is_some());
         assert_eq!(manager.packages[&url].cup, Some(cup.clone()));
 
@@ -850,14 +842,13 @@ mod tests {
             handle_pkg_cache(pkg_cache_stream),
         )
         .await;
-        let manager2 = manager2.unwrap();
         assert!(manager2.packages[&url].package_directory.is_some());
         assert_eq!(manager2.packages[&url].cup, Some(cup));
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_cup_write_persist_fail() {
-        let url = PkgUrl::parse(TEST_URL).unwrap();
+        let url = UnpinnedAbsolutePackageUrl::parse(TEST_URL).unwrap();
         let config = EagerPackageConfigs {
             packages: vec![EagerPackageConfig {
                 url: url.clone(),
@@ -869,12 +860,10 @@ mod tests {
         let (pkg_cache, _) = get_mock_pkg_cache();
 
         let mut manager =
-            EagerPackageManager::from_config(config, package_resolver, pkg_cache, None)
-                .await
-                .unwrap();
+            EagerPackageManager::from_config(config, package_resolver, pkg_cache, None).await;
         let cup: CupData = CupDataForTest::builder().build().into();
         assert_matches!(
-            manager.cup_write(&PackageUrl { url: TEST_PINNED_URL.into() }, cup).await,
+            manager.cup_write(&fpkg::PackageUrl { url: TEST_PINNED_URL.into() }, cup).await,
             Err(CupWriteError::Persist(_))
         );
         assert!(manager.packages[&url].package_directory.is_none());
@@ -883,7 +872,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_cup_write_omaha_response_different_url() {
-        let url = PkgUrl::parse(TEST_URL).unwrap();
+        let url = UnpinnedAbsolutePackageUrl::parse(TEST_URL).unwrap();
         let config = EagerPackageConfigs {
             packages: vec![EagerPackageConfig {
                 url: url.clone(),
@@ -895,13 +884,11 @@ mod tests {
         let (pkg_cache, _) = get_mock_pkg_cache();
 
         let mut manager =
-            EagerPackageManager::from_config(config, package_resolver, pkg_cache, None)
-                .await
-                .unwrap();
+            EagerPackageManager::from_config(config, package_resolver, pkg_cache, None).await;
         let cup: CupData = CupDataForTest::builder().build().into();
         assert_matches!(
             manager
-                .cup_write(&PackageUrl { url: format!("{url}?hash=beefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdead") }, cup)
+                .cup_write(&fpkg::PackageUrl { url: format!("{url}?hash=beefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdead") }, cup)
                 .await,
             Err(CupWriteError::CupResponseURLNotFound)
         );
@@ -911,7 +898,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_cup_write_unknown_url() {
-        let url = PkgUrl::parse("fuchsia-pkg://example.com/package2").unwrap();
+        let url = UnpinnedAbsolutePackageUrl::parse("fuchsia-pkg://example.com/package2").unwrap();
         let config = EagerPackageConfigs {
             packages: vec![EagerPackageConfig {
                 url: url.clone(),
@@ -923,12 +910,10 @@ mod tests {
         let (pkg_cache, _) = get_mock_pkg_cache();
 
         let mut manager =
-            EagerPackageManager::from_config(config, package_resolver, pkg_cache, None)
-                .await
-                .unwrap();
+            EagerPackageManager::from_config(config, package_resolver, pkg_cache, None).await;
         let cup: CupData = CupDataForTest::builder().build().into();
         assert_matches!(
-            manager.cup_write(&PackageUrl { url: TEST_PINNED_URL.into() }, cup).await,
+            manager.cup_write(&fpkg::PackageUrl { url: TEST_PINNED_URL.into() }, cup).await,
             Err(CupWriteError::UnknownURL(_))
         );
         assert!(manager.packages[&url].package_directory.is_none());
@@ -937,7 +922,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_cup_get_info() {
-        let url = PkgUrl::parse(TEST_URL).unwrap();
+        let url = UnpinnedAbsolutePackageUrl::parse(TEST_URL).unwrap();
         let config = EagerPackageConfigs {
             packages: vec![EagerPackageConfig {
                 url: url.clone(),
@@ -949,20 +934,18 @@ mod tests {
         let (pkg_cache, _) = get_mock_pkg_cache();
 
         let mut manager =
-            EagerPackageManager::from_config(config, package_resolver, pkg_cache, None)
-                .await
-                .unwrap();
+            EagerPackageManager::from_config(config, package_resolver, pkg_cache, None).await;
         let cup: CupData = CupDataForTest::builder().build().into();
         manager.packages.get_mut(&url).unwrap().cup = Some(cup);
         let (version, channel) =
-            manager.cup_get_info(&PackageUrl { url: TEST_URL.into() }).await.unwrap();
+            manager.cup_get_info(&fpkg::PackageUrl { url: TEST_URL.into() }).await.unwrap();
         assert_eq!(version, "1.2.3.4");
         assert_eq!(channel, "stable");
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_cup_get_info_not_available() {
-        let url = PkgUrl::parse(TEST_URL).unwrap();
+        let url = UnpinnedAbsolutePackageUrl::parse(TEST_URL).unwrap();
         let config = EagerPackageConfigs {
             packages: vec![EagerPackageConfig {
                 url: url.clone(),
@@ -973,18 +956,17 @@ mod tests {
         let package_resolver = get_test_package_resolver();
         let (pkg_cache, _) = get_mock_pkg_cache();
 
-        let manager = EagerPackageManager::from_config(config, package_resolver, pkg_cache, None)
-            .await
-            .unwrap();
+        let manager =
+            EagerPackageManager::from_config(config, package_resolver, pkg_cache, None).await;
         assert_matches!(
-            manager.cup_get_info(&PackageUrl { url: TEST_URL.into() }).await,
+            manager.cup_get_info(&fpkg::PackageUrl { url: TEST_URL.into() }).await,
             Err(CupGetInfoError::CupDataNotAvailable)
         );
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_cup_get_info_unknown_url() {
-        let url = PkgUrl::parse(TEST_URL).unwrap();
+        let url = UnpinnedAbsolutePackageUrl::parse(TEST_URL).unwrap();
         let config = EagerPackageConfigs {
             packages: vec![EagerPackageConfig {
                 url: url.clone(),
@@ -996,14 +978,14 @@ mod tests {
         let (pkg_cache, _) = get_mock_pkg_cache();
 
         let mut manager =
-            EagerPackageManager::from_config(config, package_resolver, pkg_cache, None)
-                .await
-                .unwrap();
+            EagerPackageManager::from_config(config, package_resolver, pkg_cache, None).await;
         let cup: CupData = CupDataForTest::builder().build().into();
         manager.packages.get_mut(&url).unwrap().cup = Some(cup);
         assert_matches!(
             manager
-                .cup_get_info(&PackageUrl { url: "fuchsia-pkg://example.com/package2".into() })
+                .cup_get_info(&fpkg::PackageUrl {
+                    url: "fuchsia-pkg://example.com/package2".into()
+                })
                 .await,
             Err(CupGetInfoError::UnknownURL(_))
         );
@@ -1011,7 +993,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_cup_get_info_omaha_response_different_url() {
-        let url = PkgUrl::parse("fuchsia-pkg://example.com/package2").unwrap();
+        let url = UnpinnedAbsolutePackageUrl::parse("fuchsia-pkg://example.com/package2").unwrap();
         let config = EagerPackageConfigs {
             packages: vec![EagerPackageConfig {
                 url: url.clone(),
@@ -1023,14 +1005,14 @@ mod tests {
         let (pkg_cache, _) = get_mock_pkg_cache();
 
         let mut manager =
-            EagerPackageManager::from_config(config, package_resolver, pkg_cache, None)
-                .await
-                .unwrap();
+            EagerPackageManager::from_config(config, package_resolver, pkg_cache, None).await;
         let cup: CupData = CupDataForTest::builder().build().into();
         manager.packages.get_mut(&url).unwrap().cup = Some(cup);
         assert_matches!(
             manager
-                .cup_get_info(&PackageUrl { url: "fuchsia-pkg://example.com/package2".into() })
+                .cup_get_info(&fpkg::PackageUrl {
+                    url: "fuchsia-pkg://example.com/package2".into()
+                })
                 .await,
             Err(CupGetInfoError::CupResponseURLNotFound)
         );

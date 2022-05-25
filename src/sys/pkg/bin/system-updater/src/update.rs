@@ -18,7 +18,7 @@ use {
     },
     fuchsia_async::{Task, TimeoutExt as _},
     fuchsia_syslog::{fx_log_err, fx_log_info},
-    fuchsia_url::pkg_url::PkgUrl,
+    fuchsia_url::AbsolutePackageUrl,
     futures::{prelude::*, stream::FusedStream},
     parking_lot::Mutex,
     std::{pin::Pin, sync::Arc, time::Duration},
@@ -385,8 +385,10 @@ impl<'a> Attempt<'a> {
     async fn prepare(
         &mut self,
         target_version: &mut history::Version,
-    ) -> Result<(UpdatePackage, UpdateMode, Vec<PkgUrl>, paver::CurrentConfiguration), PrepareError>
-    {
+    ) -> Result<
+        (UpdatePackage, UpdateMode, Vec<AbsolutePackageUrl>, paver::CurrentConfiguration),
+        PrepareError,
+    > {
         // Ensure that the partition boot metadata is ready for the update to begin. Specifically:
         // - the current configuration must be Healthy and Active, and
         // - the non-current configuration must be Unbootable.
@@ -446,8 +448,8 @@ impl<'a> Attempt<'a> {
         let () = replace_retained_packages(
             packages_to_fetch
                 .iter()
-                .filter_map(|url| url.package_hash().cloned())
-                .chain(self.config.update_url.package_hash().cloned()),
+                .filter_map(|url| url.hash())
+                .chain(self.config.update_url.hash()),
             &self.env.retained_packages,
         )
         .await
@@ -471,7 +473,7 @@ impl<'a> Attempt<'a> {
         &mut self,
         co: &mut async_generator::Yield<State>,
         state: &mut state::Fetch,
-        packages_to_fetch: Vec<PkgUrl>,
+        packages_to_fetch: Vec<AbsolutePackageUrl>,
         mode: UpdateMode,
     ) -> Result<Vec<fio::DirectoryProxy>, FetchError> {
         let mut packages = Vec::with_capacity(packages_to_fetch.len());
@@ -604,7 +606,7 @@ async fn gc(space_manager: &SpaceManagerProxy) -> Result<(), Error> {
 /// Resolve the update package, incorporating an increasingly aggressive GC and retry strategy.
 async fn resolve_update_package(
     pkg_resolver: &PackageResolverProxy,
-    update_url: &PkgUrl,
+    update_url: &AbsolutePackageUrl,
     space_manager: &SpaceManagerProxy,
     retained_packages: &RetainedPackagesProxy,
 ) -> Result<UpdatePackage, ResolveError> {
@@ -629,8 +631,8 @@ async fn resolve_update_package(
     // retained packages set, perform a GC and retry. If the third attempt fails,
     // return the error regardless of type.
     let () = async {
-        if let Some(hash) = update_url.package_hash() {
-            let () = replace_retained_packages(std::iter::once(*hash), retained_packages)
+        if let Some(hash) = update_url.hash() {
+            let () = replace_retained_packages(std::iter::once(hash), retained_packages)
                 .await
                 .context("serve_blob_id_iterator")?;
         } else {

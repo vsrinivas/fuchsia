@@ -9,7 +9,7 @@ use crate::{
 };
 use anyhow::{anyhow, Error};
 use fidl_fuchsia_boot::{ArgumentsMarker, ArgumentsProxy};
-use fidl_fuchsia_pkg::{CupMarker, CupProxy, GetInfoError, PackageUrl};
+use fidl_fuchsia_pkg::{self as fpkg, CupMarker, CupProxy, GetInfoError};
 use log::{error, info, warn};
 use omaha_client::{
     common::App,
@@ -216,7 +216,7 @@ impl ClientConfiguration {
     ) -> (Version, Option<ChannelConfig>) {
         let default_version = Version::from(MINIMUM_VALID_VERSION);
         if let Some(ref cup) = cup {
-            match cup.get_info(&mut PackageUrl { url: package.url.to_string() }).await {
+            match cup.get_info(&mut fpkg::PackageUrl { url: package.url.to_string() }).await {
                 Ok(Ok((cup_version, cup_channel))) => {
                     let channel_config =
                         package.channel_config.get_channel(&cup_channel).or_else(|| {
@@ -331,7 +331,7 @@ mod tests {
     use fidl_fuchsia_boot::ArgumentsRequest;
     use fidl_fuchsia_pkg::CupRequest;
     use fuchsia_async as fasync;
-    use fuchsia_url::pkg_url::PkgUrl;
+    use fuchsia_url::UnpinnedAbsolutePackageUrl;
     use futures::prelude::*;
     use omaha_client::{
         app_set::AppSet,
@@ -575,7 +575,8 @@ mod tests {
             }),
             packages: vec![
                 EagerPackageConfig {
-                    url: PkgUrl::parse("fuchsia-pkg://example.com/package").unwrap(),
+                    url: UnpinnedAbsolutePackageUrl::parse("fuchsia-pkg://example.com/package")
+                        .unwrap(),
                     flavor: Some("debug".into()),
                     channel_config: ChannelConfigs {
                         default_channel: Some("stable".into()),
@@ -608,7 +609,8 @@ mod tests {
                     },
                 },
                 EagerPackageConfig {
-                    url: PkgUrl::parse("fuchsia-pkg://example.com/package2").unwrap(),
+                    url: UnpinnedAbsolutePackageUrl::parse("fuchsia-pkg://example.com/package2")
+                        .unwrap(),
                     flavor: None,
                     channel_config: ChannelConfigs {
                         default_channel: None,
@@ -715,7 +717,7 @@ mod tests {
             check_interval_secs: None,
         };
         let config = EagerPackageConfig {
-            url: PkgUrl::parse("fuchsia-pkg://example.com/package").unwrap(),
+            url: UnpinnedAbsolutePackageUrl::parse("fuchsia-pkg://example.com/package").unwrap(),
             flavor: Some("debug".into()),
             channel_config: ChannelConfigs {
                 default_channel: Some("stable".into()),

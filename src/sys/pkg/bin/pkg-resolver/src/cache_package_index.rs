@@ -6,7 +6,7 @@ use {
     anyhow::Context as _,
     fidl_fuchsia_pkg::PackageIndexIteratorMarker,
     fuchsia_syslog::fx_log_warn,
-    fuchsia_url::pkg_url::{PinnedPkgUrl, PkgUrl},
+    fuchsia_url::{PinnedAbsolutePackageUrl, UnpinnedAbsolutePackageUrl},
 };
 
 /// Load the list of cache_packages from fuchsia.pkg/PackageCache.CachePackageIndex.
@@ -32,9 +32,10 @@ async fn from_proxy_impl(
     let mut chunk = pkg_iterator.next().await.context("getting first iterator batch")?;
     while !chunk.is_empty() {
         for entry in chunk {
-            let pkg_url = PkgUrl::parse(&entry.package_url.url).context("parsing url")?;
+            let pkg_url =
+                UnpinnedAbsolutePackageUrl::parse(&entry.package_url.url).context("parsing url")?;
             let blob_id = fidl_fuchsia_pkg_ext::BlobId::from(entry.meta_far_blob_id);
-            entries.push(PinnedPkgUrl::from_url_and_hash(pkg_url, blob_id.into()));
+            entries.push(PinnedAbsolutePackageUrl::from_unpinned(pkg_url, blob_id.into()));
         }
         chunk = pkg_iterator.next().await.context("getting next iterator batch")?;
     }
@@ -49,8 +50,8 @@ mod tests {
         super::*,
         fidl::endpoints::create_proxy_and_stream,
         fidl_fuchsia_pkg::{
-            PackageCacheMarker, PackageCacheRequest, PackageCacheRequestStream, PackageIndexEntry,
-            PackageIndexIteratorRequest, PackageIndexIteratorRequestStream, PackageUrl,
+            self as fpkg, PackageCacheMarker, PackageCacheRequest, PackageCacheRequestStream,
+            PackageIndexEntry, PackageIndexIteratorRequest, PackageIndexIteratorRequestStream,
         },
         fidl_fuchsia_pkg_ext::BlobId,
         fuchsia_async as fasync,
@@ -64,11 +65,13 @@ mod tests {
     const PACKAGE_INDEX_CHUNK_SIZE: u32 = 30;
 
     struct MockPackageCacheService {
-        cache_packages: Arc<Vec<(PkgUrl, BlobId)>>,
+        cache_packages: Arc<Vec<(UnpinnedAbsolutePackageUrl, BlobId)>>,
     }
 
     impl MockPackageCacheService {
-        fn new_with_cache_packages(cache_packages: Arc<Vec<(PkgUrl, BlobId)>>) -> Self {
+        fn new_with_cache_packages(
+            cache_packages: Arc<Vec<(UnpinnedAbsolutePackageUrl, BlobId)>>,
+        ) -> Self {
             Self { cache_packages }
         }
 
@@ -89,7 +92,7 @@ mod tests {
                 .cache_packages
                 .iter()
                 .map(|(url, hash)| PackageIndexEntry {
-                    package_url: PackageUrl { url: url.to_string() },
+                    package_url: fpkg::PackageUrl { url: url.to_string() },
                     meta_far_blob_id: BlobId::from(hash.clone()).into(),
                 })
                 .collect::<Vec<PackageIndexEntry>>();
@@ -108,7 +111,7 @@ mod tests {
     }
 
     async fn spawn_pkg_cache(
-        cache_package_index: Vec<(PkgUrl, BlobId)>,
+        cache_package_index: Vec<(UnpinnedAbsolutePackageUrl, BlobId)>,
     ) -> fidl_fuchsia_pkg::PackageCacheProxy {
         let (client, request_stream) = create_proxy_and_stream::<PackageCacheMarker>().unwrap();
         let cache = MockPackageCacheService::new_with_cache_packages(Arc::new(cache_package_index));
@@ -140,12 +143,12 @@ mod tests {
         let cache_packages = from_proxy(&client).await;
         assert_eq!(
             cache_packages,
-            system_image::CachePackages::from_entries(vec![PinnedPkgUrl::new_package(
-                "fuchsia.com".to_string(),
-                "/no-variant".to_string(),
+            system_image::CachePackages::from_entries(vec![PinnedAbsolutePackageUrl::new(
+                "fuchsia-pkg://fuchsia.com".parse().unwrap(),
+                "no-variant".parse().unwrap(),
+                None,
                 [0; 32].into()
-            )
-            .unwrap(),])
+            ),])
         );
     }
 
@@ -159,20 +162,22 @@ mod tests {
         let cache_packages = from_proxy(&client).await;
         assert_eq!(
             cache_packages,
-            system_image::CachePackages::from_entries(vec![PinnedPkgUrl::new_package(
-                "fuchsia.com".to_string(),
-                "/has-variant/5".to_string(),
+            system_image::CachePackages::from_entries(vec![PinnedAbsolutePackageUrl::new(
+                "fuchsia-pkg://fuchsia.com".parse().unwrap(),
+                "has-variant".parse().unwrap(),
+                Some("5".parse().unwrap()),
                 [0; 32].into()
-            )
-            .unwrap(),])
+            ),])
         );
     }
 
     // Generate an index with n unique entries.
-    fn index_with_n_entries(n: u32) -> Vec<(PkgUrl, BlobId)> {
+    fn index_with_n_entries(n: u32) -> Vec<(UnpinnedAbsolutePackageUrl, BlobId)> {
         let mut cache = vec![];
         for i in 0..n {
-            let pkg_url = format!("fuchsia-pkg://fuchsia.com/{}", i).parse::<PkgUrl>().unwrap();
+            let pkg_url = format!("fuchsia-pkg://fuchsia.com/{}", i)
+                .parse::<UnpinnedAbsolutePackageUrl>()
+                .unwrap();
             let blob_id = format!("{:064}", i).parse::<BlobId>().unwrap();
             cache.push((pkg_url, blob_id));
         }
@@ -195,7 +200,7 @@ mod tests {
 
             let expected_packages = expected_packages
                 .into_iter()
-                .map(|(url, blob)| PinnedPkgUrl::from_url_and_hash(url, blob.into()))
+                .map(|(url, blob)| PinnedAbsolutePackageUrl::from_unpinned(url, blob.into()))
                 .collect();
             assert_eq!(
                 cache_packages,

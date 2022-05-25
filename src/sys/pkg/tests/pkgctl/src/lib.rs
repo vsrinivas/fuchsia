@@ -29,7 +29,7 @@ use {
         server::{NestedEnvironment, ServiceFs},
     },
     fuchsia_hyper_test_support::{handler::StaticResponse, TestServer},
-    fuchsia_url::pkg_url::RepoUrl,
+    fuchsia_url::RepositoryUrl,
     fuchsia_zircon::Status,
     futures::prelude::*,
     http::Uri,
@@ -506,12 +506,14 @@ fn assert_stderr(output: &Output, expected: &str) {
 }
 
 fn make_test_repo_config() -> RepositoryConfig {
-    RepositoryConfigBuilder::new(RepoUrl::new("example.com".to_string()).expect("valid url"))
-        .add_root_key(RepositoryKey::Ed25519(vec![0u8]))
-        .add_mirror(
-            MirrorConfigBuilder::new("http://example.org".parse::<Uri>().unwrap()).unwrap().build(),
-        )
-        .build()
+    RepositoryConfigBuilder::new(
+        RepositoryUrl::parse_host("example.com".to_string()).expect("valid url"),
+    )
+    .add_root_key(RepositoryKey::Ed25519(vec![0u8]))
+    .add_mirror(
+        MirrorConfigBuilder::new("http://example.org".parse::<Uri>().unwrap()).unwrap().build(),
+    )
+    .build()
 }
 
 // This builds a v2 RepositoryConfig that is expected to be in the repository manager add request
@@ -521,16 +523,18 @@ fn make_v1_legacy_expected_test_repo_config(persist: bool) -> RepositoryConfig {
         true => RepositoryStorageType::Persistent,
         false => RepositoryStorageType::Ephemeral,
     };
-    RepositoryConfigBuilder::new(RepoUrl::new("legacy-repo".to_string()).expect("valid url"))
-        .add_root_key(RepositoryKey::Ed25519(vec![0u8]))
-        .add_mirror(
-            MirrorConfigBuilder::new("http://legacy.org".parse::<Uri>().unwrap())
-                .unwrap()
-                .subscribe(true)
-                .build(),
-        )
-        .repo_storage_type(storage_type)
-        .build()
+    RepositoryConfigBuilder::new(
+        RepositoryUrl::parse_host("legacy-repo".to_string()).expect("valid url"),
+    )
+    .add_root_key(RepositoryKey::Ed25519(vec![0u8]))
+    .add_mirror(
+        MirrorConfigBuilder::new("http://legacy.org".parse::<Uri>().unwrap())
+            .unwrap()
+            .subscribe(true)
+            .build(),
+    )
+    .repo_storage_type(storage_type)
+    .build()
 }
 
 const V1_LEGACY_TEST_REPO_JSON: &str = r#"{
@@ -557,8 +561,10 @@ const V1_LEGACY_TEST_REPO_JSON: &str = r#"{
 async fn test_repo() {
     let env = TestEnv::new();
     env.add_repository(
-        RepositoryConfigBuilder::new(RepoUrl::new("example.com".to_string()).expect("valid url"))
-            .build(),
+        RepositoryConfigBuilder::new(
+            RepositoryUrl::parse_host("example.com".to_string()).expect("valid url"),
+        )
+        .build(),
     );
 
     let output = env.run_pkgctl(vec!["repo"]).await;
@@ -573,10 +579,15 @@ async fn test_repo_show() {
 
     // Add two repos, then verify we can get the details from the one we request.
     env.add_repository(
-        RepositoryConfigBuilder::new(RepoUrl::new("z.com".to_string()).expect("valid url")).build(),
+        RepositoryConfigBuilder::new(
+            RepositoryUrl::parse_host("z.com".to_string()).expect("valid url"),
+        )
+        .build(),
     );
-    let repo =
-        RepositoryConfigBuilder::new(RepoUrl::new("a.com".to_string()).expect("valid url")).build();
+    let repo = RepositoryConfigBuilder::new(
+        RepositoryUrl::parse_host("a.com".to_string()).expect("valid url"),
+    )
+    .build();
     env.add_repository(repo.clone());
 
     // The JSON conversion does not contain the trailing newline that we get when actually running
@@ -592,10 +603,16 @@ async fn test_repo_show() {
 async fn test_repo_sorts_lines() {
     let env = TestEnv::new();
     env.add_repository(
-        RepositoryConfigBuilder::new(RepoUrl::new("z.com".to_string()).expect("valid url")).build(),
+        RepositoryConfigBuilder::new(
+            RepositoryUrl::parse_host("z.com".to_string()).expect("valid url"),
+        )
+        .build(),
     );
     env.add_repository(
-        RepositoryConfigBuilder::new(RepoUrl::new("a.com".to_string()).expect("valid url")).build(),
+        RepositoryConfigBuilder::new(
+            RepositoryUrl::parse_host("a.com".to_string()).expect("valid url"),
+        )
+        .build(),
     );
 
     let output = env.run_pkgctl(vec!["repo"]).await;

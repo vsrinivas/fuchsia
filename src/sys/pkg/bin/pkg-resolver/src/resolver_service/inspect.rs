@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    crate::inspect_util, fuchsia_inspect::Node, fuchsia_url::pkg_url::PkgUrl, fuchsia_zircon as zx,
+    crate::inspect_util, fuchsia_inspect::Node, fuchsia_url::AbsolutePackageUrl,
+    fuchsia_zircon as zx,
 };
 
 fn now_monotonic_nanos() -> i64 {
@@ -42,7 +43,7 @@ impl ResolverService {
     }
 
     /// Add a package to the list of active resolves.
-    pub fn resolve(&self, original_url: &PkgUrl) -> Package {
+    pub fn resolve(&self, original_url: &AbsolutePackageUrl) -> Package {
         let node = self.active_package_resolves.create_child(original_url.to_string());
         node.record_int("resolve_ts", now_monotonic_nanos());
         Package { node }
@@ -56,7 +57,7 @@ pub struct Package {
 
 impl Package {
     /// Export the package's rewritten url.
-    pub fn rewritten_url(self, rewritten_url: &PkgUrl) -> PackageWithRewrittenUrl {
+    pub fn rewritten_url(self, rewritten_url: &AbsolutePackageUrl) -> PackageWithRewrittenUrl {
         self.node.record_string("rewritten_url", rewritten_url.to_string());
         PackageWithRewrittenUrl { _node: self.node }
     }

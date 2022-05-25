@@ -5,7 +5,7 @@
 use {
     anyhow::anyhow,
     fuchsia_syslog::{fx_log_err, fx_log_info},
-    fuchsia_url::pkg_url::PkgUrl,
+    fuchsia_url::AbsolutePackageUrl,
     fuchsia_zircon::Duration,
     serde::Deserialize,
     std::{cmp, fs::File, io::Read, num::NonZeroU64},
@@ -16,7 +16,7 @@ use {
 #[derive(Debug, Default, PartialEq, Eq)]
 pub struct Config {
     poll_frequency: Option<Duration>,
-    update_package_url: Option<PkgUrl>,
+    update_package_url: Option<AbsolutePackageUrl>,
 }
 
 impl Config {
@@ -24,7 +24,7 @@ impl Config {
         self.poll_frequency
     }
 
-    pub fn update_package_url(&self) -> Option<&PkgUrl> {
+    pub fn update_package_url(&self) -> Option<&AbsolutePackageUrl> {
         self.update_package_url.as_ref()
     }
 
@@ -48,13 +48,10 @@ impl Config {
         #[serde(deny_unknown_fields)]
         struct ParseConfig {
             poll_frequency_minutes: Option<NonZeroU64>,
-            update_package_url: Option<PkgUrl>,
+            update_package_url: Option<AbsolutePackageUrl>,
         }
 
         let config = serde_json::from_reader::<_, ParseConfig>(r)?;
-        if config.update_package_url.as_ref().map(|url| url.resource().is_some()).unwrap_or(false) {
-            return Err(ConfigLoadError::UpdatePackageUrlContainsResource);
-        }
 
         Ok(Config {
             poll_frequency: config.poll_frequency_minutes.map(|freq| {
@@ -74,9 +71,6 @@ impl Config {
 enum ConfigLoadError {
     #[error("parse error")]
     Parse(#[from] serde_json::Error),
-
-    #[error("update_package_url must not contain a resource path")]
-    UpdatePackageUrlContainsResource,
 }
 
 #[cfg(test)]
@@ -118,7 +112,9 @@ mod tests {
             }),
             Config {
                 poll_frequency: Some(Duration::from_minutes(123)),
-                update_package_url: Some(PkgUrl::parse("fuchsia-pkg://fuchsia.com/abc").unwrap()),
+                update_package_url: Some(
+                    AbsolutePackageUrl::parse("fuchsia-pkg://fuchsia.com/abc").unwrap(),
+                ),
             },
         );
     }
@@ -132,7 +128,7 @@ mod tests {
             Config {
                 poll_frequency: None,
                 update_package_url: Some(
-                    PkgUrl::parse("fuchsia-pkg://fuchsia.com/the-update").unwrap(),
+                    AbsolutePackageUrl::parse("fuchsia-pkg://fuchsia.com/the-update").unwrap(),
                 ),
             },
         );
@@ -161,19 +157,6 @@ mod tests {
         assert_matches!(
             Config::load("not json".as_bytes()),
             Err(ConfigLoadError::Parse(ref err)) if err.is_syntax());
-    }
-
-    #[test]
-    fn test_load_rejects_resource_path() {
-        let input = json!({
-            "update_package_url": "fuchsia-pkg://fuchsia.com/update/0#unexpected/resource.path",
-        })
-        .to_string();
-
-        assert_matches!(
-            Config::load(input.as_bytes()),
-            Err(ConfigLoadError::UpdatePackageUrlContainsResource)
-        );
     }
 
     #[test]

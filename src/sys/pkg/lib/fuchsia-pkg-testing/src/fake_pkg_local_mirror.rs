@@ -4,7 +4,7 @@
 
 use {
     crate::Repository, anyhow::Error, fidl_fuchsia_io as fio,
-    fidl_fuchsia_pkg::LocalMirrorRequestStream, fuchsia_url::pkg_url::RepoUrl,
+    fidl_fuchsia_pkg::LocalMirrorRequestStream, fuchsia_url::RepositoryUrl,
     pkg_local_mirror::PkgLocalMirror, tempfile::TempDir,
 };
 
@@ -17,7 +17,7 @@ pub struct FakePkgLocalMirror {
 impl FakePkgLocalMirror {
     /// Create a `FakePkgLocalMirror` from the blobs and metadata in `repo`, serving the metadata at
     /// `url`.
-    pub async fn from_repository_and_url(repo: &Repository, url: &RepoUrl) -> Self {
+    pub async fn from_repository_and_url(repo: &Repository, url: &RepositoryUrl) -> Self {
         let dir = tempfile::tempdir().unwrap();
         let () = repo
             .copy_local_repository_to_dir(

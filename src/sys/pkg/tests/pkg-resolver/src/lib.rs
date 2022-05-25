@@ -15,10 +15,10 @@ use {
     fidl_fuchsia_component::{RealmMarker, RealmProxy},
     fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg::{
-        CupData, CupMarker, CupProxy, ExperimentToggle as Experiment, FontResolverMarker,
-        FontResolverProxy, GetInfoError, PackageCacheMarker, PackageResolverAdminMarker,
-        PackageResolverAdminProxy, PackageResolverMarker, PackageResolverProxy, PackageUrl,
-        RepositoryManagerMarker, RepositoryManagerProxy, WriteError,
+        self as fpkg, CupData, CupMarker, CupProxy, ExperimentToggle as Experiment,
+        FontResolverMarker, FontResolverProxy, GetInfoError, PackageCacheMarker,
+        PackageResolverAdminMarker, PackageResolverAdminProxy, PackageResolverMarker,
+        PackageResolverProxy, RepositoryManagerMarker, RepositoryManagerProxy, WriteError,
     },
     fidl_fuchsia_pkg_ext::{BlobId, RepositoryConfig, RepositoryConfigBuilder, RepositoryConfigs},
     fidl_fuchsia_pkg_internal::{PersistentEagerPackage, PersistentEagerPackages},
@@ -34,7 +34,7 @@ use {
     fuchsia_merkle::{Hash, MerkleTree},
     fuchsia_pkg_testing::SystemImageBuilder,
     fuchsia_pkg_testing::{serve::ServedRepository, Package, PackageBuilder, Repository},
-    fuchsia_url::pkg_url::{PkgUrl, RepoUrl},
+    fuchsia_url::{PinnedAbsolutePackageUrl, RepositoryUrl},
     fuchsia_zircon::{self as zx, Status},
     futures::{future::BoxFuture, prelude::*},
     mock_boot_arguments::MockBootArgumentsService,
@@ -113,7 +113,7 @@ pub struct MountsBuilder {
     dynamic_repositories: Option<RepositoryConfigs>,
     custom_config_data: Vec<(PathBuf, String)>,
     persisted_repos_config: Option<PersistedReposConfig>,
-    eager_packages: Vec<String>,
+    eager_packages: Vec<PinnedAbsolutePackageUrl>,
 }
 
 impl MountsBuilder {
@@ -153,11 +153,9 @@ impl MountsBuilder {
         self.custom_config_data.push((path.into(), data.into()));
         self
     }
-    pub fn eager_packages(
-        mut self,
-        package_urls: impl IntoIterator<Item = impl Into<String>>,
-    ) -> Self {
-        self.eager_packages.extend(package_urls.into_iter().map(Into::into));
+    pub fn eager_packages(mut self, package_urls: Vec<PinnedAbsolutePackageUrl>) -> Self {
+        assert!(self.eager_packages.is_empty());
+        self.eager_packages = package_urls;
         self
     }
 
@@ -264,7 +262,7 @@ impl Mounts {
         }
     }
 
-    fn add_eager_packages(&self, packages: impl IntoIterator<Item = impl Into<String>>) {
+    fn add_eager_packages(&self, packages: Vec<PinnedAbsolutePackageUrl>) {
         if let DirOrProxy::Dir(ref d) = self.pkg_resolver_data {
             let mut f = BufWriter::new(File::create(d.path().join("eager_packages.pf")).unwrap());
 
@@ -273,13 +271,12 @@ impl Mounts {
                     packages
                         .into_iter()
                         .map(|url| {
-                            let pkg_url = PkgUrl::parse(&url.into()).unwrap();
                             let cup = CupDataForTest::builder()
-                                .response(get_cup_response_with_name(&pkg_url))
+                                .response(get_cup_response_with_name(&url))
                                 .build()
                                 .into();
                             PersistentEagerPackage {
-                                url: Some(PackageUrl { url: pkg_url.strip_hash().to_string() }),
+                                url: Some(fpkg::PackageUrl { url: url.as_unpinned().to_string() }),
                                 cup: Some(cup),
                                 ..PersistentEagerPackage::EMPTY
                             }
@@ -369,7 +366,7 @@ where
     pkgfs: PkgFsFn,
     mounts: MountsFn,
     tuf_repo_config_boot_arg: Option<String>,
-    local_mirror_repo: Option<(Arc<Repository>, RepoUrl)>,
+    local_mirror_repo: Option<(Arc<Repository>, RepositoryUrl)>,
     resolver_variant: ResolverVariant,
 }
 
@@ -441,7 +438,7 @@ where
         self
     }
 
-    pub fn local_mirror_repo(mut self, repo: &Arc<Repository>, hostname: RepoUrl) -> Self {
+    pub fn local_mirror_repo(mut self, repo: &Arc<Repository>, hostname: RepositoryUrl) -> Self {
         self.local_mirror_repo = Some((repo.clone(), hostname));
         self
     }
@@ -963,7 +960,7 @@ impl<P: PkgFs> TestEnv<P> {
 
     pub async fn register_repo_at_url<R>(&self, repo: &ServedRepository, url: R)
     where
-        R: TryInto<RepoUrl>,
+        R: TryInto<RepositoryUrl>,
         R::Error: std::fmt::Debug,
     {
         let repo_config = repo.make_repo_config(url.try_into().unwrap());
@@ -1013,8 +1010,7 @@ impl<P: PkgFs> TestEnv<P> {
     }
 
     pub fn get_hash(&self, url: impl Into<String>) -> impl Future<Output = Result<BlobId, Status>> {
-        let fut =
-            self.proxies.resolver.get_hash(&mut fidl_fuchsia_pkg::PackageUrl { url: url.into() });
+        let fut = self.proxies.resolver.get_hash(&mut fpkg::PackageUrl { url: url.into() });
         async move { fut.await.unwrap().map(|blob_id| blob_id.into()).map_err(|i| Status::from_raw(i)) }
     }
 
@@ -1105,22 +1101,14 @@ impl<P: PkgFs> TestEnv<P> {
     }
 
     pub async fn cup_write(&self, url: impl Into<String>, cup: CupData) -> Result<(), WriteError> {
-        self.proxies
-            .cup
-            .write(&mut fidl_fuchsia_pkg::PackageUrl { url: url.into() }, cup)
-            .await
-            .unwrap()
+        self.proxies.cup.write(&mut fpkg::PackageUrl { url: url.into() }, cup).await.unwrap()
     }
 
     pub async fn cup_get_info(
         &self,
         url: impl Into<String>,
     ) -> Result<(String, String), GetInfoError> {
-        self.proxies
-            .cup
-            .get_info(&mut fidl_fuchsia_pkg::PackageUrl { url: url.into() })
-            .await
-            .unwrap()
+        self.proxies.cup.get_info(&mut fpkg::PackageUrl { url: url.into() }).await.unwrap()
     }
 }
 
@@ -1224,7 +1212,7 @@ impl From<CupDataForTest> for CupData {
         }
     }
 }
-pub fn get_cup_response_with_name(package_url: &PkgUrl) -> Vec<u8> {
+pub fn get_cup_response_with_name(package_url: &PinnedAbsolutePackageUrl) -> Vec<u8> {
     let response = serde_json::json!({"response":{
       "server": "prod",
       "protocol": "3.0",
@@ -1236,7 +1224,7 @@ pub fn get_cup_response_with_name(package_url: &PkgUrl) -> Vec<u8> {
           "status": "ok",
           "urls":{
             "url":[
-                {"codebase": format!("{}/", package_url.repo()) },
+                {"codebase": format!("{}/", package_url.repository()) },
             ]
           },
           "manifest": {
@@ -1247,7 +1235,7 @@ pub fn get_cup_response_with_name(package_url: &PkgUrl) -> Vec<u8> {
             "packages": {
               "package": [
                 {
-                 "name": format!("{}?hash={}", package_url.name(), package_url.package_hash().unwrap()),
+                 "name": format!("{}?hash={}", package_url.name(), package_url.hash()),
                  "required": true,
                  "fp": "",
                 }

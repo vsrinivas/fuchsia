@@ -6,14 +6,14 @@ use {
     anyhow::Error,
     fidl_fuchsia_pkg::{PackageCacheProxy, PackageIndexIteratorMarker},
     fidl_fuchsia_pkg_ext::BlobId,
-    fuchsia_url::pkg_url::PkgUrl,
+    fuchsia_url::{AbsolutePackageUrl, UnpinnedAbsolutePackageUrl},
     std::collections::HashMap,
 };
 
 /// Represents the set of base packages.
 #[derive(Debug)]
 pub struct BasePackageIndex {
-    index: HashMap<PkgUrl, BlobId>,
+    index: HashMap<UnpinnedAbsolutePackageUrl, BlobId>,
 }
 
 impl BasePackageIndex {
@@ -27,7 +27,7 @@ impl BasePackageIndex {
         let mut chunk = pkg_iterator.next().await?;
         while !chunk.is_empty() {
             for entry in chunk {
-                let pkg_url = PkgUrl::parse(&entry.package_url.url)?;
+                let pkg_url = UnpinnedAbsolutePackageUrl::parse(&entry.package_url.url)?;
                 let blob_id = BlobId::from(entry.meta_far_blob_id);
                 index.insert(pkg_url, blob_id);
             }
@@ -40,22 +40,26 @@ impl BasePackageIndex {
 
     /// Returns the package's hash if the url is unpinned and refers to a base package, otherwise
     /// returns None.
-    pub fn is_unpinned_base_package(&self, pkg_url: &PkgUrl) -> Option<BlobId> {
+    pub fn is_unpinned_base_package(&self, pkg_url: &AbsolutePackageUrl) -> Option<BlobId> {
         // Always send Merkle-pinned requests through the resolver.
         // TODO(fxbug.dev/62389) consider returning the pinned hash if it matches the base hash.
-        if pkg_url.package_hash().is_some() {
-            return None;
-        }
+        let pkg_url = match pkg_url {
+            AbsolutePackageUrl::Unpinned(unpinned) => unpinned,
+            AbsolutePackageUrl::Pinned(_) => return None,
+        };
+
         // Make sure to strip off a "/0" variant before checking the base index.
         let stripped_url;
-        let base_url = match pkg_url.variant() {
+        let url_without_zero_variant = match pkg_url.variant() {
             Some(variant) if variant.is_zero() => {
-                stripped_url = pkg_url.strip_variant();
+                let mut url = pkg_url.clone();
+                url.clear_variant();
+                stripped_url = url;
                 &stripped_url
             }
             _ => pkg_url,
         };
-        match self.index.get(&base_url) {
+        match self.index.get(&url_without_zero_variant) {
             Some(base_merkle) => Some(base_merkle.clone()),
             None => None,
         }
@@ -68,8 +72,8 @@ mod tests {
         super::*,
         fidl::endpoints::create_proxy_and_stream,
         fidl_fuchsia_pkg::{
-            PackageCacheMarker, PackageCacheRequest, PackageCacheRequestStream, PackageIndexEntry,
-            PackageIndexIteratorRequest, PackageIndexIteratorRequestStream, PackageUrl,
+            self as fpkg, PackageCacheMarker, PackageCacheRequest, PackageCacheRequestStream,
+            PackageIndexEntry, PackageIndexIteratorRequest, PackageIndexIteratorRequestStream,
         },
         fuchsia_async as fasync,
         fuchsia_syslog::fx_log_err,
@@ -84,11 +88,13 @@ mod tests {
     const PACKAGE_INDEX_CHUNK_SIZE: u32 = 30;
 
     struct MockPackageCacheService {
-        base_packages: Arc<HashMap<PkgUrl, BlobId>>,
+        base_packages: Arc<HashMap<UnpinnedAbsolutePackageUrl, BlobId>>,
     }
 
     impl MockPackageCacheService {
-        fn new_with_base_packages(base_packages: Arc<HashMap<PkgUrl, BlobId>>) -> Self {
+        fn new_with_base_packages(
+            base_packages: Arc<HashMap<UnpinnedAbsolutePackageUrl, BlobId>>,
+        ) -> Self {
             Self { base_packages: base_packages }
         }
 
@@ -109,7 +115,7 @@ mod tests {
                 .base_packages
                 .iter()
                 .map(|(path, hash)| PackageIndexEntry {
-                    package_url: PackageUrl {
+                    package_url: fpkg::PackageUrl {
                         url: format!("fuchsia-pkg://fuchsia.com/{}", path.name()),
                     },
                     meta_far_blob_id: BlobId::from(hash.clone()).into(),
@@ -135,7 +141,9 @@ mod tests {
         }
     }
 
-    async fn spawn_pkg_cache(base_package_index: HashMap<PkgUrl, BlobId>) -> PackageCacheProxy {
+    async fn spawn_pkg_cache(
+        base_package_index: HashMap<UnpinnedAbsolutePackageUrl, BlobId>,
+    ) -> PackageCacheProxy {
         let (client, request_stream) = create_proxy_and_stream::<PackageCacheMarker>().unwrap();
         let cache = MockPackageCacheService::new_with_base_packages(Arc::new(base_package_index));
         fasync::Task::spawn(cache.run_service(request_stream)).detach();
@@ -151,10 +159,12 @@ mod tests {
     }
 
     // Generate an index with n unique entries.
-    fn index_with_n_entries(n: u32) -> HashMap<PkgUrl, BlobId> {
+    fn index_with_n_entries(n: u32) -> HashMap<UnpinnedAbsolutePackageUrl, BlobId> {
         let mut base = HashMap::new();
         for i in 0..n {
-            let pkg_url = format!("fuchsia-pkg://fuchsia.com/{}", i).parse::<PkgUrl>().unwrap();
+            let pkg_url = format!("fuchsia-pkg://fuchsia.com/{}", i)
+                .parse::<UnpinnedAbsolutePackageUrl>()
+                .unwrap();
             let blob_id = format!("{:064}", i).parse::<BlobId>().unwrap();
             base.insert(pkg_url, blob_id);
         }
@@ -183,12 +193,12 @@ mod tests {
 
     #[test]
     fn reject_pinned_urls() {
-        let url: PkgUrl = "fuchsia-pkg://fuchsia.com/package-name?\
+        let url: AbsolutePackageUrl = "fuchsia-pkg://fuchsia.com/package-name?\
                    hash=0000000000000000000000000000000000000000000000000000000000000000"
             .parse()
             .unwrap();
         let index = hashmap! {
-            url.clone() => zeroes_hash()
+            url.as_unpinned().clone() => zeroes_hash()
         };
         let index = BasePackageIndex { index };
 
@@ -197,25 +207,29 @@ mod tests {
 
     #[test]
     fn strip_0_variant() {
-        let url_no_variant: PkgUrl = "fuchsia-pkg://fuchsia.com/package-name".parse().unwrap();
+        let url_no_variant: UnpinnedAbsolutePackageUrl =
+            "fuchsia-pkg://fuchsia.com/package-name".parse().unwrap();
         let index = hashmap! {
             url_no_variant => zeroes_hash(),
         };
         let index = BasePackageIndex { index };
 
-        let url_with_variant: PkgUrl = "fuchsia-pkg://fuchsia.com/package-name/0".parse().unwrap();
+        let url_with_variant: AbsolutePackageUrl =
+            "fuchsia-pkg://fuchsia.com/package-name/0".parse().unwrap();
         assert_eq!(index.is_unpinned_base_package(&url_with_variant), Some(zeroes_hash()));
     }
 
     #[test]
     fn leave_1_variant() {
-        let url_no_variant: PkgUrl = "fuchsia-pkg://fuchsia.com/package-name".parse().unwrap();
+        let url_no_variant: UnpinnedAbsolutePackageUrl =
+            "fuchsia-pkg://fuchsia.com/package-name".parse().unwrap();
         let index = hashmap! {
             url_no_variant => zeroes_hash(),
         };
         let index = BasePackageIndex { index };
 
-        let url_with_variant: PkgUrl = "fuchsia-pkg://fuchsia.com/package-name/1".parse().unwrap();
+        let url_with_variant: AbsolutePackageUrl =
+            "fuchsia-pkg://fuchsia.com/package-name/1".parse().unwrap();
         assert_eq!(index.is_unpinned_base_package(&url_with_variant), None);
     }
 }

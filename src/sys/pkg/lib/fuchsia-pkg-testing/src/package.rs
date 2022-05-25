@@ -12,7 +12,7 @@ use {
     fidl_fuchsia_io as fio,
     fuchsia_merkle::{Hash, MerkleTree},
     fuchsia_pkg::{MetaContents, MetaPackage},
-    fuchsia_url::pkg_url::PackageName,
+    fuchsia_url::PackageName,
     fuchsia_zircon::{self as zx, prelude::*, Status},
     futures::{join, prelude::*},
     maplit::btreeset,
@@ -496,7 +496,7 @@ impl PackageBuilder {
         mut contents: impl io::Read,
     ) -> Self {
         let path = path.into();
-        let () = fuchsia_url::pkg_url::validate_resource_path(
+        let () = fuchsia_url::validate_resource_path(
             path.to_str().expect(&format!("path must be utf8: {:?}", path)),
         )
         .expect(&format!("path must be an object relative path expression: {:?}", path));
@@ -520,7 +520,7 @@ impl PackageBuilder {
         mut contents: impl io::Read,
     ) -> Self {
         let path = path.into();
-        let () = fuchsia_url::pkg_url::validate_resource_path(
+        let () = fuchsia_url::validate_resource_path(
             path.to_str().expect(&format!("path must be utf8: {:?}", path)),
         )
         .expect(&format!("path must be an object relative path expression: {:?}", path));

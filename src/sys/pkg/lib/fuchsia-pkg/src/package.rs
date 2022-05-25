@@ -5,7 +5,7 @@
 use crate::{MetaContents, MetaContentsError, MetaPackage};
 use anyhow::Result;
 use fuchsia_merkle::Hash;
-use fuchsia_url::pkg_url::PackageName;
+use fuchsia_url::PackageName;
 use std::collections::{BTreeMap, HashMap};
 use std::io::{Read, Seek};
 use std::path::PathBuf;

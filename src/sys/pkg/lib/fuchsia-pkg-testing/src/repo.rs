@@ -16,7 +16,7 @@ use {
     },
     files_async::readdir,
     fuchsia_merkle::Hash,
-    fuchsia_url::pkg_url::RepoUrl,
+    fuchsia_url::RepositoryUrl,
     io_util::{
         directory::{self, open_directory, open_file},
         file::{read, write},
@@ -219,7 +219,7 @@ impl Repository {
     /// Generate a [`RepositoryConfigBuilder`] suitable for configuring a
     /// package resolver to use this repository when it is served at the given
     /// URL.
-    pub fn make_repo_config_builder(&self, url: RepoUrl) -> RepositoryConfigBuilder {
+    pub fn make_repo_config_builder(&self, url: RepositoryUrl) -> RepositoryConfigBuilder {
         let mut builder = RepositoryConfigBuilder::new(url);
 
         for key in self.root_keys() {
@@ -233,7 +233,7 @@ impl Repository {
     /// repository when it is served at the given URL.
     pub fn make_repo_config(
         &self,
-        url: RepoUrl,
+        url: RepositoryUrl,
         mirror_config: Option<MirrorConfig>,
         use_local_mirror: bool,
     ) -> RepositoryConfig {
@@ -305,7 +305,11 @@ impl Repository {
     ///       ${url.host()}/
     ///           root.json
     ///           ...
-    pub async fn copy_local_repository_to_dir(&self, dst: &fio::DirectoryProxy, url: &RepoUrl) {
+    pub async fn copy_local_repository_to_dir(
+        &self,
+        dst: &fio::DirectoryProxy,
+        url: &RepositoryUrl,
+    ) {
         let src = directory::open_in_namespace(
             self.dir.path().to_str().unwrap(),
             fio::OpenFlags::RIGHT_READABLE,
@@ -507,7 +511,7 @@ mod tests {
         assert!(repo_config.use_local_mirror());
         assert_eq!(
             repo_config.repo_url(),
-            &"fuchsia-pkg://fuchsia.com".parse::<RepoUrl>().unwrap()
+            &"fuchsia-pkg://fuchsia.com".parse::<RepositoryUrl>().unwrap()
         );
 
         assert_eq!(fs::read(local_repodir.path().join("FORMAT_VERSION")).unwrap(), b"loose");

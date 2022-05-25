@@ -5,7 +5,7 @@
 use {
     crate::errors::MetaContentsError,
     fuchsia_merkle::Hash,
-    fuchsia_url::pkg_url::validate_resource_path,
+    fuchsia_url::validate_resource_path,
     std::{collections::HashMap, io, str::FromStr},
 };
 

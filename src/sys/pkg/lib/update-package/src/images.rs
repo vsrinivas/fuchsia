@@ -6,7 +6,7 @@ use {
     crate::{image::Image, image::ImageClass, image::ImageType, update_mode::UpdateMode},
     fidl_fuchsia_io as fio,
     fuchsia_hash::Hash,
-    fuchsia_url::pkg_url::PinnedPkgUrl,
+    fuchsia_url::PinnedAbsolutePackageUrl,
     fuchsia_zircon_status::Status,
     serde::{Deserialize, Serialize},
     std::{
@@ -179,13 +179,13 @@ pub struct ImagePackage<Images> {
     images: Images,
 
     /// Pinned fuchsia-pkg URI of package containing these images.
-    url: PinnedPkgUrl,
+    url: PinnedAbsolutePackageUrl,
 }
 
 impl<Images> ImagePackage<Images> {
     /// Returns an immutable borrow of the pinned fuchsia-pkg URI of package containing these
     /// images.
-    pub fn url(&self) -> &PinnedPkgUrl {
+    pub fn url(&self) -> &PinnedAbsolutePackageUrl {
         &self.url
     }
 }
@@ -256,7 +256,7 @@ impl ImagePackagesManifestBuilder {
     /// vbmeta metadata.
     pub fn fuchsia_package(
         &mut self,
-        url: PinnedPkgUrl,
+        url: PinnedAbsolutePackageUrl,
         zbi: ImageMetadata,
         vbmeta: Option<ImageMetadata>,
     ) -> &mut Self {
@@ -269,7 +269,7 @@ impl ImagePackagesManifestBuilder {
     /// vbmeta metadata.
     pub fn recovery_package(
         &mut self,
-        url: PinnedPkgUrl,
+        url: PinnedAbsolutePackageUrl,
         zbi: ImageMetadata,
         vbmeta: Option<ImageMetadata>,
     ) -> &mut Self {
@@ -282,7 +282,7 @@ impl ImagePackagesManifestBuilder {
     /// to metadata for them.
     pub fn firmware_package(
         &mut self,
-        url: PinnedPkgUrl,
+        url: PinnedAbsolutePackageUrl,
         firmware: BTreeMap<String, ImageMetadata>,
     ) -> &mut Self {
         self.manifest.firmware = Some(FirmwareImagePackage { url, images: firmware });

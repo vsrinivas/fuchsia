@@ -12,7 +12,7 @@ use assembly_update_packages_manifest::UpdatePackagesManifest;
 use assembly_util::PathToStringExt;
 use epoch::EpochFile;
 use fuchsia_pkg::PackageBuilder;
-use fuchsia_url::pkg_url::PinnedPkgUrl;
+use fuchsia_url::{PinnedAbsolutePackageUrl, RepositoryUrl};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
@@ -156,7 +156,7 @@ struct SubpackageBuilder {
 impl SubpackageBuilder {
     /// Build and publish an update package or one of its subpackages. Returns a merkle-pinned
     /// fuchsia-pkg:// URL for the package with the hostname set to "fuchsia.com".
-    fn build(self, blobfs_builder: &mut BlobFSBuilder) -> Result<PinnedPkgUrl> {
+    fn build(self, blobfs_builder: &mut BlobFSBuilder) -> Result<PinnedAbsolutePackageUrl> {
         let SubpackageBuilder { package: builder, package_name, manifest_path, far_path, gendir } =
             self;
 
@@ -168,21 +168,13 @@ impl SubpackageBuilder {
             format!("Adding the {package_name} package to update packages blobfs")
         })?;
 
-        // Okay to unwrap because:
-        // * "fuchsia.com" is a valid hostname,
-        // * the formatted package path is valid if the package name and variant are valid, which
-        //   both are statically known to be here, and
-        // * all Hash instances are valid.
-        let url = PinnedPkgUrl::new_package(
-            "fuchsia.com".into(),
-            format!(
-                "/{}/{}",
-                manifest.package_path().name().to_string(),
-                manifest.package_path().variant().to_string()
-            ),
+        let url = PinnedAbsolutePackageUrl::new(
+            RepositoryUrl::parse_host("fuchsia.com".to_string())
+                .expect("valid host from static string"),
+            manifest.package_path().name().clone(),
+            Some(manifest.package_path().variant().clone()),
             manifest.hash(),
-        )
-        .unwrap();
+        );
 
         Ok(url)
     }
@@ -431,7 +423,6 @@ mod tests {
     use fuchsia_archive::Reader;
     use fuchsia_hash::{Hash, HASH_SIZE};
     use fuchsia_pkg::{PackageManifest, PackagePath};
-    use fuchsia_url::pkg_url::PkgUrl;
     use serde_json::json;
     use std::fs::File;
     use std::io::{BufReader, Write};
@@ -895,8 +886,12 @@ mod tests {
         let package_list_file = File::open(package_list_path).unwrap();
         let list3: UpdatePackagesManifest = serde_json::from_reader(package_list_file).unwrap();
         let UpdatePackagesManifest::V1(pkg_urls) = list3;
-        let pkg1 =
-            PkgUrl::new_package("fuchsia.com".into(), "/one/0".into(), Some(hash.clone())).unwrap();
+        let pkg1 = PinnedAbsolutePackageUrl::new(
+            "fuchsia-pkg://fuchsia.com".parse().unwrap(),
+            "one".parse().unwrap(),
+            Some(fuchsia_url::PackageVariant::zero()),
+            hash.clone(),
+        );
         println!("pkg_urls={:?}", &pkg_urls);
         println!("pkg={:?}", pkg1);
         assert!(pkg_urls.contains(&pkg1));

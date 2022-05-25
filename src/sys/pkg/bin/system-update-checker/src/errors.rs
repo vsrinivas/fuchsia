@@ -2,12 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {fuchsia_url::pkg_url::PkgUrl, std::io};
-
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("reading /pkgfs/system/meta")]
-    ReadSystemMeta(#[source] io::Error),
+    ReadSystemMeta(#[source] std::io::Error),
 
     #[error("parsing /pkgfs/system/meta merkle")]
     ParseSystemMeta(#[source] fuchsia_hash::ParseHashError),
@@ -52,7 +50,7 @@ pub enum UpdatePackage {
     MissingSystemImage,
 
     #[error("system_image/0 pkg url was not merkle pinned: {0}")]
-    UnPinnedSystemImage(PkgUrl),
+    UnPinnedSystemImage(fuchsia_url::AbsolutePackageUrl),
 
     #[error("extracting package hash")]
     Hash(#[source] update_package::HashError),

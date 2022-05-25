@@ -13,7 +13,6 @@ use {
     fidl_fuchsia_pkg_rewrite_ext::Rule,
     fuchsia_async as fasync,
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
-    fuchsia_url::pkg_url::PkgUrl,
     fuchsia_zircon::Status,
     futures::prelude::*,
     std::{convert::TryInto, sync::Arc},
@@ -64,8 +63,11 @@ impl RewriteService {
         Ok(())
     }
 
-    pub(self) async fn handle_test_apply(&self, url: &str) -> Result<PkgUrl, Status> {
-        let url = url.parse::<PkgUrl>().map_err(|e| {
+    pub(self) async fn handle_test_apply(
+        &self,
+        url: &str,
+    ) -> Result<fuchsia_url::AbsolutePackageUrl, Status> {
+        let url = url.parse::<fuchsia_url::AbsolutePackageUrl>().map_err(|e| {
             fx_log_err!("client provided invalid URL ({:?}): {:#}", url, anyhow!(e));
             Status::INVALID_ARGS
         })?;

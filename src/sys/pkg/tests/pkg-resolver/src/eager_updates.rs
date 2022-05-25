@@ -8,7 +8,7 @@ use {
     fidl_fuchsia_pkg::{GetInfoError, ResolveError},
     fuchsia_async as fasync,
     fuchsia_pkg_testing::{PackageBuilder, RepositoryBuilder, SystemImageBuilder},
-    fuchsia_url::pkg_url::PkgUrl,
+    fuchsia_url::PinnedAbsolutePackageUrl,
     lib::{
         get_cup_response_with_name, make_pkg_with_extra_blobs, pkgfs_with_system_image_and_pkg,
         CupDataForTest, MountsBuilder, TestEnvBuilder, EMPTY_REPO_PATH,
@@ -72,14 +72,17 @@ async fn test_empty_eager_config() {
 async fn test_eager_resolve_package() {
     let pkg_name = "test-package";
     let pkg = make_pkg_with_extra_blobs(&pkg_name, 0).await;
-    let url = format!("fuchsia-pkg://example.com/{}?hash={}", pkg_name, pkg.meta_far_merkle_root());
-    let pkg_url = PkgUrl::parse(&url).unwrap();
-    let url_no_hash = pkg_url.strip_hash().to_string();
+    let pkg_url = PinnedAbsolutePackageUrl::parse(&format!(
+        "fuchsia-pkg://example.com/{}?hash={}",
+        pkg_name,
+        pkg.meta_far_merkle_root()
+    ))
+    .unwrap();
 
     let eager_config = serde_json::json!({
         "packages": [
             {
-                "url": url_no_hash,
+                "url": pkg_url.as_unpinned(),
                 "public_keys": make_default_json_public_keys_for_test(),
             }
         ]
@@ -92,7 +95,7 @@ async fn test_eager_resolve_package() {
         .pkgfs(pkgfs)
         .mounts(
             MountsBuilder::new()
-                .eager_packages(vec![url])
+                .eager_packages(vec![pkg_url])
                 .custom_config_data("eager_package_config.json", eager_config.to_string())
                 .enable_dynamic_config(lib::EnableDynamicConfig {
                     enable_dynamic_configuration: true,
@@ -117,14 +120,17 @@ async fn test_eager_resolve_package() {
 async fn test_eager_get_hash() {
     let pkg_name = "test-package";
     let pkg = make_pkg_with_extra_blobs(&pkg_name, 0).await;
-    let url = format!("fuchsia-pkg://example.com/{}?hash={}", pkg_name, pkg.meta_far_merkle_root());
-    let pkg_url = PkgUrl::parse(&url).unwrap();
-    let url_no_hash = pkg_url.strip_hash().to_string();
+    let pkg_url = PinnedAbsolutePackageUrl::parse(&format!(
+        "fuchsia-pkg://example.com/{}?hash={}",
+        pkg_name,
+        pkg.meta_far_merkle_root()
+    ))
+    .unwrap();
 
     let eager_config = serde_json::json!({
         "packages": [
             {
-                "url": url_no_hash,
+                "url": pkg_url.as_unpinned(),
                 "public_keys": make_default_json_public_keys_for_test(),
             }
         ],
@@ -137,7 +143,7 @@ async fn test_eager_get_hash() {
         .pkgfs(pkgfs)
         .mounts(
             MountsBuilder::new()
-                .eager_packages(vec![url])
+                .eager_packages(vec![pkg_url])
                 .custom_config_data("eager_package_config.json", eager_config.to_string())
                 .enable_dynamic_config(lib::EnableDynamicConfig {
                     enable_dynamic_configuration: true,
@@ -158,9 +164,12 @@ async fn test_eager_get_hash() {
 async fn test_cup_write() {
     let pkg_name = "test-package";
     let pkg = make_pkg_with_extra_blobs(&pkg_name, 0).await;
-    let url = format!("fuchsia-pkg://example.com/{}?hash={}", pkg_name, pkg.meta_far_merkle_root());
-    let pkg_url = PkgUrl::parse(&url).unwrap();
-    let url_no_hash = pkg_url.strip_hash().to_string();
+    let pkg_url = PinnedAbsolutePackageUrl::parse(&format!(
+        "fuchsia-pkg://example.com/{}?hash={}",
+        pkg_name,
+        pkg.meta_far_merkle_root()
+    ))
+    .unwrap();
 
     let repo = Arc::new(
         RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
@@ -171,12 +180,12 @@ async fn test_cup_write() {
     );
     let served_repository = Arc::clone(&repo).server().start().unwrap();
 
-    let repo_config = served_repository.make_repo_config(pkg_url.repo().clone());
+    let repo_config = served_repository.make_repo_config(pkg_url.repository().clone());
 
     let eager_config = serde_json::json!({
         "packages": [
             {
-                "url": url_no_hash,
+                "url": pkg_url.as_unpinned(),
                 "public_keys": make_default_json_public_keys_for_test(),
             }
         ]
@@ -196,22 +205,28 @@ async fn test_cup_write() {
         .await;
 
     // can't get info or resolve before write
-    assert_matches!(env.cup_get_info(&url_no_hash).await, Err(GetInfoError::NotAvailable));
-    assert_matches!(env.resolve_package(&url_no_hash).await, Err(ResolveError::PackageNotFound));
+    assert_matches!(
+        env.cup_get_info(pkg_url.as_unpinned().to_string()).await,
+        Err(GetInfoError::NotAvailable)
+    );
+    assert_matches!(
+        env.resolve_package(&pkg_url.as_unpinned().to_string()).await,
+        Err(ResolveError::PackageNotFound)
+    );
 
     env.cup_write(
-        &url,
+        pkg_url.to_string(),
         CupDataForTest::builder().response(get_cup_response_with_name(&pkg_url)).build().into(),
     )
     .await
     .unwrap();
 
     // now get info and resolve works
-    let (version, channel) = env.cup_get_info(&url_no_hash).await.unwrap();
+    let (version, channel) = env.cup_get_info(pkg_url.as_unpinned().to_string()).await.unwrap();
     assert_eq!(version, "1.2.3.4");
     assert_eq!(channel, "stable");
 
-    let package = env.resolve_package(&url_no_hash).await.unwrap();
+    let package = env.resolve_package(&pkg_url.as_unpinned().to_string()).await.unwrap();
     // Verify the served package directory contains the exact expected contents.
     pkg.verify_contents(&package).await.unwrap();
 
@@ -222,14 +237,17 @@ async fn test_cup_write() {
 async fn test_cup_get_info_persisted() {
     let pkg_name = "test-package";
     let pkg = make_pkg_with_extra_blobs(&pkg_name, 0).await;
-    let url = format!("fuchsia-pkg://example.com/{}?hash={}", pkg_name, pkg.meta_far_merkle_root());
-    let pkg_url = PkgUrl::parse(&url).unwrap();
-    let url_no_hash = pkg_url.strip_hash().to_string();
+    let pkg_url = PinnedAbsolutePackageUrl::parse(&format!(
+        "fuchsia-pkg://example.com/{}?hash={}",
+        pkg_name,
+        pkg.meta_far_merkle_root()
+    ))
+    .unwrap();
 
     let eager_config = serde_json::json!({
         "packages": [
             {
-                "url": url_no_hash ,
+                "url": pkg_url.as_unpinned() ,
                 "public_keys": make_default_json_public_keys_for_test(),
             }
         ],
@@ -242,14 +260,14 @@ async fn test_cup_get_info_persisted() {
         .pkgfs(pkgfs)
         .mounts(
             MountsBuilder::new()
-                .eager_packages(vec![url])
+                .eager_packages(vec![pkg_url.clone()])
                 .custom_config_data("eager_package_config.json", eager_config.to_string())
                 .build(),
         )
         .build()
         .await;
 
-    let (version, channel) = env.cup_get_info(&url_no_hash).await.unwrap();
+    let (version, channel) = env.cup_get_info(&pkg_url.as_unpinned().to_string()).await.unwrap();
 
     assert_eq!(version, "1.2.3.4");
     assert_eq!(channel, "stable");

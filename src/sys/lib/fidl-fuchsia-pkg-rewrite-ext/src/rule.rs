@@ -5,16 +5,16 @@
 use {
     crate::errors::{RuleDecodeError, RuleParseError},
     fidl_fuchsia_pkg_rewrite as fidl,
-    fuchsia_url::pkg_url::{ParseError, PkgUrl, RepoUrl},
+    fuchsia_url::{AbsolutePackageUrl, ParseError, RepositoryUrl},
     serde::{Deserialize, Serialize},
     std::convert::TryFrom,
 };
 
-/// A `Rule` can be used to re-write parts of a [`PkgUrl`].
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Hash)]
+/// A `Rule` can be used to re-write parts of a [`AbsolutePackageUrl`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Rule {
-    host_match: String,
-    host_replacement: String,
+    host_match: RepositoryUrl,
+    host_replacement: RepositoryUrl,
     path_prefix_match: String,
     path_prefix_replacement: String,
 }
@@ -36,18 +36,24 @@ impl Rule {
         path_prefix_match: impl Into<String>,
         path_prefix_replacement: impl Into<String>,
     ) -> Result<Self, RuleParseError> {
-        let host_match = host_match.into();
-        let host_replacement = host_replacement.into();
-        let path_prefix_match = path_prefix_match.into();
-        let path_prefix_replacement = path_prefix_replacement.into();
+        Self::new_impl(
+            host_match.into(),
+            host_replacement.into(),
+            path_prefix_match.into(),
+            path_prefix_replacement.into(),
+        )
+    }
 
-        fn validate_host(s: &str) -> Result<(), RuleParseError> {
-            RepoUrl::new(s.to_owned()).map_err(|_err| RuleParseError::InvalidHost)?;
-            Ok(())
-        }
-
-        validate_host(host_match.as_str())?;
-        validate_host(host_replacement.as_str())?;
+    fn new_impl(
+        host_match: String,
+        host_replacement: String,
+        path_prefix_match: String,
+        path_prefix_replacement: String,
+    ) -> Result<Self, RuleParseError> {
+        let host_match =
+            RepositoryUrl::parse_host(host_match).map_err(|_| RuleParseError::InvalidHost)?;
+        let host_replacement =
+            RepositoryUrl::parse_host(host_replacement).map_err(|_| RuleParseError::InvalidHost)?;
 
         if !path_prefix_match.starts_with('/') {
             return Err(RuleParseError::InvalidPath);
@@ -67,12 +73,12 @@ impl Rule {
 
     /// The exact hostname to match.
     pub fn host_match(&self) -> &str {
-        &self.host_match
+        self.host_match.host()
     }
 
     /// The new hostname to replace the matched `host_match` with.
     pub fn host_replacement(&self) -> &str {
-        &self.host_replacement
+        self.host_replacement.host()
     }
 
     /// The absolute path to a package or directory to match against.
@@ -86,7 +92,7 @@ impl Rule {
         &self.path_prefix_replacement
     }
 
-    /// Apply this `Rule` to the given [`PkgUrl`].
+    /// Apply this `Rule` to the given [`AbsolutePackageUrl`].
     ///
     /// In order for a `Rule` to match a particular fuchsia-pkg:// URI, `host` must match `uri`'s
     /// host exactly and `path` must prefix match the `uri`'s path at a '/' boundary.  If `path`
@@ -95,8 +101,11 @@ impl Rule {
     /// When a `Rule` does match the given `uri`, it will replace the matched hostname and path
     /// with the given replacement strings, preserving the unmatched part of the path, the hash
     /// query parameter, and any fragment.
-    pub fn apply(&self, uri: &PkgUrl) -> Option<Result<PkgUrl, ParseError>> {
-        if uri.host() != self.host_match {
+    pub fn apply(
+        &self,
+        uri: &AbsolutePackageUrl,
+    ) -> Option<Result<AbsolutePackageUrl, ParseError>> {
+        if uri.host() != self.host_match.host() {
             return None;
         }
 
@@ -117,34 +126,21 @@ impl Rule {
             self.path_prefix_replacement.clone()
         };
 
-        Some(match (new_path.as_str(), uri.resource()) {
-            (_, None) => PkgUrl::new_package(
-                self.host_replacement.clone(),
-                new_path,
-                uri.package_hash().cloned(),
-            ),
-
-            (_, Some(resource)) => PkgUrl::new_resource(
-                self.host_replacement.clone(),
-                new_path,
-                uri.package_hash().cloned(),
-                resource.to_owned(),
-            ),
-        })
+        Some(AbsolutePackageUrl::new_with_path(self.host_replacement.clone(), new_path, uri.hash()))
     }
 
     /// Determines the replacement source id, if this rule rewrites all of "fuchsia.com".
     pub fn fuchsia_replacement(&self) -> Option<String> {
-        if self.host_match == "fuchsia.com" && self.path_prefix_match == "/" {
-            if let Some(n) = self.host_replacement.rfind(".fuchsia.com") {
-                let (host_replacement, _) = self.host_replacement.split_at(n);
+        if self.host_match.host() == "fuchsia.com" && self.path_prefix_match == "/" {
+            if let Some(n) = self.host_replacement.host().rfind(".fuchsia.com") {
+                let (host_replacement, _) = self.host_replacement.host().split_at(n);
                 host_replacement
                     .split('.')
                     .nth(1)
                     .map(|s| s.to_owned())
-                    .or_else(|| Some(self.host_replacement.clone()))
+                    .or_else(|| Some(self.host_replacement.host().to_string()))
             } else {
-                Some(self.host_replacement.clone())
+                Some(self.host_replacement.host().to_string())
             }
         } else {
             None
@@ -172,11 +168,34 @@ impl TryFrom<fidl::Rule> for Rule {
 impl From<Rule> for fidl::Rule {
     fn from(rule: Rule) -> Self {
         fidl::Rule::Literal(fidl::LiteralRule {
-            host_match: rule.host_match,
-            host_replacement: rule.host_replacement,
+            host_match: rule.host_match.into_host(),
+            host_replacement: rule.host_replacement.into_host(),
             path_prefix_match: rule.path_prefix_match,
             path_prefix_replacement: rule.path_prefix_replacement,
         })
+    }
+}
+
+impl serde::Serialize for Rule {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        #[derive(Serialize)]
+        struct TempRule<'a> {
+            host_match: &'a str,
+            host_replacement: &'a str,
+            path_prefix_match: &'a str,
+            path_prefix_replacement: &'a str,
+        }
+
+        TempRule {
+            host_match: self.host_match(),
+            host_replacement: self.host_replacement(),
+            path_prefix_match: &self.path_prefix_match,
+            path_prefix_replacement: &self.path_prefix_replacement,
+        }
+        .serialize(serializer)
     }
 }
 
@@ -415,7 +434,7 @@ mod rule_tests {
         }
     }
 
-    // Assumes apply creates a valid PkgUrl if it matches
+    // Assumes apply creates a valid AbsolutePackageUrl if it matches
     macro_rules! test_apply {
         (
             $(
@@ -441,9 +460,9 @@ mod rule_tests {
                     .unwrap();
 
                     $(
-                        let input = PkgUrl::parse($input).unwrap();
+                        let input = AbsolutePackageUrl::parse($input).unwrap();
                         let output: Option<&str> = $output;
-                        let output = output.map(|s| PkgUrl::parse(s).unwrap());
+                        let output = output.map(|s| AbsolutePackageUrl::parse(s).unwrap());
                         assert_eq!(
                             rule.apply(&input).map(|res| res.unwrap()),
                             output,
@@ -466,7 +485,6 @@ mod rule_tests {
             cases = [
                 "fuchsia-pkg://fuchsia.com/rolldice" => Some("fuchsia-pkg://fuchsia.com/rolldice"),
                 "fuchsia-pkg://fuchsia.com/rolldice/0" => Some("fuchsia-pkg://fuchsia.com/rolldice/0"),
-                "fuchsia-pkg://fuchsia.com/rolldice/0#meta/bin.cmx" => Some("fuchsia-pkg://fuchsia.com/rolldice/0#meta/bin.cmx"),
                 "fuchsia-pkg://fuchsia.com/foo/0?hash=00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff" => Some(
                 "fuchsia-pkg://fuchsia.com/foo/0?hash=00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"),
 
@@ -564,7 +582,7 @@ mod rule_tests {
         let rule = Rule::new("fuchsia.com", "fuchsia.com", "/", "/a+b/").unwrap();
         assert_matches!(
             rule.apply(&"fuchsia-pkg://fuchsia.com/foo".parse().unwrap()),
-            Some(Err(ParseError::InvalidName(_)))
+            Some(Err(ParseError::InvalidPathSegment(_)))
         );
     }
 

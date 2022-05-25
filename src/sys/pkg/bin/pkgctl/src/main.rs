@@ -26,7 +26,7 @@ use {
     fidl_fuchsia_space::ManagerMarker as SpaceManagerMarker,
     files_async, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
-    fuchsia_url::pkg_url::RepoUrl,
+    fuchsia_url::RepositoryUrl,
     fuchsia_zircon as zx,
     futures::io::copy,
     futures::stream::TryStreamExt,
@@ -207,7 +207,7 @@ async fn main_helper(command: Command) -> Result<i32, anyhow::Error> {
                                     // automatically derived name.
                                     if let Some(n) = name {
                                         repo = RepositoryConfigBuilder::from(repo)
-                                            .repo_url(RepoUrl::new(n)?)
+                                            .repo_url(RepositoryUrl::parse_host(n)?)
                                             .build();
                                     }
                                     // The storage type can be overridden to persistent via the
@@ -254,7 +254,7 @@ async fn main_helper(command: Command) -> Result<i32, anyhow::Error> {
                                     // automatically derived name.
                                     if let Some(n) = name {
                                         repo = RepositoryConfigBuilder::from(repo)
-                                            .repo_url(RepoUrl::new(n)?)
+                                            .repo_url(RepositoryUrl::parse_host(n)?)
                                             .build();
                                     }
                                     // The storage type can be overridden to persistent via the

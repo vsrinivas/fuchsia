@@ -5,7 +5,7 @@
 use {
     anyhow::{Context, Result},
     argh::from_env,
-    fuchsia_url::pkg_url::PkgUrl,
+    fuchsia_url::{AbsolutePackageUrl, RepositoryUrl},
     security_pkg_test_util::load_config,
     std::fs::{read, write},
 };
@@ -34,21 +34,23 @@ pub struct Args {
 }
 
 fn main() -> Result<()> {
-    let _args @ Args { input, output, test_config, in_domain } = &from_env();
-    let out_domain = load_config(test_config).update_domain;
+    let Args { input, output, test_config, in_domain } = &from_env();
+    let out_repo = RepositoryUrl::parse_host(load_config(test_config).update_domain)
+        .context("failed to parse update domain as a repository host")?;
     let input_packages_json_contents = read(input).context("failed to read input packages.json")?;
     let input_packages_json =
         update_package::parse_packages_json(input_packages_json_contents.as_slice())
             .context("failed parse packages.json")?;
     let output_packages_json = input_packages_json
         .into_iter()
-        .map(|pkg_url| match pkg_url.host() == in_domain {
-            true => pkg_url
-                .replace_host(out_domain.clone())
-                .context("failed to subsitute host part of package URL"),
-            false => Ok(pkg_url.clone()),
+        .map(|mut pkg_url| match pkg_url.host() == in_domain {
+            true => {
+                pkg_url.set_repository(out_repo.clone());
+                pkg_url
+            }
+            false => pkg_url,
         })
-        .collect::<Result<Vec<PkgUrl>>>()?;
+        .collect::<Vec<AbsolutePackageUrl>>();
     let packages_json_contents = update_package::serialize_packages_json(&output_packages_json)
         .context("failed to serialize transformed packages.json")?;
     write(output, packages_json_contents).context("failed to write transformed packages.json")?;

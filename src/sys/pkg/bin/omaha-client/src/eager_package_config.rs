@@ -4,7 +4,7 @@
 
 use crate::channel::ChannelConfigs;
 use anyhow::{Context as _, Error};
-use fuchsia_url::pkg_url::PkgUrl;
+use fuchsia_url::UnpinnedAbsolutePackageUrl;
 use omaha_client::cup_ecdsa::PublicKeys;
 use serde::Deserialize;
 use std::io;
@@ -19,7 +19,7 @@ pub struct OmahaServer {
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
 pub struct EagerPackageConfig {
-    pub url: PkgUrl,
+    pub url: UnpinnedAbsolutePackageUrl,
     pub flavor: Option<String>,
     pub channel_config: ChannelConfigs,
 }
@@ -158,7 +158,8 @@ mod tests {
                 }),
                 packages: vec![
                     EagerPackageConfig {
-                        url: PkgUrl::parse("fuchsia-pkg://example.com/package").unwrap(),
+                        url: UnpinnedAbsolutePackageUrl::parse("fuchsia-pkg://example.com/package")
+                            .unwrap(),
                         flavor: Some("debug".into()),
                         channel_config: ChannelConfigs {
                             default_channel: Some("stable".into()),
@@ -191,7 +192,10 @@ mod tests {
                         },
                     },
                     EagerPackageConfig {
-                        url: PkgUrl::parse("fuchsia-pkg://example.com/package2").unwrap(),
+                        url: UnpinnedAbsolutePackageUrl::parse(
+                            "fuchsia-pkg://example.com/package2"
+                        )
+                        .unwrap(),
                         flavor: None,
                         channel_config: ChannelConfigs {
                             default_channel: None,
@@ -212,7 +216,7 @@ mod tests {
     fn parse_eager_package_configs_json_reject_invalid() {
         let json = br#"
         {
-            "eager_package_configs": [ 
+            "eager_package_configs": [
                 {
                     "server": {},
                     "packages":
@@ -232,7 +236,7 @@ mod tests {
                                 }
                         }
                     ]
-                } 
+                }
             ]
         }"#;
         assert_matches!(EagerPackageConfigs::from_reader(&json[..]), Err(_));

@@ -35,7 +35,7 @@ pub use crate::{
     version::{ReadVersionError, SystemVersion},
 };
 
-use {fidl_fuchsia_io as fio, fuchsia_hash::Hash, fuchsia_url::pkg_url::PkgUrl};
+use {fidl_fuchsia_io as fio, fuchsia_hash::Hash, fuchsia_url::AbsolutePackageUrl};
 
 /// An open handle to an "update" package.
 #[derive(Debug)]
@@ -92,7 +92,7 @@ impl UpdatePackage {
     }
 
     /// Returns the list of package urls that go in the universe of this update package.
-    pub async fn packages(&self) -> Result<Vec<PkgUrl>, ParsePackageError> {
+    pub async fn packages(&self) -> Result<Vec<AbsolutePackageUrl>, ParsePackageError> {
         packages::packages(&self.proxy).await
     }
 

@@ -7,7 +7,7 @@ use {
     fidl_fuchsia_update_installer::{InstallerMarker, InstallerProxy, RebootControllerMarker},
     fidl_fuchsia_update_installer_ext::{self as installer, start_update, Options, StateId},
     fuchsia_component::client::connect_to_protocol,
-    fuchsia_url::pkg_url::PkgUrl,
+    fuchsia_url::AbsolutePackageUrl,
     futures::prelude::*,
 };
 
@@ -27,7 +27,8 @@ async fn handle_force_install_impl(
     service_initiated: bool,
     installer: &InstallerProxy,
 ) -> Result<(), Error> {
-    let pkg_url = PkgUrl::parse(&update_pkg_url).context("parsing update package url")?;
+    let pkg_url =
+        AbsolutePackageUrl::parse(&update_pkg_url).context("parsing update package url")?;
 
     let options = Options {
         initiator: if service_initiated {

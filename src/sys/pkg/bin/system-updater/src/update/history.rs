@@ -10,7 +10,7 @@ use {
     fidl_fuchsia_update_installer_ext::{Options, State},
     fuchsia_inspect as inspect,
     fuchsia_syslog::fx_log_warn,
-    fuchsia_url::pkg_url::PkgUrl,
+    fuchsia_url::AbsolutePackageUrl,
     futures::prelude::*,
     serde::{Deserialize, Serialize},
     std::{collections::VecDeque, time::SystemTime},
@@ -46,7 +46,7 @@ pub struct UpdateAttempt {
     options: Options,
 
     #[serde(rename = "url")]
-    update_url: PkgUrl,
+    update_url: AbsolutePackageUrl,
 
     #[serde(rename = "start", with = "serde_system_time")]
     start_time: SystemTime,
@@ -58,7 +58,7 @@ impl UpdateAttempt {
     fn attempt_id(&self) -> &str {
         &self.attempt_id
     }
-    fn update_url(&self) -> &PkgUrl {
+    fn update_url(&self) -> &AbsolutePackageUrl {
         &self.update_url
     }
     fn options(&self) -> &Options {
@@ -125,7 +125,7 @@ pub struct PendingAttempt {
     attempt_id: String,
     source_version: Version,
     options: Options,
-    update_url: PkgUrl,
+    update_url: AbsolutePackageUrl,
     start_time: SystemTime,
 }
 
@@ -185,7 +185,7 @@ impl UpdateHistory {
     pub fn start_update_attempt<'a>(
         &self,
         options: Options,
-        update_url: PkgUrl,
+        update_url: AbsolutePackageUrl,
         start_time: SystemTime,
         data_sink: &'a DataSinkProxy,
         boot_manager: &'a BootManagerProxy,

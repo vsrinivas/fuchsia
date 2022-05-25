@@ -4,7 +4,7 @@
 
 use {
     crate::{errors::MetaPackageError, path::PackagePath},
-    fuchsia_url::pkg_url::{PackageName, PackageVariant},
+    fuchsia_url::{PackageName, PackageVariant},
     serde::{Deserialize, Serialize},
     std::{convert::TryInto as _, io},
 };

@@ -13,9 +13,9 @@ use {
     fidl::prelude::*,
     fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg::{
-        BlobInfoIteratorRequestStream, NeededBlobsMarker, NeededBlobsRequest,
+        self as fpkg, BlobInfoIteratorRequestStream, NeededBlobsMarker, NeededBlobsRequest,
         NeededBlobsRequestStream, PackageCacheRequest, PackageCacheRequestStream,
-        PackageIndexEntry, PackageIndexIteratorRequestStream, PackageUrl,
+        PackageIndexEntry, PackageIndexIteratorRequestStream,
     },
     fidl_fuchsia_pkg_ext::{serve_fidl_iterator, BlobId, BlobInfo},
     fuchsia_async::Task,
@@ -918,7 +918,9 @@ async fn serve_base_package_index(
     let mut package_entries = base_packages
         .paths_and_hashes()
         .map(|(path, hash)| PackageIndexEntry {
-            package_url: PackageUrl { url: format!("fuchsia-pkg://fuchsia.com/{}", path.name()) },
+            package_url: fpkg::PackageUrl {
+                url: format!("fuchsia-pkg://fuchsia.com/{}", path.name()),
+            },
             meta_far_blob_id: BlobId::from(hash.clone()).into(),
         })
         .collect::<Vec<PackageIndexEntry>>();
@@ -938,8 +940,10 @@ async fn serve_cache_package_index(
         Some(cache_packages) => cache_packages
             .contents()
             .map(|package_url| PackageIndexEntry {
-                package_url: PackageUrl { url: package_url.strip_variant_and_hash().to_string() },
-                meta_far_blob_id: BlobId::from(package_url.package_hash()).into(),
+                package_url: fpkg::PackageUrl {
+                    url: package_url.as_unpinned().clone().clear_variant().to_string(),
+                },
+                meta_far_blob_id: BlobId::from(package_url.hash()).into(),
             })
             .collect::<Vec<PackageIndexEntry>>(),
         None => vec![],
@@ -2685,13 +2689,13 @@ mod serve_base_package_index_tests {
             entries,
             vec![
                 fidl_fuchsia_pkg::PackageIndexEntry {
-                    package_url: fidl_fuchsia_pkg::PackageUrl {
+                    package_url: fpkg::PackageUrl {
                         url: "fuchsia-pkg://fuchsia.com/name0".to_string()
                     },
                     meta_far_blob_id: fidl_fuchsia_pkg::BlobId { merkle_root: [0u8; 32] }
                 },
                 fidl_fuchsia_pkg::PackageIndexEntry {
-                    package_url: fidl_fuchsia_pkg::PackageUrl {
+                    package_url: fpkg::PackageUrl {
                         url: "fuchsia-pkg://fuchsia.com/name1".to_string()
                     },
                     meta_far_blob_id: fidl_fuchsia_pkg::BlobId { merkle_root: [1u8; 32] }
@@ -2709,24 +2713,25 @@ mod serve_base_package_index_tests {
 #[cfg(test)]
 mod serve_cache_package_index_tests {
     use {
-        super::*, fidl_fuchsia_pkg::PackageIndexIteratorMarker, fuchsia_url::pkg_url::PinnedPkgUrl,
+        super::*, fidl_fuchsia_pkg::PackageIndexIteratorMarker,
+        fuchsia_url::PinnedAbsolutePackageUrl,
     };
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn cache_packages_entries_converted_correctly() {
         let cache_packages = system_image::CachePackages::from_entries(vec![
-            PinnedPkgUrl::new_package(
-                "fuchsia.com".to_string(),
-                "/name0/0".to_string(),
+            PinnedAbsolutePackageUrl::new(
+                "fuchsia-pkg://fuchsia.com".parse().unwrap(),
+                "name0".parse().unwrap(),
+                Some(fuchsia_url::PackageVariant::zero()),
                 Hash::from([0u8; 32]),
-            )
-            .unwrap(),
-            PinnedPkgUrl::new_package(
-                "fuchsia.com".to_string(),
-                "/name1/1".to_string(),
+            ),
+            PinnedAbsolutePackageUrl::new(
+                "fuchsia-pkg://fuchsia.com".parse().unwrap(),
+                "name1".parse().unwrap(),
+                Some("1".parse().unwrap()),
                 Hash::from([1u8; 32]),
-            )
-            .unwrap(),
+            ),
         ]);
 
         let (proxy, stream) =
@@ -2738,13 +2743,13 @@ mod serve_cache_package_index_tests {
             entries,
             vec![
                 fidl_fuchsia_pkg::PackageIndexEntry {
-                    package_url: fidl_fuchsia_pkg::PackageUrl {
+                    package_url: fpkg::PackageUrl {
                         url: "fuchsia-pkg://fuchsia.com/name0".to_string()
                     },
                     meta_far_blob_id: fidl_fuchsia_pkg::BlobId { merkle_root: [0u8; 32] }
                 },
                 fidl_fuchsia_pkg::PackageIndexEntry {
-                    package_url: fidl_fuchsia_pkg::PackageUrl {
+                    package_url: fpkg::PackageUrl {
                         url: "fuchsia-pkg://fuchsia.com/name1".to_string()
                     },
                     meta_far_blob_id: fidl_fuchsia_pkg::BlobId { merkle_root: [1u8; 32] }

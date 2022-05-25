@@ -297,7 +297,7 @@ impl PackageDataCollector {
             .url();
         let images_package_url_string = to_package_url(images_package_url.name().as_ref())
             .with_context(|| format!("Failed to integrate update package images package name into package URL; package_name={}", images_package_url.name()))?;
-        let images_package_hash_string = images_package_url.package_hash().to_string();
+        let images_package_hash_string = images_package_url.hash().to_string();
         let images_package = fuchsia_packages.iter().find(|&pkg_def| pkg_def.url == images_package_url_string && pkg_def.merkle == images_package_hash_string)
             .ok_or_else(|| anyhow!("Failed to locate update package images package with name {} and merkle root {}", images_package_url.name().as_ref(), images_package_hash_string))?;
         images_package
@@ -854,7 +854,7 @@ pub mod tests {
         },
         fuchsia_hash::{Hash, HASH_SIZE},
         fuchsia_merkle::MerkleTree,
-        fuchsia_url::pkg_url::PinnedPkgUrl,
+        fuchsia_url::PinnedAbsolutePackageUrl,
         fuchsia_zbi_abi::zbi_container_header,
         maplit::{hashmap, hashset},
         scrutiny_testing::{artifact::MockArtifactReader, fake::fake_model_config},
@@ -1861,12 +1861,12 @@ pub mod tests {
         // Create valid images.json with "fuchsia" images that includes a ZBI.
         let mut images_json_builder = ImagePackagesManifest::builder();
         images_json_builder.fuchsia_package(
-            PinnedPkgUrl::new_package(
-                "fuchsia.com".to_string(),
-                "/update-images-fuchsia/0".to_string(),
+            PinnedAbsolutePackageUrl::new(
+                "fuchsia-pkg://fuchsia.com".parse().unwrap(),
+                "update-images-fuchsia".parse().unwrap(),
+                Some(fuchsia_url::PackageVariant::zero()),
                 images_pkg_hash.clone(),
-            )
-            .unwrap(),
+            ),
             ImageMetadata::new(zbi_contents.len().try_into().unwrap(), zbi_content_hash),
             None,
         );
@@ -1926,12 +1926,12 @@ pub mod tests {
         // Create valid images.json with "fuchsia" images that includes a ZBI.
         let mut images_json_builder = ImagePackagesManifest::builder();
         images_json_builder.fuchsia_package(
-            PinnedPkgUrl::new_package(
-                "fuchsia.com".to_string(),
-                "/update-images-fuchsia/0".to_string(),
+            PinnedAbsolutePackageUrl::new(
+                "fuchsia-pkg://fuchsia.com".parse().unwrap(),
+                "update-images-fuchsia".parse().unwrap(),
+                Some(fuchsia_url::PackageVariant::zero()),
                 images_pkg_hash.clone(),
-            )
-            .unwrap(),
+            ),
             ImageMetadata::new(zbi_contents.len().try_into().unwrap(), zbi_content_hash),
             None,
         );
@@ -1987,12 +1987,12 @@ pub mod tests {
         // Create valid images.json with "fuchsia" images that includes a ZBI.
         let mut images_json_builder = ImagePackagesManifest::builder();
         images_json_builder.fuchsia_package(
-            PinnedPkgUrl::new_package(
-                "fuchsia.com".to_string(),
-                "/update-images-fuchsia/0".to_string(),
+            PinnedAbsolutePackageUrl::new(
+                "fuchsia-pkg://fuchsia.com".parse().unwrap(),
+                "update-images-fuchsia".parse().unwrap(),
+                Some(fuchsia_url::PackageVariant::zero()),
                 images_pkg_hash.clone(),
-            )
-            .unwrap(),
+            ),
             ImageMetadata::new(zbi_contents.len().try_into().unwrap(), zbi_content_hash),
             None,
         );

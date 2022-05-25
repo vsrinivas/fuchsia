@@ -13,7 +13,7 @@ use fidl_fuchsia_pkg::RepositoryManagerMarker;
 use fidl_fuchsia_pkg_ext::RepositoryConfig;
 use fuchsia_async as fasync;
 use fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn};
-use fuchsia_url::pkg_url::PkgUrl;
+use fuchsia_url::AbsolutePackageUrl;
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use serde_json;
@@ -147,7 +147,7 @@ pub struct TargetChannelManager<S = ServiceConnector> {
     service_connector: S,
     path: PathBuf,
     target_channel: Mutex<Option<String>>,
-    channel_package_map: HashMap<String, PkgUrl>,
+    channel_package_map: HashMap<String, AbsolutePackageUrl>,
 }
 
 impl<S: ServiceConnect> TargetChannelManager<S> {
@@ -326,10 +326,12 @@ pub enum ChannelPackageMap {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ChannelPackagePair {
     channel: String,
-    package: PkgUrl,
+    package: AbsolutePackageUrl,
 }
 
-fn read_channel_mappings(p: impl AsRef<Path>) -> Result<HashMap<String, PkgUrl>, Error> {
+fn read_channel_mappings(
+    p: impl AsRef<Path>,
+) -> Result<HashMap<String, AbsolutePackageUrl>, Error> {
     let f = fs::File::open(p.as_ref())?;
     let mut result = HashMap::new();
     match serde_json::from_reader(io::BufReader::new(f))? {
@@ -372,7 +374,7 @@ mod tests {
     use fidl_fuchsia_pkg_ext::RepositoryConfigBuilder;
     use fuchsia_async::DurationExt;
     use fuchsia_component::server::ServiceFs;
-    use fuchsia_url::pkg_url::RepoUrl;
+    use fuchsia_url::RepositoryUrl;
     use fuchsia_zircon::DurationNum;
     use futures::prelude::*;
     use futures::task::Poll;
@@ -968,7 +970,7 @@ mod tests {
                                 .iter()
                                 .map(|channel| {
                                     RepositoryConfigBuilder::new(
-                                        RepoUrl::new(channel.to_string()).unwrap(),
+                                        RepositoryUrl::parse_host(channel.to_string()).unwrap(),
                                     )
                                     .build()
                                     .into()

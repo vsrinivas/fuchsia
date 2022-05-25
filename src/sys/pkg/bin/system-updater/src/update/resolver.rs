@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_io as fio, fidl_fuchsia_pkg::PackageResolverProxy, fuchsia_url::pkg_url::PkgUrl,
-    futures::prelude::*, thiserror::Error, update_package::UpdatePackage,
+    fidl_fuchsia_io as fio, fidl_fuchsia_pkg::PackageResolverProxy,
+    fuchsia_url::AbsolutePackageUrl, futures::prelude::*, thiserror::Error,
+    update_package::UpdatePackage,
 };
 
 const CONCURRENT_PACKAGE_RESOLVES: usize = 5;
@@ -13,10 +14,10 @@ const CONCURRENT_PACKAGE_RESOLVES: usize = 5;
 #[derive(Debug, Error)]
 pub enum ResolveError {
     #[error("fidl error while resolving {1}")]
-    Fidl(#[source] fidl::Error, PkgUrl),
+    Fidl(#[source] fidl::Error, AbsolutePackageUrl),
 
     #[error("error while resolving {1}")]
-    Error(#[source] fidl_fuchsia_pkg_ext::ResolveError, PkgUrl),
+    Error(#[source] fidl_fuchsia_pkg_ext::ResolveError, AbsolutePackageUrl),
 
     #[error("while creating fidl proxy and stream")]
     CreateProxy(#[source] fidl::Error),
@@ -25,7 +26,7 @@ pub enum ResolveError {
 /// Resolves the update package given by `url` through the pkg_resolver.
 pub(super) async fn resolve_update_package(
     pkg_resolver: &PackageResolverProxy,
-    url: &PkgUrl,
+    url: &AbsolutePackageUrl,
 ) -> Result<UpdatePackage, ResolveError> {
     let dir = resolve_package(pkg_resolver, &url).await?;
     Ok(UpdatePackage::new(dir))
@@ -39,7 +40,7 @@ pub(super) fn resolve_packages<'a, I>(
     urls: I,
 ) -> impl Stream<Item = Result<fio::DirectoryProxy, ResolveError>> + 'a
 where
-    I: 'a + Iterator<Item = &'a PkgUrl>,
+    I: 'a + Iterator<Item = &'a AbsolutePackageUrl>,
 {
     stream::iter(urls)
         .map(move |url| resolve_package(pkg_resolver, url))
@@ -48,7 +49,7 @@ where
 
 async fn resolve_package(
     pkg_resolver: &PackageResolverProxy,
-    url: &PkgUrl,
+    url: &AbsolutePackageUrl,
 ) -> Result<fio::DirectoryProxy, ResolveError> {
     let (dir, dir_server_end) =
         fidl::endpoints::create_proxy().map_err(ResolveError::CreateProxy)?;

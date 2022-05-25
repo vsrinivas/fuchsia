@@ -18,7 +18,7 @@ use {
     fuchsia_inspect as inspect,
     fuchsia_pkg::PackageDirectory,
     fuchsia_syslog::{fx_log_err, fx_log_info},
-    fuchsia_url::pkg_url::{PkgUrl, RepoUrl},
+    fuchsia_url::{AbsolutePackageUrl, RepositoryUrl},
     fuchsia_zircon::Status,
     futures::{future::LocalBoxFuture, lock::Mutex as AsyncMutex, prelude::*},
     parking_lot::{Mutex, RwLock},
@@ -37,10 +37,10 @@ use {
 pub struct RepositoryManager {
     _experiments: Experiments,
     dynamic_configs_path: Option<String>,
-    static_configs: HashMap<RepoUrl, InspectableRepositoryConfig>,
-    dynamic_configs: HashMap<RepoUrl, InspectableRepositoryConfig>,
+    static_configs: HashMap<RepositoryUrl, InspectableRepositoryConfig>,
+    dynamic_configs: HashMap<RepositoryUrl, InspectableRepositoryConfig>,
     persisted_repos_dir: Arc<Option<String>>,
-    repositories: Arc<RwLock<HashMap<RepoUrl, Arc<AsyncMutex<Repository>>>>>,
+    repositories: Arc<RwLock<HashMap<RepositoryUrl, Arc<AsyncMutex<Repository>>>>>,
     cobalt_sender: CobaltSender,
     inspect: RepositoryManagerInspectState,
     local_mirror: Option<LocalMirrorProxy>,
@@ -121,7 +121,7 @@ impl MirrorStats {
 impl RepositoryManager {
     /// Returns a reference to the [RepositoryConfig] config identified by the config `repo_url`,
     /// or `None` if it does not exist.
-    pub fn get(&self, repo_url: &RepoUrl) -> Option<&Arc<RepositoryConfig>> {
+    pub fn get(&self, repo_url: &RepositoryUrl) -> Option<&Arc<RepositoryConfig>> {
         self.dynamic_configs
             .get(repo_url)
             .or_else(|| self.static_configs.get(repo_url))
@@ -186,7 +186,7 @@ impl RepositoryManager {
     /// `Err(RemoveError)` is returned.
     pub async fn remove(
         &mut self,
-        repo_url: &RepoUrl,
+        repo_url: &RepositoryUrl,
     ) -> Result<Option<Arc<RepositoryConfig>>, RemoveError> {
         let dynamic_configs_path =
             self.dynamic_configs_path.as_ref().ok_or(RemoveError::DynamicConfigurationDisabled)?;
@@ -224,7 +224,7 @@ impl RepositoryManager {
     async fn save(
         data_proxy: &Option<fio::DirectoryProxy>,
         dynamic_configs_path: &str,
-        dynamic_configs: &mut HashMap<RepoUrl, InspectableRepositoryConfig>,
+        dynamic_configs: &mut HashMap<RepositoryUrl, InspectableRepositoryConfig>,
     ) {
         let data_proxy = match data_proxy.as_ref() {
             Some(proxy) => proxy,
@@ -274,15 +274,17 @@ impl RepositoryManager {
 
     pub fn get_package<'a>(
         &self,
-        url: &'a PkgUrl,
+        url: &'a AbsolutePackageUrl,
         cache: &'a cache::Client,
         blob_fetcher: &'a BlobFetcher,
     ) -> LocalBoxFuture<'a, Result<(BlobId, PackageDirectory), GetPackageError>> {
-        let config = if let Some(config) = self.get(url.repo()) {
+        let config = if let Some(config) = self.get(url.repository()) {
             Arc::clone(config)
         } else {
-            return futures::future::ready(Err(GetPackageError::RepoNotFound(url.repo().clone())))
-                .boxed_local();
+            return futures::future::ready(Err(GetPackageError::RepoNotFound(
+                url.repository().clone(),
+            )))
+            .boxed_local();
         };
 
         let fut = open_cached_or_new_repository(
@@ -290,7 +292,7 @@ impl RepositoryManager {
             Arc::clone(&self.persisted_repos_dir),
             Arc::clone(&self.repositories),
             Arc::clone(&config),
-            url.repo(),
+            url.repository(),
             self.cobalt_sender.clone(),
             Arc::clone(&self.inspect.repos_node),
             self.local_mirror.clone(),
@@ -309,13 +311,13 @@ impl RepositoryManager {
 
     pub fn get_package_hash<'a>(
         &self,
-        url: &'a PkgUrl,
+        url: &'a AbsolutePackageUrl,
     ) -> LocalBoxFuture<'a, Result<BlobId, GetPackageHashError>> {
-        let config = if let Some(config) = self.get(url.repo()) {
+        let config = if let Some(config) = self.get(url.repository()) {
             Arc::clone(config)
         } else {
             return futures::future::ready(Err(GetPackageHashError::RepoNotFound(
-                url.repo().clone(),
+                url.repository().clone(),
             )))
             .boxed_local();
         };
@@ -325,7 +327,7 @@ impl RepositoryManager {
             Arc::clone(&self.persisted_repos_dir),
             Arc::clone(&self.repositories),
             Arc::clone(&config),
-            url.repo(),
+            url.repository(),
             self.cobalt_sender.clone(),
             Arc::clone(&self.inspect.repos_node),
             self.local_mirror.clone(),
@@ -348,9 +350,9 @@ impl RepositoryManager {
 async fn open_cached_or_new_repository(
     data_proxy: Option<fio::DirectoryProxy>,
     persisted_repos_dir: Arc<Option<String>>,
-    repositories: Arc<RwLock<HashMap<RepoUrl, Arc<AsyncMutex<Repository>>>>>,
+    repositories: Arc<RwLock<HashMap<RepositoryUrl, Arc<AsyncMutex<Repository>>>>>,
     config: Arc<RepositoryConfig>,
-    url: &RepoUrl,
+    url: &RepositoryUrl,
     cobalt_sender: CobaltSender,
     inspect_node: Arc<inspect::Node>,
     local_mirror: Option<LocalMirrorProxy>,
@@ -397,8 +399,8 @@ pub struct UnsetCobaltSender;
 pub struct RepositoryManagerBuilder<S = UnsetCobaltSender, N = UnsetInspectNode> {
     dynamic_configs_path: Option<String>,
     persisted_repos_dir: Option<String>,
-    static_configs: HashMap<RepoUrl, Arc<RepositoryConfig>>,
-    dynamic_configs: HashMap<RepoUrl, Arc<RepositoryConfig>>,
+    static_configs: HashMap<RepositoryUrl, Arc<RepositoryConfig>>,
+    dynamic_configs: HashMap<RepositoryUrl, Arc<RepositoryConfig>>,
     experiments: Experiments,
     cobalt_sender: S,
     inspect_node: N,
@@ -597,9 +599,9 @@ impl RepositoryManagerBuilder<UnsetCobaltSender, inspect::Node> {
 }
 
 fn to_inspectable_map_with_node(
-    from: HashMap<RepoUrl, Arc<RepositoryConfig>>,
+    from: HashMap<RepositoryUrl, Arc<RepositoryConfig>>,
     node: &inspect::Node,
-) -> HashMap<RepoUrl, InspectableRepositoryConfig> {
+) -> HashMap<RepositoryUrl, InspectableRepositoryConfig> {
     let mut out = HashMap::new();
     for (repo_url, repo_config) in from.into_iter() {
         let config = InspectableRepositoryConfig::new(repo_config, node, repo_url.host());
@@ -654,7 +656,7 @@ impl RepositoryManagerBuilder<CobaltSender, inspect::Node> {
 /// individual [LoadError] errors encountered during the load.
 fn load_configs_dir<T: AsRef<Path>>(
     dir: T,
-) -> (HashMap<RepoUrl, RepositoryConfig>, Vec<LoadError>) {
+) -> (HashMap<RepositoryUrl, RepositoryConfig>, Vec<LoadError>) {
     let dir = dir.as_ref();
 
     let mut entries = match dir.read_dir() {
@@ -698,7 +700,7 @@ fn load_configs_dir<T: AsRef<Path>>(
         let expected_url = path
             .file_stem()
             .and_then(|name| name.to_str())
-            .and_then(|name| RepoUrl::new(name.to_string()).ok());
+            .and_then(|name| RepositoryUrl::parse_host(name.to_string()).ok());
 
         let configs = match load_configs_file(&path) {
             Ok(configs) => configs,
@@ -825,7 +827,7 @@ impl From<&LoadError> for metrics::RepositoryManagerLoadStaticConfigsMetricDimen
 ///
 /// See its documentation for more.
 pub struct List<'a> {
-    keys: btree_set::IntoIter<&'a RepoUrl>,
+    keys: btree_set::IntoIter<&'a RepositoryUrl>,
     repo_mgr: &'a RepositoryManager,
 }
 
@@ -858,7 +860,7 @@ pub enum RemoveError {
 #[derive(Debug, Error)]
 #[error("Could not create Repository for {repo_url}")]
 pub struct OpenRepoError {
-    repo_url: RepoUrl,
+    repo_url: RepositoryUrl,
     #[source]
     source: anyhow::Error,
 }
@@ -877,7 +879,7 @@ impl ToResolveError for OpenRepoError {
 #[derive(Debug, Error)]
 pub enum GetPackageError {
     #[error("the repository manager does not have a repository config for: {0}")]
-    RepoNotFound(RepoUrl),
+    RepoNotFound(RepositoryUrl),
 
     #[error("while opening the repo")]
     OpenRepo(#[from] OpenRepoError),
@@ -892,7 +894,7 @@ pub enum GetPackageError {
 #[derive(Debug, Error)]
 pub enum GetPackageHashError {
     #[error("the repository manager does not have a repository config for: {0}")]
-    RepoNotFound(RepoUrl),
+    RepoNotFound(RepositoryUrl),
 
     #[error("while opening the repo")]
     OpenRepo(#[from] OpenRepoError),
@@ -930,7 +932,6 @@ mod tests {
         fidl_fuchsia_pkg_ext::{MirrorConfigBuilder, RepositoryConfigBuilder, RepositoryKey},
         fuchsia_async as fasync,
         fuchsia_inspect::assert_data_tree,
-        fuchsia_url::pkg_url::RepoUrl,
         http::Uri,
         maplit::hashmap,
         std::{borrow::Borrow, fs::File, io::Write, path::Path},
@@ -1089,8 +1090,8 @@ mod tests {
     }
 
     fn to_inspectable_map(
-        from: HashMap<RepoUrl, Arc<RepositoryConfig>>,
-    ) -> HashMap<RepoUrl, InspectableRepositoryConfig> {
+        from: HashMap<RepositoryUrl, Arc<RepositoryConfig>>,
+    ) -> HashMap<RepositoryUrl, InspectableRepositoryConfig> {
         let inspector = inspect::Inspector::new();
         to_inspectable_map_with_node(from, inspector.root())
     }
@@ -1103,7 +1104,7 @@ mod tests {
         assert_eq!(repomgr.static_configs, HashMap::new());
         assert_eq!(repomgr.dynamic_configs, HashMap::new());
 
-        let fuchsia_url = RepoUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
+        let fuchsia_url = RepositoryUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
         assert_eq!(repomgr.get(&fuchsia_url), None);
 
         let config1 = Arc::new(
@@ -1142,7 +1143,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn shadowing_static_config() {
-        let fuchsia_url = RepoUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
+        let fuchsia_url = RepositoryUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
 
         let fuchsia_config1 = Arc::new(
             RepositoryConfigBuilder::new(fuchsia_url.clone())
@@ -1172,7 +1173,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn cannot_remove_static_config() {
-        let fuchsia_url = RepoUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
+        let fuchsia_url = RepositoryUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
 
         let fuchsia_config1 = Arc::new(
             RepositoryConfigBuilder::new(fuchsia_url.clone())
@@ -1217,12 +1218,12 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let invalid_path = dir.path().join("invalid");
 
-        let example_url = RepoUrl::parse("fuchsia-pkg://example.com").unwrap();
+        let example_url = RepositoryUrl::parse("fuchsia-pkg://example.com").unwrap();
         let example_config = RepositoryConfigBuilder::new(example_url.clone())
             .add_root_key(RepositoryKey::Ed25519(vec![0]))
             .build();
 
-        let fuchsia_url = RepoUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
+        let fuchsia_url = RepositoryUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
         let fuchsia_config = RepositoryConfigBuilder::new(fuchsia_url.clone())
             .add_root_key(RepositoryKey::Ed25519(vec![1]))
             .build();
@@ -1274,10 +1275,10 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_builder_static_configs_dir() {
-        let fuchsia_url = RepoUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
+        let fuchsia_url = RepositoryUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
         let fuchsia_config = RepositoryConfigBuilder::new(fuchsia_url.clone()).build();
 
-        let example_url = RepoUrl::parse("fuchsia-pkg://example.com").unwrap();
+        let example_url = RepositoryUrl::parse("fuchsia-pkg://example.com").unwrap();
         let example_config = RepositoryConfigBuilder::new(example_url.clone()).build();
 
         let env = TestEnv::builder()
@@ -1300,7 +1301,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_builder_static_configs_dir_overlapping_filename_wins() {
-        let fuchsia_url = RepoUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
+        let fuchsia_url = RepositoryUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
 
         let fuchsia_config = RepositoryConfigBuilder::new(fuchsia_url.clone())
             .add_root_key(RepositoryKey::Ed25519(vec![0]))
@@ -1361,7 +1362,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_builder_static_configs_dir_overlapping_first_wins() {
-        let fuchsia_url = RepoUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
+        let fuchsia_url = RepositoryUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
 
         let fuchsia_config1 = Arc::new(
             RepositoryConfigBuilder::new(fuchsia_url.clone())
@@ -1440,7 +1441,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_builder_dynamic_configs_path() {
-        let fuchsia_url = RepoUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
+        let fuchsia_url = RepositoryUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
 
         let config = Arc::new(
             RepositoryConfigBuilder::new(fuchsia_url.clone())
@@ -1460,7 +1461,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_persistence() {
-        let fuchsia_url = RepoUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
+        let fuchsia_url = RepositoryUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
 
         let static_config = RepositoryConfigBuilder::new(fuchsia_url.clone())
             .add_root_key(RepositoryKey::Ed25519(vec![1]))
@@ -1527,10 +1528,10 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_list() {
-        let example_url = RepoUrl::parse("fuchsia-pkg://example.com").unwrap();
+        let example_url = RepositoryUrl::parse("fuchsia-pkg://example.com").unwrap();
         let example_config = RepositoryConfigBuilder::new(example_url).build();
 
-        let fuchsia_url = RepoUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
+        let fuchsia_url = RepositoryUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
         let fuchsia_config = RepositoryConfigBuilder::new(fuchsia_url).build();
 
         let env = TestEnv::builder()
@@ -1545,30 +1546,30 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_get_repo_for_channel() {
-        let valid_static1_url = RepoUrl::parse("fuchsia-pkg://a.valid1.fuchsia.com").unwrap();
+        let valid_static1_url = RepositoryUrl::parse("fuchsia-pkg://a.valid1.fuchsia.com").unwrap();
         let valid_static1_config = RepositoryConfigBuilder::new(valid_static1_url).build();
 
-        let valid_static2_url = RepoUrl::parse("fuchsia-pkg://a.valid2.fuchsia.com").unwrap();
+        let valid_static2_url = RepositoryUrl::parse("fuchsia-pkg://a.valid2.fuchsia.com").unwrap();
         let valid_static2_config = RepositoryConfigBuilder::new(valid_static2_url).build();
 
-        let valid_static3_url = RepoUrl::parse("fuchsia-pkg://a.valid3.fuchsia.com").unwrap();
+        let valid_static3_url = RepositoryUrl::parse("fuchsia-pkg://a.valid3.fuchsia.com").unwrap();
         let valid_static3_config = RepositoryConfigBuilder::new(valid_static3_url).build();
 
-        let invalid_static1_url = RepoUrl::parse("fuchsia-pkg://invalid-static1").unwrap();
+        let invalid_static1_url = RepositoryUrl::parse("fuchsia-pkg://invalid-static1").unwrap();
         let invalid_static1_config = RepositoryConfigBuilder::new(invalid_static1_url).build();
 
-        let invalid_static2_url = RepoUrl::parse("fuchsia-pkg://a.invalid-static2").unwrap();
+        let invalid_static2_url = RepositoryUrl::parse("fuchsia-pkg://a.invalid-static2").unwrap();
         let invalid_static2_config = RepositoryConfigBuilder::new(invalid_static2_url).build();
 
         let invalid_static3_url =
-            RepoUrl::parse("fuchsia-pkg://a.invalid-static3.example.com").unwrap();
+            RepositoryUrl::parse("fuchsia-pkg://a.invalid-static3.example.com").unwrap();
         let invalid_static3_config = RepositoryConfigBuilder::new(invalid_static3_url).build();
 
-        let valid_dynamic_url = RepoUrl::parse("fuchsia-pkg://a.valid3.fuchsia.com").unwrap();
+        let valid_dynamic_url = RepositoryUrl::parse("fuchsia-pkg://a.valid3.fuchsia.com").unwrap();
         let valid_dynamic_config = RepositoryConfigBuilder::new(valid_dynamic_url).build();
 
         let invalid_dynamic_url =
-            RepoUrl::parse("fuchsia-pkg://a.invalid-dynamic.fuchsia.com").unwrap();
+            RepositoryUrl::parse("fuchsia-pkg://a.invalid-dynamic.fuchsia.com").unwrap();
         let invalid_dynamic_config = RepositoryConfigBuilder::new(invalid_dynamic_url).build();
 
         let env = TestEnv::builder()
@@ -1636,7 +1637,7 @@ mod tests {
                 .await
                 .unwrap()
                 .build();
-        let fuchsia_url = RepoUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
+        let fuchsia_url = RepositoryUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
         let config = Arc::new(
             RepositoryConfigBuilder::new(fuchsia_url.clone())
                 .add_root_key(RepositoryKey::Ed25519(vec![0]))
@@ -1657,7 +1658,7 @@ mod tests {
                 .await
                 .unwrap()
                 .build();
-        let fuchsia_url = RepoUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
+        let fuchsia_url = RepositoryUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
         let config = Arc::new(
             RepositoryConfigBuilder::new(fuchsia_url.clone())
                 .add_root_key(RepositoryKey::Ed25519(vec![0]))
@@ -1683,7 +1684,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_building_repo_manager_with_static_configs_populates_inspect() {
-        let fuchsia_url = RepoUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
+        let fuchsia_url = RepositoryUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
         let mirror_config =
             MirrorConfigBuilder::new("http://fake-mirror.com".parse::<Uri>().unwrap())
                 .unwrap()
@@ -1792,7 +1793,7 @@ mod tests {
             }
         );
 
-        let fuchsia_url = RepoUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
+        let fuchsia_url = RepositoryUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
         let mirror_config =
             MirrorConfigBuilder::new("http://fake-mirror.com".parse::<Uri>().unwrap())
                 .unwrap()

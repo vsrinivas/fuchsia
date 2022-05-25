@@ -251,7 +251,7 @@ pub async fn load_cache_packages(
     // to confirm with the storage team that blobfs meets this requirement.
     // TODO(fxb/90656): ensure non-fuchsia.com URLs are correctly handled in dynamic index.
     for url in cache_packages.contents() {
-        let hash = url.package_hash();
+        let hash = url.hash();
         let path = PackagePath::from_name_and_variant(
             url.name().clone(),
             url.variant().unwrap_or(&fuchsia_pkg::PackageVariant::zero()).clone(),
@@ -371,7 +371,7 @@ mod tests {
         assert_matches::assert_matches,
         fuchsia_async as fasync,
         fuchsia_pkg_testing::PackageBuilder,
-        fuchsia_url::pkg_url::PinnedPkgUrl,
+        fuchsia_url::PinnedAbsolutePackageUrl,
         maplit::{hashmap, hashset},
         std::str::FromStr,
     };
@@ -702,30 +702,30 @@ mod tests {
         blobfs_dir.remove_file(missing_meta_far.contents().0.merkle.to_string()).unwrap();
 
         let cache_packages = CachePackages::from_entries(vec![
-            PinnedPkgUrl::new_package(
-                "fuchsia.com".to_string(),
-                "/present0/0".to_string(),
+            PinnedAbsolutePackageUrl::new(
+                "fuchsia-pkg://fuchsia.com".parse().unwrap(),
+                "present0".parse().unwrap(),
+                Some(fuchsia_url::PackageVariant::zero()),
                 *present_package0.meta_far_merkle_root(),
-            )
-            .unwrap(),
-            PinnedPkgUrl::new_package(
-                "fuchsia.com".to_string(),
-                "/missing-content-blob/0".to_string(),
+            ),
+            PinnedAbsolutePackageUrl::new(
+                "fuchsia-pkg://fuchsia.com".parse().unwrap(),
+                "missing-content-blob".parse().unwrap(),
+                Some(fuchsia_url::PackageVariant::zero()),
                 *missing_content_blob.meta_far_merkle_root(),
-            )
-            .unwrap(),
-            PinnedPkgUrl::new_package(
-                "fuchsia.com".to_string(),
-                "/missing-meta-far/0".to_string(),
+            ),
+            PinnedAbsolutePackageUrl::new(
+                "fuchsia-pkg://fuchsia.com".parse().unwrap(),
+                "missing-meta-far".parse().unwrap(),
+                Some(fuchsia_url::PackageVariant::zero()),
                 *missing_meta_far.meta_far_merkle_root(),
-            )
-            .unwrap(),
-            PinnedPkgUrl::new_package(
-                "fuchsia.com".to_string(),
-                "/present1/0".to_string(),
+            ),
+            PinnedAbsolutePackageUrl::new(
+                "fuchsia-pkg://fuchsia.com".parse().unwrap(),
+                "present1".parse().unwrap(),
+                Some(fuchsia_url::PackageVariant::zero()),
                 *present_package1.meta_far_merkle_root(),
-            )
-            .unwrap(),
+            ),
         ]);
 
         let mut dynamic_index =
