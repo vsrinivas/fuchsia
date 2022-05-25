@@ -944,9 +944,6 @@ mod tests {
     // exercise one success and one failure case for each function.
     #[test]
     fn fdio_open_fd_and_open_fd_at() {
-        // fdio_open_fd requires paths to be absolute
-        assert_matches!(open_fd("pkg", fio::OpenFlags::RIGHT_READABLE), Err(zx::Status::NOT_FOUND));
-
         let pkg_fd = open_fd("/pkg", fio::OpenFlags::RIGHT_READABLE)
             .expect("Failed to open /pkg using fdio_open_fd");
 

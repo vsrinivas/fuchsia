@@ -4,6 +4,7 @@
 
 // General fdio_spawn tests
 
+#include <errno.h>
 #include <fcntl.h>
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/fdio/directory.h>
@@ -59,36 +60,76 @@ static void join(const zx::process& process, int64_t* return_code) {
 }
 
 TEST(SpawnTest, SpawnControl) {
-  zx_status_t status;
   zx::process process;
   int64_t return_code;
   const char* bin_path = kSpawnChild;
 
   {
     const char* argv[] = {bin_path, nullptr};
-    status = fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, bin_path, argv,
-                        process.reset_and_get_address());
-    ASSERT_OK(status);
+    ASSERT_OK(fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, bin_path, argv,
+                         process.reset_and_get_address()));
     join(process, &return_code);
     EXPECT_EQ(return_code, 43);
   }
 
   {
     const char* argv[] = {bin_path, "--argc", nullptr};
-    status = fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, bin_path, argv,
-                        process.reset_and_get_address());
-    ASSERT_OK(status);
+    ASSERT_OK(fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, bin_path, argv,
+                         process.reset_and_get_address()));
     join(process, &return_code);
     EXPECT_EQ(return_code, 2);
   }
 
   {
     const char* argv[] = {bin_path, "--argc", "three", "four", "five", nullptr};
-    status = fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, bin_path, argv,
-                        process.reset_and_get_address());
-    ASSERT_OK(status);
+    ASSERT_OK(fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, bin_path, argv,
+                         process.reset_and_get_address()));
     join(process, &return_code);
     EXPECT_EQ(return_code, 5);
+  }
+}
+
+TEST(SpawnTest, BinPaths) {
+  zx::process process;
+  int64_t return_code;
+  const char* argv[] = {"spawn_child_util", nullptr};
+
+  // Absolute path
+  constexpr char kAbsoluteBinPath[] = "/pkg/bin/spawn_child_util";
+  {
+    ASSERT_OK(fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, kAbsoluteBinPath, argv,
+                         process.reset_and_get_address()));
+    join(process, &return_code);
+    EXPECT_EQ(return_code, 43);
+  }
+
+  // Relative path with CWD set to "/"
+  constexpr char kRootRelativeBinPath[] = "pkg/bin/spawn_child_util";
+  {
+    ASSERT_OK(fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, kRootRelativeBinPath, argv,
+                         process.reset_and_get_address()));
+    join(process, &return_code);
+    EXPECT_EQ(return_code, 43);
+  }
+
+  // Relative path with CWD set to "/pkg"
+  constexpr char kPkgRelativeBinPath[] = "bin/spawn_child_util";
+  ASSERT_EQ(0, chdir("/pkg"), "errno %d: %s", errno, strerror(errno));
+  {
+    ASSERT_OK(fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, kPkgRelativeBinPath, argv,
+                         process.reset_and_get_address()));
+    join(process, &return_code);
+    EXPECT_EQ(return_code, 43);
+  }
+  ASSERT_EQ(0, chdir("/"), "errno %d: %s", errno, strerror(errno));
+
+  // Non-canonical form of a root relative path.
+  constexpr char kNonCanonicalRelativeBinPath[] = "./pkg/foo/../bin/spawn_child_util";
+  {
+    ASSERT_OK(fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, kNonCanonicalRelativeBinPath,
+                         argv, process.reset_and_get_address()));
+    join(process, &return_code);
+    EXPECT_EQ(return_code, 43);
   }
 }
 

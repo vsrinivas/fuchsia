@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fdio/directory.h>
+#include <lib/stdcompat/string_view.h>
 
 #include <fbl/auto_lock.h>
 
@@ -113,86 +114,43 @@ zx_status_t fdio_open_at(zx_handle_t dir, const char* path, uint32_t flags,
 
 namespace {
 
-zx_status_t fdio_open_fd_common(const fdio_ptr& iodir, std::string_view path,
-                                fio::wire::OpenFlags flags, uint32_t mode, int* out_fd) {
-  // We're opening a file descriptor rather than just a channel (like fdio_open), so we always want
-  // to Describe (or listen for an OnOpen event on) the opened connection. This ensures that the fd
-  // is valid before returning from here, and mimics how open() and openat() behave
+zx_status_t fdio_open_fd_at_internal(int dirfd, const char* dirty_path, fio::wire::OpenFlags flags,
+                                     bool allow_absolute_path, int* out_fd) {
+  // We're opening a file descriptor rather than just a channel (like fdio_open), so we always
+  // want to Describe (or listen for an OnOpen event on) the opened connection. This ensures that
+  // the fd is valid before returning from here, and mimics how open() and openat() behave
   // (fdio_flags_to_zxio always add _FLAG_DESCRIBE).
   flags |= fio::wire::OpenFlags::kDescribe;
 
-  zx::status io = iodir->open(path.data(), flags, mode);
+  zx::status io = fdio_internal::open_at_impl(dirfd, dirty_path, flags, kArbitraryMode,
+                                              {
+                                                  .disallow_directory = false,
+                                                  .allow_absolute_path = allow_absolute_path,
+                                              });
   if (io.is_error()) {
     return io.status_value();
   }
 
   std::optional fd = bind_to_fd(io.value());
-  if (fd.has_value()) {
-    *out_fd = fd.value();
-    return ZX_OK;
+  if (!fd.has_value()) {
+    return ZX_ERR_BAD_STATE;
   }
-  return ZX_ERR_BAD_STATE;
+  *out_fd = fd.value();
+  return ZX_OK;
 }
 
 }  // namespace
 
 __EXPORT
-zx_status_t fdio_open_fd(const char* dirty_path, uint32_t flags, int* out_fd) {
-  if (dirty_path == nullptr) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  fdio_internal::PathBuffer clean;
-  bool has_ending_slash;
-  if (!fdio_internal::CleanPath(dirty_path, &clean, &has_ending_slash)) {
-    return ZX_ERR_BAD_PATH;
-  }
-  std::string_view clean_path = clean;
-
-  fio::wire::OpenFlags fio_flags = static_cast<fio::wire::OpenFlags>(flags);
-  if (has_ending_slash) {
-    fio_flags |= fio::wire::OpenFlags::kDirectory;
-  }
-
-  // Since we are sending a request to the root handle, require that we start at '/'. (In fdio_open
-  // above this is done by fdio_ns_connect.)
-  if (clean_path[0] != '/') {
-    return ZX_ERR_NOT_FOUND;
-  }
-  clean_path.remove_prefix(1);
-
-  return fdio_open_fd_common(
-      []() {
-        fbl::AutoLock lock(&fdio_lock);
-        return fdio_root_handle.get();
-      }(),
-      clean_path, fio_flags, kArbitraryMode, out_fd);
+zx_status_t fdio_open_fd(const char* path, uint32_t flags, int* out_fd) {
+  return fdio_open_fd_at_internal(AT_FDCWD, path, static_cast<fio::wire::OpenFlags>(flags), true,
+                                  out_fd);
 }
 
 __EXPORT
-zx_status_t fdio_open_fd_at(int dir_fd, const char* dirty_path, uint32_t flags, int* out_fd) {
-  if (dirty_path == nullptr) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  fdio_internal::PathBuffer clean;
-  bool has_ending_slash;
-  if (!fdio_internal::CleanPath(dirty_path, &clean, &has_ending_slash)) {
-    return ZX_ERR_BAD_PATH;
-  }
-  std::string_view clean_path = clean;
-
-  fio::wire::OpenFlags fio_flags = static_cast<fio::wire::OpenFlags>(flags);
-  if (has_ending_slash) {
-    fio_flags |= fio::wire::OpenFlags::kDirectory;
-  }
-
-  fdio_ptr iodir = fd_to_io(dir_fd);
-  if (iodir == nullptr) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  return fdio_open_fd_common(iodir, clean_path, fio_flags, kArbitraryMode, out_fd);
+zx_status_t fdio_open_fd_at(int dirfd, const char* path, uint32_t flags, int* out_fd) {
+  return fdio_open_fd_at_internal(dirfd, path, static_cast<fio::wire::OpenFlags>(flags), false,
+                                  out_fd);
 }
 
 __EXPORT

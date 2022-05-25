@@ -127,8 +127,8 @@ TEST(FDIOTest, UnbindFromFD) {
   fdio_unsafe_release(io2);
 
   // Invalid file descriptors.
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, fdio_unbind_from_fd(-1, &io2));
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, fdio_unbind_from_fd(FDIO_MAX_FD, &io2));
+  EXPECT_STATUS(ZX_ERR_INVALID_ARGS, fdio_unbind_from_fd(-1, &io2));
+  EXPECT_STATUS(ZX_ERR_INVALID_ARGS, fdio_unbind_from_fd(FDIO_MAX_FD, &io2));
 }
 
 TEST(FDIOTest, GetServiceHandle) {
@@ -137,14 +137,16 @@ TEST(FDIOTest, GetServiceHandle) {
   ASSERT_EQ(-1, fcntl(unused_fd, F_GETFD));
 
   zx::channel h1;
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, fdio_get_service_handle(unused_fd, h1.reset_and_get_address()));
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, fdio_get_service_handle(-1, h1.reset_and_get_address()));
+  EXPECT_STATUS(ZX_ERR_INVALID_ARGS,
+                fdio_get_service_handle(unused_fd, h1.reset_and_get_address()));
+  EXPECT_STATUS(ZX_ERR_INVALID_ARGS, fdio_get_service_handle(-1, h1.reset_and_get_address()));
 
   fdio_t* io = fdio_default_create();
   fbl::unique_fd fd(fdio_bind_to_fd(io, -1, 0));
   EXPECT_LE(0, fd.get());
   EXPECT_EQ(0, fcntl(fd.get(), F_GETFD));
-  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, fdio_get_service_handle(fd.get(), h1.reset_and_get_address()));
+  EXPECT_STATUS(ZX_ERR_NOT_SUPPORTED,
+                fdio_get_service_handle(fd.get(), h1.reset_and_get_address()));
   EXPECT_EQ(-1, fcntl(fd.get(), F_GETFD));
   (void)fd.release();
 
@@ -161,7 +163,7 @@ TEST(FDIOTest, GetServiceHandle) {
   EXPECT_LE(0, fd2.get());
   EXPECT_EQ(0, fcntl(fd.get(), F_GETFD));
   EXPECT_EQ(0, fcntl(fd2.get(), F_GETFD));
-  EXPECT_EQ(ZX_ERR_UNAVAILABLE, fdio_get_service_handle(fd.get(), h1.reset_and_get_address()));
+  EXPECT_STATUS(ZX_ERR_UNAVAILABLE, fdio_get_service_handle(fd.get(), h1.reset_and_get_address()));
   EXPECT_EQ(-1, fcntl(fd.get(), F_GETFD));
   (void)fd.release();
   EXPECT_EQ(0, fcntl(fd2.get(), F_GETFD));

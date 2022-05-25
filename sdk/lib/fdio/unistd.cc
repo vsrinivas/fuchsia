@@ -195,6 +195,21 @@ namespace fdio_internal {
 
 zx::status<fdio_ptr> open_at_impl(int dirfd, const char* path, int flags, uint32_t mode,
                                   bool enforce_eisdir) {
+  // Emulate EISDIR behavior from
+  // http://pubs.opengroup.org/onlinepubs/9699919799/functions/open.html
+  bool flags_incompatible_with_directory =
+      ((flags & ~O_PATH & O_ACCMODE) != O_RDONLY) || (flags & O_CREAT);
+  fio::wire::OpenFlags fio_flags = fdio_flags_to_zxio(static_cast<uint32_t>(flags));
+
+  return open_at_impl(dirfd, path, fio_flags, mode,
+                      {
+                          .disallow_directory = enforce_eisdir && flags_incompatible_with_directory,
+                          .allow_absolute_path = true,
+                      });
+}
+
+zx::status<fdio_ptr> open_at_impl(int dirfd, const char* path, fio::wire::OpenFlags flags,
+                                  uint32_t mode, OpenAtOptions options) {
   if (path == nullptr) {
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
@@ -211,35 +226,37 @@ zx::status<fdio_ptr> open_at_impl(int dirfd, const char* path, int flags, uint32
 
   std::string_view clean = clean_buffer;
 
+  // Some callers such as the fdio_open_..._at() family do not permit absolute paths.
+  if (!options.allow_absolute_path && cpp20::starts_with(clean, '/')) {
+    return zx::error(ZX_ERR_INVALID_ARGS);
+  }
+
   fdio_ptr iodir = fdio_iodir(dirfd, clean);
   if (iodir == nullptr) {
     return zx::error(ZX_ERR_BAD_HANDLE);
   }
 
-  // Emulate EISDIR behavior from
-  // http://pubs.opengroup.org/onlinepubs/9699919799/functions/open.html
-  bool flags_incompatible_with_directory =
-      ((flags & ~O_PATH & O_ACCMODE) != O_RDONLY) || (flags & O_CREAT);
-  if (enforce_eisdir && has_ending_slash && flags_incompatible_with_directory) {
+  if (options.disallow_directory && has_ending_slash) {
     return zx::error(ZX_ERR_NOT_FILE);
   }
-  flags |= (has_ending_slash ? O_DIRECTORY : 0);
 
-  fio::wire::OpenFlags zx_flags = fdio_flags_to_zxio(static_cast<uint32_t>(flags));
+  if (has_ending_slash) {
+    flags |= fio::wire::OpenFlags::kDirectory;
+  }
 
-  if (!(zx_flags & fio::wire::OpenFlags::kDirectory)) {
+  if (!(flags & fio::wire::OpenFlags::kDirectory)) {
     // At this point we're not sure if the path refers to a directory.
     // To emulate EISDIR behavior, if the flags are not compatible with directory,
     // use this flag to instruct open to error if the path turns out to be a directory.
     // Otherwise, opening a directory with O_RDWR will incorrectly succeed.
-    if (enforce_eisdir && flags_incompatible_with_directory) {
-      zx_flags |= fio::wire::OpenFlags::kNotDirectory;
+    if (options.disallow_directory) {
+      flags |= fio::wire::OpenFlags::kNotDirectory;
     }
   }
-  if (zx_flags & fio::wire::OpenFlags::kNodeReference) {
-    zx_flags &= fio::wire::kOpenFlagsAllowedWithNodeReference;
+  if (flags & fio::wire::OpenFlags::kNodeReference) {
+    flags &= fio::wire::kOpenFlagsAllowedWithNodeReference;
   }
-  return iodir->open(clean, zx_flags, mode);
+  return iodir->open(clean, flags, mode);
 }
 
 // Open |path| from the |dirfd| directory, enforcing the POSIX EISDIR error condition. Specifically,

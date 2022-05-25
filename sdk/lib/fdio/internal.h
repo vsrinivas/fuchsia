@@ -303,6 +303,19 @@ zx_status_t fdio_open_at(fidl::UnownedClientEnd<fuchsia_io::Directory> directory
                          std::string_view path, fuchsia_io::wire::OpenFlags flags,
                          fidl::ServerEnd<fuchsia_io::Node> request);
 
+struct OpenAtOptions {
+  // Do not allow this open to resolve to a directory. If the operation would
+  // open a directory, instead generates a ZX_ERR_NOT_FILE error.
+  bool disallow_directory;
+
+  // Permit absolute path as input. If the provided path is absolute, instead
+  // generates a ZX_ERR_INVALID_ARGS error.
+  bool allow_absolute_path;
+};
+
+zx::status<fdio_ptr> open_at_impl(int dirfd, const char* path, fuchsia_io::wire::OpenFlags flags,
+                                  uint32_t mode, OpenAtOptions options);
+
 }  // namespace fdio_internal
 
 // TODO(tamird): every operation on this type should require the global lock.

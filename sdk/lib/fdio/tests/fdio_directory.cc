@@ -56,10 +56,10 @@ TEST(DirectoryTest, Open) {
 }
 
 TEST(DirectoryTest, OpenFD) {
-  // INVALID_LENGTH_PATH is `/a{4095}\0` (leading forward slash then 4,095 'a's then null),
+  // kInvalidLengthPath is `/a{4095}\0` (leading forward slash then 4,095 'a's then null),
   // which is 4,097 bytes (including the null) which is one longer than the maximum allowed path
   // https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.io/io.fidl;l=47;drc=e7cbd843e8ced20ea21f9213989d803ae64fcfaf
-  const auto INVALID_LENGTH_PATH =
+  constexpr std::string_view kInvalidLengthPath =
       "/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
       "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
       "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
@@ -105,6 +105,7 @@ TEST(DirectoryTest, OpenFD) {
       "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
       "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
       "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+  EXPECT_EQ(kInvalidLengthPath.length(), 4096);
   {
     fbl::unique_fd fd;
     ASSERT_STATUS(ZX_ERR_INVALID_ARGS, fdio_open_fd(nullptr, static_cast<uint32_t>(kReadFlags),
@@ -122,21 +123,30 @@ TEST(DirectoryTest, OpenFD) {
 
     // fdio_open_fd rejects paths of 4,097 bytes (including the null) or more.
     ASSERT_STATUS(ZX_ERR_BAD_PATH,
-                  fdio_open_fd(INVALID_LENGTH_PATH, static_cast<uint32_t>(kReadFlags),
+                  fdio_open_fd(kInvalidLengthPath.data(), static_cast<uint32_t>(kReadFlags),
                                fd.reset_and_get_address()));
 
     // fdio_open_fd's path canonicalization of consecutive '/'s works with fdio_open_fd's
     // requirement for a leading slash.
     ASSERT_OK(fdio_open_fd("//", static_cast<uint32_t>(kReadFlags), fd.reset_and_get_address()));
 
-    // Path must start with '/'.
-    ASSERT_STATUS(ZX_ERR_NOT_FOUND, fdio_open_fd("pkg", static_cast<uint32_t>(kReadFlags),
-                                                 fd.reset_and_get_address()));
+    // Relative paths are interpreted to CWD which is '/' at this point of the test.
+    ASSERT_OK(fdio_open_fd("pkg", static_cast<uint32_t>(kReadFlags), fd.reset_and_get_address()));
 
     // fdio_open_fd sets OPEN_FLAG_DIRECTORY if the path ends in '/'.
     ASSERT_STATUS(ZX_ERR_NOT_DIR,
                   fdio_open_fd("/pkg/test/fdio-test/", static_cast<uint32_t>(kReadFlags),
                                fd.reset_and_get_address()));
+  }
+
+  {
+    ASSERT_EQ(chdir("/pkg"), 0, "errno %d: %s", errno, strerror(errno));
+
+    fbl::unique_fd fd;
+    ASSERT_OK(fdio_open_fd("test", static_cast<uint32_t>(kReadFlags), fd.reset_and_get_address()));
+    ASSERT_TRUE(fd.is_valid());
+
+    ASSERT_EQ(chdir("/"), 0, "errno %d: %s", errno, strerror(errno));
   }
 
   {
@@ -155,10 +165,23 @@ TEST(DirectoryTest, OpenFD) {
                                   static_cast<uint32_t>(kReadFlags), fd2.reset_and_get_address()));
     ASSERT_FALSE(fd2.is_valid());
 
+    // fdio_open_fd_at() should not resolve absolute paths to the root directory, unlike openat().
+    ASSERT_STATUS(ZX_ERR_INVALID_ARGS,
+                  fdio_open_fd_at(fd.get(), "/pkg", static_cast<uint32_t>(kReadFlags),
+                                  fd2.reset_and_get_address()));
+    ASSERT_FALSE(fd2.is_valid());
+
+    // fdio_open_fd_at() also should not interpret absolute paths as relative paths to the provided
+    // fd.
+    ASSERT_STATUS(ZX_ERR_INVALID_ARGS,
+                  fdio_open_fd_at(fd.get(), "/fdio-test", static_cast<uint32_t>(kReadFlags),
+                                  fd2.reset_and_get_address()));
+    ASSERT_FALSE(fd2.is_valid());
+
     // fdio_open_fd_at rejects paths of 4,097 bytes (including the null) or more.
     ASSERT_STATUS(ZX_ERR_BAD_PATH,
-                  fdio_open_fd_at(fd.get(), INVALID_LENGTH_PATH, static_cast<uint32_t>(kReadFlags),
-                                  fd2.reset_and_get_address()));
+                  fdio_open_fd_at(fd.get(), kInvalidLengthPath.data(),
+                                  static_cast<uint32_t>(kReadFlags), fd2.reset_and_get_address()));
 
     // We expect the binary that this file is compiled into to exist
     ASSERT_OK(fdio_open_fd_at(fd.get(), "fdio-test", static_cast<uint32_t>(kReadFlags),
