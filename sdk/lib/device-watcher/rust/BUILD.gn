@@ -13,7 +13,6 @@ rustc_library("rust") {
     "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/storage/fuchsia-vfs-watcher",

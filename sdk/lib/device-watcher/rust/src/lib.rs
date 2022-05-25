@@ -4,7 +4,6 @@
 
 use {
     anyhow::{format_err, Context, Result},
-    fidl::endpoints::Proxy,
     fidl_fuchsia_device::ControllerMarker,
     fidl_fuchsia_io as fio,
     fuchsia_vfs_watcher::{WatchEvent, Watcher},
@@ -36,11 +35,14 @@ pub async fn wait_for_device_topo_path(
         let filename = msg.filename.to_str().ok_or(format_err!("to_str for filename failed"))?;
 
         let (controller_proxy, server_end) = fidl::endpoints::create_proxy::<ControllerMarker>()?;
-        fdio::service_connect_at(
-            dev_dir.as_channel().as_ref(),
-            filename,
-            server_end.into_channel().into(),
-        )?;
+        dev_dir
+            .open(
+                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+                0,
+                filename,
+                server_end.into_channel().into(),
+            )
+            .with_context(|| format!("Failed to open \"{}\"", filename))?;
 
         if let Ok(Ok(path)) = controller_proxy.get_topological_path().await {
             if path == topo_path {
