@@ -9,6 +9,7 @@ use {
     fidl_fuchsia_test_manager::LogsIteratorOption,
     fuchsia_async as fasync,
     futures::{Future, FutureExt, Stream, TryStreamExt},
+    log::warn,
     std::{io::Write, time::Duration},
 };
 
@@ -116,6 +117,7 @@ where
     let timeout = async {
         timeout_options.timeout_fut.clone().await;
         fasync::Timer::new(timeout_options.time_between_logs).await;
+        warn!("Log timeout invoked")
     };
     stream.try_next().or_cancelled(timeout).await.unwrap_or(Ok(None))
 }

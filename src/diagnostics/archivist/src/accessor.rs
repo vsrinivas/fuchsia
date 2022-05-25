@@ -15,6 +15,7 @@ use {
         ImmutableString,
     },
     diagnostics_data::{Data, DiagnosticsData},
+    fidl::endpoints::RequestStream,
     fidl_fuchsia_diagnostics::{
         self, ArchiveAccessorRequest, ArchiveAccessorRequestStream, BatchIteratorRequest,
         BatchIteratorRequestStream, ClientSelectorConfiguration, DataType, Format,
@@ -24,7 +25,11 @@ use {
     fuchsia_async::{self as fasync, Task},
     fuchsia_inspect::NumericProperty,
     fuchsia_zircon as zx,
-    futures::{channel::mpsc::UnboundedSender, prelude::*},
+    futures::{
+        channel::mpsc::UnboundedSender,
+        future::{select, Either},
+        prelude::*,
+    },
     parking_lot::RwLock,
     selectors::{self, FastError},
     serde::Serialize,
@@ -286,7 +291,10 @@ impl SchemaTruncationCounter {
 }
 
 pub struct BatchIterator {
-    requests: BatchIteratorRequestStream,
+    /// requests is always populated on construction and is removed in run().
+    /// This is an option as run() needs to consume it, but the Drop impl prevents us
+    /// from unpacking BatchIterator.
+    requests: Option<BatchIteratorRequestStream>,
     stats: Arc<BatchIteratorConnectionStats>,
     data: FormattedStream,
     truncation_counter: Option<Arc<Mutex<SchemaTruncationCounter>>>,
@@ -408,16 +416,29 @@ impl BatchIterator {
         truncation_counter: Option<Arc<Mutex<SchemaTruncationCounter>>>,
     ) -> Result<Self, AccessorError> {
         stats.open_connection();
-        Ok(Self { data, requests, stats, truncation_counter })
+        Ok(Self { data, requests: Some(requests), stats, truncation_counter })
     }
 
     pub async fn run(mut self) -> Result<(), AccessorError> {
-        while let Some(res) = self.requests.next().await {
+        let (serve_inner, terminated) =
+            self.requests.take().expect("request stream should be present").into_inner();
+        let serve_inner_clone = serve_inner.clone();
+        let channel_closed_fut =
+            fasync::OnSignals::new(serve_inner_clone.channel(), zx::Signals::CHANNEL_PEER_CLOSED)
+                .shared();
+        let mut requests = BatchIteratorRequestStream::from_inner(serve_inner, terminated);
+
+        while let Some(res) = requests.next().await {
             let BatchIteratorRequest::GetNext { responder } = res?;
             self.stats.add_request();
             let start_time = zx::Time::get_monotonic();
-            // if we get None back, treat that as a terminal batch with an empty vec
-            let batch = self.data.next().await.unwrap_or_default();
+            let batch = match select(self.data.next(), channel_closed_fut.clone()).await {
+                // if we get None back, treat that as a terminal batch with an empty vec
+                Either::Left((batch_option, _)) => batch_option.unwrap_or_default(),
+                // if the client closes the channel, stop waiting and terminate.
+                Either::Right(_) => break,
+            };
+
             // turn errors into epitaphs -- we drop intermediate items if there was an error midway
             let batch = batch.into_iter().collect::<Result<Vec<_>, _>>()?;
 
@@ -608,5 +629,39 @@ mod tests {
         // The batch iterator proxy should remain valid and providing responses regardless of the
         // invalid selectors that were given.
         assert!(batch_iterator.get_next().await.is_ok());
+    }
+
+    #[fuchsia::test]
+    fn batch_iterator_terminates_on_client_disconnect() {
+        let mut executor = fasync::TestExecutor::new().expect("create executor");
+        let (batch_iterator_proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<BatchIteratorMarker>().unwrap();
+        // Create a batch iterator that uses a hung stream to serve logs.
+        let batch_iterator = BatchIterator::new(
+            futures::stream::pending::<diagnostics_data::Data<diagnostics_data::Logs>>(),
+            stream,
+            StreamMode::Subscribe,
+            Arc::new(AccessorStats::new(Node::default()).new_inspect_batch_iterator()),
+            None,
+        )
+        .expect("create batch iterator");
+
+        let mut batch_iterator_fut = batch_iterator.run().boxed();
+        assert!(executor.run_until_stalled(&mut batch_iterator_fut).is_pending());
+
+        // After sending a request, the request should be unfulfilled.
+        let mut iterator_request_fut = batch_iterator_proxy.get_next();
+        assert!(executor.run_until_stalled(&mut iterator_request_fut).is_pending());
+        assert!(executor.run_until_stalled(&mut batch_iterator_fut).is_pending());
+        assert!(executor.run_until_stalled(&mut iterator_request_fut).is_pending());
+
+        // After closing the client end of the channel, the server should terminate and release
+        // resources.
+        drop(iterator_request_fut);
+        drop(batch_iterator_proxy);
+        assert_matches!(
+            executor.run_until_stalled(&mut batch_iterator_fut),
+            core::task::Poll::Ready(Ok(()))
+        );
     }
 }
