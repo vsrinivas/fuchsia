@@ -7,13 +7,14 @@
 #ifndef MEDIA_VIDEO_H264_PARSER_H_
 #define MEDIA_VIDEO_H264_PARSER_H_
 
+#include <lib/stdcompat/variant.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <sys/types.h>
 
-#include <lib/stdcompat/variant.h>
 #include <map>
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include "chromium_utils.h"
@@ -55,9 +56,9 @@ struct MEDIA_EXPORT H264NALU {
     kEOStream = 11,
     kFiller = 12,
     kSPSExt = 13,
-    kReserved14 = 14,
-    kReserved15 = 15,
-    kReserved16 = 16,
+    kPrefix = 14,
+    kSubsetSPS = 15,
+    kDPS = 16,
     kReserved17 = 17,
     kReserved18 = 18,
     kCodedSliceAux = 19,
@@ -232,10 +233,10 @@ struct MEDIA_EXPORT H264SPS {
                                              bool* constraint_set3_flag);
 
   // Helpers to compute frequently-used values. These methods return
-  // base::nullopt if they encounter integer overflow. They do not verify that
+  // std::nullopt if they encounter integer overflow. They do not verify that
   // the results are in-spec for the given profile or level.
-  base::Optional<gfx::Size> GetCodedSize() const;
-  base::Optional<gfx::Rect> GetVisibleRect() const;
+  std::optional<gfx::Size> GetCodedSize() const;
+  std::optional<gfx::Rect> GetVisibleRect() const;
   VideoColorSpace GetColorSpace() const;
 
   // Helper to compute indicated level from parsed SPS data. The value of
@@ -380,6 +381,14 @@ struct MEDIA_EXPORT H264SliceHeader {
   // Size in bits of dec_ref_pic_marking() syntax element.
   size_t dec_ref_pic_marking_bit_size;
   size_t pic_order_cnt_bit_size;
+
+  // This is when we are using full sample encryption and only the portions
+  // needed for DPB management are filled in, the rest will already be known
+  // by the accelerator and we will not need to specify it.
+  bool full_sample_encryption;
+  // This is used by some accelerators to handle decoding after slice header
+  // parsing.
+  uint32_t full_sample_index;
 };
 
 struct H264SEIRecoveryPoint {
@@ -450,6 +459,10 @@ class MEDIA_EXPORT H264Parser {
                          std::vector<H264NALU>* nalus);
 
   H264Parser();
+
+  H264Parser(const H264Parser&) = delete;
+  H264Parser& operator=(const H264Parser&) = delete;
+
   ~H264Parser();
 
   void Reset();
@@ -587,8 +600,6 @@ class MEDIA_EXPORT H264Parser {
   // This contains the range of the previous NALU found in
   // AdvanceToNextNalu(). Holds exactly one range.
   Ranges<const uint8_t*> previous_nalu_range_;
-
-  DISALLOW_COPY_AND_ASSIGN(H264Parser);
 };
 
 }  // namespace media

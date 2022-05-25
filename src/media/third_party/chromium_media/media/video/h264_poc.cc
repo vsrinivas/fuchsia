@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "media/video/h264_poc.h"
+
 #include <stddef.h>
 
 #include <algorithm>
 
 #include "chromium_utils.h"
 #include "media/video/h264_parser.h"
-#include "media/video/h264_poc.h"
 
 namespace media {
 
@@ -24,7 +25,7 @@ bool HasMMCO5(const media::H264SliceHeader& slice_hdr) {
     return false;
   }
 
-  for (size_t i = 0; i < base::size(slice_hdr.ref_pic_marking); i++) {
+  for (size_t i = 0; i < std::size(slice_hdr.ref_pic_marking); i++) {
     int32_t op = slice_hdr.ref_pic_marking[i].memory_mgmnt_control_operation;
     if (op == 5) {
       DVLOG(1) << "op == 5 - return true";
@@ -61,13 +62,13 @@ void H264POC::Reset() {
   pending_mmco5_ = false;
 }
 
-base::Optional<int32_t> H264POC::ComputePicOrderCnt(
+std::optional<int32_t> H264POC::ComputePicOrderCnt(
     const H264SPS* sps,
     const H264SliceHeader& slice_hdr) {
   DVLOG(1) << "ComputePicOrderCnt";
   if (slice_hdr.field_pic_flag) {
     DLOG(ERROR) << "Interlaced frames are not supported";
-    return base::nullopt;
+    return std::nullopt;
   }
 
   int32_t pic_order_cnt = 0;
@@ -180,7 +181,7 @@ base::Optional<int32_t> H264POC::ComputePicOrderCnt(
         // Moved inside 8-9 to avoid division when this check is not done.
         if (sps->num_ref_frames_in_pic_order_cnt_cycle == 0) {
           DLOG(ERROR) << "Invalid num_ref_frames_in_pic_order_cnt_cycle";
-          return base::nullopt;
+          return std::nullopt;
         }
 
         // H264Parser checks that num_ref_frames_in_pic_order_cnt_cycle < 255.
@@ -260,7 +261,7 @@ base::Optional<int32_t> H264POC::ComputePicOrderCnt(
 
     default:
       DLOG(ERROR) << "Invalid pic_order_cnt_type: " << sps->pic_order_cnt_type;
-      return base::nullopt;
+      return std::nullopt;
   }
 
   DVLOG(1) << "pic_order_cnt: " << pic_order_cnt;

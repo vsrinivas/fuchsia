@@ -379,6 +379,28 @@ const char* H264MultiDecoder::DecoderStateName(DecoderState state) {
   }
 }
 
+static bool ProfileHasChromaFormatIdc(uint32_t profile_idc) {
+  // From 7.3.2.1.1
+  switch (profile_idc) {
+    case 100:
+    case 110:
+    case 122:
+    case 244:
+    case 44:
+    case 83:
+    case 86:
+    case 118:
+    case 128:
+    case 138:
+    case 139:
+    case 134:
+    case 135:
+      return true;
+    default:
+      return false;
+  }
+}
+
 H264MultiDecoder::H264MultiDecoder(Owner* owner, Client* client, FrameDataProvider* provider,
                                    bool is_secure)
     : VideoDecoder(
@@ -1164,7 +1186,10 @@ void H264MultiDecoder::HandleSliceHeadDone() {
       OnFatalError();
       return;
     }
-    sps->chroma_format_idc = chroma_format_idc_;
+    // From 7.4.2.1.1, chroma_format_idc defaults to 1 when not present.
+    sps->chroma_format_idc = 1;
+    if (ProfileHasChromaFormatIdc(sps->profile_idc))
+      sps->chroma_format_idc = chroma_format_idc_;
     // These aren't available from FW:
     // separate_colour_plane_flag
     // bit_depth_luma_minus8
