@@ -12,6 +12,12 @@
 
 #ifdef __Fuchsia__
 
+::fidl::Status fidl::SyncEventHandler<::test_bindingsdenylist::Allowed>::HandleOneEvent(
+    ::fidl::UnownedClientEnd<::test_bindingsdenylist::Allowed> client_end) {
+  ::fidl::internal::IncomingEventsStorage<::test_bindingsdenylist::Allowed> event_storage;
+  fidl::internal::NaturalEventDispatcher<::test_bindingsdenylist::Allowed> dispatcher{this};
+  return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
+}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -78,6 +84,12 @@ fidl::internal::NaturalSyncClientImpl<::test_bindingsdenylist::OnlyLibfuzzerAndD
 
 #ifdef __Fuchsia__
 
+::fidl::Status fidl::SyncEventHandler<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>::HandleOneEvent(
+    ::fidl::UnownedClientEnd<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> client_end) {
+  ::fidl::internal::IncomingEventsStorage<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> event_storage;
+  fidl::internal::NaturalEventDispatcher<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> dispatcher{this};
+  return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
+}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -135,6 +147,12 @@ void fidl::Server<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>::dispatch_messa
 
 #ifdef __Fuchsia__
 
+::fidl::Status fidl::SyncEventHandler<::test_bindingsdenylist::OnlyCppAndDeps>::HandleOneEvent(
+    ::fidl::UnownedClientEnd<::test_bindingsdenylist::OnlyCppAndDeps> client_end) {
+  ::fidl::internal::IncomingEventsStorage<::test_bindingsdenylist::OnlyCppAndDeps> event_storage;
+  fidl::internal::NaturalEventDispatcher<::test_bindingsdenylist::OnlyCppAndDeps> dispatcher{this};
+  return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
+}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -215,6 +233,12 @@ fidl::internal::NaturalSyncClientImpl<::test_bindingsdenylist::ImportsSameNameCo
 
 #ifdef __Fuchsia__
 
+::fidl::Status fidl::SyncEventHandler<::test_bindingsdenylist::ImportsSameNameContext>::HandleOneEvent(
+    ::fidl::UnownedClientEnd<::test_bindingsdenylist::ImportsSameNameContext> client_end) {
+  ::fidl::internal::IncomingEventsStorage<::test_bindingsdenylist::ImportsSameNameContext> event_storage;
+  fidl::internal::NaturalEventDispatcher<::test_bindingsdenylist::ImportsSameNameContext> dispatcher{this};
+  return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
+}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -448,6 +472,12 @@ fidl::internal::NaturalSyncClientImpl<::test_bindingsdenylist::DenyEachBinding>:
 
 #ifdef __Fuchsia__
 
+::fidl::Status fidl::SyncEventHandler<::test_bindingsdenylist::DenyEachBinding>::HandleOneEvent(
+    ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding> client_end) {
+  ::fidl::internal::IncomingEventsStorage<::test_bindingsdenylist::DenyEachBinding> event_storage;
+  fidl::internal::NaturalEventDispatcher<::test_bindingsdenylist::DenyEachBinding> dispatcher{this};
+  return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
+}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__

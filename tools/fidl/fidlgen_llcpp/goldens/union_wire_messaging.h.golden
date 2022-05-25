@@ -748,7 +748,8 @@ class ::fidl::WireAsyncEventHandler<::test_union::TestProtocol>
 };
 
 template <>
-class ::fidl::WireSyncEventHandler<::test_union::TestProtocol> : public ::fidl::internal::WireEventHandlerInterface<::test_union::TestProtocol> {
+class ::fidl::WireSyncEventHandler<::test_union::TestProtocol>
+    : public ::fidl::internal::WireEventHandlerInterface<::test_union::TestProtocol>, public ::fidl::internal::SyncEventHandler {
  public:
   WireSyncEventHandler() = default;
 
@@ -757,9 +758,6 @@ class ::fidl::WireSyncEventHandler<::test_union::TestProtocol> : public ::fidl::
   // method.
   ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_union::TestProtocol> client_end);
-
- private:
-  [[maybe_unused]] bool got_transitional_ = false;
 };
 
 template <>

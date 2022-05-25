@@ -36,6 +36,12 @@ fidl::internal::NaturalSyncClientImpl<::test_service::SecondProtocol>::MethodOnS
 
 #ifdef __Fuchsia__
 
+::fidl::Status fidl::SyncEventHandler<::test_service::SecondProtocol>::HandleOneEvent(
+    ::fidl::UnownedClientEnd<::test_service::SecondProtocol> client_end) {
+  ::fidl::internal::IncomingEventsStorage<::test_service::SecondProtocol> event_storage;
+  fidl::internal::NaturalEventDispatcher<::test_service::SecondProtocol> dispatcher{this};
+  return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
+}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -110,6 +116,12 @@ fidl::internal::NaturalSyncClientImpl<::test_service::FirstProtocol>::MethodOnFi
 
 #ifdef __Fuchsia__
 
+::fidl::Status fidl::SyncEventHandler<::test_service::FirstProtocol>::HandleOneEvent(
+    ::fidl::UnownedClientEnd<::test_service::FirstProtocol> client_end) {
+  ::fidl::internal::IncomingEventsStorage<::test_service::FirstProtocol> event_storage;
+  fidl::internal::NaturalEventDispatcher<::test_service::FirstProtocol> dispatcher{this};
+  return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
+}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__

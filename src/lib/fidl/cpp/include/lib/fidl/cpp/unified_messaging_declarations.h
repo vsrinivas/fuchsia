@@ -156,8 +156,13 @@ class NaturalCompleterBase;
 
 }  // namespace internal
 
+// |SyncEventHandler| is used by synchronous clients to handle events using
+// natural types.
+template <typename Protocol>
+class SyncEventHandler;
+
 // |AsyncEventHandler| is used by asynchronous clients to handle events using
-// natural types. It also adds a callback for handling errors.
+// natural types. It also adds a callback for handling fatal errors.
 template <typename Protocol>
 class AsyncEventHandler;
 

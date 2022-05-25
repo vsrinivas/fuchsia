@@ -40,6 +40,12 @@ fidl::internal::NaturalSyncClientImpl<::test_doccomments::Interface>::Method() {
 
 #ifdef __Fuchsia__
 
+::fidl::Status fidl::SyncEventHandler<::test_doccomments::Interface>::HandleOneEvent(
+    ::fidl::UnownedClientEnd<::test_doccomments::Interface> client_end) {
+  ::fidl::internal::IncomingEventsStorage<::test_doccomments::Interface> event_storage;
+  fidl::internal::NaturalEventDispatcher<::test_doccomments::Interface> dispatcher{this};
+  return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
+}
 ::fidl::Status
 fidl::internal::NaturalEventDispatcher<::test_doccomments::Interface>::DispatchEvent(
     ::fidl::IncomingMessage& msg,

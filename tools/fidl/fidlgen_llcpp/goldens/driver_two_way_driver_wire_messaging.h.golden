@@ -376,21 +376,6 @@ class ::fdf::WireAsyncEventHandler<::test_drivertwoway::TwoWay>
 };
 
 template <>
-class ::fidl::WireSyncEventHandler<::test_drivertwoway::TwoWay> : public ::fidl::internal::WireEventHandlerInterface<::test_drivertwoway::TwoWay> {
- public:
-  WireSyncEventHandler() = default;
-
-  // Handle all possible events defined in this protocol.
-  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
-  // method.
-  ::fidl::Status HandleOneEvent(
-      ::fdf::UnownedClientEnd<::test_drivertwoway::TwoWay> client_end);
-
- private:
-  [[maybe_unused]] bool got_transitional_ = false;
-};
-
-template <>
 class ::fidl::internal::WireEventDispatcher<::test_drivertwoway::TwoWay> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::WireEventHandlerInterface<::test_drivertwoway::TwoWay>> {
  public:
   explicit WireEventDispatcher(::fidl::internal::WireEventHandlerInterface<::test_drivertwoway::TwoWay>* event_handler)

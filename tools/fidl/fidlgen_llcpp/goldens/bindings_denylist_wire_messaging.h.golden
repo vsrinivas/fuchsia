@@ -89,7 +89,8 @@ class ::fidl::WireAsyncEventHandler<::test_bindingsdenylist::Allowed>
 };
 
 template <>
-class ::fidl::WireSyncEventHandler<::test_bindingsdenylist::Allowed> : public ::fidl::internal::WireEventHandlerInterface<::test_bindingsdenylist::Allowed> {
+class ::fidl::WireSyncEventHandler<::test_bindingsdenylist::Allowed>
+    : public ::fidl::internal::WireEventHandlerInterface<::test_bindingsdenylist::Allowed>, public ::fidl::internal::SyncEventHandler {
  public:
   WireSyncEventHandler() = default;
 
@@ -98,9 +99,6 @@ class ::fidl::WireSyncEventHandler<::test_bindingsdenylist::Allowed> : public ::
   // method.
   ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_bindingsdenylist::Allowed> client_end);
-
- private:
-  [[maybe_unused]] bool got_transitional_ = false;
 };
 
 template <>
@@ -456,7 +454,8 @@ class ::fidl::WireAsyncEventHandler<::test_bindingsdenylist::OnlyLibfuzzerAndDep
 };
 
 template <>
-class ::fidl::WireSyncEventHandler<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> : public ::fidl::internal::WireEventHandlerInterface<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> {
+class ::fidl::WireSyncEventHandler<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>
+    : public ::fidl::internal::WireEventHandlerInterface<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>, public ::fidl::internal::SyncEventHandler {
  public:
   WireSyncEventHandler() = default;
 
@@ -465,9 +464,6 @@ class ::fidl::WireSyncEventHandler<::test_bindingsdenylist::OnlyLibfuzzerAndDeps
   // method.
   ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> client_end);
-
- private:
-  [[maybe_unused]] bool got_transitional_ = false;
 };
 
 template <>
@@ -631,7 +627,8 @@ class ::fidl::WireAsyncEventHandler<::test_bindingsdenylist::OnlyCppAndDeps>
 };
 
 template <>
-class ::fidl::WireSyncEventHandler<::test_bindingsdenylist::OnlyCppAndDeps> : public ::fidl::internal::WireEventHandlerInterface<::test_bindingsdenylist::OnlyCppAndDeps> {
+class ::fidl::WireSyncEventHandler<::test_bindingsdenylist::OnlyCppAndDeps>
+    : public ::fidl::internal::WireEventHandlerInterface<::test_bindingsdenylist::OnlyCppAndDeps>, public ::fidl::internal::SyncEventHandler {
  public:
   WireSyncEventHandler() = default;
 
@@ -640,9 +637,6 @@ class ::fidl::WireSyncEventHandler<::test_bindingsdenylist::OnlyCppAndDeps> : pu
   // method.
   ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_bindingsdenylist::OnlyCppAndDeps> client_end);
-
- private:
-  [[maybe_unused]] bool got_transitional_ = false;
 };
 
 template <>
@@ -975,7 +969,8 @@ class ::fidl::WireAsyncEventHandler<::test_bindingsdenylist::ImportsSameNameCont
 };
 
 template <>
-class ::fidl::WireSyncEventHandler<::test_bindingsdenylist::ImportsSameNameContext> : public ::fidl::internal::WireEventHandlerInterface<::test_bindingsdenylist::ImportsSameNameContext> {
+class ::fidl::WireSyncEventHandler<::test_bindingsdenylist::ImportsSameNameContext>
+    : public ::fidl::internal::WireEventHandlerInterface<::test_bindingsdenylist::ImportsSameNameContext>, public ::fidl::internal::SyncEventHandler {
  public:
   WireSyncEventHandler() = default;
 
@@ -984,9 +979,6 @@ class ::fidl::WireSyncEventHandler<::test_bindingsdenylist::ImportsSameNameConte
   // method.
   ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_bindingsdenylist::ImportsSameNameContext> client_end);
-
- private:
-  [[maybe_unused]] bool got_transitional_ = false;
 };
 
 template <>
@@ -3034,7 +3026,8 @@ class ::fidl::WireAsyncEventHandler<::test_bindingsdenylist::DenyEachBinding>
 };
 
 template <>
-class ::fidl::WireSyncEventHandler<::test_bindingsdenylist::DenyEachBinding> : public ::fidl::internal::WireEventHandlerInterface<::test_bindingsdenylist::DenyEachBinding> {
+class ::fidl::WireSyncEventHandler<::test_bindingsdenylist::DenyEachBinding>
+    : public ::fidl::internal::WireEventHandlerInterface<::test_bindingsdenylist::DenyEachBinding>, public ::fidl::internal::SyncEventHandler {
  public:
   WireSyncEventHandler() = default;
 
@@ -3043,9 +3036,6 @@ class ::fidl::WireSyncEventHandler<::test_bindingsdenylist::DenyEachBinding> : p
   // method.
   ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding> client_end);
-
- private:
-  [[maybe_unused]] bool got_transitional_ = false;
 };
 
 template <>

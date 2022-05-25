@@ -126,6 +126,12 @@ fidl::internal::NaturalSyncClientImpl<::test_protocolrequest::Parent>::TakeChild
 
 #ifdef __Fuchsia__
 
+::fidl::Status fidl::SyncEventHandler<::test_protocolrequest::Parent>::HandleOneEvent(
+    ::fidl::UnownedClientEnd<::test_protocolrequest::Parent> client_end) {
+  ::fidl::internal::IncomingEventsStorage<::test_protocolrequest::Parent> event_storage;
+  fidl::internal::NaturalEventDispatcher<::test_protocolrequest::Parent> dispatcher{this};
+  return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
+}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -239,6 +245,12 @@ void fidl::Server<::test_protocolrequest::Parent>::dispatch_message(
 
 #ifdef __Fuchsia__
 
+::fidl::Status fidl::SyncEventHandler<::test_protocolrequest::Child>::HandleOneEvent(
+    ::fidl::UnownedClientEnd<::test_protocolrequest::Child> client_end) {
+  ::fidl::internal::IncomingEventsStorage<::test_protocolrequest::Child> event_storage;
+  fidl::internal::NaturalEventDispatcher<::test_protocolrequest::Child> dispatcher{this};
+  return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
+}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__

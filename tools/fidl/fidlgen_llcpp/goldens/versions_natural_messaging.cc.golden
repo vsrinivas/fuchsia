@@ -12,6 +12,12 @@
 
 #ifdef __Fuchsia__
 
+::fidl::Status fidl::SyncEventHandler<::test_versions::OtherProtocol>::HandleOneEvent(
+    ::fidl::UnownedClientEnd<::test_versions::OtherProtocol> client_end) {
+  ::fidl::internal::IncomingEventsStorage<::test_versions::OtherProtocol> event_storage;
+  fidl::internal::NaturalEventDispatcher<::test_versions::OtherProtocol> dispatcher{this};
+  return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
+}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -70,6 +76,12 @@ fidl::internal::NaturalSyncClientImpl<::test_versions::Protocol>::Foo() {
 
 #ifdef __Fuchsia__
 
+::fidl::Status fidl::SyncEventHandler<::test_versions::Protocol>::HandleOneEvent(
+    ::fidl::UnownedClientEnd<::test_versions::Protocol> client_end) {
+  ::fidl::internal::IncomingEventsStorage<::test_versions::Protocol> event_storage;
+  fidl::internal::NaturalEventDispatcher<::test_versions::Protocol> dispatcher{this};
+  return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
+}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__

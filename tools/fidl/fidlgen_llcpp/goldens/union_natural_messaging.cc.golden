@@ -73,6 +73,12 @@ fidl::internal::NaturalSyncClientImpl<::test_union::TestProtocol>::FlexibleXUnio
 
 #ifdef __Fuchsia__
 
+::fidl::Status fidl::SyncEventHandler<::test_union::TestProtocol>::HandleOneEvent(
+    ::fidl::UnownedClientEnd<::test_union::TestProtocol> client_end) {
+  ::fidl::internal::IncomingEventsStorage<::test_union::TestProtocol> event_storage;
+  fidl::internal::NaturalEventDispatcher<::test_union::TestProtocol> dispatcher{this};
+  return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
+}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__

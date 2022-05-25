@@ -253,6 +253,19 @@ class ::fidl::AsyncEventHandler<::test_protocols::WithAndWithoutRequestResponse>
 };
 
 template <>
+class ::fidl::SyncEventHandler<::test_protocols::WithAndWithoutRequestResponse>
+    : public ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::WithAndWithoutRequestResponse>, public ::fidl::internal::SyncEventHandler {
+ public:
+  SyncEventHandler() = default;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
+  // method.
+  ::fidl::Status HandleOneEvent(
+      ::fidl::UnownedClientEnd<::test_protocols::WithAndWithoutRequestResponse> client_end);
+};
+
+template <>
 class ::fidl::internal::NaturalEventDispatcher<::test_protocols::WithAndWithoutRequestResponse> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_protocols::WithAndWithoutRequestResponse>> {
  public:
   explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_protocols::WithAndWithoutRequestResponse>* event_handler)
@@ -583,6 +596,20 @@ class ::fidl::AsyncEventHandler<::test_protocols::Transitional>
 };
 
 template <>
+class ::fidl::SyncEventHandler<::test_protocols::Transitional>
+    : public ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::Transitional>, public ::fidl::internal::SyncEventHandler {
+ public:
+  SyncEventHandler() = default;
+  void Event(::fidl::Event<::test_protocols::Transitional::Event>&) override { OnTransitionalEvent_(); }
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
+  // method.
+  ::fidl::Status HandleOneEvent(
+      ::fidl::UnownedClientEnd<::test_protocols::Transitional> client_end);
+};
+
+template <>
 class ::fidl::internal::NaturalEventDispatcher<::test_protocols::Transitional> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_protocols::Transitional>> {
  public:
   explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_protocols::Transitional>* event_handler)
@@ -740,6 +767,19 @@ class ::fidl::AsyncEventHandler<::test_protocols::MethodWithUnion>
     : public ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::MethodWithUnion>, public ::fidl::internal::AsyncEventHandler {
  public:
   AsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::SyncEventHandler<::test_protocols::MethodWithUnion>
+    : public ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::MethodWithUnion>, public ::fidl::internal::SyncEventHandler {
+ public:
+  SyncEventHandler() = default;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
+  // method.
+  ::fidl::Status HandleOneEvent(
+      ::fidl::UnownedClientEnd<::test_protocols::MethodWithUnion> client_end);
 };
 
 template <>
@@ -981,6 +1021,19 @@ class ::fidl::AsyncEventHandler<::test_protocols::WithProtocolEnds>
 };
 
 template <>
+class ::fidl::SyncEventHandler<::test_protocols::WithProtocolEnds>
+    : public ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::WithProtocolEnds>, public ::fidl::internal::SyncEventHandler {
+ public:
+  SyncEventHandler() = default;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
+  // method.
+  ::fidl::Status HandleOneEvent(
+      ::fidl::UnownedClientEnd<::test_protocols::WithProtocolEnds> client_end);
+};
+
+template <>
 class ::fidl::internal::NaturalEventDispatcher<::test_protocols::WithProtocolEnds> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_protocols::WithProtocolEnds>> {
  public:
   explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_protocols::WithProtocolEnds>* event_handler)
@@ -1174,6 +1227,19 @@ class ::fidl::AsyncEventHandler<::test_protocols::ManyParameters>
 };
 
 template <>
+class ::fidl::SyncEventHandler<::test_protocols::ManyParameters>
+    : public ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::ManyParameters>, public ::fidl::internal::SyncEventHandler {
+ public:
+  SyncEventHandler() = default;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
+  // method.
+  ::fidl::Status HandleOneEvent(
+      ::fidl::UnownedClientEnd<::test_protocols::ManyParameters> client_end);
+};
+
+template <>
 class ::fidl::internal::NaturalEventDispatcher<::test_protocols::ManyParameters> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_protocols::ManyParameters>> {
  public:
   explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_protocols::ManyParameters>* event_handler)
@@ -1354,6 +1420,19 @@ class ::fidl::AsyncEventHandler<::test_protocols::HandleRightsProtocol>
  public:
   AsyncEventHandler() = default;
   void AnEvent(::fidl::Event<::test_protocols::HandleRightsProtocol::AnEvent>&) override {}
+};
+
+template <>
+class ::fidl::SyncEventHandler<::test_protocols::HandleRightsProtocol>
+    : public ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::HandleRightsProtocol>, public ::fidl::internal::SyncEventHandler {
+ public:
+  SyncEventHandler() = default;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
+  // method.
+  ::fidl::Status HandleOneEvent(
+      ::fidl::UnownedClientEnd<::test_protocols::HandleRightsProtocol> client_end);
 };
 
 template <>
@@ -1773,6 +1852,19 @@ class ::fidl::AsyncEventHandler<::test_protocols::WithErrorSyntax>
 };
 
 template <>
+class ::fidl::SyncEventHandler<::test_protocols::WithErrorSyntax>
+    : public ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::WithErrorSyntax>, public ::fidl::internal::SyncEventHandler {
+ public:
+  SyncEventHandler() = default;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
+  // method.
+  ::fidl::Status HandleOneEvent(
+      ::fidl::UnownedClientEnd<::test_protocols::WithErrorSyntax> client_end);
+};
+
+template <>
 class ::fidl::internal::NaturalEventDispatcher<::test_protocols::WithErrorSyntax> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_protocols::WithErrorSyntax>> {
  public:
   explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_protocols::WithErrorSyntax>* event_handler)
@@ -1977,6 +2069,19 @@ class ::fidl::AsyncEventHandler<::test_protocols::DiscoverableProtocol>
     : public ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::DiscoverableProtocol>, public ::fidl::internal::AsyncEventHandler {
  public:
   AsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::SyncEventHandler<::test_protocols::DiscoverableProtocol>
+    : public ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::DiscoverableProtocol>, public ::fidl::internal::SyncEventHandler {
+ public:
+  SyncEventHandler() = default;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
+  // method.
+  ::fidl::Status HandleOneEvent(
+      ::fidl::UnownedClientEnd<::test_protocols::DiscoverableProtocol> client_end);
 };
 
 template <>
@@ -2233,6 +2338,19 @@ class ::fidl::AsyncEventHandler<::test_protocols::ChannelProtocol>
  public:
   AsyncEventHandler() = default;
   void EventA(::fidl::Event<::test_protocols::ChannelProtocol::EventA>&) override {}
+};
+
+template <>
+class ::fidl::SyncEventHandler<::test_protocols::ChannelProtocol>
+    : public ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::ChannelProtocol>, public ::fidl::internal::SyncEventHandler {
+ public:
+  SyncEventHandler() = default;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
+  // method.
+  ::fidl::Status HandleOneEvent(
+      ::fidl::UnownedClientEnd<::test_protocols::ChannelProtocol> client_end);
 };
 
 template <>

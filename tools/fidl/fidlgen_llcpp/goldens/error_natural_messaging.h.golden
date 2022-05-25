@@ -123,6 +123,19 @@ class ::fidl::AsyncEventHandler<::test_error::Example>
 };
 
 template <>
+class ::fidl::SyncEventHandler<::test_error::Example>
+    : public ::fidl::internal::NaturalEventHandlerInterface<::test_error::Example>, public ::fidl::internal::SyncEventHandler {
+ public:
+  SyncEventHandler() = default;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
+  // method.
+  ::fidl::Status HandleOneEvent(
+      ::fidl::UnownedClientEnd<::test_error::Example> client_end);
+};
+
+template <>
 class ::fidl::internal::NaturalEventDispatcher<::test_error::Example> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_error::Example>> {
  public:
   explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_error::Example>* event_handler)

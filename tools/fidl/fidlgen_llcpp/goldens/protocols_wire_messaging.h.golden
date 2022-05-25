@@ -1884,21 +1884,19 @@ class ::fidl::WireAsyncEventHandler<::test_protocols::WithAndWithoutRequestRespo
     void OnWithResponse(::fidl::WireEvent<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>* event) override {}
 };
 
-template<>
-class ::fidl::WireSyncEventHandler<::test_protocols::WithAndWithoutRequestResponse> : public ::fidl::internal::WireEventHandlerInterface<::test_protocols::WithAndWithoutRequestResponse> {
- public:
-  WireSyncEventHandler() = default;
 
-  // Handle all possible events defined in this protocol.
-  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
-  // method.
-  ::fidl::Status HandleOneEvent(
-      ::fidl::UnownedClientEnd<::test_protocols::WithAndWithoutRequestResponse> client_end);
+  template<>
+  class ::fidl::WireSyncEventHandler<::test_protocols::WithAndWithoutRequestResponse>
+      : public ::fidl::internal::WireEventHandlerInterface<::test_protocols::WithAndWithoutRequestResponse>, public ::fidl::internal::SyncEventHandler {
+   public:
+    WireSyncEventHandler() = default;
 
- private:
-  [[maybe_unused]]
-  bool got_transitional_ = false;
-};
+    // Handle all possible events defined in this protocol.
+    // Blocks to consume exactly one message from the channel, then call the corresponding virtual
+    // method.
+    ::fidl::Status HandleOneEvent(
+        ::fidl::UnownedClientEnd<::test_protocols::WithAndWithoutRequestResponse> client_end);
+  };
 
 template <>
 class ::fidl::internal::WireEventDispatcher<::test_protocols::WithAndWithoutRequestResponse> final :
@@ -2920,22 +2918,20 @@ class ::fidl::WireAsyncEventHandler<::test_protocols::Transitional>
     void Event(::fidl::WireEvent<::test_protocols::Transitional::Event>* event) override {}
 };
 
-template<>
-class ::fidl::WireSyncEventHandler<::test_protocols::Transitional> : public ::fidl::internal::WireEventHandlerInterface<::test_protocols::Transitional> {
- public:
-  WireSyncEventHandler() = default;
-      void Event(::fidl::WireEvent<::test_protocols::Transitional::Event>* event) override { got_transitional_ = true; }
 
-  // Handle all possible events defined in this protocol.
-  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
-  // method.
-  ::fidl::Status HandleOneEvent(
-      ::fidl::UnownedClientEnd<::test_protocols::Transitional> client_end);
+  template<>
+  class ::fidl::WireSyncEventHandler<::test_protocols::Transitional>
+      : public ::fidl::internal::WireEventHandlerInterface<::test_protocols::Transitional>, public ::fidl::internal::SyncEventHandler {
+   public:
+    WireSyncEventHandler() = default;
+        void Event(::fidl::WireEvent<::test_protocols::Transitional::Event>* event) override { OnTransitionalEvent_(); }
 
- private:
-  [[maybe_unused]]
-  bool got_transitional_ = false;
-};
+    // Handle all possible events defined in this protocol.
+    // Blocks to consume exactly one message from the channel, then call the corresponding virtual
+    // method.
+    ::fidl::Status HandleOneEvent(
+        ::fidl::UnownedClientEnd<::test_protocols::Transitional> client_end);
+  };
 
 template <>
 class ::fidl::internal::WireEventDispatcher<::test_protocols::Transitional> final :
@@ -3282,21 +3278,19 @@ class ::fidl::WireAsyncEventHandler<::test_protocols::MethodWithUnion>
   WireAsyncEventHandler() = default;
 };
 
-template<>
-class ::fidl::WireSyncEventHandler<::test_protocols::MethodWithUnion> : public ::fidl::internal::WireEventHandlerInterface<::test_protocols::MethodWithUnion> {
- public:
-  WireSyncEventHandler() = default;
 
-  // Handle all possible events defined in this protocol.
-  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
-  // method.
-  ::fidl::Status HandleOneEvent(
-      ::fidl::UnownedClientEnd<::test_protocols::MethodWithUnion> client_end);
+  template<>
+  class ::fidl::WireSyncEventHandler<::test_protocols::MethodWithUnion>
+      : public ::fidl::internal::WireEventHandlerInterface<::test_protocols::MethodWithUnion>, public ::fidl::internal::SyncEventHandler {
+   public:
+    WireSyncEventHandler() = default;
 
- private:
-  [[maybe_unused]]
-  bool got_transitional_ = false;
-};
+    // Handle all possible events defined in this protocol.
+    // Blocks to consume exactly one message from the channel, then call the corresponding virtual
+    // method.
+    ::fidl::Status HandleOneEvent(
+        ::fidl::UnownedClientEnd<::test_protocols::MethodWithUnion> client_end);
+  };
 
 template <>
 class ::fidl::internal::WireEventDispatcher<::test_protocols::MethodWithUnion> final :
@@ -4682,21 +4676,19 @@ class ::fidl::WireAsyncEventHandler<::test_protocols::WithProtocolEnds>
   WireAsyncEventHandler() = default;
 };
 
-template<>
-class ::fidl::WireSyncEventHandler<::test_protocols::WithProtocolEnds> : public ::fidl::internal::WireEventHandlerInterface<::test_protocols::WithProtocolEnds> {
- public:
-  WireSyncEventHandler() = default;
 
-  // Handle all possible events defined in this protocol.
-  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
-  // method.
-  ::fidl::Status HandleOneEvent(
-      ::fidl::UnownedClientEnd<::test_protocols::WithProtocolEnds> client_end);
+  template<>
+  class ::fidl::WireSyncEventHandler<::test_protocols::WithProtocolEnds>
+      : public ::fidl::internal::WireEventHandlerInterface<::test_protocols::WithProtocolEnds>, public ::fidl::internal::SyncEventHandler {
+   public:
+    WireSyncEventHandler() = default;
 
- private:
-  [[maybe_unused]]
-  bool got_transitional_ = false;
-};
+    // Handle all possible events defined in this protocol.
+    // Blocks to consume exactly one message from the channel, then call the corresponding virtual
+    // method.
+    ::fidl::Status HandleOneEvent(
+        ::fidl::UnownedClientEnd<::test_protocols::WithProtocolEnds> client_end);
+  };
 
 template <>
 class ::fidl::internal::WireEventDispatcher<::test_protocols::WithProtocolEnds> final :
@@ -5135,21 +5127,19 @@ class ::fidl::WireAsyncEventHandler<::test_protocols::ManyParameters>
   WireAsyncEventHandler() = default;
 };
 
-template<>
-class ::fidl::WireSyncEventHandler<::test_protocols::ManyParameters> : public ::fidl::internal::WireEventHandlerInterface<::test_protocols::ManyParameters> {
- public:
-  WireSyncEventHandler() = default;
 
-  // Handle all possible events defined in this protocol.
-  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
-  // method.
-  ::fidl::Status HandleOneEvent(
-      ::fidl::UnownedClientEnd<::test_protocols::ManyParameters> client_end);
+  template<>
+  class ::fidl::WireSyncEventHandler<::test_protocols::ManyParameters>
+      : public ::fidl::internal::WireEventHandlerInterface<::test_protocols::ManyParameters>, public ::fidl::internal::SyncEventHandler {
+   public:
+    WireSyncEventHandler() = default;
 
- private:
-  [[maybe_unused]]
-  bool got_transitional_ = false;
-};
+    // Handle all possible events defined in this protocol.
+    // Blocks to consume exactly one message from the channel, then call the corresponding virtual
+    // method.
+    ::fidl::Status HandleOneEvent(
+        ::fidl::UnownedClientEnd<::test_protocols::ManyParameters> client_end);
+  };
 
 template <>
 class ::fidl::internal::WireEventDispatcher<::test_protocols::ManyParameters> final :
@@ -6005,21 +5995,19 @@ class ::fidl::WireAsyncEventHandler<::test_protocols::HandleRightsProtocol>
     void AnEvent(::fidl::WireEvent<::test_protocols::HandleRightsProtocol::AnEvent>* event) override {}
 };
 
-template<>
-class ::fidl::WireSyncEventHandler<::test_protocols::HandleRightsProtocol> : public ::fidl::internal::WireEventHandlerInterface<::test_protocols::HandleRightsProtocol> {
- public:
-  WireSyncEventHandler() = default;
 
-  // Handle all possible events defined in this protocol.
-  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
-  // method.
-  ::fidl::Status HandleOneEvent(
-      ::fidl::UnownedClientEnd<::test_protocols::HandleRightsProtocol> client_end);
+  template<>
+  class ::fidl::WireSyncEventHandler<::test_protocols::HandleRightsProtocol>
+      : public ::fidl::internal::WireEventHandlerInterface<::test_protocols::HandleRightsProtocol>, public ::fidl::internal::SyncEventHandler {
+   public:
+    WireSyncEventHandler() = default;
 
- private:
-  [[maybe_unused]]
-  bool got_transitional_ = false;
-};
+    // Handle all possible events defined in this protocol.
+    // Blocks to consume exactly one message from the channel, then call the corresponding virtual
+    // method.
+    ::fidl::Status HandleOneEvent(
+        ::fidl::UnownedClientEnd<::test_protocols::HandleRightsProtocol> client_end);
+  };
 
 template <>
 class ::fidl::internal::WireEventDispatcher<::test_protocols::HandleRightsProtocol> final :
@@ -7701,21 +7689,19 @@ class ::fidl::WireAsyncEventHandler<::test_protocols::WithErrorSyntax>
   WireAsyncEventHandler() = default;
 };
 
-template<>
-class ::fidl::WireSyncEventHandler<::test_protocols::WithErrorSyntax> : public ::fidl::internal::WireEventHandlerInterface<::test_protocols::WithErrorSyntax> {
- public:
-  WireSyncEventHandler() = default;
 
-  // Handle all possible events defined in this protocol.
-  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
-  // method.
-  ::fidl::Status HandleOneEvent(
-      ::fidl::UnownedClientEnd<::test_protocols::WithErrorSyntax> client_end);
+  template<>
+  class ::fidl::WireSyncEventHandler<::test_protocols::WithErrorSyntax>
+      : public ::fidl::internal::WireEventHandlerInterface<::test_protocols::WithErrorSyntax>, public ::fidl::internal::SyncEventHandler {
+   public:
+    WireSyncEventHandler() = default;
 
- private:
-  [[maybe_unused]]
-  bool got_transitional_ = false;
-};
+    // Handle all possible events defined in this protocol.
+    // Blocks to consume exactly one message from the channel, then call the corresponding virtual
+    // method.
+    ::fidl::Status HandleOneEvent(
+        ::fidl::UnownedClientEnd<::test_protocols::WithErrorSyntax> client_end);
+  };
 
 template <>
 class ::fidl::internal::WireEventDispatcher<::test_protocols::WithErrorSyntax> final :
@@ -8175,21 +8161,19 @@ class ::fidl::WireAsyncEventHandler<::test_protocols::DiscoverableProtocol>
   WireAsyncEventHandler() = default;
 };
 
-template<>
-class ::fidl::WireSyncEventHandler<::test_protocols::DiscoverableProtocol> : public ::fidl::internal::WireEventHandlerInterface<::test_protocols::DiscoverableProtocol> {
- public:
-  WireSyncEventHandler() = default;
 
-  // Handle all possible events defined in this protocol.
-  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
-  // method.
-  ::fidl::Status HandleOneEvent(
-      ::fidl::UnownedClientEnd<::test_protocols::DiscoverableProtocol> client_end);
+  template<>
+  class ::fidl::WireSyncEventHandler<::test_protocols::DiscoverableProtocol>
+      : public ::fidl::internal::WireEventHandlerInterface<::test_protocols::DiscoverableProtocol>, public ::fidl::internal::SyncEventHandler {
+   public:
+    WireSyncEventHandler() = default;
 
- private:
-  [[maybe_unused]]
-  bool got_transitional_ = false;
-};
+    // Handle all possible events defined in this protocol.
+    // Blocks to consume exactly one message from the channel, then call the corresponding virtual
+    // method.
+    ::fidl::Status HandleOneEvent(
+        ::fidl::UnownedClientEnd<::test_protocols::DiscoverableProtocol> client_end);
+  };
 
 template <>
 class ::fidl::internal::WireEventDispatcher<::test_protocols::DiscoverableProtocol> final :
@@ -9713,21 +9697,19 @@ class ::fidl::WireAsyncEventHandler<::test_protocols::ChannelProtocol>
     void EventA(::fidl::WireEvent<::test_protocols::ChannelProtocol::EventA>* event) override {}
 };
 
-template<>
-class ::fidl::WireSyncEventHandler<::test_protocols::ChannelProtocol> : public ::fidl::internal::WireEventHandlerInterface<::test_protocols::ChannelProtocol> {
- public:
-  WireSyncEventHandler() = default;
 
-  // Handle all possible events defined in this protocol.
-  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
-  // method.
-  ::fidl::Status HandleOneEvent(
-      ::fidl::UnownedClientEnd<::test_protocols::ChannelProtocol> client_end);
+  template<>
+  class ::fidl::WireSyncEventHandler<::test_protocols::ChannelProtocol>
+      : public ::fidl::internal::WireEventHandlerInterface<::test_protocols::ChannelProtocol>, public ::fidl::internal::SyncEventHandler {
+   public:
+    WireSyncEventHandler() = default;
 
- private:
-  [[maybe_unused]]
-  bool got_transitional_ = false;
-};
+    // Handle all possible events defined in this protocol.
+    // Blocks to consume exactly one message from the channel, then call the corresponding virtual
+    // method.
+    ::fidl::Status HandleOneEvent(
+        ::fidl::UnownedClientEnd<::test_protocols::ChannelProtocol> client_end);
+  };
 
 template <>
 class ::fidl::internal::WireEventDispatcher<::test_protocols::ChannelProtocol> final :

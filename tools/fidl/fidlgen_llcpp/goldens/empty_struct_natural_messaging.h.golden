@@ -122,6 +122,19 @@ class ::fidl::AsyncEventHandler<::test_emptystruct::EmptyProtocol>
 };
 
 template <>
+class ::fidl::SyncEventHandler<::test_emptystruct::EmptyProtocol>
+    : public ::fidl::internal::NaturalEventHandlerInterface<::test_emptystruct::EmptyProtocol>, public ::fidl::internal::SyncEventHandler {
+ public:
+  SyncEventHandler() = default;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
+  // method.
+  ::fidl::Status HandleOneEvent(
+      ::fidl::UnownedClientEnd<::test_emptystruct::EmptyProtocol> client_end);
+};
+
+template <>
 class ::fidl::internal::NaturalEventDispatcher<::test_emptystruct::EmptyProtocol> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_emptystruct::EmptyProtocol>> {
  public:
   explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_emptystruct::EmptyProtocol>* event_handler)

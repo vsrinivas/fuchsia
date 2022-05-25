@@ -68,10 +68,6 @@ namespace test_driveroneway {
 }  // namespace test_driveroneway
 #ifdef __Fuchsia__
 
-::fidl::Status fidl::WireSyncEventHandler<::test_driveroneway::OneWay>::HandleOneEvent(
-    ::fdf::UnownedClientEnd<::test_driveroneway::OneWay> client_end) {
-  ZX_PANIC("events not supported for transport 'Driver'");
-}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__

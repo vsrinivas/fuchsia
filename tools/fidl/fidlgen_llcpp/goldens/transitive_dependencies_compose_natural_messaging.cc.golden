@@ -44,6 +44,12 @@ fidl::internal::NaturalSyncClientImpl<::test_transitivedependenciescompose::Top>
 
 #ifdef __Fuchsia__
 
+::fidl::Status fidl::SyncEventHandler<::test_transitivedependenciescompose::Top>::HandleOneEvent(
+    ::fidl::UnownedClientEnd<::test_transitivedependenciescompose::Top> client_end) {
+  ::fidl::internal::IncomingEventsStorage<::test_transitivedependenciescompose::Top> event_storage;
+  fidl::internal::NaturalEventDispatcher<::test_transitivedependenciescompose::Top> dispatcher{this};
+  return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
+}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__

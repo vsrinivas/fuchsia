@@ -48,6 +48,12 @@ fidl::internal::NaturalSyncClientImpl<::test_inheritance::Super>::Foo(::fidl::Re
 
 #ifdef __Fuchsia__
 
+::fidl::Status fidl::SyncEventHandler<::test_inheritance::Super>::HandleOneEvent(
+    ::fidl::UnownedClientEnd<::test_inheritance::Super> client_end) {
+  ::fidl::internal::IncomingEventsStorage<::test_inheritance::Super> event_storage;
+  fidl::internal::NaturalEventDispatcher<::test_inheritance::Super> dispatcher{this};
+  return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
+}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -143,6 +149,12 @@ fidl::internal::NaturalSyncClientImpl<::test_inheritance::Sub>::Foo(::fidl::Requ
 
 #ifdef __Fuchsia__
 
+::fidl::Status fidl::SyncEventHandler<::test_inheritance::Sub>::HandleOneEvent(
+    ::fidl::UnownedClientEnd<::test_inheritance::Sub> client_end) {
+  ::fidl::internal::IncomingEventsStorage<::test_inheritance::Sub> event_storage;
+  fidl::internal::NaturalEventDispatcher<::test_inheritance::Sub> dispatcher{this};
+  return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
+}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__

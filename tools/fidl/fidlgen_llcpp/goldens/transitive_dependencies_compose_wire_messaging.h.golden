@@ -417,7 +417,8 @@ class ::fidl::WireAsyncEventHandler<::test_transitivedependenciescompose::Top>
 };
 
 template <>
-class ::fidl::WireSyncEventHandler<::test_transitivedependenciescompose::Top> : public ::fidl::internal::WireEventHandlerInterface<::test_transitivedependenciescompose::Top> {
+class ::fidl::WireSyncEventHandler<::test_transitivedependenciescompose::Top>
+    : public ::fidl::internal::WireEventHandlerInterface<::test_transitivedependenciescompose::Top>, public ::fidl::internal::SyncEventHandler {
  public:
   WireSyncEventHandler() = default;
 
@@ -426,9 +427,6 @@ class ::fidl::WireSyncEventHandler<::test_transitivedependenciescompose::Top> : 
   // method.
   ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_transitivedependenciescompose::Top> client_end);
-
- private:
-  [[maybe_unused]] bool got_transitional_ = false;
 };
 
 template <>

@@ -107,6 +107,7 @@ var (
 	NaturalThenable             = internalNs.member("NaturalThenable")
 	NaturalAsyncEventHandler    = transportNs.member("AsyncEventHandler")
 	NaturalSyncClientImpl       = internalNs.member("NaturalSyncClientImpl")
+	NaturalSyncEventHandler     = transportNs.member("SyncEventHandler")
 
 	// NaturalEventHandlerInterface is shared between sync and async event handling.
 	NaturalEventHandlerInterface = internalNs.member("NaturalEventHandlerInterface")
@@ -127,6 +128,7 @@ type unifiedMessagingDetails struct {
 	NaturalEventHandlerInterface name
 	NaturalEventDispatcher       name
 	NaturalSyncClientImpl        name
+	NaturalSyncEventHandler      name
 	NaturalWeakEventSender       name
 	NaturalEventSender           name
 	NaturalServerDispatcher      name
@@ -141,6 +143,7 @@ func compileUnifiedMessagingDetails(protocol nameVariants, fidl fidlgen.Protocol
 		NaturalEventHandlerInterface: NaturalEventHandlerInterface.template(p),
 		NaturalEventDispatcher:       NaturalEventDispatcher.template(p),
 		NaturalSyncClientImpl:        NaturalSyncClientImpl.template(p),
+		NaturalSyncEventHandler:      NaturalSyncEventHandler.template(p),
 		NaturalWeakEventSender:       NaturalWeakEventSender.template(p),
 		NaturalEventSender:           NaturalEventSender.template(p),
 		NaturalServerDispatcher:      NaturalServerDispatcher.template(p),

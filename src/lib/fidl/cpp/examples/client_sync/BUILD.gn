@@ -1,18 +1,19 @@
-# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# [START imports]
 import("//build/components.gni")
 
+# [END imports]
+
 executable("bin") {
-  output_name = "fidl_echo_cpp_client"
+  output_name = "fidl_echo_cpp_client_sync"
   sources = [ "main.cc" ]
 
   deps = [
     "//examples/fidl/fuchsia.examples:fuchsia.examples_cpp",
-    "//sdk/lib/sys/cpp",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//sdk/lib/fdio",
     "//zircon/system/ulib/service:service-llcpp",
   ]
 }
@@ -23,8 +24,8 @@ fuchsia_component("echo-client") {
   deps = [ ":bin" ]
 }
 
-# Unified C++ async client and server example package
-fuchsia_package("echo-cpp-client") {
+# Unified C++ sync client and server example package
+fuchsia_package("echo-cpp-sync-client") {
   deps = [
     ":echo-client",
     "//examples/fidl/echo-realm:echo_realm",
@@ -32,8 +33,8 @@ fuchsia_package("echo-cpp-client") {
   ]
 }
 
-# Unified C++ async client and server example integration test package
-fuchsia_package("echo-cpp-client-test") {
+# Unified C++ sync client and server example integration test package
+fuchsia_package("echo-cpp-sync-client-test") {
   testonly = true
   deps = [
     ":echo-client",
@@ -43,10 +44,10 @@ fuchsia_package("echo-cpp-client-test") {
   ]
 }
 
-group("client") {
+group("client_sync") {
   testonly = true
   deps = [
-    ":echo-cpp-client",
-    ":echo-cpp-client-test",
+    ":echo-cpp-sync-client",
+    ":echo-cpp-sync-client-test",
   ]
 }

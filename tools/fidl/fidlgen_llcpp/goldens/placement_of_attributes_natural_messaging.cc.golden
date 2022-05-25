@@ -41,6 +41,12 @@ fidl::internal::NaturalSyncClientImpl<::test_placementofattributes::ExampleProto
 
 #ifdef __Fuchsia__
 
+::fidl::Status fidl::SyncEventHandler<::test_placementofattributes::ExampleProtocol>::HandleOneEvent(
+    ::fidl::UnownedClientEnd<::test_placementofattributes::ExampleProtocol> client_end) {
+  ::fidl::internal::IncomingEventsStorage<::test_placementofattributes::ExampleProtocol> event_storage;
+  fidl::internal::NaturalEventDispatcher<::test_placementofattributes::ExampleProtocol> dispatcher{this};
+  return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
+}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__

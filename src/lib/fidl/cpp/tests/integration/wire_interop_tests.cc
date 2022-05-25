@@ -717,7 +717,6 @@ class UnifiedSyncClientToWireServer : public zxtest::Test, public MockData {
   fidl::SyncClient<fidl_cpp_wire_interop_test::Interop> client_;
 };
 
-// TODO: more sync client tests
 TEST_F(UnifiedSyncClientToWireServer, RoundTrip) {
   class Server : public WireTestBase {
    public:
@@ -892,6 +891,35 @@ TEST_F(UnifiedSyncClientToWireServer, OneWay) {
   }
 }
 
-// TODO(fxbug.dev/60240): Synchronous natural events handling.
+TEST_F(UnifiedSyncClientToWireServer, OnNode) {
+  fidl::Arena arena;
+
+  class EventHandler : public fidl::SyncEventHandler<fidl_cpp_wire_interop_test::Interop> {
+   public:
+    void OnNode(::fidl::Event<::fidl_cpp_wire_interop_test::Interop::OnNode>& event) override {
+      CheckNaturalDir(event.node());
+      num_calls++;
+    }
+
+    int num_calls = 0;
+  };
+  EventHandler event_handler;
+
+  ASSERT_OK(fidl::WireSendEvent(server_end())->OnNode(MakeWireDir(arena)));
+  {
+    // Event handler syntax.
+    fidl::Status status = event_handler.HandleOneEvent(client().client_end());
+    EXPECT_OK(status);
+    EXPECT_EQ(1, event_handler.num_calls);
+  }
+
+  ASSERT_OK(fidl::WireSendEvent(server_end())->OnNode(MakeWireDir(arena)));
+  {
+    // Sync client syntax.
+    fidl::Status status = client().HandleOneEvent(event_handler);
+    EXPECT_OK(status);
+    EXPECT_EQ(2, event_handler.num_calls);
+  }
+}
 
 }  // namespace

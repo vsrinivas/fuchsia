@@ -48,8 +48,8 @@ struct TransactionalEvent;
 template <typename FidlProtocol>
 class WireSyncEventHandler;
 
-// WireAsyncEventHandler is used by asynchronous clients and adds a callback
-// for unbind completion on top of WireEventHandlerInterface.
+// WireAsyncEventHandler is used by asynchronous clients to handle events and
+// adds a callback for to report fatal errors.
 template <typename FidlProtocol>
 class WireAsyncEventHandler;
 

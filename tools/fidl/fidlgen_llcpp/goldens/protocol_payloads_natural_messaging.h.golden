@@ -731,6 +731,19 @@ class ::fidl::AsyncEventHandler<::test_protocolpayloads::MainProtocol>
 };
 
 template <>
+class ::fidl::SyncEventHandler<::test_protocolpayloads::MainProtocol>
+    : public ::fidl::internal::NaturalEventHandlerInterface<::test_protocolpayloads::MainProtocol>, public ::fidl::internal::SyncEventHandler {
+ public:
+  SyncEventHandler() = default;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
+  // method.
+  ::fidl::Status HandleOneEvent(
+      ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client_end);
+};
+
+template <>
 class ::fidl::internal::NaturalEventDispatcher<::test_protocolpayloads::MainProtocol> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_protocolpayloads::MainProtocol>> {
  public:
   explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_protocolpayloads::MainProtocol>* event_handler)

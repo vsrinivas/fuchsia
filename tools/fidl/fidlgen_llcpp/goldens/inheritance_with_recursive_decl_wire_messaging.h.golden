@@ -238,7 +238,8 @@ class ::fidl::WireAsyncEventHandler<::test_inheritancewithrecursivedecl::Parent>
 };
 
 template <>
-class ::fidl::WireSyncEventHandler<::test_inheritancewithrecursivedecl::Parent> : public ::fidl::internal::WireEventHandlerInterface<::test_inheritancewithrecursivedecl::Parent> {
+class ::fidl::WireSyncEventHandler<::test_inheritancewithrecursivedecl::Parent>
+    : public ::fidl::internal::WireEventHandlerInterface<::test_inheritancewithrecursivedecl::Parent>, public ::fidl::internal::SyncEventHandler {
  public:
   WireSyncEventHandler() = default;
 
@@ -247,9 +248,6 @@ class ::fidl::WireSyncEventHandler<::test_inheritancewithrecursivedecl::Parent> 
   // method.
   ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_inheritancewithrecursivedecl::Parent> client_end);
-
- private:
-  [[maybe_unused]] bool got_transitional_ = false;
 };
 
 template <>
@@ -691,7 +689,8 @@ class ::fidl::WireAsyncEventHandler<::test_inheritancewithrecursivedecl::Child>
 };
 
 template <>
-class ::fidl::WireSyncEventHandler<::test_inheritancewithrecursivedecl::Child> : public ::fidl::internal::WireEventHandlerInterface<::test_inheritancewithrecursivedecl::Child> {
+class ::fidl::WireSyncEventHandler<::test_inheritancewithrecursivedecl::Child>
+    : public ::fidl::internal::WireEventHandlerInterface<::test_inheritancewithrecursivedecl::Child>, public ::fidl::internal::SyncEventHandler {
  public:
   WireSyncEventHandler() = default;
 
@@ -700,9 +699,6 @@ class ::fidl::WireSyncEventHandler<::test_inheritancewithrecursivedecl::Child> :
   // method.
   ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_inheritancewithrecursivedecl::Child> client_end);
-
- private:
-  [[maybe_unused]] bool got_transitional_ = false;
 };
 
 template <>

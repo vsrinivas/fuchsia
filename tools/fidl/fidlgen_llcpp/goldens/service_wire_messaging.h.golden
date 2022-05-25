@@ -200,7 +200,8 @@ class ::fidl::WireAsyncEventHandler<::test_service::SecondProtocol>
 };
 
 template <>
-class ::fidl::WireSyncEventHandler<::test_service::SecondProtocol> : public ::fidl::internal::WireEventHandlerInterface<::test_service::SecondProtocol> {
+class ::fidl::WireSyncEventHandler<::test_service::SecondProtocol>
+    : public ::fidl::internal::WireEventHandlerInterface<::test_service::SecondProtocol>, public ::fidl::internal::SyncEventHandler {
  public:
   WireSyncEventHandler() = default;
 
@@ -209,9 +210,6 @@ class ::fidl::WireSyncEventHandler<::test_service::SecondProtocol> : public ::fi
   // method.
   ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_service::SecondProtocol> client_end);
-
- private:
-  [[maybe_unused]] bool got_transitional_ = false;
 };
 
 template <>
@@ -453,7 +451,8 @@ class ::fidl::WireAsyncEventHandler<::test_service::FirstProtocol>
 };
 
 template <>
-class ::fidl::WireSyncEventHandler<::test_service::FirstProtocol> : public ::fidl::internal::WireEventHandlerInterface<::test_service::FirstProtocol> {
+class ::fidl::WireSyncEventHandler<::test_service::FirstProtocol>
+    : public ::fidl::internal::WireEventHandlerInterface<::test_service::FirstProtocol>, public ::fidl::internal::SyncEventHandler {
  public:
   WireSyncEventHandler() = default;
 
@@ -462,9 +461,6 @@ class ::fidl::WireSyncEventHandler<::test_service::FirstProtocol> : public ::fid
   // method.
   ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_service::FirstProtocol> client_end);
-
- private:
-  [[maybe_unused]] bool got_transitional_ = false;
 };
 
 template <>

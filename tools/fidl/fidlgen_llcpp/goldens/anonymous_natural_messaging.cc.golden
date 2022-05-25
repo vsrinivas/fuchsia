@@ -48,6 +48,12 @@ fidl::internal::NaturalSyncClientImpl<::test_anonymous::SomeProtocol>::SomeMetho
 
 #ifdef __Fuchsia__
 
+::fidl::Status fidl::SyncEventHandler<::test_anonymous::SomeProtocol>::HandleOneEvent(
+    ::fidl::UnownedClientEnd<::test_anonymous::SomeProtocol> client_end) {
+  ::fidl::internal::IncomingEventsStorage<::test_anonymous::SomeProtocol> event_storage;
+  fidl::internal::NaturalEventDispatcher<::test_anonymous::SomeProtocol> dispatcher{this};
+  return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
+}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__

@@ -29,27 +29,26 @@ class {{ .WireAsyncEventHandler }}
   {{- end }}
 };
 
-template<>
-class {{ .WireSyncEventHandler }} : public {{ .WireEventHandlerInterface }} {
- public:
-  {{ .WireSyncEventHandler.Self }}() = default;
+{{ if .Transport.HasEvents }}
+  template<>
+  class {{ .WireSyncEventHandler }}
+      : public {{ .WireEventHandlerInterface }}, public ::fidl::internal::SyncEventHandler {
+   public:
+    {{ .WireSyncEventHandler.Self }}() = default;
 
-  {{- range .Events }}
-    {{- if .Transitional }}
-      void {{ .Name }}({{ .WireEvent }}* event) override { got_transitional_ = true; }
+    {{- range .Events }}
+      {{- if .Transitional }}
+        void {{ .Name }}({{ .WireEvent }}* event) override { OnTransitionalEvent_(); }
+      {{- end }}
     {{- end }}
-  {{- end }}
 
-  // Handle all possible events defined in this protocol.
-  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
-  // method.
-  ::fidl::Status HandleOneEvent(
-      ::{{ .Transport.Namespace }}::UnownedClientEnd<{{ . }}> client_end);
-
- private:
-  [[maybe_unused]]
-  bool got_transitional_ = false;
-};
+    // Handle all possible events defined in this protocol.
+    // Blocks to consume exactly one message from the channel, then call the corresponding virtual
+    // method.
+    ::fidl::Status HandleOneEvent(
+        ::{{ .Transport.Namespace }}::UnownedClientEnd<{{ . }}> client_end);
+  };
+{{- end }}
 
 template <>
 class {{ .WireEventDispatcher }} final :
@@ -72,40 +71,15 @@ class {{ .WireEventDispatcher }} final :
 {{- define "Protocol:EventHandler:WireMessagingSource" }}
 {{ EnsureNamespace "" }}
 {{- IfdefFuchsia }}
+
 {{ if .Transport.HasEvents }}
-::fidl::Status {{ .WireSyncEventHandler.NoLeading }}::HandleOneEvent(
-    ::{{ .Transport.Namespace }}::UnownedClientEnd<{{ . }}> client_end) {
-  zx_status_t status = client_end.channel()->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
-                                                      ::zx::time::infinite(),
-                                                      nullptr);
-  if (status != ZX_OK) {
-    return ::fidl::Status::TransportError(status, ::fidl::internal::kErrorWaitOneFailed);
+  ::fidl::Status {{ .WireSyncEventHandler.NoLeading }}::HandleOneEvent(
+      ::{{ .Transport.Namespace }}::UnownedClientEnd<{{ . }}> client_end) {
+      {{ .IncomingEventsStorage }} event_storage;
+      {{ .WireEventDispatcher.NoLeading }} dispatcher{this};
+      return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
   }
-  {{ .IncomingEventsStorage }} event_storage;
-  ::fidl::ChannelMessageStorageView storage_view = event_storage.view();
-  ::fidl::IncomingMessage msg = ::fidl::MessageRead(
-      zx::unowned_channel(client_end.handle()), storage_view, ReadOptions{.discardable = true});
-  if (msg.status() == ZX_ERR_BUFFER_TOO_SMALL) {
-    {{- /*
-    Message size is unexpectedly larger than calculated.
-    This can only be due to a newer version of the protocol defining a new event,
-    whose size exceeds the maximum of known events in the current protocol.
-    */}}
-    return ::fidl::Status::UnexpectedMessage(
-        ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorSyncEventBufferTooSmall);
-  }
-  if (!msg.ok()) {
-    return msg;
-  }
-  got_transitional_ = false;
-  {{ .WireEventDispatcher.NoLeading }} dispatcher{this};
-  ::fidl::Status dispatch_status = dispatcher.DispatchEvent(msg, &storage_view);
-  if (got_transitional_) {
-    return ::fidl::Status::UnexpectedMessage(
-        ZX_ERR_NOT_SUPPORTED, ::fidl::internal::kErrorSyncEventUnhandledTransitionalEvent);
-  }
-  return dispatch_status;
-}
+{{- end }}
 
 {{- if .Events }}
   ::fidl::Status
@@ -138,13 +112,6 @@ class {{ .WireEventDispatcher }} final :
   }
 {{- end }}
 
-{{- else }}{{/* not .Transport.HasEvents */}}
-::fidl::Status {{ .WireSyncEventHandler.NoLeading }}::HandleOneEvent(
-    ::{{ .Transport.Namespace }}::UnownedClientEnd<{{ . }}> client_end) {
-      ZX_PANIC("events not supported for transport '{{ .Transport.Name }}'");
-}
-
-{{- end }}{{/* if .Transport.HasEvents */}}
 {{- EndifFuchsia }}
 {{- end }}
 
@@ -176,6 +143,27 @@ class {{ .NaturalAsyncEventHandler }}
   {{- end }}
 };
 
+{{ if .Transport.HasEvents }}
+  template<>
+  class {{ .NaturalSyncEventHandler }}
+      : public {{ .NaturalEventHandlerInterface }}, public ::fidl::internal::SyncEventHandler {
+   public:
+    {{ .NaturalSyncEventHandler.Self }}() = default;
+
+    {{- range .Events }}
+      {{- if .Transitional }}
+        void {{ .Name }}({{ .NaturalEvent }}&) override { OnTransitionalEvent_(); }
+      {{- end }}
+    {{- end }}
+
+    // Handle all possible events defined in this protocol.
+    // Blocks to consume exactly one message from the channel, then call the corresponding virtual
+    // method.
+    ::fidl::Status HandleOneEvent(
+        ::{{ .Transport.Namespace }}::UnownedClientEnd<{{ . }}> client_end);
+  };
+{{- end }}
+
 template <>
 class {{ .NaturalEventDispatcher }} final :
     public ::fidl::internal::IncomingEventDispatcher<{{ .NaturalEventHandlerInterface }}> {
@@ -197,6 +185,15 @@ class {{ .NaturalEventDispatcher }} final :
 {{- define "Protocol:EventHandler:NaturalMessagingSource" }}
 {{- EnsureNamespace "" }}
 {{- IfdefFuchsia }}
+
+{{ if .Transport.HasEvents }}
+  ::fidl::Status {{ .NaturalSyncEventHandler.NoLeading }}::HandleOneEvent(
+      ::{{ .Transport.Namespace }}::UnownedClientEnd<{{ . }}> client_end) {
+      {{ .IncomingEventsStorage }} event_storage;
+      {{ .NaturalEventDispatcher.NoLeading }} dispatcher{this};
+      return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
+  }
+{{- end }}
 
 {{- if .Events }}
   ::fidl::Status

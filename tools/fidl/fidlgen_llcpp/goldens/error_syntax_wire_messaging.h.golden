@@ -839,7 +839,8 @@ class ::fidl::WireAsyncEventHandler<::test_errorsyntax::ExampleUseOfErrorSyntax>
 };
 
 template <>
-class ::fidl::WireSyncEventHandler<::test_errorsyntax::ExampleUseOfErrorSyntax> : public ::fidl::internal::WireEventHandlerInterface<::test_errorsyntax::ExampleUseOfErrorSyntax> {
+class ::fidl::WireSyncEventHandler<::test_errorsyntax::ExampleUseOfErrorSyntax>
+    : public ::fidl::internal::WireEventHandlerInterface<::test_errorsyntax::ExampleUseOfErrorSyntax>, public ::fidl::internal::SyncEventHandler {
  public:
   WireSyncEventHandler() = default;
 
@@ -848,9 +849,6 @@ class ::fidl::WireSyncEventHandler<::test_errorsyntax::ExampleUseOfErrorSyntax> 
   // method.
   ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_errorsyntax::ExampleUseOfErrorSyntax> client_end);
-
- private:
-  [[maybe_unused]] bool got_transitional_ = false;
 };
 
 template <>

@@ -195,6 +195,12 @@ fidl::internal::NaturalSyncClientImpl<::test_protocols::WithAndWithoutRequestRes
 
 #ifdef __Fuchsia__
 
+::fidl::Status fidl::SyncEventHandler<::test_protocols::WithAndWithoutRequestResponse>::HandleOneEvent(
+    ::fidl::UnownedClientEnd<::test_protocols::WithAndWithoutRequestResponse> client_end) {
+  ::fidl::internal::IncomingEventsStorage<::test_protocols::WithAndWithoutRequestResponse> event_storage;
+  fidl::internal::NaturalEventDispatcher<::test_protocols::WithAndWithoutRequestResponse> dispatcher{this};
+  return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
+}
 ::fidl::Status
 fidl::internal::NaturalEventDispatcher<::test_protocols::WithAndWithoutRequestResponse>::DispatchEvent(
     ::fidl::IncomingMessage& msg,
@@ -483,6 +489,12 @@ fidl::internal::NaturalSyncClientImpl<::test_protocols::Transitional>::OneWay(::
 
 #ifdef __Fuchsia__
 
+::fidl::Status fidl::SyncEventHandler<::test_protocols::Transitional>::HandleOneEvent(
+    ::fidl::UnownedClientEnd<::test_protocols::Transitional> client_end) {
+  ::fidl::internal::IncomingEventsStorage<::test_protocols::Transitional> event_storage;
+  fidl::internal::NaturalEventDispatcher<::test_protocols::Transitional> dispatcher{this};
+  return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
+}
 ::fidl::Status
 fidl::internal::NaturalEventDispatcher<::test_protocols::Transitional>::DispatchEvent(
     ::fidl::IncomingMessage& msg,
@@ -624,6 +636,12 @@ fidl::internal::NaturalSyncClientImpl<::test_protocols::MethodWithUnion>::UnionM
 
 #ifdef __Fuchsia__
 
+::fidl::Status fidl::SyncEventHandler<::test_protocols::MethodWithUnion>::HandleOneEvent(
+    ::fidl::UnownedClientEnd<::test_protocols::MethodWithUnion> client_end) {
+  ::fidl::internal::IncomingEventsStorage<::test_protocols::MethodWithUnion> event_storage;
+  fidl::internal::NaturalEventDispatcher<::test_protocols::MethodWithUnion> dispatcher{this};
+  return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
+}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -776,6 +794,12 @@ fidl::internal::NaturalSyncClientImpl<::test_protocols::WithProtocolEnds>::Struc
 
 #ifdef __Fuchsia__
 
+::fidl::Status fidl::SyncEventHandler<::test_protocols::WithProtocolEnds>::HandleOneEvent(
+    ::fidl::UnownedClientEnd<::test_protocols::WithProtocolEnds> client_end) {
+  ::fidl::internal::IncomingEventsStorage<::test_protocols::WithProtocolEnds> event_storage;
+  fidl::internal::NaturalEventDispatcher<::test_protocols::WithProtocolEnds> dispatcher{this};
+  return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
+}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -912,6 +936,12 @@ fidl::internal::NaturalSyncClientImpl<::test_protocols::ManyParameters>::Fifteen
 
 #ifdef __Fuchsia__
 
+::fidl::Status fidl::SyncEventHandler<::test_protocols::ManyParameters>::HandleOneEvent(
+    ::fidl::UnownedClientEnd<::test_protocols::ManyParameters> client_end) {
+  ::fidl::internal::IncomingEventsStorage<::test_protocols::ManyParameters> event_storage;
+  fidl::internal::NaturalEventDispatcher<::test_protocols::ManyParameters> dispatcher{this};
+  return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
+}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1028,6 +1058,12 @@ fidl::internal::NaturalSyncClientImpl<::test_protocols::HandleRightsProtocol>::N
 
 #ifdef __Fuchsia__
 
+::fidl::Status fidl::SyncEventHandler<::test_protocols::HandleRightsProtocol>::HandleOneEvent(
+    ::fidl::UnownedClientEnd<::test_protocols::HandleRightsProtocol> client_end) {
+  ::fidl::internal::IncomingEventsStorage<::test_protocols::HandleRightsProtocol> event_storage;
+  fidl::internal::NaturalEventDispatcher<::test_protocols::HandleRightsProtocol> dispatcher{this};
+  return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
+}
 ::fidl::Status
 fidl::internal::NaturalEventDispatcher<::test_protocols::HandleRightsProtocol>::DispatchEvent(
     ::fidl::IncomingMessage& msg,
@@ -1259,6 +1295,12 @@ fidl::internal::NaturalSyncClientImpl<::test_protocols::WithErrorSyntax>::Handle
 
 #ifdef __Fuchsia__
 
+::fidl::Status fidl::SyncEventHandler<::test_protocols::WithErrorSyntax>::HandleOneEvent(
+    ::fidl::UnownedClientEnd<::test_protocols::WithErrorSyntax> client_end) {
+  ::fidl::internal::IncomingEventsStorage<::test_protocols::WithErrorSyntax> event_storage;
+  fidl::internal::NaturalEventDispatcher<::test_protocols::WithErrorSyntax> dispatcher{this};
+  return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
+}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1414,6 +1456,12 @@ fidl::internal::NaturalSyncClientImpl<::test_protocols::DiscoverableProtocol>::M
 
 #ifdef __Fuchsia__
 
+::fidl::Status fidl::SyncEventHandler<::test_protocols::DiscoverableProtocol>::HandleOneEvent(
+    ::fidl::UnownedClientEnd<::test_protocols::DiscoverableProtocol> client_end) {
+  ::fidl::internal::IncomingEventsStorage<::test_protocols::DiscoverableProtocol> event_storage;
+  fidl::internal::NaturalEventDispatcher<::test_protocols::DiscoverableProtocol> dispatcher{this};
+  return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
+}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1596,6 +1644,12 @@ fidl::internal::NaturalSyncClientImpl<::test_protocols::ChannelProtocol>::Method
 
 #ifdef __Fuchsia__
 
+::fidl::Status fidl::SyncEventHandler<::test_protocols::ChannelProtocol>::HandleOneEvent(
+    ::fidl::UnownedClientEnd<::test_protocols::ChannelProtocol> client_end) {
+  ::fidl::internal::IncomingEventsStorage<::test_protocols::ChannelProtocol> event_storage;
+  fidl::internal::NaturalEventDispatcher<::test_protocols::ChannelProtocol> dispatcher{this};
+  return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
+}
 ::fidl::Status
 fidl::internal::NaturalEventDispatcher<::test_protocols::ChannelProtocol>::DispatchEvent(
     ::fidl::IncomingMessage& msg,

@@ -12,31 +12,9 @@
 
 ::fidl::Status fidl::WireSyncEventHandler<::test_bindingsdenylist::Allowed>::HandleOneEvent(
     ::fidl::UnownedClientEnd<::test_bindingsdenylist::Allowed> client_end) {
-  zx_status_t status = client_end.channel()->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
-                                                      ::zx::time::infinite(),
-                                                      nullptr);
-  if (status != ZX_OK) {
-    return ::fidl::Status::TransportError(status, ::fidl::internal::kErrorWaitOneFailed);
-  }
   ::fidl::internal::IncomingEventsStorage<::test_bindingsdenylist::Allowed> event_storage;
-  ::fidl::ChannelMessageStorageView storage_view = event_storage.view();
-  ::fidl::IncomingMessage msg = ::fidl::MessageRead(
-      zx::unowned_channel(client_end.handle()), storage_view, ReadOptions{.discardable = true});
-  if (msg.status() == ZX_ERR_BUFFER_TOO_SMALL) {
-    return ::fidl::Status::UnexpectedMessage(
-        ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorSyncEventBufferTooSmall);
-  }
-  if (!msg.ok()) {
-    return msg;
-  }
-  got_transitional_ = false;
   fidl::internal::WireEventDispatcher<::test_bindingsdenylist::Allowed> dispatcher{this};
-  ::fidl::Status dispatch_status = dispatcher.DispatchEvent(msg, &storage_view);
-  if (got_transitional_) {
-    return ::fidl::Status::UnexpectedMessage(
-        ZX_ERR_NOT_SUPPORTED, ::fidl::internal::kErrorSyncEventUnhandledTransitionalEvent);
-  }
-  return dispatch_status;
+  return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
 }
 #endif  // __Fuchsia__
 
@@ -157,31 +135,9 @@ fidl::internal::WireWeakSyncClientImpl<::test_bindingsdenylist::OnlyLibfuzzerAnd
 
 ::fidl::Status fidl::WireSyncEventHandler<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>::HandleOneEvent(
     ::fidl::UnownedClientEnd<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> client_end) {
-  zx_status_t status = client_end.channel()->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
-                                                      ::zx::time::infinite(),
-                                                      nullptr);
-  if (status != ZX_OK) {
-    return ::fidl::Status::TransportError(status, ::fidl::internal::kErrorWaitOneFailed);
-  }
   ::fidl::internal::IncomingEventsStorage<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> event_storage;
-  ::fidl::ChannelMessageStorageView storage_view = event_storage.view();
-  ::fidl::IncomingMessage msg = ::fidl::MessageRead(
-      zx::unowned_channel(client_end.handle()), storage_view, ReadOptions{.discardable = true});
-  if (msg.status() == ZX_ERR_BUFFER_TOO_SMALL) {
-    return ::fidl::Status::UnexpectedMessage(
-        ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorSyncEventBufferTooSmall);
-  }
-  if (!msg.ok()) {
-    return msg;
-  }
-  got_transitional_ = false;
   fidl::internal::WireEventDispatcher<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> dispatcher{this};
-  ::fidl::Status dispatch_status = dispatcher.DispatchEvent(msg, &storage_view);
-  if (got_transitional_) {
-    return ::fidl::Status::UnexpectedMessage(
-        ZX_ERR_NOT_SUPPORTED, ::fidl::internal::kErrorSyncEventUnhandledTransitionalEvent);
-  }
-  return dispatch_status;
+  return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
 }
 #endif  // __Fuchsia__
 
@@ -273,31 +229,9 @@ void ::fidl::internal::TransactionalResponse<::test_bindingsdenylist::OnlyLibfuz
 
 ::fidl::Status fidl::WireSyncEventHandler<::test_bindingsdenylist::OnlyCppAndDeps>::HandleOneEvent(
     ::fidl::UnownedClientEnd<::test_bindingsdenylist::OnlyCppAndDeps> client_end) {
-  zx_status_t status = client_end.channel()->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
-                                                      ::zx::time::infinite(),
-                                                      nullptr);
-  if (status != ZX_OK) {
-    return ::fidl::Status::TransportError(status, ::fidl::internal::kErrorWaitOneFailed);
-  }
   ::fidl::internal::IncomingEventsStorage<::test_bindingsdenylist::OnlyCppAndDeps> event_storage;
-  ::fidl::ChannelMessageStorageView storage_view = event_storage.view();
-  ::fidl::IncomingMessage msg = ::fidl::MessageRead(
-      zx::unowned_channel(client_end.handle()), storage_view, ReadOptions{.discardable = true});
-  if (msg.status() == ZX_ERR_BUFFER_TOO_SMALL) {
-    return ::fidl::Status::UnexpectedMessage(
-        ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorSyncEventBufferTooSmall);
-  }
-  if (!msg.ok()) {
-    return msg;
-  }
-  got_transitional_ = false;
   fidl::internal::WireEventDispatcher<::test_bindingsdenylist::OnlyCppAndDeps> dispatcher{this};
-  ::fidl::Status dispatch_status = dispatcher.DispatchEvent(msg, &storage_view);
-  if (got_transitional_) {
-    return ::fidl::Status::UnexpectedMessage(
-        ZX_ERR_NOT_SUPPORTED, ::fidl::internal::kErrorSyncEventUnhandledTransitionalEvent);
-  }
-  return dispatch_status;
+  return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
 }
 #endif  // __Fuchsia__
 
@@ -461,31 +395,9 @@ namespace test_bindingsdenylist {
 
 ::fidl::Status fidl::WireSyncEventHandler<::test_bindingsdenylist::ImportsSameNameContext>::HandleOneEvent(
     ::fidl::UnownedClientEnd<::test_bindingsdenylist::ImportsSameNameContext> client_end) {
-  zx_status_t status = client_end.channel()->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
-                                                      ::zx::time::infinite(),
-                                                      nullptr);
-  if (status != ZX_OK) {
-    return ::fidl::Status::TransportError(status, ::fidl::internal::kErrorWaitOneFailed);
-  }
   ::fidl::internal::IncomingEventsStorage<::test_bindingsdenylist::ImportsSameNameContext> event_storage;
-  ::fidl::ChannelMessageStorageView storage_view = event_storage.view();
-  ::fidl::IncomingMessage msg = ::fidl::MessageRead(
-      zx::unowned_channel(client_end.handle()), storage_view, ReadOptions{.discardable = true});
-  if (msg.status() == ZX_ERR_BUFFER_TOO_SMALL) {
-    return ::fidl::Status::UnexpectedMessage(
-        ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorSyncEventBufferTooSmall);
-  }
-  if (!msg.ok()) {
-    return msg;
-  }
-  got_transitional_ = false;
   fidl::internal::WireEventDispatcher<::test_bindingsdenylist::ImportsSameNameContext> dispatcher{this};
-  ::fidl::Status dispatch_status = dispatcher.DispatchEvent(msg, &storage_view);
-  if (got_transitional_) {
-    return ::fidl::Status::UnexpectedMessage(
-        ZX_ERR_NOT_SUPPORTED, ::fidl::internal::kErrorSyncEventUnhandledTransitionalEvent);
-  }
-  return dispatch_status;
+  return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
 }
 #endif  // __Fuchsia__
 
@@ -1059,31 +971,9 @@ fidl::internal::WireWeakSyncClientImpl<::test_bindingsdenylist::DenyEachBinding>
 
 ::fidl::Status fidl::WireSyncEventHandler<::test_bindingsdenylist::DenyEachBinding>::HandleOneEvent(
     ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding> client_end) {
-  zx_status_t status = client_end.channel()->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
-                                                      ::zx::time::infinite(),
-                                                      nullptr);
-  if (status != ZX_OK) {
-    return ::fidl::Status::TransportError(status, ::fidl::internal::kErrorWaitOneFailed);
-  }
   ::fidl::internal::IncomingEventsStorage<::test_bindingsdenylist::DenyEachBinding> event_storage;
-  ::fidl::ChannelMessageStorageView storage_view = event_storage.view();
-  ::fidl::IncomingMessage msg = ::fidl::MessageRead(
-      zx::unowned_channel(client_end.handle()), storage_view, ReadOptions{.discardable = true});
-  if (msg.status() == ZX_ERR_BUFFER_TOO_SMALL) {
-    return ::fidl::Status::UnexpectedMessage(
-        ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorSyncEventBufferTooSmall);
-  }
-  if (!msg.ok()) {
-    return msg;
-  }
-  got_transitional_ = false;
   fidl::internal::WireEventDispatcher<::test_bindingsdenylist::DenyEachBinding> dispatcher{this};
-  ::fidl::Status dispatch_status = dispatcher.DispatchEvent(msg, &storage_view);
-  if (got_transitional_) {
-    return ::fidl::Status::UnexpectedMessage(
-        ZX_ERR_NOT_SUPPORTED, ::fidl::internal::kErrorSyncEventUnhandledTransitionalEvent);
-  }
-  return dispatch_status;
+  return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
 }
 #endif  // __Fuchsia__
 

@@ -519,6 +519,12 @@ fidl::internal::NaturalSyncClientImpl<::test_protocollayouts::MainProtocol>::One
 
 #ifdef __Fuchsia__
 
+::fidl::Status fidl::SyncEventHandler<::test_protocollayouts::MainProtocol>::HandleOneEvent(
+    ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client_end) {
+  ::fidl::internal::IncomingEventsStorage<::test_protocollayouts::MainProtocol> event_storage;
+  fidl::internal::NaturalEventDispatcher<::test_protocollayouts::MainProtocol> dispatcher{this};
+  return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
+}
 ::fidl::Status
 fidl::internal::NaturalEventDispatcher<::test_protocollayouts::MainProtocol>::DispatchEvent(
     ::fidl::IncomingMessage& msg,

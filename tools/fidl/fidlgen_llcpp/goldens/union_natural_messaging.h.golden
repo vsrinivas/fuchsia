@@ -138,6 +138,19 @@ class ::fidl::AsyncEventHandler<::test_union::TestProtocol>
 };
 
 template <>
+class ::fidl::SyncEventHandler<::test_union::TestProtocol>
+    : public ::fidl::internal::NaturalEventHandlerInterface<::test_union::TestProtocol>, public ::fidl::internal::SyncEventHandler {
+ public:
+  SyncEventHandler() = default;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
+  // method.
+  ::fidl::Status HandleOneEvent(
+      ::fidl::UnownedClientEnd<::test_union::TestProtocol> client_end);
+};
+
+template <>
 class ::fidl::internal::NaturalEventDispatcher<::test_union::TestProtocol> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_union::TestProtocol>> {
  public:
   explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_union::TestProtocol>* event_handler)

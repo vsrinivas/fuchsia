@@ -24,7 +24,7 @@ class EchoImpl;
 
 // [START impl]
 // An implementation of the Echo protocol. Protocols are implemented in LLCPP by
-// creating a subclass of the ::Interface class for the protocol.
+// creating a subclass of the fidl::WireServer class for the protocol.
 class EchoImpl final : public fidl::WireServer<fuchsia_examples::Echo> {
  public:
   // [START bind_server]

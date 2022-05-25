@@ -193,21 +193,6 @@ class ::fdf::WireAsyncEventHandler<::test_driveroneway::OneWay>
 };
 
 template <>
-class ::fidl::WireSyncEventHandler<::test_driveroneway::OneWay> : public ::fidl::internal::WireEventHandlerInterface<::test_driveroneway::OneWay> {
- public:
-  WireSyncEventHandler() = default;
-
-  // Handle all possible events defined in this protocol.
-  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
-  // method.
-  ::fidl::Status HandleOneEvent(
-      ::fdf::UnownedClientEnd<::test_driveroneway::OneWay> client_end);
-
- private:
-  [[maybe_unused]] bool got_transitional_ = false;
-};
-
-template <>
 class ::fidl::internal::WireEventDispatcher<::test_driveroneway::OneWay> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::WireEventHandlerInterface<::test_driveroneway::OneWay>> {
  public:
   explicit WireEventDispatcher(::fidl::internal::WireEventHandlerInterface<::test_driveroneway::OneWay>* event_handler)

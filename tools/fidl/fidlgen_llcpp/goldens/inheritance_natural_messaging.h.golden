@@ -98,6 +98,19 @@ class ::fidl::AsyncEventHandler<::test_inheritance::Super>
 };
 
 template <>
+class ::fidl::SyncEventHandler<::test_inheritance::Super>
+    : public ::fidl::internal::NaturalEventHandlerInterface<::test_inheritance::Super>, public ::fidl::internal::SyncEventHandler {
+ public:
+  SyncEventHandler() = default;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
+  // method.
+  ::fidl::Status HandleOneEvent(
+      ::fidl::UnownedClientEnd<::test_inheritance::Super> client_end);
+};
+
+template <>
 class ::fidl::internal::NaturalEventDispatcher<::test_inheritance::Super> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_inheritance::Super>> {
  public:
   explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_inheritance::Super>* event_handler)
@@ -255,6 +268,19 @@ class ::fidl::AsyncEventHandler<::test_inheritance::Sub>
     : public ::fidl::internal::NaturalEventHandlerInterface<::test_inheritance::Sub>, public ::fidl::internal::AsyncEventHandler {
  public:
   AsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::SyncEventHandler<::test_inheritance::Sub>
+    : public ::fidl::internal::NaturalEventHandlerInterface<::test_inheritance::Sub>, public ::fidl::internal::SyncEventHandler {
+ public:
+  SyncEventHandler() = default;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
+  // method.
+  ::fidl::Status HandleOneEvent(
+      ::fidl::UnownedClientEnd<::test_inheritance::Sub> client_end);
 };
 
 template <>

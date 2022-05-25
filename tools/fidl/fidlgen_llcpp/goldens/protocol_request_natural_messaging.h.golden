@@ -149,6 +149,19 @@ class ::fidl::AsyncEventHandler<::test_protocolrequest::Parent>
 };
 
 template <>
+class ::fidl::SyncEventHandler<::test_protocolrequest::Parent>
+    : public ::fidl::internal::NaturalEventHandlerInterface<::test_protocolrequest::Parent>, public ::fidl::internal::SyncEventHandler {
+ public:
+  SyncEventHandler() = default;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
+  // method.
+  ::fidl::Status HandleOneEvent(
+      ::fidl::UnownedClientEnd<::test_protocolrequest::Parent> client_end);
+};
+
+template <>
 class ::fidl::internal::NaturalEventDispatcher<::test_protocolrequest::Parent> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_protocolrequest::Parent>> {
  public:
   explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_protocolrequest::Parent>* event_handler)
@@ -338,6 +351,19 @@ class ::fidl::AsyncEventHandler<::test_protocolrequest::Child>
     : public ::fidl::internal::NaturalEventHandlerInterface<::test_protocolrequest::Child>, public ::fidl::internal::AsyncEventHandler {
  public:
   AsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::SyncEventHandler<::test_protocolrequest::Child>
+    : public ::fidl::internal::NaturalEventHandlerInterface<::test_protocolrequest::Child>, public ::fidl::internal::SyncEventHandler {
+ public:
+  SyncEventHandler() = default;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
+  // method.
+  ::fidl::Status HandleOneEvent(
+      ::fidl::UnownedClientEnd<::test_protocolrequest::Child> client_end);
 };
 
 template <>

@@ -1081,7 +1081,8 @@ class ::fidl::WireAsyncEventHandler<::test_protocolrequest::Parent>
 };
 
 template <>
-class ::fidl::WireSyncEventHandler<::test_protocolrequest::Parent> : public ::fidl::internal::WireEventHandlerInterface<::test_protocolrequest::Parent> {
+class ::fidl::WireSyncEventHandler<::test_protocolrequest::Parent>
+    : public ::fidl::internal::WireEventHandlerInterface<::test_protocolrequest::Parent>, public ::fidl::internal::SyncEventHandler {
  public:
   WireSyncEventHandler() = default;
 
@@ -1090,9 +1091,6 @@ class ::fidl::WireSyncEventHandler<::test_protocolrequest::Parent> : public ::fi
   // method.
   ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_protocolrequest::Parent> client_end);
-
- private:
-  [[maybe_unused]] bool got_transitional_ = false;
 };
 
 template <>
@@ -1341,7 +1339,8 @@ class ::fidl::WireAsyncEventHandler<::test_protocolrequest::Child>
 };
 
 template <>
-class ::fidl::WireSyncEventHandler<::test_protocolrequest::Child> : public ::fidl::internal::WireEventHandlerInterface<::test_protocolrequest::Child> {
+class ::fidl::WireSyncEventHandler<::test_protocolrequest::Child>
+    : public ::fidl::internal::WireEventHandlerInterface<::test_protocolrequest::Child>, public ::fidl::internal::SyncEventHandler {
  public:
   WireSyncEventHandler() = default;
 
@@ -1350,9 +1349,6 @@ class ::fidl::WireSyncEventHandler<::test_protocolrequest::Child> : public ::fid
   // method.
   ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_protocolrequest::Child> client_end);
-
- private:
-  [[maybe_unused]] bool got_transitional_ = false;
 };
 
 template <>

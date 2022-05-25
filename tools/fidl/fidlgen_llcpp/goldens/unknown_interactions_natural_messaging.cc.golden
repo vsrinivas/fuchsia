@@ -124,6 +124,12 @@ fidl::internal::NaturalSyncClientImpl<::test_unknowninteractions::Example>::Flex
 
 #ifdef __Fuchsia__
 
+::fidl::Status fidl::SyncEventHandler<::test_unknowninteractions::Example>::HandleOneEvent(
+    ::fidl::UnownedClientEnd<::test_unknowninteractions::Example> client_end) {
+  ::fidl::internal::IncomingEventsStorage<::test_unknowninteractions::Example> event_storage;
+  fidl::internal::NaturalEventDispatcher<::test_unknowninteractions::Example> dispatcher{this};
+  return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
+}
 ::fidl::Status
 fidl::internal::NaturalEventDispatcher<::test_unknowninteractions::Example>::DispatchEvent(
     ::fidl::IncomingMessage& msg,

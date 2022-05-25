@@ -81,6 +81,12 @@ fidl::internal::NaturalSyncClientImpl<::test_requestflexibleenvelope::Protocol>:
 
 #ifdef __Fuchsia__
 
+::fidl::Status fidl::SyncEventHandler<::test_requestflexibleenvelope::Protocol>::HandleOneEvent(
+    ::fidl::UnownedClientEnd<::test_requestflexibleenvelope::Protocol> client_end) {
+  ::fidl::internal::IncomingEventsStorage<::test_requestflexibleenvelope::Protocol> event_storage;
+  fidl::internal::NaturalEventDispatcher<::test_requestflexibleenvelope::Protocol> dispatcher{this};
+  return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
+}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__

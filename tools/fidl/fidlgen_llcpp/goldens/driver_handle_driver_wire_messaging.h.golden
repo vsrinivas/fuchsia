@@ -210,21 +210,6 @@ class ::fdf::WireAsyncEventHandler<::test_driverhandle::HandlesInProtocol>
 };
 
 template <>
-class ::fidl::WireSyncEventHandler<::test_driverhandle::HandlesInProtocol> : public ::fidl::internal::WireEventHandlerInterface<::test_driverhandle::HandlesInProtocol> {
- public:
-  WireSyncEventHandler() = default;
-
-  // Handle all possible events defined in this protocol.
-  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
-  // method.
-  ::fidl::Status HandleOneEvent(
-      ::fdf::UnownedClientEnd<::test_driverhandle::HandlesInProtocol> client_end);
-
- private:
-  [[maybe_unused]] bool got_transitional_ = false;
-};
-
-template <>
 class ::fidl::internal::WireEventDispatcher<::test_driverhandle::HandlesInProtocol> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::WireEventHandlerInterface<::test_driverhandle::HandlesInProtocol>> {
  public:
   explicit WireEventDispatcher(::fidl::internal::WireEventHandlerInterface<::test_driverhandle::HandlesInProtocol>* event_handler)
@@ -317,21 +302,6 @@ class ::fdf::WireAsyncEventHandler<::test_driverhandle::DriverProtocol>
     : public ::fidl::internal::WireEventHandlerInterface<::test_driverhandle::DriverProtocol>, public ::fidl::internal::AsyncEventHandler {
  public:
   WireAsyncEventHandler() = default;
-};
-
-template <>
-class ::fidl::WireSyncEventHandler<::test_driverhandle::DriverProtocol> : public ::fidl::internal::WireEventHandlerInterface<::test_driverhandle::DriverProtocol> {
- public:
-  WireSyncEventHandler() = default;
-
-  // Handle all possible events defined in this protocol.
-  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
-  // method.
-  ::fidl::Status HandleOneEvent(
-      ::fdf::UnownedClientEnd<::test_driverhandle::DriverProtocol> client_end);
-
- private:
-  [[maybe_unused]] bool got_transitional_ = false;
 };
 
 template <>

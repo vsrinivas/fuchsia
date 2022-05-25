@@ -128,14 +128,12 @@ class SyncClient : private WireSyncClient<FidlProtocol> {
   // The client must be initialized first.
   const Base& wire() const { return *this; }
 
-  // TODO(fxbug.dev/60240): Implement natural sync event handler.
-  //
   // Handle all possible events defined in this protocol.
   //
   // Blocks to consume exactly one message from the channel, then call the corresponding virtual
   // method defined in |event_handler|. If the message was unknown or malformed, returns an
   // error without calling any virtual method.
-  ::fidl::Status HandleOneEvent(fidl::WireSyncEventHandler<FidlProtocol>& event_handler) const {
+  ::fidl::Status HandleOneEvent(fidl::SyncEventHandler<FidlProtocol>& event_handler) const {
     return event_handler.HandleOneEvent(client_end());
   }
 };
@@ -146,7 +144,7 @@ SyncClient(fidl::ClientEnd<FidlProtocol>) -> SyncClient<FidlProtocol>;
 // |Call| is used to make method calls directly on a |fidl::ClientEnd|
 // without having to set up a client. Call it like:
 //
-//     fidl::Call(client_end)->Method(args...);
+//     fidl::Call(client_end)->Method(request);
 //
 template <typename FidlProtocol>
 internal::SyncEndpointManagedVeneer<internal::NaturalSyncClientImpl<FidlProtocol>> Call(
@@ -158,7 +156,7 @@ internal::SyncEndpointManagedVeneer<internal::NaturalSyncClientImpl<FidlProtocol
 // |Call| is used to make method calls directly on a |fidl::ClientEnd|
 // without having to set up a client. Call it like:
 //
-//     fidl::Call(client_end)->Method(args...);
+//     fidl::Call(client_end)->Method(request);
 //
 template <typename FidlProtocol>
 internal::SyncEndpointManagedVeneer<internal::NaturalSyncClientImpl<FidlProtocol>> Call(

@@ -6,6 +6,7 @@
 #define LIB_FIDL_LLCPP_INTERNAL_CLIENT_DETAILS_H_
 
 #include <lib/fidl/llcpp/internal/arrow.h>
+#include <lib/fidl/llcpp/internal/transport_channel.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/status.h>
 #include <lib/fidl/llcpp/wire_messaging_declarations.h>
@@ -18,8 +19,30 @@
 namespace fidl {
 namespace internal {
 
+class IncomingEventDispatcherBase;
+
 // The base class for all event handler interfaces.
 class BaseEventHandlerInterface {};
+
+// The base class for all synchronous event handlers, regardless of domain
+// object flavor or protocol type.
+class SyncEventHandler {
+ public:
+  virtual ~SyncEventHandler() = default;
+
+ protected:
+  // TODO(fxbug.dev/85734): Event handling only works on channels.
+  // We might need to support |wait_one| on a type-erased transport.
+  ::fidl::Status HandleOneEventImpl_(zx::unowned_channel channel, ChannelMessageStorageView storage,
+                                     IncomingEventDispatcherBase& dispatcher);
+
+  // Subclasses should call this in their default implementation of transitional
+  // event handlers.
+  void OnTransitionalEvent_();
+
+ private:
+  bool got_transitional_ = false;
+};
 
 // The base class for all asynchronous event handlers, regardless of domain
 // object flavor or protocol type.

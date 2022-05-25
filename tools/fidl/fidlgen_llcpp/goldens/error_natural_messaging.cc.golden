@@ -48,6 +48,12 @@ fidl::internal::NaturalSyncClientImpl<::test_error::Example>::Foo(::fidl::Reques
 
 #ifdef __Fuchsia__
 
+::fidl::Status fidl::SyncEventHandler<::test_error::Example>::HandleOneEvent(
+    ::fidl::UnownedClientEnd<::test_error::Example> client_end) {
+  ::fidl::internal::IncomingEventsStorage<::test_error::Example> event_storage;
+  fidl::internal::NaturalEventDispatcher<::test_error::Example> dispatcher{this};
+  return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
+}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__

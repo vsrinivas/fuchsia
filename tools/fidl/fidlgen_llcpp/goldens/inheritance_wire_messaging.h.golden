@@ -448,7 +448,8 @@ class ::fidl::WireAsyncEventHandler<::test_inheritance::Super>
 };
 
 template <>
-class ::fidl::WireSyncEventHandler<::test_inheritance::Super> : public ::fidl::internal::WireEventHandlerInterface<::test_inheritance::Super> {
+class ::fidl::WireSyncEventHandler<::test_inheritance::Super>
+    : public ::fidl::internal::WireEventHandlerInterface<::test_inheritance::Super>, public ::fidl::internal::SyncEventHandler {
  public:
   WireSyncEventHandler() = default;
 
@@ -457,9 +458,6 @@ class ::fidl::WireSyncEventHandler<::test_inheritance::Super> : public ::fidl::i
   // method.
   ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_inheritance::Super> client_end);
-
- private:
-  [[maybe_unused]] bool got_transitional_ = false;
 };
 
 template <>
@@ -986,7 +984,8 @@ class ::fidl::WireAsyncEventHandler<::test_inheritance::Sub>
 };
 
 template <>
-class ::fidl::WireSyncEventHandler<::test_inheritance::Sub> : public ::fidl::internal::WireEventHandlerInterface<::test_inheritance::Sub> {
+class ::fidl::WireSyncEventHandler<::test_inheritance::Sub>
+    : public ::fidl::internal::WireEventHandlerInterface<::test_inheritance::Sub>, public ::fidl::internal::SyncEventHandler {
  public:
   WireSyncEventHandler() = default;
 
@@ -995,9 +994,6 @@ class ::fidl::WireSyncEventHandler<::test_inheritance::Sub> : public ::fidl::int
   // method.
   ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_inheritance::Sub> client_end);
-
- private:
-  [[maybe_unused]] bool got_transitional_ = false;
 };
 
 template <>

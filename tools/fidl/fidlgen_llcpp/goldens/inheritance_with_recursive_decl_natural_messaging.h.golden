@@ -62,6 +62,19 @@ class ::fidl::AsyncEventHandler<::test_inheritancewithrecursivedecl::Parent>
 };
 
 template <>
+class ::fidl::SyncEventHandler<::test_inheritancewithrecursivedecl::Parent>
+    : public ::fidl::internal::NaturalEventHandlerInterface<::test_inheritancewithrecursivedecl::Parent>, public ::fidl::internal::SyncEventHandler {
+ public:
+  SyncEventHandler() = default;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
+  // method.
+  ::fidl::Status HandleOneEvent(
+      ::fidl::UnownedClientEnd<::test_inheritancewithrecursivedecl::Parent> client_end);
+};
+
+template <>
 class ::fidl::internal::NaturalEventDispatcher<::test_inheritancewithrecursivedecl::Parent> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_inheritancewithrecursivedecl::Parent>> {
  public:
   explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_inheritancewithrecursivedecl::Parent>* event_handler)
@@ -185,6 +198,19 @@ class ::fidl::AsyncEventHandler<::test_inheritancewithrecursivedecl::Child>
     : public ::fidl::internal::NaturalEventHandlerInterface<::test_inheritancewithrecursivedecl::Child>, public ::fidl::internal::AsyncEventHandler {
  public:
   AsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::SyncEventHandler<::test_inheritancewithrecursivedecl::Child>
+    : public ::fidl::internal::NaturalEventHandlerInterface<::test_inheritancewithrecursivedecl::Child>, public ::fidl::internal::SyncEventHandler {
+ public:
+  SyncEventHandler() = default;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
+  // method.
+  ::fidl::Status HandleOneEvent(
+      ::fidl::UnownedClientEnd<::test_inheritancewithrecursivedecl::Child> client_end);
 };
 
 template <>

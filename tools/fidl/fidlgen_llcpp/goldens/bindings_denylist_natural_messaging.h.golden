@@ -56,6 +56,19 @@ class ::fidl::AsyncEventHandler<::test_bindingsdenylist::Allowed>
 };
 
 template <>
+class ::fidl::SyncEventHandler<::test_bindingsdenylist::Allowed>
+    : public ::fidl::internal::NaturalEventHandlerInterface<::test_bindingsdenylist::Allowed>, public ::fidl::internal::SyncEventHandler {
+ public:
+  SyncEventHandler() = default;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
+  // method.
+  ::fidl::Status HandleOneEvent(
+      ::fidl::UnownedClientEnd<::test_bindingsdenylist::Allowed> client_end);
+};
+
+template <>
 class ::fidl::internal::NaturalEventDispatcher<::test_bindingsdenylist::Allowed> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_bindingsdenylist::Allowed>> {
  public:
   explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_bindingsdenylist::Allowed>* event_handler)
@@ -182,6 +195,19 @@ class ::fidl::AsyncEventHandler<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>
 };
 
 template <>
+class ::fidl::SyncEventHandler<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>
+    : public ::fidl::internal::NaturalEventHandlerInterface<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>, public ::fidl::internal::SyncEventHandler {
+ public:
+  SyncEventHandler() = default;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
+  // method.
+  ::fidl::Status HandleOneEvent(
+      ::fidl::UnownedClientEnd<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> client_end);
+};
+
+template <>
 class ::fidl::internal::NaturalEventDispatcher<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>> {
  public:
   explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>* event_handler)
@@ -302,6 +328,19 @@ class ::fidl::AsyncEventHandler<::test_bindingsdenylist::OnlyCppAndDeps>
 };
 
 template <>
+class ::fidl::SyncEventHandler<::test_bindingsdenylist::OnlyCppAndDeps>
+    : public ::fidl::internal::NaturalEventHandlerInterface<::test_bindingsdenylist::OnlyCppAndDeps>, public ::fidl::internal::SyncEventHandler {
+ public:
+  SyncEventHandler() = default;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
+  // method.
+  ::fidl::Status HandleOneEvent(
+      ::fidl::UnownedClientEnd<::test_bindingsdenylist::OnlyCppAndDeps> client_end);
+};
+
+template <>
 class ::fidl::internal::NaturalEventDispatcher<::test_bindingsdenylist::OnlyCppAndDeps> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_bindingsdenylist::OnlyCppAndDeps>> {
  public:
   explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_bindingsdenylist::OnlyCppAndDeps>* event_handler)
@@ -398,6 +437,19 @@ class ::fidl::AsyncEventHandler<::test_bindingsdenylist::ImportsSameNameContext>
     : public ::fidl::internal::NaturalEventHandlerInterface<::test_bindingsdenylist::ImportsSameNameContext>, public ::fidl::internal::AsyncEventHandler {
  public:
   AsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::SyncEventHandler<::test_bindingsdenylist::ImportsSameNameContext>
+    : public ::fidl::internal::NaturalEventHandlerInterface<::test_bindingsdenylist::ImportsSameNameContext>, public ::fidl::internal::SyncEventHandler {
+ public:
+  SyncEventHandler() = default;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
+  // method.
+  ::fidl::Status HandleOneEvent(
+      ::fidl::UnownedClientEnd<::test_bindingsdenylist::ImportsSameNameContext> client_end);
 };
 
 template <>
@@ -857,6 +909,19 @@ class ::fidl::AsyncEventHandler<::test_bindingsdenylist::DenyEachBinding>
     : public ::fidl::internal::NaturalEventHandlerInterface<::test_bindingsdenylist::DenyEachBinding>, public ::fidl::internal::AsyncEventHandler {
  public:
   AsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::SyncEventHandler<::test_bindingsdenylist::DenyEachBinding>
+    : public ::fidl::internal::NaturalEventHandlerInterface<::test_bindingsdenylist::DenyEachBinding>, public ::fidl::internal::SyncEventHandler {
+ public:
+  SyncEventHandler() = default;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
+  // method.
+  ::fidl::Status HandleOneEvent(
+      ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding> client_end);
 };
 
 template <>

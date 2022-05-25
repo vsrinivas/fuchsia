@@ -44,6 +44,12 @@ fidl::internal::NaturalSyncClientImpl<::test_foreigntypeinresponseusedthroughcom
 
 #ifdef __Fuchsia__
 
+::fidl::Status fidl::SyncEventHandler<::test_foreigntypeinresponseusedthroughcompose::Top>::HandleOneEvent(
+    ::fidl::UnownedClientEnd<::test_foreigntypeinresponseusedthroughcompose::Top> client_end) {
+  ::fidl::internal::IncomingEventsStorage<::test_foreigntypeinresponseusedthroughcompose::Top> event_storage;
+  fidl::internal::NaturalEventDispatcher<::test_foreigntypeinresponseusedthroughcompose::Top> dispatcher{this};
+  return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
+}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
