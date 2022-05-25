@@ -192,7 +192,8 @@ so that the Netemul Runner can proxy it, and it also is required to `use` the
 [`fuchsia.netemul/ConfigurableNetstack`] protocol for each of the netstacks to
 be configured in the test. Each netstack [`use` clause][use-clause] must set the
 `path` field to `/svc/{name}`, where `name` is the name of the netstack as
-specified under `program`. See the manifest below for an example.
+specified under `program`. See the [example test](#example-test) linked below
+for an example.
 
 #### Example test
 
