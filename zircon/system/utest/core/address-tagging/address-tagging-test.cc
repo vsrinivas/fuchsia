@@ -25,8 +25,8 @@ constexpr size_t kTagShift = 56;
 constexpr uint8_t kTestTag = 0xAB;
 
 constexpr uint64_t AddTag(uintptr_t ptr, uint8_t tag) {
-  [[maybe_unused]] constexpr uint64_t kTagMask = UINT64_C(0xff) << kTagShift;
-  assert((kTagMask & ptr) == 0 && "Expected an untagged pointer.");
+  constexpr uint64_t kTagMask = UINT64_C(0xff) << kTagShift;
+  ZX_ASSERT((kTagMask & ptr) == 0 && "Expected an untagged pointer.");
   return (static_cast<uint64_t>(tag) << kTagShift) | static_cast<uint64_t>(ptr);
 }
 
@@ -177,8 +177,8 @@ void SetupWatchpoint(zx::thread& crash_thread) {
   // that bits 63:49 be a sign extension of bit 48 (that is, it cannot be tagged)
   // (D13.3.12).
   debug_regs.hw_wps[0].dbgwvr = reinterpret_cast<uintptr_t>(&gVariableToChange);
-  assert((debug_regs.hw_wps[0].dbgwvr & 0b111) == 0 &&
-         "The lowest 3 bits of DBGWVR must not be set");
+  ZX_ASSERT((debug_regs.hw_wps[0].dbgwvr & 0b111) == 0 &&
+            "The lowest 3 bits of DBGWVR must not be set");
 
   ASSERT_OK(crash_thread.write_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs, sizeof(debug_regs)));
 }
@@ -189,8 +189,8 @@ TEST(TopByteIgnoreTests, TaggedFARWatchpoint) {
   uintptr_t tagged_ptr = AddTag(watched_addr, kTestTag);
   zx_exception_report_t report = {};
   ASSERT_NO_FATAL_FAILURE(CatchCrash(DerefTaggedPtrCrash, tagged_ptr, SetupWatchpoint, &report));
-  ASSERT_EQ(report.header.type, ZX_EXCP_HW_BREAKPOINT);
-  ASSERT_EQ(report.context.arch.u.arm_64.far, tagged_ptr);
+  EXPECT_EQ(report.header.type, ZX_EXCP_HW_BREAKPOINT);
+  EXPECT_EQ(report.context.arch.u.arm_64.far, tagged_ptr);
 }
 
 static zx_koid_t get_object_koid(zx_handle_t handle) {
