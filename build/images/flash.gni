@@ -17,20 +17,14 @@ if (custom_signing_script != "" || use_vboot) {
   image_suffix = "zbi.signed"
 }
 
-image = "$root_out_dir/obj/build/images/fuchsia/fuchsia/fuchsia.${image_suffix}"
-vbmeta = "$root_out_dir/obj/build/images/fuchsia/fuchsia/fuchsia.vbmeta"
+image = "$root_out_dir/fuchsia.${image_suffix}"
+vbmeta = "$root_out_dir/fuchsia.vbmeta"
 
-recovery_image = get_label_info(recovery_label, "target_out_dir") + "/" +
-                 get_label_info(recovery_label, "name") + "/" +
-                 get_label_info(recovery_label, "name") + ".zbi"
-recovery_vbmeta = get_label_info(recovery_label, "target_out_dir") + "/" +
-                  get_label_info(recovery_label, "name") + "/" +
-                  get_label_info(recovery_label, "name") + ".vbmeta"
+recovery_image = "$root_out_dir/recovery.zbi"
+recovery_vbmeta = "$root_out_dir/recovery.vbmeta"
 if (recovery_is_zedboot) {
-  recovery_image =
-      "$root_out_dir/obj/build/images/zedboot/zedboot/zedboot.${image_suffix}"
-  recovery_vbmeta =
-      "$root_out_dir/obj/build/images/zedboot/zedboot/zedboot.vbmeta"
+  recovery_image = "$root_out_dir/zedboot.${image_suffix}"
+  recovery_vbmeta = "$root_out_dir/zedboot.vbmeta"
 }
 
 # A list of partitions for the flash json manifest that will be

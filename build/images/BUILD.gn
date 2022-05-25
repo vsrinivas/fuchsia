@@ -385,9 +385,9 @@ foreach(firmware, firmware_prebuilts) {
       {
         name = name
         partition = firmware.partition
-        out_path =
-            rebase_path("${firmware.path}${firmware_prebuilts_path_suffix}",
-                        root_build_dir)
+
+        # Both the output dir and the build archive put the image at this path.
+        out_path = "$name.img"
       },
     ]
   }
@@ -433,7 +433,7 @@ foreach(file, bootstrap_files) {
     # should be the path relative to the build dir, whereas the archive needs it
     # to be just the file name.
     part.name = file.partition
-    part.path = rebase_path(file.path, root_build_dir)
+    part.path = rebase_path(out_path, root_build_dir)
     archive_part.name = file.partition
     archive_part.path = file_name
     if (defined(file.condition)) {
@@ -604,7 +604,7 @@ foreach(cred_path, board_fastboot_unlock_credentials) {
   }
 
   fastboot_credential_deps += [ ":${target_name}" ]
-  fastboot_credential_paths += [ rebase_path(cred_path, root_build_dir) ]
+  fastboot_credential_paths += [ out_path ]
   fastboot_credential_archive_paths += [ get_path_info(out_path, "file") ]
 }
 
@@ -752,7 +752,7 @@ if (supports_fastboot_fvm) {
   archive_parts += [
     {
       name = fvm_partition
-      path = rebase_path(files.fvm_fastboot, root_build_dir)
+      path = get_path_info(files.fvm_fastboot, "file")
     },
   ]
 }
