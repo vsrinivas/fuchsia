@@ -60,18 +60,27 @@ func TestCheckForLogMessage(t *testing.T) {
 }
 
 func TestSetLogDestination(t *testing.T) {
-	testStr := `line 1
+	expectedLogOutput := `line 1
 line 2
 line 3
 `
-	// Creating a no-op exec.Cmd so that i.Wait() can wait for it to complete
-	cmd := exec.Command("true")
+
+	// Route the expected log output through `cat` to provide a more accurate testing scenario:
+	// Instance.Wait() should observe EOF on Instance.stdout exactly when Instance.cmd has
+	// terminated.
+	cmd := exec.Command("cat")
+	cmd.Stdin = strings.NewReader(expectedLogOutput)
+	catStdout, err := cmd.StdoutPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	if err := cmd.Start(); err != nil {
 		t.Fatal(err)
 	}
 
 	i := Instance{
-		stdout: bufio.NewReader(strings.NewReader(testStr)),
+		stdout: bufio.NewReader(catStdout),
 		cmd:    cmd,
 	}
 
@@ -81,7 +90,7 @@ line 3
 	if _, err := i.Wait(); err != nil {
 		t.Fatal(err)
 	}
-	if buf.String() != testStr {
-		t.Fatalf("got buf.String() = %q, wanted %q", buf.String(), testStr)
+	if buf.String() != expectedLogOutput {
+		t.Fatalf("got buf.String() = %q, wanted %q", buf.String(), expectedLogOutput)
 	}
 }

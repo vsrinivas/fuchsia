@@ -676,20 +676,22 @@ func (i *Instance) StartPiped(piped *exec.Cmd) error {
 	return startErr
 }
 
-// Wait for the emulator instance to terminate
+// Wait waits for the emulator instance to terminate while printing the emulator's stdout to
+// whichever Writer has been passed to SetLogDestination (defaults to os.Stdout).
 func (i *Instance) Wait() (*os.ProcessState, error) {
-	stop := make(chan struct{})
-	defer close(stop)
+	scanDone := make(chan struct{})
+
+	// Finish consuming the emulator process's stdout before returning.
+	defer func() {
+		<-scanDone
+	}()
+
 	go func() {
+		defer close(scanDone)
 		// Line-buffer writes to stdout to avoid messy interleaving.
 		scanner := bufio.NewScanner(i.stdout)
 		for scanner.Scan() {
-			select {
-			case <-stop:
-				return
-			default:
-				fmt.Fprintln(i.logDestination, scanner.Text())
-			}
+			fmt.Fprintln(i.logDestination, scanner.Text())
 		}
 		if err := scanner.Err(); err != nil {
 			fmt.Printf("%T.stdout: %s\n", i, err)
