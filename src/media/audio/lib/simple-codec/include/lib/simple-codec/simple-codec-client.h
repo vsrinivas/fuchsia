@@ -69,6 +69,11 @@ class SimpleCodecClient {
   void SetGainState(GainState state);
   zx_status_t SetAgl(bool enable_agl);
 
+  // Allows to use the underlying bindings.
+  const fidl::WireSharedClient<fuchsia_hardware_audio::Codec>& WiredSharedClient() {
+    return codec_;
+  }
+
  protected:
   ddk::CodecProtocolClient proto_client_;
 

@@ -18,6 +18,7 @@ namespace audio {
 namespace audio_fidl = ::fuchsia::hardware::audio;
 namespace signal_fidl = ::fuchsia::hardware::audio::signalprocessing;
 
+// SimpleCodecServer methods.
 zx_status_t SimpleCodecServer::CreateAndAddToDdkInternal() {
   simple_codec_ = inspect_.GetRoot().CreateChild("simple_codec");
   state_ = simple_codec_.CreateString("state", "created");
@@ -73,6 +74,7 @@ zx_status_t SimpleCodecServer::CodecConnect(zx::channel channel) {
   return BindClient(std::move(channel), loop_->dispatcher());
 }
 
+// SimpleCodecServerInternal methods.
 template <class T>
 SimpleCodecServerInternal<T>::SimpleCodecServerInternal() {
   plug_time_ = zx::clock::get_monotonic().get();
@@ -148,6 +150,32 @@ template <class T>
 void SimpleCodecServerInternal<T>::SignalProcessingConnect(
     fidl::InterfaceRequest<signal_fidl::SignalProcessing> signal_processing) {
   static_cast<T*>(this)->SignalProcessingConnect(std::move(signal_processing));
+}
+
+template <class T>
+void SimpleCodecServerInternal<T>::WatchPlugState(Codec::WatchPlugStateCallback callback,
+                                                  SimpleCodecServerInstance<T>* instance) {
+  if (SupportsAsyncPlugState()) {
+    WatchPlugState(std::move(callback));
+  } else {
+    if (instance->watch_plug_state_first_time_) {
+      instance->watch_plug_state_first_time_ = false;
+      fuchsia::hardware::audio::PlugState plug_state;
+      plug_state.set_plugged(true);
+      plug_state.set_plug_state_time(plug_time_);
+      callback(std::move(plug_state));
+    }
+  }
+}
+
+template <class T>
+void SimpleCodecServerInternal<T>::GetPlugDetectCapabilities(
+    Codec::GetPlugDetectCapabilitiesCallback callback) {
+  if (SupportsAsyncPlugState()) {
+    callback(audio_fidl::PlugDetectCapabilities::CAN_ASYNC_NOTIFY);
+  } else {
+    callback(audio_fidl::PlugDetectCapabilities::HARDWIRED);
+  }
 }
 
 template <class T>
@@ -300,6 +328,7 @@ void SimpleCodecServerInternal<T>::SetGainState(audio_fidl::GainState state) {
   }
 }
 
+// SimpleCodecServerInstance methods.
 template <class T>
 void SimpleCodecServerInstance<T>::GainStateUpdated(audio_fidl::GainState gain_state) {
   if (gain_state_callback_) {
@@ -310,31 +339,6 @@ void SimpleCodecServerInstance<T>::GainStateUpdated(audio_fidl::GainState gain_s
     // WatchGainState will immediately reply with the latest gain state next the time it is called.
     gain_state_updated_ = true;
   }
-}
-
-template <class T>
-void SimpleCodecServerInternal<T>::GetPlugDetectCapabilities(
-    Codec::GetPlugDetectCapabilitiesCallback callback) {
-  // Only hardwired in simple codec.
-  callback(audio_fidl::PlugDetectCapabilities::HARDWIRED);
-}
-
-template <class T>
-void SimpleCodecServerInstance<T>::WatchPlugState(WatchPlugStateCallback callback) {
-  // Only reply the first time, then don't reply anymore. Simple codec does not support changes to
-  // plug state, also clients using simple codec do not issue WatchPlugState calls.
-  if (watch_plug_state_first_time_) {
-    parent_->WatchPlugState(std::move(callback));
-    watch_plug_state_first_time_ = false;
-  }
-}
-
-template <class T>
-void SimpleCodecServerInternal<T>::WatchPlugState(Codec::WatchPlugStateCallback callback) {
-  audio_fidl::PlugState plug_state;
-  plug_state.set_plugged(true);
-  plug_state.set_plug_state_time(plug_time_);
-  callback(std::move(plug_state));
 }
 
 template class SimpleCodecServerInternal<SimpleCodecServer>;

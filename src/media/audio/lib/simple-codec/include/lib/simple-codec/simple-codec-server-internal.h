@@ -55,7 +55,11 @@ class SimpleCodecServerInternal {
                       SimpleCodecServerInstance<T>* instance);
   void SetGainState(fuchsia::hardware::audio::GainState state);
   void GetPlugDetectCapabilities(Codec::GetPlugDetectCapabilitiesCallback callback);
-  void WatchPlugState(Codec::WatchPlugStateCallback callback);
+  void WatchPlugState(Codec::WatchPlugStateCallback callback,
+                      SimpleCodecServerInstance<T>* instance);
+
+  virtual bool SupportsAsyncPlugState() = 0;
+  virtual void WatchPlugState(Codec::WatchPlugStateCallback callback) = 0;
 
   zx_time_t plug_time_ = 0;
 
@@ -120,7 +124,9 @@ class SimpleCodecServerInstance
   void GetPlugDetectCapabilities(GetPlugDetectCapabilitiesCallback callback) override {
     parent_->GetPlugDetectCapabilities(std::move(callback));
   }
-  void WatchPlugState(WatchPlugStateCallback callback) override;
+  void WatchPlugState(WatchPlugStateCallback callback) override {
+    parent_->WatchPlugState(std::move(callback), this);
+  }
 
   SimpleCodecServerInternal<T>* parent_;
   fidl::Binding<fuchsia::hardware::audio::Codec> binding_;

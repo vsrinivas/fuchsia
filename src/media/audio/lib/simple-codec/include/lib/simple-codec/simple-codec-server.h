@@ -87,7 +87,6 @@ class SimpleCodecServer : public SimpleCodecServerDeviceType,
   // - GetDaiFormats returns one DaiSupportedFormats instead of a vector (still allows supported
   //   formats with multiple frame rates, number of channels, etc. just not overly complex ones).
   // - No need to implement WatchGainState, gain must only be changed by SetGainState.
-  // - No need to implement WatchPlugState, the library always advertises "hardwired".
   virtual zx_status_t Reset() = 0;
   virtual Info GetInfo() = 0;
   virtual zx_status_t Stop() = 0;
@@ -97,6 +96,12 @@ class SimpleCodecServer : public SimpleCodecServerDeviceType,
   virtual GainFormat GetGainFormat() = 0;
   virtual GainState GetGainState() = 0;
   virtual void SetGainState(GainState state) = 0;
+
+  // Default to hardwired as opposed to asynchronous notifications of plug state.
+  // To implement asynchronous plug notification override SupportsAsyncPlugState and WatchPlugState.
+  bool SupportsAsyncPlugState() override { return false; }
+  void WatchPlugState(Codec::WatchPlugStateCallback callback) override {}
+
   // Default to not bridgable.
   virtual bool IsBridgeable() { return false; }
   virtual void SetBridgedMode(bool enable_bridged_mode) {
@@ -104,12 +109,14 @@ class SimpleCodecServer : public SimpleCodecServerDeviceType,
       zxlogf(ERROR, "bridged mode not supported");
     }
   }
+
   // Default to no support for custom signal processing API usage.
   virtual void SignalProcessingConnect(
       fidl::InterfaceRequest<fuchsia::hardware::audio::signalprocessing::SignalProcessing>
           signal_processing) {
     signal_processing.Close(ZX_ERR_NOT_SUPPORTED);
   }
+
   zx_status_t CodecConnect(zx::channel(channel));
   // The dispatcher's loop is guaranteed to be shutdown before "this" is deleted.
   async_dispatcher_t* dispatcher() { return loop_->dispatcher(); }

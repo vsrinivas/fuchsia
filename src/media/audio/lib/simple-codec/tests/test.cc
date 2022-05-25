@@ -192,7 +192,7 @@ TEST_F(SimpleCodecTest, SetDaiFormat) {
   ASSERT_EQ(codec_format_info.status_value(), ZX_ERR_NOT_SUPPORTED);
 }
 
-TEST_F(SimpleCodecTest, PlugState) {
+TEST_F(SimpleCodecTest, PlugStateHardwired) {
   auto fake_parent = MockDevice::FakeRootParent();
 
   ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<TestCodec>(fake_parent.get()));
@@ -217,6 +217,52 @@ TEST_F(SimpleCodecTest, PlugState) {
   ASSERT_OK(codec_client->WatchPlugState(&out_plug_state));
   ASSERT_EQ(out_plug_state.plugged(), true);
   ASSERT_GT(out_plug_state.plug_state_time(), 0);
+}
+
+TEST_F(SimpleCodecTest, PlugStateCanAsyncNotify) {
+  constexpr int64_t kTestPlugStateTime = 123;
+  class TestCodecCanNotify : public TestCodec {
+   public:
+    explicit TestCodecCanNotify(zx_device_t* parent) : TestCodec(parent) {}
+    bool SupportsAsyncPlugState() override { return true; }
+    void WatchPlugState(fuchsia::hardware::audio::Codec::WatchPlugStateCallback callback) override {
+      fuchsia::hardware::audio::PlugState plug_state;
+      plug_state.set_plugged(true);
+      plug_state.set_plug_state_time(kTestPlugStateTime);
+      callback(std::move(plug_state));
+      watch_state_called_ = true;
+    }
+    bool watch_state_called() { return watch_state_called_; }
+
+   private:
+    bool watch_state_called_ = false;
+  };
+  auto fake_parent = MockDevice::FakeRootParent();
+
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<TestCodecCanNotify>(fake_parent.get()));
+  auto* child_dev = fake_parent->GetLatestChild();
+  ASSERT_NOT_NULL(child_dev);
+  auto codec = child_dev->GetDeviceContext<TestCodecCanNotify>();
+  auto codec_proto = codec->GetProto();
+  ddk::CodecProtocolClient codec_proto2(&codec_proto);
+
+  zx::channel channel_remote, channel_local;
+  ASSERT_OK(zx::channel::create(0, &channel_local, &channel_remote));
+  ddk::CodecProtocolClient proto_client;
+  ASSERT_OK(codec_proto2.Connect(std::move(channel_remote)));
+  audio_fidl::CodecSyncPtr codec_client;
+  codec_client.Bind(std::move(channel_local));
+
+  audio_fidl::PlugDetectCapabilities out_plug_detect_capabilities;
+  ASSERT_OK(codec_client->GetPlugDetectCapabilities(&out_plug_detect_capabilities));
+  ASSERT_EQ(out_plug_detect_capabilities, audio_fidl::PlugDetectCapabilities::CAN_ASYNC_NOTIFY);
+
+  audio_fidl::PlugState out_plug_state;
+  ASSERT_OK(codec_client->WatchPlugState(&out_plug_state));
+  ASSERT_EQ(out_plug_state.plugged(), true);
+  ASSERT_EQ(out_plug_state.plug_state_time(), kTestPlugStateTime);
+
+  ASSERT_TRUE(codec->watch_state_called());
 }
 
 TEST_F(SimpleCodecTest, AglStateServerWithClientViaSignalProcessingApi) {
