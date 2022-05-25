@@ -11,7 +11,7 @@
 
 namespace media::audio {
 
-// ### Constants related to the PID controls that reconcile audio clocks
+// # Constants related to the PID controls that reconcile audio clocks
 //
 // Proportional-Integral-Derivative controls (PIDs) apply an optimal amount of feedback, for systems
 // with well-characterized response. We use PID controls to smoothly reach and maintain tight
@@ -75,7 +75,7 @@ namespace media::audio {
 // Latest coefficient tuning: 2020-Oct-30.
 
 inline constexpr double kMicroSrcOscillationPeriod = ZX_MSEC(20);
-inline constexpr double kMicroSrcPFactor = -0.00000007001;
+inline constexpr double kMicroSrcPFactor = -7.001e-8;
 inline constexpr clock::PidControl::Coefficients kPidFactorsMicroSrc = {
     .proportional_factor = kMicroSrcPFactor,
     .integral_factor = kMicroSrcPFactor * 2 / kMicroSrcOscillationPeriod,
@@ -83,7 +83,7 @@ inline constexpr clock::PidControl::Coefficients kPidFactorsMicroSrc = {
 };
 
 inline constexpr double kClockChasesClockOscillationPeriod = ZX_MSEC(20);
-inline constexpr double kClockChasesClockPFactor = 0.000000007998;
+inline constexpr double kClockChasesClockPFactor = 7.998e-9;
 inline constexpr clock::PidControl::Coefficients kPidFactorsClockChasesClock = {
     .proportional_factor = kClockChasesClockPFactor,
     .integral_factor = kClockChasesClockPFactor * 2 / kClockChasesClockOscillationPeriod,
@@ -91,7 +91,7 @@ inline constexpr clock::PidControl::Coefficients kPidFactorsClockChasesClock = {
 };
 
 inline constexpr double kClockChasesDeviceOscillationPeriod = ZX_MSEC(1000);
-inline constexpr double kClockChasesDevicePFactor = 0.0000000002001;
+inline constexpr double kClockChasesDevicePFactor = 2.001e-10;
 inline constexpr clock::PidControl::Coefficients kPidFactorsClockChasesDevice = {
     .proportional_factor = kClockChasesDevicePFactor,
     .integral_factor = kClockChasesDevicePFactor * 2 / kClockChasesDeviceOscillationPeriod,
