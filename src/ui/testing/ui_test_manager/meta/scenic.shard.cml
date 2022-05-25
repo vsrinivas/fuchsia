@@ -79,12 +79,16 @@
             to: [ "#scenic" ],
         },
         {
-            protocol: [ "fuchsia.cobalt.LoggerFactory" ],
+            protocol: [ "fuchsia.metrics.MetricEventLoggerFactory" ],
             from: "#mock_cobalt",
             to: [ "#scenic" ],
         },
     ],
     expose: [
+        {
+            protocol: [ "fuchsia.cobalt.LoggerFactory" ],
+            from: "#mock_cobalt",
+        },
         {
             protocol: [
                 "fuchsia.ui.annotation.Registry",
