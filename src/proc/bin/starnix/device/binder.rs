@@ -385,13 +385,14 @@ impl SharedMemory {
         })
     }
 
-    /// Allocates two buffers large enough to hold the requested data length and offsets length,
-    /// inserting padding between data and offsets as needed.
+    /// Allocates three buffers large enough to hold the requested data, offsets, and scatter-gather
+    /// buffer lengths, inserting padding between data and offsets as needed. `offsets_length` and
+    /// `sg_buffers_length` must be 8-byte aligned.
     ///
-    /// NOTE: When `data_length` and `offsets_length` are both 0, this will still allocate a minimum
-    /// data buffer size of 8 bytes. This is because clients expect their buffer addresses to be
-    /// uniquely associated with a transaction. Returning the same address for different
-    /// transactions will break oneway transactions that have no payload.
+    /// NOTE: When `data_length` is zero, a minimum data buffer size of 8 bytes is still allocated.
+    /// This is because clients expect their buffer addresses to be uniquely associated with a
+    /// transaction. Returning the same address for different transactions will break oneway
+    /// transactions that have no payload.
     //
     // This is a temporary implementation of an allocator and should be replaced by something
     // more sophisticated. It currently implements a bump allocator strategy.
@@ -399,7 +400,11 @@ impl SharedMemory {
         &'a mut self,
         data_length: usize,
         offsets_length: usize,
-    ) -> Result<(SharedBuffer<'a, u8>, SharedBuffer<'a, binder_uintptr_t>), Errno> {
+        sg_buffers_length: usize,
+    ) -> Result<
+        (SharedBuffer<'a, u8>, SharedBuffer<'a, binder_uintptr_t>, SharedBuffer<'a, u8>),
+        Errno,
+    > {
         // Round `data_length` up to the nearest multiple of 8, so that the offsets buffer is
         // aligned when we pack it next to the data buffer.
         let data_cap = round_up_to_increment(data_length, std::mem::size_of::<binder_uintptr_t>())?;
@@ -407,11 +412,16 @@ impl SharedMemory {
         // associated with a transaction. Otherwise, multiple zero-sized allocations will have the
         // same address and there will be no way of distinguishing which transaction they belong to.
         let data_cap = std::cmp::max(data_cap, std::mem::size_of::<binder_uintptr_t>());
-        // Ensure that the offsets length is valid.
-        if offsets_length % std::mem::size_of::<binder_uintptr_t>() != 0 {
+        // Ensure that the offsets and buffers lengths are valid.
+        if offsets_length % std::mem::size_of::<binder_uintptr_t>() != 0
+            || sg_buffers_length % std::mem::size_of::<binder_uintptr_t>() != 0
+        {
             return error!(EINVAL);
         }
-        let total_length = data_cap.checked_add(offsets_length).ok_or_else(|| errno!(EINVAL))?;
+        let total_length = data_cap
+            .checked_add(offsets_length)
+            .and_then(|v| v.checked_add(sg_buffers_length))
+            .ok_or_else(|| errno!(EINVAL))?;
         if let Some(offset) = self.next_free_offset.checked_add(total_length) {
             if offset <= self.length {
                 let this_offset = self.next_free_offset;
@@ -422,6 +432,11 @@ impl SharedMemory {
                     Ok((
                         SharedBuffer::new_unchecked(self, this_offset, data_length),
                         SharedBuffer::new_unchecked(self, this_offset + data_cap, offsets_length),
+                        SharedBuffer::new_unchecked(
+                            self,
+                            this_offset + data_cap + offsets_length,
+                            sg_buffers_length,
+                        ),
                     ))
                 };
             }
@@ -1337,11 +1352,31 @@ impl BinderDriver {
             }
             binder_driver_command_protocol_BC_TRANSACTION => {
                 let data = cursor.read_object::<binder_transaction_data>()?;
-                self.handle_transaction(current_task, binder_proc, binder_thread, data)
-                    .or_else(|err| err.dispatch(binder_thread))
+                self.handle_transaction(
+                    current_task,
+                    binder_proc,
+                    binder_thread,
+                    binder_transaction_data_sg { transaction_data: data, buffers_size: 0 },
+                )
+                .or_else(|err| err.dispatch(binder_thread))
             }
             binder_driver_command_protocol_BC_REPLY => {
                 let data = cursor.read_object::<binder_transaction_data>()?;
+                self.handle_reply(
+                    current_task,
+                    binder_proc,
+                    binder_thread,
+                    binder_transaction_data_sg { transaction_data: data, buffers_size: 0 },
+                )
+                .or_else(|err| err.dispatch(binder_thread))
+            }
+            binder_driver_command_protocol_BC_TRANSACTION_SG => {
+                let data = cursor.read_object::<binder_transaction_data_sg>()?;
+                self.handle_transaction(current_task, binder_proc, binder_thread, data)
+                    .or_else(|err| err.dispatch(binder_thread))
+            }
+            binder_driver_command_protocol_BC_REPLY_SG => {
+                let data = cursor.read_object::<binder_transaction_data_sg>()?;
                 self.handle_reply(current_task, binder_proc, binder_thread, data)
                     .or_else(|err| err.dispatch(binder_thread))
             }
@@ -1538,10 +1573,10 @@ impl BinderDriver {
         current_task: &CurrentTask,
         binder_proc: &Arc<BinderProcess>,
         binder_thread: &Arc<BinderThread>,
-        data: binder_transaction_data,
+        data: binder_transaction_data_sg,
     ) -> Result<(), TransactionError> {
         // SAFETY: Transactions can only refer to handles.
-        let handle = unsafe { data.target.handle }.into();
+        let handle = unsafe { data.transaction_data.target.handle }.into();
 
         let (object, target_proc) = match handle {
             Handle::SpecialServiceManager => self.get_context_manager()?,
@@ -1575,14 +1610,14 @@ impl BinderDriver {
                     FlatBinderObject::Local { object: object.local.clone() }
                 }
             },
-            code: data.code,
-            flags: data.flags,
+            code: data.transaction_data.code,
+            flags: data.transaction_data.flags,
 
             data_buffer,
             offsets_buffer,
         };
 
-        if data.flags & transaction_flags_TF_ONE_WAY != 0 {
+        if data.transaction_data.flags & transaction_flags_TF_ONE_WAY != 0 {
             // The caller is not expecting a reply.
             binder_thread.write().enqueue_command(Command::TransactionComplete);
 
@@ -1617,8 +1652,8 @@ impl BinderDriver {
                 peer_tid: 0,
                 peer_euid: 0,
                 object: FlatBinderObject::Remote { handle },
-                code: data.code,
-                flags: data.flags,
+                code: data.transaction_data.code,
+                flags: data.transaction_data.flags,
                 data_buffer: UserBuffer::default(),
                 offsets_buffer: UserBuffer::default(),
             });
@@ -1648,7 +1683,7 @@ impl BinderDriver {
         current_task: &CurrentTask,
         binder_proc: &Arc<BinderProcess>,
         binder_thread: &Arc<BinderThread>,
-        data: binder_transaction_data,
+        data: binder_transaction_data_sg,
     ) -> Result<(), TransactionError> {
         // Find the process and thread that initiated the transaction. This reply is for them.
         let (target_proc, target_thread) = {
@@ -1684,8 +1719,8 @@ impl BinderDriver {
             peer_euid: current_task.read().creds.euid,
 
             object: FlatBinderObject::Remote { handle: Handle::SpecialServiceManager },
-            code: data.code,
-            flags: data.flags,
+            code: data.transaction_data.code,
+            flags: data.transaction_data.flags,
 
             data_buffer,
             offsets_buffer,
@@ -1773,19 +1808,22 @@ impl BinderDriver {
         source_proc: &Arc<BinderProcess>,
         source_thread: &Arc<BinderThread>,
         target_proc: &Arc<BinderProcess>,
-        data: &binder_transaction_data,
+        data: &binder_transaction_data_sg,
     ) -> Result<(UserBuffer, UserBuffer, TransactionRefs), TransactionError> {
         // Get the shared memory of the target process.
         let mut shared_memory_lock = target_proc.shared_memory.lock();
         let shared_memory = shared_memory_lock.as_mut().ok_or_else(|| errno!(ENOMEM))?;
 
         // Allocate a buffer from the target process' shared memory.
-        let (mut data_buffer, mut offsets_buffer) =
-            shared_memory.allocate_buffers(data.data_size as usize, data.offsets_size as usize)?;
+        let (mut data_buffer, mut offsets_buffer, mut sg_buffer) = shared_memory.allocate_buffers(
+            data.transaction_data.data_size as usize,
+            data.transaction_data.offsets_size as usize,
+            data.buffers_size as usize,
+        )?;
 
         // SAFETY: `binder_transaction_data` was read from a userspace VMO, which means that all
         // bytes are defined, making union access safe (even if the value is garbage).
-        let userspace_addrs = unsafe { data.data.ptr };
+        let userspace_addrs = unsafe { data.transaction_data.data.ptr };
 
         // Copy the data straight into the target's buffer.
         current_task
@@ -1807,6 +1845,7 @@ impl BinderDriver {
                 target_proc,
                 offsets_buffer.as_bytes(),
                 data_buffer.as_mut_bytes(),
+                &mut sg_buffer,
             )?
         } else {
             TransactionRefs::new(target_proc)
@@ -1834,6 +1873,7 @@ impl BinderDriver {
         target_proc: &Arc<BinderProcess>,
         offsets: &[binder_uintptr_t],
         transaction_data: &mut [u8],
+        _sg_buffer: &mut SharedBuffer<'_, u8>,
     ) -> Result<TransactionRefs, TransactionError> {
         let mut transaction_refs = TransactionRefs::new(target_proc);
 
@@ -2324,7 +2364,12 @@ mod tests {
         let vmo = zx::Vmo::create(VMO_LENGTH as u64).expect("failed to create VMO");
         let mut shared_memory =
             SharedMemory::map(&vmo, BASE_ADDR, VMO_LENGTH).expect("failed to map shared memory");
-        shared_memory.allocate_buffers(3, 1).expect_err("offsets_length should be multiple of 8");
+        shared_memory
+            .allocate_buffers(3, 1, 0)
+            .expect_err("offsets_length should be multiple of 8");
+        shared_memory
+            .allocate_buffers(3, 8, 1)
+            .expect_err("buffers_length should be multiple of 8");
     }
 
     #[fuchsia::test]
@@ -2336,15 +2381,22 @@ mod tests {
         const DATA_LEN: usize = 3;
         const OFFSETS_COUNT: usize = 1;
         const OFFSETS_LEN: usize = std::mem::size_of::<binder_uintptr_t>() * OFFSETS_COUNT;
-        let (data_buf, offsets_buf) =
-            shared_memory.allocate_buffers(DATA_LEN, OFFSETS_LEN).expect("allocate buffer");
+        const BUFFERS_LEN: usize = 8;
+        let (data_buf, offsets_buf, buffers_buf) = shared_memory
+            .allocate_buffers(DATA_LEN, OFFSETS_LEN, BUFFERS_LEN)
+            .expect("allocate buffer");
         assert_eq!(data_buf.user_buffer(), UserBuffer { address: BASE_ADDR, length: DATA_LEN });
         assert_eq!(
             offsets_buf.user_buffer(),
             UserBuffer { address: BASE_ADDR + 8usize, length: OFFSETS_LEN }
         );
+        assert_eq!(
+            buffers_buf.user_buffer(),
+            UserBuffer { address: BASE_ADDR + 8usize + OFFSETS_LEN, length: BUFFERS_LEN }
+        );
         assert_eq!(data_buf.as_bytes().len(), DATA_LEN);
         assert_eq!(offsets_buf.as_bytes().len(), OFFSETS_COUNT);
+        assert_eq!(buffers_buf.as_bytes().len(), BUFFERS_LEN);
     }
 
     #[fuchsia::test]
@@ -2356,8 +2408,8 @@ mod tests {
         const DATA_LEN: usize = 256;
         const OFFSETS_COUNT: usize = 4;
         const OFFSETS_LEN: usize = std::mem::size_of::<binder_uintptr_t>() * OFFSETS_COUNT;
-        let (mut data_buf, mut offsets_buf) =
-            shared_memory.allocate_buffers(DATA_LEN, OFFSETS_LEN).expect("allocate buffer");
+        let (mut data_buf, mut offsets_buf, _) =
+            shared_memory.allocate_buffers(DATA_LEN, OFFSETS_LEN, 0).expect("allocate buffer");
 
         // Write data to the allocated buffers.
         const DATA_FILL: u8 = 0xff;
@@ -2385,8 +2437,9 @@ mod tests {
         // Check that two buffers allocated from the same shared memory region don't overlap.
         const BUF1_DATA_LEN: usize = 64;
         const BUF1_OFFSETS_LEN: usize = 8;
-        let (data_buf, offsets_buf) = shared_memory
-            .allocate_buffers(BUF1_DATA_LEN, BUF1_OFFSETS_LEN)
+        const BUF1_BUFFERS_LEN: usize = 8;
+        let (data_buf, offsets_buf, buffers_buf) = shared_memory
+            .allocate_buffers(BUF1_DATA_LEN, BUF1_OFFSETS_LEN, BUF1_BUFFERS_LEN)
             .expect("allocate buffer 1");
         assert_eq!(
             data_buf.user_buffer(),
@@ -2396,23 +2449,35 @@ mod tests {
             offsets_buf.user_buffer(),
             UserBuffer { address: BASE_ADDR + BUF1_DATA_LEN, length: BUF1_OFFSETS_LEN }
         );
+        assert_eq!(
+            buffers_buf.user_buffer(),
+            UserBuffer {
+                address: BASE_ADDR + BUF1_DATA_LEN + BUF1_OFFSETS_LEN,
+                length: BUF1_BUFFERS_LEN
+            }
+        );
 
         const BUF2_DATA_LEN: usize = 32;
         const BUF2_OFFSETS_LEN: usize = 0;
-        let (data_buf, offsets_buf) = shared_memory
-            .allocate_buffers(BUF2_DATA_LEN, BUF2_OFFSETS_LEN)
+        const BUF2_BUFFERS_LEN: usize = 0;
+        let (data_buf, offsets_buf, _) = shared_memory
+            .allocate_buffers(BUF2_DATA_LEN, BUF2_OFFSETS_LEN, BUF2_BUFFERS_LEN)
             .expect("allocate buffer 2");
         assert_eq!(
             data_buf.user_buffer(),
             UserBuffer {
-                address: BASE_ADDR + BUF1_DATA_LEN + BUF1_OFFSETS_LEN,
+                address: BASE_ADDR + BUF1_DATA_LEN + BUF1_OFFSETS_LEN + BUF1_BUFFERS_LEN,
                 length: BUF2_DATA_LEN
             }
         );
         assert_eq!(
             offsets_buf.user_buffer(),
             UserBuffer {
-                address: BASE_ADDR + BUF1_DATA_LEN + BUF1_OFFSETS_LEN + BUF2_DATA_LEN,
+                address: BASE_ADDR
+                    + BUF1_DATA_LEN
+                    + BUF1_OFFSETS_LEN
+                    + BUF1_BUFFERS_LEN
+                    + BUF2_DATA_LEN,
                 length: BUF2_OFFSETS_LEN
             }
         );
@@ -2424,13 +2489,14 @@ mod tests {
         let mut shared_memory =
             SharedMemory::map(&vmo, BASE_ADDR, VMO_LENGTH).expect("failed to map shared memory");
 
-        shared_memory.allocate_buffers(VMO_LENGTH + 1, 0).expect_err("out-of-bounds allocation");
-        shared_memory.allocate_buffers(VMO_LENGTH, 8).expect_err("out-of-bounds allocation");
+        shared_memory.allocate_buffers(VMO_LENGTH + 1, 0, 0).expect_err("out-of-bounds allocation");
+        shared_memory.allocate_buffers(VMO_LENGTH, 8, 0).expect_err("out-of-bounds allocation");
+        shared_memory.allocate_buffers(VMO_LENGTH - 8, 8, 8).expect_err("out-of-bounds allocation");
 
-        shared_memory.allocate_buffers(VMO_LENGTH, 0).expect("allocate buffer");
+        shared_memory.allocate_buffers(VMO_LENGTH, 0, 0).expect("allocate buffer");
 
         // Now that the previous buffer allocation succeeded, there should be no more room.
-        shared_memory.allocate_buffers(1, 0).expect_err("out-of-bounds allocation");
+        shared_memory.allocate_buffers(1, 0, 0).expect_err("out-of-bounds allocation");
     }
 
     #[fuchsia::test]
@@ -2699,21 +2765,24 @@ mod tests {
 
         // Construct the `binder_transaction_data` struct that contains pointers to the data and
         // offsets buffers.
-        let transaction = binder_transaction_data {
-            code: 1,
-            flags: 0,
-            sender_pid: 1,
-            sender_euid: 0,
-            target: binder_transaction_data__bindgen_ty_1 { handle: 0 },
-            cookie: 0,
-            data_size: transaction_data.len() as u64,
-            offsets_size: std::mem::size_of::<u64>() as u64,
-            data: binder_transaction_data__bindgen_ty_2 {
-                ptr: binder_transaction_data__bindgen_ty_2__bindgen_ty_1 {
-                    buffer: data_addr.ptr() as u64,
-                    offsets: offsets_addr.ptr() as u64,
+        let transaction = binder_transaction_data_sg {
+            transaction_data: binder_transaction_data {
+                code: 1,
+                flags: 0,
+                sender_pid: 1,
+                sender_euid: 0,
+                target: binder_transaction_data__bindgen_ty_1 { handle: 0 },
+                cookie: 0,
+                data_size: transaction_data.len() as u64,
+                offsets_size: std::mem::size_of::<u64>() as u64,
+                data: binder_transaction_data__bindgen_ty_2 {
+                    ptr: binder_transaction_data__bindgen_ty_2__bindgen_ty_1 {
+                        buffer: data_addr.ptr() as u64,
+                        offsets: offsets_addr.ptr() as u64,
+                    },
                 },
             },
+            buffers_size: 0,
         };
 
         // Copy the data from process 1 to process 2
@@ -2739,12 +2808,55 @@ mod tests {
         assert_eq!(&buffer[..], offsets_data.as_bytes());
     }
 
+    struct TranslateHandlesTestFixture {
+        kernel: Arc<Kernel>,
+        driver: BinderDriver,
+
+        sender_task: CurrentTask,
+        sender_proc: Arc<BinderProcess>,
+        sender_thread: Arc<BinderThread>,
+
+        receiver_task: CurrentTask,
+        receiver_proc: Arc<BinderProcess>,
+    }
+
+    impl TranslateHandlesTestFixture {
+        fn new() -> Self {
+            let (kernel, sender_task) = create_kernel_and_task();
+            let driver = BinderDriver::new();
+            let (sender_proc, sender_thread) = driver.create_process_and_thread(sender_task.id);
+            let receiver_task = create_task(&kernel, "receiver_task");
+            let receiver_proc = driver.create_process(receiver_task.id);
+
+            mmap_shared_memory(&driver, &sender_task, &sender_proc);
+            mmap_shared_memory(&driver, &receiver_task, &receiver_proc);
+
+            Self {
+                kernel,
+                driver,
+                sender_task,
+                sender_proc,
+                sender_thread,
+                receiver_task,
+                receiver_proc,
+            }
+        }
+
+        fn lock_receiver_shared_memory<'a>(
+            &'a self,
+        ) -> crate::lock::MappedMutexGuard<'a, SharedMemory> {
+            crate::lock::MutexGuard::map(self.receiver_proc.shared_memory.lock(), |value| {
+                value.as_mut().unwrap()
+            })
+        }
+    }
+
     #[fuchsia::test]
     fn transaction_translate_binder_leaving_process() {
-        let (_kernel, task) = create_kernel_and_task();
-        let driver = BinderDriver::new();
-        let (sender_proc, sender_thread) = driver.create_process_and_thread(1);
-        let receiver = driver.create_process(2);
+        let test = TranslateHandlesTestFixture::new();
+        let mut receiver_shared_memory = test.lock_receiver_shared_memory();
+        let (_, _, mut sg_buffer) =
+            receiver_shared_memory.allocate_buffers(0, 0, 0).expect("allocate buffers");
 
         let binder_object = LocalBinderObject {
             weak_ref_addr: UserAddress::from(0x0000000000000010),
@@ -2765,14 +2877,16 @@ mod tests {
 
         const EXPECTED_HANDLE: Handle = Handle::from_raw(1);
 
-        let transaction_refs = driver
+        let transaction_refs = test
+            .driver
             .translate_handles(
-                &task,
-                &sender_proc,
-                &sender_thread,
-                &receiver,
+                &test.sender_task,
+                &test.sender_proc,
+                &test.sender_thread,
+                &test.receiver_proc,
                 &offsets,
                 &mut transaction_data,
+                &mut sg_buffer,
             )
             .expect("failed to translate handles");
 
@@ -2792,28 +2906,29 @@ mod tests {
         assert_eq!(&expected_transaction_data, &transaction_data);
 
         // Verify that a handle was created in the receiver.
-        let object = receiver
+        let object = test
+            .receiver_proc
             .handles
             .lock()
             .get(EXPECTED_HANDLE.object_index())
             .expect("expected handle not present");
-        assert!(std::ptr::eq(object.owner.as_ptr(), Arc::as_ptr(&sender_proc)));
+        assert!(std::ptr::eq(object.owner.as_ptr(), Arc::as_ptr(&test.sender_proc)));
         assert_eq!(object.local, binder_object);
 
         // Verify that a strong acquire command is sent to the sender process (on the same thread
         // that sent the transaction).
         assert_eq!(
-            sender_thread.read().command_queue.front(),
+            test.sender_thread.read().command_queue.front(),
             Some(&Command::AcquireRef(binder_object))
         );
     }
 
     #[fuchsia::test]
     fn transaction_translate_binder_handle_entering_owning_process() {
-        let (_kernel, task) = create_kernel_and_task();
-        let driver = BinderDriver::new();
-        let (sender_proc, sender_thread) = driver.create_process_and_thread(1);
-        let receiver = driver.create_process(2);
+        let test = TranslateHandlesTestFixture::new();
+        let mut receiver_shared_memory = test.lock_receiver_shared_memory();
+        let (_, _, mut sg_buffer) =
+            receiver_shared_memory.allocate_buffers(0, 0, 0).expect("allocate buffers");
 
         let binder_object = LocalBinderObject {
             weak_ref_addr: UserAddress::from(0x0000000000000010),
@@ -2821,10 +2936,9 @@ mod tests {
         };
 
         // Pretend the binder object was given to the sender earlier, so it can be sent back.
-        let handle = sender_proc
-            .handles
-            .lock()
-            .insert_for_transaction(Arc::new(BinderObject::new(&receiver, binder_object.clone())));
+        let handle = test.sender_proc.handles.lock().insert_for_transaction(Arc::new(
+            BinderObject::new(&test.receiver_proc, binder_object.clone()),
+        ));
 
         const DATA_PREAMBLE: &[u8; 5] = b"stuff";
 
@@ -2838,14 +2952,15 @@ mod tests {
             __bindgen_anon_1.handle: handle.into(),
         }));
 
-        driver
+        test.driver
             .translate_handles(
-                &task,
-                &sender_proc,
-                &sender_thread,
-                &receiver,
+                &test.sender_task,
+                &test.sender_proc,
+                &test.sender_thread,
+                &test.receiver_proc,
                 &offsets,
                 &mut transaction_data,
+                &mut sg_buffer,
             )
             .expect("failed to translate handles");
 
@@ -2863,11 +2978,11 @@ mod tests {
 
     #[fuchsia::test]
     fn transaction_translate_binder_handle_passed_between_non_owning_processes() {
-        let (_kernel, task) = create_kernel_and_task();
-        let driver = BinderDriver::new();
-        let (sender_proc, sender_thread) = driver.create_process_and_thread(1);
-        let receiver = driver.create_process(2);
-        let owner = driver.create_process(3);
+        let test = TranslateHandlesTestFixture::new();
+        let owner_proc = test.driver.create_process(3);
+        let mut receiver_shared_memory = test.lock_receiver_shared_memory();
+        let (_, _, mut sg_buffer) =
+            receiver_shared_memory.allocate_buffers(0, 0, 0).expect("allocate buffers");
 
         let binder_object = LocalBinderObject {
             weak_ref_addr: UserAddress::from(0x0000000000000010),
@@ -2878,16 +2993,15 @@ mod tests {
         const RECEIVING_HANDLE: Handle = Handle::from_raw(2);
 
         // Pretend the binder object was given to the sender earlier.
-        let handle = sender_proc
-            .handles
-            .lock()
-            .insert_for_transaction(Arc::new(BinderObject::new(&owner, binder_object.clone())));
+        let handle = test.sender_proc.handles.lock().insert_for_transaction(Arc::new(
+            BinderObject::new(&owner_proc, binder_object.clone()),
+        ));
         assert_eq!(SENDING_HANDLE, handle);
 
         // Give the receiver another handle so that the input handle number and output handle
         // number aren't the same.
-        receiver.handles.lock().insert_for_transaction(Arc::new(BinderObject::new(
-            &owner,
+        test.receiver_proc.handles.lock().insert_for_transaction(Arc::new(BinderObject::new(
+            &owner_proc,
             LocalBinderObject::default(),
         )));
 
@@ -2903,14 +3017,16 @@ mod tests {
             __bindgen_anon_1.handle: SENDING_HANDLE.into(),
         }));
 
-        let transaction_refs = driver
+        let transaction_refs = test
+            .driver
             .translate_handles(
-                &task,
-                &sender_proc,
-                &sender_thread,
-                &receiver,
+                &test.sender_task,
+                &test.sender_proc,
+                &test.sender_thread,
+                &test.receiver_proc,
                 &offsets,
                 &mut transaction_data,
+                &mut sg_buffer,
             )
             .expect("failed to translate handles");
 
@@ -2930,21 +3046,22 @@ mod tests {
         assert_eq!(&expected_transaction_data, &transaction_data);
 
         // Verify that a handle was created in the receiver.
-        let object = receiver
+        let object = test
+            .receiver_proc
             .handles
             .lock()
             .get(RECEIVING_HANDLE.object_index())
             .expect("expected handle not present");
-        assert!(std::ptr::eq(object.owner.as_ptr(), Arc::as_ptr(&owner)));
+        assert!(std::ptr::eq(object.owner.as_ptr(), Arc::as_ptr(&owner_proc)));
         assert_eq!(object.local, binder_object);
     }
 
     #[fuchsia::test]
     fn transaction_translation_fails_on_invalid_handle() {
-        let (_kernel, task) = create_kernel_and_task();
-        let driver = BinderDriver::new();
-        let (sender_proc, sender_thread) = driver.create_process_and_thread(1);
-        let receiver_proc = driver.create_process(2);
+        let test = TranslateHandlesTestFixture::new();
+        let mut receiver_shared_memory = test.lock_receiver_shared_memory();
+        let (_, _, mut sg_buffer) =
+            receiver_shared_memory.allocate_buffers(0, 0, 0).expect("allocate buffers");
 
         let mut transaction_data = Vec::new();
         transaction_data.extend(struct_with_union_into_bytes!(flat_binder_object {
@@ -2954,14 +3071,16 @@ mod tests {
             __bindgen_anon_1.handle: 42,
         }));
 
-        let transaction_ref_error = driver
+        let transaction_ref_error = test
+            .driver
             .translate_handles(
-                &task,
-                &sender_proc,
-                &sender_thread,
-                &receiver_proc,
+                &test.sender_task,
+                &test.sender_proc,
+                &test.sender_thread,
+                &test.receiver_proc,
                 &[0 as binder_uintptr_t],
                 &mut transaction_data,
+                &mut sg_buffer,
             )
             .expect_err("translate handles unexpectedly succeeded");
 
@@ -2970,10 +3089,10 @@ mod tests {
 
     #[fuchsia::test]
     fn transaction_translation_fails_on_invalid_object_type() {
-        let (_kernel, task) = create_kernel_and_task();
-        let driver = BinderDriver::new();
-        let (sender_proc, sender_thread) = driver.create_process_and_thread(1);
-        let receiver_proc = driver.create_process(2);
+        let test = TranslateHandlesTestFixture::new();
+        let mut receiver_shared_memory = test.lock_receiver_shared_memory();
+        let (_, _, mut sg_buffer) =
+            receiver_shared_memory.allocate_buffers(0, 0, 0).expect("allocate buffers");
 
         let mut transaction_data = Vec::new();
         transaction_data.extend(struct_with_union_into_bytes!(flat_binder_object {
@@ -2983,14 +3102,16 @@ mod tests {
             __bindgen_anon_1.handle: 42,
         }));
 
-        let transaction_ref_error = driver
+        let transaction_ref_error = test
+            .driver
             .translate_handles(
-                &task,
-                &sender_proc,
-                &sender_thread,
-                &receiver_proc,
+                &test.sender_task,
+                &test.sender_proc,
+                &test.sender_thread,
+                &test.receiver_proc,
                 &[0 as binder_uintptr_t],
                 &mut transaction_data,
+                &mut sg_buffer,
             )
             .expect_err("translate handles unexpectedly succeeded");
 
@@ -2999,10 +3120,10 @@ mod tests {
 
     #[fuchsia::test]
     fn transaction_drop_references_on_failed_transaction() {
-        let (_kernel, task) = create_kernel_and_task();
-        let driver = BinderDriver::new();
-        let (sender_proc, sender_thread) = driver.create_process_and_thread(1);
-        let receiver_proc = driver.create_process(2);
+        let test = TranslateHandlesTestFixture::new();
+        let mut receiver_shared_memory = test.lock_receiver_shared_memory();
+        let (_, _, mut sg_buffer) =
+            receiver_shared_memory.allocate_buffers(0, 0, 0).expect("allocate buffers");
 
         let binder_object = LocalBinderObject {
             weak_ref_addr: UserAddress::from(0x0000000000000010),
@@ -3023,23 +3144,24 @@ mod tests {
             __bindgen_anon_1.handle: 42,
         }));
 
-        driver
+        test.driver
             .translate_handles(
-                &task,
-                &sender_proc,
-                &sender_thread,
-                &receiver_proc,
+                &test.sender_task,
+                &test.sender_proc,
+                &test.sender_thread,
+                &test.receiver_proc,
                 &[
                     0 as binder_uintptr_t,
                     std::mem::size_of::<flat_binder_object>() as binder_uintptr_t,
                 ],
                 &mut transaction_data,
+                &mut sg_buffer,
             )
             .expect_err("translate handles unexpectedly succeeded");
 
         // Ensure that the handle created in the receiving process is not present.
         assert!(
-            receiver_proc.handles.lock().get(0).is_none(),
+            test.receiver_proc.handles.lock().get(0).is_none(),
             "handle present when it should have been dropped"
         );
     }
@@ -3261,17 +3383,18 @@ mod tests {
 
     #[fuchsia::test]
     fn send_fd_in_transaction() {
-        let (kernel, sender_task) = create_kernel_and_task();
-        let receiver_task = create_task(&kernel, "test-task2");
-
-        let driver = BinderDriver::new();
-        let (sender_proc, sender_thread) = driver.create_process_and_thread(sender_task.id);
-        let receiver_proc = driver.create_process(receiver_task.id);
+        let test = TranslateHandlesTestFixture::new();
+        let mut receiver_shared_memory = test.lock_receiver_shared_memory();
+        let (_, _, mut sg_buffer) =
+            receiver_shared_memory.allocate_buffers(0, 0, 0).expect("allocate buffers");
 
         // Open a file in the sender process.
-        let file = SyslogFile::new(&kernel);
-        let sender_fd =
-            sender_task.files.add_with_flags(file.clone(), FdFlags::CLOEXEC).expect("add file");
+        let file = SyslogFile::new(&test.kernel);
+        let sender_fd = test
+            .sender_task
+            .files
+            .add_with_flags(file.clone(), FdFlags::CLOEXEC)
+            .expect("add file");
 
         // Send the fd in a transaction. `flags` and `cookie` are set so that we can ensure binder
         // driver doesn't touch them/passes them through.
@@ -3283,31 +3406,38 @@ mod tests {
         });
         let offsets = [0];
 
-        let _ = driver
+        let _ = test
+            .driver
             .translate_handles(
-                &sender_task,
-                &sender_proc,
-                &sender_thread,
-                &receiver_proc,
+                &test.sender_task,
+                &test.sender_proc,
+                &test.sender_thread,
+                &test.receiver_proc,
                 &offsets,
                 &mut transaction_data,
+                &mut sg_buffer,
             )
             .expect("failed to translate handles");
 
         // The receiver should now have a file.
-        let receiver_fd =
-            receiver_task.files.get_all_fds().first().cloned().expect("receiver should have FD");
+        let receiver_fd = test
+            .receiver_task
+            .files
+            .get_all_fds()
+            .first()
+            .cloned()
+            .expect("receiver should have FD");
 
         // The FD should have the same flags.
         assert_eq!(
-            receiver_task.files.get_fd_flags(receiver_fd).expect("get flags"),
+            test.receiver_task.files.get_fd_flags(receiver_fd).expect("get flags"),
             FdFlags::CLOEXEC
         );
 
         // The FD should point to the same file.
         assert!(
             Arc::ptr_eq(
-                &receiver_task.files.get(receiver_fd).expect("receiver should have FD"),
+                &test.receiver_task.files.get(receiver_fd).expect("receiver should have FD"),
                 &file
             ),
             "FDs from sender and receiver don't point to the same file"
@@ -3363,11 +3493,14 @@ mod tests {
 
         // Construct a oneway transaction to send from the sender to the receiver.
         const FIRST_TRANSACTION_CODE: u32 = 42;
-        let transaction = binder_transaction_data {
-            code: FIRST_TRANSACTION_CODE,
-            flags: transaction_flags_TF_ONE_WAY,
-            target: binder_transaction_data__bindgen_ty_1 { handle: handle.into() },
-            ..binder_transaction_data::default()
+        let transaction = binder_transaction_data_sg {
+            transaction_data: binder_transaction_data {
+                code: FIRST_TRANSACTION_CODE,
+                flags: transaction_flags_TF_ONE_WAY,
+                target: binder_transaction_data__bindgen_ty_1 { handle: handle.into() },
+                ..binder_transaction_data::default()
+            },
+            buffers_size: 0,
         };
 
         // Submit the transaction.
@@ -3390,11 +3523,14 @@ mod tests {
 
         // Queue another transaction.
         const SECOND_TRANSACTION_CODE: u32 = 43;
-        let transaction = binder_transaction_data {
-            code: SECOND_TRANSACTION_CODE,
-            flags: transaction_flags_TF_ONE_WAY,
-            target: binder_transaction_data__bindgen_ty_1 { handle: handle.into() },
-            ..binder_transaction_data::default()
+        let transaction = binder_transaction_data_sg {
+            transaction_data: binder_transaction_data {
+                code: SECOND_TRANSACTION_CODE,
+                flags: transaction_flags_TF_ONE_WAY,
+                target: binder_transaction_data__bindgen_ty_1 { handle: handle.into() },
+                ..binder_transaction_data::default()
+            },
+            buffers_size: 0,
         };
         driver
             .handle_transaction(&sender_task, &sender_proc, &sender_thread, transaction)
@@ -3470,11 +3606,14 @@ mod tests {
 
         // Construct a oneway transaction to send from the sender to the receiver.
         const ONEWAY_TRANSACTION_CODE: u32 = 42;
-        let transaction = binder_transaction_data {
-            code: ONEWAY_TRANSACTION_CODE,
-            flags: transaction_flags_TF_ONE_WAY,
-            target: binder_transaction_data__bindgen_ty_1 { handle: handle.into() },
-            ..binder_transaction_data::default()
+        let transaction = binder_transaction_data_sg {
+            transaction_data: binder_transaction_data {
+                code: ONEWAY_TRANSACTION_CODE,
+                flags: transaction_flags_TF_ONE_WAY,
+                target: binder_transaction_data__bindgen_ty_1 { handle: handle.into() },
+                ..binder_transaction_data::default()
+            },
+            buffers_size: 0,
         };
 
         // Submit the transaction twice so that the queue is populated.
@@ -3505,10 +3644,13 @@ mod tests {
 
         // Queue a synchronous (request/response) transaction.
         const SYNC_TRANSACTION_CODE: u32 = 43;
-        let transaction = binder_transaction_data {
-            code: SYNC_TRANSACTION_CODE,
-            target: binder_transaction_data__bindgen_ty_1 { handle: handle.into() },
-            ..binder_transaction_data::default()
+        let transaction = binder_transaction_data_sg {
+            transaction_data: binder_transaction_data {
+                code: SYNC_TRANSACTION_CODE,
+                target: binder_transaction_data__bindgen_ty_1 { handle: handle.into() },
+                ..binder_transaction_data::default()
+            },
+            buffers_size: 0,
         };
         driver
             .handle_transaction(&sender_task, &sender_proc, &sender_thread, transaction)
