@@ -27,7 +27,7 @@ protocol GuestManager {
     /// Connect to a currently running guest
     ConnectToGuest(resource struct {
         controller server_end:Guest;
-    });
+    }) -> (struct {}) error zx.status;
 
     /// Connect to the memory balloon of a currently running guest
     ConnectToBalloon(resource struct {

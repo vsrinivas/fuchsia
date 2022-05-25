@@ -131,4 +131,34 @@ TEST_F(GuestManagerTest, LaunchAndGetInfo) {
   ASSERT_TRUE(get_callback_called);
 }
 
+TEST_F(GuestManagerTest, ConnectToGuest) {
+  bool connect_callback_called = false;
+  GuestManager manager(provider_.context(), "/pkg/", "data/configs/valid_guest.cfg");
+
+  fuchsia::virtualization::GuestPtr guest;
+  manager.ConnectToGuest(guest.NewRequest(), [&connect_callback_called](auto res) {
+    ASSERT_TRUE(res.is_err());
+    ASSERT_EQ(ZX_ERR_UNAVAILABLE, res.err());
+    connect_callback_called = true;
+  });
+  ASSERT_TRUE(connect_callback_called);
+  guest.Unbind();
+
+  bool launch_callback_called = false;
+  fuchsia::virtualization::GuestConfig user_guest_config;
+  manager.LaunchGuest(std::move(user_guest_config), guest.NewRequest(),
+                      [&launch_callback_called](auto res) {
+                        ASSERT_FALSE(res.is_err());
+                        launch_callback_called = true;
+                      });
+  ASSERT_TRUE(launch_callback_called);
+  guest.Unbind();
+
+  connect_callback_called = false;
+  manager.ConnectToGuest(guest.NewRequest(), [&connect_callback_called](auto res) {
+    ASSERT_FALSE(res.is_err());
+    connect_callback_called = true;
+  });
+  ASSERT_TRUE(connect_callback_called);
+}
 }  // namespace

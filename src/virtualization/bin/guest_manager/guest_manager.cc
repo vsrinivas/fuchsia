@@ -8,6 +8,7 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include "fuchsia/virtualization/cpp/fidl.h"
+#include "lib/fpromise/result.h"
 #include "src/lib/files/file.h"
 
 GuestManager::GuestManager(sys::ComponentContext* context, std::string config_pkg_dir_path,
@@ -25,8 +26,7 @@ void GuestManager::LaunchGuest(
     fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller,
     fuchsia::virtualization::GuestManager::LaunchGuestCallback callback) {
   if (guest_started_) {
-    callback(
-        fuchsia::virtualization::GuestManager_LaunchGuest_Result::WithErr(ZX_ERR_ALREADY_EXISTS));
+    callback(fpromise::error(ZX_ERR_ALREADY_EXISTS));
     return;
   }
   guest_started_ = true;
@@ -49,15 +49,13 @@ void GuestManager::LaunchGuest(
   bool readFileSuccess = files::ReadFileToString(config_path, &content);
   if (!readFileSuccess) {
     FX_LOGS(ERROR) << "Failed to read guest configuration " << config_path;
-    callback(
-        fuchsia::virtualization::GuestManager_LaunchGuest_Result::WithErr(ZX_ERR_INVALID_ARGS));
+    callback(fpromise::error(ZX_ERR_INVALID_ARGS));
     return;
   }
   zx_status_t status = guest_config::ParseConfig(content, std::move(open_at), &guest_config_);
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to parse guest configuration " << config_path;
-    callback(
-        fuchsia::virtualization::GuestManager_LaunchGuest_Result::WithErr(ZX_ERR_INVALID_ARGS));
+    callback(fpromise::error(ZX_ERR_INVALID_ARGS));
     return;
   }
 
@@ -77,15 +75,18 @@ void GuestManager::LaunchGuest(
   // bring up all virtio devices and query guest_config via the
   // fuchsia::virtualization::GuestConfigProvider::Get
   context_->svc()->Connect(std::move(controller));
-  callback(fuchsia::virtualization::GuestManager_LaunchGuest_Result::WithResponse({}));
+  callback(fpromise::ok());
 }
 
 void GuestManager::ConnectToGuest(
-    fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller) {
+    fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller,
+    fuchsia::virtualization::GuestManager::ConnectToGuestCallback callback) {
   if (guest_started_) {
     context_->svc()->Connect(std::move(controller));
+    callback(fuchsia::virtualization::GuestManager_ConnectToGuest_Result::WithResponse({}));
   } else {
     FX_LOGS(ERROR) << "Failed to connect to guest. Guest is not running";
+    callback(fpromise::error(ZX_ERR_UNAVAILABLE));
   }
 }
 
