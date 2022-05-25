@@ -71,6 +71,8 @@ class WithProtocolEndsStructContainingEndsTopResponse;
 
 class WithProtocolEndsStructContainingEndsRequest;
 
+class MethodWithUnionUnionMethodTopResponse;
+
 class ManyParametersFifteenRequest;
 
 class HandleRightsProtocolResponseMethodTopResponse;
@@ -2054,6 +2056,66 @@ class WithProtocolEndsStructContainingEndsRequest {
 
 #endif  // __Fuchsia__
 
+extern "C" const fidl_type_t test_protocols_MethodWithUnionUnionMethodTopResponseTable;
+
+class MethodWithUnionUnionMethodTopResponse {
+ private:
+  struct Storage_;
+
+ public:
+  MethodWithUnionUnionMethodTopResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  MethodWithUnionUnionMethodTopResponse(::std::unique_ptr<::test_protocols::TheUnion> u) noexcept
+      : storage_({.u = std::move(u)}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |MethodWithUnionUnionMethodTopResponse| only if all of its members are default constructible.
+  MethodWithUnionUnionMethodTopResponse() = default;
+#pragma clang diagnostic pop
+
+  MethodWithUnionUnionMethodTopResponse(MethodWithUnionUnionMethodTopResponse&&) noexcept = default;
+  MethodWithUnionUnionMethodTopResponse& operator=(MethodWithUnionUnionMethodTopResponse&&) noexcept = default;
+  MethodWithUnionUnionMethodTopResponse(const MethodWithUnionUnionMethodTopResponse& other) noexcept : MethodWithUnionUnionMethodTopResponse(other.CloneStorage_()) {}
+  MethodWithUnionUnionMethodTopResponse& operator=(const MethodWithUnionUnionMethodTopResponse& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  bool operator==(const MethodWithUnionUnionMethodTopResponse& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<::test_protocols::MethodWithUnionUnionMethodTopResponse, 16>::Equal(this, &other);
+  }
+  bool operator!=(const MethodWithUnionUnionMethodTopResponse& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<::test_protocols::MethodWithUnionUnionMethodTopResponse, 16>::Equal(this, &other);
+  }
+
+  const ::std::unique_ptr<::test_protocols::TheUnion>&
+  u() const {
+    return storage_.u;
+  }
+
+  ::std::unique_ptr<::test_protocols::TheUnion>& u() {
+    return storage_.u;
+  }
+
+  MethodWithUnionUnionMethodTopResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : MethodWithUnionUnionMethodTopResponse(Storage_{
+                                                                                                          .u = {},
+                                                                                                      }) {}
+
+ private:
+  struct Storage_ final {
+    ::std::unique_ptr<::test_protocols::TheUnion> u;
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_protocols::MethodWithUnionUnionMethodTopResponse, 16>;
+  friend struct ::fidl::internal::MemberVisitor<::test_protocols::MethodWithUnionUnionMethodTopResponse>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::std::unique_ptr<::test_protocols::TheUnion>, fidl::internal::NaturalCodingConstraintEmpty>{
+      &Storage_::u, 0});
+  static constexpr auto kPadding = std::make_tuple();
+};
+
 extern "C" const fidl_type_t test_protocols_ManyParametersFifteenRequestTable;
 
 class ManyParametersFifteenRequest {
@@ -3373,6 +3435,15 @@ struct internal::NaturalCodingTraits<::test_protocols::WithProtocolEndsStructCon
     : public ::fidl::internal::NaturalStructCodingTraits<::test_protocols::WithProtocolEndsStructContainingEndsRequest, 16> {};
 
 #endif  // __Fuchsia__
+
+extern "C" const fidl_type_t test_protocols_MethodWithUnionUnionMethodTopResponseTable;
+
+template <>
+struct IsFidlType<::test_protocols::MethodWithUnionUnionMethodTopResponse> : public std::true_type {};
+
+template <>
+struct internal::NaturalCodingTraits<::test_protocols::MethodWithUnionUnionMethodTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_protocols::MethodWithUnionUnionMethodTopResponse, 16> {};
 
 extern "C" const fidl_type_t test_protocols_ManyParametersFifteenRequestTable;
 

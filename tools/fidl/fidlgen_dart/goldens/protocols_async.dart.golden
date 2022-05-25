@@ -1977,21 +1977,23 @@ class ManyParametersBinding extends $fidl.AsyncBinding<ManyParameters> {
   }
 }
 
-// unionMethod: (TheUnion u)
+// unionMethod: (TheUnion u) -> (TheUnion? u)
 const int _kMethodWithUnion_UnionMethod_Ordinal = 0x393e7f5b2b821218;
 const $fidl.MethodType _kMethodWithUnion_UnionMethod_Type = $fidl.MethodType(
   request: <$fidl.MemberType>[
     $fidl.MemberType<TheUnion>(type: kTheUnion_Type, offset: 0),
   ],
-  response: [],
+  response: <$fidl.MemberType>[
+    $fidl.MemberType<TheUnion?>(type: kTheUnion_OptType, offset: 0),
+  ],
   name: r"MethodWithUnion.UnionMethod",
   requestInlineSizeV2: 16,
-  responseInlineSizeV2: 0,
+  responseInlineSizeV2: 16,
 );
 
 abstract class MethodWithUnion {
   $fidl.ServiceData? get $serviceData => MethodWithUnionData();
-  $async.Future<void> unionMethod(TheUnion u);
+  $async.Future<TheUnion?> unionMethod(TheUnion u);
 } // TODO: Remove ServiceData for non-service
 
 class MethodWithUnionData implements $fidl.ServiceData<MethodWithUnion> {
@@ -2039,6 +2041,22 @@ class MethodWithUnionProxy extends $fidl.AsyncProxy<MethodWithUnion>
       return;
     }
     switch ($message.ordinal) {
+      case _kMethodWithUnion_UnionMethod_Ordinal:
+        final String _name = _kMethodWithUnion_UnionMethod_Type.name;
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'method response', $completer.completeError, () {
+          final List<$fidl.MemberType> $types =
+              _kMethodWithUnion_UnionMethod_Type.response!;
+          // ignore: prefer_const_declarations
+          final $response = $fidl.decodeMessage(
+              $message,
+              _kMethodWithUnion_UnionMethod_Type
+                  .responseInlineSize($message.wireFormat),
+              $types[0]);
+
+          $completer.complete($response);
+        });
+        break;
       default:
         ctrl.proxyError(
             $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
@@ -2047,7 +2065,7 @@ class MethodWithUnionProxy extends $fidl.AsyncProxy<MethodWithUnion>
   }
 
   @override
-  $async.Future<void> unionMethod(TheUnion u) {
+  $async.Future<TheUnion?> unionMethod(TheUnion u) {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
@@ -2065,9 +2083,9 @@ class MethodWithUnionProxy extends $fidl.AsyncProxy<MethodWithUnion>
             .requestInlineSize($encoder.wireFormat), () {
       $types[0].encode($encoder, u, $fidl.kMessageHeaderSize, 1);
     });
-    return $async.Future.sync(() {
-      ctrl.sendMessage($encoder.message);
-    });
+    final $completer = $async.Completer<TheUnion?>();
+    ctrl.sendMessageWithResponse($encoder.message, $completer);
+    return $completer.future;
   }
 }
 
@@ -2085,14 +2103,31 @@ class MethodWithUnionBinding extends $fidl.AsyncBinding<MethodWithUnion> {
               _kMethodWithUnion_UnionMethod_Type.request!;
           // ignore: prefer_const_declarations
           final _impl = impl!;
-          final $async.Future<void> $future = $fidl
-              .decodeMessageWithCallback<$async.Future<void>>(
+          final $async.Future<TheUnion?> $future = $fidl
+              .decodeMessageWithCallback<$async.Future<TheUnion?>>(
                   $message,
                   _kMethodWithUnion_UnionMethod_Type.requestInlineSize(
                       $message.wireFormat), ($fidl.Decoder decoder) {
             return _impl.unionMethod(
               $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
             );
+          });
+          $future.then(($response) {
+            final $fidl.Encoder $encoder =
+                $fidl.Encoder($fidl.kWireFormatDefault);
+            $encoder.encodeMessageHeader(_kMethodWithUnion_UnionMethod_Ordinal,
+                $message.txid, $fidl.CallStrictness.strict);
+            final List<$fidl.MemberType> $types =
+                _kMethodWithUnion_UnionMethod_Type.response!;
+            $fidl.encodeMessage(
+                $encoder,
+                _kMethodWithUnion_UnionMethod_Type
+                    .responseInlineSize($encoder.wireFormat),
+                $types[0],
+                $response);
+            $respond($encoder.message);
+          }, onError: (_e) {
+            $fidl.handleException(_name, _e, close);
           });
         }, close);
         break;

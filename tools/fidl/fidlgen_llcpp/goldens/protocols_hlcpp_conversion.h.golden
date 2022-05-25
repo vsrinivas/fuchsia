@@ -77,37 +77,6 @@ struct HLCPPToNaturalTraits<fidl::InterfaceRequest<::test::protocols::Transition
   }
 };
 template <>
-struct NaturalToHLCPPTraits<fidl::ClientEnd<::test_protocols::MethodWithUnion>> {
-  using HLCPPType = fidl::InterfaceHandle<::test::protocols::MethodWithUnion>;
-  static inline fidl::InterfaceHandle<::test::protocols::MethodWithUnion> Convert(fidl::ClientEnd<::test_protocols::MethodWithUnion>&& c) {
-    return fidl::InterfaceHandle<::test::protocols::MethodWithUnion>(c.TakeChannel());
-  }
-};
-
-template <>
-struct NaturalToHLCPPTraits<fidl::ServerEnd<::test_protocols::MethodWithUnion>> {
-  using HLCPPType = fidl::InterfaceRequest<::test::protocols::MethodWithUnion>;
-  static inline fidl::InterfaceRequest<::test::protocols::MethodWithUnion> Convert(fidl::ServerEnd<::test_protocols::MethodWithUnion>&& c) {
-    return fidl::InterfaceRequest<::test::protocols::MethodWithUnion>(c.TakeChannel());
-  }
-};
-
-template <>
-struct HLCPPToNaturalTraits<fidl::InterfaceHandle<::test::protocols::MethodWithUnion>> {
-  using NaturalType = fidl::ClientEnd<::test_protocols::MethodWithUnion>;
-  static inline fidl::ClientEnd<::test_protocols::MethodWithUnion> Convert(fidl::InterfaceHandle<::test::protocols::MethodWithUnion>&& c) {
-    return fidl::ClientEnd<::test_protocols::MethodWithUnion>(c.TakeChannel());
-  }
-};
-
-template <>
-struct HLCPPToNaturalTraits<fidl::InterfaceRequest<::test::protocols::MethodWithUnion>> {
-  using NaturalType = fidl::ServerEnd<::test_protocols::MethodWithUnion>;
-  static inline fidl::ServerEnd<::test_protocols::MethodWithUnion> Convert(fidl::InterfaceRequest<::test::protocols::MethodWithUnion>&& c) {
-    return fidl::ServerEnd<::test_protocols::MethodWithUnion>(c.TakeChannel());
-  }
-};
-template <>
 struct NaturalToHLCPPTraits<fidl::ClientEnd<::test_protocols::WithProtocolEnds>> {
   using HLCPPType = fidl::InterfaceHandle<::test::protocols::WithProtocolEnds>;
   static inline fidl::InterfaceHandle<::test::protocols::WithProtocolEnds> Convert(fidl::ClientEnd<::test_protocols::WithProtocolEnds>&& c) {
@@ -136,6 +105,37 @@ struct HLCPPToNaturalTraits<fidl::InterfaceRequest<::test::protocols::WithProtoc
   using NaturalType = fidl::ServerEnd<::test_protocols::WithProtocolEnds>;
   static inline fidl::ServerEnd<::test_protocols::WithProtocolEnds> Convert(fidl::InterfaceRequest<::test::protocols::WithProtocolEnds>&& c) {
     return fidl::ServerEnd<::test_protocols::WithProtocolEnds>(c.TakeChannel());
+  }
+};
+template <>
+struct NaturalToHLCPPTraits<fidl::ClientEnd<::test_protocols::MethodWithUnion>> {
+  using HLCPPType = fidl::InterfaceHandle<::test::protocols::MethodWithUnion>;
+  static inline fidl::InterfaceHandle<::test::protocols::MethodWithUnion> Convert(fidl::ClientEnd<::test_protocols::MethodWithUnion>&& c) {
+    return fidl::InterfaceHandle<::test::protocols::MethodWithUnion>(c.TakeChannel());
+  }
+};
+
+template <>
+struct NaturalToHLCPPTraits<fidl::ServerEnd<::test_protocols::MethodWithUnion>> {
+  using HLCPPType = fidl::InterfaceRequest<::test::protocols::MethodWithUnion>;
+  static inline fidl::InterfaceRequest<::test::protocols::MethodWithUnion> Convert(fidl::ServerEnd<::test_protocols::MethodWithUnion>&& c) {
+    return fidl::InterfaceRequest<::test::protocols::MethodWithUnion>(c.TakeChannel());
+  }
+};
+
+template <>
+struct HLCPPToNaturalTraits<fidl::InterfaceHandle<::test::protocols::MethodWithUnion>> {
+  using NaturalType = fidl::ClientEnd<::test_protocols::MethodWithUnion>;
+  static inline fidl::ClientEnd<::test_protocols::MethodWithUnion> Convert(fidl::InterfaceHandle<::test::protocols::MethodWithUnion>&& c) {
+    return fidl::ClientEnd<::test_protocols::MethodWithUnion>(c.TakeChannel());
+  }
+};
+
+template <>
+struct HLCPPToNaturalTraits<fidl::InterfaceRequest<::test::protocols::MethodWithUnion>> {
+  using NaturalType = fidl::ServerEnd<::test_protocols::MethodWithUnion>;
+  static inline fidl::ServerEnd<::test_protocols::MethodWithUnion> Convert(fidl::InterfaceRequest<::test::protocols::MethodWithUnion>&& c) {
+    return fidl::ServerEnd<::test_protocols::MethodWithUnion>(c.TakeChannel());
   }
 };
 template <>
@@ -553,6 +553,16 @@ template <>
 struct HLCPPToNaturalTraits<::test::protocols::WithProtocolEndsStructContainingEndsRequest> {
   using NaturalType = ::test_protocols::WithProtocolEndsStructContainingEndsRequest;
   static inline ::test_protocols::WithProtocolEndsStructContainingEndsRequest Convert(::test::protocols::WithProtocolEndsStructContainingEndsRequest&&);
+};
+template <>
+struct NaturalToHLCPPTraits<::test_protocols::MethodWithUnionUnionMethodTopResponse> {
+  using HLCPPType = ::test::protocols::MethodWithUnionUnionMethodTopResponse;
+  static inline ::test::protocols::MethodWithUnionUnionMethodTopResponse Convert(::test_protocols::MethodWithUnionUnionMethodTopResponse&&);
+};
+template <>
+struct HLCPPToNaturalTraits<::test::protocols::MethodWithUnionUnionMethodTopResponse> {
+  using NaturalType = ::test_protocols::MethodWithUnionUnionMethodTopResponse;
+  static inline ::test_protocols::MethodWithUnionUnionMethodTopResponse Convert(::test::protocols::MethodWithUnionUnionMethodTopResponse&&);
 };
 template <>
 struct NaturalToHLCPPTraits<::test_protocols::ManyParametersFifteenRequest> {
@@ -1031,6 +1041,17 @@ struct HLCPPToNaturalTraits<::test::protocols::WithErrorSyntax_ErrorAsEnum_Resul
 ::test_protocols::WithProtocolEndsStructContainingEndsRequest HLCPPToNaturalTraits<::test::protocols::WithProtocolEndsStructContainingEndsRequest>::Convert(::test::protocols::WithProtocolEndsStructContainingEndsRequest&& value) {
   return ::test_protocols::WithProtocolEndsStructContainingEndsRequest({{
       .in = ::fidl::HLCPPToNatural(std::move(value.in)),
+  }});
+}
+::test::protocols::MethodWithUnionUnionMethodTopResponse NaturalToHLCPPTraits<::test_protocols::MethodWithUnionUnionMethodTopResponse>::Convert(::test_protocols::MethodWithUnionUnionMethodTopResponse&& value) {
+  ::test::protocols::MethodWithUnionUnionMethodTopResponse hlcpp;
+  hlcpp.u = ::fidl::NaturalToHLCPP(std::move(value.u()));
+  return hlcpp;
+}
+
+::test_protocols::MethodWithUnionUnionMethodTopResponse HLCPPToNaturalTraits<::test::protocols::MethodWithUnionUnionMethodTopResponse>::Convert(::test::protocols::MethodWithUnionUnionMethodTopResponse&& value) {
+  return ::test_protocols::MethodWithUnionUnionMethodTopResponse({{
+      .u = ::fidl::HLCPPToNatural(std::move(value.u)),
   }});
 }
 ::test::protocols::ManyParametersFifteenRequest NaturalToHLCPPTraits<::test_protocols::ManyParametersFifteenRequest>::Convert(::test_protocols::ManyParametersFifteenRequest&& value) {

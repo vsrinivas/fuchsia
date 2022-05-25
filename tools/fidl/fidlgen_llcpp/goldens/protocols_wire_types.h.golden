@@ -80,6 +80,8 @@ struct WithProtocolEndsStructContainingEndsTopResponse;
 
 struct WithProtocolEndsStructContainingEndsRequest;
 
+struct MethodWithUnionUnionMethodTopResponse;
+
 struct ManyParametersFifteenRequest;
 
 struct HandleRightsProtocolResponseMethodTopResponse;
@@ -769,6 +771,12 @@ struct WithProtocolEndsStructContainingEndsRequest {
   void _CloseHandles();
 };
 #endif  // __Fuchsia__
+
+extern "C" const fidl_type_t test_protocols_MethodWithUnionUnionMethodTopResponseTable;
+
+struct MethodWithUnionUnionMethodTopResponse {
+  ::test_protocols::wire::TheUnion u = {};
+};
 
 extern "C" const fidl_type_t test_protocols_ManyParametersFifteenRequestTable;
 
@@ -2275,6 +2283,57 @@ struct ::fidl::internal::WireCodingTraits<::test_protocols::wire::WithProtocolEn
   }
 };
 #endif  // __Fuchsia__
+
+// TODO(fxbug.dev/95833) Remove this.
+template <>
+struct DeprecatedCTypeTraits<::test_protocols::wire::MethodWithUnionUnionMethodTopResponse> {
+  static constexpr const fidl_type_t* kType = &::test_protocols::wire::test_protocols_MethodWithUnionUnionMethodTopResponseTable;
+};
+
+template <>
+struct TypeTraits<::test_protocols::wire::MethodWithUnionUnionMethodTopResponse> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsFidlType<::test_protocols::wire::MethodWithUnionUnionMethodTopResponse> : public std::true_type {};
+template <>
+struct IsStruct<::test_protocols::wire::MethodWithUnionUnionMethodTopResponse> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_protocols::wire::MethodWithUnionUnionMethodTopResponse>);
+static_assert(offsetof(::test_protocols::wire::MethodWithUnionUnionMethodTopResponse, u) == 0);
+static_assert(sizeof(::test_protocols::wire::MethodWithUnionUnionMethodTopResponse) == TypeTraits<::test_protocols::wire::MethodWithUnionUnionMethodTopResponse>::kPrimarySize);
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<::test_protocols::wire::MethodWithUnionUnionMethodTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 16;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<::test_protocols::wire::TheUnion, fidl::internal::WireCodingConstraintUnion<true>, IsRecursive>());
+  static constexpr bool kHasPadding = false;
+  using Base = WireStructCodingTraitsBase<::test_protocols::wire::MethodWithUnionUnionMethodTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
+
+  static void Encode(
+      internal::WireEncoder* encoder, ::test_protocols::wire::MethodWithUnionUnionMethodTopResponse* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (is_memcpy_compatible) {
+      memcpy(position.As<void>(), value, sizeof(::test_protocols::wire::MethodWithUnionUnionMethodTopResponse));
+    } else {
+      internal::WireCodingTraits<::test_protocols::wire::TheUnion, fidl::internal::WireCodingConstraintUnion<true>, IsRecursive>::Encode(encoder, &value->u, position + 0, recursion_depth);
+    }
+  }
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (!Base::are_members_memcpy_compatible) {
+      internal::WireCodingTraits<::test_protocols::wire::TheUnion, fidl::internal::WireCodingConstraintUnion<true>, IsRecursive>::Decode(
+          decoder, position + 0, recursion_depth);
+    }
+  }
+};
 
 // TODO(fxbug.dev/95833) Remove this.
 template <>

@@ -108,21 +108,6 @@ class Transitional final {
   };
 };
 
-class MethodWithUnion final {
-  MethodWithUnion() = delete;
-
- public:
-  using Transport = ::fidl::internal::ChannelTransport;
-  class UnionMethod final {
-    UnionMethod() = delete;
-
-   public:
-    using Protocol = ::test_protocols::MethodWithUnion;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = false;
-  };
-};
-
 class WithProtocolEnds final {
   WithProtocolEnds() = delete;
 
@@ -149,6 +134,21 @@ class WithProtocolEnds final {
 
    public:
     using Protocol = ::test_protocols::WithProtocolEnds;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+};
+
+class MethodWithUnion final {
+  MethodWithUnion() = delete;
+
+ public:
+  using Transport = ::fidl::internal::ChannelTransport;
+  class UnionMethod final {
+    UnionMethod() = delete;
+
+   public:
+    using Protocol = ::test_protocols::MethodWithUnion;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
   };

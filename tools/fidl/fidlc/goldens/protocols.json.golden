@@ -754,7 +754,32 @@
               "has_flexible_envelope": true
             }
           },
-          "has_response": false,
+          "has_response": true,
+          "maybe_response_payload": {
+            "kind": "identifier",
+            "identifier": "test.protocols/MethodWithUnionUnionMethodTopResponse",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": true
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": true
+            }
+          },
           "is_composed": false,
           "has_error": false
         }
@@ -3721,6 +3746,85 @@
       }
     },
     {
+      "name": "test.protocols/MethodWithUnionUnionMethodTopResponse",
+      "naming_context": [
+        "MethodWithUnion",
+        "UnionMethod",
+        "Response"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+        "line": 172,
+        "column": 12,
+        "length": 43
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "test.protocols/TheUnion",
+            "nullable": true,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": true
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": true
+            }
+          },
+          "name": "u",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "line": 173,
+            "column": 9,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": true
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": true
+      }
+    },
+    {
       "name": "test.protocols/ProtocolEnds",
       "naming_context": [
         "ProtocolEnds"
@@ -6513,13 +6617,14 @@
     "test.protocols/Transitional",
     "test.protocols/TheUnion",
     "test.protocols/MethodWithUnionUnionMethodRequest",
-    "test.protocols/MethodWithUnion",
     "test.protocols/SyscallProtocolMethodCRequest",
     "test.protocols/SyscallProtocol",
     "test.protocols/ProtocolEnds",
     "test.protocols/WithProtocolEndsStructContainingEndsTopResponse",
     "test.protocols/WithProtocolEndsStructContainingEndsRequest",
     "test.protocols/WithProtocolEnds",
+    "test.protocols/MethodWithUnionUnionMethodTopResponse",
+    "test.protocols/MethodWithUnion",
     "test.protocols/ManyParametersFifteenRequest",
     "test.protocols/ManyParameters",
     "test.protocols/HandleRightsProtocolResponseMethodTopResponse",
@@ -6566,6 +6671,7 @@
     "test.protocols/HandleRightsProtocolResponseMethodTopResponse": "struct",
     "test.protocols/ManyParametersFifteenRequest": "struct",
     "test.protocols/MethodWithUnionUnionMethodRequest": "struct",
+    "test.protocols/MethodWithUnionUnionMethodTopResponse": "struct",
     "test.protocols/ProtocolEnds": "struct",
     "test.protocols/SyscallProtocolMethodCRequest": "struct",
     "test.protocols/TransitionalEventRequest": "struct",

@@ -265,6 +265,17 @@ func (msg *methodWithUnionWithCtxUnionMethodRequest) Marshaler() _bindings.Marsh
 	return _mmethodWithUnionWithCtxUnionMethodRequest
 }
 
+type methodWithUnionWithCtxUnionMethodResponse struct {
+	_ struct{}  `fidl:"s" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	U *TheUnion `fidl_offset_v2:"0"`
+}
+
+var _mmethodWithUnionWithCtxUnionMethodResponse = _bindings.CreateLazyMarshaler(methodWithUnionWithCtxUnionMethodResponse{})
+
+func (msg *methodWithUnionWithCtxUnionMethodResponse) Marshaler() _bindings.Marshaler {
+	return _mmethodWithUnionWithCtxUnionMethodResponse
+}
+
 type syscallProtocolWithCtxMethodCRequest struct {
 	_ struct{} `fidl:"s" fidl_size_v2:"16" fidl_alignment_v2:"8"`
 	A int64    `fidl_offset_v2:"0"`
@@ -1110,14 +1121,15 @@ const (
 
 type MethodWithUnionWithCtxInterface _bindings.ChannelProxy
 
-func (p *MethodWithUnionWithCtxInterface) UnionMethod(ctx_ _bindings.Context, u TheUnion) error {
+func (p *MethodWithUnionWithCtxInterface) UnionMethod(ctx_ _bindings.Context, u TheUnion) (*TheUnion, error) {
 	req_ := &methodWithUnionWithCtxUnionMethodRequest{U: u}
-	err_ := ((*_bindings.ChannelProxy)(p)).Send(MethodWithUnionUnionMethodOrdinal, req_)
-	return err_
+	resp_ := &methodWithUnionWithCtxUnionMethodResponse{}
+	err_ := ((*_bindings.ChannelProxy)(p)).Call(MethodWithUnionUnionMethodOrdinal, req_, resp_)
+	return (*resp_).U, err_
 }
 
 type MethodWithUnionWithCtx interface {
-	UnionMethod(ctx_ _bindings.Context, u TheUnion) error
+	UnionMethod(ctx_ _bindings.Context, u TheUnion) (*TheUnion, error)
 }
 
 type MethodWithUnionWithCtxTransitionalBase struct{}
@@ -1144,8 +1156,9 @@ func (s_ *MethodWithUnionWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_b
 		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, in_); err_ != nil {
 			return nil, false, err_
 		}
-		err_ := s_.Impl.UnionMethod(args_.Ctx, (*in_).U)
-		return nil, false, err_
+		u, err_ := s_.Impl.UnionMethod(args_.Ctx, (*in_).U)
+		out_ := &methodWithUnionWithCtxUnionMethodResponse{U: u}
+		return out_, true, err_
 	}
 	return nil, false, _bindings.ErrUnknownOrdinal
 }

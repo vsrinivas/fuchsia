@@ -169,5 +169,7 @@ type TheUnion = flexible union {
 protocol MethodWithUnion {
     UnionMethod(struct {
         u TheUnion;
+    }) -> (struct {
+        u TheUnion:optional;
     });
 };

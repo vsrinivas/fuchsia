@@ -332,6 +332,18 @@
 </table>
 
 
+#### Response {#MethodWithUnion.UnionMethod_Response}
+
+<table>
+    <tr><th>Name</th><th>Type</th></tr>
+        <tr>
+            <td><code>u</code></td>
+            <td>
+                <code><a class='link' href='#TheUnion'>TheUnion</a>?</code>
+            </td>
+        </tr>
+</table>
+
 ## SyscallProtocol {#SyscallProtocol}
 *Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=73)*
 

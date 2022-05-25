@@ -45,7 +45,6 @@ __LOCAL extern const struct FidlCodedStruct test_protocols_TransitionalEventEven
 __LOCAL extern const struct FidlCodedXUnion test_protocols_TheUnionTable;
 __LOCAL extern const struct FidlCodedXUnion test_protocols_TheUnionNullableRefTable;
 __LOCAL extern const struct FidlCodedStruct test_protocols_MethodWithUnionUnionMethodRequestTable;
-__LOCAL extern const struct FidlCodedStruct test_protocols_MethodWithUnionUnionMethodRequestMessageTable;
 __LOCAL extern const struct FidlCodedStruct test_protocols_SyscallProtocolMethodCRequestTable;
 __LOCAL extern const struct FidlCodedStruct test_protocols_SyscallProtocolMethodCRequestMessageTable;
 __LOCAL extern const struct FidlCodedStruct test_protocols_ProtocolEndsTable;
@@ -57,6 +56,9 @@ __LOCAL extern const struct FidlCodedStruct test_protocols_WithProtocolEndsServe
 __LOCAL extern const struct FidlCodedStruct test_protocols_WithProtocolEndsServerEndsResponseMessageTable;
 __LOCAL extern const struct FidlCodedStruct test_protocols_WithProtocolEndsStructContainingEndsRequestMessageTable;
 __LOCAL extern const struct FidlCodedStruct test_protocols_WithProtocolEndsStructContainingEndsResponseMessageTable;
+__LOCAL extern const struct FidlCodedStruct test_protocols_MethodWithUnionUnionMethodTopResponseTable;
+__LOCAL extern const struct FidlCodedStruct test_protocols_MethodWithUnionUnionMethodRequestMessageTable;
+__LOCAL extern const struct FidlCodedStruct test_protocols_MethodWithUnionUnionMethodResponseMessageTable;
 __LOCAL extern const struct FidlCodedStruct test_protocols_ManyParametersFifteenRequestTable;
 __LOCAL extern const struct FidlCodedStruct test_protocols_ManyParametersFifteenRequestMessageTable;
 __LOCAL extern const struct FidlCodedStruct test_protocols_HandleRightsProtocolResponseMethodTopResponseTable;
@@ -275,11 +277,6 @@ static const struct FidlStructElement Fields48test_protocols_MethodWithUnionUnio
 };
 const struct FidlCodedStruct test_protocols_MethodWithUnionUnionMethodRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_ContainsEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields48test_protocols_MethodWithUnionUnionMethodRequest, .element_count=1u, .size_v2=16u, .name="test.protocols/MethodWithUnionUnionMethodRequest"};
 
-static const struct FidlStructElement Fields55test_protocols_MethodWithUnionUnionMethodRequestMessage[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v2=0u, .field_type=(fidl_type_t*)(&test_protocols_TheUnionTable)}}
-};
-const struct FidlCodedStruct test_protocols_MethodWithUnionUnionMethodRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_ContainsEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields55test_protocols_MethodWithUnionUnionMethodRequestMessage, .element_count=1u, .size_v2=16u, .name="test.protocols/MethodWithUnionUnionMethodRequestMessage"};
-
 const struct FidlCodedStruct test_protocols_SyscallProtocolMethodCRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=NULL, .element_count=0u, .size_v2=16u, .name="test.protocols/SyscallProtocolMethodCRequest"};
 
 const struct FidlCodedStruct test_protocols_SyscallProtocolMethodCRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=NULL, .element_count=0u, .size_v2=16u, .name="test.protocols/SyscallProtocolMethodCRequestMessage"};
@@ -343,6 +340,21 @@ static const struct FidlStructElement Fields66test_protocols_WithProtocolEndsStr
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v2=12u, .field_type=(fidl_type_t*)(&Request35test_protocols_DiscoverableProtocolnullableTable)}}
 };
 const struct FidlCodedStruct test_protocols_WithProtocolEndsStructContainingEndsResponseMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields66test_protocols_WithProtocolEndsStructContainingEndsResponseMessage, .element_count=4u, .size_v2=16u, .name="test.protocols/WithProtocolEndsStructContainingEndsResponseMessage"};
+
+static const struct FidlStructElement Fields52test_protocols_MethodWithUnionUnionMethodTopResponse[] = {
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v2=0u, .field_type=(fidl_type_t*)(&test_protocols_TheUnionNullableRefTable)}}
+};
+const struct FidlCodedStruct test_protocols_MethodWithUnionUnionMethodTopResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_ContainsEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields52test_protocols_MethodWithUnionUnionMethodTopResponse, .element_count=1u, .size_v2=16u, .name="test.protocols/MethodWithUnionUnionMethodTopResponse"};
+
+static const struct FidlStructElement Fields55test_protocols_MethodWithUnionUnionMethodRequestMessage[] = {
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v2=0u, .field_type=(fidl_type_t*)(&test_protocols_TheUnionTable)}}
+};
+const struct FidlCodedStruct test_protocols_MethodWithUnionUnionMethodRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_ContainsEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields55test_protocols_MethodWithUnionUnionMethodRequestMessage, .element_count=1u, .size_v2=16u, .name="test.protocols/MethodWithUnionUnionMethodRequestMessage"};
+
+static const struct FidlStructElement Fields56test_protocols_MethodWithUnionUnionMethodResponseMessage[] = {
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v2=0u, .field_type=(fidl_type_t*)(&test_protocols_TheUnionNullableRefTable)}}
+};
+const struct FidlCodedStruct test_protocols_MethodWithUnionUnionMethodResponseMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_ContainsEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields56test_protocols_MethodWithUnionUnionMethodResponseMessage, .element_count=1u, .size_v2=16u, .name="test.protocols/MethodWithUnionUnionMethodResponseMessage"};
 
 static const struct FidlStructElement Fields43test_protocols_ManyParametersFifteenRequest[] = {
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v2=0u, .field_type=(fidl_type_t*)(&fidl_internal_kBoolTable)}},

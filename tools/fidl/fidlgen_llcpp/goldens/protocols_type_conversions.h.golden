@@ -441,6 +441,21 @@ struct WireTypeForNaturalType<::test_protocols::WithProtocolEndsStructContaining
 #endif  // __Fuchsia__
 
 template <>
+struct WireNaturalConversionTraits<::test_protocols::wire::MethodWithUnionUnionMethodTopResponse, ::test_protocols::MethodWithUnionUnionMethodTopResponse> {
+  static ::test_protocols::MethodWithUnionUnionMethodTopResponse ToNatural(::test_protocols::wire::MethodWithUnionUnionMethodTopResponse src);
+  static ::test_protocols::wire::MethodWithUnionUnionMethodTopResponse ToWire(fidl::AnyArena& arena, ::test_protocols::MethodWithUnionUnionMethodTopResponse src);
+};
+
+template <>
+struct NaturalTypeForWireType<::test_protocols::wire::MethodWithUnionUnionMethodTopResponse> {
+  using type = ::test_protocols::MethodWithUnionUnionMethodTopResponse;
+};
+template <>
+struct WireTypeForNaturalType<::test_protocols::MethodWithUnionUnionMethodTopResponse> {
+  using type = ::test_protocols::wire::MethodWithUnionUnionMethodTopResponse;
+};
+
+template <>
 struct WireNaturalConversionTraits<::test_protocols::wire::ManyParametersFifteenRequest, ::test_protocols::ManyParametersFifteenRequest> {
   static ::test_protocols::ManyParametersFifteenRequest ToNatural(::test_protocols::wire::ManyParametersFifteenRequest src);
   static ::test_protocols::wire::ManyParametersFifteenRequest ToWire(fidl::AnyArena& arena, ::test_protocols::ManyParametersFifteenRequest src);
@@ -1035,21 +1050,6 @@ struct WireTypeForNaturalType<::fidl::Event<::test_protocols::Transitional::Even
 };
 
 template <>
-struct WireNaturalConversionTraits<::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod>, ::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod>> {
-  static ::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod> ToNatural(::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod> src);
-  static ::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod> src);
-};
-
-template <>
-struct NaturalTypeForWireType<::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod>> {
-  using type = ::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod>;
-};
-template <>
-struct WireTypeForNaturalType<::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod>> {
-  using type = ::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod>;
-};
-
-template <>
 struct WireNaturalConversionTraits<::fidl::WireRequest<::test_protocols::WithProtocolEnds::ClientEnds>, ::fidl::Request<::test_protocols::WithProtocolEnds::ClientEnds>> {
   static ::fidl::Request<::test_protocols::WithProtocolEnds::ClientEnds> ToNatural(::fidl::WireRequest<::test_protocols::WithProtocolEnds::ClientEnds> src);
   static ::fidl::WireRequest<::test_protocols::WithProtocolEnds::ClientEnds> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocols::WithProtocolEnds::ClientEnds> src);
@@ -1137,6 +1137,36 @@ struct NaturalTypeForWireType<::fidl::WireResponse<::test_protocols::WithProtoco
 template <>
 struct WireTypeForNaturalType<::fidl::Response<::test_protocols::WithProtocolEnds::StructContainingEnds>> {
   using type = ::fidl::WireResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>;
+};
+
+template <>
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod>, ::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod>> {
+  static ::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod> ToNatural(::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod> src);
+  static ::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod> src);
+};
+
+template <>
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod>> {
+  using type = ::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod>;
+};
+template <>
+struct WireTypeForNaturalType<::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod>> {
+  using type = ::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod>;
+};
+
+template <>
+struct WireNaturalConversionTraits<::fidl::WireResponse<::test_protocols::MethodWithUnion::UnionMethod>, ::fidl::Response<::test_protocols::MethodWithUnion::UnionMethod>> {
+  static ::fidl::Response<::test_protocols::MethodWithUnion::UnionMethod> ToNatural(::fidl::WireResponse<::test_protocols::MethodWithUnion::UnionMethod> src);
+  static ::fidl::WireResponse<::test_protocols::MethodWithUnion::UnionMethod> ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_protocols::MethodWithUnion::UnionMethod> src);
+};
+
+template <>
+struct NaturalTypeForWireType<::fidl::WireResponse<::test_protocols::MethodWithUnion::UnionMethod>> {
+  using type = ::fidl::Response<::test_protocols::MethodWithUnion::UnionMethod>;
+};
+template <>
+struct WireTypeForNaturalType<::fidl::Response<::test_protocols::MethodWithUnion::UnionMethod>> {
+  using type = ::fidl::WireResponse<::test_protocols::MethodWithUnion::UnionMethod>;
 };
 
 template <>

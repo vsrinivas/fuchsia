@@ -76,24 +76,6 @@ class ::fidl::testing::WireSyncEventHandlerTestBase<::test_protocols::Transition
 };
 
 template <>
-class WireTestBase<::test_protocols::MethodWithUnion> : public ::fidl::WireServer<::test_protocols::MethodWithUnion> {
- public:
-  virtual ~WireTestBase<::test_protocols::MethodWithUnion>() = default;
-  virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
-  virtual void UnionMethod(
-      UnionMethodRequestView request, UnionMethodCompleter::Sync& completer) override {
-    NotImplemented_("UnionMethod", completer);
-  }
-};
-
-template <>
-class ::fidl::testing::WireSyncEventHandlerTestBase<::test_protocols::MethodWithUnion> : public ::fidl::WireSyncEventHandler<::test_protocols::MethodWithUnion> {
- public:
-  virtual ~WireSyncEventHandlerTestBase<::test_protocols::MethodWithUnion>() = default;
-  virtual void NotImplemented_(const std::string& name) = 0;
-};
-
-template <>
 class WireTestBase<::test_protocols::WithProtocolEnds> : public ::fidl::WireServer<::test_protocols::WithProtocolEnds> {
  public:
   virtual ~WireTestBase<::test_protocols::WithProtocolEnds>() = default;
@@ -116,6 +98,24 @@ template <>
 class ::fidl::testing::WireSyncEventHandlerTestBase<::test_protocols::WithProtocolEnds> : public ::fidl::WireSyncEventHandler<::test_protocols::WithProtocolEnds> {
  public:
   virtual ~WireSyncEventHandlerTestBase<::test_protocols::WithProtocolEnds>() = default;
+  virtual void NotImplemented_(const std::string& name) = 0;
+};
+
+template <>
+class WireTestBase<::test_protocols::MethodWithUnion> : public ::fidl::WireServer<::test_protocols::MethodWithUnion> {
+ public:
+  virtual ~WireTestBase<::test_protocols::MethodWithUnion>() = default;
+  virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
+  virtual void UnionMethod(
+      UnionMethodRequestView request, UnionMethodCompleter::Sync& completer) override {
+    NotImplemented_("UnionMethod", completer);
+  }
+};
+
+template <>
+class ::fidl::testing::WireSyncEventHandlerTestBase<::test_protocols::MethodWithUnion> : public ::fidl::WireSyncEventHandler<::test_protocols::MethodWithUnion> {
+ public:
+  virtual ~WireSyncEventHandlerTestBase<::test_protocols::MethodWithUnion>() = default;
   virtual void NotImplemented_(const std::string& name) = 0;
 };
 

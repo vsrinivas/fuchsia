@@ -722,141 +722,6 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_protocols::Transitional>
 };
 #endif  // __Fuchsia__
 
-namespace test_protocols {
-__LOCAL extern "C" const fidl_type_t test_protocols_MethodWithUnionUnionMethodRequestTable;
-
-#ifdef __Fuchsia__
-}  // namespace test_protocols
-template <>
-class ::fidl::internal::NaturalClientImpl<::test_protocols::MethodWithUnion> final : public ::fidl::internal::NaturalClientBase {
- public:
-  using NaturalClientBase::NaturalClientBase;
-  ::fitx::result<::fidl::Error> UnionMethod(::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod> request) const;
-};
-namespace test_protocols {
-#endif  // __Fuchsia__
-
-}  // namespace test_protocols
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::internal::NaturalSyncClientImpl<::test_protocols::MethodWithUnion> final
-    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalSyncClientImpl<::test_protocols::MethodWithUnion>> {
- public:
-  ::fitx::result<::fidl::Error> UnionMethod(::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod> request);
-
- private:
-  ::fidl::UnownedClientEnd<::test_protocols::MethodWithUnion> _client_end() const {
-    return ::fidl::UnownedClientEnd<::test_protocols::MethodWithUnion>(
-        _transport().get<::fidl::internal::ChannelTransport>());
-  }
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::MethodWithUnion> : public ::fidl::internal::BaseEventHandlerInterface {
- public:
-  NaturalEventHandlerInterface() = default;
-  virtual ~NaturalEventHandlerInterface() = default;
-};
-
-template <>
-class ::fidl::AsyncEventHandler<::test_protocols::MethodWithUnion>
-    : public ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::MethodWithUnion>, public ::fidl::internal::AsyncEventHandler {
- public:
-  AsyncEventHandler() = default;
-};
-
-template <>
-class ::fidl::SyncEventHandler<::test_protocols::MethodWithUnion>
-    : public ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::MethodWithUnion>, public ::fidl::internal::SyncEventHandler {
- public:
-  SyncEventHandler() = default;
-
-  // Handle all possible events defined in this protocol.
-  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
-  // method.
-  ::fidl::Status HandleOneEvent(
-      ::fidl::UnownedClientEnd<::test_protocols::MethodWithUnion> client_end);
-};
-
-template <>
-class ::fidl::internal::NaturalEventDispatcher<::test_protocols::MethodWithUnion> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_protocols::MethodWithUnion>> {
- public:
-  explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_protocols::MethodWithUnion>* event_handler)
-      : IncomingEventDispatcher(event_handler) {}
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-template <>
-class ::fidl::internal::NaturalWeakEventSender<::test_protocols::MethodWithUnion> : public ::fidl::internal::WeakEventSenderBase {
- public:
-  using WeakEventSenderBase::WeakEventSenderBase;
-};
-
-template <>
-class ::fidl::internal::NaturalEventSender<::test_protocols::MethodWithUnion>
-    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalEventSender<::test_protocols::MethodWithUnion>> {
- public:
-  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod> final : public ::test_protocols::MethodWithUnionUnionMethodRequest {
- public:
-  using ::test_protocols::MethodWithUnionUnionMethodRequest::MethodWithUnionUnionMethodRequest;
-  Request(::test_protocols::MethodWithUnionUnionMethodRequest v) : ::test_protocols::MethodWithUnionUnionMethodRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::MethodWithUnionUnionMethodRequest;
-};
-#endif  // __Fuchsia__
-
-template <>
-class ::fidl::Server<::test_protocols::MethodWithUnion> : public ::fidl::internal::IncomingMessageDispatcher {
- public:
-  Server() = default;
-  virtual ~Server() = default;
-
-  // The FIDL protocol type that is implemented by this server.
-  using _EnclosingProtocol = ::test_protocols::MethodWithUnion;
-
-  using UnionMethodRequest = ::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod>;
-  using UnionMethodCompleter = ::fidl::internal::NaturalCompleter<::test_protocols::MethodWithUnion::UnionMethod>;
-
-  virtual void UnionMethod(UnionMethodRequest& request, UnionMethodCompleter::Sync& completer) = 0;
-
- private:
-  void dispatch_message(
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-      ::fidl::internal::MessageStorageViewBase* storage_view) final;
-};
-
-#ifdef __Fuchsia__
-
-template <>
-struct ::fidl::internal::NaturalServerDispatcher<::test_protocols::MethodWithUnion> final {
-  NaturalServerDispatcher() = delete;
-  static void Dispatch(::fidl::Server<::test_protocols::MethodWithUnion>* impl, ::fidl::IncomingMessage&& msg,
-                       internal::MessageStorageViewBase* storage_view,
-                       ::fidl::Transaction* txn);
-
- private:
-  static const ::fidl::internal::MethodEntry entries_[];
-  static const ::fidl::internal::MethodEntry* entries_end_;
-};
-#endif  // __Fuchsia__
-
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_protocols::WithProtocolEnds::ClientEnds> {
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::WithProtocolEnds::ClientEnds>>;
@@ -1170,6 +1035,186 @@ template <>
 struct ::fidl::internal::NaturalServerDispatcher<::test_protocols::WithProtocolEnds> final {
   NaturalServerDispatcher() = delete;
   static void Dispatch(::fidl::Server<::test_protocols::WithProtocolEnds>* impl, ::fidl::IncomingMessage&& msg,
+                       internal::MessageStorageViewBase* storage_view,
+                       ::fidl::Transaction* txn);
+
+ private:
+  static const ::fidl::internal::MethodEntry entries_[];
+  static const ::fidl::internal::MethodEntry* entries_end_;
+};
+#endif  // __Fuchsia__
+
+template <>
+struct ::fidl::internal::NaturalMethodTypes<::test_protocols::MethodWithUnion::UnionMethod> {
+  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::MethodWithUnion::UnionMethod>>;
+
+  using ResultCallback =
+      ::fit::callback<void(::fidl::Result<::test_protocols::MethodWithUnion::UnionMethod>&)>;
+
+  static constexpr bool HasApplicationError = false;
+
+  static constexpr bool IsAbsentBody = false;
+};
+namespace test_protocols {
+__LOCAL extern "C" const fidl_type_t test_protocols_MethodWithUnionUnionMethodRequestTable;
+__LOCAL extern "C" const fidl_type_t test_protocols_MethodWithUnionUnionMethodTopResponseTable;
+
+#ifdef __Fuchsia__
+}  // namespace test_protocols
+
+template <>
+class ::fidl::Response<::test_protocols::MethodWithUnion::UnionMethod> final : public ::test_protocols::MethodWithUnionUnionMethodTopResponse {
+ public:
+  using ::test_protocols::MethodWithUnionUnionMethodTopResponse::MethodWithUnionUnionMethodTopResponse;
+  Response(::test_protocols::MethodWithUnionUnionMethodTopResponse v) : MethodWithUnionUnionMethodTopResponse(std::move(v)) {}
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocols::MethodWithUnion::UnionMethod>> final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload = ::test_protocols::MethodWithUnionUnionMethodTopResponse;
+};
+namespace test_protocols {}  // namespace test_protocols
+template <>
+class ::fidl::Result<::test_protocols::MethodWithUnion::UnionMethod> final : public ::fitx::result<::fidl::Error, ::test_protocols::MethodWithUnionUnionMethodTopResponse> {
+ public:
+  using ::fitx::result<::fidl::Error, ::test_protocols::MethodWithUnionUnionMethodTopResponse>::result;
+
+ protected:
+  Result() = default;
+};
+
+template <>
+class ::fidl::internal::NaturalClientImpl<::test_protocols::MethodWithUnion> final : public ::fidl::internal::NaturalClientBase {
+ public:
+  using NaturalClientBase::NaturalClientBase;
+  ::fidl::internal::NaturalThenable<::test_protocols::MethodWithUnion::UnionMethod> UnionMethod(::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod> request) const;
+};
+namespace test_protocols {
+#endif  // __Fuchsia__
+
+}  // namespace test_protocols
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::internal::NaturalSyncClientImpl<::test_protocols::MethodWithUnion> final
+    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalSyncClientImpl<::test_protocols::MethodWithUnion>> {
+ public:
+  ::fidl::Result<::test_protocols::MethodWithUnion::UnionMethod> UnionMethod(::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod> request);
+
+ private:
+  ::fidl::UnownedClientEnd<::test_protocols::MethodWithUnion> _client_end() const {
+    return ::fidl::UnownedClientEnd<::test_protocols::MethodWithUnion>(
+        _transport().get<::fidl::internal::ChannelTransport>());
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::MethodWithUnion> : public ::fidl::internal::BaseEventHandlerInterface {
+ public:
+  NaturalEventHandlerInterface() = default;
+  virtual ~NaturalEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::AsyncEventHandler<::test_protocols::MethodWithUnion>
+    : public ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::MethodWithUnion>, public ::fidl::internal::AsyncEventHandler {
+ public:
+  AsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::SyncEventHandler<::test_protocols::MethodWithUnion>
+    : public ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::MethodWithUnion>, public ::fidl::internal::SyncEventHandler {
+ public:
+  SyncEventHandler() = default;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
+  // method.
+  ::fidl::Status HandleOneEvent(
+      ::fidl::UnownedClientEnd<::test_protocols::MethodWithUnion> client_end);
+};
+
+template <>
+class ::fidl::internal::NaturalEventDispatcher<::test_protocols::MethodWithUnion> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_protocols::MethodWithUnion>> {
+ public:
+  explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_protocols::MethodWithUnion>* event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+template <>
+class ::fidl::internal::NaturalWeakEventSender<::test_protocols::MethodWithUnion> : public ::fidl::internal::WeakEventSenderBase {
+ public:
+  using WeakEventSenderBase::WeakEventSenderBase;
+};
+
+template <>
+class ::fidl::internal::NaturalEventSender<::test_protocols::MethodWithUnion>
+    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalEventSender<::test_protocols::MethodWithUnion>> {
+ public:
+  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod> final : public ::test_protocols::MethodWithUnionUnionMethodRequest {
+ public:
+  using ::test_protocols::MethodWithUnionUnionMethodRequest::MethodWithUnionUnionMethodRequest;
+  Request(::test_protocols::MethodWithUnionUnionMethodRequest v) : ::test_protocols::MethodWithUnionUnionMethodRequest(std::move(v)) {}
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod>> final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload = ::test_protocols::MethodWithUnionUnionMethodRequest;
+};
+#endif  // __Fuchsia__
+
+template <>
+class ::fidl::internal::NaturalCompleterBase<::test_protocols::MethodWithUnion::UnionMethod> : public ::fidl::CompleterBase {
+ public:
+  void Reply(::fidl::Response<::test_protocols::MethodWithUnion::UnionMethod>&& response);
+
+ protected:
+  using ::fidl::CompleterBase::CompleterBase;
+};
+
+template <>
+class ::fidl::Server<::test_protocols::MethodWithUnion> : public ::fidl::internal::IncomingMessageDispatcher {
+ public:
+  Server() = default;
+  virtual ~Server() = default;
+
+  // The FIDL protocol type that is implemented by this server.
+  using _EnclosingProtocol = ::test_protocols::MethodWithUnion;
+
+  using UnionMethodRequest = ::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod>;
+  using UnionMethodCompleter = ::fidl::internal::NaturalCompleter<::test_protocols::MethodWithUnion::UnionMethod>;
+
+  virtual void UnionMethod(UnionMethodRequest& request, UnionMethodCompleter::Sync& completer) = 0;
+
+ private:
+  void dispatch_message(
+      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::internal::MessageStorageViewBase* storage_view) final;
+};
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::NaturalServerDispatcher<::test_protocols::MethodWithUnion> final {
+  NaturalServerDispatcher() = delete;
+  static void Dispatch(::fidl::Server<::test_protocols::MethodWithUnion>* impl, ::fidl::IncomingMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 

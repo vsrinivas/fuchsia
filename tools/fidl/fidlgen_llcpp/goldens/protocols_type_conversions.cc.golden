@@ -293,6 +293,15 @@ namespace internal {
 
 #endif  // __Fuchsia__
 
+::test_protocols::MethodWithUnionUnionMethodTopResponse WireNaturalConversionTraits<::test_protocols::wire::MethodWithUnionUnionMethodTopResponse, ::test_protocols::MethodWithUnionUnionMethodTopResponse>::ToNatural(::test_protocols::wire::MethodWithUnionUnionMethodTopResponse src) {
+  return ::test_protocols::MethodWithUnionUnionMethodTopResponse(WireNaturalConversionTraits<::test_protocols::wire::TheUnion, ::std::unique_ptr<::test_protocols::TheUnion>>::ToNatural(std::move(src.u)));
+}
+::test_protocols::wire::MethodWithUnionUnionMethodTopResponse WireNaturalConversionTraits<::test_protocols::wire::MethodWithUnionUnionMethodTopResponse, ::test_protocols::MethodWithUnionUnionMethodTopResponse>::ToWire(fidl::AnyArena& arena, ::test_protocols::MethodWithUnionUnionMethodTopResponse src) {
+  return ::test_protocols::wire::MethodWithUnionUnionMethodTopResponse{
+      .u = WireNaturalConversionTraits<::test_protocols::wire::TheUnion, ::std::unique_ptr<::test_protocols::TheUnion>>::ToWire(arena, std::move(src.u())),
+  };
+}
+
 ::test_protocols::ManyParametersFifteenRequest WireNaturalConversionTraits<::test_protocols::wire::ManyParametersFifteenRequest, ::test_protocols::ManyParametersFifteenRequest>::ToNatural(::test_protocols::wire::ManyParametersFifteenRequest src) {
   return ::test_protocols::ManyParametersFifteenRequest{{
       .p1 = WireNaturalConversionTraits<bool, bool>::ToNatural(std::move(src.p1)),
@@ -794,15 +803,6 @@ std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsEnumResult> WireNaturalC
       WireNaturalConversionTraits<::test_protocols::wire::TransitionalEventRequest, ::test_protocols::TransitionalEventRequest>::ToWire(arena, std::move(src)));
 }
 
-::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod> WireNaturalConversionTraits<::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod>, ::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod>>::ToNatural(::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod> src) {
-  return ::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod>(
-      WireNaturalConversionTraits<::test_protocols::wire::MethodWithUnionUnionMethodRequest, ::test_protocols::MethodWithUnionUnionMethodRequest>::ToNatural(std::move(src)));
-}
-::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod> WireNaturalConversionTraits<::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod>, ::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod> src) {
-  return ::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod>(
-      WireNaturalConversionTraits<::test_protocols::wire::MethodWithUnionUnionMethodRequest, ::test_protocols::MethodWithUnionUnionMethodRequest>::ToWire(arena, std::move(src)));
-}
-
 ::fidl::Request<::test_protocols::WithProtocolEnds::ClientEnds> WireNaturalConversionTraits<::fidl::WireRequest<::test_protocols::WithProtocolEnds::ClientEnds>, ::fidl::Request<::test_protocols::WithProtocolEnds::ClientEnds>>::ToNatural(::fidl::WireRequest<::test_protocols::WithProtocolEnds::ClientEnds> src) {
   return ::fidl::Request<::test_protocols::WithProtocolEnds::ClientEnds>(
       WireNaturalConversionTraits<::test_protocols::wire::WithProtocolEndsClientEndsRequest, ::test_protocols::WithProtocolEndsClientEndsRequest>::ToNatural(std::move(src)));
@@ -855,6 +855,24 @@ std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsEnumResult> WireNaturalC
 ::fidl::WireResponse<::test_protocols::WithProtocolEnds::StructContainingEnds> WireNaturalConversionTraits<::fidl::WireResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>, ::fidl::Response<::test_protocols::WithProtocolEnds::StructContainingEnds>>::ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_protocols::WithProtocolEnds::StructContainingEnds> src) {
   return ::fidl::WireResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>(
       WireNaturalConversionTraits<::test_protocols::wire::WithProtocolEndsStructContainingEndsTopResponse, ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse>::ToWire(arena, std::move(src)));
+}
+
+::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod> WireNaturalConversionTraits<::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod>, ::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod>>::ToNatural(::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod> src) {
+  return ::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod>(
+      WireNaturalConversionTraits<::test_protocols::wire::MethodWithUnionUnionMethodRequest, ::test_protocols::MethodWithUnionUnionMethodRequest>::ToNatural(std::move(src)));
+}
+::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod> WireNaturalConversionTraits<::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod>, ::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod> src) {
+  return ::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod>(
+      WireNaturalConversionTraits<::test_protocols::wire::MethodWithUnionUnionMethodRequest, ::test_protocols::MethodWithUnionUnionMethodRequest>::ToWire(arena, std::move(src)));
+}
+
+::fidl::Response<::test_protocols::MethodWithUnion::UnionMethod> WireNaturalConversionTraits<::fidl::WireResponse<::test_protocols::MethodWithUnion::UnionMethod>, ::fidl::Response<::test_protocols::MethodWithUnion::UnionMethod>>::ToNatural(::fidl::WireResponse<::test_protocols::MethodWithUnion::UnionMethod> src) {
+  return ::fidl::Response<::test_protocols::MethodWithUnion::UnionMethod>(
+      WireNaturalConversionTraits<::test_protocols::wire::MethodWithUnionUnionMethodTopResponse, ::test_protocols::MethodWithUnionUnionMethodTopResponse>::ToNatural(std::move(src)));
+}
+::fidl::WireResponse<::test_protocols::MethodWithUnion::UnionMethod> WireNaturalConversionTraits<::fidl::WireResponse<::test_protocols::MethodWithUnion::UnionMethod>, ::fidl::Response<::test_protocols::MethodWithUnion::UnionMethod>>::ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_protocols::MethodWithUnion::UnionMethod> src) {
+  return ::fidl::WireResponse<::test_protocols::MethodWithUnion::UnionMethod>(
+      WireNaturalConversionTraits<::test_protocols::wire::MethodWithUnionUnionMethodTopResponse, ::test_protocols::MethodWithUnionUnionMethodTopResponse>::ToWire(arena, std::move(src)));
 }
 
 ::fidl::Request<::test_protocols::ManyParameters::Fifteen> WireNaturalConversionTraits<::fidl::WireRequest<::test_protocols::ManyParameters::Fifteen>, ::fidl::Request<::test_protocols::ManyParameters::Fifteen>>::ToNatural(::fidl::WireRequest<::test_protocols::ManyParameters::Fifteen> src) {

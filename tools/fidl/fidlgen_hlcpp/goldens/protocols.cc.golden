@@ -1576,6 +1576,33 @@ zx_status_t WithProtocolEndsStructContainingEndsRequest::Clone(WithProtocolEndsS
 }
 #endif  // __Fuchsia__
 
+extern "C" const fidl_type_t test_protocols_MethodWithUnionUnionMethodTopResponseTable;
+const fidl_type_t* MethodWithUnionUnionMethodTopResponse::FidlType = &test_protocols_MethodWithUnionUnionMethodTopResponseTable;
+
+void MethodWithUnionUnionMethodTopResponse::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                                                   cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<MethodWithUnionUnionMethodTopResponse>::value) {
+    memcpy(_encoder->template GetPtr<MethodWithUnionUnionMethodTopResponse>(_offset), this, sizeof(MethodWithUnionUnionMethodTopResponse));
+  } else {
+    ::fidl::Encode(_encoder, &u, _offset + 0);
+  }
+}
+
+void MethodWithUnionUnionMethodTopResponse::Decode(::fidl::Decoder* _decoder, MethodWithUnionUnionMethodTopResponse* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<MethodWithUnionUnionMethodTopResponse>::value) {
+    memcpy(_value, _decoder->template GetPtr<MethodWithUnionUnionMethodTopResponse>(_offset), sizeof(MethodWithUnionUnionMethodTopResponse));
+  } else {
+    ::fidl::Decode(_decoder, &_value->u, _offset + 0);
+  }
+}
+
+zx_status_t MethodWithUnionUnionMethodTopResponse::Clone(MethodWithUnionUnionMethodTopResponse* _result) const {
+  zx_status_t _status = ::fidl::Clone(u, &_result->u);
+  if (_status != ZX_OK)
+    return _status;
+  return ZX_OK;
+}
+
 extern "C" const fidl_type_t test_protocols_ManyParametersFifteenRequestTable;
 const fidl_type_t* ManyParametersFifteenRequest::FidlType = &test_protocols_ManyParametersFifteenRequestTable;
 
@@ -2892,122 +2919,6 @@ zx_status_t Transitional_SyncProxy::OneWay(int64_t x) {
 #ifdef __Fuchsia__
 
 namespace _internal {
-__LOCAL extern "C" const fidl_type_t test_protocols_MethodWithUnionUnionMethodRequestTable;
-
-}  // namespace _internal
-MethodWithUnion::~MethodWithUnion() = default;
-
-const fidl_type_t* ::test::protocols::MethodWithUnion_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
-  *out_needs_response = false;
-  switch (ordinal) {
-    case ::test::protocols::internal::kMethodWithUnion_UnionMethod_Ordinal:
-      return &::test::protocols::_internal::test_protocols_MethodWithUnionUnionMethodRequestTable;
-      ;
-    default:
-      return nullptr;
-  }
-}
-
-const fidl_type_t* MethodWithUnion_ResponseDecoder::GetType(uint64_t ordinal) {
-  switch (ordinal) {
-    default:
-      return nullptr;
-  }
-}
-
-MethodWithUnion_EventSender::~MethodWithUnion_EventSender() = default;
-
-MethodWithUnion_Sync::~MethodWithUnion_Sync() = default;
-
-MethodWithUnion_Proxy::MethodWithUnion_Proxy(::fidl::internal::ProxyController* controller)
-    : controller_(controller) {
-  (void)controller_;
-}
-
-MethodWithUnion_Proxy::~MethodWithUnion_Proxy() = default;
-
-zx_status_t MethodWithUnion_Proxy::Dispatch_(::fidl::HLCPPIncomingMessage message) {
-  zx_status_t status = ZX_OK;
-  switch (message.ordinal()) {
-    default: {
-      status = ZX_ERR_NOT_SUPPORTED;
-      break;
-    }
-  }
-  return status;
-}
-
-void MethodWithUnion_Proxy::UnionMethod(::test::protocols::TheUnion u) {
-  ::fidl::MessageEncoder _encoder(::test::protocols::internal::kMethodWithUnion_UnionMethod_Ordinal, ::test::protocols::internal::kMethodWithUnion_UnionMethod_DynamicFlags);
-  const fidl_type_t* req_type = &::test::protocols::_internal::test_protocols_MethodWithUnionUnionMethodRequestTable;
-  controller_->Send(req_type, ::test::protocols::MethodWithUnion_RequestEncoder::UnionMethod(&_encoder, &u), nullptr);
-}
-
-MethodWithUnion_Stub::MethodWithUnion_Stub(::test::protocols::MethodWithUnion_Stub::MethodWithUnion_clazz* impl) : impl_(impl) {
-  (void)impl_;
-}
-
-MethodWithUnion_Stub::~MethodWithUnion_Stub() = default;
-
-namespace {
-
-}  // namespace
-
-zx_status_t MethodWithUnion_Stub::Dispatch_(
-    ::fidl::HLCPPIncomingMessage message,
-    ::fidl::internal::PendingResponse response) {
-  bool needs_response;
-  const fidl_type_t* request_type = ::test::protocols::MethodWithUnion_RequestDecoder::GetType(message.ordinal(), &needs_response);
-  if (!message.has_only_header()) {
-    if (request_type == nullptr) {
-      return ZX_ERR_NOT_SUPPORTED;
-    }
-    const char* error_msg = nullptr;
-    zx_status_t status = message.Decode(request_type, &error_msg);
-    if (status != ZX_OK) {
-      FIDL_REPORT_DECODING_ERROR(message, request_type, error_msg);
-      return status;
-    }
-  }
-
-  if (response.needs_response() != needs_response) {
-    if (needs_response) {
-      FIDL_REPORT_DECODING_ERROR(message, request_type, "Message needing a response with no txid");
-    } else {
-      FIDL_REPORT_DECODING_ERROR(message, request_type, "Message not needing a response with a txid");
-    }
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  uint64_t ordinal = message.ordinal();
-  switch (ordinal) {
-    case ::test::protocols::internal::kMethodWithUnion_UnionMethod_Ordinal: {
-      ::fidl::Decoder decoder(std::move(message));
-      impl_->UnionMethod(::fidl::DecodeAs<::test::protocols::TheUnion>(&decoder, 0 + sizeof(fidl_message_header_t)));
-      break;
-    }
-    default: {
-      return ZX_ERR_NOT_SUPPORTED;
-    }
-  }
-  return ZX_OK;
-}
-
-MethodWithUnion_SyncProxy::MethodWithUnion_SyncProxy(::zx::channel channel)
-    : proxy_(::std::move(channel)) {}
-
-MethodWithUnion_SyncProxy::~MethodWithUnion_SyncProxy() = default;
-
-zx_status_t MethodWithUnion_SyncProxy::UnionMethod(::test::protocols::TheUnion u) {
-  ::fidl::MessageEncoder _encoder(::test::protocols::internal::kMethodWithUnion_UnionMethod_Ordinal, ::test::protocols::internal::kMethodWithUnion_UnionMethod_DynamicFlags);
-  const fidl_type_t* req_type = &::test::protocols::_internal::test_protocols_MethodWithUnionUnionMethodRequestTable;
-  return proxy_.Send(req_type, ::test::protocols::MethodWithUnion_RequestEncoder::UnionMethod(&_encoder, &u));
-}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsClientEndsRequestTable;
 __LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsClientEndsTopResponseTable;
 __LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsServerEndsRequestTable;
@@ -3289,6 +3200,166 @@ zx_status_t WithProtocolEnds_SyncProxy::StructContainingEnds(::test::protocols::
     return status_;
   ::fidl::Decoder decoder_(std::move(response_));
   *out_out = ::fidl::DecodeAs<::test::protocols::ProtocolEnds>(&decoder_, 0 + sizeof(fidl_message_header_t));
+  return ZX_OK;
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+namespace _internal {
+__LOCAL extern "C" const fidl_type_t test_protocols_MethodWithUnionUnionMethodRequestTable;
+__LOCAL extern "C" const fidl_type_t test_protocols_MethodWithUnionUnionMethodTopResponseTable;
+
+}  // namespace _internal
+MethodWithUnion::~MethodWithUnion() = default;
+
+const fidl_type_t* ::test::protocols::MethodWithUnion_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
+  *out_needs_response = false;
+  switch (ordinal) {
+    case ::test::protocols::internal::kMethodWithUnion_UnionMethod_Ordinal:
+      *out_needs_response = true;
+      return &::test::protocols::_internal::test_protocols_MethodWithUnionUnionMethodRequestTable;
+      ;
+    default:
+      return nullptr;
+  }
+}
+
+const fidl_type_t* MethodWithUnion_ResponseDecoder::GetType(uint64_t ordinal) {
+  switch (ordinal) {
+    case ::test::protocols::internal::kMethodWithUnion_UnionMethod_Ordinal:
+      return &::test::protocols::_internal::test_protocols_MethodWithUnionUnionMethodTopResponseTable;
+      ;
+    default:
+      return nullptr;
+  }
+}
+
+MethodWithUnion_EventSender::~MethodWithUnion_EventSender() = default;
+
+MethodWithUnion_Sync::~MethodWithUnion_Sync() = default;
+
+MethodWithUnion_Proxy::MethodWithUnion_Proxy(::fidl::internal::ProxyController* controller)
+    : controller_(controller) {
+  (void)controller_;
+}
+
+MethodWithUnion_Proxy::~MethodWithUnion_Proxy() = default;
+
+zx_status_t MethodWithUnion_Proxy::Dispatch_(::fidl::HLCPPIncomingMessage message) {
+  zx_status_t status = ZX_OK;
+  switch (message.ordinal()) {
+    default: {
+      status = ZX_ERR_NOT_SUPPORTED;
+      break;
+    }
+  }
+  return status;
+}
+
+namespace {
+
+::std::unique_ptr<::fidl::internal::SingleUseMessageHandler>
+MethodWithUnion_UnionMethod_ResponseHandler(MethodWithUnion::UnionMethodCallback&& callback) {
+  ZX_DEBUG_ASSERT_MSG(callback,
+                      "Callback must not be empty for MethodWithUnion::UnionMethod\n");
+  return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
+      [callback_ = std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
+        ::fidl::Decoder decoder(std::move(message));
+        callback_(::fidl::DecodeAs<::std::unique_ptr<::test::protocols::TheUnion>>(&decoder, 0 + sizeof(fidl_message_header_t)));
+        return ZX_OK;
+      },
+      &::test::protocols::_internal::test_protocols_MethodWithUnionUnionMethodTopResponseTable);
+}
+
+}  // namespace
+void MethodWithUnion_Proxy::UnionMethod(::test::protocols::TheUnion u, UnionMethodCallback callback) {
+  ::fidl::MessageEncoder _encoder(::test::protocols::internal::kMethodWithUnion_UnionMethod_Ordinal, ::test::protocols::internal::kMethodWithUnion_UnionMethod_DynamicFlags);
+  const fidl_type_t* req_type = &::test::protocols::_internal::test_protocols_MethodWithUnionUnionMethodRequestTable;
+  controller_->Send(req_type, ::test::protocols::MethodWithUnion_RequestEncoder::UnionMethod(&_encoder, &u), MethodWithUnion_UnionMethod_ResponseHandler(std::move(callback)));
+}
+
+MethodWithUnion_Stub::MethodWithUnion_Stub(::test::protocols::MethodWithUnion_Stub::MethodWithUnion_clazz* impl) : impl_(impl) {
+  (void)impl_;
+}
+
+MethodWithUnion_Stub::~MethodWithUnion_Stub() = default;
+
+namespace {
+
+class MethodWithUnion_UnionMethod_Responder final {
+ public:
+  MethodWithUnion_UnionMethod_Responder(::fidl::internal::PendingResponse response)
+      : response_(std::move(response)) {}
+
+  void operator()(::std::unique_ptr<::test::protocols::TheUnion> u) {
+    ::fidl::MessageEncoder _encoder(::test::protocols::internal::kMethodWithUnion_UnionMethod_Ordinal, ::test::protocols::internal::kMethodWithUnion_UnionMethod_DynamicFlags);
+    const fidl_type_t* resp_type = &::test::protocols::_internal::test_protocols_MethodWithUnionUnionMethodTopResponseTable;
+    response_.Send(resp_type, ::test::protocols::MethodWithUnion_ResponseEncoder::UnionMethod(&_encoder, &u));
+  }
+
+ private:
+  ::fidl::internal::PendingResponse response_;
+};
+
+}  // namespace
+
+zx_status_t MethodWithUnion_Stub::Dispatch_(
+    ::fidl::HLCPPIncomingMessage message,
+    ::fidl::internal::PendingResponse response) {
+  bool needs_response;
+  const fidl_type_t* request_type = ::test::protocols::MethodWithUnion_RequestDecoder::GetType(message.ordinal(), &needs_response);
+  if (!message.has_only_header()) {
+    if (request_type == nullptr) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    const char* error_msg = nullptr;
+    zx_status_t status = message.Decode(request_type, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_DECODING_ERROR(message, request_type, error_msg);
+      return status;
+    }
+  }
+
+  if (response.needs_response() != needs_response) {
+    if (needs_response) {
+      FIDL_REPORT_DECODING_ERROR(message, request_type, "Message needing a response with no txid");
+    } else {
+      FIDL_REPORT_DECODING_ERROR(message, request_type, "Message not needing a response with a txid");
+    }
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  uint64_t ordinal = message.ordinal();
+  switch (ordinal) {
+    case ::test::protocols::internal::kMethodWithUnion_UnionMethod_Ordinal: {
+      ::fidl::Decoder decoder(std::move(message));
+      impl_->UnionMethod(::fidl::DecodeAs<::test::protocols::TheUnion>(&decoder, 0 + sizeof(fidl_message_header_t)), MethodWithUnion_UnionMethod_Responder(std::move(response)));
+      break;
+    }
+    default: {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+  }
+  return ZX_OK;
+}
+
+MethodWithUnion_SyncProxy::MethodWithUnion_SyncProxy(::zx::channel channel)
+    : proxy_(::std::move(channel)) {}
+
+MethodWithUnion_SyncProxy::~MethodWithUnion_SyncProxy() = default;
+
+zx_status_t MethodWithUnion_SyncProxy::UnionMethod(::test::protocols::TheUnion u, ::std::unique_ptr<::test::protocols::TheUnion>* out_u) {
+  ::fidl::MessageEncoder _encoder(::test::protocols::internal::kMethodWithUnion_UnionMethod_Ordinal, ::test::protocols::internal::kMethodWithUnion_UnionMethod_DynamicFlags);
+  ::fidl::IncomingMessageBuffer buffer_;
+  ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
+  const fidl_type_t* req_type = &::test::protocols::_internal::test_protocols_MethodWithUnionUnionMethodRequestTable;
+  const fidl_type_t* resp_type = &::test::protocols::_internal::test_protocols_MethodWithUnionUnionMethodTopResponseTable;
+  zx_status_t status_ = proxy_.Call(req_type, resp_type, ::test::protocols::MethodWithUnion_RequestEncoder::UnionMethod(&_encoder, &u), &response_);
+  if (status_ != ZX_OK)
+    return status_;
+  ::fidl::Decoder decoder_(std::move(response_));
+  *out_u = ::fidl::DecodeAs<::std::unique_ptr<::test::protocols::TheUnion>>(&decoder_, 0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
 #endif  // __Fuchsia__

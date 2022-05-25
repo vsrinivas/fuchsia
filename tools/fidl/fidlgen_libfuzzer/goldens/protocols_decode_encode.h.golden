@@ -9,7 +9,7 @@
 
 namespace fuzzing {
 
-inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 85>
+inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 87>
     test_protocols_decoder_encoders = {
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_protocols::wire::WithProtocolEndsServerEndsTopResponse",
@@ -203,12 +203,6 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 85>
             .has_flexible_envelope = true,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocols::wire::MethodWithUnionUnionMethodRequest>,
         },
-
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::fidl::internal::TransactionalRequest<::test_protocols::MethodWithUnion::UnionMethod>",
-            .has_flexible_envelope = true,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::fidl::internal::TransactionalRequest<::test_protocols::MethodWithUnion::UnionMethod>>,
-        },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_protocols::wire::SyscallProtocolMethodCRequest",
             .has_flexible_envelope = false,
@@ -259,6 +253,22 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 85>
             .fidl_type_name = "::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>",
             .has_flexible_envelope = false,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::test_protocols::wire::MethodWithUnionUnionMethodTopResponse",
+            .has_flexible_envelope = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocols::wire::MethodWithUnionUnionMethodTopResponse>,
+        },
+
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::fidl::internal::TransactionalRequest<::test_protocols::MethodWithUnion::UnionMethod>",
+            .has_flexible_envelope = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::fidl::internal::TransactionalRequest<::test_protocols::MethodWithUnion::UnionMethod>>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::fidl::internal::TransactionalResponse<::test_protocols::MethodWithUnion::UnionMethod>",
+            .has_flexible_envelope = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::fidl::internal::TransactionalResponse<::test_protocols::MethodWithUnion::UnionMethod>>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_protocols::wire::ManyParametersFifteenRequest",

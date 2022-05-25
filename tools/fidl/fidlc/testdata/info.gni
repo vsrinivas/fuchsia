@@ -120,11 +120,9 @@ fidl_testdata_info = [
     denylist = [
       # TODO(fxbug.dev/45006): Implement const expressions in fidlgen.
       "fidlgen_dart",
-      "fidlgen_go",
       "fidlgen_hlcpp",
       "fidlgen_libfuzzer",
       "fidlgen_llcpp",
-      "fidlgen_rust",
     ]
   },
   {

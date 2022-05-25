@@ -4,8 +4,8 @@
 
 
 __LOCAL extern const struct FidlCodedEnum test_constants_EnumTypeTable;
-__LOCAL extern const struct FidlCodedEnum test_constants_EnumTable;
 __LOCAL extern const struct FidlCodedBits test_constants_BitsTypeTable;
+__LOCAL extern const struct FidlCodedEnum test_constants_EnumTable;
 __LOCAL extern const struct FidlCodedBits test_constants_BitsTable;
 __LOCAL extern const struct FidlCodedStruct test_constants_StructTable;
 
@@ -15,7 +15,8 @@ static const struct FidlCodedString String4294967295nonnullableTable = {.tag=kFi
 
 static bool EnumValidatorFor_test_constants_EnumType(uint64_t v) {
   switch (v) {
-    case 1ul:
+    case 3ul:
+    case 4ul:
       return true;
     default:
       return false;
@@ -23,6 +24,8 @@ static bool EnumValidatorFor_test_constants_EnumType(uint64_t v) {
 }
 
 const struct FidlCodedEnum test_constants_EnumTypeTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Int32, .strictness=kFidlStrictness_Strict, .validate=&EnumValidatorFor_test_constants_EnumType, .name="test.constants/EnumType"};
+
+const struct FidlCodedBits test_constants_BitsTypeTable = {.tag=kFidlTypeBits, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Strict, .mask=7ul, .name="test.constants/BitsType"};
 
 static bool EnumValidatorFor_test_constants_Enum(uint64_t v) {
   switch (v) {
@@ -34,8 +37,6 @@ static bool EnumValidatorFor_test_constants_Enum(uint64_t v) {
 }
 
 const struct FidlCodedEnum test_constants_EnumTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Strict, .validate=&EnumValidatorFor_test_constants_Enum, .name="test.constants/Enum"};
-
-const struct FidlCodedBits test_constants_BitsTypeTable = {.tag=kFidlTypeBits, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Strict, .mask=131ul, .name="test.constants/BitsType"};
 
 const struct FidlCodedBits test_constants_BitsTable = {.tag=kFidlTypeBits, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Strict, .mask=8ul, .name="test.constants/Bits"};
 

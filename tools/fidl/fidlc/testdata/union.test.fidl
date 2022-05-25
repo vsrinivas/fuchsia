@@ -113,8 +113,7 @@ type StrictSimpleXUnion = strict union {
 type Empty = struct {};
 
 type XUnionContainingEmptyStruct = flexible union {
-    // This is a test to prevent regressions for fxbug.dev/8084. Note that we need fxbug.dev/8080 to be resolved
-    // to ensure this actually works, since goldens aren't currently compiled.
+    // This is a test to prevent regressions for fxbug.dev/8084.
     1: empty Empty;
 };
 

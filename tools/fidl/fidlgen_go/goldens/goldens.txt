@@ -4,6 +4,7 @@ bindings_denylist.go.golden
 bits.go.golden
 bits_constants.go.golden
 byte_and_bytes.go.golden
+constants.go.golden
 consts.go.golden
 doc_comments.go.golden
 driver_handle.go.golden

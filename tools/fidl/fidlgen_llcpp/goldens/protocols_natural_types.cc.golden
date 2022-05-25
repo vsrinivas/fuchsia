@@ -126,6 +126,11 @@
 
 #endif  // __Fuchsia__
 
+::test_protocols::MethodWithUnionUnionMethodTopResponse::Storage_ test_protocols::MethodWithUnionUnionMethodTopResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.u)};
+}
+
 ::test_protocols::ManyParametersFifteenRequest::Storage_ test_protocols::ManyParametersFifteenRequest::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.p1),

@@ -42,15 +42,6 @@ class Transitional_TestBase : public ::test::protocols::Transitional {
   }
 };
 
-class MethodWithUnion_TestBase : public ::test::protocols::MethodWithUnion {
- public:
-  virtual ~MethodWithUnion_TestBase() {}
-  virtual void NotImplemented_(const std::string& name) = 0;
-  void UnionMethod(::test::protocols::TheUnion u) override {
-    NotImplemented_("UnionMethod");
-  }
-};
-
 class WithProtocolEnds_TestBase : public ::test::protocols::WithProtocolEnds {
  public:
   virtual ~WithProtocolEnds_TestBase() {}
@@ -63,6 +54,15 @@ class WithProtocolEnds_TestBase : public ::test::protocols::WithProtocolEnds {
   }
   void StructContainingEnds(::test::protocols::ProtocolEnds in, StructContainingEndsCallback callback) override {
     NotImplemented_("StructContainingEnds");
+  }
+};
+
+class MethodWithUnion_TestBase : public ::test::protocols::MethodWithUnion {
+ public:
+  virtual ~MethodWithUnion_TestBase() {}
+  virtual void NotImplemented_(const std::string& name) = 0;
+  void UnionMethod(::test::protocols::TheUnion u, UnionMethodCallback callback) override {
+    NotImplemented_("UnionMethod");
   }
 };
 

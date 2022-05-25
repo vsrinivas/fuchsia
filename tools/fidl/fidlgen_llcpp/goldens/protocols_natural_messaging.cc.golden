@@ -598,91 +598,6 @@ void fidl::Server<::test_protocols::Transitional>::dispatch_message(
 #endif  // __Fuchsia__
 
 namespace test_protocols {
-[[maybe_unused]] constexpr inline uint64_t kMethodWithUnion_UnionMethod_Ordinal = 4124874338266649112lu;
-
-[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kMethodWithUnion_UnionMethod_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
-
-#ifdef __Fuchsia__
-}  // namespace test_protocols
-::fitx::result<::fidl::Error>
-fidl::internal::NaturalClientImpl<::test_protocols::MethodWithUnion>::UnionMethod(::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod> request) const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kMethodWithUnion_UnionMethod_Ordinal, ::test_protocols::kMethodWithUnion_UnionMethod_DynamicFlags};
-  _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod>>::IntoDomainObject(std::move(request)));
-
-  ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
-  ::fidl::Status status = client_base().SendOneWay(_encoded_message);
-  return ::fidl::internal::ToFitxResult(status);
-}
-namespace test_protocols {
-#endif  // __Fuchsia__
-
-}  // namespace test_protocols
-#ifdef __Fuchsia__
-
-::fitx::result<::fidl::Error>
-fidl::internal::NaturalSyncClientImpl<::test_protocols::MethodWithUnion>::UnionMethod(::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod> request) {
-  ::fidl::internal::NaturalMessageEncoder encoder{
-      &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kMethodWithUnion_UnionMethod_Ordinal, ::test_protocols::kMethodWithUnion_UnionMethod_DynamicFlags};
-  encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod>>::IntoDomainObject(std::move(request)));
-  ::fidl::OutgoingMessage msg = encoder.GetMessage();
-  msg.Write(_client_end().handle());
-  return ::fidl::internal::ToFitxResult(::fidl::Status{msg});
-}
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-::fidl::Status fidl::SyncEventHandler<::test_protocols::MethodWithUnion>::HandleOneEvent(
-    ::fidl::UnownedClientEnd<::test_protocols::MethodWithUnion> client_end) {
-  ::fidl::internal::IncomingEventsStorage<::test_protocols::MethodWithUnion> event_storage;
-  fidl::internal::NaturalEventDispatcher<::test_protocols::MethodWithUnion> dispatcher{this};
-  return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
-}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<::test_protocols::MethodWithUnion>::entries_[] = {
-    {
-        ::test_protocols::kMethodWithUnion_UnionMethod_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocols::MethodWithUnionUnionMethodRequest>(std::move(msg));
-          if (decoded.is_error()) {
-            return decoded.error_value();
-          }
-          ::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod> request = ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod>>::FromDomainObject(std::move(decoded.value()));
-          ::fidl::internal::NaturalCompleter<::test_protocols::MethodWithUnion::UnionMethod>::Sync completer(txn);
-          static_cast<::fidl::Server<::test_protocols::MethodWithUnion>*>(interface)->UnionMethod(
-              request, completer);
-          return ::fidl::Status::Ok();
-        },
-    },
-};
-
-const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::test_protocols::MethodWithUnion>::entries_end_ =
-    &entries_[1];
-
-void fidl::internal::NaturalServerDispatcher<::test_protocols::MethodWithUnion>::Dispatch(::fidl::Server<::test_protocols::MethodWithUnion>* impl, ::fidl::IncomingMessage&& msg,
-                                                                                          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_);
-}
-void fidl::Server<::test_protocols::MethodWithUnion>::dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-    ::fidl::internal::MessageStorageViewBase* storage_view) {
-  ::fidl::internal::NaturalServerDispatcher<::test_protocols::MethodWithUnion>::Dispatch(this, std::move(msg), storage_view, txn);
-}
-#endif  // __Fuchsia__
-
-namespace test_protocols {
 [[maybe_unused]] constexpr inline uint64_t kWithProtocolEnds_ClientEnds_Ordinal = 5870448041025163330lu;
 
 [[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kWithProtocolEnds_ClientEnds_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
@@ -894,6 +809,107 @@ void fidl::Server<::test_protocols::WithProtocolEnds>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_protocols::WithProtocolEnds>::Dispatch(this, std::move(msg), storage_view, txn);
+}
+#endif  // __Fuchsia__
+
+namespace test_protocols {
+[[maybe_unused]] constexpr inline uint64_t kMethodWithUnion_UnionMethod_Ordinal = 4124874338266649112lu;
+
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kMethodWithUnion_UnionMethod_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
+#ifdef __Fuchsia__
+}  // namespace test_protocols
+::fidl::internal::NaturalThenable<::test_protocols::MethodWithUnion::UnionMethod>
+fidl::internal::NaturalClientImpl<::test_protocols::MethodWithUnion>::UnionMethod(::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod> request) const {
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kMethodWithUnion_UnionMethod_Ordinal, ::test_protocols::kMethodWithUnion_UnionMethod_DynamicFlags};
+  _encoder.EncodeBody(
+      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod>>::IntoDomainObject(std::move(request)));
+  return ::fidl::internal::NaturalThenable<::test_protocols::MethodWithUnion::UnionMethod>(
+      &client_base(), {}, std::move(_encoder),
+      [](
+          ::fidl::internal::ThenableBase* base,
+          ::fidl::internal::NaturalMessageEncoder& encoder,
+          ::fidl::internal::ResponseContext* response_context) {
+        ::fidl::OutgoingMessage msg = encoder.GetMessage();
+        return base->SendTwoWay(msg, response_context);
+      });
+}
+
+namespace test_protocols {
+#endif  // __Fuchsia__
+
+}  // namespace test_protocols
+#ifdef __Fuchsia__
+
+::fidl::Result<::test_protocols::MethodWithUnion::UnionMethod>
+fidl::internal::NaturalSyncClientImpl<::test_protocols::MethodWithUnion>::UnionMethod(::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod> request) {
+  ::fidl::internal::NaturalMessageEncoder encoder{
+      &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kMethodWithUnion_UnionMethod_Ordinal, ::test_protocols::kMethodWithUnion_UnionMethod_DynamicFlags};
+  encoder.EncodeBody(
+      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod>>::IntoDomainObject(std::move(request)));
+  ::fidl::OutgoingMessage msg = encoder.GetMessage();
+  ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocols::MethodWithUnion::UnionMethod>> response_storage;
+  return ::fidl::internal::DecodeResponseAndFoldError<::test_protocols::MethodWithUnion::UnionMethod>(
+      msg.Call(_client_end().handle(), response_storage.view()), nullptr);
+}
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+::fidl::Status fidl::SyncEventHandler<::test_protocols::MethodWithUnion>::HandleOneEvent(
+    ::fidl::UnownedClientEnd<::test_protocols::MethodWithUnion> client_end) {
+  ::fidl::internal::IncomingEventsStorage<::test_protocols::MethodWithUnion> event_storage;
+  fidl::internal::NaturalEventDispatcher<::test_protocols::MethodWithUnion> dispatcher{this};
+  return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
+
+void fidl::internal::NaturalCompleterBase<::test_protocols::MethodWithUnion::UnionMethod>::Reply(::fidl::Response<::test_protocols::MethodWithUnion::UnionMethod>&& response) {
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kMethodWithUnion_UnionMethod_Ordinal, ::test_protocols::kMethodWithUnion_UnionMethod_DynamicFlags};
+  _encoder.EncodeBody(
+      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocols::MethodWithUnion::UnionMethod>>::IntoDomainObject(std::move(response)));
+  ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
+  SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
+}
+
+#ifdef __Fuchsia__
+
+constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<::test_protocols::MethodWithUnion>::entries_[] = {
+    {
+        ::test_protocols::kMethodWithUnion_UnionMethod_Ordinal,
+        [](void* interface, ::fidl::IncomingMessage&& msg,
+           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocols::MethodWithUnionUnionMethodRequest>(std::move(msg));
+          if (decoded.is_error()) {
+            return decoded.error_value();
+          }
+          ::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod> request = ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod>>::FromDomainObject(std::move(decoded.value()));
+          ::fidl::internal::NaturalCompleter<::test_protocols::MethodWithUnion::UnionMethod>::Sync completer(txn);
+          static_cast<::fidl::Server<::test_protocols::MethodWithUnion>*>(interface)->UnionMethod(
+              request, completer);
+          return ::fidl::Status::Ok();
+        },
+    },
+};
+
+const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::test_protocols::MethodWithUnion>::entries_end_ =
+    &entries_[1];
+
+void fidl::internal::NaturalServerDispatcher<::test_protocols::MethodWithUnion>::Dispatch(::fidl::Server<::test_protocols::MethodWithUnion>* impl, ::fidl::IncomingMessage&& msg,
+                                                                                          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_);
+}
+void fidl::Server<::test_protocols::MethodWithUnion>::dispatch_message(
+    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::internal::MessageStorageViewBase* storage_view) {
+  ::fidl::internal::NaturalServerDispatcher<::test_protocols::MethodWithUnion>::Dispatch(this, std::move(msg), storage_view, txn);
 }
 #endif  // __Fuchsia__
 

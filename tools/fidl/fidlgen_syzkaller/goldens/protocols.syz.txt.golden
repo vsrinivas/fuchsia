@@ -271,13 +271,20 @@ test_protocols_MethodWithUnionUnionMethodRequest {
 test_protocols_MethodWithUnionUnionMethodRequestHandles {
        void void
 } [packed]
+test_protocols_MethodWithUnionUnionMethodResponse {
+       hdr fidl_message_header[4124874338266649112]
+       uInLine test_protocols_TheUnionInLine
+} [packed]
+test_protocols_MethodWithUnionUnionMethodResponseHandles {
+       void void
+} [packed]
 
 resource zx_chan_test_protocols_MethodWithUnion_client[zx_chan]
 resource zx_chan_test_protocols_MethodWithUnion_server[zx_chan]
 
 zx_channel_create$test_protocols_MethodWithUnion(options const[0], out0 ptr[out, zx_chan_test_protocols_MethodWithUnion_client], out1 ptr[out, zx_chan_test_protocols_MethodWithUnion_server])
 fdio_service_connect$test_protocols_MethodWithUnion(path ptr[in, string["/svc/"]], handle zx_chan_test_protocols_MethodWithUnion_server)
-zx_channel_write$test_protocols_MethodWithUnionUnionMethod(handle zx_chan_test_protocols_MethodWithUnion_client, options const[0], bytes ptr[in, test_protocols_MethodWithUnionUnionMethodRequest], num_bytes bytesize[bytes], handles ptr[in, test_protocols_MethodWithUnionUnionMethodRequestHandles], num_handles bytesize[handles])
+zx_channel_call$test_protocols_MethodWithUnionUnionMethod(handle zx_chan_test_protocols_MethodWithUnion_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_protocols_MethodWithUnionUnionMethodRequest, test_protocols_MethodWithUnionUnionMethodRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_protocols_MethodWithUnionUnionMethodResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
 
 
 test_protocols_SyscallProtocolMethodCRequest {

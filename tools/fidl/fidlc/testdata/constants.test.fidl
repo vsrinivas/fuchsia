@@ -14,21 +14,22 @@ const BOOL bool = true;
 const STRING string = "string";
 
 type EnumType = strict enum : int32 {
-    VALUE = 1;
+    VALUE = 1 | 2;
+    SECOND_VALUE = UINT32;
 };
 const enumVal EnumType = EnumType.VALUE;
 const enumPrimitiveVal int32 = EnumType.VALUE;
 
 type BitsType = strict bits : uint32 {
     VALUE = 0x00000001;
-    SECOND_VALUE = 0x80;
-    THIRD_VALUE = 0x2;
+    SECOND_VALUE = UINT32;
+    THIRD_VALUE = 0x2 | 0;
 };
 const bitsVal BitsType = BitsType.VALUE;
-const bitsPrimitiveVal int32 = BitsType.VALUE;
+const bitsPrimitiveVal uint32 = BitsType.VALUE;
 
 const orResult BitsType = BitsType.VALUE | BitsType.SECOND_VALUE | BitsType.THIRD_VALUE;
-const orResultPrimitiveVal int32 = BitsType.VALUE | BitsType.SECOND_VALUE;
+const orResultPrimitiveVal uint32 = BitsType.VALUE | BitsType.SECOND_VALUE;
 
 type Enum = strict enum {
     E = 0b10101010;

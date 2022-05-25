@@ -128,7 +128,7 @@ class ManyParameters$TestBase extends ManyParameters {
 
 class MethodWithUnion$TestBase extends MethodWithUnion {
   @override
-  $async.Future<void> unionMethod(TheUnion u) {
+  $async.Future<TheUnion?> unionMethod(TheUnion u) {
     return $async.Future.error(
         UnimplementedError(
             r'unionMethod not implemented on MethodWithUnion test base. Please implement.'),

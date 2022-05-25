@@ -5,7 +5,7 @@
 
 include <test/constants/c/fidl.h>
 test_constants_Enum = test_constants_Enum_E
-test_constants_EnumType = test_constants_EnumType_VALUE
+test_constants_EnumType = test_constants_EnumType_VALUE, test_constants_EnumType_SECOND_VALUE
 test_constants_Bits = test_constants_Bits_B
 test_constants_BitsType = test_constants_BitsType_VALUE, test_constants_BitsType_SECOND_VALUE, test_constants_BitsType_THIRD_VALUE
 test_constants_StructInLine {

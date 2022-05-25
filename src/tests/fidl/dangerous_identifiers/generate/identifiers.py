@@ -84,6 +84,8 @@ IDENTIFIERS = [
     Identifier('const_cast'),
     Identifier('constexpr'),
     Identifier('continue', RUST_KEYWORD),
+    # TODO(fxbug.dev/66767): Fix in Rust.
+    Identifier('control_handle', [Deny(bindings=['rust'])]),
     Identifier('controller'),
     Identifier('covariant'),
     Identifier('crate', RUST_KEYWORD),
@@ -131,8 +133,10 @@ IDENTIFIERS = [
     Identifier('get'),
     Identifier('go'),
     Identifier('goto'),
+    Identifier('handles'),
     Identifier('has_invalid_tag'),
     Identifier('hash_code'),
+    Identifier('header'),
     Identifier('if', RUST_KEYWORD),
     Identifier('impl', RUST_KEYWORD),
     Identifier('implements'),
@@ -200,6 +204,8 @@ IDENTIFIERS = [
     Identifier('reinterpret_cast'),
     Identifier('requires'),
     Identifier('result'),
+    # TODO(fxbug.dev/66767): Fix in Rust.
+    Identifier('responder', [Deny(bindings=['rust'])]),
     Identifier('rethrow'),
     Identifier('return', RUST_KEYWORD),
     Identifier('rhs'),

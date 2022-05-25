@@ -43,6 +43,7 @@ using SyscallProtocolMethodCRequest = ::test::protocols::SyscallProtocolMethodCR
 using ProtocolEnds = ::test::protocols::ProtocolEnds;
 using WithProtocolEndsStructContainingEndsTopResponse = ::test::protocols::WithProtocolEndsStructContainingEndsTopResponse;
 using WithProtocolEndsStructContainingEndsRequest = ::test::protocols::WithProtocolEndsStructContainingEndsRequest;
+using MethodWithUnionUnionMethodTopResponse = ::test::protocols::MethodWithUnionUnionMethodTopResponse;
 using ManyParametersFifteenRequest = ::test::protocols::ManyParametersFifteenRequest;
 using HandleRightsProtocolResponseMethodTopResponse = ::test::protocols::HandleRightsProtocolResponseMethodTopResponse;
 using HandleRightsProtocolResponseMethodRequest = ::test::protocols::HandleRightsProtocolResponseMethodRequest;
@@ -664,6 +665,24 @@ struct Allocate<WithProtocolEndsStructContainingEndsRequest> {
     size_t out_size;
     out_size = MinSize<::test::protocols::ProtocolEnds>() + slack_per_member;
     out.in = Allocate<::test::protocols::ProtocolEnds>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<MethodWithUnionUnionMethodTopResponse> {
+  operator size_t() {
+    return MinSize<::std::unique_ptr<::test::protocols::TheUnion>>();
+  }
+};
+template <>
+struct Allocate<MethodWithUnionUnionMethodTopResponse> {
+  MethodWithUnionUnionMethodTopResponse operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<MethodWithUnionUnionMethodTopResponse>());
+    MethodWithUnionUnionMethodTopResponse out;
+    const size_t slack_per_member = (*size - MinSize<MethodWithUnionUnionMethodTopResponse>()) / 1;
+    size_t out_size;
+    out_size = MinSize<::std::unique_ptr<::test::protocols::TheUnion>>() + slack_per_member;
+    out.u = Allocate<::std::unique_ptr<::test::protocols::TheUnion>>{}(src, &out_size);
     return out;
   }
 };

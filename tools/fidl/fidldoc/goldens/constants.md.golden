@@ -9,7 +9,7 @@
 ## **STRUCTS**
 
 ### Struct  {#Struct data-text="Struct"}
-*Defined in [test.constants/constants.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=41)*
+*Defined in [test.constants/constants.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=42)*
 
 <table>
     <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr>
@@ -61,7 +61,7 @@
 ### Enum [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#Enum data-text="Enum"}
 Type: <code>uint32</code>
 
-*Defined in [test.constants/constants.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=33)*
+*Defined in [test.constants/constants.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=34)*
 
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr>
@@ -81,7 +81,12 @@ Type: <code>int32</code>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr>
         <tr id="EnumType.VALUE">
 <td><h3 id="EnumType.VALUE" class="add-link hide-from-toc">VALUE</h3></td>
-            <td><code>1</code></td>
+            <td><code></code></td>
+            <td></td>
+        </tr>
+        <tr id="EnumType.SECOND_VALUE">
+<td><h3 id="EnumType.SECOND_VALUE" class="add-link hide-from-toc">SECOND_VALUE</h3></td>
+            <td><code></code></td>
             <td></td>
         </tr>
 </table>
@@ -94,7 +99,7 @@ Type: <code>int32</code>
 ### Bits [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#Bits}
 Type: <code>uint32</code>
 
-*Defined in [test.constants/constants.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=37)*
+*Defined in [test.constants/constants.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=38)*
 
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr>
@@ -108,7 +113,7 @@ Type: <code>uint32</code>
 ### BitsType [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#BitsType}
 Type: <code>uint32</code>
 
-*Defined in [test.constants/constants.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=22)*
+*Defined in [test.constants/constants.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=23)*
 
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr>
@@ -119,12 +124,12 @@ Type: <code>uint32</code>
         </tr>
         <tr id="BitsType.SECOND_VALUE">
 <td><h3 id="BitsType.SECOND_VALUE" class="add-link hide-from-toc">SECOND_VALUE</h3></td>
-            <td>128</td>
+            <td></td>
             <td></td>
         </tr>
         <tr id="BitsType.THIRD_VALUE">
 <td><h3 id="BitsType.THIRD_VALUE" class="add-link hide-from-toc">THIRD_VALUE</h3></td>
-            <td>2</td>
+            <td></td>
             <td></td>
         </tr>
 </table>
@@ -229,19 +234,19 @@ Type: <code>uint32</code>
             <td></td>
         </tr>
         <tr id="bitsPrimitiveVal">
-            <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=28">bitsPrimitiveVal</a></td>
+            <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=29">bitsPrimitiveVal</a></td>
                 <td>
                     <code><a class='link' href='#BitsType.VALUE'>BitsType.VALUE</a></code>
                 </td>
-                <td><code>int32</code></td>
+                <td><code>uint32</code></td>
             <td></td>
         </tr>
         <tr id="bitsVal">
-            <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=27">bitsVal</a></td>
+            <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=28">bitsVal</a></td>
             <td></td>
         </tr>
         <tr id="enumPrimitiveVal">
-            <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=20">enumPrimitiveVal</a></td>
+            <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=21">enumPrimitiveVal</a></td>
                 <td>
                     <code><a class='link' href='#EnumType.VALUE'>EnumType.VALUE</a></code>
                 </td>
@@ -249,19 +254,19 @@ Type: <code>uint32</code>
             <td></td>
         </tr>
         <tr id="enumVal">
-            <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=19">enumVal</a></td>
+            <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=20">enumVal</a></td>
             <td></td>
         </tr>
         <tr id="orResult">
-            <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=30">orResult</a></td>
+            <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=31">orResult</a></td>
             <td></td>
         </tr>
         <tr id="orResultPrimitiveVal">
-            <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=31">orResultPrimitiveVal</a></td>
+            <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=32">orResultPrimitiveVal</a></td>
                 <td>
                     <code></code>
                 </td>
-                <td><code>int32</code></td>
+                <td><code>uint32</code></td>
             <td></td>
         </tr>
 </table>

@@ -73,12 +73,6 @@ class TheUnion;
 
 class MethodWithUnionUnionMethodRequest;
 
-#ifdef __Fuchsia__
-
-class MethodWithUnion;
-using MethodWithUnionHandle = ::fidl::InterfaceHandle<MethodWithUnion>;
-#endif  // __Fuchsia__
-
 class SyscallProtocolMethodCRequest;
 
 class ProtocolEnds;
@@ -91,6 +85,14 @@ class WithProtocolEndsStructContainingEndsRequest;
 
 class WithProtocolEnds;
 using WithProtocolEndsHandle = ::fidl::InterfaceHandle<WithProtocolEnds>;
+#endif  // __Fuchsia__
+
+class MethodWithUnionUnionMethodTopResponse;
+
+#ifdef __Fuchsia__
+
+class MethodWithUnion;
+using MethodWithUnionHandle = ::fidl::InterfaceHandle<MethodWithUnion>;
 #endif  // __Fuchsia__
 
 class ManyParametersFifteenRequest;
@@ -1244,30 +1246,6 @@ inline zx_status_t Clone(const ::test::protocols::MethodWithUnionUnionMethodRequ
 
 using MethodWithUnionUnionMethodRequestPtr = ::std::unique_ptr<MethodWithUnionUnionMethodRequest>;
 
-#ifdef __Fuchsia__
-
-namespace _internal {
-__LOCAL extern "C" const fidl_type_t test_protocols_MethodWithUnionUnionMethodRequestTable;
-
-}  // namespace _internal
-class MethodWithUnion_RequestEncoder {
- public:
-  static ::fidl::HLCPPOutgoingMessage UnionMethod(::fidl::MessageEncoder* _encoder, ::test::protocols::TheUnion* u) {
-    fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(16);
-    ::fidl::Encode(_encoder, u, 0 + sizeof(fidl_message_header_t));
-
-    fidl_trace(DidHLCPPEncode, &::test::protocols::_internal::test_protocols_MethodWithUnionUnionMethodRequestTable, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
-
-    return _encoder->GetMessage();
-  }
-};
-
-class MethodWithUnion_ResponseEncoder {
- public:
-};
-#endif  // __Fuchsia__
-
 class SyscallProtocolMethodCRequest final {
  public:
   static const fidl_type_t* FidlType;
@@ -1454,6 +1432,64 @@ class WithProtocolEnds_ResponseEncoder {
     ::fidl::Encode(_encoder, out, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(DidHLCPPEncode, &::test::protocols::_internal::test_protocols_WithProtocolEndsStructContainingEndsTopResponseTable, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
+
+    return _encoder->GetMessage();
+  }
+};
+#endif  // __Fuchsia__
+
+class MethodWithUnionUnionMethodTopResponse final {
+ public:
+  static const fidl_type_t* FidlType;
+
+  ::std::unique_ptr<::test::protocols::TheUnion> u{};
+
+  static inline ::std::unique_ptr<MethodWithUnionUnionMethodTopResponse> New() { return ::std::make_unique<MethodWithUnionUnionMethodTopResponse>(); }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, MethodWithUnionUnionMethodTopResponse* value, size_t _offset);
+  zx_status_t Clone(MethodWithUnionUnionMethodTopResponse* result) const;
+};
+
+inline zx_status_t Clone(const ::test::protocols::MethodWithUnionUnionMethodTopResponse& _value,
+                         ::test::protocols::MethodWithUnionUnionMethodTopResponse* _result) {
+  return _value.Clone(_result);
+}
+
+using MethodWithUnionUnionMethodTopResponsePtr = ::std::unique_ptr<MethodWithUnionUnionMethodTopResponse>;
+
+#ifdef __Fuchsia__
+
+namespace _internal {
+__LOCAL extern "C" const fidl_type_t test_protocols_MethodWithUnionUnionMethodRequestTable;
+
+}  // namespace _internal
+class MethodWithUnion_RequestEncoder {
+ public:
+  static ::fidl::HLCPPOutgoingMessage UnionMethod(::fidl::MessageEncoder* _encoder, ::test::protocols::TheUnion* u) {
+    fidl_trace(WillHLCPPEncode);
+    _encoder->Alloc(16);
+    ::fidl::Encode(_encoder, u, 0 + sizeof(fidl_message_header_t));
+
+    fidl_trace(DidHLCPPEncode, &::test::protocols::_internal::test_protocols_MethodWithUnionUnionMethodRequestTable, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
+
+    return _encoder->GetMessage();
+  }
+};
+namespace _internal {
+__LOCAL extern "C" const fidl_type_t test_protocols_MethodWithUnionUnionMethodTopResponseTable;
+
+}  // namespace _internal
+class MethodWithUnion_ResponseEncoder {
+ public:
+  static ::fidl::HLCPPOutgoingMessage UnionMethod(::fidl::MessageEncoder* _encoder, ::std::unique_ptr<::test::protocols::TheUnion>* u) {
+    fidl_trace(WillHLCPPEncode);
+
+    _encoder->Alloc(16);
+    ::fidl::Encode(_encoder, u, 0 + sizeof(fidl_message_header_t));
+
+    fidl_trace(DidHLCPPEncode, &::test::protocols::_internal::test_protocols_MethodWithUnionUnionMethodTopResponseTable, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -3098,6 +3134,31 @@ struct Equality<::test::protocols::WithProtocolEndsStructContainingEndsRequest> 
 #endif  // __Fuchsia__
 
 template <>
+struct CodingTraits<::test::protocols::MethodWithUnionUnionMethodTopResponse>
+    : public EncodableCodingTraits<::test::protocols::MethodWithUnionUnionMethodTopResponse, 16> {};
+
+template <>
+struct HasPadding<::test::protocols::MethodWithUnionUnionMethodTopResponse> : public std::true_type {};
+
+template <>
+struct IsMemcpyCompatible<::test::protocols::MethodWithUnionUnionMethodTopResponse> : public internal::BoolConstant<
+                                                                                          !HasPadding<::test::protocols::MethodWithUnionUnionMethodTopResponse>::value && IsMemcpyCompatible<::std::unique_ptr<::test::protocols::TheUnion>>::value> {};
+
+inline zx_status_t Clone(const ::test::protocols::MethodWithUnionUnionMethodTopResponse& value,
+                         ::test::protocols::MethodWithUnionUnionMethodTopResponse* result) {
+  return ::test::protocols::Clone(value, result);
+}
+
+template <>
+struct Equality<::test::protocols::MethodWithUnionUnionMethodTopResponse> {
+  bool operator()(const ::test::protocols::MethodWithUnionUnionMethodTopResponse& _lhs, const ::test::protocols::MethodWithUnionUnionMethodTopResponse& _rhs) const {
+    if (!::fidl::Equals(_lhs.u, _rhs.u)) {
+      return false;
+    }
+    return true;
+  }
+};
+template <>
 struct CodingTraits<::test::protocols::ManyParametersFifteenRequest>
     : public EncodableCodingTraits<::test::protocols::ManyParametersFifteenRequest, 15> {};
 
@@ -3608,22 +3669,6 @@ constexpr ::fidl::MessageDynamicFlags kTransitional_Event_DynamicFlags = ::fidl:
 
 #ifdef __Fuchsia__
 
-using MethodWithUnionPtr = ::fidl::InterfacePtr<MethodWithUnion>;
-class MethodWithUnion_Proxy;
-class MethodWithUnion_Stub;
-class MethodWithUnion_EventSender;
-class MethodWithUnion_Sync;
-using MethodWithUnionSyncPtr = ::fidl::SynchronousInterfacePtr<MethodWithUnion>;
-class MethodWithUnion_SyncProxy;
-
-namespace internal {
-constexpr uint64_t kMethodWithUnion_UnionMethod_Ordinal = 0x393e7f5b2b821218lu;
-constexpr ::fidl::MessageDynamicFlags kMethodWithUnion_UnionMethod_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
-}  // namespace internal
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
 using WithProtocolEndsPtr = ::fidl::InterfacePtr<WithProtocolEnds>;
 class WithProtocolEnds_Proxy;
 class WithProtocolEnds_Stub;
@@ -3639,6 +3684,22 @@ constexpr uint64_t kWithProtocolEnds_ServerEnds_Ordinal = 0x70a02c2ba2228a33lu;
 constexpr ::fidl::MessageDynamicFlags kWithProtocolEnds_ServerEnds_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 constexpr uint64_t kWithProtocolEnds_StructContainingEnds_Ordinal = 0x3893f0baad26f5d5lu;
 constexpr ::fidl::MessageDynamicFlags kWithProtocolEnds_StructContainingEnds_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+}  // namespace internal
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+using MethodWithUnionPtr = ::fidl::InterfacePtr<MethodWithUnion>;
+class MethodWithUnion_Proxy;
+class MethodWithUnion_Stub;
+class MethodWithUnion_EventSender;
+class MethodWithUnion_Sync;
+using MethodWithUnionSyncPtr = ::fidl::SynchronousInterfacePtr<MethodWithUnion>;
+class MethodWithUnion_SyncProxy;
+
+namespace internal {
+constexpr uint64_t kMethodWithUnion_UnionMethod_Ordinal = 0x393e7f5b2b821218lu;
+constexpr ::fidl::MessageDynamicFlags kMethodWithUnion_UnionMethod_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 }  // namespace internal
 #endif  // __Fuchsia__
 
@@ -3987,88 +4048,6 @@ class Transitional_SyncProxy : public ::test::protocols::Transitional_Sync {
 
 #ifdef __Fuchsia__
 
-class MethodWithUnion {
- public:
-  using Proxy_ = ::test::protocols::MethodWithUnion_Proxy;
-  using Stub_ = ::test::protocols::MethodWithUnion_Stub;
-  using EventSender_ = ::test::protocols::MethodWithUnion_EventSender;
-  using Sync_ = ::test::protocols::MethodWithUnion_Sync;
-  virtual ~MethodWithUnion();
-
-  virtual void UnionMethod(::test::protocols::TheUnion u) = 0;
-};
-
-class MethodWithUnion_RequestDecoder {
- public:
-  MethodWithUnion_RequestDecoder() = default;
-  virtual ~MethodWithUnion_RequestDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
-  virtual void UnionMethod(::test::protocols::TheUnion u) = 0;
-};
-
-class MethodWithUnion_ResponseDecoder {
- public:
-  MethodWithUnion_ResponseDecoder() = default;
-  virtual ~MethodWithUnion_ResponseDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal);
-};
-
-class MethodWithUnion_EventSender {
- public:
-  virtual ~MethodWithUnion_EventSender();
-};
-
-class MethodWithUnion_Sync {
- public:
-  using Proxy_ = ::test::protocols::MethodWithUnion_SyncProxy;
-  virtual ~MethodWithUnion_Sync();
-  virtual zx_status_t UnionMethod(::test::protocols::TheUnion u) = 0;
-};
-
-class MethodWithUnion_Proxy final : public ::fidl::internal::Proxy, public MethodWithUnion {
- public:
-  explicit MethodWithUnion_Proxy(::fidl::internal::ProxyController* controller);
-  ~MethodWithUnion_Proxy() override;
-
-  zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
-  // cts-coverage-fidl-name:test.protocols/MethodWithUnion.UnionMethod
-  void UnionMethod(::test::protocols::TheUnion u) override;
-
- private:
-  MethodWithUnion_Proxy(const ::test::protocols::MethodWithUnion_Proxy&) = delete;
-  MethodWithUnion_Proxy& operator=(const ::test::protocols::MethodWithUnion_Proxy&) = delete;
-
-  ::fidl::internal::ProxyController* controller_;
-};
-
-class MethodWithUnion_Stub final : public ::fidl::internal::Stub, public ::test::protocols::MethodWithUnion_EventSender {
- public:
-  typedef class ::test::protocols::MethodWithUnion MethodWithUnion_clazz;
-  explicit MethodWithUnion_Stub(::test::protocols::MethodWithUnion_Stub::MethodWithUnion_clazz* impl);
-  ~MethodWithUnion_Stub() override;
-
-  zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
-                        ::fidl::internal::PendingResponse response) override;
-
- private:
-  ::test::protocols::MethodWithUnion_Stub::MethodWithUnion_clazz* impl_;
-};
-
-class MethodWithUnion_SyncProxy : public ::test::protocols::MethodWithUnion_Sync {
- public:
-  explicit MethodWithUnion_SyncProxy(::zx::channel channel);
-  ~MethodWithUnion_SyncProxy() override;
-  // cts-coverage-fidl-name:test.protocols/MethodWithUnion.UnionMethod
-  zx_status_t UnionMethod(::test::protocols::TheUnion u) override;
-
- private:
-  ::fidl::internal::SynchronousProxy proxy_;
-  friend class ::fidl::SynchronousInterfacePtr<MethodWithUnion>;
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
 class WithProtocolEnds {
  public:
   using Proxy_ = ::test::protocols::WithProtocolEnds_Proxy;
@@ -4171,6 +4150,91 @@ class WithProtocolEnds_SyncProxy : public ::test::protocols::WithProtocolEnds_Sy
  private:
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<WithProtocolEnds>;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+class MethodWithUnion {
+ public:
+  using Proxy_ = ::test::protocols::MethodWithUnion_Proxy;
+  using Stub_ = ::test::protocols::MethodWithUnion_Stub;
+  using EventSender_ = ::test::protocols::MethodWithUnion_EventSender;
+  using Sync_ = ::test::protocols::MethodWithUnion_Sync;
+  virtual ~MethodWithUnion();
+  using UnionMethodCallback =
+      fit::function<void(::std::unique_ptr<::test::protocols::TheUnion>)>;
+
+  virtual void UnionMethod(::test::protocols::TheUnion u, UnionMethodCallback callback) = 0;
+};
+
+class MethodWithUnion_RequestDecoder {
+ public:
+  MethodWithUnion_RequestDecoder() = default;
+  virtual ~MethodWithUnion_RequestDecoder() = default;
+  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
+  virtual void UnionMethod(::test::protocols::TheUnion u) = 0;
+};
+
+class MethodWithUnion_ResponseDecoder {
+ public:
+  MethodWithUnion_ResponseDecoder() = default;
+  virtual ~MethodWithUnion_ResponseDecoder() = default;
+  static const fidl_type_t* GetType(uint64_t ordinal);
+  virtual void UnionMethod(::std::unique_ptr<::test::protocols::TheUnion> u) = 0;
+};
+
+class MethodWithUnion_EventSender {
+ public:
+  virtual ~MethodWithUnion_EventSender();
+};
+
+class MethodWithUnion_Sync {
+ public:
+  using Proxy_ = ::test::protocols::MethodWithUnion_SyncProxy;
+  virtual ~MethodWithUnion_Sync();
+  virtual zx_status_t UnionMethod(::test::protocols::TheUnion u, ::std::unique_ptr<::test::protocols::TheUnion>* out_u) = 0;
+};
+
+class MethodWithUnion_Proxy final : public ::fidl::internal::Proxy, public MethodWithUnion {
+ public:
+  explicit MethodWithUnion_Proxy(::fidl::internal::ProxyController* controller);
+  ~MethodWithUnion_Proxy() override;
+
+  zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
+  // cts-coverage-fidl-name:test.protocols/MethodWithUnion.UnionMethod
+  void UnionMethod(::test::protocols::TheUnion u, UnionMethodCallback callback) override;
+
+ private:
+  MethodWithUnion_Proxy(const ::test::protocols::MethodWithUnion_Proxy&) = delete;
+  MethodWithUnion_Proxy& operator=(const ::test::protocols::MethodWithUnion_Proxy&) = delete;
+
+  ::fidl::internal::ProxyController* controller_;
+};
+
+class MethodWithUnion_Stub final : public ::fidl::internal::Stub, public ::test::protocols::MethodWithUnion_EventSender {
+ public:
+  typedef class ::test::protocols::MethodWithUnion MethodWithUnion_clazz;
+  explicit MethodWithUnion_Stub(::test::protocols::MethodWithUnion_Stub::MethodWithUnion_clazz* impl);
+  ~MethodWithUnion_Stub() override;
+
+  zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
+                        ::fidl::internal::PendingResponse response) override;
+
+ private:
+  ::test::protocols::MethodWithUnion_Stub::MethodWithUnion_clazz* impl_;
+};
+
+class MethodWithUnion_SyncProxy : public ::test::protocols::MethodWithUnion_Sync {
+ public:
+  explicit MethodWithUnion_SyncProxy(::zx::channel channel);
+  ~MethodWithUnion_SyncProxy() override;
+  // cts-coverage-fidl-name:test.protocols/MethodWithUnion.UnionMethod
+  zx_status_t UnionMethod(::test::protocols::TheUnion u, ::std::unique_ptr<::test::protocols::TheUnion>* out_u) override;
+
+ private:
+  ::fidl::internal::SynchronousProxy proxy_;
+  friend class ::fidl::SynchronousInterfacePtr<MethodWithUnion>;
 };
 #endif  // __Fuchsia__
 
