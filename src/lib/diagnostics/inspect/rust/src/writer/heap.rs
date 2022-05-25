@@ -140,7 +140,7 @@ impl Heap {
     }
 
     pub fn set_header_block(&mut self, header: &Block<Arc<Mapping>>) -> Result<(), Error> {
-        header.set_header_size(self.current_size_bytes.try_into().unwrap())?;
+        header.set_header_vmo_size(self.current_size_bytes.try_into().unwrap())?;
         self.header = Some(header.clone());
         Ok(())
     }
@@ -173,7 +173,7 @@ impl Heap {
         self.free_head_per_order[constants::NUM_ORDERS - 1] = last_index;
         self.current_size_bytes = new_size;
         if let Some(header) = self.header.as_ref() {
-            header.set_header_size(self.current_size_bytes.try_into().unwrap())?;
+            header.set_header_vmo_size(self.current_size_bytes.try_into().unwrap())?;
         }
         Ok(())
     }
@@ -591,7 +591,7 @@ mod tests {
     }
 
     #[fuchsia::test]
-    fn update_header_size() {
+    fn update_header_vmo_size() {
         let (mapping, _) = Mapping::allocate(3 * 4096).unwrap();
         let mut heap = Heap::new(Arc::new(mapping)).unwrap();
         let mut block = heap
@@ -600,16 +600,16 @@ mod tests {
         assert!(block.become_header(heap.current_size()).is_ok());
         assert!(heap.set_header_block(&block).is_ok());
 
-        assert_eq!(block.header_size().unwrap() as usize, heap.current_size());
+        assert_eq!(block.header_vmo_size().unwrap() as usize, heap.current_size());
         let b = heap.allocate_block(2048).unwrap();
         assert_eq!(b.index(), 128);
-        assert_eq!(block.header_size().unwrap() as usize, heap.current_size());
+        assert_eq!(block.header_vmo_size().unwrap() as usize, heap.current_size());
         let b = heap.allocate_block(2048).unwrap();
         assert_eq!(b.index(), 256);
-        assert_eq!(block.header_size().unwrap() as usize, heap.current_size());
+        assert_eq!(block.header_vmo_size().unwrap() as usize, heap.current_size());
         let b = heap.allocate_block(2048).unwrap();
         assert_eq!(b.index(), 384);
-        assert_eq!(block.header_size().unwrap() as usize, heap.current_size());
+        assert_eq!(block.header_vmo_size().unwrap() as usize, heap.current_size());
 
         let expected = [
             BlockDebug { index: 0, order: 1, block_type: BlockType::Header },
@@ -627,13 +627,13 @@ mod tests {
 
         let b = heap.allocate_block(2048).unwrap();
         assert_eq!(b.index(), 512);
-        assert_eq!(block.header_size().unwrap() as usize, heap.current_size());
+        assert_eq!(block.header_vmo_size().unwrap() as usize, heap.current_size());
         let b = heap.allocate_block(2048).unwrap();
         assert_eq!(b.index(), 640);
-        assert_eq!(block.header_size().unwrap() as usize, heap.current_size());
+        assert_eq!(block.header_vmo_size().unwrap() as usize, heap.current_size());
         assert_eq!(heap.failed_allocations, 0);
         assert!(heap.allocate_block(2048).is_err());
-        assert_eq!(block.header_size().unwrap() as usize, heap.current_size());
+        assert_eq!(block.header_vmo_size().unwrap() as usize, heap.current_size());
         assert_eq!(heap.failed_allocations, 1);
 
         assert!(heap.free_block(heap.get_block(128).unwrap()).is_ok());
@@ -641,7 +641,7 @@ mod tests {
         assert!(heap.free_block(heap.get_block(384).unwrap()).is_ok());
         assert!(heap.free_block(heap.get_block(512).unwrap()).is_ok());
         assert!(heap.free_block(heap.get_block(640).unwrap()).is_ok());
-        assert_eq!(block.header_size().unwrap() as usize, heap.current_size());
+        assert_eq!(block.header_vmo_size().unwrap() as usize, heap.current_size());
 
         assert!(heap.free_block(heap.get_block(0).unwrap()).is_ok());
 
