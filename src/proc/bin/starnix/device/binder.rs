@@ -1837,34 +1837,19 @@ impl BinderDriver {
     ) -> Result<TransactionRefs, TransactionError> {
         let mut transaction_refs = TransactionRefs::new(target_proc);
 
-        for offset in offsets {
+        for &offset in offsets {
             // Bounds-check the offset.
-            let object_end = offset
-                .checked_add(std::mem::size_of::<flat_binder_object>() as u64)
-                .ok_or_else(|| errno!(EINVAL))? as usize;
-            if object_end > transaction_data.len() {
+            if offset as usize >= transaction_data.len() {
                 return error!(EINVAL)?;
             }
-            // SAFETY: The pointer to `flat_binder_object` is within the bounds of the slice.
-            let object_ptr = unsafe {
-                transaction_data.as_mut_ptr().add(*offset as usize) as *mut flat_binder_object
-            };
-            // SAFETY: The object may not be aligned, so read a copy.
-            let flat_object = unsafe { object_ptr.read_unaligned() };
-            let patched = match flat_object.hdr.type_ {
-                BINDER_TYPE_HANDLE => {
-                    // The `flat_binder_object` is a binder handle.
-                    // SAFETY: Union access is safe because backing memory was initialized by a VMO.
-                    let handle = unsafe { flat_object.__bindgen_anon_1.handle }.into();
+            let data_at_offset = &mut transaction_data[offset as usize..];
+            let serialized_object = SerializedBinderObject::from_bytes(data_at_offset)?;
+            let translated_object = match serialized_object {
+                SerializedBinderObject::Handle { handle, flags, cookie } => {
                     match handle {
                         Handle::SpecialServiceManager => {
                             // The special handle 0 does not need to be translated. It is universal.
-                            struct_with_union_into_bytes!(flat_binder_object {
-                                hdr.type_: BINDER_TYPE_HANDLE,
-                                __bindgen_anon_1.handle: 0,
-                                flags: flat_object.flags,
-                                cookie: flat_object.cookie,
-                            })
+                            serialized_object
                         }
                         Handle::Object { index } => {
                             let proxy = source_proc
@@ -1875,12 +1860,7 @@ impl BinderDriver {
                             if std::ptr::eq(Arc::as_ptr(target_proc), proxy.owner.as_ptr()) {
                                 // The binder object belongs to the receiving process, so convert it
                                 // from a handle to a local object.
-                                struct_with_union_into_bytes!(flat_binder_object {
-                                    hdr.type_: BINDER_TYPE_BINDER,
-                                    __bindgen_anon_1.binder: proxy.local.weak_ref_addr.ptr() as u64,
-                                    flags: flat_object.flags,
-                                    cookie: proxy.local.strong_ref_addr.ptr() as u64,
-                                })
+                                SerializedBinderObject::Object { local: proxy.local.clone(), flags }
                             } else {
                                 // The binder object does not belong to the receiving process, so
                                 // dup the handle in the receiving process' handle table.
@@ -1891,27 +1871,14 @@ impl BinderDriver {
                                 // buffer.
                                 transaction_refs.push(new_handle);
 
-                                struct_with_union_into_bytes!(flat_binder_object {
-                                    hdr.type_: BINDER_TYPE_HANDLE,
-                                    __bindgen_anon_1.handle: new_handle.into(),
-                                    flags: flat_object.flags,
-                                    cookie: flat_object.cookie,
-                                })
+                                SerializedBinderObject::Handle { handle: new_handle, flags, cookie }
                             }
                         }
                     }
                 }
-                BINDER_TYPE_BINDER => {
+                SerializedBinderObject::Object { local, flags } => {
                     // We are passing a binder object across process boundaries. We need
                     // to translate this address to some handle.
-
-                    // SAFETY: Union access is safe because backing memory was initialized by a VMO.
-                    let local = LocalBinderObject {
-                        weak_ref_addr: UserAddress::from(unsafe {
-                            flat_object.__bindgen_anon_1.binder
-                        }),
-                        strong_ref_addr: UserAddress::from(flat_object.cookie),
-                    };
 
                     // Register this binder object if it hasn't already been registered.
                     let object = source_proc.find_or_register_object(local.clone());
@@ -1927,18 +1894,10 @@ impl BinderDriver {
                     // Tie this handle's strong reference to be held as long as this buffer.
                     transaction_refs.push(handle);
 
-                    // Translate the `flat_binder_object` to refer to the handle.
-                    struct_with_union_into_bytes!(flat_binder_object {
-                        hdr.type_: BINDER_TYPE_HANDLE,
-                        __bindgen_anon_1.handle: handle.into(),
-                        flags: flat_object.flags,
-                        cookie: 0,
-                    })
+                    // Translate the serialized object into a handle.
+                    SerializedBinderObject::Handle { handle, flags, cookie: 0 }
                 }
-                BINDER_TYPE_FD => {
-                    // SAFETY: Union access is safe because backing memory was initialized by a VMO.
-                    let fd =
-                        FdNumber::from_raw(unsafe { flat_object.__bindgen_anon_1.handle } as i32);
+                SerializedBinderObject::File { fd, flags, cookie } => {
                     let file = current_task.files.get(fd)?;
                     let fd_flags = current_task.files.get_fd_flags(fd)?;
                     let target_task = current_task
@@ -1949,31 +1908,11 @@ impl BinderDriver {
                         .ok_or_else(|| errno!(EINVAL))?;
                     let new_fd = target_task.files.add_with_flags(file, fd_flags)?;
 
-                    struct_with_union_into_bytes!(flat_binder_object {
-                        hdr.type_: BINDER_TYPE_FD,
-                        __bindgen_anon_1.handle: new_fd.raw() as u32,
-                        flags: flat_object.flags,
-                        cookie: flat_object.cookie,
-                    })
-                }
-                _ => {
-                    tracing::error!("unknown object type {}", flat_object.hdr.type_);
-                    return error!(EINVAL)?;
+                    SerializedBinderObject::File { fd: new_fd, flags, cookie }
                 }
             };
 
-            // Write the translated `flat_binder_object` back to the buffer.
-            // SAFETY: `struct_with_union_into_bytes!` is used to ensure there are
-            // no uninitialized fields. The result of this is a byte slice, so we
-            // operate below on a byte slice instead of a pointer to
-            // `flat_binder_object`.
-            unsafe {
-                std::slice::from_raw_parts_mut(
-                    object_ptr as *mut u8,
-                    std::mem::size_of::<flat_binder_object>(),
-                )
-                .copy_from_slice(&patched[..]);
-            };
+            translated_object.write_to(data_at_offset)?;
         }
 
         // We made it to the end successfully. No need to run the drop guard.
@@ -2052,6 +1991,132 @@ impl BinderDriver {
 
     fn cancel_wait(&self, binder_proc: &Arc<BinderProcess>, key: WaitKey) {
         binder_proc.waiters.lock().cancel_wait(key);
+    }
+}
+
+/// Represents a serialized binder object embedded in transaction data.
+#[derive(Debug, PartialEq, Eq)]
+enum SerializedBinderObject {
+    /// A `BINDER_TYPE_HANDLE` object. A handle to a remote binder object.
+    Handle { handle: Handle, flags: u32, cookie: binder_uintptr_t },
+    /// A `BINDER_TYPE_BINDER` object. The in-process representation of a binder object.
+    Object { local: LocalBinderObject, flags: u32 },
+    /// A `BINDER_TYPE_FD` object. A file descriptor.
+    File { fd: FdNumber, flags: u32, cookie: binder_uintptr_t },
+}
+
+impl SerializedBinderObject {
+    /// Deserialize a binder object from `data`. `data` must be large enough to fit the size of the
+    /// serialized object, or else this method fails.
+    fn from_bytes(data: &[u8]) -> Result<Self, Errno> {
+        // Check that there is enough data to read the object header.
+        if data.len() < std::mem::size_of::<binder_object_header>() {
+            return error!(EINVAL);
+        }
+        let object_header_ptr = data.as_ptr() as *const binder_object_header;
+        // SAFETY: The pointer to `binder_object_header` is within the bounds of the slice, as
+        // checked above. The object may not be aligned, so read a copy.
+        let object_header = unsafe { object_header_ptr.read_unaligned() };
+        match object_header.type_ {
+            BINDER_TYPE_BINDER => {
+                if data.len() < std::mem::size_of::<flat_binder_object>() {
+                    return error!(EINVAL);
+                }
+                // SAFETY: The pointer to `flat_binder_object` is within the bounds of the slice,
+                // as checked above. The object may not be aligned, so read a copy.
+                let object =
+                    unsafe { (data.as_ptr() as *const flat_binder_object).read_unaligned() };
+                Ok(Self::Object {
+                    local: LocalBinderObject {
+                        // SAFETY: Union read.
+                        weak_ref_addr: UserAddress::from(unsafe { object.__bindgen_anon_1.binder }),
+                        strong_ref_addr: UserAddress::from(object.cookie),
+                    },
+                    flags: object.flags,
+                })
+            }
+            BINDER_TYPE_HANDLE => {
+                if data.len() < std::mem::size_of::<flat_binder_object>() {
+                    return error!(EINVAL);
+                }
+                // SAFETY: The pointer to `flat_binder_object` is within the bounds of the slice,
+                // as checked above. The object may not be aligned, so read a copy.
+                let object =
+                    unsafe { (data.as_ptr() as *const flat_binder_object).read_unaligned() };
+                Ok(Self::Handle {
+                    // SAFETY: Union read.
+                    handle: unsafe { object.__bindgen_anon_1.handle }.into(),
+                    flags: object.flags,
+                    cookie: object.cookie,
+                })
+            }
+            BINDER_TYPE_FD => {
+                if data.len() < std::mem::size_of::<flat_binder_object>() {
+                    return error!(EINVAL);
+                }
+                // SAFETY: The pointer to `flat_binder_object` is within the bounds of the slice,
+                // as checked above. The object may not be aligned, so read a copy.
+                let object =
+                    unsafe { (data.as_ptr() as *const flat_binder_object).read_unaligned() };
+                // SAFETY: Union read.
+                Ok(Self::File {
+                    fd: FdNumber::from_raw(unsafe { object.__bindgen_anon_1.handle } as i32),
+                    flags: object.flags,
+                    cookie: object.cookie,
+                })
+            }
+            object_type => {
+                tracing::error!("unknown object type 0x{:08x}", object_type);
+                error!(EINVAL)
+            }
+        }
+    }
+
+    /// Writes the serialized object back to `data`. `data` must be large enough to fit the
+    /// serialized object, or else this method fails.
+    fn write_to(self, data: &mut [u8]) -> Result<(), Errno> {
+        match self {
+            SerializedBinderObject::Handle { handle, flags, cookie } => {
+                if data.len() < std::mem::size_of::<flat_binder_object>() {
+                    return error!(EINVAL);
+                }
+                (&mut data[..std::mem::size_of::<flat_binder_object>()]).copy_from_slice(
+                    &struct_with_union_into_bytes!(flat_binder_object {
+                        hdr.type_: BINDER_TYPE_HANDLE,
+                        __bindgen_anon_1.handle: handle.into(),
+                        flags: flags,
+                        cookie: cookie,
+                    }),
+                );
+            }
+            SerializedBinderObject::Object { local, flags } => {
+                if data.len() < std::mem::size_of::<flat_binder_object>() {
+                    return error!(EINVAL);
+                }
+                (&mut data[..std::mem::size_of::<flat_binder_object>()]).copy_from_slice(
+                    &struct_with_union_into_bytes!(flat_binder_object {
+                        hdr.type_: BINDER_TYPE_BINDER,
+                        __bindgen_anon_1.binder: local.weak_ref_addr.ptr() as u64,
+                        flags: flags,
+                        cookie: local.strong_ref_addr.ptr() as u64,
+                    }),
+                );
+            }
+            SerializedBinderObject::File { fd, flags, cookie } => {
+                if data.len() < std::mem::size_of::<flat_binder_object>() {
+                    return error!(EINVAL);
+                }
+                (&mut data[..std::mem::size_of::<flat_binder_object>()]).copy_from_slice(
+                    &struct_with_union_into_bytes!(flat_binder_object {
+                        hdr.type_: BINDER_TYPE_FD,
+                        __bindgen_anon_1.handle: fd.raw() as u32,
+                        flags: flags,
+                        cookie: cookie,
+                    }),
+                );
+            }
+        }
+        Ok(())
     }
 }
 
@@ -2436,6 +2501,157 @@ mod tests {
 
         // Another removal attempt will prove the handle has been removed.
         handle_table.dec_weak(handle.object_index()).expect_err("handle should no longer exist");
+    }
+
+    #[fuchsia::test]
+    fn serialize_binder_handle() {
+        let mut output = [0u8; std::mem::size_of::<flat_binder_object>()];
+
+        SerializedBinderObject::Handle { handle: 2.into(), flags: 42, cookie: 99 }
+            .write_to(&mut output)
+            .expect("write handle");
+        assert_eq!(
+            struct_with_union_into_bytes!(flat_binder_object {
+                hdr.type_: BINDER_TYPE_HANDLE,
+                flags: 42,
+                cookie: 99,
+                __bindgen_anon_1.handle: 2,
+            }),
+            output
+        );
+    }
+
+    #[fuchsia::test]
+    fn serialize_binder_object() {
+        let mut output = [0u8; std::mem::size_of::<flat_binder_object>()];
+
+        SerializedBinderObject::Object {
+            local: LocalBinderObject {
+                weak_ref_addr: UserAddress::from(0xDEADBEEF),
+                strong_ref_addr: UserAddress::from(0xDEADDEAD),
+            },
+            flags: 42,
+        }
+        .write_to(&mut output)
+        .expect("write object");
+        assert_eq!(
+            struct_with_union_into_bytes!(flat_binder_object {
+                hdr.type_: BINDER_TYPE_BINDER,
+                flags: 42,
+                cookie: 0xDEADDEAD,
+                __bindgen_anon_1.binder: 0xDEADBEEF,
+            }),
+            output
+        );
+    }
+
+    #[fuchsia::test]
+    fn serialize_binder_fd() {
+        let mut output = [0u8; std::mem::size_of::<flat_binder_object>()];
+
+        SerializedBinderObject::File { fd: FdNumber::from_raw(2), flags: 42, cookie: 99 }
+            .write_to(&mut output)
+            .expect("write fd");
+        assert_eq!(
+            struct_with_union_into_bytes!(flat_binder_object {
+                hdr.type_: BINDER_TYPE_FD,
+                flags: 42,
+                cookie: 99,
+                __bindgen_anon_1.handle: 2,
+            }),
+            output
+        );
+    }
+
+    #[fuchsia::test]
+    fn serialize_binder_buffer_too_small() {
+        let mut output = [0u8; std::mem::size_of::<binder_uintptr_t>()];
+        SerializedBinderObject::Handle { handle: 2.into(), flags: 42, cookie: 99 }
+            .write_to(&mut output)
+            .expect_err("write handle should not succeed");
+        SerializedBinderObject::Object {
+            local: LocalBinderObject {
+                weak_ref_addr: UserAddress::from(0xDEADBEEF),
+                strong_ref_addr: UserAddress::from(0xDEADDEAD),
+            },
+            flags: 42,
+        }
+        .write_to(&mut output)
+        .expect_err("write object should not succeed");
+        SerializedBinderObject::File { fd: FdNumber::from_raw(2), flags: 42, cookie: 99 }
+            .write_to(&mut output)
+            .expect_err("write fd should not succeed");
+    }
+
+    #[fuchsia::test]
+    fn deserialize_binder_handle() {
+        let input = struct_with_union_into_bytes!(flat_binder_object {
+            hdr.type_: BINDER_TYPE_HANDLE,
+            flags: 42,
+            cookie: 99,
+            __bindgen_anon_1.handle: 2,
+        });
+        assert_eq!(
+            SerializedBinderObject::from_bytes(&input).expect("read handle"),
+            SerializedBinderObject::Handle { handle: 2.into(), flags: 42, cookie: 99 }
+        );
+    }
+
+    #[fuchsia::test]
+    fn deserialize_binder_object() {
+        let input = struct_with_union_into_bytes!(flat_binder_object {
+            hdr.type_: BINDER_TYPE_BINDER,
+            flags: 42,
+            cookie: 0xDEADDEAD,
+            __bindgen_anon_1.binder: 0xDEADBEEF,
+        });
+        assert_eq!(
+            SerializedBinderObject::from_bytes(&input).expect("read object"),
+            SerializedBinderObject::Object {
+                local: LocalBinderObject {
+                    weak_ref_addr: UserAddress::from(0xDEADBEEF),
+                    strong_ref_addr: UserAddress::from(0xDEADDEAD)
+                },
+                flags: 42
+            }
+        );
+    }
+
+    #[fuchsia::test]
+    fn deserialize_binder_fd() {
+        let input = struct_with_union_into_bytes!(flat_binder_object {
+            hdr.type_: BINDER_TYPE_FD,
+            flags: 42,
+            cookie: 99,
+            __bindgen_anon_1.handle: 2,
+        });
+        assert_eq!(
+            SerializedBinderObject::from_bytes(&input).expect("read handle"),
+            SerializedBinderObject::File { fd: FdNumber::from_raw(2), flags: 42, cookie: 99 }
+        );
+    }
+
+    #[fuchsia::test]
+    fn deserialize_unknown_object() {
+        let input = struct_with_union_into_bytes!(flat_binder_object {
+            hdr.type_: 9001,
+            flags: 42,
+            cookie: 99,
+            __bindgen_anon_1.handle: 2,
+        });
+        SerializedBinderObject::from_bytes(&input).expect_err("read unknown object");
+    }
+
+    #[fuchsia::test]
+    fn deserialize_input_too_small() {
+        let input = struct_with_union_into_bytes!(flat_binder_object {
+            hdr.type_: BINDER_TYPE_FD,
+            flags: 42,
+            cookie: 99,
+            __bindgen_anon_1.handle: 2,
+        });
+        SerializedBinderObject::from_bytes(&input[..std::mem::size_of::<binder_uintptr_t>()])
+            .expect_err("read buffer too small");
     }
 
     #[fuchsia::test]
