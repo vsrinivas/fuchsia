@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//src/proc/tests/android/build/starnix_test_component.gni")
+import("//src/proc/tests/starnix_test_package.gni")
 
 group("wayland") {
   testonly = true
@@ -68,15 +69,10 @@ foreach(test_name, wayland_tests) {
   }
 }
 
-fuchsia_test_package("starnix_wayland_tests") {
+stardroid_test_package("starnix_wayland_tests") {
   test_components = []
 
   foreach(test_name, wayland_tests) {
     test_components += [ ":${test_name}" ]
   }
-
-  # This package intentionally contains many non-Fuchia ELF binaries that
-  # are not under /data/, and some of them are even unstripped, so disable
-  # theses checks to build successfully.
-  disable_elf_binaries_checks = true
 }

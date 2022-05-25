@@ -1,0 +1,57 @@
+{
+    program: {
+        runner: "starnix_test_runner",
+    },
+
+    // This collection will contain the starnix runner that will run the linux
+    // binary.
+    collections: [
+        {
+            name: "runners",
+            durability: "single_run",
+        },
+    ],
+    capabilities: [
+        { protocol: "fuchsia.test.Suite" },
+    ],
+    use: [
+        {
+            protocol: [ "fuchsia.component.Realm" ],
+            from: "framework",
+        },
+    ],
+
+    // The test runner will dispatch the permissions that the starnix runner
+    // need from the test to the runner.
+    offer: [
+        {
+            protocol: [
+                "fuchsia.kernel.VmexResource",
+                "fuchsia.logger.LogSink",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.input3.Keyboard",
+                "fuchsia.ui.scenic.Scenic",
+                "fuchsia.vulkan.loader.Loader",
+            ],
+            from: "parent",
+            to: [ "#runners" ],
+        },
+        {
+            directory: "dev-gpu",
+            from: "parent",
+            to: [ "#runners" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "self",
+        },
+    ],
+    facets: {
+        "fuchsia.test": { type: "starnix" },
+    },
+}

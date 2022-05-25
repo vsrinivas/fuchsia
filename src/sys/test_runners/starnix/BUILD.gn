@@ -14,6 +14,8 @@ rustc_binary("bin") {
   deps = [
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
     "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner-rustc",
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
@@ -28,6 +30,8 @@ rustc_binary("bin") {
     "//src/sys/lib/runner",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:rand",
+    "//third_party/rust_crates:url",
   ]
 
   sources = [
@@ -57,23 +61,9 @@ fuchsia_component("starnix_unit_test_runner") {
   deps = [ "//src/sys/test_runners/rust:bin" ]
 }
 
-fuchsia_component("starmium_test_runner") {
-  testonly = true
-  manifest = "meta/starmium_test_runner.cml"
-  component_name = "starmium_test_runner"
-}
-
-fuchsia_component("stardroid_test_runner") {
-  testonly = true
-  manifest = "meta/stardroid_test_runner.cml"
-  component_name = "stardroid_test_runner"
-}
-
 fuchsia_package("starnix-test-runners") {
   testonly = true
   deps = [
-    ":stardroid_test_runner",
-    ":starmium_test_runner",
     ":starnix_test_runner",
     ":starnix_unit_test_runner",
     ":test_runners",

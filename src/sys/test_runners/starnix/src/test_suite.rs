@@ -3,20 +3,23 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{Context, Error},
+    anyhow::{anyhow, Context, Error},
     fidl::endpoints::{create_proxy, ClientEnd},
     fidl::HandleBased,
-    fidl_fuchsia_component_runner::{
-        ComponentControllerEventStream, ComponentControllerMarker, ComponentRunnerMarker,
-        ComponentRunnerProxy, ComponentStartInfo,
-    },
-    fidl_fuchsia_data as fdata, fidl_fuchsia_process as fprocess, fidl_fuchsia_test as ftest,
-    fuchsia_component::client::connect_to_protocol,
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
+    fidl_fuchsia_component_runner as frunner, fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio,
+    fidl_fuchsia_process as fprocess, fidl_fuchsia_test as ftest,
+    fuchsia_component::client as fclient,
     fuchsia_runtime as fruntime, fuchsia_zircon as zx,
     futures::{StreamExt, TryStreamExt},
+    rand::Rng,
     runner::component::ComponentNamespace,
     std::convert::TryInto,
+    url::Url,
 };
+
+/// The name of the collection in which the starnix runner is instantiated.
+const RUNNERS_COLLECTION: &str = "runners";
 
 /// Handles a single `ftest::SuiteRequestStream`.
 ///
@@ -38,16 +41,109 @@ pub async fn handle_suite_requests(
                 handle_case_iterator(test_url, stream).await?;
             }
             ftest::SuiteRequest::Run { tests, options: _options, listener, .. } => {
-                let starnix_runner = connect_to_protocol::<ComponentRunnerMarker>()?;
                 let namespace = namespace.clone();
                 let program = program.clone();
-                run_test_cases(tests, test_url, program, listener, namespace, starnix_runner)
-                    .await?;
+                let runner_name = format!("starnix-runner-{}", rand::thread_rng().gen::<u64>());
+                let (starnix_runner, realm) =
+                    instantiate_runner_in_realm(&namespace, &runner_name, test_url).await?;
+                run_test_cases(
+                    tests,
+                    test_url,
+                    program,
+                    listener,
+                    namespace,
+                    &runner_name,
+                    realm,
+                    starnix_runner,
+                )
+                .await?;
             }
         }
     }
 
     Ok(())
+}
+
+fn get_realm(namespace: &ComponentNamespace) -> Result<fcomponent::RealmProxy, Error> {
+    namespace
+        .items()
+        .iter()
+        .flat_map(|(s, d)| {
+            if s == "/svc" {
+                Some(fuchsia_component::client::connect_to_protocol_at_dir_root::<
+                    fcomponent::RealmMarker,
+                >(&d))
+            } else {
+                None
+            }
+        })
+        .next()
+        .ok_or_else(|| anyhow!("Unable to find /svc"))?
+}
+
+async fn open_exposed_directory(
+    realm: &fcomponent::RealmProxy,
+    child_name: &str,
+    collection_name: &str,
+) -> Result<fio::DirectoryProxy, Error> {
+    let (directory_proxy, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()?;
+    realm
+        .open_exposed_dir(
+            &mut fdecl::ChildRef {
+                name: child_name.into(),
+                collection: Some(collection_name.into()),
+            },
+            server_end,
+        )
+        .await?
+        .map_err(|e| {
+            anyhow!(
+                "failed to bind to child {} in collection {:?}: {:?}",
+                child_name,
+                collection_name,
+                e
+            )
+        })?;
+    Ok(directory_proxy)
+}
+
+/// Instantiates a starnix runner in the realm of the given namespace.
+///
+/// # Parameters
+///   - `namespace`: The namespace in which to fetch the realm to instantiate the runner in.
+///   - `runner_name`: The name of the runner child.
+///   - `runner_url`: The url of the runner component, excluding the `meta/starnix_runner.cm`.
+///
+/// Returns a proxy to the instantiated runner as well as to the realm in which the runner is
+/// instantiated.
+async fn instantiate_runner_in_realm(
+    namespace: &ComponentNamespace,
+    runner_name: &str,
+    runner_url: &str,
+) -> Result<(frunner::ComponentRunnerProxy, fcomponent::RealmProxy), Error> {
+    let mut runner_url = Url::parse(runner_url)?;
+    runner_url.set_fragment(Some("meta/starnix_runner.cm"));
+
+    let realm = get_realm(namespace)?;
+    realm
+        .create_child(
+            &mut fdecl::CollectionRef { name: RUNNERS_COLLECTION.into() },
+            fdecl::Child {
+                name: Some(runner_name.to_string()),
+                url: Some(runner_url.to_string()),
+                startup: Some(fdecl::StartupMode::Lazy),
+                ..fdecl::Child::EMPTY
+            },
+            fcomponent::CreateChildArgs::EMPTY,
+        )
+        .await?
+        .map_err(|e| anyhow::anyhow!("failed to create runner child: {:?}", e))?;
+    let runner_outgoing = open_exposed_directory(&realm, &runner_name, RUNNERS_COLLECTION).await?;
+    let starnix_runner = fclient::connect_to_protocol_at_dir_root::<frunner::ComponentRunnerMarker>(
+        &runner_outgoing,
+    )?;
+
+    Ok((starnix_runner, realm))
 }
 
 /// Runs the test cases associated with a single `ftest::SuiteRequest::Run` request.
@@ -61,18 +157,18 @@ pub async fn handle_suite_requests(
 /// - `program`: The program data associated with the runner request for the test component.
 /// - `listener`: The listener for the test run.
 /// - `namespace`: The incoming namespace to provide to the test component.
-/// - `starnix_runner`: A proxy to the starnix runner's `ComponentRunner`.
 async fn run_test_cases(
     tests: Vec<ftest::Invocation>,
     test_url: &str,
     program: Option<fdata::Dictionary>,
     listener: ClientEnd<ftest::RunListenerMarker>,
     namespace: ComponentNamespace,
-    starnix_runner: ComponentRunnerProxy,
+    runner_name: &str,
+    realm: fcomponent::RealmProxy,
+    starnix_runner: frunner::ComponentRunnerProxy,
 ) -> Result<(), Error> {
     let run_listener_proxy =
         listener.into_proxy().context("Can't convert run listener channel to proxy")?;
-
     for test in tests {
         let (case_listener_proxy, case_listener) = create_proxy::<ftest::CaseListenerMarker>()?;
 
@@ -103,20 +199,20 @@ async fn run_test_cases(
         )?;
 
         let (component_controller, component_controller_server_end) =
-            create_proxy::<ComponentControllerMarker>()?;
+            create_proxy::<frunner::ComponentControllerMarker>()?;
         let ns = Some(ComponentNamespace::try_into(namespace.clone())?);
         let numbered_handles =
             Some(vec![stdin_handle_info, stdout_handle_info, stderr_handle_info]);
         let (outgoing_dir, _outgoing_dir) =
             zx::Channel::create().expect("Failed to create channel.");
-        let start_info = ComponentStartInfo {
+        let start_info = frunner::ComponentStartInfo {
             resolved_url: Some(test_url.to_string()),
             program: program.clone(),
             ns,
             outgoing_dir: Some(outgoing_dir.into()),
             runtime_dir: None,
             numbered_handles,
-            ..ComponentStartInfo::EMPTY
+            ..frunner::ComponentStartInfo::EMPTY
         };
 
         starnix_runner.start(start_info, component_controller_server_end)?;
@@ -124,6 +220,13 @@ async fn run_test_cases(
         case_listener_proxy.finished(result)?;
     }
 
+    realm
+        .destroy_child(&mut fdecl::ChildRef {
+            name: runner_name.to_string(),
+            collection: Some(RUNNERS_COLLECTION.into()),
+        })
+        .await?
+        .map_err(|e| anyhow::anyhow!("failed to destory runner child: {:?}", e))?;
     run_listener_proxy.on_finished()?;
 
     Ok(())
@@ -132,7 +235,7 @@ async fn run_test_cases(
 /// Reads the result of the test run from `event_stream`.
 ///
 /// The result is determined by reading the epitaph from the provided `event_stream`.
-async fn read_result(mut event_stream: ComponentControllerEventStream) -> ftest::Result_ {
+async fn read_result(mut event_stream: frunner::ComponentControllerEventStream) -> ftest::Result_ {
     let component_epitaph = match event_stream.next().await {
         Some(Err(fidl::Error::ClientChannelClosed { status, .. })) => status,
         result => {
@@ -183,12 +286,8 @@ async fn handle_case_iterator(
 #[cfg(test)]
 mod tests {
     use {
-        super::*,
-        fidl::endpoints::{create_proxy_and_stream, create_request_stream},
-        fidl_fuchsia_component_runner::ComponentRunnerRequest,
-        fuchsia_async as fasync,
-        futures::TryStreamExt,
-        std::convert::TryFrom,
+        super::*, fidl::endpoints::create_request_stream, fuchsia_async as fasync,
+        futures::TryStreamExt, std::convert::TryFrom,
     };
 
     /// Returns a `ftest::CaseIteratorProxy` that is served by `super::handle_case_iterator`.
@@ -220,16 +319,18 @@ mod tests {
     /// # Returns
     /// A `ComponentRunnerProxy` that serves each run request by closing the component with the
     /// provided epitaph.
-    fn spawn_runner(component_controller_epitaph: zx::Status) -> ComponentRunnerProxy {
+    fn spawn_runner(component_controller_epitaph: zx::Status) -> frunner::ComponentRunnerProxy {
         let (proxy, mut request_stream) =
-            create_proxy_and_stream::<ComponentRunnerMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<frunner::ComponentRunnerMarker>().unwrap();
         fasync::Task::local(async move {
             while let Some(event) =
                 request_stream.try_next().await.expect("Error in test runner request stream")
             {
                 match event {
-                    ComponentRunnerRequest::Start {
-                        start_info: _start_info, controller, ..
+                    frunner::ComponentRunnerRequest::Start {
+                        start_info: _start_info,
+                        controller,
+                        ..
                     } => {
                         controller
                             .close_with_epitaph(component_controller_epitaph)
@@ -278,9 +379,12 @@ mod tests {
     /// `runner_proxy`. The call is made with a test cases vector consisting of one mock test case.
     fn spawn_run_test_cases(
         run_listener: ClientEnd<ftest::RunListenerMarker>,
-        runner_proxy: ComponentRunnerProxy,
+        starnix_runner: frunner::ComponentRunnerProxy,
     ) {
         fasync::Task::local(async move {
+            let runner_name = format!("starnix-runner-{}", rand::thread_rng().gen::<u64>());
+            let (realm, _request_stream) =
+                fidl::endpoints::create_proxy_and_stream::<fcomponent::RealmMarker>().unwrap();
             let _ = run_test_cases(
                 vec![ftest::Invocation {
                     name: Some("".to_string()),
@@ -291,7 +395,9 @@ mod tests {
                 None,
                 run_listener,
                 ComponentNamespace::try_from(vec![]).expect(""),
-                runner_proxy,
+                &runner_name,
+                realm,
+                starnix_runner,
             )
             .await;
         })
@@ -327,11 +433,11 @@ mod tests {
     /// passes.
     #[fasync::run_singlethreaded(test)]
     async fn test_component_controller_epitaph_ok() {
-        let proxy = spawn_runner(zx::Status::OK);
+        let starnix_runner = spawn_runner(zx::Status::OK);
         let (run_listener, run_listener_stream) =
             create_request_stream::<ftest::RunListenerMarker>()
                 .expect("Couldn't create case listener");
-        spawn_run_test_cases(run_listener, proxy);
+        spawn_run_test_cases(run_listener, starnix_runner);
         assert_eq!(listen_to_test_result(run_listener_stream).await, Some(ftest::Status::Passed));
     }
 
@@ -339,11 +445,11 @@ mod tests {
     /// fails.
     #[fasync::run_singlethreaded(test)]
     async fn test_component_controller_epitaph_not_ok() {
-        let proxy = spawn_runner(zx::Status::INTERNAL);
+        let starnix_runner = spawn_runner(zx::Status::INTERNAL);
         let (run_listener, run_listener_stream) =
             create_request_stream::<ftest::RunListenerMarker>()
                 .expect("Couldn't create case listener");
-        spawn_run_test_cases(run_listener, proxy);
+        spawn_run_test_cases(run_listener, starnix_runner);
         assert_eq!(listen_to_test_result(run_listener_stream).await, Some(ftest::Status::Failed));
     }
 }

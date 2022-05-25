@@ -103,7 +103,7 @@ async fn serve_test_suite(
                 {
                     Ok(_) => fuchsia_syslog::fx_log_info!("Finished serving test suite requests."),
                     Err(e) => {
-                        fuchsia_syslog::fx_log_err!("Error serving test suite requsets: {:?}", e)
+                        fuchsia_syslog::fx_log_err!("Error serving test suite requests: {:?}", e)
                     }
                 }
                 let _ = controller.close_with_epitaph(zx::Status::OK);

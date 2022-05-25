@@ -4,6 +4,7 @@
 
 import("//build/dist/zip_resource.gni")
 import("//src/proc/tests/android/build/starnix_test_component.gni")
+import("//src/proc/tests/starnix_test_package.gni")
 
 group("gvisor") {
   testonly = true
@@ -15,7 +16,7 @@ expect_includes("gvisor_test") {
   includes = [ "meta/gvisor.shard.cml" ]
 
   # Uses stardroid_test_runner
-  deps = [ "//src/proc/tests/android:stardroid_test" ]
+  deps = [ "//src/proc/tests:starnix_test" ]
 }
 
 template("gvisor_test_component") {
@@ -142,7 +143,7 @@ zip_resource("gvisor_runfiles") {
   dest_prefix = "data/tests"
 }
 
-fuchsia_test_package("starnix_gvisor_tests") {
+stardroid_test_package("starnix_gvisor_tests") {
   deps = [ ":gvisor_runfiles" ]
 
   test_components = []
@@ -150,9 +151,4 @@ fuchsia_test_package("starnix_gvisor_tests") {
   foreach(test_name, gvisor_tests) {
     test_components += [ ":${test_name}" ]
   }
-
-  # This package intentionally contains many non-Fuchia ELF binaries that
-  # are not under /data/, and some of them are even unstripped, so disable
-  # theses checks to build successfully.
-  disable_elf_binaries_checks = true
 }

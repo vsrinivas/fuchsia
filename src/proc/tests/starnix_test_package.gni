@@ -1,0 +1,67 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components/fuchsia_test_package.gni")
+
+# Define a test package for a linux test.
+#
+# Arguments:
+#
+#   galaxy [mandatory]
+#   The target defining the galaxy package containing the starnix runner and the system image.
+#
+#   Any fuchsia_test_package arguments are supported.
+template("starnix_test_package") {
+  fuchsia_test_package(target_name) {
+    galaxy = invoker.galaxy
+    forward_variables_from(invoker, "*")
+
+    if (!defined(invoker.deps)) {
+      deps = []
+    }
+    if (target_cpu == "x64") {
+      name = get_label_info(galaxy, "name")
+      dir = get_label_info(galaxy, "dir")
+      deps += [ "${dir}:${name}_deps" ]
+    }
+
+    # This package intentionally contains many non-Fuchia ELF binaries that
+    # are not under /data/, and some of them are even unstripped, so disable
+    # theses checks to build successfully.
+    disable_elf_binaries_checks = true
+  }
+}
+
+# Define a test package for a linux test running in a stardroid galaxy.
+#
+# The parameters are the same as fuchsia_test_package
+template("stardroid_test_package") {
+  starnix_test_package(target_name) {
+    forward_variables_from(invoker, "*")
+
+    galaxy = "//src/proc/bin/galaxies/stardroid_test"
+  }
+}
+
+# Define a test package for a linux test running in a starmium galaxy.
+#
+# The parameters are the same as fuchsia_test_package
+template("starmium_test_package") {
+  starnix_test_package(target_name) {
+    forward_variables_from(invoker, "*")
+
+    galaxy = "//src/proc/bin/galaxies/starmium_test"
+  }
+}
+
+# Define a test package for a linux test running in a starless galaxy.
+#
+# The parameters are the same as fuchsia_test_package
+template("starless_test_package") {
+  starnix_test_package(target_name) {
+    forward_variables_from(invoker, "*")
+
+    galaxy = "//src/proc/bin/galaxies/starless"
+  }
+}

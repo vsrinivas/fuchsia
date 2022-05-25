@@ -303,10 +303,14 @@
             ],
         },
         {
+            protocol: [ "fuchsia.tracing.provider.Registry" ],
+            from: "parent",
+            to: [ "#starnix_test_runners" ],
+        },
+        {
             protocol: [
                 "fuchsia.kernel.VmexResource",
                 "fuchsia.sysmem.Allocator",
-                "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.composition.Allocator",
                 "fuchsia.ui.composition.Flatland",
                 "fuchsia.ui.input3.Keyboard",
@@ -314,7 +318,10 @@
                 "fuchsia.vulkan.loader.Loader",
             ],
             from: "parent",
-            to: [ "#starnix_test_runners" ],
+            to: [
+                "#starnix-tests",
+                "#starnix_test_runners",
+            ],
         },
         {
             protocol: "fuchsia.process.Launcher",
@@ -508,6 +515,7 @@
             directory: "dev-gpu",
             from: "parent",
             to: [
+                "#starnix-tests",
                 "#starnix_test_runners",
                 "#system-tests",
             ],

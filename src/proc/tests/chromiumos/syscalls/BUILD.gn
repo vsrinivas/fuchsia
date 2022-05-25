@@ -5,6 +5,7 @@
 import("//build/components.gni")
 import("//build/test.gni")
 import("//src/proc/tests/chromiumos/build/starnix_linux_test_component.gni")
+import("//src/proc/tests/starnix_test_package.gni")
 
 group("tests") {
   testonly = true
@@ -32,11 +33,6 @@ starnix_linux_test_component("syscalls_test") {
   test_binary = "syscalls_test_bin"
 }
 
-fuchsia_test_package("test_chromiumos_syscalls") {
+starmium_test_package("test_chromiumos_syscalls") {
   test_components = [ ":syscalls_test" ]
-
-  # This package intentionally contains many non-Fuchia ELF binaries that
-  # are not under /data/, and some of them are even unstripped, so disable
-  # theses checks to build successfully.
-  disable_elf_binaries_checks = true
 }

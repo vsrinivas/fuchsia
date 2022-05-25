@@ -4,6 +4,7 @@
 
 import("//build/components.gni")
 import("//build/testing/environments.gni")
+import("//src/proc/tests/starnix_test_package.gni")
 import("build/starnix_host_test_component.gni")
 import("build/starnix_linux_test_component.gni")
 
@@ -22,11 +23,6 @@ group("tests") {
   }
 }
 
-# Tests that use starmium_test_runner should depend on this.
-expect_includes("starmium_test") {
-  includes = [ "starmium_test.shard.cml" ]
-}
-
 fuchsia_component("sh_test") {
   testonly = true
   check_references = false
@@ -39,7 +35,7 @@ if (host_os == "linux" && host_cpu == "x64") {
   }
 }
 
-fuchsia_test_package("test_chromiumos_distro") {
+starmium_test_package("test_chromiumos_distro") {
   test_components = [ ":sh_test" ]
 
   # TODO(abarth): Remove !is_asan check when Starnix can run binaries built for
@@ -47,11 +43,6 @@ fuchsia_test_package("test_chromiumos_distro") {
   if (host_os == "linux" && host_cpu == "x64" && !is_asan) {
     test_components += [ ":fdio-test" ]
   }
-
-  # This package intentionally contains many non-Fuchia ELF binaries that
-  # are not under /data/, and some of them are even unstripped, so disable
-  # theses checks to build successfully.
-  disable_elf_binaries_checks = true
 }
 
 starnix_linux_test_component("virtmagma_conformance_tests") {
@@ -59,9 +50,12 @@ starnix_linux_test_component("virtmagma_conformance_tests") {
       "//src/graphics/lib/magma/tests/integration:virtmagma_conformance_tests"
 }
 
-fuchsia_test_package("test_starnix_magma") {
+starmium_test_package("test_starnix_magma") {
   test_components = [ ":virtmagma_conformance_tests" ]
   test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
     environments = [
       atlas_env,
       nuc_env,

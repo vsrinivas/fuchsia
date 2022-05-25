@@ -4,12 +4,8 @@
     // starnix test runners.
     children: [
         {
-            name: "stardroid_test_runner",
-            url: "fuchsia-pkg://fuchsia.com/starnix-test-runners#meta/stardroid_test_runner.cm",
-        },
-        {
-            name: "starmium_test_runner",
-            url: "fuchsia-pkg://fuchsia.com/starnix-test-runners#meta/starmium_test_runner.cm",
+            name: "starnix_test_runner",
+            url: "fuchsia-pkg://fuchsia.com/starnix-test-runners#meta/starnix_test_runner.cm",
         },
         {
             name: "starnix_unit_test_runner",
@@ -20,25 +16,22 @@
         {
             protocol: [ "fuchsia.component.Realm" ],
             from: "framework",
-            to: [
-                "#stardroid_test_runner",
-                "#starmium_test_runner",
-                "#starnix_unit_test_runner",
-            ],
+            to: [ "#starnix_unit_test_runner" ],
         },
         {
             protocol: [ "fuchsia.logger.LogSink" ],
             from: "parent",
             to: [
-                "#stardroid_test_runner",
-                "#starmium_test_runner",
+                "#starnix_test_runner",
                 "#starnix_unit_test_runner",
             ],
         },
         {
             protocol: [
                 "fuchsia.kernel.VmexResource",
+                "fuchsia.process.Launcher",
                 "fuchsia.sysmem.Allocator",
+                "fuchsia.test.runner.LibraryLoaderCacheBuilder",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.composition.Allocator",
                 "fuchsia.ui.composition.Flatland",
@@ -47,38 +40,18 @@
                 "fuchsia.vulkan.loader.Loader",
             ],
             from: "parent",
-            to: [
-                "#stardroid_test_runner",
-                "#starmium_test_runner",
-                "#starnix_unit_test_runner",
-            ],
-        },
-        {
-            protocol: [
-                "fuchsia.process.Launcher",
-                "fuchsia.test.runner.LibraryLoaderCacheBuilder",
-            ],
-            from: "parent",
             to: [ "#starnix_unit_test_runner" ],
         },
         {
             directory: "dev-gpu",
             from: "parent",
-            to: [
-                "#stardroid_test_runner",
-                "#starmium_test_runner",
-                "#starnix_unit_test_runner",
-            ],
+            to: [ "#starnix_unit_test_runner" ],
         },
     ],
     expose: [
         {
-            runner: "stardroid_test_runner",
-            from: "#stardroid_test_runner",
-        },
-        {
-            runner: "starmium_test_runner",
-            from: "#starmium_test_runner",
+            runner: "starnix_test_runner",
+            from: "#starnix_test_runner",
         },
         {
             runner: "starnix_unit_test_runner",

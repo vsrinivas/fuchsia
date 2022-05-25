@@ -17,6 +17,7 @@ template("starnix_galaxy_package") {
   assert(defined(invoker.config),
          "must define `config` as a path to JSON file with startup config")
 
+  group_target = "${target_name}_deps"
   has_system_image = defined(invoker.system_image)
   component_target = "${target_name}_component"
   config_target = "${target_name}_config"
@@ -61,7 +62,10 @@ template("starnix_galaxy_package") {
     outputs = [ "data/pkg/.placeholder" ]
   }
 
-  fuchsia_package(target_name) {
+  # A group containing all the dependency of the galaxy package, so that a
+  # galaxy can be injected into another package. It is used in particular for
+  # test to ensure hermeticity.
+  group(group_target) {
     deps = [
       ":${component_target}",
       ":${config_target}",
@@ -74,5 +78,9 @@ template("starnix_galaxy_package") {
     if (defined(invoker.deps)) {
       deps += invoker.deps
     }
+  }
+
+  fuchsia_package(target_name) {
+    deps = [ ":${group_target}" ]
   }
 }

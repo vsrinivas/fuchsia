@@ -3,26 +3,19 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
-import("//tools/cmc/build/expect_includes.gni")
+import("//src/proc/tests/starnix_test_package.gni")
 
 group("tests") {
   testonly = true
   if (target_cpu == "x64") {
     deps = [
       ":test_android_distro",
+      ":test_android_distro_with_error_logs",
       "benchmarks",
       "gvisor",
       "wayland",
     ]
   }
-}
-
-# Tests that use stardroid_test_runner should depend on this.
-expect_includes("stardroid_test") {
-  includes = [ "stardroid_test.shard.cml" ]
-
-  # stardroid_test_runner depends on starnix_runner.
-  deps = [ "//src/proc/bin/starnix" ]
 }
 
 resource("binder_smoke_test_bin") {
@@ -36,7 +29,7 @@ fuchsia_test_component("binder_smoke_test") {
   manifest = "meta/binder_smoke_test.cml"
   deps = [
     ":binder_smoke_test_bin",
-    ":stardroid_test",
+    "//src/proc/tests:starnix_test",
   ]
 }
 
@@ -49,25 +42,25 @@ fuchsia_test_component("binder_test") {
   manifest = "meta/binder_test.cml"
   deps = [
     ":binder_test_script",
-    ":stardroid_test",
+    "//src/proc/tests:starnix_test",
   ]
 }
 
 fuchsia_test_component("libutils_test") {
   manifest = "meta/libutils_test.cml"
-  deps = [ ":stardroid_test" ]
+  deps = [ "//src/proc/tests:starnix_test" ]
 }
 
 fuchsia_test_component("java_hello_world") {
   manifest = "meta/java_hello_world.cml"
-  deps = [ ":stardroid_test" ]
+  deps = [ "//src/proc/tests:starnix_test" ]
 }
 
 fuchsia_component("sh_test") {
   testonly = true
   check_references = false
   manifest = "meta/sh_test.cml"
-  deps = [ ":stardroid_test" ]
+  deps = [ "//src/proc/tests:starnix_test" ]
 }
 
 fuchsia_component("boringssl_self_test64") {
@@ -76,18 +69,21 @@ fuchsia_component("boringssl_self_test64") {
   manifest = "meta/boringssl_self_test64.cml"
 }
 
-fuchsia_test_package("test_android_distro") {
+stardroid_test_package("test_android_distro") {
   test_components = [
     ":boringssl_self_test64",
     ":java_hello_world",
     ":sh_test",
     ":binder_smoke_test",
-    ":binder_test",
     ":libutils_test",
   ]
+}
 
-  # This package intentionally contains many non-Fuchia ELF binaries that
-  # are not under /data/, and some of them are even unstripped, so disable
-  # theses checks to build successfully.
-  disable_elf_binaries_checks = true
+stardroid_test_package("test_android_distro_with_error_logs") {
+  test_components = [ ":binder_test" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }

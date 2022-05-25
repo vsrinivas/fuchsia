@@ -38,11 +38,7 @@
                     from: "#rust_test_runner",
                 },
                 {
-                    runner: "stardroid_test_runner",
-                    from: "#starnix_test_runners",
-                },
-                {
-                    runner: "starmium_test_runner",
+                    runner: "starnix_test_runner",
                     from: "#starnix_test_runners",
                 },
                 {
@@ -127,11 +123,7 @@
                     from: "#rust_test_runner",
                 },
                 {
-                    runner: "starmium_test_runner",
-                    from: "#starnix_test_runners",
-                },
-                {
-                    runner: "stardroid_test_runner",
+                    runner: "starnix_test_runner",
                     from: "#starnix_test_runners",
                 },
                 {

@@ -22,10 +22,6 @@
             storage: "tmp",
             path: "/tmp",
         },
-        {
-            protocol: [ "fuchsia.component.runner.ComponentRunner" ],
-            from: "parent",
-        },
     ],
     expose: [
         {
