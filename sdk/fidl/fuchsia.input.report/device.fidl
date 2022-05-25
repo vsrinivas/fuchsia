@@ -8,7 +8,7 @@ using zx;
 const MAX_DEVICE_REPORT_COUNT uint32 = 50;
 
 /// The InputReport field to be populated by InputDevice.GetInputReport.
-type DeviceType = strict enum {
+type DeviceType = flexible enum {
     MOUSE = 0;
     SENSOR = 1;
     TOUCH = 2;

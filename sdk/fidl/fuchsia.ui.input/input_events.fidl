@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 library fuchsia.ui.input;
 
-type KeyboardEventPhase = strict enum {
+type KeyboardEventPhase = flexible enum {
     /// When key is pressed down.
     PRESSED = 0;
     /// When key is released.

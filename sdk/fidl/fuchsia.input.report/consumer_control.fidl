@@ -9,7 +9,7 @@ const CONSUMER_CONTROL_MAX_NUM_BUTTONS uint32 = 255;
 
 /// These ControlButtons represent on/off buttons whose purpose is to change
 /// the host's configuration.
-type ConsumerControlButton = strict enum : uint32 {
+type ConsumerControlButton = flexible enum : uint32 {
     /// This button represents increasing volume.
     VOLUME_UP = 1;
 

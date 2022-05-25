@@ -78,6 +78,8 @@ protocol KeyEventInjector {
 };
 
 /// Return type for clients key events listener.
+///
+/// We do not expect new values to be added to this enum.
 type KeyEventStatus = strict enum {
     /// The key event was handled and its further propagation should be stopped.
     HANDLED = 1;

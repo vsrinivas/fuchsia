@@ -13,7 +13,7 @@ const SENSOR_MAX_VALUES uint32 = 100;
 
 /// Each sensor value has a corresponding SensorType, which explains what the
 /// value is measuring in the world.
-type SensorType = strict enum : uint32 {
+type SensorType = flexible enum : uint32 {
     /// Acceleration on the X axis.
     ACCELEROMETER_X = 1;
     /// Acceleration on the Y axis.
@@ -61,7 +61,7 @@ type SensorInputDescriptor = table {
 };
 
 /// `SensorReportingState` determines when a sensor will send reports.
-type SensorReportingState = strict enum : uint32 {
+type SensorReportingState = flexible enum : uint32 {
     /// No events will be sent from the sensor.
     REPORT_NO_EVENTS = 1;
     /// All events will be sent from the sensor. For most sensors, this

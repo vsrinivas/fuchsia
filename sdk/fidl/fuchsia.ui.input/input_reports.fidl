@@ -25,7 +25,7 @@ type RangeF = struct {
     max float32;
 };
 
-type AxisScale = strict enum {
+type AxisScale = flexible enum {
     LINEAR = 0;
     LOGARITHMIC = 1;
 };
@@ -177,14 +177,14 @@ type TouchscreenReport = struct {
 // Descriptive categories for sensor devices.
 // We assume that each (SensorType,SensorLocation) pair is unique to the system.
 
-type SensorType = strict enum {
+type SensorType = flexible enum {
     ACCELEROMETER = 0;
     GYROSCOPE = 1;
     MAGNETOMETER = 2;
     LIGHTMETER = 3;
 };
 
-type SensorLocation = strict enum {
+type SensorLocation = flexible enum {
     UNKNOWN = 0;
     BASE = 1;
     LID = 2;

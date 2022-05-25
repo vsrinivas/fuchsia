@@ -9,7 +9,7 @@ const TOUCH_MAX_CONTACTS uint32 = 10;
 const TOUCH_MAX_NUM_BUTTONS uint32 = 10;
 
 /// The device type from which the touch originated.
-type TouchType = strict enum : uint32 {
+type TouchType = flexible enum : uint32 {
     /// A touch screen has direct finger input associated with a display.
     TOUCHSCREEN = 1;
     /// A touch pad is a pointer device that tracks finger positions.
@@ -53,7 +53,7 @@ type TouchInputDescriptor = table {
 /// Input mode indicating which top-level collection should be used for input reporting.
 /// These values must correspond to the input modes defined in 16.7 of the HID Usage Tables
 /// for Universal Serial Bus (USB) Spec (https://usb.org/sites/default/files/hut1_22.pdf).
-type TouchConfigurationInputMode = strict enum : uint32 {
+type TouchConfigurationInputMode = flexible enum : uint32 {
     /// Use the Mouse Collection for reporting data.
     MOUSE_COLLECTION = 0;
     /// Use the Windows Precision Touchpad Collection for reporting data. Defined by Windows

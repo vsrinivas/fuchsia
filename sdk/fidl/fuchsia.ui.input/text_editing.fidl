@@ -10,6 +10,8 @@ library fuchsia.ui.input;
 /// line) and one after the line break (at the start of the second line). A text
 /// affinity disambiguates between those cases. (Something similar happens with
 /// between runs of bidirectional text.)
+///
+/// We do not expect new values to be added to this enum.
 type TextAffinity = strict enum {
     /// The position has affinity for the upstream side of the text position.
     ///

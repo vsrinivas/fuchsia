@@ -9,7 +9,7 @@ enum/member fuchsia.input.report/ConsumerControlButton.PAUSE 3
 enum/member fuchsia.input.report/ConsumerControlButton.REBOOT 6
 enum/member fuchsia.input.report/ConsumerControlButton.VOLUME_DOWN 2
 enum/member fuchsia.input.report/ConsumerControlButton.VOLUME_UP 1
-strict enum fuchsia.input.report/ConsumerControlButton uint32
+flexible enum fuchsia.input.report/ConsumerControlButton uint32
 table/member fuchsia.input.report/ConsumerControlDescriptor.input fuchsia.input.report/ConsumerControlInputDescriptor
 table fuchsia.input.report/ConsumerControlDescriptor
 table/member fuchsia.input.report/ConsumerControlInputDescriptor.buttons vector<fuchsia.input.report/ConsumerControlButton>:255
@@ -45,7 +45,7 @@ enum/member fuchsia.input.report/DeviceType.KEYBOARD 3
 enum/member fuchsia.input.report/DeviceType.MOUSE 0
 enum/member fuchsia.input.report/DeviceType.SENSOR 1
 enum/member fuchsia.input.report/DeviceType.TOUCH 2
-strict enum fuchsia.input.report/DeviceType uint32
+flexible enum fuchsia.input.report/DeviceType uint32
 table/member fuchsia.input.report/FeatureReport.sensor fuchsia.input.report/SensorFeatureReport
 table/member fuchsia.input.report/FeatureReport.touch fuchsia.input.report/TouchFeatureReport
 table fuchsia.input.report/FeatureReport
@@ -109,7 +109,7 @@ enum/member fuchsia.input.report/LedType.COMPOSE 4
 enum/member fuchsia.input.report/LedType.KANA 5
 enum/member fuchsia.input.report/LedType.NUM_LOCK 1
 enum/member fuchsia.input.report/LedType.SCROLL_LOCK 3
-strict enum fuchsia.input.report/LedType uint32
+flexible enum fuchsia.input.report/LedType uint32
 const fuchsia.input.report/MAX_DEVICE_REPORT_COUNT uint32 50
 const fuchsia.input.report/MAX_REPORT_COUNT uint32 255
 const fuchsia.input.report/MOUSE_MAX_NUM_BUTTONS uint32 32
@@ -171,7 +171,7 @@ table fuchsia.input.report/SensorInputReport
 enum/member fuchsia.input.report/SensorReportingState.REPORT_ALL_EVENTS 2
 enum/member fuchsia.input.report/SensorReportingState.REPORT_NO_EVENTS 1
 enum/member fuchsia.input.report/SensorReportingState.REPORT_THRESHOLD_EVENTS 3
-strict enum fuchsia.input.report/SensorReportingState uint32
+flexible enum fuchsia.input.report/SensorReportingState uint32
 enum/member fuchsia.input.report/SensorType.ACCELEROMETER_X 1
 enum/member fuchsia.input.report/SensorType.ACCELEROMETER_Y 2
 enum/member fuchsia.input.report/SensorType.ACCELEROMETER_Z 3
@@ -185,12 +185,12 @@ enum/member fuchsia.input.report/SensorType.LIGHT_RED 11
 enum/member fuchsia.input.report/SensorType.MAGNETOMETER_X 4
 enum/member fuchsia.input.report/SensorType.MAGNETOMETER_Y 5
 enum/member fuchsia.input.report/SensorType.MAGNETOMETER_Z 6
-strict enum fuchsia.input.report/SensorType uint32
+flexible enum fuchsia.input.report/SensorType uint32
 const fuchsia.input.report/TOUCH_MAX_CONTACTS uint32 10
 const fuchsia.input.report/TOUCH_MAX_NUM_BUTTONS uint32 10
 enum/member fuchsia.input.report/TouchConfigurationInputMode.MOUSE_COLLECTION 0
 enum/member fuchsia.input.report/TouchConfigurationInputMode.WINDOWS_PRECISION_TOUCHPAD_COLLECTION 3
-strict enum fuchsia.input.report/TouchConfigurationInputMode uint32
+flexible enum fuchsia.input.report/TouchConfigurationInputMode uint32
 table/member fuchsia.input.report/TouchDescriptor.feature fuchsia.input.report/TouchFeatureDescriptor
 table/member fuchsia.input.report/TouchDescriptor.input fuchsia.input.report/TouchInputDescriptor
 table fuchsia.input.report/TouchDescriptor
@@ -210,7 +210,7 @@ table/member fuchsia.input.report/TouchInputReport.pressed_buttons vector<uint8>
 table fuchsia.input.report/TouchInputReport
 enum/member fuchsia.input.report/TouchType.TOUCHPAD 2
 enum/member fuchsia.input.report/TouchType.TOUCHSCREEN 1
-strict enum fuchsia.input.report/TouchType uint32
+flexible enum fuchsia.input.report/TouchType uint32
 struct/member fuchsia.input.report/Unit.exponent int32
 struct/member fuchsia.input.report/Unit.type fuchsia.input.report/UnitType
 struct fuchsia.input.report/Unit
@@ -227,7 +227,7 @@ enum/member fuchsia.input.report/UnitType.SECONDS 12
 enum/member fuchsia.input.report/UnitType.SI_LINEAR_ACCELERATION 7
 enum/member fuchsia.input.report/UnitType.SI_LINEAR_VELOCITY 6
 enum/member fuchsia.input.report/UnitType.WEBERS 8
-strict enum fuchsia.input.report/UnitType uint32
+flexible enum fuchsia.input.report/UnitType uint32
 enum/member fuchsia.input.report/VendorGoogleProductId.AMS_LIGHT_SENSOR 65538
 enum/member fuchsia.input.report/VendorGoogleProductId.FOCALTECH_TOUCHSCREEN 65537
 enum/member fuchsia.input.report/VendorGoogleProductId.GOLDFISH_ACCELERATION_SENSOR 2417819649
@@ -235,7 +235,7 @@ enum/member fuchsia.input.report/VendorGoogleProductId.GOLDFISH_GYROSCOPE_SENSOR
 enum/member fuchsia.input.report/VendorGoogleProductId.GOLDFISH_RGBC_LIGHT_SENSOR 2417819651
 enum/member fuchsia.input.report/VendorGoogleProductId.PC_PS2_KEYBOARD 65539
 enum/member fuchsia.input.report/VendorGoogleProductId.PC_PS2_MOUSE 65540
-strict enum fuchsia.input.report/VendorGoogleProductId uint32
+flexible enum fuchsia.input.report/VendorGoogleProductId uint32
 enum/member fuchsia.input.report/VendorId.GOOGLE 6353
-strict enum fuchsia.input.report/VendorId uint32
+flexible enum fuchsia.input.report/VendorId uint32
 library fuchsia.input.report

@@ -7,6 +7,8 @@ using fuchsia.input;
 using zx;
 
 /// Type of the keyboard key input event.
+///
+/// We do not expect new values to be added into this enum.
 type KeyEventType = strict enum {
     /// Key is pressed down.
     PRESSED = 1;

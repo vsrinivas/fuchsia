@@ -9,7 +9,7 @@ library fuchsia.input.report;
 /// DISTANCE). More complicated units that need to be differentiated should
 /// begin with SI_ (for Internation System of Units) or ENGLISH_ (for English
 /// System of Units).
-type UnitType = strict enum : uint32 {
+type UnitType = flexible enum : uint32 {
     /// The device did not specify units.
     NONE = 0;
 

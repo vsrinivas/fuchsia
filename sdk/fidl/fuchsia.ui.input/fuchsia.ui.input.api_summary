@@ -8,7 +8,7 @@ struct/member fuchsia.ui.input/AxisF.scale fuchsia.ui.input/AxisScale 0
 struct fuchsia.ui.input/AxisF
 enum/member fuchsia.ui.input/AxisScale.LINEAR 0
 enum/member fuchsia.ui.input/AxisScale.LOGARITHMIC 1
-strict enum fuchsia.ui.input/AxisScale uint32
+flexible enum fuchsia.ui.input/AxisScale uint32
 union/member fuchsia.ui.input/Command.send_keyboard_input fuchsia.ui.input/SendKeyboardInputCmd
 union/member fuchsia.ui.input/Command.send_pointer_input fuchsia.ui.input/SendPointerInputCmd
 union/member fuchsia.ui.input/Command.set_hard_keyboard_delivery fuchsia.ui.input/SetHardKeyboardDeliveryCmd
@@ -83,7 +83,7 @@ enum/member fuchsia.ui.input/KeyboardEventPhase.CANCELLED 2
 enum/member fuchsia.ui.input/KeyboardEventPhase.PRESSED 0
 enum/member fuchsia.ui.input/KeyboardEventPhase.RELEASED 1
 enum/member fuchsia.ui.input/KeyboardEventPhase.REPEAT 3
-strict enum fuchsia.ui.input/KeyboardEventPhase uint32
+flexible enum fuchsia.ui.input/KeyboardEventPhase uint32
 struct/member fuchsia.ui.input/KeyboardReport.pressed_keys vector<uint32>
 struct fuchsia.ui.input/KeyboardReport
 enum/member fuchsia.ui.input/KeyboardType.DATETIME 3
@@ -168,7 +168,7 @@ struct fuchsia.ui.input/SensorDescriptor
 enum/member fuchsia.ui.input/SensorLocation.BASE 1
 enum/member fuchsia.ui.input/SensorLocation.LID 2
 enum/member fuchsia.ui.input/SensorLocation.UNKNOWN 0
-strict enum fuchsia.ui.input/SensorLocation uint32
+flexible enum fuchsia.ui.input/SensorLocation uint32
 union/member fuchsia.ui.input/SensorReport.scalar uint16
 union/member fuchsia.ui.input/SensorReport.vector array<int16,3>
 strict union fuchsia.ui.input/SensorReport
@@ -176,7 +176,7 @@ enum/member fuchsia.ui.input/SensorType.ACCELEROMETER 0
 enum/member fuchsia.ui.input/SensorType.GYROSCOPE 1
 enum/member fuchsia.ui.input/SensorType.LIGHTMETER 3
 enum/member fuchsia.ui.input/SensorType.MAGNETOMETER 2
-strict enum fuchsia.ui.input/SensorType uint32
+flexible enum fuchsia.ui.input/SensorType uint32
 struct/member fuchsia.ui.input/SetHardKeyboardDeliveryCmd.delivery_request bool
 struct fuchsia.ui.input/SetHardKeyboardDeliveryCmd
 struct/member fuchsia.ui.input/SetParallelDispatchCmd.parallel_dispatch bool
