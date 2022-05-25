@@ -14,8 +14,11 @@ use {
     futures::prelude::*,
     payload_streamer::PayloadStreamer,
     regex,
-    std::{fmt, fs, io::Read, path::Path},
+    std::{fmt, fs, io::Read, path::Path, sync::Mutex},
 };
+
+/// Number of nanoseconds in a second.
+const NS_PER_S: i64 = 1_000_000_000;
 
 struct BlockWatcherPauser {
     proxy: Option<BlockWatcherProxy>,
@@ -234,6 +237,26 @@ impl Partition {
         // Set up a PayloadStream to serve the data sink.
         let file = Box::new(fs::File::open(Path::new(&self.src)).context("Opening partition")?);
         let payload_stream = PayloadStreamer::new(file, self.size);
+        let start_time = zx::Time::get_monotonic();
+        let last_percent = Mutex::new(0 as i64);
+        let status_callback = move |data_read, data_total| {
+            if data_total == 0 {
+                return;
+            }
+            let percent: i64 =
+                unsafe { (((data_read as f64) / (data_total as f64)) * 100.0).to_int_unchecked() };
+            let mut prev = last_percent.lock().unwrap();
+            if percent != *prev {
+                let now = zx::Time::get_monotonic();
+                let nanos = now.into_nanos() - start_time.into_nanos();
+                let secs = nanos / NS_PER_S;
+                let rate = ((data_read as f64) / (secs as f64)) / (1024 as f64);
+
+                println!("Paving FVM: {}% ({:.02} KiB/s)", percent, rate);
+                *prev = percent;
+            }
+        };
+        payload_stream.set_status_callback(Box::new(status_callback));
         let (client_end, server_end) = fidl::endpoints::create_endpoints::<PayloadStreamMarker>()?;
         let mut stream = server_end.into_stream()?;
 

@@ -16,7 +16,12 @@ struct PayloadStreamerInner {
     src_size: usize,
     dest_vmo: Option<fidl::Vmo>,
     dest_size: usize,
+    status_callback: Option<Box<dyn StatusCallback>>,
 }
+
+/// Callback type, called with (data_read, data_total)
+pub trait StatusCallback: Send + Sync + Fn(usize, usize) -> () {}
+impl<F> StatusCallback for F where F: Send + Sync + Fn(usize, usize) -> () {}
 
 /// A simple VMO-backed implementation of the
 /// PayloadStream protocol.
@@ -34,8 +39,13 @@ impl PayloadStreamer {
                 src_size,
                 dest_vmo: None,
                 dest_size: 0,
+                status_callback: None,
             }),
         }
+    }
+
+    pub fn set_status_callback(&self, callback: Box<dyn StatusCallback>) {
+        self.inner.lock().unwrap().status_callback = Some(callback);
     }
 
     /// Handle a single request from a FIDL client.
@@ -92,6 +102,11 @@ impl PayloadStreamer {
                         0: ReadInfo { offset: 0, size: data_to_read as u64 },
                     })?;
                 }
+                let src_read = unwrapped.src_read;
+                let src_size = unwrapped.src_size;
+                if let Some(ref cb) = unwrapped.status_callback {
+                    cb(src_read, src_size);
+                }
             }
         }
         return Ok(());
@@ -107,12 +122,29 @@ mod tests {
         fuchsia_async as fasync,
         fuchsia_zircon::{self as zx, HandleBased},
         futures::prelude::*,
-        std::io::Cursor,
+        std::{io::Cursor, sync::Arc},
     };
 
-    fn serve_payload(src: Vec<u8>) -> Result<PayloadStreamProxy, Error> {
+    struct StatusUpdate {
+        data_read: usize,
+        data_size: usize,
+    }
+
+    fn serve_payload(
+        src: Vec<u8>,
+    ) -> Result<(PayloadStreamProxy, Arc<Mutex<StatusUpdate>>), Error> {
         let size = src.len();
         let streamer = PayloadStreamer::new(Box::new(Cursor::new(src)), size);
+
+        let status = Arc::new(Mutex::new(StatusUpdate { data_read: 0, data_size: 0 }));
+        let status_clone = Arc::clone(&status);
+        let callback = move |data_read, data_size| {
+            let mut val = status_clone.lock().unwrap();
+            val.data_read = data_read;
+            val.data_size = data_size;
+        };
+        streamer.set_status_callback(Box::new(callback));
+
         let (client_end, server_end) = fidl::endpoints::create_endpoints::<PayloadStreamMarker>()?;
         let mut stream = server_end.into_stream()?;
 
@@ -123,13 +155,16 @@ mod tests {
         })
         .detach();
 
-        return Ok(client_end.into_proxy()?);
+        return Ok((client_end.into_proxy()?, status));
     }
 
-    fn setup_proxy(src_size: usize, byte: u8) -> Result<PayloadStreamProxy, Error> {
+    fn setup_proxy(
+        src_size: usize,
+        byte: u8,
+    ) -> Result<(PayloadStreamProxy, Arc<Mutex<StatusUpdate>>), Error> {
         let buf: Vec<u8> = vec![byte; src_size];
-        let proxy = serve_payload(buf).context("serve payload failed")?;
-        Ok(proxy)
+        let ret = serve_payload(buf).context("serve payload failed")?;
+        Ok(ret)
     }
 
     async fn attach_vmo(
@@ -187,11 +222,14 @@ mod tests {
 
     async fn do_one_test(src_size: usize, dst_size: usize, byte: u8) -> Result<(), Error> {
         let buf: Vec<u8> = vec![byte; src_size];
-        let proxy = setup_proxy(src_size, byte)?;
+        let (proxy, callback_status) = setup_proxy(src_size, byte)?;
         let vmo = attach_vmo(dst_size, &proxy).await?.1.expect("No vmo");
         let mut read = 0;
         while read < buf.len() {
             read = read_slice(&vmo, dst_size, &proxy, byte, read).await?;
+            let data = callback_status.lock().unwrap();
+            assert_eq!(data.data_size, src_size);
+            assert_eq!(data.data_read, read);
         }
 
         expect_eof(&proxy).await
@@ -222,7 +260,7 @@ mod tests {
         let src_size = 4096 * 10;
         let dst_size = 4096;
         let byte: u8 = 0xab;
-        let proxy = setup_proxy(src_size, byte)?;
+        let (proxy, _) = setup_proxy(src_size, byte)?;
         let (_, vmo) = attach_vmo(dst_size, &proxy).await?;
         assert!(vmo.is_some());
         let (err, _) = attach_vmo(dst_size, &proxy).await?;
