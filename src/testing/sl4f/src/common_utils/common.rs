@@ -62,6 +62,11 @@ pub fn parse_identifier(args_raw: Value) -> Result<String, Error> {
     }
 }
 
+pub fn parse_identifier_as_u64(args_raw: &Value) -> Result<u64, Error> {
+    let id = parse_arg!(args_raw, as_str, "identifier")?;
+    id.parse::<u64>().map_err(|_| format_err!("Cannot cast to u64: {}", id))
+}
+
 pub fn parse_service_identifier(args_raw: Value) -> Result<u64, Error> {
     parse_arg!(args_raw, as_u64, "service_identifier").map_err(Into::into)
 }

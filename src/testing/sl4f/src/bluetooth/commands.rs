@@ -33,8 +33,8 @@ use crate::bluetooth::types::{
 };
 
 use crate::common_utils::common::{
-    parse_identifier, parse_max_bytes, parse_offset, parse_psm, parse_service_identifier,
-    parse_u64_identifier, parse_write_value,
+    parse_identifier, parse_identifier_as_u64, parse_max_bytes, parse_offset, parse_psm,
+    parse_service_identifier, parse_u64_identifier, parse_write_value,
 };
 
 use crate::common_utils::common::macros::parse_arg;
@@ -120,23 +120,17 @@ impl Facade for BluetoothSysFacade {
                 Ok(to_value(result)?)
             }
             "BluetoothForgetDevice" => {
-                let identifier = parse_arg!(args, as_u64, "identifier")?;
+                let identifier = parse_identifier_as_u64(&args)?;
                 let result = self.forget(identifier).await?;
                 Ok(to_value(result)?)
             }
             "BluetoothConnectDevice" => {
-                let identifier_string = parse_arg!(args, as_str, "identifier")?;
-                let identifier = match identifier_string.parse::<u64>() {
-                    Ok(val) => val,
-                    Err(e) => {
-                        bail!("Could not parse into u64: {}, {}", identifier_string, format_err!(e))
-                    }
-                };
+                let identifier = parse_identifier_as_u64(&args)?;
                 let result = self.connect(identifier).await?;
                 Ok(to_value(result)?)
             }
             "BluetoothDisconnectDevice" => {
-                let identifier = parse_arg!(args, as_u64, "identifier")?;
+                let identifier = parse_identifier_as_u64(&args)?;
                 let result = self.disconnect(identifier).await?;
                 Ok(to_value(result)?)
             }
@@ -159,13 +153,7 @@ impl Facade for BluetoothSysFacade {
                 Ok(to_value(result)?)
             }
             "BluetoothPairDevice" => {
-                let identifier_string = parse_arg!(args, as_str, "identifier")?;
-                let identifier = match identifier_string.parse::<u64>() {
-                    Ok(val) => val,
-                    Err(e) => {
-                        bail!("Could not parse into u64: {}, {}", identifier_string, format_err!(e))
-                    }
-                };
+                let identifier = parse_identifier_as_u64(&args)?;
                 let pairing_security_level =
                     match parse_arg!(args, as_u64, "pairing_security_level") {
                         Ok(v) => Some(v),
