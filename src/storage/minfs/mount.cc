@@ -4,8 +4,11 @@
 
 #include "src/storage/minfs/mount.h"
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/inspect/service/cpp/service.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace-provider/provider.h>
 
 #include <safemath/safe_math.h>
 
@@ -106,7 +109,33 @@ zx::status<std::unique_ptr<fs::ManagedVfs>> MountAndServe(
   if (status != ZX_OK) {
     return zx::error(status);
   }
+
   return zx::ok(std::move(fs));
+}
+
+zx::status<> Mount(std::unique_ptr<minfs::Bcache> bcache, const MountOptions& options,
+                   fidl::ServerEnd<fuchsia_io::Directory> root) {
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
+
+  auto on_unmount = [&loop] {
+    loop.Quit();
+    FX_LOGS(WARNING) << "Unmounted";
+  };
+
+  auto fs_or = MountAndServe(options, loop.dispatcher(), std::move(bcache), std::move(root),
+                             std::move(on_unmount));
+  if (fs_or.is_error()) {
+    return fs_or.take_error();
+  }
+
+  if (options.verbose) {
+    FX_LOGS(INFO) << "Mounted successfully";
+  }
+
+  // |ZX_ERR_CANCELED| is returned when the loop is cancelled via |loop.Quit()|.
+  ZX_ASSERT(loop.Run() == ZX_ERR_CANCELED);
+  return zx::ok();
 }
 
 }  // namespace minfs

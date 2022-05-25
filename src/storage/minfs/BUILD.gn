@@ -156,6 +156,7 @@ static_library("minfs") {
       "//zircon/system/ulib/sync",
       "//zircon/system/ulib/trace",
       "//zircon/system/ulib/trace-engine",
+      "//zircon/system/ulib/trace-provider",
     ]
   } else {
     public += [ "host.h" ]

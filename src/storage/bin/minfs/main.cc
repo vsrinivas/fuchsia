@@ -2,36 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <dirent.h>
-#include <errno.h>
-#include <fcntl.h>
 #include <getopt.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
-#include <lib/fdio/vfs.h>
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
-#include <lib/trace-provider/provider.h>
-#include <libgen.h>
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/stat.h>
 #include <unistd.h>
 #include <zircon/compiler.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 
-#include <functional>
 #include <memory>
-#include <utility>
 #include <vector>
 
-#include "src/lib/storage/block_client/cpp/block_device.h"
 #include "src/lib/storage/block_client/cpp/remote_block_device.h"
 #include "src/storage/minfs/fsck.h"
 #include "src/storage/minfs/minfs.h"
+#include "src/storage/minfs/mount.h"
 
 namespace {
 
@@ -45,31 +30,17 @@ int Fsck(std::unique_ptr<minfs::Bcache> bc, const minfs::MountOptions& options) 
 // Run the filesystem server on top of the block device |device|.
 // This function blocks until the filesystem server is instructed to exit.
 int Mount(std::unique_ptr<minfs::Bcache> bcache, const minfs::MountOptions& options) {
-  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
-
-  auto on_unmount = [&loop]() {
-    loop.Quit();
-    FX_LOGS(WARNING) << "Unmounted";
-  };
-
   fidl::ServerEnd<fuchsia_io::Directory> root(
       zx::channel(zx_take_startup_handle(PA_DIRECTORY_REQUEST)));
-  auto fs_or = MountAndServe(options, loop.dispatcher(), std::move(bcache), std::move(root),
-                             std::move(on_unmount));
-  if (fs_or.is_error()) {
+
+  zx::status status = Mount(std::move(bcache), options, std::move(root));
+  if (status.is_error()) {
     if (options.verbose) {
-      FX_LOGS(ERROR) << "Failed to mount: " << fs_or.status_string();
+      FX_LOGS(ERROR) << "Failed to mount: " << status.status_string();
     }
     return EXIT_FAILURE;
   }
 
-  if (options.verbose) {
-    FX_LOGS(ERROR) << "Mounted successfully";
-  }
-
-  // |ZX_ERR_CANCELED| is returned when the loop is cancelled via |loop.Quit()|.
-  ZX_ASSERT(loop.Run() == ZX_ERR_CANCELED);
   return 0;
 }
 

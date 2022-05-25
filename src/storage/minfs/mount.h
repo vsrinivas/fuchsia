@@ -63,6 +63,11 @@ zx::status<std::unique_ptr<fs::ManagedVfs>> MountAndServe(
     std::unique_ptr<minfs::Bcache> bcache, fidl::ServerEnd<fuchsia_io::Directory> root,
     fit::closure on_unmount);
 
+// Start the filesystem on the block device backed by |bcache|, and serve it on |root|. Blocks
+// until the filesystem terminates.
+zx::status<> Mount(std::unique_ptr<minfs::Bcache> bcache, const MountOptions& options,
+                   fidl::ServerEnd<fuchsia_io::Directory> root);
+
 #endif  // __Fuchsia__
 
 }  // namespace minfs
