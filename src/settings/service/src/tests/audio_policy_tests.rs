@@ -196,7 +196,8 @@ async fn add_invalid_volume_policy_and_expect_error(input_volume_limit: f32) {
             &mut Transform::Max(input_volume_limit).into(),
         )
         .await
-        .expect_err("max volume is not a finite number");
+        .expect("FIDL call succeeds")
+        .expect_err("Error response received since max volume is not a finite number");
 }
 
 async fn remove_policy(env: &TestEnvironment, policy_id: u32) {

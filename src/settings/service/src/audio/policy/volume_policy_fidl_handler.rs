@@ -2,7 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::policy_request_respond;
+use crate::audio::policy::{self as audio, PolicyId, Response, Transform};
+use crate::fidl_common::FidlResponseErrorLogger;
+use crate::hanging_get_handler::Sender;
+use crate::ingress::{policy_request, Scoped};
+use crate::job::source::{Error as JobError, PolicyErrorResponder};
+use crate::job::Job;
+use crate::policy::{response, PolicyInfo, PolicyType, Request};
+use crate::shutdown_responder_with_error;
 use fidl::endpoints::ProtocolMarker;
 use fidl_fuchsia_settings_policy::{
     Property, VolumePolicyControllerAddPolicyResponder, VolumePolicyControllerAddPolicyResult,
@@ -10,28 +17,81 @@ use fidl_fuchsia_settings_policy::{
     VolumePolicyControllerRemovePolicyResponder, VolumePolicyControllerRemovePolicyResult,
     VolumePolicyControllerRequest,
 };
-use fuchsia_syslog::fx_log_err;
-use futures::future::LocalBoxFuture;
-use futures::FutureExt;
+use fuchsia_syslog::{fx_log_err, fx_log_warn};
+use std::convert::TryFrom;
 use std::convert::TryInto;
 
-use crate::audio::policy::{self as audio, PolicyId, Response, Transform};
-use crate::fidl_common::FidlResponseErrorLogger;
-use crate::fidl_process_policy;
-use crate::fidl_processor::policy::RequestContext;
-use crate::fidl_result_sender_for_responder;
-use crate::handler::base::Error;
-use crate::hanging_get_handler::Sender;
-use crate::policy::{response, PolicyInfo, PolicyType, Request};
-use crate::shutdown_responder_with_error;
+impl policy_request::Responder<Scoped<Vec<Property>>>
+    for VolumePolicyControllerGetPropertiesResponder
+{
+    fn respond(self, Scoped(response): Scoped<Vec<Property>>) {
+        let _ = self.send(&mut response.into_iter());
+    }
+}
 
-fidl_result_sender_for_responder!(
-    VolumePolicyControllerMarker,
-    VolumePolicyControllerAddPolicyResult,
-    VolumePolicyControllerAddPolicyResponder,
-    VolumePolicyControllerRemovePolicyResult,
-    VolumePolicyControllerRemovePolicyResponder
-);
+impl policy_request::Responder<Scoped<VolumePolicyControllerAddPolicyResult>>
+    for VolumePolicyControllerAddPolicyResponder
+{
+    fn respond(self, Scoped(mut response): Scoped<VolumePolicyControllerAddPolicyResult>) {
+        let _ = self.send(&mut response);
+    }
+}
+
+impl PolicyErrorResponder for VolumePolicyControllerAddPolicyResponder {
+    fn id(&self) -> &'static str {
+        "AddPolicy"
+    }
+
+    fn respond(
+        self: Box<Self>,
+        error: fidl_fuchsia_settings_policy::Error,
+    ) -> Result<(), fidl::Error> {
+        self.send(&mut Err(error))
+    }
+}
+
+impl policy_request::Responder<Scoped<VolumePolicyControllerRemovePolicyResult>>
+    for VolumePolicyControllerRemovePolicyResponder
+{
+    fn respond(self, Scoped(mut response): Scoped<VolumePolicyControllerRemovePolicyResult>) {
+        let _ = self.send(&mut response);
+    }
+}
+
+impl TryFrom<VolumePolicyControllerRequest> for Job {
+    type Error = JobError;
+
+    fn try_from(item: VolumePolicyControllerRequest) -> Result<Self, Self::Error> {
+        #[allow(unreachable_patterns)]
+        match item {
+            VolumePolicyControllerRequest::GetProperties { responder } => {
+                Ok(policy_request::Work::new(PolicyType::Audio, Request::Get, responder).into())
+            }
+            VolumePolicyControllerRequest::AddPolicy { target, parameters, responder } => {
+                let transform: Transform = match parameters.try_into() {
+                    Ok(transform) => transform,
+                    Err(error_message) => {
+                        fx_log_err!("Invalid policy parameters: {:?}", error_message);
+
+                        return Err(JobError::InvalidPolicyInput(Box::new(responder)));
+                    }
+                };
+                let policy_request =
+                    Request::Audio(audio::Request::AddPolicy(target.into(), transform));
+                Ok(policy_request::Work::new(PolicyType::Audio, policy_request, responder).into())
+            }
+            VolumePolicyControllerRequest::RemovePolicy { policy_id, responder } => {
+                let policy_request =
+                    Request::Audio(audio::Request::RemovePolicy(PolicyId(policy_id)));
+                Ok(policy_request::Work::new(PolicyType::Audio, policy_request, responder).into())
+            }
+            _ => {
+                fx_log_warn!("Received a call to an unsupported API: {:?}", item);
+                Err(JobError::Unsupported)
+            }
+        }
+    }
+}
 
 /// Custom sender implementation for the GetProperty call, since the return is a vector and not a
 /// single item.
@@ -51,77 +111,46 @@ impl Sender<Vec<Property>> for VolumePolicyControllerGetPropertiesResponder {
     }
 }
 
-impl From<response::Payload> for Vec<Property> {
-    fn from(response: response::Payload) -> Self {
-        if let response::Payload::PolicyInfo(PolicyInfo::Audio(state)) = response {
+impl From<response::Response> for Scoped<Vec<Property>> {
+    fn from(response: response::Response) -> Self {
+        if let Ok(response::Payload::PolicyInfo(PolicyInfo::Audio(state))) = response {
             // Internally we store the data in a HashMap, need to flatten it out into a vector.
-            return state.properties.values().cloned().map(Property::from).collect::<Vec<_>>();
+            return Scoped(
+                state.properties.values().cloned().map(Property::from).collect::<Vec<_>>(),
+            );
         }
 
         panic!("incorrect value sent to volume policy");
     }
 }
 
-impl From<response::Payload> for VolumePolicyControllerAddPolicyResult {
-    fn from(response: response::Payload) -> Self {
-        if let response::Payload::Audio(Response::Policy(id)) = response {
-            return Ok(id.0);
+impl From<response::Response> for Scoped<VolumePolicyControllerAddPolicyResult> {
+    fn from(response: response::Response) -> Self {
+        if let Ok(response::Payload::Audio(Response::Policy(id))) = response {
+            return Scoped(Ok(id.0));
         }
 
         panic!("incorrect value sent to volume policy");
     }
 }
 
-impl From<response::Payload> for VolumePolicyControllerRemovePolicyResult {
-    fn from(response: response::Payload) -> Self {
-        if let response::Payload::Audio(Response::Policy(_)) = response {
+impl From<response::Response> for Scoped<VolumePolicyControllerRemovePolicyResult> {
+    fn from(response: response::Response) -> Self {
+        if let Ok(response::Payload::Audio(Response::Policy(_))) = response {
             // We don't return any sort of ID on removal, can just ignore the ID in the policy
             // response.
-            return Ok(());
+            return Scoped(Ok(()));
         }
 
         panic!("incorrect value sent to volume policy");
     }
-}
-
-fidl_process_policy!(VolumePolicyController, process_request);
-
-async fn process_request(
-    context: RequestContext,
-    request: VolumePolicyControllerRequest,
-) -> Result<Option<VolumePolicyControllerRequest>, anyhow::Error> {
-    match request {
-        VolumePolicyControllerRequest::GetProperties { responder } => {
-            policy_request_respond!(context, responder, PolicyType::Audio, Request::Get);
-        }
-        VolumePolicyControllerRequest::AddPolicy { target, parameters, responder } => {
-            let transform: Transform = match parameters.try_into() {
-                Ok(transform) => transform,
-                Err(error_message) => {
-                    fx_log_err!("Invalid policy parameters: {:?}", error_message);
-                    responder.on_error(&anyhow::Error::new(Error::UnexpectedError(
-                        error_message.into(),
-                    )));
-                    return Ok(None);
-                }
-            };
-            let policy_request =
-                Request::Audio(audio::Request::AddPolicy(target.into(), transform));
-            policy_request_respond!(context, responder, PolicyType::Audio, policy_request);
-        }
-        VolumePolicyControllerRequest::RemovePolicy { policy_id, responder } => {
-            let policy_request = Request::Audio(audio::Request::RemovePolicy(PolicyId(policy_id)));
-            policy_request_respond!(context, responder, PolicyType::Audio, policy_request);
-        }
-    };
-
-    Ok(None)
 }
 
 #[cfg(test)]
 mod tests {
     use crate::audio::policy::{Property, PropertyTarget, State, TransformFlags};
     use crate::audio::types::AudioStreamType;
+    use crate::ingress::Scoped;
     use crate::policy::{response, PolicyInfo};
     use std::collections::HashMap;
 
@@ -129,11 +158,12 @@ mod tests {
     // `Property` results in an empty vector.
     #[test]
     fn test_response_to_property_vector_empty() {
-        let response = response::Payload::PolicyInfo(PolicyInfo::Audio(State {
+        let response = Ok(response::Payload::PolicyInfo(PolicyInfo::Audio(State {
             properties: Default::default(),
-        }));
+        })));
 
-        let property_list: Vec<fidl_fuchsia_settings_policy::Property> = response.into();
+        let Scoped(property_list): Scoped<Vec<fidl_fuchsia_settings_policy::Property>> =
+            response.into();
 
         assert_eq!(property_list, vec![])
     }
@@ -147,10 +177,13 @@ mod tests {
         let mut property_map: HashMap<PropertyTarget, Property> = HashMap::new();
         let _ = property_map.insert(property1.target, property1.clone());
         let _ = property_map.insert(property2.target, property2.clone());
-        let response =
-            response::Payload::PolicyInfo(PolicyInfo::Audio(State { properties: property_map }));
+        let response = Ok(response::Payload::PolicyInfo(PolicyInfo::Audio(State {
+            properties: property_map,
+        })));
 
-        let mut property_list: Vec<fidl_fuchsia_settings_policy::Property> = response.into();
+        let Scoped(mut property_list): Scoped<Vec<fidl_fuchsia_settings_policy::Property>> =
+            response.into();
+
         // Sort so the result is guaranteed to be in a consistent order.
         property_list.sort_by_key(|p| {
             *p.available_transforms

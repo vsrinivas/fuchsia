@@ -9,6 +9,7 @@
 /// The [fidl] mod enables defining components that provide inbound communication over FIDL.
 pub mod fidl;
 
+pub(crate) mod policy_request;
 pub(crate) mod request;
 pub(crate) mod watch;
 

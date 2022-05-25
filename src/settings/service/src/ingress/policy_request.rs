@@ -1,30 +1,30 @@
-// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! Single request handling.
+//! Single request handling for policy APIs.
 //!
 //! The request mod defines the components necessary for executing a single, isolated command within
-//! the [Job] ecosystem. The most common work type in the setting service that fall in this category
-//! are set commands where the requested action can be succinctly captured in a single request in
-//! the service.
+//! the [Job] ecosystem. Since policy APIs do not utilize hanging gets, all policy requests fall
+//! under this umbrella.
 //!
-//! One must define two concrete trait implementations in order to use the components of this mod.
+//! Two concrete trait implementations must be defined in order to use the components of this mod.
 //! The first trait is the [From] trait for [Response]. While [Response] could be broken
-//! down into its contained [SettingInfo](crate::base::SettingInfo) and
-//! [Error](crate::handler::base::Error) types, callers often only care about the success of a call.
-//! For example, set calls typically return an empty value upon success and therefore do not
+//! down into its contained [Payload](crate::policy::Payload) and
+//! [Error](crate::policy::response::Error) types, callers often only care about the success of a call.
+//! For example, add policy calls typically  return an empty value upon success and therefore do not
 //! have a value to convert. The second trait is [Responder], which takes the first trait
 //! implementation as a parameter. Ths trait allows callers to customize how the response is handled
 //! with their own type as defined in the [From<Response>] trait. One should note that the
 //! responder itself is passed in on the callback. This allows for the consumption of any resources
 //! in the one-time use callback.
 
-use crate::base::SettingType;
-use crate::handler::base::{Payload, Request, Response};
 use crate::job::work::{Independent, Load};
 use crate::job::Job;
 use crate::message::base::Audience;
+use crate::policy::response::Response;
+use crate::policy::Request;
+use crate::policy::{Payload, PolicyType};
 use crate::service::{message, Address};
 use crate::trace;
 use crate::trace::TracingNonce;
@@ -45,7 +45,7 @@ where
     T: Responder<R> + Send + Sync + 'static,
 {
     request: Request,
-    setting_type: SettingType,
+    policy_type: PolicyType,
     responder: T,
     _data: PhantomData<R>,
 }
@@ -53,8 +53,8 @@ where
 impl<R: From<Response> + Send + Sync + 'static, T: Responder<R> + Send + Sync + 'static>
     Work<R, T>
 {
-    pub(crate) fn new(setting_type: SettingType, request: Request, responder: T) -> Self {
-        Self { setting_type, request, responder, _data: PhantomData }
+    pub(crate) fn new(policy_type: PolicyType, request: Request, responder: T) -> Self {
+        Self { policy_type, request, responder, _data: PhantomData }
     }
 }
 
@@ -68,12 +68,12 @@ where
     T: Responder<R> + Send + Sync + 'static,
 {
     async fn execute(self: Box<Self>, messenger: message::Messenger, nonce: TracingNonce) {
-        trace!(nonce, "Independent Work execute");
+        trace!(nonce, "Independent policy Work execute");
         // Send request through MessageHub.
         let mut response_listener = messenger
             .message(
                 Payload::Request(self.request.clone()).into(),
-                Audience::Address(Address::Handler(self.setting_type)),
+                Audience::Address(Address::PolicyHandler(self.policy_type)),
             )
             .send();
 
@@ -89,7 +89,7 @@ where
                     panic!("should not have received a different payload type:{:?}", payload);
                 }
             },
-            _ => Err(crate::handler::base::Error::CommunicationError),
+            _ => Err(crate::policy::response::Error::CommunicationError),
         }));
     }
 }
@@ -140,16 +140,16 @@ mod tests {
 
         // Create mock handler endpoint to receive request.
         let mut handler_receiver = message_hub_delegate
-            .create(MessengerType::Addressable(Address::Handler(SettingType::Unknown)))
+            .create(MessengerType::Addressable(Address::PolicyHandler(PolicyType::Unknown)))
             .await
-            .expect("handler messenger should be created")
+            .expect("policy handler messenger should be created")
             .1;
 
         // Create job to send request.
         let request = Request::Restore;
         let (response_tx, response_rx) = futures::channel::oneshot::channel::<Response>();
         let work = Box::new(Work::new(
-            SettingType::Unknown,
+            PolicyType::Unknown,
             request.clone(),
             TestResponder::new(response_tx),
         ));
@@ -165,7 +165,7 @@ mod tests {
         let work_messenger_signature = work_messenger.get_signature();
 
         // Execute work asynchronously.
-        fasync::Task::spawn(work.execute(work_messenger, 0)).detach();
+        let work_task_handle = fasync::Task::spawn(work.execute(work_messenger, 0));
 
         // Ensure the request is sent from the right sender.
         let (received_request, client) =
@@ -174,15 +174,16 @@ mod tests {
         assert!(client.get_author() == work_messenger_signature);
 
         // Ensure the response is received and forwarded by the work.
-        let reply = Ok(None);
+        let reply = Ok(crate::policy::response::Payload::Restore);
         let _ = client.reply(Payload::Response(reply.clone()).into()).send();
         assert!(response_rx.await.expect("should receive successful response") == reply);
+        work_task_handle.await;
     }
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_error_propagation() {
         // Create MessageHub for communication between components. Do not create any handler for the
-        // test SettingType address.
+        // test PolicyType address.
         let message_hub_delegate = MessageHub::create_hub();
 
         let (response_tx, response_rx) = futures::channel::oneshot::channel::<Response>();
@@ -190,13 +191,13 @@ mod tests {
         // Create job to send request.
         let request = Request::Restore;
         let work = Box::new(Work::new(
-            SettingType::Unknown,
+            PolicyType::Unknown,
             request.clone(),
             TestResponder::new(response_tx),
         ));
 
         // Execute work on async task.
-        fasync::Task::spawn(
+        let work_task_handle = fasync::Task::spawn(
             work.execute(
                 message_hub_delegate
                     .create(MessengerType::Unbound)
@@ -205,11 +206,11 @@ mod tests {
                     .0,
                 0,
             ),
-        )
-        .detach();
+        );
 
         // Ensure an error was returned, which should match that generated by the request work load.
         assert_matches!(response_rx.await.expect("should receive successful response"),
-                Err(x) if x == crate::handler::base::Error::CommunicationError);
+                Err(x) if x == crate::policy::response::Error::CommunicationError);
+        work_task_handle.await;
     }
 }

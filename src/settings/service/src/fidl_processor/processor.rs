@@ -2,21 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::Error;
-use fidl::endpoints::{ProtocolMarker, Request};
-use futures::future::LocalBoxFuture;
-use futures::{FutureExt, StreamExt, TryStreamExt};
-
 use crate::base::{SettingInfo, SettingType};
-use crate::fidl_processor::policy::{
-    PolicyProcessingUnit, RequestCallback as PolicyRequestCallback,
-};
 use crate::fidl_processor::settings::{
     RequestCallback as SettingsRequestCallback, SettingProcessingUnit,
 };
 use crate::hanging_get_handler::Sender;
 use crate::ExitSender;
 use crate::{service, trace};
+use anyhow::Error;
+use fidl::endpoints::{ProtocolMarker, Request};
+use futures::future::LocalBoxFuture;
+use futures::{FutureExt, StreamExt, TryStreamExt};
 use std::hash::Hash;
 
 pub type RequestResultCreator<'a, P> = LocalBoxFuture<'a, Result<Option<Request<P>>, Error>>;
@@ -162,39 +158,6 @@ where
             )
             .await,
         );
-        self.base_processor.processing_units.push(processing_unit);
-    }
-
-    pub(crate) async fn process(self) {
-        self.base_processor.process().await
-    }
-}
-
-/// Wraps [`BaseFidlProcessor`] for use with FIDL APIs in the fuchsia.settings.policy namespace that
-/// send and receive messages through the policy message hub.
-///
-/// [`BaseFidlProcessor`]: struct.BaseFidlProcessor.html
-pub struct PolicyFidlProcessor<P>
-where
-    P: ProtocolMarker,
-{
-    base_processor: BaseFidlProcessor<P>,
-}
-
-impl<P> PolicyFidlProcessor<P>
-where
-    P: ProtocolMarker,
-{
-    pub(crate) async fn new(
-        stream: RequestStream<P>,
-        service_messenger: service::message::Messenger,
-    ) -> Self {
-        Self { base_processor: BaseFidlProcessor::new(stream, service_messenger) }
-    }
-
-    /// Registers a fidl processing unit for policy requests.
-    pub(crate) async fn register(&mut self, callback: PolicyRequestCallback<P>) {
-        let processing_unit = Box::new(PolicyProcessingUnit::<P>::new(callback));
         self.base_processor.processing_units.push(processing_unit);
     }
 

@@ -203,12 +203,10 @@ impl Interface {
                         });
                     }
                     Interface::AudioPolicy => {
+                        let seeder = seeder.clone();
                         let _ = service_dir.add_fidl_service(
                             move |stream: VolumePolicyControllerRequestStream| {
-                                crate::audio::policy::volume_policy_fidl_handler::fidl_io::spawn(
-                                    delegate.clone(),
-                                    stream,
-                                );
+                                seeder.seed(stream);
                             },
                         );
                     }

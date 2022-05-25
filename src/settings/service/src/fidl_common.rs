@@ -72,62 +72,6 @@ macro_rules! fidl_process_full {
     };
 }
 
-/// This macro generates a mod containing the logic to process a FIDL stream for the
-/// fuchsia.settings.policy namespace.
-/// Callers can spawn a handler task by invoking fidl_io::spawn.
-/// Macro usages specify the interface's base name and a handler function for requests.
-// TODO(fxbug.dev/61433): consider returning spawned task instead of detaching
-#[macro_export]
-macro_rules! fidl_process_policy {
-    ($interface:ident, $handle_func:ident) => {
-        type HandleResult<'a> = LocalBoxFuture<
-            'a,
-            Result<Option<paste::paste! {[<$interface Request>]}>, anyhow::Error>,
-        >;
-
-        pub(crate) mod fidl_io {
-            paste::paste! {
-                use fidl_fuchsia_settings_policy::{
-                    [<$interface Marker>],
-                    [<$interface RequestStream>],
-                };
-            }
-            use super::*;
-            use crate::fidl_processor::processor::PolicyFidlProcessor;
-            use crate::message::base::MessengerType;
-            use crate::service;
-            use fuchsia_async as fasync;
-
-            pub(crate) fn spawn(
-                delegate: service::message::Delegate,
-                stream: paste::paste! {[<$interface RequestStream>]},
-            ) {
-                fasync::Task::local(async move {
-                    let service_messenger = delegate
-                        .create(MessengerType::Unbound)
-                        .await
-                        .expect("service messenger should be created")
-                        .0;
-
-                    let mut processor =
-                        PolicyFidlProcessor::<paste::paste! {[<$interface Marker>]}>::new(
-                            stream,
-                            service_messenger,
-                        )
-                        .await;
-                    processor
-                        .register(Box::new(move |context, req| -> HandleResult<'_> {
-                            async move { $handle_func(context, req).await }.boxed_local()
-                        }))
-                        .await;
-                    processor.process().await;
-                })
-                .detach();
-            }
-        }
-    };
-}
-
 #[macro_export]
 macro_rules! fidl_process {
     // Generates a fidl_io mod with a spawn for the given fidl interface,

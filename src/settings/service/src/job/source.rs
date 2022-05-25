@@ -95,6 +95,8 @@ pub enum Error {
     Unexpected(fidl::Error),
     #[error("Invalid input")]
     InvalidInput(Box<dyn ErrorResponder + Send>),
+    #[error("Invalid policy input")]
+    InvalidPolicyInput(Box<dyn PolicyErrorResponder + Send>),
     #[error("Unsupported API call")]
     Unsupported,
 }
@@ -104,6 +106,7 @@ impl std::fmt::Debug for Error {
         match self {
             Error::Unexpected(_) => f.write_str("Unexpected"),
             Error::InvalidInput(_) => f.write_str("InvalidInput(..)"),
+            Error::InvalidPolicyInput(_) => f.write_str("InvalidPolicyInput(..)"),
             Error::Unsupported => f.write_str("Unsupported"),
         }
     }
@@ -117,6 +120,19 @@ pub trait ErrorResponder {
     /// Respond with the supplied error. Returns any fidl errors that occur when
     /// trying to send the response.
     fn respond(self: Box<Self>, error: fidl_fuchsia_settings::Error) -> Result<(), fidl::Error>;
+}
+
+/// Abstract over how to respond with a settings policy fidl error.
+pub trait PolicyErrorResponder {
+    /// Unique identifier for the API this responder is responsible for.
+    fn id(&self) -> &'static str;
+
+    /// Respond with the supplied error. Returns any fidl errors that occur when
+    /// trying to send the response.
+    fn respond(
+        self: Box<Self>,
+        error: fidl_fuchsia_settings_policy::Error,
+    ) -> Result<(), fidl::Error>;
 }
 
 // This implementation is necessary when converting into a Job is infallible. This can happen if an

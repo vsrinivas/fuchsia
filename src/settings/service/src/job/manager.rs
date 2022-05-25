@@ -231,6 +231,21 @@ impl Manager {
                     );
                 }
             }
+            Some(Err(Error::InvalidPolicyInput(error_responder))) => {
+                // When the stream failed to produce a job due to bad input, report back the error
+                // through the APIs error responder.
+                let id = error_responder.id();
+                if let Err(e) = error_responder.respond(fidl_fuchsia_settings_policy::Error::Failed)
+                {
+                    fx_log_warn!(
+                        "Failed to report invalid policy input error to caller on policy API {} \
+                            with id {:?}: {:?}",
+                        id,
+                        source,
+                        e
+                    );
+                }
+            }
             Some(Err(Error::Unexpected(err))) if !err.is_closed() => {
                 // No-op. If the error did not close the stream then just warn and allow the rest
                 // of the stream to continue processing.
@@ -494,6 +509,75 @@ mod tests {
 
         // Confirm we never get the result from the request.
         assert!(receptor.next_of::<test::Payload>().await.is_err());
+    }
+
+    // Validates that an InvalidPolicyInput error causes the stream to close and not run further
+    // jobs.
+    #[fuchsia_async::run_until_stalled(test)]
+    async fn test_invalid_policy_input_returns_error() {
+        struct TestPolicyResponder;
+        impl source::PolicyErrorResponder for TestPolicyResponder {
+            fn id(&self) -> &'static str {
+                "Test"
+            }
+
+            fn respond(
+                self: Box<Self>,
+                error: fidl_fuchsia_settings_policy::Error,
+            ) -> Result<(), fidl::Error> {
+                assert_eq!(error, fidl_fuchsia_settings_policy::Error::Failed);
+                Ok(())
+            }
+        }
+
+        // Create delegate for communication between components.
+        let message_hub_delegate = MessageHub::create_hub();
+
+        const RESULT: i64 = 1;
+
+        // Create a top-level receptor to receive job results from.
+        let mut receptor = message_hub_delegate
+            .create(MessengerType::Unbound)
+            .await
+            .expect("should create receptor")
+            .1;
+
+        let manager_signature = Manager::spawn(&message_hub_delegate).await;
+
+        // Create a messenger to send job sources to the manager.
+        let messenger = message_hub_delegate
+            .create(MessengerType::Unbound)
+            .await
+            .expect("should create messenger")
+            .0;
+
+        let (requests_tx, requests_rx) = mpsc::unbounded();
+
+        // Send a fidl error before a valid job.
+        requests_tx
+            .unbounded_send(Err(Error::InvalidPolicyInput(Box::new(TestPolicyResponder))))
+            .expect("Should be able to queue requests");
+
+        // Now send a valid job, which should not be processed after the error.
+        let signature = receptor.get_signature();
+        requests_tx
+            .unbounded_send(Ok(Job::new(job::work::Load::Independent(Workload::new(
+                test::Payload::Integer(RESULT),
+                signature,
+            )))))
+            .expect("Should be able to queue requests");
+
+        messenger
+            .message(
+                Payload::Source(Arc::new(Mutex::new(Some(requests_rx.boxed())))).into(),
+                Audience::Messenger(manager_signature),
+            )
+            .send()
+            .ack();
+
+        // Confirm received value matches the value sent from the second job.
+        assert_matches!(receptor.next_of::<test::Payload>().await.expect("should have payload").0,
+            test::Payload::Integer(value) if value == RESULT);
     }
 
     struct WaitingWorkload {

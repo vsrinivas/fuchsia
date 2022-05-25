@@ -81,6 +81,7 @@ pub(crate) mod source {
     pub enum CompleteError {
         Unexpected,
         InvalidInput,
+        InvalidPolicyInput,
         Unsupported,
     }
 
@@ -89,6 +90,7 @@ pub(crate) mod source {
             match err {
                 Error::Unexpected(_) => CompleteError::Unexpected,
                 Error::InvalidInput(_) => CompleteError::InvalidInput,
+                Error::InvalidPolicyInput(_) => CompleteError::InvalidPolicyInput,
                 Error::Unsupported => CompleteError::Unsupported,
             }
         }
