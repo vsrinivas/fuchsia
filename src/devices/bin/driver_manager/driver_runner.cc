@@ -1097,7 +1097,7 @@ zx::status<DriverRunner::CompositeArgsIterator> DriverRunner::AddToCompositeArgs
          name.data());
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
-  auto url = composite_info.driver_info().url().get().data();
+  auto url = std::string(composite_info.driver_info().url().get());
 
   // Check if there are existing composite arguments for the composite driver.
   // We do this by checking if the node index within an existing set of
@@ -1115,7 +1115,7 @@ zx::status<DriverRunner::CompositeArgsIterator> DriverRunner::AddToCompositeArgs
   }
   // No composite arguments exist for the composite driver, create a new set.
   if (it == end) {
-    it = composite_args_.emplace(url, CompositeArgs{composite_info.num_nodes()});
+    it = composite_args_.emplace(std::move(url), CompositeArgs{composite_info.num_nodes()});
   }
   return zx::ok(it);
 }
