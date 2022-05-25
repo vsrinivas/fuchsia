@@ -85,7 +85,7 @@ in Gerrit, do the following:
     If you want to use the `git` command instead, run the following command:
 
     ```posix-terminal
-    git push origin HEAD:refs/for/master
+    git push origin HEAD:refs/for/main
     ```
 
 See the
@@ -155,11 +155,11 @@ After creating a change, to upload a patch to your change, do the following:
 
 When Gerrit warns you of merge conflicts in your change, do the following:
 
-1.  Rebase from `origin/master`, which reveals the files that cause merge
+1.  Rebase from `origin/main`, which reveals the files that cause merge
     conflicts:
 
     ```posix-terminal
-    git rebase origin/master
+    git rebase origin/main
     ```
 
 1.  Edit those files to resolve the conflicts and finish the rebase:
