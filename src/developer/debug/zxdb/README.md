@@ -7,8 +7,7 @@ running on the Fuchsia target.
 
 ### User documentation
 
-Please see the debugger [setup](../../../../garnet/docs/debugger.md) and
-[usage](../../../../garnet/docs/debugger_usage.md) documentation.
+Please see the debugger [documentation](../../../../docs/development/debugger/README.md).
 
 ### Subdirectories
 
