@@ -587,6 +587,7 @@ rustc_test("eager_updates") {
     "//src/sys/lib/fidl-fuchsia-pkg-rewrite-ext",
     "//src/sys/pkg/lib/fuchsia-merkle",
     "//src/sys/pkg/lib/fuchsia-pkg-testing",
+    "//src/sys/pkg/lib/omaha-client",
     "//src/sys/pkg/testing/pkgfs-ramdisk",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:assert_matches",

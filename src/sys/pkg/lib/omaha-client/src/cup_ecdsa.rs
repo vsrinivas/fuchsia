@@ -291,9 +291,10 @@ impl Cupv2Verifier for StandardCupv2Handler {
     }
 }
 
-#[cfg(test)]
 pub mod test_support {
     use super::*;
+    use crate::protocol::request::{Request, RequestWrapper};
+    use crate::request_builder::Intermediate;
     use p256::ecdsa::SigningKey;
     use signature::rand_core::OsRng;
     use std::convert::TryInto;
@@ -312,11 +313,42 @@ pub mod test_support {
             historical: vec![],
         }
     }
+
+    pub fn make_default_public_keys_for_test() -> PublicKeys {
+        let (_priv_key, public_key) = make_keys_for_test();
+        let public_key_id: PublicKeyId = 123456789.try_into().unwrap();
+        make_public_keys_for_test(public_key_id, public_key)
+    }
+
+    pub fn make_default_json_public_keys_for_test() -> serde_json::Value {
+        serde_json::json!({
+            "latest": {
+                "id": 123,
+                "key": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt\n7qCZFgaBN9g5z3/EgaREkjBNfvZqwRe+/oOo0I8VXytS+fYY3URwKQSODw==\n-----END PUBLIC KEY-----"
+            },
+            "historical": []
+        })
+    }
     pub fn make_cup_handler_for_test() -> StandardCupv2Handler {
         let (_signing_key, public_key) = make_keys_for_test();
         let public_key_id: PublicKeyId = 42.try_into().unwrap();
         let public_keys = make_public_keys_for_test(public_key_id, public_key);
         StandardCupv2Handler::new(&public_keys)
+    }
+
+    pub fn make_expected_signature_for_test(
+        signing_key: &SigningKey,
+        request_metadata: &RequestMetadata,
+        response_body: &[u8],
+    ) -> Vec<u8> {
+        use signature::Signer;
+        let transaction_hash = make_transaction_hash(
+            &request_metadata.request_body,
+            response_body,
+            request_metadata.public_key_id,
+            &request_metadata.nonce,
+        );
+        signing_key.sign(&transaction_hash).to_der().as_bytes().to_vec()
     }
 
     // Mock Cupv2Handler which can be used to fail at request decoration or verification.
@@ -390,13 +422,23 @@ pub mod test_support {
             }
         }
     }
+
+    pub fn make_standard_intermediate_for_test(request: Request) -> Intermediate {
+        Intermediate {
+            uri: "http://fuchsia.dev".to_string(),
+            headers: [].into(),
+            body: RequestWrapper { request },
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::protocol::request::{Request, RequestWrapper};
-    use crate::request_builder::Intermediate;
+    use crate::{
+        protocol::request::{Request, RequestWrapper},
+        request_builder::Intermediate,
+    };
     use assert_matches::assert_matches;
     use p256::ecdsa::SigningKey;
     use url::Url;
@@ -408,29 +450,6 @@ mod tests {
         }
     }
 
-    fn make_standard_intermediate_for_test(request: Request) -> Intermediate {
-        Intermediate {
-            uri: "http://fuchsia.dev".to_string(),
-            headers: [].into(),
-            body: RequestWrapper { request },
-        }
-    }
-
-    fn make_expected_signature_for_test(
-        signing_key: &SigningKey,
-        request_metadata: &RequestMetadata,
-        response_body: &[u8],
-    ) -> String {
-        use signature::Signer;
-        let transaction_hash = make_transaction_hash(
-            &request_metadata.request_body,
-            response_body,
-            request_metadata.public_key_id,
-            &request_metadata.nonce,
-        );
-        hex::encode(signing_key.sign(&transaction_hash).to_der().as_bytes())
-    }
-
     #[test]
     fn test_standard_cup_handler_decorate() -> Result<(), anyhow::Error> {
         let (_, public_key) = test_support::make_keys_for_test();
@@ -438,7 +457,8 @@ mod tests {
         let public_keys = test_support::make_public_keys_for_test(public_key_id, public_key);
         let cup_handler = StandardCupv2Handler::new(&public_keys);
 
-        let mut intermediate = make_standard_intermediate_for_test(Request::default());
+        let mut intermediate =
+            test_support::make_standard_intermediate_for_test(Request::default());
 
         let request_metadata = cup_handler.decorate_request(&mut intermediate)?;
 
@@ -491,7 +511,8 @@ mod tests {
         let public_keys = test_support::make_public_keys_for_test(public_key_id, public_key);
         let cup_handler = StandardCupv2Handler::new(&public_keys);
 
-        let mut intermediate = make_standard_intermediate_for_test(Request::default());
+        let mut intermediate =
+            test_support::make_standard_intermediate_for_test(Request::default());
         let request_metadata = cup_handler.decorate_request(&mut intermediate)?;
 
         // No .header(ETAG, <val>), which is a problem.
@@ -512,7 +533,8 @@ mod tests {
         let public_keys = test_support::make_public_keys_for_test(public_key_id, public_key);
         let cup_handler = StandardCupv2Handler::new(&public_keys);
 
-        let mut intermediate = make_standard_intermediate_for_test(Request::default());
+        let mut intermediate =
+            test_support::make_standard_intermediate_for_test(Request::default());
         let request_metadata = cup_handler.decorate_request(&mut intermediate)?;
 
         let response: Response<Vec<u8>> = hyper::Response::builder()
@@ -537,7 +559,8 @@ mod tests {
         let public_keys =
             test_support::make_public_keys_for_test(correct_public_key_id, public_key);
         let cup_handler = StandardCupv2Handler::new(&public_keys);
-        let mut intermediate = make_standard_intermediate_for_test(Request::default());
+        let mut intermediate =
+            test_support::make_standard_intermediate_for_test(Request::default());
         let request_metadata = cup_handler.decorate_request(&mut intermediate)?;
         let expected_request_metadata = RequestMetadata {
             request_body: intermediate.serialize_body()?,
@@ -548,11 +571,11 @@ mod tests {
         let expected_hash = Sha256::digest(&request_metadata.request_body);
 
         let expected_hash_hex: String = hex::encode(expected_hash);
-        let expected_signature = make_expected_signature_for_test(
+        let expected_signature = hex::encode(test_support::make_expected_signature_for_test(
             &priv_key,
             &expected_request_metadata,
             response_body.as_bytes(),
-        );
+        ));
 
         for (etag, public_key_id, expected_err) in vec![
             // This etag doesn't even have the form foo:bar.
@@ -616,14 +639,15 @@ mod tests {
         private_key: SigningKey,
         response_body: &str,
     ) -> Result<(RequestMetadata, Response<Vec<u8>>), anyhow::Error> {
-        let mut intermediate = make_standard_intermediate_for_test(Request::default());
+        let mut intermediate =
+            test_support::make_standard_intermediate_for_test(Request::default());
         let request_metadata = request_handler.decorate_request(&mut intermediate)?;
 
-        let signature = make_expected_signature_for_test(
+        let signature = hex::encode(test_support::make_expected_signature_for_test(
             &private_key,
             &request_metadata,
             response_body.as_bytes(),
-        );
+        ));
 
         let etag = &format!(
             "{}:{}",

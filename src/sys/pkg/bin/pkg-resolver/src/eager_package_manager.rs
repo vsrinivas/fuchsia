@@ -453,21 +453,11 @@ mod tests {
             PackageCacheRequestStream,
         },
         fuchsia_async as fasync, fuchsia_zircon as zx,
-        omaha_client::cup_ecdsa::{PublicKey, PublicKeyAndId, PublicKeys},
-        p256::ecdsa::SigningKey,
-        signature::rand_core::OsRng,
+        omaha_client::cup_ecdsa::{
+            test_support::make_default_public_keys_for_test, PublicKey, PublicKeyAndId, PublicKeys,
+        },
         typed_builder::TypedBuilder,
     };
-
-    fn make_public_keys_for_test() -> PublicKeys {
-        let signing_key = SigningKey::random(&mut OsRng);
-        let public_key = PublicKey::from(&signing_key);
-        let public_key_id = 42;
-        PublicKeys {
-            latest: PublicKeyAndId { id: public_key_id, key: public_key },
-            historical: vec![],
-        }
-    }
 
     const TEST_URL: &str = "fuchsia-pkg://example.com/package";
     const TEST_HASH: &str = "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
@@ -735,7 +725,7 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt
             packages: vec![EagerPackageConfig {
                 url: PkgUrl::parse(TEST_PINNED_URL).unwrap(),
                 executable: true,
-                public_keys: make_public_keys_for_test(),
+                public_keys: make_default_public_keys_for_test(),
             }],
         };
         let package_resolver = get_test_package_resolver();
@@ -765,12 +755,12 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt
                 EagerPackageConfig {
                     url: url.clone(),
                     executable: true,
-                    public_keys: make_public_keys_for_test(),
+                    public_keys: make_default_public_keys_for_test(),
                 },
                 EagerPackageConfig {
                     url: url2.clone(),
                     executable: false,
-                    public_keys: make_public_keys_for_test(),
+                    public_keys: make_default_public_keys_for_test(),
                 },
             ],
         };
@@ -832,7 +822,7 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt
             packages: vec![EagerPackageConfig {
                 url: url.clone(),
                 executable: true,
-                public_keys: make_public_keys_for_test(),
+                public_keys: make_default_public_keys_for_test(),
             }],
         };
         let (package_resolver, _test_dir) = get_test_package_resolver_with_hash(TEST_HASH);
@@ -875,7 +865,7 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt
             packages: vec![EagerPackageConfig {
                 url: url.clone(),
                 executable: true,
-                public_keys: make_public_keys_for_test(),
+                public_keys: make_default_public_keys_for_test(),
             }],
         };
         let (package_resolver, _test_dir) = get_test_package_resolver_with_hash(TEST_HASH);
@@ -901,7 +891,7 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt
             packages: vec![EagerPackageConfig {
                 url: url.clone(),
                 executable: true,
-                public_keys: make_public_keys_for_test(),
+                public_keys: make_default_public_keys_for_test(),
             }],
         };
         let (package_resolver, _test_dir) = get_test_package_resolver_with_hash(TEST_HASH);
@@ -929,7 +919,7 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt
             packages: vec![EagerPackageConfig {
                 url: url.clone(),
                 executable: true,
-                public_keys: make_public_keys_for_test(),
+                public_keys: make_default_public_keys_for_test(),
             }],
         };
         let package_resolver = get_test_package_resolver();
@@ -955,7 +945,7 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt
             packages: vec![EagerPackageConfig {
                 url: url.clone(),
                 executable: true,
-                public_keys: make_public_keys_for_test(),
+                public_keys: make_default_public_keys_for_test(),
             }],
         };
         let package_resolver = get_test_package_resolver();
@@ -980,7 +970,7 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt
             packages: vec![EagerPackageConfig {
                 url: url.clone(),
                 executable: true,
-                public_keys: make_public_keys_for_test(),
+                public_keys: make_default_public_keys_for_test(),
             }],
         };
         let package_resolver = get_test_package_resolver();
@@ -1002,7 +992,7 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt
             packages: vec![EagerPackageConfig {
                 url: url.clone(),
                 executable: true,
-                public_keys: make_public_keys_for_test(),
+                public_keys: make_default_public_keys_for_test(),
             }],
         };
         let package_resolver = get_test_package_resolver();
@@ -1029,7 +1019,7 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt
             packages: vec![EagerPackageConfig {
                 url: url.clone(),
                 executable: true,
-                public_keys: make_public_keys_for_test(),
+                public_keys: make_default_public_keys_for_test(),
             }],
         };
         let package_resolver = get_test_package_resolver();

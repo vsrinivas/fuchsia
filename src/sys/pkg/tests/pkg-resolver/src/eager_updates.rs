@@ -13,18 +13,9 @@ use {
         get_cup_response_with_name, make_pkg_with_extra_blobs, pkgfs_with_system_image_and_pkg,
         CupDataForTest, MountsBuilder, TestEnvBuilder, EMPTY_REPO_PATH,
     },
+    omaha_client::cup_ecdsa::test_support::make_default_json_public_keys_for_test,
     std::sync::Arc,
 };
-
-fn make_public_keys_for_test() -> serde_json::Value {
-    serde_json::json!({
-        "latest": {
-            "id": 123,
-            "key": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt\n7qCZFgaBN9g5z3/EgaREkjBNfvZqwRe+/oOo0I8VXytS+fYY3URwKQSODw==\n-----END PUBLIC KEY-----"
-        },
-        "historical": []
-    })
-}
 
 #[fasync::run_singlethreaded(test)]
 async fn test_empty_eager_config() {
@@ -89,7 +80,7 @@ async fn test_eager_resolve_package() {
         "packages": [
             {
                 "url": url_no_hash,
-                "public_keys": make_public_keys_for_test(),
+                "public_keys": make_default_json_public_keys_for_test(),
             }
         ]
     });
@@ -134,7 +125,7 @@ async fn test_eager_get_hash() {
         "packages": [
             {
                 "url": url_no_hash,
-                "public_keys": make_public_keys_for_test(),
+                "public_keys": make_default_json_public_keys_for_test(),
             }
         ],
     });
@@ -186,7 +177,7 @@ async fn test_cup_write() {
         "packages": [
             {
                 "url": url_no_hash,
-                "public_keys": make_public_keys_for_test(),
+                "public_keys": make_default_json_public_keys_for_test(),
             }
         ]
     });
@@ -239,7 +230,7 @@ async fn test_cup_get_info_persisted() {
         "packages": [
             {
                 "url": url_no_hash ,
-                "public_keys": make_public_keys_for_test(),
+                "public_keys": make_default_json_public_keys_for_test(),
             }
         ],
     });
