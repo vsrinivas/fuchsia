@@ -1046,4 +1046,79 @@ TEST(AmlSpiTest, InterruptRequired) {
   EXPECT_NOT_OK(AmlSpi::Create(nullptr, fake_ddk::kFakeParent));
 }
 
+TEST(AmlSpiTest, ExchangeDmaClientReversesBuffer) {
+  constexpr uint8_t kTxData[24] = {
+      0x3c, 0xa7, 0x5f, 0xc8, 0x4b, 0x0b, 0xdf, 0xef, 0xb9, 0xa0, 0xcb, 0xbd,
+      0xd4, 0xcf, 0xa8, 0xbf, 0x85, 0xf2, 0x6a, 0xe3, 0xba, 0xf1, 0x49, 0x00,
+  };
+  constexpr uint8_t kExpectedRxData[24] = {
+      0xea, 0x2b, 0x8f, 0x8f, 0xea, 0x2b, 0x8f, 0x8f, 0xea, 0x2b, 0x8f, 0x8f,
+      0xea, 0x2b, 0x8f, 0x8f, 0xea, 0x2b, 0x8f, 0x8f, 0xea, 0x2b, 0x8f, 0x8f,
+  };
+
+  FakeDdkSpi bind(true);
+
+  constexpr zx_paddr_t kDmaPaddrs[] = {0x1212'0000, 0xabab'000};
+
+  zx::bti bti;
+  ASSERT_OK(
+      fake_bti_create_with_paddrs(kDmaPaddrs, std::size(kDmaPaddrs), bti.reset_and_get_address()));
+
+  zx::unowned_bti bti_local = bti.borrow();
+  bind.pdev().set_bti(0, std::move(bti));
+
+  constexpr amlogic_spi::amlspi_config_t kSpiConfig[] = {
+      {
+          .bus_id = 0,
+          .cs_count = 3,
+          .cs = {5, 3, amlogic_spi::amlspi_config_t::kCsClientManaged},
+          .clock_divider_register_value = 0,
+          .use_enhanced_clock_mode = false,
+          .client_reverses_dma_transfers = true,
+      },
+  };
+  bind.SetMetadata(DEVICE_METADATA_AMLSPI_CONFIG, kSpiConfig, sizeof(kSpiConfig));
+
+  EXPECT_OK(AmlSpi::Create(nullptr, fake_ddk::kFakeParent));
+
+  ASSERT_EQ(bind.children().size(), 1);
+  AmlSpi& spi0 = *bind.children()[0].device;
+
+  fake_bti_pinned_vmo_info_t dma_vmos[2] = {};
+  size_t actual_vmos = 0;
+  EXPECT_OK(
+      fake_bti_get_pinned_vmos(bti_local->get(), dma_vmos, std::size(dma_vmos), &actual_vmos));
+  EXPECT_EQ(actual_vmos, std::size(dma_vmos));
+
+  zx::vmo tx_dma_vmo(dma_vmos[0].vmo);
+  zx::vmo rx_dma_vmo(dma_vmos[1].vmo);
+
+  rx_dma_vmo.write(kExpectedRxData, 0, sizeof(kExpectedRxData));
+
+  zx_paddr_t tx_paddr = 0;
+  zx_paddr_t rx_paddr = 0;
+
+  bind.mmio()[AML_SPI_DRADDR].SetWriteCallback([&tx_paddr](uint64_t value) { tx_paddr = value; });
+  bind.mmio()[AML_SPI_DWADDR].SetWriteCallback([&rx_paddr](uint64_t value) { rx_paddr = value; });
+
+  bind.gpio().ExpectWrite(ZX_OK, 0).ExpectWrite(ZX_OK, 1);
+
+  uint8_t buf[sizeof(kTxData)] = {};
+  memcpy(buf, kTxData, sizeof(buf));
+
+  size_t rx_actual;
+  EXPECT_OK(spi0.SpiImplExchange(0, buf, sizeof(buf), buf, sizeof(buf), &rx_actual));
+  EXPECT_EQ(rx_actual, sizeof(buf));
+  EXPECT_BYTES_EQ(kExpectedRxData, buf, sizeof(buf));
+
+  // Verify that the driver wrote the TX data to the TX VMO with the original byte order.
+  EXPECT_OK(tx_dma_vmo.read(buf, 0, sizeof(buf)));
+  EXPECT_BYTES_EQ(kTxData, buf, sizeof(buf));
+
+  EXPECT_EQ(tx_paddr, kDmaPaddrs[0]);
+  EXPECT_EQ(rx_paddr, kDmaPaddrs[1]);
+
+  EXPECT_FALSE(bind.ControllerReset());
+}
+
 }  // namespace spi

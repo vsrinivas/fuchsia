@@ -37,6 +37,8 @@ struct amlspi_config_t {
   uint32_t clock_divider_register_value;
   // If true, the SPI driver uses the enhanced clock mode instead of the regular clock mode.
   bool use_enhanced_clock_mode;
+  // If true, the client is responsible for reversing the endianness of transfers when using DMA.
+  bool client_reverses_dma_transfers;
 };
 
 }  // namespace amlogic_spi

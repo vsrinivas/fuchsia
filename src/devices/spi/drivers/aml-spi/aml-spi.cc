@@ -463,12 +463,16 @@ zx_status_t AmlSpi::ExchangeDma(const uint8_t* txdata, uint8_t* out_rxdata, uint
   constexpr size_t kBytesPerWord = sizeof(uint64_t);
 
   if (txdata) {
-    // Copy the TX data into the pinned VMO and reverse the endianness.
-    auto* tx_vmo = static_cast<uint64_t*>(tx_buffer_.mapped.start());
-    for (size_t offset = 0; offset < size; offset += kBytesPerWord) {
-      uint64_t tmp;
-      memcpy(&tmp, &txdata[offset], sizeof(tmp));
-      *tx_vmo++ = be64toh(tmp);
+    if (config_.client_reverses_dma_transfers) {
+      memcpy(tx_buffer_.mapped.start(), txdata, size);
+    } else {
+      // Copy the TX data into the pinned VMO and reverse the endianness.
+      auto* tx_vmo = static_cast<uint64_t*>(tx_buffer_.mapped.start());
+      for (size_t offset = 0; offset < size; offset += kBytesPerWord) {
+        uint64_t tmp;
+        memcpy(&tmp, &txdata[offset], sizeof(tmp));
+        *tx_vmo++ = be64toh(tmp);
+      }
     }
   } else {
     memset(tx_buffer_.mapped.start(), 0xff, size);
@@ -530,10 +534,14 @@ zx_status_t AmlSpi::ExchangeDma(const uint8_t* txdata, uint8_t* out_rxdata, uint
       return status;
     }
 
-    const auto* rx_vmo = static_cast<uint64_t*>(rx_buffer_.mapped.start());
-    for (size_t offset = 0; offset < size; offset += kBytesPerWord) {
-      uint64_t tmp = htobe64(*rx_vmo++);
-      memcpy(&out_rxdata[offset], &tmp, sizeof(tmp));
+    if (config_.client_reverses_dma_transfers) {
+      memcpy(out_rxdata, rx_buffer_.mapped.start(), size);
+    } else {
+      const auto* rx_vmo = static_cast<uint64_t*>(rx_buffer_.mapped.start());
+      for (size_t offset = 0; offset < size; offset += kBytesPerWord) {
+        uint64_t tmp = htobe64(*rx_vmo++);
+        memcpy(&out_rxdata[offset], &tmp, sizeof(tmp));
+      }
     }
   }
 
