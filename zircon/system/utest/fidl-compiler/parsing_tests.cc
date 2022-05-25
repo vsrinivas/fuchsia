@@ -682,9 +682,6 @@ type Struct = struct {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind);
 }
 
-// NOTE(fxbug.dev/72924): this test is slightly different from the old syntax
-// one that it replaces, in that the "missing" portion of the struct member is a
-// type, not a name.
 TEST(ParsingTests, BadFinalMemberMissingTypeAndSemicolon) {
   TestLibrary library(R"FIDL(
 library example;

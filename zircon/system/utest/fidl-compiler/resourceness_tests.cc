@@ -40,8 +40,6 @@ type Foo = resource enum {
 )FIDL");
 }
 
-// NOTE(fxbug.dev/72924): we don't parse resource in this position in the
-// new syntax.
 TEST(ResourcenessTests, BadConstResourceness) {
   TestLibrary library(R"FIDL(
 library example;
@@ -51,8 +49,6 @@ resource const BAR uint32 = 1;
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrExpectedDeclaration);
 }
 
-// NOTE(fxbug.dev/72924): we don't parse resource in this position in the
-// new syntax.
 TEST(ResourcenessTests, BadProtocolResourceness) {
   TestLibrary library(R"FIDL(
 library example;
@@ -62,8 +58,6 @@ resource protocol Foo {};
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrExpectedDeclaration);
 }
 
-// NOTE(fxbug.dev/72924): we don't parse resource in this position in the
-// new syntax.
 TEST(ResourcenessTests, BadAliasResourceness) {
   TestLibrary library(R"FIDL(
 library example;

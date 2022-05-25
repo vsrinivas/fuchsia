@@ -232,7 +232,6 @@ type Foo = strict union {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrOrdinalsMustStartAtOne);
 }
 
-// NOTE(fxbug.dev/72924): we lose the default specific error in the new syntax.
 TEST(UnionTests, BadDefaultNotAllowed) {
   TestLibrary library(R"FIDL(
 library test;
@@ -242,8 +241,6 @@ type Foo = strict union {
 };
 
 )FIDL");
-  // NOTE(fxbug.dev/72924): we lose the default specific error in the new syntax.
-  // TODO(fxbug.dev/72924): the second error doesn't make any sense
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind,
                                       fidl::ErrMissingOrdinalBeforeMember);
 }

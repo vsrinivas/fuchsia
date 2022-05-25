@@ -326,7 +326,6 @@ type Message = struct {
 
 alias alias_of_vector_of_string = vector<string>;
 )FIDL");
-  // NOTE(fxbug.dev/72924): A more general error is thrown in the new syntax
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrWrongNumberOfLayoutParameters);
 }
 

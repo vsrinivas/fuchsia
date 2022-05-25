@@ -85,8 +85,6 @@ type Foo = table {
     x int64;
 };
 )FIDL");
-  // NOTE(fxbug.dev/72924): difference in parser implementation, the old syntax
-  // checks for this case specifically.
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMissingOrdinalBeforeMember)
 }
 
@@ -199,12 +197,6 @@ type OptionalTableContainer = union {
     1: foo Foo:optional;
 };
 )FIDL");
-  // NOTE(fxbug.dev/72924): this pair of tests aims to document a behavior
-  // difference between the old and new syntaxes: in the old, we check for
-  // ErrOptionalTableMember first before determining if the type itself can be
-  // optional. This is not the case in the new syntax (we need to compile the
-  // type first to determine if it is optional). The optional union member
-  // error is tested in UnionTests.BadNoNullableMembers
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBeOptional);
 }
 
@@ -241,6 +233,7 @@ TEST(TableTests, BadOptionalTableMember) {
 library fidl.test.tables;
 
 type Foo = table {
+    // Strings can be optional in general, but not in table member position.
     1: t string:optional;
 };
 )FIDL");
@@ -252,14 +245,10 @@ TEST(TableTests, BadOptionalNonOptionalTableMember) {
 library fidl.test.tables;
 
 type Foo = table {
+    // Integers can never be optional.
     1: t int64:optional;
 };
 )FIDL");
-  // NOTE(fxbug.dev/72924): this pair of tests aims to document a behavior
-  // difference between the old and new syntaxes: in the old, we check for
-  // ErrOptionalTableMember first before determining if the type itself can be
-  // nullable. This is not the case in the new syntax (we need to compile the
-  // type first to determine if it is nullable).
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBeOptional);
 }
 
@@ -272,8 +261,6 @@ type Foo = table {
 };
 
 )FIDL");
-  // NOTE(fxbug.dev/72924): we lose the default specific error in the new syntax.
-  // TODO(fxbug.dev/72924): the second error doesn't make any sense
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind,
                                       fidl::ErrMissingOrdinalBeforeMember);
 }

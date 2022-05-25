@@ -483,7 +483,6 @@ library example;
 
 const u uint8<string> = 0;
 )FIDL");
-  // NOTE(fxbug.dev/72924): we provide a more general error in the new syntax
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrWrongNumberOfLayoutParameters);
 }
 

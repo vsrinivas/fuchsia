@@ -708,8 +708,6 @@ protocol P {
     Method(struct { r server_end; });
 };
 )FIDL");
-  // NOTE(fxbug.dev/72924): more specific error in the new syntax since it goes
-  // through a separate code path.
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrProtocolConstraintRequired);
 }
 
@@ -722,7 +720,6 @@ type S = struct {
     p server_end:<P,0>;
 };
 )FIDL");
-  // NOTE(fxbug.dev/72924): more general error in the new syntax
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedConstraint);
 }
 

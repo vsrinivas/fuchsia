@@ -38,7 +38,6 @@ type S = struct {
     arr array<uint8>;
 };
 )FIDL");
-  // NOTE(fxbug.dev/72924): A more general error is thrown in the new syntax
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrWrongNumberOfLayoutParameters);
 }
 
@@ -50,7 +49,6 @@ type S = struct {
     arr array;
 };
 )FIDL");
-  // NOTE(fxbug.dev/72924): A more general error is thrown in the new syntax
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrWrongNumberOfLayoutParameters);
 }
 
