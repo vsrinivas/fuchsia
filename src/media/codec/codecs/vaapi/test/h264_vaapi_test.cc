@@ -337,8 +337,8 @@ TEST_F(H264VaapiTestFixture, DelayedConfiguration) {
 TEST(H264Vaapi, CodecList) {
   EXPECT_TRUE(VADisplayWrapper::InitializeSingletonForTesting());
   auto codec_list = GetCodecList();
-  // video/h264 decode, video/h264-multi decode, video/vp9 decode, video/h264 encode
-  EXPECT_EQ(4u, codec_list.size());
+  // video/h264 decode, video/h264-multi decode, video/h264 encode
+  EXPECT_EQ(3u, codec_list.size());
 }
 
 // Test that we can connect using the CodecFactory.
