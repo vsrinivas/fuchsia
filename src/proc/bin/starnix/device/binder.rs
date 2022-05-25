@@ -341,7 +341,7 @@ struct SharedMemory {
     kernel_address: *mut u8,
     /// The address in user address space where the VMO is mapped.
     user_address: UserAddress,
-    /// The length of the shared memory mapping.
+    /// The length of the shared memory mapping in bytes.
     length: usize,
     /// The next free address in our bump allocator.
     next_free_offset: usize,
@@ -385,21 +385,21 @@ impl SharedMemory {
         })
     }
 
-    /// Allocates a buffer large enough to hold the requested data length and offsets length,
+    /// Allocates two buffers large enough to hold the requested data length and offsets length,
     /// inserting padding between data and offsets as needed.
     ///
     /// NOTE: When `data_length` and `offsets_length` are both 0, this will still allocate a minimum
-    /// buffer size of 8 bytes. This is because clients expect their buffer addresses to be uniquely
-    /// associated with a transaction. Returning the same address for different transactions will
-    /// break oneway transactions that have no payload.
+    /// data buffer size of 8 bytes. This is because clients expect their buffer addresses to be
+    /// uniquely associated with a transaction. Returning the same address for different
+    /// transactions will break oneway transactions that have no payload.
     //
     // This is a temporary implementation of an allocator and should be replaced by something
     // more sophisticated. It currently implements a bump allocator strategy.
-    fn allocate_buffer<'a>(
+    fn allocate_buffers<'a>(
         &'a mut self,
         data_length: usize,
         offsets_length: usize,
-    ) -> Result<SharedBuffer<'a>, Errno> {
+    ) -> Result<(SharedBuffer<'a, u8>, SharedBuffer<'a, binder_uintptr_t>), Errno> {
         // Round `data_length` up to the nearest multiple of 8, so that the offsets buffer is
         // aligned when we pack it next to the data buffer.
         let data_cap = round_up_to_increment(data_length, std::mem::size_of::<binder_uintptr_t>())?;
@@ -416,14 +416,14 @@ impl SharedMemory {
             if offset <= self.length {
                 let this_offset = self.next_free_offset;
                 self.next_free_offset = offset;
-
-                return Ok(SharedBuffer {
-                    memory: self,
-                    data_offset: this_offset,
-                    data_length,
-                    offsets_offset: this_offset + data_cap,
-                    offsets_length,
-                });
+                // SAFETY: The offsets and lengths have been bounds-checked above. Constructing a
+                // `SharedBuffer` should be safe.
+                return unsafe {
+                    Ok((
+                        SharedBuffer::new_unchecked(self, this_offset, data_length),
+                        SharedBuffer::new_unchecked(self, this_offset + data_cap, offsets_length),
+                    ))
+                };
             }
         }
         error!(ENOMEM)
@@ -442,52 +442,59 @@ impl SharedMemory {
 
 /// A buffer of memory allocated from a binder process' [`SharedMemory`].
 #[derive(Debug)]
-struct SharedBuffer<'a> {
+struct SharedBuffer<'a, T> {
     memory: &'a SharedMemory,
-    // Offset into the shared memory region where the data buffer begins.
-    data_offset: usize,
-    // The length of the data buffer.
-    data_length: usize,
-    // Offset into the shared memory region where the offsets buffer begins.
-    offsets_offset: usize,
-    // The length of the offsets buffer.
-    offsets_length: usize,
+    /// Offset into the shared memory region where the buffer begins.
+    offset: usize,
+    /// The length of the buffer in bytes.
+    length: usize,
+    // A zero-sized type that satisfies the compiler's need for the struct to reference `T`, which
+    // is used in `as_mut_bytes` and `as_bytes`.
+    _phantom_data: std::marker::PhantomData<T>,
 }
 
-impl<'a> SharedBuffer<'a> {
-    fn as_mut_bytes(&mut self) -> (&mut [u8], &mut [binder_uintptr_t]) {
-        // SAFETY: `data_offset + data_length` was bounds-checked by `allocate_buffer`, and the
-        // memory region pointed to was zero-allocated by mapping a new VMO.
-        let data = unsafe {
-            std::slice::from_raw_parts_mut(
-                self.memory.kernel_address.add(self.data_offset),
-                self.data_length,
-            )
-        };
-        // SAFETY: `offsets_offset + offsets_length` was bounds-checked by `allocate_buffer`, the
-        // size of `offsets_length` was checked to be a multiple of `binder_uintptr_t`, and the
-        // memory region pointed to was zero-allocated by mapping a new VMO.
-        let offsets = unsafe {
-            std::slice::from_raw_parts_mut(
-                self.memory.kernel_address.add(self.offsets_offset) as *mut binder_uintptr_t,
-                self.offsets_length / std::mem::size_of::<binder_uintptr_t>(),
-            )
-        };
-        (data, offsets)
+impl<'a, T: AsBytes> SharedBuffer<'a, T> {
+    /// Creates a new `SharedBuffer`, which represents a sub-region of `memory` starting at `offset`
+    /// bytes, with `length` bytes.
+    ///
+    /// This is unsafe because the caller is responsible for bounds-checking the sub-region and
+    /// ensuring it is not aliased.
+    unsafe fn new_unchecked(memory: &'a SharedMemory, offset: usize, length: usize) -> Self {
+        Self { memory, offset, length, _phantom_data: std::marker::PhantomData }
     }
 
-    fn data_user_buffer(&self) -> UserBuffer {
-        UserBuffer {
-            address: self.memory.user_address + self.data_offset,
-            length: self.data_length,
+    /// Returns a mutable slice of the buffer.
+    fn as_mut_bytes(&mut self) -> &mut [T] {
+        // SAFETY: `offset + length` was bounds-checked by `allocate_buffers`, and the
+        // memory region pointed to was zero-allocated by mapping a new VMO.
+        unsafe {
+            std::slice::from_raw_parts_mut(
+                self.memory.kernel_address.add(self.offset) as *mut T,
+                self.length / std::mem::size_of::<T>(),
+            )
         }
     }
 
-    fn offsets_user_buffer(&self) -> UserBuffer {
-        UserBuffer {
-            address: self.memory.user_address + self.offsets_offset,
-            length: self.offsets_length,
+    /// Returns an immutable slice of the buffer.
+    fn as_bytes(&self) -> &[T] {
+        // SAFETY: `offset + length` was bounds-checked by `allocate_buffers`, and the
+        // memory region pointed to was zero-allocated by mapping a new VMO.
+        unsafe {
+            std::slice::from_raw_parts(
+                self.memory.kernel_address.add(self.offset) as *const T,
+                self.length / std::mem::size_of::<T>(),
+            )
         }
+    }
+
+    /// The userspace address and length of the buffer.
+    fn user_buffer(&self) -> UserBuffer {
+        UserBuffer { address: self.memory.user_address + self.offset, length: self.length }
+    }
+
+    /// Returns `true` if the buffer has a length of zero.
+    fn is_empty(&self) -> bool {
+        self.length == 0
     }
 }
 
@@ -1773,19 +1780,20 @@ impl BinderDriver {
         let shared_memory = shared_memory_lock.as_mut().ok_or_else(|| errno!(ENOMEM))?;
 
         // Allocate a buffer from the target process' shared memory.
-        let mut shared_buffer =
-            shared_memory.allocate_buffer(data.data_size as usize, data.offsets_size as usize)?;
-        let (data_buffer, offsets_buffer) = shared_buffer.as_mut_bytes();
+        let (mut data_buffer, mut offsets_buffer) =
+            shared_memory.allocate_buffers(data.data_size as usize, data.offsets_size as usize)?;
 
         // SAFETY: `binder_transaction_data` was read from a userspace VMO, which means that all
         // bytes are defined, making union access safe (even if the value is garbage).
         let userspace_addrs = unsafe { data.data.ptr };
 
         // Copy the data straight into the target's buffer.
-        current_task.mm.read_memory(UserAddress::from(userspace_addrs.buffer), data_buffer)?;
+        current_task
+            .mm
+            .read_memory(UserAddress::from(userspace_addrs.buffer), data_buffer.as_mut_bytes())?;
         current_task.mm.read_objects(
             UserRef::new(UserAddress::from(userspace_addrs.offsets)),
-            offsets_buffer,
+            offsets_buffer.as_mut_bytes(),
         )?;
 
         // Fix up binder objects.
@@ -1797,18 +1805,14 @@ impl BinderDriver {
                 source_proc,
                 source_thread,
                 target_proc,
-                &offsets_buffer,
-                data_buffer,
+                offsets_buffer.as_bytes(),
+                data_buffer.as_mut_bytes(),
             )?
         } else {
             TransactionRefs::new(target_proc)
         };
 
-        Ok((
-            shared_buffer.data_user_buffer(),
-            shared_buffer.offsets_user_buffer(),
-            transaction_refs,
-        ))
+        Ok((data_buffer.user_buffer(), offsets_buffer.user_buffer(), transaction_refs))
     }
 
     /// Translates binder object handles from the sending process to the receiver process, patching
@@ -2255,7 +2259,7 @@ mod tests {
         let vmo = zx::Vmo::create(VMO_LENGTH as u64).expect("failed to create VMO");
         let mut shared_memory =
             SharedMemory::map(&vmo, BASE_ADDR, VMO_LENGTH).expect("failed to map shared memory");
-        shared_memory.allocate_buffer(3, 1).expect_err("offsets_length should be multiple of 8");
+        shared_memory.allocate_buffers(3, 1).expect_err("offsets_length should be multiple of 8");
     }
 
     #[fuchsia::test]
@@ -2267,16 +2271,15 @@ mod tests {
         const DATA_LEN: usize = 3;
         const OFFSETS_COUNT: usize = 1;
         const OFFSETS_LEN: usize = std::mem::size_of::<binder_uintptr_t>() * OFFSETS_COUNT;
-        let mut buf =
-            shared_memory.allocate_buffer(DATA_LEN, OFFSETS_LEN).expect("allocate buffer");
-        assert_eq!(buf.data_user_buffer(), UserBuffer { address: BASE_ADDR, length: DATA_LEN });
+        let (data_buf, offsets_buf) =
+            shared_memory.allocate_buffers(DATA_LEN, OFFSETS_LEN).expect("allocate buffer");
+        assert_eq!(data_buf.user_buffer(), UserBuffer { address: BASE_ADDR, length: DATA_LEN });
         assert_eq!(
-            buf.offsets_user_buffer(),
+            offsets_buf.user_buffer(),
             UserBuffer { address: BASE_ADDR + 8usize, length: OFFSETS_LEN }
         );
-        let (data_buf, offsets_buf) = buf.as_mut_bytes();
-        assert_eq!(data_buf.len(), DATA_LEN);
-        assert_eq!(offsets_buf.len(), OFFSETS_COUNT);
+        assert_eq!(data_buf.as_bytes().len(), DATA_LEN);
+        assert_eq!(offsets_buf.as_bytes().len(), OFFSETS_COUNT);
     }
 
     #[fuchsia::test]
@@ -2288,16 +2291,15 @@ mod tests {
         const DATA_LEN: usize = 256;
         const OFFSETS_COUNT: usize = 4;
         const OFFSETS_LEN: usize = std::mem::size_of::<binder_uintptr_t>() * OFFSETS_COUNT;
-        let mut buf =
-            shared_memory.allocate_buffer(DATA_LEN, OFFSETS_LEN).expect("allocate buffer");
-        let (data_buf, offsets_buf) = buf.as_mut_bytes();
+        let (mut data_buf, mut offsets_buf) =
+            shared_memory.allocate_buffers(DATA_LEN, OFFSETS_LEN).expect("allocate buffer");
 
         // Write data to the allocated buffers.
         const DATA_FILL: u8 = 0xff;
-        data_buf.fill(0xff);
+        data_buf.as_mut_bytes().fill(0xff);
 
         const OFFSETS_FILL: binder_uintptr_t = 0xDEADBEEFDEADBEEF;
-        offsets_buf.fill(OFFSETS_FILL);
+        offsets_buf.as_mut_bytes().fill(OFFSETS_FILL);
 
         // Check that the correct bit patterns were written through to the underlying VMO.
         let mut data = [0u8; DATA_LEN];
@@ -2318,32 +2320,32 @@ mod tests {
         // Check that two buffers allocated from the same shared memory region don't overlap.
         const BUF1_DATA_LEN: usize = 64;
         const BUF1_OFFSETS_LEN: usize = 8;
-        let buf = shared_memory
-            .allocate_buffer(BUF1_DATA_LEN, BUF1_OFFSETS_LEN)
+        let (data_buf, offsets_buf) = shared_memory
+            .allocate_buffers(BUF1_DATA_LEN, BUF1_OFFSETS_LEN)
             .expect("allocate buffer 1");
         assert_eq!(
-            buf.data_user_buffer(),
+            data_buf.user_buffer(),
             UserBuffer { address: BASE_ADDR, length: BUF1_DATA_LEN }
         );
         assert_eq!(
-            buf.offsets_user_buffer(),
+            offsets_buf.user_buffer(),
             UserBuffer { address: BASE_ADDR + BUF1_DATA_LEN, length: BUF1_OFFSETS_LEN }
         );
 
         const BUF2_DATA_LEN: usize = 32;
         const BUF2_OFFSETS_LEN: usize = 0;
-        let buf = shared_memory
-            .allocate_buffer(BUF2_DATA_LEN, BUF2_OFFSETS_LEN)
+        let (data_buf, offsets_buf) = shared_memory
+            .allocate_buffers(BUF2_DATA_LEN, BUF2_OFFSETS_LEN)
             .expect("allocate buffer 2");
         assert_eq!(
-            buf.data_user_buffer(),
+            data_buf.user_buffer(),
             UserBuffer {
                 address: BASE_ADDR + BUF1_DATA_LEN + BUF1_OFFSETS_LEN,
                 length: BUF2_DATA_LEN
             }
         );
         assert_eq!(
-            buf.offsets_user_buffer(),
+            offsets_buf.user_buffer(),
             UserBuffer {
                 address: BASE_ADDR + BUF1_DATA_LEN + BUF1_OFFSETS_LEN + BUF2_DATA_LEN,
                 length: BUF2_OFFSETS_LEN
@@ -2357,12 +2359,13 @@ mod tests {
         let mut shared_memory =
             SharedMemory::map(&vmo, BASE_ADDR, VMO_LENGTH).expect("failed to map shared memory");
 
-        shared_memory.allocate_buffer(VMO_LENGTH + 1, 0).expect_err("out-of-bounds allocation");
-        shared_memory.allocate_buffer(VMO_LENGTH, 1).expect_err("out-of-bounds allocation");
+        shared_memory.allocate_buffers(VMO_LENGTH + 1, 0).expect_err("out-of-bounds allocation");
+        shared_memory.allocate_buffers(VMO_LENGTH, 8).expect_err("out-of-bounds allocation");
 
-        let _ = shared_memory.allocate_buffer(VMO_LENGTH, 0).expect("allocate buffer");
+        shared_memory.allocate_buffers(VMO_LENGTH, 0).expect("allocate buffer");
 
-        shared_memory.allocate_buffer(1, 0).expect_err("out-of-bounds allocation");
+        // Now that the previous buffer allocation succeeded, there should be no more room.
+        shared_memory.allocate_buffers(1, 0).expect_err("out-of-bounds allocation");
     }
 
     #[fuchsia::test]
