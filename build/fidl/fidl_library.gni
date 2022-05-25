@@ -243,7 +243,13 @@ template("fidl_library") {
           forward_variables_from(invoker, [ "testonly" ])
           warn_on_changes = lenient_api_summary
           target_api_level = "$level"
-          golden = "//sdk/history/$level/$library_name.api_summary.json"
+
+          goldens_dir = "//sdk/history"
+          if (defined(invoker.goldens_dir)) {
+            goldens_dir = invoker.goldens_dir
+          }
+
+          golden = "$goldens_dir/$level/$library_name.api_summary.json"
           current = "$target_gen_dir/$level/$library_name.api_summary.json"
           if (level == platform_version.current_fuchsia_api_level) {
             policy = "no_breaking_changes"

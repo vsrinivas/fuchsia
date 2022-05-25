@@ -55,6 +55,12 @@ import("//build/rust/toolchain.gni")
 #   experimental_flags (optional)
 #     A list of experimental fidlc features to enable.
 #
+#   goldens_dir (optional)
+#     The directory containing golden files for this FIDL API, per API level.
+#     Should not contain a trailing slash. This is only used if the API is
+#     publishable in an SDK.
+#     Defaults to //sdk/history.
+#
 #   host_llcpp (optional)
 #     A flag to enable or disable llcpp host generation.
 #
@@ -100,6 +106,9 @@ template("fidl") {
   }
   if (defined(invoker.host_llcpp)) {
     not_needed(invoker, [ "host_llcpp" ])
+  }
+  if (defined(invoker.goldens_dir)) {
+    not_needed(invoker, [ "goldens_dir" ])
   }
   if (defined(invoker.lenient_api_summary)) {
     not_needed(invoker, [ "lenient_api_summary" ])
