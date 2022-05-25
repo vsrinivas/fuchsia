@@ -103,9 +103,9 @@ void GuestManager::GetHostVsockEndpoint(
 void GuestManager::GetGuestInfo(GetGuestInfoCallback callback) {
   fuchsia::virtualization::GuestInfo info;
   if (guest_started_) {
-    info.set_guest_status(::fuchsia::virtualization::GuestStatus::STARTED);
+    info.guest_status = ::fuchsia::virtualization::GuestStatus::STARTED;
   } else {
-    info.set_guest_status(::fuchsia::virtualization::GuestStatus::NOT_STARTED);
+    info.guest_status = ::fuchsia::virtualization::GuestStatus::NOT_STARTED;
   }
 
   callback(std::move(info));

@@ -8,9 +8,9 @@ type GuestStatus = strict enum {
     NOT_STARTED = 1;
     STARTED = 2;
 };
-type GuestInfo = table {
+type GuestInfo = struct {
     /// The current guest status.
-    1: guest_status GuestStatus;
+    guest_status GuestStatus;
 };
 
 @discoverable

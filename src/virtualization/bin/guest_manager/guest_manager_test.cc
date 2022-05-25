@@ -108,7 +108,7 @@ TEST_F(GuestManagerTest, LaunchAndGetInfo) {
   GuestManager manager(provider_.context(), "/pkg/", "data/configs/valid_guest.cfg");
 
   manager.GetGuestInfo([&get_callback_called](auto info) {
-    ASSERT_EQ(info.guest_status(), fuchsia::virtualization::GuestStatus::NOT_STARTED);
+    ASSERT_EQ(info.guest_status, fuchsia::virtualization::GuestStatus::NOT_STARTED);
     get_callback_called = true;
   });
   ASSERT_TRUE(get_callback_called);
@@ -125,7 +125,7 @@ TEST_F(GuestManagerTest, LaunchAndGetInfo) {
 
   get_callback_called = false;
   manager.GetGuestInfo([&get_callback_called](auto info) {
-    ASSERT_EQ(info.guest_status(), fuchsia::virtualization::GuestStatus::STARTED);
+    ASSERT_EQ(info.guest_status, fuchsia::virtualization::GuestStatus::STARTED);
     get_callback_called = true;
   });
   ASSERT_TRUE(get_callback_called);
