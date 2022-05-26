@@ -970,7 +970,6 @@ config("Wno-conversion") {
     "//zircon/third_party/ulib/ngunwind:*",
     "//zircon/tools/blobfs:*",
     "//zircon/tools/merkleroot:*",
-    "//zircon/tools/minfs:*",
   ]
 }
 

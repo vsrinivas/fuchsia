@@ -25,10 +25,6 @@ executable("minfs") {
   if (!is_fuchsia) {
     deps += [ "//zircon/system/ulib/zx-panic-libc" ]
   }
-  configs += [
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    "//build/config:Wno-conversion",
-  ]
 }
 
 sdk_host_tool("minfs_sdk") {
