@@ -52,22 +52,30 @@ async fn serve(mut stream: ResolverRequestStream) -> anyhow::Result<()> {
         fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
     )
     .context("failed to open /pkgfs")?;
-    while let Some(ResolverRequest::Resolve { component_url, responder }) =
+    while let Some(request) =
         stream.try_next().await.context("failed to read request from FIDL stream")?
     {
-        match resolve_component(&component_url, &packages_dir).await {
-            Ok(result) => responder.send(&mut Ok(result)),
-            Err(err) => {
-                let fidl_err = (&err).into();
-                error!(
-                    "failed to resolve component URL {}: {:#}",
-                    &component_url,
-                    anyhow::anyhow!(err)
-                );
-                responder.send(&mut Err(fidl_err))
+        match request {
+            ResolverRequest::Resolve { component_url, responder } => {
+                let mut result =
+                    resolve_component(&component_url, &packages_dir).await.map_err(|err| {
+                        let fidl_err = (&err).into();
+                        error!(
+                            "failed to resolve component URL {}: {:#}",
+                            &component_url,
+                            anyhow::anyhow!(err)
+                        );
+                        fidl_err
+                    });
+                responder.send(&mut result).context("failed sending response")?;
             }
-        }
-        .context("failed sending response")?;
+            ResolverRequest::ResolveWithContext { component_url: _, context: _, responder } => {
+                // To be implemented in a future commit
+                responder
+                    .send(&mut Err(fresolution::ResolverError::Internal))
+                    .expect("failed to send resolve response");
+            }
+        };
     }
     Ok(())
 }

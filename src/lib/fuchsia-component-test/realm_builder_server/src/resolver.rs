@@ -144,56 +144,65 @@ impl Registry {
         while let Some(req) = stream.try_next().await? {
             match req {
                 fresolution::ResolverRequest::Resolve { component_url, responder } => {
-                    let parsed_url = match Url::parse(&component_url) {
-                        Ok(url) => url,
-                        Err(_) => {
-                            responder.send(&mut Err(fresolution::ResolverError::InvalidArgs))?;
-                            continue;
-                        }
-                    };
-                    let component_decls_guard = self.component_decls.lock().await;
-                    if let Some(ResolveableComponent {
-                        decl,
-                        package_dir,
-                        config_value_replacements,
-                    }) = component_decls_guard.get(&parsed_url).cloned()
-                    {
-                        let package = if let Some(p) = &package_dir {
-                            let (client_end, server_end) =
-                                create_endpoints::<fio::DirectoryMarker>()?;
-                            p.clone(
-                                fio::OpenFlags::CLONE_SAME_RIGHTS,
-                                ServerEnd::new(server_end.into_channel()),
-                            )?;
-                            Some(fresolution::Package {
-                                url: Some(component_url.clone()),
-                                directory: Some(client_end),
-                                ..fresolution::Package::EMPTY
-                            })
-                        } else {
-                            None
-                        };
-
-                        let config_values =
-                            Self::get_config_data(&decl, &package_dir, &config_value_replacements)
-                                .await?;
-
-                        responder.send(&mut Ok(fresolution::Component {
-                            url: Some(component_url),
-                            decl: Some(encode(decl)?),
-                            package,
-                            config_values,
-                            ..fresolution::Component::EMPTY
-                        }))?;
-                    } else {
-                        let mut res =
-                            Self::load_relative_url(parsed_url, component_decls_guard).await;
-                        responder.send(&mut res)?;
-                    }
+                    responder.send(&mut self.resolve(&component_url).await)?;
+                }
+                fresolution::ResolverRequest::ResolveWithContext {
+                    component_url: _,
+                    context: _,
+                    responder,
+                } => {
+                    warn!("The RealmBuilder resolver does not resolve relative path component URLs with a context");
+                    responder.send(&mut Err(fresolution::ResolverError::InvalidArgs))?;
                 }
             }
         }
         Ok(())
+    }
+
+    async fn resolve(
+        self: &Arc<Self>,
+        component_url: &str,
+    ) -> Result<fresolution::Component, fresolution::ResolverError> {
+        let parsed_url =
+            Url::parse(&component_url).map_err(|_| fresolution::ResolverError::Internal)?;
+        let component_decls_guard = self.component_decls.lock().await;
+        if let Some(resolvable_component) = component_decls_guard.get(&parsed_url).cloned() {
+            Self::load_absolute_url(component_url, resolvable_component)
+                .await
+                .map_err(|_| fresolution::ResolverError::Internal)
+        } else {
+            Self::load_relative_url(parsed_url, component_decls_guard).await
+        }
+    }
+
+    async fn load_absolute_url(
+        component_url: &str,
+        resolveable_component: ResolveableComponent,
+    ) -> Result<fresolution::Component, Error> {
+        let ResolveableComponent { decl, package_dir, config_value_replacements } =
+            resolveable_component;
+        let package = if let Some(p) = &package_dir {
+            let (client_end, server_end) = create_endpoints::<fio::DirectoryMarker>()?;
+            p.clone(fio::OpenFlags::CLONE_SAME_RIGHTS, ServerEnd::new(server_end.into_channel()))?;
+            Some(fresolution::Package {
+                url: Some(component_url.to_string()),
+                directory: Some(client_end),
+                ..fresolution::Package::EMPTY
+            })
+        } else {
+            None
+        };
+
+        let config_values =
+            Self::get_config_data(&decl, &package_dir, &config_value_replacements).await?;
+        Ok(fresolution::Component {
+            url: Some(component_url.to_string()),
+            decl: Some(encode(decl)?),
+            package,
+            config_values,
+            resolution_context: None,
+            ..fresolution::Component::EMPTY
+        })
     }
 
     // Realm builder never generates URLs with fragments. If we're asked to resolve a URL with
@@ -218,8 +227,8 @@ impl Registry {
         let component = component_decls_guard
             .get(&parsed_url)
             .ok_or(fresolution::ResolverError::ManifestNotFound)?;
-        let package_dir = component.package_dir.clone();
-        let package_dir = package_dir.ok_or(fresolution::ResolverError::PackageNotFound)?;
+        let package_dir =
+            component.package_dir.clone().ok_or(fresolution::ResolverError::PackageNotFound)?;
         let manifest_file =
             io_util::open_file(&package_dir, Path::new(&fragment), fio::OpenFlags::RIGHT_READABLE)
                 .map_err(|_| fresolution::ResolverError::ManifestNotFound)?;
@@ -242,6 +251,7 @@ impl Registry {
         .map_err(|_| fresolution::ResolverError::ConfigValuesNotFound)?;
         Ok(fresolution::Component {
             url: Some(component_url.clone()),
+            resolution_context: None,
             decl: Some(encode(component_decl).map_err(|_| fresolution::ResolverError::Internal)?),
             package: Some(fresolution::Package {
                 url: Some(component_url),

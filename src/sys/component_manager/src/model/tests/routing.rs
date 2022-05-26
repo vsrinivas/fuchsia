@@ -2023,23 +2023,40 @@ async fn use_resolver_from_parent_environment() {
         },
         // Wait for a request, and resolve it.
         async {
-            while let Some(fresolution::ResolverRequest::Resolve { component_url, responder }) =
-                receiver.next().await
-            {
-                assert_eq!(component_url, "base://b");
-                responder
-                    .send(&mut Ok(fresolution::Component {
-                        url: Some("test://b".into()),
-                        decl: Some(fmem::Data::Bytes(
-                            fidl::encoding::encode_persistent::<fdecl::Component>(
-                                &mut default_component_decl().native_into_fidl(),
-                            )
-                            .unwrap(),
-                        )),
-                        package: None,
-                        ..fresolution::Component::EMPTY
-                    }))
-                    .expect("failed to send resolve response");
+            while let Some(request) = receiver.next().await {
+                match request {
+                    fresolution::ResolverRequest::Resolve { component_url, responder } => {
+                        assert_eq!(component_url, "base://b");
+                        responder
+                            .send(&mut Ok(fresolution::Component {
+                                url: Some("test://b".into()),
+                                decl: Some(fmem::Data::Bytes(
+                                    fidl::encoding::encode_persistent::<fdecl::Component>(
+                                        &mut default_component_decl().native_into_fidl(),
+                                    )
+                                    .unwrap(),
+                                )),
+                                package: None,
+                                // this test only resolves one component_url
+                                resolution_context: None,
+                                ..fresolution::Component::EMPTY
+                            }))
+                            .expect("failed to send resolve response");
+                    }
+                    fresolution::ResolverRequest::ResolveWithContext {
+                        component_url,
+                        context,
+                        responder,
+                    } => {
+                        warn!(
+                            "ResolveWithContext({}, {:?}) request is unexpected in this test",
+                            component_url, context
+                        );
+                        responder
+                            .send(&mut Err(fresolution::ResolverError::Internal))
+                            .expect("failed to send resolve response");
+                    }
+                }
             }
         }
     );
@@ -2110,23 +2127,40 @@ async fn use_resolver_from_grandparent_environment() {
         },
         // Wait for a request, and resolve it.
         async {
-            while let Some(fresolution::ResolverRequest::Resolve { component_url, responder }) =
-                receiver.next().await
-            {
-                assert_eq!(component_url, "base://c");
-                responder
-                    .send(&mut Ok(fresolution::Component {
-                        url: Some("test://c".into()),
-                        decl: Some(fmem::Data::Bytes(
-                            fidl::encoding::encode_persistent::<fdecl::Component>(
-                                &mut default_component_decl().native_into_fidl(),
-                            )
-                            .unwrap(),
-                        )),
-                        package: None,
-                        ..fresolution::Component::EMPTY
-                    }))
-                    .expect("failed to send resolve response");
+            while let Some(request) = receiver.next().await {
+                match request {
+                    fresolution::ResolverRequest::Resolve { component_url, responder } => {
+                        assert_eq!(component_url, "base://c");
+                        responder
+                            .send(&mut Ok(fresolution::Component {
+                                url: Some("test://c".into()),
+                                decl: Some(fmem::Data::Bytes(
+                                    fidl::encoding::encode_persistent::<fdecl::Component>(
+                                        &mut default_component_decl().native_into_fidl(),
+                                    )
+                                    .unwrap(),
+                                )),
+                                package: None,
+                                // this test only resolves one component_url
+                                resolution_context: None,
+                                ..fresolution::Component::EMPTY
+                            }))
+                            .expect("failed to send resolve response");
+                    }
+                    fresolution::ResolverRequest::ResolveWithContext {
+                        component_url,
+                        context,
+                        responder,
+                    } => {
+                        warn!(
+                            "ResolveWithContext({}, {:?}) request is unexpected in this test",
+                            component_url, context
+                        );
+                        responder
+                            .send(&mut Err(fresolution::ResolverError::Internal))
+                            .expect("failed to send resolve response");
+                    }
+                }
             }
         }
     );
@@ -2195,23 +2229,40 @@ async fn resolver_is_not_available() {
         },
         // Wait for a request, and resolve it.
         async {
-            while let Some(fresolution::ResolverRequest::Resolve { component_url, responder }) =
-                receiver.next().await
-            {
-                assert_eq!(component_url, "base://b");
-                responder
-                    .send(&mut Ok(fresolution::Component {
-                        url: Some("test://b".into()),
-                        decl: Some(fmem::Data::Bytes(
-                            fidl::encoding::encode_persistent::<fdecl::Component>(
-                                &mut default_component_decl().native_into_fidl(),
-                            )
-                            .unwrap(),
-                        )),
-                        package: None,
-                        ..fresolution::Component::EMPTY
-                    }))
-                    .expect("failed to send resolve response");
+            while let Some(request) = receiver.next().await {
+                match request {
+                    fresolution::ResolverRequest::Resolve { component_url, responder } => {
+                        assert_eq!(component_url, "base://b");
+                        responder
+                            .send(&mut Ok(fresolution::Component {
+                                url: Some("test://b".into()),
+                                decl: Some(fmem::Data::Bytes(
+                                    fidl::encoding::encode_persistent::<fdecl::Component>(
+                                        &mut default_component_decl().native_into_fidl(),
+                                    )
+                                    .unwrap(),
+                                )),
+                                package: None,
+                                // this test only resolves one component_url
+                                resolution_context: None,
+                                ..fresolution::Component::EMPTY
+                            }))
+                            .expect("failed to send resolve response");
+                    }
+                    fresolution::ResolverRequest::ResolveWithContext {
+                        component_url,
+                        context,
+                        responder,
+                    } => {
+                        warn!(
+                            "ResolveWithContext({}, {:?}) request is unexpected in this test",
+                            component_url, context
+                        );
+                        responder
+                            .send(&mut Err(fresolution::ResolverError::Internal))
+                            .expect("failed to send resolve response");
+                    }
+                }
             }
         }
     );
@@ -2277,35 +2328,53 @@ async fn resolver_component_decl_is_validated() {
         },
         // Wait for a request, and resolve it.
         async {
-            while let Some(fresolution::ResolverRequest::Resolve { component_url, responder }) =
-                receiver.next().await
-            {
-                assert_eq!(component_url, "base://b");
-                responder
-                    .send(&mut Ok(fresolution::Component {
-                        url: Some("test://b".into()),
-                        decl: Some(fmem::Data::Bytes({
-                            let mut fidl = fdecl::Component {
-                                exposes: Some(vec![fdecl::Expose::Protocol(
-                                    fdecl::ExposeProtocol {
-                                        source: Some(fdecl::Ref::Self_(fdecl::SelfRef {})),
-                                        ..fdecl::ExposeProtocol::EMPTY
-                                    },
-                                )]),
-                                ..fdecl::Component::EMPTY
-                            };
-                            fidl::encoding::encode_persistent_with_context(
-                                &fidl::encoding::Context {
-                                    wire_format_version: fidl::encoding::WireFormatVersion::V2,
-                                },
-                                &mut fidl,
-                            )
-                            .unwrap()
-                        })),
-                        package: None,
-                        ..fresolution::Component::EMPTY
-                    }))
-                    .expect("failed to send resolve response");
+            while let Some(request) = receiver.next().await {
+                match request {
+                    fresolution::ResolverRequest::Resolve { component_url, responder } => {
+                        assert_eq!(component_url, "base://b");
+                        responder
+                            .send(&mut Ok(fresolution::Component {
+                                url: Some("test://b".into()),
+                                decl: Some(fmem::Data::Bytes({
+                                    let mut fidl = fdecl::Component {
+                                        exposes: Some(vec![fdecl::Expose::Protocol(
+                                            fdecl::ExposeProtocol {
+                                                source: Some(fdecl::Ref::Self_(fdecl::SelfRef {})),
+                                                ..fdecl::ExposeProtocol::EMPTY
+                                            },
+                                        )]),
+                                        ..fdecl::Component::EMPTY
+                                    };
+                                    fidl::encoding::encode_persistent_with_context(
+                                        &fidl::encoding::Context {
+                                            wire_format_version:
+                                                fidl::encoding::WireFormatVersion::V2,
+                                        },
+                                        &mut fidl,
+                                    )
+                                    .unwrap()
+                                })),
+                                package: None,
+                                // this test only resolves one component_url
+                                resolution_context: None,
+                                ..fresolution::Component::EMPTY
+                            }))
+                            .expect("failed to send resolve response");
+                    }
+                    fresolution::ResolverRequest::ResolveWithContext {
+                        component_url,
+                        context,
+                        responder,
+                    } => {
+                        warn!(
+                            "ResolveWithContext({}, {:?}) request is unexpected in this test",
+                            component_url, context
+                        );
+                        responder
+                            .send(&mut Err(fresolution::ResolverError::Internal))
+                            .expect("failed to send resolve response");
+                    }
+                }
             }
         }
     );

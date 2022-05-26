@@ -303,6 +303,12 @@ class FakeBootResolver final : public fidl::WireServer<fuchsia_component_resolut
     completer.ReplySuccess(std::move(component));
   }
 
+  void ResolveWithContext(ResolveWithContextRequestView request,
+                          ResolveWithContextCompleter::Sync& completer) override {
+    FX_LOGF(ERROR, nullptr, "FakeBootResolver does not currently support ResolveWithContext");
+    completer.ReplyError(fuchsia_component_resolution::wire::ResolverError::kInvalidArgs);
+  }
+
   fbl::RefPtr<fs::RemoteDir> pkg_dir_;
 };
 

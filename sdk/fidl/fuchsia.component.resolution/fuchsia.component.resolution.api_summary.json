@@ -15,6 +15,11 @@
         "name": "fuchsia.component.resolution/Component.package"
     },
     {
+        "declaration": "vector<uint8>:8192",
+        "kind": "table/member",
+        "name": "fuchsia.component.resolution/Component.resolution_context"
+    },
+    {
         "declaration": "string:2083",
         "kind": "table/member",
         "name": "fuchsia.component.resolution/Component.url"
@@ -29,6 +34,12 @@
         "kind": "const",
         "name": "fuchsia.component.resolution/MAX_COMPONENT_URL_LENGTH",
         "value": "2083"
+    },
+    {
+        "declaration": "uint32",
+        "kind": "const",
+        "name": "fuchsia.component.resolution/MAX_RESOLUTION_CONTEXT_LENGTH",
+        "value": "8192"
     },
     {
         "declaration": "fuchsia.io/Directory",
@@ -49,6 +60,11 @@
         "declaration": "(string:2083 component_url) -> (fuchsia.component.resolution/Resolver_Resolve_Result result)",
         "kind": "protocol/member",
         "name": "fuchsia.component.resolution/Resolver.Resolve"
+    },
+    {
+        "declaration": "(string:2083 component_url,vector<uint8>:8192 context) -> (fuchsia.component.resolution/Resolver_ResolveWithContext_Result result)",
+        "kind": "protocol/member",
+        "name": "fuchsia.component.resolution/Resolver.ResolveWithContext"
     },
     {
         "kind": "protocol",
@@ -108,6 +124,32 @@
         "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.component.resolution/ResolverError",
+        "strictness": "strict"
+    },
+    {
+        "declaration": "fuchsia.component.resolution/Component",
+        "kind": "struct/member",
+        "name": "fuchsia.component.resolution/Resolver_ResolveWithContext_Response.component"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.component.resolution/Resolver_ResolveWithContext_Response",
+        "resourceness": "resource"
+    },
+    {
+        "declaration": "fuchsia.component.resolution/ResolverError",
+        "kind": "union/member",
+        "name": "fuchsia.component.resolution/Resolver_ResolveWithContext_Result.err"
+    },
+    {
+        "declaration": "fuchsia.component.resolution/Resolver_ResolveWithContext_Response",
+        "kind": "union/member",
+        "name": "fuchsia.component.resolution/Resolver_ResolveWithContext_Result.response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.component.resolution/Resolver_ResolveWithContext_Result",
+        "resourceness": "resource",
         "strictness": "strict"
     },
     {

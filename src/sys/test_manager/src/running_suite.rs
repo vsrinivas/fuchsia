@@ -508,7 +508,7 @@ async fn get_realm(
         )
         .await?;
 
-    // If this is realm is inside the hermetic tests collections, set up the
+    // If this realm is inside the hermetic tests collections, set up the
     // hermetic resolver local component.
     let mut test_root_child_opts = ChildOptions::new().eager();
     let mut hermetic_test_package_name = None;

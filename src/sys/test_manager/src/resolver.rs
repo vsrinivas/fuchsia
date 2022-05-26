@@ -14,11 +14,10 @@ use {
     tracing::{error, warn},
 };
 
-async fn hermetic_resolve(
+fn validate_hermetic_package(
     component_url: &str,
     hermetic_test_package_name: &String,
-    universe_resolver: Arc<fresolution::ResolverProxy>,
-) -> Result<fresolution::Component, fresolution::ResolverError> {
+) -> Result<(), fresolution::ResolverError> {
     let package_url =
         PkgUrl::parse(component_url).map_err(|_| fresolution::ResolverError::InvalidArgs)?;
     let package_name = package_url.name();
@@ -31,10 +30,7 @@ async fn hermetic_resolve(
             );
         return Err(fresolution::ResolverError::PackageNotFound);
     }
-    universe_resolver.resolve(component_url).await.map_err(|err| {
-        error!("failed to resolve component {}: {:?}", &component_url, err);
-        fresolution::ResolverError::Internal
-    })?
+    Ok(())
 }
 
 pub async fn serve_hermetic_resolver(
@@ -49,20 +45,47 @@ pub async fn serve_hermetic_resolver(
         let universe_resolver = universe_resolver.clone();
         let hermetic_test_package_name = hermetic_test_package_name.clone();
         tasks.push(fasync::Task::local(async move {
-            while let Some(fresolution::ResolverRequest::Resolve { component_url, responder }) =
+            while let Some(request) =
                 stream.try_next().await.expect("failed to serve component resolver")
             {
-                match hermetic_resolve(
-                    &component_url,
-                    &hermetic_test_package_name,
-                    universe_resolver.clone(),
-                )
-                .await
-                {
-                    Ok(result) => responder.send(&mut Ok(result)),
-                    Err(err) => responder.send(&mut Err(err.into())),
+                match request {
+                    fresolution::ResolverRequest::Resolve { component_url, responder } => {
+                        let mut result = if let Err(err) =
+                            validate_hermetic_package(&component_url, &hermetic_test_package_name)
+                        {
+                            Err(err)
+                        } else {
+                            universe_resolver.resolve(&component_url).await.unwrap_or_else(|err| {
+                                error!("failed to resolve component {}: {:?}", component_url, err);
+                                Err(fresolution::ResolverError::Internal)
+                            })
+                        };
+                        responder.send(&mut result).expect("failed sending response");
+                    }
+                    fresolution::ResolverRequest::ResolveWithContext {
+                        component_url,
+                        context,
+                        responder,
+                    } => {
+                        let mut result = if let Err(err) =
+                            validate_hermetic_package(&component_url, &hermetic_test_package_name)
+                        {
+                            Err(err)
+                        } else {
+                            universe_resolver
+                                .resolve_with_context(&component_url, &context)
+                                .await
+                                .unwrap_or_else(|err| {
+                                    error!(
+                                        "failed to resolve component {} with context {:?}: {:?}",
+                                        component_url, context, err
+                                    );
+                                    Err(fresolution::ResolverError::Internal)
+                                })
+                        };
+                        responder.send(&mut result).expect("failed sending response");
+                    }
                 }
-                .expect("failed sending response");
             }
         }));
     });
@@ -148,6 +171,17 @@ mod tests {
                     _ => responder.send(&mut Err(fresolution::ResolverError::Internal)),
                 }
                 .expect("failed sending response");
+            }
+            fresolution::ResolverRequest::ResolveWithContext {
+                component_url,
+                context,
+                responder,
+            } => {
+                // This test only responds to Resolve
+                error!("this test resolver does not support ResolveWithContext, and could not resolve component URL {:?} with context {:?}", component_url, context);
+                responder
+                    .send(&mut Err(fresolution::ResolverError::InvalidArgs))
+                    .expect("failed sending response");
             }
         }
     }

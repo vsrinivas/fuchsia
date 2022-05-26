@@ -84,26 +84,37 @@ async fn serve_impl(
     blobfs: &blobfs::Client,
     pkg_cache: fuchsia_hash::Hash,
 ) -> anyhow::Result<()> {
-    while let Some(ResolverRequest::Resolve { component_url, responder }) =
+    while let Some(request) =
         stream.try_next().await.context("failed to read request from FIDL stream")?
     {
-        if component_url != PKG_CACHE_COMPONENT_URL {
-            error!("failed to resolve invalid pkg-cache URL {:?}", component_url);
-            responder
-                .send(&mut Err(fresolution::ResolverError::InvalidArgs))
-                .context("failed sending invalid URL error")?;
-            continue;
-        }
+        match request {
+            ResolverRequest::Resolve { component_url, responder } => {
+                if component_url != PKG_CACHE_COMPONENT_URL {
+                    error!("failed to resolve invalid pkg-cache URL {:?}", component_url);
+                    responder
+                        .send(&mut Err(fresolution::ResolverError::InvalidArgs))
+                        .context("failed sending invalid URL error")?;
+                    continue;
+                }
 
-        let () = match resolve_pkg_cache(blobfs, pkg_cache).await {
-            Ok(result) => responder.send(&mut Ok(result)),
-            Err(e) => {
-                let fidl_err = (&e).into();
-                error!("failed to resolve pkg-cache: {:#}", anyhow::anyhow!(e));
-                responder.send(&mut Err(fidl_err))
+                let () = match resolve_pkg_cache(blobfs, pkg_cache).await {
+                    Ok(result) => responder.send(&mut Ok(result)),
+                    Err(e) => {
+                        let fidl_err = (&e).into();
+                        error!("failed to resolve pkg-cache: {:#}", anyhow::anyhow!(e));
+                        responder.send(&mut Err(fidl_err))
+                    }
+                }
+                .context("failed sending response")?;
+            }
+
+            ResolverRequest::ResolveWithContext { component_url, context, responder } => {
+                error!("pkg_cache_resolver does not support ResolveWithContext, and could not resolve component URL {:?} with context {:?}", component_url, context);
+                responder
+                    .send(&mut Err(fresolution::ResolverError::InvalidArgs))
+                    .context("failed sending response")?;
             }
         }
-        .context("failed sending response")?;
     }
     Ok(())
 }
@@ -137,6 +148,8 @@ async fn resolve_pkg_cache(
             directory: Some(client),
             ..fresolution::Package::EMPTY
         }),
+        // pkg_cache_resolver only resolves the pkg-cache component
+        resolution_context: None,
         ..fresolution::Component::EMPTY
     })
 }

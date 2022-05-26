@@ -17,7 +17,7 @@ library fuchsia.component.resolution;
 /// interface.
 @discoverable
 protocol Resolver {
-    /// Resolves a component with the given URL.
+    /// Resolves a component with the given absolute URL.
     ///
     /// `component_url` is the unescaped URL of the component to resolve.
     ///
@@ -27,6 +27,26 @@ protocol Resolver {
     /// On failure, returns a `ResolverError` error.
     Resolve(struct {
         component_url string:MAX_COMPONENT_URL_LENGTH;
+    }) -> (resource struct {
+        component Component;
+    }) error ResolverError;
+
+    /// Resolves a component with the absolute or relative URL. If relative, the
+    /// component will be resolved relative to the supplied `context`.
+    ///
+    /// `component_url` is the unescaped URL of the component to resolve, the
+    /// format of which can be either:
+    ///
+    ///   * a fully-qualified absolute component URL; or
+    ///   * a subpackaged-component reference, prefixed by a URI relative
+    ///     path to its containing subpackage (for example,
+    ///     `child_package#meta/some_component.cm`)
+    ///
+    /// `context` is the `resolution_context` of a previously-resolved
+    /// `Component`, providing the context for resoving a relative URL.
+    ResolveWithContext(struct {
+        component_url string:MAX_COMPONENT_URL_LENGTH;
+        context Context;
     }) -> (resource struct {
         component Component;
     }) error ResolverError;

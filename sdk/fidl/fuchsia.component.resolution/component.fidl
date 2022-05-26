@@ -37,4 +37,36 @@ type Component = resource table {
     /// Binary representation of the component's configuration values
     /// (`fuchsia.component.config.ValuesData`).
     4: config_values fuchsia.mem.Data;
+
+    /// The context used to resolve `component_url`s relative to this
+    /// component. Pass this value to `Resolver::ResolveWithContext()` when
+    /// resolving a component URL that _may_ be relative to this `Component`.
+    ///
+    /// The `resolution_context` is an opaque value (from the perspective of
+    /// component resolution) that is provided by a component `Resolver` to save
+    /// with a parent `Component`.
+    ///
+    /// `Resolver`s that can resolve relative path component URLs, via
+    /// `ResolveWithContext`, should return a `resolution_context` from both
+    /// `Resolve` and `ResolveWithContext`. Relative path component URLs can
+    /// only be resolved via `ResolveWithContext`, which requires a valid
+    /// resolution `Context`.
+    5: resolution_context Context;
 };
+
+// TODO(fxbug.dev/100050): Change this length to something smaller once
+// fuchsia.pkg implements subpackages, assuming fuchsia.pkg implements the
+// package context value as a much smaller lookup key (such as a package hash to
+// the package containing the subpackage map).
+
+// Note the context length, in bytes, must be at least the size of
+// fuchsia.pkg.MAX_RESOLUTION_CONTEXT_LENGTH, plus the size required to
+// accommodate additional component context information, if any.
+
+/// The maximum number of bytes for a `Context`.
+const MAX_RESOLUTION_CONTEXT_LENGTH uint32 = 8192;
+
+/// A byte array that persists a value used by the target `Resolver` to locate
+/// and resolve a component by relative path (for example, by a subpackage
+/// name).
+alias Context = bytes:MAX_RESOLUTION_CONTEXT_LENGTH;

@@ -41,6 +41,8 @@ async fn serve_resolver(mut stream: fresolution::ResolverRequestStream) -> Resul
                             directory: Some(client),
                             ..fresolution::Package::EMPTY
                         }),
+                        // component-manager-test-resolver only resolves test://trigger
+                        resolution_context: None,
                         ..fresolution::Component::EMPTY
                     })).with_context(|| format!("failed to send response to resolve request for component URL {}", component_url))?;
                 } else {
@@ -53,6 +55,21 @@ async fn serve_resolver(mut stream: fresolution::ResolverRequestStream) -> Resul
                             )
                         })?;
                 }
+            }
+            fresolution::ResolverRequest::ResolveWithContext {
+                component_url,
+                context,
+                responder,
+            } => {
+                error!("custom resolver does not support ResolveWithContext, and could not resolve component URL {:?} with context {:?}", component_url, context);
+                responder.send(&mut Err(fresolution::ResolverError::InvalidArgs)).with_context(
+                    || {
+                        format!(
+                            "failed to send response to resolve request for component URL {}",
+                            component_url
+                        )
+                    },
+                )?;
             }
         }
     }

@@ -1,13 +1,16 @@
 table/member fuchsia.component.resolution/Component.config_values fuchsia.mem/Data
 table/member fuchsia.component.resolution/Component.decl fuchsia.mem/Data
 table/member fuchsia.component.resolution/Component.package fuchsia.component.resolution/Package
+table/member fuchsia.component.resolution/Component.resolution_context vector<uint8>:8192
 table/member fuchsia.component.resolution/Component.url string:2083
 resource table fuchsia.component.resolution/Component
 const fuchsia.component.resolution/MAX_COMPONENT_URL_LENGTH uint32 2083
+const fuchsia.component.resolution/MAX_RESOLUTION_CONTEXT_LENGTH uint32 8192
 table/member fuchsia.component.resolution/Package.directory fuchsia.io/Directory
 table/member fuchsia.component.resolution/Package.url string:2083
 resource table fuchsia.component.resolution/Package
 protocol/member fuchsia.component.resolution/Resolver.Resolve(string:2083 component_url) -> (fuchsia.component.resolution/Resolver_Resolve_Result result)
+protocol/member fuchsia.component.resolution/Resolver.ResolveWithContext(string:2083 component_url,vector<uint8>:8192 context) -> (fuchsia.component.resolution/Resolver_ResolveWithContext_Result result)
 protocol fuchsia.component.resolution/Resolver
 enum/member fuchsia.component.resolution/ResolverError.CONFIG_VALUES_NOT_FOUND 10
 enum/member fuchsia.component.resolution/ResolverError.INTERNAL 1
@@ -20,6 +23,11 @@ enum/member fuchsia.component.resolution/ResolverError.NO_SPACE 7
 enum/member fuchsia.component.resolution/ResolverError.PACKAGE_NOT_FOUND 6
 enum/member fuchsia.component.resolution/ResolverError.RESOURCE_UNAVAILABLE 8
 strict enum fuchsia.component.resolution/ResolverError uint32
+struct/member fuchsia.component.resolution/Resolver_ResolveWithContext_Response.component fuchsia.component.resolution/Component
+resource struct fuchsia.component.resolution/Resolver_ResolveWithContext_Response
+union/member fuchsia.component.resolution/Resolver_ResolveWithContext_Result.err fuchsia.component.resolution/ResolverError
+union/member fuchsia.component.resolution/Resolver_ResolveWithContext_Result.response fuchsia.component.resolution/Resolver_ResolveWithContext_Response
+resource strict union fuchsia.component.resolution/Resolver_ResolveWithContext_Result
 struct/member fuchsia.component.resolution/Resolver_Resolve_Response.component fuchsia.component.resolution/Component
 resource struct fuchsia.component.resolution/Resolver_Resolve_Response
 union/member fuchsia.component.resolution/Resolver_Resolve_Result.err fuchsia.component.resolution/ResolverError

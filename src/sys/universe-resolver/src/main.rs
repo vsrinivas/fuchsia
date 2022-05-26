@@ -46,17 +46,29 @@ async fn main() -> anyhow::Result<()> {
 async fn serve(mut stream: fresolution::ResolverRequestStream) -> anyhow::Result<()> {
     let package_resolver = connect_to_protocol::<PackageResolverMarker>()
         .context("failed to connect to PackageResolver service")?;
-    while let Some(fresolution::ResolverRequest::Resolve { component_url, responder }) =
+    while let Some(request) =
         stream.try_next().await.context("failed to read request from FIDL stream")?
     {
-        match resolve_component(&component_url, &package_resolver).await {
-            Ok(result) => responder.send(&mut Ok(result)),
-            Err(err) => {
-                info!("failed to resolve component URL {}: {}", &component_url, &err);
-                responder.send(&mut Err(err.into()))
+        match request {
+            fresolution::ResolverRequest::Resolve { component_url, responder } => {
+                let mut result =
+                    resolve_component(&component_url, &package_resolver).await.map_err(|err| {
+                        info!("failed to resolve component URL {}: {}", component_url, err);
+                        err.into()
+                    });
+                responder.send(&mut result).context("failed sending response")?;
+            }
+            fresolution::ResolverRequest::ResolveWithContext {
+                component_url: _,
+                context: _,
+                responder,
+            } => {
+                // To be implemented in a future commit
+                responder
+                    .send(&mut Err(fresolution::ResolverError::Internal))
+                    .expect("failed to send resolve response");
             }
         }
-        .context("failed sending response")?;
     }
     Ok(())
 }
