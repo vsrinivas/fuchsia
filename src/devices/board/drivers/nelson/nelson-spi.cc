@@ -206,6 +206,7 @@ zx_status_t Nelson::Spi1Init() {
       .cs = {0},                                     // index into fragments list
       .clock_divider_register_value = (4 >> 1) - 1,  // SCLK = core clock / 4 = 25 MHz
       .use_enhanced_clock_mode = true,
+      .client_reverses_dma_transfers = true,
   };
 
   static pbus_dev_t spi_1_dev = []() {
