@@ -332,5 +332,8 @@ toc:
     path: /docs/contribute/governance/rfcs/0157_fxfs_encryption_and_multi_volume_support.md
   - title: "RFC-0158: Structured Config Accessors"
     path: /docs/contribute/governance/rfcs/0158_structured_config_accessors.md
+  - title: "RFC-0159: Execute Only Memory"
+    path: /docs/contribute/governance/rfcs/0159_execute_only_memory.md
   - title: "RFC-0160: Remove support for FIDL struct defaults"
     path: /docs/contribute/governance/rfcs/0160_fidl_remove_struct_defaults.md
+

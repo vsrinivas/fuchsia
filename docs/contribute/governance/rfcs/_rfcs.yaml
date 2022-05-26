@@ -2062,6 +2062,19 @@
   submitted: '2021-12-20'
   reviewed: '2022-05-04'
 
+- name: 'RFC-0159'
+  title: 'Execute Only Memory'
+  short_description: 'Support for mapping execute-only memory.'
+  authors: ['abrachet@google.com']
+  file: '0159_execute_only_memory.md'
+  area: ['Zircon', 'Toolchain']
+  issue: ['89845']
+  gerrit_change_id: ['641406']
+  status: 'Accepted'
+  reviewers: ['travisg@google.com', 'maniscalco@google.com', 'palmer@google.com', 'mcgrathr@google.com', 'mvanotti@google.com', 'curtisgalloway@google.com']
+  submitted: '2022-03-29'
+  reviewed: '2022-05-10'
+
 - name: 'RFC-0160'
   title: 'Remove support for FIDL struct defaults'
   short_description: 'This RFC proposes removing the ability to specify default values on FIDL struct fields.'
