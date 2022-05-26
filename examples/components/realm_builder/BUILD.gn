@@ -4,7 +4,6 @@
 
 import("//build/components.gni")
 import("//build/dart/dart_test_component.gni")
-import("//src/dart/testing/dart_test_wrapper_component.gni")
 
 group("tests") {
   testonly = true
@@ -31,31 +30,7 @@ fuchsia_component("rust-component") {
   deps = [ "rust:bin" ]
 }
 
-fuchsia_component("echo_client_component") {
-  component_name = "echo_client"
-  manifest = "meta/echo_client.cml"
-  deps = [ "//examples/components/routing/rust/echo_client" ]
-}
-
-fuchsia_component("echo_client_legacy_component") {
-  component_name = "echo_client"
-  manifest = "meta/echo_client.cmx"
-  deps = [ "//examples/components/routing/rust/echo_client" ]
-}
-
-fuchsia_component("echo_server_component") {
-  component_name = "echo_server"
-  manifest = "meta/echo_server.cml"
-  deps = [ "//examples/components/routing/rust/echo_server" ]
-}
-
-fuchsia_component("echo_server_legacy_component") {
-  component_name = "echo_server"
-  manifest = "meta/echo_server.cmx"
-  deps = [ "//examples/components/routing/rust/echo_server" ]
-}
-
-dart_test_component("dart-sample-test") {
+dart_test_component("dart-component") {
   package_root = "dart/"
   manifest = "dart/meta/sample_realm.cml"
 
@@ -82,12 +57,36 @@ dart_test_component("dart-sample-test") {
   # [END realm_builder_dep_dart]
 }
 
+fuchsia_component("echo_client_component") {
+  component_name = "echo_client"
+  manifest = "meta/echo_client.cml"
+  deps = [ "//examples/components/routing/rust/echo_client" ]
+}
+
+fuchsia_component("echo_client_legacy_component") {
+  component_name = "echo_client"
+  manifest = "meta/echo_client.cmx"
+  deps = [ "//examples/components/routing/rust/echo_client" ]
+}
+
+fuchsia_component("echo_server_component") {
+  component_name = "echo_server"
+  manifest = "meta/echo_server.cml"
+  deps = [ "//examples/components/routing/rust/echo_server" ]
+}
+
+fuchsia_component("echo_server_legacy_component") {
+  component_name = "echo_server"
+  manifest = "meta/echo_server.cmx"
+  deps = [ "//examples/components/routing/rust/echo_server" ]
+}
+
 # Run with `fx test realm-builder-examples`.
 fuchsia_test_package("package") {
   package_name = "realm-builder-examples"
   test_components = [
     ":cpp-component",
-    ":dart-sample-test",
+    ":dart-component",
     ":rust-component",
   ]
 

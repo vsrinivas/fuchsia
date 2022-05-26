@@ -1,5 +1,6 @@
 sdk://dart/fidl
 sdk://dart/fuchsia
+sdk://dart/fuchsia_component_test
 sdk://dart/fuchsia_inspect
 sdk://dart/fuchsia_logger
 sdk://dart/fuchsia_modular
@@ -12,7 +13,15 @@ sdk://dart/zircon
 sdk://docs/metadata_schemas
 sdk://docs/modular_config_schema
 sdk://fidl/fuchsia.auth
+sdk://fidl/fuchsia.component
+sdk://fidl/fuchsia.component.config
+sdk://fidl/fuchsia.component.decl
+sdk://fidl/fuchsia.component.runner
+sdk://fidl/fuchsia.component.test
+sdk://fidl/fuchsia.component.types
+sdk://fidl/fuchsia.data
 sdk://fidl/fuchsia.diagnostics
+sdk://fidl/fuchsia.diagnostics.types
 sdk://fidl/fuchsia.element
 sdk://fidl/fuchsia.hardware.audio
 sdk://fidl/fuchsia.hardware.audio.signalprocessing
@@ -20,11 +29,13 @@ sdk://fidl/fuchsia.input
 sdk://fidl/fuchsia.input.report
 sdk://fidl/fuchsia.intl
 sdk://fidl/fuchsia.io
+sdk://fidl/fuchsia.ldsvc
 sdk://fidl/fuchsia.logger
 sdk://fidl/fuchsia.mem
 sdk://fidl/fuchsia.modular
 sdk://fidl/fuchsia.modular.session
 sdk://fidl/fuchsia.modular.testing
+sdk://fidl/fuchsia.process
 sdk://fidl/fuchsia.sys
 sdk://fidl/fuchsia.ui.app
 sdk://fidl/fuchsia.ui.input

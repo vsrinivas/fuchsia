@@ -5,7 +5,6 @@
 import("//build/components.gni")
 import("//build/dart/dart_library.gni")
 import("//build/dart/dart_test_component.gni")
-import("//src/dart/testing/dart_test_wrapper_component.gni")
 
 # Run these tests using:
 #   fx set ... --with //sdk/dart/fuchsia_component_test:tests
@@ -21,7 +20,7 @@ dart_test_component("fuchsia-component-test-dart-tests") {
     "//examples/components/routing/fidl:echo",
     "//sdk/dart/fidl",
     "//sdk/dart/fuchsia",
-    "//sdk/dart/fuchsia_component_test:fuchsia_component_test_from_dart_test_runner",
+    "//sdk/dart/fuchsia_component_test:dart_realm_builder_deps",
     "//sdk/dart/fuchsia_logger",
     "//sdk/dart/fuchsia_services",
     "//sdk/dart/zircon",

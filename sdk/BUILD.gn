@@ -504,6 +504,7 @@ sdk("fuchsia_dart") {
     # If a FIDL deps is part of the SDK, it should be explicitly listed here.
     "//sdk/dart/fidl:fidl_sdk($dart_toolchain)",
     "//sdk/dart/fuchsia:fuchsia_sdk($dart_toolchain)",
+    "//sdk/dart/fuchsia_component_test:fuchsia_component_test_sdk($dart_toolchain)",
     "//sdk/dart/fuchsia_inspect:fuchsia_inspect_sdk($dart_toolchain)",
     "//sdk/dart/fuchsia_logger:fuchsia_logger_sdk($dart_toolchain)",
     "//sdk/dart/fuchsia_modular:fuchsia_modular_sdk($dart_toolchain)",

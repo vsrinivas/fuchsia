@@ -5,8 +5,7 @@
 import("//build/components.gni")
 import("//build/dart/dart_library.gni")
 
-# TODO(fxb/98123): Rename this "fuchsia_component_test"
-group("fuchsia_component_test_from_dart_test_runner") {
+group("dart_realm_builder_deps") {
   testonly = true
   deps = [
     ":includes",
@@ -15,11 +14,11 @@ group("fuchsia_component_test_from_dart_test_runner") {
   public_deps = [ ":fuchsia_component_test" ]
 }
 
-# TODO(fxb/98123): Rename this "fuchsia-component-test-lib"
 dart_library("fuchsia_component_test") {
   package_name = "fuchsia_component_test"
-  testonly = true
   null_safe = true
+
+  sdk_category = "partner"
 
   # TODO(fxb/98123): Make visibility private to this build file. (e.g. visibility = [ ":*" ])
   visibility = [ "*" ]
