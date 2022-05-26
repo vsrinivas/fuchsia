@@ -599,14 +599,17 @@ void Controller::ApplyConfig(DisplayConfig* configs[], int32_t count, bool is_vc
     vc_applied_ = is_vc;
     applied_layer_stamp_ = layer_stamp;
     applied_client_id_ = client_id;
-    if (switching_client) {
-      active_client_->ReapplySpecialConfigs();
-    }
 
-    active_client_->UpdateConfigStampMapping({
-        .controller_stamp = controller_stamp_,
-        .client_stamp = config_stamp,
-    });
+    if (active_client_) {
+      if (switching_client) {
+        active_client_->ReapplySpecialConfigs();
+      }
+
+      active_client_->UpdateConfigStampMapping({
+          .controller_stamp = controller_stamp_,
+          .client_stamp = config_stamp,
+      });
+    }
   }
 
   dc_.ApplyConfiguration(display_configs.get(), display_count, &controller_stamp_);
@@ -999,7 +1002,9 @@ size_t Controller::TEST_imported_images_count() const {
   for (const auto& display : displays_) {
     image_node_t* cur;
     image_node_t* tmp;
-    list_for_every_entry_safe (&display.images, cur, tmp, image_node_t, link) { ++display_images; }
+    list_for_every_entry_safe (&display.images, cur, tmp, image_node_t, link) {
+      ++display_images;
+    }
   }
   return vc_images + primary_images + display_images;
 }
