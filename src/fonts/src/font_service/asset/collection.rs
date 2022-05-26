@@ -8,7 +8,7 @@ use {
     fidl_fuchsia_fonts::CacheMissPolicy,
     fidl_fuchsia_io as io, fidl_fuchsia_mem as mem,
     fuchsia_inspect::{self as finspect, Property},
-    fuchsia_url::pkg_url::PkgUrl,
+    fuchsia_url::AbsoluteComponentUrl,
     futures::{join, lock::Mutex},
     manifest::v2,
     std::{collections::BTreeMap, hash::Hash, path::PathBuf},
@@ -45,14 +45,14 @@ impl FullAssetLocation {
             v2::AssetLocation::LocalFile(locator) => {
                 locator.directory.join(&self.file_name).to_string_lossy().to_string()
             }
-            v2::AssetLocation::Package(locator) => PkgUrl::new_resource(
-                locator.url.host().to_owned(),
-                locator.url.path().to_owned(),
-                locator.url.package_hash().map(|s| s.to_owned()),
-                self.file_name.to_owned(),
-            )
-            .unwrap()
-            .to_string(),
+            v2::AssetLocation::Package(locator) => {
+                AbsoluteComponentUrl::from_package_url_and_resource(
+                    locator.url.clone(),
+                    self.file_name.to_owned(),
+                )
+                .unwrap()
+                .to_string()
+            }
         }
     }
 }
@@ -485,7 +485,7 @@ mod tests {
             v2::Asset {
                 file_name: "Alpha-Condensed.ttf".to_string(),
                 location: v2::AssetLocation::Package(v2::PackageLocator {
-                    url: PkgUrl::parse(
+                    url: fuchsia_url::AbsolutePackageUrl::parse(
                         "fuchsia-pkg://fuchsia.com/font-package-alpha-condensed-ttf",
                     )?,
                 }),

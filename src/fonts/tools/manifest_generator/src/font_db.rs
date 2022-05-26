@@ -15,7 +15,7 @@ use {
     anyhow::{format_err, Error},
     char_set::CharSet,
     font_info::{FontAssetSource, FontInfo, FontInfoLoader},
-    fuchsia_url::pkg_url::PkgUrl,
+    fuchsia_url::AbsolutePackageUrl,
     itertools::{Either, Itertools},
     manifest::v2,
     std::{
@@ -56,7 +56,7 @@ pub struct FontDb {
     asset_name_to_assets: BTreeMap<String, BTreeSet<AssetKey>>,
     /// Map from asset name to the Fuchsia package URL that contains that asset (for downloadable
     /// font packages).
-    asset_name_to_pkg_url: BTreeMap<String, PkgUrl>,
+    asset_name_to_pkg_url: BTreeMap<String, AbsolutePackageUrl>,
     /// Map from a typeface to metadata extracted from the typeface (code points, Postscript name,
     /// etc.).
     typeface_to_metadata: BTreeMap<TypefaceKey, TypefaceMetatada>,
@@ -373,9 +373,10 @@ impl FontDb {
             .map(move |key| v2::TypefaceId { file_name: file_name.clone(), index: key.0 })
     }
 
-    fn make_pkg_url(safe_name: impl AsRef<str>) -> Result<PkgUrl, FontDbError> {
+    fn make_pkg_url(safe_name: impl AsRef<str>) -> Result<AbsolutePackageUrl, FontDbError> {
         let pkg_url = format!("{}{}", PKG_URL_PREFIX, safe_name.as_ref());
-        Ok(PkgUrl::parse(&pkg_url).map_err(|error| FontDbError::PkgUrl { error: error.into() })?)
+        Ok(AbsolutePackageUrl::parse(&pkg_url)
+            .map_err(|error| FontDbError::PkgUrl { error: error.into() })?)
     }
 
     fn load_font_infos(

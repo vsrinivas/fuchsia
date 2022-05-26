@@ -9,7 +9,7 @@ use {
     anyhow::{ensure, Error},
     char_set::CharSet,
     fidl_fuchsia_fonts::{GenericFontFamily, Slant, Width, WEIGHT_NORMAL},
-    fuchsia_url::pkg_url::PkgUrl,
+    fuchsia_url::AbsolutePackageUrl,
     itertools::Itertools,
     offset_string::OffsetString,
     serde::{
@@ -278,7 +278,7 @@ pub struct LocalFileLocator {
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct PackageLocator {
     /// URL of just the package (not including the file name)
-    pub url: PkgUrl,
+    pub url: AbsolutePackageUrl,
 }
 
 /// Describes a single typeface within a font file

@@ -15,7 +15,7 @@ use {
     char_set::CharSet,
     clonable_error::ClonableError,
     fidl_fuchsia_fonts::{GenericFontFamily, Slant, Width, WEIGHT_NORMAL},
-    fuchsia_url::pkg_url::PkgUrl,
+    fuchsia_url::AbsolutePackageUrl,
     offset_string::OffsetString,
     serde::{
         de::{self, Deserializer, Error as DeError},
@@ -146,7 +146,7 @@ pub struct Font {
 
     /// Fuchsia Package URL at which this font file can also be found.
     #[serde(default = "default_package")]
-    pub package: Option<PkgUrl>,
+    pub package: Option<AbsolutePackageUrl>,
 
     /// Character set supported by the typeface.
     #[serde(
@@ -185,7 +185,7 @@ fn default_languages() -> LanguageSet {
     LanguageSet::new()
 }
 
-fn default_package() -> Option<PkgUrl> {
+fn default_package() -> Option<AbsolutePackageUrl> {
     None
 }
 

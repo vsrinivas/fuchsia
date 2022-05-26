@@ -196,7 +196,6 @@ mod tests {
         fidl_fuchsia_fonts::{GenericFontFamily, Slant, Width},
         fidl_fuchsia_io as io, fidl_fuchsia_mem as mem,
         fuchsia_inspect::{self as finspect, assert_data_tree},
-        fuchsia_url::pkg_url::PkgUrl,
         manifest::v2,
         maplit::btreemap,
         std::path::Path,
@@ -265,7 +264,7 @@ mod tests {
             v2::Asset {
                 file_name: "Alpha-Condensed.ttf".to_string(),
                 location: v2::AssetLocation::Package(v2::PackageLocator {
-                    url: PkgUrl::parse(
+                    url: fuchsia_url::AbsolutePackageUrl::parse(
                         "fuchsia-pkg://fuchsia.com/font-package-alpha-condensed-ttf",
                     )?,
                 }),

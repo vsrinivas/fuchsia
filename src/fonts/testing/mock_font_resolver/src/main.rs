@@ -10,7 +10,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_syslog::{self as syslog, fx_vlog, macros::*},
-    fuchsia_url::pkg_url::PkgUrl,
+    fuchsia_url::AbsolutePackageUrl,
     fuchsia_zircon::Status,
     futures::{StreamExt, TryStreamExt},
     vfs::{
@@ -50,7 +50,7 @@ async fn resolve(
     package_url: String,
     directory_request: ServerEnd<fio::DirectoryMarker>,
 ) -> Result<(), Status> {
-    PkgUrl::parse(&package_url).map_err(|_| Err(Status::INVALID_ARGS))?;
+    AbsolutePackageUrl::parse(&package_url).map_err(|_| Err(Status::INVALID_ARGS))?;
 
     // Serve fake directories with single font files, with the selection depending on the package
     // URL. These correspond to the fake fonts declared in ../tests/*.font_manifest.json.
