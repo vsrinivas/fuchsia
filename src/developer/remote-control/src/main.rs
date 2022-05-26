@@ -22,13 +22,47 @@ mod args;
 async fn exec_server() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["remote-control"])?;
 
-    let (s, p) = fidl::Channel::create().context("creating ServiceProvider zx channel")?;
-    let chan =
-        fidl::AsyncChannel::from_channel(s).context("creating ServiceProvider async channel")?;
-    let stream = ServiceProviderRequestStream::from_channel(chan);
-    hoist().publish_service(rcs::RemoteControlMarker::NAME, ClientEnd::new(p))?;
-
     let service = Rc::new(RemoteControlService::new().await);
+
+    let sc = service.clone();
+    let onet_fut = async move {
+        loop {
+            let sc = sc.clone();
+            let stream = (|| -> Result<_, Error> {
+                let (s, p) =
+                    fidl::Channel::create().context("creating ServiceProvider zx channel")?;
+                let chan = fidl::AsyncChannel::from_channel(s)
+                    .context("creating ServiceProvider async channel")?;
+                let stream = ServiceProviderRequestStream::from_channel(chan);
+                hoist().publish_service(rcs::RemoteControlMarker::NAME, ClientEnd::new(p))?;
+                Ok(stream)
+            })();
+
+            let stream = match stream {
+                Ok(stream) => stream,
+                Err(err) => {
+                    error!("Could not connect to overnet: {:?}", err);
+                    break;
+                }
+            };
+
+            let fut = stream.for_each_concurrent(None, move |svc| {
+                let ServiceProviderRequest::ConnectToService {
+                    chan,
+                    info: _,
+                    control_handle: _control_handle,
+                } = svc.unwrap();
+                let chan = fidl::AsyncChannel::from_channel(chan)
+                    .context("failed to make async channel")
+                    .unwrap();
+
+                sc.clone().serve_stream(rcs::RemoteControlRequestStream::from_channel(chan))
+            });
+            info!("published remote control service to overnet");
+            let res = fut.await;
+            info!("connection to overnet lost: {:?}", res);
+        }
+    };
 
     let sc1 = service.clone();
     let mut fs = ServiceFs::new_local();
@@ -38,19 +72,6 @@ async fn exec_server() -> Result<(), Error> {
 
     fs.take_and_serve_directory_handle()?;
     let fidl_fut = fs.collect::<()>();
-    let sc = service.clone();
-    let onet_fut = stream.for_each_concurrent(None, move |svc| {
-        let ServiceProviderRequest::ConnectToService {
-            chan,
-            info: _,
-            control_handle: _control_handle,
-        } = svc.unwrap();
-        let chan =
-            fidl::AsyncChannel::from_channel(chan).context("failed to make async channel").unwrap();
-
-        sc.clone().serve_stream(rcs::RemoteControlRequestStream::from_channel(chan))
-    });
-    info!("published remote control service to overnet");
 
     join!(fidl_fut, onet_fut);
     Ok(())
