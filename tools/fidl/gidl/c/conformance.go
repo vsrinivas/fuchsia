@@ -17,7 +17,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
-var conformanceTmpl = template.Must(template.New("tmpl").Parse(`
+var conformanceTmpl = template.Must(template.New("conformanceTmpl").Parse(`
 #include <iostream>
 #include <string>
 #include <utility>

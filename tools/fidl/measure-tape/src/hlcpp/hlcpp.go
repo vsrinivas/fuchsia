@@ -47,7 +47,7 @@ func (params tmplParams) RevNamespaces() []string {
 	return rev
 }
 
-var header = template.Must(template.New("tmpls").Parse(`// Copyright {{ .Year }} The Fuchsia Authors. All rights reserved.
+var header = template.Must(template.New("header").Parse(`// Copyright {{ .Year }} The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -88,7 +88,7 @@ Size Measure(const {{ $targetType }}& value);
 #endif  // {{ .HeaderTag }}
 `))
 
-var ccTop = template.Must(template.New("tmpls").Parse(`// Copyright {{ .Year }} The Fuchsia Authors. All rights reserved.
+var ccTop = template.Must(template.New("ccTop").Parse(`// Copyright {{ .Year }} The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -114,7 +114,7 @@ class MeasuringTape {
   MeasuringTape() = default;
 `))
 
-var ccBottom = template.Must(template.New("tmpls").Parse(`
+var ccBottom = template.Must(template.New("ccBottom").Parse(`
   Size Done() {
     if (maxed_out_) {
       return Size(ZX_CHANNEL_MAX_MSG_BYTES, ZX_CHANNEL_MAX_MSG_HANDLES);

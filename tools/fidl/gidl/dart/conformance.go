@@ -16,7 +16,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
-var tmpl = template.Must(template.New("tmpls").Parse(`
+var conformanceTmpl = template.Must(template.New("conformanceTmpl").Parse(`
 // @dart = 2.8
 
 // Ignore unused imports so that GIDL tests can be commented out without error.
@@ -162,7 +162,7 @@ func GenerateConformanceTests(gidl gidlir.All, fidl fidlgen.Root, config gidlcon
 		return nil, err
 	}
 	var buf bytes.Buffer
-	err = tmpl.Execute(&buf, tmplInput{
+	err = conformanceTmpl.Execute(&buf, tmplInput{
 		EncodeSuccessCases: encodeSuccessCases,
 		DecodeSuccessCases: decodeSuccessCases,
 		EncodeFailureCases: encodeFailureCases,

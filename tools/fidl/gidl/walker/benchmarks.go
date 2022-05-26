@@ -18,7 +18,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
-var benchmarkTmpl = template.Must(template.New("tmpl").Parse(`
+var benchmarkTmpl = template.Must(template.New("benchmarkTmpl").Parse(`
 #include <fidl/test.{{ .FidlLibrary }}/cpp/wire.h>
 #include <perftest/perftest.h>
 #include <cts/tests/pkg/fidl/cpp/test/handle_util.h>

@@ -295,7 +295,7 @@ func GenerateFidl(templatePath string, ir fidlgen.Root, outputBase *string, opti
 		log.Fatalf("Error reading from %s: %v", templatePath, err)
 	}
 
-	tmpls := template.New("Templates")
+	tmpls := template.New("tmpls")
 
 	root := NewRoot(ir, *outputBase, tmpls, options)
 

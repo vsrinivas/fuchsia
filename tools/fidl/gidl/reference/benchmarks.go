@@ -18,7 +18,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
-var benchmarkTmpl = template.Must(template.New("tmpl").Parse(`
+var benchmarkTmpl = template.Must(template.New("benchmarkTmpl").Parse(`
 #include <fidl/test.benchmarkfidl/cpp/wire.h>
 
 namespace benchmark_suite {

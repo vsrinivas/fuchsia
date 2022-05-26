@@ -16,7 +16,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
-var benchmarkTmpl = template.Must(template.New("benchmarkTmpls").Parse(`
+var benchmarkTmpl = template.Must(template.New("benchmarkTmpl").Parse(`
 #![allow(unused_imports)]
 use {
 	fidl::{

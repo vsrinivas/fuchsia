@@ -177,7 +177,7 @@ var cases = []interface{}{
 	invalidCase{"\xff\xfe", "BOMs in UTF-16 LE"},
 }
 
-var successTmpl = template.Must(template.New("tmpls").Parse(
+var successTmpl = template.Must(template.New("successTmpl").Parse(
 	`{{ if .comment }}// {{ .comment }}{{ end }}
 success("StringsValidCase{{ .index }}") {
 {{- if .exclusions }}
@@ -207,7 +207,7 @@ success("StringsValidCase{{ .index }}") {
 }
 `))
 
-var decodeFailureTmpl = template.Must(template.New("tmpls").Parse(
+var decodeFailureTmpl = template.Must(template.New("decodeFailureTmpl").Parse(
 	`{{ if .comment }}// {{ .comment }}{{ end }}
 encode_failure("StringsInvalidCase{{ .index }}") {
     // TODO(fxbug.dev/52104): UTF8 encoding and decoding is not conformant in Dart.
