@@ -19,9 +19,6 @@ namespace ns8250 {
 
 constexpr uint16_t kPortCount = 8;
 
-constexpr uint32_t kDefaultBaudRate = 115200;
-constexpr uint32_t kMaxBaudRate = 115200;
-
 constexpr uint8_t kFifoDepth16750 = 64;
 constexpr uint8_t kFifoDepth16550A = 16;
 constexpr uint8_t kFifoDepthGeneric = 1;
@@ -212,8 +209,6 @@ class DriverImpl
 
   template <class IoProvider>
   void Init(IoProvider& io) {
-    auto divisor = kMaxBaudRate / kDefaultBaudRate;
-
     // Get basic config done so that tx functions.
 
     // Disable all interrupts.
@@ -221,10 +216,6 @@ class DriverImpl
 
     auto lcr = LineControlRegister::Get().FromValue(0);
     lcr.set_divisor_latch_access(true).WriteTo(io.io());
-    auto dllr = DivisorLatchLowerRegister::Get().FromValue(0);
-    auto dlur = DivisorLatchUpperRegister::Get().FromValue(0);
-    dllr.set_data(static_cast<uint8_t>(divisor)).WriteTo(io.io());
-    dlur.set_data(static_cast<uint8_t>(divisor >> 8)).WriteTo(io.io());
 
     auto fcr = FifoControlRegister::Get().FromValue(0);
     fcr.set_fifo_enable(true)
