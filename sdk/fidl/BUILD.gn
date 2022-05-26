@@ -30,7 +30,6 @@ sdk_fidl_targets = [
   "//sdk/fidl/fuchsia.castsetup:fuchsia.castsetup",
   "//sdk/fidl/fuchsia.castsysteminfo:fuchsia.castsysteminfo",
   "//sdk/fidl/fuchsia.castwindow:fuchsia.castwindow",
-  "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt",
   "//sdk/fidl/fuchsia.component:fuchsia.component",
   "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl",
   "//sdk/fidl/fuchsia.component.resolution:fuchsia.component.resolution",
