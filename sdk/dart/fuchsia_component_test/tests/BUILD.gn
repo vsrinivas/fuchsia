@@ -31,22 +31,21 @@ dart_test_component("fuchsia-component-test-dart-tests") {
     "//sdk/fidl/fuchsia.intl",
     "//sdk/fidl/fuchsia.io",
     "//sdk/fidl/fuchsia.logger",
-    "//sdk/fidl/fuchsia.sys2",
     "//third_party/dart-pkg/pub/mockito",
     "//third_party/dart-pkg/pub/test",
   ]
 }
 
-fuchsia_component("echo_server_with_binder_component") {
-  component_name = "echo_server_with_binder"
-  manifest = "meta/echo_server_with_binder.cml"
-  deps = [ "//examples/components/routing/rust/echo_server" ]
+fuchsia_component("echo_client_with_binder_component") {
+  component_name = "echo_client_with_binder"
+  manifest = "meta/echo_client_with_binder.cml"
+  deps = [ "//examples/components/routing/rust/echo_client" ]
 }
 
 fuchsia_test_package("dart_realm_builder_unittests") {
   test_components = [ ":fuchsia-component-test-dart-tests" ]
   deps = [
-    ":echo_server_with_binder_component",
+    ":echo_client_with_binder_component",
     "//examples/components/realm_builder:echo_client_component",
     "//examples/components/realm_builder:echo_client_legacy_component",
     "//examples/components/realm_builder:echo_server_component",

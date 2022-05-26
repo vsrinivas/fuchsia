@@ -3,16 +3,6 @@
         "sys/component/realm_builder.shard.cml",
         "syslog/client.shard.cml",
     ],
-    use: [
-        { protocol: "fuchsia.sys2.EventSource" },
-        {
-            event: [
-                "started",
-                "stopped",
-            ],
-            from: "framework",
-        },
-    ],
     offer: [
         {
             storage: "data",

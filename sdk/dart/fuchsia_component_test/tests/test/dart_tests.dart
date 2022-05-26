@@ -13,7 +13,6 @@ import 'package:fidl_fuchsia_component_test/fidl_async.dart' as fctest;
 import 'package:fidl_fuchsia_component_decl/fidl_async.dart' as fdecl;
 import 'package:fidl_fuchsia_io/fidl_async.dart' as fio;
 import 'package:fidl_fuchsia_logger/fidl_async.dart' as flogger;
-import 'package:fidl_fuchsia_sys2/fidl_async.dart' as fsys2;
 
 import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_services/services.dart' as services;
@@ -29,7 +28,8 @@ const String v2EchoClientUrl = '#meta/echo_client.cm';
 const String v1EchoServerUrl =
     'fuchsia-pkg://fuchsia.com/dart_realm_builder_unittests#meta/echo_server.cmx';
 const String v2EchoServerUrl = '#meta/echo_server.cm';
-const String v2EchoServerWithBinderUrl = '#meta/echo_server_with_binder.cm';
+const String v2EchoClientWithBinderUrl = '#meta/echo_client_with_binder.cm';
+const String v2EchoClientWithBinderArg = 'Hello Fuchsia!';
 const String v2EchoClientStructuredConfigUrl = '#meta/echo_client_sc.cm';
 
 void checkCommonExceptions(Exception err, StackTrace stacktrace) {
@@ -139,13 +139,6 @@ void main() {
           final reply = await echo.echoString(testString);
 
           expect(testString, reply);
-
-          final lifecycleController =
-              realmInstance.root.connectToProtocolInDirPath(
-            fsys2.LifecycleControllerProxy(),
-            'hub/debug',
-          );
-          await lifecycleController.stop('./v2EchoServer', true);
         } on Exception catch (err, stacktrace) {
           checkCommonExceptions(err, stacktrace);
           rethrow;
@@ -502,94 +495,77 @@ void main() {
     });
 
     test('start by binding', () async {
-      final eventStreamBinding = fsys2.EventStreamBinding();
       RealmInstance? realmInstance;
-      String? serverMoniker;
       try {
         final builder = await RealmBuilder.create();
 
-        const serverName = 'v2Server';
-        const serverBinder = 'serverBinder';
+        const echoClientName = 'v2Client';
+        const echoClientBinder = 'echoClientBinder';
+        const echoServerName = 'localEchoServer';
 
-        // This test leverages the `echo_server` binary, with an augmented
-        // component manifest that exposes `fuchsia.component.Binder`. The
-        // `echo_server` will automatically start if a client connects to its
-        // `Echo` service, but this test doesn't do that. It leverages the fact
-        // that the component will launch and execute a loop waiting for
-        // requests, which can make the state easier to bug if the event does
-        // not arrive, or if a future iteration of the test adds a step to
-        // stop the component (via the LifecycleController) and wait for the
-        // "stopped" event.
-        final v2Server = await builder.addChild(
-          serverName,
-          v2EchoServerWithBinderUrl,
+        // This test leverages the `echo_client` binary, with an augmented
+        // component manifest that exposes `fuchsia.component.Binder`.
+        //
+        // The client is *NOT* started eagerly!
+        //
+        // The `echo_server` will automatically start if a client connects to
+        // its `Echo` service. This test validates that connecting to the
+        // _`echo_client_`'s `Binder` service will start the client, which will
+        // subsequently invoke the `echo_server`. Since the `echo_server` is a
+        // local client, the test can confirm that the echo request was made.
+        final v2Client = await builder.addChild(
+          echoClientName,
+          v2EchoClientWithBinderUrl,
+        );
+
+        final echoRequestReceived = Completer<String?>();
+
+        final localEchoServer = await builder.addLocalChild(
+          echoServerName,
+          onRun: (handles, onStop) async {
+            LocalEcho(handles, echoRequestReceived: echoRequestReceived);
+
+            // Keep the component alive until the test is complete and the
+            // realm is closed.
+            await onStop.future;
+          },
         );
 
         // Route logging to child
         await builder.addRoute(Route()
           ..capability(ProtocolCapability(flogger.LogSink.$serviceName))
           ..from(Ref.parent())
-          ..to(Ref.child(v2Server)));
+          ..to(Ref.child(v2Client))
+          ..to(Ref.child(localEchoServer)));
+
+        // Route the echo service
+        await builder.addRoute(Route()
+          ..capability(ProtocolCapability(fecho.Echo.$serviceName))
+          ..from(Ref.child(localEchoServer))
+          ..to(Ref.child(v2Client)));
 
         // Route the child's Binder service to parent, so the test can connect
         // to it to start the child.
         await builder.addRoute(Route()
           ..capability(ProtocolCapability(fcomponent.Binder.$serviceName,
-              as: serverBinder))
-          ..from(Ref.child(v2Server))
+              as: echoClientBinder))
+          ..from(Ref.child(v2Client))
           ..to(Ref.parent()));
 
-        // Route the framework's EventSource so the test can await the server's
-        // "started" and "stopped" events.
-        await builder.addRoute(Route()
-          ..capability(ProtocolCapability(fsys2.EventSource.$serviceName))
-          ..from(Ref.framework())
-          ..to(Ref.parent()));
-
-        // Connect to the framework's EventSource.
-        final eventSource = fsys2.EventSourceProxy();
-        await (services.Incoming.fromSvcPath()..connectToService(eventSource))
-            .close();
-
-        // Register callbacks for started and stopped events, and complete a
-        // Future when called.
-        final completeWaitForStart = Completer();
-        final eventStreamClientEnd = eventStreamBinding.wrap(
-          OnEvent(
-            started: (String moniker) {
-              if (moniker == serverMoniker) {
-                completeWaitForStart.complete();
-              }
-            },
-          ),
-        );
-
-        // Subscribe to "started" events
-        await eventSource.subscribe(
-          [
-            fsys2.EventSubscription(eventName: 'started'),
-          ],
-          eventStreamClientEnd,
-        );
-
-        // Start the realmInstance. The child component (the server) is not
+        // Start the realmInstance. The child component (the client) is not
         // "eager", so it should not start automatically.
         realmInstance = await builder.build();
         final scopedInstance = realmInstance.root;
-        serverMoniker = './${scopedInstance.collectionName}:'
-            '${scopedInstance.childName}/$serverName';
 
-        // Start the server
-        /*serverBinder=*/ scopedInstance.connectToProtocolAtPath(
+        // Start the client by binding.
+        /*proxy=*/ scopedInstance.connectToProtocolAtPath(
           fcomponent.BinderProxy(),
-          serverBinder,
+          echoClientBinder,
         );
 
-        // Wait for the server "started" event
-        await completeWaitForStart.future;
+        final requestedEchoString = await echoRequestReceived.future;
 
-        // Note, since this test abruptly stopped the child component, a
-        // non-zero (error) status is likely.
+        expect(requestedEchoString, v2EchoClientWithBinderArg);
       } on Exception catch (err, stacktrace) {
         checkCommonExceptions(err, stacktrace);
         rethrow;
@@ -597,105 +573,6 @@ void main() {
         if (realmInstance != null) {
           realmInstance.root.close();
         }
-        eventStreamBinding.close();
-      }
-    });
-
-    test('route echo between two v2 components', () async {
-      final eventStreamBinding = fsys2.EventStreamBinding();
-      RealmInstance? realmInstance;
-      try {
-        final builder = await RealmBuilder.create();
-
-        const echoServerName = 'v2EchoServer';
-        const echoClientName = 'v2EchoClient';
-
-        final v2EchoServer = await builder.addChild(
-          echoServerName,
-          v2EchoServerUrl,
-        );
-        final v2EchoClient = await builder.addChild(
-          echoClientName,
-          v2EchoClientUrl,
-          ChildOptions()..eager(),
-        );
-
-        // Route logging to children
-        await builder.addRoute(Route()
-          ..capability(ProtocolCapability(flogger.LogSink.$serviceName))
-          ..from(Ref.parent())
-          ..to(Ref.child(v2EchoServer))
-          ..to(Ref.child(v2EchoClient)));
-
-        // Route the echo service from server to client
-        await builder.addRoute(Route()
-          ..capability(ProtocolCapability(fecho.Echo.$serviceName))
-          ..from(Ref.child(v2EchoServer))
-          ..to(Ref.child(v2EchoClient)));
-
-        // Route the framework's EventSource so the test can await the echo
-        // client's termination and verify a successful exit status.
-        await builder.addRoute(Route()
-          ..capability(ProtocolCapability(fsys2.EventSource.$serviceName))
-          ..from(Ref.framework())
-          ..to(Ref.parent()));
-
-        // Connect to the framework's EventSource.
-        final eventSource = fsys2.EventSourceProxy();
-        await (services.Incoming.fromSvcPath()..connectToService(eventSource))
-            .close();
-
-        // Register a callback for stopped events, and complete a Future when
-        // the event client stops.
-        final completeWaitForStop = Completer<int>();
-        final eventStreamClientEnd = eventStreamBinding.wrap(
-          OnEvent(stopped: (String moniker, int status) {
-            // Since EchoClient is [eager()], it may start and stop before the
-            // async [builder.build()] completes. [realmInstance.root.childName]
-            // would not be known before this stopped event is received, so
-            // [endsWith()] is the best solution here.
-            if (moniker.endsWith('/$echoClientName')) {
-              completeWaitForStop.complete(status);
-            }
-          }),
-        );
-
-        // Subscribe for "stopped" events.
-        //
-        // NOTE: This requires the test CML include a `use` for the subscribed
-        // event type(s), for example:
-        //
-        // ```cml
-        //   use: [
-        //     { protocol: "fuchsia.sys2.EventSource" },
-        //     {
-        //         event: [
-        //             "started",
-        //             "stopped",
-        //         ],
-        //         from: "framework",
-        //     },
-        //   ],
-        // ```
-        await eventSource.subscribe(
-          [fsys2.EventSubscription(eventName: 'stopped')],
-          eventStreamClientEnd,
-        );
-
-        // Start the realm instance.
-        realmInstance = await builder.build();
-
-        // Wait for the client to stop, and check for a successful exit status.
-        final stoppedStatus = await completeWaitForStop.future;
-        expect(stoppedStatus, 0);
-      } on Exception catch (err, stacktrace) {
-        checkCommonExceptions(err, stacktrace);
-        rethrow;
-      } finally {
-        if (realmInstance != null) {
-          realmInstance.root.close();
-        }
-        eventStreamBinding.close();
       }
     });
 
@@ -837,18 +714,6 @@ void main() {
           ..capability(ProtocolCapability(fecho.Echo.$serviceName))
           ..from(Ref.child(localEchoServer))
           ..to(Ref.child(v2EchoClientStructuredConfig)));
-
-        // Route the framework's EventSource so the test can await the echo
-        // client's termination and verify a successful exit status.
-        await builder.addRoute(Route()
-          ..capability(ProtocolCapability(fsys2.EventSource.$serviceName))
-          ..from(Ref.framework())
-          ..to(Ref.parent()));
-
-        // Connect to the framework's EventSource.
-        final eventSource = fsys2.EventSourceProxy();
-        await (services.Incoming.fromSvcPath()..connectToService(eventSource))
-            .close();
 
         // The EchoClient at the referenced URL should be using this string:
         const echoClientStructuredConfigRequest =
