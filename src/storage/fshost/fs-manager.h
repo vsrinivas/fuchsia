@@ -25,7 +25,6 @@
 #include "src/storage/fshost/fshost-boot-args.h"
 #include "src/storage/fshost/fshost_config.h"
 #include "src/storage/fshost/inspect-manager.h"
-#include "src/storage/fshost/metrics.h"
 #include "src/storage/memfs/memfs.h"
 #include "src/storage/memfs/vnode_dir.h"
 
@@ -37,8 +36,7 @@ class BlockWatcher;
 // in-memory filesystem.
 class FsManager {
  public:
-  explicit FsManager(std::shared_ptr<FshostBootArgs> boot_args,
-                     std::unique_ptr<FsHostMetrics> metrics);
+  explicit FsManager(std::shared_ptr<FshostBootArgs> boot_args);
   ~FsManager();
 
   zx_status_t Initialize(fidl::ServerEnd<fuchsia_io::Directory> dir_request,
@@ -82,13 +80,7 @@ class FsManager {
   // ReadyForShutdown is called.
   void Shutdown(fit::function<void(zx_status_t)> callback);
 
-  // Returns a pointer to the |FsHostMetrics| instance.
-  FsHostMetrics* mutable_metrics() { return metrics_.get(); }
-
-  InspectManager& inspect_manager() { return inspect_; }
-
-  // Flushes FsHostMetrics to cobalt.
-  void FlushMetrics();
+  FshostInspectManager& inspect_manager() { return inspect_manager_; }
 
   std::shared_ptr<FshostBootArgs> boot_args() { return boot_args_; }
 
@@ -130,7 +122,7 @@ class FsManager {
   zx::status<std::string> GetDevicePath(uint64_t fs_id);
 
   // Returns the filesystem root for the given mount point.
-  zx::status<fidl::ClientEnd<fuchsia_io::Directory>> GetRoot(MountPoint point);
+  zx::status<fidl::ClientEnd<fuchsia_io::Directory>> GetRoot(MountPoint point) const;
 
  private:
   class MountedFilesystem {
@@ -187,11 +179,8 @@ class FsManager {
   std::unique_ptr<async::Loop> global_loop_;
   fs::ManagedVfs vfs_;
 
-  // Keeps a collection of metrics being track at the FsHost level.
-  std::unique_ptr<FsHostMetrics> metrics_;
-
   // Serves inspect data.
-  InspectManager inspect_;
+  FshostInspectManager inspect_manager_;
 
   // Used to lookup configuration options stored in fuchsia.boot.Arguments
   std::shared_ptr<fshost::FshostBootArgs> boot_args_;

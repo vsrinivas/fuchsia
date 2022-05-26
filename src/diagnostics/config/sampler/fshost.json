@@ -114,6 +114,24 @@
             "metric_type": "String",
             "selector": "bootstrap/fshost:root/minfs/fs.info:oldest_version",
             "upload_once": true
+        },
+        {
+            "event_codes": [
+                3,
+                2
+            ],
+            "metric_id": 48,
+            "metric_type": "Occurrence",
+            "selector": "bootstrap/fshost:root/corruption_events:minfs"
+        },
+        {
+            "event_codes": [
+                4,
+                2
+            ],
+            "metric_id": 48,
+            "metric_type": "Occurrence",
+            "selector": "bootstrap/fshost:root/corruption_events:fxfs"
         }
     ],
     "poll_rate_sec": 600,

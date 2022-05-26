@@ -40,7 +40,6 @@ source_set("fshost-registry") {
     ":config",
     ":inspect",
     ":launcher",
-    ":metrics",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.feedback:fuchsia.feedback_llcpp",
@@ -86,38 +85,12 @@ source_set("inspect") {
   public_deps = [
     "//sdk/lib/fdio",
     "//sdk/lib/sys/inspect/cpp",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",
+    "//src/lib/storage/fs_management",
     "//src/lib/storage/vfs/cpp",
     "//zircon/system/ulib/fbl",
   ]
-}
-
-source_set("metrics") {
-  sources = [ "metrics.h" ]
-}
-
-source_set("metrics_cobalt") {
-  sources = [
-    "metrics_cobalt.cc",
-    "metrics_cobalt.h",
-  ]
-  public_deps = [
-    ":metrics",
-    "//src/lib/storage/vfs/cpp/metrics:metrics-cobalt",
-    "//zircon/system/ulib/async:async-cpp",
-    "//zircon/system/ulib/cobalt-client",
-  ]
-  deps = [
-    "//sdk/lib/syslog/cpp",
-    "//src/lib/storage/vfs/cpp/metrics:metrics-cobalt",
-    "//src/lib/storage/vfs/cpp/metrics:metrics-inspect",
-    "//zircon/system/ulib/cobalt-client",
-  ]
-}
-
-source_set("metrics_stub") {
-  sources = [ "metrics_stub.cc" ]
-  deps = [ ":metrics" ]
 }
 
 source_set("block-watcher") {
@@ -248,12 +221,6 @@ executable("fshost") {
     deps += [ "//src/storage/fxfs-crypt" ]
   }
 
-  if (bootfs_only) {
-    deps += [ ":metrics_stub" ]
-  } else {
-    deps += [ ":metrics_cobalt" ]
-  }
-
   # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
   # Consider switching to the C++ bindings. See linked bug for details.
   configs += [ "//build/c:fidl-deprecated-c-bindings" ]
@@ -268,13 +235,10 @@ test("fshost_test") {
     ":block-watcher",
     ":config",
     ":fshost-registry",
-    ":metrics_cobalt",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/lib/fit-promise",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/system/ulib/cobalt-client",
-    "//zircon/system/ulib/cobalt-client:in-memory-logger",
     "//zircon/system/ulib/fidl-async",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/mock-boot-arguments",
@@ -334,24 +298,6 @@ fuchsia_unittest_component("fshost-inspect-test") {
   deps = [ ":fshost_inspect_test" ]
 }
 
-test("fshost_metrics_test") {
-  sources = [ "metrics-test.cc" ]
-  deps = [
-    ":metrics_cobalt",
-    "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
-    "//sdk/lib/fdio",
-    "//src/lib/storage/vfs/cpp/metrics:metrics-cobalt",
-    "//src/lib/storage/vfs/cpp/metrics:metrics-inspect",
-    "//zircon/system/ulib/async-testing",
-    "//zircon/system/ulib/cobalt-client:in-memory-logger",
-    "//zircon/system/ulib/zxtest",
-  ]
-}
-
-fuchsia_unittest_component("fshost-metrics-test") {
-  deps = [ ":fshost_metrics_test" ]
-}
-
 test("fshost_integration_test") {
   sources = [
     "admin-server-test.cc",
@@ -365,7 +311,7 @@ test("fshost_integration_test") {
     ":block-watcher",
     ":config",
     ":headers",
-    ":metrics_cobalt",
+    ":inspect",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/fidl/fuchsia.component:fuchsia.component_llcpp",
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
@@ -376,7 +322,6 @@ test("fshost_integration_test") {
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/fs_management",
     "//src/lib/storage/ramdevice_client/cpp",
-    "//src/lib/storage/vfs/cpp/metrics:metrics-cobalt",
     "//src/lib/testing/predicates",
     "//src/storage/blobfs",
     "//src/storage/fshost/testing:integration_test_fixture",
@@ -384,8 +329,11 @@ test("fshost_integration_test") {
     "//src/storage/testing:storage_driver_test_support",
     "//src/sys/pkg/fidl/fuchsia.update.verify:fuchsia.update.verify_llcpp",
     "//third_party/googletest:gmock",
-    "//zircon/system/ulib/cobalt-client:in-memory-logger",
+    "//zircon/system/ulib/async",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fidl-async",
+    "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/service:service-llcpp",
   ]
   data_deps = [
@@ -436,7 +384,6 @@ fuchsia_test_package("fshost-tests") {
     ":fshost-integration-test",
     ":fshost-test",
     ":fshost-inspect-test",
-    ":fshost-metrics-test",
     ":fshost-loader-service-test",
     ":copier-test",
   ]

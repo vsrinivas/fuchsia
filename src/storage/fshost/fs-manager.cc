@@ -43,7 +43,6 @@
 #include "fshost-boot-args.h"
 #include "lib/async/cpp/task.h"
 #include "lifecycle.h"
-#include "metrics.h"
 #include "src/lib/storage/vfs/cpp/remote_dir.h"
 #include "src/lib/storage/vfs/cpp/vfs.h"
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
@@ -76,11 +75,9 @@ FsManager::MountedFilesystem::~MountedFilesystem() {
     FX_LOGS(WARNING) << "Unmount error: " << status.status_string();
 }
 
-FsManager::FsManager(std::shared_ptr<FshostBootArgs> boot_args,
-                     std::unique_ptr<FsHostMetrics> metrics)
+FsManager::FsManager(std::shared_ptr<FshostBootArgs> boot_args)
     : global_loop_(new async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread)),
       vfs_(fs::ManagedVfs(global_loop_->dispatcher())),
-      metrics_(std::move(metrics)),
       boot_args_(std::move(boot_args)) {}
 
 // In the event that we haven't been explicitly signalled, tear ourself down.
@@ -183,33 +180,8 @@ zx_status_t FsManager::Initialize(
   }
   outgoing_dir->AddEntry("fs", fs_dir_);
 
-  // Add the diagnostics directory
-  fidl::ClientEnd<fuchsia_io::Directory> data_root;
-  if (config.data_filesystem_format() == "fxfs") {
-    auto endpoints_or = fidl::CreateEndpoints<fuchsia_io::Directory>();
-    if (endpoints_or.is_error())
-      return endpoints_or.error_value();
-    // Fxfs is launched as a component, so we need to get access to it via the local namespace.
-    if (zx_status_t status = fdio_open(
-            "/data_root", static_cast<uint32_t>(fuchsia_io::wire::OpenFlags::kRightReadable),
-            endpoints_or->server.TakeChannel().release());
-        status != ZX_OK) {
-      FX_PLOGS(ERROR, status) << "Unable to open /data_root";
-      return status;
-    }
-    data_root = std::move(endpoints_or->client);
-  } else {
-    if (auto data_root_or =
-            fs_management::FsRootHandle(mount_nodes_[MountPoint::kData].export_root);
-        data_root_or.is_error()) {
-      return data_root_or.status_value();
-    } else {
-      data_root = *std::move(data_root_or);
-    }
-  }
-  diagnostics_dir_ = inspect_.Initialize(global_loop_->dispatcher());
+  diagnostics_dir_ = inspect_manager_.Initialize(global_loop_->dispatcher());
   outgoing_dir->AddEntry("diagnostics", diagnostics_dir_);
-  inspect_.ServeStats("data", std::move(data_root));
 
   fbl::RefPtr<memfs::VnodeDir> tmp_vnode;
   status = memfs::Memfs::Create(global_loop_->dispatcher(), "<tmp>", &tmp_, &tmp_vnode);
@@ -234,8 +206,6 @@ zx_status_t FsManager::Initialize(
   }
   return ZX_OK;
 }
-
-void FsManager::FlushMetrics() { mutable_metrics()->Flush(); }
 
 zx::status<fidl::ClientEnd<fuchsia_io::Directory>> FsManager::GetFsDir() {
   zx::status endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
@@ -543,9 +513,9 @@ zx::status<std::string> FsManager::GetDevicePath(uint64_t fs_id) {
     return zx::ok(iter->second);
 }
 
-zx::status<fidl::ClientEnd<fuchsia_io::Directory>> FsManager::GetRoot(MountPoint point) {
+zx::status<fidl::ClientEnd<fuchsia_io::Directory>> FsManager::GetRoot(MountPoint point) const {
   auto node = mount_nodes_.find(point);
-  if (node == mount_nodes_.end()) {
+  if (node == mount_nodes_.cend()) {
     if (point == MountPoint::kData) {
       // The data mount has been mounted via a component in which case we can get to the service
       // root through our local namespace.

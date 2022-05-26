@@ -18,8 +18,6 @@
 
 #include <memory>
 
-#include <cobalt-client/cpp/collector.h>
-#include <cobalt-client/cpp/in_memory_logger.h>
 #include <fbl/algorithm.h>
 #include <fbl/ref_ptr.h>
 #include <gtest/gtest.h>
@@ -30,24 +28,18 @@
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 #include "src/storage/fshost/block-watcher.h"
-#include "src/storage/fshost/metrics_cobalt.h"
 
 namespace fshost {
 namespace {
 
 namespace fio = fuchsia_io;
 
-std::unique_ptr<cobalt_client::Collector> MakeCollector() {
-  return std::make_unique<cobalt_client::Collector>(
-      std::make_unique<cobalt_client::InMemoryLogger>());
-}
-
 // Test that the manager Shutdown fails if ReadyForShutdown is not called.
 TEST(FsManagerTestCase, ShutdownBeforeReadyFails) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_EQ(loop.StartThread(), ZX_OK);
 
-  FsManager manager(nullptr, std::make_unique<FsHostMetricsCobalt>(MakeCollector()));
+  FsManager manager(nullptr);
   auto config = EmptyConfig();
   BlockWatcher watcher(manager, &config);
   ASSERT_EQ(manager.Initialize({}, {}, config, watcher), ZX_OK);
@@ -67,7 +59,7 @@ TEST(FsManagerTestCase, ShutdownSignalsCompletion) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_EQ(loop.StartThread(), ZX_OK);
 
-  FsManager manager(nullptr, std::make_unique<FsHostMetricsCobalt>(MakeCollector()));
+  FsManager manager(nullptr);
   auto config = EmptyConfig();
   BlockWatcher watcher(manager, &config);
   ASSERT_EQ(manager.Initialize({}, {}, config, watcher), ZX_OK);
@@ -104,7 +96,7 @@ TEST(FsManagerTestCase, LifecycleStop) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_EQ(loop.StartThread(), ZX_OK);
 
-  FsManager manager(nullptr, std::make_unique<FsHostMetricsCobalt>(MakeCollector()));
+  FsManager manager(nullptr);
   auto config = DefaultConfig();
   BlockWatcher watcher(manager, &config);
   ASSERT_EQ(manager.Initialize({}, std::move(lifecycle_server), config, watcher), ZX_OK);
@@ -156,7 +148,7 @@ TEST(FsManagerTestCase, InstallFsAfterShutdownWillFail) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_EQ(loop.StartThread(), ZX_OK);
 
-  FsManager manager(nullptr, std::make_unique<FsHostMetricsCobalt>(MakeCollector()));
+  FsManager manager(nullptr);
   auto config = EmptyConfig();
   BlockWatcher watcher(manager, &config);
   ASSERT_EQ(manager.Initialize({}, {}, config, watcher), ZX_OK);
@@ -172,7 +164,7 @@ TEST(FsManagerTestCase, ReportFailureOnUncleanUnmount) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_EQ(loop.StartThread(), ZX_OK);
 
-  FsManager manager(nullptr, std::make_unique<FsHostMetricsCobalt>(MakeCollector()));
+  FsManager manager(nullptr);
   auto config = EmptyConfig();
   BlockWatcher watcher(manager, &config);
   ASSERT_EQ(manager.Initialize({}, {}, config, watcher), ZX_OK);

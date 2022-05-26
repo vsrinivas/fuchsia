@@ -192,6 +192,14 @@ zx_status_t FilesystemMounter::MountData(zx::channel block_device,
     }
   }
 
+  // Obtain data root used for serving disk usage statistics. Must be valid otherwise the lazy node
+  // serving the statistics will hang indefinitely.
+  auto data_root_or = manager().GetRoot(FsManager::MountPoint::kData);
+  if (data_root_or.is_error()) {
+    return data_root_or.error_value();
+  }
+  inspect_manager().ServeStats("data", std::move(data_root_or.value()));
+
   data_mounted_ = true;
   return ZX_OK;
 }
@@ -244,9 +252,10 @@ zx_status_t FilesystemMounter::MountBlob(zx::channel block_device,
 }
 
 void FilesystemMounter::ReportPartitionCorrupted(fs_management::DiskFormat format) {
-  // TODO(fxbug.dev/96057): Report this via Inspect using Lapis and remove Cobalt flushing thread.
-  fshost_.mutable_metrics()->LogDataCorruption();
-  fshost_.FlushMetrics();
+  fshost_.inspect_manager().LogCorruption(format);
+  // Currently the only reason we report a partition as being corrupt is if it fails fsck.
+  // This may need to change in the future should we want to file synthetic crash reports for
+  // other possible failure modes.
   fshost_.FileReport(format, FsManager::ReportReason::kFsckFailure);
 }
 

@@ -12,8 +12,6 @@
 #include <lib/service/llcpp/service.h>
 #include <sys/statfs.h>
 
-#include <cobalt-client/cpp/collector.h>
-#include <cobalt-client/cpp/in_memory_logger.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 

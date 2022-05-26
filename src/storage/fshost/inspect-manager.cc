@@ -5,6 +5,7 @@
 #include "inspect-manager.h"
 
 #include <lib/inspect/service/cpp/service.h>
+#include <lib/syslog/cpp/macros.h>
 #include <sys/stat.h>
 
 #include "src/lib/storage/vfs/cpp/service.h"
@@ -32,7 +33,7 @@ zx_status_t OpenNode(fidl::UnownedClientEnd<fio::Directory> root, const std::str
   return ZX_OK;
 }
 
-fbl::RefPtr<fs::PseudoDir> InspectManager::Initialize(async_dispatcher* dispatcher) {
+fbl::RefPtr<fs::PseudoDir> FshostInspectManager::Initialize(async_dispatcher* dispatcher) {
   auto diagnostics_dir = fbl::MakeRefCounted<fs::PseudoDir>();
   diagnostics_dir->AddEntry(
       fuchsia::inspect::Tree::Name_,
@@ -44,29 +45,36 @@ fbl::RefPtr<fs::PseudoDir> InspectManager::Initialize(async_dispatcher* dispatch
   return diagnostics_dir;
 }
 
-void InspectManager::ServeStats(const std::string& name,
-                                fidl::ClientEnd<fuchsia_io::Directory> root) {
+void FshostInspectManager::ServeStats(std::string name,
+                                      fidl::ClientEnd<fuchsia_io::Directory> root) {
   inspector_.GetRoot().CreateLazyNode(
       name + "_stats",
       [this, name = std::move(name), root = std::move(root)] {
-        inspect::Inspector insp;
+        if (!root.is_valid()) {
+          FX_LOGS_FIRST_N(ERROR, 10)
+              << "Cannot serve stats for " << name << ": invalid root channel!";
+          return fpromise::make_result_promise<inspect::Inspector>(fpromise::error());
+        }
         fidl::ClientEnd<fio::Node> root_chan;
         zx_status_t status = OpenNode(root, ".", S_IFDIR, &root_chan);
         if (status != ZX_OK) {
-          return fpromise::make_result_promise(fpromise::ok(std::move(insp)));
+          FX_LOGS_FIRST_N(ERROR, 10) << "Cannot serve stats for " << name
+                                     << ": failed to open node: " << zx_status_get_string(status);
+          return fpromise::make_result_promise<inspect::Inspector>(fpromise::error());
         }
         // Note: we are unsafely assuming that |root_chan| is a directory
         // i.e. speaks |fuchsia.io/Directory|.
         fidl::ClientEnd<fio::Directory> root_dir(root_chan.TakeChannel());
+        inspect::Inspector insp;
         FillFileTreeSizes(std::move(root_dir), insp.GetRoot().CreateChild(name), &insp);
         FillStats(root, &insp);
-        return fpromise::make_result_promise(fpromise::ok(std::move(insp)));
+        return fpromise::make_ok_promise(std::move(insp));
       },
       &inspector_);
 }
 
-void InspectManager::FillStats(fidl::UnownedClientEnd<fio::Directory> dir_chan,
-                               inspect::Inspector* inspector) {
+void FshostInspectManager::FillStats(fidl::UnownedClientEnd<fio::Directory> dir_chan,
+                                     inspect::Inspector* inspector) {
   fidl::UnownedClientEnd<fuchsia_io::Directory> dir(dir_chan.channel());
   auto result = fidl::WireCall(dir)->QueryFilesystem();
   inspect::Node stats = inspector->GetRoot().CreateChild("stats");
@@ -91,8 +99,8 @@ void InspectManager::FillStats(fidl::UnownedClientEnd<fio::Directory> dir_chan,
   inspector->emplace(std::move(stats));
 }
 
-void InspectManager::FillFileTreeSizes(fidl::ClientEnd<fio::Directory> current_dir,
-                                       inspect::Node node, inspect::Inspector* inspector) {
+void FshostInspectManager::FillFileTreeSizes(fidl::ClientEnd<fio::Directory> current_dir,
+                                             inspect::Node node, inspect::Inspector* inspector) {
   struct PendingDirectory {
     std::unique_ptr<DirectoryEntriesIterator> entries_iterator;
     inspect::Node node;
@@ -153,6 +161,18 @@ void InspectManager::FillFileTreeSizes(fidl::ClientEnd<fio::Directory> current_d
       }
     }
   }
+}
+
+void FshostInspectManager::LogCorruption(fs_management::DiskFormat format) {
+  if (!corruption_node_.has_value()) {
+    corruption_node_ = inspector_.GetRoot().CreateChild("corruption_events");
+  }
+  auto found_it = corruption_events_.find(format);
+  if (found_it == corruption_events_.cend()) {
+    found_it = corruption_events_.emplace_hint(
+        found_it, format, corruption_node_->CreateUint(DiskFormatString(format), 0u));
+  }
+  found_it->second.Add(1u);
 }
 
 // Create a new lazy iterator.

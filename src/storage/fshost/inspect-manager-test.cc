@@ -24,6 +24,11 @@ namespace {
 
 constexpr char kTmpfsPath[] = "/fshost-inspect-tmp";
 
+inspect::Hierarchy ReadInspect(const inspect::Inspector& inspector) {
+  // take_value() will assert if the promise result is an error.
+  return fpromise::run_single_threaded(inspect::ReadFromInspector(inspector)).take_value();
+}
+
 class InspectManagerTest : public zxtest::Test {
  public:
   InspectManagerTest() : memfs_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
@@ -48,15 +53,6 @@ class InspectManagerTest : public zxtest::Test {
                                                      fuchsia_io::wire::OpenFlags::kRightExecutable),
                                server.TakeChannel().release()));
     return std::move(client);
-  }
-
-  fpromise::result<inspect::Hierarchy> ReadInspect(const inspect::Inspector& inspector) {
-    fpromise::result<inspect::Hierarchy> hierarchy;
-    fpromise::single_threaded_executor exec;
-    exec.schedule_task(inspect::ReadFromInspector(inspector).then(
-        [&](fpromise::result<inspect::Hierarchy>& result) { hierarchy = std::move(result); }));
-    exec.run();
-    return hierarchy;
   }
 
   void AddFile(const std::string& path, size_t content_size) {
@@ -98,14 +94,12 @@ TEST_F(InspectManagerTest, ServeStats) {
   AddFile("a/c/d.txt", 16);
 
   // Serve inspect stats.
-  auto inspect_manager = fshost::InspectManager();
+  auto inspect_manager = fshost::FshostInspectManager();
   auto test_dir = GetDir();
   inspect_manager.ServeStats("test_dir", std::move(test_dir));
 
-  //// Read inspect
-  auto result = ReadInspect(inspect_manager.inspector());
-  ASSERT_TRUE(result.is_ok());
-  auto& hierarchy = result.value();
+  // Read inspect
+  inspect::Hierarchy hierarchy = ReadInspect(inspect_manager.inspector());
 
   // Assert root
   ASSERT_EQ(1, hierarchy.children().size());
@@ -121,6 +115,18 @@ TEST_F(InspectManagerTest, ServeStats) {
   AssertValue(hierarchy, {"test_dir_stats", "test_dir", "a", "c"}, 31, 2);
   AssertValue(hierarchy, {"test_dir_stats", "test_dir", "a", "c", "c.txt"}, 15);
   AssertValue(hierarchy, {"test_dir_stats", "test_dir", "a", "c", "d.txt"}, 16);
+}
+
+// Validate that using a bad handle to serve a stats node doesn't block indefinitely.
+TEST_F(InspectManagerTest, ServeStatsBadHandle) {
+  // Serve inspect stats using an invalid channel.
+  auto inspect_manager = fshost::FshostInspectManager();
+  fidl::ClientEnd<fuchsia_io::Directory> client_end;
+  ASSERT_FALSE(client_end.is_valid());
+  inspect_manager.ServeStats("test_dir", std::move(client_end));
+  inspect::Hierarchy hierarchy = ReadInspect(inspect_manager.inspector());
+  // Ensure the node doesn't actually exist since the callback should return an error.
+  ASSERT_EQ(hierarchy.GetByPath({"test_dir_stats"}), nullptr);
 }
 
 TEST_F(InspectManagerTest, DirectoryEntryIteratorGetNext) {
@@ -160,6 +166,33 @@ TEST_F(InspectManagerTest, DirectoryEntryIteratorGetNext) {
     found += 1;
   }
   EXPECT_EQ(found, 5000);
+}
+
+TEST_F(InspectManagerTest, CorruptionEvents) {
+  fshost::FshostInspectManager inspect_manager;
+  // There should be no "corruption_events" node until an event is reported.
+  inspect::Hierarchy hierarchy = ReadInspect(inspect_manager.inspector());
+  ASSERT_EQ(hierarchy.GetByPath({"corruption_events"}), nullptr);
+
+  // Report some corruption events and make sure they show up where we expect.
+  inspect_manager.LogCorruption(fs_management::DiskFormat::kDiskFormatMinfs);
+  inspect_manager.LogCorruption(fs_management::DiskFormat::kDiskFormatFxfs);
+  inspect_manager.LogCorruption(fs_management::DiskFormat::kDiskFormatFxfs);
+  inspect_manager.LogCorruption(fs_management::DiskFormat::kDiskFormatFxfs);
+
+  hierarchy = ReadInspect(inspect_manager.inspector());
+  const inspect::Hierarchy* corruption_events = hierarchy.GetByPath({"corruption_events"});
+  ASSERT_NE(corruption_events, nullptr);
+
+  const auto* minfs_corruption_events =
+      corruption_events->node().get_property<inspect::UintPropertyValue>("minfs");
+  ASSERT_NE(minfs_corruption_events, nullptr);
+  ASSERT_EQ(minfs_corruption_events->value(), 1u);
+
+  const auto* fxfs_corruption_events =
+      corruption_events->node().get_property<inspect::UintPropertyValue>("fxfs");
+  ASSERT_NE(fxfs_corruption_events, nullptr);
+  ASSERT_EQ(fxfs_corruption_events->value(), 3u);
 }
 
 }  // namespace

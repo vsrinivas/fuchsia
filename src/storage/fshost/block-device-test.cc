@@ -6,6 +6,8 @@
 
 #include <fcntl.h>
 #include <lib/fdio/namespace.h>
+#include <lib/fpromise/single_threaded_executor.h>
+#include <lib/inspect/cpp/reader.h>
 #include <lib/syslog/global.h>
 #include <lib/syslog/logger.h>
 #include <zircon/assert.h>
@@ -14,19 +16,14 @@
 #include <sstream>
 #include <string>
 
-#include <cobalt-client/cpp/collector.h>
-#include <cobalt-client/cpp/in_memory_logger.h>
-#include <cobalt-client/cpp/metric_options.h>
 #include <gtest/gtest.h>
 
-#include "src/lib/storage/vfs/cpp/metrics/events.h"
 #include "src/storage/fshost/block-device-manager.h"
 #include "src/storage/fshost/block-watcher.h"
 #include "src/storage/fshost/config.h"
 #include "src/storage/fshost/extract-metadata.h"
 #include "src/storage/fshost/filesystem-mounter.h"
 #include "src/storage/fshost/fs-manager.h"
-#include "src/storage/fshost/metrics_cobalt.h"
 #include "src/storage/minfs/format.h"
 #include "src/storage/testing/ram_disk.h"
 
@@ -36,41 +33,9 @@ namespace {
 constexpr uint64_t kBlockSize = 512;
 constexpr uint64_t kBlockCount = 1 << 20;
 
-// The class helps in keeping track of number of minfs corruptions seen.
-class CorruptionEventCounter : public cobalt_client::InMemoryLogger {
- public:
-  explicit CorruptionEventCounter(std::atomic<uint32_t>* corruption_count)
-      : cobalt_client::InMemoryLogger(), corruption_count_(corruption_count) {}
-
-  bool Log(const cobalt_client::MetricOptions& metric_info, int64_t count) override {
-    auto ret = cobalt_client::InMemoryLogger::Log(metric_info, count);
-
-    // If this happens to be a minfs corruption event then track count.
-    if (metric_info.metric_id == static_cast<std::underlying_type<fs_metrics::Event>::type>(
-                                     fs_metrics::Event::kDataCorruption) &&
-        metric_info.event_codes[0] == static_cast<uint32_t>(fs_metrics::CorruptionSource::kMinfs)) {
-      ++(*corruption_count_);
-    }
-    return ret;
-  }
-
- private:
-  std::atomic<uint32_t>* corruption_count_;
-};
-
-std::unique_ptr<FsHostMetrics> MakeMetrics(std::atomic<uint32_t>* corruption_count) {
-  std::unique_ptr<CorruptionEventCounter> logger_ptr =
-      std::make_unique<CorruptionEventCounter>(corruption_count);
-  return std::make_unique<FsHostMetricsCobalt>(
-      std::make_unique<cobalt_client::Collector>(std::move(logger_ptr)));
-}
-
 class BlockDeviceTest : public testing::Test {
  public:
-  BlockDeviceTest()
-      : manager_(nullptr, MakeMetrics(&minfs_corruption_count_)),
-        config_(EmptyConfig()),
-        watcher_(manager_, &config_) {}
+  BlockDeviceTest() : manager_(nullptr), config_(EmptyConfig()), watcher_(manager_, &config_) {}
 
   void SetUp() override {
     // Initialize FilesystemMounter.
@@ -116,15 +81,11 @@ class BlockDeviceTest : public testing::Test {
 
   fbl::unique_fd devfs_root() { return fbl::unique_fd(open("/dev", O_RDWR)); }
 
-  uint32_t corruption_count() const { return minfs_corruption_count_.load(); }
-
  protected:
   FsManager manager_;
   fshost_config::Config config_;
 
  private:
-  // This counts number of minfs corruptions events seen.
-  std::atomic<uint32_t> minfs_corruption_count_ = 0;
   std::optional<storage::RamDisk> ramdisk_;
   BlockWatcher watcher_;
 };
@@ -255,7 +216,7 @@ TEST_F(BlockDeviceTest, TestBlobfs) {
   EXPECT_NE(device.MountFilesystem(), ZX_OK);
 }
 
-TEST_F(BlockDeviceTest, TestCorruptionEventLogged) {
+TEST_F(BlockDeviceTest, TestMinfsCorruptionEventLogged) {
   auto config = EmptyConfig();
   config.check_filesystems() = true;
   FilesystemMounter mounter(manager_, &config);
@@ -270,28 +231,25 @@ TEST_F(BlockDeviceTest, TestCorruptionEventLogged) {
   EXPECT_EQ(device.FormatFilesystem(), ZX_OK);
 
   // Corrupt minfs.
-  uint64_t buffer_size = minfs::kMinfsBlockSize * 8;
+  uint64_t buffer_size = static_cast<uint64_t>(minfs::kMinfsBlockSize) * 8;
   std::unique_ptr<uint8_t[]> zeroed_buffer(new uint8_t[buffer_size]);
   memset(zeroed_buffer.get(), 0, buffer_size);
   ASSERT_EQ(write(GetRamdiskFd().get(), zeroed_buffer.get(), buffer_size),
             static_cast<ssize_t>(buffer_size));
 
-  EXPECT_NE(device.CheckFilesystem(), ZX_OK);
+  ASSERT_NE(device.CheckFilesystem(), ZX_OK);
 
-  // Verify a corruption event was logged.
-  cobalt_client::MetricOptions metric_options;
-  metric_options.metric_id = static_cast<std::underlying_type<fs_metrics::Event>::type>(
-      fs_metrics::Event::kDataCorruption);
-  metric_options.event_codes = {static_cast<uint32_t>(fs_metrics::CorruptionSource::kMinfs),
-                                static_cast<uint32_t>(fs_metrics::CorruptionType::kMetadata)};
-  metric_options.metric_dimensions = 2;
-  metric_options.component = {};
-  // Block till counters change. Timed sleep without while loop is not sufficient because
-  // it make make test flake in virtual environment.
-  // The test may timeout and fail if the counter is never seen.
-  while (corruption_count() == 0) {
-    sleep(1);
-  }
+  // Verify that we logged a Minfs corruption event to the InspectManager.
+  inspect::Hierarchy hierarchy =
+      fpromise::run_single_threaded(
+          inspect::ReadFromInspector(mounter.inspect_manager().inspector()))
+          .take_value();
+  const inspect::Hierarchy* corruption_events = hierarchy.GetByPath({"corruption_events"});
+  ASSERT_NE(corruption_events, nullptr);
+  const auto* property =
+      corruption_events->node().get_property<inspect::UintPropertyValue>("minfs");
+  ASSERT_NE(property, nullptr);
+  ASSERT_EQ(property->value(), 1u);
 }
 
 std::unique_ptr<std::string> GetData(int fd) {

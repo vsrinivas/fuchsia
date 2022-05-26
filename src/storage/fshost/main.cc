@@ -36,7 +36,6 @@
 #include "block-watcher.h"
 #include "config.h"
 #include "fs-manager.h"
-#include "metrics.h"
 #include "src/lib/storage/vfs/cpp/remote_dir.h"
 #include "src/lib/storage/vfs/cpp/service.h"
 #include "src/storage/fshost/fshost_config.h"
@@ -172,8 +171,7 @@ int Main(bool disable_block_watcher, bool ignore_component_config) {
   fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle> lifecycle_request{
       zx::channel{zx_take_startup_handle(PA_LIFECYCLE)}};
 
-  auto metrics = DefaultMetrics();
-  FsManager fs_manager(boot_args, std::move(metrics));
+  FsManager fs_manager(boot_args);
 
   if (config.netboot()) {
     FX_LOGS(INFO) << "disabling automount";

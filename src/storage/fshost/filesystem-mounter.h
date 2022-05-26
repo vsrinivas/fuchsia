@@ -20,7 +20,6 @@
 #include "src/storage/fshost/fshost-boot-args.h"
 #include "src/storage/fshost/fshost_config.h"
 #include "src/storage/fshost/inspect-manager.h"
-#include "src/storage/fshost/metrics.h"
 
 namespace fshost {
 
@@ -73,7 +72,7 @@ class FilesystemMounter {
   zx::status<> MaybeInitCryptClient();
 
   FsManager& manager() { return fshost_; }
-  InspectManager& inspect_manager() { return fshost_.inspect_manager(); }
+  FshostInspectManager& inspect_manager() { return fshost_.inspect_manager(); }
 
  private:
   // Performs the mechanical action of mounting a filesystem, without

@@ -7,8 +7,11 @@
 
 #include <lib/inspect/cpp/inspector.h>
 
+#include <map>
+#include <optional>
 #include <queue>
 
+#include "src/lib/storage/fs_management/cpp/format.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 
 namespace fshost {
@@ -19,21 +22,29 @@ zx_status_t OpenNode(fidl::UnownedClientEnd<fuchsia_io::Directory> root, const s
                      uint32_t mode, fidl::ClientEnd<fuchsia_io::Node>* result);
 
 // Management of fshost inspect data.
-class InspectManager {
+class FshostInspectManager {
  public:
-  InspectManager() = default;
-  ~InspectManager() = default;
+  FshostInspectManager() = default;
+  ~FshostInspectManager() = default;
 
   // Returns the diagnostics directory where inspect data is contained.
   fbl::RefPtr<fs::PseudoDir> Initialize(async_dispatcher* dispatcher);
 
-  // Creates a lazy node which serves stats about the given path.
-  void ServeStats(const std::string& path, fidl::ClientEnd<fuchsia_io::Directory> root);
+  // Creates a lazy node which serves stats about the given |root|.
+  void ServeStats(std::string name, fidl::ClientEnd<fuchsia_io::Directory> root);
 
   const inspect::Inspector& inspector() const { return inspector_; }
 
+  void LogCorruption(fs_management::DiskFormat format);
+
  private:
   inspect::Inspector inspector_;
+
+  // Node which contains counters for all filesystem corruption events. Will be lazily created
+  // when the first corruption is reported via |LogCorruption|.
+  std::optional<inspect::Node> corruption_node_;
+  // Mapping of filesystem type to the Inspect properties keeping track of the corruption counts.
+  std::map<fs_management::DiskFormat, inspect::UintProperty> corruption_events_;
 
   // Fills information about the size of files and directories under the given `root` under the
   // given `node` and emplaces it in the given `inspector`. Returns the total size of `root`.
