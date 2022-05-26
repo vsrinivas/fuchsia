@@ -45,7 +45,6 @@ use util::ConversionContext;
 use context::Lockable;
 use devices::{
     BindingId, CommonInfo, DeviceInfo, DeviceSpecificInfo, Devices, EthernetInfo, LoopbackInfo,
-    ToggleError,
 };
 use interfaces_watcher::{InterfaceEventProducer, InterfaceProperties, InterfaceUpdate};
 use timers::TimerDispatcher;
@@ -54,12 +53,11 @@ use net_types::ip::{AddrSubnet, AddrSubnetEither, Ip, Ipv4, Ipv6};
 use netstack3_core::{
     add_ip_addr_subnet, add_route,
     context::{EventContext, InstantContext, RngContext, TimerContext},
-    get_ipv4_configuration, get_ipv6_configuration, handle_timer, icmp, remove_device,
-    set_ipv4_configuration, set_ipv6_configuration, AddableEntryEither, BlanketCoreContext,
-    BufferUdpContext, Ctx, DeviceId, DeviceLayerEventDispatcher, EventDispatcher,
-    IpDeviceConfiguration, IpExt, IpSockCreationError, Ipv4DeviceConfiguration,
-    Ipv6DeviceConfiguration, SlaacConfiguration, TimerId, UdpBoundId, UdpConnId, UdpContext,
-    UdpListenerId,
+    get_ipv4_configuration, get_ipv6_configuration, handle_timer, icmp, set_ipv4_configuration,
+    set_ipv6_configuration, AddableEntryEither, BlanketCoreContext, BufferUdpContext, Ctx,
+    DeviceId, DeviceLayerEventDispatcher, EventDispatcher, IpDeviceConfiguration, IpExt,
+    IpSockCreationError, Ipv4DeviceConfiguration, Ipv6DeviceConfiguration, SlaacConfiguration,
+    TimerId, UdpBoundId, UdpConnId, UdpContext, UdpListenerId,
 };
 
 /// Default MTU for loopback.
@@ -310,7 +308,15 @@ where
 
         match dev.info_mut() {
             DeviceSpecificInfo::Ethernet(EthernetInfo {
-                common_info: CommonInfo { admin_enabled, mtu: _, events: _, name: _ },
+                common_info:
+                    CommonInfo {
+                        admin_enabled,
+                        mtu: _,
+                        events: _,
+                        name: _,
+                        ipv4_config: _,
+                        ipv6_config: _,
+                    },
                 client,
                 mac: _,
                 features: _,
@@ -498,34 +504,72 @@ where
 }
 
 trait InterfaceControl {
-    /// Enables an interface, adding it to the core if it is not currently
-    /// enabled.
+    /// Enables an interface.
     ///
     /// Both `admin_enabled` and `phy_up` must be true for the interface to be
     /// enabled.
     fn enable_interface(&mut self, id: u64) -> Result<(), fidl_net_stack::Error>;
 
-    /// Disables an interface, removing it from the core if it is currently
-    /// enabled.
+    /// Disables an interface.
     ///
     /// Either an Admin (fidl) or Phy change can disable an interface.
     fn disable_interface(&mut self, id: u64) -> Result<(), fidl_net_stack::Error>;
 }
 
-fn enable_device<D: EventDispatcher, C: BlanketCoreContext>(
+fn set_interface_enabled<
+    D: EventDispatcher + AsRef<Devices> + AsMut<Devices>,
+    C: BlanketCoreContext,
+>(
     ctx: &mut Ctx<D, C>,
-    device_id: DeviceId,
-) {
-    set_ipv4_configuration(ctx, device_id, {
-        let mut config = get_ipv4_configuration(ctx, device_id);
-        config.ip_config.ip_enabled = true;
-        config
-    });
-    set_ipv6_configuration(ctx, device_id, {
-        let mut config = get_ipv6_configuration(ctx, device_id);
-        config.ip_config.ip_enabled = true;
-        config
-    });
+    id: u64,
+    should_enable: bool,
+) -> Result<(), fidl_net_stack::Error> {
+    let device =
+        ctx.dispatcher.as_mut().get_device_mut(id).ok_or(fidl_net_stack::Error::NotFound)?;
+    let core_id = device.core_id();
+
+    let (dev_enabled, events, ipv4_config, ipv6_config) = match device.info_mut() {
+        DeviceSpecificInfo::Ethernet(EthernetInfo {
+            common_info:
+                CommonInfo { admin_enabled, mtu: _, events, name: _, ipv4_config, ipv6_config },
+            client: _,
+            mac: _,
+            features: _,
+            phy_up,
+        }) => (*admin_enabled && *phy_up, events, ipv4_config, ipv6_config),
+        DeviceSpecificInfo::Loopback(LoopbackInfo {
+            common_info:
+                CommonInfo { admin_enabled, mtu: _, events, name: _, ipv4_config, ipv6_config },
+        }) => (*admin_enabled, events, ipv4_config, ipv6_config),
+    };
+
+    if should_enable {
+        // We want to enable the interface, but its device is considered
+        // disabled so we do nothing further.
+        //
+        // This can happen when the interface was set to be administratively up
+        // but the phy is down.
+        if !dev_enabled {
+            return Ok(());
+        }
+    } else {
+        assert!(!dev_enabled, "caller attemped to disable an interface that is considered enabled");
+    }
+
+    events
+        .notify(InterfaceUpdate::OnlineChanged(should_enable))
+        .expect("interfaces worker not running");
+
+    ipv4_config.ip_config.ip_enabled = should_enable;
+    ipv6_config.ip_config.ip_enabled = should_enable;
+
+    let ipv4_config = *ipv4_config;
+    let ipv6_config = *ipv6_config;
+
+    set_ipv4_configuration(ctx, core_id, ipv4_config);
+    set_ipv6_configuration(ctx, core_id, ipv6_config);
+
+    Ok(())
 }
 
 impl<D, C> InterfaceControl for Ctx<D, C>
@@ -534,117 +578,11 @@ where
     C: BlanketCoreContext,
 {
     fn enable_interface(&mut self, id: u64) -> Result<(), fidl_net_stack::Error> {
-        let Ctx { state, dispatcher, ctx: _ } = self;
-        let device = dispatcher.as_ref().get_device(id).ok_or(fidl_net_stack::Error::NotFound)?;
-
-        let enabled = match device.info() {
-            DeviceSpecificInfo::Ethernet(EthernetInfo {
-                common_info: CommonInfo { admin_enabled, mtu: _, events: _, name: _ },
-                client: _,
-                mac: _,
-                features: _,
-                phy_up,
-            }) => *admin_enabled && *phy_up,
-            DeviceSpecificInfo::Loopback(LoopbackInfo {
-                common_info: CommonInfo { admin_enabled, mtu: _, events: _, name: _ },
-            }) => *admin_enabled,
-        };
-
-        if !enabled {
-            return Ok(());
-        }
-
-        // TODO(rheacock, fxbug.dev/21135): Handle core and driver state in
-        // two stages: add device to the core to get an id, then reach into
-        // the driver to get updated info before triggering the core to
-        // allow traffic on the interface.
-        let generate_core_id = |info: &DeviceInfo| match info.info() {
-            DeviceSpecificInfo::Ethernet(EthernetInfo {
-                common_info: CommonInfo { admin_enabled: _, mtu, events: _, name: _ },
-                client: _,
-                mac,
-                features: _,
-                phy_up: _,
-            }) => state.add_ethernet_device(*mac, *mtu),
-            DeviceSpecificInfo::Loopback(LoopbackInfo {
-                common_info: CommonInfo { admin_enabled: _, mtu, events: _, name: _ },
-            }) => {
-                // Should not panic as we only reach this point if a device
-                // was previously disabled and (as of writing) disabled
-                // devices are not held in core.
-                //
-                // TODO(https://fxbug.dev/92656): Hold disabled interfaces
-                // in core so we can avoid adding interfaces when
-                // transitioning from disabled to enabled.
-                state.add_loopback_device(*mtu).expect("error adding loopback device")
-            }
-        };
-        match dispatcher.as_mut().activate_device(id, generate_core_id) {
-            Ok(device_info) => {
-                // we can unwrap core_id here because activate_device just
-                // succeeded.
-                let core_id = device_info.core_id().unwrap();
-
-                device_info
-                    .info()
-                    .common_info()
-                    .events
-                    .notify(InterfaceUpdate::OnlineChanged(true))
-                    .expect("interfaces worker not running");
-
-                // don't forget to initialize the device in core!
-                enable_device(self, core_id);
-                Ok(())
-            }
-            Err(toggle_error) => {
-                match toggle_error {
-                    ToggleError::NoChange => Ok(()),
-                    // Invalid device ID
-                    ToggleError::NotFound => Err(fidl_net_stack::Error::NotFound),
-                }
-            }
-        }
+        set_interface_enabled(self, id, true /* should_enable */)
     }
 
     fn disable_interface(&mut self, id: u64) -> Result<(), fidl_net_stack::Error> {
-        match self.dispatcher.as_mut().deactivate_device(id) {
-            Ok((core_id, device_info)) => {
-                let (online, events) = match device_info.info() {
-                    DeviceSpecificInfo::Ethernet(EthernetInfo {
-                        common_info: CommonInfo { admin_enabled, mtu: _, events, name: _ },
-                        client: _,
-                        mac: _,
-                        features: _,
-                        phy_up,
-                    }) => (*admin_enabled && *phy_up, events),
-                    DeviceSpecificInfo::Loopback(LoopbackInfo {
-                        common_info: CommonInfo { admin_enabled, mtu: _, events, name: _ },
-                    }) => (*admin_enabled, events),
-                };
-                // Sanity check that there is a reason that the device is
-                // disabled.
-                assert!(!online);
-
-                events
-                    .notify(InterfaceUpdate::OnlineChanged(false))
-                    .expect("interfaces worker not running");
-
-                // Disabling the interface deactivates it in the bindings, and
-                // will remove it completely from the core.
-                match remove_device(self, core_id) {
-                    // TODO(rheacock): schedule and send the received frames
-                    Some(_) => Ok(()),
-                    None => Ok(()),
-                }
-            }
-            Err(toggle_error) => {
-                match toggle_error {
-                    ToggleError::NoChange => Ok(()),
-                    // Invalid device ID
-                    ToggleError::NotFound => Err(fidl_net_stack::Error::NotFound),
-                }
-            }
-        }
+        set_interface_enabled(self, id, false /* should_enable */)
     }
 }
 
@@ -742,14 +680,13 @@ impl NetstackSeed {
 
             // Add and initialize the loopback interface with the IPv4 and IPv6
             // loopback addresses and on-link routes to the loopback subnets.
-            let Ctx {
-                state,
-                dispatcher: BindingsDispatcher { devices, icmp_echo_sockets: _, udp_sockets: _ },
-                ctx: _,
-            } = ctx;
-            let loopback = state
+            let loopback = ctx
+                .state
                 .add_loopback_device(DEFAULT_LOOPBACK_MTU)
                 .expect("error adding loopback device");
+            let ipv4_config = get_ipv4_configuration(&ctx, loopback);
+            let ipv6_config = get_ipv6_configuration(&ctx, loopback);
+            let devices: &mut Devices = ctx.dispatcher.as_mut();
             let _binding_id: u64 = devices
                 .add_active_device(loopback, |id| {
                     const LOOPBACK_NAME: &'static str = "lo";
@@ -771,6 +708,8 @@ impl NetstackSeed {
                             admin_enabled: true,
                             events,
                             name: LOOPBACK_NAME.to_string(),
+                            ipv4_config,
+                            ipv6_config,
                         },
                     })
                 })

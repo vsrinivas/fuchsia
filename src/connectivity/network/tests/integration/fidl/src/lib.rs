@@ -197,40 +197,50 @@ async fn add_ethernet_interface<N: Netstack>(name: &str) {
 }
 
 #[variants_test]
-async fn add_del_interface_address_deprecated<N: Netstack>(name: &str) {
+#[test_case(true; "after_enabling_interface_first")]
+#[test_case(false; "without_enabling_interface_first")]
+async fn add_del_interface_address_deprecated<N: Netstack>(
+    test_name: &str,
+    enable_interface: bool,
+) {
+    let name = format!("{}_enable_if_{}", test_name, enable_interface);
+
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
-    let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
+    let realm = sandbox.create_netstack_realm::<N, _>(name.as_str()).expect("create realm");
     let stack =
         realm.connect_to_protocol::<fnet_stack::StackMarker>().expect("connect to protocol");
     let interfaces_state = realm
         .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
         .expect("connect to protocol");
-    let device =
-        sandbox.create_endpoint::<netemul::Ethernet, _>(name).await.expect("create endpoint");
+    let device = sandbox
+        .create_endpoint::<netemul::Ethernet, _>(name.as_str())
+        .await
+        .expect("create endpoint");
 
     let iface = device.into_interface_in_realm(&realm).await.expect("add device");
     let id = iface.id();
 
-    // TODO(https://fxbug.dev/20989#c5): netstack3 doesn't allow addresses to be added while
-    // link is down.
-    let () = stack.enable_interface_deprecated(id).await.squash_result().expect("enable interface");
-    let () = iface.set_link_up(true).await.expect("bring device up");
-    fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
-        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interfaces_state)
-            .expect("interface stream"),
-        &mut fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(id),
-        |fidl_fuchsia_net_interfaces_ext::Properties {
-             id: _,
-             name: _,
-             device_class: _,
-             online,
-             addresses: _,
-             has_default_ipv4_route: _,
-             has_default_ipv6_route: _,
-         }| (*online).then(|| ()),
-    )
-    .await
-    .expect("wait device online");
+    if enable_interface {
+        let () =
+            stack.enable_interface_deprecated(id).await.squash_result().expect("enable interface");
+        let () = iface.set_link_up(true).await.expect("bring device up");
+        fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
+            fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interfaces_state)
+                .expect("interface stream"),
+            &mut fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(id),
+            |fidl_fuchsia_net_interfaces_ext::Properties {
+                 id: _,
+                 name: _,
+                 device_class: _,
+                 online,
+                 addresses: _,
+                 has_default_ipv4_route: _,
+                 has_default_ipv6_route: _,
+             }| (*online).then(|| ()),
+        )
+        .await
+        .expect("wait device online");
+    }
 
     let mut interface_address = fidl_subnet!("1.1.1.1/32");
     let res = stack

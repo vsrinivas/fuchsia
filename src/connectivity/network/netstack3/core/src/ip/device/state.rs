@@ -216,7 +216,7 @@ impl<I: Instant> AsRef<IpDeviceConfiguration> for Ipv4DeviceState<I> {
 }
 
 /// Configurations common to all IP devices.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct IpDeviceConfiguration {
     /// Is IP enabled for this device.
     pub ip_enabled: bool,
@@ -238,7 +238,7 @@ impl Default for IpDeviceConfiguration {
 }
 
 /// Configuration common to all IPv4 devices.
-#[derive(Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct Ipv4DeviceConfiguration {
     /// The configuration common to all IP devices.
     pub ip_config: IpDeviceConfiguration,
@@ -251,7 +251,7 @@ impl Default for Ipv4DeviceConfiguration {
 }
 
 /// Configuration common to all IPv6 devices.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct Ipv6DeviceConfiguration {
     /// The value for NDP's DupAddrDetectTransmits parameter as defined by
     /// [RFC 4862 section 5.1].

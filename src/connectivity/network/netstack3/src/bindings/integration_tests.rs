@@ -22,10 +22,11 @@ use net_types::{
 };
 use netstack3_core::{
     context::EventContext,
-    get_all_ip_addr_subnets,
+    get_all_ip_addr_subnets, get_ipv4_configuration, get_ipv6_configuration,
     icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
-    AddableEntryEither, BufferUdpContext, Ctx, DeviceId, DeviceLayerEventDispatcher, IpExt,
-    IpSockCreationError, Ipv6DeviceConfiguration, StackStateBuilder, UdpBoundId, UdpContext,
+    set_ipv4_configuration, set_ipv6_configuration, AddableEntryEither, BufferUdpContext, Ctx,
+    DeviceId, DeviceLayerEventDispatcher, IpExt, IpSockCreationError, Ipv6DeviceConfiguration,
+    StackStateBuilder, UdpBoundId, UdpContext,
 };
 use packet::{Buf, BufferMut, Serializer};
 use packet_formats::icmp::{IcmpEchoReply, IcmpMessage, IcmpUnusedCode};
@@ -33,7 +34,6 @@ use packet_formats::icmp::{IcmpEchoReply, IcmpMessage, IcmpUnusedCode};
 use crate::bindings::{
     context::Lockable,
     devices::{CommonInfo, DeviceInfo, DeviceSpecificInfo, Devices, EthernetInfo, LoopbackInfo},
-    enable_device,
     socket::datagram::{IcmpEcho, SocketCollectionIpExt, Udp},
     util::{ConversionContext as _, IntoFidl as _, TryFromFidlWithContext as _, TryIntoFidl as _},
     BindingsContextImpl, BindingsDispatcher, DeviceStatusNotifier, LockableContext,
@@ -295,14 +295,30 @@ impl TestStack {
     pub(crate) async fn wait_for_interface_online(&mut self, if_id: u64) {
         let check_online = |info: &DeviceInfo| match info.info() {
             DeviceSpecificInfo::Ethernet(EthernetInfo {
-                common_info: CommonInfo { admin_enabled: _, mtu: _, events: _, name: _ },
+                common_info:
+                    CommonInfo {
+                        admin_enabled: _,
+                        mtu: _,
+                        events: _,
+                        name: _,
+                        ipv4_config: _,
+                        ipv6_config: _,
+                    },
                 client: _,
                 mac: _,
                 features: _,
                 phy_up,
             }) => *phy_up,
             DeviceSpecificInfo::Loopback(LoopbackInfo {
-                common_info: CommonInfo { admin_enabled: _, mtu: _, events: _, name: _ },
+                common_info:
+                    CommonInfo {
+                        admin_enabled: _,
+                        mtu: _,
+                        events: _,
+                        name: _,
+                        ipv4_config: _,
+                        ipv6_config: _,
+                    },
             }) => true,
         };
         self.wait_for_interface_status(if_id, check_online).await;
@@ -312,14 +328,30 @@ impl TestStack {
     pub(crate) async fn wait_for_interface_offline(&mut self, if_id: u64) {
         let check_offline = |info: &DeviceInfo| match info.info() {
             DeviceSpecificInfo::Ethernet(EthernetInfo {
-                common_info: CommonInfo { admin_enabled: _, mtu: _, events: _, name: _ },
+                common_info:
+                    CommonInfo {
+                        admin_enabled: _,
+                        mtu: _,
+                        events: _,
+                        name: _,
+                        ipv4_config: _,
+                        ipv6_config: _,
+                    },
                 client: _,
                 mac: _,
                 features: _,
                 phy_up,
             }) => !phy_up,
             DeviceSpecificInfo::Loopback(LoopbackInfo {
-                common_info: CommonInfo { admin_enabled: _, mtu: _, events: _, name: _ },
+                common_info:
+                    CommonInfo {
+                        admin_enabled: _,
+                        mtu: _,
+                        events: _,
+                        name: _,
+                        ipv4_config: _,
+                        ipv6_config: _,
+                    },
             }) => false,
         };
         self.wait_for_interface_status(if_id, check_offline).await;
@@ -403,11 +435,9 @@ impl TestStack {
     async fn get_interface_info(&self, id: u64) -> InterfaceInfo {
         let ctx = self.ctx().await;
         let device = ctx.dispatcher.get_device_info(id).expect("device");
-        let addresses = device.core_id().map_or(Vec::new(), |core_id| {
-            get_all_ip_addr_subnets(&ctx, core_id)
-                .map(|addr| addr.try_into_fidl().expect("convert to FIDL"))
-                .collect()
-        });
+        let addresses = get_all_ip_addr_subnets(&ctx, device.core_id())
+            .map(|addr| addr.try_into_fidl().expect("convert to FIDL"))
+            .collect();
 
         let (admin_enabled, phy_up) = assert_matches::assert_matches!(
             device.info(),
@@ -417,6 +447,8 @@ impl TestStack {
                     mtu: _,
                     events: _,
                     name: _,
+                    ipv4_config: _,
+                    ipv6_config: _,
                 },
                 client: _,
                 mac: _,
@@ -592,7 +624,16 @@ impl TestSetupBuilder {
                         .state
                         .add_loopback_device(DEFAULT_LOOPBACK_MTU)
                         .expect("add loopback device");
-                    enable_device(ctx, loopback);
+                    set_ipv4_configuration(ctx, loopback, {
+                        let mut config = get_ipv4_configuration(ctx, loopback);
+                        config.ip_config.ip_enabled = true;
+                        config
+                    });
+                    set_ipv6_configuration(ctx, loopback, {
+                        let mut config = get_ipv6_configuration(ctx, loopback);
+                        config.ip_config.ip_enabled = true;
+                        config
+                    });
                 })
                 .await;
 
@@ -756,10 +797,10 @@ async fn test_ethernet_link_up_down() {
     assert!(if_info.phy_up);
     assert!(if_info.admin_enabled);
 
-    // Ensure that the device has been added to the core.
-    assert!(t.ctx(0).await.dispatcher.get_device_info(if_id).unwrap().is_active());
+    // Ensure that the device has been enabled in the core.
+    check_ip_enabled(t.ctx(0).await.dispatcher.get_device_info(if_id).unwrap(), true);
 
-    // Setting the link down should disable the interface and remove it from
+    // Setting the link down should disable the interface and disable it from
     // the core. The AdministrativeStatus should remain unchanged.
     assert!(t.set_endpoint_link_up(&ep_name, false).await.is_ok());
     let test_stack = t.get(0);
@@ -770,8 +811,8 @@ async fn test_ethernet_link_up_down() {
     assert!(!if_info.phy_up);
     assert!(if_info.admin_enabled);
 
-    // Ensure that the device has been removed from the core.
-    assert!(t.ctx(0).await.dispatcher.get_device_info(if_id).unwrap().is_active() == false);
+    // Ensure that the device has been disabled in the core.
+    check_ip_enabled(t.ctx(0).await.dispatcher.get_device_info(if_id).unwrap(), false);
 
     // Setting the link down again should cause no effect on the device state,
     // and should be handled gracefully.
@@ -783,10 +824,10 @@ async fn test_ethernet_link_up_down() {
     assert!(!if_info.phy_up);
     assert!(if_info.admin_enabled);
 
-    // Ensure that the device has been removed from the core.
-    assert!(t.ctx(0).await.dispatcher.get_device_info(if_id).unwrap().is_active() == false);
+    // Ensure that the device has been disabled in the core.
+    check_ip_enabled(t.ctx(0).await.dispatcher.get_device_info(if_id).unwrap(), false);
 
-    // Setting the link up should reenable the interface and add it to
+    // Setting the link up should reenable the interface and enable it in
     // the core.
     assert!(t.set_endpoint_link_up(&ep_name, true).await.is_ok());
     t.get(0).wait_for_interface_online(if_id).await;
@@ -797,8 +838,8 @@ async fn test_ethernet_link_up_down() {
     assert!(if_info.phy_up);
     assert!(if_info.admin_enabled);
 
-    // Ensure that the device has been added to the core.
-    assert!(t.ctx(0).await.dispatcher.get_device_info(if_id).unwrap().is_active());
+    // Ensure that the device has been enabled in the core.
+    check_ip_enabled(t.ctx(0).await.dispatcher.get_device_info(if_id).unwrap(), true);
 
     // Setting the link up again should cause no effect on the device state,
     // and should be handled gracefully.
@@ -810,13 +851,13 @@ async fn test_ethernet_link_up_down() {
     assert!(if_info.phy_up);
     assert!(if_info.admin_enabled);
 
-    // Ensure that the device has been added to the core.
+    // Ensure that the device has been enabled in the core.
     let core_id = t
         .get(0)
         .with_ctx(|ctx| {
             let device_info = ctx.dispatcher.get_device_info(if_id).unwrap();
-            assert!(device_info.is_active());
-            device_info.core_id().unwrap()
+            check_ip_enabled(device_info, true);
+            device_info.core_id()
         })
         .await;
 
@@ -825,6 +866,18 @@ async fn test_ethernet_link_up_down() {
     // hasn't been called)
     netstack3_core::receive_frame(t.ctx(0).await.deref_mut(), core_id, Buf::new(&mut [], ..))
         .expect("error receiving frame");
+}
+
+fn check_ip_enabled(device: &DeviceInfo, expected: bool) {
+    let common = match device.info() {
+        DeviceSpecificInfo::Ethernet(info) => &info.common_info,
+        DeviceSpecificInfo::Loopback(info) => &info.common_info,
+    };
+
+    assert_eq!(
+        (common.ipv4_config.ip_config.ip_enabled, common.ipv6_config.ip_config.ip_enabled),
+        (expected, expected),
+    );
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -856,8 +909,8 @@ async fn test_disable_enable_interface() {
     assert!(!if_info.admin_enabled);
     assert!(if_info.phy_up);
 
-    // Ensure that the device has been removed from the core.
-    assert!(test_stack.ctx().await.dispatcher.get_device_info(if_id).unwrap().is_active() == false);
+    // Ensure that the device has been disabled in the core.
+    check_ip_enabled(test_stack.ctx().await.dispatcher.get_device_info(if_id).unwrap(), false);
 
     // Enable the interface and test again.
     let () = stack
@@ -870,8 +923,8 @@ async fn test_disable_enable_interface() {
     assert!(if_info.admin_enabled);
     assert!(if_info.phy_up);
 
-    // Ensure that the device has been added to the core.
-    assert!(test_stack.ctx().await.dispatcher.get_device_info(if_id).unwrap().is_active());
+    // Ensure that the device has been enabled in the core.
+    check_ip_enabled(test_stack.ctx().await.dispatcher.get_device_info(if_id).unwrap(), true);
 
     // Check that we get the correct error for a non-existing interface id.
     assert_eq!(
@@ -919,8 +972,8 @@ async fn test_phy_admin_interface_state_interaction() {
     assert!(!if_info.admin_enabled);
     assert!(if_info.phy_up);
 
-    // Ensure that the device has been removed from the core.
-    assert!(t.ctx(0).await.dispatcher.get_device_info(if_id).unwrap().is_active() == false);
+    // Ensure that the device has been disabled in the core.
+    check_ip_enabled(t.ctx(0).await.dispatcher.get_device_info(if_id).unwrap(), false);
 
     // Setting the link down now that the interface is already down should only
     // change the cached state. Both phy and admin should be down now.
@@ -933,8 +986,8 @@ async fn test_phy_admin_interface_state_interaction() {
     assert!(!if_info.phy_up);
     assert!(!if_info.admin_enabled);
 
-    // Ensure that the device is still removed from the core.
-    assert!(t.ctx(0).await.dispatcher.get_device_info(if_id).unwrap().is_active() == false);
+    // Ensure that the device is still disabled in the core.
+    check_ip_enabled(t.ctx(0).await.dispatcher.get_device_info(if_id).unwrap(), false);
 
     // Enable the interface and test again, only cached status should be changed
     // and core state should still be disabled.
@@ -949,8 +1002,8 @@ async fn test_phy_admin_interface_state_interaction() {
     assert!(if_info.admin_enabled);
     assert!(!if_info.phy_up);
 
-    // Ensure that the device is still removed from the core.
-    assert!(t.ctx(0).await.dispatcher.get_device_info(if_id).unwrap().is_active() == false);
+    // Ensure that the device is still disabled in the core.
+    check_ip_enabled(t.ctx(0).await.dispatcher.get_device_info(if_id).unwrap(), false);
 
     // Disable the interface and test again, both should be down now.
     let () = stack
@@ -964,8 +1017,8 @@ async fn test_phy_admin_interface_state_interaction() {
     assert!(!if_info.admin_enabled);
     assert!(!if_info.phy_up);
 
-    // Ensure that the device is still removed from the core.
-    assert!(t.ctx(0).await.dispatcher.get_device_info(if_id).unwrap().is_active() == false);
+    // Ensure that the device is still disabled in the core.
+    check_ip_enabled(t.ctx(0).await.dispatcher.get_device_info(if_id).unwrap(), false);
 
     // Setting the link up should only affect cached state
     assert!(t.set_endpoint_link_up(&ep_name, true).await.is_ok());
@@ -977,8 +1030,8 @@ async fn test_phy_admin_interface_state_interaction() {
     assert!(!if_info.admin_enabled);
     assert!(if_info.phy_up);
 
-    // Ensure that the device is still removed from the core.
-    assert!(t.ctx(0).await.dispatcher.get_device_info(if_id).unwrap().is_active() == false);
+    // Ensure that the device is still disabled in the core.
+    check_ip_enabled(t.ctx(0).await.dispatcher.get_device_info(if_id).unwrap(), false);
 
     // Finally, setting admin status up should update the cached state and
     // re-add the device to the core.
@@ -994,8 +1047,8 @@ async fn test_phy_admin_interface_state_interaction() {
     assert!(if_info.phy_up);
     assert!(if_info.admin_enabled);
 
-    // Ensure that the device has been added to the core.
-    assert!(t.ctx(0).await.dispatcher.get_device_info(if_id).unwrap().is_active());
+    // Ensure that the device has been enabled in the core.
+    check_ip_enabled(t.ctx(0).await.dispatcher.get_device_info(if_id).unwrap(), true);
 }
 
 #[fasync::run_singlethreaded(test)]
