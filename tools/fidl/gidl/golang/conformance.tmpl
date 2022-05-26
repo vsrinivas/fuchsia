@@ -1,0 +1,133 @@
+{{/*
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+*/}}
+
+package fidl_test
+
+import (
+	"math"
+	"reflect"
+	"runtime"
+	"testing"
+
+	"fidl/test/conformance"
+
+	"syscall/zx"
+	"syscall/zx/fidl"
+)
+
+// Avoid unused import warnings if certain tests are disabled.
+var _ = math.Float32frombits
+var _ = reflect.Copy
+var _ = runtime.GOOS
+type _ = testing.T
+type _ = conformance.MyByte
+var _ = zx.HandleInvalid
+type _ = fidl.Context
+
+
+{{ if .EncodeSuccessCases }}
+func TestAllEncodeSuccessCases(t *testing.T) {
+{{ range .EncodeSuccessCases }}
+	{
+	{{- if .HandleDefs }}
+		handleDefs := {{ .HandleDefs }}
+		handles := createHandlesFromHandleDef(handleDefs)
+	{{- end }}
+		encodeSuccessCase{
+			name: {{ .Name }},
+			context: {{ .Context }},
+			input: &{{ .Value }},
+			bytes: {{ .Bytes }},
+	{{- if .HandleDefs }}
+			handleDispositions: {{ .Handles }},
+	{{- end }}
+			checkRights: {{ .CheckRights }},
+		}.check(t)
+	}
+{{ end }}
+}
+{{ end }}
+
+{{ if .DecodeSuccessCases }}
+func TestAllDecodeSuccessCases(t *testing.T) {
+{{ range .DecodeSuccessCases }}
+	{
+	{{- if .HandleDefs }}
+		handleDefs := {{ .HandleDefs }}
+		handles := createHandlesFromHandleDef(handleDefs)
+		var {{ .EqualityCheckKoidArrayVar }} []uint64
+		if runtime.GOOS == "fuchsia" {
+			for _, h := range handles {
+				info, err := handleGetBasicInfo(&h)
+				if err != nil {
+					t.Fatal(err)
+				}
+				{{ .EqualityCheckKoidArrayVar }} = append({{ .EqualityCheckKoidArrayVar }}, info.Koid)
+			}
+		}
+	{{- end }}
+		decodeSuccessCase{
+			name: {{ .Name }},
+			context: {{ .Context }},
+			input: &{{ .Value }},
+			bytes: {{ .Bytes }},
+	{{- if .HandleDefs }}
+			handleInfos: {{ .Handles }},
+	{{- end }}
+			equalsExpected: func(t *testing.T, input interface{}) {
+				ignore_unused_warning := func(interface{}) {}
+				{{ .EqualityCheckInputVar }} := input.(*{{ .Type }})
+				{{ .EqualityCheck }}
+			},
+		}.check(t)
+	}
+{{ end }}
+}
+{{ end }}
+
+{{ if .EncodeFailureCases }}
+func TestAllEncodeFailureCases(t *testing.T) {
+{{ range .EncodeFailureCases }}
+	{
+	{{- if .HandleDefs }}
+		handles := createHandlesFromHandleDef({{ .HandleDefs }})
+	{{- end }}
+		encodeFailureCase{
+			name: {{ .Name }},
+			context: {{ .Context }},
+			input: &{{ .Value }},
+			code: {{ .ErrorCode }},
+	{{- if .HandleDefs }}
+			handles: handles,
+	{{- end }}
+		}.check(t)
+	}
+{{ end }}
+}
+{{ end }}
+
+{{ if .DecodeFailureCases }}
+func TestAllDecodeFailureCases(t *testing.T) {
+{{ range .DecodeFailureCases }}
+	{
+	{{- if .HandleDefs }}
+		handleDefs := {{ .HandleDefs }}
+		handles := createHandlesFromHandleDef(handleDefs)
+	{{- end }}
+		decodeFailureCase{
+			name: {{ .Name }},
+			context: {{ .Context }},
+			valTyp: reflect.TypeOf((*{{ .ValueType }})(nil)),
+			bytes: {{ .Bytes }},
+			code: {{ .ErrorCode }},
+	{{- if .HandleDefs }}
+			handleInfos: {{ .Handles }},
+	{{- end }}
+		}.check(t)
+	}
+{{ end }}
+}
+{{ end }}

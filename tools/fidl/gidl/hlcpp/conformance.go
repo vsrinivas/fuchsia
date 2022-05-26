@@ -6,6 +6,7 @@ package hlcpp
 
 import (
 	"bytes"
+	_ "embed"
 	"fmt"
 	"text/template"
 
@@ -15,117 +16,12 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
-var conformanceTmpl = template.Must(template.New("conformanceTmpl").Parse(`
-#include <zxtest/zxtest.h>
+var (
+	//go:embed conformance.tmpl
+	conformanceTmplText string
 
-#include <test/conformance/cpp/fidl.h>
-#include <cts/tests/pkg/fidl/cpp/test/test_util.h>
-
-#ifdef __Fuchsia__
-#include <cts/tests/pkg/fidl/cpp/test/handle_util.h>
-#include <zircon/syscalls.h>
-#endif
-
-{{ range .EncodeSuccessCases }}
-{{- if .FuchsiaOnly }}
-#ifdef __Fuchsia__
-{{- end }}
-TEST(Conformance, {{ .Name }}_Encode) {
-	{{- if .HandleDefs }}
-	const auto handle_defs = {{ .HandleDefs }};
-	{{- end }}
-	{{ .ValueBuild }}
-	const auto expected_bytes = {{ .Bytes }};
-	const auto expected_handles = {{ .Handles }};
-	{{/* Must use a variable because macros don't understand commas in template args. */ -}}
-	const auto result =
-		fidl::test::util::ValueToBytes<{{ .ValueType }}>(
-			{{ .WireFormat }}, {{ .ValueVar }}, expected_bytes, expected_handles, {{ .CheckRights }});
-	EXPECT_TRUE(result);
-	{{- /* The handles are closed by the fidl::Message destructor in ValueToBytes. */}}
-}
-{{- if .FuchsiaOnly }}
-#endif  // __Fuchsia__
-{{- end }}
-{{ end }}
-
-{{ range .DecodeSuccessCases }}
-{{- if .FuchsiaOnly }}
-#ifdef __Fuchsia__
-{{- end }}
-TEST(Conformance, {{ .Name }}_Decode) {
-	{{- if .HandleDefs }}
-	const auto handle_defs = {{ .HandleDefs }};
-	std::vector<zx_koid_t> {{ .HandleKoidVectorName }};
-	for (zx_handle_info_t def : handle_defs) {
-		zx_info_handle_basic_t info;
-		ASSERT_OK(zx_object_get_info(def.handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr));
-		{{ .HandleKoidVectorName }}.push_back(info.koid);
-	}
-	{{- end }}
-	auto bytes = {{ .Bytes }};
-	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
-	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
-	auto handles = {{ .Handles }};
-	auto {{ .ActualValueVar }} =
-	    fidl::test::util::DecodedBytes<{{ .ValueType }}>({{ .WireFormat }}, std::move(bytes), std::move(handles));
-	{{ .EqualityCheck }}
-	{{- /* The handles are closed in the destructor of .ValueVar */ -}}
-	fidl::test::util::ForgetHandles({{ .WireFormat }}, std::move(value));
-}
-{{- if .FuchsiaOnly }}
-#endif  // __Fuchsia__
-{{- end }}
-{{ end }}
-
-{{ range .EncodeFailureCases }}
-{{- if .FuchsiaOnly }}
-#ifdef __Fuchsia__
-{{- end }}
-TEST(Conformance, {{ .Name }}_Encode_Failure) {
-	{{- if .HandleDefs }}
-	const auto handle_defs = {{ .HandleDefs }};
-	{{- end }}
-	{{ .ValueBuild }}
-	fidl::test::util::CheckEncodeFailure<{{ .ValueType }}>(
-		{{ .WireFormat }}, {{ .ValueVar }}, {{ .ErrorCode }});
-	{{- if .HandleDefs }}
-	for (const auto handle_def : handle_defs) {
-		EXPECT_EQ(ZX_ERR_BAD_HANDLE, zx_object_get_info(
-			handle_def, ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr));
-	}
-	{{- end }}
-}
-{{- if .FuchsiaOnly }}
-#endif  // __Fuchsia__
-{{- end }}
-{{ end }}
-
-{{ range .DecodeFailureCases }}
-{{- if .FuchsiaOnly }}
-#ifdef __Fuchsia__
-{{- end }}
-TEST(Conformance, {{ .Name }}_Decode_Failure) {
-	{{- if .HandleDefs }}
-	const auto handle_defs = {{ .HandleDefs }};
-	{{- end }}
-	auto bytes = {{ .Bytes }};
-	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
-	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
-	auto handles = {{ .Handles }};
-	fidl::test::util::CheckDecodeFailure<{{ .ValueType }}>({{ .WireFormat }}, std::move(bytes), std::move(handles), {{ .ErrorCode }});
-	{{- if .HandleDefs }}
-	for (const auto handle_def : handle_defs) {
-		EXPECT_EQ(ZX_ERR_BAD_HANDLE, zx_object_get_info(
-			handle_def.handle, ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr));
-	}
-	{{- end }}
-}
-{{- if .FuchsiaOnly }}
-#endif  // __Fuchsia__
-{{- end }}
-{{ end }}
-`))
+	conformanceTmpl = template.Must(template.New("conformanceTmpl").Parse(conformanceTmplText))
+)
 
 type conformanceTmplInput struct {
 	EncodeSuccessCases []encodeSuccessCase

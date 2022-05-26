@@ -6,6 +6,7 @@ package driver_cpp
 
 import (
 	"bytes"
+	_ "embed"
 	"fmt"
 	"strings"
 	"text/template"
@@ -18,56 +19,12 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
-var benchmarkTmpl = template.Must(template.New("benchmarkTmpl").Parse(`
-#include <{{ .FidlInclude }}>
-#include <cts/tests/pkg/fidl/cpp/test/handle_util.h>
-#include <perftest/perftest.h>
+var (
+	//go:embed benchmarks.tmpl
+	benchmarkTmplText string
 
-#include <vector>
-
-#include "src/tests/benchmarks/fidl/driver_cpp/echo_call_benchmark_util.h"
-
-namespace {
-
-{{ range .Benchmarks }}
-{{- if .HandleDefs }}
-std::vector<zx_handle_t> BuildHandles{{ .Name }}() {
-	return {{ .HandleDefs }};
-}
-
-{{ .Type }} BuildFromHandles{{ .Name }}(const std::vector<zx_handle_t>& handle_defs) {
-  {{ .ValueBuild }}
-  auto result =  {{ .ValueVar }};
-  return result;
-}
-
-{{ .Type }} Build{{ .Name }}() {
-  return BuildFromHandles{{ .Name }}(BuildHandles{{ .Name }}());
-}
-{{- else }}
-
-{{ .Type }} Build{{ .Name }}() {
-  {{ .ValueBuild }}
-  auto result = {{ .ValueVar }};
-  return result;
-}
-{{- end }}
-
-bool BenchmarkEchoCall{{ .Name }}(perftest::RepeatState* state) {
-	return driver_benchmarks::EchoCallBenchmark<{{ .EchoCallProtocolType }}>(state, Build{{ .Name }});
-}
-
-{{- end -}}
-
-void RegisterTests() {
-	{{ range .Benchmarks }}
-	perftest::RegisterTest("DriverCPP/EchoCall/{{ .Path }}/Steps", BenchmarkEchoCall{{ .Name }});
-	{{ end }}
-}
-PERFTEST_CTOR(RegisterTests)
-
-} // namespace
-`))
+	benchmarkTmpl = template.Must(template.New("benchmarkTmpl").Parse(benchmarkTmplText))
+)
 
 type benchmark struct {
 	Path, Name, Type, EchoCallProtocolType string

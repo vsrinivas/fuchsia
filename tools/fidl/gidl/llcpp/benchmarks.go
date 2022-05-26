@@ -6,6 +6,7 @@ package llcpp
 
 import (
 	"bytes"
+	_ "embed"
 	"fmt"
 	"strings"
 	"text/template"
@@ -18,102 +19,12 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
-var benchmarkTmpl = template.Must(template.New("benchmarkTmpl").Parse(`
-#include <{{ .FidlInclude }}>
-#include <cts/tests/pkg/fidl/cpp/test/handle_util.h>
-#include <perftest/perftest.h>
+var (
+	//go:embed benchmarks.tmpl
+	benchmarkTmplText string
 
-#include <vector>
-
-#include "src/tests/benchmarks/fidl/llcpp/builder_benchmark_util.h"
-#include "src/tests/benchmarks/fidl/llcpp/decode_benchmark_util.h"
-#include "src/tests/benchmarks/fidl/llcpp/encode_benchmark_util.h"
-#include "src/tests/benchmarks/fidl/llcpp/echo_call_benchmark_util.h"
-#include "src/tests/benchmarks/fidl/llcpp/echo_call_sync_benchmark_util.h"
-#include "src/tests/benchmarks/fidl/llcpp/send_event_benchmark_util.h"
-
-namespace {
-
-{{ range .Benchmarks }}
-{{- if .HandleDefs }}
-std::vector<zx_handle_t> BuildHandles{{ .Name }}() {
-	return {{ .HandleDefs }};
-}
-
-{{ .Type }} BuildFromHandles{{ .Name }}(fidl::AnyArena& allocator, const std::vector<zx_handle_t>& handle_defs) {
-  {{ .ValueBuild }}
-  auto result =  {{ .ValueVar }};
-  return result;
-}
-
-{{ .Type }} Build{{ .Name }}(fidl::AnyArena& allocator) {
-  return BuildFromHandles{{ .Name }}(allocator, BuildHandles{{ .Name }}());
-}
-{{- else }}
-std::tuple<> BuildEmptyContext{{ .Name }}() {
-	return std::make_tuple();
-}
-
-{{ .Type }} BuildFromEmptyContext{{ .Name }}(fidl::AnyArena& allocator, std::tuple<> _context) {
-	{{ .ValueBuild }}
-	auto result = {{ .ValueVar }};
-	return result;
-}
-
-{{ .Type }} Build{{ .Name }}(fidl::AnyArena& allocator) {
-  {{ .ValueBuild }}
-  auto result = {{ .ValueVar }};
-  return result;
-}
-{{- end }}
-
-bool BenchmarkBuilder{{ .Name }}(perftest::RepeatState* state) {
-{{- if .HandleDefs }}
-  return llcpp_benchmarks::BuilderBenchmark(state, BuildFromHandles{{ .Name }}, BuildHandles{{ .Name }});
-{{- else }}
-  return llcpp_benchmarks::BuilderBenchmark(state, BuildFromEmptyContext{{ .Name }}, BuildEmptyContext{{ .Name }});
-{{- end }}
-}
-
-bool BenchmarkEncode{{ .Name }}(perftest::RepeatState* state) {
-	return llcpp_benchmarks::EncodeBenchmark(state, Build{{ .Name }});
-}
-bool BenchmarkDecode{{ .Name }}(perftest::RepeatState* state) {
-	return llcpp_benchmarks::DecodeBenchmark(state, Build{{ .Name }});
-}
-{{ if .EnableSendEventBenchmark }}
-bool BenchmarkSendEvent{{ .Name }}(perftest::RepeatState* state) {
-	return llcpp_benchmarks::SendEventBenchmark<{{ .EventProtocolType }}>(state, Build{{ .Name }});
-}
-{{- end -}}
-{{ if .EnableEchoCallBenchmark }}
-bool BenchmarkEchoCall{{ .Name }}(perftest::RepeatState* state) {
-	return llcpp_benchmarks::EchoCallBenchmark<{{ .EchoCallProtocolType }}>(state, Build{{ .Name }});
-}
-bool BenchmarkEchoCallSync{{ .Name }}(perftest::RepeatState* state) {
-	return llcpp_benchmarks::EchoCallSyncBenchmark<{{ .EchoCallProtocolType }}>(state, Build{{ .Name }});
-}
-{{- end -}}
-{{ end }}
-
-void RegisterTests() {
-	{{ range .Benchmarks }}
-	perftest::RegisterTest("LLCPP/Builder/{{ .Path }}/Steps", BenchmarkBuilder{{ .Name }});
-	perftest::RegisterTest("LLCPP/Encode/{{ .Path }}/Steps", BenchmarkEncode{{ .Name }});
-	perftest::RegisterTest("LLCPP/Decode/{{ .Path }}/Steps", BenchmarkDecode{{ .Name }});
-	{{ if .EnableSendEventBenchmark }}
-	perftest::RegisterTest("LLCPP/SendEvent/{{ .Path }}/Steps", BenchmarkSendEvent{{ .Name }});
-	{{- end -}}
-	{{ if .EnableEchoCallBenchmark }}
-	perftest::RegisterTest("LLCPP/EchoCall/{{ .Path }}/Steps", BenchmarkEchoCall{{ .Name }});
-	perftest::RegisterTest("LLCPP/EchoCallSync/{{ .Path }}/Steps", BenchmarkEchoCallSync{{ .Name }});
-	{{- end -}}
-	{{ end }}
-}
-PERFTEST_CTOR(RegisterTests)
-
-} // namespace
-`))
+	benchmarkTmpl = template.Must(template.New("benchmarkTmpl").Parse(benchmarkTmplText))
+)
 
 type benchmark struct {
 	Path, Name, Type, EventProtocolType, EchoCallProtocolType string

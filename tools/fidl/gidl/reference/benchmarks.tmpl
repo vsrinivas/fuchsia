@@ -1,0 +1,19 @@
+{{/*
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+*/}}
+
+#include <fidl/test.benchmarkfidl/cpp/wire.h>
+
+namespace benchmark_suite {
+
+{{ range .Benchmarks }}
+[[maybe_unused]] {{ .Type }} Build_{{ .Name }}(fidl::AnyArena& allocator) {
+	{{ .ValueBuild }}
+	auto obj = {{ .ValueVar }};
+	return obj;
+}
+{{ end }}
+
+} // namespace benchmark_suite

@@ -1,0 +1,95 @@
+{{/*
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+*/}}
+
+#include <{{ .FidlInclude }}>
+#include <cts/tests/pkg/fidl/cpp/test/handle_util.h>
+#include <perftest/perftest.h>
+
+#include <vector>
+
+#include "src/tests/benchmarks/fidl/cpp/builder_benchmark_util.h"
+#include "src/tests/benchmarks/fidl/cpp/decode_benchmark_util.h"
+#include "src/tests/benchmarks/fidl/cpp/encode_benchmark_util.h"
+#include "src/tests/benchmarks/fidl/cpp/echo_call_benchmark_util.h"
+#include "src/tests/benchmarks/fidl/cpp/send_event_benchmark_util.h"
+
+namespace {
+
+{{ range .Benchmarks }}
+{{- if .HandleDefs }}
+std::vector<zx_handle_t> BuildHandles{{ .Name }}() {
+	return {{ .HandleDefs }};
+}
+
+{{ .Type }} BuildFromHandles{{ .Name }}(const std::vector<zx_handle_t>& handle_defs) {
+  {{ .ValueBuild }}
+  auto result =  {{ .ValueVar }};
+  return result;
+}
+
+{{ .Type }} Build{{ .Name }}() {
+  return BuildFromHandles{{ .Name }}(BuildHandles{{ .Name }}());
+}
+{{- else }}
+std::tuple<> BuildEmptyContext{{ .Name }}() {
+	return std::make_tuple();
+}
+
+{{ .Type }} BuildFromEmptyContext{{ .Name }}(std::tuple<> _context) {
+	{{ .ValueBuild }}
+	auto result = {{ .ValueVar }};
+	return result;
+}
+
+{{ .Type }} Build{{ .Name }}() {
+  {{ .ValueBuild }}
+  auto result = {{ .ValueVar }};
+  return result;
+}
+{{- end }}
+
+bool BenchmarkBuilder{{ .Name }}(perftest::RepeatState* state) {
+{{- if .HandleDefs }}
+  return cpp_benchmarks::BuilderBenchmark(state, BuildFromHandles{{ .Name }}, BuildHandles{{ .Name }});
+{{- else }}
+  return cpp_benchmarks::BuilderBenchmark(state, BuildFromEmptyContext{{ .Name }}, BuildEmptyContext{{ .Name }});
+{{- end }}
+}
+
+bool BenchmarkEncode{{ .Name }}(perftest::RepeatState* state) {
+	return cpp_benchmarks::EncodeBenchmark(state, Build{{ .Name }});
+}
+bool BenchmarkDecode{{ .Name }}(perftest::RepeatState* state) {
+	return cpp_benchmarks::DecodeBenchmark(state, Build{{ .Name }});
+}
+{{ if .EnableSendEventBenchmark }}
+bool BenchmarkSendEvent{{ .Name }}(perftest::RepeatState* state) {
+	return cpp_benchmarks::SendEventBenchmark<{{ .EventProtocolType }}>(state, Build{{ .Name }});
+}
+{{- end -}}
+{{ if .EnableEchoCallBenchmark }}
+bool BenchmarkEchoCall{{ .Name }}(perftest::RepeatState* state) {
+	return cpp_benchmarks::EchoCallBenchmark<{{ .EchoCallProtocolType }}>(state, Build{{ .Name }});
+}
+{{- end -}}
+{{ end }}
+
+void RegisterTests() {
+	{{ range .Benchmarks }}
+	perftest::RegisterTest("CPP/Builder/{{ .Path }}/Steps", BenchmarkBuilder{{ .Name }});
+	perftest::RegisterTest("CPP/Encode/{{ .Path }}/Steps", BenchmarkEncode{{ .Name }});
+	perftest::RegisterTest("CPP/Decode/{{ .Path }}/Steps", BenchmarkDecode{{ .Name }});
+	{{ if .EnableSendEventBenchmark }}
+	perftest::RegisterTest("CPP/SendEvent/{{ .Path }}/Steps", BenchmarkSendEvent{{ .Name }});
+	{{- end -}}
+	{{ if .EnableEchoCallBenchmark }}
+	perftest::RegisterTest("CPP/EchoCall/{{ .Path }}/Steps", BenchmarkEchoCall{{ .Name }});
+	{{- end -}}
+	{{ end }}
+}
+PERFTEST_CTOR(RegisterTests)
+
+} // namespace

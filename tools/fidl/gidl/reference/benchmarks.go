@@ -7,6 +7,7 @@ package reference
 
 import (
 	"bytes"
+	_ "embed"
 	"fmt"
 	"strings"
 	"text/template"
@@ -18,21 +19,12 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
-var benchmarkTmpl = template.Must(template.New("benchmarkTmpl").Parse(`
-#include <fidl/test.benchmarkfidl/cpp/wire.h>
+var (
+	//go:embed benchmarks.tmpl
+	benchmarkTmplText string
 
-namespace benchmark_suite {
-
-{{ range .Benchmarks }}
-[[maybe_unused]] {{ .Type }} Build_{{ .Name }}(fidl::AnyArena& allocator) {
-	{{ .ValueBuild }}
-	auto obj = {{ .ValueVar }};
-	return obj;
-}
-{{ end }}
-
-} // namespace benchmark_suite
-`))
+	benchmarkTmpl = template.Must(template.New("benchmarkTmpl").Parse(benchmarkTmplText))
+)
 
 type benchmark struct {
 	Path, Name, Type     string

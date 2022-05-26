@@ -6,6 +6,7 @@ package llcpp
 
 import (
 	"bytes"
+	_ "embed"
 	"fmt"
 	"text/template"
 
@@ -17,121 +18,12 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
-var conformanceTmpl = template.Must(template.New("tmpl").Parse(`
-#include <iostream>
-#include <string>
-#include <utility>
-#include <vector>
+var (
+	//go:embed conformance.tmpl
+	conformanceTmplText string
 
-#include <fidl/test.conformance/cpp/wire.h>
-#include <gtest/gtest.h>
-
-#include "src/lib/fidl/llcpp/tests/conformance/conformance_utils.h"
-
-#ifdef __Fuchsia__
-#include <zircon/syscalls.h>
-#include "sdk/cts/tests/pkg/fidl/cpp/test/handle_util.h"
-#endif
-
-{{ range .EncodeSuccessCases }}
-{{- if .FuchsiaOnly }}
-#ifdef __Fuchsia__
-{{- end }}
-TEST(Conformance, {{ .Name }}_Encode) {
-	{{- if .HandleDefs }}
-	const std::vector<zx_handle_t> handle_defs = {{ .HandleDefs }};
-	{{- end }}
-	[[maybe_unused]] fidl::Arena<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
-	{{ .ValueBuild }}
-	const auto expected_bytes = {{ .Bytes }};
-	const auto expected_handles = {{ .Handles }};
-	alignas(FIDL_ALIGNMENT) auto obj = {{ .ValueVar }};
-	EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(
-		{{ .WireFormatVersion }}, &obj, expected_bytes, expected_handles, {{ .CheckHandleRights }}));
-}
-{{- if .FuchsiaOnly }}
-#endif  // __Fuchsia__
-{{- end }}
-{{ end }}
-
-{{ range .DecodeSuccessCases }}
-{{- if .FuchsiaOnly }}
-#ifdef __Fuchsia__
-{{- end }}
-
-TEST(Conformance, {{ .Name }}_Decode) {
-	{{- if .HandleDefs }}
-	const std::vector<zx_handle_info_t> handle_defs = {{ .HandleDefs }};
-	std::vector<zx_koid_t> {{ .HandleKoidVectorName }};
-	for (zx_handle_info_t def : handle_defs) {
-		zx_info_handle_basic_t info;
-		ASSERT_EQ(ZX_OK, zx_object_get_info(def.handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr));
-		{{ .HandleKoidVectorName }}.push_back(info.koid);
-	}
-	{{- end }}
-	[[maybe_unused]] fidl::Arena<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
-	{{ .ValueBuild }}
-	auto bytes = {{ .Bytes }};
-	auto handles = {{ .Handles }};
-	auto obj = {{ .ValueVar }};
-	auto equality_check = [&]({{ .ValueType }}& {{ .Equality.InputVar }}) -> bool {
-		{{ .Equality.HelperStatements }}
-		return {{ .Equality.Expr }};
-	};
-	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
-		{{ .WireFormatVersion }}, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
-}
-{{- if .FuchsiaOnly }}
-#endif  // __Fuchsia__
-{{- end }}
-{{ end }}
-
-{{ range .EncodeFailureCases }}
-{{- if .FuchsiaOnly }}
-#ifdef __Fuchsia__
-{{- end }}
-TEST(Conformance, {{ .Name }}_Encode_Failure) {
-	{{- if .HandleDefs }}
-	const std::vector<zx_handle_t> handle_defs = {{ .HandleDefs }};
-	{{- end }}
-	[[maybe_unused]] fidl::Arena<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
-	{{ .ValueBuild }}
-	auto obj = {{ .ValueVar }};
-	EXPECT_TRUE(llcpp_conformance_utils::EncodeFailure({{ .WireFormatVersion }}, &obj, {{ .ErrorCode }}));
-	{{- if .HandleDefs }}
-	for (const auto handle : handle_defs) {
-		EXPECT_EQ(ZX_ERR_BAD_HANDLE, zx_object_get_info(handle, ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr));
-	}
-	{{- end }}
-}
-{{- if .FuchsiaOnly }}
-#endif  // __Fuchsia__
-{{- end }}
-{{ end }}
-
-{{ range .DecodeFailureCases }}
-{{- if .FuchsiaOnly }}
-#ifdef __Fuchsia__
-{{- end }}
-TEST(Conformance, {{ .Name }}_Decode_Failure) {
-	{{- if .HandleDefs }}
-	const std::vector<zx_handle_info_t> handle_defs = {{ .HandleDefs }};
-	{{- end }}
-	auto bytes = {{ .Bytes }};
-	auto handles = {{ .Handles }};
-	EXPECT_TRUE(llcpp_conformance_utils::DecodeFailure<{{ .ValueType }}>(
-		{{ .WireFormatVersion }}, std::move(bytes), std::move(handles), {{ .ErrorCode }}));
-	{{- if .HandleDefs }}
-	for (const auto handle_info : handle_defs) {
-		EXPECT_EQ(ZX_ERR_BAD_HANDLE, zx_object_get_info(handle_info.handle, ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr));
-	}
-	{{- end }}
-}
-{{- if .FuchsiaOnly }}
-#endif  // __Fuchsia__
-{{- end }}
-{{ end }}
-`))
+	conformanceTmpl = template.Must(template.New("conformanceTmpl").Parse(conformanceTmplText))
+)
 
 type conformanceTmplInput struct {
 	EncodeSuccessCases []encodeSuccessCase

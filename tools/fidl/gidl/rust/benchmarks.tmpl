@@ -1,0 +1,214 @@
+{{/*
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+*/}}
+
+#![allow(unused_imports)]
+use {
+	fidl::{
+		encoding::{Context, Decodable, Decoder, Encoder, with_tls_encode_buf, WireFormatVersion},
+		handle::Handle, handle::HandleDisposition, handle::HandleInfo, handle::HandleOp,
+		ObjectType, Rights, UnknownData,
+	},
+	fidl_test_benchmarkfidl{{ .CrateSuffix }} as test_benchmarkfidl{{ .CrateSuffix }},
+	fuchsia_criterion::criterion::{BatchSize, Bencher, black_box},
+	fuchsia_async::futures::{future, stream::StreamExt},
+	fuchsia_zircon as zx,
+	gidl_util::{HandleDef, HandleSubtype, create_handles, copy_handle, copy_handles_at, disown_vec},
+	std::mem::ManuallyDrop
+};
+
+// BENCHMARKS is aggregated by a generated benchmark_suite.rs file, which is ultimately
+// used in benchmarks in src/tests/benchmarks/fidl/rust/src/main.rs.
+pub const BENCHMARKS: [(&'static str, fn(&mut Bencher)); {{ .NumBenchmarks }}] = [
+{{- range .Benchmarks }}
+	("Builder/{{ .ChromeperfPath }}", benchmark_{{ .Name }}_builder),
+	("Encode/{{ .ChromeperfPath }}", benchmark_{{ .Name }}_encode),
+	("Decode/{{ .ChromeperfPath }}", benchmark_{{ .Name }}_decode),
+	{{ if .EnableSendEventBenchmark }}
+	("SendEvent/{{ .ChromeperfPath }}", benchmark_{{ .Name }}_send_event),
+	{{- end -}}
+	{{ if .EnableEchoCallBenchmark }}
+	("EchoCall/{{ .ChromeperfPath }}", benchmark_{{ .Name }}_echo_call),
+	{{- end -}}
+{{- end }}
+];
+
+const _V2_CONTEXT: &Context = &Context { wire_format_version: WireFormatVersion::V2 };
+
+{{ range .Benchmarks }}
+fn benchmark_{{ .Name }}_builder(b: &mut Bencher) {
+	b.iter_batched_ref(
+		|| {
+			{{- if .HandleDefs }}
+			let handle_defs = create_handles(&{{ .HandleDefs }});
+			unsafe { disown_vec(handle_defs) }
+			{{- else }}
+			{{- /* Use empty vector with b.iter_batched_ref, rather than b.iter,
+				for consistency between handle and non-handle benchmarks. */}}
+			Vec::<Handle>::new()
+			{{- end }}
+		},
+		|_handle_defs| {
+			{{- if .HandleDefs }}
+			let handle_defs = _handle_defs.as_ref();
+			{{- end }}
+			black_box({{ .Value }}); {{- /* semicolon: include drop time. */}}
+		},
+		{{- /* Consider using LargeInput or NumIterations if this causes memory issues. */}}
+		BatchSize::SmallInput,
+	);
+}
+
+fn benchmark_{{ .Name }}_encode(b: &mut Bencher) {
+	b.iter_batched_ref(
+		|| {
+			{{- if .HandleDefs }}
+			let handle_defs = create_handles(&{{ .HandleDefs }});
+			let handle_defs = unsafe { disown_vec(handle_defs) };
+			let handle_defs = handle_defs.as_ref();
+			{{- end }}
+			{{ .Value }}
+		},
+		|value| {
+			{{- /* Encode to TLS buffers since that's what the bindings do in practice. */}}
+			with_tls_encode_buf(|bytes, handles| {
+				Encoder::encode_with_context(_V2_CONTEXT, bytes, handles, value).unwrap();
+				{{- /* Return the underlying heap storage of handles, since with_tls_encode_buf
+					clears it after calling this closure, which otherwise would close all the
+					handles. By returning the actual handles, we avoid including handle close
+					time in the benchmark. Note that this means the handle vector must reallocate
+					on every iteration if handles are used. */}}
+				{{- if .HandleDefs }}
+				std::mem::take(handles)
+				{{- end }}
+			}) {{- /* no semicolon: exclude drop time. */}}
+		},
+		{{- /* Consider using LargeInput or NumIterations if this causes memory issues. */}}
+		BatchSize::SmallInput,
+	);
+}
+
+fn benchmark_{{ .Name }}_decode(b: &mut Bencher) {
+	b.iter_batched_ref(
+		|| {
+			{{- if .HandleDefs }}
+			let handle_defs = create_handles(&{{ .HandleDefs }});
+			let handle_defs = unsafe { disown_vec(handle_defs) };
+			let handle_defs = handle_defs.as_ref();
+			{{- end }}
+			let mut bytes = Vec::<u8>::new();
+			let mut handles = Vec::<HandleDisposition<'static>>::new();
+			let original_value = &mut {{ .Value }};
+			Encoder::encode_with_context(_V2_CONTEXT, &mut bytes, &mut handles, original_value).unwrap();
+			let handle_infos : Vec::<HandleInfo> = handles.into_iter().map(|h| {
+				HandleInfo {
+					handle: match h.handle_op {
+						HandleOp::Move(hdl) => hdl,
+						_ => panic!("unexpected handle op"),
+					},
+					object_type: h.object_type,
+					rights: h.rights,
+				}
+			}).collect();
+			{{- /* Wrap handle in an Option to allow low-overhead measurement of drop time */}}
+			(bytes, handle_infos, ManuallyDrop::new({{ .ValueType }}::new_empty()))
+		},
+		|(bytes, handle_infos, manually_drop_value)| {
+			// Cast &mut ManuallyDrop<T> to &mut T.
+			let value : &mut {{ .ValueType }} = unsafe { std::mem::transmute(manually_drop_value as *mut _) };
+			Decoder::decode_with_context(_V2_CONTEXT, bytes, handle_infos, value).unwrap();
+			// Count the drop time in the benchmark.
+			unsafe { ManuallyDrop::drop(manually_drop_value) };
+		},
+		{{- /* Consider using LargeInput or NumIterations if this causes memory issues. */}}
+		BatchSize::SmallInput,
+	);
+}
+
+{{ if .EnableSendEventBenchmark }}
+async fn {{ .Name }}_send_event_receiver_thread(receiver_fidl_chan_end: zx::Channel, sender_fifo: std::sync::mpsc::SyncSender<()>) {
+	let async_receiver_fidl_chan_end = fuchsia_async::Channel::from_channel(receiver_fidl_chan_end).unwrap();
+	let proxy = {{ .ValueType }}EventProtocolProxy::new(async_receiver_fidl_chan_end);
+	let mut event_stream = proxy.take_event_stream();
+	while let Some(_event) = event_stream.next().await {
+		sender_fifo.send(()).unwrap();
+	};
+}
+
+fn benchmark_{{ .Name }}_send_event(b: &mut Bencher) {
+	let (sender_fifo, receiver_fifo) = std::sync::mpsc::sync_channel(1);
+	let (sender_fidl_chan_end, receiver_fidl_chan_end) = zx::Channel::create().unwrap();
+	std::thread::spawn(|| {
+		fuchsia_async::LocalExecutor::new()
+			.unwrap()
+			.run_singlethreaded(async move {
+			{{ .Name }}_send_event_receiver_thread(receiver_fidl_chan_end, sender_fifo).await;
+		});
+	});
+	fuchsia_async::LocalExecutor::new()
+		.unwrap()
+		.run_singlethreaded(async move {
+			let async_sender_fidl_chan_end = fuchsia_async::Channel::from_channel(sender_fidl_chan_end).unwrap();
+			let sender = <{{ .ValueType }}EventProtocolRequestStream as fidl::endpoints::RequestStream>::from_channel(async_sender_fidl_chan_end);
+			b.iter_batched_ref(|| {
+				{{- if .HandleDefs }}
+				let handle_defs = create_handles(&{{ .HandleDefs }});
+				let handle_defs = unsafe { disown_vec(handle_defs) };
+				let handle_defs = handle_defs.as_ref();
+				{{- end }}
+				{{ .Value }}
+			},
+			|value| {
+				fidl::endpoints::RequestStream::control_handle(&sender).send_send_(value).unwrap();
+				receiver_fifo.recv().unwrap();
+			},
+			BatchSize::SmallInput);
+		});
+}
+{{- end -}}
+
+{{ if .EnableEchoCallBenchmark }}
+async fn {{ .Name }}_echo_call_server_thread(server_end: zx::Channel) {
+	let async_server_end = fuchsia_async::Channel::from_channel(server_end).unwrap();
+	let stream = <{{ .ValueType }}EchoCallRequestStream as fidl::endpoints::RequestStream>::from_channel(async_server_end);
+    const MAX_CONCURRENT: usize = 10;
+    stream.for_each_concurrent(MAX_CONCURRENT, |request| {
+		match request {
+			Ok({{ .ValueType }}EchoCallRequest::Echo { mut val, responder }) => {
+				responder.send(&mut val).unwrap();
+			},
+			Err(_) => {
+				panic!("unexpected err request")
+			},
+		}
+		future::ready(())
+	}).await;
+}
+
+fn benchmark_{{ .Name }}_echo_call(b: &mut Bencher) {
+	let (client_end, server_end) = zx::Channel::create().unwrap();
+	std::thread::spawn(|| {
+		fuchsia_async::LocalExecutor::new()
+			.unwrap()
+			.run_singlethreaded(async move {
+			{{ .Name }}_echo_call_server_thread(server_end).await;
+		});
+	});
+	let proxy = {{ .ValueType }}EchoCallSynchronousProxy::new(client_end);
+	b.iter_batched_ref(|| {
+		{{- if .HandleDefs }}
+		let handle_defs = create_handles(&{{ .HandleDefs }});
+		let handle_defs = unsafe { disown_vec(handle_defs) };
+		let handle_defs = handle_defs.as_ref();
+		{{- end }}
+		{{ .Value }}
+	},
+	|value| {
+		proxy.echo(value, zx::Time::after(zx::Duration::from_seconds(1))).unwrap();
+	},
+	BatchSize::SmallInput);
+}
+{{- end -}}
+{{ end }}

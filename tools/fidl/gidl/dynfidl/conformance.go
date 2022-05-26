@@ -6,6 +6,7 @@ package dynfidl
 
 import (
 	"bytes"
+	_ "embed"
 	"fmt"
 	"strconv"
 	"strings"
@@ -18,25 +19,12 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
-var conformanceTmpl = template.Must(template.New("conformanceTmpl").Parse(`
-#![allow(unused_imports)]
+var (
+	//go:embed conformance.tmpl
+	conformanceTmplText string
 
-use dynfidl::{BasicField, Field, Structure, VectorField};
-
-{{ range .EncodeSuccessCases }}
-#[test]
-fn test_{{ .Name }}_encode() {
-	let value = {{ .Value }};
-	let mut buf = vec![];
-	value.encode(&mut buf);
-	assert_eq!(
-		buf,
-		{{ .Bytes }},
-		"observed (left) must match expected (right)",
-	);
-}
-{{ end }}
-`))
+	conformanceTmpl = template.Must(template.New("conformanceTmpl").Parse(conformanceTmplText))
+)
 
 type conformanceTmplInput struct {
 	EncodeSuccessCases []encodeSuccessCase

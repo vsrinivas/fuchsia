@@ -6,6 +6,7 @@ package walker
 
 import (
 	"bytes"
+	_ "embed"
 	"fmt"
 	"strings"
 	"text/template"
@@ -18,40 +19,12 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
-var benchmarkTmpl = template.Must(template.New("benchmarkTmpl").Parse(`
-#include <fidl/test.{{ .FidlLibrary }}/cpp/wire.h>
-#include <perftest/perftest.h>
-#include <cts/tests/pkg/fidl/cpp/test/handle_util.h>
+var (
+	//go:embed benchmarks.tmpl
+	benchmarkTmplText string
 
-#include <vector>
-
-#include "src/tests/benchmarks/fidl/walker/walker_benchmark_util.h"
-
-namespace {
-
-{{ range .Benchmarks }}
-void Build{{ .Name }}(std::function<void({{.Type}})> f) {
-{{- if .HandleDefs }}
-	auto handle_defs = {{ .HandleDefs }};
-{{- end }}
-	{{ .ValueBuild }}
-	f(std::move({{ .ValueVar }}));
-}
-
-bool BenchmarkWalker{{ .Name }}(perftest::RepeatState* state) {
-	return walker_benchmarks::WalkerBenchmark<{{ .Type }}>(state, Build{{ .Name }});
-}
-{{ end }}
-
-void RegisterTests() {
-	{{ range .Benchmarks }}
-	perftest::RegisterTest("Walker/{{ .Path }}/WallTime", BenchmarkWalker{{ .Name }});
-	{{ end }}
-}
-PERFTEST_CTOR(RegisterTests)
-
-} // namespace
-`))
+	benchmarkTmpl = template.Must(template.New("benchmarkTmpl").Parse(benchmarkTmplText))
+)
 
 type benchmark struct {
 	Path, Name, Type     string

@@ -1,0 +1,38 @@
+{{/*
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+*/}}
+
+#include <fidl/test.{{ .FidlLibrary }}/cpp/wire.h>
+#include <perftest/perftest.h>
+#include <cts/tests/pkg/fidl/cpp/test/handle_util.h>
+
+#include <vector>
+
+#include "src/tests/benchmarks/fidl/walker/walker_benchmark_util.h"
+
+namespace {
+
+{{ range .Benchmarks }}
+void Build{{ .Name }}(std::function<void({{.Type}})> f) {
+{{- if .HandleDefs }}
+	auto handle_defs = {{ .HandleDefs }};
+{{- end }}
+	{{ .ValueBuild }}
+	f(std::move({{ .ValueVar }}));
+}
+
+bool BenchmarkWalker{{ .Name }}(perftest::RepeatState* state) {
+	return walker_benchmarks::WalkerBenchmark<{{ .Type }}>(state, Build{{ .Name }});
+}
+{{ end }}
+
+void RegisterTests() {
+	{{ range .Benchmarks }}
+	perftest::RegisterTest("Walker/{{ .Path }}/WallTime", BenchmarkWalker{{ .Name }});
+	{{ end }}
+}
+PERFTEST_CTOR(RegisterTests)
+
+} // namespace

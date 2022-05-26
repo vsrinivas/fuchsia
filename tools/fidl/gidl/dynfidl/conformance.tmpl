@@ -1,0 +1,23 @@
+{{/*
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+*/}}
+
+#![allow(unused_imports)]
+
+use dynfidl::{BasicField, Field, Structure, VectorField};
+
+{{ range .EncodeSuccessCases }}
+#[test]
+fn test_{{ .Name }}_encode() {
+	let value = {{ .Value }};
+	let mut buf = vec![];
+	value.encode(&mut buf);
+	assert_eq!(
+		buf,
+		{{ .Bytes }},
+		"observed (left) must match expected (right)",
+	);
+}
+{{ end }}

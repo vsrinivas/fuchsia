@@ -6,6 +6,7 @@ package dart
 
 import (
 	"bytes"
+	_ "embed"
 	"fmt"
 	"strings"
 	"text/template"
@@ -16,108 +17,12 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
-var conformanceTmpl = template.Must(template.New("conformanceTmpl").Parse(`
-// @dart = 2.8
+var (
+	//go:embed conformance.tmpl
+	conformanceTmplText string
 
-// Ignore unused imports so that GIDL tests can be commented out without error.
-// ignore_for_file: unused_import
-
-import 'dart:typed_data';
-
-import 'package:fidl/fidl.dart' as fidl;
-import 'package:fidl_test_conformance/fidl_async.dart';
-import 'package:test/test.dart';
-import 'package:sdk.dart.lib.gidl/gidl.dart';
-import 'package:sdk.dart.lib.gidl/handles.dart';
-import 'package:zircon/zircon.dart';
-
-void main() {
-	group('conformance', () {
-		group('encode success cases', () {
-			{{ range .EncodeSuccessCases }}
-			{{- if .HandleDefs }}
-			EncodeSuccessCase.runWithHandles(
-				{{ .EncoderName }},
-				{{ .Name }},
-				(List<Handle> handles) => {{ .Value }},
-				{{ .ValueType }},
-				{{ .Bytes }},
-				{{ .HandleDefs }},
-				{{ .Handles }});
-			{{- else }}
-			EncodeSuccessCase.run(
-				{{ .EncoderName }},
-				{{ .Name }},
-				{{ .Value }},
-				{{ .ValueType }},
-				{{ .Bytes }});
-            {{- end }}
-			{{ end }}
-				});
-
-		group('decode success cases', () {
-			{{ range .DecodeSuccessCases }}
-			{{- if .HandleDefs }}
-			DecodeSuccessCase.runWithHandles(
-				{{ .Name }},
-				{{ .WireFormat }},
-				(List<Handle> handles) => {{ .Value }},
-				{{ .ValueType }},
-				{{ .Bytes }},
-				{{ .HandleDefs }},
-				{{ .Handles }},
-				{{ .UnusedHandles }});
-			{{- else }}
-			DecodeSuccessCase.run(
-				{{ .Name }},
-				{{ .WireFormat }},
-				{{ .Value }},
-				{{ .ValueType }},
-				{{ .Bytes }});
-            {{- end }}
-			{{ end }}
-				});
-
-		group('encode failure cases', () {
-			{{ range .EncodeFailureCases }}
-			{{- if .HandleDefs }}
-			EncodeFailureCase.runWithHandles(
-				{{ .EncoderName }},
-				{{ .Name }},
-				(List<Handle> handles) => {{ .Value }},
-				{{ .ValueType }},
-				{{ .ErrorCode }},
-				{{ .HandleDefs }});
-			{{- else }}
-			EncodeFailureCase.run(
-				{{ .EncoderName }},
-				{{ .Name }},
-				() => {{ .Value }},
-				{{ .ValueType }},
-				{{ .ErrorCode }});
-			{{- end }}
-			{{ end }}
-				});
-
-		group('decode failure cases', () {
-			{{ range .DecodeFailureCases }}
-			DecodeFailureCase.run(
-				{{ .Name }},
-				{{ .WireFormat }},
-				{{ .ValueType }},
-				{{ .Bytes }},
-			{{- if .HandleDefs }}
-				{{ .ErrorCode }},
-				{{ .HandleDefs }},
-				{{ .Handles }});
-			{{- else }}
-				{{ .ErrorCode }});
-			{{- end }}
-			{{ end }}
-				});
-	});
-}
-`))
+	conformanceTmpl = template.Must(template.New("conformanceTmpl").Parse(conformanceTmplText))
+)
 
 type tmplInput struct {
 	EncodeSuccessCases []encodeSuccessCase
