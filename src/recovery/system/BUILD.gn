@@ -107,10 +107,15 @@ rustc_binary("bin") {
     "//src/sys/pkg/testing/blobfs-ramdisk",
     "//src/sys/pkg/testing/mock-paver",
   ]
-  features = [ "http_setup_server" ]
+  features = [
+    "http_setup_server",
+    "debug_console",
+  ]
   sources = [
     "src/button.rs",
+    "src/console.rs",
     "src/fdr.rs",
+    "src/font.rs",
     "src/keyboard.rs",
     "src/keys.rs",
     "src/main.rs",
@@ -169,6 +174,7 @@ rustc_binary("bin_fdr") {
   ]
   sources = [
     "src/fdr.rs",
+    "src/font.rs",
     "src/main.rs",
     "src/proxy_view_assistant.rs",
   ]

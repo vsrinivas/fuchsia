@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#[cfg(feature = "debug_console")]
+use crate::ConsoleMessages;
+
 use crate::input::{self};
 use std::collections::VecDeque;
 
@@ -20,15 +23,56 @@ pub enum ProxyMessages {
 }
 
 pub struct ProxyViewAssistant {
+    #[cfg(feature = "debug_console")]
+    console_view_assistant: ViewAssistantPtr,
     view_assistant_stack: VecDeque<ViewAssistantPtr>,
     first_call_after_switch: bool,
+    #[cfg(feature = "debug_console")]
+    console_active: bool,
 }
 
 impl ProxyViewAssistant {
-    pub fn new(view_assistant_ptr: ViewAssistantPtr) -> Result<ProxyViewAssistant, Error> {
+    pub fn new(
+        #[cfg(feature = "debug_console")] console_view_assistant: ViewAssistantPtr,
+        view_assistant_ptr: ViewAssistantPtr,
+    ) -> Result<ProxyViewAssistant, Error> {
         let mut view_assistant_stack = VecDeque::new();
         view_assistant_stack.push_front(view_assistant_ptr);
-        Ok(ProxyViewAssistant { view_assistant_stack, first_call_after_switch: true })
+
+        Ok(ProxyViewAssistant {
+            #[cfg(feature = "debug_console")]
+            console_view_assistant,
+            view_assistant_stack,
+            first_call_after_switch: true,
+            #[cfg(feature = "debug_console")]
+            console_active: false,
+        })
+    }
+
+    /// Returns true if event should toggle display of Console (and consider the event consumed).
+    #[cfg(feature = "debug_console")]
+    fn should_console_toggle(&mut self, event: &input::Event) -> bool {
+        let mut toggle_requested = false;
+
+        match &event.event_type {
+            input::EventType::Touch(touch_event) => {
+                for contact in &touch_event.contacts {
+                    let pointer_event = &input::pointer::Event::new_from_contact(contact);
+                    match pointer_event.phase {
+                        input::pointer::Phase::Down(location) => {
+                            if location.x < 100 && location.y < 100 {
+                                toggle_requested = true;
+                                break;
+                            }
+                        }
+                        _ => {}
+                    };
+                }
+            }
+            _ => {}
+        }
+
+        toggle_requested
     }
 }
 
@@ -48,6 +92,15 @@ impl ViewAssistant for ProxyViewAssistant {
         buffer_ready_event: Event,
         view_context: &ViewAssistantContext,
     ) -> Result<(), Error> {
+        #[cfg(feature = "debug_console")]
+        if self.console_active {
+            return self.console_view_assistant.as_mut().render(
+                render_context,
+                buffer_ready_event,
+                view_context,
+            );
+        }
+
         self.view_assistant_stack.front_mut().unwrap().render(
             render_context,
             buffer_ready_event,
@@ -60,6 +113,17 @@ impl ViewAssistant for ProxyViewAssistant {
         context: &mut ViewAssistantContext,
         event: &input::Event,
     ) -> Result<(), Error> {
+        #[cfg(feature = "debug_console")]
+        if self.should_console_toggle(event) {
+            self.console_active = !self.console_active;
+            return Ok(()); // Consume the console-toggling event.
+        }
+
+        #[cfg(feature = "debug_console")]
+        if self.console_active {
+            return Ok(()); // Consume the event when the console is active.
+        }
+
         if self.first_call_after_switch {
             self.first_call_after_switch = false;
             self.handle_focus_event(context, true)?;
@@ -161,9 +225,18 @@ impl ViewAssistant for ProxyViewAssistant {
                     }
                 }
             }
-        } else {
-            self.view_assistant_stack.front_mut().unwrap().handle_message(message);
+            return;
         }
+
+        if cfg!(feature = "debug_console") {
+            #[cfg(feature = "debug_console")]
+            if message.is::<ConsoleMessages>() {
+                self.console_view_assistant.as_mut().handle_message(message);
+                return;
+            }
+        }
+
+        self.view_assistant_stack.front_mut().unwrap().handle_message(message);
     }
 
     fn uses_pointer_events(&self) -> bool {
@@ -203,11 +276,18 @@ mod tests {
 
     #[test]
     fn test_proxy_view_assistant_switching() -> std::result::Result<(), anyhow::Error> {
+        #[cfg(feature = "debug_console")]
+        let mock0 = MockProxyViewAssistant::new();
         let mut mock1 = MockProxyViewAssistant::new();
         mock1.expect_handle_message().times(2).return_const(());
         let mut mock2 = MockProxyViewAssistant::new();
         mock2.expect_handle_message().times(1).return_const(());
-        let mut proxy = ProxyViewAssistant::new(Box::new(mock1)).unwrap();
+        let mut proxy = ProxyViewAssistant::new(
+            #[cfg(feature = "debug_console")]
+            Box::new(mock0),
+            Box::new(mock1),
+        )
+        .unwrap();
         assert_eq!(proxy.view_assistant_stack.len(), 1);
         proxy.handle_message(make_message(MockMessageType::MockMessage));
         proxy.handle_message(make_message(ProxyMessages::NewViewAssistant(Some(Box::new(mock2)))));
@@ -221,9 +301,16 @@ mod tests {
 
     #[test]
     fn test_proxy_view_assistant_pop_first_entry() -> std::result::Result<(), anyhow::Error> {
+        #[cfg(feature = "debug_console")]
+        let mock0 = MockProxyViewAssistant::new();
         let mut mock1 = MockProxyViewAssistant::new();
         mock1.expect_handle_message().times(0).return_const(());
-        let mut proxy = ProxyViewAssistant::new(Box::new(mock1)).unwrap();
+        let mut proxy = ProxyViewAssistant::new(
+            #[cfg(feature = "debug_console")]
+            Box::new(mock0),
+            Box::new(mock1),
+        )
+        .unwrap();
         assert_eq!(proxy.view_assistant_stack.len(), 1);
         proxy.handle_message(make_message(ProxyMessages::PopViewAssistant));
         assert_eq!(proxy.view_assistant_stack.len(), 1);
@@ -234,10 +321,17 @@ mod tests {
     fn test_proxy_view_assistant_first_call_pointer_event() -> std::result::Result<(), anyhow::Error>
     {
         let context = &mut ViewAssistantContext::new_for_testing();
+        #[cfg(feature = "debug_console")]
+        let mock0 = MockProxyViewAssistant::new();
         let mut mock1 = MockProxyViewAssistant::new();
         mock1.expect_handle_pointer_event().times(2).returning(|_, _, _| Ok(()));
         mock1.expect_handle_focus_event().times(1).returning(|_, _| Ok(()));
-        let mut proxy = ProxyViewAssistant::new(Box::new(mock1)).unwrap();
+        let mut proxy = ProxyViewAssistant::new(
+            #[cfg(feature = "debug_console")]
+            Box::new(mock0),
+            Box::new(mock1),
+        )
+        .unwrap();
         let event = get_input_event();
         let pointer_id =
             input::pointer::PointerId::Mouse(input::DeviceId("Mouse Event".to_owned()));
@@ -255,10 +349,17 @@ mod tests {
     fn test_proxy_view_assistant_first_call_input_event() -> std::result::Result<(), anyhow::Error>
     {
         let context = &mut ViewAssistantContext::new_for_testing();
+        #[cfg(feature = "debug_console")]
+        let mock0 = MockProxyViewAssistant::new();
         let mut mock1 = MockProxyViewAssistant::new();
         mock1.expect_handle_input_event().times(2).returning(|_, _| Ok(()));
         mock1.expect_handle_focus_event().times(1).returning(|_, _| Ok(()));
-        let mut proxy = ProxyViewAssistant::new(Box::new(mock1)).unwrap();
+        let mut proxy = ProxyViewAssistant::new(
+            #[cfg(feature = "debug_console")]
+            Box::new(mock0),
+            Box::new(mock1),
+        )
+        .unwrap();
         let event = get_input_event();
         assert_eq!(proxy.first_call_after_switch, true);
         proxy.handle_input_event(context, &event)?;
@@ -272,11 +373,18 @@ mod tests {
     fn test_proxy_view_assistant_first_call_input_pointer_event(
     ) -> std::result::Result<(), anyhow::Error> {
         let context = &mut ViewAssistantContext::new_for_testing();
+        #[cfg(feature = "debug_console")]
+        let mock0 = MockProxyViewAssistant::new();
         let mut mock1 = MockProxyViewAssistant::new();
         mock1.expect_handle_pointer_event().times(1).returning(|_, _, _| Ok(()));
         mock1.expect_handle_input_event().times(1).returning(|_, _| Ok(()));
         mock1.expect_handle_focus_event().times(1).returning(|_, _| Ok(()));
-        let mut proxy = ProxyViewAssistant::new(Box::new(mock1)).unwrap();
+        let mut proxy = ProxyViewAssistant::new(
+            #[cfg(feature = "debug_console")]
+            Box::new(mock0),
+            Box::new(mock1),
+        )
+        .unwrap();
         let event = get_input_event();
         let pointer_id =
             input::pointer::PointerId::Mouse(input::DeviceId("Mouse Event".to_owned()));

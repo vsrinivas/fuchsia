@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::font;
 use crate::keys;
 use crate::keys::{get_accent, Accent, Key, SpecialKey};
 use crate::proxy_view_assistant::ProxyMessages;
 use anyhow::Error;
 use carnelian::{
     color::Color,
-    drawing::{load_font, measure_text_width, FontFace},
+    drawing::{measure_text_width, FontFace},
     input::{self},
     make_message,
     render::Context as RenderContext,
@@ -30,7 +31,6 @@ use euclid::{size2, Size2D};
 use fuchsia_zircon::{Duration, Event, Time};
 use std::collections::VecDeque;
 use std::hash::{Hash, Hasher};
-use std::path::PathBuf;
 
 /// enum that defines all messages sent with `App::queue_message` that
 /// the button view assistant will understand and process.
@@ -76,7 +76,7 @@ impl KeyButton {
     ) -> Result<KeyButton, Error> {
         let options = StackOptions { alignment: Alignment::center(), ..StackOptions::default() };
         builder.start_group("key_button", Stack::with_options_ptr(options));
-        let face = load_font(PathBuf::from("/pkg/data/fonts/Roboto-Regular.ttf"))?;
+        let face = font::load_default_font_face()?;
         let text = match key {
             Key::Letter(letter_key) => &letter_key.lower,
             Key::Special(_special_key, text) => text,
@@ -485,8 +485,7 @@ impl KeyboardViewAssistant {
             let mut builder = SceneBuilder::new().background_color(self.bg_color);
             let mut user_text = None;
             let mut buttons: VecDeque<KeyButton> = VecDeque::with_capacity(50);
-            let face =
-                load_font(PathBuf::from("/pkg/data/fonts/Roboto-Regular.ttf")).expect("Font");
+            let face = font::load_default_font_face_or_panic();
             builder
                 .group()
                 .column()

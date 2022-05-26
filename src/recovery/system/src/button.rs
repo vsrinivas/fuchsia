@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::font;
 use anyhow::Error;
 use carnelian::{
     color::Color,
-    drawing::{load_font, measure_text_width, FontFace},
+    drawing::{measure_text_width, FontFace},
     input::{self},
     make_message,
     scene::{
@@ -20,7 +21,6 @@ use carnelian::{
 };
 use euclid::{size2, Size2D, UnknownUnit};
 use fuchsia_zircon::Time;
-use std::path::PathBuf;
 
 /// enum that defines all messages sent with `App::queue_message` that
 /// the button view assistant will understand and process.
@@ -56,7 +56,7 @@ impl Button {
     ) -> Result<Button, Error> {
         let options = StackOptions { alignment: Alignment::center(), ..StackOptions::default() };
         builder.start_group("button", Stack::with_options_ptr(options));
-        let face = load_font(PathBuf::from("/pkg/data/fonts/Roboto-Regular.ttf"))?;
+        let face = font::load_default_font_face()?;
         let label_width = measure_text_width(&face, font_size, text);
         let label = builder.text(
             face.clone(),

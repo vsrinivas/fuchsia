@@ -4,7 +4,10 @@
 
 #[cfg(feature = "http_setup_server")]
 mod button;
+#[cfg(feature = "debug_console")]
+mod console;
 mod fdr;
+mod font;
 #[cfg(feature = "http_setup_server")]
 mod keyboard;
 #[cfg(feature = "http_setup_server")]
@@ -22,7 +25,7 @@ use argh::FromArgs;
 use carnelian::{
     app::Config,
     color::Color,
-    drawing::{load_font, path_for_circle, DisplayRotation, FontFace},
+    drawing::{path_for_circle, DisplayRotation, FontFace},
     input, make_message,
     render::{rive::load_rive, BlendMode, Context as RenderContext, Fill, FillRule, Raster, Style},
     scene::{
@@ -52,7 +55,7 @@ use fuchsia_zircon::{Duration, Event};
 use futures::StreamExt;
 use rive_rs::{self as rive};
 use std::borrow::{Borrow, Cow};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 const FACTORY_RESET_TIMER_IN_SECONDS: u8 = 10;
 const LOGO_IMAGE_PATH: &str = "/pkg/data/logo.riv";
@@ -75,6 +78,9 @@ use crate::{
     keyboard::{KeyboardMessages, KeyboardViewAssistant},
     setup::SetupEvent,
 };
+
+#[cfg(feature = "debug_console")]
+use crate::console::{ConsoleMessages, ConsoleViewAssistant};
 
 #[cfg(feature = "http_setup_server")]
 use crate::proxy_view_assistant::ProxyMessages;
@@ -180,6 +186,10 @@ impl AppAssistant for RecoveryAppAssistant {
     fn create_view_assistant(&mut self, view_key: ViewKey) -> Result<ViewAssistantPtr, Error> {
         let body = get_recovery_body(self.fdr_restriction.is_initially_enabled());
         let file = load_rive(LOGO_IMAGE_PATH).ok();
+
+        #[cfg(feature = "debug_console")]
+        let console_view_assistant_ptr = Box::new(ConsoleViewAssistant::new()?);
+
         let view_assistant_ptr = Box::new(RecoveryViewAssistant::new(
             &self.app_sender,
             view_key,
@@ -188,7 +198,14 @@ impl AppAssistant for RecoveryAppAssistant {
             body.map(Into::into),
             self.fdr_restriction,
         )?);
-        let proxy_ptr = Box::new(ProxyViewAssistant::new(view_assistant_ptr)?);
+
+        // ProxyView is a root view that conditionally displays the top View
+        // from a stack (initialized with "RecoveryView"), or the Console.
+        let proxy_ptr = Box::new(ProxyViewAssistant::new(
+            #[cfg(feature = "debug_console")]
+            console_view_assistant_ptr,
+            view_assistant_ptr,
+        )?);
         Ok(proxy_ptr)
     }
 
@@ -506,7 +523,7 @@ impl RecoveryViewAssistant {
     ) -> Result<RecoveryViewAssistant, Error> {
         RecoveryViewAssistant::setup(app_sender, view_key)?;
 
-        let face = load_font(PathBuf::from("/pkg/data/fonts/Roboto-Regular.ttf"))?;
+        let face = font::load_default_font_face()?;
         Ok(RecoveryViewAssistant {
             face,
             heading,
@@ -756,6 +773,12 @@ impl RecoveryViewAssistant {
     fn handle_button_message(&mut self, message: &ButtonMessages) {
         match message {
             ButtonMessages::Pressed(_, label) => {
+                #[cfg(feature = "debug_console")]
+                self.app_sender.queue_message(
+                    MessageTarget::View(self.view_key),
+                    make_message(ConsoleMessages::AddText(format!("Button pressed: {}", label))),
+                );
+
                 let mut entry_text = String::new();
                 let mut field_text = "";
                 match label.as_ref() {
@@ -803,6 +826,19 @@ impl RecoveryViewAssistant {
                                 local_app_sender.queue_message(
                                     MessageTarget::View(view_key),
                                     make_message(WiFiMessages::Connected(connected.is_ok())),
+                                );
+
+                                #[cfg(feature = "debug_console")]
+                                local_app_sender.queue_message(
+                                    MessageTarget::View(view_key),
+                                    make_message(ConsoleMessages::AddText(format!(
+                                        "Wifi Connect Attempt: {}",
+                                        if connected.is_err() {
+                                            format!("Failed! ({:?})", connected.err().unwrap())
+                                        } else {
+                                            "Succeeded!".to_string()
+                                        }
+                                    ))),
                                 );
                             };
                             fasync::Task::local(f).detach();
