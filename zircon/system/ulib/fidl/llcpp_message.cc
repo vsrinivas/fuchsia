@@ -2,9 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fidl/coding.h>
 #include <lib/fidl/internal.h>
-#include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/trace.h>
 #include <zircon/assert.h>

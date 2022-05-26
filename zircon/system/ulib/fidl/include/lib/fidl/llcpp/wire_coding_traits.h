@@ -5,7 +5,6 @@
 #ifndef LIB_FIDL_LLCPP_WIRE_CODING_TRAITS_H_
 #define LIB_FIDL_LLCPP_WIRE_CODING_TRAITS_H_
 
-#include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/coding_errors.h>
 #include <lib/fidl/llcpp/object_view.h>
 #include <lib/fidl/llcpp/string_view.h>

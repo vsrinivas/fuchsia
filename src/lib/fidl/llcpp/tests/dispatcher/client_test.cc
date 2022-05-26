@@ -7,7 +7,6 @@
 #include <lib/fidl/epitaph.h>
 #include <lib/fidl/llcpp/client.h>
 #include <lib/fidl/llcpp/client_base.h>
-#include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/connect_service.h>
 #include <lib/fidl/txn_header.h>
 #include <lib/sync/completion.h>

@@ -9,7 +9,6 @@
 #include <lib/async-loop/default.h>
 #include <lib/fidl/llcpp/client.h>
 #include <lib/fidl/llcpp/client_base.h>
-#include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/connect_service.h>
 
 #include <zxtest/zxtest.h>

@@ -11,7 +11,6 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/unsafe.h>
-#include <lib/fidl/llcpp/coding.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <zircon/fidl.h>

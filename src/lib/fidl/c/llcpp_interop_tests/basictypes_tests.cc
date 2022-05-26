@@ -8,7 +8,6 @@
 #include <lib/async-loop/loop.h>
 #include <lib/fidl-async/bind.h>
 #include <lib/fidl-async/cpp/bind.h>
-#include <lib/fidl/llcpp/coding.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/eventpair.h>
 #include <lib/zx/time.h>

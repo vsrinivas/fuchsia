@@ -10,7 +10,6 @@
 #include <lib/fdf/dispatcher.h>
 #include <lib/fdf/internal.h>
 #include <lib/fidl/llcpp/arena.h>
-#include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl_driver/cpp/wire_messaging.h>
 #include <lib/fit/defer.h>
 #include <lib/sync/cpp/completion.h>

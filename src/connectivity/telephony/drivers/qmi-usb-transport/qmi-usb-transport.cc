@@ -6,7 +6,6 @@
 
 #include <endian.h>
 #include <lib/ddk/debug.h>
-#include <lib/fidl/llcpp/coding.h>
 #include <lib/zx/channel.h>
 #include <stdio.h>
 #include <zircon/hw/usb/cdc.h>

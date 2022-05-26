@@ -5,7 +5,6 @@
 #include "fake-transport-base.h"
 
 #include <lib/async/cpp/task.h>
-#include <lib/fidl/llcpp/coding.h>
 #include <lib/zx/channel.h>
 #include <zircon/status.h>
 #include <zircon/types.h>

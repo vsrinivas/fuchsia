@@ -7,7 +7,6 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/fidl/llcpp/coding.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
 

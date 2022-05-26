@@ -5,7 +5,6 @@
 #ifndef SRC_LIB_FIDL_LLCPP_TESTS_CONFORMANCE_CONFORMANCE_UTILS_H_
 #define SRC_LIB_FIDL_LLCPP_TESTS_CONFORMANCE_CONFORMANCE_UTILS_H_
 
-#include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/traits.h>
 #include <zircon/fidl.h>

@@ -10,7 +10,6 @@
 #include <lib/async/wait.h>
 #include <lib/fidl-async/bind.h>
 #include <lib/fidl-async/cpp/bind.h>
-#include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/txn_header.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/eventpair.h>

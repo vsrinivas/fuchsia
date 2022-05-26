@@ -6,7 +6,6 @@
 #define LIB_FIDL_LLCPP_SYNC_CALL_H_
 
 #include <lib/fidl/llcpp/async_binding.h>
-#include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/internal/arrow.h>
 #include <lib/fidl/llcpp/internal/endpoints.h>
 #include <lib/fidl/llcpp/internal/server_details.h>

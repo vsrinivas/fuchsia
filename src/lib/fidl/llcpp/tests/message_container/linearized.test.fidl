@@ -14,3 +14,7 @@ type InnerStruct = struct {
 type FullyLinearizedStruct = struct {
     ptr box<InnerStruct>;
 };
+
+type Uint32VectorStruct = struct {
+    vec vector<uint32>;
+};

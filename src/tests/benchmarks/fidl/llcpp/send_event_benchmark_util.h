@@ -7,7 +7,6 @@
 
 #include <lib/fidl/llcpp/arena.h>
 #include <lib/fidl/llcpp/channel.h>
-#include <lib/fidl/llcpp/coding.h>
 #include <lib/sync/cpp/completion.h>
 #include <zircon/status.h>
 #include <zircon/types.h>

@@ -87,7 +87,6 @@ if (is_fuchsia) {
                     "lib/fidl/llcpp/client_base.h",
                     "lib/fidl/llcpp/internal/thenable.h",
                     "lib/fidl/llcpp/client.h",
-                    "lib/fidl/llcpp/coding.h",
                     "lib/fidl/llcpp/channel.h",
                     "lib/fidl/llcpp/coding_errors.h",
                     "lib/fidl/llcpp/connect_service.h",
@@ -148,9 +147,7 @@ if (is_fuchsia) {
       "llcpp_client_base.cc",
       "llcpp_client_details.cc",
       "llcpp_coding_errors.cc",
-      "llcpp_decoding.cc",
       "llcpp_display_error.cc",
-      "llcpp_encoding.cc",
       "llcpp_message.cc",
       "llcpp_message_storage.cc",
       "llcpp_server.cc",
@@ -199,7 +196,6 @@ if (is_fuchsia) {
     sdk = "source"
     sdk_headers = [
                     "lib/fidl/llcpp/array.h",
-                    "lib/fidl/llcpp/coding.h",
                     "lib/fidl/llcpp/coding_errors.h",
                     "lib/fidl/llcpp/envelope.h",
                     "lib/fidl/llcpp/arena.h",
@@ -227,9 +223,7 @@ if (is_fuchsia) {
     sources = [
       "llcpp_arena.cc",
       "llcpp_coding_errors.cc",
-      "llcpp_decoding.cc",
       "llcpp_display_error.cc",
-      "llcpp_encoding.cc",
       "llcpp_message.cc",
       "llcpp_message_storage.cc",
       "llcpp_status.cc",

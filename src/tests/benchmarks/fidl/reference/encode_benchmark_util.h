@@ -6,7 +6,6 @@
 #define SRC_TESTS_BENCHMARKS_FIDL_REFERENCE_ENCODE_BENCHMARK_UTIL_H_
 
 #include <lib/fidl/llcpp/arena.h>
-#include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/message.h>
 #include <zircon/fidl.h>
 
