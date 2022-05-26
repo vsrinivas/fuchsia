@@ -45,7 +45,10 @@ bool HasOutputInChildren(const std::vector<NodePtr>& children, const NodePtr& ou
 }  // namespace
 
 Node::Node(std::string_view name, bool is_meta, PipelineStagePtr pipeline_stage, NodePtr parent)
-    : name_(name), is_meta_(is_meta), pipeline_stage_(std::move(pipeline_stage)), parent_(parent) {
+    : name_(name),
+      is_meta_(is_meta),
+      pipeline_stage_(std::move(pipeline_stage)),
+      parent_(parent ? std::optional<std::weak_ptr<Node>>(parent) : std::nullopt) {
   if (parent) {
     FX_CHECK(parent->is_meta_);
   }
@@ -75,6 +78,18 @@ const std::vector<NodePtr>& Node::child_inputs() const {
 const std::vector<NodePtr>& Node::child_outputs() const {
   FX_CHECK(is_meta_);
   return child_outputs_;
+}
+
+NodePtr Node::parent() const {
+  FX_CHECK(!is_meta_);
+  if (!parent_) {
+    return nullptr;
+  }
+  // Although `parent_` is a weak_ptr to avoid reference counting cycles, if this node has a parent,
+  // then the parent is a meta node which must outlive this child node. Hence, `lock` cannot fail.
+  auto p = parent_->lock();
+  FX_CHECK(p) << "node cannot outlive its parent";
+  return p;
 }
 
 PipelineStagePtr Node::pipeline_stage() const {
@@ -222,7 +237,7 @@ fpromise::result<void, fuchsia_audio_mixer::DeleteEdgeError> Node::DeleteEdge(
     // Find src's output child that connects to dest or to a child of dest.
     NodePtr child;
     for (auto& c : src->child_outputs_) {
-      if (c->output_ == dest || c->output_->parent_.lock() == dest) {
+      if (c->output_ == dest || c->output_->parent() == dest) {
         child = c;
         break;
       }

@@ -13,6 +13,7 @@ source_set("fidl") {
   visibility = [
     ":*",
     "//src/media/audio/mixer_service:*",
+    "//src/media/audio/mixer_service/fidl/testing:*",
   ]
 
   sources = [
@@ -23,6 +24,8 @@ source_set("fidl") {
     "node.cc",
     "node.h",
     "ptr_decls.h",
+    "reachability.cc",
+    "reachability.h",
   ]
 
   public_deps = [
@@ -44,11 +47,15 @@ source_set("fidl") {
 executable("fidl_unittests") {
   testonly = true
 
-  sources = [ "node_unittest.cc" ]
+  sources = [
+    "node_unittest.cc",
+    "reachability_unittest.cc",
+  ]
 
   deps = [
     ":fidl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/media/audio/mixer_service/fidl/testing",
     "//third_party/googletest:gmock",
   ]
 }

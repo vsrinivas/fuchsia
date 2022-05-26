@@ -105,6 +105,10 @@ class Node {
   // REQUIRED: is_meta()
   const std::vector<NodePtr>& child_outputs() const;
 
+  // Returns the parent of this node, or nullptr if this is not a child of a meta node.
+  // REQUIRED: !is_meta()
+  NodePtr parent() const;
+
   // Returns the PipelineStage owned by this node.
   // REQUIRED: !is_meta()
   PipelineStagePtr pipeline_stage() const;
@@ -127,6 +131,7 @@ class Node {
       GlobalTaskQueue& global_queue, NodePtr dest, NodePtr src);
 
  protected:
+  // REQUIRES: `parent` outlives this node.
   Node(std::string_view name, bool is_meta, PipelineStagePtr pipeline_stage, NodePtr parent);
   virtual ~Node() = default;
 
@@ -159,6 +164,8 @@ class Node {
   virtual bool CanAcceptInput(NodePtr src) const = 0;
 
  private:
+  friend class FakeGraph;
+
   // Implementation of CreateEdge.
   void AddInput(NodePtr input);
   void SetOutput(NodePtr output);
@@ -175,9 +182,10 @@ class Node {
   const bool is_meta_;
   const PipelineStagePtr pipeline_stage_;
 
-  // If this node is a child of a meta node, then parent_ is that meta node.
+  // If this node is a child of a meta node, then `parent_` is that meta node.
   // This is held as a weak_ptr to avoid a reference counting cycle.
-  const std::weak_ptr<Node> parent_;
+  // This is std::nullopt iff there is no parent.
+  const std::optional<std::weak_ptr<Node>> parent_;
 
   // If !is_meta_.
   // To allow walking the graph in any direction, we maintain both inputs and outputs.
