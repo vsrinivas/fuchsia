@@ -136,10 +136,12 @@ func TestParseValues(t *testing.T) {
 				},
 			},
 		}},
-		{gidl: `[]`, expectedValue: make([]ir.Value, 0)},
+		{gidl: `[]`, expectedValue: []ir.Value{}},
 		{gidl: `[1,]`, expectedValue: []ir.Value{uint64(1)}},
 		{gidl: `[1,"hello",true,]`, expectedValue: []ir.Value{uint64(1), "hello", true}},
 		{gidl: `[null,]`, expectedValue: []ir.Value{nil}},
+		{gidl: `[repeat(1):2]`, expectedValue: []ir.Value{uint64(1), uint64(1)}},
+		{gidl: `[repeat("hello"):2]`, expectedValue: []ir.Value{"hello", "hello"}},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.gidl, func(t *testing.T) {
@@ -161,6 +163,7 @@ func TestFailsParseValues(t *testing.T) {
 		{gidl: `#-1`, expectedErrorSubstr: `want "<text>", got "-"`},
 		{gidl: `SomeRecord { 0x01020304: 5, }`, expectedErrorSubstr: "unexpected tokenKind"},
 		{gidl: `restrict(#123, type: channel, rights: read + write)`, expectedErrorSubstr: "unknown restrict label"},
+		{gidl: `[repeat(1):0]`, expectedErrorSubstr: "expected non-zero"},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.gidl, func(t *testing.T) {

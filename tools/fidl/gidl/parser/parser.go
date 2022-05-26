@@ -913,6 +913,34 @@ func (p *Parser) parseErrorCode() (ir.ErrorCode, error) {
 func (p *Parser) parseSlice(rightsConfiguration rightsConfiguration) ([]ir.Value, error) {
 	result := make([]ir.Value, 0)
 	err := p.parseCommaSeparated(tLsquare, tRsquare, func() error {
+		tok, err := p.peekToken()
+		if err != nil {
+			return err
+		}
+		if tok.kind == tText && tok.value == "repeat" {
+			p.consumeToken(tText)
+			_, err := p.consumeToken(tLparen)
+			if err != nil {
+				return err
+			}
+			val, err := p.parseValue(rightsConfiguration)
+			if err != nil {
+				return err
+			}
+			_, err = p.consumeToken(tRparen)
+			if err != nil {
+				return err
+			}
+			size, err := p.parseColonSize()
+			if err != nil {
+				return err
+			}
+			for i := uint64(0); i < size; i++ {
+				result = append(result, val)
+			}
+			return nil
+		}
+
 		val, err := p.parseValue(rightsConfiguration)
 		if err != nil {
 			return err
