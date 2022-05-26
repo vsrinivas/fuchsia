@@ -23,6 +23,7 @@ rustc_library("input_pipeline") {
     "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
     "//sdk/fidl/fuchsia.ui.focus:fuchsia.ui.focus-rustc",
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
+    "//sdk/fidl/fuchsia.ui.input.config:fuchsia.ui.input.config-rustc",
     "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3-rustc",
     "//sdk/fidl/fuchsia.ui.keyboard.focus:fuchsia.ui.keyboard.focus-rustc",
     "//sdk/fidl/fuchsia.ui.pointerinjector:fuchsia.ui.pointerinjector-rustc",

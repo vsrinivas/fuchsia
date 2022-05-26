@@ -1,0 +1,17 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.ui.input.config;
+
+/// This protocol used to control experimental features in input pipeline.
+/// Users may use `ffx config set input-pipeline.xxx true` to enable the
+/// feature.
+@discoverable
+protocol Features {
+    /// SetTouchpadMode will enable/disable the touchpad mode feature in
+    /// input pipeline. touchpad mode will have rich gesture support on
+    /// the touchpad instead of only mouse move and click.
+    SetTouchpadMode(struct {
+        enable bool;
+    });
+};
