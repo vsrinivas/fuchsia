@@ -32,7 +32,7 @@ use {
         error::Error as RealmBuilderError, Capability, ChildOptions, Event, LocalComponentHandles,
         RealmBuilder, RealmInstance, Ref, Route,
     },
-    fuchsia_url::pkg_url::PkgUrl,
+    fuchsia_url::AbsoluteComponentUrl,
     fuchsia_zircon as zx,
     futures::{
         channel::{mpsc, oneshot},
@@ -88,8 +88,8 @@ impl RunningSuite {
     ) -> Result<Self, LaunchTestError> {
         info!("Starting '{}' in '{}' collection.", test_url, facets.collection);
 
-        let test_package = match PkgUrl::parse(test_url) {
-            Ok(package_url) => package_url.name().to_string(),
+        let test_package = match AbsoluteComponentUrl::parse(test_url) {
+            Ok(component_url) => component_url.package_url().name().to_string(),
             Err(_) => return Err(LaunchTestError::InvalidResolverData),
         };
         let builder = get_realm(

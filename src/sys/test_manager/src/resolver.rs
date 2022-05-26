@@ -8,25 +8,25 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::LocalComponentHandles,
-    fuchsia_url::pkg_url::PkgUrl,
+    fuchsia_url::AbsoluteComponentUrl,
     futures::{StreamExt, TryStreamExt},
     std::sync::Arc,
     tracing::{error, warn},
 };
 
 fn validate_hermetic_package(
-    component_url: &str,
+    component_url_str: &str,
     hermetic_test_package_name: &String,
 ) -> Result<(), fresolution::ResolverError> {
-    let package_url =
-        PkgUrl::parse(component_url).map_err(|_| fresolution::ResolverError::InvalidArgs)?;
-    let package_name = package_url.name();
+    let component_url = AbsoluteComponentUrl::parse(component_url_str)
+        .map_err(|_| fresolution::ResolverError::InvalidArgs)?;
+    let package_name = component_url.name();
     if hermetic_test_package_name != package_name.as_ref() {
         error!(
                 "failed to resolve component {}: package {} is not in the test package: '{}'
                 \nSee https://fuchsia.dev/fuchsia-src/development/testing/components/test_runner_framework?hl=en#hermetic-resolver
                 for more information.",
-                &component_url, package_name, hermetic_test_package_name
+                &component_url_str, package_name, hermetic_test_package_name
             );
         return Err(fresolution::ResolverError::PackageNotFound);
     }
@@ -95,28 +95,28 @@ pub async fn serve_hermetic_resolver(
 }
 
 async fn hermetic_loader(
-    component_url: &str,
+    component_url_str: &str,
     hermetic_test_package_name: &String,
     loader_service: fv1sys::LoaderProxy,
 ) -> Option<Box<fv1sys::Package>> {
-    let package_url = match PkgUrl::parse(component_url) {
+    let component_url = match AbsoluteComponentUrl::parse(component_url_str) {
         Ok(u) => u,
         Err(e) => {
-            warn!("Invalid component url {}: {}", component_url, e);
+            warn!("Invalid component url {}: {}", component_url_str, e);
             return None;
         }
     };
-    let package_name = package_url.name();
+    let package_name = component_url.package_url().name();
     if hermetic_test_package_name != package_name.as_ref() {
         error!(
                 "failed to resolve component {}: package {} is not in the test package: '{}'
                 \nSee https://fuchsia.dev/fuchsia-src/development/testing/components/test_runner_framework?hl=en#hermetic-resolver
                 for more information.",
-                &component_url, package_name, hermetic_test_package_name
+                &component_url_str, package_name, hermetic_test_package_name
             );
         return None;
     }
-    match loader_service.load_url(component_url).await {
+    match loader_service.load_url(component_url_str).await {
         Ok(r) => r,
         Err(e) => {
             warn!("can't communicate with global loader: {}", e);
