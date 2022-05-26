@@ -4,7 +4,7 @@
 
 use ash::extensions::{
     ext::DebugUtils,
-    khr::{Surface, Swapchain},
+    // khr::{Surface, Swapchain},
 };
 use ash::{self, vk};
 use std::borrow::Cow;
@@ -163,7 +163,7 @@ use std::mem::align_of;
 //         vk_d.DestroyDevice(device, ptr::null());
 //     }
 // }
-
+/*
 // Simple offset_of macro akin to C++ offsetof
 macro_rules! offset_of {
     ($base:path, $field:ident) => {{
@@ -278,15 +278,13 @@ pub fn find_memorytype_index(
         .map(|(index, _memory_type)| index as _)
 }
 
-pub struct ExampleBase {
-    pub entry: Entry,
-    pub instance: Instance,
-    pub device: Device,
-    pub surface_loader: Surface,
-    pub swapchain_loader: Swapchain,
+pub struct VkRender {
+    pub entry: ash::Entry,
+    pub instance: ash::Instance,
+    pub device: ash::Device,
+    // pub surface_loader: Surface,
+    // pub swapchain_loader: Swapchain,
     pub debug_utils_loader: DebugUtils,
-    pub window: winit::window::Window,
-    pub event_loop: RefCell<EventLoop<()>>,
     pub debug_call_back: vk::DebugUtilsMessengerEXT,
 
     pub pdevice: vk::PhysicalDevice,
@@ -317,7 +315,7 @@ pub struct ExampleBase {
     pub setup_commands_reuse_fence: vk::Fence,
 }
 
-impl ExampleBase {
+impl VkRender {
     // pub fn render_loop<F: Fn()>(&self, f: F) {
     //     self.event_loop
     //         .borrow_mut()
@@ -344,7 +342,7 @@ impl ExampleBase {
     //         });
     // }
 
-    pub fn new(window_width: u32, window_height: u32) -> Self {
+    pub fn new(window_width: u32, window_height: u32) -> VkResult<Self> {
         unsafe {
             // let event_loop = EventLoop::new();
             // let window = WindowBuilder::new()
@@ -355,7 +353,7 @@ impl ExampleBase {
             //     ))
             //     .build(&event_loop)
             //     .unwrap();
-            // let entry = Entry::linked();
+            let entry = ash::Entry::linked();
             let app_name = CStr::from_bytes_with_nul_unchecked(b"flatland-view-provider\0");
 
             let layer_names = [CStr::from_bytes_with_nul_unchecked(
@@ -366,10 +364,7 @@ impl ExampleBase {
                 .map(|raw_name| raw_name.as_ptr())
                 .collect();
 
-            let mut extension_names = ash_window::enumerate_required_extensions(&window)
-                .unwrap()
-                .to_vec();
-            extension_names.push(DebugUtils::name().as_ptr());
+            let extension_names = vec![DebugUtils::name().as_ptr()];
 
             let appinfo = vk::ApplicationInfo::default()
                 .application_name(app_name)
@@ -383,7 +378,7 @@ impl ExampleBase {
                 .enabled_layer_names(&layers_names_raw)
                 .enabled_extension_names(&extension_names);
 
-            let instance: Instance = entry
+            let instance: ash::Instance = entry
                 .create_instance(&create_info, None)
                 .expect("Instance creation error");
 
@@ -657,7 +652,7 @@ impl ExampleBase {
                 .create_semaphore(&semaphore_create_info, None)
                 .unwrap();
 
-            ExampleBase {
+            VkRender {
                 event_loop: RefCell::new(event_loop),
                 entry,
                 instance,
@@ -692,7 +687,7 @@ impl ExampleBase {
     }
 }
 
-impl Drop for ExampleBase {
+impl Drop for VkRender {
     fn drop(&mut self) {
         unsafe {
             self.device.device_wait_idle().unwrap();
@@ -731,7 +726,7 @@ struct Vertex {
 
 fn main() {
     unsafe {
-        let base = ExampleBase::new(1920, 1080);
+        let base = VkRender::new(1920, 1080);
         let renderpass_attachments = [
             vk::AttachmentDescription {
                 format: base.surface_format.format,
@@ -1173,11 +1168,11 @@ fn main() {
 }
 
 
-
+*/
 pub fn init() {
-    let instance = create_vk_instance();
-    let physical_device = get_vk_physical_device(instance);
+    // let instance = create_vk_instance();
+    // let physical_device = get_vk_physical_device(instance);
 
-    assert!(physical_device.is_some());
+    // assert!(physical_device.is_some());
     // destroy_vk_device(instance, physical_device.unwrap());
 }
