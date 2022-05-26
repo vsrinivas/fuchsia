@@ -310,7 +310,7 @@ TEST_F(InputUnitTest, DataFlow) {
           .then([&release_fence_local_peer_closed](
                     fpromise::result<zx_packet_signal_t, zx_status_t>& result) {
             EXPECT_TRUE(result.is_ok());
-            EXPECT_EQ(ZX_EVENTPAIR_PEER_CLOSED, result.value_NEW().trigger);
+            EXPECT_EQ(ZX_EVENTPAIR_PEER_CLOSED, result.value().trigger);
             release_fence_local_peer_closed = true;
           }));
 
