@@ -698,7 +698,6 @@ class WebEngineTest : public TouchInputBase {
   std::vector<std::pair<ChildName, LegacyUrl>> GetTestComponents() override {
     return {
         std::make_pair(kWebContextProvider, kWebContextProviderUrl),
-        std::make_pair(kSemanticsManager, kSemanticsManagerUrl),
     };
   }
 
@@ -709,6 +708,7 @@ class WebEngineTest : public TouchInputBase {
         std::make_pair(kIntl, kIntlUrl),
         std::make_pair(kMemoryPressureProvider, kMemoryPressureProviderUrl),
         std::make_pair(kNetstack, kNetstackUrl),
+        std::make_pair(kSemanticsManager, kSemanticsManagerUrl),
         std::make_pair(kTextManager, kTextManagerUrl),
         std::make_pair(kOneChromiumClient, kOneChromiumUrl),
     };
@@ -888,7 +888,7 @@ class WebEngineTest : public TouchInputBase {
 
   static constexpr auto kSemanticsManager = "semantics_manager";
   static constexpr auto kSemanticsManagerUrl =
-      "fuchsia-pkg://fuchsia.com/a11y-manager#meta/a11y-manager.cmx";
+      "fuchsia-pkg://fuchsia.com/touch-input-test#meta/fake-a11y-manager.cm";
 
   static constexpr auto kBuildInfoProvider = "build_info_provider";
   static constexpr auto kBuildInfoProviderUrl =

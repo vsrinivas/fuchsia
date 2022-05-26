@@ -82,6 +82,7 @@ fuchsia_test_package("touch-input-test") {
     ":touch-input-test-display_rotation",
     "//src/connectivity/network/netstack:component-legacy",
     "//src/developer/build_info/testing:fake-build-info-component",
+    "//src/ui/a11y/testing:fake-a11y-manager",
     "//src/ui/bin/root_presenter:component_v1_for_test",
     "//src/ui/tests/integration_input_tests:scenic-test-realm",
   ]
@@ -212,7 +213,6 @@ group("tests") {
     "//src/flutter",
     "//src/graphics/bin/vulkan_loader",
     "//src/testing/fidl/intl_property_manager",
-    "//src/ui/a11y/bin/a11y_manager:a11y-manager",
     "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider",
     "//src/ui/bin/text:text_manager",
     "//src/ui/tests/integration_input_tests/touch/embedding-flutter",
