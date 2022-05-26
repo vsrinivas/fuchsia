@@ -635,7 +635,7 @@ void Scheduler::UpdateCounters(SchedDuration queue_time_ns) {
 // Selects a thread to run. Performs any necessary maintenance if the current
 // thread is changing, depending on the reason for the change.
 Thread* Scheduler::EvaluateNextThread(SchedTime now, Thread* current_thread, bool timeslice_expired,
-                                      SchedDuration total_runtime_ns) {
+                                      SchedDuration scaled_total_runtime_ns) {
   LocalTraceDuration<KTRACE_DETAILED> trace{"find_thread"_stringref};
 
   const bool is_idle = current_thread->IsIdle();
@@ -667,7 +667,7 @@ Thread* Scheduler::EvaluateNextThread(SchedTime now, Thread* current_thread, boo
   } else if (is_active && likely(!is_idle)) {
     if (timeslice_expired) {
       // If the timeslice expired insert the current thread into the run queue.
-      QueueThread(current_thread, Placement::Insertion, now, total_runtime_ns);
+      QueueThread(current_thread, Placement::Insertion, now, scaled_total_runtime_ns);
     } else if (is_new_deadline_eligible && is_deadline) {
       // The current thread is deadline scheduled and there is at least one
       // eligible deadline thread in the run queue: select the eligible thread
@@ -675,7 +675,7 @@ Thread* Scheduler::EvaluateNextThread(SchedTime now, Thread* current_thread, boo
       const SchedTime deadline_ns = current_thread->scheduler_state().finish_time_;
       if (Thread* const earlier_thread = DequeueEarlierDeadlineThread(now, deadline_ns);
           earlier_thread != nullptr) {
-        QueueThread(current_thread, Placement::Preemption, now, total_runtime_ns);
+        QueueThread(current_thread, Placement::Preemption, now, scaled_total_runtime_ns);
         next_thread = earlier_thread;
       } else {
         // The current thread still has the earliest deadline.
@@ -684,7 +684,7 @@ Thread* Scheduler::EvaluateNextThread(SchedTime now, Thread* current_thread, boo
     } else if (is_new_deadline_eligible && !is_deadline) {
       // The current thread is fair scheduled and there is at least one eligible
       // deadline thread in the run queue: return this thread to the run queue.
-      QueueThread(current_thread, Placement::Preemption, now, total_runtime_ns);
+      QueueThread(current_thread, Placement::Preemption, now, scaled_total_runtime_ns);
     } else {
       // The current thread has remaining time and no eligible contender.
       next_thread = current_thread;
@@ -959,27 +959,19 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
                           Round<uint64_t>(total_runtime_ns));
   }
 
-  // Update the time slice of a deadline task before evaluating the next task.
-  if (IsDeadlineThread(current_thread)) {
-    // Scale the actual runtime of the deadline task by the relative performance
-    // of the CPU, effectively increasing the capacity of the task in proportion
-    // to the performance ratio. The remaining time slice may become negative
-    // due to scheduler overhead.
-    current_state->time_slice_ns_ -= ScaleDown(actual_runtime_ns);
-  }
+  // Scale the total runtime of deadline tasks by the relative performance of
+  // the CPU, effectively increasing the capacity of the task in proportion to
+  // the performance ratio.
+  const SchedDuration scaled_total_runtime_ns =
+      IsDeadlineThread(current_thread) ? ScaleDown(total_runtime_ns) : total_runtime_ns;
 
-  // Fair and deadline tasks have different time slice accounting strategies:
-  // - A fair task expires when the total runtime meets or exceeds the time
-  //   slice, which is updated only when the thread is adjusted or returns to
-  //   the run queue.
-  // - A deadline task expires when the remaining time slice is exhausted,
-  //   updated incrementally on every reschedule, or when the absolute deadline
-  //   is reached, which may occur with remaining time slice if the task wakes
-  //   up late.
+  // A deadline can expire when there is still time left in the time slice if
+  // the task wakes up late. This is handled the same as the time slice
+  // expiring.
+  const bool deadline_expired =
+      IsDeadlineThread(current_thread) && now >= current_state->finish_time_;
   const bool timeslice_expired =
-      IsFairThread(current_thread)
-          ? total_runtime_ns >= current_state->time_slice_ns_
-          : now >= current_state->finish_time_ || current_state->time_slice_ns_ <= 0;
+      deadline_expired || scaled_total_runtime_ns >= current_state->time_slice_ns_;
 
   // Check the consistency of the target preemption time and the current time
   // slice.
@@ -987,17 +979,17 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
       now < target_preemption_time_ns_ || timeslice_expired,
       "capacity_ns=%" PRId64 " deadline_ns=%" PRId64 " now=%" PRId64
       " target_preemption_time_ns=%" PRId64 " total_runtime_ns=%" PRId64
-      " actual_runtime_ns=%" PRId64 " finish_time=%" PRId64 " time_slice_ns=%" PRId64
+      " scaled_total_runtime_ns=%" PRId64 " finish_time=%" PRId64 " time_slice_ns=%" PRId64
       " start_of_current_time_slice_ns=%" PRId64,
       IsDeadlineThread(current_thread) ? current_state->deadline_.capacity_ns.raw_value() : 0,
       IsDeadlineThread(current_thread) ? current_state->deadline_.deadline_ns.raw_value() : 0,
       now.raw_value(), target_preemption_time_ns_.raw_value(), total_runtime_ns.raw_value(),
-      actual_runtime_ns.raw_value(), current_state->finish_time_.raw_value(),
+      scaled_total_runtime_ns.raw_value(), current_state->finish_time_.raw_value(),
       current_state->time_slice_ns_.raw_value(), start_of_current_time_slice_ns_.raw_value());
 
   // Select a thread to run.
   Thread* const next_thread =
-      EvaluateNextThread(now, current_thread, timeslice_expired, total_runtime_ns);
+      EvaluateNextThread(now, current_thread, timeslice_expired, scaled_total_runtime_ns);
   DEBUG_ASSERT(next_thread != nullptr);
   SchedulerState* const next_state = &next_thread->scheduler_state();
 
@@ -1129,12 +1121,11 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
     LOCAL_KTRACE_FLOW_END(KTRACE_FLOW, "sched_latency", next_state->flow_id(), next_thread->tid());
   } else {
     LocalTraceDuration<KTRACE_DETAILED> trace_continue{"continue: preempt,abs"_stringref};
-    DEBUG_ASSERT(current_thread == next_thread);
 
     // Update the target preemption time for consistency with the updated CPU
     // performance scale.
-    if (performance_scale_updated && IsDeadlineThread(next_thread)) {
-      target_preemption_time_ns_ = NextThreadTimeslice(next_thread, now);
+    if (performance_scale_updated && IsDeadlineThread(current_thread)) {
+      target_preemption_time_ns_ = NextThreadTimeslice(current_thread, now);
     }
 
     // The current thread should continue to run. A throttled deadline thread
@@ -1289,7 +1280,7 @@ SchedTime Scheduler::NextThreadTimeslice(Thread* thread, SchedTime now) {
 }
 
 void Scheduler::QueueThread(Thread* thread, Placement placement, SchedTime now,
-                            SchedDuration total_runtime_ns) {
+                            SchedDuration scaled_total_runtime_ns) {
   LocalTraceDuration<KTRACE_DETAILED> trace{"queue_thread: s,f"_stringref};
 
   DEBUG_ASSERT(thread->state() == THREAD_READY);
@@ -1298,12 +1289,12 @@ void Scheduler::QueueThread(Thread* thread, Placement placement, SchedTime now,
 
   SchedulerState* const state = &thread->scheduler_state();
 
-  if (IsFairThread(thread)) {
-    // Account for the consumed fair time slice. The consumed time is zero when
-    // the thread is unblocking, migrating, or adjusting queue position. The
-    // remaining time slice may become negative due to scheduler overhead.
-    state->time_slice_ns_ -= total_runtime_ns;
+  // Account for the consumed time slice. The consumed time is zero when the
+  // thread is unblocking, migrating, or adjusting queue position. The
+  // remaining time slice may become negative due to scheduler overhead.
+  state->time_slice_ns_ -= scaled_total_runtime_ns;
 
+  if (IsFairThread(thread)) {
     // Compute the ratio of remaining time slice to ideal time slice. This may
     // be less than 1.0 due to time slice consumed or due to previous preemption
     // by a deadline task or both.
@@ -1351,7 +1342,10 @@ void Scheduler::QueueThread(Thread* thread, Placement placement, SchedTime now,
         state->start_time_ = now >= period_finish_ns ? now : period_finish_ns;
         state->finish_time_ = state->start_time_ + state->deadline_.deadline_ns;
         state->time_slice_ns_ = state->deadline_.capacity_ns;
+      } else if (state->time_slice_ns_ >= time_until_deadline_ns) {
+        state->time_slice_ns_ = time_until_deadline_ns;
       }
+      DEBUG_ASSERT(state->time_slice_ns_ >= 0);
       deadline_trace.End(Round<uint64_t>(time_until_deadline_ns),
                          Round<uint64_t>(state->time_slice_ns_));
     }
@@ -1567,25 +1561,27 @@ void Scheduler::Yield() {
   SchedulerState* const current_state = &current_thread->scheduler_state();
   DEBUG_ASSERT(!current_thread->IsIdle());
 
+  Scheduler* const current = Get();
+  const SchedTime now = CurrentTime();
+
+  // Set the time slice to expire now.
+  current_thread->set_ready();
+  current_state->time_slice_ns_ = now - current->start_of_current_time_slice_ns_;
+  DEBUG_ASSERT(current_state->time_slice_ns_ >= 0);
+
   if (IsFairThread(current_thread)) {
     // Update the virtual timeline in preparation for snapping the thread's
     // virtual finish time to the current virtual time.
-    Scheduler* const current = Get();
-    const SchedTime now = CurrentTime();
     current->UpdateTimeline(now);
-
-    // Set the time slice to expire now.
-    current_thread->set_ready();
-    current_state->time_slice_ns_ = SchedDuration{0};
 
     // The thread is re-evaluated with zero lag against other competing threads
     // and may skip lower priority threads with similar arrival times.
     current_state->finish_time_ = current->virtual_time_;
     current_state->fair_.initial_time_slice_ns = current_state->time_slice_ns_;
     current_state->fair_.normalized_timeslice_remainder = SchedRemainder{1};
-
-    current->RescheduleCommon(now, trace.Completer());
   }
+
+  current->RescheduleCommon(now, trace.Completer());
 }
 
 void Scheduler::Preempt() {
@@ -1875,8 +1871,7 @@ void Scheduler::UpdateDeadlineCommon(Thread* thread, int original_priority,
         current->GetRunQueue(thread).erase(*thread);
       }
 
-      const bool was_fair = IsFairThread(thread);
-      if (was_fair) {
+      if (IsFairThread(thread)) {
         // Changed to the deadline discipline and update the task counts and
         // queue weight.
         current->weight_total_ -= state->fair_.weight;
@@ -1907,14 +1902,6 @@ void Scheduler::UpdateDeadlineCommon(Thread* thread, int original_priority,
         const SchedDuration scaled_time_slice_ns = current->ScaleUp(state->time_slice_ns_);
         current->target_preemption_time_ns_ = ktl::min<SchedTime>(
             current->start_of_current_time_slice_ns_ + scaled_time_slice_ns, state->finish_time_);
-
-        // A running fair does not update the time slice until re-entering the
-        // run queue, unlike a running deadline thread, where the time slice is
-        // updated on every reschedule. Ensure the full fair runtime is counted
-        // on the next reschedule after switching to deadline.
-        if (was_fair) {
-          state->last_started_running_ = current->start_of_current_time_slice_ns_;
-        }
       }
 
       // Adjust the position of the thread in the run queue based on the new

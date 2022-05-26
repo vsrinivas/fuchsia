@@ -288,12 +288,12 @@ class Scheduler {
   // Evaluates the schedule and returns the thread that should execute,
   // updating the run queue as necessary.
   Thread* EvaluateNextThread(SchedTime now, Thread* current_thread, bool timeslice_expired,
-                             SchedDuration total_runtime_ns) TA_REQ(thread_lock);
+                             SchedDuration scaled_total_runtime_ns) TA_REQ(thread_lock);
 
   // Adds a thread to the run queue tree. The thread must be active on this
   // CPU.
   void QueueThread(Thread* thread, Placement placement, SchedTime now = SchedTime{0},
-                   SchedDuration total_runtime_ns = SchedDuration{0}) TA_REQ(thread_lock);
+                   SchedDuration scaled_total_runtime_ns = SchedDuration{0}) TA_REQ(thread_lock);
 
   // Removes the thread at the head of the first eligible run queue.
   Thread* DequeueThread(SchedTime now) TA_REQ(thread_lock);
