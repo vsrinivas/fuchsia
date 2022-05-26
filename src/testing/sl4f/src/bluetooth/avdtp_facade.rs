@@ -96,8 +96,9 @@ impl AvdtpFacade {
     /// Initialize the Avdtp service and starts A2DP.
     ///
     /// # Arguments
-    /// * `initiator_delay`: A String representing the stream
-    /// initiator delay in milliseconds.
+    /// * `initiator_delay`: A String representing the stream initiator delay
+    /// in milliseconds. This delay is used in our tests to determine the initiator
+    /// when connecting. The device to initiate first becomes the initiator.
     pub async fn init_avdtp_service_proxy(
         &self,
         initiator_delay: Option<String>,
