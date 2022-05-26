@@ -103,13 +103,6 @@ zx_status_t SetProfileByRoleSimple(void* ctx, zx_handle_t thread, const char* ro
     return fuchsia_scheduler_ProfileProviderSetProfileByRole_reply(txn, ZX_ERR_NOT_FOUND);
   } else if (role == "fuchsia.test-role:ok") {
     return fuchsia_scheduler_ProfileProviderSetProfileByRole_reply(txn, ZX_OK);
-  } else if (role == "fuchsia.netstack.go-worker") {
-    info.flags = ZX_PROFILE_INFO_FLAG_DEADLINE;
-    info.deadline_params = {
-        .capacity = zx::usec(1000).to_nsecs(),
-        .relative_deadline = zx::usec(1666).to_nsecs(),
-        .period = zx::usec(1666).to_nsecs(),
-    };
   } else {
     return fuchsia_scheduler_ProfileProviderSetProfileByRole_reply(txn, ZX_ERR_NOT_FOUND);
   }
