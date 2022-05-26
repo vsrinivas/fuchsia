@@ -1,0 +1,46 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// progress-ui component manifest.
+// For information on manifest format and features,
+// see https://fuchsia.dev/fuchsia-src/concepts/components/component_manifests.
+{
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+
+    // Information about the program to run.
+    program: {
+        // Use the built-in ELF runner.
+        runner: "elf",
+
+        // The binary to run for this component.
+        binary: "bin/progress-ui",
+    },
+    capabilities: [
+        {
+            protocol: [ "fuchsia.recovery.ui.ProgressRenderer" ],
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.ui.composition.Flatland",
+            ],
+        },
+        {
+            directory: "dev-display-controller",
+            rights: [ "rw*" ],
+            path: "/dev/class/display-controller",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.recovery.ui.ProgressRenderer",
+            from: "self",
+        },
+    ],
+}

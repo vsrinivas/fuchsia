@@ -1,0 +1,28 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "progress-sender",
+            url: "fuchsia-pkg://fuchsia.com/progress-sender#meta/progress_sender.cm",
+            startup: "eager",
+        },
+        {
+            name: "progress-ui",
+            url: "fuchsia-pkg://fuchsia.com/progress-ui#meta/progress_ui.cm",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: "#progress-sender",
+        },
+        {
+            protocol: "fuchsia.recovery.ui.ProgressRenderer",
+            from: "#progress-ui",
+            to: "#progress-sender",
+        },
+    ],
+}

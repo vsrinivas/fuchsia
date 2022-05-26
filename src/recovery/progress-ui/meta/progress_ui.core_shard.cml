@@ -1,0 +1,28 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "progress-ui",
+            url: "fuchsia-pkg://fuchsia.com/progress-ui#meta/progress_ui.cm",
+        },
+    ],
+    offer: [
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-display-controller",
+            to: "#progress-ui",
+            subdir: "class/display-controller",
+        },
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.sysmem.Allocator",
+            ],
+            from: "parent",
+            to: "#progress-ui",
+        },
+    ],
+}

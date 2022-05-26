@@ -1,0 +1,336 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+use anyhow::{Error, Result};
+use carnelian::{
+    app::Config,
+    color::Color,
+    drawing::DisplayRotation,
+    make_message,
+    render::{rive::load_rive, Context as RenderContext},
+    scene::{
+        facets::{RiveFacet, TextHorizontalAlignment},
+        layout::{CrossAxisAlignment, MainAxisAlignment},
+        scene::{Scene, SceneBuilder},
+    },
+    App, AppAssistant, AppAssistantPtr, AppSender, AssistantCreatorFunc, LocalBoxFuture, Message,
+    MessageTarget, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
+};
+use euclid::{size2, Size2D};
+use fidl::endpoints::{DiscoverableProtocolMarker, RequestStream};
+use fidl_fuchsia_recovery_ui::{
+    ProgressRendererMarker, ProgressRendererRequest, ProgressRendererRequestStream, Status,
+};
+use fuchsia_async::{self as fasync};
+use fuchsia_syslog::{fx_log_err, fx_log_info};
+use fuchsia_zircon::Event;
+use futures::prelude::*;
+use recovery_util::ui::progress_bar::{
+    ProgressBar, ProgressBarConfig, ProgressBarMessages, ProgressBarText,
+};
+use rive_rs::File;
+#[cfg(feature = "debug_touch_to_update")]
+use std::time::Instant;
+
+const LOGO_IMAGE_PATH: &str = "/pkg/data/logo.riv";
+const BG_COLOR: Color = Color::white();
+const SHOW_PROGRESS_TEXT: bool = false;
+
+pub struct ProgressBarViewAssistant {
+    app_sender: AppSender,
+    view_key: ViewKey,
+    scene: Option<Scene>,
+    logo_file: Option<File>,
+    progress_bar: Option<ProgressBar>,
+    percent_complete: f32,
+    #[cfg(feature = "debug_touch_to_update")]
+    touch_time: Instant,
+}
+
+impl ProgressBarViewAssistant {
+    pub fn new(
+        app_sender: AppSender,
+        view_key: ViewKey,
+        percent_complete: f32,
+    ) -> Result<ProgressBarViewAssistant, Error> {
+        let logo_file = load_rive(LOGO_IMAGE_PATH).ok();
+        Ok(ProgressBarViewAssistant {
+            app_sender: app_sender.clone(),
+            view_key,
+            scene: None,
+            logo_file,
+            progress_bar: None,
+            percent_complete,
+            #[cfg(feature = "debug_touch_to_update")]
+            touch_time: Instant::now(),
+        })
+    }
+}
+
+impl ViewAssistant for ProgressBarViewAssistant {
+    fn setup(&mut self, _context: &ViewAssistantContext) -> Result<(), Error> {
+        Ok(())
+    }
+
+    fn resize(&mut self, _new_size: &Size) -> Result<(), Error> {
+        Ok(())
+    }
+
+    fn render(
+        &mut self,
+        render_context: &mut RenderContext,
+        ready_event: Event,
+        view_context: &ViewAssistantContext,
+    ) -> Result<(), Error> {
+        if self.scene.is_none() {
+            let target_size = view_context.size;
+            let min_dimension = target_size.width.min(target_size.height);
+            let logo_edge = min_dimension * 0.24;
+            let text_size = min_dimension / 14.0;
+
+            let mut builder =
+                SceneBuilder::new().background_color(BG_COLOR).round_scene_corners(true);
+
+            builder
+                .group()
+                .column()
+                .max_size()
+                .main_align(MainAxisAlignment::SpaceEvenly)
+                .cross_align(CrossAxisAlignment::Center)
+                .contents(|builder| {
+                    let progress_bar_size =
+                        size2(target_size.width / 2.0, target_size.height / 15.0);
+                    let progress_config = if SHOW_PROGRESS_TEXT {
+                        ProgressBarConfig::TextWithSize(
+                            ProgressBarText {
+                                text: format!(
+                                    "Progress Bar {}%   ",
+                                    (self.percent_complete * 100.0) as i32
+                                ),
+                                font_size: text_size,
+                                padding: 7.0,
+                                alignment: TextHorizontalAlignment::Left,
+                            },
+                            progress_bar_size,
+                        )
+                    } else {
+                        ProgressBarConfig::Size(progress_bar_size)
+                    };
+
+                    builder.space(Size2D {
+                        width: target_size.width,
+                        height: target_size.height / 5.0,
+                        _unit: Default::default(),
+                    });
+                    let logo_size: Size = size2(logo_edge, logo_edge);
+                    if let Some(logo_file) = self.logo_file.as_ref() {
+                        let facet = RiveFacet::new_from_file(logo_size, logo_file, None)
+                            .expect("Error creating logo facet from file");
+                        builder.facet(Box::new(facet));
+                    }
+                    let progress_bar = ProgressBar::new(
+                        self.percent_complete,
+                        progress_config,
+                        builder,
+                        self.app_sender.clone(),
+                    )
+                    .expect("Progress Bar");
+                    self.progress_bar = Some(progress_bar);
+                    builder.space(Size2D {
+                        width: target_size.width,
+                        height: target_size.height / 5.0,
+                        _unit: Default::default(),
+                    });
+                });
+            let mut scene = builder.build();
+            scene.layout(target_size);
+            self.scene = Some(scene);
+        }
+        if let Some(scene) = &mut self.scene {
+            scene.render(render_context, ready_event, view_context)?;
+            view_context.request_render();
+        }
+        Ok(())
+    }
+
+    fn handle_message(&mut self, message: Message) {
+        if message.is::<ProgressBarMessages>() {
+            let proxy_message = message.downcast::<ProgressBarMessages>().unwrap();
+            match *proxy_message {
+                ProgressBarMessages::SetProgress(progress) => {
+                    if let (Some(progress_bar), Some(scene)) =
+                        (&mut self.progress_bar, &mut self.scene)
+                    {
+                        self.percent_complete = progress * 100.0;
+                        progress_bar.set_progress(scene, progress);
+                    }
+                }
+                ProgressBarMessages::SetProgressSmooth(progress) => {
+                    if let Some(progress_bar) = &mut self.progress_bar {
+                        self.percent_complete = progress * 100.0;
+                        progress_bar.set_progress_smooth(self.view_key, progress);
+                    }
+                }
+                // This is used by the slow progress task and needs to be included in code as-is
+                ProgressBarMessages::SetInternalProgress(progress) => {
+                    if let (Some(progress_bar), Some(scene)) =
+                        (&mut self.progress_bar, &mut self.scene)
+                    {
+                        progress_bar.set_internal_progress(scene, progress);
+                    }
+                }
+                ProgressBarMessages::SetProgressBarText(text) => {
+                    if let (Some(progress_bar), Some(scene)) =
+                        (&mut self.progress_bar, &mut self.scene)
+                    {
+                        progress_bar.set_text(scene, text);
+                    }
+                }
+            }
+        }
+    }
+
+    #[cfg(feature = "debug_touch_to_update")]
+    fn handle_touch_event(
+        &mut self,
+        _context: &mut ViewAssistantContext,
+        _event: &input::Event,
+        _touch_event: &input::touch::Event,
+    ) -> Result<(), Error> {
+        // Debounce the screen touch
+        if self.touch_time.elapsed().as_millis() > 100 {
+            let r = rand::random::<f32>();
+            self.app_sender.queue_message(
+                MessageTarget::View(self.view_key),
+                make_message(ProgressBarMessages::SetProgressSmooth(r)),
+            );
+            let text = format!("Progress Bar {}%   ", (r * 100.0) as i32);
+            self.app_sender.queue_message(
+                MessageTarget::View(self.view_key),
+                make_message(ProgressBarMessages::SetProgressBarText(text)),
+            );
+        }
+        self.touch_time = Instant::now();
+        Ok(())
+    }
+}
+
+struct ProgressBarAppAssistant {
+    app_sender: AppSender,
+    progress_view_key: Option<ViewKey>,
+}
+
+impl ProgressBarAppAssistant {
+    pub fn new(app_sender: &AppSender) -> Self {
+        Self { app_sender: app_sender.clone(), progress_view_key: None }
+    }
+
+    fn handle_progress_update(app_context: &AppSender, status: Status, percent_complete: f32) {
+        match status {
+            Status::Active => {
+                app_context.queue_message(
+                    MessageTarget::Application,
+                    make_message(ProgressBarMessages::SetProgress(percent_complete)),
+                );
+            }
+            Status::Complete => {
+                app_context.queue_message(
+                    MessageTarget::Application,
+                    make_message(ProgressBarMessages::SetProgress(1.0)),
+                );
+            }
+            _ => fx_log_err!("Unhandled progress update {:?}", status),
+        };
+    }
+}
+
+impl AppAssistant for ProgressBarAppAssistant {
+    fn setup(&mut self) -> Result<(), Error> {
+        fx_log_info!("AppAssistant setup");
+        Ok(())
+    }
+
+    fn create_view_assistant(&mut self, view_key: ViewKey) -> Result<ViewAssistantPtr, Error> {
+        fx_log_info!("Create view assistant");
+        self.progress_view_key = Some(view_key.clone());
+        Ok(Box::new(ProgressBarViewAssistant::new(self.app_sender.clone(), view_key, 0.0)?))
+    }
+
+    fn filter_config(&mut self, config: &mut Config) {
+        config.display_rotation = DisplayRotation::Deg90;
+    }
+
+    fn outgoing_services_names(&self) -> Vec<&'static str> {
+        vec![ProgressRendererMarker::PROTOCOL_NAME]
+    }
+
+    fn handle_message(&mut self, message: Message) {
+        if message.is::<ProgressBarMessages>() {
+            if let Some(view_key) = self.progress_view_key {
+                self.app_sender.queue_message(MessageTarget::View(view_key), message);
+            }
+        }
+    }
+
+    fn handle_service_connection_request(
+        &mut self,
+        service_name: &str,
+        channel: fasync::Channel,
+    ) -> Result<(), Error> {
+        fx_log_info!("Handle Service Connection Request");
+        match service_name {
+            ProgressRendererMarker::PROTOCOL_NAME => {
+                let app_sender = self.app_sender.clone();
+                fasync::Task::local(async move {
+                    let stream = ProgressRendererRequestStream::from_channel(channel);
+                    stream
+                        .try_fold(app_sender, move |local_app_sender, result| async move {
+                            match result {
+                                ProgressRendererRequest::Render {
+                                    status,
+                                    percent_complete,
+                                    responder,
+                                } => {
+                                    ProgressBarAppAssistant::handle_progress_update(
+                                        &local_app_sender,
+                                        status,
+                                        percent_complete,
+                                    );
+                                    responder.send().expect("Error replying to progress update");
+                                }
+                            }
+                            Ok(local_app_sender)
+                        })
+                        .await
+                        .expect("Failed to process progress events");
+                })
+                .detach();
+            }
+            _ => panic!("Error: Unexpected service: {}", service_name),
+        }
+        Ok(())
+    }
+}
+
+fn make_app_assistant_fut(
+    app_sender: &AppSender,
+) -> LocalBoxFuture<'_, Result<AppAssistantPtr, Error>> {
+    fx_log_info!("make_app_assistant_fut");
+    let f = async move {
+        fx_log_info!("in async move");
+        let assistant = Box::new(ProgressBarAppAssistant::new(app_sender));
+        Ok::<AppAssistantPtr, Error>(assistant)
+    };
+    Box::pin(f)
+}
+
+pub fn make_app_assistant() -> AssistantCreatorFunc {
+    fx_log_info!("Make app assistant");
+    Box::new(make_app_assistant_fut)
+}
+
+#[fuchsia::main(logging = true)]
+fn main() -> Result<(), Error> {
+    App::run(make_app_assistant())
+}
