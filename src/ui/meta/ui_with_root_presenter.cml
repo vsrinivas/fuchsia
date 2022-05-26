@@ -37,6 +37,7 @@
                 "fuchsia.accessibility.semantics.SemanticsManager",
                 "fuchsia.accessibility.tts.EngineRegistry",
                 "fuchsia.accessibility.tts.TtsManager",
+                "fuchsia.accessibility.virtualkeyboard.Registry",
             ],
             from: "#a11y_manager",
         },

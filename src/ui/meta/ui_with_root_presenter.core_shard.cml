@@ -42,6 +42,7 @@
                 "fuchsia.accessibility.semantics.SemanticsManager",
                 "fuchsia.accessibility.tts.EngineRegistry",
                 "fuchsia.accessibility.tts.TtsManager",
+                "fuchsia.accessibility.virtualkeyboard.Registry",
             ],
             from: "#ui",
             dependency: "weak_for_migration",
