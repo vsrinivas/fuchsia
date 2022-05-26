@@ -122,7 +122,7 @@ FakeNodePtr FakeGraph::CreateOrdinaryNode(std::optional<NodeId> id, FakeNodePtr 
 
 NodeId FakeGraph::NextId() {
   // Since the Create*Node methods can create nodes with arbitrary IDs, we can't guarantee that IDs
-  // are densly monotonically increasing (0,1,2,...), so we need to go searching for an unused ID.
+  // are densely monotonically increasing (0,1,2,...), so we need to go searching for an unused ID.
   NodeId id = nodes_.size();
   while (nodes_.count(id) > 0) {
     id++;
