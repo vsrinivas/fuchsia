@@ -227,7 +227,7 @@ var fidlcPath = flag.String("fidlc", "", "relative path to FIDL compiler (fidlc)
 func main() {
 	flag.Parse()
 
-	if !flag.Parsed() || fidlcPath == nil {
+	if fidlcPath == nil {
 		flag.PrintDefaults()
 		os.Exit(1)
 	}

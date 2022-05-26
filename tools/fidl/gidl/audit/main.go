@@ -75,7 +75,7 @@ var flags = auditFlags{
 func main() {
 	flag.Parse()
 
-	if !flag.Parsed() || !flags.valid() {
+	if !flags.valid() {
 		flag.PrintDefaults()
 		os.Exit(1)
 	}

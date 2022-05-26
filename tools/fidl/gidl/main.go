@@ -111,8 +111,8 @@ type GIDLFlags struct {
 	FuzzerCorpusPackageDataDir *string
 }
 
-// Valid indicates whether the parsed Flags are valid to be used.
-func (gidlFlags GIDLFlags) Valid() bool {
+// valid indicates whether the parsed Flags are valid to be used.
+func (gidlFlags GIDLFlags) valid() bool {
 	return len(*gidlFlags.JSONPath) != 0 && flag.NArg() != 0
 }
 
@@ -164,7 +164,7 @@ func parseFidlJSONIr(filename string) fidlgen.Root {
 func main() {
 	flag.Parse()
 
-	if !flag.Parsed() || !flags.Valid() {
+	if !flags.valid() {
 		flag.PrintDefaults()
 		os.Exit(1)
 	}

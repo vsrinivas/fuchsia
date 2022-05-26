@@ -45,7 +45,7 @@ func main() {
 		"comma-separated list if name=value pairs.")
 	flag.Parse()
 
-	if !flag.Parsed() || !cmdlineflags.Valid() {
+	if !cmdlineflags.Valid() {
 		flag.PrintDefaults()
 		os.Exit(1)
 	}

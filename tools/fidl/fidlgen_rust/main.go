@@ -54,7 +54,7 @@ Flags:
 func main() {
 	flag.Usage = printUsage
 	flag.Parse()
-	if !flag.Parsed() || !flags.valid() {
+	if !flags.valid() {
 		printUsage()
 		os.Exit(1)
 	}

@@ -79,7 +79,7 @@ func main() {
 	flag.Var(&targetTypes, "target-types", "Target type(s) to measure, e.g. fuchsia.ui.scenic/Command")
 	flag.Parse()
 
-	if !flag.Parsed() || !flagsValid() {
+	if !flagsValid() {
 		flag.PrintDefaults()
 		os.Exit(1)
 	}
