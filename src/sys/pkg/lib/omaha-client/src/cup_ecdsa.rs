@@ -82,6 +82,12 @@ impl From<[u8; 32]> for Nonce {
     }
 }
 
+impl Default for Nonce {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Nonce {
     pub fn new() -> Nonce {
         let mut nonce_bits = [0_u8; 32];
@@ -389,6 +395,12 @@ pub mod test_support {
         }
     }
 
+    impl Default for MockCupv2Handler {
+        fn default() -> Self {
+            Self::new()
+        }
+    }
+
     impl Cupv2RequestHandler for MockCupv2Handler {
         fn decorate_request(
             &self,
@@ -575,7 +587,7 @@ mod tests {
         let expected_request_metadata = RequestMetadata {
             request_body: intermediate.serialize_body()?,
             public_key_id: correct_public_key_id,
-            nonce: request_metadata.nonce.clone(),
+            nonce: request_metadata.nonce,
         };
 
         let expected_hash = Sha256::digest(&request_metadata.request_body);
