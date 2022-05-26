@@ -75,7 +75,7 @@ Users working with the Fuchsia source checkout setup do not need to perform any 
 symbolization takes place automatically as in `fx log`. Users working without the Fuchsia source
 checkout setup need to configure the symbol index appropriate to their development environment.
 
-The `ffx log` command tries to detect common misconfigurations in the symbolizer tool, but cannot
+The `ffx log` command tries to detect common misconfigurations in the `symbolizer` tool, but cannot
 detect all of them. If your logs are not being symbolized, please
 [file a bug](https://bugs.fuchsia.dev/p/fuchsia/issues/entry?template=ffx+User+Bug).
 
