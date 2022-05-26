@@ -52,11 +52,6 @@ protocol SyntheticClockRealm {
         /// be read or updated directly. The clock's value is meaningless. To
         /// read the clock, use the `control`, below.
         1: handle zx.handle:CLOCK;
-
-        /// A channel that can be used to read and adjust the clock. If the
-        /// client does not need to read or adjust the clock, this channel can
-        /// be closed immediately.
-        2: control client_end:SyntheticClock;
     }) error CreateClockError;
 
     /// Forgets about a synthetic clock. This releases internal resources and
