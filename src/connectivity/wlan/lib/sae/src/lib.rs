@@ -133,7 +133,7 @@ pub trait SaeHandshake: Send {
     fn handle_anti_clogging_token(
         &mut self,
         sink: &mut SaeUpdateSink,
-        token: &AntiCloggingTokenMsg,
+        act_msg: &AntiCloggingTokenMsg,
     );
     fn handle_timeout(&mut self, sink: &mut SaeUpdateSink, timeout: Timeout);
 
@@ -142,8 +142,8 @@ pub trait SaeHandshake: Send {
             Ok(parse) => match parse {
                 frame::ParseSuccess::Commit(commit) => self.handle_commit(sink, &commit),
                 frame::ParseSuccess::Confirm(confirm) => self.handle_confirm(sink, &confirm),
-                frame::ParseSuccess::AntiCloggingToken(_act) => {
-                    warn!("Anti-clogging tokens not yet supported");
+                frame::ParseSuccess::AntiCloggingToken(act_msg) => {
+                    self.handle_anti_clogging_token(sink, &act_msg)
                 }
             },
             Err(e) => warn!("Failed to parse SAE auth frame: {}", e),
@@ -567,11 +567,17 @@ mod tests {
 
         // Simulate an anti-clogging token sent to sta1.
         let mut sink = vec![];
-        let token = "anticloggingtokentext";
-        let token_msg = AntiCloggingTokenMsg { group_id: 19, token: token.as_bytes() };
-        handshake.sta1.handle_anti_clogging_token(&mut sink, &token_msg);
+        let anti_clogging_token = "anticloggingtokentext";
+        let act_msg = AntiCloggingTokenMsg {
+            group_id: 19,
+            anti_clogging_token: anti_clogging_token.as_bytes(),
+        };
+        handshake.sta1.handle_anti_clogging_token(&mut sink, &act_msg);
         let commit1_retry = expect_commit(&mut sink);
-        assert_eq!(commit1_retry.clone().to_rx().msg().token, Some(token.as_bytes()));
+        assert_eq!(
+            commit1_retry.clone().to_rx().msg().anti_clogging_token,
+            Some(anti_clogging_token.as_bytes())
+        );
 
         // Finish the handshake.
         let (commit2, confirm2) = handshake.sta2_handle_commit(commit1_retry.to_rx());
@@ -674,7 +680,7 @@ mod tests {
             group_id: 19,
             scalar: &[0xab; 32][..],
             element: &[0xcd; 64][..],
-            token: None,
+            anti_clogging_token: None,
         };
 
         let mut sink = vec![];
@@ -692,7 +698,7 @@ mod tests {
             group_id: 19,
             scalar: &[0xab; 32][..],
             element: &[0xcd; 64][..],
-            token: None,
+            anti_clogging_token: None,
         };
         let mut sink = vec![];
         handshake.sta1.handle_commit(&mut sink, &commit2_wrong);

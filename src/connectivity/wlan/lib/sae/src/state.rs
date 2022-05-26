@@ -332,9 +332,9 @@ impl<E> SaeCommitted<E> {
     fn handle_anti_clogging_token(
         &mut self,
         sink: &mut SaeUpdateSink,
-        token: &AntiCloggingTokenMsg,
+        act_msg: &AntiCloggingTokenMsg,
     ) -> Result<(), RejectReason> {
-        self.anti_clogging_token = token.token.to_vec();
+        self.anti_clogging_token = act_msg.anti_clogging_token.to_vec();
         self.resend_last_frame(sink)
     }
 
@@ -623,11 +623,11 @@ impl<E> SaeHandshakeState<E> {
     fn handle_anti_clogging_token(
         self,
         sink: &mut SaeUpdateSink,
-        token: &AntiCloggingTokenMsg,
+        act_msg: &AntiCloggingTokenMsg,
     ) -> Self {
         match self {
             SaeHandshakeState::SaeCommitted(mut state) => {
-                match state.handle_anti_clogging_token(sink, token) {
+                match state.handle_anti_clogging_token(sink, act_msg) {
                     Ok(()) => state.into(),
                     Err(reject) => {
                         sink.push(SaeUpdate::Reject(reject));
@@ -707,9 +707,9 @@ impl<E> SaeHandshake for SaeHandshakeImpl<E> {
     fn handle_anti_clogging_token(
         &mut self,
         sink: &mut SaeUpdateSink,
-        token: &AntiCloggingTokenMsg,
+        act_msg: &AntiCloggingTokenMsg,
     ) {
-        self.0.replace_state(|state| state.handle_anti_clogging_token(sink, token));
+        self.0.replace_state(|state| state.handle_anti_clogging_token(sink, act_msg));
     }
 
     fn handle_timeout(&mut self, sink: &mut SaeUpdateSink, timeout: Timeout) {
