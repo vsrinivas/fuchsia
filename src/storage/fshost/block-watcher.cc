@@ -51,7 +51,6 @@
 #include "src/storage/fshost/block-device.h"
 #include "src/storage/fshost/fs-manager.h"
 #include "src/storage/fshost/nand-device.h"
-#include "src/storage/fshost/pkgfs-launcher.h"
 #include "src/storage/minfs/minfs.h"
 
 namespace fshost {

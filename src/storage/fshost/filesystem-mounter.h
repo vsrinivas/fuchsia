@@ -32,10 +32,6 @@ class FilesystemMounter {
 
   virtual ~FilesystemMounter() = default;
 
-  std::optional<fidl::ServerEnd<fuchsia_io::Directory>> TakePkgfsServerEnd() {
-    return fshost_.TakePkgfsServerEnd();
-  }
-
   bool Netbooting() const { return config_.netboot(); }
   bool ShouldCheckFilesystems() const { return config_.check_filesystems(); }
 
@@ -79,14 +75,14 @@ class FilesystemMounter {
   // validating the type of filesystem being mounted.
   zx::status<> MountFilesystem(FsManager::MountPoint point, const char* binary,
                                const fs_management::MountOptions& options,
-                               zx::channel block_device_client, uint32_t fs_flags,
+                               zx::channel block_device_client,
                                fidl::ClientEnd<fuchsia_fxfs::Crypt> crypt_client = {});
 
   // Actually launches the filesystem process.
   //
   // Virtualized to enable testing.
   virtual zx_status_t LaunchFs(int argc, const char** argv, zx_handle_t* hnd, uint32_t* ids,
-                               size_t len, uint32_t fs_flags);
+                               size_t len);
 
   // Actually launches the filesystem component.
   //

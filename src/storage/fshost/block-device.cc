@@ -48,14 +48,12 @@
 #include "constants.h"
 #include "encrypted-volume.h"
 #include "extract-metadata.h"
-#include "pkgfs-launcher.h"
 #include "src/devices/block/drivers/block-verity/verified-volume-client.h"
 #include "src/lib/files/file.h"
 #include "src/lib/storage/fs_management/cpp/format.h"
 #include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/lib/uuid/uuid.h"
 #include "src/storage/fshost/block-device-interface.h"
-#include "src/storage/fshost/fshost-fs-provider.h"
 #include "src/storage/fvm/format.h"
 #include "src/storage/minfs/fsck.h"
 #include "src/storage/minfs/minfs.h"
@@ -114,8 +112,6 @@ zx_status_t RunBinary(const fbl::Vector<const char*>& argv,
                       fidl::ClientEnd<fuchsia_io::Node> device,
                       fidl::ServerEnd<fuchsia_io::Directory> export_root = {}) {
   FX_CHECK(argv[argv.size() - 1] == nullptr);
-  FshostFsProvider fs_provider;
-  DevmgrLauncher launcher(&fs_provider);
   zx::process proc;
   int handle_count = 1;
   zx_handle_t handles[2] = {device.TakeChannel().release()};
@@ -127,9 +123,9 @@ zx_status_t RunBinary(const fbl::Vector<const char*>& argv,
     ++handle_count;
     async = true;
   }
-  if (zx_status_t status = launcher.Launch(
-          *zx::job::default_job(), argv[0], argv.data(), nullptr, -1,
-          /* TODO(fxbug.dev/32044) */ zx::resource(), handles, handle_ids, handle_count, &proc, 0);
+  if (zx_status_t status = Launch(*zx::job::default_job(), argv[0], argv.data(), nullptr, -1,
+                                  /* TODO(fxbug.dev/32044) */ zx::resource(), handles, handle_ids,
+                                  handle_count, &proc);
       status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to launch binary: " << argv[0];
     return status;

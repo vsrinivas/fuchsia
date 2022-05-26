@@ -102,10 +102,7 @@ source_set("block-watcher") {
     "copier.cc",
     "encrypted-volume.cc",
     "filesystem-mounter.cc",
-    "fshost-fs-provider.cc",
     "nand-device.cc",
-    "pkgfs-launcher.cc",
-    "pkgfs-loader-service.cc",
     "watcher.cc",
   ]
   public_deps = [
@@ -264,23 +261,6 @@ fuchsia_unittest_component("fshost-test") {
   deps = [ ":fshost_test" ]
 }
 
-# This is a separate test executable because loader_service_test_fixture uses gtest, but other
-# tests here use zxtest.
-test("fshost_loader_service_test") {
-  sources = [ "pkgfs-loader-service-test.cc" ]
-  deps = [
-    ":block-watcher",
-    ":fshost-registry",
-    "//src/lib/loader_service:loader_service_test_fixture",
-    "//zircon/system/ulib/mock-boot-arguments",
-  ]
-}
-
-fuchsia_unittest_component("fshost-loader-service-test") {
-  manifest = "meta/fshost_loader_service_test.cml"
-  deps = [ ":fshost_loader_service_test" ]
-}
-
 test("fshost_inspect_test") {
   sources = [ "inspect-manager-test.cc" ]
   deps = [
@@ -384,7 +364,6 @@ fuchsia_test_package("fshost-tests") {
     ":fshost-integration-test",
     ":fshost-test",
     ":fshost-inspect-test",
-    ":fshost-loader-service-test",
     ":copier-test",
   ]
   deps = [

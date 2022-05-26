@@ -36,36 +36,10 @@ namespace fshost {
 
 #define CHILD_JOB_RIGHTS (ZX_RIGHTS_BASIC | ZX_RIGHT_MANAGE_JOB | ZX_RIGHT_MANAGE_PROCESS)
 
-enum class FdioAction {
-  AddNsEntry = 1,
-  CloneDir = 2,
-};
-
-// clang-format off
-
-static struct {
-    const char* mount;
-    const char* name;
-    uint32_t flags;
-    FdioAction action;
-} FSTAB[] = {
-    { "/svc",         "svc",         FS_SVC,        FdioAction::CloneDir },
-    { "/data",        "data",        FS_DATA,       FdioAction::AddNsEntry },
-    { "/blob",        "blobexec",    FS_BLOB_EXEC,  FdioAction::CloneDir },
-};
-
-// clang-format on
-
-FsProvider::~FsProvider() {}
-
-DevmgrLauncher::DevmgrLauncher(FsProvider* fs_provider) : fs_provider_(fs_provider) {}
-
-zx_status_t DevmgrLauncher::LaunchWithLoader(const zx::job& job, const char* name,
-                                             zx::vmo executable, zx::channel loader,
-                                             const char* const* argv, const char** initial_envp,
-                                             int stdiofd, const zx::resource& root_resource,
-                                             const zx_handle_t* handles, const uint32_t* types,
-                                             size_t hcount, zx::process* out_proc, uint32_t flags) {
+zx_status_t Launch(const zx::job& job, const char* name, const char* const* argv,
+                   const char** initial_envp, int stdiofd, const zx::resource& root_resource,
+                   const zx_handle_t* handles, const uint32_t* types, size_t hcount,
+                   zx::process* out_proc) {
   zx::job job_copy;
   zx_status_t status = job.duplicate(CHILD_JOB_RIGHTS, &job_copy);
   if (status != ZX_OK) {
@@ -93,47 +67,19 @@ zx_status_t DevmgrLauncher::LaunchWithLoader(const zx::job& job, const char* nam
   env.push_back(nullptr);
 
   fbl::Vector<fdio_spawn_action_t> actions;
-  actions.reserve(3 + std::size(FSTAB) + hcount);
+  actions.reserve(4 + hcount);
 
   actions.push_back((fdio_spawn_action_t){
       .action = FDIO_SPAWN_ACTION_SET_NAME,
       .name = {.data = name},
   });
 
-  if (loader.is_valid()) {
-    actions.push_back((fdio_spawn_action_t){
-        .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-        .h = {.id = PA_HND(PA_LDSVC_LOADER, 0), .handle = loader.release()},
-    });
-  } else {
-    spawn_flags |= FDIO_SPAWN_DEFAULT_LDSVC;
-  }
+  spawn_flags |= FDIO_SPAWN_DEFAULT_LDSVC;
 
-  // create namespace based on FS_* flags
-  for (unsigned n = 0; n < std::size(FSTAB); n++) {
-    if (!(FSTAB[n].flags & flags)) {
-      continue;
-    }
-    switch (FSTAB[n].action) {
-      case FdioAction::AddNsEntry: {
-        zx_handle_t h;
-        if ((h = fs_provider_->CloneFs(FSTAB[n].name).release()) != ZX_HANDLE_INVALID) {
-          actions.push_back((fdio_spawn_action_t){
-              .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
-              .ns = {.prefix = FSTAB[n].mount, .handle = h},
-          });
-        }
-      } break;
-      case FdioAction::CloneDir:
-        actions.push_back((fdio_spawn_action_t){
-            .action = FDIO_SPAWN_ACTION_CLONE_DIR,
-            .dir = {.prefix = FSTAB[n].mount},
-        });
-        break;
-      default:
-        __UNREACHABLE;
-    }
-  }
+  actions.push_back((fdio_spawn_action_t){
+      .action = FDIO_SPAWN_ACTION_CLONE_DIR,
+      .dir = {.prefix = "/svc"},
+  });
 
   if (debuglog.is_valid()) {
     actions.push_back((fdio_spawn_action_t){
@@ -156,13 +102,8 @@ zx_status_t DevmgrLauncher::LaunchWithLoader(const zx::job& job, const char* nam
 
   zx::process proc;
   char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
-  if (executable.is_valid()) {
-    status = fdio_spawn_vmo(job_copy.get(), spawn_flags, executable.release(), argv, env.data(),
-                            actions.size(), actions.data(), proc.reset_and_get_address(), err_msg);
-  } else {
-    status = fdio_spawn_etc(job_copy.get(), spawn_flags, argv[0], argv, env.data(), actions.size(),
-                            actions.data(), proc.reset_and_get_address(), err_msg);
-  }
+  status = fdio_spawn_etc(job_copy.get(), spawn_flags, argv[0], argv, env.data(), actions.size(),
+                          actions.data(), proc.reset_and_get_address(), err_msg);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "spawn " << argv[0] << " (" << name << ") failed: " << err_msg << ": "
                    << status;
@@ -173,15 +114,6 @@ zx_status_t DevmgrLauncher::LaunchWithLoader(const zx::job& job, const char* nam
     *out_proc = std::move(proc);
   }
   return ZX_OK;
-}
-
-zx_status_t DevmgrLauncher::Launch(const zx::job& job, const char* name, const char* const* argv,
-                                   const char** initial_envp, int stdiofd,
-                                   const zx::resource& root_resource, const zx_handle_t* handles,
-                                   const uint32_t* types, size_t hcount, zx::process* out_proc,
-                                   uint32_t flags) {
-  return LaunchWithLoader(job, name, zx::vmo(), zx::channel(), argv, initial_envp, stdiofd,
-                          root_resource, handles, types, hcount, out_proc, flags);
 }
 
 ArgumentVector ArgumentVector::FromCmdline(const char* cmdline) {

@@ -131,17 +131,6 @@ zx_status_t FsManager::Initialize(
     fs_dir_->AddEntry(MountPointPath(MountPoint::kFactory), fbl::MakeRefCounted<fs::PseudoDir>());
   }
 
-  zx::status pkgfs_endpoints_or = fidl::CreateEndpoints<fuchsia_io::Directory>();
-  if (pkgfs_endpoints_or.is_error()) {
-    return pkgfs_endpoints_or.status_value();
-  }
-  zx_status_t status = fs_dir_->AddEntry(
-      "pkgfs", fbl::MakeRefCounted<fs::RemoteDir>(std::move(pkgfs_endpoints_or->client)));
-  if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "failed to add pkgfs to /fs directory";
-  }
-  pkgfs_server_end_ = std::move(pkgfs_endpoints_or->server);
-
   for (const auto& point : mount_points) {
     if (config.data_filesystem_format() == "fxfs") {
       // Fxfs launches as a component so doesn't have a mount node.
@@ -162,8 +151,8 @@ zx_status_t FsManager::Initialize(
       return root_or.status_value();
     }
 
-    status = fs_dir_->AddEntry(MountPointPath(point),
-                               fbl::MakeRefCounted<fs::RemoteDir>(std::move(*root_or)));
+    zx_status_t status = fs_dir_->AddEntry(MountPointPath(point),
+                                           fbl::MakeRefCounted<fs::RemoteDir>(std::move(*root_or)));
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "failed to add " << MountPointPath(point) << " to /fs directory";
     }
@@ -184,7 +173,7 @@ zx_status_t FsManager::Initialize(
   outgoing_dir->AddEntry("diagnostics", diagnostics_dir_);
 
   fbl::RefPtr<memfs::VnodeDir> tmp_vnode;
-  status = memfs::Memfs::Create(global_loop_->dispatcher(), "<tmp>", &tmp_, &tmp_vnode);
+  zx_status_t status = memfs::Memfs::Create(global_loop_->dispatcher(), "<tmp>", &tmp_, &tmp_vnode);
   if (status != ZX_OK) {
     return status;
   }
@@ -277,10 +266,6 @@ void FsManager::RegisterDevicePath(MountPoint point, std::string_view device_pat
                        << " already exists; not inserting " << device_path;
     }
   }
-}
-
-std::optional<fidl::ServerEnd<fuchsia_io::Directory>> FsManager::TakePkgfsServerEnd() {
-  return std::exchange(pkgfs_server_end_, std::nullopt);
 }
 
 void FsManager::Shutdown(fit::function<void(zx_status_t)> callback) {

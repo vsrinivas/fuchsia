@@ -33,9 +33,6 @@ class FshostBootArgs {
   bool netboot() const { return netsvc_netboot_ || zircon_system_disable_automount_; }
   bool check_filesystems() const { return zircon_system_filesystem_check_; }
 
-  zx::status<std::string> pkgfs_cmd();
-  zx::status<std::string> pkgfs_file_with_path(std::string path);
-
   // Returns the write compression algorithm to pass to blobfs (via the --compression flag).
   std::optional<std::string> blobfs_write_compression_algorithm() const {
     return blobfs_write_compression_algorithm_;

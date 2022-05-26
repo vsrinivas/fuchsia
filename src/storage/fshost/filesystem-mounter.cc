@@ -23,8 +23,6 @@
 
 #include "constants.h"
 #include "fdio.h"
-#include "fshost-fs-provider.h"
-#include "pkgfs-launcher.h"
 #include "src/storage/blobfs/mount.h"
 #include "src/storage/minfs/minfs.h"
 
@@ -66,12 +64,9 @@ zx::status<> FilesystemMounter::LaunchFsComponent(zx::channel block_device,
 }
 
 zx_status_t FilesystemMounter::LaunchFs(int argc, const char** argv, zx_handle_t* hnd,
-                                        uint32_t* ids, size_t len, uint32_t fs_flags) {
-  FshostFsProvider fs_provider;
-  DevmgrLauncher launcher(&fs_provider);
-  return launcher.Launch(*zx::job::default_job(), argv[0], argv, nullptr, -1,
-                         /* TODO(fxbug.dev/32044) */ zx::resource(), hnd, ids, len, nullptr,
-                         fs_flags);
+                                        uint32_t* ids, size_t len) {
+  return Launch(*zx::job::default_job(), argv[0], argv, nullptr, -1,
+                /* TODO(fxbug.dev/32044) */ zx::resource(), hnd, ids, len, nullptr);
 }
 
 std::string FilesystemMounter::GetDevicePath(const zx::channel& block_device) {
@@ -93,7 +88,7 @@ std::string FilesystemMounter::GetDevicePath(const zx::channel& block_device) {
 
 zx::status<> FilesystemMounter::MountFilesystem(FsManager::MountPoint point, const char* binary,
                                                 const fs_management::MountOptions& options,
-                                                zx::channel block_device_client, uint32_t fs_flags,
+                                                zx::channel block_device_client,
                                                 fidl::ClientEnd<fuchsia_fxfs::Crypt> crypt_client) {
   std::string device_path = GetDevicePath(block_device_client);
 
@@ -129,8 +124,8 @@ zx::status<> FilesystemMounter::MountFilesystem(FsManager::MountPoint point, con
   }
   argv.push_back("mount");
   argv.push_back(nullptr);
-  if (zx_status_t status = LaunchFs(static_cast<int>(argv.size() - 1), argv.data(), handles, ids,
-                                    num_handles, fs_flags);
+  if (zx_status_t status =
+          LaunchFs(static_cast<int>(argv.size() - 1), argv.data(), handles, ids, num_handles);
       status != ZX_OK) {
     return zx::error(status);
   }
@@ -179,7 +174,7 @@ zx_status_t FilesystemMounter::MountData(zx::channel block_device,
     fshost_.RegisterDevicePath(FsManager::MountPoint::kData, device_path);
   } else {
     if (auto result = MountFilesystem(FsManager::MountPoint::kData, binary_path.c_str(), options,
-                                      std::move(block_device), FS_SVC, {});
+                                      std::move(block_device), {});
         result.is_error()) {
       return result.error_value();
     }
@@ -211,7 +206,7 @@ zx_status_t FilesystemMounter::MountFactoryFs(zx::channel block_device,
   }
 
   if (auto result = MountFilesystem(FsManager::MountPoint::kFactory, kFactoryfsPath, options,
-                                    std::move(block_device), FS_SVC);
+                                    std::move(block_device));
       result.is_error()) {
     return result.error_value();
   }
@@ -227,7 +222,7 @@ zx_status_t FilesystemMounter::MountDurable(zx::channel block_device,
   }
 
   if (auto result = MountFilesystem(FsManager::MountPoint::kDurable, kMinfsPath, options,
-                                    std::move(block_device), FS_SVC);
+                                    std::move(block_device));
       result.is_error()) {
     return result.error_value();
   }

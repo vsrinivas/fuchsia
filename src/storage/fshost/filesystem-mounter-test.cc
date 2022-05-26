@@ -23,7 +23,6 @@
 #include "src/storage/fshost/config.h"
 #include "src/storage/fshost/constants.h"
 #include "src/storage/fshost/fs-manager.h"
-#include "src/storage/fshost/fshost-fs-provider.h"
 
 namespace fshost {
 namespace {
@@ -100,8 +99,8 @@ class TestMounter : public FilesystemMounter {
     return zx::ok();
   }
 
-  zx_status_t LaunchFs(int argc, const char** argv, zx_handle_t* hnd, uint32_t* ids, size_t len,
-                       uint32_t fs_flags) final {
+  zx_status_t LaunchFs(int argc, const char** argv, zx_handle_t* hnd, uint32_t* ids,
+                       size_t len) final {
     if (argc != 2) {
       return ZX_ERR_INVALID_ARGS;
     }
@@ -109,12 +108,10 @@ class TestMounter : public FilesystemMounter {
     switch (expected_filesystem_) {
       case FilesystemType::kMinfs:
         EXPECT_EQ(std::string_view(argv[0]), kMinfsPath);
-        EXPECT_EQ(fs_flags, unsigned{FS_SVC});
         EXPECT_EQ(len, 2ul);
         break;
       case FilesystemType::kFactoryfs:
         EXPECT_EQ(std::string_view(argv[0]), kFactoryfsPath);
-        EXPECT_EQ(fs_flags, unsigned{FS_SVC});
         break;
       default:
         ADD_FAILURE() << "Unexpected filesystem type";

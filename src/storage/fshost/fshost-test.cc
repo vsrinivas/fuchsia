@@ -24,7 +24,6 @@
 
 #include "config.h"
 #include "fs-manager.h"
-#include "fshost-fs-provider.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 #include "src/storage/fshost/block-watcher.h"

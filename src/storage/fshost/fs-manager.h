@@ -66,12 +66,6 @@ class FsManager {
   // Registers the device path for the given mount point.
   void RegisterDevicePath(MountPoint point, std::string_view device_path);
 
-  // Takes the server end reserved for pkgfs. This channel pair will have been collecting queued
-  // requests since fshost was started.
-  //
-  // This function can only be called once, any calls beyond that will return std::nullopt.
-  std::optional<fidl::ServerEnd<fuchsia_io::Directory>> TakePkgfsServerEnd();
-
   // Creates a connection to the /fs dir in the outgoing directory.
   zx::status<fidl::ClientEnd<fuchsia_io::Directory>> GetFsDir();
 
@@ -168,10 +162,6 @@ class FsManager {
     std::optional<fidl::ServerEnd<fuchsia_io::Directory>> server_end;
   };
   std::map<MountPoint, MountNode> mount_nodes_;
-
-  // pkgfs is special - it doesn't serve a compliant filesystem export root, and it doesn't have a
-  // device path. Because of this we keep track of it separately.
-  std::optional<fidl::ServerEnd<fuchsia_io::Directory>> pkgfs_server_end_;
 
   // The memfs which serves the /tmp directory.
   std::unique_ptr<memfs::Memfs> tmp_;

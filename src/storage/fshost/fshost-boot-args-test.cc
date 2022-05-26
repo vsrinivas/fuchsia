@@ -75,26 +75,6 @@ TEST_F(FshostBootArgsTest, GetNonDefaultBools) {
   EXPECT_EQ(true, boot_args().check_filesystems());
 }
 
-TEST_F(FshostBootArgsTest, GetPkgfsFile) {
-  std::map<std::string, std::string> config = {
-      {"zircon.system.pkgfs.file.foobar", "aaa"},
-      {"zircon.system.pkgfs.file.bin/foobaz", "bbb"},
-      {"zircon.system.pkgfs.file.lib/foobar", "ccc"},
-  };
-  ASSERT_NO_FATAL_FAILURE(CreateFshostBootArgs(config));
-
-  EXPECT_EQ("aaa", boot_args().pkgfs_file_with_path("foobar"));
-  EXPECT_EQ("bbb", boot_args().pkgfs_file_with_path("bin/foobaz"));
-  EXPECT_EQ("ccc", boot_args().pkgfs_file_with_path("lib/foobar"));
-}
-
-TEST_F(FshostBootArgsTest, GetPkgfsCmd) {
-  std::map<std::string, std::string> config = {{"zircon.system.pkgfs.cmd", "foobar"}};
-  ASSERT_NO_FATAL_FAILURE(CreateFshostBootArgs(config));
-
-  EXPECT_EQ("foobar", boot_args().pkgfs_cmd());
-}
-
 TEST_F(FshostBootArgsTest, GetBlobfsCompressionAlgorithm) {
   std::map<std::string, std::string> config = {
       {"blobfs.write-compression-algorithm", "ZSTD_CHUNKED"}};

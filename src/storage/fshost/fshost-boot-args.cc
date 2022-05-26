@@ -85,14 +85,6 @@ zx::status<std::string> FshostBootArgs::GetStringArgument(std::string key) {
   return zx::ok(std::string(value.data(), value.size()));
 }
 
-zx::status<std::string> FshostBootArgs::pkgfs_file_with_path(std::string path) {
-  return GetStringArgument(std::string("zircon.system.pkgfs.file.") + path);
-}
-
-zx::status<std::string> FshostBootArgs::pkgfs_cmd() {
-  return GetStringArgument("zircon.system.pkgfs.cmd");
-}
-
 zx::status<std::string> FshostBootArgs::block_verity_seal() {
   return GetStringArgument("factory_verity_seal");
 }
