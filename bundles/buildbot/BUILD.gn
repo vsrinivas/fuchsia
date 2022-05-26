@@ -107,7 +107,6 @@ group("core_base_packages") {
     "//examples/fidl/dart/server:echo-dart-server",
     "//examples/tests:example-tests",
     "//garnet/bin/cpuperf_provider:cpuperf_provider",
-    "//garnet/bin/glob:glob",
     "//garnet/bin/ktrace_provider:ktrace_provider",
     "//garnet/bin/setui_client:setui_client",
     "//garnet/bin/trace:trace",

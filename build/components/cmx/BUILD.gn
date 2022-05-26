@@ -64,7 +64,6 @@ group("cmx_allowlist") {
     "//garnet/bin/cpuperf:*",
     "//garnet/bin/cpuperf/tests:*",
     "//garnet/bin/cpuperf_provider:*",
-    "//garnet/bin/glob:*",
     "//garnet/bin/insntrace:*",
     "//garnet/bin/insntrace/tests:*",
     "//garnet/bin/ktrace_provider:*",

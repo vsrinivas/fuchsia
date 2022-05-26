@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/examples/echo/cpp/fidl.h>
 #include <fuchsia/inspect/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
@@ -12,7 +13,6 @@
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 
-#include <fidl/examples/echo/cpp/fidl.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -101,29 +101,32 @@ TEST_F(ProbeHub, RealmSvc) {
 }
 
 TEST_F(HubTest, ScopePolicy) {
-  constexpr char kGlobUrl[] = "fuchsia-pkg://fuchsia.com/glob#meta/glob.cmx";
+  constexpr char kHelperUrl[] =
+      "fuchsia-pkg://fuchsia.com/appmgr_integration_tests#meta/hub_test_helper.cmx";
   // create nested environment
   // test that we can see nested env
   auto nested_env = CreateNewEnclosingEnvironment("hubscopepolicytest", CreateServices());
   WaitForEnclosingEnvToStart(nested_env.get());
-  RunComponent(launcher_ptr(), kGlobUrl, {"/hub/r/hubscopepolicytest/"}, 0);
+  RunComponent(launcher_ptr(), kHelperUrl, {"/hub/r/hubscopepolicytest/"}, 0);
 
   // test that we cannot see nested env using its own launcher
-  RunComponent(nested_env->launcher_ptr(), kGlobUrl, {"/hub/r/hubscopepolicytest"}, 1);
+  RunComponent(nested_env->launcher_ptr(), kHelperUrl, {"/hub/r/hubscopepolicytest"}, 1);
 
   // test that we can see check_hub_path
-  RunComponent(nested_env->launcher_ptr(), kGlobUrl, {"/hub/c/glob.cmx"}, 0);
+  RunComponent(nested_env->launcher_ptr(), kHelperUrl, {"/hub/c/hub_test_helper.cmx"}, 0);
 }
 
 TEST_F(HubTest, SystemDiagnostics) {
-  std::string glob_url = "fuchsia-pkg://fuchsia.com/glob#meta/glob.cmx";
+  std::string helper_url =
+      "fuchsia-pkg://fuchsia.com/appmgr_integration_tests#meta/hub_test_helper.cmx";
 
   auto nested_env = CreateNewEnclosingEnvironment("hubscopepolicytest", CreateServices());
   WaitForEnclosingEnvToStart(nested_env.get());
-  RunComponent(launcher_ptr(), glob_url, {"/hub/r/hubscopepolicytest/"}, 0);
+  RunComponent(launcher_ptr(), helper_url, {"/hub/r/hubscopepolicytest/"}, 0);
 
   // test that we can see system objects
-  RunComponent(nested_env->launcher_ptr(), glob_url, {"/hub/c/glob.cmx/*/system_diagnostics"}, 0);
+  RunComponent(nested_env->launcher_ptr(), helper_url,
+               {"/hub/c/hub_test_helper.cmx/*/system_diagnostics"}, 0);
 }
 
 TEST_F(HubTest, SystemDiagnosticsData) {

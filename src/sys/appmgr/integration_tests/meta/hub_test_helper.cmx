@@ -3,14 +3,11 @@
         "syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "bin/glob"
+        "binary": "bin/hub_test_helper"
     },
     "sandbox": {
         "features": [
             "hub"
-        ],
-        "services": [
-            "fuchsia.sys.Environment"
         ]
     }
 }
