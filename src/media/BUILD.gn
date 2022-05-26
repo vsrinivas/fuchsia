@@ -13,7 +13,6 @@ group("media") {
     "//src/media/sessions",
     "//src/media/sounds",
     "//src/media/stream_processors",
-    "//src/media/vnext",
   ]
 }
 
@@ -30,6 +29,5 @@ group("tests") {
     "//src/media/sessions:tests",
     "//src/media/sounds:tests",
     "//src/media/stream_processors:tests",
-    "//src/media/vnext:tests",
   ]
 }
