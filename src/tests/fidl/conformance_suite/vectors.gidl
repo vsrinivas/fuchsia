@@ -219,7 +219,7 @@ success("SmallVector8ByteAligned") {
 // are disabled for small vectors, so test a larger vector.
 success("LargeVectorNon8ByteAligned") {
     value = VectorWrapper{
-        v: [ repeat(1):514 ],
+        v: [repeat(1):514],
     },
     bytes = {
         v1, v2 = [
@@ -236,7 +236,7 @@ success("LargeVectorNon8ByteAligned") {
 // where the vector becomes 8-byte aligned on a large vector.
 success("LargeVector8ByteAligned") {
     value = VectorWrapper{
-        v: [ repeat(1):512 ],
+        v: [repeat(1):512],
     },
     bytes = {
         v1, v2 = [
@@ -389,6 +389,174 @@ success("LotsOfVectors_AFewVectors") {
 
             // v9 contents
             0x01, 0x00, 0x01, padding:5,
+        ],
+    },
+}
+
+// The kernel is optimized for at most 16 iovecs, so typically bindings that support
+// iovecs use this number as a limit. Binding handling of iovecs is implementation
+// specific, but in many cases this test will result in exactly 16 iovecs
+// (1 for primary object and 1 for each of the 15 byte vectors).
+success("ByteVectors15") {
+    // TODO(fxbug.dev/101219) Fix for CPP / HLCPP.
+    bindings_denylist = [cpp, hlcpp],
+    value = VectorOfByteVector{
+        v: [
+            [repeat(1):512],
+            [repeat(2):512],
+            [repeat(3):512],
+            [repeat(4):512],
+            [repeat(5):512],
+            [repeat(6):512],
+            [repeat(7):512],
+            [repeat(8):512],
+            [repeat(9):512],
+            [repeat(10):512],
+            [repeat(11):512],
+            [repeat(12):512],
+            [repeat(13):512],
+            [repeat(14):512],
+            [repeat(15):512],
+        ],
+    },
+    bytes = {
+        v1, v2 = [
+            num(15):8,
+            repeat(0xff):8,
+
+            num(512):8,
+            repeat(0xff):8,
+            num(512):8,
+            repeat(0xff):8,
+            num(512):8,
+            repeat(0xff):8,
+            num(512):8,
+            repeat(0xff):8,
+            num(512):8,
+            repeat(0xff):8,
+            num(512):8,
+            repeat(0xff):8,
+            num(512):8,
+            repeat(0xff):8,
+            num(512):8,
+            repeat(0xff):8,
+            num(512):8,
+            repeat(0xff):8,
+            num(512):8,
+            repeat(0xff):8,
+            num(512):8,
+            repeat(0xff):8,
+            num(512):8,
+            repeat(0xff):8,
+            num(512):8,
+            repeat(0xff):8,
+            num(512):8,
+            repeat(0xff):8,
+            num(512):8,
+            repeat(0xff):8,
+
+            repeat(1):512,
+            repeat(2):512,
+            repeat(3):512,
+            repeat(4):512,
+            repeat(5):512,
+            repeat(6):512,
+            repeat(7):512,
+            repeat(8):512,
+            repeat(9):512,
+            repeat(10):512,
+            repeat(11):512,
+            repeat(12):512,
+            repeat(13):512,
+            repeat(14):512,
+            repeat(15):512,
+        ],
+    },
+}
+
+// The kernel is optimized for at most 16 iovecs, so typically bindings that support
+// iovecs use this number as a limit. Binding handling of iovecs is implementation
+// specific, but in many cases this test will result in 17 iovecs
+// (1 for primary object and 1 for each of the 16 byte vectors), which exercises
+// the bindings ability to handle more iovecs than are supported by its iovec
+// buffer.
+success("ByteVectors16") {
+    // TODO(fxbug.dev/101219) Fix for CPP / HLCPP.
+    bindings_denylist = [cpp, hlcpp],
+    value = VectorOfByteVector{
+        v: [
+            [repeat(1):512],
+            [repeat(2):512],
+            [repeat(3):512],
+            [repeat(4):512],
+            [repeat(5):512],
+            [repeat(6):512],
+            [repeat(7):512],
+            [repeat(8):512],
+            [repeat(9):512],
+            [repeat(10):512],
+            [repeat(11):512],
+            [repeat(12):512],
+            [repeat(13):512],
+            [repeat(14):512],
+            [repeat(15):512],
+            [repeat(16):512],
+        ],
+    },
+    bytes = {
+        v1, v2 = [
+            num(16):8,
+            repeat(0xff):8,
+
+            num(512):8,
+            repeat(0xff):8,
+            num(512):8,
+            repeat(0xff):8,
+            num(512):8,
+            repeat(0xff):8,
+            num(512):8,
+            repeat(0xff):8,
+            num(512):8,
+            repeat(0xff):8,
+            num(512):8,
+            repeat(0xff):8,
+            num(512):8,
+            repeat(0xff):8,
+            num(512):8,
+            repeat(0xff):8,
+            num(512):8,
+            repeat(0xff):8,
+            num(512):8,
+            repeat(0xff):8,
+            num(512):8,
+            repeat(0xff):8,
+            num(512):8,
+            repeat(0xff):8,
+            num(512):8,
+            repeat(0xff):8,
+            num(512):8,
+            repeat(0xff):8,
+            num(512):8,
+            repeat(0xff):8,
+            num(512):8,
+            repeat(0xff):8,
+
+            repeat(1):512,
+            repeat(2):512,
+            repeat(3):512,
+            repeat(4):512,
+            repeat(5):512,
+            repeat(6):512,
+            repeat(7):512,
+            repeat(8):512,
+            repeat(9):512,
+            repeat(10):512,
+            repeat(11):512,
+            repeat(12):512,
+            repeat(13):512,
+            repeat(14):512,
+            repeat(15):512,
+            repeat(16):512,
         ],
     },
 }
