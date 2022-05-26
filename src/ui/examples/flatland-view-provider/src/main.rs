@@ -5,7 +5,7 @@
 mod internal_message;
 mod mouse;
 mod touch;
-mod vkdemo;
+mod vulkan;
 
 use {
     async_utils::hanging_get::client::HangingGetStream,
@@ -106,7 +106,7 @@ impl<'a> AppModel<'a> {
     }
 
     async fn init_scene(&mut self) {
-        vkdemo::init();
+        vulkan::init();
 
         // BufferAllocator is a helper which makes it easier to obtain and set constraints on a
         // sysmem::BufferCollectionToken.  This token can then be registered with Scenic, which will
