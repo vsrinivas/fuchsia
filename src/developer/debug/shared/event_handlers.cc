@@ -47,9 +47,8 @@ SignalHandler::~SignalHandler() {
     return;
 
   async_wait_t* wait = handle_.get();
-  // Do not assert on the return value because StartListening() may fail and the handle is not in
-  // the event loop.
-  async_cancel_wait(async_get_default_dispatcher(), wait);
+  auto status = async_cancel_wait(async_get_default_dispatcher(), wait);
+  FX_DCHECK(status == ZX_OK) << "Got: " << ZxStatusToString(status);
 }
 
 SignalHandler::SignalHandler(SignalHandler&&) = default;
@@ -112,9 +111,8 @@ ChannelExceptionHandler::~ChannelExceptionHandler() {
     return;
 
   async_wait_t* wait = handle_.get();
-  // Do not assert on the return value because StartListening() may fail and the handle is not in
-  // the event loop.
-  async_cancel_wait(async_get_default_dispatcher(), wait);
+  auto status = async_cancel_wait(async_get_default_dispatcher(), wait);
+  FX_DCHECK(status == ZX_OK) << "Got: " << ZxStatusToString(status);
 }
 
 ChannelExceptionHandler::ChannelExceptionHandler(ChannelExceptionHandler&&) = default;

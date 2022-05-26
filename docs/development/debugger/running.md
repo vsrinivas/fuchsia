@@ -33,12 +33,10 @@ If you are building from source, most probably these syscalls are enabled.
 
 ### zxdb and debug_agent are built
 
-Zxdb depends on a target-side component called debug\_agent.  If an error message says "The plugin
-service selector 'core/debug\_agent:expose:fuchsia.debugger.DebugAgent' did not match any services
-on the target", it means that debug\_agent is not built.  You can also check whether there's
-`debug_agent` and `host_x64/zxdb` in your build directory.
-
-If you don't have the debugger in your build, add `//bundles:tools` to your "universe", either with:
+Zxdb depends on an on-target component debug_agent. Both of them are built by default in the `core`
+product type. If you are building from source, check whether there's `out/<build_dir>/debug_agent`
+and `out/<build_dir>/host_x64/zxdb`.  If you don't have the debugger in your build, add
+`//bundles:tools` to your "universe", either with:
 
 ```posix-terminal
 fx <normal_stuff_you_use> --with //bundles:tools

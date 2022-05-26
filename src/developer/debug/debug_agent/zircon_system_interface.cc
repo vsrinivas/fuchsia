@@ -80,8 +80,6 @@ uint64_t ZirconSystemInterface::GetPhysicalMemory() const { return zx_system_get
 std::unique_ptr<JobHandle> ZirconSystemInterface::GetRootJob() const {
   if (root_job_)
     return std::make_unique<ZirconJobHandle>(*root_job_);
-
-  FX_LOGS(WARNING) << "Failed to get the root job";
   return nullptr;
 }
 
