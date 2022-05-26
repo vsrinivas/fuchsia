@@ -980,6 +980,12 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
     current_state->time_slice_ns_ -= ScaleDown(actual_runtime_ns);
   }
 
+  // Rounding in the scaling above may result in a small non-zero time slice
+  // when the time slice should expire from the perspective of the target
+  // preemption time. Use a small epsilon to avoid tripping the consistency
+  // check below.
+  const SchedDuration deadline_time_slice_epsilon{1};
+
   // Fair and deadline tasks have different time slice accounting strategies:
   // - A fair task expires when the total runtime meets or exceeds the time
   //   slice, which is updated only when the thread is adjusted or returns to
@@ -991,7 +997,8 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
   const bool timeslice_expired =
       IsFairThread(current_thread)
           ? total_runtime_ns >= current_state->time_slice_ns_
-          : now >= current_state->finish_time_ || current_state->time_slice_ns_ <= 0;
+          : now >= current_state->finish_time_ ||
+                current_state->time_slice_ns_ <= deadline_time_slice_epsilon;
 
   // Check the consistency of the target preemption time and the current time
   // slice.
