@@ -1,0 +1,44 @@
+{
+    include: [
+        "sys/component/realm_builder.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/web-virtual-keyboard-client",
+    },
+    capabilities: [
+        {
+            protocol: [ "fuchsia.ui.app.ViewProvider" ],
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.accessibility.semantics.SemanticsManager",
+                "fuchsia.buildinfo.Provider",
+                "fuchsia.fonts.Provider",
+                "fuchsia.input.virtualkeyboard.ControllerCreator",
+                "fuchsia.input.virtualkeyboard.Manager",
+                "fuchsia.intl.PropertyProvider",
+                "fuchsia.logger.LogSink",
+                "fuchsia.memorypressure.Provider",
+                "fuchsia.net.interfaces.State",
+                "fuchsia.netstack.Netstack",
+                "fuchsia.posix.socket.Provider",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.ui.input.ImeService",
+                "fuchsia.ui.input3.Keyboard",
+                "fuchsia.ui.scenic.Scenic",
+                "fuchsia.web.ContextProvider",
+                "test.virtualkeyboard.InputPositionListener",
+            ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [ "fuchsia.ui.app.ViewProvider" ],
+            from: "self",
+        },
+    ],
+}

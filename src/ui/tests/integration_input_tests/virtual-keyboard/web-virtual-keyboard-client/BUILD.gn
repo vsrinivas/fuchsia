@@ -5,6 +5,7 @@
 import("//build/components.gni")
 
 group("web-virtual-keyboard-client") {
+  testonly = true
   deps = [ ":package" ]
 }
 
@@ -30,12 +31,17 @@ executable("bin") {
 }
 
 fuchsia_component("component") {
+  testonly = true
   component_name = "web-virtual-keyboard-client"
-  manifest = rebase_path("meta/web-virtual-keyboard-client.cmx")
-  deps = [ ":bin" ]
+  manifest = "meta/web-virtual-keyboard-client.cml"
+  deps = [
+    ":bin",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
+  ]
 }
 
 fuchsia_package("package") {
+  testonly = true
   package_name = "web-virtual-keyboard-client"
   deps = [ ":component" ]
 }

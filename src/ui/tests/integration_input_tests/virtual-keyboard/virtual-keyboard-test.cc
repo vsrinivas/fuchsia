@@ -359,7 +359,6 @@ class WebEngineTest : public VirtualKeyboardBase {
  protected:
   std::vector<std::pair<ChildName, LegacyUrl>> GetTestComponents() override {
     return {
-        std::make_pair(kWebVirtualKeyboardClient, kWebVirtualKeyboardUrl),
         std::make_pair(kFontsProvider, kFontsProviderUrl),
         std::make_pair(kWebContextProvider, kWebContextProviderUrl),
     };
@@ -368,11 +367,12 @@ class WebEngineTest : public VirtualKeyboardBase {
   std::vector<std::pair<ChildName, LegacyUrl>> GetTestV2Components() override {
     return {
         std::make_pair(kBuildInfoProvider, kBuildInfoProviderUrl),
-        std::make_pair(kTextManager, kTextManagerUrl),
         std::make_pair(kIntl, kIntlUrl),
         std::make_pair(kMemoryPressureProvider, kMemoryPressureProviderUrl),
         std::make_pair(kNetstack, kNetstackUrl),
         std::make_pair(kSemanticsManager, kSemanticsManagerUrl),
+        std::make_pair(kTextManager, kTextManagerUrl),
+        std::make_pair(kWebVirtualKeyboardClient, kWebVirtualKeyboardUrl),
     };
   }
 
@@ -431,7 +431,8 @@ class WebEngineTest : public VirtualKeyboardBase {
         {.capabilities = {Protocol{fuchsia::memorypressure::Provider::Name_}},
          .source = ChildRef{kMemoryPressureProvider},
          .targets = {target}},
-        {.capabilities = {Protocol{fuchsia::posix::socket::Provider::Name_},
+        {.capabilities = {Protocol{fuchsia::scheduler::ProfileProvider::Name_},
+                          Protocol{fuchsia::posix::socket::Provider::Name_},
                           Protocol{fuchsia::netstack::Netstack::Name_},
                           Protocol{fuchsia::net::interfaces::State::Name_}},
          .source = ChildRef{kNetstack},
@@ -466,9 +467,7 @@ class WebEngineTest : public VirtualKeyboardBase {
   }
 
   static constexpr auto kWebVirtualKeyboardClient = "web_virtual_keyboard_client";
-  static constexpr auto kWebVirtualKeyboardUrl =
-      "fuchsia-pkg://fuchsia.com/web-virtual-keyboard-client#meta/"
-      "web-virtual-keyboard-client.cmx";
+  static constexpr auto kWebVirtualKeyboardUrl = "#meta/web-virtual-keyboard-client.cm";
 
  private:
   static constexpr auto kFontsProvider = "fonts_provider";
