@@ -107,6 +107,23 @@ fuchsia_unittest_package("netstack3-tests") {
   ]
 }
 
+rustc_binary("netstack3-benchmarks") {
+  name = "netstack3_benchmarks"
+  testonly = true
+  sources = [ "bench/main.rs" ]
+  source_root = "bench/main.rs"
+  deps = [
+    "core:netstack3-core-benchmarks",
+    "//src/developer/fuchsia-criterion",
+  ]
+  configs -= [ "//build/config/rust:allow_unused_results" ]
+}
+
+fuchsia_shell_package("netstack3_benchmarks") {
+  deps = [ ":netstack3-benchmarks" ]
+  testonly = true
+}
+
 group("tests") {
   testonly = true
   deps = [

@@ -91,27 +91,26 @@ macro_rules! impl_timer_context {
 
 /// Declare a benchmark function.
 ///
-/// The function will be named `$name`. If the `benchmark` feature is enabled,
-/// it will be annotated with the `#[bench]` attribute, and the provided `$fn`
-/// will be invoked with a `&mut test::Bencher` - in other words, a real
-/// benchmark. If the `benchmark` feature is disabled, the function will be
-/// annotated with the `#[test]` attribute, and the provided `$fn` will be
-/// invoked with a `&mut TestBencher`, which has the effect of creating a test
-/// that runs the benchmarked function for a small, fixed number of iterations.
+/// The function will be named `$name`. If the `benchmark` cfg is enabled, the
+/// provided `$fn` will be invoked with a `&mut criterion::Bencher` - in other
+/// words, a real benchmark. If the `benchmark` cfg is disabled, the function
+/// will be annotated with the `#[test]` attribute, and the provided `$fn` will
+/// be invoked with a `&mut TestBencher`, which has the effect of creating a
+/// test that runs the benchmarked function for a small, fixed number of
+/// iterations. This test allows the use of debug assertions to verify the
+/// correctness of the benchmark.
 ///
 /// Note that `$fn` doesn't have to be a named function - it can also be an
 /// anonymous closure.
 #[cfg(test)]
 macro_rules! bench {
     ($name:ident, $fn:expr) => {
-        #[cfg(feature = "benchmark")]
-        #[bench]
-        fn $name(b: &mut test::Bencher) {
+        #[cfg(benchmark)]
+        fn $name(b: &mut criterion::Bencher) {
             $fn(b);
         }
 
-        // TODO(joshlf): Remove the `#[ignore]` once all benchmark tests pass.
-        #[cfg(not(feature = "benchmark"))]
+        #[cfg(not(benchmark))]
         #[test]
         fn $name() {
             $fn(&mut crate::testutil::benchmarks::TestBencher);

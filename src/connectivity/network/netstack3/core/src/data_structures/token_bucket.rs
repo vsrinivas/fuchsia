@@ -175,7 +175,7 @@ impl<I: crate::Instant> TokenBucket<I> {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use crate::{
         context::testutil::{DummyInstant, DummyInstantCtx},
@@ -358,6 +358,18 @@ mod tests {
     bench!(bench_try_take_almost_equal_rate, |b| bench_try_take(b, 64, 65));
     // Call `try_take` at 2x the enforced rate.
     bench!(bench_try_take_double_rate, |b| bench_try_take(b, 64, 64 * 2));
+
+    #[cfg(benchmark)]
+    pub(crate) fn add_benches(b: criterion::Benchmark) -> criterion::Benchmark {
+        let mut b = b.with_function("token_bucket.try_take_slow", bench_try_take_slow);
+        b = b.with_function("token_bucket.try_take_half_rate", bench_try_take_half_rate);
+        b = b.with_function("token_bucket.try_take_equal_rate", bench_try_take_equal_rate);
+        b = b.with_function(
+            "token_bucket.try_take_almost_equal_rate",
+            bench_try_take_almost_equal_rate,
+        );
+        b.with_function("token_bucket.try_take_double_rate", bench_try_take_double_rate)
+    }
 }
 
 #[test]

@@ -4,8 +4,12 @@
 
 //! High-level benchmarks.
 //!
-//! This module contains end-to-end and other high-level benchmarks for the
-//! netstack.
+//! This module contains microbenchmarks for the Netstack3 Core, built on top
+//! of Criterion.
+
+// Enable dead code warnings for benchmarks (disabled in `lib.rs`), unless
+// fuzzing is enabled.
+#![cfg_attr(not(fuzz), warn(dead_code, unused_imports, unused_macros))]
 
 use alloc::vec;
 use core::time::Duration;
@@ -157,10 +161,6 @@ impl TimerContext<TimerId> for BenchmarkCoreContext {
 // forwarding table with a single entry, and a single device - and we receive an
 // IPv4 packet frame which we expect will be parsed and forwarded without
 // requiring any new buffers to be allocated.
-//
-// As of Change-Id Iaa22ea23620405dadd0b4f58d112781b29890a46, on a 2018 MacBook
-// Pro, this benchmark takes in the neighborhood of 96ns - 100ns for all frame
-// sizes.
 fn bench_forward_minimum<B: Bencher>(b: &mut B, frame_size: usize) {
     let mut state_builder = StackStateBuilder::default();
     // Most tests do not need NDP's DAD or router solicitation so disable it
@@ -259,3 +259,18 @@ bench!(bench_forward_minimum_128, |b| bench_forward_minimum(b, 128));
 bench!(bench_forward_minimum_256, |b| bench_forward_minimum(b, 256));
 bench!(bench_forward_minimum_512, |b| bench_forward_minimum(b, 512));
 bench!(bench_forward_minimum_1024, |b| bench_forward_minimum(b, 1024));
+
+#[cfg(benchmark)]
+/// Returns a benchmark group for all Netstack3 Core microbenchmarks.
+pub fn get_benchmark() -> criterion::Benchmark {
+    // TODO(http://fxbug.dev/100863) Find an automatic way to add benchmark
+    // functions to the `Criterion::Benchmark`, ideally as part of `bench!`.
+    let mut b = criterion::Benchmark::new("forward_ipv4_64", bench_forward_minimum_64);
+    b = b.with_function("forward_ipv4_128", bench_forward_minimum_128);
+    b = b.with_function("forward_ipv4_256", bench_forward_minimum_256);
+    b = b.with_function("forward_ipv4_512", bench_forward_minimum_512);
+    b = b.with_function("forward_ipv4_1024", bench_forward_minimum_1024);
+
+    // Add additional microbenchmarks defined elsewhere.
+    crate::data_structures::token_bucket::tests::add_benches(b)
+}

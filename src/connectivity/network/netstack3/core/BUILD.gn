@@ -122,6 +122,25 @@ fuchsia_unittest_package("netstack3-core-test-package") {
   deps = [ ":netstack3-core_test" ]
 }
 
+config("benchmark") {
+  rustflags = [
+    "--cfg=benchmark",
+    "--cfg=test",
+  ]
+}
+
+rustc_library("netstack3-core-benchmarks") {
+  name = "netstack3_core_benchmarks"
+  testonly = true
+  with_unit_tests = true
+  sources = lib_sources
+  deps = lib_deps + lib_test_deps + [ "//third_party/rust_crates:criterion" ]
+  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust:no_features" ]
+  configs += [ "//build/config/rust:netstack3_only_specialization_feature" ]
+  configs += [ ":benchmark" ]
+}
+
 config("fuzz") {
   rustflags = [
     "--cfg=fuzz",

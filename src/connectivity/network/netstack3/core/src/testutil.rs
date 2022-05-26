@@ -70,19 +70,19 @@ pub(crate) mod benchmarks {
         fn iter<T, F: FnMut() -> T>(&mut self, inner: F);
     }
 
-    #[cfg(feature = "benchmark")]
-    impl Bencher for test::Bencher {
+    #[cfg(benchmark)]
+    impl Bencher for criterion::Bencher {
         fn iter<T, F: FnMut() -> T>(&mut self, inner: F) {
-            test::Bencher::iter(self, inner)
+            criterion::Bencher::iter(self, inner)
         }
     }
 
     /// A `Bencher` whose `iter` method runs the provided argument a small,
     /// fixed number of times.
-    #[cfg(not(feature = "benchmark"))]
+    #[cfg(not(benchmark))]
     pub(crate) struct TestBencher;
 
-    #[cfg(not(feature = "benchmark"))]
+    #[cfg(not(benchmark))]
     impl Bencher for TestBencher {
         fn iter<T, F: FnMut() -> T>(&mut self, mut inner: F) {
             const NUM_TEST_ITERS: u32 = 256;
@@ -94,11 +94,11 @@ pub(crate) mod benchmarks {
     }
 
     #[inline(always)]
-    pub(crate) fn black_box<T>(dummy: T) -> T {
-        #[cfg(feature = "benchmark")]
-        return test::black_box(dummy);
-        #[cfg(not(feature = "benchmark"))]
-        return dummy;
+    pub(crate) fn black_box<T>(placeholder: T) -> T {
+        #[cfg(benchmark)]
+        return criterion::black_box(placeholder);
+        #[cfg(not(benchmark))]
+        return placeholder;
     }
 }
 

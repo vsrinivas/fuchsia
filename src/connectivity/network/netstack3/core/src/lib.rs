@@ -11,15 +11,12 @@
 // Tracking: https://github.com/rust-lang/rust/issues/31844.
 #![feature(min_specialization)]
 #![deny(missing_docs, unreachable_patterns)]
-// This is a hack until we migrate to a different benchmarking framework. To run
-// benchmarks, edit your Cargo.toml file to add a "benchmark" feature, and then
-// run with that feature enabled.
-#![cfg_attr(feature = "benchmark", feature(test))]
-// Turn off checks for dead code, but only when building for fuzzing. This
-// allows fuzzers to be written as part of the crate, with access to test
-// utilities, without a bunch of build errors due to unused code. These checks
-// are turned back on specifically for the `fuzz` module below.
-#![cfg_attr(fuzz, allow(dead_code, unused_imports, unused_macros))]
+// Turn off checks for dead code, but only when building for fuzzing or
+// benchmarking. This allows fuzzers and benchmarks to be written as part of
+// the crate, with access to test utilities, without a bunch of build errors
+// due to unused code. These checks are turned back on in the 'fuzz' and
+// 'benchmark' modules.
+#![cfg_attr(any(fuzz, benchmark), allow(dead_code, unused_imports, unused_macros))]
 
 // TODO(https://github.com/rust-lang-nursery/portability-wg/issues/11): remove
 // this module.
@@ -29,15 +26,12 @@ extern crate fakealloc as alloc;
 #[cfg(not(fuzz))]
 extern crate fakestd as std;
 
-#[cfg(all(test, feature = "benchmark"))]
-extern crate test;
-
 #[macro_use]
 mod macros;
 
 mod algorithm;
 #[cfg(test)]
-mod benchmarks;
+pub mod benchmarks;
 pub mod context;
 mod data_structures;
 mod device;
