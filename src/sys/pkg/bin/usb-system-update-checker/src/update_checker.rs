@@ -16,7 +16,7 @@ use {
     },
     fuchsia_component::client::connect_to_protocol,
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
-    fuchsia_url::pkg_url::PkgUrl,
+    fuchsia_url::{PinnedAbsolutePackageUrl, UnpinnedAbsolutePackageUrl},
     futures::prelude::*,
     std::{cmp::Ordering, str::FromStr},
     update_package::{SystemVersion, UpdatePackage},
@@ -55,16 +55,15 @@ impl UsbUpdateChecker<'_> {
         _logs_dir: Option<fidl::endpoints::ClientEnd<fio::DirectoryMarker>>,
         monitor: Option<fidl::endpoints::ClientEnd<UsbMonitorMarker>>,
     ) -> Result<CheckSuccess, CheckError> {
-        let unpinned_update_url = PkgUrl::parse(unpinned_update_url)
-            .map_err(|e| {
+        let unpinned_update_url =
+            UnpinnedAbsolutePackageUrl::parse(unpinned_update_url).map_err(|e| {
                 fx_log_warn!(
                     "Failed to parse update_url '{}': {:#}",
                     unpinned_update_url,
                     anyhow!(e)
                 );
                 CheckError::InvalidUpdateUrl
-            })
-            .and_then(|url| self.validate_url(url))?;
+            })?;
 
         let (package, pinned_update_url) =
             self.open_update_package(unpinned_update_url).await.map_err(|e| {
@@ -103,7 +102,7 @@ impl UsbUpdateChecker<'_> {
 
     async fn install_update(
         &self,
-        update_url: PkgUrl,
+        update_url: PinnedAbsolutePackageUrl,
         installer: InstallerProxy,
     ) -> Result<(), Error> {
         let mut url = fidl_fuchsia_pkg::PackageUrl { url: update_url.to_string() };
@@ -191,14 +190,6 @@ impl UsbUpdateChecker<'_> {
         }
     }
 
-    fn validate_url(&self, url: PkgUrl) -> Result<PkgUrl, CheckError> {
-        if url.package_hash().is_some() {
-            return Err(CheckError::InvalidUpdateUrl);
-        }
-
-        Ok(url)
-    }
-
     async fn get_system_version(&self) -> Result<SystemVersion, Error> {
         let string = io_util::file::read_in_namespace_to_string(self.build_info_path)
             .await
@@ -210,7 +201,10 @@ impl UsbUpdateChecker<'_> {
     /// Resolve the update package at "url" using the system resolver.
     /// Returns a wrapper around the update package and the input 'url' which is now pinned to the
     /// resolved UpdatePackage.
-    async fn open_update_package(&self, url: PkgUrl) -> Result<(UpdatePackage, PkgUrl), Error> {
+    async fn open_update_package(
+        &self,
+        url: UnpinnedAbsolutePackageUrl,
+    ) -> Result<(UpdatePackage, PinnedAbsolutePackageUrl), Error> {
         let resolver = connect_to_protocol::<PackageResolverMarker>()
             .context("Connecting to package resolver")?;
         self.open_update_package_at(url, resolver).await
@@ -220,9 +214,9 @@ impl UsbUpdateChecker<'_> {
     /// Returns a wrapper around the update package and a pinned PkgUrl.
     async fn open_update_package_at(
         &self,
-        url: PkgUrl,
+        url: UnpinnedAbsolutePackageUrl,
         resolver: PackageResolverProxy,
-    ) -> Result<(UpdatePackage, PkgUrl), Error> {
+    ) -> Result<(UpdatePackage, PinnedAbsolutePackageUrl), Error> {
         let (dir, remote) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
             .context("Creating directory proxy")?;
         resolver
@@ -237,10 +231,8 @@ impl UsbUpdateChecker<'_> {
                 .context("Opening meta in update package")?;
         let hash =
             io_util::file::read_to_string(&meta_proxy).await.context("Reading package hash")?;
-
         let hash = fuchsia_url::Hash::from_str(&hash).context("Parsing hash")?;
-        let url = PkgUrl::new_package(url.host().to_string(), url.path().to_string(), Some(hash))
-            .context("Creating pinned package URL")?;
+        let url = PinnedAbsolutePackageUrl::from_unpinned(url, hash);
 
         Ok((UpdatePackage::new(dir), url))
     }

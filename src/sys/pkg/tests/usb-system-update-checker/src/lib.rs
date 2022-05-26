@@ -14,7 +14,6 @@ use {
         server::{NestedEnvironment, ServiceFs},
     },
     fuchsia_pkg_testing::{PackageBuilder, RepositoryBuilder},
-    fuchsia_url::pkg_url::PkgUrl,
     futures::{lock::Mutex, prelude::*},
     isolated_swd::{
         resolver::for_tests::ResolverForTest, updater::for_tests::generate_packages_json,
@@ -113,13 +112,8 @@ impl MockInstaller {
                     reboot_controller,
                     responder,
                 } => {
-                    let package_url =
-                        PkgUrl::parse(&url.url).expect("Installer is passed a valid URL");
-                    assert!(
-                        package_url.package_hash().is_some(),
-                        "Package url {} should have a hash!",
-                        package_url
-                    );
+                    let _ = fuchsia_url::PinnedAbsolutePackageUrl::parse(&url.url)
+                        .expect("Installer is passed a valid URL");
                     assert_eq!(options.initiator, Some(Initiator::User));
                     assert_eq!(options.allow_attach_to_existing_attempt, Some(false));
                     assert_eq!(options.should_write_recovery, Some(true));
@@ -296,10 +290,13 @@ async fn test_pinned_url_fails() {
     let env = TestEnvBuilder::new().build().await;
 
     let proxy = env.connect();
-    // A valid hash is 64 bytes.
+    // A valid hash is 32 bytes.
     let hash = "d00dfeed".repeat(8);
-    let evil_url = PkgUrl::parse(&format!("fuchsia-pkg://fuchsia.com/update?hash={}", hash))
-        .expect("Parsing URL succeeds");
+    let evil_url = fuchsia_url::PinnedAbsolutePackageUrl::parse(&format!(
+        "fuchsia-pkg://fuchsia.com/update?hash={}",
+        hash
+    ))
+    .expect("Parsing URL succeeds");
     let result = proxy
         .check(&mut PackageUrl { url: evil_url.to_string() }, None, None)
         .await
