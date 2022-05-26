@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/forensics/feedback_data/attachment_manager.h"
+#include "src/developer/forensics/feedback_data/attachments/attachment_manager.h"
 
 #include <lib/fpromise/promise.h>
 #include <lib/syslog/cpp/macros.h>
@@ -32,38 +32,15 @@ void EraseNotAllowlisted(std::map<std::string, T>& c, const std::set<std::string
 
 }  // namespace
 
-AttachmentManager::AttachmentManager(async_dispatcher_t* dispatcher,
-                                     std::shared_ptr<sys::ServiceDirectory> services,
-                                     timekeeper::Clock* clock, cobalt::Logger* cobalt,
-                                     RedactorBase* redactor, const AttachmentKeys& allowlist,
+AttachmentManager::AttachmentManager(const std::set<std::string>& allowlist,
                                      Attachments static_attachments,
-                                     InspectDataBudget* inspect_data_budget)
-    : allowlist_(allowlist),
-      static_attachments_(std::move(static_attachments)),
-      attachment_metrics_(cobalt),
-      kernel_log_(dispatcher, services,
-                  std::make_unique<backoff::ExponentialBackoff>(zx::min(1), 2u, zx::hour(1)),
-                  redactor),
-      system_log_(dispatcher, services, clock, redactor, kActiveLoggingPeriod),
-      inspect_(dispatcher, services,
-               std::make_unique<backoff::ExponentialBackoff>(zx::min(1), 2u, zx::hour(1)),
-               inspect_data_budget),
-
-      providers_({
-          {kAttachmentLogKernel, &kernel_log_},
-          {kAttachmentLogSystem, &system_log_},
-          {kAttachmentInspect, &inspect_},
-      }) {
-  if (allowlist_.empty()) {
-    FX_LOGS(WARNING)
-        << "Attachment allowlist is empty, no platform attachments will be collected or returned";
-  }
-
+                                     std::map<std::string, AttachmentProvider*> providers)
+    : static_attachments_(std::move(static_attachments)), providers_(std::move(providers)) {
   // Remove any static attachments or providers that return attachments not in |allowlist_|.
   EraseNotAllowlisted(static_attachments_, allowlist);
   EraseNotAllowlisted(providers_, allowlist);
 
-  for (const auto& k : allowlist_) {
+  for (const auto& k : allowlist) {
     const auto num_providers = static_attachments_.count(k) + providers_.count(k);
 
     FX_CHECK(num_providers == 1) << "Attachment \"" << k << "\" collected by " << num_providers
@@ -84,7 +61,7 @@ AttachmentManager::AttachmentManager(async_dispatcher_t* dispatcher,
   using result_t = decltype(join)::value_type;
 
   // Start with the static attachments and the add the dynamically collected values to them.
-  return join.and_then([this, keys, attachments = static_attachments_](result_t& results) mutable {
+  return join.and_then([keys, attachments = static_attachments_](result_t& results) mutable {
     for (size_t i = 0; i < results.size(); ++i) {
       attachments.insert({keys[i], results[i].take_value()});
 
@@ -94,8 +71,6 @@ AttachmentManager::AttachmentManager(async_dispatcher_t* dispatcher,
         attachment = attachment.HasError() ? attachment.Error() : Error::kMissingValue;
       }
     }
-
-    attachment_metrics_.LogMetrics(attachments);
 
     return ::fpromise::ok(std::move(attachments));
   });

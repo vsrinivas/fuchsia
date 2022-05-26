@@ -17,7 +17,8 @@
 
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/developer/forensics/feedback/annotations/metrics.h"
-#include "src/developer/forensics/feedback_data/attachment_manager.h"
+#include "src/developer/forensics/feedback_data/attachments/attachment_manager.h"
+#include "src/developer/forensics/feedback_data/attachments/metrics.h"
 #include "src/developer/forensics/feedback_data/inspect_data_budget.h"
 #include "src/developer/forensics/feedback_data/metadata.h"
 #include "src/developer/forensics/utils/cobalt/logger.h"
@@ -76,6 +77,8 @@ class DataProvider : public fuchsia::feedback::DataProvider {
   feedback::AnnotationMetrics annotation_metrics_;
 
   AttachmentManager* attachment_manager_;
+  AttachmentMetrics attachment_metrics_;
+
   async::Executor executor_;
   InspectDataBudget* inspect_data_budget_;
 

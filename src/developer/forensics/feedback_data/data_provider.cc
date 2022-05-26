@@ -64,6 +64,7 @@ DataProvider::DataProvider(
       annotation_manager_(annotation_manager),
       annotation_metrics_(cobalt_),
       attachment_manager_(attachment_manager),
+      attachment_metrics_(cobalt_),
       executor_(dispatcher_),
       inspect_data_budget_(inspect_data_budget) {}
 
@@ -76,7 +77,10 @@ DataProvider::DataProvider(
 }
 
 ::fpromise::promise<Attachments> DataProvider::GetAttachments(const zx::duration timeout) {
-  return attachment_manager_->GetAttachments(timeout);
+  return attachment_manager_->GetAttachments(timeout).and_then([this](Attachments& attachments) {
+    attachment_metrics_.LogMetrics(attachments);
+    return ::fpromise::ok(std::move(attachments));
+  });
 }
 
 void DataProvider::GetAnnotations(fuchsia::feedback::GetAnnotationsParameters params,

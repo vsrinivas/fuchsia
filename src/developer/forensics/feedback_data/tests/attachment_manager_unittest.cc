@@ -2,15 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/forensics/feedback_data/attachment_manager.h"
+#include "src/developer/forensics/feedback_data/attachments/attachment_manager.h"
 
-#include <fuchsia/hwinfo/cpp/fidl.h>
-#include <fuchsia/intl/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
+#include <lib/async/cpp/task.h>
 #include <lib/fpromise/result.h>
-#include <lib/inspect/cpp/vmo/types.h>
 #include <lib/syslog/cpp/macros.h>
-#include <lib/syslog/logger.h>
 #include <lib/zx/time.h>
 
 #include <cstddef>
@@ -22,30 +19,15 @@
 #include <gtest/gtest.h>
 
 #include "src/developer/forensics/feedback_data/attachments/types.h"
-#include "src/developer/forensics/feedback_data/constants.h"
 #include "src/developer/forensics/testing/gmatchers.h"
 #include "src/developer/forensics/testing/gpretty_printers.h"
-#include "src/developer/forensics/testing/log_message.h"
-#include "src/developer/forensics/testing/stubs/channel_control.h"
-#include "src/developer/forensics/testing/stubs/cobalt_logger_factory.h"
-#include "src/developer/forensics/testing/stubs/diagnostics_archive.h"
-#include "src/developer/forensics/testing/stubs/diagnostics_batch_iterator.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
-#include "src/developer/forensics/utils/cobalt/logger.h"
-#include "src/developer/forensics/utils/cobalt/metrics.h"
-#include "src/developer/forensics/utils/time.h"
-#include "src/lib/files/directory.h"
-#include "src/lib/files/file.h"
-#include "src/lib/files/path.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/lib/timekeeper/async_test_clock.h"
-#include "src/lib/timekeeper/test_clock.h"
 
 namespace forensics {
 namespace feedback_data {
 namespace {
 
-using testing::BuildLogMessage;
 using ::testing::Contains;
 using ::testing::ElementsAreArray;
 using ::testing::Eq;
@@ -55,192 +37,109 @@ using ::testing::Not;
 using ::testing::Pair;
 using ::testing::UnorderedElementsAreArray;
 
-constexpr zx::duration kTimeout = zx::sec(30);
-
-class AttachmentManagerTest : public UnitTestFixture {
+class SimpleAttachmentProvider : public AttachmentProvider {
  public:
-  AttachmentManagerTest() : executor_(dispatcher()), clock_(dispatcher()) {}
+  SimpleAttachmentProvider(async_dispatcher_t* dispatcher, zx::duration delay, AttachmentValue data)
+      : dispatcher_(dispatcher), delay_(delay), data_(std::move(data)) {}
 
-  void SetUp() override {
-    SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
-    cobalt_ = std::make_unique<cobalt::Logger>(dispatcher(), services(), &clock_);
+  ::fpromise::promise<AttachmentValue> Get(zx::duration timeout) override {
+    ::fpromise::bridge<AttachmentValue> bridge;
 
-    inspect_node_manager_ = std::make_unique<InspectNodeManager>(&InspectRoot());
-    inspect_data_budget_ = std::make_unique<InspectDataBudget>(
-        "non-existent_path", inspect_node_manager_.get(), cobalt_.get());
-  }
+    async::PostDelayedTask(
+        dispatcher_,
+        [this, timeout, completer = std::move(bridge.completer)]() mutable {
+          if (delay_ <= timeout) {
+            completer.complete_ok(data_);
+          } else {
+            completer.complete_ok(AttachmentValue(Error::kTimeout));
+          }
+        },
+        (delay_ <= timeout) ? delay_ : timeout);
 
-  void TearDown() override { FX_CHECK(files::DeletePath(kCurrentLogsDir, /*recursive=*/true)); }
-
- protected:
-  void SetUpAttachmentManager(const AttachmentKeys& allowlist,
-                              const Attachments& static_attachments = {}) {
-    attachment_manager_ = std::make_unique<AttachmentManager>(
-        dispatcher(), services(), &clock_, cobalt_.get(), &redactor_, allowlist, static_attachments,
-        inspect_data_budget_.get());
-  }
-
-  void SetUpDiagnosticsServer(const std::string& inspect_chunk) {
-    diagnostics_server_ = std::make_unique<stubs::DiagnosticsArchive>(
-        std::make_unique<stubs::DiagnosticsBatchIterator>(std::vector<std::vector<std::string>>({
-            {inspect_chunk},
-            {},
-        })));
-    InjectServiceProvider(diagnostics_server_.get(), kArchiveAccessorName);
-  }
-
-  void SetUpLogServer(const std::string& inspect_chunk) {
-    diagnostics_server_ = std::make_unique<stubs::DiagnosticsArchive>(
-        std::make_unique<stubs::DiagnosticsBatchIteratorNeverRespondsAfterOneBatch>(
-            std::vector<std::string>({
-                {inspect_chunk},
-            })));
-    InjectServiceProvider(diagnostics_server_.get(), kArchiveAccessorName);
-  }
-
-  void SetUpDiagnosticsServer(std::unique_ptr<stubs::DiagnosticsArchiveBase> server) {
-    diagnostics_server_ = std::move(server);
-    if (diagnostics_server_) {
-      InjectServiceProvider(diagnostics_server_.get(), kArchiveAccessorName);
-    }
-  }
-
-  void WriteFile(const std::string& filepath, const std::string& content) {
-    FX_CHECK(files::WriteFile(filepath, content.c_str(), content.size()));
-  }
-
-  ::fpromise::result<Attachments> GetAttachments() {
-    FX_CHECK(attachment_manager_);
-
-    ::fpromise::result<Attachments> result;
-    executor_.schedule_task(attachment_manager_->GetAttachments(kTimeout).then(
-        [&result](::fpromise::result<Attachments>& res) { result = std::move(res); }));
-    RunLoopFor(kTimeout);
-    return result;
+    return bridge.consumer.promise_or(::fpromise::error());
   }
 
  private:
-  async::Executor executor_;
-  timekeeper::AsyncTestClock clock_;
-  std::unique_ptr<cobalt::Logger> cobalt_;
-  IdentityRedactor redactor_{inspect::BoolProperty()};
-
- protected:
-  std::unique_ptr<AttachmentManager> attachment_manager_;
-
- private:
-  std::unique_ptr<InspectNodeManager> inspect_node_manager_;
-  std::unique_ptr<InspectDataBudget> inspect_data_budget_;
-
-  // Stubs servers.
-  std::unique_ptr<stubs::DiagnosticsArchiveBase> diagnostics_server_;
+  async_dispatcher_t* dispatcher_;
+  zx::duration delay_;
+  AttachmentValue data_;
 };
 
-TEST_F(AttachmentManagerTest, GetAttachments_Static) {
-  SetUpAttachmentManager({"static"}, {{"static", AttachmentValue("value")}});
+using AttachmentManagerTest = UnitTestFixture;
 
-  ::fpromise::result<Attachments> attachments = GetAttachments();
-  ASSERT_TRUE(attachments.is_ok());
-  EXPECT_THAT(attachments.take_value(),
-              ElementsAreArray({Pair("static", AttachmentValue("value"))}));
+TEST_F(AttachmentManagerTest, Static) {
+  async::Executor executor(dispatcher());
+  AttachmentManager manager({"static"}, {{"static", AttachmentValue("value")}});
+
+  Attachments attachments;
+  executor.schedule_task(
+      manager.GetAttachments(zx::duration::infinite())
+          .and_then([&attachments](Attachments& result) { attachments = std::move(result); })
+          .or_else([] { FX_LOGS(FATAL) << "Unreachable branch"; }));
+
+  RunLoopUntilIdle();
+  EXPECT_THAT(attachments, ElementsAreArray({Pair("static", AttachmentValue("value"))}));
 }
 
-TEST_F(AttachmentManagerTest, GetAttachments_DropStatic) {
-  SetUpAttachmentManager({"static"}, {{"static", AttachmentValue("value")}});
+TEST_F(AttachmentManagerTest, DropStatic) {
+  async::Executor executor(dispatcher());
+  AttachmentManager manager({"static"}, {{"static", AttachmentValue("value")}});
 
-  attachment_manager_->DropStaticAttachment("static", Error::kConnectionError);
-  attachment_manager_->DropStaticAttachment("unused", Error::kConnectionError);
+  manager.DropStaticAttachment("static", Error::kConnectionError);
+  manager.DropStaticAttachment("unused", Error::kConnectionError);
 
-  ::fpromise::result<Attachments> attachments = GetAttachments();
-  ASSERT_TRUE(attachments.is_ok());
-  EXPECT_THAT(attachments.take_value(),
+  Attachments attachments;
+  executor.schedule_task(
+      manager.GetAttachments(zx::duration::infinite())
+          .and_then([&attachments](Attachments& result) { attachments = std::move(result); })
+          .or_else([] { FX_LOGS(FATAL) << "Unreachable branch"; }));
+
+  RunLoopUntilIdle();
+  EXPECT_THAT(attachments,
               ElementsAreArray({Pair("static", AttachmentValue(Error::kConnectionError))}));
 }
 
-TEST_F(AttachmentManagerTest, GetAttachments_Inspect) {
-  // CollectInspectData() has its own set of unit tests so we only cover one chunk of Inspect data
-  // here to check that we are attaching the Inspect data.
-  SetUpDiagnosticsServer("foo");
-  SetUpAttachmentManager({kAttachmentInspect});
+TEST_F(AttachmentManagerTest, Dynamic) {
+  async::Executor executor(dispatcher());
 
-  ::fpromise::result<Attachments> attachments = GetAttachments();
-  ASSERT_TRUE(attachments.is_ok());
-  EXPECT_THAT(attachments.take_value(),
-              ElementsAreArray({Pair(kAttachmentInspect, AttachmentValue("[\nfoo\n]"))}));
+  SimpleAttachmentProvider provider1(dispatcher(), zx::sec(1), AttachmentValue("value1"));
+  SimpleAttachmentProvider provider2(dispatcher(), zx::sec(3), AttachmentValue("value2"));
+
+  AttachmentManager manager({"dynamic1", "dynamic2"}, {},
+                            {
+                                {"dynamic1", &provider1},
+                                {"dynamic2", &provider2},
+                            });
+
+  Attachments attachments;
+  executor.schedule_task(
+      manager.GetAttachments(zx::sec(1))
+          .and_then([&attachments](Attachments& result) { attachments = std::move(result); })
+          .or_else([] { FX_LOGS(FATAL) << "Unreachable branch"; }));
+
+  RunLoopFor(zx::sec(1));
+  EXPECT_THAT(attachments, ElementsAreArray({
+                               Pair("dynamic1", AttachmentValue("value1")),
+                               Pair("dynamic2", AttachmentValue(Error::kTimeout)),
+                           }));
+
+  attachments.clear();
+
+  executor.schedule_task(
+      manager.GetAttachments(zx::duration::infinite())
+          .and_then([&attachments](Attachments& result) { attachments = std::move(result); })
+          .or_else([] { FX_LOGS(FATAL) << "Unreachable branch"; }));
+
+  RunLoopFor(zx::sec(3));
+  EXPECT_THAT(attachments, ElementsAreArray({
+                               Pair("dynamic1", AttachmentValue("value1")),
+                               Pair("dynamic2", AttachmentValue("value2")),
+                           }));
 }
 
-TEST_F(AttachmentManagerTest, GetAttachments_SysLog) {
-  // CollectSystemLogs() has its own set of unit tests so we only cover one log message here to
-  // check that we are attaching the logs.
-  SetUpLogServer(R"JSON(
-[
-  {
-    "metadata": {
-      "timestamp": 15604000000000,
-      "severity": "INFO",
-      "pid": 7559,
-      "tid": 7687,
-      "tags": ["foo"]
-    },
-    "payload": {
-      "root": {
-        "message": {
-          "value": "log message"
-        }
-      }
-    }
-  }
-]
-)JSON");
-  SetUpAttachmentManager({kAttachmentLogSystem});
-
-  ::fpromise::result<Attachments> attachments = GetAttachments();
-  ASSERT_TRUE(attachments.is_ok());
-  EXPECT_THAT(attachments.take_value(),
-              ElementsAreArray(
-                  {Pair(kAttachmentLogSystem,
-                        AttachmentValue("[15604.000][07559][07687][foo] INFO: log message\n"))}));
-}
-
-TEST_F(AttachmentManagerTest, GetAttachments_FailOn_EmptyAttachmentAllowlist) {
-  SetUpAttachmentManager({});
-
-  ::fpromise::result<Attachments> attachments = GetAttachments();
-  ASSERT_FALSE(attachments.is_error());
-
-  EXPECT_THAT(attachments.value(), IsEmpty());
-}
-
-TEST_F(AttachmentManagerTest, GetAttachments_FailOn_OnlyUnknownAttachmentInAllowlist) {
-  ASSERT_DEATH({ SetUpAttachmentManager({"unknown.attachment"}); },
+TEST_F(AttachmentManagerTest, NoProvider) {
+  ASSERT_DEATH({ AttachmentManager manager({"unknown.attachment"}); },
                HasSubstr("Attachment \"unknown.attachment\" collected by 0 providers"));
-}
-
-TEST_F(AttachmentManagerTest, GetAttachments_CobaltLogsTimeouts) {
-  // The timeout of the kernel log collection cannot be tested due to the fact that
-  // fuchsia::boot::ReadOnlyLog cannot be stubbed and we have no mechanism to set the timeout of
-  // the kernel log collection to 0 seconds.
-  //
-  // Inspect and system log share the same stub server so we only test one of the two (i.e.
-  // Inspect).
-  SetUpAttachmentManager({
-      kAttachmentInspect,
-  });
-
-  SetUpDiagnosticsServer(std::make_unique<stubs::DiagnosticsArchive>(
-      std::make_unique<stubs::DiagnosticsBatchIteratorNeverResponds>()));
-
-  ::fpromise::result<Attachments> attachments = GetAttachments();
-
-  ASSERT_TRUE(attachments.is_ok());
-  EXPECT_THAT(attachments.take_value(),
-              ElementsAreArray({
-                  Pair(kAttachmentInspect, AttachmentValue(Error::kTimeout)),
-              }));
-
-  EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
-                                          cobalt::Event(cobalt::TimedOutData::kInspect),
-                                      }));
 }
 
 }  // namespace

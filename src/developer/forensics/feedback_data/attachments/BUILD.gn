@@ -7,6 +7,8 @@
 ###############################################################################
 source_set("attachments") {
   sources = [
+    "attachment_manager.cc",
+    "attachment_manager.h",
     "metrics.cc",
     "metrics.h",
     "provider.h",
@@ -16,9 +18,16 @@ source_set("attachments") {
   ]
 
   public_deps = [
+    "//sdk/lib/fit-promise",
+    "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
+    "//src/developer/forensics/feedback:redactor_factory",
+    "//src/developer/forensics/feedback_data:inspect_budget",
     "//src/developer/forensics/utils:errors",
     "//src/developer/forensics/utils/cobalt",
+    "//src/developer/forensics/utils/redact",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/zx",
   ]
 
   deps = [

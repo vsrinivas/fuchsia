@@ -9,29 +9,23 @@ visibility = [ "//src/developer/forensics/*" ]
 ###############################################################################
 # SOURCES
 ###############################################################################
-source_set("attachment_manager") {
+source_set("attachment_providers") {
   sources = [
-    "attachment_manager.cc",
-    "attachment_manager.h",
+    "attachment_providers.cc",
+    "attachment_providers.h",
   ]
 
   public_deps = [
+    ":constants",
     ":inspect_budget",
-    "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
-    "//src/developer/forensics/feedback:redactor_factory",
     "//src/developer/forensics/feedback_data/attachments",
     "//src/developer/forensics/feedback_data/attachments:inspect",
     "//src/developer/forensics/feedback_data/attachments:kernel_log",
     "//src/developer/forensics/feedback_data/attachments:system_log",
     "//src/developer/forensics/utils/redact",
-    "//zircon/system/ulib/async:async-cpp",
-    "//zircon/system/ulib/zx",
-  ]
-
-  deps = [
-    ":constants",
-    "//sdk/lib/syslog/cpp",
+    "//src/lib/backoff",
+    "//src/lib/timekeeper",
   ]
 }
 
@@ -91,7 +85,6 @@ source_set("data_provider") {
   ]
 
   deps = [
-    ":attachment_manager",
     ":constants",
     "//sdk/fidl/fuchsia.images",
     "//sdk/fidl/fuchsia.mem",

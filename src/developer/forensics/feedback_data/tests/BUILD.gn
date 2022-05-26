@@ -19,7 +19,6 @@ executable("attachment_manager_unittest_exe") {
     "//sdk/fidl/fuchsia.hwinfo",
     "//sdk/fidl/fuchsia.intl",
     "//sdk/lib/fit-promise",
-    "//src/developer/forensics/feedback_data:attachment_manager",
     "//src/developer/forensics/feedback_data:constants",
     "//src/developer/forensics/feedback_data/attachments",
     "//src/developer/forensics/testing:gmatchers",
