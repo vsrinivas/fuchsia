@@ -10,7 +10,6 @@ use account_common::AccountId;
 use fidl::endpoints::Proxy;
 use fidl_fuchsia_identity_account::{
     AccountAuthState, AccountListenerOptions, AccountListenerProxy, AuthState, AuthStateSummary,
-    Engagement, Presence,
 };
 use fuchsia_inspect::{Node, NumericProperty, Property};
 use futures::future::*;
@@ -21,11 +20,8 @@ use crate::inspect;
 
 // TODO(jsankey): Add a mechanism to publicize auth state changes rather than this fixed minimum
 // possible value.
-pub const MINIMUM_AUTH_STATE: AuthState = AuthState {
-    summary: AuthStateSummary::Locked,
-    presence: Presence::Absent,
-    engagement: Engagement::Disengaged,
-};
+pub const MINIMUM_AUTH_STATE: AuthState =
+    AuthState { summary: Some(AuthStateSummary::StorageLocked), ..AuthState::EMPTY };
 
 /// Events emitted on account listeners
 pub enum AccountEvent {
@@ -149,7 +145,9 @@ impl AccountEventEmitter {
 mod tests {
     use super::*;
     use fidl::endpoints::*;
-    use fidl_fuchsia_identity_account::{AccountListenerMarker, AccountListenerRequest};
+    use fidl_fuchsia_identity_account::{
+        AccountListenerMarker, AccountListenerRequest, AuthChangeGranularity,
+    };
     use fuchsia_inspect::{assert_data_tree, Inspector};
     use futures::prelude::*;
     use lazy_static::lazy_static;
@@ -170,7 +168,7 @@ mod tests {
             initial_state: true,
             add_account: true,
             remove_account: true,
-            granularity: None,
+            granularity: AuthChangeGranularity::EMPTY,
         };
         let (listener, _) = create_proxy::<AccountListenerMarker>().unwrap();
         let client = Client::new(listener, options);
@@ -184,7 +182,7 @@ mod tests {
             initial_state: false,
             add_account: false,
             remove_account: false,
-            granularity: None,
+            granularity: AuthChangeGranularity::EMPTY,
         };
         let (proxy, _) = create_proxy::<AccountListenerMarker>().unwrap();
         let client = Client::new(proxy, options);
@@ -198,7 +196,7 @@ mod tests {
             initial_state: true,
             add_account: false,
             remove_account: true,
-            granularity: None,
+            granularity: AuthChangeGranularity::EMPTY,
         };
         let (proxy, _) = create_proxy::<AccountListenerMarker>().unwrap();
         let client = Client::new(proxy, options);
@@ -212,7 +210,7 @@ mod tests {
             initial_state: false,
             add_account: true,
             remove_account: false,
-            granularity: None,
+            granularity: AuthChangeGranularity::EMPTY,
         };
         let (client_end, mut stream) = create_request_stream::<AccountListenerMarker>().unwrap();
         let client = Client::new(client_end.into_proxy().unwrap(), options);
@@ -247,13 +245,13 @@ mod tests {
             initial_state: false,
             add_account: true,
             remove_account: false,
-            granularity: None,
+            granularity: AuthChangeGranularity::EMPTY,
         };
         let options_2 = AccountListenerOptions {
             initial_state: true,
             add_account: false,
             remove_account: true,
-            granularity: None,
+            granularity: AuthChangeGranularity::EMPTY,
         };
         let (client_end_1, mut stream_1) =
             create_request_stream::<AccountListenerMarker>().unwrap();
@@ -347,7 +345,7 @@ mod tests {
             initial_state: false,
             add_account: true,
             remove_account: true,
-            granularity: None,
+            granularity: AuthChangeGranularity::EMPTY,
         };
         let (client_end, mut stream) = create_request_stream::<AccountListenerMarker>().unwrap();
         let listener = client_end.into_proxy().unwrap();

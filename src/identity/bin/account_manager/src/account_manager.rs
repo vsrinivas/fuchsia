@@ -172,7 +172,7 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
         listener: ClientEnd<AccountListenerMarker>,
         options: AccountListenerOptions,
     ) -> Result<(), ApiError> {
-        if let Some(_) = &options.granularity {
+        if let Some(true) = options.granularity.summary_changes {
             return Err(ApiError::InvalidRequest);
         };
         let account_ids = self.account_map.lock().await.get_account_ids();
@@ -307,9 +307,8 @@ mod tests {
         static ref AUTH_MECHANISM_IDS: Vec<String> = vec![];
 
         static ref TEST_GRANULARITY: AuthChangeGranularity = AuthChangeGranularity {
-            engagement_changes: true,
-            presence_changes: false,
-            summary_changes: true,
+            summary_changes: Some(true),
+            ..AuthChangeGranularity::EMPTY
         };
     }
 
@@ -453,7 +452,7 @@ mod tests {
             initial_state: true,
             add_account: true,
             remove_account: true,
-            granularity: None,
+            granularity: AuthChangeGranularity::EMPTY,
         };
 
         let data_dir = TempDir::new().unwrap();
@@ -516,7 +515,7 @@ mod tests {
             initial_state: true,
             add_account: true,
             remove_account: true,
-            granularity: Some(Box::new(TEST_GRANULARITY.clone())),
+            granularity: TEST_GRANULARITY.clone(),
         };
 
         let data_dir = TempDir::new().unwrap();

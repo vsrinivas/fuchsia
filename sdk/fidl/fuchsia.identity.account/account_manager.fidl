@@ -173,9 +173,9 @@ type AccountListenerOptions = struct {
     remove_account bool;
     /// An `AuthChangeGranularity` expressing the magnitude of change in
     /// authentication state that will lead to AuthStateChange events.
-    /// If granularity is not populated AuthStateChange events will not be
-    /// sent. May only be populated if a scenario is provided.
-    granularity box<AuthChangeGranularity>;
+    /// If no granularity fields are populated AuthStateChange events will not
+    /// be sent.
+    granularity AuthChangeGranularity;
 };
 
 /// A protocol to receive events when the set of accounts on a device or the

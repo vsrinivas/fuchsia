@@ -3,89 +3,47 @@
 // found in the LICENSE file.
 library fuchsia.identity.account;
 
-/// An assessment of whether the account owner is present.
-type Presence = strict enum {
-    /// The account itself is locked and inaccessible.
-    LOCKED = 1;
+/// A high level assessment of the degree to which the account owner is
+/// authenticated and consequently which resources are available for the
+/// account. The detailed definitions of these states and the transistions
+/// between them depend on product-specific policy. Some states may not apply
+/// for some products.
+type AuthStateSummary = flexible enum {
+    /// All encrypted storage for the account is locked. No account resources
+    /// will be available until after authentication using a storage unlock
+    /// authentication mechanism.
+    STORAGE_LOCKED = 1;
 
-    /// The account owner is marked as absent.
-    ABSENT = 2;
+    /// Some encrypted storage for the account is unlocked but local interaction
+    /// with the account will not allowed until after authentication. Some
+    /// account resources may be available in this state.
+    INTERACTION_LOCKED = 2;
 
-    /// No information (either affirming or dissenting) is available about the
-    /// current presence of the account owner.
-    PRESENCE_UNKNOWN = 3;
+    /// All encrypted storage for the account is unlocked. Local interaction
+    /// is allowed.
+    UNLOCKED = 3;
 
-    /// The account owner is marked as present.
-    PRESENT = 4;
-};
-
-/// An assessment of whether the account owner is engaged.
-type Engagement = strict enum {
-    /// The account itself is locked and inaccessible.
-    LOCKED = 1;
-
-    /// The account owner is marked as disengaged.
-    DISENGAGED = 2;
-
-    /// No information (either affirming or dissenting) is available about the
-    /// current engagement of the account owner.
-    ENGAGEMENT_UNKNOWN = 3;
-
-    /// The account owner is marked as engaged.
-    ENGAGED = 4;
-};
-
-/// A high level assessment of whether the account owner is present and engaged.
-type AuthStateSummary = strict enum {
-
-    /// The account itself is locked and inaccessible.
-    LOCKED = 1;
-
-    /// The account owner is probably physically close to the device but cannot
-    /// be said to be either actively using the device or be physically close
-    /// it.
-    NOT_KNOWN_TO_BE_PRESENT_OR_ENGAGED = 2;
-
-    /// The account owner is probably physically close to the device but cannot
-    /// be said to be actively using it.
-    PRESENT_WITHOUT_KNOWN_ENGAGEMENT = 3;
-
-    /// The account owner is probably actively using the device.
-    ENGAGED = 4;
+    /// All encrypted storage for the account is unlocked. Local interaction
+    /// is allowed, and the account owner has recently been authenticated.
+    RECENTLY_AUTHENTICATED = 4;
 };
 
 /// An assessment of the current presence and engagement of an account owner,
 /// under the provided scenario, including the system's confidence in that
 /// assessment and its timeliness.
-@max_handles("0")
-type AuthState = struct {
-    /// A high level assessment of whether the account owner is present and
-    /// engaged.
-    summary AuthStateSummary;
-
-    /// An assessment of whether the account owner is present.
-    presence Presence;
-
-    /// An assessment of whether the account owner is engaged.
-    engagement Engagement;
+type AuthState = table {
+    /// A high level assessment of the degree to which the account owner is
+    /// authenticated.
+    1: summary AuthStateSummary;
 
     // TODO(jsankey): Add additional fields to express timeliness and
-    // confidence.
+    // confidence. Potentially re-add presence and/or engagement.
 };
 
 /// An expression of the types of changes to an auth state that should be
 /// reported over listener interfaces. By default no changes will be reported.
-@max_handles("0")
-type AuthChangeGranularity = struct {
+type AuthChangeGranularity = table {
     /// If true, any changes in the `AuthStateSummary` enumeration will be
     /// reported.
-    summary_changes bool;
-
-    /// If true, any changes in the `AuthState.presence` enumeration will
-    /// be reported.
-    presence_changes bool;
-
-    /// If true, any changes in the `AuthState.engagement` enumeration will
-    /// be reported.
-    engagement_changes bool;
+    1: summary_changes bool;
 };

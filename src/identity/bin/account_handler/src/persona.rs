@@ -223,10 +223,9 @@ mod tests {
                         .register_auth_listener(
                             auth_listener_client_end,
                             true, /* include initial state */
-                            &mut AuthChangeGranularity {
-                                presence_changes: false,
-                                engagement_changes: false,
-                                summary_changes: true,
+                            AuthChangeGranularity {
+                                summary_changes: Some(true),
+                                ..AuthChangeGranularity::EMPTY
                             }
                         )
                         .await?,
