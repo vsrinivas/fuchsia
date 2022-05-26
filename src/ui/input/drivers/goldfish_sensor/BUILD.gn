@@ -57,10 +57,6 @@ fuchsia_driver("sensor_fuchsia_driver") {
   ]
 
   deps = common_deps
-
-  # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
-  # rather than builders.
-  configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
 }
 
 fuchsia_driver_component("sensor_driver") {
@@ -105,10 +101,6 @@ test("goldfish-sensor-unittest") {
          ]
 
   configs += [ "//build/config:all_source" ]
-
-  # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
-  # rather than builders.
-  configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
 }
 
 fuzzer("goldfish-sensor-parser-fuzzer") {

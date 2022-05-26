@@ -52,23 +52,24 @@ enum class Gt6853Device::DeviceCommand : uint8_t {
   kDeviceIdle = 0xff,
 };
 
-void Gt6853InputReport::ToFidlInputReport(fuchsia_input_report::wire::InputReport& input_report,
-                                          fidl::AnyArena& allocator) {
+void Gt6853InputReport::ToFidlInputReport(
+    fidl::WireTableBuilder<fuchsia_input_report::wire::InputReport>& input_report,
+    fidl::AnyArena& allocator) {
   fidl::VectorView<fuchsia_input_report::wire::ContactInputReport> input_contacts(allocator,
                                                                                   num_contacts);
   for (size_t i = 0; i < num_contacts; i++) {
-    fuchsia_input_report::wire::ContactInputReport contact(allocator);
-    contact.set_contact_id(contacts[i].contact_id);
-    contact.set_position_x(allocator, contacts[i].position_x);
-    contact.set_position_y(allocator, contacts[i].position_y);
-    input_contacts[i] = contact;
+    auto contact = fuchsia_input_report::wire::ContactInputReport::Builder(allocator);
+    contact.contact_id(contacts[i].contact_id);
+    contact.position_x(contacts[i].position_x);
+    contact.position_y(contacts[i].position_y);
+    input_contacts[i] = contact.Build();
   }
 
-  fuchsia_input_report::wire::TouchInputReport touch_report(allocator);
-  touch_report.set_contacts(allocator, input_contacts);
+  auto touch_report = fuchsia_input_report::wire::TouchInputReport::Builder(allocator);
+  touch_report.contacts(input_contacts);
 
-  input_report.set_event_time(allocator, event_time.get());
-  input_report.set_touch(allocator, touch_report);
+  input_report.event_time(event_time.get());
+  input_report.touch(touch_report.Build());
 }
 
 zx::status<Gt6853Device*> Gt6853Device::CreateAndGetDevice(void* ctx, zx_device_t* parent) {
@@ -153,24 +154,26 @@ void Gt6853Device::GetDescriptor(GetDescriptorRequestView request,
   fidl::VectorView<fuchsia_input_report::wire::ContactInputDescriptor> touch_input_contacts(
       allocator, kMaxContacts);
   for (uint32_t i = 0; i < kMaxContacts; i++) {
-    touch_input_contacts[i].Allocate(allocator);
-    touch_input_contacts[i].set_position_x(allocator, kAxisX);
-    touch_input_contacts[i].set_position_y(allocator, kAxisY);
+    touch_input_contacts[i] = fuchsia_input_report::wire::ContactInputDescriptor::Builder(allocator)
+                                  .position_x(kAxisX)
+                                  .position_y(kAxisY)
+                                  .Build();
   }
 
-  fuchsia_input_report::wire::TouchInputDescriptor touch_input_descriptor(allocator);
-  touch_input_descriptor.set_contacts(allocator, touch_input_contacts);
-  touch_input_descriptor.set_max_contacts(kMaxContacts);
-  touch_input_descriptor.set_touch_type(fuchsia_input_report::wire::TouchType::kTouchscreen);
+  auto touch_input_descriptor =
+      fuchsia_input_report::wire::TouchInputDescriptor::Builder(allocator);
+  touch_input_descriptor.contacts(touch_input_contacts);
+  touch_input_descriptor.max_contacts(kMaxContacts);
+  touch_input_descriptor.touch_type(fuchsia_input_report::wire::TouchType::kTouchscreen);
 
-  fuchsia_input_report::wire::TouchDescriptor touch_descriptor(allocator);
-  touch_descriptor.set_input(allocator, touch_input_descriptor);
+  auto touch_descriptor = fuchsia_input_report::wire::TouchDescriptor::Builder(allocator);
+  touch_descriptor.input(touch_input_descriptor.Build());
 
-  fuchsia_input_report::wire::DeviceDescriptor descriptor(allocator);
-  descriptor.set_device_info(allocator, device_info);
-  descriptor.set_touch(allocator, touch_descriptor);
+  auto descriptor = fuchsia_input_report::wire::DeviceDescriptor::Builder(allocator);
+  descriptor.device_info(device_info);
+  descriptor.touch(touch_descriptor.Build());
 
-  completer.Reply(descriptor);
+  completer.Reply(descriptor.Build());
 }
 
 void Gt6853Device::SendOutputReport(SendOutputReportRequestView request,

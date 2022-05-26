@@ -54,10 +54,6 @@ fuchsia_driver("pc-ps2-driver") {
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
-
-  # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
-  # rather than builders.
-  configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
 }
 
 fuchsia_driver_component("pc-ps2") {
@@ -85,10 +81,6 @@ test("pc-ps2-tests-bin") {
 
   # TODO(fxbug.dev/99745): remove this
   defines = [ "PS2_TEST" ]
-
-  # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
-  # rather than builders.
-  configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
 }
 
 fuchsia_unittest_package("pc-ps2-tests") {

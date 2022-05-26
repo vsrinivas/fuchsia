@@ -47,8 +47,9 @@ struct PS2InputReport {
   fuchsia_hardware_input::BootProtocol type;
   std::variant<PS2KbdInputReport, PS2MouseInputReport> report;
 
-  void ToFidlInputReport(fuchsia_input_report::wire::InputReport& input_report,
-                         fidl::AnyArena& allocator);
+  void ToFidlInputReport(
+      fidl::WireTableBuilder<::fuchsia_input_report::wire::InputReport>& input_report,
+      fidl::AnyArena& allocator);
   void Reset() {
     event_time = {};
     type = fuchsia_hardware_input::BootProtocol::kNone;

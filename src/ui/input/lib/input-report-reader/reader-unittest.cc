@@ -12,13 +12,14 @@
 struct MouseReport {
   int64_t movement_x;
   int64_t movement_y;
-  void ToFidlInputReport(fuchsia_input_report::wire::InputReport& input_report,
-                         fidl::AnyArena& allocator) {
-    fuchsia_input_report::wire::MouseInputReport mouse(allocator);
-    mouse.set_movement_x(allocator, this->movement_x);
-    mouse.set_movement_y(allocator, this->movement_y);
+  void ToFidlInputReport(
+      fidl::WireTableBuilder<::fuchsia_input_report::wire::InputReport>& input_report,
+      fidl::AnyArena& allocator) {
+    auto mouse = fuchsia_input_report::wire::MouseInputReport::Builder(allocator);
+    mouse.movement_x(this->movement_x);
+    mouse.movement_y(this->movement_y);
 
-    input_report.set_mouse(allocator, std::move(mouse));
+    input_report.mouse(mouse.Build());
   }
 };
 
@@ -82,7 +83,7 @@ void MouseDevice::GetDescriptor(GetDescriptorRequestView request,
                                 GetDescriptorCompleter::Sync& completer) {
   fidl::Arena allocator;
 
-  completer.Reply(fuchsia_input_report::wire::DeviceDescriptor(allocator));
+  completer.Reply(fuchsia_input_report::wire::DeviceDescriptor::Builder(allocator).Build());
 }
 
 void MouseDevice::SendOutputReport(SendOutputReportRequestView request,

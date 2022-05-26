@@ -61,8 +61,9 @@ __UNUSED constexpr PortInfo kPortInfo[2] = {
 
 }  // namespace
 
-void PS2InputReport::ToFidlInputReport(fuchsia_input_report::wire::InputReport& input_report,
-                                       fidl::AnyArena& allocator) {
+void PS2InputReport::ToFidlInputReport(
+    fidl::WireTableBuilder<::fuchsia_input_report::wire::InputReport>& input_report,
+    fidl::AnyArena& allocator) {
   if (type == fuchsia_hardware_input::BootProtocol::kKbd) {
     ZX_ASSERT(std::holds_alternative<PS2KbdInputReport>(report));
     auto kbd = std::get<PS2KbdInputReport>(report);
@@ -72,10 +73,10 @@ void PS2InputReport::ToFidlInputReport(fuchsia_input_report::wire::InputReport& 
       keys3[idx++] = key;
     }
 
-    auto kbd_input_rpt = fuchsia_input_report::wire::KeyboardInputReport(allocator);
-    kbd_input_rpt.set_pressed_keys3(allocator, keys3);
+    auto kbd_input_rpt = fuchsia_input_report::wire::KeyboardInputReport::Builder(allocator);
+    kbd_input_rpt.pressed_keys3(keys3);
 
-    input_report.set_keyboard(allocator, kbd_input_rpt);
+    input_report.keyboard(kbd_input_rpt.Build());
   } else if (type == fuchsia_hardware_input::BootProtocol::kMouse) {
     ZX_ASSERT(std::holds_alternative<PS2MouseInputReport>(report));
     auto mouse = std::get<PS2MouseInputReport>(report);
@@ -91,15 +92,15 @@ void PS2InputReport::ToFidlInputReport(fuchsia_input_report::wire::InputReport& 
       buttons[idx++] = button;
     }
 
-    auto mouse_input_rpt = fuchsia_input_report::wire::MouseInputReport(allocator);
-    mouse_input_rpt.set_pressed_buttons(allocator, buttons);
-    mouse_input_rpt.set_movement_x(allocator, mouse.rel_x);
-    mouse_input_rpt.set_movement_y(allocator, mouse.rel_y);
+    auto mouse_input_rpt = fuchsia_input_report::wire::MouseInputReport::Builder(allocator);
+    mouse_input_rpt.pressed_buttons(buttons);
+    mouse_input_rpt.movement_x(mouse.rel_x);
+    mouse_input_rpt.movement_y(mouse.rel_y);
 
-    input_report.set_mouse(allocator, mouse_input_rpt);
+    input_report.mouse(mouse_input_rpt.Build());
   }
 
-  input_report.set_event_time(allocator, event_time.get());
+  input_report.event_time(event_time.get());
 }
 
 zx_status_t I8042Device::Bind(Controller* parent, Port port) {
@@ -242,7 +243,7 @@ void I8042Device::GetInputReportsReader(GetInputReportsReaderRequestView request
 void I8042Device::GetDescriptor(GetDescriptorRequestView request,
                                 GetDescriptorCompleter::Sync& completer) {
   fidl::Arena allocator;
-  auto descriptor = fuchsia_input_report::wire::DeviceDescriptor(allocator);
+  auto descriptor = fuchsia_input_report::wire::DeviceDescriptor::Builder(allocator);
 
   fuchsia_input_report::wire::DeviceInfo device_info;
   device_info.vendor_id = static_cast<uint32_t>(fuchsia_input_report::wire::VendorId::kGoogle);
@@ -281,8 +282,8 @@ void I8042Device::GetDescriptor(GetDescriptorRequestView request,
       fidl_keys3[idx++] = key;
     }
 
-    auto kbd_in_desc = fuchsia_input_report::wire::KeyboardInputDescriptor(allocator);
-    kbd_in_desc.set_keys3(allocator, fidl_keys3);
+    auto kbd_in_desc = fuchsia_input_report::wire::KeyboardInputDescriptor::Builder(allocator);
+    kbd_in_desc.keys3(fidl_keys3);
 
     fidl::VectorView<fuchsia_input_report::wire::LedType> leds(allocator, 5);
     leds[0] = fuchsia_input_report::wire::LedType::kNumLock;
@@ -290,13 +291,13 @@ void I8042Device::GetDescriptor(GetDescriptorRequestView request,
     leds[2] = fuchsia_input_report::wire::LedType::kScrollLock;
     leds[3] = fuchsia_input_report::wire::LedType::kCompose;
     leds[4] = fuchsia_input_report::wire::LedType::kKana;
-    auto kbd_out_desc = fuchsia_input_report::wire::KeyboardOutputDescriptor(allocator);
-    kbd_out_desc.set_leds(allocator, leds);
+    auto kbd_out_desc = fuchsia_input_report::wire::KeyboardOutputDescriptor::Builder(allocator);
+    kbd_out_desc.leds(leds);
 
-    auto kbd_descriptor = fuchsia_input_report::wire::KeyboardDescriptor(allocator);
-    kbd_descriptor.set_input(allocator, kbd_in_desc);
-    kbd_descriptor.set_output(allocator, kbd_out_desc);
-    descriptor.set_keyboard(allocator, kbd_descriptor);
+    auto kbd_descriptor = fuchsia_input_report::wire::KeyboardDescriptor::Builder(allocator);
+    kbd_descriptor.input(kbd_in_desc.Build());
+    kbd_descriptor.output(kbd_out_desc.Build());
+    descriptor.keyboard(kbd_descriptor.Build());
   } else if (protocol_ == fuchsia_hardware_input::BootProtocol::kMouse) {
     device_info.product_id =
         static_cast<uint32_t>(fuchsia_input_report::wire::VendorGoogleProductId::kPcPs2Mouse);
@@ -314,18 +315,18 @@ void I8042Device::GetDescriptor(GetDescriptorRequestView request,
         .unit = {.type = fuchsia_input_report::wire::UnitType::kNone, .exponent = 0},
     };
 
-    auto mouse_in_desc = fuchsia_input_report::wire::MouseInputDescriptor(allocator);
-    mouse_in_desc.set_buttons(allocator, buttons);
-    mouse_in_desc.set_movement_x(allocator, movement_x);
-    mouse_in_desc.set_movement_y(allocator, movement_y);
+    auto mouse_in_desc = fuchsia_input_report::wire::MouseInputDescriptor::Builder(allocator);
+    mouse_in_desc.buttons(buttons);
+    mouse_in_desc.movement_x(movement_x);
+    mouse_in_desc.movement_y(movement_y);
 
-    auto mouse_descriptor = fuchsia_input_report::wire::MouseDescriptor(allocator);
-    mouse_descriptor.set_input(allocator, mouse_in_desc);
-    descriptor.set_mouse(allocator, mouse_descriptor);
+    auto mouse_descriptor = fuchsia_input_report::wire::MouseDescriptor::Builder(allocator);
+    mouse_descriptor.input(mouse_in_desc.Build());
+    descriptor.mouse(mouse_descriptor.Build());
   }
-  descriptor.set_device_info(allocator, device_info);
+  descriptor.device_info(device_info);
 
-  completer.Reply(descriptor);
+  completer.Reply(descriptor.Build());
 }
 
 void I8042Device::IrqThread() {

@@ -191,16 +191,19 @@ class Tcs3400Test : public zxtest::Test {
     fidl::VectorView<int64_t> threshold_low(allocator, 1);
     threshold_low[0] = report.threshold_low;
 
-    const auto set_sensor_report = fuchsia_input_report::wire::SensorFeatureReport(allocator)
-                                       .set_report_interval(allocator, report.report_interval_us)
-                                       .set_reporting_state(report.reporting_state)
-                                       .set_sensitivity(allocator, sensitivity)
-                                       .set_threshold_high(allocator, threshold_high)
-                                       .set_threshold_low(allocator, threshold_low)
-                                       .set_sampling_rate(allocator, report.integration_time_us);
+    const auto set_sensor_report =
+        fuchsia_input_report::wire::SensorFeatureReport::Builder(allocator)
+            .report_interval(report.report_interval_us)
+            .reporting_state(report.reporting_state)
+            .sensitivity(sensitivity)
+            .threshold_high(threshold_high)
+            .threshold_low(threshold_low)
+            .sampling_rate(report.integration_time_us)
+            .Build();
 
-    const auto set_report = fuchsia_input_report::wire::FeatureReport(allocator).set_sensor(
-        allocator, set_sensor_report);
+    const auto set_report = fuchsia_input_report::wire::FeatureReport::Builder(allocator)
+                                .sensor(set_sensor_report)
+                                .Build();
 
     return client->SetFeatureReport(set_report);
   }
@@ -796,14 +799,16 @@ TEST_F(Tcs3400Test, SetInvalidFeatureReport) {
   threshold_high[0] = 0;
 
   const auto set_sensor_report =
-      fuchsia_input_report::wire::SensorFeatureReport(allocator)
-          .set_report_interval(allocator, report.report_interval_us)
-          .set_reporting_state(fuchsia_input_report::wire::SensorReportingState::kReportAllEvents)
-          .set_sensitivity(allocator, sensitivity)
-          .set_threshold_high(allocator, threshold_high);
+      fuchsia_input_report::wire::SensorFeatureReport::Builder(allocator)
+          .report_interval(report.report_interval_us)
+          .reporting_state(fuchsia_input_report::wire::SensorReportingState::kReportAllEvents)
+          .sensitivity(sensitivity)
+          .threshold_high(threshold_high)
+          .Build();
 
-  const auto set_report =
-      fuchsia_input_report::wire::FeatureReport(allocator).set_sensor(allocator, set_sensor_report);
+  const auto set_report = fuchsia_input_report::wire::FeatureReport::Builder(allocator)
+                              .sensor(set_sensor_report)
+                              .Build();
 
   {
     const auto response = client->SetFeatureReport(set_report);

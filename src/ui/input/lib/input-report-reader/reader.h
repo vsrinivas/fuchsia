@@ -39,7 +39,8 @@ class InputReportReader;
 //   struct TouchScreenReport {
 //      int64_t x;
 //      int64_t y;
-//      void ToFidlInputReport(fuchsia_input_report::wire::InputReport& input_report,
+//      void ToFidlInputReport(fidl::WireTableBuilder<::fuchsia_input_report::wire::InputReport>&
+//      input_report,
 //                             fidl::AnyArena& allocator);
 //   };
 //
@@ -49,15 +50,17 @@ template <class Report>
 class InputReportReaderManager {
  public:
   // Assert that our template type `Report` has the following function:
-  //      void ToFidlInputReport(fuchsia_input_report::wire::InputReport& input_report,
+  //      void ToFidlInputReport(fidl::WireTableBuilder<::fuchsia_input_report::wire::InputReport>&
+  //      input_report,
   //                             fidl::AnyArena& allocator);
   DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(
       has_to_fidl_input_report, ToFidlInputReport,
-      void (C::*)(fuchsia_input_report::wire::InputReport& input_report,
+      void (C::*)(fidl::WireTableBuilder<::fuchsia_input_report::wire::InputReport>& input_report,
                   fidl::AnyArena& allocator));
   static_assert(
       has_to_fidl_input_report<Report>::value,
-      "Report must implement void ToFidlInputReport(fuchsia_input_report::wire::InputReport& "
+      "Report must implement void "
+      "ToFidlInputReport(fidl::WireTableBuilder<::fuchsia_input_report::wire::InputReport>& "
       "input_report, fidl::AnyArena& allocator);");
 
   // This class can't be moved because the InputReportReaders are pointing to the main class.
@@ -198,18 +201,15 @@ void InputReportReader<Report>::ReplyWithReports(ReadInputReportsCompleterBase& 
   size_t num_reports = 0;
   for (; !reports_data_.empty() && num_reports < reports.size(); num_reports++) {
     // Build the report.
-    fuchsia_input_report::wire::InputReport input_report(report_allocator_);
+    auto input_report = fuchsia_input_report::wire::InputReport::Builder(report_allocator_);
+
+    // Add some common fields. Will be overwritten if set.
+    input_report.trace_id(TRACE_NONCE());
+    input_report.event_time(zx_clock_get_monotonic());
+
     reports_data_.front().ToFidlInputReport(input_report, report_allocator_);
 
-    // Add some common fields if they weren't already set.
-    if (!input_report.has_trace_id()) {
-      input_report.set_trace_id(report_allocator_, TRACE_NONCE());
-    }
-    if (!input_report.has_event_time()) {
-      input_report.set_event_time(report_allocator_, zx_clock_get_monotonic());
-    }
-
-    reports[num_reports] = std::move(input_report);
+    reports[num_reports] = input_report.Build();
 
     TRACE_FLOW_BEGIN("input", "input_report", reports[num_reports].trace_id());
     reports_data_.pop();

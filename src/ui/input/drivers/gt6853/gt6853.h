@@ -38,8 +38,9 @@ struct Gt6853InputReport {
   Gt6853Contact contacts[kMaxContacts];
   size_t num_contacts;
 
-  void ToFidlInputReport(fuchsia_input_report::wire::InputReport& input_report,
-                         fidl::AnyArena& allocator);
+  void ToFidlInputReport(
+      fidl::WireTableBuilder<fuchsia_input_report::wire::InputReport>& input_report,
+      fidl::AnyArena& allocator);
 };
 
 class Gt6853Device;

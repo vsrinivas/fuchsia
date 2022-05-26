@@ -102,17 +102,18 @@ bool FeatureValueValid(int64_t value, const T& axis) {
 
 namespace tcs {
 
-void Tcs3400InputReport::ToFidlInputReport(fuchsia_input_report::wire::InputReport& input_report,
-                                           fidl::AnyArena& allocator) {
+void Tcs3400InputReport::ToFidlInputReport(
+    fidl::WireTableBuilder<::fuchsia_input_report::wire::InputReport>& input_report,
+    fidl::AnyArena& allocator) {
   fidl::VectorView<int64_t> values(allocator, 4);
   values[0] = illuminance;
   values[1] = red;
   values[2] = green;
   values[3] = blue;
 
-  const auto sensor_report =
-      fuchsia_input_report::wire::SensorInputReport(allocator).set_values(allocator, values);
-  input_report.set_event_time(allocator, event_time.get()).set_sensor(allocator, sensor_report);
+  auto sensor_report =
+      fuchsia_input_report::wire::SensorInputReport::Builder(allocator).values(values);
+  input_report.event_time(event_time.get()).sensor(sensor_report.Build());
 }
 
 fuchsia_input_report::wire::FeatureReport Tcs3400FeatureReport::ToFidlFeatureReport(
@@ -126,15 +127,18 @@ fuchsia_input_report::wire::FeatureReport Tcs3400FeatureReport::ToFidlFeatureRep
   fidl::VectorView<int64_t> thresh_low(allocator, 1);
   thresh_low[0] = threshold_low;
 
-  const auto sensor_report = fuchsia_input_report::wire::SensorFeatureReport(allocator)
-                                 .set_report_interval(allocator, report_interval_us)
-                                 .set_reporting_state(reporting_state)
-                                 .set_sensitivity(allocator, sens)
-                                 .set_threshold_high(allocator, thresh_high)
-                                 .set_threshold_low(allocator, thresh_low)
-                                 .set_sampling_rate(allocator, integration_time_us);
+  const auto sensor_report = fuchsia_input_report::wire::SensorFeatureReport::Builder(allocator)
+                                 .report_interval(report_interval_us)
+                                 .reporting_state(reporting_state)
+                                 .sensitivity(sens)
+                                 .threshold_high(thresh_high)
+                                 .threshold_low(thresh_low)
+                                 .sampling_rate(integration_time_us)
+                                 .Build();
 
-  return fuchsia_input_report::wire::FeatureReport(allocator).set_sensor(allocator, sensor_report);
+  return fuchsia_input_report::wire::FeatureReport::Builder(allocator)
+      .sensor(sensor_report)
+      .Build();
 }
 
 zx::status<Tcs3400InputReport> Tcs3400Device::ReadInputRpt() {
@@ -365,8 +369,9 @@ void Tcs3400Device::GetDescriptor(GetDescriptorRequestView request,
 
   fidl::VectorView<fuchsia_input_report::wire::SensorInputDescriptor> input_descriptor(allocator,
                                                                                        1);
-  input_descriptor[0].Allocate(allocator);
-  input_descriptor[0].set_values(allocator, sensor_axes);
+  input_descriptor[0] = fuchsia_input_report::wire::SensorInputDescriptor::Builder(allocator)
+                            .values(sensor_axes)
+                            .Build();
 
   auto sensitivity_axes = SensorAxisVector(allocator, 1);
   sensitivity_axes[0] = {
@@ -384,22 +389,24 @@ void Tcs3400Device::GetDescriptor(GetDescriptorRequestView request,
 
   fidl::VectorView<fuchsia_input_report::wire::SensorFeatureDescriptor> feature_descriptor(
       allocator, 1);
-  feature_descriptor[0].Allocate(allocator);
-  feature_descriptor[0]
-      .set_report_interval(allocator, kReportIntervalAxis)
-      .set_supports_reporting_state(true)
-      .set_sensitivity(allocator, sensitivity_axes)
-      .set_threshold_high(allocator, threshold_high_axes)
-      .set_threshold_low(allocator, threshold_low_axes)
-      .set_sampling_rate(allocator, kSamplingRateAxis);
+  feature_descriptor[0] = fuchsia_input_report::wire::SensorFeatureDescriptor::Builder(allocator)
+                              .report_interval(kReportIntervalAxis)
+                              .supports_reporting_state(true)
+                              .sensitivity(sensitivity_axes)
+                              .threshold_high(threshold_high_axes)
+                              .threshold_low(threshold_low_axes)
+                              .sampling_rate(kSamplingRateAxis)
+                              .Build();
 
-  const auto sensor_descriptor = fuchsia_input_report::wire::SensorDescriptor(allocator)
-                                     .set_input(allocator, input_descriptor)
-                                     .set_feature(allocator, feature_descriptor);
+  const auto sensor_descriptor = fuchsia_input_report::wire::SensorDescriptor::Builder(allocator)
+                                     .input(input_descriptor)
+                                     .feature(feature_descriptor)
+                                     .Build();
 
-  const auto descriptor = fuchsia_input_report::wire::DeviceDescriptor(allocator)
-                              .set_device_info(allocator, device_info)
-                              .set_sensor(allocator, sensor_descriptor);
+  const auto descriptor = fuchsia_input_report::wire::DeviceDescriptor::Builder(allocator)
+                              .device_info(device_info)
+                              .sensor(sensor_descriptor)
+                              .Build();
 
   completer.Reply(descriptor);
 }
@@ -502,7 +509,7 @@ void Tcs3400Device::GetInputReport(GetInputReportRequestView request,
   }
 
   fidl::Arena<kFeatureAndDescriptorBufferSize> allocator;
-  fuchsia_input_report::wire::InputReport report(allocator);
+  auto report = fuchsia_input_report::wire::InputReport::Builder(allocator);
 
   {
     fbl::AutoLock lock(&input_lock_);
@@ -514,7 +521,7 @@ void Tcs3400Device::GetInputReport(GetInputReportRequestView request,
     input_rpt_.ToFidlInputReport(report, allocator);
   }
 
-  completer.ReplySuccess(report);
+  completer.ReplySuccess(report.Build());
 }
 
 void Tcs3400Device::WaitForNextReader() {

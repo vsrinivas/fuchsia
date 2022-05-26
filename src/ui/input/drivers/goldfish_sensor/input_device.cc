@@ -39,9 +39,9 @@ InputDevice::~InputDevice() {
   }
 }
 
-void AccelerationInputDevice::InputReport::ToFidlInputReport(fir_fidl::InputReport& input_report,
-                                                             fidl::AnyArena& allocator) {
-  fir_fidl::SensorInputReport sensor_report(allocator);
+void AccelerationInputDevice::InputReport::ToFidlInputReport(
+    fidl::WireTableBuilder<fir_fidl::InputReport>& input_report, fidl::AnyArena& allocator) {
+  auto sensor_report = fir_fidl::SensorInputReport::Builder(allocator);
   fidl::VectorView<int64_t> values(allocator, 3);
 
   // Sensor reading uses unit |m/s^2|, while InputReport uses unit
@@ -53,10 +53,10 @@ void AccelerationInputDevice::InputReport::ToFidlInputReport(fir_fidl::InputRepo
   values[0] = SensorReadingToFidlReportValue(x);
   values[1] = SensorReadingToFidlReportValue(y);
   values[2] = SensorReadingToFidlReportValue(z);
-  sensor_report.set_values(allocator, std::move(values));
+  sensor_report.values(values);
 
-  input_report.set_event_time(allocator, event_time.get());
-  input_report.set_sensor(allocator, std::move(sensor_report));
+  input_report.event_time(event_time.get());
+  input_report.sensor(sensor_report.Build());
 }
 
 fpromise::result<InputDevice*, zx_status_t> AccelerationInputDevice::Create(
@@ -136,17 +136,17 @@ void AccelerationInputDevice::GetDescriptor(GetDescriptorRequestView request,
   sensor_axes[2].type = fir_fidl::SensorType::kAccelerometerZ;
 
   fidl::VectorView<fir_fidl::SensorInputDescriptor> sensor_input_descriptor(allocator, 1);
-  sensor_input_descriptor[0].Allocate(allocator);
-  sensor_input_descriptor[0].set_values(allocator, std::move(sensor_axes));
+  sensor_input_descriptor[0] =
+      fir_fidl::SensorInputDescriptor::Builder(allocator).values(sensor_axes).Build();
 
-  fir_fidl::SensorDescriptor sensor_descriptor(allocator);
-  sensor_descriptor.set_input(allocator, std::move(sensor_input_descriptor));
+  auto sensor_descriptor = fir_fidl::SensorDescriptor::Builder(allocator);
+  sensor_descriptor.input(sensor_input_descriptor);
 
-  fir_fidl::DeviceDescriptor descriptor(allocator);
-  descriptor.set_device_info(allocator, std::move(device_info));
-  descriptor.set_sensor(allocator, std::move(sensor_descriptor));
+  auto descriptor = fir_fidl::DeviceDescriptor::Builder(allocator);
+  descriptor.device_info(device_info);
+  descriptor.sensor(sensor_descriptor.Build());
 
-  completer.Reply(std::move(descriptor));
+  completer.Reply(descriptor.Build());
 }
 
 void AccelerationInputDevice::GetInputReportsReader(
@@ -155,9 +155,9 @@ void AccelerationInputDevice::GetInputReportsReader(
   ZX_DEBUG_ASSERT(status == ZX_OK);
 }
 
-void GyroscopeInputDevice::InputReport::ToFidlInputReport(fir_fidl::InputReport& input_report,
-                                                          fidl::AnyArena& allocator) {
-  fir_fidl::SensorInputReport sensor_report(allocator);
+void GyroscopeInputDevice::InputReport::ToFidlInputReport(
+    fidl::WireTableBuilder<fir_fidl::InputReport>& input_report, fidl::AnyArena& allocator) {
+  auto sensor_report = fir_fidl::SensorInputReport::Builder(allocator);
   fidl::VectorView<int64_t> values(allocator, 3);
   // Raw sensor reading uses unit |rad/s|, while InputReport uses unit
   // |deg/s * 1e-2| and only accepts integer.
@@ -168,10 +168,10 @@ void GyroscopeInputDevice::InputReport::ToFidlInputReport(fir_fidl::InputReport&
   values[0] = SensorReadingToFidlReportValue(x);
   values[1] = SensorReadingToFidlReportValue(y);
   values[2] = SensorReadingToFidlReportValue(z);
-  sensor_report.set_values(allocator, std::move(values));
+  sensor_report.values(values);
 
-  input_report.set_event_time(allocator, event_time.get());
-  input_report.set_sensor(allocator, std::move(sensor_report));
+  input_report.event_time(event_time.get());
+  input_report.sensor(sensor_report.Build());
 }
 
 fpromise::result<InputDevice*, zx_status_t> GyroscopeInputDevice::Create(
@@ -251,17 +251,17 @@ void GyroscopeInputDevice::GetDescriptor(GetDescriptorRequestView request,
   sensor_axes[2].type = fir_fidl::SensorType::kGyroscopeZ;
 
   fidl::VectorView<fir_fidl::SensorInputDescriptor> sensor_input_descriptor(allocator, 1);
-  sensor_input_descriptor[0].Allocate(allocator);
-  sensor_input_descriptor[0].set_values(allocator, std::move(sensor_axes));
+  sensor_input_descriptor[0] =
+      fir_fidl::SensorInputDescriptor::Builder(allocator).values(sensor_axes).Build();
 
-  fir_fidl::SensorDescriptor sensor_descriptor(allocator);
-  sensor_descriptor.set_input(allocator, std::move(sensor_input_descriptor));
+  auto sensor_descriptor = fir_fidl::SensorDescriptor::Builder(allocator);
+  sensor_descriptor.input(sensor_input_descriptor);
 
-  fir_fidl::DeviceDescriptor descriptor(allocator);
-  descriptor.set_device_info(allocator, std::move(device_info));
-  descriptor.set_sensor(allocator, std::move(sensor_descriptor));
+  auto descriptor = fir_fidl::DeviceDescriptor::Builder(allocator);
+  descriptor.device_info(device_info);
+  descriptor.sensor(sensor_descriptor.Build());
 
-  completer.Reply(std::move(descriptor));
+  completer.Reply(descriptor.Build());
 }
 
 void GyroscopeInputDevice::GetInputReportsReader(GetInputReportsReaderRequestView request,
@@ -270,18 +270,18 @@ void GyroscopeInputDevice::GetInputReportsReader(GetInputReportsReaderRequestVie
   ZX_DEBUG_ASSERT(status == ZX_OK);
 }
 
-void RgbcLightInputDevice::InputReport::ToFidlInputReport(fir_fidl::InputReport& input_report,
-                                                          fidl::AnyArena& allocator) {
-  fir_fidl::SensorInputReport sensor_report(allocator);
+void RgbcLightInputDevice::InputReport::ToFidlInputReport(
+    fidl::WireTableBuilder<fir_fidl::InputReport>& input_report, fidl::AnyArena& allocator) {
+  auto sensor_report = fir_fidl::SensorInputReport::Builder(allocator);
   fidl::VectorView<int64_t> values(allocator, 4);
   values[0] = static_cast<int64_t>(r);
   values[1] = static_cast<int64_t>(g);
   values[2] = static_cast<int64_t>(b);
   values[3] = static_cast<int64_t>(c);
-  sensor_report.set_values(allocator, std::move(values));
+  sensor_report.values(values);
 
-  input_report.set_event_time(allocator, event_time.get());
-  input_report.set_sensor(allocator, std::move(sensor_report));
+  input_report.event_time(event_time.get());
+  input_report.sensor(sensor_report.Build());
 }
 
 fpromise::result<InputDevice*, zx_status_t> RgbcLightInputDevice::Create(
@@ -369,17 +369,17 @@ void RgbcLightInputDevice::GetDescriptor(GetDescriptorRequestView request,
   sensor_axes[3].type = fir_fidl::SensorType::kLightIlluminance;
 
   fidl::VectorView<fir_fidl::SensorInputDescriptor> sensor_input_descriptor(allocator, 1);
-  sensor_input_descriptor[0].Allocate(allocator);
-  sensor_input_descriptor[0].set_values(allocator, std::move(sensor_axes));
+  sensor_input_descriptor[0] =
+      fir_fidl::SensorInputDescriptor::Builder(allocator).values(sensor_axes).Build();
 
-  fir_fidl::SensorDescriptor sensor_descriptor(allocator);
-  sensor_descriptor.set_input(allocator, std::move(sensor_input_descriptor));
+  auto sensor_descriptor = fir_fidl::SensorDescriptor::Builder(allocator);
+  sensor_descriptor.input(sensor_input_descriptor);
 
-  fir_fidl::DeviceDescriptor descriptor(allocator);
-  descriptor.set_device_info(allocator, std::move(device_info));
-  descriptor.set_sensor(allocator, std::move(sensor_descriptor));
+  auto descriptor = fir_fidl::DeviceDescriptor::Builder(allocator);
+  descriptor.device_info(device_info);
+  descriptor.sensor(sensor_descriptor.Build());
 
-  completer.Reply(std::move(descriptor));
+  completer.Reply(descriptor.Build());
 }
 
 void RgbcLightInputDevice::GetInputReportsReader(GetInputReportsReaderRequestView request,
