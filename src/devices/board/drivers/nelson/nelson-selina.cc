@@ -4,7 +4,6 @@
 
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
-#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <zircon/status.h>
 
@@ -20,16 +19,6 @@ static constexpr zx_device_prop_t props[] = {
     {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_RADAR_SENSOR},
 };
 
-static const bool reverse_burst_data = false;
-
-static const device_metadata_t metadata[] = {
-    {
-        .type = DEVICE_METADATA_PRIVATE,
-        .data = &reverse_burst_data,
-        .length = sizeof(reverse_burst_data),
-    },
-};
-
 static composite_device_desc_t composite_dev = []() {
   composite_device_desc_t desc = {};
   desc.props = props;
@@ -38,8 +27,6 @@ static composite_device_desc_t composite_dev = []() {
   desc.fragments_count = std::size(selina_fragments);
   desc.primary_fragment = "spi";
   desc.spawn_colocated = true;
-  desc.metadata_list = metadata;
-  desc.metadata_count = std::size(metadata);
   return desc;
 }();
 
