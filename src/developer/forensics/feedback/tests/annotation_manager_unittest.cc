@@ -20,6 +20,7 @@
 namespace forensics::feedback {
 namespace {
 
+using ::testing::HasSubstr;
 using ::testing::IsEmpty;
 using ::testing::Pair;
 using ::testing::UnorderedElementsAreArray;
@@ -62,8 +63,8 @@ TEST_F(AnnotationManagerTest, ImmediatelyAvailable) {
   DynamicNonPlatform non_platform;
 
   {
-    AnnotationManager manager(dispatcher(), {"annotation1", "annotation2", "num_calls"},
-                              static_annotations, &non_platform);
+    AnnotationManager manager(dispatcher(), {"annotation1", "annotation2"}, static_annotations,
+                              &non_platform);
 
     EXPECT_THAT(manager.ImmediatelyAvailable(), UnorderedElementsAreArray({
                                                     MakePair("annotation1", "value1"),
@@ -81,23 +82,24 @@ TEST_F(AnnotationManagerTest, StaticAllowlist) {
 
   DynamicNonPlatform counter;
   {
-    AnnotationManager manager(dispatcher(), {}, static_annotations, nullptr, {&counter});
-
-    EXPECT_THAT(manager.ImmediatelyAvailable(), IsEmpty());
-  }
-
-  {
-    AnnotationManager manager(dispatcher(), {"annotation1"}, static_annotations, nullptr,
-                              {&counter});
+    AnnotationManager manager(dispatcher(), {}, static_annotations, &counter);
 
     EXPECT_THAT(manager.ImmediatelyAvailable(), UnorderedElementsAreArray({
-                                                    MakePair("annotation1", "value1"),
+                                                    MakePair("num_calls", "1"),
                                                 }));
   }
 
   {
-    AnnotationManager manager(dispatcher(), {"annotation1", "num_calls"}, static_annotations,
-                              nullptr, {&counter});
+    AnnotationManager manager(dispatcher(), {"annotation1"}, static_annotations, &counter);
+
+    EXPECT_THAT(manager.ImmediatelyAvailable(), UnorderedElementsAreArray({
+                                                    MakePair("annotation1", "value1"),
+                                                    MakePair("num_calls", "2"),
+                                                }));
+  }
+
+  {
+    AnnotationManager manager(dispatcher(), {"annotation1"}, static_annotations, &counter);
 
     EXPECT_THAT(manager.ImmediatelyAvailable(), UnorderedElementsAreArray({
                                                     MakePair("annotation1", "value1"),
@@ -127,16 +129,6 @@ TEST_F(AnnotationManagerTest, IsMissingNonPlatform) {
     EXPECT_THAT(manager.ImmediatelyAvailable(), IsEmpty());
     EXPECT_TRUE(manager.IsMissingNonPlatformAnnotations());
   }
-}
-
-TEST_F(AnnotationManagerTest, UniqueKeys) {
-  ASSERT_DEATH(
-      {
-        AnnotationManager manager(dispatcher(), {"annotation1"});
-        manager.InsertStatic({{"annotation1", "value1"}});
-        manager.InsertStatic({{"annotation1", "value2"}});
-      },
-      "Attempting to re-insert annotation1");
 }
 
 class SimpleStaticAsync : public StaticAsyncAnnotationProvider {
@@ -216,8 +208,8 @@ TEST_F(AnnotationManagerTest, GetAllNoStaticAsyncProviders) {
   DynamicNonPlatform non_platform;
 
   {
-    AnnotationManager manager(dispatcher(), {"annotation1", "annotation2", "num_calls"},
-                              static_annotations, &non_platform);
+    AnnotationManager manager(dispatcher(), {"annotation1", "annotation2"}, static_annotations,
+                              &non_platform);
 
     Annotations annotations;
 
@@ -263,7 +255,6 @@ TEST_F(AnnotationManagerTest, GetAllStaticAsyncProviders) {
                             {
                                 "annotation1",
                                 "annotation2",
-                                "num_calls",
                                 "annotation3",
                                 "annotation4",
                                 "annotation5",
@@ -370,8 +361,8 @@ TEST_F(AnnotationManagerTest, GetAllNoDyanmicAsyncProviders) {
   DynamicNonPlatform non_platform;
 
   {
-    AnnotationManager manager(dispatcher(), {"annotation1", "annotation2", "num_calls"},
-                              static_annotations, &non_platform);
+    AnnotationManager manager(dispatcher(), {"annotation1", "annotation2"}, static_annotations,
+                              &non_platform);
 
     Annotations annotations;
 
@@ -407,7 +398,6 @@ TEST_F(AnnotationManagerTest, GetAllCachedAsyncProviders) {
                             {
                                 "annotation1",
                                 "annotation2",
-                                "num_calls",
                                 "annotation3",
                                 "annotation4",
                                 "annotation5",
@@ -489,7 +479,6 @@ TEST_F(AnnotationManagerTest, GetAllDynamicAsyncProviders) {
                             {
                                 "annotation1",
                                 "annotation2",
-                                "num_calls",
                                 "annotation3",
                                 "annotation4",
                                 "annotation5",
@@ -571,7 +560,6 @@ TEST_F(AnnotationManagerTest, GetAll) {
                             {
                                 "annotation1",
                                 "annotation2",
-                                "num_calls",
                                 "annotation3",
                                 "annotation4",
                                 "annotation5",
@@ -634,6 +622,25 @@ TEST_F(AnnotationManagerTest, GetAll) {
                                  MakePair("annotation5", "call3"),
                              }));
   }
+}
+
+TEST_F(AnnotationManagerTest, NoProvider) {
+  ASSERT_DEATH({ AnnotationManager manager(dispatcher(), {"annotation"}); },
+               HasSubstr("Annotation \"annotation\" collected by 0 providers"));
+}
+
+TEST_F(AnnotationManagerTest, MultipleProviders) {
+  SimpleStaticAsync static_async(dispatcher(), {{"annotation", Error::kMissingValue}});
+  SimpleCachedAsync cached_async(dispatcher(), {"annotation"});
+  SimpleDynamicAsync dynamic_async(dispatcher(), {"annotation"});
+
+  ASSERT_DEATH(
+      {
+        AnnotationManager manager(dispatcher(), {"annotation"},
+                                  {{"annotation", Error::kMissingValue}}, nullptr, {},
+                                  {&static_async}, {&cached_async}, {&dynamic_async});
+      },
+      HasSubstr("Annotation \"annotation\" collected by 4 providers"));
 }
 
 }  // namespace

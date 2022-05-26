@@ -49,9 +49,6 @@ class AnnotationManager {
   // Returns true if the non-platform annotation provider is missing annotations.
   bool IsMissingNonPlatformAnnotations() const;
 
-  // Inserts static, synchronous annotations.
-  void InsertStatic(const Annotations& annotations);
-
  private:
   // Returns a promise that completes once all static async annotations have been added to
   // |static_annotations_| or |timeout| expires.

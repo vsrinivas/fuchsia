@@ -40,6 +40,13 @@ ErrorOr<std::string> GetUtcTime(timekeeper::Clock* clock) {
 
 TimeProvider::TimeProvider(std::unique_ptr<timekeeper::Clock> clock) : clock_(std::move(clock)) {}
 
+std::set<std::string> TimeProvider::GetKeys() const {
+  return {
+      kDeviceUptimeKey,
+      kDeviceUtcTimeKey,
+  };
+}
+
 Annotations TimeProvider::Get() {
   return {
       {kDeviceUptimeKey, GetUptime()},

@@ -18,6 +18,8 @@ class TimeProvider : public DynamicSyncAnnotationProvider {
  public:
   TimeProvider(std::unique_ptr<timekeeper::Clock> clock);
 
+  std::set<std::string> GetKeys() const override;
+
   Annotations Get() override;
 
  private:

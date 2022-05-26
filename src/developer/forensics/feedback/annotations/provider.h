@@ -31,6 +31,8 @@ class StaticAsyncAnnotationProvider {
 // Note: synchronous calls must be low-cost and return quickly, e.g. not IPC.
 class DynamicSyncAnnotationProvider {
  public:
+  virtual std::set<std::string> GetKeys() const = 0;
+
   // Returns the Annotations from this provider.
   virtual Annotations Get() = 0;
 };
@@ -38,6 +40,11 @@ class DynamicSyncAnnotationProvider {
 // Collects annotations not set by the platform.
 class NonPlatformAnnotationProvider : public DynamicSyncAnnotationProvider {
  public:
+  std::set<std::string> GetKeys() const override {
+    FX_LOGS(FATAL) << "Not implemented";
+    return {};
+  }
+
   // Returns true if non-platform annotations are missing.
   virtual bool IsMissingAnnotations() const = 0;
 };

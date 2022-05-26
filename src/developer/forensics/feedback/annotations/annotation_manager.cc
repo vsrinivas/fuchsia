@@ -83,6 +83,25 @@ AnnotationManager::AnnotationManager(
       static_async_providers_(std::move(static_async_providers)),
       dynamic_async_providers_(std::move(dynamic_async_providers)),
       cached_async_providers_(std::move(cached_async_providers)) {
+  for (const auto& k : allowlist_) {
+    // Count the number of providers in |providers| that collect |k|.
+    auto Count = [&k](const auto& providers) {
+      size_t count{0u};
+      for (auto* p : providers) {
+        count += p->GetKeys().count(k);
+      }
+
+      return count;
+    };
+
+    const auto num_providers = static_annotations.count(k) + Count(dynamic_sync_providers_) +
+                               Count(static_async_providers_) + Count(dynamic_async_providers_) +
+                               Count(cached_async_providers_);
+
+    FX_CHECK(num_providers == 1) << "Annotation \"" << k << "\" collected by " << num_providers
+                                 << " providers";
+  }
+
   InsertUnique(static_annotations, allowlist_, &static_annotations_);
 
   // Create a weak pointer because |this| isn't guaranteed to outlive providers.
@@ -141,10 +160,6 @@ AnnotationManager::AnnotationManager(
           Remove(self->waiting_for_cached_, nullptr);
         });
   }
-}
-
-void AnnotationManager::InsertStatic(const Annotations& annotations) {
-  InsertUnique(annotations, allowlist_, &static_annotations_);
 }
 
 ::fpromise::promise<Annotations> AnnotationManager::GetAll(const zx::duration timeout) {
