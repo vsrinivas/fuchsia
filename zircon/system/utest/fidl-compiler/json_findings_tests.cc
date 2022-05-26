@@ -5,6 +5,7 @@
 #include <fidl/findings_json.h>
 #include <fidl/template_string.h>
 #include <fidl/utils.h>
+#include <zircon/assert.h>
 
 #include <fstream>
 
@@ -66,7 +67,7 @@ class JsonFindingsTest {
       filename = default_filename_;
     }
     auto result = sources_.find(filename);
-    assert(result != sources_.end());
+    ZX_ASSERT(result != sources_.end());
     auto& source_file = result->second;
     std::string_view source_data = source_file.data();
     size_t start = source_data.find(args.violation_string);
@@ -79,7 +80,8 @@ class JsonFindingsTest {
                 << "' was not found in template string:" << std::endl
                 << source_data;
     }
-    assert(start != std::string::npos && "Bad test! violation_string not found in source data");
+    ZX_ASSERT_MSG(start != std::string::npos,
+                  "Bad test! violation_string not found in source data");
 
     source_data.remove_prefix(start);
     source_data.remove_suffix(source_data.size() - size);

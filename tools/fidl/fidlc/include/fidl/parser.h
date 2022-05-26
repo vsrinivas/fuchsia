@@ -5,6 +5,8 @@
 #ifndef TOOLS_FIDL_FIDLC_INCLUDE_FIDL_PARSER_H_
 #define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_PARSER_H_
 
+#include <zircon/assert.h>
+
 #include <memory>
 #include <optional>
 
@@ -115,7 +117,7 @@ class Parser {
 
   void UpdateMarks(Token& token) {
     // There should always be at least one of these - the outermost.
-    assert(active_ast_scopes_.size() > 0 && "internal compiler error: unbalanced parse tree");
+    ZX_ASSERT_MSG(active_ast_scopes_.size() > 0, "unbalanced parse tree");
 
     if (!suppress_gap_checks_) {
       // If the end of the last node was the start of a gap, record that.
@@ -160,7 +162,7 @@ class Parser {
   // Must not be called again after returning Token::Kind::kEndOfFile.
   template <class Predicate>
   std::optional<Token> ReadToken(Predicate p, OnNoMatch on_no_match) {
-    assert(!ConsumedEOF() && "Already consumed EOF");
+    ZX_ASSERT_MSG(!ConsumedEOF(), "Already consumed EOF");
     std::unique_ptr<Diagnostic> error = p(last_token_);
     if (error) {
       switch (on_no_match) {

@@ -4,6 +4,8 @@
 
 #include "fidl/flat/consume_step.h"
 
+#include <zircon/assert.h>
+
 #include "fidl/flat/compile_step.h"
 #include "fidl/flat_ast.h"
 #include "fidl/raw_ast.h"
@@ -84,7 +86,7 @@ Decl* ConsumeStep::RegisterDecl(std::unique_ptr<Decl> decl) {
 
 void ConsumeStep::ConsumeAttributeList(std::unique_ptr<raw::AttributeList> raw_attribute_list,
                                        std::unique_ptr<AttributeList>* out_attribute_list) {
-  assert(out_attribute_list && "must provide out parameter");
+  ZX_ASSERT_MSG(out_attribute_list, "must provide out parameter");
   // Usually *out_attribute_list is null and we create the AttributeList here.
   // For library declarations it's not, since we consume attributes from each
   // file into the same library->attributes field.
@@ -118,8 +120,8 @@ void ConsumeStep::ConsumeAttribute(std::unique_ptr<raw::Attribute> raw_attribute
     all_named = all_named && name.has_value();
     args.emplace_back(std::make_unique<AttributeArg>(name, std::move(constant), raw_arg->span()));
   }
-  assert(all_named ||
-         args.size() == 1 && "parser should not allow an anonymous arg with other args");
+  ZX_ASSERT_MSG(all_named || args.size() == 1,
+                "parser should not allow an anonymous arg with other args");
   SourceSpan name;
   switch (raw_attribute->provenance) {
     case raw::Attribute::Provenance::kDefault:
@@ -219,7 +221,7 @@ void ConsumeStep::ConsumeUsing(std::unique_ptr<raw::Using> using_directive) {
 
 void ConsumeStep::ConsumeAliasDeclaration(
     std::unique_ptr<raw::AliasDeclaration> alias_declaration) {
-  assert(alias_declaration->alias && alias_declaration->type_ctor != nullptr);
+  ZX_ASSERT(alias_declaration->alias && alias_declaration->type_ctor != nullptr);
 
   std::unique_ptr<AttributeList> attributes;
   ConsumeAttributeList(std::move(alias_declaration->attributes), &attributes);
@@ -269,10 +271,11 @@ bool ConsumeStep::CreateMethodResult(
     bool has_transport_err, SourceSpan response_span, raw::ProtocolMethod* method,
     std::unique_ptr<TypeConstructor> success_variant,
     std::unique_ptr<TypeConstructor>* out_payload) {
-  assert((has_err || has_transport_err) &&
-         "Method should only use a result union if it has a result union and/or is flexible");
-  assert(err_variant_context != nullptr);
-  assert(transport_err_variant_context != nullptr);
+  ZX_ASSERT_MSG(
+      (has_err || has_transport_err),
+      "Method should only use a result union if it has a result union and/or is flexible");
+  ZX_ASSERT(err_variant_context != nullptr);
+  ZX_ASSERT(transport_err_variant_context != nullptr);
 
   raw::SourceElement sourceElement = raw::SourceElement(fidl::Token(), fidl::Token());
   std::vector<Union::Member> result_members;
@@ -295,7 +298,7 @@ bool ConsumeStep::CreateMethodResult(
                                 &error_type_ctor))
       return false;
 
-    assert(error_type_ctor != nullptr && "Missing err type ctor");
+    ZX_ASSERT_MSG(error_type_ctor != nullptr, "Missing err type ctor");
 
     result_members.emplace_back(
         ConsumeOrdinal(std::make_unique<raw::Ordinal64>(sourceElement, kErrorOrdinal)),
@@ -309,7 +312,7 @@ bool ConsumeStep::CreateMethodResult(
 
   if (has_transport_err) {
     std::unique_ptr<TypeConstructor> error_type_ctor = IdentifierTypeForDecl(transport_err_type_);
-    assert(error_type_ctor != nullptr && "Missing transport_err type ctor");
+    ZX_ASSERT_MSG(error_type_ctor != nullptr, "Missing transport_err type ctor");
     result_members.emplace_back(
         ConsumeOrdinal(std::make_unique<raw::Ordinal64>(sourceElement, kTransportErrorOrdinal)),
         std::move(error_type_ctor), transport_err_variant_context->name(),
@@ -451,8 +454,8 @@ void ConsumeStep::ConsumeProtocolDeclaration(
           return;
         }
 
-        assert(err_variant_context != nullptr && transport_err_variant_context != nullptr &&
-               "compiler bug: error type contexts should have been computed");
+        ZX_ASSERT_MSG(err_variant_context != nullptr && transport_err_variant_context != nullptr,
+                      "error type contexts should have been computed");
         if (!CreateMethodResult(success_variant_context, err_variant_context,
                                 transport_err_variant_context, has_error, has_transport_error,
                                 response_span, method.get(), std::move(result_payload),
@@ -470,7 +473,7 @@ void ConsumeStep::ConsumeProtocolDeclaration(
         maybe_response = std::move(response_payload);
       }
     }
-    assert(has_request || has_response);
+    ZX_ASSERT(has_request || has_response);
     methods.emplace_back(std::move(attributes), strictness,
                          ConsumeIdentifier(std::move(method->identifier)), method_name, has_request,
                          std::move(maybe_request), has_response, std::move(maybe_response),
@@ -581,7 +584,7 @@ void ConsumeStep::MaybeOverrideName(AttributeList& attributes, NamingContext* co
     return;
   }
   const ConstantValue& value = arg->value->Value();
-  assert(value.kind == ConstantValue::Kind::kString);
+  ZX_ASSERT(value.kind == ConstantValue::Kind::kString);
   std::string str = static_cast<const StringConstantValue&>(value).MakeContents();
   if (utils::IsValidIdentifierComponent(str)) {
     context->set_name_override(std::move(str));
@@ -758,8 +761,7 @@ bool ConsumeStep::ConsumeLayout(std::unique_ptr<raw::Layout> layout,
                                            std::move(raw_attribute_list), out_decl);
     }
   }
-  assert(false && "layouts must be of type bits, enum, struct, table, or union");
-  __builtin_unreachable();
+  ZX_PANIC("layouts must be of type bits, enum, struct, table, or union");
 }
 
 bool ConsumeStep::ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> raw_type_ctor,
@@ -847,7 +849,7 @@ bool ConsumeStep::ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> r
   }
 
   auto named_ref = static_cast<raw::NamedLayoutReference*>(raw_type_ctor->layout_ref.get());
-  assert(out_type_ctor && "out type ctors should always be provided for a named type ctor");
+  ZX_ASSERT_MSG(out_type_ctor, "out type ctors should always be provided for a named type ctor");
   *out_type_ctor = std::make_unique<TypeConstructor>(
       Reference(*named_ref->identifier),
       std::make_unique<LayoutParameterList>(std::move(params), params_span),

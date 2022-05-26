@@ -6,6 +6,7 @@
 
 #include <errno.h>
 #include <lib/fit/function.h>
+#include <zircon/assert.h>
 
 #include "fidl/diagnostics.h"
 #include "fidl/experimental_flags.h"
@@ -187,7 +188,7 @@ std::unique_ptr<raw::Ordinal64> Parser::ParseOrdinal64() {
   std::string string_data(data.data(), data.data() + data.size());
   errno = 0;
   unsigned long long value = strtoull(string_data.data(), nullptr, 0);
-  assert(errno == 0 && "unparsable number should not be lexed.");
+  ZX_ASSERT_MSG(errno == 0, "unparsable number should not be lexed.");
   if (value > std::numeric_limits<uint32_t>::max())
     return Fail(ErrOrdinalOutOfBound);
   uint32_t ordinal = static_cast<uint32_t>(value);
@@ -638,8 +639,8 @@ std::unique_ptr<raw::ProtocolMethod> Parser::ParseProtocolEvent(
       return Fail();
   }
 
-  assert(method_name);
-  assert(response != nullptr);
+  ZX_ASSERT(method_name);
+  ZX_ASSERT(response != nullptr);
 
   return std::make_unique<raw::ProtocolMethod>(
       scope.GetSourceElement(), std::move(attributes), std::move(modifiers), std::move(method_name),
@@ -674,8 +675,8 @@ std::unique_ptr<raw::ProtocolMethod> Parser::ParseProtocolMethod(
     }
   }
 
-  assert(method_name);
-  assert(request != nullptr);
+  ZX_ASSERT(method_name);
+  ZX_ASSERT(request != nullptr);
 
   return std::make_unique<raw::ProtocolMethod>(
       scope.GetSourceElement(), std::move(attributes), std::move(modifiers), std::move(method_name),
@@ -838,8 +839,7 @@ std::unique_ptr<raw::ProtocolDeclaration> Parser::ParseProtocolDeclaration(
         as_openness = types::Openness::kClosed;
         break;
       default:
-        assert(false && "expected openness token");
-        return nullptr;
+        ZX_PANIC("expected openness token");
     }
     modifiers = std::make_unique<raw::Modifiers>(
         scope.GetSourceElement(), raw::Modifier<types::Openness>(as_openness, modifier->start_));
@@ -1125,8 +1125,7 @@ std::unique_ptr<raw::TypeConstraints> Parser::ParseTypeConstraints() {
   if (bracketed) {
     ConsumeTokenOrRecover(OfKind(Token::Kind::kRightAngle));
   } else {
-    assert(constraints.size() == 1 &&
-           "Compiler bug: only parse one constraint when no brackets present");
+    ZX_ASSERT_MSG(constraints.size() == 1, "only parse one constraint when no brackets present");
   }
   return std::make_unique<raw::TypeConstraints>(scope.GetSourceElement(), std::move(constraints));
 }
@@ -1289,8 +1288,8 @@ std::unique_ptr<raw::Layout> Parser::ParseLayout(
   if (kind == raw::Layout::Kind::kUnion) {
     bool contains_non_reserved_member = false;
     for (const std::unique_ptr<raw::LayoutMember>& member : members) {
-      assert(member->kind == raw::LayoutMember::Kind::kOrdinaled &&
-             "unions should only have ordinaled members");
+      ZX_ASSERT_MSG(member->kind == raw::LayoutMember::Kind::kOrdinaled,
+                    "unions should only have ordinaled members");
       const auto& union_member = static_cast<raw::OrdinaledLayoutMember*>(member.get());
       if (!union_member->reserved)
         contains_non_reserved_member = true;
@@ -1465,7 +1464,7 @@ std::unique_ptr<raw::TypeConstructor> Parser::ParseTypeConstructor() {
             break;
           }
           default: {
-            assert(false && "expected modifier token");
+            ZX_PANIC("expected modifier token");
           }
         }
       } else {
@@ -1515,7 +1514,7 @@ std::unique_ptr<raw::TypeConstructor> Parser::ParseTypeConstructor() {
                            Fail();
                          }
                        },
-                       [&](std::monostate _) -> void { assert(!Ok()); },
+                       [&](std::monostate _) -> void { ZX_ASSERT(!Ok()); },
                    },
                    after_colon);
 
@@ -1535,9 +1534,9 @@ std::unique_ptr<raw::TypeConstructor> Parser::ParseTypeConstructor() {
   }
 
   // Build a LayoutReference of the right type based on the underlying type of the layout.
-  assert((std::holds_alternative<std::unique_ptr<raw::CompoundIdentifier>>(layout) ||
-          std::holds_alternative<std::unique_ptr<raw::Layout>>(layout)) &&
-         "must have set layout by this point");
+  ZX_ASSERT_MSG((std::holds_alternative<std::unique_ptr<raw::CompoundIdentifier>>(layout) ||
+                 std::holds_alternative<std::unique_ptr<raw::Layout>>(layout)),
+                "must have set layout by this point");
   std::visit(fidl::utils::matchers{
                  [&](std::unique_ptr<raw::CompoundIdentifier>& named_layout) -> void {
                    layout_ref = std::make_unique<raw::NamedLayoutReference>(
@@ -1567,7 +1566,8 @@ std::unique_ptr<raw::TypeConstructor> Parser::ParseTypeConstructor() {
       return Fail();
   }
 
-  assert(layout_ref != nullptr && "ParseTypeConstructor must always produce a non-null layout_ref");
+  ZX_ASSERT_MSG(layout_ref != nullptr,
+                "ParseTypeConstructor must always produce a non-null layout_ref");
   return std::make_unique<raw::TypeConstructor>(scope.GetSourceElement(), std::move(layout_ref),
                                                 std::move(parameters), std::move(constraints));
 }

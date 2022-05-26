@@ -4,6 +4,8 @@
 
 #include "fidl/flat/types.h"
 
+#include <zircon/assert.h>
+
 #include "fidl/flat/type_resolver.h"
 #include "fidl/flat/visitor.h"
 #include "fidl/flat_ast.h"
@@ -54,7 +56,7 @@ bool VectorBaseType::ResolveSizeAndNullability(TypeResolver* resolver,
         out_params->nullability = types::Nullability::kNullable;
         break;
       default:
-        assert(false && "Compiler bug: resolved to wrong constraint kind");
+        ZX_PANIC("resolved to wrong constraint kind");
     }
   } else if (num_constraints == 2) {
     // first constraint must be size, followed by optional
@@ -122,7 +124,7 @@ bool StringType::ApplyConstraints(TypeResolver* resolver, const TypeConstraints&
 bool HandleType::ApplyConstraints(TypeResolver* resolver, const TypeConstraints& constraints,
                                   const Reference& layout, std::unique_ptr<Type>* out_type,
                                   LayoutInvocation* out_params) const {
-  assert(resource_decl);
+  ZX_ASSERT(resource_decl);
 
   // We need to store this separately from out_params, because out_params doesn't
   // store the raw Constant that gets resolved to a nullability constraint.
@@ -150,7 +152,7 @@ bool HandleType::ApplyConstraints(TypeResolver* resolver, const TypeConstraints&
         applied_nullability_span = constraint_span;
         break;
       default:
-        assert(false && "Compiler bug: resolved to wrong constraint kind");
+        ZX_PANIC("resolved to wrong constraint kind");
     }
   } else if (num_constraints == 2) {
     // the first constraint must be subtype
@@ -179,7 +181,7 @@ bool HandleType::ApplyConstraints(TypeResolver* resolver, const TypeConstraints&
         applied_nullability_span = constraint_span;
         break;
       default:
-        assert(false && "Compiler bug: resolved to wrong constraint kind");
+        ZX_PANIC("resolved to wrong constraint kind");
     }
   } else if (num_constraints == 3) {
     // no degrees of freedom: must be subtype, followed by rights, then optional
@@ -267,7 +269,7 @@ bool TransportSideType::ApplyConstraints(TypeResolver* resolver, const TypeConst
         applied_nullability_span = constraint_span;
         break;
       default:
-        assert(false && "Compiler bug: resolved to wrong constraint kind");
+        ZX_PANIC("resolved to wrong constraint kind");
     }
   } else if (num_constraints == 2) {
     // first constraint must be protocol
@@ -386,8 +388,7 @@ bool IdentifierType::ApplyConstraints(TypeResolver* resolver, const TypeConstrai
       // Cannot have const: entries for constants do not exist in the typespace, so
       // they're caught earlier.
       // Cannot have resource: resource types should have resolved to the HandleTypeTemplate
-      assert(false && "Compiler bug: unexpected identifier type decl kind");
-      break;
+      ZX_PANIC("unexpected identifier type decl kind");
 
     // TODO(fxbug.dev/75837):
     // These can't be used as types. This will be caught later, in VerifyTypeCategory.
@@ -438,8 +439,7 @@ bool UntypedNumericType::ApplyConstraints(TypeResolver* resolver,
                                           const TypeConstraints& constraints,
                                           const Reference& layout, std::unique_ptr<Type>* out_type,
                                           LayoutInvocation* out_params) const {
-  assert(false && "compiler bug: should not have untyped numeric here");
-  return false;
+  ZX_PANIC("should not have untyped numeric here");
 }
 
 uint32_t PrimitiveType::SubtypeSize(types::PrimitiveSubtype subtype) {
@@ -499,7 +499,7 @@ types::Resourceness Type::Resourceness() const {
     case Type::Kind::kBox:
       return static_cast<const BoxType*>(this)->boxed_type->Resourceness();
     case Type::Kind::kUntypedNumeric:
-      assert(false && "compiler bug: should not have untyped numeric here");
+      ZX_PANIC("should not have untyped numeric here");
   }
 
   const auto* decl = static_cast<const IdentifierType*>(this)->type_decl;
@@ -511,19 +511,19 @@ types::Resourceness Type::Resourceness() const {
     case Decl::Kind::kProtocol:
       return types::Resourceness::kResource;
     case Decl::Kind::kStruct:
-      assert(decl->compiled && "Compiler bug: accessing resourceness of not-yet-compiled struct");
+      ZX_ASSERT_MSG(decl->compiled, "accessing resourceness of not-yet-compiled struct");
       return static_cast<const Struct*>(decl)->resourceness.value();
     case Decl::Kind::kTable:
       return static_cast<const Table*>(decl)->resourceness;
     case Decl::Kind::kUnion:
-      assert(decl->compiled && "Compiler bug: accessing resourceness of not-yet-compiled union");
+      ZX_ASSERT_MSG(decl->compiled, "accessing resourceness of not-yet-compiled union");
       return static_cast<const Union*>(decl)->resourceness.value();
     case Decl::Kind::kBuiltin:
     case Decl::Kind::kConst:
     case Decl::Kind::kResource:
     case Decl::Kind::kService:
     case Decl::Kind::kTypeAlias:
-      assert(false && "Compiler bug: unexpected kind");
+      ZX_PANIC("unexpected kind");
   }
 
   __builtin_unreachable();
@@ -539,8 +539,7 @@ std::any TransportSideType::AcceptAny(VisitorAny* visitor) const { return visito
 std::any VectorType::AcceptAny(VisitorAny* visitor) const { return visitor->Visit(*this); }
 
 std::any UntypedNumericType::AcceptAny(VisitorAny* visitor) const {
-  assert(false && "compiler bug: should not have untyped numeric here");
-  return nullptr;
+  ZX_PANIC("should not have untyped numeric here");
 }
 
 }  // namespace fidl::flat

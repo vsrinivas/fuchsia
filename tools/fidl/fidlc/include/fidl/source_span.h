@@ -5,7 +5,8 @@
 #ifndef TOOLS_FIDL_FIDLC_INCLUDE_FIDL_SOURCE_SPAN_H_
 #define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_SOURCE_SPAN_H_
 
-#include <cassert>
+#include <zircon/assert.h>
+
 #include <cstdint>
 #include <string_view>
 
@@ -26,7 +27,7 @@ class SourceSpan {
 
   constexpr const std::string_view& data() const { return data_; }
   constexpr const SourceFile& source_file() const {
-    assert(valid());
+    ZX_ASSERT(valid());
     return *source_file_;
   }
 

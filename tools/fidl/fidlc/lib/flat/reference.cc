@@ -4,6 +4,8 @@
 
 #include "fidl/flat/reference.h"
 
+#include <zircon/assert.h>
+
 #include "fidl/flat_ast.h"
 #include "fidl/raw_ast.h"
 
@@ -33,8 +35,7 @@ Name Reference::Target::name() const {
       return maybe_parent_->name.WithMemberName(
           std::string(static_cast<Enum::Member*>(target_)->name.data()));
     default:
-      assert(false && "invalid element kind");
-      __builtin_unreachable();
+      ZX_PANIC("invalid element kind");
   }
 }
 
@@ -47,7 +48,7 @@ Decl* Reference::Target::element_or_parent_decl() const {
 }
 
 Reference::Reference(const raw::CompoundIdentifier& name) : span_(name.span()) {
-  assert(!name.components.empty() && "expected at least one component");
+  ZX_ASSERT_MSG(!name.components.empty(), "expected at least one component");
   auto& raw = std::get<RawSourced>(state_);
   for (auto& identifier : name.components) {
     raw.components.push_back(identifier->span().data());
@@ -69,24 +70,25 @@ Reference::State Reference::state() const {
 }
 
 void Reference::SetKey(Key key) {
-  assert(state() == State::kRawSourced || state() == State::kRawSynthetic && "invalid state");
+  ZX_ASSERT_MSG(state() == State::kRawSourced || state() == State::kRawSynthetic, "invalid state");
   state_ = key;
 }
 
 void Reference::MarkContextual() {
   auto raw = raw_sourced();
-  assert(raw.components.size() == 1 && "contextual requires 1 component");
+  ZX_ASSERT_MSG(raw.components.size() == 1, "contextual requires 1 component");
   state_ = Contextual{raw.components[0]};
 }
 
 void Reference::ResolveTo(Target target) {
-  assert(state() == State::kKey || state() == State::kContextual && "invalid state");
+  ZX_ASSERT_MSG(state() == State::kKey || state() == State::kContextual, "invalid state");
   state_ = target;
 }
 
 void Reference::MarkFailed() {
-  assert(state() == State::kRawSourced || state() == State::kKey ||
-         state() == State::kContextual && "invalid state");
+  ZX_ASSERT_MSG(
+      state() == State::kRawSourced || state() == State::kKey || state() == State::kContextual,
+      "invalid state");
   state_ = Failed{};
 }
 

@@ -4,6 +4,8 @@
 
 #include "fidl/flat/name.h"
 
+#include <zircon/assert.h>
+
 #include "fidl/utils.h"
 
 namespace fidl::flat {
@@ -40,7 +42,8 @@ std::string NamingContext::BuildFlattenedName(SourceSpan name, Kind kind,
 }
 
 std::shared_ptr<NamingContext> NamingContext::Create(const Name& decl_name) {
-  assert(decl_name.span().has_value() && "cannot have a naming context from a name without a span");
+  ZX_ASSERT_MSG(decl_name.span().has_value(),
+                "cannot have a naming context from a name without a span");
   return Create(decl_name.span().value());
 }
 

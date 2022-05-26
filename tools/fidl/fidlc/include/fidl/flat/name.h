@@ -5,7 +5,8 @@
 #ifndef TOOLS_FIDL_FIDLC_INCLUDE_FIDL_FLAT_NAME_H_
 #define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_FLAT_NAME_H_
 
-#include <cassert>
+#include <zircon/assert.h>
+
 #include <memory>
 #include <optional>
 #include <string>
@@ -52,24 +53,24 @@ class NamingContext : public std::enable_shared_from_this<NamingContext> {
   static std::shared_ptr<NamingContext> Create(const Name& decl_name);
 
   std::shared_ptr<NamingContext> EnterRequest(SourceSpan method_name) {
-    assert(kind_ == Kind::kDecl && "request must follow protocol");
+    ZX_ASSERT_MSG(kind_ == Kind::kDecl, "request must follow protocol");
     return Push(method_name, Kind::kMethodRequest);
   }
 
   std::shared_ptr<NamingContext> EnterEvent(SourceSpan method_name) {
-    assert(kind_ == Kind::kDecl && "event must follow protocol");
+    ZX_ASSERT_MSG(kind_ == Kind::kDecl, "event must follow protocol");
     // an event is actually a request from the server's perspective, so we use request in the
     // naming context
     return Push(method_name, Kind::kMethodRequest);
   }
 
   std::shared_ptr<NamingContext> EnterResponse(SourceSpan method_name) {
-    assert(kind_ == Kind::kDecl && "response must follow protocol");
+    ZX_ASSERT_MSG(kind_ == Kind::kDecl, "response must follow protocol");
     return Push(method_name, Kind::kMethodResponse);
   }
 
   std::shared_ptr<NamingContext> EnterResult(SourceSpan method_name) {
-    assert(kind_ == Kind::kDecl && "result must follow protocol");
+    ZX_ASSERT_MSG(kind_ == Kind::kDecl, "result must follow protocol");
     return Push(method_name, Kind::kMethodResult);
   }
 
@@ -85,9 +86,9 @@ class NamingContext : public std::enable_shared_from_this<NamingContext> {
   // TODO(fxbug.dev/95231): Unnecessary once we remove `TopResponse` wrappers altogether.
   std::shared_ptr<NamingContext> SwapStructPayloadContext() {
     if (kind_ == Kind::kMethodResponse) {
-      assert(parent_ != nullptr);
-      assert(!flattened_name_override_.has_value() &&
-             "must perform swap before setting name override");
+      ZX_ASSERT(parent_ != nullptr);
+      ZX_ASSERT_MSG(!flattened_name_override_.has_value(),
+                    "must perform swap before setting name override");
       auto swapped = parent_->EnterResult(name_);
       return swapped;
     }
@@ -97,7 +98,7 @@ class NamingContext : public std::enable_shared_from_this<NamingContext> {
   SourceSpan name() const { return name_; }
 
   std::shared_ptr<NamingContext> parent() const {
-    assert(parent_ != nullptr && "compiler bug: traversing above root");
+    ZX_ASSERT_MSG(parent_ != nullptr, "traversing above root");
     return parent_;
   }
 
@@ -273,7 +274,7 @@ class Name final {
   }
 
   Name WithMemberName(std::string member_name) const {
-    assert(!member_name_.has_value() && "already has a member name");
+    ZX_ASSERT_MSG(!member_name_.has_value(), "already has a member name");
     Name new_name = *this;
     new_name.member_name_ = std::move(member_name);
     return new_name;

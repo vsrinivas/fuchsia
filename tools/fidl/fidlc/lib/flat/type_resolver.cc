@@ -4,6 +4,8 @@
 
 #include "fidl/flat/type_resolver.h"
 
+#include <zircon/assert.h>
+
 #include "fidl/flat/compile_step.h"
 
 namespace fidl::flat {
@@ -59,7 +61,7 @@ bool TypeResolver::ResolveParamAsSize(const Reference& layout,
       break;
     }
   }
-  assert(*out_size);
+  ZX_ASSERT(*out_size);
   if ((*out_size)->value == 0)
     return Fail(ErrMustHaveNonZeroSize, param->span, layout.resolved().name());
   return true;
@@ -72,15 +74,13 @@ bool TypeResolver::ResolveConstraintAs(Constant* constraint,
     out->kind = constraint_kind;
     switch (constraint_kind) {
       case ConstraintKind::kHandleSubtype: {
-        assert(resource &&
-               "Compiler bug: must pass resource if trying to resolve to handle subtype");
+        ZX_ASSERT_MSG(resource, "must pass resource if trying to resolve to handle subtype");
         if (ResolveAsHandleSubtype(resource, constraint, &out->value.handle_subtype))
           return true;
         break;
       }
       case ConstraintKind::kHandleRights: {
-        assert(resource &&
-               "Compiler bug: must pass resource if trying to resolve to handle rights");
+        ZX_ASSERT_MSG(resource, "must pass resource if trying to resolve to handle rights");
         if (ResolveAsHandleRights(resource, constraint, &(out->value.handle_rights)))
           return true;
         break;

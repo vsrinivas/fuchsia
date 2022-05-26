@@ -5,6 +5,7 @@
 #include <fidl/findings.h>
 #include <fidl/template_string.h>
 #include <fidl/utils.h>
+#include <zircon/assert.h>
 
 #include <sstream>
 #include <utility>
@@ -30,8 +31,8 @@ class LintTest {
   LintTest& AddFinding(const std::string& check_id, const std::string& message,
                        const std::string& violation_string = "${TEST}", std::string suggestion = "",
                        std::string replacement = "") {
-    assert(!source_template_.str().empty() &&
-           "source_template() must be called before AddFinding()");
+    ZX_ASSERT_MSG(!source_template_.str().empty(),
+                  "source_template() must be called before AddFinding()");
     std::string template_string = source_template_.str();
     size_t start = template_string.find(violation_string);
     if (start == std::string::npos) {
@@ -42,7 +43,7 @@ class LintTest {
     // Note, if there are any substitution variables in the template that
     // precede the violation_string, the test will probably fail because the
     // string location will probably be different after substitution.
-    assert(start != std::string::npos && "Bad test! violation_string not found in template");
+    ZX_ASSERT_MSG(start != std::string::npos, "Bad test! violation_string not found in template");
     std::string expanded_violation_string =
         TemplateString(violation_string).Substitute(substitutions_);
     auto span = library().source_span(start, expanded_violation_string.size());
@@ -110,7 +111,8 @@ class LintTest {
     default_replacement_ = replacement;
     if (!expected_findings_.empty()) {
       Finding& finding = expected_findings_.back();
-      assert(finding.suggestion().has_value() && "|suggestion| must be added before |replacement|");
+      ZX_ASSERT_MSG(finding.suggestion().has_value(),
+                    "|suggestion| must be added before |replacement|");
       auto description = finding.suggestion()->description();
       finding.SetSuggestion(description, replacement);
     }
@@ -314,8 +316,8 @@ class LintTest {
 
   TestLibrary& library() {
     if (!library_) {
-      assert(!source_template_.str().empty() &&
-             "source_template() must be set before library() is called");
+      ZX_ASSERT_MSG(!source_template_.str().empty(),
+                    "source_template() must be set before library() is called");
       library_ = std::make_unique<TestLibrary>();
       library_->AddSource(filename_, source_template_.Substitute(substitutions_));
     }

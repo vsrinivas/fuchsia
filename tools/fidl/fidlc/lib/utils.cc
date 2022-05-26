@@ -4,7 +4,7 @@
 
 #include "fidl/utils.h"
 
-#include <cassert>
+#include <zircon/assert.h>
 
 #include <re2/re2.h>
 
@@ -42,7 +42,7 @@ bool IsValidFullyQualifiedMethodIdentifier(std::string_view fq_identifier) {
 }
 
 bool ends_with_underscore(std::string_view str) {
-  assert(str.size() > 0);
+  ZX_ASSERT(str.size() > 0);
   return str.back() == '_';
 }
 
@@ -53,8 +53,8 @@ bool has_konstant_k(std::string_view str) {
 }
 
 std::string strip_string_literal_quotes(std::string_view str) {
-  assert(str.size() >= 2 && str[0] == '"' && str[str.size() - 1] == '"' &&
-         "string must start and end with '\"' style quotes");
+  ZX_ASSERT_MSG(str.size() >= 2 && str[0] == '"' && str[str.size() - 1] == '"',
+                "string must start and end with '\"' style quotes");
   return std::string(str.data() + 1, str.size() - 2);
 }
 
@@ -294,7 +294,7 @@ std::uint32_t string_literal_length(std::string_view str) {
     ++cnt;
     if (*it == '\\') {
       ++it;
-      assert(it < it_end && "compiler bug: invalid string literal");
+      ZX_ASSERT_MSG(it < it_end, "invalid string literal");
       char next = *it;
       switch (next) {
         case 'x':
@@ -330,9 +330,9 @@ std::uint32_t string_literal_length(std::string_view str) {
           // no additional skip required
           break;
         default:
-          assert(false && "compiler bug: invalid string literal");
+          ZX_PANIC("invalid string literal");
       }
-      assert(it < it_end && "compiler bug: invalid string literal");
+      ZX_ASSERT_MSG(it < it_end, "invalid string literal");
     }
   }
   return cnt;

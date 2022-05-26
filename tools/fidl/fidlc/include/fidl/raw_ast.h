@@ -5,7 +5,8 @@
 #ifndef TOOLS_FIDL_FIDLC_INCLUDE_FIDL_RAW_AST_H_
 #define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_RAW_AST_H_
 
-#include <cassert>
+#include <zircon/assert.h>
+
 #include <memory>
 #include <optional>
 #include <utility>
@@ -68,7 +69,7 @@ class SourceElement {
       return SourceSpan();
     }
 
-    assert(has_span());
+    ZX_ASSERT(has_span());
     const char* start_pos = start_.span().data().data();
     const char* end_pos = end_.span().data().data() + end_.span().data().length();
     return SourceSpan(std::string_view(start_pos, end_pos - start_pos),

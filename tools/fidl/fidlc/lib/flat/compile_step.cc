@@ -4,6 +4,8 @@
 
 #include "fidl/flat/compile_step.h"
 
+#include <zircon/assert.h>
+
 #include <algorithm>
 #include <optional>
 
@@ -41,7 +43,7 @@ class ScopeInsertResult {
   bool ok() const { return previous_occurrence_ == nullptr; }
 
   const SourceSpan& previous_occurrence() const {
-    assert(!ok());
+    ZX_ASSERT(!ok());
     return *previous_occurrence_;
   }
 
@@ -149,7 +151,7 @@ std::optional<std::vector<const Decl*>> CompileStep::GetDeclCycle(const Decl* de
     auto decl_pos = std::find(decl_stack_.begin(), decl_stack_.end(), decl);
     // Decl should already be in the stack somewhere because compiling is set to
     // true iff the decl is in the decl stack.
-    assert(decl_pos != decl_stack_.end());
+    ZX_ASSERT(decl_pos != decl_stack_.end());
     // Copy the part of the cycle we care about so Compiling guards can pop
     // normally when returning.
     std::vector<const Decl*> cycle(decl_pos, decl_stack_.end());
@@ -210,9 +212,9 @@ void CompileStep::CompileDecl(Decl* decl) {
 bool CompileStep::ResolveOrOperatorConstant(Constant* constant, std::optional<const Type*> opt_type,
                                             const ConstantValue& left_operand,
                                             const ConstantValue& right_operand) {
-  assert(left_operand.kind == right_operand.kind &&
-         "left and right operands of or operator must be of the same kind");
-  assert(opt_type && "compiler bug: type inference not implemented for or operator");
+  ZX_ASSERT_MSG(left_operand.kind == right_operand.kind,
+                "left and right operands of or operator must be of the same kind");
+  ZX_ASSERT_MSG(opt_type, "type inference not implemented for or operator");
   const auto type = UnderlyingType(opt_type.value());
   if (type == nullptr)
     return false;
@@ -237,7 +239,7 @@ bool CompileStep::ResolveOrOperatorConstant(Constant* constant, std::optional<co
 }
 
 bool CompileStep::ResolveConstant(Constant* constant, std::optional<const Type*> opt_type) {
-  assert(constant != nullptr);
+  ZX_ASSERT(constant != nullptr);
 
   // Prevent re-entry.
   if (constant->compiled)
@@ -263,7 +265,7 @@ bool CompileStep::ResolveConstant(Constant* constant, std::optional<const Type*>
                                            binary_operator_constant->left_operand->Value(),
                                            binary_operator_constant->right_operand->Value());
         default:
-          assert(false && "Compiler bug: unhandled binary operator");
+          ZX_PANIC("unhandled binary operator");
       }
       break;
     }
@@ -297,14 +299,14 @@ ConstantValue::Kind CompileStep::ConstantValuePrimitiveKind(
     case types::PrimitiveSubtype::kFloat64:
       return ConstantValue::Kind::kFloat64;
   }
-  assert(false && "Compiler bug: unhandled primitive subtype");
+  ZX_PANIC("unhandled primitive subtype");
 }
 
 bool CompileStep::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
                                             std::optional<const Type*> opt_type) {
   if (opt_type) {
-    assert(TypeCanBeConst(opt_type.value()) &&
-           "Compiler bug: resolving identifier constant to non-const-able type!");
+    ZX_ASSERT_MSG(TypeCanBeConst(opt_type.value()),
+                  "resolving identifier constant to non-const-able type!");
   }
 
   auto& reference = identifier_constant->reference;
@@ -331,7 +333,7 @@ bool CompileStep::ResolveIdentifierConstant(IdentifierConstant* identifier_const
       break;
     }
     case Element::Kind::kEnumMember: {
-      assert(parent->kind == Decl::Kind::kEnum);
+      ZX_ASSERT(parent->kind == Decl::Kind::kEnum);
       const_type = static_cast<Enum*>(parent)->subtype_ctor->type;
       auto member = static_cast<Enum::Member*>(target);
       if (!member->value->IsResolved()) {
@@ -341,7 +343,7 @@ bool CompileStep::ResolveIdentifierConstant(IdentifierConstant* identifier_const
       break;
     }
     case Element::Kind::kBitsMember: {
-      assert(parent->kind == Decl::Kind::kBits);
+      ZX_ASSERT(parent->kind == Decl::Kind::kBits);
       const_type = static_cast<Bits*>(parent)->subtype_ctor->type;
       auto member = static_cast<Bits::Member*>(target);
       if (!member->value->IsResolved()) {
@@ -356,8 +358,8 @@ bool CompileStep::ResolveIdentifierConstant(IdentifierConstant* identifier_const
     }
   }
 
-  assert(const_val && "Compiler bug: did not set const_val");
-  assert(const_type && "Compiler bug: did not set const_type");
+  ZX_ASSERT_MSG(const_val, "did not set const_val");
+  ZX_ASSERT_MSG(const_type, "did not set const_type");
 
   std::unique_ptr<ConstantValue> resolved_val;
   const auto type = opt_type ? opt_type.value() : const_type;
@@ -385,13 +387,13 @@ bool CompileStep::ResolveIdentifierConstant(IdentifierConstant* identifier_const
           if (!enum_decl->subtype_ctor->type) {
             return false;
           }
-          assert(enum_decl->subtype_ctor->type->kind == Type::Kind::kPrimitive);
+          ZX_ASSERT(enum_decl->subtype_ctor->type->kind == Type::Kind::kPrimitive);
           primitive_type = static_cast<const PrimitiveType*>(enum_decl->subtype_ctor->type);
           break;
         }
         case Decl::Kind::kBits: {
           auto bits_decl = static_cast<const Bits*>(identifier_type->type_decl);
-          assert(bits_decl->subtype_ctor->type->kind == Type::Kind::kPrimitive);
+          ZX_ASSERT(bits_decl->subtype_ctor->type->kind == Type::Kind::kPrimitive);
           if (!bits_decl->subtype_ctor->type) {
             return false;
           }
@@ -399,7 +401,7 @@ bool CompileStep::ResolveIdentifierConstant(IdentifierConstant* identifier_const
           break;
         }
         default: {
-          assert(false && "Compiler bug: identifier not of const-able type.");
+          ZX_PANIC("identifier not of const-able type.");
         }
       }
 
@@ -422,7 +424,7 @@ bool CompileStep::ResolveIdentifierConstant(IdentifierConstant* identifier_const
           break;
         }
         default: {
-          assert(false && "Compiler bug: identifier not of const-able type.");
+          ZX_PANIC("identifier not of const-able type.");
         }
       }
 
@@ -431,7 +433,7 @@ bool CompileStep::ResolveIdentifierConstant(IdentifierConstant* identifier_const
       break;
     }
     default: {
-      assert(false && "Compiler bug: identifier not of const-able type.");
+      ZX_PANIC("identifier not of const-able type.");
     }
   }
 
@@ -498,8 +500,7 @@ bool CompileStep::ResolveLiteralConstant(LiteralConstant* literal_constant,
         case types::PrimitiveSubtype::kFloat64:
           return ResolveLiteralConstantKindNumericLiteral<double>(literal_constant, type);
         default:
-          assert(false && "compiler bug: should not have any other primitive type reachable");
-          return false;
+          ZX_PANIC("should not have any other primitive type reachable");
       }
     }
   }  // switch
@@ -552,13 +553,12 @@ const Type* CompileStep::InferType(Constant* constant) {
       }
       return constant->type;
     case Constant::Kind::kBinaryOperator:
-      assert(false && "compiler bug: type inference not implemented for binops");
-      __builtin_unreachable();
+      ZX_PANIC("type inference not implemented for binops");
   }
 }
 
 bool CompileStep::ResolveAsOptional(Constant* constant) {
-  assert(constant);
+  ZX_ASSERT(constant);
 
   if (constant->kind != Constant::Kind::kIdentifier)
     return false;
@@ -616,7 +616,7 @@ void CompileStep::CompileAttribute(Attribute* attribute, bool early) {
 
   const AttributeSchema& schema = all_libraries()->RetrieveAttributeSchema(attribute);
   if (early) {
-    assert(schema.CanCompileEarly() && "attribute is not allowed to be compiled early");
+    ZX_ASSERT_MSG(schema.CanCompileEarly(), "attribute is not allowed to be compiled early");
   }
   schema.ResolveArgs(this, attribute);
   attribute->compiled = true;
@@ -918,7 +918,7 @@ void CompileStep::CompileProtocol(Protocol* protocol_declaration) {
       }
       auto composed_protocol_declaration = static_cast<const Protocol*>(target);
       auto span = composed_protocol_declaration->name.span();
-      assert(span);
+      ZX_ASSERT(span);
       if (method_scope.protocols.Insert(composed_protocol_declaration, span.value()).ok()) {
         Visitor(composed_protocol_declaration, Visitor);
       } else {
@@ -1074,7 +1074,7 @@ void CompileStep::CompileProtocol(Protocol* protocol_declaration) {
         if (type->kind != Type::Kind::kIdentifier) {
           Fail(ErrInvalidParameterListType, method.name, type);
         } else {
-          assert(type->kind == Type::Kind::kIdentifier);
+          ZX_ASSERT(type->kind == Type::Kind::kIdentifier);
           auto decl = static_cast<const flat::IdentifierType*>(type)->type_decl;
           CompileDecl(decl);
           CheckNoDefaultMembers(decl);
@@ -1088,16 +1088,16 @@ void CompileStep::CompileProtocol(Protocol* protocol_declaration) {
         if (type->kind != Type::Kind::kIdentifier) {
           Fail(ErrInvalidParameterListType, method.name, type);
         } else {
-          assert(type->kind == Type::Kind::kIdentifier);
+          ZX_ASSERT(type->kind == Type::Kind::kIdentifier);
           auto decl = static_cast<const flat::IdentifierType*>(type)->type_decl;
           CompileDecl(decl);
           if (method.HasResultUnion()) {
-            assert(decl->kind == Decl::Kind::kStruct);
+            ZX_ASSERT(decl->kind == Decl::Kind::kStruct);
             auto response_struct = static_cast<const flat::Struct*>(decl);
             const auto* result_union_type = static_cast<const flat::IdentifierType*>(
                 response_struct->members[0].type_ctor->type);
 
-            assert(result_union_type->type_decl->kind == Decl::Kind::kUnion);
+            ZX_ASSERT(result_union_type->type_decl->kind == Decl::Kind::kUnion);
             const auto* result_union =
                 static_cast<const flat::Union*>(result_union_type->type_decl);
             const auto* success_variant_type = static_cast<const flat::IdentifierType*>(
@@ -1384,7 +1384,7 @@ bool CompileStep::ResolveSizeBound(Constant* size_constant, const Size** out_siz
 
 template <typename DeclType, typename MemberType>
 bool CompileStep::ValidateMembers(DeclType* decl, MemberValidator<MemberType> validator) {
-  assert(decl != nullptr);
+  ZX_ASSERT(decl != nullptr);
   auto checkpoint = reporter()->Checkpoint();
 
   constexpr const char* decl_type = std::is_same_v<DeclType, Enum> ? "enum" : "bits";
@@ -1392,7 +1392,7 @@ bool CompileStep::ValidateMembers(DeclType* decl, MemberValidator<MemberType> va
   Scope<std::string> name_scope;
   Scope<MemberType> value_scope;
   for (const auto& member : decl->members) {
-    assert(member.value != nullptr && "Compiler bug: member value is null!");
+    ZX_ASSERT_MSG(member.value != nullptr, "member value is null!");
 
     // Check that the member identifier hasn't been used yet
     const auto original_name = member.name.data();

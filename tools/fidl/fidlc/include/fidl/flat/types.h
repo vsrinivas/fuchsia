@@ -5,6 +5,8 @@
 #ifndef TOOLS_FIDL_FIDLC_INCLUDE_FIDL_FLAT_TYPES_H_
 #define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_FLAT_TYPES_H_
 
+#include <zircon/assert.h>
+
 #include <any>
 #include <utility>
 
@@ -87,7 +89,7 @@ struct Type : public Object {
   // Return <0 if *this < other, ==0 if *this == other, and >0 if *this > other.
   // Derived types should override this, but also call this implementation.
   virtual Comparison Compare(const Type& other) const {
-    assert(kind == other.kind);
+    ZX_ASSERT(kind == other.kind);
     return Comparison().Compare(nullability, other.nullability);
   }
 

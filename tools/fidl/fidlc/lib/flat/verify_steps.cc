@@ -4,6 +4,8 @@
 
 #include "fidl/flat/verify_steps.h"
 
+#include <zircon/assert.h>
+
 #include "fidl/flat/attribute_schema.h"
 #include "fidl/flat_ast.h"
 
@@ -16,7 +18,7 @@ void VerifyResourcenessStep::RunImpl() {
 }
 
 void VerifyResourcenessStep::VerifyDecl(const Decl* decl) {
-  assert(decl->compiled && "verification must happen after compilation of decls");
+  ZX_ASSERT_MSG(decl->compiled, "verification must happen after compilation of decls");
   switch (decl->kind) {
     case Decl::Kind::kStruct: {
       const auto* struct_decl = static_cast<const Struct*>(decl);
@@ -82,7 +84,7 @@ types::Resourceness VerifyResourcenessStep::EffectiveResourceness(const Type* ty
     case Type::Kind::kBox:
       return EffectiveResourceness(static_cast<const BoxType*>(type)->boxed_type);
     case Type::Kind::kUntypedNumeric:
-      assert(false && "compiler bug: should not have untyped numeric here");
+      ZX_PANIC("should not have untyped numeric here");
   }
 
   const auto* decl = static_cast<const IdentifierType*>(type)->type_decl;
@@ -115,7 +117,7 @@ types::Resourceness VerifyResourcenessStep::EffectiveResourceness(const Type* ty
     case Decl::Kind::kConst:
     case Decl::Kind::kResource:
     case Decl::Kind::kTypeAlias:
-      assert(false && "Compiler bug: unexpected kind");
+      ZX_PANIC("unexpected kind");
   }
 
   const auto [it, inserted] = effective_resourceness_.try_emplace(decl, std::nullopt);
@@ -157,7 +159,7 @@ types::Resourceness VerifyResourcenessStep::EffectiveResourceness(const Type* ty
       }
       break;
     default:
-      assert(false && "Compiler bug: unexpected kind");
+      ZX_PANIC("unexpected kind");
   }
 
   effective_resourceness_[decl] = types::Resourceness::kValue;
@@ -260,8 +262,8 @@ void VerifyHandleTransportCompatibilityStep::CheckHandleTransportUsages(
     case Decl::Kind::kResource:
     case Decl::Kind::kTypeAlias:
     case Decl::Kind::kService:
-      assert(false && "Compiler bug: unexpected kind");
-      __builtin_unreachable();
+      ZX_PANIC("unexpected kind");
+
     case Decl::Kind::kStruct: {
       const Struct* s = static_cast<const Struct*>(decl);
       for (auto& member : s->members) {
@@ -291,8 +293,7 @@ void VerifyHandleTransportCompatibilityStep::CheckHandleTransportUsages(
     }
   }
 
-  assert(false && "Compiler bug: unhandled case");
-  __builtin_unreachable();
+  ZX_PANIC("unhandled case");
 }
 
 void VerifyAttributesStep::RunImpl() {
@@ -325,11 +326,11 @@ void VerifyOpenInteractionsStep::RunImpl() {
 }
 
 void VerifyOpenInteractionsStep::VerifyProtocolOpenness(const Protocol& protocol) {
-  assert(protocol.compiled && "verification must happen after compilation of decls");
+  ZX_ASSERT_MSG(protocol.compiled, "verification must happen after compilation of decls");
 
   for (const auto& composed : protocol.composed_protocols) {
     auto target = composed.reference.resolved().element();
-    assert(target->kind == Element::Kind::kProtocol && "Composed protocol not a protocol");
+    ZX_ASSERT_MSG(target->kind == Element::Kind::kProtocol, "Composed protocol not a protocol");
     auto composed_protocol = static_cast<const Protocol*>(target);
     if (!IsAllowedComposition(protocol.openness, composed_protocol->openness)) {
       Fail(ErrComposedProtocolTooOpen, composed.reference.span(), protocol.openness, protocol.name,

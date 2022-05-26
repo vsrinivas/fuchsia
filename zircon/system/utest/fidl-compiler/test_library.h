@@ -14,6 +14,7 @@
 #include <fidl/parser.h>
 #include <fidl/source_file.h>
 #include <fidl/tables_generator.h>
+#include <zircon/assert.h>
 
 #include <fstream>
 
@@ -91,7 +92,7 @@ inline fidl::raw::Ordinal64 GetGeneratedOrdinal64ForTesting(
   if (library_name.size() == 1 && library_name[0] == "methodhasher" &&
       (protocol_name == "Special" || protocol_name == "SpecialComposed")) {
     auto it = special_selectors.find(std::string(selector_name));
-    assert(it != special_selectors.end() && "only special selectors allowed");
+    ZX_ASSERT_MSG(it != special_selectors.end(), "only special selectors allowed");
     return fidl::raw::Ordinal64(source_element, it->second);
   }
   return fidl::ordinals::GetGeneratedOrdinal64(library_name, protocol_name, selector_name,
@@ -129,14 +130,14 @@ class TestLibrary final : public SharedInterface {
   // Helper for making a single test library depend on library zx, without
   // requiring an explicit SharedAmongstLibraries.
   void UseLibraryZx() {
-    assert(!compilation_ && "must call before compiling");
+    ZX_ASSERT_MSG(!compilation_, "must call before compiling");
     owned_shared_.value().AddLibraryZx();
   }
 
   // Helper for making a single test library depend on library fdf, without
   // requiring an explicit SharedAmongstLibraries.
   void UseLibraryFdf() {
-    assert(!compilation_ && "must call before compiling");
+    ZX_ASSERT_MSG(!compilation_, "must call before compiling");
     owned_shared_.value().AddLibraryFdf();
   }
 
@@ -160,7 +161,7 @@ class TestLibrary final : public SharedInterface {
 
   // TODO(pascallouis): remove, this does not use a library.
   bool Parse(std::unique_ptr<fidl::raw::File>* out_ast_ptr) {
-    assert(all_sources_.size() == 1 && "parse can only be used with one source");
+    ZX_ASSERT_MSG(all_sources_.size() == 1, "parse can only be used with one source");
     auto source_file = all_sources_.at(0);
     fidl::Lexer lexer(*source_file, reporter());
     fidl::Parser parser(&lexer, reporter(), experimental_flags());
@@ -192,7 +193,7 @@ class TestLibrary final : public SharedInterface {
   bool Lint(fidl::Findings* findings, const std::set<std::string>& included_check_ids = {},
             const std::set<std::string>& excluded_check_ids = {}, bool exclude_by_default = false,
             std::set<std::string>* excluded_checks_not_found = nullptr) {
-    assert(all_sources_.size() == 1 && "lint can only be used with one source");
+    ZX_ASSERT_MSG(all_sources_.size() == 1, "lint can only be used with one source");
     auto source_file = all_sources_.at(0);
     fidl::Lexer lexer(*source_file, reporter());
     fidl::Parser parser(&lexer, reporter(), experimental_flags());
@@ -248,7 +249,7 @@ class TestLibrary final : public SharedInterface {
       parts.push_back(name.substr(i, dot_idx));
     }
     auto library = all_libraries()->Lookup(parts);
-    assert(library && "library not found");
+    ZX_ASSERT_MSG(library, "library not found");
     return library;
   }
 
@@ -343,12 +344,12 @@ class TestLibrary final : public SharedInterface {
   }
 
   const fidl::SourceFile& source_file() const {
-    assert(all_sources_.size() == 1 && "convenience method only possible with single source");
+    ZX_ASSERT_MSG(all_sources_.size() == 1, "convenience method only possible with single source");
     return *all_sources_.at(0);
   }
 
   fidl::SourceSpan source_span(size_t start, size_t size) const {
-    assert(all_sources_.size() == 1 && "convenience method only possible with single source");
+    ZX_ASSERT_MSG(all_sources_.size() == 1, "convenience method only possible with single source");
     std::string_view data = all_sources_.at(0)->data();
     data.remove_prefix(start);
     data.remove_suffix(data.size() - size);
@@ -358,7 +359,7 @@ class TestLibrary final : public SharedInterface {
   const std::vector<std::string>& lints() const { return lints_; }
 
   const fidl::flat::Compilation* compilation() const {
-    assert(compilation_ && "must compile successfully before accessing compilation");
+    ZX_ASSERT_MSG(compilation_, "must compile successfully before accessing compilation");
     return compilation_.get();
   }
 

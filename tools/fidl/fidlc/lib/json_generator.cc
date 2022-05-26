@@ -4,6 +4,8 @@
 
 #include "fidl/json_generator.h"
 
+#include <zircon/assert.h>
+
 #include "fidl/diagnostic_types.h"
 #include "fidl/flat/name.h"
 #include "fidl/flat/types.h"
@@ -168,8 +170,8 @@ void JSONGenerator::Generate(const flat::Type* value) {
 
     switch (value->kind) {
       case flat::Type::Kind::kBox:
-        assert(false && "should be caught above");
-        __builtin_unreachable();
+        ZX_PANIC("should be caught above");
+
       case flat::Type::Kind::kVector: {
         // This code path should only be exercised if the type is "bytes." All
         // other handling of kVector is handled in GenerateParameterizedType.
@@ -216,19 +218,17 @@ void JSONGenerator::Generate(const flat::Type* value) {
         const auto* type = static_cast<const flat::TransportSideType*>(value);
         // This code path should only apply to client ends. The server end code
         // path is colocated with the parameterized types.
-        assert(type->end == flat::TransportSide::kClient);
+        ZX_ASSERT(type->end == flat::TransportSide::kClient);
         GenerateObjectMember("identifier", type->protocol_decl->name);
         GenerateObjectMember("nullable", type->nullability);
         GenerateObjectMember("protocol_transport", type->protocol_transport);
         break;
       }
       case flat::Type::Kind::kArray:
-        assert(false &&
-               "expected non-parameterized type (neither array<T>, vector<T>, nor request<P>)");
-        break;
+        ZX_PANIC("expected non-parameterized type (neither array<T>, vector<T>, nor request<P>)");
+
       case flat::Type::Kind::kUntypedNumeric:
-        assert(false && "compiler bug: should not have untyped numeric here");
-        break;
+        ZX_PANIC("should not have untyped numeric here");
     }
 
     GenerateTypeShapes(*value);
@@ -237,8 +237,9 @@ void JSONGenerator::Generate(const flat::Type* value) {
 
 void JSONGenerator::Generate(const flat::AttributeArg& value) {
   GenerateObject([&]() {
-    assert(value.name.has_value() &&
-           "anonymous attribute argument names should always be inferred during compilation");
+    ZX_ASSERT_MSG(
+        value.name.has_value(),
+        "anonymous attribute argument names should always be inferred during compilation");
     GenerateObjectMember("name", value.name.value(), Position::kFirst);
     GenerateObjectMember("type", value.value->type->name);
     GenerateObjectMember("value", value.value);
@@ -386,7 +387,7 @@ void JSONGenerator::Generate(const flat::Protocol::ComposedProtocol& value) {
 }
 
 void JSONGenerator::Generate(const flat::Protocol::MethodWithInfo& method_with_info) {
-  assert(method_with_info.method != nullptr);
+  ZX_ASSERT(method_with_info.method != nullptr);
   const auto& value = *method_with_info.method;
   GenerateObject([&]() {
     GenerateObjectMember("ordinal", value.generated_ordinal64, Position::kFirst);
@@ -523,7 +524,7 @@ void JSONGenerator::GenerateParameterizedType(TypeKind parent_type_kind, const f
         const auto* server_end = static_cast<const flat::TransportSideType*>(type);
         // This code path should only apply to server ends. The client end code
         // path is colocated with the identifier type code for protocols.
-        assert(server_end->end == flat::TransportSide::kServer);
+        ZX_ASSERT(server_end->end == flat::TransportSide::kServer);
         GenerateObjectMember("subtype", server_end->protocol_decl->name);
         // We don't need to call GenerateExperimentalMaybeFromTypeAlias here like we
         // do above because we're guaranteed that the protocol constraint didn't come
@@ -538,11 +539,10 @@ void JSONGenerator::GenerateParameterizedType(TypeKind parent_type_kind, const f
       case flat::Type::Kind::kPrimitive:
       case flat::Type::Kind::kBox:
       case flat::Type::Kind::kHandle:
-        assert(false && "expected parameterized type (either array<T>, vector<T>, or request<P>)");
-        break;
+        ZX_PANIC("expected parameterized type (either array<T>, vector<T>, or request<P>)");
+
       case flat::Type::Kind::kUntypedNumeric:
-        assert(false && "compiler bug: should not have untyped numeric here");
-        break;
+        ZX_PANIC("should not have untyped numeric here");
     }
     GenerateTypeShapes(*type);
   });
@@ -632,14 +632,14 @@ void JSONGenerator::Generate(const flat::Table::Member& value) {
   GenerateObject([&]() {
     GenerateObjectMember("ordinal", *value.ordinal, Position::kFirst);
     if (value.maybe_used) {
-      assert(!value.span);
+      ZX_ASSERT(!value.span);
       GenerateObjectMember("reserved", false);
       GenerateTypeAndFromTypeAlias(value.maybe_used->type_ctor.get());
       GenerateObjectMember("name", value.maybe_used->name);
       GenerateObjectMember("location", NameSpan(value.maybe_used->name));
       // TODO(fxbug.dev/7932): Support defaults on tables.
     } else {
-      assert(value.span);
+      ZX_ASSERT(value.span);
       GenerateObjectMember("reserved", true);
       GenerateObjectMember("location", NameSpan(value.span.value()));
     }
@@ -687,7 +687,7 @@ void JSONGenerator::Generate(const flat::Union::Member& value) {
   GenerateObject([&]() {
     GenerateObjectMember("ordinal", value.ordinal, Position::kFirst);
     if (value.maybe_used) {
-      assert(!value.span);
+      ZX_ASSERT(!value.span);
       GenerateObjectMember("reserved", false);
       GenerateObjectMember("name", value.maybe_used->name);
       GenerateTypeAndFromTypeAlias(value.maybe_used->type_ctor.get());

@@ -4,6 +4,8 @@
 
 #include "fidl/type_shape.h"
 
+#include <zircon/assert.h>
+
 #include <algorithm>
 
 #include <safemath/clamped_math.h>
@@ -161,8 +163,7 @@ class UnalignedSizeVisitor final : public TypeShapeVisitor<DataSize> {
           case flat::Decl::Kind::kResource:
           case flat::Decl::Kind::kTable:
           case flat::Decl::Kind::kTypeAlias:
-            assert(false && "UnalignedSize(flat::IdentifierType&) called on invalid nullable kind");
-            return DataSize(0);
+            ZX_PANIC("UnalignedSize(flat::IdentifierType&) called on invalid nullable kind");
         }
       case types::Nullability::kNonnullable: {
         return UnalignedSize(object.type_decl);
@@ -272,8 +273,7 @@ class AlignmentVisitor final : public TypeShapeVisitor<DataSize> {
           case flat::Decl::Kind::kResource:
           case flat::Decl::Kind::kTable:
           case flat::Decl::Kind::kTypeAlias:
-            assert(false && "Alignment(flat::IdentifierType&) called on invalid nullable kind");
-            return DataSize(0);
+            ZX_PANIC("Alignment(flat::IdentifierType&) called on invalid nullable kind");
         }
       case types::Nullability::kNonnullable:
         return Alignment(object.type_decl);
@@ -385,8 +385,7 @@ class DepthVisitor : public TypeShapeVisitor<DataSize> {
           case flat::Decl::Kind::kTable:
           case flat::Decl::Kind::kResource:
           case flat::Decl::Kind::kTypeAlias:
-            assert(false && "Depth(flat::IdentifierType&) called on invalid nullable kind");
-            return DataSize(0);
+            ZX_PANIC("Depth(flat::IdentifierType&) called on invalid nullable kind");
         }
       case types::Nullability::kNonnullable:
         switch (object.type_decl->kind) {
@@ -403,8 +402,7 @@ class DepthVisitor : public TypeShapeVisitor<DataSize> {
           case flat::Decl::Kind::kStruct:
             return Depth(object.type_decl);
           case flat::Decl::Kind::kBuiltin:
-            assert(false && "unexpected builtin");
-            return DataSize(0);
+            ZX_PANIC("unexpected builtin");
         }
     }
   }
@@ -581,7 +579,7 @@ class MaxHandlesVisitor final : public flat::Object::Visitor<DataSize> {
           case flat::Type::Kind::kBox:
             continue;
           case flat::Type::Kind::kUntypedNumeric:
-            assert(false && "compiler bug: should not have untyped numeric here");
+            ZX_PANIC("should not have untyped numeric here");
         }
       }
 
@@ -686,8 +684,7 @@ class MaxOutOfLineVisitor final : public TypeShapeVisitor<DataSize> {
           case flat::Decl::Kind::kResource:
           case flat::Decl::Kind::kTable:
           case flat::Decl::Kind::kTypeAlias:
-            assert(false && "MaxOutOfLine(flat::IdentifierType&) called on invalid nullable kind");
-            return 0;
+            ZX_PANIC("MaxOutOfLine(flat::IdentifierType&) called on invalid nullable kind");
         }
       }
       case types::Nullability::kNonnullable:
@@ -740,7 +737,7 @@ class MaxOutOfLineVisitor final : public TypeShapeVisitor<DataSize> {
     // For example, a table that looks like
     // "table T { 1: int32 i; 2: reserved; 3: uint32 u; 4: reserved; }"
     // has an envelope array size of 3, not 4.
-    assert(object.members.size() <= INT32_MAX);
+    ZX_ASSERT(object.members.size() <= INT32_MAX);
     int max_unreserved_index = -1;
     for (int i = static_cast<int>(object.members.size()) - 1; i >= 0; i--) {
       if (object.members.at(i).maybe_used) {
@@ -855,8 +852,7 @@ class HasPaddingVisitor final : public TypeShapeVisitor<bool> {
           case flat::Decl::Kind::kResource:
           case flat::Decl::Kind::kTable:
           case flat::Decl::Kind::kTypeAlias:
-            assert(false && "HasPadding(flat::IdentifierType&) called on invalid nullable kind");
-            return false;
+            ZX_PANIC("HasPadding(flat::IdentifierType&) called on invalid nullable kind");
         }
       case types::Nullability::kNonnullable:
         return HasPadding(object.type_decl);
@@ -1208,12 +1204,12 @@ TypeShape::TypeShape(const flat::Object* object, WireFormat wire_format)
 TypeShape TypeShape::ForEmptyPayload() { return TypeShape(0, 0); }
 
 FieldShape::FieldShape(const flat::StructMember& member, const WireFormat wire_format) {
-  assert(member.parent);
+  ZX_ASSERT(member.parent);
   const flat::Struct& parent = *member.parent;
 
   // Our parent struct must have at least one member if fieldshape() on a member is being
   // called.
-  assert(!parent.members.empty());
+  ZX_ASSERT(!parent.members.empty());
   const std::vector<flat::StructMember>& members = parent.members;
 
   for (size_t i = 0; i < members.size(); i++) {

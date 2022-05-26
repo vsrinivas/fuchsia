@@ -6,6 +6,7 @@
 #define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_UTILS_H_
 
 #include <errno.h>
+#include <zircon/assert.h>
 
 #include <clocale>
 #include <cstring>
@@ -144,7 +145,7 @@ enum class ParseNumericResult {
 
 template <typename NumericType>
 ParseNumericResult ParseNumeric(std::string_view input, NumericType* out_value, int base = 0) {
-  assert(out_value != nullptr);
+  ZX_ASSERT(out_value != nullptr);
 
   // Set locale to "C" for numeric types, since all strtox() functions are locale-dependent
   setlocale(LC_NUMERIC, "C");

@@ -4,6 +4,8 @@
 
 #include "fidl/tables_generator.h"
 
+#include <zircon/assert.h>
+
 #include "fidl/coded_ast.h"
 #include "fidl/names.h"
 
@@ -441,7 +443,7 @@ void TablesGenerator::Generate(const coded::StructPadding& padding) {
     Emit(&tables_file_, ".mask_16=");
     Emit(&tables_file_, std::get<uint16_t>(padding.mask));
   } else {
-    assert(false && "invalid mask variant");
+    ZX_PANIC("invalid mask variant");
   }
   Emit(&tables_file_, "}");
 }
@@ -456,7 +458,7 @@ void TablesGenerator::Generate(const coded::StructElement& element) {
     Generate(std::get<const coded::StructPadding>(element));
     Emit(&tables_file_, "}");
   } else {
-    assert(false && "invalid StructElement variant");
+    ZX_PANIC("invalid StructElement variant");
   }
 }
 
@@ -544,8 +546,7 @@ void TablesGenerator::Produce(CodedTypesGenerator* coded_types_generator) {
               break;
             }
             default: {
-              assert(false && "only structs, tables, and unions may be used as message payloads");
-              return;
+              ZX_PANIC("only structs, tables, and unions may be used as message payloads");
             }
           }
         }
@@ -676,8 +677,7 @@ void TablesGenerator::Produce(CodedTypesGenerator* coded_types_generator) {
               break;
             }
             default: {
-              assert(false && "only structs, tables, and unions may be used as message payloads");
-              return;
+              ZX_PANIC("only structs, tables, and unions may be used as message payloads");
             }
           }
         }

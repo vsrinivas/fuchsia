@@ -4,6 +4,8 @@
 
 #include "fidl/flat/sort_step.h"
 
+#include <zircon/assert.h>
+
 #include <algorithm>
 
 #include "fidl/names.h"
@@ -18,7 +20,7 @@ struct CmpDeclName {
     if (a->name == b->name) {
       auto ar = a->availability.range();
       auto br = b->availability.range();
-      assert(ar != br || a == b);
+      ZX_ASSERT(ar != br || a == b);
       return ar < br;
     }
     // Avoid constructing the full name when libraries are the same (faster).
@@ -76,8 +78,7 @@ void CalcDependencies::VisitConstant(const Constant* constant) {
 void CalcDependencies::VisitTypeConstructor(const TypeConstructor* type_ctor) {
   const auto& invocation = type_ctor->resolved_params;
   if (invocation.from_type_alias) {
-    assert(!invocation.element_type_resolved &&
-           "Compiler bug: partial aliases should be disallowed");
+    ZX_ASSERT_MSG(!invocation.element_type_resolved, "partial aliases should be disallowed");
     AddDependency(invocation.from_type_alias);
     return;
   }
@@ -93,7 +94,7 @@ void CalcDependencies::VisitTypeConstructor(const TypeConstructor* type_ctor) {
   switch (type->kind) {
     case Type::Kind::kHandle: {
       auto handle_type = static_cast<const HandleType*>(type);
-      assert(handle_type->resource_decl);
+      ZX_ASSERT(handle_type->resource_decl);
       auto decl = static_cast<const Decl*>(handle_type->resource_decl);
       AddDependency(decl);
       break;
@@ -121,8 +122,7 @@ void CalcDependencies::VisitTypeConstructor(const TypeConstructor* type_ctor) {
       break;
     }
     case Type::Kind::kUntypedNumeric:
-      assert(false && "compiler bug: should not have untyped numeric here");
-      break;
+      ZX_PANIC("should not have untyped numeric here");
   }
 }
 
@@ -277,7 +277,7 @@ void SortStep::RunImpl() {
     // Pull one out of the queue.
     auto decl = decls_without_deps.back();
     decls_without_deps.pop_back();
-    assert(dependencies[decl].empty());
+    ZX_ASSERT(dependencies[decl].empty());
     library()->declaration_order.push_back(decl);
 
     // Since this decl is now declared, remove it from the set of undeclared
@@ -286,7 +286,7 @@ void SortStep::RunImpl() {
     for (const Decl* inverse_dep : inverse_deps) {
       auto& inverse_dep_forward_edges = dependencies[inverse_dep];
       auto incoming_edge = inverse_dep_forward_edges.find(decl);
-      assert(incoming_edge != inverse_dep_forward_edges.end());
+      ZX_ASSERT(incoming_edge != inverse_dep_forward_edges.end());
       inverse_dep_forward_edges.erase(incoming_edge);
       if (inverse_dep_forward_edges.empty())
         decls_without_deps.push_back(inverse_dep);
@@ -309,14 +309,14 @@ void SortStep::RunImpl() {
     }
     // There is a cycle so we should find at least one decl with remaining
     // undeclared deps.
-    assert(!cycle.empty());
+    ZX_ASSERT(!cycle.empty());
     // Because there is a cycle, building a cycle should always succeed.
     [[maybe_unused]] bool found_cycle = BuildExampleCycle(dependencies, cycle);
-    assert(found_cycle);
+    ZX_ASSERT(found_cycle);
     // Even if there is only one element in the cycle (a self-loop),
     // BuildExampleCycle should add a second entry so when printing we get A->A,
     // so the list should always end up with at least two elements.
-    assert(cycle.size() > 1);
+    ZX_ASSERT(cycle.size() > 1);
 
     Fail(ErrIncludeCycle, cycle.front()->name.span().value(), cycle);
   }

@@ -4,6 +4,8 @@
 
 #include "fidl/flat/resolve_step.h"
 
+#include <zircon/assert.h>
+
 #include "fidl/diagnostics.h"
 
 namespace fidl::flat {
@@ -33,7 +35,7 @@ void ResolveStep::RunImpl() {
     info.points.insert(b);
     if (auto deprecated = element->availability.deprecated_range()) {
       auto [c, another_b] = deprecated.value().pair();
-      assert(another_b == b && "deprecation continues until the end");
+      ZX_ASSERT_MSG(another_b == b, "deprecation continues until the end");
       info.points.insert(c);
     }
   }
@@ -68,7 +70,7 @@ void ResolveStep::RunImpl() {
   Library::Declarations decomposed_declarations;
   for (auto [name, decl] : library()->declarations.all) {
     auto& points = graph_.at(decl).points;
-    assert(points.size() >= 2 && "every decl must have at least 2 points");
+    ZX_ASSERT_MSG(points.size() >= 2, "every decl must have at least 2 points");
     // Note: Even if there are only two points, we still "split" the decl into
     // one piece. There is no need to make it a special case.
     auto prev = *points.begin();
@@ -374,15 +376,14 @@ void ResolveStep::ParseReference(Reference& ref, Context context) {
     case Reference::State::kResolved:
       // This can only happen for the early compilation of HEAD in
       // AttributeArgSchema::TryResolveAsHead.
-      assert(ref.resolved().element()->kind == Element::Kind::kBuiltin &&
-             static_cast<Builtin*>(ref.resolved().element())->id == Builtin::Identity::kHead);
+      ZX_ASSERT(ref.resolved().element()->kind == Element::Kind::kBuiltin &&
+                static_cast<Builtin*>(ref.resolved().element())->id == Builtin::Identity::kHead);
       return;
     default:
-      assert(false && "unexpected reference state");
-      break;
+      ZX_PANIC("unexpected reference state");
   }
   if (ref.state() == initial_state) {
-    assert(checkpoint.NumNewErrors() > 0 && "should have reported an error");
+    ZX_ASSERT_MSG(checkpoint.NumNewErrors() > 0, "should have reported an error");
     ref.MarkFailed();
   }
 }
@@ -519,11 +520,10 @@ void ResolveStep::ResolveReference(Reference& ref, Context context) {
       ResolveKeyReference(ref, context);
       break;
     default:
-      assert(false && "unexpected reference state");
-      break;
+      ZX_PANIC("unexpected reference state");
   }
   if (ref.state() == initial_state) {
-    assert(checkpoint.NumNewErrors() > 0 && "should have reported an error");
+    ZX_ASSERT_MSG(checkpoint.NumNewErrors() > 0, "should have reported an error");
     ref.MarkFailed();
   }
 }
@@ -564,7 +564,7 @@ void ResolveStep::ResolveKeyReference(Reference& ref, Context context) {
 Decl* ResolveStep::LookupDeclByKey(const Reference& ref, Context context) {
   auto key = ref.key();
   auto [begin, end] = key.library->declarations.all.equal_range(key.decl_name);
-  assert(begin != end && "key must exist");
+  ZX_ASSERT_MSG(begin != end, "key must exist");
   auto platform = key.library->platform.value();
   // Case #1: source and target libraries are versioned in the same platform.
   if (library()->platform == platform) {
@@ -573,7 +573,7 @@ Decl* ResolveStep::LookupDeclByKey(const Reference& ref, Context context) {
       auto us = context.enclosing->availability.range();
       auto them = decl->availability.range();
       if (auto overlap = VersionRange::Intersect(us, them)) {
-        assert(overlap.value() == us && "referencee must outlive referencer");
+        ZX_ASSERT_MSG(overlap.value() == us, "referencee must outlive referencer");
         return decl;
       }
     }

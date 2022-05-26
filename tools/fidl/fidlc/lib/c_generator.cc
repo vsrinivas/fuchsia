@@ -4,6 +4,8 @@
 
 #include "fidl/c_generator.h"
 
+#include <zircon/assert.h>
+
 #include <unordered_set>
 
 #include "fidl/flat_ast.h"
@@ -104,7 +106,7 @@ bool DeclAllowed(const flat::Decl* decl) {
 }
 
 bool TypeAllowed(const flat::Type* type) {
-  assert(type != nullptr);
+  ZX_ASSERT(type != nullptr);
   // treat box types like we do nullable structs
   if (type->kind == flat::Type::Kind::kBox)
     type = static_cast<const flat::BoxType*>(type)->boxed_type;
@@ -221,8 +223,8 @@ void EmitMemberDecl(std::ostream* file, const CGenerator::Member& member) {
 void EmitMethodInParamDecl(std::ostream* file, const CGenerator::Member& member) {
   switch (member.kind) {
     case flat::Type::Kind::kBox:
-      assert(false && "no box types should appear at this point");
-      __builtin_unreachable();
+      ZX_PANIC("no box types should appear at this point");
+
     case flat::Type::Kind::kArray:
       *file << "const " << member.type << " " << member.name;
       for (uint32_t array_count : member.array_counts) {
@@ -249,8 +251,8 @@ void EmitMethodInParamDecl(std::ostream* file, const CGenerator::Member& member)
         case flat::Decl::Kind::kResource:
         case flat::Decl::Kind::kService:
         case flat::Decl::Kind::kTypeAlias:
-          assert(false && "bad decl kind for member");
-          break;
+          ZX_PANIC("bad decl kind for member");
+
         case flat::Decl::Kind::kBits:
         case flat::Decl::Kind::kEnum:
         case flat::Decl::Kind::kProtocol:
@@ -271,16 +273,15 @@ void EmitMethodInParamDecl(std::ostream* file, const CGenerator::Member& member)
       }
       break;
     case flat::Type::Kind::kUntypedNumeric:
-      assert(false && "compiler bug: should not have untyped numeric here");
-      break;
+      ZX_PANIC("should not have untyped numeric here");
   }
 }
 
 void EmitMethodOutParamDecl(std::ostream* file, const CGenerator::Member& member) {
   switch (member.kind) {
     case flat::Type::Kind::kBox:
-      assert(false && "no box types should appear at this point");
-      __builtin_unreachable();
+      ZX_PANIC("no box types should appear at this point");
+
     case flat::Type::Kind::kArray:
       *file << member.type << " out_" << member.name;
       for (uint32_t array_count : member.array_counts) {
@@ -309,8 +310,8 @@ void EmitMethodOutParamDecl(std::ostream* file, const CGenerator::Member& member
         case flat::Decl::Kind::kResource:
         case flat::Decl::Kind::kService:
         case flat::Decl::Kind::kTypeAlias:
-          assert(false && "bad decl kind for member");
-          break;
+          ZX_PANIC("bad decl kind for member");
+
         case flat::Decl::Kind::kBits:
         case flat::Decl::Kind::kEnum:
         case flat::Decl::Kind::kProtocol:
@@ -331,7 +332,7 @@ void EmitMethodOutParamDecl(std::ostream* file, const CGenerator::Member& member
       }
       break;
     case flat::Type::Kind::kUntypedNumeric:
-      assert(false && "compiler bug: should not have untyped numeric here");
+      ZX_PANIC("should not have untyped numeric here");
   }
 }
 
@@ -422,7 +423,7 @@ void EmitParameterSizeValidation(std::ostream* file,
     } else if (member.kind == flat::Type::Kind::kString) {
       param_name = member.name + "_size";
     } else {
-      assert(false && "only vector/string has size limit");
+      ZX_PANIC("only vector/string has size limit");
     }
     *file << kIndent << "if (" << param_name << " > " << member.max_num_elements << ") {\n";
     *file << kIndent << kIndent << "return ZX_ERR_INVALID_ARGS;\n";
@@ -486,8 +487,8 @@ void EmitLinearizeMessage(std::ostream* file, std::string_view receiver, std::st
     const auto& name = member.name;
     switch (member.kind) {
       case flat::Type::Kind::kBox:
-        assert(false && "no box types should appear at this point");
-        __builtin_unreachable();
+        ZX_PANIC("no box types should appear at this point");
+
       case flat::Type::Kind::kArray:
         *file << kIndent << "memcpy(" << receiver << "->" << name << ", " << name << ", ";
         EmitArraySizeOf(file, member);
@@ -529,19 +530,19 @@ void EmitLinearizeMessage(std::ostream* file, std::string_view receiver, std::st
           case flat::Decl::Kind::kResource:
           case flat::Decl::Kind::kService:
           case flat::Decl::Kind::kTypeAlias:
-            assert(false && "bad decl kind for member");
-            break;
+            ZX_PANIC("bad decl kind for member");
+
           case flat::Decl::Kind::kBits:
           case flat::Decl::Kind::kEnum:
           case flat::Decl::Kind::kProtocol:
             *file << kIndent << receiver << "->" << name << " = " << name << ";\n";
             break;
           case flat::Decl::Kind::kTable:
-            assert(false && "c-codegen for tables not implemented");
-            break;
+            ZX_PANIC("c-codegen for tables not implemented");
+
           case flat::Decl::Kind::kUnion:
-            assert(false && "c-codegen for unions not implemented");
-            break;
+            ZX_PANIC("c-codegen for unions not implemented");
+
           case flat::Decl::Kind::kStruct:
             switch (member.nullability) {
               case types::Nullability::kNullable:
@@ -563,8 +564,7 @@ void EmitLinearizeMessage(std::ostream* file, std::string_view receiver, std::st
         }
         break;
       case flat::Type::Kind::kUntypedNumeric:
-        assert(false && "compiler bug: should not have untyped numeric here");
-        break;
+        ZX_PANIC("should not have untyped numeric here");
     }
   }
 }
@@ -605,8 +605,7 @@ void BitsValue(const flat::Constant* constant, std::string* out_value) {
     case flat::ConstantValue::Kind::kFloat64:
     case flat::ConstantValue::Kind::kDocComment:
     case flat::ConstantValue::Kind::kString:
-      assert(false && "bad primitive type for a bits declaration");
-      break;
+      ZX_PANIC("bad primitive type for a bits declaration");
   }
 
   *out_value = member_value.str();
@@ -662,8 +661,7 @@ void EnumValue(const flat::Constant* constant, std::string* out_value) {
     case flat::ConstantValue::Kind::kFloat64:
     case flat::ConstantValue::Kind::kDocComment:
     case flat::ConstantValue::Kind::kString:
-      assert(false && "bad primitive type for an enum");
-      break;
+      ZX_PANIC("bad primitive type for an enum");
   }
 
   *out_value = member_value.str();
@@ -707,8 +705,8 @@ CGenerator::Member CreateMember(const T& decl, bool* out_allowed = nullptr) {
   std::optional<flat::Decl::Kind> decl_kind;
   switch (type->kind) {
     case flat::Type::Kind::kBox:
-      assert(false && "no box types should appear at this point");
-      __builtin_unreachable();
+      ZX_PANIC("no box types should appear at this point");
+
     case flat::Type::Kind::kArray: {
       ArrayCountsAndElementTypeName(type, &array_counts, &element_type_name);
       break;
@@ -742,7 +740,7 @@ CGenerator::Member CreateMember(const T& decl, bool* out_allowed = nullptr) {
     case flat::Type::Kind::kPrimitive:
       break;
     case flat::Type::Kind::kUntypedNumeric:
-      assert(false && "compiler bug: should not have untyped numeric here");
+      ZX_PANIC("should not have untyped numeric here");
   }
   return CGenerator::Member{
       type->kind,
@@ -798,8 +796,7 @@ uint32_t CGenerator::GetMaxHandlesFor(Transport transport, const TypeShape& type
     case Transport::Channel:
       return std::min(kChannelMaxMessageHandles, typeshape.max_handles);
   }
-  assert(false && "what transport?");
-  return 0u;
+  ZX_PANIC("what transport?");
 }
 
 void CGenerator::GeneratePrologues() {
@@ -964,7 +961,7 @@ std::map<const flat::Decl*, CGenerator::NamedProtocol> CGenerator::NameProtocols
     }
     named_protocol.transport = CGenerator::Transport::Channel;
     for (const auto& method_with_info : protocol_info->all_methods) {
-      assert(method_with_info.method != nullptr);
+      ZX_ASSERT(method_with_info.method != nullptr);
       const auto& method = *method_with_info.method;
       if (!MethodAllowed(method)) {
         continue;
@@ -987,14 +984,14 @@ std::map<const flat::Decl*, CGenerator::NamedProtocol> CGenerator::NameProtocols
           // unions or tables, as support for such payloads was added after C binding usage was
           // frozen. The previous call to `MethodAllowed` should have exited early, so this assert
           // should never be hit.
-          assert(id->type_decl->kind == flat::Decl::Kind::kStruct &&
-                 "table/union method payloads disallowed");
+          ZX_ASSERT_MSG(id->type_decl->kind == flat::Decl::Kind::kStruct,
+                        "table/union method payloads disallowed");
           auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
           typeshape = as_struct->typeshape(WireFormat::kV1NoEe);
           members = &as_struct->members;
         }
 
-        assert(!members || (members && !members->empty()));
+        ZX_ASSERT(!members || (members && !members->empty()));
         named_method.request = std::make_unique<NamedMessage>(
             NamedMessage{std::move(c_name), std::move(coded_name), members, typeshape});
       }
@@ -1012,14 +1009,14 @@ std::map<const flat::Decl*, CGenerator::NamedProtocol> CGenerator::NameProtocols
           // unions or tables, as support for such payloads was added after C binding usage was
           // frozen. The previous call to `MethodAllowed` should have exited early, so this assert
           // should never be hit.
-          assert(id->type_decl->kind == flat::Decl::Kind::kStruct &&
-                 "table/union method payloads disallowed");
+          ZX_ASSERT_MSG(id->type_decl->kind == flat::Decl::Kind::kStruct,
+                        "table/union method payloads disallowed");
           auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
           typeshape = as_struct->typeshape(WireFormat::kV1NoEe);
           members = &as_struct->members;
         }
 
-        assert(!members || (members && !members->empty()));
+        ZX_ASSERT(!members || (members && !members->empty()));
         named_method.response = std::make_unique<NamedMessage>(
             NamedMessage{std::move(c_name), std::move(coded_name), members, typeshape});
       }
@@ -1422,8 +1419,8 @@ void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_
         const auto& name = member.name;
         switch (member.kind) {
           case flat::Type::Kind::kBox:
-            assert(false && "no box types should appear at this point");
-            __builtin_unreachable();
+            ZX_PANIC("no box types should appear at this point");
+
           case flat::Type::Kind::kArray:
             file_ << kIndent << "memcpy(out_" << name << ", _response->" << name << ", ";
             EmitArraySizeOf(&file_, member);
@@ -1451,19 +1448,19 @@ void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_
               case flat::Decl::Kind::kResource:
               case flat::Decl::Kind::kService:
               case flat::Decl::Kind::kTypeAlias:
-                assert(false && "bad decl kind for member");
-                break;
+                ZX_PANIC("bad decl kind for member");
+
               case flat::Decl::Kind::kBits:
               case flat::Decl::Kind::kEnum:
               case flat::Decl::Kind::kProtocol:
                 file_ << kIndent << "*out_" << name << " = _response->" << name << ";\n";
                 break;
               case flat::Decl::Kind::kTable:
-                assert(false && "c-codegen for tables not implemented");
-                break;
+                ZX_PANIC("c-codegen for tables not implemented");
+
               case flat::Decl::Kind::kUnion:
-                assert(false && "c-codegen for unions not implemented");
-                break;
+                ZX_PANIC("c-codegen for unions not implemented");
+
               case flat::Decl::Kind::kStruct:
                 switch (member.nullability) {
                   case types::Nullability::kNullable:
@@ -1490,7 +1487,7 @@ void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_
             }
             break;
           case flat::Type::Kind::kUntypedNumeric:
-            assert(false && "compiler bug: should not have untyped numeric here");
+            ZX_PANIC("should not have untyped numeric here");
         }
       }
 
@@ -1566,8 +1563,8 @@ void CGenerator::ProduceProtocolServerImplementation(const NamedProtocol& named_
     for (const auto& member : request) {
       switch (member.kind) {
         case flat::Type::Kind::kBox:
-          assert(false && "no box types should appear at this point");
-          __builtin_unreachable();
+          ZX_PANIC("no box types should appear at this point");
+
         case flat::Type::Kind::kArray:
         case flat::Type::Kind::kHandle:
         case flat::Type::Kind::kTransportSide:
@@ -1589,16 +1586,16 @@ void CGenerator::ProduceProtocolServerImplementation(const NamedProtocol& named_
             case flat::Decl::Kind::kResource:
             case flat::Decl::Kind::kService:
             case flat::Decl::Kind::kTypeAlias:
-              assert(false && "bad decl kind for member");
-              break;
+              ZX_PANIC("bad decl kind for member");
+
             case flat::Decl::Kind::kBits:
             case flat::Decl::Kind::kEnum:
             case flat::Decl::Kind::kProtocol:
               file_ << ", request->" << member.name;
               break;
             case flat::Decl::Kind::kTable:
-              assert(false && "c-codegen for tables not yet implemented");
-              break;
+              ZX_PANIC("c-codegen for tables not yet implemented");
+
             case flat::Decl::Kind::kStruct:
             case flat::Decl::Kind::kUnion:
               switch (member.nullability) {
@@ -1613,8 +1610,7 @@ void CGenerator::ProduceProtocolServerImplementation(const NamedProtocol& named_
           }
           break;
         case flat::Type::Kind::kUntypedNumeric:
-          assert(false && "compiler bug: should not have untyped numeric here");
-          break;
+          ZX_PANIC("should not have untyped numeric here");
       }
     }
     if (method_info.response != nullptr)
@@ -1724,8 +1720,8 @@ std::ostringstream CGenerator::ProduceHeader() {
     }
     switch (decl->kind) {
       case flat::Decl::Kind::kBuiltin:
-        assert(false && "unexpected builtin");
-        break;
+        ZX_PANIC("unexpected builtin");
+
       case flat::Decl::Kind::kBits: {
         auto iter = named_bits.find(decl);
         if (iter != named_bits.end()) {
@@ -1818,8 +1814,8 @@ std::ostringstream CGenerator::ProduceHeader() {
 
     switch (decl->kind) {
       case flat::Decl::Kind::kBuiltin:
-        assert(false && "unexpected builtin");
-        break;
+        ZX_PANIC("unexpected builtin");
+
       case flat::Decl::Kind::kBits:
         // Bits can be entirely forward declared, as they have no
         // dependencies other than standard headers.

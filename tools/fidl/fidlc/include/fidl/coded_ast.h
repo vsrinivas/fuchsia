@@ -6,8 +6,8 @@
 #define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_CODED_AST_H_
 
 #include <stdint.h>
+#include <zircon/assert.h>
 
-#include <cassert>
 #include <limits>
 #include <memory>
 #include <string>
@@ -63,7 +63,7 @@ struct StructPadding {
   // (e.g. struct{uint8, uint16, uint8, uint16} has two padding segments but can
   // be covered by a single uint64 mask)
   static StructPadding FromLength(uint32_t offset_v2, uint32_t length) {
-    assert(length != 0 && "padding shouldn't be created for zero-length offsets");
+    ZX_ASSERT_MSG(length != 0, "padding shouldn't be created for zero-length offsets");
     if (length <= 2) {
       return StructPadding(offset_v2 & ~1, BuildMask<uint16_t>(offset_v2 & 1, length));
     } else if (length <= 4) {
@@ -71,7 +71,7 @@ struct StructPadding {
     } else if (length < 8) {
       return StructPadding(offset_v2 & ~7, BuildMask<uint64_t>(offset_v2 & 7, length));
     } else {
-      assert(false && "length should be < 8");
+      ZX_PANIC("length should be < 8");
     }
     __builtin_unreachable();
   }
@@ -236,7 +236,7 @@ struct StructPointerType : public Type {
   StructPointerType(std::string name, const Type* type)
       : Type(Kind::kStructPointer, std::move(name), 8u, true, false),
         element_type(static_cast<const StructType*>(type)) {
-    assert(type->kind == Type::Kind::kStruct);
+    ZX_ASSERT(type->kind == Type::Kind::kStruct);
   }
 
   const StructType* element_type;

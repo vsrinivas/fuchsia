@@ -9,8 +9,8 @@
 #define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_FLAT_AST_H_
 
 #include <lib/fit/function.h>
+#include <zircon/assert.h>
 
-#include <cassert>
 #include <cstdint>
 #include <functional>
 #include <map>
@@ -725,7 +725,7 @@ struct Protocol final : public TypeDecl {
           maybe_response(std::move(maybe_response)),
           has_error(has_error),
           generated_ordinal64(nullptr) {
-      assert(this->has_request || this->has_response);
+      ZX_ASSERT(this->has_request || this->has_response);
     }
     Method Copy() const override;
 
@@ -961,8 +961,8 @@ struct Library final : public Element {
 
 struct LibraryComparator {
   bool operator()(const flat::Library* lhs, const flat::Library* rhs) const {
-    assert(!lhs->name.empty());
-    assert(!rhs->name.empty());
+    ZX_ASSERT(!lhs->name.empty());
+    ZX_ASSERT(!rhs->name.empty());
     return lhs->name < rhs->name;
   }
 };

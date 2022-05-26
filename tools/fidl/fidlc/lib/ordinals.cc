@@ -4,6 +4,8 @@
 
 #include "fidl/ordinals.h"
 
+#include <zircon/assert.h>
+
 #include <optional>
 
 #include "fidl/flat_ast.h"
@@ -18,7 +20,7 @@ std::string GetSelector(const flat::AttributeList* attributes, SourceSpan name) 
   if (maybe_selector_attr != nullptr) {
     auto selector_constant = maybe_selector_attr->GetArg(flat::AttributeArg::kDefaultAnonymousName);
     if (selector_constant != nullptr && selector_constant->value->IsResolved()) {
-      assert(selector_constant->value->Value().kind == flat::ConstantValue::Kind::kString);
+      ZX_ASSERT(selector_constant->value->Value().kind == flat::ConstantValue::Kind::kString);
       auto& selector_string_constant =
           static_cast<const flat::StringConstantValue&>(selector_constant->value->Value());
       return selector_string_constant.MakeContents();

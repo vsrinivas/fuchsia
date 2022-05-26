@@ -4,6 +4,8 @@
 
 #include "fidl/flat/attribute_schema.h"
 
+#include <zircon/assert.h>
+
 #include "fidl/flat/compile_step.h"
 #include "fidl/flat/transport.h"
 #include "fidl/flat/typespace.h"
@@ -12,85 +14,90 @@
 namespace fidl::flat {
 
 AttributeSchema& AttributeSchema::RestrictTo(std::set<Element::Kind> placements) {
-  assert(!placements.empty() && "must allow some placements");
-  assert(kind_ == AttributeSchema::Kind::kValidateOnly ||
-         kind_ == AttributeSchema::Kind::kUseEarly ||
-         kind_ == AttributeSchema::Kind::kCompileEarly && "wrong kind");
-  assert(placement_ == AttributeSchema::Placement::kAnywhere && "already set placements");
-  assert(specific_placements_.empty() && "already set placements");
+  ZX_ASSERT_MSG(!placements.empty(), "must allow some placements");
+  ZX_ASSERT_MSG(kind_ == AttributeSchema::Kind::kValidateOnly ||
+                    kind_ == AttributeSchema::Kind::kUseEarly ||
+                    kind_ == AttributeSchema::Kind::kCompileEarly,
+                "wrong kind");
+  ZX_ASSERT_MSG(placement_ == AttributeSchema::Placement::kAnywhere, "already set placements");
+  ZX_ASSERT_MSG(specific_placements_.empty(), "already set placements");
   placement_ = AttributeSchema::Placement::kSpecific;
   specific_placements_ = std::move(placements);
   return *this;
 }
 
 AttributeSchema& AttributeSchema::RestrictToAnonymousLayouts() {
-  assert(kind_ == AttributeSchema::Kind::kValidateOnly ||
-         kind_ == AttributeSchema::Kind::kUseEarly ||
-         kind_ == AttributeSchema::Kind::kCompileEarly && "wrong kind");
-  assert(placement_ == AttributeSchema::Placement::kAnywhere && "already set placements");
-  assert(specific_placements_.empty() && "already set placements");
+  ZX_ASSERT_MSG(kind_ == AttributeSchema::Kind::kValidateOnly ||
+                    kind_ == AttributeSchema::Kind::kUseEarly ||
+                    kind_ == AttributeSchema::Kind::kCompileEarly,
+                "wrong kind");
+  ZX_ASSERT_MSG(placement_ == AttributeSchema::Placement::kAnywhere, "already set placements");
+  ZX_ASSERT_MSG(specific_placements_.empty(), "already set placements");
   placement_ = AttributeSchema::Placement::kAnonymousLayout;
   return *this;
 }
 
 AttributeSchema& AttributeSchema::DisallowOnAnonymousLayouts() {
-  assert(kind_ == AttributeSchema::Kind::kValidateOnly ||
-         kind_ == AttributeSchema::Kind::kUseEarly ||
-         kind_ == AttributeSchema::Kind::kCompileEarly && "wrong kind");
-  assert(placement_ == AttributeSchema::Placement::kAnywhere && "already set placements");
-  assert(specific_placements_.empty() && "already set placements");
+  ZX_ASSERT_MSG(kind_ == AttributeSchema::Kind::kValidateOnly ||
+                    kind_ == AttributeSchema::Kind::kUseEarly ||
+                    kind_ == AttributeSchema::Kind::kCompileEarly,
+                "wrong kind");
+  ZX_ASSERT_MSG(placement_ == AttributeSchema::Placement::kAnywhere, "already set placements");
+  ZX_ASSERT_MSG(specific_placements_.empty(), "already set placements");
   placement_ = AttributeSchema::Placement::kAnythingButAnonymousLayout;
   return *this;
 }
 
 AttributeSchema& AttributeSchema::AddArg(AttributeArgSchema arg_schema) {
-  assert(kind_ == AttributeSchema::Kind::kValidateOnly ||
-         kind_ == AttributeSchema::Kind::kUseEarly ||
-         kind_ == AttributeSchema::Kind::kCompileEarly && "wrong kind");
-  assert(arg_schemas_.empty() && "can only have one unnamed arg");
+  ZX_ASSERT_MSG(kind_ == AttributeSchema::Kind::kValidateOnly ||
+                    kind_ == AttributeSchema::Kind::kUseEarly ||
+                    kind_ == AttributeSchema::Kind::kCompileEarly,
+                "wrong kind");
+  ZX_ASSERT_MSG(arg_schemas_.empty(), "can only have one unnamed arg");
   arg_schemas_.emplace(AttributeArg::kDefaultAnonymousName, arg_schema);
   return *this;
 }
 
 AttributeSchema& AttributeSchema::AddArg(std::string name, AttributeArgSchema arg_schema) {
-  assert(kind_ == AttributeSchema::Kind::kValidateOnly ||
-         kind_ == AttributeSchema::Kind::kUseEarly ||
-         kind_ == AttributeSchema::Kind::kCompileEarly && "wrong kind");
+  ZX_ASSERT_MSG(kind_ == AttributeSchema::Kind::kValidateOnly ||
+                    kind_ == AttributeSchema::Kind::kUseEarly ||
+                    kind_ == AttributeSchema::Kind::kCompileEarly,
+                "wrong kind");
   [[maybe_unused]] const auto& [it, inserted] =
       arg_schemas_.try_emplace(std::move(name), arg_schema);
-  assert(inserted && "duplicate argument name");
+  ZX_ASSERT_MSG(inserted, "duplicate argument name");
   return *this;
 }
 
 AttributeSchema& AttributeSchema::Constrain(AttributeSchema::Constraint constraint) {
-  assert(constraint != nullptr && "constraint must be non-null");
-  assert(constraint_ == nullptr && "already set constraint");
-  assert(kind_ == AttributeSchema::Kind::kValidateOnly &&
-         "constraints only allowed on kValidateOnly attributes");
+  ZX_ASSERT_MSG(constraint != nullptr, "constraint must be non-null");
+  ZX_ASSERT_MSG(constraint_ == nullptr, "already set constraint");
+  ZX_ASSERT_MSG(kind_ == AttributeSchema::Kind::kValidateOnly,
+                "constraints only allowed on kValidateOnly attributes");
   constraint_ = std::move(constraint);
   return *this;
 }
 
 AttributeSchema& AttributeSchema::UseEarly() {
-  assert(kind_ == AttributeSchema::Kind::kValidateOnly && "already changed kind");
-  assert(constraint_ == nullptr && "use-early attribute should not specify constraint");
+  ZX_ASSERT_MSG(kind_ == AttributeSchema::Kind::kValidateOnly, "already changed kind");
+  ZX_ASSERT_MSG(constraint_ == nullptr, "use-early attribute should not specify constraint");
   kind_ = AttributeSchema::Kind::kUseEarly;
   return *this;
 }
 
 AttributeSchema& AttributeSchema::CompileEarly() {
-  assert(kind_ == AttributeSchema::Kind::kValidateOnly && "already changed kind");
-  assert(constraint_ == nullptr && "compile-early attribute should not specify constraint");
+  ZX_ASSERT_MSG(kind_ == AttributeSchema::Kind::kValidateOnly, "already changed kind");
+  ZX_ASSERT_MSG(constraint_ == nullptr, "compile-early attribute should not specify constraint");
   kind_ = AttributeSchema::Kind::kCompileEarly;
   return *this;
 }
 
 AttributeSchema& AttributeSchema::Deprecate() {
-  assert(kind_ == AttributeSchema::Kind::kValidateOnly && "wrong kind");
-  assert(placement_ == AttributeSchema::Placement::kAnywhere &&
-         "deprecated attribute should not specify placement");
-  assert(arg_schemas_.empty() && "deprecated attribute should not specify arguments");
-  assert(constraint_ == nullptr && "deprecated attribute should not specify constraint");
+  ZX_ASSERT_MSG(kind_ == AttributeSchema::Kind::kValidateOnly, "wrong kind");
+  ZX_ASSERT_MSG(placement_ == AttributeSchema::Placement::kAnywhere,
+                "deprecated attribute should not specify placement");
+  ZX_ASSERT_MSG(arg_schemas_.empty(), "deprecated attribute should not specify arguments");
+  ZX_ASSERT_MSG(constraint_ == nullptr, "deprecated attribute should not specify constraint");
   kind_ = AttributeSchema::Kind::kDeprecated;
   return *this;
 }
@@ -105,8 +112,8 @@ void AttributeSchema::Validate(Reporter* reporter, const Attribute* attribute,
       break;
     case Kind::kUseEarly:
     case Kind::kCompileEarly:
-      assert(constraint_ == nullptr &&
-             "use-early and compile-early schemas should not have a constraint");
+      ZX_ASSERT_MSG(constraint_ == nullptr,
+                    "use-early and compile-early schemas should not have a constraint");
       break;
     case Kind::kDeprecated:
       reporter->Fail(ErrDeprecatedAttribute, attribute->span, attribute);
@@ -141,7 +148,7 @@ void AttributeSchema::Validate(Reporter* reporter, const Attribute* attribute,
   auto check = reporter->Checkpoint();
   auto passed = constraint_(reporter, attribute, element);
   if (passed) {
-    assert(check.NoNewErrors() && "cannot add errors and pass");
+    ZX_ASSERT_MSG(check.NoNewErrors(), "cannot add errors and pass");
     return;
   }
   if (check.NoNewErrors()) {
@@ -245,19 +252,18 @@ bool AttributeArgSchema::TryResolveAsHead(CompileStep* step, Reference& referenc
     case Reference::State::kResolved:
       return reference.resolved().element() == head_decl;
     default:
-      assert(false && "unexpected reference state");
-      __builtin_unreachable();
+      ZX_PANIC("unexpected reference state");
   }
 }
 
 void AttributeArgSchema::ResolveArg(CompileStep* step, Attribute* attribute, AttributeArg* arg,
                                     bool literal_only) const {
   Constant* constant = arg->value.get();
-  assert(!constant->IsResolved() && "argument should not be resolved yet");
+  ZX_ASSERT_MSG(!constant->IsResolved(), "argument should not be resolved yet");
 
   ConstantValue::Kind kind;
   if (auto special_case = std::get_if<SpecialCase>(&type_)) {
-    assert(*special_case == SpecialCase::kVersion && "unhandled special case");
+    ZX_ASSERT_MSG(*special_case == SpecialCase::kVersion, "unhandled special case");
     kind = ConstantValue::Kind::kUint64;
     if (constant->kind == Constant::Kind::kIdentifier) {
       if (TryResolveAsHead(step, static_cast<IdentifierConstant*>(constant)->reference)) {
@@ -279,8 +285,8 @@ void AttributeArgSchema::ResolveArg(CompileStep* step, Attribute* attribute, Att
   const Type* target_type;
   switch (kind) {
     case ConstantValue::Kind::kDocComment:
-      assert(false && "we know the target type of doc comments, and should not end up here");
-      return;
+      ZX_PANIC("we know the target type of doc comments, and should not end up here");
+
     case ConstantValue::Kind::kString:
       target_type = step->typespace()->GetUnboundedStringType();
       break;
@@ -334,8 +340,8 @@ void AttributeSchema::ResolveArgsWithoutSchema(CompileStep* step, Attribute* att
   // Try resolving each argument as string or bool. We don't allow numerics
   // because it's not clear what type (int8, uint32, etc.) we should infer.
   for (const auto& arg : attribute->args) {
-    assert(arg->value->kind != Constant::Kind::kBinaryOperator &&
-           "attribute arg with a binary operator is a parse error");
+    ZX_ASSERT_MSG(arg->value->kind != Constant::Kind::kBinaryOperator,
+                  "attribute arg with a binary operator is a parse error");
 
     auto inferred_type = step->InferType(arg->value.get());
     if (!inferred_type) {
@@ -392,8 +398,7 @@ static bool IsSimple(const Type* type, Reporter* reporter) {
         case Type::Kind::kBox:
           return false;
         case Type::Kind::kUntypedNumeric:
-          assert(false && "compiler bug: should not have untyped numeric here");
-          return false;
+          ZX_PANIC("should not have untyped numeric here");
       }
     }
     case Type::Kind::kString: {
@@ -431,14 +436,13 @@ static bool IsSimple(const Type* type, Reporter* reporter) {
       // we can handle a depth of 1 because the secondary object is directly accessible.
       return depth <= 1u;
     case Type::Kind::kUntypedNumeric:
-      assert(false && "compiler bug: should not have untyped numeric here");
-      return false;
+      ZX_PANIC("should not have untyped numeric here");
   }
 }
 
 static bool SimpleLayoutConstraint(Reporter* reporter, const Attribute* attr,
                                    const Element* element) {
-  assert(element);
+  ZX_ASSERT(element);
   bool ok = true;
   switch (element->kind) {
     case Element::Kind::kProtocol: {
@@ -474,7 +478,7 @@ static bool SimpleLayoutConstraint(Reporter* reporter, const Attribute* attr,
             break;
           }
           default:
-            assert(false && "unexpected kind");
+            ZX_PANIC("unexpected kind");
         }
       }
       if (method->maybe_response) {
@@ -498,7 +502,7 @@ static bool SimpleLayoutConstraint(Reporter* reporter, const Attribute* attr,
             break;
           }
           default:
-            assert(false && "unexpected kind");
+            ZX_PANIC("unexpected kind");
         }
       }
       break;
@@ -514,7 +518,7 @@ static bool SimpleLayoutConstraint(Reporter* reporter, const Attribute* attr,
       break;
     }
     default:
-      assert(false && "unexpected kind");
+      ZX_PANIC("unexpected kind");
   }
   return ok;
 }
@@ -537,7 +541,7 @@ static bool ParseBound(Reporter* reporter, const Attribute* attribute, std::stri
 
 static bool MaxBytesConstraint(Reporter* reporter, const Attribute* attribute,
                                const Element* element) {
-  assert(element);
+  ZX_ASSERT(element);
   auto arg = attribute->GetArg(AttributeArg::kDefaultAnonymousName);
   auto& arg_value = static_cast<const flat::StringConstantValue&>(arg->value->Value());
 
@@ -595,8 +599,7 @@ static bool MaxBytesConstraint(Reporter* reporter, const Attribute* attribute,
       break;
     }
     default:
-      assert(false && "unexpected kind");
-      return false;
+      ZX_PANIC("unexpected kind");
   }
   if (max_bytes > bound) {
     reporter->Fail(ErrTooManyBytes, attribute->span, bound, max_bytes);
@@ -607,7 +610,7 @@ static bool MaxBytesConstraint(Reporter* reporter, const Attribute* attribute,
 
 static bool MaxHandlesConstraint(Reporter* reporter, const Attribute* attribute,
                                  const Element* element) {
-  assert(element);
+  ZX_ASSERT(element);
   auto arg = attribute->GetArg(AttributeArg::kDefaultAnonymousName);
   auto& arg_value = static_cast<const flat::StringConstantValue&>(arg->value->Value());
 
@@ -662,8 +665,7 @@ static bool MaxHandlesConstraint(Reporter* reporter, const Attribute* attribute,
       break;
     }
     default:
-      assert(false && "unexpected kind");
-      return false;
+      ZX_PANIC("unexpected kind");
   }
   if (max_handles > bound) {
     reporter->Fail(ErrTooManyHandles, attribute->span, bound, max_handles);
@@ -674,13 +676,13 @@ static bool MaxHandlesConstraint(Reporter* reporter, const Attribute* attribute,
 
 static bool ResultShapeConstraint(Reporter* reporter, const Attribute* attribute,
                                   const Element* element) {
-  assert(element);
-  assert(element->kind == Element::Kind::kUnion);
+  ZX_ASSERT(element);
+  ZX_ASSERT(element->kind == Element::Kind::kUnion);
   auto union_decl = static_cast<const Union*>(element);
-  assert(union_decl->members.size() == 2 || union_decl->members.size() == 3);
+  ZX_ASSERT(union_decl->members.size() == 2 || union_decl->members.size() == 3);
   auto& error_member = union_decl->members.at(1);
-  assert((union_decl->members.size() == 3 || error_member.maybe_used != nullptr) &&
-         "must have an error variant if transport error not used");
+  ZX_ASSERT_MSG((union_decl->members.size() == 3 || error_member.maybe_used != nullptr),
+                "must have an error variant if transport error not used");
 
   if (error_member.maybe_used != nullptr) {
     auto error_type = error_member.maybe_used->type_ctor->type;
@@ -691,7 +693,7 @@ static bool ResultShapeConstraint(Reporter* reporter, const Attribute* attribute
       auto identifier_type = static_cast<const IdentifierType*>(error_type);
       if (identifier_type->type_decl->kind == Decl::Kind::kEnum) {
         auto error_enum = static_cast<const Enum*>(identifier_type->type_decl);
-        assert(error_enum->subtype_ctor->type->kind == Type::Kind::kPrimitive);
+        ZX_ASSERT(error_enum->subtype_ctor->type->kind == Type::Kind::kPrimitive);
         error_primitive = static_cast<const PrimitiveType*>(error_enum->subtype_ctor->type);
       }
     }
@@ -708,8 +710,8 @@ static bool ResultShapeConstraint(Reporter* reporter, const Attribute* attribute
 
 static bool TransportConstraint(Reporter* reporter, const Attribute* attribute,
                                 const Element* element) {
-  assert(element);
-  assert(element->kind == Element::Kind::kProtocol);
+  ZX_ASSERT(element);
+  ZX_ASSERT(element->kind == Element::Kind::kProtocol);
 
   auto arg = attribute->GetArg(AttributeArg::kDefaultAnonymousName);
   auto& arg_value = static_cast<const flat::StringConstantValue&>(arg->value->Value());

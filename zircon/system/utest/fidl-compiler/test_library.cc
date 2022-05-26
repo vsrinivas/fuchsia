@@ -4,6 +4,8 @@
 
 #include "test_library.h"
 
+#include <zircon/assert.h>
+
 void SharedAmongstLibraries::AddLibraryZx() {
   TestLibrary zx_lib(this, "zx.fidl", R"FIDL(
 library zx;
@@ -31,7 +33,7 @@ resource_definition handle : uint32 {
 };
 )FIDL");
   [[maybe_unused]] bool success = zx_lib.Compile();
-  assert(success && "failed to compile library zx");
+  ZX_ASSERT_MSG(success, "failed to compile library zx");
 }
 
 void SharedAmongstLibraries::AddLibraryFdf() {
@@ -49,5 +51,5 @@ resource_definition handle : uint32 {
 };
 )FIDL");
   [[maybe_unused]] bool success = fdf_lib.Compile();
-  assert(success && "failed to compile library fdf");
+  ZX_ASSERT_MSG(success, "failed to compile library fdf");
 }

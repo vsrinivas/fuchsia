@@ -4,13 +4,13 @@
 
 #include "fidl/virtual_source_file.h"
 
-#include <cassert>
+#include <zircon/assert.h>
 
 namespace fidl {
 
 SourceSpan VirtualSourceFile::AddLine(std::string_view line) {
-  assert(line.find('\n') == std::string::npos &&
-         "A single line should not contain a newline character");
+  ZX_ASSERT_MSG(line.find('\n') == std::string::npos,
+                "A single line should not contain a newline character");
   return SourceSpan(*virtual_lines_.emplace_back(std::make_unique<std::string>(line)), *this);
 }
 
@@ -24,7 +24,7 @@ std::string_view VirtualSourceFile::LineContaining(std::string_view view,
       continue;
     if (position_out != nullptr) {
       auto column = (view.data() - line_begin) + 1;
-      assert(column < std::numeric_limits<int>::max());
+      ZX_ASSERT(column < std::numeric_limits<int>::max());
       *position_out = {i + 1, static_cast<int>(column)};
     }
     return std::string_view(line);

@@ -4,6 +4,8 @@
 
 #include "fidl/flat/values.h"
 
+#include <zircon/assert.h>
+
 #include <safemath/checked_math.h>
 
 #include "fidl/raw_ast.h"
@@ -26,7 +28,7 @@ template struct NumericConstantValue<double>;
 template <typename ValueType>
 bool NumericConstantValue<ValueType>::Convert(Kind kind,
                                               std::unique_ptr<ConstantValue>* out_value) const {
-  assert(out_value != nullptr);
+  ZX_ASSERT(out_value != nullptr);
 
   auto checked_value = safemath::CheckedNumeric<ValueType>(value);
 
@@ -119,7 +121,7 @@ bool NumericConstantValue<ValueType>::Convert(Kind kind,
 }
 
 bool BoolConstantValue::Convert(Kind kind, std::unique_ptr<ConstantValue>* out_value) const {
-  assert(out_value != nullptr);
+  ZX_ASSERT(out_value != nullptr);
   switch (kind) {
     case Kind::kBool:
       *out_value = std::make_unique<BoolConstantValue>(value);
@@ -130,7 +132,7 @@ bool BoolConstantValue::Convert(Kind kind, std::unique_ptr<ConstantValue>* out_v
 }
 
 bool DocCommentConstantValue::Convert(Kind kind, std::unique_ptr<ConstantValue>* out_value) const {
-  assert(out_value != nullptr);
+  ZX_ASSERT(out_value != nullptr);
   switch (kind) {
     case Kind::kDocComment:
       *out_value = std::make_unique<DocCommentConstantValue>(std::string_view(value));
@@ -148,7 +150,7 @@ std::string DocCommentConstantValue::MakeContents() const {
 }
 
 bool StringConstantValue::Convert(Kind kind, std::unique_ptr<ConstantValue>* out_value) const {
-  assert(out_value != nullptr);
+  ZX_ASSERT(out_value != nullptr);
   switch (kind) {
     case Kind::kString:
       *out_value = std::make_unique<StringConstantValue>(std::string_view(value));
@@ -166,8 +168,8 @@ std::string StringConstantValue::MakeContents() const {
 }
 
 void Constant::ResolveTo(std::unique_ptr<ConstantValue> value, const Type* type) {
-  assert(value != nullptr);
-  assert(!IsResolved() && "Constants should only be resolved once!");
+  ZX_ASSERT(value != nullptr);
+  ZX_ASSERT_MSG(!IsResolved(), "Constants should only be resolved once!");
   value_ = std::move(value);
   this->type = type;
 }
@@ -176,7 +178,7 @@ const ConstantValue& Constant::Value() const {
   if (!IsResolved()) {
     std::cout << span.data() << std::endl;
   }
-  assert(IsResolved() && "Accessing the value of an unresolved Constant!");
+  ZX_ASSERT_MSG(IsResolved(), "Accessing the value of an unresolved Constant!");
   return *value_;
 }
 

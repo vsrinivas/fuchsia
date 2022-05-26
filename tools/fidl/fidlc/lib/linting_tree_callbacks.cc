@@ -4,6 +4,7 @@
 
 #include <fidl/linting_tree_callbacks.h>
 #include <fidl/utils.h>
+#include <zircon/assert.h>
 
 #include <fstream>
 
@@ -207,7 +208,7 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
         [[maybe_unused]] bool found =
             kGapTextRegex_.Match(remaining_gap_view, 0, remaining_gap_view.size(),
                                  re2::RE2::UNANCHORED, match, gap_subre_count);
-        assert(found && "gap content did not match any of the expected regular expressions");
+        ZX_ASSERT_MSG(found, "gap content did not match any of the expected regular expressions");
 
         auto view = remaining_gap_view;
         view.remove_suffix(remaining_gap_view.size() - match[0].length());
@@ -247,7 +248,7 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
             callback(white_space, line_prefix_view);
           }
         } else {
-          assert(false && "Should never be reached. Bad regex?");
+          ZX_PANIC("Should never be reached. Bad regex?");
         }
         if (view.back() == '\n') {
           remaining_line_so_far_view.remove_prefix(

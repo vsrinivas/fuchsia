@@ -5,6 +5,7 @@
 #include "fidl/lexer.h"
 
 #include <assert.h>
+#include <zircon/assert.h>
 
 #include <map>
 
@@ -147,7 +148,7 @@ std::string_view Lexer::Reset(Token::Kind kind) {
 }
 
 Token Lexer::Finish(Token::Kind kind) {
-  assert(kind != Token::Kind::kIdentifier);
+  ZX_ASSERT(kind != Token::Kind::kIdentifier);
   std::string_view previous(previous_end_, token_start_ - previous_end_);
   SourceSpan previous_span(previous, source_file_);
   return Token(previous_span, SourceSpan(Reset(kind), source_file_), kind, Token::Subkind::kNone);
@@ -293,13 +294,13 @@ Token Lexer::LexStringLiteral() {
         }
         break;
     }
-    assert(chars_left >= 0 && "chars_left in escape sequence must be non-negative");
+    ZX_ASSERT_MSG(chars_left >= 0, "chars_left in escape sequence must be non-negative");
   }
 }
 
 Token Lexer::LexCommentOrDocComment() {
   // Consume the second /.
-  assert(Peek() == '/');
+  ZX_ASSERT(Peek() == '/');
   Consume();
 
   // Check if it's a Doc Comment
@@ -344,8 +345,8 @@ void Lexer::SkipWhitespace() {
 }
 
 Token Lexer::Lex() {
-  assert(token_start_ <= end_of_file_ && "Already reached EOF");
-  assert(current_ <= end_of_file_ + 1 && "current_ is past null terminator");
+  ZX_ASSERT_MSG(token_start_ <= end_of_file_, "Already reached EOF");
+  ZX_ASSERT_MSG(current_ <= end_of_file_ + 1, "current_ is past null terminator");
 
   do {
     SkipWhitespace();
@@ -358,8 +359,7 @@ Token Lexer::Lex() {
       case '\n':
       case '\r':
       case '\t':
-        assert(false && "Should have been handled by SkipWhitespace!");
-        break;
+        ZX_PANIC("Should have been handled by SkipWhitespace!");
 
       case '-':
         // Maybe the start of an arrow.

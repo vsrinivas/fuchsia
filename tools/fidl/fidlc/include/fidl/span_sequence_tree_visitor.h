@@ -5,6 +5,8 @@
 #ifndef TOOLS_FIDL_FIDLC_INCLUDE_FIDL_SPAN_SEQUENCE_TREE_VISITOR_H_
 #define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_SPAN_SEQUENCE_TREE_VISITOR_H_
 
+#include <zircon/assert.h>
+
 #include <stack>
 
 #include "raw_ast.h"
@@ -339,13 +341,13 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   size_t next_token_index_ = 0;
 
   void static NotYetImplemented() {
-    assert(false && "support for this AST node type is not yet implemented");
+    ZX_PANIC("support for this AST node type is not yet implemented");
   }
 
   void static AbortUnimplemented() {
-    assert(false &&
-           "input files to the new fidlfmt must not contain any raw AST nodes exclusive to the old "
-           "syntax");
+    ZX_PANIC(
+        "input files to the new fidlfmt must not contain any raw AST nodes exclusive to the old "
+        "syntax");
   }
 };
 

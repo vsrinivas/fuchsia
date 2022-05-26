@@ -6,8 +6,8 @@
 
 #include <fidl/diagnostics_json.h>
 #include <fidl/token.h>
+#include <zircon/assert.h>
 
-#include <cassert>
 #include <sstream>
 
 namespace fidl {
@@ -29,7 +29,7 @@ static std::string MakeSquiggle(std::string_view surrounding_line, int column) {
 // static
 std::string Reporter::Format(std::string_view qualifier, SourceSpan span, std::string_view message,
                              bool color) {
-  assert(span.valid() && "diagnostic span must be valid");
+  ZX_ASSERT_MSG(span.valid(), "diagnostic span must be valid");
 
   const std::string_view bold = color ? "\033[1m" : "";
   const std::string_view bold_red = color ? "\033[1;31m" : "";
@@ -38,8 +38,8 @@ std::string Reporter::Format(std::string_view qualifier, SourceSpan span, std::s
 
   SourceFile::Position position;
   std::string surrounding_line = std::string(span.SourceLine(&position));
-  assert(surrounding_line.find('\n') == std::string::npos &&
-         "A single line should not contain a newline character");
+  ZX_ASSERT_MSG(surrounding_line.find('\n') == std::string::npos,
+                "A single line should not contain a newline character");
 
   std::string squiggle = MakeSquiggle(surrounding_line, position.column);
 
@@ -87,7 +87,7 @@ void Reporter::AddWarning(std::unique_ptr<Diagnostic> warning) {
 //     sourceline
 //        ^~~~
 void Reporter::Report(std::unique_ptr<Diagnostic> diag) {
-  assert(diag && "should not report nullptr diagnostic");
+  ZX_ASSERT_MSG(diag, "should not report nullptr diagnostic");
   switch (diag->kind) {
     case DiagnosticKind::kError:
       AddError(std::move(diag));

@@ -4,6 +4,8 @@
 
 #include "fidl/span_sequence_tree_visitor.h"
 
+#include <zircon/assert.h>
+
 #include "fidl/raw_ast.h"
 #include "fidl/span_sequence.h"
 #include "fidl/tree_visitor.h"
@@ -109,7 +111,7 @@ size_t CountNewlinesBetweenAdjacentTokens(const std::string_view source,
                               ? source_start_char
                               : start->span().data().data() + start->span().data().size();
   const char* until_char = end.span().data().data();
-  assert(until_char >= from_char);
+  ZX_ASSERT(until_char >= from_char);
   const std::string_view whitespace =
       source.substr(from_char - source_start_char, until_char - from_char);
 
@@ -376,7 +378,8 @@ SpanSequenceTreeVisitor::StatementBuilder<T>::~StatementBuilder<T>() {
   // exists.
   auto last_child = composite_span_sequence->GetLastChild();
   if (last_child != nullptr && !last_child->IsClosed()) {
-    assert(last_child->IsComposite() && "cannot append semicolon to non-composite SpanSequence");
+    ZX_ASSERT_MSG(last_child->IsComposite(),
+                  "cannot append semicolon to non-composite SpanSequence");
     auto last_child_as_composite = static_cast<CompositeSpanSequence*>(last_child);
     last_child_as_composite->AddChild(std::move(semicolon_span_sequence));
   }
@@ -1074,7 +1077,7 @@ void SpanSequenceTreeVisitor::OnValueLayoutMember(
 
 MultilineSpanSequence SpanSequenceTreeVisitor::Result() {
   if (building_.empty()) {
-    assert(false && "Result() must be called exactly once after OnFile()");
+    ZX_PANIC("Result() must be called exactly once after OnFile()");
   }
   auto result = MultilineSpanSequence(std::move(building_.top()));
   result.Close();

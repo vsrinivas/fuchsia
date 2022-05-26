@@ -4,6 +4,8 @@
 
 #include "fidl/coded_types_generator.h"
 
+#include <zircon/assert.h>
+
 #include "fidl/coded_ast.h"
 #include "fidl/flat/values.h"
 #include "fidl/names.h"
@@ -23,7 +25,7 @@ coded::MemcpyCompatibility ComputeMemcpyCompatibility(const flat::Type* type) {
 CodedTypesGenerator::FlattenedStructMember::FlattenedStructMember(const flat::StructMember& member)
     : FlattenedStructMember(member.type_ctor->type, member.name, member.typeshape(WireFormat::kV2),
                             member.fieldshape(WireFormat::kV2)) {
-  assert(padding == member.fieldshape(WireFormat::kV2).padding);
+  ZX_ASSERT(padding == member.fieldshape(WireFormat::kV2).padding);
 }
 
 CodedTypesGenerator::FlattenedStructMember::FlattenedStructMember(const flat::Type* type,
@@ -35,7 +37,7 @@ CodedTypesGenerator::FlattenedStructMember::FlattenedStructMember(const flat::Ty
       inline_size_v2(typeshape_v2.inline_size),
       offset_v2(fieldshape_v2.offset),
       padding(fieldshape_v2.padding) {
-  assert(padding == fieldshape_v2.padding);
+  ZX_ASSERT(padding == fieldshape_v2.padding);
 }
 
 CodedTypesGenerator::FlattenedStructMember::FlattenedStructMember(const flat::Type* type,
@@ -96,7 +98,7 @@ std::vector<const coded::Type*> CodedTypesGenerator::AllCodedTypes() const {
   coded_types.reserve(coded_types_.size() + named_coded_types_.size());
 
   for (const auto& coded_type : coded_types_) {
-    assert(coded_type.get());
+    ZX_ASSERT(coded_type.get());
     if (!coded_type->is_coding_needed)
       continue;
 
@@ -104,7 +106,7 @@ std::vector<const coded::Type*> CodedTypesGenerator::AllCodedTypes() const {
   }
 
   for (const auto& [_, coded_type] : named_coded_types_) {
-    assert(coded_type.get());
+    ZX_ASSERT(coded_type.get());
 
     coded_types.push_back(coded_type.get());
   }
@@ -231,7 +233,7 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
       auto identifier_type = static_cast<const flat::IdentifierType*>(type);
       auto iter = named_coded_types_.find(identifier_type->name);
       if (iter == named_coded_types_.end()) {
-        assert(false && "unknown type in named type map!");
+        ZX_PANIC("unknown type in named type map!");
       }
       // We may need to set the emit-pointer bit on structs, unions, and xunions now.
       auto coded_type = iter->second.get();
@@ -255,7 +257,7 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
         }
         case coded::Type::Kind::kTable: {
           // Tables cannot be nullable.
-          assert(identifier_type->nullability != types::Nullability::kNullable);
+          ZX_ASSERT(identifier_type->nullability != types::Nullability::kNullable);
           return coded_type;
         }
         case coded::Type::Kind::kXUnion: {
@@ -288,8 +290,7 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
         case coded::Type::Kind::kArray:
         case coded::Type::Kind::kVector:
         case coded::Type::Kind::kString:
-          assert(false && "anonymous type in named type map!");
-          break;
+          ZX_PANIC("anonymous type in named type map!");
       }
       __builtin_unreachable();
     }
@@ -297,8 +298,7 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
       // this defers to the code path for a nullable struct identifier type.
       return CompileType(static_cast<const flat::BoxType*>(type)->boxed_type, context);
     case flat::Type::Kind::kUntypedNumeric:
-      assert(false && "compiler bug: should not have untyped numeric here");
-      __builtin_unreachable();
+      ZX_PANIC("should not have untyped numeric here");
   }
 }
 
@@ -310,7 +310,7 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
           static_cast<coded::ProtocolType*>(named_coded_types_[decl->name].get());
       size_t i = 0;
       for (const auto& method_with_info : protocol_decl->all_methods) {
-        assert(method_with_info.method != nullptr);
+        ZX_ASSERT(method_with_info.method != nullptr);
         const auto& method = *method_with_info.method;
         auto CompileMessage = [&](const std::unique_ptr<flat::TypeConstructor>& payload) -> void {
           if (payload && payload->layout.IsSynthetic()) {
@@ -323,7 +323,8 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
               case flat::Decl::Kind::kStruct: {
                 auto coded_struct = static_cast<coded::StructType*>(coded_message.get());
                 auto struct_decl = static_cast<const flat::Struct*>(id->type_decl);
-                assert(!struct_decl->members.empty() && "cannot process empty message payloads");
+                ZX_ASSERT_MSG(!struct_decl->members.empty(),
+                              "cannot process empty message payloads");
                 CompileStructFields(struct_decl, coded_struct);
                 break;
               }
@@ -342,8 +343,7 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
                 break;
               }
               default: {
-                assert(false && "only structs, tables, and unions may be used as message payloads");
-                return;
+                ZX_PANIC("only structs, tables, and unions may be used as message payloads");
               }
             }
 
@@ -385,8 +385,10 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
       auto type = named_coded_types_[decl->name].get();
       coded::XUnionType* coded_xunion = static_cast<coded::XUnionType*>(type);
       coded::XUnionType* nullable_coded_xunion = coded_xunion->maybe_reference_type;
-      assert(nullable_coded_xunion != nullptr && "Named coded xunion must have a reference type!");
-      assert(coded_xunion->fields.empty() && "The coded xunion fields are being compiled twice!");
+      ZX_ASSERT_MSG(nullable_coded_xunion != nullptr,
+                    "Named coded xunion must have a reference type!");
+      ZX_ASSERT_MSG(coded_xunion->fields.empty(),
+                    "The coded xunion fields are being compiled twice!");
       CompileUnionFields(union_decl, coded_xunion);
       CompileUnionFields(union_decl, nullable_coded_xunion);
       break;
@@ -432,7 +434,7 @@ void CodedTypesGenerator::CompileTableFields(const flat::Table* table_decl,
 
   for (const auto& member : table_decl->members) {
     if (!members.emplace(member.ordinal->value, &member).second) {
-      assert(false && "Duplicate ordinal found in table generation");
+      ZX_PANIC("Duplicate ordinal found in table generation");
     }
   }
 
@@ -455,7 +457,7 @@ void CodedTypesGenerator::CompileUnionFields(const flat::Union* union_decl,
   for (const auto& member_ref : union_decl->MembersSortedByXUnionOrdinal()) {
     const auto& member = member_ref.get();
     if (!members.emplace(member.ordinal->value).second) {
-      assert(false && "Duplicate ordinal found in table generation");
+      ZX_PANIC("Duplicate ordinal found in table generation");
     }
     if (member.maybe_used) {
       const auto* coded_member_type =
@@ -470,8 +472,7 @@ void CodedTypesGenerator::CompileUnionFields(const flat::Union* union_decl,
 void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
   switch (decl->kind) {
     case flat::Decl::Kind::kBuiltin: {
-      assert(false && "unexpected builtin");
-      break;
+      ZX_PANIC("unexpected builtin");
     }
     case flat::Decl::Kind::kBits: {
       auto bits_decl = static_cast<const flat::Bits*>(decl);
@@ -502,7 +503,7 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
             uint64 = static_cast<uint64_t>(
                 static_cast<flat::NumericConstantValue<int64_t>*>(value.get())->value);
           } else {
-            assert(false && "Failed to convert enum member to uint64 or int64");
+            ZX_PANIC("Failed to convert enum member to uint64 or int64");
           }
         }
         members.push_back(uint64);
@@ -521,7 +522,7 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
       std::string protocol_qname = NameFlatName(protocol_decl->name);
       std::vector<std::unique_ptr<coded::Type>> protocol_messages;
       for (const auto& method_with_info : protocol_decl->all_methods) {
-        assert(method_with_info.method != nullptr);
+        ZX_ASSERT(method_with_info.method != nullptr);
         const auto& method = *method_with_info.method;
         std::string method_name = NameMethod(protocol_name, method);
         std::string method_qname = NameMethod(protocol_qname, method);
@@ -534,7 +535,8 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
             switch (id->type_decl->kind) {
               case flat::Decl::Kind::kStruct: {
                 auto struct_decl = static_cast<const flat::Struct*>(id->type_decl);
-                assert(!struct_decl->members.empty() && "cannot process empty message payloads");
+                ZX_ASSERT_MSG(!struct_decl->members.empty(),
+                              "cannot process empty message payloads");
                 protocol_messages.push_back(
                     CompileStructDecl(struct_decl, message_name, message_qname));
                 break;
@@ -553,8 +555,7 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
                 break;
               }
               default: {
-                assert(false && "only structs, tables, and unions may be used as message payloads");
-                return;
+                ZX_PANIC("only structs, tables, and unions may be used as message payloads");
               }
             }
           }

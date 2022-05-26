@@ -7,6 +7,7 @@
 #include <fidl/names.h>
 #include <fidl/parser.h>
 #include <fidl/source_file.h>
+#include <zircon/assert.h>
 
 #include <algorithm>
 #include <chrono>
@@ -41,7 +42,7 @@ class Namer {
     std::size_t max_length = 0;
     while ((start_pos = input.find_first_of('#', start_pos)) != std::string::npos) {
       std::size_t end_pos = input.find_first_of('#', start_pos + 1);
-      assert(end_pos != std::string::npos);
+      ZX_ASSERT(end_pos != std::string::npos);
       std::size_t key_len = end_pos - start_pos;
       max_length = std::max(max_length, key_len);
       start_pos = end_pos + 1;

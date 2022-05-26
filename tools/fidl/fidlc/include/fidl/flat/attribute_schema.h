@@ -6,6 +6,7 @@
 #define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_FLAT_ATTRIBUTE_SCHEMA_H_
 
 #include <lib/fit/function.h>
+#include <zircon/assert.h>
 
 #include "fidl/flat_ast.h"
 #include "fidl/reporter.h"
@@ -33,7 +34,7 @@ class AttributeArgSchema {
                               Optionality optionality = Optionality::kRequired)
       : type_(type), optionality_(optionality) {
     if (auto kind = std::get_if<ConstantValue::Kind>(&type_)) {
-      assert(*kind != ConstantValue::Kind::kDocComment);
+      ZX_ASSERT(*kind != ConstantValue::Kind::kDocComment);
     }
   }
 

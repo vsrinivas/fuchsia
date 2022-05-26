@@ -13,6 +13,7 @@
 #include <lib/cmdline/status.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <zircon/assert.h>
 
 #include <fstream>
 #include <iostream>
@@ -146,7 +147,7 @@ int main(int argc, char* argv[]) {
       fprintf(stderr, "%s\n", lint.c_str());
     }
   } else {
-    assert(options.format == "json");  // should never be false
+    ZX_ASSERT(options.format == "json");  // should never be false
     std::cout << fidl::FindingsJson(findings).Produce().str();
   }
 

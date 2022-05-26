@@ -5,6 +5,8 @@
 #ifndef TOOLS_FIDL_FIDLC_INCLUDE_FIDL_JSON_GENERATOR_H_
 #define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_JSON_GENERATOR_H_
 
+#include <zircon/assert.h>
+
 #include <memory>
 #include <sstream>
 #include <string>
@@ -28,7 +30,7 @@ struct NameSpan {
   // anonymous, and relying on callers to avoid derefencing a nullptr
   // location.
   explicit NameSpan(const flat::Name& name) : NameSpan(name.span().value()) {
-    assert(name.span().has_value() && "NameSpan was passed an anonymous name");
+    ZX_ASSERT_MSG(name.span().has_value(), "NameSpan was passed an anonymous name");
   }
 
   const std::string filename;

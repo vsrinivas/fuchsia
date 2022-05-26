@@ -5,7 +5,8 @@
 #ifndef TOOLS_FIDL_FIDLC_INCLUDE_FIDL_VERSIONING_TYPES_H_
 #define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_VERSIONING_TYPES_H_
 
-#include <cassert>
+#include <zircon/assert.h>
+
 #include <map>
 #include <optional>
 #include <set>
@@ -113,7 +114,7 @@ class VersionRange final {
  public:
   constexpr explicit VersionRange(Version lower, Version upper_exclusive)
       : pair_(lower, upper_exclusive) {
-    assert(lower < upper_exclusive && "invalid version range");
+    ZX_ASSERT_MSG(lower < upper_exclusive, "invalid version range");
   }
 
   // Returns the [lower, upper) version pair.

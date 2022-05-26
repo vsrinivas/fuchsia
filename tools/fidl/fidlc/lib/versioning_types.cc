@@ -5,6 +5,7 @@
 #include "fidl/versioning_types.h"
 
 #include <fidl/utils.h>
+#include <zircon/assert.h>
 
 namespace fidl {
 
@@ -44,8 +45,8 @@ uint64_t Version::ordinal() const {
   switch (value_) {
     case NegInf().value_:
     case PosInf().value_:
-      assert(false && "infinite versions do not have an ordinal");
-      __builtin_unreachable();
+      ZX_PANIC("infinite versions do not have an ordinal");
+
     case Head().value_:
       return std::numeric_limits<uint64_t>::max();
     default:
@@ -97,21 +98,21 @@ std::optional<VersionRange> VersionRange::Subtract(const std::optional<VersionRa
     return std::nullopt;
   }
   if (a2 > a1) {
-    assert(b2 >= b1 && "result would not be contiguous");
+    ZX_ASSERT_MSG(b2 >= b1, "result would not be contiguous");
     return VersionRange(a1, a2);
   }
-  assert(b2 < b1 && "logic error");
-  assert(a2 <= a1 && "result would not be contiguous");
+  ZX_ASSERT_MSG(b2 < b1, "logic error");
+  ZX_ASSERT_MSG(a2 <= a1, "result would not be contiguous");
   return VersionRange(b2, b1);
 }
 
 VersionRange Availability::range() const {
-  assert(state_ == State::kInherited || state_ == State::kNarrowed);
+  ZX_ASSERT(state_ == State::kInherited || state_ == State::kNarrowed);
   return VersionRange(added_.value(), removed_.value());
 }
 
 std::optional<VersionRange> Availability::deprecated_range() const {
-  assert(state_ == State::kInherited || state_ == State::kNarrowed);
+  ZX_ASSERT(state_ == State::kInherited || state_ == State::kNarrowed);
   if (!deprecated_) {
     return std::nullopt;
   }
@@ -119,15 +120,15 @@ std::optional<VersionRange> Availability::deprecated_range() const {
 }
 
 bool Availability::is_deprecated() const {
-  assert(state_ == State::kNarrowed);
+  ZX_ASSERT(state_ == State::kNarrowed);
   return deprecated_.has_value();
 }
 
 bool Availability::Init(std::optional<Version> added, std::optional<Version> deprecated,
                         std::optional<Version> removed) {
-  assert(state_ == State::kUnset && "called Init in the wrong order");
-  assert(deprecated != Version::NegInf() && "deprecated version must be finite, got -inf");
-  assert(deprecated != Version::PosInf() && "deprecated version must be finite, got +inf");
+  ZX_ASSERT_MSG(state_ == State::kUnset, "called Init in the wrong order");
+  ZX_ASSERT_MSG(deprecated != Version::NegInf(), "deprecated version must be finite, got -inf");
+  ZX_ASSERT_MSG(deprecated != Version::PosInf(), "deprecated version must be finite, got +inf");
   added_ = added;
   deprecated_ = deprecated;
   removed_ = removed;
@@ -144,8 +145,8 @@ bool Availability::ValidOrder() const {
 }
 
 Availability::InheritResult Availability::Inherit(const Availability& parent) {
-  assert(state_ == State::kInitialized && "called Inherit in the wrong order");
-  assert(parent.state_ == State::kInherited && "must call Inherit on parent first");
+  ZX_ASSERT_MSG(state_ == State::kInitialized, "called Inherit in the wrong order");
+  ZX_ASSERT_MSG(parent.state_ == State::kInherited, "must call Inherit on parent first");
   InheritResult result;
   // Inherit and validate `added`.
   if (!added_) {
@@ -190,8 +191,8 @@ Availability::InheritResult Availability::Inherit(const Availability& parent) {
   }
 
   if (result.Ok()) {
-    assert(added_ && removed_);
-    assert(ValidOrder());
+    ZX_ASSERT(added_ && removed_);
+    ZX_ASSERT(ValidOrder());
     state_ = State::kInherited;
   } else {
     state_ = State::kFailed;
@@ -200,10 +201,10 @@ Availability::InheritResult Availability::Inherit(const Availability& parent) {
 }
 
 void Availability::Narrow(VersionRange range) {
-  assert(state_ == State::kInherited && "called Narrow in the wrong order");
+  ZX_ASSERT_MSG(state_ == State::kInherited, "called Narrow in the wrong order");
   state_ = State::kNarrowed;
   auto [a, b] = range.pair();
-  assert(a >= added_ && b <= removed_ && "must narrow to a subrange");
+  ZX_ASSERT_MSG(a >= added_ && b <= removed_, "must narrow to a subrange");
   added_ = a;
   removed_ = b;
   if (deprecated_ && a >= deprecated_.value()) {

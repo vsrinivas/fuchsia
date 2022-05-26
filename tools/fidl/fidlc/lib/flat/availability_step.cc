@@ -4,6 +4,8 @@
 
 #include "fidl/flat/availability_step.h"
 
+#include <zircon/assert.h>
+
 #include "fidl/flat/compile_step.h"
 #include "fidl/flat_ast.h"
 #include "fidl/versioning_types.h"
@@ -96,16 +98,16 @@ void AvailabilityStep::CompileAvailability(Element* element) {
   // library declaration, in which case we default to @available(added=HEAD).
   std::optional<Version> default_added;
   if (element->kind == Element::Kind::kLibrary) {
-    assert(element == library());
+    ZX_ASSERT(element == library());
     library()->platform = GetDefaultPlatform();
     default_added = Version::Head();
   }
   [[maybe_unused]] bool valid =
       element->availability.Init(default_added, std::nullopt, std::nullopt);
-  assert(valid && "initializing default availability should succeed");
+  ZX_ASSERT_MSG(valid, "initializing default availability should succeed");
   if (auto source = AvailabilityToInheritFrom(element)) {
     [[maybe_unused]] auto result = element->availability.Inherit(source.value());
-    assert(result.Ok() && "inheriting into default availability should succeed");
+    ZX_ASSERT_MSG(result.Ok(), "inheriting into default availability should succeed");
   }
 }
 
@@ -113,7 +115,7 @@ void AvailabilityStep::CompileAvailabilityFromAttribute(Element* element, Attrib
   CompileStep::CompileAttributeEarly(compiler(), attribute);
 
   const bool is_library = element->kind == Element::Kind::kLibrary;
-  assert(is_library == (element == library()));
+  ZX_ASSERT(is_library == (element == library()));
 
   const auto platform = attribute->GetArg("platform");
   const auto added = attribute->GetArg("added");
@@ -185,13 +187,13 @@ void AvailabilityStep::CompileAvailabilityFromAttribute(Element* element, Attrib
 
 Platform AvailabilityStep::GetDefaultPlatform() {
   auto platform = Platform::Parse(std::string(library()->name.front()));
-  assert(platform && "library component should be valid platform");
+  ZX_ASSERT_MSG(platform, "library component should be valid platform");
   return platform.value();
 }
 
 std::optional<Platform> AvailabilityStep::GetPlatform(const AttributeArg* maybe_arg) {
   if (maybe_arg && maybe_arg->value->IsResolved()) {
-    assert(maybe_arg->value->Value().kind == ConstantValue::Kind::kString);
+    ZX_ASSERT(maybe_arg->value->Value().kind == ConstantValue::Kind::kString);
     std::string str =
         static_cast<const StringConstantValue*>(&maybe_arg->value->Value())->MakeContents();
     if (auto platform = Platform::Parse(str)) {
@@ -206,7 +208,7 @@ std::optional<Version> AvailabilityStep::GetVersion(const AttributeArg* maybe_ar
   if (maybe_arg && maybe_arg->value->IsResolved()) {
     // Note: If the argument is "HEAD", its value will have been resolved to
     // Version::Head().ordinal(). See AttributeArgSchema::ResolveArg.
-    assert(maybe_arg->value->Value().kind == ConstantValue::Kind::kUint64);
+    ZX_ASSERT(maybe_arg->value->Value().kind == ConstantValue::Kind::kUint64);
     uint64_t value =
         static_cast<const NumericConstantValue<uint64_t>*>(&maybe_arg->value->Value())->value;
     if (auto version = Version::From(value)) {
@@ -220,7 +222,7 @@ std::optional<Version> AvailabilityStep::GetVersion(const AttributeArg* maybe_ar
 std::optional<Availability> AvailabilityStep::AvailabilityToInheritFrom(const Element* element) {
   const Element* parent = LexicalParent(element);
   if (!parent) {
-    assert(element == library() && "if it has no parent, it must be the library");
+    ZX_ASSERT_MSG(element == library(), "if it has no parent, it must be the library");
     return Availability::Unbounded();
   }
   if (parent->availability.state() == Availability::State::kInherited) {
@@ -240,12 +242,11 @@ const AttributeArg* AvailabilityStep::AncestorArgument(const Element* element,
       }
     }
   }
-  assert(false && "no ancestor exists for this arg");
-  __builtin_unreachable();
+  ZX_PANIC("no ancestor exists for this arg");
 }
 
 Element* AvailabilityStep::LexicalParent(const Element* element) {
-  assert(element);
+  ZX_ASSERT(element);
   if (element == library()) {
     return nullptr;
   }

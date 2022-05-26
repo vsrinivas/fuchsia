@@ -5,6 +5,7 @@
 #include "fidl/source_file.h"
 
 #include <assert.h>
+#include <zircon/assert.h>
 
 #include <algorithm>
 #include <functional>
@@ -30,7 +31,7 @@ SourceFile::SourceFile(std::string filename, std::string data)
 
   // Include the last line if the file does not end in a newline
   if (size > 0u) {
-    assert(start_of_line != data_.cend());
+    ZX_ASSERT(start_of_line != data_.cend());
     auto& position = *start_of_line;
     lines_.push_back(std::string_view(&position, size));
   }
@@ -49,13 +50,13 @@ std::string_view SourceFile::LineContaining(std::string_view view, Position* pos
     //
     // Assert that this view is either zero-sized or references the null-terminating character
     // in the std::string.
-    assert(view.size() <= 1 && "The view goes beyond the end of the SourceFile");
+    ZX_ASSERT_MSG(view.size() <= 1, "The view goes beyond the end of the SourceFile");
 
     if (file_size == 0) {
       *position_out = {1, 1};
       return std::string_view(view.data(), 0);
     } else {
-      assert(lines_.size() > 0 && "File size is greater than 0 but no lines were parsed");
+      ZX_ASSERT_MSG(lines_.size() > 0, "File size is greater than 0 but no lines were parsed");
       auto line = lines_.back();
       int line_number = static_cast<int>(lines_.size());
       int column_number = static_cast<int>(line.size() + 1);
@@ -64,9 +65,9 @@ std::string_view SourceFile::LineContaining(std::string_view view, Position* pos
     }
   }
 
-  assert(ptr_less_equal(file_data, view.data()) && "The view is not part of this SourceFile");
-  assert(ptr_less_equal(view.data() + view.size(), file_data + file_size) &&
-         "The view is not part of this SourceFile");
+  ZX_ASSERT_MSG(ptr_less_equal(file_data, view.data()), "The view is not part of this SourceFile");
+  ZX_ASSERT_MSG(ptr_less_equal(view.data() + view.size(), file_data + file_size),
+                "The view is not part of this SourceFile");
 
   // We are looking from the end of the file backwards (hence
   // crbegin and crend), looking for the first line (hence
@@ -76,7 +77,7 @@ std::string_view SourceFile::LineContaining(std::string_view view, Position* pos
     return ptr_less_equal(right.data(), left.data());
   };
   auto line = std::upper_bound(lines_.crbegin(), lines_.crend(), view, is_in_line);
-  assert(line != lines_.crend());
+  ZX_ASSERT(line != lines_.crend());
 
   if (position_out != nullptr) {
     // Humans number lines from 1. Calculating this from the end

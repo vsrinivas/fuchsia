@@ -4,6 +4,8 @@
 
 #include "fidl/names.h"
 
+#include <zircon/assert.h>
+
 namespace fidl {
 
 namespace {
@@ -91,12 +93,11 @@ std::string NamePrimitiveIntegerCConstantMacro(types::PrimitiveSubtype subtype) 
     case types::PrimitiveSubtype::kUint64:
       return "UINT64_C";
     case types::PrimitiveSubtype::kBool:
-      assert(false && "Tried to generate an integer constant for a bool");
-      return "";
+      ZX_PANIC("Tried to generate an integer constant for a bool");
+
     case types::PrimitiveSubtype::kFloat32:
     case types::PrimitiveSubtype::kFloat64:
-      assert(false && "Tried to generate an integer constant for a float");
-      return "";
+      ZX_PANIC("Tried to generate an integer constant for a float");
   }
 }
 
@@ -202,8 +203,7 @@ std::string NameFlatTypeKind(const flat::Type* type) {
     case flat::Type::Kind::kIdentifier:
       return "identifier";
     case flat::Type::Kind::kUntypedNumeric:
-      assert(false && "compiler bug: should not have untyped numeric here");
-      return "NameFlatTypeKind over untyped numeric";
+      ZX_PANIC("should not have untyped numeric here");
   }
 }
 
@@ -424,15 +424,13 @@ std::string NameFlatCType(const flat::Type* type) {
           case flat::Decl::Kind::kResource:
           case flat::Decl::Kind::kService:
           case flat::Decl::Kind::kTypeAlias:
-            assert(false && "no C name");
-            break;
+            ZX_PANIC("no C name");
         }
         break;
       }
 
       case flat::Type::Kind::kUntypedNumeric:
-        assert(false && "compiler bug: should not have untyped numeric here");
-        break;
+        ZX_PANIC("should not have untyped numeric here");
     }
   }
 }

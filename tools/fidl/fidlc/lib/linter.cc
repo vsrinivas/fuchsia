@@ -7,6 +7,7 @@
 #include <fidl/raw_ast.h>
 #include <fidl/utils.h>
 #include <lib/fit/function.h>
+#include <zircon/assert.h>
 
 #include <algorithm>
 #include <fstream>
@@ -121,7 +122,8 @@ Finding* Linter::AddFinding(SourceSpan span, std::string check_id, std::string m
       current_findings_.emplace(new Finding(span, std::move(check_id), std::move(message)));
   // Future checks may need to allow multiple findings of the
   // same check ID at the same location.
-  assert(result.second && "Duplicate key. Check criteria in Finding.operator==() and operator<()");
+  ZX_ASSERT_MSG(result.second,
+                "Duplicate key. Check criteria in Finding.operator==() and operator<()");
   return result.first->get();
 }
 
@@ -160,7 +162,7 @@ const Finding* Linter::AddFinding(const SourceElementSubtypeRefOrPtr& element,
 
 CheckDef Linter::DefineCheck(std::string_view check_id, std::string message_template) {
   auto result = checks_.emplace(check_id, TemplateString(std::move(message_template)));
-  assert(result.second && "DefineCheck called with a duplicate check_id");
+  ZX_ASSERT_MSG(result.second, "DefineCheck called with a duplicate check_id");
   return *result.first;
 }
 

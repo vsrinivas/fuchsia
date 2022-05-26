@@ -4,6 +4,8 @@
 
 #include "fidl/flat/compiler.h"
 
+#include <zircon/assert.h>
+
 #include "fidl/flat/attribute_schema.h"
 #include "fidl/flat/availability_step.h"
 #include "fidl/flat/compile_step.h"
@@ -57,7 +59,7 @@ bool Compiler::Compile() {
   if (!all_libraries_->Insert(std::move(library_)))
     return false;
 
-  assert(checkpoint.NoNewErrors() && "errors should have caused an early return");
+  ZX_ASSERT_MSG(checkpoint.NoNewErrors(), "errors should have caused an early return");
   return true;
 }
 
@@ -89,23 +91,23 @@ Library* Libraries::Lookup(const std::vector<std::string_view>& library_name) co
 
 void Libraries::Remove(const Library* library) {
   [[maybe_unused]] auto num_removed = libraries_by_name_.erase(library->name);
-  assert(num_removed == 1 && "library not in libraries_by_name_");
+  ZX_ASSERT_MSG(num_removed == 1, "library not in libraries_by_name_");
   auto iter = std::find_if(libraries_.begin(), libraries_.end(),
                            [&](auto& lib) { return lib.get() == library; });
-  assert(iter != libraries_.end() && "library not in libraries_");
+  ZX_ASSERT_MSG(iter != libraries_.end(), "library not in libraries_");
   libraries_.erase(iter);
 }
 
 AttributeSchema& Libraries::AddAttributeSchema(std::string name) {
   auto [it, inserted] = attribute_schemas_.try_emplace(std::move(name));
-  assert(inserted && "do not add schemas twice");
+  ZX_ASSERT_MSG(inserted, "do not add schemas twice");
   return it->second;
 }
 
 std::set<const Library*, LibraryComparator> Libraries::Unused() const {
   std::set<const Library*, LibraryComparator> unused;
   auto target = libraries_.back().get();
-  assert(target && "must have inserted at least one library");
+  ZX_ASSERT_MSG(target, "must have inserted at least one library");
   for (auto& library : libraries_) {
     if (library.get() != target) {
       unused.insert(library.get());
@@ -218,7 +220,7 @@ static std::vector<const flat::Struct*> ExternalStructs(
           const auto* result_union_type =
               static_cast<const flat::IdentifierType*>(response_struct->members[0].type_ctor->type);
 
-          assert(result_union_type->type_decl->kind == flat::Decl::Kind::kUnion);
+          ZX_ASSERT(result_union_type->type_decl->kind == flat::Decl::Kind::kUnion);
           const auto* result_union = static_cast<const flat::Union*>(result_union_type->type_decl);
           const auto* success_variant_type = static_cast<const flat::IdentifierType*>(
               result_union->members[0].maybe_used->type_ctor->type);
@@ -258,8 +260,7 @@ class CalcDepedencies {
   void VisitDecl(const Decl* decl) {
     switch (decl->kind) {
       case Decl::Kind::kBuiltin: {
-        assert(false && "unexpected element");
-        break;
+        ZX_PANIC("unexpected element");
       }
       case Decl::Kind::kBits: {
         auto bits_decl = static_cast<const Bits*>(decl);
@@ -435,7 +436,7 @@ std::unique_ptr<Compilation> Libraries::Filter(const VersionSelection* version_s
     filter(&dst->unions, src.unions);
   };
 
-  assert(!libraries_.empty());
+  ZX_ASSERT(!libraries_.empty());
   auto library = libraries_.back().get();
   auto compilation = std::make_unique<Compilation>();
   compilation->library_name = library->name;

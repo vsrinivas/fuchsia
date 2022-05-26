@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/tables_generator.h>
+#include <zircon/assert.h>
 
 #include <zxtest/zxtest.h>
 
@@ -14,11 +15,11 @@
 namespace {
 
 const fidl::coded::StructField& field(const fidl::coded::StructElement& element) {
-  assert(std::holds_alternative<const fidl::coded::StructField>(element));
+  ZX_ASSERT(std::holds_alternative<const fidl::coded::StructField>(element));
   return std::get<const fidl::coded::StructField>(element);
 }
 const fidl::coded::StructPadding& padding(const fidl::coded::StructElement& element) {
-  assert(std::holds_alternative<const fidl::coded::StructPadding>(element));
+  ZX_ASSERT(std::holds_alternative<const fidl::coded::StructPadding>(element));
   return std::get<const fidl::coded::StructPadding>(element);
 }
 

@@ -4,6 +4,8 @@
 
 #include "fidl/flat/attributes.h"
 
+#include <zircon/assert.h>
+
 #include "fidl/flat/typespace.h"
 #include "fidl/flat_ast.h"
 #include "fidl/utils.h"
@@ -25,8 +27,9 @@ const AttributeArg* Attribute::GetArg(std::string_view arg_name) const {
 }
 
 AttributeArg* Attribute::GetStandaloneAnonymousArg() const {
-  assert(!compiled &&
-         "if calling after attribute compilation, use GetArg(...) with the resolved name instead");
+  ZX_ASSERT_MSG(
+      !compiled,
+      "if calling after attribute compilation, use GetArg(...) with the resolved name instead");
   if (args.size() == 1 && !args[0]->name.has_value()) {
     return args[0].get();
   }

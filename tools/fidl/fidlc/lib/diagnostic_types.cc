@@ -4,6 +4,8 @@
 
 #include "fidl/diagnostic_types.h"
 
+#include <zircon/assert.h>
+
 #include "fidl/flat/typespace.h"
 #include "fidl/flat_ast.h"
 #include "fidl/names.h"
@@ -243,15 +245,15 @@ std::string Display(const VersionRange& r) {
   auto [a, b] = r.pair();
   std::stringstream ss;
   if (a == Version::NegInf()) {
-    assert(false && "versioned elements cannot start at -inf");
+    ZX_PANIC("versioned elements cannot start at -inf");
   } else if (a == Version::PosInf()) {
-    assert(false && "versioned elements cannot start at +inf");
+    ZX_PANIC("versioned elements cannot start at +inf");
   } else if (a == Version::Head()) {
-    assert(b == Version::PosInf() && "unexpected end version");
+    ZX_ASSERT_MSG(b == Version::PosInf(), "unexpected end version");
     ss << "at version " << Display(a);
   } else {
     if (b == Version::NegInf()) {
-      assert(false && "versioned elements cannot end at -inf");
+      ZX_PANIC("versioned elements cannot end at -inf");
     } else if (b == Version::PosInf()) {
       ss << "from version " << Display(a) << " onward";
     } else if (b == Version::Head()) {

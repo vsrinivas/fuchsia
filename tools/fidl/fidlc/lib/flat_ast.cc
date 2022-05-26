@@ -4,6 +4,8 @@
 
 #include "fidl/flat_ast.h"
 
+#include <zircon/assert.h>
+
 #include "fidl/flat/visitor.h"
 #include "fidl/reporter.h"
 
@@ -38,7 +40,7 @@ bool Element::IsDecl() const {
 }
 
 Decl* Element::AsDecl() {
-  assert(IsDecl());
+  ZX_ASSERT(IsDecl());
   return static_cast<Decl*>(this);
 }
 
@@ -275,7 +277,7 @@ Decl* Library::Declarations::Insert(std::unique_ptr<Decl> decl) {
   switch (decl->kind) {
     case Decl::Kind::kBuiltin: {
       [[maybe_unused]] auto index = static_cast<size_t>(static_cast<Builtin*>(decl.get())->id);
-      assert(index == builtins.size() && "inserted builtin out of order");
+      ZX_ASSERT_MSG(index == builtins.size(), "inserted builtin out of order");
       return StoreDecl(std::move(decl), &all, &builtins);
     }
     case Decl::Kind::kBits:
@@ -303,9 +305,9 @@ Decl* Library::Declarations::Insert(std::unique_ptr<Decl> decl) {
 
 Builtin* Library::Declarations::LookupBuiltin(Builtin::Identity id) const {
   auto index = static_cast<size_t>(id);
-  assert(index < builtins.size() && "builtin id out of range");
+  ZX_ASSERT_MSG(index < builtins.size(), "builtin id out of range");
   auto builtin = builtins[index].get();
-  assert(builtin->id == id && "builtin's id does not match index");
+  ZX_ASSERT_MSG(builtin->id == id, "builtin's id does not match index");
   return builtin;
 }
 
@@ -338,7 +340,7 @@ std::unique_ptr<LayoutParameter> TypeLayoutParameter::Clone() const {
 }
 
 std::unique_ptr<LayoutParameter> IdentifierLayoutParameter::Clone() const {
-  assert(!(as_constant || as_type_ctor) && "Clone() is not allowed after Disambiguate()");
+  ZX_ASSERT_MSG(!(as_constant || as_type_ctor), "Clone() is not allowed after Disambiguate()");
   return std::make_unique<IdentifierLayoutParameter>(reference, span);
 }
 
@@ -382,8 +384,7 @@ static std::vector<T> FilterMembers(const std::vector<T>& all, VersionRange rang
 }
 
 std::unique_ptr<Decl> Builtin::SplitImpl(VersionRange range) const {
-  assert(false && "splitting builtins not allowed");
-  __builtin_unreachable();
+  ZX_PANIC("splitting builtins not allowed");
 }
 
 std::unique_ptr<Decl> Const::SplitImpl(VersionRange range) const {

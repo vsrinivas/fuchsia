@@ -4,6 +4,8 @@
 
 #include "fidl/span_sequence.h"
 
+#include <zircon/assert.h>
+
 #include "fidl/raw_ast.h"
 
 namespace fidl::fmt {
@@ -96,7 +98,7 @@ std::optional<SpanSequence::Kind> TokenSpanSequence::Print(
 }
 
 void CompositeSpanSequence::AddChild(std::unique_ptr<SpanSequence> child) {
-  assert(!IsClosed() && "cannot AddChild to closed AtomicSpanSequence");
+  ZX_ASSERT_MSG(!IsClosed(), "cannot AddChild to closed AtomicSpanSequence");
   children_.push_back(std::move(child));
 }
 
@@ -191,7 +193,7 @@ void CompositeSpanSequence::CloseChildren() {
 }
 
 SpanSequence* CompositeSpanSequence::GetLastChild() {
-  assert(!IsClosed() && "cannot GetLastChild of closed AtomicSpanSequence");
+  ZX_ASSERT_MSG(!IsClosed(), "cannot GetLastChild of closed AtomicSpanSequence");
   const auto& children = GetChildren();
   if (!children.empty()) {
     return children.at(children.size() - 1).get();
@@ -316,7 +318,7 @@ std::optional<SpanSequence::Kind> DivisibleSpanSequence::Print(
   const auto last = LastNonCommentChildIndex(children);
   auto wrapped_indentation = indentation + (wrapped ? kWrappedIndentation : 0);
   auto space_available = max_col_width - wrapped_indentation;
-  assert(wrapped_indentation <= max_col_width && "indentation overflow");
+  ZX_ASSERT_MSG(wrapped_indentation <= max_col_width, "indentation overflow");
 
   MaybeAddBlankLinesAfterStandaloneComment(this, last_printed_kind, out);
 
@@ -362,8 +364,7 @@ std::optional<SpanSequence::Kind> DivisibleSpanSequence::Print(
     switch (child->GetKind()) {
       case SpanSequence::Kind::kInlineComment:
       case SpanSequence::Kind::kStandaloneComment: {
-        assert(false && "comments may not be children of DivisibleSpanSequence");
-        break;
+        ZX_PANIC("comments may not be children of DivisibleSpanSequence");
       }
       case SpanSequence::Kind::kAtomic:
       case SpanSequence::Kind::kDivisible: {
@@ -506,7 +507,7 @@ std::optional<SpanSequence::Kind> InlineCommentSpanSequence::Print(
 void StandaloneCommentSpanSequence::AddLine(const std::string_view line,
                                             size_t leading_blank_lines) {
   if (IsClosed()) {
-    assert(false && "cannot AddLine to closed StandaloneCommentSpanSequence");
+    ZX_PANIC("cannot AddLine to closed StandaloneCommentSpanSequence");
   }
   while (leading_blank_lines > 0) {
     lines_.emplace_back(std::string_view());

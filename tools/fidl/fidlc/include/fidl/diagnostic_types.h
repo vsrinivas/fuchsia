@@ -5,7 +5,8 @@
 #ifndef TOOLS_FIDL_FIDLC_INCLUDE_FIDL_DIAGNOSTIC_TYPES_H_
 #define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_DIAGNOSTIC_TYPES_H_
 
-#include <cassert>
+#include <zircon/assert.h>
+
 #include <memory>
 #include <set>
 #include <sstream>
@@ -56,14 +57,14 @@ std::string Display(T val) {
 }
 
 inline void FormatHelper(std::stringstream& out, std::string_view msg) {
-  assert(msg.find(kFormatMarker) == std::string::npos);
+  ZX_ASSERT(msg.find(kFormatMarker) == std::string::npos);
   out << msg;
 }
 
 template <typename T, typename... Rest>
 void FormatHelper(std::stringstream& out, std::string_view msg, T t, const Rest&... rest) {
   auto i = msg.find(kFormatMarker);
-  assert(i != std::string::npos);
+  ZX_ASSERT(i != std::string::npos);
   out << msg.substr(0, i) << Display(t);
   auto remaining_msg = msg.substr(i + kFormatMarker.size());
   FormatHelper(out, remaining_msg, rest...);
@@ -100,8 +101,8 @@ constexpr void CheckFormatArgs(std::string_view msg) {
   // always constexpr. If the condition is true, the assert evaluates to a
   // no-op. If the condition is false, it evaluates to a (non-constexpr) abort,
   // resulting in a "must be initialized by a constant expression" error.
-  assert(sizeof...(Args) == internal::CountFormatArgs(msg) &&
-         "Number of format string parameters '{}' != number of template arguments");
+  ZX_ASSERT_MSG(sizeof...(Args) == internal::CountFormatArgs(msg),
+                "Number of format string parameters '{}' != number of template arguments");
 }
 
 }  // namespace internal
