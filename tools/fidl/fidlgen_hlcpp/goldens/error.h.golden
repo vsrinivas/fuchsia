@@ -121,6 +121,7 @@ class Example_foo_Result final {
   }
 
   friend ::fidl::Equality<::test::error::Example_foo_Result>;
+
   Example_foo_Result(fpromise::result<int64_t, uint32_t>&& result) {
     ZX_ASSERT(!result.is_pending());
     if (result.is_ok()) {

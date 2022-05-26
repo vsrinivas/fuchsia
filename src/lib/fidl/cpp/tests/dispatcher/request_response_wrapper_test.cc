@@ -40,38 +40,38 @@ TEST(Response, FromPayloadErrorSyntaxSuccess) {
   test_types::FooResponse res{{.bar = 42}};
   test_types::ErrorSyntaxFooPayloadTopResponse domain_object{
       {.result = test_types::ErrorSyntaxFooPayloadResult::WithResponse(std::move(res))}};
-  fidl::Response response =
+  fidl::Response result =
       fidl::internal::NaturalMessageConverter<fidl::Response<test_types::ErrorSyntax::FooPayload>>::
           FromDomainObject(std::move(domain_object));
-  EXPECT_TRUE(response.is_ok());
-  EXPECT_EQ(42, response.value().bar());
+  EXPECT_TRUE(result.is_ok());
+  EXPECT_EQ(42, result.value().bar());
 }
 
 TEST(Response, FromPayloadErrorSyntaxError) {
   test_types::ErrorSyntaxFooPayloadTopResponse domain_object{
       {.result = test_types::ErrorSyntaxFooPayloadResult::WithErr(42)}};
-  fidl::Response response =
+  fidl::Response result =
       fidl::internal::NaturalMessageConverter<fidl::Response<test_types::ErrorSyntax::FooPayload>>::
           FromDomainObject(std::move(domain_object));
-  EXPECT_FALSE(response.is_ok());
-  EXPECT_EQ(42, response.error_value());
+  EXPECT_FALSE(result.is_ok());
+  EXPECT_EQ(42, result.error_value());
 }
 
 TEST(Response, FromPayloadErrorSyntaxEmptyStructSuccess) {
   test_types::ErrorSyntaxEmptyPayloadTopResponse domain_object{
       {.result = test_types::ErrorSyntaxEmptyPayloadResult::WithResponse({})}};
-  fidl::Response event = fidl::internal::NaturalMessageConverter<fidl::Response<
+  fidl::Response result = fidl::internal::NaturalMessageConverter<fidl::Response<
       test_types::ErrorSyntax::EmptyPayload>>::FromDomainObject(std::move(domain_object));
-  EXPECT_TRUE(event.is_ok());
+  EXPECT_TRUE(result.is_ok());
 }
 
 TEST(Response, FromPayloadErrorSyntaxEmptyStructError) {
   test_types::ErrorSyntaxEmptyPayloadTopResponse domain_object{
       {.result = test_types::ErrorSyntaxEmptyPayloadResult::WithErr(42)}};
-  fidl::Response event = fidl::internal::NaturalMessageConverter<fidl::Response<
+  fidl::Response result = fidl::internal::NaturalMessageConverter<fidl::Response<
       test_types::ErrorSyntax::EmptyPayload>>::FromDomainObject(std::move(domain_object));
-  EXPECT_FALSE(event.is_ok());
-  EXPECT_EQ(42, event.error_value());
+  EXPECT_FALSE(result.is_ok());
+  EXPECT_EQ(42, result.error_value());
 }
 
 TEST(Response, InheritFromDomainObjectErrorSyntax) {
@@ -186,5 +186,4 @@ TEST(Result, DefaultConstruction) {
       !cpp17::is_default_constructible_v<fidl::Result<test_types::ErrorSyntax::EmptyPayload>>,
       "Cannot default construct invalid result type");
 }
-
 }  // namespace

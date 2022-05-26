@@ -22,6 +22,7 @@ struct ::fidl::internal::NaturalMethodTypes<::test_nullable::SimpleProtocol::Add
       ::fit::callback<void(::fidl::Result<::test_nullable::SimpleProtocol::Add>&)>;
 
   static constexpr bool HasApplicationError = false;
+  static constexpr bool HasTransportError = false;
 
   static constexpr bool IsAbsentBody = false;
 };

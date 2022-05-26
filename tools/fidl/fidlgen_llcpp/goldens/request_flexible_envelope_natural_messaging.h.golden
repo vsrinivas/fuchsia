@@ -22,6 +22,7 @@ struct ::fidl::internal::NaturalMethodTypes<::test_requestflexibleenvelope::Prot
       ::fit::callback<void(::fidl::Result<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>&)>;
 
   static constexpr bool HasApplicationError = false;
+  static constexpr bool HasTransportError = false;
 
   static constexpr bool IsAbsentBody = false;
 };
@@ -34,6 +35,7 @@ struct ::fidl::internal::NaturalMethodTypes<::test_requestflexibleenvelope::Prot
       ::fit::callback<void(::fidl::Result<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>&)>;
 
   static constexpr bool HasApplicationError = false;
+  static constexpr bool HasTransportError = false;
 
   static constexpr bool IsAbsentBody = false;
 };

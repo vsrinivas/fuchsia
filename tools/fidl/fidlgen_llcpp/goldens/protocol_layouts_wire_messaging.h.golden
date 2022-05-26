@@ -2375,6 +2375,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocollayouts::MainProtocol::T
   using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>>;
 
   
+  
   using ApplicationError = uint32_t;
   
 
@@ -2434,6 +2435,7 @@ template<>
 struct ::fidl::internal::WireMethodTypes<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError> {
   using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>>;
 
+  
   
   using ApplicationError = uint32_t;
   
@@ -2495,6 +2497,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocollayouts::MainProtocol::T
   using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocollayouts::MainProtocol::TwoWayImportWithError>>;
 
   
+  
   using ApplicationError = uint32_t;
   
 
@@ -2555,6 +2558,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocollayouts::MainProtocol::T
   using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>>;
 
   
+  
   using ApplicationError = uint32_t;
   
 
@@ -2614,6 +2618,7 @@ template<>
 struct ::fidl::internal::WireMethodTypes<::test_protocollayouts::MainProtocol::TwoWayAnonWithError> {
   using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>>;
 
+  
   
   using ApplicationError = uint32_t;
   
@@ -4686,6 +4691,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::Two
       return &decoded_.Value()->body;
     }
 
+    
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>* Unwrap_NEW() {
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
@@ -4694,12 +4700,15 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::Two
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
     }
+    
 
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>& value() { return *Unwrap(); }
     const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>& value() const { return *Unwrap(); }
 
+    
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>& value_NEW() { return *Unwrap_NEW(); }
     const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>& value_NEW() const { return *Unwrap_NEW(); }
+    
 
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>* operator->() { return &value(); }
     const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>* operator->() const { return &value(); }
@@ -4743,6 +4752,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtoc
       return &decoded_.Value()->body;
     }
 
+    
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>* Unwrap_NEW() {
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
@@ -4751,12 +4761,15 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtoc
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
     }
+    
 
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>& value() { return *Unwrap(); }
     const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>& value() const { return *Unwrap(); }
 
+    
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>& value_NEW() { return *Unwrap_NEW(); }
     const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>& value_NEW() const { return *Unwrap_NEW(); }
+    
 
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>* operator->() { return &value(); }
     const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>* operator->() const { return &value(); }
@@ -4790,18 +4803,22 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::Two
       return &decoded_.Value()->body;
     }
 
+    
     ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ComposedProtocolTwoWayAnonComposedWithErrorResponse*>* Unwrap_NEW() {
         return &result_.value();
     }
     const ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ComposedProtocolTwoWayAnonComposedWithErrorResponse*>* Unwrap_NEW() const {
         return &result_.value();
     }
+    
 
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>& value() { return *Unwrap(); }
     const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>& value() const { return *Unwrap(); }
 
+    
     ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ComposedProtocolTwoWayAnonComposedWithErrorResponse*>& value_NEW() { return *Unwrap_NEW(); }
     const ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ComposedProtocolTwoWayAnonComposedWithErrorResponse*>& value_NEW() const { return *Unwrap_NEW(); }
+    
 
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>* operator->() { return &value(); }
     const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>* operator->() const { return &value(); }
@@ -4858,18 +4875,22 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtoc
       return &decoded_.Value()->body;
     }
 
+    
     ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ComposedProtocolTwoWayAnonComposedWithErrorResponse*>* Unwrap_NEW() {
         return &result_.value();
     }
     const ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ComposedProtocolTwoWayAnonComposedWithErrorResponse*>* Unwrap_NEW() const {
         return &result_.value();
     }
+    
 
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>& value() { return *Unwrap(); }
     const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>& value() const { return *Unwrap(); }
 
+    
     ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ComposedProtocolTwoWayAnonComposedWithErrorResponse*>& value_NEW() { return *Unwrap_NEW(); }
     const ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ComposedProtocolTwoWayAnonComposedWithErrorResponse*>& value_NEW() const { return *Unwrap_NEW(); }
+    
 
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>* operator->() { return &value(); }
     const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>* operator->() const { return &value(); }
@@ -4933,6 +4954,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::Two
       return &decoded_.Value()->body;
     }
 
+    
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>* Unwrap_NEW() {
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
@@ -4941,12 +4963,15 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::Two
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
     }
+    
 
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>& value() { return *Unwrap(); }
     const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>& value() const { return *Unwrap(); }
 
+    
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>& value_NEW() { return *Unwrap_NEW(); }
     const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>& value_NEW() const { return *Unwrap_NEW(); }
+    
 
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>* operator->() { return &value(); }
     const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>* operator->() const { return &value(); }
@@ -4990,6 +5015,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtoc
       return &decoded_.Value()->body;
     }
 
+    
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>* Unwrap_NEW() {
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
@@ -4998,12 +5024,15 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtoc
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
     }
+    
 
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>& value() { return *Unwrap(); }
     const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>& value() const { return *Unwrap(); }
 
+    
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>& value_NEW() { return *Unwrap_NEW(); }
     const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>& value_NEW() const { return *Unwrap_NEW(); }
+    
 
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>* operator->() { return &value(); }
     const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>* operator->() const { return &value(); }
@@ -5037,18 +5066,22 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::Two
       return &decoded_.Value()->body;
     }
 
+    
     ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>* Unwrap_NEW() {
         return &result_.value();
     }
     const ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>* Unwrap_NEW() const {
         return &result_.value();
     }
+    
 
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>& value() { return *Unwrap(); }
     const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>& value() const { return *Unwrap(); }
 
+    
     ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>& value_NEW() { return *Unwrap_NEW(); }
     const ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>& value_NEW() const { return *Unwrap_NEW(); }
+    
 
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>* operator->() { return &value(); }
     const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>* operator->() const { return &value(); }
@@ -5105,18 +5138,22 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtoc
       return &decoded_.Value()->body;
     }
 
+    
     ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>* Unwrap_NEW() {
         return &result_.value();
     }
     const ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>* Unwrap_NEW() const {
         return &result_.value();
     }
+    
 
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>& value() { return *Unwrap(); }
     const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>& value() const { return *Unwrap(); }
 
+    
     ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>& value_NEW() { return *Unwrap_NEW(); }
     const ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>& value_NEW() const { return *Unwrap_NEW(); }
+    
 
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>* operator->() { return &value(); }
     const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>* operator->() const { return &value(); }
@@ -5180,6 +5217,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::Two
       return &decoded_.Value()->body;
     }
 
+    
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImport>* Unwrap_NEW() {
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
@@ -5188,12 +5226,15 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::Two
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
     }
+    
 
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImport>& value() { return *Unwrap(); }
     const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImport>& value() const { return *Unwrap(); }
 
+    
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImport>& value_NEW() { return *Unwrap_NEW(); }
     const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImport>& value_NEW() const { return *Unwrap_NEW(); }
+    
 
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImport>* operator->() { return &value(); }
     const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImport>* operator->() const { return &value(); }
@@ -5237,6 +5278,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtoc
       return &decoded_.Value()->body;
     }
 
+    
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImport>* Unwrap_NEW() {
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
@@ -5245,12 +5287,15 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtoc
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
     }
+    
 
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImport>& value() { return *Unwrap(); }
     const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImport>& value() const { return *Unwrap(); }
 
+    
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImport>& value_NEW() { return *Unwrap_NEW(); }
     const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImport>& value_NEW() const { return *Unwrap_NEW(); }
+    
 
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImport>* operator->() { return &value(); }
     const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImport>* operator->() const { return &value(); }
@@ -5284,18 +5329,22 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::Two
       return &decoded_.Value()->body;
     }
 
+    
     ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>* Unwrap_NEW() {
         return &result_.value();
     }
     const ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>* Unwrap_NEW() const {
         return &result_.value();
     }
+    
 
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImportWithError>& value() { return *Unwrap(); }
     const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImportWithError>& value() const { return *Unwrap(); }
 
+    
     ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>& value_NEW() { return *Unwrap_NEW(); }
     const ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>& value_NEW() const { return *Unwrap_NEW(); }
+    
 
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImportWithError>* operator->() { return &value(); }
     const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImportWithError>* operator->() const { return &value(); }
@@ -5352,18 +5401,22 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtoc
       return &decoded_.Value()->body;
     }
 
+    
     ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>* Unwrap_NEW() {
         return &result_.value();
     }
     const ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>* Unwrap_NEW() const {
         return &result_.value();
     }
+    
 
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImportWithError>& value() { return *Unwrap(); }
     const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImportWithError>& value() const { return *Unwrap(); }
 
+    
     ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>& value_NEW() { return *Unwrap_NEW(); }
     const ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>& value_NEW() const { return *Unwrap_NEW(); }
+    
 
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImportWithError>* operator->() { return &value(); }
     const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImportWithError>* operator->() const { return &value(); }
@@ -5427,6 +5480,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::Two
       return &decoded_.Value()->body;
     }
 
+    
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>* Unwrap_NEW() {
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
@@ -5435,12 +5489,15 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::Two
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
     }
+    
 
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>& value() { return *Unwrap(); }
     const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>& value() const { return *Unwrap(); }
 
+    
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>& value_NEW() { return *Unwrap_NEW(); }
     const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>& value_NEW() const { return *Unwrap_NEW(); }
+    
 
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>* operator->() { return &value(); }
     const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>* operator->() const { return &value(); }
@@ -5484,6 +5541,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtoc
       return &decoded_.Value()->body;
     }
 
+    
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>* Unwrap_NEW() {
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
@@ -5492,12 +5550,15 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtoc
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
     }
+    
 
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>& value() { return *Unwrap(); }
     const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>& value() const { return *Unwrap(); }
 
+    
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>& value_NEW() { return *Unwrap_NEW(); }
     const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>& value_NEW() const { return *Unwrap_NEW(); }
+    
 
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>* operator->() { return &value(); }
     const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>* operator->() const { return &value(); }
@@ -5531,18 +5592,22 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::Two
       return &decoded_.Value()->body;
     }
 
+    
     ::fitx::result<uint32_t, ::test_protocollayouts::wire::LocalUnionPayload*>* Unwrap_NEW() {
         return &result_.value();
     }
     const ::fitx::result<uint32_t, ::test_protocollayouts::wire::LocalUnionPayload*>* Unwrap_NEW() const {
         return &result_.value();
     }
+    
 
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>& value() { return *Unwrap(); }
     const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>& value() const { return *Unwrap(); }
 
+    
     ::fitx::result<uint32_t, ::test_protocollayouts::wire::LocalUnionPayload*>& value_NEW() { return *Unwrap_NEW(); }
     const ::fitx::result<uint32_t, ::test_protocollayouts::wire::LocalUnionPayload*>& value_NEW() const { return *Unwrap_NEW(); }
+    
 
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>* operator->() { return &value(); }
     const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>* operator->() const { return &value(); }
@@ -5599,18 +5664,22 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtoc
       return &decoded_.Value()->body;
     }
 
+    
     ::fitx::result<uint32_t, ::test_protocollayouts::wire::LocalUnionPayload*>* Unwrap_NEW() {
         return &result_.value();
     }
     const ::fitx::result<uint32_t, ::test_protocollayouts::wire::LocalUnionPayload*>* Unwrap_NEW() const {
         return &result_.value();
     }
+    
 
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>& value() { return *Unwrap(); }
     const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>& value() const { return *Unwrap(); }
 
+    
     ::fitx::result<uint32_t, ::test_protocollayouts::wire::LocalUnionPayload*>& value_NEW() { return *Unwrap_NEW(); }
     const ::fitx::result<uint32_t, ::test_protocollayouts::wire::LocalUnionPayload*>& value_NEW() const { return *Unwrap_NEW(); }
+    
 
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>* operator->() { return &value(); }
     const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>* operator->() const { return &value(); }
@@ -5674,6 +5743,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::Two
       return &decoded_.Value()->body;
     }
 
+    
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>* Unwrap_NEW() {
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
@@ -5682,12 +5752,15 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::Two
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
     }
+    
 
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>& value() { return *Unwrap(); }
     const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>& value() const { return *Unwrap(); }
 
+    
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>& value_NEW() { return *Unwrap_NEW(); }
     const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>& value_NEW() const { return *Unwrap_NEW(); }
+    
 
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>* operator->() { return &value(); }
     const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>* operator->() const { return &value(); }
@@ -5731,6 +5804,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtoc
       return &decoded_.Value()->body;
     }
 
+    
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>* Unwrap_NEW() {
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
@@ -5739,12 +5813,15 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtoc
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
     }
+    
 
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>& value() { return *Unwrap(); }
     const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>& value() const { return *Unwrap(); }
 
+    
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>& value_NEW() { return *Unwrap_NEW(); }
     const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>& value_NEW() const { return *Unwrap_NEW(); }
+    
 
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>* operator->() { return &value(); }
     const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>* operator->() const { return &value(); }
@@ -5778,18 +5855,22 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::Two
       return &decoded_.Value()->body;
     }
 
+    
     ::fitx::result<uint32_t, ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse*>* Unwrap_NEW() {
         return &result_.value();
     }
     const ::fitx::result<uint32_t, ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse*>* Unwrap_NEW() const {
         return &result_.value();
     }
+    
 
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>& value() { return *Unwrap(); }
     const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>& value() const { return *Unwrap(); }
 
+    
     ::fitx::result<uint32_t, ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse*>& value_NEW() { return *Unwrap_NEW(); }
     const ::fitx::result<uint32_t, ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse*>& value_NEW() const { return *Unwrap_NEW(); }
+    
 
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>* operator->() { return &value(); }
     const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>* operator->() const { return &value(); }
@@ -5846,18 +5927,22 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtoc
       return &decoded_.Value()->body;
     }
 
+    
     ::fitx::result<uint32_t, ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse*>* Unwrap_NEW() {
         return &result_.value();
     }
     const ::fitx::result<uint32_t, ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse*>* Unwrap_NEW() const {
         return &result_.value();
     }
+    
 
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>& value() { return *Unwrap(); }
     const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>& value() const { return *Unwrap(); }
 
+    
     ::fitx::result<uint32_t, ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse*>& value_NEW() { return *Unwrap_NEW(); }
     const ::fitx::result<uint32_t, ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse*>& value_NEW() const { return *Unwrap_NEW(); }
+    
 
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>* operator->() { return &value(); }
     const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>* operator->() const { return &value(); }
@@ -6173,6 +6258,7 @@ class ::fidl::internal::WireCompleterImpl<::test_protocollayouts::MainProtocol::
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::test_protocollayouts_imported::wire::ComposedProtocolTwoWayAnonComposedWithErrorResult result);
+  
   void ReplySuccess(::test_protocollayouts_imported::wire::ComposedProtocolTwoWayAnonComposedWithErrorResponse ComposedProtocolTwoWayAnonComposedWithErrorResponse);
   void ReplyError(uint32_t error);
 };
@@ -6183,6 +6269,7 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_protocollayouts::MainProt
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::test_protocollayouts_imported::wire::ComposedProtocolTwoWayAnonComposedWithErrorResult result);
+  
   void ReplySuccess(::test_protocollayouts_imported::wire::ComposedProtocolTwoWayAnonComposedWithErrorResponse ComposedProtocolTwoWayAnonComposedWithErrorResponse);
   void ReplyError(uint32_t error);
 };
@@ -6239,6 +6326,7 @@ class ::fidl::internal::WireCompleterImpl<::test_protocollayouts::MainProtocol::
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::test_protocollayouts_imported::wire::ComposedProtocolTwoWayNamedComposedWithErrorResult result);
+  
   void ReplySuccess(::test_protocollayouts_imported::wire::ImportUnionPayload ImportUnionPayload);
   void ReplyError(uint32_t error);
 };
@@ -6249,6 +6337,7 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_protocollayouts::MainProt
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::test_protocollayouts_imported::wire::ComposedProtocolTwoWayNamedComposedWithErrorResult result);
+  
   void ReplySuccess(::test_protocollayouts_imported::wire::ImportUnionPayload ImportUnionPayload);
   void ReplyError(uint32_t error);
 };
@@ -6305,6 +6394,7 @@ class ::fidl::internal::WireCompleterImpl<::test_protocollayouts::MainProtocol::
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::test_protocollayouts::wire::MainProtocolTwoWayImportWithErrorResult result);
+  
   void ReplySuccess(::test_protocollayouts_imported::wire::ImportUnionPayload ImportUnionPayload);
   void ReplyError(uint32_t error);
 };
@@ -6315,6 +6405,7 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_protocollayouts::MainProt
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::test_protocollayouts::wire::MainProtocolTwoWayImportWithErrorResult result);
+  
   void ReplySuccess(::test_protocollayouts_imported::wire::ImportUnionPayload ImportUnionPayload);
   void ReplyError(uint32_t error);
 };
@@ -6371,6 +6462,7 @@ class ::fidl::internal::WireCompleterImpl<::test_protocollayouts::MainProtocol::
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::test_protocollayouts::wire::MainProtocolTwoWayLocalWithErrorResult result);
+  
   void ReplySuccess(::test_protocollayouts::wire::LocalUnionPayload LocalUnionPayload);
   void ReplyError(uint32_t error);
 };
@@ -6381,6 +6473,7 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_protocollayouts::MainProt
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::test_protocollayouts::wire::MainProtocolTwoWayLocalWithErrorResult result);
+  
   void ReplySuccess(::test_protocollayouts::wire::LocalUnionPayload LocalUnionPayload);
   void ReplyError(uint32_t error);
 };
@@ -6437,6 +6530,7 @@ class ::fidl::internal::WireCompleterImpl<::test_protocollayouts::MainProtocol::
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResult result);
+  
   void ReplySuccess(::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse MainProtocolTwoWayAnonWithErrorResponse);
   void ReplyError(uint32_t error);
 };
@@ -6447,6 +6541,7 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_protocollayouts::MainProt
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResult result);
+  
   void ReplySuccess(::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse MainProtocolTwoWayAnonWithErrorResponse);
   void ReplyError(uint32_t error);
 };

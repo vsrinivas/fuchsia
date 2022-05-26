@@ -40,8 +40,7 @@ using NaturalApplicationError =
 // |NaturalMessageConverter| extends transactional message wrappers with the
 // ability to convert to and from domain object types. In particular, result
 // unions in methods using the error syntax will be converted to
-// |fitx::result<ApplicationError, Payload>| when receiving, and vice versa
-// when sending.
+// |fitx::result<ApplicationError, Payload>| when sending.
 //
 // |Message| is either a |fidl::Request<Foo>|, |fidl::Response<Foo>|, or
 // |fidl::Event<Foo>|.
@@ -50,6 +49,12 @@ using NaturalApplicationError =
 //
 // The default implementation passes through the domain object without any
 // transformation.
+//
+// For flexible two-way methods, |FromDomainObject| is not available. This is
+// because the result union for flexible methods contains an extra variant
+// |transport_err| which gets folded into |fidl::Error| during conversion to
+// |fidl::Result<Foo>|, but which cannot be represented as part of
+// |fidl::Response<Foo>|.
 template <typename Message>
 class NaturalMessageConverter {
   using DomainObject = typename MessageTraits<Message>::Payload;

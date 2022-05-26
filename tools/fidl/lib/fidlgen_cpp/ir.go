@@ -311,8 +311,10 @@ type Result struct {
 	ValueTypeDecl     nameVariants
 	ValueTupleDecl    name
 	Value             Type
+	HasError          bool
 	ErrorDecl         nameVariants
 	Error             Type
+	HasTransportError bool
 	valueTypeIsStruct bool
 }
 
@@ -779,7 +781,7 @@ func compile(r fidlgen.Root) *Root {
 
 	for _, v := range r.Protocols {
 		for _, m := range v.Methods {
-			if m.HasError {
+			if m.HasError || m.HasTransportError() {
 				var p Payloader
 				valueTypeDecl, ok := decls[m.ValueType.Identifier]
 				if ok {

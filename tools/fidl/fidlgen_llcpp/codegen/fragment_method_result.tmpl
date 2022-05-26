@@ -33,6 +33,7 @@ class [[nodiscard]] {{ .WireResult }} final : public ::fidl::Status {
       return &decoded_.Value()->body;
     }
 
+    {{ if .HasWireResultBase }}
     {{ .WireResultBase }}* Unwrap_NEW() {
       {{- if .Result }}
         return &result_.value();
@@ -49,12 +50,15 @@ class [[nodiscard]] {{ .WireResult }} final : public ::fidl::Status {
         return &decoded_.Value()->body;
       {{- end }}
     }
+    {{ end }}
 
     {{ .WireResponse }}& value() { return *Unwrap(); }
     const {{ .WireResponse }}& value() const { return *Unwrap(); }
 
+    {{ if .HasWireResultBase }}
     {{ .WireResultBase }}& value_NEW() { return *Unwrap_NEW(); }
     const {{ .WireResultBase }}& value_NEW() const { return *Unwrap_NEW(); }
+    {{ end }}
 
     {{ .WireResponse }}* operator->() { return &value(); }
     const {{ .WireResponse }}* operator->() const { return &value(); }
@@ -67,7 +71,7 @@ class [[nodiscard]] {{ .WireResult }} final : public ::fidl::Status {
    private:
     {{ .Response.ClientAllocationV1.BackingBufferType }} bytes_;
     ::fidl::internal::DecodedValue<{{ .WireTransactionalResponse }}> decoded_;
-    {{- if .Result }}
+    {{- if and .Result .HasWireResultBase }}
       std::optional<{{ .WireResultBase }}> result_ = std::nullopt;
     {{- end }}
   {{- end }}
@@ -103,7 +107,7 @@ class [[nodiscard]] {{ .WireResult }} final : public ::fidl::Status {
       decoded_ = decoded.Take();
     }
 
-    {{- if .Result }}
+    {{- if .HasApplicationError }}
       if (ok()) {
         auto* raw_response = &decoded_.Value()->body;
         if (raw_response->result.is_err()) {

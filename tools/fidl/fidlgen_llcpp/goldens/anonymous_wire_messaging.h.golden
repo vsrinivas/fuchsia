@@ -524,6 +524,7 @@ class ::fidl::internal::WireCompleterImpl<::test_anonymous::SomeProtocol::SomeMe
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::test_anonymous::wire::SomeProtocolSomeMethodResult result);
+
   void ReplySuccess(::test_anonymous::wire::BitsMember bits_member);
   void ReplyError(::test_anonymous::wire::SomeProtocolSomeMethodError error);
 };
@@ -534,6 +535,7 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_anonymous::SomeProtocol::
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::test_anonymous::wire::SomeProtocolSomeMethodResult result);
+
   void ReplySuccess(::test_anonymous::wire::BitsMember bits_member);
   void ReplyError(::test_anonymous::wire::SomeProtocolSomeMethodError error);
 };

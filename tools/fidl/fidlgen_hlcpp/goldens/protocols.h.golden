@@ -362,6 +362,7 @@ class WithErrorSyntax_ResponseAsStruct_Result final {
   }
 
   friend ::fidl::Equality<::test::protocols::WithErrorSyntax_ResponseAsStruct_Result>;
+
   WithErrorSyntax_ResponseAsStruct_Result(fpromise::result<::std::tuple<int64_t, int64_t, int64_t>, uint32_t>&& result) {
     ZX_ASSERT(!result.is_pending());
     if (result.is_ok()) {
@@ -523,6 +524,7 @@ class WithErrorSyntax_HandleInResult_Result final {
   }
 
   friend ::fidl::Equality<::test::protocols::WithErrorSyntax_HandleInResult_Result>;
+
   WithErrorSyntax_HandleInResult_Result(fpromise::result<::zx::handle, uint32_t>&& result) {
     ZX_ASSERT(!result.is_pending());
     if (result.is_ok()) {
@@ -683,6 +685,7 @@ class WithErrorSyntax_ErrorAsPrimitive_Result final {
   }
 
   friend ::fidl::Equality<::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result>;
+
   WithErrorSyntax_ErrorAsPrimitive_Result(fpromise::result<void, uint32_t>&& result) {
     ZX_ASSERT(!result.is_pending());
     if (result.is_ok()) {
@@ -1832,6 +1835,7 @@ class WithErrorSyntax_ErrorAsEnum_Result final {
   }
 
   friend ::fidl::Equality<::test::protocols::WithErrorSyntax_ErrorAsEnum_Result>;
+
   WithErrorSyntax_ErrorAsEnum_Result(fpromise::result<void, ::test::protocols::ErrorEnum>&& result) {
     ZX_ASSERT(!result.is_pending());
     if (result.is_ok()) {

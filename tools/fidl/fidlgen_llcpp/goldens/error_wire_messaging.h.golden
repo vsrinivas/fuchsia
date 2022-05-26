@@ -520,6 +520,7 @@ class ::fidl::internal::WireCompleterImpl<::test_error::Example::Foo> : public :
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::test_error::wire::ExampleFooResult result);
+
   void ReplySuccess(int64_t y);
   void ReplyError(uint32_t error);
 };
@@ -530,6 +531,7 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_error::Example::Foo> : pu
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::test_error::wire::ExampleFooResult result);
+
   void ReplySuccess(int64_t y);
   void ReplyError(uint32_t error);
 };

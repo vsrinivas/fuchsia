@@ -24,6 +24,14 @@ using ExampleHandle = ::fidl::InterfaceHandle<Example>;
 class Example_FlexibleTwoWay_Response final {
  public:
   static const fidl_type_t* FidlType;
+  Example_FlexibleTwoWay_Response() = default;
+  explicit Example_FlexibleTwoWay_Response(uint8_t v) : __reserved(std::move(v)) {}
+  uint8_t ResultValue_() { return std::move(__reserved); }
+  explicit Example_FlexibleTwoWay_Response(::std::tuple<> _value_tuple) {
+  }
+  operator ::std::tuple<>() && {
+    return std::make_tuple();
+  }
 
   uint8_t __reserved = 0u;
 

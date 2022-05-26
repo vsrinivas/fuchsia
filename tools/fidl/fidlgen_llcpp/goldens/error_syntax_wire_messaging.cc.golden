@@ -285,6 +285,7 @@ void fidl::internal::WireCompleterImpl<::test_errorsyntax::ExampleUseOfErrorSynt
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
+
 void fidl::internal::WireCompleterImpl<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>::ReplySuccess(int64_t value) {
   ::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailResponse _response = ::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailResponse{
       .value = std::move(value),
@@ -314,6 +315,7 @@ void fidl::internal::WireBufferCompleterImpl<::test_errorsyntax::ExampleUseOfErr
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
+
 void fidl::internal::WireBufferCompleterImpl<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>::ReplySuccess(int64_t value) {
   ::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailResponse _response = ::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailResponse{
       .value = std::move(value),
@@ -339,6 +341,7 @@ void fidl::internal::WireCompleterImpl<::test_errorsyntax::ExampleUseOfErrorSynt
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
+
 void fidl::internal::WireCompleterImpl<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>::ReplySuccess(int64_t value) {
   ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse _response = ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse{
       .value = std::move(value),
@@ -368,6 +371,7 @@ void fidl::internal::WireBufferCompleterImpl<::test_errorsyntax::ExampleUseOfErr
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
+
 void fidl::internal::WireBufferCompleterImpl<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>::ReplySuccess(int64_t value) {
   ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse _response = ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse{
       .value = std::move(value),

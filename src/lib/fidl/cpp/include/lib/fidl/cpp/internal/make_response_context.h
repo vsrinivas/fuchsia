@@ -26,9 +26,11 @@ auto DecodeResponseAndFoldError(::fidl::IncomingMessage&& incoming,
                                 ::std::optional<::fidl::UnbindInfo>* out_maybe_unbind) {
   using ResultType = typename FidlMethod::Protocol::Transport::template Result<FidlMethod>;
   using NaturalResponse = ::fidl::Response<FidlMethod>;
+  constexpr bool IsAbsentBody = ::fidl::internal::NaturalMethodTypes<FidlMethod>::IsAbsentBody;
   constexpr bool HasApplicationError =
       ::fidl::internal::NaturalMethodTypes<FidlMethod>::HasApplicationError;
-  constexpr bool IsAbsentBody = ::fidl::internal::NaturalMethodTypes<FidlMethod>::IsAbsentBody;
+  constexpr bool HasTransportError =
+      ::fidl::internal::NaturalMethodTypes<FidlMethod>::HasTransportError;
 
   // Check error from the underlying transport.
   if (!incoming.ok()) {
@@ -62,25 +64,42 @@ auto DecodeResponseAndFoldError(::fidl::IncomingMessage&& incoming,
     ResultType value = ::fitx::success();
     return value;
   } else {
-    NaturalResponse response =
-        NaturalMessageConverter<NaturalResponse>::FromDomainObject(std::move(decoded.value()));
+    auto& domain_object = decoded.value();
     if constexpr (HasApplicationError) {
-      // Fold application error.
-      if (response.is_error()) {
-        ResultType error = response.take_error();
-        return error;
+      if (domain_object.result().err().has_value()) {
+        ResultType value = ::fitx::error(std::move(domain_object.result().err().value()));
+        return value;
       }
-      ZX_DEBUG_ASSERT(response.is_ok());
-      if constexpr (::fidl::internal::NaturalMethodTypes<FidlMethod>::IsEmptyStructPayload) {
-        // Omit empty structs.
+    }
+    if constexpr (HasTransportError) {
+      if (domain_object.result().transport_err().has_value()) {
+        zx_status_t transport_err = domain_object.result().transport_err().value();
+        if (transport_err == ZX_ERR_NOT_SUPPORTED) {
+          ResultType value = ::fitx::error(::fidl::Error::UnknownInteraction());
+          return value;
+        }
+        Status decode_error = ::fidl::Error::BadPeerTransportErr();
+        if (out_maybe_unbind) {
+          out_maybe_unbind->emplace(decode_error);
+        }
+        ResultType value = ::fitx::error(decode_error);
+        return value;
+      }
+    }
+    if constexpr (HasApplicationError || HasTransportError) {
+      constexpr bool IsEmptyStructPayload =
+          ::fidl::internal::NaturalMethodTypes<FidlMethod>::IsEmptyStructPayload;
+
+      ZX_DEBUG_ASSERT(domain_object.result().response().has_value());
+      if constexpr (IsEmptyStructPayload) {
         ResultType value = ::fitx::success();
         return value;
       } else {
-        ResultType value = response.take_value();
+        ResultType value = ::fitx::ok(std::move(domain_object.result().response().value()));
         return value;
       }
     } else {
-      ResultType value = ::fitx::ok(std::move(response));
+      ResultType value = ::fitx::ok(std::move(domain_object));
       return value;
     }
   }

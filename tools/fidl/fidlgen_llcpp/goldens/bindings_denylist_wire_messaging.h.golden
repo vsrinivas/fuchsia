@@ -3134,6 +3134,7 @@ class ::fidl::internal::WireCompleterImpl<::test_bindingsdenylist::DenyEachBindi
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult result);
+
   void ReplySuccess(int32_t b);
   void ReplyError(uint32_t error);
 };
@@ -3144,6 +3145,7 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_bindingsdenylist::DenyEac
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult result);
+
   void ReplySuccess(int32_t b);
   void ReplyError(uint32_t error);
 };
@@ -3169,6 +3171,7 @@ class ::fidl::internal::WireCompleterImpl<::test_bindingsdenylist::DenyEachBindi
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult result);
+
   void ReplySuccess(int32_t b);
   void ReplyError(uint32_t error);
 };
@@ -3179,6 +3182,7 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_bindingsdenylist::DenyEac
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult result);
+
   void ReplySuccess(int32_t b);
   void ReplyError(uint32_t error);
 };
@@ -3204,6 +3208,7 @@ class ::fidl::internal::WireCompleterImpl<::test_bindingsdenylist::DenyEachBindi
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult result);
+
   void ReplySuccess(int32_t b);
   void ReplyError(uint32_t error);
 };
@@ -3214,6 +3219,7 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_bindingsdenylist::DenyEac
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult result);
+
   void ReplySuccess(int32_t b);
   void ReplyError(uint32_t error);
 };
@@ -3239,6 +3245,7 @@ class ::fidl::internal::WireCompleterImpl<::test_bindingsdenylist::DenyEachBindi
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult result);
+
   void ReplySuccess(int32_t b);
   void ReplyError(uint32_t error);
 };
@@ -3249,6 +3256,7 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_bindingsdenylist::DenyEac
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult result);
+
   void ReplySuccess(int32_t b);
   void ReplyError(uint32_t error);
 };
@@ -3274,6 +3282,7 @@ class ::fidl::internal::WireCompleterImpl<::test_bindingsdenylist::DenyEachBindi
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult result);
+
   void ReplySuccess(int32_t b);
   void ReplyError(uint32_t error);
 };
@@ -3284,6 +3293,7 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_bindingsdenylist::DenyEac
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult result);
+
   void ReplySuccess(int32_t b);
   void ReplyError(uint32_t error);
 };

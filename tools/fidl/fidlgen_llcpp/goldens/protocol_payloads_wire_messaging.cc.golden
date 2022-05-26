@@ -1399,6 +1399,7 @@ void fidl::internal::WireCompleterImpl<::test_protocolpayloads::MainProtocol::Tw
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
+
 void fidl::internal::WireCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>::ReplySuccess(int32_t a) {
   ::test_protocolpayloads_imported::wire::ImportStructPayload _response = ::test_protocolpayloads_imported::wire::ImportStructPayload{
       .a = std::move(a),
@@ -1427,6 +1428,7 @@ void fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainProtoc
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
+
 void fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>::ReplySuccess(int32_t a) {
   ::test_protocolpayloads_imported::wire::ImportStructPayload _response = ::test_protocolpayloads_imported::wire::ImportStructPayload{
       .a = std::move(a),
@@ -1481,6 +1483,7 @@ void fidl::internal::WireCompleterImpl<::test_protocolpayloads::MainProtocol::Tw
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
+
 void fidl::internal::WireCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>::ReplySuccess(uint32_t a, uint32_t b) {
   ::test_protocolpayloads::wire::LocalStructPayload _response = ::test_protocolpayloads::wire::LocalStructPayload{
       .a = std::move(a),
@@ -1511,6 +1514,7 @@ void fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainProtoc
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
+
 void fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>::ReplySuccess(uint32_t a, uint32_t b) {
   ::test_protocolpayloads::wire::LocalStructPayload _response = ::test_protocolpayloads::wire::LocalStructPayload{
       .a = std::move(a),
@@ -1567,6 +1571,7 @@ void fidl::internal::WireCompleterImpl<::test_protocolpayloads::MainProtocol::Tw
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
+
 void fidl::internal::WireCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>::ReplySuccess(int32_t a) {
   ::test_protocolpayloads_imported::wire::ImportStructPayload _response = ::test_protocolpayloads_imported::wire::ImportStructPayload{
       .a = std::move(a),
@@ -1595,6 +1600,7 @@ void fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainProtoc
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
+
 void fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>::ReplySuccess(int32_t a) {
   ::test_protocolpayloads_imported::wire::ImportStructPayload _response = ::test_protocolpayloads_imported::wire::ImportStructPayload{
       .a = std::move(a),
@@ -1649,6 +1655,7 @@ void fidl::internal::WireCompleterImpl<::test_protocolpayloads::MainProtocol::Tw
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
+
 void fidl::internal::WireCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>::ReplySuccess(uint32_t a, uint32_t b) {
   ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResponse _response = ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResponse{
       .a = std::move(a),
@@ -1679,6 +1686,7 @@ void fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainProtoc
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
+
 void fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>::ReplySuccess(uint32_t a, uint32_t b) {
   ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResponse _response = ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResponse{
       .a = std::move(a),

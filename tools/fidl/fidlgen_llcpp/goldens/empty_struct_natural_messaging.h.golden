@@ -22,6 +22,7 @@ struct ::fidl::internal::NaturalMethodTypes<::test_emptystruct::EmptyProtocol::S
       ::fit::callback<void(::fidl::Result<::test_emptystruct::EmptyProtocol::SendAndReceive>&)>;
 
   static constexpr bool HasApplicationError = false;
+  static constexpr bool HasTransportError = false;
 
   static constexpr bool IsAbsentBody = false;
 };

@@ -944,20 +944,8 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::Example::Flex
     return &decoded_.Value()->body;
   }
 
-  ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>* Unwrap_NEW() {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-  const ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>* Unwrap_NEW() const {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-
   ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>& value() { return *Unwrap(); }
   const ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>& value() const { return *Unwrap(); }
-
-  ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>& value_NEW() { return *Unwrap_NEW(); }
-  const ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>& value_NEW() const { return *Unwrap_NEW(); }
 
   ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>* operator->() { return &value(); }
   const ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>* operator->() const { return &value(); }
@@ -1001,20 +989,8 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Exampl
     return &decoded_.Value()->body;
   }
 
-  ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>* Unwrap_NEW() {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-  const ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>* Unwrap_NEW() const {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-
   ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>& value() { return *Unwrap(); }
   const ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>& value() const { return *Unwrap(); }
-
-  ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>& value_NEW() { return *Unwrap_NEW(); }
-  const ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>& value_NEW() const { return *Unwrap_NEW(); }
 
   ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>* operator->() { return &value(); }
   const ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>* operator->() const { return &value(); }

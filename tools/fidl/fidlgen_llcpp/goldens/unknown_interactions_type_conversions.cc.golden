@@ -97,12 +97,10 @@ std::unique_ptr<::test_unknowninteractions::ExampleFlexibleTwoWayResult> WireNat
 }
 
 ::fidl::Response<::test_unknowninteractions::Example::FlexibleTwoWay> WireNaturalConversionTraits<::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>, ::fidl::Response<::test_unknowninteractions::Example::FlexibleTwoWay>>::ToNatural(::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay> src) {
-  return ::fidl::Response<::test_unknowninteractions::Example::FlexibleTwoWay>(
-      WireNaturalConversionTraits<::test_unknowninteractions::wire::ExampleFlexibleTwoWayTopResponse, ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse>::ToNatural(std::move(src)));
+  return ::fidl::Response<::test_unknowninteractions::Example::FlexibleTwoWay>();
 }
 ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay> WireNaturalConversionTraits<::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>, ::fidl::Response<::test_unknowninteractions::Example::FlexibleTwoWay>>::ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_unknowninteractions::Example::FlexibleTwoWay> src) {
-  return ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>(
-      WireNaturalConversionTraits<::test_unknowninteractions::wire::ExampleFlexibleTwoWayTopResponse, ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse>::ToWire(arena, std::move(src)));
+  return ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>();
 }
 
 ::fidl::Event<::test_unknowninteractions::Example::StrictEvent> WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::Example::StrictEvent>, ::fidl::Event<::test_unknowninteractions::Example::StrictEvent>>::ToNatural(::fidl::WireEvent<::test_unknowninteractions::Example::StrictEvent> src) {

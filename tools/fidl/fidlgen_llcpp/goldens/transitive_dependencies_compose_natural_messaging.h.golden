@@ -24,6 +24,7 @@ struct ::fidl::internal::NaturalMethodTypes<::test_transitivedependenciescompose
       ::fit::callback<void(::fidl::Result<::test_transitivedependenciescompose::Top::GetFoo>&)>;
 
   static constexpr bool HasApplicationError = false;
+  static constexpr bool HasTransportError = false;
 
   static constexpr bool IsAbsentBody = false;
 };

@@ -24,6 +24,7 @@ struct ::fidl::internal::NaturalMethodTypes<::test_foreigntypeinresponseusedthro
       ::fit::callback<void(::fidl::Result<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>&)>;
 
   static constexpr bool HasApplicationError = false;
+  static constexpr bool HasTransportError = false;
 
   static constexpr bool IsAbsentBody = false;
 };

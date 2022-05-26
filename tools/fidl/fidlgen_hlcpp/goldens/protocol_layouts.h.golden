@@ -321,6 +321,7 @@ class MainProtocol_TwoWayAnonWithError_Result final {
   }
 
   friend ::fidl::Equality<::test::protocollayouts::MainProtocol_TwoWayAnonWithError_Result>;
+
   MainProtocol_TwoWayAnonWithError_Result(fpromise::result<::test::protocollayouts::MainProtocol_TwoWayAnonWithError_Response, uint32_t>&& result) {
     ZX_ASSERT(!result.is_pending());
     if (result.is_ok()) {
@@ -642,6 +643,7 @@ class MainProtocol_OnAnonWithError_Result final {
   }
 
   friend ::fidl::Equality<::test::protocollayouts::MainProtocol_OnAnonWithError_Result>;
+
   MainProtocol_OnAnonWithError_Result(fpromise::result<::test::protocollayouts::MainProtocol_OnAnonWithError_Response, uint32_t>&& result) {
     ZX_ASSERT(!result.is_pending());
     if (result.is_ok()) {
@@ -1285,6 +1287,7 @@ class MainProtocol_TwoWayLocalWithError_Result final {
   }
 
   friend ::fidl::Equality<::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result>;
+
   MainProtocol_TwoWayLocalWithError_Result(fpromise::result<::test::protocollayouts::LocalUnionPayload, uint32_t>&& result) {
     ZX_ASSERT(!result.is_pending());
     if (result.is_ok()) {
@@ -1498,6 +1501,7 @@ class MainProtocol_OnLocalWithError_Result final {
   }
 
   friend ::fidl::Equality<::test::protocollayouts::MainProtocol_OnLocalWithError_Result>;
+
   MainProtocol_OnLocalWithError_Result(fpromise::result<::test::protocollayouts::LocalTablePayload, uint32_t>&& result) {
     ZX_ASSERT(!result.is_pending());
     if (result.is_ok()) {

@@ -131,9 +131,14 @@ class {{ .NaturalResponse }} final
  public:
   {{- if .HasResponsePayload }}
     {{- if .Result }}
+      {{- if .Result.HasError }}
       using {{ .ResponseMessageBase }}::result;
       {{ .NaturalResponse.Self }}({{ .ResponseMessageBase }} v) : result(std::move(v)) {}
       {{ .NaturalResponse.Self }}() = delete;
+      {{- else if .Result.ValueParameters }}
+      using {{ .ResponsePayload }}::{{ .ResponsePayload.Self }};
+      {{ .NaturalResponse.Self }}({{ .ResponseMessageBase }} v) : {{ .ResponsePayload.Self }}(std::move(v)) {}
+      {{- end }}
     {{- else }}
       using {{ .ResponsePayload }}::{{ .ResponsePayload.Self }};
       {{ .NaturalResponse.Self }}({{ .ResponseMessageBase }} v) : {{ .ResponsePayload.Self }}(std::move(v)) {}
@@ -156,6 +161,9 @@ class {{ .NaturalResponseConverter }} {
   using DomainObject = {{ .ResponsePayload }};
 
  public:
+  {{ if not .Result.HasTransportError }}
+  {{/* FromDomainObject is not available if HasTransportError because transport
+  error variants cannot be converted to fidl::Response. */}}
   static {{ .NaturalResponse }} FromDomainObject(DomainObject  o) {
     if (o.result().err().has_value()) {
       return ::fitx::error(std::move(o.result().err().value()));
@@ -168,8 +176,10 @@ class {{ .NaturalResponseConverter }} {
       {{- end }}
     }
   }
+  {{ end }}
 
   static DomainObject  IntoDomainObject({{ .NaturalResponse }}&& m) {
+    {{ if .Result.HasError -}}
     if (m.is_error()) {
       return DomainObject{ { .result = {{ .Result.ResultDecl }}::WithErr(m.error_value()) } };
     } else {
@@ -179,6 +189,13 @@ class {{ .NaturalResponseConverter }} {
         return DomainObject{ { .result = {{ .Result.ResultDecl }}::WithResponse({}) } };
       {{- end }}
     }
+    {{- else -}}
+    {{- if .Result.ValueParameters }}
+      return DomainObject{ { .result = {{ .Result.ResultDecl }}::WithResponse(std::move(m.value())) } };
+    {{- else }}
+      return DomainObject{ { .result = {{ .Result.ResultDecl }}::WithResponse({}) } };
+    {{- end }}
+    {{- end }}
   }
 };
 {{- end }}
@@ -212,7 +229,7 @@ struct WireTypeForNaturalType<{{ .NaturalResponse }}> {
 
 {{- define "Method:Response:Traits:TypeConversionsSource" }}
 {{ .NaturalResponse }}  WireNaturalConversionTraits<{{ .WireResponse }}, {{ .NaturalResponse }}>::ToNatural({{ .WireResponse }} src) {
-  {{- if .HasResponsePayload }}
+  {{- if and .HasResponsePayload .ResponseMessageBase }}
   return {{ .NaturalResponse }}(
     WireNaturalConversionTraits<{{ .ResponsePayload.Wire }}, {{ .ResponseMessageBase }}>::ToNatural(std::move(src)));
   {{- else }}
@@ -220,7 +237,7 @@ struct WireTypeForNaturalType<{{ .NaturalResponse }}> {
   {{- end }}
 }
 {{ .WireResponse }}  WireNaturalConversionTraits<{{ .WireResponse }}, {{ .NaturalResponse }}>::ToWire(fidl::AnyArena& arena, {{ .NaturalResponse }} src) {
-  {{- if .HasResponsePayload }}
+  {{- if and .HasResponsePayload .ResponseMessageBase }}
   return {{ .WireResponse }}(
     WireNaturalConversionTraits<{{ .ResponsePayload.Wire }}, {{ .ResponseMessageBase }}>::ToWire(arena, std::move(src)));
   {{- else }}

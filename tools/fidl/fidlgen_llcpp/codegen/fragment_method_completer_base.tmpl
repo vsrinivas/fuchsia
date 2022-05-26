@@ -14,7 +14,8 @@ class {{ .WireCompleterImpl }} : public ::fidl::internal::CompleterImplBase<{{ .
 
   void Reply({{ RenderParams .ResponseArgs }});
 
-  {{- if .Result }}
+  {{- if .HasApplicationError }}
+  {{/* TODO(fxbug.dev/88366): Figure out how to handle unknown interactions for wire-types. */}}
   void ReplySuccess({{ RenderParams .Result.ValueParameters }});
   void ReplyError({{ .Result.ErrorDecl }} error);
   {{- end }}
@@ -27,7 +28,8 @@ class {{ .WireBufferCompleterImpl }} : public ::fidl::internal::BufferCompleterI
 
   void Reply({{ RenderParams .ResponseArgs }});
 
-  {{- if .Result }}
+  {{- if .HasApplicationError }}
+  {{/* TODO(fxbug.dev/88366): Figure out how to handle unknown interactions for wire-types. */}}
   void ReplySuccess({{ RenderParams .Result.ValueParameters }});
   void ReplyError({{ .Result.ErrorDecl }} error);
   {{- end }}
@@ -69,7 +71,8 @@ void
                             ::fidl::internal::OutgoingTransportContext());
 }
 
-{{- if .Result }}
+{{- if .HasApplicationError }}
+  {{/* TODO(fxbug.dev/88366): Figure out how to handle unknown interactions for wire-types. */}}
   void
   {{ .WireCompleterImpl.NoLeading }}::ReplySuccess({{ RenderParams .Result.ValueParameters }}) {
     {{ .Result.BuildPayload "_response" -}}
@@ -111,7 +114,8 @@ void
                             ::fidl::internal::OutgoingTransportContext());
 }
 
-{{- if .Result }}
+{{- if .HasApplicationError }}
+  {{/* TODO(fxbug.dev/88366): Figure out how to handle unknown interactions for wire-types. */}}
   void
   {{ .WireBufferCompleterImpl.NoLeading }}::ReplySuccess({{ RenderParams .Result.ValueParameters }}) {
     {{ .Result.BuildPayload "_response" -}}

@@ -13,7 +13,8 @@ template<>
 struct {{ .WireMethodTypes }} {
   using Completer = fidl::Completer<{{ .WireCompleterBase }}>;
 
-  {{ if .Result }}
+  {{ if .HasApplicationError }}
+  {{/* TODO(fxbug.dev/88366): Figure out how to handle unknown interactions for wire-types. */}}
   using ApplicationError = {{ .Result.ErrorDecl }};
   {{ end }}
 
@@ -48,7 +49,8 @@ struct {{ .NaturalMethodTypes }} {
       ::fit::callback<void ({{ .NaturalResult }}&)>;
 
   {{ if .Result }}
-    static constexpr bool HasApplicationError = true;
+    static constexpr bool HasApplicationError = {{ .Result.HasError }};
+    static constexpr bool HasTransportError = {{ .Result.HasTransportError }};
     {{ if .Result.ValueParameters }}
       static constexpr bool IsEmptyStructPayload = false;
     {{ else }}
@@ -56,6 +58,7 @@ struct {{ .NaturalMethodTypes }} {
     {{ end }}
   {{ else }}
     static constexpr bool HasApplicationError = false;
+    static constexpr bool HasTransportError = false;
   {{ end }}
 
   {{ if .ResponseArgs }}

@@ -11,6 +11,7 @@
 #include <zircon/types.h>
 
 #include <iosfwd>
+#include <optional>
 
 #ifdef __Fuchsia__
 #include <zircon/status.h>
@@ -102,6 +103,14 @@ enum class Reason {
   // For a server, the user is still responsible for sending an epitaph,
   // if they desire.
   kUnexpectedMessage,
+
+  // An ordinal was received which was not recognized, but the the method or
+  // event is flexible.
+  //
+  // |status| contains the associated error code.  Since the method is flexible,
+  // the channel will remain open unless the user explicitly decides to close
+  // it.
+  kUnknownInteraction,
 };
 
 // |ErrorOrigin| indicates in which part of request/response processing did a
@@ -134,6 +143,8 @@ extern const char* const kErrorWaitOneFailed;
 extern const char* const kErrorSyncEventBufferTooSmall;
 extern const char* const kErrorSyncEventUnhandledTransitionalEvent;
 extern const char* const kCallerAllocatedBufferTooSmall;
+extern const char* const kUnknownInteraction;
+extern const char* const kUnsupportedTransportError;
 
 }  // namespace internal
 
@@ -189,6 +200,18 @@ class [[nodiscard]] Status {
       reason = Reason::kPeerClosed;
     }
     return Status(status, reason, error_message);
+  }
+
+  // Constructs a status for an unknown interaction.
+  constexpr static Status UnknownInteraction() {
+    return Status(ZX_ERR_NOT_SUPPORTED, ::fidl::Reason::kUnknownInteraction,
+                  ::fidl::internal::kUnknownInteraction);
+  }
+
+  // Constructs a status for a peer sending a transport_err result enum variant
+  // with a status which is not supported.
+  constexpr static Status BadPeerTransportErr() {
+    return DecodeError(ZX_ERR_INTERNAL, ::fidl::internal::kUnsupportedTransportError);
   }
 
   constexpr static Status EncodeError(zx_status_t status, const char* error_message = nullptr) {

@@ -935,6 +935,7 @@ class SomeProtocol_SomeMethod_Result final {
   }
 
   friend ::fidl::Equality<::test::anonymous::SomeProtocol_SomeMethod_Result>;
+
   SomeProtocol_SomeMethod_Result(fpromise::result<::test::anonymous::BitsMember, ::test::anonymous::SomeProtocol_SomeMethod_Error>&& result) {
     ZX_ASSERT(!result.is_pending());
     if (result.is_ok()) {

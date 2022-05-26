@@ -22,6 +22,7 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::Example:
       ::fit::callback<void(::fidl::Result<::test_unknowninteractions::Example::StrictTwoWay>&)>;
 
   static constexpr bool HasApplicationError = false;
+  static constexpr bool HasTransportError = false;
 
   static constexpr bool IsAbsentBody = true;
 };
@@ -34,6 +35,9 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::Example:
       ::fit::callback<void(::fidl::Result<::test_unknowninteractions::Example::FlexibleTwoWay>&)>;
 
   static constexpr bool HasApplicationError = false;
+  static constexpr bool HasTransportError = true;
+
+  static constexpr bool IsEmptyStructPayload = true;
 
   static constexpr bool IsAbsentBody = false;
 };
@@ -89,10 +93,8 @@ class ::fidl::Result<::test_unknowninteractions::Example::StrictTwoWay> final : 
 };
 
 template <>
-class ::fidl::Response<::test_unknowninteractions::Example::FlexibleTwoWay> final : public ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse {
+class ::fidl::Response<::test_unknowninteractions::Example::FlexibleTwoWay> final {
  public:
-  using ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse::ExampleFlexibleTwoWayTopResponse;
-  Response(::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse v) : ExampleFlexibleTwoWayTopResponse(std::move(v)) {}
 };
 
 template <>
@@ -102,9 +104,18 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractio
   using Payload = ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse;
 };
 template <>
-class ::fidl::Result<::test_unknowninteractions::Example::FlexibleTwoWay> final : public ::fitx::result<::fidl::Error, ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse> {
+class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::Example::FlexibleTwoWay>> {
+  using DomainObject = ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse;
+
  public:
-  using ::fitx::result<::fidl::Error, ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse>::result;
+  static DomainObject IntoDomainObject(::fidl::Response<::test_unknowninteractions::Example::FlexibleTwoWay>&& m) {
+    return DomainObject{{.result = ::test_unknowninteractions::ExampleFlexibleTwoWayResult::WithResponse({})}};
+  }
+};
+template <>
+class ::fidl::Result<::test_unknowninteractions::Example::FlexibleTwoWay> final : public ::fitx::result<::fidl::Error> {
+ public:
+  using ::fitx::result<::fidl::Error>::result;
 
  protected:
   Result() = default;

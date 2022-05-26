@@ -123,6 +123,7 @@ class ExampleUseOfErrorSyntax_CallWhichMayFail_Result final {
   }
 
   friend ::fidl::Equality<::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result>;
+
   ExampleUseOfErrorSyntax_CallWhichMayFail_Result(fpromise::result<int64_t, uint32_t>&& result) {
     ZX_ASSERT(!result.is_pending());
     if (result.is_ok()) {

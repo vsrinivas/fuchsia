@@ -643,12 +643,26 @@ func (m Method) NaturalRequestArg(argName string) string {
 	return ""
 }
 
+// Returns true if the method has a result payload and the payload has the `err`
+// variant used for application errors.
+func (m Method) HasApplicationError() bool {
+	return m.Result != nil && m.Result.HasError
+}
+
 func (m Method) NaturalResultBase() string {
 	if m.Result != nil {
-		if len(m.Result.ValueParameters) > 0 {
-			return fmt.Sprintf("::fitx::result<%s, %s>", m.NaturalAnyErrorIn, m.Result.ValueTypeDecl)
+		if m.Result.HasError {
+			if len(m.Result.ValueParameters) > 0 {
+				return fmt.Sprintf("::fitx::result<%s, %s>", m.NaturalAnyErrorIn, m.Result.ValueTypeDecl)
+			} else {
+				return fmt.Sprintf("::fitx::result<%s>", m.NaturalAnyErrorIn)
+			}
 		} else {
-			return fmt.Sprintf("::fitx::result<%s>", m.NaturalAnyErrorIn)
+			if len(m.Result.ValueParameters) > 0 {
+				return fmt.Sprintf("::fitx::result<::fidl::Error, %s>", m.Result.ValueTypeDecl)
+			} else {
+				return "::fitx::result<::fidl::Error>"
+			}
 		}
 	} else {
 		if len(m.ResponseArgs) > 0 {
@@ -659,12 +673,34 @@ func (m Method) NaturalResultBase() string {
 	}
 }
 
+func (m Method) HasWireResultBase() bool {
+	if m.Result != nil {
+		if m.Result.HasError {
+			return true
+		}
+		if len(m.Result.ValueParameters) > 0 {
+			return true
+		}
+	} else if len(m.ResponseArgs) > 0 {
+		return true
+	}
+	return false
+}
+
 func (m Method) WireResultBase() string {
 	if m.Result != nil {
-		if len(m.Result.ValueParameters) > 0 {
-			return fmt.Sprintf("::fitx::result<%s, %s*>", m.Result.ErrorDecl, m.Result.ValueTypeDecl)
+		if m.Result.HasError {
+			if len(m.Result.ValueParameters) > 0 {
+				return fmt.Sprintf("::fitx::result<%s, %s*>", m.Result.ErrorDecl, m.Result.ValueTypeDecl)
+			} else {
+				return fmt.Sprintf("::fitx::result<%s>", m.Result.ErrorDecl)
+			}
 		} else {
-			return fmt.Sprintf("::fitx::result<%s>", m.Result.ErrorDecl)
+			if len(m.Result.ValueParameters) > 0 {
+				return m.Result.ValueTypeDecl.String()
+			} else {
+				panic("Cannot call WireResultBase on an empty response payload")
+			}
 		}
 	}
 	if len(m.ResponseArgs) > 0 {
@@ -682,10 +718,18 @@ func (m Method) RequestMessageBase() string {
 
 func (m Method) ResponseMessageBase() string {
 	if m.Result != nil {
-		if len(m.Result.ValueParameters) > 0 {
-			return fmt.Sprintf("::fitx::result<%s, %s>", m.Result.ErrorDecl, m.Result.ValueTypeDecl)
+		if m.Result.HasError {
+			if len(m.Result.ValueParameters) > 0 {
+				return fmt.Sprintf("::fitx::result<%s, %s>", m.Result.ErrorDecl, m.Result.ValueTypeDecl)
+			} else {
+				return fmt.Sprintf("::fitx::result<%s>", m.Result.ErrorDecl)
+			}
 		} else {
-			return fmt.Sprintf("::fitx::result<%s>", m.Result.ErrorDecl)
+			if len(m.Result.ValueParameters) > 0 {
+				return m.Result.ValueTypeDecl.String()
+			} else {
+				return ""
+			}
 		}
 	} else {
 		if len(m.ResponseArgs) > 0 {
@@ -877,7 +921,7 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) *Protocol {
 		name := methodNameContext.transform(v.Name)
 
 		var result *Result
-		if v.HasError {
+		if v.HasError || v.HasTransportError() {
 			result = c.resultForUnion[v.ResultType.Identifier]
 		}
 

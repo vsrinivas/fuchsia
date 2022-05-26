@@ -143,14 +143,19 @@ func (c *compiler) compileUnion(val fidlgen.Union) *Union {
 }
 
 func (c *compiler) compileResult(p Payloader, m *fidlgen.Method) *Result {
-	valueType, errType := c.compileType(*m.ValueType), c.compileType(*m.ErrorType)
+	valueType := c.compileType(*m.ValueType)
 	result := Result{
 		ResultDecl:        c.compileNameVariants(m.ResultType.Identifier),
 		ValueTypeDecl:     valueType.nameVariants,
 		Value:             valueType,
-		ErrorDecl:         errType.nameVariants,
-		Error:             errType,
+		HasError:          m.HasError,
+		HasTransportError: m.HasTransportError(),
 		valueTypeIsStruct: false,
+	}
+	if m.HasError {
+		errType := c.compileType(*m.ErrorType)
+		result.ErrorDecl = errType.nameVariants
+		result.Error = errType
 	}
 
 	var memberTypeNames []name

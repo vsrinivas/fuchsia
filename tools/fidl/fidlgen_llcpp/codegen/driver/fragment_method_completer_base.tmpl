@@ -22,7 +22,7 @@ class {{ .WireBufferCompleterImpl }} : public ::fdf::internal::BufferCompleterIm
 
   void Reply({{ RenderParams .ResponseArgs }});
 
-  {{- if .Result }}
+  {{- if .HasApplicationError }}
   void ReplySuccess({{ RenderParams .Result.ValueParameters }});
   void ReplyError({{ .Result.ErrorDecl }} error);
   {{- end }}
@@ -67,7 +67,7 @@ void
           _arena().get()));
 }
 
-{{- if .Result }}
+{{- if .HasApplicationError }}
   void
   {{ .WireBufferCompleterImpl.NoLeading }}::ReplySuccess(
       {{- RenderParams .Result.ValueParameters }}) {

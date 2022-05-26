@@ -21,3 +21,14 @@ open protocol UnknownInteractionsProtocol {
 ajar protocol UnknownInteractionsAjarProtocol {};
 
 closed protocol UnknownInteractionsClosedProtocol {};
+
+@transport("Driver")
+open protocol UnknownInteractionsDriverProtocol {
+    strict StrictOneWay();
+    flexible FlexibleOneWay();
+
+    strict StrictTwoWay() -> ();
+    strict StrictTwoWayErr() -> (struct {}) error int32;
+    flexible FlexibleTwoWay() -> (struct {});
+    flexible FlexibleTwoWayErr() -> (struct {}) error int32;
+};
