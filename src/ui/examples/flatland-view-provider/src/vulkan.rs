@@ -727,9 +727,10 @@ impl std::ops::Drop for VkRender {
 //     color: [f32; 4],
 // }
 
+
 fn render() {
     // unsafe {
-        let _ = VkRender::new(1920, 1080);
+        VkRender::new(1920, 1080).expect("failed to create VkRenderer");
         // let renderpass_attachments = [
         //     vk::AttachmentDescription {
         //         format: base.surface_format.format,

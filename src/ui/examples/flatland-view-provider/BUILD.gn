@@ -51,7 +51,10 @@ rustc_binary("bin") {
 fuchsia_component("flatland-view-provider") {
   component_name = "flatland-view-provider-example"
   manifest = "meta/flatland-view-provider-example.cmx"
-  deps = [ ":bin" ]
+  deps = [
+    ":bin",
+    "//src/lib/vulkan/validation_layers",
+  ]
 }
 
 fuchsia_unittest_package("flatland-view-provider-example-tests") {
