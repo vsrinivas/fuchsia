@@ -226,5 +226,9 @@
             instance_id: "21cfa3a89262d5a856acab7166b36af59fcdaa2227256638cf0a6202e265a199",
             moniker: "/core/session-manager/session:session",
         },
+        {
+            instance_id: "4d5f882f294857b5eb02688fd1e284611a4154737bd00dbb47f53aa5e1276237",
+            moniker: "/core/lowpan-ot-driver",
+        },
     ],
 }
