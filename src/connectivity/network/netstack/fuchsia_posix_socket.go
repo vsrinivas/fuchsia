@@ -3602,6 +3602,8 @@ func (s *packetSocketImpl) SendMsg(_ fidl.Context, addr *packetsocket.PacketInfo
 		fullAddr.NIC = tcpip.NICID(addr.InterfaceId)
 		fullAddr.Port = addr.Protocol
 		switch w := addr.Addr.Which(); w {
+		case packetsocket.HardwareAddress_unknownData:
+			return packetsocket.SocketSendMsgResultWithErr(posix.ErrnoEinval), nil
 		case packetsocket.HardwareAddressNone:
 		case packetsocket.HardwareAddressEui48:
 			fullAddr.Addr = tcpip.Address(fidlconv.ToTCPIPLinkAddress(addr.Addr.Eui48))
