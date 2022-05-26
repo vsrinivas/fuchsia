@@ -84,7 +84,7 @@ def generate_package_creation_manifest(args: argparse.Namespace) -> None:
     manifest file by appending the path to the metadata file to the entries in
     the AIB contents manifest.
     """
-    meta_package_content = {'name': args.name, 'version': 0}
+    meta_package_content = {'name': args.name, 'version': '0'}
     json.dump(meta_package_content, args.meta_package)
     contents_manifest = args.contents_manifest.read()
     args.output.write(contents_manifest)
