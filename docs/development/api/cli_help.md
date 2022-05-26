@@ -10,15 +10,17 @@ documentation and feature discovery.
 
 ## Guide
 
-Help documentation must include a usage section written in
-[Usage](#usage) format, followed by a brief descriptions about
-the command, and the following sections (as needed):
+Help documentation must include:
+* [Usage](#usage)
+* [Description](#description)
 
-* Options
-* Commands
-* Examples
-* Notes
-* Error codes
+Help documentation may additional include the following sections (as needed):
+
+* [Options](#options)
+* [Commands](#commands)
+* [Examples](#examples)
+* [Notes](#notes)
+* [Error codes](#errorcodes)
 
 ### Example
 
@@ -248,7 +250,7 @@ Braces (`{}`) are reserved for future use. This guide intentionally leaves open
 the possibility for braces to have special meaning in a future revision of this
 document.
 
-### Description
+### Description{#description}
 
 The description is required and does not include a header. I.e. the description
 area is not labeled "description". E.g.
@@ -288,7 +290,7 @@ What not to put in the Description section
   package, if applicable)
 - release notes (use a separate file)
 
-### Options
+### Options{#options}
 
 An Options section is required if the program accepts arguments. E.g.
 
@@ -343,7 +345,7 @@ If there is a large number of options, consider showing a useful subset and
 explaining how to get further help to see all of them, e.g. by passing
 `--verbose` along with `--help`.
 
-### Commands
+### Commands{#commands}
 
 A commands section is required if the program has subcommands. If present it
 will be labeled, "Commands:". E.g.
@@ -374,7 +376,7 @@ If there is a large number of commands, consider showing a useful subset and
 explaining how to get further help to see all of them, e.g. by passing
 `--verbose` along with `--help`.
 
-### Examples
+### Examples{#examples}
 
 An examples section is optional. If present it will be labeled, "Examples:".
 E.g.
@@ -409,7 +411,7 @@ If the Examples section is getting overly long, move examples to a help doc.
 Interactive help examples are for quick reference and discoverability rather
 than exhaustive documentation.
 
-### Notes
+### Notes{#notes}
 
 Notes are optional and begin with a "Notes:" header. E.g.
 
@@ -439,7 +441,7 @@ What not to put in the Notes
   package, if applicable)
 - release notes (use a separate file)
 
-### Error codes
+### Error codes{#errorcodes}
 
 The Error codes section is required if codes other than `0` or `1` are
 generated. E.g.
