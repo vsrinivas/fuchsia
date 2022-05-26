@@ -77,17 +77,17 @@ in the kernel.
 Some early stage debugging mechanism is required for bringup of a new board, for instance serial
 port or JTAG. If serial port is the mechanism then a UART driver must be added if not already
 available in the kernel, for instance
-[here](https://source.corp.google.com/fuchsia/zircon/kernel/dev/uart/dw8250/;bpv=0). ARM’s interrupt
+[here](https://fuchsia.googlesource.com/fuchsia/+/main/zircon/kernel/dev/uart/dw8250). ARM’s interrupt
 controller and timer support are also added with drivers, for instance
-[gicv3](https://source.corp.google.com/fuchsia/zircon/kernel/dev/interrupt/arm_gic/v3/;bpv=0) and
-[generic timer](https://source.corp.google.com/fuchsia/zircon/kernel/dev/timer/arm_generic/).
+[gicv3](https://fuchsia.googlesource.com/fuchsia/+/main/zircon/kernel/dev/interrupt/arm_gic/v3/) and
+[generic timer](https://fuchsia.googlesource.com/fuchsia/+/main/zircon/kernel/dev/timer/arm_generic/).
 
 All these drivers need to be configured to be used by the kernel. If the kernel was booted by a
 bootloader that supports fuchsia, the drivers will be configured in the ZBI, for example in U-Boot
 [here](https://third-party-mirror.googlesource.com/u-boot/+/0f7b78a526a42235d0edfcfd17290c545b5d80c3/board/khadas/kvim3/zircon.c#551). If
 the kernel was booted with a boot shim, the drivers will be configured in the shim itself, for
 instance for the MediaTek 8167 board
-[here](https://source.corp.google.com/fuchsia/zircon/kernel/target/arm64/board/mt8167s_ref/boot-shim-config.h;l=115;bpv=1;bpt=0;rcl=5ddb969fbe644c34c7391e58733e50e2f16cc3f6).
+[here](https://fuchsia.googlesource.com/fuchsia/+/5ddb969fbe644c34c7391e58733e50e2f16cc3f6/zircon/kernel/target/arm64/board/mt8167s_ref/boot-shim-config.h#115).
 
 Notes:
 
@@ -98,7 +98,7 @@ Notes:
 In order to add support for a new board, a new
 [board](https://fuchsia.googlesource.com/fuchsia/+/main/boards/) configuration needs to be added to
 the build system (gn). For instance for
-[VIM3](https://source.corp.google.com/fuchsia/boards/vim3.gni) the `board_bootfs_labels` gn variable
+[VIM3](https://fuchsia.googlesource.com/fuchsia/+/main/boards/vim3.gni) the `board_bootfs_labels` gn variable
 (defined [here](https://cs.opensource.google/fuchsia/fuchsia/+/main:build/board.gni)) defines what
 gets loaded in a bringup (into [bootfs][glossary.bootfs]) build including the
 non-kernel drivers described below.
