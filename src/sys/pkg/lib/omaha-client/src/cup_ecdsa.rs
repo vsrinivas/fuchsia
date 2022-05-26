@@ -102,6 +102,22 @@ impl fmt::Display for Nonce {
     }
 }
 
+#[derive(Debug, thiserror::Error)]
+pub enum NonceDecodeError {
+    #[error("could not decode from hex")]
+    HexError(#[from] hex::FromHexError),
+    #[error("decoded byte vector of wrong length")]
+    WrongLength,
+}
+
+impl std::convert::TryFrom<&String> for Nonce {
+    type Error = NonceDecodeError;
+    fn try_from(s: &String) -> Result<Self, Self::Error> {
+        let v: Vec<u8> = hex::decode(s)?;
+        Ok(Nonce(v.try_into().map_err(|_| NonceDecodeError::WrongLength)?))
+    }
+}
+
 /// Request decoration return type, containing request internals. Clients of this
 /// library can call .hash() and store/retrieve the hash, or they can inspect the
 /// request, public key ID, nonce used if necessary.
@@ -309,6 +325,9 @@ pub mod test_support {
     pub const RAW_PRIVATE_KEY_FOR_TEST: &str = include_str!("testing_keys/test_private_key.pem");
     pub const RAW_PUBLIC_KEY_FOR_TEST: &str = include_str!("testing_keys/test_public_key.pem");
 
+    pub fn make_default_public_key_id_for_test() -> PublicKeyId {
+        123456789.try_into().unwrap()
+    }
     pub fn make_default_private_key_for_test() -> SigningKey {
         SigningKey::from_str(RAW_PRIVATE_KEY_FOR_TEST).unwrap()
     }
@@ -332,14 +351,13 @@ pub mod test_support {
 
     pub fn make_default_public_keys_for_test() -> PublicKeys {
         let (_priv_key, public_key) = make_keys_for_test();
-        let public_key_id: PublicKeyId = 123456789.try_into().unwrap();
-        make_public_keys_for_test(public_key_id, public_key)
+        make_public_keys_for_test(make_default_public_key_id_for_test(), public_key)
     }
 
     pub fn make_default_json_public_keys_for_test() -> serde_json::Value {
         serde_json::json!({
             "latest": {
-                "id": 123,
+                "id": make_default_public_key_id_for_test(),
                 "key": RAW_PUBLIC_KEY_FOR_TEST,
             },
             "historical": []
@@ -347,8 +365,8 @@ pub mod test_support {
     }
     pub fn make_cup_handler_for_test() -> StandardCupv2Handler {
         let (_signing_key, public_key) = make_keys_for_test();
-        let public_key_id: PublicKeyId = 42.try_into().unwrap();
-        let public_keys = make_public_keys_for_test(public_key_id, public_key);
+        let public_keys =
+            make_public_keys_for_test(make_default_public_key_id_for_test(), public_key);
         StandardCupv2Handler::new(&public_keys)
     }
 

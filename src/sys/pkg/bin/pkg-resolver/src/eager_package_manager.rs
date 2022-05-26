@@ -17,9 +17,16 @@ use {
     fuchsia_url::{AbsolutePackageUrl, Hash, PinnedAbsolutePackageUrl, UnpinnedAbsolutePackageUrl},
     fuchsia_zircon as zx,
     futures::prelude::*,
-    omaha_client::{cup_ecdsa::PublicKeys, protocol::response::Response},
+    omaha_client::{
+        cup_ecdsa::{
+            CupVerificationError, Cupv2Verifier, Nonce, NonceDecodeError, PublicKeyId, PublicKeys,
+            StandardCupv2Handler,
+        },
+        protocol::response::Response,
+    },
+    p256::ecdsa::{signature::Signature, DerSignature},
     serde::Deserialize,
-    std::{collections::BTreeMap, sync::Arc},
+    std::{collections::BTreeMap, convert::TryInto, sync::Arc},
 };
 
 const EAGER_PACKAGE_CONFIG_PATH: &str = "/config/data/eager_package_config.json";
@@ -31,6 +38,7 @@ struct EagerPackage {
     executable: bool,
     package_directory: Option<PackageDirectory>,
     cup: Option<CupData>,
+    public_keys: PublicKeys,
 }
 
 #[derive(Debug)]
@@ -38,6 +46,29 @@ pub struct EagerPackageManager<T: Resolver> {
     packages: BTreeMap<UnpinnedAbsolutePackageUrl, EagerPackage>,
     package_resolver: T,
     data_proxy: Option<fio::DirectoryProxy>,
+}
+
+async fn verify_cup_signature(
+    cup_handler: &StandardCupv2Handler,
+    cup: &CupData,
+) -> Result<(), ParseCupResponseError> {
+    let request: &[u8] =
+        &cup.request.as_ref().ok_or(ParseCupResponseError::Missing(CupDataField::Request))?;
+    let response: &[u8] =
+        &cup.response.as_ref().ok_or(ParseCupResponseError::Missing(CupDataField::Response))?;
+    let key_id: PublicKeyId =
+        cup.key_id.ok_or(ParseCupResponseError::Missing(CupDataField::KeyId))?;
+    let nonce: Nonce = cup
+        .nonce
+        .as_ref()
+        .ok_or(ParseCupResponseError::Missing(CupDataField::Nonce))?
+        .try_into()?;
+    let der_signature = DerSignature::from_bytes(
+        &cup.signature.as_ref().ok_or(ParseCupResponseError::Missing(CupDataField::Signature))?,
+    )?;
+    cup_handler
+        .verify_response_with_signature(der_signature, request, response, key_id, &nonce)
+        .map_err(ParseCupResponseError::VerificationError)
 }
 
 impl<T: Resolver> EagerPackageManager<T> {
@@ -60,8 +91,8 @@ impl<T: Resolver> EagerPackageManager<T> {
         let mut packages = config
             .packages
             .into_iter()
-            .map(|EagerPackageConfig { url, executable, public_keys: _ }| {
-                (url, EagerPackage { executable, package_directory: None, cup: None })
+            .map(|EagerPackageConfig { url, executable, public_keys }| {
+                (url, EagerPackage { executable, package_directory: None, cup: None, public_keys })
             })
             .collect();
 
@@ -102,7 +133,7 @@ impl<T: Resolver> EagerPackageManager<T> {
                 let cup = cup.ok_or_else(|| {
                     anyhow!("PersistentEagerPackage does not contain `cup` field")
                 })?;
-                // TODO(fxbug.dev/95296): verify CUP signature before parsing.
+
                 let response = parse_omaha_response_from_cup(&cup)
                     .with_context(|| format!("while parsing omaha response {:?}", cup.response))?;
                 let pinned_url = response
@@ -122,7 +153,15 @@ impl<T: Resolver> EagerPackageManager<T> {
                 let package = packages
                     .get_mut(&unpinned_url)
                     .ok_or_else(|| anyhow!("unknown pkg url: {}", url.url))?;
+
+                let cup_handler = StandardCupv2Handler::new(&package.public_keys);
+
+                verify_cup_signature(&cup_handler, &cup)
+                    .await
+                    .map_err(|e| anyhow!("could not verify cup signature {:?}", e))?;
+
                 package.cup = Some(cup);
+
                 let pkg_dir =
                     Self::resolve_pinned_from_cache(&pkg_cache, pinned_url).await.with_context(
                         || format!("while resolving eager package {} from cache", url.url),
@@ -226,7 +265,6 @@ impl<T: Resolver> EagerPackageManager<T> {
         url: &fpkg::PackageUrl,
         cup: CupData,
     ) -> Result<(), CupWriteError> {
-        // TODO(fxbug.dev/95296): verify CUP signature before parsing.
         let response = parse_omaha_response_from_cup(&cup)?;
         // The full URL must appear in the omaha response.
         let _app = response
@@ -248,6 +286,10 @@ impl<T: Resolver> EagerPackageManager<T> {
             .ok_or_else(|| CupWriteError::UnknownURL(pinned_url.as_unpinned().clone()))?;
         let pkg_dir = Self::resolve_pinned(&self.package_resolver, pinned_url).await?;
         package.package_directory = Some(pkg_dir);
+
+        let cup_handler = StandardCupv2Handler::new(&package.public_keys);
+        verify_cup_signature(&cup_handler, &cup).await?;
+
         package.cup = Some(cup);
 
         self.persist(&packages).await?;
@@ -283,14 +325,34 @@ impl<T: Resolver> EagerPackageManager<T> {
 
 fn parse_omaha_response_from_cup(cup: &CupData) -> Result<Response, ParseCupResponseError> {
     Ok(omaha_client::protocol::response::parse_json_response(
-        cup.response.as_ref().ok_or(ParseCupResponseError::CupDataNoResponse)?,
+        cup.response.as_ref().ok_or(ParseCupResponseError::Missing(CupDataField::Response))?,
     )?)
 }
 
 #[derive(Debug, thiserror::Error)]
+enum CupDataField {
+    #[error("CupData response field")]
+    Response,
+    #[error("CupData request field")]
+    Request,
+    #[error("CupData key_id field")]
+    KeyId,
+    #[error("CupData nonce field")]
+    Nonce,
+    #[error("CupData signature field")]
+    Signature,
+}
+
+#[derive(Debug, thiserror::Error)]
 enum ParseCupResponseError {
-    #[error("CUP data does not include a response")]
-    CupDataNoResponse,
+    #[error("CUP data does not include a field")]
+    Missing(CupDataField),
+    #[error("CUP data nonce is invalid")]
+    CupDataInvalidNonce(#[from] NonceDecodeError),
+    #[error("CUP data signature is invalid")]
+    CupDataInvalidSignature(#[from] p256::ecdsa::Error),
+    #[error("while validating CUP response")]
+    VerificationError(#[from] CupVerificationError),
     #[error("while parsing JSON")]
     ParseJSON(#[from] serde_json::Error),
 }
@@ -458,12 +520,17 @@ mod tests {
             PackageCacheRequestStream,
         },
         fuchsia_async as fasync, fuchsia_zircon as zx,
-        omaha_client::cup_ecdsa::{
-            test_support::{
-                make_default_public_key_for_test, make_default_public_keys_for_test,
-                RAW_PUBLIC_KEY_FOR_TEST,
+        omaha_client::{
+            cup_ecdsa::{
+                test_support::{
+                    make_default_public_key_for_test, make_default_public_key_id_for_test,
+                    make_default_public_keys_for_test, make_expected_signature_for_test,
+                    make_keys_for_test, make_public_keys_for_test,
+                    make_standard_intermediate_for_test, RAW_PUBLIC_KEY_FOR_TEST,
+                },
+                Cupv2RequestHandler, PublicKeyAndId, PublicKeys,
             },
-            PublicKeyAndId, PublicKeys,
+            protocol::request::Request,
         },
     };
 
@@ -569,6 +636,27 @@ mod tests {
           }],
         }});
         serde_json::to_vec(&response).unwrap()
+    }
+
+    fn make_cup_data(cup_response: &[u8]) -> CupData {
+        let (priv_key, public_key) = make_keys_for_test();
+        let public_key_id: PublicKeyId = make_default_public_key_id_for_test();
+        let public_keys = make_public_keys_for_test(public_key_id, public_key);
+        let cup_handler = StandardCupv2Handler::new(&public_keys);
+        let request = Request::default();
+        let mut intermediate = make_standard_intermediate_for_test(request);
+        let request_metadata = cup_handler.decorate_request(&mut intermediate).unwrap();
+        let request_body = intermediate.serialize_body().unwrap();
+        let expected_signature: Vec<u8> =
+            make_expected_signature_for_test(&priv_key, &request_metadata, &cup_response);
+        fidl_fuchsia_pkg_ext::CupData::builder()
+            .key_id(Some(public_key_id))
+            .nonce(Some(request_metadata.nonce.to_string()))
+            .request(Some(request_body))
+            .response(Some(cup_response.to_vec()))
+            .signature(Some(expected_signature))
+            .build()
+            .into()
     }
 
     async fn write_persistent_fidl(
@@ -730,18 +818,13 @@ mod tests {
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
         .unwrap();
-        let cup: CupData = fidl_fuchsia_pkg_ext::CupData::builder()
-            .response(get_default_cup_response())
-            .build()
-            .into();
+
+        let cup1_response: Vec<u8> = get_default_cup_response();
+        let cup1: CupData = make_cup_data(&cup1_response);
+        let cup2_response =
+            get_cup_response_with_name(&format!("package2?hash={}", "1".repeat(64)));
         // this will fail to resolve because hash doesn't match
-        let cup2: CupData = fidl_fuchsia_pkg_ext::CupData::builder()
-            .response(Some(get_cup_response_with_name(&format!(
-                "package2?hash={}",
-                "1".repeat(64)
-            ))))
-            .build()
-            .into();
+        let cup2: CupData = make_cup_data(&cup2_response);
         write_persistent_fidl(
             &data_proxy,
             [
@@ -750,10 +833,11 @@ mod tests {
                 // bad packages won't break loading of other valid packages
                 (
                     UnpinnedAbsolutePackageUrl::parse("fuchsia-pkg://unknown/package").unwrap(),
-                    cup.clone(),
+                    cup1.clone(),
                 ),
+                // If CupData is empty, we should skip and log the error but not crash or fail.
                 (url.clone(), CupData::EMPTY),
-                (url.clone(), cup.clone()),
+                (url.clone(), cup1.clone()),
             ],
         )
         .await;
@@ -769,11 +853,51 @@ mod tests {
         );
         assert!(manager.packages[&url].package_directory.is_some());
         assert!(manager.get_package_dir(&url.clone().into()).unwrap().is_some());
-        assert_eq!(manager.packages[&url].cup, Some(cup));
+        assert_eq!(manager.packages[&url].cup, Some(cup1));
         assert!(manager.packages[&url2].package_directory.is_none());
         assert_matches!(manager.get_package_dir(&url2.clone().into()), Err(_));
         // cup is still loaded even if resolve fails
         assert_eq!(manager.packages[&url2].cup, Some(cup2));
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_load_persistent_eager_packages_signature_invalid() {
+        // We intentionally stage a mismatch between the PublicKeys used
+        // to configure the EagerPackageManager (latest.key_id = 777) and the
+        // PublicKeys generated in make_cup_data() (latest.key_id = 123456789),
+        // which are written to persistent fidl and which we attempt to validate
+        // at startup.
+
+        let url = UnpinnedAbsolutePackageUrl::parse(TEST_URL).unwrap();
+
+        let mut public_keys = make_default_public_keys_for_test();
+        public_keys.latest.id = 777;
+
+        let config = EagerPackageConfigs {
+            packages: vec![EagerPackageConfig { url: url.clone(), executable: true, public_keys }],
+        };
+        let package_resolver = get_test_package_resolver();
+        let (pkg_cache, pkg_cache_stream) = get_mock_pkg_cache();
+
+        let data_dir = tempfile::tempdir().unwrap();
+        let data_proxy = io_util::open_directory_in_namespace(
+            data_dir.path().to_str().unwrap(),
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+        )
+        .unwrap();
+
+        let cup: CupData = make_cup_data(&get_default_cup_response());
+        write_persistent_fidl(&data_proxy, [(url.clone(), cup.clone())]).await;
+        let (manager, ()) = future::join(
+            EagerPackageManager::from_config(config, package_resolver, pkg_cache, Some(data_proxy)),
+            handle_pkg_cache(pkg_cache_stream),
+        )
+        .await;
+        // This fails to load, and we log "failed to load persistent eager
+        // package: could not verify cup signature
+        // VerificationError(SpecifiedPublicKeyIdMissing)".
+        assert!(manager.get_package_dir(&url.clone().into()).is_err());
+        assert!(manager.packages[&url].package_directory.is_none());
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -802,10 +926,7 @@ mod tests {
             Some(Clone::clone(&data_proxy)),
         )
         .await;
-        let cup: CupData = fidl_fuchsia_pkg_ext::CupData::builder()
-            .response(get_default_cup_response())
-            .build()
-            .into();
+        let cup: CupData = make_cup_data(&get_default_cup_response());
         manager
             .cup_write(&fpkg::PackageUrl { url: TEST_PINNED_URL.into() }, cup.clone())
             .await
@@ -838,10 +959,7 @@ mod tests {
 
         let mut manager =
             EagerPackageManager::from_config(config, package_resolver, pkg_cache, None).await;
-        let cup: CupData = fidl_fuchsia_pkg_ext::CupData::builder()
-            .response(get_default_cup_response())
-            .build()
-            .into();
+        let cup: CupData = make_cup_data(&get_default_cup_response());
         assert_matches!(
             manager.cup_write(&fpkg::PackageUrl { url: TEST_PINNED_URL.into() }, cup).await,
             Err(CupWriteError::Persist(_))
@@ -865,10 +983,7 @@ mod tests {
 
         let mut manager =
             EagerPackageManager::from_config(config, package_resolver, pkg_cache, None).await;
-        let cup: CupData = fidl_fuchsia_pkg_ext::CupData::builder()
-            .response(get_default_cup_response())
-            .build()
-            .into();
+        let cup: CupData = make_cup_data(&get_default_cup_response());
         assert_matches!(
             manager
                 .cup_write(&fpkg::PackageUrl { url: format!("{url}?hash=beefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdead") }, cup)
@@ -894,10 +1009,7 @@ mod tests {
 
         let mut manager =
             EagerPackageManager::from_config(config, package_resolver, pkg_cache, None).await;
-        let cup: CupData = fidl_fuchsia_pkg_ext::CupData::builder()
-            .response(get_default_cup_response())
-            .build()
-            .into();
+        let cup: CupData = make_cup_data(&get_default_cup_response());
         assert_matches!(
             manager.cup_write(&fpkg::PackageUrl { url: TEST_PINNED_URL.into() }, cup).await,
             Err(CupWriteError::UnknownURL(_))
@@ -921,10 +1033,7 @@ mod tests {
 
         let mut manager =
             EagerPackageManager::from_config(config, package_resolver, pkg_cache, None).await;
-        let cup: CupData = fidl_fuchsia_pkg_ext::CupData::builder()
-            .response(get_default_cup_response())
-            .build()
-            .into();
+        let cup: CupData = make_cup_data(&get_default_cup_response());
         manager.packages.get_mut(&url).unwrap().cup = Some(cup);
         let (version, channel) =
             manager.cup_get_info(&fpkg::PackageUrl { url: TEST_URL.into() }).await.unwrap();
@@ -968,10 +1077,7 @@ mod tests {
 
         let mut manager =
             EagerPackageManager::from_config(config, package_resolver, pkg_cache, None).await;
-        let cup: CupData = fidl_fuchsia_pkg_ext::CupData::builder()
-            .response(get_default_cup_response())
-            .build()
-            .into();
+        let cup: CupData = make_cup_data(&get_default_cup_response());
         manager.packages.get_mut(&url).unwrap().cup = Some(cup);
         assert_matches!(
             manager
@@ -998,10 +1104,7 @@ mod tests {
 
         let mut manager =
             EagerPackageManager::from_config(config, package_resolver, pkg_cache, None).await;
-        let cup: CupData = fidl_fuchsia_pkg_ext::CupData::builder()
-            .response(get_default_cup_response())
-            .build()
-            .into();
+        let cup: CupData = make_cup_data(&get_default_cup_response());
         manager.packages.get_mut(&url).unwrap().cup = Some(cup);
         assert_matches!(
             manager

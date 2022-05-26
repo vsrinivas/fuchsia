@@ -75,11 +75,13 @@ mod tests {
     use crate::channel::ChannelConfig;
     use assert_matches::assert_matches;
     use omaha_client::cup_ecdsa::{
-        test_support::{make_default_json_public_keys_for_test, make_default_public_key_for_test},
+        test_support::{
+            make_default_json_public_keys_for_test, make_default_public_key_for_test,
+            make_default_public_key_id_for_test,
+        },
         PublicKeyAndId,
     };
     use pretty_assertions::assert_eq;
-    use std::convert::TryInto;
 
     #[test]
     fn parse_eager_package_configs_json() {
@@ -150,7 +152,7 @@ mod tests {
                     service_url: "https://example.com".into(),
                     public_keys: PublicKeys {
                         latest: PublicKeyAndId {
-                            id: 123.try_into().unwrap(),
+                            id: make_default_public_key_id_for_test(),
                             key: make_default_public_key_for_test(),
                         },
                         historical: vec![],

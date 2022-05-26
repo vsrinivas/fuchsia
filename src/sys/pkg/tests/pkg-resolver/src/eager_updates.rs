@@ -5,8 +5,7 @@
 /// This module tests eager packages.
 use {
     assert_matches::assert_matches,
-    fidl_fuchsia_pkg::{GetInfoError, ResolveError},
-    fidl_fuchsia_pkg_ext::CupData,
+    fidl_fuchsia_pkg::{CupData, GetInfoError, ResolveError},
     fuchsia_async as fasync,
     fuchsia_pkg_testing::{PackageBuilder, RepositoryBuilder, SystemImageBuilder},
     fuchsia_url::PinnedAbsolutePackageUrl,
@@ -14,9 +13,40 @@ use {
         get_cup_response_with_name, make_pkg_with_extra_blobs, pkgfs_with_system_image_and_pkg,
         MountsBuilder, TestEnvBuilder, EMPTY_REPO_PATH,
     },
-    omaha_client::cup_ecdsa::test_support::make_default_json_public_keys_for_test,
+    omaha_client::{
+        cup_ecdsa::{
+            test_support::{
+                make_default_json_public_keys_for_test, make_default_public_key_id_for_test,
+                make_expected_signature_for_test, make_keys_for_test, make_public_keys_for_test,
+                make_standard_intermediate_for_test,
+            },
+            Cupv2RequestHandler, PublicKeyId, StandardCupv2Handler,
+        },
+        protocol::request::Request,
+    },
     std::sync::Arc,
 };
+
+fn make_cup_data(cup_response: &[u8]) -> CupData {
+    let (priv_key, public_key) = make_keys_for_test();
+    let public_key_id: PublicKeyId = make_default_public_key_id_for_test();
+    let public_keys = make_public_keys_for_test(public_key_id, public_key);
+    let cup_handler = StandardCupv2Handler::new(&public_keys);
+    let request = Request::default();
+    let mut intermediate = make_standard_intermediate_for_test(request);
+    let request_metadata = cup_handler.decorate_request(&mut intermediate).unwrap();
+    let request_body = intermediate.serialize_body().unwrap();
+    let expected_signature: Vec<u8> =
+        make_expected_signature_for_test(&priv_key, &request_metadata, &cup_response);
+    fidl_fuchsia_pkg_ext::CupData::builder()
+        .key_id(Some(public_key_id))
+        .nonce(Some(request_metadata.nonce.to_string()))
+        .request(Some(request_body))
+        .response(Some(cup_response.to_vec()))
+        .signature(Some(expected_signature))
+        .build()
+        .into()
+}
 
 #[fasync::run_singlethreaded(test)]
 async fn test_empty_eager_config() {
@@ -92,11 +122,14 @@ async fn test_eager_resolve_package() {
     let system_image_package = SystemImageBuilder::new().build().await;
     let pkgfs = pkgfs_with_system_image_and_pkg(&system_image_package, Some(&pkg)).await;
 
+    let cup_response = get_cup_response_with_name(&pkg_url);
+    let cup_data: CupData = make_cup_data(&cup_response);
+
     let env = TestEnvBuilder::new()
         .pkgfs(pkgfs)
         .mounts(
             MountsBuilder::new()
-                .eager_packages(vec![pkg_url])
+                .eager_packages(vec![(pkg_url.clone(), cup_data.clone())])
                 .custom_config_data("eager_package_config.json", eager_config.to_string())
                 .enable_dynamic_config(lib::EnableDynamicConfig {
                     enable_dynamic_configuration: true,
@@ -140,11 +173,14 @@ async fn test_eager_get_hash() {
     let system_image_package = SystemImageBuilder::new().build().await;
     let pkgfs = pkgfs_with_system_image_and_pkg(&system_image_package, Some(&pkg)).await;
 
+    let cup_response = get_cup_response_with_name(&pkg_url);
+    let cup_data: CupData = make_cup_data(&cup_response);
+
     let env = TestEnvBuilder::new()
         .pkgfs(pkgfs)
         .mounts(
             MountsBuilder::new()
-                .eager_packages(vec![pkg_url])
+                .eager_packages(vec![(pkg_url.clone(), cup_data.clone())])
                 .custom_config_data("eager_package_config.json", eager_config.to_string())
                 .enable_dynamic_config(lib::EnableDynamicConfig {
                     enable_dynamic_configuration: true,
@@ -215,12 +251,9 @@ async fn test_cup_write() {
         Err(ResolveError::PackageNotFound)
     );
 
-    env.cup_write(
-        pkg_url.to_string(),
-        CupData::builder().response(get_cup_response_with_name(&pkg_url)).build().into(),
-    )
-    .await
-    .unwrap();
+    let cup_response = get_cup_response_with_name(&pkg_url);
+    let cup_data: CupData = make_cup_data(&cup_response);
+    env.cup_write(pkg_url.to_string(), cup_data).await.unwrap();
 
     // now get info and resolve works
     let (version, channel) = env.cup_get_info(pkg_url.as_unpinned().to_string()).await.unwrap();
@@ -257,11 +290,14 @@ async fn test_cup_get_info_persisted() {
     let system_image_package = SystemImageBuilder::new().build().await;
     let pkgfs = pkgfs_with_system_image_and_pkg(&system_image_package, Some(&pkg)).await;
 
+    let cup_response = get_cup_response_with_name(&pkg_url);
+    let cup_data: CupData = make_cup_data(&cup_response);
+
     let env = TestEnvBuilder::new()
         .pkgfs(pkgfs)
         .mounts(
             MountsBuilder::new()
-                .eager_packages(vec![pkg_url.clone()])
+                .eager_packages(vec![(pkg_url.clone(), cup_data.clone())])
                 .custom_config_data("eager_package_config.json", eager_config.to_string())
                 .build(),
         )

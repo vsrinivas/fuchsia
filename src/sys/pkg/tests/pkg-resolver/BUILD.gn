@@ -593,7 +593,9 @@ rustc_test("eager_updates") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:openat",
+    "//third_party/rust_crates:p256",
     "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:signature",
   ]
 
   sources = [ "src/eager_updates.rs" ]

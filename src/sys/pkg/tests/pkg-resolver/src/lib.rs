@@ -112,7 +112,7 @@ pub struct MountsBuilder {
     dynamic_repositories: Option<RepositoryConfigs>,
     custom_config_data: Vec<(PathBuf, String)>,
     persisted_repos_config: Option<PersistedReposConfig>,
-    eager_packages: Vec<PinnedAbsolutePackageUrl>,
+    eager_packages: Vec<(PinnedAbsolutePackageUrl, CupData)>,
 }
 
 impl MountsBuilder {
@@ -152,7 +152,10 @@ impl MountsBuilder {
         self.custom_config_data.push((path.into(), data.into()));
         self
     }
-    pub fn eager_packages(mut self, package_urls: Vec<PinnedAbsolutePackageUrl>) -> Self {
+    pub fn eager_packages(
+        mut self,
+        package_urls: Vec<(PinnedAbsolutePackageUrl, CupData)>,
+    ) -> Self {
         assert!(self.eager_packages.is_empty());
         self.eager_packages = package_urls;
         self
@@ -261,7 +264,7 @@ impl Mounts {
         }
     }
 
-    fn add_eager_packages(&self, packages: Vec<PinnedAbsolutePackageUrl>) {
+    fn add_eager_packages(&self, packages: Vec<(PinnedAbsolutePackageUrl, CupData)>) {
         if let DirOrProxy::Dir(ref d) = self.pkg_resolver_data {
             let mut f = BufWriter::new(File::create(d.path().join("eager_packages.pf")).unwrap());
 
@@ -269,12 +272,8 @@ impl Mounts {
                 packages: Some(
                     packages
                         .into_iter()
-                        .map(|url| {
+                        .map(|(url, cup)| {
                             let pkg_url = fpkg::PackageUrl { url: url.as_unpinned().to_string() };
-                            let cup = fidl_fuchsia_pkg_ext::CupData::builder()
-                                .response(get_cup_response_with_name(&url))
-                                .build()
-                                .into();
                             PersistentEagerPackage {
                                 url: Some(pkg_url),
                                 cup: Some(cup),
