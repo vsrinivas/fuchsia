@@ -2855,7 +2855,7 @@ mod tests {
             let update_completed_time = now + INSTALL_DURATION;
             let expected_update_duration = update_completed_time.wall_duration_since(now).unwrap();
 
-            let first_seen_time = now - Duration::from_micros(100000000);
+            let first_seen_time = now - Duration::from_micros(1000);
 
             let expected_duration_since_first_seen =
                 update_completed_time.wall_duration_since(first_seen_time).unwrap();
