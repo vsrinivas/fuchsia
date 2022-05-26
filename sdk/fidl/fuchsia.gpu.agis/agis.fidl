@@ -12,21 +12,26 @@ using zx;
 /// interposing shared library and Vulkan layer, and the host Android GPU
 /// Inspector application.
 type Connection = resource table {
-    1: process_id zx.koid;
+    1: process_koid zx.koid;
     2: process_name string:zx.MAX_NAME_LEN;
-    3: port uint16;
+    3: agi_socket zx.handle:SOCKET;
 };
 
 /// Max connections that may be registered.
-const MAX_CONNECTIONS uint32 = 128;
+/// ZX_CHANNEL_MAX_MESSAGE_BYTES = 64KiB.  At an approximate message size
+/// of 50B, rounding up to 64B, we easily fit 512 connections in a message
+/// with ample headroom for message size growth.
+///
+/// The number of connections is determined by developers, rather than users.
+/// The typical expected connection count is 1 considering a developer
+/// performing Vulkan tracing on 1 component at a time.
+const MAX_CONNECTIONS uint32 = 512;
 
-type Status = strict enum {
-    OK = 0;
+type Error = flexible enum {
     NOT_FOUND = 1;
     ALREADY_REGISTERED = 2;
     CONNECTIONS_EXCEEDED = 3;
     INTERNAL_ERROR = 4;
-    UNIMPLEMENTED = 5;
 };
 
 /// The AGIS ComponentRegistry protocol allows traceable components to register as
@@ -36,16 +41,22 @@ protocol ComponentRegistry {
     /// Register a process as traceable and retrieve its bound socket.
     /// For AGI, gapii will be the only client of this Register interface.
     Register(struct {
-        process_id zx.koid;
+        /// Client assigned unique ID for the connection.
+        id uint64;
+
+        /// Process koid.
+        process_koid zx.koid;
+
+        /// Must match ZX_PROP_NAME of the kernel object.
         process_name string:zx.MAX_NAME_LEN;
     }) -> (resource struct {
-        gapii_socket zx.handle:optional;
-    }) error Status;
+        gapii_socket zx.handle:SOCKET;
+    }) error Error;
 
     /// Remove an entry from the registry.
     Unregister(struct {
-        process_id zx.koid;
-    }) -> (struct {}) error Status;
+        id uint64;
+    }) -> (struct {}) error Error;
 };
 
 /// The AGIS Observer protocol provides the interface to retrieve registered
@@ -56,5 +67,5 @@ protocol Observer {
     /// For AGI, gapis will be the only client of this Connections interface.
     Connections() -> (resource struct {
         connections vector<Connection>:MAX_CONNECTIONS;
-    }) error Status;
+    }) error Error;
 };

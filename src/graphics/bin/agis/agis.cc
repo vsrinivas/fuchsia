@@ -14,19 +14,20 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include <sdk/lib/fdio/include/lib/fdio/fd.h>
-
 namespace {
 // Value struct for |registry| below.
 struct RegistryValue {
-  RegistryValue(std::string process_name_in, uint16_t port_in)
-      : process_name(std::move(process_name_in)), port(port_in) {}
+  RegistryValue(zx_koid_t process_koid_in, std::string process_name_in, zx::socket agi_socket_in)
+      : process_koid(process_koid_in),
+        process_name(std::move(process_name_in)),
+        agi_socket(agi_socket_in.release()) {}
+  zx_koid_t process_koid;
   std::string process_name;
-  uint16_t port;
+  zx::socket agi_socket;
 };
 
-// Map process IDs to |RegistryValue|s.
-std::unordered_map<zx_koid_t, RegistryValue> registry;
+// Map ids to |RegistryValue|s.
+std::unordered_map<uint64_t, RegistryValue> registry;
 }  // namespace
 
 class ComponentRegistryImpl final : public fuchsia::gpu::agis::ComponentRegistry {
@@ -38,89 +39,49 @@ class ComponentRegistryImpl final : public fuchsia::gpu::agis::ComponentRegistry
   }
 
   // Add entries to the |registry| map.
-  void Register(zx_koid_t process_id, std::string process_name,
+  void Register(uint64_t id, zx_koid_t process_koid, std::string process_name,
                 RegisterCallback callback) override {
     fuchsia::gpu::agis::ComponentRegistry_Register_Result result;
 
-    auto matched_iter = registry.find(process_id);
+    auto matched_iter = registry.find(id);
     if (matched_iter != registry.end()) {
-      result.set_err(fuchsia::gpu::agis::Status::ALREADY_REGISTERED);
+      result.set_err(fuchsia::gpu::agis::Error::ALREADY_REGISTERED);
       callback(std::move(result));
       return;
     }
 
     // Test if the connection map is full.
     if (registry.size() == fuchsia::gpu::agis::MAX_CONNECTIONS) {
-      result.set_err(fuchsia::gpu::agis::Status::CONNECTIONS_EXCEEDED);
+      result.set_err(fuchsia::gpu::agis::Error::CONNECTIONS_EXCEEDED);
       callback(std::move(result));
       return;
     }
 
-    // Create a socket and find a port to bind it to.
-    fbl::unique_fd server_fd(socket(AF_INET, SOCK_STREAM, IPPROTO_TCP));
-    if (!server_fd.is_valid()) {
-      result.set_err(fuchsia::gpu::agis::Status::INTERNAL_ERROR);
-      FX_LOGF(ERROR, "agis", "ComponentRegistryImpl::Register socket() failed with %s",
-              strerror(errno));
+    zx::socket gapii_layer_socket, agi_socket;
+    auto status = zx::socket::create(0u, &gapii_layer_socket, &agi_socket);
+    if (status != ZX_OK) {
+      FX_LOGF(ERROR, "agis",
+              "ComponentRegistryImpl::Register zx::socket::create() failed with %ull", status);
+      result.set_err(fuchsia::gpu::agis::Error::INTERNAL_ERROR);
       callback(std::move(result));
-      return;
-    }
-    struct in_addr in_addr {
-      .s_addr = INADDR_ANY
-    };
-    struct sockaddr_in server_addr {
-      .sin_family = AF_INET, .sin_port = 0, .sin_addr = in_addr
-    };
-    const int bind_rv = bind(server_fd.get(), reinterpret_cast<struct sockaddr *>(&server_addr),
-                             sizeof(server_addr));
-    if (bind_rv < 0) {
-      result.set_err(fuchsia::gpu::agis::Status::INTERNAL_ERROR);
-      FX_LOGF(ERROR, "agis", "ComponentRegistryImpl::Register BIND FAILED with %s",
-              strerror(errno));
-      callback(std::move(result));
-      return;
     }
 
-    struct sockaddr bound_addr = {};
-    socklen_t address_len = sizeof(struct sockaddr);
-    getsockname(server_fd.get(), &bound_addr, &address_len);
-    assert(address_len == sizeof(sockaddr_in));
-    struct sockaddr_in *bound_addr_in = reinterpret_cast<struct sockaddr_in *>(&bound_addr);
-    const uint16_t port = ntohs(bound_addr_in->sin_port);
-    if (port == 0) {
-      FX_LOG(ERROR, "agis", "ComponentRegistryImpl::Register BAD PORT");
-      result.set_err(fuchsia::gpu::agis::Status::INTERNAL_ERROR);
-      callback(std::move(result));
-      return;
-    }
-
-    // Remove |server_fd| from the descriptor table of this process and convert |server_fd| to a
-    // FIDL-transferrable handle.
-    zx::handle socket_handle;
-    if (fdio_fd_transfer_or_clone(server_fd.get(), socket_handle.reset_and_get_address()) !=
-        ZX_OK) {
-      result.set_err(fuchsia::gpu::agis::Status::INTERNAL_ERROR);
-      FX_LOG(ERROR, "agis", "ComponentRegistryImpl::Register socket fd to handle transfer failed");
-      callback(std::move(result));
-      return;
-    }
-
-    server_fd.release();
-    keys_.insert(process_id);
-    registry.insert(std::make_pair(process_id, RegistryValue(process_name, port)));
-    fuchsia::gpu::agis::ComponentRegistry_Register_Response response(std::move(socket_handle));
+    keys_.insert(id);
+    registry.insert(
+        std::make_pair(id, RegistryValue(process_koid, process_name, std::move(agi_socket))));
+    fuchsia::gpu::agis::ComponentRegistry_Register_Response response(std::move(gapii_layer_socket));
     result.set_response(std::move(response));
     callback(std::move(result));
   }
 
-  void Unregister(zx_koid_t process_id, UnregisterCallback callback) override {
+  void Unregister(uint64_t id, UnregisterCallback callback) override {
     fuchsia::gpu::agis::ComponentRegistry_Unregister_Result result;
-    size_t num_erased = registry.erase(process_id);
+    size_t num_erased = registry.erase(id);
     if (num_erased) {
-      keys_.erase(process_id);
+      keys_.erase(id);
       result.set_response(fuchsia::gpu::agis::ComponentRegistry_Unregister_Response());
     } else {
-      result.set_err(fuchsia::gpu::agis::Status::NOT_FOUND);
+      result.set_err(fuchsia::gpu::agis::Error::NOT_FOUND);
     }
     callback(std::move(result));
   }
@@ -134,7 +95,7 @@ class ComponentRegistryImpl final : public fuchsia::gpu::agis::ComponentRegistry
   fidl::BindingSet<fuchsia::gpu::agis::ComponentRegistry,
                    std::unique_ptr<fuchsia::gpu::agis::ComponentRegistry>>
       bindings_;
-  std::unordered_set<zx_koid_t> keys_;
+  std::unordered_set<uint64_t> keys_;
 };
 
 class ObserverImpl final : public fuchsia::gpu::agis::Observer {
@@ -144,9 +105,18 @@ class ObserverImpl final : public fuchsia::gpu::agis::Observer {
     std::vector<fuchsia::gpu::agis::Connection> connections;
     for (const auto &element : registry) {
       auto connection = ::fuchsia::gpu::agis::Connection::New();
-      connection->set_process_id(element.first);
+      connection->set_process_koid(element.second.process_koid);
       connection->set_process_name(element.second.process_name);
-      connection->set_port(element.second.port);
+      zx::socket agi_socket_clone;
+      zx_status_t status =
+          element.second.agi_socket.duplicate(ZX_RIGHT_SAME_RIGHTS, &agi_socket_clone);
+      if (status != ZX_OK) {
+        FX_LOGF(ERROR, "agis",
+                "ComponentRegistryImpl::Connections socket duplicate failed with %ull", status);
+        result.set_err(fuchsia::gpu::agis::Error::INTERNAL_ERROR);
+        callback(std::move(result));
+      }
+      connection->set_agi_socket(std::move(agi_socket_clone));
       connections.emplace_back(std::move(*connection));
     }
     fuchsia::gpu::agis::Observer_Connections_Response response(std::move(connections));

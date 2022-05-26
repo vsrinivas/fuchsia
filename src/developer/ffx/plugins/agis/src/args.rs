@@ -23,8 +23,11 @@ pub enum Operation {
 #[derive(FromArgs, PartialEq, Debug)]
 #[argh(subcommand, name = "register", description = "register a process with AGIS for tracing")]
 pub struct RegisterOp {
-    #[argh(positional, description = "process ID")]
-    pub process_id: u64,
+    #[argh(positional, description = "unique id for this registration")]
+    pub id: u64,
+
+    #[argh(positional, description = "process koid")]
+    pub process_koid: u64,
 
     #[argh(positional, description = "process name")]
     pub process_name: String,
@@ -32,8 +35,8 @@ pub struct RegisterOp {
 #[derive(FromArgs, PartialEq, Debug)]
 #[argh(subcommand, name = "unregister", description = "unregister a process from AGIS")]
 pub struct UnregisterOp {
-    #[argh(positional, description = "process ID")]
-    pub process_id: u64,
+    #[argh(positional, description = "id")]
+    pub id: u64,
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
