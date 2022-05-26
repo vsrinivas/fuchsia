@@ -624,12 +624,10 @@ where
 
         omp.set_stable(net.stable.unwrap_or(true));
 
-        Ok(self
-            .driver_state
-            .lock()
-            .ot_instance
-            .add_on_mesh_prefix(&omp)
-            .map_err(|e| ZxStatus::from(ErrorAdapter(e)))?)
+        Ok(self.driver_state.lock().ot_instance.add_on_mesh_prefix(&omp).map_err(|e| {
+            warn!("register_on_mesh_prefix: Error: {:?}", e);
+            ZxStatus::from(ErrorAdapter(e))
+        })?)
     }
 
     async fn unregister_on_mesh_prefix(
@@ -638,12 +636,10 @@ where
     ) -> ZxResult<()> {
         let prefix = ot::Ip6Prefix::new(subnet.addr.addr, subnet.prefix_len);
 
-        Ok(self
-            .driver_state
-            .lock()
-            .ot_instance
-            .remove_on_mesh_prefix(&prefix)
-            .map_err(|e| ZxStatus::from(ErrorAdapter(e)))?)
+        Ok(self.driver_state.lock().ot_instance.remove_on_mesh_prefix(&prefix).map_err(|e| {
+            warn!("unregister_on_mesh_prefix: Error: {:?}", e);
+            ZxStatus::from(ErrorAdapter(e))
+        })?)
     }
 
     async fn register_external_route(&self, net: ExternalRoute) -> ZxResult<()> {
@@ -663,12 +659,10 @@ where
             er.set_stable(stable);
         }
 
-        Ok(self
-            .driver_state
-            .lock()
-            .ot_instance
-            .add_external_route(&er)
-            .map_err(|e| ZxStatus::from(ErrorAdapter(e)))?)
+        Ok(self.driver_state.lock().ot_instance.add_external_route(&er).map_err(|e| {
+            warn!("register_external_route: Error: {:?}", e);
+            ZxStatus::from(ErrorAdapter(e))
+        })?)
     }
 
     async fn unregister_external_route(
@@ -677,12 +671,10 @@ where
     ) -> ZxResult<()> {
         let prefix = ot::Ip6Prefix::new(subnet.addr.addr, subnet.prefix_len);
 
-        Ok(self
-            .driver_state
-            .lock()
-            .ot_instance
-            .remove_external_route(&prefix)
-            .map_err(|e| ZxStatus::from(ErrorAdapter(e)))?)
+        Ok(self.driver_state.lock().ot_instance.remove_external_route(&prefix).map_err(|e| {
+            warn!("unregister_external_route: Error: {:?}", e);
+            ZxStatus::from(ErrorAdapter(e))
+        })?)
     }
 
     async fn get_local_on_mesh_prefixes(
@@ -710,6 +702,7 @@ where
     }
 
     async fn make_joinable(&self, _duration: fuchsia_zircon::Duration, _port: u16) -> ZxResult<()> {
+        warn!("make_joinable: NOT_SUPPORTED");
         return Err(ZxStatus::NOT_SUPPORTED);
     }
 
@@ -718,19 +711,27 @@ where
             .lock()
             .ot_instance
             .dataset_get_active_tlvs()
-            .map(ot::OperationalDatasetTlvs::into)
-            .map_err(|e| ZxStatus::from(ErrorAdapter(e)))
+            .map(Vec::<u8>::from)
+            .or_else(|e| match e {
+                ot::Error::NotFound => Ok(vec![]),
+                err => Err(err),
+            })
+            .map_err(|e| {
+                warn!("get_active_dataset_tlvs: Error: {:?}", e);
+                ZxStatus::from(ErrorAdapter(e))
+            })
     }
 
     async fn set_active_dataset_tlvs(&self, dataset: &[u8]) -> ZxResult {
-        let dataset = ot::OperationalDatasetTlvs::try_from_slice(dataset)
-            .map_err(|e| ZxStatus::from(ErrorAdapter(e)))?;
+        let dataset = ot::OperationalDatasetTlvs::try_from_slice(dataset).map_err(|e| {
+            warn!("set_active_dataset_tlvs: Error: {:?}", e);
+            ZxStatus::from(ErrorAdapter(e))
+        })?;
 
-        self.driver_state
-            .lock()
-            .ot_instance
-            .dataset_set_active_tlvs(&dataset)
-            .map_err(|e| ZxStatus::from(ErrorAdapter(e)))
+        self.driver_state.lock().ot_instance.dataset_set_active_tlvs(&dataset).map_err(|e| {
+            warn!("set_active_dataset_tlvs: Error: {:?}", e);
+            ZxStatus::from(ErrorAdapter(e))
+        })
     }
 
     async fn attach_all_nodes_to(&self, dataset: &[u8]) -> ZxResult {
@@ -748,10 +749,10 @@ where
             warn!("attach_all_nodes_to: Migrating all devices is not supported");
             Err(ZxStatus::NOT_SUPPORTED)
         } else {
-            driver_state
-                .ot_instance
-                .dataset_set_active_tlvs(&dataset)
-                .map_err(|e| ZxStatus::from(ErrorAdapter(e)))
+            driver_state.ot_instance.dataset_set_active_tlvs(&dataset).map_err(|e| {
+                warn!("attach_all_nodes_to: Error: {:?}", e);
+                ZxStatus::from(ErrorAdapter(e))
+            })
         }
     }
 }
