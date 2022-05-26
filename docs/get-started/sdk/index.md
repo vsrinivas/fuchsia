@@ -231,7 +231,7 @@ Do the following:
 
    This command may take a few minutes to download the image and product metadata.
 
-1. (Optional) Stop all running emulator instances:
+1. Stop all running emulator instances:
 
    ```posix-terminal
    tools/ffx emu stop --all
@@ -332,18 +332,18 @@ Do the following:
    Device:
        ...
    Build:
-       Version: "7.20220330.2.1"
+       Version: "8.20220425.3.1"
        Product: "workstation"
        Board: "qemu-x64"
-       Commit: "2022-03-30T14:02:43+00:00"
+       Commit: "2022-04-25T14:46:40+00:00"
    Last Reboot:
        Graceful: "false"
        Reason: "Cold"
    ```
 
    The example output above shows that the target device is running a `workstation.qemu-x64`
-   prebuilt image whose version is `7.20220330.2.1` (which indicates that this image was
-   built and published on March 30, 2022).
+   prebuilt image whose version is `8.20220425.3.1` (which indicates that this image was
+   built and published on April 25, 2022).
 
 1. Verify that you can stream the device logs:
 
@@ -422,6 +422,15 @@ Do the following:
    `ffx product-bundle get` command (previously in the
    [Start the emulator](#start-the-emulator) section above). This repository
    contains additional system packages for the `workstation.qemu-x64` prebuilt image.
+
+1. Clear the manifest of the `workstation.qemu-x64` repository:
+
+   Note: This [workaround][workaround-01]{:.external} is added to override the expiration
+   date set on the system packages (which is May 25, 2022).
+
+   ```posix-terminal
+   touch empty.manifest && $HOME/getting-started/bazel-getting-started/external/fuchsia_sdk/tools/pm publish -lp -f ./empty.manifest -repo $HOME/.local/share/Fuchsia/ffx/pbms/12774103790762561086/workstation.qemu-x64/packages
+   ```
 
 1. Start the Fuchsia package server:
 
@@ -1191,3 +1200,4 @@ is available for the Fuchsia package server.
 [google-test]: https://google.github.io/googletest/
 [ffx]: https://fuchsia.dev/reference/tools/sdk/ffx
 [fundamentals]: /docs/get-started/sdk/learn/README.md
+[workaround-01]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=100772
