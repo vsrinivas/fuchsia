@@ -169,7 +169,8 @@ load along with environmental factors like temperature.
 
 It is difficult to write regression tests for race conditions that don't have a high
 false-pass rate. If you can write a test that deterministically reproduces the issue,
-you should do that. Otherwise, if the data race was fixed by improving the locking
+you should do that. See [Write reproducible, deterministic tests][determinism]
+for tips. Otherwise, if the data race was fixed by improving the locking
 scheme used, you can add thread annotations as a regression test. For other races,
 you should attempt to design APIs that prevent the existence of the race condition.
 
@@ -199,3 +200,5 @@ change that.
     to write integration tests for the UEFI code. Introducing that
     infrastructure is tracked in fxbug.dev/34478. A testability exception is granted
     until fxbug.dev/34478 is addressed.
+
+[determinism]: /docs/contribute/testing/best-practices.md#write_reproducible_deterministic_tests

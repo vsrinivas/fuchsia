@@ -109,6 +109,37 @@ Further reading:
 - [What Makes a Good Test?](https://testing.googleblog.com/2014/03/testing-on-toilet-what-makes-good-test.html){:.external}
 - [Keep Tests Focused](https://testing.googleblog.com/2018/06/testing-on-toilet-keep-tests-focused.html){:.external}
 
+## Write reproducible, deterministic tests
+
+Tests should be deterministic, meaning every run of the test against the same
+revision of code produces the same result. If not, the test may become costly
+to maintain.
+
+Threaded or time-dependent code, random number generators (RNGs), and
+cross-component communication are common sources of nondeterminism.
+
+<span class="compare-better">Recommended</span>: Use these tips to write
+deterministic tests:
+
+  - For time-dependent tests, use fake or mocked clocks to provide
+    determinism. See [`fuchsia_async::Executor::new_with_fake_time`] and
+    [fake-clock].
+  - Threaded code must always use the proper synchronization primitives to
+    avoid flakes. Whenever possible, prefer single-threaded tests.
+  - Always provide a mechanism to inject seeds for RNGs and use them in
+    tests.
+  - Use mocks in component integration tests. See [Realm Builder][realm-builder].
+  - When working with tests that are sensitive to flaky behavior,
+    consider running tests multiple times to ensure that they consistently pass.
+    You can use repeat flags, such as[`--gtest_repeat`][gtest_test_flags]{:.external}
+    in GoogleTest and [`--test.count`][go_test_flags]{:.external} in Go, to do this.
+    Aim for at least 100-1000 runs locally if your test is prone to flakes before
+    merging.
+
+<span class="compare-worse">Not recommended</span>: Never use `sleep` in tests
+as a means of weak synchronization. You may use short sleeps when polling in a
+loop, between loop iterations.
+
 ## Test doubles: stubs, mocks, fakes
 
 Test doubles stand in for a real dependency of the code under test during a
@@ -227,3 +258,8 @@ Further reading:
 [utest-core]: /zircon/system/utest/core/README.md
 [vdso]: /docs/concepts/kernel/vdso.md
 [wikipedia-dependency-injection]: https://en.m.wikipedia.org/wiki/Dependency_injection
+[`fuchsia_async::Executor::new_with_fake_time`]: https://fuchsia.googlesource.com/fuchsia/+/a874276/src/lib/fuchsia-async/src/executor.rs#345
+[fake-clock]: https://fuchsia.googlesource.com/fuchsia/+/a874276/src/lib/fake-clock
+[rust_65218]: https://github.com/rust-lang/rust/issues/65218
+[go_test_flags]: https://golang.org/cmd/go/#hdr-Testing_flags
+[gtest_test_flags]: https://github.com/google/googletest/blob/main/docs/advanced.md#repeating-the-tests

@@ -133,23 +133,8 @@ Consider the following guidelines when writing tests:
    test assertions.
 1. Tests must be **deterministic**. Threaded or time-dependent code, Random
    Number Generators (RNGs), and cross-component communication are common
-   sources of nondeterminism.
-     + **Don't use `sleep`** in tests as a means of weak synchronization. Only
-       `sleep` when strictly necessary (e.g. when polling is required).
-     + Time-dependent tests can use **fake or mocked clocks** to provide
-       determinism. See [`fuchsia_async::Executor::new_with_fake_time`] and
-       [fake-clock].
-     + Threaded code must always use the proper synchronization primitives to
-       avoid flakes. Whenever possible, prefer single-threaded tests.
-     + Always provide a mechanism to **inject seeds for RNGs** and use them in
-       tests.
-     + Test for flakes locally whenever possible; use repeat flags in test
-       binaries ([`--test.count`][go_test_flags] in Go,
-       [`--gtest_repeat`][gtest_test_flags] for googletest) and aim for at least
-       100-1000 runs locally if your test is prone to flakes before merging.
-         > Rust test binaries currently don't have an equivalent flag, you may
-         need to resort to a bash loop or equivalent to get repeated runs. See
-         [#65218][rust_65218].
+   sources of nondeterminism. See [Write reproducible, deterministic tests][determinism]
+   for tips.
 1. **Avoid** tests with **hard-coded timeouts**. Prefer relying on the
    framework/fixture to time out tests.
 1. Prefer **hermetic tests**; test set-up routines should be explicit and
@@ -333,6 +318,7 @@ If you're working on changes that affect `fdio` and `third_party/go`, add:
 [change_detector_tests]: https://testing.googleblog.com/2015/01/testing-on-toilet-change-detector-tests.html
 [rust_65218]: https://github.com/rust-lang/rust/issues/65218
 [go_test_flags]: https://golang.org/cmd/go/#hdr-Testing_flags
-[gtest_test_flags]: https://github.com/google/googletest/blob/HEAD/googletest/docs/advanced.md#repeating-the-tests
+[gtest_test_flags]: https://github.com/google/googletest/blob/main/docs/advanced.md#repeating-the-tests
 [`fuchsia_async::Executor::new_with_fake_time`]: https://fuchsia.googlesource.com/fuchsia/+/a874276/src/lib/fuchsia-async/src/executor.rs#345
 [fake-clock]: https://fuchsia.googlesource.com/fuchsia/+/a874276/src/lib/fake-clock
+[determinism]: /docs/contribute/testing/best-practices.md#write_reproducible_deterministic_tests
