@@ -44,13 +44,19 @@
     }
   },
   {
+    "type": "CrashReportHandler",
+    "name": "crash_handler"
+  },
+  {
     "type": "PlatformMetrics",
     "name": "platform_metrics",
     "config": {
-      "cpu_temperature_poll_interval_s": 1
+      "cpu_temperature_poll_interval_s": 1,
+      "throttle_debounce_timeout_s": 60
     },
     "dependencies": {
-      "cpu_temperature_handler_node": "soc_pll_thermal"
+      "cpu_temperature_handler_node": "soc_pll_thermal",
+      "crash_report_handler_node": "crash_handler"
     }
   },
   {

@@ -6,16 +6,17 @@ use crate::error::PowerManagerError;
 use crate::log_if_err;
 use crate::message::{Message, MessageReturn};
 use crate::node::Node;
-use crate::types::{Celsius, Microseconds, Nanoseconds, Seconds};
+use crate::types::{Celsius, Seconds, ThermalLoad, Watts};
 use crate::utils::{get_current_timestamp, CobaltIntHistogram, CobaltIntHistogramConfig};
 use anyhow::{format_err, Result};
 use async_trait::async_trait;
 use fuchsia_async as fasync;
 use fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType};
-use fuchsia_inspect as inspect;
+use fuchsia_inspect::{self as inspect, HistogramProperty, LinearHistogramParams, Property};
 use futures::future::LocalBoxFuture;
 use futures::stream::FuturesUnordered;
 use futures::{FutureExt, StreamExt};
+use log::*;
 use power_manager_metrics::power_manager_metrics as power_metrics_registry;
 use power_metrics_registry::ThermalLimitResultMetricDimensionResult as thermal_limit_result;
 use serde_derive::Deserialize;
@@ -32,42 +33,36 @@ use std::rc::Rc;
 ///   pipelines.
 ///
 /// Handles Messages:
-///     - LogThrottleStart
-///     - LogThrottleEndMitigated
-///     - LogThrottleEndShutdown
+///     - LogPlatformMetric
 ///
 /// Sends Messages:
 ///     - ReadTemperature
+///     - FileCrashReport
 ///
 /// FIDL dependencies: N/A
 
+#[derive(Default)]
 pub struct PlatformMetricsBuilder<'a> {
     cpu_temperature_poll_interval: Seconds,
     cobalt_sender: Option<CobaltSender>,
     inspect_root: Option<&'a inspect::Node>,
-    cpu_temperature_handler_node: Rc<dyn Node>,
+    cpu_temperature_handler: Option<Rc<dyn Node>>,
+    crash_report_handler: Option<Rc<dyn Node>>,
+    throttle_debounce_timeout: Seconds,
 }
 
 impl<'a> PlatformMetricsBuilder<'a> {
-    #[cfg(test)]
-    fn new(cpu_temperature_handler_node: Rc<dyn Node>) -> Self {
-        Self {
-            cpu_temperature_handler_node,
-            cpu_temperature_poll_interval: Seconds(1.0),
-            cobalt_sender: None,
-            inspect_root: None,
-        }
-    }
-
     pub fn new_from_json(json_data: json::Value, nodes: &HashMap<String, Rc<dyn Node>>) -> Self {
         #[derive(Deserialize)]
         struct Config {
             cpu_temperature_poll_interval_s: f64,
+            throttle_debounce_timeout_s: f64,
         }
 
         #[derive(Deserialize)]
         struct Dependencies {
             cpu_temperature_handler_node: String,
+            crash_report_handler_node: String,
         }
 
         #[derive(Deserialize)]
@@ -79,29 +74,26 @@ impl<'a> PlatformMetricsBuilder<'a> {
         let data: JsonData = json::from_value(json_data).unwrap();
         Self {
             cpu_temperature_poll_interval: Seconds(data.config.cpu_temperature_poll_interval_s),
-            cpu_temperature_handler_node: nodes[&data.dependencies.cpu_temperature_handler_node]
-                .clone(),
+            cpu_temperature_handler: Some(
+                nodes[&data.dependencies.cpu_temperature_handler_node].clone(),
+            ),
             cobalt_sender: None,
             inspect_root: None,
+            crash_report_handler: Some(nodes[&data.dependencies.crash_report_handler_node].clone()),
+            throttle_debounce_timeout: Seconds(data.config.throttle_debounce_timeout_s),
         }
-    }
-
-    #[cfg(test)]
-    fn with_cobalt_sender(mut self, cobalt_sender: CobaltSender) -> Self {
-        self.cobalt_sender = Some(cobalt_sender);
-        self
-    }
-
-    #[cfg(test)]
-    fn with_inspect_root(mut self, root: &'a inspect::Node) -> Self {
-        self.inspect_root = Some(root);
-        self
     }
 
     pub fn build<'b>(
         self,
         futures_out: &FuturesUnordered<LocalBoxFuture<'b, ()>>,
     ) -> Result<Rc<PlatformMetrics>> {
+        let cpu_temperature_handler = self
+            .cpu_temperature_handler
+            .ok_or(format_err!("Must provide CPU TemperatureHandler"))?;
+        let crash_report_handler =
+            self.crash_report_handler.ok_or(format_err!("Must provide CrashReportHandler"))?;
+
         let cobalt_sender = self.cobalt_sender.unwrap_or_else(|| {
             let (cobalt_sender, sender_future) = CobaltConnector::default()
                 .serve(ConnectionType::project_id(power_metrics_registry::PROJECT_ID));
@@ -112,21 +104,26 @@ impl<'a> PlatformMetricsBuilder<'a> {
             cobalt_sender
         });
 
-        let historical_max_cpu_temperature = {
+        let inspect_platform_metrics = {
             let inspect_root = self.inspect_root.unwrap_or(inspect::component::inspector().root());
             let platform_metrics_node = inspect_root.create_child("platform_metrics");
             let historical_max_cpu_temperature =
                 HistoricalMaxCpuTemperature::new(&platform_metrics_node);
-
+            let throttle_history = InspectThrottleHistory::new(&platform_metrics_node);
+            let throttling_state = InspectThrottlingState::new(&platform_metrics_node);
             inspect_root.record(platform_metrics_node);
-            historical_max_cpu_temperature
+
+            InspectPlatformMetrics {
+                historical_max_cpu_temperature,
+                throttle_history,
+                throttling_state,
+            }
         };
 
         let node = Rc::new(PlatformMetrics {
-            inner: RefCell::new(PlatformMetricsInner {
+            inner: Rc::new(RefCell::new(PlatformMetricsInner {
                 cobalt: CobaltPlatformMetrics {
                     sender: cobalt_sender,
-                    throttle_start_time: None,
                     temperature_histogram: CobaltIntHistogram::new(CobaltIntHistogramConfig {
                         floor: power_metrics_registry::RAW_TEMPERATURE_INT_BUCKETS_FLOOR,
                         num_buckets:
@@ -134,13 +131,17 @@ impl<'a> PlatformMetricsBuilder<'a> {
                         step_size: power_metrics_registry::RAW_TEMPERATURE_INT_BUCKETS_STEP_SIZE,
                     }),
                 },
-                inspect: InspectPlatformMetrics { historical_max_cpu_temperature },
-            }),
-            cpu_temperature_handler: self.cpu_temperature_handler_node,
+                inspect: inspect_platform_metrics,
+                throttle_debounce_task: None,
+            })),
+            cpu_temperature_handler,
             cpu_temperature_poll_interval: self.cpu_temperature_poll_interval,
+            crash_report_handler,
+            throttle_debounce_timeout: self.throttle_debounce_timeout,
         });
 
         futures_out.push(node.clone().cpu_temperature_polling_loop());
+
         Ok(node)
     }
 }
@@ -151,20 +152,32 @@ pub struct PlatformMetrics {
     cpu_temperature_handler: Rc<dyn Node>,
     cpu_temperature_poll_interval: Seconds,
 
-    inner: RefCell<PlatformMetricsInner>,
+    /// The node used for filing a crash report. It is expected that this node responds to the
+    /// `FileCrashReport` message.
+    crash_report_handler: Rc<dyn Node>,
+
+    /// Time to wait after receiving the `ThrottlingResultMitigated` event before updating metrics.
+    /// Used to reduce noise when a device is hovering around the throttling threshold.
+    throttle_debounce_timeout: Seconds,
+
+    /// Mutable inner state.
+    inner: Rc<RefCell<PlatformMetricsInner>>,
 }
 
 struct PlatformMetricsInner {
+    /// Holds structures for tracking/recording Cobalt metrics.
     cobalt: CobaltPlatformMetrics,
+
+    /// Holds structures for tracking/recording Inspect metrics.
     inspect: InspectPlatformMetrics,
+
+    /// Holds the debounce timer task, if one is active.
+    throttle_debounce_task: Option<fasync::Task<()>>,
 }
 
 struct CobaltPlatformMetrics {
     /// Sends Cobalt events to the Cobalt FIDL service.
     sender: CobaltSender,
-
-    /// Timestamp of the start of a throttling duration.
-    throttle_start_time: Option<Nanoseconds>,
 
     /// Histogram of raw CPU temperature readings.
     temperature_histogram: CobaltIntHistogram,
@@ -174,6 +187,13 @@ struct InspectPlatformMetrics {
     /// Tracks the max CPU temperature observed over the last 60 seconds and writes the most recent
     /// two values to Inspect.
     historical_max_cpu_temperature: HistoricalMaxCpuTemperature,
+
+    /// Tracks the current throttling state and writes it into Inspect.
+    throttling_state: InspectThrottlingState,
+
+    /// Tracks the last 10 periods of thermal throttling (start/end times and a histogram of thermal
+    /// loads) and writes them into Inspect.
+    throttle_history: InspectThrottleHistory,
 }
 
 impl PlatformMetrics {
@@ -220,81 +240,129 @@ impl PlatformMetrics {
         data.inspect.historical_max_cpu_temperature.log_raw_cpu_temperature(temperature);
     }
 
-    /// Log the start of a thermal throttling duration. Since the timestamp is recorded and used to
-    /// track duration of throttling events, it is invalid to call this function consecutively
-    /// without first ending the existing throttling duration by calling
-    /// `handle_log_throttle_end_[mitigated|shutdown]` first. If the invalid scenario is
-    /// encountered, the function will panic on debug builds or have no effect otherwise.
-    fn handle_log_throttle_start(
+    fn handle_log_platform_metric(
         &self,
-        timestamp: Nanoseconds,
+        metric: &PlatformMetric,
     ) -> Result<MessageReturn, PowerManagerError> {
-        let mut data = self.inner.borrow_mut();
-        crate::log_if_false_and_debug_assert!(
-            data.cobalt.throttle_start_time.is_none(),
-            "handle_log_throttle_start called before ending previous throttle"
-        );
-
-        // Record the new timestamp only if it was previously None
-        data.cobalt.throttle_start_time = data.cobalt.throttle_start_time.or(Some(timestamp));
-
-        Ok(MessageReturn::LogThrottleStart)
-    }
-
-    /// Log the end of a thermal throttling duration due to successful mitigation. To track the
-    /// elapsed time of a throttling event, it is expected that `handle_log_throttle_start` is
-    /// called first. Failure to do so results in a panic on debug builds or missed Cobalt events
-    /// for the elapsed throttling time metric otherwise.
-    fn handle_log_throttle_end_mitigated(
-        &self,
-        timestamp: Nanoseconds,
-    ) -> Result<MessageReturn, PowerManagerError> {
-        crate::log_if_false_and_debug_assert!(
-            self.inner.borrow().cobalt.throttle_start_time.is_some(),
-            "handle_log_throttle_end_mitigated called without 
-            first calling handle_log_throttle_start"
-        );
-        self.log_throttle_end_with_result(thermal_limit_result::Mitigated, timestamp);
-        Ok(MessageReturn::LogThrottleEndMitigated)
-    }
-
-    /// Log the end of a thermal throttling duration due to a shutdown. To track the elapsed time of
-    /// a throttling event, it is expected that `handle_log_throttle_start` is called first.
-    /// However, this is not strictly enforced because in a theoretical scenario we could see a
-    /// LogThrottleEnd* message from the ThermalShutdown node without the ThermalPolicy node having
-    /// first sent a LogThrottleStart message.
-    fn handle_log_throttle_end_shutdown(
-        &self,
-        timestamp: Nanoseconds,
-    ) -> Result<MessageReturn, PowerManagerError> {
-        self.log_throttle_end_with_result(thermal_limit_result::Shutdown, timestamp);
-        Ok(MessageReturn::LogThrottleEndShutdown)
-    }
-
-    /// Log the end of a thermal throttling duration with a specified reason. To track the elapsed
-    /// time of a throttling event, it is expected that `handle_log_throttle_start` is called first.
-    /// However, this is not strictly enforced because of a special case described in
-    /// `handle_log_throttle_end_shutdown`.
-    fn log_throttle_end_with_result(&self, result: thermal_limit_result, timestamp: Nanoseconds) {
-        let mut data = self.inner.borrow_mut();
-
-        if let Some(time) = data.cobalt.throttle_start_time.take() {
-            let elapsed_time = timestamp - time;
-            if elapsed_time >= Nanoseconds(0) {
-                data.cobalt.sender.log_elapsed_time(
-                    power_metrics_registry::THERMAL_LIMITING_ELAPSED_TIME_METRIC_ID,
-                    (),
-                    Microseconds::from(elapsed_time).0,
-                );
-            } else {
-                crate::log_if_false_and_debug_assert!(false, "Elapsed time must not be negative");
+        match metric {
+            PlatformMetric::ThrottlingActive => self.handle_log_throttling_active(),
+            PlatformMetric::ThrottlingResultMitigated => {
+                self.handle_log_throttling_result_mitigated()
             }
-        }
+            PlatformMetric::ThrottlingResultShutdown => {
+                self.handle_log_throttling_result_shutdown()
+            }
+            PlatformMetric::ThermalLoad(thermal_load, driver_path) => {
+                self.handle_log_thermal_load(*thermal_load, &driver_path)
+            }
 
+            // TODO(fxbug.dev/98245): log these metrics in a useful way
+            PlatformMetric::AvailablePower(_) | PlatformMetric::CpuPowerUsage(_, _) => {}
+        };
+
+        Ok(MessageReturn::LogPlatformMetric)
+    }
+
+    /// Log the start of thermal throttling.
+    ///
+    /// The expectation is that this function should not be called consecutively without first
+    /// ending the previous throttling period by calling `handle_log_throttling_result_mitigated` or
+    /// `handle_log_throttling_result_shutdown`.
+    fn handle_log_throttling_active(&self) {
+        info!("Throttling active");
+
+        let mut data = self.inner.borrow_mut();
+        data.throttle_debounce_task = None;
+        data.inspect.throttling_state.set_active();
+        data.inspect.throttle_history.set_active();
+    }
+
+    /// Log the end of thermal throttling due to successful mitigation.
+    ///
+    /// Calling this function updates the current throttling state to "debounce" and starts a new
+    /// `throttle_debounce_task` which will further update metrics and file a crash report after
+    /// `throttle_debounce_timeout` has elapsed.
+    fn handle_log_throttling_result_mitigated(&self) {
+        info!("Throttling result: mitigated");
+        self.inner.borrow_mut().inspect.throttling_state.set_debounce();
+
+        // Clone the required data to move into the new `throttle_debounce_task`
+        let throttle_debounce_timeout = self.throttle_debounce_timeout;
+        let crash_report_handler = self.crash_report_handler.clone();
+        let inner = self.inner.clone();
+
+        self.inner.borrow_mut().throttle_debounce_task = Some(fasync::Task::local(async move {
+            info!("Starting throttle debounce timer ({:?})", throttle_debounce_timeout);
+            fasync::Timer::new(fasync::Time::after(throttle_debounce_timeout.into())).await;
+            info!("Throttling debounce timer expired");
+
+            // File a crash report with the signature "fuchsia-thermal-throttle".
+            log_if_err!(
+                crash_report_handler
+                    .handle_message(&Message::FileCrashReport(
+                        "fuchsia-thermal-throttle".to_string()
+                    ))
+                    .await,
+                "Failed to file crash report"
+            );
+
+            Self::log_throttling_result(inner, thermal_limit_result::Mitigated);
+        }));
+    }
+
+    /// Log the end of thermal throttling due to a shutdown.
+    fn handle_log_throttling_result_shutdown(&self) {
+        info!("Throttling result: shutdown");
+        Self::log_throttling_result(self.inner.clone(), thermal_limit_result::Shutdown);
+    }
+
+    /// Log the end of thermal throttling with a specified reason.
+    ///
+    /// Calling this function updates the throttling properties in Inspect and dispatches a new
+    /// Cobalt event for the `thermal_limit_result` metric.
+    fn log_throttling_result(
+        inner: Rc<RefCell<PlatformMetricsInner>>,
+        result: thermal_limit_result,
+    ) {
+        let mut data = inner.borrow_mut();
+        data.inspect.throttling_state.set_inactive();
+        data.inspect.throttle_history.set_inactive();
         data.cobalt
             .sender
             .log_event(power_metrics_registry::THERMAL_LIMIT_RESULT_METRIC_ID, vec![result as u32]);
     }
+
+    /// Log a thermal load value.
+    ///
+    /// Calling this function updates the thermal load histogram being tracked by `throttle_history`
+    /// while thermal throttling is active.
+    ///
+    /// `driver_path` is provided to eventually record multiple thermal load histograms, but it is
+    /// not currently used.
+    fn handle_log_thermal_load(&self, thermal_load: ThermalLoad, _driver_path: &str) {
+        self.inner.borrow_mut().inspect.throttle_history.record_thermal_load(thermal_load);
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub enum PlatformMetric {
+    /// Marks the start of thermal throttling.
+    ThrottlingActive,
+
+    /// Marks the end of thermal throttling due to successful mitigation.
+    ThrottlingResultMitigated,
+
+    /// Marks the end of thermal throttling due to critical shutdown.
+    ThrottlingResultShutdown,
+
+    /// Records a thermal load value for the given sensor path.
+    ThermalLoad(crate::types::ThermalLoad, String),
+
+    /// Records the current available power.
+    AvailablePower(Watts),
+
+    /// Records an amount of power used by the given CPU domain.
+    CpuPowerUsage(String, Watts),
 }
 
 #[async_trait(?Send)]
@@ -305,13 +373,7 @@ impl Node for PlatformMetrics {
 
     async fn handle_message(&self, msg: &Message) -> Result<MessageReturn, PowerManagerError> {
         match msg {
-            Message::LogThrottleStart(timestamp) => self.handle_log_throttle_start(*timestamp),
-            Message::LogThrottleEndMitigated(timestamp) => {
-                self.handle_log_throttle_end_mitigated(*timestamp)
-            }
-            Message::LogThrottleEndShutdown(timestamp) => {
-                self.handle_log_throttle_end_shutdown(*timestamp)
-            }
+            Message::LogPlatformMetric(metric) => self.handle_log_platform_metric(metric),
             _ => Err(PowerManagerError::Unsupported),
         }
     }
@@ -388,6 +450,155 @@ impl HistoricalMaxCpuTemperature {
         let time = Seconds::from(get_current_timestamp()).0 as i64;
         let temperature = temperature.0 as i64;
         self.entries.push_back(self.inspect_node.create_int(time.to_string(), temperature));
+    }
+}
+
+/// Tracks the current thermal throttling state and writes it into Inspect.
+struct InspectThrottlingState {
+    throttling_state: inspect::StringProperty,
+}
+
+impl InspectThrottlingState {
+    const THROTTLING_ACTIVE: &'static str = "throttled";
+    const THROTTLING_INACTIVE: &'static str = "not throttled";
+    const THROTTLING_DEBOUNCE: &'static str = "debounce";
+
+    fn new(platform_metrics_root: &inspect::Node) -> Self {
+        let throttling_state =
+            platform_metrics_root.create_string("throttling_state", Self::THROTTLING_INACTIVE);
+        Self { throttling_state }
+    }
+
+    fn set_active(&self) {
+        self.throttling_state.set(Self::THROTTLING_ACTIVE);
+    }
+
+    fn set_inactive(&self) {
+        self.throttling_state.set(Self::THROTTLING_INACTIVE);
+    }
+
+    fn set_debounce(&self) {
+        self.throttling_state.set(Self::THROTTLING_DEBOUNCE);
+    }
+}
+
+/// Captures and retains data from previous throttling events in a rolling buffer.
+struct InspectThrottleHistory {
+    /// The Inspect node that will be used as the parent for throttle event child nodes.
+    root_node: inspect::Node,
+
+    /// A running count of the number of throttle events ever captured in `throttle_history_list`.
+    /// The count is always increasing, even when older throttle events are removed from the list.
+    entry_count: usize,
+
+    /// The maximum number of throttling events to keep in `throttle_history_list`.
+    capacity: usize,
+
+    /// State to track if throttling is currently active (used to ignore readings when throttling
+    /// isn't active).
+    throttling_active: bool,
+
+    /// List to store the throttle entries.
+    throttle_history_list: VecDeque<InspectThrottleHistoryEntry>,
+}
+
+impl InspectThrottleHistory {
+    /// Rolling number of throttle events to store.
+    const NUM_THROTTLE_EVENTS: usize = 10;
+
+    fn new(platform_metrics_root: &inspect::Node) -> Self {
+        Self::new_with_throttle_event_count(platform_metrics_root, Self::NUM_THROTTLE_EVENTS)
+    }
+
+    fn new_with_throttle_event_count(
+        platform_metrics_root: &inspect::Node,
+        throttle_event_count: usize,
+    ) -> Self {
+        Self {
+            root_node: platform_metrics_root.create_child("throttle_history"),
+            entry_count: 0,
+            capacity: throttle_event_count,
+            throttling_active: false,
+            throttle_history_list: VecDeque::with_capacity(throttle_event_count),
+        }
+    }
+
+    /// Mark the start of throttling.
+    fn set_active(&mut self) {
+        // Must have ended previous throttling
+        if self.throttling_active {
+            debug_assert!(false, "Must end previous throttling before setting active again");
+            return;
+        }
+
+        // Begin a new throttling entry
+        self.new_entry();
+
+        self.throttling_active = true;
+        self.throttle_history_list
+            .back()
+            .unwrap()
+            .throttle_start_time
+            .set(Seconds::from(get_current_timestamp()).0 as i64);
+    }
+
+    /// Mark the end of throttling.
+    fn set_inactive(&mut self) {
+        if self.throttling_active {
+            self.throttle_history_list
+                .back()
+                .unwrap()
+                .throttle_end_time
+                .set(Seconds::from(get_current_timestamp()).0 as i64);
+            self.throttling_active = false
+        }
+    }
+
+    /// Begin a new throttling entry. Removes the oldest entry once we've reached
+    /// InspectData::NUM_THROTTLE_EVENTS number of entries.
+    fn new_entry(&mut self) {
+        if self.throttle_history_list.len() >= self.capacity {
+            self.throttle_history_list.pop_front();
+        }
+
+        let node = self.root_node.create_child(&self.entry_count.to_string());
+        let entry = InspectThrottleHistoryEntry::new(node);
+        self.throttle_history_list.push_back(entry);
+        self.entry_count += 1;
+    }
+
+    /// Record the current thermal load. No-op unless throttling has been set active.
+    fn record_thermal_load(&self, thermal_load: ThermalLoad) {
+        if self.throttling_active {
+            self.throttle_history_list
+                .back()
+                .unwrap()
+                .thermal_load_hist
+                .insert(thermal_load.0.into());
+        }
+    }
+}
+
+/// Stores data for a single throttle event.
+struct InspectThrottleHistoryEntry {
+    _node: inspect::Node,
+    throttle_start_time: inspect::IntProperty,
+    throttle_end_time: inspect::IntProperty,
+    thermal_load_hist: inspect::UintLinearHistogramProperty,
+}
+
+impl InspectThrottleHistoryEntry {
+    /// Creates a new InspectThrottleHistoryEntry which creates new properties under `node`.
+    fn new(node: inspect::Node) -> Self {
+        Self {
+            throttle_start_time: node.create_int("throttle_start_time", 0),
+            throttle_end_time: node.create_int("throttle_end_time", 0),
+            thermal_load_hist: node.create_uint_linear_histogram(
+                "thermal_load_hist",
+                LinearHistogramParams { floor: 0, step_size: 5, buckets: 19 },
+            ),
+            _node: node,
+        }
     }
 }
 
@@ -534,13 +745,81 @@ mod historical_max_cpu_temperature_tests {
 }
 
 #[cfg(test)]
+mod inspect_throttle_history_tests {
+    use super::*;
+    use fuchsia_inspect::assert_data_tree;
+
+    /// Verifies that `InspectThrottleHistory` correctly rolls old entries out of its buffer.
+    #[test]
+    fn test_inspect_throttle_history_window() {
+        // Need an executor for the `get_current_timestamp()` calls
+        let executor = fasync::TestExecutor::new_with_fake_time().unwrap();
+
+        // Create a InspectThrottleHistory with capacity for only one throttling entry
+        let inspector = inspect::Inspector::new();
+        let mut throttle_history =
+            InspectThrottleHistory::new_with_throttle_event_count(inspector.root(), 1);
+
+        // Add a throttling entry
+        executor.set_fake_time(Seconds(0.0).into());
+        throttle_history.set_active();
+        executor.set_fake_time(Seconds(1.0).into());
+        throttle_history.set_inactive();
+
+        assert_data_tree!(
+            inspector,
+            root: {
+                throttle_history: {
+                    "0": contains {
+                        throttle_start_time: 0i64,
+                        throttle_end_time: 1i64,
+                    },
+                }
+            }
+        );
+
+        // Add a new throttling entry -- the old one should now be rolled out
+        executor.set_fake_time(Seconds(2.0).into());
+        throttle_history.set_active();
+        executor.set_fake_time(Seconds(3.0).into());
+        throttle_history.set_inactive();
+
+        assert_data_tree!(
+            inspector,
+            root: {
+                throttle_history: {
+                    "1": contains {
+                        throttle_start_time: 2i64,
+                        throttle_end_time: 3i64,
+                    },
+                }
+            }
+        );
+    }
+
+    /// Tests that calling `set_active` twice without first calling `set_inactive` causes a panic in
+    /// the debug configuration.
+    #[fasync::run_singlethreaded(test)]
+    #[should_panic(expected = "Must end previous throttling before setting active again")]
+    #[cfg(debug_assertions)]
+    async fn test_debug_panic_double_set_active() {
+        let mut throttle_history = InspectThrottleHistory::new(&inspect::Inspector::new().root());
+        throttle_history.set_active();
+        throttle_history.set_active();
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use crate::test::mock_node::{create_dummy_node, MessageMatcher, MockNodeMaker};
     use crate::types::Seconds;
+    use crate::utils::run_all_tasks_until_stalled::run_all_tasks_until_stalled;
     use crate::{msg_eq, msg_ok_return};
+    use assert_matches::assert_matches;
+    use async_utils::PollExt as _;
     use fidl_fuchsia_cobalt::{CobaltEvent, Event, EventPayload};
-    use fuchsia_inspect::assert_data_tree;
+    use fuchsia_inspect::{assert_data_tree, HistogramAssertion};
 
     /// Tests that well-formed configuration JSON does not panic the `new_from_json` function.
     #[fasync::run_singlethreaded(test)]
@@ -549,111 +828,169 @@ mod tests {
             "type": "PlatformMetrics",
             "name": "platform_metrics",
             "config": {
-              "cpu_temperature_poll_interval_s": 1
+              "cpu_temperature_poll_interval_s": 1,
+              "throttle_debounce_timeout_s": 60
             },
             "dependencies": {
-              "cpu_temperature_handler_node": "soc_pll_thermal"
+              "cpu_temperature_handler_node": "soc_pll_thermal",
+              "crash_report_handler_node": "crash_report_handler"
             }
         });
 
         let mut nodes: HashMap<String, Rc<dyn Node>> = HashMap::new();
         nodes.insert("soc_pll_thermal".to_string(), create_dummy_node());
+        nodes.insert("crash_report_handler".to_string(), create_dummy_node());
         let _ = PlatformMetricsBuilder::new_from_json(json_data, &nodes);
     }
 
-    /// Tests that we can send `LogThrottleStart` a second time if we first send `LogThrottleEnd`.
-    #[fasync::run_singlethreaded(test)]
-    async fn test_throttle_restart() {
-        let platform_metrics = PlatformMetricsBuilder::new(create_dummy_node())
-            .build(&FuturesUnordered::new())
-            .unwrap();
+    /// Tests for the correct behavior when the `ThrottlingActive` metric is received:
+    ///     - update `throttling_state`
+    ///     - update `throttle_history`
+    #[test]
+    fn test_log_throttling_active() {
+        let mut executor = fasync::TestExecutor::new_with_fake_time().unwrap();
 
-        assert!(platform_metrics
-            .handle_message(&Message::LogThrottleStart(Nanoseconds(1000)))
-            .await
-            .is_ok());
-        assert!(platform_metrics
-            .handle_message(&Message::LogThrottleEndMitigated(Nanoseconds(2000)))
-            .await
-            .is_ok());
-        assert!(platform_metrics
-            .handle_message(&Message::LogThrottleStart(Nanoseconds(3000)))
-            .await
-            .is_ok());
+        let inspector = inspect::Inspector::new();
+        let platform_metrics = PlatformMetricsBuilder {
+            cpu_temperature_handler: Some(create_dummy_node()),
+            crash_report_handler: Some(create_dummy_node()),
+            inspect_root: Some(inspector.root()),
+            ..Default::default()
+        }
+        .build(&FuturesUnordered::new())
+        .unwrap();
+
+        executor.set_fake_time(Seconds(10.0).into());
+        assert_matches!(
+            executor
+                .run_until_stalled(
+                    &mut platform_metrics.handle_message(&Message::LogPlatformMetric(
+                        PlatformMetric::ThrottlingActive
+                    ))
+                )
+                .unwrap(),
+            Ok(MessageReturn::LogPlatformMetric)
+        );
+
+        // Verify `throttle_history` entry has `throttle_start_time` populated and
+        // `throttling_state` shows "active"
+        assert_data_tree!(
+            inspector,
+            root: {
+                platform_metrics: {
+                    throttle_history: {
+                        "0": contains {
+                            throttle_start_time: 10i64,
+                            throttle_end_time: 0i64,
+                        },
+                    },
+                    throttling_state: "throttled",
+                    historical_max_cpu_temperature_c: {}
+                }
+            }
+        );
     }
 
-    /// Tests that sending `LogThrottleStart` twice without first calling `LogThrottleEnd` causes a
-    /// panic in the debug configuration.
-    #[fasync::run_singlethreaded(test)]
-    #[should_panic(expected = "throttle_start called before ending previous throttle")]
-    #[cfg(debug_assertions)]
-    async fn test_double_start_panic() {
-        let platform_metrics = PlatformMetricsBuilder::new(create_dummy_node())
-            .build(&FuturesUnordered::new())
-            .unwrap();
+    /// Tests for the correct behavior when the `ThrottlingResultMitigated` metric is received:
+    ///     - throttle debounce works as expected
+    ///     - dispatch a Cobalt event for the `thermal_limit_result` metric
+    ///     - update `throttling_state`
+    ///     - update `throttle_history`
+    ///     - crash report filed
+    #[test]
+    fn test_log_throttling_result_mitigated() {
+        let mut executor = fasync::TestExecutor::new_with_fake_time().unwrap();
 
-        assert!(platform_metrics
-            .handle_message(&Message::LogThrottleStart(Nanoseconds(0)))
-            .await
-            .is_ok());
+        let mut mock_maker = MockNodeMaker::new();
+        let crash_report_handler = mock_maker.make(
+            "MockCrashReportHandler",
+            vec![(
+                msg_eq!(FileCrashReport("fuchsia-thermal-throttle".to_string())),
+                msg_ok_return!(FileCrashReport),
+            )],
+        );
 
-        // This second consecutive LogThrottleStart should cause the expected panic
-        let _ = platform_metrics.handle_message(&Message::LogThrottleStart(Nanoseconds(0))).await;
-    }
+        let inspector = inspect::Inspector::new();
+        let (cobalt_sender, mut cobalt_receiver) = futures::channel::mpsc::channel(10);
+        let platform_metrics = PlatformMetricsBuilder {
+            cpu_temperature_handler: Some(create_dummy_node()),
+            crash_report_handler: Some(crash_report_handler),
+            throttle_debounce_timeout: Seconds(5.0),
+            cobalt_sender: Some(CobaltSender::new(cobalt_sender)),
+            inspect_root: Some(inspector.root()),
+            ..Default::default()
+        }
+        .build(&FuturesUnordered::new())
+        .unwrap();
 
-    /// Tests that a negative throttling elapsed time metric panics in the debug configuration.
-    #[fasync::run_singlethreaded(test)]
-    #[should_panic(expected = "Elapsed time must not be negative")]
-    #[cfg(debug_assertions)]
-    async fn test_negative_elapsed_time() {
-        let platform_metrics = PlatformMetricsBuilder::new(create_dummy_node())
-            .build(&FuturesUnordered::new())
-            .unwrap();
+        executor.set_fake_time(Seconds(10.0).into());
+        assert_matches!(
+            executor
+                .run_until_stalled(
+                    &mut platform_metrics.handle_message(&Message::LogPlatformMetric(
+                        PlatformMetric::ThrottlingActive
+                    ))
+                )
+                .unwrap(),
+            Ok(MessageReturn::LogPlatformMetric)
+        );
 
-        assert!(platform_metrics
-            .handle_message(&Message::LogThrottleStart(Nanoseconds(1000)))
-            .await
-            .is_ok());
+        executor.set_fake_time(Seconds(11.0).into());
+        assert_matches!(
+            executor
+                .run_until_stalled(&mut platform_metrics.handle_message(
+                    &Message::LogPlatformMetric(PlatformMetric::ThrottlingResultMitigated)
+                ))
+                .unwrap(),
+            Ok(MessageReturn::LogPlatformMetric)
+        );
 
-        // Sending an earlier time here should cause the expected panic
-        let _ = platform_metrics
-            .handle_message(&Message::LogThrottleEndMitigated(Nanoseconds(900)))
-            .await;
-    }
-
-    /// Tests that two Cobalt events for thermal_limiting_elapsed_time and thermal_limit_result are
-    /// dispatched after log calls corresponding to a single throttling duration.
-    #[fasync::run_singlethreaded(test)]
-    async fn test_throttle_elapsed_time() {
-        let (sender, mut receiver) = futures::channel::mpsc::channel(10);
-        let platform_metrics = PlatformMetricsBuilder::new(create_dummy_node())
-            .with_cobalt_sender(CobaltSender::new(sender))
-            .build(&FuturesUnordered::new())
-            .unwrap();
-
-        platform_metrics
-            .handle_message(&Message::LogThrottleStart(Seconds(0.0).into()))
-            .await
-            .unwrap();
-        platform_metrics
-            .handle_message(&Message::LogThrottleEndMitigated(Seconds(1.0).into()))
-            .await
-            .unwrap();
-
-        // Verify the expected Cobalt event for the thermal_limiting_elapsed_time metric
-        assert_eq!(
-            receiver.try_next().unwrap().unwrap(),
-            CobaltEvent {
-                metric_id: power_metrics_registry::THERMAL_LIMITING_ELAPSED_TIME_METRIC_ID,
-                event_codes: vec![],
-                component: None,
-                payload: EventPayload::ElapsedMicros(Microseconds::from(Seconds(1.0)).0)
+        assert_data_tree!(
+            inspector,
+            root: {
+                platform_metrics: {
+                    throttle_history: {
+                        "0": contains {
+                            throttle_start_time: 10i64,
+                            throttle_end_time: 0i64,
+                        },
+                    },
+                    throttling_state: "debounce",
+                    historical_max_cpu_temperature_c: {}
+                }
             }
         );
 
-        // Verify the expected Cobalt event for the thermal_limit_result metric
+        // Run `throttle_debounce_task`, which stalls at the timer
+        run_all_tasks_until_stalled(&mut executor);
+
+        // Wake the `throttle_debounce_task` timer
+        let expected_debounce_finish_time = Seconds(16.0).into();
+        assert_eq!(executor.wake_next_timer().unwrap(), expected_debounce_finish_time);
+        executor.set_fake_time(expected_debounce_finish_time);
+
+        // Continue running `throttle_debounce_task`, which will now complete
+        run_all_tasks_until_stalled(&mut executor);
+
+        assert_data_tree!(
+            inspector,
+            root: {
+                platform_metrics: {
+                    throttle_history: {
+                        "0": contains {
+                            throttle_start_time: 10i64,
+                            throttle_end_time: 16i64,
+                        },
+                    },
+                    throttling_state: "not throttled",
+                    historical_max_cpu_temperature_c: {}
+                }
+            }
+        );
+
+        // Verify the expected Cobalt event for the `thermal_limit_result` metric
         assert_eq!(
-            receiver.try_next().unwrap().unwrap(),
+            cobalt_receiver.try_next().unwrap().unwrap(),
             CobaltEvent {
                 metric_id: power_metrics_registry::THERMAL_LIMIT_RESULT_METRIC_ID,
                 event_codes: vec![thermal_limit_result::Mitigated as u32],
@@ -663,118 +1000,310 @@ mod tests {
         );
 
         // Verify there were no more dispatched Cobalt events
-        assert!(receiver.try_next().is_err());
+        assert!(cobalt_receiver.try_next().is_err());
     }
 
-    /// Tests that a Cobalt event for thermal_limit_result is dispatched after the node receives a
-    /// LogThrottleEndShutdown message.
-    #[fasync::run_singlethreaded(test)]
-    async fn test_throttle_end_shutdown() {
-        let (sender, mut receiver) = futures::channel::mpsc::channel(10);
-        let platform_metrics = PlatformMetricsBuilder::new(create_dummy_node())
-            .with_cobalt_sender(CobaltSender::new(sender))
-            .build(&FuturesUnordered::new())
-            .unwrap();
+    /// Tests for the correct behavior when the `ThrottlingResultShutdown` metric is received:
+    ///     - dispatch a Cobalt event for the `thermal_limit_result` metric
+    ///     - update `throttling_state`
+    ///     - update `throttle_history`
+    #[test]
+    fn test_log_throttling_result_shutdown() {
+        let mut executor = fasync::TestExecutor::new_with_fake_time().unwrap();
 
-        platform_metrics
-            .handle_message(&Message::LogThrottleEndShutdown(Seconds(1.0).into()))
-            .await
-            .unwrap();
+        let inspector = inspect::Inspector::new();
+        let (cobalt_sender, mut cobalt_receiver) = futures::channel::mpsc::channel(10);
+        let platform_metrics = PlatformMetricsBuilder {
+            cpu_temperature_handler: Some(create_dummy_node()),
+            crash_report_handler: Some(create_dummy_node()),
+            cobalt_sender: Some(CobaltSender::new(cobalt_sender)),
+            inspect_root: Some(inspector.root()),
+            ..Default::default()
+        }
+        .build(&FuturesUnordered::new())
+        .unwrap();
 
-        // Verify the expected Cobalt event for the thermal_limit_result metric
-        assert_eq!(
-            receiver.try_next().unwrap().unwrap(),
-            CobaltEvent {
-                metric_id: power_metrics_registry::THERMAL_LIMIT_RESULT_METRIC_ID,
-                event_codes: vec![thermal_limit_result::Shutdown as u32],
-                component: None,
-                payload: EventPayload::Event(Event),
+        executor.set_fake_time(Seconds(0.0).into());
+        assert_matches!(
+            executor
+                .run_until_stalled(
+                    &mut platform_metrics.handle_message(&Message::LogPlatformMetric(
+                        PlatformMetric::ThrottlingActive
+                    ))
+                )
+                .unwrap(),
+            Ok(MessageReturn::LogPlatformMetric)
+        );
+
+        executor.set_fake_time(Seconds(1.0).into());
+        assert_matches!(
+            executor
+                .run_until_stalled(&mut platform_metrics.handle_message(
+                    &Message::LogPlatformMetric(PlatformMetric::ThrottlingResultShutdown)
+                ))
+                .unwrap(),
+            Ok(MessageReturn::LogPlatformMetric)
+        );
+
+        // Cobalt
+        {
+            // Verify the expected Cobalt event for the `thermal_limit_result` metric
+            assert_eq!(
+                cobalt_receiver.try_next().unwrap().unwrap(),
+                CobaltEvent {
+                    metric_id: power_metrics_registry::THERMAL_LIMIT_RESULT_METRIC_ID,
+                    event_codes: vec![thermal_limit_result::Shutdown as u32],
+                    component: None,
+                    payload: EventPayload::Event(Event),
+                }
+            );
+
+            // Verify there were no more dispatched Cobalt events
+            assert!(cobalt_receiver.try_next().is_err());
+        }
+
+        // Inspect
+        {
+            // Verify `throttle_history` entry has ended and throttling state is "not throttled"
+            assert_data_tree!(
+                inspector,
+                root: {
+                    platform_metrics: {
+                        throttle_history: {
+                            "0": contains {
+                                throttle_start_time: 0i64,
+                                throttle_end_time: 1i64,
+                            },
+                        },
+                        throttling_state: "not throttled",
+                        historical_max_cpu_temperature_c: {}
+                    }
+                }
+            );
+        }
+    }
+
+    /// Tests that the PlatformMetrics node correctly polls CPU temperature to:
+    ///     - report historical max values in Inspect
+    ///     - dispatch a Cobalt event for the `raw_temperature` metric
+    #[test]
+    fn test_cpu_temperature_logging_task() {
+        let mut executor = fasync::TestExecutor::new_with_fake_time().unwrap();
+
+        // Initialize current time
+        let mut current_time = Seconds(0.0);
+        executor.set_fake_time(current_time.into());
+
+        let mut mock_maker = MockNodeMaker::new();
+        let mock_cpu_temperature = mock_maker.make("MockCpuTemperature", vec![]);
+        let inspector = inspect::Inspector::new();
+        let (cobalt_sender, mut cobalt_receiver) = futures::channel::mpsc::channel(10);
+        let futures_out = FuturesUnordered::new();
+        let _platform_metrics = PlatformMetricsBuilder {
+            cpu_temperature_handler: Some(mock_cpu_temperature.clone()),
+            crash_report_handler: Some(create_dummy_node()),
+            cpu_temperature_poll_interval: Seconds(1.0),
+            cobalt_sender: Some(CobaltSender::new(cobalt_sender)),
+            inspect_root: Some(inspector.root()),
+            ..Default::default()
+        }
+        .build(&futures_out)
+        .unwrap();
+
+        // Resolve to a single future to provide to the executor
+        let mut futures_out = futures_out.collect::<()>();
+
+        let mut iterate_polling_loop = |temperature| {
+            mock_cpu_temperature.add_msg_response_pair((
+                msg_eq!(ReadTemperature),
+                msg_ok_return!(ReadTemperature(temperature)),
+            ));
+
+            assert_eq!(executor.wake_next_timer().unwrap(), (current_time + Seconds(1.0)).into());
+            current_time += Seconds(1.0);
+            executor.set_fake_time(current_time.into());
+            assert!(executor.run_until_stalled(&mut futures_out).is_pending());
+        };
+
+        // Iterate 60 times to trigger the 1-minute historical temperature publish into Inspect
+        for _ in 0..60 {
+            iterate_polling_loop(Celsius(40.0));
+        }
+
+        // Repeat CPU temperature polling for one more "minute" with a different temperature
+        for _ in 0..60 {
+            iterate_polling_loop(Celsius(60.0));
+        }
+
+        // Verify the `historical_max_cpu_temperature_c` property is published
+        assert_data_tree!(
+            inspector,
+            root: {
+                platform_metrics: contains {
+                    historical_max_cpu_temperature_c: {
+                        "60": 40i64,
+                        "120": 60i64
+                    }
+                },
             }
         );
 
-        // Verify there were no more dispatched Cobalt events
-        assert!(receiver.try_next().is_err());
-    }
-
-    /// Tests that a Cobalt event for raw_temperature is dispatched after log calls for the expected
-    /// number of raw temperature samples.
-    #[fasync::run_singlethreaded(test)]
-    async fn test_raw_temperature() {
-        let mut mock_maker = MockNodeMaker::new();
-        let (sender, mut receiver) = futures::channel::mpsc::channel(10);
-
-        let mock_temperature_handler = mock_maker.make("MockTemperatureHandler", vec![]);
-        let platform_metrics = PlatformMetricsBuilder::new(mock_temperature_handler.clone())
-            .with_cobalt_sender(CobaltSender::new(sender))
-            .build(&FuturesUnordered::new())
-            .unwrap();
-        let num_temperature_readings = PlatformMetrics::NUM_TEMPERATURE_READINGS + 1;
-
-        for _ in 0..num_temperature_readings {
-            mock_temperature_handler.add_msg_response_pair((
-                msg_eq!(ReadTemperature),
-                msg_ok_return!(ReadTemperature(Celsius(50.0))),
-            ));
-            platform_metrics.poll_cpu_temperature().await.unwrap();
+        // Repeat CPU temperature polling for one more "minute" with a different temperature
+        for _ in 0..60 {
+            iterate_polling_loop(Celsius(80.0));
         }
 
-        // Generate the expected raw_temperature Cobalt event
+        // Verify the first "minute" is rolled out
+        assert_data_tree!(
+            inspector,
+            root: {
+                platform_metrics: contains {
+                    historical_max_cpu_temperature_c: {
+                        "120": 60i64,
+                        "180": 80i64
+                    }
+                },
+            }
+        );
+
+        // Build the expected raw temperature histogram. PlatformMetrics dispatches the Cobalt event
+        // after 100 temperature readings, so only populate the histogram with that many readings
         let mut expected_histogram = CobaltIntHistogram::new(CobaltIntHistogramConfig {
             floor: power_metrics_registry::RAW_TEMPERATURE_INT_BUCKETS_FLOOR,
             num_buckets: power_metrics_registry::RAW_TEMPERATURE_INT_BUCKETS_NUM_BUCKETS,
             step_size: power_metrics_registry::RAW_TEMPERATURE_INT_BUCKETS_STEP_SIZE,
         });
-        for _ in 0..num_temperature_readings - 1 {
-            expected_histogram.add_data(Celsius(50.0).0 as i64);
+        for _ in 0..60 {
+            expected_histogram.add_data(Celsius(40.0).0 as i64);
+        }
+        for _ in 0..40 {
+            expected_histogram.add_data(Celsius(60.0).0 as i64);
         }
 
-        let expected_cobalt_event = CobaltEvent {
-            metric_id: power_metrics_registry::RAW_TEMPERATURE_METRIC_ID,
-            event_codes: vec![],
-            component: None,
-            payload: EventPayload::IntHistogram(expected_histogram.get_data()),
-        };
+        // Verify the expected Cobalt event for the `raw_temperature` metric
+        assert_eq!(
+            cobalt_receiver.try_next().unwrap().unwrap(),
+            CobaltEvent {
+                metric_id: power_metrics_registry::RAW_TEMPERATURE_METRIC_ID,
+                event_codes: vec![],
+                component: None,
+                payload: EventPayload::IntHistogram(expected_histogram.get_data()),
+            }
+        );
 
-        // Verify that the expected Cobalt event was received, and there were no extra events
-        assert_eq!(receiver.try_next().unwrap().unwrap(), expected_cobalt_event);
-        assert!(receiver.try_next().is_err());
+        // Verify there were no more dispatched Cobalt events
+        assert!(cobalt_receiver.try_next().is_err());
     }
 
-    /// Tests that the "platform_metrics" Inspect node is published along with the expected
-    /// "historical_max_cpu_temperature_c" entry.
+    /// Tests for the correct behavior when the `ThermalLoad` metric is received: record thermal
+    /// load into the current `throttle_history` entry histogram if throttling is active, or no-op
+    /// otherwise.
     #[test]
-    fn test_inspect_data() {
+    fn test_log_thermal_load() {
         let mut executor = fasync::TestExecutor::new_with_fake_time().unwrap();
+
+        let inspector = inspect::Inspector::new();
+        let platform_metrics = PlatformMetricsBuilder {
+            cpu_temperature_handler: Some(create_dummy_node()),
+            crash_report_handler: Some(create_dummy_node()),
+            throttle_debounce_timeout: Seconds(10.0),
+            inspect_root: Some(inspector.root()),
+            ..Default::default()
+        }
+        .build(&FuturesUnordered::new())
+        .unwrap();
+
+        // Set arbitrary start time
         executor.set_fake_time(Seconds(10.0).into());
 
-        let mut mock_maker = MockNodeMaker::new();
-        let mock_cpu_temperature = mock_maker.make("MockCpuTemperature", vec![]);
-        let inspector = inspect::Inspector::new();
-        let platform_metrics = PlatformMetricsBuilder::new(mock_cpu_temperature.clone())
-            .with_inspect_root(inspector.root())
-            .build(&FuturesUnordered::new())
-            .unwrap();
+        // Log a thermal load value. Since throttling is not active, this value will be ignored
+        // (verified via `assert_data_tree` later)
+        assert_matches!(
+            executor
+                .run_until_stalled(&mut platform_metrics.handle_message(
+                    &Message::LogPlatformMetric(PlatformMetric::ThermalLoad(
+                        ThermalLoad(20),
+                        "sensor1".to_string()
+                    ))
+                ))
+                .unwrap(),
+            Ok(MessageReturn::LogPlatformMetric)
+        );
 
-        for _ in 0..60 {
-            mock_cpu_temperature.add_msg_response_pair((
-                msg_eq!(ReadTemperature),
-                msg_ok_return!(ReadTemperature(Celsius(40.0))),
-            ));
+        // Log throttling active
+        assert_matches!(
+            executor
+                .run_until_stalled(
+                    &mut platform_metrics.handle_message(&Message::LogPlatformMetric(
+                        PlatformMetric::ThrottlingActive
+                    ))
+                )
+                .unwrap(),
+            Ok(MessageReturn::LogPlatformMetric)
+        );
 
-            assert!(executor
-                .run_until_stalled(&mut Box::pin(platform_metrics.poll_cpu_temperature()))
-                .is_ready());
-        }
+        // Log a thermal load value. Since throttling is now active, it will be added to the thermal
+        // load histogram.
+        assert_matches!(
+            executor
+                .run_until_stalled(&mut platform_metrics.handle_message(
+                    &Message::LogPlatformMetric(PlatformMetric::ThermalLoad(
+                        ThermalLoad(40),
+                        "sensor1".to_string()
+                    ))
+                ))
+                .unwrap(),
+            Ok(MessageReturn::LogPlatformMetric)
+        );
+
+        // Bump the fake time before we end throttling
+        executor.set_fake_time(Seconds(12.0).into());
+
+        // Log throttling ended
+        assert_matches!(
+            executor
+                .run_until_stalled(&mut platform_metrics.handle_message(
+                    &Message::LogPlatformMetric(PlatformMetric::ThrottlingResultShutdown)
+                ))
+                .unwrap(),
+            Ok(MessageReturn::LogPlatformMetric)
+        );
+
+        // Log a thermal load value. Since throttling is no longer active, this value will be
+        // ignored (verified via `assert_data_tree` later)
+        assert_matches!(
+            executor
+                .run_until_stalled(&mut platform_metrics.handle_message(
+                    &Message::LogPlatformMetric(PlatformMetric::ThermalLoad(
+                        ThermalLoad(60),
+                        "sensor1".to_string()
+                    ))
+                ))
+                .unwrap(),
+            Ok(MessageReturn::LogPlatformMetric)
+        );
+
+        // Build the expected thermal load histogram containing just the one thermal load value
+        let mut expected_thermal_load_hist = HistogramAssertion::linear(LinearHistogramParams {
+            floor: 0u64,
+            step_size: 5,
+            buckets: 19,
+        });
+        expected_thermal_load_hist.insert_values(vec![40]);
 
         assert_data_tree!(
             inspector,
-            root: {
-                platform_metrics: {
-                    historical_max_cpu_temperature_c: {
-                        "10": 40i64
+            root: contains {
+                platform_metrics: contains {
+                    throttle_history: {
+                        "0": {
+                            throttle_start_time: 10i64,
+                            throttle_end_time: 12i64,
+                            thermal_load_hist: expected_thermal_load_hist,
+                        }
                     }
-                },
+                }
             }
-        );
+        )
     }
 }

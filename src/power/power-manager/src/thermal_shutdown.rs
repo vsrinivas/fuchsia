@@ -6,6 +6,7 @@ use crate::error::PowerManagerError;
 use crate::log_if_err;
 use crate::message::{Message, MessageReturn};
 use crate::node::Node;
+use crate::platform_metrics::PlatformMetric;
 use crate::shutdown_request::{RebootReason, ShutdownRequest};
 use crate::temperature_handler::TemperatureFilter;
 use crate::types::{Celsius, Seconds};
@@ -168,13 +169,10 @@ impl ThermalShutdown {
             >= self.thermal_shutdown_temperature
         {
             info!("{:?} crossed high temperature mark. Rebooting...", self.temperature_node.name());
+            let msg = Message::LogPlatformMetric(PlatformMetric::ThrottlingResultShutdown);
             log_if_err!(
-                self.send_message(
-                    &self.platform_metrics_node,
-                    &Message::LogThrottleEndShutdown(timestamp),
-                )
-                .await,
-                "Failed to update platform metrics with LogThrottleEndShutdown"
+                self.send_message(&self.platform_metrics_node, &msg).await,
+                format!("Failed to log platform metric {:?}", msg)
             );
             self.send_message(
                 &self.system_shutdown_node,
@@ -281,8 +279,8 @@ mod tests {
             mock_maker.make(
                 "Metrics",
                 vec![(
-                    msg_eq!(LogThrottleEndShutdown(Seconds(10.0).into())),
-                    msg_ok_return!(LogThrottleEndShutdown),
+                    msg_eq!(LogPlatformMetric(PlatformMetric::ThrottlingResultShutdown)),
+                    msg_ok_return!(LogPlatformMetric),
                 )],
             ),
         )

@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::platform_metrics::PlatformMetric;
 use crate::shutdown_request::ShutdownRequest;
-use crate::types::{Celsius, Nanoseconds, PState, ThermalLoad, Watts};
+use crate::types::{Celsius, PState, ThermalLoad, Watts};
 use fuchsia_zircon::sys;
 
 /// Defines the message types and arguments to be used for inter-node communication
@@ -66,17 +67,9 @@ pub enum Message {
     /// Arg: the new active state
     NotifyUserActiveChanged(bool),
 
-    /// Log the start of throttling with the Platform Metrics node
-    /// Arg: timestamp of the event
-    LogThrottleStart(Nanoseconds),
-
-    /// Log the end of throttling (due to successful mitigation) with the Platform Metrics node
-    /// Arg: timestamp of the event
-    LogThrottleEndMitigated(Nanoseconds),
-
-    /// Log the end of throttling (due to critical shutdown) with the Platform Metrics node
-    /// Arg: timestamp of the event
-    LogThrottleEndShutdown(Nanoseconds),
+    /// Log the given metric with the PlatformMetrics node
+    /// Arg: the `PlatformMetric` to be logged
+    LogPlatformMetric(PlatformMetric),
 
     /// Gets the topological path of the driver associated with the target node
     GetDriverPath,
@@ -134,13 +127,7 @@ pub enum MessageReturn {
     NotifyUserActiveChanged,
 
     /// There is no arg in this MessageReturn type. It only serves as an ACK.
-    LogThrottleStart,
-
-    /// There is no arg in this MessageReturn type. It only serves as an ACK.
-    LogThrottleEndMitigated,
-
-    /// There is no arg in this MessageReturn type. It only serves as an ACK.
-    LogThrottleEndShutdown,
+    LogPlatformMetric,
 
     /// Arg: the topological path of the driver associated with the target node
     GetDriverPath(String),

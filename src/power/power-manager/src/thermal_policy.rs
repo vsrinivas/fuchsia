@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::error::PowerManagerError;
 use crate::log_if_err;
 use crate::message::{Message, MessageReturn};
 use crate::node::Node;
+use crate::platform_metrics::PlatformMetric;
 use crate::shutdown_request::{RebootReason, ShutdownRequest};
 use crate::temperature_handler::TemperatureFilter;
 use crate::types::{Celsius, Nanoseconds, Seconds, ThermalLoad, Watts};
@@ -13,7 +13,7 @@ use crate::utils::get_current_timestamp;
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use fuchsia_async as fasync;
-use fuchsia_inspect::{self as inspect, HistogramProperty, LinearHistogramParams, Property};
+use fuchsia_inspect::{self as inspect, Property};
 use futures::{
     future::{FutureExt, LocalBoxFuture},
     stream::FuturesUnordered,
@@ -22,8 +22,8 @@ use futures::{
 use log::*;
 use serde_derive::Deserialize;
 use serde_json as json;
-use std::cell::{Cell, RefCell, RefMut};
-use std::collections::{HashMap, VecDeque};
+use std::cell::Cell;
+use std::collections::HashMap;
 use std::rc::Rc;
 
 /// Node: ThermalPolicy
@@ -37,7 +37,8 @@ use std::rc::Rc;
 ///     - SetMaxPowerConsumption
 ///     - SystemShutdown
 ///     - UpdateThermalLoad
-///     - FileCrashReport
+///     - LogPlatformMetric
+///     - GetDriverPath
 ///
 /// FIDL dependencies: N/A
 
@@ -68,12 +69,10 @@ impl<'a> ThermalPolicyBuilder<'a> {
         struct NodeConfig {
             thermal_shutdown_temperature: f64,
             controller_params: ControllerConfig,
-            throttle_end_delay: f64,
         }
 
         #[derive(Deserialize)]
         struct Dependencies {
-            crash_report_handler_node: String,
             cpu_control_nodes: Vec<String>,
             system_power_handler_node: String,
             temperature_handler_node: String,
@@ -103,7 +102,6 @@ impl<'a> ThermalPolicyBuilder<'a> {
                 .iter()
                 .map(|node_name| nodes[node_name].clone())
                 .collect(),
-            crash_report_handler: nodes[&data.dependencies.crash_report_handler_node].clone(),
             platform_metrics_node: nodes[&data.dependencies.platform_metrics_node].clone(),
             policy_params: ThermalPolicyParams {
                 controller_params: ThermalControllerParams {
@@ -119,7 +117,6 @@ impl<'a> ThermalPolicyBuilder<'a> {
                     integral_gain: data.config.controller_params.integral_gain,
                 },
                 thermal_shutdown_temperature: Celsius(data.config.thermal_shutdown_temperature),
-                throttle_end_delay: Seconds(data.config.throttle_end_delay),
             },
         };
 
@@ -153,8 +150,6 @@ impl<'a> ThermalPolicyBuilder<'a> {
                 max_time_delta: Cell::new(Seconds(0.0)),
                 error_integral: Cell::new(0.0),
                 thermal_load: Cell::new(ThermalLoad(0)),
-                throttling_state: Cell::new(ThrottlingState::ThrottlingInactive),
-                throttle_end_deadline: Cell::new(None),
             },
             inspect: InspectData::new(inspect_root, "ThermalPolicy".to_string(), &self.config),
             config: self.config,
@@ -204,15 +199,10 @@ pub struct ThermalConfig {
     /// these nodes respond to the UpdateThermalLoad message.
     pub thermal_load_notify_nodes: Vec<Rc<dyn Node>>,
 
-    /// The node used for filing a crash report. It is expected that this node responds to the
-    /// FileCrashReport message.
-    pub crash_report_handler: Rc<dyn Node>,
-
     /// All parameter values relating to the thermal policy itself
     pub policy_params: ThermalPolicyParams,
 
-    /// The node that we'll notify when throttling conditions have changed, for logging and metrics
-    /// purposes.
+    /// Node that we'll notify with relevant platform metrics.
     pub platform_metrics_node: Rc<dyn Node>,
 }
 
@@ -223,9 +213,6 @@ pub struct ThermalPolicyParams {
 
     /// If temperature reaches or exceeds this value, the policy will command a system shutdown
     pub thermal_shutdown_temperature: Celsius,
-
-    /// Time to wait after throttling ends to officially declare a throttle event complete.
-    pub throttle_end_delay: Seconds,
 }
 
 /// A struct to store the tunable thermal control loop parameters
@@ -273,26 +260,6 @@ struct ThermalState {
     /// A cached value in the range [0 - MAX_THERMAL_LOAD] which is defined as
     /// ((temperature - range_start) / (range_end - range_start) * MAX_THERMAL_LOAD).
     thermal_load: Cell<ThermalLoad>,
-
-    /// Current throttling state.
-    throttling_state: Cell<ThrottlingState>,
-
-    /// After we exit throttling, if `throttle_end_delay` is nonzero then this value will
-    /// indicate the time that we may officially consider a throttle event complete.
-    throttle_end_deadline: Cell<Option<Nanoseconds>>,
-}
-
-#[derive(Copy, Clone, Debug, PartialEq)]
-enum ThrottlingState {
-    /// Selected when thermal load is above zero.
-    ThrottlingActive,
-
-    /// Selected when thermal load is zero and the throttling cooldown timer is not active.
-    ThrottlingInactive,
-
-    /// Selected when throttling has ended (thermal load is zero) but the throttling cooldown timer
-    /// is active.
-    CooldownActive,
 }
 
 impl ThermalPolicy {
@@ -348,7 +315,6 @@ impl ThermalPolicy {
             self.config.policy_params.controller_params.e_integral_min,
             self.config.policy_params.controller_params.e_integral_max,
         );
-        let throttling_state = self.update_throttling_state(timestamp, thermal_load).await;
 
         self.log_thermal_iteration_metrics(
             timestamp,
@@ -357,11 +323,10 @@ impl ThermalPolicy {
             temperature.filtered,
             error_integral,
             thermal_load,
-            throttling_state,
         );
 
         // If the new temperature is above the critical threshold then shut down the system
-        let result = self.check_critical_temperature(timestamp, temperature.raw).await;
+        let result = self.check_critical_temperature(temperature.raw).await;
         log_if_err!(result, "Error checking critical temperature");
         fuchsia_trace::instant!(
             "power_manager",
@@ -371,7 +336,7 @@ impl ThermalPolicy {
         );
 
         // Determine the new thermal load and update `thermal_load_notify_nodes`
-        let result = self.process_thermal_load(timestamp, thermal_load).await;
+        let result = self.process_thermal_load(thermal_load).await;
         log_if_err!(result, "Error updating thermal load");
         fuchsia_trace::instant!(
             "power_manager",
@@ -429,14 +394,12 @@ impl ThermalPolicy {
         filtered_temperature: Celsius,
         temperature_error_integral: f64,
         thermal_load: ThermalLoad,
-        throttling_state: ThrottlingState,
     ) {
         self.inspect.timestamp.set(timestamp.0);
         self.inspect.time_delta.set(time_delta.0);
         self.inspect.temperature_raw.set(raw_temperature.0);
         self.inspect.temperature_filtered.set(filtered_temperature.0);
         self.inspect.thermal_load.set(thermal_load.0.into());
-        self.inspect.throttling_state.set(format!("{:?}", throttling_state).as_str());
         fuchsia_trace::instant!(
             "power_manager",
             "ThermalPolicy::thermal_control_iteration_data",
@@ -471,11 +434,7 @@ impl ThermalPolicy {
     /// Compares the supplied temperature with the thermal config thermal shutdown temperature. If
     /// we've reached or exceeded the shutdown temperature, message the system power handler node
     /// to initiate a system shutdown.
-    async fn check_critical_temperature(
-        &self,
-        timestamp: Nanoseconds,
-        temperature: Celsius,
-    ) -> Result<(), Error> {
+    async fn check_critical_temperature(&self, temperature: Celsius) -> Result<(), Error> {
         fuchsia_trace::duration!(
             "power_manager",
             "ThermalPolicy::check_critical_temperature",
@@ -492,15 +451,7 @@ impl ThermalPolicy {
                 "shutdown_temperature" => self.config.policy_params.thermal_shutdown_temperature.0
             );
 
-            log_if_err!(
-                self.send_message(
-                    &self.config.platform_metrics_node,
-                    &Message::LogThrottleEndShutdown(timestamp),
-                )
-                .await,
-                "Failed to update platform metrics with LogThrottleEndShutdown"
-            );
-            self.inspect.throttle_history().mark_throttling_inactive(timestamp);
+            self.log_platform_metric(PlatformMetric::ThrottlingResultShutdown).await;
 
             self.send_message(
                 &self.config.sys_pwr_handler,
@@ -515,21 +466,15 @@ impl ThermalPolicy {
 
     /// Process a new thermal load value. If there is a change from the cached thermal_load, then
     /// the new value is sent out to `thermal_load_notify_nodes`.
-    async fn process_thermal_load(
-        &self,
-        timestamp: Nanoseconds,
-        new_load: ThermalLoad,
-    ) -> Result<(), Error> {
+    async fn process_thermal_load(&self, new_load: ThermalLoad) -> Result<(), Error> {
         fuchsia_trace::duration!(
             "power_manager",
             "ThermalPolicy::process_thermal_load",
-            "timestamp" => timestamp.0,
             "new_load" => new_load.0
         );
 
         let old_load = self.state.thermal_load.get();
         self.state.thermal_load.set(new_load);
-        self.inspect.throttle_history().record_thermal_load(new_load);
 
         if new_load != old_load {
             fuchsia_trace::instant!(
@@ -540,6 +485,12 @@ impl ThermalPolicy {
                 "new_load" => new_load.0
             );
 
+            if old_load == ThermalLoad(0) {
+                self.log_platform_metric(PlatformMetric::ThrottlingActive).await;
+            } else if new_load == ThermalLoad(0) {
+                self.log_platform_metric(PlatformMetric::ThrottlingResultMitigated).await;
+            }
+
             self.send_message_to_many(
                 &self.config.thermal_load_notify_nodes,
                 &Message::UpdateThermalLoad(new_load, self.driver_path.to_string()),
@@ -549,117 +500,23 @@ impl ThermalPolicy {
             .collect::<Result<Vec<_>, _>>()?;
         }
 
+        // Call this even when thermal load hasn't changed since PlatformMetrics uses each received
+        // value to build up a thermal load histogram while throttling is active.
+        self.log_platform_metric(PlatformMetric::ThermalLoad(
+            new_load,
+            self.driver_path.to_string(),
+        ))
+        .await;
+
         Ok(())
     }
 
-    /// Updates the throttling state by considering the current throttling state, new thermal load,
-    /// and timestamp. When the throttling state changes, there may be an associated Cobalt event
-    /// (via the PlatformMetrics node) or crash report dispatched.
-    async fn update_throttling_state(
-        &self,
-        timestamp: Nanoseconds,
-        new_load: ThermalLoad,
-    ) -> ThrottlingState {
-        fuchsia_trace::duration!(
-            "power_manager",
-            "ThermalPolicy::update_throttling_state",
-            "new_load" => new_load.0,
-            "timestamp" => timestamp.0
+    async fn log_platform_metric(&self, metric: PlatformMetric) {
+        let msg = Message::LogPlatformMetric(metric);
+        log_if_err!(
+            self.send_message(&self.config.platform_metrics_node, &msg).await,
+            format!("Failed to log platform metric {:?}", msg)
         );
-
-        let old_state = self.state.throttling_state.get();
-        let new_state = match old_state {
-            ThrottlingState::ThrottlingActive => {
-                // If throttling was previously active but the thermal load is now zero, throttling
-                // is over. Mark cooldown active if there is a cooldown timer configured.
-                if (new_load == ThermalLoad(0))
-                    && (self.config.policy_params.throttle_end_delay > Seconds(0.0))
-                {
-                    ThrottlingState::CooldownActive
-                // If no cooldown delay is configured, we can mark throttling inactive immediately
-                } else if new_load == ThermalLoad(0) {
-                    ThrottlingState::ThrottlingInactive
-                } else {
-                    old_state
-                }
-            }
-            ThrottlingState::ThrottlingInactive => {
-                // If throttling was previously inactive but the thermal load is now nonzero,
-                // throttling is now active.
-                if new_load > ThermalLoad(0) {
-                    ThrottlingState::ThrottlingActive
-                } else {
-                    old_state
-                }
-            }
-            ThrottlingState::CooldownActive => {
-                // If the cooldown timer is active but the thermal load is nonzero again, we can
-                // mark throttling active
-                if new_load > ThermalLoad(0) {
-                    ThrottlingState::ThrottlingActive
-                // If the cooldown timer is active and has now expired, we can mark throttling
-                // inactive
-                } else if timestamp >= self.state.throttle_end_deadline.get().unwrap() {
-                    ThrottlingState::ThrottlingInactive
-                } else {
-                    old_state
-                }
-            }
-        };
-
-        // Handle the new throttling state
-        match (old_state, new_state) {
-            // Begin a new throttling event
-            (ThrottlingState::ThrottlingInactive, ThrottlingState::ThrottlingActive) => {
-                info!("Begin thermal mitigation");
-                log_if_err!(
-                    self.send_message(
-                        &self.config.platform_metrics_node,
-                        &Message::LogThrottleStart(timestamp),
-                    )
-                    .await,
-                    "Failed to update platform metrics with LogThrottleStart"
-                );
-                self.inspect.throttle_history().mark_throttling_active(timestamp);
-            }
-
-            // Cancel the cooldown timer and resume the existing throttling event
-            (ThrottlingState::CooldownActive, ThrottlingState::ThrottlingActive) => {
-                info!("Begin thermal mitigation");
-                self.state.throttle_end_deadline.set(None);
-            }
-
-            // Begin the cooldown timer
-            (ThrottlingState::ThrottlingActive, ThrottlingState::CooldownActive) => {
-                info!("End thermal mitigation");
-                self.state
-                    .throttle_end_deadline
-                    .set(Some(timestamp + self.config.policy_params.throttle_end_delay.into()));
-            }
-
-            // End the current throttling event and file a crash report
-            (ThrottlingState::ThrottlingActive, ThrottlingState::ThrottlingInactive)
-            | (ThrottlingState::CooldownActive, ThrottlingState::ThrottlingInactive) => {
-                if let ThrottlingState::ThrottlingActive = old_state {
-                    info!("End thermal mitigation");
-                }
-                self.state.throttle_end_deadline.set(None);
-                log_if_err!(
-                    self.send_message(
-                        &self.config.platform_metrics_node,
-                        &Message::LogThrottleEndMitigated(timestamp),
-                    )
-                    .await,
-                    "Failed to update platform metrics with LogThrottleEndMitigated"
-                );
-                self.inspect.throttle_history().mark_throttling_inactive(timestamp);
-                self.file_thermal_crash_report().await;
-            }
-            _ => {}
-        }
-
-        self.state.throttling_state.set(new_state);
-        new_state
     }
 
     /// Calculates the thermal load which is a value in the range [0 - MAX_THERMAL_LOAD] defined as
@@ -718,7 +575,7 @@ impl ThermalPolicy {
             "error_integral" => error_integral
         );
         let available_power = self.calculate_available_power(error_proportional, error_integral);
-        self.inspect.throttle_history().record_available_power(available_power);
+        self.log_platform_metric(PlatformMetric::AvailablePower(available_power)).await;
         fuchsia_trace::counter!(
             "power_manager",
             "ThermalPolicy available_power",
@@ -776,27 +633,13 @@ impl ThermalPolicy {
                 .send_message(&node, &Message::SetMaxPowerConsumption(total_available_power))
                 .await?
             {
-                self.inspect
-                    .throttle_history
-                    .borrow_mut()
-                    .record_cpu_power_consumption(node.name(), power_used);
+                self.log_platform_metric(PlatformMetric::CpuPowerUsage(node.name(), power_used))
+                    .await;
                 total_available_power = total_available_power - power_used;
             }
         }
 
         Ok(())
-    }
-
-    /// File a crash report with the signature "fuchsia-thermal-throttle".
-    async fn file_thermal_crash_report(&self) {
-        log_if_err!(
-            self.send_message(
-                &self.config.crash_report_handler,
-                &Message::FileCrashReport("fuchsia-thermal-throttle".to_string()),
-            )
-            .await,
-            "Failed to file crash report"
-        );
     }
 }
 
@@ -804,12 +647,6 @@ impl ThermalPolicy {
 impl Node for ThermalPolicy {
     fn name(&self) -> String {
         "ThermalPolicy".to_string()
-    }
-
-    async fn handle_message(&self, msg: &Message) -> Result<MessageReturn, PowerManagerError> {
-        match msg {
-            _ => Err(PowerManagerError::Unsupported),
-        }
     }
 }
 
@@ -824,15 +661,10 @@ struct InspectData {
     temperature_filtered: inspect::DoubleProperty,
     error_integral: inspect::DoubleProperty,
     thermal_load: inspect::UintProperty,
-    throttling_state: inspect::StringProperty,
     max_time_delta: inspect::DoubleProperty,
-    throttle_history: RefCell<InspectThrottleHistory>,
 }
 
 impl InspectData {
-    /// Rolling number of throttle events to store in `throttle_history`.
-    const NUM_THROTTLE_EVENTS: usize = 10;
-
     fn new(parent: &inspect::Node, name: String, config: &ThermalConfig) -> Self {
         // Create a local root node and properties
         let root_node = parent.create_child(name);
@@ -844,15 +676,7 @@ impl InspectData {
         let temperature_filtered = state_node.create_double("temperature_filtered (C)", 0.0);
         let error_integral = state_node.create_double("error_integral", 0.0);
         let thermal_load = state_node.create_uint("thermal_load", 0);
-        let throttling_state = state_node.create_string(
-            "throttling_state",
-            format!("{:?}", ThrottlingState::ThrottlingInactive),
-        );
         let max_time_delta = stats_node.create_double("max_time_delta (s)", 0.0);
-        let throttle_history = RefCell::new(InspectThrottleHistory::new(
-            root_node.create_child("throttle_history"),
-            Self::NUM_THROTTLE_EVENTS,
-        ));
 
         // Pass ownership of the new nodes to the root node, otherwise they'll be dropped
         root_node.record(state_node);
@@ -867,8 +691,6 @@ impl InspectData {
             temperature_filtered,
             error_integral,
             thermal_load,
-            throttling_state,
-            throttle_history,
         };
         inspect_data.set_thermal_config(config);
         inspect_data
@@ -890,166 +712,6 @@ impl InspectData {
 
         self.root_node.record(policy_params_node);
     }
-
-    /// A convenient wrapper to mutably borrow `throttle_history`.
-    fn throttle_history(&self) -> RefMut<'_, InspectThrottleHistory> {
-        self.throttle_history.borrow_mut()
-    }
-}
-
-/// Captures and retains data from previous throttling events in a rolling buffer.
-struct InspectThrottleHistory {
-    /// The Inspect node that will be used as the parent for throttle event child nodes.
-    root_node: inspect::Node,
-
-    /// A running count of the number of throttle events ever captured in `throttle_history_list`.
-    /// The count is always increasing, even when older throttle events are removed from the list.
-    entry_count: usize,
-
-    /// The maximum number of throttling events to keep in `throttle_history_list`.
-    capacity: usize,
-
-    /// State to track if throttling is currently active (used to ignore readings when throttling
-    /// isn't active).
-    throttling_active: bool,
-
-    /// List to store the throttle entries.
-    throttle_history_list: VecDeque<InspectThrottleHistoryEntry>,
-}
-
-impl InspectThrottleHistory {
-    fn new(root_node: inspect::Node, capacity: usize) -> Self {
-        Self {
-            entry_count: 0,
-            capacity,
-            throttling_active: false,
-            throttle_history_list: VecDeque::with_capacity(capacity),
-            root_node,
-        }
-    }
-
-    /// Mark the start of throttling.
-    fn mark_throttling_active(&mut self, timestamp: Nanoseconds) {
-        // Must have ended previous throttling
-        debug_assert_eq!(self.throttling_active, false);
-        if self.throttling_active {
-            return;
-        }
-
-        // Begin a new throttling entry
-        self.new_entry();
-
-        self.throttling_active = true;
-        self.throttle_history_list.back().unwrap().throttle_start_time.set(timestamp.0);
-    }
-
-    /// Mark the end of throttling.
-    fn mark_throttling_inactive(&mut self, timestamp: Nanoseconds) {
-        if self.throttling_active {
-            self.throttle_history_list.back().unwrap().throttle_end_time.set(timestamp.0);
-            self.throttling_active = false
-        }
-    }
-
-    /// Begin a new throttling entry. Removes the oldest entry once we've reached
-    /// InspectData::NUM_THROTTLE_EVENTS number of entries.
-    fn new_entry(&mut self) {
-        if self.throttle_history_list.len() >= self.capacity {
-            self.throttle_history_list.pop_front();
-        }
-
-        let node = self.root_node.create_child(&self.entry_count.to_string());
-        let entry = InspectThrottleHistoryEntry::new(node);
-        self.throttle_history_list.push_back(entry);
-        self.entry_count += 1;
-    }
-
-    /// Record the current thermal load. No-op unless throttling has been set active.
-    fn record_thermal_load(&self, thermal_load: ThermalLoad) {
-        if self.throttling_active {
-            self.throttle_history_list
-                .back()
-                .unwrap()
-                .thermal_load_hist
-                .insert(thermal_load.0.into());
-        }
-    }
-
-    /// Record the current available power. No-op unless throttling has been set active.
-    fn record_available_power(&self, available_power: Watts) {
-        if self.throttling_active {
-            self.throttle_history_list
-                .back()
-                .unwrap()
-                .available_power_hist
-                .insert(available_power.0);
-        }
-    }
-
-    /// Record the current CPU power consumption for the given CPU domain. No-op unless throttling
-    /// has been set active. `cpu_domain` is the name of the CpuControlHandler node that controls
-    /// the given CPU domain.
-    fn record_cpu_power_consumption(&mut self, cpu_domain: String, power_used: Watts) {
-        if self.throttling_active {
-            self.throttle_history_list
-                .back_mut()
-                .unwrap()
-                .get_cpu_power_usage_property(cpu_domain)
-                .insert(power_used.0);
-        }
-    }
-}
-
-/// Stores data for a single throttle event.
-struct InspectThrottleHistoryEntry {
-    _node: inspect::Node,
-    throttle_start_time: inspect::IntProperty,
-    throttle_end_time: inspect::IntProperty,
-    thermal_load_hist: inspect::UintLinearHistogramProperty,
-    available_power_hist: inspect::DoubleLinearHistogramProperty,
-    cpu_power_usage_node: inspect::Node,
-
-    /// Key is the name of the CPU domain. Value is a tuple of 1) Inspect node to hold the histogram
-    /// property, and 2) the histogram property.
-    cpu_power_usage: HashMap<String, (inspect::Node, inspect::DoubleLinearHistogramProperty)>,
-}
-
-impl InspectThrottleHistoryEntry {
-    /// Creates a new InspectThrottleHistoryEntry which creates new properties under `node`.
-    fn new(node: inspect::Node) -> Self {
-        Self {
-            throttle_start_time: node.create_int("throttle_start_time", 0),
-            throttle_end_time: node.create_int("throttle_end_time", 0),
-            thermal_load_hist: node.create_uint_linear_histogram(
-                "thermal_load_hist",
-                LinearHistogramParams { floor: 0, step_size: 1, buckets: 100 },
-            ),
-            available_power_hist: node.create_double_linear_histogram(
-                "available_power_hist",
-                LinearHistogramParams { floor: 0.0, step_size: 0.1, buckets: 100 },
-            ),
-            cpu_power_usage_node: node.create_child("cpu_power_usage"),
-            cpu_power_usage: HashMap::new(),
-            _node: node,
-        }
-    }
-
-    /// Gets the property to record CPU power usage for the given CPU domain.
-    fn get_cpu_power_usage_property(
-        &mut self,
-        cpu_domain: String,
-    ) -> &inspect::DoubleLinearHistogramProperty {
-        if let None = self.cpu_power_usage.get(&cpu_domain) {
-            let child = self.cpu_power_usage_node.create_child(&cpu_domain);
-            let property = child.create_double_linear_histogram(
-                "hist",
-                LinearHistogramParams { floor: 0.0, step_size: 0.1, buckets: 100 },
-            );
-            self.cpu_power_usage.insert(cpu_domain.clone(), (child, property));
-        }
-
-        &self.cpu_power_usage[&cpu_domain].1
-    }
 }
 
 #[cfg(test)]
@@ -1057,7 +719,7 @@ pub mod tests {
     use super::*;
     use crate::test::mock_node::{create_dummy_node, MessageMatcher, MockNodeMaker};
     use crate::{msg_eq, msg_ok_return};
-    use inspect::testing::{assert_data_tree, HistogramAssertion};
+    use inspect::testing::assert_data_tree;
 
     pub fn get_sample_interval(thermal_policy: &ThermalPolicy) -> Seconds {
         thermal_policy.config.policy_params.controller_params.sample_interval
@@ -1076,7 +738,6 @@ pub mod tests {
                 integral_gain: 0.2,
             },
             thermal_shutdown_temperature: Celsius(95.0),
-            throttle_end_delay: Seconds(0.0),
         }
     }
 
@@ -1125,7 +786,6 @@ pub mod tests {
             cpu_control_nodes: vec![create_dummy_node()],
             sys_pwr_handler: create_dummy_node(),
             thermal_load_notify_nodes: vec![create_dummy_node()],
-            crash_report_handler: create_dummy_node(),
             policy_params: default_policy_params(),
             platform_metrics_node: create_dummy_node(),
         };
@@ -1152,7 +812,6 @@ pub mod tests {
             cpu_control_nodes: vec![create_dummy_node()],
             sys_pwr_handler: create_dummy_node(),
             thermal_load_notify_nodes: vec![create_dummy_node()],
-            crash_report_handler: create_dummy_node(),
             policy_params,
             platform_metrics_node: create_dummy_node(),
         };
@@ -1227,7 +886,6 @@ pub mod tests {
             cpu_control_nodes: vec![cpu_node_1, cpu_node_2],
             sys_pwr_handler: mock_maker.make("SysPwrNode", vec![]),
             thermal_load_notify_nodes: vec![mock_maker.make("ThermalLoadNotify", vec![])],
-            crash_report_handler: create_dummy_node(),
             policy_params: default_policy_params(),
             platform_metrics_node: create_dummy_node(),
         };
@@ -1257,7 +915,6 @@ pub mod tests {
             cpu_control_nodes: vec![mock_maker.make("CpuCtrlNode", vec![])],
             sys_pwr_handler: mock_maker.make("SysPwrNode", vec![]),
             thermal_load_notify_nodes: vec![mock_maker.make("ThermalLoadNotify", vec![])],
-            crash_report_handler: create_dummy_node(),
             policy_params: default_policy_params(),
             platform_metrics_node: create_dummy_node(),
         };
@@ -1275,7 +932,6 @@ pub mod tests {
                 ThermalPolicy: {
                     state: contains {},
                     stats: contains {},
-                    throttle_history: contains {},
                     policy_params: {
                         controller_params: {
                             "sample_interval (s)":
@@ -1297,159 +953,6 @@ pub mod tests {
         );
     }
 
-    /// Tests that throttle data is collected and stored properly in Inspect.
-    #[fasync::run_singlethreaded(test)]
-    async fn test_inspect_throttle_history() {
-        let mut mock_maker = MockNodeMaker::new();
-
-        // Set relevant policy parameters so we have deterministic power and thermal load
-        // calculations
-        let mut policy_params = default_policy_params();
-        policy_params.controller_params.sustainable_power = Watts(1.0);
-        policy_params.controller_params.proportional_gain = 0.0;
-        policy_params.controller_params.integral_gain = 0.0;
-
-        // Calculate the values that we expect to be reported by the thermal policy based on the
-        // parameters chosen above
-        let thermal_load = ThermalLoad(50);
-        let throttle_available_power = policy_params.controller_params.sustainable_power;
-        let throttle_available_power_cpu1 = throttle_available_power;
-        let throttle_cpu1_power_used = throttle_available_power_cpu1 - Watts(0.3); // arbitrary
-        let throttle_available_power_cpu2 =
-            throttle_available_power_cpu1 - throttle_cpu1_power_used;
-        let throttle_cpu2_power_used = throttle_available_power_cpu2;
-        let throttle_start_time = Nanoseconds(0);
-        let throttle_end_time = Nanoseconds(1000);
-
-        // Set up the ThermalPolicy node
-        let thermal_config = ThermalConfig {
-            temperature_node: create_dummy_node(),
-            cpu_control_nodes: vec![
-                mock_maker.make(
-                    "Cpu1Node",
-                    vec![(
-                        msg_eq!(SetMaxPowerConsumption(throttle_available_power_cpu1)),
-                        msg_ok_return!(SetMaxPowerConsumption(throttle_cpu1_power_used)),
-                    )],
-                ),
-                mock_maker.make(
-                    "Cpu2Node",
-                    vec![(
-                        msg_eq!(SetMaxPowerConsumption(throttle_available_power_cpu2)),
-                        msg_ok_return!(SetMaxPowerConsumption(throttle_cpu2_power_used)),
-                    )],
-                ),
-            ],
-            sys_pwr_handler: create_dummy_node(),
-            thermal_load_notify_nodes: vec![create_dummy_node()],
-            crash_report_handler: create_dummy_node(),
-            policy_params,
-            platform_metrics_node: create_dummy_node(),
-        };
-        let inspector = inspect::Inspector::new();
-        let node_futures = FuturesUnordered::new();
-        let node = ThermalPolicyBuilder::new(thermal_config)
-            .with_inspect_root(inspector.root())
-            .build(&node_futures)
-            .await
-            .unwrap();
-
-        // Causes Inspect to receive throttle_start_time and one reading into thermal_load_hist
-        let _ = node.update_throttling_state(throttle_start_time, thermal_load).await;
-        let _ = node.process_thermal_load(throttle_start_time, thermal_load).await;
-
-        // Causes Inspect to receive one reading into available_power_hist and one reading into both
-        // entries of cpu_power_usage
-        let _ = node.update_power_allocation(0.0, 0.0).await;
-
-        // Causes Inspect to receive throttle_end_time
-        let _ = node.update_throttling_state(throttle_end_time, ThermalLoad(0)).await;
-        let _ = node.process_thermal_load(throttle_end_time, ThermalLoad(0)).await;
-
-        let mut expected_thermal_load_hist = HistogramAssertion::linear(LinearHistogramParams {
-            floor: 0u64,
-            step_size: 1,
-            buckets: 100,
-        });
-        expected_thermal_load_hist.insert_values(vec![thermal_load.0.into()]);
-
-        let mut expected_available_power_hist = HistogramAssertion::linear(LinearHistogramParams {
-            floor: 0.0,
-            step_size: 0.1,
-            buckets: 100,
-        });
-        expected_available_power_hist.insert_values(vec![throttle_available_power.0]);
-
-        let mut expected_cpu_1_power_usage_hist =
-            HistogramAssertion::linear(LinearHistogramParams {
-                floor: 0.0,
-                step_size: 0.1,
-                buckets: 100,
-            });
-        expected_cpu_1_power_usage_hist.insert_values(vec![throttle_cpu1_power_used.0]);
-
-        let mut expected_cpu_2_power_usage_hist =
-            HistogramAssertion::linear(LinearHistogramParams {
-                floor: 0.0,
-                step_size: 0.1,
-                buckets: 100,
-            });
-        expected_cpu_2_power_usage_hist.insert_values(vec![throttle_cpu2_power_used.0]);
-
-        assert_data_tree!(
-            inspector,
-            root: contains {
-                ThermalPolicy: contains {
-                    throttle_history: {
-                        "0": {
-                            throttle_start_time: throttle_start_time.0,
-                            throttle_end_time: throttle_end_time.0,
-                            thermal_load_hist: expected_thermal_load_hist,
-                            available_power_hist: expected_available_power_hist,
-                            cpu_power_usage: {
-                                Cpu1Node: {
-                                    hist: expected_cpu_1_power_usage_hist,
-                                },
-                                Cpu2Node: {
-                                    hist: expected_cpu_2_power_usage_hist,
-                                }
-                            }
-                        },
-                    }
-                }
-            }
-        )
-    }
-
-    /// Verifies that InspectThrottleHistory correctly removes old entries without increasing the
-    /// size of the underlying vector.
-    #[test]
-    fn test_inspect_throttle_history_length() {
-        // Create a InspectThrottleHistory with capacity for only one throttling entry
-        let mut throttle_history = InspectThrottleHistory::new(
-            inspect::Inspector::new().root().create_child("test_node"),
-            1,
-        );
-
-        // Add a throttling entry
-        throttle_history.mark_throttling_active(Nanoseconds(0));
-        throttle_history.mark_throttling_inactive(Nanoseconds(0));
-
-        // Verify one entry and unchanged capacity
-        assert_eq!(throttle_history.throttle_history_list.len(), 1);
-        assert_eq!(throttle_history.throttle_history_list.capacity(), 1);
-        assert_eq!(throttle_history.entry_count, 1);
-
-        // Add one more throttling entry
-        throttle_history.mark_throttling_active(Nanoseconds(0));
-        throttle_history.mark_throttling_inactive(Nanoseconds(0));
-
-        // Verify still one entry and unchanged capacity
-        assert_eq!(throttle_history.throttle_history_list.len(), 1);
-        assert_eq!(throttle_history.throttle_history_list.capacity(), 1);
-        assert_eq!(throttle_history.entry_count, 2);
-    }
-
     /// Tests that well-formed configuration JSON does not panic the `new_from_json` function.
     #[fasync::run_singlethreaded(test)]
     async fn test_new_from_json() {
@@ -1458,7 +961,6 @@ pub mod tests {
             "name": "thermal_policy",
             "config": {
                 "thermal_shutdown_temperature": 95.0,
-                "throttle_end_delay": 0.0,
                 "controller_params": {
                     "sample_interval": 1.0,
                     "filter_time_constant": 5.0,
@@ -1477,7 +979,6 @@ pub mod tests {
                 "system_power_handler_node": "sys_power",
                 "temperature_handler_node": "temperature",
                 "thermal_load_notify_nodes": ["thermal_load_notify"],
-                "crash_report_handler_node": "crash_report",
                 "platform_metrics_node": "metrics"
               },
         });
@@ -1487,7 +988,6 @@ pub mod tests {
         nodes.insert("cpu_control".to_string(), create_dummy_node());
         nodes.insert("sys_power".to_string(), create_dummy_node());
         nodes.insert("thermal_load_notify".to_string(), create_dummy_node());
-        nodes.insert("crash_report".to_string(), create_dummy_node());
         nodes.insert("metrics".to_string(), create_dummy_node());
         let _ = ThermalPolicyBuilder::new_from_json(json_data, &nodes);
     }
@@ -1500,9 +1000,13 @@ pub mod tests {
 
         // Set custom thermal policy parameters to have easier control over throttling state changes
         let mut policy_params = default_policy_params();
-        policy_params.throttle_end_delay = Seconds(10.0);
         policy_params.controller_params.target_temperature = Celsius(50.0);
+        policy_params.controller_params.e_integral_max = 0.0;
+        policy_params.controller_params.e_integral_min = -20.0;
         policy_params.thermal_shutdown_temperature = Celsius(80.0);
+        policy_params.controller_params.proportional_gain = 0.0;
+        policy_params.controller_params.integral_gain = 0.1;
+        policy_params.controller_params.sustainable_power = Watts(1.0);
 
         // The executor's fake time must be set before node creation to ensure the periodic timer's
         // deadline is properly initialized.
@@ -1512,22 +1016,15 @@ pub mod tests {
         let mock_metrics = mock_maker.make("MockPlatformMetrics", vec![]);
         let mock_temperature = mock_maker.make(
             "MockTemperature",
-            vec![(msg_eq!(GetDriverPath), msg_ok_return!(GetDriverPath(String::new())))],
+            vec![(msg_eq!(GetDriverPath), msg_ok_return!(GetDriverPath("sensor1".to_string())))],
         );
+
         let node_futures = FuturesUnordered::new();
         let node_builder = ThermalPolicyBuilder::new(ThermalConfig {
             temperature_node: mock_temperature.clone(),
             cpu_control_nodes: vec![create_dummy_node()],
             sys_pwr_handler: create_dummy_node(),
-            thermal_load_notify_nodes: vec![create_dummy_node()],
-            crash_report_handler: mock_maker.make(
-                "CrashReport",
-                vec![(
-                    // The test ends with a thermal shutdown so ensure the mock node expects it
-                    msg_eq!(FileCrashReport("fuchsia-thermal-throttle".to_string())),
-                    msg_ok_return!(FileCrashReport),
-                )],
-            ),
+            thermal_load_notify_nodes: vec![],
             platform_metrics_node: mock_metrics.clone(),
             policy_params,
         })
@@ -1540,11 +1037,10 @@ pub mod tests {
 
         // Wrap the executor, node, and futures in a simple struct that drives time steps. This
         // enables the control flow:
-        // 1. Call TimeStepper::schedule_wakeup to wake the periodic timer, exposing the time of the
-        //    wakeup, which may be needed for metric expectations.
-        // 2. Set metric expectations.
-        // 3. Iterate the ThermalPolicy.
-        // 4. Verify metric expectations.
+        // 1. Set metric expectations (add expected message to mock node(s)).
+        // 2. Call TimeStepper::iterate_policy to wake the periodic timer and iterate the
+        //    ThermalPolicy.
+        // 3. Verify metric expectations.
         struct TimeStepper<'a> {
             executor: fasync::TestExecutor,
             node: Rc<ThermalPolicy>,
@@ -1552,13 +1048,10 @@ pub mod tests {
         }
 
         impl<'a> TimeStepper<'a> {
-            fn schedule_wakeup(&mut self) -> Nanoseconds {
+            fn iterate_policy(&mut self) {
                 let wakeup_time = self.executor.wake_next_timer().unwrap();
                 self.executor.set_fake_time(wakeup_time);
-                Nanoseconds::from(wakeup_time)
-            }
 
-            fn iterate_policy(&mut self) {
                 self.node.state.temperature_filter.reset();
 
                 assert_eq!(
@@ -1570,106 +1063,98 @@ pub mod tests {
 
         let mut stepper = TimeStepper { executor, node, node_futures };
 
-        // Begin thermal throttling
-        let next_time = stepper.schedule_wakeup();
+        // Throttling begins because 55 degC is greater than `target_temperature` (50 degC)
         mock_temperature.add_msg_response_pair((
             msg_eq!(ReadTemperature),
             msg_ok_return!(ReadTemperature(Celsius(55.0))),
         ));
         mock_metrics.add_msg_response_pair((
-            msg_eq!(LogThrottleStart(next_time)),
-            msg_ok_return!(LogThrottleStart),
-        ));
-        stepper.iterate_policy();
-
-        // Active cooldown timer
-        stepper.schedule_wakeup();
-        mock_temperature.add_msg_response_pair((
-            msg_eq!(ReadTemperature),
-            msg_ok_return!(ReadTemperature(Celsius(45.0))),
-        ));
-        stepper.iterate_policy();
-
-        // Back into thermal throttling
-        stepper.schedule_wakeup();
-        mock_temperature.add_msg_response_pair((
-            msg_eq!(ReadTemperature),
-            msg_ok_return!(ReadTemperature(Celsius(55.0))),
-        ));
-        stepper.iterate_policy();
-
-        // Begin the active cooldown timer on iteration 0, and run for 9 more seconds
-        for _ in 0..10 {
-            stepper.schedule_wakeup();
-            mock_temperature.add_msg_response_pair((
-                msg_eq!(ReadTemperature),
-                msg_ok_return!(ReadTemperature(Celsius(45.0))),
-            ));
-            stepper.iterate_policy();
-        }
-
-        // Ten seconds after cooldown starts, thermal throttling ends
-        let next_time = stepper.schedule_wakeup();
-        mock_temperature.add_msg_response_pair((
-            msg_eq!(ReadTemperature),
-            msg_ok_return!(ReadTemperature(Celsius(45.0))),
+            msg_eq!(LogPlatformMetric(PlatformMetric::ThrottlingActive)),
+            msg_ok_return!(LogPlatformMetric),
         ));
         mock_metrics.add_msg_response_pair((
-            msg_eq!(LogThrottleEndMitigated(next_time)),
-            msg_ok_return!(LogThrottleEndMitigated),
+            msg_eq!(LogPlatformMetric(PlatformMetric::ThermalLoad(
+                ThermalLoad(25),
+                "sensor1".to_string()
+            ))),
+            msg_ok_return!(LogPlatformMetric),
+        ));
+        mock_metrics.add_msg_response_pair((
+            msg_eq!(LogPlatformMetric(PlatformMetric::AvailablePower(Watts(0.5),))),
+            msg_ok_return!(LogPlatformMetric),
+        ));
+        stepper.iterate_policy();
+
+        // Throttling still active, log the new thermal load value
+        mock_temperature.add_msg_response_pair((
+            msg_eq!(ReadTemperature),
+            msg_ok_return!(ReadTemperature(Celsius(60.0))),
+        ));
+        mock_metrics.add_msg_response_pair((
+            msg_eq!(LogPlatformMetric(PlatformMetric::ThermalLoad(
+                ThermalLoad(75),
+                "sensor1".to_string()
+            ))),
+            msg_ok_return!(LogPlatformMetric),
+        ));
+        mock_metrics.add_msg_response_pair((
+            msg_eq!(LogPlatformMetric(PlatformMetric::AvailablePower(Watts(0.0),))),
+            msg_ok_return!(LogPlatformMetric),
+        ));
+        stepper.iterate_policy();
+
+        // End thermal throttling
+        mock_temperature.add_msg_response_pair((
+            msg_eq!(ReadTemperature),
+            msg_ok_return!(ReadTemperature(Celsius(35.0))),
+        ));
+        mock_metrics.add_msg_response_pair((
+            msg_eq!(LogPlatformMetric(PlatformMetric::ThrottlingResultMitigated)),
+            msg_ok_return!(LogPlatformMetric),
+        ));
+        mock_metrics.add_msg_response_pair((
+            msg_eq!(LogPlatformMetric(PlatformMetric::ThermalLoad(
+                ThermalLoad(0),
+                "sensor1".to_string()
+            ))),
+            msg_ok_return!(LogPlatformMetric),
+        ));
+        mock_metrics.add_msg_response_pair((
+            msg_eq!(LogPlatformMetric(PlatformMetric::AvailablePower(Watts(1.0),))),
+            msg_ok_return!(LogPlatformMetric),
         ));
         stepper.iterate_policy();
 
         // Cause the thermal policy to enter thermal shutdown
-        let next_time = stepper.schedule_wakeup();
         mock_temperature.add_msg_response_pair((
             msg_eq!(ReadTemperature),
             msg_ok_return!(ReadTemperature(Celsius(90.0))),
         ));
+
         mock_metrics.add_msg_response_pair((
-            msg_eq!(LogThrottleStart(next_time)),
-            msg_ok_return!(LogThrottleStart),
+            msg_eq!(LogPlatformMetric(PlatformMetric::ThrottlingResultShutdown)),
+            msg_ok_return!(LogPlatformMetric),
+        ));
+
+        // On a real system, the shutdown would occur before these messages are sent. But since the
+        // test continues executing even after the shutdown request is sent, we need to add them to
+        // the expected messages.
+        mock_metrics.add_msg_response_pair((
+            msg_eq!(LogPlatformMetric(PlatformMetric::ThrottlingActive)),
+            msg_ok_return!(LogPlatformMetric),
         ));
         mock_metrics.add_msg_response_pair((
-            msg_eq!(LogThrottleEndShutdown(next_time)),
-            msg_ok_return!(LogThrottleEndShutdown),
+            msg_eq!(LogPlatformMetric(PlatformMetric::ThermalLoad(
+                ThermalLoad(100),
+                "sensor1".to_string()
+            ))),
+            msg_ok_return!(LogPlatformMetric),
+        ));
+        mock_metrics.add_msg_response_pair((
+            msg_eq!(LogPlatformMetric(PlatformMetric::AvailablePower(Watts(0.0),))),
+            msg_ok_return!(LogPlatformMetric),
         ));
         stepper.iterate_policy();
-    }
-
-    /// Tests that when thermal throttling exits, the ThermalPolicy triggers a crash report on the
-    /// CrashReportHandler node.
-    #[fasync::run_singlethreaded(test)]
-    async fn test_throttle_crash_report() {
-        let mut mock_maker = MockNodeMaker::new();
-
-        // Define the test parameters
-        let mut policy_params = default_policy_params();
-        policy_params.throttle_end_delay = Seconds(0.0);
-
-        // Set up the ThermalPolicy node
-        let thermal_config = ThermalConfig {
-            temperature_node: create_dummy_node(),
-            cpu_control_nodes: vec![create_dummy_node()],
-            sys_pwr_handler: create_dummy_node(),
-            thermal_load_notify_nodes: vec![create_dummy_node()],
-            crash_report_handler: mock_maker.make(
-                "CrashReportMock",
-                vec![(
-                    msg_eq!(FileCrashReport("fuchsia-thermal-throttle".to_string())),
-                    msg_ok_return!(FileCrashReport),
-                )],
-            ),
-            policy_params,
-            platform_metrics_node: create_dummy_node(),
-        };
-        let node_futures = FuturesUnordered::new();
-        let node = ThermalPolicyBuilder::new(thermal_config).build(&node_futures).await.unwrap();
-
-        // Enter and then exit thermal throttling. The mock crash_report_handler node will assert if
-        // it does not receive a FileCrashReport message.
-        let _ = node.update_throttling_state(Nanoseconds(0), ThermalLoad(50)).await;
-        let _ = node.update_throttling_state(Nanoseconds(0), ThermalLoad(0)).await;
     }
 
     #[allow(clippy::unit_cmp)] // TODO(fxbug.dev/95036)
@@ -1697,7 +1182,6 @@ pub mod tests {
                     msg_ok_return!(UpdateThermalLoad),
                 )],
             )],
-            crash_report_handler: create_dummy_node(),
             policy_params: default_policy_params(),
             platform_metrics_node: create_dummy_node(),
         };
@@ -1710,7 +1194,7 @@ pub mod tests {
         // When `process_thermal_load` runs, the new ThermalLoad value will be sent to the
         // ThermalLoadNotify node. The mock will verify the correct sensor path is found in the
         // UpdateThermalLoad message.
-        assert_eq!(node.process_thermal_load(Nanoseconds(1), ThermalLoad(20)).await.unwrap(), ());
+        assert_eq!(node.process_thermal_load(ThermalLoad(20)).await.unwrap(), ());
     }
 
     #[allow(clippy::unit_cmp)] // TODO(fxbug.dev/95036)
@@ -1747,7 +1231,6 @@ pub mod tests {
                     )],
                 ),
             ],
-            crash_report_handler: create_dummy_node(),
             policy_params: default_policy_params(),
             platform_metrics_node: create_dummy_node(),
         };
@@ -1759,6 +1242,6 @@ pub mod tests {
 
         // When `process_thermal_load` runs, the mocks will verify they each receive the
         // UpdateThermalLoad message
-        assert_eq!(node.process_thermal_load(Nanoseconds(1), ThermalLoad(20)).await.unwrap(), ());
+        assert_eq!(node.process_thermal_load(ThermalLoad(20)).await.unwrap(), ());
     }
 }

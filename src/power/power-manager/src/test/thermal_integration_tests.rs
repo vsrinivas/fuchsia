@@ -372,7 +372,6 @@ impl<'a> ThermalPolicyTest<'a> {
             cpu_control_nodes: vec![cpu_control_node],
             sys_pwr_handler,
             thermal_load_notify_nodes: vec![],
-            crash_report_handler: create_dummy_node(),
             policy_params,
             platform_metrics_node: create_dummy_node(),
         };
@@ -434,7 +433,6 @@ fn default_policy_params() -> ThermalPolicyParams {
             integral_gain: 0.2,
         },
         thermal_shutdown_temperature: Celsius(95.0),
-        throttle_end_delay: Seconds(0.0),
     }
 }
 

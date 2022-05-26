@@ -85,17 +85,18 @@
     "type": "PlatformMetrics",
     "name": "platform_metrics",
     "config": {
-      "cpu_temperature_poll_interval_s": 1
+      "cpu_temperature_poll_interval_s": 1,
+      "throttle_debounce_timeout_s": 60
     },
     "dependencies": {
-      "cpu_temperature_handler_node": "temperature_soc_pll"
+      "cpu_temperature_handler_node": "temperature_soc_pll",
+      "crash_report_handler_node": "crash_handler"
     }
   },
   {
     "type": "ThermalPolicy",
     "name": "thermal_policy",
     "dependencies": {
-      "crash_report_handler_node": "crash_handler",
       "temperature_handler_node": "temperature_soc_pll",
       "cpu_control_nodes": [
         "cpu_control"
@@ -117,8 +118,7 @@
         "proportional_gain": 0.0,
         "integral_gain": 0.08
       },
-      "thermal_shutdown_temperature": 95.0,
-      "throttle_end_delay": 60.0
+      "thermal_shutdown_temperature": 95.0
     }
   },
   {

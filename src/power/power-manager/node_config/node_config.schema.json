@@ -379,11 +379,16 @@
                 "type": "number",
                 "minimum": 0,
                 "exclusiveMinimum": true
+              },
+              "throttle_debounce_timeout_s": {
+                "type": "number",
+                "minimum": 0
               }
             },
             "additionalProperties": false,
             "required": [
-              "cpu_temperature_poll_interval_s"
+              "cpu_temperature_poll_interval_s",
+              "throttle_debounce_timeout_s"
             ]
           },
           "dependencies": {
@@ -391,11 +396,15 @@
             "properties": {
               "cpu_temperature_handler_node": {
                 "type": "string"
+              },
+              "crash_report_handler_node": {
+                "type": "string"
               }
             },
             "additionalProperties": false,
             "required": [
-              "cpu_temperature_handler_node"
+              "cpu_temperature_handler_node",
+              "crash_report_handler_node"
             ]
           }
         },
@@ -610,9 +619,6 @@
           "dependencies": {
             "type": "object",
             "properties": {
-              "crash_report_handler_node": {
-                "type": "string"
-              },
               "cpu_control_nodes": {
                 "type": "array",
                 "minItems": 1,
@@ -649,9 +655,6 @@
             "type": "object",
             "properties": {
               "thermal_shutdown_temperature": {
-                "type": "number"
-              },
-              "throttle_end_delay": {
                 "type": "number"
               },
               "controller_params": {

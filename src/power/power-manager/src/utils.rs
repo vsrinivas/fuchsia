@@ -437,3 +437,36 @@ mod tests {
         assert_eq!(get_current_timestamp(), Nanoseconds(1000));
     }
 }
+
+#[cfg(test)]
+pub mod run_all_tasks_until_stalled {
+    /// Runs all tasks known to the current executor until stalled.
+    ///
+    /// This is a useful convenience function to run `fuchsia_async::Task`s where directly polling
+    /// them is either inconvenient or not possible (e.g., detached).
+    pub fn run_all_tasks_until_stalled(executor: &mut fuchsia_async::TestExecutor) {
+        assert!(executor.run_until_stalled(&mut futures::future::pending::<()>()).is_pending());
+    }
+
+    mod tests {
+        use super::run_all_tasks_until_stalled;
+        use std::cell::Cell;
+        use std::rc::Rc;
+
+        #[test]
+        fn test_run_all_tasks_until_stalled() {
+            let mut executor = fuchsia_async::TestExecutor::new_with_fake_time().unwrap();
+
+            let completed = Rc::new(Cell::new(false));
+            let completed_clone = completed.clone();
+
+            let _task = fuchsia_async::Task::local(async move {
+                completed_clone.set(true);
+            });
+
+            assert_eq!(completed.get(), false);
+            run_all_tasks_until_stalled(&mut executor);
+            assert_eq!(completed.get(), true);
+        }
+    }
+}
