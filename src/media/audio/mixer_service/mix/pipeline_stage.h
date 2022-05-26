@@ -152,10 +152,15 @@ class PipelineStage {
   // the returned value may change concurrently.
   ThreadPtr thread() const { return std::atomic_load(&thread_); }
 
+  // Returns the koid of the clock used by the stage's destination stream.
+  // The source streams may use different clocks.
+  zx_koid_t reference_clock_koid() const { return reference_clock_koid_; }
+
   // TODO(fxbug.dev/87651): Add functionality to set presentation delay.
 
  protected:
-  PipelineStage(std::string_view name, Format format) : name_(name), format_(format) {}
+  PipelineStage(std::string_view name, Format format, zx_koid_t reference_clock_koid)
+      : name_(name), format_(format), reference_clock_koid_(reference_clock_koid) {}
 
   PipelineStage(const PipelineStage&) = delete;
   PipelineStage& operator=(const PipelineStage&) = delete;
@@ -225,6 +230,7 @@ class PipelineStage {
 
   const std::string name_;
   const Format format_;
+  const zx_koid_t reference_clock_koid_;
 
   // Cached packet from the last call to `ReadImpl`. It remains valid until `next_dest_frame_`
   // reaches the end of the packet.

@@ -22,8 +22,8 @@ namespace media_audio_mixer_service {
 
 class PacketQueueProducerStage : public ProducerStage {
  public:
-  explicit PacketQueueProducerStage(Format format)
-      : ProducerStage("PacketQueueProducerStage", format) {}
+  PacketQueueProducerStage(Format format, zx_koid_t reference_clock_koid)
+      : ProducerStage("PacketQueueProducerStage", format, reference_clock_koid) {}
 
   // Registers a callback to invoke when a packet underflows.
   // The duration estimates how late the packet was relative to the system monotonic clock.

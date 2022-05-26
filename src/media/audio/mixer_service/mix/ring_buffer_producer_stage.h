@@ -24,9 +24,9 @@ class RingBufferProducerStage : public ProducerStage {
   // TODO(fxbug.dev/87651): Move this out to a common `ring_buffer` file as `SafeReadWriteFn`?
   using SafeReadFrameFn = std::function<int64_t()>;
 
-  RingBufferProducerStage(Format format, fzl::VmoMapper vmo_mapper, int64_t frame_count,
-                          SafeReadFrameFn safe_read_frame_fn)
-      : ProducerStage("RingBufferProducerStage", format),
+  RingBufferProducerStage(Format format, zx_koid_t reference_clock_koid, fzl::VmoMapper vmo_mapper,
+                          int64_t frame_count, SafeReadFrameFn safe_read_frame_fn)
+      : ProducerStage("RingBufferProducerStage", format, reference_clock_koid),
         vmo_mapper_(std::move(vmo_mapper)),
         frame_count_(frame_count),
         safe_read_frame_fn_(std::move(safe_read_frame_fn)) {

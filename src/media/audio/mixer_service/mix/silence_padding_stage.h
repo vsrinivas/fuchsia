@@ -79,8 +79,9 @@ namespace media_audio_mixer_service {
 // silence.
 class SilencePaddingStage : public PipelineStage {
  public:
-  SilencePaddingStage(Format format, Fixed silence_frame_count, bool round_down_fractional_frames)
-      : PipelineStage("SilencePaddingStage", format),
+  SilencePaddingStage(Format format, zx_koid_t reference_clock_koid, Fixed silence_frame_count,
+                      bool round_down_fractional_frames)
+      : PipelineStage("SilencePaddingStage", format, reference_clock_koid),
         // Round up to generate an integer number of frames.
         silence_frame_count_(silence_frame_count.Ceiling()),
         round_down_fractional_frames_(round_down_fractional_frames),

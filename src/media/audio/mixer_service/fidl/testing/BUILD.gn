@@ -17,4 +17,6 @@ source_set("testing") {
   ]
 
   public_deps = [ "//src/media/audio/mixer_service/fidl" ]
+
+  deps = [ "//src/media/audio/mixer_service/mix/testing" ]
 }

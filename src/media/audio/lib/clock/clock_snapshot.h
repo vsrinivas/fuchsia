@@ -7,6 +7,7 @@
 
 #include <memory>
 #include <string>
+#include <unordered_map>
 
 #include "src/media/audio/lib/clock/clock.h"
 
@@ -54,6 +55,36 @@ class ClockSnapshot {
   Clock::ToClockMonoSnapshot to_clock_mono_snapshot_;
   zx::time mono_now_;
   zx::time ref_now_;
+};
+
+// This class provides a way to snapshot multiple clocks at once.
+// Not safe for concurrent use.
+class ClockSnapshots {
+ public:
+  // Returns the most recent snapshot for the clock with the given koid.
+  // Update must have been called since this clock was added.
+  ClockSnapshot SnapshotFor(zx_koid_t clock_koid) const;
+
+  // Adds a clock to snapshot in future calls to Update.
+  //
+  // REQUIRES: A clock with the same koid has not already been added.
+  void AddClock(std::shared_ptr<Clock> clock);
+
+  // Removes a clock from this container.
+  //
+  // REQUIRES: A clock with the same koid has been added.
+  void RemoveClock(std::shared_ptr<Clock> clock);
+
+  // Update the snapshot of every clock.
+  void Update(zx::time mono_now);
+
+ private:
+  struct ClockInfo {
+    std::shared_ptr<Clock> clock;
+    std::optional<ClockSnapshot> last_snapshot;
+  };
+
+  std::unordered_map<zx_koid_t, ClockInfo> snapshots_;
 };
 
 }  // namespace media_audio

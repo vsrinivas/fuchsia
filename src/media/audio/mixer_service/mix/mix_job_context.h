@@ -12,6 +12,7 @@
 
 #include <fbl/static_vector.h>
 
+#include "src/media/audio/lib/clock/clock_snapshot.h"
 #include "src/media/audio/mixer_service/common/basic_types.h"
 #include "src/media/audio/mixer_service/mix/mix_job_subtask.h"
 
@@ -21,9 +22,14 @@ namespace media_audio_mixer_service {
 class MixJobContext {
  private:
   // Capacity of per_subtask_metrics_.
-  static constexpr size_t kMaxTasks = 16;
+  static constexpr size_t kMaxSubtasks = 16;
 
  public:
+  explicit MixJobContext(const ClockSnapshots& clocks) : clocks_(clocks) {}
+
+  // Returns the set of clocks available during this mix job.
+  const ClockSnapshots& clocks() const { return clocks_; }
+
   // Adds metrics for the given subtask. Internally we maintain one Metrics object per subtask. If
   // this method is called multiple times with the same subtask name, the metrics are accumulated.
   void AddSubtaskMetrics(const MixJobSubtask::Metrics& new_subtask) {
@@ -34,16 +40,17 @@ class MixJobContext {
       }
     }
     // Add a new subtask, or silently drop if we've exceeded the maximum.
-    if (per_subtask_metrics_.size() < kMaxTasks) {
+    if (per_subtask_metrics_.size() < kMaxSubtasks) {
       per_subtask_metrics_.push_back(new_subtask);
     }
   }
 
   // Returns all metrics accumulated via AddMetrics.
-  using SubtaskMetricsVector = fbl::static_vector<MixJobSubtask::Metrics, kMaxTasks>;
+  using SubtaskMetricsVector = fbl::static_vector<MixJobSubtask::Metrics, kMaxSubtasks>;
   const SubtaskMetricsVector& per_subtask_metrics() { return per_subtask_metrics_; }
 
  private:
+  const ClockSnapshots& clocks_;
   SubtaskMetricsVector per_subtask_metrics_;
 };
 

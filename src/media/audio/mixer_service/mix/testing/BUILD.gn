@@ -11,10 +11,17 @@ source_set("testing") {
     ":*",
     "//src/media/audio/mixer_service:*",
     "//src/media/audio/mixer_service/fidl:*",
+    "//src/media/audio/mixer_service/fidl/testing:*",
     "//src/media/audio/mixer_service/mix:*",
   ]
 
-  sources = [ "defaults.h" ]
+  sources = [
+    "defaults.cc",
+    "defaults.h",
+  ]
 
-  public_deps = [ "//src/media/audio/mixer_service/mix" ]
+  public_deps = [
+    "//src/media/audio/lib/clock",
+    "//src/media/audio/mixer_service/mix",
+  ]
 }

@@ -9,7 +9,10 @@
 
 #include <limits>
 
-#include "src/media/audio/lib/clock/audio_clock.h"
+#include "src/media/audio/lib/clock/clock.h"
+#include "src/media/audio/lib/clock/clock_snapshot.h"
+#include "src/media/audio/lib/clock/real_clock.h"
+#include "src/media/audio/lib/clock/synthetic_clock.h"
 #include "src/media/audio/lib/format2/fixed.h"
 #include "src/media/audio/lib/format2/format.h"
 #include "src/media/audio/lib/timeline/timeline_function.h"
@@ -30,7 +33,13 @@ constexpr uint64_t kAnyThreadId = std::numeric_limits<uint64_t>::max();
 static_assert(kAnyThreadId != kInvalidId);
 
 // Alias common types into this namespace.
-using AudioClock = ::media::audio::AudioClock;
+using Clock = ::media_audio::Clock;
+using RealClock = ::media_audio::RealClock;
+using SyntheticClock = ::media_audio::SyntheticClock;
+using SyntheticClockRealm = ::media_audio::SyntheticClockRealm;
+using ClockSnapshot = ::media_audio::ClockSnapshot;
+using ClockSnapshots = ::media_audio::ClockSnapshots;
+
 using Fixed = ::media_audio::Fixed;
 using Format = ::media_audio::Format;
 using TimelineFunction = ::media::TimelineFunction;

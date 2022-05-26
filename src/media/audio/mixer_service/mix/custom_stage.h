@@ -26,7 +26,8 @@ namespace media_audio_mixer_service {
 // TODO(fxbug.dev/87651): Generalize this for all N inputs K outputs use cases.
 class CustomStage : public PipelineStage {
  public:
-  explicit CustomStage(fuchsia_audio_effects::wire::ProcessorConfiguration config);
+  CustomStage(fuchsia_audio_effects::wire::ProcessorConfiguration config,
+              zx_koid_t reference_clock_koid);
 
   // Implements `PipelineStage`.
   void AddSource(PipelineStagePtr src) final { source_.AddSource(std::move(src)); }

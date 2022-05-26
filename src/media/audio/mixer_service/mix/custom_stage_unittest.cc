@@ -188,7 +188,7 @@ fuchsia_mediastreams::wire::AudioFormat DefaultFormatWithChannels(uint32_t chann
 }
 
 PipelineStagePtr MakeCustomStage(ProcessorConfiguration config, PipelineStagePtr source_stage) {
-  PipelineStagePtr custom_stage = std::make_shared<CustomStage>(config);
+  PipelineStagePtr custom_stage = std::make_shared<CustomStage>(config, DefaultClockKoid());
   custom_stage->set_thread(DetachedThread::Create());
   ScopedThreadChecker checker(custom_stage->thread()->checker());
   custom_stage->AddSource(std::move(source_stage));
@@ -196,7 +196,7 @@ PipelineStagePtr MakeCustomStage(ProcessorConfiguration config, PipelineStagePtr
 }
 
 std::shared_ptr<PacketQueueProducerStage> MakePacketQueueProducerStage(Format format) {
-  return std::make_shared<PacketQueueProducerStage>(format);
+  return std::make_shared<PacketQueueProducerStage>(format, DefaultClockKoid());
 }
 
 std::vector<float> ToVector(void* payload, size_t sample_start_idx, size_t sample_end_idx) {
@@ -337,7 +337,7 @@ class CustomStageTest : public testing::Test {
     {
       // Read the first packet. Since our effect adds 1.0 to each sample, and we populated the
       // packet with 1.0 samples, we expect to see only 2.0 samples in the result.
-      const auto packet = custom_stage->Read(kDefaultCtx, Fixed(0), packet_frames);
+      const auto packet = custom_stage->Read(DefaultCtx(), Fixed(0), packet_frames);
       ASSERT_TRUE(packet);
       EXPECT_EQ(packet->format(), output_format);
       EXPECT_EQ(packet->start().Floor(), 0);
@@ -361,7 +361,7 @@ class CustomStageTest : public testing::Test {
 
     {
       // Read the next packet. This should be null, because there are no more packets.
-      const auto packet = custom_stage->Read(kDefaultCtx, Fixed(packet_frames), packet_frames);
+      const auto packet = custom_stage->Read(DefaultCtx(), Fixed(packet_frames), packet_frames);
       ASSERT_FALSE(packet);
     }
   }
@@ -459,7 +459,7 @@ TEST_F(CustomStageTest, AddOneWithSourceOffset) {
       // Read the first packet. Since the first source packet is offset by `source_offset`, we
       // should read silence from the source followed by 1.0s. The effect adds one to these values,
       // so we should see 1.0s followed by 2.0s.
-      const auto packet = custom_stage->Read(kDefaultCtx, Fixed(0), kPacketFrames);
+      const auto packet = custom_stage->Read(DefaultCtx(), Fixed(0), kPacketFrames);
       ASSERT_TRUE(packet);
       EXPECT_EQ(packet->start().Floor(), 0);
       EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
@@ -473,7 +473,7 @@ TEST_F(CustomStageTest, AddOneWithSourceOffset) {
 
     {
       // Read the second packet. This should contain the remainder of the 2.0s, followed by 1.0s.
-      const auto packet = custom_stage->Read(kDefaultCtx, Fixed(kPacketFrames), kPacketFrames);
+      const auto packet = custom_stage->Read(DefaultCtx(), Fixed(kPacketFrames), kPacketFrames);
       ASSERT_TRUE(packet);
       EXPECT_EQ(packet->start().Floor(), kPacketFrames);
       EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
@@ -487,7 +487,7 @@ TEST_F(CustomStageTest, AddOneWithSourceOffset) {
 
     {
       // Read the next packet. This should be null, because there are no more packets.
-      const auto packet = custom_stage->Read(kDefaultCtx, Fixed(2 * kPacketFrames), kPacketFrames);
+      const auto packet = custom_stage->Read(DefaultCtx(), Fixed(2 * kPacketFrames), kPacketFrames);
       ASSERT_FALSE(packet);
     }
   }
@@ -511,7 +511,7 @@ TEST_F(CustomStageTest, AddOneWithReadSmallerThanProcessingBuffer) {
 
   {
     // Read the first packet.
-    const auto packet = custom_stage->Read(kDefaultCtx, Fixed(0), 480);
+    const auto packet = custom_stage->Read(DefaultCtx(), Fixed(0), 480);
     ASSERT_TRUE(packet);
     EXPECT_EQ(packet->start().Floor(), 0);
     EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
@@ -526,7 +526,7 @@ TEST_F(CustomStageTest, AddOneWithReadSmallerThanProcessingBuffer) {
     // The source stream does not have a second packet, however when we processed the first packet,
     // we processed 720 frames total (480 from the first packet + 240 of silence). This `Read`
     // should return those 240 frames.
-    const auto packet = custom_stage->Read(kDefaultCtx, Fixed(480), 480);
+    const auto packet = custom_stage->Read(DefaultCtx(), Fixed(480), 480);
     ASSERT_TRUE(packet);
     EXPECT_EQ(packet->start().Floor(), 480);
     EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
@@ -540,7 +540,7 @@ TEST_F(CustomStageTest, AddOneWithReadSmallerThanProcessingBuffer) {
   {
     // Read again where we left off. This should be null, because our cache is exhausted and the
     // source has no more data.
-    const auto packet = custom_stage->Read(kDefaultCtx, Fixed(720), 480);
+    const auto packet = custom_stage->Read(DefaultCtx(), Fixed(720), 480);
     ASSERT_FALSE(packet);
   }
 }
@@ -563,20 +563,20 @@ TEST_F(CustomStageTest, AddOneWithReadSmallerThanProcessingBufferAndSourceOffset
 
   {
     // This `Read` will attempt read 720 frames from the source, but the source is empty.
-    const auto packet = custom_stage->Read(kDefaultCtx, Fixed(0), 480);
+    const auto packet = custom_stage->Read(DefaultCtx(), Fixed(0), 480);
     ASSERT_FALSE(packet);
   }
 
   {
     // This `Read` should not read anything from the source because we know from the prior `Read`
     // that the source is empty until 720.
-    const auto packet = custom_stage->Read(kDefaultCtx, Fixed(480), 240);
+    const auto packet = custom_stage->Read(DefaultCtx(), Fixed(480), 240);
     ASSERT_FALSE(packet);
   }
 
   {
     // Now we have data.
-    const auto packet = custom_stage->Read(kDefaultCtx, Fixed(720), 480);
+    const auto packet = custom_stage->Read(DefaultCtx(), Fixed(720), 480);
     ASSERT_TRUE(packet);
     EXPECT_EQ(packet->start().Floor(), 720);
     EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
@@ -590,7 +590,7 @@ TEST_F(CustomStageTest, AddOneWithReadSmallerThanProcessingBufferAndSourceOffset
   {
     // The source stream ends at frame 720+480=1200, however the last `Read` processed 240
     // additional frames from the source. This `Read` should return those 240 frames.
-    const auto packet = custom_stage->Read(kDefaultCtx, Fixed(1200), 480);
+    const auto packet = custom_stage->Read(DefaultCtx(), Fixed(1200), 480);
     ASSERT_TRUE(packet);
     EXPECT_EQ(packet->start().Floor(), 1200);
     EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
@@ -604,7 +604,7 @@ TEST_F(CustomStageTest, AddOneWithReadSmallerThanProcessingBufferAndSourceOffset
   {
     // Read again where we left off. This should be null, because our cache is exhausted and the
     // source has no more data.
-    const auto packet = custom_stage->Read(kDefaultCtx, Fixed(1440), 480);
+    const auto packet = custom_stage->Read(DefaultCtx(), Fixed(1440), 480);
     ASSERT_FALSE(packet);
   }
 }
@@ -826,7 +826,7 @@ TEST_F(CustomStageTest, AddOneWithLatencyMoreThanMaxFramesPerCall) {
   {
     // Attempt to read the first 10 frames. This will process all frames up to frame 110, to
     // compensate for latency, 10 at a time, which should return the first 8 frames of the packet.
-    const auto packet = custom_stage->Read(kDefaultCtx, Fixed(0), 10);
+    const auto packet = custom_stage->Read(DefaultCtx(), Fixed(0), 10);
     ASSERT_TRUE(packet);
     EXPECT_EQ(packet->start().Floor(), 0);
     EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
@@ -836,7 +836,7 @@ TEST_F(CustomStageTest, AddOneWithLatencyMoreThanMaxFramesPerCall) {
 
   {
     // Read the remaining 2 frames.
-    const auto packet = custom_stage->Read(kDefaultCtx, Fixed(8), 2);
+    const auto packet = custom_stage->Read(DefaultCtx(), Fixed(8), 2);
     ASSERT_TRUE(packet);
     EXPECT_EQ(packet->start().Floor(), 8);
     EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
@@ -867,7 +867,7 @@ TEST_F(CustomStageTest, AddOneWithLatencyReadOnePacketWithOffset) {
   {
     // Read the first 10 frames, this will process the first 15 frames, which should not return
     // anything as the packet starts at frame 16.
-    const auto packet = custom_stage->Read(kDefaultCtx, Fixed(0), 10);
+    const auto packet = custom_stage->Read(DefaultCtx(), Fixed(0), 10);
     ASSERT_FALSE(packet);
   }
 
@@ -875,7 +875,7 @@ TEST_F(CustomStageTest, AddOneWithLatencyReadOnePacketWithOffset) {
     // Read the next 10 frames, this should process the next 15 frames up to frame 30, and return
     // one frame of silence starting at frame 15, followed by the first 4 frames of the packet
     // starting at frame 16.
-    const auto packet = custom_stage->Read(kDefaultCtx, Fixed(10), 10);
+    const auto packet = custom_stage->Read(DefaultCtx(), Fixed(10), 10);
     ASSERT_TRUE(packet);
     EXPECT_EQ(packet->start().Floor(), 15);
     EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
@@ -891,7 +891,7 @@ TEST_F(CustomStageTest, AddOneWithLatencyReadOnePacketWithOffset) {
   {
     // Attempt to read another 10 frames, this should return the cached 8 frames of the packet
     // starting at frame 20.
-    const auto packet = custom_stage->Read(kDefaultCtx, Fixed(20), 10);
+    const auto packet = custom_stage->Read(DefaultCtx(), Fixed(20), 10);
     ASSERT_TRUE(packet);
     EXPECT_EQ(packet->start().Floor(), 20);
     EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
@@ -906,7 +906,7 @@ TEST_F(CustomStageTest, AddOneWithLatencyReadOnePacketWithOffset) {
   {
     // Finally attempt to read another 10 frames from frame 28, this should return the remaining 3
     // frames followed by silence.
-    const auto packet = custom_stage->Read(kDefaultCtx, Fixed(28), 5);
+    const auto packet = custom_stage->Read(DefaultCtx(), Fixed(28), 5);
     ASSERT_TRUE(packet);
     EXPECT_EQ(packet->start().Floor(), 28);
     EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
@@ -946,7 +946,7 @@ TEST_F(CustomStageTest, AddOneWithLatencyReadTwoPacketsWithGaps) {
 
   {
     // Read the first 10 frames, this should return the first packet's frames.
-    const auto packet = custom_stage->Read(kDefaultCtx, Fixed(0), 10);
+    const auto packet = custom_stage->Read(DefaultCtx(), Fixed(0), 10);
     ASSERT_TRUE(packet);
     EXPECT_EQ(packet->start().Floor(), 0);
     EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
@@ -961,7 +961,7 @@ TEST_F(CustomStageTest, AddOneWithLatencyReadTwoPacketsWithGaps) {
   {
     // Attempt to read the next 10 frames, this should return the cached 3 frames of silence that
     // was processed in the first read call.
-    const auto packet = custom_stage->Read(kDefaultCtx, Fixed(10), 10);
+    const auto packet = custom_stage->Read(DefaultCtx(), Fixed(10), 10);
     ASSERT_TRUE(packet);
     EXPECT_EQ(packet->start().Floor(), 10);
     EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
@@ -977,7 +977,7 @@ TEST_F(CustomStageTest, AddOneWithLatencyReadTwoPacketsWithGaps) {
     // Read the remaining 7 frames until the start of the second packet, this will read the next 15
     // frames as a result, which should return the first 7 frames of silence, since the remaining
     // frames contain the first 8 frames of the second packet.
-    const auto packet = custom_stage->Read(kDefaultCtx, Fixed(13), 7);
+    const auto packet = custom_stage->Read(DefaultCtx(), Fixed(13), 7);
     ASSERT_TRUE(packet);
     EXPECT_EQ(packet->start().Floor(), 13);
     EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
@@ -991,7 +991,7 @@ TEST_F(CustomStageTest, AddOneWithLatencyReadTwoPacketsWithGaps) {
 
   {
     // Read the next 10 frames, this should return the cached first 8 frames of the second packet.
-    const auto packet = custom_stage->Read(kDefaultCtx, Fixed(20), 30);
+    const auto packet = custom_stage->Read(DefaultCtx(), Fixed(20), 30);
     ASSERT_TRUE(packet);
     EXPECT_EQ(packet->start().Floor(), 20);
     EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
@@ -1023,7 +1023,7 @@ TEST_F(CustomStageTest, AddOneWithLatencyAndRingout) {
 
   {
     // Read first 10 frames, which should return silence.
-    const auto packet = custom_stage->Read(kDefaultCtx, Fixed(0), 10);
+    const auto packet = custom_stage->Read(DefaultCtx(), Fixed(0), 10);
     ASSERT_TRUE(packet);
     EXPECT_EQ(packet->start().Floor(), 0);
     EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
@@ -1034,7 +1034,7 @@ TEST_F(CustomStageTest, AddOneWithLatencyAndRingout) {
   {
     // Attempt to read another 10 frames, which should return the cached 6 frames, starting with the
     // the impulse followed by 5 ring out frames.
-    const auto packet = custom_stage->Read(kDefaultCtx, Fixed(10), 10);
+    const auto packet = custom_stage->Read(DefaultCtx(), Fixed(10), 10);
     ASSERT_TRUE(packet);
     EXPECT_EQ(packet->start().Floor(), 10);
     EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
@@ -1049,7 +1049,7 @@ TEST_F(CustomStageTest, AddOneWithLatencyAndRingout) {
 
   {
     // Read 10 more frames which should return the remaining 10 ring out frames.
-    const auto packet = custom_stage->Read(kDefaultCtx, Fixed(16), 10);
+    const auto packet = custom_stage->Read(DefaultCtx(), Fixed(16), 10);
     ASSERT_TRUE(packet);
     EXPECT_EQ(packet->start().Floor(), 16);
     EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
@@ -1059,7 +1059,7 @@ TEST_F(CustomStageTest, AddOneWithLatencyAndRingout) {
 
   {
     // Attempt to read 10 more frames, which should not return any output beyond ring out frames.
-    const auto packet = custom_stage->Read(kDefaultCtx, Fixed(26), 10);
+    const auto packet = custom_stage->Read(DefaultCtx(), Fixed(26), 10);
     ASSERT_FALSE(packet);
   }
 }
@@ -1120,7 +1120,7 @@ TEST_F(CustomStageTest, Metrics) {
   producer_stage->push(PacketView({input_format, Fixed(0), kPacketFrames, packet_payload.data()}));
 
   // Call Read and validate the metrics.
-  MixJobContext ctx;
+  MixJobContext ctx(DefaultClockSnapshots());
   auto packet = custom_stage->Read(ctx, Fixed(0), kPacketFrames);
   ASSERT_TRUE(packet);
 

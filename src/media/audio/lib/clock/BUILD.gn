@@ -12,6 +12,7 @@ source_set("clock") {
     "audio_clock_coefficients.h",
     "audio_clock_factory.h",
     "clock.h",
+    "clock_snapshot.cc",
     "clock_snapshot.h",
     "clone_mono.cc",
     "clone_mono.h",

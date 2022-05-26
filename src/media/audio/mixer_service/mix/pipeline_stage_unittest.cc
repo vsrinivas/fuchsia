@@ -40,7 +40,9 @@ class FakeStage : public PipelineStage {
   };
 
   FakeStage(bool use_cache, std::vector<QueuedPacket>&& packets)
-      : PipelineStage("FakeStage", kFormat), use_cache_(use_cache), packets_(std::move(packets)) {}
+      : PipelineStage("FakeStage", kFormat, DefaultClockKoid()),
+        use_cache_(use_cache),
+        packets_(std::move(packets)) {}
 
   // TODO(fxbug.dev/87651): Use this instead of the constructor.
   void AddSource(PipelineStagePtr src) override {}
@@ -110,7 +112,7 @@ class FakeStage : public PipelineStage {
 class PassthroughStage : public PipelineStage {
  public:
   explicit PassthroughStage(std::shared_ptr<FakeStage> src)
-      : PipelineStage("PassthroughStage", src->format()), src_(src) {}
+      : PipelineStage("PassthroughStage", src->format(), DefaultClockKoid()), src_(src) {}
 
   // TODO(fxbug.dev/87651): Use this instead of the constructor.
   void AddSource(PipelineStagePtr src) override {}
@@ -224,7 +226,7 @@ class PipelineStageTest : public ::testing::TestWithParam<PipelineType> {
 
 TEST_P(PipelineStageTest, EmptySource) {
   auto stage = MakeStage(std::vector<FakeStage::QueuedPacket>());
-  auto packet = stage->Read(kDefaultCtx, Fixed(0), 20);
+  auto packet = stage->Read(DefaultCtx(), Fixed(0), 20);
   ExpectNullPacket(packet);
   ExpectAdvanceCalls({Fixed(20)});
 }
@@ -242,7 +244,7 @@ TEST_P(PipelineStageTest, OnePacketFullyConsume) {
   {
     SCOPED_TRACE("Read(0, 200)");
     {
-      auto packet = stage->Read(kDefaultCtx, Fixed(0), 200);
+      auto packet = stage->Read(DefaultCtx(), Fixed(0), 200);
       ExpectPacket(packet, Fixed(0), Fixed(100), payload);
     }
     ExpectAdvanceCalls({Fixed(100)});
@@ -251,7 +253,7 @@ TEST_P(PipelineStageTest, OnePacketFullyConsume) {
   {
     SCOPED_TRACE("Read(100, 200)");
     {
-      auto packet = stage->Read(kDefaultCtx, Fixed(100), 200);
+      auto packet = stage->Read(DefaultCtx(), Fixed(100), 200);
       ExpectNullPacket(packet);
     }
     ExpectAdvanceCalls({Fixed(300)});
@@ -271,7 +273,7 @@ TEST_P(PipelineStageTest, OnePacketPartialConsume) {
   {
     SCOPED_TRACE("Read(0, 100), consume 0");
     {
-      auto packet = stage->Read(kDefaultCtx, Fixed(0), 100);
+      auto packet = stage->Read(DefaultCtx(), Fixed(0), 100);
       packet->set_frames_consumed(0);
       ExpectPacket(packet, Fixed(0), Fixed(100), payload);
     }
@@ -287,7 +289,7 @@ TEST_P(PipelineStageTest, OnePacketPartialConsume) {
     // The prior `Read` call did not consume any frames, so it is safe to repeat that call.
     SCOPED_TRACE("Read(0, 100), consume 10");
     {
-      auto packet = stage->Read(kDefaultCtx, Fixed(0), 100);
+      auto packet = stage->Read(DefaultCtx(), Fixed(0), 100);
       packet->set_frames_consumed(10);
       ExpectPacket(packet, Fixed(0), Fixed(100), payload);
     }
@@ -303,7 +305,7 @@ TEST_P(PipelineStageTest, OnePacketPartialConsume) {
     // The prior `Read` call consumed through frame 10. Keep reading at that position.
     SCOPED_TRACE("Read(10, 100), consume 10");
     {
-      auto packet = stage->Read(kDefaultCtx, Fixed(10), 100);
+      auto packet = stage->Read(DefaultCtx(), Fixed(10), 100);
       packet->set_frames_consumed(10);
       ExpectPacket(packet, Fixed(10), Fixed(100), payload + 10 * kBytesPerFrame);
     }
@@ -319,7 +321,7 @@ TEST_P(PipelineStageTest, OnePacketPartialConsume) {
     // The prior `Read` call consumed through frame 20. Skip ahead to frame 50.
     SCOPED_TRACE("Read(50, 100), consume(10)");
     {
-      auto packet = stage->Read(kDefaultCtx, Fixed(50), 100);
+      auto packet = stage->Read(DefaultCtx(), Fixed(50), 100);
       packet->set_frames_consumed(10);
       ExpectPacket(packet, Fixed(50), Fixed(100), payload + 50 * kBytesPerFrame);
     }
@@ -336,7 +338,7 @@ TEST_P(PipelineStageTest, OnePacketPartialConsume) {
     // The prior `Read` call consumed through frame 60. Keep reading at that position.
     SCOPED_TRACE("Read(60, 100), consume full");
     {
-      auto packet = stage->Read(kDefaultCtx, Fixed(60), 40);
+      auto packet = stage->Read(DefaultCtx(), Fixed(60), 40);
       ExpectPacket(packet, Fixed(60), Fixed(100), payload + 60 * kBytesPerFrame);
     }
     ExpectAdvanceCalls({Fixed(100)});
@@ -346,7 +348,7 @@ TEST_P(PipelineStageTest, OnePacketPartialConsume) {
     // Packet is exhausted.
     SCOPED_TRACE("Read(100, 200)");
     {
-      auto packet = stage->Read(kDefaultCtx, Fixed(100), 200);
+      auto packet = stage->Read(DefaultCtx(), Fixed(100), 200);
       ExpectNullPacket(packet);
     }
     ExpectAdvanceCalls({Fixed(300)});
@@ -379,7 +381,7 @@ TEST_P(PipelineStageTest, MultiplePacketsFullyConsume) {
     // No packets have been consumed yet, so this call should return the first packet.
     SCOPED_TRACE("Read(0, 1000)");
     {
-      auto packet = stage->Read(kDefaultCtx, Fixed(0), 1000);
+      auto packet = stage->Read(DefaultCtx(), Fixed(0), 1000);
       ExpectPacket(packet, Fixed(0), Fixed(100), payload_1);
     }
     ExpectAdvanceCalls({Fixed(100)});
@@ -389,7 +391,7 @@ TEST_P(PipelineStageTest, MultiplePacketsFullyConsume) {
     // The first packet has been consumed, so this call should return the second packet.
     SCOPED_TRACE("Read(100, 1000)");
     {
-      auto packet = stage->Read(kDefaultCtx, Fixed(100), 1000);
+      auto packet = stage->Read(DefaultCtx(), Fixed(100), 1000);
       ExpectPacket(packet, Fixed(100), Fixed(200), payload_2);
     }
     ExpectAdvanceCalls({Fixed(200)});
@@ -399,7 +401,7 @@ TEST_P(PipelineStageTest, MultiplePacketsFullyConsume) {
     // The second packet has been consumed, so this call should return the third packet.
     SCOPED_TRACE("Read(200, 1000)");
     {
-      auto packet = stage->Read(kDefaultCtx, Fixed(200), 1000);
+      auto packet = stage->Read(DefaultCtx(), Fixed(200), 1000);
       ExpectPacket(packet, Fixed(500), Fixed(600), payload_3);
     }
     ExpectAdvanceCalls({Fixed(600)});
@@ -409,7 +411,7 @@ TEST_P(PipelineStageTest, MultiplePacketsFullyConsume) {
     // There are no more packets.
     SCOPED_TRACE("Read(600, 1000)");
     {
-      auto packet = stage->Read(kDefaultCtx, Fixed(600), 1000);
+      auto packet = stage->Read(DefaultCtx(), Fixed(600), 1000);
       ExpectNullPacket(packet);
     }
     ExpectAdvanceCalls({Fixed(1600)});
@@ -435,7 +437,7 @@ TEST_P(PipelineStageTest, MultiplePacketsPartialConsume) {
   {
     SCOPED_TRACE("Read(0, 1000), consume 50");
     {
-      auto packet = stage->Read(kDefaultCtx, Fixed(0), 1000);
+      auto packet = stage->Read(DefaultCtx(), Fixed(0), 1000);
       packet->set_frames_consumed(50);
       ExpectPacket(packet, Fixed(0), Fixed(100), payload_1);
     }
@@ -452,7 +454,7 @@ TEST_P(PipelineStageTest, MultiplePacketsPartialConsume) {
     // This call returns the rest of that packet.
     SCOPED_TRACE("Read(50, 1000)");
     {
-      auto packet = stage->Read(kDefaultCtx, Fixed(50), 1000);
+      auto packet = stage->Read(DefaultCtx(), Fixed(50), 1000);
       ExpectPacket(packet, Fixed(50), Fixed(100), payload_1 + 50 * kBytesPerFrame);
     }
     ExpectAdvanceCalls({Fixed(100)});
@@ -463,7 +465,7 @@ TEST_P(PipelineStageTest, MultiplePacketsPartialConsume) {
     // This call returns the second packet.
     SCOPED_TRACE("Read(100, 1000)");
     {
-      auto packet = stage->Read(kDefaultCtx, Fixed(100), 1000);
+      auto packet = stage->Read(DefaultCtx(), Fixed(100), 1000);
       ExpectPacket(packet, Fixed(100), Fixed(200), payload_2);
     }
     ExpectAdvanceCalls({Fixed(200)});
@@ -473,7 +475,7 @@ TEST_P(PipelineStageTest, MultiplePacketsPartialConsume) {
     // No more packets.
     SCOPED_TRACE("Read(200, 1000)");
     {
-      auto packet = stage->Read(kDefaultCtx, Fixed(200), 1000);
+      auto packet = stage->Read(DefaultCtx(), Fixed(200), 1000);
       ExpectNullPacket(packet);
     }
     ExpectAdvanceCalls({Fixed(1200)});
@@ -494,7 +496,7 @@ TEST_P(PipelineStageTest, FractionalFrames) {
     SCOPED_TRACE("Read(1.6, 50)");
     {
       // Reqesting [1.6, 51.6) returns [1.5, 51.5).
-      auto packet = stage->Read(kDefaultCtx, Fixed(1) + ffl::FromRatio(6, 10), 50);
+      auto packet = stage->Read(DefaultCtx(), Fixed(1) + ffl::FromRatio(6, 10), 50);
       ExpectPacket(packet, Fixed(1) + ffl::FromRatio(5, 10), Fixed(51) + ffl::FromRatio(5, 10),
                    payload + kFormat.bytes_per_frame());
     }
@@ -509,7 +511,7 @@ TEST_P(PipelineStageTest, FractionalFrames) {
     SCOPED_TRACE("Read(60.6, 30)");
     {
       // Reqesting [60.6, 90.6) returns [60.5, 90.5).
-      auto packet = stage->Read(kDefaultCtx, Fixed(60) + ffl::FromRatio(6, 10), 30);
+      auto packet = stage->Read(DefaultCtx(), Fixed(60) + ffl::FromRatio(6, 10), 30);
       ExpectPacket(packet, Fixed(60) + ffl::FromRatio(5, 10), Fixed(90) + ffl::FromRatio(5, 10),
                    payload + 60 * kFormat.bytes_per_frame());
     }
@@ -525,7 +527,7 @@ TEST_P(PipelineStageTest, FractionalFrames) {
     SCOPED_TRACE("Read(99.6, 100)");
     {
       // Reqesting [99.6, 199.6) returns [99.5, 100.5).
-      auto packet = stage->Read(kDefaultCtx, Fixed(99) + ffl::FromRatio(6, 10), 100);
+      auto packet = stage->Read(DefaultCtx(), Fixed(99) + ffl::FromRatio(6, 10), 100);
       ExpectPacket(packet, Fixed(99) + ffl::FromRatio(5, 10), Fixed(100) + ffl::FromRatio(5, 10),
                    payload + 99 * kFormat.bytes_per_frame());
     }
@@ -539,7 +541,7 @@ TEST_P(PipelineStageTest, FractionalFrames) {
   {
     SCOPED_TRACE("Read(100.5, 100)");
     {
-      auto packet = stage->Read(kDefaultCtx, Fixed(100) + ffl::FromRatio(5, 10), 100);
+      auto packet = stage->Read(DefaultCtx(), Fixed(100) + ffl::FromRatio(5, 10), 100);
       ExpectNullPacket(packet);
     }
     ExpectAdvanceCalls({Fixed(200) + ffl::FromRatio(5, 10)});
