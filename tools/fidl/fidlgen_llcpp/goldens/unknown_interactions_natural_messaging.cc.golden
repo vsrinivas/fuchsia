@@ -31,10 +31,11 @@ namespace test_unknowninteractions {
 }  // namespace test_unknowninteractions
 ::fidl::internal::NaturalThenable<::test_unknowninteractions::Example::StrictTwoWay>
 fidl::internal::NaturalClientImpl<::test_unknowninteractions::Example>::StrictTwoWay() const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable, ::test_unknowninteractions::kExample_StrictTwoWay_Ordinal, ::test_unknowninteractions::kExample_StrictTwoWay_DynamicFlags};
   return ::fidl::internal::NaturalThenable<::test_unknowninteractions::Example::StrictTwoWay>(
-      &client_base(), {}, std::move(_encoder),
+      &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_unknowninteractions::kExample_StrictTwoWay_Ordinal, ::test_unknowninteractions::kExample_StrictTwoWay_DynamicFlags,
+      [](NaturalMessageEncoder& encoder) mutable {
+        return ZX_OK;
+      },
       [](
           ::fidl::internal::ThenableBase* base,
           ::fidl::internal::NaturalMessageEncoder& encoder,
@@ -46,10 +47,11 @@ fidl::internal::NaturalClientImpl<::test_unknowninteractions::Example>::StrictTw
 
 ::fidl::internal::NaturalThenable<::test_unknowninteractions::Example::FlexibleTwoWay>
 fidl::internal::NaturalClientImpl<::test_unknowninteractions::Example>::FlexibleTwoWay() const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable, ::test_unknowninteractions::kExample_FlexibleTwoWay_Ordinal, ::test_unknowninteractions::kExample_FlexibleTwoWay_DynamicFlags};
   return ::fidl::internal::NaturalThenable<::test_unknowninteractions::Example::FlexibleTwoWay>(
-      &client_base(), {}, std::move(_encoder),
+      &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_unknowninteractions::kExample_FlexibleTwoWay_Ordinal, ::test_unknowninteractions::kExample_FlexibleTwoWay_DynamicFlags,
+      [](NaturalMessageEncoder& encoder) mutable {
+        return ZX_OK;
+      },
       [](
           ::fidl::internal::ThenableBase* base,
           ::fidl::internal::NaturalMessageEncoder& encoder,

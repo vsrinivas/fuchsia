@@ -103,10 +103,13 @@ class UnionMemberView final {
 
 class EncodeResult {
  public:
-  explicit EncodeResult(::fidl::internal::NaturalBodyEncoder&& storage)
-      : storage_(std::move(storage)),
-        message_(
-            std::move(storage_).GetOutgoingMessage(NaturalBodyEncoder::MessageType::kStandalone)) {}
+  template <typename F>
+  explicit EncodeResult(const TransportVTable* vtable, internal::WireFormatVersion wire_format,
+                        F encode_callback)
+      : storage_(vtable, wire_format), message_([&]() {
+          encode_callback(storage_);
+          return storage_.GetOutgoingMessage(NaturalBodyEncoder::MessageType::kStandalone);
+        }()) {}
 
   ::fidl::OutgoingMessage& message() { return message_; }
 
@@ -122,13 +125,15 @@ class EncodeResult {
 template <typename Transport, typename EncodeResult, typename FidlType>
 EncodeResult EncodeWithTransport(FidlType&& value) {
   static_assert(::fidl::IsFidlType<FidlType>::value, "Only FIDL types are supported");
-  ::fidl::internal::NaturalBodyEncoder encoder(&Transport::VTable,
-                                               fidl::internal::WireFormatVersion::kV2);
-  encoder.Alloc(::fidl::internal::NaturalEncodingInlineSize<FidlType, NaturalCodingConstraintEmpty>(
-      &encoder));
-  ::fidl::internal::NaturalCodingTraits<FidlType, NaturalCodingConstraintEmpty>::Encode(
-      &encoder, &value, 0, kRecursionDepthInitial);
-  return EncodeResult(std::move(encoder));
+  return EncodeResult(
+      &Transport::VTable, fidl::internal::WireFormatVersion::kV2,
+      [value_ptr = &value](::fidl::internal::NaturalBodyEncoder& encoder) mutable {
+        encoder.Alloc(
+            ::fidl::internal::NaturalEncodingInlineSize<FidlType, NaturalCodingConstraintEmpty>(
+                &encoder));
+        ::fidl::internal::NaturalCodingTraits<FidlType, NaturalCodingConstraintEmpty>::Encode(
+            &encoder, value_ptr, 0, kRecursionDepthInitial);
+      });
 }
 
 }  // namespace internal

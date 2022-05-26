@@ -39,10 +39,11 @@ namespace test_protocols {
 }  // namespace test_protocols
 ::fidl::internal::NaturalThenable<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>
 fidl::internal::NaturalClientImpl<::test_protocols::WithAndWithoutRequestResponse>::NoRequestEmptyResponse() const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal, ::test_protocols::kWithAndWithoutRequestResponse_NoRequestEmptyResponse_DynamicFlags};
   return ::fidl::internal::NaturalThenable<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>(
-      &client_base(), {}, std::move(_encoder),
+      &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal, ::test_protocols::kWithAndWithoutRequestResponse_NoRequestEmptyResponse_DynamicFlags,
+      [](NaturalMessageEncoder& encoder) mutable {
+        return ZX_OK;
+      },
       [](
           ::fidl::internal::ThenableBase* base,
           ::fidl::internal::NaturalMessageEncoder& encoder,
@@ -54,10 +55,11 @@ fidl::internal::NaturalClientImpl<::test_protocols::WithAndWithoutRequestRespons
 
 ::fidl::internal::NaturalThenable<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>
 fidl::internal::NaturalClientImpl<::test_protocols::WithAndWithoutRequestResponse>::NoRequestWithResponse() const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal, ::test_protocols::kWithAndWithoutRequestResponse_NoRequestWithResponse_DynamicFlags};
   return ::fidl::internal::NaturalThenable<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>(
-      &client_base(), {}, std::move(_encoder),
+      &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal, ::test_protocols::kWithAndWithoutRequestResponse_NoRequestWithResponse_DynamicFlags,
+      [](NaturalMessageEncoder& encoder) mutable {
+        return ZX_OK;
+      },
       [](
           ::fidl::internal::ThenableBase* base,
           ::fidl::internal::NaturalMessageEncoder& encoder,
@@ -69,12 +71,13 @@ fidl::internal::NaturalClientImpl<::test_protocols::WithAndWithoutRequestRespons
 
 ::fidl::internal::NaturalThenable<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>
 fidl::internal::NaturalClientImpl<::test_protocols::WithAndWithoutRequestResponse>::WithRequestEmptyResponse(::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse> request) const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal, ::test_protocols::kWithAndWithoutRequestResponse_WithRequestEmptyResponse_DynamicFlags};
-  _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>>::IntoDomainObject(std::move(request)));
   return ::fidl::internal::NaturalThenable<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>(
-      &client_base(), {}, std::move(_encoder),
+      &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal, ::test_protocols::kWithAndWithoutRequestResponse_WithRequestEmptyResponse_DynamicFlags,
+      [request = std::move(request)](NaturalMessageEncoder& encoder) mutable {
+        encoder.EncodeBody(
+            ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>>::IntoDomainObject(std::move(request)));
+        return ZX_OK;
+      },
       [](
           ::fidl::internal::ThenableBase* base,
           ::fidl::internal::NaturalMessageEncoder& encoder,
@@ -86,12 +89,13 @@ fidl::internal::NaturalClientImpl<::test_protocols::WithAndWithoutRequestRespons
 
 ::fidl::internal::NaturalThenable<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>
 fidl::internal::NaturalClientImpl<::test_protocols::WithAndWithoutRequestResponse>::WithRequestWithResponse(::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse> request) const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal, ::test_protocols::kWithAndWithoutRequestResponse_WithRequestWithResponse_DynamicFlags};
-  _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>>::IntoDomainObject(std::move(request)));
   return ::fidl::internal::NaturalThenable<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>(
-      &client_base(), {}, std::move(_encoder),
+      &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal, ::test_protocols::kWithAndWithoutRequestResponse_WithRequestWithResponse_DynamicFlags,
+      [request = std::move(request)](NaturalMessageEncoder& encoder) mutable {
+        encoder.EncodeBody(
+            ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>>::IntoDomainObject(std::move(request)));
+        return ZX_OK;
+      },
       [](
           ::fidl::internal::ThenableBase* base,
           ::fidl::internal::NaturalMessageEncoder& encoder,
@@ -430,12 +434,13 @@ namespace test_protocols {
 }  // namespace test_protocols
 ::fidl::internal::NaturalThenable<::test_protocols::Transitional::Request>
 fidl::internal::NaturalClientImpl<::test_protocols::Transitional>::Request(::fidl::Request<::test_protocols::Transitional::Request> request) const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kTransitional_Request_Ordinal, ::test_protocols::kTransitional_Request_DynamicFlags};
-  _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::Transitional::Request>>::IntoDomainObject(std::move(request)));
   return ::fidl::internal::NaturalThenable<::test_protocols::Transitional::Request>(
-      &client_base(), {}, std::move(_encoder),
+      &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kTransitional_Request_Ordinal, ::test_protocols::kTransitional_Request_DynamicFlags,
+      [request = std::move(request)](NaturalMessageEncoder& encoder) mutable {
+        encoder.EncodeBody(
+            ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::Transitional::Request>>::IntoDomainObject(std::move(request)));
+        return ZX_OK;
+      },
       [](
           ::fidl::internal::ThenableBase* base,
           ::fidl::internal::NaturalMessageEncoder& encoder,
@@ -614,12 +619,13 @@ namespace test_protocols {
 }  // namespace test_protocols
 ::fidl::internal::NaturalThenable<::test_protocols::WithProtocolEnds::ClientEnds>
 fidl::internal::NaturalClientImpl<::test_protocols::WithProtocolEnds>::ClientEnds(::fidl::Request<::test_protocols::WithProtocolEnds::ClientEnds> request) const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kWithProtocolEnds_ClientEnds_Ordinal, ::test_protocols::kWithProtocolEnds_ClientEnds_DynamicFlags};
-  _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::WithProtocolEnds::ClientEnds>>::IntoDomainObject(std::move(request)));
   return ::fidl::internal::NaturalThenable<::test_protocols::WithProtocolEnds::ClientEnds>(
-      &client_base(), {}, std::move(_encoder),
+      &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kWithProtocolEnds_ClientEnds_Ordinal, ::test_protocols::kWithProtocolEnds_ClientEnds_DynamicFlags,
+      [request = std::move(request)](NaturalMessageEncoder& encoder) mutable {
+        encoder.EncodeBody(
+            ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::WithProtocolEnds::ClientEnds>>::IntoDomainObject(std::move(request)));
+        return ZX_OK;
+      },
       [](
           ::fidl::internal::ThenableBase* base,
           ::fidl::internal::NaturalMessageEncoder& encoder,
@@ -631,12 +637,13 @@ fidl::internal::NaturalClientImpl<::test_protocols::WithProtocolEnds>::ClientEnd
 
 ::fidl::internal::NaturalThenable<::test_protocols::WithProtocolEnds::ServerEnds>
 fidl::internal::NaturalClientImpl<::test_protocols::WithProtocolEnds>::ServerEnds(::fidl::Request<::test_protocols::WithProtocolEnds::ServerEnds> request) const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kWithProtocolEnds_ServerEnds_Ordinal, ::test_protocols::kWithProtocolEnds_ServerEnds_DynamicFlags};
-  _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::WithProtocolEnds::ServerEnds>>::IntoDomainObject(std::move(request)));
   return ::fidl::internal::NaturalThenable<::test_protocols::WithProtocolEnds::ServerEnds>(
-      &client_base(), {}, std::move(_encoder),
+      &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kWithProtocolEnds_ServerEnds_Ordinal, ::test_protocols::kWithProtocolEnds_ServerEnds_DynamicFlags,
+      [request = std::move(request)](NaturalMessageEncoder& encoder) mutable {
+        encoder.EncodeBody(
+            ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::WithProtocolEnds::ServerEnds>>::IntoDomainObject(std::move(request)));
+        return ZX_OK;
+      },
       [](
           ::fidl::internal::ThenableBase* base,
           ::fidl::internal::NaturalMessageEncoder& encoder,
@@ -648,12 +655,13 @@ fidl::internal::NaturalClientImpl<::test_protocols::WithProtocolEnds>::ServerEnd
 
 ::fidl::internal::NaturalThenable<::test_protocols::WithProtocolEnds::StructContainingEnds>
 fidl::internal::NaturalClientImpl<::test_protocols::WithProtocolEnds>::StructContainingEnds(::fidl::Request<::test_protocols::WithProtocolEnds::StructContainingEnds> request) const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kWithProtocolEnds_StructContainingEnds_Ordinal, ::test_protocols::kWithProtocolEnds_StructContainingEnds_DynamicFlags};
-  _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::WithProtocolEnds::StructContainingEnds>>::IntoDomainObject(std::move(request)));
   return ::fidl::internal::NaturalThenable<::test_protocols::WithProtocolEnds::StructContainingEnds>(
-      &client_base(), {}, std::move(_encoder),
+      &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kWithProtocolEnds_StructContainingEnds_Ordinal, ::test_protocols::kWithProtocolEnds_StructContainingEnds_DynamicFlags,
+      [request = std::move(request)](NaturalMessageEncoder& encoder) mutable {
+        encoder.EncodeBody(
+            ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::WithProtocolEnds::StructContainingEnds>>::IntoDomainObject(std::move(request)));
+        return ZX_OK;
+      },
       [](
           ::fidl::internal::ThenableBase* base,
           ::fidl::internal::NaturalMessageEncoder& encoder,
@@ -821,12 +829,13 @@ namespace test_protocols {
 }  // namespace test_protocols
 ::fidl::internal::NaturalThenable<::test_protocols::MethodWithUnion::UnionMethod>
 fidl::internal::NaturalClientImpl<::test_protocols::MethodWithUnion>::UnionMethod(::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod> request) const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kMethodWithUnion_UnionMethod_Ordinal, ::test_protocols::kMethodWithUnion_UnionMethod_DynamicFlags};
-  _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod>>::IntoDomainObject(std::move(request)));
   return ::fidl::internal::NaturalThenable<::test_protocols::MethodWithUnion::UnionMethod>(
-      &client_base(), {}, std::move(_encoder),
+      &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kMethodWithUnion_UnionMethod_Ordinal, ::test_protocols::kMethodWithUnion_UnionMethod_DynamicFlags,
+      [request = std::move(request)](NaturalMessageEncoder& encoder) mutable {
+        encoder.EncodeBody(
+            ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod>>::IntoDomainObject(std::move(request)));
+        return ZX_OK;
+      },
       [](
           ::fidl::internal::ThenableBase* base,
           ::fidl::internal::NaturalMessageEncoder& encoder,
@@ -1015,12 +1024,13 @@ namespace test_protocols {
 }  // namespace test_protocols
 ::fidl::internal::NaturalThenable<::test_protocols::HandleRightsProtocol::ResponseMethod>
 fidl::internal::NaturalClientImpl<::test_protocols::HandleRightsProtocol>::ResponseMethod(::fidl::Request<::test_protocols::HandleRightsProtocol::ResponseMethod> request) const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kHandleRightsProtocol_ResponseMethod_Ordinal, ::test_protocols::kHandleRightsProtocol_ResponseMethod_DynamicFlags};
-  _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::HandleRightsProtocol::ResponseMethod>>::IntoDomainObject(std::move(request)));
   return ::fidl::internal::NaturalThenable<::test_protocols::HandleRightsProtocol::ResponseMethod>(
-      &client_base(), {}, std::move(_encoder),
+      &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kHandleRightsProtocol_ResponseMethod_Ordinal, ::test_protocols::kHandleRightsProtocol_ResponseMethod_DynamicFlags,
+      [request = std::move(request)](NaturalMessageEncoder& encoder) mutable {
+        encoder.EncodeBody(
+            ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::HandleRightsProtocol::ResponseMethod>>::IntoDomainObject(std::move(request)));
+        return ZX_OK;
+      },
       [](
           ::fidl::internal::ThenableBase* base,
           ::fidl::internal::NaturalMessageEncoder& encoder,
@@ -1203,10 +1213,11 @@ namespace test_protocols {
 }  // namespace test_protocols
 ::fidl::internal::NaturalThenable<::test_protocols::WithErrorSyntax::ResponseAsStruct>
 fidl::internal::NaturalClientImpl<::test_protocols::WithErrorSyntax>::ResponseAsStruct() const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kWithErrorSyntax_ResponseAsStruct_Ordinal, ::test_protocols::kWithErrorSyntax_ResponseAsStruct_DynamicFlags};
   return ::fidl::internal::NaturalThenable<::test_protocols::WithErrorSyntax::ResponseAsStruct>(
-      &client_base(), {}, std::move(_encoder),
+      &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kWithErrorSyntax_ResponseAsStruct_Ordinal, ::test_protocols::kWithErrorSyntax_ResponseAsStruct_DynamicFlags,
+      [](NaturalMessageEncoder& encoder) mutable {
+        return ZX_OK;
+      },
       [](
           ::fidl::internal::ThenableBase* base,
           ::fidl::internal::NaturalMessageEncoder& encoder,
@@ -1218,10 +1229,11 @@ fidl::internal::NaturalClientImpl<::test_protocols::WithErrorSyntax>::ResponseAs
 
 ::fidl::internal::NaturalThenable<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>
 fidl::internal::NaturalClientImpl<::test_protocols::WithErrorSyntax>::ErrorAsPrimitive() const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kWithErrorSyntax_ErrorAsPrimitive_Ordinal, ::test_protocols::kWithErrorSyntax_ErrorAsPrimitive_DynamicFlags};
   return ::fidl::internal::NaturalThenable<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>(
-      &client_base(), {}, std::move(_encoder),
+      &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kWithErrorSyntax_ErrorAsPrimitive_Ordinal, ::test_protocols::kWithErrorSyntax_ErrorAsPrimitive_DynamicFlags,
+      [](NaturalMessageEncoder& encoder) mutable {
+        return ZX_OK;
+      },
       [](
           ::fidl::internal::ThenableBase* base,
           ::fidl::internal::NaturalMessageEncoder& encoder,
@@ -1233,10 +1245,11 @@ fidl::internal::NaturalClientImpl<::test_protocols::WithErrorSyntax>::ErrorAsPri
 
 ::fidl::internal::NaturalThenable<::test_protocols::WithErrorSyntax::ErrorAsEnum>
 fidl::internal::NaturalClientImpl<::test_protocols::WithErrorSyntax>::ErrorAsEnum() const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kWithErrorSyntax_ErrorAsEnum_Ordinal, ::test_protocols::kWithErrorSyntax_ErrorAsEnum_DynamicFlags};
   return ::fidl::internal::NaturalThenable<::test_protocols::WithErrorSyntax::ErrorAsEnum>(
-      &client_base(), {}, std::move(_encoder),
+      &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kWithErrorSyntax_ErrorAsEnum_Ordinal, ::test_protocols::kWithErrorSyntax_ErrorAsEnum_DynamicFlags,
+      [](NaturalMessageEncoder& encoder) mutable {
+        return ZX_OK;
+      },
       [](
           ::fidl::internal::ThenableBase* base,
           ::fidl::internal::NaturalMessageEncoder& encoder,
@@ -1248,10 +1261,11 @@ fidl::internal::NaturalClientImpl<::test_protocols::WithErrorSyntax>::ErrorAsEnu
 
 ::fidl::internal::NaturalThenable<::test_protocols::WithErrorSyntax::HandleInResult>
 fidl::internal::NaturalClientImpl<::test_protocols::WithErrorSyntax>::HandleInResult() const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kWithErrorSyntax_HandleInResult_Ordinal, ::test_protocols::kWithErrorSyntax_HandleInResult_DynamicFlags};
   return ::fidl::internal::NaturalThenable<::test_protocols::WithErrorSyntax::HandleInResult>(
-      &client_base(), {}, std::move(_encoder),
+      &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kWithErrorSyntax_HandleInResult_Ordinal, ::test_protocols::kWithErrorSyntax_HandleInResult_DynamicFlags,
+      [](NaturalMessageEncoder& encoder) mutable {
+        return ZX_OK;
+      },
       [](
           ::fidl::internal::ThenableBase* base,
           ::fidl::internal::NaturalMessageEncoder& encoder,
@@ -1543,12 +1557,13 @@ namespace test_protocols {
 }  // namespace test_protocols
 ::fidl::internal::NaturalThenable<::test_protocols::ChannelProtocol::MethodB>
 fidl::internal::NaturalClientImpl<::test_protocols::ChannelProtocol>::MethodB(::fidl::Request<::test_protocols::ChannelProtocol::MethodB> request) const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kChannelProtocol_MethodB_Ordinal, ::test_protocols::kChannelProtocol_MethodB_DynamicFlags};
-  _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::ChannelProtocol::MethodB>>::IntoDomainObject(std::move(request)));
   return ::fidl::internal::NaturalThenable<::test_protocols::ChannelProtocol::MethodB>(
-      &client_base(), {}, std::move(_encoder),
+      &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kChannelProtocol_MethodB_Ordinal, ::test_protocols::kChannelProtocol_MethodB_DynamicFlags,
+      [request = std::move(request)](NaturalMessageEncoder& encoder) mutable {
+        encoder.EncodeBody(
+            ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::ChannelProtocol::MethodB>>::IntoDomainObject(std::move(request)));
+        return ZX_OK;
+      },
       [](
           ::fidl::internal::ThenableBase* base,
           ::fidl::internal::NaturalMessageEncoder& encoder,
@@ -1560,12 +1575,13 @@ fidl::internal::NaturalClientImpl<::test_protocols::ChannelProtocol>::MethodB(::
 
 ::fidl::internal::NaturalThenable<::test_protocols::ChannelProtocol::TakeHandle>
 fidl::internal::NaturalClientImpl<::test_protocols::ChannelProtocol>::TakeHandle(::fidl::Request<::test_protocols::ChannelProtocol::TakeHandle> request) const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kChannelProtocol_TakeHandle_Ordinal, ::test_protocols::kChannelProtocol_TakeHandle_DynamicFlags};
-  _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::ChannelProtocol::TakeHandle>>::IntoDomainObject(std::move(request)));
   return ::fidl::internal::NaturalThenable<::test_protocols::ChannelProtocol::TakeHandle>(
-      &client_base(), {}, std::move(_encoder),
+      &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kChannelProtocol_TakeHandle_Ordinal, ::test_protocols::kChannelProtocol_TakeHandle_DynamicFlags,
+      [request = std::move(request)](NaturalMessageEncoder& encoder) mutable {
+        encoder.EncodeBody(
+            ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::ChannelProtocol::TakeHandle>>::IntoDomainObject(std::move(request)));
+        return ZX_OK;
+      },
       [](
           ::fidl::internal::ThenableBase* base,
           ::fidl::internal::NaturalMessageEncoder& encoder,
@@ -1577,12 +1593,13 @@ fidl::internal::NaturalClientImpl<::test_protocols::ChannelProtocol>::TakeHandle
 
 ::fidl::internal::NaturalThenable<::test_protocols::ChannelProtocol::MutateSocket>
 fidl::internal::NaturalClientImpl<::test_protocols::ChannelProtocol>::MutateSocket(::fidl::Request<::test_protocols::ChannelProtocol::MutateSocket> request) const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kChannelProtocol_MutateSocket_Ordinal, ::test_protocols::kChannelProtocol_MutateSocket_DynamicFlags};
-  _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::ChannelProtocol::MutateSocket>>::IntoDomainObject(std::move(request)));
   return ::fidl::internal::NaturalThenable<::test_protocols::ChannelProtocol::MutateSocket>(
-      &client_base(), {}, std::move(_encoder),
+      &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kChannelProtocol_MutateSocket_Ordinal, ::test_protocols::kChannelProtocol_MutateSocket_DynamicFlags,
+      [request = std::move(request)](NaturalMessageEncoder& encoder) mutable {
+        encoder.EncodeBody(
+            ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::ChannelProtocol::MutateSocket>>::IntoDomainObject(std::move(request)));
+        return ZX_OK;
+      },
       [](
           ::fidl::internal::ThenableBase* base,
           ::fidl::internal::NaturalMessageEncoder& encoder,

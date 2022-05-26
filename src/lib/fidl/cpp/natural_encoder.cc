@@ -75,7 +75,7 @@ void NaturalEncoder::EncodeHandle(fidl_handle_t handle, HandleAttributes attr, s
 
 NaturalBodyEncoder::~NaturalBodyEncoder() { Reset(); }
 
-fidl::OutgoingMessage NaturalBodyEncoder::GetOutgoingMessage(MessageType type) && {
+fidl::OutgoingMessage NaturalBodyEncoder::GetOutgoingMessage(MessageType type) {
   if (status_ != ZX_OK) {
     Reset();
     return fidl::OutgoingMessage(fidl::Status::EncodeError(status_, error_));

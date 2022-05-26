@@ -15,10 +15,11 @@ namespace test_union {
 }  // namespace test_union
 ::fidl::internal::NaturalThenable<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>
 fidl::internal::NaturalClientImpl<::test_union::TestProtocol>::StrictXUnionHenceResponseMayBeStackAllocated() const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable, ::test_union::kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal, ::test_union::kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_DynamicFlags};
   return ::fidl::internal::NaturalThenable<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>(
-      &client_base(), {}, std::move(_encoder),
+      &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_union::kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal, ::test_union::kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_DynamicFlags,
+      [](NaturalMessageEncoder& encoder) mutable {
+        return ZX_OK;
+      },
       [](
           ::fidl::internal::ThenableBase* base,
           ::fidl::internal::NaturalMessageEncoder& encoder,
@@ -30,10 +31,11 @@ fidl::internal::NaturalClientImpl<::test_union::TestProtocol>::StrictXUnionHence
 
 ::fidl::internal::NaturalThenable<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>
 fidl::internal::NaturalClientImpl<::test_union::TestProtocol>::FlexibleXUnionHenceResponseMustBeHeapAllocated() const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable, ::test_union::kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal, ::test_union::kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_DynamicFlags};
   return ::fidl::internal::NaturalThenable<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>(
-      &client_base(), {}, std::move(_encoder),
+      &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_union::kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal, ::test_union::kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_DynamicFlags,
+      [](NaturalMessageEncoder& encoder) mutable {
+        return ZX_OK;
+      },
       [](
           ::fidl::internal::ThenableBase* base,
           ::fidl::internal::NaturalMessageEncoder& encoder,

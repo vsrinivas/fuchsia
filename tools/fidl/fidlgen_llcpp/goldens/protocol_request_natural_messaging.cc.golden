@@ -23,10 +23,11 @@ namespace test_protocolrequest {
 }  // namespace test_protocolrequest
 ::fidl::internal::NaturalThenable<::test_protocolrequest::Parent::GetChild>
 fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent>::GetChild() const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable, ::test_protocolrequest::kParent_GetChild_Ordinal, ::test_protocolrequest::kParent_GetChild_DynamicFlags};
   return ::fidl::internal::NaturalThenable<::test_protocolrequest::Parent::GetChild>(
-      &client_base(), {}, std::move(_encoder),
+      &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_protocolrequest::kParent_GetChild_Ordinal, ::test_protocolrequest::kParent_GetChild_DynamicFlags,
+      [](NaturalMessageEncoder& encoder) mutable {
+        return ZX_OK;
+      },
       [](
           ::fidl::internal::ThenableBase* base,
           ::fidl::internal::NaturalMessageEncoder& encoder,
@@ -38,10 +39,11 @@ fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent>::GetChild() co
 
 ::fidl::internal::NaturalThenable<::test_protocolrequest::Parent::GetChildRequest>
 fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent>::GetChildRequest() const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable, ::test_protocolrequest::kParent_GetChildRequest_Ordinal, ::test_protocolrequest::kParent_GetChildRequest_DynamicFlags};
   return ::fidl::internal::NaturalThenable<::test_protocolrequest::Parent::GetChildRequest>(
-      &client_base(), {}, std::move(_encoder),
+      &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_protocolrequest::kParent_GetChildRequest_Ordinal, ::test_protocolrequest::kParent_GetChildRequest_DynamicFlags,
+      [](NaturalMessageEncoder& encoder) mutable {
+        return ZX_OK;
+      },
       [](
           ::fidl::internal::ThenableBase* base,
           ::fidl::internal::NaturalMessageEncoder& encoder,

@@ -15,12 +15,13 @@ namespace test_requestflexibleenvelope {
 }  // namespace test_requestflexibleenvelope
 ::fidl::internal::NaturalThenable<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
 fidl::internal::NaturalClientImpl<::test_requestflexibleenvelope::Protocol>::RequestStrictResponseFlexible(::fidl::Request<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible> request) const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable, ::test_requestflexibleenvelope::kProtocol_RequestStrictResponseFlexible_Ordinal, ::test_requestflexibleenvelope::kProtocol_RequestStrictResponseFlexible_DynamicFlags};
-  _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>>::IntoDomainObject(std::move(request)));
   return ::fidl::internal::NaturalThenable<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>(
-      &client_base(), {}, std::move(_encoder),
+      &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_requestflexibleenvelope::kProtocol_RequestStrictResponseFlexible_Ordinal, ::test_requestflexibleenvelope::kProtocol_RequestStrictResponseFlexible_DynamicFlags,
+      [request = std::move(request)](NaturalMessageEncoder& encoder) mutable {
+        encoder.EncodeBody(
+            ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>>::IntoDomainObject(std::move(request)));
+        return ZX_OK;
+      },
       [](
           ::fidl::internal::ThenableBase* base,
           ::fidl::internal::NaturalMessageEncoder& encoder,
@@ -32,12 +33,13 @@ fidl::internal::NaturalClientImpl<::test_requestflexibleenvelope::Protocol>::Req
 
 ::fidl::internal::NaturalThenable<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>
 fidl::internal::NaturalClientImpl<::test_requestflexibleenvelope::Protocol>::RequestFlexibleResponseStrict(::fidl::Request<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict> request) const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable, ::test_requestflexibleenvelope::kProtocol_RequestFlexibleResponseStrict_Ordinal, ::test_requestflexibleenvelope::kProtocol_RequestFlexibleResponseStrict_DynamicFlags};
-  _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>>::IntoDomainObject(std::move(request)));
   return ::fidl::internal::NaturalThenable<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>(
-      &client_base(), {}, std::move(_encoder),
+      &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_requestflexibleenvelope::kProtocol_RequestFlexibleResponseStrict_Ordinal, ::test_requestflexibleenvelope::kProtocol_RequestFlexibleResponseStrict_DynamicFlags,
+      [request = std::move(request)](NaturalMessageEncoder& encoder) mutable {
+        encoder.EncodeBody(
+            ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>>::IntoDomainObject(std::move(request)));
+        return ZX_OK;
+      },
       [](
           ::fidl::internal::ThenableBase* base,
           ::fidl::internal::NaturalMessageEncoder& encoder,

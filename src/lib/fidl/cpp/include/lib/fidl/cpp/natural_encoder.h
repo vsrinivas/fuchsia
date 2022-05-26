@@ -28,8 +28,12 @@ class NaturalEncoder {
   explicit NaturalEncoder(const CodingConfig* coding_config);
   NaturalEncoder(const CodingConfig* coding_config, internal::WireFormatVersion wire_format);
 
-  NaturalEncoder(NaturalEncoder&&) noexcept = default;
-  NaturalEncoder& operator=(NaturalEncoder&&) noexcept = default;
+  // The move and copy constructors are deleted for performance reasons.
+  // Removing usages of move constructors saved ~100ns from encode time (see fxrev.dev/682945).
+  NaturalEncoder(NaturalEncoder&&) noexcept = delete;
+  NaturalEncoder& operator=(NaturalEncoder&&) noexcept = delete;
+  NaturalEncoder(const NaturalEncoder&) noexcept = delete;
+  NaturalEncoder& operator=(const NaturalEncoder&) noexcept = delete;
   ~NaturalEncoder() = default;
 
   size_t Alloc(size_t size);
@@ -88,9 +92,6 @@ class NaturalBodyEncoder final : public NaturalEncoder {
   NaturalBodyEncoder(const TransportVTable* vtable, internal::WireFormatVersion wire_format)
       : NaturalEncoder(vtable->encoding_configuration, wire_format), vtable_(vtable) {}
 
-  NaturalBodyEncoder(NaturalBodyEncoder&& other) = default;
-  NaturalBodyEncoder& operator=(NaturalBodyEncoder&& other) noexcept = default;
-
   ~NaturalBodyEncoder();
 
   enum class MessageType { kTransactional, kStandalone };
@@ -98,7 +99,7 @@ class NaturalBodyEncoder final : public NaturalEncoder {
   // Return a view representing the encoded body.
   // Caller takes ownership of the handles.
   // Do not encode another value until the previous message is sent.
-  fidl::OutgoingMessage GetOutgoingMessage(MessageType type) &&;
+  fidl::OutgoingMessage GetOutgoingMessage(MessageType type);
 
   // Free memory and close owned handles.
   void Reset();

@@ -21,9 +21,6 @@ class NaturalMessageEncoder final {
   NaturalMessageEncoder(const TransportVTable* vtable, uint64_t ordinal,
                         MessageDynamicFlags dynamic_flags);
 
-  NaturalMessageEncoder(NaturalMessageEncoder&&) noexcept = default;
-  NaturalMessageEncoder& operator=(NaturalMessageEncoder&&) noexcept = default;
-
   ~NaturalMessageEncoder() = default;
 
   NaturalBodyEncoder& body_encoder() { return body_encoder_; }

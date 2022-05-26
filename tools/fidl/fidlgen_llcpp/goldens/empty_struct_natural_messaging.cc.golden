@@ -19,12 +19,13 @@ namespace test_emptystruct {
 }  // namespace test_emptystruct
 ::fidl::internal::NaturalThenable<::test_emptystruct::EmptyProtocol::SendAndReceive>
 fidl::internal::NaturalClientImpl<::test_emptystruct::EmptyProtocol>::SendAndReceive(::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive> request) const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable, ::test_emptystruct::kEmptyProtocol_SendAndReceive_Ordinal, ::test_emptystruct::kEmptyProtocol_SendAndReceive_DynamicFlags};
-  _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive>>::IntoDomainObject(std::move(request)));
   return ::fidl::internal::NaturalThenable<::test_emptystruct::EmptyProtocol::SendAndReceive>(
-      &client_base(), {}, std::move(_encoder),
+      &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_emptystruct::kEmptyProtocol_SendAndReceive_Ordinal, ::test_emptystruct::kEmptyProtocol_SendAndReceive_DynamicFlags,
+      [request = std::move(request)](NaturalMessageEncoder& encoder) mutable {
+        encoder.EncodeBody(
+            ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive>>::IntoDomainObject(std::move(request)));
+        return ZX_OK;
+      },
       [](
           ::fidl::internal::ThenableBase* base,
           ::fidl::internal::NaturalMessageEncoder& encoder,

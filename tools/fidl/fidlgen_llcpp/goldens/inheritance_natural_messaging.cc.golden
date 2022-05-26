@@ -11,12 +11,13 @@ namespace test_inheritance {
 }  // namespace test_inheritance
 ::fidl::internal::NaturalThenable<::test_inheritance::Super::Foo>
 fidl::internal::NaturalClientImpl<::test_inheritance::Super>::Foo(::fidl::Request<::test_inheritance::Super::Foo> request) const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable, ::test_inheritance::ksuper_foo_Ordinal, ::test_inheritance::ksuper_foo_DynamicFlags};
-  _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_inheritance::Super::Foo>>::IntoDomainObject(std::move(request)));
   return ::fidl::internal::NaturalThenable<::test_inheritance::Super::Foo>(
-      &client_base(), {}, std::move(_encoder),
+      &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_inheritance::ksuper_foo_Ordinal, ::test_inheritance::ksuper_foo_DynamicFlags,
+      [request = std::move(request)](NaturalMessageEncoder& encoder) mutable {
+        encoder.EncodeBody(
+            ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_inheritance::Super::Foo>>::IntoDomainObject(std::move(request)));
+        return ZX_OK;
+      },
       [](
           ::fidl::internal::ThenableBase* base,
           ::fidl::internal::NaturalMessageEncoder& encoder,
@@ -112,12 +113,13 @@ namespace test_inheritance {
 }  // namespace test_inheritance
 ::fidl::internal::NaturalThenable<::test_inheritance::Sub::Foo>
 fidl::internal::NaturalClientImpl<::test_inheritance::Sub>::Foo(::fidl::Request<::test_inheritance::Sub::Foo> request) const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable, ::test_inheritance::ksub_foo_Ordinal, ::test_inheritance::ksub_foo_DynamicFlags};
-  _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_inheritance::Sub::Foo>>::IntoDomainObject(std::move(request)));
   return ::fidl::internal::NaturalThenable<::test_inheritance::Sub::Foo>(
-      &client_base(), {}, std::move(_encoder),
+      &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_inheritance::ksub_foo_Ordinal, ::test_inheritance::ksub_foo_DynamicFlags,
+      [request = std::move(request)](NaturalMessageEncoder& encoder) mutable {
+        encoder.EncodeBody(
+            ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_inheritance::Sub::Foo>>::IntoDomainObject(std::move(request)));
+        return ZX_OK;
+      },
       [](
           ::fidl::internal::ThenableBase* base,
           ::fidl::internal::NaturalMessageEncoder& encoder,

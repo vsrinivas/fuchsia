@@ -32,11 +32,16 @@ class [[nodiscard]] NaturalThenable : private ThenableBase {
       fit::inline_callback<void(ThenableBase*, NaturalMessageEncoder&, ResponseContext*)>;
 
  public:
+  template <typename EncodeCallback>
   explicit NaturalThenable(ClientBase* client_base, fidl::WriteOptions options,
-                           NaturalMessageEncoder encoded, MessageSendOp message_send_op)
+                           const TransportVTable* vtable, uint64_t ordinal,
+                           MessageDynamicFlags dynamic_flags, EncodeCallback encode_callback,
+                           MessageSendOp message_send_op)
       : ThenableBase(client_base, std::move(options)),
-        encoded_(std::move(encoded)),
-        message_send_op_(std::move(message_send_op)) {}
+        encoded_(vtable, ordinal, dynamic_flags),
+        message_send_op_(std::move(message_send_op)) {
+    encode_callback(encoded_);
+  }
 
   // |Then| takes a callback, and implements "at most once" semantics: it
   // invokes the callback at most once until the client goes away. In other

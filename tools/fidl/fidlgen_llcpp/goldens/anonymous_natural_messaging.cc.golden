@@ -11,12 +11,13 @@ namespace test_anonymous {
 }  // namespace test_anonymous
 ::fidl::internal::NaturalThenable<::test_anonymous::SomeProtocol::SomeMethod>
 fidl::internal::NaturalClientImpl<::test_anonymous::SomeProtocol>::SomeMethod(::fidl::Request<::test_anonymous::SomeProtocol::SomeMethod> request) const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable, ::test_anonymous::kSomeProtocol_SomeMethod_Ordinal, ::test_anonymous::kSomeProtocol_SomeMethod_DynamicFlags};
-  _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_anonymous::SomeProtocol::SomeMethod>>::IntoDomainObject(std::move(request)));
   return ::fidl::internal::NaturalThenable<::test_anonymous::SomeProtocol::SomeMethod>(
-      &client_base(), {}, std::move(_encoder),
+      &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_anonymous::kSomeProtocol_SomeMethod_Ordinal, ::test_anonymous::kSomeProtocol_SomeMethod_DynamicFlags,
+      [request = std::move(request)](NaturalMessageEncoder& encoder) mutable {
+        encoder.EncodeBody(
+            ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_anonymous::SomeProtocol::SomeMethod>>::IntoDomainObject(std::move(request)));
+        return ZX_OK;
+      },
       [](
           ::fidl::internal::ThenableBase* base,
           ::fidl::internal::NaturalMessageEncoder& encoder,
