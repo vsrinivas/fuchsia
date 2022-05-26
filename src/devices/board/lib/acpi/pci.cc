@@ -34,6 +34,7 @@
 #include "src/devices/board/lib/acpi/manager.h"
 #include "src/devices/board/lib/acpi/pci-internal.h"
 #include "src/devices/board/lib/acpi/resources.h"
+#include "third_party/acpica/source/include/actypes.h"
 
 // This file contains the implementation for the code supporting the in-progress userland
 // pci bus driver.
@@ -446,19 +447,20 @@ zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object,
   dev_ctx.acpi_object = object;
   dev_ctx.acpi_device_info = std::move(info);
   // ACPI names are stored as 4 bytes in a u32
-  memcpy(dev_ctx.name, &dev_ctx.acpi_device_info->Name, 4);
+  memcpy(dev_ctx.name, &dev_ctx.acpi_device_info->Name, ACPI_NAMESEG_SIZE);
+  dev_ctx.name[sizeof(dev_ctx.name) - 1] = '\0';
 
   status = pci_init_segment_and_ecam(manager->acpi(), object, &dev_ctx);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Initializing %.*s ecam and bus information failed: %s",
-           static_cast<int>(sizeof(dev_ctx.name)), dev_ctx.name, zx_status_get_string(status));
+    zxlogf(ERROR, "Initializing %s ecam and bus information failed: %s", dev_ctx.name,
+           zx_status_get_string(status));
     return status;
   }
 
   status = pci_init_interrupts(manager->acpi(), object, &dev_ctx);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Initializing %.*s interrupt information failed: %s",
-           static_cast<int>(sizeof(dev_ctx.name)), dev_ctx.name, zx_status_get_string(status));
+    zxlogf(ERROR, "Initializing %s interrupt information failed: %s", dev_ctx.name,
+           zx_status_get_string(status));
     return status;
   }
 
@@ -466,7 +468,7 @@ zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object,
   // after device_add in the event that unbind/release are called from the DDK. See
   // the below TODO for more information.
   char name[ZX_DEVICE_NAME_MAX] = {0};
-  memcpy(name, dev_ctx.name, ACPI_NAMESEG_SIZE);
+  memcpy(name, dev_ctx.name, sizeof(dev_ctx.name));
 
   status = x64Pciroot::Create(&*RootHost, std::move(dev_ctx), parent, name, std::move(acpi_bdfs));
   if (status != ZX_OK) {

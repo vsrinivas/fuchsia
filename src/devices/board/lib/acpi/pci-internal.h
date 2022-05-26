@@ -48,7 +48,7 @@ zx_status_t pci_report_current_resources(acpi::Acpi* acpi, zx_handle_t root_reso
 class x64Pciroot : public PcirootBase {
  public:
   struct Context {
-    char name[ACPI_NAMESEG_SIZE];
+    char name[ACPI_NAMESEG_SIZE + 1];
     ACPI_HANDLE acpi_object;
     acpi::UniquePtr<ACPI_DEVICE_INFO> acpi_device_info;
     zx_device_t* platform_bus;
