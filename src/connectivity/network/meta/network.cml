@@ -32,10 +32,7 @@
     ],
     offer: [
         {
-            protocol: [
-                "fuchsia.device.NameProvider",
-                "fuchsia.scheduler.ProfileProvider",
-            ],
+            protocol: [ "fuchsia.device.NameProvider" ],
             from: "parent",
             to: [ "#netstack" ],
         },

@@ -22,7 +22,6 @@ import (
 	"strconv"
 	"sync/atomic"
 	"syscall/zx"
-	"syscall/zx/zxwait"
 	"time"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dns"
@@ -43,7 +42,6 @@ import (
 	"fidl/fuchsia/posix/socket"
 	packetsocket "fidl/fuchsia/posix/socket/packet"
 	rawsocket "fidl/fuchsia/posix/socket/raw"
-	"fidl/fuchsia/scheduler"
 	"fidl/fuchsia/stash"
 
 	glog "gvisor.dev/gvisor/pkg/log"
@@ -182,54 +180,9 @@ func (*glogEmitter) Emit(depth int, level glog.Level, timestamp time.Time, forma
 	}
 }
 
-func InstallThreadProfiles(ctx context.Context, appCtx *component.Context) {
-	const threadProfile = "fuchsia.netstack.go-worker"
-	channel := zx.GetThreadsChannel()
-	req, provider, err := scheduler.NewProfileProviderWithCtxInterfaceRequest()
-	if err != nil {
-		panic(fmt.Sprintf("failed to create ProfileProvider request: %s", err))
-	}
-	appCtx.ConnectToEnvService(req)
-	for {
-		_, err := zxwait.WaitContext(ctx, channel.Handle().Load(), zx.SignalChannelReadable)
-		if err != nil {
-			_ = syslog.Warnf("stopped observing for thread profiles: %s", err)
-			return
-		}
-		var handles [1]zx.HandleInfo
-		nb, nh, err := channel.ReadEtc(nil, handles[:], 0)
-		if err != nil {
-			_ = syslog.Errorf("failed to read from threads channel %s", err)
-			continue
-		}
-		if nb != 0 {
-			panic(fmt.Sprintf("unexpected %d bytes in channel message", nb))
-		}
-		if nh != 1 {
-			panic(fmt.Sprintf("unexpected %d handles in channel message", nh))
-		}
-		threadHandle := handles[0].Handle
-		// Attempt to install our thread profile.
-		status, err := provider.SetProfileByRole(ctx, threadHandle, threadProfile)
-		if err != nil {
-			_ = syslog.Warnf("failed to set thread profile, FIDL error: %s", err)
-			continue
-		}
-		zxStatus := zx.Status(status)
-		if zxStatus != zx.ErrOk {
-			_ = syslog.Errorf("failed to set thread profile, rejected with %s", &zx.Error{Status: zxStatus})
-			continue
-		}
-		_ = syslog.Debugf("successfully set thread profile for %d to %s", threadHandle, threadProfile)
-	}
-}
-
 func Main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-
-	appCtx := component.NewContextFromStartupInfo()
-	go InstallThreadProfiles(ctx, appCtx)
 
 	logLevel := syslog.InfoLevel
 
@@ -246,6 +199,8 @@ func Main() {
 	if err := flags.Parse(os.Args[1:]); err != nil {
 		panic(err)
 	}
+
+	appCtx := component.NewContextFromStartupInfo()
 
 	{
 		req, logSink, err := logger.NewLogSinkWithCtxInterfaceRequest()
