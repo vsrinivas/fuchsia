@@ -149,7 +149,7 @@ pub struct CupData {
     #[builder(default, setter(into))]
     pub key_id: Option<u64>,
     #[builder(default, setter(into))]
-    pub nonce: Option<String>,
+    pub nonce: Option<[u8; 32]>,
     #[builder(default, setter(into))]
     pub response: Option<Vec<u8>>,
     #[builder(default, setter(into))]

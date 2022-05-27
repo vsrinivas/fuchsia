@@ -81,6 +81,16 @@ impl From<[u8; 32]> for Nonce {
         Nonce(array)
     }
 }
+impl From<&[u8; 32]> for Nonce {
+    fn from(array: &[u8; 32]) -> Self {
+        Nonce(array.clone())
+    }
+}
+impl Into<[u8; 32]> for Nonce {
+    fn into(self: Self) -> [u8; 32] {
+        self.0
+    }
+}
 
 impl Default for Nonce {
     fn default() -> Self {
@@ -99,22 +109,6 @@ impl Nonce {
 impl fmt::Display for Nonce {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", hex::encode(self.0))
-    }
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum NonceDecodeError {
-    #[error("could not decode from hex")]
-    HexError(#[from] hex::FromHexError),
-    #[error("decoded byte vector of wrong length")]
-    WrongLength,
-}
-
-impl std::convert::TryFrom<&String> for Nonce {
-    type Error = NonceDecodeError;
-    fn try_from(s: &String) -> Result<Self, Self::Error> {
-        let v: Vec<u8> = hex::decode(s)?;
-        Ok(Nonce(v.try_into().map_err(|_| NonceDecodeError::WrongLength)?))
     }
 }
 

@@ -40,7 +40,7 @@ fn make_cup_data(cup_response: &[u8]) -> CupData {
         make_expected_signature_for_test(&priv_key, &request_metadata, &cup_response);
     fidl_fuchsia_pkg_ext::CupData::builder()
         .key_id(Some(public_key_id))
-        .nonce(Some(request_metadata.nonce.to_string()))
+        .nonce(Some(request_metadata.nonce.into()))
         .request(Some(request_body))
         .response(Some(cup_response.to_vec()))
         .signature(Some(expected_signature))

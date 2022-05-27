@@ -19,14 +19,14 @@ use {
     futures::prelude::*,
     omaha_client::{
         cup_ecdsa::{
-            CupVerificationError, Cupv2Verifier, Nonce, NonceDecodeError, PublicKeyId, PublicKeys,
+            CupVerificationError, Cupv2Verifier, Nonce, PublicKeyId, PublicKeys,
             StandardCupv2Handler,
         },
         protocol::response::Response,
     },
     p256::ecdsa::{signature::Signature, DerSignature},
     serde::Deserialize,
-    std::{collections::BTreeMap, convert::TryInto, sync::Arc},
+    std::{collections::BTreeMap, sync::Arc},
 };
 
 const EAGER_PACKAGE_CONFIG_PATH: &str = "/config/data/eager_package_config.json";
@@ -58,11 +58,8 @@ async fn verify_cup_signature(
         &cup.response.as_ref().ok_or(ParseCupResponseError::Missing(CupDataField::Response))?;
     let key_id: PublicKeyId =
         cup.key_id.ok_or(ParseCupResponseError::Missing(CupDataField::KeyId))?;
-    let nonce: Nonce = cup
-        .nonce
-        .as_ref()
-        .ok_or(ParseCupResponseError::Missing(CupDataField::Nonce))?
-        .try_into()?;
+    let nonce: Nonce =
+        cup.nonce.as_ref().ok_or(ParseCupResponseError::Missing(CupDataField::Nonce))?.into();
     let der_signature = DerSignature::from_bytes(
         &cup.signature.as_ref().ok_or(ParseCupResponseError::Missing(CupDataField::Signature))?,
     )?;
@@ -347,8 +344,6 @@ enum CupDataField {
 enum ParseCupResponseError {
     #[error("CUP data does not include a field")]
     Missing(CupDataField),
-    #[error("CUP data nonce is invalid")]
-    CupDataInvalidNonce(#[from] NonceDecodeError),
     #[error("CUP data signature is invalid")]
     CupDataInvalidSignature(#[from] p256::ecdsa::Error),
     #[error("while validating CUP response")]
@@ -651,7 +646,7 @@ mod tests {
             make_expected_signature_for_test(&priv_key, &request_metadata, &cup_response);
         fidl_fuchsia_pkg_ext::CupData::builder()
             .key_id(Some(public_key_id))
-            .nonce(Some(request_metadata.nonce.to_string()))
+            .nonce(Some(request_metadata.nonce.into()))
             .request(Some(request_body))
             .response(Some(cup_response.to_vec()))
             .signature(Some(expected_signature))

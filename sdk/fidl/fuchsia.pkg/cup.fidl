@@ -31,8 +31,8 @@ type CupData = table {
     1: request bytes:65536;
     /// The public key id
     2: key_id uint64;
-    /// ECDSA nonce in lowercase hexadecimal
-    3: nonce string:128;
+    /// ECDSA nonce.
+    3: nonce array<byte, 32>;
     /// Omaha response json
     4: response bytes:65536;
     /// DER encoded ECDSA signature
