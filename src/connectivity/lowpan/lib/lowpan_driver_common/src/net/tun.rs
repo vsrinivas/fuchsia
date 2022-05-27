@@ -321,10 +321,7 @@ impl NetworkInterface for TunNetworkInterface {
 
     /// Has the interface leave the given multicast group.
     fn leave_mcast_group(&self, addr: &std::net::Ipv6Addr) -> Result<(), Error> {
-        fx_log_info!(
-            "TunNetworkInterface: Leaving multicast group: {:?} (CURRENTLY IGNORED)",
-            addr
-        );
+        fx_log_info!("TunNetworkInterface: Leaving multicast group: {:?}", addr);
         self.mcast_socket.leave_multicast_v6(addr, self.id.try_into().unwrap())?;
         Ok(())
     }
