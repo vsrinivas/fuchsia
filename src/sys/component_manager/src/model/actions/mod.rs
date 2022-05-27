@@ -64,8 +64,7 @@ mod unresolve;
 // Re-export the actions
 pub use {
     discover::DiscoverAction, purge_child::PurgeChildAction, resolve::ResolveAction,
-    shutdown::ShutdownAction, start::StartAction, stop::StopAction,
-    unresolve::UnresolveAction,
+    shutdown::ShutdownAction, start::StartAction, stop::StopAction, unresolve::UnresolveAction,
 };
 
 // Limit visibility of internal actions
@@ -272,59 +271,76 @@ impl ActionSet {
         A: Action,
     {
         let key = action.key();
+        // If this Action is already running, just subscribe to the result
         if let Some(rx) = self.rep.get(&key) {
             let rx = rx
                 .downcast_ref::<ActionNotifier<A::Output>>()
                 .expect("action notifier has unexpected type");
             let rx = rx.clone();
-            (None, rx)
-        } else {
-            // If the current action is Stop/Shutdown, ensure that
-            // we block on the completion of Shutdown/Stop if it is
-            // currently in progress.
-            let blocking_action = match key {
-                ActionKey::Shutdown => self.rep.get(&ActionKey::Stop),
-                ActionKey::Stop => self.rep.get(&ActionKey::Shutdown),
-                _ => None,
-            };
-            let component = component.clone();
-            let handle_action = async move {
-                let res = action.handle(&component).await;
-                Self::finish(&component, &action.key()).await;
-                res
-            };
-            let fut = if let Some(blocking_action) = blocking_action {
-                let blocking_action = blocking_action
-                    .downcast_ref::<ActionNotifier<A::Output>>()
-                    .expect("action notifier has unexpected type")
-                    .clone();
-                async move {
-                    blocking_action.await;
-                    handle_action.await
-                }
-                .boxed()
-            } else {
-                handle_action.boxed()
-            };
-            let (tx, rx) = oneshot::channel();
-            let task = ActionTask::new(tx, fut);
-            let rx = ActionNotifier::new(
-                async move {
-                    match rx.await {
-                        Ok(res) => res,
-                        Err(_) => {
-                            // Normally we won't get here but this can happen if the sender's task
-                            // is cancelled because, for example, component manager exited and the
-                            // executor was torn down.
-                            let () = pending().await;
-                            unreachable!();
-                        }
+            return (None, rx);
+        }
+
+        // Otherwise we spin up the new Action
+        let prereq = self.get_prereq_action(&action);
+
+        let component = component.clone();
+
+        let action_fut = async move {
+            prereq.await;
+            let res = action.handle(&component).await;
+            Self::finish(&component, &action.key()).await;
+            res
+        }
+        .boxed();
+
+        let (tx, rx) = oneshot::channel();
+        let task = ActionTask::new(tx, action_fut);
+        let notifier = ActionNotifier::new(
+            async move {
+                match rx.await {
+                    Ok(res) => res,
+                    Err(_) => {
+                        // Normally we won't get here but this can happen if the sender's task
+                        // is cancelled because, for example, component manager exited and the
+                        // executor was torn down.
+                        let () = pending().await;
+                        unreachable!();
                     }
                 }
-                .boxed(),
-            );
-            self.rep.insert(key, Box::new(rx.clone()));
-            (Some(task), rx)
+            }
+            .boxed(),
+        );
+        self.rep.insert(key, Box::new(notifier.clone()));
+        (Some(task), notifier)
+    }
+
+    /// Return a future that waits for any Action that must be waited on before
+    /// executing the target Action. If none is required the returned future is
+    /// empty.
+    fn get_prereq_action<'a, A: Action>(
+        &'a mut self,
+        action: &'a A,
+    ) -> Pin<Box<dyn Future<Output = ()> + Send>> {
+        // If the current action is Stop/Shutdown, ensure that
+        // we block on the completion of Shutdown/Stop if it is
+        // currently in progress.
+        let prereq_action = match action.key() {
+            ActionKey::Shutdown => self.rep.get(&ActionKey::Stop),
+            ActionKey::Stop => self.rep.get(&ActionKey::Shutdown),
+            _ => None,
+        };
+
+        if let Some(prereq_action) = prereq_action {
+            let prereq_action = prereq_action
+                .downcast_ref::<ActionNotifier<A::Output>>()
+                .expect("action notifier has unexpected type")
+                .clone();
+            async move {
+                prereq_action.await;
+            }
+            .boxed()
+        } else {
+            async {}.boxed()
         }
     }
 }
