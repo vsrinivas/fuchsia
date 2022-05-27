@@ -9,7 +9,7 @@ use {
     fidl::encoding::decode_persistent,
     fidl_fuchsia_component_decl::Component,
     fidl_fuchsia_data as fdata, fuchsia_archive, fuchsia_pkg,
-    fuchsia_url::pkg_url::PkgUrl,
+    fuchsia_url::AbsoluteComponentUrl,
     maplit::btreeset,
     serde::{Deserialize, Serialize},
     serde_json,
@@ -233,9 +233,8 @@ fn update_tags_from_manifest(
     package_url: String,
     meta_far_path: &PathBuf,
 ) -> Result<(), Error> {
-    let pkg_url = PkgUrl::parse(&package_url)?;
-    let cm_path =
-        pkg_url.resource().ok_or(error::TestListToolError::InvalidPackageURL(package_url))?;
+    let pkg_url = AbsoluteComponentUrl::parse(&package_url)?;
+    let cm_path = pkg_url.resource();
     // CFv1 manifests don't generate the same FIDL declarations, so just skip generating tags
     // from them.
     if &cm_path[cm_path.len() - 3..] == "cmx" {

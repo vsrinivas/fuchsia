@@ -13,9 +13,6 @@ pub enum TestListToolError {
     #[error("Invalid facet: {0}, value: {1:?}")]
     InvalidFacetValue(String, String),
 
-    #[error("Invalid package URL: {0}")]
-    InvalidPackageURL(String),
-
     #[error("meta/ blob missing in package manifest {0}")]
     MissingMetaBlob(String),
 }
