@@ -166,7 +166,8 @@ class BtTransportUartTest : public ::gtest::TestLoopFixture {
   void TearDown() override {
     RunLoopUntilIdle();
     dut()->UnbindOp();
-    EXPECT_EQ(dut()->WaitUntilUnbindReplyCalled(), ZX_OK);
+    RunLoopUntilIdle();
+    EXPECT_EQ(dut()->UnbindReplyCallStatus(), ZX_OK);
     EXPECT_TRUE(fake_serial_device_.canceled());
     dut()->ReleaseOp();
   }
@@ -209,6 +210,15 @@ class BtTransportUartHciProtocolTest : public BtTransportUartTest {
     wait_begin_status = acl_chan_readable_wait_.Begin(dispatcher());
     ASSERT_EQ(wait_begin_status, ZX_OK) << zx_status_get_string(wait_begin_status);
 
+    zx::channel sco_chan_driver_end;
+    ASSERT_EQ(zx::channel::create(/*flags=*/0, &sco_chan_, &sco_chan_driver_end), ZX_OK);
+    ASSERT_EQ(client.OpenScoChannel(std::move(sco_chan_driver_end)), ZX_OK);
+
+    // Configure wait for readable signal on SCO channel.
+    sco_chan_readable_wait_.set_object(sco_chan_.get());
+    wait_begin_status = sco_chan_readable_wait_.Begin(dispatcher());
+    ASSERT_EQ(wait_begin_status, ZX_OK) << zx_status_get_string(wait_begin_status);
+
     zx::channel snoop_chan_driver_end;
     ZX_ASSERT(zx::channel::create(/*flags=*/0, &snoop_chan_, &snoop_chan_driver_end) == ZX_OK);
     ASSERT_EQ(client.OpenSnoopChannel(std::move(snoop_chan_driver_end)), ZX_OK);
@@ -226,6 +236,9 @@ class BtTransportUartHciProtocolTest : public BtTransportUartTest {
     acl_chan_readable_wait_.Cancel();
     acl_chan_.reset();
 
+    sco_chan_readable_wait_.Cancel();
+    sco_chan_.reset();
+
     snoop_chan_readable_wait_.Cancel();
     snoop_chan_.reset();
 
@@ -242,9 +255,15 @@ class BtTransportUartHciProtocolTest : public BtTransportUartTest {
     return acl_chan_received_packets_;
   }
 
+  const std::vector<std::vector<uint8_t>>& received_sco_packets() const {
+    return sco_chan_received_packets_;
+  }
+
   zx::channel* cmd_chan() { return &cmd_chan_; }
 
   zx::channel* acl_chan() { return &acl_chan_; }
+
+  zx::channel* sco_chan() { return &sco_chan_; }
 
  private:
   // This method is shared by the waits for all channels. |wait| is used to differentiate which wait
@@ -255,38 +274,33 @@ class BtTransportUartHciProtocolTest : public BtTransportUartTest {
     ASSERT_TRUE(signal->observed & ZX_CHANNEL_READABLE);
 
     zx::unowned_channel chan;
+    std::vector<std::vector<uint8_t>>* received_packets = nullptr;
     if (wait == &cmd_chan_readable_wait_) {
       chan = zx::unowned_channel(cmd_chan_);
+      received_packets = &cmd_chan_received_packets_;
     } else if (wait == &snoop_chan_readable_wait_) {
       chan = zx::unowned_channel(snoop_chan_);
+      received_packets = &snoop_chan_received_packets_;
     } else if (wait == &acl_chan_readable_wait_) {
       chan = zx::unowned_channel(acl_chan_);
+      received_packets = &acl_chan_received_packets_;
+    } else if (wait == &sco_chan_readable_wait_) {
+      chan = zx::unowned_channel(sco_chan_);
+      received_packets = &sco_chan_received_packets_;
     } else {
       ADD_FAILURE() << "unexpected channel in OnChannelReady";
       return;
     }
 
-    for (size_t count = 0; count < signal->count; count++) {
-      // Make byte buffer arbitrarily large to hold test packets.
-      std::vector<uint8_t> bytes(255);
-      uint32_t actual_bytes;
-      zx_status_t read_status = chan->read(
-          /*flags=*/0, bytes.data(), /*handles=*/nullptr, static_cast<uint32_t>(bytes.size()),
-          /*num_handles=*/0, &actual_bytes, /*actual_handles=*/nullptr);
-      ASSERT_EQ(read_status, ZX_OK);
-      bytes.resize(actual_bytes);
-
-      if (wait == &cmd_chan_readable_wait_) {
-        cmd_chan_received_packets_.push_back(std::move(bytes));
-      } else if (wait == &snoop_chan_readable_wait_) {
-        snoop_chan_received_packets_.push_back(std::move(bytes));
-      } else if (wait == &acl_chan_readable_wait_) {
-        acl_chan_received_packets_.push_back(std::move(bytes));
-      } else {
-        ADD_FAILURE();
-        return;
-      }
-    }
+    // Make byte buffer arbitrarily large enough to hold test packets.
+    std::vector<uint8_t> bytes(255);
+    uint32_t actual_bytes;
+    zx_status_t read_status = chan->read(
+        /*flags=*/0, bytes.data(), /*handles=*/nullptr, static_cast<uint32_t>(bytes.size()),
+        /*num_handles=*/0, &actual_bytes, /*actual_handles=*/nullptr);
+    ASSERT_EQ(read_status, ZX_OK);
+    bytes.resize(actual_bytes);
+    received_packets->push_back(std::move(bytes));
 
     // The wait needs to be restarted.
     zx_status_t wait_begin_status = wait->Begin(dispatcher());
@@ -295,6 +309,7 @@ class BtTransportUartHciProtocolTest : public BtTransportUartTest {
 
   zx::channel cmd_chan_;
   zx::channel acl_chan_;
+  zx::channel sco_chan_;
   zx::channel snoop_chan_;
 
   async::WaitMethod<BtTransportUartHciProtocolTest, &BtTransportUartHciProtocolTest::OnChannelReady>
@@ -303,10 +318,13 @@ class BtTransportUartHciProtocolTest : public BtTransportUartTest {
       snoop_chan_readable_wait_{this, zx_handle_t(), ZX_CHANNEL_READABLE};
   async::WaitMethod<BtTransportUartHciProtocolTest, &BtTransportUartHciProtocolTest::OnChannelReady>
       acl_chan_readable_wait_{this, zx_handle_t(), ZX_CHANNEL_READABLE};
+  async::WaitMethod<BtTransportUartHciProtocolTest, &BtTransportUartHciProtocolTest::OnChannelReady>
+      sco_chan_readable_wait_{this, zx_handle_t(), ZX_CHANNEL_READABLE};
 
   std::vector<std::vector<uint8_t>> cmd_chan_received_packets_;
   std::vector<std::vector<uint8_t>> snoop_chan_received_packets_;
   std::vector<std::vector<uint8_t>> acl_chan_received_packets_;
+  std::vector<std::vector<uint8_t>> sco_chan_received_packets_;
 };
 
 TEST_F(BtTransportUartTest, Lifecycle) {}
@@ -519,6 +537,99 @@ TEST_F(BtTransportUartHciProtocolTest, ReceiveManyHciEventsSplitIntoTwoResponses
   ASSERT_EQ(snoop_packets().size(), static_cast<size_t>(kNumEvents));
   for (const std::vector<uint8_t>& packet : snoop_packets()) {
     EXPECT_EQ(packet, kSnoopEventBuffer);
+  }
+}
+
+TEST_F(BtTransportUartHciProtocolTest, SendScoPackets) {
+  const uint8_t kNumPackets = 25;
+  for (uint8_t i = 0; i < kNumPackets; i++) {
+    const std::vector<uint8_t> kScoPacket = {i};
+    zx_status_t write_status =
+        sco_chan()->write(/*flags=*/0, kScoPacket.data(), static_cast<uint32_t>(kScoPacket.size()),
+                          /*handles=*/nullptr,
+                          /*num_handles=*/0);
+    ASSERT_EQ(write_status, ZX_OK);
+  }
+  // Allow SCO packets to be processed and sent to the serial device.
+  RunLoopUntilIdle();
+
+  const std::vector<std::vector<uint8_t>>& packets = serial()->writes();
+  ASSERT_EQ(packets.size(), kNumPackets);
+  for (uint8_t i = 0; i < kNumPackets; i++) {
+    // A packet indicator should be prepended.
+    std::vector<uint8_t> expected = {BtHciPacketIndicator::kHciSco, i};
+    EXPECT_EQ(packets[i], expected);
+  }
+
+  ASSERT_EQ(snoop_packets().size(), kNumPackets);
+  for (uint8_t i = 0; i < kNumPackets; i++) {
+    // Snoop packets should have a snoop packet flag prepended (NOT a UART packet indicator).
+    const std::vector<uint8_t> kExpectedSnoopPacket = {BT_HCI_SNOOP_TYPE_SCO, i};
+    EXPECT_EQ(snoop_packets()[i], kExpectedSnoopPacket);
+  }
+}
+
+TEST_F(BtTransportUartHciProtocolTest, ScoReadableSignalIgnoredUntilFirstWriteCompletes) {
+  // Delay completion of first write.
+  serial()->set_writes_paused(true);
+
+  const uint8_t kNumPackets = 2;
+  for (uint8_t i = 0; i < kNumPackets; i++) {
+    const std::vector<uint8_t> kScoPacket = {i};
+    zx_status_t write_status =
+        sco_chan()->write(/*flags=*/0, kScoPacket.data(), static_cast<uint32_t>(kScoPacket.size()),
+                          /*handles=*/nullptr,
+                          /*num_handles=*/0);
+    ASSERT_EQ(write_status, ZX_OK);
+  }
+  RunLoopUntilIdle();
+
+  // Call the first packet's completion callback. This should resume waiting for signals.
+  serial()->set_writes_paused(false);
+  // Wait for the readable signal to be processed.
+  RunLoopUntilIdle();
+
+  const std::vector<std::vector<uint8_t>>& packets = serial()->writes();
+  ASSERT_EQ(packets.size(), kNumPackets);
+  for (uint8_t i = 0; i < kNumPackets; i++) {
+    // A packet indicator should be prepended.
+    std::vector<uint8_t> expected = {BtHciPacketIndicator::kHciSco, i};
+    EXPECT_EQ(packets[i], expected);
+  }
+}
+
+TEST_F(BtTransportUartHciProtocolTest, ReceiveScoPacketsIn2Parts) {
+  const std::vector<uint8_t> kSnoopScoBuffer = {
+      BT_HCI_SNOOP_TYPE_SCO | BT_HCI_SNOOP_FLAG_RECV,  // Snoop packet flag
+      0x07,
+      0x08,  // arbitrary header fields
+      0x01,  // 1-byte payload length in little endian
+      0x02,  // arbitrary payload
+  };
+  std::vector<uint8_t> kSerialScoBuffer = kSnoopScoBuffer;
+  kSerialScoBuffer[0] = BtHciPacketIndicator::kHciSco;
+  const std::vector<uint8_t> kScoBuffer(kSnoopScoBuffer.begin() + 1, kSnoopScoBuffer.end());
+  // Split the packet before length field to test corner case.
+  const std::vector<uint8_t> kPart1(kSerialScoBuffer.begin(), kSerialScoBuffer.begin() + 3);
+  const std::vector<uint8_t> kPart2(kSerialScoBuffer.begin() + 3, kSerialScoBuffer.end());
+
+  const int kNumPackets = 20;
+  for (int i = 0; i < kNumPackets; i++) {
+    serial()->QueueReadValue(kPart1);
+    serial()->QueueReadValue(kPart2);
+    RunLoopUntilIdle();
+  }
+
+  ASSERT_EQ(received_sco_packets().size(), static_cast<size_t>(kNumPackets));
+  for (const std::vector<uint8_t>& packet : received_sco_packets()) {
+    EXPECT_EQ(packet.size(), kScoBuffer.size());
+    EXPECT_EQ(packet, kScoBuffer);
+  }
+
+  RunLoopUntilIdle();
+  ASSERT_EQ(snoop_packets().size(), static_cast<size_t>(kNumPackets));
+  for (const std::vector<uint8_t>& packet : snoop_packets()) {
+    EXPECT_EQ(packet, kSnoopScoBuffer);
   }
 }
 

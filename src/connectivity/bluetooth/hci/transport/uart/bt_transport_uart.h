@@ -13,6 +13,7 @@
 #include <lib/fit/thread_checker.h>
 #include <lib/zx/event.h>
 #include <threads.h>
+#include <zircon/device/bt-hci.h>
 
 #include <mutex>
 
@@ -46,7 +47,7 @@ class BtTransportUart : public BtTransportUartType, public ddk::BtHciProtocol<Bt
   zx_status_t BtHciOpenCommandChannel(zx::channel in);
   zx_status_t BtHciOpenAclDataChannel(zx::channel in);
   zx_status_t BtHciOpenSnoopChannel(zx::channel in);
-  zx_status_t BtHciOpenScoChannel(zx::channel channel);
+  zx_status_t BtHciOpenScoChannel(zx::channel in);
   void BtHciConfigureSco(sco_coding_format_t coding_format, sco_encoding_t encoding,
                          sco_sample_rate_t sample_rate, bt_hci_configure_sco_callback callback,
                          void* cookie);
@@ -89,6 +90,10 @@ class BtTransportUart : public BtTransportUartType, public ddk::BtHciProtocol<Bt
   // Must only be called in the read callback (HciHandleUartReadEvents).
   size_t AclPacketLength();
 
+  // Returns length of current SCO data packet being received
+  // Must only be called in the read callback (HciHandleUartReadEvents).
+  size_t ScoPacketLength();
+
   void ChannelCleanupLocked(zx::channel* channel) __TA_REQUIRES(mutex_);
 
   void SnoopChannelWriteLocked(uint8_t flags, uint8_t* bytes, size_t length) __TA_REQUIRES(mutex_);
@@ -100,6 +105,16 @@ class BtTransportUart : public BtTransportUartType, public ddk::BtHciProtocol<Bt
   void HciHandleClientChannel(zx::channel* chan, zx_signals_t pending) __TA_EXCLUDES(mutex_);
 
   void HciHandleUartReadEvents(const uint8_t* buf, size_t length) __TA_EXCLUDES(mutex_);
+
+  // Reads the next packet chunk from |uart_src| into |buffer| and increments |buffer_offset| and
+  // |uart_src| by the number of bytes read. If a complete packet is read, it will be written to
+  // |channel|.
+  using PacketLengthFunction = size_t (BtTransportUart::*)();
+  void ProcessNextUartPacketFromReadBuffer(uint8_t* buffer, size_t buffer_size,
+                                           size_t* buffer_offset, const uint8_t** uart_src,
+                                           const uint8_t* uart_end,
+                                           PacketLengthFunction get_packet_length,
+                                           zx::channel* channel, bt_hci_snoop_type_t snoop_type);
 
   void HciReadComplete(zx_status_t status, const uint8_t* buffer, size_t length)
       __TA_EXCLUDES(mutex_);
@@ -130,6 +145,10 @@ class BtTransportUart : public BtTransportUartType, public ddk::BtHciProtocol<Bt
   // (1024 + 4 bytes for the ACL header + 1 byte packet indicator)
   static constexpr uint32_t kAclMaxFrameSize = 1029;
 
+  // The maximum HCI SCO frame size used for data transactions.
+  // (255 byte payload + 3 bytes for the SCO header + 1 byte packet indicator)
+  static constexpr uint32_t kScoMaxFrameSize = 259;
+
   // 1 byte packet indicator + 2 byte header + payload
   static constexpr uint32_t kEventBufSize = 255 + 3;
 
@@ -140,6 +159,9 @@ class BtTransportUart : public BtTransportUartType, public ddk::BtHciProtocol<Bt
 
   zx::channel acl_channel_ __TA_GUARDED(mutex_);
   Wait acl_channel_wait_ __TA_GUARDED(mutex_){this, &acl_channel_};
+
+  zx::channel sco_channel_ __TA_GUARDED(mutex_);
+  Wait sco_channel_wait_ __TA_GUARDED(mutex_){this, &sco_channel_};
 
   zx::channel snoop_channel_ __TA_GUARDED(mutex_);
 
@@ -165,8 +187,15 @@ class BtTransportUart : public BtTransportUartType, public ddk::BtHciProtocol<Bt
   // Must only be used in the UART read callback (HciHandleUartReadEvents).
   size_t acl_buffer_offset_ = 0;
 
+  // For accumulating SCO packets
+  // Must only be used in the UART read callback (HciHandleUartReadEvents).
+  uint8_t sco_buffer_[kScoMaxFrameSize];
+  // Must only be used in the UART read callback (HciHandleUartReadEvents).
+  size_t sco_buffer_offset_ = 0;
+
   // for sending outbound packets to the UART
-  uint8_t write_buffer_[std::max(kEventBufSize, kAclMaxFrameSize)] __TA_GUARDED(mutex_);
+  // kAclMaxFrameSize is the largest frame size sent.
+  uint8_t write_buffer_[kAclMaxFrameSize] __TA_GUARDED(mutex_);
 
   std::mutex mutex_;
 

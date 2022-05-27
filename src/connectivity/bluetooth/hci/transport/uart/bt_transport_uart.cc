@@ -18,7 +18,6 @@
 #include <threads.h>
 #include <unistd.h>
 #include <zircon/assert.h>
-#include <zircon/device/bt-hci.h>
 #include <zircon/status.h>
 
 #include "src/connectivity/bluetooth/hci/transport/uart/bt_transport_uart_bind.h"
@@ -75,6 +74,12 @@ size_t BtTransportUart::AclPacketLength() {
   return acl_buffer_offset_ > 4 ? (acl_buffer_[3] | (acl_buffer_[4] << 8)) + 5 : 0;
 }
 
+size_t BtTransportUart::ScoPacketLength() {
+  // payload length is byte 3 of the packet
+  // add 4 bytes for packet indicator, handle, and length byte
+  return sco_buffer_offset_ > 3 ? (sco_buffer_[3] + 4) : 0;
+}
+
 void BtTransportUart::ChannelCleanupLocked(zx::channel* channel) {
   if (!channel->is_valid()) {
     return;
@@ -86,6 +91,9 @@ void BtTransportUart::ChannelCleanupLocked(zx::channel* channel) {
   } else if (channel == &acl_channel_ && acl_channel_wait_.pending) {
     async_cancel_wait(dispatcher_, &acl_channel_wait_);
     acl_channel_wait_.pending = false;
+  } else if (channel == &sco_channel_ && sco_channel_wait_.pending) {
+    async_cancel_wait(dispatcher_, &sco_channel_wait_);
+    sco_channel_wait_.pending = false;
   }
   channel->reset();
 }
@@ -164,6 +172,11 @@ void BtTransportUart::HciHandleClientChannel(zx::channel* chan, zx_signals_t pen
     packet_type = kHciAclData;
     snoop_type = BT_HCI_SNOOP_TYPE_ACL;
     chan_name = "ACL";
+  } else if (chan == &sco_channel_) {
+    max_buf_size = kScoMaxFrameSize;
+    packet_type = kHciSco;
+    snoop_type = BT_HCI_SNOOP_TYPE_SCO;
+    chan_name = "SCO";
   } else {
     // This should never happen, we only know about two packet types currently.
     ZX_ASSERT(false);
@@ -216,140 +229,107 @@ void BtTransportUart::HciHandleClientChannel(zx::channel* chan, zx_signals_t pen
 }
 
 void BtTransportUart::HciHandleUartReadEvents(const uint8_t* buf, size_t length) {
-  const uint8_t* src = buf;
-  const uint8_t* const end = src + length;
-  BtHciPacketIndicator packet_type = cur_uart_packet_type_;
-
-  while (src < end) {
-    if (packet_type == kHciNone) {
+  const uint8_t* const end = buf + length;
+  while (buf < end) {
+    if (cur_uart_packet_type_ == kHciNone) {
       // start of new packet. read packet type
-      packet_type = static_cast<BtHciPacketIndicator>(*src++);
-      if (packet_type != kHciEvent && packet_type != kHciAclData) {
-        zxlogf(INFO, "unsupported HCI packet type %u. We may be out of sync", packet_type);
-        return;
-      }
+      cur_uart_packet_type_ = static_cast<BtHciPacketIndicator>(*buf++);
     }
 
-    if (packet_type == kHciEvent) {
-      size_t packet_length = EventPacketLength();
-
-      while (!packet_length && src < end) {
-        // read until we have enough to compute packet length
-        event_buffer_[event_buffer_offset_++] = *src++;
-        packet_length = EventPacketLength();
-      }
-      if (!packet_length) {
+    switch (cur_uart_packet_type_) {
+      case kHciEvent:
+        ProcessNextUartPacketFromReadBuffer(
+            event_buffer_, sizeof(event_buffer_), &event_buffer_offset_, &buf, end,
+            &BtTransportUart::EventPacketLength, &cmd_channel_, BT_HCI_SNOOP_TYPE_EVT);
         break;
-      }
-
-      size_t remaining = end - src;
-      size_t copy = packet_length - event_buffer_offset_;
-      if (copy > remaining) {
-        copy = remaining;
-      }
-      ZX_ASSERT((event_buffer_offset_ + copy) <= sizeof(event_buffer_));
-      memcpy(event_buffer_ + event_buffer_offset_, src, copy);
-      src += copy;
-      event_buffer_offset_ += copy;
-
-      if (event_buffer_offset_ == packet_length) {
-        std::lock_guard guard(mutex_);
-
-        // Attempt to send this packet to our cmd channel.  We are working on the callback thread
-        // from the UART, so we need to do this inside of the lock to make sure that nothing closes
-        // the channel out from under us while we try to write.  If something goes wrong here, close
-        // the channel.
-        if (cmd_channel_.is_valid()) {
-          // send accumulated event packet, minus the packet indicator
-          zx_status_t status = zx_channel_write(cmd_channel_.get(), 0, &event_buffer_[1],
-                                                packet_length - 1, nullptr, 0);
-          if (status != ZX_OK) {
-            zxlogf(ERROR, "bt-transport-uart: failed to write CMD packet: %s",
-                   zx_status_get_string(status));
-            ChannelCleanupLocked(&cmd_channel_);
-          }
-        }
-
-        SnoopChannelWriteLocked(bt_hci_snoop_flags(BT_HCI_SNOOP_TYPE_EVT, true), &event_buffer_[1],
-                                packet_length - 1);
-
-        // reset buffer
-        packet_type = kHciNone;
-        event_buffer_offset_ = 1;
-      }
-    } else {  // HCI_ACL_DATA
-      size_t packet_length = AclPacketLength();
-
-      while (!packet_length && src < end) {
-        // read until we have enough to compute packet length
-        acl_buffer_[acl_buffer_offset_++] = *src++;
-        packet_length = AclPacketLength();
-      }
-
-      // Out of bytes, but we still don't know the packet length.  Just wait for
-      // the next packet.
-      if (!packet_length) {
+      case kHciAclData:
+        ProcessNextUartPacketFromReadBuffer(acl_buffer_, sizeof(acl_buffer_), &acl_buffer_offset_,
+                                            &buf, end, &BtTransportUart::AclPacketLength,
+                                            &acl_channel_, BT_HCI_SNOOP_TYPE_ACL);
         break;
-      }
-
-      // Sanity check out packet length.  The value computed by
-      // ACL_PACKET_LENGTH includes not only the packet payload size (as read
-      // from the packet itself), but also the 5 bytes of packet overhead.  We
-      // should be able to simply check packet_length against the size of the
-      // reassembly buffer.
-      if (packet_length > sizeof(acl_buffer_)) {
-        zxlogf(ERROR,
-               "bt-transport-uart: packet_length is too large (%zu > %zu) during ACL packet "
-               "reassembly.  Dropping and attempting to re-sync.\n",
-               packet_length, sizeof(acl_buffer_offset_));
-
-        // reset the reassembly state machine.
-        packet_type = kHciNone;
-        acl_buffer_offset_ = 1;
+      case kHciSco:
+        ProcessNextUartPacketFromReadBuffer(sco_buffer_, sizeof(sco_buffer_), &sco_buffer_offset_,
+                                            &buf, end, &BtTransportUart::ScoPacketLength,
+                                            &sco_channel_, BT_HCI_SNOOP_TYPE_SCO);
         break;
-      }
+      default:
+        zxlogf(ERROR, "unsupported HCI packet type %u received. We may be out of sync",
+               cur_uart_packet_type_);
+        cur_uart_packet_type_ = kHciNone;
+        return;
+    }
+  }
+}
 
-      size_t remaining = end - src;
-      size_t copy = packet_length - acl_buffer_offset_;
-      if (copy > remaining) {
-        copy = remaining;
-      }
+void BtTransportUart::ProcessNextUartPacketFromReadBuffer(
+    uint8_t* buffer, size_t buffer_size, size_t* buffer_offset, const uint8_t** uart_src,
+    const uint8_t* uart_end, PacketLengthFunction get_packet_length, zx::channel* channel,
+    bt_hci_snoop_type_t snoop_type) {
+  size_t packet_length = (this->*get_packet_length)();
 
-      ZX_ASSERT((acl_buffer_offset_ + copy) <= sizeof(acl_buffer_));
-      memcpy(acl_buffer_ + acl_buffer_offset_, src, copy);
-      src += copy;
-      acl_buffer_offset_ += copy;
+  while (!packet_length && *uart_src < uart_end) {
+    // read until we have enough to compute packet length
+    buffer[*buffer_offset] = **uart_src;
+    (*buffer_offset)++;
+    (*uart_src)++;
+    packet_length = (this->*get_packet_length)();
+  }
 
-      if (acl_buffer_offset_ == packet_length) {
-        std::lock_guard guard(mutex_);
+  // Out of bytes, but we still don't know the packet length.  Just wait for
+  // the next packet.
+  if (!packet_length) {
+    return;
+  }
 
-        // Attempt to send accumulated ACL data packet, minus the packet
-        // indicator.  See the notes in the cmd channel section for details
-        // about error handling and why the lock is needed here
-        if (acl_channel_.is_valid()) {
-          zx_status_t status = zx_channel_write(acl_channel_.get(), 0, &acl_buffer_[1],
-                                                packet_length - 1, nullptr, 0);
+  if (packet_length > buffer_size) {
+    zxlogf(ERROR,
+           "packet_length is too large (%zu > %zu) during packet reassembly. Dropping and "
+           "attempting to re-sync.",
+           packet_length, buffer_size);
 
-          if (status != ZX_OK) {
-            zxlogf(ERROR, "bt-transport-uart: failed to write ACL packet: %s",
-                   zx_status_get_string(status));
-            ChannelCleanupLocked(&acl_channel_);
-          }
-        }
+    // Reset the reassembly state machine.
+    *buffer_offset = 1;
+    cur_uart_packet_type_ = kHciNone;
+    // Consume the rest of the UART buffer to indicate that it is corrupt.
+    *uart_src = uart_end;
+    return;
+  }
 
-        // If the snoop channel is open then try to write the packet
-        // even if acl_channel was closed.
-        SnoopChannelWriteLocked(bt_hci_snoop_flags(BT_HCI_SNOOP_TYPE_ACL, true), &acl_buffer_[1],
-                                packet_length - 1);
+  size_t remaining = uart_end - *uart_src;
+  size_t copy_size = packet_length - *buffer_offset;
+  if (copy_size > remaining) {
+    copy_size = remaining;
+  }
 
-        // reset buffer
-        packet_type = kHciNone;
-        acl_buffer_offset_ = 1;
-      }
+  ZX_ASSERT(*buffer_offset + copy_size <= buffer_size);
+  memcpy(buffer + *buffer_offset, *uart_src, copy_size);
+  *uart_src += copy_size;
+  *buffer_offset += copy_size;
+
+  if (*buffer_offset != packet_length) {
+    // The packet is incomplete, the next chunk should continue the same packet.
+    return;
+  }
+
+  std::lock_guard guard(mutex_);
+
+  // Attempt to send this packet to the channel. We are working on the callback thread from the
+  // UART, so we need to do this inside of the lock to make sure that nothing closes the channel
+  // out from under us while we try to write. If something goes wrong here, close the channel.
+  if (channel->is_valid()) {
+    zx_status_t status = channel->write(/*flags=*/0, &buffer[1], packet_length - 1, nullptr, 0);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "failed to write packet: %s", zx_status_get_string(status));
+      ChannelCleanupLocked(&acl_channel_);
     }
   }
 
-  cur_uart_packet_type_ = packet_type;
+  // If the snoop channel is open then try to write the packet even if |channel| was closed.
+  SnoopChannelWriteLocked(bt_hci_snoop_flags(snoop_type, true), &buffer[1], packet_length - 1);
+
+  // reset buffer
+  cur_uart_packet_type_ = kHciNone;
+  *buffer_offset = 1;
 }
 
 void BtTransportUart::HciReadComplete(zx_status_t status, const uint8_t* buffer, size_t length) {
@@ -394,8 +374,8 @@ void BtTransportUart::HciWriteComplete(zx_status_t status) {
     std::lock_guard guard(mutex_);
     can_write_ = true;
 
-    // Resume waiting for channel signals. If a packet was queued while the write was processing, it
-    // should be immediately signaled.
+    // Resume waiting for channel signals. If a packet was queued while the write was processing,
+    // it should be immediately signaled.
     if (cmd_channel_wait_.channel->is_valid() && !cmd_channel_wait_.pending) {
       ZX_ASSERT(async_begin_wait(dispatcher_, &cmd_channel_wait_) == ZX_OK);
       cmd_channel_wait_.pending = true;
@@ -403,6 +383,10 @@ void BtTransportUart::HciWriteComplete(zx_status_t status) {
     if (acl_channel_wait_.channel->is_valid() && !acl_channel_wait_.pending) {
       ZX_ASSERT(async_begin_wait(dispatcher_, &acl_channel_wait_) == ZX_OK);
       acl_channel_wait_.pending = true;
+    }
+    if (sco_channel_wait_.channel->is_valid() && !sco_channel_wait_.pending) {
+      ZX_ASSERT(async_begin_wait(dispatcher_, &sco_channel_wait_) == ZX_OK);
+      sco_channel_wait_.pending = true;
     }
   }
 }
@@ -438,6 +422,9 @@ zx_status_t BtTransportUart::HciOpenChannel(zx::channel* in_channel, zx_handle_t
   } else if (in_channel == &acl_channel_) {
     zxlogf(DEBUG, "opening ACL channel");
     wait = &acl_channel_wait_;
+  } else if (in_channel == &sco_channel_) {
+    zxlogf(DEBUG, "opening SCO channel");
+    wait = &sco_channel_wait_;
   } else if (in_channel == &snoop_channel_) {
     zxlogf(DEBUG, "opening snoop channel");
     // TODO(fxb/91348): Handle snoop channel closed signal.
@@ -465,6 +452,7 @@ void BtTransportUart::DdkUnbind(ddk::UnbindTxn txn) {
     // removal and tasks aren't posted to work thread.
     ChannelCleanupLocked(&cmd_channel_);
     ChannelCleanupLocked(&acl_channel_);
+    ChannelCleanupLocked(&sco_channel_);
     ChannelCleanupLocked(&snoop_channel_);
   }
 
@@ -485,8 +473,8 @@ void BtTransportUart::DdkUnbind(ddk::UnbindTxn txn) {
 
 void BtTransportUart::DdkRelease() {
   zxlogf(TRACE, "Release");
-  // Driver manager is given a raw pointer to this dynamically allocated object in Create(), so when
-  // DdkRelease() is called we need to free the allocated memory.
+  // Driver manager is given a raw pointer to this dynamically allocated object in Create(), so
+  // when DdkRelease() is called we need to free the allocated memory.
   delete this;
 }
 
@@ -502,18 +490,20 @@ zx_status_t BtTransportUart::BtHciOpenSnoopChannel(zx::channel in) {
   return HciOpenChannel(&snoop_channel_, in.release());
 }
 
-zx_status_t BtTransportUart::BtHciOpenScoChannel(zx::channel channel) {
-  return ZX_ERR_NOT_SUPPORTED;
+zx_status_t BtTransportUart::BtHciOpenScoChannel(zx::channel in) {
+  return HciOpenChannel(&sco_channel_, in.release());
 }
 
 void BtTransportUart::BtHciConfigureSco(sco_coding_format_t coding_format, sco_encoding_t encoding,
                                         sco_sample_rate_t sample_rate,
                                         bt_hci_configure_sco_callback callback, void* cookie) {
-  callback(cookie, ZX_ERR_NOT_SUPPORTED);
+  // UART doesn't require any SCO configuration.
+  callback(cookie, ZX_OK);
 }
 
 void BtTransportUart::BtHciResetSco(bt_hci_reset_sco_callback callback, void* cookie) {
-  callback(cookie, ZX_ERR_NOT_SUPPORTED);
+  // UART doesn't require any SCO configuration, so there's nothing to do.
+  callback(cookie, ZX_OK);
 }
 
 zx_status_t BtTransportUart::DdkGetProtocol(uint32_t proto_id, void* out_proto) {
@@ -550,6 +540,8 @@ zx_status_t BtTransportUart::Bind() {
     event_buffer_offset_ = 1;
     acl_buffer_[0] = kHciAclData;
     acl_buffer_offset_ = 1;
+    sco_buffer_[0] = kHciSco;
+    sco_buffer_offset_ = 1;
   }
 
   serial_port_info_t info;
