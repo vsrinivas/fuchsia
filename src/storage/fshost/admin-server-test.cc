@@ -173,12 +173,12 @@ TEST_F(AdminServerTest, GetDevicePathForBuiltInFilesystem) {
   for (;;) {
     auto result = fidl::WireCall(*fshost_or)->GetDevicePath(buf.f_fsid);
     ASSERT_TRUE(result.ok());
-    if (result->result.is_err()) {
+    if (result.value_NEW().is_error()) {
       if (++attempts == 100)
         GTEST_FAIL() << "Timed out trying to get device path";
       usleep(100);
     } else {
-      EXPECT_EQ(result->result.response().path.get(),
+      EXPECT_EQ(result.value_NEW().value()->path.get(),
                 ramdisk_or->path() + "/fvm/data-p-1/block/zxcrypt/unsealed/block");
       break;
     }

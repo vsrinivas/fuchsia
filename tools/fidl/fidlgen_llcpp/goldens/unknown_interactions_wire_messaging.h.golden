@@ -935,23 +935,6 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::Example::Flex
   WireResult& operator=(WireResult&&) = delete;
   WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
-  ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>* Unwrap() {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-  const ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>* Unwrap() const {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-
-  ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>& value() { return *Unwrap(); }
-  const ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>& value() const { return *Unwrap(); }
-
-  ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>* operator->() { return &value(); }
-  const ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>* operator->() const { return &value(); }
-
-  ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>& operator*() { return value(); }
-  const ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>& operator*() const { return value(); }
 
  private:
   ::fidl::internal::InlineMessageBuffer<48> bytes_;
@@ -980,23 +963,6 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Exampl
   WireUnownedResult& operator=(WireUnownedResult&&) = delete;
   WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
-  ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>* Unwrap() {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-  const ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>* Unwrap() const {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-
-  ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>& value() { return *Unwrap(); }
-  const ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>& value() const { return *Unwrap(); }
-
-  ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>* operator->() { return &value(); }
-  const ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>* operator->() const { return &value(); }
-
-  ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>& operator*() { return value(); }
-  const ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>& operator*() const { return value(); }
 
  private:
   ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::FlexibleTwoWay>> decoded_;

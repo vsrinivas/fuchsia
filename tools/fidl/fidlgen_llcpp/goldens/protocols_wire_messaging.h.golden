@@ -1599,15 +1599,14 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithAndWithoutRequestRe
   WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
     ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>* Unwrap() {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+        ZX_ASSERT(ok());
+        return &decoded_.Value()->body;
     }
     const ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>* Unwrap() const {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+        ZX_ASSERT(ok());
+        return &decoded_.Value()->body;
     }
 
-    
     ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>* Unwrap_NEW() {
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
@@ -1616,15 +1615,12 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithAndWithoutRequestRe
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
     }
-    
 
     ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>& value() { return *Unwrap(); }
     const ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>& value() const { return *Unwrap(); }
 
-    
     ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>& value_NEW() { return *Unwrap_NEW(); }
     const ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>& value_NEW() const { return *Unwrap_NEW(); }
-    
 
     ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>* operator->() { return &value(); }
     const ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>* operator->() const { return &value(); }
@@ -1660,15 +1656,14 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithAndWithoutRe
   WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
     ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>* Unwrap() {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+        ZX_ASSERT(ok());
+        return &decoded_.Value()->body;
     }
     const ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>* Unwrap() const {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+        ZX_ASSERT(ok());
+        return &decoded_.Value()->body;
     }
 
-    
     ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>* Unwrap_NEW() {
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
@@ -1677,15 +1672,12 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithAndWithoutRe
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
     }
-    
 
     ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>& value() { return *Unwrap(); }
     const ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>& value() const { return *Unwrap(); }
 
-    
     ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>& value_NEW() { return *Unwrap_NEW(); }
     const ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>& value_NEW() const { return *Unwrap_NEW(); }
-    
 
     ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>* operator->() { return &value(); }
     const ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>* operator->() const { return &value(); }
@@ -1786,15 +1778,14 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithAndWithoutRequestRe
   WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
     ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>* Unwrap() {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+        ZX_ASSERT(ok());
+        return &decoded_.Value()->body;
     }
     const ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>* Unwrap() const {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+        ZX_ASSERT(ok());
+        return &decoded_.Value()->body;
     }
 
-    
     ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>* Unwrap_NEW() {
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
@@ -1803,15 +1794,12 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithAndWithoutRequestRe
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
     }
-    
 
     ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>& value() { return *Unwrap(); }
     const ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>& value() const { return *Unwrap(); }
 
-    
     ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>& value_NEW() { return *Unwrap_NEW(); }
     const ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>& value_NEW() const { return *Unwrap_NEW(); }
-    
 
     ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>* operator->() { return &value(); }
     const ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>* operator->() const { return &value(); }
@@ -1847,15 +1835,14 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithAndWithoutRe
   WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
     ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>* Unwrap() {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+        ZX_ASSERT(ok());
+        return &decoded_.Value()->body;
     }
     const ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>* Unwrap() const {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+        ZX_ASSERT(ok());
+        return &decoded_.Value()->body;
     }
 
-    
     ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>* Unwrap_NEW() {
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
@@ -1864,15 +1851,12 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithAndWithoutRe
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
     }
-    
 
     ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>& value() { return *Unwrap(); }
     const ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>& value() const { return *Unwrap(); }
 
-    
     ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>& value_NEW() { return *Unwrap_NEW(); }
     const ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>& value_NEW() const { return *Unwrap_NEW(); }
-    
 
     ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>* operator->() { return &value(); }
     const ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>* operator->() const { return &value(); }
@@ -2801,15 +2785,14 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::Transitional::Request> 
   WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
     ::fidl::WireResponse<::test_protocols::Transitional::Request>* Unwrap() {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+        ZX_ASSERT(ok());
+        return &decoded_.Value()->body;
     }
     const ::fidl::WireResponse<::test_protocols::Transitional::Request>* Unwrap() const {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+        ZX_ASSERT(ok());
+        return &decoded_.Value()->body;
     }
 
-    
     ::fidl::WireResponse<::test_protocols::Transitional::Request>* Unwrap_NEW() {
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
@@ -2818,15 +2801,12 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::Transitional::Request> 
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
     }
-    
 
     ::fidl::WireResponse<::test_protocols::Transitional::Request>& value() { return *Unwrap(); }
     const ::fidl::WireResponse<::test_protocols::Transitional::Request>& value() const { return *Unwrap(); }
 
-    
     ::fidl::WireResponse<::test_protocols::Transitional::Request>& value_NEW() { return *Unwrap_NEW(); }
     const ::fidl::WireResponse<::test_protocols::Transitional::Request>& value_NEW() const { return *Unwrap_NEW(); }
-    
 
     ::fidl::WireResponse<::test_protocols::Transitional::Request>* operator->() { return &value(); }
     const ::fidl::WireResponse<::test_protocols::Transitional::Request>* operator->() const { return &value(); }
@@ -2862,15 +2842,14 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::Transitional::Re
   WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
     ::fidl::WireResponse<::test_protocols::Transitional::Request>* Unwrap() {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+        ZX_ASSERT(ok());
+        return &decoded_.Value()->body;
     }
     const ::fidl::WireResponse<::test_protocols::Transitional::Request>* Unwrap() const {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+        ZX_ASSERT(ok());
+        return &decoded_.Value()->body;
     }
 
-    
     ::fidl::WireResponse<::test_protocols::Transitional::Request>* Unwrap_NEW() {
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
@@ -2879,15 +2858,12 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::Transitional::Re
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
     }
-    
 
     ::fidl::WireResponse<::test_protocols::Transitional::Request>& value() { return *Unwrap(); }
     const ::fidl::WireResponse<::test_protocols::Transitional::Request>& value() const { return *Unwrap(); }
 
-    
     ::fidl::WireResponse<::test_protocols::Transitional::Request>& value_NEW() { return *Unwrap_NEW(); }
     const ::fidl::WireResponse<::test_protocols::Transitional::Request>& value_NEW() const { return *Unwrap_NEW(); }
-    
 
     ::fidl::WireResponse<::test_protocols::Transitional::Request>* operator->() { return &value(); }
     const ::fidl::WireResponse<::test_protocols::Transitional::Request>* operator->() const { return &value(); }
@@ -4084,15 +4060,14 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithProtocolEnds::Clien
   WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
     ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds>* Unwrap() {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+        ZX_ASSERT(ok());
+        return &decoded_.Value()->body;
     }
     const ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds>* Unwrap() const {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+        ZX_ASSERT(ok());
+        return &decoded_.Value()->body;
     }
 
-    
     ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds>* Unwrap_NEW() {
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
@@ -4101,15 +4076,12 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithProtocolEnds::Clien
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
     }
-    
 
     ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds>& value() { return *Unwrap(); }
     const ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds>& value() const { return *Unwrap(); }
 
-    
     ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds>& value_NEW() { return *Unwrap_NEW(); }
     const ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds>& value_NEW() const { return *Unwrap_NEW(); }
-    
 
     ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds>* operator->() { return &value(); }
     const ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds>* operator->() const { return &value(); }
@@ -4145,15 +4117,14 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithProtocolEnds
   WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
     ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds>* Unwrap() {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+        ZX_ASSERT(ok());
+        return &decoded_.Value()->body;
     }
     const ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds>* Unwrap() const {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+        ZX_ASSERT(ok());
+        return &decoded_.Value()->body;
     }
 
-    
     ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds>* Unwrap_NEW() {
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
@@ -4162,15 +4133,12 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithProtocolEnds
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
     }
-    
 
     ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds>& value() { return *Unwrap(); }
     const ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds>& value() const { return *Unwrap(); }
 
-    
     ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds>& value_NEW() { return *Unwrap_NEW(); }
     const ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds>& value_NEW() const { return *Unwrap_NEW(); }
-    
 
     ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds>* operator->() { return &value(); }
     const ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds>* operator->() const { return &value(); }
@@ -4196,15 +4164,14 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithProtocolEnds::Serve
   WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
     ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds>* Unwrap() {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+        ZX_ASSERT(ok());
+        return &decoded_.Value()->body;
     }
     const ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds>* Unwrap() const {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+        ZX_ASSERT(ok());
+        return &decoded_.Value()->body;
     }
 
-    
     ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds>* Unwrap_NEW() {
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
@@ -4213,15 +4180,12 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithProtocolEnds::Serve
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
     }
-    
 
     ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds>& value() { return *Unwrap(); }
     const ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds>& value() const { return *Unwrap(); }
 
-    
     ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds>& value_NEW() { return *Unwrap_NEW(); }
     const ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds>& value_NEW() const { return *Unwrap_NEW(); }
-    
 
     ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds>* operator->() { return &value(); }
     const ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds>* operator->() const { return &value(); }
@@ -4257,15 +4221,14 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithProtocolEnds
   WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
     ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds>* Unwrap() {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+        ZX_ASSERT(ok());
+        return &decoded_.Value()->body;
     }
     const ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds>* Unwrap() const {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+        ZX_ASSERT(ok());
+        return &decoded_.Value()->body;
     }
 
-    
     ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds>* Unwrap_NEW() {
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
@@ -4274,15 +4237,12 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithProtocolEnds
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
     }
-    
 
     ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds>& value() { return *Unwrap(); }
     const ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds>& value() const { return *Unwrap(); }
 
-    
     ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds>& value_NEW() { return *Unwrap_NEW(); }
     const ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds>& value_NEW() const { return *Unwrap_NEW(); }
-    
 
     ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds>* operator->() { return &value(); }
     const ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds>* operator->() const { return &value(); }
@@ -4308,15 +4268,14 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithProtocolEnds::Struc
   WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
     ::fidl::WireResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>* Unwrap() {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+        ZX_ASSERT(ok());
+        return &decoded_.Value()->body;
     }
     const ::fidl::WireResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>* Unwrap() const {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+        ZX_ASSERT(ok());
+        return &decoded_.Value()->body;
     }
 
-    
     ::fidl::WireResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>* Unwrap_NEW() {
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
@@ -4325,15 +4284,12 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithProtocolEnds::Struc
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
     }
-    
 
     ::fidl::WireResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>& value() { return *Unwrap(); }
     const ::fidl::WireResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>& value() const { return *Unwrap(); }
 
-    
     ::fidl::WireResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>& value_NEW() { return *Unwrap_NEW(); }
     const ::fidl::WireResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>& value_NEW() const { return *Unwrap_NEW(); }
-    
 
     ::fidl::WireResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>* operator->() { return &value(); }
     const ::fidl::WireResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>* operator->() const { return &value(); }
@@ -4369,15 +4325,14 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithProtocolEnds
   WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
     ::fidl::WireResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>* Unwrap() {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+        ZX_ASSERT(ok());
+        return &decoded_.Value()->body;
     }
     const ::fidl::WireResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>* Unwrap() const {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+        ZX_ASSERT(ok());
+        return &decoded_.Value()->body;
     }
 
-    
     ::fidl::WireResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>* Unwrap_NEW() {
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
@@ -4386,15 +4341,12 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithProtocolEnds
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
     }
-    
 
     ::fidl::WireResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>& value() { return *Unwrap(); }
     const ::fidl::WireResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>& value() const { return *Unwrap(); }
 
-    
     ::fidl::WireResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>& value_NEW() { return *Unwrap_NEW(); }
     const ::fidl::WireResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>& value_NEW() const { return *Unwrap_NEW(); }
-    
 
     ::fidl::WireResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>* operator->() { return &value(); }
     const ::fidl::WireResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>* operator->() const { return &value(); }
@@ -4991,15 +4943,14 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::MethodWithUnion::UnionM
   WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
     ::fidl::WireResponse<::test_protocols::MethodWithUnion::UnionMethod>* Unwrap() {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+        ZX_ASSERT(ok());
+        return &decoded_.Value()->body;
     }
     const ::fidl::WireResponse<::test_protocols::MethodWithUnion::UnionMethod>* Unwrap() const {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+        ZX_ASSERT(ok());
+        return &decoded_.Value()->body;
     }
 
-    
     ::fidl::WireResponse<::test_protocols::MethodWithUnion::UnionMethod>* Unwrap_NEW() {
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
@@ -5008,15 +4959,12 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::MethodWithUnion::UnionM
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
     }
-    
 
     ::fidl::WireResponse<::test_protocols::MethodWithUnion::UnionMethod>& value() { return *Unwrap(); }
     const ::fidl::WireResponse<::test_protocols::MethodWithUnion::UnionMethod>& value() const { return *Unwrap(); }
 
-    
     ::fidl::WireResponse<::test_protocols::MethodWithUnion::UnionMethod>& value_NEW() { return *Unwrap_NEW(); }
     const ::fidl::WireResponse<::test_protocols::MethodWithUnion::UnionMethod>& value_NEW() const { return *Unwrap_NEW(); }
-    
 
     ::fidl::WireResponse<::test_protocols::MethodWithUnion::UnionMethod>* operator->() { return &value(); }
     const ::fidl::WireResponse<::test_protocols::MethodWithUnion::UnionMethod>* operator->() const { return &value(); }
@@ -5052,15 +5000,14 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::MethodWithUnion:
   WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
     ::fidl::WireResponse<::test_protocols::MethodWithUnion::UnionMethod>* Unwrap() {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+        ZX_ASSERT(ok());
+        return &decoded_.Value()->body;
     }
     const ::fidl::WireResponse<::test_protocols::MethodWithUnion::UnionMethod>* Unwrap() const {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+        ZX_ASSERT(ok());
+        return &decoded_.Value()->body;
     }
 
-    
     ::fidl::WireResponse<::test_protocols::MethodWithUnion::UnionMethod>* Unwrap_NEW() {
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
@@ -5069,15 +5016,12 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::MethodWithUnion:
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
     }
-    
 
     ::fidl::WireResponse<::test_protocols::MethodWithUnion::UnionMethod>& value() { return *Unwrap(); }
     const ::fidl::WireResponse<::test_protocols::MethodWithUnion::UnionMethod>& value() const { return *Unwrap(); }
 
-    
     ::fidl::WireResponse<::test_protocols::MethodWithUnion::UnionMethod>& value_NEW() { return *Unwrap_NEW(); }
     const ::fidl::WireResponse<::test_protocols::MethodWithUnion::UnionMethod>& value_NEW() const { return *Unwrap_NEW(); }
-    
 
     ::fidl::WireResponse<::test_protocols::MethodWithUnion::UnionMethod>* operator->() { return &value(); }
     const ::fidl::WireResponse<::test_protocols::MethodWithUnion::UnionMethod>* operator->() const { return &value(); }
@@ -6216,15 +6160,14 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::HandleRightsProtocol::R
   WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
     ::fidl::WireResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>* Unwrap() {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+        ZX_ASSERT(ok());
+        return &decoded_.Value()->body;
     }
     const ::fidl::WireResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>* Unwrap() const {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+        ZX_ASSERT(ok());
+        return &decoded_.Value()->body;
     }
 
-    
     ::fidl::WireResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>* Unwrap_NEW() {
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
@@ -6233,15 +6176,12 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::HandleRightsProtocol::R
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
     }
-    
 
     ::fidl::WireResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>& value() { return *Unwrap(); }
     const ::fidl::WireResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>& value() const { return *Unwrap(); }
 
-    
     ::fidl::WireResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>& value_NEW() { return *Unwrap_NEW(); }
     const ::fidl::WireResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>& value_NEW() const { return *Unwrap_NEW(); }
-    
 
     ::fidl::WireResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>* operator->() { return &value(); }
     const ::fidl::WireResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>* operator->() const { return &value(); }
@@ -6277,15 +6217,14 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::HandleRightsProt
   WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
     ::fidl::WireResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>* Unwrap() {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+        ZX_ASSERT(ok());
+        return &decoded_.Value()->body;
     }
     const ::fidl::WireResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>* Unwrap() const {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+        ZX_ASSERT(ok());
+        return &decoded_.Value()->body;
     }
 
-    
     ::fidl::WireResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>* Unwrap_NEW() {
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
@@ -6294,15 +6233,12 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::HandleRightsProt
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
     }
-    
 
     ::fidl::WireResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>& value() { return *Unwrap(); }
     const ::fidl::WireResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>& value() const { return *Unwrap(); }
 
-    
     ::fidl::WireResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>& value_NEW() { return *Unwrap_NEW(); }
     const ::fidl::WireResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>& value_NEW() const { return *Unwrap_NEW(); }
-    
 
     ::fidl::WireResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>* operator->() { return &value(); }
     const ::fidl::WireResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>* operator->() const { return &value(); }
@@ -7571,37 +7507,31 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithErrorSyntax::Respon
   WireResult& operator=(WireResult&&) = delete;
   WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
-    ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>* Unwrap() {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+    ::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse*>* Unwrap() {
+        return &result_.value();
     }
-    const ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>* Unwrap() const {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+    const ::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse*>* Unwrap() const {
+        return &result_.value();
     }
 
-    
     ::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse*>* Unwrap_NEW() {
         return &result_.value();
     }
     const ::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse*>* Unwrap_NEW() const {
         return &result_.value();
     }
-    
 
-    ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>& value() { return *Unwrap(); }
-    const ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>& value() const { return *Unwrap(); }
+    ::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse*>& value() { return *Unwrap(); }
+    const ::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse*>& value() const { return *Unwrap(); }
 
-    
     ::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse*>& value_NEW() { return *Unwrap_NEW(); }
     const ::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse*>& value_NEW() const { return *Unwrap_NEW(); }
-    
 
-    ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>* operator->() { return &value(); }
-    const ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>* operator->() const { return &value(); }
+    ::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse*>* operator->() { return &value(); }
+    const ::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse*>* operator->() const { return &value(); }
 
-    ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>& operator*() { return value(); }
-    const ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>& operator*() const { return value(); }
+    ::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse*>& operator*() { return value(); }
+    const ::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse*>& operator*() const { return value(); }
    private:
     ::fidl::internal::InlineMessageBuffer<64> bytes_;
     ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>> decoded_;
@@ -7643,37 +7573,31 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithErrorSyntax:
   WireUnownedResult& operator=(WireUnownedResult&&) = delete;
   WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
-    ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>* Unwrap() {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+    ::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse*>* Unwrap() {
+        return &result_.value();
     }
-    const ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>* Unwrap() const {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+    const ::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse*>* Unwrap() const {
+        return &result_.value();
     }
 
-    
     ::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse*>* Unwrap_NEW() {
         return &result_.value();
     }
     const ::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse*>* Unwrap_NEW() const {
         return &result_.value();
     }
-    
 
-    ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>& value() { return *Unwrap(); }
-    const ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>& value() const { return *Unwrap(); }
+    ::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse*>& value() { return *Unwrap(); }
+    const ::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse*>& value() const { return *Unwrap(); }
 
-    
     ::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse*>& value_NEW() { return *Unwrap_NEW(); }
     const ::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse*>& value_NEW() const { return *Unwrap_NEW(); }
-    
 
-    ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>* operator->() { return &value(); }
-    const ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>* operator->() const { return &value(); }
+    ::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse*>* operator->() { return &value(); }
+    const ::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse*>* operator->() const { return &value(); }
 
-    ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>& operator*() { return value(); }
-    const ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>& operator*() const { return value(); }
+    ::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse*>& operator*() { return value(); }
+    const ::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse*>& operator*() const { return value(); }
    private:
     ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>> decoded_;
       std::optional<::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse*>> result_ = std::nullopt;
@@ -7693,37 +7617,31 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithErrorSyntax::ErrorA
   WireResult& operator=(WireResult&&) = delete;
   WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
-    ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>* Unwrap() {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+    ::fitx::result<uint32_t>* Unwrap() {
+        return &result_.value();
     }
-    const ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>* Unwrap() const {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+    const ::fitx::result<uint32_t>* Unwrap() const {
+        return &result_.value();
     }
 
-    
     ::fitx::result<uint32_t>* Unwrap_NEW() {
         return &result_.value();
     }
     const ::fitx::result<uint32_t>* Unwrap_NEW() const {
         return &result_.value();
     }
-    
 
-    ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>& value() { return *Unwrap(); }
-    const ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>& value() const { return *Unwrap(); }
+    ::fitx::result<uint32_t>& value() { return *Unwrap(); }
+    const ::fitx::result<uint32_t>& value() const { return *Unwrap(); }
 
-    
     ::fitx::result<uint32_t>& value_NEW() { return *Unwrap_NEW(); }
     const ::fitx::result<uint32_t>& value_NEW() const { return *Unwrap_NEW(); }
-    
 
-    ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>* operator->() { return &value(); }
-    const ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>* operator->() const { return &value(); }
+    ::fitx::result<uint32_t>* operator->() { return &value(); }
+    const ::fitx::result<uint32_t>* operator->() const { return &value(); }
 
-    ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>& operator*() { return value(); }
-    const ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>& operator*() const { return value(); }
+    ::fitx::result<uint32_t>& operator*() { return value(); }
+    const ::fitx::result<uint32_t>& operator*() const { return value(); }
    private:
     ::fidl::internal::InlineMessageBuffer<48> bytes_;
     ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> decoded_;
@@ -7765,37 +7683,31 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithErrorSyntax:
   WireUnownedResult& operator=(WireUnownedResult&&) = delete;
   WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
-    ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>* Unwrap() {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+    ::fitx::result<uint32_t>* Unwrap() {
+        return &result_.value();
     }
-    const ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>* Unwrap() const {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+    const ::fitx::result<uint32_t>* Unwrap() const {
+        return &result_.value();
     }
 
-    
     ::fitx::result<uint32_t>* Unwrap_NEW() {
         return &result_.value();
     }
     const ::fitx::result<uint32_t>* Unwrap_NEW() const {
         return &result_.value();
     }
-    
 
-    ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>& value() { return *Unwrap(); }
-    const ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>& value() const { return *Unwrap(); }
+    ::fitx::result<uint32_t>& value() { return *Unwrap(); }
+    const ::fitx::result<uint32_t>& value() const { return *Unwrap(); }
 
-    
     ::fitx::result<uint32_t>& value_NEW() { return *Unwrap_NEW(); }
     const ::fitx::result<uint32_t>& value_NEW() const { return *Unwrap_NEW(); }
-    
 
-    ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>* operator->() { return &value(); }
-    const ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>* operator->() const { return &value(); }
+    ::fitx::result<uint32_t>* operator->() { return &value(); }
+    const ::fitx::result<uint32_t>* operator->() const { return &value(); }
 
-    ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>& operator*() { return value(); }
-    const ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>& operator*() const { return value(); }
+    ::fitx::result<uint32_t>& operator*() { return value(); }
+    const ::fitx::result<uint32_t>& operator*() const { return value(); }
    private:
     ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> decoded_;
       std::optional<::fitx::result<uint32_t>> result_ = std::nullopt;
@@ -7815,37 +7727,31 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithErrorSyntax::ErrorA
   WireResult& operator=(WireResult&&) = delete;
   WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
-    ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>* Unwrap() {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+    ::fitx::result<::test_protocols::wire::ErrorEnum>* Unwrap() {
+        return &result_.value();
     }
-    const ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>* Unwrap() const {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+    const ::fitx::result<::test_protocols::wire::ErrorEnum>* Unwrap() const {
+        return &result_.value();
     }
 
-    
     ::fitx::result<::test_protocols::wire::ErrorEnum>* Unwrap_NEW() {
         return &result_.value();
     }
     const ::fitx::result<::test_protocols::wire::ErrorEnum>* Unwrap_NEW() const {
         return &result_.value();
     }
-    
 
-    ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>& value() { return *Unwrap(); }
-    const ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>& value() const { return *Unwrap(); }
+    ::fitx::result<::test_protocols::wire::ErrorEnum>& value() { return *Unwrap(); }
+    const ::fitx::result<::test_protocols::wire::ErrorEnum>& value() const { return *Unwrap(); }
 
-    
     ::fitx::result<::test_protocols::wire::ErrorEnum>& value_NEW() { return *Unwrap_NEW(); }
     const ::fitx::result<::test_protocols::wire::ErrorEnum>& value_NEW() const { return *Unwrap_NEW(); }
-    
 
-    ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>* operator->() { return &value(); }
-    const ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>* operator->() const { return &value(); }
+    ::fitx::result<::test_protocols::wire::ErrorEnum>* operator->() { return &value(); }
+    const ::fitx::result<::test_protocols::wire::ErrorEnum>* operator->() const { return &value(); }
 
-    ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>& operator*() { return value(); }
-    const ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>& operator*() const { return value(); }
+    ::fitx::result<::test_protocols::wire::ErrorEnum>& operator*() { return value(); }
+    const ::fitx::result<::test_protocols::wire::ErrorEnum>& operator*() const { return value(); }
    private:
     ::fidl::internal::InlineMessageBuffer<48> bytes_;
     ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>> decoded_;
@@ -7887,37 +7793,31 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithErrorSyntax:
   WireUnownedResult& operator=(WireUnownedResult&&) = delete;
   WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
-    ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>* Unwrap() {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+    ::fitx::result<::test_protocols::wire::ErrorEnum>* Unwrap() {
+        return &result_.value();
     }
-    const ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>* Unwrap() const {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+    const ::fitx::result<::test_protocols::wire::ErrorEnum>* Unwrap() const {
+        return &result_.value();
     }
 
-    
     ::fitx::result<::test_protocols::wire::ErrorEnum>* Unwrap_NEW() {
         return &result_.value();
     }
     const ::fitx::result<::test_protocols::wire::ErrorEnum>* Unwrap_NEW() const {
         return &result_.value();
     }
-    
 
-    ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>& value() { return *Unwrap(); }
-    const ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>& value() const { return *Unwrap(); }
+    ::fitx::result<::test_protocols::wire::ErrorEnum>& value() { return *Unwrap(); }
+    const ::fitx::result<::test_protocols::wire::ErrorEnum>& value() const { return *Unwrap(); }
 
-    
     ::fitx::result<::test_protocols::wire::ErrorEnum>& value_NEW() { return *Unwrap_NEW(); }
     const ::fitx::result<::test_protocols::wire::ErrorEnum>& value_NEW() const { return *Unwrap_NEW(); }
-    
 
-    ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>* operator->() { return &value(); }
-    const ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>* operator->() const { return &value(); }
+    ::fitx::result<::test_protocols::wire::ErrorEnum>* operator->() { return &value(); }
+    const ::fitx::result<::test_protocols::wire::ErrorEnum>* operator->() const { return &value(); }
 
-    ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>& operator*() { return value(); }
-    const ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>& operator*() const { return value(); }
+    ::fitx::result<::test_protocols::wire::ErrorEnum>& operator*() { return value(); }
+    const ::fitx::result<::test_protocols::wire::ErrorEnum>& operator*() const { return value(); }
    private:
     ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>> decoded_;
       std::optional<::fitx::result<::test_protocols::wire::ErrorEnum>> result_ = std::nullopt;
@@ -7937,37 +7837,31 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithErrorSyntax::Handle
   WireResult& operator=(WireResult&&) = delete;
   WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
-    ::fidl::WireResponse<::test_protocols::WithErrorSyntax::HandleInResult>* Unwrap() {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+    ::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse*>* Unwrap() {
+        return &result_.value();
     }
-    const ::fidl::WireResponse<::test_protocols::WithErrorSyntax::HandleInResult>* Unwrap() const {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+    const ::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse*>* Unwrap() const {
+        return &result_.value();
     }
 
-    
     ::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse*>* Unwrap_NEW() {
         return &result_.value();
     }
     const ::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse*>* Unwrap_NEW() const {
         return &result_.value();
     }
-    
 
-    ::fidl::WireResponse<::test_protocols::WithErrorSyntax::HandleInResult>& value() { return *Unwrap(); }
-    const ::fidl::WireResponse<::test_protocols::WithErrorSyntax::HandleInResult>& value() const { return *Unwrap(); }
+    ::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse*>& value() { return *Unwrap(); }
+    const ::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse*>& value() const { return *Unwrap(); }
 
-    
     ::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse*>& value_NEW() { return *Unwrap_NEW(); }
     const ::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse*>& value_NEW() const { return *Unwrap_NEW(); }
-    
 
-    ::fidl::WireResponse<::test_protocols::WithErrorSyntax::HandleInResult>* operator->() { return &value(); }
-    const ::fidl::WireResponse<::test_protocols::WithErrorSyntax::HandleInResult>* operator->() const { return &value(); }
+    ::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse*>* operator->() { return &value(); }
+    const ::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse*>* operator->() const { return &value(); }
 
-    ::fidl::WireResponse<::test_protocols::WithErrorSyntax::HandleInResult>& operator*() { return value(); }
-    const ::fidl::WireResponse<::test_protocols::WithErrorSyntax::HandleInResult>& operator*() const { return value(); }
+    ::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse*>& operator*() { return value(); }
+    const ::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse*>& operator*() const { return value(); }
    private:
     ::fidl::internal::InlineMessageBuffer<48> bytes_;
     ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::HandleInResult>> decoded_;
@@ -8009,37 +7903,31 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithErrorSyntax:
   WireUnownedResult& operator=(WireUnownedResult&&) = delete;
   WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
-    ::fidl::WireResponse<::test_protocols::WithErrorSyntax::HandleInResult>* Unwrap() {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+    ::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse*>* Unwrap() {
+        return &result_.value();
     }
-    const ::fidl::WireResponse<::test_protocols::WithErrorSyntax::HandleInResult>* Unwrap() const {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+    const ::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse*>* Unwrap() const {
+        return &result_.value();
     }
 
-    
     ::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse*>* Unwrap_NEW() {
         return &result_.value();
     }
     const ::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse*>* Unwrap_NEW() const {
         return &result_.value();
     }
-    
 
-    ::fidl::WireResponse<::test_protocols::WithErrorSyntax::HandleInResult>& value() { return *Unwrap(); }
-    const ::fidl::WireResponse<::test_protocols::WithErrorSyntax::HandleInResult>& value() const { return *Unwrap(); }
+    ::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse*>& value() { return *Unwrap(); }
+    const ::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse*>& value() const { return *Unwrap(); }
 
-    
     ::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse*>& value_NEW() { return *Unwrap_NEW(); }
     const ::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse*>& value_NEW() const { return *Unwrap_NEW(); }
-    
 
-    ::fidl::WireResponse<::test_protocols::WithErrorSyntax::HandleInResult>* operator->() { return &value(); }
-    const ::fidl::WireResponse<::test_protocols::WithErrorSyntax::HandleInResult>* operator->() const { return &value(); }
+    ::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse*>* operator->() { return &value(); }
+    const ::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse*>* operator->() const { return &value(); }
 
-    ::fidl::WireResponse<::test_protocols::WithErrorSyntax::HandleInResult>& operator*() { return value(); }
-    const ::fidl::WireResponse<::test_protocols::WithErrorSyntax::HandleInResult>& operator*() const { return value(); }
+    ::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse*>& operator*() { return value(); }
+    const ::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse*>& operator*() const { return value(); }
    private:
     ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::HandleInResult>> decoded_;
       std::optional<::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse*>> result_ = std::nullopt;
@@ -9820,15 +9708,14 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::ChannelProtocol::Method
   WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
     ::fidl::WireResponse<::test_protocols::ChannelProtocol::MethodB>* Unwrap() {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+        ZX_ASSERT(ok());
+        return &decoded_.Value()->body;
     }
     const ::fidl::WireResponse<::test_protocols::ChannelProtocol::MethodB>* Unwrap() const {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+        ZX_ASSERT(ok());
+        return &decoded_.Value()->body;
     }
 
-    
     ::fidl::WireResponse<::test_protocols::ChannelProtocol::MethodB>* Unwrap_NEW() {
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
@@ -9837,15 +9724,12 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::ChannelProtocol::Method
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
     }
-    
 
     ::fidl::WireResponse<::test_protocols::ChannelProtocol::MethodB>& value() { return *Unwrap(); }
     const ::fidl::WireResponse<::test_protocols::ChannelProtocol::MethodB>& value() const { return *Unwrap(); }
 
-    
     ::fidl::WireResponse<::test_protocols::ChannelProtocol::MethodB>& value_NEW() { return *Unwrap_NEW(); }
     const ::fidl::WireResponse<::test_protocols::ChannelProtocol::MethodB>& value_NEW() const { return *Unwrap_NEW(); }
-    
 
     ::fidl::WireResponse<::test_protocols::ChannelProtocol::MethodB>* operator->() { return &value(); }
     const ::fidl::WireResponse<::test_protocols::ChannelProtocol::MethodB>* operator->() const { return &value(); }
@@ -9881,15 +9765,14 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::ChannelProtocol:
   WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
     ::fidl::WireResponse<::test_protocols::ChannelProtocol::MethodB>* Unwrap() {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+        ZX_ASSERT(ok());
+        return &decoded_.Value()->body;
     }
     const ::fidl::WireResponse<::test_protocols::ChannelProtocol::MethodB>* Unwrap() const {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+        ZX_ASSERT(ok());
+        return &decoded_.Value()->body;
     }
 
-    
     ::fidl::WireResponse<::test_protocols::ChannelProtocol::MethodB>* Unwrap_NEW() {
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
@@ -9898,15 +9781,12 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::ChannelProtocol:
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
     }
-    
 
     ::fidl::WireResponse<::test_protocols::ChannelProtocol::MethodB>& value() { return *Unwrap(); }
     const ::fidl::WireResponse<::test_protocols::ChannelProtocol::MethodB>& value() const { return *Unwrap(); }
 
-    
     ::fidl::WireResponse<::test_protocols::ChannelProtocol::MethodB>& value_NEW() { return *Unwrap_NEW(); }
     const ::fidl::WireResponse<::test_protocols::ChannelProtocol::MethodB>& value_NEW() const { return *Unwrap_NEW(); }
-    
 
     ::fidl::WireResponse<::test_protocols::ChannelProtocol::MethodB>* operator->() { return &value(); }
     const ::fidl::WireResponse<::test_protocols::ChannelProtocol::MethodB>* operator->() const { return &value(); }
@@ -9978,15 +9858,14 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::ChannelProtocol::Mutate
   WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
     ::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>* Unwrap() {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+        ZX_ASSERT(ok());
+        return &decoded_.Value()->body;
     }
     const ::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>* Unwrap() const {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+        ZX_ASSERT(ok());
+        return &decoded_.Value()->body;
     }
 
-    
     ::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>* Unwrap_NEW() {
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
@@ -9995,15 +9874,12 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::ChannelProtocol::Mutate
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
     }
-    
 
     ::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>& value() { return *Unwrap(); }
     const ::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>& value() const { return *Unwrap(); }
 
-    
     ::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>& value_NEW() { return *Unwrap_NEW(); }
     const ::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>& value_NEW() const { return *Unwrap_NEW(); }
-    
 
     ::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>* operator->() { return &value(); }
     const ::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>* operator->() const { return &value(); }
@@ -10039,15 +9915,14 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::ChannelProtocol:
   WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
     ::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>* Unwrap() {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+        ZX_ASSERT(ok());
+        return &decoded_.Value()->body;
     }
     const ::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>* Unwrap() const {
-      ZX_ASSERT(ok());
-      return &decoded_.Value()->body;
+        ZX_ASSERT(ok());
+        return &decoded_.Value()->body;
     }
 
-    
     ::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>* Unwrap_NEW() {
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
@@ -10056,15 +9931,12 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::ChannelProtocol:
         ZX_ASSERT(ok());
         return &decoded_.Value()->body;
     }
-    
 
     ::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>& value() { return *Unwrap(); }
     const ::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>& value() const { return *Unwrap(); }
 
-    
     ::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>& value_NEW() { return *Unwrap_NEW(); }
     const ::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>& value_NEW() const { return *Unwrap_NEW(); }
-    
 
     ::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>* operator->() { return &value(); }
     const ::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>* operator->() const { return &value(); }

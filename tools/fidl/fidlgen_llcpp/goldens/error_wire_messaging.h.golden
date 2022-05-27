@@ -345,13 +345,11 @@ class [[nodiscard]] ::fidl::WireResult<::test_error::Example::Foo> final : publi
   WireResult& operator=(WireResult&&) = delete;
   WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
-  ::fidl::WireResponse<::test_error::Example::Foo>* Unwrap() {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
+  ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>* Unwrap() {
+    return &result_.value();
   }
-  const ::fidl::WireResponse<::test_error::Example::Foo>* Unwrap() const {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
+  const ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>* Unwrap() const {
+    return &result_.value();
   }
 
   ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>* Unwrap_NEW() {
@@ -361,17 +359,17 @@ class [[nodiscard]] ::fidl::WireResult<::test_error::Example::Foo> final : publi
     return &result_.value();
   }
 
-  ::fidl::WireResponse<::test_error::Example::Foo>& value() { return *Unwrap(); }
-  const ::fidl::WireResponse<::test_error::Example::Foo>& value() const { return *Unwrap(); }
+  ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>& value() { return *Unwrap(); }
+  const ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>& value() const { return *Unwrap(); }
 
   ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>& value_NEW() { return *Unwrap_NEW(); }
   const ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>& value_NEW() const { return *Unwrap_NEW(); }
 
-  ::fidl::WireResponse<::test_error::Example::Foo>* operator->() { return &value(); }
-  const ::fidl::WireResponse<::test_error::Example::Foo>* operator->() const { return &value(); }
+  ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>* operator->() { return &value(); }
+  const ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>* operator->() const { return &value(); }
 
-  ::fidl::WireResponse<::test_error::Example::Foo>& operator*() { return value(); }
-  const ::fidl::WireResponse<::test_error::Example::Foo>& operator*() const { return value(); }
+  ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>& operator*() { return value(); }
+  const ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>& operator*() const { return value(); }
 
  private:
   ::fidl::internal::InlineMessageBuffer<48> bytes_;
@@ -413,13 +411,11 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_error::Example::Foo> final 
   WireUnownedResult& operator=(WireUnownedResult&&) = delete;
   WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
-  ::fidl::WireResponse<::test_error::Example::Foo>* Unwrap() {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
+  ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>* Unwrap() {
+    return &result_.value();
   }
-  const ::fidl::WireResponse<::test_error::Example::Foo>* Unwrap() const {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
+  const ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>* Unwrap() const {
+    return &result_.value();
   }
 
   ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>* Unwrap_NEW() {
@@ -429,17 +425,17 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_error::Example::Foo> final 
     return &result_.value();
   }
 
-  ::fidl::WireResponse<::test_error::Example::Foo>& value() { return *Unwrap(); }
-  const ::fidl::WireResponse<::test_error::Example::Foo>& value() const { return *Unwrap(); }
+  ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>& value() { return *Unwrap(); }
+  const ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>& value() const { return *Unwrap(); }
 
   ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>& value_NEW() { return *Unwrap_NEW(); }
   const ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>& value_NEW() const { return *Unwrap_NEW(); }
 
-  ::fidl::WireResponse<::test_error::Example::Foo>* operator->() { return &value(); }
-  const ::fidl::WireResponse<::test_error::Example::Foo>* operator->() const { return &value(); }
+  ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>* operator->() { return &value(); }
+  const ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>* operator->() const { return &value(); }
 
-  ::fidl::WireResponse<::test_error::Example::Foo>& operator*() { return value(); }
-  const ::fidl::WireResponse<::test_error::Example::Foo>& operator*() const { return value(); }
+  ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>& operator*() { return value(); }
+  const ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>& operator*() const { return value(); }
 
  private:
   ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_error::Example::Foo>> decoded_;

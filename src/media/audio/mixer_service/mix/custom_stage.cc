@@ -228,7 +228,7 @@ void CustomStage::CallFidlProcess(MixJobContext& ctx) {
   }
 
   // On success, update our metrics.
-  auto& server_metrics = result->result.response().per_stage_metrics;
+  auto& server_metrics = result.value_NEW().value()->per_stage_metrics;
   for (size_t k = 0; k < server_metrics.count(); k++) {
     MixJobSubtask::Metrics metrics;
     if (server_metrics[k].has_name()) {

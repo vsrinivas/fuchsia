@@ -349,13 +349,11 @@ class [[nodiscard]] ::fidl::WireResult<::test_anonymous::SomeProtocol::SomeMetho
   WireResult& operator=(WireResult&&) = delete;
   WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
-  ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>* Unwrap() {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
+  ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>* Unwrap() {
+    return &result_.value();
   }
-  const ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>* Unwrap() const {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
+  const ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>* Unwrap() const {
+    return &result_.value();
   }
 
   ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>* Unwrap_NEW() {
@@ -365,17 +363,17 @@ class [[nodiscard]] ::fidl::WireResult<::test_anonymous::SomeProtocol::SomeMetho
     return &result_.value();
   }
 
-  ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>& value() { return *Unwrap(); }
-  const ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>& value() const { return *Unwrap(); }
+  ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>& value() { return *Unwrap(); }
+  const ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>& value() const { return *Unwrap(); }
 
   ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>& value_NEW() { return *Unwrap_NEW(); }
   const ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>& value_NEW() const { return *Unwrap_NEW(); }
 
-  ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>* operator->() { return &value(); }
-  const ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>* operator->() const { return &value(); }
+  ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>* operator->() { return &value(); }
+  const ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>* operator->() const { return &value(); }
 
-  ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>& operator*() { return value(); }
-  const ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>& operator*() const { return value(); }
+  ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>& operator*() { return value(); }
+  const ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>& operator*() const { return value(); }
 
  private:
   ::fidl::internal::InlineMessageBuffer<48> bytes_;
@@ -417,13 +415,11 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_anonymous::SomeProtocol::So
   WireUnownedResult& operator=(WireUnownedResult&&) = delete;
   WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
-  ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>* Unwrap() {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
+  ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>* Unwrap() {
+    return &result_.value();
   }
-  const ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>* Unwrap() const {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
+  const ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>* Unwrap() const {
+    return &result_.value();
   }
 
   ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>* Unwrap_NEW() {
@@ -433,17 +429,17 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_anonymous::SomeProtocol::So
     return &result_.value();
   }
 
-  ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>& value() { return *Unwrap(); }
-  const ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>& value() const { return *Unwrap(); }
+  ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>& value() { return *Unwrap(); }
+  const ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>& value() const { return *Unwrap(); }
 
   ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>& value_NEW() { return *Unwrap_NEW(); }
   const ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>& value_NEW() const { return *Unwrap_NEW(); }
 
-  ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>* operator->() { return &value(); }
-  const ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>* operator->() const { return &value(); }
+  ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>* operator->() { return &value(); }
+  const ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>* operator->() const { return &value(); }
 
-  ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>& operator*() { return value(); }
-  const ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>& operator*() const { return value(); }
+  ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>& operator*() { return value(); }
+  const ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>& operator*() const { return value(); }
 
  private:
   ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_anonymous::SomeProtocol::SomeMethod>> decoded_;

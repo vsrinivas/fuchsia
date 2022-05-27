@@ -492,21 +492,22 @@ zx_status_t bind_simple_fidl_pci_display(zx_device_t* dev, const char* name, uin
     return bar_result.status();
   }
 
-  if (bar_result->result.is_err()) {
+  if (bar_result.value_NEW().is_error()) {
     zxlogf(ERROR, "Failed to map PCI bar %d: %s", bar,
-           zx_status_get_string(bar_result->result.err()));
-    return bar_result->result.err();
+           zx_status_get_string(bar_result.value_NEW().error_value()));
+    return bar_result.value_NEW().error_value();
   }
 
-  if (!bar_result->result.response().result.result.is_vmo()) {
+  if (!bar_result.value_NEW().value()->result.result.is_vmo()) {
     zxlogf(ERROR, "PCI bar %u is not an MMIO BAR!", bar);
     return ZX_ERR_WRONG_TYPE;
   }
 
   // map framebuffer window
-  auto mmio = fdf::MmioBuffer::Create(0, bar_result->result.response().result.size,
-                                      std::move(bar_result->result.response().result.result.vmo()),
-                                      ZX_CACHE_POLICY_WRITE_COMBINING);
+  auto mmio =
+      fdf::MmioBuffer::Create(0, bar_result.value_NEW().value()->result.size,
+                              std::move(bar_result.value_NEW().value()->result.result.vmo()),
+                              ZX_CACHE_POLICY_WRITE_COMBINING);
   if (mmio.is_error()) {
     printf("%s: failed to map pci bar %d: %s\n", name, bar, mmio.status_string());
     return mmio.status_value();
