@@ -42,7 +42,7 @@ Stay informed about the Fuchsia project by joining a discussion group.
 
 ### General discussion
 
-The following are general Fuchsia discussion groups:
+The following are general Fuchsia discussion groups (mailing lists):
 
 <table>
   <tr>
@@ -79,7 +79,7 @@ The following are general Fuchsia discussion groups:
 
 ### Topic discussion
 
-The following discussion groups are for specific areas of
+The following discussion groups (mailing lists) are for specific areas of
 Fuchsia:
 
 <table>
