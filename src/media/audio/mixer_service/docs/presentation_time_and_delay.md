@@ -5,12 +5,13 @@
 ## Presentation time
 
 Every audio stream has two kinds of timestamps: *reference timestamps*, which
-are `zx::time` values relative to a specific `zx::clock` reference clock, and
-*media timestamps*, which are relative to the audio stream itself. Media
-timestamps can be specified in various units, but most often are expressed in
-units of time or frames. For example, a 30 second audio stream might start at
-media timestamp 0 and end at media timestamp 30,000,000,000 (in nanosecond
-units) or 1,440,000 (in frame units assuming 48kHz audio).
+are `zx::time` values relative to a specific `zx::clock`
+[reference clock](clocks.md), and *media timestamps*, which are relative to the
+audio stream itself. Media timestamps can be specified in various units, but
+most often are expressed in units of time or frames. For example, a 30 second
+audio stream might start at media timestamp 0 and end at media timestamp
+30,000,000,000 (in nanosecond units) or 1,440,000 (in frame units assuming 48kHz
+audio).
 
 When we start rendering that audio stream, we establish a relationship between
 reference and media time: each media timestamp `Tm` is presented at some

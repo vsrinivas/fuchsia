@@ -34,12 +34,12 @@ parts of FidlGraphs' ownership tree are summarized below:
 
             *   `fuchsia.media2.StreamSink` channel
                 *   FidlStreamSink
-            *   PacketQueueStage
+            *   PacketQueueProducerStage
 
         *   if ring-buffer-driven:
 
             *   RingBuffer
-            *   RingBufferReaderStage
+            *   RingBufferProducerStage
 
     *   ConsumerNode
 
@@ -47,7 +47,6 @@ parts of FidlGraphs' ownership tree are summarized below:
             *   `fuchsia.media2.StreamSink` channel
         *   if ring-buffer-driven:
             *   RingBuffer
-            *   RingBufferWriter
 
     *   MixerNode
 
