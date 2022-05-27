@@ -1,0 +1,13 @@
+{
+    include: [
+        "//src/lib/storage/fs_management/client.shard.cml",
+        "//src/storage/testing/driver_test_realm/meta/client.shard.cml",
+        "//src/storage/testing/meta/storage_test.shard.cml",
+        "//src/sys/test_runners/gtest/default.shard.cml",
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "test/fvm_sparse_image_reader_test",
+    },
+}

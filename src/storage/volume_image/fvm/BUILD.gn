@@ -194,7 +194,6 @@ test("fvm_sparse_image_reader_test") {
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/block_client/cpp",
     "//src/lib/storage/fs_management",
-    "//src/storage/bin/blobfs",
     "//src/storage/bin/minfs",
     "//src/storage/testing:storage_driver_test_support",
     "//src/storage/volume_image/ftl:ftl-image",
@@ -211,6 +210,7 @@ test("fvm_sparse_image_reader_test") {
 storage_driver_test_realm_v2_component(
     "fvm-sparse-image-reader-tests-component") {
   component_name = "fvm-sparse-image-reader-tests"
+  manifest = "sparse-image-reader-tests.cml"
   deps = [
     ":fvm_sparse_image_reader_test",
     ":test_fvm.sparse.blk-resource",

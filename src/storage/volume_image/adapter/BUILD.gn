@@ -384,6 +384,7 @@ test("adapter-integration-test") {
 
 storage_driver_test_realm_v2_component("adapter-integration-test-component") {
   component_name = "adapter-integration-test"
+  manifest = "adapter-integration-test.cml"
   deps = [
     ":adapter-integration-test",
     ":adapter-test-images",
@@ -397,10 +398,7 @@ fuchsia_test_package("storage-volume-image-adapter-integration-tests") {
     }
   }
   test_components = [ ":adapter-integration-test-component" ]
-  deps = [
-    "//src/storage/bin/blobfs",
-    "//src/storage/bin/minfs",
-  ]
+  deps = [ "//src/storage/bin/minfs" ]
 }
 
 group("tests") {

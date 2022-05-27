@@ -293,6 +293,10 @@ void CheckPartitionsInRamdisk(const FvmDescriptor& fvm_descriptor) {
         .always_modify = false,
         .force = true,
     };
+    if (partition.volume().name == "blobfs") {
+      fsck_options.component_child_name = "test-blobfs";
+      fsck_options.component_collection_name = "fs-collection";
+    }
     EXPECT_EQ(
         fs_management::Fsck(partition_path,
                             partition.volume().name == "blobfs" ? fs_management::kDiskFormatBlobfs

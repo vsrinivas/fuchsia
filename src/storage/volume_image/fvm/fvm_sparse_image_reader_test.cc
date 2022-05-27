@@ -173,6 +173,8 @@ TEST(FvmSparseImageReaderTest, PartitionsInImagePassFsck) {
         .never_modify = true,
         .always_modify = false,
         .force = true,
+        .component_child_name = "test-blobfs",
+        .component_collection_name = "fs-collection",
     };
     EXPECT_EQ(fs_management::Fsck(path, fs_management::kDiskFormatBlobfs, options,
                                   fs_management::LaunchStdioSync),
