@@ -3,7 +3,7 @@
     children: [
         {
             name: "test_driver",
-            url: "#meta/configure-legacy-privacy-off-driver.cm",
+            url: "#meta/scan-legacy-privacy-on-driver.cm",
         },
     ],
 }

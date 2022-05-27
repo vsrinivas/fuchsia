@@ -5,26 +5,26 @@
 import("//build/components.gni")
 import("//build/testing/environments.gni")
 
-fuchsia_component("configure-legacy-privacy-off") {
+fuchsia_component("scan-legacy-privacy-off") {
   testonly = true
-  manifest = "meta/configure_legacy_privacy_off.cml"
+  manifest = "meta/scan_legacy_privacy_off.cml"
 }
 
-fuchsia_component("configure-legacy-privacy-off-driver") {
+fuchsia_component("scan-legacy-privacy-off-driver") {
   testonly = true
-  manifest = "meta/configure_legacy_privacy_off_driver.cml"
-  deps = [ "configure_legacy_privacy_off" ]
+  manifest = "meta/scan_legacy_privacy_off_driver.cml"
+  deps = [ "scan_legacy_privacy_off" ]
 }
 
-fuchsia_component("configure-legacy-privacy-on") {
+fuchsia_component("scan-legacy-privacy-on") {
   testonly = true
-  manifest = "meta/configure_legacy_privacy_on.cml"
+  manifest = "meta/scan_legacy_privacy_on.cml"
 }
 
-fuchsia_component("configure-legacy-privacy-on-driver") {
+fuchsia_component("scan-legacy-privacy-on-driver") {
   testonly = true
-  manifest = "meta/configure_legacy_privacy_on_driver.cml"
-  deps = [ "configure_legacy_privacy_on" ]
+  manifest = "meta/scan_legacy_privacy_on_driver.cml"
+  deps = [ "scan_legacy_privacy_on" ]
 }
 
 fuchsia_component("connect-to-open-network") {
@@ -292,10 +292,10 @@ fuchsia_test_package("wlan-hw-sim-test") {
       max_severity = "ERROR"
     }
   }
-  test_components = [ ":configure-legacy-privacy-off" ]
+  test_components = [ ":scan-legacy-privacy-off" ]
   test_components += hw_sim_test_components_for_all_privacies
   deps = [
-    ":configure-legacy-privacy-off-driver",
+    ":scan-legacy-privacy-off-driver",
     "//src/connectivity/wlan/wlanstack:wlanstack-values",
   ]
   deps += hw_sim_deps_for_all_privacies
@@ -311,13 +311,13 @@ fuchsia_test_package("wlan-hw-sim-test-legacy-privacy") {
   test_components = [
     ":connect-with-bad-password",
     ":connect-to-wpa1-network",
-    ":configure-legacy-privacy-on",
+    ":scan-legacy-privacy-on",
   ]
   test_components += hw_sim_test_components_for_all_privacies
   deps = [
-    ":configure-legacy-privacy-on-driver",
     ":connect-to-wpa1-network-driver",
     ":connect-with-bad-password-driver",
+    ":scan-legacy-privacy-on-driver",
     "//src/connectivity/wlan/wlanstack:wlanstack-legacy-privacy-values",
   ]
   deps += hw_sim_deps_for_all_privacies

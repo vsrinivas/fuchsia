@@ -23,7 +23,7 @@ lazy_static! {
 
 /// Test a client cannot connect to a wep or wpa network when configured off.
 #[fuchsia_async::run_singlethreaded(test)]
-async fn configure_legacy_privacy_off() {
+async fn scan_legacy_privacy_off() {
     init_syslog();
 
     let mut helper = test_utils::TestHelper::begin_test(default_wlantap_config_client()).await;
