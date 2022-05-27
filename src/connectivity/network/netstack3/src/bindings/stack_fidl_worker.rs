@@ -183,7 +183,7 @@ where
 
             let devices: &mut Devices = ctx.dispatcher.as_mut();
             devices
-                .add_active_device(eth_id, |id| {
+                .add_device(eth_id, |id| {
                     let device_class = if features.contains(fhardware_ethernet::Features::LOOPBACK)
                     {
                         finterfaces::DeviceClass::Loopback(finterfaces::Empty)

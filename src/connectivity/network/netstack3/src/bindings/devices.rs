@@ -24,15 +24,15 @@ pub type BindingId = u64;
 /// types used by `EventLoop` for brevity in the main use case. The type
 /// parameters are there to allow testing without dependencies on `core`.
 pub struct Devices<C: IdMapCollectionKey = DeviceId, I = DeviceSpecificInfo> {
-    active_devices: IdMapCollection<C, DeviceInfo<C, I>>,
-    // invariant: all values in id_map are valid keys in active_devices.
+    devices: IdMapCollection<C, DeviceInfo<C, I>>,
+    // invariant: all values in id_map are valid keys in devices.
     id_map: HashMap<BindingId, C>,
     last_id: BindingId,
 }
 
 impl<C: IdMapCollectionKey, I> Default for Devices<C, I> {
     fn default() -> Self {
-        Self { active_devices: IdMapCollection::new(), id_map: HashMap::new(), last_id: 0 }
+        Self { devices: IdMapCollection::new(), id_map: HashMap::new(), last_id: 0 }
     }
 }
 
@@ -46,19 +46,19 @@ where
         *last_id
     }
 
-    /// Adds a new active device.
+    /// Adds a new device.
     ///
-    /// Adds a new active device if the informed `core_id` is valid (i.e., not
+    /// Adds a new device if the informed `core_id` is valid (i.e., not
     /// currently tracked by [`Devices`]). A new [`BindingId`] will be allocated
     /// and a [`DeviceInfo`] struct will be created with the provided `info` and
     /// IDs.
-    pub fn add_active_device<F: FnOnce(BindingId) -> I>(
+    pub fn add_device<F: FnOnce(BindingId) -> I>(
         &mut self,
         core_id: C,
         info: F,
     ) -> Option<BindingId> {
-        let Self { active_devices, id_map, last_id } = self;
-        match active_devices.entry(core_id) {
+        let Self { devices, id_map, last_id } = self;
+        match devices.entry(core_id) {
             Entry::Occupied(_) => None,
             Entry::Vacant(entry) => {
                 let id = Self::alloc_id(last_id);
@@ -76,26 +76,26 @@ where
     /// Removes a device from the internal [`Devices`] list and returns the
     /// associated [`DeviceInfo`] if `id` is found or `None` otherwise.
     pub fn remove_device(&mut self, id: BindingId) -> Option<DeviceInfo<C, I>> {
-        let Self { active_devices, id_map, last_id: _ } = self;
-        id_map.remove(&id).and_then(|core_id| active_devices.remove(&core_id))
+        let Self { devices, id_map, last_id: _ } = self;
+        id_map.remove(&id).and_then(|core_id| devices.remove(&core_id))
     }
 
     /// Gets an iterator over all tracked devices.
     #[cfg(test)]
     pub fn iter_devices(&self) -> impl Iterator<Item = &DeviceInfo<C, I>> {
-        self.active_devices.iter()
+        self.devices.iter()
     }
 
     /// Retrieve device with [`BindingId`].
     pub fn get_device(&self, id: BindingId) -> Option<&DeviceInfo<C, I>> {
-        let Self { active_devices, id_map, last_id: _ } = self;
-        id_map.get(&id).and_then(|device_id| active_devices.get(&device_id))
+        let Self { devices, id_map, last_id: _ } = self;
+        id_map.get(&id).and_then(|device_id| devices.get(&device_id))
     }
 
     /// Retrieve mutable reference to device with [`BindingId`].
     pub fn get_device_mut(&mut self, id: BindingId) -> Option<&mut DeviceInfo<C, I>> {
-        let Self { active_devices, id_map, last_id: _ } = self;
-        id_map.get(&id).and_then(move |core_id| active_devices.get_mut(&core_id))
+        let Self { devices, id_map, last_id: _ } = self;
+        id_map.get(&id).and_then(move |core_id| devices.get_mut(&core_id))
     }
 
     /// Retrieve associated `core_id` for [`BindingId`].
@@ -105,17 +105,17 @@ where
 
     /// Retrieve non-mutable reference to device by associated [`CoreId`] `id`.
     pub fn get_core_device(&self, id: C) -> Option<&DeviceInfo<C, I>> {
-        self.active_devices.get(&id)
+        self.devices.get(&id)
     }
 
     /// Retrieve mutable reference to device by associated [`CoreId`] `id`.
     pub fn get_core_device_mut(&mut self, id: C) -> Option<&mut DeviceInfo<C, I>> {
-        self.active_devices.get_mut(&id)
+        self.devices.get_mut(&id)
     }
 
     /// Retrieve associated `binding_id` for `core_id`.
     pub fn get_binding_id(&self, core_id: C) -> Option<BindingId> {
-        self.active_devices.get(&core_id).map(|d| d.id)
+        self.devices.get(&core_id).map(|d| d.id)
     }
 }
 
@@ -219,14 +219,14 @@ mod tests {
     }
 
     #[test]
-    fn test_add_remove_active_device() {
+    fn test_add_remove_device() {
         let mut d = TestDevices::default();
         let core_a = MockDeviceId(1);
         let core_b = MockDeviceId(2);
-        let a = d.add_active_device(core_a, |id| id + 10).expect("can add device");
-        let b = d.add_active_device(core_b, |id| id + 20).expect("can add device");
+        let a = d.add_device(core_a, |id| id + 10).expect("can add device");
+        let b = d.add_device(core_b, |id| id + 20).expect("can add device");
         assert_ne!(a, b, "allocated same id");
-        assert_eq!(d.add_active_device(core_a, |id| id + 10), None, "can't add same id again");
+        assert_eq!(d.add_device(core_a, |id| id + 10), None, "can't add same id again");
         // check that ids are incrementing
         assert_eq!(d.last_id, 2);
 
@@ -257,7 +257,7 @@ mod tests {
         assert_eq!(d.get_core_id(a), None);
         assert_eq!(d.get_core_device_mut(core_a), None);
 
-        assert!(d.active_devices.is_empty());
+        assert!(d.devices.is_empty());
         assert!(d.id_map.is_empty());
     }
 
@@ -265,11 +265,11 @@ mod tests {
     fn test_iter() {
         let mut d = TestDevices::default();
         let core_a = MockDeviceId(1);
-        let a = d.add_active_device(core_a, |id| id + 10).unwrap();
+        let a = d.add_device(core_a, |id| id + 10).unwrap();
         assert_eq!(d.iter_devices().map(|d| d.id).collect::<HashSet<_>>(), HashSet::from([a]));
 
         let core_b = MockDeviceId(2);
-        let b = d.add_active_device(core_b, |id| id + 20).unwrap();
+        let b = d.add_device(core_b, |id| id + 20).unwrap();
         assert_eq!(d.iter_devices().map(|d| d.id).collect::<HashSet<_>>(), HashSet::from([a, b]));
     }
 }

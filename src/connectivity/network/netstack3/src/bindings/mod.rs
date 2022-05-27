@@ -688,7 +688,7 @@ impl NetstackSeed {
             let ipv6_config = get_ipv6_configuration(&ctx, loopback);
             let devices: &mut Devices = ctx.dispatcher.as_mut();
             let _binding_id: u64 = devices
-                .add_active_device(loopback, |id| {
+                .add_device(loopback, |id| {
                     const LOOPBACK_NAME: &'static str = "lo";
                     let events = netstack.create_interface_event_producer(
                         id,
