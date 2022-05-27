@@ -1,3 +1,4 @@
+<!-- Generated with `fx rfc` -->
 <!-- mdformat off(templates not supported) -->
 {% set rfcid = "RFC-NNNN" %} <!-- TODO: DO NOT SUBMIT, update number -->
 {% include "docs/contribute/governance/rfcs/_common/_rfc_header.md" %}

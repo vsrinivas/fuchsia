@@ -64,6 +64,7 @@ pub struct CreateRfcArgs {
 }
 
 const AREAS_FILE: &str = "_areas.yaml";
+const FX_RFC_GENERATED: &str = "<!-- Generated with `fx rfc` -->";
 const META_FILE: &str = "_rfcs.yaml";
 const RFC_NAME_PLACEHOLDER: &str = "RFC-NNNN";
 const RFCS_PATH: &str = "docs/contribute/governance/rfcs";
@@ -444,7 +445,8 @@ fn create_rfc(meta: &RfcMetadata, path: &PathBuf) -> Result<()> {
     let reviewers_index = template.find("_Reviewers:_").unwrap();
     let consulted_index = template.find("_Consulted:_").unwrap();
     let template = format!(
-        "{}_Reviewers:_\n\n{}\n\n{}",
+        "{}\n{}_Reviewers:_\n\n{}\n\n{}",
+        FX_RFC_GENERATED,
         &template[..reviewers_index],
         reviewers,
         &template[consulted_index..]
