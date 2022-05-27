@@ -111,7 +111,7 @@ Vfs::OpenResult Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, std::string_view path,
     just_created = false;
   }
 
-  if (!options.flags.no_remote && vn->IsRemote()) {
+  if (vn->IsRemote()) {
     // Opening a mount point: Traverse across remote.
     return OpenResult::RemoteRoot{.vnode = std::move(vn)};
   }
@@ -144,7 +144,7 @@ Vfs::OpenResult Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, std::string_view path,
       return status;
     }
 
-    if (!options.flags.no_remote && vn->IsRemote()) {
+    if (vn->IsRemote()) {
       // |OpenVnode| redirected us to a remote vnode; traverse across mount point.
       return OpenResult::RemoteRoot{.vnode = std::move(vn)};
     }

@@ -111,7 +111,6 @@ void main() {
     final _notAllowedFlags = [
       OpenFlags.create,
       OpenFlags.createIfAbsent,
-      OpenFlags.noRemote,
     ];
 
     test('onOpen event on flag validation error', () async {

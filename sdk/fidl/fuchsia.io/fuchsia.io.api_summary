@@ -426,7 +426,6 @@ bits/member fuchsia.io/OpenFlags.DESCRIBE 8388608
 bits/member fuchsia.io/OpenFlags.DIRECTORY 524288
 bits/member fuchsia.io/OpenFlags.NODE_REFERENCE 4194304
 bits/member fuchsia.io/OpenFlags.NOT_DIRECTORY 33554432
-bits/member fuchsia.io/OpenFlags.NO_REMOTE 2097152
 bits/member fuchsia.io/OpenFlags.POSIX_DEPRECATED 16777216
 bits/member fuchsia.io/OpenFlags.POSIX_EXECUTABLE 268435456
 bits/member fuchsia.io/OpenFlags.POSIX_WRITABLE 134217728

@@ -208,7 +208,6 @@ void main() {
           OpenFlags.append,
           OpenFlags.create,
           OpenFlags.createIfAbsent,
-          OpenFlags.noRemote,
           OpenFlags.truncate,
         ];
         for (final entry in invalidFlags.asMap().entries) {

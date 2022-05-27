@@ -41,7 +41,8 @@ dart_library("fuchsia_vfs") {
 
 dart_test_component("unittests-component") {
   component_name = "fuchsia-vfs-unittests"
-  manifest = "meta/fuchsia-vfs-unittests.cmx"
+  manifest = "meta/fuchsia-vfs-unittests.cml"
+  null_safe = true
   sources = [
     "composed_pseudo_dir_test.dart",
     "pseudo_dir_test.dart",

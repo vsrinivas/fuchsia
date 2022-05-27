@@ -52,9 +52,6 @@ int posix_fallocate(int, off_t, off_t);
 #define O_DIRECTORY 0x00080000
 #define O_APPEND    0x00100000
 #define O_PATH      0x00400000
-#ifdef _ALL_SOURCE
-#define O_NOREMOTE  0x00200000
-#endif
 
 // Flags which do not align with ZXIO_FS_*
 #define O_NONBLOCK  0x00000010

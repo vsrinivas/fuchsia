@@ -56,8 +56,6 @@ void PrintIntoStringBuffer(fbl::StringBuffer<N>* sb, VnodeConnectionOptions opti
       append("not_directory");
     if (options.flags.append)
       append("append");
-    if (options.flags.no_remote)
-      append("no_remote");
     if (options.flags.node_reference)
       append("node_reference");
     if (options.flags.describe)
@@ -130,7 +128,6 @@ void PrintIntoStringBuffer(fbl::StringBuffer<N>* sb, fuchsia_io::wire::OpenFlags
       {fuchsia_io::wire::OpenFlags::kTruncate, "TRUNCATE"},
       {fuchsia_io::wire::OpenFlags::kDirectory, "DIRECTORY"},
       {fuchsia_io::wire::OpenFlags::kAppend, "APPEND"},
-      {fuchsia_io::wire::OpenFlags::kNoRemote, "NO_REMOTE"},
       {fuchsia_io::wire::OpenFlags::kNodeReference, "NODE_REFERENCE"},
       {fuchsia_io::wire::OpenFlags::kDescribe, "DESCRIBE"},
       {fuchsia_io::wire::OpenFlags::kPosixDeprecated, "POSIX_DEPRECATED"},

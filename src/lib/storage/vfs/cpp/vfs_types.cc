@@ -32,9 +32,6 @@ VnodeConnectionOptions VnodeConnectionOptions::FromIoV1Flags(
   if (fidl_flags & fio::wire::OpenFlags::kAppend) {
     options.flags.append = true;
   }
-  if (fidl_flags & fio::wire::OpenFlags::kNoRemote) {
-    options.flags.no_remote = true;
-  }
   if (fidl_flags & fio::wire::OpenFlags::kNodeReference) {
     options.flags.node_reference = true;
   }
@@ -93,9 +90,6 @@ fuchsia_io::wire::OpenFlags VnodeConnectionOptions::ToIoV1Flags() const {
   }
   if (flags.append) {
     fidl_flags |= fio::wire::OpenFlags::kAppend;
-  }
-  if (flags.no_remote) {
-    fidl_flags |= fio::wire::OpenFlags::kNoRemote;
   }
   if (flags.node_reference) {
     fidl_flags |= fio::wire::OpenFlags::kNodeReference;

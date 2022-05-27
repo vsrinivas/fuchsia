@@ -268,7 +268,6 @@ class PseudoDir extends Vnode {
 
     // TODO(fxbug.dev/33058) : do not allow OpenFlags.rightWritable.
 
-    // Pseudo directories do not allow mounting, at this point.
     if (flags & prohibitedFlags != OpenFlags.$none) {
       return ZX.ERR_INVALID_ARGS;
     }

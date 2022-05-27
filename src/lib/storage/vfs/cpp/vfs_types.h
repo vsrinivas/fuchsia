@@ -224,12 +224,11 @@ struct VnodeConnectionOptions {
     fbl::BitFieldMember<uint32_t, 3, 1> directory;
     fbl::BitFieldMember<uint32_t, 4, 1> not_directory;
     fbl::BitFieldMember<uint32_t, 5, 1> append;
-    fbl::BitFieldMember<uint32_t, 6, 1> no_remote;
-    fbl::BitFieldMember<uint32_t, 7, 1> node_reference;
-    fbl::BitFieldMember<uint32_t, 8, 1> describe;
-    fbl::BitFieldMember<uint32_t, 9, 1> posix_write;
-    fbl::BitFieldMember<uint32_t, 10, 1> posix_execute;
-    fbl::BitFieldMember<uint32_t, 11, 1> clone_same_rights;
+    fbl::BitFieldMember<uint32_t, 6, 1> node_reference;
+    fbl::BitFieldMember<uint32_t, 7, 1> describe;
+    fbl::BitFieldMember<uint32_t, 8, 1> posix_write;
+    fbl::BitFieldMember<uint32_t, 9, 1> posix_execute;
+    fbl::BitFieldMember<uint32_t, 10, 1> clone_same_rights;
 
     constexpr Flags() = default;
 
@@ -251,11 +250,6 @@ struct VnodeConnectionOptions {
 
   constexpr VnodeConnectionOptions set_not_directory() {
     flags.not_directory = true;
-    return *this;
-  }
-
-  constexpr VnodeConnectionOptions set_no_remote() {
-    flags.no_remote = true;
     return *this;
   }
 

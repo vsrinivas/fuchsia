@@ -145,8 +145,7 @@ TEST_F(ServiceTest, OnOpenEvent) {
 TEST_F(ServiceTest, CannotOpenServiceWithInvalidFlags) {
   fuchsia::io::OpenFlags flags[] = {
       fuchsia::io::OpenFlags::CREATE, fuchsia::io::OpenFlags::CREATE_IF_ABSENT,
-      fuchsia::io::OpenFlags::TRUNCATE, fuchsia::io::OpenFlags::APPEND,
-      fuchsia::io::OpenFlags::NO_REMOTE};
+      fuchsia::io::OpenFlags::TRUNCATE, fuchsia::io::OpenFlags::APPEND};
 
   for (fuchsia::io::OpenFlags flag : flags) {
     ExpectOnOpen(

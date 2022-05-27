@@ -54,7 +54,6 @@ impl<T> ::std::marker::Copy for __IncompleteArrayField<T> {}
 
 // TODO(raggi): this should be able to come from libc instead.
 pub const O_DIRECTORY: raw::c_int = 0x00080000;
-pub const O_NOREMOTE: raw::c_int = 0x00200000;
 
 pub const FDIO_MAX_FD: raw::c_uint = 1024;
 pub const FDIO_CHUNK_SIZE: raw::c_uint = 8192;

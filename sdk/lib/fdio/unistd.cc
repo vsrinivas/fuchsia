@@ -82,15 +82,13 @@ static_assert(O_DIRECTORY == static_cast<uint32_t>(fio::wire::OpenFlags::kDirect
               "Open Flag mismatch");
 static_assert(O_APPEND == static_cast<uint32_t>(fio::wire::OpenFlags::kAppend),
               "Open Flag mismatch");
-static_assert(O_NOREMOTE == static_cast<uint32_t>(fio::wire::OpenFlags::kNoRemote),
-              "Open Flag mismatch");
 
 // The mask of "1:1" flags which match between both open flag representations.
 constexpr fio::wire::OpenFlags kZxioFsMask =
     fio::wire::OpenFlags::kNodeReference | fio::wire::OpenFlags::kCreate |
     fio::wire::OpenFlags::kCreateIfAbsent | fio::wire::OpenFlags::kTruncate |
     fio::wire::OpenFlags::kDirectory | fio::wire::OpenFlags::kAppend |
-    fio::wire::OpenFlags::kNoRemote | fio::wire::OpenFlags::kCloneSameRights;
+    fio::wire::OpenFlags::kCloneSameRights;
 
 // TODO(fxbug.dev/81185): Remove kOpenFlagPosixDeprecated after clients have updated to a newer SDK.
 constexpr fio::wire::OpenFlags kZxioFsFlags =

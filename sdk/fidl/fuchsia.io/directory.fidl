@@ -25,8 +25,6 @@ type OpenFlags = strict bits : uint32 {
     DIRECTORY = 0x00080000;
     /// Seek to the end of the object before all writes.
     APPEND = 0x00100000;
-    /// If the object is a mount point, open the local directory.
-    NO_REMOTE = 0x00200000;
     /// Open a reference to the object, not the object itself.
     /// It is ONLY valid to pass the following flags together with `NODE_REFERENCE`:
     /// - `DIRECTORY`

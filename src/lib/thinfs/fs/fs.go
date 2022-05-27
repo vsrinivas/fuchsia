@@ -106,7 +106,7 @@ const (
 	OpenFlagDirectory
 	// OpenFlagAppend indicates all writes should append to the file (only valid with "write")
 	OpenFlagAppend
-	_ // NoRemote
+	_ // Used to be NoRemote
 	// OpenFlagPath indicates the operation should only open the file descriptor,
 	// not actually opening the file.
 	OpenFlagPath

@@ -134,7 +134,6 @@ protocol Node1 {
     ///
     /// - `OpenFlags.RIGHT_*`
     /// - `OpenFlags.APPEND`
-    /// - `OpenFlags.NO_REMOTE`
     /// - `OpenFlags.DESCRIBE`
     /// - `OpenFlags.CLONE_SAME_RIGHTS`
     ///

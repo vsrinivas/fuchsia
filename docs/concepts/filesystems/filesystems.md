@@ -169,30 +169,10 @@ These multi-path operations do the following:
 
 ### Mounting
 
-When Fuchsia filesystems are initialized, they are created with typically two
-handles: One handle to a channel used to communicate with the mounting
-filesystem (referred to as the “mount point” channel -- the “mounting” end of
-this channel is saved as a field named “remote” in the parent Vnode, the other
-end will be connected to the root directory of the new filesystem), and
-(optionally) another to contact the underlying
-[block device](/docs/concepts/filesystems/block_devices.md).
-Once a filesystem has been initialized (reading initial state off the block
-device, finding the root vnode, etc) it starts servicing [`fuchsia.io/Node`]
-requests on the mount point channel.
-
-At this point, the parent (mounting) filesystem “pins” the connection to the
-remote filesystem on a Vnode. The VFS layers capable of path walking check for
-this remote handle when observing Vnodes: if a remote handle is detected, then
-the incoming request (open, rename, etc) is forwarded to the remote filesystem
-instead of the underlying node. If a user actually wants to interact with the
-mountpoint node, rather than the remote filesystem, they can pass the
-`O_NOREMOTE` flag to the “open” operation identify this intention.
-
-Unlike many other operating systems, the notion of “mounted filesystems” does
-not live in a globally accessible table. Instead, the question “what
-mountpoints exist?” can only be answered on a filesystem-specific basis -- an
-arbitrary filesystem may not have access to the information about what
-mountpoints exist elsewhere.
+Fshost is responsible for mounting filesystems on the system. At time of
+writing, changes are underway to make filesystems run as components (although
+fshost will still control mounting of these filesystems). Where possible,
+static routing will be used. See the fuchsia.fs.startup/Startup protocol.
 
 ### Filesystem Management
 

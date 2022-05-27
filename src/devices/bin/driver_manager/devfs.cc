@@ -469,10 +469,8 @@ void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, fidl::ServerEnd<
       return;
     }
 
-    // If we are a local-only node, or we are asked to not go remote, or we are asked to
-    // open-as-a-directory, open locally:
-    if (devnode_is_local(dn) ||
-        flags & (fio::wire::OpenFlags::kNoRemote | fio::wire::OpenFlags::kDirectory)) {
+    // If we are a local-only node, or we are asked to open-as-a-directory, open locally:
+    if (devnode_is_local(dn) || (flags & fio::wire::OpenFlags::kDirectory)) {
       auto ios = std::make_unique<DcIostate>(dn, dispatcher);
       if (ios == nullptr) {
         describe(zx::error(ZX_ERR_NO_MEMORY));
@@ -694,7 +692,7 @@ void DcIostate::Clone(CloneRequestView request, CloneCompleter::Sync& completer)
   }
   char path[] = ".";
   devfs_open(devnode_, dispatcher_, std::move(request->object), path,
-             request->flags | fio::wire::OpenFlags::kNoRemote);
+             request->flags | fio::wire::OpenFlags::kDirectory);
 }
 
 void DcIostate::QueryFilesystem(QueryFilesystemRequestView request,

@@ -2132,11 +2132,6 @@
     },
     {
         "kind": "bits/member",
-        "name": "fuchsia.io/OpenFlags.NO_REMOTE",
-        "value": "2097152"
-    },
-    {
-        "kind": "bits/member",
         "name": "fuchsia.io/OpenFlags.POSIX_DEPRECATED",
         "value": "16777216"
     },

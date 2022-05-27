@@ -65,7 +65,7 @@ async fn open_per_package_source(source: PackageSource) {
     assert_open_content_file(&source, "dir", "dir/file").await;
 }
 
-const ALL_FLAGS: [fio::OpenFlags; 16] = [
+const ALL_FLAGS: [fio::OpenFlags; 15] = [
     fio::OpenFlags::empty(),
     fio::OpenFlags::RIGHT_READABLE,
     fio::OpenFlags::RIGHT_WRITABLE,
@@ -76,7 +76,6 @@ const ALL_FLAGS: [fio::OpenFlags; 16] = [
     fio::OpenFlags::TRUNCATE,
     fio::OpenFlags::DIRECTORY,
     fio::OpenFlags::APPEND,
-    fio::OpenFlags::NO_REMOTE,
     fio::OpenFlags::NODE_REFERENCE,
     fio::OpenFlags::DESCRIBE,
     fio::OpenFlags::POSIX_WRITABLE,
@@ -122,8 +121,6 @@ async fn assert_open_root_directory(
             fio::OpenFlags::CREATE | fio::OpenFlags::CREATE_IF_ABSENT,
             // "OPEN_FLAG_CREATE_IF_ABSENT without OPEN_FLAG_CREATE"
             fio::OpenFlags::CREATE_IF_ABSENT,
-            // TODO(fxbug.dev/83844): pkgdir doesn't accept OPEN_FLAG_NO_REMOTE
-            fio::OpenFlags::NO_REMOTE,
             // "OPEN_FLAG_NOT_DIRECTORY enforced"
             fio::OpenFlags::NOT_DIRECTORY,
         ])
@@ -282,8 +279,6 @@ async fn assert_open_content_directory(
         success_flags.extend_from_slice(&[
             // "OPEN_FLAG_CREATE_IF_ABSENT without OPEN_FLAG_CREATE"
             fio::OpenFlags::CREATE_IF_ABSENT,
-            // TODO(fxbug.dev/83844): pkgdir doesn't accept OPEN_FLAG_NO_REMOTE
-            fio::OpenFlags::NO_REMOTE,
             // "OPEN_FLAG_NOT_DIRECTORY enforced"
             fio::OpenFlags::NOT_DIRECTORY,
         ])
@@ -373,7 +368,6 @@ async fn assert_open_content_file(
         fio::OpenFlags::empty(),
         fio::OpenFlags::RIGHT_READABLE,
         fio::OpenFlags::RIGHT_EXECUTABLE,
-        fio::OpenFlags::NO_REMOTE,
         fio::OpenFlags::NODE_REFERENCE,
         fio::OpenFlags::DESCRIBE,
         fio::OpenFlags::POSIX_WRITABLE,
@@ -458,8 +452,6 @@ async fn assert_open_meta_as_directory_and_file(
         base_directory_success_flags.extend_from_slice(&[
             // "OPEN_FLAG_CREATE_IF_ABSENT without OPEN_FLAG_CREATE"
             fio::OpenFlags::CREATE_IF_ABSENT,
-            // TODO(fxbug.dev/83844): pkgdir doesn't accept OPEN_FLAG_NO_REMOTE
-            fio::OpenFlags::NO_REMOTE,
             // "OPEN_FLAG_NOT_DIRECTORY enforced"
             fio::OpenFlags::NOT_DIRECTORY,
         ])
@@ -577,8 +569,6 @@ async fn assert_open_meta_as_directory_and_file(
             fio::OpenFlags::RIGHT_EXECUTABLE,
             // "OPEN_FLAG_CREATE_IF_ABSENT without OPEN_FLAG_CREATE"
             fio::OpenFlags::CREATE_IF_ABSENT,
-            // TODO(fxbug.dev/83844): pkgdir doesn't accept OPEN_FLAG_NO_REMOTE
-            fio::OpenFlags::NO_REMOTE,
         ])
     }
 
@@ -653,8 +643,6 @@ async fn assert_open_meta_subdirectory(
         success_flags.extend_from_slice(&[
             // "OPEN_FLAG_CREATE_IF_ABSENT without OPEN_FLAG_CREATE"
             fio::OpenFlags::CREATE_IF_ABSENT,
-            // TODO(fxbug.dev/83844): pkgdir doesn't accept OPEN_FLAG_NO_REMOTE
-            fio::OpenFlags::NO_REMOTE,
             // "OPEN_FLAG_NOT_DIRECTORY enforced"
             fio::OpenFlags::NOT_DIRECTORY,
         ])
@@ -713,8 +701,6 @@ async fn assert_open_meta_file(source: &PackageSource, parent_path: &str, child_
         success_flags.extend_from_slice(&[
             // "OPEN_FLAG_CREATE_IF_ABSENT without OPEN_FLAG_CREATE"
             fio::OpenFlags::CREATE_IF_ABSENT,
-            // TODO(fxbug.dev/83844): pkgdir doesn't accept OPEN_FLAG_NO_REMOTE
-            fio::OpenFlags::NO_REMOTE,
             // "OPEN_FLAG_DIRECTORY enforced"
             fio::OpenFlags::DIRECTORY,
         ])
@@ -994,14 +980,9 @@ async fn clone_per_package_source(source: PackageSource) {
         fio::OpenFlags::RIGHT_WRITABLE,
         fio::OpenFlags::RIGHT_EXECUTABLE,
         fio::OpenFlags::APPEND,
-        fio::OpenFlags::NO_REMOTE,
         fio::OpenFlags::DESCRIBE,
         fio::OpenFlags::CLONE_SAME_RIGHTS,
     ] {
-        if source.is_pkgdir() && (flag.intersects(fio::OpenFlags::NO_REMOTE)) {
-            // TODO(fxbug.dev/83844): pkgdir doesn't accept OPEN_FLAG_NO_REMOTE
-            continue;
-        }
         if source.is_pkgdir() && (flag.intersects(fio::OpenFlags::APPEND)) {
             // "OPEN_FLAG_TRUNCATE and OPEN_FLAG_APPEND not supported"
             continue;

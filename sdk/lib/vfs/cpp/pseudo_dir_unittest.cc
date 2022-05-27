@@ -525,7 +525,6 @@ TEST_F(PseudoDirConnection, CantReadNodeReferenceDir) {
 }
 
 TEST_F(PseudoDirConnection, ServeOnInvalidFlags) {
-  fuchsia::io::OpenFlags prohibitive_flags[] = {fuchsia::io::OpenFlags::NO_REMOTE};
   fuchsia::io::OpenFlags not_allowed_flags[] = {
       fuchsia::io::OpenFlags::CREATE, fuchsia::io::OpenFlags::CREATE_IF_ABSENT,
       fuchsia::io::OpenFlags::TRUNCATE, fuchsia::io::OpenFlags::APPEND};
@@ -533,11 +532,6 @@ TEST_F(PseudoDirConnection, ServeOnInvalidFlags) {
   for (auto not_allowed_flag : not_allowed_flags) {
     SCOPED_TRACE(std::to_string(static_cast<uint32_t>(not_allowed_flag)));
     AssertOpen(dispatcher(), not_allowed_flag, ZX_ERR_INVALID_ARGS);
-  }
-
-  for (auto prohibitive_flag : prohibitive_flags) {
-    SCOPED_TRACE(std::to_string(static_cast<uint32_t>(prohibitive_flag)));
-    AssertOpen(dispatcher(), prohibitive_flag, ZX_ERR_NOT_SUPPORTED);
   }
 }
 

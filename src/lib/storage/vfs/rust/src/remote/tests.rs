@@ -71,22 +71,6 @@ fn remote_dir_construction_open_node_ref() {
 }
 
 #[test]
-fn remote_dir_construction_open_no_remote() {
-    let exec = fasync::TestExecutor::new().expect("Executor creation failed");
-    let scope = ExecutionScope::new();
-
-    let remote_proxy = set_up_remote(scope.clone());
-    let server = remote_dir(remote_proxy);
-
-    run_client(exec, || async move {
-        let (proxy, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
-        let flags = fio::OpenFlags::NO_REMOTE;
-        server.open(scope, flags, 0, Path::dot(), server_end.into_channel().into());
-        assert_close!(proxy);
-    })
-}
-
-#[test]
 fn remote_dir_node_ref_with_path() {
     let exec = fasync::TestExecutor::new().expect("Executor creation failed");
     let scope = ExecutionScope::new();

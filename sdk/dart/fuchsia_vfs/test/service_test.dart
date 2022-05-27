@@ -18,7 +18,6 @@ void main() {
     io_fidl.OpenFlags.createIfAbsent,
     io_fidl.OpenFlags.directory,
     io_fidl.OpenFlags.truncate,
-    io_fidl.OpenFlags.noRemote,
     io_fidl.OpenFlags.nodeReference,
   ];
 

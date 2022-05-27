@@ -1160,8 +1160,7 @@ where
                     }
                 };
                 // Datagram sockets don't understand the following flags.
-                let append_no_remote = flags.intersects(fio::OpenFlags::APPEND)
-                    || flags.intersects(fio::OpenFlags::NO_REMOTE);
+                let append = flags.intersects(fio::OpenFlags::APPEND);
                 // Datagram sockets are neither mountable nor executable.
                 let executable = flags.intersects(fio::OpenFlags::RIGHT_EXECUTABLE);
                 // Cannot specify CLONE_FLAGS_SAME_RIGHTS together with
@@ -1181,8 +1180,7 @@ where
                     worker.rights &= new_rights;
                 }
 
-                if append_no_remote || executable || conflicting_rights || more_rights_than_original
-                {
+                if append || executable || conflicting_rights || more_rights_than_original {
                     send_on_open(zx::sys::ZX_ERR_INVALID_ARGS, None);
                     let () = worker.make_handler().await.close();
                     return Ok(());
@@ -3234,8 +3232,6 @@ mod tests {
             fio::OpenFlags::CLONE_SAME_RIGHTS | fio::OpenFlags::RIGHT_READABLE,
         )
         .await;
-        // no remote
-        expect_clone_invalid_args(&socket, fio::OpenFlags::NO_REMOTE).await;
         // append
         expect_clone_invalid_args(&socket, fio::OpenFlags::APPEND).await;
         // executable

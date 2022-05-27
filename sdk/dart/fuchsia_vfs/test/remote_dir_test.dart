@@ -133,7 +133,7 @@ void main() {
       final dir = _serveLocal(_localDirectory);
 
       // flags and statuses need to be kept in sync
-      final flags = [OpenFlags.noRemote];
+      final flags = [OpenFlags.notDirectory];
       final statuses = [ZX.ERR_NOT_SUPPORTED];
       expect(flags.length, statuses.length);
 
@@ -158,7 +158,7 @@ void main() {
       final dir = RemoteDir(_remoteDirHandle);
 
       // flags and statuses need to be kept in sync
-      final flags = [OpenFlags.noRemote];
+      final flags = [OpenFlags.notDirectory];
       final statuses = [ZX.ERR_NOT_SUPPORTED];
       expect(flags.length, statuses.length);
 
