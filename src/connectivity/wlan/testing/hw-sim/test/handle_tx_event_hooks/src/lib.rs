@@ -89,7 +89,7 @@ async fn handle_tx_event_hooks() {
     init_syslog();
 
     const BSSID: Bssid = Bssid(*b"wpa2ok");
-    let passphrase = Some("wpa2good");
+    let password = Some("wpa2good");
 
     let mut helper = test_utils::TestHelper::begin_test(default_wlantap_config_client()).await;
     let () = loop_until_iface_is_found().await;
@@ -97,7 +97,7 @@ async fn handle_tx_event_hooks() {
     let phy = helper.proxy();
 
     // Validate the connect request.
-    let mut authenticator = passphrase.map(|p| create_wpa2_psk_authenticator(&BSSID, &AP_SSID, p));
+    let mut authenticator = password.map(|p| create_wpa2_psk_authenticator(&BSSID, &AP_SSID, p));
     let mut update_sink = Some(wlan_rsn::rsna::UpdateSink::default());
     let protection = Protection::Wpa2Personal;
 
@@ -112,7 +112,7 @@ async fn handle_tx_event_hooks() {
             save_network_and_wait_until_connected(
                 &AP_SSID,
                 fidl_policy::SecurityType::Wpa2,
-                passphrase
+                password_to_policy_credential(password)
             ),
             async {
                 esssa_established_receiver

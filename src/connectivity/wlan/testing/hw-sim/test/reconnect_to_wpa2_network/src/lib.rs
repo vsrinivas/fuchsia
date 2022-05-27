@@ -27,8 +27,12 @@ async fn test_actions(
 ) {
     // Connect to the client policy service and get a client controller.
     let (_client_controller, mut client_state_update_stream) =
-        save_network_and_wait_until_connected(ssid, fidl_policy::SecurityType::Wpa2, password)
-            .await;
+        save_network_and_wait_until_connected(
+            ssid,
+            fidl_policy::SecurityType::Wpa2,
+            password_to_policy_credential(password),
+        )
+        .await;
 
     let t = Task::spawn(async move {
         // Check updates from the policy. If we see disconnect, panic.
@@ -133,7 +137,7 @@ async fn reconnect_to_wpa2_network() {
     init_syslog();
 
     const BSSID: Bssid = Bssid(*b"wpa2ok");
-    let passphrase = Some("wpa2good");
+    let password = Some("wpa2good");
 
     let mut helper = test_utils::TestHelper::begin_test(default_wlantap_config_client()).await;
     let () = loop_until_iface_is_found().await;
@@ -146,11 +150,11 @@ async fn reconnect_to_wpa2_network() {
         oneshot::channel();
     let mut second_association_confirm_sender_wrapper = Some(second_association_confirm_sender);
 
-    let test_actions_fut = test_actions(&AP_SSID, passphrase, second_association_confirm_receiver);
+    let test_actions_fut = test_actions(&AP_SSID, password, second_association_confirm_receiver);
     pin_mut!(test_actions_fut);
 
     // Validate the connect request.
-    let mut authenticator = passphrase.map(|p| create_wpa2_psk_authenticator(&BSSID, &AP_SSID, p));
+    let mut authenticator = password.map(|p| create_wpa2_psk_authenticator(&BSSID, &AP_SSID, p));
     let mut update_sink = match authenticator {
         Some(_) => Some(wlan_rsn::rsna::UpdateSink::default()),
         None => None,

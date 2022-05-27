@@ -53,7 +53,13 @@ async fn save_network_and_await_failed_connection(
     client_controller: &mut fidl_policy::ClientControllerProxy,
     client_state_update_stream: &mut fidl_policy::ClientStateUpdatesRequestStream,
 ) {
-    save_network(client_controller, &AP_SSID, fidl_policy::SecurityType::None, None).await;
+    save_network(
+        client_controller,
+        &AP_SSID,
+        fidl_policy::SecurityType::None,
+        password_to_policy_credential::<String>(None),
+    )
+    .await;
     let network_identifier = fidl_policy::NetworkIdentifier {
         ssid: AP_SSID.to_vec(),
         type_: fidl_policy::SecurityType::None,

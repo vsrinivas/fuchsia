@@ -3,11 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::create_network_config,
     crate::test_utils::RetryWithBackoff,
     fidl::endpoints::{create_endpoints, create_proxy},
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_policy as fidl_policy,
-    fidl_fuchsia_wlan_policy::SecurityType,
+    fidl_fuchsia_wlan_policy::{Credential, NetworkConfig, NetworkIdentifier, SecurityType},
     fuchsia_async::futures::TryStreamExt,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon::prelude::*,
@@ -15,6 +14,26 @@ use {
     ieee80211::Ssid,
     log::info,
 };
+
+fn create_network_config(
+    ssid: &Ssid,
+    security_type: SecurityType,
+    credential: Credential,
+) -> NetworkConfig {
+    let network_id = NetworkIdentifier { ssid: ssid.to_vec(), type_: security_type };
+    NetworkConfig { id: Some(network_id), credential: Some(credential), ..NetworkConfig::EMPTY }
+}
+
+fn credential_to_string(credential: &Credential) -> String {
+    match credential {
+        Credential::None(_) => String::from("None"),
+        Credential::Password(password) => {
+            format!("{} (type: password)", String::from_utf8_lossy(password))
+        }
+        Credential::Psk(psk) => format!("{} (type: psk)", String::from_utf8_lossy(psk)),
+        &_ => unimplemented!(),
+    }
+}
 
 // Holds basic WLAN network configuration information and allows cloning and conversion to a policy
 // NetworkConfig.
@@ -205,11 +224,10 @@ pub async fn save_network(
     client_controller: &fidl_policy::ClientControllerProxy,
     ssid: &Ssid,
     security_type: SecurityType,
-    password: Option<&str>,
+    credential: fidl_policy::Credential,
 ) {
-    let network_config = create_network_config(ssid, security_type, password.clone());
-
-    info!("Saving network. SSID: {:?}, Password: {:?}", ssid, password.map(|p| p.to_string()));
+    info!("Saving network. SSID: {:?}, Credential: {:?}", ssid, credential_to_string(&credential),);
+    let network_config = create_network_config(ssid, security_type, credential);
     client_controller
         .save_network(network_config)
         .await
@@ -221,15 +239,14 @@ pub async fn remove_network(
     client_controller: &fidl_policy::ClientControllerProxy,
     ssid: &Ssid,
     security_type: SecurityType,
-    password: Option<&str>,
+    credential: fidl_policy::Credential,
 ) {
-    let network_config = create_network_config(ssid, security_type, password.clone());
-
     info!(
-        "Removing network. SSID: {}, Password: {:?}",
+        "Removing network. SSID: {}, Credential: {:?}",
         ssid.to_string_not_redactable(),
-        password.map(|p| p.to_string())
+        credential_to_string(&credential)
     );
+    let network_config = create_network_config(ssid, security_type, credential);
     client_controller
         .remove_network(network_config)
         .await

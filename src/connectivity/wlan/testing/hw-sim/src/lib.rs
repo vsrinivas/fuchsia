@@ -8,9 +8,7 @@ use {
     fidl_fuchsia_wlan_common as fidl_common,
     fidl_fuchsia_wlan_common::WlanMacRole,
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_mlme as fidl_mlme,
-    fidl_fuchsia_wlan_policy::{
-        self as fidl_policy, Credential, Empty, NetworkConfig, NetworkIdentifier, SecurityType,
-    },
+    fidl_fuchsia_wlan_policy as fidl_policy,
     fidl_fuchsia_wlan_tap::{
         SetChannelArgs, TxArgs, WlanRxInfo, WlantapPhyConfig, WlantapPhyEvent, WlantapPhyProxy,
     },
@@ -330,40 +328,22 @@ fn default_deprecated_wpa1_vendor_ie() -> wlan_common::ie::wpa::WpaIe {
     wpa::fake_wpa_ies::fake_deprecated_wpa1_vendor_ie()
 }
 
-pub fn create_network_config<S: ToString>(
-    ssid: &Ssid,
-    security_type: SecurityType,
-    password: Option<S>,
-) -> NetworkConfig {
-    let network_id = NetworkIdentifier { ssid: ssid.to_vec(), type_: security_type };
-    let credential = match password {
-        None => Credential::None(Empty),
-        Some(p) => Credential::Password(p.to_string().as_bytes().to_vec()),
+pub fn password_to_policy_credential<S: ToString>(password: Option<S>) -> fidl_policy::Credential {
+    return match password {
+        None => fidl_policy::Credential::None(fidl_policy::Empty),
+        Some(p) => fidl_policy::Credential::Password(p.to_string().as_bytes().to_vec()),
     };
-    NetworkConfig { id: Some(network_id), credential: Some(credential), ..NetworkConfig::EMPTY }
-}
-
-pub fn create_open_network_config(ssid: &Ssid) -> NetworkConfig {
-    create_network_config(ssid, SecurityType::None, None::<String>)
-}
-
-pub fn create_wpa2_network_config<S: ToString>(ssid: &Ssid, password: S) -> NetworkConfig {
-    create_network_config(ssid, SecurityType::Wpa2, Some(password))
-}
-
-pub fn create_wpa3_network_config<S: ToString>(ssid: &Ssid, password: S) -> NetworkConfig {
-    create_network_config(ssid, SecurityType::Wpa3, Some(password))
 }
 
 // WPA1 still needs to be tested until we remove support.
 pub fn create_deprecated_wpa1_psk_authenticator(
     bssid: &Bssid,
     ssid: &Ssid,
-    passphrase: &str,
+    password: &str,
 ) -> wlan_rsn::Authenticator {
     let nonce_rdr = wlan_rsn::nonce::NonceReader::new(&bssid.0).expect("creating nonce reader");
     let gtk_provider = wlan_rsn::GtkProvider::new(CIPHER_TKIP).expect("creating gtk provider");
-    let psk = wlan_rsn::psk::compute(passphrase.as_bytes(), ssid).expect("computing PSK");
+    let psk = wlan_rsn::psk::compute(password.as_bytes(), ssid).expect("computing PSK");
     let s_protection = wlan_rsn::ProtectionInfo::LegacyWpa(default_deprecated_wpa1_vendor_ie());
     let a_protection = wlan_rsn::ProtectionInfo::LegacyWpa(default_deprecated_wpa1_vendor_ie());
     wlan_rsn::Authenticator::new_wpa2psk_ccmp128(
@@ -381,13 +361,13 @@ pub fn create_deprecated_wpa1_psk_authenticator(
 pub fn create_wpa3_authenticator(
     bssid: &Bssid,
     ssid: &Ssid,
-    passphrase: &str,
+    password: &str,
 ) -> wlan_rsn::Authenticator {
     let nonce_rdr = wlan_rsn::nonce::NonceReader::new(&bssid.0).expect("creating nonce reader");
     let gtk_provider = wlan_rsn::GtkProvider::new(CIPHER_CCMP_128).expect("creating gtk provider");
     let igtk_provider =
         wlan_rsn::IgtkProvider::new(DEFAULT_GROUP_MGMT_CIPHER).expect("creating igtk provider");
-    let password = passphrase.as_bytes().to_vec();
+    let password = password.as_bytes().to_vec();
     let s_rsne = wlan_rsn::ProtectionInfo::Rsne(rsne::Rsne::wpa3_rsne());
     let a_rsne = wlan_rsn::ProtectionInfo::Rsne(rsne::Rsne::wpa3_rsne());
     wlan_rsn::Authenticator::new_wpa3(
@@ -407,11 +387,11 @@ pub fn create_wpa3_authenticator(
 pub fn create_wpa2_psk_authenticator(
     bssid: &Bssid,
     ssid: &Ssid,
-    passphrase: &str,
+    password: &str,
 ) -> wlan_rsn::Authenticator {
     let nonce_rdr = wlan_rsn::nonce::NonceReader::new(&bssid.0).expect("creating nonce reader");
     let gtk_provider = wlan_rsn::GtkProvider::new(CIPHER_CCMP_128).expect("creating gtk provider");
-    let psk = wlan_rsn::psk::compute(passphrase.as_bytes(), ssid).expect("computing PSK");
+    let psk = wlan_rsn::psk::compute(password.as_bytes(), ssid).expect("computing PSK");
     let s_rsne = wlan_rsn::ProtectionInfo::Rsne(default_wpa2_psk_rsne());
     let a_rsne = wlan_rsn::ProtectionInfo::Rsne(default_wpa2_psk_rsne());
     wlan_rsn::Authenticator::new_wpa2psk_ccmp128(
@@ -673,13 +653,13 @@ pub fn handle_connect_events(
 pub async fn save_network_and_wait_until_connected(
     ssid: &Ssid,
     security_type: fidl_policy::SecurityType,
-    password: Option<&str>,
+    credential: fidl_policy::Credential,
 ) -> (fidl_policy::ClientControllerProxy, fidl_policy::ClientStateUpdatesRequestStream) {
     // Connect to the client policy service and get a client controller.
     let (client_controller, mut client_state_update_stream) =
         wlancfg_helper::init_client_controller().await;
 
-    save_network(&client_controller, ssid, security_type, password).await;
+    save_network(&client_controller, ssid, security_type, credential).await;
 
     // Wait until the policy layer indicates that the client has successfully connected.
     wait_until_client_state(&mut client_state_update_stream, |update| {
@@ -732,25 +712,26 @@ pub async fn connect_with_security_type(
     helper: &mut test_utils::TestHelper,
     ssid: &Ssid,
     bssid: &Bssid,
-    passphrase: Option<&str>,
+    password: Option<&str>,
     bss_protection: Protection,
     policy_security_type: fidl_policy::SecurityType,
 ) {
-    let connect_fut = save_network_and_wait_until_connected(ssid, policy_security_type, passphrase);
+    let credential = password_to_policy_credential(password);
+    let connect_fut = save_network_and_wait_until_connected(ssid, policy_security_type, credential);
     pin_mut!(connect_fut);
 
     // Create the authenticator
     let (mut authenticator, mut update_sink) = match bss_protection {
         Protection::Wpa3Personal => (
-            passphrase.map(|p| create_wpa3_authenticator(bssid, ssid, p)),
+            password.map(|p| create_wpa3_authenticator(bssid, ssid, p)),
             Some(wlan_rsn::rsna::UpdateSink::default()),
         ),
         Protection::Wpa2Personal => (
-            passphrase.map(|p| create_wpa2_psk_authenticator(bssid, ssid, p)),
+            password.map(|p| create_wpa2_psk_authenticator(bssid, ssid, p)),
             Some(wlan_rsn::rsna::UpdateSink::default()),
         ),
         Protection::Wpa1 => (
-            passphrase.map(|p| create_deprecated_wpa1_psk_authenticator(bssid, ssid, p)),
+            password.map(|p| create_deprecated_wpa1_psk_authenticator(bssid, ssid, p)),
             Some(wlan_rsn::rsna::UpdateSink::default()),
         ),
         Protection::Open => (None, None),

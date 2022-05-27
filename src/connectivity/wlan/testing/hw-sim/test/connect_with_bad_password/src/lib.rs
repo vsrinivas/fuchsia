@@ -16,7 +16,13 @@ async fn connect_future(
     security_type: fidl_policy::SecurityType,
     password: &str,
 ) {
-    save_network(client_controller, &AP_SSID, security_type, Some(password)).await;
+    save_network(
+        client_controller,
+        &AP_SSID,
+        security_type,
+        password_to_policy_credential(Some(password)),
+    )
+    .await;
     let network_identifier =
         fidl_policy::NetworkIdentifier { ssid: AP_SSID.to_vec(), type_: security_type };
     await_failed(
@@ -25,7 +31,13 @@ async fn connect_future(
         fidl_policy::DisconnectStatus::CredentialsFailed,
     )
     .await;
-    remove_network(client_controller, &AP_SSID, security_type, Some(password)).await;
+    remove_network(
+        client_controller,
+        &AP_SSID,
+        security_type,
+        password_to_policy_credential(Some(password)),
+    )
+    .await;
 }
 
 /// Test a client fails to connect to a network if the wrong credential type is
