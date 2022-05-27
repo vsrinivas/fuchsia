@@ -1107,8 +1107,7 @@ mod tests {
         }
         let set_config = |ctx: &mut crate::testutil::DummyCtx,
                           TestConfig { ip_enabled, gmp_enabled }| {
-            crate::ip::device::set_ipv6_configuration(ctx, &mut (), device_id, {
-                let mut config = crate::ip::device::get_ipv6_configuration(ctx, device_id);
+            crate::ip::device::update_ipv6_configuration(ctx, &mut (), device_id, |config| {
                 // TODO(https://fxbug.dev/98534): Make sure that DAD resolving
                 // for a link-local address results in reports sent with a
                 // specified source address.
@@ -1116,7 +1115,6 @@ mod tests {
                 config.max_router_solicitations = None;
                 config.ip_config.ip_enabled = ip_enabled;
                 config.ip_config.gmp_enabled = gmp_enabled;
-                config
             });
         };
         let check_sent_report = |ctx: &mut crate::testutil::DummyCtx, specified_source: bool| {

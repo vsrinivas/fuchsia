@@ -898,21 +898,28 @@ pub(crate) fn get_ipv6_configuration<C: IpDeviceContext<Ipv6>>(
 }
 
 /// Updates the IPv4 Configuration for the device.
-pub(crate) fn set_ipv4_configuration<SC: IpDeviceContext<Ipv4> + GmpHandler<Ipv4>, C>(
+pub(crate) fn update_ipv4_configuration<
+    SC: IpDeviceContext<Ipv4> + GmpHandler<Ipv4>,
+    C,
+    F: FnOnce(&mut Ipv4DeviceConfiguration),
+>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     device_id: SC::DeviceId,
-    config: Ipv4DeviceConfiguration,
+    update_cb: F,
 ) {
-    let Ipv4DeviceConfiguration {
-        ip_config:
-            IpDeviceConfiguration { ip_enabled: next_ip_enabled, gmp_enabled: next_gmp_enabled },
-    } = config;
+    let config = &mut sync_ctx.get_ip_device_state_mut(device_id).config;
     let Ipv4DeviceConfiguration {
         ip_config:
             IpDeviceConfiguration { ip_enabled: prev_ip_enabled, gmp_enabled: prev_gmp_enabled },
-    } = sync_ctx.get_ip_device_state_mut(device_id).config;
-    sync_ctx.get_ip_device_state_mut(device_id).config = config;
+    } = *config;
+
+    update_cb(config);
+
+    let Ipv4DeviceConfiguration {
+        ip_config:
+            IpDeviceConfiguration { ip_enabled: next_ip_enabled, gmp_enabled: next_gmp_enabled },
+    } = *config;
 
     if !prev_ip_enabled && next_ip_enabled {
         enable_ipv4_device(sync_ctx, ctx, device_id);
@@ -938,7 +945,7 @@ pub(super) fn is_ip_device_enabled<
 }
 
 /// Updates the IPv6 Configuration for the device.
-pub(crate) fn set_ipv6_configuration<
+pub(crate) fn update_ipv6_configuration<
     SC: Ipv6DeviceContext
         + GmpHandler<Ipv6>
         + RsHandler
@@ -946,27 +953,31 @@ pub(crate) fn set_ipv6_configuration<
         + RouteDiscoveryHandler
         + SlaacHandler,
     C,
+    F: FnOnce(&mut Ipv6DeviceConfiguration),
 >(
     sync_ctx: &mut SC,
     ctx: &mut C,
     device_id: SC::DeviceId,
-    config: Ipv6DeviceConfiguration,
+    update_cb: F,
 ) {
-    let Ipv6DeviceConfiguration {
-        dad_transmits: _,
-        max_router_solicitations: _,
-        slaac_config: _,
-        ip_config:
-            IpDeviceConfiguration { ip_enabled: next_ip_enabled, gmp_enabled: next_gmp_enabled },
-    } = config;
+    let config = &mut sync_ctx.get_ip_device_state_mut(device_id).config;
     let Ipv6DeviceConfiguration {
         dad_transmits: _,
         max_router_solicitations: _,
         slaac_config: _,
         ip_config:
             IpDeviceConfiguration { ip_enabled: prev_ip_enabled, gmp_enabled: prev_gmp_enabled },
-    } = sync_ctx.get_ip_device_state_mut(device_id).config;
-    sync_ctx.get_ip_device_state_mut(device_id).config = config;
+    } = *config;
+
+    update_cb(config);
+
+    let Ipv6DeviceConfiguration {
+        dad_transmits: _,
+        max_router_solicitations: _,
+        slaac_config: _,
+        ip_config:
+            IpDeviceConfiguration { ip_enabled: next_ip_enabled, gmp_enabled: next_gmp_enabled },
+    } = *config;
 
     if !prev_ip_enabled && next_ip_enabled {
         enable_ipv6_device(sync_ctx, ctx, device_id);
@@ -1015,11 +1026,9 @@ mod tests {
         // router solicitation and DAD for the auto-generated address.
         let test_enable_device =
             |ctx: &mut DummyCtx, extra_group: Option<MulticastAddr<Ipv6Addr>>| {
-                crate::ip::device::set_ipv6_configuration(ctx, &mut (), device_id, {
-                    let mut config = crate::ip::device::get_ipv6_configuration(ctx, device_id);
+                update_ipv6_configuration(ctx, &mut (), device_id, |config| {
                     config.ip_config.ip_enabled = true;
                     config.ip_config.gmp_enabled = true;
-                    config
                 });
                 assert_eq!(
                     IpDeviceContext::<Ipv6>::get_ip_device_state(ctx, device_id)
@@ -1077,10 +1086,8 @@ mod tests {
         test_enable_device(&mut ctx, None);
 
         let test_disable_device = |ctx: &mut DummyCtx| {
-            crate::ip::device::set_ipv6_configuration(ctx, &mut (), device_id, {
-                let mut config = crate::ip::device::get_ipv6_configuration(ctx, device_id);
+            update_ipv6_configuration(ctx, &mut (), device_id, |config| {
                 config.ip_config.ip_enabled = false;
-                config
             });
             ctx.ctx.timer_ctx().assert_no_timers_installed();
         };

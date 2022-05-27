@@ -1437,7 +1437,10 @@ mod tests {
                 router_solicitation::{MAX_RTR_SOLICITATION_DELAY, RTR_SOLICITATION_INTERVAL},
                 set_ipv6_routing_enabled,
                 slaac::{SlaacConfiguration, SlaacTimerId, TemporarySlaacAddressConfiguration},
-                state::{AddrConfig, Ipv6AddressEntry, Lifetime, TemporarySlaacConfig},
+                state::{
+                    AddrConfig, Ipv6AddressEntry, Ipv6DeviceConfiguration, Lifetime,
+                    TemporarySlaacConfig,
+                },
                 Ipv6DeviceTimerId,
             },
             receive_ipv6_packet, DummyDeviceId, SendIpPacketMeta,
@@ -1867,10 +1870,14 @@ mod tests {
         );
 
         // Enable DAD.
-        let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
-        ipv6_config.ip_config.ip_enabled = true;
-        crate::device::set_ipv6_configuration(net.context("local"), device_id, ipv6_config.clone());
-        crate::device::set_ipv6_configuration(net.context("remote"), device_id, ipv6_config);
+        let update = |ipv6_config: &mut Ipv6DeviceConfiguration| {
+            ipv6_config.ip_config.ip_enabled = true;
+
+            // Doesn't matter as long as we perform DAD.
+            ipv6_config.dad_transmits = NonZeroU8::new(1);
+        };
+        crate::device::update_ipv6_configuration(net.context("local"), device_id, update);
+        crate::device::update_ipv6_configuration(net.context("remote"), device_id, update);
 
         let addr = AddrSubnet::new(local_ip().get(), 128).unwrap();
         let multicast_addr = local_ip().to_solicited_node_address();
@@ -1995,10 +2002,10 @@ mod tests {
         crate::device::testutil::enable_device(&mut ctx, dev_id);
 
         // Enable DAD.
-        let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
-        ipv6_config.ip_config.ip_enabled = true;
-        ipv6_config.dad_transmits = NonZeroU8::new(3);
-        crate::device::set_ipv6_configuration(&mut ctx, dev_id, ipv6_config);
+        crate::device::update_ipv6_configuration(&mut ctx, dev_id, |config| {
+            config.ip_config.ip_enabled = true;
+            config.dad_transmits = NonZeroU8::new(3);
+        });
         add_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(local_ip().get(), 128).unwrap())
             .unwrap();
         for _ in 0..3 {
@@ -2035,11 +2042,12 @@ mod tests {
             remote.build(),
         );
 
-        let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
-        ipv6_config.ip_config.ip_enabled = true;
-        ipv6_config.dad_transmits = NonZeroU8::new(3);
-        crate::device::set_ipv6_configuration(net.context("local"), device_id, ipv6_config.clone());
-        crate::device::set_ipv6_configuration(net.context("remote"), device_id, ipv6_config);
+        let update = |ipv6_config: &mut Ipv6DeviceConfiguration| {
+            ipv6_config.ip_config.ip_enabled = true;
+            ipv6_config.dad_transmits = NonZeroU8::new(3);
+        };
+        crate::device::update_ipv6_configuration(net.context("local"), device_id, update);
+        crate::device::update_ipv6_configuration(net.context("remote"), device_id, update);
 
         add_ip_addr_subnet(
             net.context("local"),
@@ -2096,11 +2104,11 @@ mod tests {
 
         assert_empty(ctx.dispatcher.frames_sent());
 
-        let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
-        ipv6_config.ip_config.ip_enabled = true;
-        ipv6_config.dad_transmits = NonZeroU8::new(3);
-        ipv6_config.max_router_solicitations = None;
-        crate::device::set_ipv6_configuration(&mut ctx, dev_id, ipv6_config);
+        crate::device::update_ipv6_configuration(&mut ctx, dev_id, |ipv6_config| {
+            ipv6_config.ip_config.ip_enabled = true;
+            ipv6_config.dad_transmits = NonZeroU8::new(3);
+            ipv6_config.max_router_solicitations = None;
+        });
 
         // Add an IP.
         add_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(local_ip().get(), 128).unwrap())
@@ -2183,11 +2191,11 @@ mod tests {
         crate::device::testutil::enable_device(&mut ctx, dev_id);
 
         // Enable DAD.
-        let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
-        ipv6_config.ip_config.ip_enabled = true;
-        ipv6_config.dad_transmits = NonZeroU8::new(3);
-        ipv6_config.max_router_solicitations = None;
-        crate::device::set_ipv6_configuration(&mut ctx, dev_id, ipv6_config);
+        crate::device::update_ipv6_configuration(&mut ctx, dev_id, |ipv6_config| {
+            ipv6_config.ip_config.ip_enabled = true;
+            ipv6_config.dad_transmits = NonZeroU8::new(3);
+            ipv6_config.max_router_solicitations = None;
+        });
 
         assert_empty(ctx.dispatcher.frames_sent());
 
@@ -2850,10 +2858,10 @@ mod tests {
 
         // Enable DAD for the device.
         const DUP_ADDR_DETECT_TRANSMITS: u8 = 3;
-        let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
-        ipv6_config.ip_config.ip_enabled = true;
-        ipv6_config.dad_transmits = NonZeroU8::new(DUP_ADDR_DETECT_TRANSMITS);
-        crate::device::set_ipv6_configuration(&mut ctx, device, ipv6_config.clone());
+        crate::device::update_ipv6_configuration(&mut ctx, device, |ipv6_config| {
+            ipv6_config.ip_config.ip_enabled = true;
+            ipv6_config.dad_transmits = NonZeroU8::new(DUP_ADDR_DETECT_TRANSMITS);
+        });
 
         // Updating the IP should start the DAD process.
         add_ip_addr_subnet(
@@ -2882,8 +2890,9 @@ mod tests {
         assert_eq!(ctx.ctx.timer_ctx().timers().len(), 1);
 
         // Disable DAD during DAD.
-        ipv6_config.dad_transmits = None;
-        crate::device::set_ipv6_configuration(&mut ctx, device, ipv6_config.clone());
+        crate::device::update_ipv6_configuration(&mut ctx, device, |ipv6_config| {
+            ipv6_config.dad_transmits = None;
+        });
         let expected_timer_id = dad_timer_id(device_id, dummy_config.remote_ip.try_into().unwrap());
         // Allow already started DAD to complete (2 more more NS, 3 more timers).
         assert_eq!(ctx.trigger_next_timer(crate::handle_timer).unwrap(), expected_timer_id);
@@ -3435,35 +3444,31 @@ mod tests {
         let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::testutil::enable_device(&mut ctx, device);
 
-        let mut ipv6_config = crate::ip::device::get_ipv6_configuration(&ctx, device);
-        // Enable temporary addressing in addition to static addressing.
         let max_valid_lifetime = Duration::from_secs(60 * 60);
         let max_preferred_lifetime = Duration::from_secs(30 * 60);
         let idgen_retries = 3;
+        let mut slaac_config = SlaacConfiguration::default();
         enable_temporary_addresses(
-            &mut ipv6_config.slaac_config,
+            &mut slaac_config,
             ctx.rng_mut(),
             NonZeroDuration::new(max_valid_lifetime).unwrap(),
             NonZeroDuration::new(max_preferred_lifetime).unwrap(),
             idgen_retries,
         );
 
-        crate::ip::device::set_ipv6_configuration(&mut ctx, &mut (), device, ipv6_config);
-        (ctx, device, ipv6_config.slaac_config)
+        crate::ip::device::update_ipv6_configuration(&mut ctx, &mut (), device, |ipv6_config| {
+            ipv6_config.slaac_config = slaac_config;
+        });
+        (ctx, device, slaac_config)
     }
 
     #[test]
     fn test_host_stateless_address_autoconfiguration_multiple_prefixes() {
         let (mut ctx, device, _): (_, _, SlaacConfiguration) =
             initialize_with_temporary_addresses_enabled();
-        {
-            let ctx = &mut ctx;
-            crate::device::set_ipv6_configuration(ctx, device, {
-                let mut config = crate::ip::device::get_ipv6_configuration(ctx, device);
-                config.slaac_config.enable_stable_addresses = true;
-                config
-            });
-        }
+        crate::device::update_ipv6_configuration(&mut ctx, device, |config| {
+            config.slaac_config.enable_stable_addresses = true;
+        });
 
         let prefix1 = TestSlaacPrefix {
             prefix: subnet_v6!("1:2:3:4::/64"),
@@ -3751,12 +3756,12 @@ mod tests {
         let device_id = device.try_into().unwrap();
         assert_empty(iter_global_ipv6_addrs(&ctx, device_id));
 
-        // Enable DAD for future IPs.
-        crate::device::set_ipv6_configuration(&mut ctx, device, {
-            let mut config = crate::device::Ipv6DeviceConfiguration::default();
+        crate::device::update_ipv6_configuration(&mut ctx, device, |config| {
             config.ip_config.ip_enabled = true;
             config.slaac_config.enable_stable_addresses = true;
-            config
+
+            // Doesn't matter as long as we perform DAD.
+            config.dad_transmits = NonZeroU8::new(1);
         });
 
         // Set the retransmit timer between neighbor solicitations to be greater
@@ -3927,15 +3932,10 @@ mod tests {
         let config = Ipv6::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build();
         let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
-        {
-            let ctx = &mut ctx;
-            crate::device::set_ipv6_configuration(ctx, device, {
-                let mut config = crate::ip::device::get_ipv6_configuration(ctx, device);
-                config.ip_config.ip_enabled = true;
-                config.slaac_config.enable_stable_addresses = true;
-                config
-            });
-        }
+        crate::device::update_ipv6_configuration(&mut ctx, device, |config| {
+            config.ip_config.ip_enabled = true;
+            config.slaac_config.enable_stable_addresses = true;
+        });
 
         let src_mac = config.remote_mac;
         let src_ip = src_mac.to_ipv6_link_local().addr().get();
@@ -4007,12 +4007,6 @@ mod tests {
         let config = Ipv6::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build();
         let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
-        crate::device::testutil::enable_device(&mut ctx, device);
-
-        // Enable DAD for future IPs.
-        let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
-        ipv6_config.ip_config.ip_enabled = true;
-        crate::device::set_ipv6_configuration(&mut ctx, device, ipv6_config);
 
         let router_mac = config.remote_mac;
         let router_ip = router_mac.to_ipv6_link_local().addr().get();
@@ -4025,14 +4019,22 @@ mod tests {
 
         let idgen_retries = 3;
 
+        let mut slaac_config = SlaacConfiguration::default();
         enable_temporary_addresses(
-            &mut ipv6_config.slaac_config,
+            &mut slaac_config,
             ctx.rng_mut(),
             NonZeroDuration::new(MAX_VALID_LIFETIME).unwrap(),
             NonZeroDuration::new(MAX_PREFERRED_LIFETIME).unwrap(),
             idgen_retries,
         );
-        crate::device::set_ipv6_configuration(&mut ctx, device, ipv6_config);
+
+        crate::device::update_ipv6_configuration(&mut ctx, device, |ipv6_config| {
+            ipv6_config.slaac_config = slaac_config;
+            ipv6_config.ip_config.ip_enabled = true;
+
+            // Doesn't matter as long as we perform DAD.
+            ipv6_config.dad_transmits = NonZeroU8::new(1);
+        });
 
         // Send an update with lifetimes that are smaller than the ones specified in the preferences.
         let valid_lifetime = 10000;
@@ -4135,12 +4137,6 @@ mod tests {
         let config = Ipv6::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build();
         let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
-        crate::device::testutil::enable_device(&mut ctx, device);
-
-        // Enable DAD for future IPs.
-        let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
-        ipv6_config.ip_config.ip_enabled = true;
-        crate::device::set_ipv6_configuration(&mut ctx, device, ipv6_config);
 
         let router_mac = config.remote_mac;
         let router_ip = router_mac.to_ipv6_link_local().addr().get();
@@ -4152,15 +4148,22 @@ mod tests {
         const MAX_PREFERRED_LIFETIME: Duration = Duration::from_secs(5000);
 
         let idgen_retries = 3;
-
+        let mut slaac_config = SlaacConfiguration::default();
         enable_temporary_addresses(
-            &mut ipv6_config.slaac_config,
+            &mut slaac_config,
             ctx.rng_mut(),
             NonZeroDuration::new(MAX_VALID_LIFETIME).unwrap(),
             NonZeroDuration::new(MAX_PREFERRED_LIFETIME).unwrap(),
             idgen_retries,
         );
-        crate::device::set_ipv6_configuration(&mut ctx, device, ipv6_config);
+
+        crate::device::update_ipv6_configuration(&mut ctx, device, |ipv6_config| {
+            ipv6_config.slaac_config = slaac_config;
+            ipv6_config.ip_config.ip_enabled = true;
+
+            // Doesn't matter as long as we perform DAD.
+            ipv6_config.dad_transmits = NonZeroU8::new(1);
+        });
 
         receive_prefix_update(
             &mut ctx,
@@ -4247,11 +4250,6 @@ mod tests {
         let config = Ipv6::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build();
         let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
-        let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
-        ipv6_config.ip_config.ip_enabled = true;
-        ipv6_config.dad_transmits = None;
-        ipv6_config.max_router_solicitations = None;
-        crate::device::set_ipv6_configuration(&mut ctx, device, ipv6_config);
 
         let router_mac = config.remote_mac;
         let router_ip = router_mac.to_ipv6_link_local().addr().get();
@@ -4261,15 +4259,19 @@ mod tests {
 
         const MAX_VALID_LIFETIME: Duration = Duration::from_secs(15000);
         const MAX_PREFERRED_LIFETIME: Duration = Duration::from_secs(5000);
-
+        let mut slaac_config = SlaacConfiguration::default();
         enable_temporary_addresses(
-            &mut ipv6_config.slaac_config,
+            &mut slaac_config,
             ctx.rng_mut(),
             NonZeroDuration::new(MAX_VALID_LIFETIME).unwrap(),
             NonZeroDuration::new(MAX_PREFERRED_LIFETIME).unwrap(),
             0,
         );
-        crate::device::set_ipv6_configuration(&mut ctx, device, ipv6_config);
+
+        crate::device::update_ipv6_configuration(&mut ctx, device, |ipv6_config| {
+            ipv6_config.slaac_config = slaac_config;
+            ipv6_config.ip_config.ip_enabled = true;
+        });
 
         // The prefix updates contains a shorter preferred lifetime than
         // the preferences allow.
@@ -4408,11 +4410,11 @@ mod tests {
         let mut ctx = DummyEventDispatcherBuilder::default().build();
         let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         let device_id = device.try_into().unwrap();
-        let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
-        ipv6_config.ip_config.ip_enabled = true;
-        ipv6_config.dad_transmits = None;
-        ipv6_config.max_router_solicitations = None;
-        crate::device::set_ipv6_configuration(&mut ctx, device, ipv6_config);
+        // No DAD for the auto-generated link-local address.
+        crate::device::update_ipv6_configuration(&mut ctx, device, |ipv6_config| {
+            ipv6_config.dad_transmits = None;
+            ipv6_config.ip_config.ip_enabled = true;
+        });
 
         let router_mac = config.remote_mac;
         let router_ip = router_mac.to_ipv6_link_local().addr().get();
@@ -4422,16 +4424,20 @@ mod tests {
 
         const MAX_VALID_LIFETIME: Duration = Duration::from_secs(15000);
         let max_preferred_lifetime = Duration::from_secs(5000);
-
-        ipv6_config.dad_transmits = NonZeroU8::new(1);
+        let mut slaac_config = SlaacConfiguration::default();
         enable_temporary_addresses(
-            &mut ipv6_config.slaac_config,
+            &mut slaac_config,
             ctx.rng_mut(),
             NonZeroDuration::new(MAX_VALID_LIFETIME).unwrap(),
             NonZeroDuration::new(max_preferred_lifetime).unwrap(),
             1,
         );
-        crate::device::set_ipv6_configuration(&mut ctx, device, ipv6_config);
+
+        crate::device::update_ipv6_configuration(&mut ctx, device, |ipv6_config| {
+            // Perform DAD for later addresses.
+            ipv6_config.dad_transmits = NonZeroU8::new(1);
+            ipv6_config.slaac_config = slaac_config;
+        });
 
         // Set a large value for the retransmit period. This forces
         // REGEN_ADVANCE to be large, which increases the window between when an
@@ -4486,14 +4492,17 @@ mod tests {
             .unwrap();
 
         let max_preferred_lifetime = max_preferred_lifetime * 4 / 5;
+        let mut slaac_config = SlaacConfiguration::default();
         enable_temporary_addresses(
-            &mut ipv6_config.slaac_config,
+            &mut slaac_config,
             ctx.rng_mut(),
             NonZeroDuration::new(MAX_VALID_LIFETIME).unwrap(),
             NonZeroDuration::new(max_preferred_lifetime).unwrap(),
             1,
         );
-        crate::device::set_ipv6_configuration(&mut ctx, device, ipv6_config);
+        crate::device::update_ipv6_configuration(&mut ctx, device, |ipv6_config| {
+            ipv6_config.slaac_config = slaac_config;
+        });
 
         // Receiving this update should result in requiring a regen time that is
         // before the current time. The address should be regenerated
@@ -4645,19 +4654,18 @@ mod tests {
         // the next router advertisement is reeived.
         let max_valid_lifetime = max_preferred_lifetime;
         let idgen_retries = 3;
+        let mut slaac_config = SlaacConfiguration::default();
+        enable_temporary_addresses(
+            &mut slaac_config,
+            ctx.rng_mut(),
+            max_valid_lifetime,
+            max_preferred_lifetime,
+            idgen_retries,
+        );
 
-        let ipv6_config = {
-            let mut config = crate::ip::device::get_ipv6_configuration(&ctx, device);
-            enable_temporary_addresses(
-                &mut config.slaac_config,
-                ctx.rng_mut(),
-                max_valid_lifetime,
-                max_preferred_lifetime,
-                idgen_retries,
-            );
-            config
-        };
-        crate::ip::device::set_ipv6_configuration(&mut ctx, &mut (), device, ipv6_config);
+        crate::ip::device::update_ipv6_configuration(&mut ctx, &mut (), device, |config| {
+            config.slaac_config = slaac_config;
+        });
         // The new valid time is measured from the time at which the address was created (`start`),
         // not the current time (`now`). That means the max valid lifetime takes precedence over
         // the router's advertised valid lifetime.
@@ -4696,15 +4704,10 @@ mod tests {
         let config = Ipv6::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build();
         let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
-        {
-            let ctx = &mut ctx;
-            crate::device::set_ipv6_configuration(ctx, device, {
-                let mut config = crate::ip::device::get_ipv6_configuration(ctx, device);
-                config.ip_config.ip_enabled = true;
-                config.slaac_config.enable_stable_addresses = true;
-                config
-            });
-        }
+        crate::device::update_ipv6_configuration(&mut ctx, device, |config| {
+            config.ip_config.ip_enabled = true;
+            config.slaac_config.enable_stable_addresses = true;
+        });
 
         let src_mac = config.remote_mac;
         let src_ip = src_mac.to_ipv6_link_local().addr().get();

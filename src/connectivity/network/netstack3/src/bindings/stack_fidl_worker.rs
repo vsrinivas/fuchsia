@@ -21,8 +21,7 @@ use futures::{TryFutureExt as _, TryStreamExt as _};
 use log::{debug, error};
 use net_types::{ethernet::Mac, SpecifiedAddr, UnicastAddr};
 use netstack3_core::{
-    add_ip_addr_subnet, add_route, del_ip_addr, del_route, get_all_routes, get_ipv4_configuration,
-    get_ipv6_configuration, AddableEntryEither, Ctx,
+    add_ip_addr_subnet, add_route, del_ip_addr, del_route, get_all_routes, AddableEntryEither, Ctx,
 };
 
 pub(crate) struct StackFidlWorker<C> {
@@ -178,8 +177,6 @@ where
 
         let id = {
             let eth_id = ctx.state.add_ethernet_device(mac_addr, mtu);
-            let ipv4_config = get_ipv4_configuration(&ctx, eth_id);
-            let ipv6_config = get_ipv6_configuration(&ctx, eth_id);
 
             let devices: &mut Devices = ctx.dispatcher.as_mut();
             devices
@@ -210,8 +207,6 @@ where
                                 super::InterfaceProperties { name: name.clone(), device_class },
                             ),
                             name,
-                            ipv4_config,
-                            ipv6_config,
                         },
                         client,
                         mac: mac_addr,
@@ -338,30 +333,14 @@ where
         self.ctx.update_device_state(id, |dev_info| {
             let admin_enabled: &mut bool = match dev_info.info_mut() {
                 DeviceSpecificInfo::Ethernet(EthernetInfo {
-                    common_info:
-                        CommonInfo {
-                            admin_enabled,
-                            mtu: _,
-                            events: _,
-                            name: _,
-                            ipv4_config: _,
-                            ipv6_config: _,
-                        },
+                    common_info: CommonInfo { admin_enabled, mtu: _, events: _, name: _ },
                     client: _,
                     mac: _,
                     features: _,
                     phy_up: _,
                 }) => admin_enabled,
                 DeviceSpecificInfo::Loopback(LoopbackInfo {
-                    common_info:
-                        CommonInfo {
-                            admin_enabled,
-                            mtu: _,
-                            events: _,
-                            name: _,
-                            ipv4_config: _,
-                            ipv6_config: _,
-                        },
+                    common_info: CommonInfo { admin_enabled, mtu: _, events: _, name: _ },
                 }) => admin_enabled,
             };
             *admin_enabled = true;
@@ -373,30 +352,14 @@ where
         self.ctx.update_device_state(id, |dev_info| {
             let admin_enabled: &mut bool = match dev_info.info_mut() {
                 DeviceSpecificInfo::Ethernet(EthernetInfo {
-                    common_info:
-                        CommonInfo {
-                            admin_enabled,
-                            mtu: _,
-                            events: _,
-                            name: _,
-                            ipv4_config: _,
-                            ipv6_config: _,
-                        },
+                    common_info: CommonInfo { admin_enabled, mtu: _, events: _, name: _ },
                     client: _,
                     mac: _,
                     features: _,
                     phy_up: _,
                 }) => admin_enabled,
                 DeviceSpecificInfo::Loopback(LoopbackInfo {
-                    common_info:
-                        CommonInfo {
-                            admin_enabled,
-                            mtu: _,
-                            events: _,
-                            name: _,
-                            ipv4_config: _,
-                            ipv6_config: _,
-                        },
+                    common_info: CommonInfo { admin_enabled, mtu: _, events: _, name: _ },
                 }) => admin_enabled,
             };
             *admin_enabled = false;

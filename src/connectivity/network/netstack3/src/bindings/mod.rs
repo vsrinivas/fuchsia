@@ -53,11 +53,11 @@ use net_types::ip::{AddrSubnet, AddrSubnetEither, Ip, Ipv4, Ipv6};
 use netstack3_core::{
     add_ip_addr_subnet, add_route,
     context::{EventContext, InstantContext, RngContext, TimerContext},
-    get_ipv4_configuration, get_ipv6_configuration, handle_timer, icmp, set_ipv4_configuration,
-    set_ipv6_configuration, AddableEntryEither, BlanketCoreContext, BufferUdpContext, Ctx,
-    DeviceId, DeviceLayerEventDispatcher, EventDispatcher, IpDeviceConfiguration, IpExt,
-    IpSockCreationError, Ipv4DeviceConfiguration, Ipv6DeviceConfiguration, SlaacConfiguration,
-    TimerId, UdpBoundId, UdpConnId, UdpContext, UdpListenerId,
+    handle_timer, icmp, update_ipv4_configuration, update_ipv6_configuration, AddableEntryEither,
+    BlanketCoreContext, BufferUdpContext, Ctx, DeviceId, DeviceLayerEventDispatcher,
+    EventDispatcher, IpDeviceConfiguration, IpExt, IpSockCreationError, Ipv4DeviceConfiguration,
+    Ipv6DeviceConfiguration, SlaacConfiguration, TimerId, UdpBoundId, UdpConnId, UdpContext,
+    UdpListenerId,
 };
 
 /// Default MTU for loopback.
@@ -308,15 +308,7 @@ where
 
         match dev.info_mut() {
             DeviceSpecificInfo::Ethernet(EthernetInfo {
-                common_info:
-                    CommonInfo {
-                        admin_enabled,
-                        mtu: _,
-                        events: _,
-                        name: _,
-                        ipv4_config: _,
-                        ipv6_config: _,
-                    },
+                common_info: CommonInfo { admin_enabled, mtu: _, events: _, name: _ },
                 client,
                 mac: _,
                 features: _,
@@ -528,19 +520,17 @@ fn set_interface_enabled<
         ctx.dispatcher.as_mut().get_device_mut(id).ok_or(fidl_net_stack::Error::NotFound)?;
     let core_id = device.core_id();
 
-    let (dev_enabled, events, ipv4_config, ipv6_config) = match device.info_mut() {
+    let (dev_enabled, events) = match device.info_mut() {
         DeviceSpecificInfo::Ethernet(EthernetInfo {
-            common_info:
-                CommonInfo { admin_enabled, mtu: _, events, name: _, ipv4_config, ipv6_config },
+            common_info: CommonInfo { admin_enabled, mtu: _, events, name: _ },
             client: _,
             mac: _,
             features: _,
             phy_up,
-        }) => (*admin_enabled && *phy_up, events, ipv4_config, ipv6_config),
+        }) => (*admin_enabled && *phy_up, events),
         DeviceSpecificInfo::Loopback(LoopbackInfo {
-            common_info:
-                CommonInfo { admin_enabled, mtu: _, events, name: _, ipv4_config, ipv6_config },
-        }) => (*admin_enabled, events, ipv4_config, ipv6_config),
+            common_info: CommonInfo { admin_enabled, mtu: _, events, name: _ },
+        }) => (*admin_enabled, events),
     };
 
     if should_enable {
@@ -560,14 +550,12 @@ fn set_interface_enabled<
         .notify(InterfaceUpdate::OnlineChanged(should_enable))
         .expect("interfaces worker not running");
 
-    ipv4_config.ip_config.ip_enabled = should_enable;
-    ipv6_config.ip_config.ip_enabled = should_enable;
-
-    let ipv4_config = *ipv4_config;
-    let ipv6_config = *ipv6_config;
-
-    set_ipv4_configuration(ctx, core_id, ipv4_config);
-    set_ipv6_configuration(ctx, core_id, ipv6_config);
+    update_ipv4_configuration(ctx, core_id, |config| {
+        config.ip_config.ip_enabled = should_enable;
+    });
+    update_ipv6_configuration(ctx, core_id, |config| {
+        config.ip_config.ip_enabled = should_enable;
+    });
 
     Ok(())
 }
@@ -684,8 +672,6 @@ impl NetstackSeed {
                 .state
                 .add_loopback_device(DEFAULT_LOOPBACK_MTU)
                 .expect("error adding loopback device");
-            let ipv4_config = get_ipv4_configuration(&ctx, loopback);
-            let ipv6_config = get_ipv6_configuration(&ctx, loopback);
             let devices: &mut Devices = ctx.dispatcher.as_mut();
             let _binding_id: u64 = devices
                 .add_device(loopback, |id| {
@@ -708,24 +694,18 @@ impl NetstackSeed {
                             admin_enabled: true,
                             events,
                             name: LOOPBACK_NAME.to_string(),
-                            ipv4_config,
-                            ipv6_config,
                         },
                     })
                 })
                 .expect("error adding loopback device");
             // Don't need DAD and IGMP/MLD on loopback.
-            set_ipv4_configuration(
-                ctx,
-                loopback,
-                Ipv4DeviceConfiguration {
+            update_ipv4_configuration(ctx, loopback, |config| {
+                *config = Ipv4DeviceConfiguration {
                     ip_config: IpDeviceConfiguration { ip_enabled: true, gmp_enabled: false },
-                },
-            );
-            set_ipv6_configuration(
-                ctx,
-                loopback,
-                Ipv6DeviceConfiguration {
+                };
+            });
+            update_ipv6_configuration(ctx, loopback, |config| {
+                *config = Ipv6DeviceConfiguration {
                     dad_transmits: None,
                     max_router_solicitations: None,
                     slaac_config: SlaacConfiguration {
@@ -733,8 +713,8 @@ impl NetstackSeed {
                         temporary_address_configuration: None,
                     },
                     ip_config: IpDeviceConfiguration { ip_enabled: true, gmp_enabled: false },
-                },
-            );
+                };
+            });
             add_ip_addr_subnet(
                 ctx,
                 loopback,

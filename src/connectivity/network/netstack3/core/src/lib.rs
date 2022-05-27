@@ -50,7 +50,7 @@ pub use crate::{
     data_structures::{Entry, IdMap, IdMapCollection, IdMapCollectionKey},
     device::{
         get_ipv4_configuration, get_ipv6_configuration, receive_frame, remove_device,
-        set_ipv4_configuration, set_ipv6_configuration, DeviceId, DeviceLayerEventDispatcher,
+        update_ipv4_configuration, update_ipv6_configuration, DeviceId, DeviceLayerEventDispatcher,
     },
     error::{LocalAddressError, NetstackError, RemoteAddressError, SocketError},
     ip::{

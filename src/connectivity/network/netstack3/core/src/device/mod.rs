@@ -856,21 +856,29 @@ pub fn get_ipv6_configuration<D: EventDispatcher, C: BlanketCoreContext>(
 }
 
 /// Updates the IPv4 Configuration for a `device`.
-pub fn set_ipv4_configuration<D: EventDispatcher, C: BlanketCoreContext>(
+pub fn update_ipv4_configuration<
+    D: EventDispatcher,
+    C: BlanketCoreContext,
+    F: FnOnce(&mut Ipv4DeviceConfiguration),
+>(
     ctx: &mut Ctx<D, C>,
     device: DeviceId,
-    config: Ipv4DeviceConfiguration,
+    update_cb: F,
 ) {
-    crate::ip::device::set_ipv4_configuration(ctx, &mut (), device, config)
+    crate::ip::device::update_ipv4_configuration(ctx, &mut (), device, update_cb)
 }
 
 /// Updates the IPv6 Configuration for a `device`.
-pub fn set_ipv6_configuration<D: EventDispatcher, C: BlanketCoreContext>(
+pub fn update_ipv6_configuration<
+    D: EventDispatcher,
+    C: BlanketCoreContext,
+    F: FnOnce(&mut Ipv6DeviceConfiguration),
+>(
     ctx: &mut Ctx<D, C>,
     device: DeviceId,
-    config: Ipv6DeviceConfiguration,
+    update_cb: F,
 ) {
-    crate::ip::device::set_ipv6_configuration(ctx, &mut (), device, config)
+    crate::ip::device::update_ipv6_configuration(ctx, &mut (), device, update_cb)
 }
 
 /// An address that may be "tentative" in that it has not yet passed duplicate
@@ -960,15 +968,11 @@ pub(crate) mod testutil {
         ctx: &mut Ctx<D, C>,
         device: DeviceId,
     ) {
-        crate::ip::device::set_ipv4_configuration(ctx, &mut (), device, {
-            let mut config = crate::ip::device::get_ipv4_configuration(ctx, device);
+        crate::ip::device::update_ipv4_configuration(ctx, &mut (), device, |config| {
             config.ip_config.ip_enabled = true;
-            config
         });
-        crate::ip::device::set_ipv6_configuration(ctx, &mut (), device, {
-            let mut config = crate::ip::device::get_ipv6_configuration(ctx, device);
+        crate::ip::device::update_ipv6_configuration(ctx, &mut (), device, |config| {
             config.ip_config.ip_enabled = true;
-            config
         });
     }
 }

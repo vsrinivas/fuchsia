@@ -7,10 +7,7 @@ use std::collections::hash_map::HashMap;
 use ethernet as eth;
 use fidl_fuchsia_hardware_ethernet::Features;
 use net_types::{ethernet::Mac, UnicastAddr};
-use netstack3_core::{
-    DeviceId, Entry, IdMapCollection, IdMapCollectionKey, Ipv4DeviceConfiguration,
-    Ipv6DeviceConfiguration,
-};
+use netstack3_core::{DeviceId, Entry, IdMapCollection, IdMapCollectionKey};
 
 pub type BindingId = u64;
 
@@ -142,9 +139,6 @@ pub struct CommonInfo {
     pub admin_enabled: bool,
     pub events: super::InterfaceEventProducer,
     pub name: String,
-
-    pub ipv4_config: Ipv4DeviceConfiguration,
-    pub ipv6_config: Ipv6DeviceConfiguration,
 }
 
 /// Loopback device information.

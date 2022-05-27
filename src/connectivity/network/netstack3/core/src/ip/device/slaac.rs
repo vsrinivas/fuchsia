@@ -2485,10 +2485,8 @@ mod tests {
         let device_id =
             ctx.state.device.add_ethernet_device(local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         let set_ip_enabled = |ctx: &mut crate::testutil::DummyCtx, enabled| {
-            crate::ip::device::set_ipv6_configuration(ctx, &mut (), device_id, {
-                let mut config = crate::ip::device::get_ipv6_configuration(ctx, device_id);
+            crate::ip::device::update_ipv6_configuration(ctx, &mut (), device_id, |config| {
                 config.ip_config.ip_enabled = enabled;
-                config
             })
         };
         set_ip_enabled(&mut ctx, true /* enabled */);

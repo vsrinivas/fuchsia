@@ -1243,11 +1243,9 @@ mod tests {
 
         let set_config = |ctx: &mut crate::testutil::DummyCtx,
                           TestConfig { ip_enabled, gmp_enabled }| {
-            crate::ip::device::set_ipv4_configuration(ctx, &mut (), device_id, {
-                let mut config = crate::ip::device::get_ipv4_configuration(ctx, device_id);
+            crate::ip::device::update_ipv4_configuration(ctx, &mut (), device_id, |config| {
                 config.ip_config.ip_enabled = ip_enabled;
                 config.ip_config.gmp_enabled = gmp_enabled;
-                config
             });
         };
         let check_sent_report = |ctx: &mut crate::testutil::DummyCtx| {

@@ -515,15 +515,9 @@ mod tests {
         );
         let device_id =
             ctx.state.device.add_ethernet_device(local_mac, Ipv6::MINIMUM_LINK_MTU.into());
-
-        {
-            let ctx = &mut ctx;
-            crate::ip::device::set_ipv6_configuration(ctx, &mut (), device_id, {
-                let mut config = crate::ip::device::get_ipv6_configuration(ctx, device_id);
-                config.ip_config.ip_enabled = true;
-                config
-            });
-        }
+        crate::ip::device::update_ipv6_configuration(&mut ctx, &mut (), device_id, |config| {
+            config.ip_config.ip_enabled = true;
+        });
 
         ctx.ctx.timer_ctx().assert_no_timers_installed();
 
@@ -863,10 +857,8 @@ mod tests {
         ]);
 
         // Disable the interface.
-        crate::ip::device::set_ipv6_configuration(ctx, &mut (), device_id, {
-            let mut config = crate::ip::device::get_ipv6_configuration(ctx, device_id);
+        crate::ip::device::update_ipv6_configuration(ctx, &mut (), device_id, |config| {
             config.ip_config.ip_enabled = false;
-            config
         });
         assert_eq!(
             AsMut::<DummyEventCtx<_>>::as_mut(ctx).take().into_iter().collect::<HashSet<_>>(),
