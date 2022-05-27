@@ -7,6 +7,8 @@
 # team as reviewer.
 toc:
 - heading: ffx workflows
+- title: Overview
+  path: /docs/development/sdk/ffx/index.md
 - title: Devices
   section:
   - title: View device information
