@@ -147,8 +147,8 @@ where
 
             ot_instance.thread_set_enabled(false)?;
             ot_instance.ip6_set_enabled(false)?;
+            ot_instance.dataset_set_active(&ot::OperationalDataset::empty())?;
             ot_instance.erase_persistent_info()?;
-            ot_instance.reset();
 
             if ot_instance.is_commissioned() {
                 return Err(format_err!("Unable to fully clear dataset"));
