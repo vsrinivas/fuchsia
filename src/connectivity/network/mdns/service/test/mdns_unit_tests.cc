@@ -44,9 +44,9 @@ class MdnsUnitTests : public gtest::RealLoopFixture, public Mdns::Transceiver {
 
   bool HasInterfaces() override { return has_interfaces_; }
 
-  void SendMessage(DnsMessage message, const ReplyAddress& reply_address) override {
+  void SendMessage(const DnsMessage& message, const ReplyAddress& reply_address) override {
     send_message_called_ = true;
-    send_message_message_ = std::move(message);
+    send_message_message_ = message;
     send_message_reply_address_ = reply_address;
   }
 

@@ -110,7 +110,7 @@ TEST(InterfaceTransceiverTest, SendSimpleMessage) {
   message.additionals_.push_back(ptr_resource);
   message.UpdateCounts();
 
-  under_test.SendMessage(&message, to_address);
+  under_test.SendMessage(message, to_address);
   EXPECT_NE(nullptr, under_test.send_to_buffer_);
 
   // 0000  00 00 00 00 00 00 00 00  00 00 00 01 0a 5f 74 65  ............._te
@@ -153,7 +153,7 @@ TEST(InterfaceTransceiverTest, SendLeadingA) {
   message.additionals_.push_back(ptr_resource);
   message.UpdateCounts();
 
-  under_test.SendMessage(&message, to_address);
+  under_test.SendMessage(message, to_address);
   EXPECT_NE(nullptr, under_test.send_to_buffer_);
 
   // under_test.DumpSendToGolden();
@@ -205,7 +205,7 @@ TEST(InterfaceTransceiverTest, SendLeadingAAndAAAA) {
   message.additionals_.push_back(ptr_resource);
   message.UpdateCounts();
 
-  under_test.SendMessage(&message, to_address);
+  under_test.SendMessage(message, to_address);
   EXPECT_NE(nullptr, under_test.send_to_buffer_);
 
   // under_test.DumpSendToGolden();
@@ -257,7 +257,7 @@ TEST(InterfaceTransceiverTest, SendTrailingAAndAAAA) {
   message.additionals_.push_back(aaaa_resource);
   message.UpdateCounts();
 
-  under_test.SendMessage(&message, to_address);
+  under_test.SendMessage(message, to_address);
   EXPECT_NE(nullptr, under_test.send_to_buffer_);
 
   // under_test.DumpSendToGolden();
@@ -309,7 +309,7 @@ TEST(InterfaceTransceiverTest, SendBracketingAAndAAAA) {
   message.additionals_.push_back(aaaa_resource);
   message.UpdateCounts();
 
-  under_test.SendMessage(&message, to_address);
+  under_test.SendMessage(message, to_address);
   EXPECT_NE(nullptr, under_test.send_to_buffer_);
 
   // under_test.DumpSendToGolden();
@@ -360,7 +360,7 @@ TEST(InterfaceTransceiverTest, SendLeadingAWithAlternate) {
   message.additionals_.push_back(ptr_resource);
   message.UpdateCounts();
 
-  under_test.SendMessage(&message, to_address);
+  under_test.SendMessage(message, to_address);
   EXPECT_NE(nullptr, under_test.send_to_buffer_);
 
   // under_test.DumpSendToGolden();

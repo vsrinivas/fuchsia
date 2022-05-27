@@ -61,7 +61,7 @@ class Mdns : public MdnsAgent::Owner {
     // Sends a message to the specified address. A V6 interface will send to
     // |MdnsAddresses::V6Multicast| if |reply_address.socket_address()| is
     // |MdnsAddresses::V4Multicast|.
-    virtual void SendMessage(DnsMessage message, const ReplyAddress& reply_address) = 0;
+    virtual void SendMessage(const DnsMessage& message, const ReplyAddress& reply_address) = 0;
 
     // Writes log messages describing lifetime traffic.
     virtual void LogTraffic() = 0;

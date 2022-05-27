@@ -24,6 +24,7 @@
 const std::string kLocalArgument = "--local";
 const std::string kRemoteArgument = "--remote";
 const std::string kInstanceName = "mdns_test_instance_name";
+const std::string kHostName = "mdns_test_host_name";
 
 const size_t kIterations = 100;
 const zx_duration_t kTimeout = ZX_SEC(120);
@@ -128,9 +129,23 @@ class TestAgent {
               });
         },
         // This lambda is called when inbound MDNS messages are received.
-        [this](std::unique_ptr<DnsMessage> _, const ReplyAddress& reply_address) {
+        [this](std::unique_ptr<DnsMessage> message, const ReplyAddress& reply_address) {
           auto interface_addr = reply_address.interface_address();
           auto from = reply_address.socket_address().address();
+
+          for (const auto& resource : message->authorities_) {
+            if ((resource->type_ == DnsType::kA) && (resource->a_.address_.address_ != from)) {
+              std::cerr << "FAILED: unexpected address " << resource->a_.address_.address_
+                        << " received in A resource from " << from << ".\n";
+              Quit(1);
+            }
+            if ((resource->type_ == DnsType::kAaaa) &&
+                (resource->aaaa_.address_.address_ != from)) {
+              std::cerr << "FAILED: unexpected address " << resource->aaaa_.address_.address_
+                        << " received in AAAA resource from " << from << ".\n";
+              Quit(1);
+            }
+          }
 
           auto connection = connections.find(from);
           if (connection == connections.end()) {
@@ -181,6 +196,9 @@ class TestAgent {
   void SendRequest() {
     DnsMessage message;
     message.questions_.push_back(std::make_shared<DnsQuestion>(kInstanceName, DnsType::kAaaa));
+    // Add address placeholder resource.
+    message.authorities_.push_back(std::make_shared<DnsResource>(kHostName, DnsType::kA));
+    message.UpdateCounts();
     transceiver_.SendMessage(std::move(message),
                              ReplyAddress::Multicast(Media::kBoth, IpVersions::kBoth));
   }
