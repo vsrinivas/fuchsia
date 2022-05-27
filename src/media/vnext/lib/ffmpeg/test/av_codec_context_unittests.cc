@@ -959,17 +959,33 @@ TEST(AvCodecContextTest, GetAudioDecoderCompressionTypes) {
 
 // Tests the |GetVideoDecoderCompressionTypes| method.
 TEST(AvCodecContextTest, GetVideoDecoderCompressionTypes) {
-  EXPECT_TRUE(VerifyStringArray(
-      std::vector<std::string>{
-          fuchsia::mediastreams::VIDEO_COMPRESSION_H263,
-          fuchsia::mediastreams::VIDEO_COMPRESSION_H264,
-          fuchsia::mediastreams::VIDEO_COMPRESSION_MPEG4,
-          fuchsia::mediastreams::VIDEO_COMPRESSION_THEORA,
-          fuchsia::mediastreams::VIDEO_COMPRESSION_VP3,
-          fuchsia::mediastreams::VIDEO_COMPRESSION_VP8,
-          fuchsia::mediastreams::VIDEO_COMPRESSION_VP9,
-      },
-      AvCodecContext::GetVideoDecoderCompressionTypes()));
+  auto video_decoder_compression_types = AvCodecContext::GetVideoDecoderCompressionTypes();
+
+  if (video_decoder_compression_types.size() == 6) {
+    // No VP9 in the arm64 config.
+    EXPECT_TRUE(VerifyStringArray(
+        std::vector<std::string>{
+            fuchsia::mediastreams::VIDEO_COMPRESSION_H263,
+            fuchsia::mediastreams::VIDEO_COMPRESSION_H264,
+            fuchsia::mediastreams::VIDEO_COMPRESSION_MPEG4,
+            fuchsia::mediastreams::VIDEO_COMPRESSION_THEORA,
+            fuchsia::mediastreams::VIDEO_COMPRESSION_VP3,
+            fuchsia::mediastreams::VIDEO_COMPRESSION_VP8,
+        },
+        video_decoder_compression_types));
+  } else {
+    EXPECT_TRUE(VerifyStringArray(
+        std::vector<std::string>{
+            fuchsia::mediastreams::VIDEO_COMPRESSION_H263,
+            fuchsia::mediastreams::VIDEO_COMPRESSION_H264,
+            fuchsia::mediastreams::VIDEO_COMPRESSION_MPEG4,
+            fuchsia::mediastreams::VIDEO_COMPRESSION_THEORA,
+            fuchsia::mediastreams::VIDEO_COMPRESSION_VP3,
+            fuchsia::mediastreams::VIDEO_COMPRESSION_VP8,
+            fuchsia::mediastreams::VIDEO_COMPRESSION_VP9,
+        },
+        video_decoder_compression_types));
+  }
 }
 
 // Tests the |GetAudioEncoderCompressionTypes| method.

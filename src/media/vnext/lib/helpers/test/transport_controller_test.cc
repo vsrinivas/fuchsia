@@ -263,6 +263,7 @@ TEST_F(TransportControllerTest, CancelAllPresentationTimePromises) {
   EXPECT_TRUE(canceler.is_valid());
 
   under_test.CancelAllPresentationTimePromises();
+  RunLoopUntilIdle();
   EXPECT_TRUE(promise_failed);
   EXPECT_FALSE(canceler.is_valid());
 }
