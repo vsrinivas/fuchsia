@@ -217,9 +217,8 @@ zx::status<std::unique_ptr<Blobfs>> Blobfs::Create(async_dispatcher_t* dispatche
   switch (options.writability) {
     case blobfs::Writability::Writable: {
       FX_LOGS(DEBUG) << "Initializing journal for writeback";
-      auto journal_or =
-          InitializeJournal(fs.get(), fs.get(), JournalStartBlock(fs->info_),
-                            JournalBlocks(fs->info_), std::move(journal_superblock), fs->metrics_);
+      auto journal_or = InitializeJournal(fs.get(), fs.get(), JournalStartBlock(fs->info_),
+                                          JournalBlocks(fs->info_), std::move(journal_superblock));
       if (journal_or.is_error()) {
         FX_LOGS(ERROR) << "Failed to initialize journal";
         return journal_or.take_error();
@@ -388,8 +387,7 @@ void Blobfs::InitializeInspectTree() {
 // Writeback enabled, journaling enabled.
 zx::status<std::unique_ptr<Journal>> Blobfs::InitializeJournal(
     fs::TransactionHandler* transaction_handler, VmoidRegistry* registry, uint64_t journal_start,
-    uint64_t journal_length, JournalSuperblock journal_superblock,
-    std::shared_ptr<fs::MetricsTrait> journal_metrics) {
+    uint64_t journal_length, JournalSuperblock journal_superblock) {
   const uint64_t journal_entry_blocks = journal_length - fs::kJournalMetadataBlocks;
 
   std::unique_ptr<BlockingRingBuffer> journal_buffer;
@@ -408,11 +406,9 @@ zx::status<std::unique_ptr<Journal>> Blobfs::InitializeJournal(
     return zx::error(status);
   }
 
-  auto options = Journal::Options();
-  options.metrics = journal_metrics;
   return zx::ok(std::make_unique<Journal>(transaction_handler, std::move(journal_superblock),
                                           std::move(journal_buffer), std::move(writeback_buffer),
-                                          journal_start, options));
+                                          journal_start));
 }
 
 std::unique_ptr<BlockDevice> Blobfs::Destroy(std::unique_ptr<Blobfs> blobfs) {

@@ -31,7 +31,7 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t* data, size_t size) {
   }
   auto journal_start_block = fuzz_utils.data_provider()->ConsumeIntegral<uint64_t>();
   Journal journal(fuzz_utils.handler(), std::move(info), std::move(journal_buffer),
-                  std::move(writeback_buffer), journal_start_block, Journal::Options());
+                  std::move(writeback_buffer), journal_start_block);
   while (fuzz_utils.data_provider()->remaining_bytes() != 0) {
     [[maybe_unused]] zx_status_t status = journal.CommitTransaction(
         {.metadata_operations = fuzz_utils.FuzzOperation(ReservedVmoid::kJournalVmoid),

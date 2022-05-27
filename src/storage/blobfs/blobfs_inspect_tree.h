@@ -23,16 +23,14 @@ class BlobfsInspectTree final {
   ~BlobfsInspectTree() = default;
 
   // Set general filesystem information.
-  void SetInfo(const fs_inspect::InfoData& info);
+  void SetInfo(const fs_inspect::InfoData& info) __TA_EXCLUDES(info_mutex_);
 
   // Update resource usage values that change when certain fields in the superblock are modified.
-  void UpdateSuperblock(const Superblock& superblock);
+  void UpdateSuperblock(const Superblock& superblock) __TA_EXCLUDES(usage_mutex_);
 
   // Update FVM volume information and record any out of space events.
-  void UpdateVolumeData(const block_client::BlockDevice& device, bool out_of_space = false);
-
-  // Update Blobfs-specific properties related to fragmentation metrics.
-  void UpdateFragmentationMetrics(uint64_t inodes_in_use, uint64_t extent_containers_in_use);
+  void UpdateVolumeData(const block_client::BlockDevice& device, bool out_of_space = false)
+      __TA_EXCLUDES(volume_mutex_);
 
   // Reference to the Inspector this object owns.
   const inspect::Inspector& Inspector() { return inspector_; }
@@ -45,7 +43,7 @@ class BlobfsInspectTree final {
   fs_inspect::NodeCallbacks CreateCallbacks();
 
   //
-  // Generic fs_inspect properties
+  // Generic fs_inspect Properties
   //
 
   mutable std::mutex info_mutex_{};

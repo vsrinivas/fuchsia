@@ -234,8 +234,7 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
 
   static zx::status<std::unique_ptr<fs::Journal>> InitializeJournal(
       fs::TransactionHandler* transaction_handler, VmoidRegistry* registry, uint64_t journal_start,
-      uint64_t journal_length, fs::JournalSuperblock journal_superblock,
-      std::shared_ptr<fs::MetricsTrait> journal_metrics);
+      uint64_t journal_length, fs::JournalSuperblock journal_superblock);
 
   // Terminates all internal connections, updates the "clean bit" (if writable),
   // flushes writeback buffers, empties caches, and returns the underlying
@@ -306,6 +305,7 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   // Possibly-null reference to the Vfs associated with this object. See vfs() getter.
   fs::PagedVfs* vfs_ = nullptr;
 
+  // Journal object is only created if the filesystem is mounted as writable.
   std::unique_ptr<fs::Journal> journal_;
   Superblock info_;
 

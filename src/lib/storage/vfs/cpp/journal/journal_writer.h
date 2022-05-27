@@ -17,7 +17,6 @@
 #include <storage/operation/operation.h>
 
 #include "src/lib/storage/vfs/cpp/journal/format.h"
-#include "src/lib/storage/vfs/cpp/journal/metrics.h"
 #include "src/lib/storage/vfs/cpp/journal/operation_tracker.h"
 #include "src/lib/storage/vfs/cpp/journal/superblock.h"
 #include "src/lib/storage/vfs/cpp/transaction/transaction_handler.h"
@@ -50,10 +49,8 @@ struct JournalWorkItem {
 class JournalWriter {
  public:
   JournalWriter(fs::TransactionHandler* transaction_handler, JournalSuperblock journal_superblock,
-                uint64_t journal_start_block, uint64_t entries_length,
-                std::shared_ptr<JournalMetrics> metrics);
-  explicit JournalWriter(fs::TransactionHandler* transaction_handler,
-                         std::shared_ptr<JournalMetrics> metrics);
+                uint64_t journal_start_block, uint64_t entries_length);
+  explicit JournalWriter(fs::TransactionHandler* transaction_handler);
   JournalWriter(const JournalWriter&) = delete;
   JournalWriter& operator=(const JournalWriter&) = delete;
   JournalWriter(JournalWriter&& other) = delete;
@@ -137,8 +134,6 @@ class JournalWriter {
   // to prevent "partial operations" from being written to the underlying device.
   zx_status_t WriteOperations(const std::vector<storage::BufferedOperation>& operations);
 
-  JournalMetrics* metrics() const { return metrics_.get(); }
-
   fs::TransactionHandler* transaction_handler_ = nullptr;
   JournalSuperblock journal_superblock_;
 
@@ -147,11 +142,8 @@ class JournalWriter {
   // and are dropped once the journal would avoid replaying them on reboot.
   OperationTracker live_metadata_operations_;
 
-  // Journal metrics are shared with other journal threads.
-  std::shared_ptr<JournalMetrics> metrics_;
-
   // Relative to the start of the filesystem. Points to the journal info block.
-  uint64_t journal_start_block_ = 0;
+  const uint64_t journal_start_block_ = 0;
 
   // The value of the sequence_number to be used in the next entry which is written to the
   // journal.

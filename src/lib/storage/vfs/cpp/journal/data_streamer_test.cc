@@ -82,9 +82,8 @@ class DataStreamerFixture : public testing::Test {
     JournalSuperblock info_block = JournalSuperblock(std::move(info_block_buffer));
     info_block.Update(0, 0);
 
-    journal_ =
-        std::make_unique<Journal>(&handler_, std::move(info_block), std::move(journal_buffer),
-                                  std::move(data_buffer), 0, Journal::Options());
+    journal_ = std::make_unique<Journal>(&handler_, std::move(info_block),
+                                         std::move(journal_buffer), std::move(data_buffer), 0);
   }
 
   MockTransactionHandler& handler() { return handler_; }

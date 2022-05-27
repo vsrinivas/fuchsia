@@ -61,17 +61,16 @@ fpromise::result<> ToVoidError(fpromise::result<void, zx_status_t> result) {
 Journal::Journal(TransactionHandler* transaction_handler, JournalSuperblock journal_superblock,
                  std::unique_ptr<storage::BlockingRingBuffer> journal_buffer,
                  std::unique_ptr<storage::BlockingRingBuffer> writeback_buffer,
-                 uint64_t journal_start_block, Options options)
+                 uint64_t journal_start_block)
     : journal_buffer_(std::move(journal_buffer)),
       writeback_buffer_(std::move(writeback_buffer)),
-      metrics_(std::make_shared<JournalMetrics>(options.metrics, journal_buffer_->capacity(),
-                                                journal_start_block)),
       writer_(transaction_handler, std::move(journal_superblock), journal_start_block,
-              journal_buffer_->capacity(), metrics_),
-      options_(options) {
+              journal_buffer_->capacity()) {
   // For now, the ring buffers must use the same block size as kJournalBlockSize.
   ZX_ASSERT(journal_buffer_->BlockSize() == kJournalBlockSize);
   ZX_ASSERT(writeback_buffer_->BlockSize() == kJournalBlockSize);
+  FX_LOGST(DEBUG, "journal") << "Created Journal, start block: " << journal_start_block
+                             << ", capacity: " << journal_buffer_->capacity();
 }
 
 Journal::~Journal() {
@@ -108,17 +107,14 @@ void Journal::FlushPending() {
 }
 
 Journal::Promise Journal::WriteData(std::vector<storage::UnbufferedOperation> operations) {
-  auto event = metrics()->NewLatencyEvent(fs_metrics::Event::kJournalWriteData);
   auto block_count_or =
       CheckOperationsAndGetTotalBlockCount<storage::OperationType::kWrite>(operations);
   if (block_count_or.is_error()) {
     return fpromise::make_error_promise(block_count_or.status_value());
   }
   if (block_count_or.value() == 0) {
-    event.set_block_count(0);
     return fpromise::make_result_promise<void, zx_status_t>(fpromise::ok());
   }
-  event.set_block_count(block_count_or.value());
 
   storage::BlockingRingBufferReservation reservation;
   zx_status_t status = writeback_buffer_->Reserve(block_count_or.value(), &reservation);
@@ -138,7 +134,6 @@ Journal::Promise Journal::WriteData(std::vector<storage::UnbufferedOperation> op
   }
   internal::JournalWorkItem work(std::move(reservation), std::move(buffered_operations));
 
-  event.set_success(true);
   // Return the deferred action to write the data operations to the device.
   return fpromise::make_promise(
       [this, work = std::move(work)]() mutable { return writer_.WriteData(std::move(work)); });
@@ -162,8 +157,6 @@ zx_status_t Journal::CommitTransaction(Transaction transaction) {
     return ZX_OK;
   }
 
-  auto event = metrics()->NewLatencyEvent(fs_metrics::Event::kJournalWriteMetadata);
-
   if (!writer_.IsWritebackEnabled()) {
     FX_LOGST(DEBUG, "journal") << "Not commiting; writeback disabled";
     return ZX_ERR_IO_REFUSED;
@@ -183,7 +176,6 @@ zx_status_t Journal::CommitTransaction(Transaction transaction) {
 
   // Ensure there is enough space in the journal buffer. Note that in addition to the operation's
   // blocks, we also reserve space for the journal entry's metadata (header, footer, etc).
-  event.set_block_count(block_count_or.value());
   uint64_t block_count = block_count_or.value() + kEntryMetadataBlocks;
   storage::BlockingRingBufferReservation reservation;
   if (pending_ + block_count > journal_buffer_->capacity()) {
@@ -250,13 +242,11 @@ zx_status_t Journal::CommitTransaction(Transaction transaction) {
     task = std::move(ordered_promise);
   }
 
-  event.set_success(true);
   schedule_task(std::move(task));
   return ZX_OK;
 }
 
 Journal::Promise Journal::Sync() {
-  auto event = metrics()->NewLatencyEvent(fs_metrics::Event::kJournalSync);
   FlushPending();
   return journal_sequencer_.wrap(fpromise::make_promise([this] { return writer_.Sync(); }));
 }

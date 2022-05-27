@@ -48,6 +48,7 @@ source_set("test_utils") {
   deps = [
     ":test_binary_resource",
     "//sdk/lib/fdio",
+    "//sdk/lib/sys/cpp",
     "//src/lib/digest",
     "//third_party/googletest:gtest",
     "//third_party/zstd",

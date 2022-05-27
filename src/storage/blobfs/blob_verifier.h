@@ -5,6 +5,7 @@
 #ifndef SRC_STORAGE_BLOBFS_BLOB_VERIFIER_H_
 #define SRC_STORAGE_BLOBFS_BLOB_VERIFIER_H_
 
+#include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/zx/status.h>
 #include <zircon/status.h>
 #include <zircon/types.h>

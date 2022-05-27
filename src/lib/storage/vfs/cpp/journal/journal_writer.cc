@@ -12,7 +12,6 @@
 #include <cstdio>
 
 #include "src/lib/storage/vfs/cpp/journal/entry_view.h"
-#include "src/lib/storage/vfs/cpp/metrics/events.h"
 
 namespace fs {
 namespace {
@@ -25,23 +24,18 @@ namespace internal {
 
 JournalWriter::JournalWriter(TransactionHandler* transaction_handler,
                              JournalSuperblock journal_superblock, uint64_t journal_start_block,
-                             uint64_t entries_length, std::shared_ptr<JournalMetrics> metrics)
+                             uint64_t entries_length)
     : transaction_handler_(transaction_handler),
       journal_superblock_(std::move(journal_superblock)),
-      metrics_(metrics),
       journal_start_block_(journal_start_block),
       next_sequence_number_(journal_superblock_.sequence_number()),
       next_entry_start_block_(journal_superblock_.start()),
       entries_length_(entries_length) {}
 
-JournalWriter::JournalWriter(TransactionHandler* transaction_handler,
-                             std::shared_ptr<JournalMetrics> metrics)
-    : transaction_handler_(transaction_handler), metrics_(metrics) {}
+JournalWriter::JournalWriter(TransactionHandler* transaction_handler)
+    : transaction_handler_(transaction_handler) {}
 
 fpromise::result<void, zx_status_t> JournalWriter::WriteData(JournalWorkItem work) {
-  auto event = metrics()->NewLatencyEvent(fs_metrics::Event::kJournalWriterWriteData);
-  uint32_t block_count = 0;
-
   // If any of the data operations we're about to write overlap with in-flight metadata operations,
   // then we risk those metadata operations "overwriting" our data blocks on replay.
   //
@@ -63,16 +57,13 @@ fpromise::result<void, zx_status_t> JournalWriter::WriteData(JournalWorkItem wor
         return fpromise::error(status);
       }
     }
-    block_count += operation.op.length;
   }
 
-  event.set_block_count(block_count);
   zx_status_t status = WriteOperations(work.operations);
   if (status != ZX_OK) {
     FX_LOGST(WARNING, "journal") << "Failed to write data: " << zx_status_get_string(status);
     return fpromise::error(status);
   }
-  event.set_success(true);
   return fpromise::ok();
 }
 
@@ -81,9 +72,6 @@ fpromise::result<void, zx_status_t> JournalWriter::WriteMetadata(
   const uint64_t block_count = work.reservation.length();
   FX_LOGST(DEBUG, "journal") << "WriteMetadata: Writing " << block_count
                              << " blocks (includes header, commit)";
-  auto event = metrics()->NewLatencyEvent(fs_metrics::Event::kJournalWriterWriteMetadata);
-  event.set_block_count(block_count);
-
   // Ensure the info block is caught up, so it doesn't point to the middle of an invalid entry.
   zx_status_t status = WriteInfoBlockIfIntersect(block_count);
   if (status != ZX_OK) {
@@ -106,7 +94,6 @@ fpromise::result<void, zx_status_t> JournalWriter::WriteMetadata(
                                  << zx_status_get_string(status);
     return fpromise::error(status);
   }
-  event.set_success(true);
   // We rely on trim going first because the callbacks need to be after the trim operations have
   // been submitted (e.g. it's not safe to send new data operations until after trim operations have
   // been submitted).
@@ -154,7 +141,6 @@ zx_status_t JournalWriter::WriteOperationToJournal(const storage::BlockBufferVie
 }
 
 fpromise::result<void, zx_status_t> JournalWriter::Sync() {
-  auto event = metrics()->NewLatencyEvent(fs_metrics::Event::kJournalWriterSync);
   if (!IsWritebackEnabled()) {
     return fpromise::error(ZX_ERR_IO_REFUSED);
   }
@@ -168,7 +154,6 @@ fpromise::result<void, zx_status_t> JournalWriter::Sync() {
   if (status != ZX_OK) {
     return fpromise::error(status);
   }
-  event.set_success(true);
   return fpromise::ok();
 }
 
@@ -257,8 +242,6 @@ zx_status_t JournalWriter::WriteInfoBlock() {
       return result.take_error();
     }
   }
-  auto event = metrics()->NewLatencyEvent(fs_metrics::Event::kJournalWriterWriteInfoBlock);
-  event.set_block_count(InfoLength());
   ZX_DEBUG_ASSERT(next_sequence_number_ > journal_superblock_.sequence_number());
   FX_LOGST(DEBUG, "journal") << "WriteInfoBlock: Updating sequence_number from "
                              << journal_superblock_.sequence_number() << " to "
@@ -278,8 +261,6 @@ zx_status_t JournalWriter::WriteInfoBlock() {
   if (status != ZX_OK) {
     return status;
   }
-  event.set_success(true);
-
   // Immediately after the info block is updated, no metadata operations should be replayed
   // on reboot.
   live_metadata_operations_.Clear();

@@ -139,6 +139,8 @@ static_library("minfs") {
       "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
       "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
       "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_llcpp",
+      "//sdk/lib/inspect/service/cpp:cpp",
+      "//sdk/lib/sys/cpp:cpp",
       "//sdk/lib/syslog/cpp",
       "//src/storage/fvm",
       "//zircon/system/ulib/async",

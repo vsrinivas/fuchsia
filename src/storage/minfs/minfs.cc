@@ -51,7 +51,6 @@
 #include "src/lib/storage/vfs/cpp/journal/header_view.h"
 #include "src/lib/storage/vfs/cpp/journal/journal.h"
 #include "src/lib/storage/vfs/cpp/journal/replay.h"
-#include "src/lib/storage/vfs/cpp/metrics/events.h"
 #include "src/storage/fvm/client.h"
 #endif
 
@@ -1316,7 +1315,7 @@ zx::status<> Minfs::InitializeJournal(fs::JournalSuperblock journal_superblock) 
 
   journal_ = std::make_unique<fs::Journal>(GetMutableBcache(), std::move(journal_superblock),
                                            std::move(journal_buffer), std::move(writeback_buffer),
-                                           JournalStartBlock(sb_->Info()), fs::Journal::Options());
+                                           JournalStartBlock(sb_->Info()));
   return zx::ok();
 }
 

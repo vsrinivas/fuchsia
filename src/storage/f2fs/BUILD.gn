@@ -118,6 +118,7 @@ static_library("f2fs") {
       "//sdk/fidl/fuchsia.fs:fuchsia.fs_llcpp",
       "//sdk/fidl/fuchsia.io",
       "//sdk/lib/fdio",
+      "//sdk/lib/inspect/service/cpp",
       "//src/lib/storage/vfs/cpp/metrics:metrics-cobalt",
       "//zircon/system/ulib/async",
       "//zircon/system/ulib/async:async-cpp",

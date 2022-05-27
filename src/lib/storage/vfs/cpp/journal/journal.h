@@ -8,13 +8,11 @@
 #include <lib/fpromise/barrier.h>
 #include <lib/fpromise/promise.h>
 #include <lib/fpromise/sequencer.h>
-#include <lib/inspect/cpp/inspect.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
 
 #include <algorithm>
 
-#include <cobalt-client/cpp/collector.h>
 #include <fbl/vector.h>
 #include <storage/buffer/blocking_ring_buffer.h>
 #include <storage/buffer/ring_buffer.h>
@@ -23,9 +21,7 @@
 #include "src/lib/storage/vfs/cpp/journal/background_executor.h"
 #include "src/lib/storage/vfs/cpp/journal/format.h"
 #include "src/lib/storage/vfs/cpp/journal/journal_writer.h"
-#include "src/lib/storage/vfs/cpp/journal/metrics.h"
 #include "src/lib/storage/vfs/cpp/journal/superblock.h"
-#include "src/lib/storage/vfs/cpp/metrics/events.h"
 #include "src/lib/storage/vfs/cpp/transaction/transaction_handler.h"
 
 namespace fs {
@@ -59,13 +55,6 @@ class Journal final : public fpromise::executor {
  public:
   using Promise = fpromise::promise<void, zx_status_t>;
 
-  struct Options {
-    // Pointer to MetricsTrait that helps journal maintain metrics. The reference to MetricsTrait is
-    // dropped when Journal object is destroyed. A nullptr implies that the user doesn't use/want
-    // journal metrics.
-    std::shared_ptr<MetricsTrait> metrics;
-  };
-
   struct Transaction {
     // Mandatory; for now, there is no support for data/trim-only transactions.
     std::vector<storage::UnbufferedOperation> metadata_operations;
@@ -98,7 +87,7 @@ class Journal final : public fpromise::executor {
   Journal(fs::TransactionHandler* transaction_handler, JournalSuperblock journal_superblock,
           std::unique_ptr<storage::BlockingRingBuffer> journal_buffer,
           std::unique_ptr<storage::BlockingRingBuffer> writeback_buffer,
-          uint64_t journal_start_block, Options options);
+          uint64_t journal_start_block);
 
   // Synchronizes with the background thread to ensure all enqueued work is complete before
   // returning.
@@ -122,7 +111,6 @@ class Journal final : public fpromise::executor {
 
   // Schedules a promise to the journals background thread executor.
   void schedule_task(fpromise::pending_task task) final {
-    auto event = metrics_->NewLatencyEvent(fs_metrics::Event::kJournalScheduleTask);
     executor_.schedule_task(std::move(task));
   }
 
@@ -136,8 +124,6 @@ class Journal final : public fpromise::executor {
   bool IsWritebackEnabled() const { return writer_.IsWritebackEnabled(); }
 
  private:
-  JournalMetrics* metrics() { return metrics_.get(); }
-
   // Flushes blocks that have been delayed until we can flush.  See related |pending_ below.
   void FlushPending();
 
@@ -162,18 +148,12 @@ class Journal final : public fpromise::executor {
   // A promise that we use to block writes to the journal until data writes have been flushed.
   fpromise::promise<> journal_data_barrier_;
 
-  // Journal metrics. This metrics is shared with JournalWriter and potentially other threads. The
-  // reference to MetricsTrait is dropped when Journal object is destroyed.
-  std::shared_ptr<JournalMetrics> metrics_;
-
   internal::JournalWriter writer_;
 
   // Intentionally place the executor at the end of the journal. This ensures that during
   // destruction, the executor can complete pending tasks operation on the writeback buffers before
   // the writeback buffers are destroyed.
   BackgroundExecutor executor_;
-
-  const Options options_;
 
   // The callback will be called synchronously after metadata has been submitted to the underlying
   // device. This is after both the writes to the journal ring buffer and the actual metadata

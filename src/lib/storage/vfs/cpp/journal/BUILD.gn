@@ -64,12 +64,7 @@ static_library("journal") {
       "superblock.cc",
     ]
     public_deps += [
-      "//sdk/lib/sys/inspect/cpp",
-      "//src/lib/storage/vfs/cpp/metrics:metrics-cobalt",
-      "//src/lib/storage/vfs/cpp/metrics:metrics-composite-latency-event",
-      "//src/lib/storage/vfs/cpp/metrics:metrics-inspect",
       "//src/storage/lib/disk_inspector",
-      "//zircon/system/ulib/cobalt-client",
       "//zircon/system/ulib/fzl",
       "//zircon/system/ulib/range",
       "//zircon/system/ulib/storage/buffer",
@@ -123,16 +118,10 @@ test("journal-unit") {
   deps = [
     ":journal",
     "//sdk/lib/fit-promise",
-    "//sdk/lib/sys/inspect/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/block_client/cpp:fake_device",
-    "//src/lib/storage/vfs/cpp/metrics:metrics-cobalt",
-    "//src/lib/storage/vfs/cpp/metrics:metrics-composite-latency-event",
-    "//src/lib/storage/vfs/cpp/metrics:metrics-inspect",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/system/ulib/cobalt-client",
-    "//zircon/system/ulib/cobalt-client:in-memory-logger",
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
     "//zircon/third_party/ulib/cksum",
@@ -148,11 +137,6 @@ source_set("fuzz-utils") {
   sources = [ "fuzzer_utils.cc" ]
   public_deps = [
     ":journal",
-    "//sdk/lib/sys/inspect/cpp",
-    "//src/lib/storage/vfs/cpp/metrics:metrics-cobalt",
-    "//src/lib/storage/vfs/cpp/metrics:metrics-composite-latency-event",
-    "//src/lib/storage/vfs/cpp/metrics:metrics-inspect",
-    "//zircon/system/ulib/cobalt-client",
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
     "//zircon/third_party/ulib/cksum",
