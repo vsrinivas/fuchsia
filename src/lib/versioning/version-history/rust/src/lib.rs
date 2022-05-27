@@ -2,6 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use std::{
+    array::TryFromSliceError,
+    convert::{TryFrom, TryInto},
+    fmt,
+};
+
 /// VERSION_HISTORY is an array of all the known SDK versions.  It is guaranteed
 /// (at compile-time) by the proc_macro to be non-empty.
 pub const VERSION_HISTORY: &[Version] = &version_history_macro::declare_version_history!();
@@ -10,11 +16,62 @@ pub const VERSION_HISTORY: &[Version] = &version_history_macro::declare_version_
 pub const LATEST_VERSION: &Version = &version_history_macro::latest_sdk_version!();
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Copy, Clone)]
-pub struct ABIRevision(pub u64);
+pub struct AbiRevision(pub u64);
 
-impl ABIRevision {
-    pub fn new(u: u64) -> ABIRevision {
-        ABIRevision(u)
+impl AbiRevision {
+    pub fn new(u: u64) -> AbiRevision {
+        AbiRevision(u)
+    }
+
+    /// Parse the ABI revision from little-endian bytes.
+    pub fn from_bytes(b: [u8; 8]) -> Self {
+        AbiRevision(u64::from_le_bytes(b))
+    }
+
+    /// Encode the ABI revision into little-endian bytes.
+    pub fn as_bytes(&self) -> [u8; 8] {
+        self.0.to_le_bytes()
+    }
+}
+
+impl fmt::Display for AbiRevision {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:x}", self.0)
+    }
+}
+
+impl From<u64> for AbiRevision {
+    fn from(abi_revision: u64) -> AbiRevision {
+        AbiRevision(abi_revision)
+    }
+}
+
+impl From<AbiRevision> for u64 {
+    fn from(abi_revision: AbiRevision) -> u64 {
+        abi_revision.0
+    }
+}
+
+impl From<[u8; 8]> for AbiRevision {
+    fn from(abi_revision: [u8; 8]) -> AbiRevision {
+        AbiRevision::from_bytes(abi_revision)
+    }
+}
+
+impl TryFrom<&[u8]> for AbiRevision {
+    type Error = TryFromSliceError;
+
+    fn try_from(abi_revision: &[u8]) -> Result<AbiRevision, Self::Error> {
+        let abi_revision: [u8; 8] = abi_revision.try_into()?;
+        Ok(AbiRevision::from_bytes(abi_revision))
+    }
+}
+
+impl std::ops::Deref for AbiRevision {
+    type Target = u64;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
@@ -30,12 +87,12 @@ pub struct Version {
 
     /// The ABI revision denotes the semantics of the Fuchsia System Interface that an application
     /// expects the platform to provide.
-    pub abi_revision: ABIRevision,
+    pub abi_revision: AbiRevision,
 }
 
 /// Returns true if the given abi_revision is listed in the VERSION_HISTORY of
 /// known SDK versions.
-pub fn is_valid_abi_revision(abi_revision: ABIRevision) -> bool {
+pub fn is_valid_abi_revision(abi_revision: AbiRevision) -> bool {
     VERSION_HISTORY.iter().any(|v| v.abi_revision == abi_revision)
 }
 
@@ -52,7 +109,7 @@ mod tests {
             .into_iter()
             .map(|v| Version {
                 api_level: v.api_level,
-                abi_revision: ABIRevision::new(v.abi_revision.value),
+                abi_revision: AbiRevision::new(v.abi_revision.value),
             })
             .collect::<Vec<_>>()
     }
@@ -84,9 +141,9 @@ mod tests {
         fn test_invalid_abi_revision(u in any::<u64>().prop_filter("using u64 that isn't in VERSION_HISTORY", |u|
             // The randomly chosen 'abi_revision' must not equal any of the
             // abi_revisions in the VERSION_HISTORY list.
-            VERSION_HISTORY.iter().all(|v| v.abi_revision != ABIRevision::new(*u))
+            VERSION_HISTORY.iter().all(|v| v.abi_revision != AbiRevision::new(*u))
         )) {
-            assert!(!is_valid_abi_revision(ABIRevision::new(u)))
+            assert!(!is_valid_abi_revision(AbiRevision::new(u)))
         }
     }
 }

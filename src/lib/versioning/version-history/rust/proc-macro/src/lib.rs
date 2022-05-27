@@ -14,7 +14,7 @@ pub fn declare_version_history(_tokens: TokenStream) -> TokenStream {
     let mut tokens = String::from("[");
     for version in versions {
         tokens.push_str(&format!(
-            "Version {{ api_level: {}, abi_revision: ABIRevision({}) }},",
+            "Version {{ api_level: {}, abi_revision: AbiRevision({}) }},",
             version.api_level, version.abi_revision.value
         ));
     }
@@ -29,7 +29,7 @@ pub fn latest_sdk_version(_tokens: TokenStream) -> TokenStream {
     let latest_version =
         versions.last().expect("version-history.json did not contain any versions");
     format!(
-        "Version {{ api_level: {}, abi_revision: ABIRevision({}) }}",
+        "Version {{ api_level: {}, abi_revision: AbiRevision({}) }}",
         latest_version.api_level, latest_version.abi_revision.value
     )
     .parse()

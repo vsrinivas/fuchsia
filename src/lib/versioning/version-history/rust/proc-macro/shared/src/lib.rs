@@ -13,17 +13,17 @@ const VERSION_HISTORY_NAME: &str = "Platform version map";
 const VERSION_HISTORY_TYPE: &str = "version_history";
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct ABIRevision {
+pub struct AbiRevision {
     pub value: u64,
 }
 
-impl ABIRevision {
-    pub fn new(u: u64) -> ABIRevision {
-        ABIRevision { value: u }
+impl AbiRevision {
+    pub fn new(u: u64) -> AbiRevision {
+        AbiRevision { value: u }
     }
 }
 
-impl Serialize for ABIRevision {
+impl Serialize for AbiRevision {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -32,8 +32,8 @@ impl Serialize for ABIRevision {
     }
 }
 
-impl<'de> Deserialize<'de> for ABIRevision {
-    fn deserialize<D>(deserializer: D) -> Result<ABIRevision, D::Error>
+impl<'de> Deserialize<'de> for AbiRevision {
+    fn deserialize<D>(deserializer: D) -> Result<AbiRevision, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -44,7 +44,7 @@ impl<'de> Deserialize<'de> for ABIRevision {
             u64::from_str_radix(&s, 10)
         }
         .map_err(|_| D::Error::invalid_value(Unexpected::Str(&s), &"an unsigned integer"))
-        .map(|v| ABIRevision { value: v })
+        .map(|v| AbiRevision { value: v })
     }
 }
 
@@ -52,7 +52,7 @@ impl<'de> Deserialize<'de> for ABIRevision {
 pub struct Version {
     #[serde(with = "serde_u64")]
     pub api_level: u64,
-    pub abi_revision: ABIRevision,
+    pub abi_revision: AbiRevision,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -133,7 +133,7 @@ mod tests {
         let versions = version_history().unwrap();
         assert_eq!(
             versions[0],
-            Version { api_level: 4, abi_revision: ABIRevision::new(0x601665C5B1A89C7F) }
+            Version { api_level: 4, abi_revision: AbiRevision::new(0x601665C5B1A89C7F) }
         )
     }
 
@@ -160,8 +160,8 @@ mod tests {
         assert_eq!(
             parse_version_history(&expected_bytes[..]).unwrap(),
             vec![
-                Version { api_level: 1, abi_revision: ABIRevision::new(10) },
-                Version { api_level: 2, abi_revision: ABIRevision::new(0x20) },
+                Version { api_level: 1, abi_revision: AbiRevision::new(10) },
+                Version { api_level: 2, abi_revision: AbiRevision::new(0x20) },
             ],
         );
     }
