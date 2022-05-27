@@ -211,7 +211,9 @@ void TestContext::run(std::function<void()> when, std::function<bool(const Obser
   // Wait for.
   //
   // Note that timeout management is managed by run_until.
-  test_base_->run_until([&]() { return wait_for(Observations(*observations_being_recorded_)); });
+  bool collected_observations = test_base_->run_until(
+      [&]() { return wait_for(Observations(*observations_being_recorded_)); });
+  ASSERT_TRUE(collected_observations) << "timed out collecting observations";
 
   // Then observe.
   then_observe(Observations(*observations_being_recorded_));
@@ -274,21 +276,9 @@ TestContext& TestBase::context() {
   return context_.value();
 }
 
-void TestBase::run_until(std::function<bool()> condition) {
-  // We are preferring to explicitly manage the timeout rather than use
-  // RunLoopWithTimeoutOrUntil to provide an explicit explanation as to why we
-  // exited the loop.
-  auto start = std::chrono::system_clock::now();
-  RunLoopUntil([&]() {
-    if (condition()) {
-      return true;
-    }
-    if (auto now = std::chrono::system_clock::now(); now - start > std::chrono::seconds(5)) {
-      EXPECT_TRUE(false && "test timed out");
-      return true;
-    }
-    return false;
-  });
+bool TestBase::run_until(std::function<bool()> condition) {
+  constexpr zx::duration kTimeoutDuration = zx::sec(5);
+  return RunLoopWithTimeoutOrUntil(condition, kTimeoutDuration);
 }
 
 When TestBase::when(std::function<void()> when_fn) { return When(context_.value(), when_fn); }
@@ -300,7 +290,9 @@ void ServerTest::SetUp() {
   context().start_server_test();
   client_end = context().TakeClientEndToTest().release();
   context().SyncOnProgramPoint(kSomeProgramPoint);
-  run_until([&] { return context().HasReachedProgramPoint(kSomeProgramPoint); });
+  bool reached_initial_program_point =
+      run_until([&] { return context().HasReachedProgramPoint(kSomeProgramPoint); });
+  ASSERT_TRUE(reached_initial_program_point) << "timed out reaching program point";
 }
 
 void ServerTest::TearDown() {

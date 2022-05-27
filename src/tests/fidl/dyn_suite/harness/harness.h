@@ -172,7 +172,9 @@ class WaitFor : private When {
 
 class TestBase : private ::loop_fixture::RealLoop, public ::testing::Test {
  public:
-  void run_until(std::function<bool()> condition);
+  // Return value is true if condition was met, or false if a timeout occurred before meeting the
+  // condition.
+  [[nodiscard]] bool run_until(std::function<bool()> condition);
   [[nodiscard]] When when(std::function<void()> when_fn);
 
  protected:

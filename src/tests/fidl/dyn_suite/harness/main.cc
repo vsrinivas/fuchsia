@@ -37,7 +37,7 @@ TEST_F(ServerTest, Bad_ClientClosingChannelCausesUnbind) {
     }).then_observe([&](auto observations) {
     // We are not opinionated about what has been observed, just that the last
     // two observations must be unbinding and completion.
-    EXPECT_TRUE(2u <= observations.size());
+    ASSERT_TRUE(2u <= observations.size());
     auto last = observations.size() - 1;
     EXPECT_EQ(Observation::Kind::kOnUnbind, observations[last - 1].kind());
     EXPECT_EQ(Observation::Kind::kOnComplete, observations[last].kind());
@@ -54,7 +54,7 @@ TEST_F(ServerTest, Bad_WrongOrdinalCausesUnbind) {
       return observations.has(Observation::Kind::kOnComplete);
     }).then_observe([&](auto observations) {
     // Some bindings observe an error, which will precede unbinding.
-    EXPECT_TRUE(2u <= observations.size());
+    ASSERT_TRUE(2u <= observations.size());
     auto last = observations.size() - 1;
     EXPECT_EQ(Observation::Kind::kOnUnbind, observations[last - 1].kind());
     EXPECT_EQ(Observation::Kind::kOnComplete, observations[last].kind());
@@ -75,7 +75,7 @@ TEST_F(ServerTest, Good_OneWayInteraction) {
   }).wait_for([&](auto observations) {
       return 2 <= observations.size();
     }).then_observe([&](auto observations) {
-    EXPECT_EQ(2u, observations.size());
+    ASSERT_EQ(2u, observations.size());
     EXPECT_EQ(Observation::Kind::kOnMethodInvocation, observations[0].kind());
     EXPECT_EQ(Observation::Kind::kOnMethodInvocation, observations[1].kind());
   });
@@ -96,7 +96,7 @@ TEST_F(ServerTest, Bad_OneWayInteractionWithTxIdNotZero) {
       return 2 <= observations.size();
     }).then_observe([&](auto observations) {
     // Some bindings observe an error, which will precede unbinding.
-    EXPECT_TRUE(2u <= observations.size());
+    ASSERT_TRUE(2u <= observations.size());
     auto last = observations.size() - 1;
     EXPECT_EQ(Observation::Kind::kOnUnbind, observations[last - 1].kind());
     EXPECT_EQ(Observation::Kind::kOnComplete, observations[last].kind());
@@ -115,7 +115,7 @@ TEST_F(ClientTest, Good_ServerClosesChannel) {
       return 2 <= observations.size();
     }).then_observe([&](auto observations) {
     // Some bindings observe an error, which will precede unbinding.
-    EXPECT_TRUE(2u <= observations.size());
+    ASSERT_TRUE(2u <= observations.size());
     auto last = observations.size() - 1;
     EXPECT_EQ(Observation::Kind::kOnUnbind, observations[last - 1].kind());
     EXPECT_EQ(Observation::Kind::kOnComplete, observations[last].kind());
