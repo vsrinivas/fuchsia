@@ -100,7 +100,7 @@ blk_t LogicalBlockDoublyIndirect(blk_t doubly_indirect, blk_t indirect = 0, blk_
 
 class MinfsChecker {
  public:
-  static zx::status<std::unique_ptr<MinfsChecker>> Create(FuchsiaDispatcher* dispatcher,
+  static zx::status<std::unique_ptr<MinfsChecker>> Create(FuchsiaDispatcher dispatcher,
                                                           std::unique_ptr<Bcache> bc,
                                                           const FsckOptions& options);
 
@@ -809,7 +809,7 @@ zx::status<> MinfsChecker::CheckSuperblockIntegrity() const {
 #endif
 }
 
-zx::status<std::unique_ptr<MinfsChecker>> MinfsChecker::Create(FuchsiaDispatcher* dispatcher,
+zx::status<std::unique_ptr<MinfsChecker>> MinfsChecker::Create(FuchsiaDispatcher dispatcher,
                                                                std::unique_ptr<Bcache> bc,
                                                                const FsckOptions& fsck_options) {
   auto fs_or = Minfs::Create(
@@ -1116,11 +1116,14 @@ zx::status<> ReconstructAllocCounts(fs::TransactionHandler* transaction_handler,
 }
 
 zx::status<std::unique_ptr<Bcache>> Fsck(std::unique_ptr<Bcache> bc, const FsckOptions& options) {
+  FuchsiaDispatcher dispatcher = nullptr;  // Use null for the dispatcher on host.
 #ifdef __Fuchsia__
-  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  async_dispatcher_t* dispatcher = loop.dispatcher();
-#else
-  std::nullptr_t dispatcher = nullptr;  // Use null for the dispatcher on host.
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  dispatcher = loop.dispatcher();
+  if (zx_status_t status = loop.StartThread(); status != ZX_OK) {
+    FX_LOGS(ERROR) << "Cannot initialize dispatch loop: " << zx_status_get_string(status);
+    return zx::error(status);
+  }
 #endif
 
   auto chk_or = MinfsChecker::Create(dispatcher, std::move(bc), options);

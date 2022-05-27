@@ -30,7 +30,10 @@ zx::status<uint32_t> File::GetRequiredBlockCountForDirtyCache(size_t offset, siz
   return zx::ok(uncached_block_count);
 }
 
-zx::status<> File::MarkRequiredBlocksPending(size_t offset, size_t length) { return zx::ok(); }
+zx::status<> File::MarkRequiredBlocksPending(size_t offset, size_t length,
+                                             const Transaction& transaction) {
+  return zx::ok();
+}
 
 zx::status<> File::FlushCachedWrites() { return zx::ok(); }
 void File::DropCachedWrites() {}

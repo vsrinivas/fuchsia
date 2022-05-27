@@ -88,20 +88,22 @@ zx::status<uint32_t> File::GetRequiredBlockCountForDirtyCache(size_t offset, siz
   return zx::ok(uncached_block_count);
 }
 
-zx::status<> File::MarkRequiredBlocksPending(size_t offset, size_t length) {
+zx::status<> File::MarkRequiredBlocksPending(size_t offset, size_t length,
+                                             const Transaction& transaction) {
   ZX_ASSERT(DirtyCacheEnabled());
 
   // Caller should have validated the length.
   ZX_ASSERT(length > 0);
 
+  // The caller should ensure that the given transaction extended the volume enough to back all
+  // outstanding reservations.
+  ZX_ASSERT(Vfs()->AllReservationsBacked(transaction));
+
   WalkWriteBlockHandlerType mark_pending = [this](uint32_t block, bool allocated,
                                                   bool is_pending) -> zx::status<> {
     if (!is_pending) {
       allocation_state_.SetPending(block, allocated);
-      auto status = Vfs()->AddDirtyBytes(Vfs()->BlockSize(), allocated);
-      if (status.is_error()) {
-        return status.take_error();
-      }
+      Vfs()->AddDirtyBytes(Vfs()->BlockSize());
     }
     return zx::ok();
   };
@@ -122,7 +124,7 @@ void File::DropCachedWrites() {
       return zx::ok();
     }
     allocation_state_.ClearPending(block, allocated);
-    Vfs()->SubtractDirtyBytes(Vfs()->BlockSize(), allocated);
+    Vfs()->SubtractDirtyBytes(Vfs()->BlockSize());
     block_count++;
     return zx::ok();
   };

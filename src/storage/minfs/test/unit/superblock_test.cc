@@ -57,7 +57,6 @@ void CreateAndRegisterVmo(block_client::BlockDevice* device, size_t blocks, zx::
 }
 
 void FillSuperblockFields(Superblock* info) {
-  constexpr uint32_t kDefaultAllocCount = 2;
   info->magic0 = kMinfsMagic0;
   info->magic1 = kMinfsMagic1;
   info->major_version = kMinfsCurrentMajorVersion;
@@ -69,10 +68,10 @@ void FillSuperblockFields(Superblock* info) {
   info->ibm_block = ibm_block;
   info->abm_block = abm_block;
   info->ino_block = abm_block;
-  info->block_count = 1;
-  info->inode_count = 1;
-  info->alloc_block_count = kDefaultAllocCount;
-  info->alloc_inode_count = kDefaultAllocCount;
+  info->block_count = 4;
+  info->inode_count = 4;
+  info->alloc_block_count = 2;
+  info->alloc_inode_count = 2;
   info->generation_count = 0;
   info->oldest_minor_version = kMinfsCurrentMinorVersion;
   minfs::UpdateChecksum(info);
