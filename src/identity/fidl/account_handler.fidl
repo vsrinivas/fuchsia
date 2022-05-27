@@ -108,14 +108,7 @@ protocol AccountHandlerControl {
     /// successful call to RemoveAccount, all other open interfaces for this
     /// account handler will be closed and any subsequent calls on the current
     /// interface will fail.
-    ///
-    /// `force` If true, continues removing the account even if revocation of
-    ///         credentials fails. If false, any revocation failure will result
-    ///         in an error and the account will remain. In this case, a subset
-    ///         of the credentials may have been deleted.
-    RemoveAccount(struct {
-        force bool;
-    }) -> (struct {}) error fuchsia.identity.account.Error;
+    RemoveAccount() -> (struct {}) error fuchsia.identity.account.Error;
 
     // TODO(jsankey): Add methods to cover adding an existing account and
     // handling an account where the disk is not yet decrypted.

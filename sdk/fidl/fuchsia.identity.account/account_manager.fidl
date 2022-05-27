@@ -89,13 +89,8 @@ protocol AccountManager {
     /// any credentials that are held for the account.
     ///
     /// `id` The account's identifier as returned by GetAccountIds()
-    /// `force` If true, continues removing the account even if revocation of
-    ///         credentials fails. If false, any revocation failure will result
-    ///         in an error and the account will remain. In this case, a subset
-    ///         of the credentials may have been deleted.
     RemoveAccount(struct {
         id AccountId;
-        force bool;
     }) -> (struct {}) error Error;
 
     /// Removes a provisioned system account from the current device.

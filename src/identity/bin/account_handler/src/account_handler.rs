@@ -144,8 +144,8 @@ impl AccountHandler {
                 let mut response = self.lock_account().await;
                 responder.send(&mut response)?;
             }
-            AccountHandlerControlRequest::RemoveAccount { force, responder } => {
-                let mut response = self.remove_account(force).await;
+            AccountHandlerControlRequest::RemoveAccount { responder } => {
+                let mut response = self.remove_account().await;
                 responder.send(&mut response)?;
             }
             AccountHandlerControlRequest::GetAccount {
@@ -334,12 +334,7 @@ impl AccountHandler {
     }
 
     /// Remove the active account. This method should not be retried on failure.
-    // TODO(fxbug.dev/555): Implement graceful account removal.
-    async fn remove_account(&self, force: bool) -> Result<(), ApiError> {
-        if force == false {
-            warn!("Graceful (non-force) account removal not yet implemented.");
-            return Err(ApiError::UnsupportedOperation);
-        }
+    async fn remove_account(&self) -> Result<(), ApiError> {
         let old_lifecycle = {
             let mut state_lock = self.state.lock().await;
             std::mem::replace(&mut *state_lock, Lifecycle::Finished)
@@ -557,9 +552,6 @@ mod tests {
     use futures::future::join;
     use lazy_static::lazy_static;
     use std::sync::Arc;
-
-    const FORCE_REMOVE_ON: bool = true;
-    const FORCE_REMOVE_OFF: bool = false;
 
     const TEST_AUTH_MECHANISM_ID: &str = "<AUTH MECHANISM ID>";
     const TEST_INVALID_AUTH_MECHANISM_ID: &str = "<INVALID AUTH MECHANISM ID>";
@@ -1126,15 +1118,8 @@ mod tests {
                     proxy.get_account(acp_client_end, account_server_end).await??;
                     let account_proxy = account_client_end.into_proxy().unwrap();
 
-                    // Simple check that non-force account removal returns error due to not
-                    // implemented.
-                    assert_eq!(
-                        proxy.remove_account(FORCE_REMOVE_OFF).await?,
-                        Err(ApiError::UnsupportedOperation)
-                    );
-
                     // Make sure remove_account() can make progress with an open channel.
-                    proxy.remove_account(FORCE_REMOVE_ON).await??;
+                    proxy.remove_account().await??;
 
                     assert_data_tree!(inspector, root: {
                         account_handler: {
@@ -1147,10 +1132,7 @@ mod tests {
                     assert!(account_proxy.get_auth_state().await.is_err());
 
                     // We cannot remove twice.
-                    assert_eq!(
-                        proxy.remove_account(FORCE_REMOVE_ON).await?,
-                        Err(ApiError::FailedPrecondition)
-                    );
+                    assert_eq!(proxy.remove_account().await?, Err(ApiError::FailedPrecondition));
                     Ok(())
                 }
             },
@@ -1167,7 +1149,7 @@ mod tests {
             Arc::new(Inspector::new()),
             |proxy| async move {
                 proxy.preload().await??; // Preloading a non-existing account will succeed, for now
-                assert_eq!(proxy.remove_account(false).await?, Err(ApiError::UnsupportedOperation));
+                assert_eq!(proxy.remove_account().await?, Err(ApiError::UnsupportedOperation));
                 Ok(())
             },
         );
@@ -1182,10 +1164,7 @@ mod tests {
             None,
             Arc::new(Inspector::new()),
             |proxy| async move {
-                assert_eq!(
-                    proxy.remove_account(FORCE_REMOVE_ON).await?,
-                    Err(ApiError::FailedPrecondition)
-                );
+                assert_eq!(proxy.remove_account().await?, Err(ApiError::FailedPrecondition));
                 Ok(())
             },
         );
@@ -1213,7 +1192,7 @@ mod tests {
                     proxy.terminate()?;
 
                     // Check that further operations fail
-                    assert!(proxy.remove_account(FORCE_REMOVE_ON).await.is_err());
+                    assert!(proxy.remove_account().await.is_err());
                     assert!(proxy.terminate().is_err());
 
                     // Make sure that the channel closed too.

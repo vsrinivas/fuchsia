@@ -351,7 +351,7 @@ async fn remove_account_succeeds_and_terminates_clients() {
     assert_eq!(account_ids, vec![1]);
 
     account_manager
-        .remove_account(account_ids[0], false)
+        .remove_account(account_ids[0])
         .await
         .expect("remove_account FIDL")
         .expect("remove_account");

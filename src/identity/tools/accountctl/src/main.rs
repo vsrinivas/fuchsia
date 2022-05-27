@@ -47,7 +47,7 @@ async fn remove_all(account_manager: &AccountManagerProxy) -> Result<(), Error> 
     }
     for id in ids {
         account_manager
-            .remove_account(id, true)
+            .remove_account(id)
             .await?
             .map_err(|err| anyhow!("Failed to remove account {}: {:?}", id, err))?;
         println!("Removed account {}", id);
@@ -153,11 +153,9 @@ mod tests {
     impl RequestHandler for RemoveAccountHandler {
         fn handle(&self, req: AccountManagerRequest) -> Result<(), Error> {
             match req {
-                AccountManagerRequest::RemoveAccount { id, force, responder } => {
+                AccountManagerRequest::RemoveAccount { id, responder } => {
                     if id != self.id {
                         Err(anyhow!("Received RemoveAccount for {}, expected {}", id, self.id))
-                    } else if force != true {
-                        Err(anyhow!("Received RemoveAccount for {} without force set", id))
                     } else {
                         responder.send(&mut Ok(())).context("Failed to send response")
                     }

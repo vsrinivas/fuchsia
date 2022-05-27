@@ -219,7 +219,7 @@ async fn test_pinweaver_provision_and_remove_account_can_provision_again() {
 
     // Remove the account.
     account_manager
-        .remove_account(account_ids[0], false)
+        .remove_account(account_ids[0])
         .await
         .expect("remove_account FIDL")
         .expect("remove_account");

@@ -234,6 +234,6 @@ mod tests {
             DEFAULT_ACCOUNT_ID.clone(),
         )
         .unwrap();
-        assert!(conn.proxy().remove_account(true).await.unwrap_err().is_closed());
+        assert!(conn.proxy().remove_account().await.unwrap_err().is_closed());
     }
 }

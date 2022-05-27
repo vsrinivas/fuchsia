@@ -254,13 +254,13 @@ where
                 let mut resp = Err(faccount::Error::UnsupportedOperation);
                 responder.send(&mut resp).context("sending RegisterAccountListener response")?;
             }
-            AccountManagerRequest::RemoveAccount { id, force, responder } => {
-                let mut resp = self.remove_account(id, force).await;
+            AccountManagerRequest::RemoveAccount { id, responder } => {
+                let mut resp = self.remove_account(id).await;
                 responder.send(&mut resp).context("sending RemoveAccount response")?;
             }
             AccountManagerRequest::RemoveAccount2 { id, responder } => {
-                let mut resp = self.remove_account(id, true).await;
-                responder.send(&mut resp).context("sending RemoveAccount2 response")?;
+                let mut resp = self.remove_account(id).await;
+                responder.send(&mut resp).context("sending RemoveAccount response")?;
             }
             AccountManagerRequest::ProvisionNewAccount {
                 lifetime: _,
@@ -725,7 +725,7 @@ where
         Ok(id)
     }
 
-    async fn remove_account(&self, id: AccountId, _force: bool) -> Result<(), faccount::Error> {
+    async fn remove_account(&self, id: AccountId) -> Result<(), faccount::Error> {
         // To remove an account, we need to:
         // 1. lock the account, if it was unlocked
         // 2. remove the metadata from the account metadata store
@@ -2040,7 +2040,7 @@ mod test {
         let account_ids_before = account_manager.get_account_ids().await.expect("get account ids");
         assert_eq!(account_ids_before, vec![GLOBAL_ACCOUNT_ID]);
 
-        account_manager.remove_account(GLOBAL_ACCOUNT_ID, true).await.expect("remove_account");
+        account_manager.remove_account(GLOBAL_ACCOUNT_ID).await.expect("remove_account");
 
         let account_ids = account_manager.get_account_ids().await.expect("get account ids");
         assert_eq!(account_ids, Vec::<u64>::new());
@@ -2073,7 +2073,7 @@ mod test {
             .expect("get_data_directory FIDL")
             .expect("get_data_directory");
 
-        account_manager.remove_account(GLOBAL_ACCOUNT_ID, true).await.expect("remove_account");
+        account_manager.remove_account(GLOBAL_ACCOUNT_ID).await.expect("remove_account");
 
         // Expect actions on account to fail since the account should have been locked
         let (_, server_end) = fidl::endpoints::create_proxy().unwrap();
@@ -2109,7 +2109,7 @@ mod test {
         let account_ids_before = account_manager.get_account_ids().await.expect("get account ids");
         assert_eq!(account_ids_before, vec![GLOBAL_ACCOUNT_ID]);
 
-        account_manager.remove_account(GLOBAL_ACCOUNT_ID, true).await.expect("remove_account");
+        account_manager.remove_account(GLOBAL_ACCOUNT_ID).await.expect("remove_account");
 
         let account_ids = account_manager.get_account_ids().await.expect("get account ids");
         assert_eq!(account_ids, Vec::<u64>::new());
@@ -2134,7 +2134,7 @@ mod test {
         let account_ids_before = account_manager.get_account_ids().await.expect("get account ids");
         assert_eq!(account_ids_before, vec![GLOBAL_ACCOUNT_ID]);
 
-        account_manager.remove_account(GLOBAL_ACCOUNT_ID, true).await.expect("remove_account");
+        account_manager.remove_account(GLOBAL_ACCOUNT_ID).await.expect("remove_account");
 
         let account_ids = account_manager.get_account_ids().await.expect("get account ids");
         assert_eq!(account_ids, Vec::<u64>::new());
@@ -2158,7 +2158,7 @@ mod test {
         let account_ids_before = account_manager.get_account_ids().await.expect("get account ids");
         assert_eq!(account_ids_before, vec![GLOBAL_ACCOUNT_ID]);
 
-        account_manager.remove_account(GLOBAL_ACCOUNT_ID, true).await.expect("remove_account");
+        account_manager.remove_account(GLOBAL_ACCOUNT_ID).await.expect("remove_account");
 
         let account_ids = account_manager.get_account_ids().await.expect("get account ids");
         assert_eq!(account_ids, Vec::<u64>::new());

@@ -115,12 +115,12 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
                 let mut response = self.register_account_listener(listener, options).await;
                 responder.send(&mut response)?;
             }
-            AccountManagerRequest::RemoveAccount { id, force, responder } => {
-                let mut response = self.remove_account(id.into(), force).await;
+            AccountManagerRequest::RemoveAccount { id, responder } => {
+                let mut response = self.remove_account(id.into()).await;
                 responder.send(&mut response)?;
             }
             AccountManagerRequest::RemoveAccount2 { id, responder } => {
-                let mut response = self.remove_account(id.into(), true).await;
+                let mut response = self.remove_account(id.into()).await;
                 responder.send(&mut response)?;
             }
             AccountManagerRequest::ProvisionNewAccount {
@@ -192,7 +192,7 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
         Ok(())
     }
 
-    async fn remove_account(&self, account_id: AccountId, force: bool) -> Result<(), ApiError> {
+    async fn remove_account(&self, account_id: AccountId) -> Result<(), ApiError> {
         let mut account_map = self.account_map.lock().await;
         let account_handler = account_map.get_handler(&account_id).await.map_err(|err| {
             warn!("Could not get account handler for account removal {:?}", err);
@@ -201,7 +201,7 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
         // TODO(fxbug.dev/43491): Make a conscious decision on what should happen when removing
         // a locked account.
         account_handler.proxy().unlock_account().await.map_err(|_| ApiError::Resource)??;
-        account_handler.proxy().remove_account(force).await.map_err(|_| ApiError::Resource)??;
+        account_handler.proxy().remove_account().await.map_err(|_| ApiError::Resource)??;
         account_handler.terminate().await;
         // Emphemeral accounts were never included in the StoredAccountList and so it does not need
         // to be modified when they are removed.
@@ -315,8 +315,6 @@ mod tests {
             ..AuthChangeGranularity::EMPTY
         };
     }
-
-    const FORCE_REMOVE_ON: bool = true;
 
     fn request_stream_test<TestFn, Fut>(account_manager: TestAccountManager, test_fn: TestFn)
     where
@@ -435,7 +433,7 @@ mod tests {
             async move {
                 // Try to delete a very different account from the one we added.
                 assert_eq!(
-                    proxy.remove_account(AccountId::new(42).into(), FORCE_REMOVE_ON).await?,
+                    proxy.remove_account(AccountId::new(42).into()).await?,
                     Err(ApiError::NotFound)
                 );
                 assert_data_tree!(inspector, root: contains {

@@ -332,7 +332,7 @@ async fn test_account_deletion() -> Result<(), Error> {
     assert_eq!(existing_accounts.len(), 2);
 
     // Delete an account and verify it is removed.
-    assert_eq!(account_manager.remove_account(account_1, true).await?, Ok(()));
+    assert_eq!(account_manager.remove_account(account_1).await?, Ok(()));
     assert_eq!(account_manager.get_account_ids().await?, vec![account_2]);
     // Connecting to the deleted account should fail.
     let (acp_client_end, _acp_server_end) = create_endpoints()?;
@@ -384,7 +384,7 @@ async fn test_lifecycle() -> Result<(), Error> {
     );
 
     // Delete an account and verify it is removed.
-    assert_eq!(account_manager.remove_account(account_2, true).await?, Ok(()));
+    assert_eq!(account_manager.remove_account(account_2).await?, Ok(()));
     assert_eq!(account_manager.get_account_ids().await?, vec![account_1]);
 
     Ok(())
