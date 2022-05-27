@@ -53,7 +53,6 @@ class AudioDeviceStream {
 
   zx_status_t WatchPlugState(audio_stream_cmd_plug_detect_resp_t* out_state) const;
 
-  bool IsStreamBufChannelConnected() const { return IsChannelConnected(stream_ch_.channel()); }
   bool IsRingBufChannelConnected() const { return IsChannelConnected(rb_ch_.channel()); }
 
   fidl::ClientEnd<audio_fidl::StreamConfig>& BorrowStreamChannel() { return stream_ch_; }

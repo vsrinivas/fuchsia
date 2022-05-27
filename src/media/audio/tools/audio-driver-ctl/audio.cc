@@ -720,17 +720,13 @@ int main(int argc, const char** argv) {
   if (res != ZX_OK)
     return res;
 
-  if (!stream->IsStreamBufChannelConnected()) {
-    printf("No driver found\n");
+  auto formats = fidl::WireCall(stream->BorrowStreamChannel())->GetSupportedFormats();
+  if (!formats.ok()) {
+    printf("Can't connect to the driver\n");
     return ZX_ERR_BAD_STATE;
   }
 
   if (!channels.has_value()) {
-    auto formats = fidl::WireCall(stream->BorrowStreamChannel())->GetSupportedFormats();
-    if (!formats.ok()) {
-      printf("Error getting formats from the driver\n");
-      return ZX_ERR_BAD_STATE;
-    }
     if (formats.value_NEW().supported_formats.count() < 1 ||
         formats.value_NEW().supported_formats[0].pcm_supported_formats().channel_sets().count() <
             1) {
