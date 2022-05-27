@@ -258,11 +258,17 @@ type CodecDescription = struct {
     /// For each of these fields, the default is the most-capable setting, but
     /// if a codec doesn't support the most-capable behavior, then the codec
     /// must override the default.
+    @allow_deprecated_struct_defaults
     can_stream_bytes_input bool = true;
+    @allow_deprecated_struct_defaults
     can_find_start bool = true;
+    @allow_deprecated_struct_defaults
     can_re_sync bool = true;
+    @allow_deprecated_struct_defaults
     will_report_all_detected_errors bool = true;
+    @allow_deprecated_struct_defaults
     is_hw bool = true;
+    @allow_deprecated_struct_defaults
     split_header_handling bool = true;
 };
 

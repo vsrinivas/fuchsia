@@ -114,6 +114,7 @@ protocol SimpleStreamSink {
 type StreamPacket = struct {
     /// Time at which the packet is to be presented, according to the
     /// presentation clock.
+    @allow_deprecated_struct_defaults
     pts int64 = NO_TIMESTAMP;
 
     /// ID of the payload buffer used for this packet.
@@ -138,6 +139,7 @@ type StreamPacket = struct {
 
     /// An bitwise-or'ed set of flags (see constants below) describing
     /// properties of this packet.
+    @allow_deprecated_struct_defaults
     flags uint32 = 0;
 
     /// The buffer configuration associated with this packet. The semantics of
@@ -147,6 +149,7 @@ type StreamPacket = struct {
     /// are explicitly identified. In such cases, the `payload_buffer_id` refers
     /// to a payload buffer in the buffer configuration identified by this
     /// field.
+    @allow_deprecated_struct_defaults
     buffer_config uint64 = 0;
 
     /// The stream segment associated with this packet. The semantics of this
@@ -154,6 +157,7 @@ type StreamPacket = struct {
     /// contexts, this field is not used. This field is intended to distinguish
     /// contiguous segments of the stream where stream properties (e.g.
     /// encoding) may differ from segment to segment.
+    @allow_deprecated_struct_defaults
     stream_segment_id uint64 = 0;
 };
 

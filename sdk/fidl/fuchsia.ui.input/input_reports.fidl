@@ -33,13 +33,17 @@ type AxisScale = flexible enum {
 // An `Axis` is defined as a `range` and `resolution`.
 type Axis = struct {
     range Range;
+    @allow_deprecated_struct_defaults
     resolution int32 = 1;
+    @allow_deprecated_struct_defaults
     scale AxisScale = AxisScale.LINEAR;
 };
 
 type AxisF = struct {
     range RangeF;
+    @allow_deprecated_struct_defaults
     resolution float32 = 1.0;
+    @allow_deprecated_struct_defaults
     scale AxisScale = AxisScale.LINEAR;
 };
 
@@ -109,6 +113,7 @@ type StylusDescriptor = struct {
     // Range for the pressure of the tip
     pressure box<Axis>;
 
+    @allow_deprecated_struct_defaults
     is_invertible bool = false;
 
     // The list of HID button usages that this stylus can generate.
@@ -262,5 +267,6 @@ type InputReport = struct {
     touchscreen box<TouchscreenReport>;
     sensor SensorReport:optional;
 
+    @allow_deprecated_struct_defaults
     trace_id uint64 = 0; // Unique ID to connect trace async begin/end events.
 };

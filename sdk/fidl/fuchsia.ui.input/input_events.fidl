@@ -130,8 +130,9 @@ type PointerEvent = struct {
 
     // TODO(jpoichet) float32 vx;
     // TODO(jpoichet) float32 vy;
-
+    @allow_deprecated_struct_defaults
     radius_major float32 = 0.0; // DO NOT USE
+    @allow_deprecated_struct_defaults
     radius_minor float32 = 0.0; // DO NOT USE
     // TODO(jpoichet) float32 orientation;
     // TODO(jpoichet) float32 tilt;

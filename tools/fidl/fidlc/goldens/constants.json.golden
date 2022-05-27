@@ -1030,10 +1030,22 @@
           "name": "int64_with_default",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
-            "line": 43,
+            "line": 44,
             "column": 5,
             "length": 18
           },
+          "maybe_attributes": [
+            {
+              "name": "allow_deprecated_struct_defaults",
+              "arguments": [],
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
+                "line": 43,
+                "column": 5,
+                "length": 33
+              }
+            }
+          ],
           "maybe_default_value": {
             "kind": "literal",
             "value": "7",
@@ -1081,10 +1093,22 @@
           "name": "string_with_default",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
-            "line": 44,
+            "line": 46,
             "column": 5,
             "length": 19
           },
+          "maybe_attributes": [
+            {
+              "name": "allow_deprecated_struct_defaults",
+              "arguments": [],
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
+                "line": 45,
+                "column": 5,
+                "length": 33
+              }
+            }
+          ],
           "maybe_default_value": {
             "kind": "literal",
             "value": "stuff",
@@ -1132,10 +1156,22 @@
           "name": "bool_with_default",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
-            "line": 45,
+            "line": 48,
             "column": 5,
             "length": 17
           },
+          "maybe_attributes": [
+            {
+              "name": "allow_deprecated_struct_defaults",
+              "arguments": [],
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
+                "line": 47,
+                "column": 5,
+                "length": 33
+              }
+            }
+          ],
           "maybe_default_value": {
             "kind": "literal",
             "value": "true",
@@ -1184,10 +1220,22 @@
           "name": "enum_with_default",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
-            "line": 46,
+            "line": 50,
             "column": 5,
             "length": 17
           },
+          "maybe_attributes": [
+            {
+              "name": "allow_deprecated_struct_defaults",
+              "arguments": [],
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
+                "line": 49,
+                "column": 5,
+                "length": 33
+              }
+            }
+          ],
           "maybe_default_value": {
             "kind": "identifier",
             "value": "170",
@@ -1232,10 +1280,22 @@
           "name": "bits_with_default",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
-            "line": 47,
+            "line": 52,
             "column": 5,
             "length": 17
           },
+          "maybe_attributes": [
+            {
+              "name": "allow_deprecated_struct_defaults",
+              "arguments": [],
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
+                "line": 51,
+                "column": 5,
+                "length": 33
+              }
+            }
+          ],
           "maybe_default_value": {
             "kind": "identifier",
             "value": "8",

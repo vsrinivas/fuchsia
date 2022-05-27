@@ -29,5 +29,6 @@ type BufferCollectionInfo = resource struct {
 
     /// The size of each VMO provided.
     /// This property is only present when the buffers are backed by VMOs.
+    @allow_deprecated_struct_defaults
     vmo_size uint64 = 0;
 };

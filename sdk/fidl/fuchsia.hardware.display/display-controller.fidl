@@ -90,6 +90,7 @@ type ImageConfig = struct {
     // is not TYPE_SIMPLE, it is up to the driver and image producer to
     // agree on the meaning of the value through some mechanism outside the scope
     // of this API.
+    @allow_deprecated_struct_defaults
     type uint32 = TYPE_SIMPLE;
 };
 const TYPE_SIMPLE uint32 = 0;

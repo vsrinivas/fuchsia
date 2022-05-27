@@ -162,19 +162,24 @@ type Publication = struct {
 
     /// The priority of the SRV resource record for this publication. See
     /// [RFC6763](https://tools.ietf.org/html/rfc6763) for details.
+    @allow_deprecated_struct_defaults
     srv_priority uint16 = DEFAULT_SRV_PRIORITY;
 
     /// The weight of the SRV resource record for this publication. See
     /// [RFC6763](https://tools.ietf.org/html/rfc6763) for details.
+    @allow_deprecated_struct_defaults
     srv_weight uint16 = DEFAULT_SRV_WEIGHT;
 
     /// Time-to-live for PTR resource records.
+    @allow_deprecated_struct_defaults
     ptr_ttl zx.duration = DEFAULT_PTR_TTL;
 
     /// Time-to-live for SRV resource records.
+    @allow_deprecated_struct_defaults
     srv_ttl zx.duration = DEFAULT_SRV_TTL;
 
     /// Time-to-live for TXT resource records.
+    @allow_deprecated_struct_defaults
     txt_ttl zx.duration = DEFAULT_TXT_TTL;
 };
 

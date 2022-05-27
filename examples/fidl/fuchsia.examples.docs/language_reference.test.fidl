@@ -52,6 +52,7 @@ const MY_DRINK Beverage = Beverage.WATER;
 
 // [START defaults]
 type Scene = struct {
+    @allow_deprecated_struct_defaults
     background_rgb uint32 = 0xFF77FF; // fuchsia is the default background
     foreground_rgb uint32; // there is no default foreground color
 };

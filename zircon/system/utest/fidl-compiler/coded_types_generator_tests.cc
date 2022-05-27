@@ -1030,6 +1030,7 @@ TEST(CodedTypesGeneratorTests, GoodCodingTablesMatchScoping) {
 alias membertype = uint32;
 
 type byte = struct {
+    @allow_deprecated_struct_defaults
     member membertype = 1;
 };
 

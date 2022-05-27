@@ -50,6 +50,7 @@ type FlexibleLocationType = flexible enum {
 // [START structs]
 type Color = struct {
     id uint32;
+    @allow_deprecated_struct_defaults
     name string:MAX_STRING_LENGTH = "red";
 };
 // [END structs]

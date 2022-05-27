@@ -90,6 +90,7 @@ type NoiseFloorHistogram = struct {
     /// means there were 50 frames counted that had a noise floor of -90 dBm.
     noise_floor_samples vector<HistBucket>:MAX_NOISE_FLOOR_SAMPLES;
     /// Count of invalid samples encountered, if any.
+    @allow_deprecated_struct_defaults
     invalid_samples uint64 = 0;
 };
 
@@ -124,6 +125,7 @@ type RxRateIndexHistogram = struct {
     /// to N-MCS 15 (BW40:SGI).
     rx_rate_index_samples vector<HistBucket>:MAX_RX_RATE_INDEX_SAMPLES;
     /// Count of invalid samples encountered, if any.
+    @allow_deprecated_struct_defaults
     invalid_samples uint64 = 0;
 };
 
@@ -138,6 +140,7 @@ type RssiHistogram = struct {
     /// there were 50 frames counted that had a signal level of -30 dBm.
     rssi_samples vector<HistBucket>:MAX_RSSI_SAMPLES;
     /// Count of invalid samples encountered, if any.
+    @allow_deprecated_struct_defaults
     invalid_samples uint64 = 0;
 };
 

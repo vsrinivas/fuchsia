@@ -60,16 +60,27 @@ type zx_types = struct {
 };
 
 type default_values = struct {
+    @allow_deprecated_struct_defaults
     b1 bool = true;
+    @allow_deprecated_struct_defaults
     b2 bool = false;
+    @allow_deprecated_struct_defaults
     i8 int8 = -23;
+    @allow_deprecated_struct_defaults
     i16 int16 = 34;
+    @allow_deprecated_struct_defaults
     i32 int32 = -34595;
+    @allow_deprecated_struct_defaults
     i64 int64 = 3948038;
+    @allow_deprecated_struct_defaults
     u8 uint8 = 0;
+    @allow_deprecated_struct_defaults
     u16 uint16 = 348;
+    @allow_deprecated_struct_defaults
     u32 uint32 = 9038;
+    @allow_deprecated_struct_defaults
     u64 uint64 = 19835;
+    @allow_deprecated_struct_defaults
     s string = "hello-_/., '() &*0123456789";
 };
 

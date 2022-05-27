@@ -66,6 +66,7 @@ type WaylandDevice = resource struct {
     /// buffers.
     ///
     /// Default to a 1GiB allocation.
+    @allow_deprecated_struct_defaults
     memory uint64 = 1073741824;
 
     /// The server for new virtio_wl connections.
@@ -78,6 +79,7 @@ type MagmaDevice = struct {
     /// buffers.
     ///
     /// Default to a 16GiB allocation.
+    @allow_deprecated_struct_defaults
     memory uint64 = 17179869184;
 };
 

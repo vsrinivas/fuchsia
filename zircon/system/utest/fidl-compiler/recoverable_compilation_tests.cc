@@ -177,6 +177,7 @@ library example;
 type Foo = struct {
     bar string<1>;     // Error: unexpected layout parameter
     qux vector;        // Error: expected 1 layout parameter
+    @allow_deprecated_struct_defaults
     BAR                // Error: canonical name conflicts with 'bar'
         bool           // Error: cannot resolve default value
         = "not bool";  // Error: cannot interpret as bool

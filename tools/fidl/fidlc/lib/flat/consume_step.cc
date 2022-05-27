@@ -714,6 +714,11 @@ bool ConsumeStep::ConsumeStructLayout(std::unique_ptr<raw::Layout> layout,
       ConsumeConstant(std::move(member->default_value), &default_value);
     }
 
+    Attribute* allow_struct_defaults = attributes->Get("allow_deprecated_struct_defaults");
+    if (!allow_struct_defaults && default_value != nullptr) {
+      Fail(ErrDeprecatedStructDefaults, mem->span());
+    }
+
     members.emplace_back(std::move(type_ctor), member->identifier->span(), std::move(default_value),
                          std::move(attributes));
   }

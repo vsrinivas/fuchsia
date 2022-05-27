@@ -6,12 +6,16 @@ library test.benchmarkfidl;
 // Based on fuchsia.media.StreamSource.StreamPacket, used in
 // AudioCapturerOnPacketProducedEvent:
 type StreamPacket = struct {
+    @allow_deprecated_struct_defaults
     pts int64 = 0x7fffffffffffffff;
     payload_buffer_id uint32;
     payload_offset uint64;
     payload_size uint64;
+    @allow_deprecated_struct_defaults
     flags uint32 = 0;
+    @allow_deprecated_struct_defaults
     buffer_config uint64 = 0;
+    @allow_deprecated_struct_defaults
     stream_segment_id uint64 = 0;
 };
 

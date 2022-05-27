@@ -59,10 +59,22 @@
           "name": "field",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/struct_default_value_enum_library_reference/example.test.fidl",
-            "line": 6,
+            "line": 7,
             "column": 5,
             "length": 5
           },
+          "maybe_attributes": [
+            {
+              "name": "allow_deprecated_struct_defaults",
+              "arguments": [],
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/struct_default_value_enum_library_reference/example.test.fidl",
+                "line": 6,
+                "column": 5,
+                "length": 33
+              }
+            }
+          ],
           "maybe_default_value": {
             "kind": "identifier",
             "value": "1",

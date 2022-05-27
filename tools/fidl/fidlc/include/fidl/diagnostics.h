@@ -113,6 +113,8 @@ constexpr ErrorDef<SourceSpan> ErrProtocolComposedMultipleTimes(
     "protocol composed multiple times; previous was at {}");
 constexpr ErrorDef ErrOptionalTableMember("Table members cannot be optional");
 constexpr ErrorDef ErrOptionalUnionMember("Union members cannot be optional");
+constexpr ErrorDef ErrDeprecatedStructDefaults(
+    "Struct defaults are deprecated and should not be used (see RFC-0160)");
 
 // ---------------------------------------------------------------------------
 // ResolveStep

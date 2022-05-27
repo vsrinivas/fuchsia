@@ -139,10 +139,15 @@ type FlexibleEnum = flexible enum {
 type EmptyFlexibleEnum = flexible enum {};
 
 type VariousDefaults = struct {
+    @allow_deprecated_struct_defaults
     int64_with_default int64 = 5;
+    @allow_deprecated_struct_defaults
     string_with_default string = "stuff";
+    @allow_deprecated_struct_defaults
     strict_enum_with_default StrictEnum = StrictEnum.MEMBER_B;
+    @allow_deprecated_struct_defaults
     flexible_enum_with_default FlexibleEnum = FlexibleEnum.MEMBER_B;
+    @allow_deprecated_struct_defaults
     bool_with_default bool = true;
 };
 

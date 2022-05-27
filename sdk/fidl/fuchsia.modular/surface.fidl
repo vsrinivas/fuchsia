@@ -9,13 +9,16 @@ library fuchsia.modular;
 /// Provides information to the StoryShell for layout optimization.
 type SurfaceRelation = struct {
     /// Advice on arranging these surfaces on the screen together.
+    @allow_deprecated_struct_defaults
     arrangement SurfaceArrangement = SurfaceArrangement.NONE;
 
     /// Advice for dismissal of surfaces to be linked.
+    @allow_deprecated_struct_defaults
     dependency SurfaceDependency = SurfaceDependency.NONE;
 
     /// Relative emphasis of the child surface, relative to the parent.
     /// Influences relative areas of surfaces on screen.
+    @allow_deprecated_struct_defaults
     emphasis float32 = 1.0;
 };
 

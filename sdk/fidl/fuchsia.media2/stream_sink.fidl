@@ -75,6 +75,7 @@ type Packet = struct {
     /// Capture time for this packet as a system monotonic time value.
     /// This field is generally zero, but may be set by capturers
     /// to indicate when this packet was captured.
+    @allow_deprecated_struct_defaults
     capture_timestamp zx.time = 0;
 
     /// Properties describing packets in a compressed stream. This

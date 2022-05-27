@@ -227,15 +227,19 @@ type HeapType = strict enum : uint64 {
 
 @for_deprecated_c_bindings
 type BufferMemoryConstraints = struct {
+    @allow_deprecated_struct_defaults
     min_size_bytes uint32 = 0;
     /// 0 is treated as 0xFFFFFFFF.
+    @allow_deprecated_struct_defaults
     max_size_bytes uint32 = 0xFFFFFFFF;
 
+    @allow_deprecated_struct_defaults
     physically_contiguous_required bool = false;
 
     /// If true, at least one participant requires secure memory.
     ///
     /// When aggregating BufferCollectionConstraints, these values boolean-OR.
+    @allow_deprecated_struct_defaults
     secure_required bool = false;
 
     /// By default, participants must ensure the CPU can read or write data to
@@ -245,8 +249,11 @@ type BufferMemoryConstraints = struct {
     /// incorrect data to RAM), and a consumer reading using the CPU must
     /// invalidate CPU cache before reading (the producer doesn't guarantee
     /// zero stale "clean" cache lines)
+    @allow_deprecated_struct_defaults
     ram_domain_supported bool = false;
+    @allow_deprecated_struct_defaults
     cpu_domain_supported bool = true;
+    @allow_deprecated_struct_defaults
     inaccessible_domain_supported bool = false;
 
     /// Optional heap constraints. Participants that don't care which heap
@@ -334,34 +341,42 @@ type ImageFormatConstraints = struct {
     /// BufferSettings.size_bytes, and can also be enforced directly via this
     /// field.
     /// 0 is treated as 0xFFFFFFFF.
+    @allow_deprecated_struct_defaults
     max_coded_width_times_coded_height uint32 = 0xFFFFFFFF;
 
     /// Number of layers within a multi-layered image.
     /// 0 is treated as 1.
+    @allow_deprecated_struct_defaults
     layers uint32 = 1;
 
     /// coded_width % width_divisor must be 0.
     /// 0 is treated as 1.
+    @allow_deprecated_struct_defaults
     coded_width_divisor uint32 = 1;
 
     /// coded_height % height_divisor must be 0.
     /// 0 is treated as 1.
+    @allow_deprecated_struct_defaults
     coded_height_divisor uint32 = 1;
 
     /// bytes_per_row % bytes_per_row_divisor must be 0.
     /// 0 is treated as 1.
+    @allow_deprecated_struct_defaults
     bytes_per_row_divisor uint32 = 1;
 
     /// vmo_usable_start % start_offset_divisor must be 0.
     /// 0 is treated as 1.
+    @allow_deprecated_struct_defaults
     start_offset_divisor uint32 = 1;
 
     /// display_width % display_width_divisor must be 0.
     /// 0 is treated as 1.
+    @allow_deprecated_struct_defaults
     display_width_divisor uint32 = 1;
 
     /// display_height % display_height_divisor must be 0.
     /// 0 is treated as 1.
+    @allow_deprecated_struct_defaults
     display_height_divisor uint32 = 1;
 
     /// required_ dimension bounds.
@@ -436,6 +451,7 @@ type ImageFormat_2 = struct {
     display_height uint32;
 
     /// Number of layers within a multi-layered image.
+    @allow_deprecated_struct_defaults
     layers uint32 = 1;
 
     /// Color space.
@@ -452,7 +468,10 @@ type ImageFormat_2 = struct {
     /// When has_pixel_aspect_ratio == false, the pixel_aspect_ratio is unknown.
     /// A default of 1:1 can be appropriate in some cases, but as always, a
     /// consumer may determine the actual pixel_aspect_ratio by OOB means.
+    @allow_deprecated_struct_defaults
     has_pixel_aspect_ratio bool = false;
+    @allow_deprecated_struct_defaults
     pixel_aspect_ratio_width uint32 = 1;
+    @allow_deprecated_struct_defaults
     pixel_aspect_ratio_height uint32 = 1;
 };

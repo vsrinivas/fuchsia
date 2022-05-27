@@ -15,6 +15,7 @@ type ImageFormat = struct {
 
     /// Number of layers within a multi-layered image.
     /// Defaults to 1 if not specified.
+    @allow_deprecated_struct_defaults
     layers uint32 = 1;
 
     /// Pixel format.
@@ -47,6 +48,7 @@ type ImageSpec = struct {
 
     /// Number of layers within a multi-layered image.
     /// Defaults to 1 if not specified.
+    @allow_deprecated_struct_defaults
     layers uint32 = 1;
 
     /// Pixel format.

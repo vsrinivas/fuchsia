@@ -159,6 +159,7 @@ type TypeDecl = struct {
     };
     f2 struct {
       i0 vector<uint8>;
+      @allow_deprecated_struct_defaults
       i1 string = "foo";
     };
     f3 table {

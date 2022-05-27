@@ -697,12 +697,14 @@ api_diff:
 			before: `
 library l;
 type Struct = struct {
+	@allow_deprecated_struct_defaults
 	foo int32 = 1;
 };
 `,
 			after: `
 library l;
 type Struct = struct {
+	@allow_deprecated_struct_defaults
 	foo int32 = 2;
 };
 `,

@@ -14,6 +14,7 @@ TEST(StructsTests, GoodPrimitiveDefaultValueLiteral) {
   TestLibrary library(R"FIDL(library example;
 
 type MyStruct = struct {
+    @allow_deprecated_struct_defaults
     field int64 = 20;
 };
 )FIDL");
@@ -23,12 +24,23 @@ type MyStruct = struct {
   EXPECT_EQ(type_decl->members.size(), 1);
 }
 
+TEST(StructsTests, BadPrimitiveDefaultValueNoAnnotation) {
+  TestLibrary library(R"FIDL(library example;
+
+type MyStruct = struct {
+    field int64 = 20;
+};
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDeprecatedStructDefaults);
+}
+
 TEST(StructsTests, GoodPrimitiveDefaultValueConstReference) {
   TestLibrary library(R"FIDL(library example;
 
 const A int32 = 20;
 
 type MyStruct = struct {
+    @allow_deprecated_struct_defaults
     field int64 = A;
 };
 )FIDL");
@@ -54,6 +66,7 @@ type MyEnum = strict enum : int32 {
 };
 
 type MyStruct = struct {
+    @allow_deprecated_struct_defaults
     field MyEnum = MyEnum.A;
 };
 )FIDL");
@@ -68,6 +81,7 @@ type MyEnum = strict enum : int32 {
 };
 
 type MyStruct = struct {
+    @allow_deprecated_struct_defaults
     field int64 = MyEnum.A;
 };
 )FIDL");
@@ -82,6 +96,7 @@ type MyEnum = enum : int32 { A = 1; };
 type OtherEnum = enum : int32 { A = 1; };
 
 type MyStruct = struct {
+    @allow_deprecated_struct_defaults
     field MyEnum = OtherEnum.A;
 };
 )FIDL");
@@ -96,6 +111,7 @@ library example;
 type MyEnum = enum : int32 { A = 1; };
 
 type MyStruct = struct {
+    @allow_deprecated_struct_defaults
     field MyEnum = 1;
 };
 )FIDL");
@@ -112,6 +128,7 @@ type MyBits = strict bits : uint32 {
 };
 
 type MyStruct = struct {
+    @allow_deprecated_struct_defaults
     field MyBits = MyBits.A;
 };
 )FIDL");
@@ -126,6 +143,7 @@ type MyBits = strict bits : uint32 {
 };
 
 type MyStruct = struct {
+    @allow_deprecated_struct_defaults
     field int64 = MyBits.A;
 };
 )FIDL");
@@ -140,6 +158,7 @@ type MyBits = bits : uint32 { A = 0x00000001; };
 type OtherBits = bits : uint32 { A = 0x00000001; };
 
 type MyStruct = struct {
+    @allow_deprecated_struct_defaults
     field MyBits = OtherBits.A;
 };
 )FIDL");
@@ -154,6 +173,7 @@ library example;
 type MyBits = enum : int32 { A = 0x00000001; };
 
 type MyStruct = struct {
+    @allow_deprecated_struct_defaults
     field MyBits = 1;
 };
 )FIDL");
@@ -181,6 +201,7 @@ TEST(StructsTests, BadDefaultValueNullableString) {
 library example;
 
 type MyStruct = struct {
+    @allow_deprecated_struct_defaults
     field string:optional = "";
 };
 )FIDL");
@@ -379,6 +400,7 @@ TEST(StructsTests, BadDefaultValueReferencesInvalidConst) {
 library example;
 
 type Foo = struct {
+    @allow_deprecated_struct_defaults
     flag bool = BAR;
 };
 

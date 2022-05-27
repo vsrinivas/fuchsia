@@ -30,6 +30,7 @@ library fuchsia.ui.gfx;
 /// - has_material
 type ShapeNodeArgs = struct {
     // TODO(fxbug.dev/23916): Clean up dummy args.
+    @allow_deprecated_struct_defaults
     unused uint32 = 0;
 };
 
@@ -39,6 +40,7 @@ type ShapeNodeArgs = struct {
 /// - has_parts
 type ClipNodeArgs = struct {
     // TODO(fxbug.dev/23916): Clean up dummy args.
+    @allow_deprecated_struct_defaults
     unused uint32 = 0;
 };
 
@@ -49,6 +51,7 @@ type ClipNodeArgs = struct {
 /// - has_parts
 /// - has_opacity
 type OpacityNodeArgsHACK = struct {
+    @allow_deprecated_struct_defaults
     unused uint32 = 0;
 };
 
@@ -60,5 +63,6 @@ type OpacityNodeArgsHACK = struct {
 /// - has_clip
 type EntityNodeArgs = struct {
     // TODO(fxbug.dev/23916): Clean up dummy args.
+    @allow_deprecated_struct_defaults
     unused uint32 = 0;
 };

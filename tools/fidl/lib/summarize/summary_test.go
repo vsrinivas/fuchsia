@@ -238,9 +238,13 @@ library l
 library l;
 const VALUE string = "booyah!";
 type S = struct {
+  @allow_deprecated_struct_defaults
   x float32 = 0.314159;
+  @allow_deprecated_struct_defaults
   foo string = "huzzah";
+  @allow_deprecated_struct_defaults
   bar bool = true;
+  @allow_deprecated_struct_defaults
   baz string = VALUE;
 };
 `,
@@ -259,9 +263,13 @@ library l
 library l;
 const VALUE string = "booyah!";
 type S = struct {
+  @allow_deprecated_struct_defaults
   x float32 = 0.314159;
+  @allow_deprecated_struct_defaults
   foo string = "huzzah";
+  @allow_deprecated_struct_defaults
   bar bool = true;
+  @allow_deprecated_struct_defaults
   baz string = VALUE;
 };
 `,
@@ -934,9 +942,13 @@ type S = struct {
 library l;
 const VALUE string = "booyah!";
 type S = struct {
+  @allow_deprecated_struct_defaults
   x float32 = 0.314159;
+  @allow_deprecated_struct_defaults
   foo string = "huzzah";
+  @allow_deprecated_struct_defaults
   bar bool = true;
+  @allow_deprecated_struct_defaults
   baz string = VALUE;
 };
 `,

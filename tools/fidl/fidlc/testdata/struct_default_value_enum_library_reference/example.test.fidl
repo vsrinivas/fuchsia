@@ -3,5 +3,6 @@ library test.structdefaultvalueenumlibraryreference;
 using test.dependent;
 
 type Foo = struct {
+    @allow_deprecated_struct_defaults
     field test.dependent.MyEnum = test.dependent.MyEnum.A;
 };

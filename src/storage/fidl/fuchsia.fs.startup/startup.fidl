@@ -28,10 +28,13 @@ type EvictionPolicyOverride = flexible enum {
 /// Options for starting a filesystem.
 type StartOptions = resource struct {
     /// Start the filesystem in read-only mode.
+    @allow_deprecated_struct_defaults
     read_only bool = false;
     /// Enable verbose logging.
+    @allow_deprecated_struct_defaults
     verbose bool = false;
     /// If true, decompression is run in a sandbox component (if the filesystem supports it).
+    @allow_deprecated_struct_defaults
     sandbox_decompression bool = false;
 
     /// A compression algorithm specifier for the filesystem to use when storing files (if the
@@ -40,6 +43,7 @@ type StartOptions = resource struct {
     /// An optional compression level for the filesystem to use when storing files (if the
     /// filesystem and the configured |write_compression_algorithm| supports it). Setting to < 0
     /// indicates no value (the filesystem chooses a default if necessary).
+    @allow_deprecated_struct_defaults
     write_compression_level int32 = -1;
 
     /// An optional eviction policy specifier for the filesystem to use for in-memory structures
@@ -57,11 +61,14 @@ type StartOptions = resource struct {
 /// Options for how to format filesystems.
 type FormatOptions = resource struct {
     /// Enable verbose logging.
+    @allow_deprecated_struct_defaults
     verbose bool = false;
     /// If true, use the deprecated padded merkle tree blobfs format.
+    @allow_deprecated_struct_defaults
     deprecated_padded_blobfs_format bool = false;
     /// The initial number of inodes to allocate space for. If zero, a default is used. Only
     /// supported for blobfs.
+    @allow_deprecated_struct_defaults
     num_inodes uint64 = 0;
 
     /// An optional connection to a crypt client (for encrypted filesystems).

@@ -125,6 +125,7 @@ type Transform = strict enum {
 /// Information about a graphical image (texture) including its format and size.
 type ImageInfo = struct {
     /// Specifies if the image should be mirrored before displaying.
+    @allow_deprecated_struct_defaults
     transform Transform = Transform.NORMAL;
 
     /// The width and height of the image in pixels.
@@ -135,14 +136,18 @@ type ImageInfo = struct {
     stride uint32;
 
     /// The pixel format of the image.
+    @allow_deprecated_struct_defaults
     pixel_format PixelFormat = PixelFormat.BGRA_8;
 
     /// The pixel color space.
+    @allow_deprecated_struct_defaults
     color_space ColorSpace = ColorSpace.SRGB;
 
     /// The pixel arrangement in memory.
+    @allow_deprecated_struct_defaults
     tiling Tiling = Tiling.LINEAR;
 
     /// Specifies the interpretion of the alpha channel, if one exists.
+    @allow_deprecated_struct_defaults
     alpha_format AlphaFormat = AlphaFormat.OPAQUE;
 };

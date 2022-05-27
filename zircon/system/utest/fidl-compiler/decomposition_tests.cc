@@ -1106,6 +1106,7 @@ type StructMemberType = struct {
 };
 
 type StructMemberDefault = struct {
+    @allow_deprecated_struct_defaults
     member uint32 = VALUE;
 };
 

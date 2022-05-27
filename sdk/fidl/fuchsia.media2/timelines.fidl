@@ -11,10 +11,12 @@ using zx;
 type PresentationTimeline = struct {
     /// Initial presentation time of this piece of the piecewise-
     /// linear presentation timeline.
+    @allow_deprecated_struct_defaults
     initial_presentation_time zx.duration = 0;
 
     /// Initial reference time of this piece of the piecewise-
     /// linear presentation timeline.
+    @allow_deprecated_struct_defaults
     initial_reference_time zx.time = 0;
 
     /// Presentation rate, typically 1.0. Non-positive values are
@@ -23,12 +25,14 @@ type PresentationTimeline = struct {
     /// `progressing` is false, the effective rate is zero.
     // TODO(dalesat): consider removing this.
     // TODO(dalesat): consider use a rational for this.
+    @allow_deprecated_struct_defaults
     rate float32 = 1.0;
 
     /// Indicates whether presentation is progressing. If this
     /// value is true, presentation is progressing at the rate
     /// given by the `rate` field. If this value is false, the
     /// effective presentation rate is zero.
+    @allow_deprecated_struct_defaults
     progressing bool = false;
 };
 
@@ -44,9 +48,11 @@ type PresentationTimeline = struct {
 /// 10,000,000 would do just as well for the second example.
 type PacketTimestampUnits = struct {
     /// Timestamp interval corresponding to `presentation_interval`.
+    @allow_deprecated_struct_defaults
     packet_timestamp_interval int64 = 1000000000;
 
     /// Duration in the presentation timeline corresponding to
     /// `packet_timestamp_interval`.
+    @allow_deprecated_struct_defaults
     presentation_interval zx.duration = 1000000000;
 };

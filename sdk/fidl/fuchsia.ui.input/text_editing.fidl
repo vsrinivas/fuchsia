@@ -34,11 +34,13 @@ type TextRange = struct {
     /// The index of the first UTF-16 code unit in the range.
     ///
     /// If `start` and `end` are both -1, the text range is empty.
+    @allow_deprecated_struct_defaults
     start int64 = -1;
 
     /// The next index after the last UTF-16 code unit in this range.
     ///
     /// If `start` and `end` are both -1, the text range is empty.
+    @allow_deprecated_struct_defaults
     end int64 = -1;
 };
 

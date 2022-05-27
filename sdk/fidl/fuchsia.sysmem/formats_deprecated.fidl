@@ -10,6 +10,7 @@ type BufferFormat = struct {
     /// Since this struct used to be a single member union, we kept the tag
     /// to avoid any wire format changes. The tag must be set to `0`,
     /// no other value is correct.
+    @allow_deprecated_struct_defaults
     tag uint32 = 0;
     image ImageFormat;
 };

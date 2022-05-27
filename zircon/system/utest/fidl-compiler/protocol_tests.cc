@@ -886,7 +886,10 @@ TEST(ProtocolTests, BadMethodStructLayoutDefaultMember) {
 library example;
 
 protocol MyProtocol {
-  MyMethod(struct {foo uint8 = 1; });
+  MyMethod(struct {
+    @allow_deprecated_struct_defaults
+    foo uint8 = 1;
+  });
 };
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrPayloadStructHasDefaultMembers);
@@ -1014,6 +1017,7 @@ TEST(ProtocolTests, BadMethodNamedDefaultValueStruct) {
 library example;
 
 type MyStruct = struct{
+  @allow_deprecated_struct_defaults
   a bool = false;
 };
 

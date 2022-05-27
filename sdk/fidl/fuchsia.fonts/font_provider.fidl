@@ -38,13 +38,16 @@ type Request = struct {
     family string:<MAX_FAMILY_NAME_LENGTH, optional>;
 
     /// For example, 400 is normal, 700 is bold.
+    @allow_deprecated_struct_defaults
     weight uint32 = 400;
 
     /// Numeric values matching OS/2 & Windows Metrics usWidthClass table.
     /// https://www.microsoft.com/typography/otspec/os2.htm
     /// For example, 5 is normal.
+    @allow_deprecated_struct_defaults
     width uint32 = 5;
 
+    @allow_deprecated_struct_defaults
     slant Slant = Slant.UPRIGHT;
 
     /// BCP47 language tags in order of preference. See
@@ -55,13 +58,16 @@ type Request = struct {
     /// Caller that specify this field are expected to extract character set from
     /// the result and cache it in order to avoid calling the API more than
     /// necessary.
+    @allow_deprecated_struct_defaults
     character uint32 = 0;
 
     /// Fallback group preference. Caller can leave this field set to NONE. In
     /// that case the font provider will use fallback group of the specified font
     /// family.
+    @allow_deprecated_struct_defaults
     fallback_group FallbackGroup = FallbackGroup.NONE;
 
+    @allow_deprecated_struct_defaults
     flags uint32 = 0;
 };
 

@@ -32,18 +32,21 @@ type Number = strict union {
 /// Represents a number type in a ui spec with an associated action.
 type NumberValue = struct {
     value Number;
+    @allow_deprecated_struct_defaults
     action int32 = 0;
 };
 
 /// Represents a string type in a ui spec with an associated action.
 type TextValue = struct {
     text string:64;
+    @allow_deprecated_struct_defaults
     action int32 = 0;
 };
 
 /// Represents a button type in a ui spec with an associated action.
 type ButtonValue = struct {
     label string:64;
+    @allow_deprecated_struct_defaults
     action int32 = 0;
 };
 
@@ -51,6 +54,7 @@ type ButtonValue = struct {
 type ProgressValue = struct {
     // [0..1] inclusive.
     value float32;
+    @allow_deprecated_struct_defaults
     action int32 = 0;
 };
 
@@ -58,7 +62,9 @@ type ProgressValue = struct {
 type InputValue = struct {
     text string:1024;
     // 0 = multiline. 1 = Default.
+    @allow_deprecated_struct_defaults
     lines int32 = 1;
+    @allow_deprecated_struct_defaults
     action int32 = 0;
 };
 
@@ -66,6 +72,7 @@ type InputValue = struct {
 type IconValue = struct {
     code_point int32;
     font_family box<fuchsia.fonts.FamilyName>;
+    @allow_deprecated_struct_defaults
     action int32 = 0;
 };
 
@@ -77,7 +84,9 @@ type GridValue = struct {
 
 /// Represents a list of strings type in a ui spec.
 type ListValue = struct {
+    @allow_deprecated_struct_defaults
     multiselect bool = false;
+    @allow_deprecated_struct_defaults
     popup bool = false;
     title string:128;
     items vector<TextValue>:1024;
@@ -89,6 +98,7 @@ type GraphValue = struct {
     value float32;
     // Unit of progress in the x-axis.
     step int32;
+    @allow_deprecated_struct_defaults
     action int32 = 0;
 };
 

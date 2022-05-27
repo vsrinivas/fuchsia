@@ -67,7 +67,7 @@ def struct_types(f, idents: List[ScopedIdentifier]):
     f.write("alias membertype = uint32;\n")
     for ident in idents:
         f.write(ident.decl_attributes)
-        f.write(f"type {ident} = struct {{ member membertype = 1; }};\n")
+        f.write(f"type {ident} = struct {{ member membertype; }};\n")
 
     # a struct with every dangerous name as the field type
     f.write("type DangerousMembers = struct {\n")

@@ -391,6 +391,7 @@ type SetHitTestBehaviorCmd = struct {
 /// are ignored by hit tests performed for accessibility.
 type SetSemanticVisibilityCmd = struct {
     node_id uint32;
+    @allow_deprecated_struct_defaults
     visible bool = true;
 };
 

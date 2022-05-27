@@ -40,9 +40,14 @@ type Bits = strict bits {
 };
 
 type Struct = struct {
+    @allow_deprecated_struct_defaults
     int64_with_default int64 = 007;
+    @allow_deprecated_struct_defaults
     string_with_default string = "stuff";
+    @allow_deprecated_struct_defaults
     bool_with_default bool = true;
+    @allow_deprecated_struct_defaults
     enum_with_default Enum = Enum.E;
+    @allow_deprecated_struct_defaults
     bits_with_default Bits = Bits.B;
 };
