@@ -258,6 +258,10 @@ where
                 let mut resp = self.remove_account(id, force).await;
                 responder.send(&mut resp).context("sending RemoveAccount response")?;
             }
+            AccountManagerRequest::RemoveAccount2 { id, responder } => {
+                let mut resp = self.remove_account(id, true).await;
+                responder.send(&mut resp).context("sending RemoveAccount2 response")?;
+            }
             AccountManagerRequest::ProvisionNewAccount {
                 lifetime: _,
                 auth_mechanism_id: _,
