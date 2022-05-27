@@ -1778,6 +1778,124 @@ mod test {
         seg
     }
 
+    #[test]
+    fn common_rcv_data_segment_arrives() {
+        // Tests the common behavior when data segment arrives in states that
+        // have a receive state.
+        let new_snd = || Send {
+            nxt: ISS_1 + 1,
+            max: ISS_1 + 1,
+            una: ISS_1 + 1,
+            wnd: WindowSize::DEFAULT,
+            buffer: NullBuffer,
+            wl1: ISS_2 + 1,
+            wl2: ISS_1 + 1,
+            rtt_estimator: Estimator::default(),
+            last_seq_ts: None,
+            timer: None,
+        };
+        let new_rcv = || Recv {
+            buffer: RingBuffer::new(TEST_BYTES.len()),
+            assembler: Assembler::new(ISS_2 + 1),
+        };
+        for mut state in [
+            State::Established(Established { snd: new_snd(), rcv: new_rcv() }),
+            State::FinWait1(FinWait1 { snd: new_snd().queue_fin(), rcv: new_rcv() }),
+            State::FinWait2(FinWait2 { last_seq: ISS_1 + 1, rcv: new_rcv() }),
+        ] {
+            assert_eq!(
+                state.on_segment(
+                    Segment::data(ISS_2 + 1, ISS_1 + 1, WindowSize::DEFAULT, TEST_BYTES),
+                    DummyInstant::default()
+                ),
+                Some(Segment::ack(ISS_1 + 1, ISS_2 + 1 + TEST_BYTES.len(), WindowSize::ZERO))
+            );
+            assert_eq!(
+                state.read_with(|bytes| {
+                    assert_eq!(bytes.concat(), TEST_BYTES);
+                    TEST_BYTES.len()
+                }),
+                TEST_BYTES.len()
+            );
+        }
+    }
+
+    #[test]
+    fn common_snd_ack_segment_arrives() {
+        // Tests the common behavior when ack segment arrives in states that
+        // have a send state.
+        let new_snd = || Send {
+            nxt: ISS_1 + 1,
+            max: ISS_1 + 1,
+            una: ISS_1 + 1,
+            wnd: WindowSize::DEFAULT,
+            buffer: RingBuffer::with_data(TEST_BYTES.len(), TEST_BYTES),
+            wl1: ISS_2 + 1,
+            wl2: ISS_1 + 1,
+            rtt_estimator: Estimator::default(),
+            last_seq_ts: None,
+            timer: None,
+        };
+        let new_rcv = || Recv { buffer: NullBuffer, assembler: Assembler::new(ISS_2 + 1) };
+        for mut state in [
+            State::Established(Established { snd: new_snd(), rcv: new_rcv() }),
+            State::FinWait1(FinWait1 { snd: new_snd().queue_fin(), rcv: new_rcv() }),
+            State::Closing(Closing {
+                snd: new_snd().queue_fin(),
+                rcv_residual: NullBuffer,
+                last_ack: ISS_2 + 1,
+                last_wnd: WindowSize::ZERO,
+            }),
+            State::CloseWait(CloseWait {
+                snd: new_snd(),
+                rcv_residual: NullBuffer,
+                last_ack: ISS_2 + 1,
+                last_wnd: WindowSize::ZERO,
+            }),
+            State::LastAck(LastAck {
+                snd: new_snd().queue_fin(),
+                rcv_residual: NullBuffer,
+                last_ack: ISS_2 + 1,
+                last_wnd: WindowSize::ZERO,
+            }),
+        ] {
+            assert_eq!(
+                state.poll_send(u32::try_from(TEST_BYTES.len()).unwrap(), DummyInstant::default()),
+                Some(Segment::data(
+                    ISS_1 + 1,
+                    ISS_2 + 1,
+                    WindowSize::ZERO,
+                    SendPayload::Contiguous(TEST_BYTES)
+                ))
+            );
+            assert_eq!(
+                state.on_segment(
+                    Segment::ack(ISS_2 + 1, ISS_1 + 1 + TEST_BYTES.len(), WindowSize::DEFAULT),
+                    DummyInstant::default()
+                ),
+                None,
+            );
+            assert_eq!(state.poll_send_at(), None);
+            let snd = match state {
+                State::Closed(_)
+                | State::Listen(_)
+                | State::SynRcvd(_)
+                | State::SynSent(_)
+                | State::FinWait2(_)
+                | State::TimeWait(_) => unreachable!("Unexpected state {:?}", state),
+                State::Established(e) => e.snd.queue_fin(),
+                State::CloseWait(c) => c.snd.queue_fin(),
+                State::LastAck(l) => l.snd,
+                State::FinWait1(f) => f.snd,
+                State::Closing(c) => c.snd,
+            };
+            assert_eq!(snd.nxt, ISS_1 + 1 + TEST_BYTES.len());
+            assert_eq!(snd.max, ISS_1 + 1 + TEST_BYTES.len());
+            assert_eq!(snd.una, ISS_1 + 1 + TEST_BYTES.len());
+            assert_eq!(snd.buffer.len(), 0);
+        }
+    }
+
     #[test_case(
         Segment::syn(ISS_2 + 2, WindowSize::DEFAULT),
         Some(State::Closed (
