@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <unordered_map>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -18,15 +19,31 @@
 #include "src/graphics/tests/common/utils.h"
 #include "src/graphics/tests/common/vulkan_context.h"
 
+struct VkReadbackSubmitOptions {
+  // The first submission must include an image transition.
+  bool include_start_transition = false;
+
+  // The last submission before Readback() must include an image barrier.
+  bool include_end_barrier = false;
+};
+
+template <>
+struct std::hash<VkReadbackSubmitOptions> {
+  size_t operator()(const VkReadbackSubmitOptions& options) const {
+    return (options.include_start_transition ? 2 : 0) | (options.include_end_barrier ? 1 : 0);
+  }
+};
+
+inline bool operator==(const VkReadbackSubmitOptions& lhs, const VkReadbackSubmitOptions& rhs) {
+  return lhs.include_start_transition == rhs.include_start_transition &&
+         lhs.include_end_barrier == rhs.include_end_barrier;
+}
+
 // Supports Fuchsia external memory extension.
 class VkReadbackTest {
  public:
   static constexpr uint32_t kWidth = 64;
   static constexpr uint32_t kHeight = 64;
-
-  // One command buffer to transition the host visible |image_|.
-  // One command buffer, post transition of |image_|.
-  static constexpr size_t kNumCommandBuffers = 2;
 
   enum Extension { NONE, VK_FUCHSIA_EXTERNAL_MEMORY };
 
@@ -45,11 +62,18 @@ class VkReadbackTest {
   virtual ~VkReadbackTest();
 
   bool Initialize(uint32_t vk_api_verison);
+
   bool Exec(vk::Fence fence = {});
-  bool Submit(vk::Fence fence = {}, bool transition_image = true);
-  bool Submit(vk::Semaphore semaphore, uint64_t signal, bool transition_image);
+  bool Submit(VkReadbackSubmitOptions options, vk::Fence fence = {});
+  bool Submit(VkReadbackSubmitOptions options, vk::Semaphore semaphore, uint64_t signal);
   bool Wait();
+
+  // Reflects a Submit() executed by the VkReadbackTest that exported the memory
+  // handle imported by this test.
+  void TransferSubmittedStateFrom(const VkReadbackTest& export_source);
+
   bool Readback();
+
   vk::Device vulkan_device() const { return ctx_->device().get(); }
   const vk::DispatchLoaderDynamic& vulkan_loader() const { return ctx_->loader(); }
   vk::PhysicalDevice physical_device() const { return ctx_->physical_device(); }
@@ -64,7 +88,12 @@ class VkReadbackTest {
   bool InitImage();
   bool InitCommandBuffers();
 
-  bool FillCommandBuffer(vk::CommandBuffer& command_buffer, bool transition_image = true);
+  bool FillCommandBuffer(VkReadbackSubmitOptions options, vk::UniqueCommandBuffer command_buffer);
+
+  // Must be called by each Submit() variant exactly once.
+  //
+  // The validation performed by this method is not idempotent.
+  void ValidateSubmitOptions(VkReadbackSubmitOptions options);
 
   // Finds the first device memory type that can be read by the host.
   //
@@ -102,12 +131,16 @@ class VkReadbackTest {
   ImportExport import_export_;
 
   vk::UniqueCommandPool command_pool_;
-  std::vector<vk::UniqueCommandBuffer> command_buffers_;
+  std::unordered_map<VkReadbackSubmitOptions, vk::UniqueCommandBuffer> command_buffers_;
 
   VulkanExtensionSupportState timeline_semaphore_support_ =
       VulkanExtensionSupportState::kNotSupported;
 
   uint64_t bind_offset_ = 0;
+
+  // Submit() validation state.
+  bool submit_called_with_transition_ = false;
+  bool submit_called_with_barrier_ = false;
 
 #ifdef __Fuchsia__
   PFN_vkGetMemoryZirconHandleFUCHSIA vkGetMemoryZirconHandleFUCHSIA_{};

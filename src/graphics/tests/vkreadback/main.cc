@@ -87,8 +87,10 @@ TEST(Vulkan, ReadbackLoopWithFenceWaitOnSeparateThread) {
   for (int i = 0; i < kFenceCount; i++) {
     auto [fence_result, fence] = device.createFenceUnique(fence_info);
     ASSERT_EQ(fence_result, vk::Result::eSuccess);
-    const bool transition_image = (i == 0);
-    EXPECT_TRUE(readback_test.Submit(fence.get(), transition_image));
+    EXPECT_TRUE(readback_test.Submit(
+        {.include_start_transition = (i == 0), .include_end_barrier = (i == kFenceCount - 1)},
+        fence.get()));
+
     {
       std::unique_lock<std::mutex> lock(mutex);
       fences.push(std::move(fence));
@@ -113,10 +115,8 @@ TEST(Vulkan, ReadbackLoopWithFenceWait) {
 
   constexpr int kIterationCount = 500;
   for (int i = 0; i < kIterationCount; i++) {
-    {
-      const bool transition_image = (i == 0);
-      EXPECT_TRUE(test.Submit(*fence, transition_image));
-    }
+    EXPECT_TRUE(
+        test.Submit({.include_start_transition = (i == 0), .include_end_barrier = true}, *fence));
 
     EXPECT_EQ(vk::Result::eSuccess,
               device.waitForFences(*fence, /* waitAll= */ true, ms_to_ns(1000)));
@@ -157,8 +157,9 @@ TEST(Vulkan, ReadbackLoopWithTimelineWait) {
     {
       // Every time we submit commands to VkQueue, the value of the timeline
       // semaphore will increment by 1.
-      const bool transition_image = (i == 0);
-      EXPECT_TRUE(readback_test.Submit(*semaphore, timeline_value, transition_image));
+      EXPECT_TRUE(
+          readback_test.Submit({.include_start_transition = (i == 0), .include_end_barrier = true},
+                               *semaphore, timeline_value));
     }
 
     {

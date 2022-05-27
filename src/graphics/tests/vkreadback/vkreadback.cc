@@ -14,6 +14,11 @@ namespace {
 
 constexpr size_t kPageSize = 4096;
 
+// Command buffers vary according the following dimensions:
+// 1) includes an image transition
+// 2) includes an image memory barrier
+constexpr size_t kCommandBufferCount = 4;
+
 }  // namespace
 
 #ifdef __Fuchsia__
@@ -28,14 +33,12 @@ static inline T round_up(T val, uint64_t alignment) {
 
 VkReadbackTest::VkReadbackTest(Extension ext)
     : ext_(ext),
-      import_export_((ext == VK_FUCHSIA_EXTERNAL_MEMORY) ? EXPORT_EXTERNAL_MEMORY : SELF),
-      command_buffers_(kNumCommandBuffers) {}
+      import_export_((ext == VK_FUCHSIA_EXTERNAL_MEMORY) ? EXPORT_EXTERNAL_MEMORY : SELF) {}
 
 VkReadbackTest::VkReadbackTest(uint32_t exported_memory_handle)
     : ext_(VK_FUCHSIA_EXTERNAL_MEMORY),
       exported_memory_handle_(exported_memory_handle),
-      import_export_(IMPORT_EXTERNAL_MEMORY),
-      command_buffers_(kNumCommandBuffers) {}
+      import_export_(IMPORT_EXTERNAL_MEMORY) {}
 
 VkReadbackTest::~VkReadbackTest() {
   if (image_initialized_) {
@@ -432,11 +435,12 @@ bool VkReadbackTest::AssignExportedMemoryHandle() {
 }
 #endif  // __Fuchsia__
 
-bool VkReadbackTest::FillCommandBuffer(vk::CommandBuffer& command_buffer, bool transition_image) {
-  auto rv_begin = command_buffer.begin(vk::CommandBufferBeginInfo{});
+bool VkReadbackTest::FillCommandBuffer(VkReadbackSubmitOptions options,
+                                       vk::UniqueCommandBuffer command_buffer) {
+  auto rv_begin = command_buffer->begin(vk::CommandBufferBeginInfo{});
   RTN_IF_VKH_ERR(false, rv_begin, "vk::CommandBuffer::begin()\n");
 
-  if (transition_image) {
+  if (options.include_start_transition) {
     // Transition image for clear operation.
     vk::ImageMemoryBarrier image_barrier;
     image_barrier.image = image_.get();
@@ -445,12 +449,12 @@ bool VkReadbackTest::FillCommandBuffer(vk::CommandBuffer& command_buffer, bool t
     image_barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
     image_barrier.subresourceRange.levelCount = 1;
     image_barrier.subresourceRange.layerCount = 1;
-    command_buffer.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, /* srcStageMask */
-                                   vk::PipelineStageFlagBits::eTransfer,  /* dstStageMask */
-                                   vk::DependencyFlags{}, 0 /* memoryBarrierCount */,
-                                   nullptr /* pMemoryBarriers */, 0 /* bufferMemoryBarrierCount */,
-                                   nullptr /* pBufferMemoryBarriers */,
-                                   1 /* imageMemoryBarrierCount */, &image_barrier);
+    command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, /* srcStageMask */
+                                    vk::PipelineStageFlagBits::eTransfer,  /* dstStageMask */
+                                    vk::DependencyFlags{}, 0 /* memoryBarrierCount */,
+                                    nullptr /* pMemoryBarriers */, 0 /* bufferMemoryBarrierCount */,
+                                    nullptr /* pBufferMemoryBarriers */,
+                                    1 /* imageMemoryBarrierCount */, &image_barrier);
   }
 
   // RGBA
@@ -463,11 +467,35 @@ bool VkReadbackTest::FillCommandBuffer(vk::CommandBuffer& command_buffer, bool t
   image_subres_range.baseArrayLayer = 0;
   image_subres_range.layerCount = 1;
 
-  command_buffer.clearColorImage(image_.get(), vk::ImageLayout::eGeneral, &clear_color,
-                                 1 /* rangeCount */, &image_subres_range);
-  auto rv_command_buf_end = command_buffer.end();
+  command_buffer->clearColorImage(image_.get(), vk::ImageLayout::eGeneral, &clear_color,
+                                  1 /* rangeCount */, &image_subres_range);
+
+  if (options.include_end_barrier) {
+    vk::ImageMemoryBarrier transfer_results_to_host_barrier;
+    transfer_results_to_host_barrier.image = image_.get();
+    transfer_results_to_host_barrier.subresourceRange = image_subres_range;
+    transfer_results_to_host_barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+    transfer_results_to_host_barrier.dstAccessMask = vk::AccessFlagBits::eHostRead;
+
+    // Equal queue family indexes mean no queue transfer occurs. The indexes
+    // themselves are ignored.
+    transfer_results_to_host_barrier.srcQueueFamilyIndex = 0;
+    transfer_results_to_host_barrier.dstQueueFamilyIndex = 0;
+    // Equal layouts means no layout transition occurs. The layout values are
+    // ignored.
+    transfer_results_to_host_barrier.oldLayout = vk::ImageLayout::eGeneral;
+    transfer_results_to_host_barrier.newLayout = vk::ImageLayout::eGeneral;
+
+    command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer,
+                                    vk::PipelineStageFlagBits::eHost, vk::DependencyFlags{},
+                                    /*memoryBarriers=*/{}, /*bufferMemoryBarriers=*/{},
+                                    {transfer_results_to_host_barrier});
+  }
+
+  auto rv_command_buf_end = command_buffer->end();
   RTN_IF_VKH_ERR(false, rv_command_buf_end, "vk::UniqueCommandBuffer::end()\n");
 
+  command_buffers_.try_emplace(options, std::move(command_buffer));
   return true;
 }
 
@@ -486,15 +514,20 @@ bool VkReadbackTest::InitCommandBuffers() {
   vk::CommandBufferAllocateInfo command_buffer_alloc_info;
   command_buffer_alloc_info.commandPool = command_pool_.get();
   command_buffer_alloc_info.level = vk::CommandBufferLevel::ePrimary;
-  command_buffer_alloc_info.commandBufferCount = kNumCommandBuffers;
-  auto [rv_alloc_cmd_bufs, command_buffers] =
+  command_buffer_alloc_info.commandBufferCount = kCommandBufferCount;
+  vk::ResultValue<std::vector<vk::UniqueCommandBuffer>> command_buffer_result =
       device->allocateCommandBuffersUnique(command_buffer_alloc_info);
-  RTN_IF_VKH_ERR(false, rv_alloc_cmd_bufs, "vk::Device::allocateCommandBuffersUnique()\n");
-  command_buffers_ = std::move(command_buffers);
-  if (!FillCommandBuffer(command_buffers_[0].get(), true /* transition_image */))
-    return false;
-  if (!FillCommandBuffer(command_buffers_[1].get(), false /* transition_image */))
-    return false;
+  RTN_IF_VKH_ERR(false, command_buffer_result.result,
+                 "vk::Device::allocateCommandBuffersUnique()\n");
+
+  FillCommandBuffer({.include_start_transition = false, .include_end_barrier = false},
+                    std::move(command_buffer_result.value[0]));
+  FillCommandBuffer({.include_start_transition = false, .include_end_barrier = true},
+                    std::move(command_buffer_result.value[1]));
+  FillCommandBuffer({.include_start_transition = true, .include_end_barrier = false},
+                    std::move(command_buffer_result.value[2]));
+  FillCommandBuffer({.include_start_transition = true, .include_end_barrier = true},
+                    std::move(command_buffer_result.value[3]));
 
   command_buffers_initialized_ = true;
 
@@ -502,17 +535,31 @@ bool VkReadbackTest::InitCommandBuffers() {
 }
 
 bool VkReadbackTest::Exec(vk::Fence fence) {
-  if (!Submit(fence, true /* transition_image */)) {
+  if (!Submit({.include_start_transition = true, .include_end_barrier = true}, fence)) {
     return false;
   }
   return Wait();
 }
 
-bool VkReadbackTest::Submit(vk::Fence fence, bool transition_image) {
+void VkReadbackTest::ValidateSubmitOptions(VkReadbackSubmitOptions options) {
+  if (options.include_start_transition) {
+    EXPECT_FALSE(submit_called_with_transition_)
+        << "Submit() called with unnecessary include_start_transition option";
+    submit_called_with_transition_ = true;
+  } else {
+    EXPECT_TRUE(submit_called_with_transition_)
+        << "First Submit() called without include_start_transition option";
+  }
+
+  submit_called_with_barrier_ = options.include_end_barrier;
+}
+
+bool VkReadbackTest::Submit(VkReadbackSubmitOptions options, vk::Fence fence) {
+  ValidateSubmitOptions(options);
+  vk::CommandBuffer& command_buffer = command_buffers_[options].get();
+
   vk::SubmitInfo submit_info;
   submit_info.commandBufferCount = 1;
-  const vk::CommandBuffer& command_buffer =
-      (transition_image ? command_buffers_[0].get() : command_buffers_[1].get());
   submit_info.pCommandBuffers = &command_buffer;
   auto rv_submit = ctx_->queue().submit(1, &submit_info, fence);
   RTN_IF_VKH_ERR(false, rv_submit, "vk::Queue::submit()\n");
@@ -520,7 +567,11 @@ bool VkReadbackTest::Submit(vk::Fence fence, bool transition_image) {
   return true;
 }
 
-bool VkReadbackTest::Submit(vk::Semaphore semaphore, uint64_t signal, bool transition_image) {
+bool VkReadbackTest::Submit(VkReadbackSubmitOptions options, vk::Semaphore semaphore,
+                            uint64_t signal) {
+  ValidateSubmitOptions(options);
+  vk::CommandBuffer& command_buffer = command_buffers_[options].get();
+
   auto timeline_info =
       vk::TimelineSemaphoreSubmitInfo().setSignalSemaphoreValueCount(1).setPSignalSemaphoreValues(
           &signal);
@@ -530,8 +581,7 @@ bool VkReadbackTest::Submit(vk::Semaphore semaphore, uint64_t signal, bool trans
                          .setSignalSemaphoreCount(1)
                          .setPSignalSemaphores(&semaphore)
                          .setCommandBufferCount(1)
-                         .setPCommandBuffers(transition_image ? &command_buffers_[0].get()
-                                                              : &command_buffers_[1].get());
+                         .setPCommandBuffers(&command_buffer);
 
   auto rv_submit = ctx_->queue().submit(1, &submit_info, vk::Fence{});
   RTN_IF_VKH_ERR(false, rv_submit, "vk::Queue::submit()\n");
@@ -546,7 +596,20 @@ bool VkReadbackTest::Wait() {
   return true;
 }
 
+void VkReadbackTest::TransferSubmittedStateFrom(const VkReadbackTest& export_source) {
+  EXPECT_EQ(IMPORT_EXTERNAL_MEMORY, import_export_)
+      << __func__ << " called on VkReadbackTest without imported memory";
+  EXPECT_EQ(EXPORT_EXTERNAL_MEMORY, export_source.import_export_)
+      << __func__ << " called with VkReadbackTest test without exported memory";
+
+  submit_called_with_transition_ = export_source.submit_called_with_transition_;
+  submit_called_with_barrier_ = export_source.submit_called_with_barrier_;
+}
+
 bool VkReadbackTest::Readback() {
+  EXPECT_TRUE(submit_called_with_barrier_)
+      << "Readback() called after Submit() without include_end_barrier option";
+
   void* addr;
   const vk::DeviceMemory& device_memory =
       ext_ == VkReadbackTest::NONE ? device_memory_ : imported_device_memory_;
