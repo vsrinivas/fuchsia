@@ -584,6 +584,7 @@
                 "/bootstrap/driver_index",
                 "/core",
                 "/core/appmgr",
+                "/core/audio_core",
                 "/core/network/netstack",
                 "/core/omaha-client-service",
                 "/core/setui_service",
