@@ -27,6 +27,7 @@ use fidl::endpoints::create_proxy;
 use crate::driver::OtDriver;
 use crate::prelude::*;
 use std::ffi::CString;
+use std::num::NonZeroU32;
 
 mod config;
 mod convert_ext;
@@ -230,16 +231,14 @@ impl Config {
         let ot_instance = ot::Instance::new(builder.init(spinel_sink, spinel_stream));
 
         // TODO: might switch to check if the infra_if instance is constructed successfully
-        if let Some(index) = backbone_netif_index {
-            if index > 0 {
-                ot_instance
-                    .border_routing_init(index, true)
-                    .context("Unable to initialize OpenThread border routing")?;
+        if let Some(index) = backbone_netif_index.and_then(NonZeroU32::new) {
+            ot_instance
+                .border_routing_init(index.get(), true)
+                .context("Unable to initialize OpenThread border routing")?;
 
-                ot_instance
-                    .border_routing_set_enabled(true)
-                    .context("border_routing_set_enabled")?;
-            }
+            ot_instance.border_routing_set_enabled(true).context("border_routing_set_enabled")?;
+        } else {
+            warn!("Backbone interface not set, border routing not supported");
         }
 
         let driver_future = run_driver(
