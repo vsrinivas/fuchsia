@@ -190,30 +190,6 @@ static inline void cpuid_c(uint32_t sel, uint32_t sel_c, uint32_t* a, uint32_t* 
   __cpuid_count(sel, sel_c, *a, *b, *c, *d);
 }
 
-static inline void set_in_cr0(ulong mask) {
-  ulong temp;
-
-  __asm__ __volatile__(
-      "mov %%cr0, %0  \n\t"
-      "or %1, %0      \n\t"
-      "mov %0, %%cr0   \n\t"
-      : "=r"(temp)
-      : "irg"(mask)
-      :);
-}
-
-static inline void clear_in_cr0(ulong mask) {
-  ulong temp;
-
-  __asm__ __volatile__(
-      "mov %%cr0, %0  \n\t"
-      "and %1, %0     \n\t"
-      "mov %0, %%cr0  \n\t"
-      : "=r"(temp)
-      : "irg"(~mask)
-      :);
-}
-
 static inline ulong x86_get_cr2() {
   ulong rv;
 
