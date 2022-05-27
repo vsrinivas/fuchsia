@@ -308,7 +308,6 @@ func declName(decl gidlmixer.NamedDeclaration) string {
 }
 
 func EndpointDeclName(decl gidlmixer.EndpointDeclaration) string {
-	// TODO(fxbug.dev/62647): Only works in new C++ bindings, not HLCPP.
 	parts := strings.SplitN(decl.ProtocolName(), "/", 2)
 	return fmt.Sprintf("%s::%s", strings.ReplaceAll(parts[0], ".", "_"), fidlgen.ToUpperCamelCase(parts[1]))
 }

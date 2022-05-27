@@ -111,6 +111,10 @@ func (b *cppValueBuilder) newVar() string {
 	return fmt.Sprintf("v%d", b.varidx)
 }
 
+func (b *cppValueBuilder) adoptHandle(decl gidlmixer.Declaration, value gidlir.HandleWithRights) string {
+	return fmt.Sprintf("%s(handle_defs[%d]%s)", typeName(decl), value.Handle, b.handleExtractOp)
+}
+
 func (b *cppValueBuilder) visit(value gidlir.Value, decl gidlmixer.Declaration) string {
 	switch value := value.(type) {
 	case bool:
@@ -162,7 +166,14 @@ func (b *cppValueBuilder) visit(value gidlir.Value, decl gidlmixer.Declaration) 
 	case string:
 		return fmt.Sprintf("%s(%s, %d)", typeName(decl), escapeStr(value), len(value))
 	case gidlir.HandleWithRights:
-		return fmt.Sprintf("%s(handle_defs[%d]%s)", typeName(decl), value.Handle, b.handleExtractOp)
+		switch decl := decl.(type) {
+		case *gidlmixer.HandleDecl:
+			return b.adoptHandle(decl, value)
+		case *gidlmixer.ClientEndDecl:
+			return fmt.Sprintf("%s(%s)", typeName(decl), b.adoptHandle(decl.UnderlyingHandleDecl(), value))
+		case *gidlmixer.ServerEndDecl:
+			return fmt.Sprintf("%s(%s)", typeName(decl), b.adoptHandle(decl.UnderlyingHandleDecl(), value))
+		}
 	case gidlir.Record:
 		return b.visitRecord(value, decl.(gidlmixer.RecordDeclaration))
 	case []gidlir.Value:
@@ -277,11 +288,6 @@ func typeName(decl gidlmixer.Declaration) string {
 	switch decl := decl.(type) {
 	case gidlmixer.PrimitiveDeclaration:
 		return primitiveTypeName(decl.Subtype())
-	case gidlmixer.NamedDeclaration:
-		if decl.IsNullable() {
-			return fmt.Sprintf("std::unique_ptr<%s>", declName(decl))
-		}
-		return declName(decl)
 	case *gidlmixer.StringDecl:
 		if decl.IsNullable() {
 			return "::fidl::StringPtr"
@@ -305,6 +311,15 @@ func typeName(decl gidlmixer.Declaration) string {
 		default:
 			panic(fmt.Sprintf("Handle subtype not supported %s", decl.Subtype()))
 		}
+	case *gidlmixer.ClientEndDecl:
+		return fmt.Sprintf("fidl::InterfaceHandle<%s>", endpointDeclName(decl))
+	case *gidlmixer.ServerEndDecl:
+		return fmt.Sprintf("fidl::InterfaceRequest<%s>", endpointDeclName(decl))
+	case gidlmixer.NamedDeclaration:
+		if decl.IsNullable() {
+			return fmt.Sprintf("std::unique_ptr<%s>", declName(decl))
+		}
+		return declName(decl)
 	default:
 		panic("unhandled case")
 	}
@@ -312,6 +327,12 @@ func typeName(decl gidlmixer.Declaration) string {
 
 func declName(decl gidlmixer.NamedDeclaration) string {
 	parts := strings.Split(decl.Name(), "/")
+	library_parts := strings.Split(parts[0], ".")
+	return strings.Join(append(library_parts, parts[1]), "::")
+}
+
+func endpointDeclName(decl gidlmixer.EndpointDeclaration) string {
+	parts := strings.Split(decl.ProtocolName(), "/")
 	library_parts := strings.Split(parts[0], ".")
 	return strings.Join(append(library_parts, parts[1]), "::")
 }
