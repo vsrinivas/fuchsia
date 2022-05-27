@@ -66,29 +66,32 @@ class EnclosedGuest {
   explicit EnclosedGuest(async::Loop& loop) : loop_(loop) {}
   virtual ~EnclosedGuest() {}
 
-  // Start the guest.
+  // Start the guest. `Start` is the preferred way to start the guest. If the realm
+  // needs to be customized, `Start` can be replaced by a call to `InstallInRealm`
+  // followed by a call to `LaunchInRealm`. This should follow a pattern like:
   //
-  // Abort with ZX_ERR_TIMED_OUT if we reach `deadline` first.
-  // This is the preferred way to start up the guest, which creates an enclosing environment
-  // internally, and launches the guest by calling `Install` and `Launch` respectively.
+  // ```
+  // GuestLaunchInfo guest_launch_info;
+  // realm_builder = RealmBuilder::Create();
+  // InstallInRealm(realm_builder, guest_launch_info);
+  // ...
+  // ... // customize realm_builder
+  // ...
+  // RealmRoot realm_root(realm_builder.Build(dispatcher));
+  // LaunchInRealm(realm_root, guest_launch_info, deadline);
+  // ```
+  //
+  // Abort with ZX_ERR_TIMED_OUT if we reach `deadline` before the guest has started.
   zx_status_t Start(zx::time deadline);
+  zx_status_t InstallInRealm(component_testing::RealmBuilder& realm_builder,
+                             GuestLaunchInfo& guest_launch_info);
+  zx_status_t LaunchInRealm(const component_testing::RealmRoot& realm_root,
+                            GuestLaunchInfo& guest_launch_info, zx::time deadline);
 
   // Attempt to gracefully stop the guest.
   //
   // Abort with ZX_ERR_TIMED_OUT if we reach `deadline` first.
   zx_status_t Stop(zx::time deadline);
-
-  // TODO(fxbug.dev/72386)
-  // Remove once audio test framework is migrated to RealmBuilder and virtio sound tests is using
-  // CFv2
-  zx_status_t InstallV1(sys::testing::EnvironmentServices& services);
-  zx_status_t LaunchV1(sys::testing::EnclosingEnvironment& environment, const std::string& realm,
-                       zx::time deadline);
-  void GetHostVsockEndpointV1(
-      fidl::InterfaceRequest<fuchsia::virtualization::HostVsockEndpoint> endpoint) {
-    realm_->GetHostVsockEndpoint(std::move(endpoint));
-  }
-  virtual bool UsingCFv1() const { return false; }
 
   bool Ready() const { return ready_; }
 
@@ -148,6 +151,8 @@ class EnclosedGuest {
 
  private:
   async::Loop& loop_;
+
+  // Can be null if the realm is created externally by the test code.
   std::unique_ptr<component_testing::RealmRoot> realm_root_;
 
   std::unique_ptr<LocalGuestConfigProvider> local_guest_config_provider_;

@@ -70,6 +70,9 @@ class HermeticAudioRealm {
   // Read the exported inspect info for the given component.
   const inspect::Hierarchy ReadInspect(std::string_view component_name);
 
+  // Returns the root.
+  const component_testing::RealmRoot& realm_root() { return root_; }
+
  private:
   struct CtorArgs {
     component_testing::RealmRoot root;

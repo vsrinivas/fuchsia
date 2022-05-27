@@ -14,14 +14,13 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "lib/sys/cpp/testing/enclosing_environment.h"
 #include "src/lib/files/path.h"
+#include "src/media/audio/audio_core/testing/integration/hermetic_audio_realm.h"
+#include "src/media/audio/audio_core/testing/integration/hermetic_audio_test.h"
+#include "src/media/audio/audio_core/testing/integration/virtual_device.h"
 #include "src/media/audio/lib/format/audio_buffer.h"
 #include "src/media/audio/lib/format/format.h"
 #include "src/media/audio/lib/format/traits.h"
-#include "src/media/audio/lib/test/hermetic_audio_environment.h"
-#include "src/media/audio/lib/test/hermetic_audio_test.h"
-#include "src/media/audio/lib/test/virtual_device.h"
 #include "src/virtualization/tests/enclosed_guest.h"
 
 namespace {
@@ -31,7 +30,7 @@ using ::media::audio::AudioBuffer;
 using ::media::audio::AudioBufferSlice;
 using ::media::audio::Format;
 using ::media::audio::SampleFormatTraits;
-using ::media::audio::test::HermeticAudioEnvironment;
+using ::media::audio::test::HermeticAudioRealm;
 using ::media::audio::test::HermeticAudioTest;
 using ::media::audio::test::VirtualOutput;
 
@@ -40,8 +39,6 @@ constexpr int32_t kStereoChannelCount = 2;
 constexpr AudioSampleFormat kSampleFormat = AudioSampleFormat::FLOAT;
 
 constexpr audio_stream_unique_id_t kOutputId = AUDIO_STREAM_UNIQUE_ID_BUILTIN_SPEAKERS;
-
-constexpr char kEnvironmentLabel[] = "virtio-sound-guest-test";
 
 // TODO(fxbug.dev/87646): Consider creating a `virtio_audio_test_util` that directly communicates
 // with ALSA instead to have better control over the output buffer.
@@ -56,38 +53,52 @@ constexpr int32_t kZeroPaddingFrameCount = 1024;
 
 template <class GuestType>
 class VirtioSoundGuestTest : public HermeticAudioTest {
- public:
-  static void SetUpTestSuite() {
-    // Set `HermeticAudioEnvironment` to install guest services.
-    HermeticAudioEnvironment::Options options = {
-        .install_additional_services_fn = [&](sys::testing::EnvironmentServices& services)
-            -> zx_status_t { return GetEnclosedGuest().InstallV1(services); },
-        .label = kEnvironmentLabel};
-    HermeticAudioTest::SetTestSuiteEnvironmentOptions(std::move(options));
-  }
-
-  static GuestType& GetEnclosedGuest() {
-    FX_CHECK(enclosed_guest_.has_value());
-    return enclosed_guest_.value();
-  }
-
  protected:
   void SetUp() override {
+    GuestLaunchInfo guest_launch_info;
     enclosed_guest_.emplace(loop());
+
+    HermeticAudioTest::SetTestSuiteRealmOptions([this, &guest_launch_info] {
+      return HermeticAudioRealm::Options{
+          .customize_realm = [this, &guest_launch_info](
+                                 ::component_testing::RealmBuilder& realm_builder) -> zx_status_t {
+            auto status = enclosed_guest_->InstallInRealm(realm_builder, guest_launch_info);
+            if (status != ZX_OK) {
+              return status;
+            }
+
+            using component_testing::ChildRef;
+            using component_testing::Protocol;
+            using component_testing::Route;
+
+            realm_builder.AddRoute(Route{
+                .capabilities = {Protocol{"fuchsia.media.Audio"}},
+                .source = ChildRef{HermeticAudioRealm::kAudioCore},
+                .targets = {ChildRef{"guest_manager"}},
+            });
+            return ZX_OK;
+          },
+      };
+    });
+
+    // Create the realm and start audio services.
     HermeticAudioTest::SetUp();
+
+    // Now start the guest.
+    ASSERT_EQ(enclosed_guest_->LaunchInRealm(realm().realm_root(), guest_launch_info,
+                                             zx::time::infinite()),
+              ZX_OK)
+        << "Failed to launch guest";
+
     const auto format =
         Format::Create<kSampleFormat>(kStereoChannelCount, kOutputFrameRate).take_value();
     // Add some padding to ensure that there is enough headroom in the ring buffer.
     output_ = CreateOutput(kOutputId, format,
                            kRampFrameCount + kZeroPaddingFrameCount + 10 * kOutputFrameRate);
-    ASSERT_EQ(GetEnclosedGuest().LaunchV1(environment()->GetEnvironment(), kEnvironmentLabel,
-                                          zx::time::infinite()),
-              ZX_OK)
-        << "Failed to launch guest";
   }
 
   void TearDown() override {
-    EXPECT_EQ(GetEnclosedGuest().Stop(zx::time::infinite()), ZX_OK);
+    EXPECT_EQ(enclosed_guest_->Stop(zx::time::infinite()), ZX_OK);
     enclosed_guest_.reset();
 
     if constexpr (kEnableAllOverflowAndUnderflowChecksInRealtimeTests) {
@@ -97,7 +108,7 @@ class VirtioSoundGuestTest : public HermeticAudioTest {
   }
 
   zx_status_t Execute(const std::vector<std::string>& argv) {
-    return GetEnclosedGuest().Execute(argv, {}, zx::time::infinite(), nullptr, nullptr);
+    return enclosed_guest_->Execute(argv, {}, zx::time::infinite(), nullptr, nullptr);
   }
 
   std::optional<int64_t> GetFirstNonSilentFrame(const AudioBuffer<kSampleFormat>& buffer) const {
@@ -114,19 +125,12 @@ class VirtioSoundGuestTest : public HermeticAudioTest {
   bool OutputHasUnderflows() { return DeviceHasUnderflows(output_); }
 
  private:
-  static inline std::optional<GuestType> enclosed_guest_;
-
+  std::optional<GuestType> enclosed_guest_;
   VirtualOutput<kSampleFormat>* output_ = nullptr;
 };
 
-class TerminaEnclosedGuestV1 : public TerminaEnclosedGuest {
- public:
-  explicit TerminaEnclosedGuestV1(async::Loop& loop) : TerminaEnclosedGuest(loop) {}
-  bool UsingCFv1() const override { return true; }
-};
-
 // We only support `TerminaEnclosedGuest` since the tests require `virtio-sound` and `alsa-lib`.
-TYPED_TEST_SUITE(VirtioSoundGuestTest, ::testing::Types<TerminaEnclosedGuestV1>,
+TYPED_TEST_SUITE(VirtioSoundGuestTest, ::testing::Types<TerminaEnclosedGuest>,
                  GuestTestNameGenerator);
 
 TYPED_TEST(VirtioSoundGuestTest, OutputFidelity) {
@@ -135,8 +139,8 @@ TYPED_TEST(VirtioSoundGuestTest, OutputFidelity) {
   //    `buffer[frame][0] = 0x7FFF - frame`
   //    `buffer[frame][1] = -0x8000 + frame`
   // Note that the file consists of `kZeroPaddingFrameCount` frames of zeros at the beginning in
-  // order to compensate for the initial gain ramp, which is then followed by the `kRampFrameCount`
-  // ramp frames as described above.
+  // order to compensate for the initial gain ramp, which is then followed by the
+  // `kRampFrameCount` ramp frames as described above.
   ASSERT_EQ(this->Execute({kAplayBinPath, kTestFilePath}), ZX_OK);
 
   const auto ring_buffer = this->GetOutputRingBuffer();

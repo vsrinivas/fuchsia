@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//src/media/audio/audio_core_package_v2.gni")
 import("//src/virtualization/buildtools/linux_paths.gni")
 import("//src/virtualization/buildtools/romfs_image.gni")
 
@@ -477,10 +478,9 @@ executable("virtualization_sound_tests") {
     ":lib",
     ":test_main",
     "//sdk/lib/sys/component/cpp/testing:cpp",
-    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/lib/files",
+    "//src/media/audio/audio_core/testing/integration:hermetic_audio_test",
     "//src/media/audio/lib/format",
-    "//src/media/audio/lib/test:hermetic_audio_test",
     "//third_party/googletest:gmock",
   ]
 }
@@ -491,10 +491,10 @@ fuchsia_test_component("virtualization_sound_tests_cmp") {
     ":test_images",
     ":virtualization_sound_tests",
   ]
-  manifest = "meta/virtualization_sound_tests.cmx"
+  manifest = "meta/virtualization_sound_tests.cml"
 }
 
-fuchsia_test_package("virtualization_sound_tests_pkg") {
+audio_core_test_package("virtualization_sound_tests_pkg") {
   package_name = "virtualization-sound-tests"
   test_components = [ ":virtualization_sound_tests_cmp" ]
   test_specs = {
@@ -503,6 +503,10 @@ fuchsia_test_package("virtualization_sound_tests_pkg") {
       max_severity = "ERROR"
     }
   }
+  audio_core_manifest_shards = [
+    "//src/media/audio/audio_core/meta/audio_core.shard.for_integration_tests.cml",
+    "//src/media/audio/audio_core/meta/audio_core.shard.ultrasound.cml",
+  ]
 }
 
 executable("virtualization_vsock_tests") {
