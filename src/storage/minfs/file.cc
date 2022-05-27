@@ -182,7 +182,7 @@ zx::status<> File::BlocksSwap(Transaction* transaction, blk_t start, blk_t count
     ZX_DEBUG_ASSERT(cleared);
     // We have cleared pending bit for the block. Update the accounding for the
     // dirty block.
-    Vfs()->SubtractDirtyBytes(Vfs()->BlockSize());
+    Vfs()->SubtractDirtyBytes(Vfs()->BlockSize(), old_block != 0);
     --count;
     status = iterator.Advance();
     if (status.is_error())
@@ -226,7 +226,7 @@ void File::AcquireWritableBlock(Transaction* transaction, blk_t local_bno, blk_t
   bool using_new_block = (old_bno == 0);
 #ifdef __Fuchsia__
   allocation_state_.SetPending(local_bno, !using_new_block);
-  Vfs()->AddDirtyBytes(Vfs()->BlockSize());
+  [[maybe_unused]] auto unused_ = Vfs()->AddDirtyBytes(Vfs()->BlockSize(), !using_new_block);
 #else
   if (using_new_block) {
     Vfs()->BlockNew(transaction, out_bno);
@@ -246,7 +246,7 @@ void File::DeleteBlock(PendingWork* transaction, blk_t local_bno, blk_t old_bno,
 #ifdef __Fuchsia__
   if (!indirect) {
     if (allocation_state_.IsPending(local_bno)) {
-      Vfs()->SubtractDirtyBytes(Vfs()->BlockSize());
+      Vfs()->SubtractDirtyBytes(Vfs()->BlockSize(), old_bno != 0);
     }
     // Remove this block from the pending allocation map in case it's set so we do not
     // proceed to allocate a new block.
@@ -371,17 +371,18 @@ zx_status_t File::Write(const void* data, size_t len, size_t offset, size_t* out
 
     // If this file's pending blocks have crossed a limit or if there are no free blocks in the
     // filesystem, try to flush before we proceed.
-    if (zx::status status = CheckAndFlush(false, len, offset); status.is_error()) {
+    if (auto status = CheckAndFlush(false, len, offset); status.is_error()) {
       return status.error_value();
     }
 
     // Calculate maximum number of blocks to reserve for this write operation.
-    zx::status<uint32_t> reserve_blocks_or = GetRequiredBlockCount(offset, len);
+    auto reserve_blocks_or = GetRequiredBlockCount(offset, len);
     if (reserve_blocks_or.is_error()) {
       return reserve_blocks_or.error_value();
     }
 
-    auto transaction_or = GetTransaction(reserve_blocks_or.value());
+    size_t reserve_blocks = reserve_blocks_or.value();
+    auto transaction_or = GetTransaction(static_cast<uint32_t>(reserve_blocks));
     if (transaction_or.is_error()) {
       return transaction_or.error_value();
     }
@@ -389,7 +390,7 @@ zx_status_t File::Write(const void* data, size_t len, size_t offset, size_t* out
     // We mark block that has writes pending only after we have enough blocks reserved through
     // BeginTransaction or through ContinueTransaction.
     if (DirtyCacheEnabled()) {
-      if (auto status = MarkRequiredBlocksPending(offset, len, *transaction); status.is_error()) {
+      if (auto status = MarkRequiredBlocksPending(offset, len); status.is_error()) {
         return status.error_value();
       }
     }

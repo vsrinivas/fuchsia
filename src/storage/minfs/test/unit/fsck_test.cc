@@ -12,8 +12,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#include <optional>
-
 #include <gtest/gtest.h>
 #include <safemath/checked_math.h>
 
@@ -94,7 +92,9 @@ class ConsistencyCheckerFixtureVerbose : public testing::Test {
     fs_ = std::move(fs_or.value());
   }
 
-  void DestroyMinfs(std::unique_ptr<Bcache>* bcache) {
+  Minfs* get_fs() const { return fs_.get(); }
+
+  void destroy_fs(std::unique_ptr<Bcache>* bcache) {
     sync_completion_t completion;
     fs_->Sync([&completion](zx_status_t status) { sync_completion_signal(&completion); });
     EXPECT_EQ(sync_completion_wait(&completion, zx::duration::infinite().get()), ZX_OK);
@@ -153,10 +153,10 @@ TEST_F(ConsistencyCheckerFixtureVerbose, TwoInodesPointToABlock) {
   EXPECT_EQ(file1_stat.inode / kMinfsInodesPerBlock, file2_stat.inode / kMinfsInodesPerBlock);
 
   std::unique_ptr<Bcache> bcache;
-  DestroyMinfs(&bcache);
+  destroy_fs(&bcache);
 
   Superblock sb;
-  EXPECT_TRUE(bcache->Readblk(kSuperblockStart, &sb).is_ok());
+  EXPECT_TRUE(bcache->Readblk(0, &sb).is_ok());
 
   Inode inodes[kMinfsInodesPerBlock];
   blk_t inode_block =
@@ -185,10 +185,10 @@ TEST_F(ConsistencyCheckerFixtureVerbose, TwoOffsetsPointToABlock) {
   file_stat = CreateAndWrite("file", 2 * kMinfsBlockSize, 0, kMinfsBlockSize);
 
   std::unique_ptr<Bcache> bcache;
-  DestroyMinfs(&bcache);
+  destroy_fs(&bcache);
 
   Superblock sb;
-  EXPECT_TRUE(bcache->Readblk(kSuperblockStart, &sb).is_ok());
+  EXPECT_TRUE(bcache->Readblk(0, &sb).is_ok());
 
   Inode inodes[kMinfsInodesPerBlock];
   blk_t inode_block =
@@ -214,10 +214,10 @@ TEST_F(ConsistencyCheckerFixtureVerbose, IndirectBlocksShared) {
   file_stat = CreateAndWrite("file", double_indirect_offset, 0, kMinfsBlockSize);
 
   std::unique_ptr<Bcache> bcache;
-  DestroyMinfs(&bcache);
+  destroy_fs(&bcache);
 
   Superblock sb;
-  EXPECT_TRUE(bcache->Readblk(kSuperblockStart, &sb).is_ok());
+  EXPECT_TRUE(bcache->Readblk(0, &sb).is_ok());
 
   Inode inodes[kMinfsInodesPerBlock];
   blk_t inode_block =
@@ -249,7 +249,7 @@ void ConsistencyCheckerFixtureVerbose::MarkDirectoryEntryMissing(size_t offset,
     root_dir_block = root_or->GetInode()->dnum[0] + fs().Info().dat_block;
   }
 
-  DestroyMinfs(bcache);
+  destroy_fs(bcache);
 
   // Need this buffer to be a full block.
   DirentBuffer<kMinfsBlockSize> dirent_buffer;
@@ -334,79 +334,22 @@ TEST_F(ConsistencyCheckerFixtureVerbose, UnlinkedDirectoryHasBadEntryCount) {
   ASSERT_TRUE(Fsck(std::move(bcache), FsckOptions{.repair = false, .read_only = true}).is_error());
 }
 
-// Obtain the Minfs Bcache, optionally specifying the contents of the main superblock.
-std::unique_ptr<Bcache> CreateBcache(std::optional<Superblock> superblock = std::nullopt) {
-  auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
-  auto bcache_or = Bcache::Create(std::move(device), kBlockCount);
-  ZX_ASSERT(bcache_or.is_ok());
-  std::unique_ptr<Bcache> bcache = std::move(bcache_or.value());
+TEST_F(ConsistencyCheckerFixtureVerbose, CorruptSuperblock) {
+  std::unique_ptr<Bcache> bcache;
+  destroy_fs(&bcache);
 
-  ZX_ASSERT(Mkfs(bcache.get()).is_ok());
-  if (superblock.has_value()) {
-    ZX_ASSERT(bcache->Writeblk(kSuperblockStart, &superblock.value()).is_ok());
-  }
-  return bcache;
-}
+  Superblock sb;
+  EXPECT_TRUE(bcache->Readblk(0, &sb).is_ok());
 
-// Obtain the superblock a newly created Minfs filesystem has.
-Superblock DefaultSuperblock() {
-  Superblock default_superblock;
-  auto bcache = CreateBcache();
-  ZX_ASSERT(bcache->Readblk(kSuperblockStart, &default_superblock).is_ok());
-  return default_superblock;
-}
+  // Check if superblock magic is valid
+  EXPECT_EQ(sb.magic0, kMinfsMagic0);
+  EXPECT_EQ(sb.magic1, kMinfsMagic1);
 
-TEST(FsckValidateSuperblock, NewSuperblock) {
-  // Fsck should always pass on a newly created filesystem.
-  ASSERT_TRUE(Fsck(CreateBcache(), {}).is_ok());
-}
+  // Corrupt the superblock
+  sb.checksum = 0;
+  EXPECT_TRUE(bcache->Writeblk(0, &sb).is_ok());
 
-TEST(FsckValidateSuperblock, BadChecksum) {
-  Superblock bad_checksum = DefaultSuperblock();
-  bad_checksum.checksum = ~bad_checksum.checksum;
-  ASSERT_TRUE(Fsck(CreateBcache(bad_checksum), {}).is_error());
-}
-
-TEST(FsckValidateSuperblock, BadMagic0) {
-  Superblock bad_magic0 = DefaultSuperblock();
-  bad_magic0.magic0 = ~bad_magic0.magic0;
-  ASSERT_TRUE(Fsck(CreateBcache(bad_magic0), {}).is_error());
-}
-
-TEST(FsckValidateSuperblock, BadMagic1) {
-  Superblock bad_magic1 = DefaultSuperblock();
-  bad_magic1.magic1 = ~bad_magic1.magic1;
-  ASSERT_TRUE(Fsck(CreateBcache(bad_magic1), {}).is_error());
-}
-
-TEST(FsckValidateSuperblock, BadVersion) {
-  Superblock bad_version = DefaultSuperblock();
-  bad_version.major_version = ~bad_version.major_version;
-  ASSERT_TRUE(Fsck(CreateBcache(bad_version), {}).is_error());
-}
-
-TEST(FsckValidateSuperblock, BadBlockSize) {
-  Superblock bad_block_size = DefaultSuperblock();
-  bad_block_size.block_size = kMinfsBlockSize - 1;
-  ASSERT_TRUE(Fsck(CreateBcache(bad_block_size), {}).is_error());
-}
-
-TEST(FsckValidateSuperblock, BadInodeSize) {
-  Superblock bad_inode_size = DefaultSuperblock();
-  bad_inode_size.inode_size = kMinfsInodeSize - 1;
-  ASSERT_TRUE(Fsck(CreateBcache(bad_inode_size), {}).is_error());
-}
-
-TEST(FsckValidateSuperblock, BadAllocBlockCount) {
-  Superblock bad_alloc_block_count = DefaultSuperblock();
-  bad_alloc_block_count.alloc_block_count = bad_alloc_block_count.block_count + 1;
-  ASSERT_TRUE(Fsck(CreateBcache(bad_alloc_block_count), {}).is_error());
-}
-
-TEST(FsckValidateSuperblock, BadAllocInodeCount) {
-  Superblock bad_alloc_inode_count = DefaultSuperblock();
-  bad_alloc_inode_count.alloc_inode_count = bad_alloc_inode_count.inode_count + 1;
-  ASSERT_TRUE(Fsck(CreateBcache(bad_alloc_inode_count), {}).is_error());
+  ASSERT_TRUE(Fsck(std::move(bcache), FsckOptions{.repair = false}).is_error());
 }
 
 }  // namespace
