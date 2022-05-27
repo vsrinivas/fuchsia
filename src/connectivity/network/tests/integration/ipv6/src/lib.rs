@@ -4,11 +4,13 @@
 
 #![cfg(test)]
 
-use std::mem::size_of;
+use std::{convert::TryInto as _, mem::size_of};
 
 use fidl_fuchsia_net as net;
 use fidl_fuchsia_net_interfaces_admin as finterfaces_admin;
 use fidl_fuchsia_net_stack as net_stack;
+use fidl_fuchsia_posix_socket as fposix_socket;
+use fidl_fuchsia_posix_socket_raw as fposix_socket_raw;
 use fuchsia_async::{DurationExt as _, TimeoutExt as _};
 use fuchsia_zircon as zx;
 
@@ -30,7 +32,7 @@ use netstack_testing_common::{
     ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT, NDP_MESSAGE_TTL,
 };
 use netstack_testing_macros::variants_test;
-use packet::ParsablePacket as _;
+use packet::{InnerPacketBuilder as _, ParsablePacket as _, Serializer as _};
 use packet_formats::{
     ethernet::{EtherType, EthernetFrame, EthernetFrameLengthCheck},
     icmp::{
@@ -1120,4 +1122,110 @@ async fn sends_mld_reports<E: netemul::Endpoint>(name: &str) {
         .await
         .unwrap()
         .expect("error getting our expected MLD report");
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn sending_ra_with_autoconf_flag_triggers_slaac() {
+    let name = "sending_ra_with_onlink_triggers_autoconf";
+    let sandbox = netemul::TestSandbox::new().expect("error creating sandbox");
+    let (_network, realm, _netstack, iface, _fake_ep) =
+        setup_network::<netemul::NetworkDevice>(&sandbox, name, None)
+            .await
+            .expect("error setting up networking");
+
+    let interfaces_state = &realm
+        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
+        .expect("connect to protocol");
+
+    let src_ip = netstack_testing_common::interfaces::wait_for_v6_ll(&interfaces_state, iface.id())
+        .await
+        .expect("waiting for link local address");
+    let dst_ip = net_types_ip::Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS;
+
+    let sock = realm
+        .raw_socket(
+            fposix_socket::Domain::Ipv6,
+            fposix_socket_raw::ProtocolAssociation::Associated(
+                packet_formats::ip::Ipv6Proto::Icmpv6.into(),
+            ),
+        )
+        .await
+        .expect("create raw socket");
+
+    let options = [NdpOptionBuilder::PrefixInformation(PrefixInformation::new(
+        ipv6_consts::PREFIX.prefix(),  /* prefix_length */
+        true,                          /* on_link_flag */
+        true,                          /* autonomous_address_configuration_flag */
+        6234,                          /* valid_lifetime */
+        0,                             /* preferred_lifetime */
+        ipv6_consts::PREFIX.network(), /* prefix */
+    ))];
+    let ra = RouterAdvertisement::new(
+        0,     /* current_hop_limit */
+        false, /* managed_flag */
+        false, /* other_config_flag */
+        1234,  /* router_lifetime */
+        0,     /* reachable_time */
+        0,     /* retransmit_timer */
+    );
+
+    let msg = packet_formats::icmp::ndp::OptionSequenceBuilder::<_>::new(options.iter())
+        .into_serializer()
+        .encapsulate(packet_formats::icmp::IcmpPacketBuilder::<_, &[u8], _>::new(
+            src_ip,
+            dst_ip,
+            packet_formats::icmp::IcmpUnusedCode,
+            ra,
+        ))
+        .serialize_vec_outer()
+        .expect("failed to serialize NDP packet")
+        .unwrap_b();
+
+    // NDP requires that this be the hop limit.
+    let () = sock.set_multicast_hops_v6(255).expect("set multicast hops");
+
+    let written = sock
+        .send_to(
+            msg.as_ref(),
+            &std::net::SocketAddrV6::new((*dst_ip).into(), 0, 0, iface.id().try_into().unwrap())
+                .into(),
+        )
+        .expect("failed to write to socket");
+    assert_eq!(written, msg.as_ref().len());
+
+    fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
+        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interfaces_state)
+            .expect("creating interface event stream"),
+        &mut fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(iface.id()),
+        |fidl_fuchsia_net_interfaces_ext::Properties {
+             id: _,
+             name: _,
+             device_class: _,
+             online: _,
+             addresses,
+             has_default_ipv4_route: _,
+             has_default_ipv6_route: _,
+         }| {
+            addresses.into_iter().find_map(
+                |fidl_fuchsia_net_interfaces_ext::Address {
+                     addr: fidl_fuchsia_net::Subnet { addr, prefix_len: _ },
+                     valid_until: _,
+                 }| {
+                    let addr = match addr {
+                        fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
+                            ..
+                        }) => {
+                            return None;
+                        }
+                        fidl_fuchsia_net::IpAddress::Ipv6(fidl_fuchsia_net::Ipv6Address {
+                            addr,
+                        }) => net_types_ip::Ipv6Addr::from_bytes(*addr),
+                    };
+                    ipv6_consts::PREFIX.contains(&addr).then(|| ())
+                },
+            )
+        },
+    )
+    .await
+    .expect("error waiting for address assignment");
 }

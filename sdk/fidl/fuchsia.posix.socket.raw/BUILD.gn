@@ -10,6 +10,7 @@ fidl("fuchsia.posix.socket.raw") {
   sources = [ "socket.fidl" ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.io",
     "//sdk/fidl/fuchsia.net",
     "//sdk/fidl/fuchsia.posix",
     "//sdk/fidl/fuchsia.posix.socket",
