@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/forensics/feedback_data/attachments/screenshot_ptr.h"
+#include "src/developer/forensics/feedback_data/screenshot.h"
 
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>

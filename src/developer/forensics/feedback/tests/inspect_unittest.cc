@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/forensics/feedback_data/attachments/inspect.h"
+#include "src/developer/forensics/feedback/attachments/inspect.h"
 
 #include <fuchsia/mem/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
@@ -17,7 +17,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/developer/forensics/feedback_data/attachments/types.h"
+#include "src/developer/forensics/feedback/attachments/types.h"
 #include "src/developer/forensics/feedback_data/constants.h"
 #include "src/developer/forensics/testing/gpretty_printers.h"
 #include "src/developer/forensics/testing/stubs/diagnostics_archive.h"
@@ -27,7 +27,7 @@
 #include "src/developer/forensics/utils/errors.h"
 #include "src/lib/timekeeper/async_test_clock.h"
 
-namespace forensics::feedback_data {
+namespace forensics::feedback {
 namespace {
 
 class MonotonicBackoff : public backoff::Backoff {
@@ -48,20 +48,20 @@ class InspectTest : public UnitTestFixture {
         clock_(dispatcher()),
         cobalt_(dispatcher(), services(), &clock_),
         inspect_node_manager_(&InspectRoot()),
-        inspect_data_budget_(
-            std::make_unique<InspectDataBudget>(true, &inspect_node_manager_, &cobalt_)) {}
+        inspect_data_budget_(std::make_unique<feedback_data::InspectDataBudget>(
+            true, &inspect_node_manager_, &cobalt_)) {}
 
  protected:
   void SetUpInspectServer(std::unique_ptr<stubs::DiagnosticsArchiveBase> server) {
     inspect_server_ = std::move(server);
     if (inspect_server_) {
-      InjectServiceProvider(inspect_server_.get(), kArchiveAccessorName);
+      InjectServiceProvider(inspect_server_.get(), feedback_data::kArchiveAccessorName);
     }
   }
 
   void DisableDataBudget() {
     inspect_data_budget_ =
-        std::make_unique<InspectDataBudget>(false, &inspect_node_manager_, &cobalt_);
+        std::make_unique<feedback_data::InspectDataBudget>(false, &inspect_node_manager_, &cobalt_);
   }
 
   AttachmentValue Run(::fpromise::promise<AttachmentValue> promise,
@@ -80,14 +80,14 @@ class InspectTest : public UnitTestFixture {
     return attachment;
   }
 
-  InspectDataBudget* DataBudget() { return inspect_data_budget_.get(); }
+  feedback_data::InspectDataBudget* DataBudget() { return inspect_data_budget_.get(); }
 
  private:
   async::Executor executor_;
   timekeeper::AsyncTestClock clock_;
   cobalt::Logger cobalt_;
   InspectNodeManager inspect_node_manager_;
-  std::unique_ptr<InspectDataBudget> inspect_data_budget_;
+  std::unique_ptr<feedback_data::InspectDataBudget> inspect_data_budget_;
   std::unique_ptr<stubs::DiagnosticsArchiveBase> inspect_server_;
 };
 
@@ -188,7 +188,7 @@ TEST_F(InspectTest, Reconnects) {
   fuchsia::diagnostics::StreamParameters parameters;
   auto archive = std::make_unique<stubs::DiagnosticsArchiveCaptureParameters>(&parameters);
 
-  InjectServiceProvider(archive.get(), kArchiveAccessorName);
+  InjectServiceProvider(archive.get(), feedback_data::kArchiveAccessorName);
 
   Inspect inspect(dispatcher(), services(), MonotonicBackoff::Make(), DataBudget());
   RunLoopUntilIdle();
@@ -205,4 +205,4 @@ TEST_F(InspectTest, Reconnects) {
 }
 
 }  // namespace
-}  // namespace forensics::feedback_data
+}  // namespace forensics::feedback

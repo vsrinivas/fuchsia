@@ -37,13 +37,13 @@ std::set<std::string> kPreviousBootUtcMonotonicDifferenceAllowlist = {
     kAttachmentLogSystemPrevious,
 };
 
-std::string ToString(const enum AttachmentValue::State state) {
+std::string ToString(const enum feedback::AttachmentValue::State state) {
   switch (state) {
-    case AttachmentValue::State::kComplete:
+    case feedback::AttachmentValue::State::kComplete:
       return "complete";
-    case AttachmentValue::State::kPartial:
+    case feedback::AttachmentValue::State::kPartial:
       return "partial";
-    case AttachmentValue::State::kMissing:
+    case feedback::AttachmentValue::State::kMissing:
       return "missing";
   }
 }
@@ -69,21 +69,22 @@ feedback::Annotations AllAnnotations(
 }
 
 // Create a complete list set of attachments from the collected attachments and the allowlist.
-Attachments AllAttachments(const AttachmentKeys& allowlist,
-                           const ::fpromise::result<Attachments>& attachments_result) {
-  Attachments all_attachments;
+feedback::Attachments AllAttachments(
+    const feedback::AttachmentKeys& allowlist,
+    const ::fpromise::result<feedback::Attachments>& attachments_result) {
+  feedback::Attachments all_attachments;
   if (attachments_result.is_ok()) {
     // Because attachments can contain large blobs of text and we only care about the state of the
     // attachment and its associated error, we don't copy the value of the attachment.
     for (const auto& [k, v] : attachments_result.value()) {
       switch (v.State()) {
-        case AttachmentValue::State::kComplete:
-          all_attachments.insert({k, AttachmentValue("")});
+        case feedback::AttachmentValue::State::kComplete:
+          all_attachments.insert({k, feedback::AttachmentValue("")});
           break;
-        case AttachmentValue::State::kPartial:
-          all_attachments.insert({k, AttachmentValue("", v.Error())});
+        case feedback::AttachmentValue::State::kPartial:
+          all_attachments.insert({k, feedback::AttachmentValue("", v.Error())});
           break;
-        case AttachmentValue::State::kMissing:
+        case feedback::AttachmentValue::State::kMissing:
           all_attachments.insert({k, v});
           break;
       }
@@ -92,7 +93,7 @@ Attachments AllAttachments(const AttachmentKeys& allowlist,
 
   for (const auto& key : allowlist) {
     if (all_attachments.find(key) == all_attachments.end()) {
-      all_attachments.insert({key, AttachmentValue(Error::kLogicError)});
+      all_attachments.insert({key, feedback::AttachmentValue(Error::kLogicError)});
     }
   }
 
@@ -104,7 +105,7 @@ void AddUtcMonotonicDifference(const std::optional<zx::duration>& utc_monotonic_
   if (!utc_monotonic_difference.has_value() || !file->IsObject() ||
       file->HasMember("utc_monotonic_difference_nanos") ||
       (file->HasMember("state") && (*file)["state"].IsString() &&
-       (*file)["state"].GetString() == ToString(AttachmentValue::State::kMissing))) {
+       (*file)["state"].GetString() == ToString(feedback::AttachmentValue::State::kMissing))) {
     return;
   }
 
@@ -135,8 +136,8 @@ void AddUtcMonotonicDifferences(
   }
 }
 
-void AddAttachments(const AttachmentKeys& attachment_allowlist,
-                    const ::fpromise::result<Attachments>& attachments_result,
+void AddAttachments(const feedback::AttachmentKeys& attachment_allowlist,
+                    const ::fpromise::result<feedback::Attachments>& attachments_result,
                     Document* metadata_json) {
   if (attachment_allowlist.empty()) {
     return;
@@ -234,7 +235,7 @@ void AddLogRedactionCanary(const std::string& log_redaction_canary, Document* me
 
 Metadata::Metadata(async_dispatcher_t* dispatcher, timekeeper::Clock* clock, RedactorBase* redactor,
                    const bool is_first_instance, const std::set<std::string>& annotation_allowlist,
-                   const AttachmentKeys& attachment_allowlist)
+                   const feedback::AttachmentKeys& attachment_allowlist)
     : log_redaction_canary_(redactor->UnredactedCanary()),
       annotation_allowlist_(annotation_allowlist),
       attachment_allowlist_(attachment_allowlist),
@@ -245,8 +246,8 @@ Metadata::Metadata(async_dispatcher_t* dispatcher, timekeeper::Clock* clock, Red
 
 std::string Metadata::MakeMetadata(
     const ::fpromise::result<feedback::Annotations>& annotations_result,
-    const ::fpromise::result<Attachments>& attachments_result, const std::string& snapshot_uuid,
-    bool missing_non_platform_annotations) {
+    const ::fpromise::result<feedback::Attachments>& attachments_result,
+    const std::string& snapshot_uuid, bool missing_non_platform_annotations) {
   Document metadata_json(kObjectType);
   auto& allocator = metadata_json.GetAllocator();
 

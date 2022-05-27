@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_ATTACHMENTS_METRICS_H_
-#define SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_ATTACHMENTS_METRICS_H_
+#ifndef SRC_DEVELOPER_FORENSICS_FEEDBACK_ATTACHMENTS_METRICS_H_
+#define SRC_DEVELOPER_FORENSICS_FEEDBACK_ATTACHMENTS_METRICS_H_
 
-#include "src/developer/forensics/feedback_data/attachments/types.h"
+#include "src/developer/forensics/feedback/attachments/types.h"
 #include "src/developer/forensics/utils/cobalt/logger.h"
 
-namespace forensics::feedback_data {
+namespace forensics::feedback {
 
 class AttachmentMetrics {
  public:
@@ -21,6 +21,6 @@ class AttachmentMetrics {
   cobalt::Logger* cobalt_;
 };
 
-}  // namespace forensics::feedback_data
+}  // namespace forensics::feedback
 
-#endif  // SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_ATTACHMENTS_METRICS_H_
+#endif  // SRC_DEVELOPER_FORENSICS_FEEDBACK_ATTACHMENTS_METRICS_H_

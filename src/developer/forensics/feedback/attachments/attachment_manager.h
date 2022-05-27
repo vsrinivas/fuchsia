@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_ATTACHMENT_MANAGER_H_
-#define SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_ATTACHMENT_MANAGER_H_
+#ifndef SRC_DEVELOPER_FORENSICS_FEEDBACK_ATTACHMENTS_ATTACHMENT_MANAGER_H_
+#define SRC_DEVELOPER_FORENSICS_FEEDBACK_ATTACHMENTS_ATTACHMENT_MANAGER_H_
 
 #include <lib/async/dispatcher.h>
 #include <lib/fpromise/promise.h>
@@ -12,10 +12,10 @@
 
 #include <memory>
 
-#include "src/developer/forensics/feedback_data/attachments/provider.h"
-#include "src/developer/forensics/feedback_data/attachments/types.h"
+#include "src/developer/forensics/feedback/attachments/provider.h"
+#include "src/developer/forensics/feedback/attachments/types.h"
 
-namespace forensics::feedback_data {
+namespace forensics::feedback {
 
 // Responsible for the storage and collection of attachments
 //
@@ -36,6 +36,6 @@ class AttachmentManager {
   std::map<std::string, AttachmentProvider*> providers_;
 };
 
-}  // namespace forensics::feedback_data
+}  // namespace forensics::feedback
 
-#endif  // SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_ATTACHMENT_MANAGER_H_
+#endif  // SRC_DEVELOPER_FORENSICS_FEEDBACK_ATTACHMENTS_ATTACHMENT_MANAGER_H_

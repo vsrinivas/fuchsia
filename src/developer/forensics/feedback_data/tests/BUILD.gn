@@ -10,40 +10,6 @@ visibility = [ ":*" ]
 ###############################################################################
 # EXECUTABLES
 ###############################################################################
-executable("attachment_manager_unittest_exe") {
-  testonly = true
-
-  sources = [ "attachment_manager_unittest.cc" ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.hwinfo",
-    "//sdk/fidl/fuchsia.intl",
-    "//sdk/lib/fit-promise",
-    "//src/developer/forensics/feedback_data:constants",
-    "//src/developer/forensics/feedback_data/attachments",
-    "//src/developer/forensics/testing:gmatchers",
-    "//src/developer/forensics/testing:gpretty_printers",
-    "//src/developer/forensics/testing:gtest_with_syslog_main",
-    "//src/developer/forensics/testing:log_message",
-    "//src/developer/forensics/testing:unit_test_fixture",
-    "//src/developer/forensics/testing/stubs:channel_control",
-    "//src/developer/forensics/testing/stubs:cobalt",
-    "//src/developer/forensics/testing/stubs:device_id_provider",
-    "//src/developer/forensics/testing/stubs:diagnostics",
-    "//src/developer/forensics/testing/stubs:product_info_provider",
-    "//src/developer/forensics/utils:logs",
-    "//src/developer/forensics/utils:time",
-    "//src/developer/forensics/utils/cobalt",
-    "//src/lib/files",
-    "//src/lib/fxl",
-    "//src/lib/timekeeper:testing",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-    "//zircon/system/ulib/async:async-cpp",
-    "//zircon/system/ulib/zx",
-  ]
-}
-
 executable("config_unittest_exe") {
   testonly = true
 
@@ -75,10 +41,10 @@ executable("data_provider_unittest_exe") {
     "//sdk/fidl/fuchsia.math",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fidl/cpp",
+    "//src/developer/forensics/feedback/attachments",
     "//src/developer/forensics/feedback_data:constants",
     "//src/developer/forensics/feedback_data:data_provider",
     "//src/developer/forensics/feedback_data:metadata",
-    "//src/developer/forensics/feedback_data/attachments",
     "//src/developer/forensics/testing:gmatchers",
     "//src/developer/forensics/testing:gpretty_printers",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
@@ -137,27 +103,6 @@ executable("inspect_data_budget_unittest_exe") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-executable("inspect_unittest_exe") {
-  testonly = true
-
-  sources = [ "inspect_unittest.cc" ]
-
-  deps = [
-    "//sdk/lib/sys/cpp/testing:cpp",
-    "//src/developer/forensics/feedback_data:constants",
-    "//src/developer/forensics/feedback_data/attachments",
-    "//src/developer/forensics/feedback_data/attachments:inspect",
-    "//src/developer/forensics/testing:gpretty_printers",
-    "//src/developer/forensics/testing:gtest_with_syslog_main",
-    "//src/developer/forensics/testing:unit_test_fixture",
-    "//src/developer/forensics/testing/stubs:diagnostics",
-    "//src/developer/forensics/utils:errors",
-    "//src/lib/timekeeper:testing",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-  ]
-}
-
 executable("log_source_unittest_exe") {
   testonly = true
 
@@ -186,9 +131,9 @@ executable("metadata_unittest_exe") {
     "//sdk/lib/fit-promise",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/syslog/cpp:backend_legacy",
+    "//src/developer/forensics/feedback/attachments",
     "//src/developer/forensics/feedback_data:constants",
     "//src/developer/forensics/feedback_data:metadata",
-    "//src/developer/forensics/feedback_data/attachments",
     "//src/developer/forensics/testing:unit_test_fixture",
     "//src/developer/forensics/utils:errors",
     "//src/developer/forensics/utils/redact",
@@ -200,58 +145,14 @@ executable("metadata_unittest_exe") {
   ]
 }
 
-executable("metrics_unittest_exe") {
+executable("screenshot_unittest_exe") {
   testonly = true
 
-  # "metrics_unittest_exe" is rather generic for the default_output_dir that is set
-  # to root_out_dir so instead we write the binary to target_out_dir.
-  output_dir = target_out_dir
-
-  sources = [ "metrics_unittest.cc" ]
-
-  deps = [
-    "//src/developer/forensics/feedback_data:constants",
-    "//src/developer/forensics/feedback_data/attachments",
-    "//src/developer/forensics/testing:gtest_with_syslog_main",
-    "//src/developer/forensics/testing:unit_test_fixture",
-    "//src/developer/forensics/testing/stubs:cobalt",
-    "//src/lib/timekeeper:testing",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-  ]
-}
-
-executable("kernel_log_ptr_integration_test_exe") {
-  testonly = true
-
-  sources = [ "kernel_log_ptr_integration_test.cc" ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
-    "//sdk/lib/sys/cpp/testing:integration_fixture",
-    "//src/developer/forensics/feedback_data/attachments",
-    "//src/developer/forensics/feedback_data/attachments:kernel_log",
-    "//src/developer/forensics/utils:errors",
-    "//src/lib/fxl",
-    "//src/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-    "//zircon/system/ulib/zx",
-  ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
-}
-
-executable("screenshot_ptr_unittest_exe") {
-  testonly = true
-
-  sources = [ "screenshot_ptr_unittest.cc" ]
+  sources = [ "screenshot_unittest.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.ui.scenic",
-    "//src/developer/forensics/feedback_data/attachments:screenshot",
+    "//src/developer/forensics/feedback_data:screenshot",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",
     "//src/developer/forensics/testing/stubs:scenic",
@@ -260,43 +161,6 @@ executable("screenshot_ptr_unittest_exe") {
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/zx",
-  ]
-}
-
-executable("static_attachments_unittest_exe") {
-  testonly = true
-
-  sources = [ "static_attachments_unittest.cc" ]
-
-  deps = [
-    "//src/developer/forensics/feedback_data:constants",
-    "//src/developer/forensics/feedback_data/attachments",
-    "//src/developer/forensics/testing:gtest_with_syslog_main",
-    "//src/developer/forensics/testing:scoped_memfs_manager",
-    "//src/lib/files",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-  ]
-}
-
-executable("system_log_unittest_exe") {
-  testonly = true
-
-  sources = [ "system_log_unittest.cc" ]
-
-  deps = [
-    "//src/developer/forensics/feedback_data:constants",
-    "//src/developer/forensics/feedback_data/attachments",
-    "//src/developer/forensics/feedback_data/attachments:system_log",
-    "//src/developer/forensics/testing:gpretty_printers",
-    "//src/developer/forensics/testing:gtest_with_syslog_main",
-    "//src/developer/forensics/testing:unit_test_fixture",
-    "//src/developer/forensics/testing/stubs:diagnostics",
-    "//src/developer/forensics/utils:errors",
-    "//src/developer/forensics/utils/redact",
-    "//src/lib/timekeeper:testing",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
   ]
 }
 
@@ -325,14 +189,6 @@ resource("test_image") {
 ###############################################################################
 # COMPONENTS
 ###############################################################################
-fuchsia_component("attachment_manager_unittest") {
-  testonly = true
-
-  manifest = "meta/attachment_manager_unittest.cml"
-
-  deps = [ ":attachment_manager_unittest_exe" ]
-}
-
 fuchsia_unittest_component("config_unittest") {
   deps = [
     ":config_unittest_exe",
@@ -365,14 +221,6 @@ fuchsia_unittest_component("inspect_data_budget_unittest") {
   ]
 }
 
-fuchsia_component("inspect_unittest") {
-  testonly = true
-
-  manifest = "meta/inspect_unittest.cml"
-
-  deps = [ ":inspect_unittest_exe" ]
-}
-
 fuchsia_unittest_component("log_source_unittest") {
   deps = [ ":log_source_unittest_exe" ]
 }
@@ -385,32 +233,12 @@ fuchsia_component("metadata_unittest") {
   deps = [ ":metadata_unittest_exe" ]
 }
 
-fuchsia_unittest_component("metrics_unittest") {
-  deps = [ ":metrics_unittest_exe" ]
-}
-
-fuchsia_component("kernel_log_ptr_integration_test") {
+fuchsia_component("screenshot_unittest") {
   testonly = true
 
-  manifest = "meta/kernel_log_ptr_integration_test.cml"
+  manifest = "meta/screenshot_unittest.cml"
 
-  deps = [ ":kernel_log_ptr_integration_test_exe" ]
-}
-
-fuchsia_component("screenshot_ptr_unittest") {
-  testonly = true
-
-  manifest = "meta/screenshot_ptr_unittest.cml"
-
-  deps = [ ":screenshot_ptr_unittest_exe" ]
-}
-
-fuchsia_unittest_component("static_attachments_unittest") {
-  deps = [ ":static_attachments_unittest_exe" ]
-}
-
-fuchsia_unittest_component("system_log_unittest") {
-  deps = [ ":system_log_unittest_exe" ]
+  deps = [ ":screenshot_unittest_exe" ]
 }
 
 ###############################################################################
@@ -418,19 +246,13 @@ fuchsia_unittest_component("system_log_unittest") {
 ###############################################################################
 fuchsia_test_package("feedback-data-tests") {
   test_components = [
-    ":attachment_manager_unittest",
     ":config_unittest",
     ":data_provider_unittest",
     ":data_provider_controller_unittest",
     ":inspect_data_budget_unittest",
-    ":inspect_unittest",
     ":log_source_unittest",
     ":metadata_unittest",
-    ":metrics_unittest",
-    ":kernel_log_ptr_integration_test",
-    ":screenshot_ptr_unittest",
-    ":static_attachments_unittest",
-    ":system_log_unittest",
+    ":screenshot_unittest",
   ]
 
   test_specs = {

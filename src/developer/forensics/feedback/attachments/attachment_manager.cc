@@ -2,20 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/forensics/feedback_data/attachments/attachment_manager.h"
+#include "src/developer/forensics/feedback/attachments/attachment_manager.h"
 
 #include <lib/fpromise/promise.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <utility>
 
-#include "src/developer/forensics/feedback_data/attachments/static_attachments.h"
-#include "src/developer/forensics/feedback_data/attachments/types.h"
+#include "src/developer/forensics/feedback/attachments/static_attachments.h"
+#include "src/developer/forensics/feedback/attachments/types.h"
 #include "src/developer/forensics/feedback_data/constants.h"
 #include "src/lib/timekeeper/clock.h"
 
-namespace forensics {
-namespace feedback_data {
+namespace forensics::feedback {
 namespace {
 
 template <typename T>
@@ -84,5 +83,4 @@ void AttachmentManager::DropStaticAttachment(const AttachmentKey& key, const Err
   static_attachments_.insert_or_assign(key, AttachmentValue(error));
 }
 
-}  // namespace feedback_data
-}  // namespace forensics
+}  // namespace forensics::feedback

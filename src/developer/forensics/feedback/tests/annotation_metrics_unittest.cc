@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/forensics/feedback/annotations/metrics.h"
-
 #include <cctype>
 #include <memory>
 
@@ -11,6 +9,7 @@
 #include <gtest/gtest.h>
 
 #include "src/developer/forensics/feedback/annotations/constants.h"
+#include "src/developer/forensics/feedback/annotations/metrics.h"
 #include "src/developer/forensics/feedback/annotations/types.h"
 #include "src/developer/forensics/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"

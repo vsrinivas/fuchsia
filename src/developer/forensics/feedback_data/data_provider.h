@@ -17,8 +17,8 @@
 
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/developer/forensics/feedback/annotations/metrics.h"
-#include "src/developer/forensics/feedback_data/attachments/attachment_manager.h"
-#include "src/developer/forensics/feedback_data/attachments/metrics.h"
+#include "src/developer/forensics/feedback/attachments/attachment_manager.h"
+#include "src/developer/forensics/feedback/attachments/metrics.h"
 #include "src/developer/forensics/feedback_data/inspect_data_budget.h"
 #include "src/developer/forensics/feedback_data/metadata.h"
 #include "src/developer/forensics/utils/cobalt/logger.h"
@@ -48,9 +48,10 @@ class DataProvider : public fuchsia::feedback::DataProvider {
   DataProvider(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
                timekeeper::Clock* clock, RedactorBase* redactor, bool is_first_instance,
                const std::set<std::string>& annotation_allowlist,
-               const AttachmentKeys& attachment_allowlist, cobalt::Logger* cobalt,
+               const feedback::AttachmentKeys& attachment_allowlist, cobalt::Logger* cobalt,
                feedback::AnnotationManager* annotation_manager,
-               AttachmentManager* attachment_manager, InspectDataBudget* inspect_data_budget);
+               feedback::AttachmentManager* attachment_manager,
+               InspectDataBudget* inspect_data_budget);
 
   // |fuchsia::feedback::DataProvider|
   void GetAnnotations(fuchsia::feedback::GetAnnotationsParameters params,
@@ -64,7 +65,7 @@ class DataProvider : public fuchsia::feedback::DataProvider {
 
  private:
   ::fpromise::promise<feedback::Annotations> GetAnnotations(const zx::duration timeout);
-  ::fpromise::promise<Attachments> GetAttachments(const zx::duration timeout);
+  ::fpromise::promise<feedback::Attachments> GetAttachments(const zx::duration timeout);
 
   bool ServeArchive(fsl::SizedVmo archive, zx::channel server_end);
 
@@ -76,8 +77,8 @@ class DataProvider : public fuchsia::feedback::DataProvider {
   feedback::AnnotationManager* annotation_manager_;
   feedback::AnnotationMetrics annotation_metrics_;
 
-  AttachmentManager* attachment_manager_;
-  AttachmentMetrics attachment_metrics_;
+  feedback::AttachmentManager* attachment_manager_;
+  feedback::AttachmentMetrics attachment_metrics_;
 
   async::Executor executor_;
   InspectDataBudget* inspect_data_budget_;

@@ -2,15 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/forensics/feedback_data/attachments/metrics.h"
-
 #include <cctype>
 #include <memory>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/developer/forensics/feedback_data/attachments/types.h"
+#include "src/developer/forensics/feedback/attachments/metrics.h"
+#include "src/developer/forensics/feedback/attachments/types.h"
 #include "src/developer/forensics/feedback_data/constants.h"
 #include "src/developer/forensics/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
@@ -19,7 +18,7 @@
 #include "src/developer/forensics/utils/cobalt/metrics.h"
 #include "src/lib/timekeeper/test_clock.h"
 
-namespace forensics::feedback_data {
+namespace forensics::feedback {
 namespace {
 
 using ::testing::IsEmpty;
@@ -45,15 +44,14 @@ class AttachmentMetricsTest : public UnitTestFixture,
   cobalt::Logger cobalt_;
 };
 
-INSTANTIATE_TEST_SUITE_P(VariousKeys, AttachmentMetricsTest,
-                         ::testing::ValuesIn(std::vector<ExpectedMetric>({
-                             {kAttachmentLogKernel, cobalt::TimedOutData::kKernelLog, "KernelLog"},
-                             {kAttachmentLogSystem, cobalt::TimedOutData::kSystemLog, "SystemLog"},
-                             {kAttachmentInspect, cobalt::TimedOutData::kInspect, "Inspect"},
-                         })),
-                         [](const ::testing::TestParamInfo<ExpectedMetric>& info) {
-                           return info.param.name;
-                         });
+INSTANTIATE_TEST_SUITE_P(
+    VariousKeys, AttachmentMetricsTest,
+    ::testing::ValuesIn(std::vector<ExpectedMetric>({
+        {feedback_data::kAttachmentLogKernel, cobalt::TimedOutData::kKernelLog, "KernelLog"},
+        {feedback_data::kAttachmentLogSystem, cobalt::TimedOutData::kSystemLog, "SystemLog"},
+        {feedback_data::kAttachmentInspect, cobalt::TimedOutData::kInspect, "Inspect"},
+    })),
+    [](const ::testing::TestParamInfo<ExpectedMetric>& info) { return info.param.name; });
 
 TEST_P(AttachmentMetricsTest, IndividualKeysTimeout) {
   const auto param = GetParam();
@@ -103,9 +101,9 @@ TEST_F(AttachmentMetricsTest, AllAttachments) {
   AttachmentMetrics metrics(Cobalt());
 
   metrics.LogMetrics({
-      {kAttachmentLogKernel, Error::kTimeout},
-      {kAttachmentLogSystem, Error::kTimeout},
-      {kAttachmentInspect, Error::kTimeout},
+      {feedback_data::kAttachmentLogKernel, Error::kTimeout},
+      {feedback_data::kAttachmentLogSystem, Error::kTimeout},
+      {feedback_data::kAttachmentInspect, Error::kTimeout},
   });
 
   RunLoopUntilIdle();
@@ -117,4 +115,4 @@ TEST_F(AttachmentMetricsTest, AllAttachments) {
 }
 
 }  // namespace
-}  // namespace forensics::feedback_data
+}  // namespace forensics::feedback

@@ -15,7 +15,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/developer/forensics/feedback_data/attachments/types.h"
+#include "src/developer/forensics/feedback/attachments/types.h"
 #include "src/developer/forensics/feedback_data/constants.h"
 #include "src/developer/forensics/feedback_data/metadata_schema.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
@@ -158,7 +158,7 @@ class MetadataTest : public UnitTestFixture {
   }
 
   void SetUpMetadata(const std::set<std::string>& annotation_allowlist,
-                     const AttachmentKeys& attachment_allowlist) {
+                     const feedback::AttachmentKeys& attachment_allowlist) {
     metadata_ =
         std::make_unique<Metadata>(dispatcher(), &clock_, &redactor_, /*is_first_instance=*/true,
                                    annotation_allowlist, attachment_allowlist);
@@ -167,7 +167,7 @@ class MetadataTest : public UnitTestFixture {
   // Get the integrity metadata for the provided annotations and attachments, check that it adheres
   // to the schema, and turn it into a json document
   rapidjson::Document MakeJsonReport(const ::fpromise::result<feedback::Annotations>& annotations,
-                                     const ::fpromise::result<Attachments>& attachments,
+                                     const ::fpromise::result<feedback::Attachments>& attachments,
                                      const bool missing_non_platform_annotations = false) {
     FX_CHECK(metadata_);
     const auto metadata_str = metadata_->MakeMetadata(annotations, attachments, kSnapshotUuid,
@@ -221,7 +221,7 @@ TEST_F(MetadataTest, Check_AddsMissingAnnotationsOnEmptyAnnotations) {
 }
 
 TEST_F(MetadataTest, Check_AddsMissingAttachmentsOnNoAttachments) {
-  const AttachmentKeys attachment_allowlist = {
+  const feedback::AttachmentKeys attachment_allowlist = {
       "attachment 1",
   };
 
@@ -232,13 +232,14 @@ TEST_F(MetadataTest, Check_AddsMissingAttachmentsOnNoAttachments) {
 }
 
 TEST_F(MetadataTest, Check_AddsMissingAttachmentsOnEmptyAttachments) {
-  const AttachmentKeys attachment_allowlist = {
+  const feedback::AttachmentKeys attachment_allowlist = {
       "attachment 1",
   };
 
   SetUpMetadata(/*annotation_allowlist=*/{}, attachment_allowlist);
 
-  const auto metadata_json = MakeJsonReport(::fpromise::error(), ::fpromise::ok<Attachments>({}));
+  const auto metadata_json =
+      MakeJsonReport(::fpromise::error(), ::fpromise::ok<feedback::Attachments>({}));
   HAS_MISSING_ATTACHMENT(metadata_json, "attachment 1", "feedback logic error");
 }
 
@@ -272,24 +273,24 @@ TEST_F(MetadataTest, Check_FormatAnnotationsProperly) {
 }
 
 TEST_F(MetadataTest, Check_FormatAttachmentsProperly) {
-  const AttachmentKeys attachment_allowlist = {
+  const feedback::AttachmentKeys attachment_allowlist = {
       "complete attachment 1", "complete attachment 2", "partial attachment 1",
       "partial attachment 2",  "missing attachment 1",  "missing attachment 2",
   };
 
-  const Attachments attachments = {
-      {"complete attachment 1", AttachmentValue("")},
-      {"complete attachment 2", AttachmentValue("")},
-      {"partial attachment 1", AttachmentValue("", Error::kTimeout)},
-      {"partial attachment 2", AttachmentValue("", Error::kAsyncTaskPostFailure)},
-      {"missing attachment 1", AttachmentValue(Error::kBadValue)},
-      {"missing attachment 2", AttachmentValue(Error::kFileReadFailure)},
+  const feedback::Attachments attachments = {
+      {"complete attachment 1", feedback::AttachmentValue("")},
+      {"complete attachment 2", feedback::AttachmentValue("")},
+      {"partial attachment 1", feedback::AttachmentValue("", Error::kTimeout)},
+      {"partial attachment 2", feedback::AttachmentValue("", Error::kAsyncTaskPostFailure)},
+      {"missing attachment 1", feedback::AttachmentValue(Error::kBadValue)},
+      {"missing attachment 2", feedback::AttachmentValue(Error::kFileReadFailure)},
   };
 
   SetUpMetadata(/*annotation_allowlist=*/{}, attachment_allowlist);
 
-  const auto metadata_json =
-      MakeJsonReport(::fpromise::error(), ::fpromise::ok<Attachments>(std::move(attachments)));
+  const auto metadata_json = MakeJsonReport(
+      ::fpromise::error(), ::fpromise::ok<feedback::Attachments>(std::move(attachments)));
 
   HAS_COMPLETE_ATTACHMENT(metadata_json, "complete attachment 1");
   HAS_COMPLETE_ATTACHMENT(metadata_json, "complete attachment 2");
@@ -353,25 +354,25 @@ TEST_F(MetadataTest, Check_SmokeTest) {
       {"non-platform annotation 1", ""},
   };
 
-  const AttachmentKeys attachment_allowlist = {
+  const feedback::AttachmentKeys attachment_allowlist = {
       "complete attachment 1", "complete attachment 2", "partial attachment 1",
       "partial attachment 2",  "missing attachment 1",  "missing attachment 2",
       "missing attachment 3",
   };
-  const Attachments attachments = {
-      {"complete attachment 1", AttachmentValue("")},
-      {"complete attachment 2", AttachmentValue("")},
-      {"partial attachment 1", AttachmentValue("", Error::kTimeout)},
-      {"partial attachment 2", AttachmentValue("", Error::kAsyncTaskPostFailure)},
-      {"missing attachment 1", AttachmentValue(Error::kBadValue)},
-      {"missing attachment 2", AttachmentValue(Error::kFileReadFailure)},
+  const feedback::Attachments attachments = {
+      {"complete attachment 1", feedback::AttachmentValue("")},
+      {"complete attachment 2", feedback::AttachmentValue("")},
+      {"partial attachment 1", feedback::AttachmentValue("", Error::kTimeout)},
+      {"partial attachment 2", feedback::AttachmentValue("", Error::kAsyncTaskPostFailure)},
+      {"missing attachment 1", feedback::AttachmentValue(Error::kBadValue)},
+      {"missing attachment 2", feedback::AttachmentValue(Error::kFileReadFailure)},
   };
 
   SetUpMetadata(annotation_allowlist, attachment_allowlist);
 
   const auto metadata_json =
       MakeJsonReport(::fpromise::ok<feedback::Annotations>(std::move(annotations)),
-                     ::fpromise::ok<Attachments>(std::move(attachments)),
+                     ::fpromise::ok<feedback::Attachments>(std::move(attachments)),
                      /*missing_non_platform_annotations=*/true);
 
   HAS_COMPLETE_ATTACHMENT(metadata_json, "complete attachment 1");
@@ -430,7 +431,7 @@ TEST_F(MetadataTest, Check_UtcMonotonicDifference) {
       "annotation 1",
   };
 
-  const AttachmentKeys attachment_allowlist = {
+  const feedback::AttachmentKeys attachment_allowlist = {
       kAttachmentInspect,
       kAttachmentLogKernel,
       kAttachmentLogSystem,
@@ -441,11 +442,11 @@ TEST_F(MetadataTest, Check_UtcMonotonicDifference) {
       {"annotation 1", "annotation"},
   };
 
-  const Attachments attachments = {
-      {kAttachmentInspect, AttachmentValue("")},
-      {kAttachmentLogKernel, AttachmentValue("")},
-      {kAttachmentLogSystem, AttachmentValue("")},
-      {kAttachmentLogSystemPrevious, AttachmentValue("")},
+  const feedback::Attachments attachments = {
+      {kAttachmentInspect, feedback::AttachmentValue("")},
+      {kAttachmentLogKernel, feedback::AttachmentValue("")},
+      {kAttachmentLogSystem, feedback::AttachmentValue("")},
+      {kAttachmentLogSystemPrevious, feedback::AttachmentValue("")},
   };
 
   SetUpMetadata(annotation_allowlist, attachment_allowlist);
@@ -463,7 +464,7 @@ TEST_F(MetadataTest, Check_UtcMonotonicDifference) {
 
   const auto metadata_json =
       MakeJsonReport(::fpromise::ok<feedback::Annotations>(std::move(annotations)),
-                     ::fpromise::ok<Attachments>(std::move(attachments)));
+                     ::fpromise::ok<feedback::Attachments>(std::move(attachments)));
 
   UTC_MONOTONIC_DIFFERENCE_IS(metadata_json, kAttachmentInspect, utc_monotonic_difference);
   UTC_MONOTONIC_DIFFERENCE_IS(metadata_json, kAttachmentLogKernel, utc_monotonic_difference);
@@ -481,7 +482,7 @@ TEST_F(MetadataTest, Check_NoUtcMontonicDifferenceAvailable) {
       "annotation 1",
   };
 
-  const AttachmentKeys attachment_allowlist = {
+  const feedback::AttachmentKeys attachment_allowlist = {
       "attachment 1",
   };
 
@@ -489,15 +490,15 @@ TEST_F(MetadataTest, Check_NoUtcMontonicDifferenceAvailable) {
       {"annotation 1", ""},
   };
 
-  const Attachments attachments = {
-      {"attachment 1", AttachmentValue("")},
+  const feedback::Attachments attachments = {
+      {"attachment 1", feedback::AttachmentValue("")},
   };
 
   SetUpMetadata(annotation_allowlist, attachment_allowlist);
 
   const auto metadata_json =
       MakeJsonReport(::fpromise::ok<feedback::Annotations>(std::move(annotations)),
-                     ::fpromise::ok<Attachments>(std::move(attachments)));
+                     ::fpromise::ok<feedback::Attachments>(std::move(attachments)));
 
   ASSERT_TRUE(metadata_json["files"].HasMember(kAttachmentAnnotations));
   ASSERT_FALSE(
@@ -512,7 +513,7 @@ TEST_F(MetadataTest, Check_NoUtcMonotonicDifferenceMissingFile) {
       "annotation 1",
   };
 
-  const AttachmentKeys attachment_allowlist = {
+  const feedback::AttachmentKeys attachment_allowlist = {
       kAttachmentInspect,
       kAttachmentLogKernel,
       kAttachmentLogSystem,
@@ -523,11 +524,11 @@ TEST_F(MetadataTest, Check_NoUtcMonotonicDifferenceMissingFile) {
       {"annotation 1", "annotation"},
   };
 
-  const Attachments attachments = {
-      {kAttachmentInspect, AttachmentValue("")},
-      {kAttachmentLogKernel, AttachmentValue("")},
-      {kAttachmentLogSystem, AttachmentValue("")},
-      {kAttachmentLogSystemPrevious, AttachmentValue(Error::kCustom)},
+  const feedback::Attachments attachments = {
+      {kAttachmentInspect, feedback::AttachmentValue("")},
+      {kAttachmentLogKernel, feedback::AttachmentValue("")},
+      {kAttachmentLogSystem, feedback::AttachmentValue("")},
+      {kAttachmentLogSystemPrevious, feedback::AttachmentValue(Error::kCustom)},
   };
 
   SetUpMetadata(annotation_allowlist, attachment_allowlist);
@@ -545,7 +546,7 @@ TEST_F(MetadataTest, Check_NoUtcMonotonicDifferenceMissingFile) {
 
   const auto metadata_json =
       MakeJsonReport(::fpromise::ok<feedback::Annotations>(std::move(annotations)),
-                     ::fpromise::ok<Attachments>(std::move(attachments)));
+                     ::fpromise::ok<feedback::Attachments>(std::move(attachments)));
 
   UTC_MONOTONIC_DIFFERENCE_IS(metadata_json, kAttachmentInspect, utc_monotonic_difference);
   UTC_MONOTONIC_DIFFERENCE_IS(metadata_json, kAttachmentLogKernel, utc_monotonic_difference);

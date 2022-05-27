@@ -20,12 +20,11 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/developer/forensics/feedback_data/attachments/kernel_log.h"
-#include "src/developer/forensics/feedback_data/attachments/types.h"
+#include "src/developer/forensics/feedback/attachments/kernel_log.h"
+#include "src/developer/forensics/feedback/attachments/types.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
-namespace forensics {
-namespace feedback_data {
+namespace forensics::feedback {
 namespace {
 
 using testing::UnorderedElementsAreArray;
@@ -125,5 +124,4 @@ TEST_F(CollectKernelLogTest, Succeed_Redacts) {
 }
 
 }  // namespace
-}  // namespace feedback_data
-}  // namespace forensics
+}  // namespace forensics::feedback

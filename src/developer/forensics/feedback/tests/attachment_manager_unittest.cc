@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/forensics/feedback_data/attachments/attachment_manager.h"
+#include "src/developer/forensics/feedback/attachments/attachment_manager.h"
 
 #include <lib/async/cpp/executor.h>
 #include <lib/async/cpp/task.h>
@@ -18,14 +18,13 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/developer/forensics/feedback_data/attachments/types.h"
+#include "src/developer/forensics/feedback/attachments/types.h"
 #include "src/developer/forensics/testing/gmatchers.h"
 #include "src/developer/forensics/testing/gpretty_printers.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
-namespace forensics {
-namespace feedback_data {
+namespace forensics::feedback {
 namespace {
 
 using ::testing::Contains;
@@ -143,5 +142,4 @@ TEST_F(AttachmentManagerTest, NoProvider) {
 }
 
 }  // namespace
-}  // namespace feedback_data
-}  // namespace forensics
+}  // namespace forensics::feedback

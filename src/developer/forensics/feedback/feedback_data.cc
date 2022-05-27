@@ -13,8 +13,8 @@
 
 #include <memory>
 
+#include "src/developer/forensics/feedback/attachments/static_attachments.h"
 #include "src/developer/forensics/feedback/constants.h"
-#include "src/developer/forensics/feedback_data/attachments/static_attachments.h"
 #include "src/developer/forensics/feedback_data/constants.h"
 #include "src/lib/files/path.h"
 
@@ -32,8 +32,7 @@ FeedbackData::FeedbackData(async_dispatcher_t* dispatcher,
       inspect_node_manager_(inspect_root),
       inspect_data_budget_(options.limit_inspect_data, &inspect_node_manager_, cobalt_),
       attachment_providers_(dispatcher, services, clock, redactor, &inspect_data_budget_,
-                            options.config.attachment_allowlist,
-                            feedback_data::GetStaticAttachments()),
+                            options.config.attachment_allowlist, GetStaticAttachments()),
       data_provider_(dispatcher_, services_, clock_, redactor, options.is_first_instance,
                      options.config.annotation_allowlist, options.config.attachment_allowlist,
                      cobalt_, annotation_manager, attachment_providers_.GetAttachmentManager(),

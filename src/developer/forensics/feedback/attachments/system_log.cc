@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/forensics/feedback_data/attachments/system_log.h"
+#include "src/developer/forensics/feedback/attachments/system_log.h"
 
 #include <fuchsia/logger/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
@@ -29,14 +29,13 @@
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
-namespace forensics {
-namespace feedback_data {
+namespace forensics::feedback {
 namespace {
 
 size_t AppendRepeated(const size_t last_msg_repeated, std::string& append_to) {
   auto repeated_str = last_msg_repeated == 1
-                          ? kRepeatedOnceFormatStr
-                          : fxl::StringPrintf(kRepeatedFormatStr, last_msg_repeated);
+                          ? feedback_data::kRepeatedOnceFormatStr
+                          : fxl::StringPrintf(feedback_data::kRepeatedFormatStr, last_msg_repeated);
 
   append_to.append(repeated_str);
   return repeated_str.size();
@@ -194,7 +193,7 @@ SystemLog::SystemLog(async_dispatcher_t* dispatcher,
                      std::shared_ptr<sys::ServiceDirectory> services, timekeeper::Clock* clock,
                      RedactorBase* redactor, const zx::duration active_period)
     : dispatcher_(dispatcher),
-      buffer_(kCurrentLogBufferSize, redactor),
+      buffer_(feedback_data::kCurrentLogBufferSize, redactor),
       source_(dispatcher, services, &buffer_,
               std::make_unique<backoff::ExponentialBackoff>(zx::min(1), 2u, zx::hour(1))),
       clock_(clock),
@@ -280,5 +279,4 @@ void SystemLog::MakeInactive() {
   source_.Stop();
 }
 
-}  // namespace feedback_data
-}  // namespace forensics
+}  // namespace forensics::feedback

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/forensics/feedback_data/attachments/kernel_log.h"
+#include "src/developer/forensics/feedback/attachments/kernel_log.h"
 
 #include <inttypes.h>
 #include <lib/async/cpp/task.h>
@@ -17,7 +17,7 @@
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
-namespace forensics::feedback_data {
+namespace forensics::feedback {
 
 KernelLog::KernelLog(async_dispatcher_t* dispatcher,
                      std::shared_ptr<sys::ServiceDirectory> services,
@@ -119,4 +119,4 @@ KernelLog::KernelLog(async_dispatcher_t* dispatcher,
       .or_else([](const Error& error) { return ::fpromise::ok(AttachmentValue(error)); });
 }
 
-}  // namespace forensics::feedback_data
+}  // namespace forensics::feedback

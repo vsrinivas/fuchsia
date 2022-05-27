@@ -19,10 +19,10 @@
 
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/developer/forensics/feedback/annotations/encode.h"
-#include "src/developer/forensics/feedback_data/attachments/screenshot_ptr.h"
-#include "src/developer/forensics/feedback_data/attachments/types.h"
+#include "src/developer/forensics/feedback/attachments/types.h"
 #include "src/developer/forensics/feedback_data/constants.h"
 #include "src/developer/forensics/feedback_data/image_conversion.h"
+#include "src/developer/forensics/feedback_data/screenshot.h"
 #include "src/developer/forensics/utils/archive.h"
 #include "src/developer/forensics/utils/cobalt/metrics.h"
 #include "src/lib/fsl/vmo/sized_vmo.h"
@@ -50,12 +50,15 @@ const zx::duration kScreenshotTimeout = zx::sec(10);
 
 }  // namespace
 
-DataProvider::DataProvider(
-    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-    timekeeper::Clock* clock, RedactorBase* redactor, const bool is_first_instance,
-    const std::set<std::string>& annotation_allowlist, const AttachmentKeys& attachment_allowlist,
-    cobalt::Logger* cobalt, feedback::AnnotationManager* annotation_manager,
-    AttachmentManager* attachment_manager, InspectDataBudget* inspect_data_budget)
+DataProvider::DataProvider(async_dispatcher_t* dispatcher,
+                           std::shared_ptr<sys::ServiceDirectory> services,
+                           timekeeper::Clock* clock, RedactorBase* redactor,
+                           const bool is_first_instance,
+                           const std::set<std::string>& annotation_allowlist,
+                           const feedback::AttachmentKeys& attachment_allowlist,
+                           cobalt::Logger* cobalt, feedback::AnnotationManager* annotation_manager,
+                           feedback::AttachmentManager* attachment_manager,
+                           InspectDataBudget* inspect_data_budget)
     : dispatcher_(dispatcher),
       services_(services),
       metadata_(dispatcher_, clock, redactor, is_first_instance, annotation_allowlist,
@@ -76,11 +79,13 @@ DataProvider::DataProvider(
   });
 }
 
-::fpromise::promise<Attachments> DataProvider::GetAttachments(const zx::duration timeout) {
-  return attachment_manager_->GetAttachments(timeout).and_then([this](Attachments& attachments) {
-    attachment_metrics_.LogMetrics(attachments);
-    return ::fpromise::ok(std::move(attachments));
-  });
+::fpromise::promise<feedback::Attachments> DataProvider::GetAttachments(
+    const zx::duration timeout) {
+  return attachment_manager_->GetAttachments(timeout).and_then(
+      [this](feedback::Attachments& attachments) {
+        attachment_metrics_.LogMetrics(attachments);
+        return ::fpromise::ok(std::move(attachments));
+      });
 }
 
 void DataProvider::GetAnnotations(fuchsia::feedback::GetAnnotationsParameters params,
@@ -112,7 +117,7 @@ void DataProvider::GetSnapshot(fuchsia::feedback::GetSnapshotParameters params,
       ::fpromise::join_promises(GetAnnotations(timeout), GetAttachments(timeout))
           .and_then([this, channel = std::move(channel)](
                         std::tuple<::fpromise::result<feedback::Annotations>,
-                                   ::fpromise::result<Attachments>>& results) mutable {
+                                   ::fpromise::result<feedback::Attachments>>& results) mutable {
             Snapshot snapshot;
             std::map<std::string, std::string> snapshot_files;
 

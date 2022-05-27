@@ -12,7 +12,7 @@
 #include <string>
 
 #include "src/developer/forensics/feedback/annotations/types.h"
-#include "src/developer/forensics/feedback_data/attachments/types.h"
+#include "src/developer/forensics/feedback/attachments/types.h"
 #include "src/developer/forensics/utils/redact/redactor.h"
 #include "src/developer/forensics/utils/utc_time_provider.h"
 #include "src/lib/timekeeper/clock.h"
@@ -25,7 +25,7 @@ class Metadata {
  public:
   Metadata(async_dispatcher_t* dispatcher, timekeeper::Clock* clock, RedactorBase* redactor,
            bool is_first_instance, const std::set<std::string>& annotation_allowlist,
-           const AttachmentKeys& attachment_allowlist);
+           const feedback::AttachmentKeys& attachment_allowlist);
 
   // Return a JSON metadata string.
   //
@@ -33,7 +33,7 @@ class Metadata {
   // missing, i.e. whether clients tried to insert more non-platform annotations than the maximum
   // number of non-platform annotations the AttachmentManager can hold.
   std::string MakeMetadata(const ::fpromise::result<feedback::Annotations>& annotations,
-                           const ::fpromise::result<Attachments>& attachments,
+                           const ::fpromise::result<feedback::Attachments>& attachments,
                            const std::string& snapshot_uuid, bool missing_non_platform_annotations);
 
   static constexpr const char* kVersion = "1";
@@ -41,7 +41,7 @@ class Metadata {
  private:
   std::string log_redaction_canary_;
   std::set<std::string> annotation_allowlist_;
-  AttachmentKeys attachment_allowlist_;
+  feedback::AttachmentKeys attachment_allowlist_;
 
   UtcTimeProvider utc_provider_;
 };

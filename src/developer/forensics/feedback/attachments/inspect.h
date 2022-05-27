@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_ATTACHMENTS_INSPECT_H_
-#define SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_ATTACHMENTS_INSPECT_H_
+#ifndef SRC_DEVELOPER_FORENSICS_FEEDBACK_ATTACHMENTS_INSPECT_H_
+#define SRC_DEVELOPER_FORENSICS_FEEDBACK_ATTACHMENTS_INSPECT_H_
 
 #include <fuchsia/diagnostics/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
@@ -12,13 +12,13 @@
 
 #include <memory>
 
-#include "src/developer/forensics/feedback_data/attachments/provider.h"
-#include "src/developer/forensics/feedback_data/attachments/types.h"
+#include "src/developer/forensics/feedback/attachments/provider.h"
+#include "src/developer/forensics/feedback/attachments/types.h"
 #include "src/developer/forensics/feedback_data/inspect_data_budget.h"
 #include "src/lib/backoff/backoff.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
-namespace forensics::feedback_data {
+namespace forensics::feedback {
 
 // Collects the Inspect data.
 //
@@ -26,7 +26,7 @@ namespace forensics::feedback_data {
 class Inspect : public AttachmentProvider {
  public:
   Inspect(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-          std::unique_ptr<backoff::Backoff> backoff, InspectDataBudget* data_budget);
+          std::unique_ptr<backoff::Backoff> backoff, feedback_data::InspectDataBudget* data_budget);
 
   ::fpromise::promise<AttachmentValue> Get(zx::duration timeout) override;
 
@@ -34,13 +34,13 @@ class Inspect : public AttachmentProvider {
   async_dispatcher_t* dispatcher_;
   std::shared_ptr<sys::ServiceDirectory> services_;
   std::unique_ptr<backoff::Backoff> backoff_;
-  InspectDataBudget* data_budget_;
+  feedback_data::InspectDataBudget* data_budget_;
 
   fuchsia::diagnostics::ArchiveAccessorPtr archive_accessor_;
 
   fxl::WeakPtrFactory<Inspect> ptr_factory_{this};
 };
 
-}  // namespace forensics::feedback_data
+}  // namespace forensics::feedback
 
-#endif  // SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_ATTACHMENTS_INSPECT_H_
+#endif  // SRC_DEVELOPER_FORENSICS_FEEDBACK_ATTACHMENTS_INSPECT_H_

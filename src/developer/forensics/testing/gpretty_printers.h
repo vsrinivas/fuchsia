@@ -15,7 +15,7 @@
 #include <src/lib/fostr/fidl/fuchsia/mem/formatting.h>
 #include <src/lib/fostr/indent.h>
 
-#include "src/developer/forensics/feedback_data/attachments/types.h"
+#include "src/developer/forensics/feedback/attachments/types.h"
 #include "src/developer/forensics/utils/errors.h"
 #include "src/lib/fsl/vmo/strings.h"
 
@@ -54,7 +54,7 @@ inline void PrintTo(const ErrorOr<T>& error_or, std::ostream* os) {
   }
 }
 
-namespace feedback_data {
+namespace feedback {
 
 namespace pretty {
 
@@ -103,7 +103,8 @@ inline void PrintTo(const AttachmentValue& value, std::ostream* os) {
   *os << fostr::Outdent;
 }
 
-}  // namespace feedback_data
+}  // namespace feedback
+
 }  // namespace forensics
 
 namespace fuchsia {

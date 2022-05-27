@@ -2,19 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/forensics/feedback_data/attachments/metrics.h"
+#include "src/developer/forensics/feedback/attachments/metrics.h"
 
 #include "src/developer/forensics/feedback_data/constants.h"
 #include "src/developer/forensics/utils/cobalt/logger.h"
 #include "src/developer/forensics/utils/cobalt/metrics.h"
 
-namespace forensics::feedback_data {
+namespace forensics::feedback {
 namespace {
 
 static const auto* const kTimedOutMetrics = new std::map<std::string, cobalt::TimedOutData>({
-    {kAttachmentLogKernel, cobalt::TimedOutData::kKernelLog},
-    {kAttachmentLogSystem, cobalt::TimedOutData::kSystemLog},
-    {kAttachmentInspect, cobalt::TimedOutData::kInspect},
+    {feedback_data::kAttachmentLogKernel, cobalt::TimedOutData::kKernelLog},
+    {feedback_data::kAttachmentLogSystem, cobalt::TimedOutData::kSystemLog},
+    {feedback_data::kAttachmentInspect, cobalt::TimedOutData::kInspect},
 });
 
 }
@@ -34,4 +34,4 @@ void AttachmentMetrics::LogMetrics(const Attachments& annotations) {
   }
 }
 
-}  // namespace forensics::feedback_data
+}  // namespace forensics::feedback

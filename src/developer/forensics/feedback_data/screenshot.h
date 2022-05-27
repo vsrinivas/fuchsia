@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_ATTACHMENTS_SCREENSHOT_PTR_H_
-#define SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_ATTACHMENTS_SCREENSHOT_PTR_H_
+#ifndef SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_SCREENSHOT_H_
+#define SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_SCREENSHOT_H_
 
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
@@ -26,4 +26,4 @@ namespace forensics::feedback_data {
 
 }  // namespace forensics::feedback_data
 
-#endif  // SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_ATTACHMENTS_SCREENSHOT_PTR_H_
+#endif  // SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_SCREENSHOT_H_

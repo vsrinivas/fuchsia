@@ -88,27 +88,6 @@ source_set("kernel_log") {
   ]
 }
 
-source_set("screenshot") {
-  sources = [
-    "screenshot_ptr.cc",
-    "screenshot_ptr.h",
-  ]
-
-  public_deps = [
-    "//sdk/fidl/fuchsia.ui.scenic",
-    "//sdk/lib/fit-promise",
-    "//sdk/lib/sys/cpp",
-    "//src/lib/fxl",
-    "//zircon/system/ulib/async",
-  ]
-
-  deps = [
-    "//sdk/lib/syslog/cpp",
-    "//src/developer/forensics/utils:errors",
-    "//src/developer/forensics/utils:fidl_oneshot",
-  ]
-}
-
 source_set("system_log") {
   sources = [
     "system_log.cc",

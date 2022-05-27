@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_ATTACHMENTS_KERNEL_LOG_H_
-#define SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_ATTACHMENTS_KERNEL_LOG_H_
+#ifndef SRC_DEVELOPER_FORENSICS_FEEDBACK_ATTACHMENTS_KERNEL_LOG_H_
+#define SRC_DEVELOPER_FORENSICS_FEEDBACK_ATTACHMENTS_KERNEL_LOG_H_
 
 #include <fuchsia/boot/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
@@ -12,13 +12,13 @@
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/debuglog.h>
 
-#include "src/developer/forensics/feedback_data/attachments/provider.h"
-#include "src/developer/forensics/feedback_data/attachments/types.h"
+#include "src/developer/forensics/feedback/attachments/provider.h"
+#include "src/developer/forensics/feedback/attachments/types.h"
 #include "src/developer/forensics/utils/redact/redactor.h"
 #include "src/lib/backoff/backoff.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
-namespace forensics::feedback_data {
+namespace forensics::feedback {
 
 // Retrieves the kernel log.
 //
@@ -44,6 +44,6 @@ class KernelLog : public AttachmentProvider {
   fxl::WeakPtrFactory<KernelLog> ptr_factory_{this};
 };
 
-}  // namespace forensics::feedback_data
+}  // namespace forensics::feedback
 
-#endif  // SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_ATTACHMENTS_KERNEL_LOG_H_
+#endif  // SRC_DEVELOPER_FORENSICS_FEEDBACK_ATTACHMENTS_KERNEL_LOG_H_

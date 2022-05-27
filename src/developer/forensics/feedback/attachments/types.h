@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_ATTACHMENTS_TYPES_H_
-#define SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_ATTACHMENTS_TYPES_H_
+#ifndef SRC_DEVELOPER_FORENSICS_FEEDBACK_ATTACHMENTS_TYPES_H_
+#define SRC_DEVELOPER_FORENSICS_FEEDBACK_ATTACHMENTS_TYPES_H_
 
 #include <lib/syslog/cpp/macros.h>
 
@@ -13,8 +13,7 @@
 
 #include "src/developer/forensics/utils/errors.h"
 
-namespace forensics {
-namespace feedback_data {
+namespace forensics::feedback {
 
 using AttachmentKey = std::string;
 using AttachmentKeys = std::set<AttachmentKey>;
@@ -63,7 +62,6 @@ class AttachmentValue {
 using Attachment = std::pair<AttachmentKey, AttachmentValue>;
 using Attachments = std::map<AttachmentKey, AttachmentValue>;
 
-}  // namespace feedback_data
-}  // namespace forensics
+}  // namespace forensics::feedback
 
-#endif  // SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_ATTACHMENTS_TYPES_H_
+#endif  // SRC_DEVELOPER_FORENSICS_FEEDBACK_ATTACHMENTS_TYPES_H_

@@ -9,26 +9,6 @@ visibility = [ "//src/developer/forensics/*" ]
 ###############################################################################
 # SOURCES
 ###############################################################################
-source_set("attachment_providers") {
-  sources = [
-    "attachment_providers.cc",
-    "attachment_providers.h",
-  ]
-
-  public_deps = [
-    ":constants",
-    ":inspect_budget",
-    "//sdk/lib/sys/cpp",
-    "//src/developer/forensics/feedback_data/attachments",
-    "//src/developer/forensics/feedback_data/attachments:inspect",
-    "//src/developer/forensics/feedback_data/attachments:kernel_log",
-    "//src/developer/forensics/feedback_data/attachments:system_log",
-    "//src/developer/forensics/utils/redact",
-    "//src/lib/backoff",
-    "//src/lib/timekeeper",
-  ]
-}
-
 source_set("config") {
   sources = [
     "config.cc",
@@ -36,7 +16,7 @@ source_set("config") {
   ]
 
   public_deps = [
-    "//src/developer/forensics/feedback_data/attachments",
+    "//src/developer/forensics/feedback/attachments",
     "//zircon/system/ulib/zx",
   ]
 
@@ -74,7 +54,7 @@ source_set("data_provider") {
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/sys/cpp",
     "//src/developer/forensics/feedback/annotations",
-    "//src/developer/forensics/feedback_data/attachments",
+    "//src/developer/forensics/feedback/attachments",
     "//src/developer/forensics/utils:fidl_oneshot",
     "//src/developer/forensics/utils/cobalt",
     "//src/developer/forensics/utils/redact",
@@ -86,12 +66,12 @@ source_set("data_provider") {
 
   deps = [
     ":constants",
+    ":screenshot",
     "//sdk/fidl/fuchsia.images",
     "//sdk/fidl/fuchsia.mem",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/lib/syslog/cpp",
-    "//src/developer/forensics/feedback_data/attachments",
-    "//src/developer/forensics/feedback_data/attachments:screenshot",
+    "//src/developer/forensics/feedback/attachments",
     "//src/developer/forensics/utils:archive",
     "//src/lib/fostr/fidl/fuchsia.images",
     "//src/lib/fsl",
@@ -178,7 +158,7 @@ source_set("metadata") {
 
   public_deps = [
     "//sdk/lib/fit-promise",
-    "//src/developer/forensics/feedback_data/attachments",
+    "//src/developer/forensics/feedback/attachments",
     "//src/developer/forensics/utils:utc_time_provider",
     "//src/developer/forensics/utils/redact",
   ]
@@ -188,5 +168,26 @@ source_set("metadata") {
     ":errors",
     "//src/developer/forensics/utils:errors",
     "//third_party/rapidjson",
+  ]
+}
+
+source_set("screenshot") {
+  sources = [
+    "screenshot.cc",
+    "screenshot.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/lib/fit-promise",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
+    "//zircon/system/ulib/async",
+  ]
+
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//src/developer/forensics/utils:errors",
+    "//src/developer/forensics/utils:fidl_oneshot",
   ]
 }

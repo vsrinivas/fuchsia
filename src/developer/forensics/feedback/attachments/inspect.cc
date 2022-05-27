@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/forensics/feedback_data/attachments/inspect.h"
+#include "src/developer/forensics/feedback/attachments/inspect.h"
 
 #include <fuchsia/diagnostics/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
@@ -24,29 +24,31 @@
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/strings/join_strings.h"
 
-namespace forensics::feedback_data {
+namespace forensics::feedback {
 
 Inspect::Inspect(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-                 std::unique_ptr<backoff::Backoff> backoff, InspectDataBudget* data_budget)
+                 std::unique_ptr<backoff::Backoff> backoff,
+                 feedback_data::InspectDataBudget* data_budget)
     : dispatcher_(dispatcher),
       services_(std::move(services)),
       backoff_(std::move(backoff)),
       data_budget_(data_budget) {
   archive_accessor_.set_error_handler([this](const zx_status_t status) {
-    FX_LOGS(WARNING) << "Lost connection to " << kArchiveAccessorName;
+    FX_LOGS(WARNING) << "Lost connection to " << feedback_data::kArchiveAccessorName;
     auto self = ptr_factory_.GetWeakPtr();
     async::PostDelayedTask(
         dispatcher_,
         [self] {
           if (self) {
             self->services_->Connect(self->archive_accessor_.NewRequest(self->dispatcher_),
-                                     kArchiveAccessorName);
+                                     feedback_data::kArchiveAccessorName);
           }
         },
         backoff_->GetNext());
   });
 
-  services_->Connect(archive_accessor_.NewRequest(dispatcher_), kArchiveAccessorName);
+  services_->Connect(archive_accessor_.NewRequest(dispatcher_),
+                     feedback_data::kArchiveAccessorName);
 }
 
 namespace {
@@ -203,4 +205,4 @@ void InspectCollector::Run() {
   });
 }
 
-}  // namespace forensics::feedback_data
+}  // namespace forensics::feedback

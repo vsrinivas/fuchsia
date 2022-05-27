@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_ATTACHMENTS_SYSTEM_LOG_H_
-#define SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_ATTACHMENTS_SYSTEM_LOG_H_
+#ifndef SRC_DEVELOPER_FORENSICS_FEEDBACK_ATTACHMENTS_SYSTEM_LOG_H_
+#define SRC_DEVELOPER_FORENSICS_FEEDBACK_ATTACHMENTS_SYSTEM_LOG_H_
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>
@@ -17,20 +17,19 @@
 #include <optional>
 #include <string>
 
-#include "src/developer/forensics/feedback_data/attachments/provider.h"
-#include "src/developer/forensics/feedback_data/attachments/types.h"
+#include "src/developer/forensics/feedback/attachments/provider.h"
+#include "src/developer/forensics/feedback/attachments/types.h"
 #include "src/developer/forensics/feedback_data/log_source.h"
 #include "src/developer/forensics/utils/redact/redactor.h"
 #include "src/developer/forensics/utils/storage_size.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/lib/timekeeper/clock.h"
 
-namespace forensics {
-namespace feedback_data {
+namespace forensics::feedback {
 
 // Stores up to |capacity| bytes of system log messages, dropping the earliest messages when the
 // stored messages occupy too much space.
-class LogBuffer : public LogSink {
+class LogBuffer : public feedback_data::LogSink {
  public:
   LogBuffer(StorageSize capacity, RedactorBase* redactor);
 
@@ -100,7 +99,7 @@ class SystemLog : public AttachmentProvider {
   async_dispatcher_t* dispatcher_;
 
   LogBuffer buffer_;
-  LogSource source_;
+  feedback_data::LogSource source_;
 
   timekeeper::Clock* clock_;
 
@@ -111,7 +110,6 @@ class SystemLog : public AttachmentProvider {
   fxl::WeakPtrFactory<SystemLog> ptr_factory_{this};
 };
 
-}  // namespace feedback_data
-}  // namespace forensics
+}  // namespace forensics::feedback
 
-#endif  // SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_ATTACHMENTS_SYSTEM_LOG_H_
+#endif  // SRC_DEVELOPER_FORENSICS_FEEDBACK_ATTACHMENTS_SYSTEM_LOG_H_

@@ -18,8 +18,8 @@
 #include <memory>
 
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
+#include "src/developer/forensics/feedback/attachment_providers.h"
 #include "src/developer/forensics/feedback/constants.h"
-#include "src/developer/forensics/feedback_data/attachment_providers.h"
 #include "src/developer/forensics/feedback_data/config.h"
 #include "src/developer/forensics/feedback_data/data_provider.h"
 #include "src/developer/forensics/feedback_data/data_provider_controller.h"
@@ -68,7 +68,7 @@ class FeedbackData {
 
   InspectNodeManager inspect_node_manager_;
   feedback_data::InspectDataBudget inspect_data_budget_;
-  feedback_data::AttachmentProviders attachment_providers_;
+  AttachmentProviders attachment_providers_;
   feedback_data::DataProvider data_provider_;
   feedback_data::DataProviderController data_provider_controller_;
 

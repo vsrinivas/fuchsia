@@ -3,16 +3,23 @@
 // found in the LICENSE file.
 {
     include: [
+        "//sdk/lib/sys/testing/system-test.shard.cml",
         "//src/sys/test_runners/gtest/default.shard.cml",
         "inspect/client.shard.cml",
         "syslog/client.shard.cml",
     ],
     program: {
-        binary: "bin/screenshot_ptr_unittest_exe",
+        binary: "bin/kernel_log_integration_test_exe",
     },
     use: [
         {
-            protocol: [ "fuchsia.process.Launcher" ],
+            protocol: [
+                "fuchsia.boot.ReadOnlyLog",
+                "fuchsia.boot.WriteOnlyLog",
+                "fuchsia.process.Launcher",
+                "fuchsia.sys.Environment",
+                "fuchsia.sys.Loader",
+            ],
         },
     ],
 }

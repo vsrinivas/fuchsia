@@ -25,7 +25,7 @@
 #include <gtest/gtest.h>
 
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
-#include "src/developer/forensics/feedback_data/attachments/types.h"
+#include "src/developer/forensics/feedback/attachments/types.h"
 #include "src/developer/forensics/feedback_data/constants.h"
 #include "src/developer/forensics/feedback_data/metadata.h"
 #include "src/developer/forensics/testing/gmatchers.h"
@@ -146,9 +146,9 @@ class DataProviderTest : public UnitTestFixture {
  protected:
   void SetUpDataProvider(
       const std::set<std::string>& annotation_allowlist = kDefaultAnnotations,
-      const AttachmentKeys& attachment_allowlist = {},
+      const feedback::AttachmentKeys& attachment_allowlist = {},
       const std::map<std::string, ErrorOr<std::string>>& startup_annotations = {},
-      const std::map<std::string, AttachmentValue>& static_attachments = {}) {
+      const std::map<std::string, feedback::AttachmentValue>& static_attachments = {}) {
     std::set<std::string> allowlist;
     for (const auto& [k, v] : startup_annotations) {
       allowlist.insert(k);
@@ -156,7 +156,7 @@ class DataProviderTest : public UnitTestFixture {
     annotation_manager_ =
         std::make_unique<feedback::AnnotationManager>(dispatcher(), allowlist, startup_annotations);
     attachment_manager_ =
-        std::make_unique<AttachmentManager>(attachment_allowlist, static_attachments);
+        std::make_unique<feedback::AttachmentManager>(attachment_allowlist, static_attachments);
     data_provider_ = std::make_unique<DataProvider>(
         dispatcher(), services(), &clock_, &redactor_, /*is_first_instance=*/true,
         annotation_allowlist, attachment_allowlist, cobalt_.get(), annotation_manager_.get(),
@@ -219,7 +219,7 @@ class DataProviderTest : public UnitTestFixture {
   std::unique_ptr<feedback::AnnotationManager> annotation_manager_;
   std::unique_ptr<cobalt::Logger> cobalt_;
   IdentityRedactor redactor_{inspect::BoolProperty()};
-  std::unique_ptr<AttachmentManager> attachment_manager_;
+  std::unique_ptr<feedback::AttachmentManager> attachment_manager_;
 
  protected:
   std::unique_ptr<DataProvider> data_provider_;

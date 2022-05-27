@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/forensics/feedback_data/attachments/system_log.h"
+#include "src/developer/forensics/feedback/attachments/system_log.h"
 
 #include <fuchsia/mem/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
@@ -19,7 +19,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/developer/forensics/feedback_data/attachments/types.h"
+#include "src/developer/forensics/feedback/attachments/types.h"
 #include "src/developer/forensics/feedback_data/constants.h"
 #include "src/developer/forensics/testing/gpretty_printers.h"
 #include "src/developer/forensics/testing/stubs/diagnostics_archive.h"
@@ -31,8 +31,7 @@
 #include "src/lib/timekeeper/async_test_clock.h"
 #include "src/lib/timekeeper/clock.h"
 
-namespace forensics {
-namespace feedback_data {
+namespace forensics::feedback {
 namespace {
 
 using testing::IsEmpty;
@@ -77,7 +76,7 @@ class SystemLogTest : public UnitTestFixture {
     log_server_ = std::make_unique<stubs::DiagnosticsArchive>(
         std::make_unique<stubs::DiagnosticsBatchIteratorNeverRespondsAfterOneBatch>(
             std::move(messages)));
-    InjectServiceProvider(log_server_.get(), kArchiveAccessorName);
+    InjectServiceProvider(log_server_.get(), feedback_data::kArchiveAccessorName);
   }
 
   AttachmentValue CollectSystemLog(const zx::duration timeout = zx::sec(1)) {
@@ -224,7 +223,7 @@ class SimpleRedactor : public RedactorBase {
   std::string RedactedCanary() const override { return ""; }
 };
 
-LogSink::MessageOr ToMessage(const std::string& msg) {
+feedback_data::LogSink::MessageOr ToMessage(const std::string& msg) {
   return ::fpromise::ok(fuchsia::logger::LogMessage{
       .pid = 100,
       .tid = 101,
@@ -236,7 +235,7 @@ LogSink::MessageOr ToMessage(const std::string& msg) {
   });
 }
 
-LogSink::MessageOr ToMessage(const std::string& msg, const zx::duration time) {
+feedback_data::LogSink::MessageOr ToMessage(const std::string& msg, const zx::duration time) {
   return ::fpromise::ok(fuchsia::logger::LogMessage{
       .pid = 100,
       .tid = 101,
@@ -248,7 +247,9 @@ LogSink::MessageOr ToMessage(const std::string& msg, const zx::duration time) {
   });
 }
 
-LogSink::MessageOr ToError(const std::string& error) { return ::fpromise::error(error); }
+feedback_data::LogSink::MessageOr ToError(const std::string& error) {
+  return ::fpromise::error(error);
+}
 
 TEST(LogBufferTest, SafeAfterInterruption) {
   IdentityRedactor redactor(inspect::BoolProperty{});
@@ -573,5 +574,4 @@ TEST(LogBufferTest, RunsActions) {
 }
 
 }  // namespace
-}  // namespace feedback_data
-}  // namespace forensics
+}  // namespace forensics::feedback

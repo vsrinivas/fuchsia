@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/forensics/feedback_data/attachments/static_attachments.h"
+#include "src/developer/forensics/feedback/attachments/static_attachments.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -11,7 +11,7 @@
 #include "src/developer/forensics/testing/scoped_memfs_manager.h"
 #include "src/lib/files/file.h"
 
-namespace forensics::feedback_data {
+namespace forensics::feedback {
 namespace {
 
 using ::testing::Key;
@@ -29,8 +29,8 @@ class StaticAttachmentsTest : public ::testing::Test {
 
 TEST_F(StaticAttachmentsTest, Keys) {
   EXPECT_THAT(GetStaticAttachments(), UnorderedElementsAreArray({
-                                          Key(kAttachmentBuildSnapshot),
-                                          Key(kAttachmentLogSystemPrevious),
+                                          Key(feedback_data::kAttachmentBuildSnapshot),
+                                          Key(feedback_data::kAttachmentLogSystemPrevious),
                                       }));
 }
 
@@ -42,14 +42,15 @@ TEST_F(StaticAttachmentsTest, FilesPresent) {
 
   WriteFiles({
       {"/config/build-info/snapshot", "build-info"},
-      {kPreviousLogsFilePath, "previous-log"},
+      {feedback_data::kPreviousLogsFilePath, "previous-log"},
   });
 
-  EXPECT_THAT(GetStaticAttachments(),
-              UnorderedElementsAreArray({
-                  Pair(kAttachmentBuildSnapshot, AttachmentValue("build-info")),
-                  Pair(kAttachmentLogSystemPrevious, AttachmentValue("previous-log")),
-              }));
+  EXPECT_THAT(
+      GetStaticAttachments(),
+      UnorderedElementsAreArray({
+          Pair(feedback_data::kAttachmentBuildSnapshot, AttachmentValue("build-info")),
+          Pair(feedback_data::kAttachmentLogSystemPrevious, AttachmentValue("previous-log")),
+      }));
 }
 
 TEST_F(StaticAttachmentsTest, FilesEmpty) {
@@ -60,27 +61,30 @@ TEST_F(StaticAttachmentsTest, FilesEmpty) {
 
   WriteFiles({
       {"/config/build-info/snapshot", ""},
-      {kPreviousLogsFilePath, ""},
+      {feedback_data::kPreviousLogsFilePath, ""},
   });
 
   std::string data;
   ASSERT_TRUE(files::ReadFileToString("/config/build-info/snapshot", &data));
   ASSERT_EQ(data, "");
 
-  EXPECT_THAT(GetStaticAttachments(),
-              UnorderedElementsAreArray({
-                  Pair(kAttachmentBuildSnapshot, AttachmentValue(Error::kMissingValue)),
-                  Pair(kAttachmentLogSystemPrevious, AttachmentValue(Error::kMissingValue)),
-              }));
+  EXPECT_THAT(
+      GetStaticAttachments(),
+      UnorderedElementsAreArray({
+          Pair(feedback_data::kAttachmentBuildSnapshot, AttachmentValue(Error::kMissingValue)),
+          Pair(feedback_data::kAttachmentLogSystemPrevious, AttachmentValue(Error::kMissingValue)),
+      }));
 }
 
 TEST_F(StaticAttachmentsTest, FilesMissing) {
-  EXPECT_THAT(GetStaticAttachments(),
-              UnorderedElementsAreArray({
-                  Pair(kAttachmentBuildSnapshot, AttachmentValue(Error::kFileReadFailure)),
-                  Pair(kAttachmentLogSystemPrevious, AttachmentValue(Error::kFileReadFailure)),
-              }));
+  EXPECT_THAT(
+      GetStaticAttachments(),
+      UnorderedElementsAreArray({
+          Pair(feedback_data::kAttachmentBuildSnapshot, AttachmentValue(Error::kFileReadFailure)),
+          Pair(feedback_data::kAttachmentLogSystemPrevious,
+               AttachmentValue(Error::kFileReadFailure)),
+      }));
 }
 
 }  // namespace
-}  // namespace forensics::feedback_data
+}  // namespace forensics::feedback
