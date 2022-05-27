@@ -54,6 +54,9 @@ template("verify_public_symbols") {
         "--exclude=_end",
       ]
     }
+
+    # TODO(fxbug.dev/101255): lprofDirMode should be hidden from profile
+    args += [ "--exclude=lprofDirMode" ]
   }
 
   action(target_name) {
