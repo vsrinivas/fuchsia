@@ -40,7 +40,7 @@ async fn main() -> Result<(), Error> {
         let recv_test_result = recv_test_result.take();
         fasync::Task::spawn(
             async move {
-                fx_log_info!("new connection to {}", test_pwrbtn::TestsMarker::PROTOCOL_NAME);
+                fx_log_info!("new connection to {}", test_pwrbtn::TestsMarker::DEBUG_NAME);
                 match stream.try_next().await? {
                     Some(test_pwrbtn::TestsRequest::Run { responder }) => {
                         if let Some(recv_test_result) = recv_test_result {
@@ -67,7 +67,7 @@ async fn main() -> Result<(), Error> {
             .expect("failed to clone event");
         fasync::Task::spawn(
             async move {
-                fx_log_info!("new connection to {}", statecontrol::AdminMarker::PROTOCOL_NAME);
+                fx_log_info!("new connection to {}", statecontrol::AdminMarker::DEBUG_NAME);
                 match stream.try_next().await? {
                     Some(statecontrol::AdminRequest::Poweroff { responder }) => {
                         // If we respond to pwrbtn-monitor it will go back to check the signals

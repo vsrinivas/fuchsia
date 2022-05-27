@@ -130,7 +130,7 @@ where
     let _ = fs.dir("svc").add_fidl_service(
         move |mut req_stream: <S as ProtocolMarker>::RequestStream| {
             fasync::Task::local(async move {
-                let failure_msg = format!("serving {} request stream failed", S::PROTOCOL_NAME);
+                let failure_msg = format!("serving {} request stream failed", S::DEBUG_NAME);
                 while let Some(req) = req_stream.try_next().await.expect(&failure_msg) {
                     let failed_to_respond = format!("failed to respond to req {:?}", req);
                     responder(req).expect(&failed_to_respond);

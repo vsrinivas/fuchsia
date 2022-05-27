@@ -19,7 +19,7 @@ pub struct HostIdentifier {
 }
 
 fn connect_to_protocol<P: fidl::endpoints::DiscoverableProtocolMarker>() -> Result<P::Proxy> {
-    fuchsia_component::client::connect_to_protocol::<P>().context(P::PROTOCOL_NAME)
+    fuchsia_component::client::connect_to_protocol::<P>().context(P::DEBUG_NAME)
 }
 
 impl HostIdentifier {

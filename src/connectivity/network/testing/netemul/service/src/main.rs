@@ -1033,12 +1033,12 @@ mod tests {
 
         fn connect_to_protocol<S: DiscoverableProtocolMarker>(&self) -> S::Proxy {
             let (proxy, server_end) = fidl::endpoints::create_proxy::<S>()
-                .context(S::PROTOCOL_NAME)
+                .context(S::DEBUG_NAME)
                 .expect("failed to create proxy");
             let () = self
                 .realm
                 .connect_to_protocol(S::PROTOCOL_NAME, None, server_end.into_channel())
-                .context(S::PROTOCOL_NAME)
+                .context(S::DEBUG_NAME)
                 .expect("failed to connect");
             proxy
         }

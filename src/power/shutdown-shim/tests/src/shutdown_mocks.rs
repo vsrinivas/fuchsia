@@ -85,7 +85,7 @@ async fn run_statecontrol_admin(
     send_signals: mpsc::UnboundedSender<Signal>,
     mut stream: fstatecontrol::AdminRequestStream,
 ) {
-    fx_log_info!("new connection to {}", fstatecontrol::AdminMarker::PROTOCOL_NAME);
+    fx_log_info!("new connection to {}", fstatecontrol::AdminMarker::DEBUG_NAME);
     async move {
         match stream.try_next().await? {
             Some(fstatecontrol::AdminRequest::PowerFullyOn { responder }) => {
@@ -129,7 +129,7 @@ async fn run_statecontrol_admin(
     .unwrap_or_else(|e: anyhow::Error| {
         // Note: the shim checks liveness by writing garbage data on its first connection and
         // observing PEER_CLOSED, so we're expecting this warning to happen once.
-        fx_log_warn!("couldn't run {}: {:?}", fstatecontrol::AdminMarker::PROTOCOL_NAME, e);
+        fx_log_warn!("couldn't run {}: {:?}", fstatecontrol::AdminMarker::DEBUG_NAME, e);
     })
     .await
 }
@@ -176,7 +176,7 @@ async fn run_sys2_system_controller(
     send_signals: mpsc::UnboundedSender<Signal>,
     mut stream: fsys::SystemControllerRequestStream,
 ) {
-    fx_log_info!("new connection to {}", fsys::SystemControllerMarker::PROTOCOL_NAME);
+    fx_log_info!("new connection to {}", fsys::SystemControllerMarker::DEBUG_NAME);
     async move {
         match stream.try_next().await? {
             Some(fsys::SystemControllerRequest::Shutdown { responder }) => {

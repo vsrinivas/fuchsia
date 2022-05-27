@@ -306,7 +306,7 @@ impl<'a> TestRealm<'a> {
                 .context("connect to protocol name with server end")?;
             Result::Ok(proxy)
         })()
-        .context(S::PROTOCOL_NAME)
+        .context(S::DEBUG_NAME)
     }
 
     /// Connects to a protocol within the realm.

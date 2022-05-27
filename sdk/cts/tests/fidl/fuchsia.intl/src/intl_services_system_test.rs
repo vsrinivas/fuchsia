@@ -12,8 +12,7 @@ use {
 
 /// Opens a connection to the given discoverable service, provides an error context on failure.
 fn connect_to_service<M: DiscoverableProtocolMarker>() -> Result<M::Proxy, Error> {
-    client::connect_to_protocol::<M>()
-        .with_context(|| format!("connecting to {}", M::PROTOCOL_NAME))
+    client::connect_to_protocol::<M>().with_context(|| format!("connecting to {}", M::DEBUG_NAME))
 }
 
 #[fuchsia::test]
