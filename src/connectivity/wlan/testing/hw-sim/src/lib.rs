@@ -728,37 +728,35 @@ where
         .await
 }
 
-async fn connect_with_security_type(
+pub async fn connect_with_security_type(
     helper: &mut test_utils::TestHelper,
     ssid: &Ssid,
     bssid: &Bssid,
     passphrase: Option<&str>,
-    security_type: fidl_policy::SecurityType,
+    bss_protection: Protection,
+    policy_security_type: fidl_policy::SecurityType,
 ) {
-    let connect_fut = save_network_and_wait_until_connected(ssid, security_type, passphrase);
+    let connect_fut = save_network_and_wait_until_connected(ssid, policy_security_type, passphrase);
     pin_mut!(connect_fut);
 
-    // Validate the connect request.
-    let (mut authenticator, mut update_sink, protection) = match security_type {
-        fidl_policy::SecurityType::Wpa3 => (
+    // Create the authenticator
+    let (mut authenticator, mut update_sink) = match bss_protection {
+        Protection::Wpa3Personal => (
             passphrase.map(|p| create_wpa3_authenticator(bssid, ssid, p)),
             Some(wlan_rsn::rsna::UpdateSink::default()),
-            Protection::Wpa3Personal,
         ),
-        fidl_policy::SecurityType::Wpa2 => (
+        Protection::Wpa2Personal => (
             passphrase.map(|p| create_wpa2_psk_authenticator(bssid, ssid, p)),
             Some(wlan_rsn::rsna::UpdateSink::default()),
-            Protection::Wpa2Personal,
         ),
-        fidl_policy::SecurityType::Wpa => (
+        Protection::Wpa1 => (
             passphrase.map(|p| create_deprecated_wpa1_psk_authenticator(bssid, ssid, p)),
             Some(wlan_rsn::rsna::UpdateSink::default()),
-            Protection::Wpa1,
         ),
-        fidl_policy::SecurityType::Wep => {
-            panic!("hw-sim does not support connecting to a AP with WEP security type")
+        Protection::Open => (None, None),
+        _ => {
+            panic!("This helper doesn't yet support {}", bss_protection)
         }
-        fidl_policy::SecurityType::None => (None, None, Protection::Open),
     };
 
     connect_to_ap(
@@ -766,63 +764,11 @@ async fn connect_with_security_type(
         helper,
         ssid,
         bssid,
-        &protection,
+        &bss_protection,
         &mut authenticator,
         &mut update_sink,
     )
     .await;
-}
-
-pub async fn connect_wpa3(
-    helper: &mut test_utils::TestHelper,
-    ssid: &Ssid,
-    bssid: &Bssid,
-    passphrase: &str,
-) {
-    connect_with_security_type(
-        helper,
-        ssid,
-        bssid,
-        Some(passphrase),
-        fidl_policy::SecurityType::Wpa3,
-    )
-    .await;
-}
-
-pub async fn connect_wpa2(
-    helper: &mut test_utils::TestHelper,
-    ssid: &Ssid,
-    bssid: &Bssid,
-    passphrase: &str,
-) {
-    connect_with_security_type(
-        helper,
-        ssid,
-        bssid,
-        Some(passphrase),
-        fidl_policy::SecurityType::Wpa2,
-    )
-    .await;
-}
-
-pub async fn connect_deprecated_wpa1(
-    helper: &mut test_utils::TestHelper,
-    ssid: &Ssid,
-    bssid: &Bssid,
-    passphrase: &str,
-) {
-    connect_with_security_type(
-        helper,
-        ssid,
-        bssid,
-        Some(passphrase),
-        fidl_policy::SecurityType::Wpa,
-    )
-    .await;
-}
-
-pub async fn connect_open(helper: &mut test_utils::TestHelper, ssid: &Ssid, bssid: &Bssid) {
-    connect_with_security_type(helper, ssid, bssid, None, fidl_policy::SecurityType::None).await;
 }
 
 pub fn rx_wlan_data_frame(

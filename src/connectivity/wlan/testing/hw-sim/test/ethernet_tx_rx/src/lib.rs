@@ -4,11 +4,12 @@
 
 use {
     anyhow::ensure,
+    fidl_fuchsia_wlan_policy as fidl_policy,
     fuchsia_zircon::DurationNum,
     futures::StreamExt,
     ieee80211::Bssid,
     pin_utils::pin_mut,
-    wlan_common::{buffer_reader::BufferReader, mac},
+    wlan_common::{bss::Protection, buffer_reader::BufferReader, mac},
     wlan_hw_sim::*,
 };
 
@@ -95,7 +96,15 @@ async fn ethernet_tx_rx() {
     let mut helper = test_utils::TestHelper::begin_test(default_wlantap_config_client()).await;
     let () = loop_until_iface_is_found().await;
 
-    connect_open(&mut helper, &AP_SSID, &BSS).await;
+    connect_with_security_type(
+        &mut helper,
+        &AP_SSID,
+        &BSS,
+        None,
+        Protection::Open,
+        fidl_policy::SecurityType::None,
+    )
+    .await;
 
     let mut client = create_eth_client(&CLIENT_MAC_ADDR)
         .await

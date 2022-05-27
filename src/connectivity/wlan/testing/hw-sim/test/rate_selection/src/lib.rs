@@ -5,6 +5,7 @@
 use {
     anyhow::Error,
     fidl_fuchsia_wlan_common::{WlanTxResult, WlanTxStatus, WlanTxStatusEntry},
+    fidl_fuchsia_wlan_policy as fidl_policy,
     fidl_fuchsia_wlan_tap::{WlantapPhyConfig, WlantapPhyEvent, WlantapPhyProxy},
     fuchsia_async::Interval,
     fuchsia_zircon::DurationNum,
@@ -143,7 +144,15 @@ async fn rate_selection() {
     .await;
     let () = loop_until_iface_is_found().await;
 
-    let () = connect_open(&mut helper, &AP_SSID, &BSS_MINSTL).await;
+    let () = connect_with_security_type(
+        &mut helper,
+        &AP_SSID,
+        &BSS_MINSTL,
+        None,
+        Protection::Open,
+        fidl_policy::SecurityType::None,
+    )
+    .await;
 
     let phy = helper.proxy();
     let (sender, mut receiver) = mpsc::channel(1);

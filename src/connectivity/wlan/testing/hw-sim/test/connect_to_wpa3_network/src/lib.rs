@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use wlan_hw_sim::*;
+use {fidl_fuchsia_wlan_policy as fidl_policy, wlan_common::bss::Protection, wlan_hw_sim::*};
 
 /// Test a client can connect to a network protected by WPA2-PSK by simulating an AP that
 /// authenticates, associates, as well as initiating and completing EAPOL exchange.
@@ -14,6 +14,14 @@ async fn connect_to_wpa3_network() {
     let mut helper = test_utils::TestHelper::begin_test(default_wlantap_config_client()).await;
     let () = loop_until_iface_is_found().await;
 
-    let () = connect_wpa3(&mut helper, &AP_SSID, &AP_MAC_ADDR, "password").await;
+    let () = connect_with_security_type(
+        &mut helper,
+        &AP_SSID,
+        &AP_MAC_ADDR,
+        Some("password"),
+        Protection::Wpa3Personal,
+        fidl_policy::SecurityType::Wpa3,
+    )
+    .await;
     helper.stop().await;
 }
