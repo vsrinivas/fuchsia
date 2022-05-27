@@ -2,8 +2,65 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_test_manager as ftest_manager;
-use thiserror::Error;
+use {
+    fidl_fuchsia_test_manager as ftest_manager,
+    std::{fmt, sync::Arc},
+    thiserror::Error,
+};
+
+#[derive(Debug, Clone)]
+pub enum Outcome {
+    Passed,
+    Failed,
+    Inconclusive,
+    Timedout,
+    /// Suite was stopped prematurely due to cancellation by the user.
+    Cancelled,
+    /// Suite did not report completion.
+    // TODO(fxbug.dev/90037) - this outcome indicates an internal error as test manager isn't
+    // sending expected events. We should return an error instead.
+    DidNotFinish,
+    Error {
+        origin: Arc<RunTestSuiteError>,
+    },
+}
+
+impl Outcome {
+    pub(crate) fn error<E: Into<RunTestSuiteError>>(e: E) -> Self {
+        Self::Error { origin: Arc::new(e.into()) }
+    }
+}
+
+impl PartialEq for Outcome {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Passed, Self::Passed)
+            | (Self::Failed, Self::Failed)
+            | (Self::Inconclusive, Self::Inconclusive)
+            | (Self::Timedout, Self::Timedout)
+            | (Self::Cancelled, Self::Cancelled)
+            | (Self::DidNotFinish, Self::DidNotFinish) => true,
+            (Self::Error { origin }, Self::Error { origin: other_origin }) => {
+                format!("{}", origin.as_ref()) == format!("{}", other_origin.as_ref())
+            }
+            (_, _) => false,
+        }
+    }
+}
+
+impl fmt::Display for Outcome {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Outcome::Passed => write!(f, "PASSED"),
+            Outcome::Failed => write!(f, "FAILED"),
+            Outcome::Inconclusive => write!(f, "INCONCLUSIVE"),
+            Outcome::Timedout => write!(f, "TIMED OUT"),
+            Outcome::Cancelled => write!(f, "CANCELLED"),
+            Outcome::DidNotFinish => write!(f, "DID_NOT_FINISH"),
+            Outcome::Error { .. } => write!(f, "ERROR"),
+        }
+    }
+}
 
 #[derive(Error, Debug)]
 /// An enum of the different errors that may be encountered while running

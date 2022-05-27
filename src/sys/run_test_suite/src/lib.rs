@@ -17,17 +17,15 @@ use {
     log::{debug, error, warn},
     std::collections::{HashMap, HashSet, VecDeque},
     std::convert::TryInto,
-    std::fmt,
     std::io::Write,
     std::path::PathBuf,
-    std::sync::Arc,
     std::time::Duration,
     test_list::TestTag,
 };
 
 mod cancel;
 pub mod diagnostics;
-mod error;
+mod outcome;
 pub mod output;
 mod stream_util;
 mod trace;
@@ -35,7 +33,7 @@ mod trace;
 /// Timeout for draining logs.
 const LOG_TIMEOUT_DURATION: Duration = Duration::from_secs(10);
 
-pub use error::{RunTestSuiteError, UnexpectedEventError};
+pub use outcome::{Outcome, RunTestSuiteError, UnexpectedEventError};
 use {
     cancel::{Cancelled, NamedFutureExt, OrCancel},
     output::{
@@ -44,60 +42,6 @@ use {
     stream_util::StreamUtil,
     trace::duration,
 };
-
-#[derive(Debug, Clone)]
-pub enum Outcome {
-    Passed,
-    Failed,
-    Inconclusive,
-    Timedout,
-    /// Suite was stopped prematurely due to cancellation by the user.
-    Cancelled,
-    /// Suite did not report completion.
-    // TODO(fxbug.dev/90037) - this outcome indicates an internal error as test manager isn't
-    // sending expected events. We should return an error instead.
-    DidNotFinish,
-    Error {
-        origin: Arc<RunTestSuiteError>,
-    },
-}
-
-impl Outcome {
-    fn error<E: Into<RunTestSuiteError>>(e: E) -> Self {
-        Self::Error { origin: Arc::new(e.into()) }
-    }
-}
-
-impl PartialEq for Outcome {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Self::Passed, Self::Passed)
-            | (Self::Failed, Self::Failed)
-            | (Self::Inconclusive, Self::Inconclusive)
-            | (Self::Timedout, Self::Timedout)
-            | (Self::Cancelled, Self::Cancelled)
-            | (Self::DidNotFinish, Self::DidNotFinish) => true,
-            (Self::Error { origin }, Self::Error { origin: other_origin }) => {
-                format!("{}", origin.as_ref()) == format!("{}", other_origin.as_ref())
-            }
-            (_, _) => false,
-        }
-    }
-}
-
-impl fmt::Display for Outcome {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Outcome::Passed => write!(f, "PASSED"),
-            Outcome::Failed => write!(f, "FAILED"),
-            Outcome::Inconclusive => write!(f, "INCONCLUSIVE"),
-            Outcome::Timedout => write!(f, "TIMED OUT"),
-            Outcome::Cancelled => write!(f, "CANCELLED"),
-            Outcome::DidNotFinish => write!(f, "DID_NOT_FINISH"),
-            Outcome::Error { .. } => write!(f, "ERROR"),
-        }
-    }
-}
 
 /// Parameters that specify how a single test suite should be executed.
 #[derive(Clone, Debug, PartialEq, Default)]
