@@ -2295,6 +2295,11 @@ pub struct Collection {
     /// Allow child names up to 1024 characters long instead of the usual 100 character limit.
     /// Default is false.
     pub allow_long_names: Option<bool>,
+
+    /// If set to `true`, the data in isolated storage used by dynamic child instances and
+    /// their descendants will persist after the instances are destroyed. A new child instance
+    /// created with the same name will share the same storage path as the previous instance.
+    pub persistent_storage: Option<bool>,
 }
 
 pub trait FromClause {

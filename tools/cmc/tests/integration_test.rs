@@ -400,6 +400,7 @@ fn main() {
                 environment: None,
                 allowed_offers: None,
                 allow_long_names: None,
+                persistent_storage: None,
                 ..Collection::EMPTY
             },
             Collection {
@@ -408,6 +409,7 @@ fn main() {
                 environment: None,
                 allowed_offers: Some(AllowedOffers::StaticOnly),
                 allow_long_names: None,
+                persistent_storage: None,
                 ..Collection::EMPTY
             },
             Collection {
@@ -416,6 +418,7 @@ fn main() {
                 environment: None,
                 allowed_offers: Some(AllowedOffers::StaticAndDynamic),
                 allow_long_names: None,
+                persistent_storage: None,
                 ..Collection::EMPTY
             },
             Collection {
@@ -424,6 +427,16 @@ fn main() {
                 environment: None,
                 allowed_offers: None,
                 allow_long_names: Some(true),
+                persistent_storage: None,
+                ..Collection::EMPTY
+            },
+            Collection {
+                name: Some("persistent_storage".to_string()),
+                durability: Some(Durability::Persistent),
+                environment: None,
+                allowed_offers: None,
+                allow_long_names: None,
+                persistent_storage: Some(true),
                 ..Collection::EMPTY
             },
         ];

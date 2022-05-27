@@ -830,6 +830,7 @@ fn translate_collections(
             environment: extract_environment_ref(collection.environment.as_ref()).map(|e| e.into()),
             allowed_offers: collection.allowed_offers.clone().map(|a| a.into()),
             allow_long_names: collection.allow_long_names.clone(),
+            persistent_storage: collection.persistent_storage.clone(),
             ..fdecl::Collection::EMPTY
         });
     }

@@ -200,6 +200,9 @@ The `collections` section declares collections as described in
       with `CreateChild` are allowed.
 - `allow_long_names`: (_optional `bool`_) Allow child names up to 1024 characters long instead of the usual 100 character limit.
   Default is false.
+- `persistent_storage`: (_optional `bool`_) If set to `true`, the data in isolated storage used by dynamic child instances and
+  their descendants will persist after the instances are destroyed. A new child instance
+  created with the same name will share the same storage path as the previous instance.
 
 Example:
 
