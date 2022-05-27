@@ -336,12 +336,18 @@ int main(int argc, const char** argv) {
       .initial_interval = initial_interval,
       .jitter = upload_jitter,
   };
-  cobalt::CobaltApp app = cobalt::CobaltApp::CreateCobaltApp(
-      std::move(context), loop.dispatcher(), std::move(lifecycle_handle),
-      [loop = &loop]() { loop->Quit(); }, inspector.root().CreateChild("cobalt_app"),
-      upload_schedule, event_aggregator_backfill_days, start_event_aggregator_worker,
-      use_memory_observation_store, max_bytes_per_observation_store, storage_quotas, product,
-      boardname, version);
+
+  cobalt::lib::statusor::StatusOr<std::unique_ptr<cobalt::CobaltApp>> app =
+      cobalt::CobaltApp::CreateCobaltApp(
+          std::move(context), loop.dispatcher(), std::move(lifecycle_handle),
+          [loop = &loop]() { loop->Quit(); }, inspector.root().CreateChild("cobalt_app"),
+          upload_schedule, event_aggregator_backfill_days, start_event_aggregator_worker,
+          use_memory_observation_store, max_bytes_per_observation_store, storage_quotas, product,
+          boardname, version);
+
+  if (!app.ok()) {
+    FX_LOGS(FATAL) << "Failed to construct the cobalt app: " << app.status();
+  }
   inspector.Health().Ok();
   loop.Run();
   FX_LOGS(INFO) << "Cobalt will now shut down.";

@@ -32,6 +32,7 @@
 #include "src/cobalt/bin/app/user_consent_watcher.h"
 #include "src/cobalt/bin/utils/clock.h"
 #include "src/cobalt/bin/utils/fuchsia_http_client.h"
+#include "src/public/lib/statusor/statusor.h"
 #include "third_party/cobalt/src/public/cobalt_config.h"
 #include "third_party/cobalt/src/public/cobalt_service_interface.h"
 
@@ -83,7 +84,7 @@ class CobaltApp {
   //           part of every Cobalt metric.
   //
   //           Example: 20190220_01_RC00
-  static CobaltApp CreateCobaltApp(
+  static lib::statusor::StatusOr<std::unique_ptr<CobaltApp>> CreateCobaltApp(
       std::unique_ptr<sys::ComponentContext> context, async_dispatcher_t* dispatcher,
       fidl::InterfaceRequest<fuchsia::process::lifecycle::Lifecycle> lifecycle_handle,
       fit::callback<void()> shutdown, inspect::Node inspect_node,
@@ -145,7 +146,10 @@ class CobaltApp {
 
   std::unique_ptr<UserConsentWatcher> user_consent_watcher_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(CobaltApp);
+  CobaltApp(const CobaltApp&) = delete;
+  CobaltApp& operator=(const CobaltApp&) = delete;
+  CobaltApp(CobaltApp&&) = delete;
+  CobaltApp& operator=(CobaltApp&&) = delete;
 };
 
 std::string ReadGlobalMetricsRegistryBytes(const std::string& global_metrics_registry_path);

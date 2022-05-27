@@ -16,6 +16,7 @@
 #include "src/cobalt/bin/app/metric_event_logger_factory_impl.h"
 #include "src/cobalt/bin/app/utils.h"
 #include "src/cobalt/bin/utils/fuchsia_http_client.h"
+#include "src/public/lib/statusor/statusor.h"
 #include "third_party/cobalt/src/lib/util/posix_file_system.h"
 #include "third_party/cobalt/src/public/cobalt_config.h"
 #include "third_party/cobalt/src/public/cobalt_service.h"
@@ -128,7 +129,7 @@ CobaltConfig CobaltApp::CreateCobaltConfig(
   return cfg;
 }
 
-CobaltApp CobaltApp::CreateCobaltApp(
+lib::statusor::StatusOr<std::unique_ptr<CobaltApp>> CobaltApp::CreateCobaltApp(
     std::unique_ptr<sys::ComponentContext> context, async_dispatcher_t* dispatcher,
     fidl::InterfaceRequest<fuchsia::process::lifecycle::Lifecycle> lifecycle_handle,
     fit::callback<void()> shutdown, inspect::Node inspect_node,
@@ -150,24 +151,27 @@ CobaltApp CobaltApp::CreateCobaltApp(
   auto validated_clock =
       std::make_unique<FuchsiaSystemClock>(dispatcher, inspect_node.CreateChild("system_clock"));
 
-  auto cobalt_service = std::make_unique<CobaltService>(CreateCobaltConfig(
-      dispatcher, kMetricsRegistryPath, configuration_data, validated_clock.get(),
-      [context_ptr]() {
-        fuchsia::net::http::LoaderSyncPtr loader_sync;
-        context_ptr->svc()->Connect(loader_sync.NewRequest());
-        return loader_sync;
-      },
-      upload_schedule_cfg, event_aggregator_backfill_days, use_memory_observation_store,
-      max_bytes_per_observation_store, storage_quotas, product_name, board_name, version,
-      std::make_unique<ActivityListenerImpl>(dispatcher, context->svc()),
-      std::make_unique<DiagnosticsImpl>(inspect_node.CreateChild("core"))));
+  CB_ASSIGN_OR_RETURN(
+      auto cobalt_service,
+      CobaltService::Create(CreateCobaltConfig(
+          dispatcher, kMetricsRegistryPath, configuration_data, validated_clock.get(),
+          [context_ptr]() {
+            fuchsia::net::http::LoaderSyncPtr loader_sync;
+            context_ptr->svc()->Connect(loader_sync.NewRequest());
+            return loader_sync;
+          },
+          upload_schedule_cfg, event_aggregator_backfill_days, use_memory_observation_store,
+          max_bytes_per_observation_store, storage_quotas, product_name, board_name, version,
+          std::make_unique<ActivityListenerImpl>(dispatcher, context->svc()),
+          std::make_unique<DiagnosticsImpl>(inspect_node.CreateChild("core")))));
 
   cobalt_service->SetDataCollectionPolicy(configuration_data.GetDataCollectionPolicy());
 
-  return CobaltApp(std::move(context), dispatcher, std::move(lifecycle_handle), std::move(shutdown),
-                   std::move(inspect_node), std::move(inspect_config_node),
-                   std::move(cobalt_service), std::move(validated_clock),
-                   start_event_aggregator_worker, configuration_data.GetWatchForUserConsent());
+  return std::unique_ptr<CobaltApp>(
+      new CobaltApp(std::move(context), dispatcher, std::move(lifecycle_handle),
+                    std::move(shutdown), std::move(inspect_node), std::move(inspect_config_node),
+                    std::move(cobalt_service), std::move(validated_clock),
+                    start_event_aggregator_worker, configuration_data.GetWatchForUserConsent()));
 }
 
 CobaltApp::CobaltApp(
