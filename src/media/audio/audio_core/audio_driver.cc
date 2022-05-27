@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <iomanip>
+#include <sstream>
 
 #include <audio-proto-utils/format-utils.h>
 #include <fbl/algorithm.h>
@@ -227,7 +228,7 @@ zx_status_t AudioDriver::GetDriverInfo() {
 bool AudioDriver::ValidatePcmSupportedFormats(
     std::vector<fuchsia::hardware::audio::PcmSupportedFormats>& formats, bool is_input) {
   for (size_t format_index = 0u; format_index < formats.size(); ++format_index) {
-    if constexpr (kLogIdlePolicyChannelFrequencies) {
+    if constexpr (kLogAudioDriverFormats || kLogIdlePolicyChannelFrequencies) {
       FX_LOGS(INFO) << "AudioDriver::" << __FUNCTION__ << ": " << (is_input ? " Input" : "Output")
                     << " PcmSupportedFormats[" << format_index << "] for "
                     << (is_input ? " Input" : "Output");
@@ -243,6 +244,14 @@ bool AudioDriver::ValidatePcmSupportedFormats(
       FX_LOGS(WARNING) << (is_input ? " Input" : "Output") << " PcmSupportedFormats["
                        << format_index << "].frame_rates contains no entries";
       return false;
+    } else {
+      if constexpr (kLogAudioDriverFormats) {
+        std::ostringstream out;
+        for (const auto rate : formats[format_index].frame_rates()) {
+          out << rate << " ";
+        }
+        FX_LOGS(INFO) << " frame_rates: [ " << out.str() << "]";
+      }
     }
 
     auto& channel_sets = formats[format_index].channel_sets();
@@ -256,21 +265,25 @@ bool AudioDriver::ValidatePcmSupportedFormats(
         return false;
       }
 
-      if constexpr (kLogIdlePolicyChannelFrequencies) {
+      if constexpr (kLogAudioDriverFormats || kLogIdlePolicyChannelFrequencies) {
         auto& chan_set_attribs = channel_set.attributes();
         for (size_t channel_index = 0u; channel_index < chan_set_attribs.size(); ++channel_index) {
-          if (!chan_set_attribs[channel_index].has_min_frequency()) {
-            FX_LOGS(INFO) << (is_input ? " Input" : "Output") << " PcmSupportedFormats["
-                          << format_index << "].channel_sets[" << channel_set_index
-                          << "].chan_set_attribs[" << channel_index
-                          << "] does not have min_frequency";
+          std::ostringstream out;
+          out << (is_input ? " Input" : "Output") << " PcmSupportedFormats[" << format_index
+              << "].channel_sets[" << channel_set_index << "].channel[" << channel_index
+              << "] Min: ";
+          if (chan_set_attribs[channel_index].has_min_frequency()) {
+            out << chan_set_attribs[channel_index].min_frequency();
+          } else {
+            out << "NONE";
           }
-          if (!chan_set_attribs[channel_index].has_max_frequency()) {
-            FX_LOGS(INFO) << (is_input ? " Input" : "Output") << " PcmSupportedFormats["
-                          << format_index << "].channel_sets[" << channel_set_index
-                          << "].chan_set_attribs[" << channel_index
-                          << "] does not have max_frequency";
+          out << ", Max: ";
+          if (chan_set_attribs[channel_index].has_max_frequency()) {
+            out << chan_set_attribs[channel_index].max_frequency();
+          } else {
+            out << "NONE";
           }
+          FX_LOGS(INFO) << out.str();
         }
       }
     }
@@ -400,6 +413,25 @@ zx_status_t AudioDriver::Configure(const Format& format, zx::duration min_ring_b
   if (!stream_config_fidl_.is_bound()) {
     FX_LOGS(ERROR) << "Stream channel lost";
     return ZX_ERR_INTERNAL;
+  }
+
+  if constexpr (kLogAudioDriverFormats) {
+    auto format_str = [](DriverSampleFormat driver_format) {
+      switch (driver_format.sample_format) {
+        case fuchsia::hardware::audio::SampleFormat::PCM_SIGNED:
+          return "signed";
+        case fuchsia::hardware::audio::SampleFormat::PCM_UNSIGNED:
+          return "unsigned";
+        case fuchsia::hardware::audio::SampleFormat::PCM_FLOAT:
+          return "float";
+        default:
+          return "unknown";
+      }
+    };
+    FX_LOGS(INFO) << "AudioDriver: CreateRingBuffer with format [chans: " << channels << ", "
+                  << format_str(driver_format) << " " << format.valid_bits_per_channel() << "-in-"
+                  << (format.bytes_per_frame() * 8 / channels) << ", " << frames_per_second
+                  << " Hz] for " << (is_input ? "INPUT" : "OUTPUT") << " driver " << this;
   }
 
   stream_config_fidl_->CreateRingBuffer(std::move(fidl_format), std::move(request));

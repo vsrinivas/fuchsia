@@ -276,7 +276,7 @@ fpromise::promise<void> AudioDevice::Shutdown() {
 bool AudioDevice::UpdatePlugState(bool plugged, zx::time plug_time) {
   if constexpr (kLogAudioDevice || kLogDevicePlugUnplug) {
     FX_LOGS(INFO) << "AudioDevice::" << __FUNCTION__ << ": " << (plugged ? "PLUGGED" : "UNPLUGGED")
-                  << " (device " << this << ")";
+                  << " (" << (is_output() ? "output" : "input") << " device " << this << ")";
   }
 
   TRACE_DURATION("audio", "AudioDevice::UpdatePlugState");
@@ -323,7 +323,8 @@ fuchsia::media::AudioDeviceInfo AudioDevice::GetDeviceInfo() const {
 
   if constexpr (kLogAudioDevice) {
     FX_LOGS(INFO) << "AudioDevice::" << __FUNCTION__ << " (" << (is_input() ? "input " : "output ")
-                  << this << "): '" << UniqueIdToString(driver()->persistent_unique_id()) << "'";
+                  << this << "): '" << UniqueIdToString(driver()->persistent_unique_id())
+                  << "', token " << token();
   }
   return {
       .name = driver()->manufacturer_name() + ' ' + driver()->product_name(),

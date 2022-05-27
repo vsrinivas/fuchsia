@@ -57,6 +57,10 @@ inline constexpr bool kLogSetDeviceGainMuteActions = false;
 // Values retrieved from the audio driver related to delay, and associated calculations.
 inline constexpr bool kLogDriverDelayProperties = false;
 
+// Formats supported by the driver, and the format chosen when creating a RingBuffer.
+inline constexpr bool kLogAudioDriverFormats = false;
+
+// Log driver callbacks received (except position notifications: handled separately below).
 inline constexpr bool kLogAudioDriverCallbacks = false;
 // For non-zero value N, log every Nth position notification. If 0, don't log any.
 inline constexpr uint16_t kDriverPositionNotificationDisplayInterval = 0;
