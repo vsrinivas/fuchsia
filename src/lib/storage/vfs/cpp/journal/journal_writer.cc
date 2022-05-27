@@ -43,7 +43,8 @@ fpromise::result<void, zx_status_t> JournalWriter::WriteData(JournalWorkItem wor
   for (const auto& operation : work.operations) {
     range::Range<uint64_t> range(operation.op.dev_offset,
                                  operation.op.dev_offset + operation.op.length);
-    if (live_metadata_operations_.Overlaps(range)) {
+    // Determine if the given range partially overlaps any live operations.
+    if (live_metadata_operations_.find(range) != live_metadata_operations_.end()) {
       // TODO(smklein): Write "real" revocation records instead of merely updating the info block.
       //
       // Currently, writing the info block is sufficient to "avoid metadata replay", but this is
@@ -84,7 +85,7 @@ fpromise::result<void, zx_status_t> JournalWriter::WriteMetadata(
   for (const auto& operation : work.operations) {
     range::Range<uint64_t> range(operation.op.dev_offset,
                                  operation.op.dev_offset + operation.op.length);
-    live_metadata_operations_.Insert(std::move(range));
+    live_metadata_operations_.insert(std::move(range));
   }
 
   // Write metadata to the journal itself.
@@ -263,7 +264,7 @@ zx_status_t JournalWriter::WriteInfoBlock() {
   }
   // Immediately after the info block is updated, no metadata operations should be replayed
   // on reboot.
-  live_metadata_operations_.Clear();
+  live_metadata_operations_.clear();
   return ZX_OK;
 }
 

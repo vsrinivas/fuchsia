@@ -13,11 +13,11 @@
 #include <algorithm>
 
 #include <fbl/vector.h>
+#include <range/interval-tree.h>
 #include <storage/buffer/blocking_ring_buffer.h>
 #include <storage/operation/operation.h>
 
 #include "src/lib/storage/vfs/cpp/journal/format.h"
-#include "src/lib/storage/vfs/cpp/journal/operation_tracker.h"
 #include "src/lib/storage/vfs/cpp/journal/superblock.h"
 #include "src/lib/storage/vfs/cpp/transaction/transaction_handler.h"
 
@@ -140,7 +140,7 @@ class JournalWriter {
   // Tracks all in-flight metadata operations.
   // These operations are tracked from the moment they are written to the journal,
   // and are dropped once the journal would avoid replaying them on reboot.
-  OperationTracker live_metadata_operations_;
+  range::IntervalTree<range::Range<uint64_t>> live_metadata_operations_;
 
   // Relative to the start of the filesystem. Points to the journal info block.
   const uint64_t journal_start_block_ = 0;

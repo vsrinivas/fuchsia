@@ -20,7 +20,6 @@ static_library("journal") {
     "inspector_parser.h",
     "journal.h",
     "journal_writer.h",
-    "operation_tracker.h",
     "replay.h",
     "superblock.h",
   ]
@@ -57,7 +56,6 @@ static_library("journal") {
       "inspector_parser.cc",
       "journal.cc",
       "journal_writer.cc",
-      "operation_tracker.cc",
       "replay.cc",
       "replay_tree.cc",
       "replay_tree.h",
@@ -110,7 +108,6 @@ test("journal-unit") {
     "inspector_parser_test.cc",
     "inspector_test.cc",
     "journal_test.cc",
-    "operation_tracker_test.cc",
     "replay_test.cc",
     "replay_tree_test.cc",
     "superblock_test.cc",
