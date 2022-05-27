@@ -4,28 +4,25 @@
             "event_codes": [
                 0
             ],
-            "metric_id": 3000,
+            "metric_id": 3001,
             "metric_type": "Occurrence",
-            "selector": "bootstrap/driver_manager:root/fvm/partitions/blobfs:total_slices_reserved",
-            "use_legacy_cobalt": true
+            "selector": "bootstrap/driver_manager:root/fvm/partitions/blobfs:total_slices_reserved"
         },
         {
             "event_codes": [
                 1
             ],
-            "metric_id": 3000,
+            "metric_id": 3001,
             "metric_type": "Occurrence",
-            "selector": "bootstrap/driver_manager:root/fvm/partitions/minfs:total_slices_reserved",
-            "use_legacy_cobalt": true
+            "selector": "bootstrap/driver_manager:root/fvm/partitions/minfs:total_slices_reserved"
         },
         {
             "event_codes": [
                 1
             ],
-            "metric_id": 28,
+            "metric_id": 61,
             "metric_type": "Occurrence",
-            "selector": "bootstrap/driver_manager:root/fvm/mount_time/version_combo",
-            "use_legacy_cobalt": true
+            "selector": "bootstrap/driver_manager:root/fvm/mount_time/version_combo"
         }
     ],
     "poll_rate_sec": 3600,
