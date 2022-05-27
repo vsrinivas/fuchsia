@@ -242,8 +242,8 @@ impl Controller {
 
     /// For the FIDL test controller. Informational only and intended for logging only. The state is
     /// inherently racey.
-    pub fn is_connected(&self) -> bool {
-        self.peer.is_connected()
+    pub fn is_control_connected(&self) -> bool {
+        self.peer.is_control_connected()
     }
 
     /// Returns notification events from the peer.

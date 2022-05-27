@@ -3,8 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    bt_avctp::AvcPeer,
-    fidl_fuchsia_bluetooth_bredr as bredr, fuchsia_async as fasync,
+    fuchsia_async as fasync,
     fuchsia_async::DurationExt,
     fuchsia_zircon as zx,
     futures::{
@@ -56,7 +55,7 @@ async fn process_control_stream(peer: Arc<RwLock<RemotePeer>>) {
 
     // Command stream closed/errored. Disconnect the peer.
     {
-        peer.write().reset_connection(false);
+        peer.write().reset_connections(false);
     }
 }
 
@@ -148,70 +147,42 @@ fn handle_notification(
 
 /// Attempt an outgoing L2CAP connection to remote's AVRCP control channel.
 /// The control channel should be in `Connecting` state before spawning this task.
-// TODO(fxbug.dev/85761): Refactor logic into RemotePeer to avoid multiple lock accesses.
-async fn make_connection(peer: Arc<RwLock<RemotePeer>>) {
+/// TODO(fxbug.dev/85761): Refactor logic into RemotePeer to avoid multiple lock accesses.
+async fn make_connection(peer: Arc<RwLock<RemotePeer>>, conn_type: AVCTPConnectionType) {
     let random_delay: zx::Duration = zx::Duration::from_nanos(
         rand::thread_rng()
             .gen_range(MIN_CONNECTION_EST_TIME.into_nanos()..MAX_CONNECTION_EST_TIME.into_nanos()),
     );
     trace!("AVRCP waiting {:?} millis before establishing connection", random_delay.into_millis());
     fuchsia_async::Timer::new(random_delay.after_now()).await;
-    let (peer_id, profile_service, psm) = {
-        let peer_guard = peer.read();
-        // Return early if we are not in the `Connecting` state.
-        if !peer_guard.control_channel.is_connecting() {
-            return;
-        }
-        (peer_guard.peer_id, peer_guard.profile_proxy.clone(), peer_guard.service_psm())
-    };
 
-    match profile_service
-        .connect(
-            &mut peer_id.into(),
-            &mut bredr::ConnectParameters::L2cap(bredr::L2capParameters {
-                psm: Some(psm.into()),
-                ..bredr::L2capParameters::EMPTY
-            }),
-        )
-        .await
-    {
+    // Initiate outgoing connection.
+    let conn_call = peer.write().connect(conn_type);
+    if conn_call.is_none() {
+        return;
+    }
+    match conn_call.unwrap().await {
         Err(fidl_err) => {
-            let mut peer_guard = peer.write();
             warn!("Profile service connect error: {:?}", fidl_err);
-            peer_guard.inspect().metrics().connection_error();
-            peer_guard.reset_connection(false);
+            peer.write().connect_failed(conn_type, true);
         }
         Ok(Ok(channel)) => {
             let mut peer_guard = peer.write();
             let channel = match channel.try_into() {
                 Ok(chan) => chan,
                 Err(e) => {
-                    error!("Unable to make peer {} from socket: {:?}", peer_id, e);
-                    peer_guard.inspect().metrics().connection_error();
-                    peer_guard.reset_connection(false);
+                    error!("Unable to make peer {} from socket: {:?}", peer_guard.peer_id, e);
+                    peer_guard.connect_failed(conn_type, true);
                     return;
                 }
             };
-            if peer_guard.control_channel.is_connecting() {
-                let peer = AvcPeer::new(channel);
-                trace!("Successfully established outgoing connection for peer {}", peer_id);
-                peer_guard.set_control_connection(peer);
-            } else {
-                trace!("Connection collision from peer {} while making outgoing.", peer_id);
 
-                // An incoming l2cap connection was made while we were making an
-                // outgoing one. Drop both connections, per spec, and attempt
-                // to reconnect.
-                peer_guard.reset_connection(true);
-            }
+            peer_guard.connected(conn_type, channel);
         }
         Ok(Err(e)) => {
-            error!("Couldn't connect to peer {}: {:?}", peer_id, e);
             let mut peer_guard = peer.write();
-            peer_guard.inspect().metrics().connection_error();
-            if peer_guard.control_channel.is_connecting() {
-                peer_guard.reset_connection(false);
-            }
+            error!("Couldn't connect to peer {}: {:?}", peer_guard.peer_id, e);
+            peer_guard.connect_failed(conn_type, false);
         }
     }
 }
@@ -296,6 +267,7 @@ pub(super) async fn state_watcher(peer: Arc<RwLock<RemotePeer>>) {
     drop(peer);
 
     let mut make_connection_task = fasync::Task::spawn(futures::future::ready(()));
+
     let mut control_channel_task: Option<fasync::Task<()>> = None;
     let mut browse_channel_task: Option<fasync::Task<()>> = None;
     let mut notification_poll_task: Option<fasync::Task<()>> = None;
@@ -312,15 +284,18 @@ pub(super) async fn state_watcher(peer: Arc<RwLock<RemotePeer>>) {
         // processing tasks and the notification processing task.
         // Reset the `cancel_tasks` flag so that we don't fall into a loop of
         // constantly clearing the tasks.
-        if peer_guard.cancel_tasks {
+        if peer_guard.cancel_browse_task {
             if browse_channel_task.take().is_some() {
                 trace!("state_watcher: clearing previous browse channel task.");
             }
+            peer_guard.cancel_browse_task = false;
+        }
+        if peer_guard.cancel_control_task {
             if control_channel_task.take().is_some() {
                 trace!("state_watcher: clearing previous control channel task.");
             }
             notification_poll_task = None;
-            peer_guard.cancel_tasks = false;
+            peer_guard.cancel_control_task = false;
         }
 
         trace!("state_watcher control channel {:?}", peer_guard.control_channel);
@@ -332,7 +307,10 @@ pub(super) async fn state_watcher(peer: Arc<RwLock<RemotePeer>>) {
                     trace!("Starting make_connection task for peer {}", id);
                     peer_guard.attempt_connection = false;
                     peer_guard.control_channel.connecting();
-                    make_connection_task = fasync::Task::spawn(make_connection(peer.clone()));
+                    make_connection_task = fasync::Task::spawn(make_connection(
+                        peer.clone(),
+                        AVCTPConnectionType::Control,
+                    ));
                 }
             }
             &PeerChannelState::Connected(_) => {

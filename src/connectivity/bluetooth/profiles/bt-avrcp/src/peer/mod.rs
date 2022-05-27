@@ -5,8 +5,8 @@
 use {
     bt_avctp::{AvcCommandResponse, AvcCommandType, AvcPeer, AvcResponseType, AvctpPeer},
     derivative::Derivative,
-    fidl_fuchsia_bluetooth_bredr as bredr, fuchsia_async as fasync,
-    fuchsia_bluetooth::{profile::Psm, types::PeerId},
+    fidl_fuchsia_bluetooth, fidl_fuchsia_bluetooth_bredr as bredr, fuchsia_async as fasync,
+    fuchsia_bluetooth::{profile::Psm, types::Channel, types::PeerId},
     fuchsia_inspect::Property,
     fuchsia_inspect_derive::{AttachError, Inspect},
     fuchsia_zircon as zx,
@@ -125,6 +125,46 @@ impl<T> Inspect for &mut PeerChannel<T> {
     }
 }
 
+#[derive(Copy, Clone, Debug)]
+pub enum AVCTPConnectionType {
+    Control,
+    #[allow(dead_code)]
+    Browse,
+}
+
+impl AVCTPConnectionType {
+    pub fn psm(
+        &self,
+        controller_desc: &Option<AvrcpService>,
+        target_desc: &Option<AvrcpService>,
+    ) -> Psm {
+        match self {
+            AVCTPConnectionType::Control => match (target_desc, controller_desc) {
+                (Some(AvrcpService::Target { psm, .. }), None) => *psm,
+                (None, Some(AvrcpService::Controller { psm, .. })) => *psm,
+                _ => {
+                    info!("PSM for undiscovered peer, defaulting to PSM_AVCTP");
+                    Psm::AVCTP
+                }
+            },
+            AVCTPConnectionType::Browse => Psm::AVCTP_BROWSE,
+        }
+    }
+
+    pub fn parameters(&self) -> bredr::ChannelParameters {
+        // TODO(fxbug.dev/101260): set minimum MTU to 335.
+        match self {
+            AVCTPConnectionType::Control => {
+                bredr::ChannelParameters { ..bredr::ChannelParameters::EMPTY }
+            }
+            AVCTPConnectionType::Browse => bredr::ChannelParameters {
+                channel_mode: Some(bredr::ChannelMode::EnhancedRetransmission),
+                ..bredr::ChannelParameters::EMPTY
+            },
+        }
+    }
+}
+
 /// Internal object to manage a remote peer
 #[derive(Derivative)]
 #[derivative(Debug)]
@@ -169,11 +209,20 @@ struct RemotePeer {
     /// Set true to let the state watcher know that any outstanding `control_channel` processing
     /// tasks should be canceled and state cleaned up. Set to false after successfully canceling
     /// the tasks.
-    cancel_tasks: bool,
+    cancel_control_task: bool,
+
+    /// Set true to let the state watcher know that any outstanding `browse_channel` processing
+    /// tasks should be canceled and state cleaned up. Set to false after successfully canceling
+    /// the tasks.
+    cancel_browse_task: bool,
 
     /// The timestamp of the last known control connection. Used to resolve simultaneous control
     /// channel connections.
-    last_connected_time: Option<fasync::Time>,
+    last_control_connected_time: Option<fasync::Time>,
+
+    /// The timestamp of the last known browse connection. Used to resolve simultaneous browse
+    /// channel connections.
+    last_browse_connected_time: Option<fasync::Time>,
 
     /// Most recent notification values from the peer. Used to notify new controller listeners to
     /// the current state of the peer.
@@ -215,8 +264,10 @@ impl RemotePeer {
             browse_command_handler: BrowseChannelHandler::new(target_delegate),
             state_change_listener: StateChangeListener::new(),
             attempt_connection: true,
-            cancel_tasks: false,
-            last_connected_time: None,
+            cancel_control_task: false,
+            cancel_browse_task: false,
+            last_control_connected_time: None,
+            last_browse_connected_time: None,
             notification_cache: HashMap::new(),
             inspect: RemotePeerInspect::new(peer_id),
         }
@@ -234,19 +285,6 @@ impl RemotePeer {
     /// either controller or target.
     fn discovered(&self) -> bool {
         self.target_descriptor.is_some() || self.controller_descriptor.is_some()
-    }
-
-    /// Returns the L2CAP PSM associated with the AVRCP service for this peer. Defaults to PSM_AVCTP
-    /// if the peer advertises both Controller & Target services.
-    fn service_psm(&self) -> Psm {
-        match (&self.target_descriptor, &self.controller_descriptor) {
-            (Some(AvrcpService::Target { psm, .. }), None) => *psm,
-            (None, Some(AvrcpService::Controller { psm, .. })) => *psm,
-            _ => {
-                info!("Defaulting to PSM_AVCTP");
-                Psm::AVCTP
-            }
-        }
     }
 
     /// Caches the current value of this controller notification event for future controller event
@@ -270,6 +308,10 @@ impl RemotePeer {
         self.control_channel.connection().is_some()
     }
 
+    fn browse_connected(&self) -> bool {
+        self.browse_channel.connection().is_some()
+    }
+
     /// Reset all known state about the remote peer to default values.
     fn reset_peer_state(&mut self) {
         trace!("Resetting peer state for {}", self.peer_id);
@@ -278,9 +320,20 @@ impl RemotePeer {
         self.control_command_handler.reset();
     }
 
+    /// Reset browse channel.
+    fn reset_browse_connection(&mut self) {
+        info!("Disconnecting browse connection to peer {}", self.peer_id);
+        self.browse_command_handler.reset();
+        self.browse_channel.disconnect();
+        self.cancel_browse_task = true;
+        self.last_browse_connected_time = None;
+        self.wake_state_watcher();
+    }
+
+    /// Reset both browse and control channels.
     /// `attempt_reconnection` will cause state_watcher to attempt to make an outgoing connection when
     /// woken.
-    fn reset_connection(&mut self, attempt_reconnection: bool) {
+    fn reset_connections(&mut self, attempt_reconnection: bool) {
         info!(
             "Disconnecting peer {}, will {}attempt to reconnect",
             self.peer_id,
@@ -290,9 +343,90 @@ impl RemotePeer {
         self.browse_channel.disconnect();
         self.control_channel.disconnect();
         self.attempt_connection = attempt_reconnection;
-        self.cancel_tasks = true;
-        self.last_connected_time = None;
+        self.cancel_browse_task = true;
+        self.cancel_control_task = true;
+        self.last_control_connected_time = None;
+        self.last_browse_connected_time = None;
         self.wake_state_watcher();
+    }
+
+    /// Method for initiating outbound connection request.
+    /// Returns None if control/browse channel is not in connecting mode.
+    pub fn connect(
+        &mut self,
+        conn_type: AVCTPConnectionType,
+    ) -> Option<
+        impl Future<
+            Output = Result<Result<bredr::Channel, fidl_fuchsia_bluetooth::ErrorCode>, fidl::Error>,
+        >,
+    > {
+        match conn_type {
+            AVCTPConnectionType::Control => {
+                if !self.control_channel.is_connecting() {
+                    return None;
+                }
+            }
+            AVCTPConnectionType::Browse => {
+                if !self.browse_channel.is_connecting() {
+                    return None;
+                }
+            }
+        }
+
+        // Depending on AVCTPConnectionType, define the L2CAP channel parameters
+        // (basic for control, enhanced retransmission for browsing)
+        return Some(self.profile_proxy.connect(
+            &mut self.peer_id.into(),
+            &mut bredr::ConnectParameters::L2cap(bredr::L2capParameters {
+                psm: Some(
+                    conn_type.psm(&self.controller_descriptor, &self.target_descriptor).into(),
+                ),
+                parameters: Some(conn_type.parameters()),
+                ..bredr::L2capParameters::EMPTY
+            }),
+        ));
+    }
+
+    /// Called when outgoing L2CAP connection was successfully established.
+    pub fn connected(&mut self, conn_type: AVCTPConnectionType, channel: Channel) {
+        // Set up the appropriate connections. If an incoming l2cap connection
+        // was made while we were making an outgoing one, reset the channel(s).
+        match conn_type {
+            AVCTPConnectionType::Control => {
+                if self.control_channel.is_connecting() {
+                    let peer = AvcPeer::new(channel);
+                    return self.set_control_connection(peer);
+                }
+                self.reset_connections(true)
+            }
+            AVCTPConnectionType::Browse => {
+                if self.browse_channel.is_connecting() {
+                    let peer = AvctpPeer::new(channel);
+                    return self.set_browse_connection(peer);
+                }
+                self.reset_browse_connection()
+            }
+        }
+    }
+
+    /// Called when outgoing L2CAP connection was not established successfully.
+    /// When always_reset is true, connections are reset unconditionally.
+    /// Otherwise, they are only reset if the channel was in `is_connecting`
+    /// state.
+    pub fn connect_failed(&mut self, conn_type: AVCTPConnectionType, always_reset: bool) {
+        self.inspect().metrics().connection_error();
+        match conn_type {
+            AVCTPConnectionType::Control => {
+                if always_reset || self.control_channel.is_connecting() {
+                    self.reset_connections(false)
+                }
+            }
+            AVCTPConnectionType::Browse => {
+                if always_reset || self.browse_channel.is_connecting() {
+                    self.reset_browse_connection()
+                }
+            }
+        }
     }
 
     fn control_connection(&mut self) -> Result<Arc<AvcPeer>, Error> {
@@ -315,7 +449,7 @@ impl RemotePeer {
         // If the current connection establishment is within a threshold amount of time from the
         // most recent connection establishment, both connections should be dropped, and should
         // wait a random amount of time before re-establishment.
-        if let Some(previous_time) = self.last_connected_time.take() {
+        if let Some(previous_time) = self.last_control_connected_time.take() {
             let diff = (current_time - previous_time).into_nanos().abs();
             if diff < CONNECTION_THRESHOLD.into_nanos() {
                 trace!(
@@ -324,25 +458,43 @@ impl RemotePeer {
                     diff
                 );
                 self.inspect.metrics().control_collision();
-                self.reset_connection(true);
+                self.reset_connections(true);
                 return;
             }
         }
 
-        self.reset_peer_state();
+        if self.browse_connected() {
+            // Browse channel was already established.
+            // This indicates that this is a new control channel connection.
+            // Reset pre-existing channels before setting a new control channel.
+            self.reset_connections(false);
+        } else {
+            // Just reset peer state and cancel the current tasks.
+            self.reset_peer_state();
+            self.cancel_control_task = true;
+        }
+
         info!("{} connected control channel", self.peer_id);
-        self.last_connected_time = Some(current_time);
+        self.last_control_connected_time = Some(current_time);
         self.control_channel.connected(Arc::new(peer));
-        self.cancel_tasks = true;
         self.inspect.record_connected(current_time);
         self.wake_state_watcher();
     }
 
     fn set_browse_connection(&mut self, peer: AvctpPeer) {
-        info!("{} connected browse channel", self.peer_id);
-        self.browse_channel.connected(Arc::new(peer));
-        self.inspect.metrics().browse_connection();
-        self.wake_state_watcher();
+        let current_time = fasync::Time::now();
+        if self.control_connected() {
+            info!("{} connected browse channel", self.peer_id);
+            self.last_browse_connected_time = Some(current_time);
+            self.browse_channel.connected(Arc::new(peer));
+            self.inspect.metrics().browse_connection();
+            self.wake_state_watcher();
+            return;
+        }
+
+        // If control channel was not already established, don't set the
+        // browse channel and instead reset all connections.
+        self.reset_connections(true);
     }
 
     fn set_target_descriptor(&mut self, service: AvrcpService) {
@@ -498,8 +650,12 @@ impl RemotePeerHandle {
         self.peer.write().set_metrics_node(node);
     }
 
-    pub fn is_connected(&self) -> bool {
+    pub fn is_control_connected(&self) -> bool {
         self.peer.read().control_connected()
+    }
+
+    pub fn is_browse_connected(&self) -> bool {
+        self.peer.read().browse_connected()
     }
 
     /// Sends a single passthrough keycode over the control channel.
@@ -581,7 +737,7 @@ mod tests {
         fidl_fuchsia_bluetooth_bredr::{
             ConnectParameters, L2capParameters, ProfileMarker, ProfileRequest, ProfileRequestStream,
         },
-        fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
+        fuchsia_async::{self as fasync, DurationExt},
         fuchsia_bluetooth::types::Channel,
         fuchsia_inspect::assert_data_tree,
         fuchsia_inspect_derive::WithInspect,
@@ -618,10 +774,9 @@ mod tests {
             protocol_version: AvrcpProtocolVersion(1, 6),
         });
 
-        assert!(!peer_handle.is_connected());
+        assert!(!peer_handle.is_control_connected());
 
-        let next_request_fut =
-            profile_requests.next().on_timeout(1005.millis().after_now(), || None);
+        let next_request_fut = profile_requests.next();
         pin_mut!(next_request_fut);
         assert!(exec.run_until_stalled(&mut next_request_fut).is_pending());
 
@@ -630,7 +785,7 @@ mod tests {
         exec.set_fake_time(MAX_CONNECTION_EST_TIME.after_now());
         let _ = exec.wake_expired_timers();
 
-        // We should have requested a connection.
+        // We should have requested a connection for control.
         let (_remote, channel) = Channel::create();
         match exec.run_until_stalled(&mut next_request_fut) {
             Poll::Ready(Some(Ok(ProfileRequest::Connect { responder, connection, .. }))) => {
@@ -649,7 +804,19 @@ mod tests {
 
         // run until stalled, the connection should be put in place.
         let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
-        assert!(peer_handle.is_connected());
+        assert!(peer_handle.is_control_connected());
+
+        // Advance time by the maximum amount of time it would take to establish
+        // a connection.
+        exec.set_fake_time(MAX_CONNECTION_EST_TIME.after_now());
+        let _ = exec.wake_expired_timers();
+
+        // We don't send out outgoing connection for browse yet.
+        assert!(exec.run_until_stalled(&mut next_request_fut).is_pending());
+
+        // run until stalled, the connection should be put in place.
+        let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
+        assert!(!peer_handle.is_browse_connected());
         Ok(())
     }
 
@@ -672,7 +839,7 @@ mod tests {
             protocol_version: AvrcpProtocolVersion(1, 6),
         });
 
-        assert!(!peer_handle.is_connected());
+        assert!(!peer_handle.is_control_connected());
 
         let next_request_fut = profile_requests.next();
         pin_mut!(next_request_fut);
@@ -701,7 +868,7 @@ mod tests {
 
         // Peer should be connected.
         let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
-        assert!(peer_handle.is_connected());
+        assert!(peer_handle.is_control_connected());
 
         // Should be able to send data over the channel.
         match remote.as_ref().write(&[0; 1]) {
@@ -721,7 +888,7 @@ mod tests {
 
         // Run to update watcher state. Peer should be connected.
         let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
-        assert!(peer_handle.is_connected());
+        assert!(peer_handle.is_control_connected());
 
         // Shouldn't be able to send data over the old channel.
         match remote.as_ref().write(&[0; 1]) {
@@ -738,10 +905,11 @@ mod tests {
         Ok(())
     }
 
-    /// Tests that when inbound and outbound connections are established at the same
-    /// time, AVRCP drops both, and attempts to reconnect.
+    /// Tests that when inbound and outbound control connections are
+    /// established at the same time, AVRCP drops both, and attempts to
+    /// reconnect.
     #[test]
-    fn test_simultaneous_peer_connections() -> Result<(), Error> {
+    fn test_simultaneous_control_connections() -> Result<(), Error> {
         let mut exec = fasync::TestExecutor::new_with_fake_time().expect("executor should build");
         exec.set_fake_time(fasync::Time::from_nanos(5_000000000));
 
@@ -755,7 +923,7 @@ mod tests {
             protocol_version: AvrcpProtocolVersion(1, 6),
         });
 
-        assert!(!peer_handle.is_connected());
+        assert!(!peer_handle.is_control_connected());
 
         let next_request_fut = profile_requests.next();
         pin_mut!(next_request_fut);
@@ -777,7 +945,7 @@ mod tests {
 
         // The inbound connection is accepted (since there were no previous connections).
         let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
-        assert!(peer_handle.is_connected());
+        assert!(peer_handle.is_control_connected());
 
         // Should be able to send data over the channel.
         match remote.as_ref().write(&[0; 1]) {
@@ -797,9 +965,10 @@ mod tests {
 
         // Run to update watcher state.
         let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
+        assert!(!peer_handle.is_control_connected());
 
-        // Both the inbound and outbound-initiated channels should be dropped.
-        // Sending data should not work.
+        // Both the inbound and outbound-initiated control channels should be
+        // dropped. Sending data should not work.
         match remote.as_ref().write(&[0; 1]) {
             Err(zx::Status::PEER_CLOSED) => {}
             x => panic!("Expected PEER_CLOSED but got {:?}", x),
@@ -826,13 +995,129 @@ mod tests {
 
         // Run to update watcher state.
         let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
-        assert!(peer_handle.is_connected());
+        assert!(peer_handle.is_control_connected());
 
         // New channel should be good to go.
         match remote3.as_ref().write(&[0; 1]) {
             Ok(1) => {}
             x => panic!("Expected successful write but got {:?}", x),
         }
+
+        Ok(())
+    }
+
+    /// Tests that when new inbound control connection comes in, previous
+    /// control and browse connections are dropped.
+    #[test]
+    fn incoming_channel_resets_connections() -> Result<(), Error> {
+        let mut exec = fasync::TestExecutor::new_with_fake_time().expect("executor should build");
+        exec.set_fake_time(fasync::Time::from_nanos(5_000000000));
+
+        let id = PeerId(1);
+        let (peer_handle, _target_delegate, mut _profile_requests) = setup_remote_peer(id)?;
+
+        // Set the descriptor to simulate service found for peer - while unusual, this peer
+        // advertises a non-standard PSM.
+        peer_handle.set_target_descriptor(AvrcpService::Target {
+            features: AvrcpTargetFeatures::CATEGORY1,
+            psm: Psm::AVCTP,
+            protocol_version: AvrcpProtocolVersion(1, 6),
+        });
+
+        assert!(!peer_handle.is_control_connected());
+        assert!(!peer_handle.is_browse_connected());
+
+        // Peer connects with a new l2cap connection for control channel.
+        let (remote1, channel1) = Channel::create();
+        let connect_peer = AvcPeer::new(channel1);
+        peer_handle.set_control_connection(connect_peer);
+
+        // Run to update watcher state. Peer should be connected.
+        let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
+        assert!(peer_handle.is_control_connected());
+
+        // Peer connects with a new l2cap connection for browse channel.
+        let (remote2, channel2) = Channel::create();
+        let connect_peer2 = AvctpPeer::new(channel2);
+        peer_handle.set_browse_connection(connect_peer2);
+
+        // Run to update watcher state. Peer should be connected.
+        let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
+        assert!(peer_handle.is_browse_connected());
+
+        // Should be able to send data over the old channels.
+        match remote1.as_ref().write(&[0; 1]) {
+            Ok(1) => {}
+            x => panic!("Expected data write but got {:?} instead", x),
+        }
+        match remote2.as_ref().write(&[0; 1]) {
+            Ok(1) => {}
+            x => panic!("Expected data write but got {:?} instead", x),
+        }
+
+        // Advance time by the maximum amount of time it would take to establish a connection.
+        exec.set_fake_time(MAX_CONNECTION_EST_TIME.after_now());
+        let _ = exec.wake_expired_timers();
+
+        // Say some event from peer caused it to re-establish a new l2cap
+        // connection for control channel.
+        let (remote3, channel3) = Channel::create();
+        let reconnect_peer = AvcPeer::new(channel3);
+        peer_handle.set_control_connection(reconnect_peer);
+
+        // Run to update watcher state. Control should be connected, but
+        // browse channel should not be connected.
+        let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
+        assert!(peer_handle.is_control_connected());
+        assert!(!peer_handle.is_browse_connected());
+
+        // Verify that new control connection is open, but the old control and
+        // browse connections were closed.
+        match remote1.as_ref().write(&[0; 1]) {
+            Err(zx::Status::PEER_CLOSED) => {}
+            x => panic!("Expected PEER_CLOSED but got {:?}", x),
+        }
+        match remote2.as_ref().write(&[0; 1]) {
+            Err(zx::Status::PEER_CLOSED) => {}
+            x => panic!("Expected PEER_CLOSED but got {:?}", x),
+        }
+        match remote3.as_ref().write(&[0; 1]) {
+            Ok(1) => {}
+            x => panic!("Expected data write but got {:?} instead", x),
+        }
+
+        Ok(())
+    }
+
+    /// Tests that when new inbound control connection comes in, previous
+    /// control and browse connections are dropped.
+    #[test]
+    fn incoming_browse_channel_dropped() -> Result<(), Error> {
+        let mut exec = fasync::TestExecutor::new_with_fake_time().expect("executor should build");
+        exec.set_fake_time(fasync::Time::from_nanos(5_000000000));
+
+        let id = PeerId(1);
+        let (peer_handle, _target_delegate, mut _profile_requests) = setup_remote_peer(id)?;
+
+        // Set the descriptor to simulate service found for peer - while unusual, this peer
+        // advertises a non-standard PSM.
+        peer_handle.set_target_descriptor(AvrcpService::Target {
+            features: AvrcpTargetFeatures::CATEGORY1,
+            psm: Psm::AVCTP,
+            protocol_version: AvrcpProtocolVersion(1, 6),
+        });
+
+        assert!(!peer_handle.is_control_connected());
+        assert!(!peer_handle.is_browse_connected());
+
+        // Peer connects with a new l2cap connection for browse channel.
+        // Since control channel was not already connected, verify that
+        // browse channel was dropped.
+        let (_remote, channel) = Channel::create();
+        let connect_peer = AvctpPeer::new(channel);
+        peer_handle.set_browse_connection(connect_peer);
+        let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
+        assert!(!peer_handle.is_browse_connected());
 
         Ok(())
     }

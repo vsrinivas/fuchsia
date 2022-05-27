@@ -310,7 +310,7 @@ impl TestAvrcpClientController {
     async fn handle_fidl_request(&self, request: ControllerExtRequest) -> Result<(), Error> {
         match request {
             ControllerExtRequest::IsConnected { responder } => {
-                responder.send(self.controller.is_connected())?;
+                responder.send(self.controller.is_control_connected())?;
             }
             ControllerExtRequest::GetEventsSupported { responder } => {
                 match self.controller.get_supported_events().await {

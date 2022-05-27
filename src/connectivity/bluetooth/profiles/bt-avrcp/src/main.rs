@@ -76,8 +76,12 @@ async fn main() -> Result<(), Error> {
                         info!("Incoming connection request from {:?} with protocol: {:?}", id, protocol);
                         let protocol = protocol.iter().map(Into::into).collect();
                         match psm_from_protocol(&protocol) {
-                            Some(Psm::AVCTP) => peer_manager.new_control_connection(&id, channel),
-                            Some(Psm::AVCTP_BROWSE) => peer_manager.new_browse_connection(&id, channel),
+                            Some(Psm::AVCTP) => {
+                                peer_manager.new_control_connection(&id, channel);
+                            },
+                            Some(Psm::AVCTP_BROWSE) => {
+                                peer_manager.new_browse_connection(&id, channel);
+                            },
                             _ => {
                                 info!("Received connection over non-AVRCP protocol: {:?}", protocol);
                             },
