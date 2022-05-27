@@ -10,8 +10,11 @@ use {
 mod get_folder_items;
 mod get_total_items;
 mod set_addressed_player;
+mod set_browsed_player;
 
-pub use self::{get_folder_items::*, get_total_items::*, set_addressed_player::*};
+pub use self::{
+    get_folder_items::*, get_total_items::*, set_addressed_player::*, set_browsed_player::*,
+};
 use crate::packets::{Error, PacketResult, PduId, StatusCode};
 
 pub_decodable_enum!(

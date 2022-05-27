@@ -118,6 +118,7 @@ pub_decodable_enum! {
         GetTotalNumberOfItems => 0x75,
         AddToNowPlaying => 0x90,
         GeneralReject => 0xa0,
+        SetBrowsedPlayer => 0x70,
     }
 }
 
@@ -141,6 +142,8 @@ pub_decodable_enum! {
         InvalidScope => 0x0a,
         RangeOutOfBounds => 0x0b,
         InvalidPlayerId => 0x11,
+        PlayerNotBrowsable => 0x12,
+        PlayerNotAddressed => 0x13,
         NoValidSearchResults => 0x14,
         NoAvailablePlayers => 0x15,
         AddressedPlayerChanged => 0x16,
