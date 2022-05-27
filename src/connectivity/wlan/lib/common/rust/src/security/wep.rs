@@ -72,7 +72,21 @@ impl WepKey {
                     _ => unreachable!(),
                 })
             }
-            _ => WepKey::try_from(bytes),
+            _ => WepKey::try_from_literal_bytes(bytes),
+        }
+    }
+
+    /// Converts unencoded bytes into a WEP key.
+    ///
+    /// This conversion is not a parse and does **not** accept ASCII hexadecimal encoded keys; the
+    /// bytes are interpreted literally and copied as is. Use `Key::parse` for hexadecimal keys.
+    pub(crate) fn try_from_literal_bytes(bytes: impl AsRef<[u8]>) -> Result<Self, WepError> {
+        let bytes = bytes.as_ref();
+        let n = bytes.len();
+        match n {
+            WEP40_KEY_BYTES => Ok(WepKey::Wep40(bytes.try_into().unwrap())),
+            WEP104_KEY_BYTES => Ok(WepKey::Wep104(bytes.try_into().unwrap())),
+            _ => Err(WepError::Size(n)),
         }
     }
 }
@@ -103,23 +117,6 @@ impl From<WepKey> for Vec<u8> {
         match key {
             WepKey::Wep40(bytes) => bytes.into(),
             WepKey::Wep104(bytes) => bytes.into(),
-        }
-    }
-}
-
-/// Converts unencoded bytes into a WEP key.
-///
-/// This conversion is not a parse and does **not** accept ASCII hexadecimal encoded keys; the
-/// bytes are copied as is. Use `Key::parse` for hexadecimal keys.
-impl TryFrom<&[u8]> for WepKey {
-    type Error = WepError;
-
-    fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
-        let n = bytes.len();
-        match n {
-            WEP40_KEY_BYTES => Ok(WepKey::Wep40(bytes.try_into().unwrap())),
-            WEP104_KEY_BYTES => Ok(WepKey::Wep104(bytes.try_into().unwrap())),
-            _ => Err(WepError::Size(n)),
         }
     }
 }
@@ -155,7 +152,7 @@ impl TryFrom<fidl_security::WepCredentials> for WepAuthenticator {
     type Error = SecurityError;
 
     fn try_from(credentials: fidl_security::WepCredentials) -> Result<Self, Self::Error> {
-        let key = credentials.key.as_slice().try_into()?;
+        let key = WepKey::try_from_literal_bytes(credentials.key)?;
         Ok(WepAuthenticator { key })
     }
 }
@@ -166,8 +163,11 @@ mod tests {
 
     use crate::security::wep::{WepError, WepKey, WEP104_KEY_BYTES};
 
+    #[test_case([0xFF; 5] => Ok(WepKey::Wep40([0xFF; 5])))]
     #[test_case("wep40" => Ok(WepKey::Wep40([b'w', b'e', b'p', b'4', b'0'])))]
     #[test_case("abcdef0000" => Ok(WepKey::Wep40([0xAB, 0xCD, 0xEF, 0, 0])))]
+    #[test_case("FFFFFF0000" => Ok(WepKey::Wep40([0xFF, 0xFF, 0xFF, 0, 0])))]
+    #[test_case("aaaAAA0000" => Ok(WepKey::Wep40([0xAA, 0xAA, 0xAA, 0, 0])))]
     #[test_case("authenticates" => Ok(WepKey::Wep104([
         b'a', b'u', b't', b'h', b'e', b'n', b't', b'i', b'c', b'a', b't', b'e', b's',
     ])))]
