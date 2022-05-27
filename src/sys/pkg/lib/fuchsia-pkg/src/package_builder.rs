@@ -10,7 +10,8 @@ use {
     std::{
         collections::BTreeMap,
         convert::{TryFrom, TryInto},
-        io::{BufWriter, Cursor},
+        fs::File,
+        io::{BufReader, BufWriter, Cursor},
         path::{Path, PathBuf},
     },
     version_history::AbiRevision,
@@ -65,6 +66,36 @@ impl PackageBuilder {
             published_name: None,
             repository: None,
         }
+    }
+
+    /// Create a PackageBuilder from a CreationManifest.
+    pub fn from_creation_manifest(manifest: &CreationManifest) -> Result<Self> {
+        // Read the package name from `meta/package`, or error out if it's missing.
+        let meta_package = if let Some(path) = manifest.far_contents().get("meta/package") {
+            let f = File::open(path)?;
+            let meta_package = MetaPackage::deserialize(BufReader::new(f))?;
+            meta_package
+        } else {
+            return Err(anyhow!("package missing meta/package entry"));
+        };
+
+        let mut builder = PackageBuilder::new(meta_package.name());
+        ensure!(meta_package.variant().is_zero(), "package variant must be zero");
+
+        for (at_path, file) in manifest.external_contents() {
+            builder.add_file_as_blob(at_path, file)?;
+        }
+
+        for (at_path, file) in manifest.far_contents() {
+            // The package builder will automatically create a meta/package, so don't try to add it.
+            if at_path == "meta/package" {
+                continue;
+            }
+
+            builder.add_file_to_far(at_path, file)?;
+        }
+
+        Ok(builder)
     }
 
     /// Create a PackageBuilder from an existing package archive. Requires an out directory for

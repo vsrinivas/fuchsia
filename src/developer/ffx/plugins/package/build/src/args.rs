@@ -2,9 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use argh::FromArgs;
-use ffx_core::ffx_command;
-use std::path::PathBuf;
+use {argh::FromArgs, ffx_core::ffx_command, std::path::PathBuf};
 
 #[ffx_command()]
 #[derive(FromArgs, PartialEq, Debug, Default)]
@@ -15,12 +13,6 @@ use std::path::PathBuf;
 "
 )]
 pub struct BuildCommand {
-    #[argh(option, description = "path to the build manifest file")]
-    pub build_manifest_path: PathBuf,
-
-    #[argh(option, description = "write package manifest to this path")]
-    pub package_manifest_path: Option<PathBuf>,
-
     #[argh(
         option,
         short = 'o',
@@ -29,6 +21,30 @@ pub struct BuildCommand {
     )]
     pub out: PathBuf,
 
+    #[argh(option, description = "package API level")]
+    pub api_level: Option<u64>,
+
+    #[argh(option, description = "package ABI revision")]
+    pub abi_revision: Option<u64>,
+
     #[argh(option, description = "name of the package")]
-    pub published_name: String,
+    pub published_name: Option<String>,
+
+    #[argh(option, description = "repository of the package")]
+    pub repository: Option<String>,
+
+    #[argh(switch, description = "produce a depfile file")]
+    pub depfile: bool,
+
+    #[argh(switch, description = "produce a meta.far.merkle file")]
+    pub meta_far_merkle: bool,
+
+    #[argh(switch, description = "produce a blobs.json file")]
+    pub blobs_json: bool,
+
+    #[argh(switch, description = "produce a blobs.manifest file")]
+    pub blobs_manifest: bool,
+
+    #[argh(positional, description = "path to the creation manifest file")]
+    pub creation_manifest_path: PathBuf,
 }
