@@ -8,14 +8,15 @@ use fidl_fuchsia_bluetooth_gatt::ServiceInfo;
 use fidl_fuchsia_bluetooth_gatt::{
     LocalServiceDelegateMarker, LocalServiceMarker, LocalServiceProxy, Server_Marker, Server_Proxy,
 };
-use fuchsia_async::{
-    self as fasync,
-    temp::Either::{Left, Right},
-};
+use fuchsia_async::{self as fasync};
 use fuchsia_component as app;
 use fuchsia_syslog::macros::*;
 use fuchsia_zircon as zx;
-use futures::future::{ready as fready, Future, TryFutureExt};
+use futures::future::{
+    ready as fready,
+    Either::{Left, Right},
+    Future, TryFutureExt,
+};
 use parking_lot::RwLock;
 use std::collections::HashMap;
 

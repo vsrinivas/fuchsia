@@ -81,7 +81,7 @@ impl<T> GroupAvailableExt for T where T: Stream + ?Sized {}
 mod tests {
     use super::*;
 
-    use fuchsia_async::{self as fasync, temp::TempStreamExt};
+    use fuchsia_async as fasync;
     use futures::channel::mpsc;
     use futures::stream::{self, TryStreamExt};
     use void::Void;
@@ -89,10 +89,8 @@ mod tests {
     #[test]
     fn empty() {
         let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
-        let (item, _) = exec
-            .run_singlethreaded(
-                stream::empty::<Result<(), Void>>().group_available().try_into_future(),
-            )
+        let item = exec
+            .run_singlethreaded(stream::empty::<Result<(), Void>>().group_available().try_next())
             .unwrap_or_else(|x| match x {});
         assert!(item.is_none());
     }

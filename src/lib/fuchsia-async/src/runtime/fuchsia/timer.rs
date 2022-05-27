@@ -238,12 +238,10 @@ impl Eq for TimeWaker {}
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{
-        temp::{Either, TempFutureExt},
-        LocalExecutor, SendExecutor, TestExecutor, Timer,
-    };
+    use crate::{LocalExecutor, SendExecutor, TestExecutor, Timer};
     use fuchsia_zircon::prelude::*;
     use fuchsia_zircon::Duration;
+    use futures::future::Either;
     use futures::prelude::*;
 
     #[test]
@@ -251,9 +249,9 @@ mod test {
         let mut exec = LocalExecutor::new().unwrap();
         let shorter = Timer::new(Time::after(100.millis()));
         let longer = Timer::new(Time::after(1.second()));
-        match exec.run_singlethreaded(shorter.select(longer)) {
-            Either::Left(()) => {}
-            Either::Right(()) => panic!("wrong timer fired"),
+        match exec.run_singlethreaded(future::select(shorter, longer)) {
+            Either::Left(_) => {}
+            Either::Right(_) => panic!("wrong timer fired"),
         }
     }
 
@@ -262,9 +260,9 @@ mod test {
         let mut exec = SendExecutor::new(4).unwrap();
         let shorter = Timer::new(Time::after(100.millis()));
         let longer = Timer::new(Time::after(1.second()));
-        match exec.run(shorter.select(longer)) {
-            Either::Left(()) => {}
-            Either::Right(()) => panic!("wrong timer fired"),
+        match exec.run(future::select(shorter, longer)) {
+            Either::Left(_) => {}
+            Either::Right(_) => panic!("wrong timer fired"),
         }
     }
 

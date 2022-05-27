@@ -42,7 +42,6 @@ rustc_library("fuchsia-async") {
     "src/net/mod.rs",
     "src/runtime/mod.rs",
     "src/runtime/stub.rs",
-    "src/temp.rs",
     "src/test_support.rs",
   ]
   if (is_fuchsia) {

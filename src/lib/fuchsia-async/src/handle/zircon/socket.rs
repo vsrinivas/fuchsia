@@ -372,12 +372,10 @@ impl Stream for DatagramStream<&Socket> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        temp::{TempAsyncReadExt, TempAsyncWriteExt},
-        TestExecutor, Time, TimeoutExt, Timer,
-    };
+    use crate::{TestExecutor, Time, TimeoutExt, Timer};
     use fuchsia_zircon::prelude::*;
-    use futures::future::{try_join, FutureExt, TryFutureExt};
+    use futures::future::join;
+    use futures::io::{AsyncReadExt as _, AsyncWriteExt as _};
     use futures::stream::TryStreamExt;
 
     #[test]
@@ -386,21 +384,27 @@ mod tests {
         let bytes = &[0, 1, 2, 3];
 
         let (tx, rx) = zx::Socket::create(zx::SocketOpts::STREAM).unwrap();
-        let (tx, rx) = (Socket::from_socket(tx).unwrap(), Socket::from_socket(rx).unwrap());
+        let (mut tx, mut rx) = (Socket::from_socket(tx).unwrap(), Socket::from_socket(rx).unwrap());
 
-        let receive_future = rx.read_to_end(vec![]).map_ok(|(_socket, buf)| {
+        let receive_future = async {
+            let mut buf = vec![];
+            rx.read_to_end(&mut buf).await.expect("reading socket");
             assert_eq!(&*buf, bytes);
-        });
+        };
 
         // add a timeout to receiver so if test is broken it doesn't take forever
         let receiver = receive_future.on_timeout(Time::after(300.millis()), || panic!("timeout"));
 
         // Sends a message after the timeout has passed
-        let sender =
-            Timer::new(Time::after(100.millis())).then(|()| tx.write_all(bytes)).map_ok(|_tx| ());
+        let sender = async move {
+            Timer::new(Time::after(100.millis())).await;
+            tx.write_all(bytes).await.expect("writing into socket");
+            // close socket to signal no more bytes will be written
+            drop(tx);
+        };
 
-        let done = try_join(receiver, sender);
-        exec.run_singlethreaded(done).unwrap();
+        let done = join(receiver, sender);
+        exec.run_singlethreaded(done);
     }
 
     #[test]

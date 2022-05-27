@@ -5,13 +5,11 @@
 use {
     anyhow::{Context as _, Error},
     fidl_fuchsia_bluetooth_le::{CentralMarker, CentralProxy, ScanFilter},
-    fuchsia_async::{
-        self as fasync,
-        temp::Either::{Left, Right},
-    },
+    fuchsia_async as fasync,
     fuchsia_bluetooth::{
         assigned_numbers::find_service_uuid, error::Error as BTError, types::Uuid,
     },
+    futures::future::Either::{Left, Right},
     futures::{future, prelude::*},
     getopts::Options,
 };

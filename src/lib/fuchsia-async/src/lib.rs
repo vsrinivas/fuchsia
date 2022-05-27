@@ -41,10 +41,6 @@ pub use pin_utils::pin_mut;
 
 pub use fuchsia_async_macro::{run, run_singlethreaded, run_until_stalled};
 
-// TODO(cramertj) remove once async/awaitification has occurred
-#[cfg(target_os = "fuchsia")]
-pub mod temp;
-
 // Reexport futures for use in macros;
 #[doc(hidden)]
 pub mod futures {
