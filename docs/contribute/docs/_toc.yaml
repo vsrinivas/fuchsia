@@ -28,6 +28,8 @@ toc:
   path: /docs/contribute/docs/documentation-navigation-toc.md
 - title: "Modifying non-inclusive words in mdlint"
   path: /docs/contribute/docs/modify-mdlint-inclusive-language.md
+- title: "Deprecating documentation"
+  path: /docs/contribute/docs/deprecating-docs.md
 - title: Shortlinks
   section:
   - include: /docs/contribute/docs/shortlinks/_toc.yaml

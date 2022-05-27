@@ -48,3 +48,5 @@ toc:
   path: /docs/contribute/governance/deprecated-ftp-template.md
 - title: "Fuchsia.dev shortlinks"
   path: /docs/go/README.md
+- title: "Deprecation notice"
+  path: /docs/contribute/docs/deprecation-notice.md
