@@ -111,6 +111,11 @@ void InspectNode(inspect::Inspector& inspector, InspectStack& stack) {
       }
       root->CreateString("symbols", fxl::JoinStrings(strings, ", "), &inspector);
     }
+    std::string driver_string = "unbound";
+    if (node->driver_component()) {
+      driver_string = std::string((*node->driver_component())->url());
+    }
+    root->CreateString("driver", driver_string, &inspector);
 
     // Push children of this node onto the stack. We do this in reverse order to
     // ensure the children are handled in order, from first to last.
@@ -749,10 +754,41 @@ DriverRunner::DriverRunner(fidl::ClientEnd<fcomponent::Realm> realm,
 
 fpromise::promise<inspect::Inspector> DriverRunner::Inspect() const {
   inspect::Inspector inspector;
-  auto root = inspector.GetRoot().CreateChild(root_node_->name());
+
+  // Make the device tree inspect nodes.
+  auto device_tree = inspector.GetRoot().CreateChild("node_topology");
+  auto root = device_tree.CreateChild(root_node_->name());
   InspectStack stack{{std::make_pair(&root, root_node_.get())}};
   InspectNode(inspector, stack);
   inspector.emplace(std::move(root));
+  inspector.emplace(std::move(device_tree));
+
+  // Make the unbound composite devices inspect nodes.
+  auto composite = inspector.GetRoot().CreateChild("unbound_composites");
+  for (auto& args : composite_args_) {
+    auto child = composite.CreateChild(args.first);
+    for (size_t i = 0; i < args.second.size(); i++) {
+      auto& node = args.second[i];
+      if (auto real = node.lock()) {
+        child.CreateString(std::string("parent-").append(std::to_string(i)), real->TopoName(),
+                           &inspector);
+      } else {
+        child.CreateString(std::string("parent-").append(std::to_string(i)), "<empty>", &inspector);
+      }
+    }
+    inspector.emplace(std::move(child));
+  }
+  inspector.emplace(std::move(composite));
+
+  // Make the orphaned devices inspect nodes.
+  auto orphans = inspector.GetRoot().CreateChild("orphan_nodes");
+  for (size_t i = 0; i < orphaned_nodes_.size(); i++) {
+    if (auto node = orphaned_nodes_[i].lock()) {
+      orphans.CreateString(std::to_string(i), node->TopoName(), &inspector);
+    }
+  }
+  inspector.emplace(std::move(orphans));
+
   return fpromise::make_ok_promise(inspector);
 }
 
