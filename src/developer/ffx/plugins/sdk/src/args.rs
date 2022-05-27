@@ -17,7 +17,6 @@ pub struct SdkCommand {
 pub enum SubCommand {
     Version(VersionCommand),
     Set(SetCommand),
-    List(ListCommand),
 }
 
 #[derive(FromArgs, Debug, PartialEq)]
@@ -44,14 +43,3 @@ pub struct SetRootCommand {
     /// path to the sdk root
     pub path: PathBuf,
 }
-
-#[derive(FromArgs, Debug, PartialEq)]
-#[argh(subcommand, name = "list", description = "List various metadata about the SDK")]
-pub struct ListCommand {
-    #[argh(subcommand)]
-    pub sub: ListSubCommand,
-}
-
-#[derive(FromArgs, Debug, PartialEq)]
-#[argh(subcommand)]
-pub enum ListSubCommand {}

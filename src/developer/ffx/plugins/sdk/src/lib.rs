@@ -9,21 +9,18 @@ use {
         set, ConfigLevel,
     },
     ffx_core::ffx_plugin,
-    ffx_sdk_args::{
-        ListCommand, SdkCommand, SetCommand, SetRootCommand, SetSubCommand, SubCommand,
-    },
+    ffx_sdk_args::{SdkCommand, SetCommand, SetRootCommand, SetSubCommand, SubCommand},
     std::io::{stdout, Write},
 };
 
 #[ffx_plugin()]
 pub async fn exec_sdk(command: SdkCommand) -> Result<()> {
-    let mut writer = Box::new(stdout());
+    let writer = Box::new(stdout());
     let sdk = ffx_config::get_sdk().await;
 
     match &command.sub {
         SubCommand::Version(_) => exec_version(sdk?, writer).await,
         SubCommand::Set(cmd) => exec_set(cmd).await,
-        SubCommand::List(cmd) => exec_list(&mut writer, sdk?, cmd).await,
     }
 }
 
@@ -45,13 +42,6 @@ async fn exec_set(cmd: &SetCommand) -> Result<()> {
             set(("sdk.root", ConfigLevel::User), abs_path.to_string_lossy().into()).await?;
             Ok(())
         }
-    }
-}
-
-/// Execute the `list` sub-command.
-async fn exec_list<W: Write + Sync>(_writer: &mut W, _sdk: Sdk, cmd: &ListCommand) -> Result<()> {
-    match &cmd.sub {
-        _ => todo!("Add list features."),
     }
 }
 
