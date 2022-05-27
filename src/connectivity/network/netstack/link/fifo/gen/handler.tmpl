@@ -193,10 +193,11 @@ func (h *{{ .Handler }}) RxLoop(process func(entry *{{ .EntryType }}) {{ if .Sig
 	}
 }
 
-func (h *{{ .Handler }}) ProcessWrite(pkts stack.PacketBufferList, processor func(*{{ .EntryType }}, *stack.PacketBuffer)) (int, tcpip.Error) {
+func (h *{{ .Handler }}) ProcessWrite(pbList stack.PacketBufferList, processor func(*{{ .EntryType }}, *stack.PacketBuffer)) (int, tcpip.Error) {
+	pkts := pbList.AsSlice()
 	i := 0
 
-	for pkt := pkts.Front(); pkt != nil; {
+	for i < len(pkts) {
 		h.tx.mu.Lock()
 		for {
 			if h.tx.mu.detached {
@@ -215,16 +216,10 @@ func (h *{{ .Handler }}) ProcessWrite(pkts stack.PacketBufferList, processor fun
 
 		// Queue as many remaining packets as possible; if we run out of space,
 		// we'll return to the waiting state in the outer loop.
-		for {
+		for ; i < len(pkts) && h.tx.mu.entries.HaveReadied(); i++ {
 			entry := h.tx.mu.entries.GetReadied()
-			processor(entry, pkt)
+			processor(entry, pkts[i])
 			h.tx.mu.entries.IncrementQueued(1)
-
-			i++
-			pkt = pkt.Next()
-			if pkt == nil || !h.tx.mu.entries.HaveReadied() {
-				break
-			}
 		}
 		h.tx.mu.Unlock()
 		h.tx.cond.Broadcast()

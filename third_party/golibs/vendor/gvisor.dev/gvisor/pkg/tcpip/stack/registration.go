@@ -750,11 +750,73 @@ type NetworkProtocol interface {
 
 	// Parse sets pkt.NetworkHeader and trims pkt.Data appropriately. It
 	// returns:
-	// - The encapsulated protocol, if present.
-	// - Whether there is an encapsulated transport protocol payload (e.g. ARP
-	//   does not encapsulate anything).
-	// - Whether pkt.Data was large enough to parse and set pkt.NetworkHeader.
+	//	- The encapsulated protocol, if present.
+	//	- Whether there is an encapsulated transport protocol payload (e.g. ARP
+	//		does not encapsulate anything).
+	//	- Whether pkt.Data was large enough to parse and set pkt.NetworkHeader.
 	Parse(pkt *PacketBuffer) (proto tcpip.TransportProtocolNumber, hasTransportHdr bool, ok bool)
+}
+
+// UnicastSourceAndMulticastDestination is a tuple that represents a unicast
+// source address and a multicast destination address.
+type UnicastSourceAndMulticastDestination struct {
+	// Source represents a unicast source address.
+	Source tcpip.Address
+	// Destination represents a multicast destination address.
+	Destination tcpip.Address
+}
+
+// MulticastRouteOutgoingInterface represents an outgoing interface in a
+// multicast route.
+type MulticastRouteOutgoingInterface struct {
+	// ID corresponds to the outgoing NIC.
+	ID tcpip.NICID
+
+	// MinTTL represents the minumum TTL/HopLimit a multicast packet must have to
+	// be sent through the outgoing interface.
+	//
+	// Note: a value of 0 allows all packets to be forwarded.
+	MinTTL uint8
+}
+
+// MulticastRoute is a multicast route.
+type MulticastRoute struct {
+	// ExpectedInputInterface is the interface on which packets using this route
+	// are expected to ingress.
+	ExpectedInputInterface tcpip.NICID
+
+	// OutgoingInterfaces is the set of interfaces that a multicast packet should
+	// be forwarded out of.
+	//
+	// This field should not be empty.
+	OutgoingInterfaces []MulticastRouteOutgoingInterface
+}
+
+// MulticastForwardingNetworkProtocol is the interface that needs to be
+// implemented by the network protocols that support multicast forwarding.
+type MulticastForwardingNetworkProtocol interface {
+	NetworkProtocol
+
+	// AddMulticastRoute adds a route to the multicast routing table such that
+	// packets matching the addresses will be forwarded using the provided route.
+	//
+	// Returns an error if the addresses or route is invalid.
+	AddMulticastRoute(UnicastSourceAndMulticastDestination, MulticastRoute) tcpip.Error
+
+	// RemoveMulticastRoute removes the route matching the provided addresses
+	// from the multicast routing table.
+	//
+	// Returns an error if the addresses are invalid or a matching route is not
+	// found.
+	RemoveMulticastRoute(UnicastSourceAndMulticastDestination) tcpip.Error
+
+	// MulticastRouteLastUsedTime returns a monotonic timestamp that
+	// represents the last time that the route matching the provided addresses
+	// was used or updated.
+	//
+	// Returns an error if the addresses are invalid or a matching route was not
+	// found.
+	MulticastRouteLastUsedTime(UnicastSourceAndMulticastDestination) (tcpip.MonotonicTime, tcpip.Error)
 }
 
 // NetworkDispatcher contains the methods used by the network stack to deliver

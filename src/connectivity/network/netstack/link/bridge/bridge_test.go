@@ -176,7 +176,7 @@ func (*stubEndpoint) AddHeader(*stack.PacketBuffer) {}
 
 func (e *stubEndpoint) WritePackets(pkts stack.PacketBufferList) (int, tcpip.Error) {
 	i := 0
-	for pkt := pkts.Front(); pkt != nil; pkt = pkt.Next() {
+	for _, pkt := range pkts.AsSlice() {
 		select {
 		case e.c <- pkt:
 			pkt.IncRef()
@@ -773,7 +773,7 @@ type endpoint struct {
 }
 
 func (e *endpoint) WritePackets(pkts stack.PacketBufferList) (int, tcpip.Error) {
-	for pkt := pkts.Front(); pkt != nil; pkt = pkt.Next() {
+	for _, pkt := range pkts.AsSlice() {
 		if fn := e.onWritePacket; fn != nil {
 			fn(pkt)
 		}

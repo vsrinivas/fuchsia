@@ -136,7 +136,7 @@ func (ep *Endpoint) LinkAddress() tcpip.LinkAddress {
 
 func clonePkts(pkts stack.PacketBufferList) stack.PacketBufferList {
 	var newPkts stack.PacketBufferList
-	for pkt := pkts.Front(); pkt != nil; pkt = pkt.Next() {
+	for _, pkt := range pkts.AsSlice() {
 		newPkts.PushBack(pkt.Clone())
 	}
 	return newPkts

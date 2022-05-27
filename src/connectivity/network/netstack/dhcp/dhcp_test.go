@@ -178,7 +178,7 @@ func (e *endpoint) writePacket(pkt *stack.PacketBuffer) tcpip.Error {
 
 func (e *endpoint) WritePackets(pkts stack.PacketBufferList) (int, tcpip.Error) {
 	i := 0
-	for pkt := pkts.Front(); pkt != nil; i, pkt = i+1, pkt.Next() {
+	for _, pkt := range pkts.AsSlice() {
 		if err := e.writePacket(pkt); err != nil {
 			return i, err
 		}

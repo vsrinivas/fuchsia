@@ -148,6 +148,11 @@ func (p *processor) handleConnecting(ep *endpoint) {
 	if err := ep.h.processSegments(); err != nil { // +checklocksforce:ep.h.ep.mu
 		// handshake failed. clean up the tcp endpoint and handshake
 		// state.
+		if lEP := ep.h.listenEP; lEP != nil {
+			lEP.acceptMu.Lock()
+			delete(lEP.acceptQueue.pendingEndpoints, ep)
+			lEP.acceptMu.Unlock()
+		}
 		ep.handshakeFailed(err)
 		cleanup()
 		return
@@ -415,13 +420,13 @@ func (d *dispatcher) queuePacket(stackEP stack.TransportEndpoint, id stack.Trans
 
 	ep := stackEP.(*endpoint)
 
-	s := newIncomingSegment(id, clock, pkt)
-	defer s.DecRef()
-	if !s.parse(pkt.RXTransportChecksumValidated) {
+	s, err := newIncomingSegment(id, clock, pkt)
+	if err != nil {
 		ep.stack.Stats().TCP.InvalidSegmentsReceived.Increment()
 		ep.stats.ReceiveErrors.MalformedPacketsReceived.Increment()
 		return
 	}
+	defer s.DecRef()
 
 	if !s.csumValid {
 		ep.stack.Stats().TCP.ChecksumErrors.Increment()

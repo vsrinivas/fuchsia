@@ -83,14 +83,14 @@ type PacketBufferOptions struct {
 // exposes a logically-contiguous byte storage. The underlying storage structure
 // is abstracted out, and should not be a concern here for most of the time.
 //
-// |- reserved ->|
-//               |--->| consumed (incoming)
-// 0             V    V
-// +--------+----+----+--------------------+
-// |        |    |    | current data ...   | (buf)
-// +--------+----+----+--------------------+
-//          ^    |
-//          |<---| pushed (outgoing)
+//	|- reserved ->|
+//								|--->| consumed (incoming)
+//	0             V    V
+//	+--------+----+----+--------------------+
+//	|        |    |    | current data ...   | (buf)
+//	+--------+----+----+--------------------+
+//					 ^    |
+//					 |<---| pushed (outgoing)
 //
 // When a PacketBuffer is created, a `reserved` header region can be specified,
 // which stack pushes headers in this region for an outgoing packet. There could
@@ -113,13 +113,9 @@ type PacketBuffer struct {
 
 	packetBufferRefs
 
-	// PacketBufferEntry is used to build an intrusive list of
-	// PacketBuffers.
-	PacketBufferEntry
-
 	// buf is the underlying buffer for the packet. See struct level docs for
 	// details.
-	buf      buffer.Buffer
+	buf      buffer.Buffer `state:".([]byte)"`
 	reserved int
 	pushed   int
 	consumed int
@@ -203,6 +199,12 @@ func NewPacketBuffer(opts PacketBufferOptions) *PacketBuffer {
 	return pk
 }
 
+// IncRef increments the PacketBuffer's refcount.
+func (pk *PacketBuffer) IncRef() *PacketBuffer {
+	pk.packetBufferRefs.IncRef()
+	return pk
+}
+
 // DecRef decrements the PacketBuffer's refcount. If the refcount is
 // decremented to zero, the PacketBuffer is returned to the PacketBuffer
 // pool.
@@ -277,7 +279,7 @@ func (pk *PacketBuffer) Size() int {
 // MemSize returns the estimation size of the pk in memory, including backing
 // buffer data.
 func (pk *PacketBuffer) MemSize() int {
-	return int(pk.buf.Size()) + packetBufferStructSize
+	return int(pk.buf.Size()) + PacketBufferStructSize
 }
 
 // Data returns the handle to data portion of pk.
@@ -370,7 +372,6 @@ func (pk *PacketBuffer) headerView(typ headerType) tcpipbuffer.View {
 func (pk *PacketBuffer) Clone() *PacketBuffer {
 	newPk := pkPool.Get().(*PacketBuffer)
 	newPk.reset()
-	newPk.PacketBufferEntry = pk.PacketBufferEntry
 	newPk.buf = pk.buf.Clone()
 	newPk.reserved = pk.reserved
 	newPk.pushed = pk.pushed
@@ -390,6 +391,16 @@ func (pk *PacketBuffer) Clone() *PacketBuffer {
 	newPk.tuple = pk.tuple
 	newPk.InitRefs()
 	return newPk
+}
+
+// ReserveHeaderBytes prepends reserved space for headers at the front
+// of the underlying buf. Can only be called once per packet.
+func (pk *PacketBuffer) ReserveHeaderBytes(reserved int) {
+	if pk.reserved != 0 {
+		panic(fmt.Sprintf("ReserveHeaderBytes(...) called on packet with reserved=%d, want reserved=0", pk.reserved))
+	}
+	pk.reserved = reserved
+	pk.buf.PrependOwned(make([]byte, reserved))
 }
 
 // Network returns the network header as a header.Network.
@@ -453,28 +464,6 @@ func (pk *PacketBuffer) DeepCopyForForwarding(reservedHeaderBytes int) *PacketBu
 	newPk.tuple = pk.tuple
 
 	return newPk
-}
-
-// IncRef increases the reference count on each PacketBuffer
-// stored in the PacketBufferList.
-func (pk *PacketBufferList) IncRef() {
-	for pb := pk.Front(); pb != nil; pb = pb.Next() {
-		pb.IncRef()
-	}
-}
-
-// DecRef decreases the reference count on each PacketBuffer
-// stored in the PacketBufferList.
-func (pk *PacketBufferList) DecRef() {
-	// Using a while-loop here (instead of for-loop) because DecRef() can cause
-	// the pb to be recycled. If it is recycled during execution of this loop,
-	// there is a possibility of a data race during a call to pb.Next().
-	pb := pk.Front()
-	for pb != nil {
-		next := pb.Next()
-		pb.DecRef()
-		pb = next
-	}
 }
 
 // headerInfo stores metadata about a header in a packet.
@@ -623,6 +612,50 @@ func (d PacketData) ReadFromVV(srcVV *tcpipbuffer.VectorisedView, count int) int
 	}
 	srcVV.TrimFront(done)
 	return done
+}
+
+// AppendRange appends and takes ownership of the data in r.
+func (d PacketData) AppendRange(r Range) {
+	r.iterate(func(b []byte) {
+		d.pk.buf.AppendOwned(b)
+	})
+}
+
+// Merge clears headers in oth and merges its data with d.
+func (d PacketData) Merge(oth PacketData) {
+	oth.pk.buf.TrimFront(int64(oth.pk.dataOffset()))
+	d.pk.buf.Merge(&oth.pk.buf)
+}
+
+// ReadFrom moves at most count bytes from the beginning of src to the end
+// of d.
+func (d PacketData) ReadFrom(src PacketData, count int) {
+	done := 0
+	for _, v := range src.Views() {
+		if len(v) < count {
+			count -= len(v)
+			done += len(v)
+			// Use AppendOwned to avoid the cost of copying data between buffers.
+			// This is safe because the buffers are trimmed out of src at the end
+			// of the function anyways.
+			d.pk.buf.AppendOwned(v)
+		} else {
+			v = v[:count]
+			count -= len(v)
+			done += len(v)
+			d.pk.buf.Append(v)
+			break
+		}
+	}
+	src.TrimFront(done)
+}
+
+// TrimFront removes up to count bytes from the front of d's payload.
+func (d PacketData) TrimFront(count int) {
+	if count > d.Size() {
+		count = d.Size()
+	}
+	d.pk.buf.Remove(d.pk.dataOffset(), count)
 }
 
 // Size returns the number of bytes in the data payload of the packet.
