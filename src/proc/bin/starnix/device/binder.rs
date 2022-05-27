@@ -1953,6 +1953,7 @@ impl BinderDriver {
                 SerializedBinderObject::Buffer { .. } => {
                     return error!(EOPNOTSUPP)?;
                 }
+                SerializedBinderObject::FileArray { .. } => return error!(EOPNOTSUPP)?,
             };
 
             translated_object.write_to(data_at_offset)?;
@@ -2050,6 +2051,9 @@ enum SerializedBinderObject {
     /// fixed up when the payload is copied into the destination process. Part of the scatter-gather
     /// implementation.
     Buffer { buffer: UserAddress, length: usize, parent: usize, parent_offset: usize, flags: u32 },
+    /// A `BINDER_TYPE_FDA` object. Identifies an array of file descriptors in a parent buffer that
+    /// must be duped into the receiver's file descriptor table.
+    FileArray { num_fds: usize, parent: usize, parent_offset: usize },
 }
 
 impl SerializedBinderObject {
@@ -2102,6 +2106,15 @@ impl SerializedBinderObject {
                     flags: object.flags,
                 })
             }
+            BINDER_TYPE_FDA => {
+                let object =
+                    binder_fd_array_object::read_from_prefix(data).ok_or_else(|| errno!(EINVAL))?;
+                Ok(Self::FileArray {
+                    num_fds: object.num_fds as usize,
+                    parent: object.parent as usize,
+                    parent_offset: object.parent_offset as usize,
+                })
+            }
             object_type => {
                 tracing::error!("unknown object type 0x{:08x}", object_type);
                 error!(EINVAL)
@@ -2121,7 +2134,6 @@ impl SerializedBinderObject {
                     cookie: cookie,
                 })
                 .write_to_prefix(data)
-                .ok_or_else(|| errno!(EINVAL))?;
             }
             SerializedBinderObject::Object { local, flags } => {
                 struct_with_union_into_bytes!(flat_binder_object {
@@ -2131,7 +2143,6 @@ impl SerializedBinderObject {
                     cookie: local.strong_ref_addr.ptr() as u64,
                 })
                 .write_to_prefix(data)
-                .ok_or_else(|| errno!(EINVAL))?;
             }
             SerializedBinderObject::File { fd, flags, cookie } => {
                 struct_with_union_into_bytes!(flat_binder_object {
@@ -2141,7 +2152,6 @@ impl SerializedBinderObject {
                     cookie: cookie,
                 })
                 .write_to_prefix(data)
-                .ok_or_else(|| errno!(EINVAL))?;
             }
             SerializedBinderObject::Buffer { buffer, length, parent, parent_offset, flags } => {
                 binder_buffer_object {
@@ -2153,10 +2163,19 @@ impl SerializedBinderObject {
                     flags,
                 }
                 .write_to_prefix(data)
-                .ok_or_else(|| errno!(EINVAL))?;
+            }
+            SerializedBinderObject::FileArray { num_fds, parent, parent_offset } => {
+                binder_fd_array_object {
+                    hdr: binder_object_header { type_: BINDER_TYPE_FDA },
+                    pad: 0,
+                    num_fds: num_fds as u64,
+                    parent: parent as u64,
+                    parent_offset: parent_offset as u64,
+                }
+                .write_to_prefix(data)
             }
         }
-        Ok(())
+        .ok_or_else(|| errno!(EINVAL))
     }
 }
 
@@ -2657,6 +2676,26 @@ mod tests {
     }
 
     #[fuchsia::test]
+    fn serialize_binder_fd_array() {
+        let mut output = [0u8; std::mem::size_of::<binder_fd_array_object>()];
+
+        SerializedBinderObject::FileArray { num_fds: 2, parent: 1, parent_offset: 20 }
+            .write_to(&mut output)
+            .expect("write fd array");
+        assert_eq!(
+            binder_fd_array_object {
+                hdr: binder_object_header { type_: BINDER_TYPE_FDA },
+                num_fds: 2,
+                parent: 1,
+                parent_offset: 20,
+                pad: 0,
+            }
+            .as_bytes(),
+            output
+        );
+    }
+
+    #[fuchsia::test]
     fn serialize_binder_buffer_too_small() {
         let mut output = [0u8; std::mem::size_of::<binder_uintptr_t>()];
         SerializedBinderObject::Handle { handle: 2.into(), flags: 42, cookie: 99 }
@@ -2743,6 +2782,21 @@ mod tests {
                 parent_offset: 20,
                 flags: 42
             }
+        );
+    }
+
+    #[fuchsia::test]
+    fn deserialize_binder_fd_array() {
+        let input = binder_fd_array_object {
+            hdr: binder_object_header { type_: BINDER_TYPE_FDA },
+            num_fds: 2,
+            pad: 0,
+            parent: 1,
+            parent_offset: 20,
+        };
+        assert_eq!(
+            SerializedBinderObject::from_bytes(input.as_bytes()).expect("read fd array"),
+            SerializedBinderObject::FileArray { num_fds: 2, parent: 1, parent_offset: 20 }
         );
     }
 
