@@ -2535,7 +2535,7 @@ pub struct binder_object_header {
     pub type_: __u32,
 }
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, FromBytes)]
 pub struct flat_binder_object {
     pub hdr: binder_object_header,
     pub flags: __u32,
@@ -2543,7 +2543,7 @@ pub struct flat_binder_object {
     pub cookie: binder_uintptr_t,
 }
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, FromBytes)]
 pub union flat_binder_object__bindgen_ty_1 {
     pub binder: binder_uintptr_t,
     pub handle: __u32,

@@ -45,10 +45,19 @@ sed -i \
   's/derive(Debug, Default, Copy, Clone)/derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)/' \
   src/proc/lib/linux_uapi/src/x86_64.rs
 
-# If the first line matches the expected derive expression, consume another line and do a search
-# and replace for the expected identifier, rewriting the derive expression to include `FromBytes`.
-# TODO(https://github.com/rust-lang/rust-bindgen/issues/2170): Remove in favor of bindgen support
-# for custom derives.
-sed -i \
-  '/#\[derive(Copy, Clone)\]/ { N; s/.*\n\(pub \(struct\|union\) binder_transaction_data\)/#[derive(Copy, Clone, FromBytes)]\n\1/; p; d; }' \
-  src/proc/lib/linux_uapi/src/x86_64.rs
+# Adds a derive for `FromBytes` for the given type.
+#
+# Params:
+#   $1: The name of the type.
+function auto_derive_from_bytes_for() {
+  # If the first line matches the expected derive expression, consume another line and do a search
+  # and replace for the expected identifier, rewriting the derive expression to include `FromBytes`.
+  # TODO(https://github.com/rust-lang/rust-bindgen/issues/2170): Remove in favor of bindgen support
+  # for custom derives.
+  sed -i \
+    "/#\[derive(Copy, Clone)\]/ { N; s/.*\n\(pub \(struct\|union\) $1\)/#[derive(Copy, Clone, FromBytes)]\n\1/; p; d; }" \
+    src/proc/lib/linux_uapi/src/x86_64.rs
+}
+
+auto_derive_from_bytes_for binder_transaction_data
+auto_derive_from_bytes_for flat_binder_object
