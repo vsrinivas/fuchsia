@@ -15,7 +15,6 @@ std::string_view HandleClassName(HandleClass handle_class) {
     case HandleClass::kBanjo:
       return "[banjo]";
   };
-  __builtin_unreachable();
 }
 
 std::optional<HandleClass> HandleClassFromName(std::string_view name) {

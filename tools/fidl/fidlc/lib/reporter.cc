@@ -39,7 +39,7 @@ std::string Reporter::Format(std::string_view qualifier, SourceSpan span, std::s
   SourceFile::Position position;
   std::string surrounding_line = std::string(span.SourceLine(&position));
   ZX_ASSERT_MSG(surrounding_line.find('\n') == std::string::npos,
-                "A single line should not contain a newline character");
+                "a single line should not contain a newline character");
 
   std::string squiggle = MakeSquiggle(surrounding_line, position.column);
 

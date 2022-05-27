@@ -224,7 +224,6 @@ void EmitMethodInParamDecl(std::ostream* file, const CGenerator::Member& member)
   switch (member.kind) {
     case flat::Type::Kind::kBox:
       ZX_PANIC("no box types should appear at this point");
-
     case flat::Type::Kind::kArray:
       *file << "const " << member.type << " " << member.name;
       for (uint32_t array_count : member.array_counts) {
@@ -252,7 +251,6 @@ void EmitMethodInParamDecl(std::ostream* file, const CGenerator::Member& member)
         case flat::Decl::Kind::kService:
         case flat::Decl::Kind::kTypeAlias:
           ZX_PANIC("bad decl kind for member");
-
         case flat::Decl::Kind::kBits:
         case flat::Decl::Kind::kEnum:
         case flat::Decl::Kind::kProtocol:
@@ -281,7 +279,6 @@ void EmitMethodOutParamDecl(std::ostream* file, const CGenerator::Member& member
   switch (member.kind) {
     case flat::Type::Kind::kBox:
       ZX_PANIC("no box types should appear at this point");
-
     case flat::Type::Kind::kArray:
       *file << member.type << " out_" << member.name;
       for (uint32_t array_count : member.array_counts) {
@@ -311,7 +308,6 @@ void EmitMethodOutParamDecl(std::ostream* file, const CGenerator::Member& member
         case flat::Decl::Kind::kService:
         case flat::Decl::Kind::kTypeAlias:
           ZX_PANIC("bad decl kind for member");
-
         case flat::Decl::Kind::kBits:
         case flat::Decl::Kind::kEnum:
         case flat::Decl::Kind::kProtocol:
@@ -488,7 +484,6 @@ void EmitLinearizeMessage(std::ostream* file, std::string_view receiver, std::st
     switch (member.kind) {
       case flat::Type::Kind::kBox:
         ZX_PANIC("no box types should appear at this point");
-
       case flat::Type::Kind::kArray:
         *file << kIndent << "memcpy(" << receiver << "->" << name << ", " << name << ", ";
         EmitArraySizeOf(file, member);
@@ -531,7 +526,6 @@ void EmitLinearizeMessage(std::ostream* file, std::string_view receiver, std::st
           case flat::Decl::Kind::kService:
           case flat::Decl::Kind::kTypeAlias:
             ZX_PANIC("bad decl kind for member");
-
           case flat::Decl::Kind::kBits:
           case flat::Decl::Kind::kEnum:
           case flat::Decl::Kind::kProtocol:
@@ -539,10 +533,8 @@ void EmitLinearizeMessage(std::ostream* file, std::string_view receiver, std::st
             break;
           case flat::Decl::Kind::kTable:
             ZX_PANIC("c-codegen for tables not implemented");
-
           case flat::Decl::Kind::kUnion:
             ZX_PANIC("c-codegen for unions not implemented");
-
           case flat::Decl::Kind::kStruct:
             switch (member.nullability) {
               case types::Nullability::kNullable:
@@ -706,7 +698,6 @@ CGenerator::Member CreateMember(const T& decl, bool* out_allowed = nullptr) {
   switch (type->kind) {
     case flat::Type::Kind::kBox:
       ZX_PANIC("no box types should appear at this point");
-
     case flat::Type::Kind::kArray: {
       ArrayCountsAndElementTypeName(type, &array_counts, &element_type_name);
       break;
@@ -734,9 +725,7 @@ CGenerator::Member CreateMember(const T& decl, bool* out_allowed = nullptr) {
       break;
     }
     case flat::Type::Kind::kHandle:
-      break;
     case flat::Type::Kind::kTransportSide:
-      break;
     case flat::Type::Kind::kPrimitive:
       break;
     case flat::Type::Kind::kUntypedNumeric:
@@ -796,7 +785,6 @@ uint32_t CGenerator::GetMaxHandlesFor(Transport transport, const TypeShape& type
     case Transport::Channel:
       return std::min(kChannelMaxMessageHandles, typeshape.max_handles);
   }
-  ZX_PANIC("what transport?");
 }
 
 void CGenerator::GeneratePrologues() {
@@ -991,7 +979,7 @@ std::map<const flat::Decl*, CGenerator::NamedProtocol> CGenerator::NameProtocols
           members = &as_struct->members;
         }
 
-        ZX_ASSERT(!members || (members && !members->empty()));
+        ZX_ASSERT(members == nullptr || !members->empty());
         named_method.request = std::make_unique<NamedMessage>(
             NamedMessage{std::move(c_name), std::move(coded_name), members, typeshape});
       }
@@ -1016,7 +1004,7 @@ std::map<const flat::Decl*, CGenerator::NamedProtocol> CGenerator::NameProtocols
           members = &as_struct->members;
         }
 
-        ZX_ASSERT(!members || (members && !members->empty()));
+        ZX_ASSERT(members == nullptr || !members->empty());
         named_method.response = std::make_unique<NamedMessage>(
             NamedMessage{std::move(c_name), std::move(coded_name), members, typeshape});
       }
@@ -1420,7 +1408,6 @@ void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_
         switch (member.kind) {
           case flat::Type::Kind::kBox:
             ZX_PANIC("no box types should appear at this point");
-
           case flat::Type::Kind::kArray:
             file_ << kIndent << "memcpy(out_" << name << ", _response->" << name << ", ";
             EmitArraySizeOf(&file_, member);
@@ -1449,7 +1436,6 @@ void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_
               case flat::Decl::Kind::kService:
               case flat::Decl::Kind::kTypeAlias:
                 ZX_PANIC("bad decl kind for member");
-
               case flat::Decl::Kind::kBits:
               case flat::Decl::Kind::kEnum:
               case flat::Decl::Kind::kProtocol:
@@ -1457,10 +1443,8 @@ void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_
                 break;
               case flat::Decl::Kind::kTable:
                 ZX_PANIC("c-codegen for tables not implemented");
-
               case flat::Decl::Kind::kUnion:
                 ZX_PANIC("c-codegen for unions not implemented");
-
               case flat::Decl::Kind::kStruct:
                 switch (member.nullability) {
                   case types::Nullability::kNullable:
@@ -1564,7 +1548,6 @@ void CGenerator::ProduceProtocolServerImplementation(const NamedProtocol& named_
       switch (member.kind) {
         case flat::Type::Kind::kBox:
           ZX_PANIC("no box types should appear at this point");
-
         case flat::Type::Kind::kArray:
         case flat::Type::Kind::kHandle:
         case flat::Type::Kind::kTransportSide:
@@ -1587,7 +1570,6 @@ void CGenerator::ProduceProtocolServerImplementation(const NamedProtocol& named_
             case flat::Decl::Kind::kService:
             case flat::Decl::Kind::kTypeAlias:
               ZX_PANIC("bad decl kind for member");
-
             case flat::Decl::Kind::kBits:
             case flat::Decl::Kind::kEnum:
             case flat::Decl::Kind::kProtocol:
@@ -1595,7 +1577,6 @@ void CGenerator::ProduceProtocolServerImplementation(const NamedProtocol& named_
               break;
             case flat::Decl::Kind::kTable:
               ZX_PANIC("c-codegen for tables not yet implemented");
-
             case flat::Decl::Kind::kStruct:
             case flat::Decl::Kind::kUnion:
               switch (member.nullability) {
@@ -1721,7 +1702,6 @@ std::ostringstream CGenerator::ProduceHeader() {
     switch (decl->kind) {
       case flat::Decl::Kind::kBuiltin:
         ZX_PANIC("unexpected builtin");
-
       case flat::Decl::Kind::kBits: {
         auto iter = named_bits.find(decl);
         if (iter != named_bits.end()) {
@@ -1815,7 +1795,6 @@ std::ostringstream CGenerator::ProduceHeader() {
     switch (decl->kind) {
       case flat::Decl::Kind::kBuiltin:
         ZX_PANIC("unexpected builtin");
-
       case flat::Decl::Kind::kBits:
         // Bits can be entirely forward declared, as they have no
         // dependencies other than standard headers.

@@ -195,7 +195,7 @@ class JsonWriter {
   template <typename ValueType>
   void EmitNumeric(ValueType value, ConstantStyle style = kAsConstant) {
     static_assert(std::is_arithmetic<ValueType>::value && !std::is_same<ValueType, bool>::value,
-                  "EmitNumeric can only be used with a numeric ValueType!");
+                  "EmitNumeric can only be used with a numeric ValueType");
     static_assert(std::is_arithmetic<ValueType>::value && !std::is_same<ValueType, uint8_t>::value,
                   "EmitNumeric does not work for uint8_t, upcast to uint64_t");
     static_assert(std::is_arithmetic<ValueType>::value && !std::is_same<ValueType, int8_t>::value,

@@ -93,11 +93,10 @@ std::string NamePrimitiveIntegerCConstantMacro(types::PrimitiveSubtype subtype) 
     case types::PrimitiveSubtype::kUint64:
       return "UINT64_C";
     case types::PrimitiveSubtype::kBool:
-      ZX_PANIC("Tried to generate an integer constant for a bool");
-
+      ZX_PANIC("tried to generate an integer constant for a bool");
     case types::PrimitiveSubtype::kFloat32:
     case types::PrimitiveSubtype::kFloat64:
-      ZX_PANIC("Tried to generate an integer constant for a float");
+      ZX_PANIC("tried to generate an integer constant for a float");
   }
 }
 

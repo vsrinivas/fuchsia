@@ -311,7 +311,7 @@ void SortStep::RunImpl() {
     // undeclared deps.
     ZX_ASSERT(!cycle.empty());
     // Because there is a cycle, building a cycle should always succeed.
-    [[maybe_unused]] bool found_cycle = BuildExampleCycle(dependencies, cycle);
+    bool found_cycle = BuildExampleCycle(dependencies, cycle);
     ZX_ASSERT(found_cycle);
     // Even if there is only one element in the cycle (a self-loop),
     // BuildExampleCycle should add a second entry so when printing we get A->A,

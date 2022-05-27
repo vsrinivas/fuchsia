@@ -79,9 +79,8 @@ class JsonFindingsTest {
       std::cout << "ERROR: violation_string '" << args.violation_string
                 << "' was not found in template string:" << std::endl
                 << source_data;
+      ZX_PANIC("violation_string not found in template string");
     }
-    ZX_ASSERT_MSG(start != std::string::npos,
-                  "Bad test! violation_string not found in source data");
 
     source_data.remove_prefix(start);
     source_data.remove_suffix(source_data.size() - size);

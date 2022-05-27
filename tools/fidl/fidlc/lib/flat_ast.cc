@@ -276,7 +276,7 @@ static T* StoreDecl(std::unique_ptr<Decl> decl, std::multimap<std::string_view, 
 Decl* Library::Declarations::Insert(std::unique_ptr<Decl> decl) {
   switch (decl->kind) {
     case Decl::Kind::kBuiltin: {
-      [[maybe_unused]] auto index = static_cast<size_t>(static_cast<Builtin*>(decl.get())->id);
+      auto index = static_cast<size_t>(static_cast<Builtin*>(decl.get())->id);
       ZX_ASSERT_MSG(index == builtins.size(), "inserted builtin out of order");
       return StoreDecl(std::move(decl), &all, &builtins);
     }

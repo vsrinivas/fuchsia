@@ -32,8 +32,7 @@ resource_definition handle : uint32 {
     };
 };
 )FIDL");
-  [[maybe_unused]] bool success = zx_lib.Compile();
-  ZX_ASSERT_MSG(success, "failed to compile library zx");
+  ZX_ASSERT_MSG(zx_lib.Compile(), "failed to compile library zx");
 }
 
 void SharedAmongstLibraries::AddLibraryFdf() {
@@ -50,6 +49,5 @@ resource_definition handle : uint32 {
     };
 };
 )FIDL");
-  [[maybe_unused]] bool success = fdf_lib.Compile();
-  ZX_ASSERT_MSG(success, "failed to compile library fdf");
+  ZX_ASSERT_MSG(fdf_lib.Compile(), "failed to compile library fdf");
 }

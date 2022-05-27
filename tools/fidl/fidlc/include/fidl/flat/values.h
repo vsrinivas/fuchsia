@@ -53,7 +53,7 @@ struct ConstantValue : public HasClone<ConstantValue> {
 template <typename ValueType>
 struct NumericConstantValue final : ConstantValue {
   static_assert(std::is_arithmetic<ValueType>::value && !std::is_same<ValueType, bool>::value,
-                "NumericConstantValue can only be used with a numeric ValueType!");
+                "NumericConstantValue can only be used with a numeric ValueType");
 
   NumericConstantValue(ValueType value) : ConstantValue(GetKind()), value(value) {}
 

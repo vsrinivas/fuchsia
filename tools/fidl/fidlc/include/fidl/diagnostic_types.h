@@ -87,22 +87,26 @@ constexpr size_t CountFormatArgs(std::string_view s) {
   return total;
 }
 
+// No-op non-constexpr function used to produce an error.
+inline void IncorrectNumberOfFormatArgs() {}
+
 template <typename... Args>
 constexpr void CheckFormatArgs(std::string_view msg) {
   static_assert(
       (std::is_same_v<Args, std::remove_const_t<std::remove_reference_t<Args>>> && ...),
-      "Remove redundant `const` or `&`; DiagnosticDef args are always passed by const reference");
+      "remove redundant `const` or `&`; DiagnosticDef args are always passed by const reference");
   static_assert(((!std::is_pointer_v<Args> || std::is_const_v<std::remove_pointer_t<Args>>)&&...),
-                "Use a const pointer; DiagnosticDef args should not be mutable pointers");
+                "use a const pointer; DiagnosticDef args should not be mutable pointers");
   static_assert(((!std::is_same_v<Args, std::string>)&&...),
-                "Use std::string_view, not std::string");
+                "use std::string_view, not std::string");
 
-  // This can't be a static_assert because the compiler doesn't know msg is
-  // always constexpr. If the condition is true, the assert evaluates to a
-  // no-op. If the condition is false, it evaluates to a (non-constexpr) abort,
-  // resulting in a "must be initialized by a constant expression" error.
-  ZX_ASSERT_MSG(sizeof...(Args) == internal::CountFormatArgs(msg),
-                "Number of format string parameters '{}' != number of template arguments");
+  // We can't static_assert below because the compiler doesn't know msg is
+  // always constexpr. Instead, we generate a "must be initialized by a constant
+  // expression" error by calling a non-constexpr function. The error only
+  // happens if the condition is true. Otherwise, the call gets eliminated.
+  if (sizeof...(Args) != internal::CountFormatArgs(msg)) {
+    IncorrectNumberOfFormatArgs();
+  }
 }
 
 }  // namespace internal

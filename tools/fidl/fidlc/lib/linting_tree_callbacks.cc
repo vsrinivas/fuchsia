@@ -205,9 +205,8 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
       re2::StringPiece match[gap_subre_count];
       while (!remaining_gap_view.empty()) {
         // The regex_search loop should consume the entire gap
-        [[maybe_unused]] bool found =
-            kGapTextRegex_.Match(remaining_gap_view, 0, remaining_gap_view.size(),
-                                 re2::RE2::UNANCHORED, match, gap_subre_count);
+        bool found = kGapTextRegex_.Match(remaining_gap_view, 0, remaining_gap_view.size(),
+                                          re2::RE2::UNANCHORED, match, gap_subre_count);
         ZX_ASSERT_MSG(found, "gap content did not match any of the expected regular expressions");
 
         auto view = remaining_gap_view;
@@ -248,7 +247,7 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
             callback(white_space, line_prefix_view);
           }
         } else {
-          ZX_PANIC("Should never be reached. Bad regex?");
+          ZX_PANIC("should never be reached; bad regex?");
         }
         if (view.back() == '\n') {
           remaining_line_so_far_view.remove_prefix(

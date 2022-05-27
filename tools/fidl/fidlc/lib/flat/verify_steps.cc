@@ -292,8 +292,6 @@ void VerifyHandleTransportCompatibilityStep::CheckHandleTransportUsages(
       return;
     }
   }
-
-  ZX_PANIC("unhandled case");
 }
 
 void VerifyAttributesStep::RunImpl() {
@@ -330,7 +328,7 @@ void VerifyOpenInteractionsStep::VerifyProtocolOpenness(const Protocol& protocol
 
   for (const auto& composed : protocol.composed_protocols) {
     auto target = composed.reference.resolved().element();
-    ZX_ASSERT_MSG(target->kind == Element::Kind::kProtocol, "Composed protocol not a protocol");
+    ZX_ASSERT_MSG(target->kind == Element::Kind::kProtocol, "composed protocol not a protocol");
     auto composed_protocol = static_cast<const Protocol*>(target);
     if (!IsAllowedComposition(protocol.openness, composed_protocol->openness)) {
       Fail(ErrComposedProtocolTooOpen, composed.reference.span(), protocol.openness, protocol.name,

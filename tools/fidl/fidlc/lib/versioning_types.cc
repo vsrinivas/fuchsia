@@ -46,7 +46,6 @@ uint64_t Version::ordinal() const {
     case NegInf().value_:
     case PosInf().value_:
       ZX_PANIC("infinite versions do not have an ordinal");
-
     case Head().value_:
       return std::numeric_limits<uint64_t>::max();
     default:
@@ -224,7 +223,7 @@ std::string Availability::Debug() const {
 }
 
 bool VersionSelection::Insert(Platform platform, Version version) {
-  auto [iter, inserted] = map_.emplace(std::move(platform), version);
+  auto [_, inserted] = map_.emplace(std::move(platform), version);
   return inserted;
 }
 

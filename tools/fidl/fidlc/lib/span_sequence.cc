@@ -506,9 +506,7 @@ std::optional<SpanSequence::Kind> InlineCommentSpanSequence::Print(
 // absent, but still a connecting part of the comment block) is stored as an empty string_view.
 void StandaloneCommentSpanSequence::AddLine(const std::string_view line,
                                             size_t leading_blank_lines) {
-  if (IsClosed()) {
-    ZX_PANIC("cannot AddLine to closed StandaloneCommentSpanSequence");
-  }
+  ZX_ASSERT_MSG(!IsClosed(), "cannot AddLine to closed StandaloneCommentSpanSequence");
   while (leading_blank_lines > 0) {
     lines_.emplace_back(std::string_view());
     leading_blank_lines--;

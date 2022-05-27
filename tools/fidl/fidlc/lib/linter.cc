@@ -30,7 +30,7 @@ std::string_view to_string_view(const fidl::raw::SourceElement& element) {
 template <typename SourceElementSubtype>
 std::string_view to_string_view(const std::unique_ptr<SourceElementSubtype>& element_ptr) {
   static_assert(std::is_base_of<fidl::raw::SourceElement, SourceElementSubtype>::value,
-                "Template parameter type is not derived from SourceElement");
+                "template parameter type is not derived from SourceElement");
   return to_string_view(element_ptr.get());
 }
 
@@ -43,7 +43,7 @@ std::string to_string(const fidl::raw::SourceElement& element) {
 template <typename SourceElementSubtype>
 std::string to_string(const std::unique_ptr<SourceElementSubtype>& element_ptr) {
   static_assert(std::is_base_of<fidl::raw::SourceElement, SourceElementSubtype>::value,
-                "Template parameter type is not derived from SourceElement");
+                "template parameter type is not derived from SourceElement");
   return to_string(*element_ptr);
 }
 
@@ -111,20 +111,17 @@ template <typename SourceElementSubtype>
 const fidl::raw::SourceElement& GetElementAsRef(
     const std::unique_ptr<SourceElementSubtype>& element_ptr) {
   static_assert(std::is_base_of<fidl::raw::SourceElement, SourceElementSubtype>::value,
-                "Template parameter type is not derived from SourceElement");
+                "template parameter type is not derived from SourceElement");
   return GetElementAsRef(element_ptr.get());
 }
 // Add a finding with |Finding| constructor arguments.
 // This function is const because the Findings (TreeVisitor) object
 // is not modified. It's Findings object (not owned) is updated.
 Finding* Linter::AddFinding(SourceSpan span, std::string check_id, std::string message) {
-  auto result =
-      current_findings_.emplace(new Finding(span, std::move(check_id), std::move(message)));
-  // Future checks may need to allow multiple findings of the
-  // same check ID at the same location.
-  ZX_ASSERT_MSG(result.second,
-                "Duplicate key. Check criteria in Finding.operator==() and operator<()");
-  return result.first->get();
+  auto [it, inserted] = current_findings_.emplace(
+      std::make_unique<Finding>(span, std::move(check_id), std::move(message)));
+  ZX_ASSERT_MSG(inserted, "duplicate linter finding");
+  return it->get();
 }
 
 // Add a finding with optional suggestion and replacement
@@ -161,9 +158,9 @@ const Finding* Linter::AddFinding(const SourceElementSubtypeRefOrPtr& element,
 }
 
 CheckDef Linter::DefineCheck(std::string_view check_id, std::string message_template) {
-  auto result = checks_.emplace(check_id, TemplateString(std::move(message_template)));
-  ZX_ASSERT_MSG(result.second, "DefineCheck called with a duplicate check_id");
-  return *result.first;
+  auto [it, inserted] = checks_.emplace(check_id, TemplateString(std::move(message_template)));
+  ZX_ASSERT_MSG(inserted, "DefineCheck called with a duplicate check_id");
+  return *it;
 }
 
 // Returns true if no new findings were generated

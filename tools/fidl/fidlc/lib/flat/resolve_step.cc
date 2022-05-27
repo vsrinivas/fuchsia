@@ -365,7 +365,7 @@ void ResolveStep::VisitReference(Reference& ref, Context context) {
 
 void ResolveStep::ParseReference(Reference& ref, Context context) {
   auto initial_state = ref.state();
-  [[maybe_unused]] auto checkpoint = reporter()->Checkpoint();
+  auto checkpoint = reporter()->Checkpoint();
   switch (initial_state) {
     case Reference::State::kRawSynthetic:
       ParseSyntheticReference(ref, context);
@@ -507,7 +507,7 @@ void ResolveStep::InsertReferenceEdges(const Reference& ref, Context context) {
 
 void ResolveStep::ResolveReference(Reference& ref, Context context) {
   auto initial_state = ref.state();
-  [[maybe_unused]] auto checkpoint = reporter()->Checkpoint();
+  auto checkpoint = reporter()->Checkpoint();
   switch (initial_state) {
     case Reference::State::kFailed:
     case Reference::State::kResolved:

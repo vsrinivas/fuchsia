@@ -267,10 +267,8 @@ bool CompileStep::ResolveConstant(Constant* constant, std::optional<const Type*>
         default:
           ZX_PANIC("unhandled binary operator");
       }
-      break;
     }
   }
-  __builtin_unreachable();
 }
 
 ConstantValue::Kind CompileStep::ConstantValuePrimitiveKind(
@@ -299,14 +297,13 @@ ConstantValue::Kind CompileStep::ConstantValuePrimitiveKind(
     case types::PrimitiveSubtype::kFloat64:
       return ConstantValue::Kind::kFloat64;
   }
-  ZX_PANIC("unhandled primitive subtype");
 }
 
 bool CompileStep::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
                                             std::optional<const Type*> opt_type) {
   if (opt_type) {
     ZX_ASSERT_MSG(TypeCanBeConst(opt_type.value()),
-                  "resolving identifier constant to non-const-able type!");
+                  "resolving identifier constant to non-const-able type");
   }
 
   auto& reference = identifier_constant->reference;
@@ -1392,7 +1389,7 @@ bool CompileStep::ValidateMembers(DeclType* decl, MemberValidator<MemberType> va
   Scope<std::string> name_scope;
   Scope<MemberType> value_scope;
   for (const auto& member : decl->members) {
-    ZX_ASSERT_MSG(member.value != nullptr, "member value is null!");
+    ZX_ASSERT_MSG(member.value != nullptr, "member value is null");
 
     // Check that the member identifier hasn't been used yet
     const auto original_name = member.name.data();
@@ -1447,7 +1444,7 @@ static bool IsPowerOfTwo(T t) {
 template <typename MemberType>
 bool CompileStep::ValidateBitsMembersAndCalcMask(Bits* bits_decl, MemberType* out_mask) {
   static_assert(std::is_unsigned<MemberType>::value && !std::is_same<MemberType, bool>::value,
-                "Bits members must be an unsigned integral type!");
+                "bits members must be an unsigned integral type");
   // Each bits member must be a power of two.
   MemberType mask = 0u;
   auto validator = [&mask](MemberType member, const AttributeList*,
@@ -1469,7 +1466,7 @@ template <typename MemberType>
 bool CompileStep::ValidateEnumMembersAndCalcUnknownValue(Enum* enum_decl,
                                                          MemberType* out_unknown_value) {
   static_assert(std::is_integral<MemberType>::value && !std::is_same<MemberType, bool>::value,
-                "Enum members must be an integral type!");
+                "enum members must be an integral type");
 
   const auto default_unknown_value = std::numeric_limits<MemberType>::max();
   std::optional<MemberType> explicit_unknown_value;

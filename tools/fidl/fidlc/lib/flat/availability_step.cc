@@ -102,11 +102,10 @@ void AvailabilityStep::CompileAvailability(Element* element) {
     library()->platform = GetDefaultPlatform();
     default_added = Version::Head();
   }
-  [[maybe_unused]] bool valid =
-      element->availability.Init(default_added, std::nullopt, std::nullopt);
+  bool valid = element->availability.Init(default_added, std::nullopt, std::nullopt);
   ZX_ASSERT_MSG(valid, "initializing default availability should succeed");
   if (auto source = AvailabilityToInheritFrom(element)) {
-    [[maybe_unused]] auto result = element->availability.Inherit(source.value());
+    auto result = element->availability.Inherit(source.value());
     ZX_ASSERT_MSG(result.Ok(), "inheriting into default availability should succeed");
   }
 }

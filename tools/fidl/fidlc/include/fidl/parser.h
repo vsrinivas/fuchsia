@@ -162,7 +162,7 @@ class Parser {
   // Must not be called again after returning Token::Kind::kEndOfFile.
   template <class Predicate>
   std::optional<Token> ReadToken(Predicate p, OnNoMatch on_no_match) {
-    ZX_ASSERT_MSG(!ConsumedEOF(), "Already consumed EOF");
+    ZX_ASSERT_MSG(!ConsumedEOF(), "already consumed EOF");
     std::unique_ptr<Diagnostic> error = p(last_token_);
     if (error) {
       switch (on_no_match) {

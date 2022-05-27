@@ -71,9 +71,8 @@ struct StructPadding {
     } else if (length < 8) {
       return StructPadding(offset_v2 & ~7, BuildMask<uint64_t>(offset_v2 & 7, length));
     } else {
-      ZX_PANIC("length should be < 8");
+      ZX_PANIC("length should be < 8, got %u", length);
     }
-    __builtin_unreachable();
   }
 
   const uint32_t offset_v2;

@@ -50,13 +50,13 @@ std::string_view SourceFile::LineContaining(std::string_view view, Position* pos
     //
     // Assert that this view is either zero-sized or references the null-terminating character
     // in the std::string.
-    ZX_ASSERT_MSG(view.size() <= 1, "The view goes beyond the end of the SourceFile");
+    ZX_ASSERT_MSG(view.size() <= 1, "the view goes beyond the end of the SourceFile");
 
     if (file_size == 0) {
       *position_out = {1, 1};
       return std::string_view(view.data(), 0);
     } else {
-      ZX_ASSERT_MSG(lines_.size() > 0, "File size is greater than 0 but no lines were parsed");
+      ZX_ASSERT_MSG(lines_.size() > 0, "file size is greater than 0 but no lines were parsed");
       auto line = lines_.back();
       int line_number = static_cast<int>(lines_.size());
       int column_number = static_cast<int>(line.size() + 1);
@@ -65,9 +65,9 @@ std::string_view SourceFile::LineContaining(std::string_view view, Position* pos
     }
   }
 
-  ZX_ASSERT_MSG(ptr_less_equal(file_data, view.data()), "The view is not part of this SourceFile");
+  ZX_ASSERT_MSG(ptr_less_equal(file_data, view.data()), "the view is not part of this SourceFile");
   ZX_ASSERT_MSG(ptr_less_equal(view.data() + view.size(), file_data + file_size),
-                "The view is not part of this SourceFile");
+                "the view is not part of this SourceFile");
 
   // We are looking from the end of the file backwards (hence
   // crbegin and crend), looking for the first line (hence

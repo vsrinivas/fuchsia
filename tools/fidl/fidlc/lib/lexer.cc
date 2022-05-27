@@ -345,7 +345,7 @@ void Lexer::SkipWhitespace() {
 }
 
 Token Lexer::Lex() {
-  ZX_ASSERT_MSG(token_start_ <= end_of_file_, "Already reached EOF");
+  ZX_ASSERT_MSG(token_start_ <= end_of_file_, "already reached EOF");
   ZX_ASSERT_MSG(current_ <= end_of_file_ + 1, "current_ is past null terminator");
 
   do {
@@ -359,8 +359,7 @@ Token Lexer::Lex() {
       case '\n':
       case '\r':
       case '\t':
-        ZX_PANIC("Should have been handled by SkipWhitespace!");
-
+        ZX_PANIC("should have been handled by SkipWhitespace");
       case '-':
         // Maybe the start of an arrow.
         if (Peek() == '>') {

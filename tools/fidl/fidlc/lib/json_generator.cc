@@ -171,7 +171,6 @@ void JSONGenerator::Generate(const flat::Type* value) {
     switch (value->kind) {
       case flat::Type::Kind::kBox:
         ZX_PANIC("should be caught above");
-
       case flat::Type::Kind::kVector: {
         // This code path should only be exercised if the type is "bytes." All
         // other handling of kVector is handled in GenerateParameterizedType.
@@ -225,10 +224,8 @@ void JSONGenerator::Generate(const flat::Type* value) {
         break;
       }
       case flat::Type::Kind::kArray:
-        ZX_PANIC("expected non-parameterized type (neither array<T>, vector<T>, nor request<P>)");
-
       case flat::Type::Kind::kUntypedNumeric:
-        ZX_PANIC("should not have untyped numeric here");
+        ZX_PANIC("unexpected kind");
     }
 
     GenerateTypeShapes(*value);
@@ -539,10 +536,8 @@ void JSONGenerator::GenerateParameterizedType(TypeKind parent_type_kind, const f
       case flat::Type::Kind::kPrimitive:
       case flat::Type::Kind::kBox:
       case flat::Type::Kind::kHandle:
-        ZX_PANIC("expected parameterized type (either array<T>, vector<T>, or request<P>)");
-
       case flat::Type::Kind::kUntypedNumeric:
-        ZX_PANIC("should not have untyped numeric here");
+        ZX_PANIC("unexpected kind");
     }
     GenerateTypeShapes(*type);
   });

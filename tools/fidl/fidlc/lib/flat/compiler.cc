@@ -31,7 +31,7 @@ bool Compiler::ConsumeFile(std::unique_ptr<raw::File> file) {
 }
 
 bool Compiler::Compile() {
-  [[maybe_unused]] auto checkpoint = reporter()->Checkpoint();
+  auto checkpoint = reporter()->Checkpoint();
 
   if (!AvailabilityStep(this).Run())
     return false;
@@ -76,7 +76,7 @@ VirtualSourceFile* Compiler::Step::generated_source_file() {
 }
 
 bool Libraries::Insert(std::unique_ptr<Library> library) {
-  auto [iter, inserted] = libraries_by_name_.try_emplace(library->name, library.get());
+  auto [_, inserted] = libraries_by_name_.try_emplace(library->name, library.get());
   if (!inserted) {
     return Fail(ErrMultipleLibrariesWithSameName, library->arbitrary_name_span, library->name);
   }
@@ -90,7 +90,7 @@ Library* Libraries::Lookup(const std::vector<std::string_view>& library_name) co
 }
 
 void Libraries::Remove(const Library* library) {
-  [[maybe_unused]] auto num_removed = libraries_by_name_.erase(library->name);
+  auto num_removed = libraries_by_name_.erase(library->name);
   ZX_ASSERT_MSG(num_removed == 1, "library not in libraries_by_name_");
   auto iter = std::find_if(libraries_.begin(), libraries_.end(),
                            [&](auto& lib) { return lib.get() == library; });
@@ -260,7 +260,7 @@ class CalcDepedencies {
   void VisitDecl(const Decl* decl) {
     switch (decl->kind) {
       case Decl::Kind::kBuiltin: {
-        ZX_PANIC("unexpected element");
+        ZX_PANIC("unexpected builtin");
       }
       case Decl::Kind::kBits: {
         auto bits_decl = static_cast<const Bits*>(decl);

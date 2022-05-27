@@ -106,7 +106,7 @@ void ConsumeStep::ConsumeAttributeList(std::unique_ptr<raw::AttributeList> raw_a
 
 void ConsumeStep::ConsumeAttribute(std::unique_ptr<raw::Attribute> raw_attribute,
                                    std::unique_ptr<Attribute>* out_attribute) {
-  [[maybe_unused]] bool all_named = true;
+  bool all_named = true;
   std::vector<std::unique_ptr<AttributeArg>> args;
   for (auto& raw_arg : raw_attribute->args) {
     std::unique_ptr<Constant> constant;
@@ -272,8 +272,8 @@ bool ConsumeStep::CreateMethodResult(
     std::unique_ptr<TypeConstructor> success_variant,
     std::unique_ptr<TypeConstructor>* out_payload) {
   ZX_ASSERT_MSG(
-      (has_err || has_transport_err),
-      "Method should only use a result union if it has a result union and/or is flexible");
+      has_err || has_transport_err,
+      "method should only use a result union if it has a result union and/or is flexible");
   ZX_ASSERT(err_variant_context != nullptr);
   ZX_ASSERT(transport_err_variant_context != nullptr);
 
@@ -298,7 +298,7 @@ bool ConsumeStep::CreateMethodResult(
                                 &error_type_ctor))
       return false;
 
-    ZX_ASSERT_MSG(error_type_ctor != nullptr, "Missing err type ctor");
+    ZX_ASSERT_MSG(error_type_ctor != nullptr, "missing err type ctor");
 
     result_members.emplace_back(
         ConsumeOrdinal(std::make_unique<raw::Ordinal64>(sourceElement, kErrorOrdinal)),
@@ -312,7 +312,7 @@ bool ConsumeStep::CreateMethodResult(
 
   if (has_transport_err) {
     std::unique_ptr<TypeConstructor> error_type_ctor = IdentifierTypeForDecl(transport_err_type_);
-    ZX_ASSERT_MSG(error_type_ctor != nullptr, "Missing transport_err type ctor");
+    ZX_ASSERT_MSG(error_type_ctor != nullptr, "missing transport_err type ctor");
     result_members.emplace_back(
         ConsumeOrdinal(std::make_unique<raw::Ordinal64>(sourceElement, kTransportErrorOrdinal)),
         std::move(error_type_ctor), transport_err_variant_context->name(),
@@ -761,7 +761,6 @@ bool ConsumeStep::ConsumeLayout(std::unique_ptr<raw::Layout> layout,
                                            std::move(raw_attribute_list), out_decl);
     }
   }
-  ZX_PANIC("layouts must be of type bits, enum, struct, table, or union");
 }
 
 bool ConsumeStep::ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> raw_type_ctor,

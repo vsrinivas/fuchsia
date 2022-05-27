@@ -107,7 +107,6 @@ std::vector<const coded::Type*> CodedTypesGenerator::AllCodedTypes() const {
 
   for (const auto& [_, coded_type] : named_coded_types_) {
     ZX_ASSERT(coded_type.get());
-
     coded_types.push_back(coded_type.get());
   }
 
@@ -232,9 +231,7 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
     case flat::Type::Kind::kIdentifier: {
       auto identifier_type = static_cast<const flat::IdentifierType*>(type);
       auto iter = named_coded_types_.find(identifier_type->name);
-      if (iter == named_coded_types_.end()) {
-        ZX_PANIC("unknown type in named type map!");
-      }
+      ZX_ASSERT_MSG(iter != named_coded_types_.end(), "identifier type not found");
       // We may need to set the emit-pointer bit on structs, unions, and xunions now.
       auto coded_type = iter->second.get();
       switch (coded_type->kind) {
@@ -290,9 +287,8 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
         case coded::Type::Kind::kArray:
         case coded::Type::Kind::kVector:
         case coded::Type::Kind::kString:
-          ZX_PANIC("anonymous type in named type map!");
+          ZX_PANIC("anonymous type in named type map");
       }
-      __builtin_unreachable();
     }
     case flat::Type::Kind::kBox:
       // this defers to the code path for a nullable struct identifier type.
@@ -386,9 +382,9 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
       coded::XUnionType* coded_xunion = static_cast<coded::XUnionType*>(type);
       coded::XUnionType* nullable_coded_xunion = coded_xunion->maybe_reference_type;
       ZX_ASSERT_MSG(nullable_coded_xunion != nullptr,
-                    "Named coded xunion must have a reference type!");
+                    "named coded xunion must have a reference type");
       ZX_ASSERT_MSG(coded_xunion->fields.empty(),
-                    "The coded xunion fields are being compiled twice!");
+                    "the coded xunion fields are being compiled twice");
       CompileUnionFields(union_decl, coded_xunion);
       CompileUnionFields(union_decl, nullable_coded_xunion);
       break;
@@ -433,9 +429,8 @@ void CodedTypesGenerator::CompileTableFields(const flat::Table* table_decl,
   std::map<uint32_t, const flat::Table::Member*> members;
 
   for (const auto& member : table_decl->members) {
-    if (!members.emplace(member.ordinal->value, &member).second) {
-      ZX_PANIC("Duplicate ordinal found in table generation");
-    }
+    auto [_, inserted] = members.emplace(member.ordinal->value, &member);
+    ZX_ASSERT_MSG(inserted, "duplicate table ordinal");
   }
 
   for (const auto& member_pair : members) {
@@ -456,9 +451,8 @@ void CodedTypesGenerator::CompileUnionFields(const flat::Union* union_decl,
 
   for (const auto& member_ref : union_decl->MembersSortedByXUnionOrdinal()) {
     const auto& member = member_ref.get();
-    if (!members.emplace(member.ordinal->value).second) {
-      ZX_PANIC("Duplicate ordinal found in table generation");
-    }
+    auto [_, inserted] = members.emplace(member.ordinal->value);
+    ZX_ASSERT_MSG(inserted, "duplicate union ordinal");
     if (member.maybe_used) {
       const auto* coded_member_type =
           CompileType(member.maybe_used->type_ctor->type, coded::CodingContext::kInsideEnvelope);
@@ -503,7 +497,7 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
             uint64 = static_cast<uint64_t>(
                 static_cast<flat::NumericConstantValue<int64_t>*>(value.get())->value);
           } else {
-            ZX_PANIC("Failed to convert enum member to uint64 or int64");
+            ZX_PANIC("failed to convert enum member to uint64 or int64");
           }
         }
         members.push_back(uint64);

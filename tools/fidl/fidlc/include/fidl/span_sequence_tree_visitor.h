@@ -339,16 +339,6 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
 
   // The index of the next token to be visited.
   size_t next_token_index_ = 0;
-
-  void static NotYetImplemented() {
-    ZX_PANIC("support for this AST node type is not yet implemented");
-  }
-
-  void static AbortUnimplemented() {
-    ZX_PANIC(
-        "input files to the new fidlfmt must not contain any raw AST nodes exclusive to the old "
-        "syntax");
-  }
 };
 
 }  // namespace fidl::fmt

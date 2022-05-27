@@ -63,8 +63,7 @@ AttributeSchema& AttributeSchema::AddArg(std::string name, AttributeArgSchema ar
                     kind_ == AttributeSchema::Kind::kUseEarly ||
                     kind_ == AttributeSchema::Kind::kCompileEarly,
                 "wrong kind");
-  [[maybe_unused]] const auto& [it, inserted] =
-      arg_schemas_.try_emplace(std::move(name), arg_schema);
+  auto [_, inserted] = arg_schemas_.try_emplace(std::move(name), arg_schema);
   ZX_ASSERT_MSG(inserted, "duplicate argument name");
   return *this;
 }
@@ -286,7 +285,6 @@ void AttributeArgSchema::ResolveArg(CompileStep* step, Attribute* attribute, Att
   switch (kind) {
     case ConstantValue::Kind::kDocComment:
       ZX_PANIC("we know the target type of doc comments, and should not end up here");
-
     case ConstantValue::Kind::kString:
       target_type = step->typespace()->GetUnboundedStringType();
       break;
@@ -368,10 +366,8 @@ void AttributeSchema::ResolveArgsWithoutSchema(CompileStep* step, Attribute* att
         step->Fail(ErrCanOnlyUseStringOrBool, attribute->span, arg.get(), attribute);
         continue;
     }
-    if (!step->ResolveConstant(arg->value.get(), inferred_type)) {
-      // Since we've inferred the type, it must resolve correctly.
-      __builtin_unreachable();
-    }
+    ZX_ASSERT_MSG(step->ResolveConstant(arg->value.get(), inferred_type),
+                  "resolving cannot fail when we've inferred the type");
   }
 }
 
@@ -681,7 +677,7 @@ static bool ResultShapeConstraint(Reporter* reporter, const Attribute* attribute
   auto union_decl = static_cast<const Union*>(element);
   ZX_ASSERT(union_decl->members.size() == 2 || union_decl->members.size() == 3);
   auto& error_member = union_decl->members.at(1);
-  ZX_ASSERT_MSG((union_decl->members.size() == 3 || error_member.maybe_used != nullptr),
+  ZX_ASSERT_MSG(union_decl->members.size() == 3 || error_member.maybe_used != nullptr,
                 "must have an error variant if transport error not used");
 
   if (error_member.maybe_used != nullptr) {

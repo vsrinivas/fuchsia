@@ -1076,9 +1076,7 @@ void SpanSequenceTreeVisitor::OnValueLayoutMember(
 }
 
 MultilineSpanSequence SpanSequenceTreeVisitor::Result() {
-  if (building_.empty()) {
-    ZX_PANIC("Result() must be called exactly once after OnFile()");
-  }
+  ZX_ASSERT_MSG(!building_.empty(), "Result() must be called exactly once after OnFile()");
   auto result = MultilineSpanSequence(std::move(building_.top()));
   result.Close();
   building_.pop();

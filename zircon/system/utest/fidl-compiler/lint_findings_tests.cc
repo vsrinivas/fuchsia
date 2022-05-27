@@ -39,11 +39,11 @@ class LintTest {
       std::cout << "ERROR: violation_string '" << violation_string
                 << "' was not found in template string:" << std::endl
                 << template_string;
+      ZX_PANIC("violation_string not found in template string");
     }
     // Note, if there are any substitution variables in the template that
     // precede the violation_string, the test will probably fail because the
     // string location will probably be different after substitution.
-    ZX_ASSERT_MSG(start != std::string::npos, "Bad test! violation_string not found in template");
     std::string expanded_violation_string =
         TemplateString(violation_string).Substitute(substitutions_);
     auto span = library().source_span(start, expanded_violation_string.size());

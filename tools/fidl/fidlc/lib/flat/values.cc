@@ -169,7 +169,7 @@ std::string StringConstantValue::MakeContents() const {
 
 void Constant::ResolveTo(std::unique_ptr<ConstantValue> value, const Type* type) {
   ZX_ASSERT(value != nullptr);
-  ZX_ASSERT_MSG(!IsResolved(), "Constants should only be resolved once!");
+  ZX_ASSERT_MSG(!IsResolved(), "constants should only be resolved once");
   value_ = std::move(value);
   this->type = type;
 }
@@ -178,7 +178,7 @@ const ConstantValue& Constant::Value() const {
   if (!IsResolved()) {
     std::cout << span.data() << std::endl;
   }
-  ZX_ASSERT_MSG(IsResolved(), "Accessing the value of an unresolved Constant!");
+  ZX_ASSERT_MSG(IsResolved(), "accessing the value of an unresolved Constant");
   return *value_;
 }
 

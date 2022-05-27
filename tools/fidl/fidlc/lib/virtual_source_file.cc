@@ -10,7 +10,7 @@ namespace fidl {
 
 SourceSpan VirtualSourceFile::AddLine(std::string_view line) {
   ZX_ASSERT_MSG(line.find('\n') == std::string::npos,
-                "A single line should not contain a newline character");
+                "a single line should not contain a newline character");
   return SourceSpan(*virtual_lines_.emplace_back(std::make_unique<std::string>(line)), *this);
 }
 

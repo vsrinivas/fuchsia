@@ -1534,8 +1534,8 @@ std::unique_ptr<raw::TypeConstructor> Parser::ParseTypeConstructor() {
   }
 
   // Build a LayoutReference of the right type based on the underlying type of the layout.
-  ZX_ASSERT_MSG((std::holds_alternative<std::unique_ptr<raw::CompoundIdentifier>>(layout) ||
-                 std::holds_alternative<std::unique_ptr<raw::Layout>>(layout)),
+  ZX_ASSERT_MSG(std::holds_alternative<std::unique_ptr<raw::CompoundIdentifier>>(layout) ||
+                    std::holds_alternative<std::unique_ptr<raw::Layout>>(layout),
                 "must have set layout by this point");
   std::visit(fidl::utils::matchers{
                  [&](std::unique_ptr<raw::CompoundIdentifier>& named_layout) -> void {
