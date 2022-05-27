@@ -736,7 +736,10 @@ async fn handle_element_controller_stream(
 mod tests {
     use {
         super::{ElementManager, ElementManagerError},
-        fidl::endpoints::{spawn_stream_handler, ProtocolMarker, ServerEnd},
+        fidl::{
+            endpoints::{spawn_stream_handler, ServerEnd},
+            prelude::*,
+        },
         fidl_fuchsia_component as fcomponent, fidl_fuchsia_io as fio, fidl_fuchsia_sys as fsys,
         fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::{channel::mpsc::channel, prelude::*},

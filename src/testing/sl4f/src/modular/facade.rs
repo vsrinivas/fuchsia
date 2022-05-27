@@ -8,7 +8,7 @@ use {
         StartBasemgrRequest,
     },
     anyhow::{format_err, Context, Error},
-    fidl::endpoints::{ProtocolMarker, ServerEnd},
+    fidl::{endpoints::ServerEnd, prelude::*},
     fidl_fuchsia_io as fio, fidl_fuchsia_mem as fmem,
     fidl_fuchsia_modular::{
         AddMod, Intent, PuppetMasterMarker, PuppetMasterProxy, StoryCommand,
@@ -59,19 +59,19 @@ lazy_static! {
     /// If this path exists, the session component exists, but may not be running.
     static ref MODULAR_SESSION_LAUNCHER_PATH: PathBuf = SESSION_HUB_PATH
         .join("resolved/expose")
-        .join(fmodular_session::LauncherMarker::NAME);
+        .join(fmodular_session::LauncherMarker::PROTOCOL_NAME);
 
     /// Path to basemgr's debug service exposed by a running session component.
     ///
     /// This is used to check if the session is both running and exposes the BasemgrDebug protocol.
     static ref BASEMGR_DEBUG_SESSION_EXEC_PATH: PathBuf = SESSION_HUB_PATH
         .join("exec/expose")
-        .join(fmodular_internal::BasemgrDebugMarker::NAME);
+        .join(fmodular_internal::BasemgrDebugMarker::PROTOCOL_NAME);
 
     /// Path to the LifecycleController protocol used to resolve the session component.
     static ref SESSION_LIFECYCLE_CONTROLLER_PATH: PathBuf = SESSION_HUB_PATH
         .join("debug")
-        .join(fsys2::LifecycleControllerMarker::NAME);
+        .join(fsys2::LifecycleControllerMarker::PROTOCOL_NAME);
 }
 
 enum BasemgrRuntimeState {
@@ -122,7 +122,7 @@ async fn connect_to_modular_session_launcher() -> Result<fmodular_session::Launc
 
 /// Returns a PuppetMasterProxy served by the currently running sessionmgr.
 fn connect_to_puppet_master() -> Result<Option<PuppetMasterProxy>, Error> {
-    let glob_path = format!("{}/{}", SESSIONCTL_GLOB, PuppetMasterMarker::NAME);
+    let glob_path = format!("{}/{}", SESSIONCTL_GLOB, PuppetMasterMarker::PROTOCOL_NAME);
     connect_in_paths::<PuppetMasterMarker>(&[&glob_path])
 }
 

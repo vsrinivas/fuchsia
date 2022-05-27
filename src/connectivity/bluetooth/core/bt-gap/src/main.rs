@@ -7,7 +7,7 @@
 use {
     anyhow::{format_err, Context as _, Error},
     async_helpers::hanging_get::asynchronous as hanging_get,
-    fidl::endpoints::{DiscoverableProtocolMarker, ProtocolMarker},
+    fidl::prelude::*,
     fidl_fuchsia_bluetooth::Appearance,
     fidl_fuchsia_bluetooth_bredr::ProfileMarker,
     fidl_fuchsia_bluetooth_gatt::{LocalServiceDelegateRequest, Server_Marker},
@@ -219,15 +219,15 @@ async fn serve_fidl(hd: HostDispatcher, inspect: fuchsia_inspect::Inspector) -> 
     let _ = fs
         .dir("svc")
         .add_service_at(
-            CentralMarker::NAME,
+            CentralMarker::PROTOCOL_NAME,
             host_service_handler(&hd, CentralMarker::DEBUG_NAME, LeCentral),
         )
         .add_service_at(
-            PeripheralMarker::NAME,
+            PeripheralMarker::PROTOCOL_NAME,
             host_service_handler(&hd, PeripheralMarker::DEBUG_NAME, LePeripheral),
         )
         .add_service_at(
-            Server_Marker::NAME,
+            Server_Marker::PROTOCOL_NAME,
             host_service_handler(&hd, Server_Marker::DEBUG_NAME, LeGatt),
         )
         .add_service_at(

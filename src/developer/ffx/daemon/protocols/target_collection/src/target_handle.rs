@@ -235,7 +235,7 @@ mod tests {
     use chrono::Utc;
     use ffx_daemon_events::TargetConnectionState;
     use ffx_daemon_target::target::{TargetAddrEntry, TargetAddrType};
-    use fidl::endpoints::ProtocolMarker;
+    use fidl::prelude::*;
     use fidl_fuchsia_developer_remotecontrol as fidl_rcs;
     use fuchsia_async::Task;
     use hoist::OvernetInstance;
@@ -412,7 +412,7 @@ mod tests {
         hoist2
             .connect_as_service_publisher()
             .unwrap()
-            .publish_service(fidl_rcs::RemoteControlMarker::NAME, client)
+            .publish_service(fidl_rcs::RemoteControlMarker::PROTOCOL_NAME, client)
             .unwrap();
         let daemon = FakeDaemonBuilder::new().build();
         let cx = Context::new(daemon);
@@ -422,7 +422,7 @@ mod tests {
             .unwrap()
             .connect_to_service(
                 &mut hoist2.node().node_id().into(),
-                fidl_rcs::RemoteControlMarker::NAME,
+                fidl_rcs::RemoteControlMarker::PROTOCOL_NAME,
                 server,
             )
             .unwrap();

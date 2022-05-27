@@ -4,7 +4,7 @@
 
 use crate::tests::fakes::base::Service;
 use anyhow::{format_err, Error};
-use fidl::endpoints::{ProtocolMarker, ServerEnd};
+use fidl::{endpoints::ServerEnd, prelude::*};
 use fidl_fuchsia_media_sessions2::{
     DiscoveryMarker, DiscoveryRequest, SessionInfoDelta, SessionsWatcherProxy,
 };
@@ -47,7 +47,7 @@ impl DiscoveryService {
 
 impl Service for DiscoveryService {
     fn can_handle_service(&self, service_name: &str) -> bool {
-        service_name == DiscoveryMarker::NAME
+        service_name == DiscoveryMarker::PROTOCOL_NAME
     }
 
     fn process_stream(&mut self, service_name: &str, channel: zx::Channel) -> Result<(), Error> {

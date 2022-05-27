@@ -34,7 +34,7 @@ impl DriverConnector {
             selector: &str,
         ) -> Result<S::Proxy> {
             let (proxy, server_end) = fidl::endpoints::create_proxy::<S>()
-                .with_context(|| format!("failed to create proxy to {}", S::NAME))?;
+                .with_context(|| format!("failed to create proxy to {}", S::DEBUG_NAME))?;
             let _: rc::ServiceMatch = remote_control
                 .connect(
                     selectors::parse_selector::<VerboseError>(selector)?,
@@ -42,7 +42,12 @@ impl DriverConnector {
                 )
                 .await?
                 .map_err(|e| {
-                    anyhow::anyhow!("failed to connect to {} as {}: {:?}", S::NAME, selector, e)
+                    anyhow::anyhow!(
+                        "failed to connect to {} as {}: {:?}",
+                        S::DEBUG_NAME,
+                        selector,
+                        e
+                    )
                 })?;
             Ok(proxy)
         }

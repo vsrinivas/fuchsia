@@ -14,7 +14,7 @@ use {
         app::Config, make_message, AppAssistant, AppSender, MessageTarget, ViewAssistantPtr,
         ViewKey,
     },
-    fidl::endpoints::ProtocolMarker,
+    fidl::prelude::*,
     fidl_fuchsia_hardware_display::VirtconMode,
     fidl_fuchsia_virtualconsole::SessionManagerMarker,
     fuchsia_async as fasync, fuchsia_zircon as zx,
@@ -214,7 +214,7 @@ impl AppAssistant for VirtualConsoleAppAssistant {
     }
 
     fn outgoing_services_names(&self) -> Vec<&'static str> {
-        [SessionManagerMarker::NAME].to_vec()
+        [SessionManagerMarker::PROTOCOL_NAME].to_vec()
     }
 
     fn handle_service_connection_request(
@@ -293,7 +293,7 @@ mod tests {
         let mut app = VirtualConsoleAppAssistant::new_for_test()?;
         let (_, server_end) = zx::Channel::create().unwrap();
         let channel = fasync::Channel::from_channel(server_end).unwrap();
-        app.handle_service_connection_request(SessionManagerMarker::NAME, channel)?;
+        app.handle_service_connection_request(SessionManagerMarker::PROTOCOL_NAME, channel)?;
         Ok(())
     }
 }

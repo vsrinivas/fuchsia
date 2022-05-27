@@ -89,11 +89,11 @@ fn main() -> Result<(), Error> {
                 Arc::new(Mutex::new(store::StoreManager::new(PathBuf::from(&opts.backing_file))?));
 
             let name = if opts.secure_mode {
-                SecureStoreMarker::NAME
+                SecureStoreMarker::PROTOCOL_NAME
             } else if opts.secondary_store {
-                Store2Marker::NAME
+                Store2Marker::PROTOCOL_NAME
             } else {
-                StoreMarker::NAME
+                StoreMarker::PROTOCOL_NAME
             };
             inspect::component::inspector().root().record_bool("secure_mode", opts.secure_mode);
 

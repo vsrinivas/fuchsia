@@ -5,7 +5,7 @@
 use std::sync::Arc;
 
 use anyhow::{format_err, Error};
-use fidl::endpoints::{ProtocolMarker, ServerEnd};
+use fidl::{endpoints::ServerEnd, prelude::*};
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::TryStreamExt;
@@ -45,7 +45,7 @@ impl InputDeviceRegistryService {
 
 impl Service for InputDeviceRegistryService {
     fn can_handle_service(&self, service_name: &str) -> bool {
-        service_name == fidl_fuchsia_ui_policy::DeviceListenerRegistryMarker::NAME
+        service_name == fidl_fuchsia_ui_policy::DeviceListenerRegistryMarker::PROTOCOL_NAME
     }
 
     fn process_stream(&mut self, service_name: &str, channel: zx::Channel) -> Result<(), Error> {

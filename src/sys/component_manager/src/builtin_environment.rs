@@ -73,7 +73,8 @@ use {
     cm_rust::{CapabilityName, RunnerRegistration},
     cm_types::Url,
     fidl::{
-        endpoints::{create_endpoints, create_proxy, ProtocolMarker, ServerEnd},
+        endpoints::{create_endpoints, create_proxy, ServerEnd},
+        prelude::*,
         AsHandleRef,
     },
     fidl_fuchsia_component_internal::{BuiltinBootResolver, BuiltinPkgResolver, OutDirContents},
@@ -1198,7 +1199,7 @@ fn register_appmgr_resolver(
 /// Checks if the appmgr loader service is available through our namespace and connects to it if
 /// so. If not available, returns Ok(None).
 fn connect_sys_loader() -> Result<Option<LoaderProxy>, Error> {
-    let service_path = PathBuf::from(format!("/svc/{}", LoaderMarker::NAME));
+    let service_path = PathBuf::from(format!("/svc/{}", LoaderMarker::PROTOCOL_NAME));
     if !service_path.exists() {
         return Ok(None);
     }

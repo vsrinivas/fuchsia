@@ -18,7 +18,7 @@ use {
     ffx_daemon_target::zedboot::zedboot_discovery,
     ffx_metrics::{add_daemon_launch_event, add_daemon_metrics_event},
     ffx_stream_util::TryStreamUtilExt,
-    fidl::endpoints::{ClientEnd, DiscoverableProtocolMarker, ProtocolMarker, RequestStream},
+    fidl::{endpoints::ClientEnd, prelude::*},
     fidl_fuchsia_developer_ffx::{
         self as bridge, DaemonError, DaemonMarker, DaemonRequest, DaemonRequestStream,
         RepositoryRegistryMarker, TargetCollectionMarker,
@@ -507,7 +507,7 @@ impl Daemon {
                 .description
                 .services
                 .as_ref()
-                .map(|v| v.contains(&RemoteControlMarker::NAME.to_string()))
+                .map(|v| v.contains(&RemoteControlMarker::PROTOCOL_NAME.to_string()))
                 .unwrap_or(false);
             if peer_has_rcs {
                 queue.push(DaemonEvent::OvernetPeer(peer.id.id)).unwrap_or_else(|err| {
@@ -630,7 +630,7 @@ impl Daemon {
         let mut stream = ServiceProviderRequestStream::from_channel(chan);
 
         log::info!("Starting daemon overnet server");
-        hoist::hoist().publish_service(DaemonMarker::NAME, ClientEnd::new(p))?;
+        hoist::hoist().publish_service(DaemonMarker::PROTOCOL_NAME, ClientEnd::new(p))?;
 
         log::info!("Starting daemon serve loop");
         while let Some(ServiceProviderRequest::ConnectToService {
@@ -908,7 +908,7 @@ mod test {
 
         let peer1 = Peer {
             description: PeerDescription {
-                services: Some(vec![RemoteControlMarker::NAME.to_string()]),
+                services: Some(vec![RemoteControlMarker::PROTOCOL_NAME.to_string()]),
                 unknown_data: None,
                 ..PeerDescription::EMPTY
             },
@@ -917,7 +917,7 @@ mod test {
         };
         let peer2 = Peer {
             description: PeerDescription {
-                services: Some(vec![RemoteControlMarker::NAME.to_string()]),
+                services: Some(vec![RemoteControlMarker::PROTOCOL_NAME.to_string()]),
                 unknown_data: None,
                 ..PeerDescription::EMPTY
             },

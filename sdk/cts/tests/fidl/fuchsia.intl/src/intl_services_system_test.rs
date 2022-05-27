@@ -4,15 +4,16 @@
 
 use {
     anyhow::{ensure, format_err, Context, Error},
-    fidl::endpoints::{DiscoverableProtocolMarker, ProtocolMarker},
+    fidl::endpoints::DiscoverableProtocolMarker,
     fidl_fuchsia_intl as fintl, fidl_fuchsia_settings as fsettings,
     fuchsia_component::client,
     futures::StreamExt,
 };
 
 /// Opens a connection to the given discoverable service, provides an error context on failure.
-fn connect_to_service<M: ProtocolMarker + DiscoverableProtocolMarker>() -> Result<M::Proxy, Error> {
-    client::connect_to_protocol::<M>().with_context(|| format!("connecting to {}", M::DEBUG_NAME))
+fn connect_to_service<M: DiscoverableProtocolMarker>() -> Result<M::Proxy, Error> {
+    client::connect_to_protocol::<M>()
+        .with_context(|| format!("connecting to {}", M::PROTOCOL_NAME))
 }
 
 #[fuchsia::test]

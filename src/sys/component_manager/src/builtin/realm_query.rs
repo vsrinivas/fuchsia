@@ -15,7 +15,7 @@ use {
     cm_rust::CapabilityName,
     cm_task_scope::TaskScope,
     cm_util::channel,
-    fidl::endpoints::{ProtocolMarker, ServerEnd},
+    fidl::{endpoints::ServerEnd, prelude::*},
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
     fuchsia_zircon as zx,
     futures::lock::Mutex,
@@ -32,7 +32,7 @@ use {
 
 lazy_static! {
     pub static ref REALM_QUERY_CAPABILITY_NAME: CapabilityName =
-        fsys::RealmQueryMarker::NAME.into();
+        fsys::RealmQueryMarker::PROTOCOL_NAME.into();
 }
 
 // Serves the fuchsia.sys2.RealmQuery protocol.

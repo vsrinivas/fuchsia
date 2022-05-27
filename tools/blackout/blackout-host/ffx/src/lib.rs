@@ -8,7 +8,7 @@ use {
     ffx_storage_blackout_step_args::{
         BlackoutCommand, BlackoutSubcommand, SetupCommand, TestCommand, VerifyCommand,
     },
-    fidl::endpoints::ProtocolMarker,
+    fidl::{endpoints::ProtocolMarker, prelude::*},
     fidl_fuchsia_blackout_test as fblackout,
     fidl_fuchsia_developer_remotecontrol as fremotecontrol,
     fuchsia_zircon_status::Status,
@@ -27,7 +27,7 @@ async fn remotecontrol_connect<S: ProtocolMarker>(
         .map_err(|e| {
             anyhow::anyhow!(
                 "failed to connect to protocol {} with selector {}: {:?}",
-                S::NAME.to_string(),
+                S::DEBUG_NAME.to_string(),
                 selector.to_string(),
                 e
             )
@@ -44,7 +44,7 @@ async fn step(
         &remote_control,
         &format!(
             "core/ffx-laboratory\\:blackout-target:expose:{}",
-            fblackout::ControllerMarker::NAME
+            fblackout::ControllerMarker::PROTOCOL_NAME
         ),
     )
     .await?;

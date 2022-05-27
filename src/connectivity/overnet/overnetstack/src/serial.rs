@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::{format_err, Context as _, Error};
-use fidl::endpoints::{create_proxy, ProtocolMarker};
+use fidl::{endpoints::create_proxy, prelude::*};
 use fidl_fuchsia_hardware_serial::{
     NewDeviceProxy, NewDeviceProxy_Marker, NewDeviceReadResult, NewDeviceWriteResult,
 };
@@ -37,7 +37,7 @@ pub async fn run_serial_link_handlers(
                             .get_channel(svr)
                             .context(format!(
                                 "connecting to service {}",
-                                NewDeviceProxy_Marker::NAME
+                                NewDeviceProxy_Marker::PROTOCOL_NAME
                             ))?;
                     }
                     Descriptor::Device { ref path, mut config } => {

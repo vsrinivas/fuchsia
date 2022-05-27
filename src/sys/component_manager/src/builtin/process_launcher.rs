@@ -383,7 +383,10 @@ mod tests {
         anyhow::{format_err, Context},
         assert_matches::assert_matches,
         cm_moniker::InstancedAbsoluteMoniker,
-        fidl::endpoints::{ClientEnd, ProtocolMarker, Proxy, ServerEnd},
+        fidl::{
+            endpoints::{ClientEnd, ServerEnd},
+            prelude::*,
+        },
         fidl_fuchsia_io as fio,
         fidl_test_processbuilder::{UtilMarker, UtilProxy},
         fuchsia_async as fasync,
@@ -466,7 +469,7 @@ mod tests {
 
     fn connect_util(client: &zx::Channel) -> Result<UtilProxy, Error> {
         let (proxy, server) = zx::Channel::create()?;
-        fdio::service_connect_at(&client, UtilMarker::NAME, server)
+        fdio::service_connect_at(&client, UtilMarker::PROTOCOL_NAME, server)
             .context("failed to connect to util service")?;
         Ok(UtilProxy::from_channel(fasync::Channel::from_channel(proxy)?))
     }

@@ -16,7 +16,7 @@ use {
     ffx_lib_sub_command::Subcommand,
     ffx_metrics::{add_ffx_launch_and_timing_events, init_metrics_svc},
     ffx_writer::Writer,
-    fidl::endpoints::{create_proxy, ProtocolMarker},
+    fidl::{endpoints::create_proxy, prelude::*},
     fidl_fuchsia_developer_ffx::{
         DaemonError, DaemonProxy, FastbootMarker, FastbootProxy, TargetCollectionMarker,
         TargetMarker, TargetProxy, TargetQuery, VersionInfo,
@@ -67,7 +67,10 @@ fn open_target_with_fut<'a>(
     let t_clone = target.clone();
     let target_collection_fut = async move {
         daemon_proxy
-            .connect_to_protocol(TargetCollectionMarker::NAME, tc_server_end.into_channel())
+            .connect_to_protocol(
+                TargetCollectionMarker::PROTOCOL_NAME,
+                tc_server_end.into_channel(),
+            )
             .await?
             .map_err(|err| FfxError::DaemonError { err, target: t_clone, is_default_target })?;
         Result::<()>::Ok(())
@@ -546,7 +549,7 @@ mod test {
     use ascendd;
     use async_lock::Mutex;
     use async_net::unix::UnixListener;
-    use fidl::endpoints::{ClientEnd, ProtocolMarker, RequestStream};
+    use fidl::endpoints::ClientEnd;
     use fidl_fuchsia_developer_ffx::{DaemonMarker, DaemonRequest, DaemonRequestStream};
     use fidl_fuchsia_overnet::{ServiceProviderRequest, ServiceProviderRequestStream};
     use fuchsia_async::Task;
@@ -605,7 +608,7 @@ mod test {
         let daemon_hoist = Arc::new(hoist::Hoist::new().unwrap());
 
         let (s, p) = fidl::Channel::create().unwrap();
-        daemon_hoist.publish_service(DaemonMarker::NAME, ClientEnd::new(p)).unwrap();
+        daemon_hoist.publish_service(DaemonMarker::PROTOCOL_NAME, ClientEnd::new(p)).unwrap();
 
         let link_tasks = Arc::new(Mutex::new(Vec::<Task<()>>::new()));
         let link_tasks1 = link_tasks.clone();

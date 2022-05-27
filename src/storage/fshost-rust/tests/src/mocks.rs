@@ -4,7 +4,7 @@
 
 use {
     anyhow::Error,
-    fidl::endpoints::ProtocolMarker,
+    fidl::prelude::*,
     fidl_fuchsia_boot as fboot, fidl_fuchsia_io as fio,
     fuchsia_component_test::LocalComponentHandles,
     futures::{future::BoxFuture, FutureExt, StreamExt},
@@ -25,8 +25,8 @@ pub async fn new_mocks(
 async fn run_mocks(handles: LocalComponentHandles) -> Result<(), Error> {
     let export = vfs::pseudo_directory! {
         "svc" => vfs::pseudo_directory! {
-            fboot::ArgumentsMarker::NAME => service::host(run_boot_args),
-            fboot::ItemsMarker::NAME => service::host(run_boot_items),
+            fboot::ArgumentsMarker::PROTOCOL_NAME => service::host(run_boot_args),
+            fboot::ItemsMarker::PROTOCOL_NAME => service::host(run_boot_items),
         },
         "dev" => vfs::pseudo_directory! {
             "class" => vfs::pseudo_directory! {
@@ -62,7 +62,10 @@ async fn run_boot_items(mut stream: fboot::ItemsRequestStream) {
                 responder.send(None, 0).unwrap();
             }
             fboot::ItemsRequest::GetBootloaderFile { .. } => {
-                panic!("unexpectedly called GetBootloaderFile on {}", fboot::ItemsMarker::NAME);
+                panic!(
+                    "unexpectedly called GetBootloaderFile on {}",
+                    fboot::ItemsMarker::PROTOCOL_NAME
+                );
             }
         }
     }
@@ -101,7 +104,7 @@ async fn run_boot_args(mut stream: fboot::ArgumentsRequestStream) {
             }
             fboot::ArgumentsRequest::Collect { .. } => {
                 // This seems to be deprecated. Either way, fshost doesn't use it.
-                panic!("unexpectedly called Collect on {}", fboot::ArgumentsMarker::NAME);
+                panic!("unexpectedly called Collect on {}", fboot::ArgumentsMarker::PROTOCOL_NAME);
             }
         }
     }

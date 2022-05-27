@@ -4,7 +4,7 @@
 
 use {
     anyhow::{format_err, Error},
-    fidl::endpoints::{ProtocolMarker, RequestStream},
+    fidl::prelude::*,
     fidl_fuchsia_bluetooth_avrcp::*,
     fidl_fuchsia_bluetooth_avrcp_test::*,
     fuchsia_async as fasync,
@@ -533,10 +533,10 @@ pub fn run_services(
     let sender_test = sender.clone();
     let _ = fs
         .dir("svc")
-        .add_fidl_service_at(PeerManagerExtMarker::NAME, move |stream| {
+        .add_fidl_service_at(PeerManagerExtMarker::PROTOCOL_NAME, move |stream| {
             spawn_test_avrcp_client(stream, sender_test.clone());
         })
-        .add_fidl_service_at(PeerManagerMarker::NAME, move |stream| {
+        .add_fidl_service_at(PeerManagerMarker::PROTOCOL_NAME, move |stream| {
             spawn_avrcp_client(stream, sender_avrcp.clone());
         });
     let _ = fs.take_and_serve_directory_handle()?;

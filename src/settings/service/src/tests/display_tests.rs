@@ -14,8 +14,8 @@ use crate::tests::test_failure_utils::create_test_env_with_failures;
 use crate::EnvironmentBuilder;
 use anyhow::{anyhow, Result};
 use assert_matches::assert_matches;
-use fidl::endpoints::{ProtocolMarker, ServerEnd};
 use fidl::Error::ClientChannelClosed;
+use fidl::{endpoints::ServerEnd, prelude::*};
 use fidl_fuchsia_settings::{
     DisplayMarker, DisplayProxy, DisplaySettings, Error as FidlError, IntlMarker,
     LowLightMode as FidlLowLightMode, Theme as FidlTheme, ThemeMode as FidlThemeMode,
@@ -568,7 +568,7 @@ async fn test_display_failure() {
     let service_gen =
         |service_name: &str, channel: zx::Channel| -> BoxFuture<'static, Result<()>> {
             match service_name {
-                fidl_fuchsia_ui_brightness::ControlMarker::NAME => {
+                fidl_fuchsia_ui_brightness::ControlMarker::PROTOCOL_NAME => {
                     // This stream is closed immediately
                     let manager_stream_result =
                         ServerEnd::<fidl_fuchsia_ui_brightness::ControlMarker>::new(channel)

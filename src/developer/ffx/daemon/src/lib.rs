@@ -6,7 +6,7 @@ use {
     anyhow::{Context, Result},
     daemonize::daemonize,
     errors::{ffx_error, FfxError},
-    fidl::endpoints::ProtocolMarker,
+    fidl::endpoints::DiscoverableProtocolMarker,
     fidl_fuchsia_developer_ffx::{DaemonMarker, DaemonProxy},
     fidl_fuchsia_overnet_protocol::NodeId,
     futures::prelude::*,
@@ -26,7 +26,7 @@ pub use daemon::Daemon;
 async fn create_daemon_proxy(id: &mut NodeId) -> Result<DaemonProxy> {
     let svc = hoist::hoist().connect_as_service_consumer()?;
     let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
-    svc.connect_to_service(id, DaemonMarker::NAME, s)?;
+    svc.connect_to_service(id, DaemonMarker::PROTOCOL_NAME, s)?;
     let proxy = fidl::AsyncChannel::from_channel(p).context("failed to make async channel")?;
     Ok(DaemonProxy::new(proxy))
 }
@@ -68,7 +68,7 @@ async fn find_next_daemon<'a>(exclusions: Option<Vec<NodeId>>) -> Result<(NodeId
                 .as_ref()
                 .unwrap_or(&Vec::new())
                 .iter()
-                .find(|name| *name == DaemonMarker::NAME)
+                .find(|name| *name == DaemonMarker::PROTOCOL_NAME)
                 .is_none()
             {
                 continue;

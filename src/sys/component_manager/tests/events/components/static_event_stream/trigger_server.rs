@@ -10,7 +10,7 @@ use {
         },
         matcher::EventMatcher,
     },
-    fidl::endpoints::ProtocolMarker,
+    fidl::prelude::*,
     fidl_fidl_test_components as ftest, fuchsia_async as fasync,
     futures::{channel::mpsc, SinkExt, StreamExt},
     std::sync::Arc,
@@ -48,7 +48,7 @@ fn run_main_event_stream(
             capability_request.component_url());
 
         assert_eq!(
-            format!("{}", ftest::TriggerMarker::NAME),
+            format!("{}", ftest::TriggerMarker::PROTOCOL_NAME),
             capability_request.result().unwrap().name
         );
 
@@ -66,7 +66,9 @@ fn run_second_event_stream(mut event_stream: EventStream, mut tx: mpsc::Unbounde
 
         // Verify that the second stream gets an error.
         match capability_request.result() {
-            Err(CapabilityRequestedError { name, .. }) if name == ftest::TriggerMarker::NAME => {
+            Err(CapabilityRequestedError { name, .. })
+                if name == ftest::TriggerMarker::PROTOCOL_NAME =>
+            {
                 tx.send(()).await.expect("Could not send response");
             }
             _ => panic!("Incorrect event received"),

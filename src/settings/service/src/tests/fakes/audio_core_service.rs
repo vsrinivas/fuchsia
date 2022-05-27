@@ -4,7 +4,7 @@
 use crate::audio::default_audio_info;
 use crate::tests::fakes::base::Service;
 use anyhow::{format_err, Error};
-use fidl::endpoints::{ProtocolMarker, ServerEnd};
+use fidl::{endpoints::ServerEnd, prelude::*};
 use fidl_fuchsia_media::{AudioRenderUsage, Usage};
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
@@ -76,7 +76,7 @@ impl AudioCoreService {
 
 impl Service for AudioCoreService {
     fn can_handle_service(&self, service_name: &str) -> bool {
-        service_name == fidl_fuchsia_media::AudioCoreMarker::NAME
+        service_name == fidl_fuchsia_media::AudioCoreMarker::PROTOCOL_NAME
     }
 
     fn process_stream(&mut self, service_name: &str, channel: zx::Channel) -> Result<(), Error> {

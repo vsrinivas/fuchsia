@@ -4,7 +4,7 @@
 
 use {
     anyhow::{anyhow, Context as _, Result},
-    fidl::endpoints::ProtocolMarker,
+    fidl::prelude::*,
     fidl_fuchsia_developer_ffx as bridge,
     fidl_fuchsia_developer_remotecontrol::{
         ConnectError, IdentifyHostError, RemoteControlMarker, RemoteControlProxy,
@@ -59,7 +59,7 @@ impl RcsConnection {
 
     fn connect_to_service(overnet_id: &mut NodeId, channel: fidl::Channel) -> Result<()> {
         let svc = hoist::hoist().connect_as_service_consumer()?;
-        svc.connect_to_service(overnet_id, RemoteControlMarker::NAME, channel)
+        svc.connect_to_service(overnet_id, RemoteControlMarker::PROTOCOL_NAME, channel)
             .map_err(|e| anyhow!("Error connecting to Rcs: {}", e))
     }
 

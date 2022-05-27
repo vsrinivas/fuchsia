@@ -4,7 +4,7 @@
 
 use {
     anyhow::{Context as _, Error},
-    fidl::endpoints::{ClientEnd, ProtocolMarker, RequestStream},
+    fidl::{endpoints::ClientEnd, prelude::*},
     fidl_fuchsia_developer_remotecontrol as rcs,
     fidl_fuchsia_overnet::{ServiceProviderRequest, ServiceProviderRequestStream},
     fuchsia_async as fasync,
@@ -34,7 +34,8 @@ async fn exec_server() -> Result<(), Error> {
                 let chan = fidl::AsyncChannel::from_channel(s)
                     .context("creating ServiceProvider async channel")?;
                 let stream = ServiceProviderRequestStream::from_channel(chan);
-                hoist().publish_service(rcs::RemoteControlMarker::NAME, ClientEnd::new(p))?;
+                hoist()
+                    .publish_service(rcs::RemoteControlMarker::PROTOCOL_NAME, ClientEnd::new(p))?;
                 Ok(stream)
             })();
 

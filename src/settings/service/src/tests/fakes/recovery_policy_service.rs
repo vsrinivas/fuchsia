@@ -4,7 +4,7 @@
 
 use crate::tests::fakes::base::Service;
 use anyhow::{format_err, Error};
-use fidl::endpoints::{ProtocolMarker, ServerEnd};
+use fidl::{endpoints::ServerEnd, prelude::*};
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::lock::Mutex;
@@ -28,7 +28,7 @@ impl RecoveryPolicy {
 
 impl Service for RecoveryPolicy {
     fn can_handle_service(&self, service_name: &str) -> bool {
-        service_name == fidl_fuchsia_recovery_policy::DeviceMarker::NAME
+        service_name == fidl_fuchsia_recovery_policy::DeviceMarker::PROTOCOL_NAME
     }
 
     fn process_stream(&mut self, service_name: &str, channel: zx::Channel) -> Result<(), Error> {

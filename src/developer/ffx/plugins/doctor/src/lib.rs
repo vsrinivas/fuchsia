@@ -14,8 +14,7 @@ use {
     ffx_config::{get, print_config},
     ffx_core::ffx_plugin,
     ffx_doctor_args::DoctorCommand,
-    fidl::endpoints::create_proxy,
-    fidl::endpoints::ProtocolMarker,
+    fidl::{endpoints::create_proxy, prelude::*},
     fidl_fuchsia_developer_ffx::{
         TargetCollectionMarker, TargetCollectionProxy, TargetCollectionReaderMarker,
         TargetCollectionReaderRequest, TargetInfo, TargetMarker, TargetQuery, TargetState,
@@ -917,7 +916,8 @@ async fn doctor_summary<W: Write>(
     let (tc_proxy, tc_server) = fidl::endpoints::create_proxy::<TargetCollectionMarker>()?;
     match timeout(
         retry_delay,
-        daemon_proxy.connect_to_protocol(TargetCollectionMarker::NAME, tc_server.into_channel()),
+        daemon_proxy
+            .connect_to_protocol(TargetCollectionMarker::PROTOCOL_NAME, tc_server.into_channel()),
     )
     .await
     {

@@ -27,7 +27,7 @@ use {
         ChildDeclBuilder, ComponentDeclBuilder, DirectoryDeclBuilder, EnvironmentDeclBuilder,
         ProtocolDeclBuilder,
     },
-    fidl::endpoints::ProtocolMarker,
+    fidl::prelude::*,
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_component_internal as component_internal,
     fidl_fuchsia_sys2 as fsys, fuchsia_zircon_status as zx_status,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
@@ -273,7 +273,8 @@ impl RoutingTestForAnalyzer {
                     .iter()
                     .find_map(|u| match u {
                         UseDecl::Protocol(d)
-                            if d.source_name.to_string() == fsys::StorageAdminMarker::NAME =>
+                            if d.source_name.to_string()
+                                == fsys::StorageAdminMarker::PROTOCOL_NAME =>
                         {
                             Some(u.clone())
                         }

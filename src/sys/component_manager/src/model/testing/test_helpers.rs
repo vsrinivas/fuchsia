@@ -25,7 +25,7 @@ use {
     },
     cm_types::Url,
     diagnostics_message::{LoggerMessage, MonikerWithUrl},
-    fidl::endpoints::{self, ProtocolMarker, Proxy},
+    fidl::{endpoints, prelude::*},
     fidl_fidl_examples_routing_echo as echo, fidl_fuchsia_component as fcomponent,
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io as fio,
@@ -532,7 +532,7 @@ pub fn create_fs_with_mock_logsink(
     let (client, server) = endpoints::create_endpoints::<fio::DirectoryMarker>()
         .context("Failed to create VFS endpoints.")?;
     let mut dir = ServiceFs::new_local();
-    dir.add_fidl_service_at(LogSinkMarker::NAME, MockServiceRequest::LogSink);
+    dir.add_fidl_service_at(LogSinkMarker::PROTOCOL_NAME, MockServiceRequest::LogSink);
     dir.serve_connection(server.into_channel()).context("Failed to add serving channel.")?;
     let entries = vec![fcrunner::ComponentNamespaceEntry {
         path: Some("/svc".to_string()),

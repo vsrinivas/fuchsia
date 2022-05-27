@@ -145,7 +145,7 @@ async fn connect_to_hermetic_network_realm_protocol<
         .unwrap_or_else(|e| {
             panic!(
                 "failed to connect to hermetic network realm protocol {} with error: {:?}",
-                P::NAME,
+                P::PROTOCOL_NAME,
                 e
             )
         })

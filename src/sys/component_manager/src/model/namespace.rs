@@ -23,7 +23,10 @@ use {
         scoped::ScopedLogger,
     },
     cm_rust::{self, CapabilityPath, ComponentDecl, UseDecl, UseProtocolDecl},
-    fidl::endpoints::{create_endpoints, ClientEnd, ProtocolMarker, Proxy, ServerEnd},
+    fidl::{
+        endpoints::{create_endpoints, ClientEnd, ServerEnd},
+        prelude::*,
+    },
     fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_io as fio,
     fidl_fuchsia_logger::LogSinkMarker,
     fuchsia_async as fasync, fuchsia_zircon as zx,
@@ -111,7 +114,7 @@ impl IncomingNamespace {
                         &s.target_path,
                         component.clone(),
                     )?;
-                    if s.source_name.0 == LogSinkMarker::NAME {
+                    if s.source_name.0 == LogSinkMarker::PROTOCOL_NAME {
                         log_sink_decl = Some(s.clone());
                     }
                 }
@@ -582,7 +585,7 @@ pub mod test {
         super::*,
         crate::model::testing::test_helpers::MockServiceRequest,
         cm_rust::{CapabilityPath, DependencyType, UseProtocolDecl, UseSource},
-        fidl::endpoints::{self, ProtocolMarker},
+        fidl::endpoints,
         fidl_fuchsia_component_runner as fcrunner,
         fidl_fuchsia_logger::{LogSinkMarker, LogSinkRequest},
         fuchsia_async,
@@ -635,7 +638,7 @@ pub mod test {
         let (dir_client, dir_server) = endpoints::create_endpoints::<fio::DirectoryMarker>()
             .expect("failed to create VFS endpoints");
         let mut root_dir = ServiceFs::new_local();
-        root_dir.add_fidl_service_at(LogSinkMarker::NAME, MockServiceRequest::LogSink);
+        root_dir.add_fidl_service_at(LogSinkMarker::PROTOCOL_NAME, MockServiceRequest::LogSink);
         let _sub_dir = root_dir.dir("subdir");
         root_dir
             .serve_connection(dir_server.into_channel())
@@ -673,7 +676,7 @@ pub mod test {
             .expect("failed to create VFS endpoints");
         let mut root_dir = ServiceFs::new_local();
         let mut svc_dir = root_dir.dir("arbitrary-dir");
-        svc_dir.add_fidl_service_at(LogSinkMarker::NAME, MockServiceRequest::LogSink);
+        svc_dir.add_fidl_service_at(LogSinkMarker::PROTOCOL_NAME, MockServiceRequest::LogSink);
         let _sub_dir = root_dir.dir("subdir");
         root_dir
             .serve_connection(dir_server.into_channel())
@@ -708,7 +711,7 @@ pub mod test {
         let (dir_client, dir_server) = endpoints::create_endpoints::<fio::DirectoryMarker>()
             .expect("failed to create VFS endpoints");
         let mut root_dir = ServiceFs::new_local();
-        root_dir.add_fidl_service_at(LogSinkMarker::NAME, MockServiceRequest::LogSink);
+        root_dir.add_fidl_service_at(LogSinkMarker::PROTOCOL_NAME, MockServiceRequest::LogSink);
         let _sub_dir = root_dir.dir("subdir");
         root_dir
             .serve_connection(dir_server.into_channel())
@@ -783,7 +786,7 @@ pub mod test {
         let (dir_client, dir_server) = endpoints::create_endpoints::<fio::DirectoryMarker>()
             .expect("failed to create VFS endpoints");
         let mut root_dir = ServiceFs::new_local();
-        root_dir.add_fidl_service_at(LogSinkMarker::NAME, MockServiceRequest::LogSink);
+        root_dir.add_fidl_service_at(LogSinkMarker::PROTOCOL_NAME, MockServiceRequest::LogSink);
         root_dir
             .serve_connection(dir_server.into_channel())
             .expect("failed to add serving channel");

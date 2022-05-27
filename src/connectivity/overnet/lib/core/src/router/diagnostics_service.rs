@@ -7,10 +7,7 @@
 use {
     crate::router::Router,
     anyhow::{format_err, Context as _, Error},
-    fidl::{
-        endpoints::{ClientEnd, ProtocolMarker, RequestStream},
-        AsyncChannel, Channel,
-    },
+    fidl::{endpoints::ClientEnd, prelude::*, AsyncChannel, Channel},
     fidl_fuchsia_overnet::{ServiceProviderRequest, ServiceProviderRequestStream},
     fidl_fuchsia_overnet_protocol::{
         DiagnosticMarker, DiagnosticRequest, DiagnosticRequestStream, ProbeResult, ProbeSelector,
@@ -37,7 +34,7 @@ pub async fn run_diagostic_service_request_handler(router: &Weak<Router>) -> Res
     let chan = AsyncChannel::from_channel(s).context("failed to make async channel")?;
     Weak::upgrade(router)
         .ok_or_else(|| format_err!("router gone"))?
-        .register_service(DiagnosticMarker::NAME.to_string(), ClientEnd::new(p))
+        .register_service(DiagnosticMarker::PROTOCOL_NAME.to_string(), ClientEnd::new(p))
         .await?;
     handle_diagnostic_service_requests(router, ServiceProviderRequestStream::from_channel(chan))
         .await

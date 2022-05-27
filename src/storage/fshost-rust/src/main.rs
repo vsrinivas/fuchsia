@@ -4,7 +4,7 @@
 
 use {
     anyhow::{format_err, Error},
-    fidl::endpoints::ProtocolMarker,
+    fidl::prelude::*,
     fidl_fuchsia_fshost as fshost, fidl_fuchsia_io as fio,
     fuchsia_runtime::{take_startup_handle, HandleType},
     futures::{channel::mpsc, StreamExt},
@@ -26,7 +26,7 @@ async fn main() -> Result<(), Error> {
 
     let export = vfs::pseudo_directory! {
         "svc" => vfs::pseudo_directory! {
-            fshost::AdminMarker::NAME => service::fshost_admin(shutdown_tx),
+            fshost::AdminMarker::PROTOCOL_NAME => service::fshost_admin(shutdown_tx),
         }
     };
 

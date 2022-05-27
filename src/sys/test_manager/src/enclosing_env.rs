@@ -81,7 +81,7 @@ impl EnclosingEnvironment {
             }
             None => {
                 fs.add_service_at(
-                    fv1sys::LoaderMarker::NAME,
+                    fv1sys::LoaderMarker::PROTOCOL_NAME,
                     move |chan: fuchsia_zircon::Channel| {
                         if let Err(e) = connect_channel_to_protocol::<fv1sys::LoaderMarker>(chan) {
                             warn!("Cannot connect to loader: {}", e);
@@ -92,11 +92,11 @@ impl EnclosingEnvironment {
             }
         }
         fs.add_service_at(
-            fdebugdata::PublisherMarker::NAME,
+            fdebugdata::PublisherMarker::PROTOCOL_NAME,
             move |chan: fuchsia_zircon::Channel| {
                 if let Err(e) = fdio::service_connect_at(
                     incoming_svc_clone.as_channel().as_ref(),
-                    fdebugdata::PublisherMarker::NAME,
+                    fdebugdata::PublisherMarker::PROTOCOL_NAME,
                     chan,
                 ) {
                     warn!("cannot connect to debug data Publisher: {}", e);
@@ -122,8 +122,8 @@ impl EnclosingEnvironment {
 
         let mut service_list = fv1sys::ServiceList {
             names: vec![
-                fv1sys::LoaderMarker::NAME.to_string(),
-                fdebugdata::PublisherMarker::NAME.to_string(),
+                fv1sys::LoaderMarker::PROTOCOL_NAME.to_string(),
+                fdebugdata::PublisherMarker::PROTOCOL_NAME.to_string(),
                 "fuchsia.logger.LogSink".into(),
             ],
             provider: None,
@@ -254,14 +254,20 @@ pub async fn gen_enclosing_env(
             })
             .detach();
         })
-        .add_service_at(fv1sys::LauncherMarker::NAME, move |chan: fuchsia_zircon::Channel| {
-            enclosing_env_clone.get_launcher(chan.into());
-            None
-        })
-        .add_service_at(fv1sys::LoaderMarker::NAME, move |chan: fuchsia_zircon::Channel| {
-            enclosing_env_clone2.connect_to_protocol(fv1sys::LoaderMarker::NAME, chan);
-            None
-        });
+        .add_service_at(
+            fv1sys::LauncherMarker::PROTOCOL_NAME,
+            move |chan: fuchsia_zircon::Channel| {
+                enclosing_env_clone.get_launcher(chan.into());
+                None
+            },
+        )
+        .add_service_at(
+            fv1sys::LoaderMarker::PROTOCOL_NAME,
+            move |chan: fuchsia_zircon::Channel| {
+                enclosing_env_clone2.connect_to_protocol(fv1sys::LoaderMarker::PROTOCOL_NAME, chan);
+                None
+            },
+        );
 
     fs.serve_connection(handles.outgoing_dir.into_channel())?;
     fs.collect::<()>().await;

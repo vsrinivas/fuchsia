@@ -10,7 +10,7 @@
 use {
     super::Overnet,
     anyhow::{Context as _, Error},
-    fidl::endpoints::{ClientEnd, ProtocolMarker, RequestStream},
+    fidl::{endpoints::ClientEnd, prelude::*},
     fidl_fuchsia_overnet::{
         ServiceConsumerProxyInterface, ServiceProviderRequest, ServiceProviderRequestStream,
         ServicePublisherProxyInterface,
@@ -80,13 +80,13 @@ async fn exec_client(overnet: Arc<Overnet>, text: Option<&str>) -> Result<(), Er
                 .services
                 .unwrap()
                 .iter()
-                .find(|name| *name == echo::EchoMarker::NAME)
+                .find(|name| *name == echo::EchoMarker::PROTOCOL_NAME)
                 .is_none()
             {
                 continue;
             }
             let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
-            svc.connect_to_service(&mut peer.id, echo::EchoMarker::NAME, s).unwrap();
+            svc.connect_to_service(&mut peer.id, echo::EchoMarker::PROTOCOL_NAME, s).unwrap();
             let proxy =
                 fidl::AsyncChannel::from_channel(p).context("failed to make async channel")?;
             let cli = echo::EchoProxy::new(proxy);
@@ -106,7 +106,7 @@ async fn exec_server(overnet: Arc<Overnet>) -> Result<(), Error> {
     let chan = fidl::AsyncChannel::from_channel(s).context("failed to make async channel")?;
     overnet
         .connect_as_service_publisher()?
-        .publish_service(echo::EchoMarker::NAME, ClientEnd::new(p))?;
+        .publish_service(echo::EchoMarker::PROTOCOL_NAME, ClientEnd::new(p))?;
     ServiceProviderRequestStream::from_channel(chan)
         .map_err(Into::<Error>::into)
         .try_for_each_concurrent(None, |req| async move {

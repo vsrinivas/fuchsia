@@ -6,7 +6,7 @@ use crate::input::common::CAMERA_WATCHER_TIMEOUT;
 use crate::tests::fakes::base::Service;
 
 use anyhow::{format_err, Error};
-use fidl::endpoints::{ProtocolMarker, ServerEnd};
+use fidl::{endpoints::ServerEnd, prelude::*};
 use fidl_fuchsia_camera3::{
     DeviceRequest, DeviceWatcherMarker, DeviceWatcherRequest, WatchDevicesEvent,
 };
@@ -54,7 +54,7 @@ impl Camera3Service {
 
 impl Service for Camera3Service {
     fn can_handle_service(&self, service_name: &str) -> bool {
-        service_name == DeviceWatcherMarker::NAME
+        service_name == DeviceWatcherMarker::PROTOCOL_NAME
     }
 
     fn process_stream(&mut self, service_name: &str, channel: zx::Channel) -> Result<(), Error> {

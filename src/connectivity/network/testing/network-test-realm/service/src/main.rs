@@ -4,7 +4,7 @@
 
 use anyhow::{Context as _, Error, Result};
 use async_utils::stream::FlattenUnorderedExt as _;
-use fidl::endpoints::Proxy as _;
+use fidl::prelude::*;
 use fidl_fuchsia_component as fcomponent;
 use fidl_fuchsia_component_decl as fdecl;
 use fidl_fuchsia_hardware_ethernet as fethernet;
@@ -656,7 +656,7 @@ impl Connector for SystemConnector {
         &self,
     ) -> Result<P::Proxy, fntr::Error> {
         fuchsia_component::client::connect_to_protocol::<P>().map_err(|e| {
-            error!("failed to connect to {} with error: {:?}", P::NAME, e);
+            error!("failed to connect to {} with error: {:?}", P::PROTOCOL_NAME, e);
             fntr::Error::Internal
         })
     }
@@ -689,7 +689,7 @@ impl Connector for HermeticNetworkConnector {
     ) -> Result<P::Proxy, fntr::Error> {
         fuchsia_component::client::connect_to_protocol_at_dir_root::<P>(&self.child_directory)
             .map_err(|e| {
-                error!("failed to connect to {} with error: {:?}", P::NAME, e);
+                error!("failed to connect to {} with error: {:?}", P::PROTOCOL_NAME, e);
                 fntr::Error::Internal
             })
     }

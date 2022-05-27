@@ -346,7 +346,7 @@ impl<E: std::fmt::Debug> std::error::Error for TerminalError<E> {}
 #[cfg(test)]
 mod test {
     use super::{assignment_state_stream, AddressStateProviderError};
-    use fidl::endpoints::{ProtocolMarker as _, RequestStream as _};
+    use fidl::prelude::*;
     use fidl_fuchsia_net_interfaces_admin as fnet_interfaces_admin;
     use fuchsia_zircon_status as zx;
     use futures::{FutureExt as _, StreamExt as _, TryStreamExt as _};
@@ -520,7 +520,7 @@ mod test {
                     control.get_id().await,
                     Err(super::TerminalError::Fidl(fidl::Error::ClientChannelClosed {
                         status: zx::Status::PEER_CLOSED,
-                        protocol_name: fidl_fuchsia_net_interfaces_admin::ControlMarker::NAME
+                        protocol_name: fidl_fuchsia_net_interfaces_admin::ControlMarker::DEBUG_NAME
                     }))
                 );
             },

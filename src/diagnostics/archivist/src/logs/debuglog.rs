@@ -11,7 +11,7 @@ use crate::{
 };
 use async_trait::async_trait;
 use diagnostics_data::{BuilderArgs, LogsData, LogsDataBuilder, Severity};
-use fidl::endpoints::ProtocolMarker;
+use fidl::prelude::*;
 use fidl_fuchsia_boot::ReadOnlyLogMarker;
 use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_protocol;
@@ -58,7 +58,7 @@ impl KernelDebugLog {
     /// Connects to `fuchsia.boot.ReadOnlyLog` to retrieve a handle.
     pub async fn new() -> Result<Self, LogsError> {
         let boot_log = connect_to_protocol::<ReadOnlyLogMarker>().map_err(|source| {
-            LogsError::ConnectingToService { protocol: ReadOnlyLogMarker::NAME, source }
+            LogsError::ConnectingToService { protocol: ReadOnlyLogMarker::PROTOCOL_NAME, source }
         })?;
         let debuglogger =
             boot_log.get().await.map_err(|source| LogsError::RetrievingDebugLog { source })?;

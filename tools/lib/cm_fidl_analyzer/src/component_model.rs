@@ -14,7 +14,7 @@ use {
         CapabilityDecl, CapabilityPath, CapabilityTypeName, ComponentDecl, ExposeDecl,
         ExposeDeclCommon, ProgramDecl, ResolverRegistration, UseDecl, UseStorageDecl,
     },
-    fidl::endpoints::ProtocolMarker,
+    fidl::prelude::*,
     fidl_fuchsia_sys2 as fsys,
     fuchsia_url::pkg_url::PkgUrl,
     fuchsia_zircon_status as zx_status,
@@ -805,12 +805,12 @@ impl ComponentModelForAnalyzer {
             .expect("failed to get source capability name");
 
         match source_capability.source_name().map(|name| name.to_string()).as_deref() {
-            Some(fsys::StorageAdminMarker::NAME) => {
+            Some(fsys::StorageAdminMarker::PROTOCOL_NAME) => {
                 match source_component.decl.find_storage_source(source_capability_name) {
                     Some(_) => Ok(()),
                     None => Err(AnalyzerModelError::InvalidSourceCapability(
                         source_capability_name.to_string(),
-                        fsys::StorageAdminMarker::NAME.to_string(),
+                        fsys::StorageAdminMarker::PROTOCOL_NAME.to_string(),
                     )),
                 }
             }

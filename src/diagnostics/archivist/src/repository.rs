@@ -25,7 +25,7 @@ use {
         trie::{self, TrieIterableNode},
         InspectHierarchyMatcher,
     },
-    fidl::endpoints::ProtocolMarker,
+    fidl::prelude::*,
     fidl_fuchsia_diagnostics::{
         self, LogInterestSelector, LogSettingsMarker, LogSettingsRequest, LogSettingsRequestStream,
         Selector, StreamMode,
@@ -138,7 +138,7 @@ impl DataRepo {
         let connection_id = CONNECTION_ID.fetch_add(1, Ordering::Relaxed);
         while let Some(request) = stream.next().await {
             let request = request.map_err(|source| LogsError::HandlingRequests {
-                protocol: LogMarker::NAME,
+                protocol: LogMarker::PROTOCOL_NAME,
                 source,
             })?;
 
@@ -176,7 +176,7 @@ impl DataRepo {
         let connection_id = CONNECTION_ID.fetch_add(1, Ordering::Relaxed);
         while let Some(request) = stream.next().await {
             let request = request.map_err(|source| LogsError::HandlingRequests {
-                protocol: LogSettingsMarker::NAME,
+                protocol: LogSettingsMarker::PROTOCOL_NAME,
                 source,
             })?;
             match request {

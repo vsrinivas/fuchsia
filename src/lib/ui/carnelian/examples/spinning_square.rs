@@ -20,7 +20,7 @@ use carnelian::{
     ViewKey,
 };
 use euclid::{point2, size2, vec2, Angle, Transform2D};
-use fidl::endpoints::{ProtocolMarker, RequestStream};
+use fidl::prelude::*;
 use fidl_test_placeholders::{EchoMarker, EchoRequest, EchoRequestStream};
 use fuchsia_async as fasync;
 use fuchsia_zircon::Time;
@@ -61,7 +61,7 @@ impl AppAssistant for SpinningSquareAppAssistant {
 
     /// Return the list of names of services this app wants to provide
     fn outgoing_services_names(&self) -> Vec<&'static str> {
-        [EchoMarker::NAME].to_vec()
+        [EchoMarker::PROTOCOL_NAME].to_vec()
     }
 
     /// Handle a request to connect to a service provided by this app

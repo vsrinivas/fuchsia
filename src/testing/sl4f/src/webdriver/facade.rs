@@ -4,7 +4,10 @@
 
 use crate::webdriver::types::{EnableDevToolsResult, GetDevToolsPortsResult};
 use anyhow::{format_err, Error};
-use fidl::endpoints::{create_proxy, create_request_stream, ClientEnd, ProtocolMarker, ServerEnd};
+use fidl::{
+    endpoints::{create_proxy, create_request_stream, ClientEnd, ServerEnd},
+    prelude::*,
+};
 use fidl_fuchsia_web::{
     ContextMarker, ContextProviderMarker, ContextProviderProxy, CreateContextParams, DebugMarker,
     DebugProxy, DevToolsListenerMarker, DevToolsListenerRequest, DevToolsListenerRequestStream,
@@ -159,7 +162,7 @@ impl WebdriverFacadeInternal {
     /// Locate debug service published in the Hub.
     async fn get_path_to_debug() -> Result<String, Error> {
         // Find debug service in the Hub.
-        let glob_query = format!("/hub-v2/children/core/children/appmgr/exec/out/hub/r/sys/*/c/context_provider.cmx/*/out/debug/{}", DebugMarker::NAME);
+        let glob_query = format!("/hub-v2/children/core/children/appmgr/exec/out/hub/r/sys/*/c/context_provider.cmx/*/out/debug/{}", DebugMarker::PROTOCOL_NAME);
         if let Some(found_path) = glob(&glob_query)?.filter_map(|entry| entry.ok()).next() {
             Ok(found_path.to_string_lossy().to_string())
         } else {

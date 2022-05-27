@@ -59,7 +59,7 @@ impl<D: Borrow<fio::DirectoryProxy>, P: DiscoverableProtocolMarker> ProtocolConn
     /// This method requires a round trip to the service directory to check for
     /// existence.
     pub async fn exists(&self) -> Result<bool, Error> {
-        match files_async::dir_contains(self.svc_dir.borrow(), P::NAME).await {
+        match files_async::dir_contains(self.svc_dir.borrow(), P::PROTOCOL_NAME).await {
             Ok(v) => Ok(v),
             // If the service directory is unavailable, then mask the error as if
             // the protocol does not exist.
@@ -81,7 +81,7 @@ impl<D: Borrow<fio::DirectoryProxy>, P: DiscoverableProtocolMarker> ProtocolConn
             .open(
                 fio::OpenFlags::RIGHT_READABLE,
                 0, /* mode */
-                P::NAME,
+                P::PROTOCOL_NAME,
                 fidl::endpoints::ServerEnd::new(server_end),
             )
             .context("error connecting to protocol")

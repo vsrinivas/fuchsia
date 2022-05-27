@@ -4,7 +4,10 @@
 
 use {
     anyhow::{format_err, Context as _, Error},
-    fidl::endpoints::{create_endpoints, create_proxy, ProtocolMarker, ServerEnd},
+    fidl::{
+        endpoints::{create_endpoints, create_proxy, ServerEnd},
+        prelude::*,
+    },
     fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_io as fio, fidl_fuchsia_sys as fsysv1,
     futures::TryStreamExt,
     log::*,
@@ -83,7 +86,7 @@ impl LegacyComponent {
         )?;
         let host_pseudo_dir = pfs::simple();
         host_pseudo_dir.clone().add_entry(
-        fsysv1::LoaderMarker::NAME,
+        fsysv1::LoaderMarker::PROTOCOL_NAME,
         vfs::remote::remote_boxed(Box::new(
             move |_scope: ExecutionScope,
                   flags: fio::OpenFlags,
@@ -93,7 +96,7 @@ impl LegacyComponent {
                 if let Err(e) = runner_svc_dir_proxy.open(
                     flags,
                     mode,
-                    fsysv1::LoaderMarker::NAME,
+                    fsysv1::LoaderMarker::PROTOCOL_NAME,
                     server_end,
                 ) {
                     error!("failed to forward service open to realm builder server namespace: {:?}", e);
@@ -146,7 +149,7 @@ impl LegacyComponent {
             host_dir_server_end.into_channel().into(),
         );
 
-        svc_names.push(fsysv1::LoaderMarker::NAME.into());
+        svc_names.push(fsysv1::LoaderMarker::PROTOCOL_NAME.into());
         let mut additional_services = fsysv1::ServiceList {
             names: svc_names,
             provider: None,

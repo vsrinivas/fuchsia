@@ -4,7 +4,7 @@
 
 use {
     anyhow::{bail, Context, Error},
-    fidl::endpoints::{ProtocolMarker, Proxy},
+    fidl::prelude::*,
     fidl_fuchsia_developer_remotecontrol::ServiceMatch,
     fidl_fuchsia_diagnostics::{Selector, StringSelector, TreeSelector},
     fidl_fuchsia_io as io, fidl_fuchsia_sys2 as fsys,
@@ -247,7 +247,7 @@ pub async fn get_matching_paths(root: &str, selector: &Selector) -> Result<Vec<P
                             .debug_hub_path
                             .as_ref()
                             .context("missing debug path")?
-                            .join(fsys::LifecycleControllerMarker::NAME);
+                            .join(fsys::LifecycleControllerMarker::PROTOCOL_NAME);
                         let node_proxy = io_util::open_node_in_namespace(
                             lifecycle_controller_path.to_str().expect("invalid chars"),
                             io::OpenFlags::RIGHT_READABLE | io::OpenFlags::RIGHT_WRITABLE,

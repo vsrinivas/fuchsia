@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 use crate::tests::fakes::base::Service;
 use anyhow::{format_err, Error};
-use fidl::endpoints::{ProtocolMarker, ServerEnd};
+use fidl::{endpoints::ServerEnd, prelude::*};
 use fidl_fuchsia_hardware_power_statecontrol::{AdminRequest, RebootReason};
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
@@ -39,7 +39,7 @@ impl HardwarePowerStatecontrolService {
 
 impl Service for HardwarePowerStatecontrolService {
     fn can_handle_service(&self, service_name: &str) -> bool {
-        service_name == fidl_fuchsia_hardware_power_statecontrol::AdminMarker::NAME
+        service_name == fidl_fuchsia_hardware_power_statecontrol::AdminMarker::PROTOCOL_NAME
     }
 
     fn process_stream(&mut self, service_name: &str, channel: zx::Channel) -> Result<(), Error> {

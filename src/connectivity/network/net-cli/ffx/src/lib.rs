@@ -44,14 +44,14 @@ impl FfxConnector<'_> {
         let Self { remote_control, realm } = &self;
         let unparsed_selector = format!("{}{}", realm, selector_suffix);
         let (proxy, server_end) = fidl::endpoints::create_proxy::<S>()
-            .with_context(|| format!("failed to create proxy to {}", S::NAME))?;
+            .with_context(|| format!("failed to create proxy to {}", S::DEBUG_NAME))?;
         let selector = selectors::parse_selector::<selectors::VerboseError>(&unparsed_selector)
             .with_context(|| format!("failed to parse selector {}", &unparsed_selector))?;
         let _: fremotecontrol::ServiceMatch =
             remote_control.connect(selector, server_end.into_channel()).await?.map_err(|e| {
                 anyhow::anyhow!(
                     "failed to connect to {} as {}: {:?}",
-                    S::NAME,
+                    S::DEBUG_NAME,
                     unparsed_selector,
                     e
                 )

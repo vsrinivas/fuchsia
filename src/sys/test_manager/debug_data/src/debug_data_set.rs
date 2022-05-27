@@ -5,7 +5,7 @@
 use crate::message::PublisherRequestMessage;
 use anyhow::{anyhow, Error};
 use async_trait::async_trait;
-use fidl::endpoints::{RequestStream, ServerEnd};
+use fidl::{endpoints::ServerEnd, prelude::*};
 use fidl_fuchsia_debugdata as fdebug;
 use fidl_fuchsia_sys2 as fsys;
 use fidl_fuchsia_test_internal as ftest_internal;
@@ -911,7 +911,6 @@ mod inner {
 #[cfg(test)]
 mod testing {
     use super::*;
-    use fidl::endpoints::ProtocolMarker;
 
     pub(super) fn start_event(moniker: &str) -> fsys::Event {
         fsys::Event {
@@ -954,7 +953,7 @@ mod testing {
             .into(),
             event_result: Some(fsys::EventResult::Payload(
                 fsys::EventPayload::CapabilityRequested(fsys::CapabilityRequestedPayload {
-                    name: fdebug::PublisherMarker::NAME.to_string().into(),
+                    name: fdebug::PublisherMarker::PROTOCOL_NAME.to_string().into(),
                     capability: Some(server),
                     ..fsys::CapabilityRequestedPayload::EMPTY
                 }),

@@ -6,7 +6,7 @@
 
 use {
     anyhow::{Context, Error},
-    fidl::endpoints::ProtocolMarker,
+    fidl::prelude::*,
     fidl_test_placeholders as fecho, fuchsia_async as fasync,
     fuchsia_component::client::{
         launch_with_options, launcher, App, AppBuilder, LaunchOptions, Stdio,
@@ -138,10 +138,11 @@ async fn serve_echo_stream(mut stream: fecho::EchoRequestStream) -> Result<(), E
 async fn launch_options_set_additional_services() {
     let (client_chan, server_chan) = zx::Channel::create().unwrap();
     let mut launch_options = LaunchOptions::new();
-    launch_options.set_additional_services(vec![fecho::EchoMarker::NAME.to_string()], client_chan);
+    launch_options
+        .set_additional_services(vec![fecho::EchoMarker::PROTOCOL_NAME.to_string()], client_chan);
 
     let mut fs = ServiceFs::new();
-    fs.add_fidl_service_at(fecho::EchoMarker::NAME, |stream: fecho::EchoRequestStream| {
+    fs.add_fidl_service_at(fecho::EchoMarker::PROTOCOL_NAME, |stream: fecho::EchoRequestStream| {
         fasync::Task::spawn(
             serve_echo_stream(stream)
                 .unwrap_or_else(|e| panic!("Error while serving echo service: {}", e)),

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl::endpoints::ProtocolMarker as _;
+use fidl::prelude::*;
 use fuchsia_zircon::{self as zx, HandleBased as _};
 use futures::{Future, FutureExt as _, StreamExt as _};
 use itertools::Itertools as _;
@@ -317,7 +317,8 @@ where
                                 name: Some(NAME_PROVIDER_NAME.to_string()),
                                 capability: Some(
                                     fidl_fuchsia_netemul::ExposedCapability::Protocol(
-                                        fidl_fuchsia_device::NameProviderMarker::NAME.to_string(),
+                                        fidl_fuchsia_device::NameProviderMarker::PROTOCOL_NAME
+                                            .to_string(),
                                     ),
                                 ),
                                 ..fidl_fuchsia_netemul::ChildDep::EMPTY
@@ -328,7 +329,7 @@ where
                                 name: Some(MOCK_SERVICES_NAME.to_string()),
                                 capability: Some(
                                     fidl_fuchsia_netemul::ExposedCapability::Protocol(
-                                        fidl_fuchsia_logger::LogMarker::NAME.to_string(),
+                                        fidl_fuchsia_logger::LogMarker::PROTOCOL_NAME.to_string(),
                                     ),
                                 ),
                                 ..fidl_fuchsia_netemul::ChildDep::EMPTY
@@ -339,7 +340,8 @@ where
                                 name: Some(MOCK_SERVICES_NAME.to_string()),
                                 capability: Some(
                                     fidl_fuchsia_netemul::ExposedCapability::Protocol(
-                                        fidl_fuchsia_sysinfo::SysInfoMarker::NAME.to_string(),
+                                        fidl_fuchsia_sysinfo::SysInfoMarker::PROTOCOL_NAME
+                                            .to_string(),
                                     ),
                                 ),
                                 ..fidl_fuchsia_netemul::ChildDep::EMPTY
@@ -350,7 +352,7 @@ where
                                 name: Some(MOCK_SERVICES_NAME.to_string()),
                                 capability: Some(
                                     fidl_fuchsia_netemul::ExposedCapability::Protocol(
-                                        fidl_fuchsia_paver::PaverMarker::NAME.to_string(),
+                                        fidl_fuchsia_paver::PaverMarker::PROTOCOL_NAME.to_string(),
                                     ),
                                 ),
                                 ..fidl_fuchsia_netemul::ChildDep::EMPTY
@@ -383,7 +385,9 @@ where
                         ),
                         fidl_fuchsia_netemul::Capability::LogSink(fidl_fuchsia_netemul::Empty {}),
                     ])),
-                    exposes: Some(vec![fidl_fuchsia_device::NameProviderMarker::NAME.to_string()]),
+                    exposes: Some(vec![
+                        fidl_fuchsia_device::NameProviderMarker::PROTOCOL_NAME.to_string()
+                    ]),
                     ..fidl_fuchsia_netemul::ChildDef::EMPTY
                 },
                 fidl_fuchsia_netemul::ChildDef {

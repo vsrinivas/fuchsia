@@ -11,7 +11,7 @@ use crate::{
 use async_trait::async_trait;
 use diagnostics_log_encoding::{encode::Encoder, Record};
 use diagnostics_message::{fx_log_packet_t, MAX_DATAGRAM_LEN};
-use fidl::endpoints::ProtocolMarker;
+use fidl::prelude::*;
 use fidl_fuchsia_io as fio;
 use fidl_fuchsia_logger::{
     LogFilterOptions, LogLevelFilter, LogMarker, LogMessage, LogProxy, LogSinkMarker, LogSinkProxy,
@@ -59,7 +59,7 @@ pub fn create_log_sink_requested_event(
         }),
         event_result: Some(fsys::EventResult::Payload(fsys::EventPayload::CapabilityRequested(
             fsys::CapabilityRequestedPayload {
-                name: Some(LogSinkMarker::NAME.into()),
+                name: Some(LogSinkMarker::PROTOCOL_NAME.into()),
                 capability: Some(capability),
                 ..fsys::CapabilityRequestedPayload::EMPTY
             },

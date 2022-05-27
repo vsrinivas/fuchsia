@@ -196,7 +196,7 @@ where
     C: ServiceConnector<S>,
     S: fidl::endpoints::ProtocolMarker,
 {
-    connector.connect().await.with_context(|| format!("failed to connect to {}", S::NAME))
+    connector.connect().await.with_context(|| format!("failed to connect to {}", S::DEBUG_NAME))
 }
 
 async fn get_control<C>(connector: &C, id: u64) -> Result<finterfaces_ext::admin::Control, Error>

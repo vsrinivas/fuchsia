@@ -6,7 +6,8 @@
 
 use diagnostics_message::fx_log_packet_t;
 use fidl::{
-    endpoints::{ClientEnd, ProtocolMarker, ServerEnd},
+    endpoints::{ClientEnd, ServerEnd},
+    prelude::*,
     Socket, SocketOpts,
 };
 use fidl_fuchsia_diagnostics_test::ControllerMarker;
@@ -74,7 +75,7 @@ async fn same_log_sink_simultaneously_via_connector() {
     let (take_log_listener_response_snd, mut take_log_listener_response_rcv) =
         futures::channel::mpsc::channel(1);
     fs.add_fidl_service_at(
-        LogConnectorMarker::NAME,
+        LogConnectorMarker::PROTOCOL_NAME,
         move |mut stream: LogConnectorRequestStream| {
             let mut serverend = serverend.take();
             let mut sender_mut = Some(take_log_listener_response_snd.clone());
@@ -98,7 +99,8 @@ async fn same_log_sink_simultaneously_via_connector() {
     // launch archivist-for-embedding.cmx
     let launcher = connect_to_protocol::<LauncherMarker>().unwrap();
     let mut options = LaunchOptions::new();
-    options.set_additional_services(vec![LogConnectorMarker::NAME.to_string()], dir_client);
+    options
+        .set_additional_services(vec![LogConnectorMarker::PROTOCOL_NAME.to_string()], dir_client);
     let mut archivist = launch_with_options(
         &launcher,
         "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx"

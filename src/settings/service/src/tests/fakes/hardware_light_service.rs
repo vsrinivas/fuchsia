@@ -5,8 +5,8 @@
 use crate::light::types::{LightType, LightValue};
 use crate::tests::fakes::base::Service;
 use anyhow::{format_err, Error};
-use fidl::endpoints::ProtocolMarker;
 use fidl::endpoints::ServerEnd;
+use fidl::prelude::*;
 use fidl_fuchsia_hardware_light::{Info, LightMarker, LightRequest, Rgb};
 use fuchsia_async as fasync;
 use fuchsia_zircon::Channel;
@@ -68,7 +68,7 @@ impl HardwareLightService {
 
 impl Service for HardwareLightService {
     fn can_handle_service(&self, service_name: &str) -> bool {
-        service_name == LightMarker::NAME
+        service_name == LightMarker::PROTOCOL_NAME
     }
 
     fn process_stream(&mut self, service_name: &str, channel: Channel) -> Result<(), Error> {

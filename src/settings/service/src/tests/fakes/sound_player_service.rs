@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 use crate::tests::fakes::base::Service;
 use anyhow::{format_err, Error};
-use fidl::endpoints::{ProtocolMarker, ServerEnd};
+use fidl::{endpoints::ServerEnd, prelude::*};
 use fidl_fuchsia_media::AudioRenderUsage;
 use fidl_fuchsia_media_sounds::{PlayerMarker, PlayerRequest};
 use fuchsia_async as fasync;
@@ -63,7 +63,7 @@ impl SoundPlayerService {
 
 impl Service for SoundPlayerService {
     fn can_handle_service(&self, service_name: &str) -> bool {
-        service_name == PlayerMarker::NAME
+        service_name == PlayerMarker::PROTOCOL_NAME
     }
 
     fn process_stream(&mut self, service_name: &str, channel: zx::Channel) -> Result<(), Error> {

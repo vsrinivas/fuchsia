@@ -12,7 +12,7 @@ use {
     crate::config::Config,
     crate::device_server::{serve_application_passthrough, serve_device_info_passthrough},
     anyhow::{format_err, Context as _, Error},
-    fidl::endpoints::ProtocolMarker,
+    fidl::prelude::*,
     fidl_fuchsia_hardware_tee::{DeviceConnectorMarker, DeviceConnectorProxy},
     fidl_fuchsia_tee::{self as fuchsia_tee, DeviceInfoMarker},
     fuchsia_async as fasync,
@@ -52,7 +52,7 @@ async fn main() -> Result<(), Error> {
         open_tee_device_connector(device_list.first().unwrap().to_str().unwrap())?;
 
     let mut fs = ServiceFs::new_local();
-    fs.dir("svc").add_service_at(DeviceInfoMarker::NAME, |channel| {
+    fs.dir("svc").add_service_at(DeviceInfoMarker::PROTOCOL_NAME, |channel| {
         Some(IncomingRequest::DeviceInfo(channel))
     });
 

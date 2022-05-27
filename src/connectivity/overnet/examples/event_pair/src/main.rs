@@ -5,7 +5,7 @@
 use {
     anyhow::{Context as _, Error},
     argh::FromArgs,
-    fidl::endpoints::{ClientEnd, ProtocolMarker, RequestStream},
+    fidl::{endpoints::ClientEnd, prelude::*},
     fidl::{Peered, Signals},
     fidl_fuchsia_overnet::{ServiceProviderRequest, ServiceProviderRequestStream},
     fidl_fuchsia_overnet_eventpairexample as event_pair,
@@ -55,13 +55,14 @@ async fn exec_client() -> Result<(), Error> {
                 .services
                 .unwrap()
                 .iter()
-                .find(|name| *name == event_pair::ExampleMarker::NAME)
+                .find(|name| *name == event_pair::ExampleMarker::PROTOCOL_NAME)
                 .is_none()
             {
                 continue;
             }
             let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
-            if let Err(e) = svc.connect_to_service(&mut peer.id, event_pair::ExampleMarker::NAME, s)
+            if let Err(e) =
+                svc.connect_to_service(&mut peer.id, event_pair::ExampleMarker::PROTOCOL_NAME, s)
             {
                 println!("{:?}", e);
                 continue;
@@ -119,7 +120,7 @@ async fn example_server(chan: fidl::AsyncChannel) -> Result<(), Error> {
 async fn exec_server() -> Result<(), Error> {
     let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
     let chan = fidl::AsyncChannel::from_channel(s).context("failed to make async channel")?;
-    hoist().publish_service(event_pair::ExampleMarker::NAME, ClientEnd::new(p))?;
+    hoist().publish_service(event_pair::ExampleMarker::PROTOCOL_NAME, ClientEnd::new(p))?;
     ServiceProviderRequestStream::from_channel(chan)
         .map_err(Into::into)
         .try_for_each_concurrent(

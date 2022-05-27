@@ -9,7 +9,10 @@
 use {
     super::Overnet,
     anyhow::{Context as _, Error},
-    fidl::endpoints::{ClientEnd, ProtocolMarker, RequestStream, ServerEnd},
+    fidl::{
+        endpoints::{ClientEnd, ServerEnd},
+        prelude::*,
+    },
     fidl_fuchsia_overnet::{
         Peer, ServiceConsumerProxyInterface, ServiceProviderRequest, ServiceProviderRequestStream,
         ServicePublisherProxyInterface,
@@ -157,7 +160,7 @@ fn has_peer_conscript(peers: &[Peer], peer_id: NodeId) -> bool {
                 .as_ref()
                 .unwrap()
                 .iter()
-                .find(|name| *name == triangle::ConscriptMarker::NAME)
+                .find(|name| *name == triangle::ConscriptMarker::PROTOCOL_NAME)
                 .is_some()
     };
     peers.iter().find(|p| is_peer_ready(p)).is_some()
@@ -168,7 +171,8 @@ fn connect_peer(
     node_id: NodeId,
 ) -> Result<triangle::ConscriptProxy, Error> {
     let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
-    svc.connect_to_service(&mut node_id.into(), triangle::ConscriptMarker::NAME, s).unwrap();
+    svc.connect_to_service(&mut node_id.into(), triangle::ConscriptMarker::PROTOCOL_NAME, s)
+        .unwrap();
     let proxy = fidl::AsyncChannel::from_channel(p).context("failed to make async channel")?;
     Ok(triangle::ConscriptProxy::new(proxy))
 }
@@ -246,7 +250,7 @@ async fn exec_conscript<
     let node_id = overnet.node_id();
     overnet
         .connect_as_service_publisher()?
-        .publish_service(triangle::ConscriptMarker::NAME, ClientEnd::new(p))?;
+        .publish_service(triangle::ConscriptMarker::PROTOCOL_NAME, ClientEnd::new(p))?;
     ServiceProviderRequestStream::from_channel(chan)
         .map_err(Into::into)
         .try_for_each_concurrent(None, |req| {

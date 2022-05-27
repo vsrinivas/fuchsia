@@ -23,7 +23,7 @@ use {
     cm_task_scope::TaskScope,
     cm_util::{channel, io::clone_dir},
     config_encoder::ConfigFields,
-    fidl::endpoints::{ProtocolMarker, ServerEnd},
+    fidl::{endpoints::ServerEnd, prelude::*},
     fidl_fuchsia_io as fio,
     fidl_fuchsia_sys2::LifecycleControllerMarker,
     fuchsia_zircon as zx,
@@ -392,9 +392,10 @@ impl Hub {
     ) -> Result<(), ModelError> {
         let mut debug_dir = pfs::simple();
 
-        let lifecycle_controller_path =
-            CapabilityPath::try_from(format!("/{}", LifecycleControllerMarker::NAME).as_str())
-                .unwrap();
+        let lifecycle_controller_path = CapabilityPath::try_from(
+            format!("/{}", LifecycleControllerMarker::PROTOCOL_NAME).as_str(),
+        )
+        .unwrap();
         let capabilities = vec![DirTreeCapability::new(
             lifecycle_controller_path,
             Box::new(

@@ -7,7 +7,7 @@ use {
     anyhow::{anyhow, Error},
     async_trait::async_trait,
     cm_logger::{fmt::FmtArgsLogger, scoped::ScopedLogger},
-    fidl::endpoints::ProtocolMarker,
+    fidl::prelude::*,
     fidl_fuchsia_logger::LogSinkMarker,
     fidl_fuchsia_process as fproc, fuchsia_async as fasync,
     fuchsia_runtime::{HandleInfo, HandleType},
@@ -22,7 +22,7 @@ use {
 const STDOUT_FD: i32 = 1;
 const STDERR_FD: i32 = 2;
 const SVC_DIRECTORY_NAME: &str = "/svc";
-const SYSLOG_PROTOCOL_NAME: &str = LogSinkMarker::NAME;
+const SYSLOG_PROTOCOL_NAME: &str = LogSinkMarker::PROTOCOL_NAME;
 const NEWLINE: u8 = b'\n';
 
 /// Max size for message when draining input stream socket. This number is

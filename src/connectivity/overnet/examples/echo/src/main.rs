@@ -5,7 +5,7 @@
 use {
     anyhow::{Context as _, Error},
     argh::FromArgs,
-    fidl::endpoints::{ClientEnd, ProtocolMarker, RequestStream},
+    fidl::{endpoints::ClientEnd, prelude::*},
     fidl_fuchsia_overnet::{ServiceProviderRequest, ServiceProviderRequestStream},
     fidl_test_placeholders as echo,
     futures::prelude::*,
@@ -59,7 +59,7 @@ async fn exec_client(text: Option<String>) -> Result<(), Error> {
                 .services
                 .unwrap()
                 .iter()
-                .find(|name| *name == echo::EchoMarker::NAME)
+                .find(|name| *name == echo::EchoMarker::PROTOCOL_NAME)
                 .is_none()
             {
                 continue;
@@ -68,7 +68,8 @@ async fn exec_client(text: Option<String>) -> Result<(), Error> {
             log::info!("Trying peer: {:?}", peer.id);
 
             let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
-            if let Err(e) = svc.connect_to_service(&mut peer.id, echo::EchoMarker::NAME, s) {
+            if let Err(e) = svc.connect_to_service(&mut peer.id, echo::EchoMarker::PROTOCOL_NAME, s)
+            {
                 log::info!("{:?}", e);
                 continue;
             }
@@ -116,7 +117,7 @@ async fn echo_server(chan: fidl::AsyncChannel, quiet: bool) -> Result<(), Error>
 async fn exec_server(quiet: bool) -> Result<(), Error> {
     let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
     let chan = fidl::AsyncChannel::from_channel(s).context("failed to make async channel")?;
-    hoist().publish_service(echo::EchoMarker::NAME, ClientEnd::new(p))?;
+    hoist().publish_service(echo::EchoMarker::PROTOCOL_NAME, ClientEnd::new(p))?;
     ServiceProviderRequestStream::from_channel(chan)
         .map_err(Into::into)
         .try_for_each_concurrent(

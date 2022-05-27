@@ -5,7 +5,10 @@
 use {
     anyhow::{Context as _, Error},
     clap::{App, Arg, SubCommand},
-    fidl::endpoints::{ClientEnd, ProtocolMarker, RequestStream, ServerEnd},
+    fidl::{
+        endpoints::{ClientEnd, ServerEnd},
+        prelude::*,
+    },
     fidl_fuchsia_overnet::{ServiceProviderRequest, ServiceProviderRequestStream},
     fidl_fuchsia_overnet_examples_interfacepassing as interfacepassing,
     fidl_test_placeholders as echo,
@@ -41,15 +44,17 @@ async fn exec_client(text: Option<&str>) -> Result<(), Error> {
                 .services
                 .unwrap()
                 .iter()
-                .find(|name| *name == interfacepassing::ExampleMarker::NAME)
+                .find(|name| *name == interfacepassing::ExampleMarker::PROTOCOL_NAME)
                 .is_none()
             {
                 continue;
             }
             let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
-            if let Err(e) =
-                svc.connect_to_service(&mut peer.id, interfacepassing::ExampleMarker::NAME, s)
-            {
+            if let Err(e) = svc.connect_to_service(
+                &mut peer.id,
+                interfacepassing::ExampleMarker::PROTOCOL_NAME,
+                s,
+            ) {
                 println!("{:?}", e);
                 continue;
             }
@@ -112,7 +117,7 @@ async fn example_server(chan: fidl::AsyncChannel, quiet: bool) -> Result<(), Err
 async fn exec_server(quiet: bool) -> Result<(), Error> {
     let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
     let chan = fidl::AsyncChannel::from_channel(s).context("failed to make async channel")?;
-    hoist().publish_service(interfacepassing::ExampleMarker::NAME, ClientEnd::new(p))?;
+    hoist().publish_service(interfacepassing::ExampleMarker::PROTOCOL_NAME, ClientEnd::new(p))?;
     ServiceProviderRequestStream::from_channel(chan)
         .map_err(Into::into)
         .try_for_each_concurrent(

@@ -6,7 +6,8 @@ use crate::{
     events::error::{EventError, MonikerError},
     identity::ComponentIdentity,
 };
-use fidl::endpoints::{ProtocolMarker, ServerEnd};
+use fidl::endpoints::ServerEnd;
+use fidl::prelude::*;
 use fidl_fuchsia_io as fio;
 use fidl_fuchsia_logger as flogger;
 use fidl_fuchsia_sys2 as fsys;
@@ -416,10 +417,10 @@ impl TryFrom<fsys::Event> for Event {
                         let name =
                             capability_requested.name.ok_or(EventError::MissingField("name"))?;
 
-                        if name != flogger::LogSinkMarker::NAME {
+                        if name != flogger::LogSinkMarker::PROTOCOL_NAME {
                             return Err(EventError::IncorrectName {
                                 received: name,
-                                expected: flogger::LogSinkMarker::NAME,
+                                expected: flogger::LogSinkMarker::PROTOCOL_NAME,
                             });
                         }
                         let capability = capability_requested

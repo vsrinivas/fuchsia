@@ -4,7 +4,7 @@
 
 use {
     anyhow::{Context as _, Error},
-    fidl::endpoints::ProtocolMarker,
+    fidl::prelude::*,
     fidl_fuchsia_overnet_protocol::{DiagnosticMarker, DiagnosticProxy, NodeId, ProbeResult},
     hoist::{hoist, OvernetInstance},
 };
@@ -15,7 +15,7 @@ pub async fn probe_node(mut node_id: NodeId, probe_bits: Selector) -> Result<Pro
     let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
     hoist().connect_as_service_consumer()?.connect_to_service(
         &mut node_id,
-        DiagnosticMarker::NAME,
+        DiagnosticMarker::PROTOCOL_NAME,
         s,
     )?;
     Ok(DiagnosticProxy::new(

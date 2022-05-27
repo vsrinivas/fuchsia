@@ -16,7 +16,10 @@ use {
     cm_rust::CapabilityName,
     cm_task_scope::TaskScope,
     cm_util::channel,
-    fidl::endpoints::{ClientEnd, ProtocolMarker, ServerEnd},
+    fidl::{
+        endpoints::{ClientEnd, ServerEnd},
+        prelude::*,
+    },
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
     fuchsia_async as fasync, fuchsia_zircon as zx,
     fuchsia_zircon::sys::ZX_CHANNEL_MAX_MSG_BYTES,
@@ -34,7 +37,7 @@ use {
 
 lazy_static! {
     pub static ref REALM_EXPLORER_CAPABILITY_NAME: CapabilityName =
-        fsys::RealmExplorerMarker::NAME.into();
+        fsys::RealmExplorerMarker::PROTOCOL_NAME.into();
 }
 
 // Number of bytes the header of a vector occupies in a fidl message.

@@ -4,7 +4,7 @@
 
 use {
     anyhow::Error,
-    fidl::endpoints::{create_proxy, ProtocolMarker},
+    fidl::{endpoints::create_proxy, prelude::*},
     fidl_fuchsia_device_manager as fdevicemanager,
     fidl_fuchsia_hardware_power_statecontrol as fstatecontrol, fidl_fuchsia_io as fio,
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
@@ -85,7 +85,7 @@ async fn run_statecontrol_admin(
     send_signals: mpsc::UnboundedSender<Signal>,
     mut stream: fstatecontrol::AdminRequestStream,
 ) {
-    fx_log_info!("new connection to {}", fstatecontrol::AdminMarker::NAME);
+    fx_log_info!("new connection to {}", fstatecontrol::AdminMarker::PROTOCOL_NAME);
     async move {
         match stream.try_next().await? {
             Some(fstatecontrol::AdminRequest::PowerFullyOn { responder }) => {
@@ -129,7 +129,7 @@ async fn run_statecontrol_admin(
     .unwrap_or_else(|e: anyhow::Error| {
         // Note: the shim checks liveness by writing garbage data on its first connection and
         // observing PEER_CLOSED, so we're expecting this warning to happen once.
-        fx_log_warn!("couldn't run {}: {:?}", fstatecontrol::AdminMarker::NAME, e);
+        fx_log_warn!("couldn't run {}: {:?}", fstatecontrol::AdminMarker::PROTOCOL_NAME, e);
     })
     .await
 }
@@ -138,7 +138,10 @@ async fn run_device_manager_system_state_transition(
     send_signals: mpsc::UnboundedSender<Signal>,
     mut stream: fdevicemanager::SystemStateTransitionRequestStream,
 ) {
-    fx_log_info!("new connection to {}", fdevicemanager::SystemStateTransitionMarker::NAME);
+    fx_log_info!(
+        "new connection to {}",
+        fdevicemanager::SystemStateTransitionMarker::PROTOCOL_NAME
+    );
     async move {
         match stream.try_next().await? {
             Some(fdevicemanager::SystemStateTransitionRequest::SetTerminationSystemState {
@@ -160,7 +163,11 @@ async fn run_device_manager_system_state_transition(
         Ok(())
     }
     .unwrap_or_else(|e: anyhow::Error| {
-        panic!("couldn't run {}: {:?}", fdevicemanager::SystemStateTransitionMarker::NAME, e);
+        panic!(
+            "couldn't run {}: {:?}",
+            fdevicemanager::SystemStateTransitionMarker::PROTOCOL_NAME,
+            e
+        );
     })
     .await
 }
@@ -169,7 +176,7 @@ async fn run_sys2_system_controller(
     send_signals: mpsc::UnboundedSender<Signal>,
     mut stream: fsys::SystemControllerRequestStream,
 ) {
-    fx_log_info!("new connection to {}", fsys::SystemControllerMarker::NAME);
+    fx_log_info!("new connection to {}", fsys::SystemControllerMarker::PROTOCOL_NAME);
     async move {
         match stream.try_next().await? {
             Some(fsys::SystemControllerRequest::Shutdown { responder }) => {
@@ -183,7 +190,7 @@ async fn run_sys2_system_controller(
         Ok(())
     }
     .unwrap_or_else(|e: anyhow::Error| {
-        panic!("couldn't run {}: {:?}", fsys::SystemControllerMarker::NAME, e);
+        panic!("couldn't run {}: {:?}", fsys::SystemControllerMarker::PROTOCOL_NAME, e);
     })
     .await
 }

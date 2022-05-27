@@ -16,7 +16,7 @@ use {
     },
     diagnostics_data::LogsData,
     diagnostics_hierarchy::InspectHierarchyMatcher,
-    fidl::endpoints::ProtocolMarker,
+    fidl::prelude::*,
     fidl_fuchsia_diagnostics::{self, ArchiveAccessorMarker, Selector, StreamMode},
     fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceObj},
@@ -123,7 +123,7 @@ impl Pipeline {
             has_config: false,
             name: "all",
             empty_behavior: configs::EmptyBehavior::Disable,
-            protocol_name: ArchiveAccessorMarker::NAME,
+            protocol_name: ArchiveAccessorMarker::PROTOCOL_NAME,
             redactor: Redactor::noop(),
             moniker_rewriter: None,
         };
