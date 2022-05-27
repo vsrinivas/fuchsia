@@ -74,7 +74,7 @@ zx_status_t SimpleAudioStream::CreateInternal() {
     ScopedToken t(domain_token());
     res = Init();
     if (res != ZX_OK) {
-      zxlogf(ERROR, "Init failure (res %d)", res);
+      zxlogf(ERROR, "Failed during initialization (err %d)", res);
       return res;
     }
     // If no subclass has set this, we need to do so here.
@@ -89,7 +89,7 @@ zx_status_t SimpleAudioStream::CreateInternal() {
 
   res = PublishInternal();
   if (res != ZX_OK) {
-    zxlogf(ERROR, "Publish failure (res %d)", res);
+    zxlogf(ERROR, "Failed during publishing (err %d)", res);
     return res;
   }
 
@@ -208,6 +208,7 @@ void SimpleAudioStream::DdkSuspend(ddk::SuspendTxn txn) {
 void SimpleAudioStream::Connect(ConnectRequestView request, ConnectCompleter::Sync& completer) {
   fbl::AutoLock channel_lock(&channel_lock_);
   if (shutting_down_) {
+    zxlogf(ERROR, "Can't retrieve the stream channel -- we are closing");
     return completer.Close(ZX_ERR_BAD_STATE);
   }
 
@@ -248,12 +249,14 @@ void SimpleAudioStream::DeactivateStreamChannel(StreamChannel* channel) {
 
   // Any pending LLCPP completer must be either replied to or closed before we destroy it.
   if (channel->plug_completer_.has_value()) {
+    zxlogf(ERROR, "Plug completer is still open when deactivating stream channel");
     channel->plug_completer_->Close(ZX_ERR_INTERNAL);
   }
   channel->plug_completer_.reset();
 
   // Any pending LLCPP completer must be either replied to or closed before we destroy it.
   if (channel->gain_completer_.has_value()) {
+    zxlogf(ERROR, "Gain completer is still open when deactivating stream channel");
     channel->gain_completer_->Close(ZX_ERR_INTERNAL);
   }
   channel->gain_completer_.reset();
@@ -274,6 +277,7 @@ void SimpleAudioStream::DeactivateRingBufferChannel(const Channel* channel) {
       fbl::AutoLock position_lock(&position_lock_);
       // Any pending LLCPP completer must be either replied to or closed before we destroy it.
       if (position_completer_.has_value()) {
+        zxlogf(ERROR, "Position completer is still open when deactivating ring buffer channel");
         position_completer_->Close(ZX_ERR_INTERNAL);
       }
       position_completer_.reset();
@@ -317,7 +321,7 @@ void SimpleAudioStream::CreateRingBuffer(
   if (pcm_format.sample_format == audio_fidl::wire::SampleFormat::kPcmFloat) {
     sample_format = AUDIO_SAMPLE_FORMAT_32BIT_FLOAT;
     if (pcm_format.valid_bits_per_sample != 32 || pcm_format.bytes_per_sample != 4) {
-      zxlogf(ERROR, "Unsupported format: Not 32 per sample/channel for float\n");
+      zxlogf(ERROR, "Unsupported format: float format must be 4 byte, 32 valid-bits\n");
       completer.Close(ZX_ERR_INVALID_ARGS);
       return;
     }
@@ -371,7 +375,7 @@ void SimpleAudioStream::CreateRingBuffer(
   // Actually attempt to change the format.
   auto result = ChangeFormat(req);
   if (result != ZX_OK) {
-    zxlogf(ERROR, "Could not ChangeFormat");
+    zxlogf(ERROR, "Failed to change the format");
     completer.Close(ZX_ERR_INVALID_ARGS);
     return;
   }
@@ -391,6 +395,7 @@ void SimpleAudioStream::CreateRingBuffer(
   {
     fbl::AutoLock channel_lock(&channel_lock_);
     if (shutting_down_) {
+      zxlogf(ERROR, "Already shutting down when trying to create ring buffer");
       return completer.Close(ZX_ERR_BAD_STATE);
     }
 
@@ -522,6 +527,7 @@ void SimpleAudioStream::SetActiveChannels(SetActiveChannelsRequestView request,
   ScopedToken t(domain_token());
   zx_status_t status = ChangeActiveChannels(request->active_channels_bitmask);
   if (status != ZX_OK) {
+    zxlogf(ERROR, "Error while setting the active channels");
     completer.ReplyError(status);
     return;
   }
@@ -688,7 +694,7 @@ void SimpleAudioStream::GetVmo(GetVmoRequestView request, GetVmoCompleter::Sync&
   frames_requested_.Set(request->min_frames);
 
   if (rb_started_) {
-    zxlogf(ERROR, "Cannot call GetVmo while started");
+    zxlogf(ERROR, "Cannot retrieve the buffer if already started");
     completer.ReplyError(audio_fidl::wire::GetVmoError::kInternalError);
     return;
   }
@@ -702,7 +708,7 @@ void SimpleAudioStream::GetVmo(GetVmoRequestView request, GetVmoCompleter::Sync&
   auto status = GetBuffer(req, &num_ring_buffer_frames, &buffer);
   if (status != ZX_OK) {
     expected_notifications_per_ring_.store(0);
-    zxlogf(ERROR, "GetBuffer failed (err %u)", status);
+    zxlogf(ERROR, "Failed to retrieve the buffer (err %u)", status);
     completer.ReplyError(audio_fidl::wire::GetVmoError::kInternalError);
     return;
   }
@@ -711,7 +717,7 @@ void SimpleAudioStream::GetVmo(GetVmoRequestView request, GetVmoCompleter::Sync&
   status = buffer.get_size(&size);
   if (status != ZX_OK) {
     expected_notifications_per_ring_.store(0);
-    zxlogf(ERROR, "vmo::get_size failed (err %u)", status);
+    zxlogf(ERROR, "Failed to get the size of the VMO (err %u)", status);
     completer.ReplyError(audio_fidl::wire::GetVmoError::kInternalError);
     return;
   }
@@ -724,12 +730,12 @@ void SimpleAudioStream::Start(StartRequestView request, StartCompleter::Sync& co
   ScopedToken t(domain_token());
 
   if (!rb_vmo_fetched_) {
-    zxlogf(ERROR, "Cannot call Start before GetVmo");
+    zxlogf(ERROR, "Cannot start the ring buffer before retrieving the VMO");
     completer.Close(ZX_ERR_BAD_STATE);
     return;
   }
   if (rb_started_) {
-    zxlogf(ERROR, "Cannot call Start when already started");
+    zxlogf(ERROR, "Cannot start the ring buffer if already started");
     completer.Close(ZX_ERR_BAD_STATE);
     return;
   }
@@ -748,7 +754,7 @@ void SimpleAudioStream::Stop(StopRequestView request, StopCompleter::Sync& compl
   ScopedToken t(domain_token());
 
   if (!rb_vmo_fetched_) {
-    zxlogf(ERROR, "Cannot call Stop before GetVmo");
+    zxlogf(ERROR, "Cannot stop the ring buffer before retrieving the VMO");
     completer.Close(ZX_ERR_BAD_STATE);
     return;
   }
