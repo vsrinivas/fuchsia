@@ -20,20 +20,19 @@ use {
     std::io::Write,
     std::path::PathBuf,
     std::time::Duration,
-    test_list::TestTag,
 };
 
 mod cancel;
 pub mod diagnostics;
 mod outcome;
 pub mod output;
+mod params;
 mod stream_util;
 mod trace;
 
 /// Timeout for draining logs.
 const LOG_TIMEOUT_DURATION: Duration = Duration::from_secs(10);
 
-pub use outcome::{Outcome, RunTestSuiteError, UnexpectedEventError};
 use {
     cancel::{Cancelled, NamedFutureExt, OrCancel},
     output::{
@@ -42,51 +41,10 @@ use {
     stream_util::StreamUtil,
     trace::duration,
 };
-
-/// Parameters that specify how a single test suite should be executed.
-#[derive(Clone, Debug, PartialEq, Default)]
-pub struct TestParams {
-    /// Test URL.
-    pub test_url: String,
-
-    /// |timeout_seconds|: Test timeout. Should be more than zero.
-    pub timeout_seconds: Option<std::num::NonZeroU32>,
-
-    /// Filter tests based on glob pattern(s).
-    pub test_filters: Option<Vec<String>>,
-
-    // Run disabled tests.
-    pub also_run_disabled_tests: bool,
-
-    /// Test concurrency count.
-    pub parallel: Option<u16>,
-
-    /// Arguments to pass to test using command line.
-    pub test_args: Vec<String>,
-
-    /// Maximum allowable log severity for the test.
-    pub max_severity_logs: Option<Severity>,
-
-    /// List of tags to associate with this test's output.
-    pub tags: Vec<TestTag>,
-}
-
-/// Parameters that specify how the overall test run should be executed.
-pub struct RunParams {
-    /// The behavior of the test run if a suite times out.
-    pub timeout_behavior: TimeoutBehavior,
-
-    /// If set, stop executing tests after this number of normal test failures occur.
-    pub stop_after_failures: Option<std::num::NonZeroU32>,
-}
-
-/// Sets the behavior of the overall run if a suite terminates with a timeout.
-pub enum TimeoutBehavior {
-    /// Immediately terminate any suites that haven't started.
-    TerminateRemaining,
-    /// Continue executing any suites that haven't finished.
-    Continue,
-}
+pub use {
+    outcome::{Outcome, RunTestSuiteError, UnexpectedEventError},
+    params::{RunParams, TestParams, TimeoutBehavior},
+};
 
 /// Collects results and artifacts for a single suite.
 // TODO(satsukiu): There's two ways to return an error here:
@@ -573,13 +531,14 @@ async fn run_tests<'a, F: 'a + Future<Output = ()> + Unpin>(
             }
             None => None,
         };
-        let run_options = SuiteRunOptions {
+        let run_options = fidl_fuchsia_test_manager::RunOptions {
             parallel: params.parallel,
             arguments: Some(params.test_args),
             run_disabled_tests: Some(params.also_run_disabled_tests),
             timeout,
-            test_filters: params.test_filters,
+            case_filters_to_run: params.test_filters,
             log_iterator: Some(diagnostics::get_type()),
+            ..fidl_fuchsia_test_manager::RunOptions::EMPTY
         };
 
         let suite_id = SuiteId(suite_id_raw as u32);
@@ -594,7 +553,7 @@ async fn run_tests<'a, F: 'a + Future<Output = ()> + Unpin>(
         )
         .map(move |running_suite| (running_suite, suite_id));
         suite_start_futs.push(suite_and_id_fut);
-        builder_proxy.add_suite(&params.test_url, run_options.into(), suite_server_end)?;
+        builder_proxy.add_suite(&params.test_url, run_options, suite_server_end)?;
     }
     let (run_controller, run_server_end) = fidl::endpoints::create_proxy()?;
     let run_controller_ref = &run_controller;
@@ -929,45 +888,6 @@ pub async fn run_tests_and_get_outcome<F: Future<Output = ()>>(
     }
 
     test_outcome
-}
-
-/// Options that apply when executing a test suite.
-///
-/// For the FIDL equivalent, see [`fidl_fuchsia_test::RunOptions`].
-#[derive(Debug, Clone, Default, Eq, PartialEq)]
-pub struct SuiteRunOptions {
-    /// How to handle tests that were marked disabled/ignored by the developer.
-    pub run_disabled_tests: Option<bool>,
-
-    /// Number of test cases to run in parallel.
-    pub parallel: Option<u16>,
-
-    /// Arguments passed to tests.
-    pub arguments: Option<Vec<String>>,
-
-    /// suite timeout
-    pub timeout: Option<i64>,
-
-    /// Test cases to filter and run.
-    pub test_filters: Option<Vec<String>>,
-
-    /// Type of log iterator
-    pub log_iterator: Option<ftest_manager::LogsIteratorOption>,
-}
-
-impl From<SuiteRunOptions> for fidl_fuchsia_test_manager::RunOptions {
-    fn from(test_run_options: SuiteRunOptions) -> Self {
-        // Note: This will *not* break if new members are added to the FIDL table.
-        fidl_fuchsia_test_manager::RunOptions {
-            parallel: test_run_options.parallel,
-            arguments: test_run_options.arguments,
-            run_disabled_tests: test_run_options.run_disabled_tests,
-            timeout: test_run_options.timeout,
-            case_filters_to_run: test_run_options.test_filters,
-            log_iterator: test_run_options.log_iterator,
-            ..fidl_fuchsia_test_manager::RunOptions::EMPTY
-        }
-    }
 }
 
 #[cfg(test)]
