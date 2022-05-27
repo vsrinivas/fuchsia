@@ -72,7 +72,7 @@ class AuthService {
         if (metadata.name != null &&
             _shouldRemoveAccountWithName(metadata.name!, currentAuthMode)) {
           try {
-            await _accountManager.removeAccount2(id);
+            await _accountManager.removeAccount(id);
             ids.remove(id);
             log.info('Removed account: $id with name: ${metadata.name}');
             // ignore: avoid_catches_without_on_clauses
