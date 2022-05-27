@@ -76,7 +76,7 @@ you can expect to find along the way:
     <td><code>boards</code></td>
     <td>
       Contains all the default <a
-      href="/docs/development/build/concepts/build_system/boards_and_products.md">board
+      href="/docs/development/build/build_system/boards_and_products.md">board
       configurations</a> supported and maintained by the Fuchsia team.
     </td>
   </tr>
@@ -84,7 +84,7 @@ you can expect to find along the way:
     <td><code>build</code></td>
     <td>
       Shared configurations and default templates for the <a
-      href="/docs/development/build/concepts/build_system/index.md">Fuchsia
+      href="/docs/development/build/build_system/index.md">Fuchsia
       build system</a>.
     </td>
   </tr>
@@ -93,7 +93,7 @@ you can expect to find along the way:
     <td>
       Top-level groupings of build target labels typically included together in
       a build configuration. See <a
-      href="/docs/development/build/concepts/build_system/bundles.md">Bundles</a>
+      href="/docs/development/build/build_system/bundles.md">Bundles</a>
       for more details.
     </td>
   </tr>
@@ -115,7 +115,7 @@ you can expect to find along the way:
     <td><code>products</code></td>
     <td>
       Contains all the default <a
-      href="/docs/development/build/concepts/build_system/boards_and_products.md">product
+      href="/docs/development/build/build_system/boards_and_products.md">product
       configurations</a> supported and maintained by the Fuchsia team.
     </td>
   </tr>

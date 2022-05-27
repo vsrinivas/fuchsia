@@ -784,7 +784,7 @@ Additionally, there have been a few projects that combine AFL with qemu:
 [115]: #afl_with_qemu
 
 [2xx]: # "2xx links refer to other Fuchsia documentation."
-[201]: /docs/development/build/concepts/build_system/variants.md
+[201]: /docs/development/build/build_system/variants.md
 [202]: /docs/concepts/components/v2/component_manifests.md#include
 [203]: /docs/concepts/components/v2/realms.md
 [204]: /docs/concepts/components/v2/topology.md
@@ -847,5 +847,3 @@ Additionally, there have been a few projects that combine AFL with qemu:
 [406]: resources/0117_component_fuzzing/single-service.png
 [407]: resources/0117_component_fuzzing/taxonomy.png
 [408]: resources/0117_component_fuzzing/topology.png
-
-

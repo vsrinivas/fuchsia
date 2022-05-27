@@ -11,7 +11,7 @@ operating system.
  - [fx workflows](build/fx.md)
  - [Pushing a package](/docs/concepts/packages/package_update.md)
  - [Working across different petals](source_code/working_across_petals.md)
- - [Build system](/docs/development/build/concepts/build_system/index.md)
+ - [Build system](/docs/development/build/build_system/index.md)
  - [Workflow tips and FAQ](source_code/workflow_tips_and_faq.md)
  - [Testing FAQ](testing/faq.md)
 

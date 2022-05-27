@@ -22,7 +22,7 @@ For more information on configuring the emulator
 see, [Start the Fuchsia emulator](/docs/get-started/set_up_femu.md).
 
 Your device must be running a `core`
-[product configuration](/docs/development/build/concepts/build_system/boards_and_products.md)
+[product configuration](/docs/development/build/build_system/boards_and_products.md)
 or a product configuration that extends `core` (such as `workstation`).
 
 Optionally, you can run `ffx log`, which will provide some additional information
@@ -266,7 +266,7 @@ CML components are run with the `ffx component run` subcommand. These components
 destroyed when they stop.
 
 Note: `fx serve` must be running in order to run a package that is not
-[in base or cached](/docs/development/build/concepts/build_system/boards_and_products.md#dependency_sets).
+[in base or cached](/docs/development/build/build_system/boards_and_products.md#dependency_sets).
 
 Here's an example of running the Rust hello-world component. First, you'll need
 the hello-world package in your universe:
@@ -297,7 +297,7 @@ CMX components are run with the `ffx component run-legacy` subcommand. `stdout` 
 be streamed to the corresponding descriptor on the host terminal.
 
 Note: `fx serve` must be running in order to run a package that is not
-[in base or cached](/docs/development/build/concepts/build_system/boards_and_products.md#dependency_sets).
+[in base or cached](/docs/development/build/build_system/boards_and_products.md#dependency_sets).
 
 Here's an example of running the Dart hello-world component. First, you'll need
 the hello-world package in your universe:

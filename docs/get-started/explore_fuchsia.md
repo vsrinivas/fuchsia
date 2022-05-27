@@ -75,7 +75,7 @@ check out the following resources:
 *   [Workflow tips and questions](/docs/development/source_code/workflow_tips_and_faq.md)
 *   [Configure editors](/docs/development/editors/)
 *   [Source code layout](/docs/development/source_code/layout.md)
-*   [Build system](/docs/development/build/concepts/build_system/index.md)
+*   [Build system](/docs/development/build/build_system/index.md)
 
 <!-- Reference links -->
 
@@ -88,4 +88,3 @@ check out the following resources:
 [run-fuchsia-tests]: /docs/development/testing/run_fuchsia_tests.md
 [scenic]: /docs/concepts/ui/scenic/index.md
 [contribute-changes]: /docs/development/source_code/contribute_changes.md
-
