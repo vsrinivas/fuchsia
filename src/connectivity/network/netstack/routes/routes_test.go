@@ -130,11 +130,13 @@ func TestSortingLess(t *testing.T) {
 		prf1    routes.Preference
 		metric1 routes.Metric
 		nic1    tcpip.NICID
+		gw1     string
 
 		subnet2 string
 		prf2    routes.Preference
 		metric2 routes.Metric
 		nic2    tcpip.NICID
+		gw2     string
 
 		want bool
 	}{
@@ -158,6 +160,16 @@ func TestSortingLess(t *testing.T) {
 		{subnet1: "2511:5f32:4:6:124::2:12/128", metric1: 100, nic1: 1, subnet2: "2605:32::12/127", metric2: 100, nic2: 1, want: true},
 		{subnet1: "fe80:ffff:0:1234:5:6::/96", metric1: 100, nic1: 2, subnet2: "2511:5f32:4:6:124::/90", metric2: 100, nic2: 1, want: true},
 		{subnet1: "2511:5f32:4:6:124::2:1/128", metric1: 100, nic1: 1, subnet2: "::1/120", metric2: 100, nic2: 2, want: true},
+
+		// on-link wins
+		{subnet1: "100.99.2.0/23", prf1: routes.LowPreference, nic1: 1, gw1: "", subnet2: "101.99.2.0/23", prf2: routes.LowPreference, nic2: 1, gw2: "101.99.2.1", want: true},
+		{subnet1: "100.99.2.0/23", prf1: routes.LowPreference, nic1: 1, gw1: "100.99.2.1", subnet2: "101.99.2.0/23", prf2: routes.LowPreference, nic2: 1, gw2: "", want: false},
+		// on-link tie-breaker (both on/off-link), higher-preference wins
+		{subnet1: "100.99.2.0/23", prf1: routes.HighPreference, nic1: 1, gw1: "", subnet2: "101.99.2.0/23", prf2: routes.LowPreference, nic2: 1, gw2: "", want: true},
+		{subnet1: "100.99.2.0/23", prf1: routes.LowPreference, nic1: 1, gw1: "", subnet2: "101.99.2.0/23", prf2: routes.HighPreference, nic2: 1, gw2: "", want: false},
+		{subnet1: "100.99.2.0/23", prf1: routes.HighPreference, nic1: 1, gw1: "100.99.2.1", subnet2: "101.99.2.0/23", prf2: routes.LowPreference, nic2: 1, gw2: "101.99.2.1", want: true},
+		{subnet1: "100.99.2.0/23", prf1: routes.LowPreference, nic1: 1, gw1: "100.99.2.1", subnet2: "101.99.2.0/23", prf2: routes.HighPreference, nic2: 1, gw2: "101.99.2.1", want: false},
+
 		// higher preference wins
 		{subnet1: "100.99.24.12/32", prf1: routes.HighPreference, metric1: 2, nic1: 1, subnet2: "10.1.21.31/32", prf2: routes.LowPreference, metric2: 1, nic2: 1, want: true},
 		{subnet1: "100.99.24.12/32", prf1: routes.MediumPreference, metric1: 2, nic1: 1, subnet2: "10.1.21.31/32", prf2: routes.LowPreference, metric2: 1, nic2: 2, want: true},
@@ -187,8 +199,8 @@ func TestSortingLess(t *testing.T) {
 	} {
 		name := fmt.Sprintf("Test-%s@nic%d[m:%d]_<_%s@nic%d[m:%d]", tc.subnet1, tc.nic1, tc.metric1, tc.subnet2, tc.nic2, tc.metric2)
 		t.Run(name, func(t *testing.T) {
-			e1 := createExtendedRouteWithPrf(tc.nic1, tc.subnet1, "", tc.prf1, tc.metric1, true, true, true)
-			e2 := createExtendedRouteWithPrf(tc.nic2, tc.subnet2, "", tc.prf2, tc.metric2, true, true, true)
+			e1 := createExtendedRouteWithPrf(tc.nic1, tc.subnet1, tc.gw1, tc.prf1, tc.metric1, true, true, true)
+			e2 := createExtendedRouteWithPrf(tc.nic2, tc.subnet2, tc.gw2, tc.prf2, tc.metric2, true, true, true)
 			if got := routes.Less(&e1, &e2); got != tc.want {
 				t.Errorf("got Less(%s, %s) = %t, want = %t", &e1, &e2, got, tc.want)
 			}

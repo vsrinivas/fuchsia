@@ -390,6 +390,11 @@ func Less(ei, ej *ExtendedRoute) bool {
 		return riPrefix > rjPrefix
 	}
 
+	// On-link wins.
+	if riOnLink, rjOnLink := len(ri.Gateway) == 0, len(rj.Gateway) == 0; riOnLink != rjOnLink {
+		return riOnLink
+	}
+
 	// Higher preference wins.
 	if ei.Prf != ej.Prf {
 		return ei.Prf > ej.Prf
