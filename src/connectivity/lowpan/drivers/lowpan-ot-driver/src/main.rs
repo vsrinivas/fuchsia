@@ -356,7 +356,12 @@ async fn main() -> Result<(), Error> {
         // Implement an exponential backoff for restarts.
         let delay = (1 << attempt_count).min(MAX_EXPONENTIAL_BACKOFF_DELAY_SEC);
 
-        if ret.as_ref().map_err(|err| err.is::<driver::ResetRequested>()).err().unwrap_or(false) {
+        if ret
+            .as_ref()
+            .map_err(|err| err.is::<driver::ResetRequested>() || err.is::<BackboneNetworkChanged>())
+            .err()
+            .unwrap_or(false)
+        {
             // This is an expected OpenThread reset.
             fx_log_warn!("OpenThread Reset: {:?}", ret);
         } else {

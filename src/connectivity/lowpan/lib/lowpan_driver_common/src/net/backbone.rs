@@ -9,6 +9,15 @@ use {crate::prelude_internal::*, anyhow::Error, futures::stream::BoxStream};
 
 const WLAN_CLIENT_IF_PREFIX: &str = "wlan";
 
+#[derive(thiserror::Error, Debug, Eq, PartialEq)]
+pub struct BackboneNetworkChanged;
+
+impl std::fmt::Display for BackboneNetworkChanged {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Debug::fmt(self, f)
+    }
+}
+
 #[derive(Debug)]
 pub struct BackboneNetworkInterface {
     id: u64,
@@ -72,9 +81,7 @@ impl BackboneNetworkInterface {
                                 if let (Some(has_route), Some(id)) = (has_default_ipv4_route, id) {
                                     // wlan router may disabled ipv6
                                     if has_route && wlan_nicid_set.contains(&id) {
-                                        return Err(format_err!(
-                                            "Valid wlan if with default route addeed"
-                                        ));
+                                        return Err(anyhow::Error::from(BackboneNetworkChanged));
                                     }
                                 }
                             }
@@ -96,9 +103,7 @@ impl BackboneNetworkInterface {
                                 if let (Some(has_route), Some(id)) = (has_default_ipv4_route, id) {
                                     // wlan router may disabled ipv6
                                     if has_route && wlan_nicid_set.contains(&id) {
-                                        return Err(format_err!(
-                                            "Valid wlan if with default route addeed"
-                                        ));
+                                        return Err(anyhow::Error::from(BackboneNetworkChanged));
                                     }
                                 }
                             }
