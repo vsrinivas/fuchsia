@@ -1,3 +1,7 @@
+// HACK: Temporary workaround for the SiFive HiFive Unleashed which has a
+// different calculation formulas than QEMU-virt:
+// #define SIFIVE_HIFIVE_UNLEASHED_HACK
+
 // Copyright 2020 The Fuchsia Authors
 //
 // Use of this source code is governed by a MIT-style
@@ -29,10 +33,14 @@
 #include <arch/regs.h>
 #include <arch/riscv64/mp.h>
 
-// Driver for PLIC implementation for qemu riscv virt machine
+#ifdef SIFIVE_HIFIVE_UNLEASHED_HACK
+#define PLIC_HART_IDX(hart)    ((hart) ? (2 * (hart)) : ~0U)
+#define PLIC_PRIORITY(plic_base, irq)     (plic_base + 4 * (irq))
+#else
 #define PLIC_HART_IDX(hart)    ((2 * (hart)) + 1)
-
 #define PLIC_PRIORITY(plic_base, irq)     (plic_base + 4 + 4 * (irq))
+#endif
+
 #define PLIC_PENDING(plic_base, irq)      (plic_base + 0x1000 + (4 * ((irq) / 32)))
 #define PLIC_ENABLE(plic_base, irq, hart) (plic_base + 0x2000 + (0x80 * PLIC_HART_IDX(hart)) + (4 * ((irq) / 32)))
 #define PLIC_THRESHOLD(plic_base, hart)   (plic_base + 0x200000 + (0x1000 * PLIC_HART_IDX(hart)))
