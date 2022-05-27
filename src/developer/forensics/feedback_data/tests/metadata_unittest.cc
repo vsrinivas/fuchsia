@@ -166,8 +166,8 @@ class MetadataTest : public UnitTestFixture {
 
   // Get the integrity metadata for the provided annotations and attachments, check that it adheres
   // to the schema, and turn it into a json document
-  rapidjson::Document MakeJsonReport(const ::fpromise::result<feedback::Annotations>& annotations,
-                                     const ::fpromise::result<feedback::Attachments>& attachments,
+  rapidjson::Document MakeJsonReport(const feedback::Annotations& annotations,
+                                     const feedback::Attachments& attachments,
                                      const bool missing_non_platform_annotations = false) {
     FX_CHECK(metadata_);
     const auto metadata_str = metadata_->MakeMetadata(annotations, attachments, kSnapshotUuid,
@@ -204,7 +204,7 @@ TEST_F(MetadataTest, Check_AddsMissingAnnotationsOnNoAnnotations) {
 
   SetUpMetadata(annotation_allowlist, /*attachment_allowlist=*/{});
 
-  const auto metadata_json = MakeJsonReport(::fpromise::error(), ::fpromise::error());
+  const auto metadata_json = MakeJsonReport({}, {});
   HAS_MISSING_ANNOTATION(metadata_json, "annotation 1", "feedback logic error");
 }
 
@@ -215,8 +215,7 @@ TEST_F(MetadataTest, Check_AddsMissingAnnotationsOnEmptyAnnotations) {
 
   SetUpMetadata(annotation_allowlist, /*attachment_allowlist=*/{});
 
-  const auto metadata_json =
-      MakeJsonReport(::fpromise::ok<feedback::Annotations>({}), ::fpromise::error());
+  const auto metadata_json = MakeJsonReport({}, {});
   HAS_MISSING_ANNOTATION(metadata_json, "annotation 1", "feedback logic error");
 }
 
@@ -227,7 +226,7 @@ TEST_F(MetadataTest, Check_AddsMissingAttachmentsOnNoAttachments) {
 
   SetUpMetadata(/*annotation_allowlist=*/{}, attachment_allowlist);
 
-  const auto metadata_json = MakeJsonReport(::fpromise::error(), ::fpromise::error());
+  const auto metadata_json = MakeJsonReport({}, {});
   HAS_MISSING_ATTACHMENT(metadata_json, "attachment 1", "feedback logic error");
 }
 
@@ -238,8 +237,7 @@ TEST_F(MetadataTest, Check_AddsMissingAttachmentsOnEmptyAttachments) {
 
   SetUpMetadata(/*annotation_allowlist=*/{}, attachment_allowlist);
 
-  const auto metadata_json =
-      MakeJsonReport(::fpromise::error(), ::fpromise::ok<feedback::Attachments>({}));
+  const auto metadata_json = MakeJsonReport({}, {});
   HAS_MISSING_ATTACHMENT(metadata_json, "attachment 1", "feedback logic error");
 }
 
@@ -260,8 +258,7 @@ TEST_F(MetadataTest, Check_FormatAnnotationsProperly) {
 
   SetUpMetadata(annotation_allowlist, /*attachment_allowlist=*/{});
 
-  const auto metadata_json =
-      MakeJsonReport(::fpromise::ok(std::move(annotations)), ::fpromise::error());
+  const auto metadata_json = MakeJsonReport(std::move(annotations), {});
 
   ANNOTATIONS_JSON_STATE_IS(metadata_json, "partial");
 
@@ -289,8 +286,7 @@ TEST_F(MetadataTest, Check_FormatAttachmentsProperly) {
 
   SetUpMetadata(/*annotation_allowlist=*/{}, attachment_allowlist);
 
-  const auto metadata_json = MakeJsonReport(
-      ::fpromise::error(), ::fpromise::ok<feedback::Attachments>(std::move(attachments)));
+  const auto metadata_json = MakeJsonReport({}, std::move(attachments));
 
   HAS_COMPLETE_ATTACHMENT(metadata_json, "complete attachment 1");
   HAS_COMPLETE_ATTACHMENT(metadata_json, "complete attachment 2");
@@ -309,8 +305,7 @@ TEST_F(MetadataTest, Check_NonPlatformAnnotationsComplete) {
 
   SetUpMetadata(/*annotation_allowlist=*/{}, /*attachment_allowlist=*/{});
 
-  const auto metadata_json =
-      MakeJsonReport(::fpromise::ok(std::move(annotations)), ::fpromise::error());
+  const auto metadata_json = MakeJsonReport(std::move(annotations), {});
 
   HAS_PRESENT_ANNOTATION(metadata_json, "non-platform annotations");
 }
@@ -322,9 +317,8 @@ TEST_F(MetadataTest, Check_NonPlatformAnnotationsPartial) {
 
   SetUpMetadata(/*annotation_allowlist=*/{}, /*attachment_allowlist=*/{});
 
-  const auto metadata_json =
-      MakeJsonReport(::fpromise::ok(std::move(annotations)), ::fpromise::error(),
-                     /*missing_non_platform_annotations=*/true);
+  const auto metadata_json = MakeJsonReport(std::move(annotations), {},
+                                            /*missing_non_platform_annotations=*/true);
 
   HAS_MISSING_ANNOTATION(metadata_json, "non-platform annotations",
                          "too many non-platfrom annotations added");
@@ -333,7 +327,7 @@ TEST_F(MetadataTest, Check_NonPlatformAnnotationsPartial) {
 TEST_F(MetadataTest, Check_NonPlatformAnnotationsMissing) {
   SetUpMetadata(/*annotation_allowlist=*/{}, /*attachment_allowlist=*/{});
 
-  const auto metadata_json = MakeJsonReport(::fpromise::error(), ::fpromise::error(),
+  const auto metadata_json = MakeJsonReport({}, {},
                                             /*missing_non_platform_annotations=*/true);
 
   HAS_MISSING_ANNOTATION(metadata_json, "non-platform annotations",
@@ -370,10 +364,8 @@ TEST_F(MetadataTest, Check_SmokeTest) {
 
   SetUpMetadata(annotation_allowlist, attachment_allowlist);
 
-  const auto metadata_json =
-      MakeJsonReport(::fpromise::ok<feedback::Annotations>(std::move(annotations)),
-                     ::fpromise::ok<feedback::Attachments>(std::move(attachments)),
-                     /*missing_non_platform_annotations=*/true);
+  const auto metadata_json = MakeJsonReport(std::move(annotations), std::move(attachments),
+                                            /*missing_non_platform_annotations=*/true);
 
   HAS_COMPLETE_ATTACHMENT(metadata_json, "complete attachment 1");
   HAS_COMPLETE_ATTACHMENT(metadata_json, "complete attachment 2");
@@ -401,9 +393,8 @@ TEST_F(MetadataTest, Check_SmokeTest) {
 TEST_F(MetadataTest, Check_EmptySnapshot) {
   SetUpMetadata(/*annotation_allowlist=*/{}, /*attachment_allowlist=*/{});
 
-  auto metadata_str =
-      metadata_->MakeMetadata(::fpromise::error(), ::fpromise::error(), kSnapshotUuid,
-                              /*missing_non_platform_annotations=*/false);
+  auto metadata_str = metadata_->MakeMetadata({}, {}, kSnapshotUuid,
+                                              /*missing_non_platform_annotations=*/false);
 
   rapidjson::Document json;
   ASSERT_TRUE(!json.Parse(metadata_str.c_str()).HasParseError());
@@ -462,9 +453,7 @@ TEST_F(MetadataTest, Check_UtcMonotonicDifference) {
   monotonic = clock_.Now();
   ASSERT_EQ(clock_.UtcNow(&utc), ZX_OK);
 
-  const auto metadata_json =
-      MakeJsonReport(::fpromise::ok<feedback::Annotations>(std::move(annotations)),
-                     ::fpromise::ok<feedback::Attachments>(std::move(attachments)));
+  const auto metadata_json = MakeJsonReport(std::move(annotations), std::move(attachments));
 
   UTC_MONOTONIC_DIFFERENCE_IS(metadata_json, kAttachmentInspect, utc_monotonic_difference);
   UTC_MONOTONIC_DIFFERENCE_IS(metadata_json, kAttachmentLogKernel, utc_monotonic_difference);
@@ -496,9 +485,7 @@ TEST_F(MetadataTest, Check_NoUtcMontonicDifferenceAvailable) {
 
   SetUpMetadata(annotation_allowlist, attachment_allowlist);
 
-  const auto metadata_json =
-      MakeJsonReport(::fpromise::ok<feedback::Annotations>(std::move(annotations)),
-                     ::fpromise::ok<feedback::Attachments>(std::move(attachments)));
+  const auto metadata_json = MakeJsonReport(std::move(annotations), std::move(attachments));
 
   ASSERT_TRUE(metadata_json["files"].HasMember(kAttachmentAnnotations));
   ASSERT_FALSE(
@@ -544,9 +531,7 @@ TEST_F(MetadataTest, Check_NoUtcMonotonicDifferenceMissingFile) {
   monotonic = clock_.Now();
   ASSERT_EQ(clock_.UtcNow(&utc), ZX_OK);
 
-  const auto metadata_json =
-      MakeJsonReport(::fpromise::ok<feedback::Annotations>(std::move(annotations)),
-                     ::fpromise::ok<feedback::Attachments>(std::move(attachments)));
+  const auto metadata_json = MakeJsonReport(std::move(annotations), std::move(attachments));
 
   UTC_MONOTONIC_DIFFERENCE_IS(metadata_json, kAttachmentInspect, utc_monotonic_difference);
   UTC_MONOTONIC_DIFFERENCE_IS(metadata_json, kAttachmentLogKernel, utc_monotonic_difference);
@@ -684,8 +669,8 @@ TEST_P(AnnotationsJsonStateTest, Succeed) {
   const auto param = GetParam();
   SetUpMetadata(param.annotation_allowlist, /*attachment_allowlist=*/{});
 
-  const auto metadata_json = MakeJsonReport(::fpromise::ok(param.annotations), ::fpromise::error(),
-                                            param.missing_non_platform_annotations);
+  const auto metadata_json =
+      MakeJsonReport(param.annotations, {}, param.missing_non_platform_annotations);
   ANNOTATIONS_JSON_STATE_IS(metadata_json, param.state.c_str());
 }
 

@@ -113,11 +113,17 @@ void DataProvider::GetSnapshot(fuchsia::feedback::GetSnapshotParameters params,
   }
 
   const uint64_t timer_id = cobalt_->StartTimer();
+  auto join = ::fpromise::join_promises(GetAnnotations(timeout), GetAttachments(timeout));
+  using result_t = decltype(join)::value_type;
+
   auto promise =
-      ::fpromise::join_promises(GetAnnotations(timeout), GetAttachments(timeout))
-          .and_then([this, channel = std::move(channel)](
-                        std::tuple<::fpromise::result<feedback::Annotations>,
-                                   ::fpromise::result<feedback::Attachments>>& results) mutable {
+      join.and_then([this, channel = std::move(channel)](result_t& results) mutable {
+            FX_CHECK(std::get<0>(results).is_ok()) << "Impossible annotation collection failure";
+            FX_CHECK(std::get<1>(results).is_ok()) << "Impossible attachment collection failure";
+
+            const auto& annotations = std::get<0>(results).value();
+            const auto& attachments = std::get<1>(results).value();
+
             Snapshot snapshot;
             std::map<std::string, std::string> snapshot_files;
 
@@ -147,7 +153,7 @@ void DataProvider::GetSnapshot(fuchsia::feedback::GetSnapshotParameters params,
             }
 
             snapshot_files[kAttachmentMetadata] =
-                metadata_.MakeMetadata(std::get<0>(results), std::get<1>(results), uuid::Generate(),
+                metadata_.MakeMetadata(annotations, attachments, uuid::Generate(),
                                        annotation_manager_->IsMissingNonPlatformAnnotations());
 
             // We bundle the attachments into a single archive.

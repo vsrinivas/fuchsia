@@ -49,13 +49,9 @@ std::string ToString(const enum feedback::AttachmentValue::State state) {
 }
 
 // Create a complete list set of annotations from the collected annotations and the allowlist.
-feedback::Annotations AllAnnotations(
-    const std::set<std::string>& allowlist,
-    const ::fpromise::result<feedback::Annotations>& annotations_result) {
-  feedback::Annotations all_annotations;
-  if (annotations_result.is_ok()) {
-    all_annotations.insert(annotations_result.value().cbegin(), annotations_result.value().cend());
-  }
+feedback::Annotations AllAnnotations(const std::set<std::string>& allowlist,
+                                     const feedback::Annotations& annotations) {
+  feedback::Annotations all_annotations = annotations;
 
   for (const auto& key : allowlist) {
     if (all_annotations.find(key) == all_annotations.end()) {
@@ -69,25 +65,23 @@ feedback::Annotations AllAnnotations(
 }
 
 // Create a complete list set of attachments from the collected attachments and the allowlist.
-feedback::Attachments AllAttachments(
-    const feedback::AttachmentKeys& allowlist,
-    const ::fpromise::result<feedback::Attachments>& attachments_result) {
+feedback::Attachments AllAttachments(const feedback::AttachmentKeys& allowlist,
+                                     const feedback::Attachments& attachments) {
   feedback::Attachments all_attachments;
-  if (attachments_result.is_ok()) {
-    // Because attachments can contain large blobs of text and we only care about the state of the
-    // attachment and its associated error, we don't copy the value of the attachment.
-    for (const auto& [k, v] : attachments_result.value()) {
-      switch (v.State()) {
-        case feedback::AttachmentValue::State::kComplete:
-          all_attachments.insert({k, feedback::AttachmentValue("")});
-          break;
-        case feedback::AttachmentValue::State::kPartial:
-          all_attachments.insert({k, feedback::AttachmentValue("", v.Error())});
-          break;
-        case feedback::AttachmentValue::State::kMissing:
-          all_attachments.insert({k, v});
-          break;
-      }
+
+  // Because attachments can contain large blobs of text and we only care about the state of the
+  // attachment and its associated error, we don't copy the value of the attachment.
+  for (const auto& [k, v] : attachments) {
+    switch (v.State()) {
+      case feedback::AttachmentValue::State::kComplete:
+        all_attachments.insert({k, feedback::AttachmentValue("")});
+        break;
+      case feedback::AttachmentValue::State::kPartial:
+        all_attachments.insert({k, feedback::AttachmentValue("", v.Error())});
+        break;
+      case feedback::AttachmentValue::State::kMissing:
+        all_attachments.insert({k, v});
+        break;
     }
   }
 
@@ -137,8 +131,7 @@ void AddUtcMonotonicDifferences(
 }
 
 void AddAttachments(const feedback::AttachmentKeys& attachment_allowlist,
-                    const ::fpromise::result<feedback::Attachments>& attachments_result,
-                    Document* metadata_json) {
+                    const feedback::Attachments& attachments, Document* metadata_json) {
   if (attachment_allowlist.empty()) {
     return;
   }
@@ -146,7 +139,7 @@ void AddAttachments(const feedback::AttachmentKeys& attachment_allowlist,
   auto& allocator = metadata_json->GetAllocator();
   auto MakeValue = [&allocator](const std::string& v) { return Value(v, allocator); };
 
-  for (const auto& [name, v] : AllAttachments(attachment_allowlist, attachments_result)) {
+  for (const auto& [name, v] : AllAttachments(attachment_allowlist, attachments)) {
     Value file(kObjectType);
 
     file.AddMember("state", MakeValue(ToString(v.State())), allocator);
@@ -159,10 +152,9 @@ void AddAttachments(const feedback::AttachmentKeys& attachment_allowlist,
 }
 
 void AddAnnotationsJson(const std::set<std::string>& annotation_allowlist,
-                        const ::fpromise::result<feedback::Annotations>& annotations_result,
+                        const feedback::Annotations& annotations,
                         const bool missing_non_platform_annotations, Document* metadata_json) {
-  const feedback::Annotations all_annotations =
-      AllAnnotations(annotation_allowlist, annotations_result);
+  const feedback::Annotations all_annotations = AllAnnotations(annotation_allowlist, annotations);
 
   bool has_non_platform = all_annotations.size() > annotation_allowlist.size();
   if (annotation_allowlist.empty() && !(has_non_platform || missing_non_platform_annotations)) {
@@ -244,10 +236,10 @@ Metadata::Metadata(async_dispatcher_t* dispatcher, timekeeper::Clock* clock, Red
   redactor->Redact(log_redaction_canary_);
 }
 
-std::string Metadata::MakeMetadata(
-    const ::fpromise::result<feedback::Annotations>& annotations_result,
-    const ::fpromise::result<feedback::Attachments>& attachments_result,
-    const std::string& snapshot_uuid, bool missing_non_platform_annotations) {
+std::string Metadata::MakeMetadata(const feedback::Annotations& annotations,
+                                   const feedback::Attachments& attachments,
+                                   const std::string& snapshot_uuid,
+                                   bool missing_non_platform_annotations) {
   Document metadata_json(kObjectType);
   auto& allocator = metadata_json.GetAllocator();
 
@@ -268,17 +260,15 @@ std::string Metadata::MakeMetadata(
   metadata_json.AddMember("files", Value(kObjectType), allocator);
   AddLogRedactionCanary(log_redaction_canary_, &metadata_json);
 
-  const bool has_non_platform_annotations =
-      annotations_result.is_ok() &&
-      annotations_result.value().size() > annotation_allowlist_.size();
+  const bool has_non_platform_annotations = annotations.size() > annotation_allowlist_.size();
 
   if (annotation_allowlist_.empty() && attachment_allowlist_.empty() &&
       !has_non_platform_annotations && !missing_non_platform_annotations) {
     return MetadataString();
   }
 
-  AddAttachments(attachment_allowlist_, attachments_result, &metadata_json);
-  AddAnnotationsJson(annotation_allowlist_, annotations_result, missing_non_platform_annotations,
+  AddAttachments(attachment_allowlist_, attachments, &metadata_json);
+  AddAnnotationsJson(annotation_allowlist_, annotations, missing_non_platform_annotations,
                      &metadata_json);
   AddUtcMonotonicDifferences(utc_provider_.CurrentUtcMonotonicDifference(),
                              utc_provider_.PreviousBootUtcMonotonicDifference(), &metadata_json);
