@@ -319,11 +319,15 @@ bool SemanticTree::Update(TreeUpdates updates) {
       // contain this node. Note that since we support partial tree updates,
       // this logic ONLY applies in the case that a node does not exist
       // pre-commit.
-      if (nodes_.find(delete_node_id) == nodes_.end() &&
-          nodes_to_be_updated_.find(delete_node_id) != nodes_to_be_updated_.end()) {
-        nodes_to_be_updated_.erase(delete_node_id);
+      auto nodes_it = nodes_.find(delete_node_id);
+      auto nodes_to_be_updated_it = nodes_to_be_updated_.find(delete_node_id);
+      auto nodes_to_be_updated_found = nodes_to_be_updated_it != nodes_to_be_updated_.end();
+      if (nodes_it == nodes_.end() && nodes_to_be_updated_found) {
+        nodes_to_be_updated_.erase(nodes_to_be_updated_it);
+      } else if (nodes_to_be_updated_found) {
+        nodes_to_be_updated_it->second.reset();
       } else {
-        nodes_to_be_updated_[update.TakeDeleteNodeId()].reset();
+        nodes_to_be_updated_[delete_node_id].reset();
       }
     } else if (update.has_node()) {
       MarkNodeForUpdate(update.TakeNode());
