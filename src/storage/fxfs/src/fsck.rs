@@ -179,7 +179,6 @@ pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
     let mut actual = CoalescingIterator::new(allocator.iter(&mut merger, Bound::Unbounded).await?)
         .await
         .expect("filter failed");
-
     let mut expected =
         CoalescingIterator::new(fsck.allocations.seek(Bound::Unbounded).await?).await?;
     let mut expected_owner_allocated_bytes = BTreeMap::new();

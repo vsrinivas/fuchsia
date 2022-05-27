@@ -61,6 +61,7 @@ use {
     static_assertions::const_assert,
     std::{
         clone::Clone,
+        collections::HashMap,
         convert::TryFrom as _,
         ops::Bound,
         sync::{
@@ -328,6 +329,7 @@ impl Journal {
     fn update_checksum_list(
         &self,
         journal_offset: u64,
+        owner_object_id: u64,
         mutation: &Mutation,
         checksum_list: &mut ChecksumList,
     ) -> Result<(), Error> {
@@ -356,6 +358,7 @@ impl Journal {
             }) => {
                 checksum_list.push(
                     journal_offset,
+                    owner_object_id,
                     *device_offset..*device_offset + range.length()?,
                     checksums,
                 );
@@ -474,6 +477,9 @@ impl Journal {
         let mut transactions = Vec::new();
         let mut current_transaction = None;
         let mut device_flushed_offset = super_block.super_block_journal_file_offset;
+        // Maps from owner_object_id to offset at which it was deleted. Required for checksum
+        // validation.
+        let mut marked_for_deletion: HashMap<u64, u64> = HashMap::new();
         loop {
             // Cache the checkpoint before we deserialize a record.
             let checkpoint = reader.journal_file_checkpoint();
@@ -572,6 +578,17 @@ impl Journal {
                                             );
                                         }
                                     }
+                                    // If a MarkForDeletion mutation is found, we want to skip
+                                    // checksum validation of prior writes.
+                                    if let Mutation::Allocator(
+                                        AllocatorMutation::MarkForDeletion(owner_object_id),
+                                    ) = mutation
+                                    {
+                                        marked_for_deletion.insert(
+                                            *owner_object_id,
+                                            reader.journal_file_checkpoint().file_offset,
+                                        );
+                                    }
                                 }
                                 *end_offset = reader.journal_file_checkpoint().file_offset;
                             }
@@ -612,20 +629,25 @@ impl Journal {
         // Validate all the mutations.
         let mut checksum_list = ChecksumList::new(device_flushed_offset);
         let mut valid_to = reader.journal_file_checkpoint().file_offset;
-        for (checkpoint, mutations, _) in &transactions {
-            for (_object_id, mutation) in mutations {
+        'bad_replay: for (checkpoint, mutations, _) in &transactions {
+            for (object_id, mutation) in mutations {
                 if !self.validate_mutation(&mutation)? {
                     log::info!("Stopping replay at bad mutation: {:?}", mutation);
                     valid_to = checkpoint.file_offset;
-                    break;
+                    break 'bad_replay;
                 }
-                self.update_checksum_list(checkpoint.file_offset, &mutation, &mut checksum_list)?;
+                self.update_checksum_list(
+                    checkpoint.file_offset,
+                    *object_id,
+                    &mutation,
+                    &mut checksum_list,
+                )?;
             }
         }
 
         // Validate the checksums.
         let valid_to = checksum_list
-            .verify(device.as_ref(), valid_to)
+            .verify(device.as_ref(), marked_for_deletion, valid_to)
             .await
             .context("Failed to validate checksums")?;
 
