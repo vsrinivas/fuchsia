@@ -24,6 +24,10 @@ class FshostIntegrationTest : public ::testing::Test {
 
   void ResetFshost();
 
+  std::string DataFilesystemFormat() const;
+  std::string FshostComponentName() const;
+  std::string FshostComponentCollection() const;
+
   const fidl::WireSyncClient<fuchsia_io::Directory>& exposed_dir() const { return exposed_dir_; }
 
   const fidl::WireSyncClient<fuchsia_fshost::BlockWatcher>& block_watcher() const {

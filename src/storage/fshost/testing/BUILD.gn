@@ -25,7 +25,6 @@ source_set("integration_test_fixture") {
     "//src/storage/fshost:headers",
   ]
   deps = [ "//zircon/system/ulib/service:service-llcpp" ]
-  data_deps = [ ":test-fshost" ]
 }
 
 cmc_merge("test-fshost.cml") {
@@ -65,13 +64,49 @@ group("test-fshost") {
   ]
 }
 
-cmc_merge("test-fshost-no-watcher.cml") {
+cmc_merge("test-fshost-fxfs.cml") {
   sources = [
     "//src/storage/fshost/meta/base_fshost.cml",
     "//src/storage/fshost/meta/config.cml",
     "//src/storage/fshost/meta/core_fshost.cml",
     "//src/storage/fshost/meta/cpp_fshost.cml",
     "//src/storage/fshost/meta/fxfs_fshost.cml",
+  ]
+}
+
+fuchsia_component_manifest("test-fshost-fxfs-manifest") {
+  testonly = true
+  component_name = "test-fshost-fxfs"
+  manifest_outputs = get_target_outputs(":test-fshost-fxfs.cml")
+  manifest = manifest_outputs[0]
+  deps = [ ":test-fshost-fxfs.cml" ]
+}
+
+fuchsia_component("test-fshost-fxfs-comp") {
+  testonly = true
+
+  deps = [
+    "//src/security/policy/zxcrypt:null",
+    "//src/storage/fshost",
+  ]
+  cm_label = ":test-fshost-fxfs-manifest"
+}
+
+group("test-fshost-fxfs") {
+  testonly = true
+  deps = [
+    ":integration_test_config_fxfs",
+    ":test-fshost-fxfs-comp",
+  ]
+}
+
+cmc_merge("test-fshost-no-watcher.cml") {
+  sources = [
+    "//src/storage/fshost/meta/base_fshost.cml",
+    "//src/storage/fshost/meta/config.cml",
+    "//src/storage/fshost/meta/core_fshost.cml",
+    "//src/storage/fshost/meta/cpp_fshost.cml",
+    "//src/storage/fshost/meta/no_fxfs_fshost.cml",
     "//src/storage/fshost/testing/meta/no_watcher.cml",
   ]
 }
@@ -120,18 +155,22 @@ integration_test_config = {
 
   # The BlockDeviceManagerIntegration.SetPartitionName test needs this.
   allow_legacy_data_partition_names = true
-
-  # TODO(fxbug.dev/100264) For now, the integration tests only pass if the data filesystem format is
-  # minfs.
-  data_filesystem_format = ""
 }
 
 generated_fshost_config("integration_test_config") {
   component_name = "test-fshost"
   forward_variables_from(integration_test_config, "*")
+  data_filesystem_format = ""
+}
+
+generated_fshost_config("integration_test_config_fxfs") {
+  component_name = "test-fshost-fxfs"
+  forward_variables_from(integration_test_config, "*")
+  data_filesystem_format = "fxfs"
 }
 
 generated_fshost_config("integration_test_config_no_watcher") {
   component_name = "test-fshost-no-watcher"
   forward_variables_from(integration_test_config, "*")
+  data_filesystem_format = ""
 }

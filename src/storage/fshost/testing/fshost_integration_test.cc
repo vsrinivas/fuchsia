@@ -11,9 +11,14 @@
 
 namespace fshost::testing {
 
-static const char kTestFshostName[] = "test-fshost";
+#ifndef TEST_COMPONENT_NAME
+#error Need to specify TEST_COMPONENT_NAME
+#endif
+
+static const char kTestFshostName[] = TEST_COMPONENT_NAME;
 static const char kTestFshostCollection[] = "fshost-collection";
-static const char kTestFshostUrl[] = "fuchsia-pkg://fuchsia.com/fshost-tests#meta/test-fshost.cm";
+static const char kTestFshostUrl[] =
+    "fuchsia-pkg://fuchsia.com/fshost-tests#meta/" TEST_COMPONENT_NAME ".cm";
 
 static const fuchsia_component_decl::wire::ChildRef kFshostChildRef{
     .name = kTestFshostName, .collection = kTestFshostCollection};
@@ -54,6 +59,19 @@ void FshostIntegrationTest::TearDown() {
 void FshostIntegrationTest::ResetFshost() {
   TearDown();
   SetUp();
+}
+
+std::string FshostIntegrationTest::DataFilesystemFormat() const {
+  if (strlen(DATA_FILESYSTEM_FORMAT) == 0) {
+    return "minfs";
+  }
+  return DATA_FILESYSTEM_FORMAT;
+}
+
+std::string FshostIntegrationTest::FshostComponentName() const { return kTestFshostName; }
+
+std::string FshostIntegrationTest::FshostComponentCollection() const {
+  return kTestFshostCollection;
 }
 
 void FshostIntegrationTest::PauseWatcher() const {

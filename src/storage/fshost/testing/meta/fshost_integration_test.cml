@@ -8,9 +8,6 @@
         "inspect/client.shard.cml",
         "syslog/client.shard.cml",
     ],
-    program: {
-        binary: "test/fshost_integration_test",
-    },
     children: [
         {
             name: "decompressor",

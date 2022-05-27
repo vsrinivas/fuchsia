@@ -5,11 +5,11 @@
     children: [
         {
             name: "fxfs-crypt",
-            url: "fuchsia-boot:///#meta/fxfs-crypt.cm",
+            url: "#meta/fxfs-crypt.cm",
         },
         {
             name: "fxfs",
-            url: "fuchsia-boot:///#meta/fxfs.cm",
+            url: "#meta/fxfs.cm",
         },
     ],
     use: [

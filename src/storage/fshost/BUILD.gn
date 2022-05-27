@@ -278,54 +278,6 @@ fuchsia_unittest_component("fshost-inspect-test") {
   deps = [ ":fshost_inspect_test" ]
 }
 
-test("fshost_integration_test") {
-  sources = [
-    "admin-server-test.cc",
-    "block-device-manager-test.cc",
-    "block-device-test.cc",
-    "block-watcher-test.cc",
-    "filesystem-mounter-test.cc",
-    "recovery-test.cc",
-  ]
-  deps = [
-    ":block-watcher",
-    ":config",
-    ":headers",
-    ":inspect",
-    "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
-    "//sdk/fidl/fuchsia.component:fuchsia.component_llcpp",
-    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
-    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_llcpp",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp_testing",
-    "//src/developer/forensics/testing/fakes:fuchsia.feedback.testing_llcpp",
-    "//src/lib/files",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/lib/storage/fs_management",
-    "//src/lib/storage/ramdevice_client/cpp",
-    "//src/lib/testing/predicates",
-    "//src/storage/blobfs",
-    "//src/storage/fshost/testing:integration_test_fixture",
-    "//src/storage/minfs",
-    "//src/storage/testing:storage_driver_test_support",
-    "//src/sys/pkg/fidl/fuchsia.update.verify:fuchsia.update.verify_llcpp",
-    "//third_party/googletest:gmock",
-    "//zircon/system/ulib/async",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/fidl-async",
-    "//zircon/system/ulib/inspect",
-    "//zircon/system/ulib/service:service-llcpp",
-  ]
-  data_deps = [
-    "//src/storage/bin/mount",
-    "//src/storage/bin/umount",
-  ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
-}
-
 test("copier_test") {
   sources = [
     "copier.cc",
@@ -345,13 +297,130 @@ fuchsia_unittest_component("copier-test") {
   deps = [ ":copier_test" ]
 }
 
-fuchsia_component("fshost-integration-test") {
-  testonly = true
-  manifest = "testing/meta/fshost_integration_test.cml"
-  deps = [
-    ":fshost_integration_test",
-    "//src/storage/testing:storage_driver_test_realm",
-  ]
+# Generates a test component for the fshost integration tests.
+#
+#   test_component_name (required)
+#     [string] The name of the test component, e.g. "test-fshost".
+#
+#   test_component_target (required)
+#     [string] The build target for the test component, e.g. "//src/storage/fshost/testing:test-fshost".
+#
+#   data_filesystem_format
+#     [string] One of "fxfs", "minfs", or "f2fs".
+template("fshost_integration_test") {
+  assert(defined(invoker.test_component_name) &&
+             defined(invoker.test_component_target),
+         "Test component not specified")
+  _test_bin = "${target_name}-bin"
+  test(_test_bin) {
+    data_filesystem_format = invoker.data_filesystem_format
+    forward_variables_from(invoker, [ "test_component_name" ])
+    sources = [
+      "admin-server-test.cc",
+      "block-device-manager-test.cc",
+      "block-device-test.cc",
+      "block-watcher-test.cc",
+      "filesystem-mounter-test.cc",
+      "recovery-test.cc",
+      "testing/fshost_integration_test.cc",
+      "testing/fshost_integration_test.h",
+      "testing/mock-block-device.h",
+    ]
+    deps = [
+      ":block-watcher",
+      ":config",
+      ":headers",
+      "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
+      "//sdk/fidl/fuchsia.component:fuchsia.component_llcpp",
+      "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
+      "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_llcpp",
+      "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp_testing",
+      "//src/developer/forensics/testing/fakes:fuchsia.feedback.testing_llcpp",
+      "//src/lib/files",
+      "//src/lib/fxl/test:gtest_main",
+      "//src/lib/storage/fs_management",
+      "//src/lib/storage/ramdevice_client/cpp",
+      "//src/lib/storage/vfs/cpp/metrics:metrics-cobalt",
+      "//src/lib/testing/predicates",
+      "//src/storage/blobfs",
+      "//src/storage/fxfs:fxfs_component",
+      "//src/storage/fxfs-crypt",
+      "//src/storage/minfs",
+      "//src/storage/testing:storage_driver_test_support",
+      "//src/sys/pkg/fidl/fuchsia.update.verify:fuchsia.update.verify_llcpp",
+      "//third_party/googletest:gmock",
+      "//zircon/system/ulib/cobalt-client:in-memory-logger",
+      "//zircon/system/ulib/fidl-async",
+      "//zircon/system/ulib/service:service-llcpp",
+    ]
+    data_deps = [
+      "//src/storage/bin/mount",
+      "//src/storage/bin/umount",
+    ]
+
+    # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
+    # Consider switching to the C++ bindings. See linked bug for details.
+    configs += [ "//build/c:fidl-deprecated-c-bindings" ]
+    defines = [
+      "DATA_FILESYSTEM_FORMAT=\"$data_filesystem_format\"",
+      "TEST_COMPONENT_NAME=\"$test_component_name\"",
+    ]
+  }
+
+  _shard_target = "${target_name}-shard"
+  generated_file(_shard_target) {
+    testonly = true
+    contents = {
+      program = {
+        binary = "test/${_test_bin}"
+      }
+    }
+    outputs = [ "${target_out_dir}/${_shard_target}.json" ]
+    output_conversion = "json"
+    visibility = [ ":*" ]
+  }
+  _shard = get_target_outputs(":$_shard_target")
+  _shard = _shard[0]
+
+  _manifest_target = "${target_name}-manifest.cml"
+  cmc_merge("$_manifest_target") {
+    testonly = true
+    sources = [
+      "testing/meta/fshost_integration_test.cml",
+      _shard,
+    ]
+    deps = [ ":$_shard_target" ]
+  }
+  _manifest = get_target_outputs(":$_manifest_target")
+  _manifest = _manifest[0]
+
+  fuchsia_component(target_name) {
+    testonly = true
+    forward_variables_from(invoker, [ "test_component_target" ])
+    manifest = _manifest
+    deps = [
+      ":$_manifest_target",
+      ":$_test_bin",
+      "//src/storage/testing:storage_driver_test_realm",
+      test_component_target,
+    ]
+  }
+}
+
+fshost_integration_test("fshost-integration-test") {
+  test_component_name = "test-fshost"
+  test_component_target = "//src/storage/fshost/testing:test-fshost"
+
+  # Ideally these would come from the configuration of "test_component_target".
+  data_filesystem_format = "minfs"
+}
+
+fshost_integration_test("fshost-fxfs-integration-test") {
+  test_component_name = "test-fshost-fxfs"
+  test_component_target = "//src/storage/fshost/testing:test-fshost-fxfs"
+
+  # Ideally these would come from the configuration of "test_component_target".
+  data_filesystem_format = "fxfs"
 }
 
 fuchsia_test_package("fshost-tests") {
@@ -361,6 +430,7 @@ fuchsia_test_package("fshost-tests") {
     }
   }
   test_components = [
+    ":fshost-fxfs-integration-test",
     ":fshost-integration-test",
     ":fshost-test",
     ":fshost-inspect-test",
