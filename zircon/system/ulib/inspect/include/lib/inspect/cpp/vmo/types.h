@@ -590,9 +590,9 @@ class Node final {
   // also not be stored in a buffer.
   UintProperty CreateUint(BorrowedStringValue name, uint64_t value) __WARN_UNUSED_RESULT;
 
-  // Create a new |IntProperty| with the given name that is a child of this node.
+  // Create a new |UintProperty| with the given name that is a child of this node.
   // The new property lifetime will be the same as the parent node.
-  void RecordUint(BorrowedStringValue name, int64_t value);
+  void RecordUint(BorrowedStringValue name, uint64_t value);
 
   // Same as CreateUint, but emplaces the value in the given container.
   //

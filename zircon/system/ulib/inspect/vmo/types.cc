@@ -381,7 +381,7 @@ UintProperty Node::CreateUint(BorrowedStringValue name, uint64_t value) {
   return UintProperty();
 }
 
-void Node::RecordUint(BorrowedStringValue name, int64_t value) {
+void Node::RecordUint(BorrowedStringValue name, uint64_t value) {
   value_list_.emplace(CreateUint(name, value));
 }
 

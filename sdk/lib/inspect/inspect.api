@@ -10,5 +10,5 @@
   "pkg/inspect/include/lib/inspect/cpp/vmo/scanner.h": "eddde27e2cc24b722fea75cdc024a850",
   "pkg/inspect/include/lib/inspect/cpp/vmo/snapshot.h": "d1f97aaa56acc0912b1ce53bdcbdf09f",
   "pkg/inspect/include/lib/inspect/cpp/vmo/state.h": "b359dbf3751c2710daa60825ceeffab2",
-  "pkg/inspect/include/lib/inspect/cpp/vmo/types.h": "05f54b23606b75927ca110a974832064"
+  "pkg/inspect/include/lib/inspect/cpp/vmo/types.h": "4c7cb024cad06b5b1ae6c0a205ff1873"
 }
