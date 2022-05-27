@@ -478,7 +478,41 @@ It will provide you with a link to the BuildBucket page to track your build.
 You will need to run `led auth-login` prior to triggering any builds, and may need to
 file an infra ticket to request access to run led jobs.
 
+## [Googlers Only] Downloading Toolchains from CAS
+
+Our Clang Toolchain CI builders upload all build artifacts to Content Addressed Storage (CAS).
+It provides a convenient way to quickly download a specific toolchain without having to build from scratch.
+This can greatly speedup investigations into toolchain issues, since you can avoid the long LLVM build times, on top of building Fuchsia.
+
+Below is an example of how download a specific toolchain into a corpus directory using `cas`:
+
+```bash
+$ ${INFRA_PREBUILTS}/cas download -cas-instance chromium-swarm -digest \
+    ad53e1f315a849955190594fde6b07e11e76b40563db5779fcc69d6a6e04dc71/267 -dir corpus
+```
+In the example above the `-digest` field is passed a unique id, which is used by the `cas` tool to fetch the correct artifacts.
+The `digest` can be obtained from Fuchsia's CI builder by selecting the builder you want the toolchain from, then expanding the `clang`->`cas`->`archive` fields and then clicking on the `CAS_UI` link.
+The resulting page will give show you some information about the CAS upload, including the digest.
+
 {% dynamic endif %}
+
+## Downloading Toolchains from CAS
+
+Our Clang Toolchain CI builders upload all build artifacts to Content Addressed Storage (CAS).
+It provides a convenient way to quickly download a specific toolchain without having to build from scratch.
+This can greatly speedup investigations into toolchain issues, since you can avoid the long LLVM build times, on top of building Fuchsia.
+
+Below is an example of how to install the `cas` tool from scratch and download a specific toolchain into a corpus directory:
+
+```bash
+$ cipd install infra/tools/luci/cas/linux-amd64 latest -root luci
+$ ./luci/cas download -cas-instance chromium-swarm -digest \
+    ad53e1f315a849955190594fde6b07e11e76b40563db5779fcc69d6a6e04dc71/267 -dir corpus
+```
+In the example above the `-digest` field is passed a unique id, which is used by the `cas` tool to fetch the correct artifacts.
+The `digest` can be obtained from Fuchsia's CI builder by selecting the builder you want the toolchain from, then expanding the `clang`->`cas`->`archive` fields and then clicking on the `CAS_UI` link.
+The resulting page will give show you some information about the CAS upload, including the digest.
+
 
 ## Useful CMake Flags
 
