@@ -288,11 +288,11 @@ if (target_cpu == "arm64") {
       }
       outputs = [ "lib/firmware/amlogic_video_ucode.bin" ]
     }
-  }
 
-  fuchsia_driver_package("amlogic_decoder-package") {
-    driver_components = [ ":amlogic_video_decoder-component" ]
-    deps = [ ":amlogic_decoder_firmware" ]
+    fuchsia_driver_package("amlogic_decoder-package") {
+      driver_components = [ ":amlogic_video_decoder-component" ]
+      deps = [ ":amlogic_decoder_firmware" ]
+    }
   }
 
   fuchsia_driver_package("amlogic_decoder_test-package") {
