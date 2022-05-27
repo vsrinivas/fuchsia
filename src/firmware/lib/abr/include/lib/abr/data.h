@@ -17,7 +17,7 @@ extern "C" {
  */
 
 /* Magic for the A/B struct when serialized. */
-static const char* kAbrMagic = "\0AB0";
+#define kAbrMagic "\0AB0"
 #define kAbrMagicLen 4
 
 /* Versioning for the on-disk A/B metadata. */
