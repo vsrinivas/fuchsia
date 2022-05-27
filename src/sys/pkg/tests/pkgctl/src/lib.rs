@@ -809,7 +809,7 @@ async fn test_get_hash_success() {
 
     let output = env.run_pkgctl(vec!["get-hash", "the-url"]).await;
 
-    assert_stdout(&output, hash);
+    assert_stdout(&output, &(hash.to_owned() + "\n"));
     env.assert_only_package_resolver_called_with(vec![CapturedPackageResolverRequest::GetHash {
         package_url: "the-url".into(),
     }]);

@@ -83,7 +83,7 @@ async fn main_helper(command: Command) -> Result<i32, anyhow::Error> {
                         zx::Status::from_raw(i)
                     )
                 })?;
-            print!("{}", BlobId::from(blob_id));
+            println!("{}", BlobId::from(blob_id));
             Ok(0)
         }
         Command::PkgStatus(PkgStatusCommand { pkg_url }) => {
