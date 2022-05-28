@@ -19,7 +19,7 @@ pub use line::AnsiFilterWriter;
 pub use directory::DirectoryReporter;
 pub use directory_with_stdout::DirectoryWithStdoutReporter;
 use fidl_fuchsia_test_manager as ftest_manager;
-pub use memory::{InMemoryArtifact, InMemoryReporter};
+pub use memory::{InMemoryArtifact, InMemoryDirectoryWriter, InMemoryReporter};
 pub use mux::MultiplexedReporter;
 pub use noop::NoopReporter;
 pub use shell::{ShellReporter, ShellWriterView};

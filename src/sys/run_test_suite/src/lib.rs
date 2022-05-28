@@ -3,25 +3,23 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{anyhow, Context},
     async_utils::event,
     diagnostics_data::Severity,
     fidl::Peered,
-    fidl_fuchsia_io as fio,
     fidl_fuchsia_test_manager::{
         self as ftest_manager, CaseArtifact, CaseFinished, CaseFound, CaseStarted, CaseStopped,
         RunBuilderProxy, SuiteArtifact, SuiteStopped,
     },
     fuchsia_async as fasync,
-    futures::{channel::mpsc, future::join_all, prelude::*, stream::FuturesUnordered, StreamExt},
-    log::{debug, error, warn},
-    std::collections::{HashMap, HashSet, VecDeque},
+    futures::{channel::mpsc, prelude::*, stream::FuturesUnordered, StreamExt},
+    log::{error, warn},
+    std::collections::{HashMap, HashSet},
     std::convert::TryInto,
     std::io::Write,
-    std::path::PathBuf,
     std::time::Duration,
 };
 
+mod artifacts;
 mod cancel;
 pub mod diagnostics;
 mod outcome;
@@ -285,11 +283,12 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()> + Unpin>(
                                             .await?;
 
                                         let custom_fut = async move {
-                                            if let Err(e) = read_custom_artifact_directory(
-                                                directory,
-                                                directory_artifact,
-                                            )
-                                            .await
+                                            if let Err(e) =
+                                                artifacts::copy_custom_artifact_directory(
+                                                    directory,
+                                                    directory_artifact,
+                                                )
+                                                .await
                                             {
                                                 warn!(
                                                     "Error reading suite artifact directory: {:?}",
@@ -662,60 +661,18 @@ async fn run_tests<'a, F: 'a + Future<Output = ()> + Unpin>(
                     Some(ftest_manager::RunEventPayload::Artifact(artifact)) => {
                         match artifact {
                             ftest_manager::Artifact::DebugData(iterator) => {
-                                let iterator = iterator.into_proxy().unwrap();
                                 let output_directory = run_reporter
                                     .new_directory_artifact(
                                         &DirectoryArtifactType::Debug,
                                         None, /* moniker */
                                     )
                                     .await?;
-
-                                const PIPELINED_REQUESTS: usize = 4;
-                                let unprocessed_data_stream =
-                                    futures::stream::repeat_with(move || iterator.get_next())
-                                        .buffered(PIPELINED_REQUESTS);
-                                let terminated_event_stream = unprocessed_data_stream
-                                    .take_until_stop_after(|result| match &result {
-                                        Ok(events) => events.is_empty(),
-                                        _ => true,
-                                    });
-
-                                let data_futs = terminated_event_stream
-                                    .map(|result| match result {
-                                        Ok(vals) => vals,
-                                        Err(e) => {
-                                            warn!("Request failure: {:?}", e);
-                                            vec![]
-                                        }
-                                    })
-                                    .map(futures::stream::iter)
-                                    .flatten()
-                                    .map(|debug_data| {
-                                        let output = debug_data
-                                            .name
-                                            .as_ref()
-                                            .ok_or_else(|| anyhow!("Missing profile name"))
-                                            .and_then(|name| {
-                                                output_directory
-                                                    .new_file(&PathBuf::from(name))
-                                                    .map_err(anyhow::Error::from)
-                                            });
-                                        fasync::Task::spawn(async move {
-                                            let mut output = output?;
-                                            let file = debug_data
-                                                .file
-                                                .ok_or_else(|| {
-                                                    anyhow!("Missing profile file handle")
-                                                })?
-                                                .into_proxy()?;
-                                            debug!("Reading run profile \"{:?}\"", debug_data.name);
-                                            read_file_to_writer(&file, &mut output).await
-                                        })
-                                    })
-                                    .collect::<Vec<_>>()
-                                    .await;
-                                join_all(data_futs).named("debug_data").await;
-                                debug!("All profiles downloaded");
+                                artifacts::copy_debug_data(
+                                    iterator.into_proxy()?,
+                                    output_directory,
+                                )
+                                .named("debug_data")
+                                .await;
                             }
                             ftest_manager::Artifact::Custom(val) => {
                                 if let Some(ftest_manager::DirectoryAndToken {
@@ -732,10 +689,11 @@ async fn run_tests<'a, F: 'a + Future<Output = ()> + Unpin>(
                                         )
                                         .await?;
 
-                                    if let Err(e) =
-                                        read_custom_artifact_directory(directory, out_dir)
-                                            .named("run_custom_artifact")
-                                            .await
+                                    if let Err(e) = artifacts::copy_custom_artifact_directory(
+                                        directory, out_dir,
+                                    )
+                                    .named("run_custom_artifact")
+                                    .await
                                     {
                                         warn!("Error reading run artifact directory: {:?}", e);
                                     }
@@ -776,65 +734,6 @@ async fn run_tests<'a, F: 'a + Future<Output = ()> + Unpin>(
         (Ok(outcome), Ok(())) => Ok(outcome),
         (Err(e), _) | (_, Err(e)) => Err(e),
     }
-}
-
-async fn read_custom_artifact_directory(
-    directory: fio::DirectoryProxy,
-    out_dir: Box<output::DynDirectoryArtifact>,
-) -> Result<(), anyhow::Error> {
-    let mut paths = vec![];
-    let mut enumerate = files_async::readdir_recursive(&directory, None);
-    while let Ok(Some(file)) = enumerate.try_next().await {
-        if file.kind == files_async::DirentKind::File {
-            paths.push(file.name);
-        }
-    }
-
-    let futs = FuturesUnordered::new();
-    paths.iter().for_each(|path| {
-        let path = std::path::PathBuf::from(path);
-        let file = io_util::open_file(&directory, &path, io_util::OpenFlags::RIGHT_READABLE);
-        let output_file = out_dir.new_file(&path);
-        futs.push(async move {
-            let file = file.with_context(|| format!("with path {:?}", path))?;
-            let mut output_file = output_file?;
-            read_file_to_writer(&file, &mut output_file).await
-        });
-    });
-
-    futs.for_each(|result| {
-        if let Err(e) = result {
-            warn!("Custom artifact failure: {}", e);
-        }
-        async move {}
-    })
-    .await;
-
-    Ok(())
-}
-
-async fn read_file_to_writer<T: Write>(
-    file: &fio::FileProxy,
-    output: &mut T,
-) -> Result<(), anyhow::Error> {
-    const READ_SIZE: u64 = fio::MAX_BUF;
-
-    let mut vector = VecDeque::new();
-    // Arbitrary number of reads to pipeline.
-    const PIPELINED_READ_COUNT: u64 = 4;
-    for _n in 0..PIPELINED_READ_COUNT {
-        vector.push_back(file.read(READ_SIZE));
-    }
-    loop {
-        let mut buf =
-            vector.pop_front().unwrap().await?.map_err(fuchsia_zircon_status::Status::from_raw)?;
-        if buf.is_empty() {
-            break;
-        }
-        output.write_all(&mut buf)?;
-        vector.push_back(file.read(READ_SIZE));
-    }
-    Ok(())
 }
 
 /// Runs tests specified in |test_params| and reports the results to
@@ -900,7 +799,7 @@ mod test {
     #[cfg(target_os = "fuchsia")]
     use {
         fidl::endpoints::ServerEnd,
-        fuchsia_zircon as zx,
+        fidl_fuchsia_io as fio, fuchsia_zircon as zx,
         futures::future::join3,
         vfs::{
             directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
