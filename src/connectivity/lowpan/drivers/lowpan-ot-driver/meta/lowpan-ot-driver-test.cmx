@@ -7,6 +7,7 @@
             "isolated-persistent-storage"
         ],
         "services": [
+            "fuchsia.hwinfo.Product",
             "fuchsia.location.namedplace.RegulatoryRegionWatcher",
             "fuchsia.net.mdns.HostNameResolver",
             "fuchsia.net.mdns.HostNameSubscriber",

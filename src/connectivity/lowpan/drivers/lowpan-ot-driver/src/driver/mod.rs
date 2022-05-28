@@ -9,6 +9,7 @@ use fuchsia_zircon::Duration;
 use openthread::ot;
 
 mod api;
+mod border_agent;
 mod connectivity_state;
 mod convert;
 mod driver_state;
@@ -22,6 +23,7 @@ mod thread_to_host;
 #[cfg(test)]
 mod tests;
 
+pub use border_agent::*;
 pub use connectivity_state::*;
 pub use convert::*;
 use driver_state::*;
@@ -74,6 +76,12 @@ pub struct OtDriver<OT, NI, BI> {
 
     /// Output receiver for OpenThread CLI
     cli_output_receiver: futures::lock::Mutex<futures::channel::mpsc::UnboundedReceiver<String>>,
+
+    /// Task for updating mDNS service for border agent
+    border_agent_service: parking_lot::Mutex<Option<fasync::Task<Result<(), anyhow::Error>>>>,
+
+    /// Additional TXT records set by `meshcop_update_txt_entries`.
+    border_agent_txt_entries: futures::lock::Mutex<Vec<(String, Vec<u8>)>>,
 }
 
 impl<OT: ot::Cli, NI, BI> OtDriver<OT, NI, BI> {
@@ -90,6 +98,8 @@ impl<OT: ot::Cli, NI, BI> OtDriver<OT, NI, BI> {
             net_if,
             backbone_if,
             cli_output_receiver: futures::lock::Mutex::new(cli_output_receiver),
+            border_agent_service: parking_lot::Mutex::new(None),
+            border_agent_txt_entries: futures::lock::Mutex::new(vec![]),
         }
     }
 

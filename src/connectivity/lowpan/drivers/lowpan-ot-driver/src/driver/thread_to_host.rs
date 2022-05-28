@@ -51,6 +51,17 @@ where
             self.driver_state_change.trigger();
         }
 
+        if flags.intersects(
+            ot::ChangedFlags::THREAD_ROLE
+                | ot::ChangedFlags::THREAD_EXT_PANID
+                | ot::ChangedFlags::THREAD_NETWORK_NAME
+                | ot::ChangedFlags::ACTIVE_DATASET
+                | ot::ChangedFlags::THREAD_PARTITION_ID
+                | ot::ChangedFlags::THREAD_BACKBONE_ROUTER_STATE,
+        ) {
+            self.update_border_agent_service().await;
+        }
+
         Ok(())
     }
 
