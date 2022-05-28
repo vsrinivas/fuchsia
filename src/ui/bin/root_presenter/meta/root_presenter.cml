@@ -10,6 +10,8 @@
     capabilities: [
         {
             protocol: [
+                "fuchsia.input.virtualkeyboard.ControllerCreator",
+                "fuchsia.input.virtualkeyboard.Manager",
                 "fuchsia.ui.accessibility.view.Registry",
                 "fuchsia.ui.brightness.ColorAdjustmentHandler",
                 "fuchsia.ui.input.accessibility.PointerEventRegistry",
@@ -21,6 +23,11 @@
         },
     ],
     use: [
+        // Features: isolated-persistent-storage.
+        {
+            storage: "data",
+            path: "/data",
+        },
         {
             directory: "config-data",
             rights: [ "r*" ],
@@ -28,7 +35,10 @@
         },
         {
             protocol: [
+                "fuchsia.accessibility.ColorTransform",
                 "fuchsia.accessibility.Magnifier",
+                "fuchsia.media.sounds.Player",
+                "fuchsia.recovery.FactoryReset",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.focus.FocusChainListenerRegistry",
                 "fuchsia.ui.keyboard.focus.Controller",
@@ -36,9 +46,6 @@
                 "fuchsia.ui.scenic.Scenic",
 
                 // TODO(fxbug.dev/71767): Route capabilities to root_presenter
-                // "fuchsia.accessibility.ColorTransform",
-                // "fuchsia.media.sounds.Player",
-                // "fuchsia.recovery.FactoryReset",
                 // "fuchsia.sys.Environment",
                 // "fuchsia.sys.Loader",
                 // "fuchsia.ui.activity.Tracker",
@@ -48,6 +55,8 @@
     expose: [
         {
             protocol: [
+                "fuchsia.input.virtualkeyboard.ControllerCreator",
+                "fuchsia.input.virtualkeyboard.Manager",
                 "fuchsia.ui.accessibility.view.Registry",
                 "fuchsia.ui.brightness.ColorAdjustmentHandler",
                 "fuchsia.ui.pointerinjector.configuration.Setup",

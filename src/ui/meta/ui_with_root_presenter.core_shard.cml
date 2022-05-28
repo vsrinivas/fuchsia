@@ -12,17 +12,12 @@
     capabilities: [
         {
             protocol: [
-                "fuchsia.accessibility.ColorTransform",
                 "fuchsia.accessibility.gesture.ListenerRegistry",
-                "fuchsia.accessibility.Magnifier",
-                "fuchsia.accessibility.semantics.SemanticsManager",
                 "fuchsia.accessibility.tts.EngineRegistry",
-                "fuchsia.accessibility.tts.TtsManager",
                 "fuchsia.accessibility.virtualkeyboard.Registry",
                 "fuchsia.input.virtualkeyboard.ControllerCreator",
                 "fuchsia.input.virtualkeyboard.Manager",
                 "fuchsia.recovery.ui.FactoryResetCountdown",
-                "fuchsia.ui.accessibility.view.Registry",
                 "fuchsia.ui.brightness.ColorAdjustmentHandler",
                 "fuchsia.ui.input.ImeVisibilityService",
                 "fuchsia.ui.policy.DisplayBacklight",
@@ -35,14 +30,17 @@
     use: [
         {
             protocol: [
-                "fuchsia.accessibility.ColorTransform",
                 "fuchsia.accessibility.gesture.ListenerRegistry",
-                "fuchsia.accessibility.Magnifier",
-                "fuchsia.accessibility.scene.Provider",
                 "fuchsia.accessibility.semantics.SemanticsManager",
                 "fuchsia.accessibility.tts.EngineRegistry",
                 "fuchsia.accessibility.tts.TtsManager",
                 "fuchsia.accessibility.virtualkeyboard.Registry",
+                "fuchsia.input.virtualkeyboard.ControllerCreator",
+                "fuchsia.input.virtualkeyboard.Manager",
+                "fuchsia.ui.brightness.ColorAdjustmentHandler",
+                "fuchsia.ui.pointerinjector.configuration.Setup",
+                "fuchsia.ui.policy.DisplayBacklight",
+                "fuchsia.ui.policy.Presenter",
             ],
             from: "#ui",
             dependency: "weak_for_migration",
@@ -58,7 +56,6 @@
             protocol: [
                 "fuchsia.intl.PropertyProvider",
                 "fuchsia.tracing.provider.Registry",
-                "fuchsia.ui.accessibility.view.Registry",
                 "fuchsia.ui.annotation.Registry",
                 "fuchsia.ui.composition.Flatland",
                 "fuchsia.ui.focus.FocusChainListenerRegistry",
@@ -78,6 +75,31 @@
             protocol: [ "fuchsia.settings.Accessibility" ],
             from: "#setui_service",
             to: "#ui",
+        },
+        {
+            protocol: [ "fuchsia.media.sounds.Player" ],
+            from: "#soundplayer",
+            to: "#ui",
+        },
+        {
+            protocol: [ "fuchsia.recovery.FactoryReset" ],
+            from: "#factory_reset",
+            to: "#ui",
+        },
+        {
+            protocol: [ "fuchsia.ui.keyboard.focus.Controller" ],
+            from: "#text_manager",
+            to: "#ui",
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: "#ui",
+        },
+        {
+            storage: "data",
+            from: "self",
+            to: [ "#ui" ],
         },
     ],
 }
