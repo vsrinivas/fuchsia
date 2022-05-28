@@ -12,12 +12,6 @@ namespace media_audio_mixer_service {
 // This file exists to break circular dependencies.
 // Since shared_ptr use is ubiquitous, we use XPtr as a more concise name for std::shared_ptr<X>.
 
-class FidlGraphCreator;
-using FidlGraphCreatorPtr = std::shared_ptr<FidlGraphCreator>;
-
-class FidlGraph;
-using FidlGraphPtr = std::shared_ptr<FidlGraph>;
-
 class Node;
 using NodePtr = std::shared_ptr<Node>;
 

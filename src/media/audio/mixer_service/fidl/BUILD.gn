@@ -17,6 +17,7 @@ source_set("fidl") {
   ]
 
   sources = [
+    "base_fidl_server.h",
     "fidl_graph.cc",
     "fidl_graph.h",
     "fidl_graph_creator.cc",
@@ -36,11 +37,12 @@ source_set("fidl") {
     "//sdk/lib/fit-promise",
     "//src/media/audio/mixer_service/common",
     "//src/media/audio/mixer_service/mix",
+    "//zircon/system/ulib/trace",
   ]
 
   deps = [
     "//sdk/lib/syslog/cpp",
-    "//zircon/system/ulib/trace",
+    "//zircon/system/ulib/sync:sync-cpp",
   ]
 }
 
@@ -48,6 +50,7 @@ executable("fidl_unittests") {
   testonly = true
 
   sources = [
+    "base_fidl_server_unittest.cc",
     "node_unittest.cc",
     "reachability_unittest.cc",
   ]
@@ -57,6 +60,8 @@ executable("fidl_unittests") {
     "//src/lib/fxl/test:gtest_main",
     "//src/media/audio/mixer_service/fidl/testing",
     "//third_party/googletest:gmock",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }
 

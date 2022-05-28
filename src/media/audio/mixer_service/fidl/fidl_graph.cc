@@ -13,34 +13,7 @@ namespace media_audio_mixer_service {
 std::shared_ptr<FidlGraph> FidlGraph::Create(
     async_dispatcher_t* fidl_thread_dispatcher,
     fidl::ServerEnd<fuchsia_audio_mixer::Graph> server_end) {
-  // std::make_shared requires a public ctor, but we hide our ctor to force callers to use Create.
-  struct WithPublicCtor : public FidlGraph {};
-
-  FidlGraphPtr server = std::make_shared<WithPublicCtor>();
-
-  // Callback invoked when the server shuts down.
-  auto on_unbound = [](FidlGraph* server, fidl::UnbindInfo info,
-                       fidl::ServerEnd<fuchsia_audio_mixer::Graph> server_end) {
-    // Log abnormal shutdowns.
-    if (!info.is_user_initiated() && !info.is_peer_closed()) {
-      FX_LOGS(ERROR) << "FidlGraph shutdown with unexpected status: " << info;
-    } else {
-      FX_LOGS(DEBUG) << "FidlGraph shutdown with status: " << info;
-    }
-  };
-
-  // Passing server (a shared_ptr) to BindServer ensures that the server object
-  // lives until on_unbound is called.
-  server->binding_ = fidl::BindServer(fidl_thread_dispatcher, std::move(server_end), server,
-                                      std::move(on_unbound));
-
-  return server;
-}
-
-void FidlGraph::Shutdown() {
-  // Graceful shutdown: close the binding, which will (asynchronously) close the channel
-  // and trigger OnUnbound, which will delete this server.
-  binding_->Close(ZX_ERR_CANCELED);
+  return BaseFidlServer::Create(fidl_thread_dispatcher, std::move(server_end));
 }
 
 void FidlGraph::CreateProducer(CreateProducerRequestView request,

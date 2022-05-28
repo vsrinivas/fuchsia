@@ -8,20 +8,17 @@
 #include <fidl/fuchsia.audio.mixer/cpp/wire.h>
 #include <zircon/errors.h>
 
+#include <memory>
 #include <optional>
 
-#include "src/media/audio/mixer_service/fidl/ptr_decls.h"
+#include "src/media/audio/mixer_service/fidl/base_fidl_server.h"
 
 namespace media_audio_mixer_service {
 
-class FidlGraph : public fidl::WireServer<fuchsia_audio_mixer::Graph> {
+class FidlGraph : public BaseFidlServer<FidlGraph, fuchsia_audio_mixer::Graph> {
  public:
-  static FidlGraphPtr Create(async_dispatcher_t* fidl_thread_dispatcher,
-                             fidl::ServerEnd<fuchsia_audio_mixer::Graph> server_end);
-
-  // Shutdown this server.
-  // This closes the channel, which eventually deletes this server.
-  void Shutdown();
+  static std::shared_ptr<FidlGraph> Create(async_dispatcher_t* fidl_thread_dispatcher,
+                                           fidl::ServerEnd<fuchsia_audio_mixer::Graph> server_end);
 
   // Implementation of fidl::WireServer<fuchsia_audio_mixer::Graph>.
   void CreateProducer(CreateProducerRequestView request,
@@ -52,8 +49,11 @@ class FidlGraph : public fidl::WireServer<fuchsia_audio_mixer::Graph> {
       ForgetGraphControlledReferenceClockCompleter::Sync& completer) override;
 
  private:
+  static inline constexpr std::string_view Name = "FidlGraph";
+  template <class ServerT, class ProtocolT>
+  friend class BaseFidlServer;
+
   FidlGraph() = default;
-  std::optional<fidl::ServerBindingRef<fuchsia_audio_mixer::Graph>> binding_;
 };
 
 }  // namespace media_audio_mixer_service
