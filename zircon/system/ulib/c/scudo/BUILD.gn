@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config/zircon/levels.gni")
 import("../libc.gni")
 
 scudo_common_vars = {
@@ -73,7 +74,18 @@ libc_source_set("scudo") {
 
 config("common.config") {
   visibility = [ ":*" ]
-  defines = [ "GWP_ASAN_HOOKS=1" ]
+
+  # This enables Scudo DCHECK* when ZX_DEBUG_ASSERT is enabled.
+  if (zx_assert_level > 1) {
+    scudo_debug = 1
+  } else {
+    scudo_debug = 0
+  }
+
+  defines = [
+    "GWP_ASAN_HOOKS=1",
+    "SCUDO_DEBUG=$scudo_debug",
+  ]
 }
 
 # These define the public API entry points (malloc et al).  They cannot be
