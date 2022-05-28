@@ -14,16 +14,6 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/retry"
 )
 
-// Errors can be wrapped as transient, so that the transient exit code
-// will be returned.
-type TransientError struct {
-	err error
-}
-
-func (e TransientError) Error() string { return e.err.Error() }
-
-func (e TransientError) Unwrap() error { return e.err }
-
 // Retry wraps a function that makes a GCS API call, adding retries for failures
 // that might be transient.
 func Retry(ctx context.Context, f func() error) error {
@@ -45,7 +35,7 @@ func retryWithStrategy(ctx context.Context, strategy retry.Backoff, f func() err
 			if errors.Is(err, storage.ErrBucketNotExist) || errors.Is(err, storage.ErrObjectNotExist) {
 				return retry.Fatal(err)
 			}
-			return TransientError{err: err}
+			return err
 		}
 		return nil
 	}, nil)

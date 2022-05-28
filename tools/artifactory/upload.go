@@ -37,10 +37,6 @@ type Upload struct {
 	// private key is provided.
 	Signed bool `json:"signed,omitempty"`
 
-	// Metadata contains the metadata to be uploaded with the file.
-	// TODO(fxbug.dev/92697): Remove.
-	Metadata map[string]string `json:"-"`
-
 	// TarHeader tells whether or not to compress with tar and contains the
 	// associated header.
 	TarHeader *tar.Header `json:"tar_header,omitempty"`

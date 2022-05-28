@@ -31,11 +31,9 @@ go_library("main") {
 
   deps = [
     ":lib",
-    "//third_party/golibs:cloud.google.com/go/storage",
     "//third_party/golibs:github.com/google/subcommands",
     "//tools/build",
     "//tools/lib/color",
-    "//tools/lib/gcsutil",
     "//tools/lib/iomisc",
     "//tools/lib/jsonutil",
     "//tools/lib/logger",
@@ -60,8 +58,6 @@ go_library("lib") {
     "product_bundle_test.go",
     "sdk_archives.go",
     "sdk_archives_test.go",
-    "sign.go",
-    "sign_test.go",
     "tools.go",
     "tools_test.go",
     "upload.go",
