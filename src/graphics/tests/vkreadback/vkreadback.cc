@@ -213,7 +213,7 @@ bool VkReadbackTest::InitImage() {
   }
 
   vk::ImageCreateInfo image_create_info;
-  image_create_info.flags = vk::ImageCreateFlagBits::eMutableFormat;
+  image_create_info.flags = vk::ImageCreateFlagBits();
   image_create_info.imageType = vk::ImageType::e2D;
   image_create_info.format = vk::Format::eR8G8B8A8Unorm;
   image_create_info.extent = vk::Extent3D(kWidth, kHeight, 1);
