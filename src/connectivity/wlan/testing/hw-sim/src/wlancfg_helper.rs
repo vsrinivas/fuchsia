@@ -13,6 +13,7 @@ use {
     futures::StreamExt,
     ieee80211::Ssid,
     log::info,
+    std::convert::TryInto,
 };
 
 fn create_network_config(
@@ -252,6 +253,37 @@ pub async fn remove_network(
         .await
         .expect("remove_network future failed")
         .expect("client controller failed to remove network");
+}
+
+pub async fn remove_all_networks(client_controller: &fidl_policy::ClientControllerProxy) {
+    info!("Removing all saved networks");
+    let mut saved_networks = vec![];
+
+    // Read all saved networks on the device
+    let (iter, server) =
+        fidl::endpoints::create_proxy::<fidl_policy::NetworkConfigIteratorMarker>()
+            .expect("failed to create iterator");
+    client_controller.get_saved_networks(server).expect("Failed to call get saved networks");
+    loop {
+        let additional_saved_networks =
+            iter.get_next().await.expect("Failed to read saved networks");
+        if additional_saved_networks.len() == 0 {
+            break;
+        } else {
+            saved_networks.extend(additional_saved_networks);
+        }
+    }
+
+    // Remove each saved network
+    for network in saved_networks {
+        remove_network(
+            client_controller,
+            &network.id.clone().unwrap().ssid.try_into().unwrap(),
+            network.id.unwrap().type_.into(),
+            network.credential.unwrap(),
+        )
+        .await;
+    }
 }
 
 pub async fn await_failed(
