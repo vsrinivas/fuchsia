@@ -211,6 +211,7 @@ where
     let product_bundle = find_product_bundle(&entries, &Some(product_name.to_string()))
         .context("finding product bundle")?;
 
+    let start = std::time::Instant::now();
     writeln!(writer, "Getting product data for {:?}", product_bundle.name)?;
     let local_dir = local_repo_dir.join(&product_bundle.name).join("images");
     async_fs::create_dir_all(&local_dir).await.context("creating directory")?;
@@ -226,6 +227,9 @@ where
             .await
             .with_context(|| format!("fetching images for {}.", product_bundle.name))?;
     }
+    log::debug!("Total fetch images runtime {} seconds.", start.elapsed().as_secs_f32());
+
+    let start = std::time::Instant::now();
     writeln!(writer, "Getting package data for {:?}", product_bundle.name)?;
     let local_dir = local_repo_dir.join(&product_bundle.name).join("packages");
     async_fs::create_dir_all(&local_dir).await.context("creating directory")?;
@@ -248,6 +252,7 @@ where
             .with_context(|| format!("Packages for {}.", product_bundle.name))?;
     }
     */
+    log::debug!("Total fetch packages runtime {} seconds.", start.elapsed().as_secs_f32());
 
     writeln!(writer, "Download of product data for {:?} is complete.", product_bundle.name)?;
     if verbose {

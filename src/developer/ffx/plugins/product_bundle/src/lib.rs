@@ -78,6 +78,7 @@ async fn pb_get<W: Write + Sync>(
     cmd: &GetCommand,
     repos: RepositoryRegistryProxy,
 ) -> Result<()> {
+    let start = std::time::Instant::now();
     if !cmd.cached {
         update_metadata(cmd.verbose, writer).await?;
     }
@@ -105,6 +106,7 @@ async fn pb_get<W: Write + Sync>(
         }
     }
 
+    log::debug!("Total fx product-bundle get runtime {} seconds.", start.elapsed().as_secs_f32());
     Ok(())
 }
 

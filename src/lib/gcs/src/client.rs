@@ -94,11 +94,15 @@ impl Client {
         P: AsRef<Path>,
         W: Write + Sync,
     {
-        let objects =
-            self.token_store.list(&self.https, bucket, prefix).await.context("token store list")?;
+        let objects = self
+            .token_store
+            .list(&self.https, bucket, prefix)
+            .await
+            .context("listing with token store")?;
         let output_dir = output_dir.as_ref();
         for object in objects {
             if let Some(relative_path) = object.strip_prefix(prefix) {
+                let start = std::time::Instant::now();
                 // Strip leading slash, if present.
                 let relative_path = if relative_path.starts_with("/") {
                     &relative_path[1..]
@@ -115,16 +119,27 @@ impl Client {
 
                 if let Some(parent) = output_path.parent() {
                     create_dir_all(&parent)
-                        .with_context(|| format!("create dir all for {:?}", parent))?;
+                        .with_context(|| format!("creating dir all for {:?}", parent))?;
                 }
-                let mut file = File::create(output_path).context("create file")?;
+                let mut file = File::create(&output_path).context("creating file")?;
                 if verbose {
                     writeln!(writer, "GCS fetch: gs://{}/{}", bucket, object)?;
                 } else {
                     write!(writer, ".")?;
                     writer.flush()?;
                 }
-                self.write(bucket, &object, &mut file).await.context("write object")?;
+                self.write(bucket, &object, &mut file).await.context("writing object")?;
+
+                use std::io::{Seek, SeekFrom};
+                let file_size = file.seek(SeekFrom::End(0)).context("getting file size")?;
+                log::debug!(
+                    "Wrote gs://{}/{} to {:?}, {} bytes in {} seconds.",
+                    bucket,
+                    object,
+                    output_path,
+                    file_size,
+                    start.elapsed().as_secs_f32()
+                );
             }
         }
         if !verbose {
