@@ -1284,10 +1284,10 @@ pub(crate) mod tests {
 
     #[fuchsia::test(allow_stalls = false)]
     async fn read_error_result_is_propagated_to_stream() {
-        // Close the local end of the channel so that local reads and remote writes
+        // Close the remote end of the channel so that local reads and remote writes
         // fail.
         let (local, remote) = Channel::create();
-        assert!(remote.as_ref().half_close().is_ok());
+        assert!(local.as_ref().half_close().is_ok());
         let mut connection = DataController::new(local);
 
         // Remote writing to us should fail.
@@ -1299,10 +1299,10 @@ pub(crate) mod tests {
 
     #[fuchsia::test(allow_stalls = false)]
     async fn write_error_result_is_propagated_to_stream() {
-        // Close the remote end of the channel so that remote reads and local writes
+        // Close the local end of the channel so that remote reads and local writes
         // fail.
-        let (local, _remote) = Channel::create();
-        assert!(local.as_ref().half_close().is_ok());
+        let (local, remote) = Channel::create();
+        assert!(remote.as_ref().half_close().is_ok());
         let mut connection = DataController::new(local);
 
         // Queue some data to be sent to the remote.

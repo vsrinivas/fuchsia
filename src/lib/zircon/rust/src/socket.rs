@@ -173,8 +173,8 @@ impl Socket {
         let status = unsafe {
             sys::zx_socket_set_disposition(
                 self.raw_handle(),
-                sys::ZX_SOCKET_DISPOSITION_WRITE_DISABLED,
                 0,
+                sys::ZX_SOCKET_DISPOSITION_WRITE_DISABLED,
             )
         };
         ok(status)
@@ -230,15 +230,15 @@ mod tests {
         // Try reading when there is nothing to read.
         assert_eq!(s2.read(&mut read_vec), Err(Status::SHOULD_WAIT));
 
-        // Disable writes on one end of the socket.
+        // Disable writes from the socket peer.
         assert!(s1.half_close().is_ok());
-        assert_eq!(s2.read(&mut read_vec), Err(Status::BAD_STATE));
-        assert_eq!(s1.write(b"fail"), Err(Status::BAD_STATE));
+        assert_eq!(s2.write(b"fail"), Err(Status::BAD_STATE));
+        assert_eq!(s1.read(&mut read_vec), Err(Status::BAD_STATE));
 
-        // Writing in the other direction should still work.
-        assert_eq!(s1.read(&mut read_vec), Err(Status::SHOULD_WAIT));
-        assert_eq!(s2.write(b"back").unwrap(), 4);
-        assert_eq!(s1.read(&mut read_vec).unwrap(), 4);
+        // Writing to the peer should still work.
+        assert_eq!(s2.read(&mut read_vec), Err(Status::SHOULD_WAIT));
+        assert_eq!(s1.write(b"back").unwrap(), 4);
+        assert_eq!(s2.read(&mut read_vec).unwrap(), 4);
         assert_eq!(&read_vec[0..4], b"back");
     }
 

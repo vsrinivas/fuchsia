@@ -880,6 +880,7 @@ mod tests {
         at_commands::{self as at, SerDe},
         bt_rfcomm::{profile::build_rfcomm_protocol, ServerChannel},
         core::task::Poll,
+        fidl::AsHandleRef,
         fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileRequestStream, ScoErrorCode},
         fidl_fuchsia_bluetooth_hfp::{
             CallDirection, CallRequest, CallRequestStream, CallState, NextCall, PeerHandlerMarker,
@@ -1214,8 +1215,16 @@ mod tests {
         let run_fut = peer.run(receiver);
         pin_mut!(run_fut);
 
-        // Produces an error when polling the ServiceLevelConnection stream.
-        assert!(remote.as_ref().half_close().is_ok());
+        // Produces an error when polling the ServiceLevelConnection stream by disabling write
+        // on the remote socket and read on the local socket.
+        let status = unsafe {
+            zx::sys::zx_socket_set_disposition(
+                remote.as_ref().raw_handle(),
+                zx::sys::ZX_SOCKET_DISPOSITION_WRITE_DISABLED,
+                0,
+            )
+        };
+        zx::Status::ok(status).unwrap();
 
         // Error on the SLC connection will result in the completion of the peer task.
         let result = exec.run_until_stalled(&mut run_fut);

@@ -84,8 +84,8 @@ fn start_tcpdump(
         zx::Socket::create(zx::SocketOpts::STREAM).expect("create stderr socket");
 
     // The reader-ends should not write.
-    let () = stdout_reader.half_close().expect("stdout_reader.half_close");
-    let () = stderr_reader.half_close().expect("stderr_reader.half_close");
+    let () = stdout_writer.half_close().expect("stdout_reader.half_close");
+    let () = stdout_writer.half_close().expect("stderr_reader.half_close");
 
     let path = CString::new(BINARY_PATH).expect("cstring path");
     let path = path.as_c_str();

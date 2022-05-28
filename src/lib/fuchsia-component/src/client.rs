@@ -781,7 +781,7 @@ impl Stdio {
             Stdio::MakePipe => {
                 let (local, remote) = Socket::create(SocketOpts::STREAM)?;
                 // local end is read-only
-                local.half_close()?;
+                remote.half_close()?;
 
                 let local = fasync::Socket::from_socket(local)?;
                 let remote = FileDescriptor {
