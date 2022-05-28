@@ -8,12 +8,12 @@ use fidl_fuchsia_net_interfaces_admin as finterfaces_admin;
 use fidl_fuchsia_net_stack_ext::FidlReturn as _;
 use fuchsia_async::TimeoutExt as _;
 use futures::{FutureExt as _, StreamExt as _, TryFutureExt as _, TryStreamExt as _};
-use net_declare::{fidl_ip, fidl_subnet, std_ip_v6, std_socket_addr};
+use net_declare::{fidl_ip, fidl_mac, fidl_subnet, std_ip_v6, std_socket_addr};
 use net_types::ip::IpAddress as _;
 use netemul::RealmUdpSocket as _;
 use netstack_testing_common::{
     interfaces,
-    realms::{Netstack2, TestRealmExt as _, TestSandboxExt as _},
+    realms::{Netstack, Netstack2, NetstackVersion, TestRealmExt as _, TestSandboxExt as _},
 };
 use netstack_testing_macros::variants_test;
 use std::collections::{HashMap, HashSet};
@@ -532,16 +532,15 @@ async fn add_address_success() {
     }
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
-async fn device_control_create_interface() {
-    const NAME: &'static str = "device_control_create_interface";
+#[variants_test]
+async fn device_control_create_interface<N: Netstack>(name: &str) {
     // NB: interface names are limited to fuchsia.net.interfaces/INTERFACE_NAME_LENGTH.
     const IF_NAME: &'static str = "ctrl_create_if";
 
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
-    let realm = sandbox.create_netstack_realm::<Netstack2, _>(NAME).expect("create realm");
+    let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
     let endpoint =
-        sandbox.create_endpoint::<netemul::NetworkDevice, _>(NAME).await.expect("create endpoint");
+        sandbox.create_endpoint::<netemul::NetworkDevice, _>(name).await.expect("create endpoint");
     let installer = realm
         .connect_to_protocol::<fidl_fuchsia_net_interfaces_admin::InstallerMarker>()
         .expect("connect to protocol");
@@ -604,19 +603,20 @@ async fn device_control_create_interface() {
 
 // Tests that when a DeviceControl instance is dropped, all interfaces created
 // from it are dropped as well.
+#[variants_test]
 #[test_case(false; "no_detach")]
 #[test_case(true; "detach")]
-#[fuchsia_async::run_singlethreaded(test)]
-async fn device_control_owns_interfaces_lifetimes(detach: bool) {
-    let name = if detach { "detach" } else { "no_detach" };
-    let name = format!("device_control_owns_interfaces_lifetimes_{}", name);
-    const IP_FRAME_TYPES: [fidl_fuchsia_hardware_network::FrameType; 2] = [
-        fidl_fuchsia_hardware_network::FrameType::Ipv4,
-        fidl_fuchsia_hardware_network::FrameType::Ipv6,
-    ];
+async fn device_control_owns_interfaces_lifetimes<N: Netstack>(name: &str, detach: bool) {
+    if detach && N::VERSION == NetstackVersion::Netstack3 {
+        // TODO(https://fxbug.dev/100867): Run this test when we support
+        // detaching.
+        return;
+    }
 
+    let detach_str = if detach { "detach" } else { "no_detach" };
+    let name = format!("{name}_{detach_str}");
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
-    let realm = sandbox.create_netstack_realm::<Netstack2, _>(name).expect("create realm");
+    let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
 
     // Create tun interfaces directly to attach ports to different interfaces.
     let (tun_dev, netdevice_client_end) = create_tun_device();
@@ -666,22 +666,18 @@ async fn device_control_owns_interfaces_lifetimes(detach: bool) {
                     fidl_fuchsia_net_tun::DevicePortConfig {
                         base: Some(fidl_fuchsia_net_tun::BasePortConfig {
                             id: Some(index),
-                            rx_types: Some(IP_FRAME_TYPES.to_vec()),
-                            tx_types: Some(
-                                IP_FRAME_TYPES
-                                    .iter()
-                                    .copied()
-                                    .map(|type_| fidl_fuchsia_hardware_network::FrameTypeSupport {
-                                        type_,
-                                        features: fidl_fuchsia_hardware_network::FRAME_FEATURES_RAW,
-                                        supported_flags:
-                                            fidl_fuchsia_hardware_network::TxFlags::empty(),
-                                    })
-                                    .collect(),
-                            ),
+                            rx_types: Some(vec![
+                                fidl_fuchsia_hardware_network::FrameType::Ethernet,
+                            ]),
+                            tx_types: Some(vec![fidl_fuchsia_hardware_network::FrameTypeSupport {
+                                type_: fidl_fuchsia_hardware_network::FrameType::Ethernet,
+                                features: fidl_fuchsia_hardware_network::FRAME_FEATURES_RAW,
+                                supported_flags: fidl_fuchsia_hardware_network::TxFlags::empty(),
+                            }]),
                             mtu: Some(netemul::DEFAULT_MTU.into()),
                             ..fidl_fuchsia_net_tun::BasePortConfig::EMPTY
                         }),
+                        mac: Some(fidl_mac!("02:03:04:05:06:07")),
                         ..fidl_fuchsia_net_tun::DevicePortConfig::EMPTY
                     },
                     port_server_end,
@@ -819,6 +815,7 @@ async fn device_control_owns_interfaces_lifetimes(detach: bool) {
     }
 }
 
+#[variants_test]
 #[test_case(
 fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::DuplicateName;
 "DuplicateName"
@@ -830,14 +827,14 @@ fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::PortAlreadyBound;
 #[test_case(fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::BadPort; "BadPort")]
 #[test_case(fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::PortClosed; "PortClosed")]
 #[test_case(fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::User; "User")]
-#[fuchsia_async::run_singlethreaded(test)]
-async fn control_terminal_events(
+async fn control_terminal_events<N: Netstack>(
+    name: &str,
     reason: fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason,
 ) {
-    let name = format!("control_terminal_event_{:?}", reason);
+    let name = format!("{}_{:?}", name, reason);
 
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
-    let realm = sandbox.create_netstack_realm::<Netstack2, _>(&name).expect("create realm");
+    let realm = sandbox.create_netstack_realm::<N, _>(&name).expect("create realm");
 
     let installer = realm
         .connect_to_protocol::<fidl_fuchsia_net_interfaces_admin::InstallerMarker>()
@@ -866,6 +863,7 @@ async fn control_terminal_events(
             .add_port(
                 fidl_fuchsia_net_tun::DevicePortConfig {
                     base: Some(config),
+                    mac: Some(fidl_mac!("02:aa:bb:cc:dd:ee")),
                     ..fidl_fuchsia_net_tun::DevicePortConfig::EMPTY
                 },
                 port_server_end,
@@ -925,6 +923,11 @@ async fn control_terminal_events(
             (control2, vec![KeepResource::Control(control1), KeepResource::Port(port)])
         }
         fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::DuplicateName => {
+            if N::VERSION == NetstackVersion::Netstack3 {
+                // TODO(https://fxbug.dev/84516): Keep track of names properly
+                // in NS3 and reject duplicate interface names.
+                return;
+            }
             let (port1, port1_id) = create_port(base_port_config.clone()).await;
             let if_name = "test_same_name";
             let control1 = {
@@ -985,6 +988,13 @@ async fn control_terminal_events(
             (control, vec![])
         }
         fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::User => {
+            if N::VERSION == NetstackVersion::Netstack3 {
+                // TODO(https://fxbug.dev/88797): Update this test to observe
+                // epitaphs on fuchsia.net.debug once Netstack3 supports it.
+                // It's a bad idea to test this API in terms of the deprecated
+                // one, and not worth it implementing this machinery in NS3.
+                return;
+            }
             let (port, port_id) = create_port(base_port_config).await;
             let control =
                 create_interface(port_id, fidl_fuchsia_net_interfaces_admin::Options::EMPTY);
@@ -1018,12 +1028,10 @@ async fn control_terminal_events(
 }
 
 // Test that destroying a device causes device control instance to close.
-#[fuchsia_async::run_singlethreaded(test)]
-async fn device_control_closes_on_device_close() {
-    let name = "device_control_closes_on_device_close";
-
+#[variants_test]
+async fn device_control_closes_on_device_close<N: Netstack>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
-    let realm = sandbox.create_netstack_realm::<Netstack2, _>(name).expect("create realm");
+    let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
     let endpoint =
         sandbox.create_endpoint::<netemul::NetworkDevice, _>(name).await.expect("create endpoint");
 
@@ -1069,6 +1077,8 @@ async fn device_control_closes_on_device_close() {
         watcher.try_next().await.expect("watcher error").expect("watcher ended uexpectedly");
 }
 
+// TODO(https://fxbug.dev/48853): Enable in netstack3 once netdevice support is
+// fully in.
 // Tests that interfaces created through installer have a valid datapath.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn installer_creates_datapath() {
@@ -1207,6 +1217,7 @@ async fn installer_creates_datapath() {
     assert_eq!(&buff[..read], payload_bytes);
 }
 
+// TODO(https://fxbug.dev/48853): Enable in netstack3 once we can observe link state.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn control_enable_disable() {
     let name = "control_enable_disable";
@@ -1307,15 +1318,21 @@ async fn control_enable_disable() {
         .await;
 }
 
+#[variants_test]
 #[test_case(false; "no_detach")]
 #[test_case(true; "detach")]
-#[fuchsia_async::run_singlethreaded(test)]
-async fn control_owns_interface_lifetime(detach: bool) {
-    let name = if detach { "detach" } else { "no_detach" };
-    let name = format!("control_owns_interface_lifetime_{}", name);
+async fn control_owns_interface_lifetime<N: Netstack>(name: &str, detach: bool) {
+    if detach && N::VERSION == NetstackVersion::Netstack3 {
+        // TODO(https://fxbug.dev/100867): Enable in Netstack3 once detaching is
+        // supported.
+        return;
+    }
+
+    let detach_str = if detach { "detach" } else { "no_detach" };
+    let name = format!("{}_{}", name, detach_str);
 
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
-    let realm = sandbox.create_netstack_realm::<Netstack2, _>(&name).expect("create realm");
+    let realm = sandbox.create_netstack_realm::<N, _>(&name).expect("create realm");
     let endpoint =
         sandbox.create_endpoint::<netemul::NetworkDevice, _>(&name).await.expect("create endpoint");
     let installer = realm
@@ -1369,14 +1386,23 @@ async fn control_owns_interface_lifetime(detach: bool) {
         ) if id == iface_id
     );
 
-    let debug = realm
-        .connect_to_protocol::<fidl_fuchsia_net_debug::InterfacesMarker>()
-        .expect("connect to protocol");
-    let (debug_control, control_server_end) =
-        fidl_fuchsia_net_interfaces_ext::admin::Control::create_endpoints().expect("create proxy");
-    let () = debug.get_admin(iface_id, control_server_end).expect("get admin");
-    let same_iface_id = debug_control.get_id().await.expect("get id");
-    assert_eq!(same_iface_id, iface_id);
+    let debug_control = if N::VERSION == NetstackVersion::Netstack3 {
+        // TODO(https://fxbug.dev/88797): Observe termination through the debug
+        // handle once we support it. For now, just check that the interface is
+        // removed on detach
+        None
+    } else {
+        let debug = realm
+            .connect_to_protocol::<fidl_fuchsia_net_debug::InterfacesMarker>()
+            .expect("connect to protocol");
+        let (debug_control, control_server_end) =
+            fidl_fuchsia_net_interfaces_ext::admin::Control::create_endpoints()
+                .expect("create proxy");
+        let () = debug.get_admin(iface_id, control_server_end).expect("get admin");
+        let same_iface_id = debug_control.get_id().await.expect("get id");
+        assert_eq!(same_iface_id, iface_id);
+        Some(debug_control)
+    };
 
     if detach {
         let () = control.detach().expect("detach");
@@ -1384,9 +1410,16 @@ async fn control_owns_interface_lifetime(detach: bool) {
         std::mem::drop(control);
         let watcher_fut =
             watcher.select_next_some().map(|event| panic!("unexpected event {:?}", event));
-        let debug_control_fut = debug_control
-            .wait_termination()
-            .map(|event| panic!("unexpected termination {:?}", event));
+
+        let debug_control_fut = if let Some(debug_control) = debug_control {
+            debug_control
+                .wait_termination()
+                .map(|event| panic!("unexpected termination {:?}", event))
+                .left_future()
+        } else {
+            futures::future::pending().right_future()
+        };
+
         let ((), ()) = futures::future::join(watcher_fut, debug_control_fut)
             .on_timeout(
                 fuchsia_async::Time::after(
@@ -1404,14 +1437,16 @@ async fn control_owns_interface_lifetime(detach: bool) {
             fidl_fuchsia_net_interfaces::Event::Removed(id) if id == iface_id
         );
 
-        // The debug control channel is a weak ref, it didn't prevent destruction,
-        // but is closed now.
-        assert_matches::assert_matches!(
-            debug_control.wait_termination().await,
-            fidl_fuchsia_net_interfaces_ext::admin::TerminalError::Terminal(
-                fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::User
-            )
-        );
+        if let Some(debug_control) = debug_control {
+            // The debug control channel is a weak ref, it didn't prevent destruction,
+            // but is closed now.
+            assert_matches::assert_matches!(
+                debug_control.wait_termination().await,
+                fidl_fuchsia_net_interfaces_ext::admin::TerminalError::Terminal(
+                    fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::User
+                )
+            );
+        }
     }
 }
 

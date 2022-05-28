@@ -14,6 +14,7 @@ use futures::{Stream, StreamExt as _, TryStreamExt as _};
 use crate::error::{Error, Result};
 use crate::session::{Config, DeviceInfo, Port, Session, Task};
 
+#[derive(Clone)]
 /// A client that communicates with a network device to send and receive packets.
 pub struct Client {
     device: netdev::DeviceProxy,
@@ -23,6 +24,13 @@ impl Client {
     /// Creates a new network device client for the [`netdev::DeviceProxy`].
     pub fn new(device: netdev::DeviceProxy) -> Self {
         Client { device }
+    }
+
+    /// Connects to the specified `port`.
+    pub fn connect_port(&self, port: Port) -> Result<netdev::PortProxy> {
+        let (port_proxy, port_server) = fidl::endpoints::create_proxy::<netdev::PortMarker>()?;
+        let () = self.device.get_port(&mut port.into(), port_server)?;
+        Ok(port_proxy)
     }
 
     /// Retrieves information about the underlying network device.
@@ -48,8 +56,7 @@ impl Client {
         port: Port,
         buffer: u32,
     ) -> Result<impl Stream<Item = Result<PortStatus>> + Unpin> {
-        let (port_proxy, port_server) = fidl::endpoints::create_proxy::<netdev::PortMarker>()?;
-        let () = self.device.get_port(&mut port.into(), port_server)?;
+        let port_proxy = self.connect_port(port)?;
         let (watcher_proxy, watcher_server) =
             fidl::endpoints::create_proxy::<netdev::StatusWatcherMarker>()?;
         let () = port_proxy.get_status_watcher(watcher_server, buffer)?;
@@ -97,6 +104,20 @@ impl Client {
         let primary_config = device_info.primary_config(buffer_length)?;
         Session::new(&self.device, name, primary_config).await
     }
+}
+
+/// Network device information with all required fields.
+#[derive(Debug, Clone, ValidFidlTable)]
+#[fidl_table_src(netdev::PortInfo)]
+pub struct PortInfo {
+    /// Port's identifier.
+    pub id: Port,
+    /// Port's class.
+    pub class: netdev::DeviceClass,
+    /// Supported rx frame types on this port.
+    pub rx_types: Vec<netdev::FrameType>,
+    /// Supported tx frame types on this port.
+    pub tx_types: Vec<netdev::FrameTypeSupport>,
 }
 
 /// Dynamic port information with all required fields.

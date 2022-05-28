@@ -33,7 +33,10 @@ use packet_formats::icmp::{IcmpEchoReply, IcmpMessage, IcmpUnusedCode};
 
 use crate::bindings::{
     context::Lockable,
-    devices::{CommonInfo, DeviceInfo, DeviceSpecificInfo, Devices, EthernetInfo, LoopbackInfo},
+    devices::{
+        CommonInfo, DeviceInfo, DeviceSpecificInfo, Devices, EthernetInfo, LoopbackInfo,
+        NetdeviceInfo,
+    },
     socket::datagram::{IcmpEcho, SocketCollectionIpExt, Udp},
     util::{ConversionContext as _, IntoFidl as _, TryFromFidlWithContext as _, TryIntoFidl as _},
     BindingsContextImpl, BindingsDispatcher, DeviceStatusNotifier, LockableContext,
@@ -291,38 +294,35 @@ impl TestStack {
         Ok(stack)
     }
 
-    /// Waits for interface with given `if_id` to come online.
-    pub(crate) async fn wait_for_interface_online(&mut self, if_id: u64) {
-        let check_online = |info: &DeviceInfo| match info.info() {
+    fn is_interface_link_up(info: &DeviceInfo) -> bool {
+        match info.info() {
             DeviceSpecificInfo::Ethernet(EthernetInfo {
                 common_info: CommonInfo { admin_enabled: _, mtu: _, events: _, name: _ },
                 client: _,
                 mac: _,
                 features: _,
+                phy_up,
+            })
+            | DeviceSpecificInfo::Netdevice(NetdeviceInfo {
+                common_info: CommonInfo { admin_enabled: _, mtu: _, events: _, name: _ },
+                handler: _,
+                mac: _,
                 phy_up,
             }) => *phy_up,
             DeviceSpecificInfo::Loopback(LoopbackInfo {
                 common_info: CommonInfo { admin_enabled: _, mtu: _, events: _, name: _ },
             }) => true,
-        };
-        self.wait_for_interface_status(if_id, check_online).await;
+        }
+    }
+
+    /// Waits for interface with given `if_id` to come online.
+    pub(crate) async fn wait_for_interface_online(&mut self, if_id: u64) {
+        self.wait_for_interface_status(if_id, Self::is_interface_link_up).await;
     }
 
     /// Waits for interface with given `if_id` to go offline.
     pub(crate) async fn wait_for_interface_offline(&mut self, if_id: u64) {
-        let check_offline = |info: &DeviceInfo| match info.info() {
-            DeviceSpecificInfo::Ethernet(EthernetInfo {
-                common_info: CommonInfo { admin_enabled: _, mtu: _, events: _, name: _ },
-                client: _,
-                mac: _,
-                features: _,
-                phy_up,
-            }) => !phy_up,
-            DeviceSpecificInfo::Loopback(LoopbackInfo {
-                common_info: CommonInfo { admin_enabled: _, mtu: _, events: _, name: _ },
-            }) => false,
-        };
-        self.wait_for_interface_status(if_id, check_offline).await;
+        self.wait_for_interface_status(if_id, |info| !Self::is_interface_link_up(info)).await;
     }
 
     async fn wait_for_interface_status<F: Fn(&DeviceInfo) -> bool>(

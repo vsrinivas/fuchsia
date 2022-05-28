@@ -15,7 +15,9 @@ mod integration_tests;
 mod context;
 mod devices;
 mod ethernet_worker;
+mod interfaces_admin;
 mod interfaces_watcher;
+mod netdevice_worker;
 mod socket;
 mod stack_fidl_worker;
 mod timers;
@@ -35,7 +37,9 @@ use fidl_fuchsia_net_stack as fidl_net_stack;
 use fuchsia_async as fasync;
 use fuchsia_component::server::{ServiceFs, ServiceFsDir};
 use fuchsia_zircon as zx;
-use futures::{lock::Mutex, FutureExt as _, StreamExt as _, TryStreamExt as _};
+use futures::{
+    channel::mpsc, lock::Mutex, FutureExt as _, SinkExt as _, StreamExt as _, TryStreamExt as _,
+};
 use log::{debug, error, warn};
 use packet::{BufferMut, Serializer};
 use packet_formats::icmp::{IcmpEchoReply, IcmpMessage, IcmpUnusedCode};
@@ -45,6 +49,7 @@ use util::ConversionContext;
 use context::Lockable;
 use devices::{
     BindingId, CommonInfo, DeviceInfo, DeviceSpecificInfo, Devices, EthernetInfo, LoopbackInfo,
+    NetdeviceInfo,
 };
 use interfaces_watcher::{InterfaceEventProducer, InterfaceProperties, InterfaceUpdate};
 use timers::TimerDispatcher;
@@ -318,6 +323,18 @@ where
                     client.send(frame.as_ref())
                 }
             }
+            DeviceSpecificInfo::Netdevice(NetdeviceInfo {
+                common_info: CommonInfo { admin_enabled, mtu: _, events: _, name: _ },
+                handler,
+                mac: _,
+                phy_up,
+            }) => {
+                if *admin_enabled && *phy_up {
+                    handler.send(frame.as_ref()).unwrap_or_else(|e| {
+                        log::warn!("failed to send frame to {:?}: {:?}", handler, e)
+                    })
+                }
+            }
             DeviceSpecificInfo::Loopback(LoopbackInfo { .. }) => {
                 unreachable!("loopback must not send packets out of the node")
             }
@@ -527,6 +544,12 @@ fn set_interface_enabled<
             mac: _,
             features: _,
             phy_up,
+        })
+        | DeviceSpecificInfo::Netdevice(NetdeviceInfo {
+            common_info: CommonInfo { admin_enabled, mtu: _, events, name: _ },
+            handler: _,
+            mac: _,
+            phy_up,
         }) => (*admin_enabled && *phy_up, events),
         DeviceSpecificInfo::Loopback(LoopbackInfo {
             common_info: CommonInfo { admin_enabled, mtu: _, events, name: _ },
@@ -626,11 +649,13 @@ enum Service {
     Stack(fidl_fuchsia_net_stack::StackRequestStream),
     Socket(fidl_fuchsia_posix_socket::ProviderRequestStream),
     Interfaces(fidl_fuchsia_net_interfaces::StateRequestStream),
+    InterfacesAdmin(fidl_fuchsia_net_interfaces_admin::InstallerRequestStream),
     Debug(fidl_fuchsia_net_debug::InterfacesRequestStream),
 }
 
 enum WorkItem {
     Incoming(Service),
+    Task(fasync::Task<()>),
 }
 
 trait RequestStreamExt: RequestStream {
@@ -773,11 +798,20 @@ impl NetstackSeed {
             .add_fidl_service(Service::Debug)
             .add_fidl_service(Service::Stack)
             .add_fidl_service(Service::Socket)
-            .add_fidl_service(Service::Interfaces);
+            .add_fidl_service(Service::Interfaces)
+            .add_fidl_service(Service::InterfacesAdmin);
 
         let services = fs.take_and_serve_directory_handle().context("directory handle")?;
-        let work_items = services.map(WorkItem::Incoming);
-        let service_fs_fut = work_items
+
+        // Buffer size doesn't matter much, we're just trying to reduce
+        // allocations.
+        const TASK_CHANNEL_BUFFER_SIZE: usize = 16;
+        let (task_sink, task_stream) = mpsc::channel(TASK_CHANNEL_BUFFER_SIZE);
+        let work_items = futures::stream::select(
+            services.map(WorkItem::Incoming),
+            task_stream.map(WorkItem::Task),
+        );
+        let work_items_fut = work_items
             .for_each_concurrent(None, |wi| async {
                 match wi {
                     WorkItem::Incoming(Service::Stack(stack)) => {
@@ -798,6 +832,23 @@ impl NetstackSeed {
                                 )
                             })
                             .await
+                    }
+                    WorkItem::Incoming(Service::InterfacesAdmin(installer)) => {
+                        log::debug!(
+                            "serving {}",
+                            fidl_fuchsia_net_interfaces_admin::InstallerMarker::PROTOCOL_NAME
+                        );
+                        interfaces_admin::serve(netstack.clone(), installer)
+                            .map_err(anyhow::Error::from)
+                            .forward(task_sink.clone().sink_map_err(anyhow::Error::from))
+                            .await
+                            .unwrap_or_else(|e| {
+                                log::warn!(
+                                    "error serving {}: {:?}",
+                                    fidl_fuchsia_net_interfaces_admin::InstallerMarker::PROTOCOL_NAME,
+                                    e
+                                )
+                            })
                     }
                     WorkItem::Incoming(Service::Debug(debug)) => {
                         // TODO(https://fxbug.dev/88797): Implement this
@@ -833,10 +884,11 @@ impl NetstackSeed {
                             }))
                             .await
                     }
-                    }
+                    WorkItem::Task(task) => task.await
+                }
             });
 
-        let ((), ()) = futures::future::join(service_fs_fut, interfaces_worker_task).await;
+        let ((), ()) = futures::future::join(work_items_fut, interfaces_worker_task).await;
         debug!("Services stream finished");
         Ok(())
     }

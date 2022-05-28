@@ -120,6 +120,7 @@ where
 #[derive(Debug)]
 pub enum DeviceSpecificInfo {
     Ethernet(EthernetInfo),
+    Netdevice(NetdeviceInfo),
     Loopback(LoopbackInfo),
 }
 
@@ -127,7 +128,16 @@ impl DeviceSpecificInfo {
     pub fn common_info(&self) -> &CommonInfo {
         match self {
             Self::Ethernet(i) => &i.common_info,
+            Self::Netdevice(i) => &i.common_info,
             Self::Loopback(i) => &i.common_info,
+        }
+    }
+
+    pub fn common_info_mut(&mut self) -> &mut CommonInfo {
+        match self {
+            Self::Ethernet(i) => &mut i.common_info,
+            Self::Netdevice(i) => &mut i.common_info,
+            Self::Loopback(i) => &mut i.common_info,
         }
     }
 }
@@ -158,8 +168,23 @@ pub struct EthernetInfo {
 }
 
 impl From<EthernetInfo> for DeviceSpecificInfo {
-    fn from(i: EthernetInfo) -> DeviceSpecificInfo {
-        DeviceSpecificInfo::Ethernet(i)
+    fn from(i: EthernetInfo) -> Self {
+        Self::Ethernet(i)
+    }
+}
+
+/// Network device information.
+#[derive(Debug)]
+pub struct NetdeviceInfo {
+    pub common_info: CommonInfo,
+    pub handler: super::netdevice_worker::PortHandler,
+    pub mac: UnicastAddr<Mac>,
+    pub phy_up: bool,
+}
+
+impl From<NetdeviceInfo> for DeviceSpecificInfo {
+    fn from(i: NetdeviceInfo) -> Self {
+        Self::Netdevice(i)
     }
 }
 

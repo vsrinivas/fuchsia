@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use super::{
-    devices::{CommonInfo, DeviceSpecificInfo, Devices, EthernetInfo, LoopbackInfo},
+    devices::{CommonInfo, DeviceSpecificInfo, Devices, EthernetInfo},
     ethernet_worker,
     util::{IntoFidl, TryFromFidlWithContext as _, TryIntoCore as _, TryIntoFidlWithContext as _},
     DeviceStatusNotifier, InterfaceControl as _, InterfaceEventProducerFactory, Lockable,
@@ -331,38 +331,14 @@ where
 {
     fn fidl_enable_interface(mut self, id: u64) -> Result<(), fidl_net_stack::Error> {
         self.ctx.update_device_state(id, |dev_info| {
-            let admin_enabled: &mut bool = match dev_info.info_mut() {
-                DeviceSpecificInfo::Ethernet(EthernetInfo {
-                    common_info: CommonInfo { admin_enabled, mtu: _, events: _, name: _ },
-                    client: _,
-                    mac: _,
-                    features: _,
-                    phy_up: _,
-                }) => admin_enabled,
-                DeviceSpecificInfo::Loopback(LoopbackInfo {
-                    common_info: CommonInfo { admin_enabled, mtu: _, events: _, name: _ },
-                }) => admin_enabled,
-            };
-            *admin_enabled = true;
+            dev_info.info_mut().common_info_mut().admin_enabled = true;
         });
         self.ctx.enable_interface(id)
     }
 
     fn fidl_disable_interface(mut self, id: u64) -> Result<(), fidl_net_stack::Error> {
         self.ctx.update_device_state(id, |dev_info| {
-            let admin_enabled: &mut bool = match dev_info.info_mut() {
-                DeviceSpecificInfo::Ethernet(EthernetInfo {
-                    common_info: CommonInfo { admin_enabled, mtu: _, events: _, name: _ },
-                    client: _,
-                    mac: _,
-                    features: _,
-                    phy_up: _,
-                }) => admin_enabled,
-                DeviceSpecificInfo::Loopback(LoopbackInfo {
-                    common_info: CommonInfo { admin_enabled, mtu: _, events: _, name: _ },
-                }) => admin_enabled,
-            };
-            *admin_enabled = false;
+            dev_info.info_mut().common_info_mut().admin_enabled = false;
         });
         self.ctx.disable_interface(id)
     }

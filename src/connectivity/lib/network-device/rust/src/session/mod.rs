@@ -31,6 +31,7 @@ use buffer::{
 };
 
 /// A session between network device client and driver.
+#[derive(Clone)]
 pub struct Session {
     inner: Weak<Inner>,
 }
@@ -76,18 +77,19 @@ impl Session {
     }
 
     /// Attaches [`Session`] to a port.
-    pub async fn attach<IntoIter, Iter>(&self, port: Port, rx_frames: IntoIter) -> Result<()>
+    pub async fn attach<IntoIter>(&self, port: Port, rx_frames: IntoIter) -> Result<()>
     where
-        IntoIter: IntoIterator<IntoIter = Iter>,
-        Iter: Iterator<Item = netdev::FrameType> + ExactSizeIterator,
+        IntoIter: IntoIterator<Item = netdev::FrameType>,
+        IntoIter::IntoIter: ExactSizeIterator,
     {
-        let mut iter = rx_frames.into_iter();
-        let () = self
-            .inner()?
-            .proxy
-            .attach(&mut port.into(), &mut iter)
-            .await?
-            .map_err(|raw| Error::Attach(port, zx::Status::from_raw(raw)))?;
+        // NB: Need to bind the future returned by `proxy.attach` to a variable
+        // otherwise this function's (`Session::attach`) returned future becomes
+        // not `Send` and we get unexpected compiler errors at a distance.
+        //
+        // The dyn borrow in the signature of `proxy.attach` seems to be the
+        // cause of the compiler's confusion.
+        let fut = self.inner()?.proxy.attach(&mut port.into(), &mut rx_frames.into_iter());
+        let () = fut.await?.map_err(|raw| Error::Attach(port, zx::Status::from_raw(raw)))?;
         Ok(())
     }
 
@@ -478,7 +480,7 @@ impl DeviceInfo {
 }
 
 /// A port of the device.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Port {
     base: u8,
     salt: u8,
