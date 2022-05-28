@@ -123,10 +123,12 @@ async fn ethernet_device_send(
             _ => (),
         }
     }
-
-    if buf.iter().all(|b| *b == config.receive_byte) {
-        println!("PASS");
-    }
+    assert!(
+        buf.iter().all(|b| *b == config.receive_byte),
+        "expected entire buffer to be {:x}, found {:x?}",
+        config.receive_byte,
+        buf,
+    );
     Ok(())
 }
 
@@ -155,8 +157,13 @@ async fn network_device_send(
     let recv_buf = session.recv().await.expect("receive");
     let mut scratch = vec![0; config.length];
     let read = recv_buf.read_at(0, &mut scratch).expect("read from buffer");
-    assert_eq!(read, config.length);
-    assert!(scratch.iter().all(|b| *b == config.receive_byte))
+    assert_eq!(read, config.length, "expected length: {}, found: {}", config.length, read);
+    assert!(
+        scratch.iter().all(|b| *b == config.receive_byte),
+        "expected entire buffer to be {:x}, found {:x?}",
+        config.receive_byte,
+        scratch,
+    );
 }
 
 #[fasync::run_singlethreaded]
@@ -166,11 +173,15 @@ async fn main() -> Result<(), anyhow::Error> {
 
     let config = Config::from_args();
     match find_ethernet_device(MacAddress::from_str(&config.mac)?).await {
-        Ok(client) => ethernet_device_send(client, config).await,
+        Ok(client) => {
+            ethernet_device_send(client, config).await.expect("failed to send on ethernet device");
+        }
         Err(_) => {
             let (client, port) = find_network_device(MacAddress::from_str(&config.mac)?).await;
             network_device_send(client, port, config).await;
-            Ok(())
         }
     }
+    // Test output requires this print, do not remove.
+    println!("PASS");
+    Ok(())
 }
