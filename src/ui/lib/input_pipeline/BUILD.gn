@@ -82,7 +82,6 @@ rustc_library("input_pipeline") {
     "src/fake_input_device_binding.rs",
     "src/fake_input_handler.rs",
     "src/focus_listener.rs",
-    "src/gfx_touch_handler.rs",
     "src/ime_handler.rs",
     "src/immersive_mode_shortcut_handler.rs",
     "src/input_device.rs",

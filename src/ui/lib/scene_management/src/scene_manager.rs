@@ -3,9 +3,14 @@
 // found in the LICENSE file.
 
 use {
-    crate::{pointerinjector_config, DisplayMetrics},
+    crate::pointerinjector_config::{
+        InjectorViewportChangeFn, InjectorViewportHangingGet, InjectorViewportSpec,
+        InjectorViewportSubscriber,
+    },
+    crate::DisplayMetrics,
     anyhow::Error,
     async_trait::async_trait,
+    async_utils::hanging_get::server as hanging_get,
     fidl_fuchsia_ui_app as ui_app, fidl_fuchsia_ui_composition as ui_comp,
     fidl_fuchsia_ui_pointerinjector_configuration::{
         SetupRequest as PointerInjectorConfigurationSetupRequest,
@@ -13,12 +18,11 @@ use {
     },
     fidl_fuchsia_ui_scenic as ui_scenic, fidl_fuchsia_ui_views as ui_views,
     fuchsia_async as fasync, fuchsia_scenic as scenic, fuchsia_scenic,
-    fuchsia_syslog::{fx_log_err, fx_log_warn},
+    fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
     futures::channel::mpsc::{UnboundedReceiver, UnboundedSender},
     futures::channel::oneshot,
     futures::future::TryFutureExt,
     futures::prelude::*,
-    input_pipeline::input_pipeline::InputPipelineAssembly,
     parking_lot::Mutex,
     std::sync::{Arc, Weak},
 };
@@ -148,14 +152,6 @@ pub trait SceneManager: Send {
     /// - `visible`: Boolean value indicating if the cursor should be visible.
     fn set_cursor_visibility(&mut self, visible: bool);
 
-    /// Annotates `assembly` with an additional pipeline stage.
-    ///
-    /// # Parameters
-    /// - `assembly`: An [`InputPipelineAssembly`] which represents a partially-constructed input pipeline.
-    // TODO(fxbug.dev/87519): delete when Gfx version is deleted.
-    async fn add_touch_handler(&self, mut assembly: InputPipelineAssembly)
-        -> InputPipelineAssembly;
-
     // Supports the implementation of fuchsia.ui.pointerinjector.configurator.Setup.GetViewRefs()
     fn get_pointerinjection_view_refs(&self) -> (ui_views::ViewRef, ui_views::ViewRef);
 
@@ -165,9 +161,7 @@ pub trait SceneManager: Send {
 
     // Support the hanging get implementation of
     // fuchsia.ui.pointerinjector.configurator.Setup.WatchViewport().
-    fn get_pointerinjector_viewport_watcher_subscription(
-        &self,
-    ) -> pointerinjector_config::InjectorViewportSubscriber;
+    fn get_pointerinjector_viewport_watcher_subscription(&self) -> InjectorViewportSubscriber;
 
     fn get_display_metrics(&self) -> &DisplayMetrics;
 }
@@ -257,6 +251,20 @@ fn present(session: &scenic::SessionPtr) {
             .unwrap_or_else(|error| fx_log_err!("Present error: {:?}", error)),
     )
     .detach();
+}
+
+pub fn create_viewport_hanging_get(
+    initial_spec: InjectorViewportSpec,
+) -> Arc<Mutex<InjectorViewportHangingGet>> {
+    let notify_fn: InjectorViewportChangeFn = Box::new(|viewport_spec, responder| {
+        if let Err(fidl_error) = responder.send((*viewport_spec).into()) {
+            fx_log_info!("Viewport hanging get notification, FIDL error: {}", fidl_error);
+        }
+        // TODO(fxbug.dev/87670): the HangingGet docs don't explain what value to return.
+        true
+    });
+
+    Arc::new(Mutex::new(hanging_get::HangingGet::new(initial_spec, notify_fn)))
 }
 
 pub fn start_flatland_presentation_loop(

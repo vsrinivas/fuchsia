@@ -95,7 +95,7 @@ fn setup_pointer_injector_config_request_stream(
     setup_proxy
 }
 
-async fn add_flatland_touch_handler(
+async fn add_touch_handler(
     scene_manager: Arc<Mutex<Box<dyn SceneManager>>>,
     mut assembly: InputPipelineAssembly,
 ) -> InputPipelineAssembly {
@@ -115,7 +115,7 @@ async fn add_flatland_touch_handler(
     assembly
 }
 
-async fn add_flatland_mouse_handler(
+async fn add_mouse_handler(
     scene_manager: Arc<Mutex<Box<dyn SceneManager>>>,
     mut assembly: InputPipelineAssembly,
     sender: futures::channel::mpsc::Sender<CursorMessage>,
@@ -197,12 +197,13 @@ async fn build_input_pipeline_assembly(
             scene_manager.lock().await.get_display_metrics().physical_pixel_ratio().max(1.0);
         assembly = add_pointer_motion_display_scale_handler(assembly, pointer_scale);
 
+        assembly = add_touch_handler(scene_manager.clone(), assembly).await;
         if use_flatland {
-            assembly = add_flatland_touch_handler(scene_manager.clone(), assembly).await;
-            assembly = add_flatland_mouse_handler(scene_manager.clone(), assembly, sender).await;
+            assembly = add_mouse_handler(scene_manager.clone(), assembly, sender).await;
         } else {
-            let locked_scene_manager = scene_manager.lock().await;
-            assembly = locked_scene_manager.add_touch_handler(assembly).await;
+            // We don't have mouse support for GFX. But that's okay,
+            // because the devices still using GFX don't support mice
+            // anyway.
         }
 
         // Keep this handler last because it keeps performance measurement counters

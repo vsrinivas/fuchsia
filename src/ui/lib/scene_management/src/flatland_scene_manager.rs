@@ -5,15 +5,14 @@
 use {
     crate::{
         pointerinjector_config::{
-            InjectorViewportChangeFn, InjectorViewportHangingGet, InjectorViewportPublisher,
-            InjectorViewportSpec, InjectorViewportSubscriber,
+            InjectorViewportHangingGet, InjectorViewportPublisher, InjectorViewportSpec,
+            InjectorViewportSubscriber,
         },
         scene_manager::{self, PresentationMessage, PresentationSender, SceneManager},
         DisplayMetrics,
     },
     anyhow::Error,
     async_trait::async_trait,
-    async_utils::hanging_get::server as hanging_get,
     fidl,
     fidl::endpoints::create_proxy,
     fidl_fuchsia_accessibility_scene as a11y_scene, fidl_fuchsia_math as fmath,
@@ -21,9 +20,9 @@ use {
     fidl_fuchsia_ui_composition::{self as ui_comp, ContentId, TransformId},
     fidl_fuchsia_ui_scenic as ui_scenic, fidl_fuchsia_ui_views as ui_views,
     fuchsia_scenic as scenic, fuchsia_scenic,
-    fuchsia_syslog::{fx_log_info, fx_log_warn},
+    fuchsia_syslog::fx_log_warn,
     futures::channel::mpsc::unbounded,
-    input_pipeline::{input_pipeline::InputPipelineAssembly, Size},
+    input_pipeline::Size,
     parking_lot::Mutex,
     std::{convert::TryFrom, sync::Arc},
 };
@@ -381,14 +380,6 @@ impl SceneManager for FlatlandSceneManager {
         Size { width, height }
     }
 
-    // TODO(fxbug.dev/87519): delete
-    async fn add_touch_handler(
-        &self,
-        mut _assembly: InputPipelineAssembly,
-    ) -> InputPipelineAssembly {
-        panic!("add_touch_handler() not implemented for Flatland.  See build_input_pipeline() in input_pipeline.rs");
-    }
-
     fn get_pointerinjector_viewport_watcher_subscription(&self) -> InjectorViewportSubscriber {
         self.viewport_hanging_get.lock().new_subscriber()
     }
@@ -600,20 +591,10 @@ impl FlatlandSceneManager {
             ui_comp::ChildViewStatus::ContentHasPresented => {}
         }
 
-        let viewport_hanging_get: Arc<Mutex<InjectorViewportHangingGet>> = {
-            let notify_fn: InjectorViewportChangeFn = Box::new(|viewport_spec, responder| {
-                if let Err(fidl_error) = responder.send((*viewport_spec).into()) {
-                    fx_log_info!("Viewport hanging get notification, FIDL error: {}", fidl_error);
-                }
-                // TODO(fxbug.dev/87670): the HangingGet docs don't explain what value to return.
-                true
-            });
-
-            Arc::new(Mutex::new(hanging_get::HangingGet::new(
-                InjectorViewportSpec::try_from(layout_info.clone())?,
-                notify_fn,
-            )))
-        };
+        let viewport_hanging_get: Arc<Mutex<InjectorViewportHangingGet>> =
+            scene_manager::create_viewport_hanging_get(InjectorViewportSpec::try_from(
+                layout_info.clone(),
+            )?);
         let viewport_publisher = Arc::new(Mutex::new(viewport_hanging_get.lock().new_publisher()));
 
         let context_view_ref = scenic::duplicate_view_ref(&root_flatland.view_ref)?;

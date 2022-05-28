@@ -5,6 +5,9 @@
 use {
     crate::display_metrics::{DisplayMetrics, ViewingDistance},
     crate::graphics_utils::{ImageResource, ScreenCoordinates, ScreenSize},
+    crate::pointerinjector_config::{
+        InjectorViewportHangingGet, InjectorViewportSpec, InjectorViewportSubscriber,
+    },
     crate::scene_manager::{self, PresentationMessage, PresentationSender, SceneManager},
     anyhow::Error,
     async_trait::async_trait,
@@ -16,11 +19,9 @@ use {
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
     futures::channel::mpsc::unbounded,
     futures::channel::oneshot,
-    futures::lock::Mutex,
     futures::TryStreamExt,
-    input_pipeline::{
-        gfx_touch_handler::GfxTouchHandler, input_pipeline::InputPipelineAssembly, Size,
-    },
+    input_pipeline::Size,
+    parking_lot::Mutex,
     std::sync::{Arc, Weak},
 };
 
@@ -39,17 +40,20 @@ pub struct GfxSceneManager {
     /// The Scenic session associated with this [`GfxSceneManager`].
     pub session: scenic::SessionPtr,
 
+    /// Presentation sender used to request presents for the root session.
+    presentation_sender: PresentationSender,
+
     /// The view focuser associated with the [`session`].
     pub focuser: FocuserPtr,
 
     /// The id of the compositor used for the scene's layer stack.
     pub compositor_id: u32,
 
+    /// The root node of the scene. Views & the cursor are added as children of this node.
+    pub root_node: scenic::EntityNode,
+
     /// The size of the display, as determined when [`GfxSceneManager::new()`] was called.
     pub display_size: ScreenSize,
-
-    /// The root node of the scene. Views are added as children of this node.
-    pub root_node: scenic::EntityNode,
 
     /// The metrics for the display presenting the scene.
     pub display_metrics: DisplayMetrics,
@@ -57,35 +61,91 @@ pub struct GfxSceneManager {
     /// The camera of the scene.
     camera: scenic::Camera,
 
-    /// The view holder [`scenic::EntityNodes`], which have been added to the Scene.
-    views: Vec<scenic::EntityNode>,
+    /// Scene topology:
+    ///
+    /// scene
+    ///   |
+    /// root_node
+    ///   |
+    /// global_root_view_holder
+    ///   |
+    /// global_root_view
+    ///   |
+    /// pointerinjector_view_holder
+    ///   |
+    /// pointerinjector_view
+    ///   |
+    /// a11y_proxy_view_holder*
+    ///   |
+    /// a11y_proxy_view
+    ///   |
+    /// (all views in `views`)
+    ///
+    ///
+    /// *This represents the state when GfxSceneManager is first created, before
+    /// the a11y view is inserted. After `insert_a11y_view` is called,
+    /// a11y_proxy_view_holder will be removed, and the new topology will look
+    /// like:
+    ///  ...
+    ///   |
+    /// pointerinjector_view
+    ///   |
+    /// a11y_view_holder
+    ///   |
+    /// a11y_view (owned & created by a11y manager)
+    ///   |
+    /// new_a11y_proxy_view_holder (owned & created by a11y manager)
+    ///   |
+    /// a11y_proxy_view
+    ///   |
+    /// (all views in `views`)
+
+    /// The root view of Scene Manager.
+    /// This view is always static. It's used as the 'source' view when injecting events through
+    /// fuchsia::ui::pointerinjector.
+    _root_view_holder: scenic::ViewHolder,
+    _root_view: scenic::View,
+
+    /// The pointerinjector view is used as the 'target' view when injecting events through
+    /// fuchsia::ui::pointerinjector.
+    /// See also: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/ui/a11y/docs/accessibility_view.md
+    /// TODO(fxbug.dev/100980) This is where scale, rotation and translation for all child views
+    /// should be set.
+    _pointerinjector_view_holder: scenic::ViewHolder,
+    pointerinjector_view: scenic::View,
+    pointerinjector_session: scenic::SessionPtr,
+    pointerinjector_presentation_sender: PresentationSender,
 
     /// The proxy View/ViewHolder pair exists so that the a11y manager can insert its view into the
     /// scene after SetRootView() has already been called.
     a11y_proxy_view_holder: scenic::ViewHolder,
-
-    /// See comment for a11y_proxy_view_holder.
     a11y_proxy_view: scenic::View,
-
-    /// Copy of the root view's [`ui_views::ViewRef`]. If the root view is attached before the a11y
-    /// view, then we need to re-focus it after the a11y view is inserted.
-    root_view_ref: Option<ui_views::ViewRef>,
-
-    /// Proxy session. The proxy view must exist in a separate session from the root view since
-    /// its parent is in a different session.
     a11y_proxy_session: scenic::SessionPtr,
+    a11y_proxy_presentation_sender: PresentationSender,
+
+    /// The view holder [`scenic::EntityNodes`], which have been added to the Scene.
+    views: Vec<scenic::EntityNode>,
+
+    /// This refers to one of the views in `views`.
+    /// It's not actually the 'root' view of any other views in `views`, but it's special in that
+    /// if the a11y view is inserted we'll re-focus this view afterwards.
+    /// TODO(fxbug.dev/100977) Simplify the view hierarchy.
+    client_root_view_ref: Option<ui_views::ViewRef>,
+
+    /// Supports callers of fuchsia.ui.pointerinjector.configuration.setup.WatchViewport(), allowing
+    /// each invocation to subscribe to changes in the viewport region.
+    viewport_hanging_get: Arc<Mutex<InjectorViewportHangingGet>>,
+
+    /// These are the ViewRefs returned by get_pointerinjection_view_refs().  They are used to
+    /// configure input-pipeline handlers for pointer events.
+    context_view_ref: ui_views::ViewRef,
+    target_view_ref: ui_views::ViewRef,
 
     /// The node for the cursor. It is optional in case a scene doesn't render a cursor.
     cursor_node: Option<scenic::EntityNode>,
 
     /// The shapenode for the cursor. It is optional in case a scene doesn't render a cursor.
     cursor_shape: Option<scenic::ShapeNode>,
-
-    /// Presentation sender used to request presents for the root session.
-    presentation_sender: PresentationSender,
-
-    /// Presentation sender used to request presents for the a11y proxy session.
-    a11y_proxy_presentation_sender: PresentationSender,
 
     /// The resources used to construct the scene. If these are dropped, they will be removed
     /// from Scenic, so they must be kept alive for the lifetime of `GfxSceneManager`.
@@ -137,7 +197,8 @@ impl SceneManager for GfxSceneManager {
         // - The second copy will be stored, and used to re-focus the root view if insertion
         //   of the a11y view breaks the focus chain.
         let viewref_dup = fuchsia_scenic::duplicate_view_ref(&viewref_pair.view_ref)?;
-        self.root_view_ref = Some(fuchsia_scenic::duplicate_view_ref(&viewref_pair.view_ref)?);
+        self.client_root_view_ref =
+            Some(fuchsia_scenic::duplicate_view_ref(&viewref_pair.view_ref)?);
 
         view_provider.create_view_with_view_ref(
             token_pair.view_token.value,
@@ -169,14 +230,14 @@ impl SceneManager for GfxSceneManager {
         &mut self,
         a11y_view_holder_token: ui_views::ViewHolderToken,
     ) -> Result<ui_views::ViewHolderToken, Error> {
-        // Create the new a11y view holder, and attach it as a child of the root node.
+        // Create the new a11y view holder, and attach it as a child of the pointerinjector view.
         let a11y_view_holder = GfxSceneManager::create_view_holder(
-            &self.session,
+            &self.pointerinjector_session,
             a11y_view_holder_token,
             self.display_metrics,
             Some(String::from("a11y view holder")),
         );
-        self.root_node.add_child(&a11y_view_holder);
+        self.pointerinjector_view.add_child(&a11y_view_holder);
 
         // Disconnect the old proxy view/viewholder from the scene graph.
         self.a11y_proxy_view_holder.detach();
@@ -203,20 +264,21 @@ impl SceneManager for GfxSceneManager {
             self.a11y_proxy_view.add_child(&*view_holder_node);
         }
 
-        GfxSceneManager::request_present(&self.presentation_sender);
+        GfxSceneManager::request_present(&self.pointerinjector_presentation_sender);
         GfxSceneManager::request_present(&self.a11y_proxy_presentation_sender);
 
         // If the root view was already set, inserting the a11y view will have broken the focus
         // chain. In this case, we need to re-focus the root view.
         let view_ref_installed = Arc::downgrade(&self.view_ref_installed);
         let focuser = Arc::downgrade(&self.focuser);
-        if let Some(ref root_view_ref) = self.root_view_ref {
-            let root_view_ref_dup = fuchsia_scenic::duplicate_view_ref(&root_view_ref)?;
+        if let Some(ref client_root_view_ref) = self.client_root_view_ref {
+            let client_root_view_ref_dup =
+                fuchsia_scenic::duplicate_view_ref(&client_root_view_ref)?;
             fasync::Task::local(async move {
-                GfxSceneManager::focus_root_view(
+                GfxSceneManager::focus_client_root_view(
                     view_ref_installed,
                     focuser,
-                    root_view_ref_dup,
+                    client_root_view_ref_dup,
                     a11y_proxy_view_ref,
                 )
                 .await;
@@ -244,9 +306,10 @@ impl SceneManager for GfxSceneManager {
     }
 
     fn get_pointerinjection_view_refs(&self) -> (ui_views::ViewRef, ui_views::ViewRef) {
-        // Gfx implementation doesn't use the fuchsia.ui.pointerinjection APIs.
-        // This is very ugly, but the entire Gfx implementation will soon be deleted.
-        panic!("Not implemented in Gfx SceneManager");
+        (
+            scenic::duplicate_view_ref(&self.context_view_ref).expect("failed to copy ViewRef"),
+            scenic::duplicate_view_ref(&self.target_view_ref).expect("failed to copy ViewRef"),
+        )
     }
 
     fn set_cursor_position(&mut self, position: input_pipeline::Position) {
@@ -282,28 +345,8 @@ impl SceneManager for GfxSceneManager {
         Size { width: width_pixels, height: height_pixels }
     }
 
-    async fn add_touch_handler(
-        &self,
-        mut assembly: InputPipelineAssembly,
-    ) -> InputPipelineAssembly {
-        if let Ok(touch_handler) = GfxTouchHandler::new(
-            self.session.clone(),
-            self.compositor_id,
-            self.get_pointerinjection_display_size(),
-        )
-        .await
-        {
-            assembly = assembly.add_handler(touch_handler);
-        }
-        assembly
-    }
-
-    fn get_pointerinjector_viewport_watcher_subscription(
-        &self,
-    ) -> crate::pointerinjector_config::InjectorViewportSubscriber {
-        // Gfx implementation doesn't use the fuchsia.ui.pointerinjection APIs.
-        // This is very ugly, but the entire Gfx implementation will soon be deleted.
-        panic!("get_pointerinjector_viewport_watcher_subscription() not implemented for GfxSceneManager.");
+    fn get_pointerinjector_viewport_watcher_subscription(&self) -> InjectorViewportSubscriber {
+        self.viewport_hanging_get.lock().new_subscriber()
     }
 
     fn get_display_metrics(&self) -> &DisplayMetrics {
@@ -331,7 +374,6 @@ impl GfxSceneManager {
         let view_ref_installed = Arc::new(view_ref_installed_proxy);
 
         let (session, focuser) = GfxSceneManager::create_session(&scenic)?;
-        let (a11y_proxy_session, _a11y_proxy_focuser) = GfxSceneManager::create_session(&scenic)?;
 
         let ambient_light = GfxSceneManager::create_ambient_light(&session);
         let scene = GfxSceneManager::create_ambiently_lit_scene(&session, &ambient_light);
@@ -358,25 +400,79 @@ impl GfxSceneManager {
 
         // Add the root node to the scene immediately.
         let root_node = scenic::EntityNode::new(session.clone());
+
         scene.add_child(&root_node);
 
-        // Create proxy view/viewholder and add to the scene.
-        let proxy_token_pair = scenic::ViewTokenPair::new()?;
+        // Create pointer injector view/viewholder and add to the scene.
+        let root_view_token_pair = scenic::ViewTokenPair::new()?;
+        let root_viewref_pair = scenic::ViewRefPair::new()?;
+        let root_view_holder = GfxSceneManager::create_view_holder(
+            &session,
+            root_view_token_pair.view_holder_token,
+            display_metrics,
+            Some(String::from("root view holder")),
+        );
+
+        let context_view_ref = scenic::duplicate_view_ref(&root_viewref_pair.view_ref)?;
+
+        let root_view = scenic::View::new3(
+            session.clone(),
+            root_view_token_pair.view_token,
+            root_viewref_pair.control_ref,
+            root_viewref_pair.view_ref,
+            Some(String::from("root_view view")),
+        );
+
+        root_node.add_child(&root_view_holder);
+
+        // Create pointer injector view/viewholder and add to the scene.
+        let pointerinjector_token_pair = scenic::ViewTokenPair::new()?;
+        let pointerinjector_viewref_pair = scenic::ViewRefPair::new()?;
+        let pointerinjector_view_holder = GfxSceneManager::create_view_holder(
+            &session,
+            pointerinjector_token_pair.view_holder_token,
+            display_metrics,
+            Some(String::from("pointerinjector view holder")),
+        );
+        let (pointerinjector_session, _pointerinjector_focuser) =
+            GfxSceneManager::create_session(&scenic)?;
+
+        let target_view_ref = scenic::duplicate_view_ref(&pointerinjector_viewref_pair.view_ref)?;
+
+        let pointerinjector_view = scenic::View::new3(
+            pointerinjector_session.clone(),
+            pointerinjector_token_pair.view_token,
+            pointerinjector_viewref_pair.control_ref,
+            pointerinjector_viewref_pair.view_ref,
+            Some(String::from("pointerinjector view")),
+        );
+        root_view.add_child(&pointerinjector_view_holder);
+
+        // Create a11y proxy view/viewholder and add to the scene.
+        let a11y_proxy_token_pair = scenic::ViewTokenPair::new()?;
         let a11y_proxy_viewref_pair = scenic::ViewRefPair::new()?;
         let a11y_proxy_view_holder = GfxSceneManager::create_view_holder(
-            &session,
-            proxy_token_pair.view_holder_token,
+            &pointerinjector_session,
+            a11y_proxy_token_pair.view_holder_token,
             display_metrics,
             Some(String::from("a11y proxy view holder")),
         );
+        let (a11y_proxy_session, _a11y_proxy_focuser) = GfxSceneManager::create_session(&scenic)?;
+
         let a11y_proxy_view = scenic::View::new3(
             a11y_proxy_session.clone(),
-            proxy_token_pair.view_token,
+            a11y_proxy_token_pair.view_token,
             a11y_proxy_viewref_pair.control_ref,
             a11y_proxy_viewref_pair.view_ref,
             Some(String::from("a11y proxy view")),
         );
-        root_node.add_child(&a11y_proxy_view_holder);
+        pointerinjector_view.add_child(&a11y_proxy_view_holder);
+
+        let viewport_hanging_get: Arc<Mutex<InjectorViewportHangingGet>> =
+            scene_manager::create_viewport_hanging_get(InjectorViewportSpec {
+                width: size_in_pixels.width,
+                height: size_in_pixels.height,
+            });
 
         let compositor_id = compositor.id();
 
@@ -393,6 +489,14 @@ impl GfxSceneManager {
         scene_manager::start_presentation_loop(sender.clone(), receiver, Arc::downgrade(&session));
         GfxSceneManager::request_present(&sender);
 
+        let (pointerinjector_sender, pointerinjector_receiver) = unbounded();
+        scene_manager::start_presentation_loop(
+            pointerinjector_sender.clone(),
+            pointerinjector_receiver,
+            Arc::downgrade(&pointerinjector_session),
+        );
+        GfxSceneManager::request_present(&pointerinjector_sender);
+
         let (a11y_proxy_sender, a11y_proxy_receiver) = unbounded();
         scene_manager::start_presentation_loop(
             a11y_proxy_sender.clone(),
@@ -404,28 +508,37 @@ impl GfxSceneManager {
         Ok(GfxSceneManager {
             view_ref_installed,
             session,
+            presentation_sender: sender,
             focuser,
+            compositor_id,
             root_node,
             display_size: ScreenSize::from_size(&size_in_pixels, display_metrics),
-            compositor_id,
-            _resources: resources,
             camera,
-            views: vec![],
+            _root_view_holder: root_view_holder,
+            _root_view: root_view,
+            _pointerinjector_view_holder: pointerinjector_view_holder,
+            pointerinjector_view,
+            pointerinjector_session,
+            pointerinjector_presentation_sender: pointerinjector_sender,
             a11y_proxy_view_holder,
             a11y_proxy_view,
-            root_view_ref: None,
             a11y_proxy_session,
+            a11y_proxy_presentation_sender: a11y_proxy_sender,
+            views: vec![],
+            client_root_view_ref: None,
+            viewport_hanging_get,
+            context_view_ref,
+            target_view_ref,
             display_metrics,
             cursor_node: None,
             cursor_shape: None,
-            presentation_sender: sender,
-            a11y_proxy_presentation_sender: a11y_proxy_sender,
+            _resources: resources,
         })
     }
 
     pub fn handle_magnification_handler_request_stream(
         mut request_stream: MagnificationHandlerRequestStream,
-        scene_manager: Arc<Mutex<Box<dyn SceneManager>>>,
+        scene_manager: Arc<futures::lock::Mutex<Box<dyn SceneManager>>>,
     ) {
         fasync::Task::local(async move {
             loop {
@@ -621,10 +734,10 @@ impl GfxSceneManager {
     }
 
     /// Sets focus on the root view if it exists.
-    async fn focus_root_view(
+    async fn focus_client_root_view(
         weak_view_ref_installed: Weak<ui_views::ViewRefInstalledProxy>,
         weak_focuser: Weak<ui_views::FocuserProxy>,
-        mut root_view_ref: ui_views::ViewRef,
+        mut client_root_view_ref: ui_views::ViewRef,
         mut proxy_view_ref: ui_views::ViewRef,
     ) {
         if let Some(view_ref_installed) = weak_view_ref_installed.upgrade() {
@@ -637,7 +750,7 @@ impl GfxSceneManager {
                 Ok(_) => {
                     // Now set focus on the view_ref.
                     if let Some(focuser) = weak_focuser.upgrade() {
-                        let focus_result = focuser.request_focus(&mut root_view_ref).await;
+                        let focus_result = focuser.request_focus(&mut client_root_view_ref).await;
                         match focus_result {
                             Ok(_) => fx_log_info!("Refocused client view"),
                             Err(e) => fx_log_warn!("Failed with err: {:?}", e),
