@@ -1443,7 +1443,7 @@ mod tests {
                 },
                 Ipv6DeviceTimerId,
             },
-            receive_ipv6_packet, DummyDeviceId, SendIpPacketMeta,
+            receive_ipv6_packet, SendIpPacketMeta,
         },
         testutil::{
             assert_empty, get_counter_val, set_logger_for_test, DummyEventDispatcher,
@@ -1778,15 +1778,7 @@ mod tests {
         let remote = DummyEventDispatcherBuilder::default();
         let device_id = DeviceId::new_ethernet(0);
 
-        // We explicitly call `build_with` when building our contexts below
-        // because `build` will set the default NDP parameter
-        // DUP_ADDR_DETECT_TRANSMITS to 0 (effectively disabling DAD) so we use
-        // our own custom `StackStateBuilder` to set it to the default value of
-        // `1` (see `DUP_ADDR_DETECT_TRANSMITS`).
-        let mut stack_builder = StackStateBuilder::default();
-        let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
-        ipv6_config.max_router_solicitations = None;
-        stack_builder.device_builder().set_default_ipv6_config(ipv6_config);
+        let stack_builder = StackStateBuilder::default();
         let mut net = crate::context::testutil::new_legacy_simple_dummy_network(
             "local",
             local.build_with(
@@ -1799,16 +1791,22 @@ mod tests {
         );
 
         // Create the devices (will start DAD at the same time).
+        let update = |ipv6_config: &mut Ipv6DeviceConfiguration| {
+            ipv6_config.ip_config.ip_enabled = true;
+
+            // Doesn't matter as long as we perform DAD.
+            ipv6_config.dad_transmits = NonZeroU8::new(1);
+        };
         assert_eq!(
             net.context("local").state.add_ethernet_device(mac, Ipv6::MINIMUM_LINK_MTU.into()),
             device_id
         );
-        crate::device::testutil::enable_device(net.context("local"), device_id);
+        crate::device::update_ipv6_configuration(net.context("local"), device_id, update);
         assert_eq!(
             net.context("remote").state.add_ethernet_device(mac, Ipv6::MINIMUM_LINK_MTU.into()),
             device_id
         );
-        crate::device::testutil::enable_device(net.context("remote"), device_id);
+        crate::device::update_ipv6_configuration(net.context("remote"), device_id, update);
         assert_eq!(net.context("local").dispatcher.frames_sent().len(), 1);
         assert_eq!(net.context("remote").dispatcher.frames_sent().len(), 1);
 
@@ -1943,18 +1941,12 @@ mod tests {
         // Test that we can make our tentative address change when DAD is
         // ongoing.
 
-        // We explicitly call `build_with` when building our context below
-        // because `build` will set the default NDP parameter
-        // DUP_ADDR_DETECT_TRANSMITS to 0 (effectively disabling DAD) so we use
-        // our own custom `StackStateBuilder` to set it to the default value of
-        // `1` (see `DUP_ADDR_DETECT_TRANSMITS`).
-        let mut ctx = DummyEventDispatcherBuilder::default().build_with(
-            StackStateBuilder::default(),
-            DummyEventDispatcher::default(),
-            DummyCtx::<(), TimerId, DeviceId, (), DummyDeviceId>::default(),
-        );
+        let mut ctx = DummyEventDispatcherBuilder::default().build();
         let dev_id = ctx.state.add_ethernet_device(local_mac(), Ipv6::MINIMUM_LINK_MTU.into());
-        crate::device::testutil::enable_device(&mut ctx, dev_id);
+        crate::device::update_ipv6_configuration(&mut ctx, dev_id, |config| {
+            config.ip_config.ip_enabled = true;
+            config.dad_transmits = NonZeroU8::new(1);
+        });
         let addr = local_ip();
         add_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(addr.get(), 128).unwrap()).unwrap();
         assert_eq!(
@@ -1991,13 +1983,7 @@ mod tests {
 
     #[test]
     fn test_dad_three_transmits_no_conflicts() {
-        let mut stack_builder = StackStateBuilder::default();
-        let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
-        ipv6_config.dad_transmits = None;
-        ipv6_config.max_router_solicitations = None;
-        stack_builder.device_builder().set_default_ipv6_config(ipv6_config);
-        let mut ctx =
-            Ctx::new(stack_builder.build(), DummyEventDispatcher::default(), DummyCtx::default());
+        let mut ctx = Ctx::default();
         let dev_id = ctx.state.add_ethernet_device(local_mac(), Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::testutil::enable_device(&mut ctx, dev_id);
 
@@ -2605,22 +2591,19 @@ mod tests {
             assert_eq!(code, IcmpUnusedCode);
         }
 
-        // By default, we should send `MAX_RTR_SOLICITATIONS` number of Router
-        // Solicitation messages.
-
         let dummy_config = Ipv6::DUMMY_CONFIG;
 
-        let mut stack_builder = StackStateBuilder::default();
-        let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
-        ipv6_config.dad_transmits = None;
-        stack_builder.device_builder().set_default_ipv6_config(ipv6_config);
-        let mut ctx =
-            Ctx::new(stack_builder.build(), DummyEventDispatcher::default(), DummyCtx::default());
+        let mut ctx = Ctx::<DummyEventDispatcher, _>::default();
 
         assert_empty(ctx.dispatcher.frames_sent());
         let device_id =
             ctx.state.add_ethernet_device(dummy_config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
-        crate::device::testutil::enable_device(&mut ctx, device_id);
+        crate::device::update_ipv6_configuration(&mut ctx, device_id, |config| {
+            config.ip_config.ip_enabled = true;
+
+            // Test expects to send 3 RSs.
+            config.max_router_solicitations = NonZeroU8::new(3);
+        });
         assert_empty(ctx.dispatcher.frames_sent());
 
         let time = ctx.now();
@@ -2755,22 +2738,20 @@ mod tests {
         // solicitations do not get cancelled when we enable forwarding on the
         // device.
 
-        let mut state_builder = StackStateBuilder::default();
-        let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
-        ipv6_config.dad_transmits = None;
-        state_builder.device_builder().set_default_ipv6_config(ipv6_config);
-        let mut ctx = DummyEventDispatcherBuilder::default().build_with(
-            state_builder,
-            DummyEventDispatcher::default(),
-            DummyCtx::default(),
-        );
+        let mut ctx = DummyEventDispatcherBuilder::default().build();
 
         assert_empty(ctx.dispatcher.frames_sent());
         assert_empty(ctx.ctx.timer_ctx().timers());
 
         let device =
             ctx.state.add_ethernet_device(dummy_config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
-        crate::device::testutil::enable_device(&mut ctx, device);
+        crate::device::update_ipv6_configuration(&mut ctx, device, |config| {
+            config.ip_config.ip_enabled = true;
+
+            // Doesn't matter as long as we are configured to send at least 2
+            // solicitations.
+            config.max_router_solicitations = NonZeroU8::new(2);
+        });
         let timer_id = rs_timer_id(device.try_into().expect("expected ethernet ID")).into();
 
         // Send the first router solicitation.

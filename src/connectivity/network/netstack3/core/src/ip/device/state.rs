@@ -15,10 +15,7 @@ use nonzero_ext::nonzero;
 
 use crate::{
     ip::{
-        device::{
-            dad::DUP_ADDR_DETECT_TRANSMITS, route_discovery::Ipv6RouteDiscoveryState,
-            router_solicitation::MAX_RTR_SOLICITATIONS, slaac::SlaacConfiguration,
-        },
+        device::{route_discovery::Ipv6RouteDiscoveryState, slaac::SlaacConfiguration},
         gmp::{igmp::IgmpGroupState, mld::MldGroupState, MulticastGroupSet},
     },
     Instant,
@@ -216,7 +213,7 @@ impl<I: Instant> AsRef<IpDeviceConfiguration> for Ipv4DeviceState<I> {
 }
 
 /// Configurations common to all IP devices.
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Default)]
 pub struct IpDeviceConfiguration {
     /// Is IP enabled for this device.
     pub ip_enabled: bool,
@@ -231,27 +228,15 @@ pub struct IpDeviceConfiguration {
     pub gmp_enabled: bool,
 }
 
-impl Default for IpDeviceConfiguration {
-    fn default() -> IpDeviceConfiguration {
-        IpDeviceConfiguration { ip_enabled: false, gmp_enabled: false }
-    }
-}
-
 /// Configuration common to all IPv4 devices.
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Default)]
 pub struct Ipv4DeviceConfiguration {
     /// The configuration common to all IP devices.
     pub ip_config: IpDeviceConfiguration,
 }
 
-impl Default for Ipv4DeviceConfiguration {
-    fn default() -> Ipv4DeviceConfiguration {
-        Ipv4DeviceConfiguration { ip_config: Default::default() }
-    }
-}
-
 /// Configuration common to all IPv6 devices.
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Default)]
 pub struct Ipv6DeviceConfiguration {
     /// The value for NDP's DupAddrDetectTransmits parameter as defined by
     /// [RFC 4862 section 5.1].
@@ -276,17 +261,6 @@ pub struct Ipv6DeviceConfiguration {
 
     /// The configuration common to all IP devices.
     pub ip_config: IpDeviceConfiguration,
-}
-
-impl Default for Ipv6DeviceConfiguration {
-    fn default() -> Ipv6DeviceConfiguration {
-        Ipv6DeviceConfiguration {
-            dad_transmits: NonZeroU8::new(DUP_ADDR_DETECT_TRANSMITS),
-            max_router_solicitations: NonZeroU8::new(MAX_RTR_SOLICITATIONS),
-            slaac_config: Default::default(),
-            ip_config: Default::default(),
-        }
-    }
 }
 
 /// The state common to all IPv6 devices.

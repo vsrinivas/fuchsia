@@ -1018,6 +1018,14 @@ mod tests {
         let local_mac = Ipv6::DUMMY_CONFIG.local_mac;
         let device_id =
             ctx.state.device.add_ethernet_device(local_mac, Ipv6::MINIMUM_LINK_MTU.into());
+        update_ipv6_configuration(&mut ctx, &mut (), device_id, |config| {
+            config.ip_config.gmp_enabled = true;
+
+            // Doesn't matter as long as we perform DAD and router
+            // solicitation.
+            config.dad_transmits = NonZeroU8::new(1);
+            config.max_router_solicitations = NonZeroU8::new(1);
+        });
         ctx.ctx.timer_ctx().assert_no_timers_installed();
 
         let ll_addr = local_mac.to_ipv6_link_local();
@@ -1028,7 +1036,6 @@ mod tests {
             |ctx: &mut DummyCtx, extra_group: Option<MulticastAddr<Ipv6Addr>>| {
                 update_ipv6_configuration(ctx, &mut (), device_id, |config| {
                     config.ip_config.ip_enabled = true;
-                    config.ip_config.gmp_enabled = true;
                 });
                 assert_eq!(
                     IpDeviceContext::<Ipv6>::get_ip_device_state(ctx, device_id)

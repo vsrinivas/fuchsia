@@ -20,13 +20,6 @@ use crate::{
     ip::IpDeviceIdContext,
 };
 
-/// Maximum number of Router Solicitation messages that may be sent when
-/// attempting to discover routers. Each message sent must be separated by at
-/// least `RTR_SOLICITATION_INTERVAL` as defined in [RFC 4861 section 10].
-///
-/// [RFC 4861 section 10]: https://tools.ietf.org/html/rfc4861#section-10
-pub(super) const MAX_RTR_SOLICITATIONS: u8 = 3;
-
 /// Amount of time to wait after sending `MAX_RTR_SOLICITATIONS` Router
 /// Solicitation messages before determining that there are no routers on the
 /// link for the purpose of IPv6 Stateless Address Autoconfiguration if no

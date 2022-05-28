@@ -2949,17 +2949,8 @@ mod tests {
         let a = "alice";
         let b = "bob";
         let dummy_config = I::DUMMY_CONFIG;
-        let mut state_builder = StackStateBuilder::default();
-        let mut ipv6_config = crate::ip::device::state::Ipv6DeviceConfiguration::default();
-        ipv6_config.dad_transmits = None;
-        ipv6_config.max_router_solicitations = None;
-        state_builder.device_builder().set_default_ipv6_config(ipv6_config);
         let device = DeviceId::new_ethernet(0);
-        let mut alice = DummyEventDispatcherBuilder::from_config(dummy_config.swap()).build_with(
-            state_builder,
-            DummyEventDispatcher::default(),
-            crate::context::testutil::DummyCtx::default(),
-        );
+        let mut alice = DummyEventDispatcherBuilder::from_config(dummy_config.swap()).build();
         set_routing_enabled::<_, _, I>(&mut alice, &mut (), device, true)
             .expect("error setting routing enabled");
         let bob = DummyEventDispatcherBuilder::from_config(dummy_config).build();
@@ -3017,11 +3008,6 @@ mod tests {
         // it arrived at.
 
         let dummy_config = Ipv6::DUMMY_CONFIG;
-        let mut state_builder = StackStateBuilder::default();
-        let mut ipv6_config = crate::ip::device::state::Ipv6DeviceConfiguration::default();
-        ipv6_config.dad_transmits = None;
-        ipv6_config.max_router_solicitations = None;
-        state_builder.device_builder().set_default_ipv6_config(ipv6_config);
         let mut dispatcher_builder = DummyEventDispatcherBuilder::from_config(dummy_config.clone());
         let extra_ip = UnicastAddr::new(Ipv6Addr::from_bytes([
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 100,
@@ -3034,11 +3020,7 @@ mod tests {
             extra_mac.to_ipv6_link_local().addr().get(),
             extra_mac,
         );
-        let mut ctx = dispatcher_builder.build_with(
-            state_builder,
-            DummyEventDispatcher::default(),
-            crate::context::testutil::DummyCtx::default(),
-        );
+        let mut ctx = dispatcher_builder.build();
         let device = DeviceId::new_ethernet(0);
         set_routing_enabled::<_, _, Ipv6>(&mut ctx, &mut (), device, true)
             .expect("error setting routing enabled");
@@ -3580,14 +3562,14 @@ mod tests {
         // tentative address (that is performing NDP's Duplicate Address
         // Detection (DAD)) -- IPv6 only.
 
-        // We explicitly call `build_with` when building our context below
-        // because `build` will set the default NDP parameter
-        // DUP_ADDR_DETECT_TRANSMITS to 0 (effectively disabling DAD) so we use
-        // our own custom `StackStateBuilder` to set it to the default value of
-        // `1` (see `DUP_ADDR_DETECT_TRANSMITS`).
         let config = Ipv6::DUMMY_CONFIG;
+        let mut state_builder = StackStateBuilder::default();
+        let mut ipv6_config = crate::ip::device::state::Ipv6DeviceConfiguration::default();
+        // Doesn't matter as long as DAD is enabled.
+        ipv6_config.dad_transmits = NonZeroU8::new(1);
+        state_builder.device_builder().set_default_ipv6_config(ipv6_config);
         let mut ctx = DummyEventDispatcherBuilder::default().build_with(
-            StackStateBuilder::default(),
+            state_builder,
             DummyEventDispatcher::default(),
             crate::context::testutil::DummyCtx::default(),
         );
@@ -3766,11 +3748,15 @@ mod tests {
         // Receive packet addressed to a tentative address.
         {
             // Construct a one-off context that has DAD enabled. The context
-            // built above with `builder.clone().build()` has DAD disabled, and
-            // so addresses start off in the assigned state rather than the
-            // tentative state.
+            // built above has DAD disabled, and so addresses start off in the
+            // assigned state rather than the tentative state.
+            let mut state_builder = StackStateBuilder::default();
+            let mut ipv6_config = crate::ip::device::state::Ipv6DeviceConfiguration::default();
+            // Doesn't matter as long as DAD is enabled.
+            ipv6_config.dad_transmits = NonZeroU8::new(1);
+            state_builder.device_builder().set_default_ipv6_config(ipv6_config);
             let mut ctx = builder.build_with(
-                StackStateBuilder::default(),
+                state_builder,
                 DummyEventDispatcher::default(),
                 crate::context::testutil::DummyCtx::<(), TimerId, DeviceId, (), DummyDeviceId>::default(),
             );

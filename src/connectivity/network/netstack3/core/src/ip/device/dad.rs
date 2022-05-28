@@ -20,11 +20,6 @@ use crate::{
     ip::{device::state::AddressState, IpDeviceIdContext},
 };
 
-/// The number of NS messages to be sent to perform DAD [RFC 4862 section 5.1].
-///
-/// [RFC 4862 section 5.1]: https://tools.ietf.org/html/rfc4862#section-5.1
-pub(crate) const DUP_ADDR_DETECT_TRANSMITS: u8 = 1;
-
 /// A timer ID for duplicate address detection.
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
 pub(crate) struct DadTimerId<DeviceId> {
