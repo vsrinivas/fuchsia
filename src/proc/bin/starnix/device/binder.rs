@@ -1873,17 +1873,19 @@ impl BinderDriver {
         target_proc: &Arc<BinderProcess>,
         offsets: &[binder_uintptr_t],
         transaction_data: &mut [u8],
-        _sg_buffer: &mut SharedBuffer<'_, u8>,
+        sg_buffer: &mut SharedBuffer<'_, u8>,
     ) -> Result<TransactionRefs, TransactionError> {
         let mut transaction_refs = TransactionRefs::new(target_proc);
 
-        for &offset in offsets {
+        let mut sg_remaining_buffer = sg_buffer.user_buffer();
+        let mut sg_buffer_offset = 0;
+        for (offset_idx, object_offset) in offsets.iter().map(|o| *o as usize).enumerate() {
             // Bounds-check the offset.
-            if offset as usize >= transaction_data.len() {
+            if object_offset >= transaction_data.len() {
                 return error!(EINVAL)?;
             }
-            let data_at_offset = &mut transaction_data[offset as usize..];
-            let serialized_object = SerializedBinderObject::from_bytes(data_at_offset)?;
+            let serialized_object =
+                SerializedBinderObject::from_bytes(&mut transaction_data[object_offset..])?;
             let translated_object = match serialized_object {
                 SerializedBinderObject::Handle { handle, flags, cookie } => {
                     match handle {
@@ -1950,13 +1952,84 @@ impl BinderDriver {
 
                     SerializedBinderObject::File { fd: new_fd, flags, cookie }
                 }
-                SerializedBinderObject::Buffer { .. } => {
-                    return error!(EOPNOTSUPP)?;
+                SerializedBinderObject::Buffer { buffer, length, flags, parent, parent_offset } => {
+                    if length % std::mem::size_of::<binder_uintptr_t>() != 0
+                        || !buffer.is_aligned(std::mem::size_of::<binder_uintptr_t>() as u64)
+                    {
+                        return error!(EINVAL)?;
+                    }
+
+                    // Copy the memory pointed to by this buffer object into the receiver.
+                    if length > sg_remaining_buffer.length {
+                        return error!(EINVAL)?;
+                    }
+                    current_task.mm.read_memory(
+                        buffer,
+                        &mut sg_buffer.as_mut_bytes()[sg_buffer_offset..sg_buffer_offset + length],
+                    )?;
+
+                    let translated_buffer_address = sg_remaining_buffer.address;
+
+                    // If the buffer has a parent, it means that the parent buffer has a pointer to
+                    // this buffer. This pointer will need to be translated to the receiver's
+                    // address space.
+                    if flags & BINDER_BUFFER_FLAG_HAS_PARENT != 0 {
+                        // The parent buffer must come earlier in the object list and already be
+                        // copied into the receiver's address space. Otherwise we would be fixing
+                        // up memory in the sender's address space, which is marked const in the
+                        // userspace runtime.
+                        if parent >= offset_idx {
+                            return error!(EINVAL)?;
+                        }
+
+                        // Find the parent buffer in the transaction data.
+                        let parent_object_offset = offsets[parent] as usize;
+                        if parent_object_offset >= transaction_data.len() {
+                            return error!(EINVAL)?;
+                        }
+                        let parent_buffer_addr = match SerializedBinderObject::from_bytes(
+                            &transaction_data[parent_object_offset..],
+                        )? {
+                            SerializedBinderObject::Buffer { buffer, .. } => buffer,
+                            _ => return error!(EINVAL)?,
+                        };
+
+                        // Calculate the offset of the parent buffer in the scatter gather buffer.
+                        let parent_buffer_offset =
+                            parent_buffer_addr - sg_buffer.user_buffer().address;
+
+                        // Calculate the offset of the pointer to be fixed in the scatter-gather
+                        // buffer.
+                        let pointer_to_fix_offset = parent_buffer_offset
+                            .checked_add(parent_offset)
+                            .ok_or_else(|| errno!(EINVAL))?;
+
+                        // Patch the pointer with the translated address.
+                        translated_buffer_address
+                            .write_to_prefix(&mut sg_buffer.as_mut_bytes()[pointer_to_fix_offset..])
+                            .ok_or_else(|| errno!(EINVAL))?;
+                    }
+
+                    // Update the scatter-gather buffer to account for the buffer we just wrote.
+                    sg_remaining_buffer = UserBuffer {
+                        address: sg_remaining_buffer.address + length,
+                        length: sg_remaining_buffer.length - length,
+                    };
+                    sg_buffer_offset += length;
+
+                    // Patch this buffer with the translated address.
+                    SerializedBinderObject::Buffer {
+                        buffer: translated_buffer_address,
+                        length,
+                        flags,
+                        parent,
+                        parent_offset,
+                    }
                 }
                 SerializedBinderObject::FileArray { .. } => return error!(EOPNOTSUPP)?,
             };
 
-            translated_object.write_to(data_at_offset)?;
+            translated_object.write_to(&mut transaction_data[object_offset..])?;
         }
 
         // We made it to the end successfully. No need to run the drop guard.
@@ -2259,6 +2332,7 @@ mod tests {
     use crate::mm::PAGE_SIZE;
     use crate::testing::*;
     use assert_matches::assert_matches;
+    use memoffset::offset_of;
 
     const BASE_ADDR: UserAddress = UserAddress::from(0x0000000000000100);
     const VMO_LENGTH: usize = 4096;
@@ -3171,6 +3245,276 @@ mod tests {
             .expect("expected handle not present");
         assert!(std::ptr::eq(object.owner.as_ptr(), Arc::as_ptr(&owner_proc)));
         assert_eq!(object.local, binder_object);
+    }
+
+    /// Tests that hwbinder's scatter-gather buffer-fix-up implementation is correct.
+    #[fuchsia::test]
+    fn transaction_translate_buffers() {
+        let test = TranslateHandlesTestFixture::new();
+
+        // Allocate memory in the sender to hold all the buffers that will get submitted to the
+        // binder driver.
+        let sender_addr = map_memory(&test.sender_task, UserAddress::default(), *PAGE_SIZE);
+        let mut writer = UserMemoryWriter::new(&test.sender_task, sender_addr);
+
+        // Serialize a string into memory and pad it to 8 bytes. Binder requires all buffers to be
+        // padded to 8-byte alignment.
+        const FOO_STR_LEN: i32 = 3;
+        const FOO_STR_PADDED_LEN: u64 = 8;
+        let sender_foo_addr = writer.write(b"foo\0\0\0\0\0");
+
+        // Serialize a C struct that points to the above string.
+        #[repr(C)]
+        #[derive(AsBytes)]
+        struct Bar {
+            foo_str: UserAddress,
+            len: i32,
+            _padding: u32,
+        }
+        let sender_bar_addr =
+            writer.write_object(&Bar { foo_str: sender_foo_addr, len: FOO_STR_LEN, _padding: 0 });
+
+        // Mark the start of the transaction data.
+        let transaction_data_addr = writer.current_address();
+
+        // Write the buffer object representing the C struct `Bar`.
+        let sender_buffer0_addr = writer.write_object(&binder_buffer_object {
+            hdr: binder_object_header { type_: BINDER_TYPE_PTR },
+            buffer: sender_bar_addr.ptr() as u64,
+            length: std::mem::size_of::<Bar>() as u64,
+            ..binder_buffer_object::default()
+        });
+
+        // Write the buffer object representing the "foo" string. Its parent is the C struct `Bar`,
+        // which has a pointer to it.
+        let sender_buffer1_addr = writer.write_object(&binder_buffer_object {
+            hdr: binder_object_header { type_: BINDER_TYPE_PTR },
+            buffer: sender_foo_addr.ptr() as u64,
+            length: FOO_STR_PADDED_LEN,
+            // Mark this buffer as having a parent who references it. The driver will then read
+            // the next two fields.
+            flags: BINDER_BUFFER_FLAG_HAS_PARENT,
+            // The index in the offsets array of the parent buffer.
+            parent: 0,
+            // The location in the parent buffer where a pointer to this object needs to be
+            // fixed up.
+            parent_offset: offset_of!(Bar, foo_str) as u64,
+        });
+
+        // Write the offsets array.
+        let offsets_addr = writer.current_address();
+        writer.write_object(&((sender_buffer0_addr - transaction_data_addr) as u64));
+        writer.write_object(&((sender_buffer1_addr - transaction_data_addr) as u64));
+
+        let end_data_addr = writer.current_address();
+        drop(writer);
+
+        // Construct the input for the binder driver to process.
+        let input = binder_transaction_data_sg {
+            transaction_data: binder_transaction_data {
+                target: binder_transaction_data__bindgen_ty_1 { handle: 1 },
+                data_size: (offsets_addr - transaction_data_addr) as u64,
+                offsets_size: (end_data_addr - offsets_addr) as u64,
+                data: binder_transaction_data__bindgen_ty_2 {
+                    ptr: binder_transaction_data__bindgen_ty_2__bindgen_ty_1 {
+                        buffer: transaction_data_addr.ptr() as u64,
+                        offsets: offsets_addr.ptr() as u64,
+                    },
+                },
+                ..binder_transaction_data::new_zeroed()
+            },
+            buffers_size: std::mem::size_of::<Bar>() as u64 + FOO_STR_PADDED_LEN,
+        };
+
+        // Perform the translation and copying.
+        let (data_buffer, _, _) = test
+            .driver
+            .copy_transaction_buffers(
+                &test.sender_task,
+                &test.sender_proc,
+                &test.sender_thread,
+                &test.receiver_proc,
+                &input,
+            )
+            .expect("copy_transaction_buffers");
+
+        // Read back the translated objects from the receiver's memory.
+        let mut translated_objects = [binder_buffer_object::default(); 2];
+        test.receiver_task
+            .mm
+            .read_objects(UserRef::new(data_buffer.address), &mut translated_objects)
+            .expect("read output");
+
+        // Check that the second buffer is the string "foo".
+        let foo_addr = UserAddress::from(translated_objects[1].buffer);
+        let mut str = [0u8; 3];
+        test.receiver_task.mm.read_memory(foo_addr, &mut str).expect("read buffer 1");
+        assert_eq!(&str, b"foo");
+
+        // Check that the first buffer points to the string "foo".
+        let foo_ptr: UserAddress = test
+            .receiver_task
+            .mm
+            .read_object(UserRef::new(UserAddress::from(translated_objects[0].buffer)))
+            .expect("read buffer 0");
+        assert_eq!(foo_ptr, foo_addr);
+    }
+
+    /// Tests that when the scatter-gather buffer size reported by userspace is too small, we stop
+    /// processing and fail, instead of skipping a buffer object that doesn't fit.
+    #[fuchsia::test]
+    fn transaction_fails_when_sg_buffer_size_is_too_small() {
+        let test = TranslateHandlesTestFixture::new();
+
+        // Allocate memory in the sender to hold all the buffers that will get submitted to the
+        // binder driver.
+        let sender_addr = map_memory(&test.sender_task, UserAddress::default(), *PAGE_SIZE);
+        let mut writer = UserMemoryWriter::new(&test.sender_task, sender_addr);
+
+        // Serialize a series of buffers that point to empty data. Each successive buffer is smaller
+        // than the last.
+        let buffer_objects = [8, 7, 6]
+            .iter()
+            .map(|size| binder_buffer_object {
+                hdr: binder_object_header { type_: BINDER_TYPE_PTR },
+                buffer: writer
+                    .write(&{
+                        let mut data = Vec::new();
+                        data.resize(*size, 0u8);
+                        data
+                    })
+                    .ptr() as u64,
+                length: *size as u64,
+                ..binder_buffer_object::default()
+            })
+            .collect::<Vec<_>>();
+
+        // Mark the start of the transaction data.
+        let transaction_data_addr = writer.current_address();
+
+        // Write the buffer objects to the transaction payload.
+        let offsets = buffer_objects
+            .into_iter()
+            .map(|buffer_object| {
+                (writer.write_object(&buffer_object) - transaction_data_addr) as u64
+            })
+            .collect::<Vec<_>>();
+
+        // Write the offsets array.
+        let offsets_addr = writer.current_address();
+        for offset in offsets {
+            writer.write_object(&offset);
+        }
+
+        let end_data_addr = writer.current_address();
+        drop(writer);
+
+        // Construct the input for the binder driver to process.
+        let input = binder_transaction_data_sg {
+            transaction_data: binder_transaction_data {
+                target: binder_transaction_data__bindgen_ty_1 { handle: 1 },
+                data_size: (offsets_addr - transaction_data_addr) as u64,
+                offsets_size: (end_data_addr - offsets_addr) as u64,
+                data: binder_transaction_data__bindgen_ty_2 {
+                    ptr: binder_transaction_data__bindgen_ty_2__bindgen_ty_1 {
+                        buffer: transaction_data_addr.ptr() as u64,
+                        offsets: offsets_addr.ptr() as u64,
+                    },
+                },
+                ..binder_transaction_data::new_zeroed()
+            },
+            // Make the buffers size only fit the first buffer fully (size 8). The remaining space
+            // should be 6 bytes, so that the second buffer doesn't fit but the next one does.
+            buffers_size: 8 + 6,
+        };
+
+        // Perform the translation and copying.
+        test.driver
+            .copy_transaction_buffers(
+                &test.sender_task,
+                &test.sender_proc,
+                &test.sender_thread,
+                &test.receiver_proc,
+                &input,
+            )
+            .expect_err("copy_transaction_buffers should fail");
+    }
+
+    /// Tests that when a scatter-gather buffer refers to a parent that comes *after* it in the
+    /// object list, the transaction fails.
+    #[fuchsia::test]
+    fn transaction_fails_when_sg_buffer_parent_is_out_of_order() {
+        let test = TranslateHandlesTestFixture::new();
+
+        // Allocate memory in the sender to hold all the buffers that will get submitted to the
+        // binder driver.
+        let sender_addr = map_memory(&test.sender_task, UserAddress::default(), *PAGE_SIZE);
+        let mut writer = UserMemoryWriter::new(&test.sender_task, sender_addr);
+
+        // Write the data for two buffer objects.
+        const BUFFER_DATA_LEN: usize = 8;
+        let buf0_addr = writer.write(&[0; BUFFER_DATA_LEN]);
+        let buf1_addr = writer.write(&[0; BUFFER_DATA_LEN]);
+
+        // Mark the start of the transaction data.
+        let transaction_data_addr = writer.current_address();
+
+        // Write a buffer object that marks a future buffer as its parent.
+        let sender_buffer0_addr = writer.write_object(&binder_buffer_object {
+            hdr: binder_object_header { type_: BINDER_TYPE_PTR },
+            buffer: buf0_addr.ptr() as u64,
+            length: BUFFER_DATA_LEN as u64,
+            // Mark this buffer as having a parent who references it. The driver will then read
+            // the next two fields.
+            flags: BINDER_BUFFER_FLAG_HAS_PARENT,
+            parent: 0,
+            parent_offset: 0,
+        });
+
+        // Write a buffer object that acts as the first buffers parent (contains a pointer to the
+        // first buffer).
+        let sender_buffer1_addr = writer.write_object(&binder_buffer_object {
+            hdr: binder_object_header { type_: BINDER_TYPE_PTR },
+            buffer: buf1_addr.ptr() as u64,
+            length: BUFFER_DATA_LEN as u64,
+            ..binder_buffer_object::default()
+        });
+
+        // Write the offsets array.
+        let offsets_addr = writer.current_address();
+        writer.write_object(&((sender_buffer0_addr - transaction_data_addr) as u64));
+        writer.write_object(&((sender_buffer1_addr - transaction_data_addr) as u64));
+
+        let end_data_addr = writer.current_address();
+        drop(writer);
+
+        // Construct the input for the binder driver to process.
+        let input = binder_transaction_data_sg {
+            transaction_data: binder_transaction_data {
+                target: binder_transaction_data__bindgen_ty_1 { handle: 1 },
+                data_size: (offsets_addr - transaction_data_addr) as u64,
+                offsets_size: (end_data_addr - offsets_addr) as u64,
+                data: binder_transaction_data__bindgen_ty_2 {
+                    ptr: binder_transaction_data__bindgen_ty_2__bindgen_ty_1 {
+                        buffer: transaction_data_addr.ptr() as u64,
+                        offsets: offsets_addr.ptr() as u64,
+                    },
+                },
+                ..binder_transaction_data::new_zeroed()
+            },
+            buffers_size: BUFFER_DATA_LEN as u64 * 2,
+        };
+
+        // Perform the translation and copying.
+        test.driver
+            .copy_transaction_buffers(
+                &test.sender_task,
+                &test.sender_proc,
+                &test.sender_thread,
+                &test.receiver_proc,
+                &input,
+            )
+            .expect_err("copy_transaction_buffers should fail");
     }
 
     #[fuchsia::test]

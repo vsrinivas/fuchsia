@@ -6,13 +6,14 @@ use fidl_fuchsia_io as fio;
 use fuchsia_zircon as zx;
 use std::ffi::CString;
 use std::sync::Arc;
+use zerocopy::AsBytes;
 
 use crate::fs::fuchsia::RemoteFs;
 use crate::fs::tmpfs::TmpFs;
 use crate::fs::*;
 use crate::mm::{
     syscalls::{sys_mmap, sys_mremap},
-    PAGE_SIZE,
+    MemoryManager, PAGE_SIZE,
 };
 use crate::task::*;
 use crate::types::*;
@@ -197,5 +198,43 @@ pub struct PlaceholderFsNodeOps;
 impl FsNodeOps for PlaceholderFsNodeOps {
     fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
         panic!("should not be called")
+    }
+}
+
+/// Helper to write out data to a task's memory sequentially.
+pub struct UserMemoryWriter<'a> {
+    // The task's memory manager.
+    mm: &'a MemoryManager,
+    // The address to which to write the next bit of data.
+    current_addr: UserAddress,
+}
+
+impl<'a> UserMemoryWriter<'a> {
+    /// Constructs a new `UserMemoryWriter` to write to `task`'s memory at `addr`.
+    pub fn new(task: &'a Task, addr: UserAddress) -> Self {
+        Self { mm: &task.mm, current_addr: addr }
+    }
+
+    /// Writes all of `data` to the current address in the task's address space, incrementing the
+    /// current address by the size of `data`. Returns the address at which the data starts.
+    /// Panics on failure.
+    pub fn write(&mut self, data: &[u8]) -> UserAddress {
+        let bytes_written = self.mm.write_memory(self.current_addr, data).unwrap();
+        assert_eq!(bytes_written, data.len());
+        let start_addr = self.current_addr;
+        self.current_addr += bytes_written;
+        start_addr
+    }
+
+    /// Writes `object` to the current address in the task's address space, incrementing the
+    /// current address by the size of `object`. Returns the address at which the data starts.
+    /// Panics on failure.
+    pub fn write_object<T: AsBytes>(&mut self, object: &T) -> UserAddress {
+        self.write(object.as_bytes())
+    }
+
+    /// Returns the current address at which data will be next written.
+    pub fn current_address(&self) -> UserAddress {
+        self.current_addr
     }
 }
