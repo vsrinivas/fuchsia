@@ -26,12 +26,6 @@ group("end_to_end_deps") {
     # Needed for performance testing.
     "//garnet/packages/prod:tracing",
 
-    # Needed for file exist verification.
-    "//third_party/sbase:ls",
-
-    # Needed for flutter driver using find to get vmservice-port.
-    "//third_party/sbase:find",
-
     # Needed for VP9 decode conformance testing.
     "//src/media/codec/examples:vp9_decoder_conformance_http",
 

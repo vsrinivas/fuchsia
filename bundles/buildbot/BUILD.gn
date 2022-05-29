@@ -202,9 +202,6 @@ group("core_base_packages") {
     "//src/ui/tests/integration_input_tests/touch/one-flutter:one-flutter",
     "//src/ui/tests/integration_input_tests/touch/touch-gfx-client:touch-gfx-client",
     "//src/ui/tests/scenic-stress-tests",
-    "//third_party/sbase:ls",
-    "//third_party/sbase:sleep",
-    "//third_party/sbase:yes",
     dart_default_build_cfg.runner_dep,
     flutter_default_build_cfg.runner_dep,
   ]
