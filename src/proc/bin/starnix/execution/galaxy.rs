@@ -38,6 +38,13 @@ pub struct Galaxy {
     pub root_fs: Arc<FsContext>,
 }
 
+impl Galaxy {
+    pub fn create_process(&self, binary_path: &CString) -> Result<CurrentTask, Errno> {
+        // TODO(fxb/101376): The task should be parented to init instead of being rootless.
+        Task::create_process_without_parent(&self.kernel, binary_path.clone(), self.root_fs.clone())
+    }
+}
+
 /// Creates a new galaxy.
 ///
 /// If the CONFIG specifies an init task, it is run before

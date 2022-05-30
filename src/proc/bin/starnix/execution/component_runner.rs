@@ -74,11 +74,7 @@ pub async fn start_component(
         // If the binary path is absolute, treat it as a path to an existing binary.
         binary_path.to_owned()
     })?;
-    let mut current_task = Task::create_process_without_parent(
-        &galaxy.kernel,
-        binary_path.clone(),
-        galaxy.root_fs.clone(),
-    )?;
+    let mut current_task = galaxy.create_process(&binary_path)?;
     let user_passwd = get_program_string(&start_info, "user").unwrap_or("fuchsia:x:42:42");
     let credentials = Credentials::from_passwd(user_passwd)?;
     current_task.write().creds = credentials;
