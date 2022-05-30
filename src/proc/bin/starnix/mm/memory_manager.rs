@@ -16,7 +16,7 @@ use crate::fs::*;
 use crate::lock::{Mutex, RwLock};
 use crate::logging::*;
 use crate::mm::{vmo::round_up_to_system_page_size, FutexTable};
-use crate::task::{CurrentTask, Task};
+use crate::task::*;
 use crate::types::{range_ext::RangeExt, *};
 use crate::vmex_resource::VMEX_RESOURCE;
 
@@ -1454,8 +1454,13 @@ impl FileOps for ProcStatFile {
         let iter = move |_cursor, sink: &mut SeqFileBuf| {
             let command = command.as_c_str().to_str().unwrap_or("unknown");
             let mut stats = [0u64; 49];
-            let mm_state = self.task.mm.state.read();
-            stats[24] = mm_state.stack_start.ptr() as u64;
+            stats[0] = self.task.thread_group.read().get_ppid() as u64;
+            stats[1] = self.task.thread_group.read().process_group.leader as u64;
+            stats[2] = self.task.thread_group.read().process_group.session.leader as u64;
+            {
+                let mm_state = self.task.mm.state.read();
+                stats[24] = mm_state.stack_start.ptr() as u64;
+            }
             let stat_str = stats.map(|n| n.to_string()).join(" ");
             write!(sink, "{} ({}) R {}\n", self.task.get_pid(), command, stat_str)?;
             Ok(None)
