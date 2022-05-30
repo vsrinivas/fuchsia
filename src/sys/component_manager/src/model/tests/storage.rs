@@ -119,6 +119,7 @@ async fn use_in_collection_from_parent() {
                     rights: Some(*routing::rights::READ_RIGHTS | *routing::rights::WRITE_RIGHTS),
                     subdir: None,
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .add_lazy_child("b")
                 .build(),
@@ -131,18 +132,21 @@ async fn use_in_collection_from_parent() {
                     source_name: "fuchsia.component.Realm".try_into().unwrap(),
                     target_path: "/svc/fuchsia.component.Realm".try_into().unwrap(),
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .offer(OfferDecl::Storage(OfferStorageDecl {
                     source: OfferSource::Self_,
                     target: OfferTarget::Collection("coll".to_string()),
                     source_name: "data".into(),
                     target_name: "data".into(),
+                    availability: Availability::Required,
                 }))
                 .offer(OfferDecl::Storage(OfferStorageDecl {
                     source: OfferSource::Self_,
                     target: OfferTarget::Collection("coll".to_string()),
                     source_name: "cache".into(),
                     target_name: "cache".into(),
+                    availability: Availability::Required,
                 }))
                 .storage(StorageDecl {
                     name: "data".into(),
@@ -167,10 +171,12 @@ async fn use_in_collection_from_parent() {
                 .use_(UseDecl::Storage(UseStorageDecl {
                     source_name: "data".into(),
                     target_path: "/data".try_into().unwrap(),
+                    availability: Availability::Required,
                 }))
                 .use_(UseDecl::Storage(UseStorageDecl {
                     source_name: "cache".into(),
                     target_path: "/cache".try_into().unwrap(),
+                    availability: Availability::Required,
                 }))
                 .build(),
         ),
@@ -286,12 +292,14 @@ async fn use_in_collection_from_grandparent() {
                     target: OfferTarget::static_child("b".to_string()),
                     source_name: "data".into(),
                     target_name: "data".into(),
+                    availability: Availability::Required,
                 }))
                 .offer(OfferDecl::Storage(OfferStorageDecl {
                     source: OfferSource::Self_,
                     target: OfferTarget::static_child("b".to_string()),
                     source_name: "cache".into(),
                     target_name: "cache".into(),
+                    availability: Availability::Required,
                 }))
                 .add_lazy_child("b")
                 .storage(StorageDecl {
@@ -318,18 +326,21 @@ async fn use_in_collection_from_grandparent() {
                     source_name: "fuchsia.component.Realm".try_into().unwrap(),
                     target_path: "/svc/fuchsia.component.Realm".try_into().unwrap(),
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .offer(OfferDecl::Storage(OfferStorageDecl {
                     source: OfferSource::Parent,
                     target: OfferTarget::Collection("coll".to_string()),
                     source_name: "data".into(),
                     target_name: "data".into(),
+                    availability: Availability::Required,
                 }))
                 .offer(OfferDecl::Storage(OfferStorageDecl {
                     source: OfferSource::Parent,
                     target: OfferTarget::Collection("coll".to_string()),
                     source_name: "cache".into(),
                     target_name: "cache".into(),
+                    availability: Availability::Required,
                 }))
                 .add_transient_collection("coll")
                 .build(),
@@ -340,10 +351,12 @@ async fn use_in_collection_from_grandparent() {
                 .use_(UseDecl::Storage(UseStorageDecl {
                     source_name: "data".into(),
                     target_path: "/data".try_into().unwrap(),
+                    availability: Availability::Required,
                 }))
                 .use_(UseDecl::Storage(UseStorageDecl {
                     source_name: "cache".into(),
                     target_path: "/cache".try_into().unwrap(),
+                    availability: Availability::Required,
                 }))
                 .build(),
         ),
@@ -517,6 +530,7 @@ async fn use_restricted_storage_start_failure() {
                     target: OfferTarget::static_child("parent_consumer".to_string()),
                     source_name: "cache".into(),
                     target_name: "cache".into(),
+                    availability: Availability::Required,
                 }))
                 .add_lazy_child("parent_consumer")
                 .build(),
@@ -527,12 +541,14 @@ async fn use_restricted_storage_start_failure() {
                 .use_(UseDecl::Storage(UseStorageDecl {
                     source_name: "cache".into(),
                     target_path: "/storage".try_into().unwrap(),
+                    availability: Availability::Required,
                 }))
                 .offer(OfferDecl::Storage(OfferStorageDecl {
                     source: OfferSource::Parent,
                     target: OfferTarget::static_child("child_consumer".to_string()),
                     source_name: "cache".into(),
                     target_name: "cache".into(),
+                    availability: Availability::Required,
                 }))
                 .add_lazy_child("child_consumer")
                 .build(),
@@ -543,6 +559,7 @@ async fn use_restricted_storage_start_failure() {
                 .use_(UseDecl::Storage(UseStorageDecl {
                     source_name: "cache".into(),
                     target_path: "/storage".try_into().unwrap(),
+                    availability: Availability::Required,
                 }))
                 .build(),
         ),
@@ -609,6 +626,7 @@ async fn use_restricted_storage_open_failure() {
                     target: OfferTarget::static_child("parent_consumer".to_string()),
                     source_name: "cache".into(),
                     target_name: "cache".into(),
+                    availability: Availability::Required,
                 }))
                 .add_lazy_child("parent_consumer")
                 .build(),
@@ -619,6 +637,7 @@ async fn use_restricted_storage_open_failure() {
                 .use_(UseDecl::Storage(UseStorageDecl {
                     source_name: "cache".into(),
                     target_path: "/storage".try_into().unwrap(),
+                    availability: Availability::Required,
                 }))
                 .build(),
         ),
@@ -641,6 +660,7 @@ async fn use_restricted_storage_open_failure() {
         RouteRequest::UseStorage(UseStorageDecl {
             source_name: "cache".into(),
             target_path: "/storage".try_into().unwrap(),
+            availability: cm_rust::Availability::Required,
         }),
         &parent_consumer_instance,
         OpenOptions::Storage(OpenStorageOptions {
@@ -676,6 +696,7 @@ async fn use_restricted_storage_open_failure() {
         RouteRequest::UseStorage(UseStorageDecl {
             source_name: "cache".into(),
             target_path: "/storage".try_into().unwrap(),
+            availability: cm_rust::Availability::Required,
         }),
         &parent_consumer_instance,
         OpenOptions::Storage(OpenStorageOptions {
@@ -728,6 +749,7 @@ async fn storage_persistence_relative_moniker_path() {
                     target: OfferTarget::static_child("b".to_string()),
                     source_name: "data".into(),
                     target_name: "data".into(),
+                    availability: Availability::Required,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferSource::Capability("data".into()),
@@ -735,6 +757,7 @@ async fn storage_persistence_relative_moniker_path() {
                     target_name: "fuchsia.sys2.StorageAdmin".try_into().unwrap(),
                     target: OfferTarget::static_child("b".to_string()),
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .add_lazy_child("b")
                 .build(),
@@ -747,22 +770,26 @@ async fn storage_persistence_relative_moniker_path() {
                     source_name: "fuchsia.component.Realm".try_into().unwrap(),
                     target_path: "/svc/fuchsia.component.Realm".try_into().unwrap(),
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Parent,
                     source_name: "fuchsia.sys2.StorageAdmin".try_into().unwrap(),
                     target_path: "/svc/fuchsia.sys2.StorageAdmin".try_into().unwrap(),
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .use_(UseDecl::Storage(UseStorageDecl {
                     source_name: "data".into(),
                     target_path: "/data".try_into().unwrap(),
+                    availability: Availability::Required,
                 }))
                 .offer(OfferDecl::Storage(OfferStorageDecl {
                     source: OfferSource::Parent,
                     target: OfferTarget::Collection("persistent_coll".to_string()),
                     source_name: "data".into(),
                     target_name: "data".into(),
+                    availability: Availability::Required,
                 }))
                 .add_collection(
                     CollectionDeclBuilder::new_transient_collection("persistent_coll")
@@ -776,6 +803,7 @@ async fn storage_persistence_relative_moniker_path() {
                 .use_(UseDecl::Storage(UseStorageDecl {
                     source_name: "data".into(),
                     target_path: "/data".try_into().unwrap(),
+                    availability: Availability::Required,
                 }))
                 .build(),
         ),
@@ -904,6 +932,7 @@ async fn storage_persistence_instance_id_path() {
                     target: OfferTarget::static_child("b".to_string()),
                     source_name: "data".into(),
                     target_name: "data".into(),
+                    availability: Availability::Required,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferSource::Capability("data".into()),
@@ -911,6 +940,7 @@ async fn storage_persistence_instance_id_path() {
                     target_name: "fuchsia.sys2.StorageAdmin".try_into().unwrap(),
                     target: OfferTarget::static_child("b".to_string()),
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .add_lazy_child("b")
                 .build(),
@@ -923,22 +953,26 @@ async fn storage_persistence_instance_id_path() {
                     source_name: "fuchsia.component.Realm".try_into().unwrap(),
                     target_path: "/svc/fuchsia.component.Realm".try_into().unwrap(),
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Parent,
                     source_name: "fuchsia.sys2.StorageAdmin".try_into().unwrap(),
                     target_path: "/svc/fuchsia.sys2.StorageAdmin".try_into().unwrap(),
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .use_(UseDecl::Storage(UseStorageDecl {
                     source_name: "data".into(),
                     target_path: "/data".try_into().unwrap(),
+                    availability: Availability::Required,
                 }))
                 .offer(OfferDecl::Storage(OfferStorageDecl {
                     source: OfferSource::Parent,
                     target: OfferTarget::Collection("persistent_coll".to_string()),
                     source_name: "data".into(),
                     target_name: "data".into(),
+                    availability: Availability::Required,
                 }))
                 .add_collection(
                     CollectionDeclBuilder::new_transient_collection("persistent_coll")
@@ -952,6 +986,7 @@ async fn storage_persistence_instance_id_path() {
                 .use_(UseDecl::Storage(UseStorageDecl {
                     source_name: "data".into(),
                     target_path: "/data".try_into().unwrap(),
+                    availability: Availability::Required,
                 }))
                 .build(),
         ),
@@ -1083,6 +1118,7 @@ async fn storage_persistence_inheritance() {
                     target: OfferTarget::static_child("b".to_string()),
                     source_name: "data".into(),
                     target_name: "data".into(),
+                    availability: Availability::Required,
                 }))
                 .add_lazy_child("b")
                 .build(),
@@ -1095,16 +1131,19 @@ async fn storage_persistence_inheritance() {
                     source_name: "fuchsia.component.Realm".try_into().unwrap(),
                     target_path: "/svc/fuchsia.component.Realm".try_into().unwrap(),
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .use_(UseDecl::Storage(UseStorageDecl {
                     source_name: "data".into(),
                     target_path: "/data".try_into().unwrap(),
+                    availability: Availability::Required,
                 }))
                 .offer(OfferDecl::Storage(OfferStorageDecl {
                     source: OfferSource::Parent,
                     target: OfferTarget::Collection("persistent_coll".to_string()),
                     source_name: "data".into(),
                     target_name: "data".into(),
+                    availability: Availability::Required,
                 }))
                 .add_collection(
                     CollectionDeclBuilder::new_transient_collection("persistent_coll")
@@ -1120,22 +1159,26 @@ async fn storage_persistence_inheritance() {
                     source_name: "fuchsia.component.Realm".try_into().unwrap(),
                     target_path: "/svc/fuchsia.component.Realm".try_into().unwrap(),
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .use_(UseDecl::Storage(UseStorageDecl {
                     source_name: "data".into(),
                     target_path: "/data".try_into().unwrap(),
+                    availability: Availability::Required,
                 }))
                 .offer(OfferDecl::Storage(OfferStorageDecl {
                     source: OfferSource::Parent,
                     target: OfferTarget::static_child("d".to_string()),
                     source_name: "data".into(),
                     target_name: "data".into(),
+                    availability: Availability::Required,
                 }))
                 .offer(OfferDecl::Storage(OfferStorageDecl {
                     source: OfferSource::Parent,
                     target: OfferTarget::Collection("lower_coll".to_string()),
                     source_name: "data".into(),
                     target_name: "data".into(),
+                    availability: Availability::Required,
                 }))
                 .add_lazy_child("d")
                 .add_transient_collection("lower_coll")
@@ -1147,6 +1190,7 @@ async fn storage_persistence_inheritance() {
                 .use_(UseDecl::Storage(UseStorageDecl {
                     source_name: "data".into(),
                     target_path: "/data".try_into().unwrap(),
+                    availability: Availability::Required,
                 }))
                 .build(),
         ),
@@ -1156,6 +1200,7 @@ async fn storage_persistence_inheritance() {
                 .use_(UseDecl::Storage(UseStorageDecl {
                     source_name: "data".into(),
                     target_path: "/data".try_into().unwrap(),
+                    availability: Availability::Required,
                 }))
                 .build(),
         ),
@@ -1327,6 +1372,7 @@ async fn storage_persistence_disablement() {
                     target: OfferTarget::static_child("b".to_string()),
                     source_name: "data".into(),
                     target_name: "data".into(),
+                    availability: Availability::Required,
                 }))
                 .add_lazy_child("b")
                 .build(),
@@ -1339,16 +1385,19 @@ async fn storage_persistence_disablement() {
                     source_name: "fuchsia.component.Realm".try_into().unwrap(),
                     target_path: "/svc/fuchsia.component.Realm".try_into().unwrap(),
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .use_(UseDecl::Storage(UseStorageDecl {
                     source_name: "data".into(),
                     target_path: "/data".try_into().unwrap(),
+                    availability: Availability::Required,
                 }))
                 .offer(OfferDecl::Storage(OfferStorageDecl {
                     source: OfferSource::Parent,
                     target: OfferTarget::Collection("persistent_coll".to_string()),
                     source_name: "data".into(),
                     target_name: "data".into(),
+                    availability: Availability::Required,
                 }))
                 .add_collection(
                     CollectionDeclBuilder::new_transient_collection("persistent_coll")
@@ -1364,22 +1413,26 @@ async fn storage_persistence_disablement() {
                     source_name: "fuchsia.component.Realm".try_into().unwrap(),
                     target_path: "/svc/fuchsia.component.Realm".try_into().unwrap(),
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .use_(UseDecl::Storage(UseStorageDecl {
                     source_name: "data".into(),
                     target_path: "/data".try_into().unwrap(),
+                    availability: Availability::Required,
                 }))
                 .offer(OfferDecl::Storage(OfferStorageDecl {
                     source: OfferSource::Parent,
                     target: OfferTarget::static_child("d".to_string()),
                     source_name: "data".into(),
                     target_name: "data".into(),
+                    availability: Availability::Required,
                 }))
                 .offer(OfferDecl::Storage(OfferStorageDecl {
                     source: OfferSource::Parent,
                     target: OfferTarget::Collection("non_persistent_coll".to_string()),
                     source_name: "data".into(),
                     target_name: "data".into(),
+                    availability: Availability::Required,
                 }))
                 .add_lazy_child("d")
                 .add_collection(
@@ -1396,10 +1449,12 @@ async fn storage_persistence_disablement() {
                     source_name: "fuchsia.component.Realm".try_into().unwrap(),
                     target_path: "/svc/fuchsia.component.Realm".try_into().unwrap(),
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .use_(UseDecl::Storage(UseStorageDecl {
                     source_name: "data".into(),
                     target_path: "/data".try_into().unwrap(),
+                    availability: Availability::Required,
                 }))
                 .build(),
         ),
@@ -1409,6 +1464,7 @@ async fn storage_persistence_disablement() {
                 .use_(UseDecl::Storage(UseStorageDecl {
                     source_name: "data".into(),
                     target_path: "/data".try_into().unwrap(),
+                    availability: Availability::Required,
                 }))
                 .build(),
         ),

@@ -175,9 +175,9 @@ mod tests {
         },
         ::routing::component_instance::ComponentInstanceInterface,
         cm_rust::{
-            CapabilityName, CapabilityPath, DependencyType, ExposeDecl, ExposeDirectoryDecl,
-            ExposeProtocolDecl, ExposeRunnerDecl, ExposeSource, ExposeTarget, UseDecl,
-            UseDirectoryDecl, UseProtocolDecl, UseSource, UseStorageDecl,
+            Availability, CapabilityName, CapabilityPath, DependencyType, ExposeDecl,
+            ExposeDirectoryDecl, ExposeProtocolDecl, ExposeRunnerDecl, ExposeSource, ExposeTarget,
+            UseDecl, UseDirectoryDecl, UseProtocolDecl, UseSource, UseStorageDecl,
         },
         fidl::endpoints::{ClientEnd, ServerEnd},
         fidl_fuchsia_io as fio, fuchsia_zircon as zx,
@@ -202,20 +202,24 @@ mod tests {
                     rights: fio::Operations::CONNECT,
                     subdir: None,
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }),
                 UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Parent,
                     source_name: "baz-svc".into(),
                     target_path: CapabilityPath::try_from("/in/svc/hippo").unwrap(),
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }),
                 UseDecl::Storage(UseStorageDecl {
                     source_name: "data".into(),
                     target_path: "/in/data/persistent".try_into().unwrap(),
+                    availability: Availability::Required,
                 }),
                 UseDecl::Storage(UseStorageDecl {
                     source_name: "cache".into(),
                     target_path: "/in/data/cache".try_into().unwrap(),
+                    availability: Availability::Required,
                 }),
             ],
             ..default_component_decl()

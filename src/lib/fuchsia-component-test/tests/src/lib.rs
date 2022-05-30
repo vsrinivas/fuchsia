@@ -691,12 +691,14 @@ async fn mock_component_with_a_relative_dynamic_child() -> Result<(), Error> {
         target: cm_rust::OfferTarget::Collection(collection_name.clone()),
         target_name: "fidl.examples.routing.echo.Echo".into(),
         dependency_type: cm_rust::DependencyType::Strong,
+        availability: cm_rust::Availability::Required,
     }));
     echo_client_decl.uses.push(cm_rust::UseDecl::Protocol(cm_rust::UseProtocolDecl {
         source: cm_rust::UseSource::Framework,
         source_name: "fuchsia.component.Realm".into(),
         target_path: "/svc/fuchsia.component.Realm".try_into().unwrap(),
         dependency_type: cm_rust::DependencyType::Strong,
+        availability: cm_rust::Availability::Required,
     }));
     builder.replace_component_decl(&echo_client, echo_client_decl).await?;
 

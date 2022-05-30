@@ -116,7 +116,7 @@ mod tests {
         anyhow::Result,
         cm_fidl_analyzer::component_model::ModelBuilderForAnalyzer,
         cm_rust::{
-            CapabilityDecl, CapabilityName, CapabilityPath, ChildDecl, ComponentDecl,
+            Availability, CapabilityDecl, CapabilityName, CapabilityPath, ChildDecl, ComponentDecl,
             DependencyType, DirectoryDecl, FidlIntoNative, NativeIntoFidl, OfferDecl,
             OfferDirectoryDecl, OfferProtocolDecl, OfferSource, OfferTarget, ProgramDecl, UseDecl,
             UseDirectoryDecl, UseProtocolDecl, UseSource,
@@ -200,6 +200,7 @@ mod tests {
             rights,
             subdir: None,
             dependency_type: DependencyType::Strong,
+            availability: Availability::Required,
         }
     }
 
@@ -218,6 +219,7 @@ mod tests {
             rights,
             subdir: None,
             dependency_type: DependencyType::Strong,
+            availability: Availability::Required,
         }
     }
 
@@ -234,6 +236,7 @@ mod tests {
                 basename: "svc".to_string(),
             },
             dependency_type: DependencyType::Strong,
+            availability: Availability::Required,
         }
     }
 
@@ -249,6 +252,7 @@ mod tests {
             target,
             target_name,
             dependency_type: DependencyType::Strong,
+            availability: Availability::Required,
         }
     }
 
@@ -1188,6 +1192,7 @@ mod tests {
                               {
                                   "action": "use_by",
                                   "capability": {
+                                      "availability": "required",
                                       "dependency_type": "strong",
                                       "rights": 1,
                                       "source": "parent",
@@ -1201,6 +1206,7 @@ mod tests {
                               {
                                   "action": "offer_by",
                                   "capability": {
+                                      "availability": "required",
                                       "dependency_type": "strong",
                                       "rights": 1,
                                       "source": "self_",

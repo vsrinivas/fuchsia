@@ -950,7 +950,7 @@ mod tests {
         anyhow::Result,
         cm_moniker::InstancedAbsoluteMoniker,
         cm_rust::{
-            CapabilityName, DependencyType, RegistrationSource, RunnerRegistration,
+            Availability, CapabilityName, DependencyType, RegistrationSource, RunnerRegistration,
             UseProtocolDecl, UseSource,
         },
         cm_rust_testing::{ChildDeclBuilder, ComponentDeclBuilder, EnvironmentDeclBuilder},
@@ -1152,6 +1152,7 @@ mod tests {
                 source_name: "bar_svc".into(),
                 target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                 dependency_type: DependencyType::Strong,
+                availability: Availability::Required,
             }),
             &root_instance,
         );
@@ -1189,6 +1190,7 @@ mod tests {
             UseStorageDecl {
                 source_name: "cache".into(),
                 target_path: "/storage".try_into().unwrap(),
+                availability: Availability::Required,
             },
             &root_instance,
         );

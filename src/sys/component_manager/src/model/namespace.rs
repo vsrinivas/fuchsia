@@ -584,7 +584,7 @@ pub mod test {
     use {
         super::*,
         crate::model::testing::test_helpers::MockServiceRequest,
-        cm_rust::{CapabilityPath, DependencyType, UseProtocolDecl, UseSource},
+        cm_rust::{Availability, CapabilityPath, DependencyType, UseProtocolDecl, UseSource},
         fidl::endpoints,
         fidl_fuchsia_component_runner as fcrunner,
         fidl_fuchsia_logger::{LogSinkMarker, LogSinkRequest},
@@ -633,6 +633,7 @@ pub mod test {
             source_name: "logsink".into(),
             target_path: CapabilityPath::try_from("/fuchsia.logger.LogSink").unwrap(),
             dependency_type: DependencyType::Strong,
+            availability: Availability::Required,
         };
 
         let (dir_client, dir_server) = endpoints::create_endpoints::<fio::DirectoryMarker>()
@@ -670,6 +671,7 @@ pub mod test {
             source_name: "logsink".into(),
             target_path: CapabilityPath::try_from("/arbitrary-dir/fuchsia.logger.LogSink").unwrap(),
             dependency_type: DependencyType::Strong,
+            availability: Availability::Required,
         };
 
         let (dir_client, dir_server) = endpoints::create_endpoints::<fio::DirectoryMarker>()
@@ -706,6 +708,7 @@ pub mod test {
             source_name: "logsink".into(),
             target_path: CapabilityPath::try_from("/svc/fuchsia.logger.LogSink").unwrap(),
             dependency_type: DependencyType::Strong,
+            availability: Availability::Required,
         };
 
         let (dir_client, dir_server) = endpoints::create_endpoints::<fio::DirectoryMarker>()
@@ -759,6 +762,7 @@ pub mod test {
             source_name: "logsink".into(),
             target_path: CapabilityPath::try_from("/svc/fuchsia.logger.LogSink").unwrap(),
             dependency_type: DependencyType::Strong,
+            availability: Availability::Required,
         };
 
         let ns_entries = vec![];
@@ -781,6 +785,7 @@ pub mod test {
             source_name: "logsink".into(),
             target_path: CapabilityPath::try_from("/svc/fuchsia.logger.LogSink").unwrap(),
             dependency_type: DependencyType::Strong,
+            availability: Availability::Required,
         };
 
         let (dir_client, dir_server) = endpoints::create_endpoints::<fio::DirectoryMarker>()

@@ -909,9 +909,9 @@ mod tests {
         super::*,
         assert_matches::assert_matches,
         cm_rust::{
-            CapabilityName, CapabilityPath, DependencyType, ExposeDecl, ExposeProtocolDecl,
-            ExposeSource, ExposeTarget, OfferDecl, OfferProtocolDecl, OfferSource, OfferTarget,
-            UseDecl, UseProtocolDecl, UseSource,
+            Availability, CapabilityName, CapabilityPath, DependencyType, ExposeDecl,
+            ExposeProtocolDecl, ExposeSource, ExposeTarget, OfferDecl, OfferProtocolDecl,
+            OfferSource, OfferTarget, UseDecl, UseProtocolDecl, UseSource,
         },
         fidl_fuchsia_component_test as fctest,
         fuchsia_component_test::error::Error as RealmBuilderError,
@@ -1118,6 +1118,7 @@ mod tests {
                 basename: bredr::ProfileTestMarker::PROTOCOL_NAME.to_string(),
             },
             dependency_type: DependencyType::Strong,
+            availability: Availability::Required,
         });
         assert!(pico_member_decl.uses.contains(&use_decl));
 
@@ -1131,6 +1132,7 @@ mod tests {
             target: OfferTarget::static_child(member_spec.name.clone()),
             target_name: profile_test_name,
             dependency_type: DependencyType::Strong,
+            availability: Availability::Required,
         });
         assert!(root.offers.contains(&offer_profile_test));
 
@@ -1187,6 +1189,7 @@ mod tests {
                 basename: bredr::ProfileTestMarker::PROTOCOL_NAME.to_string(),
             },
             dependency_type: DependencyType::Strong,
+            availability: Availability::Required,
         });
         assert!(interposer.uses.contains(&profile_test_use));
 
@@ -1197,6 +1200,7 @@ mod tests {
             target: OfferTarget::static_child(profile_name.to_string()),
             target_name: profile_capability_name.clone(),
             dependency_type: DependencyType::Strong,
+            availability: Availability::Required,
         });
         let root = test_harness.builder.get_realm_decl().await.expect("unable to get root decl");
         assert!(root.offers.contains(&profile_offer));
@@ -1208,6 +1212,7 @@ mod tests {
             target: OfferTarget::static_child(interposer_name.clone()),
             target_name: profile_test_name.clone(),
             dependency_type: DependencyType::Strong,
+            availability: Availability::Required,
         });
         assert!(root.offers.contains(&profile_test_offer));
 
@@ -1219,6 +1224,7 @@ mod tests {
             target: OfferTarget::static_child(profile_name.to_string()),
             target_name: log_capability_name.clone(),
             dependency_type: DependencyType::Strong,
+            availability: Availability::Required,
         });
         assert!(root.offers.contains(&log_offer));
     }
@@ -1261,6 +1267,7 @@ mod tests {
             target: OfferTarget::static_child(bt_rfcomm_name.clone()),
             target_name: profile_capability_name.clone(),
             dependency_type: DependencyType::Strong,
+            availability: Availability::Required,
         });
         // `Profile` is offered from bt-rfcomm to profile.
         let profile_offer2 = OfferDecl::Protocol(OfferProtocolDecl {
@@ -1269,6 +1276,7 @@ mod tests {
             target: OfferTarget::static_child(profile_name.to_string()),
             target_name: profile_capability_name.clone(),
             dependency_type: DependencyType::Strong,
+            availability: Availability::Required,
         });
         let root = test_harness.builder.get_realm_decl().await.expect("unable to get root decl");
         assert!(root.offers.contains(&profile_offer1));
@@ -1327,6 +1335,7 @@ mod tests {
             target: OfferTarget::static_child(profile_name.to_string()),
             target_name: fake_cap3.into(),
             dependency_type: DependencyType::Strong,
+            availability: Availability::Required,
         });
 
         let root = test_harness.builder.get_realm_decl().await.expect("unable to get root decl");

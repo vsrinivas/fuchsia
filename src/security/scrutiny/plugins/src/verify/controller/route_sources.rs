@@ -618,10 +618,10 @@ mod tests {
             component_model::ModelBuilderForAnalyzer, node_path::NodePath, route::RouteSegment,
         },
         cm_rust::{
-            CapabilityName, CapabilityPath, CapabilityTypeName, ChildDecl, ComponentDecl,
-            DependencyType, DirectoryDecl, ExposeDirectoryDecl, ExposeSource, ExposeTarget,
-            OfferDirectoryDecl, OfferSource, OfferTarget, ProgramDecl, UseDirectoryDecl, UseSource,
-            UseStorageDecl,
+            Availability, CapabilityName, CapabilityPath, CapabilityTypeName, ChildDecl,
+            ComponentDecl, DependencyType, DirectoryDecl, ExposeDirectoryDecl, ExposeSource,
+            ExposeTarget, OfferDirectoryDecl, OfferSource, OfferTarget, ProgramDecl,
+            UseDirectoryDecl, UseSource, UseStorageDecl,
         },
         fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_io as fio,
         maplit::{hashmap, hashset},
@@ -654,6 +654,7 @@ mod tests {
                 &UseStorageDecl {
                     source_name: CapabilityName("name".to_string()),
                     target_path: CapabilityPath::from_str("/path").unwrap(),
+                    availability: Availability::Required,
                 }
                 .into()
             )
@@ -671,6 +672,7 @@ mod tests {
                 &UseStorageDecl {
                     source_name: CapabilityName("name".to_string()),
                     target_path: CapabilityPath::from_str("/path").unwrap(),
+                    availability: Availability::Required,
                 }
                 .into()
             )
@@ -796,6 +798,7 @@ mod tests {
                         dependency_type: DependencyType::Strong,
                         rights: Some(fio::Operations::CONNECT),
                         subdir: Some(PathBuf::from_str("root_subdir").unwrap()),
+                        availability: Availability::Required,
                     }.into(),
                     OfferDirectoryDecl{
                         source: OfferSource::Self_,
@@ -805,6 +808,7 @@ mod tests {
                         dependency_type: DependencyType::Strong,
                         rights: Some(fio::Operations::CONNECT),
                         subdir: Some(PathBuf::from_str("root_subdir").unwrap()),
+                        availability: Availability::Required,
                     }.into(),
                 ],
                 children: vec![
@@ -834,6 +838,7 @@ mod tests {
                         rights: fio::Operations::CONNECT,
                         subdir: Some(PathBuf::from_str("user_subdir").unwrap()),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }.into(),
                     UseDirectoryDecl{
                         source: UseSource::Parent,
@@ -842,6 +847,7 @@ mod tests {
                         rights: fio::Operations::CONNECT,
                         subdir: Some(PathBuf::from_str("user_subdir").unwrap()),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }.into(),
                 ],
                 ..ComponentDecl::default()
@@ -2088,6 +2094,7 @@ mod tests {
                                     rights: fio::Operations::CONNECT,
                                     subdir: Some(PathBuf::from_str("user_subdir").unwrap()),
                                     dependency_type: DependencyType::Strong,
+                                    availability: Availability::Required,
                                 }.into(),
                             }, untrusted_source.clone())),
                         },
@@ -2102,6 +2109,7 @@ mod tests {
                                     rights: fio::Operations::CONNECT,
                                     subdir: Some(PathBuf::from_str("user_subdir").unwrap()),
                                     dependency_type: DependencyType::Strong,
+                                    availability: Availability::Required,
                                 }.into(),
                             }, untrusted_source)),
                         }

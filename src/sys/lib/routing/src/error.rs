@@ -302,6 +302,13 @@ pub enum RoutingError {
     },
 
     #[error(
+        "An `offer from void` declaration was found at `{}` for `{}`, so the route cannot be completed",
+        moniker,
+        capability_id
+    )]
+    OfferFromVoid { moniker: AbsoluteMoniker, capability_id: String },
+
+    #[error(
         "An `offer from #{}` declaration was found at `{}` for `{}`, but no matching collection \
         was found",
         collection,
@@ -581,6 +588,10 @@ impl RoutingError {
             moniker: moniker.clone(),
             capability_id: capability_id.into(),
         }
+    }
+
+    pub fn offer_from_void(moniker: &AbsoluteMoniker, capability_id: impl Into<String>) -> Self {
+        Self::OfferFromVoid { moniker: moniker.clone(), capability_id: capability_id.into() }
     }
 
     pub fn used_expose_not_found(

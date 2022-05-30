@@ -584,7 +584,7 @@ pub type BuiltinCapabilities = Vec<CapabilityDecl>;
 mod tests {
     use {
         super::*,
-        cm_rust::{DependencyType, StorageDirectorySource},
+        cm_rust::{Availability, DependencyType, StorageDirectorySource},
         fidl_fuchsia_component_decl as fdecl,
     };
 
@@ -605,6 +605,7 @@ mod tests {
             source_name: "started".into(),
             target_name: "started-x".into(),
             filter: None,
+            availability: Availability::Required,
         }));
         assert_eq!(event_capability.type_name(), CapabilityTypeName::Event);
     }

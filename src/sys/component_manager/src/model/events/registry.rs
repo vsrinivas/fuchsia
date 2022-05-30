@@ -442,8 +442,9 @@ mod tests {
         assert_matches::assert_matches,
         cm_moniker::InstancedAbsoluteMoniker,
         cm_rust::{
-            ChildDecl, ComponentDecl, DependencyType, DictionaryValue, OfferDecl, OfferEventDecl,
-            OfferSource, OfferTarget, ProtocolDecl, UseDecl, UseEventDecl, UseSource,
+            Availability, ChildDecl, ComponentDecl, DependencyType, DictionaryValue, OfferDecl,
+            OfferEventDecl, OfferSource, OfferTarget, ProtocolDecl, UseDecl, UseEventDecl,
+            UseSource,
         },
         fidl_fuchsia_component_decl as fdecl, fuchsia_async as fasync, fuchsia_zircon as zx,
         maplit::hashmap,
@@ -715,6 +716,7 @@ mod tests {
                                     "name".to_string() => DictionaryValue::Str(
                                         "fuchsia.foo.Foo".to_string())
                                 }),
+                                availability: Availability::Required,
                             }),
                             OfferDecl::Event(OfferEventDecl {
                                 source: OfferSource::Framework,
@@ -725,6 +727,7 @@ mod tests {
                                     "name".to_string() => DictionaryValue::Str(
                                         "fuchsia.bar.Bar".to_string())
                                 }),
+                                availability: Availability::Required,
                             }),
                         ],
                         ..Default::default()
@@ -743,6 +746,7 @@ mod tests {
                                         "fuchsia.foo.Foo".to_string())
                                 }),
                                 dependency_type: DependencyType::Strong,
+                                availability: Availability::Required,
                             }),
                             UseDecl::Event(UseEventDecl {
                                 source: UseSource::Framework,
@@ -753,6 +757,7 @@ mod tests {
                                         "fuchsia.bar.Bar".to_string())
                                 }),
                                 dependency_type: DependencyType::Strong,
+                                availability: Availability::Required,
                             }),
                         ],
                         ..Default::default()

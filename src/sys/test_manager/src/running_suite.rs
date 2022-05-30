@@ -699,6 +699,7 @@ async fn get_realm(
             .try_into()
             .unwrap(),
         dependency_type: cm_rust::DependencyType::Strong,
+        availability: cm_rust::Availability::Required,
     }));
     wrapper_realm.replace_component_decl(&enclosing_env, enclosing_env_decl).await?;
 

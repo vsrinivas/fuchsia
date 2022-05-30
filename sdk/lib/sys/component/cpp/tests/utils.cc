@@ -34,6 +34,7 @@ std::shared_ptr<fcdecl::Offer> CreateFidlProtocolOfferDecl(std::string_view sour
   offer.set_target(std::move(*target));
   offer.set_target_name(std::string(target_name));
   offer.set_dependency_type(fcdecl::DependencyType::STRONG);
+  offer.set_availability(fcdecl::Availability::REQUIRED);
 
   return std::make_shared<fcdecl::Offer>(fcdecl::Offer::WithProtocol(std::move(offer)));
 }
@@ -47,6 +48,7 @@ std::shared_ptr<fcdecl::Offer> CreateFidlServiceOfferDecl(std::string_view sourc
   offer.set_source_name(std::string(source_name));
   offer.set_target(std::move(*target));
   offer.set_target_name(std::string(target_name));
+  offer.set_availability(fcdecl::Availability::REQUIRED);
 
   return std::make_shared<fcdecl::Offer>(fcdecl::Offer::WithService(std::move(offer)));
 }
@@ -62,6 +64,7 @@ std::shared_ptr<fcdecl::Offer> CreateFidlDirectoryOfferDecl(
   offer.set_subdir(std::string(subdir));
   offer.set_rights(rights);
   offer.set_dependency_type(fcdecl::DependencyType::STRONG);
+  offer.set_availability(fcdecl::Availability::REQUIRED);
 
   return std::make_shared<fcdecl::Offer>(fcdecl::Offer::WithDirectory(std::move(offer)));
 }
@@ -75,6 +78,7 @@ std::shared_ptr<fcdecl::Offer> CreateFidlStorageOfferDecl(std::string_view sourc
   offer.set_source_name(std::string(source_name));
   offer.set_target(std::move(*target));
   offer.set_target_name(std::string(target_name));
+  offer.set_availability(fcdecl::Availability::REQUIRED);
 
   return std::make_shared<fcdecl::Offer>(fcdecl::Offer::WithStorage(std::move(offer)));
 }

@@ -33,6 +33,7 @@ impl<T: RoutingTestModelBuilder> CommonRightsTest<T> {
                         rights: Some(*READ_RIGHTS | *WRITE_RIGHTS),
                         subdir: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .add_lazy_child("c")
@@ -66,6 +67,7 @@ impl<T: RoutingTestModelBuilder> CommonRightsTest<T> {
                         rights: *READ_RIGHTS,
                         subdir: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -87,6 +89,7 @@ impl<T: RoutingTestModelBuilder> CommonRightsTest<T> {
                         rights: Some(*WRITE_RIGHTS),
                         subdir: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .add_lazy_child("c")
@@ -120,6 +123,7 @@ impl<T: RoutingTestModelBuilder> CommonRightsTest<T> {
                         rights: *READ_RIGHTS,
                         subdir: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -146,6 +150,7 @@ impl<T: RoutingTestModelBuilder> CommonRightsTest<T> {
                         rights: Some(*READ_RIGHTS),
                         subdir: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .add_lazy_child("c")
@@ -179,6 +184,7 @@ impl<T: RoutingTestModelBuilder> CommonRightsTest<T> {
                         rights: *READ_RIGHTS,
                         subdir: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -200,6 +206,7 @@ impl<T: RoutingTestModelBuilder> CommonRightsTest<T> {
                         rights: Some(*READ_RIGHTS | *WRITE_RIGHTS),
                         subdir: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .add_lazy_child("c")
@@ -233,6 +240,7 @@ impl<T: RoutingTestModelBuilder> CommonRightsTest<T> {
                         rights: *READ_RIGHTS,
                         subdir: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -259,6 +267,7 @@ impl<T: RoutingTestModelBuilder> CommonRightsTest<T> {
                         rights: Some(*READ_RIGHTS),
                         subdir: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .add_lazy_child("c")
@@ -292,6 +301,7 @@ impl<T: RoutingTestModelBuilder> CommonRightsTest<T> {
                         rights: *READ_RIGHTS,
                         subdir: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -313,6 +323,7 @@ impl<T: RoutingTestModelBuilder> CommonRightsTest<T> {
                         rights: Some(*READ_RIGHTS | *WRITE_RIGHTS),
                         subdir: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .add_lazy_child("c")
@@ -342,6 +353,7 @@ impl<T: RoutingTestModelBuilder> CommonRightsTest<T> {
                         rights: *READ_RIGHTS,
                         subdir: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -376,6 +388,7 @@ impl<T: RoutingTestModelBuilder> CommonRightsTest<T> {
                         rights: None,
                         subdir: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .build(),
@@ -390,6 +403,7 @@ impl<T: RoutingTestModelBuilder> CommonRightsTest<T> {
                         rights: *READ_RIGHTS,
                         subdir: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),

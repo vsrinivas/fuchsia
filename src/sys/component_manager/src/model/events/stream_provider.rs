@@ -134,6 +134,7 @@ impl EventStreamProvider {
                 UseDecl::EventStreamDeprecated(UseEventStreamDeprecatedDecl {
                     name,
                     subscriptions,
+                    ..
                 }) => {
                     self.create_static_event_stream(
                         &InstancedExtendedMoniker::ComponentInstance(target_moniker.clone()),

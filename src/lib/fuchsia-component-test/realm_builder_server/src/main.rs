@@ -1249,6 +1249,7 @@ fn create_offer_decl(
                 target,
                 target_name,
                 dependency_type,
+                availability: cm_rust::Availability::Required,
             })
         }
         ftest::Capability2::Directory(directory) => {
@@ -1263,6 +1264,7 @@ fn create_offer_decl(
                 rights: directory.rights,
                 subdir: directory.subdir.map(PathBuf::from),
                 dependency_type,
+                availability: cm_rust::Availability::Required,
             })
         }
         ftest::Capability2::Storage(storage) => {
@@ -1273,6 +1275,7 @@ fn create_offer_decl(
                 source_name,
                 target,
                 target_name,
+                availability: cm_rust::Availability::Required,
             })
         }
         ftest::Capability2::Service(service) => {
@@ -1285,6 +1288,7 @@ fn create_offer_decl(
                 target_name,
                 source_instance_filter: None,
                 renamed_instances: None,
+                availability: cm_rust::Availability::Required,
             })
         }
         ftest::Capability2::Event(event) => {
@@ -1297,6 +1301,7 @@ fn create_offer_decl(
                 target,
                 target_name,
                 filter,
+                availability: cm_rust::Availability::Required,
             })
         }
         _ => {
@@ -1414,6 +1419,7 @@ fn create_use_decl(capability: ftest::Capability2) -> Result<cm_rust::UseDecl, R
                 source_name,
                 target_path,
                 dependency_type,
+                availability: cm_rust::Availability::Required,
             })
         }
         ftest::Capability2::Directory(directory) => {
@@ -1440,6 +1446,7 @@ fn create_use_decl(capability: ftest::Capability2) -> Result<cm_rust::UseDecl, R
                 // we'll set the sub-directory field there.
                 subdir: None,
                 dependency_type,
+                availability: cm_rust::Availability::Required,
             })
         }
         ftest::Capability2::Storage(storage) => {
@@ -1447,7 +1454,11 @@ fn create_use_decl(capability: ftest::Capability2) -> Result<cm_rust::UseDecl, R
             // post-rename version of it here.
             let source_name = try_into_target_name(&storage.name, &storage.as_)?;
             let target_path = try_into_capability_path(&storage.path)?;
-            cm_rust::UseDecl::Storage(cm_rust::UseStorageDecl { source_name, target_path })
+            cm_rust::UseDecl::Storage(cm_rust::UseStorageDecl {
+                source_name,
+                target_path,
+                availability: cm_rust::Availability::Required,
+            })
         }
         ftest::Capability2::Service(service) => {
             // If the capability was renamed in the parent's offer declaration, we want to use the
@@ -1462,6 +1473,7 @@ fn create_use_decl(capability: ftest::Capability2) -> Result<cm_rust::UseDecl, R
                 source_name,
                 target_path,
                 dependency_type: cm_rust::DependencyType::Strong,
+                availability: cm_rust::Availability::Required,
             })
         }
         ftest::Capability2::Event(event) => {
@@ -1475,6 +1487,7 @@ fn create_use_decl(capability: ftest::Capability2) -> Result<cm_rust::UseDecl, R
                 target_name: source_name,
                 filter,
                 dependency_type: cm_rust::DependencyType::Strong,
+                availability: cm_rust::Availability::Required,
             })
         }
         _ => {
@@ -2014,6 +2027,7 @@ mod tests {
                         name: "a".to_string(),
                         collection: None,
                     }),
+                    availability: cm_rust::Availability::Required,
                 })],
                 ..cm_rust::ComponentDecl::default()
             },
@@ -2036,6 +2050,7 @@ mod tests {
                     source_name: "fuchsia.logger.LogSink".into(),
                     target_name: "fuchsia.logger.LogSink".into(),
                     dependency_type: cm_rust::DependencyType::Strong,
+                    availability: cm_rust::Availability::Required,
                 })],
                 children: vec![cm_rust::ChildDecl {
                     name: "a".to_string(),
@@ -2066,6 +2081,7 @@ mod tests {
                     source_name: "fuchsia.logger.LogSink".into(),
                     target_name: "fuchsia.logger.LogSink".into(),
                     dependency_type: cm_rust::DependencyType::Strong,
+                    availability: cm_rust::Availability::Required,
                 })],
                 ..cm_rust::ComponentDecl::default()
             },
@@ -2093,6 +2109,7 @@ mod tests {
                     source_name: "fuchsia.logger.LogSink".into(),
                     target_name: "fuchsia.logger.LogSink".into(),
                     dependency_type: cm_rust::DependencyType::Strong,
+                    availability: cm_rust::Availability::Required,
                 })],
                 children: vec![cm_rust::ChildDecl {
                     name: "a".to_string(),
@@ -2127,6 +2144,7 @@ mod tests {
                     source_name: "fuchsia.logger.LogSink".into(),
                     target_name: "fuchsia.logger.LogSink".into(),
                     dependency_type: cm_rust::DependencyType::Strong,
+                    availability: cm_rust::Availability::Required,
                 })],
                 ..cm_rust::ComponentDecl::default()
             },
@@ -2144,6 +2162,7 @@ mod tests {
                             source_name: "fuchsia.logger.LogSink".into(),
                             target_name: "fuchsia.logger.LogSink".into(),
                             dependency_type: cm_rust::DependencyType::Strong,
+                            availability: cm_rust::Availability::Required,
                         })],
                         ..cm_rust::ComponentDecl::default()
                     },
@@ -2173,6 +2192,7 @@ mod tests {
                     source_name: "fuchsia.logger.LogSink".into(),
                     target_name: "fuchsia.logger.LogSink".into(),
                     dependency_type: cm_rust::DependencyType::Strong,
+                    availability: cm_rust::Availability::Required,
                 })],
                 ..cm_rust::ComponentDecl::default()
             },
@@ -2203,6 +2223,7 @@ mod tests {
                     source_name: "fuchsia.logger.LogSink".into(),
                     target_name: "fuchsia.logger.LogSink".into(),
                     dependency_type: cm_rust::DependencyType::Strong,
+                    availability: cm_rust::Availability::Required,
                 })],
                 environments: vec![cm_rust::EnvironmentDecl {
                     name: "new-env".to_string(),
@@ -2245,6 +2266,7 @@ mod tests {
                     source_name: "fuchsia.logger.LogSink".into(),
                     target_name: "fuchsia.logger.LogSink".into(),
                     dependency_type: cm_rust::DependencyType::Strong,
+                    availability: cm_rust::Availability::Required,
                 })],
                 ..cm_rust::ComponentDecl::default()
             },
@@ -2663,6 +2685,7 @@ mod tests {
                 source_name: "example.Hippo".into(),
                 target_path: "/svc/example.Hippo".try_into().unwrap(),
                 dependency_type: cm_rust::DependencyType::Strong,
+                availability: cm_rust::Availability::Required,
             })],
             ..cm_rust::ComponentDecl::default()
         };
@@ -2735,6 +2758,7 @@ mod tests {
                 source_name: "example.Hippo".into(),
                 target_path: "/svc/non-default-path".try_into().unwrap(),
                 dependency_type: cm_rust::DependencyType::Strong,
+                availability: cm_rust::Availability::Required,
             })],
             ..cm_rust::ComponentDecl::default()
         }
@@ -2951,6 +2975,7 @@ mod tests {
                         target: cm_rust::OfferTarget::static_child("a".to_string()),
                         target_name: "fuchsia.examples.Elephant".into(),
                         dependency_type: cm_rust::DependencyType::Strong,
+                        availability: cm_rust::Availability::Required,
                     }),
                     cm_rust::OfferDecl::Directory(cm_rust::OfferDirectoryDecl {
                         source: cm_rust::OfferSource::Parent,
@@ -2960,12 +2985,14 @@ mod tests {
                         dependency_type: cm_rust::DependencyType::Strong,
                         rights: Some(fio::RW_STAR_DIR),
                         subdir: Some(PathBuf::from("component")),
+                        availability: cm_rust::Availability::Required,
                     }),
                     cm_rust::OfferDecl::Storage(cm_rust::OfferStorageDecl {
                         source: cm_rust::OfferSource::Parent,
                         source_name: "temp".into(),
                         target: cm_rust::OfferTarget::static_child("a".to_string()),
                         target_name: "data".into(),
+                        availability: cm_rust::Availability::Required,
                     }),
                     cm_rust::OfferDecl::Service(cm_rust::OfferServiceDecl {
                         source: cm_rust::OfferSource::Parent,
@@ -2974,6 +3001,7 @@ mod tests {
                         target_name: "fuchsia.examples.Orca".into(),
                         source_instance_filter: None,
                         renamed_instances: None,
+                        availability: cm_rust::Availability::Required,
                     }),
                     cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
                         source: cm_rust::OfferSource::static_child("a".to_string()),
@@ -2981,6 +3009,7 @@ mod tests {
                         target: cm_rust::OfferTarget::static_child("b".to_string()),
                         target_name: "fuchsia.examples.Echo".into(),
                         dependency_type: cm_rust::DependencyType::Strong,
+                        availability: cm_rust::Availability::Required,
                     }),
                 ],
                 exposes: vec![cm_rust::ExposeDecl::Protocol(cm_rust::ExposeProtocolDecl {
@@ -3073,6 +3102,7 @@ mod tests {
                         }),
                         target_name: cm_rust::CapabilityName("fuchsia.examples.Hippo".to_owned()),
                         dependency_type: cm_rust::DependencyType::Strong,
+                        availability: cm_rust::Availability::Required,
                     }),
                     cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
                         source: cm_rust::OfferSource::Child(cm_rust::ChildRef {
@@ -3086,6 +3116,7 @@ mod tests {
                         }),
                         target_name: cm_rust::CapabilityName("fuchsia.examples.Hippo".to_owned()),
                         dependency_type: cm_rust::DependencyType::Strong,
+                        availability: cm_rust::Availability::Required,
                     }),
                 ],
                 ..cm_rust::ComponentDecl::default()
@@ -3219,6 +3250,7 @@ mod tests {
                         }),
                         target_name: cm_rust::CapabilityName("fuchsia.examples.Echo".to_owned()),
                         dependency_type: cm_rust::DependencyType::Strong,
+                        availability: cm_rust::Availability::Required,
                     }),
                     cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
                         source: cm_rust::OfferSource::Child(cm_rust::ChildRef {
@@ -3236,6 +3268,7 @@ mod tests {
                             "fuchsia.examples.RandonNumberGenerator".to_owned(),
                         ),
                         dependency_type: cm_rust::DependencyType::Strong,
+                        availability: cm_rust::Availability::Required,
                     }),
                 ],
                 ..cm_rust::ComponentDecl::default()
@@ -3284,6 +3317,7 @@ mod tests {
                                 basename: "fuchsia.examples.RandonNumberGenerator".to_owned(),
                             },
                             dependency_type: cm_rust::DependencyType::Strong,
+                            availability: cm_rust::Availability::Required,
                         })],
                         exposes: vec![cm_rust::ExposeDecl::Protocol(cm_rust::ExposeProtocolDecl {
                             source: cm_rust::ExposeSource::Self_,
@@ -3437,6 +3471,7 @@ mod tests {
             source_name: "example.Hippo".into(),
             target_path: "/svc/example.Hippo".try_into().unwrap(),
             dependency_type: cm_rust::DependencyType::Strong,
+            availability: cm_rust::Availability::Required,
         }));
         realm_and_builder_task
             .realm_proxy
@@ -3515,6 +3550,7 @@ mod tests {
                     filter: Some(hashmap!(
                         "name".to_string() => cm_rust::DictionaryValue::Str("hippos".to_string()),
                     )),
+                    availability: cm_rust::Availability::Required,
                 })],
                 ..cm_rust::ComponentDecl::default()
             },
@@ -3967,6 +4003,7 @@ mod tests {
                     dependency_type: cm_rust::DependencyType::Strong,
                     rights: Some(fio::R_STAR_DIR),
                     subdir: None,
+                    availability: cm_rust::Availability::Required,
                 })],
                 ..cm_rust::ComponentDecl::default()
             },

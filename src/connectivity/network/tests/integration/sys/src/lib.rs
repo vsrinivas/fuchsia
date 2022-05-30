@@ -146,6 +146,7 @@ async fn start_with_cache_no_space() {
         target_path: CACHE_DIR_PATH.try_into().expect("failed to convert string to path"),
         rights: fio::RW_STAR_DIR,
         subdir: None,
+        availability: cm_rust::Availability::Required,
     }));
 
     // The netstack component exposes `/diagnostics` to `framework` with `connect` rights, in order

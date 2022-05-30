@@ -132,6 +132,7 @@ async fn framework_directory_rights() {
                     rights: None,
                     subdir: Some("foo".into()),
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .add_lazy_child("b")
                 .build(),
@@ -146,6 +147,7 @@ async fn framework_directory_rights() {
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *routing::rights::READ_RIGHTS,
                     subdir: None,
+                    availability: Availability::Required,
                 }))
                 .build(),
         ),
@@ -181,6 +183,7 @@ async fn framework_directory_incompatible_rights() {
                     rights: None,
                     subdir: Some("foo".into()),
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .add_lazy_child("b")
                 .build(),
@@ -195,6 +198,7 @@ async fn framework_directory_incompatible_rights() {
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *routing::rights::EXECUTE_RIGHTS,
                     subdir: None,
+                    availability: Availability::Required,
                 }))
                 .build(),
         ),

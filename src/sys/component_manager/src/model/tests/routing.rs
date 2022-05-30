@@ -200,6 +200,7 @@ async fn use_framework_service() {
                     source: UseSource::Framework,
                     source_name: "fuchsia.component.Realm".into(),
                     target_path: CapabilityPath::try_from("/svc/fuchsia.component.Realm").unwrap(),
+                    availability: Availability::Required,
                 }))
                 .build(),
         ),
@@ -242,12 +243,14 @@ async fn capability_requested_event_at_parent() {
                     target_name: "bar_svc".into(),
                     target: OfferTarget::static_child("b".to_string()),
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     dependency_type: DependencyType::Strong,
                     source: UseSource::Parent,
                     source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
                     target_path: "/svc/fuchsia.sys2.EventSource".try_into().unwrap(),
+                    availability: Availability::Required,
                 }))
                 .use_(UseDecl::Event(UseEventDecl {
                     dependency_type: DependencyType::Strong,
@@ -255,6 +258,7 @@ async fn capability_requested_event_at_parent() {
                     source_name: "capability_requested".into(),
                     target_name: "capability_requested".into(),
                     filter: Some(hashmap!{"name".to_string() => DictionaryValue::Str("foo_svc".to_string())}),
+                    availability: Availability::Required,
                 }))
                 // TODO: This shouldn't be necessary
                 // .use_(UseDecl::Event(UseEventDecl {
@@ -276,6 +280,7 @@ async fn capability_requested_event_at_parent() {
                     source: UseSource::Parent,
                     source_name: "bar_svc".into(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                    availability: Availability::Required,
                 }))
                 .build(),
         ),
@@ -358,6 +363,7 @@ async fn use_in_collection() {
                     rights: Some(*routing::rights::READ_RIGHTS),
                     subdir: None,
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source_name: "foo_svc".into(),
@@ -365,6 +371,7 @@ async fn use_in_collection() {
                     target_name: "hippo_svc".into(),
                     target: OfferTarget::static_child("b".to_string()),
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .add_lazy_child("b")
                 .build(),
@@ -377,6 +384,7 @@ async fn use_in_collection() {
                     source_name: "fuchsia.component.Realm".into(),
                     target_path: CapabilityPath::try_from("/svc/fuchsia.component.Realm").unwrap(),
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
                     source_name: "hippo_data".into(),
@@ -386,6 +394,7 @@ async fn use_in_collection() {
                     rights: Some(*routing::rights::READ_RIGHTS),
                     subdir: None,
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source_name: "hippo_svc".into(),
@@ -393,6 +402,7 @@ async fn use_in_collection() {
                     target_name: "hippo_svc".into(),
                     target: OfferTarget::Collection("coll".to_string()),
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .add_transient_collection("coll")
                 .build(),
@@ -407,6 +417,7 @@ async fn use_in_collection() {
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *routing::rights::READ_RIGHTS,
                     subdir: None,
+                    availability: Availability::Required,
                 }))
                 .build(),
         ),
@@ -418,6 +429,7 @@ async fn use_in_collection() {
                     source: UseSource::Parent,
                     source_name: "hippo_svc".into(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                    availability: Availability::Required,
                 }))
                 .build(),
         ),
@@ -480,6 +492,7 @@ async fn use_in_collection_not_offered() {
                     rights: Some(*routing::rights::READ_RIGHTS),
                     subdir: None,
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source_name: "foo_svc".into(),
@@ -487,6 +500,7 @@ async fn use_in_collection_not_offered() {
                     target_name: "hippo_svc".into(),
                     target: OfferTarget::static_child("b".to_string()),
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .add_lazy_child("b")
                 .build(),
@@ -499,6 +513,7 @@ async fn use_in_collection_not_offered() {
                     source_name: "fuchsia.component.Realm".into(),
                     target_path: CapabilityPath::try_from("/svc/fuchsia.component.Realm").unwrap(),
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .add_transient_collection("coll")
                 .build(),
@@ -513,12 +528,14 @@ async fn use_in_collection_not_offered() {
                     rights: *routing::rights::READ_RIGHTS,
                     subdir: None,
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     dependency_type: DependencyType::Strong,
                     source: UseSource::Parent,
                     source_name: "hippo_svc".into(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                    availability: Availability::Required,
                 }))
                 .build(),
         ),
@@ -573,6 +590,7 @@ async fn dynamic_offer_from_parent() {
                     target_name: "hippo_svc".into(),
                     target: OfferTarget::static_child("b".to_string()),
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .add_lazy_child("b")
                 .build(),
@@ -585,6 +603,7 @@ async fn dynamic_offer_from_parent() {
                     source: UseSource::Framework,
                     target_path: CapabilityPath::try_from("/svc/fuchsia.component.Realm").unwrap(),
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .add_collection(
                     CollectionDeclBuilder::new_transient_collection("coll")
@@ -601,6 +620,7 @@ async fn dynamic_offer_from_parent() {
                     source: UseSource::Parent,
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .build(),
         ),
@@ -612,6 +632,7 @@ async fn dynamic_offer_from_parent() {
                     source: UseSource::Parent,
                     dependency_type: DependencyType::Strong,
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                    availability: Availability::Required,
                 }))
                 .build(),
         ),
@@ -683,6 +704,7 @@ async fn dynamic_offer_siblings_same_collection() {
                     source: UseSource::Framework,
                     target_path: CapabilityPath::try_from("/svc/fuchsia.component.Realm").unwrap(),
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .add_collection(
                     CollectionDeclBuilder::new_transient_collection("coll")
@@ -711,6 +733,7 @@ async fn dynamic_offer_siblings_same_collection() {
                     source: UseSource::Parent,
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .build(),
         ),
@@ -778,6 +801,7 @@ async fn dynamic_offer_siblings_cross_collection() {
                     source: UseSource::Framework,
                     target_path: CapabilityPath::try_from("/svc/fuchsia.component.Realm").unwrap(),
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .add_collection(
                     CollectionDeclBuilder::new_transient_collection("source_coll").build(),
@@ -809,6 +833,7 @@ async fn dynamic_offer_siblings_cross_collection() {
                     source: UseSource::Parent,
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .build(),
         ),
@@ -876,6 +901,7 @@ async fn dynamic_offer_destroyed_on_source_destruction() {
                     source: UseSource::Framework,
                     target_path: CapabilityPath::try_from("/svc/fuchsia.component.Realm").unwrap(),
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .add_collection(
                     CollectionDeclBuilder::new_transient_collection("coll")
@@ -904,6 +930,7 @@ async fn dynamic_offer_destroyed_on_source_destruction() {
                     source: UseSource::Parent,
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .build(),
         ),
@@ -994,6 +1021,7 @@ async fn dynamic_offer_destroyed_on_target_destruction() {
                     source: UseSource::Framework,
                     target_path: CapabilityPath::try_from("/svc/fuchsia.component.Realm").unwrap(),
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .add_collection(
                     CollectionDeclBuilder::new_transient_collection("coll")
@@ -1026,6 +1054,7 @@ async fn dynamic_offer_destroyed_on_target_destruction() {
                     dependency_type: DependencyType::Strong,
                     rights: *READ_RIGHTS,
                     subdir: None,
+                    availability: Availability::Required,
                 }))
                 .build(),
         ),
@@ -1112,6 +1141,7 @@ async fn dynamic_offer_to_static_offer() {
                     source: UseSource::Framework,
                     target_path: CapabilityPath::try_from("/svc/fuchsia.component.Realm").unwrap(),
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .add_collection(
                     CollectionDeclBuilder::new_transient_collection("coll")
@@ -1142,6 +1172,7 @@ async fn dynamic_offer_to_static_offer() {
                     target_name: "hippo_svc".into(),
                     target: OfferTarget::static_child("d".to_string()),
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .add_lazy_child("d")
                 .build(),
@@ -1154,6 +1185,7 @@ async fn dynamic_offer_to_static_offer() {
                     source: UseSource::Parent,
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .add_lazy_child("d")
                 .build(),
@@ -1205,6 +1237,7 @@ async fn destroying_instance_kills_framework_service_task() {
                     source_name: "fuchsia.component.Realm".into(),
                     target_path: CapabilityPath::try_from("/svc/fuchsia.component.Realm").unwrap(),
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .build(),
         ),
@@ -1323,6 +1356,7 @@ async fn use_runner_from_environment_in_collection() {
                     source_name: "fuchsia.component.Realm".into(),
                     target_path: CapabilityPath::try_from("/svc/fuchsia.component.Realm").unwrap(),
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .runner(RunnerDecl {
                     name: "elf".into(),
@@ -1623,12 +1657,14 @@ async fn use_runner_from_environment_failed() {
                     source_name: "stopped".into(),
                     target_name: "stopped".into(),
                     filter: None,
+                    availability: Availability::Required,
                 }))
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     dependency_type: DependencyType::Strong,
                     source: UseSource::Parent,
                     source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
                     target_path: "/svc/fuchsia.sys2.EventSource".try_into().unwrap(),
+                    availability: Availability::Required,
                 }))
                 .build(),
         ),
@@ -1811,6 +1847,7 @@ async fn use_with_destroyed_parent() {
         source_name: "foo_svc".into(),
         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
         dependency_type: DependencyType::Strong,
+        availability: Availability::Required,
     };
     let use_decl = UseDecl::Protocol(use_protocol_decl.clone());
     let components = vec![
@@ -1823,6 +1860,7 @@ async fn use_with_destroyed_parent() {
                     source_name: "fuchsia.component.Realm".into(),
                     target_path: CapabilityPath::try_from("/svc/fuchsia.component.Realm").unwrap(),
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferSource::Self_,
@@ -1830,6 +1868,7 @@ async fn use_with_destroyed_parent() {
                     target_name: "foo_svc".into(),
                     target: OfferTarget::Collection("coll".to_string()),
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .add_transient_collection("coll")
                 .build(),
@@ -1843,6 +1882,7 @@ async fn use_with_destroyed_parent() {
                     target_name: "foo_svc".into(),
                     target: OfferTarget::static_child("c".to_string()),
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .add_lazy_child("c")
                 .build(),
@@ -1908,6 +1948,7 @@ async fn use_from_destroyed_but_not_removed() {
                     target_name: "baz_svc".into(),
                     target: OfferTarget::static_child("c".to_string()),
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .add_lazy_child("b")
                 .add_lazy_child("c")
@@ -1934,6 +1975,7 @@ async fn use_from_destroyed_but_not_removed() {
                     source_name: "baz_svc".into(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .build(),
         ),
@@ -2387,6 +2429,7 @@ async fn route_service_from_parent_collection() {
         source: UseSource::Parent,
         source_name: "foo".into(),
         target_path: CapabilityPath::try_from("/foo").unwrap(),
+        availability: Availability::Required,
     };
     let components = vec![
         (
@@ -2399,6 +2442,7 @@ async fn route_service_from_parent_collection() {
                     renamed_instances: None,
                     target_name: "foo".into(),
                     target: OfferTarget::static_child("b".to_string()),
+                    availability: Availability::Required,
                 }))
                 .add_collection(CollectionDeclBuilder::new_transient_collection("coll"))
                 .add_lazy_child("b")
@@ -2435,6 +2479,7 @@ async fn list_service_instances_from_collection() {
         source: UseSource::Parent,
         source_name: "foo".into(),
         target_path: CapabilityPath::try_from("/foo").unwrap(),
+        availability: Availability::Required,
     };
     let components = vec![
         (
@@ -2445,6 +2490,7 @@ async fn list_service_instances_from_collection() {
                     source: UseSource::Framework,
                     source_name: "fuchsia.component.Realm".into(),
                     target_path: CapabilityPath::try_from("/svc/fuchsia.component.Realm").unwrap(),
+                    availability: Availability::Required,
                 }))
                 .offer(OfferDecl::Service(OfferServiceDecl {
                     source: OfferSource::Collection("coll".to_string()),
@@ -2453,6 +2499,7 @@ async fn list_service_instances_from_collection() {
                     renamed_instances: None,
                     target_name: "foo".into(),
                     target: OfferTarget::static_child("client".to_string()),
+                    availability: Availability::Required,
                 }))
                 .add_collection(CollectionDeclBuilder::new_transient_collection("coll"))
                 .add_lazy_child("client")
@@ -2573,6 +2620,7 @@ async fn use_service_from_sibling_collection() {
                     renamed_instances: None,
                     target: OfferTarget::static_child("b".to_string()),
                     target_name: "my.service.Service".into(),
+                    availability: Availability::Required,
                 }))
                 .add_child(ChildDeclBuilder::new_lazy_child("b"))
                 .add_child(ChildDeclBuilder::new_lazy_child("c"))
@@ -2586,6 +2634,7 @@ async fn use_service_from_sibling_collection() {
                     source: UseSource::Parent,
                     source_name: "my.service.Service".into(),
                     target_path: "/svc/my.service.Service".try_into().unwrap(),
+                    availability: Availability::Required,
                 }))
                 .build(),
         ),
@@ -2597,6 +2646,7 @@ async fn use_service_from_sibling_collection() {
                     source: UseSource::Framework,
                     source_name: "fuchsia.component.Realm".into(),
                     target_path: "/svc/fuchsia.component.Realm".try_into().unwrap(),
+                    availability: Availability::Required,
                 }))
                 .expose(ExposeDecl::Service(ExposeServiceDecl {
                     source: ExposeSource::Collection("coll".to_string()),
@@ -2732,6 +2782,7 @@ async fn use_filtered_service_from_sibling() {
                     renamed_instances: None,
                     target: OfferTarget::static_child("c".to_string()),
                     target_name: "my.service.Service".into(),
+                    availability: Availability::Required,
                 }))
                 .offer(OfferDecl::Service(OfferServiceDecl {
                     source: OfferSource::static_child("b".to_string()),
@@ -2743,6 +2794,7 @@ async fn use_filtered_service_from_sibling() {
                     }]),
                     target: OfferTarget::static_child("d".to_string()),
                     target_name: "my.service.Service".into(),
+                    availability: Availability::Required,
                 }))
                 .add_child(ChildDeclBuilder::new_lazy_child("b"))
                 .add_child(ChildDeclBuilder::new_lazy_child("c"))
@@ -2772,6 +2824,7 @@ async fn use_filtered_service_from_sibling() {
                     source: UseSource::Parent,
                     source_name: "my.service.Service".into(),
                     target_path: "/svc/my.service.Service".try_into().unwrap(),
+                    availability: Availability::Required,
                 }))
                 .build(),
         ),
@@ -2783,6 +2836,7 @@ async fn use_filtered_service_from_sibling() {
                     source: UseSource::Parent,
                     source_name: "my.service.Service".into(),
                     target_path: "/svc/my.service.Service".try_into().unwrap(),
+                    availability: Availability::Required,
                 }))
                 .build(),
         ),

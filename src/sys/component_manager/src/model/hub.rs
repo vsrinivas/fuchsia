@@ -817,12 +817,12 @@ mod tests {
         },
         assert_matches::assert_matches,
         cm_rust::{
-            self, CapabilityName, CapabilityPath, ComponentDecl, ConfigChecksum, ConfigDecl,
-            ConfigField, ConfigNestedValueType, ConfigValueSource, ConfigValueType, DependencyType,
-            DirectoryDecl, EventSubscription, ExposeDecl, ExposeDirectoryDecl, ExposeProtocolDecl,
-            ExposeSource, ExposeTarget, ProtocolDecl, SingleValue, UseDecl, UseDirectoryDecl,
-            UseEventDecl, UseEventStreamDeprecatedDecl, UseProtocolDecl, UseSource, Value,
-            ValueSpec, ValuesData, VectorValue,
+            self, Availability, CapabilityName, CapabilityPath, ComponentDecl, ConfigChecksum,
+            ConfigDecl, ConfigField, ConfigNestedValueType, ConfigValueSource, ConfigValueType,
+            DependencyType, DirectoryDecl, EventSubscription, ExposeDecl, ExposeDirectoryDecl,
+            ExposeProtocolDecl, ExposeSource, ExposeTarget, ProtocolDecl, SingleValue, UseDecl,
+            UseDirectoryDecl, UseEventDecl, UseEventStreamDeprecatedDecl, UseProtocolDecl,
+            UseSource, Value, ValueSpec, ValuesData, VectorValue,
         },
         cm_rust_testing::ComponentDeclBuilder,
         fidl::endpoints::ServerEnd,
@@ -1087,6 +1087,7 @@ mod tests {
                         target_path: CapabilityPath::try_from("/hub").unwrap(),
                         rights: *routing::rights::READ_RIGHTS,
                         subdir: None,
+                        availability: Availability::Required,
                     }))
                     .build(),
                 config: None,
@@ -1198,6 +1199,7 @@ mod tests {
                         target_path: CapabilityPath::try_from("/hub").unwrap(),
                         rights: *routing::rights::READ_RIGHTS,
                         subdir: Some("resolved".into()),
+                        availability: Availability::Required,
                     }))
                     .build(),
                 config: None,
@@ -1236,6 +1238,7 @@ mod tests {
                         target_path: CapabilityPath::try_from("/hub").unwrap(),
                         rights: *routing::rights::READ_RIGHTS,
                         subdir: Some("resolved".into()),
+                        availability: Availability::Required,
                     }))
                     .build(),
                 config: None,
@@ -1293,6 +1296,7 @@ mod tests {
                         target_path: CapabilityPath::try_from("/hub").unwrap(),
                         rights: *routing::rights::READ_RIGHTS,
                         subdir: None,
+                        availability: Availability::Required,
                     }))
                     .build(),
                 config: None,
@@ -1348,6 +1352,7 @@ mod tests {
                             target_path: CapabilityPath::try_from("/hub").unwrap(),
                             rights: *routing::rights::READ_RIGHTS,
                             subdir: Some("resolved".into()),
+                            availability: Availability::Required,
                         }))
                         .build(),
                     config: None,
@@ -1450,12 +1455,14 @@ mod tests {
                         rights: *routing::rights::READ_RIGHTS,
                         subdir: Some("exec".into()),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .use_(UseDecl::Protocol(UseProtocolDecl {
                         source: UseSource::Parent,
                         source_name: "baz-svc".into(),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .use_(UseDecl::Directory(UseDirectoryDecl {
                         source: UseSource::Parent,
@@ -1464,6 +1471,7 @@ mod tests {
                         rights: *routing::rights::READ_RIGHTS | *routing::rights::WRITE_RIGHTS,
                         subdir: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .build(),
                 config: None,
@@ -1501,12 +1509,14 @@ mod tests {
                         source_name: "started".into(),
                         target_name: "started".into(),
                         filter: None,
+                        availability: Availability::Required,
                     }))
                     .use_(UseDecl::EventStreamDeprecated(UseEventStreamDeprecatedDecl {
                         name: CapabilityName::try_from("EventStream").unwrap(),
                         subscriptions: vec![EventSubscription {
                             event_name: "started".to_string(),
                         }],
+                        availability: Availability::Required,
                     }))
                     .build(),
                 config: None,

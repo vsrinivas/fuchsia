@@ -265,6 +265,7 @@ mod tests {
             source_name: "foo".into(),
             target_path: CapabilityPath::try_from("/svc/foo").unwrap(),
             dependency_type: DependencyType::Strong,
+            availability: Availability::Required,
         });
 
         let expose_decl = ExposeDecl::Protocol(ExposeProtocolDecl {

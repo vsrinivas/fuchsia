@@ -13,13 +13,13 @@ use {
     async_trait::async_trait,
     cm_moniker::InstancedRelativeMoniker,
     cm_rust::{
-        CapabilityDecl, CapabilityName, CapabilityPath, CapabilityTypeName, ComponentDecl,
-        DependencyType, DictionaryValue, EventDecl, EventMode, ExposeDecl, ExposeDirectoryDecl,
-        ExposeProtocolDecl, ExposeRunnerDecl, ExposeServiceDecl, ExposeSource, ExposeTarget,
-        NameMapping, OfferDecl, OfferDirectoryDecl, OfferEventDecl, OfferProtocolDecl,
-        OfferRunnerDecl, OfferServiceDecl, OfferSource, OfferTarget, ProgramDecl, ProtocolDecl,
-        RegistrationSource, RunnerDecl, RunnerRegistration, ServiceDecl, UseDecl, UseDirectoryDecl,
-        UseEventDecl, UseProtocolDecl, UseServiceDecl, UseSource,
+        Availability, CapabilityDecl, CapabilityName, CapabilityPath, CapabilityTypeName,
+        ComponentDecl, DependencyType, DictionaryValue, EventDecl, EventMode, ExposeDecl,
+        ExposeDirectoryDecl, ExposeProtocolDecl, ExposeRunnerDecl, ExposeServiceDecl, ExposeSource,
+        ExposeTarget, NameMapping, OfferDecl, OfferDirectoryDecl, OfferEventDecl,
+        OfferProtocolDecl, OfferRunnerDecl, OfferServiceDecl, OfferSource, OfferTarget,
+        ProgramDecl, ProtocolDecl, RegistrationSource, RunnerDecl, RunnerRegistration, ServiceDecl,
+        UseDecl, UseDirectoryDecl, UseEventDecl, UseProtocolDecl, UseServiceDecl, UseSource,
     },
     cm_rust_testing::{
         ChildDeclBuilder, ComponentDeclBuilder, DirectoryDeclBuilder, EnvironmentDeclBuilder,
@@ -397,6 +397,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         rights: Some(*READ_RIGHTS),
                         subdir: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source: OfferSource::Self_,
@@ -404,6 +405,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         target_name: "bar_svc".into(),
                         target: OfferTarget::static_child("b".to_string()),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source: OfferSource::Self_,
@@ -411,6 +413,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         target_name: "device".into(),
                         target: OfferTarget::static_child("b".to_string()),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .build(),
@@ -425,18 +428,21 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         rights: *READ_RIGHTS,
                         subdir: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .use_(UseDecl::Protocol(UseProtocolDecl {
                         source: UseSource::Parent,
                         source_name: "bar_svc".into(),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .use_(UseDecl::Protocol(UseProtocolDecl {
                         source: UseSource::Parent,
                         source_name: "device".into(),
                         target_path: CapabilityPath::try_from("/svc/device").unwrap(),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -475,12 +481,14 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         rights: *READ_RIGHTS,
                         subdir: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .use_(UseDecl::Protocol(UseProtocolDecl {
                         source: UseSource::Child("b".to_string()),
                         source_name: "bar_svc".into(),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .build(),
@@ -531,6 +539,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     source_name: "hippo".into(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .build(),
         )];
@@ -570,12 +579,14 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         rights: *READ_RIGHTS,
                         subdir: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .use_(UseDecl::Protocol(UseProtocolDecl {
                         source: UseSource::Child("b".to_string()),
                         source_name: "baz_svc".into(),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .build(),
@@ -662,6 +673,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         rights: Some(*READ_RIGHTS),
                         subdir: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source: OfferSource::Self_,
@@ -669,6 +681,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         target_name: "bar_svc".into(),
                         target: OfferTarget::static_child("b".to_string()),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .build(),
@@ -684,6 +697,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         rights: Some(*READ_RIGHTS),
                         subdir: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source: OfferSource::Parent,
@@ -691,6 +705,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         target_name: "baz_svc".into(),
                         target: OfferTarget::static_child("c".to_string()),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("c")
                     .build(),
@@ -705,12 +720,14 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         rights: *READ_RIGHTS,
                         subdir: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .use_(UseDecl::Protocol(UseProtocolDecl {
                         source: UseSource::Parent,
                         source_name: "baz_svc".into(),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -750,6 +767,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         target_name: "builtin.Echo".into(),
                         target: OfferTarget::static_child("b".to_string()),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .build(),
@@ -763,6 +781,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         target_name: "builtin.Echo".into(),
                         target: OfferTarget::static_child("c".to_string()),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("c")
                     .build(),
@@ -775,6 +794,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         source_name: "builtin.Echo".into(),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -821,6 +841,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         rights: Some(*READ_RIGHTS),
                         subdir: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source: OfferSource::static_child("d".to_string()),
@@ -828,6 +849,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         target_name: "foobar_svc".into(),
                         target: OfferTarget::static_child("c".to_string()),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("c")
                     .add_lazy_child("d")
@@ -843,12 +865,14 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         rights: *READ_RIGHTS,
                         subdir: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .use_(UseDecl::Protocol(UseProtocolDecl {
                         source: UseSource::Parent,
                         source_name: "foobar_svc".into(),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -909,6 +933,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         rights: Some(*READ_RIGHTS),
                         subdir: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source: OfferSource::static_child("b".to_string()),
@@ -916,6 +941,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         target_name: "baz_svc".into(),
                         target: OfferTarget::static_child("c".to_string()),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .add_lazy_child("c")
@@ -952,12 +978,14 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         rights: *READ_RIGHTS,
                         subdir: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .use_(UseDecl::Protocol(UseProtocolDecl {
                         source: UseSource::Parent,
                         source_name: "baz_svc".into(),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -998,6 +1026,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         rights: Some(*READ_RIGHTS),
                         subdir: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source: OfferSource::static_child("b".to_string()),
@@ -1005,6 +1034,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         target_name: "foobar_svc".into(),
                         target: OfferTarget::static_child("c".to_string()),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .add_lazy_child("c")
@@ -1040,12 +1070,14 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         rights: *READ_RIGHTS,
                         subdir: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .use_(UseDecl::Protocol(UseProtocolDecl {
                         source: UseSource::Parent,
                         source_name: "foobar_svc".into(),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -1108,6 +1140,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         target_name: "foo_from_a_svc".into(),
                         target: OfferTarget::static_child("b".to_string()),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .offer(OfferDecl::Directory(OfferDirectoryDecl {
                         source: OfferSource::static_child("b".to_string()),
@@ -1117,6 +1150,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         rights: Some(*READ_RIGHTS),
                         subdir: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .add_lazy_child("c")
@@ -1133,6 +1167,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         rights: Some(*READ_RIGHTS),
                         subdir: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source: OfferSource::Parent,
@@ -1140,6 +1175,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         target_name: "foo_from_a_svc".into(),
                         target: OfferTarget::static_child("e".to_string()),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
                         source: ExposeSource::Child("d".to_string()),
@@ -1164,6 +1200,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         rights: Some(*READ_RIGHTS),
                         subdir: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source: OfferSource::static_child("g".to_string()),
@@ -1171,6 +1208,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         target_name: "foo_from_h_svc".into(),
                         target: OfferTarget::static_child("f".to_string()),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("f")
                     .add_lazy_child("g")
@@ -1200,12 +1238,14 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         rights: *READ_RIGHTS,
                         subdir: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .use_(UseDecl::Protocol(UseProtocolDecl {
                         source: UseSource::Parent,
                         source_name: "foo_from_a_svc".into(),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -1219,12 +1259,14 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         rights: *READ_RIGHTS,
                         subdir: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .use_(UseDecl::Protocol(UseProtocolDecl {
                         source: UseSource::Parent,
                         source_name: "foo_from_h_svc".into(),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -1297,12 +1339,14 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     rights: *READ_RIGHTS,
                     subdir: None,
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Parent,
                     source_name: "foo_svc".into(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .build(),
         )];
@@ -1356,6 +1400,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         rights: Some(*READ_RIGHTS),
                         subdir: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source: OfferSource::Parent,
@@ -1363,6 +1408,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         target_name: "bar_svc".into(),
                         target: OfferTarget::static_child("b".to_string()),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .build(),
@@ -1377,12 +1423,14 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         rights: *READ_RIGHTS,
                         subdir: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .use_(UseDecl::Protocol(UseProtocolDecl {
                         source: UseSource::Parent,
                         source_name: "bar_svc".into(),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -1435,12 +1483,14 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         rights: *READ_RIGHTS,
                         subdir: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .use_(UseDecl::Protocol(UseProtocolDecl {
                         source: UseSource::Parent,
                         source_name: "hippo_svc".into(),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -1484,6 +1534,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         rights: Some(*READ_RIGHTS),
                         subdir: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source_name: "hippo_svc".into(),
@@ -1491,6 +1542,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         target_name: "hippo_svc".into(),
                         target: OfferTarget::static_child("c".to_string()),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .add_lazy_child("c")
@@ -1507,12 +1559,14 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         rights: *READ_RIGHTS,
                         subdir: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .use_(UseDecl::Protocol(UseProtocolDecl {
                         source: UseSource::Parent,
                         source_name: "hippo_svc".into(),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -1559,6 +1613,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         rights: Some(*READ_RIGHTS),
                         subdir: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source_name: "hippo_svc".into(),
@@ -1566,6 +1621,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         target_name: "hippo_svc".into(),
                         target: OfferTarget::static_child("c".to_string()),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("c")
                     .build(),
@@ -1580,12 +1636,14 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         rights: *READ_RIGHTS,
                         subdir: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .use_(UseDecl::Protocol(UseProtocolDecl {
                         source: UseSource::Parent,
                         source_name: "hippo_svc".into(),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -1629,12 +1687,14 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         rights: *READ_RIGHTS,
                         subdir: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .use_(UseDecl::Protocol(UseProtocolDecl {
                         source: UseSource::Parent,
                         source_name: "hippo_svc".into(),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("c")
                     .build(),
@@ -1753,6 +1813,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         rights: Some(*READ_RIGHTS),
                         subdir: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source: OfferSource::static_child("b".to_string()),
@@ -1760,6 +1821,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         target_name: "baz_svc".into(),
                         target: OfferTarget::static_child("c".to_string()),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .add_lazy_child("c")
@@ -1796,12 +1858,14 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         rights: *READ_RIGHTS,
                         subdir: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .use_(UseDecl::Protocol(UseProtocolDecl {
                         source: UseSource::Parent,
                         source_name: "baz_svc".into(),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -1847,6 +1911,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         rights: Some(*READ_RIGHTS),
                         subdir: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source_name: "hippo_svc".into(),
@@ -1854,6 +1919,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         target_name: "hippo_svc".into(),
                         target: OfferTarget::static_child("b".to_string()),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .build(),
@@ -1868,12 +1934,14 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         rights: *READ_RIGHTS,
                         subdir: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .use_(UseDecl::Protocol(UseProtocolDecl {
                         source: UseSource::Parent,
                         source_name: "hippo_svc".into(),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -1920,6 +1988,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         rights: Some(*READ_RIGHTS),
                         subdir: Some(PathBuf::from("s1/s2")),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .build(),
@@ -1935,6 +2004,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         rights: Some(*READ_RIGHTS),
                         subdir: Some(PathBuf::from("s3")),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("c")
                     .build(),
@@ -1949,6 +2019,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         rights: *READ_RIGHTS,
                         subdir: Some(PathBuf::from("s4")),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -1991,6 +2062,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         rights: Some(*READ_RIGHTS),
                         subdir: Some(PathBuf::from("s3")),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .add_lazy_child("c")
@@ -2020,6 +2092,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         rights: *READ_RIGHTS,
                         subdir: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -2284,6 +2357,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     source_name: "invalid".into(),
                     target_path: CapabilityPath::try_from("/svc/valid").unwrap(),
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .build(),
         )];
@@ -2320,6 +2394,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         target_name: "valid".into(),
                         target: OfferTarget::static_child("b".to_string()),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .build(),
@@ -2332,6 +2407,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         source_name: "valid".into(),
                         target_path: CapabilityPath::try_from("/svc/valid").unwrap(),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -2366,6 +2442,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         target_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
                         target: OfferTarget::static_child("b".to_string()),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .build(),
@@ -2378,6 +2455,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
                         target_path: "/svc/fuchsia.sys2.EventSource".try_into().unwrap(),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .use_(UseDecl::Event(UseEventDecl {
                         source: UseSource::Framework,
@@ -2385,6 +2463,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         target_name: "capability_requested".into(),
                         filter: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .use_(UseDecl::Event(UseEventDecl {
                         source: UseSource::Framework,
@@ -2392,6 +2471,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         target_name: "started".into(),
                         filter: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .use_(UseDecl::Event(UseEventDecl {
                         source: UseSource::Framework,
@@ -2399,6 +2479,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         target_name: "resolved".into(),
                         filter: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -2447,6 +2528,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         target_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
                         target: OfferTarget::static_child("b".to_string()),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .offer(OfferDecl::Event(OfferEventDecl {
                         source: OfferSource::Framework,
@@ -2454,6 +2536,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         target_name: "capability_requested_on_a".into(),
                         target: OfferTarget::static_child("b".to_string()),
                         filter: None,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .build(),
@@ -2466,6 +2549,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
                         target_path: "/svc/fuchsia.sys2.EventSource".try_into().unwrap(),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .use_(UseDecl::Event(UseEventDecl {
                         source: UseSource::Parent,
@@ -2473,6 +2557,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         target_name: "capability_requested_from_parent".into(),
                         filter: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .use_(UseDecl::Event(UseEventDecl {
                         source: UseSource::Framework,
@@ -2480,6 +2565,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         target_name: "resolved".into(),
                         filter: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -2523,6 +2609,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         target_name: "started_on_a".into(),
                         target: OfferTarget::static_child("b".to_string()),
                         filter: None,
+                        availability: Availability::Required,
                     }))
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source: OfferSource::Parent,
@@ -2530,6 +2617,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         target_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
                         target: OfferTarget::static_child("b".to_string()),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .build(),
@@ -2542,6 +2630,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
                         target_path: "/svc/fuchsia.sys2.EventSource".try_into().unwrap(),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .use_(UseDecl::Event(UseEventDecl {
                         source: UseSource::Parent,
@@ -2549,6 +2638,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         target_name: "started".into(),
                         filter: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .use_(UseDecl::Event(UseEventDecl {
                         source: UseSource::Framework,
@@ -2556,6 +2646,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         target_name: "resolved".into(),
                         filter: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -2603,6 +2694,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     target_name: "started_on_a".into(),
                     target: OfferTarget::static_child("b".to_string()),
                     filter: None,
+                    availability: Availability::Required,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferSource::Parent,
@@ -2610,6 +2702,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     target_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
                     target: OfferTarget::static_child("b".to_string()),
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .offer(OfferDecl::Event(OfferEventDecl {
                     source: OfferSource::Framework,
@@ -2617,6 +2710,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     target_name: "stopped_on_b".into(),
                     target: OfferTarget::static_child("b".to_string()),
                     filter: None,
+                    availability: Availability::Required,
                 }))
                 .add_lazy_child("b")
                 .build(),
@@ -2630,6 +2724,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     target_name: "started_on_a".into(),
                     target: OfferTarget::static_child("c".to_string()),
                     filter: None,
+                    availability: Availability::Required,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferSource::Parent,
@@ -2637,6 +2732,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     target_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
                     target: OfferTarget::static_child("c".to_string()),
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .offer(OfferDecl::Event(OfferEventDecl {
                     source: OfferSource::Framework,
@@ -2644,6 +2740,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     target_name: "destroyed".into(),
                     target: OfferTarget::static_child("c".to_string()),
                     filter: Some(hashmap!{"path".to_string() => DictionaryValue::Str("/diagnostics".to_string())}),
+                    availability: Availability::Required,
                 }))
                 .add_lazy_child("c")
                 .build(),
@@ -2656,6 +2753,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
                     target_path: "/svc/fuchsia.sys2.EventSource".try_into().unwrap(),
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .use_(UseDecl::Event(UseEventDecl {
                     source: UseSource::Parent,
@@ -2664,6 +2762,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     filter: None,
                     dependency_type: DependencyType::Strong,
 
+                    availability: Availability::Required,
                 }))
                 .use_(UseDecl::Event(UseEventDecl {
                     source: UseSource::Parent,
@@ -2671,6 +2770,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     target_name: "destroyed".into(),
                     filter: Some(hashmap!{"path".to_string() => DictionaryValue::Str("/diagnostics".to_string())}),
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .use_(UseDecl::Event(UseEventDecl {
                     source: UseSource::Parent,
@@ -2678,6 +2778,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     target_name: "stopped".into(),
                     filter: None,
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .use_(UseDecl::Event(UseEventDecl {
                     source: UseSource::Framework,
@@ -2685,6 +2786,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     target_name: "resolved".into(),
                     filter: None,
                     dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
                 }))
                 .build(),
         )];
@@ -2751,6 +2853,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                                 "foo".to_string(), "bar".to_string(), "baz".to_string()
                             ])
                         }),
+                        availability: Availability::Required,
                     }))
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source: OfferSource::Parent,
@@ -2758,6 +2861,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         target_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
                         target: OfferTarget::static_child("b".to_string()),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .build(),
@@ -2770,6 +2874,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
                         target_path: "/svc/fuchsia.sys2.EventSource".try_into().unwrap(),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .use_(UseDecl::Event(UseEventDecl {
                         dependency_type: DependencyType::Strong,
@@ -2779,6 +2884,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         filter: Some(hashmap! {
                             "name".to_string() => DictionaryValue::Str("foo".into()),
                         }),
+                        availability: Availability::Required,
                     }))
                     .use_(UseDecl::Event(UseEventDecl {
                         dependency_type: DependencyType::Strong,
@@ -2786,6 +2892,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         source_name: "resolved".into(),
                         target_name: "resolved".into(),
                         filter: None,
+                        availability: Availability::Required,
                     }))
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source: OfferSource::Parent,
@@ -2793,6 +2900,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         target_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
                         target: OfferTarget::static_child("c".to_string()),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source: OfferSource::Parent,
@@ -2800,6 +2908,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         target_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
                         target: OfferTarget::static_child("d".to_string()),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .offer(OfferDecl::Event(OfferEventDecl {
                         source: OfferSource::Parent,
@@ -2811,6 +2920,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                                 "foo".to_string(), "bar".to_string()
                             ])
                         }),
+                        availability: Availability::Required,
                     }))
                     .offer(OfferDecl::Event(OfferEventDecl {
                         source: OfferSource::Parent,
@@ -2822,6 +2932,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                                 "foo".to_string(), "bar".to_string()
                             ])
                         }),
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("c")
                     .add_lazy_child("d")
@@ -2835,6 +2946,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         source: UseSource::Parent,
                         source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
                         target_path: "/svc/fuchsia.sys2.EventSource".try_into().unwrap(),
+                        availability: Availability::Required,
                     }))
                     .use_(UseDecl::Event(UseEventDecl {
                         dependency_type: DependencyType::Strong,
@@ -2846,6 +2958,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                                 "foo".to_string(), "bar".to_string()
                             ])
                         }),
+                        availability: Availability::Required,
                     }))
                     .use_(UseDecl::Event(UseEventDecl {
                         dependency_type: DependencyType::Strong,
@@ -2853,6 +2966,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         source_name: "resolved".into(),
                         target_name: "resolved".into(),
                         filter: None,
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -2864,6 +2978,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         source: UseSource::Parent,
                         source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
                         target_path: "/svc/fuchsia.sys2.EventSource".try_into().unwrap(),
+                        availability: Availability::Required,
                     }))
                     .use_(UseDecl::Event(UseEventDecl {
                         dependency_type: DependencyType::Strong,
@@ -2873,6 +2988,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         filter: Some(hashmap! {
                             "name".to_string() => DictionaryValue::Str("baz".into()),
                         }),
+                        availability: Availability::Required,
                     }))
                     .use_(UseDecl::Event(UseEventDecl {
                         dependency_type: DependencyType::Strong,
@@ -2880,6 +2996,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         source_name: "resolved".into(),
                         target_name: "resolved".into(),
                         filter: None,
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -2938,12 +3055,14 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     source_name: "directory_ready".into(),
                     target_name: "directory_ready".into(),
                     filter: None,
+                    availability: Availability::Required,
                 }))
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     dependency_type: DependencyType::Strong,
                     source: UseSource::Parent,
                     source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
                     target_path: "/svc/fuchsia.sys2.EventSource".try_into().unwrap(),
+                    availability: Availability::Required,
                 }))
                 .use_(UseDecl::Event(UseEventDecl {
                     dependency_type: DependencyType::Strong,
@@ -2951,6 +3070,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     source_name: "unregistered".into(),
                     target_name: "unregistered".into(),
                     filter: None,
+                    availability: Availability::Required,
                 }))
                 .build(),
         )];
@@ -3004,6 +3124,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         target_name: "hippo_svc".into(),
                         target: OfferTarget::static_child("b".to_string()),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .build(),
@@ -3016,6 +3137,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         source: UseSource::Parent,
                         source_name: "hippo_svc".into(),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -3063,6 +3185,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         rights: Some(*READ_RIGHTS),
                         subdir: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .build(),
@@ -3077,6 +3200,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         rights: *READ_RIGHTS,
                         subdir: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -3121,6 +3245,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         target_name: "hippo_svc".into(),
                         target: OfferTarget::static_child("b".to_string()),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .build(),
@@ -3134,12 +3259,14 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         target_name: "hippo_svc".into(),
                         target: OfferTarget::static_child("c".to_string()),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .use_(UseDecl::Protocol(UseProtocolDecl {
                         dependency_type: DependencyType::Strong,
                         source: UseSource::Parent,
                         source_name: "hippo_svc".into(),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("c")
                     .build(),
@@ -3152,6 +3279,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         source: UseSource::Parent,
                         source_name: "hippo_svc".into(),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -3214,6 +3342,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         target_name: "hippo_svc".into(),
                         target: OfferTarget::static_child("b".to_string()),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .build(),
@@ -3227,6 +3356,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         target_name: "hippo_svc".into(),
                         target: OfferTarget::static_child("c".to_string()),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source: OfferSource::Parent,
@@ -3234,6 +3364,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         target_name: "hippo_svc".into(),
                         target: OfferTarget::static_child("d".to_string()),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("c")
                     .add_lazy_child("d")
@@ -3247,6 +3378,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         source: UseSource::Parent,
                         source_name: "hippo_svc".into(),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -3258,6 +3390,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         source: UseSource::Parent,
                         source_name: "hippo_svc".into(),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -3314,6 +3447,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     source: UseSource::Parent,
                     source_name: "foo_svc".into(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                    availability: Availability::Required,
                 }))
                 .build(),
         )];
@@ -3363,6 +3497,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         target_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
                         target: OfferTarget::static_child("b".to_string()),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .build(),
@@ -3375,6 +3510,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         source: UseSource::Parent,
                         source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
                         target_path: "/svc/fuchsia.sys2.EventSource".try_into().unwrap(),
+                        availability: Availability::Required,
                     }))
                     .use_(UseDecl::Event(UseEventDecl {
                         dependency_type: DependencyType::Strong,
@@ -3382,6 +3518,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         source_name: "capability_requested".into(),
                         target_name: "capability_requested".into(),
                         filter: None,
+                        availability: Availability::Required,
                     }))
                     .use_(UseDecl::Event(UseEventDecl {
                         dependency_type: DependencyType::Strong,
@@ -3389,6 +3526,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         source_name: "started".into(),
                         target_name: "started".into(),
                         filter: None,
+                        availability: Availability::Required,
                     }))
                     .use_(UseDecl::Event(UseEventDecl {
                         dependency_type: DependencyType::Strong,
@@ -3396,6 +3534,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         source_name: "resolved".into(),
                         target_name: "resolved".into(),
                         filter: None,
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -3513,6 +3652,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         source: UseSource::Debug,
                         source_name: "svc_allowed".into(),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -3524,6 +3664,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         source: UseSource::Debug,
                         source_name: "svc_not_allowed".into(),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -3619,6 +3760,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         source: UseSource::Debug,
                         source_name: "svc_allowed".into(),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -3630,6 +3772,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         source: UseSource::Debug,
                         source_name: "svc_not_allowed".into(),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -3734,6 +3877,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         source: UseSource::Debug,
                         source_name: "svc_allowed".into(),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -3754,6 +3898,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         source: UseSource::Debug,
                         source_name: "svc_not_allowed".into(),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -3862,12 +4007,14 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         source: UseSource::Debug,
                         source_name: "svc_allowed".into(),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                        availability: Availability::Required,
                     }))
                     .use_(UseDecl::Protocol(UseProtocolDecl {
                         dependency_type: DependencyType::Strong,
                         source: UseSource::Debug,
                         source_name: "svc_not_allowed".into(),
                         target_path: CapabilityPath::try_from("/svc/hippo_not_allowed").unwrap(),
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -3950,6 +4097,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
             source: UseSource::Parent,
             source_name: "foo".into(),
             target_path: CapabilityPath::try_from("/foo").unwrap(),
+            availability: Availability::Required,
         };
         let components = vec![
             (
@@ -3962,6 +4110,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         renamed_instances: None,
                         target_name: "foo".into(),
                         target: OfferTarget::static_child("b".to_string()),
+                        availability: Availability::Required,
                     }))
                     .service(ServiceDecl {
                         name: "foo".into(),
@@ -4009,6 +4158,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
             source: UseSource::Child("b".to_string()),
             source_name: "foo".into(),
             target_path: CapabilityPath::try_from("/foo").unwrap(),
+            availability: Availability::Required,
         };
         let components = vec![
             (
@@ -4072,6 +4222,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
             source: UseSource::Parent,
             source_name: "foo".into(),
             target_path: CapabilityPath::try_from("/foo").unwrap(),
+            availability: Availability::Required,
         };
         let components = vec![
             (
@@ -4084,6 +4235,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         renamed_instances: None,
                         target_name: "foo".into(),
                         target: OfferTarget::static_child("b".to_string()),
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .add_lazy_child("c")
@@ -4145,6 +4297,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
             source: UseSource::Parent,
             source_name: "foo".into(),
             target_path: CapabilityPath::try_from("/foo").unwrap(),
+            availability: Availability::Required,
         };
         let source_instance_filter = Some(vec!["service_instance_0".to_string()]);
         let renamed_instances = Some(vec![]);
@@ -4159,6 +4312,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         renamed_instances: renamed_instances,
                         target_name: "foo".into(),
                         target: OfferTarget::static_child("b".to_string()),
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .add_lazy_child("c")
@@ -4225,6 +4379,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
             source: UseSource::Parent,
             source_name: "foo".into(),
             target_path: CapabilityPath::try_from("/foo").unwrap(),
+            availability: Availability::Required,
         };
         let source_instance_filter = Some(vec![]);
         let renamed_instances = Some(vec![NameMapping {
@@ -4248,6 +4403,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         renamed_instances: renamed_instances,
                         target_name: "foo".into(),
                         target: OfferTarget::static_child("b".to_string()),
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .add_lazy_child("c")

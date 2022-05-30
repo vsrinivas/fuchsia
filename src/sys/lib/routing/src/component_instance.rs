@@ -120,6 +120,7 @@ pub trait ResolvedInstanceInterfaceExt: ResolvedInstanceInterface {
     fn offer_source_exists(&self, source: &OfferSource) -> bool {
         match source {
             OfferSource::Framework | OfferSource::Self_ | OfferSource::Parent => true,
+            OfferSource::Void => false,
             OfferSource::Child(cm_rust::ChildRef { name, collection }) => {
                 self.get_live_child(&ChildMoniker::new(name.clone(), collection.clone())).is_some()
             }

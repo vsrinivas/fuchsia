@@ -5,8 +5,8 @@
 use {
     crate::model::{
         actions::{
-            shutdown, start, ActionSet, DiscoverAction, PurgeChildAction,
-            ResolveAction, StartAction, StopAction, UnresolveAction
+            shutdown, start, ActionSet, DiscoverAction, PurgeChildAction, ResolveAction,
+            StartAction, StopAction, UnresolveAction,
         },
         context::{ModelContext, WeakModelContext},
         environment::Environment,
@@ -2019,7 +2019,7 @@ pub mod tests {
     use {
         super::*,
         crate::model::{
-            actions::{ShutdownAction, DestroyChildAction, test_utils::is_discovered},
+            actions::{test_utils::is_discovered, DestroyChildAction, ShutdownAction},
             events::{registry::EventSubscription, stream::EventStream},
             hooks::EventType,
             starter::Starter,
@@ -2031,9 +2031,10 @@ pub mod tests {
         },
         assert_matches::assert_matches,
         cm_rust::{
-            CapabilityDecl, CapabilityPath, ChildRef, DependencyType, EventMode, ExposeDecl,
-            ExposeProtocolDecl, ExposeSource, ExposeTarget, OfferDecl, OfferDirectoryDecl,
-            OfferProtocolDecl, OfferSource, OfferTarget, ProtocolDecl, UseProtocolDecl, UseSource,
+            Availability, CapabilityDecl, CapabilityPath, ChildRef, DependencyType, EventMode,
+            ExposeDecl, ExposeProtocolDecl, ExposeSource, ExposeTarget, OfferDecl,
+            OfferDirectoryDecl, OfferProtocolDecl, OfferSource, OfferTarget, ProtocolDecl,
+            UseProtocolDecl, UseSource,
         },
         cm_rust_testing::{
             ChildDeclBuilder, CollectionDeclBuilder, ComponentDeclBuilder, EnvironmentDeclBuilder,
@@ -2751,6 +2752,7 @@ pub mod tests {
             dependency_type: DependencyType::Strong,
             rights: None,
             subdir: None,
+            availability: Availability::Required,
         });
         let example_capability = ProtocolDecl { name: "bar".into(), source_path: None };
         let example_expose = ExposeDecl::Protocol(ExposeProtocolDecl {
@@ -2764,6 +2766,7 @@ pub mod tests {
             source_name: "baz".into(),
             target_path: CapabilityPath::try_from("/svc/baz").expect("parsing"),
             dependency_type: DependencyType::Strong,
+            availability: Availability::Required,
         });
 
         let env_a = EnvironmentDeclBuilder::new()
@@ -2844,6 +2847,7 @@ pub mod tests {
             dependency_type: DependencyType::Strong,
             rights: None,
             subdir: None,
+            availability: Availability::Required,
         });
 
         let components = vec![
@@ -2917,6 +2921,7 @@ pub mod tests {
             source_name: "dyn_offer_source_name".into(),
             target_name: "dyn_offer_target_name".into(),
             dependency_type: DependencyType::Strong,
+            availability: Availability::Required,
         });
 
         let root_component = test.look_up(vec![].into()).await;
@@ -3043,6 +3048,7 @@ pub mod tests {
             source_name: "dyn_offer2_source_name".into(),
             target_name: "dyn_offer2_target_name".into(),
             dependency_type: DependencyType::Strong,
+            availability: Availability::Required,
         });
 
         {

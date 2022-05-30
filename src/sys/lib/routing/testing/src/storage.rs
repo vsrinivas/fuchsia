@@ -48,6 +48,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                         target_name: "cache".into(),
                         source: OfferSource::Self_,
                         target: OfferTarget::static_child("b".to_string()),
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .storage(StorageDecl {
@@ -65,6 +66,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                     .use_(UseDecl::Storage(UseStorageDecl {
                         source_name: "cache".into(),
                         target_path: "/storage".try_into().unwrap(),
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -121,6 +123,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                         target: OfferTarget::static_child("b".to_string()),
                         source_name: "cache".into(),
                         target_name: "cache".into(),
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .storage(StorageDecl {
@@ -138,6 +141,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                     .use_(UseDecl::Storage(UseStorageDecl {
                         source_name: "cache".into(),
                         target_path: "/storage".try_into().unwrap(),
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -185,6 +189,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                         target: OfferTarget::static_child("b".to_string()),
                         source_name: "cache".into(),
                         target_name: "cache".into(),
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .storage(StorageDecl {
@@ -202,6 +207,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                     .use_(UseDecl::Storage(UseStorageDecl {
                         source_name: "cache".into(),
                         target_path: "/storage".try_into().unwrap(),
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -249,6 +255,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                         target: OfferTarget::static_child("b".to_string()),
                         source_name: "cache".into(),
                         target_name: "cache".into(),
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .storage(StorageDecl {
@@ -266,6 +273,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                     .use_(UseDecl::Storage(UseStorageDecl {
                         source_name: "cache".into(),
                         target_path: "/storage".try_into().unwrap(),
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -314,6 +322,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                         rights: Some(*READ_RIGHTS | *WRITE_RIGHTS),
                         subdir: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .build(),
@@ -326,6 +335,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                         target: OfferTarget::static_child("c".to_string()),
                         source_name: "data".into(),
                         target_name: "data".into(),
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("c")
                     .storage(StorageDecl {
@@ -343,6 +353,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                     .use_(UseDecl::Storage(UseStorageDecl {
                         source_name: "data".into(),
                         target_path: "/storage".try_into().unwrap(),
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -395,6 +406,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                         rights: Some(*READ_RIGHTS | *WRITE_RIGHTS),
                         subdir: Some("subdir_1".into()),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .build(),
@@ -407,6 +419,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                         target: OfferTarget::static_child("c".to_string()),
                         source_name: "data".into(),
                         target_name: "data".into(),
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("c")
                     .storage(StorageDecl {
@@ -424,6 +437,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                     .use_(UseDecl::Storage(UseStorageDecl {
                         source_name: "data".into(),
                         target_path: "/storage".try_into().unwrap(),
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -482,6 +496,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                         rights: Some(*READ_RIGHTS | *WRITE_RIGHTS),
                         subdir: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .build(),
@@ -494,6 +509,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                         target: OfferTarget::static_child("c".to_string()),
                         source_name: "data".into(),
                         target_name: "data".into(),
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("c")
                     .storage(StorageDecl {
@@ -511,6 +527,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                     .use_(UseDecl::Storage(UseStorageDecl {
                         source_name: "data".into(),
                         target_path: "/storage".try_into().unwrap(),
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -560,6 +577,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                         target: OfferTarget::static_child("b".to_string()),
                         source_name: "data".into(),
                         target_name: "data".into(),
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .storage(StorageDecl {
@@ -579,6 +597,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                         target: OfferTarget::static_child("c".to_string()),
                         source_name: "data".into(),
                         target_name: "data".into(),
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("c")
                     .build(),
@@ -589,6 +608,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                     .use_(UseDecl::Storage(UseStorageDecl {
                         source_name: "data".into(),
                         target_path: "/storage".try_into().unwrap(),
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -636,6 +656,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                         target: OfferTarget::static_child("c".to_string()),
                         source_name: "cache".into(),
                         target_name: "cache".into(),
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .add_lazy_child("c")
@@ -666,6 +687,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                     .use_(UseDecl::Storage(UseStorageDecl {
                         source_name: "cache".into(),
                         target_path: "/storage".try_into().unwrap(),
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -714,6 +736,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                         target: OfferTarget::static_child("c".to_string()),
                         source_name: "cache".into(),
                         target_name: "cache".into(),
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .add_lazy_child("c")
@@ -744,6 +767,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                     .use_(UseDecl::Storage(UseStorageDecl {
                         source_name: "cache".into(),
                         target_path: "/storage".try_into().unwrap(),
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -808,12 +832,14 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                         target: OfferTarget::static_child("c".to_string()),
                         source_name: "cache".into(),
                         target_name: "cache".into(),
+                        availability: Availability::Required,
                     }))
                     .offer(OfferDecl::Storage(OfferStorageDecl {
                         source: OfferSource::Self_,
                         target: OfferTarget::static_child("c".to_string()),
                         source_name: "data".into(),
                         target_name: "data".into(),
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .add_lazy_child("c")
@@ -846,20 +872,24 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                         target: OfferTarget::static_child("d".to_string()),
                         source_name: "data".into(),
                         target_name: "data".into(),
+                        availability: Availability::Required,
                     }))
                     .offer(OfferDecl::Storage(OfferStorageDecl {
                         source: OfferSource::Parent,
                         target: OfferTarget::static_child("d".to_string()),
                         source_name: "cache".into(),
                         target_name: "cache".into(),
+                        availability: Availability::Required,
                     }))
                     .use_(UseDecl::Storage(UseStorageDecl {
                         source_name: "data".into(),
                         target_path: "/storage".try_into().unwrap(),
+                        availability: Availability::Required,
                     }))
                     .use_(UseDecl::Storage(UseStorageDecl {
                         source_name: "cache".into(),
                         target_path: "/cache".try_into().unwrap(),
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("d")
                     .build(),
@@ -870,10 +900,12 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                     .use_(UseDecl::Storage(UseStorageDecl {
                         source_name: "data".into(),
                         target_path: "/storage".try_into().unwrap(),
+                        availability: Availability::Required,
                     }))
                     .use_(UseDecl::Storage(UseStorageDecl {
                         source_name: "cache".into(),
                         target_path: "/cache".try_into().unwrap(),
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -965,6 +997,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                         target: OfferTarget::static_child("b".to_string()),
                         source_name: "cache".into(),
                         target_name: "cache".into(),
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .storage(StorageDecl {
@@ -982,6 +1015,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                     .use_(UseDecl::Storage(UseStorageDecl {
                         source_name: "data".into(),
                         target_path: "/storage".try_into().unwrap(),
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -1026,6 +1060,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                         rights: Some(*READ_RIGHTS | *WRITE_RIGHTS),
                         subdir: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .build(),
@@ -1036,6 +1071,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                     .use_(UseDecl::Storage(UseStorageDecl {
                         source_name: "data".into(),
                         target_path: "/storage".try_into().unwrap(),
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -1089,6 +1125,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                     .use_(UseDecl::Storage(UseStorageDecl {
                         source_name: "data".into(),
                         target_path: "/storage".try_into().unwrap(),
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -1137,6 +1174,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                         rights: Some(*READ_RIGHTS | *WRITE_RIGHTS),
                         subdir: None,
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .build(),
@@ -1149,6 +1187,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                         target: OfferTarget::static_child("c".to_string()),
                         source_name: "data".into(),
                         target_name: "data".into(),
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("c")
                     .storage(StorageDecl {
@@ -1166,6 +1205,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                     .use_(UseDecl::Storage(UseStorageDecl {
                         source_name: "data".into(),
                         target_path: "/storage".try_into().unwrap(),
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -1205,6 +1245,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                         target_name: "cache".into(),
                         source: OfferSource::Self_,
                         target: OfferTarget::static_child("b".to_string()),
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .storage(StorageDecl {
@@ -1222,6 +1263,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                     .use_(UseDecl::Storage(UseStorageDecl {
                         source_name: "cache".into(),
                         target_path: "/storage".try_into().unwrap(),
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -1298,6 +1340,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                         target: OfferTarget::static_child("b".to_string()),
                         source_name: "cache".into(),
                         target_name: "cache".into(),
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .storage(StorageDecl {
@@ -1315,12 +1358,14 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                     .use_(UseDecl::Storage(UseStorageDecl {
                         source_name: "cache".into(),
                         target_path: "/storage".try_into().unwrap(),
+                        availability: Availability::Required,
                     }))
                     .offer(OfferDecl::Storage(OfferStorageDecl {
                         source: OfferSource::Parent,
                         target: OfferTarget::static_child("c".to_string()),
                         source_name: "cache".into(),
                         target_name: "cache".into(),
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("c")
                     .build(),
@@ -1331,6 +1376,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                     .use_(UseDecl::Storage(UseStorageDecl {
                         source_name: "cache".into(),
                         target_path: "/storage".try_into().unwrap(),
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),

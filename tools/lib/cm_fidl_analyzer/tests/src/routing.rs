@@ -14,7 +14,7 @@ use {
         route::{CapabilityRouteError, RouteSegment, VerifyRouteResult},
     },
     cm_rust::{
-        CapabilityDecl, CapabilityName, CapabilityPath, CapabilityTypeName, ChildRef,
+        Availability, CapabilityDecl, CapabilityName, CapabilityPath, CapabilityTypeName, ChildRef,
         ComponentDecl, DependencyType, ExposeDecl, ExposeDeclCommon, ExposeDirectoryDecl,
         ExposeProtocolDecl, ExposeResolverDecl, ExposeServiceDecl, ExposeSource, ExposeTarget,
         OfferDecl, OfferDirectoryDecl, OfferEventDecl, OfferProtocolDecl, OfferServiceDecl,
@@ -460,6 +460,7 @@ mod tests {
             source: UseSource::Parent,
             source_name: "foo".into(),
             target_path: CapabilityPath::try_from("/foo").unwrap(),
+            availability: Availability::Required,
         };
         let components = vec![
             (
@@ -472,6 +473,7 @@ mod tests {
                         renamed_instances: None,
                         target_name: "foo".into(),
                         target: OfferTarget::static_child("b".to_string()),
+                        availability: Availability::Required,
                     }))
                     .service(ServiceDecl {
                         name: "foo".into(),
@@ -509,6 +511,7 @@ mod tests {
             source: UseSource::Parent,
             source_name: "foo".into(),
             target_path: CapabilityPath::try_from("/foo").unwrap(),
+            availability: Availability::Required,
         };
         let components = vec![
             (
@@ -521,6 +524,7 @@ mod tests {
                         renamed_instances: None,
                         target_name: "foo".into(),
                         target: OfferTarget::static_child("b".to_string()),
+                        availability: Availability::Required,
                     }))
                     .service(ServiceDecl {
                         name: "foo".into(),
@@ -558,6 +562,7 @@ mod tests {
             source: UseSource::Child("b".to_string()),
             source_name: "foo".into(),
             target_path: CapabilityPath::try_from("/foo").unwrap(),
+            availability: Availability::Required,
         };
         let components = vec![
             (
@@ -611,6 +616,7 @@ mod tests {
             source: UseSource::Parent,
             source_name: "foo".into(),
             target_path: CapabilityPath::try_from("/foo").unwrap(),
+            availability: Availability::Required,
         };
         let components = vec![
             (
@@ -623,6 +629,7 @@ mod tests {
                         renamed_instances: None,
                         target_name: "foo".into(),
                         target: OfferTarget::static_child("b".to_string()),
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .add_lazy_child("c")
@@ -951,6 +958,7 @@ mod tests {
             source_name: "bar_svc".into(),
             target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
             dependency_type: DependencyType::Strong,
+            availability: Availability::Required,
         });
         let offer_decl = OfferDecl::Protocol(OfferProtocolDecl {
             source: OfferSource::Self_,
@@ -958,6 +966,7 @@ mod tests {
             target_name: "bar_svc".into(),
             target: OfferTarget::Child(ChildRef { name: "b".to_string(), collection: None }),
             dependency_type: DependencyType::Strong,
+            availability: Availability::Required,
         });
         let protocol_decl = ProtocolDeclBuilder::new("foo_svc").build();
         let components = vec![
@@ -1009,6 +1018,7 @@ mod tests {
             source_name: "bar_svc".into(),
             target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
             dependency_type: DependencyType::Strong,
+            availability: Availability::Required,
         });
         let expose_decl = ExposeDecl::Protocol(ExposeProtocolDecl {
             source: ExposeSource::Self_,
@@ -1060,6 +1070,7 @@ mod tests {
             source_name: "hippo".into(),
             target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
             dependency_type: DependencyType::Strong,
+            availability: Availability::Required,
         });
         let protocol_decl = ProtocolDeclBuilder::new("hippo").build();
         let components = vec![(
@@ -1110,6 +1121,7 @@ mod tests {
             rights: *READ_RIGHTS,
             subdir: None,
             dependency_type: DependencyType::Strong,
+            availability: Availability::Required,
         });
         let a_offer_decl = OfferDecl::Directory(OfferDirectoryDecl {
             source: OfferSource::static_child("b".to_string()),
@@ -1119,6 +1131,7 @@ mod tests {
             rights: Some(*READ_RIGHTS),
             subdir: None,
             dependency_type: DependencyType::Strong,
+            availability: Availability::Required,
         });
         let b_expose_decl = ExposeDecl::Directory(ExposeDirectoryDecl {
             source: ExposeSource::Child("d".to_string()),
@@ -1296,10 +1309,12 @@ mod tests {
             target: OfferTarget::static_child("b".to_string()),
             source_name: "cache".into(),
             target_name: "cache".into(),
+            availability: Availability::Required,
         });
         let use_storage_decl = UseDecl::Storage(UseStorageDecl {
             source_name: "cache".into(),
             target_path: "/storage".try_into().unwrap(),
+            availability: Availability::Required,
         });
         let components = vec![
             (
@@ -1373,6 +1388,7 @@ mod tests {
             target_name: "started_on_a".into(),
             target: OfferTarget::static_child("b".to_string()),
             filter: None,
+            availability: Availability::Required,
         });
         let use_event_decl = UseDecl::Event(UseEventDecl {
             source: UseSource::Parent,
@@ -1380,6 +1396,7 @@ mod tests {
             target_name: "started".into(),
             filter: None,
             dependency_type: DependencyType::Strong,
+            availability: Availability::Required,
         });
 
         let offer_event_source_decl = OfferDecl::Protocol(OfferProtocolDecl {
@@ -1388,12 +1405,14 @@ mod tests {
             target_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
             target: OfferTarget::static_child("b".to_string()),
             dependency_type: DependencyType::Strong,
+            availability: Availability::Required,
         });
         let use_event_source_decl = UseDecl::Protocol(UseProtocolDecl {
             source: UseSource::Parent,
             source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
             target_path: "/svc/fuchsia.sys2.EventSource".try_into().unwrap(),
             dependency_type: DependencyType::Strong,
+            availability: Availability::Required,
         });
         let event_source_decl = CapabilityDecl::Protocol(ProtocolDecl {
             name: "fuchsia.sys2.EventSource".into(),
@@ -1481,12 +1500,14 @@ mod tests {
             target_name: "bar_svc".into(),
             target: OfferTarget::static_child("b".to_string()),
             dependency_type: DependencyType::Strong,
+            availability: Availability::Required,
         });
         let use_decl = UseDecl::Protocol(UseProtocolDecl {
             source: UseSource::Parent,
             source_name: "bar_svc".into(),
             target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
             dependency_type: DependencyType::Strong,
+            availability: Availability::Required,
         });
         let capability_decl = CapabilityDecl::Protocol(
             ProtocolDeclBuilder::new("foo_svc").path("/offer_from_cm_namespace/svc/foo").build(),
@@ -1884,6 +1905,7 @@ mod tests {
             rights: *READ_RIGHTS,
             subdir: None,
             dependency_type: DependencyType::Strong,
+            availability: Availability::Required,
         });
         let offer_directory_decl = OfferDecl::Directory(OfferDirectoryDecl {
             source: OfferSource::Self_,
@@ -1893,6 +1915,7 @@ mod tests {
             rights: Some(*READ_RIGHTS),
             subdir: None,
             dependency_type: DependencyType::Strong,
+            availability: Availability::Required,
         });
         let directory_decl = DirectoryDeclBuilder::new("foo_data").build();
         let expose_protocol_decl = ExposeDecl::Protocol(ExposeProtocolDecl {
@@ -1907,6 +1930,7 @@ mod tests {
             target_name: "started".into(),
             filter: None,
             dependency_type: DependencyType::Strong,
+            availability: Availability::Required,
         });
 
         let components = vec![

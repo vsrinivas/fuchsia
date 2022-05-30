@@ -7,7 +7,7 @@ mod tests {
         crate::routing::RoutingTestBuilderForAnalyzer,
         cm_moniker::InstancedRelativeMoniker,
         cm_rust::{
-            OfferDecl, OfferSource, OfferStorageDecl, OfferTarget, StorageDecl,
+            Availability, OfferDecl, OfferSource, OfferStorageDecl, OfferTarget, StorageDecl,
             StorageDirectorySource, UseDecl, UseStorageDecl,
         },
         cm_rust_testing::{ComponentDeclBuilder, DirectoryDeclBuilder},
@@ -187,6 +187,7 @@ mod tests {
                         target: OfferTarget::static_child("consumer".to_string()),
                         source_name: "cache".into(),
                         target_name: "cache".into(),
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("consumer")
                     .build(),
@@ -197,6 +198,7 @@ mod tests {
                     .use_(UseDecl::Storage(UseStorageDecl {
                         source_name: "cache".into(),
                         target_path: "/storage".try_into().unwrap(),
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),

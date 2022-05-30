@@ -706,6 +706,7 @@ mod tests {
                         source_name: "fuchsia.component.Realm".into(),
                         target_path: "/svc/fuchsia.component.Realm".try_into().unwrap(),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .expose(ExposeDecl::Service(ExposeServiceDecl {
                         source: ExposeSource::Collection("coll".to_string()),

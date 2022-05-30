@@ -199,6 +199,29 @@ impl ComponentDecl {
     }
 }
 
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize), serde(rename_all = "snake_case"))]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Availability {
+    Required,
+    Optional,
+    SameAsTarget,
+}
+
+// TODO(dgonyeo): remove this once we've soft migrated to the availability field being required.
+impl Default for Availability {
+    fn default() -> Self {
+        Availability::Required
+    }
+}
+
+fidl_translations_symmetrical_enums!(
+    fdecl::Availability,
+    Availability,
+    Required,
+    Optional,
+    SameAsTarget
+);
+
 #[cfg_attr(
     feature = "serde",
     derive(Deserialize, Serialize),
@@ -224,6 +247,8 @@ pub struct UseServiceDecl {
     pub source_name: CapabilityName,
     pub target_path: CapabilityPath,
     pub dependency_type: DependencyType,
+    #[fidl_decl(default)]
+    pub availability: Availability,
 }
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
@@ -234,6 +259,8 @@ pub struct UseProtocolDecl {
     pub source_name: CapabilityName,
     pub target_path: CapabilityPath,
     pub dependency_type: DependencyType,
+    #[fidl_decl(default)]
+    pub availability: Availability,
 }
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
@@ -255,6 +282,8 @@ pub struct UseDirectoryDecl {
 
     pub subdir: Option<PathBuf>,
     pub dependency_type: DependencyType,
+    #[fidl_decl(default)]
+    pub availability: Availability,
 }
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
@@ -263,6 +292,8 @@ pub struct UseDirectoryDecl {
 pub struct UseStorageDecl {
     pub source_name: CapabilityName,
     pub target_path: CapabilityPath,
+    #[fidl_decl(default)]
+    pub availability: Availability,
 }
 
 impl SourceName for UseStorageDecl {
@@ -286,6 +317,8 @@ pub struct UseEventDecl {
     pub target_name: CapabilityName,
     pub filter: Option<HashMap<String, DictionaryValue>>,
     pub dependency_type: DependencyType,
+    #[fidl_decl(default)]
+    pub availability: Availability,
 }
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
@@ -308,6 +341,8 @@ pub enum EventMode {
 pub struct UseEventStreamDeprecatedDecl {
     pub name: CapabilityName,
     pub subscriptions: Vec<EventSubscription>,
+    #[fidl_decl(default)]
+    pub availability: Availability,
 }
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
@@ -318,6 +353,8 @@ pub struct UseEventStreamDecl {
     pub source: UseSource,
     pub scope: Option<Vec<EventScope>>,
     pub target_path: CapabilityPath,
+    #[fidl_decl(default)]
+    pub availability: Availability,
 }
 
 #[cfg_attr(
@@ -348,6 +385,8 @@ pub struct OfferEventStreamDecl {
     pub source_name: CapabilityName,
     pub target: OfferTarget,
     pub target_name: CapabilityName,
+    #[fidl_decl(default)]
+    pub availability: Availability,
 }
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
@@ -406,6 +445,8 @@ pub struct OfferServiceDecl {
     pub target_name: CapabilityName,
     pub source_instance_filter: Option<Vec<String>>,
     pub renamed_instances: Option<Vec<NameMapping>>,
+    #[fidl_decl(default)]
+    pub availability: Availability,
 }
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
@@ -417,6 +458,8 @@ pub struct OfferProtocolDecl {
     pub target: OfferTarget,
     pub target_name: CapabilityName,
     pub dependency_type: DependencyType,
+    #[fidl_decl(default)]
+    pub availability: Availability,
 }
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
@@ -439,6 +482,8 @@ pub struct OfferDirectoryDecl {
     pub rights: Option<fio::Operations>,
 
     pub subdir: Option<PathBuf>,
+    #[fidl_decl(default)]
+    pub availability: Availability,
 }
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
@@ -449,6 +494,8 @@ pub struct OfferStorageDecl {
     pub source_name: CapabilityName,
     pub target: OfferTarget,
     pub target_name: CapabilityName,
+    #[fidl_decl(default)]
+    pub availability: Availability,
 }
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
@@ -480,6 +527,8 @@ pub struct OfferEventDecl {
     pub target: OfferTarget,
     pub target_name: CapabilityName,
     pub filter: Option<HashMap<String, DictionaryValue>>,
+    #[fidl_decl(default)]
+    pub availability: Availability,
 }
 
 impl SourceName for OfferDecl {
@@ -1719,6 +1768,7 @@ pub enum OfferSource {
     Collection(String),
     Self_,
     Capability(CapabilityName),
+    Void,
 }
 
 impl OfferSource {
@@ -1736,9 +1786,7 @@ impl FidlIntoNative<OfferSource> for fdecl::Ref {
             fdecl::Ref::Collection(c) => OfferSource::Collection(c.name),
             fdecl::Ref::Framework(_) => OfferSource::Framework,
             fdecl::Ref::Capability(c) => OfferSource::Capability(c.name.into()),
-            // TODO: this is invalid, but until cm_rust supports the void source we need to put
-            // _something_ here.
-            fdecl::Ref::VoidType(_) => OfferSource::Framework,
+            fdecl::Ref::VoidType(_) => OfferSource::Void,
             _ => panic!("invalid OfferSource variant"),
         }
     }
@@ -1755,6 +1803,7 @@ impl NativeIntoFidl<fdecl::Ref> for OfferSource {
             OfferSource::Capability(name) => {
                 fdecl::Ref::Capability(fdecl::CapabilityRef { name: name.to_string() })
             }
+            OfferSource::Void => fdecl::Ref::VoidType(fdecl::VoidRef {}),
         }
     }
 }
@@ -2123,6 +2172,7 @@ mod tests {
                         source: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
                         source_name: Some("netstack".to_string()),
                         target_path: Some("/svc/mynetstack".to_string()),
+                        availability: Some(fdecl::Availability::Required),
                         ..fdecl::UseService::EMPTY
                     }),
                     fdecl::Use::Protocol(fdecl::UseProtocol {
@@ -2130,6 +2180,7 @@ mod tests {
                         source: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
                         source_name: Some("legacy_netstack".to_string()),
                         target_path: Some("/svc/legacy_mynetstack".to_string()),
+                        availability: Some(fdecl::Availability::Optional),
                         ..fdecl::UseProtocol::EMPTY
                     }),
                     fdecl::Use::Protocol(fdecl::UseProtocol {
@@ -2137,6 +2188,7 @@ mod tests {
                         source: Some(fdecl::Ref::Child(fdecl::ChildRef { name: "echo".to_string(), collection: None})),
                         source_name: Some("echo_service".to_string()),
                         target_path: Some("/svc/echo_service".to_string()),
+                        availability: Some(fdecl::Availability::Required),
                         ..fdecl::UseProtocol::EMPTY
                     }),
                     fdecl::Use::Directory(fdecl::UseDirectory {
@@ -2146,16 +2198,19 @@ mod tests {
                         target_path: Some("/data".to_string()),
                         rights: Some(fio::Operations::CONNECT),
                         subdir: Some("foo/bar".to_string()),
+                        availability: Some(fdecl::Availability::Required),
                         ..fdecl::UseDirectory::EMPTY
                     }),
                     fdecl::Use::Storage(fdecl::UseStorage {
                         source_name: Some("cache".to_string()),
                         target_path: Some("/cache".to_string()),
+                        availability: Some(fdecl::Availability::Required),
                         ..fdecl::UseStorage::EMPTY
                     }),
                     fdecl::Use::Storage(fdecl::UseStorage {
                         source_name: Some("temp".to_string()),
                         target_path: Some("/temp".to_string()),
+                        availability: Some(fdecl::Availability::Optional),
                         ..fdecl::UseStorage::EMPTY
                     }),
                     fdecl::Use::Event(fdecl::UseEvent {
@@ -2172,6 +2227,7 @@ mod tests {
                             ]),
                             ..fdata::Dictionary::EMPTY
                         }),
+                        availability: Some(fdecl::Availability::Required),
                         ..fdecl::UseEvent::EMPTY
                     }),
                     fdecl::Use::EventStream(fdecl::UseEventStream {
@@ -2188,6 +2244,7 @@ mod tests {
                             name:"b".to_string(),
                         })]),
                         target_path: Some("/svc/test".to_string()),
+                        availability: Some(fdecl::Availability::Optional),
                         ..fdecl::UseEventStream::EMPTY
                     }),
                 ]),
@@ -2277,6 +2334,7 @@ mod tests {
                         )),
                         target_name: Some("legacy_mynetstack".to_string()),
                         dependency_type: Some(fdecl::DependencyType::WeakForMigration),
+                        availability: Some(fdecl::Availability::Required),
                         ..fdecl::OfferProtocol::EMPTY
                     }),
                     fdecl::Offer::Directory(fdecl::OfferDirectory {
@@ -2289,6 +2347,7 @@ mod tests {
                         rights: Some(fio::Operations::CONNECT),
                         subdir: None,
                         dependency_type: Some(fdecl::DependencyType::Strong),
+                        availability: Some(fdecl::Availability::Optional),
                         ..fdecl::OfferDirectory::EMPTY
                     }),
                     fdecl::Offer::Storage(fdecl::OfferStorage {
@@ -2298,6 +2357,7 @@ mod tests {
                             fdecl::CollectionRef { name: "modular".to_string() }
                         )),
                         target_name: Some("cache".to_string()),
+                        availability: Some(fdecl::Availability::Required),
                         ..fdecl::OfferStorage::EMPTY
                     }),
                     fdecl::Offer::Runner(fdecl::OfferRunner {
@@ -2343,6 +2403,7 @@ mod tests {
                             ]),
                             ..fdata::Dictionary::EMPTY
                         }),
+                        availability: Some(fdecl::Availability::Optional),
                         ..fdecl::OfferEvent::EMPTY
                     }),
                     fdecl::Offer::Service(fdecl::OfferService {
@@ -2355,6 +2416,7 @@ mod tests {
                            }
                         )),
                         target_name: Some("mynetstack".to_string()),
+                        availability: Some(fdecl::Availability::Required),
                         ..fdecl::OfferService::EMPTY
                     }),
                     fdecl::Offer::Service(fdecl::OfferService {
@@ -2367,6 +2429,7 @@ mod tests {
                            }
                         )),
                         target_name: Some("mynetstack".to_string()),
+                        availability: Some(fdecl::Availability::Optional),
                         ..fdecl::OfferService::EMPTY
                     }),
                     fdecl::Offer::Service(fdecl::OfferService {
@@ -2381,6 +2444,7 @@ mod tests {
                         target_name: Some("mynetstack".to_string()),
                         source_instance_filter: Some(vec!["allowedinstance".to_string()]),
                         renamed_instances: Some(vec![fdecl::NameMapping{source_name: "default".to_string(), target_name: "allowedinstance".to_string()}]),
+                        availability: Some(fdecl::Availability::Required),
                         ..fdecl::OfferService::EMPTY
                     }),
                     fdecl::Offer::EventStream (
@@ -2390,6 +2454,7 @@ mod tests {
                             target: Some(fdecl::Ref::Child(fdecl::ChildRef {name: "netstack".to_string(), collection: None})),
                             scope: Some(vec![fdecl::Ref::Child(fdecl::ChildRef{name: "netstack".to_string(), collection: None})]),
                             target_name: Some("diagnostics_ready".to_string()),
+                            availability: Some(fdecl::Availability::Optional),
                             ..fdecl::OfferEventStream::EMPTY
                         }
                     )
@@ -2573,18 +2638,21 @@ mod tests {
                             source: UseSource::Parent,
                             source_name: "netstack".try_into().unwrap(),
                             target_path: "/svc/mynetstack".try_into().unwrap(),
+                            availability: Availability::Required,
                         }),
                         UseDecl::Protocol(UseProtocolDecl {
                             dependency_type: DependencyType::Strong,
                             source: UseSource::Parent,
                             source_name: "legacy_netstack".try_into().unwrap(),
                             target_path: "/svc/legacy_mynetstack".try_into().unwrap(),
+                            availability: Availability::Optional,
                         }),
                         UseDecl::Protocol(UseProtocolDecl {
                             dependency_type: DependencyType::Strong,
                             source: UseSource::Child("echo".to_string()),
                             source_name: "echo_service".try_into().unwrap(),
                             target_path: "/svc/echo_service".try_into().unwrap(),
+                            availability: Availability::Required,
                         }),
                         UseDecl::Directory(UseDirectoryDecl {
                             dependency_type: DependencyType::Strong,
@@ -2593,14 +2661,17 @@ mod tests {
                             target_path: "/data".try_into().unwrap(),
                             rights: fio::Operations::CONNECT,
                             subdir: Some("foo/bar".into()),
+                            availability: Availability::Required,
                         }),
                         UseDecl::Storage(UseStorageDecl {
                             source_name: "cache".into(),
                             target_path: "/cache".try_into().unwrap(),
+                            availability: Availability::Required,
                         }),
                         UseDecl::Storage(UseStorageDecl {
                             source_name: "temp".into(),
                             target_path: "/temp".try_into().unwrap(),
+                            availability: Availability::Optional,
                         }),
                         UseDecl::Event(UseEventDecl {
                             dependency_type: DependencyType::Strong,
@@ -2608,12 +2679,14 @@ mod tests {
                             source_name: "directory_ready".into(),
                             target_name: "diagnostics_ready".into(),
                             filter: Some(hashmap!{"path".to_string() =>  DictionaryValue::Str("/diagnostics".to_string())}),
+                            availability: Availability::Required,
                         }),
                         UseDecl::EventStream(UseEventStreamDecl {
                             source: UseSource::Child("test".to_string()),
                             scope: Some(vec![EventScope::Child(ChildRef{ name: "a".to_string(), collection: None}), EventScope::Collection("b".to_string())]),
                             source_name: CapabilityName::from("stopped"),
                             target_path: CapabilityPath::from_str("/svc/test").unwrap(),
+                            availability: Availability::Optional,
                         }),
                     ],
                     exposes: vec![
@@ -2672,6 +2745,7 @@ mod tests {
                             target: OfferTarget::static_child("echo".to_string()),
                             target_name: "legacy_mynetstack".try_into().unwrap(),
                             dependency_type: DependencyType::WeakForMigration,
+                            availability: Availability::Required,
                         }),
                         OfferDecl::Directory(OfferDirectoryDecl {
                             source: OfferSource::Parent,
@@ -2681,12 +2755,14 @@ mod tests {
                             rights: Some(fio::Operations::CONNECT),
                             subdir: None,
                             dependency_type: DependencyType::Strong,
+                            availability: Availability::Optional,
                         }),
                         OfferDecl::Storage(OfferStorageDecl {
                             source_name: "cache".try_into().unwrap(),
                             source: OfferSource::Self_,
                             target: OfferTarget::Collection("modular".to_string()),
                             target_name: "cache".try_into().unwrap(),
+                            availability: Availability::Required,
                         }),
                         OfferDecl::Runner(OfferRunnerDecl {
                             source: OfferSource::Parent,
@@ -2706,6 +2782,7 @@ mod tests {
                             target: OfferTarget::static_child("echo".to_string()),
                             target_name: "mystarted".into(),
                             filter: Some(hashmap!{"path".to_string() => DictionaryValue::Str("/a".to_string())}),
+                            availability: Availability::Optional,
                         }),
                         OfferDecl::Service(OfferServiceDecl {
                                     source: OfferSource::Parent,
@@ -2714,6 +2791,7 @@ mod tests {
                                     renamed_instances: None,
                             target: OfferTarget::static_child("echo".to_string()),
                             target_name: "mynetstack".try_into().unwrap(),
+                            availability: Availability::Required,
                         }),
                         OfferDecl::Service(OfferServiceDecl {
                                     source: OfferSource::Parent,
@@ -2722,6 +2800,7 @@ mod tests {
                                     renamed_instances: None,
                             target: OfferTarget::static_child("echo".to_string()),
                             target_name: "mynetstack".try_into().unwrap(),
+                            availability: Availability::Optional,
                         }),
                         OfferDecl::Service(OfferServiceDecl {
                                     source: OfferSource::Parent,
@@ -2730,6 +2809,7 @@ mod tests {
                                     renamed_instances: Some(vec![NameMapping{source_name: "default".to_string(), target_name: "allowedinstance".to_string()}]),
                             target: OfferTarget::static_child("echo".to_string()),
                             target_name: "mynetstack".try_into().unwrap(),
+                            availability: Availability::Required,
                         }),
                         OfferDecl::EventStream (
                             OfferEventStreamDecl {
@@ -2739,6 +2819,7 @@ mod tests {
                                 scope: Some(vec![EventScope::Child(ChildRef{ name: "netstack".to_string(), collection: None})]),
                                 target_name: CapabilityName::from("diagnostics_ready".to_string()),
                                 filter: None,
+                                availability: Availability::Optional,
                             }
                         )
                     ],
@@ -2959,6 +3040,7 @@ mod tests {
                 fdecl::Ref::Capability(fdecl::CapabilityRef { name: "foo".to_string() }),
                 fdecl::Ref::Parent(fdecl::ParentRef {}),
                 fdecl::Ref::Collection(fdecl::CollectionRef { name: "foo".to_string() }),
+                fdecl::Ref::VoidType(fdecl::VoidRef {}),
             ],
             input_type = fdecl::Ref,
             result = vec![
@@ -2968,6 +3050,7 @@ mod tests {
                 OfferSource::Capability(CapabilityName("foo".to_string())),
                 OfferSource::Parent,
                 OfferSource::Collection("foo".to_string()),
+                OfferSource::Void,
             ],
             result_type = OfferSource,
         },

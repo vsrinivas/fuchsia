@@ -1087,6 +1087,12 @@ where
             OfferVisitor::visit(visitor, &offer)?;
 
             match offer.source() {
+                OfferSource::Void => {
+                    return Err(RoutingError::offer_from_void(
+                        &target.abs_moniker(),
+                        offer.source_name().clone(),
+                    ));
+                }
                 OfferSource::Self_ => {
                     let target_capabilities = target.lock_resolved_state().await?.capabilities();
                     let component_capability = sources.find_component_source(

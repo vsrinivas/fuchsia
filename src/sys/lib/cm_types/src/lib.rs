@@ -649,6 +649,8 @@ pub enum Availability {
     SameAsTarget,
 }
 
+symmetrical_enums!(Availability, fdecl::Availability, Required, Optional, SameAsTarget);
+
 impl Default for Availability {
     fn default() -> Self {
         Self::Required

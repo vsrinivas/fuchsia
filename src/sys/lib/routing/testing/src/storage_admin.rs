@@ -58,6 +58,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                         target: OfferTarget::static_child("b".to_string()),
                         source_name: "data".into(),
                         target_name: "data".into(),
+                        availability: Availability::Required,
                     }))
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source: OfferSource::Capability("data".into()),
@@ -65,6 +66,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                         target_name: "fuchsia.sys2.StorageAdmin".into(),
                         target: OfferTarget::static_child("c".to_string()),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .add_lazy_child("c")
@@ -76,6 +78,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                     .use_(UseDecl::Storage(UseStorageDecl {
                         source_name: "data".into(),
                         target_path: "/storage".try_into().unwrap(),
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -88,6 +91,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                         target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.StorageAdmin")
                             .unwrap(),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -136,6 +140,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                         rights: Some(*READ_RIGHTS | *WRITE_RIGHTS),
                         subdir: Some(PathBuf::from("foo")),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .build(),
@@ -156,6 +161,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                         target_name: "fuchsia.sys2.StorageAdmin".into(),
                         target: OfferTarget::static_child("c".to_string()),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("c")
                     .build(),
@@ -169,6 +175,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                         target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.StorageAdmin")
                             .unwrap(),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -210,6 +217,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                         target_name: "fuchsia.sys2.StorageAdmin".into(),
                         target: OfferTarget::static_child("b".to_string()),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .add_lazy_child("c")
@@ -224,6 +232,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                         target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.StorageAdmin")
                             .unwrap(),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -248,6 +257,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                         target: OfferTarget::static_child("d".to_string()),
                         source_name: "data".into(),
                         target_name: "data".into(),
+                        availability: Availability::Required,
                     }))
                     .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                         source: ExposeSource::Capability("data".into()),
@@ -264,6 +274,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                     .use_(UseDecl::Storage(UseStorageDecl {
                         source_name: "data".into(),
                         target_path: "/storage".try_into().unwrap(),
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -312,6 +323,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                         target: OfferTarget::static_child("b".to_string()),
                         source_name: "data".into(),
                         target_name: "data".into(),
+                        availability: Availability::Required,
                     }))
                     .use_(UseDecl::Protocol(UseProtocolDecl {
                         source: UseSource::Capability("data".into()),
@@ -319,6 +331,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                         target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.StorageAdmin")
                             .unwrap(),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .build(),
@@ -329,6 +342,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                     .use_(UseDecl::Storage(UseStorageDecl {
                         source_name: "data".into(),
                         target_path: "/storage".try_into().unwrap(),
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -380,6 +394,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                         target: OfferTarget::static_child("b".to_string()),
                         source_name: "data".into(),
                         target_name: "data".into(),
+                        availability: Availability::Required,
                     }))
                     .use_(UseDecl::Protocol(UseProtocolDecl {
                         source: UseSource::Capability("unrelated.protocol".into()),
@@ -387,6 +402,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                         target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.StorageAdmin")
                             .unwrap(),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .build(),
@@ -397,6 +413,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                     .use_(UseDecl::Storage(UseStorageDecl {
                         source_name: "data".into(),
                         target_path: "/storage".try_into().unwrap(),
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -448,6 +465,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                         target_name: "fuchsia.sys2.StorageAdmin".into(),
                         target: OfferTarget::static_child("b".to_string()),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .build(),
@@ -461,6 +479,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                         target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.StorageAdmin")
                             .unwrap(),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -503,6 +522,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                         target_name: "fuchsia.sys2.StorageAdmin".into(),
                         target: OfferTarget::static_child("b".to_string()),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .add_lazy_child("c")
@@ -517,6 +537,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                         target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.StorageAdmin")
                             .unwrap(),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -542,6 +563,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                         target: OfferTarget::static_child("d".to_string()),
                         source_name: "data".into(),
                         target_name: "data".into(),
+                        availability: Availability::Required,
                     }))
                     .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                         source: ExposeSource::Capability("unrelated.protocol".into()),
@@ -558,6 +580,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                     .use_(UseDecl::Storage(UseStorageDecl {
                         source_name: "data".into(),
                         target_path: "/storage".try_into().unwrap(),
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -608,6 +631,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                         target: OfferTarget::static_child("b".to_string()),
                         source_name: "data".into(),
                         target_name: "data".into(),
+                        availability: Availability::Required,
                     }))
                     .use_(UseDecl::Protocol(UseProtocolDecl {
                         source: UseSource::Capability("unrelated.protocol".into()),
@@ -615,6 +639,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                         target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.StorageAdmin")
                             .unwrap(),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .build(),
@@ -625,6 +650,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                     .use_(UseDecl::Storage(UseStorageDecl {
                         source_name: "data".into(),
                         target_path: "/storage".try_into().unwrap(),
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -674,6 +700,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                         target_name: "fuchsia.sys2.StorageAdmin".into(),
                         target: OfferTarget::static_child("b".to_string()),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .build(),
@@ -687,6 +714,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                         target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.StorageAdmin")
                             .unwrap(),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -728,6 +756,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                         target_name: "fuchsia.sys2.StorageAdmin".into(),
                         target: OfferTarget::static_child("b".to_string()),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
                     .add_lazy_child("c")
@@ -742,6 +771,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                         target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.StorageAdmin")
                             .unwrap(),
                         dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
@@ -766,6 +796,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                         target: OfferTarget::static_child("d".to_string()),
                         source_name: "data".into(),
                         target_name: "data".into(),
+                        availability: Availability::Required,
                     }))
                     .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                         source: ExposeSource::Capability("data".into()),
@@ -782,6 +813,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                     .use_(UseDecl::Storage(UseStorageDecl {
                         source_name: "data".into(),
                         target_path: "/storage".try_into().unwrap(),
+                        availability: Availability::Required,
                     }))
                     .build(),
             ),
