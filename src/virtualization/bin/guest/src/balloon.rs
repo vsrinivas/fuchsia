@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    crate::services,
+    crate::{arguments, services},
     anyhow::anyhow,
     anyhow::Context,
     anyhow::Error,
-    fidl_fuchsia_virtualization::{BalloonControllerMarker, BalloonControllerProxy},
+    fidl_fuchsia_virtualization::{BalloonControllerMarker, BalloonControllerProxy, GuestStatus},
     fuchsia_zircon_status as zx_status,
 };
 
@@ -38,6 +38,25 @@ pub async fn connect_to_balloon_controller(
     realm.connect_to_balloon(cid, balloon_server_end).context("Failed to connect to given cid")?;
 
     Ok(balloon_controller)
+}
+
+pub async fn connect_to_balloon_controller_cfv2(
+    guest_type: arguments::GuestType,
+) -> Result<BalloonControllerProxy, Error> {
+    let guest_manager = services::connect_to_manager_cfv2(guest_type)?;
+    let guest_info = guest_manager.get_guest_info().await?;
+    if guest_info.guest_status == GuestStatus::Started {
+        let (balloon_controller, balloon_server_end) =
+            fidl::endpoints::create_proxy::<BalloonControllerMarker>()
+                .context("failed to make balloon controller")?;
+        // Wire up the controller we made to the relevant guest manager (that has the memory we want)
+        guest_manager
+            .connect_to_balloon(balloon_server_end)
+            .context("Failed to connect to given cid")?;
+        Ok(balloon_controller)
+    } else {
+        Err(anyhow!(zx_status::Status::NOT_CONNECTED))
+    }
 }
 
 fn map_tag_name(tag: u16) -> String {

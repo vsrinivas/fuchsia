@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    anyhow::Context,
-    anyhow::Error,
+    crate::arguments::GuestType,
+    anyhow::{anyhow, Context, Error},
     fidl_fuchsia_virtualization::{
-        GuestMarker, GuestProxy, ManagerMarker, ManagerProxy, RealmMarker, RealmProxy,
+        GuestManagerMarker, GuestManagerProxy, GuestMarker, GuestProxy, ManagerMarker,
+        ManagerProxy, RealmMarker, RealmProxy,
     },
     fuchsia_async::{self as fasync},
-    fuchsia_component::client::connect_to_protocol,
+    fuchsia_component::client::{connect_to_protocol, connect_to_protocol_at_path},
     fuchsia_zircon::{self as zx, HandleBased},
+    fuchsia_zircon_status as zx_status,
     std::os::unix::{io::AsRawFd, io::FromRawFd, prelude::RawFd},
 };
 
@@ -104,6 +106,16 @@ pub fn connect_to_manager() -> Result<ManagerProxy, Error> {
     Ok(manager)
 }
 
+pub fn connect_to_manager_cfv2(
+    guest_type: crate::arguments::GuestType,
+) -> Result<GuestManagerProxy, Error> {
+    let manager = connect_to_protocol_at_path::<GuestManagerMarker>(
+        format!("/svc/{}", guest_type.guest_manager_interface()).as_str(),
+    )
+    .context("Failed to connect to manager service")?;
+    Ok(manager)
+}
+
 pub fn connect_to_env(env_id: u32) -> Result<RealmProxy, Error> {
     let manager = connect_to_manager()?;
     let (realm, realm_server_end) =
@@ -125,6 +137,18 @@ pub fn connect_to_guest(env_id: u32, cid: u32) -> Result<GuestProxy, Error> {
     realm
         .connect_to_instance(cid, guest_server_end)
         .context("Could not connect to specified guest instance")?;
+
+    Ok(guest)
+}
+
+pub async fn connect_to_guest_cfv2(guest_type: GuestType) -> Result<GuestProxy, Error> {
+    let guest_manager = connect_to_manager_cfv2(guest_type)?;
+    let (guest, guest_server_end) =
+        fidl::endpoints::create_proxy::<GuestMarker>().context("Failed to create Guest")?;
+    guest_manager
+        .connect_to_guest(guest_server_end)
+        .await?
+        .map_err(|status| anyhow!(zx_status::Status::from_raw(status)))?;
 
     Ok(guest)
 }

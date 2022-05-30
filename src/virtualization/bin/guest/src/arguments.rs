@@ -47,6 +47,13 @@ impl GuestType {
             GuestType::Zircon => "fuchsia-pkg://fuchsia.com/zircon_guest#meta/zircon_guest.cmx",
         }
     }
+    pub fn guest_manager_interface(&self) -> &str {
+        match *self {
+            GuestType::Zircon => "fuchsia.virtualization.ZirconGuestManager",
+            GuestType::Debian => "fuchsia.virtualization.DebianGuestManager",
+            GuestType::Termina => "fuchsia.virtualization.TerminaGuestManager",
+        }
+    }
 }
 
 #[derive(FromArgs, PartialEq, Debug)]

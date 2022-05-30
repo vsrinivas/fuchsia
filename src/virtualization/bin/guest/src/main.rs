@@ -41,6 +41,9 @@ struct BalloonArgs {
     #[argh(positional)]
     /// context id of guest.
     cid: u32,
+    #[argh(option)]
+    /// type of the guest
+    guest_type: Option<arguments::GuestType>,
     #[argh(positional)]
     /// number of pages guest balloon will have after use.
     num_pages: u32,
@@ -56,6 +59,9 @@ struct BalloonStatsArgs {
     #[argh(positional)]
     /// context id of guest.
     cid: u32,
+    #[argh(option)]
+    /// type of the guest
+    guest_type: Option<arguments::GuestType>,
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
@@ -68,6 +74,9 @@ struct SerialArgs {
     #[argh(positional)]
     /// context id of guest.
     cid: u32,
+    #[argh(option)]
+    /// type of the guest
+    guest_type: Option<arguments::GuestType>,
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
@@ -82,7 +91,10 @@ struct SocatArgs {
     #[argh(positional)]
     /// environment id where guest lives.
     env_id: u32,
-    #[argh(positional)]
+    #[argh(option)]
+    /// type of the guest
+    guest_type: Option<arguments::GuestType>,
+    #[argh(option)]
     /// port for listeners to connect on.
     port: u32,
 }
@@ -94,7 +106,10 @@ struct SocatListenArgs {
     #[argh(positional)]
     /// environment id of host.
     env_id: u32,
-    #[argh(positional)]
+    #[argh(option)]
+    /// type of the guest
+    guest_type: Option<arguments::GuestType>,
+    #[argh(option)]
     /// port number of host (see `guest socat`)
     host_port: u32,
 }
@@ -124,44 +139,87 @@ async fn main() -> Result<(), Error> {
     match options.nested {
         SubCommands::Launch(launch_args) => {
             let guest_config = launch::parse_vmm_args(&launch_args);
-            let guest = launch::GuestLaunch::new(launch_args.guest_type, guest_config).await?;
+
+            let guest = if cfg!(feature = "USE_CFV1") {
+                launch::GuestLaunch::new(launch_args.guest_type, guest_config).await?
+            } else {
+                launch::GuestLaunch::new_cfv2(launch_args.guest_type, guest_config).await?
+            };
             guest.run().await
         }
         SubCommands::Balloon(balloon_args) => {
-            let balloon_controller =
+            let balloon_controller = if cfg!(feature = "USE_CFV1") {
                 balloon::connect_to_balloon_controller(balloon_args.env_id, balloon_args.cid)
-                    .await?;
+                    .await?
+            } else {
+                balloon::connect_to_balloon_controller_cfv2(balloon_args.guest_type.unwrap())
+                    .await?
+            };
             let output =
                 balloon::handle_balloon(balloon_controller, balloon_args.num_pages).await?;
             println!("{}", output);
             Ok(())
         }
         SubCommands::BalloonStats(balloon_stat_args) => {
-            let balloon_controller = balloon::connect_to_balloon_controller(
-                balloon_stat_args.env_id,
-                balloon_stat_args.cid,
-            )
-            .await?;
+            let balloon_controller = if cfg!(feature = "USE_CFV1") {
+                balloon::connect_to_balloon_controller(
+                    balloon_stat_args.env_id,
+                    balloon_stat_args.cid,
+                )
+                .await?
+            } else {
+                balloon::connect_to_balloon_controller_cfv2(balloon_stat_args.guest_type.unwrap())
+                    .await?
+            };
             let output = balloon::handle_balloon_stats(balloon_controller).await?;
             println!("{}", output);
             Ok(())
         }
         SubCommands::Serial(serial_args) => {
-            let guest = services::connect_to_guest(serial_args.env_id, serial_args.cid)?;
+            let guest = if cfg!(feature = "USE_CFV1") {
+                services::connect_to_guest(serial_args.env_id, serial_args.cid)?
+            } else {
+                services::connect_to_guest_cfv2(serial_args.guest_type.unwrap()).await?
+            };
             serial::handle_serial(guest).await
         }
         SubCommands::List(..) => {
-            let manager = services::connect_to_manager()?;
-            let output = list::handle_list(manager).await?;
-            println!("{}", output);
+            if cfg!(feature = "USE_CFV1") {
+                let manager = services::connect_to_manager()?;
+                let output = list::handle_list(manager).await?;
+                println!("{}", output);
+            } else {
+                let supported_guests = vec![
+                    arguments::GuestType::Zircon,
+                    arguments::GuestType::Debian,
+                    arguments::GuestType::Termina,
+                ];
+                let mut managers = Vec::new();
+                for guest_type in supported_guests {
+                    managers.push((
+                        guest_type.to_string(),
+                        services::connect_to_manager_cfv2(guest_type)?,
+                    ));
+                }
+                let output = list::handle_list_cfv2(&managers).await?;
+                println!("{}", output);
+            }
             Ok(())
         }
         SubCommands::Socat(socat_args) => {
-            let vsock_endpoint = socat::connect_to_vsock_endpoint(socat_args.env_id).await?;
+            let vsock_endpoint = if cfg!(feature = "USE_CFV1") {
+                socat::connect_to_vsock_endpoint(socat_args.env_id).await?
+            } else {
+                socat::connect_to_vsock_endpoint_cfv2(socat_args.guest_type.unwrap()).await?
+            };
             socat::handle_socat(vsock_endpoint, socat_args.port).await
         }
         SubCommands::SocatListen(socat_listen_args) => {
-            let vsock_endpoint = socat::connect_to_vsock_endpoint(socat_listen_args.env_id).await?;
+            let vsock_endpoint = if cfg!(feature = "USE_CFV1") {
+                socat::connect_to_vsock_endpoint(socat_listen_args.env_id).await?
+            } else {
+                socat::connect_to_vsock_endpoint_cfv2(socat_listen_args.guest_type.unwrap()).await?
+            };
             socat::handle_socat_listen(vsock_endpoint, socat_listen_args.host_port).await
         }
         _ => unimplemented!(), // TODO(fxbug.dev/89427): Implement guest tool

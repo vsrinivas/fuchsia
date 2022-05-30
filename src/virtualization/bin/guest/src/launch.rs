@@ -56,34 +56,55 @@ pub struct GuestLaunch {
 
 impl GuestLaunch {
     pub async fn new(guest_type: arguments::GuestType, config: GuestConfig) -> Result<Self, Error> {
-        let guest_url = guest_type.package_url();
         let guest_name = guest_type.to_string();
-        println!("Starting {} with package {}", guest_name, guest_url);
 
+        let (guest, guest_server_end) =
+            fidl::endpoints::create_proxy::<GuestMarker>().context("Failed to create Guest")?;
+
+        let (realm, realm_server_end) = fidl::endpoints::create_proxy::<RealmMarker>()
+            .context("Failed to create Realm proxy")?;
+
+        let guest_url = guest_type.package_url();
+        println!("Starting {} with package {}", guest_name, guest_url);
         // Take a package, connect to a Manager, create a Guest Realm,
         // launch the package, return guest proxy on success
         // as we need a reference to both the manager and the realm,
         // we can't use services.rs in this instance
+
         let manager = connect_to_protocol::<ManagerMarker>()
             .context("Failed to connect to manager service")?;
-        let (realm, realm_server_end) = fidl::endpoints::create_proxy::<RealmMarker>()
-            .context("Failed to create Realm proxy")?;
 
         manager
             .create(Some(&guest_name), realm_server_end)
             .context("Failed to connect Realm to Manager")?;
-
-        let (guest, guest_server_end) =
-            fidl::endpoints::create_proxy::<GuestMarker>().context("Failed to create Guest")?;
 
         let _guest_cid = realm
             .launch_instance(guest_url, None, config, guest_server_end)
             .map_err(Error::new)
             .await?;
 
-        // We return the realm to prevent it from being dropped
         Ok(GuestLaunch { guest: guest, _realm: realm })
     }
+
+    pub async fn new_cfv2(
+        guest_type: arguments::GuestType,
+        config: GuestConfig,
+    ) -> Result<Self, Error> {
+        let (guest, guest_server_end) =
+            fidl::endpoints::create_proxy::<GuestMarker>().context("Failed to create Guest")?;
+
+        let (_realm, _realm_server_end) = fidl::endpoints::create_proxy::<RealmMarker>()
+            .context("Failed to create Realm proxy")?;
+
+        println!("Starting {}", guest_type.to_string());
+        let manager = services::connect_to_manager_cfv2(guest_type)?;
+        manager
+            .launch_guest(config, guest_server_end)
+            .await?
+            .map_err(|status| anyhow!(zx_status::Status::from_raw(status)))?;
+        Ok(GuestLaunch { guest, _realm })
+    }
+
     pub async fn run(&self) -> Result<(), Error> {
         // Set up serial output (grab a zx_socket)
         // Returns a QueryResponseFuture containing ANOTHER future
