@@ -18,7 +18,6 @@
 // Used by various bits of pc platform init
 
 struct pc_bootloader_info_t {
-  uint64_t acpi_rsdp;
   zbi_swfb_t fb;
 };
 

@@ -158,6 +158,11 @@ void HandoffPrep::SummarizeMiscZbiItems(ktl::span<ktl::byte> zbi) {
         }
 #endif
         break;
+      case ZBI_TYPE_ACPI_RSDP:
+        ZX_ASSERT(payload.size() >= sizeof(uint64_t));
+        handoff()->acpi_rsdp = *reinterpret_cast<const uint64_t*>(payload.data());
+        SaveForMexec(*header, payload);
+        break;
 
       // Default assumption is that the type is architecture-specific.
       default:

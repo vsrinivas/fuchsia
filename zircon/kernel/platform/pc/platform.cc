@@ -83,10 +83,6 @@ EfiCrashlog efi;
 static bool early_console_disabled;
 
 static void platform_save_bootloader_data(void) {
-  if (gPhysHandoff->arch_handoff.acpi_rsdp) {
-    bootloader.acpi_rsdp = gPhysHandoff->arch_handoff.acpi_rsdp.value();
-  }
-
   if (gPhysHandoff->arch_handoff.framebuffer) {
     bootloader.fb = gPhysHandoff->arch_handoff.framebuffer.value();
   }
@@ -324,7 +320,7 @@ void platform_early_init(void) {
   platform_early_display_init();
 
   /* initialize the ACPI parser */
-  PlatformInitAcpi(bootloader.acpi_rsdp);
+  PlatformInitAcpi(gPhysHandoff->acpi_rsdp.value_or(0));
 
   /* initialize the boot memory reservation system */
   boot_reserve_init();

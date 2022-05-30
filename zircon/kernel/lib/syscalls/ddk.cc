@@ -52,6 +52,9 @@
 
 #define LOCAL_TRACE 0
 
+// TODO(fxbug.dev/91213): Remove this when zx_pc_firmware_tables() goes away.
+zx_paddr_t gAcpiRsdp = 0;
+
 // zx_status_t zx_vmo_create_contiguous
 zx_status_t sys_vmo_create_contiguous(zx_handle_t bti, size_t size, uint32_t alignment_log2,
                                       user_out_handle* out) {
@@ -347,6 +350,7 @@ zx_status_t sys_msi_create(zx_handle_t msi_alloc, uint32_t options, uint32_t msi
   return out->make(ktl::move(msi_handle), rights);
 }
 
+// TODO(fxbug.dev/91213): Remove zx_pc_firmware_tables().
 // zx_status_t zx_pc_firmware_tables
 zx_status_t sys_pc_firmware_tables(zx_handle_t hrsrc, user_out_ptr<zx_paddr_t> acpi_rsdp,
                                    user_out_ptr<zx_paddr_t> smbios) {
@@ -355,17 +359,19 @@ zx_status_t sys_pc_firmware_tables(zx_handle_t hrsrc, user_out_ptr<zx_paddr_t> a
   if ((status = validate_resource(hrsrc, ZX_RSRC_KIND_ROOT)) < 0) {
     return status;
   }
-#if ARCH_X86
-  if ((status = acpi_rsdp.copy_to_user(bootloader.acpi_rsdp)) != ZX_OK) {
+  if ((status = acpi_rsdp.copy_to_user(gAcpiRsdp)) != ZX_OK) {
     return status;
   }
-  if ((status = smbios.copy_to_user(pc_get_smbios_entrypoint())) != ZX_OK) {
+
+  zx_paddr_t smbios_entrypoint = 0;
+#if ARCH_X86
+  smbios_entrypoint = pc_get_smbios_entrypoint();
+#endif
+  if ((status = smbios.copy_to_user(smbios_entrypoint)) != ZX_OK) {
     return status;
   }
 
   return ZX_OK;
-#endif
-  return ZX_ERR_NOT_SUPPORTED;
 }
 
 // zx_status_t zx_bti_create

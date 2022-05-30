@@ -106,6 +106,9 @@ bool platform_early_console_enabled(void);
 void platform_set_hw_reboot_reason(zbi_hw_reboot_reason_t reason);
 zbi_hw_reboot_reason_t platform_hw_reboot_reason(void);
 
+// TODO(fxbug.dev/91213): Remove this when zx_pc_firmware_tables() goes away.
+extern zx_paddr_t gAcpiRsdp;
+
 __END_CDECLS
 
 #ifdef __cplusplus

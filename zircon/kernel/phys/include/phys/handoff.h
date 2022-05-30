@@ -117,6 +117,11 @@ struct PhysHandoff {
 
   // ZBI_TYPE_PLATFORM_ID payload.
   ktl::optional<zbi_platform_id_t> platform_id;
+
+  // ZBI_TYPE_ACPI_RSDP payload.
+  // Physical address of the ACPI RSDP (Root System Descriptor Pointer).
+  // TODO(fxbug.dev/91213): Remove this with zx_pc_firmware_tables.
+  ktl::optional<uint64_t> acpi_rsdp;
 };
 
 static_assert(ktl::is_default_constructible_v<PhysHandoff>);
