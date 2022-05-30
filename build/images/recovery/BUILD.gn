@@ -135,7 +135,7 @@ recovery_eng_packages =
       "//src/developer/sshd-host:config",
 
       # Basic command-line tools:
-      "//garnet/packages/prod:sbase",
+      "//third_party/sbase",
       "//src/diagnostics/log_listener:log_listener_shell",
 
       # Command-line interface to wlan stack:
