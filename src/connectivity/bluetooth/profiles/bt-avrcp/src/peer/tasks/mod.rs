@@ -266,7 +266,8 @@ pub(super) async fn state_watcher(peer: Arc<RwLock<RemotePeer>>) {
     let peer_weak = Arc::downgrade(&peer);
     drop(peer);
 
-    let mut make_connection_task = fasync::Task::spawn(futures::future::ready(()));
+    let mut make_control_channel_task = fasync::Task::spawn(futures::future::ready(()));
+    let mut make_browse_channel_task = fasync::Task::spawn(futures::future::ready(()));
 
     let mut control_channel_task: Option<fasync::Task<()>> = None;
     let mut browse_channel_task: Option<fasync::Task<()>> = None;
@@ -307,7 +308,7 @@ pub(super) async fn state_watcher(peer: Arc<RwLock<RemotePeer>>) {
                     trace!("Starting make_connection task for peer {}", id);
                     peer_guard.attempt_connection = false;
                     peer_guard.control_channel.connecting();
-                    make_connection_task = fasync::Task::spawn(make_connection(
+                    make_control_channel_task = fasync::Task::spawn(make_connection(
                         peer.clone(),
                         AVCTPConnectionType::Control,
                     ));
@@ -332,6 +333,14 @@ pub(super) async fn state_watcher(peer: Arc<RwLock<RemotePeer>>) {
             &PeerChannelState::Connecting => {}
             &PeerChannelState::Disconnected => {
                 browse_channel_task = None;
+                if peer_guard.control_connected() && peer_guard.supports_browsing() {
+                    trace!("Starting make_connection task for browse channel on peer {}", id);
+                    peer_guard.browse_channel.connecting();
+                    make_browse_channel_task = fasync::Task::spawn(make_connection(
+                        peer.clone(),
+                        AVCTPConnectionType::Browse,
+                    ));
+                }
             }
             &PeerChannelState::Connected(_) => {
                 // The Browse channel must be established after the control channel.
@@ -349,7 +358,8 @@ pub(super) async fn state_watcher(peer: Arc<RwLock<RemotePeer>>) {
 
     trace!("state_watcher shutting down. aborting processors");
 
-    let _ = make_connection_task.cancel();
+    let _ = make_control_channel_task.cancel();
+    let _ = make_browse_channel_task.cancel();
 
     // Stop processing state changes on the browse channel.
     // This needs to happen before stopping the control channel.

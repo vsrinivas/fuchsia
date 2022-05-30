@@ -62,6 +62,10 @@ struct MetricsNodeInner {
     /// and outbound connection occur at roughly the same time.
     control_channel_collisions: inspect::UintProperty,
 
+    /// Total number of browse channel connection collisions. Namely, when an inbound
+    /// and outbound connection occur at roughly the same time.
+    browse_channel_collisions: inspect::UintProperty,
+
     /// Metrics for features supported by discovered peers.
     support_node: PeerSupportMetrics,
 
@@ -134,6 +138,10 @@ impl MetricsNode {
         self.inner.lock().control_channel_collisions.add(1);
     }
 
+    pub fn browse_collision(&self) {
+        self.inner.lock().browse_channel_collisions.add(1);
+    }
+
     /// A peer supporting the controller role is discovered.
     pub fn controller_features(&self, id: PeerId, features: AvrcpControllerFeatures) {
         let mut inner = self.inner.lock();
@@ -181,6 +189,7 @@ mod tests {
                 browse_connections: 0u64,
                 distinct_peers: 0u64,
                 control_channel_collisions: 0u64,
+                browse_channel_collisions: 0u64,
             }
         });
 
@@ -197,6 +206,7 @@ mod tests {
                 browse_connections: 0u64,
                 distinct_peers: 2u64,
                 control_channel_collisions: 0u64,
+                browse_channel_collisions: 0u64,
             }
         });
 
@@ -211,6 +221,7 @@ mod tests {
                 browse_connections: 0u64,
                 distinct_peers: 2u64,
                 control_channel_collisions: 0u64,
+                browse_channel_collisions: 0u64,
             }
         });
 
@@ -219,6 +230,7 @@ mod tests {
         metrics1.new_peer(id1);
         metrics1.control_collision();
         metrics1.control_connection();
+        metrics1.browse_collision();
         metrics1.browse_connection();
         assert_data_tree!(inspect, root: {
             metrics: contains {
@@ -227,6 +239,7 @@ mod tests {
                 browse_connections: 1u64,
                 distinct_peers: 2u64,
                 control_channel_collisions: 1u64,
+                browse_channel_collisions: 1u64,
             }
         });
     }

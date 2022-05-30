@@ -159,6 +159,17 @@ pub enum AvrcpService {
 }
 
 impl AvrcpService {
+    pub fn supports_browsing(&self) -> bool {
+        match &self {
+            Self::Target { features, .. } => {
+                features.contains(AvrcpTargetFeatures::SUPPORTSBROWSING)
+            }
+            Self::Controller { features, .. } => {
+                features.contains(AvrcpControllerFeatures::SUPPORTSBROWSING)
+            }
+        }
+    }
+
     pub fn from_search_result(
         protocol: Vec<ProtocolDescriptor>,
         attributes: Vec<Attribute>,

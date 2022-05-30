@@ -483,6 +483,25 @@ impl RemotePeer {
 
     fn set_browse_connection(&mut self, peer: AvctpPeer) {
         let current_time = fasync::Time::now();
+        trace!("Set browse connection for {} at: {}", self.peer_id, current_time.into_nanos());
+
+        // If the current connection establishment is within a threshold amount of time from the
+        // most recent connection establishment, both connections should be dropped, and should
+        // wait a random amount of time before re-establishment.
+        if let Some(previous_time) = self.last_browse_connected_time.take() {
+            let diff = (current_time - previous_time).into_nanos().abs();
+            if diff < CONNECTION_THRESHOLD.into_nanos() {
+                trace!(
+                    "Collision in browse connection establishment for {}. Time diff: {}",
+                    self.peer_id,
+                    diff
+                );
+                self.inspect.metrics().browse_collision();
+                self.reset_browse_connection();
+                return;
+            }
+        }
+
         if self.control_connected() {
             info!("{} connected browse channel", self.peer_id);
             self.last_browse_connected_time = Some(current_time);
@@ -513,6 +532,11 @@ impl RemotePeer {
         // Record inspect controller features.
         self.inspect.record_controller_features(service);
         self.wake_state_watcher();
+    }
+
+    fn supports_browsing(&self) -> bool {
+        self.target_descriptor.map_or(false, |desc| desc.supports_browsing())
+            || self.controller_descriptor.map_or(false, |desc| desc.supports_browsing())
     }
 
     fn set_metrics_node(&mut self, node: MetricsNode) {
@@ -811,12 +835,92 @@ mod tests {
         exec.set_fake_time(MAX_CONNECTION_EST_TIME.after_now());
         let _ = exec.wake_expired_timers();
 
-        // We don't send out outgoing connection for browse yet.
+        // Since peer does not support browsing, verify that outgoing
+        // browsing connection was not initiated.
         assert!(exec.run_until_stalled(&mut next_request_fut).is_pending());
+        assert!(!peer_handle.is_browse_connected());
+
+        Ok(())
+    }
+
+    // Check that the remote will attempt to connect to a peer for both control
+    // and browsing.
+    #[test]
+    fn trigger_connections_test() -> Result<(), Error> {
+        let mut exec = fasync::TestExecutor::new_with_fake_time().expect("executor should build");
+        exec.set_fake_time(fasync::Time::from_nanos(5_000000000));
+
+        let id = PeerId(1);
+        let (peer_handle, _target_delegate, mut profile_requests) = setup_remote_peer(id)?;
+
+        // Set the descriptor to simulate service found for peer - while unusual, this peer
+        // advertises a non-standard PSM.
+        let peer_psm = Psm::new(23); // AVCTP PSM
+        peer_handle.set_target_descriptor(AvrcpService::Target {
+            features: AvrcpTargetFeatures::CATEGORY1 | AvrcpTargetFeatures::SUPPORTSBROWSING,
+            psm: peer_psm,
+            protocol_version: AvrcpProtocolVersion(1, 6),
+        });
+
+        assert!(!peer_handle.is_control_connected());
+
+        let next_request_fut = profile_requests.next();
+        pin_mut!(next_request_fut);
+        assert!(exec.run_until_stalled(&mut next_request_fut).is_pending());
+
+        // Advance time by the maximum amount of time it would take to establish
+        // a connection.
+        exec.set_fake_time(MAX_CONNECTION_EST_TIME.after_now());
+        let _ = exec.wake_expired_timers();
+
+        // We should have requested a connection for control.
+        let (_remote, channel) = Channel::create();
+        match exec.run_until_stalled(&mut next_request_fut) {
+            Poll::Ready(Some(Ok(ProfileRequest::Connect { responder, .. }))) => {
+                let channel = channel.try_into().unwrap();
+                responder.send(&mut Ok(channel)).expect("FIDL response should work");
+            }
+            x => panic!("Expected Profile connection request to be ready, got {:?} instead.", x),
+        };
 
         // run until stalled, the connection should be put in place.
         let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
-        assert!(!peer_handle.is_browse_connected());
+        assert!(peer_handle.is_control_connected());
+
+        // Advance time by the maximum amount of time it would take to establish
+        // a connection.
+        exec.set_fake_time(MAX_CONNECTION_EST_TIME.after_now());
+        let _ = exec.wake_expired_timers();
+
+        // We should have requested a connection for browse.
+        let (_remote2, channel2) = Channel::create();
+        match exec.run_until_stalled(&mut next_request_fut) {
+            Poll::Ready(Some(Ok(ProfileRequest::Connect { responder, connection, .. }))) => {
+                let channel = channel2.try_into().unwrap();
+                responder.send(&mut Ok(channel)).expect("FIDL response should work");
+                // The connect request should be for the PSM advertised by the remote peer.
+                match connection {
+                    ConnectParameters::L2cap(L2capParameters {
+                        psm: Some(v),
+                        parameters: Some(params),
+                        ..
+                    }) => {
+                        assert_eq!(v, u16::from(Psm::new(27))); // AVCTP_BROWSE
+                        assert_eq!(
+                            params.channel_mode.expect("channel mode should not be None"),
+                            bredr::ChannelMode::EnhancedRetransmission
+                        );
+                    }
+                    x => panic!("Expected L2CAP parameters but got: {:?}", x),
+                }
+            }
+            x => panic!("Expected Profile connection request to be ready, got {:?} instead.", x),
+        };
+
+        // run until stalled, the connection should be put in place.
+        let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
+        assert!(peer_handle.is_browse_connected());
+
         Ok(())
     }
 
@@ -1006,6 +1110,129 @@ mod tests {
         Ok(())
     }
 
+    /// Tests that when inbound and outbound browse connections are
+    /// established at the same time, AVRCP drops both, and attempts to
+    /// reconnect.
+    #[test]
+    fn test_simultaneous_browse_connections() -> Result<(), Error> {
+        let mut exec = fasync::TestExecutor::new_with_fake_time().expect("executor should build");
+        exec.set_fake_time(fasync::Time::from_nanos(5_000000000));
+
+        let id = PeerId(123);
+        let (peer_handle, _target_delegate, mut profile_requests) = setup_remote_peer(id)?;
+
+        // Set the descriptor to simulate service found for peer.
+        peer_handle.set_target_descriptor(AvrcpService::Target {
+            features: AvrcpTargetFeatures::CATEGORY1 | AvrcpTargetFeatures::SUPPORTSBROWSING,
+            psm: Psm::AVCTP,
+            protocol_version: AvrcpProtocolVersion(1, 6),
+        });
+
+        assert!(!peer_handle.is_control_connected());
+
+        let next_request_fut = profile_requests.next();
+        pin_mut!(next_request_fut);
+        assert!(exec.run_until_stalled(&mut next_request_fut).is_pending());
+
+        // Advance time by the maximum amount of time it would take to establish
+        // a connection.
+        exec.set_fake_time(MAX_CONNECTION_EST_TIME.after_now());
+        let _ = exec.wake_expired_timers();
+
+        // We should have requested a connection for control.
+        let (_remote, channel) = Channel::create();
+        match exec.run_until_stalled(&mut next_request_fut) {
+            Poll::Ready(Some(Ok(ProfileRequest::Connect { responder, .. }))) => {
+                let channel = channel.try_into().unwrap();
+                responder.send(&mut Ok(channel)).expect("FIDL response should work");
+            }
+            x => panic!("Expected Profile connection request to be ready, got {:?} instead.", x),
+        };
+
+        // run until stalled, the connection should be put in place.
+        let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
+        assert!(peer_handle.is_control_connected());
+
+        // Advance time by the maximum amount of time it would take to establish
+        // a connection.
+        exec.set_fake_time(MAX_CONNECTION_EST_TIME.after_now());
+        let _ = exec.wake_expired_timers();
+
+        // We should have requested a connection for browse.
+        let (remote2, channel2) = Channel::create();
+        match exec.run_until_stalled(&mut next_request_fut) {
+            Poll::Ready(Some(Ok(ProfileRequest::Connect { responder, .. }))) => {
+                let channel = channel2.try_into().unwrap();
+                responder.send(&mut Ok(channel)).expect("FIDL response should work");
+            }
+            x => panic!("Expected Profile connection request to be ready, got {:?} instead.", x),
+        };
+
+        // run until stalled, the connection should be put in place.
+        let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
+        assert!(peer_handle.is_browse_connected());
+
+        // Should be able to send data over the channel.
+        match remote2.as_ref().write(&[0; 1]) {
+            Ok(1) => {}
+            x => panic!("Expected data write but got {:?} instead", x),
+        }
+
+        // Advance time by LESS than the CONNECTION_THRESHOLD amount.
+        let advance_time = CONNECTION_THRESHOLD.into_nanos() - 200;
+        exec.set_fake_time(advance_time.nanos().after_now());
+        let _ = exec.wake_expired_timers();
+
+        // Simulate inbound browse connection.
+        let (remote3, channel3) = Channel::create();
+        let reconnect_peer = AvctpPeer::new(channel3);
+        peer_handle.set_browse_connection(reconnect_peer);
+
+        // Run to update watcher state. Browse channel should be disconnected,
+        // but control channel should remain connected.
+        let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
+        assert!(!peer_handle.is_browse_connected());
+        assert!(peer_handle.is_control_connected());
+
+        // Both the inbound and outbound-initiated browse channels should be
+        // dropped. Sending data should not work.
+        match remote2.as_ref().write(&[0; 1]) {
+            Err(zx::Status::PEER_CLOSED) => {}
+            x => panic!("Expected PEER_CLOSED but got {:?}", x),
+        }
+        match remote3.as_ref().write(&[0; 1]) {
+            Err(zx::Status::PEER_CLOSED) => {}
+            x => panic!("Expected PEER_CLOSED but got {:?}", x),
+        }
+
+        // We expect to attempt to reconnect.
+        // Advance time by the maximum amount of time it would take to establish
+        // a connection.
+        exec.set_fake_time(MAX_CONNECTION_EST_TIME.after_now());
+        let _ = exec.wake_expired_timers();
+
+        let (remote4, channel4) = Channel::create();
+        match exec.run_until_stalled(&mut next_request_fut) {
+            Poll::Ready(Some(Ok(ProfileRequest::Connect { responder, .. }))) => {
+                let channel = channel4.try_into().unwrap();
+                responder.send(&mut Ok(channel)).expect("FIDL response should work");
+            }
+            x => panic!("Expected Profile connection request to be ready, got {:?} instead.", x),
+        };
+
+        // Run to update watcher state.
+        let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
+        assert!(peer_handle.is_browse_connected());
+
+        // New channel should be good to go.
+        match remote4.as_ref().write(&[0; 1]) {
+            Ok(1) => {}
+            x => panic!("Expected successful write but got {:?}", x),
+        }
+
+        Ok(())
+    }
+
     /// Tests that when new inbound control connection comes in, previous
     /// control and browse connections are dropped.
     #[test]
@@ -1014,39 +1241,62 @@ mod tests {
         exec.set_fake_time(fasync::Time::from_nanos(5_000000000));
 
         let id = PeerId(1);
-        let (peer_handle, _target_delegate, mut _profile_requests) = setup_remote_peer(id)?;
+        let (peer_handle, _target_delegate, mut profile_requests) = setup_remote_peer(id)?;
 
         // Set the descriptor to simulate service found for peer - while unusual, this peer
         // advertises a non-standard PSM.
         peer_handle.set_target_descriptor(AvrcpService::Target {
-            features: AvrcpTargetFeatures::CATEGORY1,
+            features: AvrcpTargetFeatures::CATEGORY1 | AvrcpTargetFeatures::SUPPORTSBROWSING,
             psm: Psm::AVCTP,
             protocol_version: AvrcpProtocolVersion(1, 6),
         });
 
         assert!(!peer_handle.is_control_connected());
-        assert!(!peer_handle.is_browse_connected());
 
-        // Peer connects with a new l2cap connection for control channel.
-        let (remote1, channel1) = Channel::create();
-        let connect_peer = AvcPeer::new(channel1);
-        peer_handle.set_control_connection(connect_peer);
+        let next_request_fut = profile_requests.next();
+        pin_mut!(next_request_fut);
+        assert!(exec.run_until_stalled(&mut next_request_fut).is_pending());
 
-        // Run to update watcher state. Peer should be connected.
+        // Advance time by the maximum amount of time it would take to establish
+        // a connection.
+        exec.set_fake_time(MAX_CONNECTION_EST_TIME.after_now());
+        let _ = exec.wake_expired_timers();
+
+        // We should have requested a connection for control.
+        let (remote, channel) = Channel::create();
+        match exec.run_until_stalled(&mut next_request_fut) {
+            Poll::Ready(Some(Ok(ProfileRequest::Connect { responder, .. }))) => {
+                let channel = channel.try_into().unwrap();
+                responder.send(&mut Ok(channel)).expect("FIDL response should work");
+            }
+            x => panic!("Expected Profile connection request to be ready, got {:?} instead.", x),
+        };
+
+        // run until stalled, the connection should be put in place.
         let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
         assert!(peer_handle.is_control_connected());
 
-        // Peer connects with a new l2cap connection for browse channel.
-        let (remote2, channel2) = Channel::create();
-        let connect_peer2 = AvctpPeer::new(channel2);
-        peer_handle.set_browse_connection(connect_peer2);
+        // Advance time by the maximum amount of time it would take to establish
+        // a connection.
+        exec.set_fake_time(MAX_CONNECTION_EST_TIME.after_now());
+        let _ = exec.wake_expired_timers();
 
-        // Run to update watcher state. Peer should be connected.
+        // We should have requested a connection for browse.
+        let (remote2, channel2) = Channel::create();
+        match exec.run_until_stalled(&mut next_request_fut) {
+            Poll::Ready(Some(Ok(ProfileRequest::Connect { responder, .. }))) => {
+                let channel = channel2.try_into().unwrap();
+                responder.send(&mut Ok(channel)).expect("FIDL response should work");
+            }
+            x => panic!("Expected Profile connection request to be ready, got {:?} instead.", x),
+        };
+
+        // run until stalled, the connection should be put in place.
         let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
         assert!(peer_handle.is_browse_connected());
 
-        // Should be able to send data over the old channels.
-        match remote1.as_ref().write(&[0; 1]) {
+        // Should be able to send data over the channels.
+        match remote.as_ref().write(&[0; 1]) {
             Ok(1) => {}
             x => panic!("Expected data write but got {:?} instead", x),
         }
@@ -1055,25 +1305,24 @@ mod tests {
             x => panic!("Expected data write but got {:?} instead", x),
         }
 
-        // Advance time by the maximum amount of time it would take to establish a connection.
-        exec.set_fake_time(MAX_CONNECTION_EST_TIME.after_now());
+        // Advance time by some arbitrary amount before peer decides to reconnect.
+        exec.set_fake_time(5.seconds().after_now());
         let _ = exec.wake_expired_timers();
 
-        // Say some event from peer caused it to re-establish a new l2cap
-        // connection for control channel.
+        // After some time, remote peer sends incoming a new l2cap connection
+        // for control channel. Keep the old one alive to validate that it's closed.
         let (remote3, channel3) = Channel::create();
         let reconnect_peer = AvcPeer::new(channel3);
         peer_handle.set_control_connection(reconnect_peer);
 
-        // Run to update watcher state. Control should be connected, but
-        // browse channel should not be connected.
+        // Run to update watcher state. Control channel should be connected,
+        // but browse channel that was previously set should have closed.
         let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
         assert!(peer_handle.is_control_connected());
         assert!(!peer_handle.is_browse_connected());
 
-        // Verify that new control connection is open, but the old control and
-        // browse connections were closed.
-        match remote1.as_ref().write(&[0; 1]) {
+        // Shouldn't be able to send data over the old channels.
+        match remote.as_ref().write(&[0; 1]) {
             Err(zx::Status::PEER_CLOSED) => {}
             x => panic!("Expected PEER_CLOSED but got {:?}", x),
         }
@@ -1081,6 +1330,7 @@ mod tests {
             Err(zx::Status::PEER_CLOSED) => {}
             x => panic!("Expected PEER_CLOSED but got {:?}", x),
         }
+        // Should be able to send data over the new channel.
         match remote3.as_ref().write(&[0; 1]) {
             Ok(1) => {}
             x => panic!("Expected data write but got {:?} instead", x),
