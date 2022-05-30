@@ -241,6 +241,7 @@ void main(List<String> arguments) {
         '--messages=.*EchoString',
         '--exclude-syscalls=zx_channel_create',
         '--exclude-syscalls=zx_handle_close',
+        '--exclude-syscalls=zx_handle_close_many',
         'run',
         'fuchsia-pkg://fuchsia.com/echo_client_placeholder#meta/echo_client.cmx'
       ]);
