@@ -63,12 +63,8 @@ const (
 )
 
 type upCommand struct {
-	// TODO(fxbug.dev/92697): Delete.
-	gcsBucket string
 	// Unique namespace under which to index artifacts.
 	namespace string
-	// Whether or not to upload host tests.
-	uploadHostTests bool
 	// Whether to emit upload manifest JSON to this path instead of executing
 	// uploads.
 	uploadManifestJSONOutput string
@@ -76,7 +72,7 @@ type upCommand struct {
 
 func (upCommand) Name() string { return "up" }
 
-func (upCommand) Synopsis() string { return "upload artifacts from a build to Google Cloud Storage" }
+func (upCommand) Synopsis() string { return "emit a GCS upload manifest for a build" }
 
 func (upCommand) Usage() string {
 	return `
@@ -131,9 +127,7 @@ flags:
 }
 
 func (cmd *upCommand) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&cmd.gcsBucket, "bucket", "", "Unused.")
 	f.StringVar(&cmd.namespace, "namespace", "", "Namespace under which to index artifacts.")
-	f.BoolVar(&cmd.uploadHostTests, "upload-host-tests", false, "Whether or not to include host tests and their runtime deps. Should be deleted once unused by infrastructure.")
 	f.StringVar(&cmd.uploadManifestJSONOutput, "upload-manifest-json-output", "", "Whether to emit upload manifest to this path instead of executing uploads.")
 }
 
@@ -264,14 +258,6 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 		Contents:    buildIDsToLabelsJSON,
 		Destination: path.Join(cmd.namespace, buildIDsToLabelsManifestName),
 	})
-
-	if cmd.uploadHostTests {
-		hostTests, err := artifactory.HostTestUploads(m.TestSpecs(), m.BuildDir(), path.Join(cmd.namespace, hostTestDirName))
-		if err != nil {
-			return fmt.Errorf("failed to get host test files: %v", err)
-		}
-		uploads = append(uploads, hostTests...)
-	}
 
 	uploads, err = filterNonExistentFiles(ctx, uploads)
 	if err != nil {
