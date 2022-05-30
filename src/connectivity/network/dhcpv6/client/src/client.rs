@@ -12,8 +12,8 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_net as fnet,
     fidl_fuchsia_net_dhcpv6::{
-        AddressAssignmentConfig, AddressConfig, ClientConfig, ClientMarker, ClientRequest,
-        ClientRequestStream, ClientWatchServersResponder, InformationConfig, NewClientParams,
+        AddressConfig, ClientConfig, ClientMarker, ClientRequest, ClientRequestStream,
+        ClientWatchServersResponder, InformationConfig, NewClientParams,
         RELAY_AGENT_AND_SERVER_LINK_LOCAL_MULTICAST_ADDRESS, RELAY_AGENT_AND_SERVER_PORT,
     },
     fidl_fuchsia_net_ext as fnetext, fidl_fuchsia_net_name as fnetname, fuchsia_async as fasync,
@@ -163,12 +163,10 @@ fn create_state_machine(
     (dhcpv6_core::client::ClientStateMachine<StdRng>, dhcpv6_core::client::Actions),
     ClientError,
 > {
-    let ClientConfig { address_assignment_config, information_config, .. } = config;
-    match address_assignment_config {
-        Some(AddressAssignmentConfig { non_temporary_address_config, .. }) => {
-            let address_config =
-                non_temporary_address_config.ok_or(ClientError::UnsupportedConfigs)?;
-            let configured_addresses = to_configured_addresses(address_config)?;
+    let ClientConfig { non_temporary_address_config, information_config, .. } = config;
+    match non_temporary_address_config {
+        Some(non_temporary_address_config) => {
+            let configured_addresses = to_configured_addresses(non_temporary_address_config)?;
             Ok(dhcpv6_core::client::ClientStateMachine::start_stateful(
                 transaction_id,
                 v6::duid_uuid(),
@@ -577,22 +575,16 @@ mod tests {
             ClientConfig::EMPTY,
             // Empty address config and no information config.
             ClientConfig {
-                address_assignment_config: Some(AddressAssignmentConfig {
-                    non_temporary_address_config: None,
-                    ..AddressAssignmentConfig::EMPTY
-                }),
+                non_temporary_address_config: None,
                 information_config: None,
                 ..ClientConfig::EMPTY
             },
             // Address config requesting no addresses, and no information
             // config.
             ClientConfig {
-                address_assignment_config: Some(AddressAssignmentConfig {
-                    non_temporary_address_config: Some(AddressConfig {
-                        address_count: None,
-                        ..AddressConfig::EMPTY
-                    }),
-                    ..AddressAssignmentConfig::EMPTY
+                non_temporary_address_config: Some(AddressConfig {
+                    address_count: None,
+                    ..AddressConfig::EMPTY
                 }),
                 information_config: None,
                 ..ClientConfig::EMPTY
@@ -600,12 +592,9 @@ mod tests {
             // Address config requesting zero addresses, and no information
             // config.
             ClientConfig {
-                address_assignment_config: Some(AddressAssignmentConfig {
-                    non_temporary_address_config: Some(AddressConfig {
-                        address_count: Some(0),
-                        ..AddressConfig::EMPTY
-                    }),
-                    ..AddressAssignmentConfig::EMPTY
+                non_temporary_address_config: Some(AddressConfig {
+                    address_count: Some(0),
+                    ..AddressConfig::EMPTY
                 }),
                 information_config: None,
                 ..ClientConfig::EMPTY
@@ -613,16 +602,10 @@ mod tests {
             // Address config with more preferred addresses than
             // `address_count`.
             ClientConfig {
-                address_assignment_config: Some(AddressAssignmentConfig {
-                    non_temporary_address_config: Some(AddressConfig {
-                        address_count: Some(1),
-                        preferred_addresses: Some(vec![
-                            fidl_ip_v6!("ff01::1"),
-                            fidl_ip_v6!("ff01::1"),
-                        ]),
-                        ..AddressConfig::EMPTY
-                    }),
-                    ..AddressAssignmentConfig::EMPTY
+                non_temporary_address_config: Some(AddressConfig {
+                    address_count: Some(1),
+                    preferred_addresses: Some(vec![fidl_ip_v6!("ff01::1"), fidl_ip_v6!("ff01::1")]),
+                    ..AddressConfig::EMPTY
                 }),
                 information_config: None,
                 ..ClientConfig::EMPTY
@@ -704,25 +687,19 @@ mod tests {
             },
             // Address config is set.
             ClientConfig {
-                address_assignment_config: Some(AddressAssignmentConfig {
-                    non_temporary_address_config: Some(AddressConfig {
-                        address_count: Some(1),
-                        preferred_addresses: None,
-                        ..AddressConfig::EMPTY
-                    }),
-                    ..AddressAssignmentConfig::EMPTY
+                non_temporary_address_config: Some(AddressConfig {
+                    address_count: Some(1),
+                    preferred_addresses: None,
+                    ..AddressConfig::EMPTY
                 }),
                 ..ClientConfig::EMPTY
             },
             // Both address config and information config are set.
             ClientConfig {
-                address_assignment_config: Some(AddressAssignmentConfig {
-                    non_temporary_address_config: Some(AddressConfig {
-                        address_count: Some(1),
-                        preferred_addresses: None,
-                        ..AddressConfig::EMPTY
-                    }),
-                    ..AddressAssignmentConfig::EMPTY
+                non_temporary_address_config: Some(AddressConfig {
+                    address_count: Some(1),
+                    preferred_addresses: None,
+                    ..AddressConfig::EMPTY
                 }),
                 information_config: Some(InformationConfig { ..InformationConfig::EMPTY }),
                 ..ClientConfig::EMPTY
@@ -768,13 +745,10 @@ mod tests {
             // stateful mode, by sending out a solicit.
             (
                 ClientConfig {
-                    address_assignment_config: Some(AddressAssignmentConfig {
-                        non_temporary_address_config: Some(AddressConfig {
-                            address_count: Some(1),
-                            preferred_addresses: None,
-                            ..AddressConfig::EMPTY
-                        }),
-                        ..AddressAssignmentConfig::EMPTY
+                    non_temporary_address_config: Some(AddressConfig {
+                        address_count: Some(1),
+                        preferred_addresses: None,
+                        ..AddressConfig::EMPTY
                     }),
                     ..ClientConfig::EMPTY
                 },
@@ -784,13 +758,10 @@ mod tests {
             // client should start in stateful mode, by sending out a solicit.
             (
                 ClientConfig {
-                    address_assignment_config: Some(AddressAssignmentConfig {
-                        non_temporary_address_config: Some(AddressConfig {
-                            address_count: Some(1),
-                            preferred_addresses: None,
-                            ..AddressConfig::EMPTY
-                        }),
-                        ..AddressAssignmentConfig::EMPTY
+                    non_temporary_address_config: Some(AddressConfig {
+                        address_count: Some(1),
+                        preferred_addresses: None,
+                        ..AddressConfig::EMPTY
                     }),
                     information_config: Some(InformationConfig { ..InformationConfig::EMPTY }),
                     ..ClientConfig::EMPTY
@@ -1392,13 +1363,10 @@ mod tests {
         let mut client = Client::<fasync::net::UdpSocket>::start(
             [1, 2, 3], /* transaction ID */
             ClientConfig {
-                address_assignment_config: Some(AddressAssignmentConfig {
-                    non_temporary_address_config: Some(AddressConfig {
-                        address_count: Some(1),
-                        preferred_addresses: None,
-                        ..AddressConfig::EMPTY
-                    }),
-                    ..AddressAssignmentConfig::EMPTY
+                non_temporary_address_config: Some(AddressConfig {
+                    address_count: Some(1),
+                    preferred_addresses: None,
+                    ..AddressConfig::EMPTY
                 }),
                 ..ClientConfig::EMPTY
             },

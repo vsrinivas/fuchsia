@@ -55,64 +55,55 @@ protocol ClientProvider {
             /// [RFC 8415, Section 6.1](https://tools.ietf.org/html/rfc8415#section-6.1).
             ///
             /// Client creation will fail if `config` is not requesting any
-            /// information, or if it contains invalid fields.
+            /// information (all fields are empty), or if it contains invalid
+            /// fields.
             ///
             /// Required.
             3: config @generated_name("ClientConfig") table {
-                /// Configuration for negotiating addresses.
-                ///
-                /// If set, the client runs in stateful mode, as described in
-                /// [RFC 8415, Section 6.2](https://tools.ietf.org/html/rfc8415#section-6.2).
-                ///
-                /// If not set, interpreted as empty (no addresses will be
-                /// negotiated).
-                1: address_assignment_config @generated_name("AddressAssignmentConfig") table {
-                    /// Non-temporary address configuration.
-                    ///
-                    /// Configures the client to negotiate non-temporary
-                    /// addresses (IA_NA), as defined in
-                    /// [RFC 8415, section 6.2](https://tools.ietf.org/html/rfc8415#section-6.2).
-                    ///
-                    /// It not set, interpreted as empty (no non-temporary
-                    /// addresses will be negotiated).
-                    1: non_temporary_address_config @generated_name("AddressConfig") table {
-                        /// Number of addresses.
-                        ///
-                        /// If not set, interpreted as 0 (no addresses will be
-                        /// requested).
-                        1: address_count uint8;
-
-                        /// Preferred addresses.
-                        ///
-                        /// Used for requesting specific addresses from DHCPv6
-                        /// servers. The addresses are used as hints by DHCPv6
-                        /// servers, but may be ignored. If the DHCPv6 server
-                        /// does not assign the preferred addresses and responds
-                        /// with different addresses instead, the DHCPv6
-                        /// client's behaviour is to accept the assigned
-                        /// addresses.
-                        ///
-                        /// The size of `preferred_addresses` must be less than
-                        /// or equal to `address_count`, otherwise the
-                        /// `AddressConfig` is invalid.
-                        ///
-                        /// Optional field. If not set, or if
-                        /// `preferred_addresses` is empty, no address hints are
-                        /// provided.
-                        2: preferred_addresses vector<fuchsia.net.Ipv6Address>:MAX;
-                    };
-                };
-
                 /// Configuration for requesting configuration information.
                 ///
                 /// If not set, interpreted as empty (no configuration
                 /// information will be requested).
-                2: information_config @generated_name("InformationConfig") table {
+                1: information_config @generated_name("InformationConfig") table {
                     /// Request a list of available DNS servers
                     /// [RFC 3646](https://tools.ietf.org/html/rfc3646).
                     ///
                     /// If not set, interpreted as false;
                     1: dns_servers bool;
+                };
+
+                /// Non-temporary address configuration.
+                ///
+                /// Configures the client to negotiate non-temporary
+                /// addresses (IA_NA), as defined in
+                /// [RFC 8415, section 6.2](https://tools.ietf.org/html/rfc8415#section-6.2).
+                ///
+                /// If not set, interpreted as empty (non-temporary addresses
+                /// will not be negotiated).
+                2: non_temporary_address_config @generated_name("AddressConfig") table {
+                    /// Number of addresses.
+                    ///
+                    /// Required. Must be greater than 0.
+                    1: address_count uint8;
+
+                    /// Preferred addresses.
+                    ///
+                    /// Used for requesting specific addresses from DHCPv6
+                    /// servers. The addresses are used as hints by DHCPv6
+                    /// servers, but may be ignored. If the DHCPv6 server
+                    /// does not assign the preferred addresses and responds
+                    /// with different addresses instead, the DHCPv6
+                    /// client's behaviour is to accept the assigned
+                    /// addresses.
+                    ///
+                    /// The size of `preferred_addresses` must be less than
+                    /// or equal to `address_count`, otherwise the
+                    /// `AddressConfig` is invalid.
+                    ///
+                    /// Optional field. If not set, or if
+                    /// `preferred_addresses` is empty, no address hints are
+                    /// provided.
+                    2: preferred_addresses vector<fuchsia.net.Ipv6Address>:MAX;
                 };
             };
         };
