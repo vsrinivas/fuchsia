@@ -180,6 +180,7 @@
                 "fuchsia.ui.activity.Provider",
                 "fuchsia.update.CommitStatusProvider",
                 "fuchsia.virtualization.DebianGuestManager",
+                "fuchsia.virtualization.LinuxManager",
                 "fuchsia.virtualization.Manager",
                 "fuchsia.virtualization.TerminaGuestManager",
                 "fuchsia.virtualization.ZirconGuestManager",

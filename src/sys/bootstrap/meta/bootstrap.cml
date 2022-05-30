@@ -197,6 +197,7 @@
         {
             protocol: [
                 "fuchsia.virtualization.DebianGuestManager",
+                "fuchsia.virtualization.LinuxManager",
 
                 // Allow launching / managing guests from the console.
                 "fuchsia.virtualization.Manager",
