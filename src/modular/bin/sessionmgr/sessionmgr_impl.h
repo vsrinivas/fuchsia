@@ -60,8 +60,9 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
                   fuchsia::ui::views::ViewRef view_ref) override;
 
   // Sequence of Initialize() broken up into steps for clarity.
-  void InitializeSessionEnvironment(std::string session_id);
-  void InitializeStartupAgentLauncher(fuchsia::sys::ServiceList v2_services_for_sessionmgr);
+  void InitializeSessionEnvironment(std::string session_id,
+                                    fuchsia::sys::ServiceList v2_services_for_sessionmgr);
+  void InitializeStartupAgentLauncher();
   void InitializeStartupAgents();
   void InitializeAgentRunner(const std::string& session_shell_url);
   void InitializeStoryProvider(fuchsia::modular::session::AppConfig story_shell_config,
@@ -166,6 +167,9 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   std::unique_ptr<SessionCtl> session_ctl_;
 
   std::unique_ptr<StartupAgentLauncher> startup_agent_launcher_;
+
+  // Holds the service-directory containing services from the v2 framework.
+  std::optional<sys::ServiceDirectory> v2_service_directory_;
 
   // Component context given to session shell so that it can run agents.
   std::unique_ptr<ComponentContextImpl> session_shell_component_context_impl_;

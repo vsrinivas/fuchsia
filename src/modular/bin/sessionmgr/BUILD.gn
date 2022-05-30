@@ -64,6 +64,7 @@ source_set("sessionmgr_lib") {
     ":session_ctl",
     ":startup_agent_launcher",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/fit",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/inspect/cpp",
     "//sdk/lib/ui/scenic/cpp",

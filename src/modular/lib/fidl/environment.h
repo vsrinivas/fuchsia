@@ -44,6 +44,12 @@ class Environment {
     services_dir_->AddEntry(service_name, service);
   }
 
+  void AddService(fit::function<zx_status_t(zx::channel)> handler,
+                  const std::string& service_name) {
+    auto service = fbl::MakeRefCounted<fs::Service>(std::move(handler));
+    services_dir_->AddEntry(service_name, service);
+  }
+
   // Overrides return value of GetLauncher() with |launcher|.
   void OverrideLauncher(std::unique_ptr<fuchsia::sys::Launcher> launcher);
 

@@ -36,7 +36,6 @@ class StartupAgentLauncher : public AgentServicesFactory {
       fidl::InterfaceRequestHandler<fuchsia::intl::PropertyProvider>
           intl_property_provider_connector,
       fidl::InterfaceRequestHandler<fuchsia::element::Manager> element_manager_connector,
-      fuchsia::sys::ServiceList v2_services_for_sessionmgr,
       fit::function<bool()> is_terminating_cb);
 
   ~StartupAgentLauncher() override = default;
@@ -100,9 +99,6 @@ class StartupAgentLauncher : public AgentServicesFactory {
   fit::function<void(fidl::InterfaceRequest<fuchsia::intl::PropertyProvider>)>
       intl_property_provider_connector_;
   fit::function<void(fidl::InterfaceRequest<fuchsia::element::Manager>)> element_manager_connector_;
-
-  fuchsia::sys::ServiceList v2_services_for_sessionmgr_;
-  sys::ServiceDirectory v2_services_for_sessionmgr_directory_;
 
   // Return |true| to avoid automatically restarting session_agents_.
   fit::function<bool()> is_terminating_cb_ = nullptr;

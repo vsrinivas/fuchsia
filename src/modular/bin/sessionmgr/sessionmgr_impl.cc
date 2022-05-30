@@ -118,13 +118,13 @@ void SessionmgrImpl::Initialize(
   session_storage_ = std::make_unique<SessionStorage>();
   OnTerminate(Reset(&session_storage_));
 
-  InitializeSessionEnvironment(session_id);
+  InitializeSessionEnvironment(session_id, std::move(v2_services_for_sessionmgr));
 
   // Create |puppet_master_| before |agent_runner_| to ensure agents can use it when terminating.
   InitializePuppetMaster();
   InitializeElementManager();
 
-  InitializeStartupAgentLauncher(std::move(v2_services_for_sessionmgr));
+  InitializeStartupAgentLauncher();
   InitializeAgentRunner(config_accessor_.session_shell_app_config().url());
   InitializeStartupAgents();
 
@@ -192,17 +192,22 @@ void SessionmgrImpl::ConnectSessionShellToStoryProvider() {
 //
 // Future implementations will use the new SessionFramework, which will provide support for
 // multiple sessions.
-void SessionmgrImpl::InitializeSessionEnvironment(std::string session_id) {
+void SessionmgrImpl::InitializeSessionEnvironment(
+    std::string session_id, fuchsia::sys::ServiceList v2_services_for_sessionmgr) {
   session_id_ = std::move(session_id);
+  v2_service_directory_.emplace(std::move(v2_services_for_sessionmgr.host_directory));
 
   // Create the session's environment (in which we run stories, modules, agents, and so on) as a
-  // child of sessionmgr's environment. Add session-provided additional services, |kEnvServices|.
-  static const auto* const kEnvServices =
-      new std::vector<std::string>{fuchsia::intl::PropertyProvider::Name_};
+  // child of sessionmgr's environment.
+  // Both session-provided services and additional services routed from CFv2
+  // must be listed in |env_services|, to make them available to Mods, Agents,
+  // Runners, etc.
+  std::vector<std::string> env_services(v2_services_for_sessionmgr.names);
+  env_services.insert(env_services.end(), {fuchsia::intl::PropertyProvider::Name_});
 
   session_environment_ = std::make_unique<Environment>(
       /* parent_env = */ sessionmgr_context_->svc()->Connect<fuchsia::sys::Environment>(),
-      std::string(kSessionEnvironmentLabelPrefix) + session_id_, *kEnvServices,
+      std::string(kSessionEnvironmentLabelPrefix) + session_id_, env_services,
       /* kill_on_oom = */ true);
 
   // Get the default launcher from the new |session_environment_| to wrap in an
@@ -228,11 +233,21 @@ void SessionmgrImpl::InitializeSessionEnvironment(std::string session_id) {
         sessionmgr_context_->svc()->Connect<fuchsia::intl::PropertyProvider>(std::move(request));
       });
 
+  // Add v2-provided services.
+  for (std::string v2_service_name : v2_services_for_sessionmgr.names) {
+    session_environment_->AddService(
+        [this, v2_service_name](zx::channel request) {
+          if (terminating_)
+            return ZX_ERR_UNAVAILABLE;
+          return v2_service_directory_->Connect(v2_service_name, std::move(request));
+        },
+        v2_service_name);
+  }
+
   OnTerminate(Reset(&session_environment_));
 }
 
-void SessionmgrImpl::InitializeStartupAgentLauncher(
-    fuchsia::sys::ServiceList v2_services_for_sessionmgr) {
+void SessionmgrImpl::InitializeStartupAgentLauncher() {
   FX_DCHECK(puppet_master_impl_);
 
   startup_agent_launcher_ = std::make_unique<StartupAgentLauncher>(
@@ -261,7 +276,7 @@ void SessionmgrImpl::InitializeStartupAgentLauncher(
         }
         element_manager_impl_->Connect(std::move(request));
       },
-      std::move(v2_services_for_sessionmgr), [this]() { return terminating_; });
+      [this]() { return terminating_; });
   OnTerminate(Reset(&startup_agent_launcher_));
 }
 
