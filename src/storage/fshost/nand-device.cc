@@ -4,9 +4,28 @@
 
 #include "src/storage/fshost/nand-device.h"
 
+#include <fcntl.h>
 #include <fidl/fuchsia.device/cpp/wire.h>
 #include <lib/fdio/cpp/caller.h>
+#include <lib/syslog/cpp/macros.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include "src/storage/fshost/block-device.h"
 
-namespace fshost {}  // namespace fshost
+namespace fshost {
+
+zx::status<std::unique_ptr<BlockDeviceInterface>> NandDevice::OpenBlockDevice(
+    const char* topological_path) const {
+  fbl::unique_fd fd(::open(topological_path, O_RDWR, S_IFBLK));
+  if (!fd) {
+    FX_LOGS(WARNING) << "Failed to open block device " << topological_path << ": "
+                     << strerror(errno);
+    return zx::error(ZX_ERR_INVALID_ARGS);
+  }
+  return zx::ok(
+      std::unique_ptr<NandDevice>(new NandDevice(mounter_, std::move(fd), device_config_)));
+}
+
+}  // namespace fshost

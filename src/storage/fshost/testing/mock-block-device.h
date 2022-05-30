@@ -60,6 +60,14 @@ class MockBlockDevice : public BlockDeviceInterface {
   // Returns the value SetPartitionMaxSize() was called with. Will be a nullopt if uncalled.
   const std::optional<uint64_t>& max_size() const { return max_size_; }
 
+  zx::status<std::unique_ptr<BlockDeviceInterface>> OpenBlockDevice(
+      const char* topological_path) const override {
+    return zx::error(ZX_ERR_INTERNAL);
+  }
+
+  void AddData(Copier) override {}
+  zx::status<Copier> ExtractData() override { return zx::error(ZX_ERR_NOT_SUPPORTED); }
+
   fs_management::DiskFormat content_format() const override { return options_.content_format; }
   const std::string& topological_path() const override { return options_.topological_path; }
   const std::string& partition_name() const override { return partition_name_; }
@@ -133,7 +141,6 @@ class MockBlockDevice : public BlockDeviceInterface {
     partition_name_ = name;
     return ZX_OK;
   }
-
   bool IsNand() const override { return options_.is_nand; }
 
   bool attached() const { return attached_; }

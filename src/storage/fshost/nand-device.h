@@ -32,6 +32,8 @@ class NandDevice : public BlockDevice {
   NandDevice(const NandDevice&) = delete;
   NandDevice& operator=(const NandDevice&) = delete;
 
+  zx::status<std::unique_ptr<BlockDeviceInterface>> OpenBlockDevice(
+      const char* topological_path) const override;
   fs_management::DiskFormat content_format() const override {
     return fs_management::DiskFormat::kDiskFormatUnknown;
   }

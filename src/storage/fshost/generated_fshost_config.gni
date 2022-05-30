@@ -59,6 +59,7 @@ declare_args() {
 #   no_minfs_zxcrypt (optional; default: false)
 #     [boolean] If set, fshost will look for a data partition that doesn't have zxcrypt set up, and
 #     instead has minfs directly on the device. This option will cause production builds to fail.
+#     This option is ignored when data_filesystem_binary_format is "fxfs".
 #
 #   fvm_ramdisk (optional; default: false)
 #     [boolean] If set, fshost will bind the fvm driver to the first ramdisk it finds that looks

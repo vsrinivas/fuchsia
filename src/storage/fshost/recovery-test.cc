@@ -105,14 +105,17 @@ TEST_F(FsRecoveryTest, CorruptDataRecoveryTest) {
     auto fvm_partition_or = storage::CreateFvmPartition(ramdisk_or->path(), kSliceSize, options);
     ASSERT_EQ(fvm_partition_or.status_value(), ZX_OK);
 
-    auto zxcrypt_device_path_or = storage::CreateZxcryptVolume(fvm_partition_or.value());
-    ASSERT_EQ(zxcrypt_device_path_or.status_value(), ZX_OK);
-    std::string zxcrypt_device_path = std::move(zxcrypt_device_path_or.value());
+    std::string device_path = *fvm_partition_or;
+    if (DataFilesystemFormat() != "fxfs") {
+      auto zxcrypt_device_path_or = storage::CreateZxcryptVolume(fvm_partition_or.value());
+      ASSERT_EQ(zxcrypt_device_path_or.status_value(), ZX_OK);
+      device_path = std::move(zxcrypt_device_path_or.value());
+    }
 
     // To make it look like there's a filesystem there but it is corrupt, write out the
     // appropriate magic into the otherwise empty block device.
     {
-      fbl::unique_fd data_fd(open(zxcrypt_device_path.c_str(), O_RDWR));
+      fbl::unique_fd data_fd(open(device_path.c_str(), O_RDWR));
       ASSERT_TRUE(data_fd);
       char buf[4096];
       if (DataFilesystemFormat() == "minfs") {

@@ -159,11 +159,16 @@ TEST_F(BlockDeviceManagerIntegration, MaxSize) {
   EXPECT_EQ(limit_result.value_NEW().slice_count, kMaxRuntimeBytes / kSliceSize);
 }
 
-TEST_F(BlockDeviceManagerIntegration, SetPartitionName) {
+TEST_F(BlockDeviceManagerIntegration, MinfsPartitionsRenamedToPreferredName) {
   constexpr uint32_t kBlockCount = 9 * 1024 * 256;
   constexpr uint32_t kBlockSize = 512;
   constexpr uint32_t kSliceSize = 32'768;
   constexpr size_t kDeviceSize = kBlockCount * kBlockSize;
+
+  if (DataFilesystemFormat() == "fxfs") {
+    // Fxfs partitions use a new matcher which does not have the logic to migrate legacy names.
+    return;
+  }
 
   PauseWatcher();  // Pause whilst we create a ramdisk.
 

@@ -42,6 +42,10 @@ class BlockDevice : public BlockDeviceInterface {
   BlockDevice(const BlockDevice&) = delete;
   BlockDevice& operator=(const BlockDevice&) = delete;
 
+  zx::status<std::unique_ptr<BlockDeviceInterface>> OpenBlockDevice(
+      const char* topological_path) const override;
+  void AddData(Copier) override;
+  zx::status<Copier> ExtractData() override;
   fs_management::DiskFormat GetFormat() override;
   void SetFormat(fs_management::DiskFormat format) override;
   zx_status_t GetInfo(fuchsia_hardware_block_BlockInfo* out_info) const override;
@@ -68,15 +72,17 @@ class BlockDevice : public BlockDeviceInterface {
   zx_status_t CheckCustomFilesystem(fs_management::DiskFormat format) const;
   zx_status_t FormatCustomFilesystem(fs_management::DiskFormat format);
 
+ protected:
+  FilesystemMounter* mounter_ = nullptr;
+  const fshost_config::Config* device_config_;
+
  private:
   zx_status_t MountData(fs_management::MountOptions* options, zx::channel block_device);
 
   // Copies source data for filesystems that aren't components.
   zx_status_t CopySourceData(const Copier& copier) const;
 
-  FilesystemMounter* mounter_ = nullptr;
   fbl::unique_fd fd_;
-  const fshost_config::Config* device_config_;
   mutable std::optional<fuchsia_hardware_block_BlockInfo> info_;
   mutable fs_management::DiskFormat content_format_;
   fs_management::DiskFormat format_ = fs_management::kDiskFormatUnknown;

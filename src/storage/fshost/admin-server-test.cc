@@ -182,8 +182,14 @@ TEST_F(AdminServerTest, GetDevicePathForBuiltInFilesystem) {
         GTEST_FAIL() << "Timed out trying to get device path";
       usleep(100);
     } else {
-      EXPECT_EQ(result.value_NEW().value()->path.get(),
-                ramdisk_or->path() + "/fvm/data-p-1/block/zxcrypt/unsealed/block");
+      if (DataFilesystemFormat() == "fxfs") {
+        // Fxfs doesn't use zxcrypt.
+        EXPECT_EQ(result.value_NEW().value()->path.get(),
+                  ramdisk_or->path() + "/fvm/data-p-1/block");
+      } else {
+        EXPECT_EQ(result.value_NEW().value()->path.get(),
+                  ramdisk_or->path() + "/fvm/data-p-1/block/zxcrypt/unsealed/block");
+      }
       break;
     }
   }

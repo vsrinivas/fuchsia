@@ -6,10 +6,12 @@
 
 #include <dirent.h>
 #include <fcntl.h>
+#include <fidl/fuchsia.device.manager/cpp/markers.h>
 #include <fidl/fuchsia.device/cpp/wire.h>
 #include <fidl/fuchsia.fs.startup/cpp/wire.h>
 #include <fidl/fuchsia.fs/cpp/wire.h>
 #include <fidl/fuchsia.hardware.block.volume/cpp/wire.h>
+#include <fidl/fuchsia.io/cpp/wire_types.h>
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <inttypes.h>
@@ -37,6 +39,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
+#include <cctype>
 #include <utility>
 
 #include <fbl/algorithm.h>
@@ -52,6 +55,7 @@
 #include "src/lib/files/file.h"
 #include "src/lib/storage/fs_management/cpp/format.h"
 #include "src/lib/storage/fs_management/cpp/mount.h"
+#include "src/lib/storage/fs_management/cpp/options.h"
 #include "src/lib/uuid/uuid.h"
 #include "src/storage/fshost/block-device-interface.h"
 #include "src/storage/fvm/format.h"
@@ -155,16 +159,8 @@ zx_status_t RunBinary(const fbl::Vector<const char*>& argv,
   return ZX_OK;
 }
 
-// Tries to mount Minfs and reads all data found on the minfs partition.  Errors are ignored.
-Copier TryReadingMinfs(fidl::ClientEnd<fuchsia_io::Node> device) {
-  fbl::Vector<const char*> argv = {kMinfsPath, "mount", nullptr};
-  auto export_root_or = fidl::CreateEndpoints<fuchsia_io::Directory>();
-  if (export_root_or.is_error())
-    return {};
-  if (RunBinary(argv, std::move(device), std::move(export_root_or->server)) != ZX_OK)
-    return {};
-
-  auto root_dir_or = fs_management::FsRootHandle(export_root_or->client);
+Copier TryReadingFilesystem(fidl::ClientEnd<fuchsia_io::Directory> export_root) {
+  auto root_dir_or = fs_management::FsRootHandle(export_root);
   if (root_dir_or.is_error())
     return {};
 
@@ -172,7 +168,7 @@ Copier TryReadingMinfs(fidl::ClientEnd<fuchsia_io::Node> device) {
   if (zx_status_t status =
           fdio_fd_create(root_dir_or->TakeChannel().release(), fd.reset_and_get_address());
       status != ZX_OK) {
-    FX_LOGS(ERROR) << "fdio_fd_create failed";
+    FX_LOGS(ERROR) << "fdio_fd_create failed: " << zx_status_get_string(status);
     return {};
   }
 
@@ -180,13 +176,13 @@ Copier TryReadingMinfs(fidl::ClientEnd<fuchsia_io::Node> device) {
   zx::channel root_dir_handle;
   if (zx_status_t status = fdio_fd_clone(fd.get(), root_dir_handle.reset_and_get_address());
       status != ZX_OK) {
-    FX_LOGS(ERROR) << "fdio_fd_clone failed";
+    FX_LOGS(ERROR) << "fdio_fd_clone failed: " << zx_status_get_string(status);
     return {};
   }
 
   fidl::ClientEnd<fuchsia_io::Directory> root_dir_client(std::move(root_dir_handle));
-  auto unmount = fit::defer([&export_root_or] {
-    [[maybe_unused]] auto ignore_failure = fs_management::Shutdown(export_root_or->client);
+  auto unmount = fit::defer([&export_root] {
+    [[maybe_unused]] auto ignore_failure = fs_management::Shutdown(export_root);
   });
 
   if (auto copier_or = Copier::Read(std::move(fd)); copier_or.is_error()) {
@@ -195,6 +191,17 @@ Copier TryReadingMinfs(fidl::ClientEnd<fuchsia_io::Node> device) {
   } else {
     return std::move(copier_or).value();
   }
+}
+
+// Tries to mount Minfs and reads all data found on the minfs partition.  Errors are ignored.
+Copier TryReadingMinfs(fidl::ClientEnd<fuchsia_io::Node> device) {
+  fbl::Vector<const char*> argv = {kMinfsPath, "mount", nullptr};
+  auto export_root_or = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  if (export_root_or.is_error())
+    return {};
+  if (RunBinary(argv, std::move(device), std::move(export_root_or->server)) != ZX_OK)
+    return {};
+  return TryReadingFilesystem(std::move(export_root_or->client));
 }
 
 }  // namespace
@@ -252,10 +259,34 @@ fuchsia_fs_startup::wire::StartOptions GetBlobfsStartOptions(
 BlockDevice::BlockDevice(FilesystemMounter* mounter, fbl::unique_fd fd,
                          const fshost_config::Config* device_config)
     : mounter_(mounter),
-      fd_(std::move(fd)),
       device_config_(device_config),
+      fd_(std::move(fd)),
       content_format_(fs_management::kDiskFormatUnknown),
       topological_path_(GetTopologicalPath(fd_.get())) {}
+
+zx::status<std::unique_ptr<BlockDeviceInterface>> BlockDevice::OpenBlockDevice(
+    const char* topological_path) const {
+  fbl::unique_fd fd(open(topological_path, O_RDWR, S_IFBLK));
+  if (!fd) {
+    FX_LOGS(WARNING) << "Failed to open block device " << topological_path << ": "
+                     << strerror(errno);
+    return zx::error(ZX_ERR_INVALID_ARGS);
+  }
+  return zx::ok(
+      std::unique_ptr<BlockDevice>(new BlockDevice(mounter_, std::move(fd), device_config_)));
+}
+
+void BlockDevice::AddData(Copier copier) { source_data_ = std::move(copier); }
+
+zx::status<Copier> BlockDevice::ExtractData() {
+  if (content_format() != fs_management::kDiskFormatMinfs) {
+    return zx::error(ZX_ERR_NOT_SUPPORTED);
+  }
+  auto device_or = GetDeviceEndPoint();
+  if (device_or.is_error())
+    return device_or.take_error();
+  return zx::ok(TryReadingMinfs(std::move(device_or).value()));
+}
 
 DiskFormat BlockDevice::content_format() const {
   if (content_format_ != fs_management::kDiskFormatUnknown) {

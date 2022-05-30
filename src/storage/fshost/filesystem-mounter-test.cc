@@ -145,7 +145,7 @@ TEST_F(MounterTest, DurableMount) {
   TestMounter mounter(manager(), &config_);
 
   mounter.ExpectFilesystem(FilesystemType::kMinfs);
-  ASSERT_OK(mounter.MountDurable(zx::channel(), fs_management::MountOptions()));
+  ASSERT_EQ(mounter.MountDurable(zx::channel(), fs_management::MountOptions()), ZX_OK);
   ASSERT_TRUE(mounter.DurableMounted());
 }
 

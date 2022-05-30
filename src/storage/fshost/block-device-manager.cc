@@ -4,6 +4,7 @@
 
 #include "src/storage/fshost/block-device-manager.h"
 
+#include <fidl/fuchsia.device/cpp/markers.h>
 #include <fidl/fuchsia.device/cpp/wire.h>
 #include <inttypes.h>
 #include <lib/fdio/cpp/caller.h>
@@ -13,8 +14,14 @@
 
 #include <set>
 
+#include "lib/fdio/directory.h"
+#include "lib/fidl/llcpp/channel.h"
+#include "lib/service/llcpp/service.h"
 #include "src/lib/storage/fs_management/cpp/format.h"
+#include "src/storage/fshost/block-device-interface.h"
 #include "src/storage/fshost/constants.h"
+#include "src/storage/fshost/copier.h"
+#include "zircon/errors.h"
 
 namespace fshost {
 namespace {
@@ -200,8 +207,120 @@ class SimpleMatcher : public BlockDeviceManager::Matcher {
   const PartitionLimit limit_;
 };
 
-// Matches a data partition, which is a mutable filesystem (e.g. minfs, Fxfs) optionally backed by
+static constexpr std::string_view kZxcryptSuffix = "/zxcrypt/unsealed/block";
+
+// Matches Fxfs partitions and manages migrations that may need to happen, e.g. removing zxcrypt
+// from beneath Fxfs or migrating from a zxcrypt+minfs partition.
+class FxfsMatcher : public BlockDeviceManager::Matcher {
+ public:
+  using PartitionNames = std::set<std::string, std::less<>>;
+
+  FxfsMatcher(const PartitionMapMatcher& map, PartitionNames partition_names,
+              const fuchsia_hardware_block_partition::wire::Guid& type_guid, PartitionLimit limit,
+              bool format_on_corruption)
+      : map_(map),
+        partition_names_(std::move(partition_names)),
+        type_guid_(type_guid),
+        limit_(limit),
+        format_on_corruption_(format_on_corruption) {}
+
+  fs_management::DiskFormat Match(const BlockDeviceInterface& device) override {
+    bool is_child =
+        zxcrypt_parent_path_.empty()
+            ? map_.IsChild(device)
+            : device.topological_path() == zxcrypt_parent_path_ + std::string(kZxcryptSuffix);
+    if (!is_child || memcmp(&device.GetTypeGuid(), &type_guid_, sizeof(type_guid_)) != 0 ||
+        partition_names_.find(device.partition_name()) == partition_names_.end()) {
+      return fs_management::kDiskFormatUnknown;
+    }
+    // We don't actually want to mount a zxcrypt-contained data partition, but we need to extract
+    // any data stored therein (to support paving flows which currently only create zxcrypt+minfs
+    // partitions).  When we find a zxcrypt-formatted data partition, we will bind it, pull the data
+    // off, and then reformat to Fxfs (without zxcrypt).
+    if (device.content_format() == fs_management::kDiskFormatZxcrypt) {
+      if (!zxcrypt_parent_path_.empty()) {
+        FX_LOGS(WARNING) << "Unexpectedly found nested zxcrypt devices.  Not proceeding.";
+        return fs_management::kDiskFormatUnknown;
+      }
+      return fs_management::kDiskFormatZxcrypt;
+    }
+    return fs_management::kDiskFormatFxfs;
+  }
+
+  zx_status_t Add(BlockDeviceInterface& device) override {
+    if (limit_.max_bytes) {
+      if (limit_.apply_to_ramdisk || !IsRamdisk(device)) {
+        // Set the max size for this partition in FVM. This is not persisted so we need to set it
+        // every time on mount. Ignore failures since the max size is mostly a guard rail against
+        // bad behavior and we can still function.
+        [[maybe_unused]] auto status =
+            device.SetPartitionMaxSize(GetFvmPathForPartitionMap(map_), limit_.max_bytes);
+      }
+    }
+    if (device.GetFormat() == fs_management::kDiskFormatZxcrypt) {
+      // The channel needs to be cloned before Add is called, since BlockDevice::Add consumes the
+      // device channel for zxcrypt.
+      zxcrypt_parent_path_ = device.topological_path();
+      return device.Add(format_on_corruption_);
+    }
+    if (zxcrypt_parent_path_.empty()) {
+      return device.Add(format_on_corruption_);
+    }
+    // Copy the data out of the child device.
+    FX_LOGS(INFO) << "Copying data out of " << device.topological_path();
+    auto copier_or = device.ExtractData();
+    Copier copied_data;
+    if (copier_or.is_error()) {
+      FX_LOGS(WARNING) << "Failed to copy data out from old partition: "
+                       << copier_or.status_string() << ".  Reformatting.  Expect data loss!";
+    } else {
+      copied_data = std::move(*copier_or);
+    }
+    // Once we have done so, tear down the zxcrypt device so that we can use it for Fxfs.
+    FX_LOGS(INFO) << "Shutting down zxcrypt...";
+    auto controller_or = service::Connect<fuchsia_device::Controller>(zxcrypt_parent_path_.c_str());
+    if (controller_or.is_error()) {
+      FX_LOGS(ERROR) << "Failed to connect to zcxrypt: " << controller_or.status_string();
+      return ZX_ERR_BAD_STATE;
+    }
+    auto resp = fidl::WireCall(*controller_or)->UnbindChildren();
+    zx_status_t status = resp.status();
+    if (status != ZX_OK) {
+      FX_LOGS(WARNING) << "Failed to send UnbindChildren: " << zx_status_get_string(status);
+      return ZX_ERR_BAD_STATE;
+    }
+    if (resp.Unwrap_NEW()->is_error()) {
+      FX_LOGS(WARNING) << "UnbindChildren failed: "
+                       << zx_status_get_string(resp.Unwrap_NEW()->error_value());
+      return ZX_ERR_BAD_STATE;
+    }
+
+    FX_LOGS(INFO) << "Shut down zxcrypt.  Re-adding device " << zxcrypt_parent_path_;
+    auto parent_or = device.OpenBlockDevice(zxcrypt_parent_path_.c_str());
+    if (parent_or.is_error()) {
+      FX_LOGS(WARNING) << "Failed to open parent: " << parent_or.status_string();
+      return ZX_ERR_BAD_STATE;
+    }
+    zxcrypt_parent_path_.clear();
+    parent_or->AddData(std::move(copied_data));
+    parent_or->SetFormat(fs_management::DiskFormat::kDiskFormatFxfs);
+    return parent_or->Add();
+  }
+
+ private:
+  const PartitionMapMatcher& map_;
+  const PartitionNames partition_names_;
+  const fuchsia_hardware_block_partition::wire::Guid type_guid_;
+  const PartitionLimit limit_;
+  const bool format_on_corruption_;
+
+  // Set to the topological path of the block device containing zxcrypt once it's been bound.
+  std::string zxcrypt_parent_path_;
+};
+
+// Matches a data partition, which is a mutable filesystem (e.g. minfs) optionally backed by
 // zxcrypt.
+// Note that Fxfs partitions are matched by FxfsMatcher.
 class DataPartitionMatcher : public BlockDeviceManager::Matcher {
  public:
   using PartitionNames = std::set<std::string, std::less<>>;
@@ -219,8 +338,6 @@ class DataPartitionMatcher : public BlockDeviceManager::Matcher {
     fs_management::DiskFormat format = fs_management::kDiskFormatMinfs;
     bool format_data_on_corruption = true;
   };
-
-  static constexpr std::string_view kZxcryptSuffix = "/zxcrypt/unsealed/block";
 
   DataPartitionMatcher(const PartitionMapMatcher& map, PartitionNames partition_names,
                        std::string_view preferred_name,
@@ -340,6 +457,8 @@ class DataPartitionMatcher : public BlockDeviceManager::Matcher {
   const Variant variant_;
   const PartitionLimit limit_;
 
+  // Once we have matched a zxcrypt partition, this field will be set to the expected topological
+  // path of the child device, which will then be matched against directly.
   std::string expected_inner_path_;
   // If we reformat the zxcrypt device, this flag is set so that we know we should reformat the
   // minfs device when it appears.
@@ -462,10 +581,16 @@ BlockDeviceManager::BlockDeviceManager(const fshost_config::Config* config) : co
       fvm_required = true;
     }
     if (config_.data()) {
-      matchers_.push_back(std::make_unique<DataPartitionMatcher>(
-          *fvm, GetDataPartitionNames(config_.allow_legacy_data_partition_names()),
-          kDataPartitionLabel, data_type_guid, DataPartitionMatcher::GetVariantFromConfig(config_),
-          data_limit));
+      if (config_.data_filesystem_format() == "fxfs") {
+        matchers_.push_back(std::make_unique<FxfsMatcher>(
+            *fvm, GetDataPartitionNames(config_.allow_legacy_data_partition_names()),
+            data_type_guid, data_limit, config_.format_data_on_corruption()));
+      } else {
+        matchers_.push_back(std::make_unique<DataPartitionMatcher>(
+            *fvm, GetDataPartitionNames(config_.allow_legacy_data_partition_names()),
+            kDataPartitionLabel, data_type_guid,
+            DataPartitionMatcher::GetVariantFromConfig(config_), data_limit));
+      }
       fvm_required = true;
     }
   }

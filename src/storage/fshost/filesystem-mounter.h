@@ -55,6 +55,16 @@ class FilesystemMounter {
   zx_status_t MountFactoryFs(zx::channel block_device_client,
                              const fs_management::MountOptions& options);
 
+  // Actually launches the filesystem component.
+  //
+  // TODO(fxbug.dev/91577): All filesystems should be launched as components. Once they are, remove
+  // LaunchFs.
+  //
+  // Virtualized to enable testing.
+  virtual zx::status<> LaunchFsComponent(zx::channel block_device,
+                                         fuchsia_fs_startup::wire::StartOptions options,
+                                         const std::string& fs_name);
+
   std::shared_ptr<FshostBootArgs> boot_args() { return fshost_.boot_args(); }
   void ReportPartitionCorrupted(fs_management::DiskFormat format);
 
@@ -83,16 +93,6 @@ class FilesystemMounter {
   // Virtualized to enable testing.
   virtual zx_status_t LaunchFs(int argc, const char** argv, zx_handle_t* hnd, uint32_t* ids,
                                size_t len);
-
-  // Actually launches the filesystem component.
-  //
-  // TODO(fxbug.dev/91577): All filesystems should be launched as components. Once they are, remove
-  // LaunchFs.
-  //
-  // Virtualized to enable testing.
-  virtual zx::status<> LaunchFsComponent(zx::channel block_device,
-                                         fuchsia_fs_startup::wire::StartOptions options,
-                                         const std::string& fs_name);
 
   static std::string GetDevicePath(const zx::channel& block_device);
 
