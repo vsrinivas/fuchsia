@@ -112,7 +112,12 @@ pub(crate) trait DadHandler: IpDeviceIdContext<Ipv6> {
     );
 
     /// Handles a timer.
-    fn handle_timer(&mut self, DadTimerId { device_id, addr }: DadTimerId<Self::DeviceId>) {
+    // TODO(https://fxbug.dev/101399): Replace this with a `TimerHandler` bound.
+    fn handle_timer(
+        &mut self,
+        _ctx: &mut (),
+        DadTimerId { device_id, addr }: DadTimerId<Self::DeviceId>,
+    ) {
         self.do_duplicate_address_detection(device_id, addr)
     }
 }

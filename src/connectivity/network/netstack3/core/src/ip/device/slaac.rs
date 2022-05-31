@@ -735,8 +735,12 @@ impl<C: SlaacContext> SlaacHandler for C {
     }
 }
 
-impl<C: SlaacContext> TimerHandler<SlaacTimerId<C::DeviceId>> for C {
-    fn handle_timer(&mut self, SlaacTimerId { device_id, inner }: SlaacTimerId<C::DeviceId>) {
+impl<C: SlaacContext> TimerHandler<(), SlaacTimerId<C::DeviceId>> for C {
+    fn handle_timer(
+        &mut self,
+        _ctx: &mut (),
+        SlaacTimerId { device_id, inner }: SlaacTimerId<C::DeviceId>,
+    ) {
         match inner {
             InnerSlaacTimerId::DeprecateSlaacAddress { addr } => {
                 set_deprecated_slaac_addr(self, device_id, &addr, true)

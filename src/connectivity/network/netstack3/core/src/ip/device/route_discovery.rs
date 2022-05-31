@@ -163,9 +163,10 @@ impl<C: Ipv6RouteDiscoveryContext> RouteDiscoveryHandler for C {
     }
 }
 
-impl<C: Ipv6RouteDiscoveryContext> TimerHandler<Ipv6DiscoveredRouteTimerId<C::DeviceId>> for C {
+impl<C: Ipv6RouteDiscoveryContext> TimerHandler<(), Ipv6DiscoveredRouteTimerId<C::DeviceId>> for C {
     fn handle_timer(
         &mut self,
+        _ctx: &mut (),
         Ipv6DiscoveredRouteTimerId { device_id, route }: Ipv6DiscoveredRouteTimerId<C::DeviceId>,
     ) {
         let Ipv6RouteDiscoveryState { routes } = self.get_discovered_routes_mut(device_id);

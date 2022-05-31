@@ -198,7 +198,7 @@ where
     C: BlanketCoreContext + AsMut<timers::TimerDispatcher<TimerId>> + Send + Sync + 'static,
 {
     fn handle_expired_timer(&mut self, timer: TimerId) {
-        handle_timer(self, timer)
+        handle_timer(self, &mut (), timer)
     }
 
     fn get_timer_dispatcher(&mut self) -> &mut timers::TimerDispatcher<TimerId> {

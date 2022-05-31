@@ -384,8 +384,8 @@ impl_timer_context!(
     id
 );
 
-impl<C: MldContext> TimerHandler<MldDelayedReportTimerId<C::DeviceId>> for C {
-    fn handle_timer(&mut self, timer: MldDelayedReportTimerId<C::DeviceId>) {
+impl<C: MldContext> TimerHandler<(), MldDelayedReportTimerId<C::DeviceId>> for C {
+    fn handle_timer(&mut self, _ctx: &mut (), timer: MldDelayedReportTimerId<C::DeviceId>) {
         let MldDelayedReportTimerId(id) = timer;
         gmp_handle_timer(self, &mut (), id);
     }

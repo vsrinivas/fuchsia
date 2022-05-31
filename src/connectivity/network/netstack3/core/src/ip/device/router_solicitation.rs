@@ -102,7 +102,8 @@ pub(crate) trait RsHandler: IpDeviceIdContext<Ipv6> {
     fn stop_router_solicitation(&mut self, device_id: Self::DeviceId);
 
     /// Handles a timer.
-    fn handle_timer(&mut self, id: RsTimerId<Self::DeviceId>);
+    // TODO: Replace this with a `TimerHandler` bound.
+    fn handle_timer(&mut self, _ctx: &mut (), id: RsTimerId<Self::DeviceId>);
 }
 
 impl<C: RsContext> RsHandler for C {
@@ -128,8 +129,8 @@ impl<C: RsContext> RsHandler for C {
         let _: Option<C::Instant> = self.cancel_timer(RsTimerId { device_id });
     }
 
-    fn handle_timer(&mut self, RsTimerId { device_id }: RsTimerId<C::DeviceId>) {
-        do_router_solicitation(self, &mut (), device_id)
+    fn handle_timer(&mut self, ctx: &mut (), RsTimerId { device_id }: RsTimerId<C::DeviceId>) {
+        do_router_solicitation(self, ctx, device_id)
     }
 }
 

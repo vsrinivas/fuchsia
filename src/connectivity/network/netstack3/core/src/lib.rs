@@ -340,8 +340,12 @@ impl_timer_context!(
     id
 );
 
-/// Handle a generic timer event.
-pub fn handle_timer<D: EventDispatcher, C: BlanketCoreContext>(ctx: &mut Ctx<D, C>, id: TimerId) {
+/// Handles a generic timer event.
+pub fn handle_timer<D: EventDispatcher, C: BlanketCoreContext>(
+    ctx: &mut Ctx<D, C>,
+    _ctx: &mut (),
+    id: TimerId,
+) {
     trace!("handle_timer: dispatching timerid: {:?}", id);
 
     match id {

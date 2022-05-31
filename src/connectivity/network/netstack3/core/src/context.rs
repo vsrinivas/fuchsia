@@ -212,9 +212,9 @@ impl<D: EventDispatcher, C: BlanketCoreContext> TimerContext<TimerId> for Ctx<D,
 /// A handler for timer firing events.
 ///
 /// A `TimerHandler` is a type capable of handling the event of a timer firing.
-pub(crate) trait TimerHandler<Id> {
+pub(crate) trait TimerHandler<C, Id> {
     /// Handle a timer firing.
-    fn handle_timer(&mut self, id: Id);
+    fn handle_timer(&mut self, ctx: &mut C, id: Id);
 }
 
 // NOTE:
@@ -923,10 +923,10 @@ pub(crate) mod testutil {
         ///
         /// `trigger_next_timer` triggers the next timer, if any, advances the
         /// internal clock to the timer's scheduled time, and returns its ID.
-        fn trigger_next_timer<F: FnMut(&mut Self, Id)>(&mut self, mut f: F) -> Option<Id> {
+        fn trigger_next_timer<F: FnMut(&mut Self, &mut (), Id)>(&mut self, mut f: F) -> Option<Id> {
             self.as_mut().timers.pop().map(|InstantAndData(t, id)| {
                 self.as_mut().instant.time = t;
-                f(self, id.clone());
+                f(self, &mut (), id.clone());
                 id
             })
         }
@@ -939,7 +939,7 @@ pub(crate) mod testutil {
         /// # Panics
         ///
         /// Panics if `instant` is in the past.
-        fn trigger_timers_until_instant<F: FnMut(&mut Self, Id)>(
+        fn trigger_timers_until_instant<F: FnMut(&mut Self, &mut (), Id)>(
             &mut self,
             instant: DummyInstant,
             mut f: F,
@@ -967,7 +967,7 @@ pub(crate) mod testutil {
         /// until then, inclusive, by calling `f` on them.
         ///
         /// Returns the timers which were triggered.
-        fn trigger_timers_for<F: FnMut(&mut Self, Id)>(
+        fn trigger_timers_for<F: FnMut(&mut Self, &mut (), Id)>(
             &mut self,
             duration: Duration,
             f: F,
@@ -993,7 +993,7 @@ pub(crate) mod testutil {
         #[track_caller]
         fn trigger_timers_and_expect_unordered<
             I: IntoIterator<Item = Id>,
-            F: FnMut(&mut Self, Id),
+            F: FnMut(&mut Self, &mut (), Id),
         >(
             &mut self,
             timers: I,
@@ -1027,7 +1027,7 @@ pub(crate) mod testutil {
         /// only be triggered until `instant` (inclusive).
         fn trigger_timers_until_and_expect_unordered<
             I: IntoIterator<Item = Id>,
-            F: FnMut(&mut Self, Id),
+            F: FnMut(&mut Self, &mut (), Id),
         >(
             &mut self,
             instant: DummyInstant,
@@ -1061,7 +1061,10 @@ pub(crate) mod testutil {
         ///
         /// Like `trigger_timers_and_expect_unordered`, except that timers will
         /// only be triggered for `duration` (inclusive).
-        fn trigger_timers_for_and_expect<I: IntoIterator<Item = Id>, F: FnMut(&mut Self, Id)>(
+        fn trigger_timers_for_and_expect<
+            I: IntoIterator<Item = Id>,
+            F: FnMut(&mut Self, &mut (), Id),
+        >(
             &mut self,
             duration: Duration,
             timers: I,
@@ -1585,7 +1588,7 @@ pub(crate) mod testutil {
         /// destinations.
         pub(crate) fn step<
             FH: FnMut(&mut Ctx, RecvMeta, Buf<Vec<u8>>),
-            FT: FnMut(&mut Ctx, Ctx::TimerId),
+            FT: FnMut(&mut Ctx, &mut (), Ctx::TimerId),
         >(
             &mut self,
             mut handle_frame: FH,
@@ -1646,7 +1649,7 @@ pub(crate) mod testutil {
                 }
 
                 for t in timers {
-                    handle_timer(ctx, t);
+                    handle_timer(ctx, &mut (), t);
                     ret.timers_fired += 1;
                 }
             }
@@ -1662,7 +1665,7 @@ pub(crate) mod testutil {
         /// Also panics under the same conditions as [`step`].
         pub(crate) fn run_until_idle<
             FH: FnMut(&mut Ctx, RecvMeta, Buf<Vec<u8>>) + Copy,
-            FT: FnMut(&mut Ctx, Ctx::TimerId) + Copy,
+            FT: FnMut(&mut Ctx, &mut (), Ctx::TimerId) + Copy,
         >(
             &mut self,
             handle_frame: FH,
@@ -1809,8 +1812,10 @@ pub(crate) mod testutil {
         fn test_dummy_timer_context() {
             // An implementation of `TimerContext` that uses `usize` timer IDs
             // and stores every timer in a `Vec`.
-            impl<M, E: Debug, D> TimerHandler<usize> for DummyCtx<Vec<(usize, DummyInstant)>, usize, M, E, D> {
-                fn handle_timer(&mut self, id: usize) {
+            impl<M, E: Debug, D> TimerHandler<(), usize>
+                for DummyCtx<Vec<(usize, DummyInstant)>, usize, M, E, D>
+            {
+                fn handle_timer(&mut self, _ctx: &mut (), id: usize) {
                     let now = self.now();
                     self.get_mut().push((id, now));
                 }

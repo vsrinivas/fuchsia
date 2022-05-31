@@ -334,8 +334,8 @@ impl<DeviceId> IgmpTimerId<DeviceId> {
     }
 }
 
-impl<C: IgmpContext> TimerHandler<IgmpTimerId<C::DeviceId>> for C {
-    fn handle_timer(&mut self, timer: IgmpTimerId<C::DeviceId>) {
+impl<C: IgmpContext> TimerHandler<(), IgmpTimerId<C::DeviceId>> for C {
+    fn handle_timer(&mut self, _ctx: &mut (), timer: IgmpTimerId<C::DeviceId>) {
         match timer {
             IgmpTimerId::Gmp(id) => gmp_handle_timer(self, &mut (), id),
             IgmpTimerId::V1RouterPresent { device } => {

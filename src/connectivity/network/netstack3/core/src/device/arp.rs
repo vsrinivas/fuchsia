@@ -202,7 +202,8 @@ impl<D: ArpDevice, P: PType, B: BufferMut, C: BufferArpContext<D, P, B>> ArpPack
 /// `ArpHandler<D, P>` is implemented for any type which implements
 /// [`ArpContext<D, P>`], and it can also be mocked for use in testing.
 pub(super) trait ArpHandler<D: ArpDevice, P: PType>:
-    ArpDeviceIdContext<D> + TimerHandler<ArpTimerId<D, P, <Self as ArpDeviceIdContext<D>>::DeviceId>>
+    ArpDeviceIdContext<D>
+    + TimerHandler<(), ArpTimerId<D, P, <Self as ArpDeviceIdContext<D>>::DeviceId>>
 {
     /// Cleans up state associated with the device.
     ///
@@ -291,7 +292,7 @@ pub(super) fn handle_timer<D: ArpDevice, P: PType, H: ArpHandler<D, P>>(
     ctx: &mut H,
     id: ArpTimerId<D, P, H::DeviceId>,
 ) {
-    ctx.handle_timer(id)
+    ctx.handle_timer(&mut (), id)
 }
 
 /// A handler for ARP events.
@@ -307,10 +308,10 @@ struct ArpTimerFrameHandler<D: ArpDevice, P> {
     _never: Never,
 }
 
-impl<D: ArpDevice, P: PType, C: ArpContext<D, P>> TimerHandler<ArpTimerId<D, P, C::DeviceId>>
+impl<D: ArpDevice, P: PType, C: ArpContext<D, P>> TimerHandler<(), ArpTimerId<D, P, C::DeviceId>>
     for C
 {
-    fn handle_timer(&mut self, id: ArpTimerId<D, P, C::DeviceId>) {
+    fn handle_timer(&mut self, _ctx: &mut (), id: ArpTimerId<D, P, C::DeviceId>) {
         match id.inner {
             ArpTimerIdInner::RequestRetry { proto_addr } => {
                 send_arp_request(self, &mut (), id.device_id, proto_addr)

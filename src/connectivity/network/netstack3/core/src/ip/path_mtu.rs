@@ -411,8 +411,8 @@ mod tests {
     /// to `DummyTimerCtx::trigger_timers_for` and friends.
     fn get_timer_handler<I: Ip, Instant: crate::Instant, C: PmtuContext<I, Instant = Instant>>(
         cache: &mut PmtuCache<I, Instant>,
-    ) -> impl FnMut(&mut C, PmtuTimerId<I>) + '_ {
-        move |ctx, id| cache.handle_timer(ctx, &mut (), id)
+    ) -> impl FnMut(&mut C, &mut (), PmtuTimerId<I>) + '_ {
+        move |ctx, _ctx, id| cache.handle_timer(ctx, &mut (), id)
     }
 
     #[test]

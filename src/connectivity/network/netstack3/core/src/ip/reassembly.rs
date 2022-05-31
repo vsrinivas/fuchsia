@@ -1033,8 +1033,8 @@ mod tests {
     /// to `DummyTimerCtx::trigger_timers_for` and friends.
     fn get_timer_handler<I: Ip, C>(
         cache: &mut IpPacketFragmentCache<I>,
-    ) -> impl FnMut(&mut C, FragmentCacheKey<I::Addr>) + '_ {
-        move |_ctx, id| cache.handle_timer(id)
+    ) -> impl FnMut(&mut C, &mut (), FragmentCacheKey<I::Addr>) + '_ {
+        move |_ctx, __ctx, id| cache.handle_timer(id)
     }
 
     /// Gets a `FragmentCacheKey` with the remote and local IP addresses hard
