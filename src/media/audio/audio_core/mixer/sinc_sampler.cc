@@ -12,8 +12,8 @@
 #include "src/media/audio/audio_core/mixer/channel_strip.h"
 #include "src/media/audio/audio_core/mixer/constants.h"
 #include "src/media/audio/audio_core/mixer/filter.h"
-#include "src/media/audio/audio_core/mixer/mixer_utils.h"
 #include "src/media/audio/audio_core/mixer/position_manager.h"
+#include "src/media/audio/lib/processing/sampler.h"
 
 namespace media::audio::mixer {
 
@@ -141,8 +141,6 @@ inline void SincSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::M
   static_assert(GainType != media_audio::GainType::kSilent || DoAccumulate == true,
                 "Mixing muted streams without accumulation is explicitly unsupported");
 
-  using DM = DestMixer<GainType, DoAccumulate>;
-
   auto info = &bookkeeping();
   auto frac_source_offset = source_offset_ptr->raw_value();
   const auto frac_neg_width = neg_filter_width().raw_value();
@@ -219,7 +217,8 @@ inline void SincSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::M
         for (size_t dest_chan = 0; dest_chan < DestChanCount; ++dest_chan) {
           float sample = filter_.ComputeSample(frac_interp_fraction,
                                                &(working_data_[dest_chan][cache_center_idx]));
-          dest_frame[dest_chan] = DM::Mix(dest_frame[dest_chan], sample, amplitude_scale);
+          media_audio::MixSample<GainType, DoAccumulate>(sample, &dest_frame[dest_chan],
+                                                         amplitude_scale);
         }
 
         frac_source_offset = position_.AdvanceFrame();

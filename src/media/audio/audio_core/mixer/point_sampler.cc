@@ -11,8 +11,8 @@
 #include <limits>
 
 #include "src/media/audio/audio_core/mixer/constants.h"
-#include "src/media/audio/audio_core/mixer/mixer_utils.h"
 #include "src/media/audio/audio_core/mixer/position_manager.h"
+#include "src/media/audio/lib/processing/sampler.h"
 
 namespace media::audio::mixer {
 
@@ -122,7 +122,6 @@ inline void PointSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::
   static_assert(GainType != media_audio::GainType::kSilent || DoAccumulate == true,
                 "Mixing muted streams without accumulation is explicitly unsupported");
 
-  using DM = DestMixer<GainType, DoAccumulate>;
   auto dest_offset = *dest_offset_ptr;
 
   using SR = SourceReader<SourceSampleType, SourceChanCount, DestChanCount>;
@@ -160,7 +159,7 @@ inline void PointSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::
 
       for (int32_t dest_chan = 0; dest_chan < DestChanCount; ++dest_chan) {
         float sample = SR::Read(source_ptr + source_sample_idx, dest_chan);
-        out[dest_chan] = DM::Mix(out[dest_chan], sample, amplitude_scale);
+        media_audio::MixSample<GainType, DoAccumulate>(sample, &out[dest_chan], amplitude_scale);
       }
 
       source_sample_idx += SourceChanCount;
@@ -247,7 +246,6 @@ inline void NxNPointSamplerImpl<SourceSampleType>::Mix(
                 "Mixing muted streams without accumulation is explicitly unsupported");
 
   using SR = SourceReader<SourceSampleType, 1, 1>;
-  using DM = DestMixer<GainType, DoAccumulate>;
   auto dest_offset = *dest_offset_ptr;
 
   auto frac_source_offset = source_offset_ptr->raw_value();
@@ -283,7 +281,7 @@ inline void NxNPointSamplerImpl<SourceSampleType>::Mix(
 
       for (int32_t dest_chan = 0; dest_chan < chan_count; ++dest_chan) {
         float sample = SR::Read(source_ptr + source_sample_idx, dest_chan);
-        out[dest_chan] = DM::Mix(out[dest_chan], sample, amplitude_scale);
+        media_audio::MixSample<GainType, DoAccumulate>(sample, &out[dest_chan], amplitude_scale);
       }
 
       source_sample_idx += chan_count;

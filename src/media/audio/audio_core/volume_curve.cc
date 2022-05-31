@@ -11,11 +11,18 @@
 #include <algorithm>
 
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/media/audio/audio_core/mixer/mixer_utils.h"
 #include "src/media/audio/audio_core/process_config_loader.h"
 #include "src/media/audio/lib/processing/gain.h"
 
 namespace media::audio {
+
+namespace {
+
+// First-order Linear Interpolation formula (Position-fraction):
+//   out = Pf(S' - S) + S
+inline float LinearInterpolate(float A, float B, float alpha) { return ((B - A) * alpha) + A; }
+
+}  // namespace
 
 VolumeCurve VolumeCurve::DefaultForMinGain(float min_gain_db) {
   FX_DCHECK(min_gain_db < media_audio::kUnityGainDb);
@@ -95,7 +102,7 @@ float VolumeCurve::VolumeToDb(float volume) const {
 
   const auto alpha = (x - x0) / (x1 - x0);
 
-  return mixer::LinearInterpolate(a, b, alpha);
+  return LinearInterpolate(a, b, alpha);
 }
 
 float VolumeCurve::DbToVolume(float gain_dbfs) const {
@@ -120,7 +127,7 @@ float VolumeCurve::DbToVolume(float gain_dbfs) const {
 
   const auto alpha = (x - x0) / (x1 - x0);
 
-  return mixer::LinearInterpolate(a, b, alpha);
+  return LinearInterpolate(a, b, alpha);
 }
 
 std::optional<std::pair<VolumeCurve::VolumeMapping, VolumeCurve::VolumeMapping>>

@@ -7,7 +7,6 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/media/audio/audio_core/mixer/mixer_utils.h"
 #include "src/media/audio/lib/format2/channel_mapper.h"
 #include "src/media/audio/lib/format2/sample_converter.h"
 #include "src/media/audio/lib/processing/gain.h"

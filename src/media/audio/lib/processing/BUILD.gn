@@ -14,10 +14,12 @@ source_set("processing") {
     "gain.h",
     "gain_control.cc",
     "gain_control.h",
+    "sampler.h",
   ]
 
   deps = [
     "//sdk/lib/syslog/cpp",
+    "//src/media/audio/lib/format2",
     "//zircon/system/ulib/zx",
   ]
 }
@@ -30,11 +32,13 @@ executable("unittest-bin") {
   sources = [
     "gain_control_unittest.cc",
     "gain_unittest.cc",
+    "sampler_unittest.cc",
   ]
 
   deps = [
     ":processing",
     "//src/lib/fxl/test:gtest_main",
+    "//src/media/audio/lib/format2",
     "//third_party/googletest:gmock",
   ]
 }
