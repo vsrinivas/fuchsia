@@ -67,6 +67,7 @@ pub fn create_connection(
         unsafe { magma_create_connection2(control.device, &mut connection_out) as u64 };
 
     response.connection_out = connection_out;
+    response.hdr.type_ = virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_CREATE_CONNECTION2 as u32;
 }
 
 /// Creates a DRM image VMO and imports it to magma.
@@ -101,6 +102,8 @@ pub fn create_image(
     };
 
     response.image_out = buffer_out;
+    response.hdr.type_ = virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_VIRT_CREATE_IMAGE as u32;
+
     Ok(BufferInfo::Image(ImageInfo { info, token }))
 }
 
@@ -139,6 +142,7 @@ pub fn device_import(
         unsafe { magma_device_import(device_channel, &mut device_out as *mut u64) as u64 };
 
     response.device_out = device_out;
+    response.hdr.type_ = virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_DEVICE_IMPORT as u32;
 
     Ok(client_channel)
 }
@@ -147,11 +151,16 @@ pub fn device_import(
 ///
 /// # Parameters
 ///  - `control`: The control message that contains the device to release.
+///  - `response`: The response message that will be updated to write back to user space.
 ///
 /// SAFETY: Makes an FFI call to populate the fields of `response`. The FFI function is expected to
 /// handle an invalid device id.
-pub fn device_release(control: virtio_magma_device_release_ctrl_t) {
+pub fn device_release(
+    control: virtio_magma_device_release_ctrl_t,
+    response: &mut virtio_magma_device_release_resp_t,
+) {
     unsafe { magma_device_release(control.device) };
+    response.hdr.type_ = virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_DEVICE_RELEASE as u32;
 }
 
 /// `WireDescriptor` matches the struct used by libmagma_linux to encode some fields of the magma
@@ -235,6 +244,7 @@ pub fn execute_command(
 /// SAFETY: Makes an FFI call to magma, which is expected to handle invalid connection parameters.
 pub fn flush(control: virtio_magma_flush_ctrl_t, response: &mut virtio_magma_flush_resp_t) {
     response.result_return = unsafe { magma_flush(control.connection) as u64 };
+    response.hdr.type_ = virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_FLUSH as u32;
 }
 
 /// Fetches a VMO handles from magma wraps it in a file, then adds that file to `current_task`.
@@ -273,6 +283,8 @@ pub fn get_buffer_handle(
         response.result_return = MAGMA_STATUS_OK as u64;
     }
 
+    response.hdr.type_ = virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_GET_BUFFER_HANDLE2 as u32;
+
     Ok(())
 }
 
@@ -285,6 +297,7 @@ pub fn get_buffer_size(
     response: &mut virtio_magma_get_buffer_size_resp_t,
 ) {
     response.result_return = unsafe { magma_get_buffer_size(control.buffer) };
+    response.hdr.type_ = virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_GET_BUFFER_SIZE as u32;
 }
 
 /// Runs a magma query.
@@ -353,6 +366,8 @@ pub fn read_notification_channel(
 
     response.more_data_out = more_data_out as u64;
     response.buffer_size_out = buffer_size_out;
+    response.hdr.type_ = virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_READ_NOTIFICATION_CHANNEL2 as u32;
+
     current_task.mm.write_memory(UserAddress::from(control.buffer), &mut buffer)?;
 
     Ok(())
@@ -365,26 +380,31 @@ pub fn read_notification_channel(
 ///
 /// SAFETY: The passed in `control` is expected to contain a valid buffer, otherwise the FFI call
 /// will panic.
-pub fn release_buffer(control: &virtio_magma_release_buffer_ctrl_t) {
+pub fn release_buffer(
+    control: virtio_magma_release_buffer_ctrl_t,
+    response: &mut virtio_magma_release_buffer_resp_t,
+) {
     unsafe {
         magma_release_buffer(
             control.connection as magma_connection_t,
             control.buffer as magma_buffer_t,
         );
     }
+    response.hdr.type_ = virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_RELEASE_BUFFER as u32;
 }
 
 /// Releases the provided `control.connection`.
 ///
 /// # Parameters
 ///   - `control`: The control message that contains the connection to remove.
+///   - `response`: The response message that will be updated to write back to user space.
 ///   - `connections`: The starnix-magma connection map, which is used to determine whether or not
 ///                    to call into magma to release the connection.
 ///
 /// SAFETY: Makes an FFI call to populate the fields of `response`.
-
 pub fn release_connection(
     control: virtio_magma_release_connection_ctrl_t,
+    response: &mut virtio_magma_release_connection_resp_t,
     connections: &mut ConnectionMap,
 ) {
     let connection = control.connection as magma_connection_t;
@@ -392,4 +412,5 @@ pub fn release_connection(
         unsafe { magma_release_connection(connection) };
         connections.remove(&connection);
     }
+    response.hdr.type_ = virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_RELEASE_CONNECTION as u32;
 }
