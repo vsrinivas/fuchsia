@@ -1940,8 +1940,7 @@ impl BinderDriver {
                     SerializedBinderObject::Handle { handle, flags, cookie: 0 }
                 }
                 SerializedBinderObject::File { fd, flags, cookie } => {
-                    let file = current_task.files.get(fd)?;
-                    let fd_flags = current_task.files.get_fd_flags(fd)?;
+                    let (file, fd_flags) = current_task.files.get_with_flags(fd)?;
                     let target_task = current_task
                         .kernel()
                         .pids

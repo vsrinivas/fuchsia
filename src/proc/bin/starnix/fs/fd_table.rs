@@ -99,8 +99,12 @@ impl FdTable {
     }
 
     pub fn get(&self, fd: FdNumber) -> Result<FileHandle, Errno> {
+        self.get_with_flags(fd).map(|(file, _flags)| file)
+    }
+
+    pub fn get_with_flags(&self, fd: FdNumber) -> Result<(FileHandle, FdFlags), Errno> {
         let table = self.table.read();
-        table.get(&fd).map(|entry| entry.file.clone()).ok_or(errno!(EBADF))
+        table.get(&fd).map(|entry| (entry.file.clone(), entry.flags)).ok_or(errno!(EBADF))
     }
 
     pub fn get_unless_opath(&self, fd: FdNumber) -> Result<FileHandle, Errno> {
@@ -122,8 +126,7 @@ impl FdTable {
     }
 
     pub fn get_fd_flags(&self, fd: FdNumber) -> Result<FdFlags, Errno> {
-        let table = self.table.read();
-        table.get(&fd).map(|entry| entry.flags).ok_or(errno!(EBADF))
+        self.get_with_flags(fd).map(|(_file, flags)| flags)
     }
 
     pub fn set_fd_flags(&self, fd: FdNumber, flags: FdFlags) -> Result<(), Errno> {
