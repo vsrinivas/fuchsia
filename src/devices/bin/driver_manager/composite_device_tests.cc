@@ -1271,3 +1271,13 @@ TEST_F(CompositeTestCase, DeviceIteratorCompositeSibling) {
 
   ASSERT_TRUE(device(child_index)->device->children().is_empty());
 }
+
+TEST_F(CompositeTestCase, DeviceIteratorOrphanFragment) {
+  size_t index;
+  fbl::String driver = coordinator().fragment_driver()->libname;
+  ASSERT_NO_FATAL_FAILURE(AddDevice(platform_bus()->device, "fragment-device", 0, driver, &index));
+
+  device(index)->device->DetachFromParent();
+
+  ASSERT_TRUE(device(index)->device->children().is_empty());
+}

@@ -289,14 +289,16 @@ zx_status_t DeviceManager::RemoveDevice(const fbl::RefPtr<Device>& dev, bool for
     // is the actual device matched by the fragment description).
     const auto& parent = dev->parent();
 
-    // Erase from the parent the fragment that matches this fragment device.
-    CompositeDeviceFragment* fragment =
-        parent->fragments().erase_if([&dev](const CompositeDeviceFragment& fragment) {
-          return fragment.fragment_device() == dev;
-        });
-    ZX_ASSERT_MSG(fragment != nullptr,
-                  "Unable to find fragment matching fragment device in parent");
-    fragment->Unbind();
+    if (parent) {
+      // Erase from the parent the fragment that matches this fragment device.
+      CompositeDeviceFragment* fragment =
+          parent->fragments().erase_if([&dev](const CompositeDeviceFragment& fragment) {
+            return fragment.fragment_device() == dev;
+          });
+      ZX_ASSERT_MSG(fragment != nullptr,
+                    "Unable to find fragment matching fragment device in parent");
+      fragment->Unbind();
+    }
   }
 
   // Detach from driver_host

@@ -188,10 +188,13 @@ class Device
                 // If there are no more children and this is a fragment device,
                 // find children of the fragment device by looking at its parent's
                 // fragment list.
-                if (device_->parent_ &&
-                    device_->libname() == device_->coordinator->GetFragmentDriverUrl()) {
-                  state_ = FragmentIterType{device_->parent()->fragments_.begin()};
-                  return true;
+                if (device_->libname() == device_->coordinator->GetFragmentDriverUrl()) {
+                  if (device_->parent_) {
+                    state_ = FragmentIterType{device_->parent()->fragments_.begin()};
+                    return true;
+                  }
+                  state_ = Done{};
+                  return false;
                 }
 
                 // Some composite devices are added directly as fragments without
