@@ -358,6 +358,22 @@ pub fn read_notification_channel(
     Ok(())
 }
 
+/// Releases the provided `control.buffer` in `control.connection`.
+///
+/// # Parameters:
+///   - `control`: The control message containing the relevant buffer and connection.
+///
+/// SAFETY: The passed in `control` is expected to contain a valid buffer, otherwise the FFI call
+/// will panic.
+pub fn release_buffer(control: &virtio_magma_release_buffer_ctrl_t) {
+    unsafe {
+        magma_release_buffer(
+            control.connection as magma_connection_t,
+            control.buffer as magma_buffer_t,
+        );
+    }
+}
+
 /// Releases the provided `control.connection`.
 ///
 /// # Parameters

@@ -259,12 +259,7 @@ impl FileOps for MagmaFile {
 
                 self.connections.lock().get_mut(&{ control.connection }).map(
                     |buffers| match buffers.remove(&(control.buffer as u64)) {
-                        Some(_) => unsafe {
-                            magma_release_buffer(
-                                control.connection as magma_connection_t,
-                                control.buffer as magma_buffer_t,
-                            );
-                        },
+                        Some(_) => release_buffer(&control),
                         _ => {
                             tracing::error!("Calling magma_release_buffer with an invalid buffer.");
                         }
