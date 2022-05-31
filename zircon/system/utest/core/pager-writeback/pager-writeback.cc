@@ -788,6 +788,81 @@ TEST(PagerWriteback, FailDirtyRequests) {
   ASSERT_TRUE(check_buffer_data(vmo, 0, kNumPages, expected.data(), true));
 }
 
+// Tests that partially failed DIRTY requests allow the write to partially complete.
+TEST(PagerWriteback, PartialFailDirtyRequests) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  constexpr uint64_t kNumPages = 5;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(kNumPages, ZX_VMO_TRAP_DIRTY, &vmo));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, kNumPages));
+
+  // Buffer to verify VMO contents later.
+  std::vector<uint8_t> expected(kNumPages * zx_system_get_page_size(), 0);
+  vmo->GenerateBufferContents(expected.data(), kNumPages, 0);
+
+  // Attempt to write to all the pages so we can partially succeed the request.
+  TestThread t1([vmo]() -> bool {
+    uint8_t data[kNumPages * zx_system_get_page_size()];
+    memset(data, 0xaa, sizeof(data));
+    return vmo->vmo().write(&data, 0, sizeof(data)) == ZX_OK;
+  });
+  ASSERT_TRUE(t1.Start());
+
+  // Should see a dirty request spanning all pages.
+  ASSERT_TRUE(t1.WaitForBlocked());
+  ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, kNumPages, ZX_TIME_INFINITE));
+
+  // Succeed a portion of the request, and fail the remaining.
+  constexpr uint64_t kNumSuccess = 3;
+  ASSERT_TRUE(pager.DirtyPages(vmo, 0, kNumSuccess));
+  ASSERT_TRUE(pager.FailPages(vmo, kNumSuccess, kNumPages - kNumSuccess));
+
+  // We partially succeeded the previous request, so when the write resumes after blocking, we
+  // should see another one for the failed portion. Fail it again to indicate failure starting at
+  // the start offset of the new request, which will stop further retry attempts.
+  ASSERT_TRUE(t1.WaitForBlocked());
+  ASSERT_TRUE(pager.WaitForPageDirty(vmo, kNumSuccess, kNumPages - kNumSuccess, ZX_TIME_INFINITE));
+  ASSERT_TRUE(pager.FailPages(vmo, kNumSuccess, kNumPages - kNumSuccess));
+
+  // The overall write should fail.
+  ASSERT_TRUE(t1.WaitForFailure());
+
+  // Only the successful portion should be dirty.
+  zx_vmo_dirty_range_t range = {.offset = 0, .length = kNumSuccess, .options = 0};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  // The portion that succeeded should have modified contents.
+  memset(expected.data(), 0xaa, kNumSuccess * zx_system_get_page_size());
+  ASSERT_TRUE(check_buffer_data(vmo, 0, kNumPages, expected.data(), true));
+
+  // Clean the modified pages.
+  ASSERT_TRUE(pager.WritebackBeginPages(vmo, 0, kNumSuccess));
+  ASSERT_TRUE(pager.WritebackEndPages(vmo, 0, kNumSuccess));
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // Try to write again and this time fail at the start of the request.
+  TestThread t2([vmo]() -> bool {
+    uint8_t data[kNumPages * zx_system_get_page_size()];
+    memset(data, 0xbb, sizeof(data));
+    return vmo->vmo().write(&data, 0, sizeof(data)) == ZX_OK;
+  });
+  ASSERT_TRUE(t2.Start());
+
+  // Should see a dirty request spanning all pages.
+  ASSERT_TRUE(t2.WaitForBlocked());
+  ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, kNumPages, ZX_TIME_INFINITE));
+
+  // Fail at the start of the request. This should terminate the blocked thread.
+  ASSERT_TRUE(pager.FailPages(vmo, 0, kNumSuccess));
+  ASSERT_TRUE(t2.WaitForFailure());
+
+  // No dirty pages and no changes in VMO contents.
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+  ASSERT_TRUE(check_buffer_data(vmo, 0, kNumPages, expected.data(), true));
+}
+
 // Tests that DIRTY requests are generated when offsets with zero page markers are written to.
 TEST(PagerWriteback, DirtyRequestsForZeroPages) {
   UserPager pager;

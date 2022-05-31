@@ -365,17 +365,17 @@ class PageSource final : public PageRequestInterface {
   // Helper that adds page at |offset| to |request| and potentially forwards it to the provider.
   // |request| must already be initialized. |offset| must be page-aligned.
   //
-  // Returns ZX_ERR_NEXT if |internal_batching| is true and more pages can be added to the request,
-  // in which case the caller of this function within PageSource *must* handle ZX_ERR_NEXT itself
-  // before returning from PageSource. This option is used for request types that want to operate in
-  // batch mode by default (e.g. DIRTY requests), where pages are added to the batch internally in
-  // PageSource without involving the external caller.
+  // Returns ZX_ERR_NEXT if the PageRequest::batch_state_ is BatchState::Internal and more pages can
+  // be added to it, in which case the caller of this function within PageSource *must* handle
+  // ZX_ERR_NEXT itself before returning from PageSource. This option is used for request types that
+  // the PageSource would like to operate in batch mode by default as an optimization (e.g. DIRTY
+  // requests), where pages are added to the batch internally in PageSource without involving the
+  // external caller. In other words, the ZX_ERR_NEXT must be consumed internally within the
+  // PageSource caller, as the external caller is not prepared to handle it.
   //
   // Otherwise this method always returns ZX_ERR_SHOULD_WAIT, and transitions the
   // PageRequest::batch_state_ as required.
-  // TODO(rashaeqbal): Figure out if internal_batching can be unified with allow_batching_.
-  zx_status_t PopulateRequestLocked(PageRequest* request, uint64_t offset,
-                                    bool internal_batching = false) TA_REQ(page_source_mtx_);
+  zx_status_t PopulateRequestLocked(PageRequest* request, uint64_t offset) TA_REQ(page_source_mtx_);
 
   // Helper used to complete a batched page request if the last call to PopulateRequestLocked
   // left the page request in the BatchRequest::Accepting state.
@@ -440,7 +440,7 @@ class PageRequest : public fbl::WAVLTreeContainable<PageRequest*>,
   // checked and the object must be initialized if necessary (an uninitialized request has offset_
   // set to UINT64_MAX).
   void Init(fbl::RefPtr<PageRequestInterface> src, uint64_t offset, page_request_type type,
-            VmoDebugInfo vmo_debug_info);
+            VmoDebugInfo vmo_debug_info, bool internal_batching = false);
 
   // The batch state is used both to implement a stateful query of whether a batch page request is
   // finished taking new requests or not, and to implement assertions to catch misuse of the request
@@ -452,7 +452,19 @@ class PageRequest : public fbl::WAVLTreeContainable<PageRequest*>,
     // FinalizeRequest called before it can be waited on.
     Accepting,
     // This was a batched request that has been finalized and may be waited on.
-    Finalized
+    Finalized,
+    // The caller did not request batching, but the PageSource internally decided to batch the
+    // request as an optimization. Internal is treated differently from Accepting even though they
+    // both notionally refer to batches, as Internal is not finalized externally (outside of
+    // PageSource) as is the case for Accepting. The Internal state is managed internally by the
+    // PageSource, so it is never transitioned to Finalized when the batch is ready to be waited on.
+    // Since the "batch" in the case of Internal is not exposed to the external caller, there is
+    // also a difference in the way page request failures are handled by the PageSource.
+    // Only used for page_request_type::DIRTY. See comment near PageSource::PopulateRequestLocked
+    // for more context.
+    // TODO(rashaeqbal): Figure out if Internal can be unified with Accepting by making all batches
+    // external.
+    Internal
   };
 
   BatchState batch_state_;

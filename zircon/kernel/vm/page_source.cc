@@ -176,6 +176,22 @@ void PageSource::OnPagesFailed(uint64_t offset, uint64_t len, zx_status_t error_
 
       LTRACEF_LEVEL(2, "%p, signaling failure %d %lx\n", this, error_status, cur->offset_);
 
+      // If this was an Internal batch, that means that the PageSource created the batch purely as
+      // an optimization, and the external caller was not prepared to deal with batches at all. The
+      // external caller is working under the assumption that the request in Unbatched (single page
+      // request), so a failure for a portion of the batch that does not include the first page
+      // cannot be propagated to the external caller.
+      if (cur->batch_state_ == PageRequest::BatchState::Internal) {
+        // We only use Internal batches for DIRTY requests.
+        DEBUG_ASSERT(type == page_request_type::DIRTY);
+        // This failure does not apply to the first page. Since the caller only requested the first
+        // page, we cannot treat failures for other pages we added to the request as fatal. Pretend
+        // that this is not a failure and let the caller retry.
+        if (offset > cur->offset_) {
+          error_status = ZX_OK;
+        }
+      }
+
       // Notify anything waiting on this page.
       CompleteRequestLocked(outstanding_requests_[type].erase(cur), error_status);
     }
@@ -246,8 +262,7 @@ zx_status_t PageSource::GetPage(uint64_t offset, PageRequest* request, VmoDebugI
 
 void PageSource::FreePages(list_node* pages) { page_provider_->FreePages(pages); }
 
-zx_status_t PageSource::PopulateRequestLocked(PageRequest* request, uint64_t offset,
-                                              bool internal_batching) {
+zx_status_t PageSource::PopulateRequestLocked(PageRequest* request, uint64_t offset) {
   ASSERT(request);
   DEBUG_ASSERT(IS_ALIGNED(offset, PAGE_SIZE));
   DEBUG_ASSERT(request->type_ < page_request_type::COUNT);
@@ -261,7 +276,8 @@ zx_status_t PageSource::PopulateRequestLocked(PageRequest* request, uint64_t off
   bool send_request = false;
   zx_status_t res = ZX_ERR_SHOULD_WAIT;
   DEBUG_ASSERT(!request->provider_owned_);
-  if (request->batch_state_ == PageRequest::BatchState::Accepting || internal_batching) {
+  if (request->batch_state_ == PageRequest::BatchState::Accepting ||
+      request->batch_state_ == PageRequest::BatchState::Internal) {
     // If possible, append the page directly to the current request. Else have the
     // caller try again with a new request.
     if (request->offset_ + request->len_ == offset) {
@@ -289,7 +305,9 @@ zx_status_t PageSource::PopulateRequestLocked(PageRequest* request, uint64_t off
 
       if (end_batch) {
         send_request = true;
-      } else if (internal_batching) {
+      } else if (request->batch_state_ == PageRequest::BatchState::Internal) {
+        // We only use Internal batches for DIRTY requests.
+        DEBUG_ASSERT(request->type_ == page_request_type::DIRTY);
         res = ZX_ERR_NEXT;
       }
     } else {
@@ -468,12 +486,15 @@ zx_status_t PageSource::RequestDirtyTransition(PageRequest* request, uint64_t of
   // Request should not be previously initialized.
   DEBUG_ASSERT(request->offset_ == UINT64_MAX);
   request->Init(fbl::RefPtr<PageRequestInterface>(this), offset, page_request_type::DIRTY,
-                vmo_debug_info);
+                vmo_debug_info, /*internal_batching=*/true);
+  // Init should have set the batch_state_ to Internal since we requested it, allowing us to
+  // accumulate multiple pages into the same request below.
+  DEBUG_ASSERT(request->batch_state_ == PageRequest::BatchState::Internal);
 
   zx_status_t status;
   // Keep building up the current request as long as PopulateRequestLocked returns ZX_ERR_NEXT.
   do {
-    status = PopulateRequestLocked(request, offset, true);
+    status = PopulateRequestLocked(request, offset);
     offset += PAGE_SIZE;
   } while (offset < end && status == ZX_ERR_NEXT);
 
@@ -505,7 +526,8 @@ PageRequest::~PageRequest() {
 }
 
 void PageRequest::Init(fbl::RefPtr<PageRequestInterface> src, uint64_t offset,
-                       page_request_type type, VmoDebugInfo vmo_debug_info) {
+                       page_request_type type, VmoDebugInfo vmo_debug_info,
+                       bool internal_batching) {
   DEBUG_ASSERT(offset_ == UINT64_MAX);
   vmo_debug_info_ = vmo_debug_info;
   len_ = 0;
@@ -513,8 +535,21 @@ void PageRequest::Init(fbl::RefPtr<PageRequestInterface> src, uint64_t offset,
   DEBUG_ASSERT(type < page_request_type::COUNT);
   type_ = type;
   src_ = ktl::move(src);
-  if (batch_state_ != BatchState::Unbatched) {
+
+  // If this request was operating in external batch mode and has been Finalized, set it back to
+  // Accepting.
+  if (batch_state_ == BatchState::Finalized) {
     batch_state_ = BatchState::Accepting;
+  }
+  // If internal batching was requested by the caller, set the batch mode to Internal. Otherwise,
+  // requests operate in either Unbatched mode or external batch mode (Accepting).
+  if (internal_batching) {
+    // We do not expect the external caller to have set up the request for batching, since we are
+    // using internal batching.
+    DEBUG_ASSERT(batch_state_ != BatchState::Accepting);
+    batch_state_ = BatchState::Internal;
+  } else if (batch_state_ != BatchState::Accepting) {
+    batch_state_ = BatchState::Unbatched;
   }
 
   event_.Unsignal();
