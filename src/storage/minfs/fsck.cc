@@ -780,8 +780,7 @@ zx::status<> MinfsChecker::CheckSuperblockIntegrity() const {
   journal_info->checksum = 0;
   journal_info->checksum = crc32(0, reinterpret_cast<uint8_t*>(data), sizeof(fs::JournalInfo));
   if (journal_info->checksum != old_checksum) {
-    FX_LOGS(ERROR) << "invalid journal checksum: actual = " << old_checksum
-                   << ", expected = " << journal_info->checksum;
+    FX_LOGS(ERROR) << "invalid journal checksum";
     return zx::error(ZX_ERR_BAD_STATE);
   }
 

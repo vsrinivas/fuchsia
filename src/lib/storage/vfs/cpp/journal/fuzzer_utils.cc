@@ -94,11 +94,14 @@ zx_status_t FuzzerUtils::FuzzSuperblock(JournalSuperblock* out_info) {
   if (status != ZX_OK) {
     return status;
   }
-  // Create a JournalInfo with random fields. Magic & checksum validation is skipped in fuzz builds.
+  // Create a JournalInfo with a valid magic and checksum to pass shallow checks.
   JournalInfo info;
+  info.magic = kJournalMagic;
   info.start_block = input_.ConsumeIntegral<uint64_t>();
   info.reserved = input_.ConsumeIntegral<uint64_t>();
   info.timestamp = input_.ConsumeIntegral<uint64_t>();
+  info.checksum = 0;
+  info.checksum = crc32(0, reinterpret_cast<const uint8_t*>(&info), sizeof(JournalInfo));
   memcpy(info_buffer->Data(0), &info, sizeof(JournalInfo));
   std::unique_ptr<BlockBuffer> fuzzed_info(info_buffer.release());
   *out_info = JournalSuperblock(std::move(fuzzed_info));

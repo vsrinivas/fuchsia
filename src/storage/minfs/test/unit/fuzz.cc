@@ -23,13 +23,10 @@ enum class Operation {
   kMaxValue = kWrite
 };
 
-}  // namespace
-
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  std::unique_ptr<Minfs> fs;
-  {
+  static Minfs& fs = [&loop]() -> Minfs& {
     constexpr uint64_t kBlockCount = 1 << 17;
     auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kMinfsBlockSize);
     auto bcache_or = Bcache::Create(std::move(device), kBlockCount);
@@ -38,11 +35,10 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     MountOptions options = {};
     auto fs_or = Minfs::Create(loop.dispatcher(), std::move(bcache_or.value()), options);
     ZX_ASSERT(fs_or.is_ok());
-    fs = std::move(fs_or.value());
-  }
-  ZX_ASSERT(fs != nullptr);
+    return *fs_or.value().release();
+  }();
 
-  auto root_or = fs->VnodeGet(kMinfsRootIno);
+  auto root_or = fs.VnodeGet(kMinfsRootIno);
   ZX_ASSERT(root_or.is_ok());
 
   std::array<fbl::RefPtr<VnodeMinfs>, 10> files;
@@ -65,19 +61,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
         for (auto& name : created_files) {
           ZX_ASSERT(root_or->Unlink(name, /*must_be_dir=*/false) == ZX_OK);
         }
-        // Make sure we don't hold onto the root Vnode after we destroy Minfs.
-        *root_or = nullptr;
-        // Fsck should always pass regardless of if we flushed any outstanding transactions or not.
-        if (fuzzed_data.ConsumeBool()) {
-          ZX_ASSERT(fs->BlockingJournalSync().is_ok());
-        }
-        loop.RunUntilIdle();
-        ZX_ASSERT(fs->Info().alloc_block_count == 2);
-        ZX_ASSERT(fs->Info().alloc_inode_count == 2);
-        // Destroy Minfs and run Fsck.
-        std::unique_ptr<Bcache> bcache = Minfs::Destroy(std::move(fs));
-        auto fsck_result = Fsck(std::move(bcache), FsckOptions{.read_only = true, .quiet = true});
-        ZX_ASSERT_MSG(fsck_result.is_ok(), "Fsck failure: %s", fsck_result.status_string());
+        ZX_ASSERT(fs.Info().alloc_block_count == 2);
+        ZX_ASSERT(fs.Info().alloc_inode_count == 2);
         return 0;
       }
       case Operation::kCreate: {
@@ -131,4 +116,5 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   }  // for (;;)
 }
 
+}  // namespace
 }  // namespace minfs
