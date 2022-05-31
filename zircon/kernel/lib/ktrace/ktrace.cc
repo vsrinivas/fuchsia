@@ -700,12 +700,10 @@ zx_status_t ktrace_control(uint32_t action, uint32_t options, void* ptr) {
       }
 
       struct DynamicStringRef {
-        DynamicStringRef(const char* string) : string_ref{storage} {
-          memcpy(storage, string, sizeof(storage));
-        }
+        explicit DynamicStringRef(const char* string) { memcpy(storage, string, sizeof(storage)); }
 
-        StringRef string_ref;
         char storage[ZX_MAX_NAME_LEN];
+        StringRef string_ref{storage};
       };
 
       // TODO(eieio,dje): Figure out how to constrain this to prevent abuse by
