@@ -6,7 +6,7 @@ use {
     crate::{
         lsm_tree::merge,
         object_handle::ReadObjectHandle,
-        serialized_types::{Versioned, VersionedLatest},
+        serialized_types::{Version, Versioned, VersionedLatest},
     },
     anyhow::Error,
     async_trait::async_trait,
@@ -220,6 +220,9 @@ pub trait Layer<K, V>: Send + Sync {
     /// Waits for existing locks readers to finish and then returns.  Subsequent calls to lock will
     /// return None.
     async fn close(&self);
+
+    /// Returns the version number used by structs in this layer
+    fn get_version(&self) -> Version;
 }
 
 /// MutableLayer is a trait that only mutable layers need to implement.

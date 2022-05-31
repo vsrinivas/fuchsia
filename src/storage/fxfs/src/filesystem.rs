@@ -22,6 +22,7 @@ use {
             volume::{root_volume, VOLUMES_DIRECTORY},
             ObjectStore,
         },
+        serialized_types::Version,
         trace_duration,
     },
     anyhow::{Context, Error},
@@ -120,7 +121,9 @@ pub trait JournalingObject: Send + Sync {
     fn drop_mutation(&self, mutation: Mutation, transaction: &Transaction<'_>);
 
     /// Flushes in-memory changes to the device (to allow journal space to be freed).
-    async fn flush(&self) -> Result<(), Error>;
+    ///
+    /// Also returns the earliest version of a struct in the filesystem.
+    async fn flush(&self) -> Result<Version, Error>;
 
     /// Optionally encrypts a mutation.
     fn encrypt_mutation(&self, _mutation: &Mutation) -> Option<Mutation> {

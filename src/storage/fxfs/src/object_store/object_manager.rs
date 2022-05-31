@@ -19,6 +19,7 @@ use {
             volume::{list_volumes, VOLUMES_DIRECTORY},
             LastObjectId, LockState, ObjectDescriptor, ObjectStore,
         },
+        serialized_types::{Version, LATEST_VERSION},
     },
     anyhow::{anyhow, bail, Context, Error},
     once_cell::sync::OnceCell,
@@ -553,17 +554,26 @@ impl ObjectManager {
     }
 
     /// Flushes all known objects.  This will then allow the journal space to be freed.
-    pub async fn flush(&self) -> Result<(), Error> {
+    ///
+    /// Also returns the earliest known version of a struct on the filesystem.
+    pub async fn flush(&self) -> Result<Version, Error> {
         let mut object_ids: Vec<_> =
             self.inner.read().unwrap().journal_checkpoints.keys().cloned().collect();
         // Process objects in reverse sorted order because that will mean we compact the root object
         // store last which will ensure we include the metadata from the compactions of other
         // objects.
         object_ids.sort_unstable();
+
+        // As we iterate, keep track of the earliest version used by structs in these objects
+        let mut earliest_version: Version = LATEST_VERSION;
         for &object_id in object_ids.iter().rev() {
-            self.object(object_id).unwrap().flush().await?;
+            let object_earliest_version = self.object(object_id).unwrap().flush().await?;
+            if object_earliest_version < earliest_version {
+                earliest_version = object_earliest_version;
+            }
         }
-        Ok(())
+
+        Ok(earliest_version)
     }
 
     fn object(&self, object_id: u64) -> Option<Arc<dyn JournalingObject>> {

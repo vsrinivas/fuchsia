@@ -9,6 +9,7 @@ use {
             allocator::{Allocator, AllocatorInfo, Reservation, ReservationOwner},
             transaction::{AssocObj, Mutation, Transaction},
         },
+        serialized_types::{Version, LATEST_VERSION},
     },
     anyhow::Error,
     async_trait::async_trait,
@@ -137,7 +138,7 @@ impl JournalingObject for FakeAllocator {
 
     fn drop_mutation(&self, _mutation: Mutation, _transaction: &Transaction<'_>) {}
 
-    async fn flush(&self) -> Result<(), Error> {
-        Ok(())
+    async fn flush(&self) -> Result<Version, Error> {
+        return Ok(LATEST_VERSION);
     }
 }

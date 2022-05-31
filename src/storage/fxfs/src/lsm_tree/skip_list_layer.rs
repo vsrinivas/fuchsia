@@ -6,12 +6,15 @@
 // memory usage.
 
 use {
-    crate::lsm_tree::{
-        merge::{self, MergeFn},
-        types::{
-            BoxedLayerIterator, Item, ItemRef, Key, Layer, LayerIterator, LayerIteratorMut,
-            MutableLayer, OrdLowerBound, OrdUpperBound, Value,
+    crate::{
+        lsm_tree::{
+            merge::{self, MergeFn},
+            types::{
+                BoxedLayerIterator, Item, ItemRef, Key, Layer, LayerIterator, LayerIteratorMut,
+                MutableLayer, OrdLowerBound, OrdUpperBound, Value,
+            },
         },
+        serialized_types::{Version, LATEST_VERSION},
     },
     anyhow::Error,
     async_trait::async_trait,
@@ -224,6 +227,12 @@ impl<K: Key, V: Value> Layer<K, V> for SkipListLayer<K, V> {
             event.wait_or_dropped()
         }
         .await;
+    }
+
+    fn get_version(&self) -> Version {
+        // The SkipListLayer is stored in RAM and written to disk as a SimplePersitentLayer
+        // Hence, the SkipListLayer is always at the latest version
+        return LATEST_VERSION;
     }
 }
 

@@ -23,7 +23,7 @@ use {
             tree, AssocObj, CachingObjectHandle, HandleOptions, ObjectStore, Options, StoreInfo,
             MAX_ENCRYPTED_MUTATIONS_SIZE,
         },
-        serialized_types::VersionedLatest,
+        serialized_types::{Version, VersionedLatest},
         trace_duration,
     },
     anyhow::Error,
@@ -41,10 +41,11 @@ pub enum Reason {
 }
 
 impl ObjectStore {
-    pub async fn flush_with_reason(&self, reason: Reason) -> Result<(), Error> {
+    pub async fn flush_with_reason(&self, reason: Reason) -> Result<Version, Error> {
         trace_duration!("ObjectStore::flush", "store_object_id" => self.store_object_id);
         if self.parent_store.is_none() {
-            return Ok(());
+            // Early exit, but still return the earliest version used by a struct in the tree
+            return Ok(self.tree.get_earliest_version());
         }
         let filesystem = self.filesystem();
         let object_manager = filesystem.object_manager();
@@ -58,12 +59,15 @@ impl ObjectStore {
                 // in a file.  We don't worry if they're in memory because a flush should get
                 // triggered when the journal gets full.
                 if self.store_info().encrypted_mutations_object_id == INVALID_OBJECT_ID {
-                    return Ok(());
+                    // TODO(ruperts): Add earliest_version support for encrypted mutations
+                    // Early exit, but still return the earliest version used by a struct in the tree
+                    return Ok(self.tree.get_earliest_version());
                 }
             }
             Reason::Journal => {
                 if !object_manager.needs_flush(self.store_object_id) {
-                    return Ok(());
+                    // Early exit, but still return the earliest version used by a struct in the tree
+                    return Ok(self.tree.get_earliest_version());
                 }
             }
         }
@@ -317,6 +321,8 @@ impl ObjectStore {
         if trace {
             log::info!("OS {} end flush", self.store_object_id());
         }
-        Ok(())
+
+        // Return the earliest version used by a struct in the tree
+        Ok(self.tree.get_earliest_version())
     }
 }

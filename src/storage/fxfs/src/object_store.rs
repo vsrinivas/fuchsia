@@ -1430,8 +1430,10 @@ impl JournalingObject for ObjectStore {
     /// journal will take care of it.  This is supposed to be called when there is either memory or
     /// space pressure (flushing the store will persist in-memory data and allow the journal file to
     /// be trimmed).
-    async fn flush(&self) -> Result<(), Error> {
-        self.flush_with_reason(flush::Reason::Journal).await
+    ///
+    /// Also returns the earliest version of a struct in the filesystem (when known).
+    async fn flush(&self) -> Result<Version, Error> {
+        return self.flush_with_reason(flush::Reason::Journal).await;
     }
 
     fn encrypt_mutation(&self, mutation: &Mutation) -> Option<Mutation> {

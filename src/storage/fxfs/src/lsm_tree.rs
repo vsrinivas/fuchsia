@@ -10,6 +10,7 @@ pub mod types;
 use {
     crate::{
         object_handle::{ReadObjectHandle, WriteBytes, WriteObjectHandle, Writer},
+        serialized_types::{Version, LATEST_VERSION},
         trace_duration,
     },
     anyhow::Error,
@@ -265,6 +266,18 @@ impl<'tree, K: MergeableKey, V: Value> LSMTree<K, V> {
     /// sequence of mutations that are applied to the tree.
     pub fn set_mutation_callback(&self, mutation_callback: MutationCallback<K, V>) {
         self.data.write().unwrap().mutation_callback = mutation_callback;
+    }
+
+    /// Returns the earliest version used by a layer in the tree.
+    pub fn get_earliest_version(&self) -> Version {
+        let mut earliest_version = LATEST_VERSION;
+        for layer in self.layer_set().layers {
+            let layer_version = layer.get_version();
+            if layer_version < earliest_version {
+                earliest_version = layer_version;
+            }
+        }
+        return earliest_version;
     }
 }
 

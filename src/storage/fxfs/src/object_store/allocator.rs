@@ -29,7 +29,7 @@ use {
         },
         range::RangeExt,
         round::round_down,
-        serialized_types::{Versioned, VersionedLatest, MAX_SERIALIZED_RECORD_SIZE},
+        serialized_types::{Version, Versioned, VersionedLatest, MAX_SERIALIZED_RECORD_SIZE},
         trace_duration,
     },
     anyhow::{anyhow, bail, ensure, Error},
@@ -1135,11 +1135,12 @@ impl JournalingObject for SimpleAllocator {
         }
     }
 
-    async fn flush(&self) -> Result<(), Error> {
+    async fn flush(&self) -> Result<Version, Error> {
         let filesystem = self.filesystem.upgrade().unwrap();
         let object_manager = filesystem.object_manager();
         if !object_manager.needs_flush(self.object_id()) {
-            return Ok(());
+            // Early exit, but still return the earliest version used by a struct in the tree
+            return Ok(self.tree.get_earliest_version());
         }
 
         let keys = [LockKey::flush(self.object_id())];
@@ -1251,7 +1252,8 @@ impl JournalingObject for SimpleAllocator {
             }
         }
 
-        Ok(())
+        // Return the earliest version used by a struct in the tree
+        Ok(self.tree.get_earliest_version())
     }
 }
 

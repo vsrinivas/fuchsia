@@ -9,6 +9,9 @@ use {
     std::io::Cursor,
 };
 
+// Note we don't use the standard serialized_types::EARLIEST_SUPPORTED_VERSION for tests.
+const EARLIEST_SUPPORTED_VERSION: Version = Version { major: 1, minor: 0 };
+
 // Note we don't use the standard serialized_types::LATEST_VERSION for tests.
 const LATEST_VERSION: Version = Version { major: 4, minor: 2 };
 
@@ -54,7 +57,7 @@ fn test_deserialize_from_version() {
     // and we do NOT want varint encoding here.
     bincode::serialize_into(&mut v, &f1).expect("FooV1");
     assert_eq!(
-        FooV3::deserialize_from_version(&mut Cursor::new(&v), Version { major: 1, minor: 0 })
+        FooV3::deserialize_from_version(&mut Cursor::new(&v), EARLIEST_SUPPORTED_VERSION)
             .expect("Deserialize FooV1"),
         f3
     );

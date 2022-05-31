@@ -273,6 +273,10 @@ impl<K: Key, V: Value> Layer<K, V> for SimplePersistentLayer {
         }
         .await;
     }
+
+    fn get_version(&self) -> Version {
+        return self.layer_info.key_value_version;
+    }
 }
 
 // -- Writer support --

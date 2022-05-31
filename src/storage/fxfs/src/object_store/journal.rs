@@ -835,6 +835,7 @@ impl Journal {
             allocator.object_id(),
             journal_handle.object_id(),
             checkpoint,
+            /* earliest_version: */ LATEST_VERSION,
         );
 
         // Initialize the journal writer.
@@ -1253,7 +1254,8 @@ impl Journal {
             log::info!("J start compaction");
         }
         trace_duration!("Journal::compact");
-        self.objects.flush().await?;
+        let earliest_version = self.objects.flush().await?;
+        self.inner.lock().unwrap().super_block.earliest_version = earliest_version;
         self.write_super_block().await?;
         if trace {
             log::info!("J end compaction");

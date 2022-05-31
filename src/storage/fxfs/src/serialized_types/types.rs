@@ -5,9 +5,9 @@
 use crate::{
     lsm_tree::LayerInfo,
     object_store::{
-        transaction::Mutation, AllocatorInfo, AllocatorInfoV1, AllocatorKey, AllocatorValue,
-        EncryptedMutations, JournalRecord, ObjectKey, ObjectValue, StoreInfo, StoreInfoV1,
-        SuperBlock, SuperBlockRecord,
+        journal::super_block::SuperBlockV1, transaction::Mutation, AllocatorInfo, AllocatorInfoV1,
+        AllocatorKey, AllocatorValue, EncryptedMutations, JournalRecord, ObjectKey, ObjectValue,
+        StoreInfo, StoreInfoV1, SuperBlock, SuperBlockRecord,
     },
     serialized_types::{versioned_type, Version, Versioned, VersionedLatest},
 };
@@ -16,7 +16,17 @@ use crate::{
 ///
 /// If all layer files are compacted the the journal flushed, and super-block
 /// both rewritten, all versions should match this value.
-pub const LATEST_VERSION: Version = Version { major: 18, minor: 0 };
+///
+/// If making a breaking change, please see EARLIEST_SUPPORTED_VERSION (below).
+pub const LATEST_VERSION: Version = Version { major: 19, minor: 0 };
+
+/// The earliest supported version of the on-disk filesystem format.
+///
+/// When a breaking change is made:
+/// 1) LATEST_VERSION should have it's major component increased (see above).
+/// 2) EARLIEST_SUPPORTED_VERSION should be set to the new LATEST_VERSION.
+/// 3) The SuperBlock version (below) should also be set to the new LATEST_VERSION.
+pub const EARLIEST_SUPPORTED_VERSION: Version = Version { major: 16, minor: 0 };
 
 versioned_type! {
     18.. => AllocatorInfo,
@@ -51,7 +61,8 @@ versioned_type! {
     8.. => StoreInfoV1,
 }
 versioned_type! {
-    16.. => SuperBlock,
+    19.. => SuperBlock,
+    16.. => SuperBlockV1,
 }
 versioned_type! {
     5.. => SuperBlockRecord,

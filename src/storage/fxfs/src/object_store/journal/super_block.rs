@@ -21,7 +21,7 @@ use {
             HandleOptions, Mutation, ObjectStore, StoreObjectHandle,
         },
         range::RangeExt,
-        serialized_types::{Versioned, VersionedLatest},
+        serialized_types::{Version, Versioned, VersionedLatest, EARLIEST_SUPPORTED_VERSION},
     },
     anyhow::{bail, ensure, Context, Error},
     serde::{Deserialize, Serialize},
@@ -144,6 +144,51 @@ pub struct SuperBlock {
     /// Records the amount of borrowed metadata space as applicable at
     /// `super_block_journal_file_offset`.
     pub borrowed_metadata_space: u64,
+
+    /// The earliest version of Fxfs used to create any still-existing struct in the filesystem.
+    ///
+    /// Note: structs in the filesystem may had been made with various different versions of Fxfs.
+    pub earliest_version: Version,
+}
+
+#[derive(Serialize, Deserialize, Versioned)]
+pub struct SuperBlockV1 {
+    guid: [u8; 16],
+    generation: u64,
+    root_parent_store_object_id: u64,
+    root_parent_graveyard_directory_object_id: u64,
+    root_store_object_id: u64,
+    allocator_object_id: u64,
+    journal_object_id: u64,
+    journal_checkpoint: JournalCheckpoint,
+    super_block_journal_file_offset: u64,
+    journal_file_offsets: HashMap<u64, u64>,
+    borrowed_metadata_space: u64,
+}
+
+impl From<SuperBlockV1> for SuperBlock {
+    fn from(old: SuperBlockV1) -> SuperBlock {
+        // The earliest version wasn't tracked before Fxfs 19.
+        // At that time, the earliest version supported was 16 so we're hard coding
+        // it as that until such time as this migration path is no longer required.
+        const EARLIEST_VERSION: Version = Version { major: 16, minor: 0 };
+
+        SuperBlock {
+            guid: old.guid,
+            generation: old.generation,
+            root_parent_store_object_id: old.root_parent_store_object_id,
+            root_parent_graveyard_directory_object_id: old
+                .root_parent_graveyard_directory_object_id,
+            root_store_object_id: old.root_store_object_id,
+            allocator_object_id: old.allocator_object_id,
+            journal_object_id: old.journal_object_id,
+            journal_checkpoint: old.journal_checkpoint,
+            super_block_journal_file_offset: old.super_block_journal_file_offset,
+            journal_file_offsets: old.journal_file_offsets,
+            borrowed_metadata_space: old.borrowed_metadata_space,
+            earliest_version: EARLIEST_VERSION,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Versioned)]
@@ -272,6 +317,7 @@ impl SuperBlock {
         allocator_object_id: u64,
         journal_object_id: u64,
         journal_checkpoint: JournalCheckpoint,
+        earliest_version: Version,
     ) -> Self {
         let uuid = Uuid::new_v4();
         SuperBlock {
@@ -283,6 +329,7 @@ impl SuperBlock {
             allocator_object_id,
             journal_object_id,
             journal_checkpoint,
+            earliest_version,
             ..Default::default()
         }
     }
@@ -359,7 +406,7 @@ impl SuperBlock {
 
         reader.fill_buf().await?;
         let mut super_block;
-        let version;
+        let super_block_version;
         reader.consume({
             let mut cursor = std::io::Cursor::new(reader.buffer());
             // Validate magic bytes.
@@ -368,7 +415,29 @@ impl SuperBlock {
             if magic_bytes.as_slice() != SUPER_BLOCK_MAGIC.as_slice() {
                 bail!(format!("Invalid magic: {:?}", magic_bytes));
             }
-            (super_block, version) = SuperBlock::deserialize_with_version(&mut cursor)?;
+            (super_block, super_block_version) = SuperBlock::deserialize_with_version(&mut cursor)?;
+
+            if super_block_version < EARLIEST_SUPPORTED_VERSION {
+                bail!(format!("Unsupported SuperBlock version: {:?}", super_block_version));
+            }
+
+            // NOTE: It is possible that data was written to the journal with an old version
+            // but no compaction ever happened, so the journal version could potentially be older
+            // than the layer file versions.
+            if super_block.journal_checkpoint.version < EARLIEST_SUPPORTED_VERSION {
+                bail!(format!(
+                    "Unsupported JournalCheckpoint version: {:?}",
+                    super_block.journal_checkpoint.version
+                ));
+            }
+
+            if super_block.earliest_version < EARLIEST_SUPPORTED_VERSION {
+                bail!(format!(
+                    "Filesystem contains struct with unsupported version: {:?}",
+                    super_block.earliest_version
+                ));
+            }
+
             cursor.position() as usize
         });
         // If guid is zeroed (e.g. in a newly imaged system), assign one randomly.
@@ -376,7 +445,7 @@ impl SuperBlock {
             let uuid = Uuid::new_v4();
             super_block.guid = *uuid.as_bytes();
         }
-        reader.set_version(version);
+        reader.set_version(super_block_version);
         Ok((super_block, ItemReader { reader }))
     }
 
@@ -616,6 +685,7 @@ mod tests {
             fs.allocator().object_id(),
             JOURNAL_OBJECT_ID,
             JournalCheckpoint { file_offset: 1234, checksum: 5678, version: LATEST_VERSION },
+            /* earliest_version: */ LATEST_VERSION,
         );
         super_block_a.super_block_journal_file_offset = journal_offset + 1;
         let mut super_block_b = super_block_a.clone();
@@ -688,6 +758,7 @@ mod tests {
             fs.allocator().object_id(),
             JOURNAL_OBJECT_ID,
             JournalCheckpoint { file_offset: 1234, checksum: 5678, version: LATEST_VERSION },
+            /* earliest_version: */ LATEST_VERSION,
         );
         // Ensure the superblock has no set GUID.
         super_block_a.guid = [0; 16];
