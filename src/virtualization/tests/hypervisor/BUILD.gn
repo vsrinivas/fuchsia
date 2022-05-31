@@ -36,7 +36,7 @@ executable("hypervisor_integration_tests") {
 
 fuchsia_unittest_package("hypervisor_tests") {
   deps = [ ":hypervisor_integration_tests" ]
-  manifest = "meta/hypervisor_tests.cmx"
+  manifest = "meta/hypervisor_tests.cml"
   test_specs = {
     environments = guest_envs
     log_settings = {
