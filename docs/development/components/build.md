@@ -448,7 +448,7 @@ template as a convenience. This template fuses together `fuchsia_package()` and
    go_binary("rot13_encoder_decoder") {
    }
 
-   fuchsia_component("rot13") {
+   fuchsia_package_with_single_component("rot13") {
      manifest = "meta/rot13.cml"
      deps = [ ":rot13_encoder_decoder" ]
    }
