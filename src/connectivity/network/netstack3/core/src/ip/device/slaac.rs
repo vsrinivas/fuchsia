@@ -1424,11 +1424,7 @@ mod tests {
             },
             receive_ipv6_packet, DummyDeviceId,
         },
-        testutil::{
-            assert_empty, DummyEventDispatcher, DummyEventDispatcherConfig, FakeCryptoRng,
-            TestIpExt as _,
-        },
-        Ctx, StackStateBuilder,
+        testutil::{assert_empty, DummyEventDispatcherConfig, FakeCryptoRng, TestIpExt as _},
     };
 
     struct MockSlaacContext {
@@ -2463,31 +2459,21 @@ mod tests {
             const_unwrap::const_unwrap_option(NonZeroU64::new(TWO_HOURS_AS_SECS as u64)),
         );
 
-        let mut ctx: crate::testutil::DummyCtx = Ctx::new(
-            {
-                let mut stack_builder = StackStateBuilder::default();
-
-                let mut ipv6_config = crate::ip::device::state::Ipv6DeviceConfiguration::default();
-                ipv6_config.dad_transmits = None;
-                ipv6_config.max_router_solicitations = None;
-                ipv6_config.slaac_config = SlaacConfiguration {
-                    enable_stable_addresses: true,
-                    temporary_address_configuration: Some(TemporarySlaacAddressConfiguration {
-                        temp_valid_lifetime: ONE_HOUR,
-                        temp_preferred_lifetime: ONE_HOUR,
-                        temp_idgen_retries: 0,
-                        secret_key: SECRET_KEY,
-                    }),
-                };
-                stack_builder.device_builder().set_default_ipv6_config(ipv6_config);
-
-                stack_builder.build()
-            },
-            DummyEventDispatcher::default(),
-            Default::default(),
-        );
+        let mut ctx = crate::testutil::DummyCtx::default();
         let device_id =
             ctx.state.device.add_ethernet_device(local_mac, Ipv6::MINIMUM_LINK_MTU.into());
+        crate::ip::device::update_ipv6_configuration(&mut ctx, &mut (), device_id, |config| {
+            config.slaac_config = SlaacConfiguration {
+                enable_stable_addresses: true,
+                temporary_address_configuration: Some(TemporarySlaacAddressConfiguration {
+                    temp_valid_lifetime: ONE_HOUR,
+                    temp_preferred_lifetime: ONE_HOUR,
+                    temp_idgen_retries: 0,
+                    secret_key: SECRET_KEY,
+                }),
+            };
+        });
+
         let set_ip_enabled = |ctx: &mut crate::testutil::DummyCtx, enabled| {
             crate::ip::device::update_ipv6_configuration(ctx, &mut (), device_id, |config| {
                 config.ip_config.ip_enabled = enabled;

@@ -224,8 +224,8 @@ mod tests {
         context::testutil::{DummyCtx, DummyEventCtx, DummyInstant, DummyTimerCtxExt as _},
         device::FrameDestination,
         ip::{device::Ipv6DeviceTimerId, receive_ipv6_packet, DummyDeviceId, IPV6_DEFAULT_SUBNET},
-        testutil::{DummyEventDispatcher, DummyEventDispatcherConfig, TestIpExt as _},
-        Ctx, DeviceId, StackStateBuilder, TimerId, TimerIdInner,
+        testutil::{DummyEventDispatcherConfig, TestIpExt as _},
+        DeviceId, TimerId, TimerIdInner,
     };
 
     #[derive(Default)]
@@ -500,20 +500,7 @@ mod tests {
             subnet: _,
         } = Ipv6::DUMMY_CONFIG;
 
-        let mut ctx: crate::testutil::DummyCtx = Ctx::new(
-            {
-                let mut stack_builder = StackStateBuilder::default();
-
-                let mut ipv6_config = crate::ip::device::state::Ipv6DeviceConfiguration::default();
-                ipv6_config.dad_transmits = None;
-                ipv6_config.max_router_solicitations = None;
-                stack_builder.device_builder().set_default_ipv6_config(ipv6_config);
-
-                stack_builder.build()
-            },
-            DummyEventDispatcher::default(),
-            Default::default(),
-        );
+        let mut ctx = crate::testutil::DummyCtx::default();
         let device_id =
             ctx.state.device.add_ethernet_device(local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::ip::device::update_ipv6_configuration(&mut ctx, &mut (), device_id, |config| {

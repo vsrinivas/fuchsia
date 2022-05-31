@@ -92,7 +92,7 @@ use packet::{Buf, BufferMut, EmptyBuf};
 
 use crate::{
     context::{EventContext, InstantContext, RngContext, TimerContext},
-    device::{DeviceLayerState, DeviceLayerTimerId, DeviceStateBuilder},
+    device::{DeviceLayerState, DeviceLayerTimerId},
     ip::{
         device::{Ipv4DeviceTimerId, Ipv6DeviceTimerId},
         icmp::{BufferIcmpContext, IcmpContext},
@@ -174,7 +174,6 @@ pub struct StackStateBuilder {
     transport: TransportStateBuilder,
     ipv4: Ipv4StateBuilder,
     ipv6: Ipv6StateBuilder,
-    device: DeviceStateBuilder,
 }
 
 impl StackStateBuilder {
@@ -193,18 +192,13 @@ impl StackStateBuilder {
         &mut self.ipv6
     }
 
-    /// Get the builder for the device layer state.
-    pub fn device_builder(&mut self) -> &mut DeviceStateBuilder {
-        &mut self.device
-    }
-
     /// Consume this builder and produce a `StackState`.
     pub fn build<I: Instant>(self) -> StackState<I> {
         StackState {
             transport: self.transport.build(),
             ipv4: self.ipv4.build(),
             ipv6: self.ipv6.build(),
-            device: self.device.build(),
+            device: Default::default(),
             #[cfg(test)]
             test_counters: Default::default(),
         }

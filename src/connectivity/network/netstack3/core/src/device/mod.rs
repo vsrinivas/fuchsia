@@ -18,6 +18,7 @@ use core::{
     time::Duration,
 };
 
+use derivative::Derivative;
 use log::{debug, trace};
 use net_types::{
     ethernet::Mac,
@@ -204,7 +205,7 @@ fn get_ip_device_state_mut_and_rng<D: EventDispatcher, C: BlanketCoreContext>(
 fn iter_devices<D: EventDispatcher, C: BlanketCoreContext>(
     ctx: &Ctx<D, C>,
 ) -> impl Iterator<Item = DeviceId> + '_ {
-    let DeviceLayerState { ethernet, loopback, default_ipv6_config: _ } = &ctx.state.device;
+    let DeviceLayerState { ethernet, loopback } = &ctx.state.device;
 
     ethernet
         .iter()
@@ -596,30 +597,12 @@ impl FrameDestination {
     }
 }
 
-/// Builder for a [`DeviceLayerState`].
-#[derive(Clone, Default)]
-pub struct DeviceStateBuilder {
-    default_ipv6_config: Ipv6DeviceConfiguration,
-}
-
-impl DeviceStateBuilder {
-    /// Set the default IPv6 device configuration for new interfaces.
-    pub fn set_default_ipv6_config(&mut self, v: Ipv6DeviceConfiguration) {
-        self.default_ipv6_config = v;
-    }
-
-    /// Build the [`DeviceLayerState`].
-    pub(crate) fn build<I: Instant>(self) -> DeviceLayerState<I> {
-        let Self { default_ipv6_config } = self;
-        DeviceLayerState { ethernet: IdMap::new(), loopback: None, default_ipv6_config }
-    }
-}
-
 /// The state associated with the device layer.
+#[derive(Derivative)]
+#[derivative(Default(bound = ""))]
 pub(crate) struct DeviceLayerState<I: Instant> {
     ethernet: IdMap<IpLinkDeviceState<I, EthernetDeviceState>>,
     loopback: Option<IpLinkDeviceState<I, LoopbackDeviceState>>,
-    default_ipv6_config: Ipv6DeviceConfiguration,
 }
 
 impl<I: Instant> DeviceLayerState<I> {
@@ -629,27 +612,23 @@ impl<I: Instant> DeviceLayerState<I> {
     /// MTU. The MTU will be taken as a limit on the size of Ethernet payloads -
     /// the Ethernet header is not counted towards the MTU.
     pub(crate) fn add_ethernet_device(&mut self, mac: UnicastAddr<Mac>, mtu: u32) -> DeviceId {
-        let Self { ethernet, loopback: _, default_ipv6_config } = self;
+        let Self { ethernet, loopback: _ } = self;
 
-        let mut ethernet_state =
-            IpLinkDeviceState::new(EthernetDeviceStateBuilder::new(mac, mtu).build());
-        ethernet_state.ip.ipv6.config = default_ipv6_config.clone();
-        let id = ethernet.push(ethernet_state);
+        let id = ethernet
+            .push(IpLinkDeviceState::new(EthernetDeviceStateBuilder::new(mac, mtu).build()));
         debug!("adding Ethernet device with ID {} and MTU {}", id, mtu);
         DeviceId::new_ethernet(id)
     }
 
     /// Adds a new loopback device to the device layer.
     pub(crate) fn add_loopback_device(&mut self, mtu: u32) -> Result<DeviceId, ExistsError> {
-        let Self { ethernet: _, loopback, default_ipv6_config } = self;
+        let Self { ethernet: _, loopback } = self;
 
         if let Some(IpLinkDeviceState { .. }) = loopback {
             return Err(ExistsError);
         }
 
-        let mut loopback_state = IpLinkDeviceState::new(LoopbackDeviceState::new(mtu));
-        loopback_state.ip.ipv6.config = default_ipv6_config.clone();
-        *loopback = Some(loopback_state);
+        *loopback = Some(IpLinkDeviceState::new(LoopbackDeviceState::new(mtu)));
 
         debug!("added loopback device");
 

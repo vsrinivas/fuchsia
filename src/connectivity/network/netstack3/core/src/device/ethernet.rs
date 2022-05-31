@@ -936,10 +936,8 @@ mod tests {
         },
         testutil::{
             add_arp_or_ndp_table_entry, assert_empty, get_counter_val, new_rng,
-            DummyEventDispatcher, DummyEventDispatcherBuilder, FakeCryptoRng, TestIpExt,
-            DUMMY_CONFIG_V4,
+            DummyEventDispatcherBuilder, FakeCryptoRng, TestIpExt, DUMMY_CONFIG_V4,
         },
-        StackStateBuilder,
     };
 
     struct DummyEthernetCtx {
@@ -1166,13 +1164,7 @@ mod tests {
         // Should only send a frame if the device is enabled.
 
         let config = I::DUMMY_CONFIG;
-        let mut stack_builder = StackStateBuilder::default();
-        let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
-        ipv6_config.dad_transmits = None;
-        ipv6_config.max_router_solicitations = None;
-        stack_builder.device_builder().set_default_ipv6_config(ipv6_config);
-        let mut ctx: crate::testutil::DummyCtx =
-            Ctx::new(stack_builder.build(), DummyEventDispatcher::default(), Default::default());
+        let mut ctx = crate::testutil::DummyCtx::default();
         let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
 
         let expected_sent = if enable {

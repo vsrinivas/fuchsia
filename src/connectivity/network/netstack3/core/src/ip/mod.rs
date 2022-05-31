@@ -2423,7 +2423,7 @@ mod tests {
         device::{receive_frame, testutil::receive_frame_or_panic, FrameDestination},
         ip::device::set_routing_enabled,
         testutil::*,
-        DeviceId, Mac, StackStateBuilder,
+        DeviceId, Mac,
     };
 
     // Some helper functions
@@ -3563,18 +3563,14 @@ mod tests {
         // Detection (DAD)) -- IPv6 only.
 
         let config = Ipv6::DUMMY_CONFIG;
-        let mut state_builder = StackStateBuilder::default();
-        let mut ipv6_config = crate::ip::device::state::Ipv6DeviceConfiguration::default();
-        // Doesn't matter as long as DAD is enabled.
-        ipv6_config.dad_transmits = NonZeroU8::new(1);
-        state_builder.device_builder().set_default_ipv6_config(ipv6_config);
-        let mut ctx = DummyEventDispatcherBuilder::default().build_with(
-            state_builder,
-            DummyEventDispatcher::default(),
-            crate::context::testutil::DummyCtx::default(),
-        );
+        let mut ctx = DummyEventDispatcherBuilder::default().build();
         let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
-        crate::device::testutil::enable_device(&mut ctx, device);
+        crate::ip::device::update_ipv6_configuration(&mut ctx, &mut (), device, |config| {
+            config.ip_config.ip_enabled = true;
+
+            // Doesn't matter as long as DAD is enabled.
+            config.dad_transmits = NonZeroU8::new(1);
+        });
 
         let frame_dst = FrameDestination::Unicast;
 
@@ -3750,20 +3746,18 @@ mod tests {
             // Construct a one-off context that has DAD enabled. The context
             // built above has DAD disabled, and so addresses start off in the
             // assigned state rather than the tentative state.
-            let mut state_builder = StackStateBuilder::default();
-            let mut ipv6_config = crate::ip::device::state::Ipv6DeviceConfiguration::default();
-            // Doesn't matter as long as DAD is enabled.
-            ipv6_config.dad_transmits = NonZeroU8::new(1);
-            state_builder.device_builder().set_default_ipv6_config(ipv6_config);
-            let mut ctx = builder.build_with(
-                state_builder,
-                DummyEventDispatcher::default(),
-                crate::context::testutil::DummyCtx::<(), TimerId, DeviceId, (), DummyDeviceId>::default(),
-            );
-            let tentative: UnicastAddr<Ipv6Addr> =
-                v6_config.local_mac.to_ipv6_link_local().addr().get();
+            let mut ctx = DummyCtx::default();
+            let local_mac = v6_config.local_mac;
+            let device = ctx.state.add_ethernet_device(local_mac, Ipv6::MINIMUM_LINK_MTU.into());
+            crate::ip::device::update_ipv6_configuration(&mut ctx, &mut (), device, |config| {
+                config.ip_config.ip_enabled = true;
+
+                // Doesn't matter as long as DAD is enabled.
+                config.dad_transmits = NonZeroU8::new(1);
+            });
+            let tentative: UnicastAddr<Ipv6Addr> = local_mac.to_ipv6_link_local().addr().get();
             assert_eq!(
-                receive_ipv6_packet_action(&mut ctx, &mut (), v6_dev, tentative.into_specified()),
+                receive_ipv6_packet_action(&mut ctx, &mut (), device, tentative.into_specified()),
                 ReceivePacketAction::Drop { reason: DropReason::Tentative }
             );
         }

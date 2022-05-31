@@ -469,9 +469,7 @@ impl DummyEventDispatcherBuilder {
         self.ndp_table_entries.push((device, ip, mac));
     }
 
-    /// Builds a `Ctx` from the present configuration with a default dispatcher,
-    /// and stack state set to disable NDP's Duplicate Address Detection by
-    /// default.
+    /// Builds a `Ctx` from the present configuration with a default dispatcher.
     pub(crate) fn build(self) -> DummyCtx {
         self.build_with_modifications(|_| {})
     }
@@ -484,14 +482,6 @@ impl DummyEventDispatcherBuilder {
         f: F,
     ) -> DummyCtx {
         let mut stack_builder = StackStateBuilder::default();
-
-        // Most tests do not need NDP's DAD or router solicitation so disable it
-        // here.
-        let mut ipv6_config = crate::ip::device::state::Ipv6DeviceConfiguration::default();
-        ipv6_config.dad_transmits = None;
-        ipv6_config.max_router_solicitations = None;
-        stack_builder.device_builder().set_default_ipv6_config(ipv6_config);
-
         f(&mut stack_builder);
         self.build_with(stack_builder, Default::default(), Default::default())
     }

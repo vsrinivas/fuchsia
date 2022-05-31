@@ -26,7 +26,7 @@ use netstack3_core::{
     icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
     update_ipv4_configuration, update_ipv6_configuration, AddableEntryEither, BlanketCoreContext,
     BufferUdpContext, Ctx, DeviceId, DeviceLayerEventDispatcher, EventDispatcher, IpExt,
-    IpSockCreationError, Ipv6DeviceConfiguration, StackStateBuilder, UdpBoundId, UdpContext,
+    IpSockCreationError, UdpBoundId, UdpContext,
 };
 use packet::{Buf, BufferMut, Serializer};
 use packet_formats::icmp::{IcmpEchoReply, IcmpMessage, IcmpUnusedCode};
@@ -216,14 +216,10 @@ pub(crate) struct TestContext {
 }
 
 impl TestContext {
-    fn new(builder: StackStateBuilder) -> Self {
+    fn new() -> Self {
         let (worker, _, interfaces_sink) = super::interfaces_watcher::Worker::new();
         Self {
-            ctx: Arc::new(Mutex::new(Ctx::new(
-                builder.build(),
-                TestDispatcher::default(),
-                BindingsContextImpl::default(),
-            ))),
+            ctx: Arc::new(Mutex::new(Ctx::default())),
             _interfaces_worker: Arc::new(worker),
             interfaces_sink,
         }
@@ -362,21 +358,7 @@ impl TestStack {
 
     /// Creates a new `TestStack`.
     pub(crate) fn new() -> Self {
-        // Create a new TestStack with Duplicate Address Detection disabled for
-        // tests.
-        //
-        // TODO(fxbug.dev/36238): Remove this code when an event is dispatched
-        // when Duplicate Address Detection finishes or when an IPv6 address has
-        // been assigned. Without such events, tests do not know how long to
-        // wait for the stack to be ready for events.
-        let mut builder = StackStateBuilder::default();
-        builder.device_builder().set_default_ipv6_config(Ipv6DeviceConfiguration {
-            dad_transmits: None,
-            max_router_solicitations: None,
-            slaac_config: Default::default(),
-            ip_config: Default::default(),
-        });
-        let ctx = TestContext::new(builder);
+        let ctx = TestContext::new();
         TestStack { ctx, endpoint_ids: HashMap::new() }
     }
 

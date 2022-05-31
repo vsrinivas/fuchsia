@@ -2675,20 +2675,14 @@ mod tests {
         // Should have only sent 3 packets (Router solicitations).
         assert_eq!(ctx.dispatcher.frames_sent().len(), 3);
 
-        // Configure MAX_RTR_SOLICITATIONS in the stack.
-
-        let mut stack_builder = StackStateBuilder::default();
-        let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
-        ipv6_config.dad_transmits = None;
-        ipv6_config.max_router_solicitations = NonZeroU8::new(2);
-        stack_builder.device_builder().set_default_ipv6_config(ipv6_config);
-        let mut ctx =
-            Ctx::new(stack_builder.build(), DummyEventDispatcher::default(), DummyCtx::default());
-
+        let mut ctx = Ctx::<DummyEventDispatcher, _>::default();
         assert_empty(ctx.dispatcher.frames_sent());
         let device_id =
             ctx.state.add_ethernet_device(dummy_config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
-        crate::device::testutil::enable_device(&mut ctx, device_id);
+        crate::device::update_ipv6_configuration(&mut ctx, device_id, |config| {
+            config.ip_config.ip_enabled = true;
+            config.max_router_solicitations = NonZeroU8::new(2);
+        });
         assert_empty(ctx.dispatcher.frames_sent());
 
         let time = ctx.now();
@@ -3290,16 +3284,7 @@ mod tests {
         // Routers should not perform SLAAC for global addresses.
 
         let config = Ipv6::DUMMY_CONFIG;
-        let mut state_builder = StackStateBuilder::default();
-        let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
-        ipv6_config.dad_transmits = None;
-        ipv6_config.max_router_solicitations = None;
-        state_builder.device_builder().set_default_ipv6_config(ipv6_config);
-        let mut ctx = DummyEventDispatcherBuilder::default().build_with(
-            state_builder,
-            DummyEventDispatcher::default(),
-            DummyCtx::default(),
-        );
+        let mut ctx = DummyEventDispatcherBuilder::default().build();
         let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::testutil::enable_device(&mut ctx, device);
         set_ipv6_routing_enabled(&mut ctx, &mut (), device, true)

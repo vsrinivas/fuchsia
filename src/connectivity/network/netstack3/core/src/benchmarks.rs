@@ -162,16 +162,8 @@ impl TimerContext<TimerId> for BenchmarkCoreContext {
 // IPv4 packet frame which we expect will be parsed and forwarded without
 // requiring any new buffers to be allocated.
 fn bench_forward_minimum<B: Bencher>(b: &mut B, frame_size: usize) {
-    let mut state_builder = StackStateBuilder::default();
-    // Most tests do not need NDP's DAD or router solicitation so disable it
-    // here.
-    let mut ipv6_config = crate::ip::device::state::Ipv6DeviceConfiguration::default();
-    ipv6_config.dad_transmits = None;
-    ipv6_config.max_router_solicitations = None;
-    state_builder.device_builder().set_default_ipv6_config(ipv6_config);
-
     let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V4).build_with(
-        state_builder,
+        StackStateBuilder::default(),
         BenchmarkEventDispatcher::default(),
         BenchmarkCoreContext::default(),
     );
