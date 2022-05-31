@@ -8,6 +8,8 @@
 
 #include "lib/fxt/fields.h"
 #include "lib/fxt/record_types.h"
+#include "zircon/syscalls/object.h"
+#include "zircon/types.h"
 
 namespace {
 struct FakeRecord {
@@ -491,6 +493,150 @@ TEST(Serializer, FlowEndEventRecord) {
   EXPECT_EQ(header & 0x0000'0000'000F'0000, uint64_t{0x0000'0000'000A'0000});
   EXPECT_EQ(words[1], event_time);
   EXPECT_EQ(words[2], flow_id);
+}
+
+TEST(Serializer, BlobRecord) {
+  fxt::StringRef blob_name(0x7777);
+  fxt::BlobType type = fxt::BlobType::kData;
+  const char* data = "This is some data that we are writing";
+  size_t num_bytes = strlen(data);  // 37
+
+  FakeWriter writer;
+  EXPECT_EQ(ZX_OK, fxt::WriteBlobRecord(&writer, blob_name, type,
+                                        reinterpret_cast<const void*>(data), num_bytes));
+  // One word for the header, five for the data
+  EXPECT_EQ(writer.bytes.size(), fxt::WordSize(6).SizeInBytes());
+  uint64_t* bytes = reinterpret_cast<uint64_t*>(writer.bytes.data());
+  uint64_t header = bytes[0];
+  // Record type is 5
+  EXPECT_EQ(header & 0x0000'0000'0000'000F, uint64_t{0x0000'0000'0000'0005});
+  // Size
+  EXPECT_EQ(header & 0x0000'0000'0000'FFF0, uint64_t{0x0000'0000'0000'0060});
+  // Block name ref
+  EXPECT_EQ(header & 0x0000'0000'FFFF'0000, uint64_t{0x0000'0000'7777'0000});
+  // Blob size
+  EXPECT_EQ(header & 0x0000'7FFF'0000'0000, uint64_t{0x0000'0025'0000'0000});
+  // Type
+  EXPECT_EQ(header & 0x00FF'0000'0000'0000, uint64_t{0x0001'0000'0000'0000});
+  EXPECT_EQ(std::memcmp(bytes + 1, "This is ", 8), 0);
+  EXPECT_EQ(std::memcmp(bytes + 2, "some dat", 8), 0);
+  EXPECT_EQ(std::memcmp(bytes + 3, "a that w", 8), 0);
+  EXPECT_EQ(std::memcmp(bytes + 4, "e are wr", 8), 0);
+  EXPECT_EQ(std::memcmp(bytes + 5, "iting\0\0\0", 8), 0);
+}
+
+TEST(Serializer, UserspaceObjectRecord) {
+  fxt::StringRef name(0x7777);
+  fxt::StringRef arg_name(0x1234);
+  fxt::ThreadRef thread(0xAA);
+  uintptr_t ptr = 0xDEADBEEF;
+
+  FakeWriter writer;
+  EXPECT_EQ(ZX_OK, fxt::WriteUserspaceObjectRecord(&writer, ptr, thread, name,
+                                                   fxt::Argument(arg_name, true)));
+  // 1 word for the header, 1 for the pointer, 1 for the argument
+  EXPECT_EQ(writer.bytes.size(), fxt::WordSize(3).SizeInBytes());
+  uint64_t* bytes = reinterpret_cast<uint64_t*>(writer.bytes.data());
+  uint64_t header = bytes[0];
+  // Record type is 6
+  EXPECT_EQ(header & 0x0000'0000'0000'000F, uint64_t{0x0000'0000'0000'0006});
+  // Size
+  EXPECT_EQ(header & 0x0000'0000'0000'FFF0, uint64_t{0x0000'0000'0000'0030});
+  // Threadref
+  EXPECT_EQ(header & 0x0000'0000'00FF'0000, uint64_t{0x0000'0000'00AA'0000});
+  // Name Ref
+  EXPECT_EQ(header & 0x0000'00FF'FF00'0000, uint64_t{0x0000'0077'7700'0000});
+  EXPECT_EQ(bytes[1], ptr);
+  // Argument (true)
+  EXPECT_EQ(bytes[2], uint64_t{0x0000'0001'1234'0019});
+}
+
+TEST(Serializer, KernelObjectRecord) {
+  fxt::StringRef name(0x7777);
+  fxt::StringRef arg_name(0x4321);
+  zx_koid_t koid = 0xDEADBEEF;
+  zx_obj_type_t obj_type = ZX_OBJ_TYPE_CHANNEL;
+
+  FakeWriter writer;
+  EXPECT_EQ(ZX_OK, fxt::WriteKernelObjectRecord(&writer, koid, obj_type, name,
+                                                fxt::Argument(arg_name, false)));
+  // 1 word for the header, 1 for the pointer, 1 for the argument
+  EXPECT_EQ(writer.bytes.size(), fxt::WordSize(3).SizeInBytes());
+  uint64_t* bytes = reinterpret_cast<uint64_t*>(writer.bytes.data());
+  uint64_t header = bytes[0];
+  // Record type is 7
+  EXPECT_EQ(header & 0x0000'0000'0000'000F, uint64_t{0x0000'0000'0000'0007});
+  // Size
+  EXPECT_EQ(header & 0x0000'0000'0000'FFF0, uint64_t{0x0000'0000'0000'0030});
+  // Obj type
+  EXPECT_EQ(header & 0x0000'0000'00FF'0000, uint64_t{0x0000'0000'0004'0000});
+  // Name Ref
+  EXPECT_EQ(header & 0x0000'00FF'FF00'0000, uint64_t{0x0000'0077'7700'0000});
+  EXPECT_EQ(bytes[1], koid);
+  // Argument (true)
+  EXPECT_EQ(bytes[2], uint64_t{0x0000'0000'4321'0019});
+}
+
+TEST(Serializer, ContextSwitchRecord) {
+  uint64_t event_time = 0xAABB'CCDD'EEFF'0011;
+  uint8_t cpu_number = 0xBB;
+  zx_thread_state_t outgoing_state = ZX_THREAD_STATE_SUSPENDED;
+  fxt::ThreadRef outgoing_thread(0x1);
+  fxt::ThreadRef incoming_thread(0x2);
+  uint8_t outgoing_thread_pri = 3;
+  uint8_t incoming_thread_pri = 4;
+
+  FakeWriter writer;
+  EXPECT_EQ(ZX_OK, fxt::WriteContextSwitchRecord(&writer, event_time, cpu_number, outgoing_state,
+                                                 outgoing_thread, incoming_thread,
+                                                 outgoing_thread_pri, incoming_thread_pri));
+  // 1 word for the header, 1 for the timestamp
+  EXPECT_EQ(writer.bytes.size(), fxt::WordSize(2).SizeInBytes());
+  uint64_t* bytes = reinterpret_cast<uint64_t*>(writer.bytes.data());
+  uint64_t header = bytes[0];
+  // Record type is 8
+  EXPECT_EQ(header & 0x0000'0000'0000'000F, uint64_t{0x0000'0000'0000'0008});
+  // Size
+  EXPECT_EQ(header & 0x0000'0000'0000'FFF0, uint64_t{0x0000'0000'0000'0020});
+  // CPU number
+  EXPECT_EQ(header & 0x0000'0000'00FF'0000, uint64_t{0x0000'0000'00BB'0000});
+  // State
+  EXPECT_EQ(header & 0x0000'0000'0F00'0000, uint64_t{0x0000'0000'0200'0000});
+  // out ref
+  EXPECT_EQ(header & 0x0000'000F'F000'0000, uint64_t{0x0000'0000'1000'0000});
+  // in ref
+  EXPECT_EQ(header & 0x0000'0FF0'0000'0000, uint64_t{0x0000'0020'0000'0000});
+  // out pri
+  EXPECT_EQ(header & 0x000F'F000'0000'0000, uint64_t{0x0000'3000'0000'0000});
+  // in pri
+  EXPECT_EQ(header & 0x0FF0'0000'0000'0000, uint64_t{0x0040'0000'0000'0000});
+  EXPECT_EQ(bytes[1], event_time);
+}
+
+TEST(Serializer, LogRecord) {
+  uint64_t event_time = 0xAABB'CCDD'EEFF'0011;
+  fxt::ThreadRef log_thread(0x1);
+  const char* message = "This is a log message";
+  size_t message_len = strlen(message);  // 21
+
+  FakeWriter writer;
+  EXPECT_EQ(ZX_OK, fxt::WriteLogRecord(&writer, event_time, log_thread, message, message_len));
+  // 1 word for the header, 1 for the timestamp, 3 words for the message
+  EXPECT_EQ(writer.bytes.size(), fxt::WordSize(5).SizeInBytes());
+  uint64_t* bytes = reinterpret_cast<uint64_t*>(writer.bytes.data());
+  uint64_t header = bytes[0];
+  // Record type is 9
+  EXPECT_EQ(header & 0x0000'0000'0000'000F, uint64_t{0x0000'0000'0000'0009});
+  // Size
+  EXPECT_EQ(header & 0x0000'0000'0000'FFF0, uint64_t{0x0000'0000'0000'0050});
+  // message length
+  EXPECT_EQ(header & 0x0000'0000'8FFF'0000, uint64_t{0x0000'0000'0015'0000});
+  // thread_ref
+  EXPECT_EQ(header & 0x0000'00FF'0000'0000, uint64_t{0x0000'0001'0000'0000});
+  EXPECT_EQ(bytes[1], event_time);
+  EXPECT_EQ(std::memcmp(bytes + 2, "This is ", 8), 0);
+  EXPECT_EQ(std::memcmp(bytes + 3, "a log me", 8), 0);
+  EXPECT_EQ(std::memcmp(bytes + 4, "ssage\0\0\0", 8), 0);
 }
 
 }  // namespace

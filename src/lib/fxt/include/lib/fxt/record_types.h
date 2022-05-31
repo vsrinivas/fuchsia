@@ -47,6 +47,7 @@ enum class RecordType {
   kThread = 3,
   kEvent = 4,
   kBlob = 5,
+  kUserspaceObject = 6,
   kKernelObject = 7,
   kContextSwitch = 8,
   kLog = 9,
@@ -134,6 +135,8 @@ enum class ThreadState {
 
 using ArgumentHeader = uint64_t;
 using RecordHeader = uint64_t;
+
+enum class BlobType { kData = 1, kLastBranch = 2 };
 
 }  // namespace fxt
 

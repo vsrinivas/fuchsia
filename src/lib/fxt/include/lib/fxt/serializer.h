@@ -20,6 +20,7 @@
 #include "fields.h"
 #include "record_types.h"
 #include "writer_internal.h"
+#include "zircon/syscalls/object.h"
 #include "zircon/types.h"
 
 namespace fxt {
@@ -421,6 +422,7 @@ Argument(StringRef<RefType::kId>, StringRef<RefType::kInline>)
 #endif
 
 // Write an Initialization Record using Writer
+//
 // An Initialization Record provides additional information which modifies how
 // following records are interpreted.
 //
@@ -432,6 +434,46 @@ zx_status_t WriteInitializationRecord(Writer* writer, zx_ticks_t ticks_per_secon
   zx::status<typename internal::WriterTraits<Writer>::Reservation> res = writer->Reserve(header);
   if (res.is_ok()) {
     res->WriteWord(ticks_per_second);
+    res->Commit();
+  }
+  return res.status_value();
+}
+
+// Write String Record using Writer
+//
+// Registers a string in the string table
+//
+// See also: https://fuchsia.dev/fuchsia-src/reference/tracing/trace-format#string-record
+template <typename Writer, internal::EnableIfWriter<Writer> = 0>
+zx_status_t WriteStringRecord(Writer* writer, uint16_t index, const char* string,
+                              size_t string_length) {
+  const WordSize record_size = WordSize(1) + WordSize::FromBytes(string_length);
+  uint64_t header = MakeHeader(RecordType::kString, record_size) |
+                    fxt::StringRecordFields::StringIndex::Make(index) |
+                    fxt::StringRecordFields::StringLength::Make(string_length);
+  zx::status<typename internal::WriterTraits<Writer>::Reservation> res = writer->Reserve(header);
+  if (res.is_ok()) {
+    res->WriteBytes(string, string_length);
+    res->Commit();
+  }
+  return res.status_value();
+}
+
+// Write Thread Record using Writer
+//
+// Registers a thread in the thread table
+//
+// See also: https://fuchsia.dev/fuchsia-src/reference/tracing/trace-format#thread-record
+template <typename Writer, internal::EnableIfWriter<Writer> = 0>
+zx_status_t WriteThreadRecord(Writer* writer, uint16_t index, zx_koid_t process_koid,
+                              zx_koid_t thread_koid) {
+  const WordSize record_size(3);
+  uint64_t header = MakeHeader(RecordType::kThread, record_size) |
+                    fxt::ThreadRecordFields::ThreadIndex::Make(index);
+  zx::status<typename internal::WriterTraits<Writer>::Reservation> res = writer->Reserve(header);
+  if (res.is_ok()) {
+    res->WriteWord(process_koid);
+    res->WriteWord(thread_koid);
     res->Commit();
   }
   return res.status_value();
@@ -731,6 +773,165 @@ zx_status_t WriteFlowEndEventRecord(Writer* writer, uint64_t event_time,
   return internal::WriteOneWordEventRecord(writer, event_time, thread_ref, category_ref, name_ref,
                                            fxt::EventType::kFlowEnd, flow_id, args...);
 }
+
+// Write Block Record to the given Writer
+//
+// Provides uninterpreted bulk data to be included in the trace. This can be
+// useful for embedding captured trace data in other formats.
+//
+// See also: https://fuchsia.dev/fuchsia-src/reference/tracing/trace-format#blob-record
+template <typename Writer, internal::EnableIfWriter<Writer> = 0, RefType name_type>
+zx_status_t WriteBlobRecord(Writer* writer, const StringRef<name_type>& blob_name, BlobType type,
+                            const void* bytes, size_t num_bytes) {
+  const WordSize record_size =
+      WordSize(1) + blob_name.PayloadSize() + WordSize::FromBytes(num_bytes);
+  uint64_t header = MakeHeader(RecordType::kBlob, record_size) |
+                    fxt::BlobRecordFields::NameStringRef::Make(blob_name.HeaderEntry()) |
+                    fxt::BlobRecordFields::BlobSize::Make(num_bytes) |
+                    fxt::BlobRecordFields::BlobType::Make(ToUnderlyingType(type));
+
+  zx::status<typename internal::WriterTraits<Writer>::Reservation> res = writer->Reserve(header);
+  if (res.is_ok()) {
+    blob_name.Write(*res);
+    res->WriteBytes(bytes, num_bytes);
+    res->Commit();
+  }
+  return res.status_value();
+}
+
+// Write a Userspace Object Record to the given Writer
+//
+// Describes a userspace object, assigns it a label, and optionally associates
+// key/value data with it as arguments. Information about the object is added
+// to a per-process userspace object table.
+//
+// See also: https://fuchsia.dev/fuchsia-src/reference/tracing/trace-format#userspace-object-record
+template <typename Writer, internal::EnableIfWriter<Writer> = 0, RefType thread_type,
+          RefType name_type, ArgumentType... arg_types, RefType... ref_types>
+zx_status_t WriteUserspaceObjectRecord(Writer* writer, uintptr_t pointer,
+                                       const ThreadRef<thread_type>& thread_arg,
+                                       const StringRef<name_type>& name_arg,
+                                       const Argument<arg_types, ref_types>&... args) {
+  WordSize record_size = WordSize(1) /*header*/ + WordSize(1) /*pointer*/ +
+                         thread_arg.PayloadSize() + name_arg.PayloadSize();
+
+  WordSize arg_sizes[] = {args.PayloadSize()...};
+  for (auto i : arg_sizes) {
+    record_size += i;
+  }
+  uint64_t header =
+      MakeHeader(RecordType::kUserspaceObject, record_size) |
+      fxt::UserspaceObjectRecordFields::ProcessThreadRef::Make(thread_arg.HeaderEntry()) |
+      fxt::UserspaceObjectRecordFields::NameStringRef::Make(name_arg.HeaderEntry()) |
+      fxt::UserspaceObjectRecordFields::ArgumentCount::Make(sizeof...(args));
+
+  zx::status<typename internal::WriterTraits<Writer>::Reservation> res = writer->Reserve(header);
+  if (res.is_ok()) {
+    res->WriteWord(pointer);
+    thread_arg.Write(*res);
+    name_arg.Write(*res);
+    bool array[] = {(args.Write(*res), false)...};
+    (void)array;
+    res->Commit();
+  }
+  return res.status_value();
+}
+
+// Write a Kernel Object Record using the given Writer
+//
+// Describes a kernel object, assigns it a label, and optionally associates
+// key/value data with it as arguments. Information about the object is added
+// to a global kernel object table.
+//
+// See also: https://fuchsia.dev/fuchsia-src/reference/tracing/trace-format#kernel-object-record
+template <typename Writer, internal::EnableIfWriter<Writer> = 0, RefType name_type,
+          ArgumentType... arg_types, RefType... ref_types>
+zx_status_t WriteKernelObjectRecord(Writer* writer, zx_koid_t koid, zx_obj_type_t obj_type,
+                                    const StringRef<name_type>& name_arg,
+                                    const Argument<arg_types, ref_types>&... args) {
+  WordSize record_size = WordSize(1) /*header*/ + WordSize(1) /*koid*/ + name_arg.PayloadSize() +
+                         name_arg.PayloadSize();
+
+  WordSize arg_sizes[] = {args.PayloadSize()...};
+  for (auto i : arg_sizes) {
+    record_size += i;
+  }
+  uint64_t header = MakeHeader(RecordType::kKernelObject, record_size) |
+                    fxt::KernelObjectRecordFields::ObjectType::Make(obj_type) |
+                    fxt::KernelObjectRecordFields::NameStringRef::Make(name_arg.HeaderEntry()) |
+                    fxt::KernelObjectRecordFields::ArgumentCount::Make(sizeof...(args));
+
+  zx::status<typename internal::WriterTraits<Writer>::Reservation> res = writer->Reserve(header);
+  if (res.is_ok()) {
+    res->WriteWord(koid);
+    name_arg.Write(*res);
+    bool array[] = {(args.Write(*res), false)...};
+    (void)array;
+    res->Commit();
+  }
+  return res.status_value();
+}
+
+// Write a Context Switch Record using the given Writer
+//
+// Describes a context switch during which a CPU handed off control from an
+// outgoing thread to an incoming thread that resumes execution.
+//
+// See also: https://fuchsia.dev/fuchsia-src/reference/tracing/trace-format#context-switch-record
+template <typename Writer, internal::EnableIfWriter<Writer> = 0, RefType outgoing_type,
+          RefType incoming_type>
+zx_status_t WriteContextSwitchRecord(Writer* writer, uint64_t event_time, uint8_t cpu_number,
+                                     zx_thread_state_t outgoing_thread_state,
+                                     const ThreadRef<outgoing_type>& outgoing_thread,
+                                     const ThreadRef<incoming_type>& incoming_thread,
+                                     uint8_t outgoing_thread_priority,
+                                     uint8_t incoming_thread_priority) {
+  const WordSize record_size = WordSize(1) /*header*/ + WordSize(1) /*timestamp*/ +
+                               outgoing_thread.PayloadSize() + incoming_thread.PayloadSize();
+  uint64_t header =
+      MakeHeader(RecordType::kContextSwitch, record_size) |
+      fxt::ContextSwitchRecordFields::CpuNumber::Make(cpu_number) |
+      fxt::ContextSwitchRecordFields::OutgoingThreadState::Make(outgoing_thread_state) |
+      fxt::ContextSwitchRecordFields::OutgoingThreadRef::Make(outgoing_thread.HeaderEntry()) |
+      fxt::ContextSwitchRecordFields::IncomingThreadRef::Make(incoming_thread.HeaderEntry()) |
+      fxt::ContextSwitchRecordFields::OutgoingThreadPriority::Make(outgoing_thread_priority) |
+      fxt::ContextSwitchRecordFields::IncomingThreadPriority::Make(incoming_thread_priority);
+
+  zx::status<typename internal::WriterTraits<Writer>::Reservation> res = writer->Reserve(header);
+  if (res.is_ok()) {
+    res->WriteWord(event_time);
+    outgoing_thread.Write(*res);
+    incoming_thread.Write(*res);
+    res->Commit();
+  }
+  return res.status_value();
+}
+
+// Write a Log Record using the given Writer
+//
+// Describes a message written to the log at a particular moment in time.
+//
+// https://fuchsia.dev/fuchsia-src/reference/tracing/trace-format#log-record
+template <typename Writer, internal::EnableIfWriter<Writer> = 0, RefType thread_type>
+zx_status_t WriteLogRecord(Writer* writer, uint64_t event_time,
+                           const ThreadRef<thread_type>& thread_arg, const char* log_message,
+                           size_t log_message_length) {
+  const WordSize record_size = WordSize(1) /*header*/ + WordSize(1) /*timestamp*/ +
+                               thread_arg.PayloadSize() + WordSize::FromBytes(log_message_length);
+  uint64_t header = MakeHeader(RecordType::kLog, record_size) |
+                    fxt::LogRecordFields::LogMessageLength::Make(log_message_length) |
+                    fxt::LogRecordFields::ThreadRef::Make(thread_arg.HeaderEntry());
+
+  zx::status<typename internal::WriterTraits<Writer>::Reservation> res = writer->Reserve(header);
+  if (res.is_ok()) {
+    res->WriteWord(event_time);
+    thread_arg.Write(*res);
+    res->WriteBytes(log_message, log_message_length);
+    res->Commit();
+  }
+  return res.status_value();
+}
+
 }  // namespace fxt
 
 #endif  // SRC_LIB_FXT_INCLUDE_LIB_FXT_SERIALIZER_H_
