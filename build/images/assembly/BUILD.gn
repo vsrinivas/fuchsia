@@ -6,6 +6,11 @@ import("//build/python/python_host_test.gni")
 
 assert(is_host, "Only include assembly build scripts via the host toolchain")
 
+python_binary("generated_assembly_inputs") {
+  main_source = "generated_assembly_inputs.py"
+  deps = [ "//build/python/modules/assembly" ]
+}
+
 python_binary("check_size_hermetic_inputs") {
   main_source = "check_size_hermetic_inputs.py"
   deps = [ "//build/python/modules/assembly" ]

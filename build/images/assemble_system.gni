@@ -619,6 +619,7 @@ template("assemble_system") {
                              "testonly",
                              "visibility",
                            ])
+    product_config = files.product_assembly_config
     images_config = files.images_config
     output_path = files.assembly_inputs
 

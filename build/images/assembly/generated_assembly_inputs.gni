@@ -2,10 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/python/python_action.gni")
+
 # Generates a list of the files included in a product that must be uploaded by
 # infrastructure.
 #
 # Arguments
+#
+#   product_config (required)
+#     [path] The path to the product config.
 #
 #   images_config (required)
 #     [path] The path to the images config.
@@ -17,26 +22,37 @@
 #     [list of str] Additional files or directories to list as inputs.
 #
 template("generated_assembly_inputs") {
+  assert(defined(invoker.product_config), "Need to define product_config")
   assert(defined(invoker.images_config), "Need to define images_config")
   assert(defined(invoker.output_path), "Need to define output_path")
 
-  action(target_name) {
+  python_action(target_name) {
     forward_variables_from(invoker,
                            [
                              "deps",
                              "testonly",
                              "visibility",
                            ])
-    script = "//build/images/assembly/generated_assembly_inputs.py"
+    binary_label = "//build/images/assembly:generated_assembly_inputs"
+
+    depfile_path = "$target_out_dir/$target_name.depfile"
+    depfile = depfile_path
 
     outputs = [ invoker.output_path ]
-    inputs = [ invoker.images_config ]
+    inputs = [
+      invoker.images_config,
+      invoker.product_config,
+    ]
 
     args = [
+      "--product-config",
+      rebase_path(invoker.product_config, root_build_dir),
       "--images-config",
       rebase_path(invoker.images_config, root_build_dir),
       "--output",
       rebase_path(invoker.output_path, root_build_dir),
+      "--depfile",
+      rebase_path(depfile_path, root_build_dir),
     ]
 
     if (defined(invoker.sources)) {

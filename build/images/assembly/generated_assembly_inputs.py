@@ -8,6 +8,8 @@ import json
 import os
 import sys
 
+from depfile import DepFile
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -15,9 +17,12 @@ def main():
         'Create a flat list of files included in the images. This is used to inform infrastructure what files to upload'
     )
     parser.add_argument(
+        '--product-config', type=argparse.FileType('r'), required=True)
+    parser.add_argument(
         '--images-config', type=argparse.FileType('r'), required=True)
     parser.add_argument('--sources', type=str, nargs='*')
     parser.add_argument('--output', type=argparse.FileType('w'), required=True)
+    parser.add_argument('--depfile', type=argparse.FileType('w'), required=True)
     args = parser.parse_args()
 
     # The files to put in the output with source mapped to destination.
@@ -39,6 +44,29 @@ def main():
         else:
             destination = os.path.join("built/artifacts", source)
         file_mapping[source] = destination
+
+    # Add a package and all the included blobs.
+    manifests_for_depfile = []
+
+    def add_package(manifest):
+        manifests_for_depfile.append(manifest)
+        add_source(manifest)
+        with open(manifest, 'r') as f:
+            manifest = json.load(f)
+            for blob in manifest.get("blobs", []):
+                add_source(blob["source_path"])
+
+    # Add the product config.
+    add_source(args.product_config.name)
+    product_config = json.load(args.product_config)
+    if "product" in product_config:
+        product = product_config["product"]
+        if "packages" in product:
+            packages = product["packages"]
+            for package in packages.get("base", []):
+                add_package(package)
+            for package in packages.get("cache", []):
+                add_package(package)
 
     # Add the images config.
     add_source(args.images_config.name)
@@ -65,6 +93,12 @@ def main():
             "source": src,
             "destination": dest,
         })
+
+    # Write a depfile with any opened package manifests.
+    if manifests_for_depfile:
+        depfile = DepFile(args.output.name)
+        depfile.update(manifests_for_depfile)
+        depfile.write_to(args.depfile)
 
     # Write the list.
     json.dump(files, args.output, indent=2)
