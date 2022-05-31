@@ -654,17 +654,7 @@ TEST_P(DatagramSendTest, SendToIPv4MappedIPv6FromIPv4) {
       << strerror(errno);
   ASSERT_EQ(addrlen, sizeof(addr));
 
-  sockaddr_in6 addr6 = {
-      .sin6_family = AF_INET6,
-      .sin6_port = addr.sin_port,
-  };
-  addr6.sin6_addr.s6_addr[10] = 0xff;
-  addr6.sin6_addr.s6_addr[11] = 0xff;
-  memcpy(&addr6.sin6_addr.s6_addr[12], &addr.sin_addr.s_addr, sizeof(addr.sin_addr.s_addr));
-
-  char buf[INET6_ADDRSTRLEN];
-  ASSERT_TRUE(IN6_IS_ADDR_V4MAPPED(&addr6.sin6_addr))
-      << inet_ntop(addr6.sin6_family, &addr6.sin6_addr, buf, sizeof(buf));
+  sockaddr_in6 addr6 = MapIpv4SockaddrToIpv6Sockaddr(addr);
 
   switch (io_method.Op()) {
     case IOMethod::Op::SENDTO: {
@@ -1049,6 +1039,94 @@ TEST(NetDatagramTest, DatagramSendtoRecvfromV6) {
   ASSERT_EQ(close(sendfd.release()), 0) << strerror(errno);
 
   EXPECT_EQ(close(recvfd.release()), 0) << strerror(errno);
+}
+
+TEST(NetDatagramTest, DatagramSendtoV4RecvfromV6) {
+  sockaddr_in addr4 = LoopbackSockaddrV4(0);
+  sockaddr_in6 addr6 = MapIpv4SockaddrToIpv6Sockaddr(addr4);
+
+  fbl::unique_fd recv_fd;
+  ASSERT_TRUE(recv_fd = fbl::unique_fd(socket(AF_INET6, SOCK_DGRAM, 0))) << strerror(errno);
+  ASSERT_EQ(bind(recv_fd.get(), reinterpret_cast<const sockaddr*>(&addr6), sizeof(addr6)), 0)
+      << strerror(errno);
+
+  socklen_t addrlen = sizeof(addr6);
+  ASSERT_EQ(getsockname(recv_fd.get(), reinterpret_cast<sockaddr*>(&addr6), &addrlen), 0)
+      << strerror(errno);
+  ASSERT_EQ(addrlen, sizeof(addr6));
+
+  fbl::unique_fd send_fd;
+  ASSERT_TRUE(send_fd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, 0))) << strerror(errno);
+
+  addr4.sin_port = addr6.sin6_port;
+  constexpr char send_buf[] = "abc";
+  ASSERT_EQ(sendto(send_fd.get(), send_buf, sizeof(send_buf), 0,
+                   reinterpret_cast<sockaddr*>(&addr4), addrlen),
+            ssize_t(sizeof(send_buf)))
+      << strerror(errno);
+
+  char recv_buf[sizeof(send_buf) + 1];
+  sockaddr_in6 peer;
+  socklen_t peerlen = sizeof(peer);
+  ASSERT_EQ(recvfrom(recv_fd.get(), recv_buf, sizeof(recv_buf), 0,
+                     reinterpret_cast<sockaddr*>(&peer), &peerlen),
+            ssize_t(sizeof(send_buf)))
+      << strerror(errno);
+  ASSERT_EQ(peerlen, sizeof(peer));
+
+  char addrbuf[INET6_ADDRSTRLEN];
+  char peerbuf[INET6_ADDRSTRLEN];
+  const char* addrstr = inet_ntop(addr6.sin6_family, &addr6.sin6_addr, addrbuf, sizeof(addrbuf));
+  const char* peerstr = inet_ntop(peer.sin6_family, &peer.sin6_addr, peerbuf, sizeof(peerbuf));
+  EXPECT_STREQ(peerstr, addrstr);
+
+  EXPECT_EQ(close(send_fd.release()), 0) << strerror(errno);
+
+  EXPECT_EQ(close(recv_fd.release()), 0) << strerror(errno);
+}
+
+TEST(NetDatagramTest, DatagramSendtoV6RecvfromV4) {
+  sockaddr_in addr = LoopbackSockaddrV4(0);
+  fbl::unique_fd recv_fd;
+  ASSERT_TRUE(recv_fd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, 0))) << strerror(errno);
+
+  ASSERT_EQ(bind(recv_fd.get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)), 0)
+      << strerror(errno);
+
+  socklen_t addrlen = sizeof(addr);
+  ASSERT_EQ(getsockname(recv_fd.get(), reinterpret_cast<sockaddr*>(&addr), &addrlen), 0)
+      << strerror(errno);
+  ASSERT_EQ(addrlen, sizeof(addr));
+
+  sockaddr_in6 addr6 = MapIpv4SockaddrToIpv6Sockaddr(addr);
+
+  fbl::unique_fd send_fd;
+  ASSERT_TRUE(send_fd = fbl::unique_fd(socket(AF_INET6, SOCK_DGRAM, 0))) << strerror(errno);
+
+  constexpr char send_buf[] = "abc";
+  ASSERT_EQ(sendto(send_fd.get(), send_buf, sizeof(send_buf), 0,
+                   reinterpret_cast<sockaddr*>(&addr6), sizeof(addr6)),
+            ssize_t(sizeof(send_buf)))
+      << strerror(errno);
+
+  char recv_buf[sizeof(send_buf) + 1];
+  sockaddr_in peer;
+  socklen_t peerlen = sizeof(peer);
+  ASSERT_EQ(recvfrom(recv_fd.get(), recv_buf, sizeof(recv_buf), 0,
+                     reinterpret_cast<sockaddr*>(&peer), &peerlen),
+            ssize_t(sizeof(send_buf)))
+      << strerror(errno);
+  ASSERT_EQ(peerlen, sizeof(peer));
+
+  char addrbuf[INET_ADDRSTRLEN];
+  char peerbuf[INET_ADDRSTRLEN];
+  const char* addrstr = inet_ntop(addr.sin_family, &addr.sin_addr, addrbuf, sizeof(addrbuf));
+  const char* peerstr = inet_ntop(peer.sin_family, &peer.sin_addr, peerbuf, sizeof(peerbuf));
+  EXPECT_STREQ(peerstr, addrstr);
+
+  EXPECT_EQ(close(send_fd.release()), 0) << strerror(errno);
+
+  EXPECT_EQ(close(recv_fd.release()), 0) << strerror(errno);
 }
 
 TEST(NetDatagramTest, ConnectUnspecV4) {
@@ -2974,14 +3052,7 @@ class DatagramLinearizedSendSemanticsIpv6OnlyInstance
     ASSERT_TRUE(send_fd_ = fbl::unique_fd(socket(AF_INET6, SOCK_DGRAM, 0))) << strerror(errno);
 
     // Construct a IPV4 mapped IPV6 address.
-    send_addr_ = {
-        .sin6_family = AF_INET6,
-        .sin6_port = recv_addr.sin_port,
-    };
-    send_addr_.sin6_addr.s6_addr[10] = 0xff;
-    send_addr_.sin6_addr.s6_addr[11] = 0xff;
-    memcpy(&send_addr_.sin6_addr.s6_addr[12], &recv_addr.sin_addr.s_addr,
-           sizeof(recv_addr.sin_addr.s_addr));
+    send_addr_ = MapIpv4SockaddrToIpv6Sockaddr(recv_addr);
   }
 
   void ToggleOn() {

@@ -20,6 +20,9 @@
 
 constexpr std::chrono::duration kTimeout = std::chrono::seconds(10);
 
+// Returns a `sockaddr_in6` address mapped from the provided `sockaddr_in`.
+sockaddr_in6 MapIpv4SockaddrToIpv6Sockaddr(const sockaddr_in& addr4);
+
 template <typename T>
 void AssertBlocked(const std::future<T>& fut) {
   // Give an asynchronous blocking operation some time to reach the blocking state. Clocks

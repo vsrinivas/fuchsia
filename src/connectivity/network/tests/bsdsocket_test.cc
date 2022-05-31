@@ -1252,11 +1252,14 @@ class AnyAddrSocketTest : public SocketTest<socktype> {
         return addr;
       }
       case AddrKind::Kind::V4MAPPEDV6: {
-        auto sin6 = reinterpret_cast<sockaddr_in6*>(&addr);
-        sin6->sin6_addr = IN6ADDR_ANY_INIT;
-        sin6->sin6_addr.s6_addr[10] = 0xff;
-        sin6->sin6_addr.s6_addr[11] = 0xff;
-        sin6->sin6_port = port;
+        sockaddr_in v4_addr{
+            .sin_port = port,
+            .sin_addr =
+                {
+                    .s_addr = htonl(INADDR_ANY),
+                },
+        };
+        *reinterpret_cast<sockaddr_in6*>(&addr) = MapIpv4SockaddrToIpv6Sockaddr(v4_addr);
         return addr;
       }
     }

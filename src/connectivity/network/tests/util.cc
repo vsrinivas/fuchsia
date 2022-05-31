@@ -4,6 +4,7 @@
 
 #include "util.h"
 
+#include <arpa/inet.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
@@ -11,6 +12,24 @@
 #include <algorithm>
 
 #include <gtest/gtest.h>
+
+sockaddr_in6 MapIpv4SockaddrToIpv6Sockaddr(const sockaddr_in& addr4) {
+  sockaddr_in6 addr6 = {
+      .sin6_family = AF_INET6,
+      .sin6_port = addr4.sin_port,
+  };
+
+  // An IPv4-mapped IPv6 address has 8 bytes of zeros, followed by two bytes of ones,
+  // followed by the original address.
+  addr6.sin6_addr.s6_addr[10] = 0xff;
+  addr6.sin6_addr.s6_addr[11] = 0xff;
+  memcpy(&addr6.sin6_addr.s6_addr[12], &addr4.sin_addr.s_addr, sizeof(addr4.sin_addr.s_addr));
+
+  char buf[INET6_ADDRSTRLEN];
+  EXPECT_TRUE(IN6_IS_ADDR_V4MAPPED(&addr6.sin6_addr))
+      << inet_ntop(addr6.sin6_family, &addr6.sin6_addr, buf, sizeof(buf));
+  return addr6;
+}
 
 sockaddr_in LoopbackSockaddrV4(in_port_t port) {
   return {
