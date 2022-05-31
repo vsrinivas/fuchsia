@@ -35,7 +35,7 @@ pub struct Environment {
 // control access to individual files, but we only encounter multiple [Environment]s in tests, so
 // it's probably not worth the overhead.
 lazy_static::lazy_static! {
-    static ref ENV_MUTEX: Mutex<Option<String>> = Mutex::new(None);
+    static ref ENV_MUTEX: Mutex<()> = Mutex::default();
 }
 
 impl Environment {
