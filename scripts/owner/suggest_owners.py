@@ -20,6 +20,8 @@ $ scripts/owner/suggest_owners.py \
 $ scripts/owner/suggest_owners.py --path third_party/crashpad --csv csv.out
 
 $ scripts/owner/suggest_owners.py --path third_party/* --csv csv.out
+
+$ scripts/owner/suggest_owners.py --path third_party/* --all_refs --csv csv.out
 """
 
 import argparse
@@ -50,17 +52,26 @@ def get_project_paths(jiri_manifest_path):
     return [project.get("path") for project in projects.findall("project")]
 
 
-def get_referencing_paths(path):
+def get_referencing_paths(*args):
     build_dir = check_output("fx", "get-build-dir").strip()
     try:
-        refs_out = check_output("fx", "gn", "refs", build_dir, path + ":*")
+        refs_out = check_output("fx", "gn", "refs", build_dir, *args)
     except Exception as e:
-        print(f"Failed to find refs to {path}", file=sys.stderr)
+        print(f"Failed to find refs to {args}", file=sys.stderr)
         print(e.output, file=sys.stderr)
         return []
     # Remove empty lines, turn labels to paths, unique, sort
     return sorted(
         {line[2:].partition(":")[0] for line in refs_out.splitlines() if line})
+
+
+def get_filenames(path):
+    filenames = []
+    for dirpath, dirnames, names in os.walk(path):
+        for name in names:
+            filepath = os.path.join(dirpath, name)
+            filenames.append(filepath)
+    return filenames
 
 
 def get_owners(path):
@@ -93,6 +104,11 @@ def main():
         nargs='+',
         help="Input project path, relative to fuchsia root")
     parser.add_argument(
+        "--all_refs",
+        action='store_true',
+        help=
+        "Search for references to all targets and all files in input projects")
+    parser.add_argument(
         "--csv",
         help="Output csv file",
         type=argparse.FileType('w'),
@@ -110,13 +126,25 @@ def main():
         project_paths = get_project_paths(args.jiri_manifest)
     else:
         project_paths = [
-            project for project in args.path if os.path.isdir(project)
+            project.strip("/")
+            for project in args.path
+            if os.path.isdir(project)
         ]
+
     for project_path in project_paths:
         if get_owners(project_path):
             print(f"{project_path} has OWNERS, skipping.")
             continue
-        refs = get_referencing_paths(project_path)
+        # Search for references to any of the project's targets if `--all_refs`
+        # is set, or for the top-level targets otherwise.
+        refs = get_referencing_paths(
+            project_path + ("/*" if args.all_refs else ":*"))
+        if not refs and args.all_refs:
+            print(
+                f"{project_path} has no target references, searching for all file references."
+            )
+            files = get_filenames(project_path)
+            refs = get_referencing_paths(project_path, *files)
         if not refs:
             print(f"{project_path} has no references, skipping.")
             continue
@@ -146,6 +174,7 @@ def main():
         print("\n".join(sorted(refs)))
         print()
         args.csv.write(f"{project_path},{owners},{refs}\n")
+
 
 if __name__ == "__main__":
     sys.exit(main())
