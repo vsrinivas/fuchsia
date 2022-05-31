@@ -141,10 +141,12 @@ func TestFindingNormalize(t *testing.T) {
 						Replacements: []Replacement{
 							{
 								Replacement: "foo",
-								// Replacement span is not fully specified and
-								// should be rejected.
+								// Replacement span is not fully specified
+								// (missing an EndLine) and should be rejected.
 								StartLine: 1,
-								EndLine:   1,
+								EndLine:   0,
+								StartChar: 5,
+								EndChar:   6,
 							},
 						},
 					},

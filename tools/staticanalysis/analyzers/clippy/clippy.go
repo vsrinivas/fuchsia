@@ -81,7 +81,7 @@ func (a *analyzer) Analyze(ctx context.Context, path string) ([]*staticanalysis.
 			return nil, fmt.Errorf("failed to unmarshal clippy output line (%q): %w", line, err)
 		}
 
-		primarySpan, ok := result.primarySpan(ctx)
+		primarySpan, ok := result.primarySpan()
 		if !ok {
 			// Skip any result that doesn't have any primary span. This will be
 			// the case for e.g. results that have no spans because they just
@@ -215,7 +215,7 @@ type clippyResult struct {
 
 // primarySpan returns the first (presumed only) primary span, if any, of this
 // clippy result. It returns false if no primary span was found.
-func (cr *clippyResult) primarySpan(ctx context.Context) (clippySpan, bool) {
+func (cr *clippyResult) primarySpan() (clippySpan, bool) {
 	var primarySpans []clippySpan
 	for _, s := range cr.Spans {
 		if s.Primary {
@@ -225,11 +225,8 @@ func (cr *clippyResult) primarySpan(ctx context.Context) (clippySpan, bool) {
 	if len(primarySpans) == 0 {
 		return clippySpan{}, false
 	}
-	if len(primarySpans) > 1 {
-		// Note that some Clippy lints such as `uninit_vec` actually do have
-		// multiple primary spans, but we'll always use the first one.
-		logger.Warningf(ctx, "Multiple primary spans found in clippy result: %+v", cr)
-	}
+	// Some Clippy lints such as `uninit_vec` have multiple primary spans.
+	// We'll always use the first one.
 	return primarySpans[0], true
 }
 

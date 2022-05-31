@@ -25,7 +25,6 @@ type Analyzer interface {
 //
 // The replacement should be for one continuous section of a file.
 type Replacement struct {
-
 	// Path to the file for this replacement.
 	//
 	// An empty string indicates the commit message.
@@ -168,7 +167,7 @@ func (f *Finding) Normalize() error {
 
 	for _, suggestion := range f.Suggestions {
 		for _, r := range suggestion.Replacements {
-			if r.StartLine < 1 || r.EndLine < 1 || r.StartChar < 0 || r.EndChar <= 0 {
+			if r.StartLine < 1 || r.EndLine < 1 || r.StartChar < 0 || r.EndChar < 0 {
 				return fmt.Errorf("a suggested replacement must have a fully specified span: %#+v", r)
 			}
 			// StartChar==EndChar is allowed for a replacement span because a
