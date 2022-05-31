@@ -23,6 +23,7 @@ use packet_formats::{
     ethernet::{
         EtherType, EthernetFrame, EthernetFrameBuilder, EthernetFrameLengthCheck, EthernetIpExt,
     },
+    utils::NonZeroDuration,
 };
 use specialize_ip_macro::specialize_ip_address;
 
@@ -755,6 +756,10 @@ pub(super) fn get_mac<'a, SC: EthernetIpLinkDeviceContext, C>(
 }
 
 impl<C: EthernetIpLinkDeviceContext> NdpContext<EthernetLinkDevice> for C {
+    fn get_retrans_timer(&self, device_id: Self::DeviceId) -> NonZeroDuration {
+        self.get_state_with(device_id).ip.ipv6.retrans_timer
+    }
+
     fn get_link_layer_addr(&self, device_id: C::DeviceId) -> UnicastAddr<Mac> {
         get_mac(self, &mut (), device_id).clone()
     }

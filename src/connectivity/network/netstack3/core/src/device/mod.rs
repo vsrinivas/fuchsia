@@ -15,7 +15,6 @@ use alloc::{boxed::Box, vec::Vec};
 use core::{
     fmt::{self, Debug, Display, Formatter},
     marker::PhantomData,
-    time::Duration,
 };
 
 use derivative::Derivative;
@@ -44,7 +43,7 @@ use crate::{
         },
         link::LinkDevice,
         loopback::LoopbackDeviceState,
-        ndp::{NdpHandler, NdpPacketHandler},
+        ndp::NdpPacketHandler,
         state::IpLinkDeviceState,
     },
     error::{ExistsError, NotFoundError, NotSupportedError},
@@ -371,15 +370,6 @@ impl<D: EventDispatcher, C: BlanketCoreContext> IpDeviceContext<Ipv6> for Ctx<D,
 }
 
 impl<D: EventDispatcher, C: BlanketCoreContext> Ipv6DeviceContext for Ctx<D, C> {
-    fn retrans_timer(&self, device_id: Self::DeviceId) -> Duration {
-        match device_id.inner() {
-            DeviceIdInner::Ethernet(id) => NdpHandler::retrans_timer(self, id),
-            DeviceIdInner::Loopback => {
-                unimplemented!("TODO(https://fxbug.dev/72378): loopback does not handle NDP yet")
-            }
-        }
-    }
-
     fn get_link_layer_addr_bytes(&self, device_id: Self::DeviceId) -> Option<&[u8]> {
         match device_id.inner() {
             DeviceIdInner::Ethernet(id) => {

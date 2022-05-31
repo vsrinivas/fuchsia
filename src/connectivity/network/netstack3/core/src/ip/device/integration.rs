@@ -91,7 +91,7 @@ impl<C: device::Ipv6DeviceContext + GmpHandler<Ipv6> + DadHandler + CounterConte
     }
 
     fn retrans_timer(&self, device_id: C::DeviceId) -> Duration {
-        device::Ipv6DeviceContext::retrans_timer(self, device_id)
+        C::get_ip_device_state(self, device_id).retrans_timer.get()
     }
 
     fn get_interface_identifier(&self, device_id: Self::DeviceId) -> [u8; 8] {
@@ -264,7 +264,7 @@ impl<C: device::Ipv6DeviceContext> Ipv6DeviceDadContext for C {
     }
 
     fn retrans_timer(&self, device_id: C::DeviceId) -> Duration {
-        device::Ipv6DeviceContext::retrans_timer(self, device_id)
+        C::get_ip_device_state(self, device_id).retrans_timer.get()
     }
 
     fn get_link_layer_addr_bytes(&self, device_id: C::DeviceId) -> Option<&[u8]> {

@@ -12,7 +12,7 @@ pub(crate) mod slaac;
 pub(crate) mod state;
 
 use alloc::{boxed::Box, vec::Vec};
-use core::{num::NonZeroU8, time::Duration};
+use core::num::NonZeroU8;
 
 #[cfg(test)]
 use net_types::ip::IpVersion;
@@ -21,6 +21,7 @@ use net_types::{
     MulticastAddr, SpecifiedAddr,
 };
 use packet::{BufferMut, EmptyBuf, Serializer};
+use packet_formats::utils::NonZeroDuration;
 
 use crate::{
     context::{EventContext, InstantContext, RngContext, TimerContext, TimerHandler},
@@ -287,11 +288,6 @@ pub(crate) trait IpDeviceContext<
 
 /// The execution context for an IPv6 device.
 pub(crate) trait Ipv6DeviceContext: IpDeviceContext<Ipv6> {
-    /// Returns the NDP retransmission timer configured on the device.
-    // TODO(https://fxbug.dev/72378): Remove this method once DAD operates at
-    // L3.
-    fn retrans_timer(&self, device_id: Self::DeviceId) -> Duration;
-
     /// Gets the device's link-layer address bytes, if the device supports
     /// link-layer addressing.
     fn get_link_layer_addr_bytes(&self, device_id: Self::DeviceId) -> Option<&[u8]>;
@@ -301,6 +297,26 @@ pub(crate) trait Ipv6DeviceContext: IpDeviceContext<Ipv6> {
     /// A `None` value indicates the device does not have an EUI-64 based
     /// interface identifier.
     fn get_eui64_iid(&self, device_id: Self::DeviceId) -> Option<[u8; 8]>;
+}
+
+/// An implementation of an IPv6 device.
+pub(crate) trait Ipv6DeviceHandler: IpDeviceIdContext<Ipv6> {
+    /// Sets the discovered retransmit timer for the device.
+    fn set_discovered_retrans_timer(
+        &mut self,
+        device_id: Self::DeviceId,
+        retrans_timer: NonZeroDuration,
+    );
+}
+
+impl<C: Ipv6DeviceContext> Ipv6DeviceHandler for C {
+    fn set_discovered_retrans_timer(
+        &mut self,
+        device_id: Self::DeviceId,
+        retrans_timer: NonZeroDuration,
+    ) {
+        self.get_ip_device_state_mut(device_id).retrans_timer = retrans_timer;
+    }
 }
 
 /// The execution context for an IP device with a buffer.
@@ -332,6 +348,7 @@ fn enable_ipv6_device<SC: Ipv6DeviceContext + GmpHandler<Ipv6> + RsHandler + Dad
                 slaac_config: _,
                 ip_config: IpDeviceConfiguration { ip_enabled: _, gmp_enabled: _ },
             },
+        retrans_timer: _,
         router_soliciations_remaining: _,
         route_discovery: _,
     } = sync_ctx.get_ip_device_state_mut(device_id);
@@ -778,6 +795,7 @@ pub(crate) fn add_ipv6_addr_subnet<SC: Ipv6DeviceContext + GmpHandler<Ipv6> + Da
                 slaac_config: _,
                 ip_config: IpDeviceConfiguration { ip_enabled, gmp_enabled: _ },
             },
+        retrans_timer: _,
         router_soliciations_remaining: _,
         route_discovery: _,
     } = sync_ctx.get_ip_device_state_mut(device_id);

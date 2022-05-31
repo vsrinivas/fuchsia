@@ -41,6 +41,7 @@ use crate::{
         device::{
             route_discovery::{Ipv6DiscoveredRoute, RouteDiscoveryHandler},
             slaac::SlaacHandler,
+            Ipv6DeviceHandler,
         },
         forwarding::ForwardingTable,
         gmp::mld::MldPacketHandler,
@@ -1198,6 +1199,7 @@ impl<B: BufferMut, C: InnerBufferIcmpv4Context<B> + PmtuHandler<Ipv4>>
 fn receive_ndp_packet<
     B: ByteSlice,
     SC: InnerIcmpv6Context
+        + Ipv6DeviceHandler
         + NdpPacketHandler<<SC as IpDeviceIdContext<Ipv6>>::DeviceId>
         + RouteDiscoveryHandler
         + SlaacHandler,
@@ -1243,6 +1245,20 @@ fn receive_ndp_packet<
             };
 
             sync_ctx.increment_counter("ndp::rx_router_advertisement");
+
+            // As per RFC 4861 section 6.3.4,
+            //   The RetransTimer variable SHOULD be copied from the Retrans
+            //   Timer field, if it is specified.
+            //
+            // TODO(https://fxbug.dev/101357): Control whether or not we should
+            // update the retransmit timer.
+            if let Some(retransmit_timer) = p.message().retransmit_timer() {
+                Ipv6DeviceHandler::set_discovered_retrans_timer(
+                    sync_ctx,
+                    device_id,
+                    retransmit_timer,
+                );
+            }
 
             RouteDiscoveryHandler::update_route(
                 sync_ctx,
@@ -1326,6 +1342,7 @@ impl<
         B: BufferMut,
         C: InnerIcmpv6Context
             + InnerBufferIcmpContext<Ipv6, B>
+            + Ipv6DeviceHandler
             + PmtuHandler<Ipv6>
             + MldPacketHandler<<C as IpDeviceIdContext<Ipv6>>::DeviceId>
             + NdpPacketHandler<<C as IpDeviceIdContext<Ipv6>>::DeviceId>
@@ -2669,6 +2686,7 @@ mod tests {
         ip::{IpPacketBuilder, IpProto},
         testutil::parse_icmp_packet_in_ip_packet_in_ethernet_frame,
         udp::UdpPacketBuilder,
+        utils::NonZeroDuration,
     };
     use specialize_ip_macro::ip_test;
 
@@ -3784,6 +3802,16 @@ mod tests {
         }
 
         fn remove_all_slaac_addresses(&mut self, _device_id: Self::DeviceId) {
+            unimplemented!()
+        }
+    }
+
+    impl Ipv6DeviceHandler for Dummyv6Ctx {
+        fn set_discovered_retrans_timer(
+            &mut self,
+            _device_id: Self::DeviceId,
+            _retrans_timer: NonZeroDuration,
+        ) {
             unimplemented!()
         }
     }

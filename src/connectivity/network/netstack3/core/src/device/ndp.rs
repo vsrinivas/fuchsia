@@ -41,6 +41,7 @@ use packet_formats::{
     },
     ip::Ipv6Proto,
     ipv6::Ipv6PacketBuilder,
+    utils::NonZeroDuration,
 };
 use rand::{thread_rng, Rng};
 use zerocopy::ByteSlice;
@@ -79,11 +80,6 @@ pub(crate) const HOP_LIMIT_DEFAULT: NonZeroU8 = nonzero!(64u8);
 /// [RFC 4861 section 10]: https://tools.ietf.org/html/rfc4861#section-10
 const REACHABLE_TIME_DEFAULT: Duration = Duration::from_secs(30);
 
-/// The default value for *RetransTimer* as defined in [RFC 4861 section 10].
-///
-/// [RFC 4861 section 10]: https://tools.ietf.org/html/rfc4861#section-10
-const RETRANS_TIMER_DEFAULT: Duration = Duration::from_secs(1);
-
 /// The maximum number of multicast solicitations as defined in [RFC 4861
 /// section 10].
 ///
@@ -118,9 +114,6 @@ pub(crate) trait NdpHandler<D: LinkDevice>: DeviceIdContext<D> {
     /// The contract is that after `deinitialize` is called, nothing else should
     /// be done with the state.
     fn deinitialize<C>(&mut self, ctx: &mut C, device_id: Self::DeviceId);
-
-    /// Returns the configured retransmit timer.
-    fn retrans_timer(&self, device_id: Self::DeviceId) -> Duration;
 
     /// Look up the link layer address.
     ///
@@ -158,10 +151,6 @@ where
         deinitialize(self, ctx, device_id)
     }
 
-    fn retrans_timer(&self, device_id: Self::DeviceId) -> Duration {
-        self.get_state_with(device_id).retrans_timer
-    }
-
     fn lookup<C>(
         &mut self,
         ctx: &mut C,
@@ -196,6 +185,11 @@ pub(crate) trait NdpContext<D: LinkDevice>:
     + StateContext<NdpState<D>, <Self as DeviceIdContext<D>>::DeviceId>
     + TimerContext<NdpTimerId<D, <Self as DeviceIdContext<D>>::DeviceId>>
 {
+    /// Returns the NDP retransmission timer configured on the device.
+    // TODO(https://fxbug.dev/72378): Remove this method once NUD operates in
+    // L3.
+    fn get_retrans_timer(&self, device_id: Self::DeviceId) -> NonZeroDuration;
+
     /// Get the link layer address for a device.
     fn get_link_layer_addr(&self, device_id: Self::DeviceId) -> UnicastAddr<D::Address>;
 
@@ -361,17 +355,6 @@ pub(crate) struct NdpState<D: LinkDevice> {
     // TODO(fxbug.dev/69490): Remove this or explain why it's here.
     #[allow(dead_code)]
     reachable_time: Duration,
-
-    /// The time between retransmissions of Neighbor Solicitation messages to a
-    /// neighbor when resolving the address or when probing the reachability of
-    /// a neighbor.
-    ///
-    /// Default: [`RETRANS_TIMER_DEFAULT`].
-    ///
-    /// See RetransTimer in [RFC 4861 section 6.3.2] for more details.
-    ///
-    /// [RFC 4861 section 6.3.2]: https://tools.ietf.org/html/rfc4861#section-6.3.2
-    retrans_timer: Duration,
 }
 
 impl<D: LinkDevice> NdpState<D> {
@@ -381,7 +364,6 @@ impl<D: LinkDevice> NdpState<D> {
 
             base_reachable_time: REACHABLE_TIME_DEFAULT,
             reachable_time: REACHABLE_TIME_DEFAULT,
-            retrans_timer: RETRANS_TIMER_DEFAULT,
         };
 
         // Calculate an actually random `reachable_time` value instead of using
@@ -427,15 +409,6 @@ impl<D: LinkDevice> NdpState<D> {
         assert!((reachable_time >= half) && (reachable_time <= (base + half)));
 
         self.reachable_time = reachable_time;
-    }
-
-    /// Set the time between retransmissions of Neighbor Solicitation messages
-    /// to a neighbor when resolving the address or when probing the
-    /// reachability of a neighbor.
-    pub(crate) fn set_retrans_timer(&mut self, v: Duration) {
-        assert_ne!(Duration::new(0, 0), v);
-
-        self.retrans_timer = v;
     }
 }
 
@@ -487,14 +460,14 @@ fn handle_timer<D: LinkDevice, SC: NdpContext<D>, C>(
             }) = ndp_state.neighbors.get_neighbor_state_mut(&neighbor_addr)
             {
                 if *transmit_counter < MAX_MULTICAST_SOLICIT {
-                    let retrans_timer = ndp_state.retrans_timer;
-
                     // Increase the transmit counter and send the solicitation
                     // again
                     *transmit_counter += 1;
                     send_neighbor_solicitation(sync_ctx, ctx, id.device_id, neighbor_addr);
+
+                    let retrans_timer = sync_ctx.get_retrans_timer(id.device_id);
                     let _: Option<SC::Instant> = sync_ctx.schedule_timer(
-                        retrans_timer,
+                        retrans_timer.get(),
                         NdpTimerId::new_link_address_resolution(id.device_id, neighbor_addr).into(),
                     );
                 } else {
@@ -545,8 +518,6 @@ where
         None => {
             trace!("ndp::lookup: starting address resolution process for {:?}", lookup_addr);
 
-            let retrans_timer = ndpstate.retrans_timer;
-
             // If we're not already waiting for a neighbor solicitation
             // response, mark it as Incomplete and send a neighbor solicitation,
             // also setting the transmission count to 1.
@@ -556,8 +527,9 @@ where
 
             // Also schedule a timer to retransmit in case we don't get neighbor
             // advertisements back.
+            let retrans_timer = sync_ctx.get_retrans_timer(device_id);
             let _: Option<SC::Instant> = sync_ctx.schedule_timer(
-                retrans_timer,
+                retrans_timer.get(),
                 NdpTimerId::new_link_address_resolution(device_id, lookup_addr).into(),
             );
 
@@ -977,22 +949,6 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, SC: NdpContext<D>, C, B>(
             if let Some(base_reachable_time) = ra.reachable_time() {
                 trace!("receive_ndp_packet: NDP RA: updating base_reachable_time to {:?} for router: {:?}", base_reachable_time, src_ip);
                 ndp_state.set_base_reachable_time(base_reachable_time.get());
-            }
-
-            // As per RFC 4861 section 6.3.4:
-            // The RetransTimer variable SHOULD be copied from the Retrans Timer
-            // field, if it is specified.
-            //
-            // TODO(ghanan): Make the updating of this field from the RA message
-            //               configurable since the RFC does not say we MUST
-            //               update the field.
-            if let Some(retransmit_timer) = ra.retransmit_timer() {
-                trace!(
-                    "receive_ndp_packet: NDP RA: updating retrans_timer to {:?} for router: {:?}",
-                    retransmit_timer,
-                    src_ip
-                );
-                ndp_state.set_retrans_timer(retransmit_timer.get());
             }
 
             // As per RFC 4861 section 6.3.4:
@@ -1441,7 +1397,7 @@ mod tests {
                     AddrConfig, Ipv6AddressEntry, Ipv6DeviceConfiguration, Lifetime,
                     TemporarySlaacConfig,
                 },
-                Ipv6DeviceTimerId,
+                Ipv6DeviceHandler, Ipv6DeviceTimerId,
             },
             receive_ipv6_packet, SendIpPacketMeta,
         },
@@ -3732,8 +3688,11 @@ mod tests {
 
         // Set the retransmit timer between neighbor solicitations to be greater
         // than the preferred lifetime of the prefix.
-        StateContext::<NdpState<EthernetLinkDevice>, _>::get_state_mut_with(&mut ctx, device_id)
-            .set_retrans_timer(Duration::from_secs(10));
+        Ipv6DeviceHandler::set_discovered_retrans_timer(
+            &mut ctx,
+            device,
+            NonZeroDuration::from_nonzero_secs(nonzero!(10u64)),
+        );
 
         // Receive a new RA with new prefix (autonomous).
         //
@@ -4408,8 +4367,11 @@ mod tests {
         // Set a large value for the retransmit period. This forces
         // REGEN_ADVANCE to be large, which increases the window between when an
         // address is regenerated and when it becomes deprecated.
-        StateContext::<NdpState<EthernetLinkDevice>, _>::get_state_mut_with(&mut ctx, device_id)
-            .set_retrans_timer(max_preferred_lifetime / 4);
+        Ipv6DeviceHandler::set_discovered_retrans_timer(
+            &mut ctx,
+            device,
+            NonZeroDuration::new(max_preferred_lifetime / 4).unwrap(),
+        );
 
         receive_prefix_update(
             &mut ctx,

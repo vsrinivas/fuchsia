@@ -12,6 +12,7 @@ use net_types::{
     SpecifiedAddr, UnicastAddr, Witness,
 };
 use nonzero_ext::nonzero;
+use packet_formats::utils::NonZeroDuration;
 
 use crate::{
     ip::{
@@ -20,6 +21,11 @@ use crate::{
     },
     Instant,
 };
+
+/// The default value for *RetransTimer* as defined in [RFC 4861 section 10].
+///
+/// [RFC 4861 section 10]: https://tools.ietf.org/html/rfc4861#section-10
+const RETRANS_TIMER_DEFAULT: NonZeroDuration = NonZeroDuration::from_nonzero_secs(nonzero!(1u64));
 
 pub(crate) enum DelIpv6AddrReason {
     ManualAction,
@@ -265,6 +271,16 @@ pub struct Ipv6DeviceConfiguration {
 
 /// The state common to all IPv6 devices.
 pub(crate) struct Ipv6DeviceState<I: Instant> {
+    /// The time between retransmissions of Neighbor Solicitation messages to a
+    /// neighbor when resolving the address or when probing the reachability of
+    /// a neighbor.
+    ///
+    /// Default: [`RETRANS_TIMER_DEFAULT`].
+    ///
+    /// See RetransTimer in [RFC 4861 section 6.3.2] for more details.
+    ///
+    /// [RFC 4861 section 6.3.2]: https://tools.ietf.org/html/rfc4861#section-6.3.2
+    pub(crate) retrans_timer: NonZeroDuration,
     pub(super) route_discovery: Ipv6RouteDiscoveryState,
     pub(super) router_soliciations_remaining: Option<NonZeroU8>,
     pub(crate) ip_state: IpDeviceState<I, Ipv6>,
@@ -274,6 +290,7 @@ pub(crate) struct Ipv6DeviceState<I: Instant> {
 impl<I: Instant> Default for Ipv6DeviceState<I> {
     fn default() -> Ipv6DeviceState<I> {
         Ipv6DeviceState {
+            retrans_timer: RETRANS_TIMER_DEFAULT,
             route_discovery: Default::default(),
             router_soliciations_remaining: None,
             ip_state: Default::default(),
