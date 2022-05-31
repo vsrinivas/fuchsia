@@ -33,6 +33,8 @@ zx::status<std::unique_ptr<JsonFilesystem>> JsonFilesystem::NewFilesystem(
           .supports_resize = ConfigGetOrDefault<bool>(config, "supports_resize", false),
           .max_file_size = ConfigGetOrDefault<int64_t>(config, "max_file_size",
                                                        std::numeric_limits<int64_t>::max()),
+          .max_block_size = ConfigGetOrDefault<int64_t>(config, "max_block_size",
+                                                        std::numeric_limits<int64_t>::max()),
           .in_memory = ConfigGetOrDefault<bool>(config, "in_memory", false),
           .is_case_sensitive = ConfigGetOrDefault<bool>(config, "is_case_sensitive", true),
           .supports_sparse_files = ConfigGetOrDefault<bool>(config, "supports_sparse_files", true),

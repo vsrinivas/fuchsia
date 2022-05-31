@@ -382,9 +382,10 @@ void VnodeF2fs::RecycleNode() {
       // It can happen only when CpFlag::kCpErrorFlag is set.
       FX_LOGS(WARNING) << "RecycleNode[" << GetNameView().data() << ":" << GetKey()
                        << "]: GetDirtyPageCount() must be zero but " << GetDirtyPageCount()
-                       << ", Checkpoint error flag: "
-                       << (Vfs()->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag) ? "true"
-                                                                                        : "false");
+                       << ". CpFlag::kCpErrorFlag is "
+                       << (Vfs()->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag)
+                               ? "set."
+                               : "not set.");
     }
     file_cache_.Reset();
 #ifdef __Fuchsia__
@@ -853,10 +854,7 @@ void VnodeF2fs::MarkInodeDirty() {
 }
 
 #ifdef __Fuchsia__
-void VnodeF2fs::Sync(SyncCallback closure) {
-  SyncFile(0, GetSize(), 0);
-  closure(ZX_OK);
-}
+void VnodeF2fs::Sync(SyncCallback closure) { closure(SyncFile(0, GetSize(), 0)); }
 #endif  // __Fuchsia__
 
 zx_status_t VnodeF2fs::SyncFile(loff_t start, loff_t end, int datasync) {
@@ -864,7 +862,11 @@ zx_status_t VnodeF2fs::SyncFile(loff_t start, loff_t end, int datasync) {
   zx_status_t ret = ZX_OK;
   bool need_cp = false;
 
-  // TODO: Do nothing when read-only mode is set
+  // When kCpErrorFlag is set, write is not allowed.
+  if (Vfs()->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag)) {
+    return ZX_ERR_BAD_STATE;
+  }
+
   // TODO: When fdatasync is available, check if it should be written.
   // TODO: Consider some case where there is no need to write node or data pages.
   if (!IsDirty()) {
@@ -889,9 +891,12 @@ zx_status_t VnodeF2fs::SyncFile(loff_t start, loff_t end, int datasync) {
   }
 
   if (need_cp) {
-    // all the dirty node pages should be flushed for POR
     Vfs()->SyncFs();
     ClearFlag(InodeInfoFlag::kNeedCp);
+    // Check if checkpoint errors happen during fsync().
+    if (Vfs()->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag)) {
+      ret = ZX_ERR_BAD_STATE;
+    }
   } else {
     // TODO: After impl ordered writeback for node pages,
     // support logging nodes for roll-forward recovery.

@@ -912,33 +912,25 @@ TEST_F(CheckpointTestF, CpError) {
   fbl::RefPtr<f2fs::File> vn = fbl::RefPtr<f2fs::File>::Downcast(std::move(test_file));
   char wbuf[] = "Checkpoint error test";
   char rbuf[kBlockSize];
-  block_t fault_lba = 0x1;
 
   // Make dirty data, node, and meta Pages.
   FileTester::AppendToFile(vn.get(), wbuf, sizeof(wbuf));
-  {
-    LockedPage page;
-    ASSERT_EQ(fs_->GrabMetaPage(fault_lba, &page), ZX_OK);
-    page->SetDirty();
-  }
+
   // The appended data is written in the node page of |root_dir_|
   // since the inline_data option is enabled by default.
   ASSERT_EQ(fs_->GetSuperblockInfo().GetPageCount(CountType::kDirtyNodes), 1);
-  ASSERT_EQ(fs_->GetSuperblockInfo().GetPageCount(CountType::kDirtyMeta), 1);
   ASSERT_FALSE(fs_->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag));
 
-  // Set a hook to trigger an io error with a meta Page at |fault_lba| on FakeBlockDevice.
-  // It causes that f2fs sets the checkpoint error flag.
-  auto hook = [&bc = fs_->GetBc(), fault_lba](const block_fifo_request_t &_req,
-                                              const zx::vmo *_vmo) {
-    if (_req.dev_offset == bc.BlockNumberToDevice(fault_lba)) {
+  // Set a hook to trigger an io error with any write requests on FakeBlockDevice,
+  // which causes that f2fs sets the checkpoint error flag.
+  auto hook = [](const block_fifo_request_t &_req, const zx::vmo *_vmo) {
+    if (_req.opcode == BLOCKIO_WRITE) {
       return ZX_ERR_IO;
     }
     return ZX_OK;
   };
   static_cast<FakeBlockDevice *>(fs_->GetBc().GetDevice())->set_hook(std::move(hook));
-  WritebackOperation operation = {.bSync = true};
-  fs_->GetMetaVnode().Writeback(operation);
+  fs_->WriteCheckpoint(false, false);
 
   ASSERT_TRUE(fs_->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag));
 
@@ -956,6 +948,7 @@ TEST_F(CheckpointTestF, CpError) {
   FileTester::ReadFromFile(vn.get(), rbuf, sizeof(wbuf), 0);
   ASSERT_EQ(root_dir_->Lookup("test", &test_file), ZX_OK);
   ASSERT_EQ(strcmp(wbuf, rbuf), 0);
+  static_cast<FakeBlockDevice *>(fs_->GetBc().GetDevice())->set_hook(nullptr);
 
   vn->Close();
   vn = nullptr;

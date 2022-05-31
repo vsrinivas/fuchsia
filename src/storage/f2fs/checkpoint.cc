@@ -495,7 +495,7 @@ void F2fs::DoCheckpoint(bool is_umount) {
 
   start_blk = superblock_info.StartCpAddr();
 
-  // write out checkpoint buffer at block 0
+  // Prepare Pages for this checkpoint pack
   {
     LockedPage cp_page;
     GrabMetaPage(start_blk++, &cp_page);
@@ -523,7 +523,16 @@ void F2fs::DoCheckpoint(bool is_umount) {
     start_blk += kNrCursegNodeType;
   }
 
-  // writeout checkpoint block
+  // Flush SegmentWriteBuffers.
+  ScheduleWriterSubmitPages();
+  {
+    // Write out this checkpoint pack.
+    WritebackOperation op = {.bSync = true};
+    SyncMetaPages(op);
+    ZX_ASSERT(superblock_info.GetPageCount(CountType::kWriteback) == 0);
+  }
+
+  // Prepare the commit block.
   {
     LockedPage cp_page;
     GrabMetaPage(start_blk, &cp_page);
@@ -531,19 +540,19 @@ void F2fs::DoCheckpoint(bool is_umount) {
     cp_page->SetDirty();
   }
 
-  // wait for previous submitted node/meta pages writeback
-  sync_completion_t completion;
-  ScheduleWriterSubmitPages(&completion);
-  sync_completion_wait(&completion, ZX_TIME_INFINITE);
-  ZX_ASSERT(superblock_info.GetPageCount(CountType::kWriteback) == 0);
-
-  // update user_block_counts
+  // Update the valid block count.
   superblock_info.SetLastValidBlockCount(superblock_info.GetTotalValidBlockCount());
   superblock_info.SetAllocValidBlockCount(0);
 
-  // Here, we only have dirty meta Pages for CP pack
-  WritebackOperation op = {.bSync = true};
-  SyncMetaPages(op);
+  // Commit.
+  {
+    ZX_ASSERT(superblock_info.GetPageCount(CountType::kDirtyMeta) == 1);
+    // TODO: Use FUA when it is available.
+    GetBc().Flush();
+    WritebackOperation op = {.bSync = true};
+    SyncMetaPages(op);
+    GetBc().Flush();
+  }
 
   GetSegmentManager().ClearPrefreeSegments();
   superblock_info.ClearDirty();

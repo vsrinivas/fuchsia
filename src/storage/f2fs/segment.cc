@@ -156,12 +156,8 @@ block_t SegmentManager::ReservedSections() {
   return GetReservedSegmentsCount() / superblock_info_->GetSegsPerSec();
 }
 bool SegmentManager::NeedSSR() {
-#ifdef F2FS_FORCE_SSR
-  return true;
-#else
   // TODO: need to consider allocation mode and gc mode
   return (FreeSections() < static_cast<uint32_t>(OverprovisionSections()));
-#endif
 }
 
 int SegmentManager::GetSsrSegment(CursegType type) {
@@ -781,20 +777,16 @@ void SegmentManager::ChangeCurseg(CursegType type, bool reuse) {
   }
 }
 
-// flush out current segment and replace it with new segment
-// This function should be returned with success, otherwise BUG
+// Allocate a segment for new block allocations in CURSEG_I(type).
+// This function is supposed to be successful. Otherwise, BUG.
 void SegmentManager::AllocateSegmentByDefault(CursegType type, bool force) {
   SuperblockInfo &superblock_info = fs_->GetSuperblockInfo();
   CursegInfo *curseg = CURSEG_I(type);
-  // uint32_t ofs_unit;
 
   if (force) {
     NewCurseg(type, true);
   } else {
-    // TODO: Enable LFS for warm node when gc is available.
-    // Temporarily enforce ssr for warm node segments.
-    // It is very helpful not to waste space of node segments without gc.
-    if (!superblock_info.TestOpt(kMountDisableRollForward) && type == CursegType::kCursegWarmNode) {
+    if (type == CursegType::kCursegWarmNode) {
       NewCurseg(type, false);
     } else if (NeedSSR() && GetSsrSegment(type)) {
       ChangeCurseg(type, true);

@@ -80,7 +80,7 @@ fs_test_config("f2fs") {
   supports_hard_links = true
   supports_resize = false
   max_file_size = 4329690886144
-  is_journaled = false
+  max_block_size = 4096
   supports_fsck_after_every_transaction = false
   supports_inspect = true
   supports_shutdown_on_no_connections = true

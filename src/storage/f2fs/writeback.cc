@@ -103,18 +103,19 @@ fpromise::promise<> Writer::SubmitPages(sync_completion_t *completion, PageType 
         }
         operations.Completion([ret, type](fbl::RefPtr<Page> page) {
           if (ret != ZX_OK && page->IsUptodate()) {
-            if (type == PageType::kMeta) {
-              // When it fails to write metadata blocks, it set kCpErrorFlag.
+            if (type == PageType::kMeta || ret == ZX_ERR_UNAVAILABLE) {
+              // When it fails to write metadata or the block device is not available,
+              // set kCpErrorFlag to enter read-only mode.
               page->GetVnode().Vfs()->GetSuperblockInfo().SetCpFlags(CpFlag::kCpErrorFlag);
+            } else {
+              // When IO errors occur with node and data Pages, just set a dirty flag
+              // to retry it with another LBA.
+              LockedPage locked_page(page);
+              locked_page->SetDirty();
             }
-            // Just redirty it in case of IO failure.
-            LockedPage locked_page(std::move(page));
-            locked_page->SetDirty();
-            locked_page->ClearWriteback();
-            return ret;
           }
           page->ClearWriteback();
-          return ZX_OK;
+          return ret;
         });
         if (completion) {
           sync_completion_signal(completion);

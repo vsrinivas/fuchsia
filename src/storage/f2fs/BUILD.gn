@@ -3,9 +3,6 @@
 # found in the LICENSE file.
 
 declare_args() {
-  # Enforce every allocation in a ssr manner [for test]
-  f2fs_force_ssr = true
-
   # Enable f2fs_roll_forward
   f2fs_roll_fwd = false
 }
@@ -82,10 +79,6 @@ static_library("f2fs") {
   ]
 
   defines = []
-
-  if (f2fs_force_ssr) {
-    defines += [ "F2FS_FORCE_SSR" ]
-  }
 
   if (f2fs_roll_fwd) {
     defines += [ "F2FS_ROLL_FORWARD" ]

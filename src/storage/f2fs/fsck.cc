@@ -423,8 +423,6 @@ zx::status<TraverseResult> FsckWorker::TraverseInodeBlock(const Node &node_block
           fsck_.data_exist_flag_set.insert(nid);
         }
       }
-
-      FX_LOGS(INFO) << "ino[0x" << std::hex << nid << "] has inline data";
       break;
     }
 
@@ -548,11 +546,6 @@ void FsckWorker::PrintDentry(const uint32_t depth, std::string_view name,
   int next_idx = 0;
   int name_len;
   int bit_offset;
-
-#if 0  // porting needed
-  if (config.dbg_lv != -1)
-    return;
-#endif
 
   name_len = LeToCpu(dentry.name_len);
   next_idx = index + (name_len + kDentrySlotLen - 1) / kDentrySlotLen;
@@ -812,8 +805,6 @@ zx_status_t FsckWorker::Verify() {
   zx_status_t status = ZX_OK;
   uint32_t nr_unref_nid = 0;
 
-  printf("\n");
-
   for (uint32_t i = 0; i < fsck_.nr_nat_entries; ++i) {
     if (TestValidBitmap(i, fsck_.nat_area_bitmap.get()) != 0) {
       printf("NID[0x%x] is unreachable\n", i);
@@ -891,14 +882,23 @@ zx_status_t FsckWorker::Verify() {
     status = ZX_ERR_INTERNAL;
   }
 
+  std::cout << "[FSCK] next_blkoff in curseg is free                 ";
+  std::string segnums = " [free: ";
+  bool is_free = true;
   for (uint32_t segtype = 0; segtype < kNrCursegType; ++segtype) {
-    std::cout << "[FSCK] next_blkoff in curseg (" << segtype << ") is free             ";
-    if (VerifyCursegOffset(static_cast<CursegType>(segtype)) == ZX_OK) {
-      std::cout << " [Ok..]\n";
+    if (VerifyCursegOffset(static_cast<CursegType>(segtype)) != ZX_OK) {
+      is_free = false;
     } else {
-      std::cout << " [Fail]\n";
-      status = ZX_ERR_INTERNAL;
+      segnums += std::to_string(segtype);
+      segnums += " ";
     }
+  }
+  segnums += "]";
+  if (is_free) {
+    std::cout << " [Ok..]" << segnums << std::endl;
+  } else {
+    status = ZX_ERR_INTERNAL;
+    std::cout << " [Fail]" << segnums << std::endl;
   }
 
   std::cout << "[FSCK] Junk inline data checking for regular file    ";
@@ -1279,15 +1279,11 @@ void FsckWorker::PrintNodeInfo(Node &node_block) {
 
 void FsckWorker::PrintRawSuperblockInfo() {
   const Superblock &sb = superblock_info_.GetRawSuperblock();
-#if 0  // porting needed
-  if (!config.dbg_lv)
-    return;
-#endif
 
-  printf("\n");
-  printf("+--------------------------------------------------------+\n");
-  printf("| Super block                                            |\n");
-  printf("+--------------------------------------------------------+\n");
+  std::cout << std::endl
+            << "+--------------------------------------------------------+" << std::endl
+            << "| Super block                                            |" << std::endl
+            << "+--------------------------------------------------------+" << std::endl;
 
   DisplayMember(sizeof(uint32_t), sb.magic, "magic");
   DisplayMember(sizeof(uint32_t), sb.major_ver, "major_ver");
@@ -1322,21 +1318,16 @@ void FsckWorker::PrintRawSuperblockInfo() {
   DisplayMember(sizeof(uint32_t), sb.node_ino, "node_ino");
   DisplayMember(sizeof(uint32_t), sb.meta_ino, "meta_ino");
   DisplayMember(sizeof(uint32_t), sb.cp_payload, "cp_payload");
-  printf("\n");
 }
 
 void FsckWorker::PrintCheckpointInfo() {
   Checkpoint &cp = superblock_info_.GetCheckpoint();
   uint32_t alloc_type;
-#if 0  // porting needed
-  if (!config.dbg_lv)
-    return;
-#endif
 
-  printf("\n");
-  printf("+--------------------------------------------------------+\n");
-  printf("| Checkpoint                                             |\n");
-  printf("+--------------------------------------------------------+\n");
+  std::cout << std::endl
+            << "+--------------------------------------------------------+" << std::endl
+            << "| Checkpoint                                             |" << std::endl
+            << "+--------------------------------------------------------+" << std::endl;
 
   DisplayMember(sizeof(uint64_t), cp.checkpoint_ver, "checkpoint_ver");
   DisplayMember(sizeof(uint64_t), cp.user_block_count, "user_block_count");
@@ -1384,8 +1375,6 @@ void FsckWorker::PrintCheckpointInfo() {
   DisplayMember(sizeof(uint32_t), cp.nat_ver_bitmap_bytesize, "nat_ver_bitmap_bytesize");
   DisplayMember(sizeof(uint32_t), cp.checksum_offset, "checksum_offset");
   DisplayMember(sizeof(uint64_t), cp.elapsed_time, "elapsed_time");
-
-  printf("\n\n");
 }
 
 zx_status_t FsckWorker::SanityCheckRawSuper(const Superblock *raw_super) {
@@ -2212,8 +2201,6 @@ zx_status_t FsckWorker::DoMount() {
     return status;
   }
 
-  PrintRawSuperblockInfo();
-
   if (auto status = GetValidCheckpoint(); status != ZX_OK) {
     FX_LOGS(ERROR) << "Can't find valid checkpoint" << status;
     return status;
@@ -2223,7 +2210,6 @@ zx_status_t FsckWorker::DoMount() {
     return status;
   }
 
-  PrintCheckpointInfo();
   superblock_info_.SetTotalValidNodeCount(
       LeToCpu(superblock_info_.GetCheckpoint().valid_node_count));
   superblock_info_.SetTotalValidInodeCount(
@@ -2283,7 +2269,6 @@ zx_status_t FsckWorker::DoFsck() {
   if (auto status = CheckOrphanNodes(); status != ZX_OK) {
     return status;
   }
-  FX_LOGS(INFO) << "checking orphan node.. done";
 
   // Traverse all block recursively from root inode
   if (auto status = CheckNodeBlock(nullptr, superblock_info_.GetRootIno(), FileType::kFtDir,
@@ -2291,15 +2276,16 @@ zx_status_t FsckWorker::DoFsck() {
       status.is_error()) {
     return status.error_value();
   }
-  FX_LOGS(INFO) << "checking node blocks.. done";
 
   if (auto status = Verify(); status != ZX_OK) {
+    std::cout << "[FSCK] Corruption detected.." << std::endl;
     if (fsck_options_.repair) {
       status = Repair();
+      std::cout << "[FSCK] Repair..                                      "
+                << (status == ZX_OK ? " [Ok..]" : " [Fail]") << std::endl;
     }
     return status;
   }
-  FX_LOGS(INFO) << "verifying.. done";
   return ZX_OK;
 }
 
@@ -2309,11 +2295,17 @@ zx_status_t FsckWorker::Run() {
     return status;
   }
 
+  std::cout << std::endl << "[FSCK] Start.." << std::endl;
   status = DoFsck();
-#if 0  // porting needed
-  // ret = DoDump(superblock_info);
-#endif
-  FX_LOGS(INFO) << "Fsck.. done: " << status;
+  std::cout << "[FSCK] Done..                                        ";
+  if (status != ZX_OK) {
+    std::cout << " [Fail] [" << status << "]" << std::endl;
+    PrintRawSuperblockInfo();
+    PrintCheckpointInfo();
+  } else {
+    std::cout << " [Ok..]" << std::endl;
+  }
+  // TODO: Add dump
   return status;
 }
 

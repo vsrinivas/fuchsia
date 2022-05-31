@@ -77,6 +77,11 @@
             "maximum": 9223372036854775807,
             "type": "integer"
         },
+        "max_block_size": {
+            "description": "The maximum block size the filesystem can support",
+            "maximum": 9223372036854775807,
+            "type": "integer"
+        },
         "name": {
             "description": "Name of the filesystem",
             "minLength": 1,

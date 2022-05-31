@@ -131,6 +131,7 @@ class Filesystem {
     bool supports_mmap_shared_write = false;
     bool supports_resize = false;
     int64_t max_file_size = std::numeric_limits<int64_t>::max();
+    int64_t max_block_size = std::numeric_limits<int64_t>::max();
     bool in_memory = false;
     bool is_case_sensitive = true;
     bool supports_sparse_files = true;

@@ -35,9 +35,14 @@ TEST_P(CorruptTest, CorruptTest) {
     memset(vmo.start(), 0xff, kSize);
 
     TestFilesystemOptions options = GetParam();
-    options.device_block_size = 8192;
+    options.device_block_size = std::min(options.filesystem->GetTraits().max_block_size, 8192L);
+    // For now, a ram-nand device supports only a block size of 8KiB.
+    if (options.device_block_size == 8192) {
+      options.use_ram_nand = true;
+    } else {
+      options.ram_disk_discard_random_after_last_flush = true;
+    }
     options.device_block_count = 0;  // Use VMO size.
-    options.use_ram_nand = true;
     options.vmo = zx::unowned_vmo(vmo.vmo());
     if (options.use_fvm) {
       // Create a dummy FVM partition that shifts the location of the minfs partition such that the
@@ -110,7 +115,7 @@ TEST_P(CorruptTest, OutOfOrderWrites) {
   memset(vmo.start(), 0xff, kSize);
 
   TestFilesystemOptions options = GetParam();
-  options.device_block_size = 8192;
+  options.device_block_size = std::min(options.filesystem->GetTraits().max_block_size, 8192L);
   options.device_block_count = 0;  // Use VMO size.
   options.vmo = zx::unowned_vmo(vmo.vmo());
   if (options.use_fvm) {
