@@ -18,9 +18,13 @@ function usage() {
   exit 1
 }
 
+function realpath() {
+  echo $(cd $(dirname "$1"); pwd)/$(basename "$1")
+}
+
 readonly LIBRARY_NAME=$1
-readonly CURRENT=$2
-readonly REFERENCE=$3
+readonly CURRENT=$(realpath "$2")
+readonly REFERENCE=$(realpath "$3")
 readonly STAMP=$4
 
 WARN_ON_CHANGES=0
