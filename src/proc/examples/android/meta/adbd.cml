@@ -2,6 +2,7 @@
     program: {
         runner: "stardroid",
         binary: "/system/apex/com.android.adbd/bin/adbd",
+        user: "root:x:0:0",
         environ: [ "ADB_TRACE=all" ],
     },
 }
