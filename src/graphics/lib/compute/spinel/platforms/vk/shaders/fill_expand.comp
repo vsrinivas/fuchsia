@@ -138,7 +138,7 @@ SPN_BUFFER_DEFINE_RASTERIZE_RAST_CMDS(writeonly);
 //
 #define SPN_FILL_EXPAND_TAG_IS_RAT(tag_)                                                           \
   (uint32_t(tag_ - SPN_BLOCK_ID_TAG_PATH_RAT_QUAD) <=                                              \
-   SPN_BLOCK_ID_TAG_PATH_RAT_CUBIC - SPN_BLOCK_ID_TAG_PATH_RAT_QUAD)
+   uint32_t(SPN_BLOCK_ID_TAG_PATH_RAT_CUBIC - SPN_BLOCK_ID_TAG_PATH_RAT_QUAD))
 
 //
 // Unfortunately we're going to have to lean on shared memory to
@@ -315,7 +315,7 @@ main()
 #endif
     {
       // FIXME(allanmac): use a ~mask and multiply
-      const uint32_t fsp_row = (gl_SubgroupInvocationID / 4) * SPN_FILL_EXPAND_SUBGROUP_SIZE;
+      const uint32_t fsp_row = (gl_SubgroupInvocationID >> 2) * SPN_FILL_EXPAND_SUBGROUP_SIZE;
       const uint32_t uv4_idx = (gl_SubgroupInvocationID & 3);
 
       prim_base = fill_scan.prefix[fsp_idx + fsp_row][uv4_idx];

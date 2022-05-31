@@ -75,8 +75,6 @@ main()
   const u32vec4 dispatch = { wgs, 1, 1, segment_count };
 
   ttcks.render_dispatch = dispatch;
-
-  // debugPrintfEXT("render_dispatch: %v4u\n", dispatch);
 }
 
 //

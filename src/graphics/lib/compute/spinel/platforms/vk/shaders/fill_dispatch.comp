@@ -68,7 +68,7 @@ main()
 
 #if (SPN_FILL_DISPATCH_SUBGROUP_SIZE == 4)
   //
-  // SIMD4 -- ARM Bifrost4 and maybe very small future GPUs
+  // SIMD4 -- ARM Bifrost4 and SwiftShader
   //
   u32vec4 dispatch[2] = { u32vec4(0, 1, 1, 0), u32vec4(0, 1, 1, 0) };
 
@@ -115,16 +115,15 @@ main()
 #endif
     {
       //
-      // FIXME(allanmac): This needs to setup the dispatch based on
-      // rounded-up workgroup size and not subgroup size.
+      // TODO(fxbug.dev/101414): This eventually needs to setup the
+      // dispatch based on rounded-up workgroup size and not subgroup
+      // size.
       //
       dispatch[0] = fill_scan.counts[gl_SubgroupInvocationID];
     }
 
   //
   // Exclusive scan-add of commands by type.
-  //
-  // FIXME(allanmac): predicate/cluster this to only 5 lanes?
   //
   dispatch[3] = subgroupExclusiveAdd(dispatch[0]);
 
@@ -136,8 +135,6 @@ main()
 #endif
     {
       fill_scan.dispatch[gl_SubgroupInvocationID] = dispatch;
-
-      // debugPrintfEXT("%2u: < %7v4u >\n", gl_SubgroupInvocationID, dispatch);
     }
 
 #else

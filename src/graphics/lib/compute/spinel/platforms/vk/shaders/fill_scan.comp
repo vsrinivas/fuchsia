@@ -52,7 +52,8 @@ SPN_BUFFER_DEFINE_BLOCK_POOL_BLOCKS_U32VEC4(readonly);
 // clang-format on
 
 //
-// This kernel is executing a prefix-sum on each path primitive count.
+// This kernel is executing a local prefix-sum on each path primitive
+// count.
 //
 // A slab of commands will be loaded and scanned in registers with an
 // offset determined by a global atomic add.  The prefix sums are then
@@ -166,13 +167,9 @@ main()
     prims##I[0][0] = is_proj ? prims##I[0][3] : 0; /* SPN_RAST_TYPE_PROJ_LINE  */                  \
     prims##I[0][1] = is_proj ? prims##I[1][0] : 0; /* SPN_RAST_TYPE_PROJ_QUAD  */                  \
     prims##I[0][2] = is_proj ? prims##I[1][1] : 0; /* SPN_RAST_TYPE_PROJ_CUBIC */                  \
-                                                                                                   \
-    if (is_proj)                                                                                   \
-      {                                                                                            \
-        prims##I[0][3] = 0; /* SPN_RAST_TYPE_LINE  */                                              \
-        prims##I[1][0] = 0; /* SPN_RAST_TYPE_QUAD  */                                              \
-        prims##I[1][1] = 0; /* SPN_RAST_TYPE_CUBIC */                                              \
-      }                                                                                            \
+    prims##I[0][3] = is_proj ? 0 : prims##I[0][3]; /* SPN_RAST_TYPE_LINE  */                       \
+    prims##I[1][0] = is_proj ? 0 : prims##I[1][0]; /* SPN_RAST_TYPE_QUAD  */                       \
+    prims##I[1][1] = is_proj ? 0 : prims##I[1][1]; /* SPN_RAST_TYPE_CUBIC */                       \
   }
 
   SPN_DEVICE_FILL_SCAN_EXPAND();
