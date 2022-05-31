@@ -27,6 +27,7 @@ import (
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dns"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/filter"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/pprof"
+	zxtime "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/time"
 	tracingprovider "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/tracing/provider"
 
 	"go.fuchsia.dev/fuchsia/src/lib/component"
@@ -382,6 +383,7 @@ func Main() {
 
 		RawFactory:               &raw.EndpointFactory{},
 		AllowPacketEndpointWrite: true,
+		Clock:                    &zxtime.Clock{},
 	})
 
 	delayEnabled := tcpip.TCPDelayEnabled(true)
