@@ -23,19 +23,24 @@ extern "C" {
 //
 // Benchmark info
 //
+// Note that (`.is_direct` xor `.is_indirect`) must be true as an indication
+// that either the "direct" or "indirect" token appeared in the parsed
+// arguments.
+//
 struct radix_sort_vk_bench_info
 {
   char const * exec_name;       //
-  uint32_t     vendor_id;       // If vendor:device is 0:0 then
-  uint32_t     device_id;       // use first VkPhysicalDevice.
+  uint32_t     vendor_id;       // If vendor:device is 0:0 then use first VkPhysicalDevice.
+  uint32_t     device_id;       //
   char const * target_name;     // If NULL then find target name.
   uint32_t     keyval_dwords;   // Only eval'd if target_name is NULL.
-  bool         is_indirect;     // indirect vs. direct dispatch
-  uint32_t     count_lo;        //
-  uint32_t     count_hi;        //
-  uint32_t     count_step;      //
-  uint32_t     loops;           //
-  uint32_t     warmup;          //
+  bool         is_direct;       // Directly dispatch shaders.  Implies `.is_indirect` is false.
+  bool         is_indirect;     // Indirectly dispatch shaders.  Implies `.is_direct` is false.
+  uint32_t     count_lo;        // Starting number of keyvals.
+  uint32_t     count_hi;        // Ending number of keyvals.
+  uint32_t     count_step;      // Increase count until greater than `.count_hi`.
+  uint32_t     loops;           // Number of times to execute the benchmarked sort.
+  uint32_t     warmup;          // Number of times to execute the sort before benchmarking.
   uint32_t     is_verify;       // Compare GPU to CPU sorted output.
   bool         is_validation;   // Load Vulkan Validation Layers.
   bool         is_debug_utils;  // Label Vulkan objects.
@@ -43,13 +48,13 @@ struct radix_sort_vk_bench_info
 };
 
 //
-// Parse args as defined in `rs_usage()`
+// Parse args as defined in `rs_usage()`.
 //
-// Failure if EXIT_FAILURE is returned.
+// Parsing always succeeds.
 //
-// Otherwise, returns EXIT_SUCCESS.
+// The `radix_sort_vk_bench()` will further validate the `info` struct.
 //
-int
+void
 radix_sort_vk_bench_parse(int argc, char const * argv[], struct radix_sort_vk_bench_info * info);
 
 //

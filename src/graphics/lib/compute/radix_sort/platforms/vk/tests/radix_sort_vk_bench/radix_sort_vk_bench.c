@@ -445,9 +445,19 @@ rs_usage(char const * exec_name)
 //
 // Parse args as defined in `rs_usage()`
 //
-int
+// Parsing always succeeds.
+//
+void
 radix_sort_vk_bench_parse(int argc, char const * argv[], struct radix_sort_vk_bench_info * info)
 {
+  //
+  // Zero the struct
+  //
+  memset(info, 0, sizeof(*info));
+
+  //
+  // Save the exec name
+  //
   info->exec_name = argv[0];
 
   //
@@ -471,48 +481,25 @@ radix_sort_vk_bench_parse(int argc, char const * argv[], struct radix_sort_vk_be
   //
   // Make sure there is a target filename
   //
-  if (argc < 3)
+  if (argc >= 3)
     {
-#if defined(__Fuchsia__) && !defined(RS_VK_TARGET_ARCHIVE_LINKABLE)
-      fprintf(stderr, "Error: Missing target filename\n");
-#else
-      fprintf(stderr, "Error: Missing target name\n");
-#endif
-
-      rs_usage(info->exec_name);
-
-      return EXIT_FAILURE;
+      info->target_name = argv[2];
     }
-
-  info->target_name = argv[2];
 
   //
-  // Make sure there is either a "direct" or "indirect" keyword.
+  // These boolean flags are kept separate because either a "direct" or
+  // "indirect" keyword must be found when parsing arguments.
   //
-  if (argc < 4)
+  if (argc >= 4)
     {
-      fprintf(stderr, "Error: Missing \"direct\" or \"indirect\" dispatch mode\n");
-
-      rs_usage(info->exec_name);
-
-      return EXIT_FAILURE;
-    }
-
-  if (strcmp(argv[3], "direct") == 0)
-    {
-      info->is_indirect = false;
-    }
-  else if (strcmp(argv[3], "indirect") == 0)
-    {
-      info->is_indirect = true;
-    }
-  else
-    {
-      fprintf(stderr, "Error: Specify either \"direct\" or \"indirect\"\n");
-
-      rs_usage(info->exec_name);
-
-      return EXIT_FAILURE;
+      if (strcmp(argv[3], "direct") == 0)
+        {
+          info->is_direct = true;
+        }
+      else if (strcmp(argv[3], "indirect") == 0)
+        {
+          info->is_indirect = true;
+        }
     }
 
   //
@@ -526,32 +513,7 @@ radix_sort_vk_bench_parse(int argc, char const * argv[], struct radix_sort_vk_be
   info->is_verify      = (argc <= 9) ? true : strtoul(argv[9], NULL, 0) != 0;
   info->is_validation  = (argc <= 10) ? false : strtoul(argv[10], NULL, 0) != 0;
   info->is_debug_utils = true;
-
-  //
-  // Arg validation
-  //
-  if (info->count_lo == 0)
-    {
-      fprintf(stderr, "Error: Keyval count must be >= 1\n");
-
-      return EXIT_FAILURE;
-    }
-
-  if (info->count_lo > info->count_hi)
-    {
-      fprintf(stderr, "Error: count_lo > count_hi\n");
-
-      return EXIT_FAILURE;
-    }
-
-  if (info->loops == 0)
-    {
-      fprintf(stderr, "Error: Loops must be non-zero\n");
-
-      return EXIT_FAILURE;
-    }
-
-  return EXIT_SUCCESS;
+  info->is_verbose     = true;
 }
 
 //
@@ -560,16 +522,6 @@ radix_sort_vk_bench_parse(int argc, char const * argv[], struct radix_sort_vk_be
 int
 radix_sort_vk_bench(struct radix_sort_vk_bench_info const * info)
 {
-  //
-  // Perform same validatation as arg parsing.
-  //
-  if (((info->count_lo == 0) && (info->count_hi == 0)) ||  //
-      (info->count_lo > info->count_hi) ||                 //
-      (info->loops == 0))
-    {
-      return EXIT_FAILURE;
-    }
-
   //
   // Create a Vulkan 1.2 instance
   //
@@ -615,6 +567,8 @@ radix_sort_vk_bench(struct radix_sort_vk_bench_info const * info)
 
   if (result != VK_SUCCESS)
     {
+      fprintf(stderr, "Couldn't create VkInstance.\n");
+
       return EXIT_FAILURE;
     }
 
@@ -635,6 +589,8 @@ radix_sort_vk_bench(struct radix_sort_vk_bench_info const * info)
 
   if (pd_count == 0)
     {
+      fprintf(stderr, "VkPhysicalDevice count is zero.\n");
+
       vkDestroyInstance(instance, NULL);
 
       return EXIT_FAILURE;
@@ -721,6 +677,8 @@ radix_sort_vk_bench(struct radix_sort_vk_bench_info const * info)
     {
       fprintf(stderr, "Error: Vulkan `pdp.limits.timestampComputeAndGraphics != VK_TRUE`\n");
 
+      rs_usage(info->exec_name);
+
       vkDestroyInstance(instance, NULL);
 
       return EXIT_FAILURE;
@@ -740,8 +698,76 @@ radix_sort_vk_bench(struct radix_sort_vk_bench_info const * info)
       target_name = info->target_name;
     }
 
+  if (target_name == NULL)
+    {
+#if defined(__Fuchsia__) && !defined(RS_VK_TARGET_ARCHIVE_LINKABLE)
+      fprintf(stderr, "Error: Missing target filename\n");
+#else
+      fprintf(stderr, "Error: Missing target name\n");
+#endif
+
+      rs_usage(info->exec_name);
+
+      vkDestroyInstance(instance, NULL);
+
+      return EXIT_FAILURE;
+    }
+
   //
-  // Load the target.
+  // There must be either a direct or an indirect flag but not both.
+  //
+  if ((info->is_direct != info->is_indirect) == false)
+    {
+      fprintf(stderr, "Error: Specify either \"direct\" or \"indirect\"\n");
+
+      rs_usage(info->exec_name);
+
+      vkDestroyInstance(instance, NULL);
+
+      return EXIT_FAILURE;
+    }
+
+  //
+  // Loop validation
+  //
+  if (info->count_hi == 0)
+    {
+      if (info->is_verbose)
+        {
+          fprintf(stderr, "Error: count_hi must be >= 1\n");
+
+          rs_usage(info->exec_name);
+        }
+
+      vkDestroyInstance(instance, NULL);
+
+      return EXIT_FAILURE;
+    }
+
+  if (info->count_lo > info->count_hi)
+    {
+      fprintf(stderr, "Error: count_lo > count_hi\n");
+
+      rs_usage(info->exec_name);
+
+      vkDestroyInstance(instance, NULL);
+
+      return EXIT_FAILURE;
+    }
+
+  if (info->loops == 0)
+    {
+      fprintf(stderr, "Error: Loops must be non-zero\n");
+
+      rs_usage(info->exec_name);
+
+      vkDestroyInstance(instance, NULL);
+
+      return EXIT_FAILURE;
+    }
+
+  //
+  // Load the target
   //
   struct radix_sort_vk_target const * rs_target = rs_load_target(target_name);
 
@@ -757,14 +783,14 @@ radix_sort_vk_bench(struct radix_sort_vk_bench_info const * info)
     }
 
   //
-  // get the physical device's memory props
+  // Get the physical device's memory props
   //
   VkPhysicalDeviceMemoryProperties pdmp;
 
   vkGetPhysicalDeviceMemoryProperties(pd, &pdmp);
 
   //
-  // get queue properties
+  // Get queue properties
   //
   uint32_t qfp_count;
 
@@ -775,7 +801,7 @@ radix_sort_vk_bench(struct radix_sort_vk_bench_info const * info)
   vkGetPhysicalDeviceQueueFamilyProperties(pd, &qfp_count, qfp);
 
   //
-  // one compute queue
+  // One compute queue
   //
   float const qci_priorities[] = { 1.0f };
 
@@ -790,14 +816,14 @@ radix_sort_vk_bench(struct radix_sort_vk_bench_info const * info)
   };
 
   //
-  // probe Radix Sort device extension requirements for this target
+  // Probe Radix Sort device extension requirements for this target
   //
   struct radix_sort_vk_target_requirements rs_tr = { 0 };
 
   radix_sort_vk_target_get_requirements(rs_target, &rs_tr);  // returns false
 
   //
-  // feature structures chain
+  // Feature structures chain
   //
   VkPhysicalDeviceVulkan12Features pdf12 = {
     .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
@@ -814,7 +840,7 @@ radix_sort_vk_bench(struct radix_sort_vk_bench_info const * info)
   };
 
   //
-  // populate Radix Sort device requirements
+  // Populate Radix Sort device requirements
   //
   char const * ext_names[rs_tr.ext_name_count];
 
@@ -831,7 +857,7 @@ radix_sort_vk_bench(struct radix_sort_vk_bench_info const * info)
     }
 
   //
-  // create VkDevice
+  // Create VkDevice
   //
   VkDeviceCreateInfo const device_info = {
     .sType                   = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
@@ -851,38 +877,38 @@ radix_sort_vk_bench(struct radix_sort_vk_bench_info const * info)
   vk(CreateDevice(pd, &device_info, NULL, &device));
 
   //
-  // get a queue
+  // Get a queue
   //
   VkQueue queue;
 
   vkGetDeviceQueue(device, 0, 0, &queue);
 
   //
-  // get the pipeline cache
+  // Get the pipeline cache
   //
   VkPipelineCache pc;
 
   vk_pipeline_cache_create(device, NULL, VK_PIPELINE_CACHE_PREFIX_STRING "vk_cache", &pc);
 
   //
-  // create Radix Sort instance
+  // Create Radix Sort instance
   //
   struct radix_sort_vk * const rs = radix_sort_vk_create(device, NULL, pc, rs_target);
 
   //
-  // destroy the pipeline cache
+  // Destroy the pipeline cache
   //
   vk_pipeline_cache_destroy(device, NULL, VK_PIPELINE_CACHE_PREFIX_STRING "vk_cache", pc);
 
   //
-  // free the target archive if it was loaded
+  // Free the target archive if it was loaded
   //
 #ifndef RS_VK_TARGET_ARCHIVE_LINKABLE
   free((void *)rs_target);
 #endif
 
   //
-  // was the radix sort instance successfully created?
+  // Was the radix sort instance successfully created?
   //
   if (rs == NULL)
     {
@@ -892,7 +918,7 @@ radix_sort_vk_bench(struct radix_sort_vk_bench_info const * info)
     }
 
   //
-  // create command pool
+  // Create command pool
   //
   VkCommandPoolCreateInfo const cmd_pool_info = {
     .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
@@ -906,7 +932,7 @@ radix_sort_vk_bench(struct radix_sort_vk_bench_info const * info)
   vk(CreateCommandPool(device, &cmd_pool_info, NULL, &cmd_pool));
 
   //
-  // create a query pool for benchmarking
+  // Create a query pool for benchmarking
   //
   float const vk_timestamp_period = pdp.limits.timestampPeriod;
 
@@ -935,7 +961,8 @@ radix_sort_vk_bench(struct radix_sort_vk_bench_info const * info)
   vk(CreateQueryPool(device, &query_pool_info, NULL, &query_pool));
 
   //
-  // get target's memory requirements//
+  // Get target's memory requirements
+  //
   struct radix_sort_vk_memory_requirements rs_mr;
 
   radix_sort_vk_get_memory_requirements(rs, info->count_hi, &rs_mr);
@@ -944,7 +971,7 @@ radix_sort_vk_bench(struct radix_sort_vk_bench_info const * info)
   uint32_t const keyval_dwords = keyval_bytes / 4;
 
   //
-  // create buffers:
+  // Create buffers:
   //
   //   * rand buffer
   //
@@ -1048,7 +1075,7 @@ radix_sort_vk_bench(struct radix_sort_vk_bench_info const * info)
   vk(CreateBuffer(device, &bci, NULL, &buffers.count));
 
   //
-  // create dbis
+  // Create dbis
   //
   struct
   {
@@ -1095,7 +1122,7 @@ radix_sort_vk_bench(struct radix_sort_vk_bench_info const * info)
   };
 
   //
-  // get memory requirements for one of the buffers
+  // Get memory requirements for one of the buffers
   //
   struct
   {
@@ -1121,7 +1148,7 @@ radix_sort_vk_bench(struct radix_sort_vk_bench_info const * info)
   vkGetBufferMemoryRequirements(device, buffers.count, &mrs.count);
 
   //
-  // indicate that we're going to get the buffer's address
+  // Indicate that we're going to get the buffer's address
   //
   VkMemoryAllocateFlagsInfo const afi_devaddr = {
 
@@ -1132,9 +1159,9 @@ radix_sort_vk_bench(struct radix_sort_vk_bench_info const * info)
   };
 
   //
-  // allocate memory for the buffers
+  // Allocate memory for the buffers
   //
-  // for simplicity, all buffers are the same size
+  // For simplicity, all buffers are the same size
   //
   VkMemoryAllocateInfo const mai_rand = {
 
@@ -1231,7 +1258,7 @@ radix_sort_vk_bench(struct radix_sort_vk_bench_info const * info)
   };
 
   //
-  // allocate device memory
+  // Allocate device memory
   //
   struct
   {
@@ -1270,7 +1297,7 @@ radix_sort_vk_bench(struct radix_sort_vk_bench_info const * info)
   vk(BindBufferMemory(device, buffers.count, mems.count, 0));
 
   //
-  // create the rand and sort host buffers
+  // Create the rand and sort host buffers
   //
   void * rand_h = malloc(rs_mr.keyvals_size);
   void * sort_h = malloc(rs_mr.keyvals_size);
@@ -1286,7 +1313,7 @@ radix_sort_vk_bench(struct radix_sort_vk_bench_info const * info)
   vkUnmapMemory(device, mems.rand);
 
   //
-  // create a single command buffer for this thread
+  // Create a single command buffer for this thread
   //
   VkCommandBufferAllocateInfo const cmd_buffer_info = {
     .sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
@@ -1338,7 +1365,7 @@ radix_sort_vk_bench(struct radix_sort_vk_bench_info const * info)
   };
 
   //
-  // labels
+  // Labels
   //
   fprintf(stdout,
           "Device, "
@@ -1356,7 +1383,7 @@ radix_sort_vk_bench(struct radix_sort_vk_bench_info const * info)
           "Trials, ");
 
   //
-  // accumulate verifications
+  // Accumulate verifications
   //
   bool all_verified = true;
 
@@ -1689,7 +1716,7 @@ radix_sort_vk_bench(struct radix_sort_vk_bench_info const * info)
           // DEBUG
           //
 #ifdef RS_DEBUG_DUMP
-          if (!is_direct)
+          if (!info->is_direct)
             {
               rs_debug_dump_indirect(mem_map_indirect_d);
             }

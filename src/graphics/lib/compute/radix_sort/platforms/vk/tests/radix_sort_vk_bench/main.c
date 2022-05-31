@@ -19,14 +19,9 @@ main(int argc, char const * argv[])
   //
   // Parse arguments.
   //
-  struct radix_sort_vk_bench_info info = {
-    .is_verbose = true,
-  };
+  struct radix_sort_vk_bench_info info;  // no need to zero-initialize
 
-  if (radix_sort_vk_bench_parse(argc, argv, &info) != EXIT_SUCCESS)
-    {
-      return EXIT_FAILURE;
-    }
+  radix_sort_vk_bench_parse(argc, argv, &info);
 
   //
   // Execute benchmark.
