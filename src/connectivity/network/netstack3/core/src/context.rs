@@ -486,15 +486,6 @@ pub trait FrameContext<C, B: BufferMut, Meta> {
     ) -> Result<(), S>;
 }
 
-/// A handler for frame events.
-///
-/// A `FrameHandler` is a type capable of handling the event of a frame being
-/// received.
-pub(crate) trait FrameHandler<Ctx, Meta, B> {
-    /// Handle a frame being received.
-    fn handle_frame(ctx: &mut Ctx, meta: Meta, buffer: B);
-}
-
 /// A context that stores performance counters.
 ///
 /// `CounterContext` allows counters keyed by string names to be incremented for

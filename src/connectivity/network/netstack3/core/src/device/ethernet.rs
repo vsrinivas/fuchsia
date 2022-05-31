@@ -443,7 +443,7 @@ pub(super) fn send_ip_frame<
 /// Receive an Ethernet frame from the network.
 pub(super) fn receive_frame<B: BufferMut, SC: BufferEthernetIpLinkDeviceContext<B>, C>(
     sync_ctx: &mut SC,
-    ctx: &mut C,
+    _ctx: &mut C,
     device_id: SC::DeviceId,
     mut buffer: B,
 ) {
@@ -485,7 +485,7 @@ pub(super) fn receive_frame<B: BufferMut, SC: BufferEthernetIpLinkDeviceContext<
             };
             match types {
                 (ArpHardwareType::Ethernet, ArpNetworkType::Ipv4) => {
-                    arp::receive_arp_packet(sync_ctx, ctx, device_id, buffer)
+                    arp::handle_packet(sync_ctx, device_id, buffer)
                 }
             }
         }
