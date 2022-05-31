@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -495,11 +494,8 @@ func affectedTestsNoWork(
 			testsByPath[path] = test.Name
 			continue
 		}
-		if test.PackageLabel != "" {
-			dirtyLine, err := dirtyLineForPackageLabel(test.PackageLabel)
-			if err != nil {
-				return result, err
-			}
+		for _, packageManifest := range test.PackageManifests {
+			dirtyLine := dirtyLineForPackageManifest(packageManifest)
 			testsByDirtyLine[dirtyLine] = append(testsByDirtyLine[dirtyLine], test.Name)
 		}
 	}
@@ -580,35 +576,8 @@ func affectedTestsNoWork(
 	return result, nil
 }
 
-func dirtyLineForPackageLabel(label string) (string, error) {
-	// Remove the "//" prefix and parenthesized toolchain suffix from the label.
-	trimmedLabel := strings.TrimPrefix(strings.Split(label, "(")[0], "//")
-
-	var directory, targetName string
-	if strings.Contains(trimmedLabel, ":") {
-		// Label looks like "//foo/bar:baz"
-		parts := strings.Split(trimmedLabel, ":")
-		directory = parts[0]
-		targetName = parts[1]
-	} else {
-		// Label looks like "//foo/bar"
-		directory = trimmedLabel
-		targetName = path.Base(trimmedLabel)
-	}
-
-	if directory == "" || targetName == "" {
-		return "", fmt.Errorf("failed to parse test label %q", label)
-	}
-
-	var packagePath string
-	if targetName == path.Base(directory) {
-		packagePath = directory
-	} else {
-		packagePath = path.Join(directory, targetName)
-	}
-
-	// `meta/contents` is sensitive to any of the package's contents changing
-	return "ninja explain: " + filepath.Join("obj", filepath.FromSlash(packagePath), "meta", "contents") + " is dirty", nil
+func dirtyLineForPackageManifest(label string) string {
+	return "ninja explain: " + label + " is dirty"
 }
 
 // ninjaGraph runs the ninja graph tool and pipes its stdout to the file at the

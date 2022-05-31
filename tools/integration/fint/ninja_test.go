@@ -519,69 +519,11 @@ func TestCheckNinjaNoop(t *testing.T) {
 	}
 }
 
-func TestDirtyLineForPackage(t *testing.T) {
-	testCases := []struct {
-		name      string
-		input     string
-		want      string
-		expectErr bool
-	}{
-		{
-			name:  "implicit basename",
-			input: "//foo/bar",
-			want:  "ninja explain: obj/foo/bar/meta/contents is dirty",
-		},
-		{
-			name:  "toolchain suffix",
-			input: "//foo/bar(//toolchain)",
-			want:  "ninja explain: obj/foo/bar/meta/contents is dirty",
-		},
-		{
-			name:  "explicit basename",
-			input: "//foo/bar:baz",
-			want:  "ninja explain: obj/foo/bar/baz/meta/contents is dirty",
-		},
-		{
-			name:  "explicit basename with toolchain",
-			input: "//foo/bar:baz(//toolchain)",
-			want:  "ninja explain: obj/foo/bar/baz/meta/contents is dirty",
-		},
-		{
-			name:  "explicit basename same as directory",
-			input: "//foo/bar:bar",
-			want:  "ninja explain: obj/foo/bar/meta/contents is dirty",
-		},
-		{
-			// This can happen if there's a bug in the tests.json generation
-			// template.
-			name:      "double colon in label",
-			input:     "//foo/bar::bar",
-			expectErr: true,
-		},
-	}
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			got, err := dirtyLineForPackageLabel(tc.input)
-			if err != nil && !tc.expectErr {
-				t.Fatal(err)
-			} else if tc.expectErr {
-				if err == nil {
-					t.Fatal("Expected error but got none")
-				}
-				return
-			}
-			if diff := cmp.Diff(tc.want, got); diff != "" {
-				t.Errorf("Wrong dirty line for test (-want +got):\n%s", diff)
-			}
-		})
-	}
-}
-
 func TestAffectedTestsNoWork(t *testing.T) {
 	mockTestManifest := []build.Test{
 		{Name: "host_test", Path: "host/run.sh"},
-		{Name: "fuchsia_test", PackageLabel: "//src/path/to:fuchsia_test(//toolchain)"},
-		{Name: "unaffected_test", PackageLabel: "//src/path/to:unaffected_test(//toolchain)"},
+		{Name: "fuchsia_test", PackageLabel: "//src/path/to:fuchsia_test(//toolchain)", PackageManifests: []string{"obj/src/path/to/fuchsia_test/package_manifest.json"}},
+		{Name: "unaffected_test", PackageLabel: "//src/path/to:unaffected_test(//toolchain)", PackageManifests: []string{"obj/src/path/to/unaffected_test/package_manifest.json"}},
 		{Name: "never_affected_test", PackageLabel: neverAffectedTestLabels[0] + "(//toolchain)"},
 	}
 
@@ -604,8 +546,8 @@ func TestAffectedTestsNoWork(t *testing.T) {
 			name: "affected tests",
 			ninjaOutput: `
 ninja: entering directory /foo
-ninja explain: obj/src/path/to/fuchsia_test/meta/contents is dirty
-ninja explain: obj/another_test/meta/contents is dirty
+ninja explain: obj/src/path/to/fuchsia_test/package_manifest.json is dirty
+ninja explain: obj/another_test/package_manifest.json is dirty
 [3/3] python build.py host/run.sh
             `,
 			expectedAffectedTests: []string{"host_test", "fuchsia_test"},
@@ -615,8 +557,8 @@ ninja explain: obj/another_test/meta/contents is dirty
 			name: "affected GN files",
 			ninjaOutput: `
 ninja: entering directory /foo
-ninja explain: obj/src/path/to/fuchsia_test/meta/contents is dirty
-ninja explain: obj/another_test/meta/contents is dirty
+ninja explain: obj/src/path/to/fuchsia_test/package_manifest.json is dirty
+ninja explain: obj/another_test/package_manifest.json is dirty
 [3/3] python build.py host/run.sh
 			`,
 			affectedFiles:         []string{"foo.gn", "bar.gni", "foo.go"},
