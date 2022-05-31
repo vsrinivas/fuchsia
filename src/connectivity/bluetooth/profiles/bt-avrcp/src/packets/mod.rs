@@ -54,9 +54,14 @@ pub enum Error {
     #[error("Encountered an error encoding a message")]
     ParameterEncodingError,
 
-    /// A enum value is out of expected range
+    /// A enum value is out of expected range.
     #[error("Value is out of expected range for enum")]
     OutOfRange,
+
+    /// AVRCP 1.6.2 section 6.15.3.
+    /// Direction parameter is invalid.
+    #[error("The Direction parameter is invalid")]
+    InvalidDirection,
 
     #[doc(hidden)]
     #[error("__Nonexhaustive error should never be created.")]
@@ -76,6 +81,13 @@ pub_decodable_enum! {
         Utf16be => 1013,
         Utf16le => 1014,
         Utf16 => 1015,
+    }
+}
+
+pub_decodable_enum! {
+    Direction<u8, Error, InvalidDirection> {
+        FolderUp => 0,
+        FolderDown => 1,
     }
 }
 

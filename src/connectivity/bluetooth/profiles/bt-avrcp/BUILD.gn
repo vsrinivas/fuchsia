@@ -47,6 +47,7 @@ rustc_binary("bin") {
   sources = [
     "src/main.rs",
     "src/metrics/mod.rs",
+    "src/packets/browsing/change_path.rs",
     "src/packets/browsing/get_folder_items.rs",
     "src/packets/browsing/get_total_items.rs",
     "src/packets/browsing/mod.rs",
