@@ -1249,23 +1249,18 @@ pub fn sys_epoll_ctl(
     fd: FdNumber,
     event: UserRef<EpollEvent>,
 ) -> Result<(), Errno> {
+    if epfd == fd {
+        return error!(EINVAL);
+    }
+
     let file = current_task.files.get(epfd)?;
     let epoll_file = file.downcast_file::<EpollFileObject>().ok_or_else(|| errno!(EINVAL))?;
 
     let ctl_file = current_task.files.get(fd)?;
-
-    // TODO We cannot wait on other epoll fds for fear of deadlocks caused by
-    // loops of dependency - for example, two loops that wait on each
-    // other. Fix this by detecting loops and returning ELOOP.
-    if ctl_file.downcast_file::<EpollFileObject>().is_some() {
-        not_implemented!("epoll_ctl cannot yet add another epoll fd");
-        return error!(ENOSYS);
-    }
-
     match op {
         EPOLL_CTL_ADD => {
             let epoll_event = current_task.mm.read_object(event)?;
-            epoll_file.add(&current_task, &ctl_file, epoll_event)?;
+            epoll_file.add(&current_task, &ctl_file, &file, epoll_event)?;
         }
         EPOLL_CTL_MOD => {
             let epoll_event = current_task.mm.read_object(event)?;
@@ -1343,7 +1338,7 @@ fn poll(
         }
         let file = current_task.files.get(FdNumber::from_raw(poll_descriptor.fd as i32))?;
         let event = EpollEvent { events: poll_descriptor.events as u32, data: index as u64 };
-        epoll_file.add(&current_task, &file, event)?;
+        epoll_file.add(&current_task, &file, &file_object, event)?;
     }
 
     let mask = mask.unwrap_or_else(|| current_task.read().signals.mask);
