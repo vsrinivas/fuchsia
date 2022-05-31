@@ -19,8 +19,3 @@ toc:
 - include: /docs/contribute/roadmap/_toc.yaml
 - heading: "Request for comment"
 - include: /docs/contribute/governance/rfcs/_toc.yaml
-- heading: "APIs"
-- title: "API design document template"
-  path: /docs/contribute/governance/api-design-template.md
-- include: /docs/contribute/governance/apis/_toc.yaml
-

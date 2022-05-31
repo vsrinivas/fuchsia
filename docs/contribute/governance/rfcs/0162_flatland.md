@@ -1,4 +1,19 @@
-# Flatland
+<!-- mdformat off(templates not supported) -->
+{% set rfcid = "RFC-0162" %}
+{% include "docs/contribute/governance/rfcs/_common/_rfc_header.md" %}
+# {{ rfc.name }}: {{ rfc.title }}
+{# Fuchsia RFCs use templates to display various fields from _rfcs.yaml. View the #}
+{# fully rendered RFCs at https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs #}
+<!-- SET the `rfcid` VAR ABOVE. DO NOT EDIT ANYTHING ELSE ABOVE THIS LINE. -->
+
+<!-- mdformat on -->
+
+<!-- This should begin with an H2 element (for example, ## Summary).-->
+
+## Former API Design Document
+
+This RFC was previously submitted as an API design document and converted to an
+RFC afterwards when the API design doc template was deprecated.
 
 ## Summary
 
@@ -115,7 +130,7 @@ Below is a figure that explains how a connected graph that links multiple
 Flatland sessions would work. This is a more complex but common use case.
 
 **Figure 1 - Flatland** ![This figure presents the linking between Flatland
-APIs.](resources/flatland/figure_1.svg "Figure 1")
+APIs.](resources/0162_flatland/figure_1.svg "Figure 1")
 
 ## Testing
 

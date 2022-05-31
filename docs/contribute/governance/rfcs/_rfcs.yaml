@@ -2087,3 +2087,55 @@
   reviewers: ['ianloic@google.com', 'yifeit@google.com']
   submitted: '2021-12-29'
   reviewed: '2022-05-17'
+
+- name: 'RFC-0161'
+  title: 'Scenic Allocator API'
+  short_description: 'Former API design document for the Scenic Allocator for API calibration.'
+  authors: ['emircan@google.com']
+  file: '0161_scenic_allocator.md'
+  area: ['Graphics']
+  issue: ['']
+  gerrit_change_id: ['504760']
+  status: 'Accepted'
+  reviewers: ['abarth@google.com', 'jbauman@google.com', 'jaeheon@google.com']
+  submitted: '2021-03-19'
+  reviewed: '2021-04-05'
+
+- name: 'RFC-0162'
+  title: 'Flatland API'
+  short_description: 'Describes Flatland, the 2D composition API for Fuchsia.'
+  authors: ['emircan@google.com']
+  file: '0162_flatland.md'
+  area: ['Graphics']
+  issue: ['']
+  gerrit_change_id: ['534141']
+  status: 'Accepted'
+  reviewers: ['abarth@google.com']
+  submitted: '2021-05-24'
+  reviewed: '2021-05-30'
+
+- name: 'RFC-0163'
+  title: 'Test Output Format'
+  short_description: 'Defines, but does not yet use, an initial stable version of the test output format produced by ffx test.'
+  authors: ['satsukiu@google.com']
+  file: '0163_test_output_format.md'
+  area: ['Testing']
+  issue: ['81195']
+  gerrit_change_id: ['649303']
+  status: 'Accepted'
+  reviewers: ['anmittal@google.com', 'maruel@google.com', 'marshallk@google.com', 'crjohns@google.com', 'gridman@google.com', 'olivernewman@google.com', 'dragonbear@google.com']
+  submitted: '2022-02-22'
+  reviewed: '2022-05-18'
+
+- name: 'RFC-0164'
+  title: 'Test Suite API'
+  short_description: 'API review to publish suite protocol to sdk'
+  authors: ['anmittal@google.com']
+  file: '0164_test_suite.md'
+  area: ['Testing']
+  issue: ['']
+  gerrit_change_id: ['655031']
+  status: 'Accepted'
+  reviewers: ['abarth@google.com', 'crjohns@google.com', 'satsukiu@google.com']
+  submitted: '2022-03-07'
+  reviewed: '2022-05-05'

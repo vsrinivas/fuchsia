@@ -336,4 +336,11 @@ toc:
     path: /docs/contribute/governance/rfcs/0159_execute_only_memory.md
   - title: "RFC-0160: Remove support for FIDL struct defaults"
     path: /docs/contribute/governance/rfcs/0160_fidl_remove_struct_defaults.md
-
+  - title: "RFC-0161: Scenic Allocator API"
+    path: /docs/contribute/governance/rfcs/0161_scenic_allocator.md
+  - title: "RFC-0162: Flatland API"
+    path: /docs/contribute/governance/rfcs/0162_flatland.md
+  - title: "RFC-0163: Test Output Format"
+    path: /docs/contribute/governance/rfcs/0163_test_output_format.md
+  - title: "RFC-0164: Test Suite API"
+    path: /docs/contribute/governance/rfcs/0164_test_suite.md

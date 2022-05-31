@@ -209,13 +209,15 @@ To contribute to the
     * If you have a large change to the API, that is, a change that
     significantly expands on the fuction of the API or modifies the
     API extensively, do the following:
-        * Create an [API Design Document](/docs/contribute/governance/api-design-template.md)
-        that explains the design of your modification to the API.
-        * Request a review of your API Design Document.
-        To read about the API Design Document and the API Design Document review
-        process, see [Decision process](/docs/contribute/governance/api_council.md#decision_process)
-        in the Fuchsia API Council Charter.
-        * After your API Design Document is approved, contribute your change by
+        * Create an [RFC](/docs/contribute/governance/rfcs/TEMPLATE.md) that
+        explains the design of your modification to the API.
+        * This RFC should be reviewed through the normal [RFC
+        process](/docs/contribute/governance/rfcs/rfc_process.md). The API
+        reviewer for the relevant area should be a stakeholder in the RFC. See
+        the [Fuchsia API Council
+        Charter](/docs/contribute/governance/api_council.md#area) to identify
+        API reviewers.
+        * After your API RFC is approved, contribute your change by
         completing the steps in
         [create a change in Gerrit](#create-a-change-in-gerrit), as you would
         for any Fuchsia source code change.
@@ -237,4 +239,3 @@ see the following pages:
 
 See [Source code layout](/docs/development/source_code/layout.md) for more
 information on the structure of the Fuchsia repository.
-

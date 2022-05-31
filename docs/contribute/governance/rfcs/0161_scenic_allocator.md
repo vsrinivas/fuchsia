@@ -1,4 +1,19 @@
-# Scenic Allocator
+<!-- mdformat off(templates not supported) -->
+{% set rfcid = "RFC-0161" %}
+{% include "docs/contribute/governance/rfcs/_common/_rfc_header.md" %}
+# {{ rfc.name }}: {{ rfc.title }}
+{# Fuchsia RFCs use templates to display various fields from _rfcs.yaml. View the #}
+{# fully rendered RFCs at https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs #}
+<!-- SET the `rfcid` VAR ABOVE. DO NOT EDIT ANYTHING ELSE ABOVE THIS LINE. -->
+
+<!-- mdformat on -->
+
+<!-- This should begin with an H2 element (for example, ## Summary).-->
+
+## Former API Design Document
+
+This RFC was previously submitted as an API design document and converted to an
+RFC afterwards when the API design doc template was deprecated.
 
 ## Summary
 
@@ -70,7 +85,7 @@ protocol Allocator {
 ```
 
 **Figure 1 - Image creation flow**
-![This figure presents the relationship client, Allocator and presentation APIs.](resources/scenic_allocator/figure_1.svg "Figure 1")
+![This figure presents the relationship client, Allocator and presentation APIs.](resources/0161_scenic_allocator/figure_1.svg "Figure 1")
 
 Note that buffer deregistration is no longer necessary. This can be implicitly done by dropping
 all BufferCollectionImportToken instances on the client side. This is a better guard against
