@@ -553,6 +553,11 @@ config("default_warnings") {
       #
       # See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=39589.
       "-Wno-missing-field-initializers",
+
+      # TODO(fxbug.dev/101358): -Warray-bounds has false positives in GCC 12.
+      # When https://gcc.gnu.org/bugzilla/show_bug.cgi?id=105762 is fixed,
+      # remove this.
+      "-Wno-array-bounds",
     ]
   }
 }
