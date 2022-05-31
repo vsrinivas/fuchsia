@@ -18,7 +18,6 @@ import stat
 import subprocess
 import sys
 import tarfile
-import xml.etree.ElementTree
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 FUCHSIA_ROOT = os.path.dirname(  # $root
@@ -32,48 +31,6 @@ from frontend import Frontend
 import template_model as model
 
 from collections import namedtuple
-# Arguments for self.copy_file. Using the 'src' path, a relative path will be
-# calculated from 'base', then the file is copied to that path under 'dest'.
-# E.g. to copy {in}/foo/bar/baz to {out}/blam/baz, use
-#   CopyArgs(src = 'foo/bar/baz', base = 'foo/bar', dest = 'blam')
-CopyArgs = namedtuple('CopyArgs', ['src', 'base', 'dest'])
-
-# Any extra files which need to be added manually to the SDK can be specified
-# here. Entries are structured as args for self.copy_file.
-EXTRA_COPY = [
-    # Copy various files to support femu.sh from implementation of fx emu.
-    # See base/bin/femu-meta.json for more detail about the files needed.
-    # {fuchsia}/tools/devshell/emu -> {out}/bin/devshell/emu
-    CopyArgs(
-        src=os.path.join(FUCHSIA_ROOT, 'tools', 'devshell', 'emu'),
-        base=os.path.join(FUCHSIA_ROOT, 'tools'),
-        dest='bin'),
-    # {fuchsia}/tools/devshell/lib/fvm.sh -> {out}/bin/devshell/lib/fvm.sh
-    CopyArgs(
-        src=os.path.join(FUCHSIA_ROOT, 'tools', 'devshell', 'lib', 'fvm.sh'),
-        base=os.path.join(FUCHSIA_ROOT, 'tools'),
-        dest='bin'),
-    # {fuchsia}/scripts/start-unsecure-internet.sh -> {out}/bin/start-unsecure-internet.sh
-    CopyArgs(
-        src=os.path.join(FUCHSIA_ROOT, 'scripts', 'start-unsecure-internet.sh'),
-        base=os.path.join(FUCHSIA_ROOT, 'scripts'),
-        dest='bin'),
-    # {fuchsia}/tools/devshell/lib/emu-ifup-macos.sh -> {out}/bin/devshell/lib/emu-ifup-macos.sh
-    CopyArgs(
-        src=os.path.join(
-            FUCHSIA_ROOT, 'tools', 'devshell', 'lib', 'emu-ifup-macos.sh'),
-        base=os.path.join(FUCHSIA_ROOT, 'tools'),
-        dest='bin'),
-]
-
-# Capture the version of required prebuilts from the jiri manifest. Note
-# that ${platform} is actually part of the XML package name, so should
-# not be interpreted.
-EXTRA_PREBUILTS = {
-    'fuchsia/third_party/android/aemu/release/${platform}': 'aemu',
-    'fuchsia/third_party/grpcwebproxy/${platform}': 'grpcwebproxy',
-    'fuchsia/vdl/${platform}': 'device_launcher',
-}
 
 
 class GNBuilder(Frontend):
@@ -88,13 +45,7 @@ class GNBuilder(Frontend):
   is added to the SDK is in the base directory.
   """
 
-    def __init__(
-            self,
-            local_dir,
-            output,
-            archive='',
-            directory='',
-            jiri_manifest=None):
+    def __init__(self, local_dir, output, archive='', directory=''):
         """Initializes an instance of the GNBuilder.
 
         Note that only one of archive or directory should be specified.
@@ -108,8 +59,6 @@ class GNBuilder(Frontend):
         directory parameter as input.
       directory: The directory containing an unpackaged IDK. Can be empty
         meaning use the archive parameter as input.
-      jiri_manifest: File containing external references in XML format.
-        This is typically $FUCHSIA_ROOT/.jiri_root/update_history/latest
     """
         super(GNBuilder, self).__init__(
             local_dir=local_dir,
@@ -126,11 +75,6 @@ class GNBuilder(Frontend):
         ]  # List of all loadable module targets generated
         self.sysroot_targets = []  # List of all sysroot targets generated
         self.build_files = []
-        if jiri_manifest:
-            self.jiri_manifest = jiri_manifest
-        else:
-            self.jiri_manifest = os.path.join(
-                FUCHSIA_ROOT, '.jiri_root', 'update_history', 'latest')
 
     def prepare(self, arch, types):
         """Called before elements are processed.
@@ -147,12 +91,6 @@ class GNBuilder(Frontend):
         del types  # types is not used.
         self.target_arches = arch['target']
 
-        # Capture versions of various prebuilts contained in the jiri manifest
-        prebuilt_results = get_prebuilts(EXTRA_PREBUILTS, self.jiri_manifest)
-        for prebuilt, version in prebuilt_results.items():
-            with open(self.dest('bin', prebuilt + '.version'), 'w') as output:
-                output.write(version)
-
         # Propagate the manifest for the Core SDK into the GN SDK. Metadata
         # schemas are copied by the metadata_schemas documentation atom.
         self.copy_file(os.path.join('meta', 'manifest.json'))
@@ -162,9 +100,6 @@ class GNBuilder(Frontend):
         # the root of the fuchsia_sdk.
         copy_tree(self.local('base'), self.output, allow_overwrite=False)
         # Copy any additional files that would normally not be included
-        for each in EXTRA_COPY:
-            self.copy_file(
-                each.src, each.base, each.dest, allow_overwrite=False)
 
         self.write_additional_files()
         # Find CIPD prebuilt gn.
@@ -490,44 +425,6 @@ def make_executable(path):
     os.chmod(path, st.st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
 
 
-def get_prebuilts(in_extra_prebuilts, jiri_manifest):
-    """ Lookup version strings for a set of prebuilts
-
-    Given a file such as $FUCHSIA_ROOT/.jiri_root/update_history/latest, find matches for each of the name
-    strings, capture the version string, and return back a dictionary with the mappings.
-
-    Args:
-        in_extra_prebuilts: Dictionary of name strings to search, and the corresponding short name
-        jiri_manifest: XML file to read, such as $FUCHSIA_ROOT/.jiri_root/update_history/latest
-
-    Returns:
-        Dictionary of short name to version mappings
-
-    Raises:
-        RuntimeError: If in_extra_prebuilts contains items not found in the prebuilts file
-        or the jiri manifest can't be parsed
-    """
-
-    # Copy the input list since we modify it in the loop
-    extra_prebuilts = in_extra_prebuilts.copy()
-    prebuilt_results = {}
-    try:
-        manifest_root = xml.etree.ElementTree.parse(jiri_manifest).getroot()
-    except Exception as e:
-        raise RuntimeError(
-            'Unable to parse jiri manifest at %s: %s' % (jiri_manifest, e))
-    remaining_prebuilts = extra_prebuilts
-    for packages in manifest_root.iter('package'):
-        prebuilt = remaining_prebuilts.pop(packages.attrib['name'], None)
-        if prebuilt:
-            prebuilt_results[prebuilt] = packages.attrib['version']
-    if remaining_prebuilts:
-        raise RuntimeError(
-            'Could not find entries in %s for the remaining EXTRA_PREBUILTS: %s'
-            % (jiri_manifest, remaining_prebuilts))
-    return prebuilt_results
-
-
 def create_test_workspace(output):
     # Remove any existing output.
     shutil.rmtree(output, True)
@@ -580,11 +477,7 @@ def main(args_list=None):
     )
     parser.add_argument(
         '--tests', help='Path to the directory where to generate tests')
-    parser.add_argument(
-        '--jiri-manifest',
-        help=
-        'File containing external references in XML format (e.g. ".jiri_root/update_history/latest")'
-    )
+
     if args_list:
         args = parser.parse_args(args_list)
     else:
@@ -596,8 +489,7 @@ def main(args_list=None):
         output=args.output,
         tests=args.tests,
         output_archive=args.output_archive,
-        output_archive_only=args.output_archive_only,
-        jiri_manifest=args.jiri_manifest)
+        output_archive_only=args.output_archive_only)
 
 
 def run_generator(
@@ -606,8 +498,7 @@ def run_generator(
         output,
         output_archive_only=False,
         tests='',
-        output_archive='',
-        jiri_manifest=None):
+        output_archive=''):
     """Run the generator. Returns 0 on success, non-zero otherwise.
 
     Note that only one of archive or directory should be specified.
@@ -627,8 +518,7 @@ def run_generator(
         archive=archive,
         directory=directory,
         output=output,
-        local_dir=SCRIPT_DIR,
-        jiri_manifest=jiri_manifest)
+        local_dir=SCRIPT_DIR)
     if not builder.run():
         return 1
 
