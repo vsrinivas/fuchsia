@@ -77,15 +77,26 @@ fn update_into_from_attrs(info: &mut FsNodeInfo, attrs: zxio_node_attributes_t) 
 
 fn get_zxio_signals_from_events(events: FdEvents) -> zxio::zxio_signals_t {
     let mut signals = ZxioSignals::NONE;
+
     if events & FdEvents::POLLIN {
-        signals |= ZxioSignals::READABLE | ZxioSignals::PEER_CLOSED | ZxioSignals::READ_DISABLED;
+        signals |= ZxioSignals::READABLE;
+    }
+    if events & FdEvents::POLLPRI {
+        signals |= ZxioSignals::OUT_OF_BAND;
     }
     if events & FdEvents::POLLOUT {
-        signals |= ZxioSignals::WRITABLE | ZxioSignals::WRITE_DISABLED;
+        signals |= ZxioSignals::WRITABLE;
+    }
+    if events & FdEvents::POLLERR {
+        signals |= ZxioSignals::ERROR;
+    }
+    if events & FdEvents::POLLHUP {
+        signals |= ZxioSignals::PEER_CLOSED;
     }
     if events & FdEvents::POLLRDHUP {
-        signals |= ZxioSignals::READ_DISABLED | ZxioSignals::PEER_CLOSED;
+        signals |= ZxioSignals::READ_DISABLED;
     }
+
     return signals.bits();
 }
 
@@ -94,15 +105,27 @@ fn get_events_from_zxio_signals(signals: zxio::zxio_signals_t) -> FdEvents {
 
     let mut events = FdEvents::empty();
 
-    if zxio_signals
-        .intersects(ZxioSignals::READABLE | ZxioSignals::PEER_CLOSED | ZxioSignals::READ_DISABLED)
-    {
+    if zxio_signals.intersects(ZxioSignals::READABLE) {
         events |= FdEvents::POLLIN;
     }
-    if zxio_signals.intersects(ZxioSignals::WRITABLE | ZxioSignals::WRITE_DISABLED) {
+
+    if zxio_signals.intersects(ZxioSignals::OUT_OF_BAND) {
+        events |= FdEvents::POLLPRI;
+    }
+
+    if zxio_signals.intersects(ZxioSignals::WRITABLE) {
         events |= FdEvents::POLLOUT;
     }
-    if zxio_signals.intersects(ZxioSignals::READ_DISABLED | ZxioSignals::PEER_CLOSED) {
+
+    if zxio_signals.intersects(ZxioSignals::ERROR) {
+        events |= FdEvents::POLLERR;
+    }
+
+    if zxio_signals.intersects(ZxioSignals::PEER_CLOSED) {
+        events |= FdEvents::POLLHUP;
+    }
+
+    if zxio_signals.intersects(ZxioSignals::READ_DISABLED) {
         events |= FdEvents::POLLRDHUP;
     }
 
@@ -233,7 +256,11 @@ fn zxio_cancel_wait(zxio: &Arc<Zxio>, waiter: &Arc<Waiter>, key: WaitKey) -> boo
 fn zxio_query_events(zxio: &Arc<Zxio>) -> FdEvents {
     let signals = get_zxio_signals_from_events(FdEvents::POLLIN | FdEvents::POLLOUT);
     let (handle, signals) = zxio.wait_begin(signals);
-    let observed_signals = handle.wait(signals, zx::Time::INFINITE_PAST).unwrap();
+    // Wait can error out if the remote gets closed.
+    let observed_signals = match handle.wait(signals, zx::Time::INFINITE_PAST) {
+        Ok(signals) => signals,
+        Err(_) => return FdEvents::POLLHUP,
+    };
     let observed_zxio_signals = zxio.wait_end(observed_signals);
     get_events_from_zxio_signals(observed_zxio_signals)
 }
