@@ -122,12 +122,26 @@ spinel_styling_group_enter(spinel_styling_t      styling,
       return res;
     }
 
-  styling->extent[group_id + SPN_STYLING_GROUP_OFFSET_CMDS_ENTER] =
-    spinel_styling_cmd_base_count(styling->dwords.next, n);
+  if (n == 0)
+    {
+      styling->extent[group_id + SPN_STYLING_GROUP_OFFSET_CMDS_ENTER] = 0;
 
-  *cmds = styling->extent + styling->dwords.next;
+      if (cmds != NULL)
+        {
+          *cmds = NULL;
+        }
+    }
+  else
+    {
+      assert(cmds != NULL);
 
-  styling->dwords.next += n;
+      styling->extent[group_id + SPN_STYLING_GROUP_OFFSET_CMDS_ENTER] =
+        spinel_styling_cmd_base_count(styling->dwords.next, n);
+
+      *cmds = styling->extent + styling->dwords.next;
+
+      styling->dwords.next += n;
+    }
 
   return SPN_SUCCESS;
 }
@@ -147,12 +161,26 @@ spinel_styling_group_leave(spinel_styling_t      styling,
       return res;
     }
 
-  styling->extent[group_id + SPN_STYLING_GROUP_OFFSET_CMDS_LEAVE] =
-    spinel_styling_cmd_base_count(styling->dwords.next, n);
+  if (n == 0)
+    {
+      styling->extent[group_id + SPN_STYLING_GROUP_OFFSET_CMDS_LEAVE] = 0;
 
-  *cmds = styling->extent + styling->dwords.next;
+      if (cmds != NULL)
+        {
+          *cmds = NULL;
+        }
+    }
+  else
+    {
+      assert(cmds != NULL);
 
-  styling->dwords.next += n;
+      styling->extent[group_id + SPN_STYLING_GROUP_OFFSET_CMDS_LEAVE] =
+        spinel_styling_cmd_base_count(styling->dwords.next, n);
+
+      *cmds = styling->extent + styling->dwords.next;
+
+      styling->dwords.next += n;
+    }
 
   return SPN_SUCCESS;
 }
@@ -172,11 +200,23 @@ spinel_styling_group_parents(spinel_styling_t      styling,
       return res;
     }
 
-  styling->extent[group_id + SPN_STYLING_GROUP_OFFSET_PARENTS_DEPTH] = n;
-  styling->extent[group_id + SPN_STYLING_GROUP_OFFSET_PARENTS_BASE]  = styling->dwords.next;
-
-  if (parents != NULL)
+  if (n == 0)
     {
+      styling->extent[group_id + SPN_STYLING_GROUP_OFFSET_PARENTS_DEPTH] = 0;
+      styling->extent[group_id + SPN_STYLING_GROUP_OFFSET_PARENTS_BASE]  = UINT32_MAX;
+
+      if (parents != NULL)
+        {
+          *parents = NULL;
+        }
+    }
+  else
+    {
+      assert(parents != NULL);
+
+      styling->extent[group_id + SPN_STYLING_GROUP_OFFSET_PARENTS_DEPTH] = n;
+      styling->extent[group_id + SPN_STYLING_GROUP_OFFSET_PARENTS_BASE]  = styling->dwords.next;
+
       *parents = styling->extent + styling->dwords.next;
     }
 

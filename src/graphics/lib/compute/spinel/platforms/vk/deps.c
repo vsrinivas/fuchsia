@@ -752,7 +752,7 @@ spinel_deps_delayed_acquire(struct spinel_deps *                            deps
   // FIXME(allanmac): This workaround exacts some performance. Remove it as soon
   // as it's feasible.
   //
-  if (vk->workaround.mesa_21_anv)
+  if (vk->workarounds.mesa_21_anv)
     {
       VkSemaphoreWaitInfo const swi = {
         .sType          = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,

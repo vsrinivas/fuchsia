@@ -197,9 +197,6 @@ fxt_spinel_vk_render::SetUp()
   //
   // The SVG decoder creates a top-level group and a child group per SVG.
   //
-  // This requires
-  //
-  //
   uint32_t const layer_count = param.test->layer_count();
 
   spinel_styling_create_info_t const styling_create_info = {
@@ -343,12 +340,11 @@ fxt_spinel_vk_render::checksum()
   // invalidate the mapped memory
   //
   VkMappedMemoryRange const mmr = {
-
     .sType  = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
     .pNext  = NULL,
     .memory = surface.h.dm,
     .offset = surface.h.dbi.offset,
-    .size   = surface.h.dbi.range
+    .size   = surface.h.dbi.range,
   };
 
   vk(InvalidateMappedMemoryRanges(shared_env->device->vk.d, 1, &mmr));

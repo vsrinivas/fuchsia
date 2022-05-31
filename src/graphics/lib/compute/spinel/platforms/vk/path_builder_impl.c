@@ -18,6 +18,7 @@
 #include "common/vk/barrier.h"
 #include "core_c.h"
 #include "device.h"
+#include "flush.h"
 #include "handle_pool.h"
 #include "queue_pool.h"
 #include "ring.h"
@@ -521,8 +522,36 @@ spinel_pbi_flush_submit(void * data0, void * data1)
 {
   struct spinel_path_builder_impl * const impl     = data0;
   struct spinel_pbi_dispatch * const      dispatch = data1;
+  struct spinel_device * const            device   = impl->device;
 
   assert(dispatch->paths.span > 0);
+
+  //
+  // Flush if the ring is non-coherent
+  //
+  if (!spinel_allocator_is_coherent(&device->allocator.device.perm.hw_dr))
+    {
+      VkDeviceSize const block_size       = sizeof(uint32_t) * impl->config.block_dwords;
+      VkDeviceSize const blocks_ring_size = block_size * impl->mapped.ring.size;
+
+      // Flush blocks
+      spinel_ring_flush(&device->vk,
+                        impl->vk.ring.dbi_dm.dm,
+                        0,
+                        impl->mapped.ring.size,
+                        dispatch->blocks.head,
+                        dispatch->blocks.span,
+                        block_size);
+
+      // Flush commands
+      spinel_ring_flush(&device->vk,
+                        impl->vk.ring.dbi_dm.dm,
+                        blocks_ring_size,
+                        impl->mapped.ring.size,
+                        dispatch->blocks.head,
+                        dispatch->blocks.span,
+                        sizeof(uint32_t));
+    }
 
   //
   // Acquire an immediate semaphore
@@ -561,8 +590,6 @@ spinel_pbi_flush_submit(void * data0, void * data1)
   //
   // We don't need to save the returned immediate semaphore.
   //
-  struct spinel_device * const device = impl->device;
-
   spinel_deps_immediate_submit(device->deps, &device->vk, &disi, NULL);
 
   //
@@ -609,7 +636,7 @@ spinel_pb_cn_coords_zero(float * coords, uint32_t rem)
 }
 
 static void
-spinel_pb_cn_coords_finalize(float * coords[], uint32_t coords_len, uint32_t const rem)
+spinel_pb_cn_coords_finalize(float * coords[], uint32_t coords_len, uint32_t rem)
 {
   do
     {
@@ -1045,8 +1072,8 @@ spinel_pbi_release(struct spinel_path_builder_impl * impl)
   //
   // Free device allocations.
   //
-  // Note that we don't have to unmap before freeing.
-  //
+  vkUnmapMemory(device->vk.d, impl->vk.ring.dbi_dm.dm);  // not necessary
+
   spinel_allocator_free_dbi_dm(&device->allocator.device.perm.hw_dr,
                                device->vk.d,
                                device->vk.ac,
@@ -1157,19 +1184,27 @@ spinel_path_builder_impl_create(struct spinel_device *        device,
 
   impl->mapped.rolling = 0;
 
+  //
   // each ring entry is a block of dwords and a one dword cmd
-  uint32_t const extent_dwords = ring_size * (block_dwords + 1);
-  size_t const   extent_size   = extent_dwords * sizeof(uint32_t);
+  //
+  // round up to coherent atom whether allocator is coherent or not
+  //
+  uint32_t const     extent_dwords  = ring_size * (block_dwords + 1);
+  size_t const       extent_size    = extent_dwords * sizeof(uint32_t);
+  VkDeviceSize const extent_size_ru = ROUND_UP_POW2_MACRO(extent_size,  //
+                                                          device->vk.limits.noncoherent_atom_size);
 
   spinel_allocator_alloc_dbi_dm_devaddr(&device->allocator.device.perm.hw_dr,
                                         device->vk.pd,
                                         device->vk.d,
                                         device->vk.ac,
-                                        extent_size,
+                                        extent_size_ru,
                                         NULL,
                                         &impl->vk.ring);
 
+  //
   // map and initialize blocks and cmds
+  //
   vk(MapMemory(device->vk.d,
                impl->vk.ring.dbi_dm.dm,
                0,
@@ -1177,6 +1212,9 @@ spinel_path_builder_impl_create(struct spinel_device *        device,
                0,
                (void **)&impl->mapped.blocks.u32));
 
+  //
+  // cmds are offset from blocks
+  //
   uint32_t const cmds_offset = ring_size * block_dwords;
 
   impl->mapped.cmds = impl->mapped.blocks.u32 + cmds_offset;

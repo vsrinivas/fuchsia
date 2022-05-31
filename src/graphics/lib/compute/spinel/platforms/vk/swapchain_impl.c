@@ -8,20 +8,16 @@
 
 #include "swapchain_impl.h"
 
+#include <assert.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "common/util.h"
 #include "common/vk/assert.h"
 #include "common/vk/barrier.h"
 #include "composition_impl.h"
 #include "spinel/platforms/vk/spinel_vk_types.h"
 #include "styling_impl.h"
-
-//
-//
-//
-
-#include <assert.h>
-#include <stdlib.h>
-#include <string.h>
 
 //
 // VK
@@ -247,22 +243,22 @@ spinel_sc_render_record(VkCommandBuffer cb, void * data0, void * data1)
     }
 
   //
-  // Push:   push.ttcks
-  // Direct: render dispatch pipeline
-  //
-  // FIXME(allanmac): Is there a better way to discover the src_stage and
-  // src_mask versus inspection of this function?
-  //
-  {
-    spinel_composition_push_render_dispatch_record(exts->submit->composition, cb);
-
-    vk_barrier_compute_w_to_indirect_compute_r(cb);
-  }
-
-  //
   // SPN_VK_SWAPCHAIN_SUBMIT_EXT_TYPE_COMPUTE_RENDER
   //
   {
+    //
+    // Push:   push.ttcks
+    // Direct: render dispatch pipeline
+    //
+    // FIXME(allanmac): Is there a better way to discover the src_stage and
+    // src_mask versus inspection of this function?
+    //
+    {
+      spinel_composition_push_render_dispatch_record(exts->submit->composition, cb);
+
+      vk_barrier_compute_w_to_indirect_compute_r(cb);
+    }
+
     //
     // Set up the tile clip
     //
@@ -362,8 +358,8 @@ spinel_sc_render_record(VkCommandBuffer cb, void * data0, void * data1)
       //
       // Outgoing stage/access
       //
-      src_stage = VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_HOST_BIT;
-      src_mask  = VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_HOST_READ_BIT;
+      src_stage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+      src_mask  = VK_ACCESS_NONE_KHR;
     }
 
   //
@@ -657,7 +653,7 @@ spinel_sc_graphics(struct spinel_swapchain_impl * impl, struct spinel_sc_exts co
   // FIXME(allanmac): This workaround exacts some performance. Remove it as soon
   // as it's feasible.
   //
-  if (device->vk.workaround.mesa_21_anv)
+  if (device->vk.workarounds.mesa_21_anv)
     {
       VkSemaphoreWaitInfo const swi = {
         .sType          = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,

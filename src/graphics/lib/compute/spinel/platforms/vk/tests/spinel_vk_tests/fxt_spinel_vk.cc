@@ -58,8 +58,14 @@ fxt_spinel_vk::SetUp()
       .q  = {
         .compute = {
           .flags        = 0,
-          .family_index = 0,
           .count        = shared_env->device->vk.qfp[0].queueCount,
+          .family_index = 0, // default to family index 0
+        },
+        .shared = {
+          .family_count   = 1,
+          .family_indices = {
+            0, // default to family index 0
+          },
         },
       },
     },

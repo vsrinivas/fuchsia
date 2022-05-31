@@ -16,6 +16,7 @@
 #include "common/vk/assert.h"
 #include "common/vk/barrier.h"
 #include "device.h"
+#include "flush.h"
 #include "handle_pool.h"
 #include "queue_pool.h"
 #include "raster_builder_impl.h"
@@ -161,9 +162,9 @@ struct spinel_composition_impl
 //
 //
 static bool
-spinel_ci_is_staged(struct spinel_target_config const * config)
+spinel_ci_is_staged(struct spinel_device const * device)
 {
-  return ((config->allocator.device.hw_dr.properties & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) == 0);
+  return !spinel_allocator_is_device_local(&device->allocator.device.perm.hw_dr);
 }
 
 //
@@ -197,10 +198,13 @@ spinel_ci_dispatch_init(struct spinel_composition_impl * impl, struct spinel_ci_
 {
   // .signal doesn't need initialization
   *dispatch = (struct spinel_ci_dispatch){
-
-    .cp = { .head = impl->mapped.cp.ring.head,  //
-            .span = 0 },
-    .rd = { .head = impl->rasters.count }
+    .cp = {
+      .head = impl->mapped.cp.ring.head,
+      .span = 0,
+    },
+    .rd = {
+      .head = impl->rasters.count,
+    },
   };
 }
 
@@ -278,7 +282,7 @@ spinel_ci_place_flush_record(VkCommandBuffer cb, void * data0, void * data1)
   struct spinel_target_config const * const config   = &device->ti.config;
   struct spinel_ci_dispatch * const         dispatch = data1;
 
-  if (spinel_ci_is_staged(config))
+  if (spinel_ci_is_staged(device))
     {
       VkDeviceSize const head_offset = dispatch->cp.head * sizeof(struct spinel_cmd_place);
 
@@ -379,11 +383,26 @@ static void
 spinel_ci_place_flush(struct spinel_composition_impl * impl)
 {
   struct spinel_ci_dispatch * const dispatch = spinel_ci_dispatch_head(impl);
+  struct spinel_device * const      device   = impl->device;
 
   // Is this a dispatch with no commands?
   if (spinel_ci_dispatch_is_empty(dispatch))
     {
       return;
+    }
+
+  //
+  // Flush if the ring is non-coherent
+  //
+  if (!spinel_allocator_is_coherent(&device->allocator.device.perm.hw_dr))
+    {
+      spinel_ring_flush(&device->vk,
+                        impl->vk.rings.h.dbi_dm.dm,
+                        0UL,
+                        impl->mapped.cp.ring.size,
+                        dispatch->cp.head,
+                        dispatch->cp.span,
+                        sizeof(*impl->mapped.cp.extent));
     }
 
   //
@@ -432,8 +451,6 @@ spinel_ci_place_flush(struct spinel_composition_impl * impl)
   //
   // Submit!
   //
-  struct spinel_device * const device = impl->device;
-
   spinel_deps_immediate_submit(device->deps, &device->vk, &disi, &dispatch->signal.immediate);
 
   //
@@ -1156,7 +1173,14 @@ spinel_ci_release(struct spinel_composition_impl * impl)
   //
   // free rings
   //
-  if (spinel_ci_is_staged(&device->ti.config))
+  vkUnmapMemory(device->vk.d, impl->vk.rings.h.dbi_dm.dm);  // not necessary
+
+  spinel_allocator_free_dbi_dm(&device->allocator.device.perm.hw_dr,
+                               device->vk.d,
+                               device->vk.ac,
+                               &impl->vk.rings.h.dbi_dm);
+
+  if (spinel_ci_is_staged(device))
     {
       spinel_allocator_free_dbi_dm(&device->allocator.device.perm.drw,
                                    device->vk.d,
@@ -1164,13 +1188,6 @@ spinel_ci_release(struct spinel_composition_impl * impl)
                                    &impl->vk.rings.d.dbi_dm);
     }
 
-  //
-  // note that we don't have to unmap before freeing
-  //
-  spinel_allocator_free_dbi_dm(&device->allocator.device.perm.hw_dr,
-                               device->vk.d,
-                               device->vk.ac,
-                               &impl->vk.rings.h.dbi_dm);
   //
   // free host allocations
   //
@@ -1244,17 +1261,22 @@ spinel_composition_impl_create(struct spinel_device *       device,
   struct spinel_target_config const * const config = &device->ti.config;
 
   //
+  // Init ring
+  //
+  spinel_ring_init(&impl->mapped.cp.ring, config->composition.size.ring);
+
+  //
   // Allocate and map ring
   //
-  size_t const ring_size = config->composition.size.ring * sizeof(*impl->mapped.cp.extent);
-
-  spinel_ring_init(&impl->mapped.cp.ring, config->composition.size.ring);
+  VkDeviceSize const ring_size    = config->composition.size.ring * sizeof(*impl->mapped.cp.extent);
+  VkDeviceSize const ring_size_ru = ROUND_UP_POW2_MACRO(ring_size,  //
+                                                        device->vk.limits.noncoherent_atom_size);
 
   spinel_allocator_alloc_dbi_dm_devaddr(&device->allocator.device.perm.hw_dr,
                                         device->vk.pd,
                                         device->vk.d,
                                         device->vk.ac,
-                                        ring_size,
+                                        ring_size_ru,
                                         NULL,
                                         &impl->vk.rings.h);
 
@@ -1265,13 +1287,13 @@ spinel_composition_impl_create(struct spinel_device *       device,
                0,
                (void **)&impl->mapped.cp.extent));
 
-  if (spinel_ci_is_staged(config))
+  if (spinel_ci_is_staged(device))
     {
       spinel_allocator_alloc_dbi_dm_devaddr(&device->allocator.device.perm.drw,
                                             device->vk.pd,
                                             device->vk.d,
                                             device->vk.ac,
-                                            ring_size,
+                                            ring_size_ru,
                                             NULL,
                                             &impl->vk.rings.d);
     }

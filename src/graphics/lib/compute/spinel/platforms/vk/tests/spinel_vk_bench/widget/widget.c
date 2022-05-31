@@ -170,6 +170,10 @@ widget_simple_impl_styling_group(struct widget *                     widget,
 
       spinel(styling_group_range_lo(context->styling.curr, *group_id, layer_lo));
       spinel(styling_group_range_hi(context->styling.curr, *group_id, layer_hi));
+
+      // no group enter/leave commands
+      spinel(styling_group_enter(context->styling.curr, *group_id, 0, NULL));
+      spinel(styling_group_leave(context->styling.curr, *group_id, 0, NULL));
     }
   else
     {

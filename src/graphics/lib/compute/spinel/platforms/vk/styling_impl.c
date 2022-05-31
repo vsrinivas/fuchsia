@@ -26,8 +26,7 @@ typedef enum spinel_si_state_e
 {
   SPN_SI_STATE_UNSEALED,
   SPN_SI_STATE_SEALING,
-  SPN_SI_STATE_SEALED
-
+  SPN_SI_STATE_SEALED,
 } spinel_si_state_e;
 
 //
@@ -92,11 +91,12 @@ spinel_si_seal_record(VkCommandBuffer cb, void * data0, void * data1)
 {
   struct spinel_styling_impl * const impl = data0;
 
-  VkBufferCopy const bc = {
+  VkDeviceSize const copy_size = impl->styling->dwords.next * sizeof(uint32_t);
 
+  VkBufferCopy const bc = {
     .srcOffset = impl->vk.h.dbi_dm.dbi.offset,
     .dstOffset = impl->vk.d.dbi_dm.dbi.offset,
-    .size      = impl->styling->dwords.next * sizeof(uint32_t)
+    .size      = copy_size,
   };
 
   vkCmdCopyBuffer(cb,  //
@@ -118,7 +118,7 @@ static spinel_result_t
 spinel_si_seal(struct spinel_styling_impl * const impl)
 {
   //
-  // return if SEALING or SEALED
+  // Return if SEALING or SEALED
   //
   if (impl->state >= SPN_SI_STATE_SEALING)
     {
@@ -126,17 +126,39 @@ spinel_si_seal(struct spinel_styling_impl * const impl)
     }
 
   //
-  // otherwise, kick off the UNSEALED > SEALING > SEALED transition
+  // Otherwise, kick off the UNSEALED > SEALING > SEALED transition
   //
   struct spinel_device * const device = impl->device;
+
+  //
+  // If the host buffer is not coherent then it has to be flushed.
+  //
+  // TODO(fxbug.dev/101416): Only flush what has changed.
+  //
+  if (!spinel_allocator_is_coherent(&device->allocator.device.perm.hw_dr))
+    {
+      // clang-format off
+      VkDeviceSize const flush_size    = impl->styling->dwords.next * sizeof(uint32_t);
+      VkDeviceSize const flush_size_ru = ROUND_UP_POW2_MACRO(flush_size,  //
+                                                             device->vk.limits.noncoherent_atom_size);
+      // clang-format on
+
+      VkMappedMemoryRange const mmr = {
+        .sType  = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
+        .pNext  = NULL,
+        .memory = impl->vk.h.dbi_dm.dm,
+        .offset = 0,
+        .size   = flush_size_ru,
+      };
+
+      vk(FlushMappedMemoryRanges(device->vk.d, 1, &mmr));
+    }
 
   //
   // If this is a discrete GPU then styling data is copied from the host to
   // device.
   //
-  struct spinel_target_config const * config = &device->ti.config;
-
-  if ((config->allocator.device.hw_dr.properties & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) == 0)
+  if (!spinel_allocator_is_device_local(&device->allocator.device.perm.hw_dr))
     {
       //
       // Move to SEALING state
@@ -236,23 +258,20 @@ spinel_si_release(struct spinel_styling_impl * const impl)
   //
   // free device allocations
   //
-  struct spinel_target_config const * config = &device->ti.config;
-
-  if ((config->allocator.device.hw_dr.properties & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) == 0)
-    {
-      //
-      // Note that we don't have to unmap before freeing
-      //
-      spinel_allocator_free_dbi_dm(&device->allocator.device.perm.drw,
-                                   device->vk.d,
-                                   device->vk.ac,
-                                   &impl->vk.d.dbi_dm);
-    }
+  vkUnmapMemory(device->vk.d, impl->vk.h.dbi_dm.dm);  // not necessary
 
   spinel_allocator_free_dbi_dm(&device->allocator.device.perm.hw_dr,
                                device->vk.d,
                                device->vk.ac,
                                &impl->vk.h.dbi_dm);
+
+  if (!spinel_allocator_is_device_local(&device->allocator.device.perm.hw_dr))
+    {
+      spinel_allocator_free_dbi_dm(&device->allocator.device.perm.drw,
+                                   device->vk.d,
+                                   device->vk.ac,
+                                   &impl->vk.d.dbi_dm);
+    }
 
   //
   // free host allocations
@@ -276,24 +295,24 @@ spinel_styling_impl_create(struct spinel_device *               device,
   spinel_context_retain(device->context);
 
   //
-  // allocate impl
+  // Allocate impl
   //
   struct spinel_styling_impl * const impl = malloc(sizeof(*impl));
 
   //
-  // allocate styling
+  // Allocate styling
   //
   struct spinel_styling * const s = *styling = malloc(sizeof(*s));
 
   //
-  // init forward/backward pointers
+  // Init forward/backward pointers
   //
   impl->styling = s;
   impl->device  = device;
   s->impl       = impl;
 
   //
-  // initialize styling pfns
+  // Initialize styling pfns
   //
   s->seal         = spinel_si_seal;
   s->unseal       = spinel_si_unseal;
@@ -308,26 +327,28 @@ spinel_styling_impl_create(struct spinel_device *               device,
   s->dwords.count = dwords_count;
 
   //
-  // initialize rest of impl
+  // Initialize rest of impl
   //
-  impl->lock_count = 0;
-  impl->state      = SPN_SI_STATE_UNSEALED;
-
-  //
-  //
-  //
+  impl->lock_count               = 0;
+  impl->state                    = SPN_SI_STATE_UNSEALED;
   impl->signal.sealing.immediate = SPN_DEPS_IMMEDIATE_SEMAPHORE_INVALID;
 
   //
-  // initialize styling extent
+  // Initialize styling extent
   //
-  VkDeviceSize const styling_size = sizeof(uint32_t) * dwords_count;
+  // Round up to a coherent atom whether or not allocator is coherent.
+  //
+  // clang-format off
+  VkDeviceSize const styling_size    = sizeof(uint32_t) * dwords_count;
+  VkDeviceSize const styling_size_ru = ROUND_UP_POW2_MACRO(styling_size,  //
+                                                           device->vk.limits.noncoherent_atom_size);
+  // clang-format on
 
   spinel_allocator_alloc_dbi_dm_devaddr(&device->allocator.device.perm.hw_dr,
                                         device->vk.pd,
                                         device->vk.d,
                                         device->vk.ac,
-                                        styling_size,
+                                        styling_size_ru,
                                         NULL,
                                         &impl->vk.h);
 
@@ -338,18 +359,13 @@ spinel_styling_impl_create(struct spinel_device *               device,
                0,
                (void **)&s->extent));
 
-  struct spinel_target_config const * config = &device->ti.config;
-
-  // For now, require `hw_dr` is always coherent
-  assert((config->allocator.device.hw_dr.properties & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) != 0);
-
-  if ((config->allocator.device.hw_dr.properties & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) == 0)
+  if (!spinel_allocator_is_device_local(&device->allocator.device.perm.hw_dr))
     {
       spinel_allocator_alloc_dbi_dm_devaddr(&device->allocator.device.perm.drw,
                                             device->vk.pd,
                                             device->vk.d,
                                             device->vk.ac,
-                                            styling_size,
+                                            styling_size_ru,
                                             NULL,
                                             &impl->vk.d);
     }

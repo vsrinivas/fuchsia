@@ -1059,8 +1059,8 @@
 #define SPN_STYLING_CMDS_OFFSET_BASE                   0
 #define SPN_STYLING_CMDS_OFFSET_COUNT                  SPN_STYLING_CMDS_BITS_BASE
 
-#define SPN_STYLING_CMDS_MAX_BASE                      (1<<SPN_STYLING_CMDS_BITS_BASE)
-#define SPN_STYLING_CMDS_MAX_COUNT                     (1<<SPN_STYLING_CMDS_BITS_COUNT)
+#define SPN_STYLING_CMDS_MAX_BASE                      ((1<<SPN_STYLING_CMDS_BITS_BASE) - 1)
+#define SPN_STYLING_CMDS_MAX_COUNT                     ((1<<SPN_STYLING_CMDS_BITS_COUNT) - 1)
 
 #define SPN_STYLING_CMDS_GET_COUNT(c_)                 SPN_BITFIELD_EXTRACT(c_,                                 \
                                                                             SPN_STYLING_CMDS_OFFSET_COUNT,      \

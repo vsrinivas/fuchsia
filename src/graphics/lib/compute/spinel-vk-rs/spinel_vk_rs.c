@@ -670,12 +670,12 @@ spinel_vk_rs_create(spinel_vk_rs_create_info_t const * create_info)
       .q  = {
         .compute = {
           .flags        = dqcis[0].flags,
-          .family_index = dqcis[0].queueFamilyIndex,
           .count        = dqcis[0].queueCount,
+          .family_index = dqcis[0].queueFamilyIndex,
         },
         .shared  = {
-          .queue_family_count   = is_same_queue ? 1 : 2,
-          .queue_family_indices = {
+          .family_count   = is_same_queue ? 1 : 2,
+          .family_indices = {
             dqcis[0].queueFamilyIndex,
             dqcis[1].queueFamilyIndex,
           },

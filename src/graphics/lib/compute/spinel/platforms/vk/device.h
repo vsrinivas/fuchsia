@@ -31,10 +31,21 @@ struct spinel_device_vk
   VkPipelineCache               pc;
   VkAllocationCallbacks const * ac;
 
+  //
+  // Queues
+  //
   struct
   {
     struct spinel_queue_pool compute;
   } q;
+
+  //
+  // Limits
+  //
+  struct
+  {
+    VkDeviceSize noncoherent_atom_size;
+  } limits;
 
   //
   // Workarounds
@@ -42,7 +53,7 @@ struct spinel_device_vk
   struct
   {
     bool mesa_21_anv;
-  } workaround;
+  } workarounds;
 };
 
 //
@@ -77,7 +88,6 @@ struct spinel_device
         struct spinel_allocator drw;         // no host access  / device read-write
         struct spinel_allocator hw_dr;       // host write      / device read once
         struct spinel_allocator hrw_dr;      // host read-write / device read once
-        struct spinel_allocator hr_dw;       // host read       / device write once
         struct spinel_allocator drw_shared;  // device read-write on 1 or 2 queue families
       } perm;
     } device;

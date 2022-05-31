@@ -15,6 +15,7 @@
 #include "common/macros.h"
 #include "common/vk/assert.h"
 #include "common/vk/barrier.h"
+#include "flush.h"
 #include "handle_pool.h"
 #include "path_builder.h"
 #include "path_builder_impl.h"
@@ -308,9 +309,9 @@ struct spinel_raster_builder_impl
 //
 //
 static bool
-spinel_rbi_is_staged(struct spinel_target_config const * config)
+spinel_rbi_is_staged(struct spinel_device const * device)
 {
-  return ((config->allocator.device.hw_dr.properties & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) == 0);
+  return !spinel_allocator_is_device_local(&device->allocator.device.perm.hw_dr);
 }
 
 //
@@ -638,42 +639,31 @@ spinel_rbi_flush_record(VkCommandBuffer cb, void * data0, void * data1)
   ////////////////////////////////////////////////////////////////
   //
   // FILL: ZERO RASTER COHORT META TABLE
+  // FILL: ZERO RASTERIZE.FILL_SCAN_COUNTS
   //
   ////////////////////////////////////////////////////////////////
 
   {
     //
-    // Zero ttrks SoA arrays *after* .alloc[]
+    // * Zero ttrks.meta SoA arrays *after* .alloc[]
+    // * Zero ttrks.count_dispatch
     //
-    // NOTE(allanmac): This fill has no dependencies until step (7) so it can be
-    // delayed.
+    // NOTE(allanmac): The ttrks.meta SoA fills have no dependencies until step
+    // (7) so there may be an opportunity to delay this.  But the
+    // ttrks.count_dispatch needs to be zeroed earlier.  Since they're adjacent
+    // we go ahead and zero them together.
     //
-    VkDeviceSize const offset = SPN_BUFFER_OFFSETOF(ttrks, meta.rk_off);
-    VkDeviceSize const size   = SPN_BUFFER_MEMBER_SIZE(ttrks, meta) - offset;
+    // clang-format off
+    VkDeviceSize const meta_offset           = SPN_BUFFER_OFFSETOF(ttrks,    meta.rk_off);
+    VkDeviceSize const count_dispatch_offset = SPN_BUFFER_OFFSETOF(ttrks,    count_dispatch);
+    VkDeviceSize const count_dispatch_size   = SPN_BUFFER_MEMBER_SIZE(ttrks, count_dispatch);
+    VkDeviceSize const span                  = count_dispatch_offset + count_dispatch_size - meta_offset;
+    // clang-format on
 
     vkCmdFillBuffer(cb,
                     dispatch->vk.ttrks.dbi.buffer,
-                    dispatch->vk.ttrks.dbi.offset + offset,
-                    size,
-                    0);
-  }
-
-  ////////////////////////////////////////////////////////////////
-  //
-  // FILL: ZERO TTRKS.COUNT_DISPATCH
-  //
-  // FIXME(allanmac): This fill can be combined with the above zeroing fill.
-  //
-  ////////////////////////////////////////////////////////////////
-
-  {
-    VkDeviceSize const offset = SPN_BUFFER_OFFSETOF(ttrks, count_dispatch);
-    VkDeviceSize const size   = SPN_BUFFER_MEMBER_SIZE(ttrks, count_dispatch);
-
-    vkCmdFillBuffer(cb,
-                    dispatch->vk.ttrks.dbi.buffer,
-                    dispatch->vk.ttrks.dbi.offset + offset,
-                    size,
+                    dispatch->vk.ttrks.dbi.offset + meta_offset,
+                    span,
                     0);
   }
 
@@ -707,7 +697,7 @@ spinel_rbi_flush_record(VkCommandBuffer cb, void * data0, void * data1)
 
   struct spinel_target_config const * const config = &device->ti.config;
 
-  if (spinel_rbi_is_staged(config))
+  if (spinel_rbi_is_staged(device))
     {
       // CF
       spinel_rbi_copy_ring(cb,
@@ -1144,10 +1134,44 @@ spinel_rbi_flush_submit(void * data0, void * data1)
 {
   struct spinel_raster_builder_impl * const impl     = data0;
   struct spinel_rbi_dispatch * const        dispatch = data1;
+  struct spinel_device * const              device   = impl->device;
 
   assert(dispatch->cf.span > 0);
   assert(dispatch == spinel_rbi_dispatch_head(impl));
   assert(dispatch->state == SPN_RBI_DISPATCH_STATE_RECORDING);
+
+  //
+  // Flush if the ring is non-coherent
+  //
+  if (!spinel_allocator_is_coherent(&device->allocator.device.perm.hw_dr))
+    {
+      // Flush CF
+      spinel_ring_flush(&device->vk,
+                        impl->vk.rings.cf.h.dbi_dm.dm,
+                        0UL,
+                        impl->mapped.cf.ring.size,
+                        dispatch->cf.head,
+                        dispatch->cf.span,
+                        sizeof(*impl->mapped.cf.extent));
+
+      // Flush TC
+      spinel_ring_flush(&device->vk,
+                        impl->vk.rings.tc.h.dbi_dm.dm,
+                        0UL,
+                        impl->mapped.tc.next.size,
+                        dispatch->tc.head,
+                        dispatch->tc.span,
+                        sizeof(*impl->mapped.tc.extent));
+
+      // Flush RC
+      spinel_ring_flush(&device->vk,
+                        impl->vk.rings.rc.h.dbi_dm.dm,
+                        0UL,
+                        impl->mapped.rc.next.size,
+                        dispatch->rc.head,
+                        dispatch->rc.span,
+                        sizeof(*impl->mapped.rc.extent));
+    }
 
   //
   // Acquire an immediate semaphore
@@ -1201,8 +1225,6 @@ spinel_rbi_flush_submit(void * data0, void * data1)
   //
   // We don't need to save the immediate semaphore
   //
-  struct spinel_device * const device = impl->device;
-
   spinel_deps_immediate_submit(device->deps, &device->vk, &disi, NULL);
 
   //
@@ -1636,11 +1658,30 @@ spinel_rbi_release(struct spinel_raster_builder_impl * impl)
                                &impl->vk.dispatch.rs.internal);
 
   //
+  // Ring extents
+  //
+  vkUnmapMemory(device->vk.d, impl->vk.rings.rc.h.dbi_dm.dm);  // not necessary
+  vkUnmapMemory(device->vk.d, impl->vk.rings.tc.h.dbi_dm.dm);  // not necessary
+  vkUnmapMemory(device->vk.d, impl->vk.rings.cf.h.dbi_dm.dm);  // not necessary
+
+  spinel_allocator_free_dbi_dm(&device->allocator.device.perm.hw_dr,
+                               device->vk.d,
+                               device->vk.ac,
+                               &impl->vk.rings.rc.h.dbi_dm);
+
+  spinel_allocator_free_dbi_dm(&device->allocator.device.perm.hw_dr,
+                               device->vk.d,
+                               device->vk.ac,
+                               &impl->vk.rings.tc.h.dbi_dm);
+
+  spinel_allocator_free_dbi_dm(&device->allocator.device.perm.hw_dr,
+                               device->vk.d,
+                               device->vk.ac,
+                               &impl->vk.rings.cf.h.dbi_dm);
+  //
   // Ring staging extents
   //
-  struct spinel_target_config const * const config = &device->ti.config;
-
-  if (spinel_rbi_is_staged(config))
+  if (spinel_rbi_is_staged(device))
     {
       spinel_allocator_free_dbi_dm(&device->allocator.device.perm.drw,
                                    device->vk.d,
@@ -1658,23 +1699,6 @@ spinel_rbi_release(struct spinel_raster_builder_impl * impl)
                                    &impl->vk.rings.cf.d.dbi_dm);
     }
 
-  //
-  // Ring extents
-  //
-  spinel_allocator_free_dbi_dm(&device->allocator.device.perm.hw_dr,
-                               device->vk.d,
-                               device->vk.ac,
-                               &impl->vk.rings.rc.h.dbi_dm);
-
-  spinel_allocator_free_dbi_dm(&device->allocator.device.perm.hw_dr,
-                               device->vk.d,
-                               device->vk.ac,
-                               &impl->vk.rings.tc.h.dbi_dm);
-
-  spinel_allocator_free_dbi_dm(&device->allocator.device.perm.hw_dr,
-                               device->vk.d,
-                               device->vk.ac,
-                               &impl->vk.rings.cf.h.dbi_dm);
   //
   // Free host allocations
   //
@@ -1781,98 +1805,111 @@ spinel_raster_builder_impl_create(struct spinel_device *    device,
   //
   // Allocate and map CF
   //
-  VkDeviceSize const cf_size = sizeof(*impl->mapped.cf.extent) * cf_ring_size;
+  {
+    VkDeviceSize const cf_size    = sizeof(*impl->mapped.cf.extent) * cf_ring_size;
+    VkDeviceSize const cf_size_ru = ROUND_UP_POW2_MACRO(cf_size,  //
+                                                        device->vk.limits.noncoherent_atom_size);
 
-  spinel_allocator_alloc_dbi_dm_devaddr(&device->allocator.device.perm.hw_dr,
-                                        device->vk.pd,
-                                        device->vk.d,
-                                        device->vk.ac,
-                                        cf_size,
-                                        NULL,
-                                        &impl->vk.rings.cf.h);
+    spinel_allocator_alloc_dbi_dm_devaddr(&device->allocator.device.perm.hw_dr,
+                                          device->vk.pd,
+                                          device->vk.d,
+                                          device->vk.ac,
+                                          cf_size_ru,
+                                          NULL,
+                                          &impl->vk.rings.cf.h);
 
-  vk(MapMemory(device->vk.d,
-               impl->vk.rings.cf.h.dbi_dm.dm,
-               0,
-               VK_WHOLE_SIZE,
-               0,
-               (void **)&impl->mapped.cf.extent));
+    vk(MapMemory(device->vk.d,
+                 impl->vk.rings.cf.h.dbi_dm.dm,
+                 0,
+                 VK_WHOLE_SIZE,
+                 0,
+                 (void **)&impl->mapped.cf.extent));
 
-  //
-  // Allocate and map TC
-  //
-  VkDeviceSize const tc_size = sizeof(*impl->mapped.tc.extent) * tc_ring_size;
+    //
+    // Allocate and map TC
+    //
+    VkDeviceSize const tc_size    = sizeof(*impl->mapped.tc.extent) * tc_ring_size;
+    VkDeviceSize const tc_size_ru = ROUND_UP_POW2_MACRO(tc_size,  //
+                                                        device->vk.limits.noncoherent_atom_size);
 
-  spinel_allocator_alloc_dbi_dm_devaddr(&device->allocator.device.perm.hw_dr,
-                                        device->vk.pd,
-                                        device->vk.d,
-                                        device->vk.ac,
-                                        tc_size,
-                                        NULL,
-                                        &impl->vk.rings.tc.h);
+    spinel_allocator_alloc_dbi_dm_devaddr(&device->allocator.device.perm.hw_dr,
+                                          device->vk.pd,
+                                          device->vk.d,
+                                          device->vk.ac,
+                                          tc_size_ru,
+                                          NULL,
+                                          &impl->vk.rings.tc.h);
 
-  vk(MapMemory(device->vk.d,
-               impl->vk.rings.tc.h.dbi_dm.dm,
-               0,
-               VK_WHOLE_SIZE,
-               0,
-               (void **)&impl->mapped.tc.extent));
+    vk(MapMemory(device->vk.d,
+                 impl->vk.rings.tc.h.dbi_dm.dm,
+                 0,
+                 VK_WHOLE_SIZE,
+                 0,
+                 (void **)&impl->mapped.tc.extent));
 
-  //
-  // Allocate and map RC
-  //
-  VkDeviceSize const rc_size = sizeof(*impl->mapped.rc.extent) * rc_ring_size;
+    //
+    // Allocate and map RC
+    //
+    VkDeviceSize const rc_size    = sizeof(*impl->mapped.rc.extent) * rc_ring_size;
+    VkDeviceSize const rc_size_ru = ROUND_UP_POW2_MACRO(rc_size,  //
+                                                        device->vk.limits.noncoherent_atom_size);
 
-  spinel_allocator_alloc_dbi_dm_devaddr(&device->allocator.device.perm.hw_dr,
-                                        device->vk.pd,
-                                        device->vk.d,
-                                        device->vk.ac,
-                                        rc_size,
-                                        NULL,
-                                        &impl->vk.rings.rc.h);
+    spinel_allocator_alloc_dbi_dm_devaddr(&device->allocator.device.perm.hw_dr,
+                                          device->vk.pd,
+                                          device->vk.d,
+                                          device->vk.ac,
+                                          rc_size_ru,
+                                          NULL,
+                                          &impl->vk.rings.rc.h);
 
-  vk(MapMemory(device->vk.d,
-               impl->vk.rings.rc.h.dbi_dm.dm,
-               0,
-               VK_WHOLE_SIZE,
-               0,
-               (void **)&impl->mapped.rc.extent));
+    vk(MapMemory(device->vk.d,
+                 impl->vk.rings.rc.h.dbi_dm.dm,
+                 0,
+                 VK_WHOLE_SIZE,
+                 0,
+                 (void **)&impl->mapped.rc.extent));
 
-  //
-  // Are host-writable rings used as staging buffers?
-  //
-  if (spinel_rbi_is_staged(config))
-    {
-      spinel_allocator_alloc_dbi_dm_devaddr(&device->allocator.device.perm.drw,
-                                            device->vk.pd,
-                                            device->vk.d,
-                                            device->vk.ac,
-                                            cf_size,
-                                            NULL,
-                                            &impl->vk.rings.cf.d);
+    //
+    // Allocate rasters
+    //
+    impl->rasters.extent = malloc(rc_size_ru);  // same size as mapped size
 
-      spinel_allocator_alloc_dbi_dm_devaddr(&device->allocator.device.perm.drw,
-                                            device->vk.pd,
-                                            device->vk.d,
-                                            device->vk.ac,
-                                            tc_size,
-                                            NULL,
-                                            &impl->vk.rings.tc.d);
+    //
+    // Are host-writable rings used as staging buffers?
+    //
+    if (spinel_rbi_is_staged(device))
+      {
+        spinel_allocator_alloc_dbi_dm_devaddr(&device->allocator.device.perm.drw,
+                                              device->vk.pd,
+                                              device->vk.d,
+                                              device->vk.ac,
+                                              cf_size_ru,
+                                              NULL,
+                                              &impl->vk.rings.cf.d);
 
-      spinel_allocator_alloc_dbi_dm_devaddr(&device->allocator.device.perm.drw,
-                                            device->vk.pd,
-                                            device->vk.d,
-                                            device->vk.ac,
-                                            rc_size,
-                                            NULL,
-                                            &impl->vk.rings.rc.d);
-    }
-  else
-    {
-      impl->vk.rings.cf.d = impl->vk.rings.cf.h;
-      impl->vk.rings.tc.d = impl->vk.rings.tc.h;
-      impl->vk.rings.rc.d = impl->vk.rings.rc.h;
-    }
+        spinel_allocator_alloc_dbi_dm_devaddr(&device->allocator.device.perm.drw,
+                                              device->vk.pd,
+                                              device->vk.d,
+                                              device->vk.ac,
+                                              tc_size_ru,
+                                              NULL,
+                                              &impl->vk.rings.tc.d);
+
+        spinel_allocator_alloc_dbi_dm_devaddr(&device->allocator.device.perm.drw,
+                                              device->vk.pd,
+                                              device->vk.d,
+                                              device->vk.ac,
+                                              rc_size_ru,
+                                              NULL,
+                                              &impl->vk.rings.rc.d);
+      }
+    else
+      {
+        impl->vk.rings.cf.d = impl->vk.rings.cf.h;
+        impl->vk.rings.tc.d = impl->vk.rings.tc.h;
+        impl->vk.rings.rc.d = impl->vk.rings.rc.h;
+      }
+  }
 
   //
   // Allocate dispatches and path/raster release extents
@@ -1887,11 +1924,6 @@ spinel_raster_builder_impl_create(struct spinel_device *    device,
   size_t const paths_size = sizeof(*impl->paths.extent) * config->raster_builder.size.ring;
 
   impl->paths.extent = malloc(paths_size);
-
-  //
-  // Allocate rasters
-  //
-  impl->rasters.extent = malloc(rc_size);  // same size as mapped size
 
   //
   // Get radix sort memory requirements

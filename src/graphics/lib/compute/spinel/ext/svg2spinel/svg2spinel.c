@@ -565,8 +565,8 @@ spinel_svg_layers_decode_at(spinel_layer_id const         layer_base,
 
               spinel_styling_cmd_t * cmds;
 
-#define spinel_svg2SPINEL_DISABLE_OPACITY
-#ifndef spinel_svg2SPINEL_DISABLE_OPACITY
+#define SPINEL_SVG2SPINEL_DISABLE_OPACITY
+#ifndef SPINEL_SVG2SPINEL_DISABLE_OPACITY
               spinel(styling_group_layer(styling, group_id, layer_id, 6, &cmds));
 #else
               spinel(styling_group_layer(styling, group_id, layer_id, 5, &cmds));
@@ -579,7 +579,7 @@ spinel_svg_layers_decode_at(spinel_layer_id const         layer_base,
 
               cmds[4] = blend_mode;
 
-#ifndef spinel_svg2SPINEL_DISABLE_OPACITY
+#ifndef SPINEL_SVG2SPINEL_DISABLE_OPACITY
               cmds[5] = SPN_STYLING_OPCODE_COLOR_ACC_TEST_OPACITY;
 #endif
             }
@@ -707,7 +707,9 @@ spinel_svg_layers_decode_n(uint32_t const                svg_count,
       uint32_t const layer_count = svg_layer_count(svg);
 
       if (layer_count == 0)
-        continue;
+        {
+          continue;
+        }
 
       //
       // create the svg styling group
@@ -728,6 +730,10 @@ spinel_svg_layers_decode_n(uint32_t const                svg_count,
 
       spinel(styling_group_range_lo(styling, group_id, layer_lo));
       spinel(styling_group_range_hi(styling, group_id, layer_hi));
+
+      // no group enter/leave commands
+      spinel(styling_group_enter(styling, group_id, 0, NULL));
+      spinel(styling_group_leave(styling, group_id, 0, NULL));
 
       //
       // decode commands

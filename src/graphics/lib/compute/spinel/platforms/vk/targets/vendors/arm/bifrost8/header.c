@@ -45,7 +45,7 @@ const struct spinel_target_header kRodata =
         .hw_dr = {
           .properties       = (VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT  |
                                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT  |
-                               VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
+                               VK_MEMORY_PROPERTY_HOST_CACHED_BIT),
           .usage            = (VK_BUFFER_USAGE_STORAGE_BUFFER_BIT   |
                                VK_BUFFER_USAGE_TRANSFER_SRC_BIT     |
                                VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT)

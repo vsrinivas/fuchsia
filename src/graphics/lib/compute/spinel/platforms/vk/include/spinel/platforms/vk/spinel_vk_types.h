@@ -41,13 +41,15 @@ typedef struct spinel_vk_target_requirements
 //
 // Spinel Vulkan queue creation info
 //
-// The queue family must be compute-capable.
+// The queue `.family_index` must be compute-capable.
+//
+// The queue pool `.count` must be greater than 0.
 //
 typedef struct spinel_vk_context_create_info_vk_queue
 {
   VkDeviceQueueCreateFlags flags;
-  uint32_t                 family_index;
   uint32_t                 count;
+  uint32_t                 family_index;
 } spinel_vk_context_create_info_vk_queue_t;
 
 //
@@ -57,8 +59,8 @@ typedef struct spinel_vk_context_create_info_vk_queue
 
 typedef struct spinel_vk_context_create_info_vk_queue_shared
 {
-  uint32_t queue_family_count;
-  uint32_t queue_family_indices[SPN_VK_CONTEXT_CREATE_INFO_VK_QUEUE_SHARED_MAX_FAMILIES];
+  uint32_t family_count;
+  uint32_t family_indices[SPN_VK_CONTEXT_CREATE_INFO_VK_QUEUE_SHARED_MAX_FAMILIES];
 } spinel_vk_context_create_info_vk_queue_shared_t;
 
 //

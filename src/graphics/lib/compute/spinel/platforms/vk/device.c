@@ -38,11 +38,34 @@ spinel_device_lost(struct spinel_device * const device)
 }
 
 //
+//
+//
+static void
+spinel_device_limits_init(struct spinel_device * device, VkPhysicalDeviceProperties2 const * pdp2)
+{
+  device->vk.limits.noncoherent_atom_size = pdp2->properties.limits.nonCoherentAtomSize;
+}
+
+//
 // FIXME(allanmac): This workaround exacts some performance. Remove it as soon
 // as it's feasible.
 //
 static void
-spinel_deps_workaround_mesa_21_anv(struct spinel_device * const device)
+spinel_device_workaround_mesa_21_anv(struct spinel_device * const               device,
+                                     VkPhysicalDeviceProperties2 const *        pdp2,
+                                     VkPhysicalDeviceVulkan12Properties const * pdp12)
+{
+  if ((pdp2->properties.vendorID == 0x8086) && strcmp(pdp12->driverName, "Mesa 21."))
+    {
+      device->vk.workarounds.mesa_21_anv = true;
+    }
+}
+
+//
+//
+//
+static void
+spinel_device_init(struct spinel_device * const device)
 {
   VkPhysicalDeviceVulkan12Properties pdp12 = {
     .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_PROPERTIES,
@@ -55,10 +78,15 @@ spinel_deps_workaround_mesa_21_anv(struct spinel_device * const device)
 
   vkGetPhysicalDeviceProperties2(device->vk.pd, &pdp2);
 
-  if ((pdp2.properties.vendorID == 0x8086) && strcmp(pdp12.driverName, "Mesa 21."))
-    {
-      device->vk.workaround.mesa_21_anv = true;
-    }
+  //
+  // Limits
+  //
+  spinel_device_limits_init(device, &pdp2);
+
+  //
+  // Workarounds
+  //
+  spinel_device_workaround_mesa_21_anv(device, &pdp2, &pdp12);
 }
 
 //
@@ -91,16 +119,15 @@ spinel_device_create(struct spinel_vk_context_create_info const * create_info)
   device->vk.pc = create_info->vk.pc;
   device->vk.ac = create_info->vk.ac;
 
-  //////////////////////////////////////////////////////////////////////////////
   //
-  // Initialize all workarounds
+  // Initialize limits and workarounds
   //
-  spinel_deps_workaround_mesa_21_anv(device);
+  spinel_device_init(device);
 
   //
   // Create the queue pools
   //
-  assert(create_info->vk.q.compute.count > 0);  // Compute queue count must be greater than zero
+  assert(create_info->vk.q.compute.count > 0);  // Queue pool count must be greater than zero
 
   spinel_queue_pool_create(&device->vk.q.compute, create_info->vk.d, &create_info->vk.q.compute);
 
@@ -118,9 +145,8 @@ spinel_device_create(struct spinel_vk_context_create_info const * create_info)
                           config->allocator.device.drw.properties,
                           config->allocator.device.drw.usage,
                           VK_SHARING_MODE_EXCLUSIVE,
-                          0,
-                          NULL);
-
+                          1,
+                          &create_info->vk.q.compute.family_index);
   //
   // "perm host write / device read"
   //
@@ -128,8 +154,8 @@ spinel_device_create(struct spinel_vk_context_create_info const * create_info)
                           config->allocator.device.hw_dr.properties,
                           config->allocator.device.hw_dr.usage,
                           VK_SHARING_MODE_EXCLUSIVE,
-                          0,
-                          NULL);
+                          1,
+                          &create_info->vk.q.compute.family_index);
 
   //
   // "perm host read-write / device read"
@@ -138,8 +164,8 @@ spinel_device_create(struct spinel_vk_context_create_info const * create_info)
                           config->allocator.device.hrw_dr.properties,
                           config->allocator.device.hrw_dr.usage,
                           VK_SHARING_MODE_EXCLUSIVE,
-                          0,
-                          NULL);
+                          1,
+                          &create_info->vk.q.compute.family_index);
 
   //
   // "perm device read-write on 1 or 2 queue families"
@@ -148,8 +174,8 @@ spinel_device_create(struct spinel_vk_context_create_info const * create_info)
                           config->allocator.device.drw_shared.properties,
                           config->allocator.device.drw_shared.usage,
                           config->swapchain.sharing_mode,
-                          create_info->vk.q.shared.queue_family_count,
-                          create_info->vk.q.shared.queue_family_indices);
+                          create_info->vk.q.shared.family_count,
+                          create_info->vk.q.shared.family_indices);
 
   //
   // Create deps

@@ -75,6 +75,15 @@ spinel_allocator_create(struct spinel_allocator * allocator,
                         uint32_t const            queue_family_indices[]);
 
 //
+// Query memory property flags
+//
+bool
+spinel_allocator_is_coherent(struct spinel_allocator const * allocator);
+
+bool
+spinel_allocator_is_device_local(struct spinel_allocator const * allocator);
+
+//
 //
 //
 void

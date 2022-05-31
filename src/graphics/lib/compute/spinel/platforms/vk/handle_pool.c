@@ -14,6 +14,7 @@
 #include "common/macros.h"
 #include "common/vk/assert.h"
 #include "common/vk/barrier.h"
+#include "flush.h"
 #include "ring.h"
 #include "shaders/push.h"
 #include "spinel/spinel_assert.h"
@@ -122,14 +123,6 @@ union spinel_rasters_to_handles
   struct spinel_raster const * const rasters;
   spinel_handle_t      const * const handles;
 };
-// clang-format on
-
-//
-// See Vulkan specification's "Required Limits" section.
-//
-// clang-format off
-#define SPN_VK_MAX_NONCOHERENT_ATOM_SIZE    256
-#define SPN_VK_MAX_NONCOHERENT_ATOM_HANDLES (SPN_VK_MAX_NONCOHERENT_ATOM_SIZE / sizeof(spinel_handle_t))
 // clang-format on
 
 //
@@ -292,17 +285,15 @@ spinel_handle_pool_reclaim_create(struct spinel_handle_pool_reclaim * reclaim,
   //
   spinel_ring_init(&reclaim->mapped.ring, count_handles);
 
-  // clang-format off
-  uint32_t const count_handles_ru = ROUND_UP_POW2_MACRO(count_handles, SPN_VK_MAX_NONCOHERENT_ATOM_HANDLES);
-  // clang-format on
-
-  VkDeviceSize const extent_size = sizeof(*reclaim->mapped.extent) * count_handles_ru;
+  VkDeviceSize const extent_size    = sizeof(*reclaim->mapped.extent) * count_handles;
+  VkDeviceSize const extent_size_ru = ROUND_UP_POW2_MACRO(extent_size,  //
+                                                          device->vk.limits.noncoherent_atom_size);
 
   spinel_allocator_alloc_dbi_dm_devaddr(&device->allocator.device.perm.hrw_dr,
                                         device->vk.pd,
                                         device->vk.d,
                                         device->vk.ac,
-                                        extent_size,
+                                        extent_size_ru,
                                         NULL,
                                         &reclaim->vk);
 
@@ -341,6 +332,8 @@ spinel_handle_pool_reclaim_dispose(struct spinel_handle_pool_reclaim * reclaim,
   //
   // free device allocations
   //
+  vkUnmapMemory(device->vk.d, reclaim->vk.dbi_dm.dm);  // not necessary
+
   spinel_allocator_free_dbi_dm(&device->allocator.device.perm.hrw_dr,
                                device->vk.d,
                                device->vk.ac,
@@ -449,59 +442,6 @@ spinel_handle_pool_reclaim_flush_rasters_complete(void * data0, void * data1)
 }
 
 //
-// Flush the noncoherent mapped ring
-//
-static void
-spinel_handle_pool_reclaim_flush_mapped(VkDevice       vk_d,  //
-                                        VkDeviceMemory ring,
-                                        uint32_t const size,
-                                        uint32_t const head,
-                                        uint32_t const span)
-{
-  uint32_t const idx_max = head + span;
-  uint32_t const idx_hi  = MIN_MACRO(uint32_t, idx_max, size);
-  uint32_t const span_hi = idx_hi - head;
-
-  uint32_t const idx_rd    = ROUND_DOWN_POW2_MACRO(head, SPN_VK_MAX_NONCOHERENT_ATOM_HANDLES);
-  uint32_t const idx_hi_ru = ROUND_UP_POW2_MACRO(idx_hi, SPN_VK_MAX_NONCOHERENT_ATOM_HANDLES);
-
-  VkMappedMemoryRange mmr[2];
-
-  mmr[0].sType  = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-  mmr[0].pNext  = NULL;
-  mmr[0].memory = ring;
-  mmr[0].offset = sizeof(spinel_handle_t) * idx_rd;
-  mmr[0].size   = sizeof(spinel_handle_t) * (idx_hi_ru - idx_rd);
-
-  if (span <= span_hi)
-    {
-      vk(FlushMappedMemoryRanges(vk_d, 1, mmr));
-    }
-  else
-    {
-      uint32_t const span_lo    = span - span_hi;
-      uint32_t const span_lo_ru = ROUND_UP_POW2_MACRO(span_lo, SPN_VK_MAX_NONCOHERENT_ATOM_HANDLES);
-
-      mmr[1].sType  = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-      mmr[1].pNext  = NULL;
-      mmr[1].memory = ring;
-      mmr[1].offset = 0;
-      mmr[1].size   = sizeof(spinel_handle_t) * span_lo_ru;
-
-      vk(FlushMappedMemoryRanges(vk_d, 2, mmr));
-    }
-}
-
-//
-//
-//
-static bool
-spinel_handle_pool_reclaim_is_noncoherent(struct spinel_target_config const * config)
-{
-  return ((config->allocator.device.hrw_dr.properties & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) == 0);
-}
-
-//
 // Record path reclamation commands
 //
 static VkPipelineStageFlags
@@ -519,15 +459,15 @@ spinel_handle_pool_reclaim_flush_paths_record(VkCommandBuffer cb, void * data0, 
   //
   // If ring is not coherent then flush
   //
-  struct spinel_target_config const * const config = &device->ti.config;
-
-  if (spinel_handle_pool_reclaim_is_noncoherent(config))
+  if (!spinel_allocator_is_coherent(&device->allocator.device.perm.hrw_dr))
     {
-      spinel_handle_pool_reclaim_flush_mapped(device->vk.d,
-                                              reclaim->vk.dbi_dm.dm,
-                                              reclaim->mapped.ring.size,
-                                              wip->ring.head,
-                                              wip->ring.span);
+      spinel_ring_flush(&device->vk,
+                        reclaim->vk.dbi_dm.dm,
+                        0UL,
+                        reclaim->mapped.ring.size,
+                        wip->ring.head,
+                        wip->ring.span,
+                        sizeof(spinel_handle_t));
     }
 
   //
@@ -558,6 +498,8 @@ spinel_handle_pool_reclaim_flush_paths_record(VkCommandBuffer cb, void * data0, 
   //
   // Dispatch a subgroup per span element
   //
+  struct spinel_target_config const * const config = &device->ti.config;
+
   uint32_t const sgs_per_wg = config->group_sizes.named.paths_reclaim.workgroup >>
                               config->group_sizes.named.paths_reclaim.subgroup_log2;
 
@@ -650,15 +592,15 @@ spinel_handle_pool_reclaim_flush_rasters_record(VkCommandBuffer cb, void * data0
   //
   // If ring is not coherent then flush
   //
-  struct spinel_target_config const * const config = &device->ti.config;
-
-  if (spinel_handle_pool_reclaim_is_noncoherent(config))
+  if (!spinel_allocator_is_coherent(&device->allocator.device.perm.hrw_dr))
     {
-      spinel_handle_pool_reclaim_flush_mapped(device->vk.d,
-                                              reclaim->vk.dbi_dm.dm,
-                                              reclaim->mapped.ring.size,
-                                              wip->ring.head,
-                                              wip->ring.span);
+      spinel_ring_flush(&device->vk,
+                        reclaim->vk.dbi_dm.dm,
+                        0UL,
+                        reclaim->mapped.ring.size,
+                        wip->ring.head,
+                        wip->ring.span,
+                        sizeof(spinel_handle_t));
     }
 
   //
@@ -689,6 +631,8 @@ spinel_handle_pool_reclaim_flush_rasters_record(VkCommandBuffer cb, void * data0
   //
   // Dispatch a subgroup per span element
   //
+  struct spinel_target_config const * const config = &device->ti.config;
+
   uint32_t const sgs_per_wg = config->group_sizes.named.rasters_reclaim.workgroup >>
                               config->group_sizes.named.rasters_reclaim.subgroup_log2;
 

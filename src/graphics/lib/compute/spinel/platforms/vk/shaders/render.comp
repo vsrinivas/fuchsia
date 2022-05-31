@@ -18,11 +18,6 @@
 //
 //
 //
-#extension GL_EXT_debug_printf : enable
-
-//
-//
-//
 #include "config.h"
 #include "push.h"
 #include "spinel/spinel_opcodes.h"
@@ -385,7 +380,7 @@ SPN_SUBGROUP_UNIFORM uint32_t lgf_flags;
 SPN_SUBGROUP_UNIFORM uint32_t lgf_group_id;
 
 //
-//
+// LGF fields are SPN_UINT_MAX except for .RANGE_LO which is 0.
 //
 void
 spn_lgf_init()
@@ -574,8 +569,9 @@ spn_lgf_layer_load(SPN_BUFFER_TYPE(styling) styling, SPN_SUBGROUP_UNIFORM const 
   //
   if (gl_SubgroupInvocationID <= SPN_LGF_LAYER_PARENT)
     {
-      lgf[gl_SubgroupInvocationID] =
-        styling.extent[layer_id * SPN_STYLING_LAYER_COUNT_DWORDS + gl_SubgroupInvocationID];
+      // clang-format off
+      lgf[gl_SubgroupInvocationID] = styling.extent[layer_id * SPN_STYLING_LAYER_COUNT_DWORDS + gl_SubgroupInvocationID];
+      // clang-format on
     }
 
   subgroupMemoryBarrierShared();
@@ -650,8 +646,9 @@ spn_lgf_load_child_group(SPN_BUFFER_TYPE(styling) styling)
 {
   lgf_group_id = SPN_LGF_LOAD(SPN_LGF_LAYER_PARENT);
 
-  SPN_SUBGROUP_UNIFORM const uint32_t group_depth_old =
-    SPN_LGF_LOAD(SPN_LGF_GROUP_PARENTS_DEPTH) + 1;
+  // clang-format off
+  SPN_SUBGROUP_UNIFORM const uint32_t group_depth_old = SPN_LGF_LOAD(SPN_LGF_GROUP_PARENTS_DEPTH) + 1;
+  // clang-format on
 
   spn_lgf_group_load(styling);
 
@@ -1633,6 +1630,10 @@ main()
   //
   SPN_SUBGROUP_UNIFORM
   const uint32_t ttck_offset_idx = gl_WorkGroupID.x;
+
+  // define ttcks and ttck_keyvals bufrefs
+  SPN_BUFREF_DEFINE(SPN_BUFFER_TYPE(ttcks_header), ttcks, push.devaddr_ttcks_header);
+  SPN_BUFREF_DEFINE(SPN_BUFFER_TYPE(ttck_keyvals), ttck_keyvals, push.devaddr_ttck_keyvals);
 #else
   //
   // A workgroup contains multiple subgroups. Subgroups with no work exit early.
@@ -1640,15 +1641,17 @@ main()
   SPN_SUBGROUP_UNIFORM
   const uint32_t ttck_offset_idx = gl_WorkGroupID.x * SPN_RENDER_SUBGROUPS + gl_SubgroupID;
 
+  // define ttcks
+  SPN_BUFREF_DEFINE(SPN_BUFFER_TYPE(ttcks_header), ttcks, push.devaddr_ttcks_header);
+
   if (ttck_offset_idx >= ttcks.render_dispatch.w)
     {
       return;
     }
-#endif
 
-  // define ttcks and ttck_keyvals bufrefs
-  SPN_BUFREF_DEFINE(SPN_BUFFER_TYPE(ttcks_header), ttcks, push.devaddr_ttcks_header);
+  // define ttck_keyvals bufrefs
   SPN_BUFREF_DEFINE(SPN_BUFFER_TYPE(ttck_keyvals), ttck_keyvals, push.devaddr_ttck_keyvals);
+#endif
 
   // how many ttcks?
   SPN_SUBGROUP_UNIFORM const uint32_t ttcks_count_minus_1 = ttcks.segment_dispatch.w - 1;
@@ -1663,65 +1666,71 @@ main()
   //
   // SHUFFLE
   //
-  SPN_SUBGROUP_UNIFORM const uint32_t ttck_base = ttcks.offsets[ttck_offset_idx];
+  u32vec2 ttck_sg;  // row of TTCK keys in registers
 
-  // align on a subgroup
-  uint32_t ttck_idx_next = (ttck_base & ~SPN_RENDER_SUBGROUP_MASK) + gl_SubgroupInvocationID;
-
-  // row of TTCK keys in registers
-  u32vec2 ttck_sg;
+  SPN_SUBGROUP_UNIFORM uint32_t ttck_base = ttcks.offsets[ttck_offset_idx];
 
   {
-    SPN_SUBGROUP_UNIFORM const uint32_t ttck_lane = (ttck_base & SPN_RENDER_SUBGROUP_MASK);
+    SPN_SUBGROUP_UNIFORM uint32_t ttck_base_offset = ttck_base & SPN_RENDER_SUBGROUP_MASK;
 
-    const bool is_valid = (gl_SubgroupInvocationID >= ttck_lane) &&  //
-                          (ttck_idx_next <= ttcks_count_minus_1);
+    // align ttck_base
+    ttck_base &= ~SPN_RENDER_SUBGROUP_MASK;
+
+    uint32_t ttck_idx = ttck_base + gl_SubgroupInvocationID;
+
+    ttck_base += SPN_RENDER_SUBGROUP_SIZE;
+
+    const bool is_valid = (gl_SubgroupInvocationID >= ttck_base_offset) &&  //
+                          (ttck_idx <= ttcks_count_minus_1);
 
     if (is_valid)
       {
-        ttck_sg = ttck_keyvals.extent[ttck_idx_next];
+        ttck_sg = ttck_keyvals.extent[ttck_idx];
       }
 
-    ttck_idx_next += SPN_RENDER_SUBGROUP_SIZE;
-
-    lgf_lxy[0] = subgroupShuffle(ttck_sg[0], ttck_lane) & SPN_TTCK_LO_MASK_LAYER;
-    lgf_lxy[1] = subgroupShuffle(ttck_sg[1], ttck_lane);
+    lgf_lxy[0] = subgroupShuffle(ttck_sg[0], ttck_base_offset) & SPN_TTCK_LO_MASK_LAYER;
+    lgf_lxy[1] = subgroupShuffle(ttck_sg[1], ttck_base_offset);
 
     // bit-twiddle invalid keys so they mismatch: ~xy
     if (!is_valid)
-      ttck_sg[1] = ~lgf_lxy[1];
+      {
+        ttck_sg[1] = ~lgf_lxy[1];
+      }
   }
 
 #elif defined(SPN_DEVICE_RENDER_TTCKS_USE_SHARED)
   //
   // SHARED
   //
-  SPN_SUBGROUP_UNIFORM uint32_t ttck_idx_next = ttcks.offsets[ttck_offset_idx];
+  // clang-format off
+  SPN_SUBGROUP_UNIFORM uint32_t ttck_base        = ttcks.offsets[ttck_offset_idx];
+  SPN_SUBGROUP_UNIFORM uint32_t ttck_base_offset = ttck_base & SPN_RENDER_SUBGROUP_MASK;
+  // clang-format on
 
   {
-    const uint32_t ttck_idx_aligned = (ttck_idx_next & ~SPN_RENDER_SUBGROUP_MASK) +  //
-                                      gl_SubgroupInvocationID;
+    // align ttck_base
+    ttck_base &= ~SPN_RENDER_SUBGROUP_MASK;
 
-    SPN_SUBGROUP_UNIFORM const uint32_t ttck_lane = (ttck_idx_next & SPN_RENDER_SUBGROUP_MASK);
+    uint32_t ttck_idx = ttck_base + gl_SubgroupInvocationID;
 
-    const bool is_valid = (gl_SubgroupInvocationID >= ttck_lane) &&  //
-                          (ttck_idx_aligned <= ttcks_count_minus_1);
+    ttck_base += SPN_RENDER_SUBGROUP_SIZE;
 
-    u32vec2 ttck_new = { 0, 0 };
+    const bool is_valid = (gl_SubgroupInvocationID >= ttck_base_offset) &&  //
+                          (ttck_idx <= ttcks_count_minus_1);
 
     if (is_valid)
       {
-        ttck_new = ttck_keyvals.extent[ttck_idx_aligned];
+        ttck_smem[gl_SubgroupInvocationID] = ttck_keyvals.extent[ttck_idx];
       }
-
-    ttck_smem[gl_SubgroupInvocationID] = ttck_new;
 
     subgroupMemoryBarrierShared();
 
-    SPN_SUBGROUP_UNIFORM const u32vec2 ttck_first = ttck_smem[ttck_lane];
+    SPN_SUBGROUP_UNIFORM const u32vec2 ttck_first = ttck_smem[ttck_base_offset];
 
     if (!is_valid)
-      ttck_smem[gl_SubgroupInvocationID][1] = ~ttck_first[1];  // ~xy
+      {
+        ttck_smem[gl_SubgroupInvocationID][1] = ~ttck_first[1];  // ~xy
+      }
 
     lgf_lxy[0] = ttck_first[0] & SPN_TTCK_LO_MASK_LAYER;
     lgf_lxy[1] = ttck_first[1];
@@ -1731,14 +1740,13 @@ main()
   //
   // NO SHARED
   //
-  SPN_SUBGROUP_UNIFORM uint32_t ttck_idx_next = ttcks.offsets[ttck_offset_idx];
+  SPN_SUBGROUP_UNIFORM uint32_t ttck_base = ttcks.offsets[ttck_offset_idx];
   SPN_SUBGROUP_UNIFORM u32vec2  ttck_sgu;  // subgroup uniform TTCK key
   {
-    ttck_sgu   = ttck_keyvals.extent[ttck_idx_next++];
+    ttck_sgu   = ttck_keyvals.extent[ttck_base++];
     lgf_lxy[0] = ttck_sgu[0] & SPN_TTCK_LO_MASK_LAYER;
     lgf_lxy[1] = ttck_sgu[1];
   }
-
 #endif
 
   //
@@ -1810,8 +1818,6 @@ main()
       //
       while (true)
         {
-          // debugPrintfEXT("ttck_sg[%8u]: %v2X\n", gl_SubgroupInvocationID, ttck_sg);
-
           //
           // How many matches?  Note that matches will be contiguous.
           //
@@ -1825,8 +1831,6 @@ main()
               SPN_SUBGROUP_UNIFORM uint32_t next = subgroupBallotFindLSB(match);
 
               last = next + count;
-
-              // debugPrintfEXT("scatter: %u / %u / %u\n", next, count, last);
 
 #if (SPN_RENDER_SUBTILE_COUNT == 1)
               //
@@ -1892,8 +1896,6 @@ main()
                         }
                       else
                         {
-                          // debugPrintfEXT("ttx[%2u]: %08X\n", gl_SubgroupInvocationID, ttx);
-
                           spn_tile_scatter_ttsb(ttx);
                         }
                     }
@@ -1906,22 +1908,24 @@ main()
           //
           if (last == SPN_RENDER_SUBGROUP_SIZE)
             {
+              last = 0;
+
               // mark all keys invalid
-              last       = 0;
               ttck_sg[1] = ~lgf_lxy[1];
 
-              if (ttck_idx_next <= ttcks_count_minus_1)
+              const uint32_t ttck_idx = ttck_base + gl_SubgroupInvocationID;
+
+              if (ttck_idx <= ttcks_count_minus_1)
                 {
-                  ttck_sg = ttck_keyvals.extent[ttck_idx_next];
+                  ttck_sg = ttck_keyvals.extent[ttck_idx];
                 }
 
-              ttck_idx_next += SPN_RENDER_SUBGROUP_SIZE;
+              ttck_base += SPN_RENDER_SUBGROUP_SIZE;
             }
 
           SPN_SUBGROUP_UNIFORM const u32vec2 ttck_first = {
-
             subgroupShuffle(ttck_sg[0], last),
-            subgroupShuffle(ttck_sg[1], last)
+            subgroupShuffle(ttck_sg[1], last),
           };
 
           // is this a new LXY?
@@ -1948,9 +1952,7 @@ main()
       //
       while (true)
         {
-          SPN_SUBGROUP_UNIFORM const uint32_t ttck_lane =
-            (ttck_idx_next & SPN_RENDER_SUBGROUP_MASK);
-          SPN_SUBGROUP_UNIFORM const u32vec2 ttck = ttck_smem[ttck_lane];
+          SPN_SUBGROUP_UNIFORM const u32vec2 ttck = ttck_smem[ttck_base_offset];
 
           // is this a new LXY?
           if (spn_ttck_lxy_neq_uni(ttck, lgf_lxy))
@@ -1974,13 +1976,13 @@ main()
           //
           if (is_scatter)
             {
-              SPN_SUBGROUP_UNIFORM const bool is_ttpb = SPN_TTCK_LO_IS_PREFIX(ttck[0]);
-              SPN_SUBGROUP_UNIFORM const uint32_t ttxb_id = SPN_TTCK_LO_GET_TTXB_ID(ttck[0]);
-              SPN_SUBGROUP_UNIFORM const uint32_t ttxb_base =
-                ttxb_id * SPN_BLOCK_POOL_SUBBLOCK_DWORDS;
+              // clang-format off
+              SPN_SUBGROUP_UNIFORM const bool     is_ttpb   = SPN_TTCK_LO_IS_PREFIX(ttck[0]);
+              SPN_SUBGROUP_UNIFORM const uint32_t ttxb_id   = SPN_TTCK_LO_GET_TTXB_ID(ttck[0]);
+              SPN_SUBGROUP_UNIFORM const uint32_t ttxb_base = ttxb_id * SPN_BLOCK_POOL_SUBBLOCK_DWORDS;
 
-              const SPN_RENDER_TTX ttx =
-                int32_t(bp_blocks.extent[ttxb_base + gl_SubgroupInvocationID]);
+              const SPN_RENDER_TTX ttx = int32_t(bp_blocks.extent[ttxb_base + gl_SubgroupInvocationID]);
+              // clang-format on
 
               if (is_ttpb)
                 {
@@ -1995,17 +1997,21 @@ main()
           //
           // are we now out of keys?
           //
-          if ((++ttck_idx_next & SPN_RENDER_SUBGROUP_MASK) == 0)
+          if (++ttck_base_offset == SPN_RENDER_SUBGROUP_SIZE)
             {
-              const uint32_t ttck_idx_aligned = ttck_idx_next + gl_SubgroupInvocationID;
+              ttck_base_offset = 0;
 
-              const bool is_valid = (ttck_idx_aligned <= ttcks_count_minus_1);
+              const uint32_t ttck_idx = ttck_base + gl_SubgroupInvocationID;
+
+              ttck_base += SPN_RENDER_SUBGROUP_SIZE;
+
+              const bool is_valid = (ttck_idx <= ttcks_count_minus_1);
 
               u32vec2 ttck_new = { 0, ~lgf_lxy[1] };
 
               if (is_valid)
                 {
-                  ttck_new = ttck_keyvals.extent[ttck_idx_aligned];
+                  ttck_new = ttck_keyvals.extent[ttck_idx];
                 }
 
               ttck_smem[gl_SubgroupInvocationID] = ttck_new;
@@ -2018,6 +2024,7 @@ main()
       //
       // NO SHARED
       //
+#error "SPN_DEVICE_RENDER_TTCKS_NO_SHARED not fully implemented."
 #endif
 
       //
@@ -2042,6 +2049,7 @@ main()
       //
       //   exit current group, restoring regs as necessary
       //   decrement depth and update layer range
+      //
 
       // clear flag that controls group/layer traversal
       spn_lgf_flag_clear_flush_complete();
@@ -2084,195 +2092,193 @@ main()
             }
 
           //
-          // execute cmds
+          // Execute commands
           //
-          // currently limited to 8 commands -- a subgroup size of 4 will
-          // break this but is easily fixed or avoided by using shared
-          // memory or reading the commands one at a time.
+          // Currently limited to 7 commands -- a subgroup size of 4
+          // will break this but is easily fixed or avoided by using
+          // shared memory or reading the commands one at a time.
           //
-          // implicitly add 1 to the cmd_count
-          //
-          // FIXME -- all tiles will be picking their way through the
-          // smallish styling buffer so performing these subgroup uniform
-          // reads through the texture cache (or equivalent) would
-          // probably be a performance win.
-          //
-          SPN_SUBGROUP_UNIFORM const uint32_t cmd_base  = SPN_STYLING_CMDS_GET_BASE(cmd_next);
           SPN_SUBGROUP_UNIFORM const uint32_t cmd_count = SPN_STYLING_CMDS_GET_COUNT(cmd_next);
 
+          if (cmd_count > 0)
+            {
+              SPN_SUBGROUP_UNIFORM const uint32_t cmd_base = SPN_STYLING_CMDS_GET_BASE(cmd_next);
+
 #if defined(SPN_DEVICE_RENDER_STYLING_CMDS_USE_SHUFFLE)
-          //
-          // DEFAULT
-          //
+              //
+              // DEFAULT
+              //
 #define SPN_STYLING_CMDS_LOAD(ii_) subgroupShuffle(cmds, ii_)
 
-          uint32_t cmds;
+              uint32_t cmds;
 
-          if (gl_SubgroupInvocationID <= cmd_count)
-            {
-              cmds = styling.extent[cmd_base + gl_SubgroupInvocationID];
-            }
+              if (gl_SubgroupInvocationID < cmd_count)
+                {
+                  cmds = styling.extent[cmd_base + gl_SubgroupInvocationID];
+                }
 
 #elif defined(SPN_DEVICE_RENDER_STYLING_CMDS_USE_SHARED)
-          //
-          // ONLY SUBGROUP BASIC SUPPORT
-          //
-          // load a number of commands into shared
-          //
+              //
+              // ONLY SUBGROUP BASIC SUPPORT
+              //
+              // Load a number of commands into shared.
+              //
 #if SPN_RENDER_SUBGROUP_SIZE >= SPN_STYLING_CMDS_MAX_COUNT
-          if (gl_SubgroupInvocationID <= cmd_count)
-            {
-              spn_cmds[gl_SubgroupInvocationID] =
-                styling.extent[cmd_base + gl_SubgroupInvocationID];
-            }
+              if (gl_SubgroupInvocationID < cmd_count)
+                {
+                  // clang-format off
+                spn_cmds[gl_SubgroupInvocationID] = styling.extent[cmd_base + gl_SubgroupInvocationID];
+                  // clang-format on
+                }
+
 #else
-          for (uint32_t ii = gl_SubgroupInvocationID;  //
-               ii <= cmd_count;
-               ii += SPN_RENDER_SUBGROUP_SIZE)
-            {
-              spn_cmds[ii] = styling.extent[cmd_base + ii];
-            }
+              for (uint32_t ii = gl_SubgroupInvocationID;  //
+                   ii < cmd_count;
+                   ii += SPN_RENDER_SUBGROUP_SIZE)
+                {
+                  spn_cmds[ii] = styling.extent[cmd_base + ii];
+                }
 #endif
 
 #define SPN_STYLING_CMDS_LOAD(ii_) spn_cmds[ii_]
 
 #elif defined(SPN_DEVICE_RENDER_STYLING_CMDS_NO_SHARED)
-          //
-          // ONLY SUBGROUP BASIC SUPPORT
-          //
-          // load each command from styling buffer
-          //
+              //
+              // ONLY SUBGROUP BASIC SUPPORT
+              //
+              // Load each command from styling buffer.
+              //
 #define SPN_STYLING_CMDS_LOAD(ii_) styling.extent[cmd_base + ii_]
 
 #endif
-
-          for (SPN_SUBGROUP_UNIFORM uint32_t ii = 0; ii < cmd_count; ii++)
-            {
-              SPN_SUBGROUP_UNIFORM uint32_t cmd = SPN_STYLING_CMDS_LOAD(ii);
-
-              switch (cmd)
+              for (SPN_SUBGROUP_UNIFORM uint32_t ii = 0; ii < cmd_count; ii++)
                 {
-                  case SPN_STYLING_OPCODE_NOOP:
-                    break;
+                  SPN_SUBGROUP_UNIFORM uint32_t cmd = SPN_STYLING_CMDS_LOAD(ii);
 
-                  case SPN_STYLING_OPCODE_COVER_NONZERO:
-                    spn_tile_cover_nonzero();
-                    break;
+                  switch (cmd)
+                    {
+                      case SPN_STYLING_OPCODE_NOOP:
+                        break;
 
-                  case SPN_STYLING_OPCODE_COVER_EVENODD:
-                    spn_tile_cover_evenodd();
-                    break;
+                      case SPN_STYLING_OPCODE_COVER_NONZERO:
+                        spn_tile_cover_nonzero();
+                        break;
 
-                  case SPN_STYLING_OPCODE_COVER_ACCUMULATE:
-                    spn_tile_cover_accumulate();
-                    break;
+                      case SPN_STYLING_OPCODE_COVER_EVENODD:
+                        spn_tile_cover_evenodd();
+                        break;
 
-                  case SPN_STYLING_OPCODE_COVER_MASK:
-                    spn_tile_cover_wip_mask();
-                    break;
+                      case SPN_STYLING_OPCODE_COVER_ACCUMULATE:
+                        spn_tile_cover_accumulate();
+                        break;
 
-                  case SPN_STYLING_OPCODE_COVER_WIP_ZERO:
-                    spn_tile_cover_wip_zero();
-                    break;
+                      case SPN_STYLING_OPCODE_COVER_MASK:
+                        spn_tile_cover_wip_mask();
+                        break;
 
-                  case SPN_STYLING_OPCODE_COVER_ACC_ZERO:
-                    spn_tile_cover_acc_zero();
-                    break;
+                      case SPN_STYLING_OPCODE_COVER_WIP_ZERO:
+                        spn_tile_cover_wip_zero();
+                        break;
 
-                  case SPN_STYLING_OPCODE_COVER_MASK_ZERO:
-                    spn_tile_cover_msk_zero();
-                    break;
+                      case SPN_STYLING_OPCODE_COVER_ACC_ZERO:
+                        spn_tile_cover_acc_zero();
+                        break;
 
-                  case SPN_STYLING_OPCODE_COVER_MASK_ONE:
-                    spn_tile_cover_msk_one();
-                    break;
+                      case SPN_STYLING_OPCODE_COVER_MASK_ZERO:
+                        spn_tile_cover_msk_zero();
+                        break;
 
-                  case SPN_STYLING_OPCODE_COVER_MASK_INVERT:
-                    spn_tile_cover_msk_invert();
-                    break;
+                      case SPN_STYLING_OPCODE_COVER_MASK_ONE:
+                        spn_tile_cover_msk_one();
+                        break;
 
-                    case SPN_STYLING_OPCODE_COLOR_FILL_SOLID: {
-                      SPN_SUBGROUP_UNIFORM const uint32_t rg = SPN_STYLING_CMDS_LOAD(++ii);
-                      SPN_SUBGROUP_UNIFORM const uint32_t ba = SPN_STYLING_CMDS_LOAD(++ii);
-                      spn_tile_color_fill_solid(rg, ba);
+                      case SPN_STYLING_OPCODE_COVER_MASK_INVERT:
+                        spn_tile_cover_msk_invert();
+                        break;
+
+                        case SPN_STYLING_OPCODE_COLOR_FILL_SOLID: {
+                          SPN_SUBGROUP_UNIFORM const uint32_t rg = SPN_STYLING_CMDS_LOAD(++ii);
+                          SPN_SUBGROUP_UNIFORM const uint32_t ba = SPN_STYLING_CMDS_LOAD(++ii);
+                          spn_tile_color_fill_solid(rg, ba);
+                        }
+                        break;
+
+                      case SPN_STYLING_OPCODE_COLOR_FILL_GRADIENT_LINEAR:
+                        //
+                        // FIXME -- gradients shouldn't be executing so much
+                        // conditional driven code at runtime since we *know*
+                        // the gradient style on the host can just create a
+                        // new styling command to exploit this.
+                        //
+                        // FIXME -- it might be time to try using the GPU's
+                        // sampler on a linear array of half4 vectors -- it
+                        // might outperform the explicit load/lerp routines.
+                        //
+                        // FIXME -- optimizing for vertical gradients (uhhh,
+                        // they're actually horizontal due to the -90 degree
+                        // view transform) is nice but is it worthwhile to
+                        // have this in the kernel?  Easy to add it back...
+                        //
+                        // spn_tile_color_fill_gradient_linear_nonvertical(smem,commands,&cmd_next,&color_wip,ttck0.hi);
+                        //
+                        // disable gradients for now
+                        cmd_next += SPN_GRADIENT_CMD_DWORDS_V1(styling.extent[cmd_next + 6]);
+                        break;
+
+                      case SPN_STYLING_OPCODE_COLOR_WIP_ZERO:
+                        spn_tile_color_wip_zero();
+                        break;
+
+                      case SPN_STYLING_OPCODE_COLOR_ACC_ZERO:
+                        spn_tile_color_acc_zero();
+                        break;
+
+                      case SPN_STYLING_OPCODE_BLEND_OVER:
+                        spn_tile_blend_over();
+                        break;
+
+                      case SPN_STYLING_OPCODE_BLEND_PLUS:
+                        spn_tile_blend_plus();
+                        break;
+
+                      case SPN_STYLING_OPCODE_BLEND_MULTIPLY:
+                        spn_tile_blend_multiply();
+                        break;
+
+                      case SPN_STYLING_OPCODE_BLEND_KNOCKOUT:
+                        spn_tile_blend_knockout();
+                        break;
+
+                      case SPN_STYLING_OPCODE_COVER_WIP_MOVE_TO_MASK:
+                        spn_tile_cover_msk_copy_wip();
+                        break;
+
+                      case SPN_STYLING_OPCODE_COVER_ACC_MOVE_TO_MASK:
+                        spn_tile_cover_msk_copy_acc();
+                        break;
+
+                        case SPN_STYLING_OPCODE_COLOR_ACC_OVER_BACKGROUND: {
+                          SPN_SUBGROUP_UNIFORM const uint32_t rg = SPN_STYLING_CMDS_LOAD(++ii);
+                          SPN_SUBGROUP_UNIFORM const uint32_t ba = SPN_STYLING_CMDS_LOAD(++ii);
+                          spn_tile_color_acc_over_background(rg, ba);
+                        }
+                        break;
+
+                      case SPN_STYLING_OPCODE_COLOR_ACC_STORE_TO_SURFACE_RGBA8:
+                        spn_tile_color_acc_store_to_surface_rgba8();
+                        break;
+
+                      case SPN_STYLING_OPCODE_COLOR_ACC_STORE_TO_SURFACE_BGRA8:
+                        spn_tile_color_acc_store_to_surface_bgra8();
+                        break;
+
+                      case SPN_STYLING_OPCODE_COLOR_ACC_TEST_OPACITY:
+                        spn_tile_color_acc_test_opacity();
+                        break;
+
+                        // default:
+                        // return;  // this is an illegal opcode -- trap and die!
                     }
-                    break;
-
-                  case SPN_STYLING_OPCODE_COLOR_FILL_GRADIENT_LINEAR:
-                    //
-                    // FIXME -- gradients shouldn't be executing so much
-                    // conditional driven code at runtime since we *know*
-                    // the gradient style on the host can just create a
-                    // new styling command to exploit this.
-                    //
-                    // FIXME -- it might be time to try using the GPU's
-                    // sampler on a linear array of half4 vectors -- it
-                    // might outperform the explicit load/lerp routines.
-                    //
-                    // FIXME -- optimizing for vertical gradients (uhhh,
-                    // they're actually horizontal due to the -90 degree
-                    // view transform) is nice but is it worthwhile to
-                    // have this in the kernel?  Easy to add it back...
-                    //
-                    // spn_tile_color_fill_gradient_linear_nonvertical(smem,commands,&cmd_next,&color_wip,ttck0.hi);
-
-                    // disable gradients for now
-                    cmd_next += SPN_GRADIENT_CMD_DWORDS_V1(styling.extent[cmd_next + 6]);
-                    break;
-
-                  case SPN_STYLING_OPCODE_COLOR_WIP_ZERO:
-                    spn_tile_color_wip_zero();
-                    break;
-
-                  case SPN_STYLING_OPCODE_COLOR_ACC_ZERO:
-                    spn_tile_color_acc_zero();
-                    break;
-
-                  case SPN_STYLING_OPCODE_BLEND_OVER:
-                    spn_tile_blend_over();
-                    break;
-
-                  case SPN_STYLING_OPCODE_BLEND_PLUS:
-                    spn_tile_blend_plus();
-                    break;
-
-                  case SPN_STYLING_OPCODE_BLEND_MULTIPLY:
-                    spn_tile_blend_multiply();
-                    break;
-
-                  case SPN_STYLING_OPCODE_BLEND_KNOCKOUT:
-                    spn_tile_blend_knockout();
-                    break;
-
-                  case SPN_STYLING_OPCODE_COVER_WIP_MOVE_TO_MASK:
-                    spn_tile_cover_msk_copy_wip();
-                    break;
-
-                  case SPN_STYLING_OPCODE_COVER_ACC_MOVE_TO_MASK:
-                    spn_tile_cover_msk_copy_acc();
-                    break;
-
-                    case SPN_STYLING_OPCODE_COLOR_ACC_OVER_BACKGROUND: {
-                      SPN_SUBGROUP_UNIFORM const uint32_t rg = SPN_STYLING_CMDS_LOAD(++ii);
-                      SPN_SUBGROUP_UNIFORM const uint32_t ba = SPN_STYLING_CMDS_LOAD(++ii);
-                      spn_tile_color_acc_over_background(rg, ba);
-                    }
-                    break;
-
-                  case SPN_STYLING_OPCODE_COLOR_ACC_STORE_TO_SURFACE_RGBA8:
-                    spn_tile_color_acc_store_to_surface_rgba8();
-                    break;
-
-                  case SPN_STYLING_OPCODE_COLOR_ACC_STORE_TO_SURFACE_BGRA8:
-                    spn_tile_color_acc_store_to_surface_bgra8();
-                    break;
-
-                  case SPN_STYLING_OPCODE_COLOR_ACC_TEST_OPACITY:
-                    spn_tile_color_acc_test_opacity();
-                    break;
-
-                    // default:
-                    // return;  // this is an illegal opcode -- trap and die!
                 }
             }
       }  // continue as long as tile flush isn't complete
