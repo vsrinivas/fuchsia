@@ -15,7 +15,6 @@ use fuchsia_zircon::{AsHandleRef, Task as zxTask};
 use std::ffi::CString;
 use std::mem;
 use std::sync::Arc;
-use tracing::info;
 
 use super::shared::*;
 use crate::logging::set_zx_name;
@@ -114,7 +113,17 @@ fn run_exception_loop(
 ) -> Result<ExitStatus, Error> {
     let mut buffer = zx::MessageBuf::new();
     loop {
-        read_channel_sync(&exceptions, &mut buffer)?;
+        match read_channel_sync(&exceptions, &mut buffer) {
+            Err(zx::Status::PEER_CLOSED) => {
+                // PEER_CLOSED means the process exited without first sending an exception we can
+                // handle.
+                tracing::warn!("process {:?} died unexpectedly! treating as SIGKILL", current_task);
+                let exit_status = ExitStatus::Kill(SignalInfo::default(SIGKILL));
+                current_task.write().exit_status = Some(exit_status.clone());
+                return Ok(exit_status);
+            }
+            res => res?,
+        }
 
         let info = as_exception_info(&buffer);
         assert!(buffer.n_handles() == 1);
@@ -191,7 +200,7 @@ fn run_exception_loop(
             }
 
             _ => {
-                info!("unhandled exception. info={:?} report.header={:?} synth_code={:?} synth_data={:?}", info, report.header, report.context.synth_code, report.context.synth_data);
+                tracing::warn!("unhandled exception. info={:?} report.header={:?} synth_code={:?} synth_data={:?}", info, report.header, report.context.synth_code, report.context.synth_data);
                 exception.set_exception_state(&ZX_EXCEPTION_STATE_TRY_NEXT)?;
                 continue;
             }
