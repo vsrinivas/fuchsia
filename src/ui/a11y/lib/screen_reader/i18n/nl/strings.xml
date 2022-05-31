@@ -22,6 +22,7 @@
   <string name="role_table_cell">Cel</string>
   <string name="set_size">{num_items} items</string>
   <string name="entered_list">Lijst geopend</string>
+  <string name="entered_list_detail">Lijst opgegeven met {num_items,plural, =0{nul items}=1{één item}other{# items}}</string>
   <string name="exited_list">Lijst gesloten</string>
   <string name="table_summary">{table_name}, {table_rows} bij {table_columns}</string>
   <string name="cell_summary">Rij {row_index}, kolom {column_index}</string>

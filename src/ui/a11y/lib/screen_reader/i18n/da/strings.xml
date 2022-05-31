@@ -22,6 +22,7 @@
   <string name="role_table_cell">Celle</string>
   <string name="set_size">{num_items} elementer</string>
   <string name="entered_list">En liste er åbnet</string>
+  <string name="entered_list_detail">En liste med {num_items,plural, =0{ingen elementer}=1{et element}one{# element}other{# elementer}} er åbnet</string>
   <string name="exited_list">En liste er lukket</string>
   <string name="table_summary">{table_name},        {table_rows} efter {table_columns}</string>
   <string name="cell_summary">Række {row_index}, kolonne {column_index}</string>

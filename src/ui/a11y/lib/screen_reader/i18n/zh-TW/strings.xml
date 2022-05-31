@@ -22,6 +22,7 @@
   <string name="role_table_cell">儲存格</string>
   <string name="set_size">{num_items} 個項目</string>
   <string name="entered_list">已開啟清單</string>
+  <string name="entered_list_detail">已進入清單，當中{num_items,plural, =0{沒有任何項目}=1{有 1 個項目}other{有 # 個項目}}</string>
   <string name="exited_list">已關閉清單</string>
   <string name="table_summary">{table_name}，{table_rows} 乘 {table_columns}</string>
   <string name="cell_summary">第 {row_index} 列，第 {column_index} 欄</string>

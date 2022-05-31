@@ -22,6 +22,7 @@
   <string name="role_table_cell">셀</string>
   <string name="set_size">항목 {num_items}개</string>
   <string name="entered_list">목록이 열림</string>
+  <string name="entered_list_detail">{num_items,plural, =0{항목 0개}=1{항목 1개}other{항목 #개}}가 있는 목록이 열림</string>
   <string name="exited_list">목록이 닫힘</string>
   <string name="table_summary">{table_name},        {table_rows}행 {table_columns}열</string>
   <string name="cell_summary">{row_index}행 {column_index}열</string>

@@ -22,6 +22,7 @@
   <string name="role_table_cell">Célula</string>
   <string name="set_size">{num_items} itens</string>
   <string name="entered_list">Lista aberta</string>
+  <string name="entered_list_detail">Lista aberta {num_items,plural, =0{sem itens}=1{com 1 item}one{com # item}other{com # itens}}</string>
   <string name="exited_list">Lista fechada</string>
   <string name="table_summary">{table_name},        {table_rows} por {table_columns}</string>
   <string name="cell_summary">Linha {row_index} coluna {column_index}</string>

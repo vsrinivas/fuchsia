@@ -22,6 +22,7 @@
   <string name="role_table_cell">[Çéļļ one]</string>
   <string name="set_size">[ᐅ{num_items}ᐊ îţémš one two three]</string>
   <string name="entered_list">[Éñţéŕéð ļîšţ one two]</string>
+  <string name="entered_list_detail">Entered list with {num_items,plural, =0{[ñö îţémš one]}=1{[öñé îţém one]}other{[ᐅ#ᐊ îţémš one two three]}}</string>
   <string name="exited_list">[Éxîţéð ļîšţ one two]</string>
   <string name="table_summary">[ᐅ{table_name}ᐊ,        ᐅ{table_rows}ᐊ бý ᐅ{table_columns}ᐊ one two three four five]</string>
   <string name="cell_summary">[Ŕöŵ ᐅ{row_index}ᐊ çöļûmñ ᐅ{column_index}ᐊ one two three four]</string>

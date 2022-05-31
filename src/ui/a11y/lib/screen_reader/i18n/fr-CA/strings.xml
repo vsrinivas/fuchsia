@@ -22,6 +22,7 @@
   <string name="role_table_cell">Cellule</string>
   <string name="set_size">{num_items} éléments</string>
   <string name="entered_list">Vous avez ouvert une liste</string>
+  <string name="entered_list_detail">A entré une liste avec {num_items,plural, =0{aucun élément}=1{un élément}one{# élément}other{# éléments}}</string>
   <string name="exited_list">Vous avez fermé une liste</string>
   <string name="table_summary">{table_name},        {table_rows} sur {table_columns}</string>
   <string name="cell_summary">Ligne {row_index} colonne {column_index}</string>

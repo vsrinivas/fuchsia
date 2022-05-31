@@ -22,6 +22,7 @@
   <string name="role_table_cell">Celda</string>
   <string name="set_size">{num_items} elementos</string>
   <string name="entered_list">Abriste un lista</string>
+  <string name="entered_list_detail">Se ingresó una lista {num_items,plural, =0{sin elementos}=1{con un elemento}other{con # elementos}}</string>
   <string name="exited_list">Cerraste una lista</string>
   <string name="table_summary">{table_name}: {table_rows} por {table_columns}</string>
   <string name="cell_summary">Fila {row_index}, columna {column_index}</string>

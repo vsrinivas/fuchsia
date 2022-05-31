@@ -22,6 +22,7 @@
   <string name="role_table_cell">セル</string>
   <string name="set_size">{num_items} 件のアイテム</string>
   <string name="entered_list">リストを表示しました</string>
+  <string name="entered_list_detail">{num_items,plural, =0{項目が 0 個}=1{項目が 1 個}other{項目が # 個}}のリストを入力しました</string>
   <string name="exited_list">リストを終了しました</string>
   <string name="table_summary">{table_name}、{table_rows} × {table_columns}</string>
   <string name="cell_summary">{row_index} 行、{column_index} 列</string>
