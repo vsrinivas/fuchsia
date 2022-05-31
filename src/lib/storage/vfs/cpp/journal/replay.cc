@@ -69,10 +69,13 @@ std::optional<const JournalEntryView> ParseEntry(storage::VmoBuffer* journal_buf
   if (header.value().SequenceNumber() != const_entry_view.footer()->prefix.sequence_number) {
     return std::nullopt;
   }
-  // Validate the contents of the entry itself.
+
+  // Validate the contents of the entry itself by verifying checksum (skip if built for fuzzing).
+#ifndef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
   if (const_entry_view.footer()->checksum != const_entry_view.CalculateChecksum()) {
     return std::nullopt;
   }
+#endif
 
   // Decode any blocks within the entry which were previously encoded (escaped).
   //

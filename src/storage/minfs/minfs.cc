@@ -1125,7 +1125,7 @@ Minfs::ReadInitialBlocks(const Superblock& info, Bcache& bc, SuperblockManager& 
       std::make_pair(std::move(block_allocator_or.value()), std::move(inodes_or.value())));
 }
 
-zx::status<std::unique_ptr<Minfs>> Minfs::Create(FuchsiaDispatcher* dispatcher,
+zx::status<std::unique_ptr<Minfs>> Minfs::Create(FuchsiaDispatcher dispatcher,
                                                  std::unique_ptr<Bcache> bc,
                                                  const MountOptions& options) {
   // Read the superblock before replaying the journal.
@@ -1342,7 +1342,9 @@ void Minfs::Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) {
 
         // TODO(/fxbug.dev/90054): Report sync and managed shutdown status.
         // Identify to the unmounting channel that teardown is complete.
-        cb(ZX_OK);
+        if (cb != nullptr) {
+          cb(ZX_OK);
+        }
 
         // Identify to the unmounting thread that teardown is complete.
         if (on_unmount) {

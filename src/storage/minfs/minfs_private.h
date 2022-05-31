@@ -78,7 +78,7 @@ constexpr zx::duration kJournalBackgroundSyncTime = zx::sec(30);
 //
 // Prefer async_dispatcher_t* for Fuchsia-specific functions since it makes the intent more clear.
 #ifdef __Fuchsia__
-using FuchsiaDispatcher = async_dispatcher_t;
+using FuchsiaDispatcher = async_dispatcher_t*;
 #else
 using FuchsiaDispatcher = std::nullptr_t;
 #endif  // __Fuchsia__
@@ -181,7 +181,7 @@ class Minfs :
   // Destroys a "minfs" object, but take back ownership of the bcache object.
   static std::unique_ptr<Bcache> Destroy(std::unique_ptr<Minfs> minfs);
 
-  [[nodiscard]] static zx::status<std::unique_ptr<Minfs>> Create(FuchsiaDispatcher* dispatcher,
+  [[nodiscard]] static zx::status<std::unique_ptr<Minfs>> Create(FuchsiaDispatcher dispatcher,
                                                                  std::unique_ptr<Bcache> bc,
                                                                  const MountOptions& options);
 
