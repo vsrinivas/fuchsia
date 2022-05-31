@@ -63,17 +63,16 @@ impl PkgfsPackages {
             res.entry(name).or_default().insert(variant, *hash);
         }
 
-        // Then fill in allowed dynamic packages, which may override existing base packages.
+        // Then fill in allowed dynamic packages, which may not override existing base packages.
         let active_packages = self.non_base_packages.read().await.active_packages();
         for (path, hash) in active_packages {
             if !self.non_static_allow_list.allows(path.name()) {
                 continue;
             }
 
-            let name = path.name().to_owned();
-            let variant = path.variant().to_owned();
+            let (name, variant) = path.into_name_and_variant();
 
-            res.entry(name).or_default().insert(variant, hash);
+            res.entry(name).or_default().entry(variant).or_insert(hash);
         }
 
         res
@@ -302,44 +301,21 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn packages_listing_dynamic_overrides_static() {
+    async fn packages_listing_dynamic_does_not_override_static() {
         let (pkgfs_packages, package_index) = PkgfsPackages::new_test(
-            [(path("replaceme", "0"), hash(0)), (path("replaceme", "butnotme"), hash(1))],
-            non_static_allow_list(&["replaceme"]),
+            [(path("base-package", "0"), hash(0))],
+            non_static_allow_list(&["base-package"]),
         );
 
-        register_dynamic_package(&package_index, path("replaceme", "0"), hash(10)).await;
+        register_dynamic_package(&package_index, path("base-package", "0"), hash(1)).await;
+        register_dynamic_package(&package_index, path("base-package", "1"), hash(2)).await;
 
         assert_eq!(
             pkgfs_packages.packages().await,
             package_name_hashmap!(
-                "replaceme" => package_variant_hashmap!{
-                    "0" => hash(10),
-                    "butnotme" => hash(1),
-                },
-            )
-        );
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn packages_listing_ignores_disallowed_dynamic_packages() {
-        let (pkgfs_packages, package_index) = PkgfsPackages::new_test(
-            [(path("allowed", "0"), hash(0)), (path("static", "0"), hash(1))],
-            non_static_allow_list(&["allowed"]),
-        );
-
-        register_dynamic_package(&package_index, path("allowed", "0"), hash(10)).await;
-        register_dynamic_package(&package_index, path("static", "0"), hash(11)).await;
-        register_dynamic_package(&package_index, path("dynamic", "0"), hash(12)).await;
-
-        assert_eq!(
-            pkgfs_packages.packages().await,
-            package_name_hashmap!(
-                "allowed" => package_variant_hashmap!{
-                    "0" => hash(10),
-                },
-                "static" => package_variant_hashmap!{
-                    "0" => hash(1),
+                "base-package" => package_variant_hashmap!{
+                    "0" => hash(0), // hash is still `0`, was not updated to `1`
+                    "1" => hash(2), // registration of non-base variant succeeded
                 },
             )
         );
