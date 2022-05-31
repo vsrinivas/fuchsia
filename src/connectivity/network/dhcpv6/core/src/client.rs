@@ -259,8 +259,8 @@ impl InformationRequesting {
         )
     }
 
-    /// A helper function that returns a transition back to `InformationRequesting`, with actions
-    /// to send an information request and schedules retransmission.
+    /// A helper function that returns a transition to stay in `InformationRequesting`,
+    /// with actions to send an information request and schedules retransmission.
     fn send_and_schedule_retransmission<R: Rng>(
         self,
         transaction_id: [u8; 3],
@@ -389,24 +389,16 @@ impl AdvertiseMessage {
         options_to_request: &[v6::OptionCode],
     ) -> bool {
         let Self {
-            server_id,
+            server_id: _,
             addresses,
             dns_servers,
             preference: _,
             receive_time: _,
             preferred_addresses_count,
         } = self;
-        // TODO(fxbug.dev/69696): remove assert once `server_id` is used in
-        // Requesting implementation; Temporary use of `server_id` to avoid
-        // dead code warning.
-        assert!(!server_id.is_empty());
-        addresses.len() >= configured_addresses.keys().len()
+        addresses.len() >= configured_addresses.len()
             && *preferred_addresses_count
-                == configured_addresses
-                    .values()
-                    .filter(|&value| value.is_some())
-                    .collect::<Vec<_>>()
-                    .len()
+                == configured_addresses.values().filter(|&value| value.is_some()).count()
             && options_to_request.contains(&v6::OptionCode::DnsServers) == !dns_servers.is_empty()
     }
 }
@@ -420,9 +412,6 @@ impl AdvertiseMessage {
 //    be preferred over all other Advertise messages. The client MAY choose a
 //    less preferred server if that server has a better set of advertised
 //    parameters, such as the available set of IAs.
-//
-// Between two Advertise of equal address count and preference, the Advertise
-// received earliest is greater.
 impl Ord for AdvertiseMessage {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         let Self {
@@ -472,6 +461,9 @@ impl PartialEq for AdvertiseMessage {
 
 impl Eq for AdvertiseMessage {}
 
+// Returns a count of entries in `configured_addresses` where the value is
+// some address and the corresponding entry in `got_addresses` has the same
+// address.
 fn compute_preferred_address_count(
     got_addresses: &HashMap<v6::IAID, IdentityAssociation>,
     configured_addresses: &HashMap<v6::IAID, Option<Ipv6Addr>>,
@@ -578,7 +570,7 @@ impl ServerDiscovery {
         )
     }
 
-    /// Returns a transition back to `ServerDiscovery`, with actions to send a
+    /// Returns a transition to stay in `ServerDiscovery`, with actions to send a
     /// solicit and schedule retransmission.
     fn send_and_schedule_retransmission<R: Rng>(
         self,
@@ -777,8 +769,7 @@ impl ServerDiscovery {
                     let vacant_ia_entry = match addresses.entry(v6::IAID::new(iana_data.iaid())) {
                         Entry::Occupied(entry) => {
                             log::debug!(
-                                "received unexpected IA_NA option with
-                                non-unique IAID {:?}.",
+                                "received unexpected IA_NA option with non-unique IAID {:?}.",
                                 entry.key()
                             );
                             continue;
@@ -816,7 +807,7 @@ impl ServerDiscovery {
                             | v6::ParsedDhcpOption::DnsServers(_)
                             | v6::ParsedDhcpOption::DomainList(_) => {
                                 log::debug!(
-                                    "received unexpected suboption with code
+                                    "received unexpected suboption with code \
                                     {:?} in IANA options in Advertise message.",
                                     iana_opt.code()
                                 );
@@ -844,29 +835,27 @@ impl ServerDiscovery {
                 }
                 v6::ParsedDhcpOption::InformationRefreshTime(refresh_time) => {
                     log::debug!(
-                        "received unexpected option Information Refresh Time
+                        "received unexpected option Information Refresh Time \
                         ({:?}) in Advertise message",
                         refresh_time
                     );
                 }
                 v6::ParsedDhcpOption::IaAddr(iaaddr_data) => {
                     log::debug!(
-                        "received unexpected option IA Addr [addr: {:?}] as top
+                        "received unexpected option IA Addr [addr: {:?}] as top \
                         option in Advertise message",
                         iaaddr_data.addr()
                     );
                 }
                 v6::ParsedDhcpOption::Oro(option_codes) => {
                     log::debug!(
-                        "received unexpected option ORO ({:?}) in Advertise
-                        message",
+                        "received unexpected option ORO ({:?}) in Advertise message",
                         option_codes
                     );
                 }
                 v6::ParsedDhcpOption::ElapsedTime(elapsed_time) => {
                     log::debug!(
-                        "received unexpected option Elapsed Time ({:?}) in
-                        Advertise message",
+                        "received unexpected option Elapsed Time ({:?}) in Advertise message",
                         elapsed_time
                     );
                 }
@@ -1362,7 +1351,7 @@ impl Requesting {
         )
     }
 
-    /// A helper function that returns a transition back to `Requesting`, with
+    /// A helper function that returns a transition to stay in `Requesting`, with
     /// actions to cancel current retransmission timer, send a request and
     /// schedules retransmission.
     fn send_and_reschedule_retransmission<R: Rng>(
@@ -1379,7 +1368,7 @@ impl Requesting {
         Transition { state, actions, transaction_id }
     }
 
-    /// A helper function that returns a transition back to `Requesting`, with
+    /// A helper function that returns a transition to stay in `Requesting`, with
     /// actions to send a request and schedules retransmission.
     ///
     /// # Panics
@@ -1674,8 +1663,8 @@ impl Requesting {
                                 // client. Ignore unsolicited IAs to control how
                                 // many addresses are assigned to the client.
                                 log::debug!(
-                                    "received unexpected IA_NA option
-                                  {:?} not requested by the client.",
+                                    "received unexpected IA_NA option \
+                                    {:?} not requested by the client.",
                                     iana_data
                                 );
                                 continue;
@@ -1690,8 +1679,7 @@ impl Requesting {
                     let vacant_ia_entry = match addresses.entry(v6::IAID::new(iana_data.iaid())) {
                         Entry::Occupied(entry) => {
                             log::debug!(
-                                "received unexpected IA_NA option with
-                                non-unique IAID {:?}.",
+                                "received unexpected IA_NA option with non-unique IAID {:?}.",
                                 entry.key()
                             );
                             continue;
@@ -1733,8 +1721,7 @@ impl Requesting {
                                     //    valid lifetime of 0 in the IA Address.
                                     v6::TimeValue::Zero => {
                                         log::debug!(
-                                            "IA(address: {:?}) with valid
-                                            lifetime 0 is ignored",
+                                            "IA(address: {:?}) with valid lifetime 0 is ignored",
                                             iaaddr_data.addr()
                                         );
                                         continue;
@@ -1776,7 +1763,7 @@ impl Requesting {
                             | v6::ParsedDhcpOption::DnsServers(_)
                             | v6::ParsedDhcpOption::DomainList(_) => {
                                 log::debug!(
-                                    "received unexpected option with code {:?}
+                                    "received unexpected option with code {:?} \
                                     in IANA options in Reply.",
                                     iana_opt.code()
                                 );
@@ -1827,8 +1814,7 @@ impl Requesting {
                         | v6::StatusCode::UseMulticast
                         | v6::StatusCode::NoPrefixAvail => {
                             log::debug!(
-                                "received unexpected status code {:?} in IANA
-                                option",
+                                "received unexpected status code {:?} in IANA option",
                                 iana_status_code
                             );
                         }
@@ -1837,37 +1823,34 @@ impl Requesting {
                 v6::ParsedDhcpOption::DnsServers(server_addrs) => dns_servers = Some(server_addrs),
                 v6::ParsedDhcpOption::InformationRefreshTime(refresh_time) => {
                     log::debug!(
-                        "received unexpected option Information Refresh
-                                 Time ({:?}) in Reply to non-Information Request
-                                 message",
+                        "received unexpected option Information Refresh \
+                        Time ({:?}) in Reply to non-Information Request \
+                        message",
                         refresh_time
                     );
                 }
                 v6::ParsedDhcpOption::IaAddr(iaaddr_data) => {
                     log::debug!(
-                        "received unexpected option IA Addr [addr: {:?}] as top
+                        "received unexpected option IA Addr [addr: {:?}] as top \
                         option in Reply message",
                         iaaddr_data.addr()
                     );
                 }
                 v6::ParsedDhcpOption::Preference(preference_opt) => {
                     log::debug!(
-                        "received unexpected option Preference
-                                         ({:?}) in Reply message",
+                        "received unexpected option Preference ({:?}) in Reply message",
                         preference_opt
                     );
                 }
                 v6::ParsedDhcpOption::Oro(option_codes) => {
                     log::debug!(
-                        "received unexpected option ORO ({:?})
-                                         in Reply message",
+                        "received unexpected option ORO ({:?}) in Reply message",
                         option_codes
                     );
                 }
                 v6::ParsedDhcpOption::ElapsedTime(elapsed_time) => {
                     log::debug!(
-                        "received unexpected option Elapsed Time ({:?}) in Reply
-                        message",
+                        "received unexpected option Elapsed Time ({:?}) in Reply message",
                         elapsed_time
                     );
                 }
@@ -2000,8 +1983,7 @@ impl Requesting {
             | v6::StatusCode::NoPrefixAvail
             | v6::StatusCode::NoBinding => {
                 log::debug!(
-                    "received top level error status code {:?} in Reply to
-                    Request",
+                    "received top level error status code {:?} in Reply to Request",
                     status_code,
                 );
                 return request_from_alternate_server_or_restart_server_discovery(
@@ -2334,7 +2316,7 @@ impl Renewing {
         retransmission_timeout(prev_retrans_timeout, INITIAL_RENEW_TIMEOUT, MAX_RENEW_TIMEOUT, rng)
     }
 
-    /// Returns a transition back to Renewing, with actions to send a Renew and
+    /// Returns a transition to stay in `Renewing`, with actions to send a Renew and
     /// schedule retransmission.
     fn send_and_schedule_retransmission<R: Rng>(
         self,
@@ -2854,7 +2836,10 @@ pub(crate) mod testutil {
         // Start of server discovery should send a solicit and schedule a
         // retransmission timer.
         let mut buf = assert_matches!( &actions[..],
-            [Action::SendMessage(buf), Action::ScheduleTimer(ClientTimerType::Retransmission, INITIAL_SOLICIT_TIMEOUT)] => buf
+            [
+                Action::SendMessage(buf),
+                Action::ScheduleTimer(ClientTimerType::Retransmission, INITIAL_SOLICIT_TIMEOUT)
+            ] => buf
         );
 
         assert_outgoing_stateful_message(
@@ -3511,7 +3496,10 @@ mod tests {
         // Following exponential backoff defined in https://tools.ietf.org/html/rfc8415#section-15.
         assert_matches!(
             actions[..],
-            [_, Action::ScheduleTimer(ClientTimerType::Retransmission, timeout)] if timeout == 2 * INITIAL_INFO_REQ_TIMEOUT
+            [
+                _,
+                Action::ScheduleTimer(ClientTimerType::Retransmission, timeout)
+            ] if timeout == 2 * INITIAL_INFO_REQ_TIMEOUT
         );
     }
 
@@ -4301,8 +4289,13 @@ mod tests {
             }) if server_id == vec![1, 2, 3] &&
                   addresses == expected_addresses);
         let expected_t1 = Duration::from_secs(t1.into());
-        assert_matches!(&actions[..],
-            [Action::CancelTimer(ClientTimerType::Retransmission), Action::ScheduleTimer(ClientTimerType::Renew, t1)] if *t1 == expected_t1
+        assert_matches!(
+            &actions[..],
+            [
+                Action::CancelTimer(ClientTimerType::Retransmission),
+                Action::ScheduleTimer(ClientTimerType::Renew, t1)
+            ]
+            if *t1 == expected_t1
         );
         assert!(transaction_id.is_none());
     }
@@ -5198,7 +5191,8 @@ mod tests {
             &client;
         assert_matches!(
             state,
-            Some(ClientState::InformationReceived(InformationReceived { dns_servers})) if dns_servers.is_empty()
+            Some(ClientState::InformationReceived(InformationReceived { dns_servers}))
+                if dns_servers.is_empty()
         );
 
         // Should panic if Retransmission timeout is received while in
@@ -5363,8 +5357,14 @@ mod tests {
     #[test_case(v6::TimeValue::Zero, v6::TimeValue::Zero, v6::TimeValue::Zero)]
     #[test_case(
         v6::TimeValue::Zero,
-        v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(120).expect("should succeed for non-zero or u32::MAX values"))),
-        v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(120).expect("should succeed for non-zero or u32::MAX values")))
+        v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
+            v6::NonZeroOrMaxU32::new(120)
+                .expect("should succeed for non-zero or u32::MAX values")
+        )),
+        v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
+            v6::NonZeroOrMaxU32::new(120)
+                .expect("should succeed for non-zero or u32::MAX values")
+        ))
      )]
     #[test_case(
         v6::TimeValue::Zero,
@@ -5372,24 +5372,51 @@ mod tests {
         v6::TimeValue::NonZero(v6::NonZeroTimeValue::Infinity)
     )]
     #[test_case(
-        v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(120).expect("should succeed for non-zero or u32::MAX values"))),
+        v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
+            v6::NonZeroOrMaxU32::new(120)
+                .expect("should succeed for non-zero or u32::MAX values")
+        )),
         v6::TimeValue::Zero,
-        v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(120).expect("should succeed for non-zero or u32::MAX values")))
+        v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
+            v6::NonZeroOrMaxU32::new(120)
+                .expect("should succeed for non-zero or u32::MAX values")
+        ))
      )]
     #[test_case(
-        v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(120).expect("should succeed for non-zero or u32::MAX values"))),
-        v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(60).expect("should succeed for non-zero or u32::MAX values"))),
-        v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(60).expect("should succeed for non-zero or u32::MAX values")))
+        v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
+            v6::NonZeroOrMaxU32::new(120)
+                .expect("should succeed for non-zero or u32::MAX values")
+        )),
+        v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
+            v6::NonZeroOrMaxU32::new(60)
+                .expect("should succeed for non-zero or u32::MAX values")
+        )),
+        v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
+            v6::NonZeroOrMaxU32::new(60)
+                .expect("should succeed for non-zero or u32::MAX values")
+        ))
      )]
     #[test_case(
-        v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(120).expect("should succeed for non-zero or u32::MAX values"))),
+        v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
+            v6::NonZeroOrMaxU32::new(120)
+                .expect("should succeed for non-zero or u32::MAX values")
+        )),
         v6::TimeValue::NonZero(v6::NonZeroTimeValue::Infinity),
-        v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(120).expect("should succeed for non-zero or u32::MAX values")))
+        v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
+            v6::NonZeroOrMaxU32::new(120)
+                .expect("should succeed for non-zero or u32::MAX values")
+        ))
      )]
     #[test_case(
         v6::TimeValue::NonZero(v6::NonZeroTimeValue::Infinity),
-        v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(120).expect("should succeed for non-zero or u32::MAX values"))),
-        v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(120).expect("should succeed for non-zero or u32::MAX values")))
+        v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
+            v6::NonZeroOrMaxU32::new(120)
+                .expect("should succeed for non-zero or u32::MAX values")
+        )),
+        v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
+            v6::NonZeroOrMaxU32::new(120)
+                .expect("should succeed for non-zero or u32::MAX values")
+        ))
      )]
     #[test_case(
         v6::TimeValue::NonZero(v6::NonZeroTimeValue::Infinity),
@@ -5405,24 +5432,51 @@ mod tests {
     }
 
     #[test_case(
-        v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(120).expect("should succeed for non-zero or u32::MAX values")),
+        v6::NonZeroTimeValue::Finite(
+            v6::NonZeroOrMaxU32::new(120)
+                .expect("should succeed for non-zero or u32::MAX values")
+        ),
         v6::TimeValue::Zero,
-        v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(120).expect("should succeed for non-zero or u32::MAX values"))
+        v6::NonZeroTimeValue::Finite(
+            v6::NonZeroOrMaxU32::new(120)
+                .expect("should succeed for non-zero or u32::MAX values")
+        )
     )]
     #[test_case(
-        v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(120).expect("should succeed for non-zero or u32::MAX values")),
-        v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(60).expect("should succeed for non-zero or u32::MAX values"))),
-        v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(60).expect("should succeed for non-zero or u32::MAX values"))
+        v6::NonZeroTimeValue::Finite(
+            v6::NonZeroOrMaxU32::new(120)
+                .expect("should succeed for non-zero or u32::MAX values")
+        ),
+        v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
+            v6::NonZeroOrMaxU32::new(60)
+                .expect("should succeed for non-zero or u32::MAX values")
+        )),
+        v6::NonZeroTimeValue::Finite(
+            v6::NonZeroOrMaxU32::new(60)
+                .expect("should succeed for non-zero or u32::MAX values")
+        )
     )]
     #[test_case(
-        v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(120).expect("should succeed for non-zero or u32::MAX values")),
+        v6::NonZeroTimeValue::Finite(
+            v6::NonZeroOrMaxU32::new(120)
+                .expect("should succeed for non-zero or u32::MAX values")
+        ),
         v6::TimeValue::NonZero(v6::NonZeroTimeValue::Infinity),
-        v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(120).expect("should succeed for non-zero or u32::MAX values"))
+        v6::NonZeroTimeValue::Finite(
+            v6::NonZeroOrMaxU32::new(120)
+                .expect("should succeed for non-zero or u32::MAX values")
+        )
     )]
     #[test_case(
         v6::NonZeroTimeValue::Infinity,
-        v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(120).expect("should succeed for non-zero or u32::MAX values"))),
-        v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(120).expect("should succeed for non-zero or u32::MAX values"))
+        v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
+            v6::NonZeroOrMaxU32::new(120)
+                .expect("should succeed for non-zero or u32::MAX values"))
+        ),
+        v6::NonZeroTimeValue::Finite(
+            v6::NonZeroOrMaxU32::new(120)
+                .expect("should succeed for non-zero or u32::MAX values")
+        )
     )]
     #[test_case(
         v6::NonZeroTimeValue::Infinity,
@@ -5454,7 +5508,10 @@ mod tests {
     )]
     #[test_case(v6::NonZeroTimeValue::Infinity, T2_T1_RATIO, v6::NonZeroTimeValue::Infinity)]
     #[test_case(
-        v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(INFINITY - 1).expect("should succeed")),
+        v6::NonZeroTimeValue::Finite(
+            v6::NonZeroOrMaxU32::new(INFINITY - 1)
+                .expect("should succeed")
+        ),
         T2_T1_RATIO,
         v6::NonZeroTimeValue::Infinity
     )]

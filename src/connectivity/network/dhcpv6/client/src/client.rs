@@ -927,7 +927,9 @@ mod tests {
                         // Make the client ready for another reply immediately on signal, so it can
                         // start receiving updates without waiting for the full refresh timeout
                         // which is unrealistic test.
-                        if client.timer_abort_handles.contains_key(&dhcpv6_core::client::ClientTimerType::Refresh) {
+                        if client.timer_abort_handles
+                            .contains_key(&dhcpv6_core::client::ClientTimerType::Refresh)
+                        {
                             let () = client
                                 .handle_timeout(dhcpv6_core::client::ClientTimerType::Refresh)
                                 .await
@@ -1046,8 +1048,9 @@ mod tests {
         } // drop `test_fut` so `client_fut` is no longer mutably borrowed.
 
         {
-            // Send an empty list of DNS servers, should update watcher, because this is different from
-            // what the watcher has seen last time.
+            // Send an empty list of DNS servers, should update watcher,
+            // because this is different from what the watcher has seen
+            // last time.
             let () = signal_client_to_refresh
                 .try_send(())
                 .expect("failed to signal test client to refresh");
