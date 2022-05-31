@@ -538,6 +538,7 @@ zx_status_t WriteOneWordEventRecord(Writer* writer, uint64_t event_time,
 }  // namespace internal
 
 // Write an Instant Event using the given Writer
+//
 // Instant Events marks a moment in time on a thread.
 //
 // See also: https://fuchsia.dev/fuchsia-src/reference/tracing/trace-format#instant-event
@@ -553,6 +554,7 @@ zx_status_t WriteInstantEventRecord(Writer* writer, uint64_t event_time,
 }
 
 // Write a Counter Event using the given Writer
+//
 // Counter Events sample values of each argument as data in a time series
 // associated with the counter's name and id.
 //
@@ -566,6 +568,168 @@ zx_status_t WriteCounterEventRecord(Writer* writer, uint64_t event_time,
                                     const Argument<arg_types, ref_types>&... args) {
   return internal::WriteOneWordEventRecord(writer, event_time, thread_ref, category_ref, name_ref,
                                            fxt::EventType::kCounter, counter_id, args...);
+}
+
+// Write a Duration Begin Event using the given Writer
+//
+// A Duration Begin Event marks the beginning of an operation on a particular
+// thread. Must be matched by a duration end event. May be nested.
+//
+// See also: https://fuchsia.dev/fuchsia-src/reference/tracing/trace-format#duration-begin-event
+template <typename Writer, internal::EnableIfWriter<Writer> = 0, RefType thread_type,
+          RefType name_type, RefType category_type, ArgumentType... arg_types, RefType... ref_types>
+zx_status_t WriteDurationBeginEventRecord(Writer* writer, uint64_t event_time,
+                                          const ThreadRef<thread_type>& thread_ref,
+                                          const StringRef<category_type>& category_ref,
+                                          const StringRef<name_type>& name_ref,
+                                          Argument<arg_types, ref_types>... args) {
+  return internal::WriteZeroWordEventRecord(writer, event_time, thread_ref, category_ref, name_ref,
+                                            fxt::EventType::kDurationBegin, args...);
+}
+
+// Write a Duration End Event using the given Writer
+//
+// A Duration End Event marks the end of an operation on a particular
+// thread.
+//
+// See also: https://fuchsia.dev/fuchsia-src/reference/tracing/trace-format#duration-end-event
+template <typename Writer, internal::EnableIfWriter<Writer> = 0, RefType thread_type,
+          RefType name_type, RefType category_type, ArgumentType... arg_types, RefType... ref_types>
+zx_status_t WriteDurationEndEventRecord(Writer* writer, uint64_t event_time,
+                                        const ThreadRef<thread_type>& thread_ref,
+                                        const StringRef<category_type>& category_ref,
+                                        const StringRef<name_type>& name_ref,
+                                        Argument<arg_types, ref_types>... args) {
+  return internal::WriteZeroWordEventRecord(writer, event_time, thread_ref, category_ref, name_ref,
+                                            fxt::EventType::kDurationEnd, args...);
+}
+
+// Write a Duration Complete Event using the given Writer
+//
+// A Duration Complete Event marks the beginning and end of an operation on a particular thread.
+//
+// See also: https://fuchsia.dev/fuchsia-src/reference/tracing/trace-format#duration-complete-event
+template <typename Writer, internal::EnableIfWriter<Writer> = 0, RefType thread_type,
+          RefType name_type, RefType category_type, ArgumentType... arg_types, RefType... ref_types>
+zx_status_t WriteDurationCompleteEventRecord(Writer* writer, uint64_t start_time,
+                                             const ThreadRef<thread_type>& thread_ref,
+                                             const StringRef<category_type>& category_ref,
+                                             const StringRef<name_type>& name_ref,
+                                             uint64_t end_time,
+                                             Argument<arg_types, ref_types>... args) {
+  return internal::WriteOneWordEventRecord(writer, start_time, thread_ref, category_ref, name_ref,
+                                           fxt::EventType::kDurationComplete, end_time, args...);
+}
+
+// Write an Async Begin Event using the given Writer
+//
+// An Async Begin event marks the beginning of an operation that may span
+// threads. Must be matched by an async end event using the same async
+// correlation id.
+//
+// See also: https://fuchsia.dev/fuchsia-src/reference/tracing/trace-format#async-begin-event
+template <typename Writer, internal::EnableIfWriter<Writer> = 0, RefType thread_type,
+          RefType name_type, RefType category_type, ArgumentType... arg_types, RefType... ref_types>
+zx_status_t WriteAsyncBeginEventRecord(Writer* writer, uint64_t event_time,
+                                       const ThreadRef<thread_type>& thread_ref,
+                                       const StringRef<category_type>& category_ref,
+                                       const StringRef<name_type>& name_ref, uint64_t async_id,
+                                       Argument<arg_types, ref_types>... args) {
+  return internal::WriteOneWordEventRecord(writer, event_time, thread_ref, category_ref, name_ref,
+                                           fxt::EventType::kAsyncBegin, async_id, args...);
+}
+
+// Write an Async Instant Event using the given Writer
+//
+// An Async Instant Event marks a moment within an operation that may span
+// threads. Must appear between async begin event and async end event using the
+// same async correlation id.
+//
+// See also: https://fuchsia.dev/fuchsia-src/reference/tracing/trace-format#async-instant-event
+template <typename Writer, internal::EnableIfWriter<Writer> = 0, RefType thread_type,
+          RefType name_type, RefType category_type, ArgumentType... arg_types, RefType... ref_types>
+zx_status_t WriteAsyncInstantEventRecord(Writer* writer, uint64_t event_time,
+                                         const ThreadRef<thread_type>& thread_ref,
+                                         const StringRef<category_type>& category_ref,
+                                         const StringRef<name_type>& name_ref, uint64_t async_id,
+                                         Argument<arg_types, ref_types>... args) {
+  return internal::WriteOneWordEventRecord(writer, event_time, thread_ref, category_ref, name_ref,
+                                           fxt::EventType::kAsyncInstant, async_id, args...);
+}
+
+// Write an Async End Event using the given Writer
+//
+// An Async End event marks the end of an operation that may span
+// threads.
+//
+// See also: https://fuchsia.dev/fuchsia-src/reference/tracing/trace-format#async-end-event
+template <typename Writer, internal::EnableIfWriter<Writer> = 0, RefType thread_type,
+          RefType name_type, RefType category_type, ArgumentType... arg_types, RefType... ref_types>
+zx_status_t WriteAsyncEndEventRecord(Writer* writer, uint64_t event_time,
+                                     const ThreadRef<thread_type>& thread_ref,
+                                     const StringRef<category_type>& category_ref,
+                                     const StringRef<name_type>& name_ref, uint64_t async_id,
+                                     Argument<arg_types, ref_types>... args) {
+  return internal::WriteOneWordEventRecord(writer, event_time, thread_ref, category_ref, name_ref,
+                                           fxt::EventType::kAsyncEnd, async_id, args...);
+}
+
+// Write a Flow Begin Event to the given Writer
+//
+// A Flow Begin Event marks the beginning of an operation, which results in a
+// sequence of actions that may span multiple threads or abstraction layers.
+// Must be matched by a flow end event using the same flow correlation id. This
+// can be envisioned as an arrow between duration events. The beginning of the
+// flow is associated with the enclosing duration event for this thread; it
+// begins where the enclosing duration event ends.
+//
+// See also: https://fuchsia.dev/fuchsia-src/reference/tracing/trace-format#flow-begin-event
+template <typename Writer, internal::EnableIfWriter<Writer> = 0, RefType thread_type,
+          RefType name_type, RefType category_type, ArgumentType... arg_types, RefType... ref_types>
+zx_status_t WriteFlowBeginEventRecord(Writer* writer, uint64_t event_time,
+                                      const ThreadRef<thread_type>& thread_ref,
+                                      const StringRef<category_type>& category_ref,
+                                      const StringRef<name_type>& name_ref, uint64_t flow_id,
+                                      Argument<arg_types, ref_types>... args) {
+  return internal::WriteOneWordEventRecord(writer, event_time, thread_ref, category_ref, name_ref,
+                                           fxt::EventType::kFlowBegin, flow_id, args...);
+}
+
+// Write a Flow Step Event to the given Writer
+//
+// Marks a point within a flow. The step is associated with the enclosing
+// duration event for this thread; the flow resumes where the enclosing
+// duration event begins then is suspended at the point where the enclosing
+// duration event event ends.
+//
+// See also: https://fuchsia.dev/fuchsia-src/reference/tracing/trace-format#flow-step-event
+template <typename Writer, internal::EnableIfWriter<Writer> = 0, RefType thread_type,
+          RefType name_type, RefType category_type, ArgumentType... arg_types, RefType... ref_types>
+zx_status_t WriteFlowStepEventRecord(Writer* writer, uint64_t event_time,
+                                     const ThreadRef<thread_type>& thread_ref,
+                                     const StringRef<category_type>& category_ref,
+                                     const StringRef<name_type>& name_ref, uint64_t flow_id,
+                                     Argument<arg_types, ref_types>... args) {
+  return internal::WriteOneWordEventRecord(writer, event_time, thread_ref, category_ref, name_ref,
+                                           fxt::EventType::kFlowStep, flow_id, args...);
+}
+
+// Write a Flow End Event to the given Writer
+//
+// Marks the end of a flow. The end of the flow is associated with the
+// enclosing duration event for this thread; the flow resumes where the
+// enclosing duration event begins.
+//
+// See also: https://fuchsia.dev/fuchsia-src/reference/tracing/trace-format#flow-end-event
+template <typename Writer, internal::EnableIfWriter<Writer> = 0, RefType thread_type,
+          RefType name_type, RefType category_type, ArgumentType... arg_types, RefType... ref_types>
+zx_status_t WriteFlowEndEventRecord(Writer* writer, uint64_t event_time,
+                                    const ThreadRef<thread_type>& thread_ref,
+                                    const StringRef<category_type>& category_ref,
+                                    const StringRef<name_type>& name_ref, uint64_t flow_id,
+                                    Argument<arg_types, ref_types>... args) {
+  return internal::WriteOneWordEventRecord(writer, event_time, thread_ref, category_ref, name_ref,
+                                           fxt::EventType::kFlowEnd, flow_id, args...);
 }
 }  // namespace fxt
 

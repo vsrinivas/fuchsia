@@ -323,4 +323,174 @@ TEST(Serializer, CounterEventRecord) {
   EXPECT_EQ(bytes[3], counter_id);
 }
 
+TEST(Serializer, DurationBeginEventRecord) {
+  uint64_t event_time = 0x1234'5678'90AB'CDEF;
+  fxt::ThreadRef thread_ref(1);
+  fxt::StringRef category_ref(0x7777);
+  fxt::StringRef name_ref(0x1234);
+
+  FakeWriter writer;
+  EXPECT_EQ(ZX_OK, fxt::WriteDurationBeginEventRecord(&writer, event_time, thread_ref, category_ref,
+                                                      name_ref));
+  // One word for the header, one for the time stamp
+  EXPECT_EQ(writer.bytes.size(), fxt::WordSize(2).SizeInBytes());
+  uint64_t* words = reinterpret_cast<uint64_t*>(writer.bytes.data());
+  uint64_t header = words[0];
+  // Event type should be 2
+  EXPECT_EQ(header & 0x0000'0000'000F'0000, uint64_t{0x0000'0000'0002'0000});
+  EXPECT_EQ(words[1], event_time);
+}
+
+TEST(Serializer, DurationEndEventRecord) {
+  uint64_t event_time = 0x1234'5678'90AB'CDEF;
+  fxt::ThreadRef thread_ref(1);
+  fxt::StringRef category_ref(0x7777);
+  fxt::StringRef name_ref(0x1234);
+
+  FakeWriter writer;
+  EXPECT_EQ(ZX_OK, fxt::WriteDurationEndEventRecord(&writer, event_time, thread_ref, category_ref,
+                                                    name_ref));
+  // One word for the header, one for the time stamp
+  EXPECT_EQ(writer.bytes.size(), fxt::WordSize(2).SizeInBytes());
+  uint64_t* words = reinterpret_cast<uint64_t*>(writer.bytes.data());
+  uint64_t header = words[0];
+  // Event type should be 3
+  EXPECT_EQ(header & 0x0000'0000'000F'0000, uint64_t{0x0000'0000'0003'0000});
+  EXPECT_EQ(words[1], event_time);
+}
+
+TEST(Serializer, DurationCompleteEventRecord) {
+  uint64_t event_time = 0x1234'5678'90AB'CDEF;
+  uint64_t event_end_time = 0x1122'3344'5566'7788;
+  fxt::ThreadRef thread_ref(1);
+  fxt::StringRef category_ref(0x7777);
+  fxt::StringRef name_ref(0x1234);
+
+  FakeWriter writer;
+  EXPECT_EQ(ZX_OK, fxt::WriteDurationCompleteEventRecord(&writer, event_time, thread_ref,
+                                                         category_ref, name_ref, event_end_time));
+  // One word for the header, one for the start time, one for the end time
+  EXPECT_EQ(writer.bytes.size(), fxt::WordSize(3).SizeInBytes());
+  uint64_t* words = reinterpret_cast<uint64_t*>(writer.bytes.data());
+  uint64_t header = words[0];
+  // Event type should be 4
+  EXPECT_EQ(header & 0x0000'0000'000F'0000, uint64_t{0x0000'0000'0004'0000});
+  EXPECT_EQ(words[1], event_time);
+  EXPECT_EQ(words[2], event_end_time);
+}
+
+TEST(Serializer, AsyncBeginEventRecord) {
+  uint64_t event_time = 0x1234'5678'90AB'CDEF;
+  fxt::ThreadRef thread_ref(1);
+  fxt::StringRef category_ref(0x7777);
+  fxt::StringRef name_ref(0x1234);
+  uint64_t async_id = 0x1122'3344'5566'7788;
+
+  FakeWriter writer;
+  EXPECT_EQ(ZX_OK, fxt::WriteAsyncBeginEventRecord(&writer, event_time, thread_ref, category_ref,
+                                                   name_ref, async_id));
+  // One word for the header, one for the time stamp, one for the id
+  EXPECT_EQ(writer.bytes.size(), fxt::WordSize(3).SizeInBytes());
+  uint64_t* words = reinterpret_cast<uint64_t*>(writer.bytes.data());
+  uint64_t header = words[0];
+  EXPECT_EQ(header & 0x0000'0000'000F'0000, uint64_t{0x0000'0000'0005'0000});
+  EXPECT_EQ(words[1], event_time);
+  EXPECT_EQ(words[2], async_id);
+}
+
+TEST(Serializer, AsyncInstantEventRecord) {
+  uint64_t event_time = 0x1234'5678'90AB'CDEF;
+  fxt::ThreadRef thread_ref(1);
+  fxt::StringRef category_ref(0x7777);
+  fxt::StringRef name_ref(0x1234);
+  uint64_t async_id = 0x1122'3344'5566'7788;
+
+  FakeWriter writer;
+  EXPECT_EQ(ZX_OK, fxt::WriteAsyncInstantEventRecord(&writer, event_time, thread_ref, category_ref,
+                                                     name_ref, async_id));
+  // One word for the header, one for the time stamp, one for the id
+  EXPECT_EQ(writer.bytes.size(), fxt::WordSize(3).SizeInBytes());
+  uint64_t* words = reinterpret_cast<uint64_t*>(writer.bytes.data());
+  uint64_t header = words[0];
+  EXPECT_EQ(header & 0x0000'0000'000F'0000, uint64_t{0x0000'0000'0006'0000});
+  EXPECT_EQ(words[1], event_time);
+  EXPECT_EQ(words[2], async_id);
+}
+
+TEST(Serializer, AsyncEndEventRecord) {
+  uint64_t event_time = 0x1234'5678'90AB'CDEF;
+  fxt::ThreadRef thread_ref(1);
+  fxt::StringRef category_ref(0x7777);
+  fxt::StringRef name_ref(0x1234);
+  uint64_t async_id = 0x1122'3344'5566'7788;
+
+  FakeWriter writer;
+  EXPECT_EQ(ZX_OK, fxt::WriteAsyncEndEventRecord(&writer, event_time, thread_ref, category_ref,
+                                                 name_ref, async_id));
+  // One word for the header, one for the time stamp, one for the id
+  EXPECT_EQ(writer.bytes.size(), fxt::WordSize(3).SizeInBytes());
+  uint64_t* words = reinterpret_cast<uint64_t*>(writer.bytes.data());
+  uint64_t header = words[0];
+  EXPECT_EQ(header & 0x0000'0000'000F'0000, uint64_t{0x0000'0000'0007'0000});
+  EXPECT_EQ(words[1], event_time);
+  EXPECT_EQ(words[2], async_id);
+}
+
+TEST(Serializer, FlowBeginEventRecord) {
+  uint64_t event_time = 0x1234'5678'90AB'CDEF;
+  fxt::ThreadRef thread_ref(1);
+  fxt::StringRef category_ref(0x7777);
+  fxt::StringRef name_ref(0x1234);
+  uint64_t flow_id = 0x1122'3344'5566'7788;
+
+  FakeWriter writer;
+  EXPECT_EQ(ZX_OK, fxt::WriteFlowBeginEventRecord(&writer, event_time, thread_ref, category_ref,
+                                                  name_ref, flow_id));
+  // One word for the header, one for the time stamp, one for the id
+  EXPECT_EQ(writer.bytes.size(), fxt::WordSize(3).SizeInBytes());
+  uint64_t* words = reinterpret_cast<uint64_t*>(writer.bytes.data());
+  uint64_t header = words[0];
+  EXPECT_EQ(header & 0x0000'0000'000F'0000, uint64_t{0x0000'0000'0008'0000});
+  EXPECT_EQ(words[1], event_time);
+  EXPECT_EQ(words[2], flow_id);
+}
+
+TEST(Serializer, FlowInstantEventRecord) {
+  uint64_t event_time = 0x1234'5678'90AB'CDEF;
+  fxt::ThreadRef thread_ref(1);
+  fxt::StringRef category_ref(0x7777);
+  fxt::StringRef name_ref(0x1234);
+  uint64_t flow_id = 0x1122'3344'5566'7788;
+
+  FakeWriter writer;
+  EXPECT_EQ(ZX_OK, fxt::WriteFlowStepEventRecord(&writer, event_time, thread_ref, category_ref,
+                                                 name_ref, flow_id));
+  // One word for the header, one for the time stamp, one for the id
+  EXPECT_EQ(writer.bytes.size(), fxt::WordSize(3).SizeInBytes());
+  uint64_t* words = reinterpret_cast<uint64_t*>(writer.bytes.data());
+  uint64_t header = words[0];
+  EXPECT_EQ(header & 0x0000'0000'000F'0000, uint64_t{0x0000'0000'0009'0000});
+  EXPECT_EQ(words[1], event_time);
+  EXPECT_EQ(words[2], flow_id);
+}
+
+TEST(Serializer, FlowEndEventRecord) {
+  uint64_t event_time = 0x1234'5678'90AB'CDEF;
+  fxt::ThreadRef thread_ref(1);
+  fxt::StringRef category_ref(0x7777);
+  fxt::StringRef name_ref(0x1234);
+  uint64_t flow_id = 0x1122'3344'5566'7788;
+
+  FakeWriter writer;
+  EXPECT_EQ(ZX_OK, fxt::WriteFlowEndEventRecord(&writer, event_time, thread_ref, category_ref,
+                                                name_ref, flow_id));
+  // One word for the header, one for the time stamp, one for the id
+  EXPECT_EQ(writer.bytes.size(), fxt::WordSize(3).SizeInBytes());
+  uint64_t* words = reinterpret_cast<uint64_t*>(writer.bytes.data());
+  uint64_t header = words[0];
+  EXPECT_EQ(header & 0x0000'0000'000F'0000, uint64_t{0x0000'0000'000A'0000});
+  EXPECT_EQ(words[1], event_time);
+  EXPECT_EQ(words[2], flow_id);
+}
+
 }  // namespace
