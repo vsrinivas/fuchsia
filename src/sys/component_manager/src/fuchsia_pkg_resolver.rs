@@ -15,7 +15,7 @@ use {
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_component_resolution as fresolution,
     fidl_fuchsia_io as fio,
     fidl_fuchsia_sys::LoaderProxy,
-    fuchsia_url::pkg_url::PkgUrl,
+    fuchsia_url::AbsoluteComponentUrl,
     std::path::Path,
     std::sync::Arc,
 };
@@ -44,11 +44,10 @@ impl FuchsiaPkgResolver {
         component_url: &'a str,
     ) -> Result<ResolvedComponent, ResolverError> {
         // Parse URL.
-        let fuchsia_pkg_url =
-            PkgUrl::parse(component_url).map_err(|e| ResolverError::malformed_url(e))?;
-        let cm_path =
-            Path::new(fuchsia_pkg_url.resource().ok_or(ResolverError::UrlMissingResource)?);
-        let package_url = fuchsia_pkg_url.root_url().to_string();
+        let component_url =
+            AbsoluteComponentUrl::parse(component_url).map_err(ResolverError::malformed_url)?;
+        let cm_path = Path::new(component_url.resource());
+        let package_url = component_url.package_url().to_string();
 
         // Resolve package.
         let package = self
@@ -175,7 +174,7 @@ mod tests {
         // directory once Rust vfs supports OPEN_RIGHT_EXECUTABLE.
         fn load_url(&self, package_url: &str) -> Option<Package> {
             let (dir_c, dir_s) = zx::Channel::create().unwrap();
-            let parsed_url = PkgUrl::parse(&package_url).expect("bad url");
+            let parsed_url = fuchsia_url::AbsolutePackageUrl::parse(&package_url).expect("bad url");
             // Simulate a package server that only contains the "hello-world" package.
             let invalid_cm_bytes = encode_persistent_with_context(
                 &fidl::encoding::Context {
@@ -418,7 +417,7 @@ mod tests {
         test_resolve_error!(
             resolver,
             "fuchsia-pkg://fuchsia.com/hello-world",
-            ResolverError::UrlMissingResource
+            ResolverError::MalformedUrl { .. }
         );
         test_resolve_error!(
             resolver,
