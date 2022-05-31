@@ -140,7 +140,7 @@ fi
 disassemble() {
   local BINARY_PATH="$1" BINARY_LABEL="$2"
 
-  "$OBJDUMP" "${OBJDUMP_ARGS[@]}" "$FUCHSIA_BUILD_DIR/$BINARY_PATH" > "$FUCHSIA_BUILD_DIR/${BINARY_PATH}.lst"
+  (cd "$FUCHSIA_BUILD_DIR" && "$OBJDUMP" "${OBJDUMP_ARGS[@]}" "$BINARY_PATH" > "${BINARY_PATH}.lst")
 
   fx-info Wrote "${BINARY_PATH}.lst" for "$BINARY_LABEL"
 }
