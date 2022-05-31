@@ -20,7 +20,7 @@ use {
     fuchsia_zircon::JobCriticalOptions,
     log::*,
     std::path::PathBuf,
-    std::{panic, process, thread, time::Duration},
+    std::{panic, process},
 };
 
 extern "C" {
@@ -30,28 +30,6 @@ extern "C" {
 }
 
 fn main() {
-    // Make sure we exit if there is a panic. Add this hook before we init the
-    // KernelLogger because it installs its own hook and then calls any
-    // existing hook.
-    panic::set_hook(Box::new(|info| {
-        println!("Panic in component_manager, aborting process. Message: {}", info);
-        // TODO remove after 43671 is resolved
-        std::thread::spawn(move || {
-            let mut nap_duration = Duration::from_secs(1);
-            // Do a short sleep, hopefully under "normal" circumstances the
-            // process will exit before this is printed
-            thread::sleep(nap_duration);
-            println!("component manager abort was started");
-            // set a fairly long duration so we don't spam logs
-            nap_duration = Duration::from_secs(30);
-            loop {
-                thread::sleep(nap_duration);
-                println!("component manager alive long after abort");
-            }
-        });
-        process::abort();
-    }));
-
     // Set ourselves as critical to our job. If we do not fail gracefully, our
     // job will be killed.
     if let Err(err) =
