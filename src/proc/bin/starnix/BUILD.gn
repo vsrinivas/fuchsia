@@ -42,6 +42,7 @@ if (target_cpu == "x64") {
       "//sdk/fidl/fuchsia.kernel:fuchsia.kernel-rustc",
       "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
       "//sdk/fidl/fuchsia.process:fuchsia.process-rustc",
+      "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle-rustc",
       "//sdk/fidl/fuchsia.starnix.developer:fuchsia.starnix.developer-rustc",
       "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
       "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem-rustc",

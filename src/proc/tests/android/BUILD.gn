@@ -9,8 +9,9 @@ group("tests") {
   testonly = true
   if (target_cpu == "x64") {
     deps = [
-      ":test_android_distro",
-      ":test_android_distro_with_error_logs",
+      ":android",
+      ":android_with_error_logs",
+      ":android_with_init",
       "benchmarks",
       "gvisor",
       "wayland",
@@ -56,6 +57,11 @@ fuchsia_test_component("java_hello_world") {
   deps = [ "//src/proc/tests:starnix_test" ]
 }
 
+fuchsia_test_component("init_test") {
+  manifest = "meta/init_test.cml"
+  deps = [ "//src/proc/tests:starnix_test" ]
+}
+
 fuchsia_component("sh_test") {
   testonly = true
   check_references = false
@@ -69,7 +75,7 @@ fuchsia_component("boringssl_self_test64") {
   manifest = "meta/boringssl_self_test64.cml"
 }
 
-stardroid_test_package("test_android_distro") {
+stardroid_test_package("android") {
   test_components = [
     ":boringssl_self_test64",
     ":java_hello_world",
@@ -79,7 +85,12 @@ stardroid_test_package("test_android_distro") {
   ]
 }
 
-stardroid_test_package("test_android_distro_with_error_logs") {
+starnix_test_package("android_with_init") {
+  test_components = [ ":init_test" ]
+  galaxy = "//src/proc/bin/galaxies/stardroid"
+}
+
+stardroid_test_package("android_with_error_logs") {
   test_components = [ ":binder_test" ]
   test_specs = {
     log_settings = {

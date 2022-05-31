@@ -5,22 +5,16 @@
     features: [
         "binder",
         "logd",
-        "wayland",
         "selinux_enabled",
     ],
-    init: [],
+    init: [
+        "/system/bin/init",
+    ],
     init_user: "root:x:0:0",
     kernel_cmdline: "androidboot.hardware=starnix",
     mounts: [
         "/:ext4:data/system.img",
-        "/data:remotefs:data",
-        "/dev:devtmpfs",
-        "/data/tmp:tmpfs",
-        "/dev/pts:devpts",
-        "/proc:proc",
-        "/sys:sysfs",
-        "/sys/fs/selinux:selinuxfs",
     ],
     name: "stardroid",
-    startup_file_path: "",
+    startup_file_path: "/linkerconfig/ld.config.txt",
 }
