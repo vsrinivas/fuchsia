@@ -1,0 +1,37 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/connectivity/network/lib/net_interfaces/client.shard.cml",
+        "//src/lib/fuchsia-hyper/hyper.shard.cml",
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/httpsdate_time_source",
+    },
+    capabilities: [
+        {
+            protocol: [ "fuchsia.time.external.PushSource" ],
+        },
+    ],
+    use: [
+        {
+            protocol: [ "fuchsia.cobalt.LoggerFactory" ],
+            from: "parent",
+        },
+        {
+            directory: "root-ssl-certificates",
+            rights: [ "r*" ],
+            path: "/config/ssl",
+        },
+    ],
+    expose: [
+        {
+            protocol: [ "fuchsia.time.external.PushSource" ],
+            from: "self",
+        },
+    ],
+}
