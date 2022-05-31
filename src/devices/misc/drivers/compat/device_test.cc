@@ -14,6 +14,7 @@
 #include <gtest/gtest.h>
 
 #include "lib/ddk/binding_priv.h"
+#include "lib/ddk/debug.h"
 #include "lib/ddk/device.h"
 #include "lib/ddk/driver.h"
 #include "lib/fidl/llcpp/connect_service.h"
@@ -572,6 +573,79 @@ TEST_F(DeviceTest, DevfsVnodeGetTopologicalPath) {
                          result.Unwrap_NEW()->value()->path.size());
         EXPECT_STREQ("/dev/second-device", path.data());
         callback_called = true;
+      });
+
+  ASSERT_TRUE(test_loop().RunUntilIdle());
+  ASSERT_TRUE(callback_called);
+}
+
+TEST_F(DeviceTest, DevfsVnodeSetAndGetMinDriverLogSeverity) {
+  auto endpoints = fidl::CreateEndpoints<fdf::Node>();
+
+  // Create a device.
+  zx_protocol_device_t ops{};
+  compat::Device device(compat::kDefaultDevice, &ops, nullptr, std::nullopt, logger(),
+                        dispatcher());
+  device.Bind({std::move(endpoints->client), dispatcher()});
+
+  DevfsVnode vnode(device.ZxDevice());
+  auto dev_endpoints = fidl::CreateEndpoints<fuchsia_device::Controller>();
+  ASSERT_EQ(ZX_OK, endpoints.status_value());
+
+  fidl::BindServer(test_loop().dispatcher(), std::move(dev_endpoints->server), &vnode);
+
+  fidl::WireClient<fuchsia_device::Controller> client;
+  client.Bind(std::move(dev_endpoints->client), test_loop().dispatcher());
+
+  bool callback_called = false;
+  client->SetMinDriverLogSeverity(FX_LOG_ERROR)
+      .Then([&client, &callback_called](
+                fidl::WireUnownedResult<fuchsia_device::Controller::SetMinDriverLogSeverity>&
+                    result) {
+        if (!result.ok()) {
+          FAIL() << result.error();
+          return;
+        }
+        ASSERT_EQ(ZX_OK, result.Unwrap_NEW()->status);
+        client->GetMinDriverLogSeverity().Then(
+            [&client, &callback_called](
+                fidl::WireUnownedResult<fuchsia_device::Controller::GetMinDriverLogSeverity>&
+                    result) {
+              if (!result.ok()) {
+                FAIL() << result.error();
+                return;
+              }
+              ASSERT_EQ(ZX_OK, result.Unwrap_NEW()->status);
+              ASSERT_EQ(FX_LOG_ERROR, (fx_log_severity_t)result.Unwrap_NEW()->severity);
+
+              // We set and get again because we cannot confirm if the first
+              // call to set actually worked. The min driver log severity that
+              // the first get compares to may have been unluckily the logger's
+              // initial min driver log severity.
+              client->SetMinDriverLogSeverity(FX_LOG_INFO)
+                  .Then([&client, &callback_called](
+                            fidl::WireUnownedResult<
+                                fuchsia_device::Controller::SetMinDriverLogSeverity>& result) {
+                    if (!result.ok()) {
+                      FAIL() << result.error();
+                      return;
+                    }
+                    ASSERT_EQ(ZX_OK, result.Unwrap_NEW()->status);
+
+                    client->GetMinDriverLogSeverity().Then(
+                        [&callback_called](
+                            fidl::WireUnownedResult<
+                                fuchsia_device::Controller::GetMinDriverLogSeverity>& result) {
+                          if (!result.ok()) {
+                            FAIL() << result.error();
+                            return;
+                          }
+                          ASSERT_EQ(ZX_OK, result.Unwrap_NEW()->status);
+                          ASSERT_EQ(FX_LOG_INFO, (fx_log_severity_t)result.Unwrap_NEW()->severity);
+                          callback_called = true;
+                        });
+                  });
+            });
       });
 
   ASSERT_TRUE(test_loop().RunUntilIdle());

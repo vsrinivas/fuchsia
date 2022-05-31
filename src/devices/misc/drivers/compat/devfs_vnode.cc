@@ -170,12 +170,15 @@ void DevfsVnode::GetTopologicalPath(GetTopologicalPathRequestView request,
 
 void DevfsVnode::GetMinDriverLogSeverity(GetMinDriverLogSeverityRequestView request,
                                          GetMinDriverLogSeverityCompleter::Sync& completer) {
-  completer.Reply(ZX_ERR_NOT_SUPPORTED, 0);
+  uint8_t severity = dev_->logger().GetSeverity();
+  completer.Reply(ZX_OK, severity);
 }
 
 void DevfsVnode::SetMinDriverLogSeverity(SetMinDriverLogSeverityRequestView request,
                                          SetMinDriverLogSeverityCompleter::Sync& completer) {
-  completer.Reply(ZX_ERR_NOT_SUPPORTED);
+  FuchsiaLogSeverity severity = static_cast<FuchsiaLogSeverity>(request->severity);
+  dev_->logger().SetSeverity(severity);
+  completer.Reply(ZX_OK);
 }
 
 void DevfsVnode::SetPerformanceState(SetPerformanceStateRequestView request,

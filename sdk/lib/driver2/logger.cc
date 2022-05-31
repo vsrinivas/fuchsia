@@ -90,6 +90,8 @@ uint32_t Logger::GetAndResetDropped() {
 
 FuchsiaLogSeverity Logger::GetSeverity() { return severity_.load(std::memory_order_relaxed); }
 
+void Logger::SetSeverity(FuchsiaLogSeverity severity) { severity_.store(severity); }
+
 void Logger::logf(FuchsiaLogSeverity severity, const char* tag, const char* file, int line,
                   const char* msg, ...) {
   va_list args;

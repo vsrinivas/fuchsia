@@ -70,8 +70,14 @@ int main(int argc, char** argv) {
   if (argc == 3) {
     auto response = fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(device))
                         ->GetMinDriverLogSeverity();
-    if (response.status() != ZX_OK || response.Unwrap_NEW()->status != ZX_OK) {
-      fprintf(stderr, "GetDriverLogFlags failed for %s\n", path);
+    if (response.status() != ZX_OK) {
+      fprintf(stderr, "Failed to send GetMinDriverLogSeverity request: %s\n",
+              zx_status_get_string(response.status()));
+      return -1;
+    }
+    if (response.Unwrap_NEW()->status != ZX_OK) {
+      fprintf(stderr, "GetMinDriverLogSeverity returned an error: %s\n",
+              zx_status_get_string(response->status));
       return -1;
     }
     printf("Log severity: ");

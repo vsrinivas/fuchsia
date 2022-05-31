@@ -163,3 +163,56 @@ TEST(LoggerTest, Create_NoLogSink) {
   auto logger = driver::Logger::Create(*ns, loop.dispatcher(), kName);
   ASSERT_TRUE(logger.is_error());
 }
+
+TEST(LoggerTest, SetSeverity) {
+  async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
+
+  // Setup namespace.
+  auto svc = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  EXPECT_EQ(ZX_OK, svc.status_value());
+  auto ns = driver::testing::CreateNamespace(std::move(svc->client));
+  ASSERT_TRUE(ns.is_ok());
+
+  // Setup logger.
+  zx::socket log_socket;
+  TestLogSink log_sink;
+  log_sink.SetConnectHandler([&log_socket](zx::socket socket) { log_socket = std::move(socket); });
+  fidl::Binding<flogger::LogSink> log_binding(&log_sink);
+
+  driver::testing::Directory svc_directory;
+  svc_directory.SetOpenHandler([&loop, &log_binding](std::string path, auto object) {
+    EXPECT_EQ(fidl::DiscoverableProtocolName<fuchsia_logger::LogSink>, path);
+    log_binding.Bind(object.TakeChannel(), loop.dispatcher());
+  });
+  fidl::Binding<fio::Directory> svc_binding(&svc_directory);
+  svc_binding.Bind(svc->server.TakeChannel(), loop.dispatcher());
+
+  auto logger = driver::Logger::Create(*ns, loop.dispatcher(), kName);
+  ASSERT_TRUE(logger.is_ok());
+  loop.RunUntilIdle();
+
+  // Check initial state of logger.
+  ASSERT_TRUE(log_socket.is_valid());
+  CheckLogUnreadable(log_socket);
+
+  // Check severity after setting it.
+  logger.value().SetSeverity(FUCHSIA_LOG_INFO);
+  ASSERT_EQ(FUCHSIA_LOG_INFO, logger.value().GetSeverity());
+
+  // Check state of logger after writing logs that were above or equal to min
+  // severity.
+  FDF_LOGL(INFO, logger.value(), kMessage);
+  CheckLogReadable(log_socket, FX_LOG_INFO);
+  FDF_LOGL(WARNING, logger.value(), kMessage);
+  CheckLogReadable(log_socket, FX_LOG_WARNING);
+
+  // Check severity after setting it.
+  logger.value().SetSeverity(FUCHSIA_LOG_WARNING);
+  ASSERT_EQ(FUCHSIA_LOG_WARNING, logger.value().GetSeverity());
+
+  // Check state of logger after writing logs that were below min severity.
+  FDF_LOGL(INFO, logger.value(), kMessage);
+  CheckLogUnreadable(log_socket);
+  FDF_LOGL(WARNING, logger.value(), kMessage);
+  CheckLogReadable(log_socket, FX_LOG_WARNING);
+}

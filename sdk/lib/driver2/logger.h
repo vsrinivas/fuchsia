@@ -35,6 +35,8 @@ class Logger {
 
   FuchsiaLogSeverity GetSeverity();
 
+  void SetSeverity(FuchsiaLogSeverity severity);
+
   void logf(FuchsiaLogSeverity severity, const char* tag, const char* file, int line,
             const char* msg, ...) __PRINTFLIKE(6, 7);
   void logvf(FuchsiaLogSeverity severity, const char* tag, const char* file, int line,
