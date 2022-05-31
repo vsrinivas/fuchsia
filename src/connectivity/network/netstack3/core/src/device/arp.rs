@@ -87,14 +87,15 @@ pub(crate) struct ArpFrameMetadata<D: ArpDevice, DeviceId> {
 
 /// Cleans up state associated with the device.
 ///
-/// Equivalent to calling `ctx.deinitialize`.
+/// Equivalent to calling `sync_ctx.deinitialize`.
 ///
 /// See [`ArpHandler::deinitialize`] for more details.
-pub(super) fn deinitialize<D: ArpDevice, P: PType, H: ArpHandler<D, P>>(
-    ctx: &mut H,
+pub(super) fn deinitialize<D: ArpDevice, C, P: PType, H: ArpHandler<D, C, P>>(
+    sync_ctx: &mut H,
+    ctx: &mut C,
     device_id: H::DeviceId,
 ) {
-    ctx.deinitialize(device_id)
+    sync_ctx.deinitialize(ctx, device_id)
 }
 
 /// An execution context for the ARP protocol when a buffer is provided.
@@ -182,17 +183,17 @@ pub(crate) trait ArpContext<D: ArpDevice, P: PType>:
 /// types in a given context, it is the caller's responsibility to call
 /// `peek_arp_types` in order to determine which types to use when referencing
 /// a specific `ArpPacketHandler` implementation.
-pub(super) trait ArpPacketHandler<D: ArpDevice, P: PType, B: BufferMut>:
-    ArpHandler<D, P>
+pub(super) trait ArpPacketHandler<D: ArpDevice, C, P: PType, B: BufferMut>:
+    ArpHandler<D, C, P>
 {
     /// Receive an ARP packet from a device.
-    fn receive_arp_packet(&mut self, device_id: Self::DeviceId, buffer: B);
+    fn receive_arp_packet(&mut self, ctx: &mut C, device_id: Self::DeviceId, buffer: B);
 }
 
-impl<D: ArpDevice, P: PType, B: BufferMut, C: BufferArpContext<D, P, B>> ArpPacketHandler<D, P, B>
-    for C
+impl<D: ArpDevice, P: PType, B: BufferMut, SC: BufferArpContext<D, P, B>, C>
+    ArpPacketHandler<D, C, P, B> for SC
 {
-    fn receive_arp_packet(&mut self, device_id: Self::DeviceId, buffer: B) {
+    fn receive_arp_packet(&mut self, _ctx: &mut C, device_id: Self::DeviceId, buffer: B) {
         ArpTimerFrameHandler::handle_frame(self, device_id, buffer)
     }
 }
@@ -201,18 +202,17 @@ impl<D: ArpDevice, P: PType, B: BufferMut, C: BufferArpContext<D, P, B>> ArpPack
 ///
 /// `ArpHandler<D, P>` is implemented for any type which implements
 /// [`ArpContext<D, P>`], and it can also be mocked for use in testing.
-pub(super) trait ArpHandler<D: ArpDevice, P: PType>:
-    ArpDeviceIdContext<D>
-    + TimerHandler<(), ArpTimerId<D, P, <Self as ArpDeviceIdContext<D>>::DeviceId>>
+pub(super) trait ArpHandler<D: ArpDevice, C, P: PType>:
+    ArpDeviceIdContext<D> + TimerHandler<C, ArpTimerId<D, P, <Self as ArpDeviceIdContext<D>>::DeviceId>>
 {
     /// Cleans up state associated with the device.
     ///
     /// The contract is that after `deinitialize` is called, nothing else should
     /// be done with the state.
-    fn deinitialize(&mut self, device_id: Self::DeviceId);
+    fn deinitialize(&mut self, ctx: &mut C, device_id: Self::DeviceId);
 
     /// Look up the hardware address for a network protocol address.
-    fn lookup<C>(
+    fn lookup(
         &mut self,
         ctx: &mut C,
         device_id: Self::DeviceId,
@@ -226,7 +226,7 @@ pub(super) trait ArpHandler<D: ArpDevice, P: PType>:
     /// future conflicting gratuitous ARPs to be ignored.
     // TODO(rheacock): remove `cfg(test)` when this is used.
     #[cfg(test)]
-    fn insert_static_neighbor<C>(
+    fn insert_static_neighbor(
         &mut self,
         ctx: &mut C,
         device_id: Self::DeviceId,
@@ -235,15 +235,15 @@ pub(super) trait ArpHandler<D: ArpDevice, P: PType>:
     );
 }
 
-impl<D: ArpDevice, P: PType, SC: ArpContext<D, P>> ArpHandler<D, P> for SC {
-    fn deinitialize(&mut self, device_id: Self::DeviceId) {
+impl<D: ArpDevice, P: PType, SC: ArpContext<D, P>, C> ArpHandler<D, C, P> for SC {
+    fn deinitialize(&mut self, _ctx: &mut C, device_id: Self::DeviceId) {
         // Remove all timers associated with the device
         self.cancel_timers_with(|timer_id| *timer_id.get_device_id() == device_id);
         // TODO(rheacock): Send any immediate packets, and potentially flag the state as
         // uninitialized?
     }
 
-    fn lookup<C>(
+    fn lookup(
         &mut self,
         ctx: &mut C,
         device_id: Self::DeviceId,
@@ -261,7 +261,7 @@ impl<D: ArpDevice, P: PType, SC: ArpContext<D, P>> ArpHandler<D, P> for SC {
     }
 
     #[cfg(test)]
-    fn insert_static_neighbor<C>(
+    fn insert_static_neighbor(
         &mut self,
         _ctx: &mut C,
         device_id: Self::DeviceId,
@@ -287,12 +287,13 @@ impl<D: ArpDevice, P: PType, SC: ArpContext<D, P>> ArpHandler<D, P> for SC {
 
 /// Handle an ARP timer firing.
 ///
-/// Equivalent to calling `ctx.handle_timer`.
-pub(super) fn handle_timer<D: ArpDevice, P: PType, H: ArpHandler<D, P>>(
-    ctx: &mut H,
+/// Equivalent to calling `sync_ctx.handle_timer`.
+pub(super) fn handle_timer<D: ArpDevice, C, P: PType, H: ArpHandler<D, C, P>>(
+    sync_ctx: &mut H,
+    ctx: &mut C,
     id: ArpTimerId<D, P, H::DeviceId>,
 ) {
-    ctx.handle_timer(&mut (), id)
+    sync_ctx.handle_timer(ctx, id)
 }
 
 /// A handler for ARP events.
@@ -308,10 +309,10 @@ struct ArpTimerFrameHandler<D: ArpDevice, P> {
     _never: Never,
 }
 
-impl<D: ArpDevice, P: PType, C: ArpContext<D, P>> TimerHandler<(), ArpTimerId<D, P, C::DeviceId>>
-    for C
+impl<D: ArpDevice, P: PType, C, SC: ArpContext<D, P>>
+    TimerHandler<C, ArpTimerId<D, P, SC::DeviceId>> for SC
 {
-    fn handle_timer(&mut self, _ctx: &mut (), id: ArpTimerId<D, P, C::DeviceId>) {
+    fn handle_timer(&mut self, _ctx: &mut C, id: ArpTimerId<D, P, SC::DeviceId>) {
         match id.inner {
             ArpTimerIdInner::RequestRetry { proto_addr } => {
                 send_arp_request(self, &mut (), id.device_id, proto_addr)
@@ -367,15 +368,17 @@ enum ArpTimerIdInner<P: PType> {
 /// Equivalent to calling `ctx.receive_arp_packet`.
 pub(super) fn receive_arp_packet<
     D: ArpDevice,
+    C,
     P: PType,
     B: BufferMut,
-    H: ArpPacketHandler<D, P, B>,
+    H: ArpPacketHandler<D, C, P, B>,
 >(
-    ctx: &mut H,
+    sync_ctx: &mut H,
+    ctx: &mut C,
     device_id: H::DeviceId,
     buffer: B,
 ) {
-    ctx.receive_arp_packet(device_id, buffer)
+    sync_ctx.receive_arp_packet(ctx, device_id, buffer)
 }
 
 impl<D: ArpDevice, P: PType, B: BufferMut, C: BufferArpContext<D, P, B>>
@@ -528,7 +531,7 @@ impl<D: ArpDevice, P: PType, B: BufferMut, C: BufferArpContext<D, P, B>>
 /// See [`ArpHandler::insert_static_neighbor`] for more details.
 // TODO(rheacock): remove `cfg(test)` when this is used.
 #[cfg(test)]
-pub(super) fn insert_static_neighbor<D: ArpDevice, P: PType, H: ArpHandler<D, P>, C>(
+pub(super) fn insert_static_neighbor<D: ArpDevice, C, P: PType, H: ArpHandler<D, C, P>>(
     sync_ctx: &mut H,
     ctx: &mut C,
     device_id: H::DeviceId,
@@ -562,7 +565,7 @@ fn insert_dynamic<D: ArpDevice, P: PType, C: ArpContext<D, P>>(
 /// Look up the hardware address for a network protocol address.
 ///
 /// Equivalent to calling `ctx.lookup`.
-pub(super) fn lookup<D: ArpDevice, P: PType, H: ArpHandler<D, P>, C>(
+pub(super) fn lookup<D: ArpDevice, C, P: PType, H: ArpHandler<D, C, P>>(
     sync_ctx: &mut H,
     ctx: &mut C,
     device_id: H::DeviceId,
@@ -860,7 +863,7 @@ mod tests {
         assert_eq!(hw, ArpHardwareType::Ethernet);
         assert_eq!(proto, ArpNetworkType::Ipv4);
 
-        receive_arp_packet::<_, Ipv4Addr, _, _>(ctx, (), buf);
+        receive_arp_packet::<_, _, Ipv4Addr, _, _>(ctx, &mut (), (), buf);
     }
 
     // Validate that buf is an ARP packet with the specific op, local_ipv4,
@@ -1065,11 +1068,11 @@ mod tests {
         ctx.timer_ctx().assert_timers_installed([(timer, deadline)]);
 
         // Deinitializing a different ID should not impact the current timer.
-        deinitialize(&mut ctx, device_id_1);
+        deinitialize(&mut ctx, &mut (), device_id_1);
         ctx.timer_ctx().assert_timers_installed([(timer, deadline)]);
 
         // Deinitializing the correct ID should cancel the timer.
-        deinitialize(&mut ctx, device_id_0);
+        deinitialize(&mut ctx, &mut (), device_id_0);
         ctx.timer_ctx().assert_no_timers_installed();
     }
 

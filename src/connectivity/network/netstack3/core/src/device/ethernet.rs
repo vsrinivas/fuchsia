@@ -332,7 +332,7 @@ pub(super) fn handle_timer<SC: EthernetIpLinkDeviceContext, C>(
     id: EthernetTimerId<SC::DeviceId>,
 ) {
     match id {
-        EthernetTimerId::Arp(id) => arp::handle_timer(sync_ctx, id.into()),
+        EthernetTimerId::Arp(id) => arp::handle_timer(sync_ctx, ctx, id.into()),
         EthernetTimerId::Ndp(id) => {
             <SC as NdpHandler<EthernetLinkDevice>>::handle_timer(sync_ctx, ctx, id)
         }
@@ -442,7 +442,7 @@ pub(super) fn send_ip_frame<
 /// Receive an Ethernet frame from the network.
 pub(super) fn receive_frame<B: BufferMut, SC: BufferEthernetIpLinkDeviceContext<B>, C>(
     sync_ctx: &mut SC,
-    _ctx: &mut C,
+    ctx: &mut C,
     device_id: SC::DeviceId,
     mut buffer: B,
 ) {
@@ -484,7 +484,7 @@ pub(super) fn receive_frame<B: BufferMut, SC: BufferEthernetIpLinkDeviceContext<
             };
             match types {
                 (ArpHardwareType::Ethernet, ArpNetworkType::Ipv4) => {
-                    arp::receive_arp_packet(sync_ctx, device_id, buffer)
+                    arp::receive_arp_packet(sync_ctx, ctx, device_id, buffer)
                 }
             }
         }
@@ -646,7 +646,7 @@ pub(super) fn deinitialize<SC: EthernetIpLinkDeviceContext, C>(
     ctx: &mut C,
     device_id: SC::DeviceId,
 ) {
-    arp::deinitialize(sync_ctx, device_id);
+    arp::deinitialize(sync_ctx, ctx, device_id);
     <SC as NdpHandler<_>>::deinitialize(sync_ctx, ctx, device_id);
 }
 
@@ -1065,7 +1065,7 @@ mod tests {
                 DUMMY_CONFIG_V4.local_mac,
                 Ipv6::MINIMUM_LINK_MTU.into(),
             ));
-            <DummyCtx as ArpHandler<_, _>>::insert_static_neighbor(
+            <DummyCtx as ArpHandler<_, _, _>>::insert_static_neighbor(
                 &mut ctx,
                 &mut (),
                 DummyDeviceId,
