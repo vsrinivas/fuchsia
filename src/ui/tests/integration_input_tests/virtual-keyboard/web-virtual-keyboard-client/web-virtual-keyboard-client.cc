@@ -102,12 +102,20 @@ class WebApp : public fuchsia::ui::app::ViewProvider {
         is_app_loaded = true;
       }
     });
+    FX_LOGS(INFO) << "Wait for app to load";
     RunLoopUntil([&] { return is_app_loaded; });
 
     // Plumb view to child.
     FX_LOGS(INFO) << "Waiting for view token from parent";
-    RunLoopUntil([&] { return view_token_.value.is_valid(); });
-    web_frame_->CreateView(std::move(view_token_));
+    RunLoopUntil([&] { return view_token_.has_value(); });
+    // If we received a `ViewRef`, we should use `CreateViewWithViewRef`.
+    // Otherwise, use `CreateView`.
+    if (view_ref_.has_value()) {
+      web_frame_->CreateViewWithViewRef(std::move(*view_token_), std::move(*view_ref_control_),
+                                        std::move(*view_ref_));
+    } else {
+      web_frame_->CreateView(std::move(*view_token_));
+    }
 
     FX_LOGS(INFO) << "Requesting input position";
     fuchsia::web::MessagePortPtr input_position_port;
@@ -122,6 +130,7 @@ class WebApp : public fuchsia::ui::app::ViewProvider {
     RunLoopUntil([&] { return input_position.has_value(); });
 
     // Validate structure of input position.
+    FX_LOGS(INFO) << "Return input position to test fixture";
     const auto& input_pos = input_position.value();
     for (const auto& element : {"left", "right", "top", "bottom"}) {
       FX_CHECK(input_pos.HasMember(element)) << "HasMember failed for " << element;
@@ -214,6 +223,15 @@ class WebApp : public fuchsia::ui::app::ViewProvider {
     view_token_ = scenic::ToViewToken(std::move(token));
   }
 
+  // |fuchsia::ui::app::ViewProvider|
+  void CreateViewWithViewRef(zx::eventpair token,
+                             fuchsia::ui::views::ViewRefControl view_ref_control,
+                             fuchsia::ui::views::ViewRef view_ref) override {
+    view_token_ = scenic::ToViewToken(std::move(token));
+    view_ref_control_ = std::move(view_ref_control);
+    view_ref_ = std::move(view_ref);
+  }
+
   void SendMessageToWebPage(fidl::InterfaceRequest<fuchsia::web::MessagePort> message_port,
                             const std::string& message) {
     fuchsia::web::WebMessage web_message;
@@ -238,7 +256,9 @@ class WebApp : public fuchsia::ui::app::ViewProvider {
   async::Loop loop_;
   std::unique_ptr<sys::ComponentContext> context_;
   fidl::Binding<fuchsia::ui::app::ViewProvider> view_provider_binding_;
-  fuchsia::ui::views::ViewToken view_token_;
+  std::optional<fuchsia::ui::views::ViewToken> view_token_;
+  std::optional<fuchsia::ui::views::ViewRef> view_ref_;
+  std::optional<fuchsia::ui::views::ViewRefControl> view_ref_control_;
   fuchsia::web::ContextPtr web_context_;
   fuchsia::web::FramePtr web_frame_;
 };

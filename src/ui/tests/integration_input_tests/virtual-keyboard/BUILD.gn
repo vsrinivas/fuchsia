@@ -34,6 +34,7 @@ executable("virtual-keyboard-test-bin") {
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.focus",
     "//sdk/fidl/fuchsia.ui.input",
+    "//sdk/fidl/fuchsia.ui.observation.test",
     "//sdk/fidl/fuchsia.ui.pointerinjector",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.scenic",

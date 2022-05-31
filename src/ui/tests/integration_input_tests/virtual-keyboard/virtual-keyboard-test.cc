@@ -20,6 +20,7 @@
 #include <fuchsia/ui/app/cpp/fidl.h>
 #include <fuchsia/ui/focus/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
+#include <fuchsia/ui/observation/test/cpp/fidl.h>
 #include <fuchsia/ui/pointerinjector/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
@@ -34,6 +35,7 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/resources.h>
 #include <lib/ui/scenic/cpp/session.h>
+#include <lib/ui/scenic/cpp/view_ref_pair.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/time.h>
@@ -141,9 +143,11 @@ void AddBaseRoutes(RealmBuilder* realm_builder) {
                              Protocol{fuchsia::ui::policy::Presenter::Name_}},
             .source = ChildRef{kRootPresenter},
             .targets = {ParentRef()}});
-  realm_builder->AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
-                                .source = ChildRef{kScenicTestRealm},
-                                .targets = {ParentRef()}});
+  realm_builder->AddRoute(
+      Route{.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_},
+                             Protocol{fuchsia::ui::observation::test::Registry::Name_}},
+            .source = ChildRef{kScenicTestRealm},
+            .targets = {ParentRef()}});
 }
 
 // Combines all vectors in `vecs` into one.
@@ -154,6 +158,32 @@ std::vector<T> merge(std::initializer_list<std::vector<T>> vecs) {
     result.insert(result.end(), v.begin(), v.end());
   }
   return result;
+}
+
+bool CheckViewExistsInSnapshot(const fuchsia::ui::observation::geometry::ViewTreeSnapshot& snapshot,
+                               zx_koid_t view_ref_koid) {
+  if (!snapshot.has_views()) {
+    return false;
+  }
+
+  auto snapshot_count = std::count_if(
+      snapshot.views().begin(), snapshot.views().end(),
+      [view_ref_koid](const auto& view) { return view.view_ref_koid() == view_ref_koid; });
+
+  return snapshot_count > 0;
+}
+
+zx_koid_t ExtractKoid(const zx::object_base& object) {
+  zx_info_handle_basic_t info{};
+  if (object.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr) != ZX_OK) {
+    return ZX_KOID_INVALID;  // no info
+  }
+
+  return info.koid;
+}
+
+zx_koid_t ExtractKoid(const fuchsia::ui::views::ViewRef& view_ref) {
+  return ExtractKoid(view_ref.reference);
 }
 
 // This component implements the interface for a RealmBuilder
@@ -231,20 +261,41 @@ class VirtualKeyboardBase : public gtest::RealLoopFixture {
   // next to the base ones added.
   virtual std::vector<std::pair<ChildName, std::string>> GetTestV2Components() { return {}; }
 
+  // This method does NOT block; it only logs when the client view has rendered.
+  void WatchClientRenderStatus(zx_koid_t client_view_ref_koid) {
+    geometry_provider_->Watch([this, client_view_ref_koid](auto response) {
+      if (response.has_updates() && !response.updates().empty() &&
+          CheckViewExistsInSnapshot(response.updates().back(), client_view_ref_koid)) {
+        FX_LOGS(INFO) << "Client view has rendered";
+      } else {
+        WatchClientRenderStatus(client_view_ref_koid);
+      }
+    });
+  }
+
   // Launches the test client by connecting to fuchsia.ui.app.ViewProvider protocol.
   // This method should only be invoked if this protocol has been exposed from
   // the root of the test realm.
   void LaunchChromium() {
+    // Use |fuchsia.ui.observation.test.Registry| to register the view observer endpoint with
+    // scenic.
+    realm()->Connect<fuchsia::ui::observation::test::Registry>(observer_registry_ptr_.NewRequest());
+    observer_registry_ptr_->RegisterGlobalGeometryProvider(geometry_provider_.NewRequest());
+
     auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
-    // Instruct Root Presenter to present test's View.
     auto root_presenter = realm()->Connect<fuchsia::ui::policy::Presenter>();
     root_presenter->PresentOrReplaceView(std::move(view_holder_token),
                                          /* presentation */ nullptr);
 
+    auto [view_ref_control, view_ref] = scenic::ViewRefPair::New();
+    const auto view_ref_koid = ExtractKoid(view_ref);
+
+    WatchClientRenderStatus(view_ref_koid);
+
     auto view_provider = realm()->Connect<fuchsia::ui::app::ViewProvider>();
-    view_provider->CreateView(std::move(view_token.value), /* in */ nullptr,
-                              /* out */ nullptr);
+    view_provider->CreateViewWithViewRef(std::move(view_token.value), std::move(view_ref_control),
+                                         std::move(view_ref));
   }
 
   // Inject directly into Root Presenter, using fuchsia.ui.input FIDLs.
@@ -350,6 +401,9 @@ class VirtualKeyboardBase : public gtest::RealLoopFixture {
   // Test view and child view's ViewHolder.
   std::unique_ptr<scenic::ViewHolder> view_holder_;
   std::unique_ptr<scenic::View> view_;
+
+  fuchsia::ui::observation::test::RegistrySyncPtr observer_registry_ptr_;
+  fuchsia::ui::observation::geometry::ProviderPtr geometry_provider_;
 
   fuchsia::sys::ComponentControllerPtr client_component_;
   std::shared_ptr<sys::ServiceDirectory> child_services_;
