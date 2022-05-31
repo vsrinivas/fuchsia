@@ -825,6 +825,7 @@
             protocol: "fuchsia.tracing.provider.Registry",
             from: "self",
             to: "#metrics-logger",
+            dependency: "weak_for_migration",
         },
         {
             directory: "minfs",

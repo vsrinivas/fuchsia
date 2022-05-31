@@ -120,6 +120,11 @@
             to: "#sl4f",
         },
         {
+            protocol: "fuchsia.metricslogger.test.MetricsLogger",
+            from: "#metrics-logger",
+            to: "#sl4f",
+        },
+        {
             protocol: [
                 "fuchsia.wlan.policy.AccessPointListener",
                 "fuchsia.wlan.policy.AccessPointProvider",

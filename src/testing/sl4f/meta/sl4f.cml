@@ -78,6 +78,7 @@
                 "fuchsia.lowpan.device.Lookup",
                 "fuchsia.media.ProfileProvider",
                 "fuchsia.memorypressure.Provider",
+                "fuchsia.metricslogger.test.MetricsLogger",
                 "fuchsia.net.interfaces.State",
                 "fuchsia.net.name.Lookup",
                 "fuchsia.paver.Paver",

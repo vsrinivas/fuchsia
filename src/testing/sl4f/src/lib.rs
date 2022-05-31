@@ -26,6 +26,7 @@ pub mod logging;
 pub mod modular;
 pub mod netstack;
 pub mod paver;
+pub mod power;
 pub mod proxy;
 pub mod scenic;
 pub mod server;

@@ -89,6 +89,9 @@ use crate::netstack::facade::NetstackFacade;
 // Paver related includes
 use crate::paver::facade::PaverFacade;
 
+// Power related includes
+use crate::power::facade::PowerFacade;
+
 // Proxy related includes
 use crate::proxy::facade::ProxyFacade;
 
@@ -202,6 +205,7 @@ impl Sl4f {
                 "netstack_facade" => NetstackFacade::default(),
                 "rfcomm_facade" => RfcommFacade::new()?,
                 "paver" => PaverFacade::new(),
+                "power_facade" => PowerFacade::new(),
                 "profile_server_facade" => ProfileServerFacade::new(),
                 "proxy_facade" => ProxyFacade::new(),
                 "scenic_facade" => ScenicFacade::new(),
