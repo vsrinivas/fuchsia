@@ -192,31 +192,6 @@ class MinfsFvmTest : public BaseFilesystemTest {
     EXPECT_EQ(slice_limit, get_response.value_NEW().slice_count);
     return ZX_OK;
   }
-
-  void ToggleMetrics(bool enabled) const {
-    fbl::unique_fd fd = fs().GetRootFd();
-    ASSERT_TRUE(fd);
-    fdio_cpp::FdioCaller caller(std::move(fd));
-    zx_status_t status;
-    ASSERT_EQ(fuchsia_minfs_MinfsToggleMetrics(caller.borrow_channel(), enabled, &status), ZX_OK);
-    ASSERT_EQ(status, ZX_OK);
-  }
-
-  zx::status<fuchsia_minfs_Metrics> GetMetrics() const {
-    fbl::unique_fd fd = fs().GetRootFd();
-    if (!fd)
-      return zx::error(ZX_ERR_IO);
-    fdio_cpp::FdioCaller caller(std::move(fd));
-    fuchsia_minfs_Metrics metrics;
-    zx_status_t status;
-    zx_status_t fidl_status =
-        fuchsia_minfs_MinfsGetMetrics(caller.borrow_channel(), &status, &metrics);
-    if (fidl_status != ZX_OK)
-      return zx::error(fidl_status);
-    if (status != ZX_OK)
-      return zx::error(status);
-    return zx::ok(metrics);
-  }
 };
 
 class MinfsFvmTestWith8MiBSliceSize : public MinfsFvmTest {

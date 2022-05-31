@@ -655,20 +655,6 @@ zx::status<std::string> VnodeMinfs::GetDevicePath() const {
   return fs_->bc_->device()->GetDevicePath();
 }
 
-void VnodeMinfs::GetMetrics(GetMetricsRequestView request, GetMetricsCompleter::Sync& completer) {
-  fuchsia_minfs::wire::Metrics metrics;
-  zx_status_t status = fs_->GetMetrics(&metrics);
-  completer.Reply(status,
-                  status == ZX_OK
-                      ? fidl::ObjectView<fuchsia_minfs::wire::Metrics>::FromExternal(&metrics)
-                      : nullptr);
-}
-
-void VnodeMinfs::ToggleMetrics(ToggleMetricsRequestView request,
-                               ToggleMetricsCompleter::Sync& completer) {
-  completer.Reply(ZX_OK);
-}
-
 void VnodeMinfs::GetAllocatedRegions(GetAllocatedRegionsRequestView request,
                                      GetAllocatedRegionsCompleter::Sync& completer) {
   static_assert(sizeof(fuchsia_minfs::wire::BlockRegion) == sizeof(BlockRegion));

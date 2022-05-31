@@ -28,7 +28,6 @@
 #include "src/lib/storage/vfs/cpp/managed_vfs.h"
 #include "src/lib/storage/vfs/cpp/remote_container.h"
 #include "src/lib/storage/vfs/cpp/watcher.h"
-#include "src/storage/minfs/metrics.h"
 #include "src/storage/minfs/minfs_inspect_tree.h"
 #endif
 
@@ -43,7 +42,6 @@
 
 #include "src/lib/storage/vfs/cpp/inspect/node_operations.h"
 #include "src/lib/storage/vfs/cpp/journal/inspector_journal.h"
-#include "src/lib/storage/vfs/cpp/ticker.h"
 #include "src/lib/storage/vfs/cpp/transaction/transaction_handler.h"
 #include "src/lib/storage/vfs/cpp/vfs.h"
 #include "src/lib/storage/vfs/cpp/vnode.h"
@@ -306,13 +304,6 @@ class Minfs :
   // Requires a Transaction to ensure the transaction lock is held.
   [[nodiscard]] bool AllReservationsBacked(const Transaction&) const;
 
-  // Acquire a copy of the collected metrics.
-  // TODO(fxbug.dev/98018): Remove as part of fuchsia.minfs cleanup.
-  [[nodiscard]] zx_status_t GetMetrics(fuchsia_minfs::wire::Metrics* out) const {
-    metrics_.CopyToFidl(out);
-    return ZX_OK;
-  }
-
   // Record the location, size, and number of all non-free block regions.
   fbl::Vector<BlockRegion> GetAllocatedRegions() const;
 
@@ -443,7 +434,6 @@ class Minfs :
 
 #ifdef __Fuchsia__
   fit::closure on_unmount_{};
-  MinfsMetrics metrics_ = {};
   std::unique_ptr<fs::Journal> journal_;
 
   // This event's koid is used as a unique identifier for this filesystem instance.

@@ -109,8 +109,6 @@ static_library("minfs") {
       "inspector/minfs_inspector.cc",
       "inspector/parser.cc",
       "inspector/parser.h",
-      "metrics.cc",
-      "metrics.h",
       "minfs_inspect_tree.cc",
       "minfs_target.cc",
       "mount.cc",

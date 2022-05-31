@@ -31,7 +31,6 @@
 #include <fbl/macros.h>
 #include <fbl/ref_ptr.h>
 
-#include "src/lib/storage/vfs/cpp/ticker.h"
 #include "src/lib/storage/vfs/cpp/vfs.h"
 #include "src/lib/storage/vfs/cpp/vnode.h"
 #include "src/storage/minfs/format.h"
@@ -176,9 +175,6 @@ class VnodeMinfs : public fs::Vnode,
   virtual void CancelPendingWriteback() = 0;
 
   // Minfs FIDL interface.
-  void GetMetrics(GetMetricsRequestView request, GetMetricsCompleter::Sync& completer) final;
-  void ToggleMetrics(ToggleMetricsRequestView request,
-                     ToggleMetricsCompleter::Sync& completer) final;
   void GetAllocatedRegions(GetAllocatedRegionsRequestView request,
                            GetAllocatedRegionsCompleter::Sync& completer) final;
 

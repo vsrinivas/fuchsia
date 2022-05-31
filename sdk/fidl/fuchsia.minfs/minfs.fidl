@@ -4,32 +4,6 @@
 library fuchsia.minfs;
 
 using zx;
-using fuchsia.storage.metrics;
-
-/// Describes metrics about the running Minfs instance.
-@for_deprecated_c_bindings
-type Metrics = struct {
-    fs_metrics fuchsia.storage.metrics.FsMetrics;
-
-    /// Minfs initializes entire VMOs at once.
-    /// The following fields track this information.
-    initialized_vmos uint64;
-    /// Top-level direct blocks only
-    init_dnum_count uint32;
-    /// Top-level indirect blocks only
-    init_inum_count uint32;
-    init_dinum_count uint32;
-    init_user_data_size uint64;
-    init_user_data_ticks uint64;
-
-    /// Minfs looks up Vnodes by ino internally (using "VnodeGet").
-    /// The following fields track this information.
-    vnodes_opened_cache_hit uint64;
-
-    /// The number of bytes in dirty cache for which we have not issued writes yet.
-    /// The number is filesystem block aligned.
-    dirty_bytes uint64;
-};
 
 /// Describes a contiguous run of allocated blocks.
 @for_deprecated_c_bindings
@@ -40,19 +14,6 @@ type BlockRegion = struct {
 
 @for_deprecated_c_bindings
 protocol Minfs {
-    /// Acquires metrics about the currently running filesystem.
-    GetMetrics() -> (struct {
-        status zx.status;
-        metrics box<Metrics>;
-    });
-
-    /// Toggle the metrics collection system on or off.
-    ToggleMetrics(struct {
-        enable bool;
-    }) -> (struct {
-        status zx.status;
-    });
-
     /// Retrieve information about allocated regions on the filesystem.
     GetAllocatedRegions() -> (resource struct {
         status zx.status;
