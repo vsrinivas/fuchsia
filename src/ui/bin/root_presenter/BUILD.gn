@@ -31,6 +31,16 @@ fuchsia_component("component_v1_for_test") {
   deps = [ ":bin" ]
 }
 
+group("configs") {
+  deps = [ ":root_presenter_config" ]
+}
+
+config_data("root_presenter_config") {
+  for_pkg = "sysmgr"
+  outputs = [ "root_presenter.config" ]
+  sources = [ "services.config" ]
+}
+
 group("tests") {
   testonly = true
 
