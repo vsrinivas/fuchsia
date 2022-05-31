@@ -986,13 +986,15 @@ zx_status_t FragmentProxy::SpiExchange(const uint8_t* txdata_list, size_t txdata
     req->length = rxdata_count;
   }
 
-  size_t req_length = sizeof(SpiProxyRequest) + txdata_count;
-  if (req_length >= kProxyMaxTransferSize) {
+  size_t req_length;
+  if (__builtin_add_overflow(sizeof(SpiProxyRequest), txdata_count, &req_length) ||
+      req_length >= kProxyMaxTransferSize) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
 
-  const size_t resp_length = sizeof(SpiProxyResponse) + rxdata_count;
-  if (req_length >= kProxyMaxTransferSize) {
+  size_t resp_length;
+  if (__builtin_add_overflow(sizeof(SpiProxyResponse), rxdata_count, &resp_length) ||
+      resp_length >= kProxyMaxTransferSize) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
 
