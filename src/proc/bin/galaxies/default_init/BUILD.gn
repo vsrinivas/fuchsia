@@ -1,0 +1,21 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+config("config") {
+  cflags = [ "-fPIC" ]
+  ldflags = [ "-nolibc" ]
+}
+
+executable("default_init") {
+  sources = [ "init.cc" ]
+
+  disable_syslog_backend = true
+  exclude_toolchain_tags = [ "instrumented" ]
+
+  configs += [
+    "//build/config/fuchsia:no_cpp_standard_library",
+    "//build/config/fuchsia:static-pie-config",
+    ":config",
+  ]
+}

@@ -52,6 +52,7 @@ impl Galaxy {
 /// a startup file to be created.
 pub async fn create_galaxy() -> Result<Galaxy, Error> {
     const COMPONENT_PKG_PATH: &'static str = "/pkg";
+    const DEFAULT_INIT: &'static str = "/data/init";
 
     let (server, client) = zx::Channel::create().context("failed to create channel pair")?;
     fdio::open(
@@ -92,20 +93,19 @@ pub async fn create_galaxy() -> Result<Galaxy, Error> {
     // startup_file_path to be created. The task struct is still used
     // to initialize the system up until this point, regardless of whether
     // or not there is an actual init to be run.
-    if CONFIG.init.is_empty() {
-        // A task must have an exit status, so set it here to simulate the init task having run.
-        init_task.write().exit_status = Some(ExitStatus::Exit(0));
-    } else {
-        let argv: Vec<_> = CONFIG.init.iter().map(to_cstr).collect();
-        init_task.exec(argv[0].clone(), argv.clone(), vec![])?;
-        execute_task(init_task, |result| {
-            tracing::info!("Finished running init process: {:?}", result);
-        });
-        if let Some(startup_file_path) = startup_file_path {
-            let init_wait_task = create_init_task(&kernel, &fs_context)?;
-            wait_for_init_file(&startup_file_path, &init_wait_task).await?;
-            init_wait_task.write().exit_status = Some(ExitStatus::Exit(0));
-        }
+    let argv =
+        if CONFIG.init.is_empty() { vec![DEFAULT_INIT.to_string()] } else { CONFIG.init.clone() }
+            .iter()
+            .map(to_cstr)
+            .collect::<Vec<_>>();
+    init_task.exec(argv[0].clone(), argv.clone(), vec![])?;
+    execute_task(init_task, |result| {
+        tracing::info!("Finished running init process: {:?}", result);
+    });
+    if let Some(startup_file_path) = startup_file_path {
+        let init_wait_task = create_init_task(&kernel, &fs_context)?;
+        wait_for_init_file(&startup_file_path, &init_wait_task).await?;
+        init_wait_task.write().exit_status = Some(ExitStatus::Exit(0));
     };
 
     Ok(Galaxy { kernel, root_fs })

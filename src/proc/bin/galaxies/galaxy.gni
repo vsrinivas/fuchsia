@@ -24,6 +24,7 @@ template("starnix_galaxy_package") {
   manifest_target = "${target_name}_manifest_compile"
   data_tmp_target = "${target_name}_data_tmp"
   data_pkg_target = "${target_name}_data_pkg"
+  data_init_target = "${target_name}_data_init"
   if (has_system_image) {
     system_image_target = "${target_name}_system_image"
   }
@@ -62,6 +63,16 @@ template("starnix_galaxy_package") {
     outputs = [ "data/pkg/.placeholder" ]
   }
 
+  # The default init executable. Used if the configuration has no init.
+  resource(data_init_target) {
+    init_label =
+        "//src/proc/bin/galaxies/default_init(//build/toolchain:linux_x64)"
+    out_dir = get_label_info(init_label, "root_out_dir")
+    sources = [ "${out_dir}/default_init" ]
+    outputs = [ "data/init" ]
+    deps = [ init_label ]
+  }
+
   # A group containing all the dependency of the galaxy package, so that a
   # galaxy can be injected into another package. It is used in particular for
   # test to ensure hermeticity.
@@ -69,6 +80,7 @@ template("starnix_galaxy_package") {
     deps = [
       ":${component_target}",
       ":${config_target}",
+      ":${data_init_target}",
       ":${data_pkg_target}",
       ":${data_tmp_target}",
     ]
