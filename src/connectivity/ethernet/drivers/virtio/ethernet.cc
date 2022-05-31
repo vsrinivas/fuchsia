@@ -226,20 +226,12 @@ zx_status_t EthernetDevice::Init() {
   // Start the interrupt thread and set the driver OK status
   StartIrqThread();
 
-  // TODO(fxbug.dev/93333): Remove this once DFv2 is stabilised.
-  bool is_dfv2 = device_is_dfv2(zxdev_);
-
-  zx_status_t status = ZX_OK;
   // Initialize the zx_device and publish us
-  if (is_dfv2) {
-    zx_device_str_prop_t props[] = {{
-        .key = "fuchsia.ethernet.NETDEVICE_MIGRATION",
-        .property_value = str_prop_bool_val(true),
-    }};
-    status = DdkAdd(ddk::DeviceAddArgs("virtio-net").set_str_props(props));
-  } else {
-    status = DdkAdd("virtio-net");
-  }
+  const zx_device_str_prop_t props[] = {{
+      .key = "fuchsia.ethernet.NETDEVICE_MIGRATION",
+      .property_value = str_prop_bool_val(true),
+  }};
+  zx_status_t status = DdkAdd(ddk::DeviceAddArgs("virtio-net").set_str_props(props));
   if (status != ZX_OK) {
     zxlogf(ERROR, "failed to add device: %s", zx_status_get_string(rc));
     return status;
