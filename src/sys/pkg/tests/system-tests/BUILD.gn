@@ -193,10 +193,10 @@ if (is_linux || is_mac) {
   }
 
   system_test_upgrade_suite("workstation-release-upgrade-omaha") {
-    # FIXME(fxbug.dev/99966): Temporarily pin the build to bootstrap the builder.
+    # FIXME(fxbug.dev/101410): Temporarily pin the build to bootstrap the builder.
     #downgrade_release_builder =
     #    "fuchsia/global.ci/workstation.x64-release-e2e-isolated-omaha"
-    downgrade_release_build_id = "8813081939013250065"
+    downgrade_release_build_id = "8812712520724452209"
     installer = "omaha"
     environments = [
       {
