@@ -165,7 +165,7 @@ impl<C: DadContext> DadHandler for C {
                     device_id,
                     dst_ip,
                     NeighborSolicitation::new(addr.get()),
-                    OptionSequenceBuilder::<_>::new(
+                    OptionSequenceBuilder::new(
                         src_ll
                             .as_ref()
                             .map(AsRef::as_ref)

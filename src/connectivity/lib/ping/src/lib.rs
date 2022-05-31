@@ -302,7 +302,7 @@ where
     type Item = Result<PingData<I>, PingError>;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        let ping_stream = Pin::<_>::into_inner(self);
+        let ping_stream = Pin::into_inner(self);
         let buf = &mut ping_stream.recv_buf[..];
         let socket = &ping_stream.socket;
         Poll::Ready(Some(

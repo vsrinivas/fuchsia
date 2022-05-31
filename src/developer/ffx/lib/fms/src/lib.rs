@@ -45,7 +45,7 @@ impl Display for Entries {
 
 impl Entries {
     pub fn new() -> Self {
-        Self { data: HashMap::<_, _>::new() }
+        Self { data: HashMap::new() }
     }
 
     /// Initialize the FMS database from a list of file paths.

@@ -146,7 +146,7 @@ fn do_router_solicitation<SC: RsContext, C>(
     let _: Result<(), _> = sync_ctx.send_rs_packet(
         device_id,
         RouterSolicitation::default(),
-        OptionSequenceBuilder::<_>::new(
+        OptionSequenceBuilder::new(
             src_ll.as_ref().map(AsRef::as_ref).map(NdpOptionBuilder::SourceLinkLayerAddress).iter(),
         )
         .into_serializer(),

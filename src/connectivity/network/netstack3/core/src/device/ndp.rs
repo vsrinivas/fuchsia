@@ -847,7 +847,7 @@ where
         .send_ipv6_frame(
             device_id,
             dst_ip,
-            ndp::OptionSequenceBuilder::<_>::new(options.iter())
+            ndp::OptionSequenceBuilder::new(options.iter())
                 .into_serializer()
                 .encapsulate(IcmpPacketBuilder::<Ipv6, B, M>::new(
                     src_ip,

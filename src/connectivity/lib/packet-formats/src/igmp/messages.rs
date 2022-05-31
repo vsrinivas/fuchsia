@@ -348,7 +348,7 @@ impl<B> MessageType<B> for IgmpMembershipReportV3 {
     where
         B: ByteSlice,
     {
-        LimitedRecords::<_, _>::parse_with_context(
+        LimitedRecords::parse_with_context(
             bytes.into_rest(),
             header.number_of_group_records().into(),
         )

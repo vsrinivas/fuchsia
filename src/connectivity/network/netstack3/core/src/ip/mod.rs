@@ -680,7 +680,7 @@ impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext> BufferTranspor
                 )
             }
             Ipv4Proto::Igmp => {
-                IgmpPacketHandler::<_, _>::receive_igmp_packet(self, device, src_ip, dst_ip, body);
+                IgmpPacketHandler::receive_igmp_packet(self, device, src_ip, dst_ip, body);
                 Ok(())
             }
             Ipv4Proto::Proto(IpProto::Udp) => {
@@ -2919,7 +2919,7 @@ mod tests {
         process_ip_fragment::<I, _, _>(&mut ctx, device, fragment_id, 1, 3);
 
         // Trigger the timer (simulate a timer for the fragmented packet)
-        let key = FragmentCacheKey::<_>::new(
+        let key = FragmentCacheKey::new(
             I::DUMMY_CONFIG.remote_ip.get(),
             I::DUMMY_CONFIG.local_ip.get(),
             u32::from(fragment_id),

@@ -67,7 +67,7 @@ pub fn assignment_state_stream(
                         futures::future::ok(Some((state, (address_state_provider, event_fut))))
                             .left_future()
                     }
-                    Err(e) if e.is_closed() => event_fut.map(Result::<_, _>::Err).right_future(),
+                    Err(e) if e.is_closed() => event_fut.map(Result::Err).right_future(),
                     Err(e) => {
                         futures::future::err(AddressStateProviderError::Fidl(e)).left_future()
                     }
