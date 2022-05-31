@@ -9,6 +9,7 @@
 
 #include <fbl/ref_counted.h>
 #include <kernel/mutex.h>
+#include <object/futex_context.h>
 #include <object/handle_table.h>
 
 // This class is logically private to ProcessDispatcher.
@@ -47,11 +48,15 @@ class ShareableProcessState : public fbl::RefCounted<ShareableProcessState> {
   HandleTable& handle_table() { return handle_table_; }
   const HandleTable& handle_table() const { return handle_table_; }
 
+  FutexContext& futex_context() { return futex_context_; }
+  const FutexContext& futex_context() const { return futex_context_; }
+
  private:
   // The number of processes currently sharing this state.
   RelaxedAtomic<uint32_t> process_count_ = 0;
 
   HandleTable handle_table_;
+  FutexContext futex_context_;
 };
 
 #endif  // ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_SHAREABLE_PROCESS_STATE_H_

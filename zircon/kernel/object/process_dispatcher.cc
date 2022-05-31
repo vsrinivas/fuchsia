@@ -22,7 +22,6 @@
 #include <fbl/ref_ptr.h>
 #include <kernel/thread.h>
 #include <object/diagnostics.h>
-#include <object/futex_context.h>
 #include <object/handle.h>
 #include <object/job_dispatcher.h>
 #include <object/thread_dispatcher.h>

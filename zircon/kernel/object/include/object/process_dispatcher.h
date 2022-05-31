@@ -94,7 +94,7 @@ class ProcessDispatcher final
   // Accessors.
   HandleTable& handle_table() { return shared_state_->handle_table(); }
   const HandleTable& handle_table() const { return shared_state_->handle_table(); }
-  FutexContext& futex_context() { return futex_context_; }
+  FutexContext& futex_context() { return shared_state_->futex_context(); }
   State state() const;
   fbl::RefPtr<VmAspace> aspace() { return aspace_; }
   fbl::RefPtr<JobDispatcher> job();
@@ -248,8 +248,6 @@ class ProcessDispatcher final
 
   // our address space
   fbl::RefPtr<VmAspace> aspace_;
-
-  FutexContext futex_context_;
 
   // our state
   State state_ TA_GUARDED(get_lock()) = State::INITIAL;
