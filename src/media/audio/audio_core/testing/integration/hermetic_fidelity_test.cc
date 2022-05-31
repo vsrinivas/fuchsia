@@ -92,7 +92,7 @@ constexpr int64_t kFreqTestBufSize = 65536;
 // also sets the digits of precision for 'expected' values, when stored or displayed.
 constexpr double kFidelityDbTolerance = 0.001;
 // If kDisplayAnalysisDataOnFailureDbTolerance, display freq bins with magnitude >= this val.
-constexpr double kMinAnalysisMagnitudeToDisplay = 4e-6;
+constexpr double kMinAnalysisMagnitudeToDisplay = 1e-4;
 
 // For each test_name|channel, we maintain two results arrays: Frequency Response and
 // Signal-to-Noise-and-Distortion (SiNAD). A map of array results is saved as a function-local
@@ -256,19 +256,9 @@ AudioBuffer<OutputFormat> HermeticFidelityTest::GetRendererOutput(
     TypedFormat<InputFormat> input_format, int64_t input_buffer_frames, RenderPath path,
     AudioBuffer<InputFormat> input, VirtualOutput<OutputFormat>* device, ClockMode clock_mode,
     std::optional<float> gain_db) {
-  fuchsia::media::AudioRenderUsage usage = fuchsia::media::AudioRenderUsage::MEDIA;
+  RendererShimImpl* renderer;
 
-  if (path == RenderPath::Communications) {
-    usage = fuchsia::media::AudioRenderUsage::COMMUNICATION;
-  }
-
-  if (path == RenderPath::Ultrasound) {
-    auto renderer = CreateUltrasoundRenderer(input_format, input_buffer_frames, true);
-    auto packets = renderer->AppendPackets({&input});
-
-    renderer->PlaySynchronized(this, device, 0);
-    renderer->WaitForPackets(this, packets);
-  } else {
+  if (path != RenderPath::Ultrasound) {
     std::optional<zx::clock> clock;
     zx::clock::update_args args;
     zx::clock offset_clock;
@@ -299,18 +289,34 @@ AudioBuffer<OutputFormat> HermeticFidelityTest::GetRendererOutput(
         EXPECT_EQ(clock->update(args), ZX_OK) << "Could not rate-adjust a custom clock";
         break;
     }
-    auto renderer = CreateAudioRenderer(input_format, input_buffer_frames, usage, std::move(clock));
-    if (gain_db.has_value()) {
-      renderer->SetGain(*gain_db);
+
+    fuchsia::media::AudioRenderUsage usage = fuchsia::media::AudioRenderUsage::MEDIA;
+    if (path == RenderPath::Communications) {
+      usage = fuchsia::media::AudioRenderUsage::COMMUNICATION;
     }
-
-    auto packets = renderer->AppendPackets({&input});
-
-    renderer->PlaySynchronized(this, device, 0);
-    renderer->WaitForPackets(this, packets);
+    auto audio_renderer =
+        CreateAudioRenderer(input_format, input_buffer_frames, usage, std::move(clock));
+    if (gain_db.has_value()) {
+      audio_renderer->SetGain(*gain_db);
+    }
+    renderer = audio_renderer;
+  } else {
+    renderer = CreateUltrasoundRenderer(input_format, input_buffer_frames, true);
   }
+  auto packets = renderer->AppendPackets<InputFormat>({&input});
 
-  return device->SnapshotRingBuffer();
+  renderer->PlaySynchronized(this, device, 0);
+  renderer->WaitForPackets(this, packets);
+
+  auto buffer = device->SnapshotRingBuffer();
+
+  // Free the renderer now, instead of accumulating one for every test frequency.
+  if (path == RenderPath::Ultrasound) {
+    Unbind(static_cast<UltrasoundRendererShim<InputFormat>*>(renderer));
+  } else {
+    Unbind(static_cast<AudioRendererShim<InputFormat>*>(renderer));
+  }
+  return buffer;
 }
 
 // Measuring system response requires providing enough input for a full output response.
@@ -330,7 +336,7 @@ AudioBuffer<OutputFormat> HermeticFidelityTest::GetRendererOutput(
 // frames I and F:                             I                          F                       .
 //                                                                                                .
 // A system may produce                        /\_^=~_~_--------------^-_~/\_                     .
-// this output signal:            -------_~_^_/                              \/~_=_~-/\~_-_-----  .
+// this output signal:            -------_~w^_/                              \/~_=w~-/\~v-_-----  .
 //                                                      ^            ^                            .
 // "Ramp-in" (pre I):                    RRRRRR         .            .                            .
 // "initial Stabilization" (at/post I):        SSSSSSSSS.            .                            .

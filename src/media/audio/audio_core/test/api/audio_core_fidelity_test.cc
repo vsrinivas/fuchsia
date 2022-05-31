@@ -26,12 +26,12 @@ namespace media::audio::test {
 // more than just SincSampler filter width.
 //
 // At the beginning of the output signal, these values represent:
-//    pos_filter_width --  "read-ahead". how early the signal starts to ramp in.
-//    neg_filter_width --  "settle time" required after signal-start, before analysis.
+//    ramp_in_width --  "read-ahead". how early the signal starts to ramp in.
+//    stabilization_width --  "settle time" required after signal-start, before analysis.
 //
 // At the end of the output signal, these values represent:
-//    pos_filter_width --  any "pre-ring-out destabilization" occurring BEFORE end of signal.
-//    neg_filter_width --  "ring-out" or decay time, after signal end (not relevant for this class)
+//    destabilization_width --  any "unsettling" occurring BEFORE end of signal.
+//    decay_width --  "ring-out" or decay time, after end of signal (not relevant for this class).
 
 class AudioCoreFidelityTest : public HermeticFidelityTest {
  protected:
@@ -44,9 +44,11 @@ class AudioCoreFidelityTest : public HermeticFidelityTest {
   static HermeticPipelineTest::PipelineConstants pipeline_constants(int32_t source_rate,
                                                                     int32_t num_mix_stages = 1) {
     return {
-        .pos_filter_width =
+        .ramp_in_width =
             LeadTimeFramesFromSourceRate(source_rate) + kFilterWidthFrames * num_mix_stages,
-        .neg_filter_width = kFilterWidthFrames * num_mix_stages,
+        .stabilization_width = kFilterWidthFrames * num_mix_stages,
+        .destabilization_width = kFilterWidthFrames * num_mix_stages,
+        .decay_width = kFilterWidthFrames * num_mix_stages,
     };
   }
 

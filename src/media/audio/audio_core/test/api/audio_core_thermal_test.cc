@@ -151,15 +151,15 @@ class AudioCoreThermalTest : public HermeticPipelineTest {
 };
 
 // At thermal state 0, we expect our amplitude to be doubled.
-TEST_F(AudioCoreThermalTest, SimplerThermal0) { RunTestCase(0, 2.0f); }
+TEST_F(AudioCoreThermalTest, Thermal0) { RunTestCase(0, 2.0f); }
 
 // At thermal state 1, no effects are enabled. We expect normal magnitude.
-TEST_F(AudioCoreThermalTest, SimplerThermal1) { RunTestCase(1, 1.0f); }
+TEST_F(AudioCoreThermalTest, Thermal1) { RunTestCase(1, 1.0f); }
 
 // At thermal state 2, "inverter" is enabled. We expect inverted magnitude.
-TEST_F(AudioCoreThermalTest, SimplerThermal2) { RunTestCase(2, -1.0f); }
+TEST_F(AudioCoreThermalTest, Thermal2) { RunTestCase(2, -1.0f); }
 
 // At thermal state 3, "doubler" and "inverter" are enabled. We expect doubled inverted magnitude.
-TEST_F(AudioCoreThermalTest, SimplerThermal3) { RunTestCase(3, -2.0f); }
+TEST_F(AudioCoreThermalTest, Thermal3) { RunTestCase(3, -2.0f); }
 
 }  // namespace media::audio::test
