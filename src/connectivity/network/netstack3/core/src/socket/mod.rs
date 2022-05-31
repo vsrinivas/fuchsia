@@ -184,8 +184,9 @@ pub(crate) trait SocketMapAddrStateSpec<Addr, State, Id, S: SocketMapSpec + ?Siz
     /// with the provided state.
     ///
     /// If the new state is incompatible with the existing socket(s),
-    /// implementations of this function should return `Err(())`.  If `Ok(dest)`
-    /// is returned, the new socket ID will be appended to `dest`.
+    /// implementations of this function should return
+    /// `Err(IncompatibleError)`. If `Ok(dest)` is returned, the new socket ID
+    /// will be appended to `dest`.
     fn try_get_dest<'a, 'b>(
         &'b mut self,
         new_state: &'a State,
