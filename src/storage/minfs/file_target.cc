@@ -103,7 +103,7 @@ zx::status<> File::MarkRequiredBlocksPending(size_t offset, size_t length,
                                                   bool is_pending) -> zx::status<> {
     if (!is_pending) {
       allocation_state_.SetPending(block, allocated);
-      Vfs()->AddDirtyBytes(Vfs()->BlockSize());
+      Vfs()->InspectTree()->AddDirtyBytes(Vfs()->BlockSize());
     }
     return zx::ok();
   };
@@ -124,7 +124,7 @@ void File::DropCachedWrites() {
       return zx::ok();
     }
     allocation_state_.ClearPending(block, allocated);
-    Vfs()->SubtractDirtyBytes(Vfs()->BlockSize());
+    Vfs()->InspectTree()->SubtractDirtyBytes(Vfs()->BlockSize());
     block_count++;
     return zx::ok();
   };

@@ -89,7 +89,7 @@ zx::status<std::unique_ptr<fs::ManagedVfs>> MountAndServe(
                                                 inspect::TreeServerSendPreference::Type::DeepCopy)};
 
   auto inspect_tree = fbl::MakeRefCounted<fs::Service>(
-      [connector = inspect::MakeTreeHandler(&fs->Inspector(), dispatcher, settings)](
+      [connector = inspect::MakeTreeHandler(&fs->InspectTree()->Inspector(), dispatcher, settings)](
           zx::channel chan) mutable {
         connector(fidl::InterfaceRequest<fuchsia::inspect::Tree>(std::move(chan)));
         return ZX_OK;

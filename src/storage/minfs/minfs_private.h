@@ -299,12 +299,6 @@ class Minfs :
   // functions is preferred.
   [[nodiscard]] zx::status<> ReadDat(blk_t bno, void* data);
 
-  // Adds |dirty_bytes| number of bytes to metrics.
-  void AddDirtyBytes(uint64_t dirty_bytes);
-
-  // Subtracts |dirty_bytes| number of bytes to from dirty bytes metrics.
-  void SubtractDirtyBytes(uint64_t dirty_bytes);
-
 #ifdef __Fuchsia__
 
   // Return true if the all outstanding block reservations are backed by persistent storage
@@ -313,6 +307,7 @@ class Minfs :
   [[nodiscard]] bool AllReservationsBacked(const Transaction&) const;
 
   // Acquire a copy of the collected metrics.
+  // TODO(fxbug.dev/98018): Remove as part of fuchsia.minfs cleanup.
   [[nodiscard]] zx_status_t GetMetrics(fuchsia_minfs::wire::Metrics* out) const {
     metrics_.CopyToFidl(out);
     return ZX_OK;
@@ -321,8 +316,8 @@ class Minfs :
   // Record the location, size, and number of all non-free block regions.
   fbl::Vector<BlockRegion> GetAllocatedRegions() const;
 
-  // Get reference to the Inspector that Minfs is using.
-  const inspect::Inspector& Inspector() { return inspect_tree_.Inspector(); }
+  // Mutable pointer to the MinfsInspectTree this object uses for metrics. Guaranteed non-nullptr.
+  MinfsInspectTree* InspectTree() { return &inspect_tree_; }
 
   fs_inspect::NodeOperations* GetNodeOperations() { return inspect_tree_.GetNodeOperations(); }
 #else

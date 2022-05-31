@@ -7,6 +7,8 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
 
+#include <safemath/checked_math.h>
+
 namespace minfs {
 
 fs_inspect::UsageData CalculateSpaceUsage(const Superblock& superblock, uint64_t reserved_blocks) {
@@ -71,6 +73,16 @@ void MinfsInspectTree::OnRecoveredSpace() {
   }
 }
 
+void MinfsInspectTree::AddDirtyBytes(uint64_t bytes) {
+  std::lock_guard guard(volume_mutex_);
+  dirty_bytes_ = safemath::CheckAdd(dirty_bytes_, bytes).ValueOrDie();
+}
+
+void MinfsInspectTree::SubtractDirtyBytes(uint64_t bytes) {
+  std::lock_guard guard(volume_mutex_);
+  dirty_bytes_ = safemath::CheckSub(dirty_bytes_, bytes).ValueOrDie();
+}
+
 fs_inspect::VolumeData MinfsInspectTree::GetVolumeData() {
   zx::status<fs_inspect::VolumeData::SizeInfo> size_info = zx::error(ZX_ERR_BAD_HANDLE);
   {
@@ -92,11 +104,14 @@ inspect::LazyNodeCallbackFn MinfsInspectTree::CreateDetailNode() const {
   return [this]() {
     inspect::Inspector insp;
     uint64_t recovered_space_events;
+    uint64_t dirty_bytes;
     {
       std::lock_guard guard(volume_mutex_);
       recovered_space_events = recovered_space_events_;
+      dirty_bytes = dirty_bytes_;
     }
     insp.GetRoot().CreateUint("recovered_space_events", recovered_space_events, &insp);
+    insp.GetRoot().CreateUint("dirty_bytes", dirty_bytes, &insp);
     return fpromise::make_ok_promise(insp);
   };
 }

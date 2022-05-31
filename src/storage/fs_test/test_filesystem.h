@@ -6,6 +6,7 @@
 #define SRC_STORAGE_FS_TEST_TEST_FILESYSTEM_H_
 
 #include <fidl/fuchsia.io/cpp/wire.h>
+#include <lib/inspect/cpp/hierarchy.h>
 
 #include "src/storage/fs_test/fs_test.h"
 
@@ -65,6 +66,10 @@ class TestFilesystem {
   void ResetOutgoingDirectory() { filesystem_->ResetOutgoingDirectory(); }
 
   zx::status<fuchsia_io::wire::FilesystemInfo> GetFsInfo() const;
+
+  // Obtain a snapshot from the underlying filesystem's inspect tree. Will cause an assertion if
+  // the Inspect service could not be connected to or does not exist.
+  inspect::Hierarchy TakeSnapshot() const;
 
  private:
   // Creates a mount point for the instance, mounts it and returns a TestFilesystem.

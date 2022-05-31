@@ -3,12 +3,8 @@
 // found in the LICENSE file.
 
 #include <fuchsia/inspect/cpp/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
-#include <lib/async/cpp/executor.h>
 #include <lib/fdio/directory.h>
 #include <lib/inspect/cpp/hierarchy.h>
-#include <lib/inspect/service/cpp/reader.h>
 #include <lib/inspect/testing/cpp/inspect.h>
 
 #include <algorithm>
@@ -154,46 +150,6 @@ fs_inspect::VolumeData GetVolumeProperties(const inspect::NodeValue& volume_node
   };
 }
 
-// Obtain a snapshot from the underlying filesystem's inspect tree.
-inspect::Hierarchy TakeSnapshot(zx_handle_t export_root) {
-  async::Loop loop = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  loop.StartThread("inspect-snapshot-thread");
-  async::Executor executor(loop.dispatcher());
-
-  fuchsia::inspect::TreePtr tree;
-  async_dispatcher_t* dispatcher = executor.dispatcher();
-  zx_status_t status = fdio_service_connect_at(export_root, "diagnostics/fuchsia.inspect.Tree",
-                                               tree.NewRequest(dispatcher).TakeChannel().release());
-  ZX_ASSERT_MSG(status == ZX_OK, "Failed to connect to inspect service: %s",
-                zx_status_get_string(status));
-
-  std::condition_variable cv;
-  std::mutex m;
-  bool done = false;
-  fpromise::result<inspect::Hierarchy> hierarchy_or_error;
-
-  auto promise = inspect::ReadFromTree(std::move(tree))
-                     .then([&](fpromise::result<inspect::Hierarchy>& result) {
-                       {
-                         std::unique_lock<std::mutex> lock(m);
-                         hierarchy_or_error = std::move(result);
-                         done = true;
-                       }
-                       cv.notify_all();
-                     });
-
-  executor.schedule_task(std::move(promise));
-
-  std::unique_lock<std::mutex> lock(m);
-  cv.wait(lock, [&done]() { return done; });
-
-  loop.Quit();
-  loop.JoinThreads();
-
-  ZX_ASSERT_MSG(hierarchy_or_error.is_ok(), "Failed to obtain inspect tree snapshot!");
-  return hierarchy_or_error.take_value();
-}
-
 class InspectTest : public FilesystemTest {
  protected:
   // Initializes the test case by taking an initial snapshot of the inspect tree, and validates
@@ -209,7 +165,7 @@ class InspectTest : public FilesystemTest {
   // All calls to this function *must* be wrapped with ASSERT_NO_FATAL_FAILURE. Failure to do so
   // can result in some test fixture methods segfaulting.
   void UpdateAndValidateSnapshot() {
-    snapshot_ = TakeSnapshot(fs().GetOutgoingDirectory().channel()->get());
+    snapshot_ = fs().TakeSnapshot();
     // Validate the inspect hierarchy. Ensures all nodes/properties exist and are the correct types.
     ASSERT_NO_FATAL_FAILURE(ValidateHierarchy(Root()));
   }

@@ -28,33 +28,40 @@
 namespace minfs {
 namespace {
 
-using DirtyCacheTest = fs_test::FilesystemTest;
+const std::vector<std::string> kDetailNodePath = {"minfs", "fs.detail"};
+const std::string kDirtyBytesPropertyName = "dirty_bytes";
 
-void EnableStats(DirtyCacheTest* fs) {
-  fbl::unique_fd fd = fs->fs().GetRootFd();
-  ASSERT_TRUE(fd);
-  fdio_cpp::FdioCaller caller(std::move(fd));
-  auto res = fidl::WireCall(caller.borrow_as<fuchsia_minfs::Minfs>())->ToggleMetrics(true);
-  EXPECT_EQ(res.status(), ZX_OK);
-  EXPECT_EQ(res.value_NEW().status, ZX_OK);
-}
+class DirtyCacheTest : public fs_test::FilesystemTest {
+ public:
+  uint64_t GetDirtyBytes() {
+    inspect::Hierarchy snapshot = fs().TakeSnapshot();
+    const inspect::Hierarchy* detail_node = snapshot.GetByPath(kDetailNodePath);
+    ZX_ASSERT_MSG(detail_node != nullptr, "Failed to find expected node in Inspect hierarchy!");
+    const auto* dirty_bytes_property =
+        detail_node->node().get_property<inspect::UintPropertyValue>(kDirtyBytesPropertyName);
+    ZX_ASSERT_MSG(dirty_bytes_property != nullptr,
+                  "Failed to find dirty bytes property in specified node!");
+    return dirty_bytes_property->value();
+  }
+};
 
 class BufferedFile {
  public:
-  BufferedFile(DirtyCacheTest* fs, std::string path, size_t max_size, size_t bytes_to_write,
+  BufferedFile(DirtyCacheTest* fs, const std::string& path, size_t max_size, size_t bytes_to_write,
                size_t bytes_per_write, bool remount_verify = true) {
     remount_verify_ = remount_verify;
-    EXPECT_NE(fs, nullptr);
-    EXPECT_NE(path.length(), 0ul);
-    EXPECT_LE(bytes_to_write, max_size);
-    EXPECT_EQ(bytes_per_write > 0ul, bytes_to_write > 0ul);
-    EXPECT_GE(bytes_to_write, bytes_per_write);
+    ZX_ASSERT(fs != nullptr);
+    ZX_ASSERT(!path.empty());
+    ZX_ASSERT(bytes_to_write <= max_size);
+    if (bytes_per_write > 0 && bytes_to_write > 0) {
+      ZX_ASSERT(bytes_to_write >= bytes_per_write);
+    }
 
     fs_ = fs;
     bytes_per_write_ = bytes_per_write;
     file_path_ = path;
     fd_.reset(open(file_path_.c_str(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR));
-    EXPECT_TRUE(fd_);
+    ZX_ASSERT(fd_.is_valid());
     buffer_.resize(max_size, 0);
 
     // Fill buffer with "random" data.
@@ -106,7 +113,6 @@ class BufferedFile {
   void RemountAndReopen() {
     ASSERT_TRUE(fs_->fs().Unmount().is_ok());
     ASSERT_TRUE(fs_->fs().Mount().is_ok());
-    EnableStats(fs_);
     Reopen();
   }
 
@@ -145,23 +151,9 @@ class BufferedFile {
   bool remount_verify_ = true;
 };
 
-void CheckDirtyStats(std::string mount_path, uint64_t dirty_bytes) {
-  fbl::unique_fd fd(open(mount_path.c_str(), O_RDONLY | O_DIRECTORY));
-  ASSERT_TRUE(fd);
-
-  fdio_cpp::FdioCaller caller(std::move(fd));
-  auto metrics_or = fidl::WireCall<fuchsia_minfs::Minfs>(caller.channel())->GetMetrics();
-  ASSERT_TRUE(metrics_or.ok());
-  ASSERT_EQ(metrics_or.value_NEW().status, ZX_OK);
-  ASSERT_NE(metrics_or.value_NEW().metrics, nullptr);
-  auto metrics = *metrics_or.value_NEW().metrics;
-  ASSERT_EQ(metrics.dirty_bytes, dirty_bytes);
-}
-
-BufferedFile EnableStatsAndCreateFile(DirtyCacheTest* fs, size_t file_max_size, int bytes_to_write,
-                                      int bytes_per_write, std::string file_name = "foo",
-                                      bool remount_verify = true) {
-  EnableStats(fs);
+BufferedFile CreateTestFile(DirtyCacheTest* fs, size_t file_max_size, int bytes_to_write,
+                            int bytes_per_write, const std::string& file_name = "foo",
+                            bool remount_verify = true) {
   return BufferedFile(fs, fs->fs().mount_path() + file_name, file_max_size, bytes_to_write,
                       bytes_per_write, remount_verify);
 }
@@ -171,26 +163,26 @@ constexpr size_t kBytesToWrite = 2 * kBytesPerWrite;
 constexpr size_t kFileMaxSize = kBytesToWrite;
 
 TEST_P(DirtyCacheTest, CleanlyMountedFs) {
-  { auto file = EnableStatsAndCreateFile(this, kFileMaxSize, 0, 0); }
-  CheckDirtyStats(fs().mount_path(), 0);
+  { auto file = CreateTestFile(this, kFileMaxSize, 0, 0); }
+  ASSERT_EQ(GetDirtyBytes(), 0u);
 }
 
 TEST_P(DirtyCacheTest, DirtyBytesAfterWrite) {
-  auto file = EnableStatsAndCreateFile(this, kFileMaxSize, kBytesToWrite, kBytesPerWrite);
-  CheckDirtyStats(fs().mount_path(), kFileMaxSize);
+  auto file = CreateTestFile(this, kFileMaxSize, kBytesToWrite, kBytesPerWrite);
+  ASSERT_EQ(GetDirtyBytes(), kFileMaxSize);
 }
 
 TEST_P(DirtyCacheTest, NoDirtyByteAfterClose) {
   {
-    auto file = EnableStatsAndCreateFile(this, kFileMaxSize, kBytesToWrite, kBytesPerWrite);
-    CheckDirtyStats(fs().mount_path(), kFileMaxSize);
+    auto file = CreateTestFile(this, kFileMaxSize, kBytesToWrite, kBytesPerWrite);
+    ASSERT_EQ(GetDirtyBytes(), kFileMaxSize);
   }
-  CheckDirtyStats(fs().mount_path(), 0);
+  ASSERT_EQ(GetDirtyBytes(), 0u);
 }
 
 TEST_P(DirtyCacheTest, UnmountFlushedPendingWrites) {
-  auto file = EnableStatsAndCreateFile(this, kFileMaxSize, kBytesToWrite, kBytesPerWrite);
-  CheckDirtyStats(fs().mount_path(), kFileMaxSize);
+  auto file = CreateTestFile(this, kFileMaxSize, kBytesToWrite, kBytesPerWrite);
+  ASSERT_EQ(GetDirtyBytes(), kFileMaxSize);
   file.RemountAndReopen();
 }
 
@@ -198,10 +190,10 @@ TEST_P(DirtyCacheTest, MultipleByteWriteToSameBlockKeepsDirtyBytesTheSame) {
   constexpr size_t kFileMaxSize = kMinfsBlockSize;
   constexpr size_t kBytesPerWrite = 10;
   {
-    auto file = EnableStatsAndCreateFile(this, kFileMaxSize, kFileMaxSize, kBytesPerWrite);
-    CheckDirtyStats(fs().mount_path(), minfs::kMinfsBlockSize);
+    auto file = CreateTestFile(this, kFileMaxSize, kFileMaxSize, kBytesPerWrite);
+    ASSERT_EQ(GetDirtyBytes(), minfs::kMinfsBlockSize);
   }
-  CheckDirtyStats(fs().mount_path(), 0);
+  ASSERT_EQ(GetDirtyBytes(), 0u);
 }
 
 TEST_P(DirtyCacheTest, MultipleBlocWriteToSameOffsetKeepsDirtyBytesTheSame) {
@@ -209,15 +201,15 @@ TEST_P(DirtyCacheTest, MultipleBlocWriteToSameOffsetKeepsDirtyBytesTheSame) {
     constexpr size_t kBytesPerWrite = kMinfsBlockSize;
     constexpr size_t kBytesToWrite = kBytesPerWrite;
     constexpr size_t kFileMaxSize = kBytesToWrite;
-    auto file = EnableStatsAndCreateFile(this, kFileMaxSize, kBytesToWrite, kBytesPerWrite);
-    CheckDirtyStats(fs().mount_path(), kBytesPerWrite);
+    auto file = CreateTestFile(this, kFileMaxSize, kBytesToWrite, kBytesPerWrite);
+    ASSERT_EQ(GetDirtyBytes(), kBytesPerWrite);
     for (int i = 0; i < 10; i++) {
       file.Write(kBytesPerWrite, 0);
-      CheckDirtyStats(fs().mount_path(), kBytesPerWrite);
+      ASSERT_EQ(GetDirtyBytes(), kBytesPerWrite);
     }
-    CheckDirtyStats(fs().mount_path(), kBytesPerWrite);
+    ASSERT_EQ(GetDirtyBytes(), kBytesPerWrite);
   }
-  CheckDirtyStats(fs().mount_path(), 0);
+  ASSERT_EQ(GetDirtyBytes(), 0u);
 }
 
 TEST_P(DirtyCacheTest, MultipleBlocWritesMakesMultipleBlocksDirty) {
@@ -225,10 +217,10 @@ TEST_P(DirtyCacheTest, MultipleBlocWritesMakesMultipleBlocksDirty) {
   constexpr size_t kBytesToWrite = 2 * kBytesPerWrite;
   constexpr size_t kFileMaxSize = kBytesToWrite;
   {
-    auto file = EnableStatsAndCreateFile(this, kFileMaxSize, kBytesToWrite, kBytesPerWrite);
-    CheckDirtyStats(fs().mount_path(), kBytesToWrite);
+    auto file = CreateTestFile(this, kFileMaxSize, kBytesToWrite, kBytesPerWrite);
+    ASSERT_EQ(GetDirtyBytes(), kBytesToWrite);
   }
-  CheckDirtyStats(fs().mount_path(), 0);
+  ASSERT_EQ(GetDirtyBytes(), 0u);
 }
 
 // Test creates a few files and writes to few of them. He we test that the fs handles such a case
@@ -238,15 +230,15 @@ TEST_P(DirtyCacheTest, FewCleanFewDirtyFiles) {
   constexpr size_t kBytesToWrite = 2 * kBytesPerWrite;
   constexpr size_t kFileMaxSize = kBytesToWrite;
   {
-    auto dirty1 = EnableStatsAndCreateFile(this, kFileMaxSize, kBytesToWrite, kBytesPerWrite,
-                                           "dirty1", false);
-    auto clean1 = EnableStatsAndCreateFile(this, 0, 0, 0, "clean1", false);
-    auto dirty2 = EnableStatsAndCreateFile(this, kFileMaxSize, kBytesToWrite, kBytesPerWrite,
-                                           "dirty2", false);
-    auto clean2 = EnableStatsAndCreateFile(this, 0, 0, 0, "clean2", false);
-    auto dirty3 = EnableStatsAndCreateFile(this, kFileMaxSize, kBytesToWrite, kBytesPerWrite,
-                                           "dirty3", false);
-    CheckDirtyStats(fs().mount_path(), kBytesToWrite * 3);
+    auto dirty1 =
+        CreateTestFile(this, kFileMaxSize, kBytesToWrite, kBytesPerWrite, "dirty1", false);
+    auto clean1 = CreateTestFile(this, 0, 0, 0, "clean1", false);
+    auto dirty2 =
+        CreateTestFile(this, kFileMaxSize, kBytesToWrite, kBytesPerWrite, "dirty2", false);
+    auto clean2 = CreateTestFile(this, 0, 0, 0, "clean2", false);
+    auto dirty3 =
+        CreateTestFile(this, kFileMaxSize, kBytesToWrite, kBytesPerWrite, "dirty3", false);
+    ASSERT_EQ(GetDirtyBytes(), kBytesToWrite * 3);
   }
 }
 

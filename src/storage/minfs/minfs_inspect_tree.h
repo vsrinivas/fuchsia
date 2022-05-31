@@ -40,6 +40,12 @@ class MinfsInspectTree final {
   // Increment the recovered space event counter.
   void OnRecoveredSpace() __TA_EXCLUDES(volume_mutex_);
 
+  // Add |bytes| to the dirty bytes counter.
+  void AddDirtyBytes(uint64_t bytes) __TA_EXCLUDES(volume_mutex_);
+
+  // Subtract |bytes| from the dirty bytes counter.
+  void SubtractDirtyBytes(uint64_t bytes) __TA_EXCLUDES(volume_mutex_);
+
   // Reference to the Inspector this object owns.
   const inspect::Inspector& Inspector() { return inspector_; }
 
@@ -92,6 +98,9 @@ class MinfsInspectTree final {
   static constexpr zx::duration kEventWindowDuration = zx::min(5);
   zx::time last_out_of_space_event_ __TA_GUARDED(volume_mutex_){zx::time::infinite_past()};
   zx::time last_recovered_space_event_ __TA_GUARDED(volume_mutex_){zx::time::infinite_past()};
+
+  // Number of bytes currently in the dirty cache.
+  uint64_t dirty_bytes_ __TA_GUARDED(volume_mutex_){};
 
   inspect::LazyNodeCallbackFn CreateDetailNode() const;
 

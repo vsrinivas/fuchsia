@@ -180,9 +180,8 @@ zx::status<> File::BlocksSwap(Transaction* transaction, blk_t start, blk_t count
     *bnos++ = new_block;
     bool cleared = allocation_state_.ClearPending(file_block, old_block != 0);
     ZX_DEBUG_ASSERT(cleared);
-    // We have cleared pending bit for the block. Update the accounding for the
-    // dirty block.
-    Vfs()->SubtractDirtyBytes(Vfs()->BlockSize());
+    // We have cleared pending bit for the block. Update the accounting for the dirty block.
+    Vfs()->InspectTree()->SubtractDirtyBytes(Vfs()->BlockSize());
     --count;
     status = iterator.Advance();
     if (status.is_error())
@@ -226,7 +225,7 @@ void File::AcquireWritableBlock(Transaction* transaction, blk_t local_bno, blk_t
   bool using_new_block = (old_bno == 0);
 #ifdef __Fuchsia__
   allocation_state_.SetPending(local_bno, !using_new_block);
-  Vfs()->AddDirtyBytes(Vfs()->BlockSize());
+  Vfs()->InspectTree()->AddDirtyBytes(Vfs()->BlockSize());
 #else
   if (using_new_block) {
     Vfs()->BlockNew(transaction, out_bno);
@@ -246,7 +245,7 @@ void File::DeleteBlock(PendingWork* transaction, blk_t local_bno, blk_t old_bno,
 #ifdef __Fuchsia__
   if (!indirect) {
     if (allocation_state_.IsPending(local_bno)) {
-      Vfs()->SubtractDirtyBytes(Vfs()->BlockSize());
+      Vfs()->InspectTree()->SubtractDirtyBytes(Vfs()->BlockSize());
     }
     // Remove this block from the pending allocation map in case it's set so we do not
     // proceed to allocate a new block.

@@ -30,8 +30,4 @@ zx::status<> Minfs::ContinueTransaction(size_t reserve_blocks,
   return zx::ok();
 }
 
-void Minfs::AddDirtyBytes(uint64_t dirty_bytes) {}
-
-void Minfs::SubtractDirtyBytes(uint64_t dirty_bytes) {}
-
 }  // namespace minfs

@@ -4,8 +4,13 @@
 
 #include "src/storage/fs_test/test_filesystem.h"
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+#include <lib/async/cpp/executor.h>
 #include <lib/fdio/cpp/caller.h>
+#include <lib/fdio/directory.h>
 #include <lib/fidl/llcpp/channel.h>
+#include <lib/inspect/service/cpp/reader.h>
 
 #include "sdk/lib/syslog/cpp/macros.h"
 #include "src/storage/fs_test/crypt_service.h"
@@ -99,6 +104,48 @@ zx::status<fuchsia_io::wire::FilesystemInfo> TestFilesystem::GetFsInfo() const {
     return zx::error(result.value_NEW().s);
   }
   return zx::ok(*result.value_NEW().info);
+}
+
+inspect::Hierarchy TestFilesystem::TakeSnapshot() const {
+  async::Loop loop = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  loop.StartThread("inspect-snapshot-thread");
+  async::Executor executor(loop.dispatcher());
+
+  fuchsia::inspect::TreePtr tree;
+  async_dispatcher_t* dispatcher = executor.dispatcher();
+  auto export_root = GetOutgoingDirectory();
+  ZX_ASSERT(export_root.is_valid());
+  zx_status_t status =
+      fdio_service_connect_at(export_root.handle()->get(), "diagnostics/fuchsia.inspect.Tree",
+                              tree.NewRequest(dispatcher).TakeChannel().release());
+  ZX_ASSERT_MSG(status == ZX_OK, "Failed to connect to inspect service: %s",
+                zx_status_get_string(status));
+
+  std::condition_variable cv;
+  std::mutex m;
+  bool done = false;
+  fpromise::result<inspect::Hierarchy> hierarchy_or_error;
+
+  auto promise = inspect::ReadFromTree(std::move(tree))
+                     .then([&](fpromise::result<inspect::Hierarchy>& result) {
+                       {
+                         std::unique_lock<std::mutex> lock(m);
+                         hierarchy_or_error = std::move(result);
+                         done = true;
+                       }
+                       cv.notify_all();
+                     });
+
+  executor.schedule_task(std::move(promise));
+
+  std::unique_lock<std::mutex> lock(m);
+  cv.wait(lock, [&done]() { return done; });
+
+  loop.Quit();
+  loop.JoinThreads();
+
+  ZX_ASSERT_MSG(hierarchy_or_error.is_ok(), "Failed to obtain inspect tree snapshot!");
+  return hierarchy_or_error.take_value();
 }
 
 }  // namespace fs_test

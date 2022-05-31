@@ -98,13 +98,6 @@ bool Minfs::AllReservationsBacked(const Transaction&) const {
   return BlocksReserved() <= blocks_available;
 }
 
-void Minfs::AddDirtyBytes(uint64_t dirty_bytes) { metrics_.dirty_bytes += dirty_bytes; }
-
-void Minfs::SubtractDirtyBytes(uint64_t dirty_bytes) {
-  ZX_ASSERT(dirty_bytes <= metrics_.dirty_bytes.load());
-  metrics_.dirty_bytes -= dirty_bytes;
-}
-
 zx::status<> Minfs::BlockingJournalSync() {
   zx_status_t sync_status = ZX_OK;
   sync_completion_t sync_completion = {};
