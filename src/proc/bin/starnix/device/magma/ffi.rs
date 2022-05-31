@@ -237,6 +237,45 @@ pub fn flush(control: virtio_magma_flush_ctrl_t, response: &mut virtio_magma_flu
     response.result_return = unsafe { magma_flush(control.connection) as u64 };
 }
 
+/// Fetches a VMO handles from magma wraps it in a file, then adds that file to `current_task`.
+///
+/// # Parameters
+///   - `current_task`: The task that the created file is added to, in `anon_fs`.
+///   - `control`: The control message containing the image handle.
+///   - `response`: The response which will contain the file descriptor for the created file.
+///
+/// SAFETY: Makes an FFI call to fetch a VMO handle. The VMO handle is expected to be valid if the
+/// FFI call succeeds. Either way, creating a `zx::Vmo` with an invalid handle is safe.
+pub fn get_buffer_handle(
+    current_task: &CurrentTask,
+    control: virtio_magma_get_buffer_handle2_ctrl_t,
+    response: &mut virtio_magma_get_buffer_handle2_resp_t,
+) -> Result<(), Errno> {
+    let mut buffer_handle_out = 0;
+    let status = unsafe {
+        magma_get_buffer_handle2(
+            control.buffer as magma_buffer_t,
+            &mut buffer_handle_out as *mut magma_handle_t,
+        )
+    };
+
+    if status != MAGMA_STATUS_OK as i32 {
+        response.result_return = status as u64;
+    } else {
+        let vmo = unsafe { zx::Vmo::from(zx::Handle::from_raw(buffer_handle_out)) };
+        let file = Anon::new_file(
+            anon_fs(current_task.kernel()),
+            Box::new(VmoFileObject::new(Arc::new(vmo))),
+            OpenFlags::RDWR,
+        );
+        let fd = current_task.files.add_with_flags(file, FdFlags::empty())?;
+        response.handle_out = fd.raw() as u64;
+        response.result_return = MAGMA_STATUS_OK as u64;
+    }
+
+    Ok(())
+}
+
 /// Writes the size of the provided buffer to `response`.
 ///
 /// SAFETY: Makes an FFI call to magma. The buffer in `control` is expected to be valid, although

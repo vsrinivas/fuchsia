@@ -245,26 +245,7 @@ impl FileOps for MagmaFile {
                     virtio_magma_get_buffer_handle2_resp_t,
                 ) = read_control_and_response(current_task, &command)?;
 
-                let mut buffer_handle_out = 0;
-                let status = unsafe {
-                    magma_get_buffer_handle2(
-                        control.buffer as magma_buffer_t,
-                        &mut buffer_handle_out as *mut magma_handle_t,
-                    )
-                };
-                if status != MAGMA_STATUS_OK as i32 {
-                    response.result_return = status as u64;
-                } else {
-                    let vmo = unsafe { zx::Vmo::from(zx::Handle::from_raw(buffer_handle_out)) };
-                    let file = Anon::new_file(
-                        anon_fs(current_task.kernel()),
-                        Box::new(VmoFileObject::new(Arc::new(vmo))),
-                        OpenFlags::RDWR,
-                    );
-                    let fd = current_task.files.add_with_flags(file, FdFlags::empty())?;
-                    response.handle_out = fd.raw() as u64;
-                    response.result_return = MAGMA_STATUS_OK as u64;
-                }
+                get_buffer_handle(current_task, control, &mut response)?;
 
                 response.hdr.type_ =
                     virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_GET_BUFFER_HANDLE2 as u32;
