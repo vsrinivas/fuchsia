@@ -367,7 +367,7 @@ impl_timer_context!(
 pub(super) fn send_ip_frame<
     B: BufferMut,
     SC: EthernetIpLinkDeviceContext
-        + FrameContext<B, <SC as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
+        + FrameContext<(), B, <SC as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
     C,
     A: IpAddress,
     S: Serializer<Buffer = B>,
@@ -403,6 +403,7 @@ pub(super) fn send_ip_frame<
     match dst_mac {
         Ok(dst_mac) => sync_ctx
             .send_frame(
+                &mut (),
                 device_id.into(),
                 body.with_mtu(mtu as usize).encapsulate(EthernetFrameBuilder::new(
                     local_mac.get(),
@@ -668,16 +669,18 @@ impl<C: EthernetIpLinkDeviceContext>
 impl<
         B: BufferMut,
         C: EthernetIpLinkDeviceContext
-            + FrameContext<B, <C as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
-    > FrameContext<B, ArpFrameMetadata<EthernetLinkDevice, C::DeviceId>> for C
+            + FrameContext<(), B, <C as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
+    > FrameContext<(), B, ArpFrameMetadata<EthernetLinkDevice, C::DeviceId>> for C
 {
     fn send_frame<S: Serializer<Buffer = B>>(
         &mut self,
+        ctx: &mut (),
         meta: ArpFrameMetadata<EthernetLinkDevice, C::DeviceId>,
         body: S,
     ) -> Result<(), S> {
         let src = self.get_state_with(meta.device_id).link.mac;
         self.send_frame(
+            ctx,
             meta.device_id,
             body.encapsulate(EthernetFrameBuilder::new(src.get(), meta.dst_addr, EtherType::Arp)),
         )
@@ -860,6 +863,7 @@ fn mac_resolved<SC: EthernetIpLinkDeviceContext, C>(
             //  stands right now) because the MTU is guaranteed to be larger
             //  than an Ethernet minimum frame body size.
             let res = sync_ctx.send_frame(
+                &mut (),
                 device_id.into(),
                 frame.encapsulate(EthernetFrameBuilder::new(src_mac.get(), dst_mac, ether_type)),
             );

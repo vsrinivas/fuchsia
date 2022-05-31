@@ -266,7 +266,7 @@ mod tests {
             message: NeighborSolicitation,
             body: S,
         ) -> Result<(), S> {
-            self.send_frame(DadMessageMeta { dst_ip, message }, body)
+            self.send_frame(&mut (), DadMessageMeta { dst_ip, message }, body)
         }
     }
 

@@ -1016,7 +1016,7 @@ pub(crate) mod testutil {
             DeviceId,
         > BufferIpSocketContext<I, B> for DummyCtx<S, Id, Meta, Event, DeviceId>
     where
-        DummyCtx<S, Id, Meta, Event, DeviceId>: FrameContext<B, SendIpPacketMeta<I, Self::DeviceId, SpecifiedAddr<I::Addr>>>
+        DummyCtx<S, Id, Meta, Event, DeviceId>: FrameContext<(), B, SendIpPacketMeta<I, Self::DeviceId, SpecifiedAddr<I::Addr>>>
             + IpSocketContext<I>
             + InstantContext<Instant = DummyInstant>,
     {
@@ -1025,7 +1025,7 @@ pub(crate) mod testutil {
             meta: SendIpPacketMeta<I, Self::DeviceId, SpecifiedAddr<I::Addr>>,
             body: SS,
         ) -> Result<(), SS> {
-            self.send_frame(meta, body)
+            self.send_frame(&mut (), meta, body)
         }
     }
 

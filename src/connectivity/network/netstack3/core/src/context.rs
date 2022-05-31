@@ -466,7 +466,7 @@ pub trait RecvFrameContext<B: BufferMut, Meta> {
 // TODO(joshlf): Rename `FrameContext` to `SendFrameContext`
 
 /// A context for sending frames.
-pub trait FrameContext<B: BufferMut, Meta> {
+pub trait FrameContext<C, B: BufferMut, Meta> {
     // TODO(joshlf): Add an error type parameter or associated type once we need
     // different kinds of errors.
 
@@ -478,7 +478,12 @@ pub trait FrameContext<B: BufferMut, Meta> {
     /// unmodified `Serializer` is returned.
     ///
     /// [`Serializer`]: packet::Serializer
-    fn send_frame<S: Serializer<Buffer = B>>(&mut self, metadata: Meta, frame: S) -> Result<(), S>;
+    fn send_frame<S: Serializer<Buffer = B>>(
+        &mut self,
+        ctx: &mut C,
+        metadata: Meta,
+        frame: S,
+    ) -> Result<(), S>;
 }
 
 /// A handler for frame events.
@@ -1111,9 +1116,10 @@ pub(crate) mod testutil {
         }
     }
 
-    impl<B: BufferMut, Meta> FrameContext<B, Meta> for DummyFrameCtx<Meta> {
+    impl<C, B: BufferMut, Meta> FrameContext<C, B, Meta> for DummyFrameCtx<Meta> {
         fn send_frame<S: Serializer<Buffer = B>>(
             &mut self,
+            _ctx: &mut C,
             metadata: Meta,
             frame: S,
         ) -> Result<(), S> {
@@ -1360,15 +1366,16 @@ pub(crate) mod testutil {
         }
     }
 
-    impl<B: BufferMut, S, Id, Meta, Event: Debug, DeviceId> FrameContext<B, Meta>
+    impl<C, B: BufferMut, S, Id, Meta, Event: Debug, DeviceId> FrameContext<C, B, Meta>
         for DummyCtx<S, Id, Meta, Event, DeviceId>
     {
         fn send_frame<SS: Serializer<Buffer = B>>(
             &mut self,
+            _ctx: &mut C,
             metadata: Meta,
             frame: SS,
         ) -> Result<(), SS> {
-            self.frames.send_frame(metadata, frame)
+            self.frames.send_frame(&mut (), metadata, frame)
         }
     }
 

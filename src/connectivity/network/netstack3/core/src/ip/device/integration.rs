@@ -195,10 +195,11 @@ impl<C: device::BufferIpDeviceContext<Ipv4, EmptyBuf>> IgmpContext for C {
 }
 
 impl<C: device::BufferIpDeviceContext<Ipv4, EmptyBuf>>
-    FrameContext<EmptyBuf, IgmpPacketMetadata<C::DeviceId>> for C
+    FrameContext<(), EmptyBuf, IgmpPacketMetadata<C::DeviceId>> for C
 {
     fn send_frame<S: Serializer<Buffer = EmptyBuf>>(
         &mut self,
+        _ctx: &mut (),
         meta: IgmpPacketMetadata<C::DeviceId>,
         body: S,
     ) -> Result<(), S> {
@@ -467,10 +468,11 @@ impl<C: device::IpDeviceContext<Ipv6>> ip::IpDeviceContext<Ipv6> for C {
 }
 
 impl<C: device::BufferIpDeviceContext<Ipv6, EmptyBuf>>
-    FrameContext<EmptyBuf, MldFrameMetadata<C::DeviceId>> for C
+    FrameContext<(), EmptyBuf, MldFrameMetadata<C::DeviceId>> for C
 {
     fn send_frame<S: Serializer<Buffer = EmptyBuf>>(
         &mut self,
+        _ctx: &mut (),
         meta: MldFrameMetadata<C::DeviceId>,
         body: S,
     ) -> Result<(), S> {

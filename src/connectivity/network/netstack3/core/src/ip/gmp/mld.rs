@@ -72,7 +72,7 @@ pub(crate) trait MldContext:
     IpDeviceIdContext<Ipv6>
     + RngContext
     + TimerContext<MldDelayedReportTimerId<Self::DeviceId>>
-    + FrameContext<EmptyBuf, MldFrameMetadata<Self::DeviceId>>
+    + FrameContext<(), EmptyBuf, MldFrameMetadata<Self::DeviceId>>
 {
     /// Gets the IPv6 link local address on `device`.
     fn get_ipv6_link_local_addr(
@@ -429,7 +429,7 @@ fn send_mld_packet<SC: MldContext, C, B: ByteSlice, M: IcmpMldv1MessageType<B>>(
             .unwrap(),
         );
     sync_ctx
-        .send_frame(MldFrameMetadata::new(device, dst_ip), body)
+        .send_frame(&mut (), MldFrameMetadata::new(device, dst_ip), body)
         .map_err(|_| MldError::SendFailure { addr: group_addr.into() })
 }
 

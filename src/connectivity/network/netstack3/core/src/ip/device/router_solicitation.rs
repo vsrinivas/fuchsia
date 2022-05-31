@@ -239,7 +239,7 @@ mod tests {
             message: RouterSolicitation,
             body: S,
         ) -> Result<(), S> {
-            self.send_frame(RsMessageMeta { message }, body)
+            self.send_frame(&mut (), RsMessageMeta { message }, body)
         }
     }
 

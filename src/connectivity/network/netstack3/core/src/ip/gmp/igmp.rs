@@ -66,7 +66,7 @@ impl<D> IgmpPacketMetadata<D> {
 pub(crate) trait IgmpContext:
     IpDeviceIdContext<Ipv4>
     + TimerContext<IgmpTimerId<Self::DeviceId>>
-    + FrameContext<EmptyBuf, IgmpPacketMetadata<Self::DeviceId>>
+    + FrameContext<(), EmptyBuf, IgmpPacketMetadata<Self::DeviceId>>
     + RngContext
 {
     /// Gets an IP address and subnet associated with this device.
@@ -384,7 +384,7 @@ where
     let body = body.into_serializer().encapsulate(builder);
 
     sync_ctx
-        .send_frame(IgmpPacketMetadata::new(device, dst_ip), body)
+        .send_frame(&mut (), IgmpPacketMetadata::new(device, dst_ip), body)
         .map_err(|_| IgmpError::SendFailure { addr: *group_addr })
 }
 

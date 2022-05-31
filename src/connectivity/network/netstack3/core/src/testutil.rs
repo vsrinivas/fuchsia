@@ -712,7 +712,7 @@ impl<B: BufferMut> DeviceLayerEventDispatcher<B> for DummyEventDispatcher {
         device: DeviceId,
         frame: S,
     ) -> Result<(), S> {
-        self.frames.send_frame(device, frame)
+        self.frames.send_frame(&mut (), device, frame)
     }
 }
 

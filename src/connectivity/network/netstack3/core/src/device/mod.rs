@@ -92,8 +92,8 @@ pub(crate) trait IpLinkDeviceContext<D: LinkDevice, TimerId>:
         <Self as RngContext>::Rng,
         <Self as DeviceIdContext<D>>::DeviceId,
     > + TimerContext<TimerId>
-    + FrameContext<EmptyBuf, <Self as DeviceIdContext<D>>::DeviceId>
-    + FrameContext<Buf<Vec<u8>>, <Self as DeviceIdContext<D>>::DeviceId>
+    + FrameContext<(), EmptyBuf, <Self as DeviceIdContext<D>>::DeviceId>
+    + FrameContext<(), Buf<Vec<u8>>, <Self as DeviceIdContext<D>>::DeviceId>
 {
 }
 
@@ -108,8 +108,8 @@ impl<
                 <Self as RngContext>::Rng,
                 <Self as DeviceIdContext<D>>::DeviceId,
             > + TimerContext<TimerId>
-            + FrameContext<EmptyBuf, <Self as DeviceIdContext<D>>::DeviceId>
-            + FrameContext<Buf<Vec<u8>>, <Self as DeviceIdContext<D>>::DeviceId>,
+            + FrameContext<(), EmptyBuf, <Self as DeviceIdContext<D>>::DeviceId>
+            + FrameContext<(), Buf<Vec<u8>>, <Self as DeviceIdContext<D>>::DeviceId>,
     > IpLinkDeviceContext<D, TimerId> for C
 {
 }
@@ -119,7 +119,7 @@ impl<
 /// `BufferIpLinkDeviceContext` is used when sending a frame is required.
 trait BufferIpLinkDeviceContext<D: LinkDevice, TimerId, B: BufferMut>:
     IpLinkDeviceContext<D, TimerId>
-    + FrameContext<B, <Self as DeviceIdContext<D>>::DeviceId>
+    + FrameContext<(), B, <Self as DeviceIdContext<D>>::DeviceId>
     + RecvFrameContext<B, RecvIpFrameMeta<<Self as DeviceIdContext<D>>::DeviceId, Ipv4>>
     + RecvFrameContext<B, RecvIpFrameMeta<<Self as DeviceIdContext<D>>::DeviceId, Ipv6>>
 {
@@ -130,7 +130,7 @@ impl<
         TimerId,
         B: BufferMut,
         C: IpLinkDeviceContext<D, TimerId>
-            + FrameContext<B, <Self as DeviceIdContext<D>>::DeviceId>
+            + FrameContext<(), B, <Self as DeviceIdContext<D>>::DeviceId>
             + RecvFrameContext<B, RecvIpFrameMeta<<Self as DeviceIdContext<D>>::DeviceId, Ipv4>>
             + RecvFrameContext<B, RecvIpFrameMeta<<Self as DeviceIdContext<D>>::DeviceId, Ipv6>>,
     > BufferIpLinkDeviceContext<D, TimerId, B> for C
@@ -411,11 +411,12 @@ impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext> BufferIpDevice
     }
 }
 
-impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext> FrameContext<B, EthernetDeviceId>
-    for Ctx<D, C>
+impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext>
+    FrameContext<(), B, EthernetDeviceId> for Ctx<D, C>
 {
     fn send_frame<S: Serializer<Buffer = B>>(
         &mut self,
+        _ctx: &mut (),
         device: EthernetDeviceId,
         frame: S,
     ) -> Result<(), S> {

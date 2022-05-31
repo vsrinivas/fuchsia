@@ -106,7 +106,8 @@ pub(super) fn deinitialize<D: ArpDevice, C, P: PType, H: ArpHandler<D, C, P>>(
 /// [`receive_arp_packet`]), and allows ARP to reuse that buffer rather than
 /// needing to always allocate a new one.
 pub(super) trait BufferArpContext<D: ArpDevice, P: PType, B: BufferMut>:
-    ArpContext<D, P> + FrameContext<B, ArpFrameMetadata<D, <Self as ArpDeviceIdContext<D>>::DeviceId>>
+    ArpContext<D, P>
+    + FrameContext<(), B, ArpFrameMetadata<D, <Self as ArpDeviceIdContext<D>>::DeviceId>>
 {
 }
 
@@ -115,7 +116,7 @@ impl<
         P: PType,
         B: BufferMut,
         C: ArpContext<D, P>
-            + FrameContext<B, ArpFrameMetadata<D, <Self as ArpDeviceIdContext<D>>::DeviceId>>,
+            + FrameContext<(), B, ArpFrameMetadata<D, <Self as ArpDeviceIdContext<D>>::DeviceId>>,
     > BufferArpContext<D, P, B> for C
 {
 }
@@ -151,7 +152,7 @@ pub(crate) trait ArpContext<D: ArpDevice, P: PType>:
     ArpDeviceIdContext<D>
     + StateContext<ArpState<D, P>, <Self as ArpDeviceIdContext<D>>::DeviceId>
     + TimerContext<ArpTimerId<D, P, <Self as ArpDeviceIdContext<D>>::DeviceId>>
-    + FrameContext<EmptyBuf, ArpFrameMetadata<D, <Self as ArpDeviceIdContext<D>>::DeviceId>>
+    + FrameContext<(), EmptyBuf, ArpFrameMetadata<D, <Self as ArpDeviceIdContext<D>>::DeviceId>>
     + CounterContext
 {
     /// Get a protocol address of this interface.
@@ -337,6 +338,7 @@ impl<D: ArpDevice, P: PType, C, SC: ArpContext<D, P>>
                     // TODO(joshlf): Do something if send_frame returns an
                     // error?
                     let _ = self.send_frame(
+                        &mut (),
                         ArpFrameMetadata { device_id: id.device_id, dst_addr: D::HType::BROADCAST },
                         ArpPacketBuilder::new(
                             ArpOp::Request,
@@ -510,6 +512,7 @@ impl<D: ArpDevice, P: PType, B: BufferMut, C: BufferArpContext<D, P, B>>
             sync_ctx.increment_counter("arp::rx_request");
             // TODO(joshlf): Do something if send_frame returns an error?
             let _ = sync_ctx.send_frame(
+                &mut (),
                 ArpFrameMetadata { device_id, dst_addr: packet.sender_hardware_address() },
                 ArpPacketBuilder::new(
                     ArpOp::Response,
@@ -601,6 +604,7 @@ fn send_arp_request<D: ArpDevice, P: PType, SC: ArpContext<D, P>, C>(
         let self_hw_addr = sync_ctx.get_hardware_addr(device_id);
         // TODO(joshlf): Do something if send_frame returns an error?
         let _ = sync_ctx.send_frame(
+            &mut (),
             ArpFrameMetadata { device_id, dst_addr: D::HType::BROADCAST },
             ArpPacketBuilder::new(
                 ArpOp::Request,
