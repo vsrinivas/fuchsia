@@ -344,3 +344,5 @@ toc:
     path: /docs/contribute/governance/rfcs/0163_test_output_format.md
   - title: "RFC-0164: Test Suite API"
     path: /docs/contribute/governance/rfcs/0164_test_suite.md
+  - title: "RFC-0165: SDK categories"
+    path: /docs/contribute/governance/rfcs/0165_sdk_categories.md

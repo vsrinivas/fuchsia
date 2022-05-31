@@ -2139,3 +2139,16 @@
   reviewers: ['abarth@google.com', 'crjohns@google.com', 'satsukiu@google.com']
   submitted: '2022-03-07'
   reviewed: '2022-05-05'
+
+- name: 'RFC-0165'
+  title: 'SDK categories'
+  short_description: 'SDK atoms have categories that describe their maturity and intended audience.'
+  authors: ['abarth@google.com']
+  file: '0165_sdk_categories.md'
+  area: ['Developer']
+  issue: ['']
+  gerrit_change_id: ['679446']
+  status: 'Accepted'
+  reviewers: ['dschuyler@google.com', 'jamesr@google.com', 'jeremymanson@google.com', 'neelsa@google.com', 'sebmarchand@google.com', 'sethladd@google.com']
+  submitted: '2022-05-13'
+  reviewed: '2022-05-31'
