@@ -53,6 +53,7 @@ class VulkanContext {
   static vk::DebugUtilsMessengerCreateInfoEXT default_debug_info_s_;
   static ContextWithUserData default_debug_callback_user_data_s_;
 
+  // All struct arguments are shallow copied.
   VulkanContext(const vk::InstanceCreateInfo &instance_info, uint32_t physical_device_index,
                 const vk::DeviceCreateInfo &device_info,
                 const vk::DeviceQueueCreateInfo &queue_info,
@@ -71,6 +72,7 @@ class VulkanContext {
   bool InitQueueFamily();
   bool InitDevice();
 
+  // All struct arguments to modifiers are shallow copied.
   bool set_instance_info(const vk::InstanceCreateInfo &v);
   bool set_device_info(const vk::DeviceCreateInfo &v);
   bool set_queue_info(const vk::DeviceQueueCreateInfo &v);
@@ -116,6 +118,10 @@ class VulkanContext {
 
  private:
   FRIEND_TEST(VkContext, Unique);
+  FRIEND_TEST(VkContext, ImplicitDebugUtilsMessenger);
+
+  // Is a debug utils messenger installed in the |instance_info_| structure chain.
+  bool DebugUtilsMessengerInstalled() const;
 
   bool initialized_ = false;
   bool instance_initialized_ = false;

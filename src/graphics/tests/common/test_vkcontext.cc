@@ -185,15 +185,15 @@ TEST(VkContext, DeviceExtension) {
   vk::InstanceCreateInfo instance_info;
   instance_info.pApplicationInfo = &app_info;
 
-  auto context = std::make_unique<VulkanContext>(0);
-  context->set_instance_info(instance_info);
-  ASSERT_TRUE(context->InitInstance());
+  auto ctx = std::make_unique<VulkanContext>(0);
+  ctx->set_instance_info(instance_info);
+  ASSERT_TRUE(ctx->InitInstance());
 
-  ASSERT_TRUE(context->InitQueueFamily());
+  ASSERT_TRUE(ctx->InitQueueFamily());
 
   bool found_ext = false;
   {
-    auto result = context->physical_device().enumerateDeviceExtensionProperties();
+    auto result = ctx->physical_device().enumerateDeviceExtensionProperties();
 
     for (auto &ext : result.value) {
       if (strcmp(ext.extensionName, VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME) == 0) {
@@ -206,11 +206,50 @@ TEST(VkContext, DeviceExtension) {
 
   std::array<const char *, 1> device_exts{VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME};
 
-  vk::DeviceCreateInfo device_create_info = context->device_info();
+  vk::DeviceCreateInfo device_create_info = ctx->device_info();
   device_create_info.setPEnabledExtensionNames(device_exts);
-  context->set_device_info(device_create_info);
+  ctx->set_device_info(device_create_info);
 
-  EXPECT_TRUE(context->InitDevice());
+  EXPECT_TRUE(ctx->InitDevice());
+}
+
+TEST(VkContext, ImplicitDebugUtilsMessenger) {
+  const char *app_name = "Test VK Context";
+  vk::ApplicationInfo app_info;
+  app_info.pApplicationName = app_name;
+  vk::InstanceCreateInfo instance_info;
+  instance_info.pApplicationInfo = &app_info;
+
+  auto ctx = std::make_unique<VulkanContext>(0);
+  ctx->set_instance_info(instance_info);
+  ctx->set_validation_layers_enabled(true);
+
+  EXPECT_EQ(ctx->DebugUtilsMessengerInstalled(), false);
+  ASSERT_TRUE(ctx->InitInstance());
+  EXPECT_EQ(ctx->DebugUtilsMessengerInstalled(), true);
+
+  ctx = VulkanContext::Builder{}
+            .set_instance_info(instance_info)
+            .set_validation_layers_enabled(false)
+            .Unique();
+  ASSERT_NE(ctx, nullptr);
+  EXPECT_EQ(ctx->DebugUtilsMessengerInstalled(), false);
+
+  vk::DebugUtilsMessengerCreateInfoEXT debug_info(
+      {} /* create flags */, vk::DebugUtilsMessageSeverityFlagBitsEXT::eError,
+      vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
+          vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation,
+      DebugUtilsErrorCallback);
+
+  // Link in arbitrary structure that is compatible with the |instance_info| structure chain.
+  vk::InstanceCreateInfo unexpected_structure;
+  debug_info.pNext = &unexpected_structure;
+
+  ctx = std::make_unique<VulkanContext>(0);
+  ctx->set_instance_info(instance_info);
+  ctx->set_validation_layers_enabled(true);
+  ctx->set_debug_utils_messenger(debug_info, VulkanContext::default_debug_callback_user_data_s_);
+  EXPECT_FALSE(ctx->InitInstance());
 }
 
 int main(int argc, char **argv) {

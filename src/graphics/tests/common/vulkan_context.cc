@@ -81,8 +81,26 @@ bool VulkanContext::InitInstance() {
   }
 
   if (validation_layers_enabled_) {
+    debug_callback_user_data_.context_ = this;
+    debug_info_.pUserData = &debug_callback_user_data_;
+
     layers_.emplace_back("VK_LAYER_KHRONOS_validation");
     extensions_.emplace_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+
+    // Install a debug utils messenger info struct by default if validation layers are enabled.
+    if (!DebugUtilsMessengerInstalled()) {
+      if (debug_info_.pNext) {
+        RTN_MSG(false, "Can't overwrite |debug_info_| structure chain.");
+      }
+      debug_info_.pNext = instance_info_.pNext;
+      instance_info_.pNext = &debug_info_;
+    }
+  } else {
+    if (DebugUtilsMessengerInstalled()) {
+      printf(
+          "VulkanContext::InitInstance: found debug utils messenger.  "
+          "Expected |validation_layers_enabled| to be true.\n");
+    }
   }
 
   instance_info_.ppEnabledLayerNames = layers_.data();
@@ -115,12 +133,10 @@ bool VulkanContext::InitInstance() {
 
   if (validation_layers_enabled_) {
     loader_.init(instance_.get(), vkGetInstanceProcAddr);
-    debug_callback_user_data_.context_ = this;
-    debug_info_.pUserData = &debug_callback_user_data_;
     auto rv_messenger =
         instance_->createDebugUtilsMessengerEXTUnique(debug_info_, nullptr, loader_);
     if (rv_messenger.result != vk::Result::eSuccess) {
-      RTN_MSG(false, "VK Error - CreateDebugUtilsMessengeEXT: %d (%s)\n", rv_messenger.result,
+      RTN_MSG(false, "VK Error - CreateDebugUtilsMessenger: %d (%s)\n", rv_messenger.result,
               vk::to_string(rv_messenger.result).data());
     }
     messenger_ = std::move(rv_messenger.value);
@@ -209,6 +225,21 @@ bool VulkanContext::Init() {
   }
   initialized_ = true;
   return true;
+}
+
+bool VulkanContext::DebugUtilsMessengerInstalled() const {
+  bool installed = false;
+  VkBaseOutStructure *next = const_cast<VkBaseOutStructure *>(
+      reinterpret_cast<const VkBaseOutStructure *>(instance_info_.pNext));
+  while (next) {
+    const VkBaseOutStructure *base = reinterpret_cast<const VkBaseOutStructure *>(next);
+    if (base->sType == VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT) {
+      installed = true;
+      break;
+    }
+    next = next->pNext;
+  }
+  return installed;
 }
 
 bool VulkanContext::set_instance_info(const vk::InstanceCreateInfo &v) {
