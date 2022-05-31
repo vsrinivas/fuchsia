@@ -21,6 +21,9 @@ JournalSuperblock::JournalSuperblock(std::unique_ptr<storage::BlockBuffer> buffe
 }
 
 zx_status_t JournalSuperblock::Validate() const {
+#ifdef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
+  return ZX_OK;
+#else
   if (Info()->magic != kJournalMagic) {
     FX_LOGST(ERROR, "journal") << "Bad journal magic";
     return ZX_ERR_IO;
@@ -30,6 +33,7 @@ zx_status_t JournalSuperblock::Validate() const {
     return ZX_ERR_IO;
   }
   return ZX_OK;
+#endif
 }
 
 void JournalSuperblock::Update(uint64_t start, uint64_t sequence_number) {
@@ -40,14 +44,9 @@ void JournalSuperblock::Update(uint64_t start, uint64_t sequence_number) {
 }
 
 uint32_t JournalSuperblock::new_checksum() const {
-#ifdef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
-  // Aways return 0 when fuzzing
-  return 0;
-#else
   JournalInfo info = *reinterpret_cast<const JournalInfo*>(buffer_->Data(0));
   info.checksum = 0;
   return crc32(0, reinterpret_cast<const uint8_t*>(&info), sizeof(JournalInfo));
-#endif
 }
 
 }  // namespace fs

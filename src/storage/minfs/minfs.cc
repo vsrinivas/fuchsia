@@ -1342,7 +1342,9 @@ void Minfs::Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) {
 
         // TODO(/fxbug.dev/90054): Report sync and managed shutdown status.
         // Identify to the unmounting channel that teardown is complete.
-        cb(ZX_OK);
+        if (cb != nullptr) {
+          cb(ZX_OK);
+        }
 
         // Identify to the unmounting thread that teardown is complete.
         if (on_unmount) {
