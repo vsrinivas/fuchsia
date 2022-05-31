@@ -13,7 +13,8 @@ use {
 };
 
 #[derive(Serialize, Debug)]
-struct Connection {
+// Vtc == Vulkan Traceable Component
+struct Vtc {
     process_koid: u64,
     process_name: String,
 
@@ -33,18 +34,16 @@ impl std::fmt::Display for ConnectionsResult {
     }
 }
 
-impl Connection {
-    fn from_fidl(
-        fidl_connection: fidl_fuchsia_gpu_agis::Connection,
-    ) -> Result<Connection, anyhow::Error> {
-        Ok(Connection {
-            process_koid: fidl_connection.process_koid.ok_or_else(|| {
+impl Vtc {
+    fn from_fidl(fidl_vtc: fidl_fuchsia_gpu_agis::Vtc) -> Result<Vtc, anyhow::Error> {
+        Ok(Vtc {
+            process_koid: fidl_vtc.process_koid.ok_or_else(|| {
                 anyhow!(ffx_error!("\"agis\" service error. The \"process_koid\" is missing."))
             })?,
-            process_name: fidl_connection.process_name.ok_or_else(|| {
+            process_name: fidl_vtc.process_name.ok_or_else(|| {
                 anyhow!(ffx_error!("\"agis\" service error. The \"process_name\" is missing."))
             })?,
-            agi_socket: fidl_connection.agi_socket.ok_or_else(|| {
+            agi_socket: fidl_vtc.agi_socket.ok_or_else(|| {
                 anyhow!(ffx_error!("\"agis\" service error. The \"agis_socket\" is missing."))
             })?,
         })
@@ -76,13 +75,10 @@ async fn component_registry_register(
         Ok(_) => {
             // Create an arbitrary, valid socket to test as a return value.
             let (s, _) = fidl::Socket::create(fidl::SocketOpts::STREAM).unwrap();
-            let connection = Connection {
-                process_koid: op.process_koid,
-                process_name: op.process_name,
-                agi_socket: s,
-            };
+            let vtc =
+                Vtc { process_koid: op.process_koid, process_name: op.process_name, agi_socket: s };
             let connections_result =
-                ConnectionsResult { json: serde_json::to_value(&connection)?, agi_sockets: vec![] };
+                ConnectionsResult { json: serde_json::to_value(&vtc)?, agi_sockets: vec![] };
             return Ok(connections_result);
         }
         Err(e) => {
@@ -114,23 +110,21 @@ async fn component_registry_unregister(
 async fn observer_connections(observer: ObserverProxy) -> Result<ConnectionsResult, anyhow::Error> {
     let result = observer.connections().await?;
     match result {
-        Ok(_fidl_connections) => {
-            let mut connections = vec![];
+        Ok(_fidl_vtcs) => {
+            let mut vtcs = vec![];
             let mut agi_sockets = vec![];
-            for fidl_connection in _fidl_connections {
-                let connection = Connection::from_fidl(fidl_connection).unwrap();
+            for fidl_vtc in _fidl_vtcs {
+                let vtc = Vtc::from_fidl(fidl_vtc).unwrap();
                 let (s, _) = fidl::Socket::create(fidl::SocketOpts::STREAM).unwrap();
-                connections.push(Connection {
-                    process_name: connection.process_name,
-                    process_koid: connection.process_koid,
+                vtcs.push(Vtc {
+                    process_name: vtc.process_name,
+                    process_koid: vtc.process_koid,
                     agi_socket: s,
                 });
-                agi_sockets.push(connection.agi_socket);
+                agi_sockets.push(vtc.agi_socket);
             }
-            let connections_result = ConnectionsResult {
-                json: serde_json::to_value(&connections)?,
-                agi_sockets: agi_sockets,
-            };
+            let connections_result =
+                ConnectionsResult { json: serde_json::to_value(&vtcs)?, agi_sockets: agi_sockets };
             return Ok(connections_result);
         }
         Err(e) => {
@@ -184,17 +178,17 @@ mod test {
         let callback = move |req| {
             match req {
                 ObserverRequest::Connections { responder, .. } => {
-                    let mut connections = vec![];
+                    let mut vtcs = vec![];
                     // Create an arbitrary, valid socket for use as the |agi_socket|.
                     let (s, _) = fidl::Socket::create(fidl::SocketOpts::STREAM).unwrap();
-                    connections.push(fidl_fuchsia_gpu_agis::Connection {
+                    vtcs.push(fidl_fuchsia_gpu_agis::Vtc {
                         process_koid: Some(PROCESS_KOID),
                         process_name: Some(PROCESS_NAME.to_string()),
                         agi_socket: Some(s),
                         unknown_data: None,
-                        ..fidl_fuchsia_gpu_agis::Connection::EMPTY
+                        ..fidl_fuchsia_gpu_agis::Vtc::EMPTY
                     });
-                    let mut result = Ok(connections);
+                    let mut result = Ok(vtcs);
                     responder.send(&mut result).unwrap();
                 }
             };

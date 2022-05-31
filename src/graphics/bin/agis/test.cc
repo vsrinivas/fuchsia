@@ -109,12 +109,12 @@ class AgisTest : public testing::Test {
     outstanding++;
     observer_->Connections([&](fuchsia::gpu::agis::Observer_Connections_Result result) {
       fuchsia::gpu::agis::Observer_Connections_Response response(std::move(result.response()));
-      std::vector<fuchsia::gpu::agis::Connection> connections(response.ResultValue_());
-      for (auto &connection : connections) {
-        FX_LOGF(INFO, "agis-test", "AgisTest::Connection \"%lu\" \"%s\"", connection.process_koid(),
-                connection.process_name().c_str());
+      std::vector<fuchsia::gpu::agis::Vtc> vtcs(response.ResultValue_());
+      for (auto &vtc : vtcs) {
+        FX_LOGF(INFO, "agis-test", "AgisTest::Connection \"%lu\" \"%s\"", vtc.process_koid(),
+                vtc.process_name().c_str());
       }
-      num_connections_ = connections.size();
+      num_connections_ = vtcs.size();
       outstanding--;
     });
   }
@@ -207,11 +207,11 @@ TEST_F(AgisTest, UsableSocket) {
   observer_->Connections([&](fuchsia::gpu::agis::Observer_Connections_Result result) {
     fuchsia::gpu::agis::Observer_Connections_Response response(std::move(result.response()));
     EXPECT_FALSE(result.err());
-    std::vector<fuchsia::gpu::agis::Connection> connections(response.ResultValue_());
-    EXPECT_EQ(connections.size(), 1ul);
-    connections.front().agi_socket().duplicate(ZX_RIGHT_SAME_RIGHTS, &agi_socket);
-    process_name = connections.front().process_name();
-    process_koid = connections.front().process_koid();
+    std::vector<fuchsia::gpu::agis::Vtc> vtcs(response.ResultValue_());
+    EXPECT_EQ(vtcs.size(), 1ul);
+    vtcs.front().agi_socket().duplicate(ZX_RIGHT_SAME_RIGHTS, &agi_socket);
+    process_name = vtcs.front().process_name();
+    process_koid = vtcs.front().process_koid();
     outstanding--;
   });
   LoopWait();
@@ -281,12 +281,12 @@ TEST(AgisDisconnect, Main) {
     observer->Connections([&](fuchsia::gpu::agis::Observer_Connections_Result result) {
       fuchsia::gpu::agis::Observer_Connections_Response response(std::move(result.response()));
       EXPECT_FALSE(result.err());
-      std::vector<fuchsia::gpu::agis::Connection> connections(response.ResultValue_());
-      EXPECT_EQ(connections.size(), 1ul);
+      std::vector<fuchsia::gpu::agis::Vtc> vtcs(response.ResultValue_());
+      EXPECT_EQ(vtcs.size(), 1ul);
       bool found = false;
-      for (const auto &connection : connections) {
-        if (connection.process_koid() == process_koid) {
-          EXPECT_EQ(connection.process_name(), process_name);
+      for (const auto &vtc : vtcs) {
+        if (vtc.process_koid() == process_koid) {
+          EXPECT_EQ(vtc.process_name(), process_name);
           found = true;
           break;
         }
@@ -312,11 +312,11 @@ TEST(AgisDisconnect, Main) {
     disconnect_outstanding = true;
     observer->Connections([&](fuchsia::gpu::agis::Observer_Connections_Result result) {
       EXPECT_FALSE(result.err());
-      auto connections(result.response().ResultValue_());
+      auto vtcs(result.response().ResultValue_());
       bool component_found = false;
-      for (const auto &connection : connections) {
-        if (connection.process_koid() == process_koid) {
-          EXPECT_EQ(connection.process_name(), process_name);
+      for (const auto &vtc : vtcs) {
+        if (vtc.process_koid() == process_koid) {
+          EXPECT_EQ(vtc.process_name(), process_name);
           component_found = true;
           break;
         }

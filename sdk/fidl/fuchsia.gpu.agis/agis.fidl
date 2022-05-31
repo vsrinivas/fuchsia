@@ -11,7 +11,9 @@ using zx;
 /// It acts as an intermediary between gapii, the Android GPU Inspector
 /// interposing shared library and Vulkan layer, and the host Android GPU
 /// Inspector application.
-type Connection = resource table {
+///
+/// Vtc == Vulkan Traceable Component
+type Vtc = resource table {
     1: process_koid zx.koid;
     2: process_name string:zx.MAX_NAME_LEN;
     3: agi_socket zx.handle:SOCKET;
@@ -66,6 +68,6 @@ protocol Observer {
     /// Retrieve registered components.
     /// For AGI, gapis will be the only client of this Connections interface.
     Connections() -> (resource struct {
-        connections vector<Connection>:MAX_CONNECTIONS;
+        vtcs vector<Vtc>:MAX_CONNECTIONS;
     }) error Error;
 };

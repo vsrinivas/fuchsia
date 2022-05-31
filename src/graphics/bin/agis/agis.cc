@@ -102,9 +102,9 @@ class ObserverImpl final : public fuchsia::gpu::agis::Observer {
  public:
   void Connections(ConnectionsCallback callback) override {
     fuchsia::gpu::agis::Observer_Connections_Result result;
-    std::vector<fuchsia::gpu::agis::Connection> connections;
+    std::vector<fuchsia::gpu::agis::Vtc> connections;
     for (const auto &element : registry) {
-      auto connection = ::fuchsia::gpu::agis::Connection::New();
+      auto connection = ::fuchsia::gpu::agis::Vtc::New();
       connection->set_process_koid(element.second.process_koid);
       connection->set_process_name(element.second.process_name);
       zx::socket agi_socket_clone;
