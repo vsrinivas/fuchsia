@@ -12,6 +12,7 @@ group("tests") {
 
 rustc_test("bin") {
   name = "{{PROJECT_NAME}}"
+  edition = "2021"
 
   deps = [
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
