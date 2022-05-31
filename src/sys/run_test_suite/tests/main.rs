@@ -988,13 +988,17 @@ fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/echo_test_realm.
     assert_eq!(outcome, Outcome::Passed);
 }
 
+/// Time to wait for tests that verify timeout behavior.
+/// If this is too short, the test may not complete launching.
+const TIMEOUT_SECONDS: Option<std::num::NonZeroU32> = std::num::NonZeroU32::new(3);
+
 #[fixture::fixture(run_with_reporter)]
 #[fuchsia::test]
 async fn test_timeout(reporter: TestMuxMuxReporter, output: TestOutputView, _: tempfile::TempDir) {
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm",
     );
-    test_params.timeout_seconds = std::num::NonZeroU32::new(1);
+    test_params.timeout_seconds = TIMEOUT_SECONDS;
     let outcome =
         run_test_once(reporter, test_params, None).await.expect("Running test should not fail");
     let expected_output = "Running test 'fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm'
@@ -1021,7 +1025,7 @@ async fn test_timeout_multiple_times(
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm",
     );
-    test_params.timeout_seconds = std::num::NonZeroU32::new(1);
+    test_params.timeout_seconds = TIMEOUT_SECONDS;
     let outcome = run_test_suite_lib::run_tests_and_get_outcome(
         fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
             .expect("connecting to RunBuilderProxy"),
@@ -1096,7 +1100,7 @@ async fn test_continue_on_timeout(
     let mut long_test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm",
     );
-    long_test_params.timeout_seconds = std::num::NonZeroU32::new(1);
+    long_test_params.timeout_seconds = TIMEOUT_SECONDS;
 
     let short_test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
