@@ -131,13 +131,7 @@ class NetStreamSocketsTest : public testing::Test {
     fbl::unique_fd listener;
     ASSERT_TRUE(listener = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
 
-    sockaddr_in addr = {
-        .sin_family = AF_INET,
-        .sin_addr =
-            {
-                .s_addr = htonl(INADDR_ANY),
-            },
-    };
+    sockaddr_in addr = LoopbackSockaddrV4(0);
     ASSERT_EQ(bind(listener.get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)), 0)
         << strerror(errno);
 
@@ -462,13 +456,7 @@ TEST_F(NetStreamSocketsTest, ShutdownPendingWrite) {
 void TestListenWhileConnect(const IOMethod& io_method, void (*stopListen)(fbl::unique_fd&)) {
   fbl::unique_fd listener;
   ASSERT_TRUE(listener = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
-  sockaddr_in addr = {
-      .sin_family = AF_INET,
-      .sin_addr =
-          {
-              .s_addr = htonl(INADDR_LOOPBACK),
-          },
-  };
+  sockaddr_in addr = LoopbackSockaddrV4(0);
   ASSERT_EQ(bind(listener.get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
   // This test is only interested in deterministically getting a socket in
@@ -582,13 +570,7 @@ TEST_P(ConnectingIOTest, BlockedIO) {
   fbl::unique_fd listener;
   ASSERT_TRUE(listener = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
 
-  sockaddr_in addr = {
-      .sin_family = AF_INET,
-      .sin_addr =
-          {
-              .s_addr = htonl(INADDR_ANY),
-          },
-  };
+  sockaddr_in addr = LoopbackSockaddrV4(0);
   ASSERT_EQ(bind(listener.get(), reinterpret_cast<sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
 
@@ -888,13 +870,7 @@ TEST(NetStreamTest, BlockingAcceptWriteMultiple) {
   fbl::unique_fd acptfd;
   ASSERT_TRUE(acptfd = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
 
-  sockaddr_in addr = {
-      .sin_family = AF_INET,
-      .sin_addr =
-          {
-              .s_addr = htonl(INADDR_ANY),
-          },
-  };
+  sockaddr_in addr = LoopbackSockaddrV4(0);
   ASSERT_EQ(bind(acptfd.get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
 
@@ -935,13 +911,7 @@ TEST(NetStreamTest, NonBlockingAcceptWrite) {
   ASSERT_TRUE(acptfd = fbl::unique_fd(socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)))
       << strerror(errno);
 
-  sockaddr_in addr = {
-      .sin_family = AF_INET,
-      .sin_addr =
-          {
-              .s_addr = htonl(INADDR_ANY),
-          },
-  };
+  sockaddr_in addr = LoopbackSockaddrV4(0);
   ASSERT_EQ(bind(acptfd.get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
 
@@ -983,13 +953,7 @@ TEST(NetStreamTest, NonBlockingAcceptDupWrite) {
   ASSERT_TRUE(acptfd = fbl::unique_fd(socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)))
       << strerror(errno);
 
-  sockaddr_in addr = {
-      .sin_family = AF_INET,
-      .sin_addr =
-          {
-              .s_addr = htonl(INADDR_ANY),
-          },
-  };
+  sockaddr_in addr = LoopbackSockaddrV4(0);
   ASSERT_EQ(bind(acptfd.get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
 
@@ -1034,13 +998,7 @@ TEST(NetStreamTest, NonBlockingConnectWrite) {
   fbl::unique_fd acptfd;
   ASSERT_TRUE(acptfd = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
 
-  sockaddr_in addr = {
-      .sin_family = AF_INET,
-      .sin_addr =
-          {
-              .s_addr = htonl(INADDR_ANY),
-          },
-  };
+  sockaddr_in addr = LoopbackSockaddrV4(0);
   ASSERT_EQ(bind(acptfd.get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
 
@@ -1093,13 +1051,7 @@ TEST(NetStreamTest, NonBlockingConnectRead) {
   fbl::unique_fd acptfd;
   ASSERT_TRUE(acptfd = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
 
-  sockaddr_in addr = {
-      .sin_family = AF_INET,
-      .sin_addr =
-          {
-              .s_addr = htonl(INADDR_ANY),
-          },
-  };
+  sockaddr_in addr = LoopbackSockaddrV4(0);
   ASSERT_EQ(bind(acptfd.get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
 
@@ -1155,13 +1107,7 @@ TEST(NetStreamTest, NonBlockingConnectRefused) {
   fbl::unique_fd acptfd;
   ASSERT_TRUE(acptfd = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
 
-  sockaddr_in addr = {
-      .sin_family = AF_INET,
-      .sin_addr =
-          {
-              .s_addr = htonl(INADDR_ANY),
-          },
-  };
+  sockaddr_in addr = LoopbackSockaddrV4(0);
   ASSERT_EQ(bind(acptfd.get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
 
@@ -1271,13 +1217,7 @@ TEST(NetStreamTest, GetSocketAcceptConn) {
   }
 
   {
-    const sockaddr_in addr = {
-        .sin_family = AF_INET,
-        .sin_addr =
-            {
-                .s_addr = htonl(INADDR_ANY),
-            },
-    };
+    const sockaddr_in addr = LoopbackSockaddrV4(0);
     ASSERT_EQ(bind(fd.get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)), 0)
         << strerror(errno);
   }
@@ -1487,13 +1427,7 @@ INSTANTIATE_TEST_SUITE_P(NetStreamTest, BlockedIOTest,
 class ListenBacklogTest : public testing::TestWithParam<int> {};
 
 TEST_P(ListenBacklogTest, BacklogValues) {
-  sockaddr_in addr = {
-      .sin_family = AF_INET,
-      .sin_addr =
-          {
-              .s_addr = htonl(INADDR_LOOPBACK),
-          },
-  };
+  sockaddr_in addr = LoopbackSockaddrV4(0);
   socklen_t addrlen = sizeof(addr);
 
   fbl::unique_fd listenfd;
@@ -1533,13 +1467,7 @@ TEST(NetStreamTest, MultipleListeningSockets) {
   fbl::unique_fd listenfds[kListeningSockets];
   fbl::unique_fd connfd[kListeningSockets];
 
-  sockaddr_in addr = {
-      .sin_family = AF_INET,
-      .sin_addr =
-          {
-              .s_addr = htonl(INADDR_LOOPBACK),
-          },
-  };
+  sockaddr_in addr = LoopbackSockaddrV4(0);
   socklen_t addrlen = sizeof(addr);
 
   for (auto& listenfd : listenfds) {
@@ -1574,13 +1502,7 @@ TEST(NetStreamTest, UnconnectPoll) {
   ASSERT_TRUE(init = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
   ASSERT_TRUE(bound = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
 
-  sockaddr_in addr = {
-      .sin_family = AF_INET,
-      .sin_addr =
-          {
-              .s_addr = htonl(INADDR_LOOPBACK),
-          },
-  };
+  sockaddr_in addr = LoopbackSockaddrV4(0);
   ASSERT_EQ(bind(bound.get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
 
@@ -1619,14 +1541,7 @@ TEST(NetStreamTest, ConnectTwice) {
   ASSERT_TRUE(client = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
   ASSERT_TRUE(listener = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
 
-  sockaddr_in addr = {
-      .sin_family = AF_INET,
-      .sin_addr =
-          {
-              .s_addr = htonl(INADDR_LOOPBACK),
-          },
-  };
-
+  sockaddr_in addr = LoopbackSockaddrV4(0);
   ASSERT_EQ(bind(listener.get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
 
@@ -1655,14 +1570,7 @@ TEST(NetStreamTest, ConnectTwice) {
 }
 
 TEST(NetStreamTest, ConnectCloseRace) {
-  sockaddr_in addr = {
-      .sin_family = AF_INET,
-      .sin_addr =
-          {
-              .s_addr = htonl(INADDR_LOOPBACK),
-          },
-  };
-
+  sockaddr_in addr = LoopbackSockaddrV4(0);
   // Use the ephemeral port allocated by the stack as destination address for connect.
   {
     fbl::unique_fd tmp;
@@ -1738,13 +1646,7 @@ TEST_P(HangupTest, DuringConnect) {
   ASSERT_TRUE(listener = fbl::unique_fd(socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)))
       << strerror(errno);
 
-  sockaddr_in addr_in = {
-      .sin_family = AF_INET,
-      .sin_addr =
-          {
-              .s_addr = htonl(INADDR_LOOPBACK),
-          },
-  };
+  sockaddr_in addr_in = LoopbackSockaddrV4(0);
   auto* addr = reinterpret_cast<sockaddr*>(&addr_in);
   socklen_t addr_len = sizeof(addr_in);
 
@@ -1964,10 +1866,7 @@ TEST(LocalhostTest, Accept) {
   fbl::unique_fd serverfd;
   ASSERT_TRUE(serverfd = fbl::unique_fd(socket(AF_INET6, SOCK_STREAM, 0))) << strerror(errno);
 
-  sockaddr_in6 serveraddr = {
-      .sin6_family = AF_INET6,
-      .sin6_addr = IN6ADDR_LOOPBACK_INIT,
-  };
+  sockaddr_in6 serveraddr = LoopbackSockaddrV6(0);
   socklen_t serveraddrlen = sizeof(serveraddr);
   ASSERT_EQ(bind(serverfd.get(), reinterpret_cast<sockaddr*>(&serveraddr), serveraddrlen), 0)
       << strerror(errno);
@@ -1995,10 +1894,7 @@ TEST(LocalhostTest, AcceptAfterReset) {
   fbl::unique_fd server;
   ASSERT_TRUE(server = fbl::unique_fd(socket(AF_INET6, SOCK_STREAM, 0))) << strerror(errno);
 
-  sockaddr_in6 addr = {
-      .sin6_family = AF_INET6,
-      .sin6_addr = IN6ADDR_LOOPBACK_INIT,
-  };
+  sockaddr_in6 addr = LoopbackSockaddrV6(0);
   socklen_t addrlen = sizeof(addr);
   ASSERT_EQ(bind(server.get(), reinterpret_cast<const sockaddr*>(&addr), addrlen), 0)
       << strerror(errno);
@@ -2074,14 +1970,7 @@ TEST(LocalhostTest, RaceLocalPeerClose) {
   ASSERT_GE(flags = fcntl(listener.get(), F_GETFL, 0), 0) << strerror(errno);
   ASSERT_EQ(fcntl(listener.get(), F_SETFL, flags | O_NONBLOCK), 0) << strerror(errno);
 #endif
-  sockaddr_in addr = {
-      .sin_family = AF_INET,
-      .sin_addr =
-          {
-              .s_addr = htonl(INADDR_LOOPBACK),
-          },
-  };
-
+  sockaddr_in addr = LoopbackSockaddrV4(0);
   ASSERT_EQ(bind(listener.get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
 
@@ -2213,14 +2102,7 @@ TEST_P(IOMethodTest, ListenerSocketIO) {
   fbl::unique_fd listener;
   ASSERT_TRUE(listener = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
 
-  sockaddr_in serveraddr = {
-      .sin_family = AF_INET,
-      .sin_addr =
-          {
-              .s_addr = htonl(INADDR_LOOPBACK),
-          },
-  };
-
+  sockaddr_in serveraddr = LoopbackSockaddrV4(0);
   ASSERT_EQ(bind(listener.get(), reinterpret_cast<sockaddr*>(&serveraddr), sizeof(serveraddr)), 0)
       << strerror(errno);
   ASSERT_EQ(listen(listener.get(), 0), 0) << strerror(errno);
@@ -2243,13 +2125,7 @@ TEST_P(IOMethodTest, NullptrFaultSTREAM) {
   fbl::unique_fd listener, client, server;
   ASSERT_TRUE(listener = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
 
-  sockaddr_in addr = {
-      .sin_family = AF_INET,
-      .sin_addr =
-          {
-              .s_addr = htonl(INADDR_ANY),
-          },
-  };
+  sockaddr_in addr = LoopbackSockaddrV4(0);
   ASSERT_EQ(bind(listener.get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
 

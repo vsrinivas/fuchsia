@@ -67,15 +67,7 @@ void SendWithCmsg(int sock, char* buf, size_t buf_size, int cmsg_level, int cmsg
 }
 
 TEST(LocalhostTest, SendToZeroPort) {
-  sockaddr_in addr = {
-      .sin_family = AF_INET,
-      .sin_port = htons(0),
-      .sin_addr =
-          {
-              .s_addr = htonl(INADDR_LOOPBACK),
-          },
-  };
-
+  sockaddr_in addr = LoopbackSockaddrV4(0);
   fbl::unique_fd fd;
   ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, 0))) << strerror(errno);
   ASSERT_EQ(sendto(fd.get(), nullptr, 0, 0, reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)),
@@ -93,14 +85,7 @@ TEST(LocalhostTest, DatagramSocketIgnoresMsgWaitAll) {
   ASSERT_TRUE(recvfd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0)))
       << strerror(errno);
 
-  sockaddr_in addr = {
-      .sin_family = AF_INET,
-      .sin_addr =
-          {
-              .s_addr = htonl(INADDR_LOOPBACK),
-          },
-  };
-
+  sockaddr_in addr = LoopbackSockaddrV4(0);
   ASSERT_EQ(bind(recvfd.get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
 
@@ -225,11 +210,7 @@ TEST(LocalhostTest, ConnectAFMismatchINET) {
   fbl::unique_fd s;
   ASSERT_TRUE(s = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP))) << strerror(errno);
 
-  sockaddr_in6 addr = {
-      .sin6_family = AF_INET6,
-      .sin6_port = htons(1337),
-      .sin6_addr = IN6ADDR_LOOPBACK_INIT,
-  };
+  sockaddr_in6 addr = LoopbackSockaddrV6(1337);
   EXPECT_EQ(connect(s.get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)), -1);
   EXPECT_EQ(errno, EAFNOSUPPORT) << strerror(errno);
   EXPECT_EQ(close(s.release()), 0) << strerror(errno);
@@ -239,14 +220,7 @@ TEST(LocalhostTest, ConnectAFMismatchINET6) {
   fbl::unique_fd s;
   ASSERT_TRUE(s = fbl::unique_fd(socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP))) << strerror(errno);
 
-  sockaddr_in addr = {
-      .sin_family = AF_INET,
-      .sin_port = htons(1337),
-      .sin_addr =
-          {
-              .s_addr = htonl(INADDR_LOOPBACK),
-          },
-  };
+  sockaddr_in addr = LoopbackSockaddrV4(1337);
   EXPECT_EQ(connect(s.get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
   EXPECT_EQ(close(s.release()), 0) << strerror(errno);
@@ -258,14 +232,7 @@ TEST_P(IOMethodTest, NullptrFaultDGRAM) {
   fbl::unique_fd fd;
   ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0)))
       << strerror(errno);
-  const sockaddr_in addr = {
-      .sin_family = AF_INET,
-      .sin_port = 1235,
-      .sin_addr =
-          {
-              .s_addr = htonl(INADDR_LOOPBACK),
-          },
-  };
+  const sockaddr_in addr = LoopbackSockaddrV4(1235);
 
   ASSERT_EQ(bind(fd.get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
@@ -287,14 +254,7 @@ TEST_P(IOReadingMethodTest, DatagramSocketErrorWhileBlocked) {
 
   {
     // Connect to an existing remote but on a port that is not being used.
-    sockaddr_in addr = {
-        .sin_family = AF_INET,
-        .sin_port = htons(1337),
-        .sin_addr =
-            {
-                .s_addr = htonl(INADDR_LOOPBACK),
-            },
-    };
+    sockaddr_in addr = LoopbackSockaddrV4(1337);
     ASSERT_EQ(connect(fd.get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)), 0)
         << strerror(errno);
   }
@@ -362,14 +322,7 @@ class DatagramSocketErrBase {
 
   static void BindLoopback(const fbl::unique_fd& fd) {
     {
-      sockaddr_in addr = {
-          .sin_family = AF_INET,
-          .sin_addr =
-              {
-                  .s_addr = htonl(INADDR_LOOPBACK),
-              },
-      };
-
+      sockaddr_in addr = LoopbackSockaddrV4(0);
       ASSERT_EQ(bind(fd.get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)), 0)
           << strerror(errno);
     }
@@ -692,14 +645,7 @@ TEST_P(DatagramSendTest, SendToIPv4MappedIPv6FromIPv4) {
   fbl::unique_fd fd;
   ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, 0))) << strerror(errno);
 
-  sockaddr_in addr = {
-      .sin_family = AF_INET,
-      .sin_addr =
-          {
-              .s_addr = htonl(INADDR_LOOPBACK),
-          },
-  };
-
+  sockaddr_in addr = LoopbackSockaddrV4(0);
   ASSERT_EQ(bind(fd.get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
 
@@ -749,14 +695,7 @@ TEST_P(DatagramSendTest, DatagramSend) {
   fbl::unique_fd recvfd;
   ASSERT_TRUE(recvfd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, 0))) << strerror(errno);
 
-  sockaddr_in addr = {
-      .sin_family = AF_INET,
-      .sin_addr =
-          {
-              .s_addr = htonl(INADDR_LOOPBACK),
-          },
-  };
-
+  sockaddr_in addr = LoopbackSockaddrV4(0);
   EXPECT_EQ(bind(recvfd.get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
 
@@ -890,14 +829,7 @@ TEST(NetDatagramTest, DatagramConnectWrite) {
   fbl::unique_fd recvfd;
   ASSERT_TRUE(recvfd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, 0))) << strerror(errno);
 
-  sockaddr_in addr = {
-      .sin_family = AF_INET,
-      .sin_addr =
-          {
-              .s_addr = htonl(INADDR_LOOPBACK),
-          },
-  };
-
+  sockaddr_in addr = LoopbackSockaddrV4(0);
   ASSERT_EQ(bind(recvfd.get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
 
@@ -931,14 +863,7 @@ TEST(NetDatagramTest, DatagramPartialRecv) {
   fbl::unique_fd recvfd;
   ASSERT_TRUE(recvfd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, 0))) << strerror(errno);
 
-  sockaddr_in addr = {
-      .sin_family = AF_INET,
-      .sin_addr =
-          {
-              .s_addr = htonl(INADDR_LOOPBACK),
-          },
-  };
-
+  sockaddr_in addr = LoopbackSockaddrV4(0);
   ASSERT_EQ(bind(recvfd.get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
 
@@ -1018,14 +943,7 @@ TEST(NetDatagramTest, DatagramSendtoRecvfrom) {
   fbl::unique_fd recvfd;
   ASSERT_TRUE(recvfd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, 0))) << strerror(errno);
 
-  sockaddr_in addr = {
-      .sin_family = AF_INET,
-      .sin_addr =
-          {
-              .s_addr = htonl(INADDR_LOOPBACK),
-          },
-  };
-
+  sockaddr_in addr = LoopbackSockaddrV4(0);
   ASSERT_EQ(bind(recvfd.get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
 
@@ -1082,11 +1000,7 @@ TEST(NetDatagramTest, DatagramSendtoRecvfromV6) {
   fbl::unique_fd recvfd;
   ASSERT_TRUE(recvfd = fbl::unique_fd(socket(AF_INET6, SOCK_DGRAM, 0))) << strerror(errno);
 
-  sockaddr_in6 addr = {
-      .sin6_family = AF_INET6,
-      .sin6_addr = IN6ADDR_LOOPBACK_INIT,
-  };
-
+  sockaddr_in6 addr = LoopbackSockaddrV6(0);
   ASSERT_EQ(bind(recvfd.get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
 

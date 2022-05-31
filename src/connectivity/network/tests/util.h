@@ -46,6 +46,12 @@ fit::deferred_action<std::function<void()>> DisableSigPipe(bool is_write);
 bool IsRoot();
 #endif
 
+// Returns a sockaddr_in holding an IPv4 loopback address with the provided port.
+sockaddr_in LoopbackSockaddrV4(in_port_t port);
+
+// Returns a sockaddr_in6 holding an IPv6 loopback address with the provided port.
+sockaddr_in6 LoopbackSockaddrV6(in_port_t port);
+
 // Fills `fd`'s send buffer and writes the number of bytes written to `out_bytes_written`.
 //
 // Assumes that `fd` was previously connected to `peer_fd`.

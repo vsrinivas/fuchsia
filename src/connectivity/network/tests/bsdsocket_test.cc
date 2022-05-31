@@ -80,17 +80,11 @@ class SocketKindTest : public testing::TestWithParam<SocketKind> {
 
     switch (domain) {
       case AF_INET:
-        *(reinterpret_cast<sockaddr_in*>(ss)) = {
-            .sin_family = AF_INET,
-            .sin_addr = {.s_addr = htonl(INADDR_LOOPBACK)},
-        };
+        *(reinterpret_cast<sockaddr_in*>(ss)) = LoopbackSockaddrV4(0);
         *len = sizeof(sockaddr_in);
         break;
       case AF_INET6:
-        *(reinterpret_cast<sockaddr_in6*>(ss)) = {
-            .sin6_family = AF_INET6,
-            .sin6_addr = IN6ADDR_LOOPBACK_INIT,
-        };
+        *(reinterpret_cast<sockaddr_in6*>(ss)) = LoopbackSockaddrV6(0);
         *len = sizeof(sockaddr_in6);
         break;
       default:
@@ -1124,13 +1118,7 @@ TEST_P(ReuseTest, AllowsAddressReuse) {
   }
 #endif
 
-  sockaddr_in addr = {
-      .sin_family = AF_INET,
-      .sin_addr =
-          {
-              .s_addr = htonl(INADDR_LOOPBACK),
-          },
-  };
+  sockaddr_in addr = LoopbackSockaddrV4(0);
   if (multicast) {
     int n = inet_pton(addr.sin_family, "224.0.2.1", &addr.sin_addr);
     ASSERT_GE(n, 0) << strerror(errno);
@@ -1318,13 +1306,7 @@ class NetSocketTest : public testing::TestWithParam<int> {};
 // MSG_PEEK with scatter/gather.
 TEST_P(NetSocketTest, SocketPeekTest) {
   int socket_type = GetParam();
-  sockaddr_in addr = {
-      .sin_family = AF_INET,
-      .sin_addr =
-          {
-              .s_addr = htonl(INADDR_LOOPBACK),
-          },
-  };
+  sockaddr_in addr = LoopbackSockaddrV4(0);
   socklen_t addrlen = sizeof(addr);
   fbl::unique_fd sendfd;
   fbl::unique_fd recvfd;
@@ -1670,14 +1652,7 @@ TEST_P(IcmpSocketTest, PayloadIdentIgnored) {
 
   switch (domain) {
     case AF_INET: {
-      const sockaddr_in bind_addr = {
-          .sin_family = AF_INET,
-          .sin_port = htons(kBindIdent),
-          .sin_addr =
-              {
-                  .s_addr = htonl(INADDR_LOOPBACK),
-              },
-      };
+      const sockaddr_in bind_addr = LoopbackSockaddrV4(kBindIdent);
       ASSERT_EQ(bind(fd().get(), reinterpret_cast<const sockaddr*>(&bind_addr), sizeof(bind_addr)),
                 0)
           << strerror(errno);
@@ -1716,11 +1691,7 @@ TEST_P(IcmpSocketTest, PayloadIdentIgnored) {
       EXPECT_EQ(hdr_with_extra.hdr.un.echo.sequence, pkt.un.echo.sequence);
     } break;
     case AF_INET6: {
-      const sockaddr_in6 bind_addr = {
-          .sin6_family = AF_INET6,
-          .sin6_port = htons(kBindIdent),
-          .sin6_addr = IN6ADDR_LOOPBACK_INIT,
-      };
+      const sockaddr_in6 bind_addr = LoopbackSockaddrV6(kBindIdent);
       ASSERT_EQ(bind(fd().get(), reinterpret_cast<const sockaddr*>(&bind_addr), sizeof(bind_addr)),
                 0)
           << strerror(errno);

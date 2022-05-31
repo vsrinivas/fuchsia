@@ -12,6 +12,25 @@
 
 #include <gtest/gtest.h>
 
+sockaddr_in LoopbackSockaddrV4(in_port_t port) {
+  return {
+      .sin_family = AF_INET,
+      .sin_port = htons(port),
+      .sin_addr =
+          {
+              .s_addr = htonl(INADDR_LOOPBACK),
+          },
+  };
+}
+
+sockaddr_in6 LoopbackSockaddrV6(in_port_t port) {
+  return {
+      .sin6_family = AF_INET6,
+      .sin6_port = htons(port),
+      .sin6_addr = IN6ADDR_LOOPBACK_INIT,
+  };
+}
+
 void fill_stream_send_buf(int fd, int peer_fd, ssize_t* out_bytes_written) {
   {
 #if defined(__Fuchsia__)
