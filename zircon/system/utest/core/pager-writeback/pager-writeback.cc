@@ -3668,4 +3668,313 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(OpZeroPartialPage, ZX_VMO_RESIZABLE) {
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, ranges, sizeof(ranges) / sizeof(zx_vmo_dirty_range_t)));
 }
 
+// Tests that dirty pages can be written back after detach.
+TEST_WITH_AND_WITHOUT_TRAP_DIRTY(WritebackDirtyPagesAfterDetach, 0) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(1, create_option, &vmo));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+
+  // Write to a page.
+  uint8_t data = 0xaa;
+  TestThread t([vmo, data]() -> bool { return vmo->vmo().write(&data, 0, sizeof(data)) == ZX_OK; });
+  ASSERT_TRUE(t.Start());
+
+  if (create_option & ZX_VMO_TRAP_DIRTY) {
+    // Dirty the page.
+    ASSERT_TRUE(t.WaitForBlocked());
+    ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
+    ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
+  }
+  ASSERT_TRUE(t.Wait());
+
+  // We should have committed the page.
+  zx_info_vmo_t info;
+  ASSERT_OK(vmo->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+  ASSERT_EQ(zx_system_get_page_size(), info.committed_bytes);
+
+  // Verify that the page is dirty.
+  zx_vmo_dirty_range_t range = {.offset = 0, .length = 1, .options = 0};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  // Detach the VMO.
+  ASSERT_TRUE(pager.DetachVmo(vmo));
+  ASSERT_TRUE(pager.WaitForPageComplete(vmo->GetKey(), ZX_TIME_INFINITE));
+
+  // Verify that the page is still dirty.
+  ASSERT_OK(vmo->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+  ASSERT_EQ(zx_system_get_page_size(), info.committed_bytes);
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  // Should be able to read the page and verify its contents.
+  std::vector<uint8_t> expected(zx_system_get_page_size(), 0);
+  vmo->GenerateBufferContents(expected.data(), 1, 0);
+  memset(expected.data(), data, sizeof(data));
+  // We should be able to read the dirty range both through mappings and with a VMO read.
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), false));
+
+  // Writeback the page.
+  ASSERT_TRUE(pager.WritebackBeginPages(vmo, 0, 1));
+  ASSERT_TRUE(pager.WritebackEndPages(vmo, 0, 1));
+
+  // Verify that the page is clean now.
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+}
+
+// Tests that a newly resized range can be written back after detach.
+TEST_WITH_AND_WITHOUT_TRAP_DIRTY(WritebackResizedRangeAfterDetach, ZX_VMO_RESIZABLE) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(1, create_option, &vmo));
+
+  // Resize the VMO up and write a page leaving a gap.
+  ASSERT_TRUE(vmo->Resize(3));
+
+  uint8_t data = 0xbb;
+  TestThread t([vmo, data]() -> bool {
+    return vmo->vmo().write(&data, 2 * zx_system_get_page_size(), sizeof(data)) == ZX_OK;
+  });
+  ASSERT_TRUE(t.Start());
+
+  if (create_option & ZX_VMO_TRAP_DIRTY) {
+    // Dirty the page.
+    ASSERT_TRUE(t.WaitForBlocked());
+    ASSERT_TRUE(pager.WaitForPageDirty(vmo, 2, 1, ZX_TIME_INFINITE));
+    ASSERT_TRUE(pager.DirtyPages(vmo, 2, 1));
+  }
+  ASSERT_TRUE(t.Wait());
+
+  // Verify dirty ranges.
+  zx_vmo_dirty_range_t ranges[] = {{1, 1, ZX_VMO_DIRTY_RANGE_IS_ZERO}, {2, 1, 0}};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, ranges, sizeof(ranges) / sizeof(zx_vmo_dirty_range_t)));
+
+  // Only the last page should be committed.
+  zx_info_vmo_t info;
+  ASSERT_OK(vmo->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+  ASSERT_EQ(zx_system_get_page_size(), info.committed_bytes);
+
+  // Detach the VMO.
+  ASSERT_TRUE(pager.DetachVmo(vmo));
+  ASSERT_TRUE(pager.WaitForPageComplete(vmo->GetKey(), ZX_TIME_INFINITE));
+
+  // Everything beyond the original size is dirty so should remain intact.
+  ASSERT_OK(vmo->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+  ASSERT_EQ(zx_system_get_page_size(), info.committed_bytes);
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, ranges, sizeof(ranges) / sizeof(zx_vmo_dirty_range_t)));
+
+  // Verify VMO contents in the dirty range.
+  std::vector<uint8_t> expected(3 * zx_system_get_page_size(), 0);
+  memset(expected.data() + 2 * zx_system_get_page_size(), data, sizeof(data));
+  // We should be able to read the dirty range both through mappings and with a VMO read.
+  ASSERT_TRUE(check_buffer_data(vmo, 1, 2, expected.data(), true));
+  ASSERT_TRUE(check_buffer_data(vmo, 1, 2, expected.data() + zx_system_get_page_size(), false));
+
+  // Can writeback the dirty ranges.
+  ASSERT_TRUE(pager.WritebackBeginPages(vmo, 1, 2));
+  ASSERT_TRUE(pager.WritebackEndPages(vmo, 1, 2));
+
+  // No more dirty pages.
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+}
+
+// Tests that clean pages are decommitted on detach.
+TEST_WITH_AND_WITHOUT_TRAP_DIRTY(DecommitCleanOnDetach, 0) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(1, create_option, &vmo));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+
+  // We have one committed page.
+  zx_info_vmo_t info;
+  ASSERT_OK(vmo->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+  ASSERT_EQ(zx_system_get_page_size(), info.committed_bytes);
+
+  // No dirty ranges.
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // Detach the VMO.
+  ASSERT_TRUE(pager.DetachVmo(vmo));
+  ASSERT_TRUE(pager.WaitForPageComplete(vmo->GetKey(), ZX_TIME_INFINITE));
+
+  // No dirty ranges.
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // No committed pages.
+  ASSERT_OK(vmo->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+  ASSERT_EQ(0, info.committed_bytes);
+}
+
+// Tests that DIRTY requests cannot be generated after detach.
+VMO_VMAR_TEST(PagerWriteback, NoDirtyRequestsAfterDetach) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo1;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(1, ZX_VMO_TRAP_DIRTY, &vmo1));
+  ASSERT_TRUE(pager.SupplyPages(vmo1, 0, 1));
+
+  // Verify that no pages are dirty.
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo1, nullptr, 0));
+
+  // Detach the VMO.
+  ASSERT_TRUE(pager.DetachVmo(vmo1));
+  ASSERT_TRUE(pager.WaitForPageComplete(vmo1->GetKey(), ZX_TIME_INFINITE));
+
+  // Try to write to the VMO. As we are starting with a clean page, this would have generated a
+  // DIRTY request pre-detach, but will now fail.
+  if (check_vmar) {
+    TestThread t1([vmo1]() -> bool {
+      auto ptr = reinterpret_cast<uint8_t*>(vmo1->GetBaseAddr());
+      *ptr = 0xaa;
+      return true;
+    });
+    ASSERT_TRUE(t1.Start());
+    ASSERT_TRUE(t1.WaitForCrash(vmo1->GetBaseAddr(), ZX_ERR_BAD_STATE));
+  } else {
+    uint8_t data = 0xaa;
+    ASSERT_EQ(ZX_ERR_BAD_STATE, vmo1->vmo().write(&data, 0, sizeof(data)));
+  }
+
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo1, 0, &offset, &length));
+
+  // No pages are dirty still.
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo1, nullptr, 0));
+
+  // Try again but this time with an AwaitingClean page, which would also have generated a DIRTY
+  // request before the detach.
+  Vmo* vmo2;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(1, ZX_VMO_TRAP_DIRTY, &vmo2));
+  ASSERT_TRUE(pager.SupplyPages(vmo2, 0, 1));
+  ASSERT_TRUE(pager.DirtyPages(vmo2, 0, 1));
+
+  // Verify that the page is dirty.
+  zx_vmo_dirty_range_t range = {.offset = 0, .length = 1, .options = 0};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo2, &range, 1));
+
+  // Being writeback, putting the page in AwaitingClean.
+  ASSERT_TRUE(pager.WritebackBeginPages(vmo2, 0, 1));
+
+  // Detach the VMO.
+  ASSERT_TRUE(pager.DetachVmo(vmo2));
+  ASSERT_TRUE(pager.WaitForPageComplete(vmo2->GetKey(), ZX_TIME_INFINITE));
+
+  // Try to write to the VMO. This will fail.
+  if (check_vmar) {
+    TestThread t2([vmo2]() -> bool {
+      auto ptr = reinterpret_cast<uint8_t*>(vmo2->GetBaseAddr());
+      *ptr = 0xaa;
+      return true;
+    });
+    ASSERT_TRUE(t2.Start());
+    ASSERT_TRUE(t2.WaitForCrash(vmo2->GetBaseAddr(), ZX_ERR_BAD_STATE));
+  } else {
+    uint8_t data = 0xaa;
+    ASSERT_EQ(ZX_ERR_BAD_STATE, vmo2->vmo().write(&data, 0, sizeof(data)));
+  }
+
+  // The page is still dirty (AwaitingClean, but not clean yet).
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo2, &range, 1));
+
+  // End the writeback. This should clean the page.
+  ASSERT_TRUE(pager.WritebackEndPages(vmo2, 0, 1));
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo2, nullptr, 0));
+
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo2, 0, &offset, &length));
+}
+
+// Tests that detach with a pending DIRTY request fails the request.
+VMO_VMAR_TEST(PagerWriteback, DetachWithPendingDirtyRequest) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(1, ZX_VMO_TRAP_DIRTY, &vmo));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+
+  // We have one committed page.
+  zx_info_vmo_t info;
+  ASSERT_OK(vmo->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+  ASSERT_EQ(zx_system_get_page_size(), info.committed_bytes);
+
+  // Try to write.
+  TestThread t([vmo, check_vmar]() -> bool {
+    uint8_t data = 0xaa;
+    if (check_vmar) {
+      auto ptr = reinterpret_cast<uint8_t*>(vmo->GetBaseAddr());
+      *ptr = data;
+      return true;
+    }
+    return vmo->vmo().write(&data, 0, sizeof(data)) == ZX_ERR_BAD_STATE;
+  });
+  ASSERT_TRUE(t.Start());
+
+  // Wait for the dirty request.
+  ASSERT_TRUE(t.WaitForBlocked());
+  ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
+
+  // Detach the VMO.
+  ASSERT_TRUE(pager.DetachVmo(vmo));
+  ASSERT_TRUE(pager.WaitForPageComplete(vmo->GetKey(), ZX_TIME_INFINITE));
+
+  // The thread should terminate.
+  if (check_vmar) {
+    ASSERT_TRUE(t.WaitForCrash(vmo->GetBaseAddr(), ZX_ERR_BAD_STATE));
+  } else {
+    ASSERT_TRUE(t.Wait());
+  }
+
+  // Verify that no pages are dirty.
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // No pages are committed.
+  ASSERT_OK(vmo->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+  ASSERT_EQ(0, info.committed_bytes);
+}
+
+// Tests that failing a DIRTY request after the VMO is detached is a no-op.
+TEST(PagerWriteback, FailDirtyRequestAfterDetach) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(1, ZX_VMO_TRAP_DIRTY, &vmo));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+
+  TestThread t([vmo]() -> bool {
+    uint8_t data = 0xaa;
+    return vmo->vmo().write(&data, 0, sizeof(data)) == ZX_ERR_BAD_STATE;
+  });
+  ASSERT_TRUE(t.Start());
+
+  ASSERT_TRUE(t.WaitForBlocked());
+  ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
+
+  // Detach the VMO.
+  ASSERT_TRUE(pager.DetachVmo(vmo));
+  ASSERT_TRUE(pager.WaitForPageComplete(vmo->GetKey(), ZX_TIME_INFINITE));
+
+  // The write should fail.
+  ASSERT_TRUE(t.Wait());
+
+  // No more requests seen.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+
+  // This is a no-op.
+  ASSERT_TRUE(pager.FailPages(vmo, 0, 1));
+
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+
+  // The page was not dirtied.
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+}
+
 }  // namespace pager_tests

@@ -2778,7 +2778,6 @@ zx_status_t VmCowPages::UnmapAndRemovePagesLocked(uint64_t offset, uint64_t len,
 
   // DecommitRangeLocked() will call this function only on a VMO with no parent. The only clone
   // types that support OP_DECOMMIT are slices, for which we will recurse up to the root.
-  // The only other callsite, DetachSourceLocked(), can only be called on a root pager-backed VMO.
   DEBUG_ASSERT(!parent_);
 
   // unmap all of the pages in this range on all the mapping regions
@@ -4766,9 +4765,52 @@ void VmCowPages::DetachSourceLocked() {
   list_node_t freed_list;
   list_initialize(&freed_list);
 
-  // Remove committed pages so that all future page faults on this VMO and its clones can fail.
-  zx_status_t status = UnmapAndRemovePagesLocked(0, size_, &freed_list);
-  DEBUG_ASSERT(status == ZX_OK);
+  // We would like to remove all committed pages so that all future page faults on this VMO and its
+  // clones can fail in a deterministic manner. However, if the page source is preserving content
+  // (is a userpager), we need to hold on to un-Clean (Dirty and AwaitingClean pages) so that they
+  // can be written back by the page source. If the page source is not preserving content, its pages
+  // will not be dirty tracked to begin with i.e. their dirty state will be Untracked, so we will
+  // end up removing all pages.
+
+  // We should only be removing pages from the root VMO.
+  DEBUG_ASSERT(!parent_);
+
+  // Even though we might end up removing only a subset of the pages, unmap them all at once as an
+  // optimization.
+  RangeChangeUpdateLocked(0, size_, RangeChangeOp::Unmap);
+
+  __UNINITIALIZED BatchPQRemove page_remover(&freed_list);
+
+  // Remove all clean (or untracked) pages.
+  // TODO(rashaeqbal): Pages that linger after this will be written back and marked clean at some
+  // point, and will age through the pager-backed queues and eventually get evicted. We could
+  // adopt an eager approach instead, and decommit those pages as soon as they get marked clean.
+  // If we do that, we could also extend the eager approach to supply_pages, where pages get
+  // decommitted on supply, i.e. the supply is a no-op.
+  page_list_.RemovePages(
+      [&page_remover](VmPageOrMarker* p, uint64_t off) {
+        // A marker is a clean zero page. Replace it with an empty slot.
+        if (p->IsMarker()) {
+          *p = VmPageOrMarker::Empty();
+          return ZX_ERR_NEXT;
+        }
+        DEBUG_ASSERT(p->IsPage());
+
+        // We cannot remove the page if it is dirty-tracked but not clean.
+        if (is_page_dirty_tracked(p->Page()) && !is_page_clean(p->Page())) {
+          DEBUG_ASSERT(!pmm_is_loaned(p->Page()));
+          return ZX_ERR_NEXT;
+        }
+
+        // This is a page that we're going to remove; we don't expect it to be pinned.
+        DEBUG_ASSERT(p->Page()->object.pin_count == 0);
+
+        page_remover.Push(p->ReleasePage());
+        return ZX_ERR_NEXT;
+      },
+      0, size_);
+
+  page_remover.Flush();
   FreePages(&freed_list);
 
   IncrementHierarchyGenerationCountLocked();
