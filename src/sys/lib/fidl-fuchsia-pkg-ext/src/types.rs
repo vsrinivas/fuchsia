@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::errors::BlobIdParseError,
+    crate::errors::{BlobIdParseError, CupMissingField},
     fidl_fuchsia_pkg as fidl,
     proptest_derive::Arbitrary,
     serde::{Deserialize, Serialize},
-    std::{fmt, str},
+    std::{convert::TryFrom, fmt, str},
     typed_builder::TypedBuilder,
 };
 
@@ -145,27 +145,40 @@ mod hex_serde {
 #[derive(Clone, Debug, Eq, PartialEq, TypedBuilder)]
 pub struct CupData {
     #[builder(default, setter(into))]
-    pub request: Option<Vec<u8>>,
+    pub request: Vec<u8>,
     #[builder(default, setter(into))]
-    pub key_id: Option<u64>,
+    pub key_id: u64,
     #[builder(default, setter(into))]
-    pub nonce: Option<[u8; 32]>,
+    pub nonce: [u8; 32],
     #[builder(default, setter(into))]
-    pub response: Option<Vec<u8>>,
+    pub response: Vec<u8>,
     #[builder(default, setter(into))]
-    pub signature: Option<Vec<u8>>,
+    pub signature: Vec<u8>,
 }
 
 impl From<CupData> for fidl::CupData {
     fn from(c: CupData) -> Self {
         fidl::CupData {
-            request: c.request,
-            key_id: c.key_id,
-            nonce: c.nonce,
-            response: c.response,
-            signature: c.signature,
+            request: Some(c.request),
+            key_id: Some(c.key_id),
+            nonce: Some(c.nonce),
+            response: Some(c.response),
+            signature: Some(c.signature),
             ..fidl::CupData::EMPTY
         }
+    }
+}
+
+impl TryFrom<fidl::CupData> for CupData {
+    type Error = CupMissingField;
+    fn try_from(c: fidl::CupData) -> Result<Self, Self::Error> {
+        Ok(CupData::builder()
+            .request(c.request.ok_or(CupMissingField::Request)?)
+            .response(c.response.ok_or(CupMissingField::Response)?)
+            .key_id(c.key_id.ok_or(CupMissingField::KeyId)?)
+            .nonce(c.nonce.ok_or(CupMissingField::Nonce)?)
+            .signature(c.signature.ok_or(CupMissingField::Signature)?)
+            .build())
     }
 }
 

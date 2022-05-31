@@ -5,7 +5,8 @@
 /// This module tests eager packages.
 use {
     assert_matches::assert_matches,
-    fidl_fuchsia_pkg::{CupData, GetInfoError, ResolveError},
+    fidl_fuchsia_pkg::{GetInfoError, ResolveError},
+    fidl_fuchsia_pkg_ext::CupData,
     fuchsia_async as fasync,
     fuchsia_pkg_testing::{PackageBuilder, RepositoryBuilder, SystemImageBuilder},
     fuchsia_url::PinnedAbsolutePackageUrl,
@@ -39,13 +40,12 @@ fn make_cup_data(cup_response: &[u8]) -> CupData {
     let expected_signature: Vec<u8> =
         make_expected_signature_for_test(&priv_key, &request_metadata, &cup_response);
     fidl_fuchsia_pkg_ext::CupData::builder()
-        .key_id(Some(public_key_id))
-        .nonce(Some(request_metadata.nonce.into()))
-        .request(Some(request_body))
-        .response(Some(cup_response.to_vec()))
-        .signature(Some(expected_signature))
+        .key_id(public_key_id)
+        .nonce(request_metadata.nonce)
+        .request(request_body)
+        .response(cup_response)
+        .signature(expected_signature)
         .build()
-        .into()
 }
 
 #[fasync::run_singlethreaded(test)]

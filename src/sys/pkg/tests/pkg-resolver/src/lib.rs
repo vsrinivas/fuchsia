@@ -15,12 +15,14 @@ use {
     fidl_fuchsia_component::{RealmMarker, RealmProxy},
     fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg::{
-        self as fpkg, CupData, CupMarker, CupProxy, ExperimentToggle as Experiment,
-        FontResolverMarker, FontResolverProxy, GetInfoError, PackageCacheMarker,
-        PackageResolverAdminMarker, PackageResolverAdminProxy, PackageResolverMarker,
-        PackageResolverProxy, RepositoryManagerMarker, RepositoryManagerProxy, WriteError,
+        self as fpkg, CupMarker, CupProxy, ExperimentToggle as Experiment, FontResolverMarker,
+        FontResolverProxy, GetInfoError, PackageCacheMarker, PackageResolverAdminMarker,
+        PackageResolverAdminProxy, PackageResolverMarker, PackageResolverProxy,
+        RepositoryManagerMarker, RepositoryManagerProxy, WriteError,
     },
-    fidl_fuchsia_pkg_ext::{BlobId, RepositoryConfig, RepositoryConfigBuilder, RepositoryConfigs},
+    fidl_fuchsia_pkg_ext::{
+        BlobId, CupData, RepositoryConfig, RepositoryConfigBuilder, RepositoryConfigs,
+    },
     fidl_fuchsia_pkg_internal::{PersistentEagerPackage, PersistentEagerPackages},
     fidl_fuchsia_pkg_rewrite::{
         EngineMarker as RewriteEngineMarker, EngineProxy as RewriteEngineProxy,
@@ -276,7 +278,7 @@ impl Mounts {
                             let pkg_url = fpkg::PackageUrl { url: url.as_unpinned().to_string() };
                             PersistentEagerPackage {
                                 url: Some(pkg_url),
-                                cup: Some(cup),
+                                cup: Some(cup.into()),
                                 ..PersistentEagerPackage::EMPTY
                             }
                         })
@@ -1100,7 +1102,7 @@ impl<P: PkgFs> TestEnv<P> {
     }
 
     pub async fn cup_write(&self, url: impl Into<String>, cup: CupData) -> Result<(), WriteError> {
-        self.proxies.cup.write(&mut fpkg::PackageUrl { url: url.into() }, cup).await.unwrap()
+        self.proxies.cup.write(&mut fpkg::PackageUrl { url: url.into() }, cup.into()).await.unwrap()
     }
 
     pub async fn cup_get_info(

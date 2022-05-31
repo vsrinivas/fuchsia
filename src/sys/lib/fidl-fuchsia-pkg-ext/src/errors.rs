@@ -134,3 +134,17 @@ pub enum RepositoryUrlParseError {
     #[error("invalid repository url")]
     InvalidRepoUrl(#[source] fuchsia_url::ParseError),
 }
+
+#[derive(Debug, thiserror::Error)]
+pub enum CupMissingField {
+    #[error("CupData response field")]
+    Response,
+    #[error("CupData request field")]
+    Request,
+    #[error("CupData key_id field")]
+    KeyId,
+    #[error("CupData nonce field")]
+    Nonce,
+    #[error("CupData signature field")]
+    Signature,
+}
