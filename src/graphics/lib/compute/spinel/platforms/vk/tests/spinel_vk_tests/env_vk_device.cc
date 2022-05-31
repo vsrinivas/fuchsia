@@ -9,7 +9,6 @@
 
 #include "common/macros.h"
 #include "common/vk/cache.h"
-#include "common/vk/debug.h"
 
 //
 // Define a platform-specific prefix

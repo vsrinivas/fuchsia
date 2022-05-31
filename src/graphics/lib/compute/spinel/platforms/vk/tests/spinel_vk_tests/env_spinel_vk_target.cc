@@ -7,7 +7,6 @@
 #include <stdlib.h>
 
 #include "common/macros.h"
-#include "common/vk/debug.h"
 #include "spinel/platforms/vk/ext/find_target/find_target.h"
 
 //

@@ -15,10 +15,8 @@ source_set("vk") {
     "assert.h",
     "barrier.h",
     "cache.h",
-    "debug.h",
     "debug_utils.h",
     "find_mem_type_idx.h",
-    "shader_info_amd.h",
   ]
   sources = [
     "assert.c",
@@ -27,14 +25,10 @@ source_set("vk") {
     "barrier.h",
     "cache.c",
     "cache.h",
-    "debug.c",
-    "debug.h",
     "debug_utils.c",
     "debug_utils.h",
     "find_mem_type_idx.c",
     "find_mem_type_idx.h",
-    "shader_info_amd.c",
-    "shader_info_amd.h",
   ]
   public_deps = [ graphics_compute_vulkan_loader_target ]
   deps = [ "${graphics_compute_dir}/common" ]
