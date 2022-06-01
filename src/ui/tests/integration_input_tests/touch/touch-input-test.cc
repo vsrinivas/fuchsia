@@ -146,10 +146,8 @@ using time_utc = zx::basic_time<1>;
 // created below, or by this component. Note, that when I refer to "this component",
 // I'm referring to the test suite, which is itself a component.
 void AddBaseComponents(RealmBuilder* realm_builder) {
-  realm_builder->AddChild(kRootPresenter,
-                          "fuchsia-pkg://fuchsia.com/touch-input-test#meta/root_presenter.cm");
-  realm_builder->AddChild(kScenicTestRealm,
-                          "fuchsia-pkg://fuchsia.com/touch-input-test#meta/scenic-test-realm.cm");
+  realm_builder->AddChild(kRootPresenter, "#meta/root_presenter.cm");
+  realm_builder->AddChild(kScenicTestRealm, "#meta/scenic_only.cm");
 }
 
 void AddBaseRoutes(RealmBuilder* realm_builder) {
@@ -163,7 +161,8 @@ void AddBaseRoutes(RealmBuilder* realm_builder) {
             .source = ParentRef(),
             .targets = {ChildRef{kScenicTestRealm}}});
   realm_builder->AddRoute(
-      Route{.capabilities = {Protocol{fuchsia::tracing::provider::Registry::Name_}},
+      Route{.capabilities = {Protocol{fuchsia::logger::LogSink::Name_},
+                             Protocol{fuchsia::tracing::provider::Registry::Name_}},
             .source = ParentRef(),
             .targets = {ChildRef{kRootPresenter}}});
 
@@ -188,7 +187,7 @@ void AddBaseRoutes(RealmBuilder* realm_builder) {
             .source = ChildRef{kScenicTestRealm},
             .targets = {ParentRef()}});
 
-  // Supply a default display rotation.
+  // Set display rotation.
   auto config_directory_contents = component_testing::DirectoryContents();
   config_directory_contents.AddFile("display_rotation", "90");
   realm_builder->RouteReadOnlyDirectory("config-data", {ChildRef{kRootPresenter}},
@@ -628,17 +627,14 @@ class FlutterInputTest : public TouchInputBase {
   }
 
   static constexpr auto kFlutterRealm = "flutter_realm";
-  static constexpr auto kFlutterRealmUrl =
-      "fuchsia-pkg://fuchsia.com/one-flutter#meta/one-flutter-realm.cm";
+  static constexpr auto kFlutterRealmUrl = "#meta/one-flutter-realm.cm";
 
  private:
   static constexpr auto kMemoryPressureProvider = "memory_pressure_provider";
-  static constexpr auto kMemoryPressureProviderUrl =
-      "fuchsia-pkg://fuchsia.com/memory_monitor#meta/memory_monitor.cm";
+  static constexpr auto kMemoryPressureProviderUrl = "#meta/memory_monitor.cm";
 
   static constexpr auto kNetstack = "netstack";
-  static constexpr auto kNetstackUrl =
-      "fuchsia-pkg://fuchsia.com/touch-input-test#meta/netstack.cm";
+  static constexpr auto kNetstackUrl = "#meta/netstack.cm";
 };
 
 TEST_F(FlutterInputTest, FlutterTap) {
@@ -679,8 +675,7 @@ class GfxInputTest : public TouchInputBase {
 
  private:
   static constexpr auto kCppGfxClient = "gfx_client";
-  static constexpr auto kCppGfxClientUrl =
-      "fuchsia-pkg://fuchsia.com/touch-gfx-client#meta/touch-gfx-client.cm";
+  static constexpr auto kCppGfxClientUrl = "#meta/touch-gfx-client.cm";
 };
 
 TEST_F(GfxInputTest, CppGfxClientTap) {
@@ -804,6 +799,9 @@ class WebEngineTest : public TouchInputBase {
         {.capabilities = {Protocol{test::touch::ResponseListener::Name_}},
          .source = ChildRef{kMockResponseListener},
          .targets = {target}},
+        {.capabilities = {Protocol{fuchsia::logger::LogSink::Name_}},
+         .source = ParentRef(),
+         .targets = {ChildRef{kFontsProvider}}},
         {.capabilities = {Protocol{fuchsia::fonts::Provider::Name_}},
          .source = ChildRef{kFontsProvider},
          .targets = {target}},
@@ -865,40 +863,33 @@ class WebEngineTest : public TouchInputBase {
   }
 
   static constexpr auto kOneChromiumClient = "chromium_client";
-  static constexpr auto kOneChromiumUrl =
-      "fuchsia-pkg://fuchsia.com/one-chromium#meta/one-chromium.cm";
+  static constexpr auto kOneChromiumUrl = "#meta/one-chromium.cm";
 
  private:
   static constexpr auto kFontsProvider = "fonts_provider";
-  static constexpr auto kFontsProviderUrl = "fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cm";
+  static constexpr auto kFontsProviderUrl = "#meta/fake_fonts.cm";
 
   static constexpr auto kTextManager = "text_manager";
-  static constexpr auto kTextManagerUrl =
-      "fuchsia-pkg://fuchsia.com/text_manager#meta/text_manager.cm";
+  static constexpr auto kTextManagerUrl = "#meta/text_manager.cm";
 
   static constexpr auto kIntl = "intl";
-  static constexpr auto kIntlUrl =
-      "fuchsia-pkg://fuchsia.com/intl_property_manager#meta/intl_property_manager.cm";
+  static constexpr auto kIntlUrl = "#meta/intl_property_manager.cm";
 
   static constexpr auto kMemoryPressureProvider = "memory_pressure_provider";
-  static constexpr auto kMemoryPressureProviderUrl =
-      "fuchsia-pkg://fuchsia.com/memory_monitor#meta/memory_monitor.cm";
+  static constexpr auto kMemoryPressureProviderUrl = "#meta/memory_monitor.cm";
 
   static constexpr auto kNetstack = "netstack";
-  static constexpr auto kNetstackUrl =
-      "fuchsia-pkg://fuchsia.com/touch-input-test#meta/netstack.cm";
+  static constexpr auto kNetstackUrl = "#meta/netstack.cm";
 
   static constexpr auto kWebContextProvider = "web_context_provider";
   static constexpr auto kWebContextProviderUrl =
       "fuchsia-pkg://fuchsia.com/web_engine#meta/context_provider.cmx";
 
   static constexpr auto kSemanticsManager = "semantics_manager";
-  static constexpr auto kSemanticsManagerUrl =
-      "fuchsia-pkg://fuchsia.com/touch-input-test#meta/fake-a11y-manager.cm";
+  static constexpr auto kSemanticsManagerUrl = "#meta/fake-a11y-manager.cm";
 
   static constexpr auto kBuildInfoProvider = "build_info_provider";
-  static constexpr auto kBuildInfoProviderUrl =
-      "fuchsia-pkg://fuchsia.com/touch-input-test#meta/fake_build_info.cm";
+  static constexpr auto kBuildInfoProviderUrl = "#meta/fake_build_info.cm";
 
   // The typical latency on devices we've tested is ~60 msec. The retry interval is chosen to be
   // a) Long enough that it's unlikely that we send a new tap while a previous tap is still being
@@ -983,8 +974,7 @@ class EmbeddingFlutterTest {
   }
 
   static constexpr auto kEmbeddingFlutter = "embedding_flutter";
-  static constexpr auto kEmbeddingFlutterUrl =
-      "fuchsia-pkg://fuchsia.com/embedding-flutter#meta/embedding-flutter-realm.cm";
+  static constexpr auto kEmbeddingFlutterUrl = "#meta/embedding-flutter-realm.cm";
 };
 
 class FlutterInFlutterTest : public FlutterInputTest, public EmbeddingFlutterTest {

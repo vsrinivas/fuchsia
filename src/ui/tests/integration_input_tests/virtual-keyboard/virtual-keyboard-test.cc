@@ -105,7 +105,7 @@ using time_utc = zx::basic_time<1>;
 
 void AddBaseComponents(RealmBuilder* realm_builder) {
   realm_builder->AddChild(kRootPresenter, "#meta/root_presenter.cm");
-  realm_builder->AddChild(kScenicTestRealm, "#meta/scenic-test-realm.cm");
+  realm_builder->AddChild(kScenicTestRealm, "#meta/scenic_only.cm");
 }
 
 void AddBaseRoutes(RealmBuilder* realm_builder) {

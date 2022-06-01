@@ -19,11 +19,9 @@ namespace {
 
 // Name for the scenic subrealm.
 constexpr auto kScenicRealm = "scenic_realm";
-constexpr auto kScenicRealmUrl = "#meta/scenic_realm.cm";
+constexpr auto kScenicRealmUrl = "#meta/scenic_only.cm";
 constexpr auto kRootPresenter = "root_presenter";
 constexpr auto kRootPresenterUrl = "#meta/root_presenter.cm";
-constexpr auto kLegacyRootPresenter = "wrapper_root_presenter";
-constexpr auto kLegacyRootPresenterUrl = "#meta/wrapper_root_presenter.cm";
 
 }  // namespace
 
@@ -39,8 +37,6 @@ ScenicRealmBuilder::ScenicRealmBuilder(RealmBuilderArgs args)
   if (args.scene_owner.has_value()) {
     if (args.scene_owner == SceneOwner::ROOT_PRESENTER) {
       scene_owner_ = {kRootPresenter, kRootPresenterUrl};
-    } else if (args.scene_owner == SceneOwner::ROOT_PRESENTER_LEGACY) {
-      scene_owner_ = {kLegacyRootPresenter, kLegacyRootPresenterUrl};
     }
   }
 

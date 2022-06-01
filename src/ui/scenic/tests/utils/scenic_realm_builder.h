@@ -17,10 +17,6 @@ using SceneOwnerInfo =
 // TODO(fxb/95644): Add support for Scene Manager.
 enum class SceneOwner {
   ROOT_PRESENTER = 0,
-
-  // CFv1 component for the root presenter. Required for the test fixtures which depend on the root
-  // presenter to use fuchsia.accessibility.Magnifier.
-  ROOT_PRESENTER_LEGACY,
 };
 
 // Configs required to launch a client which exposes |fuchsia.ui.app.ViewProvider|.

@@ -28,33 +28,3 @@ group("workstation_tests") {
     "text-input:tests",
   ]
 }
-
-fuchsia_component("wrapped-input-pipeline") {
-  testonly = true
-  manifest = "meta/wrapped-input-pipeline.cml"
-  deps = [ "//src/ui/bin/input-pipeline:component-for-test" ]
-}
-
-# scenic-test-realm is a realm replicating the scenic setup that
-# can be stenciled out in tests, and amended to fit.
-fuchsia_component("scenic-test-realm") {
-  testonly = true
-  manifest = "meta/scenic-test-realm.cml"
-  deps = [
-    "//src/cobalt/bin/testing/mock_cobalt:component_v2",
-    "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv2-component",
-    "//src/ui/scenic:component_v2",
-  ]
-}
-
-# input-pipeline-test-realm is a realm replicating the input UI setup that
-# can be stenciled out in tests, and amended to fit.
-fuchsia_component("input-pipeline-test-realm") {
-  testonly = true
-  manifest = "meta/input-pipeline-test-realm.cml"
-  deps = [
-    ":scenic-test-realm",
-    ":wrapped-input-pipeline",
-    "//src/ui/bin/root_presenter:component_v2",
-  ]
-}

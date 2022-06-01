@@ -69,9 +69,7 @@ static size_t OverlayPixelCount(std::map<scenic::Color, size_t>& histogram) {
 void FlutterEmbedderTestIp::SetUpRealmBase() {
   FX_LOGS(INFO) << "Setting up realm base.";
   // Add base components.
-  realm_builder_.AddChild(
-      kInputPipelineTestRealm,
-      "fuchsia-pkg://fuchsia.com/flutter-embedder-test-ip#meta/input-pipeline-test-realm.cm");
+  realm_builder_.AddChild(kInputPipelineTestRealm, "#meta/root_presenter_scene_with_input.cm");
 
   // Add base routes.
   realm_builder_.AddRoute(Route{.capabilities =

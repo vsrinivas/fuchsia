@@ -32,7 +32,7 @@ async fn assemble_realm(
     // Declare packaged components.
     let scenic_test_realm = PackagedComponent::new_from_modern_url(
         "scenic-test-realm",
-        "fuchsia-pkg://fuchsia.com/factory-reset-handler-test#meta/scenic-test-realm.cm",
+        "fuchsia-pkg://fuchsia.com/factory-reset-handler-test#meta/scenic_only.cm",
     );
     let input_pipeline = PackagedComponent::new_from_legacy_url(
         "input_pipeline",

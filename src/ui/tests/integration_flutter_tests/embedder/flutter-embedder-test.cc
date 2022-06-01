@@ -28,8 +28,6 @@ constexpr auto kRootPresenter = "root_presenter";
 constexpr auto kRootPresenterRef = ChildRef{kRootPresenter};
 constexpr auto kScenicTestRealm = "scenic_test_realm";
 constexpr auto kScenicTestRealmRef = ChildRef{kScenicTestRealm};
-constexpr auto kHdcp = "hdcp";
-constexpr auto kHdcpRef = ChildRef{kHdcp};
 constexpr auto kParentFlutter = "parent_flutter";
 constexpr auto kParentFlutterRef = ChildRef{kParentFlutter};
 
@@ -71,13 +69,8 @@ static size_t OverlayPixelCount(std::map<scenic::Color, size_t>& histogram) {
 void FlutterEmbedderTest::SetUpRealmBase() {
   FX_LOGS(INFO) << "Setting up realm base.";
   // Add base components.
-  realm_builder_.AddChild(kRootPresenter,
-                          "fuchsia-pkg://fuchsia.com/flutter-embedder-test#meta/root_presenter.cm");
-  realm_builder_.AddChild(
-      kScenicTestRealm,
-      "fuchsia-pkg://fuchsia.com/flutter-embedder-test#meta/scenic-test-realm.cm");
-  realm_builder_.AddLegacyChild(
-      kHdcp, "fuchsia-pkg://fuchsia.com/fake-hardware-display-controller-provider#meta/hdcp.cmx");
+  realm_builder_.AddChild(kRootPresenter, "#meta/root_presenter.cm");
+  realm_builder_.AddChild(kScenicTestRealm, "#meta/scenic_only.cm");
 
   // Add base routes.
   realm_builder_.AddRoute(
@@ -88,18 +81,13 @@ void FlutterEmbedderTest::SetUpRealmBase() {
             .targets = {kScenicTestRealmRef}});
   realm_builder_.AddRoute(Route{.capabilities = {Protocol{fuchsia::sysmem::Allocator::Name_}},
                                 .source = ParentRef{},
-                                .targets = {kScenicTestRealmRef, kHdcpRef}});
+                                .targets = {kScenicTestRealmRef}});
   realm_builder_.AddRoute(
       Route{.capabilities = {Protocol{fuchsia::tracing::provider::Registry::Name_}},
             .source = ParentRef{},
-            .targets = {kScenicTestRealmRef, kRootPresenterRef, kHdcpRef}});
+            .targets = {kScenicTestRealmRef, kRootPresenterRef}});
 
   // Route between siblings.
-  realm_builder_.AddRoute(
-      Route{.capabilities = {Protocol{fuchsia::hardware::display::Provider::Name_}},
-            .source = kHdcpRef,
-            .targets = {kScenicTestRealmRef}});
-
   realm_builder_.AddRoute(
       Route{.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_},
                              Protocol{fuchsia::ui::pointerinjector::Registry::Name_}},
@@ -115,10 +103,6 @@ void FlutterEmbedderTest::SetUpRealmBase() {
   realm_builder_.AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
                                 .source = kScenicTestRealmRef,
                                 .targets = {ParentRef{}}});
-  realm_builder_.AddRoute(
-      Route{.capabilities = {Protocol{fuchsia::hardware::display::Provider::Name_}},
-            .source = kHdcpRef,
-            .targets = {ParentRef{}}});
 }
 
 void FlutterEmbedderTest::BuildRealmAndLaunchApp(const std::string& component_url) {

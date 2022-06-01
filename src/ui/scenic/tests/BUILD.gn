@@ -56,7 +56,6 @@ source_set("scenic_realm_builder") {
     "utils/scenic_realm_builder.h",
   ]
   public_deps = [
-    ":scenic_realm",
     "//sdk//fidl/fuchsia.logger",
     "//sdk//fidl/fuchsia.scheduler",
     "//sdk//fidl/fuchsia.tracing.provider",
@@ -67,6 +66,7 @@ source_set("scenic_realm_builder") {
     "//sdk/fidl/fuchsia.vulkan.loader",
     "//sdk/lib/sys/component/cpp/testing:cpp",
     "//sdk/lib/syslog/cpp",
+    "//src/ui/testing/ui_test_manager:test_realms",
   ]
 }
 
@@ -89,17 +89,6 @@ source_set("gfx_pixel_test") {
   ]
 }
 
-fuchsia_component("scenic_realm") {
-  testonly = true
-  manifest = "meta/scenic_realm.cml"
-  deps = [
-    "//examples/fidl/rust/server:echo-server",
-    "//src/cobalt/bin/testing/mock_cobalt:component_v2",
-    "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv2-component",
-    "//src/ui/scenic:component_v2",
-  ]
-}
-
 executable("gfx_focus_integration_test_bin") {
   testonly = true
   sources = [ "gfx_integration_tests/gfx_focus_integration_test.cc" ]
@@ -113,12 +102,6 @@ fuchsia_component("wrapper_vk_cube") {
   testonly = true
   manifest = "meta/wrapper_vk_cube.cml"
   deps = [ "//third_party/Vulkan-Tools/cube:vkcube-on-scenic" ]
-}
-
-fuchsia_component("wrapper_root_presenter") {
-  testonly = true
-  manifest = "meta/wrapper_root_presenter.cml"
-  deps = [ "//src/ui/bin/root_presenter:component_v1" ]
 }
 
 fuchsia_test_component("gfx_focus_integration_test") {
@@ -277,7 +260,7 @@ fuchsia_test_component("scenic_pixeltest") {
   manifest = "meta/scenic_pixeltest.cml"
   deps = [
     ":scenic_pixeltest_bin",
-    ":wrapper_root_presenter",
+    "//src/ui/bin/root_presenter:component_v2",
   ]
 }
 

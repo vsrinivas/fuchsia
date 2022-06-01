@@ -24,25 +24,21 @@
     use: [
         {
             directory: "config-data",
+            from: "parent",
             rights: [ "r*" ],
             path: "/config/data",
         },
         {
             protocol: [
+                "fuchsia.accessibility.ColorTransform",
                 "fuchsia.accessibility.Magnifier",
+                "fuchsia.media.sounds.Player",
+                "fuchsia.recovery.FactoryReset",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.focus.FocusChainListenerRegistry",
                 "fuchsia.ui.keyboard.focus.Controller",
                 "fuchsia.ui.pointerinjector.Registry",
                 "fuchsia.ui.scenic.Scenic",
-
-                // TODO(fxbug.dev/71767): Route capabilities to root_presenter
-                // "fuchsia.accessibility.ColorTransform",
-                // "fuchsia.media.sounds.Player",
-                // "fuchsia.recovery.FactoryReset",
-                // "fuchsia.sys.Environment",
-                // "fuchsia.sys.Loader",
-                // "fuchsia.ui.activity.Tracker",
             ],
         },
     ],
