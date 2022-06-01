@@ -237,3 +237,10 @@ type StructOfOptionals = struct {
     v vector<uint32>:<128, optional>;
     t box<CopyableStruct>;
 };
+
+type StructWithDefault = struct {
+    @allow_deprecated_struct_defaults
+    defaulted int32 = SOME_DEFAULT_VALUE;
+};
+
+const SOME_DEFAULT_VALUE int32 = 100;

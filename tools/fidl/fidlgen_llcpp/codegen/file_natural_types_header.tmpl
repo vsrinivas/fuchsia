@@ -41,12 +41,13 @@ fidl/{{ .LibraryDots }}/cpp/natural_types.h
 {{ range .Tables }}{{ template "Table:ForwardDeclaration:NaturalTypesHeader" . }}{{ end }}
 {{ range .Unions }}{{ template "Union:ForwardDeclaration:NaturalTypesHeader" . }}{{ end }}
 
+{{ range .Consts }}{{ template "Const:NaturalTypesHeader" . }}{{ end }}
+
 {{ range .Decls }}
   {{ if Eq .Kind Kinds.Struct }}{{ template "Struct:NaturalTypesHeader" . }}{{ end }}
   {{ if Eq .Kind Kinds.Table }}{{ template "Table:NaturalTypesHeader" . }}{{ end }}
   {{ if Eq .Kind Kinds.Union }}{{ template "Union:NaturalTypesHeader" . }}{{ end }}
 {{- end }}
-{{ range .Consts }}{{ template "Const:NaturalTypesHeader" . }}{{ end }}
 
 {{ EnsureNamespace "fidl" }}
 {{ range .Structs }}{{ template "Struct:Traits:NaturalTypesHeader" . }}{{ end }}

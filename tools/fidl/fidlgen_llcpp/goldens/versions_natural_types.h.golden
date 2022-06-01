@@ -23,6 +23,10 @@ class Table;
 
 class Union;
 
+constexpr uint32_t kConst = 0u;
+
+constexpr bool kAddedAtHead = true;
+
 extern "C" const fidl_type_t test_versions_UnionTable;
 
 class Union {
@@ -220,10 +224,6 @@ class Struct {
       &Storage_::x, 0});
   static constexpr auto kPadding = std::make_tuple();
 };
-
-constexpr uint32_t kConst = 0u;
-
-constexpr bool kAddedAtHead = true;
 
 }  // namespace test_versions
 namespace fidl {

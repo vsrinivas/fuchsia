@@ -29,6 +29,8 @@ class ExampleXUnion;
 
 class ExampleUnion;
 
+constexpr uint32_t kExampleConst = 0u;
+
 extern "C" const fidl_type_t test_placementofattributes_ExampleXUnionTable;
 
 class ExampleXUnion {
@@ -373,8 +375,6 @@ class ExampleProtocolMethodRequest {
       &Storage_::arg, 0});
   static constexpr auto kPadding = std::make_tuple();
 };
-
-constexpr uint32_t kExampleConst = 0u;
 
 }  // namespace test_placementofattributes
 namespace fidl {

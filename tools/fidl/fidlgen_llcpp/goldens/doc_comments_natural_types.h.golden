@@ -25,6 +25,11 @@ class StrictUnion;
 
 class FlexibleUnion;
 
+/// const comment #1
+///
+/// const comment #3
+constexpr int32_t kC = 4u;
+
 extern "C" const fidl_type_t test_doccomments_TableTable;
 
 /// table comment #1
@@ -339,11 +344,6 @@ class FlexibleUnion {
     }
   }
 };
-
-/// const comment #1
-///
-/// const comment #3
-constexpr int32_t kC = 4u;
 
 }  // namespace test_doccomments
 namespace fidl {

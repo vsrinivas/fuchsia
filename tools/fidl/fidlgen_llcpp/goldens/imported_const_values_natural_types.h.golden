@@ -19,6 +19,10 @@
 namespace test_importedconstvalues {
 class MyStruct;
 
+constexpr ::test_dependent::MyEnum kEnumMember = ::test_dependent::MyEnum::kMember;
+
+constexpr ::test_dependent::MyBits kBitsMember = ::test_dependent::MyBits::kMember;
+
 extern "C" const fidl_type_t test_importedconstvalues_MyStructTable;
 
 class MyStruct {
@@ -78,10 +82,6 @@ class MyStruct {
       &Storage_::__reserved, 0});
   static constexpr auto kPadding = std::make_tuple();
 };
-
-constexpr ::test_dependent::MyEnum kEnumMember = ::test_dependent::MyEnum::kMember;
-
-constexpr ::test_dependent::MyBits kBitsMember = ::test_dependent::MyBits::kMember;
 
 }  // namespace test_importedconstvalues
 namespace fidl {

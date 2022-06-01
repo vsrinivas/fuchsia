@@ -65,6 +65,8 @@ class DenyEachBindingOnlyDenyGoResult;
 
 class DenyEachBindingOnlyDenyDartResult;
 
+constexpr uint32_t kAllBindings = 0u;
+
 extern "C" const fidl_type_t test_bindingsdenylist_OnlyLlcppTable;
 
 class OnlyLlcpp {
@@ -1691,8 +1693,6 @@ class DenyEachBindingOnlyDenyDartRequest {
       &Storage_::a, 0});
   static constexpr auto kPadding = std::make_tuple();
 };
-
-constexpr uint32_t kAllBindings = 0u;
 
 }  // namespace test_bindingsdenylist
 namespace fidl {
