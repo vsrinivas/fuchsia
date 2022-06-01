@@ -147,6 +147,7 @@ template("generate_chromium_targets") {
     outputs = [ "scheme_map/http.config" ]
   }
 
+  # Only add chrome_browser for x64, arm64 is still WIP: http://crbug/1320078
   if (target_cpu == "x64") {
     group("chrome_browser") {
       deps = [

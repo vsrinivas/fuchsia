@@ -5,3 +5,7 @@
 import("arm64.gni")
 
 add_qemu_to_build_archives = true
+
+# Supports only virtual devices.
+board_is_emu = true
+board_is_phys = false
