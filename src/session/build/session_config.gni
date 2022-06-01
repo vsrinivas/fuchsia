@@ -1,6 +1,0 @@
-# Copyright 2020 The Fuchsia Authors. All rights reserved.
-# Use of this source code is governed by a BSD-style license that can be
-# found in the LICENSE file.
-
-# The template previously in this file is no longer used, but this file is still included in some
-# CTS prebuilts. Once this file is no longer referenced anywhere in the build it should be deleted.
