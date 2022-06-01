@@ -981,18 +981,6 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
 
     builder.AddConfigData(sandbox, fp.package_name());
 
-    zx_status_t status = builder.AddSandbox(
-        sandbox,
-        /*hub_directory_factory=*/[this] { return OpenInfoDir(); },
-        /*isolated_data_path_factory=*/
-        [&] { return InitIsolatedPathForComponentInstance(fp, internal::StorageType::DATA); },
-        [&] { return InitIsolatedPathForComponentInstance(fp, internal::StorageType::CACHE); },
-        [&] { return InitIsolatedPathForComponentInstance(fp, internal::StorageType::TEMP); });
-    if (status != ZX_OK) {
-      component_request.SetReturnValues(kComponentCreationFailed, TerminationReason::ACCESS_DENIED);
-      return;
-    }
-
     // It is critical that if nothing is returned the component does not lanuch.
     PolicyChecker policy_checker(appmgr_config_dir_.duplicate());
     std::optional<SecurityPolicy> security_policy = policy_checker.Check(sandbox, fp);
@@ -1033,10 +1021,21 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
     builder.AddServices(std::move(svc));
 
     // Add the custom namespace.
-    // Note that this must be the last |builder| step adding entries to the
-    // namespace so that we can filter out entries already added in previous
-    // steps.
+    // Note that the flat namespace takes precedent over entries added elsewhere.
+    // So we add it before all other entries, e.g. from sandbox.
     builder.AddFlatNamespace(std::move(launch_info.flat_namespace));
+
+    zx_status_t status = builder.AddSandbox(
+        sandbox,
+        /*hub_directory_factory=*/[this] { return OpenInfoDir(); },
+        /*isolated_data_path_factory=*/
+        [&] { return InitIsolatedPathForComponentInstance(fp, internal::StorageType::DATA); },
+        [&] { return InitIsolatedPathForComponentInstance(fp, internal::StorageType::CACHE); },
+        [&] { return InitIsolatedPathForComponentInstance(fp, internal::StorageType::TEMP); });
+    if (status != ZX_OK) {
+      component_request.SetReturnValues(kComponentCreationFailed, TerminationReason::ACCESS_DENIED);
+      return;
+    }
 
     if (runtime.IsNull()) {
       // Use the default runner: ELF binaries.

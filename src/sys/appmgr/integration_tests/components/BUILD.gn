@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
 
 group("components") {
   testonly = true
@@ -49,6 +50,16 @@ executable("getenv_bin") {
   public_deps = [ "//src/lib/fxl" ]
 }
 
+executable("test_driver_bin") {
+  output_name = "test_driver"
+
+  sources = [ "test_driver.cc" ]
+
+  deps = []
+
+  public_deps = [ "//src/lib/fxl" ]
+}
+
 executable("components_binary_test_bin") {
   output_name = "components_binary_test"
   testonly = true
@@ -57,6 +68,7 @@ executable("components_binary_test_bin") {
 
   deps = [
     "//sdk/lib/sys/cpp/testing:integration_fixture",
+    "//sdk/lib/vfs/cpp",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
   ]
@@ -97,6 +109,11 @@ fuchsia_component("getenv2") {
   manifest = "meta/getenv2.cmx"
 }
 
+fuchsia_component("test_driver") {
+  deps = [ ":test_driver_bin" ]
+  manifest = "meta/test_driver.cmx"
+}
+
 fuchsia_unittest_package("components_binary_tests") {
   component_name = "components_binary_test"
   manifest = "meta/components_binary_test.cmx"
@@ -109,6 +126,7 @@ fuchsia_unittest_package("components_binary_tests") {
     ":echo_stdin",
     ":getenv1",
     ":getenv2",
+    ":test_driver",
   ]
   test_specs = {
   }

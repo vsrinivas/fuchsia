@@ -6,14 +6,17 @@
 
 #include <fcntl.h>
 #include <lib/zx/channel.h>
+#include <zircon/syscalls/object.h>
 
 #include <string>
 #include <vector>
 
 #include <gtest/gtest.h>
 
+#include "fuchsia/sys/cpp/fidl.h"
 #include "rapidjson/document.h"
 #include "src/lib/json_parser/json_parser.h"
+#include "zircon/types.h"
 
 namespace component {
 namespace {
@@ -51,8 +54,52 @@ TEST(NamespaceBuilder, SystemData) {
   EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/system/data") == paths.end());
   EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/system/deprecated-data") == paths.end());
 
-  for (size_t i = 0; i < ns->count; ++i)
+  for (size_t i = 0; i < ns->count; ++i) {
     zx_handle_close(ns->handle[i]);
+  }
+}
+
+zx_koid_t GetRelatedKoid(const zx::unowned_channel& object) {
+  zx_info_handle_basic info = {};
+  zx_status_t status =
+      object->get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+  ZX_ASSERT_MSG(status == ZX_OK, "Failed to get object info: %s", zx_status_get_string(status));
+  return info.related_koid;
+}
+
+zx_koid_t GetKoid(const zx::unowned_channel& object) {
+  zx_info_handle_basic info = {};
+  zx_status_t status =
+      object->get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+  ZX_ASSERT_MSG(status == ZX_OK, "Failed to get object info: %s", zx_status_get_string(status));
+  return info.koid;
+}
+
+TEST(NamespaceBuilder, FlatNamespaceAreAddedToComponent) {
+  fbl::unique_fd dir(open(".", O_RDONLY));
+  NamespaceBuilder builder = NamespaceBuilder(std::move(dir), "test_namespace");
+  auto flat_namespace = fuchsia::sys::FlatNamespace::New();
+  zx::channel client, server;
+  ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
+  // The related Koid should equal the Koid of the opposite end of a channel.
+  // So the related Koid of the client end should equal the Koid of the server
+  // end here, and vice versa.
+  ASSERT_EQ(GetRelatedKoid(client.borrow()), GetKoid(server.borrow()));
+  flat_namespace->directories.push_back(std::move(client));
+  flat_namespace->paths.push_back("/dev/class/usb-device");
+  builder.AddFlatNamespace(std::move(flat_namespace));
+
+  fdio_flat_namespace_t* ns = builder.Build();
+  EXPECT_EQ(1u, ns->count);
+
+  std::vector<std::string> paths;
+  EXPECT_EQ(std::string(ns->path[0]), std::string("/dev/class/usb-device"));
+  // Assert that the channel in |ns| is connected to the server end.
+  EXPECT_EQ(GetRelatedKoid(zx::unowned_channel(ns->handle[0])), GetKoid(server.borrow()));
+
+  for (size_t i = 0; i < ns->count; ++i) {
+    zx_handle_close(ns->handle[i]);
+  }
 }
 
 }  // namespace
