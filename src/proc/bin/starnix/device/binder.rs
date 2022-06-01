@@ -15,7 +15,9 @@ use crate::logging::not_implemented;
 use crate::mm::vmo::round_up_to_increment;
 use crate::mm::{DesiredAddress, MappedVmo, MappingOptions, MemoryManager, UserMemoryCursor};
 use crate::syscalls::{SyscallResult, SUCCESS};
-use crate::task::{CurrentTask, EventHandler, Kernel, WaitCallback, WaitKey, WaitQueue, Waiter};
+use crate::task::{
+    CurrentTask, EventHandler, Kernel, Task, WaitCallback, WaitKey, WaitQueue, Waiter,
+};
 use crate::types::*;
 use bitflags::bitflags;
 use fuchsia_zircon as zx;
@@ -233,19 +235,6 @@ struct TransactionState {
     handles: Vec<Handle>,
 }
 
-impl TransactionState {
-    /// Creates a new `TransactionState` which operates on `target_proc`'s handle table.
-    fn new(target_proc: &Arc<BinderProcess>) -> Self {
-        TransactionState { proc: Arc::downgrade(target_proc), handles: Vec::new() }
-    }
-
-    /// Schedule `handle` to have its strong reference count decremented when this
-    /// `TransactionState` is dropped.
-    fn push_handle(&mut self, handle: Handle) {
-        self.handles.push(handle)
-    }
-}
-
 impl Drop for TransactionState {
     fn drop(&mut self) {
         if let Some(proc) = self.proc.upgrade() {
@@ -256,6 +245,65 @@ impl Drop for TransactionState {
                 let _: Result<(), Errno> = handles.dec_strong(handle.object_index());
             }
         }
+    }
+}
+
+/// Transaction state held during the processing and dispatching of a transaction. In the event of
+/// an error while dispatching a transaction, this object is meant to cleanup any temporary
+/// resources that were allocated. Once a transaction has been dispatched successfully, this object
+/// can be converted into a [`TransactionState`] to be held for the lifetime of the transaction.
+#[derive(Debug)]
+struct TransientTransactionState<'a> {
+    /// The part of the transient state that will live for the lifetime of the transaction.
+    state: TransactionState,
+    /// The task to which the transient file descriptors belong.
+    task: &'a Task,
+    /// The file descriptors to close in case of an error.
+    transient_fds: Vec<FdNumber>,
+}
+
+impl<'a> TransientTransactionState<'a> {
+    /// Creates a new [`TransientTransactionState`], whose resources will belong to `task` and
+    /// `target_proc` for FDs and binder handles respectively.
+    fn new(task: &'a Task, target_proc: &Arc<BinderProcess>) -> Self {
+        TransientTransactionState {
+            state: TransactionState { proc: Arc::downgrade(target_proc), handles: Vec::new() },
+            task,
+            transient_fds: Vec::new(),
+        }
+    }
+
+    /// Schedule `handle` to have its strong reference count decremented if the transaction fails.
+    /// If the transaction succeeds and this object is converted into a [`TransactionState`], the
+    /// strong reference will be released when the transaction completes ([`TransactionState`] is
+    /// dropped).
+    fn push_handle(&mut self, handle: Handle) {
+        self.state.handles.push(handle)
+    }
+
+    /// Schedule `fd` to be removed from the file descriptor table if the transaction fails.
+    fn push_fd(&mut self, fd: FdNumber) {
+        self.transient_fds.push(fd)
+    }
+}
+
+impl<'a> Drop for TransientTransactionState<'a> {
+    fn drop(&mut self) {
+        for fd in &self.transient_fds {
+            let _: Result<(), Errno> = self.task.files.close(*fd);
+        }
+    }
+}
+
+impl<'a> From<TransientTransactionState<'a>> for TransactionState {
+    fn from(mut transient: TransientTransactionState<'a>) -> Self {
+        // Clear the transient FD list, so that these FDs no longer get closed.
+        transient.transient_fds.clear();
+        // We cannot move out due to the Drop impl, so drain the handles instead and create a new
+        // instance of `TransactionState`.
+        let handles = transient.state.handles.drain(..).collect();
+        let proc = std::mem::replace(&mut transient.state.proc, Weak::new());
+        TransactionState { proc, handles }
     }
 }
 
@@ -514,11 +562,6 @@ impl<'a, T: AsBytes> SharedBuffer<'a, T> {
     /// The userspace address and length of the buffer.
     fn user_buffer(&self) -> UserBuffer {
         UserBuffer { address: self.memory.user_address + self.offset, length: self.length }
-    }
-
-    /// Returns `true` if the buffer has a length of zero.
-    fn is_empty(&self) -> bool {
-        self.length == 0
     }
 }
 
@@ -1598,11 +1641,19 @@ impl BinderDriver {
             }
         };
 
+        let target_task = current_task
+            .kernel()
+            .pids
+            .read()
+            .get_task(target_proc.pid)
+            .ok_or_else(|| errno!(EINVAL))?;
+
         // Copy the transaction data to the target process.
         let (data_buffer, offsets_buffer, transaction_state) = self.copy_transaction_buffers(
             current_task,
             binder_proc,
             binder_thread,
+            &target_task,
             &target_proc,
             &data,
         )?;
@@ -1636,7 +1687,7 @@ impl BinderDriver {
                 data_buffer.address,
                 ActiveTransaction {
                     request_type: RequestType::Oneway { object: Arc::downgrade(&object) },
-                    _state: transaction_state,
+                    _state: transaction_state.into(),
                 },
             );
 
@@ -1673,7 +1724,7 @@ impl BinderDriver {
                 data_buffer.address,
                 ActiveTransaction {
                     request_type: RequestType::RequestResponse,
-                    _state: transaction_state,
+                    _state: transaction_state.into(),
                 },
             );
         }
@@ -1710,11 +1761,19 @@ impl BinderDriver {
             (target_proc, target_thread)
         };
 
+        let target_task = current_task
+            .kernel()
+            .pids
+            .read()
+            .get_task(target_proc.pid)
+            .ok_or_else(|| errno!(EINVAL))?;
+
         // Copy the transaction data to the target process.
         let (data_buffer, offsets_buffer, transaction_state) = self.copy_transaction_buffers(
             current_task,
             binder_proc,
             binder_thread,
+            &target_task,
             &target_proc,
             &data,
         )?;
@@ -1724,7 +1783,7 @@ impl BinderDriver {
             data_buffer.address,
             ActiveTransaction {
                 request_type: RequestType::RequestResponse,
-                _state: transaction_state,
+                _state: transaction_state.into(),
             },
         );
 
@@ -1818,14 +1877,15 @@ impl BinderDriver {
     /// target process' shared binder VMO.
     /// Returns a pair of addresses, the first the address to the transaction data, the second the
     /// address to the offset buffer.
-    fn copy_transaction_buffers(
+    fn copy_transaction_buffers<'a>(
         &self,
-        current_task: &CurrentTask,
+        source_task: &Task,
         source_proc: &Arc<BinderProcess>,
         source_thread: &Arc<BinderThread>,
+        target_task: &'a Task,
         target_proc: &Arc<BinderProcess>,
         data: &binder_transaction_data_sg,
-    ) -> Result<(UserBuffer, UserBuffer, TransactionState), TransactionError> {
+    ) -> Result<(UserBuffer, UserBuffer, TransientTransactionState<'a>), TransactionError> {
         // Get the shared memory of the target process.
         let mut shared_memory_lock = target_proc.shared_memory.lock();
         let shared_memory = shared_memory_lock.as_mut().ok_or_else(|| errno!(ENOMEM))?;
@@ -1842,56 +1902,53 @@ impl BinderDriver {
         let userspace_addrs = unsafe { data.transaction_data.data.ptr };
 
         // Copy the data straight into the target's buffer.
-        current_task
+        source_task
             .mm
             .read_memory(UserAddress::from(userspace_addrs.buffer), data_buffer.as_mut_bytes())?;
-        current_task.mm.read_objects(
+        source_task.mm.read_objects(
             UserRef::new(UserAddress::from(userspace_addrs.offsets)),
             offsets_buffer.as_mut_bytes(),
         )?;
 
-        // Fix up binder objects.
-        let transaction_state = if !offsets_buffer.is_empty() {
-            // Translate any handles/fds from the source process' handle table to the target
-            // process' handle table.
-            self.translate_handles(
-                current_task,
-                source_proc,
-                source_thread,
-                target_proc,
-                offsets_buffer.as_bytes(),
-                data_buffer.as_mut_bytes(),
-                &mut sg_buffer,
-            )?
-        } else {
-            TransactionState::new(target_proc)
-        };
+        // Translate any handles/fds from the source process' handle table to the target process'
+        // handle table.
+        let transient_transaction_state = self.translate_handles(
+            source_task,
+            source_proc,
+            source_thread,
+            target_task,
+            target_proc,
+            offsets_buffer.as_bytes(),
+            data_buffer.as_mut_bytes(),
+            &mut sg_buffer,
+        )?;
 
-        Ok((data_buffer.user_buffer(), offsets_buffer.user_buffer(), transaction_state))
+        Ok((data_buffer.user_buffer(), offsets_buffer.user_buffer(), transient_transaction_state))
     }
 
-    /// Translates binder object handles from the sending process to the receiver process, patching
-    /// the transaction data as needed.
+    /// Translates binder object handles/FDs from the sending process to the receiver process,
+    /// patching the transaction data as needed.
     ///
     /// When a binder object is sent from one process to another, it must be added to the receiving
     /// process' handle table. Conversely, a handle being sent to the process that owns the
     /// underlying binder object should receive the actual pointers to the object.
     ///
-    /// Returns [`TransactionState`], which contains the handles in the target process' handle table
-    /// for which temporary strong references were acquired. When the buffer containing the
-    /// translated binder handles is freed with the `BC_FREE_BUFFER` command, the strong references
-    /// are released.
-    fn translate_handles(
+    /// Returns [`TransientTransactionState`], which contains the handles in the target process'
+    /// handle table for which temporary strong references were acquired, along with duped FDs. This
+    /// object takes care of releasing these resources when dropped, due to an error or a
+    /// `BC_FREE_BUFFER` command.
+    fn translate_handles<'a>(
         &self,
-        current_task: &CurrentTask,
+        source_task: &Task,
         source_proc: &Arc<BinderProcess>,
         source_thread: &Arc<BinderThread>,
+        target_task: &'a Task,
         target_proc: &Arc<BinderProcess>,
         offsets: &[binder_uintptr_t],
         transaction_data: &mut [u8],
         sg_buffer: &mut SharedBuffer<'_, u8>,
-    ) -> Result<TransactionState, TransactionError> {
-        let mut transaction_state = TransactionState::new(target_proc);
+    ) -> Result<TransientTransactionState<'a>, TransactionError> {
+        let mut transaction_state = TransientTransactionState::new(target_task, target_proc);
 
         let mut sg_remaining_buffer = sg_buffer.user_buffer();
         let mut sg_buffer_offset = 0;
@@ -1956,14 +2013,11 @@ impl BinderDriver {
                     SerializedBinderObject::Handle { handle, flags, cookie: 0 }
                 }
                 SerializedBinderObject::File { fd, flags, cookie } => {
-                    let (file, fd_flags) = current_task.files.get_with_flags(fd)?;
-                    let target_task = current_task
-                        .kernel()
-                        .pids
-                        .read()
-                        .get_task(target_proc.pid)
-                        .ok_or_else(|| errno!(EINVAL))?;
+                    let (file, fd_flags) = source_task.files.get_with_flags(fd)?;
                     let new_fd = target_task.files.add_with_flags(file, fd_flags)?;
+
+                    // Close this FD if the transaction fails.
+                    transaction_state.push_fd(new_fd);
 
                     SerializedBinderObject::File { fd: new_fd, flags, cookie }
                 }
@@ -1978,7 +2032,7 @@ impl BinderDriver {
                     if length > sg_remaining_buffer.length {
                         return error!(EINVAL)?;
                     }
-                    current_task.mm.read_memory(
+                    source_task.mm.read_memory(
                         buffer,
                         &mut sg_buffer.as_mut_bytes()[sg_buffer_offset..sg_buffer_offset + length],
                     )?;
@@ -2047,7 +2101,6 @@ impl BinderDriver {
             translated_object.write_to(&mut transaction_data[object_offset..])?;
         }
 
-        // We made it to the end successfully. No need to run the drop guard.
         Ok(transaction_state)
     }
 
@@ -2926,94 +2979,6 @@ mod tests {
         SerializedBinderObject::from_bytes(&unaligned_input[1..]).expect("read unaligned object");
     }
 
-    #[fuchsia::test]
-    fn copy_transaction_data_between_processes() {
-        let (_kernel, task1) = create_kernel_and_task();
-        let driver = BinderDriver::new();
-
-        // Register a binder process that represents `task1`. This is the source process: data will
-        // be copied out of process ID 1 into process ID 2's shared memory.
-        let (proc1, thread1) = driver.create_process_and_thread(1);
-
-        // Initialize process 2 with shared memory in the driver.
-        let proc2 = driver.create_process(2);
-        let vmo = zx::Vmo::create(VMO_LENGTH as u64).expect("failed to create VMO");
-        *proc2.shared_memory.lock() = Some(
-            SharedMemory::map(&vmo, BASE_ADDR, VMO_LENGTH).expect("failed to map shared memory"),
-        );
-
-        // Map some memory for process 1.
-        let data_addr = map_memory(&task1, UserAddress::default(), *PAGE_SIZE);
-
-        // Write transaction data in process 1.
-        const BINDER_DATA: &[u8; 8] = b"binder!!";
-        let mut transaction_data = Vec::new();
-        transaction_data.extend(BINDER_DATA);
-        transaction_data.extend(struct_with_union_into_bytes!(flat_binder_object {
-            hdr: binder_object_header { type_: BINDER_TYPE_HANDLE },
-            flags: 0,
-            __bindgen_anon_1.handle: 0,
-            cookie: 0,
-        }));
-
-        let offsets_addr = data_addr
-            + task1
-                .mm
-                .write_memory(data_addr, &transaction_data)
-                .expect("failed to write transaction data");
-
-        // Write the offsets data (where in the data buffer `flat_binder_object`s are).
-        let offsets_data: u64 = BINDER_DATA.len() as u64;
-        task1
-            .mm
-            .write_object(UserRef::new(offsets_addr), &offsets_data)
-            .expect("failed to write offsets buffer");
-
-        // Construct the `binder_transaction_data` struct that contains pointers to the data and
-        // offsets buffers.
-        let transaction = binder_transaction_data_sg {
-            transaction_data: binder_transaction_data {
-                code: 1,
-                flags: 0,
-                sender_pid: 1,
-                sender_euid: 0,
-                target: binder_transaction_data__bindgen_ty_1 { handle: 0 },
-                cookie: 0,
-                data_size: transaction_data.len() as u64,
-                offsets_size: std::mem::size_of::<u64>() as u64,
-                data: binder_transaction_data__bindgen_ty_2 {
-                    ptr: binder_transaction_data__bindgen_ty_2__bindgen_ty_1 {
-                        buffer: data_addr.ptr() as u64,
-                        offsets: offsets_addr.ptr() as u64,
-                    },
-                },
-            },
-            buffers_size: 0,
-        };
-
-        // Copy the data from process 1 to process 2
-        let (data_buffer, offsets_buffer, _transaction_state) = driver
-            .copy_transaction_buffers(&task1, &proc1, &thread1, &proc2, &transaction)
-            .expect("copy data");
-
-        // Check that the returned buffers are in-bounds of process 2's shared memory.
-        assert!(data_buffer.address >= BASE_ADDR);
-        assert!(data_buffer.address < BASE_ADDR + VMO_LENGTH);
-        assert!(offsets_buffer.address >= BASE_ADDR);
-        assert!(offsets_buffer.address < BASE_ADDR + VMO_LENGTH);
-
-        // Verify the contents of the copied data in process 2's shared memory VMO.
-        let mut buffer = [0u8; BINDER_DATA.len() + std::mem::size_of::<flat_binder_object>()];
-        vmo.read(&mut buffer, (data_buffer.address - BASE_ADDR) as u64)
-            .expect("failed to read data");
-        assert_eq!(&buffer[..], &transaction_data);
-
-        let mut buffer = [0u8; std::mem::size_of::<u64>()];
-        vmo.read(&mut buffer, (offsets_buffer.address - BASE_ADDR) as u64)
-            .expect("failed to read offsets");
-        assert_eq!(&buffer[..], offsets_data.as_bytes());
-    }
-
     struct TranslateHandlesTestFixture {
         kernel: Arc<Kernel>,
         driver: BinderDriver,
@@ -3058,6 +3023,97 @@ mod tests {
     }
 
     #[fuchsia::test]
+    fn copy_transaction_data_between_processes() {
+        let test = TranslateHandlesTestFixture::new();
+
+        // Explicitly install a VMO that we can read from later.
+        let vmo = zx::Vmo::create(VMO_LENGTH as u64).expect("failed to create VMO");
+        *test.receiver_proc.shared_memory.lock() = Some(
+            SharedMemory::map(&vmo, BASE_ADDR, VMO_LENGTH).expect("failed to map shared memory"),
+        );
+
+        // Map some memory for process 1.
+        let data_addr = map_memory(&test.sender_task, UserAddress::default(), *PAGE_SIZE);
+
+        // Write transaction data in process 1.
+        const BINDER_DATA: &[u8; 8] = b"binder!!";
+        let mut transaction_data = Vec::new();
+        transaction_data.extend(BINDER_DATA);
+        transaction_data.extend(struct_with_union_into_bytes!(flat_binder_object {
+            hdr: binder_object_header { type_: BINDER_TYPE_HANDLE },
+            flags: 0,
+            __bindgen_anon_1.handle: 0,
+            cookie: 0,
+        }));
+
+        let offsets_addr = data_addr
+            + test
+                .sender_task
+                .mm
+                .write_memory(data_addr, &transaction_data)
+                .expect("failed to write transaction data");
+
+        // Write the offsets data (where in the data buffer `flat_binder_object`s are).
+        let offsets_data: u64 = BINDER_DATA.len() as u64;
+        test.sender_task
+            .mm
+            .write_object(UserRef::new(offsets_addr), &offsets_data)
+            .expect("failed to write offsets buffer");
+
+        // Construct the `binder_transaction_data` struct that contains pointers to the data and
+        // offsets buffers.
+        let transaction = binder_transaction_data_sg {
+            transaction_data: binder_transaction_data {
+                code: 1,
+                flags: 0,
+                sender_pid: test.sender_proc.pid,
+                sender_euid: 0,
+                target: binder_transaction_data__bindgen_ty_1 { handle: 0 },
+                cookie: 0,
+                data_size: transaction_data.len() as u64,
+                offsets_size: std::mem::size_of::<u64>() as u64,
+                data: binder_transaction_data__bindgen_ty_2 {
+                    ptr: binder_transaction_data__bindgen_ty_2__bindgen_ty_1 {
+                        buffer: data_addr.ptr() as u64,
+                        offsets: offsets_addr.ptr() as u64,
+                    },
+                },
+            },
+            buffers_size: 0,
+        };
+
+        // Copy the data from process 1 to process 2
+        let (data_buffer, offsets_buffer, _transaction_state) = test
+            .driver
+            .copy_transaction_buffers(
+                &test.sender_task,
+                &test.sender_proc,
+                &test.sender_thread,
+                &test.receiver_task,
+                &test.receiver_proc,
+                &transaction,
+            )
+            .expect("copy data");
+
+        // Check that the returned buffers are in-bounds of process 2's shared memory.
+        assert!(data_buffer.address >= BASE_ADDR);
+        assert!(data_buffer.address < BASE_ADDR + VMO_LENGTH);
+        assert!(offsets_buffer.address >= BASE_ADDR);
+        assert!(offsets_buffer.address < BASE_ADDR + VMO_LENGTH);
+
+        // Verify the contents of the copied data in process 2's shared memory VMO.
+        let mut buffer = [0u8; BINDER_DATA.len() + std::mem::size_of::<flat_binder_object>()];
+        vmo.read(&mut buffer, (data_buffer.address - BASE_ADDR) as u64)
+            .expect("failed to read data");
+        assert_eq!(&buffer[..], &transaction_data);
+
+        let mut buffer = [0u8; std::mem::size_of::<u64>()];
+        vmo.read(&mut buffer, (offsets_buffer.address - BASE_ADDR) as u64)
+            .expect("failed to read offsets");
+        assert_eq!(&buffer[..], offsets_data.as_bytes());
+    }
+
+    #[fuchsia::test]
     fn transaction_translate_binder_leaving_process() {
         let test = TranslateHandlesTestFixture::new();
         let mut receiver_shared_memory = test.lock_receiver_shared_memory();
@@ -3089,6 +3145,7 @@ mod tests {
                 &test.sender_task,
                 &test.sender_proc,
                 &test.sender_thread,
+                &test.receiver_task,
                 &test.receiver_proc,
                 &offsets,
                 &mut transaction_data,
@@ -3098,7 +3155,7 @@ mod tests {
 
         // Verify that the new handle was returned in `transaction_state` so that it gets dropped
         // at the end of the transaction.
-        assert_eq!(transaction_state.handles[0], EXPECTED_HANDLE);
+        assert_eq!(transaction_state.state.handles[0], EXPECTED_HANDLE);
 
         // Verify that the transaction data was mutated.
         let mut expected_transaction_data = Vec::new();
@@ -3163,6 +3220,7 @@ mod tests {
                 &test.sender_task,
                 &test.sender_proc,
                 &test.sender_thread,
+                &test.receiver_task,
                 &test.receiver_proc,
                 &offsets,
                 &mut transaction_data,
@@ -3229,6 +3287,7 @@ mod tests {
                 &test.sender_task,
                 &test.sender_proc,
                 &test.sender_thread,
+                &test.receiver_task,
                 &test.receiver_proc,
                 &offsets,
                 &mut transaction_data,
@@ -3238,7 +3297,7 @@ mod tests {
 
         // Verify that the new handle was returned in `transaction_state` so that it gets dropped
         // at the end of the transaction.
-        assert_eq!(transaction_state.handles[0], RECEIVING_HANDLE);
+        assert_eq!(transaction_state.state.handles[0], RECEIVING_HANDLE);
 
         // Verify that the transaction data was mutated.
         let mut expected_transaction_data = Vec::new();
@@ -3348,6 +3407,7 @@ mod tests {
                 &test.sender_task,
                 &test.sender_proc,
                 &test.sender_thread,
+                &test.receiver_task,
                 &test.receiver_proc,
                 &input,
             )
@@ -3449,6 +3509,7 @@ mod tests {
                 &test.sender_task,
                 &test.sender_proc,
                 &test.sender_thread,
+                &test.receiver_task,
                 &test.receiver_proc,
                 &input,
             )
@@ -3526,6 +3587,7 @@ mod tests {
                 &test.sender_task,
                 &test.sender_proc,
                 &test.sender_thread,
+                &test.receiver_task,
                 &test.receiver_proc,
                 &input,
             )
@@ -3553,6 +3615,7 @@ mod tests {
                 &test.sender_task,
                 &test.sender_proc,
                 &test.sender_thread,
+                &test.receiver_task,
                 &test.receiver_proc,
                 &[0 as binder_uintptr_t],
                 &mut transaction_data,
@@ -3584,6 +3647,7 @@ mod tests {
                 &test.sender_task,
                 &test.sender_proc,
                 &test.sender_thread,
+                &test.receiver_task,
                 &test.receiver_proc,
                 &[0 as binder_uintptr_t],
                 &mut transaction_data,
@@ -3625,6 +3689,7 @@ mod tests {
                 &test.sender_task,
                 &test.sender_proc,
                 &test.sender_thread,
+                &test.receiver_task,
                 &test.receiver_proc,
                 &[
                     0 as binder_uintptr_t,
@@ -3882,18 +3947,22 @@ mod tests {
         });
         let offsets = [0];
 
-        let _ = test
+        let transient_transaction_state = test
             .driver
             .translate_handles(
                 &test.sender_task,
                 &test.sender_proc,
                 &test.sender_thread,
+                &test.receiver_task,
                 &test.receiver_proc,
                 &offsets,
                 &mut transaction_data,
                 &mut sg_buffer,
             )
             .expect("failed to translate handles");
+
+        // Simulate success by converting the transient state.
+        let _transaction_state: TransactionState = transient_transaction_state.into();
 
         // The receiver should now have a file.
         let receiver_fd = test
@@ -3927,6 +3996,55 @@ mod tests {
         });
 
         assert_eq!(expected_transaction_data, transaction_data);
+    }
+
+    #[fuchsia::test]
+    fn cleanup_fd_in_failed_transaction() {
+        let test = TranslateHandlesTestFixture::new();
+        let mut receiver_shared_memory = test.lock_receiver_shared_memory();
+        let (_, _, mut sg_buffer) =
+            receiver_shared_memory.allocate_buffers(0, 0, 0).expect("allocate buffers");
+
+        // Open a file in the sender process.
+        let file = SyslogFile::new(&test.kernel);
+        let sender_fd = test
+            .sender_task
+            .files
+            .add_with_flags(file.clone(), FdFlags::CLOEXEC)
+            .expect("add file");
+
+        // Send the fd in a transaction.
+        let mut transaction_data = struct_with_union_into_bytes!(flat_binder_object {
+            hdr.type_: BINDER_TYPE_FD,
+            flags: 0,
+            cookie: 0,
+            __bindgen_anon_1.handle: sender_fd.raw() as u32,
+        });
+        let offsets = [0];
+
+        let transaction_state = test
+            .driver
+            .translate_handles(
+                &test.sender_task,
+                &test.sender_proc,
+                &test.sender_thread,
+                &test.receiver_task,
+                &test.receiver_proc,
+                &offsets,
+                &mut transaction_data,
+                &mut sg_buffer,
+            )
+            .expect("failed to translate handles");
+
+        assert!(!test.receiver_task.files.get_all_fds().is_empty(), "receiver should have a file");
+
+        // Simulate an error, which will drop the transaction state.
+        drop(transaction_state);
+
+        assert!(
+            test.receiver_task.files.get_all_fds().is_empty(),
+            "receiver should not have any files"
+        );
     }
 
     #[fuchsia::test]
