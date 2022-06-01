@@ -38,6 +38,37 @@ if (is_fuchsia) {
 
   supports_fastboot_fvm = fvm_partition != "" && !bootfs_only
 
+  files = {
+    images_config = "$target_out_dir/fuchsia.image_assembly_config.json"
+    partitions_config = "$target_out_dir/partitions_config.json"
+    assembly_inputs = "$target_out_dir/fuchsia/assembly_inputs.json"
+    platform_aib_dir = get_label_info("//build/assembly", "target_out_dir")
+
+    # Outputs of assembly.
+    outdir = target_out_dir + "/fuchsia"
+    zbi = "${outdir}/fuchsia.zbi"
+    zbi_signed = "${outdir}/fuchsia.zbi.signed"
+    vbmeta = "${outdir}/fuchsia.vbmeta"
+    minfs = "${outdir}/data.blk"
+    blobfs = "${outdir}/blob.blk"
+    fvm = "${outdir}/fvm.blk"
+    fvm_sparse = "${outdir}/fvm.sparse.blk"
+    fvm_blob_sparse = "${outdir}/fvm.blob.sparse.blk"
+    fvm_fastboot = "${outdir}/fvm.fastboot.blk"
+    packages_json = "${outdir}/packages.json"
+    images_json = "${outdir}/images.json"
+
+    # Outputs of prime assembly.
+    outdir_prime = target_out_dir + "/fuchsia_prime_assembly"
+    images_prime_json = "${outdir_prime}/images.json"
+    packages_prime_json = "${outdir_prime}/packages.json"
+
+    # Outputs of recovery.
+    recovery_outdir = get_label_info(recovery_label, "target_out_dir") + "/" +
+                      get_label_info(recovery_label, "name")
+    recovery_images_json = "${recovery_outdir}/images.json"
+  }
+
   fuchsia_base = {
     testonly = fuchsia_zbi_testonly
     generate_fvm = !bootfs_only
@@ -265,21 +296,7 @@ if (is_fuchsia) {
     create_legacy_aib_package = !is_debug
     create_legacy_aib_archive = !is_debug
 
-    # Calculate the paths of the generated images.
-    files = {
-      outdir = target_out_dir + "/" + image_name
-
-      zbi = "${outdir}/fuchsia.zbi"
-      zbi_signed = "${outdir}/fuchsia.zbi.signed"
-      vbmeta = "${outdir}/fuchsia.vbmeta"
-      minfs = "${outdir}/data.blk"
-      blobfs = "${outdir}/blob.blk"
-      fvm = "${outdir}/fvm.blk"
-      fvm_sparse = "${outdir}/fvm.sparse.blk"
-      fvm_blob_sparse = "${outdir}/fvm.blob.sparse.blk"
-      fvm_fastboot = "${outdir}/fvm.fastboot.blk"
-    }
-    rebased_files = {
+    _rebased_files = {
       zbi = rebase_path(files.zbi, root_build_dir)
       zbi_signed = rebase_path(files.zbi_signed, root_build_dir)
       vbmeta = rebase_path(files.vbmeta, root_build_dir)
@@ -298,7 +315,7 @@ if (is_fuchsia) {
         {
           label = get_label_info(":$target_name", "label_with_toolchain")
           name = "data"
-          path = rebased_files.minfs
+          path = _rebased_files.minfs
           type = "blk"
         },
 
@@ -352,7 +369,7 @@ if (is_fuchsia) {
           label = get_label_info(":$target_name", "label_with_toolchain")
           archive = add_qemu_to_build_archives
           name = "storage-full"
-          path = rebased_files.fvm
+          path = _rebased_files.fvm
           type = "blk"
         },
 
@@ -362,19 +379,19 @@ if (is_fuchsia) {
           archive = true
           bootserver_pave = [ "--fvm" ]
           name = "storage-sparse"
-          path = rebased_files.fvm_sparse
+          path = _rebased_files.fvm_sparse
           type = "blk"
         },
       ]
 
       # Declare the paths to the images.
       image_paths = [
-        "IMAGE_DATA_RAW=${rebased_files.minfs}",
-        "IMAGE_BLOB_RAW=${rebased_files.blobfs}",
+        "IMAGE_DATA_RAW=${_rebased_files.minfs}",
+        "IMAGE_BLOB_RAW=${_rebased_files.blobfs}",
         "IMAGE_ZIRCONA_ZBI=fuchsia.zbi",
-        "IMAGE_FVM_RAW=${rebased_files.fvm}",
-        "IMAGE_FVM_SPARSE=${rebased_files.fvm_sparse}",
-        "IMAGE_FVM_BLOB_SPARSE=${rebased_files.fvm_blob_sparse}",
+        "IMAGE_FVM_RAW=${_rebased_files.fvm}",
+        "IMAGE_FVM_SPARSE=${_rebased_files.fvm_sparse}",
+        "IMAGE_FVM_BLOB_SPARSE=${_rebased_files.fvm_blob_sparse}",
 
         # TODO(mcgrathr): The complete ZBI can be used with a separate
         # kernel too, the kernel image in it will just be ignored.  So
@@ -455,20 +472,19 @@ if (is_fuchsia) {
             label = get_label_info(":$target_name", "label_with_toolchain")
             archive = true
             name = "fvm.fastboot"
-            path = rebased_files.fvm_fastboot
+            path = rebase_path(files.fvm_fastboot, root_build_dir)
             type = "blk"
             fastboot_flash = [ fvm_partition ]
           },
         ]
-        image_paths += [ "IMAGE_FVM_FASTBOOT=${rebased_files.fvm_fastboot}" ]
+        image_paths += [ "IMAGE_FVM_FASTBOOT=${_rebased_files.fvm_fastboot}" ]
       }
     }
   }
 
-  partitions_config = "$target_out_dir/partitions_config.json"
   generated_partitions_config("partitions_config") {
     testonly = fuchsia_zbi_testonly
-    output_path = partitions_config
+    output_path = files.partitions_config
     hw_revision = board_name
     bootstrap_partitions = bootstrap_files
     unlock_credentials = board_fastboot_unlock_credentials
@@ -480,16 +496,6 @@ if (is_fuchsia) {
   }
 
   update_package("update") {
-    files = {
-      _fuchsia_out =
-          get_label_info(":fuchsia_assembly", "target_out_dir") + "/fuchsia"
-      _recovery_out = get_label_info(recovery_label, "target_out_dir") + "/" +
-                      get_label_info(recovery_label, "name")
-      fuchsia_packages = "${_fuchsia_out}/packages.json"
-      fuchsia_images = "${_fuchsia_out}/images.json"
-      recovery_images = "${_recovery_out}/images.json"
-    }
-
     testonly = fuchsia_zbi_testonly
     deps = [
       ":fuchsia_assembly",
@@ -497,35 +503,26 @@ if (is_fuchsia) {
       "//build/info:latest-commit-date",
       recovery_label,
     ]
-    partitions = partitions_config
-    packages = files.fuchsia_packages
-    system_a = files.fuchsia_images
-    system_r = files.recovery_images
+    partitions = files.partitions_config
+    packages = files.packages_json
+    system_a = files.images_json
+    system_r = files.recovery_images_json
     board_name = board_name
     version_file = build_info_files.version
     epoch = "1"
   }
 
   flash_manifest("flash_manifest") {
-    files = {
-      _fuchsia_out =
-          get_label_info(":fuchsia_assembly", "target_out_dir") + "/fuchsia"
-      _recovery_out = get_label_info(recovery_label, "target_out_dir") + "/" +
-                      get_label_info(recovery_label, "name")
-      fuchsia_images = "${_fuchsia_out}/images.json"
-      recovery_images = "${_recovery_out}/images.json"
-    }
-
     testonly = fuchsia_zbi_testonly
     deps = [
       ":fuchsia_assembly",
       ":partitions_config",
       recovery_label,
     ]
-    partitions = partitions_config
-    system_a = files.fuchsia_images
-    system_b = files.fuchsia_images
-    system_r = files.recovery_images
+    partitions = files.partitions_config
+    system_a = files.images_json
+    system_b = files.images_json
+    system_r = files.recovery_images_json
   }
 
   ##################################################
@@ -552,16 +549,6 @@ if (is_fuchsia) {
   }
 
   update_package("fuchsia_prime") {
-    files = {
-      _fuchsia_out = get_label_info(":fuchsia_prime", "target_out_dir") +
-                     "/fuchsia_prime_assembly"
-      _recovery_out = get_label_info(recovery_label, "target_out_dir") + "/" +
-                      get_label_info(recovery_label, "name")
-      fuchsia_packages = "${_fuchsia_out}/packages.json"
-      fuchsia_images = "${_fuchsia_out}/images.json"
-      recovery_images = "${_recovery_out}/images.json"
-    }
-
     testonly = fuchsia_zbi_testonly
     deps = [
       ":fuchsia_prime_assembly",
@@ -570,10 +557,10 @@ if (is_fuchsia) {
       recovery_label,
     ]
     name = "update_prime"
-    partitions = partitions_config
-    packages = files.fuchsia_packages
-    system_a = files.fuchsia_images
-    system_r = files.recovery_images
+    partitions = files.partitions_config
+    packages = files.packages_prime_json
+    system_a = files.images_prime_json
+    system_r = files.recovery_images_json
     board_name = board_name
     version_file = build_info_files.version
     epoch = "1"
