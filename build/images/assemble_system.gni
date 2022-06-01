@@ -8,7 +8,6 @@ import("//build/component/component_id_index.gni")
 import("//build/config.gni")
 import("//build/drivers/driver_manifest.gni")
 import("//build/images/assembly/compare_json_list.gni")
-import("//build/images/assembly/generated_assembly_inputs.gni")
 import("//build/images/assembly/generated_image_assembly_config.gni")
 import("//build/images/assembly/generated_images_config.gni")
 import("//build/images/assembly/hermetic_inputs_for_image_assembly.gni")
@@ -268,7 +267,6 @@ template("assemble_system") {
     copy_images = "${image_name}.copy_images"
     config_data = "${image_name}.config-data"
     shell_commands = "${image_name}.shell_commands"
-    assembly_inputs = "${image_name}.assembly_inputs"
     fshost_config = "${image_name}.fshost_config"
     pkgfs_package_label = "//src/sys/pkg/bin/pkgfs"
     compare_command_logs = "${image_name}.compare_command_logs"
@@ -334,7 +332,6 @@ template("assemble_system") {
     base_pkg_abi_revision =
         "${gendir}/${base_package_name}/meta/fuchsia.abi/abi-revision"
     images_manifest = "${outdir}/images.json"
-    assembly_inputs = "${outdir}/assembly_inputs.json"
 
     image_command_log = "${gendir}/command_log.json"
 
@@ -611,24 +608,6 @@ template("assemble_system") {
   check_production_tag = false
   if (defined(invoker.check_production_tag)) {
     check_production_tag = invoker.check_production_tag
-  }
-
-  generated_assembly_inputs(labels.assembly_inputs) {
-    forward_variables_from(invoker,
-                           [
-                             "testonly",
-                             "visibility",
-                           ])
-    product_config = files.product_assembly_config
-    images_config = files.images_config
-    output_path = files.assembly_inputs
-
-    sources = [
-      "${files.outdir}/legacy",
-      "${files.platform_aib_dir}/emulator_support",
-    ]
-
-    deps = [ ":${labels.images_config}" ] + labels.product_assembly_config_deps
   }
 
   # Create the legacy assembly input bundle for the above-generated image
@@ -1024,9 +1003,9 @@ template("assemble_system") {
     # public_deps is used, so that the outputs of these dependencies are
     # available to external targets.
     public_deps = [
-      ":${labels.assembly_inputs}",
       ":${labels.compare_image_assembly_configs}",
       ":${labels.image_assembler}",
+      ":${labels.image_assembly_config}",
       ":${labels.images_config}",
     ]
     if (defined(invoker.output_dir)) {
@@ -1051,11 +1030,6 @@ template("assemble_system") {
       assembly_package_barrier = []
 
       assembly_inputs_barrier = []
-      assembly_inputs = [
-        {
-          path = rebase_path(files.assembly_inputs, root_build_dir)
-        },
-      ]
     }
 
     # Note: "${image_name}.route_sources_verify_files" dependency on pm-publish
