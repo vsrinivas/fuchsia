@@ -200,6 +200,11 @@ sdk_source_set("backend_fuchsia_compat") {
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 
   public_configs = [ "//sdk/config" ]
+
+  visibility = [
+    "//sdk/lib/syslog/cpp:*",
+    "//src/devices/bin/driver_host:driver_host",
+  ]
 }
 
 sdk_source_set("backend") {

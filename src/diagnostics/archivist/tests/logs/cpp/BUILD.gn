@@ -56,7 +56,7 @@ executable("logs_integration_structured_cpp_tests") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_fuchsia_compat",
+    "//sdk/lib/syslog/cpp:backend",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
