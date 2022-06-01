@@ -14,8 +14,11 @@ use {
 };
 
 static MONIKER_ERROR_HELP: &'static str = "Provide a moniker to a (not currently existing) \
-component instance in a collection. To learn more about collections, visit \
-https://fuchsia.dev/fuchsia-src/concepts/components/v2/realms#collections";
+component instance in a collection. To learn more, see \
+https://fuchsia.dev/go/components/collections";
+
+static LIFECYCLE_ERROR_HELP: &'static str = "To learn more, see \
+https://fuchsia.dev/go/components/run-errors";
 
 #[ffx_plugin]
 pub async fn create(rcs_proxy: rc::RemoteControlProxy, cmd: CreateComponentCommand) -> Result<()> {
@@ -66,10 +69,14 @@ async fn create_impl<W: std::io::Write>(
 
     match result {
         Err(fcomponent::Error::InstanceAlreadyExists) => {
-            ffx_bail!("Component instance already exists. Component instances can be destroyed with the `ffx component destroy` command.")
+            ffx_bail!("Component instance already exists. Component instances can be destroyed with the `ffx component destroy` command.\n{}", LIFECYCLE_ERROR_HELP)
         }
         Err(e) => {
-            ffx_bail!("Lifecycle protocol could not create component instance: {:?}", e);
+            ffx_bail!(
+                "Lifecycle protocol could not create component instance: {:?}.\n{}",
+                e,
+                LIFECYCLE_ERROR_HELP
+            );
         }
         Ok(()) => Ok(()),
     }

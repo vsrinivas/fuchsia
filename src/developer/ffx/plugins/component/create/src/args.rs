@@ -13,7 +13,7 @@ use {argh::FromArgs, ffx_core::ffx_command};
     example = "To create a component instance designated by the moniker `/core/ffx-laboratory:foo`:
 
     $ ffx component create /core/ffx-laboratory:foo fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world-rust.cm",
-    note = "To learn more about running components, visit https://fuchsia.dev/fuchsia-src/development/components/run"
+    note = "To learn more about running components, see https://fuchsia.dev/go/components/run"
 )]
 
 pub struct CreateComponentCommand {

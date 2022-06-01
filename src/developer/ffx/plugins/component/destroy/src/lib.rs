@@ -14,8 +14,7 @@ use {
 };
 
 static MONIKER_ERROR_HELP: &'static str = "Provide a moniker to a component instance in a \
-collection. To learn more about collections, visit \
-https://fuchsia.dev/fuchsia-src/concepts/components/v2/realms#collections";
+collection. To learn more, see https://fuchsia.dev/go/components/collections";
 
 #[ffx_plugin]
 pub async fn destroy(

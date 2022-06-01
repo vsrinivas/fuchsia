@@ -51,7 +51,7 @@ To list the contents of a directory using a different provider and capability:
 Note: 2042425d4b16ac396ebdb70e40845dc51516dd25754741a209d1972f126a7520 is the instance ID of
 the component whose persistent data storage is being accessed.
 
-To learn about component instance IDs, visit https://fuchsia.dev/fuchsia-src/development/components/component_id_index"
+To learn about component instance IDs, see https://fuchsia.dev/go/components/instance-id"
 )]
 pub struct ListArgs {
     #[argh(positional)]
@@ -75,7 +75,7 @@ To make a `settings` directory in a storage from a different provider and capabi
 Note: 2042425d4b16ac396ebdb70e40845dc51516dd25754741a209d1972f126a7520 is the instance ID of
 the component whose persistent data storage is being accessed.
 
-To learn about component instance IDs, visit https://fuchsia.dev/fuchsia-src/development/components/component_id_index"
+To learn about component instance IDs, see https://fuchsia.dev/go/components/instance-id"
 )]
 pub struct MakeDirectoryArgs {
     #[argh(positional)]
@@ -99,7 +99,7 @@ To copy `credentials.json` from the current working directory on the host to the
 Note: 2042425d4b16ac396ebdb70e40845dc51516dd25754741a209d1972f126a7520 is the instance ID of
 the component whose persistent data storage is being accessed.
 
-To learn about component instance IDs, visit https://fuchsia.dev/fuchsia-src/development/components/component_id_index"
+To learn about component instance IDs, see https://fuchsia.dev/go/components/instance-id"
 )]
 pub struct CopyArgs {
     #[argh(positional)]

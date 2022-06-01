@@ -15,6 +15,9 @@ use {
 
 const COLLECTION_NAME: &'static str = "ffx-laboratory";
 
+static LIFECYCLE_ERROR_HELP: &'static str = "To learn more, see \
+https://fuchsia.dev/go/components/run-errors";
+
 #[ffx_plugin]
 pub async fn run(rcs_proxy: rc::RemoteControlProxy, cmd: RunComponentCommand) -> Result<()> {
     let lifecycle_controller = connect_to_lifecycle_controller(&rcs_proxy).await?;
@@ -89,7 +92,11 @@ async fn run_impl<W: std::io::Write>(
                     })?;
 
                 if let Err(e) = create_result {
-                    ffx_bail!("Lifecycle protocol could not recreate component instance: {:?}", e);
+                    ffx_bail!(
+                        "Lifecycle protocol could not recreate component instance: {:?}.\n{}",
+                        e,
+                        LIFECYCLE_ERROR_HELP
+                    );
                 }
             } else {
                 ffx_bail!("Component instance already exists. Use --recreate to destroy and recreate a new instance, or --name to create a new instance with a different name.")
@@ -119,7 +126,11 @@ async fn run_impl<W: std::io::Write>(
             writeln!(writer, "The component instance was already started.")?;
         }
         Err(e) => {
-            ffx_bail!("Lifecycle protocol could not start the component instance: {:?}", e);
+            ffx_bail!(
+                "Lifecycle protocol could not start the component instance: {:?}.\n{}",
+                e,
+                LIFECYCLE_ERROR_HELP
+            );
         }
     }
 

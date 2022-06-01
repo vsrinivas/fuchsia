@@ -18,7 +18,7 @@ use {argh::FromArgs, ffx_core::ffx_command};
     $ ffx component create /core/ffx-laboratory:<instance-name> <component-url>
     $ ffx component start /core/ffx-laboratory:<instance-name>
 
-To learn more about running components, visit https://fuchsia.dev/fuchsia-src/development/components/run"
+To learn more about running components, see https://fuchsia.dev/go/components/run"
 )]
 
 pub struct RunComponentCommand {

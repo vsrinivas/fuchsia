@@ -14,7 +14,7 @@ use {argh::FromArgs, ffx_core::ffx_command};
     $ ffx component run-legacy \\
     fuchsia-pkg://fuchsia.com/hello_world_rust#meta/hello_world_rust.cmx",
     description = "Runs a legacy (CMX) component instance on the target",
-    note = "To learn more about component URLs, visit https://fuchsia.dev/fuchsia-src/concepts/components/component_urls"
+    note = "To learn more, see https://fuchsia.dev/go/components/url"
 )]
 
 pub struct RunComponentCommand {

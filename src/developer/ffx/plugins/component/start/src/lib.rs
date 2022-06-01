@@ -12,6 +12,9 @@ use {
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
 };
 
+static LIFECYCLE_ERROR_HELP: &'static str = "To learn more, see \
+https://fuchsia.dev/go/components/run-errors";
+
 #[ffx_plugin()]
 pub async fn start(rcs_proxy: rc::RemoteControlProxy, cmd: ComponentStartCommand) -> Result<()> {
     let lifecycle_controller = connect_to_lifecycle_controller(&rcs_proxy).await?;
@@ -42,7 +45,11 @@ async fn start_impl<W: std::io::Write>(
                 Ok(fsys::StartResult::AlreadyStarted)
             }
             Err(e) => {
-                ffx_bail!("Lifecycle protocol could not start the component instance: {:?}", e)
+                ffx_bail!(
+                    "Lifecycle protocol could not start the component instance: {:?}.\n{}",
+                    e,
+                    LIFECYCLE_ERROR_HELP
+                )
             }
         },
         Err(e) => {
