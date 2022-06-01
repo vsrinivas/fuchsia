@@ -14,19 +14,16 @@ if (is_host) {
     args_sources = [ "src/args.rs" ]
     config_data = [ "data/config.json" ]
     plugin_deps = [
-      "list:ffx_emulator_list",
-      "show:ffx_emulator_show",
-      "start:ffx_emulator_start",
-      "stop:ffx_emulator_stop",
+      "commands/list:ffx_emulator_list",
+      "commands/show:ffx_emulator_show",
+      "commands/start:ffx_emulator_start",
+      "commands/stop:ffx_emulator_stop",
     ]
     test_deps = [
+      "commands:tests",
       "common:tests",
       "configuration:tests",
       "engines:tests",
-      "list:tests",
-      "show:tests",
-      "start:tests",
-      "stop:tests",
     ]
     deps = [
       ":aemu_internal",
