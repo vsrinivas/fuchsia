@@ -204,7 +204,7 @@ async fn main() -> Result<(), Error> {
                 }
                 ImageSubCommand::Format(_) => {
                     log::set_max_level(log::LevelFilter::Info);
-                    mkfs(device, crypt).await?;
+                    mkfs(device, Some(crypt)).await?;
                     Ok(())
                 }
                 ImageSubCommand::Fsck(_) => {

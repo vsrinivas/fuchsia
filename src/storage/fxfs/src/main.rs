@@ -44,7 +44,11 @@ enum SubCommand {
 #[derive(FromArgs, PartialEq, Debug)]
 /// Format
 #[argh(subcommand, name = "mkfs")]
-struct FormatSubCommand {}
+struct FormatSubCommand {
+    /// make the default volume encrypted (using supplied crypt service)
+    #[argh(switch)]
+    encrypted: bool,
+}
 
 #[derive(FromArgs, PartialEq, Debug)]
 /// Mount
@@ -58,12 +62,28 @@ struct MountSubCommand {
 #[derive(FromArgs, PartialEq, Debug)]
 /// Fsck
 #[argh(subcommand, name = "fsck")]
-struct FsckSubCommand {}
+struct FsckSubCommand {
+    /// check encrypted volumes (with supplied crypt service)
+    #[argh(switch)]
+    encrypted: bool,
+}
 
 #[derive(FromArgs, PartialEq, Debug)]
 /// Component
 #[argh(subcommand, name = "component")]
 struct ComponentSubCommand {}
+
+fn get_crypt_client() -> Result<Arc<RemoteCrypt>, Error> {
+    Ok(Arc::new(RemoteCrypt::new(CryptProxy::new(fasync::Channel::from_channel(
+        zx::Channel::from(
+            fuchsia_runtime::take_startup_handle(fuchsia_runtime::HandleInfo::new(
+                HandleType::User0,
+                2,
+            ))
+            .ok_or(format_err!("Missing crypt service"))?,
+        ),
+    )?))))
+}
 
 // The number of threads chosen here must exceed the number of concurrent system calls to paged VMOs
 // that we allow since otherwise deadlocks are possible.  Search for CONCURRENT_SYSCALLS.
@@ -91,20 +111,13 @@ async fn main() -> Result<(), Error> {
     ))
     .await?;
 
-    let crypt = Arc::new(RemoteCrypt::new(CryptProxy::new(fasync::Channel::from_channel(
-        zx::Channel::from(
-            fuchsia_runtime::take_startup_handle(fuchsia_runtime::HandleInfo::new(
-                HandleType::User0,
-                2,
-            ))
-            .ok_or(format_err!("Missing crypt service"))?,
-        ),
-    )?)));
-
     match args {
-        TopLevel { nested: SubCommand::Format(_), .. } => {
-            mkfs(DeviceHolder::new(BlockDevice::new(Box::new(client), false).await?), crypt)
-                .await?;
+        TopLevel { nested: SubCommand::Format(FormatSubCommand { encrypted }), .. } => {
+            mkfs(
+                DeviceHolder::new(BlockDevice::new(Box::new(client), false).await?),
+                if encrypted { Some(get_crypt_client()?) } else { None },
+            )
+            .await?;
             Ok(())
         }
         TopLevel { nested: SubCommand::Mount(MountSubCommand { readonly }), verbose } => {
@@ -117,9 +130,9 @@ async fn main() -> Result<(), Error> {
             let startup_handle =
                 fuchsia_runtime::take_startup_handle(HandleType::DirectoryRequest.into())
                     .ok_or(MissingStartupHandle)?;
-            server.run(zx::Channel::from(startup_handle), Some(crypt)).await
+            server.run(zx::Channel::from(startup_handle), Some(get_crypt_client()?)).await
         }
-        TopLevel { nested: SubCommand::Fsck(_), verbose } => {
+        TopLevel { nested: SubCommand::Fsck(FsckSubCommand { encrypted }), verbose } => {
             let fs = FxFilesystem::open_with_options(
                 DeviceHolder::new(BlockDevice::new(Box::new(client), true).await?),
                 OpenOptions { read_only: true, trace: verbose, ..Default::default() },
@@ -127,7 +140,12 @@ async fn main() -> Result<(), Error> {
             .await?;
             let mut options = fsck::default_options();
             options.verbose = verbose;
-            fsck::fsck_with_options(&fs, Some(crypt), options).await
+            fsck::fsck_with_options(
+                &fs,
+                if encrypted { Some(get_crypt_client()?) } else { None },
+                options,
+            )
+            .await
         }
         TopLevel { nested: SubCommand::Component(_), .. } => unreachable!(),
     }

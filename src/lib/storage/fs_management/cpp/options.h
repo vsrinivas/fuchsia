@@ -60,7 +60,6 @@ struct MountOptions {
 
   // If set, use the specified component URL rather than a default.
   std::string component_url;
-
   // If set, provides the caller with the opportunity to migrate data before the mount is finalised.
   // The mount will be blocked until the channel and any other channels opened via this channel are
   // closed.

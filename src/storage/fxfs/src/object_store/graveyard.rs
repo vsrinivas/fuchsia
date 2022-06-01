@@ -110,7 +110,6 @@ impl Graveyard {
     }
 
     async fn reap_task(self: Arc<Self>, mut receiver: UnboundedReceiver<(u64, u64)>) {
-        log::info!("Reaping graveyard starting");
         // Wait and process reap requests.
         while let Some((store_id, object_id)) = receiver.next().await {
             if let Err(e) = self.tombstone(store_id, object_id).await {

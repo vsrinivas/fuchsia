@@ -221,7 +221,7 @@ impl FxFilesystem {
             lock_manager: LockManager::new(),
             flush_task: Mutex::new(None),
             device_sender: OnceCell::new(),
-            closed: AtomicBool::new(false),
+            closed: AtomicBool::new(true),
             read_only: false,
             trace: false,
             graveyard: Graveyard::new(objects.clone()),
@@ -250,7 +250,7 @@ impl FxFilesystem {
         transaction.commit().await?;
 
         objects.set_volume_directory(volume_directory);
-
+        filesystem.closed.store(false, atomic::Ordering::SeqCst);
         Ok(filesystem.into())
     }
 
@@ -270,7 +270,7 @@ impl FxFilesystem {
             lock_manager: LockManager::new(),
             flush_task: Mutex::new(None),
             device_sender: OnceCell::new(),
-            closed: AtomicBool::new(false),
+            closed: AtomicBool::new(true),
             read_only: options.read_only,
             trace: options.trace,
             graveyard: Graveyard::new(objects.clone()),
@@ -300,6 +300,7 @@ impl FxFilesystem {
                     .await?;
             }
         }
+        filesystem.closed.store(false, atomic::Ordering::SeqCst);
         Ok(filesystem.into())
     }
 
@@ -509,13 +510,13 @@ impl AsRef<LockManager> for FxFilesystem {
 }
 
 /// Helper method for making a new filesystem.
-pub async fn mkfs(device: DeviceHolder, crypt: Arc<dyn Crypt>) -> Result<(), Error> {
+pub async fn mkfs(device: DeviceHolder, crypt: Option<Arc<dyn Crypt>>) -> Result<(), Error> {
     let fs = FxFilesystem::new_empty(device).await?;
     {
         // expect instead of propagating errors here, since otherwise we could drop |fs| before
         // close is called, which leads to confusing and unrelated error messages.
         let root_volume = root_volume(&fs).await.expect("Open root_volume failed");
-        root_volume.new_volume("default", Some(crypt)).await.expect("Create volume failed");
+        root_volume.new_volume("default", crypt).await.expect("Create volume failed");
     }
     fs.close().await?;
     Ok(())

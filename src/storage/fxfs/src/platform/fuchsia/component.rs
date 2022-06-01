@@ -4,6 +4,7 @@
 
 use {
     crate::{
+        crypt::Crypt,
         filesystem::{mkfs, FxFilesystem, OpenFxFilesystem, OpenOptions},
         fsck,
         object_store::volume::root_volume,
@@ -221,18 +222,22 @@ impl Component {
             let _ = state.fs.close().await;
         }
         let client = RemoteBlockClient::new(device.into_channel()).await?;
+        let crypt = if let Some(crypt) = options.crypt {
+            Some(Arc::new(RemoteCrypt::new(CryptProxy::new(fasync::Channel::from_channel(
+                crypt.into_channel(),
+            )?))) as Arc<dyn Crypt>)
+        } else {
+            None
+        };
         let fs = FxFilesystem::open_with_options(
             DeviceHolder::new(BlockDevice::new(Box::new(client), options.read_only).await?),
             OpenOptions { read_only: options.read_only, ..Default::default() },
         )
         .await?;
         let volumes = VolumesDirectory::new(root_volume(&fs).await?).await?;
-        let crypt = Arc::new(RemoteCrypt::new(CryptProxy::new(fasync::Channel::from_channel(
-            options.crypt.ok_or(zx::Status::INVALID_ARGS)?.into_channel(),
-        )?)));
         // TODO(fxbug.dev/99182): We should eventually not open the default volume.
         let volume = volumes
-            .open_or_create_volume(DEFAULT_VOLUME_NAME, Some(crypt), /* create_only: */ false)
+            .open_or_create_volume(DEFAULT_VOLUME_NAME, crypt, /* create_only: */ false)
             .await?;
         let root = volume.root();
         if let Some(migrate_root) = options.migrate_root {
@@ -278,7 +283,7 @@ impl Component {
         )?)));
         mkfs(
             DeviceHolder::new(BlockDevice::new(Box::new(client), /* read_only: */ false).await?),
-            crypt,
+            Some(crypt),
         )
         .await?;
         Ok(())

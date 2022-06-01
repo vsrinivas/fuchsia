@@ -71,7 +71,7 @@ pub async fn create_image() -> Result<(), Error> {
     {
         let device_holder = DeviceHolder::new(FakeDevice::new(IMAGE_BLOCKS, IMAGE_BLOCK_SIZE));
         let device = device_holder.clone();
-        mkfs(device_holder, crypt.clone()).await?;
+        mkfs(device_holder, Some(crypt.clone())).await?;
         device.reopen();
         save_device(device, path.as_path()).await?;
     }

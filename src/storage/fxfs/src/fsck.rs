@@ -253,6 +253,8 @@ pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
     } else {
         if warnings > 0 {
             log::warn!("Fsck encountered {} warnings", warnings);
+        } else {
+            log::info!("No issues detected");
         }
         Ok(())
     }

@@ -246,8 +246,7 @@ __EXPORT std::string_view DiskFormatComponentUrl(DiskFormat fs_type) {
     case kDiskFormatBlobfs:
       return kBlobfsComponentUrl;
     case kDiskFormatFxfs:
-      // TODO(fxbug.dev/99591): Enable this when ready.
-      // return kFxfsComponentUrl;
+      return kFxfsComponentUrl;
     case kDiskFormatCount:
     case kDiskFormatUnknown:
     case kDiskFormatGpt:

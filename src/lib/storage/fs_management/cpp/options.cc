@@ -107,6 +107,9 @@ std::vector<std::string> MkfsOptions::as_argv(const char *binary) const {
 
   argv.push_back("mkfs");
 
+  if (crypt_client)
+    argv.push_back("--encrypted");
+
   return argv;
 }
 
@@ -131,6 +134,9 @@ std::vector<std::string> FsckOptions::as_argv(const char *binary) const {
   // TODO(smklein): Add support for modify, force flags. Without them,
   // we have "never_modify=true" and "force=true" effectively on by default.
   argv.push_back("fsck");
+
+  if (crypt_client)
+    argv.push_back("--encrypted");
 
   return argv;
 }

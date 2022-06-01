@@ -180,6 +180,7 @@ fuchsia_test_package("fs-management-tests") {
       max_severity = "ERROR"
     }
   }
+  deps = [ "//src/storage/fxfs:fxfs_component" ]
 }
 
 group("tests") {

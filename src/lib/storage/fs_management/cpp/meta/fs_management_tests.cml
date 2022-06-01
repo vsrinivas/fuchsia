@@ -20,6 +20,10 @@
             url: "fuchsia-boot:///#meta/blobfs.cm",
             startup: "eager",
         },
+        {
+            name: "static-test-fxfs",
+            url: "#meta/fxfs.cm",
+        },
     ],
     use: [
         { protocol: "fuchsia.process.Launcher" },

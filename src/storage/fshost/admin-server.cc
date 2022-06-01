@@ -92,6 +92,10 @@ void AdminServer::Mount(MountRequestView request, MountCompleter::Sync& complete
                       completer = completer.ToAsync(), options = std::move(options),
                       fd = std::move(fd), df = std::move(df), fs_manager = fs_manager_,
                       dispatcher]() mutable {
+    static int mount_index = 0;
+    std::string component_child_name = name + "." + std::to_string(mount_index++);
+    options.component_child_name = component_child_name.c_str();
+    options.component_collection_name = "fs-collection";
     auto mounted_filesystem_or =
         fs_management::Mount(std::move(fd), nullptr, df, options, fs_management::LaunchLogsAsync);
     if (mounted_filesystem_or.is_error()) {
@@ -102,18 +106,20 @@ void AdminServer::Mount(MountRequestView request, MountCompleter::Sync& complete
 
     // fs_manager isn't thread-safe, so we have to post back on to the async loop to attach the
     // mount.
-    async::PostTask(dispatcher, [device_path = std::move(device_path),
-                                 export_root = std::move(*mounted_filesystem_or).TakeExportRoot(),
-                                 name = std::move(name), fs_manager,
-                                 completer = std::move(completer)]() mutable {
-      if (zx_status_t status = fs_manager->AttachMount(device_path, std::move(export_root), name);
-          status != ZX_OK) {
-        FX_LOGS(WARNING) << "Failed to attach mount: " << zx_status_get_string(status);
-        completer.ReplyError(status);
-        return;
-      }
-      completer.ReplySuccess();
-    });
+    async::PostTask(
+        dispatcher,
+        [device_path = std::move(device_path),
+         mounted_filesystem = std::move(*mounted_filesystem_or).TakeExportRoot(),
+         name = std::move(name), fs_manager, completer = std::move(completer)]() mutable {
+          if (zx_status_t status =
+                  fs_manager->AttachMount(device_path, std::move(mounted_filesystem), name);
+              status != ZX_OK) {
+            FX_LOGS(WARNING) << "Failed to attach mount: " << zx_status_get_string(status);
+            completer.ReplyError(status);
+            return;
+          }
+          completer.ReplySuccess();
+        });
   });
 
   thread.detach();

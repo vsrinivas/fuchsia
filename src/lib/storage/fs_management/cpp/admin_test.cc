@@ -30,33 +30,58 @@ enum State {
   kStarted,
 };
 
-MountOptions ReadonlyOptions() {
-  return MountOptions{
-      .readonly = true,
-      // Remaining options are same as default values.
-  };
-}
+enum class Mode {
+  // Use the old, non-component way of launching.
+  kLegacy,
 
-MountOptions DynamicComponentOptions() {
-  return MountOptions{
-      .component_child_name = "test-blobfs", .component_collection_name = "fs-collection",
-      // Remaining options are same as default values.
-  };
-}
+  // The old, non-component way but read-only.
+  kReadOnly,
 
-MountOptions StaticComponentOptions() {
-  return MountOptions{
-      .component_child_name = "static-test-blobfs",
-      // Remaining options are same as default values.
-  };
-}
+  // A statically routed component. If not supported, the old way will be used.
+  kStatic,
+
+  // A dynamically routed component. If not supported, the old way will be used.
+  kDynamic,
+};
 
 constexpr char kTestFilePath[] = "test_file";
 
 class OutgoingDirectoryFixture : public testing::Test {
  public:
-  explicit OutgoingDirectoryFixture(DiskFormat format, MountOptions options = {})
-      : format_(format), options_(options) {}
+  explicit OutgoingDirectoryFixture(DiskFormat format, Mode mode) : format_(format) {
+    switch (mode) {
+      case Mode::kLegacy:
+        options_ = MountOptions();
+        break;
+      case Mode::kReadOnly:
+        options_ = MountOptions{
+            .readonly = true,
+            // Remaining options are same as default values.
+        };
+        break;
+      case Mode::kStatic:
+        component_name_ = std::string("static-test-");
+        component_name_.append(DiskFormatString(format));
+        options_ = MountOptions{.component_child_name = component_name_.c_str()};
+        break;
+      case Mode::kDynamic:
+        component_name_ = "dynamic-test-";
+        component_name_.append(DiskFormatString(format));
+        options_ = MountOptions{
+            .component_child_name = component_name_.c_str(),
+            .component_collection_name = "fs-collection",
+        };
+        // We can use the default for blobfs, but other filesystems need to come from our package
+        // (if they run as a component).
+        if (format != kDiskFormatBlobfs && !fs_management::DiskFormatComponentUrl(format).empty()) {
+          std::string url = std::string("#meta/");
+          url.append(DiskFormatString(format));
+          url.append(".cm");
+          options_.component_url = std::move(url);
+        }
+        break;
+    }
+  }
 
   void SetUp() override {
     auto ramdisk_or = storage::RamDisk::Create(512, 1 << 17);
@@ -67,6 +92,7 @@ class OutgoingDirectoryFixture : public testing::Test {
     MkfsOptions mkfs_options{
         .component_child_name = options_.component_child_name,
         .component_collection_name = options_.component_collection_name,
+        .component_url = options_.component_url,
     };
     if (format_ == kDiskFormatFxfs) {
       mkfs_options.crypt_client = [] {
@@ -85,6 +111,7 @@ class OutgoingDirectoryFixture : public testing::Test {
     FsckOptions fsck_options{
         .component_child_name = options_.component_child_name,
         .component_collection_name = options_.component_collection_name,
+        .component_url = options_.component_url,
     };
     if (format_ == kDiskFormatFxfs) {
       fsck_options.crypt_client = [] {
@@ -161,6 +188,7 @@ class OutgoingDirectoryFixture : public testing::Test {
   MountOptions options_ = {};
   fidl::WireSyncClient<Directory> export_client_;
   fidl::WireSyncClient<Directory> data_client_;
+  std::string component_name_;
 };
 
 // Generalized Admin Tests
@@ -170,26 +198,28 @@ struct OutgoingDirectoryTestParameters {
   MountOptions options;
 };
 
-std::string PrintTestSuffix(
-    const testing::TestParamInfo<std::tuple<DiskFormat, MountOptions>> params) {
+std::string PrintTestSuffix(const testing::TestParamInfo<std::tuple<DiskFormat, Mode>> params) {
   std::stringstream out;
   out << DiskFormatString(std::get<0>(params.param));
-  if (std::get<1>(params.param).readonly) {
-    out << "_readonly";
-  }
-  if (std::get<1>(params.param).component_collection_name != nullptr) {
-    out << "_dynamic";
-  }
-  if (std::get<1>(params.param).component_child_name != nullptr) {
-    out << "_component";
+  switch (std::get<1>(params.param)) {
+    case Mode::kLegacy:
+      break;
+    case Mode::kReadOnly:
+      out << "_readonly";
+      break;
+    case Mode::kDynamic:
+      out << "_dynamic";
+      __FALLTHROUGH;
+    case Mode::kStatic:
+      out << "_component";
+      break;
   }
   return out.str();
 }
 
 // Generalized outgoing directory tests which should work in both mutable and read-only modes.
-class OutgoingDirectoryTest
-    : public OutgoingDirectoryFixture,
-      public testing::WithParamInterface<std::tuple<DiskFormat, MountOptions>> {
+class OutgoingDirectoryTest : public OutgoingDirectoryFixture,
+                              public testing::WithParamInterface<std::tuple<DiskFormat, Mode>> {
  public:
   OutgoingDirectoryTest()
       : OutgoingDirectoryFixture(std::get<0>(GetParam()), std::get<1>(GetParam())) {}
@@ -209,9 +239,8 @@ INSTANTIATE_TEST_SUITE_P(OutgoingDirectoryTest, OutgoingDirectoryTest,
                                           // Filesystems that don't yet support launching as
                                           // components should be able to fall back to launching
                                           // the old way.
-                                          testing::Values(MountOptions(), ReadonlyOptions(),
-                                                          StaticComponentOptions(),
-                                                          DynamicComponentOptions())),
+                                          testing::Values(Mode::kLegacy, Mode::kReadOnly,
+                                                          Mode::kStatic, Mode::kDynamic)),
                          PrintTestSuffix);
 
 // Minfs-Specific Tests (can be generalized to work with any mutable filesystem by parameterizing
@@ -219,7 +248,7 @@ INSTANTIATE_TEST_SUITE_P(OutgoingDirectoryTest, OutgoingDirectoryTest,
 // Launches the filesystem and creates a file called kTestFilePath in the data root.
 class OutgoingDirectoryMinfs : public OutgoingDirectoryFixture {
  public:
-  OutgoingDirectoryMinfs() : OutgoingDirectoryFixture(kDiskFormatMinfs) {}
+  OutgoingDirectoryMinfs() : OutgoingDirectoryFixture(kDiskFormatMinfs, Mode::kLegacy) {}
 
   void SetUp() final {
     // Make sure we invoke the base fixture's SetUp method before we continue.
@@ -260,7 +289,7 @@ class OutgoingDirectoryMinfs : public OutgoingDirectoryFixture {
 TEST_F(OutgoingDirectoryMinfs, CannotWriteToReadOnlyDataRoot) {
   // restart the filesystem in read-only mode
   ASSERT_NO_FATAL_FAILURE(StopFilesystem());
-  ASSERT_NO_FATAL_FAILURE(StartFilesystem(ReadonlyOptions()));
+  ASSERT_NO_FATAL_FAILURE(StartFilesystem(MountOptions{.readonly = true}));
 
   auto fail_file_ends = fidl::CreateEndpoints<fio::File>();
   ASSERT_TRUE(fail_file_ends.is_ok()) << fail_file_ends.status_string();
