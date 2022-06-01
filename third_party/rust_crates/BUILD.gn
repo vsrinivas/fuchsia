@@ -812,6 +812,10 @@ if (!(current_os == "fuchsia")) {
   }
 }
 
+group("siphasher") {
+  public_deps = [ ":siphasher-v0_3_10" ]
+}
+
 group("slab") {
   public_deps = [ ":slab-v0_4_2" ]
 }
@@ -10784,7 +10788,7 @@ rust_library("simplelog-v0_10_2") {
 
 rust_library("siphasher-v0_2_3") {
   crate_name = "siphasher"
-  crate_root = "//third_party/rust_crates/vendor/siphasher/src/lib.rs"
+  crate_root = "//third_party/rust_crates/vendor/siphasher-0.2.3/src/lib.rs"
   output_name = "siphasher-c0f71ec8ce76c479"
   configs -= [
     "//build/config/rust:edition_2018",
@@ -10800,6 +10804,31 @@ rust_library("siphasher-v0_2_3") {
     "--edition=2015",
     "-Cmetadata=c0f71ec8ce76c479",
     "-Cextra-filename=-c0f71ec8ce76c479",
+  ]
+
+  visibility = [ ":*" ]
+}
+
+rust_library("siphasher-v0_3_10") {
+  crate_name = "siphasher"
+  crate_root = "//third_party/rust_crates/vendor/siphasher/src/lib.rs"
+  output_name = "siphasher-e2ef53c2b88c1cff"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=e2ef53c2b88c1cff",
+    "-Cextra-filename=-e2ef53c2b88c1cff",
+    "--cfg=feature=\"default\"",
+    "--cfg=feature=\"std\"",
   ]
 
   visibility = [ ":*" ]
