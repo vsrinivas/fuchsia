@@ -20,6 +20,7 @@
 
 #include "src/developer/forensics/crash_reports/snapshot.h"
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
+#include "src/developer/forensics/feedback/annotations/types.h"
 #include "src/developer/forensics/utils/storage_size.h"
 #include "src/lib/timekeeper/clock.h"
 
@@ -101,9 +102,9 @@ class SnapshotManager {
     size_t num_clients_with_uuid;
     StorageSize annotations_size;
     StorageSize archive_size;
-    std::shared_ptr<const AnnotationMap> annotations;
+    std::shared_ptr<const feedback::Annotations> annotations;
     std::shared_ptr<const ManagedSnapshot::Archive> archive;
-    std::shared_ptr<AnnotationMap> presence_annotations;
+    std::shared_ptr<feedback::Annotations> presence_annotations;
   };
 
   // Determine if the most recent SnapshotRequest's delayed call to
@@ -165,10 +166,10 @@ class SnapshotManager {
   // SnapshotUuid and annotations to return under specific conditions, e.g., garbage collection,
   // time outs.
   struct SpecialCaseSnapshot {
-    explicit SpecialCaseSnapshot(SnapshotUuid uuid, AnnotationMap annotations)
+    explicit SpecialCaseSnapshot(SnapshotUuid uuid, feedback::Annotations annotations)
         : uuid(std::move(uuid)), annotations(std::move(annotations)) {}
     SnapshotUuid uuid;
-    AnnotationMap annotations;
+    feedback::Annotations annotations;
   };
 
   const SpecialCaseSnapshot garbage_collected_snapshot_;

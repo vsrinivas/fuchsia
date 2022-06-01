@@ -41,16 +41,12 @@ void StubCrashServer::MakeRequest(const Report& report, const Snapshot& snapshot
 
   if (std::holds_alternative<ManagedSnapshot>(snapshot)) {
     const auto& s = std::get<ManagedSnapshot>(snapshot);
-    if (auto annotations = s.LockAnnotations(); annotations) {
-      for (const auto& [key, value] : annotations->Raw()) {
-        latest_annotations_.Set(key, value);
-      }
+    for (const auto& [key, value] : s.Annotations()) {
+      latest_annotations_.Set(key, value);
     }
 
-    if (auto annotations = s.LockPresenceAnnotations(); annotations) {
-      for (const auto& [key, value] : annotations->Raw()) {
-        latest_annotations_.Set(key, value);
-      }
+    for (const auto& [key, value] : s.PresenceAnnotations()) {
+      latest_annotations_.Set(key, value);
     }
 
     if (auto archive = s.LockArchive(); archive) {
@@ -58,7 +54,7 @@ void StubCrashServer::MakeRequest(const Report& report, const Snapshot& snapshot
     }
   } else {
     const auto& s = std::get<MissingSnapshot>(snapshot);
-    for (const auto& [key, value] : s.PresenceAnnotations().Raw()) {
+    for (const auto& [key, value] : s.PresenceAnnotations()) {
       latest_annotations_.Set(key, value);
     }
   }

@@ -206,12 +206,10 @@ TEST_F(SnapshotManagerTest, Check_Get) {
 
   ASSERT_TRUE(uuid.has_value());
   auto snapshot = AsManaged(snapshot_manager_->GetSnapshot(uuid.value()));
-  ASSERT_TRUE(snapshot.LockAnnotations());
-  ASSERT_TRUE(snapshot.LockPresenceAnnotations());
   ASSERT_TRUE(snapshot.LockArchive());
 
-  EXPECT_THAT(snapshot.LockAnnotations()->Raw(), IsSupersetOf(Vector(kDefaultAnnotations)));
-  EXPECT_THAT(snapshot.LockPresenceAnnotations()->Raw(), IsEmpty());
+  EXPECT_THAT(snapshot.Annotations(), IsSupersetOf(Vector(kDefaultAnnotations)));
+  EXPECT_THAT(snapshot.PresenceAnnotations(), IsEmpty());
   EXPECT_EQ(snapshot.LockArchive()->key, kDefaultArchiveKey);
 }
 
@@ -226,8 +224,6 @@ TEST_F(SnapshotManagerTest, Check_SetsPresenceAnnotations) {
 
   ASSERT_TRUE(uuid.has_value());
   auto snapshot = AsManaged(snapshot_manager_->GetSnapshot(uuid.value()));
-  ASSERT_TRUE(snapshot.LockAnnotations());
-  ASSERT_TRUE(snapshot.LockPresenceAnnotations());
   ASSERT_TRUE(snapshot.LockArchive());
 
   std::map<std::string, std::string> annotations(kDefaultAnnotations.begin(),
@@ -235,15 +231,15 @@ TEST_F(SnapshotManagerTest, Check_SetsPresenceAnnotations) {
   annotations["debug.snapshot.shared-request.num-clients"] = std::to_string(1);
   annotations["debug.snapshot.shared-request.uuid"] = uuid.value();
 
-  EXPECT_THAT(snapshot.LockAnnotations()->Raw(), UnorderedElementsAreArray(Vector(annotations)));
-  EXPECT_THAT(snapshot.LockPresenceAnnotations()->Raw(), IsEmpty());
+  EXPECT_THAT(snapshot.Annotations(), UnorderedElementsAreArray(Vector(annotations)));
+  EXPECT_THAT(snapshot.PresenceAnnotations(), IsEmpty());
 }
 
 TEST_F(SnapshotManagerTest, Check_AnnotationsMaxSizeIsEnforced) {
   SetUpDefaultDataProviderServer();
 
   // Initialize the manager to only hold the default annotations and the debug annotations.
-  SetUpSnapshotManager(StorageSize::Bytes(256), StorageSize::Bytes(0));
+  SetUpSnapshotManager(StorageSize::Bytes(256), StorageSize::Megabytes(1));
 
   std::optional<std::string> uuid1{std::nullopt};
   ScheduleGetSnapshotUuidAndThen(zx::duration::infinite(),
@@ -251,8 +247,7 @@ TEST_F(SnapshotManagerTest, Check_AnnotationsMaxSizeIsEnforced) {
   RunLoopFor(kWindow);
 
   ASSERT_TRUE(uuid1.has_value());
-  ASSERT_TRUE(AsManaged(snapshot_manager_->GetSnapshot(uuid1.value())).LockAnnotations());
-  ASSERT_TRUE(AsManaged(snapshot_manager_->GetSnapshot(uuid1.value())).LockPresenceAnnotations());
+  ASSERT_TRUE(AsManaged(snapshot_manager_->GetSnapshot(uuid1.value())).LockArchive());
 
   clock_.Set(clock_.Now() + kWindow);
 
@@ -262,17 +257,16 @@ TEST_F(SnapshotManagerTest, Check_AnnotationsMaxSizeIsEnforced) {
   RunLoopFor(kWindow);
 
   ASSERT_TRUE(uuid2.has_value());
-  ASSERT_TRUE(AsManaged(snapshot_manager_->GetSnapshot(uuid2.value())).LockAnnotations());
-  ASSERT_TRUE(AsManaged(snapshot_manager_->GetSnapshot(uuid2.value())).LockAnnotations());
+  ASSERT_TRUE(AsManaged(snapshot_manager_->GetSnapshot(uuid2.value())).LockArchive());
 
-  EXPECT_THAT(AsMissing(snapshot_manager_->GetSnapshot(uuid1.value())).PresenceAnnotations().Raw(),
+  EXPECT_THAT(AsMissing(snapshot_manager_->GetSnapshot(uuid1.value())).PresenceAnnotations(),
               UnorderedElementsAreArray({
                   Pair("debug.snapshot.error", "garbage collected"),
                   Pair("debug.snapshot.present", "false"),
               }));
+
   EXPECT_THAT(ReadGarbageCollectedSnapshots(), UnorderedElementsAreArray({
                                                    uuid1.value(),
-                                                   uuid2.value(),
                                                }));
 }
 
@@ -288,15 +282,13 @@ TEST_F(SnapshotManagerTest, Check_Release) {
   ASSERT_TRUE(uuid.has_value());
   {
     auto snapshot = AsManaged(snapshot_manager_->GetSnapshot(uuid.value()));
-    ASSERT_TRUE(snapshot.LockAnnotations());
-    ASSERT_TRUE(snapshot.LockPresenceAnnotations());
     ASSERT_TRUE(snapshot.LockArchive());
   }
 
   snapshot_manager_->Release(uuid.value());
   {
     auto snapshot = AsMissing(snapshot_manager_->GetSnapshot(uuid.value()));
-    EXPECT_THAT(snapshot.PresenceAnnotations().Raw(),
+    EXPECT_THAT(snapshot.PresenceAnnotations(),
                 UnorderedElementsAreArray({
                     Pair("debug.snapshot.error", "garbage collected"),
                     Pair("debug.snapshot.present", "false"),
@@ -332,19 +324,18 @@ TEST_F(SnapshotManagerTest, Check_ArchivesMaxSizeIsEnforced) {
   ASSERT_TRUE(AsManaged(snapshot_manager_->GetSnapshot(uuid2.value())).LockArchive());
 
   EXPECT_FALSE(AsManaged(snapshot_manager_->GetSnapshot(uuid1.value())).LockArchive());
-  EXPECT_THAT(AsManaged(snapshot_manager_->GetSnapshot(uuid1.value())).LockAnnotations()->Raw(),
+  EXPECT_THAT(AsManaged(snapshot_manager_->GetSnapshot(uuid1.value())).Annotations(),
               UnorderedElementsAreArray({
                   Pair("annotation.key.one", "annotation.value.one"),
                   Pair("annotation.key.two", "annotation.value.two"),
                   Pair("debug.snapshot.shared-request.num-clients", "1"),
                   Pair("debug.snapshot.shared-request.uuid", uuid1.value().c_str()),
               }));
-  EXPECT_THAT(
-      AsManaged(snapshot_manager_->GetSnapshot(uuid1.value())).LockPresenceAnnotations()->Raw(),
-      UnorderedElementsAreArray({
-          Pair("debug.snapshot.error", "garbage collected"),
-          Pair("debug.snapshot.present", "false"),
-      }));
+  EXPECT_THAT(AsManaged(snapshot_manager_->GetSnapshot(uuid1.value())).PresenceAnnotations(),
+              UnorderedElementsAreArray({
+                  Pair("debug.snapshot.error", "garbage collected"),
+                  Pair("debug.snapshot.present", "false"),
+              }));
   EXPECT_THAT(ReadGarbageCollectedSnapshots(), UnorderedElementsAreArray({
                                                    uuid1.value(),
                                                }));
@@ -361,10 +352,10 @@ TEST_F(SnapshotManagerTest, Check_Timeout) {
 
   ASSERT_TRUE(uuid.has_value());
   auto snapshot = AsMissing(snapshot_manager_->GetSnapshot(uuid.value()));
-  EXPECT_THAT(snapshot.PresenceAnnotations().Raw(), UnorderedElementsAreArray({
-                                                        Pair("debug.snapshot.error", "timeout"),
-                                                        Pair("debug.snapshot.present", "false"),
-                                                    }));
+  EXPECT_THAT(snapshot.PresenceAnnotations(), UnorderedElementsAreArray({
+                                                  Pair("debug.snapshot.error", "timeout"),
+                                                  Pair("debug.snapshot.present", "false"),
+                                              }));
 }
 
 TEST_F(SnapshotManagerTest, Check_UuidForNoSnapshotUuid) {
@@ -372,11 +363,10 @@ TEST_F(SnapshotManagerTest, Check_UuidForNoSnapshotUuid) {
   SetUpDefaultSnapshotManager();
   auto snapshot =
       AsMissing(snapshot_manager_->GetSnapshot(SnapshotManager::UuidForNoSnapshotUuid()));
-  EXPECT_THAT(snapshot.PresenceAnnotations().Raw(),
-              UnorderedElementsAreArray({
-                  Pair("debug.snapshot.error", "missing uuid"),
-                  Pair("debug.snapshot.present", "false"),
-              }));
+  EXPECT_THAT(snapshot.PresenceAnnotations(), UnorderedElementsAreArray({
+                                                  Pair("debug.snapshot.error", "missing uuid"),
+                                                  Pair("debug.snapshot.present", "false"),
+                                              }));
 }
 
 TEST_F(SnapshotManagerTest, Check_Shutdown) {
@@ -391,11 +381,10 @@ TEST_F(SnapshotManagerTest, Check_Shutdown) {
 
   ASSERT_TRUE(uuid.has_value());
   auto snapshot = AsMissing(snapshot_manager_->GetSnapshot(uuid.value()));
-  EXPECT_THAT(snapshot.PresenceAnnotations().Raw(),
-              IsSupersetOf({
-                  Pair("debug.snapshot.error", "system shutdown"),
-                  Pair("debug.snapshot.present", "false"),
-              }));
+  EXPECT_THAT(snapshot.PresenceAnnotations(), IsSupersetOf({
+                                                  Pair("debug.snapshot.error", "system shutdown"),
+                                                  Pair("debug.snapshot.present", "false"),
+                                              }));
 
   uuid = std::nullopt;
   ScheduleGetSnapshotUuidAndThen(zx::duration::infinite(),
@@ -404,11 +393,10 @@ TEST_F(SnapshotManagerTest, Check_Shutdown) {
 
   ASSERT_TRUE(uuid.has_value());
   snapshot = AsMissing(snapshot_manager_->GetSnapshot(uuid.value()));
-  EXPECT_THAT(snapshot.PresenceAnnotations().Raw(),
-              IsSupersetOf({
-                  Pair("debug.snapshot.error", "system shutdown"),
-                  Pair("debug.snapshot.present", "false"),
-              }));
+  EXPECT_THAT(snapshot.PresenceAnnotations(), IsSupersetOf({
+                                                  Pair("debug.snapshot.error", "system shutdown"),
+                                                  Pair("debug.snapshot.present", "false"),
+                                              }));
 }
 
 TEST_F(SnapshotManagerTest, Check_DefaultToNotPersisted) {
@@ -417,11 +405,10 @@ TEST_F(SnapshotManagerTest, Check_DefaultToNotPersisted) {
 
   std::string uuid("UNKNOWN");
   auto snapshot = AsMissing(snapshot_manager_->GetSnapshot(uuid));
-  EXPECT_THAT(snapshot.PresenceAnnotations().Raw(),
-              UnorderedElementsAreArray({
-                  Pair("debug.snapshot.error", "not persisted"),
-                  Pair("debug.snapshot.present", "false"),
-              }));
+  EXPECT_THAT(snapshot.PresenceAnnotations(), UnorderedElementsAreArray({
+                                                  Pair("debug.snapshot.error", "not persisted"),
+                                                  Pair("debug.snapshot.present", "false"),
+                                              }));
 }
 
 TEST_F(SnapshotManagerTest, Check_ReadPreviouslyGarbageCollected) {
@@ -436,15 +423,13 @@ TEST_F(SnapshotManagerTest, Check_ReadPreviouslyGarbageCollected) {
   ASSERT_TRUE(uuid.has_value());
   {
     auto snapshot = AsManaged(snapshot_manager_->GetSnapshot(uuid.value()));
-    ASSERT_TRUE(snapshot.LockAnnotations());
-    ASSERT_TRUE(snapshot.LockPresenceAnnotations());
     ASSERT_TRUE(snapshot.LockArchive());
   }
 
   snapshot_manager_->Release(uuid.value());
   {
     auto snapshot = AsMissing(snapshot_manager_->GetSnapshot(uuid.value()));
-    EXPECT_THAT(snapshot.PresenceAnnotations().Raw(),
+    EXPECT_THAT(snapshot.PresenceAnnotations(),
                 UnorderedElementsAreArray({
                     Pair("debug.snapshot.error", "garbage collected"),
                     Pair("debug.snapshot.present", "false"),
@@ -457,7 +442,7 @@ TEST_F(SnapshotManagerTest, Check_ReadPreviouslyGarbageCollected) {
   SetUpSnapshotManager(StorageSize::Megabytes(1u), StorageSize::Megabytes(1u));
   {
     auto snapshot = AsMissing(snapshot_manager_->GetSnapshot(uuid.value()));
-    EXPECT_THAT(snapshot.PresenceAnnotations().Raw(),
+    EXPECT_THAT(snapshot.PresenceAnnotations(),
                 UnorderedElementsAreArray({
                     Pair("debug.snapshot.error", "garbage collected"),
                     Pair("debug.snapshot.present", "false"),

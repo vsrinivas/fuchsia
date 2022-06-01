@@ -243,9 +243,7 @@ std::map<std::string, std::string> CrashServer::PrepareAnnotations(const Report&
   }
 
   const auto& s = std::get<ManagedSnapshot>(snapshot);
-  if (const auto presence_annotations = s.LockPresenceAnnotations(); presence_annotations) {
-    annotations.Set(*presence_annotations);
-  }
+  annotations.Set(s.PresenceAnnotations());
 
   return annotations.Raw();
 }

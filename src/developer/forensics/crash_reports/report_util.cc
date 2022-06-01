@@ -240,13 +240,8 @@ void AddSnapshotAnnotations(const SnapshotUuid& snapshot_uuid, const Snapshot& s
   // fuchsia.feedback.DataProvider and any annotations about why the collected archive may be
   // missing.
   const auto& s = std::get<ManagedSnapshot>(snapshot);
-  if (const auto snapshot_annotations = s.LockAnnotations(); snapshot_annotations) {
-    annotations->Set(*snapshot_annotations);
-  }
-
-  if (const auto presence_annotations = s.LockPresenceAnnotations(); presence_annotations) {
-    annotations->Set(*presence_annotations);
-  }
+  annotations->Set(s.Annotations());
+  annotations->Set(s.PresenceAnnotations());
 }
 
 void AddCrashServerAnnotations(const std::string& program_name,

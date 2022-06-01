@@ -18,6 +18,7 @@
 #include "src/developer/forensics/crash_reports/constants.h"
 #include "src/developer/forensics/crash_reports/snapshot_manager.h"
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
+#include "src/developer/forensics/feedback/annotations/types.h"
 #include "src/developer/forensics/testing/stubs/data_provider.h"
 #include "src/developer/forensics/testing/stubs/loader.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
@@ -221,12 +222,12 @@ TEST_F(CrashServerTest, PreparesAnnotationsManagedSnapshot) {
                       /*snapshot_uuid=*/kSnapshotUuid,
                       /*minidump=*/std::nullopt};
 
-  const auto snapshot_annotations = std::make_shared<AnnotationMap>(AnnotationMap{
+  const auto snapshot_annotations = std::make_shared<feedback::Annotations>(feedback::Annotations{
       {"key2", "value2.1"},
       {"key3", "value3"},
   });
 
-  const auto presence_annotations = std::make_shared<AnnotationMap>(AnnotationMap{
+  const auto presence_annotations = std::make_shared<feedback::Annotations>(feedback::Annotations{
       {"key4", "value4"},
   });
 
@@ -251,19 +252,19 @@ TEST_F(CrashServerTest, PreparesAnnotationsErrorSnapshot) {
                       /*snapshot_uuid=*/kSnapshotUuid,
                       /*minidump=*/std::nullopt};
 
-  const AnnotationMap annotations({
+  const feedback::Annotations annotations({
       {"key2", "value2.1"},
       {"key3", "value3"},
   });
 
-  const AnnotationMap presence_annotations({
+  const feedback::Annotations presence_annotations({
       {"key3", "value3.1"},
       {"key4", "value4"},
 
   });
 
   EXPECT_THAT(CrashServer::PrepareAnnotations(
-                  report, MissingSnapshot(AnnotationMap({}), presence_annotations)),
+                  report, MissingSnapshot(feedback::Annotations(), presence_annotations)),
               UnorderedElementsAreArray({
                   Pair("key1", "value1"),
                   Pair("key2", "value2"),

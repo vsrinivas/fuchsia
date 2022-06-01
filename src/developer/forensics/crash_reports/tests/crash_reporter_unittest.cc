@@ -93,12 +93,14 @@ constexpr bool kUserOptOutDataSharing = false;
 
 constexpr size_t kDailyPerProductQuota = 100u;
 
-const std::map<std::string, std::string> kDefaultAnnotations = {
-    {"feedback.annotation.1.key", "feedback.annotation.1.value"},
-    {"feedback.annotation.2.key", "feedback.annotation.2.value"},
+const std::map<std::string, std::string> kFeedbackAnnotations = {
+    {feedback::kBuildVersionKey, kBuildVersion},
+    {feedback::kBuildBoardKey, kBuildBoard},
+    {feedback::kBuildProductKey, kBuildProduct},
+    {feedback::kBuildLatestCommitDateKey, kBuildLatestCommitDate},
+    {feedback::kDeviceFeedbackIdKey, kDefaultDeviceId},
+    {feedback::kSystemUpdateChannelCurrentKey, kDefaultChannel},
 };
-
-const std::map<std::string, std::string> kEmptyAnnotations = {};
 
 constexpr char kDefaultAttachmentBundleKey[] = "feedback.attachment.bundle.key";
 constexpr char kEmptyAttachmentBundleKey[] = "empty.attachment.key";
@@ -182,8 +184,8 @@ class CrashReporterTest : public UnitTestFixture {
         std::make_unique<StubCrashServer>(dispatcher(), services(), upload_attempt_results);
 
     crash_reporter_ = std::make_unique<CrashReporter>(
-        dispatcher(), services(), &clock_, info_context_, config, annotation_manager_.get(),
-        crash_register_.get(), &tags_, snapshot_manager_.get(), crash_server_.get());
+        dispatcher(), services(), &clock_, info_context_, config, crash_register_.get(), &tags_,
+        snapshot_manager_.get(), crash_server_.get());
     FX_CHECK(crash_reporter_);
   }
 
@@ -238,6 +240,8 @@ class CrashReporterTest : public UnitTestFixture {
         {feedback::kBuildBoardKey, kBuildBoard},
         {feedback::kBuildProductKey, kBuildProduct},
         {feedback::kBuildLatestCommitDateKey, kBuildLatestCommitDate},
+        {feedback::kDeviceFeedbackIdKey, kDefaultDeviceId},
+        {feedback::kSystemUpdateChannelCurrentKey, kDefaultChannel},
         {"reportTimeMillis", Not(IsEmpty())},
         {"guid", kDefaultDeviceId},
         {"channel", kDefaultChannel},
@@ -432,17 +436,17 @@ class CrashReporterTest : public UnitTestFixture {
 
 TEST_F(CrashReporterTest, Succeed_OnInputCrashReport) {
   SetUpDataProviderServer(
-      std::make_unique<stubs::DataProvider>(kDefaultAnnotations, kDefaultAttachmentBundleKey));
+      std::make_unique<stubs::DataProvider>(kFeedbackAnnotations, kDefaultAttachmentBundleKey));
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
 
   ASSERT_TRUE(FileOneCrashReport().is_ok());
-  CheckAnnotationsOnServer(kDefaultAnnotations);
+  CheckAnnotationsOnServer();
   CheckAttachmentsOnServer({kDefaultAttachmentBundleKey});
 }
 
 TEST_F(CrashReporterTest, EnforcesQuota) {
   SetUpDataProviderServer(
-      std::make_unique<stubs::DataProvider>(kDefaultAnnotations, kDefaultAttachmentBundleKey));
+      std::make_unique<stubs::DataProvider>(kFeedbackAnnotations, kDefaultAttachmentBundleKey));
   SetUpCrashReporterDefaultConfig(
       std::vector<CrashServer::UploadStatus>(kDailyPerProductQuota, kUploadSuccessful));
 
@@ -453,7 +457,7 @@ TEST_F(CrashReporterTest, EnforcesQuota) {
 
 TEST_F(CrashReporterTest, ResetsQuota) {
   SetUpDataProviderServer(
-      std::make_unique<stubs::DataProvider>(kDefaultAnnotations, kDefaultAttachmentBundleKey));
+      std::make_unique<stubs::DataProvider>(kFeedbackAnnotations, kDefaultAttachmentBundleKey));
   SetUpCrashReporterDefaultConfig(
       std::vector<CrashServer::UploadStatus>(kDailyPerProductQuota * 2, kUploadSuccessful));
 
@@ -469,7 +473,7 @@ TEST_F(CrashReporterTest, ResetsQuota) {
 
 TEST_F(CrashReporterTest, NoQuota) {
   SetUpDataProviderServer(
-      std::make_unique<stubs::DataProvider>(kDefaultAnnotations, kDefaultAttachmentBundleKey));
+      std::make_unique<stubs::DataProvider>(kFeedbackAnnotations, kDefaultAttachmentBundleKey));
   SetUpCrashReporter(
       Config{/*crash_server=*/
              {
@@ -487,7 +491,7 @@ TEST_F(CrashReporterTest, NoQuota) {
 
 TEST_F(CrashReporterTest, Check_RegisteredProduct) {
   SetUpDataProviderServer(
-      std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kDefaultAttachmentBundleKey));
+      std::make_unique<stubs::DataProvider>(kFeedbackAnnotations, kDefaultAttachmentBundleKey));
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
 
   fuchsia::feedback::CrashReportingProduct product;
@@ -508,7 +512,7 @@ TEST_F(CrashReporterTest, Check_RegisteredProduct) {
 
 TEST_F(CrashReporterTest, Succeed_OnInputCrashReportWithAdditionalData) {
   SetUpDataProviderServer(
-      std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kEmptyAttachmentBundleKey));
+      std::make_unique<stubs::DataProvider>(kFeedbackAnnotations, kEmptyAttachmentBundleKey));
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
 
   std::vector<Attachment> attachments;
@@ -529,7 +533,7 @@ TEST_F(CrashReporterTest, Succeed_OnInputCrashReportWithAdditionalData) {
 
 TEST_F(CrashReporterTest, Succeed_OnInputCrashReportWithEventId) {
   SetUpDataProviderServer(
-      std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kDefaultAttachmentBundleKey));
+      std::make_unique<stubs::DataProvider>(kFeedbackAnnotations, kDefaultAttachmentBundleKey));
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
 
   CrashReport report;
@@ -545,7 +549,7 @@ TEST_F(CrashReporterTest, Succeed_OnInputCrashReportWithEventId) {
 
 TEST_F(CrashReporterTest, Succeed_OnInputCrashReportWithProgramUptime) {
   SetUpDataProviderServer(
-      std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kDefaultAttachmentBundleKey));
+      std::make_unique<stubs::DataProvider>(kFeedbackAnnotations, kDefaultAttachmentBundleKey));
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
 
   CrashReport report;
@@ -563,7 +567,7 @@ TEST_F(CrashReporterTest, Succeed_OnInputCrashReportWithProgramUptime) {
 
 TEST_F(CrashReporterTest, Succeed_OnNativeInputCrashReport) {
   SetUpDataProviderServer(
-      std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kDefaultAttachmentBundleKey));
+      std::make_unique<stubs::DataProvider>(kFeedbackAnnotations, kDefaultAttachmentBundleKey));
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
 
   fuchsia::mem::Buffer minidump;
@@ -581,7 +585,7 @@ TEST_F(CrashReporterTest, Succeed_OnNativeInputCrashReport) {
 
 TEST_F(CrashReporterTest, Succeed_OnNativeInputCrashReportWithoutMinidump) {
   SetUpDataProviderServer(
-      std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kDefaultAttachmentBundleKey));
+      std::make_unique<stubs::DataProvider>(kFeedbackAnnotations, kDefaultAttachmentBundleKey));
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
 
   ASSERT_TRUE(FileOneNativeCrashReport(std::nullopt, std::nullopt).is_ok());
@@ -597,7 +601,7 @@ TEST_F(CrashReporterTest, Succeed_OnNativeInputCrashReportWithoutMinidump) {
 
 TEST_F(CrashReporterTest, Succeed_OnNativeInputCrashReportWithoutMinidumpButCrashSignature) {
   SetUpDataProviderServer(
-      std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kDefaultAttachmentBundleKey));
+      std::make_unique<stubs::DataProvider>(kFeedbackAnnotations, kDefaultAttachmentBundleKey));
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
 
   ASSERT_TRUE(FileOneNativeCrashReport(std::nullopt, "some-signature").is_ok());
@@ -613,7 +617,7 @@ TEST_F(CrashReporterTest, Succeed_OnNativeInputCrashReportWithoutMinidumpButCras
 
 TEST_F(CrashReporterTest, Succeed_OnDartInputCrashReport) {
   SetUpDataProviderServer(
-      std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kEmptyAttachmentBundleKey));
+      std::make_unique<stubs::DataProvider>(kFeedbackAnnotations, kEmptyAttachmentBundleKey));
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
 
   fuchsia::mem::Buffer stack_trace;
@@ -632,7 +636,7 @@ TEST_F(CrashReporterTest, Succeed_OnDartInputCrashReport) {
 
 TEST_F(CrashReporterTest, Succeed_OnDartInputCrashReportWithoutExceptionData) {
   SetUpDataProviderServer(
-      std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kDefaultAttachmentBundleKey));
+      std::make_unique<stubs::DataProvider>(kFeedbackAnnotations, kDefaultAttachmentBundleKey));
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
 
   ASSERT_TRUE(FileOneDartCrashReport(std::nullopt, std::nullopt, std::nullopt).is_ok());
@@ -645,7 +649,7 @@ TEST_F(CrashReporterTest, Succeed_OnDartInputCrashReportWithoutExceptionData) {
 
 TEST_F(CrashReporterTest, Succeed_OnInputCrashReportWithSignature) {
   SetUpDataProviderServer(
-      std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kDefaultAttachmentBundleKey));
+      std::make_unique<stubs::DataProvider>(kFeedbackAnnotations, kDefaultAttachmentBundleKey));
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
 
   ASSERT_TRUE(FileOneCrashReportWithSignature("some-signature").is_ok());
@@ -664,7 +668,7 @@ TEST_F(CrashReporterTest, Fail_OnInvalidInputCrashReport) {
 
 TEST_F(CrashReporterTest, Succeed_OnInputCrashReportWithIsFatalTrue) {
   SetUpDataProviderServer(
-      std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kDefaultAttachmentBundleKey));
+      std::make_unique<stubs::DataProvider>(kFeedbackAnnotations, kDefaultAttachmentBundleKey));
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
 
   ASSERT_TRUE(FileOneCrashReportWithIsFatal(true).is_ok());
@@ -676,7 +680,7 @@ TEST_F(CrashReporterTest, Succeed_OnInputCrashReportWithIsFatalTrue) {
 
 TEST_F(CrashReporterTest, Succeed_OnInputCrashReportWithIsFatalFalse) {
   SetUpDataProviderServer(
-      std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kDefaultAttachmentBundleKey));
+      std::make_unique<stubs::DataProvider>(kFeedbackAnnotations, kDefaultAttachmentBundleKey));
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
 
   ASSERT_TRUE(FileOneCrashReportWithIsFatal(false).is_ok());
@@ -688,7 +692,7 @@ TEST_F(CrashReporterTest, Succeed_OnInputCrashReportWithIsFatalFalse) {
 
 TEST_F(CrashReporterTest, Upload_OnUserAlreadyOptedInDataSharing) {
   SetUpDataProviderServer(
-      std::make_unique<stubs::DataProvider>(kDefaultAnnotations, kDefaultAttachmentBundleKey));
+      std::make_unique<stubs::DataProvider>(kFeedbackAnnotations, kDefaultAttachmentBundleKey));
   SetUpCrashReporter(
       Config{/*crash_server=*/
              {
@@ -701,7 +705,7 @@ TEST_F(CrashReporterTest, Upload_OnUserAlreadyOptedInDataSharing) {
   SetPrivacySettings(kUserOptInDataSharing);
 
   ASSERT_TRUE(FileOneCrashReport().is_ok());
-  CheckAnnotationsOnServer(kDefaultAnnotations);
+  CheckAnnotationsOnServer();
   CheckAttachmentsOnServer({kDefaultAttachmentBundleKey});
 }
 
@@ -723,7 +727,7 @@ TEST_F(CrashReporterTest, Archive_OnUserAlreadyOptedOutDataSharing) {
 
 TEST_F(CrashReporterTest, Upload_OnceUserOptInDataSharing) {
   SetUpDataProviderServer(
-      std::make_unique<stubs::DataProvider>(kDefaultAnnotations, kDefaultAttachmentBundleKey));
+      std::make_unique<stubs::DataProvider>(kFeedbackAnnotations, kDefaultAttachmentBundleKey));
   SetUpCrashReporter(
       Config{/*crash_server=*/
              {
@@ -740,13 +744,13 @@ TEST_F(CrashReporterTest, Upload_OnceUserOptInDataSharing) {
   SetPrivacySettings(kUserOptInDataSharing);
   ASSERT_TRUE(RunLoopUntilIdle());
 
-  CheckAnnotationsOnServer(kDefaultAnnotations);
+  CheckAnnotationsOnServer();
   CheckAttachmentsOnServer({kDefaultAttachmentBundleKey});
 }
 
 TEST_F(CrashReporterTest, Succeed_OnFailedUpload) {
   SetUpDataProviderServer(
-      std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kEmptyAttachmentBundleKey));
+      std::make_unique<stubs::DataProvider>(kFeedbackAnnotations, kEmptyAttachmentBundleKey));
   SetUpCrashReporter(
       Config{/*crash_server=*/
              {
@@ -761,7 +765,7 @@ TEST_F(CrashReporterTest, Succeed_OnFailedUpload) {
 
 TEST_F(CrashReporterTest, Succeed_OnThrottledUpload) {
   SetUpDataProviderServer(
-      std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kEmptyAttachmentBundleKey));
+      std::make_unique<stubs::DataProvider>(kFeedbackAnnotations, kEmptyAttachmentBundleKey));
   SetUpCrashReporter(
       Config{/*crash_server=*/
              {
@@ -776,7 +780,7 @@ TEST_F(CrashReporterTest, Succeed_OnThrottledUpload) {
 
 TEST_F(CrashReporterTest, Succeed_OnDisabledUpload) {
   SetUpDataProviderServer(
-      std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kEmptyAttachmentBundleKey));
+      std::make_unique<stubs::DataProvider>(kFeedbackAnnotations, kEmptyAttachmentBundleKey));
   SetUpCrashReporter(Config{/*crash_server=*/
                             {
                                 /*upload_policy=*/CrashServerConfig::UploadPolicy::DISABLED,
@@ -789,38 +793,17 @@ TEST_F(CrashReporterTest, Succeed_OnDisabledUpload) {
 
 TEST_F(CrashReporterTest, Succeed_OnNoFeedbackAttachments) {
   SetUpDataProviderServer(
-      std::make_unique<stubs::DataProviderReturnsNoAttachment>(kDefaultAnnotations));
-  SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-
-  EXPECT_TRUE(FileOneCrashReportWithSingleAttachment().is_ok());
-  CheckAnnotationsOnServer(kDefaultAnnotations);
-  CheckAttachmentsOnServer({kSingleAttachmentKey});
-}
-
-TEST_F(CrashReporterTest, Succeed_OnNoFeedbackAnnotations) {
-  SetUpDataProviderServer(
-      std::make_unique<stubs::DataProviderReturnsNoAnnotation>(kEmptyAttachmentBundleKey));
+      std::make_unique<stubs::DataProviderReturnsNoAttachment>(kFeedbackAnnotations));
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
 
   EXPECT_TRUE(FileOneCrashReportWithSingleAttachment().is_ok());
   CheckAnnotationsOnServer();
-  CheckAttachmentsOnServer({kSingleAttachmentKey, kEmptyAttachmentBundleKey});
-}
-
-TEST_F(CrashReporterTest, Succeed_OnNoFeedbackData) {
-  SetUpDataProviderServer(std::make_unique<stubs::DataProviderReturnsEmptySnapshot>());
-  SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-
-  EXPECT_TRUE(FileOneCrashReportWithSingleAttachment().is_ok());
-  CheckAnnotationsOnServer({
-      {"debug.snapshot.present", "false"},
-  });
   CheckAttachmentsOnServer({kSingleAttachmentKey});
 }
 
 TEST_F(CrashReporterTest, Upload_HourlySnapshot) {
   SetUpDataProviderServer(
-      std::make_unique<stubs::DataProvider>(kDefaultAnnotations, kDefaultAttachmentBundleKey));
+      std::make_unique<stubs::DataProvider>(kFeedbackAnnotations, kDefaultAttachmentBundleKey));
   SetUpCrashReporterDefaultConfig({kUploadSuccessful, kUploadSuccessful});
 
   RunLoopFor(zx::min(5));
@@ -842,7 +825,7 @@ TEST_F(CrashReporterTest, Upload_HourlySnapshot) {
 
 TEST_F(CrashReporterTest, Skip_HourlySnapshotIfPending) {
   SetUpDataProviderServer(
-      std::make_unique<stubs::DataProvider>(kDefaultAnnotations, kDefaultAttachmentBundleKey));
+      std::make_unique<stubs::DataProvider>(kFeedbackAnnotations, kDefaultAttachmentBundleKey));
   SetUpCrashReporterDefaultConfig({
       // Initial upload attempt.
       kUploadFailed,
@@ -867,7 +850,7 @@ TEST_F(CrashReporterTest, Skip_HourlySnapshotIfPending) {
 
 TEST_F(CrashReporterTest, Skip_HourlySnapshotIfNegativeConsent) {
   SetUpDataProviderServer(
-      std::make_unique<stubs::DataProvider>(kDefaultAnnotations, kDefaultAttachmentBundleKey));
+      std::make_unique<stubs::DataProvider>(kFeedbackAnnotations, kDefaultAttachmentBundleKey));
   SetUpCrashReporter(
       Config{/*crash_server=*/
              {
@@ -884,7 +867,7 @@ TEST_F(CrashReporterTest, Skip_HourlySnapshotIfNegativeConsent) {
 
 TEST_F(CrashReporterTest, Check_CobaltAfterSuccessfulUpload) {
   SetUpDataProviderServer(
-      std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kEmptyAttachmentBundleKey));
+      std::make_unique<stubs::DataProvider>(kFeedbackAnnotations, kEmptyAttachmentBundleKey));
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
 
   EXPECT_TRUE(FileOneCrashReport().is_ok());
@@ -900,7 +883,7 @@ TEST_F(CrashReporterTest, Check_CobaltAfterSuccessfulUpload) {
 
 TEST_F(CrashReporterTest, Check_CobaltAfterQuotaReached) {
   SetUpDataProviderServer(
-      std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kEmptyAttachmentBundleKey));
+      std::make_unique<stubs::DataProvider>(kFeedbackAnnotations, kEmptyAttachmentBundleKey));
   SetUpCrashReporter(Config{/*crash_server=*/
                             {
                                 /*upload_policy=*/CrashServerConfig::UploadPolicy::ENABLED,
@@ -961,7 +944,7 @@ class CrashReporterTestWithClock : public CrashReporterTest {
 
 TEST_F(CrashReporterTestWithClock, Check_UtcTimeIsNotReady) {
   SetUpDataProviderServer(
-      std::make_unique<stubs::DataProvider>(kDefaultAnnotations, kDefaultAttachmentBundleKey));
+      std::make_unique<stubs::DataProvider>(kFeedbackAnnotations, kDefaultAttachmentBundleKey));
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
 
   ASSERT_TRUE(FileOneCrashReport().is_ok());

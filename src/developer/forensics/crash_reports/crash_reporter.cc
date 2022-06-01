@@ -22,6 +22,7 @@
 #include <string>
 #include <tuple>
 #include <utility>
+#include <variant>
 
 #include "src/developer/forensics/crash_reports/config.h"
 #include "src/developer/forensics/crash_reports/constants.h"
@@ -82,14 +83,12 @@ CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
                              const std::shared_ptr<sys::ServiceDirectory>& services,
                              timekeeper::Clock* clock,
                              const std::shared_ptr<InfoContext>& info_context, Config config,
-                             feedback::AnnotationManager* annotation_manager,
                              CrashRegister* crash_register, LogTags* tags,
                              SnapshotManager* snapshot_manager, CrashServer* crash_server)
     : dispatcher_(dispatcher),
       executor_(dispatcher),
       services_(services),
       tags_(tags),
-      annotation_manager_(annotation_manager),
       crash_register_(crash_register),
       utc_provider_(dispatcher_, zx::unowned_clock(zx_utc_reference_get()), clock),
       snapshot_manager_(snapshot_manager),
@@ -181,7 +180,9 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, const bool is_ho
                      is_hourly_snapshot, record_failure](const std::string& snapshot_uuid) mutable {
             const auto snapshot = snapshot_manager_->GetSnapshot(snapshot_uuid);
             const auto current_time = utc_provider_.CurrentTime();
-            const auto annotations = annotation_manager_->ImmediatelyAvailable();
+            const auto& annotations = std::holds_alternative<ManagedSnapshot>(snapshot)
+                                          ? std::get<ManagedSnapshot>(snapshot).Annotations()
+                                          : std::get<MissingSnapshot>(snapshot).Annotations();
 
             // Update the default product with the immediately available annotations (which should
             // contain the version and channel).

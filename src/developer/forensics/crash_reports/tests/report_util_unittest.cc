@@ -9,6 +9,8 @@
 
 #include <gtest/gtest.h>
 
+#include "src/developer/forensics/feedback/annotations/types.h"
+
 namespace forensics {
 namespace crash_reports {
 namespace {
@@ -62,11 +64,11 @@ TEST(Logname, MakesLognameCorrectly) {
 }
 
 TEST(MakeReport, AddsManagedSnapshotAnnotations) {
-  auto annotations = std::make_shared<AnnotationMap>(AnnotationMap({
+  auto annotations = std::make_shared<feedback::Annotations>(feedback::Annotations({
       {"snapshot_annotation_key", "snapshot_annotation_value"},
   }));
 
-  auto presence_annotations = std::make_shared<AnnotationMap>(AnnotationMap({
+  auto presence_annotations = std::make_shared<feedback::Annotations>(feedback::Annotations({
       {"presence_annotation_key", "presence_annotation_value"},
   }));
 
@@ -92,11 +94,11 @@ TEST(MakeReport, AddsManagedSnapshotAnnotations) {
 }
 
 TEST(MakeReport, AddsMissingSnapshotAnnotations) {
-  AnnotationMap annotations({
+  feedback::Annotations annotations({
       {"snapshot_annotation_key", "snapshot_annotation_value"},
   });
 
-  AnnotationMap presence_annotations({
+  feedback::Annotations presence_annotations({
       {"presence_annotation_key", "presence_annotation_value"},
   });
 

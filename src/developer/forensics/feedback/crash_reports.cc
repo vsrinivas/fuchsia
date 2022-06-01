@@ -25,9 +25,8 @@ CrashReports::CrashReports(async_dispatcher_t* dispatcher,
                         options.snapshot_manager_max_annotations_size,
                         options.snapshot_manager_max_archives_size),
       crash_register_(info_context_, kCrashRegisterPath),
-      crash_reporter_(dispatcher, services, clock, info_context_, options.config,
-                      annotation_manager, &crash_register_, &tags_, &snapshot_manager_,
-                      &crash_server_),
+      crash_reporter_(dispatcher, services, clock, info_context_, options.config, &crash_register_,
+                      &tags_, &snapshot_manager_, &crash_server_),
       info_(info_context_) {
   info_.ExposeConfig(options.config);
 }

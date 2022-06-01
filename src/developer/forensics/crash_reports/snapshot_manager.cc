@@ -15,6 +15,7 @@
 
 #include "src/developer/forensics/crash_reports/errors.h"
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
+#include "src/developer/forensics/feedback/annotations/decode.h"
 #include "src/lib/uuid/uuid.h"
 
 namespace forensics {
@@ -42,12 +43,6 @@ void AddAnnotation<std::string>(const std::string& key, const std::string& value
   });
 }
 
-AnnotationMap ToAnnotationMap(const std::vector<Annotation>& annotations) {
-  AnnotationMap map;
-  map.Set(annotations);
-  return map;
-}
-
 // Helper function to make a shared_ptr from a rvalue-reference of a type.
 template <typename T>
 std::shared_ptr<T> MakeShared(T&& t) {
@@ -73,23 +68,23 @@ SnapshotManager::SnapshotManager(async_dispatcher_t* dispatcher, timekeeper::Clo
       max_archives_size_(max_archives_size),
       current_archives_size_(0u),
       garbage_collected_snapshot_("garbage collected",
-                                  AnnotationMap({
+                                  feedback::Annotations({
                                       {"debug.snapshot.error", "garbage collected"},
                                       {"debug.snapshot.present", "false"},
                                   })),
-      not_persisted_snapshot_("not persisted", AnnotationMap({
+      not_persisted_snapshot_("not persisted", feedback::Annotations({
                                                    {"debug.snapshot.error", "not persisted"},
                                                    {"debug.snapshot.present", "false"},
                                                })),
-      timed_out_snapshot_("timed out", AnnotationMap({
+      timed_out_snapshot_("timed out", feedback::Annotations({
                                            {"debug.snapshot.error", "timeout"},
                                            {"debug.snapshot.present", "false"},
                                        })),
-      shutdown_snapshot_("shutdown", AnnotationMap({
+      shutdown_snapshot_("shutdown", feedback::Annotations({
                                          {"debug.snapshot.error", "system shutdown"},
                                          {"debug.snapshot.present", "false"},
                                      })),
-      no_uuid_snapshot_(UuidForNoSnapshotUuid(), AnnotationMap({
+      no_uuid_snapshot_(UuidForNoSnapshotUuid(), feedback::Annotations({
                                                      {"debug.snapshot.error", "missing uuid"},
                                                      {"debug.snapshot.present", "false"},
                                                  })) {
@@ -102,8 +97,7 @@ SnapshotManager::SnapshotManager(async_dispatcher_t* dispatcher, timekeeper::Clo
 
 Snapshot SnapshotManager::GetSnapshot(const SnapshotUuid& uuid) {
   auto BuildMissing = [this](const SpecialCaseSnapshot& special_case) {
-    return MissingSnapshot(AnnotationMap(annotation_manager_->ImmediatelyAvailable()),
-                           special_case.annotations);
+    return MissingSnapshot(annotation_manager_->ImmediatelyAvailable(), special_case.annotations);
   };
 
   if (uuid == garbage_collected_snapshot_.uuid) {
@@ -318,9 +312,9 @@ void SnapshotManager::CompleteWithSnapshot(const SnapshotUuid& uuid, FidlSnapsho
   FX_CHECK(data);
   FX_CHECK(request->is_pending);
 
-  data->presence_annotations = std::make_shared<AnnotationMap>();
+  data->presence_annotations = std::make_shared<feedback::Annotations>();
   if (fidl_snapshot.IsEmpty()) {
-    data->presence_annotations->Set("debug.snapshot.present", "false");
+    data->presence_annotations->insert({"debug.snapshot.present", "false"});
   }
 
   // Add annotations about the snapshot. These are not "presence" annotations because
@@ -331,11 +325,13 @@ void SnapshotManager::CompleteWithSnapshot(const SnapshotUuid& uuid, FidlSnapsho
 
   // Take ownership of |fidl_snapshot| and the record the size of its annotations and archive.
   if (fidl_snapshot.has_annotations()) {
-    data->annotations = MakeShared(ToAnnotationMap(fidl_snapshot.annotations()));
+    data->annotations = MakeShared(feedback::FromFidl(fidl_snapshot.annotations()));
 
-    for (const auto& [k, v] : data->annotations->Raw()) {
+    for (const auto& [k, v] : *data->annotations) {
       data->annotations_size += StorageSize::Bytes(k.size());
-      data->annotations_size += StorageSize::Bytes(v.size());
+      if (v.HasValue()) {
+        data->annotations_size += StorageSize::Bytes(v.Value().size());
+      }
     }
     current_annotations_size_ += data->annotations_size;
   }
@@ -373,9 +369,12 @@ void SnapshotManager::EnforceSizeLimits() {
     auto* data = FindSnapshotData(request->uuid);
     FX_CHECK(data);
 
-    // Drop |request|'s annotations if necessary.
+    // Drop |request|'s annotations and attachments if necessary. Attachments are dropped because
+    // they don't make sense without the accompanying annotations.
     if (current_annotations_size_ > max_annotations_size_) {
       DropAnnotations(data);
+      DropArchive(data);
+      RecordAsGarbageCollected(request->uuid);
     }
 
     // Drop |request|'s archive if necessary.
@@ -414,10 +413,15 @@ void SnapshotManager::DropArchive(SnapshotData* data) {
 
   // If annotations still exist, add an annotation indicating the archive was garbage collected.
   if (data->annotations) {
-    for (const auto& [k, v] : garbage_collected_snapshot_.annotations.Raw()) {
-      data->presence_annotations->Set(k, v);
-      data->annotations_size += StorageSize::Bytes(k.size()) + StorageSize::Bytes(v.size());
-      current_annotations_size_ += StorageSize::Bytes(k.size()) + StorageSize::Bytes(v.size());
+    for (const auto& [k, v] : garbage_collected_snapshot_.annotations) {
+      data->presence_annotations->insert({k, v});
+      data->annotations_size += StorageSize::Bytes(k.size());
+      current_annotations_size_ += StorageSize::Bytes(k.size());
+
+      if (v.HasValue()) {
+        data->annotations_size += StorageSize::Bytes(v.Value().size());
+        current_annotations_size_ += StorageSize::Bytes(v.Value().size());
+      }
     }
   }
 }

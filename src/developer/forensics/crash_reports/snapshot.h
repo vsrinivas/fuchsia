@@ -11,16 +11,18 @@
 #include <memory>
 #include <string>
 
-#include "src/developer/forensics/crash_reports/annotation_map.h"
+#include "src/developer/forensics/feedback/annotations/types.h"
 #include "src/developer/forensics/utils/sized_data.h"
 
 namespace forensics {
 namespace crash_reports {
 
 // Allows for the data from a single FIDL fuchsia.feedback.Snapshot to be shared amongst many
-// clients and managed by the SnapshotManager. The SnapshotManager may drop the annotations or
-// archive at any point, however if a reference is held (gotten from LockAnnotations or
-// LockArchive) the data will not be deleted until the last reference is deleted.
+// clients and managed by the SnapshotManager. The SnapshotManager may drop the underlying data at
+// any point, however if a reference is held (gotten from Annotations or LockArchive) the data
+// will not be deleted until the last reference is deleted.
+//
+// Attachments may be missing, but annotations are always guaranteed to be present.
 //
 // The SnapshotManager may add annotations as |presence_annotations_| that convey information about
 // how its management has affected the archive.
@@ -32,24 +34,25 @@ class ManagedSnapshot {
     SizedData value;
   };
 
-  ManagedSnapshot(std::weak_ptr<const AnnotationMap> annotations,
-                  std::weak_ptr<const AnnotationMap> presence_annotations,
+  ManagedSnapshot(std::shared_ptr<const feedback::Annotations> annotations,
+                  std::shared_ptr<const feedback::Annotations> presence_annotations,
                   std::weak_ptr<const Archive> archive = std::weak_ptr<const Archive>())
       : annotations_(std::move(annotations)),
         presence_annotations_(std::move(presence_annotations)),
-        archive_(std::move(archive)) {}
-
-  std::shared_ptr<const AnnotationMap> LockAnnotations() const { return annotations_.lock(); }
-
-  std::shared_ptr<const AnnotationMap> LockPresenceAnnotations() const {
-    return presence_annotations_.lock();
+        archive_(std::move(archive)) {
+    FX_CHECK(annotations_ != nullptr) << "Annotations can't be null";
+    FX_CHECK(presence_annotations_ != nullptr) << "Presence annotations can't be null";
   }
+
+  const feedback::Annotations& Annotations() const { return *annotations_; }
+
+  const feedback::Annotations& PresenceAnnotations() const { return *presence_annotations_; }
 
   std::shared_ptr<const Archive> LockArchive() const { return archive_.lock(); }
 
  private:
-  std::weak_ptr<const AnnotationMap> annotations_;
-  std::weak_ptr<const AnnotationMap> presence_annotations_;
+  std::shared_ptr<const feedback::Annotations> annotations_;
+  std::shared_ptr<const feedback::Annotations> presence_annotations_;
   std::weak_ptr<const Archive> archive_;
 };
 
@@ -63,18 +66,19 @@ class ManagedSnapshot {
 // caused the underlying data to be missing.
 class MissingSnapshot {
  public:
-  explicit MissingSnapshot(AnnotationMap annotations, AnnotationMap presence_annotations)
+  explicit MissingSnapshot(feedback::Annotations annotations,
+                           feedback::Annotations presence_annotations)
       : annotations_(std::move(annotations)),
         presence_annotations_(std::move(presence_annotations)) {}
 
-  const AnnotationMap& Annotations() const { return annotations_; }
+  const feedback::Annotations& Annotations() const { return annotations_; }
 
   // Information from the snapshot manager on why the snapshot is missing.
-  const AnnotationMap& PresenceAnnotations() const { return presence_annotations_; }
+  const feedback::Annotations& PresenceAnnotations() const { return presence_annotations_; }
 
  private:
-  AnnotationMap annotations_;
-  AnnotationMap presence_annotations_;
+  feedback::Annotations annotations_;
+  feedback::Annotations presence_annotations_;
 };
 
 using Snapshot = std::variant<ManagedSnapshot, MissingSnapshot>;
