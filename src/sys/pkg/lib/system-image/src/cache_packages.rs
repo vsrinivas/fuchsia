@@ -44,8 +44,16 @@ impl CachePackages {
         Ok(CachePackages { contents })
     }
 
+    /// Create a new instance of `CachePackages` from parsing a json.
+    /// If there are no cache packages, `file_contents` must be empty.
     pub(crate) fn from_json(file_contents: &[u8]) -> Result<Self, CachePackagesInitError> {
+        if file_contents.is_empty() {
+            return Ok(CachePackages { contents: vec![] });
+        }
         let contents = parse_json(file_contents)?;
+        if contents.is_empty() {
+            return Err(CachePackagesInitError::NoCachePackages);
+        }
         Ok(CachePackages { contents })
     }
 
@@ -93,7 +101,7 @@ fn parse_json(contents: &[u8]) -> Result<Vec<PinnedAbsolutePackageUrl>, CachePac
 
 #[cfg(test)]
 mod tests {
-    use {super::*, fuchsia_pkg::PackagePath};
+    use {super::*, assert_matches::assert_matches, fuchsia_pkg::PackagePath};
 
     #[test]
     fn populate_from_path_hash_mapping() {
@@ -126,6 +134,26 @@ mod tests {
             "fuchsia-pkg://foo.bar/rty/0?hash=1111111111111111111111111111111111111111111111111111111111111111"
         ];
         assert!(packages.into_contents().map(|u| u.to_string()).eq(expected.into_iter()));
+    }
+
+    #[test]
+    fn populate_from_empty_json() {
+        let packages = CachePackages::from_json(b"").unwrap();
+        assert_eq!(packages.into_contents().count(), 0);
+    }
+
+    #[test]
+    fn reject_non_empty_json_with_no_cache_packages() {
+        let file_contents = br#"
+        {
+            "version": "1",
+            "content": []
+        }"#;
+
+        assert_matches!(
+            CachePackages::from_json(file_contents),
+            Err(CachePackagesInitError::NoCachePackages)
+        );
     }
 
     #[test]

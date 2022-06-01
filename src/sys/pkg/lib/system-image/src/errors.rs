@@ -52,6 +52,9 @@ pub enum CachePackagesInitError {
 
     #[error("packages config version not supported: '{0:?}'")]
     VersionNotSupported(String),
+
+    #[error("non empty cache_packages.json should have at least 1 package")]
+    NoCachePackages,
 }
 
 #[derive(Debug, Error)]
