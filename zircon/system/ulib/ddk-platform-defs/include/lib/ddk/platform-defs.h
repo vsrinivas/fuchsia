@@ -159,6 +159,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_AMLOGIC_DAI_OUT     0x29
 #define PDEV_DID_AMLOGIC_DAI_IN      0x2A
 #define PDEV_DID_AMLOGIC_HDMI        0x2B
+#define PDEV_DID_AMLOGIC_A5_CLK      0x2C
 
 // Broadcom
 #define PDEV_VID_BROADCOM           0x06

@@ -42,8 +42,9 @@ using DeviceType =
 class AmlClock : public DeviceType, public ddk::ClockImplProtocol<AmlClock, ddk::base_protocol> {
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlClock);
-  AmlClock(zx_device_t* device, fdf::MmioBuffer hiu_mmio, fdf::MmioBuffer dosbus_mmio,
-           std::optional<fdf::MmioBuffer> msr_mmio, uint32_t device_id);
+  AmlClock(zx_device_t* device, fdf::MmioBuffer hiu_mmio,
+           std::optional<fdf::MmioBuffer> dosbus_mmio, std::optional<fdf::MmioBuffer> msr_mmio,
+           uint32_t device_id);
   ~AmlClock();
 
   // Performs the object initialization.
@@ -106,7 +107,7 @@ class AmlClock : public DeviceType, public ddk::ClockImplProtocol<AmlClock, ddk:
 
   // IO MMIO
   fdf::MmioBuffer hiu_mmio_;
-  fdf::MmioBuffer dosbus_mmio_;
+  std::optional<fdf::MmioBuffer> dosbus_mmio_;
   std::optional<fdf::MmioBuffer> msr_mmio_;
   // Protects clock gate registers.
   // Clock gates.

@@ -18,4 +18,5 @@ accept fuchsia.BIND_PLATFORM_DEV_DID {
   fuchsia.amlogic.platform.BIND_PLATFORM_DEV_DID.G12A_CLK,
   fuchsia.amlogic.platform.BIND_PLATFORM_DEV_DID.G12B_CLK,
   fuchsia.amlogic.platform.BIND_PLATFORM_DEV_DID.SM1_CLK,
+  fuchsia.amlogic.platform.BIND_PLATFORM_DEV_DID.A5_CLK,
 }

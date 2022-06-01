@@ -61,6 +61,7 @@ class Av400 : public Av400Type {
 
   zx_status_t GpioInit();
   zx_status_t PwmInit();
+  zx_status_t ClkInit();
 
   int Thread();
 

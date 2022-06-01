@@ -32,6 +32,7 @@ zx_library("amlogic") {
     "soc/aml-meson/g12b-clk.h",
     "soc/aml-meson/gxl-clk.h",
     "soc/aml-meson/sm1-clk.h",
+    "soc/aml-meson/a5-clk.h",
     "soc/aml-s905d2/aml-mali.h",
     "soc/aml-s905d2/s905d2-gpio.h",
     "soc/aml-s905d2/s905d2-hiu.h",

@@ -5,7 +5,12 @@
 #ifndef SRC_DEVICES_LIB_AMLOGIC_INCLUDE_SOC_AML_A5_A5_HW_H_
 #define SRC_DEVICES_LIB_AMLOGIC_INCLUDE_SOC_AML_A5_A5_HW_H_
 
-// HIU - includes clock control registers
+// clock control registers
+#define A5_CLK_BASE 0xfe000000
+#define A5_CLK_LENGTH 0x2000
+
+#define A5_MSR_CLK_BASE 0xfe048000
+#define A5_MSR_CLK_LENGTH 0x2000
 
 // gpio
 #define A5_GPIO_BASE 0xfe004000

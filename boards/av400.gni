@@ -13,6 +13,7 @@ amlogic_decoder_firmware_path = "//fake"
 _common_bootfs_deps = [
   "//boards/kernel_cmdline:av400",
   "//src/devices/board/drivers/av400",
+  "//src/devices/clock/drivers/amlogic-clk",
   "//src/devices/gpio/drivers/aml-axg-gpio",
   "//src/devices/pwm/drivers/aml-pwm",
 ]

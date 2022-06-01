@@ -17,6 +17,7 @@
 #include <hwreg/bitfields.h>
 #include <soc/aml-meson/aml-clk-common.h>
 
+#include "aml-a5-blocks.h"
 #include "aml-axg-blocks.h"
 #include "aml-fclk.h"
 #include "aml-g12a-blocks.h"
@@ -356,7 +357,8 @@ zx_status_t MesonCpuClock::WaitForBusyCpu() {
 
 AmlClock::~AmlClock() = default;
 
-AmlClock::AmlClock(zx_device_t* device, fdf::MmioBuffer hiu_mmio, fdf::MmioBuffer dosbus_mmio,
+AmlClock::AmlClock(zx_device_t* device, fdf::MmioBuffer hiu_mmio,
+                   std::optional<fdf::MmioBuffer> dosbus_mmio,
                    std::optional<fdf::MmioBuffer> msr_mmio, uint32_t device_id)
     : DeviceType(device),
       hiu_mmio_(std::move(hiu_mmio)),
@@ -439,6 +441,24 @@ AmlClock::AmlClock(zx_device_t* device, fdf::MmioBuffer hiu_mmio, fdf::MmioBuffe
 
       break;
     }
+    case PDEV_DID_AMLOGIC_A5_CLK: {
+      // AV400
+      clk_msr_offsets_ = a5_clk_msr;
+
+      clk_table_ = static_cast<const char* const*>(a5_clk_table);
+      clk_table_count_ = std::size(a5_clk_table);
+
+      gates_ = a5_clk_gates;
+      gate_count_ = std::size(a5_clk_gates);
+      meson_gate_enable_count_.resize(gate_count_);
+
+      muxes_ = a5_muxes;
+      mux_count_ = std::size(a5_muxes);
+
+      InitHiu();
+
+      break;
+    }
     default:
       ZX_PANIC("aml-clk: Unsupported SOC DID %u\n", device_id);
   }
@@ -446,6 +466,7 @@ AmlClock::AmlClock(zx_device_t* device, fdf::MmioBuffer hiu_mmio, fdf::MmioBuffe
 
 zx_status_t AmlClock::Create(zx_device_t* parent) {
   zx_status_t status;
+  unsigned max_mmio_region = 0;
 
   // Get the platform device protocol and try to map all the MMIO regions.
   ddk::PDev pdev(parent);
@@ -466,12 +487,6 @@ zx_status_t AmlClock::Create(zx_device_t* parent) {
     return status;
   }
 
-  status = pdev.MapMmio(kDosbusMmio, &dosbus_mmio);
-  if (status != ZX_OK || !dosbus_mmio) {
-    zxlogf(ERROR, "aml-clk: failed to map DOS regs, status = %d", status);
-    return status;
-  }
-
   // Use the Pdev Device Info to determine if we've been provided with two
   // MMIO regions.
   pdev_device_info_t info;
@@ -481,8 +496,19 @@ zx_status_t AmlClock::Create(zx_device_t* parent) {
     return status;
   }
 
-  if (info.mmio_count > kMsrMmio) {
-    status = pdev.MapMmio(kMsrMmio, &msr_mmio);
+  // For A113X2, don't have dosbus reg
+  max_mmio_region = kDosbusMmio;
+  if (info.pid != PDEV_PID_AMLOGIC_A5) {
+    max_mmio_region = kMsrMmio;
+    status = pdev.MapMmio(kDosbusMmio, &dosbus_mmio);
+    if (status != ZX_OK || !dosbus_mmio) {
+      zxlogf(ERROR, "aml-clk: failed to map DOS regs, status = %d", status);
+      return status;
+    }
+  }
+
+  if (info.mmio_count > max_mmio_region) {
+    status = pdev.MapMmio(max_mmio_region, &msr_mmio);
     if (status != ZX_OK) {
       zxlogf(ERROR, "aml-clk: failed to map MSR regs, status = %d", status);
       return status;
@@ -564,7 +590,7 @@ void AmlClock::ClkToggleHw(const meson_clk_gate_t* gate, bool enable) {
       mmio = &hiu_mmio_;
       break;
     case kMesonRegisterSetDos:
-      mmio = &dosbus_mmio_;
+      mmio = &(*dosbus_mmio_);
       break;
     default:
       ZX_ASSERT(false);

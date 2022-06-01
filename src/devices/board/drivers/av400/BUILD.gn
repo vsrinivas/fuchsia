@@ -22,6 +22,7 @@ fuchsia_driver("av400-driver") {
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
   sources = [
+    "av400-clk.cc",
     "av400-gpio.cc",
     "av400-pwm.cc",
     "av400.cc",
