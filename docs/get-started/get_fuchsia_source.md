@@ -12,7 +12,31 @@ The steps are:
 4. [Set up environment variables](#set-up-environment-variables).
 5. [Configure firewall rules (Optional)](#configure-firewall-rules).
 
-## 1. Perform a preflight check {#perform-a-preflight-check}
+## 1. Install prerequisite packages {#install-prerequisite-packages}
+
+Fuchsia requires `curl`, `file`, `unzip`, and `git` to be up to date. The version
+of `git` needs to be 2.28 or higher.
+
+* {Linux}
+
+  Install (or update) the following packages:
+
+  ```posix-terminal
+  sudo apt-get install curl file git unzip
+  ```
+
+* {macOS}
+
+  Install the Xcode command line tools:
+
+  Note: Skip this step if `ffx platform preflight` shows that Xcode tools
+  are already installed on your machine.
+
+  ```posix-terminal
+  xcode-select --install
+  ```
+
+## 2. Perform a preflight check {#perform-a-preflight-check}
 
 Fuchsia provides a preflight check tool (`ffx platform preflight`)
 that examines your machine and informs you of any issues that may
@@ -34,30 +58,6 @@ Run the following command:
 
   ```posix-terminal
   curl -sO https://storage.googleapis.com/fuchsia-ffx/ffx-macos-x64 && chmod +x ffx-macos-x64 && ./ffx-macos-x64 platform preflight
-  ```
-
-## 2. Install prerequisite packages {#install-prerequisite-packages}
-
-Fuchsia requires `curl`, `unzip`, and `git` to be up to date. The version
-of `git` needs to be 2.28 or higher.
-
-* {Linux}
-
-  Install (or update) the following packages:
-
-  ```posix-terminal
-  sudo apt-get install curl git unzip
-  ```
-
-* {macOS}
-
-  Install the Xcode command line tools:
-
-  Note: Skip this step if `ffx platform preflight` shows that Xcode tools
-  are already installed on your machine.
-
-  ```posix-terminal
-  xcode-select --install
   ```
 
 ## 3. Download the Fuchsia source code {#download-the-fuchsia-source-code}
