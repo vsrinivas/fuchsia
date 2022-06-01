@@ -67,6 +67,11 @@ int Av400::Thread() {
     init_txn_->Reply(ZX_ERR_INTERNAL);
     return status;
   }
+  if ((status = PwmInit()) != ZX_OK) {
+    zxlogf(ERROR, "PwmInit() failed: %s", zx_status_get_string(status));
+    init_txn_->Reply(ZX_ERR_INTERNAL);
+    return status;
+  }
   init_txn_->Reply(status);
   return ZX_OK;
 }

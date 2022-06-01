@@ -46,6 +46,52 @@
 #define A5_GPIO_IRQ_10 52  // 32+20
 #define A5_GPIO_IRQ_11 53  // 32+21
 
+// PWM
+#define A5_PWM_LENGTH 0x2000  // applies to each PWM bank
+#define A5_PWM_AB_BASE 0xfe058000
+#define A5_PWM_PWM_A 0x0
+#define A5_PWM_PWM_B 0x4
+#define A5_PWM_MISC_REG_AB 0x8
+#define A5_DS_A_B 0xc
+#define A5_PWM_TIME_AB 0x10
+#define A5_PWM_A2 0x14
+#define A5_PWM_B2 0x18
+#define A5_PWM_BLINK_AB 0x1c
+#define A5_PWM_LOCK_AB 0x20
+
+#define A5_PWM_CD_BASE 0xfe05a000
+#define A5_PWM_PWM_C 0x0
+#define A5_PWM_PWM_D 0x4
+#define A5_PWM_MISC_REG_CD 0x8
+#define A5_DS_C_D 0xc
+#define A5_PWM_TIME_CD 0x10
+#define A5_PWM_C2 0x14
+#define A5_PWM_D2 0x18
+#define A5_PWM_BLINK_CD 0x1c
+#define A5_PWM_LOCK_CD 0x20
+
+#define A5_PWM_EF_BASE 0xfe05c000
+#define A5_PWM_PWM_E 0x0
+#define A5_PWM_PWM_F 0x4
+#define A5_PWM_MISC_REG_EF 0x8
+#define A5_DS_E_F 0xc
+#define A5_PWM_TIME_EF 0x10
+#define A5_PWM_E2 0x14
+#define A5_PWM_F2 0x18
+#define A5_PWM_BLINK_EF 0x1c
+#define A5_PWM_LOCK_EF 0x20
+
+#define A5_PWM_GH_BASE 0xfe05e000
+#define A5_PWM_PWM_G 0x0
+#define A5_PWM_PWM_H 0x4
+#define A5_PWM_MISC_REG_GH 0x8
+#define A5_DS_G_H 0xc
+#define A5_PWM_TIME_GH 0x10
+#define A5_PWM_G2 0x14
+#define A5_PWM_H2 0x18
+#define A5_PWM_BLINK_GH 0x1c
+#define A5_PWM_LOCK_GH 0x20
+
 // USB
 
 // Temperature

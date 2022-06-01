@@ -60,6 +60,7 @@ class Av400 : public Av400Type {
   DISALLOW_COPY_ASSIGN_AND_MOVE(Av400);
 
   zx_status_t GpioInit();
+  zx_status_t PwmInit();
 
   int Thread();
 

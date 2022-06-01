@@ -16,6 +16,7 @@ enum RegIdx : uint8_t {
   REG_A2 = 5,
   REG_B2 = 6,
   REG_BLINK = 7,
+  REG_LOCK = 8,
 
   REG_COUNT,
 };
@@ -28,6 +29,7 @@ constexpr uint32_t kTimeOffset = 0x10;
 constexpr uint32_t kA2Offset = 0x14;
 constexpr uint32_t kB2Offset = 0x18;
 constexpr uint32_t kBlinkOffset = 0x1c;
+constexpr uint32_t kLockOffset = 0x20;
 
 // Mode indices
 enum Mode : uint32_t {

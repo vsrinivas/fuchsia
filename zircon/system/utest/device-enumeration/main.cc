@@ -146,6 +146,7 @@ TEST_F(DeviceEnumerationTest, Av400Test) {
   static const char* kDevicePaths[] = {
       "sys/platform/platform-passthrough/av400",
       "sys/platform/05:07:1/aml-axg-gpio",
+      "sys/platform/05:07:1d",  // pwm
   };
 
   ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));

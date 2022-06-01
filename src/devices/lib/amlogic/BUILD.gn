@@ -51,6 +51,7 @@ zx_library("amlogic") {
     "soc/aml-t931/t931-pwm.h",
     "soc/aml-a5/a5-gpio.h",
     "soc/aml-a5/a5-hw.h",
+    "soc/aml-a5/a5-pwm.h",
   ]
   sources = [
     "a113-clocks.c",

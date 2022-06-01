@@ -14,6 +14,7 @@ _common_bootfs_deps = [
   "//boards/kernel_cmdline:av400",
   "//src/devices/board/drivers/av400",
   "//src/devices/gpio/drivers/aml-axg-gpio",
+  "//src/devices/pwm/drivers/aml-pwm",
 ]
 
 board_bootfs_labels += _common_bootfs_deps
