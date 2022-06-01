@@ -55,6 +55,12 @@ impl From<PackageName> for String {
     }
 }
 
+impl From<&PackageName> for String {
+    fn from(name: &PackageName) -> Self {
+        name.0.clone()
+    }
+}
+
 impl std::fmt::Display for PackageName {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)

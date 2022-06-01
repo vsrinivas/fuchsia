@@ -154,11 +154,11 @@ impl MockPackageCacheService {
         let mut packages = self
             .base_packages
             .iter()
-            .map(|(path, hash)| PackageIndexEntry {
+            .map(|(path, &hash)| PackageIndexEntry {
                 package_url: PackageUrl {
                     url: format!("fuchsia-pkg://fuchsia.com/{}", path.name()),
                 },
-                meta_far_blob_id: BlobId::from(hash.clone()).into(),
+                meta_far_blob_id: hash.into(),
             })
             .collect::<Vec<PackageIndexEntry>>();
 

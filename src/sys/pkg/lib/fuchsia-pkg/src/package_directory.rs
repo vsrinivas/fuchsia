@@ -4,10 +4,14 @@
 
 //! Typesafe wrappers around an open package directory.
 
-use crate::{MetaContents, MetaContentsError, MetaPackage, MetaPackageError};
+use crate::{
+    MetaContents, MetaContentsError, MetaPackage, MetaPackageError, MetaSubpackages,
+    MetaSubpackagesError,
+};
 use fidl::endpoints::ServerEnd;
 use fidl_fuchsia_io as fio;
 use fuchsia_hash::{Hash, ParseHashError};
+use fuchsia_zircon_status as zx_status;
 use thiserror::Error;
 
 // re-export wrapped io_util errors.
@@ -38,6 +42,18 @@ pub enum LoadMetaPackageError {
     Parse(#[source] MetaPackageError),
 }
 
+/// An error encountered while reading/parsing the package's
+/// meta/fuchsia.pkg/subpackages file
+#[derive(Debug, Error)]
+#[allow(missing_docs)]
+pub enum LoadMetaSubpackagesError {
+    #[error("while reading '{}'", MetaSubpackages::PATH)]
+    Read(#[source] ReadError),
+
+    #[error("while parsing '{}'", MetaSubpackages::PATH)]
+    Parse(#[source] MetaSubpackagesError),
+}
+
 /// An error encountered while reading/parsing the package's meta/contents file
 #[derive(Debug, Error)]
 #[allow(missing_docs)]
@@ -61,8 +77,8 @@ impl PackageDirectory {
         Self { proxy }
     }
 
-    /// Creates a new channel pair, returning the client end as Self and the server end as a
-    /// channel.
+    /// Creates a new channel pair, returning the client end as Self and the
+    /// server end as a channel.
     pub fn create_request() -> Result<(Self, ServerEnd<fio::DirectoryMarker>), fidl::Error> {
         let (proxy, request) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()?;
         Ok((Self::from_proxy(proxy), request))
@@ -99,6 +115,8 @@ impl PackageDirectory {
         io_util::directory::open_file(&self.proxy, path, rights.to_flags()).await
     }
 
+    /// Read the file in the package given by `path`, and return its contents as
+    /// a UTF-8 decoded string.
     async fn read_file_to_string(&self, path: &str) -> Result<String, ReadError> {
         let f = self.open_file(path, OpenRights::Read).await?;
         Ok(io_util::file::read_to_string(&f).await?)
@@ -126,6 +144,19 @@ impl PackageDirectory {
         let meta_package = MetaPackage::deserialize(meta_package.as_bytes())
             .map_err(LoadMetaPackageError::Parse)?;
         Ok(meta_package)
+    }
+
+    /// Reads and parses the package's meta/fuchsia.pkg/subpackages file. If the file
+    /// doesn't exist, an empty `MetaSubpackages` is returned.
+    pub async fn meta_subpackages(&self) -> Result<MetaSubpackages, LoadMetaSubpackagesError> {
+        match self.read_file_to_string(MetaSubpackages::PATH).await {
+            Ok(file) => Ok(MetaSubpackages::deserialize(file.as_bytes())
+                .map_err(LoadMetaSubpackagesError::Parse)?),
+            Err(ReadError::Open(OpenError::OpenError(zx_status::Status::NOT_FOUND))) => {
+                Ok(MetaSubpackages::default())
+            }
+            Err(err) => Err(LoadMetaSubpackagesError::Read(err)),
+        }
     }
 
     /// Returns an iterator of blobs needed by this package, does not include meta.far blob itself.
@@ -209,5 +240,12 @@ mod tests {
             pkg.meta_package().await.unwrap().into_path().to_string(),
             "fuchsia-pkg-tests/0"
         );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn missing_subpackages_file_is_empty_subpackages() {
+        let pkg = PackageDirectory::open_from_namespace().unwrap();
+
+        assert_eq!(pkg.meta_subpackages().await.unwrap(), MetaSubpackages::default(),);
     }
 }

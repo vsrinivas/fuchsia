@@ -1121,9 +1121,53 @@ mod tests {
         test_parse_relative_path_cannot_start_with_slash => {
             urls = [
                 "/abc123",
-                "/abc123/#meta/some.cm",
+                "/abc123#meta/some.cm",
             ],
             err = ParseError::AbsolutePathNotSupported,
+        }
+        test_parse_relative_path_name_cannot_be_empty => {
+            urls = [
+                "",
+            ],
+            err = ParseError::MissingName,
+        }
+        test_parse_relative_path_name_cannot_be_longer_than_255_chars => {
+            urls = [
+                &format!("{}", "a".repeat(256)),
+            ],
+            err = ParseError::InvalidName(PackagePathSegmentError::TooLong(256)),
+        }
+        test_parse_relative_path_name_cannot_have_invalid_characters => {
+            urls = [
+                "$",
+            ],
+            err = ParseError::InvalidName(
+                PackagePathSegmentError::InvalidCharacter { character: '$' }
+            ),
+        }
+        test_parse_relative_path_name_cannot_have_colon => {
+            urls = [
+                "left:right",
+            ],
+            err = ParseError::InvalidName(
+                PackagePathSegmentError::InvalidCharacter { character: ':' }
+            ),
+        }
+        test_parse_relative_path_name_cannot_have_uppercase => {
+            urls = [
+                "Abc",
+            ],
+            err = ParseError::InvalidName(
+                PackagePathSegmentError::InvalidCharacter { character: 'A' }
+            ),
+        }
+        test_parse_relative_path_name_cannot_have_invalid_characters_more => {
+            urls = [
+                "foo$bar",
+            ],
+            err = ParseError::InvalidName(
+                PackagePathSegmentError::InvalidCharacter { character: '$' }
+            ),
         }
     }
 

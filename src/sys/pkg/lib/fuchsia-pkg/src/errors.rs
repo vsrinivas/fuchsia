@@ -69,6 +69,9 @@ pub enum PackageManifestError {
     #[error("meta package: {}", _0)]
     MetaPackage(#[from] MetaPackageError),
 
+    #[error("meta subpackages: {}", _0)]
+    MetaSubpackages(#[from] MetaSubpackagesError),
+
     #[error("archive: {}", _0)]
     Archive(#[from] fuchsia_archive::Error),
 }
@@ -117,6 +120,28 @@ pub enum MetaPackageError {
 }
 
 #[derive(Debug, Error)]
+pub enum MetaSubpackagesError {
+    #[error("invalid subpackage name: '{:?}'", name)]
+    InvalidSubpackageName {
+        #[source]
+        cause: PackagePathSegmentError,
+        name: String,
+    },
+
+    #[error("attempted to deserialize {} from malformed json", crate::MetaSubpackages::PATH)]
+    Json(#[from] serde_json::Error),
+
+    #[error("duplicate subpackage name: '{:?}'", name)]
+    DuplicateSubpackageName { name: String },
+
+    #[error("io error")]
+    IoError(#[from] io::Error),
+
+    #[error("invalid hash")]
+    ParseHash(#[from] fuchsia_hash::ParseHashError),
+}
+
+#[derive(Debug, Error)]
 pub enum BuildError {
     #[error("io: {}", _0)]
     IoError(#[from] io::Error),
@@ -129,6 +154,9 @@ pub enum BuildError {
 
     #[error("meta package")]
     MetaPackage(#[from] MetaPackageError),
+
+    #[error("meta subpackages")]
+    MetaSubpackages(#[from] MetaSubpackagesError),
 
     #[error("package name")]
     PackageName(#[source] PackagePathSegmentError),

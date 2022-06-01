@@ -10,6 +10,7 @@ mod creation_manifest;
 mod errors;
 mod meta_contents;
 mod meta_package;
+mod meta_subpackages;
 mod package;
 mod package_directory;
 mod package_manifest;
@@ -23,10 +24,12 @@ pub use {
         creation_manifest::CreationManifest,
         errors::{
             BuildError, CreationManifestError, MetaContentsError, MetaPackageError,
-            PackageManifestError, ParsePackagePathError,
+            MetaSubpackagesError, PackageManifestError, ParsePackagePathError,
         },
         meta_contents::MetaContents,
         meta_package::MetaPackage,
+        meta_subpackages::transitional,
+        meta_subpackages::MetaSubpackages,
         package::{BlobEntry, Package},
         package_directory::{LoadMetaContentsError, OpenRights, PackageDirectory, ReadHashError},
         package_manifest::{BlobInfo, PackageManifest, PackageManifestBuilder, RelativeTo},

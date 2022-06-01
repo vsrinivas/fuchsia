@@ -9,13 +9,19 @@ use {
     fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg::{PackageResolverMarker, PackageResolverProxy},
     fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
-    fuchsia_url::pkg_url::PkgUrl,
+    fuchsia_pkg::{
+        transitional::{
+            context_bytes_from_subpackages_map, parse_package_url_and_resource,
+            subpackages_map_from_context_bytes,
+        },
+        PackageDirectory,
+    },
+    fuchsia_url::{
+        pkg_url::{PackageName, PkgUrl, RepoUrl},
+        Hash,
+    },
     futures::prelude::*,
     log::*,
-    routing::resolving::{
-        context_bytes_from_subpackages_map, parse_package_url_and_resource, read_subpackages,
-        subpackages_map_from_context_bytes,
-    },
     std::collections::HashMap,
     thiserror::Error,
 };
@@ -23,8 +29,6 @@ use {
 enum IncomingService {
     Resolver(fresolution::ResolverRequestStream),
 }
-
-pub static SCHEME: &str = "fuchsia-pkg";
 
 #[fuchsia::main]
 async fn main() -> anyhow::Result<()> {
@@ -163,14 +167,15 @@ async fn resolve_package_async(
 ) -> Result<ResolvedPackage, ResolverError> {
     let (proxy, server_end) =
         create_proxy::<fio::DirectoryMarker>().expect("failed to create channel pair");
+    let package_dir = PackageDirectory::from_proxy(proxy);
 
     let package_context = if package_url.is_relative() {
         let context = some_incoming_context
             .ok_or_else(|| ResolverError::RelativeUrlMissingContext(package_url.to_string()))?;
         transitional::resolve_with_context(
             package_resolver,
-            &proxy,
-            // TODO(fxbug.dev/100060): Replace above line with
+            &package_dir,
+            // TODO(fxbug.dev/100060): Replace above 3 lines with
             // `package_resolver.resolve_with_context` when available
             &package_url.to_string(),
             context,
@@ -180,10 +185,9 @@ async fn resolve_package_async(
     } else {
         transitional::resolve(
             package_resolver,
-            &proxy,
-            // TODO(fxbug.dev/100060): Replace above line with
-            // `package_resolver.resolve` when updated to return
-            // a context.
+            &package_dir,
+            // TODO(fxbug.dev/100060): Replace above 3 lines with
+            // `package_resolver.resolve` when updated to return a context.
             &package_url.to_string(),
             server_end,
         )
@@ -198,7 +202,7 @@ async fn resolve_package_async(
         fidl_fuchsia_pkg::ResolveError::NoSpace => ResolverError::NoSpace,
         _ => ResolverError::Internal,
     })?;
-    Ok(ResolvedPackage { dir: proxy, context: package_context })
+    Ok(ResolvedPackage { dir: package_dir.into_proxy(), context: package_context })
 }
 
 /// Implements the expected behavior of future Rust bindings for the upcoming
@@ -210,7 +214,7 @@ mod transitional {
 
     pub async fn resolve(
         package_resolver: &PackageResolverProxy,
-        dir_proxy: &fio::DirectoryProxy,
+        package_dir: &PackageDirectory,
         package_url: &str,
         dir_server_end: ServerEnd<fio::DirectoryMarker>,
     ) -> Result<Result<Vec<u8>, fidl_fuchsia_pkg::ResolveError>, fidl::Error> {
@@ -227,8 +231,8 @@ mod transitional {
             Ok(v) => v,
             Err(err) => return Ok(Err(err)),
         };
-        let host = pkgurl.host().to_string();
-        let result = fabricate_package_context(host, dir_proxy).await.map_err(|err| {
+        let repo = pkgurl.repo();
+        let result = fabricate_package_context(repo, package_dir).await.map_err(|err| {
             error!("failed to fabricate package context: {:?}", err);
             fidl_fuchsia_pkg::ResolveError::Internal
         });
@@ -237,13 +241,13 @@ mod transitional {
 
     pub async fn resolve_with_context(
         package_resolver: &PackageResolverProxy,
-        dir_proxy: &fio::DirectoryProxy,
+        package_dir: &PackageDirectory,
         package_url: &str,
         context: &Vec<u8>,
         dir_server_end: ServerEnd<fio::DirectoryMarker>,
     ) -> Result<Result<Vec<u8>, fidl_fuchsia_pkg::ResolveError>, fidl::Error> {
-        let (host, hash) = match get_subpackage_host_and_hash(package_url, context) {
-            Ok(hash) => hash,
+        let (repo, hash) = match get_subpackage_repo_and_hash(package_url, context) {
+            Ok(v) => v,
             Err(err) => {
                 error!("failed to parse package context: {:?}", err);
                 return Ok(Err(fidl_fuchsia_pkg::ResolveError::Internal));
@@ -266,11 +270,11 @@ mod transitional {
         //   3. Implement package resolver's "ResolveWithContext()" and move the
         //      logic for looking up subpackages to package resolver instead,
         //      where it actually belongs (according to the RFC).
-        let pinned_subpackage_url = format!("{}://{}/?hash={}", SCHEME, host, hash);
+        let pinned_subpackage_url = format!("{}/?hash={}", repo, hash);
         if let Err(err) = package_resolver.resolve(&pinned_subpackage_url, dir_server_end).await {
             return Err(err);
         }
-        match fabricate_package_context(host, dir_proxy).await {
+        match fabricate_package_context(&repo, package_dir).await {
             Ok(package_context) => Ok(Ok(package_context)),
             Err(err) => {
                 error!(
@@ -282,14 +286,14 @@ mod transitional {
         }
     }
 
-    fn get_subpackage_host_and_hash(
+    fn get_subpackage_repo_and_hash(
         package_url: &str,
         context: &Vec<u8>,
-    ) -> anyhow::Result<(String, String)> {
-        let subpackage = PkgUrl::parse_relative_path(package_url)?.name().to_string();
+    ) -> anyhow::Result<(RepoUrl, Hash)> {
+        let subpackage = PkgUrl::parse_relative_path(package_url)?.name().clone();
         let info = PackageResolutionInfo::from_package_context(context)?;
         Ok((
-            info.host,
+            info.repo,
             info.subpackage_hashes
                 .get(&subpackage)
                 .ok_or_else(|| anyhow::format_err!("subpackage {} not found", subpackage))?
@@ -298,43 +302,42 @@ mod transitional {
     }
 
     async fn fabricate_package_context(
-        host: String,
-        dir_proxy: &fio::DirectoryProxy,
+        repo: &RepoUrl,
+        package_dir: &PackageDirectory,
     ) -> anyhow::Result<Vec<u8>> {
-        let some_subpackage_hashes = read_subpackages(dir_proxy).await?;
-        PackageResolutionInfo::new(host, some_subpackage_hashes).into_package_context()
+        let meta = package_dir.meta_subpackages().await?;
+        PackageResolutionInfo::new(repo.clone(), meta.into_subpackages()).into_package_context()
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PackageResolutionInfo {
-    pub host: String,
-    pub subpackage_hashes: HashMap<String, String>,
+    pub repo: RepoUrl,
+    pub subpackage_hashes: HashMap<PackageName, Hash>,
 }
 
 impl PackageResolutionInfo {
-    pub fn new(host: String, some_subpackage_hashes: Option<HashMap<String, String>>) -> Self {
-        Self {
-            host,
-            subpackage_hashes: some_subpackage_hashes.unwrap_or_else(|| HashMap::default()),
-        }
+    pub fn new(repo: RepoUrl, subpackage_hashes: HashMap<PackageName, Hash>) -> Self {
+        Self { repo, subpackage_hashes }
     }
 
     pub fn from_package_context(context: &Vec<u8>) -> Result<Self, anyhow::Error> {
         let mut parts = context.split(|&b| b == b'\0');
-        let host = String::from_utf8(
-            parts
-                .next()
-                .ok_or_else(|| anyhow::format_err!("Empty resolution context bytes"))?
-                .to_vec(),
-        )
-        .map_err(|err| {
-            anyhow::format_err!(
-                "Error extracting package URL host from resolution context bytes: {:?}: {:?}",
-                context,
-                err
+        let repo = RepoUrl::new(
+            String::from_utf8(
+                parts
+                    .next()
+                    .ok_or_else(|| anyhow::format_err!("Empty resolution context bytes"))?
+                    .to_vec(),
             )
-        })?;
+            .map_err(|err| {
+                anyhow::format_err!(
+                    "Error extracting package URL host from resolution context bytes: {:?}: {:?}",
+                    context,
+                    err
+                )
+            })?,
+        )?;
 
         let subpackage_hashes = parts.next().map(|bytes| {
             subpackages_map_from_context_bytes(&bytes.to_vec())
@@ -342,15 +345,13 @@ impl PackageResolutionInfo {
                 anyhow::format_err!("Error extracting subpackages JSON from resolution context bytes: {:?}: {:?}", err, bytes)
             })
         }).transpose()?.unwrap_or_else(|| HashMap::default());
-        Ok(Self { host, subpackage_hashes })
+        Ok(Self { repo, subpackage_hashes })
     }
 
     pub fn into_package_context(self) -> anyhow::Result<Vec<u8>> {
-        let Self { host, subpackage_hashes } = self;
-        let mut resolution_context = host.into_bytes();
-        if let Some(mut context_bytes) =
-            context_bytes_from_subpackages_map(Some(&subpackage_hashes))?
-        {
+        let Self { repo, subpackage_hashes } = self;
+        let mut resolution_context = repo.host().as_bytes().to_vec();
+        if let Some(mut context_bytes) = context_bytes_from_subpackages_map(&subpackage_hashes)? {
             resolution_context.push(b'\0');
             resolution_context.append(&mut context_bytes);
         }
@@ -427,9 +428,11 @@ mod tests {
         fuchsia_component_test::{
             Capability, ChildOptions, LocalComponentHandles, RealmBuilder, Ref, Route,
         },
+        fuchsia_hash::Hash,
+        fuchsia_pkg::MetaSubpackages,
         fuchsia_zircon::Vmo,
         futures::{channel::mpsc, join, lock::Mutex},
-        std::{boxed::Box, sync::Arc},
+        std::{boxed::Box, iter::FromIterator, str::FromStr, sync::Arc},
         vfs::{
             directory::entry::DirectoryEntry,
             execution_scope::ExecutionScope,
@@ -770,6 +773,10 @@ mod tests {
         let subpackage_hash = "facefacefacefacefacefacefacefacefacefacefacefacefacefacefaceface";
         let subpackage_hash_query_url =
             format!("fuchsia-pkg://fuchsia.com/?hash={}", subpackage_hash);
+        let subpackages = MetaSubpackages::from_iter(vec![(
+            PackageName::from_str(subpackage_name).unwrap(),
+            Hash::from_str(subpackage_hash).unwrap(),
+        )]);
 
         let (proxy, mut server) =
             fidl::endpoints::create_proxy_and_stream::<PackageResolverMarker>().unwrap();
@@ -783,8 +790,10 @@ mod tests {
             .expect("failed to encode ComponentDecl FIDL");
             let parent_package_fs = pseudo_directory! {
                 "meta" => pseudo_directory!{
-                    "subpackages" => vfs::file::vmo::asynchronous::read_only_const(&format!("{}={}\n", subpackage_name, subpackage_hash).into_bytes()),
                     "foo.cm" => read_only_static(cm_bytes.clone()),
+                    "fuchsia.pkg" => pseudo_directory!{
+                        "subpackages" => vfs::file::vmo::asynchronous::read_only_const(&serde_json::to_vec(&subpackages).unwrap()),
+                    },
                 },
             };
             let subpackage_fs = pseudo_directory! {
@@ -818,6 +827,15 @@ mod tests {
             let parent_component = resolve_component(&parent_component_url, &proxy)
                 .await
                 .expect("failed to resolve parent_component");
+            let resolution_context_repr =
+                parent_component.resolution_context.clone().map(|context_bytes| {
+                    let mut parts = context_bytes.split(|b| *b == b'\0');
+                    let host = String::from_utf8(parts.next().unwrap_or(&[]).to_vec())
+                        .unwrap_or_else(|e| format!("{:?}({:?})", e, context_bytes));
+                    let subpackages = String::from_utf8(parts.next().unwrap_or(&[]).to_vec())
+                        .unwrap_or_else(|e| format!("{:?}({:?})", e, context_bytes));
+                    format!("host: {}, subpackages: {}", host, subpackages)
+                });
             assert_matches!(parent_component.resolution_context, Some(..));
             assert_matches!(
                 resolve_component_with_context(
@@ -832,7 +850,7 @@ mod tests {
                 }),
                 "Could not resolve subpackaged component '{}' from context '{:?}'",
                 subpackaged_component_relative_url,
-                parent_component.resolution_context
+                resolution_context_repr
             );
         };
         join!(server, client);
@@ -1039,8 +1057,12 @@ mod tests {
     #[test]
     fn test_package_resolution_info() -> Result<(), Error> {
         let mut subpackages_map = HashMap::default();
-        subpackages_map.insert("subpackage_name".to_string(), "cafecafecafe".to_string());
-        let info = PackageResolutionInfo::new("fuchsia.com".to_string(), Some(subpackages_map));
+        subpackages_map.insert(
+            PackageName::from_str("subpackage_name").unwrap(),
+            Hash::from_str("facefacefacefacefacefacefacefacefacefacefacefacefacefacefaceface")?,
+        );
+        let info =
+            PackageResolutionInfo::new(RepoUrl::new("fuchsia.com".to_string())?, subpackages_map);
         let package_context = info.clone().into_package_context()?;
         let info2 = PackageResolutionInfo::from_package_context(&package_context)?;
         assert_eq!(info, info2);

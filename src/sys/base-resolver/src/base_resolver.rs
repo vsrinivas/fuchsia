@@ -11,15 +11,18 @@ use {
     },
     fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg::PackageCacheMarker,
-    fidl_fuchsia_pkg_ext::{BasePackageIndex, BlobId},
+    fidl_fuchsia_pkg_ext::BasePackageIndex,
     fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
+    fuchsia_pkg::{
+        transitional::{
+            context_bytes_from_subpackages_map, parse_package_url_and_resource,
+            subpackages_map_from_context_bytes,
+        },
+        PackageDirectory,
+    },
     fuchsia_url::pkg_url::PkgUrl,
     futures::prelude::*,
     log::*,
-    routing::resolving::{
-        context_bytes_from_subpackages_map, parse_package_url_and_resource, read_subpackages,
-        subpackages_map_from_context_bytes,
-    },
 };
 
 pub(crate) async fn main() -> anyhow::Result<()> {
@@ -198,7 +201,7 @@ async fn resolve_package_async(
         let base_package_index =
             some_base_package_index.ok_or_else(|| crate::ResolverError::Internal)?;
         // Note, `name()` returns the first segment only
-        let subpackage = package_url.name().as_ref();
+        let subpackage = package_url.name();
         let subpackage_hashes = subpackages_map_from_context_bytes(context)
             .map_err(|err| crate::ResolverError::ReadingContext(err))?;
         let hash = subpackage_hashes.get(subpackage).ok_or_else(|| {
@@ -208,9 +211,7 @@ async fn resolve_package_async(
                 subpackage_hashes
             ))
         })?;
-        if let Some(package_url) = base_package_index
-            .get_url(&BlobId::parse(hash).map_err(crate::ResolverError::InvalidPackageHash)?)
-        {
+        if let Some(package_url) = base_package_index.get_url(&(*hash).into()) {
             (package_url.name(), package_url.variant())
         } else {
             return Err(crate::ResolverError::SubpackageNotInBase(anyhow::format_err!(
@@ -236,15 +237,16 @@ async fn resolve_package_async(
     )
     .await
     .map_err(crate::ResolverError::PackageNotFound)?;
-    let resolved_package_context = fabricate_package_context(&dir)
+    let package_dir = PackageDirectory::from_proxy(dir);
+    let context = fabricate_package_context(&package_dir)
         .map_err(|err| crate::ResolverError::CreatingContext(anyhow::anyhow!(err)))
         .await?;
-    Ok(ResolvedPackage { dir, context: resolved_package_context })
+    Ok(ResolvedPackage { dir: package_dir.into_proxy(), context })
 }
 
-async fn fabricate_package_context(dir_proxy: &fio::DirectoryProxy) -> anyhow::Result<Vec<u8>> {
-    let some_subpackage_hashes = read_subpackages(dir_proxy).await?;
-    Ok(context_bytes_from_subpackages_map(some_subpackage_hashes.as_ref())?.unwrap_or(vec![]))
+async fn fabricate_package_context(package_dir: &PackageDirectory) -> anyhow::Result<Vec<u8>> {
+    let meta = package_dir.meta_subpackages().await?;
+    Ok(context_bytes_from_subpackages_map(&meta.into_subpackages())?.unwrap_or(vec![]))
 }
 
 #[cfg(test)]
@@ -257,10 +259,13 @@ mod tests {
         fidl::prelude::*,
         fidl_fuchsia_component_config as fconfig, fidl_fuchsia_component_decl as fdecl,
         fidl_fuchsia_mem as fmem,
-        fuchsia_url::UnpinnedAbsolutePackageUrl,
+        fidl_fuchsia_pkg_ext::BlobId,
+        fuchsia_hash::Hash,
+        fuchsia_pkg::MetaSubpackages,
+        fuchsia_url::{pkg_url::PackageName, UnpinnedAbsolutePackageUrl},
         fuchsia_zircon::Status,
         maplit::hashmap,
-        std::sync::Arc,
+        std::{iter::FromIterator, str::FromStr, sync::Arc},
     };
 
     const SUBPACKAGE_NAME: &'static str = "my_subpackage";
@@ -321,28 +326,6 @@ mod tests {
             ServerEnd::new(server_end.into_channel()),
         );
         proxy
-    }
-
-    #[fuchsia::test]
-    async fn resolves_package_with_executable_rights() {
-        let pkg_url = PkgUrl::new_package("fuchsia.com".into(), "/test-package".into(), None)
-            .expect("failed to create test PkgUrl");
-        let flag_verifier = Arc::new(FlagVerifier(
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
-        ));
-        let packages_dir = serve_executable_dir(vfs::pseudo_directory! {
-            "test-package" => vfs::pseudo_directory! {
-                "0" => flag_verifier,
-            }
-        });
-
-        let package =
-            resolve_package(&pkg_url, &packages_dir).await.expect("failed to resolve package");
-        let event_stream = package.dir.take_event_stream().map_ok(|_| ());
-        assert_matches!(
-            event_stream.try_collect::<()>().await,
-            Err(fidl::Error::ClientChannelClosed { status: Status::OK, .. })
-        );
     }
 
     #[fuchsia::test]
@@ -601,9 +584,16 @@ mod tests {
         )
         .expect("failed to encode ComponentDecl FIDL");
 
+        let subpackages = MetaSubpackages::from_iter(vec![(
+            PackageName::from_str(SUBPACKAGE_NAME).unwrap(),
+            Hash::from_str(SUBPACKAGE_HASH).unwrap(),
+        )]);
+
         vfs::pseudo_directory! {
             "meta" => vfs::pseudo_directory! {
-                "subpackages" => vfs::file::vmo::asynchronous::read_only_const(&format!("{}={}\n", SUBPACKAGE_NAME, SUBPACKAGE_HASH).into_bytes()),
+                "fuchsia.pkg" => vfs::pseudo_directory! {
+                    "subpackages" => vfs::file::vmo::asynchronous::read_only_const(&serde_json::to_vec(&subpackages).unwrap()),
+                },
                 "foo.cm" => vfs::file::vmo::asynchronous::read_only_const(&cm_bytes),
                 "foo-with-config.cm" => vfs::file::vmo::asynchronous::read_only_const(
                     &encode_persistent_with_context(

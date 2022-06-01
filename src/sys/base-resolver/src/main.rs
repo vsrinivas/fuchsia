@@ -2,10 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_component_resolution as fresolution,
-    fidl_fuchsia_pkg_ext::BlobIdParseError,
-};
+use {fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_component_resolution as fresolution};
 
 mod base_resolver;
 mod pkg_cache_resolver;
@@ -69,8 +66,6 @@ enum ResolverError {
     SubpackageNotFound(#[source] anyhow::Error),
     #[error("the subpackage hash was not found in the system base package index: {0}")]
     SubpackageNotInBase(#[source] anyhow::Error),
-    #[error("the subpackage hash string was invalid: {0}")]
-    InvalidPackageHash(#[source] BlobIdParseError),
     #[error("missing context required to resolve relative url: {0}")]
     RelativeUrlMissingContext(String),
     #[error("internal error")]
@@ -81,9 +76,7 @@ impl From<&ResolverError> for fresolution::ResolverError {
     fn from(err: &ResolverError) -> fresolution::ResolverError {
         use ResolverError::*;
         match err {
-            InvalidPackageHash(_) | InvalidUrl(_) | PackageHashNotSupported => {
-                fresolution::ResolverError::InvalidArgs
-            }
+            InvalidUrl(_) | PackageHashNotSupported => fresolution::ResolverError::InvalidArgs,
             UnsupportedRepo => fresolution::ResolverError::NotSupported,
             ComponentNotFound(_) => fresolution::ResolverError::ManifestNotFound,
             PackageNotFound(_) => fresolution::ResolverError::PackageNotFound,
