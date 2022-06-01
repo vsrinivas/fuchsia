@@ -191,8 +191,9 @@ zx_status_t VmObjectPaged::CreateCommon(uint32_t pmm_alloc_flags, uint32_t optio
                                         fbl::RefPtr<VmObjectPaged>* obj) {
   DEBUG_ASSERT(!(options & (kContiguous | kCanBlockOnPageRequests)));
 
-  // TODO(fxb/94078): Set kCanBlockOnPageRequests for VMOs that might wait on delayed PMM
-  // allocations.
+  if (pmm_alloc_flags & PMM_ALLOC_FLAG_CAN_WAIT) {
+    options |= kCanBlockOnPageRequests;
+  }
 
   // make sure size is page aligned
   zx_status_t status = RoundSize(size, &size);
@@ -384,7 +385,10 @@ zx_status_t VmObjectPaged::CreateExternal(fbl::RefPtr<PageSource> src, uint32_t 
     return status;
   }
 
-  return CreateWithSourceCommon(ktl::move(src), PMM_ALLOC_FLAG_ANY, options, size, obj);
+  // External VMOs always support delayed PMM allocations, since they already have to tolerate
+  // arbitrary waits for pages due to the PageSource.
+  return CreateWithSourceCommon(ktl::move(src), PMM_ALLOC_FLAG_ANY | PMM_ALLOC_FLAG_CAN_WAIT,
+                                options | kCanBlockOnPageRequests, size, obj);
 }
 
 zx_status_t VmObjectPaged::CreateWithSourceCommon(fbl::RefPtr<PageSource> src,
