@@ -626,7 +626,6 @@ template("assemble_system") {
     sources = [
       "${files.outdir}/legacy",
       "${files.platform_aib_dir}/emulator_support",
-      "${files.product_assembly_config}",
     ]
 
     deps = [ ":${labels.images_config}" ] + labels.product_assembly_config_deps
