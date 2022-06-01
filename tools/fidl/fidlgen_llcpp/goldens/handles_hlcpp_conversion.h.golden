@@ -2,11 +2,11 @@
 
 #pragma once
 
+#include <fidl/fdf/cpp/hlcpp_conversion.h>
 #include <fidl/test.handles/cpp/natural_types.h>
 #include <lib/fidl/cpp/hlcpp_conversion.h>
 #include <lib/fidl/llcpp/internal/transport_channel.h>
 #include <test/handles/cpp/fidl.h>
-
 namespace fidl {
 namespace internal {
 
@@ -101,7 +101,7 @@ struct HLCPPToNaturalTraits<::test::handles::FdfHandles> {
 }
 
 ::test_handles::Handles HLCPPToNaturalTraits<::test::handles::Handles>::Convert(::test::handles::Handles&& value) {
-  return ::test_handles::Handles({{
+  return ::test_handles::Handles{{
       .plain_handle = ::fidl::HLCPPToNatural(std::move(value.plain_handle)),
       .bti_handle = ::fidl::HLCPPToNatural(std::move(value.bti_handle)),
       .channel_handle = ::fidl::HLCPPToNatural(std::move(value.channel_handle)),
@@ -134,7 +134,7 @@ struct HLCPPToNaturalTraits<::test::handles::FdfHandles> {
       .aliased_rights_handle_field = ::fidl::HLCPPToNatural(std::move(value.aliased_rights_handle_field)),
       .some_protocol = ::fidl::HLCPPToNatural(std::move(value.some_protocol)),
       .request_some_protocol = ::fidl::HLCPPToNatural(std::move(value.request_some_protocol)),
-  }});
+  }};
 }
 ::test::handles::FdfHandles NaturalToHLCPPTraits<::test_handles::FdfHandles>::Convert(::test_handles::FdfHandles&& value) {
   ::test::handles::FdfHandles hlcpp;
@@ -145,11 +145,11 @@ struct HLCPPToNaturalTraits<::test::handles::FdfHandles> {
 }
 
 ::test_handles::FdfHandles HLCPPToNaturalTraits<::test::handles::FdfHandles>::Convert(::test::handles::FdfHandles&& value) {
-  return ::test_handles::FdfHandles({{
+  return ::test_handles::FdfHandles{{
       .fdf_channel_handle = ::fidl::HLCPPToNatural(std::move(value.fdf_channel_handle)),
       .client_end_driver = ::fidl::HLCPPToNatural(std::move(value.client_end_driver)),
       .server_end_driver = ::fidl::HLCPPToNatural(std::move(value.server_end_driver)),
-  }});
+  }};
 }
 
 }  // namespace internal

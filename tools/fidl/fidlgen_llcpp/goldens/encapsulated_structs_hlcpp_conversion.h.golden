@@ -79,10 +79,10 @@ struct HLCPPToNaturalTraits<::test::encapsulatedstructs::TopLevelStruct> {
 }
 
 ::test_encapsulatedstructs::NonInlineStructTestStruct HLCPPToNaturalTraits<::test::encapsulatedstructs::NonInlineStructTestStruct>::Convert(::test::encapsulatedstructs::NonInlineStructTestStruct&& value) {
-  return ::test_encapsulatedstructs::NonInlineStructTestStruct({{
+  return ::test_encapsulatedstructs::NonInlineStructTestStruct{{
       .element = ::fidl::HLCPPToNatural(std::move(value.element)),
       .h = ::fidl::HLCPPToNatural(std::move(value.h)),
-  }});
+  }};
 }
 ::test::encapsulatedstructs::Int8Int32 NaturalToHLCPPTraits<::test_encapsulatedstructs::Int8Int32>::Convert(::test_encapsulatedstructs::Int8Int32&& value) {
   ::test::encapsulatedstructs::Int8Int32 hlcpp;
@@ -92,10 +92,10 @@ struct HLCPPToNaturalTraits<::test::encapsulatedstructs::TopLevelStruct> {
 }
 
 ::test_encapsulatedstructs::Int8Int32 HLCPPToNaturalTraits<::test::encapsulatedstructs::Int8Int32>::Convert(::test::encapsulatedstructs::Int8Int32&& value) {
-  return ::test_encapsulatedstructs::Int8Int32({{
+  return ::test_encapsulatedstructs::Int8Int32{{
       .a = ::fidl::HLCPPToNatural(std::move(value.a)),
       .b = ::fidl::HLCPPToNatural(std::move(value.b)),
-  }});
+  }};
 }
 ::test::encapsulatedstructs::Int16Int8 NaturalToHLCPPTraits<::test_encapsulatedstructs::Int16Int8>::Convert(::test_encapsulatedstructs::Int16Int8&& value) {
   ::test::encapsulatedstructs::Int16Int8 hlcpp;
@@ -105,10 +105,10 @@ struct HLCPPToNaturalTraits<::test::encapsulatedstructs::TopLevelStruct> {
 }
 
 ::test_encapsulatedstructs::Int16Int8 HLCPPToNaturalTraits<::test::encapsulatedstructs::Int16Int8>::Convert(::test::encapsulatedstructs::Int16Int8&& value) {
-  return ::test_encapsulatedstructs::Int16Int8({{
+  return ::test_encapsulatedstructs::Int16Int8{{
       .a = ::fidl::HLCPPToNatural(std::move(value.a)),
       .b = ::fidl::HLCPPToNatural(std::move(value.b)),
-  }});
+  }};
 }
 ::test::encapsulatedstructs::ArrayInt16Int8 NaturalToHLCPPTraits<::test_encapsulatedstructs::ArrayInt16Int8>::Convert(::test_encapsulatedstructs::ArrayInt16Int8&& value) {
   ::test::encapsulatedstructs::ArrayInt16Int8 hlcpp;
@@ -117,9 +117,9 @@ struct HLCPPToNaturalTraits<::test::encapsulatedstructs::TopLevelStruct> {
 }
 
 ::test_encapsulatedstructs::ArrayInt16Int8 HLCPPToNaturalTraits<::test::encapsulatedstructs::ArrayInt16Int8>::Convert(::test::encapsulatedstructs::ArrayInt16Int8&& value) {
-  return ::test_encapsulatedstructs::ArrayInt16Int8({{
+  return ::test_encapsulatedstructs::ArrayInt16Int8{{
       .arr = ::fidl::HLCPPToNatural(std::move(value.arr)),
-  }});
+  }};
 }
 ::test::encapsulatedstructs::StructPaddingTestStruct NaturalToHLCPPTraits<::test_encapsulatedstructs::StructPaddingTestStruct>::Convert(::test_encapsulatedstructs::StructPaddingTestStruct&& value) {
   ::test::encapsulatedstructs::StructPaddingTestStruct hlcpp;
@@ -130,11 +130,11 @@ struct HLCPPToNaturalTraits<::test::encapsulatedstructs::TopLevelStruct> {
 }
 
 ::test_encapsulatedstructs::StructPaddingTestStruct HLCPPToNaturalTraits<::test::encapsulatedstructs::StructPaddingTestStruct>::Convert(::test::encapsulatedstructs::StructPaddingTestStruct&& value) {
-  return ::test_encapsulatedstructs::StructPaddingTestStruct({{
+  return ::test_encapsulatedstructs::StructPaddingTestStruct{{
       .trailing = ::fidl::HLCPPToNatural(std::move(value.trailing)),
       .inner = ::fidl::HLCPPToNatural(std::move(value.inner)),
       .array = ::fidl::HLCPPToNatural(std::move(value.array)),
-  }});
+  }};
 }
 ::test::encapsulatedstructs::TopLevelStruct NaturalToHLCPPTraits<::test_encapsulatedstructs::TopLevelStruct>::Convert(::test_encapsulatedstructs::TopLevelStruct&& value) {
   ::test::encapsulatedstructs::TopLevelStruct hlcpp;
@@ -144,10 +144,10 @@ struct HLCPPToNaturalTraits<::test::encapsulatedstructs::TopLevelStruct> {
 }
 
 ::test_encapsulatedstructs::TopLevelStruct HLCPPToNaturalTraits<::test::encapsulatedstructs::TopLevelStruct>::Convert(::test::encapsulatedstructs::TopLevelStruct&& value) {
-  return ::test_encapsulatedstructs::TopLevelStruct({{
+  return ::test_encapsulatedstructs::TopLevelStruct{{
       .a = ::fidl::HLCPPToNatural(std::move(value.a)),
       .b = ::fidl::HLCPPToNatural(std::move(value.b)),
-  }});
+  }};
 }
 
 }  // namespace internal

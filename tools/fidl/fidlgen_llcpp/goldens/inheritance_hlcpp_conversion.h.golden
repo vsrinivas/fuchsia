@@ -101,9 +101,9 @@ struct HLCPPToNaturalTraits<::test::inheritance::SuperFooRequest> {
 }
 
 ::test_inheritance::SuperFooTopResponse HLCPPToNaturalTraits<::test::inheritance::SuperFooTopResponse>::Convert(::test::inheritance::SuperFooTopResponse&& value) {
-  return ::test_inheritance::SuperFooTopResponse({{
+  return ::test_inheritance::SuperFooTopResponse{{
       .y = ::fidl::HLCPPToNatural(std::move(value.y)),
-  }});
+  }};
 }
 ::test::inheritance::SuperFooRequest NaturalToHLCPPTraits<::test_inheritance::SuperFooRequest>::Convert(::test_inheritance::SuperFooRequest&& value) {
   ::test::inheritance::SuperFooRequest hlcpp;
@@ -112,9 +112,9 @@ struct HLCPPToNaturalTraits<::test::inheritance::SuperFooRequest> {
 }
 
 ::test_inheritance::SuperFooRequest HLCPPToNaturalTraits<::test::inheritance::SuperFooRequest>::Convert(::test::inheritance::SuperFooRequest&& value) {
-  return ::test_inheritance::SuperFooRequest({{
+  return ::test_inheritance::SuperFooRequest{{
       .s = ::fidl::HLCPPToNatural(std::move(value.s)),
-  }});
+  }};
 }
 
 }  // namespace internal

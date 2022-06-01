@@ -57,14 +57,14 @@ struct HLCPPToNaturalTraits<::test::handlesintypes::UnionWithHandle> {
 }
 
 ::test_handlesintypes::HandlesInTypes HLCPPToNaturalTraits<::test::handlesintypes::HandlesInTypes>::Convert(::test::handlesintypes::HandlesInTypes&& value) {
-  return ::test_handlesintypes::HandlesInTypes({{
+  return ::test_handlesintypes::HandlesInTypes{{
       .normal_handle = ::fidl::HLCPPToNatural(std::move(value.normal_handle)),
       .handle_in_vec = ::fidl::HLCPPToNatural(std::move(value.handle_in_vec)),
       .handle_in_array = ::fidl::HLCPPToNatural(std::move(value.handle_in_array)),
       .handle_in_mixed_vec_array = ::fidl::HLCPPToNatural(std::move(value.handle_in_mixed_vec_array)),
       .table_with_handle = ::fidl::HLCPPToNatural(std::move(value.table_with_handle)),
       .union_with_handle = ::fidl::HLCPPToNatural(std::move(value.union_with_handle)),
-  }});
+  }};
 }
 ::test::handlesintypes::TableWithHandle NaturalToHLCPPTraits<::test_handlesintypes::TableWithHandle>::Convert(::test_handlesintypes::TableWithHandle&& value) {
   ::test::handlesintypes::TableWithHandle hlcpp;

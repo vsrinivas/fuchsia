@@ -100,9 +100,9 @@ struct HLCPPToNaturalTraits<::test::emptystruct::EmptyProtocolReceiveRequest> {
 }
 
 ::test_emptystruct::Empty HLCPPToNaturalTraits<::test::emptystruct::Empty>::Convert(::test::emptystruct::Empty&& value) {
-  return ::test_emptystruct::Empty({{
+  return ::test_emptystruct::Empty{{
       .__reserved = ::fidl::HLCPPToNatural(std::move(value.__reserved)),
-  }});
+  }};
 }
 ::test::emptystruct::EmptyProtocolSendRequest NaturalToHLCPPTraits<::test_emptystruct::EmptyProtocolSendRequest>::Convert(::test_emptystruct::EmptyProtocolSendRequest&& value) {
   ::test::emptystruct::EmptyProtocolSendRequest hlcpp;
@@ -111,9 +111,9 @@ struct HLCPPToNaturalTraits<::test::emptystruct::EmptyProtocolReceiveRequest> {
 }
 
 ::test_emptystruct::EmptyProtocolSendRequest HLCPPToNaturalTraits<::test::emptystruct::EmptyProtocolSendRequest>::Convert(::test::emptystruct::EmptyProtocolSendRequest&& value) {
-  return ::test_emptystruct::EmptyProtocolSendRequest({{
+  return ::test_emptystruct::EmptyProtocolSendRequest{{
       .e = ::fidl::HLCPPToNatural(std::move(value.e)),
-  }});
+  }};
 }
 ::test::emptystruct::EmptyProtocolSendAndReceiveTopResponse NaturalToHLCPPTraits<::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse>::Convert(::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse&& value) {
   ::test::emptystruct::EmptyProtocolSendAndReceiveTopResponse hlcpp;
@@ -122,9 +122,9 @@ struct HLCPPToNaturalTraits<::test::emptystruct::EmptyProtocolReceiveRequest> {
 }
 
 ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse HLCPPToNaturalTraits<::test::emptystruct::EmptyProtocolSendAndReceiveTopResponse>::Convert(::test::emptystruct::EmptyProtocolSendAndReceiveTopResponse&& value) {
-  return ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse({{
+  return ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse{{
       .e = ::fidl::HLCPPToNatural(std::move(value.e)),
-  }});
+  }};
 }
 ::test::emptystruct::EmptyProtocolSendAndReceiveRequest NaturalToHLCPPTraits<::test_emptystruct::EmptyProtocolSendAndReceiveRequest>::Convert(::test_emptystruct::EmptyProtocolSendAndReceiveRequest&& value) {
   ::test::emptystruct::EmptyProtocolSendAndReceiveRequest hlcpp;
@@ -133,9 +133,9 @@ struct HLCPPToNaturalTraits<::test::emptystruct::EmptyProtocolReceiveRequest> {
 }
 
 ::test_emptystruct::EmptyProtocolSendAndReceiveRequest HLCPPToNaturalTraits<::test::emptystruct::EmptyProtocolSendAndReceiveRequest>::Convert(::test::emptystruct::EmptyProtocolSendAndReceiveRequest&& value) {
-  return ::test_emptystruct::EmptyProtocolSendAndReceiveRequest({{
+  return ::test_emptystruct::EmptyProtocolSendAndReceiveRequest{{
       .e = ::fidl::HLCPPToNatural(std::move(value.e)),
-  }});
+  }};
 }
 ::test::emptystruct::EmptyProtocolReceiveRequest NaturalToHLCPPTraits<::test_emptystruct::EmptyProtocolReceiveRequest>::Convert(::test_emptystruct::EmptyProtocolReceiveRequest&& value) {
   ::test::emptystruct::EmptyProtocolReceiveRequest hlcpp;
@@ -144,9 +144,9 @@ struct HLCPPToNaturalTraits<::test::emptystruct::EmptyProtocolReceiveRequest> {
 }
 
 ::test_emptystruct::EmptyProtocolReceiveRequest HLCPPToNaturalTraits<::test::emptystruct::EmptyProtocolReceiveRequest>::Convert(::test::emptystruct::EmptyProtocolReceiveRequest&& value) {
-  return ::test_emptystruct::EmptyProtocolReceiveRequest({{
+  return ::test_emptystruct::EmptyProtocolReceiveRequest{{
       .e = ::fidl::HLCPPToNatural(std::move(value.e)),
-  }});
+  }};
 }
 
 }  // namespace internal

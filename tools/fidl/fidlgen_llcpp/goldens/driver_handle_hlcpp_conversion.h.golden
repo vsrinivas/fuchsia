@@ -58,9 +58,9 @@ struct HLCPPToNaturalTraits<::test::driverhandle::T> {
 }
 
 ::test_driverhandle::HandlesInProtocolSendHandlesRequest HLCPPToNaturalTraits<::test::driverhandle::HandlesInProtocolSendHandlesRequest>::Convert(::test::driverhandle::HandlesInProtocolSendHandlesRequest&& value) {
-  return ::test_driverhandle::HandlesInProtocolSendHandlesRequest({{
+  return ::test_driverhandle::HandlesInProtocolSendHandlesRequest{{
       .t = ::fidl::HLCPPToNatural(std::move(value.t)),
-  }});
+  }};
 }
 ::test::driverhandle::ServerEndWrapper NaturalToHLCPPTraits<::test_driverhandle::ServerEndWrapper>::Convert(::test_driverhandle::ServerEndWrapper&& value) {
   ::test::driverhandle::ServerEndWrapper hlcpp;
@@ -69,9 +69,9 @@ struct HLCPPToNaturalTraits<::test::driverhandle::T> {
 }
 
 ::test_driverhandle::ServerEndWrapper HLCPPToNaturalTraits<::test::driverhandle::ServerEndWrapper>::Convert(::test::driverhandle::ServerEndWrapper&& value) {
-  return ::test_driverhandle::ServerEndWrapper({{
+  return ::test_driverhandle::ServerEndWrapper{{
       .value = ::fidl::HLCPPToNatural(std::move(value.value)),
-  }});
+  }};
 }
 ::test::driverhandle::ClientEndWrapper NaturalToHLCPPTraits<::test_driverhandle::ClientEndWrapper>::Convert(::test_driverhandle::ClientEndWrapper&& value) {
   ::test::driverhandle::ClientEndWrapper hlcpp;
@@ -80,9 +80,9 @@ struct HLCPPToNaturalTraits<::test::driverhandle::T> {
 }
 
 ::test_driverhandle::ClientEndWrapper HLCPPToNaturalTraits<::test::driverhandle::ClientEndWrapper>::Convert(::test::driverhandle::ClientEndWrapper&& value) {
-  return ::test_driverhandle::ClientEndWrapper({{
+  return ::test_driverhandle::ClientEndWrapper{{
       .value = ::fidl::HLCPPToNatural(std::move(value.value)),
-  }});
+  }};
 }
 ::test::driverhandle::T NaturalToHLCPPTraits<::test_driverhandle::T>::Convert(::test_driverhandle::T&& value) {
   ::test::driverhandle::T hlcpp;

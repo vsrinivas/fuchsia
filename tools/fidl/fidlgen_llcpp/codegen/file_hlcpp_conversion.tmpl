@@ -26,6 +26,11 @@
   #include <{{ .Library | Filename "NaturalTypesHeader" }}>
   #include <{{ .Library | Filename "HLCPPHeader" }}>
 
+  {{ range .Dependencies -}}
+    #include <{{ . | Filename "HLCPPConversion" }}>
+  {{ end -}}
+
+
   {{ EnsureNamespace "fidl::internal" }}
 
   {{- range .Enums }}
@@ -125,11 +130,11 @@
     }
 
     {{ .Unified }} HLCPPToNaturalTraits<{{ .HLCPP }}>::Convert({{ .HLCPP }}&& value) {
-      return {{ .Unified }}({ {
+      return {{ .Unified }}{ {
         {{- range .Members }}
           .{{ .Unified }} = ::fidl::HLCPPToNatural(std::move(value.{{ .HLCPP }})),
         {{- end }}
-      } });
+      } };
     }
   {{- end }}
 

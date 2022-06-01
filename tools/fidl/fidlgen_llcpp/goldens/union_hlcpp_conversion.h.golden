@@ -340,9 +340,9 @@ struct HLCPPToNaturalTraits<::test::union_::XUnionContainingEmptyStruct> {
 }
 
 ::test_union::StructWithNullableXUnion HLCPPToNaturalTraits<::test::union_::StructWithNullableXUnion>::Convert(::test::union_::StructWithNullableXUnion&& value) {
-  return ::test_union::StructWithNullableXUnion({{
+  return ::test_union::StructWithNullableXUnion{{
       .x1 = ::fidl::HLCPPToNatural(std::move(value.x1)),
-  }});
+  }};
 }
 ::test::union_::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse NaturalToHLCPPTraits<::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>::Convert(::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse&& value) {
   ::test::union_::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse hlcpp;
@@ -351,9 +351,9 @@ struct HLCPPToNaturalTraits<::test::union_::XUnionContainingEmptyStruct> {
 }
 
 ::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse HLCPPToNaturalTraits<::test::union_::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>::Convert(::test::union_::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse&& value) {
-  return ::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse({{
+  return ::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse{{
       .xu = ::fidl::HLCPPToNatural(std::move(value.xu)),
-  }});
+  }};
 }
 ::test::union_::Pizza NaturalToHLCPPTraits<::test_union::Pizza>::Convert(::test_union::Pizza&& value) {
   ::test::union_::Pizza hlcpp;
@@ -362,9 +362,9 @@ struct HLCPPToNaturalTraits<::test::union_::XUnionContainingEmptyStruct> {
 }
 
 ::test_union::Pizza HLCPPToNaturalTraits<::test::union_::Pizza>::Convert(::test::union_::Pizza&& value) {
-  return ::test_union::Pizza({{
+  return ::test_union::Pizza{{
       .toppings = ::fidl::HLCPPToNatural(std::move(value.toppings)),
-  }});
+  }};
 }
 ::test::union_::Pasta NaturalToHLCPPTraits<::test_union::Pasta>::Convert(::test_union::Pasta&& value) {
   ::test::union_::Pasta hlcpp;
@@ -373,9 +373,9 @@ struct HLCPPToNaturalTraits<::test::union_::XUnionContainingEmptyStruct> {
 }
 
 ::test_union::Pasta HLCPPToNaturalTraits<::test::union_::Pasta>::Convert(::test::union_::Pasta&& value) {
-  return ::test_union::Pasta({{
+  return ::test_union::Pasta{{
       .sauce = ::fidl::HLCPPToNatural(std::move(value.sauce)),
-  }});
+  }};
 }
 ::test::union_::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse NaturalToHLCPPTraits<::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>::Convert(::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse&& value) {
   ::test::union_::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse hlcpp;
@@ -384,9 +384,9 @@ struct HLCPPToNaturalTraits<::test::union_::XUnionContainingEmptyStruct> {
 }
 
 ::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse HLCPPToNaturalTraits<::test::union_::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>::Convert(::test::union_::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse&& value) {
-  return ::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse({{
+  return ::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse{{
       .xu = ::fidl::HLCPPToNatural(std::move(value.xu)),
-  }});
+  }};
 }
 ::test::union_::NullableUnionStruct NaturalToHLCPPTraits<::test_union::NullableUnionStruct>::Convert(::test_union::NullableUnionStruct&& value) {
   ::test::union_::NullableUnionStruct hlcpp;
@@ -395,9 +395,9 @@ struct HLCPPToNaturalTraits<::test::union_::XUnionContainingEmptyStruct> {
 }
 
 ::test_union::NullableUnionStruct HLCPPToNaturalTraits<::test::union_::NullableUnionStruct>::Convert(::test::union_::NullableUnionStruct&& value) {
-  return ::test_union::NullableUnionStruct({{
+  return ::test_union::NullableUnionStruct{{
       .the_union = ::fidl::HLCPPToNatural(std::move(value.the_union)),
-  }});
+  }};
 }
 ::test::union_::UnionSandwich NaturalToHLCPPTraits<::test_union::UnionSandwich>::Convert(::test_union::UnionSandwich&& value) {
   ::test::union_::UnionSandwich hlcpp;
@@ -408,11 +408,11 @@ struct HLCPPToNaturalTraits<::test::union_::XUnionContainingEmptyStruct> {
 }
 
 ::test_union::UnionSandwich HLCPPToNaturalTraits<::test::union_::UnionSandwich>::Convert(::test::union_::UnionSandwich&& value) {
-  return ::test_union::UnionSandwich({{
+  return ::test_union::UnionSandwich{{
       .a = ::fidl::HLCPPToNatural(std::move(value.a)),
       .u = ::fidl::HLCPPToNatural(std::move(value.u)),
       .b = ::fidl::HLCPPToNatural(std::move(value.b)),
-  }});
+  }};
 }
 ::test::union_::Empty NaturalToHLCPPTraits<::test_union::Empty>::Convert(::test_union::Empty&& value) {
   ::test::union_::Empty hlcpp;
@@ -421,9 +421,9 @@ struct HLCPPToNaturalTraits<::test::union_::XUnionContainingEmptyStruct> {
 }
 
 ::test_union::Empty HLCPPToNaturalTraits<::test::union_::Empty>::Convert(::test::union_::Empty&& value) {
-  return ::test_union::Empty({{
+  return ::test_union::Empty{{
       .__reserved = ::fidl::HLCPPToNatural(std::move(value.__reserved)),
-  }});
+  }};
 }
 
 ::test::union_::UnionWithAttributes NaturalToHLCPPTraits<::test_union::UnionWithAttributes>::Convert(::test_union::UnionWithAttributes&& value) {

@@ -80,9 +80,9 @@ struct HLCPPToNaturalTraits<::test::unknowninteractions::Example_FlexibleTwoWay_
 }
 
 ::test_unknowninteractions::ExampleFlexibleTwoWayResponse HLCPPToNaturalTraits<::test::unknowninteractions::Example_FlexibleTwoWay_Response>::Convert(::test::unknowninteractions::Example_FlexibleTwoWay_Response&& value) {
-  return ::test_unknowninteractions::ExampleFlexibleTwoWayResponse({{
+  return ::test_unknowninteractions::ExampleFlexibleTwoWayResponse{{
       .__reserved = ::fidl::HLCPPToNatural(std::move(value.__reserved)),
-  }});
+  }};
 }
 ::test::unknowninteractions::ExampleFlexibleTwoWayTopResponse NaturalToHLCPPTraits<::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse>::Convert(::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse&& value) {
   ::test::unknowninteractions::ExampleFlexibleTwoWayTopResponse hlcpp;
@@ -91,9 +91,9 @@ struct HLCPPToNaturalTraits<::test::unknowninteractions::Example_FlexibleTwoWay_
 }
 
 ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse HLCPPToNaturalTraits<::test::unknowninteractions::ExampleFlexibleTwoWayTopResponse>::Convert(::test::unknowninteractions::ExampleFlexibleTwoWayTopResponse&& value) {
-  return ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse({{
+  return ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse{{
       .result = ::fidl::HLCPPToNatural(std::move(value.result)),
-  }});
+  }};
 }
 
 ::test::unknowninteractions::Example_FlexibleTwoWay_Result NaturalToHLCPPTraits<::test_unknowninteractions::ExampleFlexibleTwoWayResult>::Convert(::test_unknowninteractions::ExampleFlexibleTwoWayResult&& value) {

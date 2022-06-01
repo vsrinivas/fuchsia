@@ -160,9 +160,9 @@ struct HLCPPToNaturalTraits<::test::nullable::SimpleUnion> {
 }
 
 ::test_nullable::StructWithNullableVector HLCPPToNaturalTraits<::test::nullable::StructWithNullableVector>::Convert(::test::nullable::StructWithNullableVector&& value) {
-  return ::test_nullable::StructWithNullableVector({{
+  return ::test_nullable::StructWithNullableVector{{
       .val = ::fidl::HLCPPToNatural(std::move(value.val)),
-  }});
+  }};
 }
 ::test::nullable::StructWithNullableUnion NaturalToHLCPPTraits<::test_nullable::StructWithNullableUnion>::Convert(::test_nullable::StructWithNullableUnion&& value) {
   ::test::nullable::StructWithNullableUnion hlcpp;
@@ -171,9 +171,9 @@ struct HLCPPToNaturalTraits<::test::nullable::SimpleUnion> {
 }
 
 ::test_nullable::StructWithNullableUnion HLCPPToNaturalTraits<::test::nullable::StructWithNullableUnion>::Convert(::test::nullable::StructWithNullableUnion&& value) {
-  return ::test_nullable::StructWithNullableUnion({{
+  return ::test_nullable::StructWithNullableUnion{{
       .val = ::fidl::HLCPPToNatural(std::move(value.val)),
-  }});
+  }};
 }
 ::test::nullable::StructWithNullableStruct NaturalToHLCPPTraits<::test_nullable::StructWithNullableStruct>::Convert(::test_nullable::StructWithNullableStruct&& value) {
   ::test::nullable::StructWithNullableStruct hlcpp;
@@ -182,9 +182,9 @@ struct HLCPPToNaturalTraits<::test::nullable::SimpleUnion> {
 }
 
 ::test_nullable::StructWithNullableStruct HLCPPToNaturalTraits<::test::nullable::StructWithNullableStruct>::Convert(::test::nullable::StructWithNullableStruct&& value) {
-  return ::test_nullable::StructWithNullableStruct({{
+  return ::test_nullable::StructWithNullableStruct{{
       .val = ::fidl::HLCPPToNatural(std::move(value.val)),
-  }});
+  }};
 }
 ::test::nullable::StructWithNullableString NaturalToHLCPPTraits<::test_nullable::StructWithNullableString>::Convert(::test_nullable::StructWithNullableString&& value) {
   ::test::nullable::StructWithNullableString hlcpp;
@@ -193,9 +193,9 @@ struct HLCPPToNaturalTraits<::test::nullable::SimpleUnion> {
 }
 
 ::test_nullable::StructWithNullableString HLCPPToNaturalTraits<::test::nullable::StructWithNullableString>::Convert(::test::nullable::StructWithNullableString&& value) {
-  return ::test_nullable::StructWithNullableString({{
+  return ::test_nullable::StructWithNullableString{{
       .val = ::fidl::HLCPPToNatural(std::move(value.val)),
-  }});
+  }};
 }
 ::test::nullable::StructWithNullableRequest NaturalToHLCPPTraits<::test_nullable::StructWithNullableRequest>::Convert(::test_nullable::StructWithNullableRequest&& value) {
   ::test::nullable::StructWithNullableRequest hlcpp;
@@ -204,9 +204,9 @@ struct HLCPPToNaturalTraits<::test::nullable::SimpleUnion> {
 }
 
 ::test_nullable::StructWithNullableRequest HLCPPToNaturalTraits<::test::nullable::StructWithNullableRequest>::Convert(::test::nullable::StructWithNullableRequest&& value) {
-  return ::test_nullable::StructWithNullableRequest({{
+  return ::test_nullable::StructWithNullableRequest{{
       .val = ::fidl::HLCPPToNatural(std::move(value.val)),
-  }});
+  }};
 }
 ::test::nullable::StructWithNullableProtocol NaturalToHLCPPTraits<::test_nullable::StructWithNullableProtocol>::Convert(::test_nullable::StructWithNullableProtocol&& value) {
   ::test::nullable::StructWithNullableProtocol hlcpp;
@@ -215,9 +215,9 @@ struct HLCPPToNaturalTraits<::test::nullable::SimpleUnion> {
 }
 
 ::test_nullable::StructWithNullableProtocol HLCPPToNaturalTraits<::test::nullable::StructWithNullableProtocol>::Convert(::test::nullable::StructWithNullableProtocol&& value) {
-  return ::test_nullable::StructWithNullableProtocol({{
+  return ::test_nullable::StructWithNullableProtocol{{
       .val = ::fidl::HLCPPToNatural(std::move(value.val)),
-  }});
+  }};
 }
 ::test::nullable::StructWithNullableHandle NaturalToHLCPPTraits<::test_nullable::StructWithNullableHandle>::Convert(::test_nullable::StructWithNullableHandle&& value) {
   ::test::nullable::StructWithNullableHandle hlcpp;
@@ -226,9 +226,9 @@ struct HLCPPToNaturalTraits<::test::nullable::SimpleUnion> {
 }
 
 ::test_nullable::StructWithNullableHandle HLCPPToNaturalTraits<::test::nullable::StructWithNullableHandle>::Convert(::test::nullable::StructWithNullableHandle&& value) {
-  return ::test_nullable::StructWithNullableHandle({{
+  return ::test_nullable::StructWithNullableHandle{{
       .val = ::fidl::HLCPPToNatural(std::move(value.val)),
-  }});
+  }};
 }
 ::test::nullable::SimpleProtocolAddTopResponse NaturalToHLCPPTraits<::test_nullable::SimpleProtocolAddTopResponse>::Convert(::test_nullable::SimpleProtocolAddTopResponse&& value) {
   ::test::nullable::SimpleProtocolAddTopResponse hlcpp;
@@ -237,9 +237,9 @@ struct HLCPPToNaturalTraits<::test::nullable::SimpleUnion> {
 }
 
 ::test_nullable::SimpleProtocolAddTopResponse HLCPPToNaturalTraits<::test::nullable::SimpleProtocolAddTopResponse>::Convert(::test::nullable::SimpleProtocolAddTopResponse&& value) {
-  return ::test_nullable::SimpleProtocolAddTopResponse({{
+  return ::test_nullable::SimpleProtocolAddTopResponse{{
       .sum = ::fidl::HLCPPToNatural(std::move(value.sum)),
-  }});
+  }};
 }
 ::test::nullable::SimpleProtocolAddRequest NaturalToHLCPPTraits<::test_nullable::SimpleProtocolAddRequest>::Convert(::test_nullable::SimpleProtocolAddRequest&& value) {
   ::test::nullable::SimpleProtocolAddRequest hlcpp;
@@ -249,10 +249,10 @@ struct HLCPPToNaturalTraits<::test::nullable::SimpleUnion> {
 }
 
 ::test_nullable::SimpleProtocolAddRequest HLCPPToNaturalTraits<::test::nullable::SimpleProtocolAddRequest>::Convert(::test::nullable::SimpleProtocolAddRequest&& value) {
-  return ::test_nullable::SimpleProtocolAddRequest({{
+  return ::test_nullable::SimpleProtocolAddRequest{{
       .a = ::fidl::HLCPPToNatural(std::move(value.a)),
       .b = ::fidl::HLCPPToNatural(std::move(value.b)),
-  }});
+  }};
 }
 ::test::nullable::Int32Wrapper NaturalToHLCPPTraits<::test_nullable::Int32Wrapper>::Convert(::test_nullable::Int32Wrapper&& value) {
   ::test::nullable::Int32Wrapper hlcpp;
@@ -261,9 +261,9 @@ struct HLCPPToNaturalTraits<::test::nullable::SimpleUnion> {
 }
 
 ::test_nullable::Int32Wrapper HLCPPToNaturalTraits<::test::nullable::Int32Wrapper>::Convert(::test::nullable::Int32Wrapper&& value) {
-  return ::test_nullable::Int32Wrapper({{
+  return ::test_nullable::Int32Wrapper{{
       .val = ::fidl::HLCPPToNatural(std::move(value.val)),
-  }});
+  }};
 }
 
 ::test::nullable::SimpleUnion NaturalToHLCPPTraits<::test_nullable::SimpleUnion>::Convert(::test_nullable::SimpleUnion&& value) {

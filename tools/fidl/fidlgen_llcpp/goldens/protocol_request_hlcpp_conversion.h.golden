@@ -121,9 +121,9 @@ struct HLCPPToNaturalTraits<::test::protocolrequest::ParentGetChildRequestTopRes
 }
 
 ::test_protocolrequest::ParentTakeChildRequestRequest HLCPPToNaturalTraits<::test::protocolrequest::ParentTakeChildRequestRequest>::Convert(::test::protocolrequest::ParentTakeChildRequestRequest&& value) {
-  return ::test_protocolrequest::ParentTakeChildRequestRequest({{
+  return ::test_protocolrequest::ParentTakeChildRequestRequest{{
       .r = ::fidl::HLCPPToNatural(std::move(value.r)),
-  }});
+  }};
 }
 ::test::protocolrequest::ParentTakeChildRequest NaturalToHLCPPTraits<::test_protocolrequest::ParentTakeChildRequest>::Convert(::test_protocolrequest::ParentTakeChildRequest&& value) {
   ::test::protocolrequest::ParentTakeChildRequest hlcpp;
@@ -132,9 +132,9 @@ struct HLCPPToNaturalTraits<::test::protocolrequest::ParentGetChildRequestTopRes
 }
 
 ::test_protocolrequest::ParentTakeChildRequest HLCPPToNaturalTraits<::test::protocolrequest::ParentTakeChildRequest>::Convert(::test::protocolrequest::ParentTakeChildRequest&& value) {
-  return ::test_protocolrequest::ParentTakeChildRequest({{
+  return ::test_protocolrequest::ParentTakeChildRequest{{
       .c = ::fidl::HLCPPToNatural(std::move(value.c)),
-  }});
+  }};
 }
 ::test::protocolrequest::ParentGetChildTopResponse NaturalToHLCPPTraits<::test_protocolrequest::ParentGetChildTopResponse>::Convert(::test_protocolrequest::ParentGetChildTopResponse&& value) {
   ::test::protocolrequest::ParentGetChildTopResponse hlcpp;
@@ -143,9 +143,9 @@ struct HLCPPToNaturalTraits<::test::protocolrequest::ParentGetChildRequestTopRes
 }
 
 ::test_protocolrequest::ParentGetChildTopResponse HLCPPToNaturalTraits<::test::protocolrequest::ParentGetChildTopResponse>::Convert(::test::protocolrequest::ParentGetChildTopResponse&& value) {
-  return ::test_protocolrequest::ParentGetChildTopResponse({{
+  return ::test_protocolrequest::ParentGetChildTopResponse{{
       .c = ::fidl::HLCPPToNatural(std::move(value.c)),
-  }});
+  }};
 }
 ::test::protocolrequest::ParentGetChildRequestTopResponse NaturalToHLCPPTraits<::test_protocolrequest::ParentGetChildRequestTopResponse>::Convert(::test_protocolrequest::ParentGetChildRequestTopResponse&& value) {
   ::test::protocolrequest::ParentGetChildRequestTopResponse hlcpp;
@@ -154,9 +154,9 @@ struct HLCPPToNaturalTraits<::test::protocolrequest::ParentGetChildRequestTopRes
 }
 
 ::test_protocolrequest::ParentGetChildRequestTopResponse HLCPPToNaturalTraits<::test::protocolrequest::ParentGetChildRequestTopResponse>::Convert(::test::protocolrequest::ParentGetChildRequestTopResponse&& value) {
-  return ::test_protocolrequest::ParentGetChildRequestTopResponse({{
+  return ::test_protocolrequest::ParentGetChildRequestTopResponse{{
       .r = ::fidl::HLCPPToNatural(std::move(value.r)),
-  }});
+  }};
 }
 
 }  // namespace internal

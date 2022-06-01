@@ -2,11 +2,11 @@
 
 #pragma once
 
+#include <fidl/test.exampleusing/cpp/hlcpp_conversion.h>
 #include <fidl/test.placementofattributes/cpp/natural_types.h>
 #include <lib/fidl/cpp/hlcpp_conversion.h>
 #include <lib/fidl/llcpp/internal/transport_channel.h>
 #include <test/placementofattributes/cpp/fidl.h>
-
 namespace fidl {
 namespace internal {
 template <>
@@ -108,9 +108,9 @@ struct HLCPPToNaturalTraits<::test::placementofattributes::ExampleUnion> {
 }
 
 ::test_placementofattributes::ExampleStruct HLCPPToNaturalTraits<::test::placementofattributes::ExampleStruct>::Convert(::test::placementofattributes::ExampleStruct&& value) {
-  return ::test_placementofattributes::ExampleStruct({{
+  return ::test_placementofattributes::ExampleStruct{{
       .member = ::fidl::HLCPPToNatural(std::move(value.member)),
-  }});
+  }};
 }
 ::test::placementofattributes::ExampleProtocolMethodRequest NaturalToHLCPPTraits<::test_placementofattributes::ExampleProtocolMethodRequest>::Convert(::test_placementofattributes::ExampleProtocolMethodRequest&& value) {
   ::test::placementofattributes::ExampleProtocolMethodRequest hlcpp;
@@ -119,9 +119,9 @@ struct HLCPPToNaturalTraits<::test::placementofattributes::ExampleUnion> {
 }
 
 ::test_placementofattributes::ExampleProtocolMethodRequest HLCPPToNaturalTraits<::test::placementofattributes::ExampleProtocolMethodRequest>::Convert(::test::placementofattributes::ExampleProtocolMethodRequest&& value) {
-  return ::test_placementofattributes::ExampleProtocolMethodRequest({{
+  return ::test_placementofattributes::ExampleProtocolMethodRequest{{
       .arg = ::fidl::HLCPPToNatural(std::move(value.arg)),
-  }});
+  }};
 }
 ::test::placementofattributes::ExampleTable NaturalToHLCPPTraits<::test_placementofattributes::ExampleTable>::Convert(::test_placementofattributes::ExampleTable&& value) {
   ::test::placementofattributes::ExampleTable hlcpp;

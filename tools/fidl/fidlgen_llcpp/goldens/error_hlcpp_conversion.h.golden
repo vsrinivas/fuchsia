@@ -90,9 +90,9 @@ struct HLCPPToNaturalTraits<::test::error::Example_foo_Result> {
 }
 
 ::test_error::ExampleFooResponse HLCPPToNaturalTraits<::test::error::Example_foo_Response>::Convert(::test::error::Example_foo_Response&& value) {
-  return ::test_error::ExampleFooResponse({{
+  return ::test_error::ExampleFooResponse{{
       .y = ::fidl::HLCPPToNatural(std::move(value.y)),
-  }});
+  }};
 }
 ::test::error::ExampleFooTopResponse NaturalToHLCPPTraits<::test_error::ExampleFooTopResponse>::Convert(::test_error::ExampleFooTopResponse&& value) {
   ::test::error::ExampleFooTopResponse hlcpp;
@@ -101,9 +101,9 @@ struct HLCPPToNaturalTraits<::test::error::Example_foo_Result> {
 }
 
 ::test_error::ExampleFooTopResponse HLCPPToNaturalTraits<::test::error::ExampleFooTopResponse>::Convert(::test::error::ExampleFooTopResponse&& value) {
-  return ::test_error::ExampleFooTopResponse({{
+  return ::test_error::ExampleFooTopResponse{{
       .result = ::fidl::HLCPPToNatural(std::move(value.result)),
-  }});
+  }};
 }
 ::test::error::ExampleFooRequest NaturalToHLCPPTraits<::test_error::ExampleFooRequest>::Convert(::test_error::ExampleFooRequest&& value) {
   ::test::error::ExampleFooRequest hlcpp;
@@ -112,9 +112,9 @@ struct HLCPPToNaturalTraits<::test::error::Example_foo_Result> {
 }
 
 ::test_error::ExampleFooRequest HLCPPToNaturalTraits<::test::error::ExampleFooRequest>::Convert(::test::error::ExampleFooRequest&& value) {
-  return ::test_error::ExampleFooRequest({{
+  return ::test_error::ExampleFooRequest{{
       .s = ::fidl::HLCPPToNatural(std::move(value.s)),
-  }});
+  }};
 }
 
 ::test::error::Example_foo_Result NaturalToHLCPPTraits<::test_error::ExampleFooResult>::Convert(::test_error::ExampleFooResult&& value) {

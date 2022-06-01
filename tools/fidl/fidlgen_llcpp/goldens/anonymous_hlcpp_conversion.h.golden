@@ -166,9 +166,9 @@ struct HLCPPToNaturalTraits<::test::anonymous::SomeProtocol_SomeMethod_Result> {
 }
 
 ::test_anonymous::TableData HLCPPToNaturalTraits<::test::anonymous::TableData>::Convert(::test::anonymous::TableData&& value) {
-  return ::test_anonymous::TableData({{
+  return ::test_anonymous::TableData{{
       .data = ::fidl::HLCPPToNatural(std::move(value.data)),
-  }});
+  }};
 }
 ::test::anonymous::SomeProtocolSomeMethodRequest NaturalToHLCPPTraits<::test_anonymous::SomeProtocolSomeMethodRequest>::Convert(::test_anonymous::SomeProtocolSomeMethodRequest&& value) {
   ::test::anonymous::SomeProtocolSomeMethodRequest hlcpp;
@@ -178,10 +178,10 @@ struct HLCPPToNaturalTraits<::test::anonymous::SomeProtocol_SomeMethod_Result> {
 }
 
 ::test_anonymous::SomeProtocolSomeMethodRequest HLCPPToNaturalTraits<::test::anonymous::SomeProtocolSomeMethodRequest>::Convert(::test::anonymous::SomeProtocolSomeMethodRequest&& value) {
-  return ::test_anonymous::SomeProtocolSomeMethodRequest({{
+  return ::test_anonymous::SomeProtocolSomeMethodRequest{{
       .union_member = ::fidl::HLCPPToNatural(std::move(value.union_member)),
       .table_member = ::fidl::HLCPPToNatural(std::move(value.table_member)),
-  }});
+  }};
 }
 ::test::anonymous::OverrideTest NaturalToHLCPPTraits<::test_anonymous::OverrideTest>::Convert(::test_anonymous::OverrideTest&& value) {
   ::test::anonymous::OverrideTest hlcpp;
@@ -192,11 +192,11 @@ struct HLCPPToNaturalTraits<::test::anonymous::SomeProtocol_SomeMethod_Result> {
 }
 
 ::test_anonymous::OverrideTest HLCPPToNaturalTraits<::test::anonymous::OverrideTest>::Convert(::test::anonymous::OverrideTest&& value) {
-  return ::test_anonymous::OverrideTest({{
+  return ::test_anonymous::OverrideTest{{
       .op = ::fidl::HLCPPToNatural(std::move(value.op)),
       .left = ::fidl::HLCPPToNatural(std::move(value.left)),
       .right = ::fidl::HLCPPToNatural(std::move(value.right)),
-  }});
+  }};
 }
 ::test::anonymous::SomeProtocol_SomeMethod_Response NaturalToHLCPPTraits<::test_anonymous::SomeProtocolSomeMethodResponse>::Convert(::test_anonymous::SomeProtocolSomeMethodResponse&& value) {
   ::test::anonymous::SomeProtocol_SomeMethod_Response hlcpp;
@@ -205,9 +205,9 @@ struct HLCPPToNaturalTraits<::test::anonymous::SomeProtocol_SomeMethod_Result> {
 }
 
 ::test_anonymous::SomeProtocolSomeMethodResponse HLCPPToNaturalTraits<::test::anonymous::SomeProtocol_SomeMethod_Response>::Convert(::test::anonymous::SomeProtocol_SomeMethod_Response&& value) {
-  return ::test_anonymous::SomeProtocolSomeMethodResponse({{
+  return ::test_anonymous::SomeProtocolSomeMethodResponse{{
       .bits_member = ::fidl::HLCPPToNatural(std::move(value.bits_member)),
-  }});
+  }};
 }
 ::test::anonymous::SomeProtocolSomeMethodTopResponse NaturalToHLCPPTraits<::test_anonymous::SomeProtocolSomeMethodTopResponse>::Convert(::test_anonymous::SomeProtocolSomeMethodTopResponse&& value) {
   ::test::anonymous::SomeProtocolSomeMethodTopResponse hlcpp;
@@ -216,9 +216,9 @@ struct HLCPPToNaturalTraits<::test::anonymous::SomeProtocol_SomeMethod_Result> {
 }
 
 ::test_anonymous::SomeProtocolSomeMethodTopResponse HLCPPToNaturalTraits<::test::anonymous::SomeProtocolSomeMethodTopResponse>::Convert(::test::anonymous::SomeProtocolSomeMethodTopResponse&& value) {
-  return ::test_anonymous::SomeProtocolSomeMethodTopResponse({{
+  return ::test_anonymous::SomeProtocolSomeMethodTopResponse{{
       .result = ::fidl::HLCPPToNatural(std::move(value.result)),
-  }});
+  }};
 }
 ::test::anonymous::TableMember NaturalToHLCPPTraits<::test_anonymous::TableMember>::Convert(::test_anonymous::TableMember&& value) {
   ::test::anonymous::TableMember hlcpp;

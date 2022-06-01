@@ -106,9 +106,9 @@ struct HLCPPToNaturalTraits<::test::doccomments::FlexibleUnion> {
 }
 
 ::test_doccomments::Struct HLCPPToNaturalTraits<::test::doccomments::Struct>::Convert(::test::doccomments::Struct&& value) {
-  return ::test_doccomments::Struct({{
+  return ::test_doccomments::Struct{{
       .field = ::fidl::HLCPPToNatural(std::move(value.Field)),
-  }});
+  }};
 }
 ::test::doccomments::Table NaturalToHLCPPTraits<::test_doccomments::Table>::Convert(::test_doccomments::Table&& value) {
   ::test::doccomments::Table hlcpp;

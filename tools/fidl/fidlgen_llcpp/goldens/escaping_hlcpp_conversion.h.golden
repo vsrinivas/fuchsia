@@ -28,9 +28,9 @@ struct HLCPPToNaturalTraits<::test::escaping::DocCommentWithQuotes> {
 }
 
 ::test_escaping::DocCommentWithQuotes HLCPPToNaturalTraits<::test::escaping::DocCommentWithQuotes>::Convert(::test::escaping::DocCommentWithQuotes&& value) {
-  return ::test_escaping::DocCommentWithQuotes({{
+  return ::test_escaping::DocCommentWithQuotes{{
       .__reserved = ::fidl::HLCPPToNatural(std::move(value.__reserved)),
-  }});
+  }};
 }
 
 }  // namespace internal

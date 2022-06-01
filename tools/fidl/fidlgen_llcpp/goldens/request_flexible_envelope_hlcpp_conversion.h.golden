@@ -110,9 +110,9 @@ struct HLCPPToNaturalTraits<::test::requestflexibleenvelope::FlexibleFoo> {
 }
 
 ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest HLCPPToNaturalTraits<::test::requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest>::Convert(::test::requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest&& value) {
-  return ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest({{
+  return ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest{{
       .s = ::fidl::HLCPPToNatural(std::move(value.s)),
-  }});
+  }};
 }
 ::test::requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse NaturalToHLCPPTraits<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse>::Convert(::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse&& value) {
   ::test::requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse hlcpp;
@@ -121,9 +121,9 @@ struct HLCPPToNaturalTraits<::test::requestflexibleenvelope::FlexibleFoo> {
 }
 
 ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse HLCPPToNaturalTraits<::test::requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse>::Convert(::test::requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse&& value) {
-  return ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse({{
+  return ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse{{
       .f = ::fidl::HLCPPToNatural(std::move(value.f)),
-  }});
+  }};
 }
 ::test::requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse NaturalToHLCPPTraits<::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse>::Convert(::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse&& value) {
   ::test::requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse hlcpp;
@@ -132,9 +132,9 @@ struct HLCPPToNaturalTraits<::test::requestflexibleenvelope::FlexibleFoo> {
 }
 
 ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse HLCPPToNaturalTraits<::test::requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse>::Convert(::test::requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse&& value) {
-  return ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse({{
+  return ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse{{
       .f = ::fidl::HLCPPToNatural(std::move(value.f)),
-  }});
+  }};
 }
 ::test::requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictRequest NaturalToHLCPPTraits<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictRequest>::Convert(::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictRequest&& value) {
   ::test::requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictRequest hlcpp;
@@ -143,9 +143,9 @@ struct HLCPPToNaturalTraits<::test::requestflexibleenvelope::FlexibleFoo> {
 }
 
 ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictRequest HLCPPToNaturalTraits<::test::requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictRequest>::Convert(::test::requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictRequest&& value) {
-  return ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictRequest({{
+  return ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictRequest{{
       .s = ::fidl::HLCPPToNatural(std::move(value.s)),
-  }});
+  }};
 }
 
 ::test::requestflexibleenvelope::StrictFoo NaturalToHLCPPTraits<::test_requestflexibleenvelope::StrictFoo>::Convert(::test_requestflexibleenvelope::StrictFoo&& value) {

@@ -31,12 +31,12 @@ struct HLCPPToNaturalTraits<::test::byteandbytes::ByteAndBytes> {
 }
 
 ::test_byteandbytes::ByteAndBytes HLCPPToNaturalTraits<::test::byteandbytes::ByteAndBytes>::Convert(::test::byteandbytes::ByteAndBytes&& value) {
-  return ::test_byteandbytes::ByteAndBytes({{
+  return ::test_byteandbytes::ByteAndBytes{{
       .single_byte = ::fidl::HLCPPToNatural(std::move(value.single_byte)),
       .many_bytes = ::fidl::HLCPPToNatural(std::move(value.many_bytes)),
       .only_one_k_bytes = ::fidl::HLCPPToNatural(std::move(value.only_one_k_bytes)),
       .opt_only_one_k_bytes = ::fidl::HLCPPToNatural(std::move(value.opt_only_one_k_bytes)),
-  }});
+  }};
 }
 
 }  // namespace internal

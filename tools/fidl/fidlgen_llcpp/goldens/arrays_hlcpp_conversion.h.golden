@@ -78,9 +78,9 @@ struct HLCPPToNaturalTraits<::test::arrays::UnionLargeArray> {
 }
 
 ::test_arrays::StructSmallArray HLCPPToNaturalTraits<::test::arrays::StructSmallArray>::Convert(::test::arrays::StructSmallArray&& value) {
-  return ::test_arrays::StructSmallArray({{
+  return ::test_arrays::StructSmallArray{{
       .a = ::fidl::HLCPPToNatural(std::move(value.a)),
-  }});
+  }};
 }
 ::test::arrays::StructLargeArray NaturalToHLCPPTraits<::test_arrays::StructLargeArray>::Convert(::test_arrays::StructLargeArray&& value) {
   ::test::arrays::StructLargeArray hlcpp;
@@ -89,9 +89,9 @@ struct HLCPPToNaturalTraits<::test::arrays::UnionLargeArray> {
 }
 
 ::test_arrays::StructLargeArray HLCPPToNaturalTraits<::test::arrays::StructLargeArray>::Convert(::test::arrays::StructLargeArray&& value) {
-  return ::test_arrays::StructLargeArray({{
+  return ::test_arrays::StructLargeArray{{
       .a = ::fidl::HLCPPToNatural(std::move(value.a)),
-  }});
+  }};
 }
 ::test::arrays::TableSmallArray NaturalToHLCPPTraits<::test_arrays::TableSmallArray>::Convert(::test_arrays::TableSmallArray&& value) {
   ::test::arrays::TableSmallArray hlcpp;

@@ -38,9 +38,9 @@ struct HLCPPToNaturalTraits<::test::driveroneway::OneWaySendRequest> {
 }
 
 ::test_driveroneway::Payload HLCPPToNaturalTraits<::test::driveroneway::Payload>::Convert(::test::driveroneway::Payload&& value) {
-  return ::test_driveroneway::Payload({{
+  return ::test_driveroneway::Payload{{
       .value = ::fidl::HLCPPToNatural(std::move(value.value)),
-  }});
+  }};
 }
 ::test::driveroneway::OneWaySendRequest NaturalToHLCPPTraits<::test_driveroneway::OneWaySendRequest>::Convert(::test_driveroneway::OneWaySendRequest&& value) {
   ::test::driveroneway::OneWaySendRequest hlcpp;
@@ -49,9 +49,9 @@ struct HLCPPToNaturalTraits<::test::driveroneway::OneWaySendRequest> {
 }
 
 ::test_driveroneway::OneWaySendRequest HLCPPToNaturalTraits<::test::driveroneway::OneWaySendRequest>::Convert(::test::driveroneway::OneWaySendRequest&& value) {
-  return ::test_driveroneway::OneWaySendRequest({{
+  return ::test_driveroneway::OneWaySendRequest{{
       .payload = ::fidl::HLCPPToNatural(std::move(value.payload)),
-  }});
+  }};
 }
 
 }  // namespace internal

@@ -119,9 +119,9 @@ struct HLCPPToNaturalTraits<::test::versions::Union> {
 }
 
 ::test_versions::Struct HLCPPToNaturalTraits<::test::versions::Struct>::Convert(::test::versions::Struct&& value) {
-  return ::test_versions::Struct({{
+  return ::test_versions::Struct{{
       .x = ::fidl::HLCPPToNatural(std::move(value.x)),
-  }});
+  }};
 }
 ::test::versions::Table NaturalToHLCPPTraits<::test_versions::Table>::Convert(::test_versions::Table&& value) {
   ::test::versions::Table hlcpp;

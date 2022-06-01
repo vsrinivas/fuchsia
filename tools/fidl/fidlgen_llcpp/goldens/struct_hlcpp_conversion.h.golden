@@ -39,10 +39,10 @@ struct HLCPPToNaturalTraits<::test::struct_::BasicStruct> {
 }
 
 ::test_struct::Simple HLCPPToNaturalTraits<::test::struct_::Simple>::Convert(::test::struct_::Simple&& value) {
-  return ::test_struct::Simple({{
+  return ::test_struct::Simple{{
       .f1 = ::fidl::HLCPPToNatural(std::move(value.f1)),
       .f2 = ::fidl::HLCPPToNatural(std::move(value.f2)),
-  }});
+  }};
 }
 ::test::struct_::BasicStruct NaturalToHLCPPTraits<::test_struct::BasicStruct>::Convert(::test_struct::BasicStruct&& value) {
   ::test::struct_::BasicStruct hlcpp;
@@ -52,10 +52,10 @@ struct HLCPPToNaturalTraits<::test::struct_::BasicStruct> {
 }
 
 ::test_struct::BasicStruct HLCPPToNaturalTraits<::test::struct_::BasicStruct>::Convert(::test::struct_::BasicStruct&& value) {
-  return ::test_struct::BasicStruct({{
+  return ::test_struct::BasicStruct{{
       .x = ::fidl::HLCPPToNatural(std::move(value.x)),
       .y = ::fidl::HLCPPToNatural(std::move(value.y)),
-  }});
+  }};
 }
 
 }  // namespace internal

@@ -752,9 +752,9 @@ struct HLCPPToNaturalTraits<::test::protocols::WithErrorSyntax_ErrorAsEnum_Resul
 }
 
 ::test_protocols::WithProtocolEndsServerEndsTopResponse HLCPPToNaturalTraits<::test::protocols::WithProtocolEndsServerEndsTopResponse>::Convert(::test::protocols::WithProtocolEndsServerEndsTopResponse&& value) {
-  return ::test_protocols::WithProtocolEndsServerEndsTopResponse({{
+  return ::test_protocols::WithProtocolEndsServerEndsTopResponse{{
       .out = ::fidl::HLCPPToNatural(std::move(value.out)),
-  }});
+  }};
 }
 ::test::protocols::WithProtocolEndsServerEndsRequest NaturalToHLCPPTraits<::test_protocols::WithProtocolEndsServerEndsRequest>::Convert(::test_protocols::WithProtocolEndsServerEndsRequest&& value) {
   ::test::protocols::WithProtocolEndsServerEndsRequest hlcpp;
@@ -763,9 +763,9 @@ struct HLCPPToNaturalTraits<::test::protocols::WithErrorSyntax_ErrorAsEnum_Resul
 }
 
 ::test_protocols::WithProtocolEndsServerEndsRequest HLCPPToNaturalTraits<::test::protocols::WithProtocolEndsServerEndsRequest>::Convert(::test::protocols::WithProtocolEndsServerEndsRequest&& value) {
-  return ::test_protocols::WithProtocolEndsServerEndsRequest({{
+  return ::test_protocols::WithProtocolEndsServerEndsRequest{{
       .in = ::fidl::HLCPPToNatural(std::move(value.in)),
-  }});
+  }};
 }
 ::test::protocols::WithProtocolEndsClientEndsTopResponse NaturalToHLCPPTraits<::test_protocols::WithProtocolEndsClientEndsTopResponse>::Convert(::test_protocols::WithProtocolEndsClientEndsTopResponse&& value) {
   ::test::protocols::WithProtocolEndsClientEndsTopResponse hlcpp;
@@ -774,9 +774,9 @@ struct HLCPPToNaturalTraits<::test::protocols::WithErrorSyntax_ErrorAsEnum_Resul
 }
 
 ::test_protocols::WithProtocolEndsClientEndsTopResponse HLCPPToNaturalTraits<::test::protocols::WithProtocolEndsClientEndsTopResponse>::Convert(::test::protocols::WithProtocolEndsClientEndsTopResponse&& value) {
-  return ::test_protocols::WithProtocolEndsClientEndsTopResponse({{
+  return ::test_protocols::WithProtocolEndsClientEndsTopResponse{{
       .out = ::fidl::HLCPPToNatural(std::move(value.out)),
-  }});
+  }};
 }
 ::test::protocols::WithProtocolEndsClientEndsRequest NaturalToHLCPPTraits<::test_protocols::WithProtocolEndsClientEndsRequest>::Convert(::test_protocols::WithProtocolEndsClientEndsRequest&& value) {
   ::test::protocols::WithProtocolEndsClientEndsRequest hlcpp;
@@ -785,9 +785,9 @@ struct HLCPPToNaturalTraits<::test::protocols::WithErrorSyntax_ErrorAsEnum_Resul
 }
 
 ::test_protocols::WithProtocolEndsClientEndsRequest HLCPPToNaturalTraits<::test::protocols::WithProtocolEndsClientEndsRequest>::Convert(::test::protocols::WithProtocolEndsClientEndsRequest&& value) {
-  return ::test_protocols::WithProtocolEndsClientEndsRequest({{
+  return ::test_protocols::WithProtocolEndsClientEndsRequest{{
       .in = ::fidl::HLCPPToNatural(std::move(value.in)),
-  }});
+  }};
 }
 ::test::protocols::WithErrorSyntax_ResponseAsStruct_Response NaturalToHLCPPTraits<::test_protocols::WithErrorSyntaxResponseAsStructResponse>::Convert(::test_protocols::WithErrorSyntaxResponseAsStructResponse&& value) {
   ::test::protocols::WithErrorSyntax_ResponseAsStruct_Response hlcpp;
@@ -798,11 +798,11 @@ struct HLCPPToNaturalTraits<::test::protocols::WithErrorSyntax_ErrorAsEnum_Resul
 }
 
 ::test_protocols::WithErrorSyntaxResponseAsStructResponse HLCPPToNaturalTraits<::test::protocols::WithErrorSyntax_ResponseAsStruct_Response>::Convert(::test::protocols::WithErrorSyntax_ResponseAsStruct_Response&& value) {
-  return ::test_protocols::WithErrorSyntaxResponseAsStructResponse({{
+  return ::test_protocols::WithErrorSyntaxResponseAsStructResponse{{
       .a = ::fidl::HLCPPToNatural(std::move(value.a)),
       .b = ::fidl::HLCPPToNatural(std::move(value.b)),
       .c = ::fidl::HLCPPToNatural(std::move(value.c)),
-  }});
+  }};
 }
 ::test::protocols::WithErrorSyntaxResponseAsStructTopResponse NaturalToHLCPPTraits<::test_protocols::WithErrorSyntaxResponseAsStructTopResponse>::Convert(::test_protocols::WithErrorSyntaxResponseAsStructTopResponse&& value) {
   ::test::protocols::WithErrorSyntaxResponseAsStructTopResponse hlcpp;
@@ -811,9 +811,9 @@ struct HLCPPToNaturalTraits<::test::protocols::WithErrorSyntax_ErrorAsEnum_Resul
 }
 
 ::test_protocols::WithErrorSyntaxResponseAsStructTopResponse HLCPPToNaturalTraits<::test::protocols::WithErrorSyntaxResponseAsStructTopResponse>::Convert(::test::protocols::WithErrorSyntaxResponseAsStructTopResponse&& value) {
-  return ::test_protocols::WithErrorSyntaxResponseAsStructTopResponse({{
+  return ::test_protocols::WithErrorSyntaxResponseAsStructTopResponse{{
       .result = ::fidl::HLCPPToNatural(std::move(value.result)),
-  }});
+  }};
 }
 ::test::protocols::WithErrorSyntax_HandleInResult_Response NaturalToHLCPPTraits<::test_protocols::WithErrorSyntaxHandleInResultResponse>::Convert(::test_protocols::WithErrorSyntaxHandleInResultResponse&& value) {
   ::test::protocols::WithErrorSyntax_HandleInResult_Response hlcpp;
@@ -822,9 +822,9 @@ struct HLCPPToNaturalTraits<::test::protocols::WithErrorSyntax_ErrorAsEnum_Resul
 }
 
 ::test_protocols::WithErrorSyntaxHandleInResultResponse HLCPPToNaturalTraits<::test::protocols::WithErrorSyntax_HandleInResult_Response>::Convert(::test::protocols::WithErrorSyntax_HandleInResult_Response&& value) {
-  return ::test_protocols::WithErrorSyntaxHandleInResultResponse({{
+  return ::test_protocols::WithErrorSyntaxHandleInResultResponse{{
       .h = ::fidl::HLCPPToNatural(std::move(value.h)),
-  }});
+  }};
 }
 ::test::protocols::WithErrorSyntaxHandleInResultTopResponse NaturalToHLCPPTraits<::test_protocols::WithErrorSyntaxHandleInResultTopResponse>::Convert(::test_protocols::WithErrorSyntaxHandleInResultTopResponse&& value) {
   ::test::protocols::WithErrorSyntaxHandleInResultTopResponse hlcpp;
@@ -833,9 +833,9 @@ struct HLCPPToNaturalTraits<::test::protocols::WithErrorSyntax_ErrorAsEnum_Resul
 }
 
 ::test_protocols::WithErrorSyntaxHandleInResultTopResponse HLCPPToNaturalTraits<::test::protocols::WithErrorSyntaxHandleInResultTopResponse>::Convert(::test::protocols::WithErrorSyntaxHandleInResultTopResponse&& value) {
-  return ::test_protocols::WithErrorSyntaxHandleInResultTopResponse({{
+  return ::test_protocols::WithErrorSyntaxHandleInResultTopResponse{{
       .result = ::fidl::HLCPPToNatural(std::move(value.result)),
-  }});
+  }};
 }
 ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response NaturalToHLCPPTraits<::test_protocols::WithErrorSyntaxErrorAsPrimitiveResponse>::Convert(::test_protocols::WithErrorSyntaxErrorAsPrimitiveResponse&& value) {
   ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response hlcpp;
@@ -844,9 +844,9 @@ struct HLCPPToNaturalTraits<::test::protocols::WithErrorSyntax_ErrorAsEnum_Resul
 }
 
 ::test_protocols::WithErrorSyntaxErrorAsPrimitiveResponse HLCPPToNaturalTraits<::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response>::Convert(::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response&& value) {
-  return ::test_protocols::WithErrorSyntaxErrorAsPrimitiveResponse({{
+  return ::test_protocols::WithErrorSyntaxErrorAsPrimitiveResponse{{
       .__reserved = ::fidl::HLCPPToNatural(std::move(value.__reserved)),
-  }});
+  }};
 }
 ::test::protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse NaturalToHLCPPTraits<::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse>::Convert(::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse&& value) {
   ::test::protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse hlcpp;
@@ -855,9 +855,9 @@ struct HLCPPToNaturalTraits<::test::protocols::WithErrorSyntax_ErrorAsEnum_Resul
 }
 
 ::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse HLCPPToNaturalTraits<::test::protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse>::Convert(::test::protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse&& value) {
-  return ::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse({{
+  return ::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse{{
       .result = ::fidl::HLCPPToNatural(std::move(value.result)),
-  }});
+  }};
 }
 ::test::protocols::WithErrorSyntax_ErrorAsEnum_Response NaturalToHLCPPTraits<::test_protocols::WithErrorSyntaxErrorAsEnumResponse>::Convert(::test_protocols::WithErrorSyntaxErrorAsEnumResponse&& value) {
   ::test::protocols::WithErrorSyntax_ErrorAsEnum_Response hlcpp;
@@ -866,9 +866,9 @@ struct HLCPPToNaturalTraits<::test::protocols::WithErrorSyntax_ErrorAsEnum_Resul
 }
 
 ::test_protocols::WithErrorSyntaxErrorAsEnumResponse HLCPPToNaturalTraits<::test::protocols::WithErrorSyntax_ErrorAsEnum_Response>::Convert(::test::protocols::WithErrorSyntax_ErrorAsEnum_Response&& value) {
-  return ::test_protocols::WithErrorSyntaxErrorAsEnumResponse({{
+  return ::test_protocols::WithErrorSyntaxErrorAsEnumResponse{{
       .__reserved = ::fidl::HLCPPToNatural(std::move(value.__reserved)),
-  }});
+  }};
 }
 ::test::protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse NaturalToHLCPPTraits<::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse>::Convert(::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse&& value) {
   ::test::protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse hlcpp;
@@ -877,9 +877,9 @@ struct HLCPPToNaturalTraits<::test::protocols::WithErrorSyntax_ErrorAsEnum_Resul
 }
 
 ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse HLCPPToNaturalTraits<::test::protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse>::Convert(::test::protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse&& value) {
-  return ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse({{
+  return ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse{{
       .ret = ::fidl::HLCPPToNatural(std::move(value.ret)),
-  }});
+  }};
 }
 ::test::protocols::WithAndWithoutRequestResponseWithRequestWithResponseRequest NaturalToHLCPPTraits<::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseRequest>::Convert(::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseRequest&& value) {
   ::test::protocols::WithAndWithoutRequestResponseWithRequestWithResponseRequest hlcpp;
@@ -888,9 +888,9 @@ struct HLCPPToNaturalTraits<::test::protocols::WithErrorSyntax_ErrorAsEnum_Resul
 }
 
 ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseRequest HLCPPToNaturalTraits<::test::protocols::WithAndWithoutRequestResponseWithRequestWithResponseRequest>::Convert(::test::protocols::WithAndWithoutRequestResponseWithRequestWithResponseRequest&& value) {
-  return ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseRequest({{
+  return ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseRequest{{
       .arg = ::fidl::HLCPPToNatural(std::move(value.arg)),
-  }});
+  }};
 }
 ::test::protocols::WithAndWithoutRequestResponseWithRequestNoResponseRequest NaturalToHLCPPTraits<::test_protocols::WithAndWithoutRequestResponseWithRequestNoResponseRequest>::Convert(::test_protocols::WithAndWithoutRequestResponseWithRequestNoResponseRequest&& value) {
   ::test::protocols::WithAndWithoutRequestResponseWithRequestNoResponseRequest hlcpp;
@@ -899,9 +899,9 @@ struct HLCPPToNaturalTraits<::test::protocols::WithErrorSyntax_ErrorAsEnum_Resul
 }
 
 ::test_protocols::WithAndWithoutRequestResponseWithRequestNoResponseRequest HLCPPToNaturalTraits<::test::protocols::WithAndWithoutRequestResponseWithRequestNoResponseRequest>::Convert(::test::protocols::WithAndWithoutRequestResponseWithRequestNoResponseRequest&& value) {
-  return ::test_protocols::WithAndWithoutRequestResponseWithRequestNoResponseRequest({{
+  return ::test_protocols::WithAndWithoutRequestResponseWithRequestNoResponseRequest{{
       .arg = ::fidl::HLCPPToNatural(std::move(value.arg)),
-  }});
+  }};
 }
 ::test::protocols::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest NaturalToHLCPPTraits<::test_protocols::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest>::Convert(::test_protocols::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest&& value) {
   ::test::protocols::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest hlcpp;
@@ -910,9 +910,9 @@ struct HLCPPToNaturalTraits<::test::protocols::WithErrorSyntax_ErrorAsEnum_Resul
 }
 
 ::test_protocols::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest HLCPPToNaturalTraits<::test::protocols::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest>::Convert(::test::protocols::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest&& value) {
-  return ::test_protocols::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest({{
+  return ::test_protocols::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest{{
       .arg = ::fidl::HLCPPToNatural(std::move(value.arg)),
-  }});
+  }};
 }
 ::test::protocols::WithAndWithoutRequestResponseOnWithResponseRequest NaturalToHLCPPTraits<::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest>::Convert(::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest&& value) {
   ::test::protocols::WithAndWithoutRequestResponseOnWithResponseRequest hlcpp;
@@ -921,9 +921,9 @@ struct HLCPPToNaturalTraits<::test::protocols::WithErrorSyntax_ErrorAsEnum_Resul
 }
 
 ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest HLCPPToNaturalTraits<::test::protocols::WithAndWithoutRequestResponseOnWithResponseRequest>::Convert(::test::protocols::WithAndWithoutRequestResponseOnWithResponseRequest&& value) {
-  return ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest({{
+  return ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest{{
       .ret = ::fidl::HLCPPToNatural(std::move(value.ret)),
-  }});
+  }};
 }
 ::test::protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse NaturalToHLCPPTraits<::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse>::Convert(::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse&& value) {
   ::test::protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse hlcpp;
@@ -932,9 +932,9 @@ struct HLCPPToNaturalTraits<::test::protocols::WithErrorSyntax_ErrorAsEnum_Resul
 }
 
 ::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse HLCPPToNaturalTraits<::test::protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse>::Convert(::test::protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse&& value) {
-  return ::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse({{
+  return ::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse{{
       .ret = ::fidl::HLCPPToNatural(std::move(value.ret)),
-  }});
+  }};
 }
 ::test::protocols::TransitionalRequestTopResponse NaturalToHLCPPTraits<::test_protocols::TransitionalRequestTopResponse>::Convert(::test_protocols::TransitionalRequestTopResponse&& value) {
   ::test::protocols::TransitionalRequestTopResponse hlcpp;
@@ -943,9 +943,9 @@ struct HLCPPToNaturalTraits<::test::protocols::WithErrorSyntax_ErrorAsEnum_Resul
 }
 
 ::test_protocols::TransitionalRequestTopResponse HLCPPToNaturalTraits<::test::protocols::TransitionalRequestTopResponse>::Convert(::test::protocols::TransitionalRequestTopResponse&& value) {
-  return ::test_protocols::TransitionalRequestTopResponse({{
+  return ::test_protocols::TransitionalRequestTopResponse{{
       .y = ::fidl::HLCPPToNatural(std::move(value.y)),
-  }});
+  }};
 }
 ::test::protocols::TransitionalRequestRequest NaturalToHLCPPTraits<::test_protocols::TransitionalRequestRequest>::Convert(::test_protocols::TransitionalRequestRequest&& value) {
   ::test::protocols::TransitionalRequestRequest hlcpp;
@@ -954,9 +954,9 @@ struct HLCPPToNaturalTraits<::test::protocols::WithErrorSyntax_ErrorAsEnum_Resul
 }
 
 ::test_protocols::TransitionalRequestRequest HLCPPToNaturalTraits<::test::protocols::TransitionalRequestRequest>::Convert(::test::protocols::TransitionalRequestRequest&& value) {
-  return ::test_protocols::TransitionalRequestRequest({{
+  return ::test_protocols::TransitionalRequestRequest{{
       .x = ::fidl::HLCPPToNatural(std::move(value.x)),
-  }});
+  }};
 }
 ::test::protocols::TransitionalOneWayRequest NaturalToHLCPPTraits<::test_protocols::TransitionalOneWayRequest>::Convert(::test_protocols::TransitionalOneWayRequest&& value) {
   ::test::protocols::TransitionalOneWayRequest hlcpp;
@@ -965,9 +965,9 @@ struct HLCPPToNaturalTraits<::test::protocols::WithErrorSyntax_ErrorAsEnum_Resul
 }
 
 ::test_protocols::TransitionalOneWayRequest HLCPPToNaturalTraits<::test::protocols::TransitionalOneWayRequest>::Convert(::test::protocols::TransitionalOneWayRequest&& value) {
-  return ::test_protocols::TransitionalOneWayRequest({{
+  return ::test_protocols::TransitionalOneWayRequest{{
       .x = ::fidl::HLCPPToNatural(std::move(value.x)),
-  }});
+  }};
 }
 ::test::protocols::TransitionalEventRequest NaturalToHLCPPTraits<::test_protocols::TransitionalEventRequest>::Convert(::test_protocols::TransitionalEventRequest&& value) {
   ::test::protocols::TransitionalEventRequest hlcpp;
@@ -976,9 +976,9 @@ struct HLCPPToNaturalTraits<::test::protocols::WithErrorSyntax_ErrorAsEnum_Resul
 }
 
 ::test_protocols::TransitionalEventRequest HLCPPToNaturalTraits<::test::protocols::TransitionalEventRequest>::Convert(::test::protocols::TransitionalEventRequest&& value) {
-  return ::test_protocols::TransitionalEventRequest({{
+  return ::test_protocols::TransitionalEventRequest{{
       .x = ::fidl::HLCPPToNatural(std::move(value.x)),
-  }});
+  }};
 }
 ::test::protocols::MethodWithUnionUnionMethodRequest NaturalToHLCPPTraits<::test_protocols::MethodWithUnionUnionMethodRequest>::Convert(::test_protocols::MethodWithUnionUnionMethodRequest&& value) {
   ::test::protocols::MethodWithUnionUnionMethodRequest hlcpp;
@@ -987,9 +987,9 @@ struct HLCPPToNaturalTraits<::test::protocols::WithErrorSyntax_ErrorAsEnum_Resul
 }
 
 ::test_protocols::MethodWithUnionUnionMethodRequest HLCPPToNaturalTraits<::test::protocols::MethodWithUnionUnionMethodRequest>::Convert(::test::protocols::MethodWithUnionUnionMethodRequest&& value) {
-  return ::test_protocols::MethodWithUnionUnionMethodRequest({{
+  return ::test_protocols::MethodWithUnionUnionMethodRequest{{
       .u = ::fidl::HLCPPToNatural(std::move(value.u)),
-  }});
+  }};
 }
 ::test::protocols::SyscallProtocolMethodCRequest NaturalToHLCPPTraits<::test_protocols::SyscallProtocolMethodCRequest>::Convert(::test_protocols::SyscallProtocolMethodCRequest&& value) {
   ::test::protocols::SyscallProtocolMethodCRequest hlcpp;
@@ -999,10 +999,10 @@ struct HLCPPToNaturalTraits<::test::protocols::WithErrorSyntax_ErrorAsEnum_Resul
 }
 
 ::test_protocols::SyscallProtocolMethodCRequest HLCPPToNaturalTraits<::test::protocols::SyscallProtocolMethodCRequest>::Convert(::test::protocols::SyscallProtocolMethodCRequest&& value) {
-  return ::test_protocols::SyscallProtocolMethodCRequest({{
+  return ::test_protocols::SyscallProtocolMethodCRequest{{
       .a = ::fidl::HLCPPToNatural(std::move(value.a)),
       .b = ::fidl::HLCPPToNatural(std::move(value.b)),
-  }});
+  }};
 }
 ::test::protocols::ProtocolEnds NaturalToHLCPPTraits<::test_protocols::ProtocolEnds>::Convert(::test_protocols::ProtocolEnds&& value) {
   ::test::protocols::ProtocolEnds hlcpp;
@@ -1014,12 +1014,12 @@ struct HLCPPToNaturalTraits<::test::protocols::WithErrorSyntax_ErrorAsEnum_Resul
 }
 
 ::test_protocols::ProtocolEnds HLCPPToNaturalTraits<::test::protocols::ProtocolEnds>::Convert(::test::protocols::ProtocolEnds&& value) {
-  return ::test_protocols::ProtocolEnds({{
+  return ::test_protocols::ProtocolEnds{{
       .client = ::fidl::HLCPPToNatural(std::move(value.client)),
       .server = ::fidl::HLCPPToNatural(std::move(value.server)),
       .client_opt = ::fidl::HLCPPToNatural(std::move(value.client_opt)),
       .server_opt = ::fidl::HLCPPToNatural(std::move(value.server_opt)),
-  }});
+  }};
 }
 ::test::protocols::WithProtocolEndsStructContainingEndsTopResponse NaturalToHLCPPTraits<::test_protocols::WithProtocolEndsStructContainingEndsTopResponse>::Convert(::test_protocols::WithProtocolEndsStructContainingEndsTopResponse&& value) {
   ::test::protocols::WithProtocolEndsStructContainingEndsTopResponse hlcpp;
@@ -1028,9 +1028,9 @@ struct HLCPPToNaturalTraits<::test::protocols::WithErrorSyntax_ErrorAsEnum_Resul
 }
 
 ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse HLCPPToNaturalTraits<::test::protocols::WithProtocolEndsStructContainingEndsTopResponse>::Convert(::test::protocols::WithProtocolEndsStructContainingEndsTopResponse&& value) {
-  return ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse({{
+  return ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse{{
       .out = ::fidl::HLCPPToNatural(std::move(value.out)),
-  }});
+  }};
 }
 ::test::protocols::WithProtocolEndsStructContainingEndsRequest NaturalToHLCPPTraits<::test_protocols::WithProtocolEndsStructContainingEndsRequest>::Convert(::test_protocols::WithProtocolEndsStructContainingEndsRequest&& value) {
   ::test::protocols::WithProtocolEndsStructContainingEndsRequest hlcpp;
@@ -1039,9 +1039,9 @@ struct HLCPPToNaturalTraits<::test::protocols::WithErrorSyntax_ErrorAsEnum_Resul
 }
 
 ::test_protocols::WithProtocolEndsStructContainingEndsRequest HLCPPToNaturalTraits<::test::protocols::WithProtocolEndsStructContainingEndsRequest>::Convert(::test::protocols::WithProtocolEndsStructContainingEndsRequest&& value) {
-  return ::test_protocols::WithProtocolEndsStructContainingEndsRequest({{
+  return ::test_protocols::WithProtocolEndsStructContainingEndsRequest{{
       .in = ::fidl::HLCPPToNatural(std::move(value.in)),
-  }});
+  }};
 }
 ::test::protocols::MethodWithUnionUnionMethodTopResponse NaturalToHLCPPTraits<::test_protocols::MethodWithUnionUnionMethodTopResponse>::Convert(::test_protocols::MethodWithUnionUnionMethodTopResponse&& value) {
   ::test::protocols::MethodWithUnionUnionMethodTopResponse hlcpp;
@@ -1050,9 +1050,9 @@ struct HLCPPToNaturalTraits<::test::protocols::WithErrorSyntax_ErrorAsEnum_Resul
 }
 
 ::test_protocols::MethodWithUnionUnionMethodTopResponse HLCPPToNaturalTraits<::test::protocols::MethodWithUnionUnionMethodTopResponse>::Convert(::test::protocols::MethodWithUnionUnionMethodTopResponse&& value) {
-  return ::test_protocols::MethodWithUnionUnionMethodTopResponse({{
+  return ::test_protocols::MethodWithUnionUnionMethodTopResponse{{
       .u = ::fidl::HLCPPToNatural(std::move(value.u)),
-  }});
+  }};
 }
 ::test::protocols::ManyParametersFifteenRequest NaturalToHLCPPTraits<::test_protocols::ManyParametersFifteenRequest>::Convert(::test_protocols::ManyParametersFifteenRequest&& value) {
   ::test::protocols::ManyParametersFifteenRequest hlcpp;
@@ -1075,7 +1075,7 @@ struct HLCPPToNaturalTraits<::test::protocols::WithErrorSyntax_ErrorAsEnum_Resul
 }
 
 ::test_protocols::ManyParametersFifteenRequest HLCPPToNaturalTraits<::test::protocols::ManyParametersFifteenRequest>::Convert(::test::protocols::ManyParametersFifteenRequest&& value) {
-  return ::test_protocols::ManyParametersFifteenRequest({{
+  return ::test_protocols::ManyParametersFifteenRequest{{
       .p1 = ::fidl::HLCPPToNatural(std::move(value.p1)),
       .p2 = ::fidl::HLCPPToNatural(std::move(value.p2)),
       .p3 = ::fidl::HLCPPToNatural(std::move(value.p3)),
@@ -1091,7 +1091,7 @@ struct HLCPPToNaturalTraits<::test::protocols::WithErrorSyntax_ErrorAsEnum_Resul
       .p13 = ::fidl::HLCPPToNatural(std::move(value.p13)),
       .p14 = ::fidl::HLCPPToNatural(std::move(value.p14)),
       .p15 = ::fidl::HLCPPToNatural(std::move(value.p15)),
-  }});
+  }};
 }
 ::test::protocols::HandleRightsProtocolResponseMethodTopResponse NaturalToHLCPPTraits<::test_protocols::HandleRightsProtocolResponseMethodTopResponse>::Convert(::test_protocols::HandleRightsProtocolResponseMethodTopResponse&& value) {
   ::test::protocols::HandleRightsProtocolResponseMethodTopResponse hlcpp;
@@ -1100,9 +1100,9 @@ struct HLCPPToNaturalTraits<::test::protocols::WithErrorSyntax_ErrorAsEnum_Resul
 }
 
 ::test_protocols::HandleRightsProtocolResponseMethodTopResponse HLCPPToNaturalTraits<::test::protocols::HandleRightsProtocolResponseMethodTopResponse>::Convert(::test::protocols::HandleRightsProtocolResponseMethodTopResponse&& value) {
-  return ::test_protocols::HandleRightsProtocolResponseMethodTopResponse({{
+  return ::test_protocols::HandleRightsProtocolResponseMethodTopResponse{{
       .h = ::fidl::HLCPPToNatural(std::move(value.h)),
-  }});
+  }};
 }
 ::test::protocols::HandleRightsProtocolResponseMethodRequest NaturalToHLCPPTraits<::test_protocols::HandleRightsProtocolResponseMethodRequest>::Convert(::test_protocols::HandleRightsProtocolResponseMethodRequest&& value) {
   ::test::protocols::HandleRightsProtocolResponseMethodRequest hlcpp;
@@ -1111,9 +1111,9 @@ struct HLCPPToNaturalTraits<::test::protocols::WithErrorSyntax_ErrorAsEnum_Resul
 }
 
 ::test_protocols::HandleRightsProtocolResponseMethodRequest HLCPPToNaturalTraits<::test::protocols::HandleRightsProtocolResponseMethodRequest>::Convert(::test::protocols::HandleRightsProtocolResponseMethodRequest&& value) {
-  return ::test_protocols::HandleRightsProtocolResponseMethodRequest({{
+  return ::test_protocols::HandleRightsProtocolResponseMethodRequest{{
       .h = ::fidl::HLCPPToNatural(std::move(value.h)),
-  }});
+  }};
 }
 ::test::protocols::HandleRightsProtocolNoResponseMethodRequest NaturalToHLCPPTraits<::test_protocols::HandleRightsProtocolNoResponseMethodRequest>::Convert(::test_protocols::HandleRightsProtocolNoResponseMethodRequest&& value) {
   ::test::protocols::HandleRightsProtocolNoResponseMethodRequest hlcpp;
@@ -1122,9 +1122,9 @@ struct HLCPPToNaturalTraits<::test::protocols::WithErrorSyntax_ErrorAsEnum_Resul
 }
 
 ::test_protocols::HandleRightsProtocolNoResponseMethodRequest HLCPPToNaturalTraits<::test::protocols::HandleRightsProtocolNoResponseMethodRequest>::Convert(::test::protocols::HandleRightsProtocolNoResponseMethodRequest&& value) {
-  return ::test_protocols::HandleRightsProtocolNoResponseMethodRequest({{
+  return ::test_protocols::HandleRightsProtocolNoResponseMethodRequest{{
       .h = ::fidl::HLCPPToNatural(std::move(value.h)),
-  }});
+  }};
 }
 ::test::protocols::HandleRightsProtocolAnEventRequest NaturalToHLCPPTraits<::test_protocols::HandleRightsProtocolAnEventRequest>::Convert(::test_protocols::HandleRightsProtocolAnEventRequest&& value) {
   ::test::protocols::HandleRightsProtocolAnEventRequest hlcpp;
@@ -1133,9 +1133,9 @@ struct HLCPPToNaturalTraits<::test::protocols::WithErrorSyntax_ErrorAsEnum_Resul
 }
 
 ::test_protocols::HandleRightsProtocolAnEventRequest HLCPPToNaturalTraits<::test::protocols::HandleRightsProtocolAnEventRequest>::Convert(::test::protocols::HandleRightsProtocolAnEventRequest&& value) {
-  return ::test_protocols::HandleRightsProtocolAnEventRequest({{
+  return ::test_protocols::HandleRightsProtocolAnEventRequest{{
       .h = ::fidl::HLCPPToNatural(std::move(value.h)),
-  }});
+  }};
 }
 ::test::protocols::WithErrorSyntaxErrorAsEnumTopResponse NaturalToHLCPPTraits<::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse>::Convert(::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse&& value) {
   ::test::protocols::WithErrorSyntaxErrorAsEnumTopResponse hlcpp;
@@ -1144,9 +1144,9 @@ struct HLCPPToNaturalTraits<::test::protocols::WithErrorSyntax_ErrorAsEnum_Resul
 }
 
 ::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse HLCPPToNaturalTraits<::test::protocols::WithErrorSyntaxErrorAsEnumTopResponse>::Convert(::test::protocols::WithErrorSyntaxErrorAsEnumTopResponse&& value) {
-  return ::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse({{
+  return ::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse{{
       .result = ::fidl::HLCPPToNatural(std::move(value.result)),
-  }});
+  }};
 }
 ::test::protocols::ChannelProtocolTakeHandleRequest NaturalToHLCPPTraits<::test_protocols::ChannelProtocolTakeHandleRequest>::Convert(::test_protocols::ChannelProtocolTakeHandleRequest&& value) {
   ::test::protocols::ChannelProtocolTakeHandleRequest hlcpp;
@@ -1155,9 +1155,9 @@ struct HLCPPToNaturalTraits<::test::protocols::WithErrorSyntax_ErrorAsEnum_Resul
 }
 
 ::test_protocols::ChannelProtocolTakeHandleRequest HLCPPToNaturalTraits<::test::protocols::ChannelProtocolTakeHandleRequest>::Convert(::test::protocols::ChannelProtocolTakeHandleRequest&& value) {
-  return ::test_protocols::ChannelProtocolTakeHandleRequest({{
+  return ::test_protocols::ChannelProtocolTakeHandleRequest{{
       .h = ::fidl::HLCPPToNatural(std::move(value.h)),
-  }});
+  }};
 }
 ::test::protocols::ChannelProtocolMutateSocketTopResponse NaturalToHLCPPTraits<::test_protocols::ChannelProtocolMutateSocketTopResponse>::Convert(::test_protocols::ChannelProtocolMutateSocketTopResponse&& value) {
   ::test::protocols::ChannelProtocolMutateSocketTopResponse hlcpp;
@@ -1166,9 +1166,9 @@ struct HLCPPToNaturalTraits<::test::protocols::WithErrorSyntax_ErrorAsEnum_Resul
 }
 
 ::test_protocols::ChannelProtocolMutateSocketTopResponse HLCPPToNaturalTraits<::test::protocols::ChannelProtocolMutateSocketTopResponse>::Convert(::test::protocols::ChannelProtocolMutateSocketTopResponse&& value) {
-  return ::test_protocols::ChannelProtocolMutateSocketTopResponse({{
+  return ::test_protocols::ChannelProtocolMutateSocketTopResponse{{
       .b = ::fidl::HLCPPToNatural(std::move(value.b)),
-  }});
+  }};
 }
 ::test::protocols::ChannelProtocolMutateSocketRequest NaturalToHLCPPTraits<::test_protocols::ChannelProtocolMutateSocketRequest>::Convert(::test_protocols::ChannelProtocolMutateSocketRequest&& value) {
   ::test::protocols::ChannelProtocolMutateSocketRequest hlcpp;
@@ -1177,9 +1177,9 @@ struct HLCPPToNaturalTraits<::test::protocols::WithErrorSyntax_ErrorAsEnum_Resul
 }
 
 ::test_protocols::ChannelProtocolMutateSocketRequest HLCPPToNaturalTraits<::test::protocols::ChannelProtocolMutateSocketRequest>::Convert(::test::protocols::ChannelProtocolMutateSocketRequest&& value) {
-  return ::test_protocols::ChannelProtocolMutateSocketRequest({{
+  return ::test_protocols::ChannelProtocolMutateSocketRequest{{
       .a = ::fidl::HLCPPToNatural(std::move(value.a)),
-  }});
+  }};
 }
 ::test::protocols::ChannelProtocolMethodBTopResponse NaturalToHLCPPTraits<::test_protocols::ChannelProtocolMethodBTopResponse>::Convert(::test_protocols::ChannelProtocolMethodBTopResponse&& value) {
   ::test::protocols::ChannelProtocolMethodBTopResponse hlcpp;
@@ -1188,9 +1188,9 @@ struct HLCPPToNaturalTraits<::test::protocols::WithErrorSyntax_ErrorAsEnum_Resul
 }
 
 ::test_protocols::ChannelProtocolMethodBTopResponse HLCPPToNaturalTraits<::test::protocols::ChannelProtocolMethodBTopResponse>::Convert(::test::protocols::ChannelProtocolMethodBTopResponse&& value) {
-  return ::test_protocols::ChannelProtocolMethodBTopResponse({{
+  return ::test_protocols::ChannelProtocolMethodBTopResponse{{
       .result = ::fidl::HLCPPToNatural(std::move(value.result)),
-  }});
+  }};
 }
 ::test::protocols::ChannelProtocolMethodBRequest NaturalToHLCPPTraits<::test_protocols::ChannelProtocolMethodBRequest>::Convert(::test_protocols::ChannelProtocolMethodBRequest&& value) {
   ::test::protocols::ChannelProtocolMethodBRequest hlcpp;
@@ -1200,10 +1200,10 @@ struct HLCPPToNaturalTraits<::test::protocols::WithErrorSyntax_ErrorAsEnum_Resul
 }
 
 ::test_protocols::ChannelProtocolMethodBRequest HLCPPToNaturalTraits<::test::protocols::ChannelProtocolMethodBRequest>::Convert(::test::protocols::ChannelProtocolMethodBRequest&& value) {
-  return ::test_protocols::ChannelProtocolMethodBRequest({{
+  return ::test_protocols::ChannelProtocolMethodBRequest{{
       .a = ::fidl::HLCPPToNatural(std::move(value.a)),
       .b = ::fidl::HLCPPToNatural(std::move(value.b)),
-  }});
+  }};
 }
 ::test::protocols::ChannelProtocolMethodARequest NaturalToHLCPPTraits<::test_protocols::ChannelProtocolMethodARequest>::Convert(::test_protocols::ChannelProtocolMethodARequest&& value) {
   ::test::protocols::ChannelProtocolMethodARequest hlcpp;
@@ -1213,10 +1213,10 @@ struct HLCPPToNaturalTraits<::test::protocols::WithErrorSyntax_ErrorAsEnum_Resul
 }
 
 ::test_protocols::ChannelProtocolMethodARequest HLCPPToNaturalTraits<::test::protocols::ChannelProtocolMethodARequest>::Convert(::test::protocols::ChannelProtocolMethodARequest&& value) {
-  return ::test_protocols::ChannelProtocolMethodARequest({{
+  return ::test_protocols::ChannelProtocolMethodARequest{{
       .a = ::fidl::HLCPPToNatural(std::move(value.a)),
       .b = ::fidl::HLCPPToNatural(std::move(value.b)),
-  }});
+  }};
 }
 ::test::protocols::ChannelProtocolEventARequest NaturalToHLCPPTraits<::test_protocols::ChannelProtocolEventARequest>::Convert(::test_protocols::ChannelProtocolEventARequest&& value) {
   ::test::protocols::ChannelProtocolEventARequest hlcpp;
@@ -1226,10 +1226,10 @@ struct HLCPPToNaturalTraits<::test::protocols::WithErrorSyntax_ErrorAsEnum_Resul
 }
 
 ::test_protocols::ChannelProtocolEventARequest HLCPPToNaturalTraits<::test::protocols::ChannelProtocolEventARequest>::Convert(::test::protocols::ChannelProtocolEventARequest&& value) {
-  return ::test_protocols::ChannelProtocolEventARequest({{
+  return ::test_protocols::ChannelProtocolEventARequest{{
       .a = ::fidl::HLCPPToNatural(std::move(value.a)),
       .b = ::fidl::HLCPPToNatural(std::move(value.b)),
-  }});
+  }};
 }
 
 ::test::protocols::WithErrorSyntax_ResponseAsStruct_Result NaturalToHLCPPTraits<::test_protocols::WithErrorSyntaxResponseAsStructResult>::Convert(::test_protocols::WithErrorSyntaxResponseAsStructResult&& value) {

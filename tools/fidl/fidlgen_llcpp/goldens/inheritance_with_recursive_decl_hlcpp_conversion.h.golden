@@ -101,9 +101,9 @@ struct HLCPPToNaturalTraits<::test::inheritancewithrecursivedecl::ChildSecondReq
 }
 
 ::test_inheritancewithrecursivedecl::ParentFirstRequest HLCPPToNaturalTraits<::test::inheritancewithrecursivedecl::ParentFirstRequest>::Convert(::test::inheritancewithrecursivedecl::ParentFirstRequest&& value) {
-  return ::test_inheritancewithrecursivedecl::ParentFirstRequest({{
+  return ::test_inheritancewithrecursivedecl::ParentFirstRequest{{
       .request = ::fidl::HLCPPToNatural(std::move(value.request)),
-  }});
+  }};
 }
 ::test::inheritancewithrecursivedecl::ChildSecondRequest NaturalToHLCPPTraits<::test_inheritancewithrecursivedecl::ChildSecondRequest>::Convert(::test_inheritancewithrecursivedecl::ChildSecondRequest&& value) {
   ::test::inheritancewithrecursivedecl::ChildSecondRequest hlcpp;
@@ -112,9 +112,9 @@ struct HLCPPToNaturalTraits<::test::inheritancewithrecursivedecl::ChildSecondReq
 }
 
 ::test_inheritancewithrecursivedecl::ChildSecondRequest HLCPPToNaturalTraits<::test::inheritancewithrecursivedecl::ChildSecondRequest>::Convert(::test::inheritancewithrecursivedecl::ChildSecondRequest&& value) {
-  return ::test_inheritancewithrecursivedecl::ChildSecondRequest({{
+  return ::test_inheritancewithrecursivedecl::ChildSecondRequest{{
       .request = ::fidl::HLCPPToNatural(std::move(value.request)),
-  }});
+  }};
 }
 
 }  // namespace internal

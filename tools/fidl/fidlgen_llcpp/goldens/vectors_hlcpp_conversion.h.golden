@@ -29,10 +29,10 @@ struct HLCPPToNaturalTraits<::test::vectors::ExampleUseOfVectors> {
 }
 
 ::test_vectors::ExampleUseOfVectors HLCPPToNaturalTraits<::test::vectors::ExampleUseOfVectors>::Convert(::test::vectors::ExampleUseOfVectors&& value) {
-  return ::test_vectors::ExampleUseOfVectors({{
+  return ::test_vectors::ExampleUseOfVectors{{
       .vector_of_uint8 = ::fidl::HLCPPToNatural(std::move(value.vector_of_uint8)),
       .vector_of_vector_of_bool = ::fidl::HLCPPToNatural(std::move(value.vector_of_vector_of_bool)),
-  }});
+  }};
 }
 
 }  // namespace internal
