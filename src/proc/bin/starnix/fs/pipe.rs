@@ -261,6 +261,9 @@ impl FileOps for PipeFileObject {
             assert!(pipe.writer_count > 0);
             pipe.writer_count -= 1;
             if pipe.writer_count == 0 {
+                if pipe.reader_count > 0 {
+                    events |= FdEvents::POLLHUP;
+                }
                 events |= FdEvents::POLLIN;
             }
         }

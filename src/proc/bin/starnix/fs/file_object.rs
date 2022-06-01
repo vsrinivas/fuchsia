@@ -820,9 +820,6 @@ impl FileObject {
     }
 
     /// Wait on the specified events and call the EventHandler when ready
-    ///
-    /// - `options`: Can be 0 or EPOLLET, which will ignore events active
-    ///              at the time of the call to `wait_async()`.
     pub fn wait_async(
         &self,
         current_task: &CurrentTask,
