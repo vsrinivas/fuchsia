@@ -605,7 +605,7 @@ Now that you have added Inspect to your component, you can read what it says:
    * {C++}
 
       ```
-      $ ffx inspect -f json show 'core/ffx-laboratory\:client_part_1/reverser'
+      $ ffx --machine json-pretty inspect show 'core/ffx-laboratory\:client_part_1/reverser'
       [
         {
           "data_source": "Inspect",
@@ -628,7 +628,7 @@ Now that you have added Inspect to your component, you can read what it says:
    * {Rust}
 
       ```
-      $ ffx inspect -f json show 'core/ffx-laboratory\:client_part_1/reverser'
+      $ ffx --machine json-pretty inspect show 'core/ffx-laboratory\:client_part_1/reverser'
       [
         {
           "data_source": "Inspect",
@@ -651,7 +651,7 @@ Now that you have added Inspect to your component, you can read what it says:
    * {Dart}
 
       ```
-      $ ffx inspect -f json show 'codelab_*/inspect_dart_codelab_part_1.cmx'
+      $ ffx --machine json-pretty inspect show 'codelab_*/inspect_dart_codelab_part_1.cmx'
       [
         {
           "data_source": "Inspect",
@@ -779,19 +779,19 @@ is even being handled by your component.
    * {C++}
 
       ```
-      $ ffx inspect -f json show --manifest inspect_cpp_codelab
+      $ ffx --machine json-pretty inspect show --manifest inspect_cpp_codelab
       ```
 
    * {Rust}
 
       ```
-      $ ffx inspect -f json show --manifest inspect_rust_codelab
+      $ ffx --machine json-pretty inspect show --manifest inspect_rust_codelab
       ```
 
    * {Dart}
 
       ```
-      $ ffx inspect -f json show --manifest inspect_dart_codelab_part_1
+      $ ffx --machine json-pretty inspect show --manifest inspect_dart_codelab_part_1
       ```
 
    You should now see:
