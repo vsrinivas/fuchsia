@@ -254,6 +254,7 @@ zx_status_t usb_request_physmap(usb_request_t* req, zx_handle_t bti_handle) {
   const size_t pin_length = USB_ROUNDUP(page_length + sub_offset, kPageSize);
 
   if (pin_length / kPageSize != pages) {
+    free(paddrs);
     return ZX_ERR_INVALID_ARGS;
   }
   zx_handle_t pmt;
