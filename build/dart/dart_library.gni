@@ -36,7 +36,8 @@ declare_args() {
 #
 #   package_name (optional)
 #     Name of the Dart package. This is used as an identifier in code that
-#     depends on this library.
+#     depends on this library. Must be a valid Dart package name, so for
+#     example "some_name" is OK, but "some-name" is not.
 #
 #   language_version (optional)
 #     Specify the Dart language version to use for this package.
