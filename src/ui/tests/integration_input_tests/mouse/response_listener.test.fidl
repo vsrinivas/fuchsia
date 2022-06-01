@@ -18,6 +18,12 @@ type PointerData = table {
 
     // Name of the component to help distinguish responses from multiple components.
     4: component_name string:1024;
+
+    /// The pressed buttons that were received by the client.
+    5: buttons int64;
+
+    /// The type that the client has reported with the pointer data.
+    6: type string;
 };
 
 /// A test-specific scheme to gather signal from the client-under-test.

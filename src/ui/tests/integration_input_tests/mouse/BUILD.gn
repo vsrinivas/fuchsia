@@ -32,6 +32,7 @@ executable("mouse-input-test-bin") {
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.tracing.provider",
     "//sdk/fidl/fuchsia.ui.app",
+    "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.vulkan.loader",
     "//sdk/fidl/fuchsia.web",
