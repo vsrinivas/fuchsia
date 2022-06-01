@@ -250,8 +250,23 @@
     }
   },
   {
+    "type": "PlatformMetrics",
+    "name": "platform_metrics",
+    "config": {
+      "cpu_temperature_poll_interval_s": 1,
+      "throttle_debounce_timeout_s": 60
+    },
+    "dependencies": {
+      "cpu_temperature_handler_node": "temperature_soc_pll",
+      "crash_report_handler_node": "crash_handler"
+    }
+  },
+  {
     "type": "ThermalStateHandler",
-    "name": "thermal_state_handler"
+    "name": "thermal_state_handler",
+    "dependencies": {
+      "platform_metrics_node": "platform_metrics"
+    }
   },
   {
     "type": "ThermalLoadDriver",
@@ -275,18 +290,6 @@
       "temperature_handler_node_names": [
         "temperature_soc_pll"
       ]
-    }
-  },
-  {
-    "type": "PlatformMetrics",
-    "name": "platform_metrics",
-    "config": {
-      "cpu_temperature_poll_interval_s": 1,
-      "throttle_debounce_timeout_s": 60
-    },
-    "dependencies": {
-      "cpu_temperature_handler_node": "temperature_soc_pll",
-      "crash_report_handler_node": "crash_handler"
     }
   },
   {

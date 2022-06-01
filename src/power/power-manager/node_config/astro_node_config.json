@@ -78,10 +78,6 @@
     }
   },
   {
-    "type": "ThermalStateHandler",
-    "name": "thermal_state_handler"
-  },
-  {
     "type": "PlatformMetrics",
     "name": "platform_metrics",
     "config": {
@@ -91,6 +87,13 @@
     "dependencies": {
       "cpu_temperature_handler_node": "temperature_soc_pll",
       "crash_report_handler_node": "crash_handler"
+    }
+  },
+  {
+    "type": "ThermalStateHandler",
+    "name": "thermal_state_handler",
+    "dependencies": {
+      "platform_metrics_node": "platform_metrics"
     }
   },
   {

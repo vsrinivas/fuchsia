@@ -79,7 +79,10 @@
   },
   {
     "type": "ThermalStateHandler",
-    "name": "thermal_state_handler"
+    "name": "thermal_state_handler",
+    "dependencies": {
+      "platform_metrics_node": "platform_metrics"
+    }
   },
   {
     "type": "ThermalLoadDriver",

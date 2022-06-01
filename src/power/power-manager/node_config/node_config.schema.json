@@ -847,12 +847,25 @@
           },
           "name": {
             "type": "string"
+          },
+          "dependencies": {
+            "type": "object",
+            "properties": {
+              "platform_metrics_node": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "platform_metrics_node"
+            ]
           }
         },
         "additionalProperties": false,
         "required": [
           "type",
-          "name"
+          "name",
+          "dependencies"
         ]
       }
     ]

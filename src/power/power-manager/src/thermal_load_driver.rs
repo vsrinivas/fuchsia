@@ -169,7 +169,6 @@ impl ThermalLoadDriver {
 
             let mut periodic_timer = fasync::Interval::new(config.poll_interval.into());
             let temperature_input = TemperatureInput::new(config);
-            let mut cached_thermal_load = ThermalLoad(0);
 
             // Enter the timer-based polling loop...
             while let Some(()) = periodic_timer.next().await {
@@ -186,27 +185,24 @@ impl ThermalLoadDriver {
                     }
                 };
 
-                if new_thermal_load != cached_thermal_load {
-                    cached_thermal_load = new_thermal_load;
-                    inspect.log_thermal_load(new_thermal_load);
+                inspect.log_thermal_load(new_thermal_load);
 
-                    if new_thermal_load >= ThermalLoad(100) {
-                        log_if_err!(
-                            this.initiate_thermal_shutdown().await,
-                            "Failed to initiate thermal shutdown"
-                        );
-                    } else {
-                        log_if_err!(
-                            this.send_message_to_many(
-                                &this.thermal_load_notify_nodes,
-                                &Message::UpdateThermalLoad(new_thermal_load, sensor_path.clone())
-                            )
-                            .await
-                            .into_iter()
-                            .collect::<Result<Vec<_>, _>>(),
-                            "Failed to send thermal load update"
-                        );
-                    }
+                if new_thermal_load >= ThermalLoad(100) {
+                    log_if_err!(
+                        this.initiate_thermal_shutdown().await,
+                        "Failed to initiate thermal shutdown"
+                    );
+                } else {
+                    log_if_err!(
+                        this.send_message_to_many(
+                            &this.thermal_load_notify_nodes,
+                            &Message::UpdateThermalLoad(new_thermal_load, sensor_path.clone())
+                        )
+                        .await
+                        .into_iter()
+                        .collect::<Result<Vec<_>, _>>(),
+                        "Failed to send thermal load update"
+                    );
                 }
             }
 
@@ -583,13 +579,17 @@ mod tests {
 
         // Increase mock_1 temperature, expect a corresponding thermal load update
         expect_thermal_load(&mock_thermal_load_receiver, 20, "fake_driver_path_1");
+        expect_thermal_load(&mock_thermal_load_receiver, 0, "fake_driver_path_2");
         node_runner.iterate_with_temperature_inputs(&[10.0, 0.0]);
 
         // Increase mock_2 temperature, expect a corresponding thermal load update
+        expect_thermal_load(&mock_thermal_load_receiver, 20, "fake_driver_path_1");
         expect_thermal_load(&mock_thermal_load_receiver, 40, "fake_driver_path_2");
         node_runner.iterate_with_temperature_inputs(&[10.0, 40.0]);
 
-        // Both temperatures remain constant, expect no thermal load update
+        // Both temperatures remain constant, thermal load should still be sent
+        expect_thermal_load(&mock_thermal_load_receiver, 20, "fake_driver_path_1");
+        expect_thermal_load(&mock_thermal_load_receiver, 40, "fake_driver_path_2");
         node_runner.iterate_with_temperature_inputs(&[10.0, 40.0]);
 
         // Decrease temperature for both mocks, expect two corresponding thermal load updates

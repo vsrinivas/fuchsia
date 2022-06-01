@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 use crate::error::PowerManagerError;
+use crate::log_if_err;
 use crate::message::{Message, MessageReturn};
 use crate::node::Node;
+use crate::platform_metrics::PlatformMetric;
 use crate::types::ThermalLoad;
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
@@ -16,6 +18,7 @@ use fuchsia_inspect::{self as inspect, NumericProperty, Property};
 use futures::prelude::*;
 use futures::TryStreamExt;
 use log::*;
+use serde_derive::Deserialize;
 use serde_json as json;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -38,7 +41,8 @@ use thermal_config::{ClientConfig, ThermalConfig};
 /// Handles Messages:
 ///   - UpdateThermalLoad
 ///
-/// Sends Messages: N/A
+/// Sends Messages:
+///   - LogPlatformMetric
 ///
 /// FIDL dependencies:
 ///   - fuchsia.thermal.ClientStateConnector: the node hosts this service to allow thermal clients
@@ -53,41 +57,35 @@ pub struct ThermalStateHandlerBuilder<'a, 'b> {
     thermal_config: Option<ThermalConfig>,
     outgoing_svc_dir: Option<ServiceFsDir<'a, ServiceObjLocal<'b, ()>>>,
     inspect_root: Option<&'a inspect::Node>,
+    platform_metrics: Rc<dyn Node>,
 }
 
 impl<'a, 'b> ThermalStateHandlerBuilder<'a, 'b> {
     const THERMAL_CONFIG_PATH: &'static str = "/pkg/config/power_manager/thermal_config.json";
 
-    pub fn new() -> Self {
-        Self { thermal_config: None, outgoing_svc_dir: None, inspect_root: None }
-    }
-
     pub fn new_from_json(
-        _json_data: json::Value,
-        _nodes: &HashMap<String, Rc<dyn Node>>,
+        json_data: json::Value,
+        nodes: &HashMap<String, Rc<dyn Node>>,
         service_fs: &'a mut ServiceFs<ServiceObjLocal<'b, ()>>,
     ) -> Self {
-        Self::new().with_outgoing_svc_dir(service_fs.dir("svc"))
-    }
+        #[derive(Deserialize)]
+        struct Dependencies {
+            platform_metrics_node: String,
+        }
 
-    pub fn with_outgoing_svc_dir(
-        mut self,
-        outgoing_svc_dir: ServiceFsDir<'a, ServiceObjLocal<'b, ()>>,
-    ) -> Self {
-        self.outgoing_svc_dir = Some(outgoing_svc_dir);
-        self
-    }
+        #[derive(Deserialize)]
+        struct JsonData {
+            dependencies: Dependencies,
+        }
 
-    #[cfg(test)]
-    pub fn with_inspect_root(mut self, root: &'a inspect::Node) -> Self {
-        self.inspect_root = Some(root);
-        self
-    }
+        let data: JsonData = json::from_value(json_data).unwrap();
 
-    #[cfg(test)]
-    fn with_thermal_config(mut self, thermal_config: ThermalConfig) -> Self {
-        self.thermal_config = Some(thermal_config);
-        self
+        Self {
+            thermal_config: None,
+            outgoing_svc_dir: Some(service_fs.dir("svc")),
+            inspect_root: None,
+            platform_metrics: nodes[&data.dependencies.platform_metrics_node].clone(),
+        }
     }
 
     pub fn build(self) -> Result<Rc<ThermalStateHandler>, Error> {
@@ -104,8 +102,12 @@ impl<'a, 'b> ThermalStateHandlerBuilder<'a, 'b> {
             None => ThermalConfig::read(&Path::new(Self::THERMAL_CONFIG_PATH))?,
         };
 
+        let metrics_tracker =
+            MetricsTracker::new(inspect.create_child("ThermalLoadStates"), self.platform_metrics);
+
         let node = Rc::new(ThermalStateHandler {
             client_states: ClientStates::new(thermal_config, &inspect),
+            metrics_tracker: RefCell::new(metrics_tracker),
             _inspect: inspect,
         });
 
@@ -122,6 +124,10 @@ impl<'a, 'b> ThermalStateHandlerBuilder<'a, 'b> {
 pub struct ThermalStateHandler {
     /// Configuration and state for all supported thermal clients.
     client_states: ClientStates,
+
+    /// Records metrics around thermal load and throttling state, forwarding them along to the
+    /// PlatformMetrics node.
+    metrics_tracker: RefCell<MetricsTracker>,
 
     /// Root inspect node for the ThermalStateHandler.
     _inspect: inspect::Node,
@@ -465,7 +471,7 @@ impl ThermalStateHandler {
     ///
     /// The new thermal load is checked for validity then passed on to each `ClientState` entry for
     /// further processing.
-    fn handle_update_thermal_load(
+    async fn handle_update_thermal_load(
         &self,
         thermal_load: ThermalLoad,
         sensor: &str,
@@ -485,7 +491,10 @@ impl ThermalStateHandler {
             )));
         }
 
-        self.client_states.process_new_thermal_load(thermal_load, sensor);
+        // `log_thermal_load` returns true if thermal load for this sensor has changed
+        if self.metrics_tracker.borrow_mut().log_thermal_load(sensor, thermal_load).await {
+            self.client_states.process_new_thermal_load(thermal_load, sensor);
+        }
 
         Ok(MessageReturn::UpdateThermalLoad)
     }
@@ -500,16 +509,110 @@ impl Node for ThermalStateHandler {
     async fn handle_message(&self, msg: &Message) -> Result<MessageReturn, PowerManagerError> {
         match msg {
             Message::UpdateThermalLoad(thermal_load, sensor) => {
-                self.handle_update_thermal_load(*thermal_load, sensor)
+                self.handle_update_thermal_load(*thermal_load, sensor).await
             }
             _ => Err(PowerManagerError::Unsupported),
         }
     }
 }
 
+struct MetricsTracker {
+    platform_metrics: Rc<dyn Node>,
+    root_node: inspect::Node,
+    per_sensor_metrics: HashMap<String, PerSensorMetrics>,
+    throttling_active: bool,
+}
+
+impl MetricsTracker {
+    fn new(root_node: inspect::Node, platform_metrics: Rc<dyn Node>) -> Self {
+        Self {
+            root_node,
+            platform_metrics,
+            per_sensor_metrics: HashMap::new(),
+            throttling_active: false,
+        }
+    }
+
+    /// Logs a thermal load value for the given sensor.
+    ///
+    /// Returns true if the thermal load has changed for this sensor, otherwise false. Each time
+    /// this function is called, the provided thermal load value is passed on to the PlatformMetrics
+    /// node. If the new thermal load value results in a change in throttling state ("active" or
+    /// "mitigated") then this metric is reported to the PlatformMetrics node as well.
+    async fn log_thermal_load(&mut self, sensor_path: &str, thermal_load: ThermalLoad) -> bool {
+        // Always send the received thermal load value to PlatformMetrics
+        self.log_platform_metric(PlatformMetric::ThermalLoad(
+            thermal_load,
+            sensor_path.to_string(),
+        ))
+        .await;
+
+        let mut per_sensor_metrics = {
+            if let Some(m) = self.per_sensor_metrics.get_mut(sensor_path) {
+                m
+            } else {
+                self.per_sensor_metrics.insert(
+                    sensor_path.to_string(),
+                    PerSensorMetrics {
+                        thermal_load: ThermalLoad(0),
+                        thermal_load_property: self.root_node.create_uint(sensor_path, 0),
+                        throttled: false,
+                    },
+                );
+                self.per_sensor_metrics.get_mut(sensor_path).unwrap()
+            }
+        };
+
+        // Bail if the value hasn't changed
+        if thermal_load == per_sensor_metrics.thermal_load {
+            return false;
+        }
+
+        per_sensor_metrics.thermal_load = thermal_load;
+        per_sensor_metrics.thermal_load_property.set(thermal_load.0.into());
+        per_sensor_metrics.throttled = thermal_load > ThermalLoad(0);
+
+        // If this is a transition of either:
+        //   A) no sensors are throttled --> at least one sensor is throttled, or
+        //   B) at least one sensor is throttled --> no sensors are throttled
+        // then update the PlatformMetrics node with the appropriate PlatformMetric to indicate
+        // "throttling active" or "throttling result mitigated", respectively.
+        let was_throttling_active = self.throttling_active;
+        self.throttling_active = self.per_sensor_metrics.values().any(|m| m.throttled);
+
+        if was_throttling_active != self.throttling_active {
+            let send_metric = if self.throttling_active {
+                PlatformMetric::ThrottlingActive
+            } else {
+                PlatformMetric::ThrottlingResultMitigated
+            };
+            self.log_platform_metric(send_metric).await;
+        }
+
+        true
+    }
+
+    async fn log_platform_metric(&self, metric: PlatformMetric) {
+        let msg = Message::LogPlatformMetric(metric);
+        log_if_err!(
+            self.platform_metrics.handle_message(&msg).await,
+            format!("Failed to log platform metric {:?}", msg)
+        );
+    }
+}
+
+/// Holds the throttle state and thermal load Inspect property for a single temperature sensor.
+struct PerSensorMetrics {
+    thermal_load: ThermalLoad,
+    thermal_load_property: inspect::UintProperty,
+    throttled: bool,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test::mock_node::{create_dummy_node, MessageMatcher, MockNodeMaker};
+    use crate::{msg_eq, msg_ok_return};
     use assert_matches::assert_matches;
     use fuchsia_inspect::assert_data_tree;
     use std::task::Poll;
@@ -595,11 +698,17 @@ mod tests {
     async fn test_new_from_json() {
         let json_data = json::json!({
             "type": "ThermalStateHandler",
-            "name": "thermal_state_handler"
+            "name": "thermal_state_handler",
+            "dependencies": {
+                "platform_metrics_node": "platform_metrics"
+            }
         });
+
+        let mut nodes: HashMap<String, Rc<dyn Node>> = HashMap::new();
+        nodes.insert("platform_metrics".to_string(), create_dummy_node());
         let _ = ThermalStateHandlerBuilder::new_from_json(
             json_data,
-            &HashMap::new(),
+            &nodes,
             &mut ServiceFs::new_local(),
         );
     }
@@ -623,12 +732,14 @@ mod tests {
             );
 
         let inspector = inspect::Inspector::new();
-        let node = ThermalStateHandlerBuilder::new()
-            .with_inspect_root(inspector.root())
-            .with_thermal_config(thermal_config)
-            .with_outgoing_svc_dir(service_fs.root_dir())
-            .build()
-            .unwrap();
+        let node = ThermalStateHandlerBuilder {
+            inspect_root: Some(inspector.root()),
+            thermal_config: Some(thermal_config),
+            outgoing_svc_dir: Some(service_fs.root_dir()),
+            platform_metrics: create_dummy_node(),
+        }
+        .build()
+        .unwrap();
 
         let test_env = TestEnv::new(service_fs);
 
@@ -637,6 +748,7 @@ mod tests {
             inspector,
             root: {
                 ThermalStateHandler: {
+                    ThermalLoadStates: {},
                     client1: {
                         thermal_state: 0u64,
                         connect_count: 0u64
@@ -657,6 +769,7 @@ mod tests {
             inspector,
             root: {
                 ThermalStateHandler: {
+                    ThermalLoadStates: {},
                     client1: {
                         thermal_state: 0u64,
                         connect_count: 0u64
@@ -670,12 +783,17 @@ mod tests {
         );
 
         // Update the thermal state for client1 and verify its `thermal_state` is updated
-        node.handle_update_thermal_load(ThermalLoad(10), "sensor1").unwrap();
+        executor
+            .run_singlethreaded(node.handle_update_thermal_load(ThermalLoad(10), "sensor1"))
+            .unwrap();
 
         assert_data_tree!(
             inspector,
             root: {
                 ThermalStateHandler: {
+                    ThermalLoadStates: {
+                        sensor1: 10u64
+                    },
                     client1: {
                         thermal_state: 1u64,
                         connect_count: 0u64
@@ -700,11 +818,14 @@ mod tests {
             ClientConfig::new().add_thermal_state(vec![TripPoint::new("sensor1", 0, 10)]),
         );
 
-        let node = ThermalStateHandlerBuilder::new()
-            .with_thermal_config(thermal_config)
-            .with_outgoing_svc_dir(service_fs.root_dir())
-            .build()
-            .unwrap();
+        let node = ThermalStateHandlerBuilder {
+            inspect_root: None,
+            thermal_config: Some(thermal_config),
+            outgoing_svc_dir: Some(service_fs.root_dir()),
+            platform_metrics: create_dummy_node(),
+        }
+        .build()
+        .unwrap();
 
         let test_env = TestEnv::new(service_fs);
         let client = test_env.connect_client("client1");
@@ -716,13 +837,17 @@ mod tests {
         assert_matches!(client.get_thermal_state(&mut executor), Ok(None));
 
         // Now update the thermal load
-        node.handle_update_thermal_load(ThermalLoad(10), "sensor1").unwrap();
+        executor
+            .run_singlethreaded(node.handle_update_thermal_load(ThermalLoad(10), "sensor1"))
+            .unwrap();
 
         // Verify the client now gets the thermal state change response
         assert_matches!(client.get_thermal_state(&mut executor), Ok(Some(ThermalState(1))));
 
         // Update thermal load, but the client's state is unchanged
-        node.handle_update_thermal_load(ThermalLoad(20), "sensor1").unwrap();
+        executor
+            .run_singlethreaded(node.handle_update_thermal_load(ThermalLoad(20), "sensor1"))
+            .unwrap();
 
         // Verify there is no new response for the client
         assert_matches!(client.get_thermal_state(&mut executor), Ok(None));
@@ -734,11 +859,14 @@ mod tests {
         let mut executor = fasync::TestExecutor::new().unwrap();
         let mut service_fs = ServiceFs::new_local();
 
-        let _node = ThermalStateHandlerBuilder::new()
-            .with_thermal_config(ThermalConfig::new())
-            .with_outgoing_svc_dir(service_fs.root_dir())
-            .build()
-            .unwrap();
+        let _node = ThermalStateHandlerBuilder {
+            inspect_root: None,
+            thermal_config: Some(ThermalConfig::new()),
+            outgoing_svc_dir: Some(service_fs.root_dir()),
+            platform_metrics: create_dummy_node(),
+        }
+        .build()
+        .unwrap();
 
         let test_env = TestEnv::new(service_fs);
         let client = test_env.connect_client("client1");
@@ -751,10 +879,14 @@ mod tests {
     /// Tests that an invalid thermal load update is met with an InvalidArgument error
     #[fasync::run_singlethreaded(test)]
     async fn test_invalid_thermal_load() {
-        let node = ThermalStateHandlerBuilder::new()
-            .with_thermal_config(ThermalConfig::new())
-            .build()
-            .unwrap();
+        let node = ThermalStateHandlerBuilder {
+            thermal_config: Some(ThermalConfig::new()),
+            outgoing_svc_dir: None,
+            inspect_root: None,
+            platform_metrics: create_dummy_node(),
+        }
+        .build()
+        .unwrap();
 
         let result = node
             .handle_message(&Message::UpdateThermalLoad(
@@ -778,17 +910,22 @@ mod tests {
             ClientConfig::new().add_thermal_state(vec![TripPoint::new("sensor1", 0, 10)]),
         );
 
-        let node = ThermalStateHandlerBuilder::new()
-            .with_thermal_config(thermal_config)
-            .with_outgoing_svc_dir(service_fs.root_dir())
-            .build()
-            .unwrap();
+        let node = ThermalStateHandlerBuilder {
+            inspect_root: None,
+            thermal_config: Some(thermal_config),
+            outgoing_svc_dir: Some(service_fs.root_dir()),
+            platform_metrics: create_dummy_node(),
+        }
+        .build()
+        .unwrap();
 
         let test_env = TestEnv::new(service_fs);
         let client = test_env.connect_client("client1");
 
         // Set the initial thermal load before the client connects
-        node.handle_update_thermal_load(ThermalLoad(10), "sensor1").unwrap();
+        executor
+            .run_singlethreaded(node.handle_update_thermal_load(ThermalLoad(10), "sensor1"))
+            .unwrap();
 
         // When the client first connects, verify they get the latest thermal state
         assert_matches!(client.get_thermal_state(&mut executor), Ok(Some(ThermalState(1))));
@@ -815,11 +952,14 @@ mod tests {
                     .add_thermal_state(vec![TripPoint::new("sensor1", 20, 29)]),
             );
 
-        let node = ThermalStateHandlerBuilder::new()
-            .with_thermal_config(thermal_config)
-            .with_outgoing_svc_dir(service_fs.root_dir())
-            .build()
-            .unwrap();
+        let node = ThermalStateHandlerBuilder {
+            inspect_root: None,
+            thermal_config: Some(thermal_config),
+            outgoing_svc_dir: Some(service_fs.root_dir()),
+            platform_metrics: create_dummy_node(),
+        }
+        .build()
+        .unwrap();
 
         let test_env = TestEnv::new(service_fs);
         let client1 = test_env.connect_client("client1");
@@ -830,15 +970,110 @@ mod tests {
         assert_matches!(client2.get_thermal_state(&mut executor), Ok(Some(ThermalState(0))));
 
         // Update the thermal load for "sensor1" and verify each client is in their expected state
-        node.handle_update_thermal_load(ThermalLoad(19), "sensor1").unwrap();
+        executor
+            .run_singlethreaded(node.handle_update_thermal_load(ThermalLoad(19), "sensor1"))
+            .unwrap();
         assert_matches!(client1.get_thermal_state(&mut executor), Ok(Some(ThermalState(2))));
         assert_matches!(client2.get_thermal_state(&mut executor), Ok(Some(ThermalState(1))));
 
         // Update thermal load for "sensor1" once more
-        node.handle_update_thermal_load(ThermalLoad(29), "sensor1").unwrap();
+        executor
+            .run_singlethreaded(node.handle_update_thermal_load(ThermalLoad(29), "sensor1"))
+            .unwrap();
 
         // client1 state is unchanged, but client2 moves to state 2
         assert_matches!(client1.get_thermal_state(&mut executor), Ok(None));
         assert_matches!(client2.get_thermal_state(&mut executor), Ok(Some(ThermalState(2))));
+    }
+
+    /// Tests that when the temperature sensors go in and out of throttling, the correct platform
+    /// metric messages are sent to the PlatformMetrics node.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_platform_metrics() {
+        // Create mock platform metrics node
+        let mut mock_maker = MockNodeMaker::new();
+        let mock_platform_metrics = mock_maker.make("mock_platform_metrics", vec![]);
+
+        let node = ThermalStateHandlerBuilder {
+            inspect_root: None,
+            thermal_config: Some(ThermalConfig::new()),
+            outgoing_svc_dir: None,
+            platform_metrics: mock_platform_metrics.clone(),
+        }
+        .build()
+        .unwrap();
+
+        // Inject a nonzero `ThermalLoad` value to simulate throttling on multiple sensors, then
+        // verify `ThrottlingActive` is sent, along with the `ThermalLoad` for each sensor.
+        mock_platform_metrics.add_msg_response_pair((
+            msg_eq!(LogPlatformMetric(PlatformMetric::ThermalLoad(
+                ThermalLoad(10),
+                "sensor1".to_string()
+            ))),
+            msg_ok_return!(LogPlatformMetric),
+        ));
+        mock_platform_metrics.add_msg_response_pair((
+            msg_eq!(LogPlatformMetric(PlatformMetric::ThrottlingActive)),
+            msg_ok_return!(LogPlatformMetric),
+        ));
+        mock_platform_metrics.add_msg_response_pair((
+            msg_eq!(LogPlatformMetric(PlatformMetric::ThermalLoad(
+                ThermalLoad(20),
+                "sensor2".to_string()
+            ))),
+            msg_ok_return!(LogPlatformMetric),
+        ));
+        assert_matches!(
+            node.handle_update_thermal_load(ThermalLoad(10), "sensor1").await,
+            Ok(MessageReturn::UpdateThermalLoad)
+        );
+        assert_matches!(
+            node.handle_update_thermal_load(ThermalLoad(20), "sensor2").await,
+            Ok(MessageReturn::UpdateThermalLoad)
+        );
+
+        // Verify that unchanged thermal load still gets reported to platform metrics
+        mock_platform_metrics.add_msg_response_pair((
+            msg_eq!(LogPlatformMetric(PlatformMetric::ThermalLoad(
+                ThermalLoad(10),
+                "sensor1".to_string()
+            ))),
+            msg_ok_return!(LogPlatformMetric),
+        ));
+        assert_matches!(
+            node.handle_update_thermal_load(ThermalLoad(10), "sensor1").await,
+            Ok(MessageReturn::UpdateThermalLoad)
+        );
+
+        // Remove throttling from one sensor and verify only the `ThermalLoad` message is sent
+        mock_platform_metrics.add_msg_response_pair((
+            msg_eq!(LogPlatformMetric(PlatformMetric::ThermalLoad(
+                ThermalLoad(0),
+                "sensor1".to_string()
+            ))),
+            msg_ok_return!(LogPlatformMetric),
+        ));
+        assert_matches!(
+            node.handle_update_thermal_load(ThermalLoad(0), "sensor1").await,
+            Ok(MessageReturn::UpdateThermalLoad)
+        );
+
+        // Remove throttling from the second sensor and verify both a `ThermalLoad` message is sent
+        // for the sensor as well as `ThrottlingResultMitigated`
+        mock_platform_metrics.add_msg_response_pair((
+            msg_eq!(LogPlatformMetric(PlatformMetric::ThermalLoad(
+                ThermalLoad(0),
+                "sensor2".to_string()
+            ))),
+            msg_ok_return!(LogPlatformMetric),
+        ));
+        mock_platform_metrics.add_msg_response_pair((
+            msg_eq!(LogPlatformMetric(PlatformMetric::ThrottlingResultMitigated)),
+            msg_ok_return!(LogPlatformMetric),
+        ));
+        assert_matches!(
+            node.handle_update_thermal_load(ThermalLoad(0), "sensor2").await,
+            Ok(MessageReturn::UpdateThermalLoad)
+        );
     }
 }

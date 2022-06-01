@@ -149,7 +149,6 @@ impl<'a> ThermalPolicyBuilder<'a> {
                 prev_timestamp: Cell::new(Nanoseconds(0)),
                 max_time_delta: Cell::new(Seconds(0.0)),
                 error_integral: Cell::new(0.0),
-                thermal_load: Cell::new(ThermalLoad(0)),
             },
             inspect: InspectData::new(inspect_root, "ThermalPolicy".to_string(), &self.config),
             config: self.config,
@@ -256,10 +255,6 @@ struct ThermalState {
 
     /// The integral error [degC * s] that is accumulated across controller iterations
     error_integral: Cell<f64>,
-
-    /// A cached value in the range [0 - MAX_THERMAL_LOAD] which is defined as
-    /// ((temperature - range_start) / (range_end - range_start) * MAX_THERMAL_LOAD).
-    thermal_load: Cell<ThermalLoad>,
 }
 
 impl ThermalPolicy {
@@ -473,40 +468,13 @@ impl ThermalPolicy {
             "new_load" => new_load.0
         );
 
-        let old_load = self.state.thermal_load.get();
-        self.state.thermal_load.set(new_load);
-
-        if new_load != old_load {
-            fuchsia_trace::instant!(
-                "power_manager",
-                "ThermalPolicy::thermal_load_changed",
-                fuchsia_trace::Scope::Thread,
-                "old_load" => old_load.0,
-                "new_load" => new_load.0
-            );
-
-            if old_load == ThermalLoad(0) {
-                self.log_platform_metric(PlatformMetric::ThrottlingActive).await;
-            } else if new_load == ThermalLoad(0) {
-                self.log_platform_metric(PlatformMetric::ThrottlingResultMitigated).await;
-            }
-
-            self.send_message_to_many(
-                &self.config.thermal_load_notify_nodes,
-                &Message::UpdateThermalLoad(new_load, self.driver_path.to_string()),
-            )
-            .await
-            .into_iter()
-            .collect::<Result<Vec<_>, _>>()?;
-        }
-
-        // Call this even when thermal load hasn't changed since PlatformMetrics uses each received
-        // value to build up a thermal load histogram while throttling is active.
-        self.log_platform_metric(PlatformMetric::ThermalLoad(
-            new_load,
-            self.driver_path.to_string(),
-        ))
-        .await;
+        self.send_message_to_many(
+            &self.config.thermal_load_notify_nodes,
+            &Message::UpdateThermalLoad(new_load, self.driver_path.to_string()),
+        )
+        .await
+        .into_iter()
+        .collect::<Result<Vec<_>, _>>()?;
 
         Ok(())
     }
@@ -1063,42 +1031,35 @@ pub mod tests {
 
         let mut stepper = TimeStepper { executor, node, node_futures };
 
-        // Throttling begins because 55 degC is greater than `target_temperature` (50 degC)
+        // Not throttled yet
         mock_temperature.add_msg_response_pair((
             msg_eq!(ReadTemperature),
-            msg_ok_return!(ReadTemperature(Celsius(55.0))),
+            msg_ok_return!(ReadTemperature(Celsius(50.0))),
         ));
         mock_metrics.add_msg_response_pair((
-            msg_eq!(LogPlatformMetric(PlatformMetric::ThrottlingActive)),
-            msg_ok_return!(LogPlatformMetric),
-        ));
-        mock_metrics.add_msg_response_pair((
-            msg_eq!(LogPlatformMetric(PlatformMetric::ThermalLoad(
-                ThermalLoad(25),
-                "sensor1".to_string()
-            ))),
-            msg_ok_return!(LogPlatformMetric),
-        ));
-        mock_metrics.add_msg_response_pair((
-            msg_eq!(LogPlatformMetric(PlatformMetric::AvailablePower(Watts(0.5),))),
+            msg_eq!(LogPlatformMetric(PlatformMetric::AvailablePower(Watts(1.0),))),
             msg_ok_return!(LogPlatformMetric),
         ));
         stepper.iterate_policy();
 
-        // Throttling still active, log the new thermal load value
+        // Throttling begins because 55 degC is greater than `target_temperature` (50 degC)
         mock_temperature.add_msg_response_pair((
             msg_eq!(ReadTemperature),
-            msg_ok_return!(ReadTemperature(Celsius(60.0))),
+            msg_ok_return!(ReadTemperature(Celsius(52.0))),
         ));
         mock_metrics.add_msg_response_pair((
-            msg_eq!(LogPlatformMetric(PlatformMetric::ThermalLoad(
-                ThermalLoad(75),
-                "sensor1".to_string()
-            ))),
+            msg_eq!(LogPlatformMetric(PlatformMetric::AvailablePower(Watts(0.8),))),
             msg_ok_return!(LogPlatformMetric),
         ));
+        stepper.iterate_policy();
+
+        // Throttling still active, available power is reduced
+        mock_temperature.add_msg_response_pair((
+            msg_eq!(ReadTemperature),
+            msg_ok_return!(ReadTemperature(Celsius(52.0))),
+        ));
         mock_metrics.add_msg_response_pair((
-            msg_eq!(LogPlatformMetric(PlatformMetric::AvailablePower(Watts(0.0),))),
+            msg_eq!(LogPlatformMetric(PlatformMetric::AvailablePower(Watts(0.6),))),
             msg_ok_return!(LogPlatformMetric),
         ));
         stepper.iterate_policy();
@@ -1107,17 +1068,6 @@ pub mod tests {
         mock_temperature.add_msg_response_pair((
             msg_eq!(ReadTemperature),
             msg_ok_return!(ReadTemperature(Celsius(35.0))),
-        ));
-        mock_metrics.add_msg_response_pair((
-            msg_eq!(LogPlatformMetric(PlatformMetric::ThrottlingResultMitigated)),
-            msg_ok_return!(LogPlatformMetric),
-        ));
-        mock_metrics.add_msg_response_pair((
-            msg_eq!(LogPlatformMetric(PlatformMetric::ThermalLoad(
-                ThermalLoad(0),
-                "sensor1".to_string()
-            ))),
-            msg_ok_return!(LogPlatformMetric),
         ));
         mock_metrics.add_msg_response_pair((
             msg_eq!(LogPlatformMetric(PlatformMetric::AvailablePower(Watts(1.0),))),
@@ -1130,7 +1080,6 @@ pub mod tests {
             msg_eq!(ReadTemperature),
             msg_ok_return!(ReadTemperature(Celsius(90.0))),
         ));
-
         mock_metrics.add_msg_response_pair((
             msg_eq!(LogPlatformMetric(PlatformMetric::ThrottlingResultShutdown)),
             msg_ok_return!(LogPlatformMetric),
@@ -1139,17 +1088,6 @@ pub mod tests {
         // On a real system, the shutdown would occur before these messages are sent. But since the
         // test continues executing even after the shutdown request is sent, we need to add them to
         // the expected messages.
-        mock_metrics.add_msg_response_pair((
-            msg_eq!(LogPlatformMetric(PlatformMetric::ThrottlingActive)),
-            msg_ok_return!(LogPlatformMetric),
-        ));
-        mock_metrics.add_msg_response_pair((
-            msg_eq!(LogPlatformMetric(PlatformMetric::ThermalLoad(
-                ThermalLoad(100),
-                "sensor1".to_string()
-            ))),
-            msg_ok_return!(LogPlatformMetric),
-        ));
         mock_metrics.add_msg_response_pair((
             msg_eq!(LogPlatformMetric(PlatformMetric::AvailablePower(Watts(0.0),))),
             msg_ok_return!(LogPlatformMetric),
@@ -1204,6 +1142,9 @@ pub mod tests {
     async fn test_multiple_thermal_load_notify_nodes() {
         let mut mock_maker = MockNodeMaker::new();
 
+        let mock_notify1 = mock_maker.make("ThermalLoadNotify1", vec![]);
+        let mock_notify2 = mock_maker.make("ThermalLoadNotify2", vec![]);
+
         // Set up the ThermalPolicy node
         let thermal_config = ThermalConfig {
             temperature_node: mock_maker.make(
@@ -1215,22 +1156,7 @@ pub mod tests {
             ),
             cpu_control_nodes: vec![create_dummy_node()],
             sys_pwr_handler: create_dummy_node(),
-            thermal_load_notify_nodes: vec![
-                mock_maker.make(
-                    "ThermalLoadNotify1",
-                    vec![(
-                        msg_eq!(UpdateThermalLoad(ThermalLoad(20), "Sensor1".to_string())),
-                        msg_ok_return!(UpdateThermalLoad),
-                    )],
-                ),
-                mock_maker.make(
-                    "ThermalLoadNotify2",
-                    vec![(
-                        msg_eq!(UpdateThermalLoad(ThermalLoad(20), "Sensor1".to_string())),
-                        msg_ok_return!(UpdateThermalLoad),
-                    )],
-                ),
-            ],
+            thermal_load_notify_nodes: vec![mock_notify1.clone(), mock_notify2.clone()],
             policy_params: default_policy_params(),
             platform_metrics_node: create_dummy_node(),
         };
@@ -1242,6 +1168,25 @@ pub mod tests {
 
         // When `process_thermal_load` runs, the mocks will verify they each receive the
         // UpdateThermalLoad message
+        mock_notify1.add_msg_response_pair((
+            msg_eq!(UpdateThermalLoad(ThermalLoad(20), "Sensor1".to_string())),
+            msg_ok_return!(UpdateThermalLoad),
+        ));
+        mock_notify2.add_msg_response_pair((
+            msg_eq!(UpdateThermalLoad(ThermalLoad(20), "Sensor1".to_string())),
+            msg_ok_return!(UpdateThermalLoad),
+        ));
+        assert_eq!(node.process_thermal_load(ThermalLoad(20)).await.unwrap(), ());
+
+        // Even if thermal load is unchanged, the nodes should still be updated
+        mock_notify1.add_msg_response_pair((
+            msg_eq!(UpdateThermalLoad(ThermalLoad(20), "Sensor1".to_string())),
+            msg_ok_return!(UpdateThermalLoad),
+        ));
+        mock_notify2.add_msg_response_pair((
+            msg_eq!(UpdateThermalLoad(ThermalLoad(20), "Sensor1".to_string())),
+            msg_ok_return!(UpdateThermalLoad),
+        ));
         assert_eq!(node.process_thermal_load(ThermalLoad(20)).await.unwrap(), ());
     }
 }
