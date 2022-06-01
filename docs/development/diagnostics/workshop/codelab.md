@@ -97,10 +97,101 @@ ffx component start /core/ffx-laboratory:profile_store/clients:reader
 
 ## Debugging with diganostics
 
-<!-- TODO -->
+Diagnostics provides multiple products that help component authors debug their components both
+while developing and in the field.
+
+For this workshop we'll be exploring three core technologies:
+
+- [Structured logging](#structured-logging)
+- [Inspect](#inspect)
+- [Triage](#triage)
+
+### Structured logging
+
+Diagnostics provides structured logging libraries to allow components to write logs.
+To help find the bug, we'll be adding a few logs to the profile store component.
+
+The first step when adding logging to a component, is to include the logging library
+in your binary dependencies. To do this, update your [BUILD.gn][profile-store-build] as follows:
+
+```
+source_set("lib") {
+  ...
+  public_deps = [
+    ...
+    "//sdk/lib/syslog/cpp",
+  ]
+}
+```
+
+Logging is initialized the moment we call one of the logging macros. However, the libraries provide
+some utilities that should be called in `main()` such as configuring the tags (if desired only, this
+is optional).
+
+Tags can be useful to later query the logs of a group of components. For our purposes we can add
+the `workshop` tag:
+
+```
+#include <lib/syslog/cpp/log_settings.h>
+...
+syslog::SetTags({"workshop", "profile_store_server"});
+```
+
+Now, it's time to write some logs. We'll be using the `FX_SLOG` macro which allows to write
+structured keys and values.
+
+For example, we can add the following log when we get a request on `ProfileStore::Open` but
+the profile file doesn't exist:
+
+```
+#include <lib/syslog/cpp/macros.h>
+...
+FX_SLOG(WARNING, "Profile doesn't exist", KV("key", key.c_str()));
+```
+
+Try adding that log, build (`fx build`), relaunch your component (`ffx component start ...`) and
+then run: `ffx log --tags workshop`.
+
+What other logs could we add that would help identify the log? Please experiment!
+
+A solution can be found in this patch: https://fuchsia-review.googlesource.com/c/fuchsia/+/684632
+
+### Inspect
+
+Inspect allows components to expose state about themselves. Unlike logs, which are a stream,
+inspect represents a live view into the component current state.
+
+Reading through the [Inspect quickstart][inspect-quickstart] would be a good first step. If you'd
+like to dive deeper into Inspect, you can also follow the [Inspect codelab][inspect-codelab].
+
+Once those introductory documents have been read, what intrumentation could be useful to add to
+help prevent/find the bug in this component?
+
+A possible solution can be found in this patch:
+https://fuchsia-review.googlesource.com/c/fuchsia/+/682671
+
+
+### Triage
+
+Triage allows to write rules to automatically process inspect snapshots and find potential issues
+or gather stats that the snapshots might contain.
+
+Reading through the [Triage codelab][triage-codelab] would be a good first step as well as reading
+through the [triage config guide][triage-config-guide].
+
+Try writing a triage configuration that could have help spot the bug in snapshots gathered in the
+field.
+
+A possible solution (built on top of the inspect solution) can be found in this patch:
+https://fuchsia-review.googlesource.com/c/fuchsia/+/684762
 
 ## Verifying with tests
 
 <!-- TODO -->
 
+[inspect-codelab]: /docs/development/diagnostics/inspect/codelab/codelab.md
+[inspect-quickstart]: /docs/development/diagnostics/inspect/quickstart.md
 [profile-store]: /examples/diagnostics/workshop/fidl/profile_store.test.fidl
+[profile-store-build]: /examples/diagnostics/workshop/BUILD.gn
+[triage-codelab]: /docs/development/diagnostics/triage/codelab.md
+[triage-config-guide]: /src/diagnostics/triage/config.md
