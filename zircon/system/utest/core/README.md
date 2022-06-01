@@ -119,3 +119,9 @@ launchpad uses fdio.
 
 Since these tests can't use fdio core/libc-and-io-stubs.c stubs out the needed
 functions from fdio.
+
+An additional kernel debugging option of kernel.pmm.alloc-random-should-wait is
+enabled for these tests. It has a small performance overhead for the purpose of
+exercising some of the allocation paths that otherwise are only executed under
+certain OOM conditions. This path exploration is random and the errors may be
+realized in any of the core tests, and should not be ignored.
