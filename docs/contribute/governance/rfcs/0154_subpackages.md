@@ -266,8 +266,8 @@ URL. These changes are represented by the following notional FIDL snippet:
 
    ...
 
-   const MAX_RESOLUTION_CONTEXT_LEN = <TBD>;
-   type ResolutionContext = bytes:MAX_RESOLUTION_CONTEXT_LEN;
+   const MAX_RESOLUTION_CONTEXT_LENGTH = <TBD>;
+   type ResolutionContext = bytes:MAX_RESOLUTION_CONTEXT_LENGTH;
 
    protocol PackageResolver {
 
@@ -285,8 +285,8 @@ URL. These changes are represented by the following notional FIDL snippet:
      /// `context`.
      ResolveWithContext(resource struct {
          package_url string;
-         dir server_end:fuchsia.io.Directory;
          context ResolutionContext;
+         dir server_end:fuchsia.io.Directory;
      }) -> (struct {
          resolved_context ResolutionContext;
      }) error ResolveError;
@@ -342,30 +342,32 @@ relative path.
 
 The `Resolve` method of the `fuchsia.component.resolution.Resolver` protocol
 will only resolve absolute component URLs. An additional method,
-`ResolveWithContext`, will be added to take an additional `context` argument
-(a `Context`). `ResolveWithContext` will resolve either an absolute component
-URL (ignoring the `context`) or a relative component URL. These changes are
-represented by the following notional FIDL snippets:
+`ResolveWithContext`, will be added, taking an additional `context` argument (a
+`fuchsia.component.resolution.Context`). `ResolveWithContext` will resolve
+either an absolute component URL (ignoring the `context`) or a relative
+component URL. These changes are represented by the following notional FIDL
+snippets:
 
 ```fidl
    library fuchsia.component.resolution;
 
    ...
 
-   // Note this size must be at least the size of
-   // fuchsia.pkg.MAX_RESOLUTION_CONTEXT_LEN, plus the size required to
+   // Note the context length, in bytes, must be at least the size of
+   // fuchsia.pkg.MAX_RESOLUTION_CONTEXT_LENGTH, plus the size required to
    // accommodate additional component context information, if any.
-   const MAX_RESOLUTION_CONTEXT_LEN = <TBD>;
 
-   // Note, this fuchsia.component.resolution.Context must support
-   // embedding and extracting the content of a fuchsia.pkg.ResolutionContext (or
-   // it may use the same value, if additional component context information is
-   // not required).
-   type Context = bytes:MAX_RESOLUTION_CONTEXT_LEN;
+   /// The maximum number of bytes for a `Context`.
+   const MAX_RESOLUTION_CONTEXT_LENGTH uint32 = 8192;
+
+   /// A byte array that persists a value used by the target `Resolver` to locate
+   /// and resolve a component by relative URL (for example, by a subpackage
+   /// name).
+   alias Context = bytes:MAX_RESOLUTION_CONTEXT_LENGTH;
 
    protocol Resolver {
 
-     /// Resolves an absolute component URL.
+     /// Resolves a component with the given absolute URL.
      /// ...
      Resolve(struct {
          component_url string;
@@ -373,17 +375,21 @@ represented by the following notional FIDL snippets:
          component Component;
      }) error ResolverError;
 
-     /// Resolves a component URL, which may be absolute or relative. If
-     /// relative, the component will be resolved relative to the supplied
-     /// `context`.
-     /// ...
-     /// The format for a relative `component_url` can either be:
+     /// Resolves a component with the absolute or relative URL. If relative, the
+     /// component will be resolved relative to the supplied `context`.
      ///
+     /// `component_url` is the unescaped URL of the component to resolve, the
+     /// format of which can be either:
+     ///
+     ///   * a fully-qualified absolute component URL
      ///   * a subpackaged-component reference, prefixed by a URI relative
      ///     path to its containing subpackage (for example,
      ///     `child_package#meta/some_component.cm`); or
      ///   * a URI fragment to a component in the current package (for
      ///     example,`#meta/other_component.cm`)
+     ///
+     /// `context` is the `resolution_context` of a previously-resolved
+     /// `Component`, providing the context for resoving a relative URL.
      ResolveWithContext(struct {
          component_url string;
          context Context;
@@ -404,7 +410,7 @@ The returned `Component` type will be modified to include a
 
        /// The context used to resolve `component_url`s relative to this
        /// component.
-       5: resolution_context fuchsia.component.resolution.Context;
+       5: resolution_context Context;
    };
 ```
 
@@ -418,7 +424,7 @@ ignored.
 For relative `component_url`s:
 
   * The client must use `ResolveWithContext`. Calling `Resolve` with a relative
-    component URL will return the error code `ResolveError::INVALID_URL`.
+    component URL will return the error code `ResolveError::INVALID_ARGS`.
 
 For relative, subpackaged component URLs:
 
@@ -429,7 +435,8 @@ For relative, subpackaged component URLs:
     package store-dependent error), the component resolver MUST return
     `ResolveError:PACKAGE_NOT_FOUND`.
 
-For relative components URLs (from the same package as another component):
+For relative resource component URLs (from the same package as another
+component):
 
   * The `component_url` is a URI fragment (for example,
     `#meta/other_component.cm`, as documented in [RFC-0104: Relative Component
@@ -439,7 +446,8 @@ For relative components URLs (from the same package as another component):
   * The `context` value MUST refer to the same package version (same package
     hash) as its peer.
 
-NOTE: Using a `context` to resolve relative component URLs (by URI fragment)
+NOTE: Using a `context` to resolve relative resource component URLs (by URI
+fragment)
 alters the current behavior of the Relative Resolver. Currently the Relative
 Resolver constructs an absolute package URL from its parent component, and
 appends the relative fragment part. This behavior does not guarantee that the
@@ -452,10 +460,8 @@ an improvement.
 
 When resolving a component URL using a relative URI (path or fragment) on behalf
 of an existing component (the "parent component"), Component Manager MUST
-delegate the resolution to the same `Resolver` used to resolve the
-parent component. The context value MUST allow the selected `Resolver`
-used to resolve the relative URI, with the parent component's
-`resolution_context` value.
+delegate the resolution to the same `Resolver` that was used to resolve the
+parent component.
 
 The context value should be considered an implementation detail internal to the
 Component Resolver, and opaque to clients. The `Resolver` MAY
@@ -488,7 +494,7 @@ child (assuming a post-boot environment) follows:
 
     a. Component Manager gets the `Resolver` capability used to resolve
        `component-a`, and calls
-       `ComponentManager::ResolveWithContext("child-package#meta/component-b.cm", component_a.resolution_context)`.
+       `Resolver::ResolveWithContext("child-package#meta/component-b.cm", component_a.resolution_context)`.
 
     b. The `Resolver` extracts the relative package path (the
        subpackage name) from the component URL, and extracts the
@@ -700,10 +706,11 @@ could be included when building a package.
 
 ## Backwards Compatibility
 
-### Resolution behavior for relative component URLs
+### Resolution behavior for relative resource component URLs
 
 The behavior for resolving existing package URLs and component URLs is
-unchanged, with one exception: relative component URLs (represented by URI
+unchanged, with one exception: relative resource component URLs (represented by
+URI
 fragments, such as `#meta/child.cm`) will require the component `context` (which
 the proposed implementation will guarantee), but the behavior changes slightly.
 The current Relative Resolver concatenates the fragment to the parent
@@ -1003,15 +1010,15 @@ Ultimately, we summarized the constraints for this type as follows:
 
 ### Alternative: Component Manager uses the `resolution_context` to get the Resolver
 
-When resolving a relative component URL, we considered including the URI scheme
-(such as `fuchsia-pkg`) as part of the `Component::resolution_context`, to
-allow component manager to get the `Resolver` via the resolver
-registry by scheme lookup. This was rejected because doing so would, in theory,
-allow a `Resolver` to return a context with a different scheme for
-resolving relative components, which was considered and architectural risk.
-Instead, component manager will keep track of the `Resolver` used to
-resolve a component. Component Manager will always use the `Resolver`
-of the component that requests another component by relative URL.
+When resolving a relative subpackaged component URL, we considered including the
+URI scheme (such as `fuchsia-pkg`) as part of the
+`Component::resolution_context`, to allow component manager to get the
+`Resolver` via the resolver registry by scheme lookup. This was rejected because
+doing so would, in theory, allow a `Resolver` to return a context with a
+different scheme for resolving relative subpackaged components, which was
+considered an architectural risk. Instead, component manager will keep track of
+the `Resolver` used to resolve a component. Component Manager will always use
+the `Resolver` of the component that requests another component by relative URL.
 
 ### Alternative: Relative components instead of relative packages
 
