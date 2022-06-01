@@ -116,7 +116,7 @@ mod tests {
         let contents = far_reader.read_file("meta/contents").unwrap();
         let contents = std::str::from_utf8(&contents).unwrap();
         let expected_contents = "\
-            data/cache_packages=7740f21364ff0b21f83cb671c2684d08e5d6b64186de66e5b622cef2fd8402b2\n\
+            data/cache_packages.json=8a7bb95ce6dfb4f9c9b9b3c3b654923c4148351db2719ecc98d24ae328128e2b\n\
             data/static_packages=e4f7b124a8c758488b7b9f0a42c09cb0c3c3ca6e4cf2d42ba6f03158eb2ad890\n\
             extra_base_data.txt=6ef2ad21fe7a1f22e224da891fba56b8cc53f39b977867a839584d4cc3919c4c\n\
         "

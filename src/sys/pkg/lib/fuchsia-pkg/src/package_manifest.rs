@@ -82,6 +82,12 @@ impl PackageManifest {
         }
     }
 
+    pub fn repository(&self) -> &Option<String> {
+        match &self.0 {
+            VersionedPackageManifest::Version1(manifest) => &manifest.repository,
+        }
+    }
+
     /// Returns the merkle root of the meta.far.
     ///
     /// # Panics
@@ -579,6 +585,7 @@ mod tests {
         let package = package_builder.build().unwrap();
         let package_manifest = PackageManifest::from_package(package, None).unwrap();
         assert_eq!(&"package-name".parse::<PackageName>().unwrap(), package_manifest.name());
+        assert_eq!(&None, package_manifest.repository());
     }
 
     #[test]

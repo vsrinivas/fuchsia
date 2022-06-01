@@ -187,6 +187,9 @@ impl PackageBuilder {
         let mut builder = PackageBuilder::new(inner_name);
         builder.abi_revision(*abi_rev);
         builder.published_name(original_manifest.name());
+        if let Some(repository) = original_manifest.repository().as_ref() {
+            builder.repository(repository);
+        }
 
         for (path, contents) in meta_blobs {
             builder

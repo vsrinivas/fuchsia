@@ -329,7 +329,7 @@ template("assemble_system") {
     blobfs_manifest = "${gendir}/blob.manifest"
     blobs_json = "${gendir}/blobs.json"
     static_packages = "${gendir}/${base_package_name}/data/static_packages"
-    cache_packages = "${gendir}/${base_package_name}/data/cache_packages"
+    cache_packages = "${gendir}/${base_package_name}/data/cache_packages.json"
     base_meta_package = "${gendir}/${base_package_name}/meta/package"
     base_pkg_abi_revision =
         "${gendir}/${base_package_name}/meta/fuchsia.abi/abi-revision"
