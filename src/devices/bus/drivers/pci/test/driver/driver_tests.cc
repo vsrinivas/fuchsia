@@ -52,17 +52,19 @@ TEST_F(PciDriverTests, TestRunner) {
   IsolatedDevmgr::Args args;
 
   args.device_list.push_back(kDeviceEntry);
-  fuchsia::driver::test::DriverLog log;
-  log.name = "fake_pci_bus_driver";
-  switch (test_log_level) {
-    case 1:
-      log.log_level = fuchsia::diagnostics::Severity::DEBUG;
-      args.log_level.push_back(log);
-      break;
-    case 2:
-      log.log_level = fuchsia::diagnostics::Severity::TRACE;
-      args.log_level.push_back(log);
-      break;
+  for (auto driver_name : {"fake_pci_bus_driver", "pci"}) {
+    fuchsia::driver::test::DriverLog log;
+    log.name = driver_name;
+    switch (test_log_level) {
+      case 1:
+        log.log_level = fuchsia::diagnostics::Severity::DEBUG;
+        args.log_level.push_back(log);
+        break;
+      case 2:
+        log.log_level = fuchsia::diagnostics::Severity::TRACE;
+        args.log_level.push_back(log);
+        break;
+    }
   }
   zx_status_t st = IsolatedDevmgr::Create(&args, &devmgr_);
   ASSERT_OK(st);

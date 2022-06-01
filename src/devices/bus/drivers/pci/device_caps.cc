@@ -1,12 +1,15 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+#include <zircon/errors.h>
+
 #include <fbl/string_buffer.h>
 #include <hwreg/bitfields.h>
 
 #include "src/devices/bus/drivers/pci/capabilities/msi.h"
 #include "src/devices/bus/drivers/pci/capabilities/msix.h"
 #include "src/devices/bus/drivers/pci/capabilities/pci_express.h"
+#include "src/devices/bus/drivers/pci/capabilities/power_management.h"
 #include "src/devices/bus/drivers/pci/common.h"
 #include "src/devices/bus/drivers/pci/device.h"
 
@@ -155,6 +158,15 @@ zx_status_t Device::ParseCapabilities() {
     // access, but otherwise everything is found via the capability list.
     zx_status_t st;
     switch (static_cast<Capability::Id>(hdr.id)) {
+      case Capability::Id::kPciPowerManagement:
+        st = AllocateCapability<PowerManagementCapability>(cap_offset, *cfg_, &caps_.power,
+                                                           &caps_.list);
+        if (st != ZX_OK) {
+          zxlogf(ERROR, "%s Error allocating PowerManagement capability: %d, %p", cfg_->addr(), st,
+                 caps_.pcie);
+          return st;
+        }
+        break;
       case Capability::Id::kPciExpress:
         st = AllocateCapability<PciExpressCapability>(cap_offset, *cfg_, &caps_.pcie, &caps_.list);
         if (st != ZX_OK) {
@@ -180,7 +192,6 @@ zx_status_t Device::ParseCapabilities() {
         }
         break;
       case Capability::Id::kNull:
-      case Capability::Id::kPciPowerManagement:
       case Capability::Id::kAgp:
       case Capability::Id::kVitalProductData:
       case Capability::Id::kSlotIdentification:

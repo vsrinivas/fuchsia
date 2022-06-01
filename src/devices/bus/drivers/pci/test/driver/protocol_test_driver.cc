@@ -293,15 +293,18 @@ TEST_F(PciProtocolTests, GetCapabilities) {
   ASSERT_OK(pci().ReadConfig8(offsetA, &val8));
   ASSERT_EQ(PCI_CAPABILITY_ID_PCI_PWR_MGMT, val8);
 
-  // Second Power Management Capability is at 0xA0.
-  ASSERT_OK(pci().GetNextCapability(PCI_CAPABILITY_ID_PCI_PWR_MGMT, offsetA, &offsetB));
-  ASSERT_EQ(0xA0, offsetB);
-  ASSERT_OK(pci().ReadConfig8(offsetB, &val8));
-  ASSERT_EQ(PCI_CAPABILITY_ID_PCI_PWR_MGMT, val8);
-
-  // There is no third Power Management Capability.
+  // There is no second Power Management Capability.
   ASSERT_EQ(ZX_ERR_NOT_FOUND,
-            pci().GetNextCapability(PCI_CAPABILITY_ID_PCI_PWR_MGMT, offsetB, &offsetA));
+            pci().GetNextCapability(PCI_CAPABILITY_ID_PCI_PWR_MGMT, offsetA, &offsetB));
+
+  // First MSI Capability is at 0x68.
+  ASSERT_OK(pci().GetFirstCapability(PCI_CAPABILITY_ID_MSI, &offsetA));
+  ASSERT_EQ(0x68, offsetA);
+  ASSERT_OK(pci().ReadConfig8(offsetA, &val8));
+  ASSERT_EQ(PCI_CAPABILITY_ID_MSI, val8);
+
+  // There is no second MSI Capability.
+  ASSERT_EQ(ZX_ERR_NOT_FOUND, pci().GetNextCapability(PCI_CAPABILITY_ID_MSI, offsetA, &offsetB));
 
   // First Pci Express Capability is at 0x78.
   ASSERT_OK(pci().GetFirstCapability(PCI_CAPABILITY_ID_PCI_EXPRESS, &offsetA));
@@ -312,15 +315,6 @@ TEST_F(PciProtocolTests, GetCapabilities) {
   // There is no second Pci Express Capability.
   ASSERT_EQ(ZX_ERR_NOT_FOUND,
             pci().GetNextCapability(PCI_CAPABILITY_ID_PCI_EXPRESS, offsetA, &offsetB));
-
-  // First MSI Capability is at 0x68.
-  ASSERT_OK(pci().GetFirstCapability(PCI_CAPABILITY_ID_MSI, &offsetA));
-  ASSERT_EQ(0x68, offsetA);
-  ASSERT_OK(pci().ReadConfig8(offsetA, &val8));
-  ASSERT_EQ(PCI_CAPABILITY_ID_MSI, val8);
-
-  // There is no second MSI Capability.
-  ASSERT_EQ(ZX_ERR_NOT_FOUND, pci().GetNextCapability(PCI_CAPABILITY_ID_MSI, offsetA, &offsetB));
 
   // First Vendor Capability is at 0xC4.
   ASSERT_OK(pci().GetFirstCapability(PCI_CAPABILITY_ID_VENDOR, &offsetA));

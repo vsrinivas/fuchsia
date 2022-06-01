@@ -15,7 +15,7 @@
 // Standard config dump of an NVIDIA Quadro K2200 for testing because it has multiple bars
 // and other values that can be used for tests.
 // Modifications:
-// - The Base Address registers have been modifieVd to exercise different
+// - The Base Address registers have been modified to exercise different
 //   configurations in the tests, but keep the same size layout.
 // - An additional PciPowerMangement capability was added at 0xA0.
 // - An MSI-X capability was added at 0xf0.
@@ -24,22 +24,27 @@
 // protocol_test_driver.cpp will need to be updated.
 //
 // A basic lspci dump of this device:
-// 	Subsystem: 103c:1097
-// 	Physical Slot: 2
-// 	Flags: bus master, fast devsel, latency 0, IRQ 62
-// 	Memory at f2000000 (32-bit, non-prefetchable) [size=16M]
-// 	Memory at e0000000 (64-bit, prefetchable) [size=256M]
-// 	Memory at f0000000 (64-bit, prefetchable) [size=32M]
-// 	I/O ports at 2000 [size=128]
-// 	Expansion ROM at f3080000 [disabled] [size=512K]
-// 	Capabilities: [60] Power Management version 3
-// 	Capabilities: [68] MSI: Enable+ Count=1/1 Maskable- 64bit+
-// 	Capabilities: [78] Express Legacy Endpoint, MSI 00
-// 	Capabilities: [100] Virtual Channel
-// 	Capabilities: [250] Latency Tolerance Reporting
-// 	Capabilities: [258] L1 PM Substates
-// 	Capabilities: [128] Power Budgeting <?>
-// 	Capabilities: [600] Vendor Specific Information: ID=0001 Rev=1 Len=024 <?>
+//  Subsystem: 103c:1097
+//  Physical Slot: 2
+//  Flags: bus master, fast devsel, latency 0, IRQ 62
+//  Memory at f2000000 (32-bit, non-prefetchable) [size=16M]
+//  Memory at e0000000 (64-bit, prefetchable) [size=256M]
+//  Memory at f0000000 (64-bit, prefetchable) [size=32M]
+//  I/O ports at 2000 [size=128]
+//  Expansion ROM at f3080000 [disabled] [size=512K]
+//  Capabilities: [60] Power Management version 3
+//  Capabilities: [68] MSI: Enable+ Count=1/1 Maskable- 64bit+
+//  Capabilities: [78] Express Legacy Endpoint, MSI 00
+//  Capabilities: [C4] Vendor Specific Information (added manually)
+//  Capabilities: [C8] Vendor Specific Information (added manually)
+//  Capabilities: [D0] Vendor Specific Information (added manually)
+//  Capabilities: [E8] Vendor Specific Information (added manually)
+//  Capabilities: [F0] MSI-X (added manually)
+//  Capabilities: [100] Virtual Channel
+//  Capabilities: [250] Latency Tolerance Reporting
+//  Capabilities: [258] L1 PM Substates
+//  Capabilities: [128] Power Budgeting <?>
+//  Capabilities: [600] Vendor Specific Information: ID=0001 Rev=1 Len=024 <?>
 static std::array<uint8_t, PCI_EXT_CONFIG_SIZE> kFakeQuadroDeviceConfig = {
     0xde, 0x10, // Vendor Id
     0xba, 0x13, // Device Id
@@ -69,10 +74,11 @@ static std::array<uint8_t, PCI_EXT_CONFIG_SIZE> kFakeQuadroDeviceConfig = {
     0x00, // Min_Gnt
     0x00, // Max_Lat
 // End of the config header
+//           0     1     2     3     4     5     6     7     8     9     A     B     C     D     E     F
 /*  40: */ 0x3c, 0x10, 0x97, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 /*  50: */ 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0xce, 0xd6, 0x23, 0x00, 0x00, 0x00, 0x00, 0x00,
 /*  60: */ 0x01, 0x68, 0x03, 0x00, 0x08, 0x00, 0x00, 0x00, 0x05, 0x78, 0x85, 0x00, 0xb8, 0x05, 0xe0, 0xfe,
-/*  70: */ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0xA0, 0x12, 0x00, 0xe1, 0x8d, 0x2c, 0x01,
+/*  70: */ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0xC4, 0x12, 0x00, 0xe1, 0x8d, 0x2c, 0x01,
 /*  80: */ 0x30, 0x31, 0x00, 0x00, 0x02, 0x3d, 0x45, 0x00, 0x40, 0x01, 0x01, 0x11, 0x00, 0x00, 0x00, 0x00,
 /*  90: */ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x13, 0x08, 0x04, 0x00,
 /*  a0: */ 0x01, 0xC4, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -325,6 +331,7 @@ static std::array<uint8_t, PCI_EXT_CONFIG_SIZE> kFakeQuadroDeviceConfig = {
 
 };
 
+constexpr size_t kFakeQuadroPowerManagementCapabilityOffset = 0x60;
 constexpr size_t kFakeQuadroMsiCapabilityOffset = 0x68;
 constexpr size_t kFakeQuadroMsiXCapabilityOffset = 0xf0;
 constexpr size_t kFakeQuadroMsiXIrqCnt = 5;

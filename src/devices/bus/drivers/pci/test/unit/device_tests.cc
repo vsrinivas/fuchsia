@@ -7,14 +7,19 @@
 #include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/cpp/vmo/types.h>
 #include <lib/inspect/testing/cpp/zxtest/inspect.h>
+#include <lib/zx/clock.h>
+#include <lib/zx/time.h>
 #include <zircon/limits.h>
 #include <zircon/syscalls/object.h>
 
 #include <memory>
+#include <utility>
 
 #include <fbl/ref_ptr.h>
 #include <zxtest/zxtest.h>
 
+#include "src/devices/bus/drivers/pci/capabilities.h"
+#include "src/devices/bus/drivers/pci/capabilities/power_management.h"
 #include "src/devices/bus/drivers/pci/config.h"
 #include "src/devices/bus/drivers/pci/device.h"
 #include "src/devices/bus/drivers/pci/test/fakes/fake_bus.h"
@@ -441,5 +446,55 @@ TEST_F(PciDeviceTests, InspectMSI) {
       CheckProperty(node, Device::kInspectMsiAllocated, inspect::UintPropertyValue(irq_cnt)));
 }
 #endif
+
+// Verify that power state transitions wait the necessary amount of time, and that they end up in
+// the correct state.
+TEST_F(PciDeviceTests, PowerStateTransitions) {
+  auto& dev = CreateTestDevice(parent(), kFakeQuadroDeviceConfig.data(),
+                               kFakeQuadroDeviceConfig.max_size());
+  auto& cfg = *dev.config();
+
+  auto power = PowerManagementCapability(*dev.config(), kFakeQuadroPowerManagementCapabilityOffset);
+  auto test_recovery_delay = [&cfg, &power](
+                                 PowerManagementCapability::PowerState start_state,
+                                 PowerManagementCapability::PowerState end_state) -> bool {
+    // Manually update our starting state
+    PmcsrReg pmcsr{.value = cfg.Read(power.pmcsr())};
+    pmcsr.set_power_state(start_state);
+    cfg.Write(power.pmcsr(), pmcsr.value);
+    // Time the transition
+    zx::time start_time = zx::clock::get_monotonic();
+    power.SetPowerState(cfg, end_state);
+    zx::time end_time = zx::clock::get_monotonic();
+    zx::duration min_delay = PowerManagementCapability::kStateRecoveryTime[start_state][end_state];
+    return (end_time - start_time > min_delay);
+  };
+
+  ASSERT_TRUE(test_recovery_delay(PowerManagementCapability::PowerState::D0,
+                                  PowerManagementCapability::PowerState::D1));
+  ASSERT_EQ(dev.GetPowerState().value(), PowerManagementCapability::PowerState::D1);
+
+  ASSERT_TRUE(test_recovery_delay(PowerManagementCapability::PowerState::D0,
+                                  PowerManagementCapability::PowerState::D2));
+  ASSERT_EQ(dev.GetPowerState().value(), PowerManagementCapability::PowerState::D2);
+
+  ASSERT_TRUE(test_recovery_delay(PowerManagementCapability::PowerState::D0,
+                                  PowerManagementCapability::PowerState::D3));
+  ASSERT_EQ(dev.GetPowerState().value(), PowerManagementCapability::PowerState::D3);
+
+  ASSERT_TRUE(test_recovery_delay(PowerManagementCapability::PowerState::D3,
+                                  PowerManagementCapability::PowerState::D0));
+  ASSERT_EQ(dev.GetPowerState().value(), PowerManagementCapability::PowerState::D0);
+
+  // D0 to D0 should be essentially a no-op return.
+  ASSERT_TRUE(test_recovery_delay(PowerManagementCapability::PowerState::D0,
+                                  PowerManagementCapability::PowerState::D0));
+  ASSERT_EQ(dev.GetPowerState().value(), PowerManagementCapability::PowerState::D0);
+
+  // D1 to D2 should actually run D1 > D0 > D2 and hit both code paths.
+  ASSERT_TRUE(test_recovery_delay(PowerManagementCapability::PowerState::D2,
+                                  PowerManagementCapability::PowerState::D1));
+  ASSERT_EQ(dev.GetPowerState().value(), PowerManagementCapability::PowerState::D1);
+}
 
 }  // namespace pci

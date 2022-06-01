@@ -38,6 +38,7 @@
 #include "src/devices/bus/drivers/pci/capabilities/msi.h"
 #include "src/devices/bus/drivers/pci/capabilities/msix.h"
 #include "src/devices/bus/drivers/pci/capabilities/pci_express.h"
+#include "src/devices/bus/drivers/pci/capabilities/power_management.h"
 #include "src/devices/bus/drivers/pci/config.h"
 #include "src/devices/bus/drivers/pci/proxy_rpc.h"
 #include "src/devices/bus/drivers/pci/ref_counted.h"
@@ -120,6 +121,7 @@ class Device : public fbl::WAVLTreeContainable<fbl::RefPtr<pci::Device>>,
   struct Capabilities {
     CapabilityList list;
     ExtCapabilityList ext_list;
+    PowerManagementCapability* power;
     MsiCapability* msi;
     MsixCapability* msix;
     PciExpressCapability* pcie;
@@ -290,6 +292,8 @@ class Device : public fbl::WAVLTreeContainable<fbl::RefPtr<pci::Device>>,
   zx_status_t AckLegacyIrq() __TA_REQUIRES(dev_lock_);
   void EnableLegacyIrq() __TA_REQUIRES(dev_lock_);
   void DisableLegacyIrq() __TA_REQUIRES(dev_lock_);
+
+  zx::status<PowerManagementCapability::PowerState> GetPowerState() __TA_EXCLUDES(dev_lock_);
 
   // Provide Irq information to the Bus for handling situations with no ack.
   Irqs& irqs() __TA_REQUIRES(dev_lock_) { return irqs_; }

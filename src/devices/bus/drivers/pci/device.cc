@@ -13,6 +13,7 @@
 #include <lib/zx/interrupt.h>
 #include <string.h>
 #include <zircon/compiler.h>
+#include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
@@ -30,6 +31,7 @@
 #include "src/devices/bus/drivers/pci/bus_device_interface.h"
 #include "src/devices/bus/drivers/pci/capabilities/msi.h"
 #include "src/devices/bus/drivers/pci/capabilities/msix.h"
+#include "src/devices/bus/drivers/pci/capabilities/power_management.h"
 #include "src/devices/bus/drivers/pci/common.h"
 #include "src/devices/bus/drivers/pci/pci_bind.h"
 #include "src/devices/bus/drivers/pci/ref_counted.h"
@@ -216,6 +218,16 @@ zx_status_t Device::InitLocked() {
   st = InitInterrupts();
   if (st != ZX_OK) {
     return st;
+  }
+
+  // Power the device on by transitioning to the highest power level if possible
+  // and necessary.
+  if (caps_.power) {
+    if (auto state = caps_.power->GetPowerState(*cfg_);
+        state != PowerManagementCapability::PowerState::D0) {
+      zxlogf(DEBUG, "[%s] transitioning power state from D%d to D0", cfg_->addr(), state);
+      caps_.power->SetPowerState(*cfg_, PowerManagementCapability::PowerState::D0);
+    }
   }
 
   auto result = BanjoDevice::Create(parent_, this);
@@ -500,6 +512,15 @@ zx_status_t Device::ConfigureBars() {
   }
 
   return ZX_OK;
+}
+
+zx::status<PowerManagementCapability::PowerState> Device::GetPowerState() {
+  fbl::AutoLock dev_lock(&dev_lock_);
+  if (!caps_.power) {
+    return zx::error(ZX_ERR_NOT_SUPPORTED);
+  }
+
+  return zx::ok(caps_.power->GetPowerState(*cfg_));
 }
 
 void Device::Unplug() {

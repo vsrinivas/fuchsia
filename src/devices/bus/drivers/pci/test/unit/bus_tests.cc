@@ -20,6 +20,7 @@
 #include <zxtest/zxtest.h>
 
 #include "src/devices/bus/drivers/pci/bus.h"
+#include "src/devices/bus/drivers/pci/capabilities/power_management.h"
 #include "src/devices/bus/drivers/pci/common.h"
 #include "src/devices/bus/drivers/pci/test/fakes/fake_ecam.h"
 #include "src/devices/bus/drivers/pci/test/fakes/fake_pciroot.h"
@@ -93,6 +94,8 @@ class TestBus : public pci::Bus {
           std::optional<fdf::MmioBuffer> ecam)
       : pci::Bus(parent, pciroot, info, std::move(ecam)) {}
 
+  pci::DeviceTree& Devices() { return devices(); }
+
   size_t GetDeviceCount() {
     fbl::AutoLock _(devices_lock());
     return devices().size();
@@ -116,9 +119,6 @@ class TestBus : public pci::Bus {
 };
 
 // Bind tests the entire initialization path using an ECAM included via platform information.
-// TODO(66253): disabled until fake_ddk handles the device lifecycle contract
-// better and provides a method so we can force the unbind. As it is now, ASAN
-// will notice the allocation leaks from the Bus construction.
 TEST_F(PciBusTests, Bind) {
   SetupTopology();
   ASSERT_OK(pci_bus_bind(nullptr, parent()));
