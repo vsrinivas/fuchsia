@@ -23,9 +23,9 @@ example for crashing in a well-defined sequence.
 
 - System headers may be installed under `zircon/`, rather than `lib/zircon/`.
 - System call wrappers, such as `zx`, are not considered system headers. They
-  are library headers (see below) that depend on the system headers..
-- Standard system headers (e.g., from the C and C++ standard librareis) have
-  their   standard paths
+  are library headers (see below) that depend on the system headers.
+- Standard system headers (e.g., from the C and C++ standard libraries) have
+  their standard paths.
 
 ###### Examples
 
