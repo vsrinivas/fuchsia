@@ -157,20 +157,8 @@ where
     {
         match Use::route(use_decl, use_target, &sources, visitor, mapper).await? {
             UseResult::Source(source) => return Ok(source),
-            UseResult::FromParent(offers, component) => {
-                if offers.len() == 1 {
-                    let offer_opt: Option<&O> = offers.first();
-                    self.route_from_offer(
-                        offer_opt.unwrap().clone(),
-                        component,
-                        sources,
-                        visitor,
-                        mapper,
-                    )
-                    .await
-                } else {
-                    create_aggregate_source(offers, component)
-                }
+            UseResult::FromParent(offer, component) => {
+                self.route_from_offer(offer, component, sources, visitor, mapper).await
             }
             UseResult::FromChild(_use_decl, _component) => {
                 unreachable!("found use from child but capability cannot be exposed")
@@ -210,11 +198,6 @@ where
                 // This condition should not happen since cm_fidl_validator ensures
                 // that this kind of declaration cannot exist.
                 unreachable!("found offer from collection but capability cannot be exposed")
-            }
-            OfferResult::OfferFromAggregate(_, _) => {
-                // This condition should not happen since cm_fidl_validator ensures
-                // that this kind of declaration cannot exist.
-                unreachable!("found offer from aggregate but capability cannot be exposed")
             }
         }
     }
@@ -269,20 +252,8 @@ where
     {
         match Use::route(use_decl, use_target.clone(), &sources, visitor, mapper).await? {
             UseResult::Source(source) => return Ok(source),
-            UseResult::FromParent(offers, component) => {
-                if offers.len() == 1 {
-                    let offer_opt: Option<&O> = offers.first();
-                    self.route_from_offer(
-                        offer_opt.unwrap().clone(),
-                        component,
-                        sources,
-                        visitor,
-                        mapper,
-                    )
-                    .await
-                } else {
-                    create_aggregate_source(offers, component)
-                }
+            UseResult::FromParent(offer, component) => {
+                self.route_from_offer(offer, component, sources, visitor, mapper).await
             }
             UseResult::FromChild(use_decl, child_component) => {
                 let child_exposes = child_component.lock_resolved_state().await?.exposes();
@@ -356,20 +327,8 @@ where
             .await?
         {
             RegistrationResult::Source(source) => return Ok(source),
-            RegistrationResult::FromParent(offers, component) => {
-                if offers.len() == 1 {
-                    let offer_opt: Option<&O> = offers.first();
-                    self.route_from_offer(
-                        offer_opt.unwrap().clone(),
-                        component,
-                        sources,
-                        visitor,
-                        mapper,
-                    )
-                    .await
-                } else {
-                    create_aggregate_source(offers, component)
-                }
+            RegistrationResult::FromParent(offer, component) => {
+                self.route_from_offer(offer, component, sources, visitor, mapper).await
             }
             RegistrationResult::FromChild(expose, component) => {
                 self.route_from_expose(expose, component, sources, visitor, mapper).await
@@ -467,23 +426,8 @@ where
                     component: collection_component.as_weak(),
                 })
             }
-            OfferResult::OfferFromAggregate(offer_decls, aggregation_component) => {
-                create_aggregate_source(offer_decls, aggregation_component)
-            }
         }
     }
-}
-
-fn create_aggregate_source<C, O>(
-    _offer_decls: Vec<O>,
-    _aggregation_component: Arc<C>,
-) -> Result<CapabilitySourceInterface<C>, RoutingError>
-where
-    C: ComponentInstanceInterface + 'static,
-    O: OfferDeclCommon + FromEnum<OfferDecl> + Into<OfferDecl> + Clone,
-{
-    //TODO(fxbug.dev/100985) Update to support aggregate service capabilities.
-    Err(RoutingError::unsupported_route_source("Aggregate offers not yet supported"))
 }
 
 // Common expose routing shared between Registration and Use routing.
@@ -839,7 +783,7 @@ enum UseResult<C: ComponentInstanceInterface, O, U> {
     /// The source of the Use was found (Framework, AboveRoot, etc.)
     Source(CapabilitySourceInterface<C>),
     /// The Use led to a parent Offer declaration.
-    FromParent(Vec<O>, Arc<C>),
+    FromParent(O, Arc<C>),
     /// The Use led to a child Expose declaration.
     /// Note: Instead of FromChild carrying an ExposeDecl of the matching child, it carries a
     /// UseDecl. This is because some RoutingStrategy<> don't support Expose, but are still
@@ -915,27 +859,20 @@ where
                     ))
                 }
                 ExtendedInstanceInterface::<C>::Component(parent_component) => {
-                    let parent_offers: Vec<O> = {
+                    let parent_offer: O = {
                         let parent_offers = parent_component.lock_resolved_state().await?.offers();
                         let child_moniker =
                             target.child_moniker().expect("ChildMoniker should exist");
-                        let found_offers = find_matching_offers(
-                            use_.source_name(),
-                            &child_moniker,
-                            &parent_offers,
-                        );
-                        if found_offers.is_empty() {
-                            return Err(
+                        find_matching_offer(use_.source_name(), &child_moniker, &parent_offers)
+                            .cloned()
+                            .ok_or_else(|| {
                                 <U as ErrorNotFoundFromParent>::error_not_found_from_parent(
                                     target.abs_moniker().clone(),
                                     use_.source_name().clone(),
-                                ),
-                            );
-                        } else {
-                            found_offers
-                        }
+                                )
+                            })?
                     };
-                    Ok(UseResult::FromParent(parent_offers, parent_component))
+                    Ok(UseResult::FromParent(parent_offer, parent_component))
                 }
             },
             UseSource::Child(name) => {
@@ -975,7 +912,7 @@ enum RegistrationResult<C: ComponentInstanceInterface, O, E> {
     /// The source of the Registration was found (Framework, AboveRoot, etc.).
     Source(CapabilitySourceInterface<C>),
     /// The Registration led to a parent Offer declaration.
-    FromParent(Vec<O>, Arc<C>),
+    FromParent(O, Arc<C>),
     /// The Registration led to a child Expose declaration.
     FromChild(E, Arc<C>),
 }
@@ -1056,27 +993,24 @@ where
                     ))
                 }
                 ExtendedInstanceInterface::<C>::Component(parent_component) => {
-                    let parent_offers: Vec<O> = {
+                    let parent_offer: O = {
                         let parent_offers = parent_component.lock_resolved_state().await?.offers();
                         let child_moniker =
                             target.child_moniker().expect("ChildMoniker should exist");
-                        let found_offers = find_matching_offers(
+                        find_matching_offer(
                             registration.source_name(),
                             &child_moniker,
                             &parent_offers,
-                        );
-                        if found_offers.is_empty() {
-                            return Err(
-                                <R as ErrorNotFoundFromParent>::error_not_found_from_parent(
-                                    target.abs_moniker().clone(),
-                                    registration.source_name().clone(),
-                                ),
-                            );
-                        } else {
-                            found_offers
-                        }
+                        )
+                        .cloned()
+                        .ok_or_else(|| {
+                            <R as ErrorNotFoundFromParent>::error_not_found_from_parent(
+                                target.abs_moniker().clone(),
+                                registration.source_name().clone(),
+                            )
+                        })?
                     };
-                    Ok(RegistrationResult::FromParent(parent_offers, parent_component))
+                    Ok(RegistrationResult::FromParent(parent_offer, parent_component))
                 }
             },
             RegistrationSource::Child(child) => {
@@ -1126,8 +1060,6 @@ enum OfferResult<C: ComponentInstanceInterface, O> {
     OfferFromChild(O, Arc<C>),
     /// Offer from collection.
     OfferFromCollection(O, Arc<C>, String),
-    /// Offer from multiple sources.
-    OfferFromAggregate(Vec<O>, Arc<C>),
 }
 
 impl<O> Offer<O>
@@ -1253,30 +1185,19 @@ where
                         ExtendedInstanceInterface::<C>::Component(component) => component,
                     };
                     let child_moniker = target.child_moniker().expect("ChildMoniker should exist");
-                    let parent_offers: Vec<O> = {
+                    let parent_offer = {
                         let parent_offers = parent_component.lock_resolved_state().await?.offers();
-                        let found_offers = find_matching_offers(
-                            offer.source_name(),
-                            &child_moniker,
-                            &parent_offers,
-                        );
-                        if found_offers.is_empty() {
-                            return Err(
+                        find_matching_offer(offer.source_name(), &child_moniker, &parent_offers)
+                            .cloned()
+                            .ok_or_else(|| {
                                 <O as ErrorNotFoundFromParent>::error_not_found_from_parent(
                                     target.abs_moniker().clone(),
                                     offer.source_name().clone(),
-                                ),
-                            );
-                        } else {
-                            found_offers
-                        }
+                                )
+                            })?
                     };
-                    if parent_offers.len() == 1 {
-                        offer = parent_offers.first().unwrap().clone();
-                        target = parent_component;
-                    } else {
-                        return Ok(OfferResult::OfferFromAggregate(parent_offers, target));
-                    }
+                    offer = parent_offer;
+                    target = parent_component;
                 }
                 OfferSource::Child(_) => {
                     return Ok(OfferResult::OfferFromChild(offer, target));
@@ -1519,25 +1440,6 @@ where
         *offer.target_name() == *source_name
             && target_matches_moniker(offer.target(), &child_moniker)
     })
-}
-
-pub fn find_matching_offers<'a, O>(
-    source_name: &CapabilityName,
-    child_moniker: &ChildMoniker,
-    offers: &'a Vec<OfferDecl>,
-) -> Vec<O>
-where
-    O: OfferDeclCommon + FromEnum<OfferDecl> + Clone,
-{
-    offers
-        .iter()
-        .flat_map(FromEnum::<OfferDecl>::from_enum)
-        .filter(|offer: &&O| {
-            *offer.target_name() == *source_name
-                && target_matches_moniker(offer.target(), &child_moniker)
-        })
-        .cloned()
-        .collect()
 }
 
 pub fn find_matching_expose<'a, E>(

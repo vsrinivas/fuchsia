@@ -300,7 +300,6 @@ macro_rules! instantiate_common_routing_tests {
             test_route_protocol_from_expose,
             test_use_from_expose_to_framework,
             test_offer_from_non_executable,
-            test_route_aggregate_protocol_fails,
             test_use_directory_with_subdir_from_grandparent,
             test_use_directory_with_subdir_from_sibling,
             test_expose_directory_with_subdir,
@@ -1965,97 +1964,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
             .await;
     }
 
-    ///   a
-    /// / | \
-    /// b c d
-    ///
-    /// a: exposes "foo" to parent from child
-    /// b: exposes "foo" to parent from child
-    /// c: uses "foo" from parent
-    /// routing an aggregate protocol should fail
-    pub async fn test_route_aggregate_protocol_fails(&self) {
-        let expected_protocol_decl =
-            ProtocolDecl { name: "foo".into(), source_path: Some("/svc/foo".parse().unwrap()) };
-        let components = vec![
-            (
-                "a",
-                ComponentDeclBuilder::new()
-                    .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                        source: OfferSource::static_child("b".into()),
-                        source_name: "foo".into(),
-                        target_name: "foo".into(),
-                        target: OfferTarget::static_child("d".to_string()),
-                        dependency_type: DependencyType::Strong,
-                        availability: Availability::Required,
-                    }))
-                    .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                        source: OfferSource::static_child("c".into()),
-                        source_name: "foo".into(),
-                        target_name: "foo".into(),
-                        target: OfferTarget::static_child("d".to_string()),
-                        dependency_type: DependencyType::Strong,
-                        availability: Availability::Required,
-                    }))
-                    .add_lazy_child("b")
-                    .add_lazy_child("c")
-                    .add_lazy_child("d")
-                    .build(),
-            ),
-            (
-                "b",
-                ComponentDeclBuilder::new()
-                    .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
-                        source: ExposeSource::Self_,
-                        source_name: "foo".into(),
-                        target_name: "foo".into(),
-                        target: ExposeTarget::Parent,
-                    }))
-                    .protocol(expected_protocol_decl.clone())
-                    .build(),
-            ),
-            (
-                "c",
-                ComponentDeclBuilder::new()
-                    .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
-                        source: ExposeSource::Self_,
-                        source_name: "foo".into(),
-                        target_name: "foo".into(),
-                        target: ExposeTarget::Parent,
-                    }))
-                    .protocol(expected_protocol_decl.clone())
-                    .build(),
-            ),
-            (
-                "d",
-                ComponentDeclBuilder::new()
-                    .use_(UseDecl::Protocol(UseProtocolDecl {
-                        source: UseSource::Parent,
-                        source_name: "foo".into(),
-                        target_path: CapabilityPath::try_from("/svc/foo").unwrap(),
-                        dependency_type: DependencyType::Strong,
-                        availability: Availability::Required,
-                    }))
-                    .build(),
-            ),
-        ];
-        let model = T::new("a", components).build().await;
-
-        let d_component = model.look_up_instance(&vec!["d"].into()).await.expect("b instance");
-        assert_matches!(
-            route_capability(
-                RouteRequest::UseProtocol(UseProtocolDecl {
-                    source: UseSource::Parent,
-                    source_name: "foo".into(),
-                    target_path: CapabilityPath::try_from("/svc/foo").unwrap(),
-                    dependency_type: DependencyType::Strong,
-                    availability: Availability::Required,
-                }),
-                &d_component
-            )
-            .await,
-            Err(RoutingError::UnsupportedRouteSource { source_type: _ })
-        );
-    }
     ///   a
     ///    \
     ///     b
