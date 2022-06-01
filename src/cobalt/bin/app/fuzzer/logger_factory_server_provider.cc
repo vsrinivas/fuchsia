@@ -80,7 +80,7 @@ zx_status_t fuzzer_init() {
   }
 
   if (cobalt_service == nullptr) {
-    cobalt_service = std::make_unique<cobalt::CobaltService>(std::move(cfg));
+    cobalt_service = cobalt::CobaltService::Create(std::move(cfg)).ValueOrDie();
   }
 
   return fuzzer_server_provider->Init(&timer_manager, cobalt_service.get());

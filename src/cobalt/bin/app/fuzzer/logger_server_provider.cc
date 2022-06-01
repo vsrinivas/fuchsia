@@ -77,7 +77,7 @@ zx_status_t fuzzer_init() {
   }
 
   if (cobalt_service == nullptr) {
-    cobalt_service = std::make_unique<cobalt::CobaltService>(std::move(cfg));
+    cobalt_service = cobalt::CobaltService::Create(std::move(cfg)).ValueOrDie();
   }
 
   std::string config = cobalt::Base64Decode(
