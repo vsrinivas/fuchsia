@@ -1,6 +1,6 @@
 # Documentation style guide
 
-This document gives writing style guidance for Fuchsia.dev, and these
+This document gives writing style guidance for Fuchsia.dev. These
 guidelines build on the general guidance in the [Google Developers Style
 Guide][google-dev-doc-style-guide].
 
