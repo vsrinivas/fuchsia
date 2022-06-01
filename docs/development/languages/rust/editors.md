@@ -95,7 +95,8 @@ flycheck-rust-check-tests<RET>` and then customizing the variable in the normal
 way.
 
 Now, you'll want to make sure that the default `cargo` and `rustc` that you are
-using are Fuchsia versions of those.  From your fuchsia root, type:
+using are Fuchsia versions of those.  If you haven't already,
+[install rustup](https://rustup.rs/). Then, from your Fuchsia root, type:
 
 ```posix-terminal
 rustup toolchain link fuchsia {{ '<var>' }}FUCHSIA_DIR{{ '</var>' }}/prebuilt/third_party/rust/{{ '<var>' }}HOST_OS{{ '</var>' }}
