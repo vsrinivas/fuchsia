@@ -95,7 +95,7 @@ ffx component start /core/ffx-laboratory:profile_store/clients:delete_olive
 ffx component start /core/ffx-laboratory:profile_store/clients:reader
 ```
 
-## Debugging with diganostics
+## Debugging with diagnostics
 
 Diagnostics provides multiple products that help component authors debug their components both
 while developing and in the field.
