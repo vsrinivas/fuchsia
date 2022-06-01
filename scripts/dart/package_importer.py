@@ -327,7 +327,7 @@ def main():
         os.mkdir(pub_cache_dir)
         env = os.environ
         env['PUB_CACHE'] = pub_cache_dir
-        pub_get = [args.dart, 'pub', 'get']
+        pub_get = [args.dart, 'pub', 'get', '--legacy-packages-file']
         if args.debug:
             pub_get.append('-v')
         subprocess.check_call(pub_get, cwd=importer_dir, env=env)
