@@ -5,7 +5,7 @@
 use {
     crate::framework::RealmCapabilityHost,
     crate::model::{
-        component::{ComponentInstance, InstanceState, StartReason, WeakComponentInstance},
+        component::{ComponentInstance, StartReason, WeakComponentInstance},
         error::ModelError,
         model::Model,
         storage::admin_protocol::StorageAdmin,
@@ -98,21 +98,16 @@ impl LifecycleController {
     async fn unresolve_component(&self, moniker: &str) -> Result<(), fcomponent::Error> {
         let abs_moniker = self.construct_moniker(&moniker)?;
         let model = self.model.upgrade().ok_or(fcomponent::Error::Internal)?;
-        if let Some(component) = model.find(&abs_moniker).await {
-            if {
-                let state = component.lock_state().await;
-                matches!(*state, InstanceState::Resolved(_))
-            } {
-                component.unresolve().await.map_err(|e: ModelError| {
-                    debug!(
-                        "lifecycle controller failed to unresolve the component instance {}: {:?}",
-                        moniker, e
-                    );
-                    return fcomponent::Error::InstanceCannotUnresolve;
-                })?;
-            }
+        match model.find(&abs_moniker).await {
+            Some(component) => component.unresolve().await.map_err(|e: ModelError| {
+                error!(
+                    "lifecycle controller failed to unresolve the component instance {}: {:?}",
+                    moniker, e
+                );
+                fcomponent::Error::InstanceCannotUnresolve
+            }),
+            _ => Err(fcomponent::Error::InstanceNotFound),
         }
-        Ok(())
     }
 
     async fn unresolve(&self, moniker: String) -> Result<(), fcomponent::Error> {
@@ -407,18 +402,27 @@ mod tests {
         let lifecycle_controller =
             LifecycleController::new(Arc::downgrade(&test.model), vec![].into());
 
-        lifecycle_controller.resolve(".".to_string()).await.unwrap();
+        assert_eq!(lifecycle_controller.resolve(".".to_string()).await, Ok(()));
         let component_a = test.model.look_up(&vec!["a"].into()).await.unwrap();
         let component_b = test.model.look_up(&vec!["a", "b"].into()).await.unwrap();
         assert!(is_resolved(&component_a).await);
         assert!(is_resolved(&component_b).await);
 
-        lifecycle_controller.unresolve_component(".").await.unwrap();
+        assert_eq!(lifecycle_controller.unresolve_component(".").await, Ok(()));
         assert!(is_discovered(&component_a).await);
         assert!(is_discovered(&component_b).await);
 
-        // No error if component doesn't exist.
-        lifecycle_controller.unresolve_component("./nonesuch").await.unwrap();
+        assert_eq!(
+            lifecycle_controller.unresolve_component("./nonesuch").await,
+            Err(fcomponent::Error::InstanceNotFound)
+        );
+
+        // TODO(fxbug.dev/101406): For idempotency, make unresolving a Discovered component a
+        // NOP/Ok(()).
+        assert_eq!(
+            lifecycle_controller.unresolve_component(".").await,
+            Err(fcomponent::Error::InstanceCannotUnresolve)
+        );
     }
 
     #[fuchsia::test]
