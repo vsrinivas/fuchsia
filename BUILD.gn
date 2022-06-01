@@ -1164,14 +1164,13 @@ group("default") {
     "//build/images:packages",
     "//build/input:build_only",
     "//build/zircon/zbi_tests",
+    "//sdk",
   ]
 
   # SDK-only builds must not attempt to build images.
   if (product_build) {
     deps += [ "//build/images:default-images" ]
     deps += [ "//:drivers-check" ]
-  } else {
-    deps += [ "//sdk" ]
   }
 }
 
