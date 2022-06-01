@@ -18,7 +18,7 @@ use core::num::NonZeroU8;
 use net_types::ip::IpVersion;
 use net_types::{
     ip::{AddrSubnet, Ip, IpAddress as _, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr},
-    MulticastAddr, SpecifiedAddr,
+    MulticastAddr, SpecifiedAddr, UnicastAddr,
 };
 use packet::{BufferMut, EmptyBuf, Serializer};
 use packet_formats::utils::NonZeroDuration;
@@ -207,6 +207,15 @@ pub enum IpAddressState {
     Tentative,
 }
 
+impl From<AddressState> for IpAddressState {
+    fn from(state: AddressState) -> IpAddressState {
+        match state {
+            AddressState::Assigned => IpAddressState::Assigned,
+            AddressState::Tentative { .. } => IpAddressState::Tentative,
+        }
+    }
+}
+
 #[derive(Debug)]
 /// Events emitted from IP devices.
 pub enum IpDeviceEvent<DeviceId, I: Ip> {
@@ -307,15 +316,58 @@ pub(crate) trait Ipv6DeviceHandler: IpDeviceIdContext<Ipv6> {
         device_id: Self::DeviceId,
         retrans_timer: NonZeroDuration,
     );
+
+    /// Removes a tentative address as a result of duplicate address detection.
+    ///
+    /// Returns whether or not the address was removed. That is, this method
+    /// returns `Ok(true)` when the address was tentatively assigned and
+    /// `Ok(false)` if the address is fully assigned.
+    fn remove_duplicate_tentative_address(
+        &mut self,
+        device_id: Self::DeviceId,
+        addr: UnicastAddr<Ipv6Addr>,
+    ) -> Result<bool, NotFoundError>;
 }
 
-impl<C: Ipv6DeviceContext> Ipv6DeviceHandler for C {
+impl<C: Ipv6DeviceContext + GmpHandler<Ipv6> + DadHandler + SlaacHandler> Ipv6DeviceHandler for C {
     fn set_discovered_retrans_timer(
         &mut self,
         device_id: Self::DeviceId,
         retrans_timer: NonZeroDuration,
     ) {
         self.get_ip_device_state_mut(device_id).retrans_timer = retrans_timer;
+    }
+
+    fn remove_duplicate_tentative_address(
+        &mut self,
+        device_id: Self::DeviceId,
+        addr: UnicastAddr<Ipv6Addr>,
+    ) -> Result<bool, NotFoundError> {
+        let address_state = self
+            .get_ip_device_state(device_id)
+            .ip_state
+            .iter_addrs()
+            .find_map(
+                |Ipv6AddressEntry { addr_sub, state: address_state, config: _, deprecated: _ }| {
+                    (addr_sub.addr() == addr).then(|| (*address_state).into())
+                },
+            )
+            .ok_or(NotFoundError)?;
+
+        Ok(match address_state {
+            IpAddressState::Tentative => {
+                del_ipv6_addr_with_reason(
+                    self,
+                    &mut (),
+                    device_id,
+                    &addr.into_specified(),
+                    DelIpv6AddrReason::DadFailed,
+                )
+                .unwrap();
+                true
+            }
+            IpAddressState::Assigned => false,
+        })
     }
 }
 

@@ -37,6 +37,7 @@ use crate::{
     data_structures::{token_bucket::TokenBucket, IdMap, IdMapCollectionKey},
     device::ndp::NdpPacketHandler,
     device::FrameDestination,
+    error::NotFoundError,
     ip::{
         device::{
             route_discovery::{Ipv6DiscoveredRoute, RouteDiscoveryHandler},
@@ -1216,12 +1217,121 @@ fn receive_ndp_packet<
     // per RFC 4861 section 6.1.2.
 
     match packet {
-        NdpPacket::NeighborSolicitation(_)
-        | NdpPacket::RouterSolicitation(_)
-        | NdpPacket::Redirect(_) => {}
-        NdpPacket::NeighborAdvertisement(_) => {
+        NdpPacket::RouterSolicitation(_) | NdpPacket::Redirect(_) => {}
+        NdpPacket::NeighborSolicitation(ref p) => {
+            let target_address = p.message().target_address();
+            let target_address = match UnicastAddr::new(*target_address) {
+                Some(a) => a,
+                None => {
+                    trace!(
+                        "dropping NS from {} with non-unicast target={:?}",
+                        src_ip,
+                        target_address
+                    );
+                    return;
+                }
+            };
+
+            match src_ip {
+                Ipv6SourceAddr::Unspecified => {
+                    // The neighbor is performing Duplicate address detection.
+                    //
+                    // As per RFC 4861 section 4.3,
+                    //
+                    //   Source Address
+                    //       Either an address assigned to the interface from
+                    //       which this message is sent or (if Duplicate Address
+                    //       Detection is in progress [ADDRCONF]) the
+                    //       unspecified address.
+                    match Ipv6DeviceHandler::remove_duplicate_tentative_address(
+                        sync_ctx,
+                        device_id,
+                        target_address,
+                    ) {
+                        Ok(tentative) => {
+                            if tentative {
+                                // Nothing further to do.
+                                return;
+                            }
+                        }
+                        Err(NotFoundError) => {
+                            // Nothing further to do for unassigned target
+                            // addresses.
+                            return;
+                        }
+                    }
+                }
+                Ipv6SourceAddr::Unicast(_) => {}
+            }
+
+            // TODO(https://fxbug.dev/99830): Move NUD to IP.
+        }
+        NdpPacket::NeighborAdvertisement(ref p) => {
             // TODO(https://fxbug.dev/97311): Invalidate discovered routers when
             // neighbor entry's IsRouter field transitions to false.
+
+            let target_address = p.message().target_address();
+
+            let src_ip = match src_ip {
+                Ipv6SourceAddr::Unicast(src_ip) => src_ip,
+                Ipv6SourceAddr::Unspecified => {
+                    trace!("dropping NA with unspecified source and target = {:?}", target_address);
+                    return;
+                }
+            };
+
+            let target_address = match UnicastAddr::new(*target_address) {
+                Some(a) => a,
+                None => {
+                    trace!(
+                        "dropping NA from {} with non-unicast target={:?}",
+                        src_ip,
+                        target_address
+                    );
+                    return;
+                }
+            };
+
+            match Ipv6DeviceHandler::remove_duplicate_tentative_address(
+                sync_ctx,
+                device_id,
+                target_address,
+            ) {
+                Ok(tentative) => {
+                    if !tentative {
+                        // A neighbor is advertising that it owns an address
+                        // that we also have assigned. This is out of scope
+                        // for DAD.
+                        //
+                        // As per RFC 4862 section 5.4.4,
+                        //
+                        //   2.  If the target address matches a unicast address
+                        //       assigned to the receiving interface, it would
+                        //       possibly indicate that the address is a
+                        //       duplicate but it has not been detected by the
+                        //       Duplicate Address Detection procedure (recall
+                        //       that Duplicate Address Detection is not
+                        //       completely reliable). How to handle such a case
+                        //       is beyond the scope of this document.
+                        //
+                        // TODO(https://fxbug.dev/36238): Signal to bindings
+                        // that a duplicate address is detected.
+                        error!(
+                            "NA from {} with target address {} that is also assigned on device {}",
+                            src_ip, target_address, device_id
+                        );
+                    }
+
+                    // Nothing further to do for an NA from a neighbor that
+                    // targets an address we also have assigned.
+                    return;
+                }
+                Err(NotFoundError) => {
+                    // Address not targeting us so we know its for a neighbor.
+                    //
+                    // TODO(https://fxbug.dev/99830): Move NUD to IP.
+                }
+            }
         }
         NdpPacket::RouterAdvertisement(ref p) => {
             // As per RFC 4861 section 6.1.2,
@@ -3812,6 +3922,14 @@ mod tests {
             _device_id: Self::DeviceId,
             _retrans_timer: NonZeroDuration,
         ) {
+            unimplemented!()
+        }
+
+        fn remove_duplicate_tentative_address(
+            &mut self,
+            _device_id: Self::DeviceId,
+            _addr: UnicastAddr<Ipv6Addr>,
+        ) -> Result<bool, NotFoundError> {
             unimplemented!()
         }
     }

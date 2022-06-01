@@ -22,11 +22,11 @@ use alloc::collections::HashMap;
 use core::{fmt::Debug, marker::PhantomData, num::NonZeroU8, time::Duration};
 
 use assert_matches::assert_matches;
-use log::{debug, error, trace};
+use log::{debug, trace};
 use net_types::{
     ip::{Ip, Ipv6, Ipv6Addr, Ipv6Scope, Ipv6SourceAddr},
     LinkLocalAddress, LinkLocalUnicastAddr, MulticastAddr, MulticastAddress, ScopeableAddress,
-    SpecifiedAddr, SpecifiedAddress, UnicastAddr, Witness,
+    SpecifiedAddr, UnicastAddr, Witness,
 };
 use nonzero_ext::nonzero;
 use packet::{EmptyBuf, InnerPacketBuilder, Serializer};
@@ -276,15 +276,6 @@ pub(crate) trait NdpContext<D: LinkDevice, C>:
         ctx: &mut C,
         device_id: Self::DeviceId,
         address: &UnicastAddr<Ipv6Addr>,
-    );
-
-    /// Notifies the device layer that a duplicate address has been detected.
-    /// The device should want to remove the address.
-    fn duplicate_address_detected(
-        &mut self,
-        ctx: &mut C,
-        device_id: Self::DeviceId,
-        addr: UnicastAddr<Ipv6Addr>,
     );
 
     /// Set Link MTU.
@@ -1039,43 +1030,16 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C, SC: NdpContext<D, C>, B>(
                 }
             };
 
-            // Is `target_address` associated with our device? If not, drop the
-            // packet.
-            if sync_ctx.get_ip_device_state(ctx, device_id).find_addr(&target_address).is_none() {
-                trace!("receive_ndp_packet: Dropping NDP NS packet that is not meant for us");
-                return;
-            }
-
-            // We know the call to `unwrap` will not panic because we just
-            // checked to make sure that `target_address` is associated with
-            // `device_id`.
-            let addr_entry =
-                sync_ctx.get_ip_device_state(ctx, device_id).find_addr(&target_address).unwrap();
-            if addr_entry.state.is_tentative() {
-                if !src_ip.is_specified() {
-                    // If the source address of the packet is the unspecified
-                    // address, the source of the packet is performing DAD for
-                    // the same target address as our `my_addr`. A duplicate
-                    // address has been detected.
-                    trace!(
-                        "receive_ndp_packet: Received NDP NS: duplicate address {:?} detected on device {:?}", target_address, device_id
-                    );
-                    sync_ctx.duplicate_address_detected(ctx, device_id, target_address);
-                }
-
-                // `target_address` is tentative on `device_id` so we do not
-                // continue processing the NDP NS.
-                return;
-            }
-
             // At this point, we guarantee the following is true because of the
-            // earlier checks:
+            // earlier checks (with 2 & 3 being done in IP):
             //
             //   1) The target address is a valid unicast address.
             //   2) The target address is an address that is on our device,
             //      `device_id`.
             //   3) The target address is not tentative.
-
+            //
+            // TODO(https://fxbub.dev/99830): Move all of NDP handling
+            // to IP.
             sync_ctx.increment_counter("ndp::rx_neighbor_solicitation");
 
             // If we have a source link layer address option, we take it and
@@ -1129,51 +1093,20 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C, SC: NdpContext<D, C>, B>(
             let message = p.message();
             let target_address = p.message().target_address();
 
-            let (src_ip, target_address) = match (src_ip, UnicastAddr::new(*target_address)) {
-                (Ipv6SourceAddr::Unicast(src_ip), Some(target_address)) => {
+            let src_ip = match src_ip {
+                Ipv6SourceAddr::Unicast(src_ip) => {
                     trace!(
                         "receive_ndp_packet: NDP NA source={:?} target={:?}",
                         src_ip,
                         target_address
                     );
-                    (src_ip, target_address)
+                    src_ip
                 }
-                (Ipv6SourceAddr::Unspecified, Some(target_address)) => {
+                Ipv6SourceAddr::Unspecified => {
                     trace!("receive_ndp_packet: NDP NA source={:?} target={:?}; source is not specified; discarding", src_ip, target_address);
                     return;
                 }
-                (Ipv6SourceAddr::Unicast(src_ip), None) => {
-                    trace!("receive_ndp_packet: NDP NA source={:?} target={:?}; target is not unicast; discarding", src_ip, target_address);
-                    return;
-                }
-                (Ipv6SourceAddr::Unspecified, None) => {
-                    trace!("receive_ndp_packet: NDP NA source={:?} target={:?}; source is not specified and target is not unicast; discarding", src_ip, target_address);
-                    return;
-                }
             };
-
-            match sync_ctx
-                .get_ip_device_state(ctx, device_id)
-                .find_addr(&target_address)
-                .map(|entry| entry.state)
-            {
-                Some(AddressState::Tentative { dad_transmits_remaining }) => {
-                    trace!("receive_ndp_packet: NDP NA has a target address {:?} that is tentative on device {:?}; dad_transmits_remaining={:?}", target_address, device_id, dad_transmits_remaining);
-                    sync_ctx.duplicate_address_detected(ctx, device_id, target_address);
-                    return;
-                }
-                Some(AddressState::Assigned) => {
-                    // RFC 4862 says this situation is out of the scope, so we
-                    // just log out the situation for now.
-                    //
-                    // TODO(ghanan): Signal to bindings that a duplicate address
-                    // is detected?
-                    error!("receive_ndp_packet: NDP NA: A duplicated address {:?} found on device {:?} when we are not in DAD process!", target_address, device_id);
-                    return;
-                }
-                // Do nothing.
-                None => {}
-            }
 
             sync_ctx.increment_counter("ndp::rx_neighbor_advertisement");
 
@@ -4009,7 +3942,6 @@ mod tests {
             &mut ctx,
             device,
             first_addr_entry.addr_sub().addr(),
-            router_ip,
         );
 
         // In response to the advertisement with the duplicate address, a
@@ -4047,29 +3979,39 @@ mod tests {
         ctx: &mut crate::testutil::DummyCtx,
         device: DeviceId,
         source_ip: UnicastAddr<Ipv6Addr>,
-        router_ip: Ipv6Addr,
     ) {
         let peer_mac = mac!("00:11:22:33:44:55");
         let dest_ip = Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.get();
         let router_flag = false;
         let solicited_flag = false;
         let override_flag = true;
-        let mut buf = neighbor_advertisement_message(
-            source_ip.get(),
-            dest_ip,
-            router_flag,
-            solicited_flag,
-            override_flag,
-            Some(peer_mac),
-        );
-        let packet =
-            buf.parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(dest_ip, source_ip)).unwrap();
-        ctx.receive_ndp_packet(
+
+        let src_ip = source_ip.get();
+        receive_ipv6_packet(
+            ctx,
             device,
-            router_ip.try_into().unwrap(),
-            source_ip.into_specified(),
-            packet.unwrap_ndp(),
-        );
+            FrameDestination::Multicast,
+            Buf::new(
+                neighbor_advertisement_message(
+                    src_ip,
+                    dest_ip,
+                    router_flag,
+                    solicited_flag,
+                    override_flag,
+                    Some(peer_mac),
+                ),
+                ..,
+            )
+            .encapsulate(Ipv6PacketBuilder::new(
+                src_ip,
+                dest_ip,
+                REQUIRED_NDP_IP_PACKET_HOP_LIMIT,
+                Ipv6Proto::Icmpv6,
+            ))
+            .serialize_vec_outer()
+            .unwrap()
+            .unwrap_b(),
+        )
     }
 
     #[test]
@@ -4148,7 +4090,6 @@ mod tests {
                     &mut ctx,
                     device,
                     addr_entry.addr_sub().addr(),
-                    router_ip,
                 );
 
                 // The address should be unassigned from the device.

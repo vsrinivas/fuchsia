@@ -38,7 +38,7 @@ use crate::{
         BufferIpLinkDeviceContext, DeviceIdContext, EthernetDeviceId, FrameDestination,
         IpLinkDeviceContext, RecvIpFrameMeta,
     },
-    error::{ExistsError, NotFoundError},
+    error::ExistsError,
     ip::device::state::{AddrConfig, IpDeviceState},
     BlanketCoreContext, Ctx, EventDispatcher,
 };
@@ -77,16 +77,6 @@ pub(crate) trait EthernetIpLinkDeviceContext<C>:
         config: AddrConfig<Self::Instant>,
     ) -> Result<(), ExistsError>;
 
-    /// Removes an IPv6 address from the device as a result of DAD failing.
-    // TODO(https://fxbug.dev/72378): Remove this method once NDP operates at
-    // L3.
-    fn del_ipv6_addr_on_dad_failure(
-        &mut self,
-        ctx: &mut C,
-        device_id: Self::DeviceId,
-        addr: &SpecifiedAddr<Ipv6Addr>,
-    ) -> Result<(), NotFoundError>;
-
     /// Joins an IPv6 multicast group.
     // TODO(https://fxbug.dev/72378): Remove this method once NDP operates at
     // L3.
@@ -117,21 +107,6 @@ impl<D: EventDispatcher, C: BlanketCoreContext> EthernetIpLinkDeviceContext<()> 
         config: AddrConfig<C::Instant>,
     ) -> Result<(), ExistsError> {
         crate::ip::device::add_ipv6_addr_subnet(self, &mut (), device_id.into(), addr_sub, config)
-    }
-
-    fn del_ipv6_addr_on_dad_failure(
-        &mut self,
-        _ctx: &mut (),
-        device_id: EthernetDeviceId,
-        addr: &SpecifiedAddr<Ipv6Addr>,
-    ) -> Result<(), NotFoundError> {
-        crate::ip::device::del_ipv6_addr_with_reason(
-            self,
-            &mut (),
-            device_id.into(),
-            addr,
-            crate::ip::device::state::DelIpv6AddrReason::DadFailed,
-        )
     }
 
     fn join_ipv6_multicast(
@@ -849,17 +824,6 @@ impl<C, SC: EthernetIpLinkDeviceContext<C>> NdpContext<EthernetLinkDevice, C> fo
         mac_resolution_failed(self, ctx, device_id, IpAddr::V6(address.get()));
     }
 
-    fn duplicate_address_detected(
-        &mut self,
-        ctx: &mut C,
-        device_id: SC::DeviceId,
-        addr: UnicastAddr<Ipv6Addr>,
-    ) {
-        let () = self
-            .del_ipv6_addr_on_dad_failure(ctx, device_id, &addr.into_specified())
-            .expect("expected to delete an address we are performing DAD on");
-    }
-
     fn set_mtu(&mut self, _ctx: &mut C, device_id: SC::DeviceId, mut mtu: u32) {
         // TODO(ghanan): Should this new MTU be updated only from the netstack's
         //               perspective or be exposed to the device hardware?
@@ -981,6 +945,7 @@ mod tests {
             arp::ArpHandler, testutil::DeviceTestIpExt, DeviceId, DeviceIdInner, EthernetDeviceId,
             IpLinkDeviceState,
         },
+        error::NotFoundError,
         ip::{
             device::{
                 is_ipv4_routing_enabled, is_ipv6_routing_enabled, set_routing_enabled,
@@ -1052,15 +1017,6 @@ mod tests {
             _addr_sub: AddrSubnet<Ipv6Addr>,
             _config: AddrConfig<DummyInstant>,
         ) -> Result<(), ExistsError> {
-            unimplemented!()
-        }
-
-        fn del_ipv6_addr_on_dad_failure(
-            &mut self,
-            _ctx: &mut C,
-            _device_id: DummyDeviceId,
-            _addr: &SpecifiedAddr<Ipv6Addr>,
-        ) -> Result<(), NotFoundError> {
             unimplemented!()
         }
 
