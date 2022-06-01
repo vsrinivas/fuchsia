@@ -17,96 +17,92 @@ namespace media_audio {
 // TODO(fxbug.dev/85201): Remove this workaround, once the device properly maps channels.
 inline constexpr bool kEnable4ChannelWorkaround = true;
 
-// Template to map an input frame of `InputSampleType` with `InputChannelCount` into each output
-// sample with `OutputChannelCount` in a normalized 32-bit float format.
-template <typename InputSampleType, size_t InputChannelCount, size_t OutputChannelCount,
+// Template to map a source frame of `SourceSampleType` with `SourceChannelCount` into each
+// destination sample with `DestChannelCount` in a normalized 32-bit float format.
+template <typename SourceSampleType, size_t SourceChannelCount, size_t DestChannelCount,
           bool Customizable = false, typename Trait = void>
 class ChannelMapper;
 
 // N -> N channel mapper (passthrough).
-template <typename InputSampleType, size_t InputChannelCount, size_t OutputChannelCount>
-class ChannelMapper<InputSampleType, InputChannelCount, OutputChannelCount, /*Customizable*/ false,
-                    typename std::enable_if_t<(InputChannelCount == OutputChannelCount)>> {
+template <typename SourceSampleType, size_t SourceChannelCount, size_t DestChannelCount>
+class ChannelMapper<SourceSampleType, SourceChannelCount, DestChannelCount, /*Customizable*/ false,
+                    typename std::enable_if_t<(SourceChannelCount == DestChannelCount)>> {
  public:
-  inline float Map(const InputSampleType* input, size_t output_channel) {
-    return SampleConverter<InputSampleType>::ToFloat(input[output_channel]);
+  inline float Map(const SourceSampleType* source_frame, size_t dest_channel) {
+    return SampleConverter<SourceSampleType>::ToFloat(source_frame[dest_channel]);
   }
 };
 
 // 1 -> N channel mapper.
-template <typename InputSampleType, size_t InputChannelCount, size_t OutputChannelCount>
-class ChannelMapper<InputSampleType, InputChannelCount, OutputChannelCount, /*Customizable*/ false,
-                    typename std::enable_if_t<(InputChannelCount == 1 && OutputChannelCount > 1)>> {
+template <typename SourceSampleType, size_t SourceChannelCount, size_t DestChannelCount>
+class ChannelMapper<SourceSampleType, SourceChannelCount, DestChannelCount, /*Customizable*/ false,
+                    typename std::enable_if_t<(SourceChannelCount == 1 && DestChannelCount > 1)>> {
  public:
-  inline float Map(const InputSampleType* input, [[maybe_unused]] size_t output_channel) {
-    return SampleConverter<InputSampleType>::ToFloat(input[0]);
+  inline float Map(const SourceSampleType* source_frame, [[maybe_unused]] size_t dest_channel) {
+    return SampleConverter<SourceSampleType>::ToFloat(source_frame[0]);
   }
 };
 
 // 2 -> 1 channel mapper.
-template <typename InputSampleType, size_t InputChannelCount, size_t OutputChannelCount>
-class ChannelMapper<
-    InputSampleType, InputChannelCount, OutputChannelCount, /*Customizable*/ false,
-    typename std::enable_if_t<(InputChannelCount == 2 && OutputChannelCount == 1)>> {
+template <typename SourceSampleType, size_t SourceChannelCount, size_t DestChannelCount>
+class ChannelMapper<SourceSampleType, SourceChannelCount, DestChannelCount, /*Customizable*/ false,
+                    typename std::enable_if_t<(SourceChannelCount == 2 && DestChannelCount == 1)>> {
  public:
-  inline float Map(const InputSampleType* input, [[maybe_unused]] size_t output_channel) {
+  inline float Map(const SourceSampleType* source_frame, [[maybe_unused]] size_t dest_channel) {
     // Assumes a configuration with equal weighting of each channel.
-    return 0.5f * (SampleConverter<InputSampleType>::ToFloat(input[0]) +
-                   SampleConverter<InputSampleType>::ToFloat(input[1]));
+    return 0.5f * (SampleConverter<SourceSampleType>::ToFloat(source_frame[0]) +
+                   SampleConverter<SourceSampleType>::ToFloat(source_frame[1]));
   }
 };
 
 // 2 -> 3 channel mapper.
-template <typename InputSampleType, size_t InputChannelCount, size_t OutputChannelCount>
-class ChannelMapper<
-    InputSampleType, InputChannelCount, OutputChannelCount, /*Customizable*/ false,
-    typename std::enable_if_t<(InputChannelCount == 2 && OutputChannelCount == 3)>> {
+template <typename SourceSampleType, size_t SourceChannelCount, size_t DestChannelCount>
+class ChannelMapper<SourceSampleType, SourceChannelCount, DestChannelCount, /*Customizable*/ false,
+                    typename std::enable_if_t<(SourceChannelCount == 2 && DestChannelCount == 3)>> {
  public:
-  inline float Map(const InputSampleType* input, size_t output_channel) {
+  inline float Map(const SourceSampleType* source_frame, size_t dest_channel) {
     // Assumes a configuration where the third channel is an equally weighted downmix of the first
     // two channels.
-    return (output_channel < 2) ? SampleConverter<InputSampleType>::ToFloat(input[output_channel])
-                                : 0.5f * (SampleConverter<InputSampleType>::ToFloat(input[0]) +
-                                          SampleConverter<InputSampleType>::ToFloat(input[1]));
+    return (dest_channel < 2)
+               ? SampleConverter<SourceSampleType>::ToFloat(source_frame[dest_channel])
+               : 0.5f * (SampleConverter<SourceSampleType>::ToFloat(source_frame[0]) +
+                         SampleConverter<SourceSampleType>::ToFloat(source_frame[1]));
   }
 };
 
 // 2 -> 4 channel mapper.
-template <typename InputSampleType, size_t InputChannelCount, size_t OutputChannelCount>
-class ChannelMapper<
-    InputSampleType, InputChannelCount, OutputChannelCount, /*Customizable*/ false,
-    typename std::enable_if_t<(InputChannelCount == 2 && OutputChannelCount == 4)>> {
+template <typename SourceSampleType, size_t SourceChannelCount, size_t DestChannelCount>
+class ChannelMapper<SourceSampleType, SourceChannelCount, DestChannelCount, /*Customizable*/ false,
+                    typename std::enable_if_t<(SourceChannelCount == 2 && DestChannelCount == 4)>> {
  public:
-  inline float Map(const InputSampleType* input, size_t output_channel) {
-    return SampleConverter<InputSampleType>::ToFloat(input[output_channel % 2]);
+  inline float Map(const SourceSampleType* source_frame, size_t dest_channel) {
+    return SampleConverter<SourceSampleType>::ToFloat(source_frame[dest_channel % 2]);
   }
 };
 
 // 3 -> 1 channel mapper.
-template <typename InputSampleType, size_t InputChannelCount, size_t OutputChannelCount>
-class ChannelMapper<
-    InputSampleType, InputChannelCount, OutputChannelCount, /*Customizable*/ false,
-    typename std::enable_if_t<(InputChannelCount == 3 && OutputChannelCount == 1)>> {
+template <typename SourceSampleType, size_t SourceChannelCount, size_t DestChannelCount>
+class ChannelMapper<SourceSampleType, SourceChannelCount, DestChannelCount, /*Customizable*/ false,
+                    typename std::enable_if_t<(SourceChannelCount == 3 && DestChannelCount == 1)>> {
  public:
   // Assumes a configuration with equal weighting of each channel.
-  inline float Map(const InputSampleType* input, [[maybe_unused]] size_t output_channel) {
-    return (SampleConverter<InputSampleType>::ToFloat(input[0]) +
-            SampleConverter<InputSampleType>::ToFloat(input[1]) +
-            SampleConverter<InputSampleType>::ToFloat(input[2])) /
+  inline float Map(const SourceSampleType* source_frame, [[maybe_unused]] size_t dest_channel) {
+    return (SampleConverter<SourceSampleType>::ToFloat(source_frame[0]) +
+            SampleConverter<SourceSampleType>::ToFloat(source_frame[1]) +
+            SampleConverter<SourceSampleType>::ToFloat(source_frame[2])) /
            3.0f;
   }
 };
 
 // 3 -> 2 channel mapper.
-template <typename InputSampleType, size_t InputChannelCount, size_t OutputChannelCount>
-class ChannelMapper<
-    InputSampleType, InputChannelCount, OutputChannelCount, /*Customizable*/ false,
-    typename std::enable_if_t<(InputChannelCount == 3 && OutputChannelCount == 2)>> {
+template <typename SourceSampleType, size_t SourceChannelCount, size_t DestChannelCount>
+class ChannelMapper<SourceSampleType, SourceChannelCount, DestChannelCount, /*Customizable*/ false,
+                    typename std::enable_if_t<(SourceChannelCount == 3 && DestChannelCount == 2)>> {
  public:
-  inline float Map(const InputSampleType* input, size_t output_channel) {
-    return SampleConverter<InputSampleType>::ToFloat(input[output_channel]) *
+  inline float Map(const SourceSampleType* source_frame, size_t dest_channel) {
+    return SampleConverter<SourceSampleType>::ToFloat(source_frame[dest_channel]) *
                kInverseOnePlusRootHalf +
-           SampleConverter<InputSampleType>::ToFloat(input[2]) * kInverseRootTwoPlusOne;
+           SampleConverter<SourceSampleType>::ToFloat(source_frame[2]) * kInverseRootTwoPlusOne;
   }
 
  private:
@@ -115,60 +111,58 @@ class ChannelMapper<
 };
 
 // 4 -> 1 channel mapper.
-template <typename InputSampleType, size_t InputChannelCount, size_t OutputChannelCount>
-class ChannelMapper<
-    InputSampleType, InputChannelCount, OutputChannelCount, /*Customizable*/ false,
-    typename std::enable_if_t<(InputChannelCount == 4 && OutputChannelCount == 1)>> {
+template <typename SourceSampleType, size_t SourceChannelCount, size_t DestChannelCount>
+class ChannelMapper<SourceSampleType, SourceChannelCount, DestChannelCount, /*Customizable*/ false,
+                    typename std::enable_if_t<(SourceChannelCount == 4 && DestChannelCount == 1)>> {
  public:
-  inline float Map(const InputSampleType* input, [[maybe_unused]] size_t output_channel) {
+  inline float Map(const SourceSampleType* source_frame, [[maybe_unused]] size_t dest_channel) {
     if constexpr (kEnable4ChannelWorkaround) {
       // TODO(fxbug.dev/85201): Temporarily ignore the third and fourth channels.
-      return 0.5f * (SampleConverter<InputSampleType>::ToFloat(input[0]) +
-                     SampleConverter<InputSampleType>::ToFloat(input[1]));
+      return 0.5f * (SampleConverter<SourceSampleType>::ToFloat(source_frame[0]) +
+                     SampleConverter<SourceSampleType>::ToFloat(source_frame[1]));
     }
-    return 0.25f * (SampleConverter<InputSampleType>::ToFloat(input[0]) +
-                    SampleConverter<InputSampleType>::ToFloat(input[1]) +
-                    SampleConverter<InputSampleType>::ToFloat(input[2]) +
-                    SampleConverter<InputSampleType>::ToFloat(input[3]));
+    return 0.25f * (SampleConverter<SourceSampleType>::ToFloat(source_frame[0]) +
+                    SampleConverter<SourceSampleType>::ToFloat(source_frame[1]) +
+                    SampleConverter<SourceSampleType>::ToFloat(source_frame[2]) +
+                    SampleConverter<SourceSampleType>::ToFloat(source_frame[3]));
   }
 };
 
 // 4 -> 2 channel mapper.
-template <typename InputSampleType, size_t InputChannelCount, size_t OutputChannelCount>
-class ChannelMapper<
-    InputSampleType, InputChannelCount, OutputChannelCount, /*Customizable*/ false,
-    typename std::enable_if_t<(InputChannelCount == 4 && OutputChannelCount == 2)>> {
+template <typename SourceSampleType, size_t SourceChannelCount, size_t DestChannelCount>
+class ChannelMapper<SourceSampleType, SourceChannelCount, DestChannelCount, /*Customizable*/ false,
+                    typename std::enable_if_t<(SourceChannelCount == 4 && DestChannelCount == 2)>> {
  public:
-  inline float Map(const InputSampleType* input, size_t output_channel) {
+  inline float Map(const SourceSampleType* source_frame, size_t dest_channel) {
     if constexpr (kEnable4ChannelWorkaround) {
       // TODO(fxbug.dev/85201): Temporarily ignore the third and fourth channels.
-      return SampleConverter<InputSampleType>::ToFloat(input[output_channel]);
+      return SampleConverter<SourceSampleType>::ToFloat(source_frame[dest_channel]);
     }
-    return 0.5f * (SampleConverter<InputSampleType>::ToFloat(input[output_channel]) +
-                   SampleConverter<InputSampleType>::ToFloat(input[output_channel + 2]));
+    return 0.5f * (SampleConverter<SourceSampleType>::ToFloat(source_frame[dest_channel]) +
+                   SampleConverter<SourceSampleType>::ToFloat(source_frame[dest_channel + 2]));
   }
 };
 
 // M -> N customizable channel mapper.
-template <typename InputSampleType, size_t InputChannelCount, size_t OutputChannelCount>
-class ChannelMapper<InputSampleType, InputChannelCount, OutputChannelCount, /*Customizable=*/true> {
+template <typename SourceSampleType, size_t SourceChannelCount, size_t DestChannelCount>
+class ChannelMapper<SourceSampleType, SourceChannelCount, DestChannelCount, /*Customizable=*/true> {
  public:
   explicit ChannelMapper(
-      std::array<std::array<float, InputChannelCount>, OutputChannelCount> coefficients)
+      std::array<std::array<float, SourceChannelCount>, DestChannelCount> coefficients)
       : coefficients_(std::move(coefficients)) {}
 
-  inline float Map(const InputSampleType* input, size_t output_channel) {
-    float output = 0.0f;
-    for (size_t input_channel = 0; input_channel < InputChannelCount; ++input_channel) {
-      output += coefficients_[output_channel][input_channel] *
-                SampleConverter<InputSampleType>::ToFloat(input[input_channel]);
+  inline float Map(const SourceSampleType* source_frame, size_t dest_channel) {
+    float dest_sample = 0.0f;
+    for (size_t source_channel = 0; source_channel < SourceChannelCount; ++source_channel) {
+      dest_sample += coefficients_[dest_channel][source_channel] *
+                     SampleConverter<SourceSampleType>::ToFloat(source_frame[source_channel]);
     }
-    return output;
+    return dest_sample;
   }
 
  private:
   // Normalized channel coefficients.
-  std::array<std::array<float, InputChannelCount>, OutputChannelCount> coefficients_;
+  std::array<std::array<float, SourceChannelCount>, DestChannelCount> coefficients_;
 };
 
 }  // namespace media_audio
