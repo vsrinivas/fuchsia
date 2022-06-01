@@ -221,9 +221,9 @@ executable("gfx_viewstate_apptest_bin") {
   testonly = true
   sources = [ "gfx_integration_tests/gfx_viewstate_apptest.cc" ]
   deps = [
+    ":common_deps",
     ":gfx_pixel_test",
     ":scenic_realm_builder",
-    "//src/ui/scenic/lib/gfx/tests:gfx_tests_main",
     "//src/ui/scenic/lib/gfx/tests:testing_deps",
   ]
 }
@@ -233,9 +233,28 @@ fuchsia_test_component("gfx_viewstate_apptest") {
   manifest = "meta/gfx_viewstate_app_test.cml"
   deps = [
     ":gfx_viewstate_apptest_bin",
-    ":wrapper_vk_cube",
     "//src/ui/bin/root_presenter:component_v2",
     "//src/ui/examples/bouncing_ball:component_v2_for_test",
+  ]
+}
+
+executable("gfx_vkcube_test_bin") {
+  testonly = true
+  sources = [ "gfx_integration_tests/gfx_vkcube_test.cc" ]
+  deps = [
+    ":gfx_pixel_test",
+    ":scenic_realm_builder",
+    "//src/ui/scenic/lib/gfx/tests:gfx_tests_main",
+    "//src/ui/scenic/lib/gfx/tests:testing_deps",
+  ]
+}
+
+fuchsia_test_component("gfx_vkcube_test") {
+  component_name = "gfx_vkcube_test"
+  manifest = "meta/gfx_vkcube_test.cml"
+  deps = [
+    ":gfx_vkcube_test_bin",
+    ":wrapper_vk_cube",
   ]
 }
 
@@ -380,6 +399,7 @@ fuchsia_test_package("gfx_integration_tests") {
     ":gfx_view_ref_installed_integration_test",
     ":gfx_viewstate_apptest",
     ":scenic_pixeltest",
+    ":gfx_vkcube_test",
   ]
 
   test_specs = {

@@ -9,9 +9,4 @@
     program: {
         binary: "bin/gfx_viewstate_apptest_bin",
     },
-    use: [
-        {
-            protocol: [ "fuchsia.vulkan.loader.Loader" ],
-        },
-    ],
 }
