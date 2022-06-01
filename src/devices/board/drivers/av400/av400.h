@@ -14,6 +14,7 @@
 
 #include <ddktl/device.h>
 #include <fbl/macros.h>
+#include <soc/aml-a5/a5-hw.h>
 
 namespace av400 {
 
@@ -57,6 +58,8 @@ class Av400 : public Av400Type {
 
  private:
   DISALLOW_COPY_ASSIGN_AND_MOVE(Av400);
+
+  zx_status_t GpioInit();
 
   int Thread();
 

@@ -58,7 +58,16 @@ zx_status_t Av400::Create(void* ctx, zx_device_t* parent) {
 
 int Av400::Thread() {
   // Load protocol implementation drivers first.
+  zx_status_t status;
+
   zxlogf(INFO, "Initializing AV400 board!!!");
+
+  if ((status = GpioInit()) != ZX_OK) {
+    zxlogf(ERROR, "GpioInit() failed: %s", zx_status_get_string(status));
+    init_txn_->Reply(ZX_ERR_INTERNAL);
+    return status;
+  }
+  init_txn_->Reply(status);
   return ZX_OK;
 }
 

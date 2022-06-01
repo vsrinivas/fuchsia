@@ -13,6 +13,7 @@ accept fuchsia.BIND_PLATFORM_DEV_PID {
   fuchsia.amlogic.platform.BIND_PLATFORM_DEV_PID.T931,
   fuchsia.amlogic.platform.BIND_PLATFORM_DEV_PID.A311D,
   fuchsia.amlogic.platform.BIND_PLATFORM_DEV_PID.S905D3,
+  fuchsia.amlogic.platform.BIND_PLATFORM_DEV_PID.A5,
 }
 fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.amlogic.platform.BIND_PLATFORM_DEV_DID.GPIO;
 

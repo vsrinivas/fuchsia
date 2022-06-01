@@ -14,6 +14,7 @@
 #include <fbl/alloc_checker.h>
 
 #include "a113-blocks.h"
+#include "a5-blocks.h"
 #include "s905d2-blocks.h"
 #include "src/devices/gpio/drivers/aml-axg-gpio/aml-axg-gpio-bind.h"
 
@@ -101,6 +102,11 @@ zx_status_t AmlAxgGpio::Create(void* ctx, zx_device_t* parent) {
       gpio_blocks = s905d2_gpio_blocks;
       block_count = std::size(s905d2_gpio_blocks);
       gpio_interrupt = &s905d2_interrupt_block;
+      break;
+    case PDEV_PID_AMLOGIC_A5:
+      gpio_blocks = a5_gpio_blocks;
+      block_count = std::size(a5_gpio_blocks);
+      gpio_interrupt = &a5_interrupt_block;
       break;
     default:
       zxlogf(ERROR, "AmlAxgGpio::Create: unsupported SOC PID %u", info.pid);
