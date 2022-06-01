@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/gtest/real_loop_fixture.h>
+#include <lib/gtest/test_loop_fixture.h>
 
 #include <gtest/gtest.h>
 
@@ -13,7 +13,7 @@
 #include "lib/fidl/cpp/interface_ptr.h"
 #include "profile_store.h"
 
-class ProfileStoreTests : public gtest::RealLoopFixture {
+class ProfileStoreTests : public gtest::TestLoopFixture {
  public:
   ProfileStoreTests() : store_(dispatcher()) {}
 
@@ -39,21 +39,17 @@ TEST_F(ProfileStoreTests, DISABLED_Delete) {
   profile_client->SetName("my_name");
   profile_client->AddBalance(10);
   // Verify details were set.
-  std::string set_name = "";
-  int64_t set_balance = -1;
+  std::string set_name;
+  int64_t set_balance;
   profile_client->GetName([&](std::string n) { set_name = std::move(n); });
   profile_client->GetBalance([&](int64_t b) { set_balance = b; });
-  RunLoopUntil([&]() { return !set_name.empty() && set_balance != -1; });
+  RunLoopUntilIdle();
   EXPECT_EQ(set_name, "my_name");
   EXPECT_EQ(set_balance, 10);
 
   // Delete profile.
-  bool delete_done = false;
-  store_client->Delete("my_key", [&](bool successful) {
-    EXPECT_TRUE(successful);
-    delete_done = true;
-  });
-  RunLoopUntil([&]() { return delete_done; });
+  store_client->Delete("my_key", [&](bool successful) { EXPECT_TRUE(successful); });
+  RunLoopUntilIdle();
   profile_client.Unbind();
   RunLoopUntilIdle();
 
@@ -63,7 +59,7 @@ TEST_F(ProfileStoreTests, DISABLED_Delete) {
   set_balance = -1;
   profile_client->GetName([&](std::string n) { set_name = std::move(n); });
   profile_client->GetBalance([&](int64_t b) { set_balance = b; });
-  RunLoopUntil([&]() { return !set_name.empty() && set_balance != -1; });
+  RunLoopUntilIdle();
   EXPECT_EQ(set_name, "");
   EXPECT_EQ(set_balance, 0);
 }
