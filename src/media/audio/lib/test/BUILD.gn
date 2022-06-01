@@ -142,6 +142,7 @@ source_set("hermetic_pipeline_test_main") {
 
   deps = [
     "//sdk/fidl/fuchsia.media",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
     "//src/lib/fxl/test:test_settings",
   ]
