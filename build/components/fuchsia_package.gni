@@ -159,7 +159,7 @@ template("fuchsia_package") {
     }
 
     _pm_build_target = "${target_name}.pm"
-    _validate_structured_config = true
+    _validate_structured_config = false
     if (defined(invoker.validate_structured_config)) {
       _validate_structured_config = invoker.validate_structured_config
     }

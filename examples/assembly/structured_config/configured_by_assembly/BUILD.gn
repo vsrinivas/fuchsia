@@ -19,8 +19,4 @@ fuchsia_component("to_configure") {
 # to provide it with configuration values.
 fuchsia_package("configured_by_assembly") {
   deps = [ ":to_configure" ]
-
-  # This package can't have its config validated during its own build because the config is provided
-  # in a later stage by assembly tooling.
-  validate_structured_config = false
 }

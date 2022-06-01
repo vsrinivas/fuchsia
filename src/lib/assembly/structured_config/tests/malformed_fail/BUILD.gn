@@ -25,9 +25,6 @@ fuchsia_package("malformed_for_validation_fail") {
     ":fail_bad_runner",
     ":fail_missing_program",
   ]
-
-  # This package intentionally includes invalidly configured components for testing purposes.
-  validate_structured_config = false
   visibility = [ ":*" ]
 }
 

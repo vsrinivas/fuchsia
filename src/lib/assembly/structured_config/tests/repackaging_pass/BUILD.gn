@@ -49,9 +49,6 @@ fuchsia_package(_package_name) {
     ":pass_without_config",
   ]
   visibility = [ ":*" ]
-
-  # This package intentionally includes invalidly configured components for testing purposes.
-  validate_structured_config = false
 }
 
 _archive_name = "${_package_name}_archive"

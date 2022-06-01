@@ -106,9 +106,6 @@ fuchsia_component("session_manager_comp") {
 
 fuchsia_package("session_manager") {
   deps = [ ":session_manager_comp" ]
-
-  # This package's configuration is supplied by product assembly's config.
-  validate_structured_config = false
 }
 
 fuchsia_unittest_package("session_manager_tests") {
