@@ -85,59 +85,6 @@ std::string JoinArgVector(const std::vector<std::string>& argv) {
 
 }  // namespace
 
-LocalGuestConfigProvider::LocalGuestConfigProvider(async_dispatcher_t* dispatcher,
-                                                   std::string package_dir_name,
-                                                   fuchsia::virtualization::GuestConfig&& config)
-    : dispatcher_(dispatcher),
-      config_(std::move(config)),
-      package_dir_name_(std::move(package_dir_name)) {}
-
-void LocalGuestConfigProvider::Get(GetCallback callback) {
-  auto block_devices = std::move(*config_.mutable_block_devices());
-  zx_status_t status;
-
-  const std::string config_path = package_dir_name_ + "/data/guest.cfg";
-
-  auto open_at = [&](const std::string& path, fidl::InterfaceRequest<fuchsia::io::File> file) {
-    return fdio_open((package_dir_name_ + "/" + path).c_str(),
-                     static_cast<uint32_t>(fuchsia::io::OpenFlags::RIGHT_READABLE),
-                     file.TakeChannel().release());
-  };
-
-  std::string content;
-  bool readFileSuccess = files::ReadFileToString(config_path, &content);
-  if (!readFileSuccess) {
-    FX_LOGS(WARNING) << "Failed to read guest configuration";
-  }
-  status = guest_config::ParseConfig(content, std::move(open_at), &config_);
-  if (status != ZX_OK) {
-    FX_PLOGS(WARNING, status) << "Failed to read guest configuration";
-  }
-
-  // Make sure that block devices provided by the configuration in the guest's
-  // package take precedence, as the order matters.
-  for (auto& block_device : block_devices) {
-    config_.mutable_block_devices()->emplace_back(std::move(block_device));
-  }
-  // Merge the command-line additions into the main kernel command-line field.
-  for (auto& cmdline : *config_.mutable_cmdline_add()) {
-    config_.mutable_cmdline()->append(" " + cmdline);
-  }
-  config_.clear_cmdline_add();
-  // Set any defaults, before returning the configuration.
-  guest_config::SetDefaults(&config_);
-  callback(std::move(config_));
-}
-
-void LocalGuestConfigProvider::Start(
-    std::unique_ptr<component_testing::LocalComponentHandles> handles) {
-  // This class contains handles to the component's incoming and outgoing capabilities.
-  handles_ = std::move(handles);
-
-  ASSERT_EQ(handles_->outgoing()->AddPublicService(binding_set_.GetHandler(this, dispatcher_)),
-            ZX_OK);
-}
-
 // Execute |command| on the guest serial and wait for the |result|.
 zx_status_t EnclosedGuest::Execute(const std::vector<std::string>& argv,
                                    const std::unordered_map<std::string, std::string>& env,

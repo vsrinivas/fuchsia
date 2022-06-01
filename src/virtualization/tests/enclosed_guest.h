@@ -30,25 +30,6 @@ enum class GuestKernel {
   LINUX,
 };
 
-class LocalGuestConfigProvider : public fuchsia::virtualization::GuestConfigProvider,
-                                 public component_testing::LocalComponent {
- public:
-  LocalGuestConfigProvider(async_dispatcher_t* dispatcher, std::string package_dir_name,
-                           fuchsia::virtualization::GuestConfig&& config);
-
-  // |fuchsia::virtualization::GuestConfigProvider|
-  void Get(GetCallback callback) override;
-  // |component_testing::LocalComponent
-  void Start(std::unique_ptr<component_testing::LocalComponentHandles> handles) override;
-
- private:
-  async_dispatcher_t* dispatcher_;
-  fidl::BindingSet<fuchsia::virtualization::GuestConfigProvider> binding_set_;
-  std::unique_ptr<component_testing::LocalComponentHandles> handles_;
-  fuchsia::virtualization::GuestConfig config_;
-  std::string package_dir_name_;
-};
-
 struct GuestLaunchInfo {
   std::string url;
   std::string interface_name;
@@ -155,8 +136,6 @@ class EnclosedGuest {
   // Can be null if the realm is created externally by the test code.
   std::unique_ptr<component_testing::RealmRoot> realm_root_;
 
-  std::unique_ptr<LocalGuestConfigProvider> local_guest_config_provider_;
-
   fuchsia::virtualization::GuestPtr guest_;
   FakeScenic fake_scenic_;
   FakeNetstack fake_netstack_;
@@ -167,13 +146,6 @@ class EnclosedGuest {
   std::optional<GuestConsole> console_;
   uint32_t guest_cid_;
   bool ready_ = false;
-
-  // TODO(fxbug.dev/72386)
-  // Remove once audio test framework is migrated to RealmBuilder and sound test is using CFv2
-  fuchsia::sys::EnvironmentPtr real_env_;
-  std::unique_ptr<sys::testing::EnclosingEnvironment> enclosing_environment_;
-  fuchsia::virtualization::ManagerPtr manager_;
-  fuchsia::virtualization::RealmPtr realm_;
 };
 
 class ZirconEnclosedGuest : public EnclosedGuest {
