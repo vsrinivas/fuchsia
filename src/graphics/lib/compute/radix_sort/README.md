@@ -20,10 +20,12 @@ The following architectures are supported:
 Vendor | Architecture  | 32‑bit Keyvals     | 64‑bit Keyvals  | Notes
 -------|---------------|:------------------:|:---------------:|------
 NVIDIA | sm_35+        | ✔                  | ✔               |
-AMD    | GCN           | ✔                  | ✔               |
+AMD    | GCN3+         | ✔                  | ✔               |
+AMD    | RDNA+         | ✔                  | ✔               | 64-wide subgroup
 ARM    | Bifrost4      | ✔                  | ✔               |
 ARM    | Bifrost8      | ✔                  | ✔               |
 Intel  | GEN8+         | ✔                  | ✔               |
+Intel  | Xe+           | ✔                  | ✔               |
 
 ## Benchmarks
 
@@ -45,4 +47,13 @@ Intel  | GEN8+         | ✔                  | ✔               |
 ### ARM Mali G31
 ![ARM Mali G31](docs/images/arm_g31.png)
 
+## Future Improvements
+
+* 96-bit and 128-bit keyval support.
+* Possibly reduce GMEM transactions by accumulating stores that share the same
+  transaction boundary.
+
 ## References
+
+* Merrill, Duane and Michael Garland. "Single-pass Parallel Prefix Scan with Decoupled Lookback." (2016).
+* Adinets, Andy. "A Faster Radix Sort Implementation." NVIDIA GTC 2020.
