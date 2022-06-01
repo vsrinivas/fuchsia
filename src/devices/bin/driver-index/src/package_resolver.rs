@@ -5,8 +5,10 @@
 use anyhow::Context;
 use futures::TryStreamExt;
 use {
-    fidl_fuchsia_io as fio, fidl_fuchsia_pkg::PackageResolverRequestStream,
-    fuchsia_url::pkg_url::PkgUrl, futures::StreamExt,
+    fidl_fuchsia_io as fio,
+    fidl_fuchsia_pkg::PackageResolverRequestStream,
+    fuchsia_url::{PackageVariant, UnpinnedAbsolutePackageUrl},
+    futures::StreamExt,
 };
 pub async fn serve(stream: PackageResolverRequestStream) -> anyhow::Result<()> {
     stream
@@ -18,12 +20,17 @@ pub async fn serve(stream: PackageResolverRequestStream) -> anyhow::Result<()> {
                     dir,
                     responder,
                 } => {
-                    let package_url = PkgUrl::parse(&package_url)?;
-                    let root_url = package_url.root_url();
-                    let package_name = io_util::canonicalize_path(root_url.path());
+                    let package_url = UnpinnedAbsolutePackageUrl::parse(&package_url)?;
                     let flags = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DIRECTORY;
                     io_util::node::connect_in_namespace(
-                        &format!("/pkgfs/packages/{}/0", package_name),
+                        &format!(
+                            "/pkgfs/packages/{}/{}",
+                            package_url.name(),
+                            package_url
+                                .variant()
+                                .cloned()
+                                .unwrap_or_else(|| PackageVariant::zero())
+                        ),
                         flags,
                         dir.into_channel(),
                     )?;
