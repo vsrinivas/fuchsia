@@ -1,0 +1,9 @@
+{
+    "short_description": "AV400 board driver",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "Board"
+    ]
+}

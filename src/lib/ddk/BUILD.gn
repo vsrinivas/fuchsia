@@ -108,6 +108,7 @@ library_headers("ddk-deprecated-binding-headers") {
     "//src/devices/bin/driver_host:*",
     "//src/devices/bin/driver_manager:*",
     "//src/devices/board/drivers/astro:*",
+    "//src/devices/board/drivers/av400:*",
     "//src/devices/board/drivers/c18:*",
     "//src/devices/board/drivers/integration-test:*",
     "//src/devices/board/drivers/machina:*",

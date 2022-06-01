@@ -120,6 +120,8 @@ fbl::String GetTestFilter() {
   } else if (!strcmp(board_name, "Standard PC (Q35 + ICH9, 2009)")) {
     // QEMU and AEMU with emulated Q35 boards have this board name.
     return "*QemuX64Q35*";
+  } else if (!strcmp(board_name, "av400")) {
+    return "*Av400*";
   }
 
   return "Unknown";
@@ -139,6 +141,14 @@ class DeviceEnumerationTest : public zxtest::Test {
     }
   }
 };
+
+TEST_F(DeviceEnumerationTest, Av400Test) {
+  static const char* kDevicePaths[] = {
+      "sys/platform/platform-passthrough/av400",
+  };
+
+  ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));
+}
 
 TEST_F(DeviceEnumerationTest, QemuArm64Test) {
   static const char* kDevicePaths[] = {

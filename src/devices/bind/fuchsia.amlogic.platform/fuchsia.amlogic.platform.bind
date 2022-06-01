@@ -19,7 +19,9 @@ extend uint fuchsia.BIND_PLATFORM_DEV_PID {
   T931 = 0x04,
   S905D3 = 0x05,
   A311D = 0x06,
+  A5 = 0x07,
   NELSON = 0x0A,
+  AV400 = 0xF,
 };
 
 extend uint fuchsia.BIND_PLATFORM_DEV_DID {

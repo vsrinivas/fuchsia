@@ -83,6 +83,7 @@ __BEGIN_CDECLS
 #define PDEV_PID_LUIS               0x0C
 #define PDEV_PID_GOLDFISH           0x0D
 #define PDEV_PID_MOTMOT             0x0E
+#define PDEV_PID_AV400              0x0F
 
 #define PDEV_DID_GAUSS_AUDIO_IN     0x01
 #define PDEV_DID_GAUSS_AUDIO_OUT    0x02
@@ -113,6 +114,7 @@ __BEGIN_CDECLS
 #define PDEV_PID_AMLOGIC_T931       0x04
 #define PDEV_PID_AMLOGIC_S905D3     0x05
 #define PDEV_PID_AMLOGIC_A311D      0x06
+#define PDEV_PID_AMLOGIC_A5         0x07
 
 #define PDEV_DID_AMLOGIC_GPIO        0x01
 #define PDEV_DID_AMLOGIC_I2C         0x02
