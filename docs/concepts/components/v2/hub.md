@@ -72,6 +72,13 @@ section for more details.
 Once the capability is added to the manifest, a component can access the hub
 from `/hub`.
 
+Note: in [shell][sshd-use-hub] [environments][console-launcher-use-hub], the v2
+hub included in the namespace as `/hub-v2`, not `/hub`. So replace `/hub` with
+`/hub-v2` for all the examples on this page when exploring the hub via the shell.
+
+[sshd-use-hub]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/developer/sshd-host/meta/sshd-host.cml;l=76-80;drc=35c04b3fb6c0476555cfcaeb3656a6733e764df5
+[console-launcher-use-hub]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/bringup/bin/console-launcher/meta/console-launcher.cml;l=45-49;drc=82ce40f543731cfe645222f34903347a634de240
+
 ## Structure of the hub
 
 ### `/hub`
