@@ -28,7 +28,10 @@
             protocol: [
                 "fuchsia.fonts.Provider",
                 "fuchsia.hwinfo.Product",
+                "fuchsia.media.Audio",
+                "fuchsia.media.AudioDeviceEnumerator",
                 "fuchsia.media.ProfileProvider",
+                "fuchsia.mediacodec.CodecFactory",
                 "fuchsia.posix.socket.Provider",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.vulkan.loader.Loader",
