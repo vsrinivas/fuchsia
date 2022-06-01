@@ -237,12 +237,13 @@ impl Cupv2RequestHandler for StandardCupv2Handler {
         // recognizes that the request has been tampered in transit, and rejects
         // the exchange.
 
-        let etag_header: &str = resp
+        let etag_header = resp
             .headers()
             .get(ETAG)
             .ok_or(CupVerificationError::EtagHeaderMissing)?
             .to_str()
-            .map_err(CupVerificationError::EtagNotString)?;
+            .map_err(CupVerificationError::EtagNotString)
+            .map(parse_etag)?;
 
         let (encoded_signature, hex_hash): (&str, &str) =
             etag_header.split_once(':').ok_or(CupVerificationError::EtagMalformed)?;
@@ -304,6 +305,25 @@ impl Cupv2Verifier for StandardCupv2Handler {
             .get(&public_key_id)
             .ok_or(CupVerificationError::SpecifiedPublicKeyIdMissing)?;
         Ok(public_key.verify(&transaction_hash, &ecdsa_signature.try_into()?)?)
+    }
+}
+
+fn parse_etag(etag: &str) -> &str {
+    // ETag headers are wrapped in double quotes, and can optionally have a W/
+    // prefix. Examples:
+    //     ETag: "33a64df551425fcc55e4d42a148795d9f25f89d4"
+    //     ETag: W/"0815"
+    match etag.as_bytes() {
+        // If W/".." is present, strip this prefix and the trailing quote.
+        //
+        // NB: Since the &str is valid utf8, removing bytes results in a valid
+        // byte sequence which can be reconstituted into a utf8 without
+        // checking.
+        [b'W', b'/', b'\"', inner @ .., b'\"'] => unsafe { std::str::from_utf8_unchecked(inner) },
+        // If only ".." is present, strip the surrounding quotes.
+        [b'\"', inner @ .., b'\"'] => unsafe { std::str::from_utf8_unchecked(inner) },
+        // Otherwise, leave the str unchanged.
+        _ => etag,
     }
 }
 
@@ -766,5 +786,22 @@ mod tests {
         .unwrap();
 
         assert_eq!(public_key_and_id.key, test_support::make_default_public_key_for_test());
+    }
+
+    #[test]
+    fn test_parse_etag() {
+        // W/ prefix
+        assert_eq!(parse_etag("W/\"foo\""), "foo");
+        assert_eq!(parse_etag("W/\"thing-\"with\"-quotes\""), "thing-\"with\"-quotes");
+        assert_eq!(parse_etag("W/\"\""), "");
+        // only surrounding quotes
+        assert_eq!(parse_etag("\"foo\""), "foo");
+        assert_eq!(parse_etag("\"thing-\"with\"-quotes\""), "thing-\"with\"-quotes",);
+        assert_eq!(parse_etag("\"\""), "");
+        // otherwise, left unchanged
+        for v in ["foo", "1", "W", "W\"", "W/\"", "W/", "w/\"bar\"", "W/'bar'", ""] {
+            //
+            assert_eq!(parse_etag(v), v);
+        }
     }
 }
