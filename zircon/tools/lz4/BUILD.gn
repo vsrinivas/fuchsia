@@ -20,5 +20,6 @@ zx_host_tool("lz4") {
   defines = [ "XXH_NAMESPACE=LZ4_" ]
   include_dirs = [ "$lz4_lib" ]
 
+  configs += [ "//build/config:Wno-conversion" ]
   configs += [ "//build/config:Wno-implicit-fallthrough" ]
 }
