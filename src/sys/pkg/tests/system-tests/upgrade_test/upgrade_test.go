@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/tests/system-tests/check"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/tests/system-tests/flash"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/tests/system-tests/pave"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/tests/system-tests/script"
 	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/artifacts"
@@ -249,8 +250,14 @@ func initializeDevice(
 		if upToDate {
 			logger.Infof(ctx, "device already up to date")
 		} else {
-			if err := pave.PaveDevice(ctx, device, build); err != nil {
-				return nil, fmt.Errorf("failed to pave device during initialization: %w", err)
+			if c.useFlash {
+				if err := flash.FlashDevice(ctx, device, build); err != nil {
+					return nil, fmt.Errorf("failed to flash device during initialization: %w", err)
+				}
+			} else {
+				if err := pave.PaveDevice(ctx, device, build); err != nil {
+					return nil, fmt.Errorf("failed to pave device during initialization: %w", err)
+				}
 			}
 		}
 	}

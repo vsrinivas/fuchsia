@@ -25,6 +25,7 @@ type config struct {
 	beforeInitScript     string
 	afterInitScript      string
 	afterTestScript      string
+	useFlash             bool
 }
 
 func newConfig(fs *flag.FlagSet) (*config, error) {
@@ -50,6 +51,7 @@ func newConfig(fs *flag.FlagSet) (*config, error) {
 	fs.StringVar(&c.beforeInitScript, "before-init-script", "", "Run this script before initializing device for testing")
 	fs.StringVar(&c.afterInitScript, "after-init-script", "", "Run this script after initializing device for testing")
 	fs.StringVar(&c.afterTestScript, "after-test-script", "", "Run this script after a test step")
+	fs.BoolVar(&c.useFlash, "use-flash", false, "Provision device using flashing instead of paving")
 
 	return c, nil
 }
