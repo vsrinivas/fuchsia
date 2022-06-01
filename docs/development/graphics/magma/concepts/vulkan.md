@@ -119,6 +119,12 @@ A component that uses Vulkan must have these FIDL services routed to it:
 * `fuchsia.tracing.provider.Registry`
 * `fuchsia.logger.LogSink`
 
+Test components can receive these capabilities by being placed into a
+[non-hermetic realm](/docs/development/testing/components/test_component.md#legacy_non-hermetic_tests):
+
+* For `vulkan-test` include the `//src/lib/vulkan/vulkan-test.shard.cml` shard
+* For `system-test` include the `//src/sys/test_manager/system-test.shard.cml` shard
+
 ## Buildtime dependencies
 
 In order for your project to access the Vulkan headers, and to link against the Vulkan loader libvulkan.so, add the following GN dependency:
