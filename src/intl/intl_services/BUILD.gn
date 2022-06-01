@@ -12,6 +12,7 @@ import("//src/sys/core/build/core_shard.gni")
 group("intl_services") {
   testonly = true
   public_deps = [
+    ":intl_services_comp_v2",
     ":pkg",
     ":pkg_small",
     ":tests",
@@ -61,6 +62,14 @@ executable("intl_services_bin") {
 fuchsia_package_with_single_component("pkg") {
   package_name = "intl_services"
   manifest = "meta/intl_services.cmx"
+  deps = [
+    ":intl_services_bin",
+    "//src/intl:icudtl",
+  ]
+}
+
+fuchsia_component("intl_services_comp_v2") {
+  manifest = "meta/intl_services.cml"
   deps = [
     ":intl_services_bin",
     "//src/intl:icudtl",
