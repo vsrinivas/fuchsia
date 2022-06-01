@@ -6,7 +6,6 @@
 #define SRC_UI_A11Y_BIN_A11Y_MANAGER_TESTS_MOCKS_MOCK_FOCUS_CHAIN_H_
 
 #include <fuchsia/ui/focus/cpp/fidl.h>
-#include <fuchsia/ui/views/accessibility/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 

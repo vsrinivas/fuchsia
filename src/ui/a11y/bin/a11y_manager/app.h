@@ -13,7 +13,6 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/focus/cpp/fidl.h>
 #include <fuchsia/ui/input/accessibility/cpp/fidl.h>
-#include <fuchsia/ui/views/accessibility/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/inspect/cpp/inspect.h>

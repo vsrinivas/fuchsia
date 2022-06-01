@@ -25,7 +25,6 @@ source_set("mocks") {
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.input.accessibility",
     "//sdk/fidl/fuchsia.ui.views",
-    "//sdk/fidl/fuchsia.ui.views.accessibility",
   ]
 
   deps = [

@@ -36,7 +36,6 @@
             "fuchsia.ui.policy.DeviceListenerRegistry",
             "fuchsia.ui.policy.Presenter",
             "fuchsia.ui.scenic.Scenic",
-            "fuchsia.ui.views.accessibility.FocuserRegistry",
             "fuchsia.vulkan.loader.Loader"
         ]
     }
