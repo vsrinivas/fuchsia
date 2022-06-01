@@ -83,7 +83,7 @@ impl<D, I: Ip> RecvIpFrameMeta<D, I> {
 ///
 /// A blanket implementation is provided for all types that implement
 /// the inherited traits.
-pub(crate) trait IpLinkDeviceContext<D: LinkDevice, TimerId>:
+pub(crate) trait IpLinkDeviceContext<D: LinkDevice, C, TimerId>:
     DeviceIdContext<D>
     + CounterContext
     + RngContext
@@ -92,15 +92,16 @@ pub(crate) trait IpLinkDeviceContext<D: LinkDevice, TimerId>:
         <Self as RngContext>::Rng,
         <Self as DeviceIdContext<D>>::DeviceId,
     > + TimerContext<TimerId>
-    + FrameContext<(), EmptyBuf, <Self as DeviceIdContext<D>>::DeviceId>
-    + FrameContext<(), Buf<Vec<u8>>, <Self as DeviceIdContext<D>>::DeviceId>
+    + FrameContext<C, EmptyBuf, <Self as DeviceIdContext<D>>::DeviceId>
+    + FrameContext<C, Buf<Vec<u8>>, <Self as DeviceIdContext<D>>::DeviceId>
 {
 }
 
 impl<
         D: LinkDevice,
+        C,
         TimerId,
-        C: DeviceIdContext<D>
+        SC: DeviceIdContext<D>
             + CounterContext
             + RngContext
             + DualStateContext<
@@ -108,18 +109,18 @@ impl<
                 <Self as RngContext>::Rng,
                 <Self as DeviceIdContext<D>>::DeviceId,
             > + TimerContext<TimerId>
-            + FrameContext<(), EmptyBuf, <Self as DeviceIdContext<D>>::DeviceId>
-            + FrameContext<(), Buf<Vec<u8>>, <Self as DeviceIdContext<D>>::DeviceId>,
-    > IpLinkDeviceContext<D, TimerId> for C
+            + FrameContext<C, EmptyBuf, <Self as DeviceIdContext<D>>::DeviceId>
+            + FrameContext<C, Buf<Vec<u8>>, <Self as DeviceIdContext<D>>::DeviceId>,
+    > IpLinkDeviceContext<D, C, TimerId> for SC
 {
 }
 
 /// `IpLinkDeviceContext` with an extra `B: BufferMut` parameter.
 ///
 /// `BufferIpLinkDeviceContext` is used when sending a frame is required.
-trait BufferIpLinkDeviceContext<D: LinkDevice, TimerId, B: BufferMut>:
-    IpLinkDeviceContext<D, TimerId>
-    + FrameContext<(), B, <Self as DeviceIdContext<D>>::DeviceId>
+trait BufferIpLinkDeviceContext<D: LinkDevice, C, TimerId, B: BufferMut>:
+    IpLinkDeviceContext<D, C, TimerId>
+    + FrameContext<C, B, <Self as DeviceIdContext<D>>::DeviceId>
     + RecvFrameContext<B, RecvIpFrameMeta<<Self as DeviceIdContext<D>>::DeviceId, Ipv4>>
     + RecvFrameContext<B, RecvIpFrameMeta<<Self as DeviceIdContext<D>>::DeviceId, Ipv6>>
 {
@@ -127,13 +128,14 @@ trait BufferIpLinkDeviceContext<D: LinkDevice, TimerId, B: BufferMut>:
 
 impl<
         D: LinkDevice,
+        C,
         TimerId,
         B: BufferMut,
-        C: IpLinkDeviceContext<D, TimerId>
-            + FrameContext<(), B, <Self as DeviceIdContext<D>>::DeviceId>
+        SC: IpLinkDeviceContext<D, C, TimerId>
+            + FrameContext<C, B, <Self as DeviceIdContext<D>>::DeviceId>
             + RecvFrameContext<B, RecvIpFrameMeta<<Self as DeviceIdContext<D>>::DeviceId, Ipv4>>
             + RecvFrameContext<B, RecvIpFrameMeta<<Self as DeviceIdContext<D>>::DeviceId, Ipv6>>,
-    > BufferIpLinkDeviceContext<D, TimerId, B> for C
+    > BufferIpLinkDeviceContext<D, C, TimerId, B> for SC
 {
 }
 

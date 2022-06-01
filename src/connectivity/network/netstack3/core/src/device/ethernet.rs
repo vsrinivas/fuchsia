@@ -28,12 +28,13 @@ use packet_formats::{
 use specialize_ip_macro::specialize_ip_address;
 
 use crate::{
-    context::{FrameContext, StateContext},
+    context::{DualStateContext, FrameContext, InstantContext, RngContext, StateContext},
     data_structures::ref_counted_hash_map::{InsertResult, RefCountedHashSet, RemoveResult},
     device::{
         arp::{self, ArpContext, ArpDeviceIdContext, ArpFrameMetadata, ArpState, ArpTimerId},
         link::LinkDevice,
         ndp::{self, NdpContext, NdpHandler, NdpState, NdpTimerId},
+        state::IpLinkDeviceState,
         BufferIpLinkDeviceContext, DeviceIdContext, EthernetDeviceId, FrameDestination,
         IpLinkDeviceContext, RecvIpFrameMeta,
     },
@@ -58,9 +59,10 @@ impl From<Mac> for FrameDestination {
 }
 
 /// The execution context for an Ethernet device.
-pub(crate) trait EthernetIpLinkDeviceContext:
+pub(crate) trait EthernetIpLinkDeviceContext<C>:
     IpLinkDeviceContext<
     EthernetLinkDevice,
+    C,
     EthernetTimerId<<Self as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
 >
 {
@@ -102,7 +104,7 @@ pub(crate) trait EthernetIpLinkDeviceContext:
     );
 }
 
-impl<D: EventDispatcher, C: BlanketCoreContext> EthernetIpLinkDeviceContext for Ctx<D, C> {
+impl<D: EventDispatcher, C: BlanketCoreContext> EthernetIpLinkDeviceContext<()> for Ctx<D, C> {
     fn add_ipv6_addr_subnet(
         &mut self,
         device_id: EthernetDeviceId,
@@ -155,10 +157,11 @@ impl<D: EventDispatcher, C: BlanketCoreContext> EthernetIpLinkDeviceContext for 
 
 /// A shorthand for `BufferIpLinkDeviceContext` with all of the appropriate type
 /// arguments fixed to their Ethernet values.
-pub(super) trait BufferEthernetIpLinkDeviceContext<B: BufferMut>:
-    EthernetIpLinkDeviceContext
+pub(super) trait BufferEthernetIpLinkDeviceContext<C, B: BufferMut>:
+    EthernetIpLinkDeviceContext<C>
     + BufferIpLinkDeviceContext<
         EthernetLinkDevice,
+        C,
         EthernetTimerId<<Self as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
         B,
     >
@@ -166,14 +169,16 @@ pub(super) trait BufferEthernetIpLinkDeviceContext<B: BufferMut>:
 }
 
 impl<
+        C,
         B: BufferMut,
-        C: EthernetIpLinkDeviceContext
+        SC: EthernetIpLinkDeviceContext<C>
             + BufferIpLinkDeviceContext<
                 EthernetLinkDevice,
-                EthernetTimerId<<C as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
+                C,
+                EthernetTimerId<<SC as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
                 B,
             >,
-    > BufferEthernetIpLinkDeviceContext<B> for C
+    > BufferEthernetIpLinkDeviceContext<C, B> for SC
 {
 }
 
@@ -327,16 +332,14 @@ impl<D> From<NdpTimerId<EthernetLinkDevice, D>> for EthernetTimerId<D> {
 }
 
 /// Handle an Ethernet timer firing.
-pub(super) fn handle_timer<SC: EthernetIpLinkDeviceContext, C>(
+pub(super) fn handle_timer<C, SC: EthernetIpLinkDeviceContext<C>>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     id: EthernetTimerId<SC::DeviceId>,
 ) {
     match id {
         EthernetTimerId::Arp(id) => arp::handle_timer(sync_ctx, ctx, id.into()),
-        EthernetTimerId::Ndp(id) => {
-            <SC as NdpHandler<EthernetLinkDevice>>::handle_timer(sync_ctx, ctx, id)
-        }
+        EthernetTimerId::Ndp(id) => <SC as NdpHandler<_, _>>::handle_timer(sync_ctx, ctx, id),
     }
 }
 
@@ -367,9 +370,9 @@ impl_timer_context!(
 #[specialize_ip_address]
 pub(super) fn send_ip_frame<
     B: BufferMut,
-    SC: EthernetIpLinkDeviceContext
-        + FrameContext<(), B, <SC as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
     C,
+    SC: EthernetIpLinkDeviceContext<C>
+        + FrameContext<C, B, <SC as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
     A: IpAddress,
     S: Serializer<Buffer = B>,
 >(
@@ -396,7 +399,7 @@ pub(super) fn send_ip_frame<
     let dst_mac = match UnicastOrMulticastIpv6Addr::from_specified(local_addr) {
         UnicastOrMulticastIpv6Addr::Multicast(addr) => Ok(Mac::from(&addr)),
         UnicastOrMulticastIpv6Addr::Unicast(addr) => {
-            <SC as NdpHandler<_>>::lookup(sync_ctx, ctx, device_id, addr)
+            <SC as NdpHandler<_, _>>::lookup(sync_ctx, ctx, device_id, addr)
                 .ok_or(IpAddr::V6(local_addr))
         }
     };
@@ -404,7 +407,7 @@ pub(super) fn send_ip_frame<
     match dst_mac {
         Ok(dst_mac) => sync_ctx
             .send_frame(
-                &mut (),
+                ctx,
                 device_id.into(),
                 body.with_mtu(mtu as usize).encapsulate(EthernetFrameBuilder::new(
                     local_mac.get(),
@@ -442,9 +445,9 @@ pub(super) fn send_ip_frame<
 }
 
 /// Receive an Ethernet frame from the network.
-pub(super) fn receive_frame<B: BufferMut, SC: BufferEthernetIpLinkDeviceContext<B>, C>(
+pub(super) fn receive_frame<C, B: BufferMut, SC: BufferEthernetIpLinkDeviceContext<C, B>>(
     sync_ctx: &mut SC,
-    _ctx: &mut C,
+    ctx: &mut C,
     device_id: SC::DeviceId,
     mut buffer: B,
 ) {
@@ -486,7 +489,7 @@ pub(super) fn receive_frame<B: BufferMut, SC: BufferEthernetIpLinkDeviceContext<
             };
             match types {
                 (ArpHardwareType::Ethernet, ArpNetworkType::Ipv4) => {
-                    arp::handle_packet(sync_ctx, device_id, buffer)
+                    arp::handle_packet(sync_ctx, ctx, device_id, buffer)
                 }
             }
         }
@@ -501,7 +504,7 @@ pub(super) fn receive_frame<B: BufferMut, SC: BufferEthernetIpLinkDeviceContext<
 }
 
 /// Set the promiscuous mode flag on `device_id`.
-pub(super) fn set_promiscuous_mode<SC: EthernetIpLinkDeviceContext, C>(
+pub(super) fn set_promiscuous_mode<C, SC: EthernetIpLinkDeviceContext<C>>(
     sync_ctx: &mut SC,
     _ctx: &mut C,
     device_id: SC::DeviceId,
@@ -525,7 +528,7 @@ pub(super) fn set_promiscuous_mode<SC: EthernetIpLinkDeviceContext, C>(
 /// `join_link_multicast` is different from [`join_ip_multicast`] as
 /// `join_link_multicast` joins an L2 multicast group, whereas
 /// `join_ip_multicast` joins an L3 multicast group.
-pub(super) fn join_link_multicast<SC: EthernetIpLinkDeviceContext, C>(
+pub(super) fn join_link_multicast<C, SC: EthernetIpLinkDeviceContext<C>>(
     sync_ctx: &mut SC,
     _ctx: &mut C,
     device_id: SC::DeviceId,
@@ -566,7 +569,7 @@ pub(super) fn join_link_multicast<SC: EthernetIpLinkDeviceContext, C>(
 /// # Panics
 ///
 /// If `device_id` is not in the multicast group `multicast_addr`.
-pub(super) fn leave_link_multicast<SC: EthernetIpLinkDeviceContext, C>(
+pub(super) fn leave_link_multicast<C, SC: EthernetIpLinkDeviceContext<C>>(
     sync_ctx: &mut SC,
     _ctx: &mut C,
     device_id: SC::DeviceId,
@@ -597,7 +600,7 @@ pub(super) fn leave_link_multicast<SC: EthernetIpLinkDeviceContext, C>(
 }
 
 /// Get the MTU associated with this device.
-pub(super) fn get_mtu<SC: EthernetIpLinkDeviceContext, C>(
+pub(super) fn get_mtu<C, SC: EthernetIpLinkDeviceContext<C>>(
     sync_ctx: &SC,
     _ctx: &mut C,
     device_id: SC::DeviceId,
@@ -612,7 +615,7 @@ pub(super) fn get_mtu<SC: EthernetIpLinkDeviceContext, C>(
 // TODO(rheacock): remove `cfg(test)` when this is used. Will probably be called
 // by a pub fn in the device mod.
 #[cfg(test)]
-pub(super) fn insert_static_arp_table_entry<SC: EthernetIpLinkDeviceContext, C>(
+pub(super) fn insert_static_arp_table_entry<C, SC: EthernetIpLinkDeviceContext<C>>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     device_id: SC::DeviceId,
@@ -629,54 +632,63 @@ pub(super) fn insert_static_arp_table_entry<SC: EthernetIpLinkDeviceContext, C>(
 /// resolution.
 // TODO(rheacock): Remove when this is called from non-test code.
 #[cfg(test)]
-pub(super) fn insert_ndp_table_entry<SC: EthernetIpLinkDeviceContext, C>(
+pub(super) fn insert_ndp_table_entry<C, SC: EthernetIpLinkDeviceContext<C>>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     device_id: SC::DeviceId,
     addr: UnicastAddr<Ipv6Addr>,
     mac: Mac,
 ) {
-    <SC as NdpHandler<_>>::insert_static_neighbor(sync_ctx, ctx, device_id, addr, mac)
+    <SC as NdpHandler<_, _>>::insert_static_neighbor(sync_ctx, ctx, device_id, addr, mac)
 }
 
 /// Deinitializes and cleans up state for ethernet devices
 ///
 /// After this function is called, the ethernet device should not be used and
 /// nothing else should be done with the state.
-pub(super) fn deinitialize<SC: EthernetIpLinkDeviceContext, C>(
+pub(super) fn deinitialize<C, SC: EthernetIpLinkDeviceContext<C>>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     device_id: SC::DeviceId,
 ) {
     arp::deinitialize(sync_ctx, ctx, device_id);
-    <SC as NdpHandler<_>>::deinitialize(sync_ctx, ctx, device_id);
+    <SC as NdpHandler<_, _>>::deinitialize(sync_ctx, ctx, device_id);
 }
 
-impl<C: EthernetIpLinkDeviceContext>
-    StateContext<ArpState<EthernetLinkDevice, Ipv4Addr>, C::DeviceId> for C
+impl<
+        SC: InstantContext
+            + RngContext
+            + DeviceIdContext<EthernetLinkDevice>
+            + DualStateContext<
+                IpLinkDeviceState<<SC as InstantContext>::Instant, EthernetDeviceState>,
+                <SC as RngContext>::Rng,
+                <SC as DeviceIdContext<EthernetLinkDevice>>::DeviceId,
+            >,
+    > StateContext<ArpState<EthernetLinkDevice, Ipv4Addr>, SC::DeviceId> for SC
 {
-    fn get_state_with(&self, id: C::DeviceId) -> &ArpState<EthernetLinkDevice, Ipv4Addr> {
+    fn get_state_with(&self, id: SC::DeviceId) -> &ArpState<EthernetLinkDevice, Ipv4Addr> {
         &self.get_state_with(id).link.ipv4_arp
     }
 
     fn get_state_mut_with(
         &mut self,
-        id: C::DeviceId,
+        id: SC::DeviceId,
     ) -> &mut ArpState<EthernetLinkDevice, Ipv4Addr> {
         &mut self.get_state_mut_with(id).link.ipv4_arp
     }
 }
 
 impl<
+        C,
         B: BufferMut,
-        C: EthernetIpLinkDeviceContext
-            + FrameContext<(), B, <C as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
-    > FrameContext<(), B, ArpFrameMetadata<EthernetLinkDevice, C::DeviceId>> for C
+        SC: EthernetIpLinkDeviceContext<C>
+            + FrameContext<C, B, <SC as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
+    > FrameContext<C, B, ArpFrameMetadata<EthernetLinkDevice, SC::DeviceId>> for SC
 {
     fn send_frame<S: Serializer<Buffer = B>>(
         &mut self,
-        ctx: &mut (),
-        meta: ArpFrameMetadata<EthernetLinkDevice, C::DeviceId>,
+        ctx: &mut C,
+        meta: ArpFrameMetadata<EthernetLinkDevice, SC::DeviceId>,
         body: S,
     ) -> Result<(), S> {
         let src = self.get_state_with(meta.device_id).link.mac;
@@ -689,14 +701,15 @@ impl<
     }
 }
 
-impl<C: EthernetIpLinkDeviceContext> ArpDeviceIdContext<EthernetLinkDevice> for C {
+impl<C: DeviceIdContext<EthernetLinkDevice>> ArpDeviceIdContext<EthernetLinkDevice> for C {
     type DeviceId = <C as DeviceIdContext<EthernetLinkDevice>>::DeviceId;
 }
 
-impl<C: EthernetIpLinkDeviceContext> ArpContext<EthernetLinkDevice, Ipv4Addr> for C {
+impl<C, SC: EthernetIpLinkDeviceContext<C>> ArpContext<EthernetLinkDevice, Ipv4Addr, C> for SC {
     fn get_protocol_addr(
         &self,
-        device_id: <C as ArpDeviceIdContext<EthernetLinkDevice>>::DeviceId,
+        _ctx: &mut C,
+        device_id: <SC as ArpDeviceIdContext<EthernetLinkDevice>>::DeviceId,
     ) -> Option<Ipv4Addr> {
         self.get_state_with(device_id.into())
             .ip
@@ -709,45 +722,59 @@ impl<C: EthernetIpLinkDeviceContext> ArpContext<EthernetLinkDevice, Ipv4Addr> fo
     }
     fn get_hardware_addr(
         &self,
-        device_id: <C as ArpDeviceIdContext<EthernetLinkDevice>>::DeviceId,
+        _ctx: &mut C,
+        device_id: <SC as ArpDeviceIdContext<EthernetLinkDevice>>::DeviceId,
     ) -> UnicastAddr<Mac> {
         self.get_state_with(device_id.into()).link.mac
     }
     fn address_resolved(
         &mut self,
-        device_id: <C as ArpDeviceIdContext<EthernetLinkDevice>>::DeviceId,
+        ctx: &mut C,
+        device_id: <SC as ArpDeviceIdContext<EthernetLinkDevice>>::DeviceId,
         proto_addr: Ipv4Addr,
         hw_addr: Mac,
     ) {
-        mac_resolved(self, &mut (), device_id.into(), IpAddr::V4(proto_addr), hw_addr);
+        mac_resolved(self, ctx, device_id.into(), IpAddr::V4(proto_addr), hw_addr);
     }
     fn address_resolution_failed(
         &mut self,
-        device_id: <C as ArpDeviceIdContext<EthernetLinkDevice>>::DeviceId,
+        ctx: &mut C,
+        device_id: <SC as ArpDeviceIdContext<EthernetLinkDevice>>::DeviceId,
         proto_addr: Ipv4Addr,
     ) {
-        mac_resolution_failed(self, &mut (), device_id.into(), IpAddr::V4(proto_addr));
+        mac_resolution_failed(self, ctx, device_id.into(), IpAddr::V4(proto_addr));
     }
     fn address_resolution_expired(
         &mut self,
-        _device_id: <C as ArpDeviceIdContext<EthernetLinkDevice>>::DeviceId,
+        _ctx: &mut C,
+        _device_id: <SC as ArpDeviceIdContext<EthernetLinkDevice>>::DeviceId,
         _proto_addr: Ipv4Addr,
     ) {
         log_unimplemented!((), "ArpContext::address_resolution_expired");
     }
 }
 
-impl<C: EthernetIpLinkDeviceContext> StateContext<NdpState<EthernetLinkDevice>, C::DeviceId> for C {
-    fn get_state_with(&self, id: C::DeviceId) -> &NdpState<EthernetLinkDevice> {
+impl<
+        SC: InstantContext
+            + RngContext
+            + DeviceIdContext<EthernetLinkDevice>
+            + DualStateContext<
+                IpLinkDeviceState<<SC as InstantContext>::Instant, EthernetDeviceState>,
+                <SC as RngContext>::Rng,
+                <SC as DeviceIdContext<EthernetLinkDevice>>::DeviceId,
+            >,
+    > StateContext<NdpState<EthernetLinkDevice>, SC::DeviceId> for SC
+{
+    fn get_state_with(&self, id: SC::DeviceId) -> &NdpState<EthernetLinkDevice> {
         &self.get_state_with(id).link.ndp
     }
 
-    fn get_state_mut_with(&mut self, id: C::DeviceId) -> &mut NdpState<EthernetLinkDevice> {
+    fn get_state_mut_with(&mut self, id: SC::DeviceId) -> &mut NdpState<EthernetLinkDevice> {
         &mut self.get_state_mut_with(id).link.ndp
     }
 }
 
-pub(super) fn get_mac<'a, SC: EthernetIpLinkDeviceContext, C>(
+pub(super) fn get_mac<'a, C, SC: EthernetIpLinkDeviceContext<C>>(
     sync_ctx: &'a SC,
     _ctx: &mut C,
     device_id: SC::DeviceId,
@@ -755,17 +782,18 @@ pub(super) fn get_mac<'a, SC: EthernetIpLinkDeviceContext, C>(
     &sync_ctx.get_state_with(device_id).link.mac
 }
 
-impl<C: EthernetIpLinkDeviceContext> NdpContext<EthernetLinkDevice> for C {
-    fn get_retrans_timer(&self, device_id: Self::DeviceId) -> NonZeroDuration {
+impl<C, SC: EthernetIpLinkDeviceContext<C>> NdpContext<EthernetLinkDevice, C> for SC {
+    fn get_retrans_timer(&self, _ctx: &mut C, device_id: Self::DeviceId) -> NonZeroDuration {
         self.get_state_with(device_id).ip.ipv6.retrans_timer
     }
 
-    fn get_link_layer_addr(&self, device_id: C::DeviceId) -> UnicastAddr<Mac> {
-        get_mac(self, &mut (), device_id).clone()
+    fn get_link_layer_addr(&self, ctx: &mut C, device_id: SC::DeviceId) -> UnicastAddr<Mac> {
+        get_mac(self, ctx, device_id).clone()
     }
 
     fn get_ip_device_state(
         &self,
+        _ctx: &mut C,
         device_id: Self::DeviceId,
     ) -> &IpDeviceState<Self::Instant, Ipv6> {
         &self.get_state_with(device_id).ip.ipv6.ip_state
@@ -773,6 +801,7 @@ impl<C: EthernetIpLinkDeviceContext> NdpContext<EthernetLinkDevice> for C {
 
     fn get_ip_device_state_mut(
         &mut self,
+        _ctx: &mut C,
         device_id: Self::DeviceId,
     ) -> &mut IpDeviceState<Self::Instant, Ipv6> {
         &mut self.get_state_mut_with(device_id).ip.ipv6.ip_state
@@ -780,38 +809,46 @@ impl<C: EthernetIpLinkDeviceContext> NdpContext<EthernetLinkDevice> for C {
 
     fn send_ipv6_frame<S: Serializer<Buffer = EmptyBuf>>(
         &mut self,
+        ctx: &mut C,
         device_id: Self::DeviceId,
         next_hop: SpecifiedAddr<Ipv6Addr>,
         body: S,
     ) -> Result<(), S> {
         // TODO(joshlf): Wire `SpecifiedAddr` through the `ndp` module.
-        send_ip_frame(self, &mut (), device_id, next_hop, body)
+        send_ip_frame(self, ctx, device_id, next_hop, body)
     }
 
     fn address_resolved(
         &mut self,
-        device_id: C::DeviceId,
+        ctx: &mut C,
+        device_id: SC::DeviceId,
         address: &UnicastAddr<Ipv6Addr>,
         link_address: Mac,
     ) {
-        mac_resolved(self, &mut (), device_id, IpAddr::V6(address.get()), link_address);
+        mac_resolved(self, ctx, device_id, IpAddr::V6(address.get()), link_address);
     }
 
     fn address_resolution_failed(
         &mut self,
-        device_id: C::DeviceId,
+        ctx: &mut C,
+        device_id: SC::DeviceId,
         address: &UnicastAddr<Ipv6Addr>,
     ) {
-        mac_resolution_failed(self, &mut (), device_id, IpAddr::V6(address.get()));
+        mac_resolution_failed(self, ctx, device_id, IpAddr::V6(address.get()));
     }
 
-    fn duplicate_address_detected(&mut self, device_id: C::DeviceId, addr: UnicastAddr<Ipv6Addr>) {
+    fn duplicate_address_detected(
+        &mut self,
+        _ctx: &mut C,
+        device_id: SC::DeviceId,
+        addr: UnicastAddr<Ipv6Addr>,
+    ) {
         let () = self
             .del_ipv6_addr_on_dad_failure(device_id, &addr.into_specified())
             .expect("expected to delete an address we are performing DAD on");
     }
 
-    fn set_mtu(&mut self, device_id: C::DeviceId, mut mtu: u32) {
+    fn set_mtu(&mut self, _ctx: &mut C, device_id: SC::DeviceId, mut mtu: u32) {
         // TODO(ghanan): Should this new MTU be updated only from the netstack's
         //               perspective or be exposed to the device hardware?
 
@@ -846,9 +883,9 @@ impl LinkDevice for EthernetLinkDevice {
 ///
 /// `mac_resolved` is the common logic used when a link layer address is
 /// resolved either by ARP or NDP.
-fn mac_resolved<SC: EthernetIpLinkDeviceContext, C>(
+fn mac_resolved<C, SC: EthernetIpLinkDeviceContext<C>>(
     sync_ctx: &mut SC,
-    _ctx: &mut C,
+    ctx: &mut C,
     device_id: SC::DeviceId,
     address: IpAddr,
     dst_mac: Mac,
@@ -868,7 +905,7 @@ fn mac_resolved<SC: EthernetIpLinkDeviceContext, C>(
             //  stands right now) because the MTU is guaranteed to be larger
             //  than an Ethernet minimum frame body size.
             let res = sync_ctx.send_frame(
-                &mut (),
+                ctx,
                 device_id.into(),
                 frame.encapsulate(EthernetFrameBuilder::new(src_mac.get(), dst_mac, ether_type)),
             );
@@ -885,7 +922,7 @@ fn mac_resolved<SC: EthernetIpLinkDeviceContext, C>(
 ///
 /// `mac_resolution_failed` is the common logic used when a link layer address
 /// fails to resolve either by ARP or NDP.
-fn mac_resolution_failed<SC: EthernetIpLinkDeviceContext, C>(
+fn mac_resolution_failed<C, SC: EthernetIpLinkDeviceContext<C>>(
     sync_ctx: &mut SC,
     _ctx: &mut C,
     device_id: SC::DeviceId,
@@ -995,7 +1032,7 @@ mod tests {
         }
     }
 
-    impl EthernetIpLinkDeviceContext for DummyCtx {
+    impl<C> EthernetIpLinkDeviceContext<C> for DummyCtx {
         fn add_ipv6_addr_subnet(
             &mut self,
             _device_id: DummyDeviceId,
@@ -1034,7 +1071,7 @@ mod tests {
         type DeviceId = DummyDeviceId;
     }
 
-    impl IpLinkDeviceContext<EthernetLinkDevice, EthernetTimerId<DummyDeviceId>> for DummyCtx {}
+    impl<C> IpLinkDeviceContext<EthernetLinkDevice, C, EthernetTimerId<DummyDeviceId>> for DummyCtx {}
 
     fn contains_addr<A: IpAddress>(
         ctx: &crate::testutil::DummyCtx,
