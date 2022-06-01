@@ -21,7 +21,7 @@ pub use emulated::*;
 ///   * Stub for handle types that have not yet had a Fuchsia API implemented in the zircon crate
 ///
 /// To make a handle available everywhere, a polyfill must be implemented in
-/// crate::handle::non_fuchsia_handles.
+/// crate::handle::emulated.
 #[macro_export]
 macro_rules! invoke_for_handle_types {
     ($x:ident) => {
