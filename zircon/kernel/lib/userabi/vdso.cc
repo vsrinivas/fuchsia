@@ -193,12 +193,12 @@ void SetConstants(const fbl::RefPtr<VmObject>& vmo) {
           arch_get_hw_breakpoint_count(),
           arch_get_hw_watchpoint_count(),
           arch_address_tagging_features(),
+          arch_vm_features(),
       },
       arch_dcache_line_size(),
       arch_icache_line_size(),
       PAGE_SIZE,
-      // Uncomment this if padding is re-added.
-      // 0,
+      0,  // Padding.
       per_second,
       platform_get_raw_ticks_to_ticks_offset(),
       ticks_to_mono_ratio.numerator(),

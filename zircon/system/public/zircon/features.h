@@ -12,6 +12,7 @@
 #define ZX_FEATURE_KIND_HW_BREAKPOINT_COUNT   ((uint32_t)1)
 #define ZX_FEATURE_KIND_HW_WATCHPOINT_COUNT   ((uint32_t)2)
 #define ZX_FEATURE_KIND_ADDRESS_TAGGING       ((uint32_t)3)
+#define ZX_FEATURE_KIND_VM                    ((uint32_t)4)
 
 // arch-independent CPU features
 #define ZX_HAS_CPU_FEATURES            ((uint32_t)(1u << 0))
@@ -48,6 +49,9 @@
 
 // arm64 address-tagging features
 #define ZX_ARM64_FEATURE_ADDRESS_TAGGING_TBI  ((uint32_t)(1u << 0))
+
+// Virtual memory features.
+#define ZX_VM_FEATURE_CAN_MAP_XOM ((uint32_t)(1u << 0))
 
 #else
 

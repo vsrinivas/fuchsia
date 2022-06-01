@@ -21,9 +21,10 @@
 // The manifest for the constants size is currently...
 // + 10 32-bit integers
 // |++ max_num_cpus (1)
-// |++ features (4)
+// |++ features (5)
 // |++ cache lines sizes (2)
 // |++ system page size (1)
+// |++ padding (1)
 // |++ ticks to mono ratio (2)
 // |
 // + 4 64-bit integers
@@ -34,7 +35,7 @@
 // |
 // + max version string size (64 bytes)
 //
-#define VDSO_CONSTANTS_SIZE ((10 * 4) + (4 * 8) + MAX_VERSION_STRING_SIZE)
+#define VDSO_CONSTANTS_SIZE ((12 * 4) + (4 * 8) + MAX_VERSION_STRING_SIZE)
 
 #ifndef __ASSEMBLER__
 
@@ -64,6 +65,9 @@ struct vdso_constants {
 
     // Bitmask indicating which address tagging features are available.
     uint32_t address_tagging;
+
+    // Bitmask for vm related features.
+    uint32_t vm;
   } features;
 
   // Number of bytes in a data cache line.
@@ -75,9 +79,7 @@ struct vdso_constants {
   // System page size in bytes. Guaranteed to be a power of 2.
   uint32_t page_size;
 
-  // Explicit padding as the remaining struct members end up 64-bit aligned.
-  // Uncomment this if another uint32_t field is added.
-  // uint32_t padding;
+  uint32_t padding;
 
   // Conversion factor for zx_ticks_get return values to seconds.
   zx_ticks_t ticks_per_second;

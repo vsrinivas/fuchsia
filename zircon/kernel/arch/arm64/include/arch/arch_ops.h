@@ -26,6 +26,8 @@ static inline uint32_t arch_dcache_line_size() { return arm64_dcache_size; }
 
 static inline uint32_t arch_icache_line_size() { return arm64_icache_size; }
 
+static inline uint32_t arch_vm_features() { return 0; }
+
 // Implemented in assembly.
 extern "C" void arm64_clean_cache_range_pou(vaddr_t start, size_t len);
 
