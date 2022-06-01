@@ -30,7 +30,19 @@ zx_status_t Nelson::BacklightInit() {
   TiLp8556Metadata kDeviceMetadata = {
       .panel_id = uint8_t(GetDisplayId()),
       .allow_set_current_scale = false,
-      .register_count = 0,
+      .registers =
+          {
+              // Registers
+              0x01, 0x85,  // Device Control
+                           // EPROM
+              0xa2, 0x30,  // CFG2
+              0xa3, 0x32,  // CFG3
+              0xa5, 0x54,  // CFG5
+              0xa7, 0xf4,  // CFG7
+              0xa9, 0x60,  // CFG9
+              0xae, 0x09,  // CFGE
+          },
+      .register_count = 14,
   };
 
   pbus_metadata_t backlight_metadata[] = {
