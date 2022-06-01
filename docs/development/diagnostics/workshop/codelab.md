@@ -1,7 +1,7 @@
 # Diagnostics and testing codelab
 
-This document contains the codelab for debugging with diagnostics and tests.
-It is currently a work in progress.
+This document contains a codelab for debugging with diagnostics and tests. It is currently
+intended for developers writing tests within fuchsia.git. It is currently a work in progress.
 
 ## Prerequisites
 
@@ -34,6 +34,8 @@ There is an example component that serves a protocol called [ProfileStore][profi
 
 This protocol allows creation, deletion, and inspection of user profiles, which contain a
 name and balance. The component has a bug - profile deletion does not work.
+
+Code for the codelab is located in [//examples/diagnostics/workshop](/examples/diagnostics/workshop).
 
 ## Run the component
 
@@ -187,11 +189,60 @@ https://fuchsia-review.googlesource.com/c/fuchsia/+/684762
 
 ## Verifying with tests
 
+This section covers adding tests to verify the fix.
+
+This example contains [example unit tests][example-unittests] and an
+[example integration test][example-integration-test], including some tests that are
+disabled due to the bug. Feel free to either modify the examples, or create new tests from
+scratch using the flows below.
+
+### Adding new unit tests
+
 <!-- TODO -->
 
+### Adding a new integration test
+
+The `fx testgen` command autogenerates integration test boilerplate setup to use
+[RealmBuilder][realm-builder]. To use it, you will need to find the compiled component manifest
+of our profile_store component in our output directory.
+
+```bash
+# find the manifest in output directory.
+find $(fx get-build-dir) -name profile_store.cm
+
+# generate integration tests.
+fx testgen --cm-location <result from find> --out-dir examples/diagnostics/workshop/tests -c
+```
+
+This should generate a few files under `examples/diagnostics/workshop/tests`. Before running the
+tests, there are a few build rules that need to be updated:
+
+ * In the newly generated `examples/diagnostics/workshop/tests/BUILD.gn`
+  * Replace `{COMPONENT_FIDL_BUILD_TARGET}` with the build target for the ProfileStore fidl -
+  `//examples/diagnostics/workshop/fidl:fuchsia.examples.diagnostics`
+  * Replace `{COMPONENT_BUILD_TARGET}` with the build target for the ProfileStore component -
+  `//examples/diagnostics/workshop:profile_store`/
+ * In `examples/diagnostics/workshop/BUILD.gn`
+  * Add "tests" to deps in the `group("tests")` definition. This ensures GN can find the new test.
+
+Next, verify that the test builds and runs.
+
+```bash
+# Build is needed the first time so that fx test becomes aware of the new test.
+# For subsequent test executions, fx build is automatically invoked.
+fx build examples/diagnostics/workshop:tests
+
+fx test profile_store_test
+```
+
+Once the test runs, you are ready to modify the boilerplate to write useful tests.
+
+[example-integration-test]: /examples/diagnostics/workshop/example-integration
+[example-unittests]: /examples/diagnostics/workshop/profile_unittest_example.cc
 [inspect-codelab]: /docs/development/diagnostics/inspect/codelab/codelab.md
 [inspect-quickstart]: /docs/development/diagnostics/inspect/quickstart.md
 [profile-store]: /examples/diagnostics/workshop/fidl/profile_store.test.fidl
 [profile-store-build]: /examples/diagnostics/workshop/BUILD.gn
+[realm-builder]: /docs/development/testing/components/realm_builder.md
 [triage-codelab]: /docs/development/diagnostics/triage/codelab.md
 [triage-config-guide]: /src/diagnostics/triage/config.md
