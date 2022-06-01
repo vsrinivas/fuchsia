@@ -122,6 +122,32 @@ the migrated v2 realm, keeping the same `instance_id`:
 Note: If you are migrating your component to a realm other than `core`, the
 moniker should reflect that.
 
+### (Optional) Enable `persistent_storage` for collection descendants using storage
+
+If the component or any of its ancestors, such as the session component, is part
+of a collection, and the component requires storage contents to exist after a
+component instance has been destroyed, add the
+[`persistent_storage`][collection-persistent-storage] setting to the collection
+decl:
+
+```json5
+{
+  collections: [
+    {
+      name: "my_collection",
+      durability: "{{ '<var label="durability">durability</var>' }}",
+      persistent_storage: true,
+    }
+  ],
+}
+```
+
+This setting allows collection descendants using the component ID index to
+preserve storage content across [dynamic component instances][dynamic-children].
+
+Note: the `persistent_storage` setting will apply to all descendants of the
+collection.
+
 ### Storage capabilities in tests
 
 When [migrating tests][migrate-tests], you will need to route storage access
@@ -541,10 +567,12 @@ specific features your components may support:
 [build-info-fidl]: https://fuchsia.dev/reference/fidl/fuchsia.buildinfo#Provider
 [cf-dev-list]: https://groups.google.com/a/fuchsia.dev/g/component-framework-dev
 [cmx-services]: /docs/concepts/components/v1/component_manifests.md#sandbox
+[collection-persistent-storage]: https://fuchsia.dev/reference/fidl/fuchsia.component.decl?hl=en#Collection.persistent_storage
 [component-id-index]: /docs/development/components/component_id_index.md
 [config-data]: /docs/development/components/data.md#product-specific_configuration_with_config_data
 [device-model]: /docs/development/drivers/concepts/device_driver_model/device-model.md
 [directory-capabilities]: /docs/concepts/components/v2/capabilities/directory.md
+[dynamic-children]: /docs/concepts/components/v2/realms.md#dynamic-children
 [event-capabilities]: /docs/concepts/components/v2/capabilities/event.md
 [example-component-id-index]: /src/sys/appmgr/config/core_component_id_index.json5
 [fdio_fd_null_create]: /sdk/lib/fdio/include/lib/fdio/fdio.h#48
