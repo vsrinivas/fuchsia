@@ -20,6 +20,7 @@ use {
             irq_resource::IrqResource,
             items::Items,
             kernel_stats::KernelStats,
+            lifecycle_controller::LifecycleController,
             log::{ReadOnlyLog, WriteOnlyLog},
             mmio_resource::MmioResource,
             power_resource::PowerResource,
@@ -57,7 +58,6 @@ use {
             },
             hooks::EventType,
             hub::Hub,
-            lifecycle_controller_factory::LifecycleControllerFactory,
             model::{Model, ModelParams},
             resolver::{BuiltinResolver, Resolver, ResolverRegistry},
             storage::admin_protocol::StorageAdmin,
@@ -411,6 +411,7 @@ pub struct BuiltinEnvironment {
     pub hub: Option<Arc<Hub>>,
     pub realm_explorer: Option<Arc<RealmExplorer>>,
     pub realm_query: Option<Arc<RealmQuery>>,
+    pub lifecycle_controller: Option<Arc<LifecycleController>>,
     pub builtin_runners: Vec<Arc<BuiltinRunner>>,
     pub event_registry: Arc<EventRegistry>,
     pub event_source_factory: Arc<EventSourceFactory>,
@@ -791,17 +792,6 @@ impl BuiltinEnvironment {
         let stop_notifier = Arc::new(RootStopNotifier::new());
         model.root().hooks.install(stop_notifier.hooks()).await;
 
-        let hub = if enable_introspection {
-            let hub = Arc::new(Hub::new(
-                root_component_url.as_str().to_owned(),
-                LifecycleControllerFactory::new(Arc::downgrade(&model)),
-            )?);
-            model.root().hooks.install(hub.hooks()).await;
-            Some(hub)
-        } else {
-            None
-        };
-
         let realm_explorer = if enable_introspection {
             let realm_explorer = Arc::new(RealmExplorer::new(model.clone()));
             model.root().hooks.install(realm_explorer.hooks()).await;
@@ -814,6 +804,24 @@ impl BuiltinEnvironment {
             let realm_query = Arc::new(RealmQuery::new(model.clone()));
             model.root().hooks.install(realm_query.hooks()).await;
             Some(realm_query)
+        } else {
+            None
+        };
+
+        let lifecycle_controller = if enable_introspection {
+            let realm_control = Arc::new(LifecycleController::new(model.clone()));
+            model.root().hooks.install(realm_control.hooks()).await;
+            Some(realm_control)
+        } else {
+            None
+        };
+
+        let hub = if enable_introspection {
+            let lifecycle_controller = lifecycle_controller.as_ref().unwrap().clone();
+            let hub =
+                Arc::new(Hub::new(root_component_url.as_str().to_owned(), lifecycle_controller)?);
+            model.root().hooks.install(hub.hooks()).await;
+            Some(hub)
         } else {
             None
         };
@@ -896,6 +904,7 @@ impl BuiltinEnvironment {
             hub,
             realm_explorer,
             realm_query,
+            lifecycle_controller,
             builtin_runners,
             event_registry,
             event_source_factory,

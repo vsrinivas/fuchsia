@@ -26,10 +26,8 @@
             from: "framework",
         },
         {
-            directory: "hub",
+            protocol: "fuchsia.sys2.LifecycleController",
             from: "framework",
-            rights: [ "rw*" ],
-            path: "/hub",
         },
     ],
     offer: [

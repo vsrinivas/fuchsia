@@ -14,7 +14,6 @@ pub mod starter;
 pub(crate) mod context;
 pub(crate) mod environment;
 pub(crate) mod events;
-pub(crate) mod lifecycle_controller_factory;
 pub(crate) mod namespace;
 pub(crate) mod resolver;
 pub(crate) mod routing;
@@ -24,7 +23,6 @@ pub(crate) mod storage;
 mod addable_directory;
 mod dir_tree;
 mod exposed_dir;
-mod lifecycle_controller;
 
 #[cfg(test)]
 mod tests;

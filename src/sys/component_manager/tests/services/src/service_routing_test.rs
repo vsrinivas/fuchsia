@@ -31,9 +31,6 @@ const PROVIDER_A_NAME: &str = "a";
 /// Name of the provider-b.cm child component in the branch.
 const PROVIDER_B_NAME: &str = "b";
 
-/// Path to the LifecycleController protocol in the hub.
-const LIFECYCLE_CONTROLLER_HUB_PATH: &str = "/hub/debug/fuchsia.sys2.LifecycleController";
-
 #[fuchsia::test]
 async fn list_instances_test() {
     let branch = start_branch().await.expect("failed to start branch component");
@@ -144,10 +141,9 @@ async fn start_branch() -> Result<ScopedInstance, Error> {
 
 /// Starts the provider with the name `child_name` in the branch component.
 async fn start_provider(branch: &ScopedInstance, child_name: &str) -> Result<(), Error> {
-    let lifecycle_controller_proxy = client::connect_to_protocol_at_path::<
-        fsys2::LifecycleControllerMarker,
-    >(LIFECYCLE_CONTROLLER_HUB_PATH)
-    .context("failed to connect to LifecycleController")?;
+    let lifecycle_controller_proxy =
+        client::connect_to_protocol::<fsys2::LifecycleControllerMarker>()
+            .context("failed to connect to LifecycleController")?;
 
     let event_source = EventSource::new()?;
     let event_stream = event_source

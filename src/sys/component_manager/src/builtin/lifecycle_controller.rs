@@ -1,93 +1,83 @@
-// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 use {
+    crate::capability::{CapabilityProvider, CapabilitySource},
     crate::framework::RealmCapabilityHost,
     crate::model::{
         component::{ComponentInstance, StartReason, WeakComponentInstance},
         error::ModelError,
+        hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
         model::Model,
         storage::admin_protocol::StorageAdmin,
     },
-    ::routing::{component_instance::ComponentInstanceInterface, error::ComponentInstanceError},
+    ::routing::error::ComponentInstanceError,
+    async_trait::async_trait,
     cm_rust::CapabilityName,
-    fidl::endpoints::ServerEnd,
+    cm_task_scope::TaskScope,
+    cm_util::channel,
+    fidl::endpoints::{DiscoverableProtocolMarker, ServerEnd},
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
-    fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys, fuchsia_zircon as zx,
+    futures::lock::Mutex,
     futures::prelude::*,
+    lazy_static::lazy_static,
     log::*,
-    moniker::{
-        AbsoluteMoniker, AbsoluteMonikerBase, MonikerError, RelativeMoniker, RelativeMonikerBase,
-    },
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, RelativeMoniker, RelativeMonikerBase},
+    routing::component_instance::ComponentInstanceInterface,
     std::convert::TryFrom,
+    std::path::PathBuf,
     std::sync::{Arc, Weak},
 };
 
+lazy_static! {
+    pub static ref LIFECYCLE_CONTROLLER_CAPABILITY_NAME: CapabilityName =
+        fsys::LifecycleControllerMarker::PROTOCOL_NAME.into();
+}
+
 #[derive(Clone)]
 pub struct LifecycleController {
-    model: Weak<Model>,
-    prefix: AbsoluteMoniker,
+    model: Arc<Model>,
 }
 
 impl LifecycleController {
-    pub fn new(model: Weak<Model>, prefix: AbsoluteMoniker) -> Self {
-        Self { model, prefix }
+    pub fn new(model: Arc<Model>) -> Self {
+        Self { model }
     }
 
-    fn construct_moniker(&self, input: &str) -> Result<AbsoluteMoniker, fcomponent::Error> {
-        let relative_moniker = RelativeMoniker::try_from(input).map_err(|e: MonikerError| {
-            debug!("lifecycle controller received invalid component moniker: {}", e);
-            fcomponent::Error::InvalidArguments
-        })?;
-        if !relative_moniker.up_path().is_empty() {
-            debug!(
-                "lifecycle controller received moniker that attempted to reach outside its scope"
-            );
-            return Err(fcomponent::Error::InvalidArguments);
-        }
-        let abs_moniker = AbsoluteMoniker::from_relative(&self.prefix, &relative_moniker).map_err(
-            |e: MonikerError| {
-                debug!("lifecycle controller received invalid component moniker: {}", e);
-                fcomponent::Error::InvalidArguments
-            },
-        )?;
-
-        Ok(abs_moniker)
+    pub fn hooks(self: &Arc<Self>) -> Vec<HooksRegistration> {
+        vec![HooksRegistration::new(
+            "LifecycleController",
+            vec![EventType::CapabilityRouted],
+            Arc::downgrade(self) as Weak<dyn Hook>,
+        )]
     }
 
-    async fn resolve_component(
+    async fn resolve(
         &self,
-        moniker: &str,
+        scope_moniker: &AbsoluteMoniker,
+        moniker: String,
     ) -> Result<Arc<ComponentInstance>, fcomponent::Error> {
-        let abs_moniker = self.construct_moniker(moniker)?;
-        let model = self.model.upgrade().ok_or(fcomponent::Error::Internal)?;
-        model.look_up(&abs_moniker).await.map_err(|e| match e {
-            e @ ModelError::ResolverError { .. } | e @ ModelError::ComponentInstanceError {
-                err: ComponentInstanceError::ResolveFailed { .. }
+        let moniker = join_monikers(scope_moniker, &moniker)?;
+        self.model.look_up(&moniker).await.map_err(|e| match e {
+            e @ ModelError::ResolverError { .. }
+            | e @ ModelError::ComponentInstanceError {
+                err: ComponentInstanceError::ResolveFailed { .. },
             } => {
-                debug!(
-                    "lifecycle controller failed to resolve component instance {}: {:?}",
-                    abs_moniker,
-                    e
-                );
+                warn!("LifecycleController could not resolve {}: {:?}", moniker, e);
                 fcomponent::Error::InstanceCannotResolve
             }
             e @ ModelError::ComponentInstanceError {
                 err: ComponentInstanceError::InstanceNotFound { .. },
             } => {
-                debug!(
-                    "lifecycle controller was asked to perform an operation on a component instance that doesn't exist {}: {:?}",
-                    abs_moniker,
-                    e,
-                );
+                warn!("LifecycleController could not find {}: {:?}", moniker, e,);
                 fcomponent::Error::InstanceNotFound
             }
             e => {
-                error!(
-                    "unexpected error encountered by lifecycle controller while looking up component {}: {:?}",
-                    abs_moniker,
-                    e,
+                warn!(
+                    "LifecycleController encountered unknown error looking up {}: {:?}",
+                    moniker, e,
                 );
                 fcomponent::Error::Internal
             }
@@ -95,64 +85,61 @@ impl LifecycleController {
     }
 
     // If the component exists and is resolved, unresolve it.
-    async fn unresolve_component(&self, moniker: &str) -> Result<(), fcomponent::Error> {
-        let abs_moniker = self.construct_moniker(&moniker)?;
-        let model = self.model.upgrade().ok_or(fcomponent::Error::Internal)?;
-        match model.find(&abs_moniker).await {
-            Some(component) => component.unresolve().await.map_err(|e: ModelError| {
-                error!(
-                    "lifecycle controller failed to unresolve the component instance {}: {:?}",
-                    moniker, e
-                );
-                fcomponent::Error::InstanceCannotUnresolve
-            }),
-            _ => Err(fcomponent::Error::InstanceNotFound),
-        }
+    async fn unresolve(
+        &self,
+        scope_moniker: &AbsoluteMoniker,
+        moniker: String,
+    ) -> Result<(), fcomponent::Error> {
+        let moniker = join_monikers(scope_moniker, &moniker)?;
+        let component =
+            self.model.find(&moniker).await.ok_or(fcomponent::Error::InstanceNotFound)?;
+        component.unresolve().await.map_err(|e: ModelError| {
+            warn!("LifecycleController could not unresolve {}: {:?}", moniker, e);
+            fcomponent::Error::InstanceCannotUnresolve
+        })
     }
 
-    async fn unresolve(&self, moniker: String) -> Result<(), fcomponent::Error> {
-        self.unresolve_component(&moniker).await?;
-        Ok(())
-    }
-
-    async fn resolve(&self, moniker: String) -> Result<(), fcomponent::Error> {
-        self.resolve_component(&moniker).await?;
-        Ok(())
-    }
-
-    async fn start(&self, moniker: String) -> Result<fsys::StartResult, fcomponent::Error> {
-        let component = self.resolve_component(&moniker).await?;
+    async fn start(
+        &self,
+        scope_moniker: &AbsoluteMoniker,
+        moniker: String,
+    ) -> Result<fsys::StartResult, fcomponent::Error> {
+        let moniker = join_monikers(scope_moniker, &moniker)?;
+        let component =
+            self.model.find(&moniker).await.ok_or(fcomponent::Error::InstanceNotFound)?;
         let res = component.start(&StartReason::Debug).await.map_err(|e: ModelError| {
-            debug!(
-                "lifecycle controller failed to start the component instance {}: {:?}",
-                moniker, e
-            );
+            warn!("LifecycleController could not start {}: {:?}", moniker, e);
             fcomponent::Error::InstanceCannotStart
         })?;
         Ok(res)
     }
 
-    async fn stop(&self, moniker: String, is_recursive: bool) -> Result<(), fcomponent::Error> {
-        log::info!("Stopping {}", moniker);
-        let component = self.resolve_component(&moniker).await?;
-        log::info!("{} Resolved!", moniker);
+    async fn stop(
+        &self,
+        scope_moniker: &AbsoluteMoniker,
+        moniker: String,
+        is_recursive: bool,
+    ) -> Result<(), fcomponent::Error> {
+        let moniker = join_monikers(scope_moniker, &moniker)?;
+        let component =
+            self.model.find(&moniker).await.ok_or(fcomponent::Error::InstanceNotFound)?;
         component.stop_instance(false, is_recursive).await.map_err(|e: ModelError| {
-            debug!(
-                "lifecycle controller failed to stop component instance {} (is_recursive={}): {:?}",
-                moniker, is_recursive, e
-            );
+            warn!("LifecycleController could not stop {}: {:?}", moniker, e);
             fcomponent::Error::Internal
         })
     }
 
     async fn create_child(
         &self,
+        scope_moniker: &AbsoluteMoniker,
         parent_moniker: String,
         collection: fdecl::CollectionRef,
         child_decl: fdecl::Child,
         child_args: fcomponent::CreateChildArgs,
     ) -> Result<(), fcomponent::Error> {
-        let parent_component = self.resolve_component(&parent_moniker).await?;
+        let parent_moniker = join_monikers(scope_moniker, &parent_moniker)?;
+        let parent_component =
+            self.model.find(&parent_moniker).await.ok_or(fcomponent::Error::InstanceNotFound)?;
         let parent_component = WeakComponentInstance::new(&parent_component);
         RealmCapabilityHost::create_child(&parent_component, collection, child_decl, child_args)
             .await
@@ -160,35 +147,41 @@ impl LifecycleController {
 
     async fn destroy_child(
         &self,
+        scope_moniker: &AbsoluteMoniker,
         parent_moniker: String,
         child: fdecl::ChildRef,
     ) -> Result<(), fcomponent::Error> {
-        let parent_component = self.resolve_component(&parent_moniker).await?;
+        let parent_moniker = join_monikers(scope_moniker, &parent_moniker)?;
+        let parent_component =
+            self.model.find(&parent_moniker).await.ok_or(fcomponent::Error::InstanceNotFound)?;
         let parent_component = WeakComponentInstance::new(&parent_component);
         RealmCapabilityHost::destroy_child(&parent_component, child).await
     }
 
-    async fn get_storage_admin(
+    async fn open_storage_admin(
         &self,
+        scope_moniker: &AbsoluteMoniker,
         moniker: String,
         capability: String,
         admin_server: ServerEnd<fsys::StorageAdminMarker>,
     ) -> Result<(), fcomponent::Error> {
-        let component = self.resolve_component(&moniker).await?;
-        let storage_admin = StorageAdmin::new(self.model.clone());
+        let moniker = join_monikers(scope_moniker, &moniker)?;
+        let component =
+            self.model.find(&moniker).await.ok_or(fcomponent::Error::InstanceNotFound)?;
+        let storage_admin = StorageAdmin::new(Arc::downgrade(&self.model));
         let task_scope = component.task_scope();
 
         let storage_decl = {
             let locked_component = component.lock_resolved_state().await.map_err(|e| {
-                debug!("lifecycle controller failed to lock component resolved state: {:?}", e);
-                fcomponent::Error::Internal
+                warn!("LifecycleController could not get resolved state of {}: {:?}", moniker, e);
+                fcomponent::Error::InstanceCannotResolve
             })?;
 
             locked_component
                 .decl()
                 .find_storage_source(&CapabilityName::from(capability.as_str()))
                 .ok_or_else(|| {
-                    debug!("lifecycle controller could not find the storage source for component {} and capability name {}", moniker, capability);
+                    warn!("LifecycleController could not find the storage source with the name {} in {}", capability, moniker);
                     fcomponent::Error::ResourceNotFound
                 })?
                 .clone()
@@ -200,39 +193,46 @@ impl LifecycleController {
                     .serve(storage_decl, component.as_weak(), admin_server.into_channel().into())
                     .await
                 {
-                    warn!("failed to serve storage admin protocol: {:?}", e);
+                    warn!(
+                        "LifecycleController failed to serve StorageAdmin for {}: {:?}",
+                        moniker, e
+                    );
                 };
             })
             .await;
         Ok(())
     }
 
-    pub async fn serve(&self, mut stream: fsys::LifecycleControllerRequestStream) {
+    pub async fn serve(
+        &self,
+        scope_moniker: AbsoluteMoniker,
+        mut stream: fsys::LifecycleControllerRequestStream,
+    ) {
         while let Ok(Some(operation)) = stream.try_next().await {
             match operation {
                 fsys::LifecycleControllerRequest::Resolve { moniker, responder } => {
-                    let mut res = self.resolve(moniker).await;
-                    responder
-                        .send(&mut res)
-                        .unwrap_or_else(|e| warn!("response send failed: {}", e));
+                    let mut res = self.resolve(&scope_moniker, moniker).await.map(|_| ());
+                    responder.send(&mut res).unwrap_or_else(|e| {
+                        warn!("LifecycleController.Resolve failed to send: {}", e)
+                    });
                 }
                 fsys::LifecycleControllerRequest::Unresolve { moniker, responder } => {
-                    let mut res = self.unresolve(moniker).await;
-                    responder
-                        .send(&mut res)
-                        .unwrap_or_else(|e| warn!("response send failed: {}", e));
+                    let mut res = self.unresolve(&scope_moniker, moniker).await;
+                    responder.send(&mut res).unwrap_or_else(|e| {
+                        warn!("LifecycleController.Unresolve failed to send: {}", e)
+                    });
                 }
                 fsys::LifecycleControllerRequest::Start { moniker, responder } => {
-                    let mut res = self.start(moniker).await;
-                    responder
-                        .send(&mut res)
-                        .unwrap_or_else(|e| warn!("response send failed: {}", e));
+                    let mut res = self.start(&scope_moniker, moniker).await;
+                    responder.send(&mut res).unwrap_or_else(|e| {
+                        warn!("LifecycleController.Start failed to send: {}", e)
+                    });
                 }
-                fsys::LifecycleControllerRequest::Stop { moniker, responder, is_recursive } => {
-                    let mut res = self.stop(moniker, is_recursive).await;
-                    responder
-                        .send(&mut res)
-                        .unwrap_or_else(|e| warn!("response send failed: {}", e));
+                fsys::LifecycleControllerRequest::Stop { moniker, is_recursive, responder } => {
+                    let mut res = self.stop(&scope_moniker, moniker, is_recursive).await;
+                    responder.send(&mut res).unwrap_or_else(|e| {
+                        warn!("LifecycleController.Stop failed to send: {}", e)
+                    });
                 }
                 fsys::LifecycleControllerRequest::CreateChild {
                     parent_moniker,
@@ -241,36 +241,143 @@ impl LifecycleController {
                     args,
                     responder,
                 } => {
-                    let mut res = self.create_child(parent_moniker, collection, decl, args).await;
-                    responder
-                        .send(&mut res)
-                        .unwrap_or_else(|e| warn!("response send failed: {}", e));
+                    let mut res = self
+                        .create_child(&scope_moniker, parent_moniker, collection, decl, args)
+                        .await;
+                    responder.send(&mut res).unwrap_or_else(|e| {
+                        warn!("LifecycleController.CreateChild failed to send: {}", e)
+                    });
                 }
                 fsys::LifecycleControllerRequest::DestroyChild {
                     parent_moniker,
                     child,
                     responder,
                 } => {
-                    let mut res = self.destroy_child(parent_moniker, child).await;
-                    responder
-                        .send(&mut res)
-                        .unwrap_or_else(|e| warn!("response send failed: {}", e));
+                    let mut res = self.destroy_child(&scope_moniker, parent_moniker, child).await;
+                    responder.send(&mut res).unwrap_or_else(|e| {
+                        warn!("LifecycleController.DestroyChild failed to send: {}", e)
+                    });
                 }
-
                 fsys::LifecycleControllerRequest::GetStorageAdmin {
                     moniker,
                     capability,
                     admin_server,
                     responder,
                 } => {
-                    let mut res = self.get_storage_admin(moniker, capability, admin_server).await;
-                    responder
-                        .send(&mut res)
-                        .unwrap_or_else(|e| warn!("response send failed: {}", e))
+                    let mut res = self
+                        .open_storage_admin(&scope_moniker, moniker, capability, admin_server)
+                        .await;
+                    responder.send(&mut res).unwrap_or_else(|e| {
+                        warn!("LifecycleController.GetStorageAdmin failed to send: {}", e)
+                    });
                 }
             }
         }
     }
+
+    /// Given a `CapabilitySource`, determine if it is a framework-provided
+    /// LifecycleController capability. If so, serve the capability.
+    async fn on_capability_routed_async(
+        self: Arc<Self>,
+        source: CapabilitySource,
+        capability_provider: Arc<Mutex<Option<Box<dyn CapabilityProvider>>>>,
+    ) -> Result<(), ModelError> {
+        // If this is a scoped framework directory capability, then check the source path
+        if let CapabilitySource::Framework { capability, component } = source {
+            if capability.matches_protocol(&LIFECYCLE_CONTROLLER_CAPABILITY_NAME) {
+                // Set the capability provider, if not already set.
+                let mut capability_provider = capability_provider.lock().await;
+                if capability_provider.is_none() {
+                    *capability_provider =
+                        Some(Box::new(LifecycleControllerCapabilityProvider::new(
+                            self,
+                            component.abs_moniker.clone(),
+                        )));
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl Hook for LifecycleController {
+    async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
+        match &event.result {
+            Ok(EventPayload::CapabilityRouted { source, capability_provider }) => {
+                self.on_capability_routed_async(source.clone(), capability_provider.clone())
+                    .await?;
+            }
+            _ => {}
+        }
+        Ok(())
+    }
+}
+
+pub struct LifecycleControllerCapabilityProvider {
+    control: Arc<LifecycleController>,
+    scope_moniker: AbsoluteMoniker,
+}
+
+impl LifecycleControllerCapabilityProvider {
+    pub fn new(control: Arc<LifecycleController>, scope_moniker: AbsoluteMoniker) -> Self {
+        Self { control, scope_moniker }
+    }
+}
+
+#[async_trait]
+impl CapabilityProvider for LifecycleControllerCapabilityProvider {
+    async fn open(
+        self: Box<Self>,
+        task_scope: TaskScope,
+        flags: fio::OpenFlags,
+        _open_mode: u32,
+        relative_path: PathBuf,
+        server_end: &mut zx::Channel,
+    ) -> Result<(), ModelError> {
+        if flags != fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE {
+            warn!("LifecycleController capability got open request with bad flags: {:?}", flags);
+            return Ok(());
+        }
+
+        if relative_path.components().count() != 0 {
+            warn!(
+                "LifecycleController capability got open request with non-empty path: {}",
+                relative_path.display()
+            );
+            return Ok(());
+        }
+
+        let server_end = channel::take_channel(server_end);
+
+        let server_end = ServerEnd::<fsys::LifecycleControllerMarker>::new(server_end);
+        let stream: fsys::LifecycleControllerRequestStream =
+            server_end.into_stream().map_err(ModelError::stream_creation_error)?;
+        task_scope
+            .add_task(async move {
+                self.control.serve(self.scope_moniker, stream).await;
+            })
+            .await;
+
+        Ok(())
+    }
+}
+
+/// Takes the scoped component's moniker and a relative moniker string and joins them into an
+/// absolute moniker.
+fn join_monikers(
+    scope_moniker: &AbsoluteMoniker,
+    moniker_str: &str,
+) -> Result<AbsoluteMoniker, fcomponent::Error> {
+    let relative_moniker =
+        RelativeMoniker::try_from(moniker_str).map_err(|_| fcomponent::Error::InvalidArguments)?;
+    if !relative_moniker.up_path().is_empty() {
+        return Err(fcomponent::Error::InvalidArguments);
+    }
+    let abs_moniker = AbsoluteMoniker::from_relative(scope_moniker, &relative_moniker)
+        .map_err(|_| fcomponent::Error::InvalidArguments)?;
+
+    Ok(abs_moniker)
 }
 
 #[cfg(test)]
@@ -279,7 +386,7 @@ mod tests {
         super::*,
         crate::model::{
             actions::test_utils::{is_discovered, is_resolved},
-            testing::test_helpers::{ActionsTest, TestEnvironmentBuilder, TestModelResult},
+            testing::test_helpers::TestEnvironmentBuilder,
         },
         cm_rust::{
             CapabilityPath, DirectoryDecl, ExposeDecl, ExposeDirectoryDecl, ExposeSource,
@@ -294,7 +401,6 @@ mod tests {
         fidl_fuchsia_io::Operations,
         fidl_fuchsia_sys2::StorageAdminProxy,
         fuchsia_async as fasync,
-        std::sync::Arc,
     };
 
     #[fuchsia::test]
@@ -334,17 +440,20 @@ mod tests {
             ("b", ComponentDeclBuilder::new().build()),
         ];
 
-        let TestModelResult { model, .. } =
+        let test_model_result =
             TestEnvironmentBuilder::new().set_components(components).build().await;
 
-        let lifecycle_controller = LifecycleController::new(Arc::downgrade(&model), vec![].into());
+        let lifecycle_controller = {
+            let env = test_model_result.builtin_environment.lock().await;
+            env.lifecycle_controller.clone().unwrap()
+        };
 
         let (lifecycle_proxy, lifecycle_request_stream) =
             create_proxy_and_stream::<fsys::LifecycleControllerMarker>().unwrap();
 
         // async move {} is used here because we want this to own the lifecycle_controller
         let _lifecycle_server_task = fasync::Task::local(async move {
-            lifecycle_controller.serve(lifecycle_request_stream).await
+            lifecycle_controller.serve(AbsoluteMoniker::root(), lifecycle_request_stream).await
         });
 
         assert_eq!(lifecycle_proxy.resolve(".").await.unwrap(), Ok(()));
@@ -397,30 +506,41 @@ mod tests {
             ("b", ComponentDeclBuilder::new().build()),
         ];
 
-        let test = ActionsTest::new("root", components, None).await;
+        let test_model_result =
+            TestEnvironmentBuilder::new().set_components(components).build().await;
 
-        let lifecycle_controller =
-            LifecycleController::new(Arc::downgrade(&test.model), vec![].into());
+        let lifecycle_controller = {
+            let env = test_model_result.builtin_environment.lock().await;
+            env.lifecycle_controller.clone().unwrap()
+        };
 
-        assert_eq!(lifecycle_controller.resolve(".".to_string()).await, Ok(()));
-        let component_a = test.model.look_up(&vec!["a"].into()).await.unwrap();
-        let component_b = test.model.look_up(&vec!["a", "b"].into()).await.unwrap();
+        let (lifecycle_proxy, lifecycle_request_stream) =
+            create_proxy_and_stream::<fsys::LifecycleControllerMarker>().unwrap();
+
+        // async move {} is used here because we want this to own the lifecycle_controller
+        let _lifecycle_server_task = fasync::Task::local(async move {
+            lifecycle_controller.serve(AbsoluteMoniker::root(), lifecycle_request_stream).await
+        });
+
+        lifecycle_proxy.resolve(".").await.unwrap().unwrap();
+        let component_a = test_model_result.model.look_up(&vec!["a"].into()).await.unwrap();
+        let component_b = test_model_result.model.look_up(&vec!["a", "b"].into()).await.unwrap();
         assert!(is_resolved(&component_a).await);
         assert!(is_resolved(&component_b).await);
 
-        assert_eq!(lifecycle_controller.unresolve_component(".").await, Ok(()));
+        lifecycle_proxy.unresolve(".").await.unwrap().unwrap();
         assert!(is_discovered(&component_a).await);
         assert!(is_discovered(&component_b).await);
 
         assert_eq!(
-            lifecycle_controller.unresolve_component("./nonesuch").await,
+            lifecycle_proxy.unresolve("./nonesuch").await.unwrap(),
             Err(fcomponent::Error::InstanceNotFound)
         );
 
         // TODO(fxbug.dev/101406): For idempotency, make unresolving a Discovered component a
         // NOP/Ok(()).
         assert_eq!(
-            lifecycle_controller.unresolve_component(".").await,
+            lifecycle_proxy.unresolve(".").await.unwrap(),
             Err(fcomponent::Error::InstanceCannotUnresolve)
         );
     }
@@ -432,15 +552,17 @@ mod tests {
         let test_model_result =
             TestEnvironmentBuilder::new().set_components(components).build().await;
 
-        let lifecycle_controller =
-            LifecycleController::new(Arc::downgrade(&test_model_result.model), vec![].into());
+        let lifecycle_controller = {
+            let env = test_model_result.builtin_environment.lock().await;
+            env.lifecycle_controller.clone().unwrap()
+        };
 
         let (lifecycle_proxy, lifecycle_request_stream) =
             create_proxy_and_stream::<fsys::LifecycleControllerMarker>().unwrap();
 
         // async move {} is used here because we want this to own the lifecycle_controller
         let _lifecycle_server_task = fasync::Task::local(async move {
-            lifecycle_controller.serve(lifecycle_request_stream).await
+            lifecycle_controller.serve(AbsoluteMoniker::root(), lifecycle_request_stream).await
         });
 
         assert_eq!(lifecycle_proxy.start(".").await.unwrap(), Ok(fsys::StartResult::Started));
@@ -472,14 +594,17 @@ mod tests {
         let test_model_result =
             TestEnvironmentBuilder::new().set_components(components).build().await;
 
-        let lifecycle_controller =
-            LifecycleController::new(Arc::downgrade(&test_model_result.model), vec![].into());
+        let lifecycle_controller = {
+            let env = test_model_result.builtin_environment.lock().await;
+            env.lifecycle_controller.clone().unwrap()
+        };
 
         let (lifecycle_proxy, lifecycle_request_stream) =
             create_proxy_and_stream::<fsys::LifecycleControllerMarker>().unwrap();
 
+        // async move {} is used here because we want this to own the lifecycle_controller
         let _lifecycle_server_task = fasync::Task::local(async move {
-            lifecycle_controller.serve(lifecycle_request_stream).await
+            lifecycle_controller.serve(AbsoluteMoniker::root(), lifecycle_request_stream).await
         });
 
         assert_eq!(
@@ -567,15 +692,17 @@ mod tests {
         let test_model_result =
             TestEnvironmentBuilder::new().set_components(components).build().await;
 
-        let lifecycle_controller =
-            LifecycleController::new(Arc::downgrade(&test_model_result.model), vec![].into());
+        let lifecycle_controller = {
+            let env = test_model_result.builtin_environment.lock().await;
+            env.lifecycle_controller.clone().unwrap()
+        };
 
         let (lifecycle_proxy, lifecycle_request_stream) =
             create_proxy_and_stream::<fsys::LifecycleControllerMarker>().unwrap();
 
         // async move {} is used here because we want this to own the lifecycle_controller
         let _lifecycle_server_task = fasync::Task::local(async move {
-            lifecycle_controller.serve(lifecycle_request_stream).await
+            lifecycle_controller.serve(AbsoluteMoniker::root(), lifecycle_request_stream).await
         });
 
         let (client, server) = Channel::create().unwrap();

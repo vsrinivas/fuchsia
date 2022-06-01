@@ -1,0 +1,35 @@
+{
+    include: [
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/lifecycle_controller_test",
+    },
+    children: [
+        {
+            name: "echo_server",
+            url: "#meta/echo_server.cm",
+        },
+    ],
+    collections: [
+        {
+            name: "servers",
+            durability: "transient",
+        },
+    ],
+    use: [
+        {
+            protocol: "fidl.examples.routing.echo.Echo",
+            from: "#echo_server",
+        },
+        {
+            protocol: "fuchsia.sys2.LifecycleController",
+            from: "framework",
+        },
+        {
+            protocol: "fuchsia.sys2.RealmQuery",
+            from: "framework",
+        },
+    ],
+}

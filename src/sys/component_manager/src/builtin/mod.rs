@@ -15,6 +15,7 @@ pub mod ioport_resource;
 pub mod irq_resource;
 pub mod items;
 pub mod kernel_stats;
+pub mod lifecycle_controller;
 pub mod log;
 pub mod mmio_resource;
 pub mod power_resource;

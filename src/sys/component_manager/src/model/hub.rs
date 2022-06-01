@@ -4,6 +4,7 @@
 
 use {
     crate::{
+        builtin::lifecycle_controller::LifecycleController,
         capability::{CapabilityProvider, CapabilitySource},
         model::{
             addable_directory::AddableDirectoryWithResult,
@@ -11,8 +12,6 @@ use {
             dir_tree::{DirTree, DirTreeCapability},
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration, RuntimeInfo},
-            lifecycle_controller::LifecycleController,
-            lifecycle_controller_factory::LifecycleControllerFactory,
             routing_fns::{route_expose_fn, route_use_fn},
         },
     },
@@ -101,7 +100,7 @@ struct Instance {
 pub struct Hub {
     instances: Mutex<HashMap<InstancedAbsoluteMoniker, Instance>>,
     scope: ExecutionScope,
-    lifecycle_controller_factory: LifecycleControllerFactory,
+    lifecycle_controller: Arc<LifecycleController>,
 }
 
 impl Hub {
@@ -109,16 +108,13 @@ impl Hub {
     /// `lifecycle_controller_factory` which can create scoped LifecycleController services.
     pub fn new(
         component_url: String,
-        lifecycle_controller_factory: LifecycleControllerFactory,
+        lifecycle_controller: Arc<LifecycleController>,
     ) -> Result<Self, ModelError> {
         let mut instance_map = HashMap::new();
         let instanced_moniker = InstancedAbsoluteMoniker::root();
 
-        let lifecycle_controller =
-            lifecycle_controller_factory.create(&instanced_moniker.without_instance_ids());
-
         Hub::add_instance_if_necessary(
-            lifecycle_controller,
+            &lifecycle_controller,
             &instanced_moniker,
             component_url,
             &mut instance_map,
@@ -128,7 +124,7 @@ impl Hub {
         Ok(Hub {
             instances: Mutex::new(instance_map),
             scope: ExecutionScope::new(),
-            lifecycle_controller_factory,
+            lifecycle_controller,
         })
     }
 
@@ -186,7 +182,7 @@ impl Hub {
     }
 
     fn add_instance_if_necessary(
-        lifecycle_controller: LifecycleController,
+        lifecycle_controller: &Arc<LifecycleController>,
         instanced_moniker: &InstancedAbsoluteMoniker,
         component_url: String,
         instance_map: &mut HashMap<InstancedAbsoluteMoniker, Instance>,
@@ -275,7 +271,7 @@ impl Hub {
     }
 
     async fn add_instance_to_parent_if_necessary<'a>(
-        lifecycle_controller: LifecycleController,
+        lifecycle_controller: &Arc<LifecycleController>,
         instanced_moniker: &'a InstancedAbsoluteMoniker,
         component_url: String,
         mut instance_map: &'a mut HashMap<InstancedAbsoluteMoniker, Instance>,
@@ -386,16 +382,18 @@ impl Hub {
     }
 
     fn add_debug_directory(
-        lifecycle_controller: LifecycleController,
+        lifecycle_controller: &Arc<LifecycleController>,
         parent_directory: Directory,
         target_moniker: &InstancedAbsoluteMoniker,
     ) -> Result<(), ModelError> {
         let mut debug_dir = pfs::simple();
 
+        let lifecycle_controller = lifecycle_controller.clone();
         let lifecycle_controller_path = CapabilityPath::try_from(
             format!("/{}", LifecycleControllerMarker::PROTOCOL_NAME).as_str(),
         )
         .unwrap();
+        let moniker = target_moniker.without_instance_ids();
         let capabilities = vec![DirTreeCapability::new(
             lifecycle_controller_path,
             Box::new(
@@ -406,6 +404,7 @@ impl Hub {
                       server_end: ServerEnd<fio::NodeMarker>| {
                     log::info!("Connecting fuchsia.sys2.LifecycleController");
                     let lifecycle_controller = lifecycle_controller.clone();
+                    let moniker = moniker.clone();
                     // Forward to the vfs::service::Service implementation of DirectoryEntry::open
                     // instead of just converting the server_end into a
                     // LifecycleControllerRequestStream and using scope to spawn a task to handle
@@ -417,7 +416,8 @@ impl Hub {
                     //      `ls -l` is run in the containing directory.
                     vfs::service::host(move |stream| {
                         let lifecycle_controller = lifecycle_controller.clone();
-                        async move { lifecycle_controller.serve(stream).await }
+                        let moniker = moniker.clone();
+                        async move { lifecycle_controller.serve(moniker, stream).await }
                     })
                     .open(scope, flags, mode, relative_path, server_end)
                 },
@@ -613,13 +613,10 @@ impl Hub {
         target_moniker: &InstancedAbsoluteMoniker,
         component_url: String,
     ) -> Result<(), ModelError> {
-        let lifecycle_controller =
-            self.lifecycle_controller_factory.create(&target_moniker.without_instance_ids());
-
         let mut instance_map = self.instances.lock().await;
 
         Self::add_instance_to_parent_if_necessary(
-            lifecycle_controller,
+            &self.lifecycle_controller,
             target_moniker,
             component_url,
             &mut instance_map,

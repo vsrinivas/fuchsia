@@ -8,22 +8,36 @@ using fuchsia.component.decl;
 
 /// Describes the result of the Start command.
 type StartResult = strict enum {
-    /// The component start succeeded.
+    /// The instance was started.
     STARTED = 0;
 
-    /// The component was already running.
+    /// The instance was already running.
     ALREADY_STARTED = 1;
 };
 
-/// A protocol exposed in a component's hub to allow component tools
-/// to resolve, bind, stop component manifests.
+/// Mutates the component instance state in a realm.
 @discoverable
 protocol LifecycleController {
-    /// Resolves the component designated by the provided relative moniker
-    /// relative to the component to which the protocol is scoped.
+    /// Starts the instance identified by the given moniker.
     ///
-    /// The function returns once the component successfully resolves, or the
-    /// operation fails.
+    /// The function returns once the instance has been started.
+    Start(struct {
+        moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
+    }) -> (struct {
+        result StartResult;
+    }) error fuchsia.component.Error;
+
+    /// Stops the instance identified by the given moniker.
+    ///
+    /// The function returns once the instance has been stopped.
+    Stop(struct {
+        moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
+        is_recursive bool;
+    }) -> (struct {}) error fuchsia.component.Error;
+
+    /// Resolves the instance identified by the given moniker.
+    ///
+    /// The function returns once the instance has been resolved
     Resolve(struct {
         moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
     }) -> (struct {}) error fuchsia.component.Error;
@@ -37,12 +51,12 @@ protocol LifecycleController {
         moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
     }) -> (struct {}) error fuchsia.component.Error;
 
-    /// Creates a child component instance dynamically. This method is equivalent to
-    /// fuchsia.component/Realm.CreateChild. See its documentation for more details.
+    /// Creates a new child instance under a collection. This method is similar to
+    /// [`fuchsia.component/Realm.CreateChild`].
     ///
-    /// `parent_moniker` is the moniker of the component that owns the collection
-    /// in which the child will be created, relative to the component to which
-    /// the protocol is scoped.
+    /// `parent_moniker` is the moniker of the instance that owns the collection.
+    ///
+    /// The function returns once the child instance has been added to the topology.
     CreateChild(resource struct {
         parent_moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
         collection fuchsia.component.decl.CollectionRef;
@@ -50,45 +64,21 @@ protocol LifecycleController {
         args fuchsia.component.CreateChildArgs;
     }) -> (struct {}) error fuchsia.component.Error;
 
-    /// Destroys a dynamically-created component instance. This method is equivalent to
-    /// fuchsia.component/Realm.DestroyChild. See its documentation for more details.
+    /// Destroys a child instance under a collection. This method is similar to
+    /// [`fuchsia.component/Realm.DestroyChild`].
     ///
-    /// `parent_moniker` is the moniker of the component that owns the collection
-    /// in which the child will be destroyed, relative to the component to which
-    /// the protocol is scoped.
+    /// `parent_moniker` is the moniker of the instance that owns the collection.
+    ///
+    /// The function returns once the child instance no longer exists in the topology.
     DestroyChild(struct {
         parent_moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
         child fuchsia.component.decl.ChildRef;
     }) -> (struct {}) error fuchsia.component.Error;
 
-    /// Starts the component designated by the provided relative moniker
-    /// relative to the component to which the protocol is scoped.
+    /// Opens a [`fuchsia.sys2/StorageAdmin`] protocol for the exposed storage capability of an
+    /// instance identified by its moniker. This protocol is served by component manager.
     ///
-    /// The function returns once the component has started, or the operation
-    /// fails. It returns a StartResult enum to indicate success (Started or
-    /// AlreadyStarted).
-    Start(struct {
-        moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
-    }) -> (struct {
-        result StartResult;
-    }) error fuchsia.component.Error;
-
-    /// Stops the component designated by the provided relative moniker
-    /// relative to the component to which the protocol is scoped.
-    ///
-    /// The function returns once the component successfully stops, or the
-    /// operation fails.
-    Stop(struct {
-        moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
-        is_recursive bool;
-    }) -> (struct {}) error fuchsia.component.Error;
-
-    /// Retrieves the storage admin using the parent moniker and the capability
-    /// name
-    ///
-    /// The function returns once the storage admin has been served, or the
-    /// operation fails.
-    /// TODO(http://fxbug.dev/97774): Move `GetStorageAdmin` out of `lifecycle_controller`
+    /// TODO(http://fxbug.dev/97774): Move this function to [`fuchsia.sys2/RealmQuery`]
     GetStorageAdmin(resource struct {
         moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
         capability string:MAX_CAPABILITY_ID_LENGTH;
