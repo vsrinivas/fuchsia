@@ -36,7 +36,7 @@ fn test_minimal() {
 
     let expected = Response {
         protocol_version: "3.0".to_string(),
-        server: "prod".to_string(),
+        server: Some("prod".to_string()),
         daystart: None,
         apps: vec![App {
             id: "{00000000-0000-0000-0000-000000000001}".to_string(),
@@ -126,7 +126,7 @@ fn test_all_fields() {
 
     let expected = Response {
         protocol_version: "3.0".to_string(),
-        server: "test".to_string(),
+        server: Some("test".to_string()),
         daystart: Some(DayStart { elapsed_seconds: Some(54956), elapsed_days: Some(4242) }),
         apps: vec![
             App {
@@ -242,7 +242,7 @@ fn test_new_cohort() {
 
     let expected = Response {
         protocol_version: "3.0".to_string(),
-        server: "prod".to_string(),
+        server: Some("prod".to_string()),
         daystart: None,
         apps: vec![App {
             id: "{00000000-0000-0000-0000-000000000001}".to_string(),
@@ -279,7 +279,7 @@ fn test_unknown_app_id() {
 
     let expected = Response {
         protocol_version: "3.0".to_string(),
-        server: "prod".to_string(),
+        server: Some("prod".to_string()),
         daystart: None,
         apps: vec![App {
             id: "{00000000-0000-0000-0000-000000000001}".to_string(),
@@ -338,7 +338,7 @@ fn test_single_url() {
 
     let expected = Response {
         protocol_version: "3.0".to_string(),
-        server: "prod".to_string(),
+        server: Some("prod".to_string()),
         daystart: None,
         apps: vec![App {
             id: "single-url-appid".to_string(),
@@ -403,7 +403,7 @@ fn test_no_update() {
 
     let expected = Response {
         protocol_version: "3.0".to_string(),
-        server: "prod".to_string(),
+        server: Some("prod".to_string()),
         daystart: None,
         apps: vec![App {
             id: "no-update-appid".to_string(),
@@ -433,7 +433,7 @@ fn test_unsupported_protocol_version() {
 
     let expected = Response {
         protocol_version: "2.0".to_string(),
-        server: "prod".to_string(),
+        server: Some("prod".to_string()),
         daystart: None,
         apps: vec![App {
             id: "{00000000-0000-0000-0000-000000000001}".to_string(),

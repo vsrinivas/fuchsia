@@ -24,7 +24,7 @@ pub struct Response {
     pub protocol_version: String,
 
     /// A string identifying the server or server family for diagnostic purposes.
-    pub server: String,
+    pub server: Option<String>,
 
     /// The server time at the time the request was received.
     pub daystart: Option<DayStart>,
