@@ -20,6 +20,8 @@ def main():
         '--product-config', type=argparse.FileType('r'), required=True)
     parser.add_argument(
         '--images-config', type=argparse.FileType('r'), required=True)
+    parser.add_argument(
+        '--partitions-config', type=argparse.FileType('r'), required=True)
     parser.add_argument('--sources', type=str, nargs='*')
     parser.add_argument('--output', type=argparse.FileType('w'), required=True)
     parser.add_argument('--depfile', type=argparse.FileType('w'), required=True)
@@ -81,6 +83,16 @@ def main():
         elif image["type"] == "zbi":
             if "postprocessing_script" in image:
                 add_source(image["postprocessing_script"]["path"])
+
+    # Add the partitions config.
+    add_source(args.partitions_config.name)
+    partitions_config = json.load(args.partitions_config)
+    for cred in partitions_config.get("unlock_credentials", []):
+        add_source(cred)
+    for part in partitions_config.get("bootloader_partitions", []):
+        add_source(part["image"])
+    for part in partitions_config.get("bootstrap_partitions", []):
+        add_source(part["image"])
 
     # Add any additional sources to copy.
     for source in args.sources:

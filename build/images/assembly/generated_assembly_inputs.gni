@@ -15,6 +15,9 @@ import("//build/python/python_action.gni")
 #   images_config (required)
 #     [path] The path to the images config.
 #
+#   partitions_config (required)
+#     [path] The path to the partitions config.
+#
 #   output_path (required)
 #     [path] Where to write the output list.
 #
@@ -24,6 +27,7 @@ import("//build/python/python_action.gni")
 template("generated_assembly_inputs") {
   assert(defined(invoker.product_config), "Need to define product_config")
   assert(defined(invoker.images_config), "Need to define images_config")
+  assert(defined(invoker.partitions_config), "Need to define partitions_config")
   assert(defined(invoker.output_path), "Need to define output_path")
 
   python_action(target_name) {
@@ -41,6 +45,7 @@ template("generated_assembly_inputs") {
     outputs = [ invoker.output_path ]
     inputs = [
       invoker.images_config,
+      invoker.partitions_config,
       invoker.product_config,
     ]
 
@@ -49,6 +54,8 @@ template("generated_assembly_inputs") {
       rebase_path(invoker.product_config, root_build_dir),
       "--images-config",
       rebase_path(invoker.images_config, root_build_dir),
+      "--partitions-config",
+      rebase_path(invoker.partitions_config, root_build_dir),
       "--output",
       rebase_path(invoker.output_path, root_build_dir),
       "--depfile",

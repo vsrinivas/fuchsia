@@ -538,6 +538,7 @@ if (is_fuchsia) {
   generated_assembly_inputs("assembly_inputs") {
     testonly = fuchsia_zbi_testonly
     images_config = files.images_config
+    partitions_config = files.partitions_config
     output_path = files.assembly_inputs
 
     sources = [
