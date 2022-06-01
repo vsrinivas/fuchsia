@@ -103,7 +103,7 @@ To delete the pages and redirect:
 
    Fix any issues that `doc-checker` may signal.
 
-1. In the `[/docs/_common/_deprecate-docs.yaml]` file, create a redirect for
+1. In the `[/docs/_common/_deprecate-docs.yaml][deprecate-docs]` file, create a redirect for
    the deprecated pages to the [deprecation notice][deprecation-notice] page.
    Also include a comment listing the deprecate feature with a deprecation date.
    For example:
@@ -120,5 +120,5 @@ To delete the pages and redirect:
 1. Submit the changes to the Fuchsia repository.
 
 
-[/docs/_common/_deprecate-docs.yaml]: /docs/_common/_deprecate-docs.yaml
+[deprecate-docs]: /docs/_common/_deprecate-docs.yaml
 [deprecation-notice]: /docs/contribute/docs/deprecation-notice.md
