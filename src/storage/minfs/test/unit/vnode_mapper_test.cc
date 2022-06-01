@@ -12,7 +12,7 @@
 #include "src/storage/minfs/format.h"
 #include "src/storage/minfs/lazy_buffer.h"
 #include "src/storage/minfs/minfs.h"
-#include "src/storage/minfs/minfs_private.h"
+#include "src/storage/minfs/runner.h"
 
 namespace minfs {
 namespace {
@@ -33,11 +33,11 @@ class VnodeMapperTestFixture : public testing::Test {
     ASSERT_TRUE(Mkfs(bcache_or.value().get()).is_ok());
 
     auto fs_or =
-        Minfs::Create(vfs_loop_.dispatcher(), std::move(bcache_or.value()), MountOptions());
+        Runner::Create(vfs_loop_.dispatcher(), std::move(bcache_or.value()), MountOptions());
     ASSERT_TRUE(fs_or.is_ok());
-    fs_ = std::move(fs_or.value());
+    runner_ = std::move(fs_or.value());
 
-    VnodeMinfs::Allocate(fs_.get(), kMinfsTypeFile, &vnode_);
+    VnodeMinfs::Allocate(&runner_->minfs(), kMinfsTypeFile, &vnode_);
     EXPECT_EQ(vnode_->Open(vnode_->ValidateOptions(fs::VnodeConnectionOptions()).value(), nullptr),
               ZX_OK);
   }
@@ -46,7 +46,7 @@ class VnodeMapperTestFixture : public testing::Test {
 
  protected:
   async::Loop vfs_loop_;
-  std::unique_ptr<Minfs> fs_;
+  std::unique_ptr<Runner> runner_;
   fbl::RefPtr<VnodeMinfs> vnode_;
 };
 
@@ -58,7 +58,7 @@ TEST_F(VnodeIndirectMapperTest, FirstIndirectBlockIsMapped) {
   zx::status<DeviceBlockRange> device_range = mapper.Map(BlockRange(0, 2));
   ASSERT_EQ(device_range.status_value(), ZX_OK);
   ASSERT_TRUE(device_range.value().IsMapped());
-  EXPECT_EQ(fs_->Info().dat_block + 10, device_range.value().block());
+  EXPECT_EQ(runner_->minfs().Info().dat_block + 10, device_range.value().block());
   EXPECT_EQ(device_range.value().count(), 1ul);
 }
 
@@ -68,7 +68,7 @@ TEST_F(VnodeIndirectMapperTest, CoalescedBlocks) {
   VnodeIndirectMapper mapper(vnode_.get());
   zx::status<DeviceBlockRange> device_range = mapper.Map(BlockRange(0, 2));
   ASSERT_EQ(device_range.status_value(), ZX_OK);
-  EXPECT_EQ(fs_->Info().dat_block + 10, device_range.value().block());
+  EXPECT_EQ(runner_->minfs().Info().dat_block + 10, device_range.value().block());
   EXPECT_EQ(device_range.value().count(), 2ul);
 }
 
@@ -78,7 +78,7 @@ TEST_F(VnodeIndirectMapperTest, LastIndirectBlockIsMapped) {
   zx::status<DeviceBlockRange> device_range =
       mapper.Map(BlockRange(kMinfsIndirect - 1, kMinfsIndirect));
   ASSERT_EQ(device_range.status_value(), ZX_OK);
-  EXPECT_EQ(fs_->Info().dat_block + 17, device_range.value().block());
+  EXPECT_EQ(runner_->minfs().Info().dat_block + 17, device_range.value().block());
   EXPECT_EQ(device_range.value().count(), 1ul);
 }
 
@@ -97,19 +97,22 @@ TEST_F(VnodeIndirectMapperTest, DoubleIndirectBlockIsMapped) {
   zx::status<DeviceBlockRange> device_range =
       mapper.Map(BlockRange(kMinfsIndirect, kMinfsIndirect + 1));
   ASSERT_EQ(device_range.status_value(), ZX_OK);
-  EXPECT_EQ(fs_->Info().dat_block + 17, device_range.value().block());
+  EXPECT_EQ(runner_->minfs().Info().dat_block + 17, device_range.value().block());
   EXPECT_EQ(device_range.value().count(), 1ul);
 }
 
 TEST_F(VnodeIndirectMapperTest, DoubleIndirectFirstLeafBlockIsMapped) {
   vnode_->GetMutableInode()->dinum[0] = 17;
   blk_t buffer[kMinfsDirectPerIndirect] = {18};
-  ASSERT_TRUE(fs_->GetMutableBcache()->Writeblk(fs_->Info().dat_block + 17, buffer).is_ok());
+  ASSERT_TRUE(runner_->minfs()
+                  .GetMutableBcache()
+                  ->Writeblk(runner_->minfs().Info().dat_block + 17, buffer)
+                  .is_ok());
   VnodeIndirectMapper mapper(vnode_.get());
   uint64_t block = kMinfsIndirect + kMinfsDoublyIndirect;
   zx::status<DeviceBlockRange> device_range = mapper.Map(BlockRange(block, block + 1));
   ASSERT_EQ(device_range.status_value(), ZX_OK);
-  EXPECT_EQ(fs_->Info().dat_block + 18, device_range.value().block());
+  EXPECT_EQ(runner_->minfs().Info().dat_block + 18, device_range.value().block());
   EXPECT_EQ(device_range.value().count(), 1ul);
 }
 
@@ -117,13 +120,16 @@ TEST_F(VnodeIndirectMapperTest, DoubleIndirectLastLeafBlockIsMapped) {
   vnode_->GetMutableInode()->dinum[0] = 17;
   blk_t buffer[kMinfsDirectPerIndirect] = {};
   buffer[kMinfsDirectPerIndirect - 1] = 21;
-  ASSERT_TRUE(fs_->GetMutableBcache()->Writeblk(fs_->Info().dat_block + 17, buffer).is_ok());
+  ASSERT_TRUE(runner_->minfs()
+                  .GetMutableBcache()
+                  ->Writeblk(runner_->minfs().Info().dat_block + 17, buffer)
+                  .is_ok());
   VnodeIndirectMapper mapper(vnode_.get());
   uint64_t block =
       kMinfsIndirect + kMinfsDoublyIndirect + kMinfsDirectPerIndirect * kMinfsDoublyIndirect - 1;
   zx::status<DeviceBlockRange> device_range = mapper.Map(BlockRange(block, block + 1));
   ASSERT_EQ(device_range.status_value(), ZX_OK);
-  EXPECT_EQ(fs_->Info().dat_block + 21, device_range.value().block());
+  EXPECT_EQ(runner_->minfs().Info().dat_block + 21, device_range.value().block());
   EXPECT_EQ(device_range.value().count(), 1ul);
 }
 
@@ -178,12 +184,13 @@ class FakeTransaction : public PendingWork {
 
 TEST_F(VnodeIndirectMapperTest, MapForWriteAllocatesBlock) {
   VnodeIndirectMapper mapper(vnode_.get());
-  FakeTransaction transaction(fs_->GetMutableBcache());
+  FakeTransaction transaction(runner_->minfs().GetMutableBcache());
   bool allocated = false;
   zx::status<DeviceBlockRange> device_range =
       mapper.MapForWrite(&transaction, BlockRange(10, 10 + 2), &allocated);
   ASSERT_EQ(device_range.status_value(), ZX_OK);
-  EXPECT_EQ(fs_->Info().dat_block + FakeTransaction::kFirstBlock, device_range.value().block());
+  EXPECT_EQ(runner_->minfs().Info().dat_block + FakeTransaction::kFirstBlock,
+            device_range.value().block());
   EXPECT_EQ(device_range.value().count(), 1ul);
   EXPECT_TRUE(allocated);
 }
@@ -200,7 +207,7 @@ TEST_F(VnodeMapperTest, VnodeMapperDirectBlocksAreMapped) {
   zx::status<DeviceBlockRange> device_range = mapper.Map(BlockRange(0, 2));
   ASSERT_EQ(device_range.status_value(), ZX_OK);
   ASSERT_TRUE(device_range.value().IsMapped());
-  EXPECT_EQ(fs_->Info().dat_block + 17, device_range.value().block());
+  EXPECT_EQ(runner_->minfs().Info().dat_block + 17, device_range.value().block());
   EXPECT_EQ(device_range.value().count(), 1ul);
 }
 
@@ -212,37 +219,46 @@ TEST_F(VnodeMapperTest, VnodeMapperContiguousDirectBlocksAreCoalesced) {
   zx::status<DeviceBlockRange> device_range = mapper.Map(BlockRange(0, 3));
   ASSERT_EQ(device_range.status_value(), ZX_OK);
   ASSERT_TRUE(device_range.value().IsMapped());
-  EXPECT_EQ(fs_->Info().dat_block + 17, device_range.value().block());
+  EXPECT_EQ(runner_->minfs().Info().dat_block + 17, device_range.value().block());
   EXPECT_EQ(device_range.value().count(), 2ul);
 }
 
 TEST_F(VnodeMapperTest, VnodeMapperIndirectBlocksAreMapped) {
   vnode_->GetMutableInode()->inum[0] = 17;
   blk_t buffer[kMinfsDirectPerIndirect] = {19};
-  ASSERT_TRUE(fs_->GetMutableBcache()->Writeblk(fs_->Info().dat_block + 17, buffer).is_ok());
+  ASSERT_TRUE(runner_->minfs()
+                  .GetMutableBcache()
+                  ->Writeblk(runner_->minfs().Info().dat_block + 17, buffer)
+                  .is_ok());
   VnodeMapper mapper(vnode_.get());
   uint64_t block = kMinfsDirect;
   zx::status<DeviceBlockRange> device_range = mapper.Map(BlockRange(block, block + 2));
   ASSERT_EQ(device_range.status_value(), ZX_OK);
   ASSERT_TRUE(device_range.value().IsMapped());
-  EXPECT_EQ(fs_->Info().dat_block + 19, device_range.value().block());
+  EXPECT_EQ(runner_->minfs().Info().dat_block + 19, device_range.value().block());
   EXPECT_EQ(device_range.value().count(), 1ul);
 }
 
 TEST_F(VnodeMapperTest, VnodeMapperDoubleIndirectBlocksAreMapped) {
   vnode_->GetMutableInode()->dinum[0] = 17;
   blk_t buffer[kMinfsDirectPerIndirect] = {19};
-  ASSERT_TRUE(fs_->GetMutableBcache()->Writeblk(fs_->Info().dat_block + 17, buffer).is_ok());
+  ASSERT_TRUE(runner_->minfs()
+                  .GetMutableBcache()
+                  ->Writeblk(runner_->minfs().Info().dat_block + 17, buffer)
+                  .is_ok());
   buffer[0] = 37;
   buffer[1] = 38;
-  ASSERT_TRUE(fs_->GetMutableBcache()->Writeblk(fs_->Info().dat_block + 19, buffer).is_ok());
+  ASSERT_TRUE(runner_->minfs()
+                  .GetMutableBcache()
+                  ->Writeblk(runner_->minfs().Info().dat_block + 19, buffer)
+                  .is_ok());
   VnodeMapper mapper(vnode_.get());
   uint64_t block_count = 3;
   uint64_t block = kMinfsDirect + kMinfsIndirect * kMinfsDirectPerIndirect;
   zx::status<DeviceBlockRange> device_range = mapper.Map(BlockRange(block, block + block_count));
   ASSERT_EQ(device_range.status_value(), ZX_OK);
   ASSERT_TRUE(device_range.value().IsMapped());
-  EXPECT_EQ(fs_->Info().dat_block + 37, device_range.value().block());
+  EXPECT_EQ(runner_->minfs().Info().dat_block + 37, device_range.value().block());
   EXPECT_EQ(device_range.value().count(), 2ul);
 }
 
@@ -285,7 +301,7 @@ TEST_F(VnodeIteratorTest, AdvanceBeyondMaximumFails) {
 TEST_F(VnodeIteratorTest, SetDirectBlock) {
   VnodeMapper mapper(vnode_.get());
   VnodeIterator iterator;
-  FakeTransaction transaction(fs_->GetMutableBcache());
+  FakeTransaction transaction(runner_->minfs().GetMutableBcache());
   ASSERT_TRUE(iterator.Init(&mapper, &transaction, 0).is_ok());
   EXPECT_TRUE(iterator.SetBlk(1).is_ok());
   ASSERT_TRUE(iterator.Flush().is_ok());
@@ -295,15 +311,16 @@ TEST_F(VnodeIteratorTest, SetDirectBlock) {
 TEST_F(VnodeIteratorTest, SetIndirectBlock) {
   VnodeMapper mapper(vnode_.get());
   VnodeIterator iterator;
-  FakeTransaction transaction(fs_->GetMutableBcache());
+  FakeTransaction transaction(runner_->minfs().GetMutableBcache());
   ASSERT_TRUE(iterator.Init(&mapper, &transaction, kMinfsDirect).is_ok());
   EXPECT_TRUE(iterator.SetBlk(1).is_ok());
   EXPECT_TRUE(iterator.Flush().is_ok());
   EXPECT_EQ(FakeTransaction::kFirstBlock, vnode_->GetInode()->inum[0]);
   // Check the indirect node was flushed.
   blk_t data[kMinfsDirectPerIndirect];
-  ASSERT_TRUE(fs_->GetMutableBcache()
-                  ->Readblk(fs_->Info().dat_block + FakeTransaction::kFirstBlock, data)
+  ASSERT_TRUE(runner_->minfs()
+                  .GetMutableBcache()
+                  ->Readblk(runner_->minfs().Info().dat_block + FakeTransaction::kFirstBlock, data)
                   .is_ok());
   EXPECT_EQ(data[0], 1u);
 }
@@ -311,7 +328,7 @@ TEST_F(VnodeIteratorTest, SetIndirectBlock) {
 TEST_F(VnodeIteratorTest, AllocateLastBlock) {
   VnodeMapper mapper(vnode_.get());
   VnodeIterator iterator;
-  FakeTransaction transaction(fs_->GetMutableBcache());
+  FakeTransaction transaction(runner_->minfs().GetMutableBcache());
   // Allocate the very last block.
   ASSERT_TRUE(iterator
                   .Init(&mapper, &transaction,
@@ -325,15 +342,18 @@ TEST_F(VnodeIteratorTest, AllocateLastBlock) {
   // Check the doubly indirect node was flushed.
   EXPECT_NE(vnode_->GetInode()->dinum[kMinfsDoublyIndirect - 1], 0u);
   blk_t data[kMinfsDirectPerIndirect];
-  ASSERT_TRUE(
-      fs_->GetMutableBcache()
-          ->Readblk(fs_->Info().dat_block + vnode_->GetInode()->dinum[kMinfsDoublyIndirect - 1],
-                    data)
-          .is_ok());
-  EXPECT_NE(data[kMinfsDirectPerIndirect - 1], 0u);
-  ASSERT_TRUE(fs_->GetMutableBcache()
-                  ->Readblk(fs_->Info().dat_block + data[kMinfsDirectPerIndirect - 1], data)
+  ASSERT_TRUE(runner_->minfs()
+                  .GetMutableBcache()
+                  ->Readblk(runner_->minfs().Info().dat_block +
+                                vnode_->GetInode()->dinum[kMinfsDoublyIndirect - 1],
+                            data)
                   .is_ok());
+  EXPECT_NE(data[kMinfsDirectPerIndirect - 1], 0u);
+  ASSERT_TRUE(
+      runner_->minfs()
+          .GetMutableBcache()
+          ->Readblk(runner_->minfs().Info().dat_block + data[kMinfsDirectPerIndirect - 1], data)
+          .is_ok());
   EXPECT_EQ(data[kMinfsDirectPerIndirect - 1], 1u);
 }
 
@@ -344,7 +364,7 @@ TEST_F(VnodeIteratorTest, IndirectBlockDeallocatedWhenCleared) {
   blk_t blocks[2];
   blk_t indirect_blocks[3];
   blk_t data[kMinfsDirectPerIndirect];
-  FakeTransaction transaction(fs_->GetMutableBcache());
+  FakeTransaction transaction(runner_->minfs().GetMutableBcache());
   {
     // First allocate two blocks in the double-indirect region. We should end up with something
     // like:
@@ -375,23 +395,29 @@ TEST_F(VnodeIteratorTest, IndirectBlockDeallocatedWhenCleared) {
 
     // Wait for the flush to make it through to the device.
     sync_completion_t synced;
-    fs_->Sync([&](zx_status_t status) { sync_completion_signal(&synced); });
+    runner_->minfs().Sync([&](zx_status_t status) { sync_completion_signal(&synced); });
     EXPECT_EQ(sync_completion_wait(&synced, zx::sec(5).get()), ZX_OK);
 
     // Check the block pointers.
     indirect_blocks[0] = vnode_->GetInode()->dinum[kMinfsDoublyIndirect - 1];
     EXPECT_NE(indirect_blocks[0], 0u);
-    ASSERT_TRUE(
-        fs_->GetMutableBcache()->Readblk(fs_->Info().dat_block + indirect_blocks[0], data).is_ok());
+    ASSERT_TRUE(runner_->minfs()
+                    .GetMutableBcache()
+                    ->Readblk(runner_->minfs().Info().dat_block + indirect_blocks[0], data)
+                    .is_ok());
     indirect_blocks[1] = data[0];
     indirect_blocks[2] = data[1];
     EXPECT_NE(indirect_blocks[1], 0u);
     EXPECT_NE(indirect_blocks[2], 1u);
-    ASSERT_TRUE(
-        fs_->GetMutableBcache()->Readblk(fs_->Info().dat_block + indirect_blocks[1], data).is_ok());
+    ASSERT_TRUE(runner_->minfs()
+                    .GetMutableBcache()
+                    ->Readblk(runner_->minfs().Info().dat_block + indirect_blocks[1], data)
+                    .is_ok());
     EXPECT_EQ(blocks[0], data[0]);
-    ASSERT_TRUE(
-        fs_->GetMutableBcache()->Readblk(fs_->Info().dat_block + indirect_blocks[2], data).is_ok());
+    ASSERT_TRUE(runner_->minfs()
+                    .GetMutableBcache()
+                    ->Readblk(runner_->minfs().Info().dat_block + indirect_blocks[2], data)
+                    .is_ok());
     EXPECT_EQ(blocks[1], data[0]);
   }
 
@@ -414,8 +440,10 @@ TEST_F(VnodeIteratorTest, IndirectBlockDeallocatedWhenCleared) {
 
   // Flush now.
   EXPECT_TRUE(iterator.Flush().is_ok());
-  ASSERT_TRUE(
-      fs_->GetMutableBcache()->Readblk(fs_->Info().dat_block + indirect_blocks[0], data).is_ok());
+  ASSERT_TRUE(runner_->minfs()
+                  .GetMutableBcache()
+                  ->Readblk(runner_->minfs().Info().dat_block + indirect_blocks[0], data)
+                  .is_ok());
   EXPECT_EQ(data[0], 0u);
   EXPECT_EQ(indirect_blocks[2], data[1]);
 

@@ -64,38 +64,38 @@ zx::status<std::unique_ptr<disk_inspector::DiskObject>> Inspector::CreateRoot(
   options.writability = minfs::Writability::ReadOnlyFilesystem;
   options.repair_filesystem = false;
 
-  auto fs_or = Minfs::Create(dispatcher_, std::move(bc), options);
-  if (fs_or.is_error()) {
-    FX_LOGS(ERROR) << "minfsInspector: Create Failed to Create Minfs: " << fs_or.error_value();
-    return fs_or.take_error();
+  auto fs = Runner::Create(dispatcher_, std::move(bc), options);
+  if (fs.is_error()) {
+    FX_LOGS(ERROR) << "minfsInspector: Create Failed to Create Minfs: " << fs.error_value();
+    return fs.take_error();
   }
 
-  return zx::ok(std::make_unique<RootObject>(std::move(fs_or.value())));
+  return zx::ok(std::make_unique<RootObject>(*std::move(fs)));
 }
 
 std::unique_ptr<disk_inspector::DiskObject> RootObject::GetSuperBlock() const {
   return std::unique_ptr<disk_inspector::DiskObject>(
-      new SuperBlockObject(fs_->Info(), SuperblockType::kPrimary));
+      new SuperBlockObject(fs_.Info(), SuperblockType::kPrimary));
 }
 
 std::unique_ptr<disk_inspector::DiskObject> RootObject::GetInodeTable() const {
   return std::unique_ptr<disk_inspector::DiskObject>(new InodeTableObject(
-      fs_->GetInodeManager(), fs_->Info().alloc_inode_count, fs_->Info().inode_count));
+      fs_.GetInodeManager(), fs_.Info().alloc_inode_count, fs_.Info().inode_count));
 }
 
 std::unique_ptr<disk_inspector::DiskObject> RootObject::GetJournal() const {
   char data[kMinfsBlockSize];
 
-  const Superblock& superblock = fs_->Info();
+  const Superblock& superblock = fs_.Info();
   uint64_t start_block = JournalStartBlock(superblock);
   uint64_t length = JournalBlocks(superblock);
-  if (fs_->ReadBlock(static_cast<blk_t>(start_block), data) < 0) {
+  if (fs_.ReadBlock(static_cast<blk_t>(start_block), data) < 0) {
     FX_LOGS(ERROR) << "minfsInspector: could not read journal block";
     return nullptr;
   }
   fs::JournalInfo* info = reinterpret_cast<fs::JournalInfo*>(data);
-  auto block_reader = [fs = fs_.get()](uint64_t start, void* data) {
-    return fs->ReadBlock(safemath::checked_cast<blk_t>(start), data);
+  auto block_reader = [&fs = fs_](uint64_t start, void* data) {
+    return fs.ReadBlock(safemath::checked_cast<blk_t>(start), data);
   };
   return std::unique_ptr<disk_inspector::DiskObject>(
       new fs::JournalObject(*info, start_block, length, std::move(block_reader)));
@@ -103,11 +103,11 @@ std::unique_ptr<disk_inspector::DiskObject> RootObject::GetJournal() const {
 
 std::unique_ptr<disk_inspector::DiskObject> RootObject::GetBackupSuperBlock() const {
   char data[kMinfsBlockSize];
-  const Superblock& info = fs_->Info();
+  const Superblock& info = fs_.Info();
 
   uint64_t location =
       ((info.flags & kMinfsFlagFVM) == 0) ? kNonFvmSuperblockBackup : kFvmSuperblockBackup;
-  if (fs_->ReadBlock(static_cast<blk_t>(location), &data) < 0) {
+  if (fs_.ReadBlock(static_cast<blk_t>(location), &data) < 0) {
     FX_LOGS(ERROR) << "minfsInspector: could not read backup superblock";
     return nullptr;
   }

@@ -21,7 +21,7 @@
 #include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/lib/storage/vfs/cpp/journal/format.h"
 #include "src/storage/minfs/format.h"
-#include "src/storage/minfs/minfs_private.h"
+#include "src/storage/minfs/runner.h"
 
 namespace minfs {
 namespace {
@@ -70,10 +70,10 @@ TEST_F(ConsistencyCheckerTest, NewlyFormattedFilesystemCheckAfterMount) {
   ASSERT_TRUE(Mkfs(bcache_or.value().get()).is_ok());
 
   MountOptions options = {};
-  auto fs_or = Minfs::Create(dispatcher(), std::move(bcache_or.value()), options);
+  auto fs_or = Runner::Create(dispatcher(), std::move(bcache_or.value()), options);
   ASSERT_TRUE(fs_or.is_ok());
 
-  bcache_or = zx::ok(Minfs::Destroy(std::move(fs_or.value())));
+  bcache_or = zx::ok(Runner::Destroy(std::move(fs_or.value())));
   ASSERT_TRUE(Fsck(std::move(bcache_or.value()), FsckOptions{.repair = true}).is_ok());
 }
 
@@ -89,21 +89,21 @@ class ConsistencyCheckerFixtureVerbose : public testing::Test {
     EXPECT_TRUE(Mkfs(bcache_or.value().get()).is_ok());
     MountOptions options = {};
 
-    auto fs_or = Minfs::Create(vfs_loop_.dispatcher(), std::move(bcache_or.value()), options);
+    auto fs_or = Runner::Create(vfs_loop_.dispatcher(), std::move(bcache_or.value()), options);
     EXPECT_TRUE(fs_or.is_ok());
     fs_ = std::move(fs_or.value());
   }
 
   void DestroyMinfs(std::unique_ptr<Bcache>* bcache) {
     sync_completion_t completion;
-    fs_->Sync([&completion](zx_status_t status) { sync_completion_signal(&completion); });
+    fs().Sync([&completion](zx_status_t status) { sync_completion_signal(&completion); });
     EXPECT_EQ(sync_completion_wait(&completion, zx::duration::infinite().get()), ZX_OK);
-    *bcache = Minfs::Destroy(std::move(fs_));
+    *bcache = Runner::Destroy(std::move(fs_));
   }
 
   fs::VnodeAttributes CreateAndWrite(const char* name, size_t truncate_size, size_t offset,
                                      size_t data_size) {
-    auto root_or = fs_->VnodeGet(kMinfsRootIno);
+    auto root_or = fs().VnodeGet(kMinfsRootIno);
     EXPECT_TRUE(root_or.is_ok());
     fbl::RefPtr<fs::Vnode> child;
     EXPECT_EQ(root_or->Create(name, 0, &child), ZX_OK);
@@ -124,14 +124,14 @@ class ConsistencyCheckerFixtureVerbose : public testing::Test {
   }
 
   void TearDown() override { EXPECT_EQ(fs_.get(), nullptr); }
-  Minfs& fs() { return *fs_; }
-  std::unique_ptr<Minfs> TakeFs() { return std::move(fs_); }
+  Minfs& fs() { return fs_->minfs(); }
+  std::unique_ptr<Runner> TakeFs() { return std::move(fs_); }
 
   void MarkDirectoryEntryMissing(size_t offset, std::unique_ptr<Bcache>* bcache);
 
  private:
   async::Loop vfs_loop_;
-  std::unique_ptr<Minfs> fs_;
+  std::unique_ptr<Runner> fs_;
 };
 
 TEST_F(ConsistencyCheckerFixtureVerbose, TwoInodesPointToABlock) {
@@ -244,7 +244,7 @@ void ConsistencyCheckerFixtureVerbose::MarkDirectoryEntryMissing(size_t offset,
                                                                  std::unique_ptr<Bcache>* bcache) {
   blk_t root_dir_block;
   {
-    auto root_or = fs_->VnodeGet(kMinfsRootIno);
+    auto root_or = fs().VnodeGet(kMinfsRootIno);
     EXPECT_TRUE(root_or.is_ok());
     root_dir_block = root_or->GetInode()->dnum[0] + fs().Info().dat_block;
   }
@@ -273,13 +273,13 @@ TEST_F(ConsistencyCheckerFixtureVerbose, MissingDotDotEntry) {
   ASSERT_TRUE(Fsck(std::move(bcache), FsckOptions{.repair = true}).is_error());
 }
 
-void CreateUnlinkedDirectoryWithEntry(std::unique_ptr<Minfs> fs,
+void CreateUnlinkedDirectoryWithEntry(std::unique_ptr<Runner> fs,
                                       std::unique_ptr<Bcache>* bcache_out) {
   ino_t ino;
   blk_t inode_block;
 
   {
-    auto root_or = fs->VnodeGet(kMinfsRootIno);
+    auto root_or = fs->minfs().VnodeGet(kMinfsRootIno);
     ASSERT_TRUE(root_or.is_ok());
     fbl::RefPtr<fs::Vnode> child_;
     ASSERT_EQ(root_or->Create("foo", 0, &child_), ZX_OK);
@@ -305,17 +305,16 @@ void CreateUnlinkedDirectoryWithEntry(std::unique_ptr<Minfs> fs,
     ASSERT_EQ(root_or->Unlink("foo", false), ZX_OK);
 
     sync_completion_t completion;
-    fs->Sync([&completion](zx_status_t status) { sync_completion_signal(&completion); });
+    fs->minfs().Sync([&completion](zx_status_t status) { sync_completion_signal(&completion); });
     EXPECT_EQ(sync_completion_wait(&completion, zx::duration::infinite().get()), ZX_OK);
 
-    inode_block = fs->Info().ino_block;
+    inode_block = fs->minfs().Info().ino_block;
 
     // Prevent the inode from being purged when we close the child.
-    fs->SetReadonly(true);
-    fs->StopWriteback();
+    fs->minfs().StopWriteback();
   }
 
-  std::unique_ptr<Bcache> bcache = Minfs::Destroy(std::move(fs));
+  std::unique_ptr<Bcache> bcache = Runner::Destroy(std::move(fs));
 
   // Now hack the inode so it looks like a directory with an invalid entry count.
   Inode inodes[kMinfsInodesPerBlock];

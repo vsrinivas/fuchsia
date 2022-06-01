@@ -681,9 +681,8 @@ void Minfs::CommitTransaction(std::unique_ptr<Transaction> transaction) {
     // During mount, there isn't a dispatcher, so we won't queue a flush, but that won't matter
     // since the only changes will be things like whether the volume is clean and it doesn't
     // matter if they're not persisted.
-    async_dispatcher_t* d = dispatcher();
-    if (d) {
-      journal_sync_task_.PostDelayed(d, kJournalBackgroundSyncTime);
+    if (dispatcher_) {
+      journal_sync_task_.PostDelayed(dispatcher_, kJournalBackgroundSyncTime);
     }
   }
 #else
@@ -723,29 +722,32 @@ void Minfs::Sync(SyncCallback closure) {
 #ifdef __Fuchsia__
 Minfs::Minfs(async_dispatcher_t* dispatcher, std::unique_ptr<Bcache> bc,
              std::unique_ptr<SuperblockManager> sb, std::unique_ptr<Allocator> block_allocator,
-             std::unique_ptr<InodeManager> inodes, const MountOptions& mount_options)
-    : fs::ManagedVfs(dispatcher),
-      bc_(std::move(bc)),
+             std::unique_ptr<InodeManager> inodes, const MountOptions& mount_options,
+             fs::ManagedVfs* vfs)
+    : bc_(std::move(bc)),
       sb_(std::move(sb)),
       block_allocator_(std::move(block_allocator)),
       inodes_(std::move(inodes)),
       journal_sync_task_([this]() { Sync(); }),
       inspect_tree_(bc_->device()),
       limits_(sb_->Info()),
-      mount_options_(mount_options) {
+      mount_options_(mount_options),
+      dispatcher_(dispatcher),
+      vfs_(vfs) {
   zx::event::create(0, &fs_id_);
 }
 #else
 Minfs::Minfs(std::unique_ptr<Bcache> bc, std::unique_ptr<SuperblockManager> sb,
              std::unique_ptr<Allocator> block_allocator, std::unique_ptr<InodeManager> inodes,
-             BlockOffsets offsets, const MountOptions& mount_options)
+             BlockOffsets offsets, const MountOptions& mount_options, fs::Vfs* vfs)
     : bc_(std::move(bc)),
       sb_(std::move(sb)),
       block_allocator_(std::move(block_allocator)),
       inodes_(std::move(inodes)),
       offsets_(offsets),
       limits_(sb_->Info()),
-      mount_options_(mount_options) {}
+      mount_options_(mount_options),
+      vfs_(vfs) {}
 #endif
 
 Minfs::~Minfs() { vnode_hash_.clear(); }
@@ -1153,7 +1155,7 @@ Minfs::ReadInitialBlocks(const Superblock& info, Bcache& bc, SuperblockManager& 
 
 zx::status<std::unique_ptr<Minfs>> Minfs::Create(FuchsiaDispatcher dispatcher,
                                                  std::unique_ptr<Bcache> bc,
-                                                 const MountOptions& options) {
+                                                 const MountOptions& options, PlatformVfs* vfs) {
   // Read the superblock before replaying the journal.
   auto info_or = LoadSuperblockWithRepair(bc.get(), options.repair_filesystem);
   if (info_or.is_error()) {
@@ -1210,9 +1212,9 @@ zx::status<std::unique_ptr<Minfs>> Minfs::Create(FuchsiaDispatcher dispatcher,
   std::unique_ptr<Minfs> out_fs;
 
 #ifdef __Fuchsia__
-  out_fs =
-      std::unique_ptr<Minfs>(new Minfs(dispatcher, std::move(bc), std::move(sb),
-                                       std::move(block_allocator), std::move(inodes), options));
+  out_fs = std::unique_ptr<Minfs>(new Minfs(dispatcher, std::move(bc), std::move(sb),
+                                            std::move(block_allocator), std::move(inodes), options,
+                                            vfs));
   if (options.writability != Writability::ReadOnlyDisk) {
     auto status = out_fs->InitializeJournal(std::move(journal_superblock_or.value()));
     if (status.is_error()) {
@@ -1260,14 +1262,12 @@ zx::status<std::unique_ptr<Minfs>> Minfs::Create(FuchsiaDispatcher dispatcher,
     }
   }
 
-  out_fs->SetReadonly(options.writability != Writability::Writable);
-
   out_fs->InitializeInspectTree();
 #else
   BlockOffsets offsets(*bc, *sb);
   out_fs =
       std::unique_ptr<Minfs>(new Minfs(std::move(bc), std::move(sb), std::move(block_allocator),
-                                       std::move(inodes), offsets, options));
+                                       std::move(inodes), offsets, options, vfs));
 #endif  // !defined(__Fuchsia__)
 
   return zx::ok(std::move(out_fs));
@@ -1345,42 +1345,6 @@ zx::status<fbl::RefPtr<VnodeMinfs>> Minfs::OpenRootNode() {
 
 #ifdef __Fuchsia__
 
-void Minfs::Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) {
-  // On a read-write filesystem, set the kMinfsFlagClean on a clean unmount.
-  FX_LOGS(INFO) << "Shutting down";
-  ManagedVfs::Shutdown([this, cb = std::move(cb)](zx_status_t status) mutable {
-    if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "Managed VFS shutdown failed with status: " << zx_status_get_string(status);
-    }
-    Sync([this, cb = std::move(cb)](zx_status_t sync_status) mutable {
-      if (sync_status != ZX_OK) {
-        FX_LOGS(ERROR) << "Sync at unmount failed with status: "
-                       << zx_status_get_string(sync_status);
-      }
-      async::PostTask(dispatcher(), [this, cb = std::move(cb)]() mutable {
-        // Ensure writeback buffer completes before auxiliary structures are deleted.
-        StopWriteback();
-
-        auto on_unmount = std::move(on_unmount_);
-
-        // Shut down the block cache.
-        bc_.reset();
-
-        // TODO(/fxbug.dev/90054): Report sync and managed shutdown status.
-        // Identify to the unmounting channel that teardown is complete.
-        if (cb != nullptr) {
-          cb(ZX_OK);
-        }
-
-        // Identify to the unmounting thread that teardown is complete.
-        if (on_unmount) {
-          on_unmount();
-        }
-      });
-    });
-  });
-}
-
 zx::status<fs::FilesystemInfo> Minfs::GetFilesystemInfo() {
   fs::FilesystemInfo info;
 
@@ -1411,15 +1375,6 @@ zx::status<fs::FilesystemInfo> Minfs::GetFilesystemInfo() {
   return zx::ok(info);
 }
 
-void Minfs::OnNoConnections() {
-  if (IsTerminating()) {
-    return;
-  }
-  Shutdown([](zx_status_t status) mutable {
-    ZX_ASSERT_MSG(status == ZX_OK, "Filesystem shutdown failed on OnNoConnections(): %s",
-                  zx_status_get_string(status));
-  });
-}
 #endif
 
 uint32_t BlocksRequiredForInode(uint64_t inode_count) {

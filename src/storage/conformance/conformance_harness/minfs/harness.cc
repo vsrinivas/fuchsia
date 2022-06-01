@@ -30,6 +30,7 @@
 #include "src/storage/minfs/format.h"
 #include "src/storage/minfs/minfs.h"
 #include "src/storage/minfs/minfs_private.h"
+#include "src/storage/minfs/runner.h"
 #include "src/storage/minfs/vnode.h"
 
 namespace minfs {
@@ -43,31 +44,25 @@ class MinfsHarness : public fuchsia::io::test::Io1Harness {
 
     auto device = std::make_unique<block_client::FakeBlockDevice>(kBlockCount, kMinfsBlockSize);
 
-    auto bcache_or = Bcache::Create(std::move(device), kBlockCount);
-    ZX_ASSERT(bcache_or.is_ok());
-    ZX_ASSERT(Mkfs(bcache_or.value().get()).is_ok());
+    auto bcache = Bcache::Create(std::move(device), kBlockCount);
+    ZX_ASSERT(bcache.is_ok());
+    ZX_ASSERT(Mkfs(bcache.value().get()).is_ok());
 
-    auto minfs_or = Minfs::Create(vfs_loop_.dispatcher(), std::move(bcache_or.value()), {});
-    ZX_ASSERT(minfs_or.is_ok());
-    minfs_ = std::move(minfs_or.value());
+    auto runner = Runner::Create(vfs_loop_.dispatcher(), *std::move(bcache), {});
+    ZX_ASSERT(runner.is_ok());
+    runner_ = *std::move(runner);
 
     // One connection must be maintained to avoid filesystem termination.
     auto root_server = root_client_.NewRequest();
-    fbl::RefPtr<Directory> root = GetRootNode();
-    minfs_->ServeDirectory(std::move(root),
-                           fidl::ServerEnd<fuchsia_io::Directory>(root_server.TakeChannel()));
+    zx::status status =
+        runner_->ServeRoot(fidl::ServerEnd<fuchsia_io::Directory>(root_server.TakeChannel()));
+    ZX_ASSERT(status.is_ok());
   }
 
   ~MinfsHarness() override {
-    // |fs::ManagedVfs| must be shutdown first before stopping its dispatch loop.
-    // Here we asynchronously post the shutdown request, then synchronously join
-    // the |vfs_loop_| thread.
-    minfs_->Shutdown([this](zx_status_t status) mutable {
-      async::PostTask(vfs_loop_.dispatcher(), [this] {
-        minfs_.reset();
-        vfs_loop_.Quit();
-      });
-    });
+    // The runner shutdown takes care of shutting everything down in the right order, including the
+    // async loop.
+    runner_->Shutdown([](zx_status_t status) { ZX_ASSERT(status == ZX_OK); });
     vfs_loop_.JoinThreads();
   }
 
@@ -105,7 +100,7 @@ class MinfsHarness : public fuchsia::io::test::Io1Harness {
     auto options = directory->ValidateOptions(GetConnectionOptions(flags));
     ZX_ASSERT_MSG(options.is_ok(), "Invalid directory flags: %s", options.status_string());
     zx_status_t status =
-        minfs_->Serve(std::move(directory), directory_request.TakeChannel(), options.value());
+        runner_->Serve(std::move(directory), directory_request.TakeChannel(), options.value());
     ZX_ASSERT_MSG(status == ZX_OK, "Failed to serve test directory: %s",
                   zx_status_get_string(status));
   }
@@ -161,7 +156,7 @@ class MinfsHarness : public fuchsia::io::test::Io1Harness {
   }
 
   fbl::RefPtr<Directory> GetRootNode() {
-    auto vn_or = minfs_->VnodeGet(kMinfsRootIno);
+    auto vn_or = runner_->minfs().VnodeGet(kMinfsRootIno);
     ZX_ASSERT(vn_or.is_ok());
     auto root = fbl::RefPtr<Directory>::Downcast(std::move(vn_or.value()));
     ZX_ASSERT_MSG(root != nullptr, "The root node wasn't a directory");
@@ -190,7 +185,7 @@ class MinfsHarness : public fuchsia::io::test::Io1Harness {
 
  private:
   async::Loop vfs_loop_;
-  std::unique_ptr<Minfs> minfs_;
+  std::unique_ptr<Runner> runner_;
 
   // Used to create a new unique directory within minfs for every call to |GetDirectory|.
   uint32_t directory_count_ = 0;

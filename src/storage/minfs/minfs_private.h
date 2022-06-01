@@ -32,7 +32,6 @@
 #endif
 
 #include <lib/fit/function.h>
-#include <lib/zircon-internal/fnv1hash.h>
 
 #include <fbl/algorithm.h>
 #include <fbl/intrusive_hash_table.h>
@@ -79,6 +78,17 @@ constexpr zx::duration kJournalBackgroundSyncTime = zx::sec(30);
 using FuchsiaDispatcher = async_dispatcher_t*;
 #else
 using FuchsiaDispatcher = std::nullptr_t;
+#endif  // __Fuchsia__
+
+// A reference to the vfs is needed for some functions. The specific vfs type is different between
+// Fuchsia and Host, so define a PlatformVfs which represents the one for our current platform to
+// avoid ifdefs on every call.
+//
+// Prefer using the appropriate vfs when the function is only used for one or the other.
+#ifdef __Fuchsia__
+using PlatformVfs = fs::ManagedVfs;
+#else
+using PlatformVfs = fs::Vfs;
 #endif  // __Fuchsia__
 
 // SyncVnode flags
@@ -159,14 +169,7 @@ class TransactionalFs {
   virtual Allocator& GetInodeAllocator() = 0;
 };
 
-class Minfs :
-#ifdef __Fuchsia__
-    public fs::ManagedVfs,
-#else
-    public fs::Vfs,
-#endif
-    public fbl::RefCounted<Minfs>,
-    public TransactionalFs {
+class Minfs : public fbl::RefCounted<Minfs>, public TransactionalFs {
  public:
   // Not copyable or movable
   Minfs(const Minfs&) = delete;
@@ -181,7 +184,8 @@ class Minfs :
 
   [[nodiscard]] static zx::status<std::unique_ptr<Minfs>> Create(FuchsiaDispatcher dispatcher,
                                                                  std::unique_ptr<Bcache> bc,
-                                                                 const MountOptions& options);
+                                                                 const MountOptions& options,
+                                                                 PlatformVfs* vfs);
 
 #ifdef __Fuchsia__
   // Initializes the Minfs journal and writeback queue and resolves any pending disk state (e.g.,
@@ -277,14 +281,7 @@ class Minfs :
     return 10 * (1 << 20) / kMinfsBlockSize;
   }
 
-  void SetUnmountCallback(fit::closure closure) { on_unmount_ = std::move(closure); }
-
-  // FuchsiaVfs overrides.
-  void Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) final;
-  zx::status<fs::FilesystemInfo> GetFilesystemInfo() final;
-
-  // ManagedVfs overrides.
-  void OnNoConnections() final;
+  zx::status<fs::FilesystemInfo> GetFilesystemInfo();
 
   // Signals the completion object as soon as the journal has finished synchronizing.
   void Sync(SyncCallback closure = {});
@@ -376,17 +373,20 @@ class Minfs :
 
   const MountOptions& mount_options() { return mount_options_; }
 
+  PlatformVfs* vfs() { return vfs_; }
+
  private:
   using HashTable = fbl::HashTable<ino_t, VnodeMinfs*>;
 
 #ifdef __Fuchsia__
   Minfs(async_dispatcher_t* dispatcher, std::unique_ptr<Bcache> bc,
         std::unique_ptr<SuperblockManager> sb, std::unique_ptr<Allocator> block_allocator,
-        std::unique_ptr<InodeManager> inodes, const MountOptions& mount_options);
+        std::unique_ptr<InodeManager> inodes, const MountOptions& mount_options,
+        fs::ManagedVfs* vfs);
 #else
   Minfs(std::unique_ptr<Bcache> bc, std::unique_ptr<SuperblockManager> sb,
         std::unique_ptr<Allocator> block_allocator, std::unique_ptr<InodeManager> inodes,
-        BlockOffsets offsets, const MountOptions& mount_options);
+        BlockOffsets offsets, const MountOptions& mount_options, fs::Vfs* vfs);
 #endif
 
   // Internal version of VnodeLookup which may also return unlinked vnodes.
@@ -433,7 +433,6 @@ class Minfs :
   HashTable vnode_hash_ __TA_GUARDED(hash_lock_){};
 
 #ifdef __Fuchsia__
-  fit::closure on_unmount_{};
   std::unique_ptr<fs::Journal> journal_;
 
   // This event's koid is used as a unique identifier for this filesystem instance.
@@ -451,6 +450,11 @@ class Minfs :
 
   TransactionLimits limits_;
   MountOptions mount_options_;
+
+#ifdef __Fuchsia__
+  async_dispatcher_t* dispatcher_;
+#endif
+  PlatformVfs* vfs_;
 };
 
 #ifdef __Fuchsia__

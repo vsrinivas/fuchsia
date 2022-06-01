@@ -18,7 +18,7 @@
 #include "src/lib/storage/block_client/cpp/fake_block_device.h"
 #include "src/lib/storage/vfs/cpp/journal/format.h"
 #include "src/storage/minfs/format.h"
-#include "src/storage/minfs/minfs_private.h"
+#include "src/storage/minfs/runner.h"
 
 namespace minfs {
 
@@ -60,15 +60,15 @@ class MinfsInspectorTest : public testing::Test {
     // Write journal info to the device by creating a minfs and waiting for it to finish.
     MountOptions options = {};
     auto fs_or =
-        minfs::Minfs::Create(vfs_loop_.dispatcher(), std::move(bcache_or.value()), options);
+        minfs::Runner::Create(vfs_loop_.dispatcher(), std::move(bcache_or.value()), options);
     EXPECT_TRUE(fs_or.is_ok());
     sync_completion_t completion;
-    fs_or->Sync([&completion](zx_status_t status) { sync_completion_signal(&completion); });
+    fs_or->minfs().Sync([&completion](zx_status_t status) { sync_completion_signal(&completion); });
     EXPECT_EQ(sync_completion_wait(&completion, zx::duration::infinite().get()), ZX_OK);
 
     // We only care about the disk format written into the fake block device, so we destroy the
     // minfs/bcache used to format it.
-    bcache_or = zx::ok(Minfs::Destroy(std::move(fs_or.value())));
+    bcache_or = zx::ok(Runner::Destroy(std::move(fs_or.value())));
     return CreateMinfsInspector(Bcache::Destroy(std::move(bcache_or.value())));
   }
 

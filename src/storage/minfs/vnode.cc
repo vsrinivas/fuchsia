@@ -604,7 +604,7 @@ zx_status_t VnodeMinfs::SetAttributes(fs::VnodeAttributesUpdate attr) {
   });
 }
 
-VnodeMinfs::VnodeMinfs(Minfs* fs) : Vnode(fs), fs_(fs) {}
+VnodeMinfs::VnodeMinfs(Minfs* fs) : Vnode(fs ? fs->vfs() : nullptr), fs_(fs) {}
 
 #ifdef __Fuchsia__
 void VnodeMinfs::Notify(std::string_view name, fuchsia_io::wire::WatchEvent event) {

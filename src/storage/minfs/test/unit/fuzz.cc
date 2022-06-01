@@ -8,7 +8,7 @@
 #include <fuzzer/FuzzedDataProvider.h>
 
 #include "src/lib/storage/block_client/cpp/fake_block_device.h"
-#include "src/storage/minfs/minfs_private.h"
+#include "src/storage/minfs/runner.h"
 
 namespace minfs {
 namespace {
@@ -28,7 +28,7 @@ enum class Operation {
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  std::unique_ptr<Minfs> fs;
+  std::unique_ptr<Runner> runner;
   {
     constexpr uint64_t kBlockCount = 1 << 17;
     auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kMinfsBlockSize);
@@ -36,13 +36,14 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     ZX_ASSERT(bcache_or.is_ok());
     ZX_ASSERT(Mkfs(bcache_or.value().get()).is_ok());
     MountOptions options = {};
-    auto fs_or = Minfs::Create(loop.dispatcher(), std::move(bcache_or.value()), options);
+    auto fs_or = Runner::Create(loop.dispatcher(), std::move(bcache_or.value()), options);
     ZX_ASSERT(fs_or.is_ok());
-    fs = std::move(fs_or.value());
+    runner = std::move(fs_or.value());
   }
-  ZX_ASSERT(fs != nullptr);
+  ZX_ASSERT(runner != nullptr);
+  Minfs& fs = runner->minfs();
 
-  auto root_or = fs->VnodeGet(kMinfsRootIno);
+  auto root_or = fs.VnodeGet(kMinfsRootIno);
   ZX_ASSERT(root_or.is_ok());
 
   std::array<fbl::RefPtr<VnodeMinfs>, 10> files;
@@ -69,13 +70,13 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
         *root_or = nullptr;
         // Fsck should always pass regardless of if we flushed any outstanding transactions or not.
         if (fuzzed_data.ConsumeBool()) {
-          ZX_ASSERT(fs->BlockingJournalSync().is_ok());
+          ZX_ASSERT(fs.BlockingJournalSync().is_ok());
         }
         loop.RunUntilIdle();
-        ZX_ASSERT(fs->Info().alloc_block_count == 2);
-        ZX_ASSERT(fs->Info().alloc_inode_count == 2);
+        ZX_ASSERT(fs.Info().alloc_block_count == 2);
+        ZX_ASSERT(fs.Info().alloc_inode_count == 2);
         // Destroy Minfs and run Fsck.
-        std::unique_ptr<Bcache> bcache = Minfs::Destroy(std::move(fs));
+        std::unique_ptr<Bcache> bcache = Runner::Destroy(std::move(runner));
         auto fsck_result = Fsck(std::move(bcache), FsckOptions{.read_only = true, .quiet = true});
         ZX_ASSERT_MSG(fsck_result.is_ok(), "Fsck failure: %s", fsck_result.status_string());
         return 0;

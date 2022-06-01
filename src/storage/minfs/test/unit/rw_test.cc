@@ -12,7 +12,7 @@
 #include "src/storage/minfs/format.h"
 #include "src/storage/minfs/lazy_buffer.h"
 #include "src/storage/minfs/minfs.h"
-#include "src/storage/minfs/minfs_private.h"
+#include "src/storage/minfs/runner.h"
 
 namespace minfs {
 namespace {
@@ -31,9 +31,9 @@ TEST_F(ReadWriteTest, WriteZeroLength) {
   auto bcache_or = Bcache::Create(std::move(device), kNumBlocks);
   ASSERT_TRUE(bcache_or.is_ok());
   ASSERT_TRUE(Mkfs(bcache_or.value().get()).is_ok());
-  auto fs_or = Minfs::Create(loop.dispatcher(), std::move(bcache_or.value()), MountOptions());
+  auto fs_or = Runner::Create(loop.dispatcher(), std::move(bcache_or.value()), MountOptions());
   ASSERT_TRUE(fs_or.is_ok());
-  auto root_or = fs_or->VnodeGet(kMinfsRootIno);
+  auto root_or = fs_or->minfs().VnodeGet(kMinfsRootIno);
   ASSERT_TRUE(root_or.is_ok());
   fbl::RefPtr<fs::Vnode> foo;
   ASSERT_EQ(root_or->Create("foo", 0, &foo), ZX_OK);

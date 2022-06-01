@@ -6,18 +6,18 @@
 #define SRC_STORAGE_MINFS_SERVICE_ADMIN_H_
 
 #include "src/lib/storage/vfs/cpp/service.h"
-#include "src/storage/minfs/minfs_private.h"
+#include "src/storage/minfs/runner.h"
 
 namespace minfs {
 
 class AdminService : public fidl::WireServer<fuchsia_fs::Admin>, public fs::Service {
  public:
-  AdminService(async_dispatcher_t* dispatcher, Minfs& minfs);
+  AdminService(async_dispatcher_t* dispatcher, Runner& runner);
 
   void Shutdown(ShutdownRequestView request, ShutdownCompleter::Sync& completer) override;
 
  private:
-  Minfs& minfs_;
+  Runner& runner_;
 };
 
 }  // namespace minfs

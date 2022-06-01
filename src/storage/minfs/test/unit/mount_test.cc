@@ -9,7 +9,7 @@
 
 #include "src/lib/storage/block_client/cpp/fake_block_device.h"
 #include "src/storage/minfs/format.h"
-#include "src/storage/minfs/minfs_private.h"
+#include "src/storage/minfs/runner.h"
 
 namespace minfs {
 namespace {
@@ -39,10 +39,10 @@ TEST(MountTest, OldestRevisionUpdatedOnMount) {
   ASSERT_EQ(kMinfsCurrentMinorVersion + 1, superblock_or->oldest_minor_version);
 
   MountOptions options = {};
-  auto fs_or = Minfs::Create(loop.dispatcher(), std::move(bcache_or.value()), options);
+  auto fs_or = Runner::Create(loop.dispatcher(), std::move(bcache_or.value()), options);
   ASSERT_TRUE(fs_or.is_ok());
 
-  bcache_or = zx::ok(Minfs::Destroy(std::move(fs_or.value())));
+  bcache_or = zx::ok(Runner::Destroy(std::move(fs_or.value())));
 
   superblock_or = LoadSuperblock(bcache_or.value().get());
   ASSERT_TRUE(superblock_or.is_ok());
@@ -63,7 +63,7 @@ TEST(MountTest, ReadsExceptForSuperBlockFail) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  auto fs_or = Minfs::Create(loop.dispatcher(), std::move(bcache_or.value()), {});
+  auto fs_or = Runner::Create(loop.dispatcher(), std::move(bcache_or.value()), {});
   EXPECT_EQ(fs_or.status_value(), ZX_ERR_IO);
 }
 

@@ -18,8 +18,8 @@ class TruncateTest : public JournalIntegrationFixture {
   // Create a file with 2 blocks, then truncate down to 1 block. If the transaction succeeds we
   // should see the new length, but if it fails, we should still see the old length with the old
   // contents.
-  void PerformOperation(Minfs* fs) {
-    auto root = fs->VnodeGet(kMinfsRootIno);
+  void PerformOperation(Minfs& fs) {
+    auto root = fs.VnodeGet(kMinfsRootIno);
     ASSERT_TRUE(root.is_ok());
     fbl::RefPtr<fs::Vnode> foo;
     ASSERT_EQ(root->Create("foo", 0, &foo), ZX_OK);
@@ -40,11 +40,11 @@ TEST_F(TruncateTest, EnsureOldDataWhenTransactionFails) {
   auto bcache = CutOffDevice(write_count() - 12 * kDiskBlocksPerFsBlock);
 
   // Since we cut off the transaction, we should see the old length with the old contents.
-  auto fs_or = Minfs::Create(loop.dispatcher(), std::move(bcache), MountOptions{});
+  auto fs_or = Runner::Create(loop.dispatcher(), std::move(bcache), MountOptions{});
   ASSERT_TRUE(fs_or.is_ok());
 
   // Open the 'foo' file.
-  auto root = fs_or->VnodeGet(kMinfsRootIno);
+  auto root = fs_or->minfs().VnodeGet(kMinfsRootIno);
   ASSERT_TRUE(root.is_ok());
   fbl::RefPtr<fs::Vnode> foo;
   ASSERT_EQ(root->Lookup("foo", &foo), ZX_OK);

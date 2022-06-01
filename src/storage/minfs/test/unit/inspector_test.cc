@@ -20,7 +20,7 @@
 #include "src/storage/minfs/inspector/inspector_inode_table.h"
 #include "src/storage/minfs/inspector/inspector_private.h"
 #include "src/storage/minfs/inspector/inspector_superblock.h"
-#include "src/storage/minfs/minfs_private.h"
+#include "src/storage/minfs/runner.h"
 
 namespace minfs {
 namespace {
@@ -176,15 +176,15 @@ TEST(InspectorTest, CorrectJournalLocation) {
   ASSERT_TRUE(Mkfs(bcache_or.value().get()).is_ok());
 
   MountOptions options = {};
-  auto fs_or = minfs::Minfs::Create(loop.dispatcher(), std::move(bcache_or.value()), options);
+  auto fs_or = minfs::Runner::Create(loop.dispatcher(), std::move(bcache_or.value()), options);
   ASSERT_TRUE(fs_or.is_ok());
 
   // Ensure the dirty bit is propagated to the device.
   sync_completion_t completion;
-  fs_or->Sync([&completion](zx_status_t status) { sync_completion_signal(&completion); });
+  fs_or->minfs().Sync([&completion](zx_status_t status) { sync_completion_signal(&completion); });
   ASSERT_EQ(sync_completion_wait(&completion, zx::duration::infinite().get()), ZX_OK);
 
-  uint64_t journal_length = JournalBlocks(fs_or->Info());
+  uint64_t journal_length = JournalBlocks(fs_or->minfs().Info());
   std::unique_ptr<RootObject> root_obj(new RootObject(std::move(fs_or.value())));
 
   // Root name

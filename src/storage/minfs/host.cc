@@ -29,7 +29,7 @@
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 #include "src/storage/minfs/format.h"
 #include "src/storage/minfs/minfs.h"
-#include "src/storage/minfs/minfs_private.h"
+#include "src/storage/minfs/runner.h"
 
 namespace {
 
@@ -129,16 +129,16 @@ int emu_mkfs(const char* path) {
 }
 
 int emu_mount_bcache(std::unique_ptr<minfs::Bcache> bc) {
-  auto fs_or = minfs::Minfs::Create(nullptr, std::move(bc), minfs::MountOptions());
-  if (fs_or.is_error()) {
+  auto fs = minfs::Runner::Create(nullptr, std::move(bc), minfs::MountOptions());
+  if (fs.is_error()) {
     return -1;
   }
-  auto root_or = fs_or->OpenRootNode();
-  if (root_or.is_error()) {
+  auto root = fs->minfs().OpenRootNode();
+  if (root.is_error()) {
     return -1;
   }
-  fake_fs.fake_root = std::move(root_or).value();
-  fake_fs.fake_vfs = std::move(fs_or).value();
+  fake_fs.fake_root = std::move(root).value();
+  fake_fs.fake_vfs = std::move(fs).value();
   return 0;
 }
 

@@ -51,17 +51,6 @@ struct CreateBcacheResult {
 // Returns the bcache and a boolean indicating if the underlying device is read-only.
 zx::status<CreateBcacheResult> CreateBcache(std::unique_ptr<block_client::BlockDevice> device);
 
-// Mount the filesystem backed by |bcache| and serve under the provided |mount_channel|.
-// The layout of the served directory is controlled by |serve_layout|.
-//
-// This function does not start the async_dispatcher_t object owned by |vfs|;
-// requests will not be dispatched if that async_dispatcher_t object is not
-// active.
-zx::status<std::unique_ptr<fs::ManagedVfs>> MountAndServe(
-    const MountOptions& options, async_dispatcher_t* dispatcher,
-    std::unique_ptr<minfs::Bcache> bcache, fidl::ServerEnd<fuchsia_io::Directory> root,
-    fit::closure on_unmount);
-
 // Start the filesystem on the block device backed by |bcache|, and serve it on |root|. Blocks
 // until the filesystem terminates.
 zx::status<> Mount(std::unique_ptr<minfs::Bcache> bcache, const MountOptions& options,

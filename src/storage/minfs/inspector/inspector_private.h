@@ -16,7 +16,7 @@
 #include "src/lib/storage/vfs/cpp/journal/format.h"
 #include "src/storage/minfs/allocator/inode_manager.h"
 #include "src/storage/minfs/format.h"
-#include "src/storage/minfs/minfs_private.h"
+#include "src/storage/minfs/runner.h"
 
 namespace minfs {
 
@@ -32,7 +32,7 @@ class RootObject : public disk_inspector::DiskObject {
   RootObject& operator=(const RootObject&) = delete;
   RootObject& operator=(RootObject&&) = delete;
 
-  explicit RootObject(std::unique_ptr<Minfs> fs) : fs_(std::move(fs)) {}
+  explicit RootObject(std::unique_ptr<Runner> fs) : runner_(std::move(fs)), fs_(runner_->minfs()) {}
 
   // DiskObject interface
   const char* GetName() const override { return kRootName; }
@@ -57,7 +57,8 @@ class RootObject : public disk_inspector::DiskObject {
   std::unique_ptr<disk_inspector::DiskObject> GetBackupSuperBlock() const;
 
   // Pointer to the Minfs instance.
-  std::unique_ptr<Minfs> fs_;
+  std::unique_ptr<Runner> runner_;
+  Minfs& fs_;
 };
 
 std::unique_ptr<disk_inspector::DiskObjectUint64> CreateUint64DiskObj(fbl::String fieldName,

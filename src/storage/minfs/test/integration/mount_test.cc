@@ -32,6 +32,7 @@
 #include "src/storage/minfs/format.h"
 #include "src/storage/minfs/fsck.h"
 #include "src/storage/minfs/minfs.h"
+#include "src/storage/minfs/runner.h"
 #include "src/storage/testing/ram_disk.h"
 
 namespace minfs {
@@ -126,12 +127,15 @@ class MountTestTemplate : public testing::Test {
   async::Loop& loop() { return loop_; }
 
   zx_status_t MountAndServe() {
-    auto fs_or = minfs::MountAndServe(mount_options(), loop().dispatcher(), bcache(),
-                                      std::move(root_server_end_), [this]() { loop().Quit(); });
-    if (fs_or.is_error()) {
-      return fs_or.error_value();
+    auto runner = minfs::Runner::Create(loop().dispatcher(), bcache(), mount_options());
+    if (runner.is_error()) {
+      return runner.error_value();
     }
-    fs_ = std::move(fs_or).value();
+    zx::status status = runner->ServeRoot(std::move(root_server_end_));
+    if (status.is_error()) {
+      return status.error_value();
+    }
+    runner_ = *std::move(runner);
     return ZX_OK;
   }
 
@@ -142,7 +146,7 @@ class MountTestTemplate : public testing::Test {
   std::unique_ptr<minfs::Bcache> bcache_ = nullptr;
   fidl::ClientEnd<fuchsia_io::Directory> root_client_end_;
   fidl::ServerEnd<fuchsia_io::Directory> root_server_end_;
-  std::unique_ptr<fs::ManagedVfs> fs_;
+  std::unique_ptr<Runner> runner_;
   async::Loop loop_ = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 };
 

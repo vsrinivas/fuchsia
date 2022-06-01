@@ -14,7 +14,7 @@
 #include <gtest/gtest.h>
 
 #include "src/lib/storage/block_client/cpp/fake_block_device.h"
-#include "src/storage/minfs/minfs_private.h"
+#include "src/storage/minfs/runner.h"
 
 namespace minfs {
 
@@ -42,12 +42,12 @@ class JournalIntegrationFixture : public testing::Test {
 
  protected:
   // To be overridden by subclasses to perform an operation.
-  virtual void PerformOperation(Minfs* fs) = 0;
+  virtual void PerformOperation(Minfs& fs) = 0;
 
   // Records an appropriate write count that can be used to determine a suitable value for
   // CutOffDevice. PerformOperation may call this, or it will be called automatically by
   // CountWritesToPerformOperation.
-  void RecordWriteCount(Minfs* fs);
+  void RecordWriteCount(Minfs& fs);
 
  private:
   // Collects the number of write operations necessary to perform an operation.

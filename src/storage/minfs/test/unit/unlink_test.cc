@@ -12,7 +12,7 @@
 #include "src/storage/minfs/directory.h"
 #include "src/storage/minfs/file.h"
 #include "src/storage/minfs/format.h"
-#include "src/storage/minfs/minfs_private.h"
+#include "src/storage/minfs/runner.h"
 
 namespace minfs {
 namespace {
@@ -30,13 +30,13 @@ TEST(UnlinkTest, PurgedFileHasCorrectMagic) {
   EXPECT_TRUE(Mkfs(bcache_or.value().get()).is_ok());
   MountOptions options = {};
 
-  auto fs_or = Minfs::Create(loop.dispatcher(), std::move(bcache_or.value()), options);
+  auto fs_or = Runner::Create(loop.dispatcher(), std::move(bcache_or.value()), options);
   EXPECT_TRUE(fs_or.is_ok());
 
   ino_t ino;
   uint32_t inode_block;
   {
-    auto root_or = fs_or->VnodeGet(kMinfsRootIno);
+    auto root_or = fs_or->minfs().VnodeGet(kMinfsRootIno);
     EXPECT_TRUE(root_or.is_ok());
     fbl::RefPtr<fs::Vnode> fs_child;
     EXPECT_EQ(root_or->Create("foo", 0, &fs_child), ZX_OK);
@@ -45,9 +45,9 @@ TEST(UnlinkTest, PurgedFileHasCorrectMagic) {
     ino = child->GetIno();
     EXPECT_EQ(child->Close(), ZX_OK);
     EXPECT_EQ(root_or->Unlink("foo", /*must_be_dir=*/false), ZX_OK);
-    inode_block = fs_or->Info().ino_block + ino / kMinfsInodesPerBlock;
+    inode_block = fs_or->minfs().Info().ino_block + ino / kMinfsInodesPerBlock;
   }
-  bcache_or = zx::ok(Minfs::Destroy(std::move(fs_or.value())));
+  bcache_or = zx::ok(Runner::Destroy(std::move(fs_or.value())));
 
   Inode inodes[kMinfsInodesPerBlock];
   EXPECT_TRUE(bcache_or->Readblk(inode_block, &inodes).is_ok());
@@ -66,11 +66,11 @@ TEST(UnlinkTest, UnlinkedDirectoryFailure) {
   EXPECT_TRUE(Mkfs(bcache_or.value().get()).is_ok());
   MountOptions options = {};
 
-  auto fs_or = Minfs::Create(loop.dispatcher(), std::move(bcache_or.value()), options);
+  auto fs_or = Runner::Create(loop.dispatcher(), std::move(bcache_or.value()), options);
   EXPECT_TRUE(fs_or.is_ok());
 
   {
-    auto root_or = fs_or->VnodeGet(kMinfsRootIno);
+    auto root_or = fs_or->minfs().VnodeGet(kMinfsRootIno);
     EXPECT_TRUE(root_or.is_ok());
     fbl::RefPtr<fs::Vnode> fs_child;
     EXPECT_EQ(root_or->Create("foo", S_IFDIR, &fs_child), ZX_OK);
@@ -84,7 +84,7 @@ TEST(UnlinkTest, UnlinkedDirectoryFailure) {
     EXPECT_EQ(child->Close(), ZX_OK);
   }
 
-  [[maybe_unused]] auto bcache = Minfs::Destroy(std::move(fs_or.value()));
+  [[maybe_unused]] auto bcache = Runner::Destroy(std::move(fs_or.value()));
 }
 
 }  // namespace
