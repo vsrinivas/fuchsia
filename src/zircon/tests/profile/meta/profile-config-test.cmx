@@ -1,0 +1,13 @@
+{
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "test/profile-config-test"
+    },
+    "sandbox": {
+        "features": [
+            "config-data"
+        ]
+    }
+}

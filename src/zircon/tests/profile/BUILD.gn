@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/dist/component_manifest_resources.gni")
 import("//build/test.gni")
 
 test("profile") {
@@ -26,7 +27,43 @@ fuchsia_unittest_package("profile-test-pkg") {
   deps = [ ":profile" ]
 }
 
+test("profile-config") {
+  output_name = "profile-config-test"
+  sources = [ "profile-config.cc" ]
+  deps = [
+    ":profile-config-files",
+    "//sdk/lib/fdio",
+    "//zircon/system/ulib/profile:config-test",
+    "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
+
+resource("profile-config-files") {
+  testonly = true
+  sources = [
+    "config/bad.extension",
+    "config/bringup-test.profiles",
+    "config/core-test.profiles",
+    "config/error-test.profiles",
+    "config/invalid-test.profiles",
+    "config/product-test.profiles",
+  ]
+  outputs = [ "data/{{source_file_part}}" ]
+}
+
+fuchsia_unittest_package("profile-config-test-pkg") {
+  manifest = "meta/profile-config-test.cmx"
+  deps = [
+    ":profile-config",
+    ":profile-config-files",
+  ]
+}
+
 group("tests") {
   testonly = true
-  deps = [ ":profile-test-pkg" ]
+  deps = [
+    ":profile-config-test-pkg",
+    ":profile-test-pkg",
+  ]
 }
