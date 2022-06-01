@@ -11,7 +11,7 @@ use fidl_fuchsia_io as fio;
 use fidl_fuchsia_sys::{FlatNamespace, RunnerRequest, RunnerRequestStream};
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
-use fuchsia_url::pkg_url::PkgUrl;
+use fuchsia_url::AbsoluteComponentUrl;
 use fuchsia_zircon as zx;
 use futures::prelude::*;
 use tracing::info;
@@ -19,14 +19,7 @@ use tracing::info;
 use std::mem;
 
 fn manifest_path_from_url(url: &str) -> Result<String, Error> {
-    match PkgUrl::parse(url) {
-        Ok(url) => match url.resource() {
-            Some(r) => Ok(r.to_string()),
-            None => return Err(format_err!("no resource")),
-        },
-        Err(e) => Err(e),
-    }
-    .map_err(|e| format_err!("parse error {}", e))
+    Ok(AbsoluteComponentUrl::parse(url).context("parse error")?.resource().to_string())
 }
 
 fn extract_directory_with_name(ns: &mut FlatNamespace, name: &str) -> Result<zx::Channel, Error> {
