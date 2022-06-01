@@ -54,18 +54,6 @@ static PmmNode pmm_node;
 // Singleton
 static PhysicalPageBorrowingConfig ppb_config;
 
-// Check that if random should wait is requested that this is a debug build with assertions as it is
-// currently assumed that enabling this in a non-debug build would be a mistake that should be
-// caught.
-static void pmm_check_alloc_random_should_wait(uint level) {
-  if (gBootOptions->pmm_alloc_random_should_wait) {
-    ASSERT(DEBUG_ASSERT_IMPLEMENTED);
-    printf("pmm: alloc-random-should-wait enabled\n");
-  }
-}
-LK_INIT_HOOK(pmm_check_alloc_random_should_wait, &pmm_check_alloc_random_should_wait,
-             LK_INIT_LEVEL_LAST)
-
 static void pmm_fill_free_pages(uint level) { pmm_node.FillFreePagesAndArm(); }
 LK_INIT_HOOK(pmm_fill, &pmm_fill_free_pages, LK_INIT_LEVEL_VM)
 

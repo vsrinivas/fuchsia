@@ -214,7 +214,6 @@ template("core_tests") {
              "kernel.vdso.always_use_next=true",
              "kernel.enable-debugging-syscalls=true",
              "kernel.test.ram.reserve=0x8000",
-             "kernel.pmm.alloc-random-should-wait=true",
            ] + invoker.args
 
     deps = [

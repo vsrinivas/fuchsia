@@ -664,14 +664,6 @@ the PMM's use-after-free checker is enabled.  Valid values are multiples of 8,
 between 8 and PAGE_SIZE, inclusive.
 )""")
 
-DEFINE_OPTION("kernel.pmm.alloc-random-should-wait", bool, pmm_alloc_random_should_wait, {false},
-              R"""(
-Enables a testing option that causes the PMM to randomly fail wait-able page allocations with
-ZX_ERR_SHOULD_WAIT, regardless of the current memory level. This is intended to facilitate testing
-of the waiting paths without needing to put the system into a low memory state. It is an error to
-enable this option if the kernel is not built with debugging assertions enabled.
-)""")
-
 DEFINE_OPTION("kernel.portobserver.reserve-pages", uint64_t, port_observer_reserve_pages, {8},
               R"""(
 Specifies the number of pages per CPU to reserve for port observer (async

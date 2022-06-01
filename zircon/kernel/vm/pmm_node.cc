@@ -6,9 +6,7 @@
 #include "pmm_node.h"
 
 #include <align.h>
-#include <assert.h>
 #include <inttypes.h>
-#include <lib/boot-options/boot-options.h>
 #include <lib/counters.h>
 #include <lib/instrumentation/asan.h>
 #include <lib/zircon-internal/macros.h>
@@ -678,15 +676,13 @@ bool PmmNode::InOomStateLocked() {
   if (mem_avail_state_cur_index_ == 0) {
     return true;
   }
-  // See pmm_check_alloc_random_should_wait in pmm.cc for an assertion that random should wait is
-  // only enabled if DEBUG_ASSERT_IMPLEMENTED.
-  if constexpr (DEBUG_ASSERT_IMPLEMENTED) {
-    // Randomly try to make 10% of allocations delayed allocations.
-    if (gBootOptions->pmm_alloc_random_should_wait && rand() < (RAND_MAX / 10)) {
-      return true;
-    }
-  }
+
+#if RANDOM_DELAYED_ALLOC
+  // Randomly try to make 10% of allocations delayed allocations.
+  return rand() < (RAND_MAX / 10);
+#else
   return false;
+#endif
 }
 
 uint64_t PmmNode::CountFreePages() const TA_NO_THREAD_SAFETY_ANALYSIS {

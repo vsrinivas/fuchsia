@@ -696,14 +696,6 @@ This option specifies how many bytes of each free page is filled or checked when
 the PMM's use-after-free checker is enabled.  Valid values are multiples of 8,
 between 8 and PAGE_SIZE, inclusive.
 
-### kernel.pmm.alloc-random-should-wait=\<bool>
-**Default:** `false`
-
-Enables a testing option that causes the PMM to randomly fail wait-able page allocations with
-ZX_ERR_SHOULD_WAIT, regardless of the current memory level. This is intended to facilitate testing
-of the waiting paths without needing to put the system into a low memory state. It is an error to
-enable this option if the kernel is not built with debugging assertions enabled.
-
 ### kernel.portobserver.reserve-pages=\<uint64_t>
 **Default:** `0x8`
 
