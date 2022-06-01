@@ -47,6 +47,7 @@ rustc_library("routing") {
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:maplit",
+    "//third_party/rust_crates:once_cell",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tempfile",

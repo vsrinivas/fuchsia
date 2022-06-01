@@ -3,14 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::{
-        events::error::EventsError, resolver::ResolverError, routing::OpenResourceError,
-        storage::StorageError,
-    },
+    crate::model::{events::error::EventsError, routing::OpenResourceError, storage::StorageError},
     ::routing::{
         component_id_index::ComponentIdIndexError,
         error::{ComponentInstanceError, RoutingError},
         policy::PolicyError,
+        resolving::ResolverError,
     },
     anyhow::Error,
     clonable_error::ClonableError,
@@ -45,6 +43,18 @@ pub enum ModelError {
     NameTooLong { max_len: usize },
     #[error("context not found")]
     ContextNotFound,
+    #[error(
+        "component address could not be computed for component '{}' at url '{}': {:#?}",
+        moniker,
+        url,
+        err
+    )]
+    ComponentAddressNotAvailable {
+        url: String,
+        moniker: AbsoluteMoniker,
+        #[source]
+        err: ResolverError,
+    },
     #[error("{} is not supported", feature)]
     Unsupported { feature: String },
     #[error("package URL missing")]

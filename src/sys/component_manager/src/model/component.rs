@@ -14,7 +14,6 @@ use {
         exposed_dir::ExposedDir,
         hooks::{Event, EventPayload, Hooks},
         namespace::IncomingNamespace,
-        resolver::ResolvedComponent,
         routing::{
             self, route_and_open_capability, OpenOptions, OpenResourceError, OpenRunnerOptions,
             RouteRequest, RoutingError,
@@ -31,6 +30,9 @@ use {
         environment::EnvironmentInterface,
         error::ComponentInstanceError,
         policy::GlobalPolicyChecker,
+        resolving::{
+            ComponentAddress, ComponentResolutionContext, ResolvedComponent, ResolvedPackage,
+        },
         DebugRouteMapper,
     },
     anyhow::format_err,
@@ -46,7 +48,7 @@ use {
     config_encoder::ConfigFields,
     fidl::endpoints::{self, ClientEnd, Proxy, ServerEnd},
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
-    fidl_fuchsia_component_resolution as fresolution, fidl_fuchsia_component_runner as fcrunner,
+    fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_hardware_power_statecontrol as fstatecontrol, fidl_fuchsia_io as fio,
     fidl_fuchsia_process as fprocess, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_component::client,
@@ -121,6 +123,10 @@ impl fmt::Display for StartReason {
 pub struct Component {
     /// The URL of the resolved component.
     pub resolved_url: String,
+    /// The context to be used to resolve a component from a path
+    /// relative to this component (for example, a component in a subpackage).
+    /// If `None`, the resolver cannot resolve relative path component URLs.
+    pub context_to_resolve_children: Option<ComponentResolutionContext>,
     /// The declaration of the resolved manifest.
     pub decl: ComponentDecl,
     /// The package info, if the component came from a package.
@@ -142,7 +148,14 @@ impl TryFrom<ResolvedComponent> for Component {
     type Error = ModelError;
 
     fn try_from(
-        ResolvedComponent { resolved_url, decl, package, config_values }: ResolvedComponent,
+        ResolvedComponent {
+            resolved_by: _,
+            resolved_url,
+            context_to_resolve_children,
+            decl,
+            package,
+            config_values,
+        }: ResolvedComponent,
     ) -> Result<Self, Self::Error> {
         // Verify the component configuration, if it exists
         let config = if let Some(config_decl) = decl.config.as_ref() {
@@ -155,19 +168,18 @@ impl TryFrom<ResolvedComponent> for Component {
         };
 
         let package = package.map(|p| p.try_into()).transpose()?;
-        Ok(Self { resolved_url, decl, package, config })
+        Ok(Self { resolved_url, context_to_resolve_children, decl, package, config })
     }
 }
 
-impl TryFrom<fresolution::Package> for Package {
+impl TryFrom<ResolvedPackage> for Package {
     type Error = ModelError;
 
-    fn try_from(package: fresolution::Package) -> Result<Self, Self::Error> {
+    fn try_from(package: ResolvedPackage) -> Result<Self, Self::Error> {
         Ok(Self {
-            package_url: package.url.ok_or(ModelError::PackageUrlMissing)?,
+            package_url: package.url,
             package_dir: package
                 .directory
-                .ok_or(ModelError::PackageDirectoryMissing)?
                 .into_proxy()
                 .expect("could not convert package dir to proxy"),
         })
@@ -1383,6 +1395,13 @@ pub struct ResolvedInstanceState {
     /// child (i.e., a member of `live_children`), and if the `source` field
     /// refers to a dynamic child, it must also be live.
     dynamic_offers: Vec<cm_rust::OfferDecl>,
+    /// The as-resolved location of the component: either an absolute component
+    /// URL, or (with a package context) a relative path URL.
+    address: ComponentAddress,
+    /// The context to be used to resolve a component from a path
+    /// relative to this component (for example, a component in a subpackage).
+    /// If `None`, the resolver cannot resolve relative path component URLs.
+    context_to_resolve_children: Option<ComponentResolutionContext>,
 }
 
 impl ResolvedInstanceState {
@@ -1391,6 +1410,8 @@ impl ResolvedInstanceState {
         decl: ComponentDecl,
         package: Option<Package>,
         config: Option<ConfigFields>,
+        address: ComponentAddress,
+        context_to_resolve_children: Option<ComponentResolutionContext>,
     ) -> Result<Self, ModelError> {
         let exposed_dir = ExposedDir::new(
             ExecutionScope::new(),
@@ -1408,6 +1429,8 @@ impl ResolvedInstanceState {
             package,
             config,
             dynamic_offers: vec![],
+            address,
+            context_to_resolve_children,
         };
         state.add_static_children(component, &decl).await;
         Ok(state)
@@ -1729,6 +1752,14 @@ impl ResolvedInstanceInterface for ResolvedInstanceState {
         collection: &str,
     ) -> Vec<(ChildMoniker, Arc<ComponentInstance>)> {
         ResolvedInstanceState::live_children_in_collection(self, collection)
+    }
+
+    fn address(&self) -> ComponentAddress {
+        self.address.clone()
+    }
+
+    fn context_to_resolve_children(&self) -> Option<ComponentResolutionContext> {
+        self.context_to_resolve_children.clone()
     }
 }
 
@@ -3149,7 +3180,7 @@ pub mod tests {
         ComponentInstance::new(
             Arc::new(Environment::empty()),
             InstancedAbsoluteMoniker::root(),
-            "foo".to_string(),
+            "fuchsia-pkg://fuchsia.com/foo#at_root.cm".to_string(),
             fdecl::StartupMode::Lazy,
             fdecl::OnTerminate::None,
             WeakModelContext::new(Weak::new()),
@@ -3163,7 +3194,16 @@ pub mod tests {
     async fn new_resolved() -> InstanceState {
         let comp = new_component().await;
         let decl = ComponentDeclBuilder::new().build();
-        let ris = ResolvedInstanceState::new(&comp, decl, None, None).await.unwrap();
+        let ris = ResolvedInstanceState::new(
+            &comp,
+            decl,
+            None,
+            None,
+            ComponentAddress::from(&comp.component_url, &comp).await.unwrap(),
+            None,
+        )
+        .await
+        .unwrap();
         InstanceState::Resolved(ris)
     }
 

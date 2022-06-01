@@ -9,6 +9,7 @@ use {
         environment::EnvironmentInterface,
         error::ComponentInstanceError,
         policy::GlobalPolicyChecker,
+        resolving::{ComponentAddress, ComponentResolutionContext},
         DebugRouteMapper,
     },
     async_trait::async_trait,
@@ -110,6 +111,15 @@ pub trait ResolvedInstanceInterface: Send + Sync {
         &self,
         collection: &str,
     ) -> Vec<(ChildMoniker, Arc<Self::Component>)>;
+
+    /// Returns the resolver-ready location of the component, which is either
+    /// an absolute component URL or a relative path URL with context.
+    fn address(&self) -> ComponentAddress;
+
+    /// Returns the context to be used to resolve a component from a path
+    /// relative to this component (for example, a component in a subpackage).
+    /// If `None`, the resolver cannot resolve relative path component URLs.
+    fn context_to_resolve_children(&self) -> Option<ComponentResolutionContext>;
 }
 
 /// An extension trait providing functionality for any model of a resolved
@@ -177,6 +187,14 @@ where
         collection: &str,
     ) -> Vec<(ChildMoniker, Arc<Self::Component>)> {
         T::Target::live_children_in_collection(&*self, collection)
+    }
+
+    fn address(&self) -> ComponentAddress {
+        T::Target::address(&*self)
+    }
+
+    fn context_to_resolve_children(&self) -> Option<ComponentResolutionContext> {
+        T::Target::context_to_resolve_children(&*self)
     }
 }
 

@@ -11,10 +11,11 @@ use {
             },
             environment::Environment,
             error::ModelError,
-            resolver::{ResolvedComponent, Resolver, ResolverError, ResolverRegistry},
+            resolver::{Resolver, ResolverRegistry},
             starter::Starter,
         },
     },
+    ::routing::resolving::{ComponentAddress, ResolvedComponent, ResolvedPackage, ResolverError},
     ::routing::{
         environment::{DebugRegistry, RunnerRegistry},
         policy::ScopedPolicyChecker,
@@ -29,7 +30,7 @@ use {
         epitaph::ChannelEpitaphExt,
     },
     fidl_fidl_examples_routing_echo::{EchoMarker, EchoRequest, EchoRequestStream},
-    fidl_fuchsia_component_resolution as fresolution, fidl_fuchsia_component_runner as fcrunner,
+    fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_diagnostics_types::{
         ComponentDiagnostics, ComponentTasks, Task as DiagnosticsTask,
     },
@@ -203,13 +204,11 @@ impl MockResolver {
         );
 
         Ok(ResolvedComponent {
+            resolved_by: "mocks::MockResolver".into(),
             resolved_url: format!("test:///{}_resolved", name),
+            context_to_resolve_children: None,
             decl: decl.clone(),
-            package: Some(fresolution::Package {
-                url: Some("pkg".to_string()),
-                directory: Some(client),
-                ..fresolution::Package::EMPTY
-            }),
+            package: Some(ResolvedPackage { url: "pkg".to_string(), directory: client }),
             config_values,
         })
     }
@@ -231,10 +230,10 @@ impl MockResolver {
 impl Resolver for MockResolver {
     async fn resolve(
         &self,
-        component_url: &str,
+        component_address: &ComponentAddress,
         _target: &Arc<ComponentInstance>,
     ) -> Result<ResolvedComponent, ResolverError> {
-        self.resolve_async(component_url.to_string()).await
+        self.resolve_async(component_address.url().to_string()).await
     }
 }
 

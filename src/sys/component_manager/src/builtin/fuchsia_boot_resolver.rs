@@ -6,7 +6,7 @@ use {
     crate::{
         builtin::capability::BuiltinCapability,
         model::component::ComponentInstance,
-        model::resolver::{self, ResolvedComponent, Resolver, ResolverError},
+        model::resolver::{self, Resolver},
     },
     anyhow::Error,
     async_trait::async_trait,
@@ -16,6 +16,8 @@ use {
     fuchsia_url::boot_url::BootUrl,
     futures::TryStreamExt,
     routing::capability_source::InternalCapability,
+    routing::resolving::{ComponentAddress, ResolvedComponent, ResolverError},
+    std::convert::TryInto,
     std::path::Path,
     std::sync::Arc,
 };
@@ -33,6 +35,7 @@ pub static SCHEME: &str = "fuchsia-boot";
 ///
 /// URL syntax:
 /// - fuchsia-boot:///path/within/bootfs#meta/component.cm
+#[derive(Debug)]
 pub struct FuchsiaBootResolver {
     boot_proxy: fio::DirectoryProxy,
 }
@@ -123,6 +126,7 @@ impl FuchsiaBootResolver {
 
         Ok(fresolution::Component {
             url: Some(component_url.into()),
+            resolution_context: None,
             decl: Some(data),
             package: Some(fresolution::Package {
                 url: Some(url.root_url().to_string()),
@@ -141,11 +145,14 @@ impl FuchsiaBootResolver {
 impl Resolver for FuchsiaBootResolver {
     async fn resolve(
         &self,
-        component_url: &str,
+        component_address: &ComponentAddress,
         _target: &Arc<ComponentInstance>,
     ) -> Result<ResolvedComponent, ResolverError> {
+        if component_address.is_relative_path() {
+            return Err(ResolverError::UnexpectedRelativePath(component_address.url().to_string()));
+        }
         let fresolution::Component { url, decl, package, config_values, .. } =
-            self.resolve_async(component_url).await?;
+            self.resolve_async(component_address.url()).await?;
         let resolved_url = url.unwrap();
         let decl = decl.ok_or_else(|| {
             ResolverError::ManifestInvalid(
@@ -159,9 +166,11 @@ impl Resolver for FuchsiaBootResolver {
             None
         };
         Ok(ResolvedComponent {
+            resolved_by: "FuchsiaBootResolver".into(),
             resolved_url,
+            context_to_resolve_children: None,
             decl,
-            package: package.map(Into::into),
+            package: package.map(|p| p.try_into()).transpose()?,
             config_values,
         })
     }
@@ -176,10 +185,21 @@ impl BuiltinCapability for FuchsiaBootResolver {
         self: Arc<Self>,
         mut stream: fresolution::ResolverRequestStream,
     ) -> Result<(), Error> {
-        while let Some(fresolution::ResolverRequest::Resolve { component_url, responder }) =
-            stream.try_next().await?
-        {
-            responder.send(&mut self.resolve_async(&component_url).await)?;
+        while let Some(request) = stream.try_next().await? {
+            match request {
+                fresolution::ResolverRequest::Resolve { component_url, responder } => {
+                    responder.send(&mut self.resolve_async(&component_url).await)?;
+                }
+                fresolution::ResolverRequest::ResolveWithContext {
+                    component_url,
+                    context: _,
+                    responder,
+                } => {
+                    // FuchsiaBootResolver ResolveWithContext currently ignores
+                    // context, but should still resolve absolute URLs.
+                    responder.send(&mut self.resolve_async(&component_url).await)?;
+                }
+            }
         }
         Ok(())
     }
@@ -197,6 +217,7 @@ mod tests {
     use {
         super::*,
         crate::model::{component::ComponentInstance, environment::Environment},
+        ::routing::resolving::ResolvedPackage,
         assert_matches::assert_matches,
         cm_rust::{FidlIntoNative, NativeIntoFidl},
         fidl::encoding::encode_persistent_with_context,
@@ -248,7 +269,7 @@ mod tests {
         );
 
         let url = "fuchsia-boot:///#meta/hello-world-rust.cm";
-        let component = resolver.resolve(url, &root).await?;
+        let component = resolver.resolve(&ComponentAddress::from_absolute_url(url)?, &root).await?;
 
         // Check that both the returned component manifest and the component manifest in
         // the returned package dir match the expected value. This also tests that
@@ -283,11 +304,10 @@ mod tests {
         // sure that we were able to resolve.
         assert_eq!(decl.program, expected_program);
 
-        let fresolution::Package { url: package_url, directory: package_dir, .. } =
-            package.unwrap();
-        assert_eq!(package_url.unwrap(), "fuchsia-boot:///");
+        let ResolvedPackage { url: package_url, directory: package_dir, .. } = package.unwrap();
+        assert_eq!(package_url, "fuchsia-boot:///");
 
-        let dir_proxy = package_dir.unwrap().into_proxy().unwrap();
+        let dir_proxy = package_dir.into_proxy().unwrap();
         let path = Path::new("meta/hello-world-rust.cm");
         let file_proxy = io_util::open_file(&dir_proxy, path, fio::OpenFlags::RIGHT_READABLE)
             .expect("could not open cm");
@@ -306,7 +326,8 @@ mod tests {
             .expect("failed to open executable file");
 
         let url = "fuchsia-boot:///contains/a/package#meta/hello-world-rust.cm";
-        let err = resolver.resolve(url, &root).await.unwrap_err();
+        let err =
+            resolver.resolve(&ComponentAddress::from_absolute_url(url)?, &root).await.unwrap_err();
         assert_matches!(err, ResolverError::MalformedUrl { .. });
         Ok(())
     }
@@ -367,7 +388,10 @@ mod tests {
         );
 
         let url = "fuchsia-boot:///#meta/has_config.cm";
-        let component = resolver.resolve(url, &root).await.unwrap();
+        let component = resolver
+            .resolve(&ComponentAddress::from_absolute_url(url).unwrap(), &root)
+            .await
+            .unwrap();
 
         let ResolvedComponent { resolved_url, decl, config_values, .. } = component;
         assert_eq!(url, resolved_url);
@@ -428,13 +452,18 @@ mod tests {
         );
 
         let url = "fuchsia-boot:///#meta/has_config.cm";
-        let err = resolver.resolve(url, &root).await.unwrap_err();
+        let err = resolver
+            .resolve(&ComponentAddress::from(url, &root).await.unwrap(), &root)
+            .await
+            .unwrap_err();
         assert_matches!(err, ResolverError::ConfigValuesIo { .. });
     }
 
     macro_rules! test_resolve_error {
         ($resolver:ident, $url:expr, $target:ident, $resolver_error_expected:ident) => {
-            let res = $resolver.resolve($url, &$target).await;
+            let res = $resolver
+                .resolve(&ComponentAddress::from($url, &$target).await.unwrap(), &$target)
+                .await;
             match res.err().expect("unexpected success") {
                 ResolverError::$resolver_error_expected { .. } => {}
                 e => panic!("unexpected error {:?}", e),

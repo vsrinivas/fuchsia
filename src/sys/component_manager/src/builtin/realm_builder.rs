@@ -10,11 +10,10 @@
 use {
     crate::{
         builtin::{capability::BuiltinCapability, runner::BuiltinRunnerFactory},
-        model::{
-            component::ComponentInstance,
-            resolver::{self, ResolvedComponent, Resolver, ResolverError},
-        },
+        model::component::ComponentInstance,
+        model::resolver::{self, Resolver},
     },
+    ::routing::resolving::{ComponentAddress, ResolvedComponent, ResolverError},
     ::routing::{capability_source::InternalCapability, policy::ScopedPolicyChecker},
     anyhow::Error,
     async_trait::async_trait,
@@ -23,6 +22,7 @@ use {
     fidl_fuchsia_component_resolution as fresolution, fidl_fuchsia_component_runner as fcrunner,
     fuchsia_component::client as fclient,
     futures::TryStreamExt,
+    std::convert::TryInto,
     std::sync::Arc,
 };
 
@@ -37,6 +37,7 @@ pub static RUNNER_NAME: &str = "realm_builder";
 ///
 /// Both of these protocols are typically implemented by the realm builder library, for use when
 /// integration testing a nested component manager.
+#[derive(Debug)]
 pub struct RealmBuilderResolver {
     resolver_proxy: fresolution::ResolverProxy,
 }
@@ -55,12 +56,19 @@ impl RealmBuilderResolver {
     async fn resolve_async(
         &self,
         component_url: &str,
+        some_incoming_context: Option<&Vec<u8>>,
     ) -> Result<fresolution::Component, fresolution::ResolverError> {
-        let res = self
-            .resolver_proxy
-            .resolve(component_url)
-            .await
-            .expect("failed to use realm builder resolver");
+        let res = if let Some(context) = some_incoming_context {
+            self.resolver_proxy
+                .resolve_with_context(component_url, context)
+                .await
+                .expect("resolve_with_context failed in realm builder resolver")
+        } else {
+            self.resolver_proxy
+                .resolve(component_url)
+                .await
+                .expect("resolve failed in realm builder resolver")
+        };
         res
     }
 }
@@ -69,12 +77,18 @@ impl RealmBuilderResolver {
 impl Resolver for RealmBuilderResolver {
     async fn resolve(
         &self,
-        component_url: &str,
+        component_address: &ComponentAddress,
         _target: &Arc<ComponentInstance>,
     ) -> Result<ResolvedComponent, ResolverError> {
-        let fresolution::Component { url, decl, package, config_values, .. } =
-            self.resolve_async(component_url).await?;
+        let (component_url, some_context) = component_address.to_url_and_context();
+        let fresolution::Component {
+            url, decl, package, config_values, resolution_context, ..
+        } = self
+            .resolve_async(component_url, some_context.map(|context| context.into()).as_ref())
+            .await?;
+        let resolved_by = "RealmBuilderResolver".to_string();
         let resolved_url = url.unwrap();
+        let context_to_resolve_children = resolution_context.map(Into::into);
         let decl = resolver::read_and_validate_manifest(&decl.unwrap()).await?;
         let config_values = if let Some(data) = config_values {
             Some(resolver::read_and_validate_config_values(&data)?)
@@ -82,9 +96,11 @@ impl Resolver for RealmBuilderResolver {
             None
         };
         Ok(ResolvedComponent {
+            resolved_by,
             resolved_url,
+            context_to_resolve_children,
             decl,
-            package: package.map(Into::into),
+            package: package.map(|p| p.try_into()).transpose()?,
             config_values,
         })
     }
@@ -99,10 +115,20 @@ impl BuiltinCapability for RealmBuilderResolver {
         self: Arc<Self>,
         mut stream: fresolution::ResolverRequestStream,
     ) -> Result<(), Error> {
-        while let Some(fresolution::ResolverRequest::Resolve { component_url, responder }) =
-            stream.try_next().await?
-        {
-            responder.send(&mut self.resolve_async(&component_url).await)?;
+        while let Some(request) = stream.try_next().await? {
+            match request {
+                fresolution::ResolverRequest::Resolve { component_url, responder } => {
+                    responder.send(&mut self.resolve_async(&component_url, None).await)?;
+                }
+                fresolution::ResolverRequest::ResolveWithContext {
+                    component_url,
+                    context,
+                    responder,
+                } => {
+                    responder
+                        .send(&mut self.resolve_async(&component_url, Some(&context)).await)?;
+                }
+            }
         }
         Ok(())
     }

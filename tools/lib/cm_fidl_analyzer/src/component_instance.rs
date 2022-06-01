@@ -24,6 +24,7 @@ use {
         environment::{EnvironmentInterface, RunnerRegistry},
         error::ComponentInstanceError,
         policy::GlobalPolicyChecker,
+        resolving::{ComponentAddress, ComponentResolutionContext},
     },
     std::{
         collections::HashMap,
@@ -248,6 +249,14 @@ impl ResolvedInstanceInterface for ComponentInstanceForAnalyzer {
     // This is a static model with no notion of a collection.
     fn live_children_in_collection(&self, _collection: &str) -> Vec<(ChildMoniker, Arc<Self>)> {
         vec![]
+    }
+
+    fn address(&self) -> ComponentAddress {
+        ComponentAddress::new_absolute("", "", "", None)
+    }
+
+    fn context_to_resolve_children(&self) -> Option<ComponentResolutionContext> {
+        None
     }
 }
 

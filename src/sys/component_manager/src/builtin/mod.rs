@@ -22,7 +22,6 @@ pub mod process_launcher;
 pub mod realm_builder;
 pub mod realm_explorer;
 pub mod realm_query;
-pub mod relative_resolver;
 pub mod root_job;
 pub mod root_resource;
 pub mod runner;

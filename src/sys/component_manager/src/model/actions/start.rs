@@ -348,6 +348,7 @@ mod tests {
         fidl_fuchsia_sys2 as fsys, fuchsia, fuchsia_zircon as zx,
         moniker::AbsoluteMoniker,
         routing::error::ComponentInstanceError,
+        routing::resolving::ComponentAddress,
         std::sync::{Arc, Weak},
     };
 
@@ -520,7 +521,16 @@ mod tests {
         );
         let (_, child) = build_tree_with_single_child(TEST_CHILD_NAME).await;
         let decl = ComponentDeclBuilder::new().add_lazy_child("bar").build();
-        let ris = ResolvedInstanceState::new(&child, decl, None, None).await.unwrap();
+        let ris = ResolvedInstanceState::new(
+            &child,
+            decl,
+            None,
+            None,
+            ComponentAddress::from_absolute_url(&child.component_url).unwrap(),
+            None,
+        )
+        .await
+        .unwrap();
         assert!(should_return_early(&InstanceState::Resolved(ris), &es, &m).is_none());
 
         // Check for already_started:

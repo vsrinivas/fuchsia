@@ -3,10 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::{
-        component::ComponentInstance,
-        resolver::{ResolvedComponent, Resolver, ResolverError},
-    },
+    crate::model::{component::ComponentInstance, resolver::Resolver},
+    ::routing::resolving::{ComponentAddress, ResolvedComponent, ResolverError},
     anyhow::format_err,
     async_trait::async_trait,
     cm_fidl_validator,
@@ -16,6 +14,7 @@ use {
     fidl_fuchsia_io as fio,
     fidl_fuchsia_sys::LoaderProxy,
     fuchsia_url::AbsoluteComponentUrl,
+    std::convert::TryInto,
     std::path::Path,
     std::sync::Arc,
 };
@@ -30,6 +29,7 @@ pub static SCHEME: &str = "fuchsia-pkg";
 /// situations where the v2 runtime runs under the v1 runtime.
 ///
 /// See the fuchsia_pkg_url crate for URL syntax.
+#[derive(Debug)]
 pub struct FuchsiaPkgResolver {
     loader: LoaderProxy,
 }
@@ -112,9 +112,11 @@ impl FuchsiaPkgResolver {
             ..fresolution::Package::EMPTY
         };
         Ok(ResolvedComponent {
+            resolved_by: "FuchsiaPkgResolver".into(),
             resolved_url: component_url.to_string(),
+            context_to_resolve_children: None,
             decl: component_decl.fidl_into_native(),
-            package: Some(package.into()),
+            package: Some(package.try_into()?),
             config_values,
         })
     }
@@ -124,10 +126,13 @@ impl FuchsiaPkgResolver {
 impl Resolver for FuchsiaPkgResolver {
     async fn resolve(
         &self,
-        component_url: &str,
+        component_address: &ComponentAddress,
         _target: &Arc<ComponentInstance>,
     ) -> Result<ResolvedComponent, ResolverError> {
-        self.resolve_async(component_url).await
+        if component_address.is_relative_path() {
+            return Err(ResolverError::UnexpectedRelativePath(component_address.url().to_string()));
+        }
+        self.resolve_async(component_address.url()).await
     }
 }
 
@@ -135,6 +140,7 @@ impl Resolver for FuchsiaPkgResolver {
 mod tests {
     use {
         super::*,
+        ::routing::resolving::ResolvedPackage,
         cm_rust::FidlIntoNative,
         fidl::encoding::encode_persistent_with_context,
         fidl::endpoints::{self, ServerEnd},
@@ -313,8 +319,18 @@ mod tests {
         // Check that both the returned component manifest and the component manifest in
         // the returned package dir match the expected value. This also tests that
         // the resolver returned the right package dir.
-        let ResolvedComponent { resolved_url, decl, package, .. } = component;
+        let ResolvedComponent {
+            resolved_by,
+            resolved_url,
+            context_to_resolve_children,
+            decl,
+            package,
+            config_values,
+        } = component;
+        assert_eq!(resolved_by, "FuchsiaPkgResolver");
         assert_eq!(resolved_url, url);
+        assert_eq!(context_to_resolve_children, None);
+        assert!(config_values.is_none());
 
         let expected_program = Some(cm_rust::ProgramDecl {
             runner: Some("elf".into()),
@@ -342,11 +358,10 @@ mod tests {
         // no need to check full decl as we just want to make
         // sure that we were able to resolve.
         assert_eq!(decl.program, expected_program);
-        let fresolution::Package { url: package_url, directory: package_dir, .. } =
-            package.unwrap();
-        assert_eq!(package_url.unwrap(), "fuchsia-pkg://fuchsia.com/hello-world");
+        let ResolvedPackage { url: package_url, directory: package_dir, .. } = package.unwrap();
+        assert_eq!(package_url, "fuchsia-pkg://fuchsia.com/hello-world");
 
-        let dir_proxy = package_dir.unwrap().into_proxy().unwrap();
+        let dir_proxy = package_dir.into_proxy().unwrap();
         let path = Path::new("meta/hello-world-rust.cm");
         let file_proxy = io_util::open_file(&dir_proxy, path, fio::OpenFlags::RIGHT_READABLE)
             .expect("could not open cm");

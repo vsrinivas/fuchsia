@@ -5,47 +5,33 @@
 use {
     crate::model::{
         component::{ComponentInstance, WeakComponentInstance},
-        error::ModelError,
         routing::{route_and_open_capability, OpenOptions, OpenResolverOptions, RouteRequest},
     },
     ::routing::component_instance::ComponentInstanceInterface,
-    anyhow::Error,
+    ::routing::resolving::{ComponentAddress, ResolvedComponent, ResolverError},
     async_trait::async_trait,
-    clonable_error::ClonableError,
-    cm_rust::{FidlIntoNative, ResolverRegistration},
+    cm_rust::{FidlIntoNative, RegistrationSource, ResolverRegistration},
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_component_resolution as fresolution,
     fidl_fuchsia_io as fio, fidl_fuchsia_mem as fmem,
-    fuchsia_zircon::Status,
-    std::{collections::HashMap, sync::Arc},
-    thiserror::Error,
-    url::Url,
+    log::*,
+    std::{collections::HashMap, convert::TryInto, sync::Arc},
 };
 
 /// Resolves a component URL to its content.
 #[async_trait]
-pub trait Resolver {
-    /// Resolves a component URL to its content. This function takes in the `component_url` to
-    /// resolve and the `target` component that is trying to be resolved.
+pub trait Resolver: std::fmt::Debug {
+    /// Resolves a component URL to its content. This function takes in the
+    /// `component_address` (from an absolute or relative URL), and the `target`
+    /// component that is trying to be resolved.
     async fn resolve(
         &self,
-        component_url: &str,
+        component_address: &ComponentAddress,
         target: &Arc<ComponentInstance>,
     ) -> Result<ResolvedComponent, ResolverError>;
 }
 
-/// The response returned from a Resolver. This struct is derived from the FIDL
-/// [`fuchsia.component.resolution.Component`][fidl_fuchsia_component_resolution::Component]
-/// table, except that the opaque binary ComponentDecl has been deserialized and validated.
-#[derive(Debug)]
-pub struct ResolvedComponent {
-    pub resolved_url: String,
-    pub decl: cm_rust::ComponentDecl,
-    pub package: Option<fresolution::Package>,
-    pub config_values: Option<cm_rust::ValuesData>,
-}
-
 /// Resolves a component URL using a resolver selected based on the URL's scheme.
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct ResolverRegistry {
     resolvers: HashMap<String, Box<dyn Resolver + Send + Sync + 'static>>,
 }
@@ -85,34 +71,20 @@ impl ResolverRegistry {
 impl Resolver for ResolverRegistry {
     async fn resolve(
         &self,
-        component_url: &str,
+        component_address: &ComponentAddress,
         target: &Arc<ComponentInstance>,
     ) -> Result<ResolvedComponent, ResolverError> {
-        match Url::parse(component_url) {
-            Ok(parsed_url) => {
-                if let Some(resolver) = self.resolvers.get(parsed_url.scheme()) {
-                    resolver.resolve(component_url, target).await
-                } else {
-                    Err(ResolverError::SchemeNotRegistered)
-                }
-            }
-            Err(e) => {
-                if e == url::ParseError::RelativeUrlWithoutBase {
-                    if let Some(resolver) = self.resolvers.get("") {
-                        resolver.resolve(component_url, target).await
-                    } else {
-                        Err(ResolverError::SchemeNotRegistered)
-                    }
-                } else {
-                    Err(ResolverError::malformed_url(e))
-                }
-            }
+        if let Some(resolver) = self.resolvers.get(component_address.scheme()) {
+            resolver.resolve(component_address, target).await
+        } else {
+            Err(ResolverError::SchemeNotRegistered)
         }
     }
 }
 
 /// A resolver whose implementation lives in an external component. The source
 /// of the resolver is determined through capability routing.
+#[derive(Debug)]
 pub struct RemoteResolver {
     registration: ResolverRegistration,
     component: WeakComponentInstance,
@@ -130,7 +102,7 @@ impl RemoteResolver {
 impl Resolver for RemoteResolver {
     async fn resolve(
         &self,
-        component_url: &str,
+        component_address: &ComponentAddress,
         _target: &Arc<ComponentInstance>,
     ) -> Result<ResolvedComponent, ResolverError> {
         let (proxy, server_end) = fidl::endpoints::create_proxy::<fresolution::ResolverMarker>()
@@ -148,7 +120,19 @@ impl Resolver for RemoteResolver {
         )
         .await
         .map_err(ResolverError::routing_error)?;
-        let component = proxy.resolve(component_url).await.map_err(ResolverError::fidl_error)??;
+        let (component_url, some_context) = component_address.to_url_and_context();
+        let component = if component_address.is_relative_path() {
+            let context = some_context.ok_or_else(|| {
+                error!("calling resolve_with_context() for absolute URL {}", component_url);
+                ResolverError::RelativeUrlMissingContext(component_url.to_string())
+            })?;
+            proxy
+                .resolve_with_context(component_url, context.into())
+                .await
+                .map_err(ResolverError::fidl_error)??
+        } else {
+            proxy.resolve(component_url).await.map_err(ResolverError::fidl_error)??
+        };
         let decl_buffer: fmem::Data = component.decl.ok_or(ResolverError::RemoteInvalidData)?;
         let decl = read_and_validate_manifest(&decl_buffer).await?;
         let config_values = if decl.config.is_some() {
@@ -158,25 +142,39 @@ impl Resolver for RemoteResolver {
         } else {
             None
         };
+        let resolved_by = format!(
+            "RemoteResolver::{}{}",
+            if let RegistrationSource::Child(ref name) = self.registration.source {
+                name.to_string() + "/"
+            } else {
+                "".into()
+            },
+            self.registration.resolver.str()
+        );
+        let resolved_url = component.url.ok_or(ResolverError::RemoteInvalidData)?;
+        let context_to_resolve_children = component.resolution_context.map(Into::into);
         Ok(ResolvedComponent {
-            resolved_url: component.url.ok_or(ResolverError::RemoteInvalidData)?,
+            resolved_by,
+            resolved_url,
+            context_to_resolve_children,
             decl,
-            package: component.package,
+            package: component.package.map(TryInto::try_into).transpose()?,
             config_values,
         })
     }
 }
 
+#[derive(Debug)]
 pub struct BuiltinResolver(pub Arc<dyn Resolver + Send + Sync + 'static>);
 
 #[async_trait]
 impl Resolver for BuiltinResolver {
     async fn resolve(
         &self,
-        component_url: &str,
+        component_address: &ComponentAddress,
         target: &Arc<ComponentInstance>,
     ) -> Result<ResolvedComponent, ResolverError> {
-        self.0.resolve(component_url, target).await
+        self.0.resolve(component_address, target).await
     }
 }
 
@@ -200,124 +198,32 @@ pub fn read_and_validate_config_values(
     Ok(values.fidl_into_native())
 }
 
-/// Errors produced by `Resolver`.
-#[derive(Debug, Error, Clone)]
-pub enum ResolverError {
-    #[error("an unexpected error occurred: {0}")]
-    Internal(#[source] ClonableError),
-    #[error("an IO error occurred: {0}")]
-    Io(#[source] ClonableError),
-    #[error("component manifest not found: {0}")]
-    ManifestNotFound(#[source] ClonableError),
-    #[error("package not found: {0}")]
-    PackageNotFound(#[source] ClonableError),
-    #[error("component manifest invalid: {0}")]
-    ManifestInvalid(#[source] ClonableError),
-    #[error("config values file invalid: {0}")]
-    ConfigValuesInvalid(#[source] ClonableError),
-    #[error("failed to read manifest: {0}")]
-    ManifestIo(Status),
-    #[error("failed to read config values: {0}")]
-    ConfigValuesIo(Status),
-    #[error("Model not available")]
-    ModelNotAvailable,
-    #[error("scheme not registered")]
-    SchemeNotRegistered,
-    #[error("malformed url: {0}")]
-    MalformedUrl(#[source] ClonableError),
-    #[error("url missing resource")]
-    UrlMissingResource,
-    #[error("failed to route resolver capability: {0}")]
-    RoutingError(#[source] Box<ModelError>),
-    #[error("the remote resolver returned invalid data")]
-    RemoteInvalidData,
-    #[error("an error occurred sending a FIDL request to the remote resolver: {0}")]
-    FidlError(#[source] ClonableError),
-}
-
-impl ResolverError {
-    pub fn internal(err: impl Into<Error>) -> ResolverError {
-        ResolverError::Internal(err.into().into())
-    }
-
-    pub fn io(err: impl Into<Error>) -> ResolverError {
-        ResolverError::Io(err.into().into())
-    }
-
-    pub fn manifest_not_found(err: impl Into<Error>) -> ResolverError {
-        ResolverError::ManifestNotFound(err.into().into())
-    }
-
-    pub fn package_not_found(err: impl Into<Error>) -> ResolverError {
-        ResolverError::PackageNotFound(err.into().into())
-    }
-
-    pub fn manifest_invalid(err: impl Into<Error>) -> ResolverError {
-        ResolverError::ManifestInvalid(err.into().into())
-    }
-
-    pub fn config_values_invalid(err: impl Into<Error>) -> ResolverError {
-        ResolverError::ConfigValuesInvalid(err.into().into())
-    }
-
-    pub fn malformed_url(err: impl Into<Error>) -> ResolverError {
-        ResolverError::MalformedUrl(err.into().into())
-    }
-
-    pub fn routing_error(err: impl Into<ModelError>) -> ResolverError {
-        ResolverError::RoutingError(Box::new(err.into()))
-    }
-
-    pub fn fidl_error(err: impl Into<Error>) -> ResolverError {
-        ResolverError::FidlError(err.into().into())
-    }
-}
-
-impl From<fresolution::ResolverError> for ResolverError {
-    fn from(err: fresolution::ResolverError) -> ResolverError {
-        match err {
-            fresolution::ResolverError::Internal => ResolverError::internal(RemoteError(err)),
-            fresolution::ResolverError::Io => ResolverError::io(RemoteError(err)),
-            fresolution::ResolverError::PackageNotFound
-            | fresolution::ResolverError::NoSpace
-            | fresolution::ResolverError::ResourceUnavailable
-            | fresolution::ResolverError::NotSupported => {
-                ResolverError::package_not_found(RemoteError(err))
-            }
-            fresolution::ResolverError::ManifestNotFound => {
-                ResolverError::manifest_not_found(RemoteError(err))
-            }
-            fresolution::ResolverError::InvalidArgs => {
-                ResolverError::malformed_url(RemoteError(err))
-            }
-            fresolution::ResolverError::InvalidManifest => {
-                ResolverError::ManifestInvalid(anyhow::Error::from(RemoteError(err)).into())
-            }
-            fresolution::ResolverError::ConfigValuesNotFound => {
-                ResolverError::ConfigValuesIo(Status::NOT_FOUND)
-            }
-        }
-    }
-}
-
-#[derive(Error, Clone, Debug)]
-#[error("remote resolver responded with {0:?}")]
-struct RemoteError(fresolution::ResolverError);
-
 #[cfg(test)]
 mod tests {
     use {
         super::*,
-        crate::model::{component::ComponentInstance, environment::Environment},
-        anyhow::format_err,
+        crate::model::{
+            component::{ComponentInstance, ComponentManagerInstance, WeakExtendedInstance},
+            context::WeakModelContext,
+            environment::Environment,
+            hooks::Hooks,
+        },
+        anyhow::{format_err, Error},
+        assert_matches::assert_matches,
+        async_trait::async_trait,
+        cm_moniker::InstancedAbsoluteMoniker,
         cm_rust::NativeIntoFidl,
         cm_rust_testing::new_decl_from_json,
         fidl_fuchsia_component_config as fconfig, fidl_fuchsia_component_decl as fdecl,
         lazy_static::lazy_static,
+        moniker::AbsoluteMonikerBase,
+        routing::environment::{DebugRegistry, RunnerRegistry},
+        routing::resolving::{ComponentAddressKind, ComponentResolutionContext},
         serde_json::json,
-        std::sync::Weak,
+        std::sync::{Mutex, Weak},
     };
 
+    #[derive(Debug)]
     struct MockOkResolver {
         pub expected_url: String,
         pub resolved_url: String,
@@ -327,12 +233,17 @@ mod tests {
     impl Resolver for MockOkResolver {
         async fn resolve(
             &self,
-            component_url: &str,
+            component_address: &ComponentAddress,
             _target: &Arc<ComponentInstance>,
         ) -> Result<ResolvedComponent, ResolverError> {
-            assert_eq!(self.expected_url, component_url);
+            assert_eq!(Some(self.expected_url.as_str()), component_address.original_url());
+            assert_eq!(self.expected_url.as_str(), component_address.url());
             Ok(ResolvedComponent {
+                resolved_by: "resolver::MockOkResolver".into(),
                 resolved_url: self.resolved_url.clone(),
+                // MockOkResolver only resolves one component, so it does not
+                // need to provide a context for resolving children.
+                context_to_resolve_children: None,
                 decl: cm_rust::ComponentDecl::default(),
                 package: None,
                 config_values: None,
@@ -345,15 +256,86 @@ mod tests {
         pub error: Box<dyn Fn(&str) -> ResolverError + Send + Sync + 'static>,
     }
 
+    impl core::fmt::Debug for MockErrorResolver {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            f.debug_struct("MockErrorResolver").finish()
+        }
+    }
+
     #[async_trait]
     impl Resolver for MockErrorResolver {
         async fn resolve(
             &self,
-            component_url: &str,
+            component_address: &ComponentAddress,
             _target: &Arc<ComponentInstance>,
         ) -> Result<ResolvedComponent, ResolverError> {
-            assert_eq!(self.expected_url, component_url);
-            Err((self.error)(component_url))
+            assert_eq!(Some(self.expected_url.as_str()), component_address.original_url());
+            assert_eq!(self.expected_url, component_address.url());
+            Err((self.error)(component_address.url()))
+        }
+    }
+
+    #[derive(Debug, Clone)]
+    struct ResolveState {
+        pub expected_url: String,
+        pub resolved_url: String,
+        pub expected_context: Option<ComponentResolutionContext>,
+        pub context_to_resolve_children: Option<ComponentResolutionContext>,
+    }
+
+    impl ResolveState {
+        fn new(
+            url: &str,
+            expected_context: Option<ComponentResolutionContext>,
+            context_to_resolve_children: Option<ComponentResolutionContext>,
+        ) -> Self {
+            Self {
+                expected_url: url.to_string(),
+                resolved_url: url.to_string(),
+                expected_context,
+                context_to_resolve_children,
+            }
+        }
+    }
+
+    #[derive(Debug)]
+    struct MockMultipleOkResolver {
+        pub resolve_states: Arc<Mutex<Vec<ResolveState>>>,
+    }
+
+    impl MockMultipleOkResolver {
+        fn new(resolve_states: Vec<ResolveState>) -> Self {
+            Self { resolve_states: Arc::new(Mutex::new(resolve_states)) }
+        }
+    }
+
+    #[async_trait]
+    impl Resolver for MockMultipleOkResolver {
+        async fn resolve(
+            &self,
+            component_address: &ComponentAddress,
+            _target: &Arc<ComponentInstance>,
+        ) -> Result<ResolvedComponent, ResolverError> {
+            let ResolveState {
+                expected_url,
+                resolved_url,
+                expected_context,
+                context_to_resolve_children,
+            } = self.resolve_states.lock().unwrap().remove(0);
+            let (component_url, some_context) = component_address.to_url_and_context();
+            assert_eq!(expected_url, component_url);
+            assert_eq!(expected_context.as_ref(), some_context, "resolving {}", component_url);
+            Ok(ResolvedComponent {
+                resolved_by: "resolver::MockMultipleOkResolver".into(),
+                resolved_url,
+                context_to_resolve_children,
+
+                // We don't actually need to return a valid component here as these unit tests only
+                // cover the process of going from relative -> full URL.
+                decl: cm_rust::ComponentDecl::default(),
+                package: None,
+                config_values: None,
+            })
         }
     }
 
@@ -385,7 +367,10 @@ mod tests {
         );
 
         // Resolve known scheme that returns success.
-        let component = registry.resolve("foo://url", &root).await.unwrap();
+        let component = registry
+            .resolve(&ComponentAddress::from_absolute_url("foo://url").unwrap(), &root)
+            .await
+            .unwrap();
         assert_eq!("foo://resolved", component.resolved_url);
 
         // Resolve a different scheme that produces an error.
@@ -393,7 +378,12 @@ mod tests {
             Err(ResolverError::manifest_not_found(format_err!("not available")));
         assert_eq!(
             format!("{:?}", expected_res),
-            format!("{:?}", registry.resolve("bar://url", &root).await)
+            format!(
+                "{:?}",
+                registry
+                    .resolve(&ComponentAddress::from_absolute_url("bar://url").unwrap(), &root)
+                    .await
+            )
         );
 
         // Resolve an unknown scheme
@@ -401,15 +391,19 @@ mod tests {
             Err(ResolverError::SchemeNotRegistered);
         assert_eq!(
             format!("{:?}", expected_res),
-            format!("{:?}", registry.resolve("unknown://url", &root).await),
+            format!(
+                "{:?}",
+                registry
+                    .resolve(&ComponentAddress::from_absolute_url("unknown://url").unwrap(), &root)
+                    .await
+            ),
         );
 
-        // Resolve an URL lacking a scheme.
-        let expected_res: Result<ResolvedComponent, ResolverError> =
-            Err(ResolverError::SchemeNotRegistered);
-        assert_eq!(
-            format!("{:?}", expected_res),
-            format!("{:?}", registry.resolve("xxx", &root).await),
+        // Resolve a possible relative path (e.g., subpackage) URL lacking a
+        // resolvable parent causes a SchemeNotRegistered.
+        assert_matches!(
+            ComponentAddress::from("xxx#meta/comp.cm", &root).await,
+            Err(ResolverError::NoParentContext(_))
         );
     }
 
@@ -563,5 +557,612 @@ mod tests {
         let actual =
             read_and_validate_config_values(&data).expect("failed to decode config values");
         assert_eq!(actual, config_values);
+    }
+
+    #[fuchsia::test]
+    async fn test_from_absolute_component_url_with_component_instance() -> Result<(), Error> {
+        let top_instance = Arc::new(ComponentManagerInstance::new(vec![], vec![]));
+        let environment = Environment::new_root(
+            &top_instance,
+            RunnerRegistry::default(),
+            ResolverRegistry::new(),
+            DebugRegistry::default(),
+        );
+        let root = ComponentInstance::new_root(
+            environment,
+            Weak::new(),
+            Weak::new(),
+            "fuchsia-pkg://fuchsia.com/package#meta/comp.cm".to_string(),
+        );
+
+        let abs =
+            ComponentAddress::from("fuchsia-pkg://fuchsia.com/package#meta/comp.cm", &root).await?;
+        assert_matches!(abs.kind(), ComponentAddressKind::Absolute { .. });
+        assert_eq!(abs.host(), "fuchsia.com");
+        assert_eq!(abs.scheme(), "fuchsia-pkg");
+        assert_eq!(abs.path(), "package");
+        assert_eq!(abs.resource(), Some("meta/comp.cm"));
+        Ok(())
+    }
+
+    #[fuchsia::test]
+    async fn test_from_relative_path_component_url_with_component_instance() -> Result<(), Error> {
+        let expected_urls_and_contexts = vec![
+            ResolveState::new(
+                "fuchsia-pkg://fuchsia.com/package#meta/comp.cm",
+                None,
+                Some(ComponentResolutionContext("package_context".as_bytes().to_vec())),
+            ),
+            ResolveState::new(
+                "subpackage#meta/subcomp.cm",
+                Some(ComponentResolutionContext("package_context".as_bytes().to_vec())),
+                Some(ComponentResolutionContext("subpackage_context".as_bytes().to_vec())),
+            ),
+        ];
+        let mut resolver = ResolverRegistry::new();
+
+        resolver.register(
+            "fuchsia-pkg".to_string(),
+            Box::new(MockMultipleOkResolver::new(expected_urls_and_contexts.clone())),
+        );
+
+        let top_instance = Arc::new(ComponentManagerInstance::new(vec![], vec![]));
+        let environment = Environment::new_root(
+            &top_instance,
+            RunnerRegistry::default(),
+            resolver,
+            DebugRegistry::default(),
+        );
+        let root = ComponentInstance::new_root(
+            environment,
+            Weak::new(),
+            Weak::new(),
+            "fuchsia-pkg://fuchsia.com/package#meta/comp.cm".to_string(),
+        );
+        let child = ComponentInstance::new(
+            root.environment.clone(),
+            InstancedAbsoluteMoniker::parse_str("/root:0/child:0")?,
+            "subpackage#meta/subcomp.cm".to_string(),
+            fdecl::StartupMode::Lazy,
+            fdecl::OnTerminate::None,
+            WeakModelContext::new(Weak::new()),
+            WeakExtendedInstance::Component(WeakComponentInstance::from(&root)),
+            Arc::new(Hooks::new()),
+            None,
+            false,
+        );
+
+        let relpath = ComponentAddress::from("subpackage#meta/subcomp.cm", &child).await?;
+        assert_matches!(relpath.kind(), ComponentAddressKind::RelativePath { .. });
+        assert_eq!(relpath.path(), "subpackage");
+        assert_eq!(relpath.resource(), Some("meta/subcomp.cm"));
+        assert_eq!(
+            relpath.context(),
+            &ComponentResolutionContext("package_context".as_bytes().to_vec())
+        );
+        Ok(())
+    }
+
+    #[fuchsia::test]
+    async fn relative_to_fuchsia_pkg() -> Result<(), Error> {
+        let expected_urls_and_contexts = vec![
+            ResolveState::new(
+                "fuchsia-pkg://fuchsia.com/my-package#meta/my-root.cm",
+                None,
+                Some(ComponentResolutionContext("package_context".as_bytes().to_vec())),
+            ),
+            ResolveState::new(
+                "fuchsia-pkg://fuchsia.com/my-package#meta/my-child.cm",
+                None,
+                Some(ComponentResolutionContext("package_context".as_bytes().to_vec())),
+            ),
+        ];
+        let mut resolver = ResolverRegistry::new();
+
+        resolver.register(
+            "fuchsia-pkg".to_string(),
+            Box::new(MockMultipleOkResolver::new(expected_urls_and_contexts.clone())),
+        );
+
+        let top_instance = Arc::new(ComponentManagerInstance::new(vec![], vec![]));
+        let environment = Environment::new_root(
+            &top_instance,
+            RunnerRegistry::default(),
+            resolver,
+            DebugRegistry::default(),
+        );
+        let root = ComponentInstance::new_root(
+            environment,
+            Weak::new(),
+            Weak::new(),
+            "fuchsia-pkg://fuchsia.com/my-package#meta/my-root.cm".to_string(),
+        );
+
+        let child = ComponentInstance::new(
+            root.environment.clone(),
+            InstancedAbsoluteMoniker::parse_str("/root:0/child:0")?,
+            "#meta/my-child.cm".to_string(),
+            fdecl::StartupMode::Lazy,
+            fdecl::OnTerminate::None,
+            WeakModelContext::new(Weak::new()),
+            WeakExtendedInstance::Component(WeakComponentInstance::from(&root)),
+            Arc::new(Hooks::new()),
+            None,
+            false,
+        );
+
+        let resolved = child
+            .environment
+            .resolve(&ComponentAddress::from(&child.component_url, &child).await?, &child)
+            .await?;
+        let expected = expected_urls_and_contexts.as_slice().last().unwrap();
+        assert_eq!(&resolved.resolved_url, &expected.resolved_url);
+        assert_eq!(&resolved.context_to_resolve_children, &expected.context_to_resolve_children);
+
+        Ok(())
+    }
+
+    #[fuchsia::test]
+    async fn two_relative_to_fuchsia_pkg() -> Result<(), Error> {
+        let expected_urls_and_contexts = vec![
+            ResolveState::new(
+                "fuchsia-pkg://fuchsia.com/my-package#meta/my-root.cm",
+                None,
+                Some(ComponentResolutionContext("package_context".as_bytes().to_vec())),
+            ),
+            ResolveState::new(
+                "fuchsia-pkg://fuchsia.com/my-package#meta/my-child.cm",
+                None,
+                Some(ComponentResolutionContext("package_context".as_bytes().to_vec())),
+            ),
+            ResolveState::new(
+                "fuchsia-pkg://fuchsia.com/my-package#meta/my-child2.cm",
+                None,
+                Some(ComponentResolutionContext("package_context".as_bytes().to_vec())),
+            ),
+        ];
+        let mut resolver = ResolverRegistry::new();
+
+        resolver.register(
+            "fuchsia-pkg".to_string(),
+            Box::new(MockMultipleOkResolver::new(expected_urls_and_contexts.clone())),
+        );
+
+        let top_instance = Arc::new(ComponentManagerInstance::new(vec![], vec![]));
+        let environment = Environment::new_root(
+            &top_instance,
+            RunnerRegistry::default(),
+            resolver,
+            DebugRegistry::default(),
+        );
+        let root = ComponentInstance::new_root(
+            environment,
+            Weak::new(),
+            Weak::new(),
+            "fuchsia-pkg://fuchsia.com/my-package#meta/my-root.cm".to_string(),
+        );
+
+        let child_one = ComponentInstance::new(
+            root.environment.clone(),
+            InstancedAbsoluteMoniker::parse_str("/root:0/child:0")?,
+            "#meta/my-child.cm".to_string(),
+            fdecl::StartupMode::Lazy,
+            fdecl::OnTerminate::None,
+            WeakModelContext::new(Weak::new()),
+            WeakExtendedInstance::Component(WeakComponentInstance::from(&root)),
+            Arc::new(Hooks::new()),
+            None,
+            false,
+        );
+
+        let child_two = ComponentInstance::new(
+            root.environment.clone(),
+            InstancedAbsoluteMoniker::parse_str("/root:0/child:0")?,
+            "#meta/my-child2.cm".to_string(),
+            fdecl::StartupMode::Lazy,
+            fdecl::OnTerminate::None,
+            WeakModelContext::new(Weak::new()),
+            WeakExtendedInstance::Component(WeakComponentInstance::from(&child_one)),
+            Arc::new(Hooks::new()),
+            None,
+            false,
+        );
+
+        let resolved = child_two
+            .environment
+            .resolve(
+                &ComponentAddress::from(&child_two.component_url, &child_two).await?,
+                &child_two,
+            )
+            .await?;
+        let expected = expected_urls_and_contexts.as_slice().last().unwrap();
+        assert_eq!(&resolved.resolved_url, &expected.resolved_url);
+        assert_eq!(&resolved.context_to_resolve_children, &expected.context_to_resolve_children);
+        Ok(())
+    }
+
+    #[fuchsia::test]
+    async fn relative_to_fuchsia_boot() -> Result<(), Error> {
+        let expected_urls_and_contexts = vec![
+            ResolveState::new(
+                "fuchsia-boot:///#meta/my-root.cm",
+                None,
+                Some(ComponentResolutionContext("package_context".as_bytes().to_vec())),
+            ),
+            ResolveState::new(
+                "fuchsia-boot:///#meta/my-child.cm",
+                None,
+                Some(ComponentResolutionContext("package_context".as_bytes().to_vec())),
+            ),
+        ];
+        let mut resolver = ResolverRegistry::new();
+
+        resolver.register(
+            "fuchsia-boot".to_string(),
+            Box::new(MockMultipleOkResolver::new(expected_urls_and_contexts.clone())),
+        );
+
+        let top_instance = Arc::new(ComponentManagerInstance::new(vec![], vec![]));
+        let environment = Environment::new_root(
+            &top_instance,
+            RunnerRegistry::default(),
+            resolver,
+            DebugRegistry::default(),
+        );
+        let root = ComponentInstance::new_root(
+            environment,
+            Weak::new(),
+            Weak::new(),
+            "fuchsia-boot:///#meta/my-root.cm".to_string(),
+        );
+
+        let child = ComponentInstance::new(
+            root.environment.clone(),
+            InstancedAbsoluteMoniker::parse_str("/root:0/child:0")?,
+            "#meta/my-child.cm".to_string(),
+            fdecl::StartupMode::Lazy,
+            fdecl::OnTerminate::None,
+            WeakModelContext::new(Weak::new()),
+            WeakExtendedInstance::Component(WeakComponentInstance::from(&root)),
+            Arc::new(Hooks::new()),
+            None,
+            false,
+        );
+
+        let resolved = child
+            .environment
+            .resolve(&ComponentAddress::from(&child.component_url, &child).await?, &child)
+            .await?;
+        let expected = expected_urls_and_contexts.as_slice().last().unwrap();
+        assert_eq!(&resolved.resolved_url, &expected.resolved_url);
+        assert_eq!(&resolved.context_to_resolve_children, &expected.context_to_resolve_children);
+        Ok(())
+    }
+
+    #[fuchsia::test]
+    async fn resolve_above_root_error() -> Result<(), Error> {
+        let resolver = ResolverRegistry::new();
+
+        let top_instance = Arc::new(ComponentManagerInstance::new(vec![], vec![]));
+        let environment = Environment::new_root(
+            &top_instance,
+            RunnerRegistry::default(),
+            resolver,
+            DebugRegistry::default(),
+        );
+        let root = ComponentInstance::new_root(
+            environment,
+            Weak::new(),
+            Weak::new(),
+            "#meta/my-root.cm".to_string(),
+        );
+
+        let child = ComponentInstance::new(
+            root.environment.clone(),
+            InstancedAbsoluteMoniker::parse_str("/root:0/child:0")?,
+            "#meta/my-child.cm".to_string(),
+            fdecl::StartupMode::Lazy,
+            fdecl::OnTerminate::None,
+            WeakModelContext::new(Weak::new()),
+            WeakExtendedInstance::Component(WeakComponentInstance::from(&root)),
+            Arc::new(Hooks::new()),
+            None,
+            false,
+        );
+
+        let result = ComponentAddress::from(&child.component_url, &child).await;
+        assert_matches!(result, Err(ResolverError::Internal(..)));
+        Ok(())
+    }
+
+    #[fuchsia::test]
+    async fn relative_resource_and_path_to_fuchsia_pkg() -> Result<(), Error> {
+        let expected_urls_and_contexts = vec![
+            ResolveState::new(
+                "fuchsia-pkg://fuchsia.com/my-package#meta/my-root.cm",
+                None,
+                Some(ComponentResolutionContext("fuchsia.com...".as_bytes().to_vec())),
+            ),
+            ResolveState::new(
+                "my-subpackage#meta/my-child.cm",
+                Some(ComponentResolutionContext("fuchsia.com...".as_bytes().to_vec())),
+                Some(ComponentResolutionContext("my-subpackage...".as_bytes().to_vec())),
+            ),
+            ResolveState::new(
+                "my-subpackage#meta/my-child2.cm",
+                Some(ComponentResolutionContext("fuchsia.com...".as_bytes().to_vec())),
+                Some(ComponentResolutionContext("my-subpackage...".as_bytes().to_vec())),
+            ),
+        ];
+        let mut resolver = ResolverRegistry::new();
+
+        resolver.register(
+            "fuchsia-pkg".to_string(),
+            Box::new(MockMultipleOkResolver::new(expected_urls_and_contexts.clone())),
+        );
+
+        let top_instance = Arc::new(ComponentManagerInstance::new(vec![], vec![]));
+        let environment = Environment::new_root(
+            &top_instance,
+            RunnerRegistry::default(),
+            resolver,
+            DebugRegistry::default(),
+        );
+        let root = ComponentInstance::new_root(
+            environment,
+            Weak::new(),
+            Weak::new(),
+            "fuchsia-pkg://fuchsia.com/my-package#meta/my-root.cm".to_string(),
+        );
+
+        let child_one = ComponentInstance::new(
+            root.environment.clone(),
+            InstancedAbsoluteMoniker::parse_str("/root:0/child:0")?,
+            "my-subpackage#meta/my-child.cm".to_string(),
+            fdecl::StartupMode::Lazy,
+            fdecl::OnTerminate::None,
+            WeakModelContext::new(Weak::new()),
+            WeakExtendedInstance::Component(WeakComponentInstance::from(&root)),
+            Arc::new(Hooks::new()),
+            None,
+            false,
+        );
+
+        let child_two = ComponentInstance::new(
+            root.environment.clone(),
+            InstancedAbsoluteMoniker::parse_str("/root:0/child:0/child2:0")?,
+            "#meta/my-child2.cm".to_string(),
+            fdecl::StartupMode::Lazy,
+            fdecl::OnTerminate::None,
+            WeakModelContext::new(Weak::new()),
+            WeakExtendedInstance::Component(WeakComponentInstance::from(&child_one)),
+            Arc::new(Hooks::new()),
+            None,
+            false,
+        );
+
+        let resolved = child_two
+            .environment
+            .resolve(
+                &ComponentAddress::from(&child_two.component_url, &child_two).await?,
+                &child_two,
+            )
+            .await?;
+        let expected = expected_urls_and_contexts.as_slice().last().unwrap();
+        assert_eq!(&resolved.resolved_url, &expected.resolved_url);
+        assert_eq!(&resolved.context_to_resolve_children, &expected.context_to_resolve_children);
+        Ok(())
+    }
+
+    #[fuchsia::test]
+    async fn two_relative_resources_and_path_to_fuchsia_pkg() -> Result<(), Error> {
+        let expected_urls_and_contexts = vec![
+            ResolveState::new(
+                "fuchsia-pkg://fuchsia.com/my-package#meta/my-root.cm",
+                None,
+                Some(ComponentResolutionContext("fuchsia.com...".as_bytes().to_vec())),
+            ),
+            ResolveState::new(
+                "my-subpackage#meta/my-child.cm",
+                Some(ComponentResolutionContext("fuchsia.com...".as_bytes().to_vec())),
+                Some(ComponentResolutionContext("my-subpackage...".as_bytes().to_vec())),
+            ),
+            ResolveState::new(
+                "my-subpackage#meta/my-child2.cm",
+                Some(ComponentResolutionContext("fuchsia.com...".as_bytes().to_vec())),
+                Some(ComponentResolutionContext("my-subpackage...".as_bytes().to_vec())),
+            ),
+            ResolveState::new(
+                "my-subpackage#meta/my-child3.cm",
+                Some(ComponentResolutionContext("fuchsia.com...".as_bytes().to_vec())),
+                Some(ComponentResolutionContext("my-subpackage...".as_bytes().to_vec())),
+            ),
+        ];
+        let mut resolver = ResolverRegistry::new();
+
+        resolver.register(
+            "fuchsia-pkg".to_string(),
+            Box::new(MockMultipleOkResolver::new(expected_urls_and_contexts.clone())),
+        );
+
+        let top_instance = Arc::new(ComponentManagerInstance::new(vec![], vec![]));
+        let environment = Environment::new_root(
+            &top_instance,
+            RunnerRegistry::default(),
+            resolver,
+            DebugRegistry::default(),
+        );
+        let root = ComponentInstance::new_root(
+            environment,
+            Weak::new(),
+            Weak::new(),
+            "fuchsia-pkg://fuchsia.com/my-package#meta/my-root.cm".to_string(),
+        );
+
+        let child_one = ComponentInstance::new(
+            root.environment.clone(),
+            InstancedAbsoluteMoniker::parse_str("/root:0/child:0")?,
+            "my-subpackage#meta/my-child.cm".to_string(),
+            fdecl::StartupMode::Lazy,
+            fdecl::OnTerminate::None,
+            WeakModelContext::new(Weak::new()),
+            WeakExtendedInstance::Component(WeakComponentInstance::from(&root)),
+            Arc::new(Hooks::new()),
+            None,
+            false,
+        );
+
+        let child_two = ComponentInstance::new(
+            root.environment.clone(),
+            InstancedAbsoluteMoniker::parse_str("/root:0/child:0/child2:0")?,
+            "#meta/my-child2.cm".to_string(),
+            fdecl::StartupMode::Lazy,
+            fdecl::OnTerminate::None,
+            WeakModelContext::new(Weak::new()),
+            WeakExtendedInstance::Component(WeakComponentInstance::from(&child_one)),
+            Arc::new(Hooks::new()),
+            None,
+            false,
+        );
+
+        let child_three = ComponentInstance::new(
+            root.environment.clone(),
+            InstancedAbsoluteMoniker::parse_str("/root:0/child:0/child2:0/child3:0")?,
+            "#meta/my-child3.cm".to_string(),
+            fdecl::StartupMode::Lazy,
+            fdecl::OnTerminate::None,
+            WeakModelContext::new(Weak::new()),
+            WeakExtendedInstance::Component(WeakComponentInstance::from(&child_two)),
+            Arc::new(Hooks::new()),
+            None,
+            false,
+        );
+
+        let resolved = child_three
+            .environment
+            .resolve(
+                &ComponentAddress::from(&child_three.component_url, &child_three).await?,
+                &child_three,
+            )
+            .await?;
+        let expected = expected_urls_and_contexts.as_slice().last().unwrap();
+        assert_eq!(&resolved.resolved_url, &expected.resolved_url);
+        assert_eq!(&resolved.context_to_resolve_children, &expected.context_to_resolve_children);
+        Ok(())
+    }
+
+    #[fuchsia::test]
+    async fn relative_resources_and_paths_to_realm_builder() -> Result<(), Error> {
+        let expected_urls_and_contexts = vec![
+            ResolveState::new(
+                "realm-builder://fuchsia.com/my-realm",
+                None,
+                Some(ComponentResolutionContext("fuchsia.com...".as_bytes().to_vec())),
+            ),
+            ResolveState::new(
+                "my-subpackage1#meta/sub1.cm",
+                Some(ComponentResolutionContext("fuchsia.com...".as_bytes().to_vec())),
+                Some(ComponentResolutionContext("my-subpackage1...".as_bytes().to_vec())),
+            ),
+            ResolveState::new(
+                "my-subpackage1#meta/sub1-child.cm",
+                Some(ComponentResolutionContext("fuchsia.com...".as_bytes().to_vec())),
+                Some(ComponentResolutionContext("my-subpackage1...".as_bytes().to_vec())),
+            ),
+            ResolveState::new(
+                "my-subpackage2#meta/sub2.cm",
+                Some(ComponentResolutionContext("my-subpackage1...".as_bytes().to_vec())),
+                Some(ComponentResolutionContext("my-subpackage2...".as_bytes().to_vec())),
+            ),
+            ResolveState::new(
+                "my-subpackage2#meta/sub2-child.cm",
+                Some(ComponentResolutionContext("my-subpackage1...".as_bytes().to_vec())),
+                Some(ComponentResolutionContext("my-subpackage2...".as_bytes().to_vec())),
+            ),
+        ];
+        let mut resolver = ResolverRegistry::new();
+
+        resolver.register(
+            "realm-builder".to_string(),
+            Box::new(MockMultipleOkResolver::new(expected_urls_and_contexts.clone())),
+        );
+
+        let top_instance = Arc::new(ComponentManagerInstance::new(vec![], vec![]));
+        let environment = Environment::new_root(
+            &top_instance,
+            RunnerRegistry::default(),
+            resolver,
+            DebugRegistry::default(),
+        );
+        let root = ComponentInstance::new_root(
+            environment,
+            Weak::new(),
+            Weak::new(),
+            "realm-builder://fuchsia.com/my-realm".to_string(),
+        );
+
+        let child_one = ComponentInstance::new(
+            root.environment.clone(),
+            InstancedAbsoluteMoniker::parse_str("/root:0/child:0")?,
+            "my-subpackage1#meta/sub1.cm".to_string(),
+            fdecl::StartupMode::Lazy,
+            fdecl::OnTerminate::None,
+            WeakModelContext::new(Weak::new()),
+            WeakExtendedInstance::Component(WeakComponentInstance::from(&root)),
+            Arc::new(Hooks::new()),
+            None,
+            false,
+        );
+
+        let child_two = ComponentInstance::new(
+            root.environment.clone(),
+            InstancedAbsoluteMoniker::parse_str("/root:0/child:0/child2:0")?,
+            "#meta/sub1-child.cm".to_string(),
+            fdecl::StartupMode::Lazy,
+            fdecl::OnTerminate::None,
+            WeakModelContext::new(Weak::new()),
+            WeakExtendedInstance::Component(WeakComponentInstance::from(&child_one)),
+            Arc::new(Hooks::new()),
+            None,
+            false,
+        );
+
+        let child_three = ComponentInstance::new(
+            root.environment.clone(),
+            InstancedAbsoluteMoniker::parse_str("/root:0/child:0/child2:0/child3:0")?,
+            "my-subpackage2#meta/sub2.cm".to_string(),
+            fdecl::StartupMode::Lazy,
+            fdecl::OnTerminate::None,
+            WeakModelContext::new(Weak::new()),
+            WeakExtendedInstance::Component(WeakComponentInstance::from(&child_two)),
+            Arc::new(Hooks::new()),
+            None,
+            false,
+        );
+
+        let child_four = ComponentInstance::new(
+            root.environment.clone(),
+            InstancedAbsoluteMoniker::parse_str("/root:0/child:0/child2:0/child3:0/child4:0")?,
+            "#meta/sub2-child.cm".to_string(),
+            fdecl::StartupMode::Lazy,
+            fdecl::OnTerminate::None,
+            WeakModelContext::new(Weak::new()),
+            WeakExtendedInstance::Component(WeakComponentInstance::from(&child_three)),
+            Arc::new(Hooks::new()),
+            None,
+            false,
+        );
+
+        let resolved = child_four
+            .environment
+            .resolve(
+                &ComponentAddress::from(&child_four.component_url, &child_four).await?,
+                &child_four,
+            )
+            .await?;
+        let expected = expected_urls_and_contexts.as_slice().last().unwrap();
+        assert_eq!(&resolved.resolved_url, &expected.resolved_url);
+        assert_eq!(&resolved.context_to_resolve_children, &expected.context_to_resolve_children);
+        Ok(())
     }
 }
