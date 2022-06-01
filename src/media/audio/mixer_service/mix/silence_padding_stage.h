@@ -88,16 +88,16 @@ class SilencePaddingStage : public PipelineStage {
         silence_buffer_(silence_frame_count_ * format.bytes_per_frame(), 0) {}
 
   // Implements `PipelineStage`.
-  void AddSource(PipelineStagePtr src) final {
-    FX_CHECK(!source_) << "SilencePaddingStage does not support multiple input sources";
-    FX_CHECK(src->format() == format())
-        << "SilencePaddingStage format does not match with input source format";
-    source_ = std::move(src);
+  void AddSource(PipelineStagePtr source) final {
+    FX_CHECK(!source_) << "SilencePaddingStage does not support multiple sources";
+    FX_CHECK(source->format() == format())
+        << "SilencePaddingStage format does not match with source format";
+    source_ = std::move(source);
   }
-  void RemoveSource(PipelineStagePtr src) final {
-    FX_CHECK(source_) << "SilencePaddingStage input source was not found";
-    FX_CHECK(source_ == src) << "SilencePaddingStage input source " << source_->name()
-                             << " does not match with " << src->name();
+  void RemoveSource(PipelineStagePtr source) final {
+    FX_CHECK(source_) << "SilencePaddingStage source was not found";
+    FX_CHECK(source_ == source) << "SilencePaddingStage source " << source_->name()
+                                << " does not match with " << source->name();
     source_ = nullptr;
   }
 

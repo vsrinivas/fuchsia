@@ -30,8 +30,8 @@ class CustomStage : public PipelineStage {
               zx_koid_t reference_clock_koid);
 
   // Implements `PipelineStage`.
-  void AddSource(PipelineStagePtr src) final { source_.AddSource(std::move(src)); }
-  void RemoveSource(PipelineStagePtr src) final { source_.RemoveSource(std::move(src)); }
+  void AddSource(PipelineStagePtr source) final { source_.AddSource(std::move(source)); }
+  void RemoveSource(PipelineStagePtr source) final { source_.RemoveSource(std::move(source)); }
 
  protected:
   void AdvanceImpl(Fixed frame) final;

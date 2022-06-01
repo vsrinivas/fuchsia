@@ -45,8 +45,8 @@ class FakeStage : public PipelineStage {
         packets_(std::move(packets)) {}
 
   // TODO(fxbug.dev/87651): Use this instead of the constructor.
-  void AddSource(PipelineStagePtr src) override {}
-  void RemoveSource(PipelineStagePtr src) override {}
+  void AddSource(PipelineStagePtr source) override {}
+  void RemoveSource(PipelineStagePtr source) override {}
 
   std::optional<Packet> ReadImpl(MixJobContext& ctx, Fixed start_frame,
                                  int64_t frame_count) override {
@@ -111,22 +111,22 @@ class FakeStage : public PipelineStage {
 // No-op passthrough stage that wraps a source stage via using `ForwardPacket`.
 class PassthroughStage : public PipelineStage {
  public:
-  explicit PassthroughStage(std::shared_ptr<FakeStage> src)
-      : PipelineStage("PassthroughStage", src->format(), DefaultClockKoid()), src_(src) {}
+  explicit PassthroughStage(std::shared_ptr<FakeStage> source)
+      : PipelineStage("PassthroughStage", source->format(), DefaultClockKoid()), source_(source) {}
 
   // TODO(fxbug.dev/87651): Use this instead of the constructor.
-  void AddSource(PipelineStagePtr src) override {}
-  void RemoveSource(PipelineStagePtr src) override {}
+  void AddSource(PipelineStagePtr source) override {}
+  void RemoveSource(PipelineStagePtr source) override {}
 
   std::optional<Packet> ReadImpl(MixJobContext& ctx, Fixed start_frame,
                                  int64_t frame_count) override {
-    return ForwardPacket(src_->Read(ctx, start_frame, frame_count));
+    return ForwardPacket(source_->Read(ctx, start_frame, frame_count));
   }
 
-  void AdvanceImpl(Fixed frame) override { src_->Advance(frame); }
+  void AdvanceImpl(Fixed frame) override { source_->Advance(frame); }
 
  private:
-  std::shared_ptr<FakeStage> src_;
+  std::shared_ptr<FakeStage> source_;
 };
 
 // All tests in this file can be run against four pipelines.

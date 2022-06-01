@@ -19,11 +19,11 @@ namespace media_audio_mixer_service {
 class ProducerStage : public PipelineStage {
  public:
   // Implements `PipelineStage`.
-  void AddSource(PipelineStagePtr src) final {
-    FX_CHECK(false) << "ProducerStage should not have input sources";
+  void AddSource(PipelineStagePtr source) final {
+    FX_CHECK(false) << "ProducerStage should not have a source";
   }
-  void RemoveSource(PipelineStagePtr src) final {
-    FX_CHECK(false) << "ProducerStage should not have input sources";
+  void RemoveSource(PipelineStagePtr source) final {
+    FX_CHECK(false) << "ProducerStage should not have a source";
   }
 
  protected:

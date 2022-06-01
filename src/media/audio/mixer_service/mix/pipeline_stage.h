@@ -71,13 +71,13 @@ class PipelineStage {
 
   // Adds a source stream.
   //
-  // Required: caller must verify that src produces a stream with a compatible format.
-  virtual void AddSource(PipelineStagePtr src) TA_REQ(thread()->checker()) = 0;
+  // Required: caller must verify that `source` produces a stream with a compatible format.
+  virtual void AddSource(PipelineStagePtr source) TA_REQ(thread()->checker()) = 0;
 
   // Removes a source stream.
   //
-  // Required: caller must verify that src is currently a source for this stage.
-  virtual void RemoveSource(PipelineStagePtr src) TA_REQ(thread()->checker()) = 0;
+  // Required: caller must verify that `source` is currently a source for this stage.
+  virtual void RemoveSource(PipelineStagePtr source) TA_REQ(thread()->checker()) = 0;
 
   // Advances the destination stream by releasing any frames before the given `frame`. This is a
   // declaration that the caller will not attempt to `Read` any frame before the given `frame`. If
@@ -215,7 +215,7 @@ class PipelineStage {
   // a source stream. For example:
   //
   //   ```
-  //   auto packet = src->Read(frame, frame_count);
+  //   auto packet = source->Read(frame, frame_count);
   //   auto start_frame = packet->start().Ceiling();
   //   return ForwardPacketWithModifiedStart(std::move(packet), start_frame);
   //   ```

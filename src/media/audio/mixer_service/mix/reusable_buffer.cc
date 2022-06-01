@@ -50,8 +50,8 @@ void ReusableBuffer::Append(Fixed new_payload_start, int64_t new_payload_frames,
   }
 
   if (new_payload) {
-    char* src = reinterpret_cast<char*>(new_payload);
-    buf_.insert(buf_.end(), src, src + new_payload_frames * format_.bytes_per_frame());
+    char* source = reinterpret_cast<char*>(new_payload);
+    buf_.insert(buf_.end(), source, source + new_payload_frames * format_.bytes_per_frame());
   } else {
     PushSilence(new_payload_frames);
   }
