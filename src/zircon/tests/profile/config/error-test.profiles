@@ -1,0 +1,18 @@
+// error-test.profiles: Test error paths with malformed profiles.
+{
+  "profiles": {
+    "error-test.priority:units": { "priority": "20x" },
+    "error-test.priority:float": { "priority": 1.2 },
+    "error-test.priority:array": { "priority": [] },
+    "error-test.priority:string": { "priority": "abcde" },
+    "error-test.priority:object": { "priority": {} },
+    "error-test.deadline:units": { "capacity": "10ns", "deadline": "20us", "period": "20x" },
+    "error-test.deadline:float": { "capacity": "10ns", "deadline": "20us", "period": 1.2 },
+    "error-test.deadline:array": { "capacity": "10ns", "deadline": "20us", "period": [] },
+    "error-test.deadline:string": { "capacity": "10ns", "deadline": "20us", "period": "abcde" },
+    "error-test.deadline:object": { "capacity": "10ns", "deadline": "20us", "period": {} },
+    "error-test.empty": {},
+    "error-test.exclusive": { "priority": 10, "capacity": "5ms", "deadline": "10ms", "period": "10ms" },
+    "error-test.partial": { "capacity": "5000000", "period": "10ms" },
+  },
+}

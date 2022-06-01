@@ -1,0 +1,8 @@
+// Profiles common to core and derivatives.
+{
+  "scope": "core",
+  "profiles": {
+    "fuchsia.scenic.main:hz=60": { "capacity": "16ms", "deadline": "16ms", "period": "16ms" },
+    "fuchsia.netstack.go-worker": { "priority": 25 },
+  },
+}

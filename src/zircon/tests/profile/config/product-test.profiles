@@ -1,0 +1,9 @@
+// product-test.profiles: Test product scope profiles.
+{
+  "scope": "product",
+  "profiles": {
+    "test.bringup.b": { "priority": 20 },
+    "test.core.a:affinity": { "capacity": "6ms", "deadline": "15ms", "period": "20ms", "affinity": [ 1, 2 ] },
+    "test.product.a": { "priority": 25 },
+  },
+}

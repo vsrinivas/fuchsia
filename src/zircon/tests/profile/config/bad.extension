@@ -1,0 +1,6 @@
+// bad.extension: A file without the .profiles extention should not get parsed.
+{
+  "profiles": {
+    "bad.extension": { "priority": 1 },
+  },
+}

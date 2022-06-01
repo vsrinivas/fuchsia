@@ -1,0 +1,10 @@
+// core-test.profiles: Test core scope profiles.
+{
+  "scope": "core",
+  "profiles": {
+    "test.bringup.a": { "priority": 10 },
+    "test.bringup.b:affinity": { "priority": 1, "affinity": 3 },
+    "test.core.a": { "capacity": "5ms", "deadline": "10ms", "period": "10ms" },
+    "test.core.a:affinity": { "capacity": "5ms", "deadline": "10ms", "period": "10ms", "affinity": [ 0, 1, 2 ] },
+  },
+}

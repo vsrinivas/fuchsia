@@ -242,6 +242,14 @@
             rights: [ "rx*" ],
         },
         {
+            directory: "boot",
+            from: "parent",
+            as: "config-profiles",
+            to: "#svchost",
+            rights: [ "r*" ],
+            subdir: "config/profiles",
+        },
+        {
             protocol: [
                 "fuchsia.boot.Arguments",
                 "fuchsia.boot.Items",

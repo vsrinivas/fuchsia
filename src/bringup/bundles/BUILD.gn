@@ -15,6 +15,7 @@ group("bootstrap") {
 # zedboot image for all products.
 group("zedboot") {
   deps = [
+    "//src/bringup:bootfs",
     "//src/bringup/bin/console:bootfs",
     "//src/bringup/bin/console-launcher:bootfs",
     "//src/bringup/bin/debuglog",

@@ -1,0 +1,7 @@
+// Profiles common to bringup and derivatives.
+{
+  "scope": "bringup",
+  "profiles": {
+    "fuchsia.async.loop": { "priority": 16 },
+  },
+}

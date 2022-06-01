@@ -15,6 +15,9 @@ product_bootfs_labels +=
 
 include_shell_commands_package = true
 
+# Core scheduler profiles.
+product_bootfs_labels += [ "//src/sys/core:bootfs" ]
+
 product_system_image_deps = [
   "//src/connectivity/bluetooth:core-system",
 

@@ -1,0 +1,10 @@
+// bringup-test.profiles: Test bringup scope profiles.
+{
+  "scope": "bringup",
+  "profiles": {
+    "test.bringup.a": { "priority": 0 },
+    "test.bringup.a:affinity": { "priority": 0, "affinity": 1 },
+    "test.bringup.b": { "priority": 1 },
+    "test.bringup.b:affinity": { "priority": 1, "affinity": 2 },
+  },
+}

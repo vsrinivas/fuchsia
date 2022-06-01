@@ -21,6 +21,11 @@
             path: "/dev/class/sysmem",
         },
         {
+            directory: "config-profiles",
+            rights: [ "r*" ],
+            path: "/config/profiles",
+        },
+        {
             protocol: [
                 "fuchsia.boot.Arguments",
                 "fuchsia.boot.RootResource",
