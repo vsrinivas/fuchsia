@@ -567,7 +567,7 @@ specific features your components may support:
 [build-info-fidl]: https://fuchsia.dev/reference/fidl/fuchsia.buildinfo#Provider
 [cf-dev-list]: https://groups.google.com/a/fuchsia.dev/g/component-framework-dev
 [cmx-services]: /docs/concepts/components/v1/component_manifests.md#sandbox
-[collection-persistent-storage]: https://fuchsia.dev/reference/fidl/fuchsia.component.decl?hl=en#Collection.persistent_storage
+[collection-persistent-storage]: https://fuchsia.dev/reference/fidl/fuchsia.component.decl#Collection.persistent_storage
 [component-id-index]: /docs/development/components/component_id_index.md
 [config-data]: /docs/development/components/data.md#product-specific_configuration_with_config_data
 [device-model]: /docs/development/drivers/concepts/device_driver_model/device-model.md
