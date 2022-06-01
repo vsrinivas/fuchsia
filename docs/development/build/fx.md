@@ -272,7 +272,7 @@ for flashing the build to a Fuchsia device.
 To generate a build archive file, run `fx build` with the following special target:
 
 ```posix-terminal
-fx build build-archive.<FORMAT>
+fx build build-archive.{{ "<var>" }}FORMAT{{ "</var>" }}
 ```
 
 Replace `FORMAT` with `tar`, `tgz`, or `zip`, for example:
@@ -577,7 +577,7 @@ GI status: PENDING
 ### Getting help with `fx` {#getting-help-with-fx}
 
 `fx help <command>` provides the best introductory documentation for that
-command. Some commands also support/provide `fx <command> -h` or
+command. Some commands also support and provide `fx <command> -h` or
 `fx <command> --help`, however this help is not available for all commands.
 This is unusual, but is a function of implementation details. Internally many
 `fx` commands just run other programs, most often those produced by the
@@ -591,12 +591,41 @@ Users should always start with `fx help <command>`.
 `fx help` with no other arguments provides a list of all available commands
 in `fx`, as well as documentation for `fx` global flags.
 
-## Displaying pending commits {#displaying-pending-commits}
+### Displaying pending commits {#displaying-pending-commits}
 
 `fx pending-commits` displays the commits not yet rolled to global
   integration.
 
 To view Fuchsia's integration dashboard, see [Builders](https://luci-milo.appspot.com/p/fuchsia).
+
+### Synchronizing the Fuchsia checkout to a release branch {#synchronizing-to-a-release-branch}
+
+To synchronize your local Fuchsia checkout to a specific release branch,
+run the following command:
+
+```posix-terminal
+fx sync-to {{ "<var>" }}RELEASE_BRANCH{{ "</var>" }}
+```
+
+Replace `RELEASE_BRANCH` with the release branch that you want to switch to
+(for example, `refs/heads/releases/f6`). To see the list of all available
+release branches, see the Branches section on the
+[Fuchsia global integration repository][fuchsia-gi-repo]{:.external} page.
+
+The example command below synchronizes the Fuchsia checkout to the F6 release
+branch:
+
+```none {:.devsite-disable-click-to-copy}
+fx sync-to refs/heads/releases/f6
+```
+
+To reset the Fuchsia checkout to the top of the tree, run the following command:
+
+```posix-terminal
+fx sync-to reset
+```
+
+For more options, see the [`fx sync-to` reference][fx-sync-to-ref] page.
 
 <!-- Reference links -->
 
@@ -604,3 +633,5 @@ To view Fuchsia's integration dashboard, see [Builders](https://luci-milo.appspo
 [executing-tests]: /docs/development/testing/run_fuchsia_tests.md
 [ffx-target-flash]: https://fuchsia.dev/reference/tools/sdk/ffx#flash
 [fxb94507]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=94507
+[fuchsia-gi-repo]: https://fuchsia.googlesource.com/integration/
+[fx-sync-to-ref]: https://fuchsia.dev/reference/tools/fx/cmd/sync-to
