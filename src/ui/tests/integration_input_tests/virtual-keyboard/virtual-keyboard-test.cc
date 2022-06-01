@@ -104,11 +104,8 @@ enum class TapLocation { kTopLeft, kTopRight };
 using time_utc = zx::basic_time<1>;
 
 void AddBaseComponents(RealmBuilder* realm_builder) {
-  realm_builder->AddLegacyChild(
-      kRootPresenter, "fuchsia-pkg://fuchsia.com/virtual-keyboard-test#meta/root_presenter.cmx");
-  realm_builder->AddChild(
-      kScenicTestRealm,
-      "fuchsia-pkg://fuchsia.com/virtual-keyboard-test#meta/scenic-test-realm.cm");
+  realm_builder->AddChild(kRootPresenter, "#meta/root_presenter.cm");
+  realm_builder->AddChild(kScenicTestRealm, "#meta/scenic-test-realm.cm");
 }
 
 void AddBaseRoutes(RealmBuilder* realm_builder) {

@@ -10,7 +10,7 @@
         },
         {
             name: "root_presenter",
-            url: "#meta/wrapped-root-presenter.cm",
+            url: "#meta/root_presenter.cm",
         },
     ],
     offer: [

@@ -31,6 +31,12 @@ fuchsia_component("component_v1_for_test") {
   deps = [ ":bin" ]
 }
 
+fuchsia_component("component_v2_for_test") {
+  component_name = "root_presenter"
+  manifest = "meta/root_presenter_for_test.cml"
+  deps = [ ":bin" ]
+}
+
 group("configs") {
   deps = [ ":root_presenter_config" ]
 }

@@ -10,6 +10,8 @@
     capabilities: [
         {
             protocol: [
+                "fuchsia.input.virtualkeyboard.ControllerCreator",
+                "fuchsia.input.virtualkeyboard.Manager",
                 "fuchsia.ui.accessibility.view.Registry",
                 "fuchsia.ui.brightness.ColorAdjustmentHandler",
                 "fuchsia.ui.input.accessibility.PointerEventRegistry",
@@ -48,6 +50,8 @@
     expose: [
         {
             protocol: [
+                "fuchsia.input.virtualkeyboard.ControllerCreator",
+                "fuchsia.input.virtualkeyboard.Manager",
                 "fuchsia.ui.accessibility.view.Registry",
                 "fuchsia.ui.brightness.ColorAdjustmentHandler",
                 "fuchsia.ui.pointerinjector.configuration.Setup",

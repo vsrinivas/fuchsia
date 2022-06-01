@@ -71,8 +71,8 @@ static size_t OverlayPixelCount(std::map<scenic::Color, size_t>& histogram) {
 void FlutterEmbedderTest::SetUpRealmBase() {
   FX_LOGS(INFO) << "Setting up realm base.";
   // Add base components.
-  realm_builder_.AddLegacyChild(
-      kRootPresenter, "fuchsia-pkg://fuchsia.com/flutter-embedder-test#meta/root_presenter.cmx");
+  realm_builder_.AddChild(kRootPresenter,
+                          "fuchsia-pkg://fuchsia.com/flutter-embedder-test#meta/root_presenter.cm");
   realm_builder_.AddChild(
       kScenicTestRealm,
       "fuchsia-pkg://fuchsia.com/flutter-embedder-test#meta/scenic-test-realm.cm");

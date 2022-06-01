@@ -72,7 +72,7 @@ fuchsia_test_package("virtual-keyboard-test") {
     "//src/developer/memory/monitor:component",
     "//src/testing/fidl/intl_property_manager:intl_property_manager_component",
     "//src/ui/a11y/testing:fake-a11y-manager",
-    "//src/ui/bin/root_presenter:component_v1_for_test",
+    "//src/ui/bin/root_presenter:component_v2_for_test",
     "//src/ui/bin/text:text_manager_comp_v2",
     "//src/ui/tests/integration_input_tests:scenic-test-realm",
     "//src/ui/tests/integration_input_tests/virtual-keyboard/web-virtual-keyboard-client:component",

@@ -24,16 +24,9 @@ group("workstation_tests") {
   testonly = true
 
   deps = [
-    ":workstation-test-realm",
     "mouse:tests",
     "text-input:tests",
   ]
-}
-
-fuchsia_component("wrapped-root-presenter") {
-  testonly = true
-  manifest = "meta/wrapped-root-presenter.cml"
-  deps = [ "//src/ui/bin/root_presenter:component_v1_for_test" ]
 }
 
 fuchsia_component("wrapped-input-pipeline") {
@@ -54,21 +47,6 @@ fuchsia_component("scenic-test-realm") {
   ]
 }
 
-# workstation-test-realm is a realm replicating the workstation UI setup that
-# can be stenciled out in tests, and amended to fit.
-# TODO(92183): The realm definition is still under construction.
-fuchsia_component("workstation-test-realm") {
-  testonly = true
-  manifest = "meta/workstation-test-realm.cml"
-  deps = [
-    ":scenic-test-realm",
-    ":wrapped-root-presenter",
-    "//src/lib/ui/input-synthesis:input-synthesis-component",
-    "//src/ui/bin/scene_manager:scene_manager_component",
-    "//src/ui/bin/text:text_manager_comp_v2",
-  ]
-}
-
 # input-pipeline-test-realm is a realm replicating the input UI setup that
 # can be stenciled out in tests, and amended to fit.
 fuchsia_component("input-pipeline-test-realm") {
@@ -77,6 +55,6 @@ fuchsia_component("input-pipeline-test-realm") {
   deps = [
     ":scenic-test-realm",
     ":wrapped-input-pipeline",
-    ":wrapped-root-presenter",
+    "//src/ui/bin/root_presenter:component_v2",
   ]
 }

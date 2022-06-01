@@ -146,8 +146,8 @@ using time_utc = zx::basic_time<1>;
 // created below, or by this component. Note, that when I refer to "this component",
 // I'm referring to the test suite, which is itself a component.
 void AddBaseComponents(RealmBuilder* realm_builder) {
-  realm_builder->AddLegacyChild(
-      kRootPresenter, "fuchsia-pkg://fuchsia.com/touch-input-test#meta/root_presenter.cmx");
+  realm_builder->AddChild(kRootPresenter,
+                          "fuchsia-pkg://fuchsia.com/touch-input-test#meta/root_presenter.cm");
   realm_builder->AddChild(kScenicTestRealm,
                           "fuchsia-pkg://fuchsia.com/touch-input-test#meta/scenic-test-realm.cm");
 }
@@ -187,6 +187,12 @@ void AddBaseRoutes(RealmBuilder* realm_builder) {
       Route{.capabilities = {Protocol{fuchsia::ui::observation::test::Registry::Name_}},
             .source = ChildRef{kScenicTestRealm},
             .targets = {ParentRef()}});
+
+  // Supply a default display rotation.
+  auto config_directory_contents = component_testing::DirectoryContents();
+  config_directory_contents.AddFile("display_rotation", "90");
+  realm_builder->RouteReadOnlyDirectory("config-data", {ChildRef{kRootPresenter}},
+                                        std::move(config_directory_contents));
 }
 
 // Combines all vectors in `vecs` into one.

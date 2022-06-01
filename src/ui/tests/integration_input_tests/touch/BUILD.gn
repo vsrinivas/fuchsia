@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
-import("//build/config.gni")
 import("//build/fidl/fidl.gni")
 import("//build/flutter/config.gni")
 
@@ -14,13 +13,6 @@ fidl("test.touch") {
     "test_app_launcher.test.fidl",
   ]
   public_deps = [ "//zircon/vdso/zx" ]
-}
-
-config_data("touch-input-test-display_rotation") {
-  for_pkg = "touch-input-test"
-
-  sources = [ "data/display_rotation" ]
-  outputs = [ "display_rotation" ]
 }
 
 executable("touch-input-test-bin") {
@@ -79,11 +71,10 @@ fuchsia_component("touch-input-test-component") {
 fuchsia_test_package("touch-input-test") {
   test_components = [ ":touch-input-test-component" ]
   deps = [
-    ":touch-input-test-display_rotation",
     "//src/connectivity/network/netstack:component-legacy",
     "//src/developer/build_info/testing:fake-build-info-component",
     "//src/ui/a11y/testing:fake-a11y-manager",
-    "//src/ui/bin/root_presenter:component_v1_for_test",
+    "//src/ui/bin/root_presenter:component_v2_for_test",
     "//src/ui/tests/integration_input_tests:scenic-test-realm",
   ]
   test_specs = {
@@ -99,13 +90,6 @@ fuchsia_test_package("touch-input-test") {
       },
     ]
   }
-}
-
-config_data("touch-input-test-display_rotation-ip") {
-  for_pkg = "touch-input-test-ip"
-
-  sources = [ "data/display_rotation" ]
-  outputs = [ "display_rotation" ]
 }
 
 executable("touch-input-test-ip-bin") {
@@ -167,7 +151,6 @@ fuchsia_test_component("touch-input-test-ip-component") {
 fuchsia_test_package("touch-input-test-ip") {
   test_components = [ ":touch-input-test-ip-component" ]
   deps = [
-    ":touch-input-test-display_rotation-ip",
     "//src/cobalt/bin/testing/mock_cobalt",
     "//src/connectivity/network/netstack:component",
     "//src/developer/build_info/testing:fake-build-info-component",
@@ -181,9 +164,8 @@ fuchsia_test_package("touch-input-test-ip") {
     "//src/ui/tests/integration_input_tests/touch/touch-gfx-client:component",
 
     # TODO(fxbug.dev/98509): Remove these deps once we break the explicit dependencies
-    # on touch-input-test-ip in wrapped-input-pipeline.cml and wrapped-root-presenter.cml.
+    # on touch-input-test-ip in wrapped-input-pipeline.cml.
     "//src/ui/bin/input-pipeline:component-for-test",
-    "//src/ui/bin/root_presenter:component_v1_for_test",
   ]
   test_specs = {
     log_settings = {
