@@ -17,5 +17,7 @@ $ python -m http.server 12345
 # 2. Build and run the omaha client
 $ ./fake-omaha-client --key-id 1 \
   --key "$(cat public.pem)" \
-  --server "http://127.0.0.1:12345"
+  --server "http://127.0.0.1:12345" \
+  --app-id "some_app_id" \
+  --channel "some_channel"
 ```

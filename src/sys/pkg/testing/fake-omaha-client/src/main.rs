@@ -57,6 +57,10 @@ struct FakeOmahaClientArgs {
     key_id: PublicKeyId,
     #[argh(option, description = "public key (ECDSA), .pem format")]
     key: String,
+    #[argh(option, description = "omaha app ID")]
+    app_id: String,
+    #[argh(option, description = "omaha channel")]
+    channel: String,
 }
 
 fn main() -> Result<(), Box<dyn error::Error>> {
@@ -66,11 +70,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
 
 fn main_inner(args: FakeOmahaClientArgs) -> Result<(), Box<dyn error::Error>> {
     let omaha_public_keys = PublicKeys {
-        latest: PublicKeyAndId {
-            id: args.key_id,
-            key: args.key.parse()?,
-            // key: PublicKey::from_str(&args.key)?,
-        },
+        latest: PublicKeyAndId { id: args.key_id, key: args.key.parse()? },
         historical: vec![],
     };
     let config = Config {
@@ -85,9 +85,9 @@ fn main_inner(args: FakeOmahaClientArgs) -> Result<(), Box<dyn error::Error>> {
         omaha_public_keys: Some(omaha_public_keys.clone()),
     };
     let app_set = VecAppSet::new(vec![App::builder()
-        .id("qnzHyt4n")
+        .id(args.app_id)
         .version([20200101, 0, 0, 0])
-        .cohort(Cohort::new("test-channel"))
+        .cohort(Cohort::new(&args.channel))
         .build()]);
 
     let state_machine = StateMachineBuilder::new(
