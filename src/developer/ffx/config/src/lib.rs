@@ -250,9 +250,8 @@ pub async fn add<'a, U: Into<ConfigQuery<'a>>>(query: U, value: Value) -> Result
 pub fn save_config(config: &mut Config, build_dir: &Option<String>) -> Result<()> {
     let e = env_file().ok_or(anyhow!("Could not find environment file"))?;
     let env = Environment::load(&e)?;
-    build_dir.as_ref().map_or(config.save(&env.global, &None, &env.user), |b| {
-        config.save(&env.global, &env.build.as_ref().and_then(|c| c.get(b)), &env.user)
-    })
+    let build = build_dir.as_ref().and_then(|b| env.build.as_ref().and_then(|c| c.get(b)));
+    config.save(&env.global, &build, &env.user)
 }
 
 pub async fn print_config<W: Write>(mut writer: W, build_dir: &Option<String>) -> Result<()> {
