@@ -48,87 +48,56 @@ impl<T: Driver> ServeTo<DriverRequestStream> for T {
             .try_for_each_concurrent(MAX_CONCURRENT, move |cmd| {
                 match cmd {
                     DriverRequest::GetProtocols { protocols, .. } => {
-                        let mut futures = vec![];
-                        if let Some(server_end) = protocols.device {
-                            if let Some(stream) = server_end.into_stream().ok() {
-                                futures.push(self.serve_to(stream));
-                            }
-                        }
-                        if let Some(server_end) = protocols.device_extra {
-                            if let Some(stream) = server_end.into_stream().ok() {
-                                futures.push(self.serve_to(stream));
-                            }
-                        }
-                        if let Some(server_end) = protocols.experimental_device {
-                            match server_end.into_stream() {
-                                Ok(stream) => futures.push(self.serve_to(stream)),
-                                Err(err) => warn!("into_stream() failed: {:?}", err),
-                            }
-                        }
-                        if let Some(server_end) = protocols.experimental_device_extra {
-                            match server_end.into_stream() {
-                                Ok(stream) => futures.push(self.serve_to(stream)),
-                                Err(err) => warn!("into_stream() failed: {:?}", err),
-                            }
-                        }
-                        if let Some(server_end) = protocols.energy_scan {
-                            match server_end.into_stream() {
-                                Ok(stream) => futures.push(self.serve_to(stream)),
-                                Err(err) => warn!("into_stream() failed: {:?}", err),
-                            }
-                        }
-                        if let Some(server_end) = protocols.meshcop {
-                            match server_end.into_stream() {
-                                Ok(stream) => futures.push(self.serve_to(stream)),
-                                Err(err) => warn!("into_stream() failed: {:?}", err),
-                            }
-                        }
-                        if let Some(server_end) = protocols.counters {
-                            if let Some(stream) = server_end.into_stream().ok() {
-                                futures.push(self.serve_to(stream));
-                            }
-                        }
-                        if let Some(server_end) = protocols.device_test {
-                            if let Some(stream) = server_end.into_stream().ok() {
-                                futures.push(self.serve_to(stream));
-                            }
-                        }
-                        if let Some(server_end) = protocols.device_route_extra {
-                            if let Some(stream) = server_end.into_stream().ok() {
-                                futures.push(self.serve_to(stream));
-                            }
-                        }
-                        if let Some(server_end) = protocols.device_route {
-                            if let Some(stream) = server_end.into_stream().ok() {
-                                futures.push(self.serve_to(stream));
-                            }
-                        }
-                        if let Some(server_end) = protocols.thread_dataset {
-                            if let Some(stream) = server_end.into_stream().ok() {
-                                futures.push(self.serve_to(stream));
-                            }
-                        }
-                        if let Some(server_end) = protocols.thread_legacy_joining {
-                            if let Some(stream) = server_end.into_stream().ok() {
-                                // We only let there be one outstanding instance of this protocol.
-                                if !legacy_joining_protocol_in_use_flag
-                                    .swap(true, Ordering::Relaxed)
-                                {
-                                    fx_log_info!("Mutually exclusive thread_legacy_joining channel requested and vended.");
-                                    let flag = legacy_joining_protocol_in_use_flag.clone();
-                                    futures.push(
-                                        self.serve_to(stream)
-                                            .inspect(move |_| {
-                                                fx_log_info!("thread_legacy_joining channel released.");
-                                                flag.store(false, Ordering::Relaxed)
-                                            })
-                                            .boxed(),
-                                    );
-                                } else {
-                                    fx_log_warn!("Cannot vend thread_legacy_joining, one instance already outstanding.");
+                        macro_rules! handle_protocol {
+                            ($futures:expr, $protocol:expr) => {
+                                if let Some(server_end) = $protocol {
+                                    match server_end.into_stream() {
+                                        Ok(stream) => $futures.push(self.serve_to(stream)),
+                                        Err(err) => warn!("into_stream() failed: {:?}", err),
+                                    }
                                 }
+                            };
+                        }
+
+                        let mut futures = vec![];
+
+                        handle_protocol!(futures, protocols.device);
+                        handle_protocol!(futures, protocols.device_extra);
+                        handle_protocol!(futures, protocols.experimental_device);
+                        handle_protocol!(futures, protocols.experimental_device_extra);
+                        handle_protocol!(futures, protocols.energy_scan);
+                        handle_protocol!(futures, protocols.meshcop);
+                        handle_protocol!(futures, protocols.counters);
+                        handle_protocol!(futures, protocols.device_test);
+                        handle_protocol!(futures, protocols.device_route);
+                        handle_protocol!(futures, protocols.device_route_extra);
+                        handle_protocol!(futures, protocols.thread_dataset);
+
+                        if let Some(server_end) = protocols.thread_legacy_joining {
+                            match server_end.into_stream() {
+                                Ok(stream) => {
+                                    // We only let there be one outstanding instance of this protocol.
+                                    if !legacy_joining_protocol_in_use_flag
+                                        .swap(true, Ordering::Relaxed)
+                                    {
+                                        fx_log_info!("Mutually exclusive thread_legacy_joining channel requested and vended.");
+                                        let flag = legacy_joining_protocol_in_use_flag.clone();
+                                        futures.push(
+                                            self.serve_to(stream)
+                                                .inspect(move |_| {
+                                                    fx_log_info!("thread_legacy_joining channel released.");
+                                                    flag.store(false, Ordering::Relaxed)
+                                                })
+                                                .boxed(),
+                                        );
+                                    } else {
+                                        fx_log_warn!("Cannot vend thread_legacy_joining, one instance already outstanding.");
+                                    }
+                                }
+                                Err(err) => warn!("into_stream() failed: {:?}", err),
                             }
                         }
+
                         join_all(futures).map(|_| Ok(()))
                     }
                 }

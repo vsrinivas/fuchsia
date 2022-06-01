@@ -435,19 +435,17 @@ impl<T: Driver> ServeTo<DeviceExtraRequestStream> for T {
             Result::<(), anyhow::Error>::Ok(())
         };
 
-        if let Some(err) =
-            request_stream.err_into::<Error>().try_for_each_concurrent(None, closure).await.err()
-        {
-            fx_log_err!("Error serving DeviceExtraRequestStream: {:?}", err);
+        request_stream.err_into::<Error>().try_for_each_concurrent(None, closure).await.map_err(
+            |err| {
+                fx_log_err!("Error serving DeviceExtraRequestStream: {:?}", err);
 
-            if let Some(epitaph) = err.downcast_ref::<ZxStatus>() {
-                request_control_handle.shutdown_with_epitaph(*epitaph);
-            }
+                if let Some(epitaph) = err.downcast_ref::<ZxStatus>() {
+                    request_control_handle.shutdown_with_epitaph(*epitaph);
+                }
 
-            Err(err)
-        } else {
-            Ok(())
-        }
+                err
+            },
+        )
     }
 }
 
@@ -855,19 +853,17 @@ impl<T: Driver> ServeTo<DeviceTestRequestStream> for T {
             Result::<(), Error>::Ok(())
         };
 
-        if let Some(err) =
-            request_stream.err_into::<Error>().try_for_each_concurrent(None, closure).await.err()
-        {
-            fx_log_err!("Error serving DeviceTestRequestStream: {:?}", err);
+        request_stream.err_into::<Error>().try_for_each_concurrent(None, closure).await.map_err(
+            |err| {
+                fx_log_err!("Error serving DeviceTestRequestStream: {:?}", err);
 
-            if let Some(epitaph) = err.downcast_ref::<ZxStatus>() {
-                request_control_handle.shutdown_with_epitaph(*epitaph);
-            }
+                if let Some(epitaph) = err.downcast_ref::<ZxStatus>() {
+                    request_control_handle.shutdown_with_epitaph(*epitaph);
+                }
 
-            Err(err)
-        } else {
-            Ok(())
-        }
+                err
+            },
+        )
     }
 }
 
@@ -911,19 +907,17 @@ impl<T: Driver> ServeTo<DeviceRouteRequestStream> for T {
             Result::<(), Error>::Ok(())
         };
 
-        if let Some(err) =
-            request_stream.err_into::<Error>().try_for_each_concurrent(None, closure).await.err()
-        {
-            fx_log_err!("Error serving DeviceRouteRequestStream: {:?}", err);
+        request_stream.err_into::<Error>().try_for_each_concurrent(None, closure).await.map_err(
+            |err| {
+                fx_log_err!("Error serving DeviceRouteRequestStream: {:?}", err);
 
-            if let Some(epitaph) = err.downcast_ref::<ZxStatus>() {
-                request_control_handle.shutdown_with_epitaph(*epitaph);
-            }
+                if let Some(epitaph) = err.downcast_ref::<ZxStatus>() {
+                    request_control_handle.shutdown_with_epitaph(*epitaph);
+                }
 
-            Err(err)
-        } else {
-            Ok(())
-        }
+                err
+            },
+        )
     }
 }
 
@@ -956,19 +950,17 @@ impl<T: Driver> ServeTo<DeviceRouteExtraRequestStream> for T {
             Result::<(), Error>::Ok(())
         };
 
-        if let Some(err) =
-            request_stream.err_into::<Error>().try_for_each_concurrent(None, closure).await.err()
-        {
-            fx_log_err!("Error serving DeviceRouteExtraRequestStream: {:?}", err);
+        request_stream.err_into::<Error>().try_for_each_concurrent(None, closure).await.map_err(
+            |err| {
+                fx_log_err!("Error serving DeviceRouteExtraRequestStream: {:?}", err);
 
-            if let Some(epitaph) = err.downcast_ref::<ZxStatus>() {
-                request_control_handle.shutdown_with_epitaph(*epitaph);
-            }
+                if let Some(epitaph) = err.downcast_ref::<ZxStatus>() {
+                    request_control_handle.shutdown_with_epitaph(*epitaph);
+                }
 
-            Err(err)
-        } else {
-            Ok(())
-        }
+                err
+            },
+        )
     }
 }
 
@@ -990,19 +982,17 @@ impl<T: Driver> ServeTo<FactoryDeviceRequestStream> for T {
             Result::<(), Error>::Ok(())
         };
 
-        if let Some(err) =
-            request_stream.err_into::<Error>().try_for_each_concurrent(None, closure).await.err()
-        {
-            fx_log_err!("Error serving DeviceTestRequestStream: {:?}", err);
+        request_stream.err_into::<Error>().try_for_each_concurrent(None, closure).await.map_err(
+            |err| {
+                fx_log_err!("Error serving DeviceTestRequestStream: {:?}", err);
 
-            if let Some(epitaph) = err.downcast_ref::<ZxStatus>() {
-                request_control_handle.shutdown_with_epitaph(*epitaph);
-            }
+                if let Some(epitaph) = err.downcast_ref::<ZxStatus>() {
+                    request_control_handle.shutdown_with_epitaph(*epitaph);
+                }
 
-            Err(err)
-        } else {
-            Ok(())
-        }
+                err
+            },
+        )
     }
 }
 
@@ -1031,19 +1021,17 @@ impl<T: Driver> ServeTo<CountersRequestStream> for T {
             Result::<(), Error>::Ok(())
         };
 
-        if let Some(err) =
-            request_stream.err_into::<Error>().try_for_each_concurrent(None, closure).await.err()
-        {
-            fx_log_err!("Error serving CountersRequestStream: {:?}", err);
+        request_stream.err_into::<Error>().try_for_each_concurrent(None, closure).await.map_err(
+            |err| {
+                fx_log_err!("Error serving CountersRequestStream: {:?}", err);
 
-            if let Some(epitaph) = err.downcast_ref::<ZxStatus>() {
-                request_control_handle.shutdown_with_epitaph(*epitaph);
-            }
+                if let Some(epitaph) = err.downcast_ref::<ZxStatus>() {
+                    request_control_handle.shutdown_with_epitaph(*epitaph);
+                }
 
-            Err(err)
-        } else {
-            Ok(())
-        }
+                err
+            },
+        )
     }
 }
 
@@ -1065,19 +1053,17 @@ impl<T: Driver> ServeTo<LegacyJoiningRequestStream> for T {
             Result::<(), Error>::Ok(())
         };
 
-        if let Some(err) =
-            request_stream.err_into::<Error>().try_for_each_concurrent(None, closure).await.err()
-        {
-            fx_log_err!("Error serving LegacyJoiningRequestStream: {:?}", err);
+        request_stream.err_into::<Error>().try_for_each_concurrent(None, closure).await.map_err(
+            |err| {
+                fx_log_err!("Error serving LegacyJoiningRequestStream: {:?}", err);
 
-            if let Some(epitaph) = err.downcast_ref::<ZxStatus>() {
-                request_control_handle.shutdown_with_epitaph(*epitaph);
-            }
+                if let Some(epitaph) = err.downcast_ref::<ZxStatus>() {
+                    request_control_handle.shutdown_with_epitaph(*epitaph);
+                }
 
-            Err(err)
-        } else {
-            Ok(())
-        }
+                err
+            },
+        )
     }
 }
 
@@ -1113,19 +1099,17 @@ impl<T: Driver> ServeTo<DatasetRequestStream> for T {
             Result::<(), Error>::Ok(())
         };
 
-        if let Some(err) =
-            request_stream.err_into::<Error>().try_for_each_concurrent(None, closure).await.err()
-        {
-            fx_log_err!("Error serving DatasetRequestStream: {:?}", err);
+        request_stream.err_into::<Error>().try_for_each_concurrent(None, closure).await.map_err(
+            |err| {
+                fx_log_err!("Error serving DatasetRequestStream: {:?}", err);
 
-            if let Some(epitaph) = err.downcast_ref::<ZxStatus>() {
-                request_control_handle.shutdown_with_epitaph(*epitaph);
-            }
+                if let Some(epitaph) = err.downcast_ref::<ZxStatus>() {
+                    request_control_handle.shutdown_with_epitaph(*epitaph);
+                }
 
-            Err(err)
-        } else {
-            Ok(())
-        }
+                err
+            },
+        )
     }
 }
 
