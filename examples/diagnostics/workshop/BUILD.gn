@@ -119,7 +119,7 @@ fuchsia_package("profile_store_example") {
   ]
 }
 
-executable("test_bin") {
+executable("example_test_bin") {
   testonly = true
   output_name = "profile_store_example_unittests"
 
@@ -132,14 +132,11 @@ executable("test_bin") {
     ":lib",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
-    "//third_party/googletest:gmock",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }
 
 fuchsia_unittest_package("profile_store_example_unittests") {
-  deps = [ ":test_bin" ]
+  deps = [ ":example_test_bin" ]
   manifest = "meta/profile_store_example_unittests.cml"
 }
 

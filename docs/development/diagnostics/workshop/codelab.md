@@ -198,7 +198,111 @@ scratch using the flows below.
 
 ### Adding new unit tests
 
-<!-- TODO -->
+The code structure of unit tests is highly dependent on the runtime used. This section walks
+through the process of setting up new unit tests that verify the behavior of the ProfileStore
+C++ class.
+
+Create a new file in `examples/diagnostics/workshop/profile_store_unittest.cc` with these contents:
+
+```c++
+#include <lib/gtest/test_loop_fixture.h>
+
+#include <gtest/gtest.h>
+
+#include "fuchsia/examples/diagnostics/cpp/fidl.h"
+#include "lib/fidl/cpp/interface_ptr.h"
+#include "profile_store.h"
+
+class ProfileStoreTests : public gtest::TestLoopFixture {};
+
+TEST_F(ProfileStoreTests, SampleTest) {
+    ProfileStore store(dispatcher());
+    fidl::InterfacePtr<fuchsia::examples::diagnostics::ProfileStore> store_ptr;
+    store.AddBinding(store_ptr.NewRequest(dispatcher()));
+
+    store_ptr->Delete("my_key", [&](bool successful) { EXPECT_FALSE(successful); });
+    RunLoopUntilIdle();
+}
+```
+
+This sets up a minimal unit test which creates a ProfileStore, and creates a client to interact
+with it under an asynchronous test loop.
+Next, you will create a component manifest for the test, which defines how to run the test.
+Create a new component manifest for the test in
+`examples/diagnostics/workshop/meta/profile_store_unittests.cm` with the following contents:
+
+```
+{
+    include: [
+        // Needed for gtest runners
+        "//src/sys/test_runners/gtest/default.shard.cml",
+        // Needed so that logs are created
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/profile_store_unittests",
+    },
+    use: [
+        {
+            // ProfileStore uses /data to store profiles. We'll use the tmp
+            // storage provided to the test.
+            storage: "tmp",
+            path: "/data",
+        },
+    ],
+}
+```
+
+Finally, add new build rules to `examples/diagnostics/workshop/BUILD.gn`:
+
+```
+
+# Builds the test binary.
+executable("test_bin") {
+  testonly = true
+  output_name = "profile_store_unittests"
+
+  sources = [
+    "profile_store_unittest.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+  ]
+}
+
+# Creates a test component and test package.
+fuchsia_unittest_package("profile_store_unittests") {
+  deps = [ ":test_bin" ]
+  manifest = "meta/profile_store_unittests.cml"
+}
+
+## Update the existing group("tests") to include the new package as a dep
+group("tests") {
+  testonly = true
+  deps = [
+    # new dependency
+    ":profile_store_unittests",
+
+    ":profile_store_example_unittests",
+    "example-integration:tests",
+  ]
+}
+```
+
+Next, verify that the test builds and runs.
+
+```bash
+# Build is needed the first time so that fx test becomes aware of the new test.
+# For subsequent test executions, fx build is automatically invoked.
+fx build examples/diagnostics/workshop:tests
+
+fx test profile_store_unittests
+```
+
+You are now ready to modify the test code to verify behavior.
 
 ### Adding a new integration test
 
@@ -241,6 +345,7 @@ Once the test runs, you are ready to modify the boilerplate to write useful test
 [example-unittests]: /examples/diagnostics/workshop/profile_unittest_example.cc
 [inspect-codelab]: /docs/development/diagnostics/inspect/codelab/codelab.md
 [inspect-quickstart]: /docs/development/diagnostics/inspect/quickstart.md
+[gtest]: https://github.com/google/googletest
 [profile-store]: /examples/diagnostics/workshop/fidl/profile_store.test.fidl
 [profile-store-build]: /examples/diagnostics/workshop/BUILD.gn
 [realm-builder]: /docs/development/testing/components/realm_builder.md
