@@ -7,6 +7,7 @@
 //! Provides utilities for Netstack integration tests.
 
 pub mod constants;
+pub mod devices;
 pub mod interfaces;
 pub mod ping;
 #[macro_use]

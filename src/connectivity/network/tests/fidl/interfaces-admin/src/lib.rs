@@ -12,6 +12,7 @@ use net_declare::{fidl_ip, fidl_mac, fidl_subnet, std_ip_v6, std_socket_addr};
 use net_types::ip::IpAddress as _;
 use netemul::RealmUdpSocket as _;
 use netstack_testing_common::{
+    devices::create_tun_device,
     interfaces,
     realms::{Netstack, Netstack2, NetstackVersion, TestRealmExt as _, TestSandboxExt as _},
 };
@@ -19,26 +20,6 @@ use netstack_testing_macros::variants_test;
 use std::collections::{HashMap, HashSet};
 use std::convert::TryInto as _;
 use test_case::test_case;
-
-fn create_tun_device() -> (
-    fidl_fuchsia_net_tun::DeviceProxy,
-    fidl::endpoints::ClientEnd<fidl_fuchsia_hardware_network::DeviceMarker>,
-) {
-    let tun_ctl =
-        fuchsia_component::client::connect_to_protocol::<fidl_fuchsia_net_tun::ControlMarker>()
-            .expect("connect to protocol");
-    let (tun_dev, tun_dev_server_end) =
-        fidl::endpoints::create_proxy::<fidl_fuchsia_net_tun::DeviceMarker>()
-            .expect("create proxy");
-    let () = tun_ctl
-        .create_device(fidl_fuchsia_net_tun::DeviceConfig::EMPTY, tun_dev_server_end)
-        .expect("create tun device");
-    let (netdevice_client_end, netdevice_server_end) =
-        fidl::endpoints::create_endpoints::<fidl_fuchsia_hardware_network::DeviceMarker>()
-            .expect("create endpoints");
-    let () = tun_dev.get_device(netdevice_server_end).expect("get device");
-    (tun_dev, netdevice_client_end)
-}
 
 #[variants_test]
 async fn address_deprecation<E: netemul::Endpoint>(name: &str) {

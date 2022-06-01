@@ -5,7 +5,10 @@
 #![cfg(test)]
 
 use futures::{FutureExt as _, TryStreamExt as _};
-use netstack_testing_common::realms::{Netstack2, TestRealmExt as _, TestSandboxExt as _};
+use netstack_testing_common::{
+    devices::create_tun_device,
+    realms::{Netstack2, TestRealmExt as _, TestSandboxExt as _},
+};
 
 async fn get_loopback_id(realm: &netemul::TestRealm<'_>) -> u64 {
     let fidl_fuchsia_net_interfaces_ext::Properties {
@@ -46,26 +49,12 @@ async fn get_admin_unknown() {
 
 #[fuchsia::test]
 async fn get_mac() {
-    // fuchsia.net.tun is not exposed by netemul realms.
-    let tun_control =
-        fuchsia_component::client::connect_to_protocol::<fidl_fuchsia_net_tun::ControlMarker>()
-            .expect("connect to protocol");
-
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let realm = sandbox.create_netstack_realm::<Netstack2, _>("get_mac").expect("create realm");
 
     let loopback_id = get_loopback_id(&realm).await;
 
-    let (tun_device, server_end) =
-        fidl::endpoints::create_proxy::<fidl_fuchsia_net_tun::DeviceMarker>()
-            .expect("create proxy");
-    let () = tun_control
-        .create_device(fidl_fuchsia_net_tun::DeviceConfig::EMPTY, server_end)
-        .expect("create tun device");
-    let (network_device, server_end) =
-        fidl::endpoints::create_endpoints::<fidl_fuchsia_hardware_network::DeviceMarker>()
-            .expect("create endpoints");
-    let () = tun_device.get_device(server_end).expect("get device");
+    let (tun_device, network_device) = create_tun_device();
 
     let (admin_device_control, server_end) =
         fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces_admin::DeviceControlMarker>()

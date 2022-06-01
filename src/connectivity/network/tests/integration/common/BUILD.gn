@@ -11,6 +11,7 @@ rustc_library("netstack_testing_common") {
     ":client_includes",
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
+    "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network-rustc",
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//sdk/fidl/fuchsia.net.debug:fuchsia.net.debug-rustc",
     "//sdk/fidl/fuchsia.net.dhcp:fuchsia.net.dhcp-rustc",
@@ -22,6 +23,7 @@ rustc_library("netstack_testing_common") {
     "//sdk/fidl/fuchsia.net.neighbor:fuchsia.net.neighbor-rustc",
     "//sdk/fidl/fuchsia.net.routes:fuchsia.net.routes-rustc",
     "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
+    "//sdk/fidl/fuchsia.net.tun:fuchsia.net.tun-rustc",
     "//sdk/fidl/fuchsia.net.virtualization:fuchsia.net.virtualization-rustc",
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
     "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket-rustc",
@@ -56,6 +58,7 @@ rustc_library("netstack_testing_common") {
   ]
   sources = [
     "src/constants.rs",
+    "src/devices.rs",
     "src/interfaces.rs",
     "src/lib.rs",
     "src/ping.rs",
