@@ -685,7 +685,7 @@ impl ProjectSampler {
             Some(indexes) => indexes.to_vec(),
         };
         // We cloned the selector indexes. Whatever we do in this function must not invalidate them.
-        let mut selectors_changed = false;
+        let mut snapshot_outcome = SnapshotOutcome::SelectorsUnchanged;
         let mut events_to_log = vec![];
         for index_info in selector_indexes.iter() {
             let SelectorIndexes { metric_index, selector_index } = index_info;
@@ -732,30 +732,26 @@ impl ProjectSampler {
                             }
                             events_to_log.push(event);
                         }
-                        selectors_changed = selectors_changed
-                            || self.update_metric_selectors(index_info)
-                                == SnapshotOutcome::SelectorsChanged;
+                        if self.update_metric_selectors(index_info) {
+                            snapshot_outcome = SnapshotOutcome::SelectorsChanged;
+                        }
                     }
                     too_many => warn!(%too_many, %selector_string, "Too many matches for selector"),
                 }
             }
         }
-        Ok((
-            match selectors_changed {
-                true => SnapshotOutcome::SelectorsChanged,
-                false => SnapshotOutcome::SelectorsUnchanged,
-            },
-            events_to_log,
-        ))
+        Ok((snapshot_outcome, events_to_log))
     }
 
-    fn update_metric_selectors(&mut self, index_info: &SelectorIndexes) -> SnapshotOutcome {
+    /// Handle selectors that may be removed (e.g. if upload_once is set). Return true if the
+    /// selector was changed/removed, false otherwise.
+    fn update_metric_selectors(&mut self, index_info: &SelectorIndexes) -> bool {
         let metric = &mut self.metrics[index_info.metric_index];
         if let Some(true) = metric.upload_once {
             for selector in metric.selectors.iter_mut() {
                 *selector = None;
             }
-            return SnapshotOutcome::SelectorsChanged;
+            return true;
         }
         let mut deleted = false;
         for (index, selector) in metric.selectors.iter_mut().enumerate() {
@@ -764,10 +760,7 @@ impl ProjectSampler {
                 deleted = true;
             }
         }
-        match deleted {
-            true => SnapshotOutcome::SelectorsChanged,
-            false => SnapshotOutcome::SelectorsUnchanged,
-        }
+        return deleted;
     }
 
     async fn prepare_sample(
@@ -1331,6 +1324,66 @@ mod tests {
             // This selector will not be found and removed from the map, resulting in SelectorsUnchanged.
             Ok((SnapshotOutcome::SelectorsUnchanged, _events)) => (),
             _ => panic!("Expecting SelectorsUnchanged from process_component_data."),
+        }
+    }
+
+    /// Test removal of selectors marked with upload_once.
+    #[fuchsia::test]
+    fn test_upload_once() {
+        let hierarchy = hierarchy! {
+            root: {
+                value_one: 0,
+                value_two: 1,
+            }
+        };
+
+        let mut sampler = ProjectSampler {
+            archive_reader: ArchiveReader::new(),
+            moniker_to_selector_map: HashMap::new(),
+            metrics: vec![],
+            metric_cache: HashMap::new(),
+            cobalt_logger: None,
+            metrics_logger: None,
+            poll_rate_sec: 3600,
+            project_sampler_stats: Arc::new(ProjectSamplerStats::new()),
+        };
+        sampler.metrics.push(MetricConfig {
+            selectors: SelectorList(vec![sampler_config::parse_selector_for_test(
+                "my/component:root:value_one",
+            )]),
+            metric_id: 1,
+            metric_type: DataType::Integer,
+            event_codes: Vec::new(),
+            upload_once: Some(true),
+            use_legacy_cobalt: Some(false),
+        });
+        sampler.metrics.push(MetricConfig {
+            selectors: SelectorList(vec![sampler_config::parse_selector_for_test(
+                "my/component:root:value_two",
+            )]),
+            metric_id: 2,
+            metric_type: DataType::Integer,
+            event_codes: Vec::new(),
+            upload_once: Some(true),
+            use_legacy_cobalt: Some(false),
+        });
+        sampler.rebuild_selector_data_structures();
+
+        // Both selectors should be found and removed from the map.
+        match executor::block_on(sampler.process_component_data(
+            &hierarchy,
+            "a_filename",
+            &"my/component".to_string(),
+        )) {
+            Ok((SnapshotOutcome::SelectorsChanged, _events)) => (),
+            _ => panic!("Expecting SelectorsChanged from process_component_data."),
+        }
+
+        let selector_indices = sampler.moniker_to_selector_map.get("my/component").unwrap();
+        for index_info in selector_indices {
+            let metric = &sampler.metrics[index_info.metric_index];
+            let selector = &metric.selectors[index_info.selector_index];
+            assert!(selector.is_none());
         }
     }
 
