@@ -111,7 +111,6 @@ TEST(CppThreadTest, CreateAndVerifyThreadHandle) {
 
 TEST(C11ThreadTest, DetachedThreadKeepsRunning) {
   constexpr zx::duration kWaitEachIteration = zx::usec(10);
-  constexpr zx::duration kWaitMax = zx::usec(20000);
 
   struct Args {
     std::atomic<bool> keep_running;
@@ -139,7 +138,7 @@ TEST(C11ThreadTest, DetachedThreadKeepsRunning) {
   // observe the thread is still operating
   int recorded_thread_iterations = args.thread_iterations.load();
   zx::duration time_waited;
-  while (recorded_thread_iterations == args.thread_iterations.load() && time_waited < kWaitMax) {
+  while (recorded_thread_iterations == args.thread_iterations.load()) {
     zx::nanosleep(zx::deadline_after(kWaitEachIteration));
     time_waited += kWaitEachIteration;
   }
@@ -148,7 +147,7 @@ TEST(C11ThreadTest, DetachedThreadKeepsRunning) {
   args.keep_running.store(false);
 
   time_waited = zx::duration();
-  while (!args.thread_done.load() && time_waited < kWaitMax) {
+  while (!args.thread_done.load()) {
     zx::nanosleep(zx::deadline_after(kWaitEachIteration));
     time_waited += kWaitEachIteration;
   }
