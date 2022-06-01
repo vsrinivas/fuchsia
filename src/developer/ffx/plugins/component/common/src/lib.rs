@@ -7,7 +7,7 @@ use {
     errors::{ffx_bail, ffx_error},
     fidl::endpoints::create_proxy,
     fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
-    fuchsia_url::pkg_url::PkgUrl,
+    fuchsia_url::AbsoluteComponentUrl,
     fuchsia_zircon_status::Status,
 };
 
@@ -55,13 +55,13 @@ pub async fn connect_to_lifecycle_controller(
 /// Verifies that `url` can be parsed as a fuchsia-pkg CM URL
 /// Returns the name of the component manifest, if the parsing was successful.
 pub fn verify_fuchsia_pkg_cm_url(url: &str) -> Result<String> {
-    let url = match PkgUrl::parse(url) {
+    let url = match AbsoluteComponentUrl::parse(url) {
         Ok(url) => url,
         Err(e) => ffx_bail!("URL parsing error: {:?}", e),
     };
 
-    let resource = url.resource().ok_or(ffx_error!("URL does not contain a path to a manifest"))?;
-    let manifest = resource
+    let manifest = url
+        .resource()
         .split('/')
         .last()
         .ok_or(ffx_error!("Could not extract manifest filename from URL"))?;
