@@ -142,7 +142,6 @@ class Linter {
   const re2::RE2 kDisallowedLibraryComponentRegex;
 
   const std::set<std::string> kPermittedLibraryPrefixes;
-  const std::set<std::string> kStopWords;
 
   // Stores the stack of type contexts (roughly analogous to the NamingContext
   // in flat/name.h, but storing the type rather than name), so that it is
