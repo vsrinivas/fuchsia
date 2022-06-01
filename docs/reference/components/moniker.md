@@ -38,8 +38,8 @@ with the children of `alice` labeled with their child monikers.
 
 Examples:
 
-- `carol:0`: child "carol" (instance id 0)
-- `support:dan:1`: child "dan" (instance id 1) in collection "support"
+- `carol:0`: child `carol` (instance ID `0`)
+- `support:dan:1`: child `dan` (instance ID `1`) in collection `support`
 
 ## Relative Monikers {#relative}
 
@@ -83,9 +83,9 @@ children: `dan` and `jan`.
 Examples:
 
 - `.`: self - no traversal needed
-- `./carol:2`: a child - traverse down `carol:2`
-- `./carol:2/sandy:1`: a grandchild - traverse down `carol:2` then down `sandy:1`
-- `.\alice:2/bob:0`: a cousin - traverse up `alice:2` then down `bob:0`
+- `./carol:0`: a child - traverse down `carol:0`
+- `./carol:0/sandy:0`: a grandchild - traverse down `carol:0` then down `sandy:0`
+- `.\alice:0/bob:0`: a cousin - traverse up `alice:0` then down `bob:0`
 - `./support:dan:1`: a child - traverse down into collection child `support:dan:1`
 
 ## Absolute Monikers {#absolute}
@@ -110,8 +110,8 @@ two children: `dan` and `jan`.
 Examples:
 
 - `/`: the root itself (it has no name because it has no parent)
-- `/alice:2/support:dan:1`: from root traverse down `alice:2` then down `support:dan:1`
-- `/alice:2/carol:1`: from root traverse down `alice:2` then down `carol:1`
+- `/alice:0/support:dan:0`: from root traverse down `alice:0` then down `support:dan:0`
+- `/alice:0/carol:0`: from root traverse down `alice:0` then down `carol:0`
 
 [glossary.moniker]: /docs/glossary/README.md#moniker
 [cml-reference]: https://fuchsia.dev/reference/cml
