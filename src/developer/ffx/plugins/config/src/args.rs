@@ -58,7 +58,6 @@ pub struct SetCommand {
 pub enum MappingMode {
     Raw,
     Substitute,
-    SubstituteAndFlatten,
 }
 
 #[derive(FromArgs, Debug, PartialEq)]
@@ -73,9 +72,14 @@ pub struct GetCommand {
     /// name of the config property
     pub name: Option<String>,
 
-    #[argh(option, from_str_fn(parse_mapping_mode), default = "MappingMode::Raw", short = 'p')]
-    /// how to process results. Possible values are "raw", "sub", and "sub_flat".  Defaults
-    /// to "raw". Currently only supported if a name is given.
+    #[argh(
+        option,
+        from_str_fn(parse_mapping_mode),
+        default = "MappingMode::Substitute",
+        short = 'p'
+    )]
+    /// how to process results. Possible values are "r/raw", and "s/sub/substitute".  Defaults
+    /// to "substitute". Currently only supported if a name is given.
     pub process: MappingMode,
 
     #[argh(option, from_str_fn(parse_mode), default = "SelectMode::First", short = 's')]
@@ -199,12 +203,7 @@ fn parse_mapping_mode(value: &str) -> Result<MappingMode, String> {
     match value {
         "r" | "raw" => Ok(MappingMode::Raw),
         "s" | "sub" | "substitute" => Ok(MappingMode::Substitute),
-        "sf" | "sub_flat" | "sub_and_flat" | "substitute_and_flatten" => {
-            Ok(MappingMode::SubstituteAndFlatten)
-        }
-        _ => Err(String::from(
-            "Unrecognized value. Possible values are \"raw\",\"sub\",\"sub_and_flat\".",
-        )),
+        _ => Err(String::from("Unrecognized value. Possible values are \"raw\", \"sub\".")),
     }
 }
 
@@ -322,7 +321,7 @@ mod tests {
                 ConfigCommand::from_args(CMD_NAME, args),
                 Ok(ConfigCommand {
                     sub: SubCommand::Get(GetCommand {
-                        process: MappingMode::Raw,
+                        process: MappingMode::Substitute,
                         select: SelectMode::First,
                         name: Some(expected_key.to_string()),
                         build_dir: expected_build_dir,

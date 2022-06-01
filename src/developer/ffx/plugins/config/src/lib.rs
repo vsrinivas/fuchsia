@@ -78,10 +78,6 @@ async fn exec_get<W: Write + Sync>(get_cmd: &GetCommand, writer: W) -> Result<()
                 let value: std::result::Result<Vec<Value>, _> = get(query).await;
                 output_array(writer, value)
             }
-            MappingMode::SubstituteAndFlatten => {
-                let value: Option<Value> = get(query).await?;
-                output(writer, value)
-            }
         },
         None => print_config(writer, &get_cmd.build_dir).await,
     }
@@ -144,7 +140,7 @@ fn exec_env_set<W: Write + Sync>(
             Some(v) => *v = s.file.to_string(),
             None => env.global = Some(s.file.to_string()),
         },
-        _ => ffx_bail!("This configuration is not stored in the enivronment."),
+        _ => ffx_bail!("This configuration is not stored in the environment."),
     }
     env.save(&env_file)
 }
