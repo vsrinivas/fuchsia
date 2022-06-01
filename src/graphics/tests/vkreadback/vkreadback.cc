@@ -278,7 +278,9 @@ bool VkReadbackTest::InitImage() {
   vk::DeviceSize allocation_size = memory_reqs.size + bind_offset_;
   uint32_t memory_type = FindReadableMemoryType(allocation_size, memory_reqs.memoryTypeBits);
   if (memory_type == VK_MAX_MEMORY_TYPES) {
-    RTN_MSG(false, "Can't find host mappable memory type for image.\n");
+    ADD_FAILURE()
+        << "Memory requirements for linear images must always include a host-coherent memory type";
+    return false;
   }
 
   vk::ExportMemoryAllocateInfoKHR export_info;
