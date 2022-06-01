@@ -34,6 +34,10 @@ pub struct RunComponentCommand {
     #[argh(switch, short = 'r')]
     /// destroy and recreate the component instance if it already exists
     pub recreate: bool,
+
+    #[argh(switch, short = 'f')]
+    /// start printing logs from the started component after it has started
+    pub follow_logs: bool,
 }
 
 #[cfg(test)]
@@ -51,7 +55,18 @@ mod tests {
             Ok(RunComponentCommand {
                 url: url.to_string(),
                 name: Some(name.to_string()),
-                recreate: true
+                recreate: true,
+                follow_logs: false,
+            })
+        );
+        let args = &[url, "--name", name, "--recreate", "--follow-logs"];
+        assert_eq!(
+            RunComponentCommand::from_args(CMD_NAME, args),
+            Ok(RunComponentCommand {
+                url: url.to_string(),
+                name: Some(name.to_string()),
+                recreate: true,
+                follow_logs: true,
             })
         )
     }

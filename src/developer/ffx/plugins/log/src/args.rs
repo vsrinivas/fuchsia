@@ -166,6 +166,32 @@ pub struct LogCommand {
     pub select: Vec<LogInterestSelector>,
 }
 
+impl Default for LogCommand {
+    fn default() -> Self {
+        LogCommand {
+            filter: vec![],
+            exclude: vec![],
+            tags: vec![],
+            exclude_tags: vec![],
+            hide_tags: false,
+            hide_file: false,
+            clock: TimeFormat::Monotonic,
+            no_color: false,
+            kernel: false,
+            severity: Severity::Info,
+            show_metadata: false,
+            no_symbols: false,
+            since: None,
+            since_monotonic: None,
+            until: None,
+            until_monotonic: None,
+            sub_command: None,
+            select: vec![],
+            show_full_moniker: false,
+        }
+    }
+}
+
 #[derive(FromArgs, Clone, PartialEq, Debug)]
 #[argh(subcommand)]
 pub enum LogSubCommand {

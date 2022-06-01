@@ -8,7 +8,10 @@ use {
     ffx_component::{connect_to_lifecycle_controller, verify_fuchsia_pkg_cm_url},
     ffx_component_run_args::RunComponentCommand,
     ffx_core::ffx_plugin,
+    ffx_log::{log_impl, LogOpts},
+    ffx_log_args::LogCommand,
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
+    fidl_fuchsia_developer_ffx::DiagnosticsProxy,
     fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_sys2 as fsys,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
 };
@@ -18,30 +21,67 @@ const COLLECTION_NAME: &'static str = "ffx-laboratory";
 static LIFECYCLE_ERROR_HELP: &'static str = "To learn more, see \
 https://fuchsia.dev/go/components/run-errors";
 
-#[ffx_plugin]
-pub async fn run(rcs_proxy: rc::RemoteControlProxy, cmd: RunComponentCommand) -> Result<()> {
-    let lifecycle_controller = connect_to_lifecycle_controller(&rcs_proxy).await?;
-    run_impl(lifecycle_controller, cmd.url, cmd.name, cmd.recreate, &mut std::io::stdout()).await
-}
-
-async fn run_impl<W: std::io::Write>(
-    lifecycle_controller: fsys::LifecycleControllerProxy,
-    url: String,
-    name: Option<String>,
-    recreate: bool,
-    writer: &mut W,
-) -> Result<()> {
+fn get_component_name(url: &String, name: &Option<String>) -> Result<String> {
     let manifest_name = verify_fuchsia_pkg_cm_url(url.as_str())?;
 
     let name = if let Some(name) = name {
         // Use a custom name provided in the command line
-        name
+        name.clone()
     } else {
         // Attempt to use the manifest name as the instance name
         manifest_name
     };
 
-    let moniker = format!("/core/{}:{}", COLLECTION_NAME, name);
+    Ok(name)
+}
+
+#[ffx_plugin(DiagnosticsProxy = "daemon::protocol")]
+pub async fn run(
+    diagnostics_proxy: DiagnosticsProxy,
+    rcs_proxy: rc::RemoteControlProxy,
+    cmd: RunComponentCommand,
+) -> Result<()> {
+    let component_name = get_component_name(&cmd.url, &cmd.name)?;
+    let moniker = format!("/core/{}:{}", COLLECTION_NAME, &component_name);
+    let log_filter = format!("core/{}:{}", COLLECTION_NAME, &component_name);
+
+    // TODO(fxb/100844): Intgrate with Started event to get a start time for the logs.
+    let log_cmd = LogCommand { filter: vec![log_filter], ..LogCommand::default() };
+
+    let lifecycle_controller = connect_to_lifecycle_controller(&rcs_proxy).await?;
+    run_impl(
+        lifecycle_controller,
+        cmd.url,
+        component_name,
+        moniker,
+        cmd.recreate,
+        &mut std::io::stdout(),
+    )
+    .await?;
+
+    if cmd.follow_logs {
+        log_impl(
+            diagnostics_proxy,
+            Some(rcs_proxy),
+            None,
+            log_cmd,
+            &mut std::io::stdout(),
+            LogOpts::default(),
+        )
+        .await?;
+    }
+
+    Ok(())
+}
+
+async fn run_impl<W: std::io::Write>(
+    lifecycle_controller: fsys::LifecycleControllerProxy,
+    url: String,
+    name: String,
+    moniker: String,
+    recreate: bool,
+    writer: &mut W,
+) -> Result<()> {
     let moniker = AbsoluteMoniker::parse_str(&moniker)
         .map_err(|e| ffx_error!("Moniker could not be parsed: {}", e))?;
 
@@ -301,10 +341,14 @@ mod test {
             "fuchsia-pkg://fuchsia.com/test#meta/test.cm",
             "./core/ffx-laboratory:test",
         );
+        let component_name =
+            get_component_name(&"fuchsia-pkg://fuchsia.com/test#meta/test.cm".to_string(), &None)?;
+        let moniker = format!("/core/{}:{}", COLLECTION_NAME, &component_name);
         let response = run_impl(
             lifecycle_controller,
             "fuchsia-pkg://fuchsia.com/test#meta/test.cm".to_string(),
-            None,
+            component_name,
+            moniker,
             false,
             &mut output,
         )
@@ -323,10 +367,16 @@ mod test {
             "fuchsia-pkg://fuchsia.com/test#meta/test.cm",
             "./core/ffx-laboratory:foobar",
         );
+        let component_name = get_component_name(
+            &"fuchsia-pkg://fuchsia.com/test#meta/test.cm".to_string(),
+            &Some("foobar".to_string()),
+        )?;
+        let moniker = format!("/core/{}:{}", COLLECTION_NAME, &component_name);
         let response = run_impl(
             lifecycle_controller,
             "fuchsia-pkg://fuchsia.com/test#meta/test.cm".to_string(),
-            Some("foobar".to_string()),
+            component_name,
+            moniker,
             false,
             &mut output,
         )
@@ -344,10 +394,14 @@ mod test {
             "test",
             "fuchsia-pkg://fuchsia.com/test#meta/test.cm",
         );
+        let component_name =
+            get_component_name(&"fuchsia-pkg://fuchsia.com/test#meta/test.cm".to_string(), &None)?;
+        let moniker = format!("/core/{}:{}", COLLECTION_NAME, &component_name);
         let response = run_impl(
             lifecycle_controller,
             "fuchsia-pkg://fuchsia.com/test#meta/test.cm".to_string(),
-            None,
+            component_name,
+            moniker,
             false,
             &mut output,
         )
@@ -366,10 +420,14 @@ mod test {
             "fuchsia-pkg://fuchsia.com/test#meta/test.cm",
             "./core/ffx-laboratory:test",
         );
+        let component_name =
+            get_component_name(&"fuchsia-pkg://fuchsia.com/test#meta/test.cm".to_string(), &None)?;
+        let moniker = format!("/core/{}:{}", COLLECTION_NAME, &component_name);
         let response = run_impl(
             lifecycle_controller,
             "fuchsia-pkg://fuchsia.com/test#meta/test.cm".to_string(),
-            None,
+            component_name,
+            moniker,
             true,
             &mut output,
         )
