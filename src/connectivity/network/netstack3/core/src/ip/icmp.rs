@@ -4,7 +4,6 @@
 
 //! The Internet Control Message Protocol (ICMP).
 
-use alloc::vec::Vec;
 use core::{convert::TryInto as _, fmt::Debug};
 
 use log::{debug, error, trace};
@@ -48,13 +47,13 @@ use crate::{
         gmp::mld::MldPacketHandler,
         path_mtu::PmtuHandler,
         socket::{
-            BufferIpSocketHandler, IpSock, IpSockCreationError, IpSockSendError, IpSockUpdate,
-            IpSocket, IpSocketHandler, UnroutableBehavior,
+            BufferIpSocketHandler, IpSock, IpSockCreationError, IpSockSendError, IpSocket,
+            IpSocketHandler,
         },
         BufferIpTransportContext, IpDeviceIdContext, IpExt, IpTransportContext,
         TransportReceiveError, IPV6_DEFAULT_SUBNET,
     },
-    socket::{ConnSocketEntry, ConnSocketMap, Socket},
+    socket::{ConnSocketEntry, ConnSocketMap},
     BlanketCoreContext, BufferDispatcher, Ctx, EventDispatcher,
 };
 
@@ -311,44 +310,6 @@ impl<I: Ip> IdMapCollectionKey for IcmpConnId<I> {
     fn get_id(&self) -> usize {
         let Self(id, _marker) = *self;
         id
-    }
-}
-
-/// Apply an update to all IPv4 sockets that this module is responsible for
-/// - namely, those contained in ICMPv4 sockets.
-pub(super) fn update_all_ipv4_sockets<SC: InnerIcmpv4Context, C>(
-    sync_ctx: &mut SC,
-    _ctx: &mut C,
-    update: IpSockUpdate<Ipv4>,
-) {
-    let (state, meta) = sync_ctx.get_state_and_update_meta();
-    // We have to collect into a `Vec` here because the iterator borrows `ctx`,
-    // which we need mutable access to in order to report the closures.
-    let closed_conns = state
-        .conns
-        .update_retain(|conn, _addr| conn.ip.apply_update(&update, meta))
-        .collect::<Vec<_>>();
-    for (id, _entry, err) in closed_conns {
-        sync_ctx.close_icmp_connection(IcmpConnId::new(id), err);
-    }
-}
-
-/// Apply an update to all IPv6 sockets that this module is responsible for
-/// - namely, those contained in ICMPv6 sockets.
-pub(super) fn update_all_ipv6_sockets<SC: InnerIcmpv6Context, C>(
-    sync_ctx: &mut SC,
-    _ctx: &mut C,
-    update: IpSockUpdate<Ipv6>,
-) {
-    let (state, meta) = sync_ctx.get_state_and_update_meta();
-    // We have to collect into a `Vec` here because the iterator borrows `ctx`,
-    // which we need mutable access to in order to report the closures.
-    let closed_conns = state
-        .conns
-        .update_retain(|conn, _addr| conn.ip.apply_update(&update, meta))
-        .collect::<Vec<_>>();
-    for (id, _entry, err) in closed_conns {
-        sync_ctx.close_icmp_connection(IcmpConnId::new(id), err);
     }
 }
 
@@ -2708,14 +2669,7 @@ fn connect_icmpv4_inner<SC: InnerIcmpv4Context, C>(
     remote_addr: SpecifiedAddr<Ipv4Addr>,
     icmp_id: u16,
 ) -> Result<IcmpConnId<Ipv4>, IcmpSockCreationError> {
-    let ip = sync_ctx.new_ip_socket(
-        None,
-        local_addr,
-        remote_addr,
-        Ipv4Proto::Icmp,
-        UnroutableBehavior::Close,
-        None,
-    )?;
+    let ip = sync_ctx.new_ip_socket(None, local_addr, remote_addr, Ipv4Proto::Icmp, None)?;
     let IcmpState { unbound, conns, error_send_bucket: _ } = sync_ctx.get_state_mut();
     Ok(connect_icmp_inner(unbound, conns, id, remote_addr, icmp_id, ip)?)
 }
@@ -2753,14 +2707,7 @@ fn connect_icmpv6_inner<SC: InnerIcmpv6Context, C>(
     remote_addr: SpecifiedAddr<Ipv6Addr>,
     icmp_id: u16,
 ) -> Result<IcmpConnId<Ipv6>, IcmpSockCreationError> {
-    let ip = sync_ctx.new_ip_socket(
-        None,
-        local_addr,
-        remote_addr,
-        Ipv6Proto::Icmpv6,
-        UnroutableBehavior::Close,
-        None,
-    )?;
+    let ip = sync_ctx.new_ip_socket(None, local_addr, remote_addr, Ipv6Proto::Icmpv6, None)?;
     let IcmpState { unbound, conns, error_send_bucket: _ } = sync_ctx.get_state_mut();
     Ok(connect_icmp_inner(unbound, conns, id, remote_addr, icmp_id, ip)?)
 }
@@ -2783,7 +2730,7 @@ fn connect_icmp_inner<I: IcmpIpExt + IpExt, S: IpSocket<I>>(
 
 #[cfg(test)]
 mod tests {
-    use alloc::{format, vec};
+    use alloc::{format, vec, vec::Vec};
     use core::{convert::TryInto, fmt::Debug, num::NonZeroU16, time::Duration};
 
     use net_types::ip::{AddrSubnet, Ip, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Subnet};

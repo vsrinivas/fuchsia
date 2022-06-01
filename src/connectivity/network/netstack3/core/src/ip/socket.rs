@@ -7,7 +7,6 @@
 use alloc::vec::Vec;
 use core::cmp::Ordering;
 use core::convert::Infallible;
-use core::marker::PhantomData;
 use core::num::NonZeroU8;
 
 use net_types::ip::{Ip, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
@@ -20,15 +19,13 @@ use crate::{
     context::{CounterContext, InstantContext, RngContext},
     ip::{
         device::state::{IpDeviceStateIpExt, Ipv6AddressEntry},
-        forwarding::{Destination, ForwardingTable},
+        forwarding::Destination,
         IpDeviceIdContext, IpExt, SendIpPacketMeta,
     },
-    socket::Socket,
-    BlanketCoreContext, Ctx, EventDispatcher,
 };
 
 /// A socket identifying a connection between a local and remote IP host.
-pub(crate) trait IpSocket<I: Ip>: Socket<UpdateError = IpSockCreationError> {
+pub(crate) trait IpSocket<I: Ip> {
     /// Get the local IP address.
     fn local_ip(&self) -> &SpecifiedAddr<I::Addr>;
 
@@ -56,8 +53,7 @@ pub trait IpSocketHandler<I: IpExt>: IpDeviceIdContext<I> {
     ///
     /// `new_ip_socket` returns an error if no route to the remote was found in
     /// the forwarding table or if the given local IP address is not valid for
-    /// the found route. Currently, this is true regardless of the value of
-    /// `unroutable_behavior`. Eventually, this will be changed.
+    /// the found route.
     ///
     /// The builder may be used to override certain default parameters. Passing
     /// `None` for the `builder` parameter is equivalent to passing
@@ -68,7 +64,6 @@ pub trait IpSocketHandler<I: IpExt>: IpDeviceIdContext<I> {
         local_ip: Option<SpecifiedAddr<I::Addr>>,
         remote_ip: SpecifiedAddr<I::Addr>,
         proto: I::Proto,
-        unroutable_behavior: UnroutableBehavior,
         builder: Option<Self::Builder>,
     ) -> Result<IpSock<I, Self::DeviceId>, IpSockCreationError>;
 }
@@ -169,14 +164,7 @@ pub trait BufferIpSocketHandler<I: IpExt, B: BufferMut>: IpSocketHandler<I> {
     ) -> Result<(), (S, IpSockCreateAndSendError)> {
         // We use a `match` instead of `map_err` because `map_err` would require passing a closure
         // which takes ownership of `get_body_from_src_ip`, which we also use in the success case.
-        match self.new_ip_socket(
-            device,
-            local_ip,
-            remote_ip,
-            proto,
-            UnroutableBehavior::Close,
-            builder,
-        ) {
+        match self.new_ip_socket(device, local_ip, remote_ip, proto, builder) {
             Err(err) => Err((get_body_from_src_ip(I::LOOPBACK_ADDRESS), err.into())),
             Ok(tmp) => self
                 .send_ip_packet(&tmp, get_body_from_src_ip(*tmp.local_ip()), mtu)
@@ -188,32 +176,6 @@ pub trait BufferIpSocketHandler<I: IpExt, B: BufferMut>: IpSocketHandler<I> {
                 }),
         }
     }
-}
-
-/// What should a socket do when it becomes unroutable?
-///
-/// `UnroutableBehavior` describes how a socket is configured to behave if it
-/// becomes unroutable. In particular, this affects the behavior of
-/// [`Socket::apply_update`].
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub enum UnroutableBehavior {
-    /// The socket should stay open.
-    ///
-    /// When a call to [`Socket::apply_update`] results in the socket becoming
-    /// unroutable, the socket will remain open, and `apply_update` will return
-    /// `Ok`.
-    ///
-    /// So long as the socket is unroutable, attempting to send packets will
-    /// fail on a per-packet basis. If the socket later becomes routable again,
-    /// these operations will succeed again.
-    #[allow(dead_code)]
-    StayOpen,
-    /// The socket should close.
-    ///
-    /// When a call to [`Socket::apply_update`] results in the socket becoming
-    /// unroutable, the socket will be closed - `apply_update` will return
-    /// `Err`.
-    Close,
 }
 
 /// An error encountered when creating an IP socket.
@@ -323,9 +285,6 @@ impl Ipv6SocketBuilder {
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct IpSock<I: IpExt, D> {
     defn: IpSockDefinition<I, D>,
-    // This is `Ok` if the socket is currently routable and `Err` otherwise. If
-    // `unroutable_behavior` is `Close`, then this is guaranteed to be `Ok`.
-    cached: Result<CachedInfo<I, D>, IpSockUnroutableError>,
 }
 
 /// The definition of an IP socket.
@@ -348,57 +307,6 @@ struct IpSockDefinition<I: IpExt, D> {
     device: Option<D>,
     hop_limit: Option<NonZeroU8>,
     proto: I::Proto,
-    #[cfg_attr(not(test), allow(unused))]
-    unroutable_behavior: UnroutableBehavior,
-}
-
-/// Information which is cached inside an [`IpSock`].
-///
-/// This information is cached as an optimization, but is not part of the
-/// definition of the socket.
-#[derive(Clone)]
-#[cfg_attr(test, derive(Debug, PartialEq))]
-struct CachedInfo<I: IpExt, D> {
-    destination: Destination<I::Addr, D>,
-}
-
-/// An update to the information cached in an [`IpSock`].
-///
-/// Whenever IP-layer information changes that might affect `IpSock`s, an
-/// `IpSockUpdate` is emitted, and clients are responsible for applying this
-/// update to all `IpSock`s that they are responsible for.
-pub struct IpSockUpdate<I: IpExt> {
-    // Currently, `IpSockUpdate`s only represent a single type of update: that
-    // the forwarding table or assignment of IP addresses to devices have
-    // changed in some way. Thus, this is a ZST.
-    _marker: PhantomData<I>,
-}
-
-impl<I: IpExt> IpSockUpdate<I> {
-    /// Constructs a new `IpSocketUpdate`.
-    pub(crate) fn new() -> IpSockUpdate<I> {
-        IpSockUpdate { _marker: PhantomData }
-    }
-}
-
-impl<I: IpExt, D> Socket for IpSock<I, D> {
-    type Update = IpSockUpdate<I>;
-    type UpdateMeta = ForwardingTable<I, D>;
-    type UpdateError = IpSockCreationError;
-
-    fn apply_update(
-        &mut self,
-        _update: &IpSockUpdate<I>,
-        _meta: &ForwardingTable<I, D>,
-    ) -> Result<(), IpSockCreationError> {
-        // NOTE(joshlf): Currently, with this unimplemented, we will panic if we
-        // ever try to update the forwarding table or the assignment of IP
-        // addresses to devices while sockets are installed. However, updates
-        // that happen while no sockets are installed will still succeed. This
-        // should allow us to continue testing Netstack3 until we implement this
-        // method.
-        unimplemented!()
-    }
 }
 
 impl<I: IpExt, D> IpSocket<I> for IpSock<I, D> {
@@ -409,30 +317,6 @@ impl<I: IpExt, D> IpSocket<I> for IpSock<I, D> {
     fn remote_ip(&self) -> &SpecifiedAddr<I::Addr> {
         &self.defn.remote_ip
     }
-}
-
-/// Apply an update to all IPv4 sockets.
-///
-/// `update_all_ipv4_sockets` applies the given socket update to all IPv4
-/// sockets in existence. It does this by delegating to every module that is
-/// responsible for storing IPv4 sockets.
-pub(super) fn update_all_ipv4_sockets<D: EventDispatcher, C: BlanketCoreContext>(
-    ctx: &mut Ctx<D, C>,
-    update: IpSockUpdate<Ipv4>,
-) {
-    crate::ip::icmp::update_all_ipv4_sockets(ctx, &mut (), update);
-}
-
-/// Apply an update to all IPv6 sockets.
-///
-/// `update_all_ipv6_sockets` applies the given socket update to all IPv6
-/// sockets in existence. It does this by delegating to every module that is
-/// responsible for storing IPv6 sockets.
-pub(super) fn update_all_ipv6_sockets<D: EventDispatcher, C: BlanketCoreContext>(
-    ctx: &mut Ctx<D, C>,
-    update: IpSockUpdate<Ipv6>,
-) {
-    crate::ip::icmp::update_all_ipv6_sockets(ctx, &mut (), update);
 }
 
 // TODO(joshlf): Once we support configuring transport-layer protocols using
@@ -495,23 +379,19 @@ impl<C: IpSocketContext<Ipv4>> IpSocketHandler<Ipv4> for C {
         local_ip: Option<SpecifiedAddr<Ipv4Addr>>,
         remote_ip: SpecifiedAddr<Ipv4Addr>,
         proto: Ipv4Proto,
-        unroutable_behavior: UnroutableBehavior,
         builder: Option<Ipv4SocketBuilder>,
     ) -> Result<IpSock<Ipv4, C::DeviceId>, IpSockCreationError> {
-        let IpSockRoute { local_ip, destination } =
+        // Make sure the remote is routable with a local address before creating
+        // the socket. We do not care about the actual destination here because
+        // we will recalculate it when we send a packet so that the best route
+        // available at the time is used for each outgoing packet.
+        let IpSockRoute { local_ip, destination: _ } =
             self.lookup_route(device, local_ip, remote_ip)?;
 
         let Ipv4SocketBuilder { ttl } = builder.unwrap_or_default();
 
-        let defn = IpSockDefinition {
-            local_ip,
-            remote_ip,
-            device,
-            proto,
-            hop_limit: ttl,
-            unroutable_behavior,
-        };
-        Ok(IpSock { defn, cached: Ok(CachedInfo { destination }) })
+        let defn = IpSockDefinition { local_ip, remote_ip, device, proto, hop_limit: ttl };
+        Ok(IpSock { defn })
     }
 }
 
@@ -524,18 +404,63 @@ impl<C: IpSocketContext<Ipv6>> IpSocketHandler<Ipv6> for C {
         local_ip: Option<SpecifiedAddr<Ipv6Addr>>,
         remote_ip: SpecifiedAddr<Ipv6Addr>,
         proto: Ipv6Proto,
-        unroutable_behavior: UnroutableBehavior,
         builder: Option<Ipv6SocketBuilder>,
     ) -> Result<IpSock<Ipv6, C::DeviceId>, IpSockCreationError> {
-        let IpSockRoute { local_ip, destination } =
+        // Make sure the remote is routable with a local address before creating
+        // the socket. We do not care about the actual destination here because
+        // we will recalculate it when we send a packet so that the best route
+        // available at the time is used for each outgoing packet.
+        let IpSockRoute { local_ip, destination: _ } =
             self.lookup_route(device, local_ip, remote_ip)?;
 
         let Ipv6SocketBuilder { hop_limit } = builder.unwrap_or_default();
 
-        let defn =
-            IpSockDefinition { local_ip, remote_ip, device, proto, hop_limit, unroutable_behavior };
-        Ok(IpSock { defn, cached: Ok(CachedInfo { destination }) })
+        let defn = IpSockDefinition { local_ip, remote_ip, device, proto, hop_limit };
+        Ok(IpSock { defn })
     }
+}
+
+fn send_ip_packet<
+    I: IpExt + IpDeviceStateIpExt<C::Instant> + packet_formats::ip::IpExt,
+    B: BufferMut,
+    S: Serializer<Buffer = B>,
+    C: BufferIpSocketContext<I, B> + BufferIpSocketContext<I, Buf<Vec<u8>>> + IpSocketContext<I>,
+>(
+    sync_ctx: &mut C,
+    IpSock { defn: IpSockDefinition { remote_ip, local_ip, device, hop_limit, proto } }: &IpSock<
+        I,
+        C::DeviceId,
+    >,
+    body: S,
+    mtu: Option<u32>,
+) -> Result<(), (S, IpSockSendError)> {
+    let IpSockRoute { local_ip: got_local_ip, destination: Destination { device, next_hop } } =
+        match sync_ctx.lookup_route(*device, Some(*local_ip), *remote_ip) {
+            Ok(o) => o,
+            Err(IpSockRouteError::NoLocalAddrAvailable) => {
+                unreachable!("local IP {} was specified", local_ip)
+            }
+            Err(IpSockRouteError::Unroutable(e)) => {
+                return Err((body, IpSockSendError::Unroutable(e)))
+            }
+        };
+
+    assert_eq!(*local_ip, got_local_ip);
+
+    BufferIpSocketContext::send_ip_packet(
+        sync_ctx,
+        SendIpPacketMeta {
+            device,
+            src_ip: *local_ip,
+            dst_ip: *remote_ip,
+            next_hop,
+            ttl: *hop_limit,
+            proto: *proto,
+            mtu,
+        },
+        body,
+    )
+    .map_err(|s| (s, IpSockSendError::Mtu))
 }
 
 impl<
@@ -547,42 +472,14 @@ impl<
 {
     fn send_ip_packet<S: Serializer<Buffer = B>>(
         &mut self,
-        IpSock {
-            defn:
-                IpSockDefinition {
-                    remote_ip,
-                    local_ip,
-                    device: _,
-                    hop_limit,
-                    proto,
-                    unroutable_behavior: _,
-                },
-            cached,
-        }: &IpSock<Ipv4, C::DeviceId>,
+        ip_sock: &IpSock<Ipv4, C::DeviceId>,
         body: S,
         mtu: Option<u32>,
     ) -> Result<(), (S, IpSockSendError)> {
         // TODO(joshlf): Call `trace!` with relevant fields from the socket.
         self.increment_counter("send_ipv4_packet");
-        match cached {
-            Ok(CachedInfo { destination: Destination { device, next_hop } }) => {
-                BufferIpSocketContext::send_ip_packet(
-                    self,
-                    SendIpPacketMeta {
-                        device: *device,
-                        src_ip: *local_ip,
-                        dst_ip: *remote_ip,
-                        next_hop: *next_hop,
-                        ttl: *hop_limit,
-                        proto: *proto,
-                        mtu,
-                    },
-                    body,
-                )
-                .map_err(|s| (s, IpSockSendError::Mtu))
-            }
-            Err(err) => Err((body, (*err).into())),
-        }
+
+        send_ip_packet(self, ip_sock, body, mtu)
     }
 }
 
@@ -593,42 +490,14 @@ impl<
 {
     fn send_ip_packet<S: Serializer<Buffer = B>>(
         &mut self,
-        IpSock {
-            defn:
-                IpSockDefinition {
-                    remote_ip,
-                    local_ip,
-                    device: _,
-                    hop_limit,
-                    proto,
-                    unroutable_behavior: _,
-                },
-            cached,
-        }: &IpSock<Ipv6, C::DeviceId>,
+        ip_sock: &IpSock<Ipv6, C::DeviceId>,
         body: S,
         mtu: Option<u32>,
     ) -> Result<(), (S, IpSockSendError)> {
         // TODO(joshlf): Call `trace!` with relevant fields from the socket.
         self.increment_counter("send_ipv6_packet");
-        match cached {
-            Ok(CachedInfo { destination: Destination { device, next_hop } }) => {
-                BufferIpSocketContext::send_ip_packet(
-                    self,
-                    SendIpPacketMeta {
-                        device: *device,
-                        src_ip: *local_ip,
-                        dst_ip: *remote_ip,
-                        next_hop: *next_hop,
-                        ttl: *hop_limit,
-                        proto: *proto,
-                        mtu,
-                    },
-                    body,
-                )
-                .map_err(|s| (s, IpSockSendError::Mtu))
-            }
-            Err(err) => Err((body, (*err).into())),
-        }
+
+        send_ip_packet(self, ip_sock, body, mtu)
     }
 }
 
@@ -941,6 +810,7 @@ pub(crate) mod testutil {
         },
         ip::{
             device::state::{AddrConfig, AddressState, AssignedAddress as _, IpDeviceState},
+            forwarding::ForwardingTable,
             DummyDeviceId, IpDeviceId, SendIpPacketMeta,
         },
     };
@@ -1137,8 +1007,6 @@ pub(crate) mod testutil {
 
 #[cfg(test)]
 mod tests {
-    use alloc::vec;
-
     use net_types::{
         ip::{AddrSubnet, SubnetEither},
         Witness,
@@ -1153,8 +1021,7 @@ mod tests {
     use specialize_ip_macro::{ip_test, specialize_ip};
 
     use super::*;
-    use crate::device::DeviceId;
-    use crate::testutil::*;
+    use crate::{device::DeviceId, testutil::*, Ctx};
 
     enum AddressType {
         LocallyOwned,
@@ -1304,9 +1171,7 @@ mod tests {
                 device: local_device,
                 proto,
                 hop_limit: None,
-                unroutable_behavior: UnroutableBehavior::Close,
             },
-            cached: Ok(CachedInfo { destination: Destination { next_hop: to_ip, device } }),
         };
 
         let res = IpSocketHandler::<I>::new_ip_socket(
@@ -1315,7 +1180,6 @@ mod tests {
             from_ip,
             to_ip,
             proto,
-            UnroutableBehavior::Close,
             None,
         );
         assert_eq!(res, get_expected_result(template.clone()));
@@ -1332,13 +1196,12 @@ mod tests {
                     from_ip,
                     to_ip,
                     proto,
-                    UnroutableBehavior::Close,
                     Some(builder),
                 ),
                 {
                     // The template socket, but with the TTL set to 1.
                     let mut x = template.clone();
-                    let IpSock::<Ipv4, DeviceId> { defn, cached } = &mut x;
+                    let IpSock::<Ipv4, DeviceId> { defn } = &mut x;
                     defn.hop_limit = NonZeroU8::new(1);
                     get_expected_result(x)
                 }
@@ -1359,12 +1222,11 @@ mod tests {
                     from_ip,
                     to_ip,
                     proto,
-                    UnroutableBehavior::Close,
                     Some(builder),
                 ),
                 {
                     let mut template_with_hop_limit = template.clone();
-                    let IpSock::<Ipv6, DeviceId> { defn, cached } = &mut template_with_hop_limit;
+                    let IpSock::<Ipv6, DeviceId> { defn } = &mut template_with_hop_limit;
                     defn.hop_limit = NonZeroU8::new(SPECIFIED_HOP_LIMIT);
                     let builder =
                         Ipv6PacketBuilder::new(expected_from_ip, to_ip, SPECIFIED_HOP_LIMIT, proto);
@@ -1590,7 +1452,6 @@ mod tests {
             from_ip,
             to_ip,
             proto,
-            UnroutableBehavior::Close,
             Some(socket_builder),
         )
         .unwrap();
@@ -1664,24 +1525,18 @@ mod tests {
             (DUMMY_CONFIG_V6, builder, Ipv6Proto::Icmpv6)
         };
 
-        let DummyEventDispatcherConfig::<_> {
-            local_mac,
-            remote_mac,
-            local_ip,
-            remote_ip,
-            subnet: _,
-        } = cfg;
+        let DummyEventDispatcherConfig::<_> { local_mac, remote_mac, local_ip, remote_ip, subnet } =
+            cfg;
 
         let mut ctx = DummyEventDispatcherBuilder::from_config(cfg.clone()).build();
 
         // Create a normal, routable socket.
-        let mut sock = IpSocketHandler::<I>::new_ip_socket(
+        let sock = IpSocketHandler::<I>::new_ip_socket(
             &mut ctx,
             None,
             None,
             remote_ip,
             proto,
-            UnroutableBehavior::Close,
             Some(socket_builder),
         )
         .unwrap();
@@ -1739,13 +1594,15 @@ mod tests {
 
         // Send a packet while imposing an MTU that is large enough to fit the
         // packet.
-        BufferIpSocketHandler::<I, _>::send_ip_packet(
+        let small_body = [0; 1];
+        let small_body_serializer = (&small_body).into_serializer();
+        let res = BufferIpSocketHandler::<I, _>::send_ip_packet(
             &mut ctx,
             &sock,
-            (&[0u8][..]).into_serializer(),
+            small_body_serializer,
             Some(Ipv6::MINIMUM_LINK_MTU.into()),
-        )
-        .unwrap();
+        );
+        assert_matches::assert_matches!(res, Ok(()));
         check_sent_frame(&ctx);
 
         // Send a packet on the socket while imposing an MTU which will not
@@ -1753,7 +1610,7 @@ mod tests {
         let res = BufferIpSocketHandler::<I, _>::send_ip_packet(
             &mut ctx,
             &sock,
-            (&[0u8]).into_serializer(),
+            small_body_serializer,
             Some(1), // mtu
         );
         assert_matches::assert_matches!(res, Err((_, IpSockSendError::Mtu)));
@@ -1761,21 +1618,20 @@ mod tests {
         assert_eq!(ctx.dispatcher.frames_sent().len(), packet_count);
         // Try sending a packet which will be larger than the device's MTU,
         // and make sure it fails.
-        let body = vec![0u8; crate::ip::Ipv6::MINIMUM_LINK_MTU as usize];
         let res = BufferIpSocketHandler::<I, _>::send_ip_packet(
             &mut ctx,
             &sock,
-            (&body[..]).into_serializer(),
+            (&[0; crate::ip::Ipv6::MINIMUM_LINK_MTU as usize][..]).into_serializer(),
             None,
         );
         assert_matches::assert_matches!(res, Err((_, IpSockSendError::Mtu)));
 
         // Make sure that sending on an unroutable socket fails.
-        sock.cached = Err(IpSockUnroutableError::NoRouteToRemoteAddr);
+        crate::ip::del_route::<I, _, _>(&mut ctx, &mut (), subnet).unwrap();
         let res = BufferIpSocketHandler::<I, _>::send_ip_packet(
             &mut ctx,
             &sock,
-            (&body[..]).into_serializer(),
+            small_body_serializer,
             None,
         );
         assert_matches::assert_matches!(

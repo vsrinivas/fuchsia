@@ -68,7 +68,7 @@ use crate::{
         reassembly::{FragmentCacheKey, FragmentProcessingState, IpPacketFragmentCache},
         socket::{
             BufferIpSocketHandler, IpSock, IpSockRoute, IpSockRouteError, IpSockUnroutableError,
-            IpSockUpdate, IpSocketContext, IpSocketHandler,
+            IpSocketContext, IpSocketHandler,
         },
     },
     BlanketCoreContext, BufferDispatcher, Ctx, EventDispatcher, Instant, StackState, TimerId,
@@ -391,14 +391,6 @@ pub(crate) trait IpDeviceContext<I: IpLayerIpExt>: IpDeviceIdContext<I> {
     fn get_hop_limit(&self, device_id: Self::DeviceId) -> NonZeroU8;
 }
 
-/// The transport context provided to the IP layer.
-pub(crate) trait TransportContext<I: Ip> {
-    /// Handles an update affecting routing.
-    ///
-    /// This method is called after routing state has been updated.
-    fn on_routing_state_updated(&mut self);
-}
-
 /// Events observed at the IP layer.
 pub enum IpLayerEvent<DeviceId, I: Ip> {
     /// A device route was added.
@@ -419,19 +411,13 @@ pub enum IpLayerEvent<DeviceId, I: Ip> {
 
 /// The execution context for the IP layer.
 pub(crate) trait IpLayerContext<I: IpLayerStateIpExt<Self::Instant, Self::DeviceId>>:
-    IpStateContext<I>
-    + IpDeviceContext<I>
-    + TransportContext<I>
-    + EventContext<IpLayerEvent<Self::DeviceId, I>>
+    IpStateContext<I> + IpDeviceContext<I> + EventContext<IpLayerEvent<Self::DeviceId, I>>
 {
 }
 
 impl<
         I: IpLayerStateIpExt<C::Instant, C::DeviceId>,
-        C: IpStateContext<I>
-            + IpDeviceContext<I>
-            + TransportContext<I>
-            + EventContext<IpLayerEvent<C::DeviceId, I>>,
+        C: IpStateContext<I> + IpDeviceContext<I> + EventContext<IpLayerEvent<C::DeviceId, I>>,
     > IpLayerContext<I> for C
 {
 }
@@ -586,12 +572,6 @@ impl<D: EventDispatcher, C: BlanketCoreContext> IpStateContext<Ipv4> for Ctx<D, 
     }
 }
 
-impl<D: EventDispatcher, C: BlanketCoreContext> TransportContext<Ipv4> for Ctx<D, C> {
-    fn on_routing_state_updated(&mut self) {
-        crate::ip::socket::update_all_ipv4_sockets(self, IpSockUpdate::new());
-    }
-}
-
 impl<D: EventDispatcher, C: BlanketCoreContext> IpStateContext<Ipv6> for Ctx<D, C> {
     fn get_ip_layer_state(&self) -> &Ipv6State<C::Instant, DeviceId> {
         &self.state.ipv6
@@ -599,12 +579,6 @@ impl<D: EventDispatcher, C: BlanketCoreContext> IpStateContext<Ipv6> for Ctx<D, 
 
     fn get_ip_layer_state_mut(&mut self) -> &mut Ipv6State<C::Instant, DeviceId> {
         &mut self.state.ipv6
-    }
-}
-
-impl<D: EventDispatcher, C: BlanketCoreContext> TransportContext<Ipv6> for Ctx<D, C> {
-    fn on_routing_state_updated(&mut self) {
-        crate::ip::socket::update_all_ipv6_sockets(self, IpSockUpdate::new());
     }
 }
 
@@ -2024,17 +1998,6 @@ fn lookup_route<I: IpLayerStateIpExt<SC::Instant, SC::DeviceId>, SC: IpLayerCont
         .lookup(device, dst_ip)
 }
 
-pub(crate) fn on_routing_state_updated<
-    I: IpLayerStateIpExt<SC::Instant, SC::DeviceId>,
-    SC: IpLayerContext<I>,
-    C,
->(
-    sync_ctx: &mut SC,
-    _ctx: &mut C,
-) {
-    sync_ctx.on_routing_state_updated()
-}
-
 fn get_ip_layer_state_inner_mut<
     'a,
     I: IpLayerStateIpExt<SC::Instant, SC::DeviceId>,
@@ -2059,10 +2022,7 @@ pub(crate) fn add_route<
     subnet: Subnet<I::Addr>,
     next_hop: SpecifiedAddr<I::Addr>,
 ) -> Result<(), AddRouteError> {
-    get_ip_layer_state_inner_mut(sync_ctx, ctx)
-        .table
-        .add_route(subnet, next_hop)
-        .map(|()| on_routing_state_updated(sync_ctx, ctx))
+    get_ip_layer_state_inner_mut(sync_ctx, ctx).table.add_route(subnet, next_hop)
 }
 
 /// Add a device route to the forwarding table, returning `Err` if the
@@ -2078,7 +2038,6 @@ pub(crate) fn add_device_route<
     device: SC::DeviceId,
 ) -> Result<(), ExistsError> {
     get_ip_layer_state_inner_mut(sync_ctx, ctx).table.add_device_route(subnet, device).map(|()| {
-        on_routing_state_updated(sync_ctx, ctx);
         sync_ctx.on_event(IpLayerEvent::DeviceRouteAdded { device, subnet });
     })
 }
@@ -2095,7 +2054,6 @@ pub(crate) fn del_route<
     subnet: Subnet<I::Addr>,
 ) -> Result<(), NotFoundError> {
     get_ip_layer_state_inner_mut(sync_ctx, ctx).table.del_route(subnet).map(|removed| {
-        on_routing_state_updated(sync_ctx, ctx);
         removed.into_iter().for_each(|Entry { subnet, device, gateway }| match gateway {
             None => sync_ctx.on_event(IpLayerEvent::DeviceRouteRemoved { device, subnet }),
             Some(SpecifiedAddr { .. }) => (),

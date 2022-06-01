@@ -732,7 +732,6 @@ pub(crate) fn add_ip_addr_subnet<D: EventDispatcher, C: BlanketCoreContext, A: I
     match addr_sub.into() {
         AddrSubnetEither::V4(addr_sub) => {
             crate::ip::device::add_ipv4_addr_subnet(ctx, &mut (), device, addr_sub)
-                .map(|()| crate::ip::on_routing_state_updated::<Ipv4, _, _>(ctx, &mut ()))
         }
         AddrSubnetEither::V6(addr_sub) => crate::ip::device::add_ipv6_addr_subnet(
             ctx,
@@ -740,8 +739,7 @@ pub(crate) fn add_ip_addr_subnet<D: EventDispatcher, C: BlanketCoreContext, A: I
             device,
             addr_sub,
             AddrConfig::Manual,
-        )
-        .map(|()| crate::ip::on_routing_state_updated::<Ipv6, _, _>(ctx, &mut ())),
+        ),
     }
 }
 
@@ -756,16 +754,14 @@ pub(crate) fn del_ip_addr<D: EventDispatcher, C: BlanketCoreContext, A: IpAddres
     trace!("del_ip_addr: removing addr {:?} from device {:?}", addr, device);
 
     match Into::into(*addr) {
-        IpAddr::V4(addr) => crate::ip::device::del_ipv4_addr(ctx, &mut (), device, &addr)
-            .map(|()| crate::ip::on_routing_state_updated::<Ipv4, _, _>(ctx, &mut ())),
+        IpAddr::V4(addr) => crate::ip::device::del_ipv4_addr(ctx, &mut (), device, &addr),
         IpAddr::V6(addr) => crate::ip::device::del_ipv6_addr_with_reason(
             ctx,
             &mut (),
             device,
             &addr,
             crate::ip::device::state::DelIpv6AddrReason::ManualAction,
-        )
-        .map(|()| crate::ip::on_routing_state_updated::<Ipv6, _, _>(ctx, &mut ())),
+        ),
     }
 }
 

@@ -41,7 +41,7 @@ use crate::{
     error::{ExistsError, LocalAddressError},
     ip::{
         icmp::{IcmpIpExt, Icmpv4ErrorCode, Icmpv6ErrorCode},
-        socket::{IpSock, IpSockCreationError, IpSockSendError, IpSocket, UnroutableBehavior},
+        socket::{IpSock, IpSockCreationError, IpSockSendError, IpSocket},
         BufferIpTransportContext, BufferTransportIpContext, IpDeviceId, IpDeviceIdContext, IpExt,
         IpTransportContext, TransportIpContext, TransportReceiveError,
     },
@@ -1056,14 +1056,8 @@ pub fn send_udp_listener<I: IpExt, B: BufferMut, SC: BufferUdpStateContext<I, B>
     let ListenerAddr { ip: ListenerIpAddr { addr: local_ip, identifier: local_port }, device } =
         *addr;
 
-    let sock = match sync_ctx.new_ip_socket(
-        device,
-        local_ip,
-        remote_ip,
-        IpProto::Udp.into(),
-        UnroutableBehavior::Close,
-        None,
-    ) {
+    let sock = match sync_ctx.new_ip_socket(device, local_ip, remote_ip, IpProto::Udp.into(), None)
+    {
         Ok(sock) => sock,
         Err(err) => return Err((body, UdpSendListenerError::CreateSock(err))),
     };
@@ -1168,14 +1162,7 @@ fn create_udp_conn<I: IpExt, SC: UdpStateContext<I>, C>(
     sharing: PosixSharingOptions,
 ) -> Result<UdpConnId<I>, UdpSockCreationError> {
     let ip_sock = sync_ctx
-        .new_ip_socket(
-            None,
-            local_ip,
-            remote_ip,
-            IpProto::Udp.into(),
-            UnroutableBehavior::StayOpen,
-            None,
-        )
+        .new_ip_socket(None, local_ip, remote_ip, IpProto::Udp.into(), None)
         .map_err(<IpSockCreationError as Into<UdpSockCreationError>>::into)?;
 
     let local_ip = *ip_sock.local_ip();
