@@ -16,6 +16,7 @@
         { protocol: "fuchsia.component.resolution.Resolver" },
     ],
     use: [
+        { protocol: "fuchsia.pkg.PackageCache" },
         {
             directory: "pkgfs-packages",
             rights: [ "rx*" ],

@@ -20,6 +20,9 @@ pub use crate::errors::{BlobIdParseError, CupMissingField, RepositoryParseError,
 mod measure;
 pub use crate::measure::Measurable;
 
+pub mod base_package_index;
+pub use crate::base_package_index::BasePackageIndex;
+
 pub mod cache;
 
 mod serve_fidl_iterator;

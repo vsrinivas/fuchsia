@@ -3,13 +3,28 @@
 // found in the LICENSE file.
 
 use {
-    fidl::endpoints::DiscoverableProtocolMarker as _, fidl_fuchsia_boot as fboot,
-    fidl_fuchsia_io as fio, fuchsia_async as fasync, futures::stream::TryStreamExt as _,
+    fidl::endpoints::DiscoverableProtocolMarker as _,
+    fidl_fuchsia_boot as fboot, fidl_fuchsia_io as fio,
+    fidl_fuchsia_pkg::{
+        PackageCacheMarker, PackageCacheRequest, PackageCacheRequestStream, PackageIndexEntry,
+        PackageIndexIteratorRequest, PackageIndexIteratorRequestStream, PackageUrl,
+    },
+    fidl_fuchsia_pkg_ext::BlobId,
+    fuchsia_async as fasync,
+    fuchsia_syslog::fx_log_err,
+    fuchsia_url::pkg_url::PkgUrl,
+    futures::prelude::*,
+    maplit::hashmap,
+    std::collections::HashMap,
+    std::sync::Arc,
     vfs::directory::entry::DirectoryEntry as _,
 };
 
 static PKGFS_BOOT_ARG_KEY: &'static str = "zircon.system.pkgfs.cmd";
 static PKGFS_BOOT_ARG_VALUE_PREFIX: &'static str = "bin/pkgsvr+";
+
+static MOCK_PACKAGE_HASH: &'static str =
+    "facefacefacefacefacefacefacefacefacefacefacefacefacefacefaceface";
 
 // The pkg-cache-resolver integration test demonstrates that the pkg-cache-resolver resolves a
 // a working (has executable blobs, responds to FIDL requests from capabilities routed by the
@@ -57,6 +72,17 @@ async fn main() {
                 vfs::service::host(move |stream: fboot::ArgumentsRequestStream| {
                     serve_boot_args(stream, system_image_hash)
                 }),
+            PackageCacheMarker::PROTOCOL_NAME =>
+                vfs::service::host(move |stream: PackageCacheRequestStream| {
+                    let mock_package_url: PkgUrl =
+                        "fuchsia-pkg://fuchsia.com/mock-package".parse().unwrap();
+                    let mock_package_blob_id = BlobId::parse(MOCK_PACKAGE_HASH).unwrap();
+                    let base_package_index = hashmap! {
+                        mock_package_url => mock_package_blob_id,
+                    };
+                    let cache = MockPackageCacheService::new_with_base_packages(Arc::new(base_package_index));
+                    cache.run_service(stream)
+                }),
         },
         "blob" =>
             vfs::remote::remote_dir(blobfs.root_dir_proxy().expect("get blobfs root dir")),
@@ -66,9 +92,9 @@ async fn main() {
                     "/pkg",
                     fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
                 )
-                .unwrap())
-            }
-        }
+                .unwrap()),
+            },
+        },
     };
 
     let scope = vfs::execution_scope::ExecutionScope::new();
@@ -95,5 +121,61 @@ async fn serve_boot_args(mut stream: fboot::ArgumentsRequestStream, hash: fuchsi
             }
             req => panic!("unexpected request {:?}", req),
         }
+    }
+}
+
+// The actual pkg-cache will fit as many items per chunk as possible.  Intentionally choose a
+// small, fixed value here to verify the BasePackageIndex behavior with multiple chunks without
+// having to actually send hundreds of entries in these tests.
+const PACKAGE_INDEX_CHUNK_SIZE: u32 = 30;
+
+struct MockPackageCacheService {
+    base_packages: Arc<HashMap<PkgUrl, BlobId>>,
+}
+
+impl MockPackageCacheService {
+    fn new_with_base_packages(base_packages: Arc<HashMap<PkgUrl, BlobId>>) -> Self {
+        Self { base_packages: base_packages }
+    }
+
+    async fn run_service(self, mut stream: PackageCacheRequestStream) {
+        while let Some(req) = stream.try_next().await.unwrap() {
+            match req {
+                PackageCacheRequest::BasePackageIndex { iterator, control_handle: _ } => {
+                    let iterator = iterator.into_stream().unwrap();
+                    self.serve_package_iterator(iterator);
+                }
+                _ => panic!("unexpected PackageCache request: {:?}", req),
+            }
+        }
+    }
+
+    fn serve_package_iterator(&self, mut stream: PackageIndexIteratorRequestStream) {
+        let mut packages = self
+            .base_packages
+            .iter()
+            .map(|(path, hash)| PackageIndexEntry {
+                package_url: PackageUrl {
+                    url: format!("fuchsia-pkg://fuchsia.com/{}", path.name()),
+                },
+                meta_far_blob_id: BlobId::from(hash.clone()).into(),
+            })
+            .collect::<Vec<PackageIndexEntry>>();
+
+        fasync::Task::spawn(
+            async move {
+                let mut iter = packages.iter_mut();
+                while let Some(request) = stream.try_next().await? {
+                    let PackageIndexIteratorRequest::Next { responder } = request;
+
+                    responder.send(&mut iter.by_ref().take(PACKAGE_INDEX_CHUNK_SIZE as usize))?;
+                }
+                Ok(())
+            }
+            .unwrap_or_else(|e: fidl::Error| {
+                fx_log_err!("while serving package index iterator: {:?}", e)
+            }),
+        )
+        .detach();
     }
 }

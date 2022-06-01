@@ -36,6 +36,7 @@ rustc_binary("bin") {
     "//src/lib/fuchsia-url",
     "//src/lib/syslog/rust:syslog",
     "//src/sys/lib/mem_util",
+    "//src/sys/lib/routing",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
     "//third_party/rust_crates:futures",

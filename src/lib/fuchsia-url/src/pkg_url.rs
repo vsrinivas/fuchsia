@@ -36,6 +36,14 @@ pub use {
 /// - fuchsia-pkg://example.com/some-package#path/to/resource
 /// - fuchsia-pkg://example.com/some-package/some-variant#path/to/resource
 /// - fuchsia-pkg://example.com/some-package/some-variant?hash=<some-hash>#path/to/resource
+///
+/// `PkgUrl`s can also begin with a relative path, representing
+/// context-dependent "subpackages". Note that subpackages do not allow variants
+/// or package hashes.
+///
+/// Subpackages:
+/// - some-package
+/// - some-package#path/to-resource
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct PkgUrl {
     repo: RepoUrl,
@@ -47,14 +55,27 @@ pub struct PkgUrl {
 }
 
 impl PkgUrl {
-    pub fn parse(input: &str) -> Result<Self, ParseError> {
-        let (url, repo_url) = parse_helper(input)?;
+    fn parse_internal(input: &str, is_relative: bool) -> Result<Self, ParseError> {
+        let (url, repo_url) = parse_helper(input, is_relative)?;
 
         let (name, variant) = parse_path(url.path())?;
+        if is_relative && variant.is_some() {
+            // Since relative path URLs are currently implemented only in
+            // support of Subpackages, RFC-0154 states the path cannot contain
+            // a slash, implying the package URL cannot include a variant since
+            // variants are separated by package names using a slash.
+            return Err(ParseError::RelativePathCannotSpecifyVariant);
+        }
 
-        let path = url.path().to_string();
+        let path = if is_relative { &url.path()[1..] } else { url.path() }.to_string();
 
         let hash = parse_query_pairs(url.query_pairs())?;
+        if is_relative && hash.is_some() {
+            // Since relative path URLs are currently implemented only in
+            // support of Subpackages, RFC-0154 states a subpackage is pinned
+            // to a specific hash, declared at built time in the parent package.
+            return Err(ParseError::RelativePathCannotSpecifyHash);
+        }
 
         let resource = if let Some(resource) = url.fragment() {
             let resource = match percent_decode(resource.as_bytes()).decode_utf8() {
@@ -76,6 +97,27 @@ impl PkgUrl {
         };
 
         Ok(PkgUrl { repo: repo_url, path, hash, resource, name, variant })
+    }
+
+    pub fn parse(input: &str) -> Result<Self, ParseError> {
+        Self::parse_internal(input, false)
+    }
+
+    pub fn parse_relative_path(input: &str) -> Result<Self, ParseError> {
+        Self::parse_internal(input, true)
+    }
+
+    pub fn parse_maybe_relative(input: &str) -> Result<Self, ParseError> {
+        let result = Self::parse(input);
+        if result == Err(ParseError::UrlParseError(url::ParseError::RelativeUrlWithoutBase)) {
+            Self::parse_relative_path(input)
+        } else {
+            result
+        }
+    }
+
+    pub fn is_relative(&self) -> bool {
+        self.repo.host().is_empty()
     }
 
     pub fn host(&self) -> &str {
@@ -203,6 +245,33 @@ impl PkgUrl {
         url.resource = Some(resource);
         Ok(url)
     }
+
+    pub fn new_relative_package_url(name: PackageName) -> PkgUrl {
+        let path = format!("{}", name);
+        PkgUrl {
+            repo: RepoUrl { host: "".to_string() },
+            path,
+            hash: None,
+            resource: None,
+            name,
+            variant: None,
+        }
+    }
+
+    pub fn new_relative_resource(mut path: String, resource: String) -> Result<PkgUrl, ParseError> {
+        if path.starts_with("/") {
+            return Err(ParseError::AbsolutePathNotSupported);
+        }
+        path.insert(0, '/');
+        let (name, variant) = parse_path(path.as_str())?;
+        if variant.is_some() {
+            return Err(ParseError::RelativePathCannotSpecifyVariant);
+        }
+        let mut url = PkgUrl::new_relative_package_url(name);
+        let () = validate_resource_path(&resource).map_err(ParseError::InvalidResourcePath)?;
+        url.resource = Some(resource);
+        Ok(url)
+    }
 }
 
 /// `PinnedPkgUrl` represents a package URL, "pinned" to a specific package hash.
@@ -281,7 +350,9 @@ impl<'de> Deserialize<'de> for PinnedPkgUrl {
 
 impl fmt::Display for PkgUrl {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.repo)?;
+        if !self.is_relative() {
+            write!(f, "{}", self.repo)?;
+        }
         if self.path != "/" {
             write!(f, "{}", self.path)?;
         }
@@ -331,7 +402,7 @@ impl<'de> Deserialize<'de> for PkgUrl {
         D: Deserializer<'de>,
     {
         let url = String::deserialize(de)?;
-        Ok(PkgUrl::parse(&url).map_err(|err| serde::de::Error::custom(err))?)
+        Ok(PkgUrl::parse_maybe_relative(&url).map_err(|err| serde::de::Error::custom(err))?)
     }
 }
 
@@ -358,7 +429,7 @@ impl RepoUrl {
     }
 
     pub fn parse(input: &str) -> Result<Self, ParseError> {
-        let (url, repo_url) = parse_helper(input)?;
+        let (url, repo_url) = parse_helper(input, false)?;
         if url.path() != "/" || url.query().is_some() || url.fragment().is_some() {
             return Err(ParseError::InvalidRepository);
         }
@@ -417,12 +488,20 @@ impl<'de> Deserialize<'de> for RepoUrl {
 
 // Validates the fuchsia-pkg URL invariants that are common between PkgUrl and
 // RepoUrl.
-fn parse_helper(input: &str) -> Result<(Url, RepoUrl), ParseError> {
-    let url = Url::parse(input)?;
+fn parse_helper(input: &str, is_relative: bool) -> Result<(Url, RepoUrl), ParseError> {
+    let url = if is_relative {
+        if input.starts_with("/") {
+            return Err(ParseError::AbsolutePathNotSupported);
+        }
+        Url::parse(&format!("relative:///{}", input))
+    } else {
+        Url::parse(input)
+    }?;
 
-    let scheme = url.scheme();
-    if scheme != "fuchsia-pkg" {
-        return Err(ParseError::InvalidScheme);
+    if !is_relative {
+        if url.scheme() != "fuchsia-pkg" {
+            return Err(ParseError::InvalidScheme);
+        }
     }
 
     if url.port().is_some() {
@@ -437,16 +516,21 @@ fn parse_helper(input: &str) -> Result<(Url, RepoUrl), ParseError> {
         return Err(ParseError::CannotContainPassword);
     }
 
-    let host = if let Some(host) = url.host() {
-        host.to_string()
-    } else {
-        return Err(ParseError::MissingHost);
-    };
-    if host.is_empty() {
-        return Err(ParseError::EmptyHost);
+    let mut host = "".to_string();
+    if !is_relative {
+        host = if let Some(host) = url.host() {
+            host.to_string()
+        } else {
+            return Err(ParseError::MissingHost);
+        };
+        if host.is_empty() {
+            return Err(ParseError::EmptyHost);
+        }
+        validate_host(&host)?;
     }
-    validate_host(&host)?;
 
+    // Note: `host` will be the empty string if the parsed URL was a relative
+    // path URL.
     Ok((url, RepoUrl { host }))
 }
 
@@ -513,6 +597,77 @@ mod tests {
         std::str::FromStr,
     };
 
+    macro_rules! test_parse_ok_impl {
+        (
+            test_name = $test_name:ident,
+            url = $pkg_url:expr,
+            host = $pkg_host:expr,
+            path = $pkg_path:expr,
+            name = $pkg_name:expr,
+            variant = $pkg_variant:expr,
+            hash = $pkg_hash:expr,
+            resource = $pkg_resource:expr,
+            is_relative = $pkg_is_relative:expr,
+        ) => {
+            mod $test_name {
+                use super::*;
+                #[test]
+                fn test_eq() {
+                    let pkg_url = $pkg_url.to_string();
+                    let url = if $pkg_is_relative {
+                        PkgUrl::parse_relative_path(&pkg_url)
+                    } else {
+                        PkgUrl::parse(&pkg_url)
+                    };
+                    assert_eq!(
+                        url,
+                        Ok(PkgUrl {
+                            repo: RepoUrl { host: $pkg_host.to_string() },
+                            path: $pkg_path.to_string(),
+                            hash: $pkg_hash.map(|s: &str| s.parse().unwrap()),
+                            resource: $pkg_resource.map(|s: &str| s.to_string()),
+                            name: $pkg_name.parse().unwrap(),
+                            variant: $pkg_variant.map(|s: &str| s.parse().unwrap()),
+                        })
+                    );
+
+                    let url = url.unwrap();
+                    assert_eq!(url.path(), $pkg_path);
+                    assert_eq!(url.name(), &$pkg_name.parse::<PackageName>().unwrap());
+                    assert_eq!(
+                        url.variant(),
+                        $pkg_variant.map(|s: &str| s.parse().unwrap()).as_ref()
+                    );
+                    assert_eq!(
+                        url.package_hash(),
+                        $pkg_hash.map(|s: &str| s.parse().unwrap()).as_ref()
+                    );
+                    assert_eq!(url.resource(), $pkg_resource);
+                }
+
+                #[test]
+                fn test_roundtrip() {
+                    let pkg_url = $pkg_url.to_string();
+                    let parsed = if $pkg_is_relative {
+                        PkgUrl::parse_relative_path(&pkg_url)
+                    } else {
+                        PkgUrl::parse(&pkg_url)
+                    }
+                    .unwrap();
+                    let format_pkg_url = parsed.to_string();
+                    assert_eq!(
+                        if $pkg_is_relative {
+                            PkgUrl::parse_relative_path(&format_pkg_url)
+                        } else {
+                            PkgUrl::parse(&format_pkg_url)
+                        },
+                        Ok(parsed)
+                    );
+                }
+            }
+        };
+    }
+
     macro_rules! test_parse_ok {
         (
             $(
@@ -528,50 +683,42 @@ mod tests {
             )+
         ) => {
             $(
-                mod $test_name {
-                    use super::*;
-                    #[test]
-                    fn test_eq() {
-                        let pkg_url = $pkg_url.to_string();
-                        let url = PkgUrl::parse(&pkg_url);
-                        assert_eq!(
-                            url,
-                            Ok(PkgUrl {
-                                repo: RepoUrl {
-                                    host: $pkg_host.to_string(),
-                                },
-                                path: $pkg_path.to_string(),
-                                hash: $pkg_hash.map(|s: &str| s.parse().unwrap()),
-                                resource: $pkg_resource.map(|s: &str| s.to_string()),
-                                name: $pkg_name.parse().unwrap(),
-                                variant: $pkg_variant.map(|s: &str| s.parse().unwrap()),
-                            })
-                        );
+                test_parse_ok_impl! {
+                    test_name = $test_name,
+                    url = $pkg_url,
+                    host = $pkg_host,
+                    path = $pkg_path,
+                    name = $pkg_name,
+                    variant = $pkg_variant,
+                    hash = $pkg_hash,
+                    resource = $pkg_resource,
+                    is_relative = false,
+                }
+            )+
+        }
+    }
 
-                        let url = url.unwrap();
-                        assert_eq!(url.path(), $pkg_path);
-                        assert_eq!(url.name(), &$pkg_name.parse::<PackageName>().unwrap());
-                        assert_eq!(
-                            url.variant(),
-                            $pkg_variant.map(|s: &str| s.parse().unwrap()).as_ref()
-                        );
-                        assert_eq!(
-                            url.package_hash(),
-                            $pkg_hash.map(|s: &str| s.parse().unwrap()).as_ref()
-                        );
-                        assert_eq!(url.resource(), $pkg_resource);
-                    }
-
-                    #[test]
-                    fn test_roundtrip() {
-                        let pkg_url = $pkg_url.to_string();
-                        let parsed = PkgUrl::parse(&pkg_url).unwrap();
-                        let format_pkg_url = parsed.to_string();
-                        assert_eq!(
-                            PkgUrl::parse(&format_pkg_url),
-                            Ok(parsed)
-                        );
-                    }
+    macro_rules! test_parse_relative_path_ok {
+        (
+            $(
+                $test_name:ident => {
+                    url = $pkg_url:expr,
+                    path = $pkg_path:expr,
+                    resource = $pkg_resource:expr,
+                }
+            )+
+        ) => {
+            $(
+                test_parse_ok_impl! {
+                    test_name = $test_name,
+                    url = $pkg_url,
+                    host = "",
+                    path = $pkg_path,
+                    name = $pkg_path, // name should match path
+                    variant = None,
+                    hash = None,
+                    resource = $pkg_resource,
+                    is_relative = true,
                 }
             )+
         }
@@ -592,6 +739,29 @@ mod tests {
                     for url in &$urls {
                         assert_matches!(
                             PkgUrl::parse(url),
+                            Err($err)
+                        );
+                    }
+                }
+            )+
+        }
+    }
+
+    macro_rules! test_parse_relative_path_err {
+        (
+            $(
+                $test_name:ident => {
+                    urls = $urls:expr,
+                    err = $err:pat,
+                }
+            )+
+        ) => {
+            $(
+                #[test]
+                fn $test_name() {
+                    for url in &$urls {
+                        assert_matches!(
+                            PkgUrl::parse_relative_path(url),
                             Err($err)
                         );
                     }
@@ -719,6 +889,49 @@ mod tests {
             name = &"a".repeat(255),
             variant = Some("b".repeat(255).as_str()),
             hash = None,
+            resource = None,
+        }
+    }
+
+    test_parse_relative_path_ok! {
+        test_parse_relative_path_only => {
+            url = "fonts",
+            path = "fonts",
+            resource = None,
+        }
+        test_parse_relative_path_special_chars => {
+            url = "abc123-._",
+            path = "abc123-._",
+            resource = None,
+        }
+        test_parse_relative_ignoring_empty_resource => {
+            url = "fonts#",
+            path = "fonts",
+            resource = None,
+        }
+        test_parse_relative_resource => {
+            url = "fonts#foo/bar",
+            path = "fonts",
+            resource = Some("foo/bar"),
+        }
+        test_parse_relative_resource_decodes_percent_encoding => {
+            url = "fonts#foo%23bar",
+            path = "fonts",
+            resource = Some("foo#bar"),
+        }
+        test_parse_relative_resource_ignores_nul_chars => {
+            url = "fonts#foo\x00bar",
+            path = "fonts",
+            resource = Some("foobar"),
+        }
+        test_parse_relative_resource_allows_encoded_control_chars => {
+            url = "fonts#foo%09bar",
+            path = "fonts",
+            resource = Some("foo\tbar"),
+        }
+        test_parse_relative_resource_can_have_large_package_name => {
+            url = &format!("{}", "a".repeat(255)),
+            path = &"a".repeat(255),
             resource = None,
         }
     }
@@ -877,6 +1090,43 @@ mod tests {
         }
     }
 
+    test_parse_relative_path_err! {
+        test_parse_relative_path_rejects_hash_query => {
+            urls = [
+                "fonts?hash=80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a",
+                "fonts?hash=80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a#foo/bar",
+            ],
+            err = ParseError::RelativePathCannotSpecifyHash,
+        }
+        test_parse_relative_path_rejects_variant => {
+            urls = [
+                "fonts/stable",
+                "fonts/stable?hash=80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a",
+                "fonts/stable#foo/bar",
+            ],
+            err = ParseError::RelativePathCannotSpecifyVariant,
+        }
+        test_parse_relative_path_rejects_absolute_url => {
+            urls = [
+                "fuchsia-pkg://fuchsia.com/name#meta/some.cm",
+            ],
+            err = ParseError::InvalidName(_),
+        }
+        test_parse_relative_path_rejects_resource_only_url => {
+            urls = [
+                "#meta/some.cm",
+            ],
+            err = ParseError::MissingName,
+        }
+        test_parse_relative_path_cannot_start_with_slash => {
+            urls = [
+                "/abc123",
+                "/abc123/#meta/some.cm",
+            ],
+            err = ParseError::AbsolutePathNotSupported,
+        }
+    }
+
     test_format! {
         test_format_package_url => {
             parsed = PkgUrl::new_package(
@@ -939,6 +1189,19 @@ mod tests {
                 "foo<>bar".to_string(),
             ).unwrap(),
             formatted = "fuchsia-pkg://fuchsia.com/fonts#foo%3C%3Ebar",
+        }
+        test_format_relative_package_url => {
+            parsed = PkgUrl::new_relative_package_url(
+                PackageName::from_str("fonts").unwrap(),
+            ),
+            formatted = "fonts",
+        }
+        test_format_relative_resource => {
+            parsed = PkgUrl::new_relative_resource(
+                "fonts".to_string(),
+                "meta/some.cm".to_string(),
+            ).unwrap(),
+            formatted = "fonts#meta/some.cm",
         }
     }
 

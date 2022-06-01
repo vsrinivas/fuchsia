@@ -14,7 +14,12 @@
         binary: "bin/base_resolver_fake_dependencies_bin",
     },
     capabilities: [
-        { protocol: "fuchsia.boot.Arguments" },
+        {
+            protocol: [
+                "fuchsia.boot.Arguments",
+                "fuchsia.pkg.PackageCache",
+            ],
+        },
         {
             directory: "blob-exec",
             rights: [ "rx*" ],
@@ -39,9 +44,19 @@
             path: "/svc_blobfs/fuchsia.kernel.VmexResource",
         },
     ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: "#platform_driver_test_realm",
+        },
+    ],
     expose: [
         {
-            protocol: "fuchsia.boot.Arguments",
+            protocol: [
+                "fuchsia.boot.Arguments",
+                "fuchsia.pkg.PackageCache",
+            ],
             from: "self",
         },
         {

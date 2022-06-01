@@ -12,6 +12,7 @@ pub mod error;
 pub mod event;
 pub mod path;
 pub mod policy;
+pub mod resolving;
 pub mod rights;
 pub mod router;
 pub mod walk_state;

@@ -2,18 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! Retrives and serves the base package index.
+
 use {
+    crate::BlobId,
     anyhow::Error,
     fidl_fuchsia_pkg::{PackageCacheProxy, PackageIndexIteratorMarker},
-    fidl_fuchsia_pkg_ext::BlobId,
     fuchsia_url::{AbsolutePackageUrl, UnpinnedAbsolutePackageUrl},
     std::collections::HashMap,
+    std::iter::FromIterator,
 };
 
 /// Represents the set of base packages.
 #[derive(Debug)]
 pub struct BasePackageIndex {
     index: HashMap<UnpinnedAbsolutePackageUrl, BlobId>,
+    blob_id_to_url: HashMap<BlobId, UnpinnedAbsolutePackageUrl>,
 }
 
 impl BasePackageIndex {
@@ -24,18 +28,33 @@ impl BasePackageIndex {
         cache.base_package_index(server_end)?;
 
         let mut index = HashMap::with_capacity(256);
+        let mut blob_id_to_url = HashMap::with_capacity(256);
         let mut chunk = pkg_iterator.next().await?;
         while !chunk.is_empty() {
             for entry in chunk {
                 let pkg_url = UnpinnedAbsolutePackageUrl::parse(&entry.package_url.url)?;
                 let blob_id = BlobId::from(entry.meta_far_blob_id);
+                blob_id_to_url.insert(blob_id, pkg_url.clone());
                 index.insert(pkg_url, blob_id);
             }
             chunk = pkg_iterator.next().await?;
         }
+        blob_id_to_url.shrink_to_fit();
         index.shrink_to_fit();
 
-        Ok(Self { index })
+        Ok(Self { index, blob_id_to_url })
+    }
+
+    /// Returns true if the given package (indicated by meta.far BlobId) is in
+    /// the set of base packages.
+    pub fn contains_package(&self, blob_id: &BlobId) -> bool {
+        self.blob_id_to_url.contains_key(blob_id)
+    }
+
+    /// Returns the absolute package URL for a base package, by `BlobId`, or
+    /// `None` if the given `BlobId` is not in the set of base packages.
+    pub fn get_url(&self, blob_id: &BlobId) -> Option<&UnpinnedAbsolutePackageUrl> {
+        self.blob_id_to_url.get(blob_id)
     }
 
     /// Returns the package's hash if the url is unpinned and refers to a base package, otherwise
@@ -64,6 +83,13 @@ impl BasePackageIndex {
             None => None,
         }
     }
+
+    /// Creates a BasePackageIndex backed only by the supplied `HashMap`. This
+    /// is useful for testing.
+    pub fn create_mock(index: HashMap<UnpinnedAbsolutePackageUrl, BlobId>) -> Self {
+        let blob_id_to_url = HashMap::from_iter(index.iter().map(|(k, v)| (v.clone(), k.clone())));
+        Self { index, blob_id_to_url }
+    }
 }
 
 #[cfg(test)]
@@ -76,8 +102,8 @@ mod tests {
             PackageIndexEntry, PackageIndexIteratorRequest, PackageIndexIteratorRequestStream,
         },
         fuchsia_async as fasync,
-        fuchsia_syslog::fx_log_err,
         futures::prelude::*,
+        log::error,
         maplit::hashmap,
         std::sync::Arc,
     };
@@ -134,7 +160,7 @@ mod tests {
                     Ok(())
                 }
                 .unwrap_or_else(|e: fidl::Error| {
-                    fx_log_err!("while serving package index iterator: {:?}", e)
+                    error!("while serving package index iterator: {:?}", e)
                 }),
             )
             .detach();
@@ -191,6 +217,10 @@ mod tests {
         "0000000000000000000000000000000000000000000000000000000000000000".parse().unwrap()
     }
 
+    fn ones_hash() -> BlobId {
+        "1111111111111111111111111111111111111111111111111111111111111111".parse().unwrap()
+    }
+
     #[test]
     fn reject_pinned_urls() {
         let url: AbsolutePackageUrl = "fuchsia-pkg://fuchsia.com/package-name?\
@@ -198,9 +228,12 @@ mod tests {
             .parse()
             .unwrap();
         let index = hashmap! {
-            url.as_unpinned().clone() => zeroes_hash()
+            url.as_unpinned().clone() => zeroes_hash(),
         };
-        let index = BasePackageIndex { index };
+        let blob_id_to_url = hashmap! {
+            zeroes_hash() => url.as_unpinned().clone(),
+        };
+        let index = BasePackageIndex { index, blob_id_to_url };
 
         assert_eq!(index.is_unpinned_base_package(&url), None);
     }
@@ -210,13 +243,17 @@ mod tests {
         let url_no_variant: UnpinnedAbsolutePackageUrl =
             "fuchsia-pkg://fuchsia.com/package-name".parse().unwrap();
         let index = hashmap! {
-            url_no_variant => zeroes_hash(),
+            url_no_variant.clone() => zeroes_hash(),
         };
-        let index = BasePackageIndex { index };
+        let blob_id_to_url = hashmap! {
+            zeroes_hash() => url_no_variant,
+        };
+        let index = BasePackageIndex { index, blob_id_to_url };
 
         let url_with_variant: AbsolutePackageUrl =
             "fuchsia-pkg://fuchsia.com/package-name/0".parse().unwrap();
         assert_eq!(index.is_unpinned_base_package(&url_with_variant), Some(zeroes_hash()));
+        assert!(index.contains_package(&zeroes_hash()));
     }
 
     #[test]
@@ -224,12 +261,41 @@ mod tests {
         let url_no_variant: UnpinnedAbsolutePackageUrl =
             "fuchsia-pkg://fuchsia.com/package-name".parse().unwrap();
         let index = hashmap! {
-            url_no_variant => zeroes_hash(),
+            url_no_variant.clone() => zeroes_hash(),
         };
-        let index = BasePackageIndex { index };
+        let blob_id_to_url = hashmap! {
+            zeroes_hash() => url_no_variant,
+        };
+        let index = BasePackageIndex { index, blob_id_to_url };
 
         let url_with_variant: AbsolutePackageUrl =
             "fuchsia-pkg://fuchsia.com/package-name/1".parse().unwrap();
         assert_eq!(index.is_unpinned_base_package(&url_with_variant), None);
+    }
+
+    #[test]
+    fn contains_rejects_missing_blob_id() {
+        let url_no_variant: UnpinnedAbsolutePackageUrl =
+            "fuchsia-pkg://fuchsia.com/package-name".parse().unwrap();
+        let index = hashmap! {
+            url_no_variant => zeroes_hash(),
+        };
+        let index = BasePackageIndex::create_mock(index);
+
+        assert!(index.contains_package(&zeroes_hash()));
+        assert!(!index.contains_package(&ones_hash()));
+    }
+
+    #[test]
+    fn test_get_url() {
+        let url_no_variant: UnpinnedAbsolutePackageUrl =
+            "fuchsia-pkg://fuchsia.com/package-name".parse().unwrap();
+        let index = hashmap! {
+            url_no_variant.clone() => zeroes_hash(),
+        };
+        let index = BasePackageIndex::create_mock(index);
+
+        assert_eq!(index.get_url(&zeroes_hash()), Some(&url_no_variant));
+        assert_eq!(index.get_url(&ones_hash()), None);
     }
 }

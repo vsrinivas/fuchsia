@@ -23,6 +23,10 @@
             url: "fuchsia-pkg-cache:///#meta/pkg-cache.cm",
             environment: "#pkg_cache_resolver_env",
         },
+
+        // TODO(101213): Extend the integration test to resolve a component from
+        // a relative subpackage reference, either directly from this component,
+        // or perhaps as a subpackage of `mock-component`
     ],
     use: [
         {

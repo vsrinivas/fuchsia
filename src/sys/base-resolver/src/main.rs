@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_component_resolution as fresolution};
+use {
+    fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_component_resolution as fresolution,
+    fidl_fuchsia_pkg_ext::BlobIdParseError,
+};
 
 mod base_resolver;
 mod pkg_cache_resolver;
@@ -58,13 +61,29 @@ enum ResolverError {
 
     #[error("serve package directory")]
     ServePackageDirectory(#[source] package_directory::Error),
+    #[error("failed to read the resolution context")]
+    ReadingContext(#[source] anyhow::Error),
+    #[error("failed to create the resolution context")]
+    CreatingContext(#[source] anyhow::Error),
+    #[error("subpackage name was not found in the package's subpackage list")]
+    SubpackageNotFound(#[source] anyhow::Error),
+    #[error("the subpackage hash was not found in the system base package index: {0}")]
+    SubpackageNotInBase(#[source] anyhow::Error),
+    #[error("the subpackage hash string was invalid: {0}")]
+    InvalidPackageHash(#[source] BlobIdParseError),
+    #[error("missing context required to resolve relative url: {0}")]
+    RelativeUrlMissingContext(String),
+    #[error("internal error")]
+    Internal,
 }
 
 impl From<&ResolverError> for fresolution::ResolverError {
     fn from(err: &ResolverError) -> fresolution::ResolverError {
         use ResolverError::*;
         match err {
-            InvalidUrl(_) | PackageHashNotSupported => fresolution::ResolverError::InvalidArgs,
+            InvalidPackageHash(_) | InvalidUrl(_) | PackageHashNotSupported => {
+                fresolution::ResolverError::InvalidArgs
+            }
             UnsupportedRepo => fresolution::ResolverError::NotSupported,
             ComponentNotFound(_) => fresolution::ResolverError::ManifestNotFound,
             PackageNotFound(_) => fresolution::ResolverError::PackageNotFound,
@@ -75,6 +94,13 @@ impl From<&ResolverError> for fresolution::ResolverError {
             ReadManifest(_) | CreateEndpoints(_) | ServePackageDirectory(_) => {
                 fresolution::ResolverError::Io
             }
+            CreatingContext(_) => fresolution::ResolverError::Internal,
+            ReadingContext(_) => fresolution::ResolverError::Internal,
+            SubpackageNotInBase(_) | SubpackageNotFound(_) => {
+                fresolution::ResolverError::PackageNotFound
+            }
+            RelativeUrlMissingContext(_) => fresolution::ResolverError::InvalidArgs,
+            Internal => fresolution::ResolverError::Internal,
         }
     }
 }

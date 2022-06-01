@@ -27,8 +27,7 @@ use {
     tuf::metadata::TargetPath,
 };
 
-mod base_package_index;
-pub use base_package_index::BasePackageIndex;
+pub use fidl_fuchsia_pkg_ext::BasePackageIndex;
 
 mod inspect;
 mod resume;

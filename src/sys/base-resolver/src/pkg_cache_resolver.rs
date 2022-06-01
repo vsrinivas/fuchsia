@@ -148,8 +148,6 @@ async fn resolve_pkg_cache(
             directory: Some(client),
             ..fresolution::Package::EMPTY
         }),
-        // pkg_cache_resolver only resolves the pkg-cache component
-        resolution_context: None,
         ..fresolution::Component::EMPTY
     })
 }

@@ -908,6 +908,11 @@
             to: "#base_resolver",
         },
         {
+            protocol: "fuchsia.pkg.PackageCache",
+            from: "#pkg-cache",
+            to: "#base_resolver",
+        },
+        {
             protocol: "fuchsia.boot.Arguments",
             from: "parent",
             to: "#pkg_cache_resolver",

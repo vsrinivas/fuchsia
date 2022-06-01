@@ -10,13 +10,16 @@ use {
         self as fresolution, ResolverRequest, ResolverRequestStream,
     },
     fidl_fuchsia_io as fio,
-    fuchsia_component::server::ServiceFs,
-    fuchsia_url::{
-        errors::{ParseError as PkgUrlParseError, ResourcePathError},
-        pkg_url::PkgUrl,
-    },
+    fidl_fuchsia_pkg::PackageCacheMarker,
+    fidl_fuchsia_pkg_ext::{BasePackageIndex, BlobId},
+    fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
+    fuchsia_url::pkg_url::PkgUrl,
     futures::prelude::*,
     log::*,
+    routing::resolving::{
+        context_bytes_from_subpackages_map, parse_package_url_and_resource, read_subpackages,
+        subpackages_map_from_context_bytes,
+    },
 };
 
 pub(crate) async fn main() -> anyhow::Result<()> {
@@ -47,11 +50,16 @@ enum Services {
 }
 
 async fn serve(mut stream: ResolverRequestStream) -> anyhow::Result<()> {
+    let pkg_cache =
+        connect_to_protocol::<PackageCacheMarker>().context("error connecting to package cache")?;
+    let base_package_index = BasePackageIndex::from_proxy(&pkg_cache)
+        .await
+        .context("failed to load base package index")?;
     let packages_dir = io_util::open_directory_in_namespace(
         "/pkgfs/packages",
         fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
     )
-    .context("failed to open /pkgfs")?;
+    .context("failed to open /pkgfs/packages")?;
     while let Some(request) =
         stream.try_next().await.context("failed to read request from FIDL stream")?
     {
@@ -69,11 +77,25 @@ async fn serve(mut stream: ResolverRequestStream) -> anyhow::Result<()> {
                     });
                 responder.send(&mut result).context("failed sending response")?;
             }
-            ResolverRequest::ResolveWithContext { component_url: _, context: _, responder } => {
-                // To be implemented in a future commit
-                responder
-                    .send(&mut Err(fresolution::ResolverError::Internal))
-                    .expect("failed to send resolve response");
+            ResolverRequest::ResolveWithContext { component_url, context, responder } => {
+                let mut result = resolve_component_with_context(
+                    &component_url,
+                    &context,
+                    &packages_dir,
+                    &base_package_index,
+                )
+                .await
+                .map_err(|err| {
+                    let fidl_err = (&err).into();
+                    error!(
+                        "failed to resolve component URL {} with context {:?}: {:#}",
+                        &component_url,
+                        &context,
+                        anyhow::anyhow!(err)
+                    );
+                    fidl_err
+                });
+                responder.send(&mut result).context("failed sending response")?;
             }
         };
     }
@@ -84,15 +106,35 @@ async fn resolve_component(
     component_url: &str,
     packages_dir: &fio::DirectoryProxy,
 ) -> Result<fresolution::Component, crate::ResolverError> {
-    let package_url = PkgUrl::parse(component_url)?;
-    let cm_path = package_url.resource().ok_or_else(|| {
-        crate::ResolverError::InvalidUrl(PkgUrlParseError::InvalidResourcePath(
-            ResourcePathError::PathIsEmpty,
-        ))
-    })?;
-    let package_dir = resolve_package(&package_url, packages_dir).await?;
+    resolve_component_async(component_url, None, packages_dir, None).await
+}
 
-    let data = mem_util::open_file_data(&package_dir, cm_path)
+async fn resolve_component_with_context(
+    component_url: &str,
+    context: &Vec<u8>,
+    packages_dir: &fio::DirectoryProxy,
+    base_package_index: &BasePackageIndex,
+) -> Result<fresolution::Component, crate::ResolverError> {
+    resolve_component_async(component_url, Some(context), packages_dir, Some(base_package_index))
+        .await
+}
+
+async fn resolve_component_async(
+    component_url: &str,
+    some_incoming_context: Option<&Vec<u8>>,
+    packages_dir: &fio::DirectoryProxy,
+    some_base_package_index: Option<&BasePackageIndex>,
+) -> Result<fresolution::Component, crate::ResolverError> {
+    let (package_url, cm_path) = parse_package_url_and_resource(component_url)?;
+    let package = resolve_package_async(
+        &package_url,
+        some_incoming_context,
+        packages_dir,
+        some_base_package_index,
+    )
+    .await?;
+
+    let data = mem_util::open_file_data(&package.dir, &cm_path)
         .await
         .map_err(crate::ResolverError::ComponentNotFound)?;
     let raw_bytes = mem_util::bytes_from_data(&data).map_err(crate::ResolverError::ReadManifest)?;
@@ -108,7 +150,7 @@ async fn resolve_component(
             other => return Err(crate::ResolverError::UnsupportedConfigSource(other.to_owned())),
         };
         Some(
-            mem_util::open_file_data(&package_dir, &config_path)
+            mem_util::open_file_data(&package.dir, &config_path)
                 .await
                 .map_err(crate::ResolverError::ConfigValuesNotFound)?,
         )
@@ -117,13 +159,14 @@ async fn resolve_component(
     };
 
     let package_dir = ClientEnd::new(
-        package_dir.into_channel().expect("could not convert proxy to channel").into_zx_channel(),
+        package.dir.into_channel().expect("could not convert proxy to channel").into_zx_channel(),
     );
     Ok(fresolution::Component {
         url: Some(component_url.into()),
+        resolution_context: Some(package.context),
         decl: Some(data),
         package: Some(fresolution::Package {
-            url: Some(package_url.root_url().to_string()),
+            url: Some(package_url.to_string()),
             directory: Some(package_dir),
             ..fresolution::Package::EMPTY
         }),
@@ -132,27 +175,76 @@ async fn resolve_component(
     })
 }
 
-async fn resolve_package(
+#[derive(Debug)]
+struct ResolvedPackage {
+    dir: fio::DirectoryProxy,
+    context: Vec<u8>,
+}
+
+async fn resolve_package_async(
     package_url: &PkgUrl,
+    some_incoming_context: Option<&Vec<u8>>,
     packages_dir: &fio::DirectoryProxy,
-) -> Result<fio::DirectoryProxy, crate::ResolverError> {
-    let root_url = package_url.root_url();
-    if root_url.host() != "fuchsia.com" {
-        return Err(crate::ResolverError::UnsupportedRepo);
-    }
-    if root_url.package_hash().is_some() {
-        return Err(crate::ResolverError::PackageHashNotSupported);
-    }
-    let package_name = io_util::canonicalize_path(root_url.path());
+    some_base_package_index: Option<&BasePackageIndex>,
+) -> Result<ResolvedPackage, crate::ResolverError> {
+    let (package_name, some_variant) = if package_url.is_relative() {
+        let context = some_incoming_context.ok_or_else(|| {
+            crate::ResolverError::RelativeUrlMissingContext(package_url.to_string())
+        })?;
+        // TODO(fxbug.dev/101492): Update base-resolver to use blobfs directly,
+        // and allow subpackage lookup to resolve subpackages from blobfs via
+        // the blobid (package hash). Then base-resolver will no longer need
+        // access to pkgfs-packages or to the package index (from PackageCache).
+        let base_package_index =
+            some_base_package_index.ok_or_else(|| crate::ResolverError::Internal)?;
+        // Note, `name()` returns the first segment only
+        let subpackage = package_url.name().as_ref();
+        let subpackage_hashes = subpackages_map_from_context_bytes(context)
+            .map_err(|err| crate::ResolverError::ReadingContext(err))?;
+        let hash = subpackage_hashes.get(subpackage).ok_or_else(|| {
+            crate::ResolverError::SubpackageNotFound(anyhow::format_err!(
+                "Subpackage '{}' not found in context: {:?}",
+                subpackage,
+                subpackage_hashes
+            ))
+        })?;
+        if let Some(package_url) = base_package_index
+            .get_url(&BlobId::parse(hash).map_err(crate::ResolverError::InvalidPackageHash)?)
+        {
+            (package_url.name(), package_url.variant())
+        } else {
+            return Err(crate::ResolverError::SubpackageNotInBase(anyhow::format_err!(
+                "Subpackage '{}' with hash '{}' is not in base",
+                subpackage,
+                hash
+            )));
+        }
+    } else {
+        if package_url.host() != "fuchsia.com" {
+            return Err(crate::ResolverError::UnsupportedRepo);
+        }
+        if package_url.package_hash().is_some() {
+            return Err(crate::ResolverError::PackageHashNotSupported);
+        }
+        (package_url.name(), package_url.variant())
+    };
     // Package contents are available at `packages/$PACKAGE_NAME/0`.
     let dir = io_util::directory::open_directory(
         packages_dir,
-        &format!("{}/0", package_name),
+        &format!("{}/{}", package_name.as_ref(), some_variant.map(|v| v.as_ref()).unwrap_or("0")),
         fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
     )
     .await
     .map_err(crate::ResolverError::PackageNotFound)?;
-    Ok(dir)
+    let resolved_package_context = fabricate_package_context(&dir)
+        .map_err(|err| crate::ResolverError::CreatingContext(anyhow::anyhow!(err)))
+        .await?;
+    Ok(ResolvedPackage { dir, context: resolved_package_context })
+}
+
+async fn fabricate_package_context(dir_proxy: &fio::DirectoryProxy) -> anyhow::Result<Vec<u8>> {
+    let some_subpackage_hashes = read_subpackages(dir_proxy).await?;
+    Ok(context_bytes_from_subpackages_map(some_subpackage_hashes.as_ref())?.unwrap_or(vec![]))
 }
 
 #[cfg(test)]
@@ -165,9 +257,24 @@ mod tests {
         fidl::prelude::*,
         fidl_fuchsia_component_config as fconfig, fidl_fuchsia_component_decl as fdecl,
         fidl_fuchsia_mem as fmem,
+        fuchsia_url::UnpinnedAbsolutePackageUrl,
         fuchsia_zircon::Status,
+        maplit::hashmap,
         std::sync::Arc,
     };
+
+    const SUBPACKAGE_NAME: &'static str = "my_subpackage";
+    const SUBPACKAGE_HASH: &'static str =
+        "facefacefacefacefacefacefacefacefacefacefacefacefacefacefaceface";
+    const OTHER_PACKAGE_HASH: &'static str =
+        "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
+
+    async fn resolve_package(
+        package_url: &PkgUrl,
+        packages_dir: &fio::DirectoryProxy,
+    ) -> Result<ResolvedPackage, crate::ResolverError> {
+        resolve_package_async(package_url, None, packages_dir, None).await
+    }
 
     /// A DirectoryEntry implementation that checks whether an expected set of flags
     /// are set in the Open request.
@@ -199,7 +306,9 @@ mod tests {
         }
     }
 
-    fn serve_pkgfs(
+    /// Serve a pseudo_dir with `RIGHT_EXECUTABLE` permissions, which can
+    /// emulate `/pkgfs/packages` for tests.
+    fn serve_executable_dir(
         pseudo_dir: Arc<dyn vfs::directory::entry::DirectoryEntry>,
     ) -> fio::DirectoryProxy {
         let (proxy, server_end) = create_proxy::<fio::DirectoryMarker>()
@@ -221,15 +330,15 @@ mod tests {
         let flag_verifier = Arc::new(FlagVerifier(
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
         ));
-        let pkgfs_dir = serve_pkgfs(vfs::pseudo_directory! {
+        let packages_dir = serve_executable_dir(vfs::pseudo_directory! {
             "test-package" => vfs::pseudo_directory! {
                 "0" => flag_verifier,
             }
         });
 
         let package =
-            resolve_package(&pkg_url, &pkgfs_dir).await.expect("failed to resolve package");
-        let event_stream = package.take_event_stream().map_ok(|_| ());
+            resolve_package(&pkg_url, &packages_dir).await.expect("failed to resolve package");
+        let event_stream = package.dir.take_event_stream().map_ok(|_| ());
         assert_matches!(
             event_stream.try_collect::<()>().await,
             Err(fidl::Error::ClientChannelClosed { status: Status::OK, .. })
@@ -240,31 +349,31 @@ mod tests {
     async fn fails_to_resolve_package_unsupported_repo() {
         let pkg_url = PkgUrl::new_package("fuchsia.ca".into(), "/test-package".into(), None)
             .expect("failed to create test PkgUrl");
-        let pkgfs_dir = serve_pkgfs(vfs::pseudo_directory! {});
+        let packages_dir = serve_executable_dir(vfs::pseudo_directory! {});
 
         assert_matches!(
-            resolve_package(&pkg_url, &pkgfs_dir).await,
+            resolve_package(&pkg_url, &packages_dir).await,
             Err(crate::ResolverError::UnsupportedRepo)
         );
     }
 
     #[fuchsia::test]
     async fn fails_to_resolve_component_invalid_url() {
-        let pkgfs_dir = serve_pkgfs(vfs::pseudo_directory! {});
+        let packages_dir = serve_executable_dir(vfs::pseudo_directory! {});
         assert_matches!(
-            resolve_component("fuchsia://fuchsia.com/foo#meta/bar.cm", &pkgfs_dir).await,
+            resolve_component("fuchsia://fuchsia.com/foo#meta/bar.cm", &packages_dir).await,
             Err(crate::ResolverError::InvalidUrl(_))
         );
         assert_matches!(
-            resolve_component("fuchsia-pkg://fuchsia.com/foo", &pkgfs_dir).await,
+            resolve_component("fuchsia-pkg://fuchsia.com/foo", &packages_dir).await,
             Err(crate::ResolverError::InvalidUrl(_))
         );
         assert_matches!(
-            resolve_component("fuchsia-pkg://fuchsia.com/#meta/bar.cm", &pkgfs_dir).await,
+            resolve_component("fuchsia-pkg://fuchsia.com/#meta/bar.cm", &packages_dir).await,
             Err(crate::ResolverError::InvalidUrl(_))
         );
         assert_matches!(
-            resolve_component("fuchsia-pkg://fuchsia.ca/foo#meta/bar.cm", &pkgfs_dir).await,
+            resolve_component("fuchsia-pkg://fuchsia.ca/foo#meta/bar.cm", &packages_dir).await,
             Err(crate::ResolverError::UnsupportedRepo)
         );
 
@@ -274,26 +383,29 @@ mod tests {
             "#meta/test.cm"
         );
         assert_matches!(
-            resolve_component(url_with_hash, &pkgfs_dir).await,
+            resolve_component(url_with_hash, &packages_dir).await,
             Err(crate::ResolverError::PackageHashNotSupported)
         );
     }
 
     #[fuchsia::test]
     async fn fails_to_resolve_component_package_not_found() {
-        let pkgfs_dir = serve_pkgfs(build_fake_pkgfs());
+        let packages_dir = serve_executable_dir(build_fake_packages_dir());
         assert_matches!(
-            resolve_component("fuchsia-pkg://fuchsia.com/missing-package#meta/foo.cm", &pkgfs_dir)
-                .await,
+            resolve_component(
+                "fuchsia-pkg://fuchsia.com/missing-package#meta/foo.cm",
+                &packages_dir
+            )
+            .await,
             Err(crate::ResolverError::PackageNotFound(_))
         );
     }
 
     #[fuchsia::test]
     async fn fails_to_resolve_component_missing_manifest() {
-        let pkgfs_dir = serve_pkgfs(build_fake_pkgfs());
+        let packages_dir = serve_executable_dir(build_fake_packages_dir());
         assert_matches!(
-            resolve_component("fuchsia-pkg://fuchsia.com/test-package#meta/bar.cm", &pkgfs_dir)
+            resolve_component("fuchsia-pkg://fuchsia.com/test-package#meta/bar.cm", &packages_dir)
                 .await,
             Err(crate::ResolverError::ComponentNotFound(_))
         );
@@ -301,9 +413,9 @@ mod tests {
 
     #[fuchsia::test]
     async fn resolves_component_vmo_manifest() {
-        let pkgfs_dir = serve_pkgfs(build_fake_pkgfs());
+        let packages_dir = serve_executable_dir(build_fake_packages_dir());
         assert_matches!(
-            resolve_component("fuchsia-pkg://fuchsia.com/test-package#meta/vmo.cm", &pkgfs_dir)
+            resolve_component("fuchsia-pkg://fuchsia.com/test-package#meta/vmo.cm", &packages_dir)
                 .await,
             Ok(fresolution::Component { decl: Some(fmem::Data::Buffer(_)), .. })
         );
@@ -311,9 +423,9 @@ mod tests {
 
     #[fuchsia::test]
     async fn resolves_component_file_manifest() {
-        let pkgfs_dir = serve_pkgfs(build_fake_pkgfs());
+        let packages_dir = serve_executable_dir(build_fake_packages_dir());
         assert_matches!(
-            resolve_component("fuchsia-pkg://fuchsia.com/test-package#meta/foo.cm", &pkgfs_dir)
+            resolve_component("fuchsia-pkg://fuchsia.com/test-package#meta/foo.cm", &packages_dir)
                 .await,
             Ok(fresolution::Component {
                 decl: Some(fidl_fuchsia_mem::Data::Buffer(fidl_fuchsia_mem::Buffer { .. })),
@@ -323,11 +435,119 @@ mod tests {
     }
 
     #[fuchsia::test]
+    async fn resolves_component_in_subpackage() {
+        let parent_component_url = "fuchsia-pkg://fuchsia.com/test-package#meta/foo.cm";
+        let subpackaged_component_url = SUBPACKAGE_NAME.to_string() + "#meta/subfoo.cm";
+
+        // Set up the base package index with the subpackage's hash that will
+        // be requested
+        let subpackage_as_base_package_url: UnpinnedAbsolutePackageUrl =
+            "fuchsia-pkg://fuchsia.com/toplevel-subpackage".parse().unwrap();
+        let subpackage_blob_id = BlobId::parse(SUBPACKAGE_HASH).unwrap();
+        let other_package_as_base_package_url: UnpinnedAbsolutePackageUrl =
+            "fuchsia-pkg://fuchsia.com/some-other-package".parse().unwrap();
+        let other_package_blob_id = BlobId::parse(OTHER_PACKAGE_HASH).unwrap();
+        let index = hashmap! {
+            subpackage_as_base_package_url => subpackage_blob_id,
+            other_package_as_base_package_url => other_package_blob_id,
+        };
+        let base_package_index = BasePackageIndex::create_mock(index);
+
+        let packages_dir = serve_executable_dir(build_fake_packages_dir());
+        let parent_component = resolve_component(parent_component_url, &packages_dir)
+            .await
+            .expect("failed to resolve parent_component");
+
+        assert_matches!(parent_component.resolution_context, Some(..));
+        assert_matches!(
+            resolve_component_with_context(
+                &subpackaged_component_url,
+                parent_component.resolution_context.as_ref().unwrap(),
+                &packages_dir,
+                &base_package_index,
+            )
+            .await,
+            Ok(fresolution::Component { decl: Some(..), .. }),
+            "Could not resolve subpackaged component '{}' from context '{:?}'",
+            subpackaged_component_url,
+            parent_component.resolution_context
+        );
+    }
+
+    #[fuchsia::test]
+    async fn fails_to_resolve_component_in_subpackage_not_in_base() {
+        let parent_component_url = "fuchsia-pkg://fuchsia.com/test-package#meta/foo.cm";
+        let subpackaged_component_url = SUBPACKAGE_NAME.to_string() + "#meta/other_subfoo.cm";
+
+        // Set up the base package index WITHOUT the subpackage's hash that will
+        // be requested
+        let other_package_as_base_package_url: UnpinnedAbsolutePackageUrl =
+            "fuchsia-pkg://fuchsia.com/some-other-package".parse().unwrap();
+        let other_package_blob_id = BlobId::parse(OTHER_PACKAGE_HASH).unwrap();
+        let index = hashmap! {
+            other_package_as_base_package_url => other_package_blob_id,
+        };
+        let base_package_index = BasePackageIndex::create_mock(index);
+        assert!(base_package_index.contains_package(&other_package_blob_id));
+
+        let packages_dir = serve_executable_dir(build_fake_packages_dir());
+        let parent_component = resolve_component(parent_component_url, &packages_dir)
+            .await
+            .expect("failed to resolve parent_component");
+
+        assert_matches!(parent_component.resolution_context, Some(..));
+        assert_matches!(
+            resolve_component_with_context(
+                &subpackaged_component_url,
+                parent_component.resolution_context.as_ref().unwrap(),
+                &packages_dir,
+                &base_package_index,
+            )
+            .await,
+            Err(crate::ResolverError::SubpackageNotInBase(..))
+        );
+    }
+
+    #[fuchsia::test]
+    async fn fails_to_resolve_subpackage_name_not_in_parent_subpackages() {
+        let parent_component_url = "fuchsia-pkg://fuchsia.com/test-package#meta/foo.cm";
+        let subpackaged_component_url = "subpackage_not_in_parent#meta/other_subfoo.cm";
+
+        // Set up the base package index WITHOUT the subpackage's hash that will
+        // be requested
+        let other_package_as_base_package_url: UnpinnedAbsolutePackageUrl =
+            "fuchsia-pkg://fuchsia.com/some-other-package".parse().unwrap();
+        let other_package_blob_id = BlobId::parse(OTHER_PACKAGE_HASH).unwrap();
+        let index = hashmap! {
+            other_package_as_base_package_url => other_package_blob_id,
+        };
+        let base_package_index = BasePackageIndex::create_mock(index);
+        assert!(base_package_index.contains_package(&other_package_blob_id));
+
+        let packages_dir = serve_executable_dir(build_fake_packages_dir());
+        let parent_component = resolve_component(parent_component_url, &packages_dir)
+            .await
+            .expect("failed to resolve parent_component");
+
+        assert_matches!(parent_component.resolution_context, Some(..));
+        assert_matches!(
+            resolve_component_with_context(
+                &subpackaged_component_url,
+                parent_component.resolution_context.as_ref().unwrap(),
+                &packages_dir,
+                &base_package_index,
+            )
+            .await,
+            Err(crate::ResolverError::SubpackageNotFound(..))
+        );
+    }
+
+    #[fuchsia::test]
     async fn resolves_component_with_config() {
-        let pkgfs_dir = serve_pkgfs(build_fake_pkgfs());
+        let packages_dir = serve_executable_dir(build_fake_packages_dir());
         let component = resolve_component(
             "fuchsia-pkg://fuchsia.com/test-package#meta/foo-with-config.cm",
-            &pkgfs_dir,
+            &packages_dir,
         )
         .await
         .unwrap();
@@ -339,10 +559,10 @@ mod tests {
 
     #[fuchsia::test]
     async fn fails_to_resolve_component_missing_config_values() {
-        let pkgfs_dir = serve_pkgfs(build_fake_pkgfs());
+        let packages_dir = serve_executable_dir(build_fake_packages_dir());
         let error = resolve_component(
             "fuchsia-pkg://fuchsia.com/test-package#meta/foo-without-config.cm",
-            &pkgfs_dir,
+            &packages_dir,
         )
         .await
         .unwrap_err();
@@ -351,17 +571,30 @@ mod tests {
 
     #[fuchsia::test]
     async fn fails_to_resolve_component_bad_config_source() {
-        let pkgfs_dir = serve_pkgfs(build_fake_pkgfs());
+        let packages_dir = serve_executable_dir(build_fake_packages_dir());
         let error = resolve_component(
             "fuchsia-pkg://fuchsia.com/test-package#meta/foo-with-bad-config.cm",
-            &pkgfs_dir,
+            &packages_dir,
         )
         .await
         .unwrap_err();
         assert_matches!(error, crate::ResolverError::InvalidConfigSource);
     }
 
-    fn build_fake_pkgfs() -> Arc<dyn vfs::directory::entry::DirectoryEntry> {
+    fn build_fake_packages_dir() -> Arc<dyn vfs::directory::entry::DirectoryEntry> {
+        let subpackage = build_fake_subpackage_dir();
+        let parent_package = build_fake_package_dir();
+        vfs::pseudo_directory! {
+            "test-package" => vfs::pseudo_directory! {
+                "0" => parent_package,
+            },
+            "toplevel-subpackage" => vfs::pseudo_directory! {
+                "0" => subpackage,
+            },
+        }
+    }
+
+    fn build_fake_package_dir() -> Arc<dyn vfs::directory::entry::DirectoryEntry> {
         let cm_bytes = encode_persistent_with_context(
             &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V2 },
             &mut fdecl::Component::EMPTY.clone(),
@@ -369,72 +602,83 @@ mod tests {
         .expect("failed to encode ComponentDecl FIDL");
 
         vfs::pseudo_directory! {
-            "test-package" => vfs::pseudo_directory! {
-                "0" => vfs::pseudo_directory! {
-                    "meta" => vfs::pseudo_directory! {
-                        "foo.cm" => vfs::file::vmo::asynchronous::read_only_const(&cm_bytes),
-                        "foo-with-config.cm" => vfs::file::vmo::asynchronous::read_only_const(
-                            &encode_persistent_with_context(
-                                &fidl::encoding::Context {
-                                    wire_format_version: fidl::encoding::WireFormatVersion::V2
-                                },
-                                &mut fdecl::Component {
-                                    config: Some(fdecl::ConfigSchema {
-                                        value_source: Some(
-                                            fdecl::ConfigValueSource::PackagePath(
-                                                "meta/foo-with-config.cvf".to_string(),
-                                            ),
-                                        ),
-                                        ..fdecl::ConfigSchema::EMPTY
-                                    }),
-                                    ..fdecl::Component::EMPTY
-                                }
-                            ).unwrap()
-                        ),
-                        "foo-with-config.cvf" => vfs::file::vmo::asynchronous::read_only_const(
-                            &encode_persistent_with_context(
-                                &fidl::encoding::Context {
-                                    wire_format_version: fidl::encoding::WireFormatVersion::V2
-                                },
-                                &mut fconfig::ValuesData {
-                                    ..fconfig::ValuesData::EMPTY
-                                }
-                            ).unwrap()
-                        ),
-                        "foo-with-bad-config.cm" => vfs::file::vmo::asynchronous::read_only_const(
-                            &encode_persistent_with_context(
-                                &fidl::encoding::Context {
-                                    wire_format_version: fidl::encoding::WireFormatVersion::V2
-                                },
-                                &mut fdecl::Component {
-                                    config: Some(fdecl::ConfigSchema {
-                                        ..fdecl::ConfigSchema::EMPTY
-                                    }),
-                                    ..fdecl::Component::EMPTY
-                                }
-                            ).unwrap()
-                        ),
-                        "foo-without-config.cm" => vfs::file::vmo::asynchronous::read_only_const(
-                            &encode_persistent_with_context(
-                                &fidl::encoding::Context {
-                                    wire_format_version: fidl::encoding::WireFormatVersion::V2
-                                },
-                                &mut fdecl::Component {
-                                    config: Some(fdecl::ConfigSchema {
-                                        value_source: Some(
-                                            fdecl::ConfigValueSource::PackagePath(
-                                                "doesnt-exist.cvf".to_string(),
-                                            ),
-                                        ),
-                                        ..fdecl::ConfigSchema::EMPTY
-                                    }),
-                                    ..fdecl::Component::EMPTY
-                                }
-                            ).unwrap()
-                        ),
-                        "vmo.cm" => vfs::file::vmo::asynchronous::read_only_const(&cm_bytes),
-                    }
-                }
+            "meta" => vfs::pseudo_directory! {
+                "subpackages" => vfs::file::vmo::asynchronous::read_only_const(&format!("{}={}\n", SUBPACKAGE_NAME, SUBPACKAGE_HASH).into_bytes()),
+                "foo.cm" => vfs::file::vmo::asynchronous::read_only_const(&cm_bytes),
+                "foo-with-config.cm" => vfs::file::vmo::asynchronous::read_only_const(
+                    &encode_persistent_with_context(
+                        &fidl::encoding::Context {
+                            wire_format_version: fidl::encoding::WireFormatVersion::V2
+                        },
+                        &mut fdecl::Component {
+                            config: Some(fdecl::ConfigSchema {
+                                value_source: Some(
+                                    fdecl::ConfigValueSource::PackagePath(
+                                        "meta/foo-with-config.cvf".to_string(),
+                                    ),
+                                ),
+                                ..fdecl::ConfigSchema::EMPTY
+                            }),
+                            ..fdecl::Component::EMPTY
+                        }
+                    ).unwrap()
+                ),
+                "foo-with-config.cvf" => vfs::file::vmo::asynchronous::read_only_const(
+                    &encode_persistent_with_context(
+                        &fidl::encoding::Context {
+                            wire_format_version: fidl::encoding::WireFormatVersion::V2
+                        },
+                        &mut fconfig::ValuesData {
+                            ..fconfig::ValuesData::EMPTY
+                        }
+                    ).unwrap()
+                ),
+                "foo-with-bad-config.cm" => vfs::file::vmo::asynchronous::read_only_const(
+                    &encode_persistent_with_context(
+                        &fidl::encoding::Context {
+                            wire_format_version: fidl::encoding::WireFormatVersion::V2
+                        },
+                        &mut fdecl::Component {
+                            config: Some(fdecl::ConfigSchema {
+                                ..fdecl::ConfigSchema::EMPTY
+                            }),
+                            ..fdecl::Component::EMPTY
+                        }
+                    ).unwrap()
+                ),
+                "foo-without-config.cm" => vfs::file::vmo::asynchronous::read_only_const(
+                    &encode_persistent_with_context(
+                        &fidl::encoding::Context {
+                            wire_format_version: fidl::encoding::WireFormatVersion::V2
+                        },
+                        &mut fdecl::Component {
+                            config: Some(fdecl::ConfigSchema {
+                                value_source: Some(
+                                    fdecl::ConfigValueSource::PackagePath(
+                                        "doesnt-exist.cvf".to_string(),
+                                    ),
+                                ),
+                                ..fdecl::ConfigSchema::EMPTY
+                            }),
+                            ..fdecl::Component::EMPTY
+                        }
+                    ).unwrap()
+                ),
+                "vmo.cm" => vfs::file::vmo::asynchronous::read_only_const(&cm_bytes),
+            }
+        }
+    }
+
+    fn build_fake_subpackage_dir() -> Arc<dyn vfs::directory::entry::DirectoryEntry> {
+        let cm_bytes = encode_persistent_with_context(
+            &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V2 },
+            &mut fdecl::Component::EMPTY.clone(),
+        )
+        .expect("failed to encode ComponentDecl FIDL");
+
+        vfs::pseudo_directory! {
+            "meta" => vfs::pseudo_directory! {
+                "subfoo.cm" => vfs::file::vmo::asynchronous::read_only_const(&cm_bytes),
             }
         }
     }

@@ -81,6 +81,20 @@ pub enum ParseError {
     #[error("cannot contain password")]
     CannotContainPassword,
 
+    #[error("cannot contain query parameters")]
+    CannotContainQueryParameters,
+
+    #[error("relative path URL cannot specify a package hash")]
+    RelativePathCannotSpecifyHash,
+
+    #[error("relative path URL cannot specify a variant")]
+    RelativePathCannotSpecifyVariant,
+
+    #[error(
+        "relative URL with absolute path is not supported (relative path cannot start with `/`)"
+    )]
+    AbsolutePathNotSupported,
+
     #[error("invalid repository URI")]
     InvalidRepository,
 

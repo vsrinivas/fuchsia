@@ -344,6 +344,7 @@
                 source_name: "fuchsia.pkg.PackageCache",
                 capability: "protocol",
                 target_monikers: [
+                    "/bootstrap/base_resolver",
                     "/core",
                     "/core/pkg-resolver",
                     "/core/system-updater",

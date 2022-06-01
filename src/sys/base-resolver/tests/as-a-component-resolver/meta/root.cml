@@ -28,6 +28,11 @@
             to: "#base_resolver",
         },
         {
+            protocol: "fuchsia.pkg.PackageCache",
+            from: "#fake_dependencies",
+            to: "#base_resolver",
+        },
+        {
             directory: "blob-exec",
             from: "#fake_dependencies",
             to: "#pkg_cache_resolver",
