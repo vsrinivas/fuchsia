@@ -128,7 +128,7 @@ template("virtual_device_specification") {
   }
 
   copy(template_target) {
-    sources = [ "//src/developer/ffx/plugins/emulator/testdata/emulator_flags.json.template" ]
+    sources = [ "//src/developer/ffx/plugins/emulator/templates/emulator_flags.json.template" ]
     outputs = [ template_output ]
     metadata = {
       images = [
