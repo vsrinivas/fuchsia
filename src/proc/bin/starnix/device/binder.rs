@@ -204,37 +204,49 @@ struct BinderProcess {
     /// When there are no commands in a thread's and the process' command queue, a binder thread can
     /// register with this [`WaitQueue`] to be notified when commands are available.
     waiters: Mutex<WaitQueue>,
-    /// Outstanding references to handles within transaction buffers.
-    /// When the process frees them with the BC_FREE_BUFFER, they will be released.
-    transaction_buffers: Mutex<BTreeMap<UserAddress, TransactionBuffer>>,
+    /// State associated with active transactions, keyed by the userspace addresses of the buffers
+    /// allocated to them. When the process frees a transaction buffer with `BC_FREE_BUFFER`, the
+    /// state is dropped, releasing temporary strong references and the memory allocated to the
+    /// transaction.
+    active_transactions: Mutex<BTreeMap<UserAddress, ActiveTransaction>>,
     /// The list of processes that should be notified if this process dies.
     death_subscribers: Mutex<Vec<(Weak<BinderProcess>, binder_uintptr_t)>>,
 }
 
-/// References to binder objects that should be dropped when the buffer they're attached to is
-/// released.
+/// An active binder transaction.
 #[derive(Debug)]
-struct TransactionRefs {
+struct ActiveTransaction {
+    /// The transaction's request type.
+    request_type: RequestType,
+    /// The state associated with the transaction. Not read, exists to be dropped along with the
+    /// [`ActiveTransaction`] object.
+    _state: TransactionState,
+}
+
+/// State held for the duration of a transaction. When a transaction completes (or fails), this
+/// state is dropped, decrementing temporary strong references to binder objects.
+#[derive(Debug)]
+struct TransactionState {
     // The process whose handle table `handles` belong to.
     proc: Weak<BinderProcess>,
     // The handles to decrement their strong reference count.
     handles: Vec<Handle>,
 }
 
-impl TransactionRefs {
-    /// Creates a new `TransactionRef` which operates on `target_proc`'s handle table.
+impl TransactionState {
+    /// Creates a new `TransactionState` which operates on `target_proc`'s handle table.
     fn new(target_proc: &Arc<BinderProcess>) -> Self {
-        TransactionRefs { proc: Arc::downgrade(target_proc), handles: Vec::new() }
+        TransactionState { proc: Arc::downgrade(target_proc), handles: Vec::new() }
     }
 
-    /// Schedule `handle` to have its strong reference count decremented when this `TransactionRef`
-    /// is dropped.
-    fn push(&mut self, handle: Handle) {
+    /// Schedule `handle` to have its strong reference count decremented when this
+    /// `TransactionState` is dropped.
+    fn push_handle(&mut self, handle: Handle) {
         self.handles.push(handle)
     }
 }
 
-impl Drop for TransactionRefs {
+impl Drop for TransactionState {
     fn drop(&mut self) {
         if let Some(proc) = self.proc.upgrade() {
             let mut handles = proc.handles.lock();
@@ -247,20 +259,17 @@ impl Drop for TransactionRefs {
     }
 }
 
-/// A buffer associated with an ongoing transaction.
+/// The request type of a transaction.
 #[derive(Debug)]
-enum TransactionBuffer {
-    /// This buffer serves a oneway transaction.
+enum RequestType {
+    /// A fire-and-forget request, which has special ordering guarantees.
     Oneway {
-        /// The temporary strong references held while the transaction buffer is alive.
-        _refs: TransactionRefs,
-        /// The binder object associated with the transaction.
+        /// The recipient of the transaction. Oneway transactions are ordered for a given binder
+        /// object.
         object: Weak<BinderObject>,
     },
-    RequestResponse {
-        /// The temporary strong references held while the transaction buffer is alive.
-        _refs: TransactionRefs,
-    },
+    /// A request/response type.
+    RequestResponse,
 }
 
 impl BinderProcess {
@@ -273,7 +282,7 @@ impl BinderProcess {
             handles: Mutex::new(HandleTable::default()),
             command_queue: Mutex::new(VecDeque::new()),
             waiters: Mutex::new(WaitQueue::default()),
-            transaction_buffers: Mutex::new(BTreeMap::new()),
+            active_transactions: Mutex::new(BTreeMap::new()),
             death_subscribers: Mutex::new(Vec::new()),
         }
     }
@@ -1463,12 +1472,13 @@ impl BinderDriver {
         binder_proc: &Arc<BinderProcess>,
         buffer_ptr: UserAddress,
     ) -> Result<(), Errno> {
-        // Drop the temporary references held during the transaction.
-        let removed_buffer = binder_proc.transaction_buffers.lock().remove(&buffer_ptr);
+        // Drop the state associated with the now completed transaction.
+        let active_transaction = binder_proc.active_transactions.lock().remove(&buffer_ptr);
 
-        // Check if the buffer is associated with a oneway transaction and schedule the next oneway
-        // if this is the case.
-        if let Some(TransactionBuffer::Oneway { object, .. }) = removed_buffer {
+        // Check if this was a oneway transaction and schedule the next oneway if this is the case.
+        if let Some(ActiveTransaction { request_type: RequestType::Oneway { object }, .. }) =
+            active_transaction
+        {
             if let Some(object) = object.upgrade() {
                 let mut object_state = object.lock();
                 assert!(
@@ -1589,7 +1599,7 @@ impl BinderDriver {
         };
 
         // Copy the transaction data to the target process.
-        let (data_buffer, offsets_buffer, transaction_refs) = self.copy_transaction_buffers(
+        let (data_buffer, offsets_buffer, transaction_state) = self.copy_transaction_buffers(
             current_task,
             binder_proc,
             binder_thread,
@@ -1622,11 +1632,11 @@ impl BinderDriver {
             binder_thread.write().enqueue_command(Command::TransactionComplete);
 
             // Register the transaction buffer.
-            target_proc.transaction_buffers.lock().insert(
+            target_proc.active_transactions.lock().insert(
                 data_buffer.address,
-                TransactionBuffer::Oneway {
-                    _refs: transaction_refs,
-                    object: Arc::downgrade(&object),
+                ActiveTransaction {
+                    request_type: RequestType::Oneway { object: Arc::downgrade(&object) },
+                    _state: transaction_state,
                 },
             );
 
@@ -1659,9 +1669,12 @@ impl BinderDriver {
             });
 
             // Register the transaction buffer.
-            target_proc.transaction_buffers.lock().insert(
+            target_proc.active_transactions.lock().insert(
                 data_buffer.address,
-                TransactionBuffer::RequestResponse { _refs: transaction_refs },
+                ActiveTransaction {
+                    request_type: RequestType::RequestResponse,
+                    _state: transaction_state,
+                },
             );
         }
 
@@ -1698,7 +1711,7 @@ impl BinderDriver {
         };
 
         // Copy the transaction data to the target process.
-        let (data_buffer, offsets_buffer, transaction_refs) = self.copy_transaction_buffers(
+        let (data_buffer, offsets_buffer, transaction_state) = self.copy_transaction_buffers(
             current_task,
             binder_proc,
             binder_thread,
@@ -1707,9 +1720,12 @@ impl BinderDriver {
         )?;
 
         // Register the transaction buffer.
-        target_proc.transaction_buffers.lock().insert(
+        target_proc.active_transactions.lock().insert(
             data_buffer.address,
-            TransactionBuffer::RequestResponse { _refs: transaction_refs },
+            ActiveTransaction {
+                request_type: RequestType::RequestResponse,
+                _state: transaction_state,
+            },
         );
 
         // Schedule the transaction on the target process' command queue.
@@ -1809,7 +1825,7 @@ impl BinderDriver {
         source_thread: &Arc<BinderThread>,
         target_proc: &Arc<BinderProcess>,
         data: &binder_transaction_data_sg,
-    ) -> Result<(UserBuffer, UserBuffer, TransactionRefs), TransactionError> {
+    ) -> Result<(UserBuffer, UserBuffer, TransactionState), TransactionError> {
         // Get the shared memory of the target process.
         let mut shared_memory_lock = target_proc.shared_memory.lock();
         let shared_memory = shared_memory_lock.as_mut().ok_or_else(|| errno!(ENOMEM))?;
@@ -1835,7 +1851,7 @@ impl BinderDriver {
         )?;
 
         // Fix up binder objects.
-        let transaction_refs = if !offsets_buffer.is_empty() {
+        let transaction_state = if !offsets_buffer.is_empty() {
             // Translate any handles/fds from the source process' handle table to the target
             // process' handle table.
             self.translate_handles(
@@ -1848,10 +1864,10 @@ impl BinderDriver {
                 &mut sg_buffer,
             )?
         } else {
-            TransactionRefs::new(target_proc)
+            TransactionState::new(target_proc)
         };
 
-        Ok((data_buffer.user_buffer(), offsets_buffer.user_buffer(), transaction_refs))
+        Ok((data_buffer.user_buffer(), offsets_buffer.user_buffer(), transaction_state))
     }
 
     /// Translates binder object handles from the sending process to the receiver process, patching
@@ -1861,7 +1877,7 @@ impl BinderDriver {
     /// process' handle table. Conversely, a handle being sent to the process that owns the
     /// underlying binder object should receive the actual pointers to the object.
     ///
-    /// Returns [`TransactionRefs`], which contains the handles in the target process' handle table
+    /// Returns [`TransactionState`], which contains the handles in the target process' handle table
     /// for which temporary strong references were acquired. When the buffer containing the
     /// translated binder handles is freed with the `BC_FREE_BUFFER` command, the strong references
     /// are released.
@@ -1874,8 +1890,8 @@ impl BinderDriver {
         offsets: &[binder_uintptr_t],
         transaction_data: &mut [u8],
         sg_buffer: &mut SharedBuffer<'_, u8>,
-    ) -> Result<TransactionRefs, TransactionError> {
-        let mut transaction_refs = TransactionRefs::new(target_proc);
+    ) -> Result<TransactionState, TransactionError> {
+        let mut transaction_state = TransactionState::new(target_proc);
 
         let mut sg_remaining_buffer = sg_buffer.user_buffer();
         let mut sg_buffer_offset = 0;
@@ -1911,7 +1927,7 @@ impl BinderDriver {
 
                                 // Tie this handle's strong reference to be held as long as this
                                 // buffer.
-                                transaction_refs.push(new_handle);
+                                transaction_state.push_handle(new_handle);
 
                                 SerializedBinderObject::Handle { handle: new_handle, flags, cookie }
                             }
@@ -1934,7 +1950,7 @@ impl BinderDriver {
                     let handle = target_proc.handles.lock().insert_for_transaction(object);
 
                     // Tie this handle's strong reference to be held as long as this buffer.
-                    transaction_refs.push(handle);
+                    transaction_state.push_handle(handle);
 
                     // Translate the serialized object into a handle.
                     SerializedBinderObject::Handle { handle, flags, cookie: 0 }
@@ -2032,7 +2048,7 @@ impl BinderDriver {
         }
 
         // We made it to the end successfully. No need to run the drop guard.
-        Ok(transaction_refs)
+        Ok(transaction_state)
     }
 
     fn get_vmo(&self, length: usize) -> Result<zx::Vmo, Errno> {
@@ -2976,7 +2992,7 @@ mod tests {
         };
 
         // Copy the data from process 1 to process 2
-        let (data_buffer, offsets_buffer, _transaction_refs) = driver
+        let (data_buffer, offsets_buffer, _transaction_state) = driver
             .copy_transaction_buffers(&task1, &proc1, &thread1, &proc2, &transaction)
             .expect("copy data");
 
@@ -3067,7 +3083,7 @@ mod tests {
 
         const EXPECTED_HANDLE: Handle = Handle::from_raw(1);
 
-        let transaction_refs = test
+        let transaction_state = test
             .driver
             .translate_handles(
                 &test.sender_task,
@@ -3080,9 +3096,9 @@ mod tests {
             )
             .expect("failed to translate handles");
 
-        // Verify that the new handle was returned in `transaction_refs` so that it gets dropped
+        // Verify that the new handle was returned in `transaction_state` so that it gets dropped
         // at the end of the transaction.
-        assert_eq!(transaction_refs.handles[0], EXPECTED_HANDLE);
+        assert_eq!(transaction_state.handles[0], EXPECTED_HANDLE);
 
         // Verify that the transaction data was mutated.
         let mut expected_transaction_data = Vec::new();
@@ -3207,7 +3223,7 @@ mod tests {
             __bindgen_anon_1.handle: SENDING_HANDLE.into(),
         }));
 
-        let transaction_refs = test
+        let transaction_state = test
             .driver
             .translate_handles(
                 &test.sender_task,
@@ -3220,9 +3236,9 @@ mod tests {
             )
             .expect("failed to translate handles");
 
-        // Verify that the new handle was returned in `transaction_refs` so that it gets dropped
+        // Verify that the new handle was returned in `transaction_state` so that it gets dropped
         // at the end of the transaction.
-        assert_eq!(transaction_refs.handles[0], RECEIVING_HANDLE);
+        assert_eq!(transaction_state.handles[0], RECEIVING_HANDLE);
 
         // Verify that the transaction data was mutated.
         let mut expected_transaction_data = Vec::new();
