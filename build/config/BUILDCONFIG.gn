@@ -2925,8 +2925,7 @@ template("executable") {
         has_syslog_backend =
             has_syslog_backend || dep == "//sdk/lib/syslog/cpp:backend" ||
             dep == "//sdk/lib/syslog/cpp:backend_fuchsia_lib" ||
-            dep == "//sdk/lib/syslog/cpp:backend_fuchsia_compat" ||
-            dep == "//sdk/lib/syslog/cpp/sdk"
+            dep == "//sdk/lib/syslog/cpp:backend_fuchsia_compat"
       }
 
       if (!has_syslog_backend) {
