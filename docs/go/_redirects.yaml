@@ -8,16 +8,22 @@
 # Using ? or * is not supported in the redirect links.
 redirects:
 # Component Framework links
+- from: /docs/go/components/build
+  to: /docs/development/components/build.md
+- from: /docs/go/components/build-errors
+  to: /docs/development/components/build.md#troubleshooting
+- from: /docs/go/components/collections
+  to: https://fuchsia.dev/reference/cml#collections
+- from: /docs/go/components/instance-id
+  to: /docs/development/components/component_id_index
 - from: /docs/go/components/run
   to: /docs/development/components/run.md
 - from: /docs/go/components/run-errors
   to: /docs/development/components/run.md#troubleshooting
-- from: /docs/go/components/collections
-  to: https://fuchsia.dev/reference/cml#collections
+- from: /docs/go/components/restricted-features
+  to: /docs/development/components/build.md#restricted-features
 - from: /docs/go/components/url
   to: /docs/reference/components/url
-- from: /docs/go/components/instance-id
-  to: /docs/development/components/component_id_index
   # Keep this item last as the default fallback path
 - from: /docs/go/components/...
   to: /docs/concepts/components/v2/README.md

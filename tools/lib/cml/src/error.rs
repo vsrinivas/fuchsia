@@ -132,7 +132,7 @@ impl fmt::Display for Error {
             Error::Utf8(err) => write!(f, "UTF8 error: {}", err),
             Error::RestrictedFeature(feature) => write!(
                 f,
-                "Use of restricted feature \"{}\". To opt-in, see https://fuchsia.dev/fuchsia-src/development/components/build?hl=en#restricted-features",
+                "Use of restricted feature \"{}\". To opt-in, see https://fuchsia.dev/go/components/restricted-features",
                 feature
             ),
         }

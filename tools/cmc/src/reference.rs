@@ -27,6 +27,8 @@ const RUNNER_VALIDATE_LIST: [&'static str; 6] = [
     // TODO(fxbug.dev/68608): Add support for Dart components.
 ];
 
+const CHECK_REFERENCES_URL: &str = "https://fuchsia.dev/go/components/build-errors";
+
 /// Validates that a component manifest file is consistent with the content
 /// of its package. Checks included in this function are:
 ///     1. If provided program binary in component manifest matches with
@@ -193,12 +195,15 @@ program.binary={} but {} is not provided by deps!
 Did you mean {}?
 
 Try any of the following:
-{}",
+{}
+
+For more details, see {}",
         header,
         program_binary,
         program_binary,
         nearest_match,
-        package_targets.join("\n")
+        package_targets.join("\n"),
+        CHECK_REFERENCES_URL,
     ))
 }
 

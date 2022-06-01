@@ -64,8 +64,7 @@ pub fn merge_includes(
     Ok(())
 }
 
-const CHECK_INCLUDES_URL: &str =
-    "https://fuchsia.dev/fuchsia-src/development/components/build#component-manifest-includes";
+const CHECK_INCLUDES_URL: &str = "https://fuchsia.dev/go/components/build-errors";
 
 /// Read in the provided JSON file and ensure that it contains all expected includes.
 pub fn check_includes(
@@ -105,7 +104,7 @@ pub fn check_includes(
             return Err(Error::Validate {
                 schema_name: None,
                 err: format!(
-                    "{:?} must include {:?}.\nSee: {}",
+                    "{:?} must include {:?}.\nFor more details, see {}",
                     &file, &expected, CHECK_INCLUDES_URL
                 ),
                 filename: file.to_str().map(String::from),
