@@ -99,7 +99,7 @@ pub struct FvmInstance {
     volume_manager: VolumeManagerProxy,
 
     /// Manages the ramdisk device that is backed by a VMO
-    _ramdisk: RamdiskClient,
+    ramdisk: RamdiskClient,
 }
 
 impl FvmInstance {
@@ -119,7 +119,7 @@ impl FvmInstance {
 
         let volume_manager = start_fvm_driver(ramdisk_path).await;
 
-        Self { _ramdisk: ramdisk, volume_manager }
+        Self { ramdisk, volume_manager }
     }
 
     /// Create a new FVM volume with the given name and type GUID.
@@ -146,6 +146,10 @@ impl FvmInstance {
         Status::ok(status).unwrap();
 
         info.unwrap().slice_count
+    }
+
+    pub fn ramdisk_path(&self) -> PathBuf {
+        PathBuf::from(DEV_PATH).join(self.ramdisk.get_path())
     }
 }
 

@@ -77,14 +77,6 @@ impl TransactionHandler for FakeObject {
         Ok(Transaction::new(self, MetadataReservation::Borrowed, &[], locks).await)
     }
 
-    async fn new_transaction_with_locks<'a>(
-        self: Arc<Self>,
-        locks: TransactionLocks<'_>,
-        _options: Options<'a>,
-    ) -> Result<Transaction<'a>, Error> {
-        Ok(Transaction::new_with_locks(self, MetadataReservation::Borrowed, &[], locks).await)
-    }
-
     async fn transaction_lock<'a>(&'a self, lock_keys: &[LockKey]) -> TransactionLocks<'a> {
         let lock_manager: &LockManager = self.as_ref();
         TransactionLocks(lock_manager.txn_lock(lock_keys).await)

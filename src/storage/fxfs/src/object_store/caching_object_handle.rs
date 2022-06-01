@@ -4,6 +4,7 @@
 
 use {
     crate::{
+        debug_assert_not_too_long,
         errors::FxfsError,
         object_handle::{
             GetProperties, ObjectHandle, ObjectProperties, ReadObjectHandle, WriteObjectHandle,
@@ -147,6 +148,10 @@ impl<S: HandleOwner> CachingObjectHandle<S> {
 
         // We use the transaction lock here to make sure that flush calls are correctly sequenced,
         // i.e. that we commit transactions in the same order to which take_flushable was executed.
+        // The order in which locks, flushable and transaction are dropped is important.  The
+        // transaction must be dropped first so that it returns any reservations.  flushable is next
+        // which relies on the reservations being returned.  flushable must be dropped before the
+        // locks since we need to stop take_flushable from being called.
         let locks = fs
             .transaction_lock(&[LockKey::object_attribute(
                 store_object_id,
@@ -154,10 +159,6 @@ impl<S: HandleOwner> CachingObjectHandle<S> {
                 self.handle.attribute_id,
             )])
             .await;
-
-        // We want to make sure the transaction goes out of scope *after* flushable is dropped
-        // because we need to drop flushable before dropping the locks.
-        let mut transaction;
 
         let mut flushable = self.cache.take_flushable(
             bs,
@@ -173,10 +174,10 @@ impl<S: HandleOwner> CachingObjectHandle<S> {
 
         std::mem::drop(cached_write_lock);
 
-        transaction = fs
+        let mut transaction = fs
             .clone()
-            .new_transaction_with_locks(
-                locks,
+            .new_transaction(
+                &[],
                 Options {
                     // If there is no data then the reservation won't have any space for the
                     // transaction. Since it should only be for file size or metadata changes,
@@ -221,6 +222,7 @@ impl<S: HandleOwner> CachingObjectHandle<S> {
             self.handle.multi_write(&mut transaction, &data.ranges, data.buffer.as_mut()).await?;
         }
 
+        debug_assert_not_too_long!(locks.commit_prepare());
         transaction
             .commit_with_callback(|_| {
                 self.cache.complete_flush(flushable);

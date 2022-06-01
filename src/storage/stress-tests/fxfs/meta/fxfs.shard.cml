@@ -1,0 +1,35 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "//src/storage/fs_test/meta/fxfs_crypt_test.shard.cml" ],
+    children: [
+        {
+            name: "fxfs",
+            url: "#meta/fxfs.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.fs.Admin",
+                "fuchsia.fs.startup.Startup",
+            ],
+            from: "#fxfs",
+        },
+        {
+            protocol: "fuchsia.component.Realm",
+            from: "framework",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+            ],
+            from: "parent",
+            to: [ "#fxfs" ],
+        },
+    ],
+}

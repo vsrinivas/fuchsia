@@ -456,21 +456,6 @@ impl TransactionHandler for FxFilesystem {
         Ok(transaction)
     }
 
-    async fn new_transaction_with_locks<'a>(
-        self: Arc<Self>,
-        locks: TransactionLocks<'_>,
-        options: Options<'a>,
-    ) -> Result<Transaction<'a>, Error> {
-        let (metadata_reservation, allocator_reservation, hold) =
-            self.reservation_for_transaction(options).await?;
-        let mut transaction =
-            Transaction::new_with_locks(self, metadata_reservation, &[LockKey::Filesystem], locks)
-                .await;
-        hold.map(|h| h.forget()); // Transaction takes ownership from here on.
-        transaction.allocator_reservation = allocator_reservation;
-        Ok(transaction)
-    }
-
     async fn transaction_lock<'a>(&'a self, lock_keys: &[LockKey]) -> TransactionLocks<'a> {
         let lock_manager: &LockManager = self.as_ref();
         TransactionLocks(debug_assert_not_too_long!(lock_manager.txn_lock(lock_keys)))
@@ -481,7 +466,7 @@ impl TransactionHandler for FxFilesystem {
         transaction: &mut Transaction<'_>,
     ) -> Result<u64, Error> {
         trace_duration!("FxFilesystem::commit_transaction");
-        debug_assert_not_too_long!(self.lock_manager.commit_prepare(transaction));
+        debug_assert_not_too_long!(self.lock_manager.commit_prepare(&transaction));
         {
             let mut flush_task = self.flush_task.lock().unwrap();
             if flush_task.is_none() {

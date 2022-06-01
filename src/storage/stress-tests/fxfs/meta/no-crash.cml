@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 {
     include: [
-        "//src/storage/fs_test/meta/fxfs_crypt_test.shard.cml",
+        "//src/storage/stress-tests/fxfs/meta/fxfs.shard.cml",
         "//src/sys/test_runners/rust/default.shard.cml",
         "syslog/client.shard.cml",
     ],

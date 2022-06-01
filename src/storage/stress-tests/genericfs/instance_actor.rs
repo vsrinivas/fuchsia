@@ -4,27 +4,40 @@
 
 use {
     async_trait::async_trait,
-    fs_management::{FSConfig, Filesystem},
+    fs_management::asynchronous::ServingFilesystem,
+    fuchsia_async as fasync,
+    std::time::Duration,
     storage_stress_test_utils::fvm::FvmInstance,
     stress_test::actor::{Actor, ActorError},
 };
 
 /// An actor that kills the fs instance and destroys the ramdisk
-pub struct InstanceActor<FSC: FSConfig> {
-    pub instance: Option<(Filesystem<FSC>, FvmInstance)>,
+pub struct InstanceActor {
+    pub instance: Option<(FvmInstance, ServingFilesystem)>,
 }
 
-impl<FSC: FSConfig> InstanceActor<FSC> {
-    pub fn new(fvm: FvmInstance, fs: Filesystem<FSC>) -> Self {
-        Self { instance: Some((fs, fvm)) }
+impl InstanceActor {
+    pub fn new(fvm: FvmInstance, fs: ServingFilesystem) -> Self {
+        Self { instance: Some((fvm, fs)) }
     }
 }
 
 #[async_trait]
-impl<FSC: 'static + FSConfig + Send + Sync> Actor for InstanceActor<FSC> {
+impl Actor for InstanceActor {
     async fn perform(&mut self) -> Result<(), ActorError> {
-        if let Some((mut fs, _)) = self.instance.take() {
-            fs.kill().expect("Could not kill fs instance");
+        if let Some((fvm_instance, fs)) = self.instance.take() {
+            // We want to kill the ram-disk before the filesystem so that we test the filesystem in
+            // a simulated power-fail.
+            let path = fvm_instance.ramdisk_path();
+            std::mem::drop(fvm_instance);
+            // Wait for the device to go away.
+            let mut count = 0;
+            while let Ok(_) = std::fs::metadata(&path) {
+                count += 1;
+                assert!(count < 100);
+                fasync::Timer::new(Duration::from_millis(100)).await;
+            }
+            fs.kill().await.expect("Could not kill fs instance");
         } else {
             panic!("Instance was already killed!")
         }

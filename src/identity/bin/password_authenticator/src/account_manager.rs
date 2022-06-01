@@ -863,7 +863,6 @@ mod test {
         },
         async_trait::async_trait,
         fidl_fuchsia_io as fio,
-        fs_management::ServeError,
         fuchsia_zircon::Status,
         lazy_static::lazy_static,
         vfs::execution_scope::ExecutionScope,
@@ -1911,8 +1910,7 @@ mod test {
     #[fuchsia::test]
     async fn test_recover_from_failed_provisioning() {
         let scope = ExecutionScope::new();
-        let mut one_time_failure =
-            Some(DiskError::MinfsServeError(ServeError::Fidl(fidl::Error::Invalid)));
+        let mut one_time_failure = Some(DiskError::MinfsServeError(anyhow!("Fake serve error")));
         let disk_manager = MockDiskManager::new()
             .with_partition(make_unformatted_account_partition())
             .with_serve_minfs(move || {

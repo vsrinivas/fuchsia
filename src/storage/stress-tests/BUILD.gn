@@ -23,6 +23,7 @@ fuchsia_component("fxfs-crash") {
   manifest = "fxfs/meta/crash.cml"
   deps = [
     "genericfs:stressor-bin",
+    "//src/storage/fxfs:fxfs_component",
     "//src/storage/fxfs-crypt",
   ]
 }
@@ -32,6 +33,7 @@ fuchsia_component("fxfs-no-crash") {
   manifest = "fxfs/meta/no-crash.cml"
   deps = [
     "genericfs:stressor-bin",
+    "//src/storage/fxfs:fxfs_component",
     "//src/storage/fxfs-crypt",
   ]
 }
@@ -83,6 +85,7 @@ fuchsia_component("fxfs-short") {
   manifest = "fxfs/meta/short.cml"
   deps = [
     "genericfs:stressor-bin",
+    "//src/storage/fxfs:fxfs_component",
     "//src/storage/fxfs-crypt",
   ]
 }
@@ -98,7 +101,6 @@ fuchsia_test_package("storage-stress-tests") {
     ":blobfs-no-crash",
     ":minfs-crash",
     ":minfs-no-crash",
-
     ":fxfs-crash",
     ":fxfs-no-crash",
   ]

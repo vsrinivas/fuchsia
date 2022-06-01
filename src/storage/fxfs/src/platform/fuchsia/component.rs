@@ -263,6 +263,7 @@ impl Component {
                 root.clone().open(scope.clone(), open_flags, mode, path, channel);
             }
         }
+        log::info!("Mounted");
         Ok(())
     }
 

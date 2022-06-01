@@ -1018,7 +1018,7 @@ mod tests {
                         .expect("write to file error");
                 }
                 // Check that blobfs can be successfully unmounted
-                let blobfs = serving.shutdown().await.expect("shutdown blobfs failed");
+                serving.shutdown().await.expect("shutdown blobfs failed");
 
                 let serving = blobfs.serve().await.expect("serve blobfs faield");
                 {

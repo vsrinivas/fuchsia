@@ -9,7 +9,8 @@ use {
     async_trait::async_trait,
     fidl_fuchsia_hardware_block_partition::Guid,
     fidl_fuchsia_io as fio,
-    fs_management::{FSConfig, Filesystem},
+    fs_management::{asynchronous::Filesystem, FSConfig},
+    fuchsia_component::client::connect_to_protocol_at_path,
     fuchsia_zircon::Vmo,
     futures::lock::Mutex,
     rand::{rngs::SmallRng, Rng, SeedableRng},
@@ -47,7 +48,7 @@ pub struct FsEnvironment<FSC: FSConfig> {
     vmo: Vmo,
     volume_guid: Guid,
     config: FSC,
-    instance_actor: Arc<Mutex<InstanceActor<FSC>>>,
+    instance_actor: Arc<Mutex<InstanceActor>>,
     file_actor: Arc<Mutex<FileActor>>,
     deletion_actor: Arc<Mutex<DeletionActor>>,
 }
@@ -67,10 +68,13 @@ impl<FSC: Clone + FSConfig> FsEnvironment<FSC> {
         // Initialize the filesystem on a new volume
         let volume_guid = fvm.new_volume("default", TYPE_GUID, fvm.total_slices().await).await;
         let volume_path = get_volume_path(&volume_guid).await;
-        let mut fs = Filesystem::from_path(volume_path.to_str().unwrap(), config.clone()).unwrap();
-        fs.format().unwrap();
+        let node =
+            connect_to_protocol_at_path::<fio::NodeMarker>(volume_path.to_str().unwrap()).unwrap();
+        let fs = Filesystem::from_node(node, config.clone());
+        fs.format().await.unwrap();
 
-        fs.mount(MOUNT_PATH).unwrap();
+        let instance = fs.serve().await.unwrap();
+        instance.bind_to_path(MOUNT_PATH).unwrap();
 
         let seed = match args.seed {
             Some(seed) => seed,
@@ -107,7 +111,7 @@ impl<FSC: Clone + FSConfig> FsEnvironment<FSC> {
             Arc::new(Mutex::new(DeletionActor::new(rng, home_dir)))
         };
 
-        let instance_actor = Arc::new(Mutex::new(InstanceActor::new(fvm, fs)));
+        let instance_actor = Arc::new(Mutex::new(InstanceActor::new(fvm, instance)));
 
         Self { seed, args, vmo, volume_guid, file_actor, deletion_actor, instance_actor, config }
     }
@@ -169,16 +173,18 @@ impl<FSC: 'static + FSConfig + Clone + Send + Sync> Environment for FsEnvironmen
                 self.args.ramdisk_block_size,
             )
             .await;
-
             let volume_path = get_volume_path(&self.volume_guid).await;
+            let node =
+                connect_to_protocol_at_path::<fio::NodeMarker>(volume_path.to_str().unwrap())
+                    .unwrap();
 
-            let mut fs =
-                Filesystem::from_path(volume_path.to_str().unwrap(), self.config.clone()).unwrap();
-            fs.fsck().unwrap();
-            fs.mount(MOUNT_PATH).unwrap();
+            let fs = Filesystem::from_node(node, self.config.clone());
+            fs.fsck().await.unwrap();
+            let instance = fs.serve().await.unwrap();
+            instance.bind_to_path(MOUNT_PATH).unwrap();
 
             // Replace the fvm and fs instances
-            actor.instance = Some((fs, fvm));
+            actor.instance = Some((fvm, instance));
         }
 
         // Replace the root directory with a new one

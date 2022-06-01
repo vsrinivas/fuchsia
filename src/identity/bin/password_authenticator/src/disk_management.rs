@@ -56,9 +56,9 @@ pub enum DiskError {
     #[error("Failed to shred zxcrypt block device: {0}")]
     FailedToShredZxcrypt(#[source] zx::Status),
     #[error("Failed to format minfs: {0}")]
-    MinfsFormatError(#[from] fs::CommandError),
+    MinfsFormatError(#[source] anyhow::Error),
     #[error("Failed to serve minfs: {0}")]
-    MinfsServeError(#[from] fs::ServeError),
+    MinfsServeError(#[source] anyhow::Error),
     #[error("Failed to shutdown minfs: {0}")]
     MinfsShutdownError(#[from] fs::ShutdownError),
     #[error("Failed to kill the minfs process: {0}")]
@@ -326,13 +326,13 @@ impl DiskManager for DevDiskManager {
     async fn format_minfs(&self, block_dev: &Self::BlockDevice) -> Result<(), DiskError> {
         let node = block_dev.0.clone_as::<fio::NodeMarker>()?;
         let minfs = Filesystem::from_node(node, fs::Minfs::default());
-        minfs.format().await?;
+        minfs.format().await.map_err(DiskError::MinfsFormatError)?;
         Ok(())
     }
 
     async fn serve_minfs(&self, block_dev: Self::BlockDevice) -> Result<Self::Minfs, DiskError> {
         let minfs = Filesystem::from_node(block_dev.0 .0, fs::Minfs::default());
-        let serving_fs = minfs.serve().await.map_err(|err| err.serve_error().clone())?;
+        let serving_fs = minfs.serve().await.map_err(DiskError::MinfsServeError)?;
         Ok(DevMinfs { serving_fs })
     }
 }
@@ -464,7 +464,7 @@ impl EncryptedBlockDevice for EncryptedDevBlockDevice {
 
 /// Production implementation of Minfs.
 pub struct DevMinfs {
-    serving_fs: ServingFilesystem<fs::Minfs>,
+    serving_fs: ServingFilesystem,
 }
 
 #[async_trait]
@@ -473,15 +473,13 @@ impl Minfs for DevMinfs {
         self.serving_fs.root()
     }
 
+    // TODO(fxbug.dev/101442): This can't fail in any way that the caller can recover from so we
+    // should probably change the return value.
     async fn shutdown(self) -> Result<(), DiskError> {
         match self.serving_fs.shutdown().await {
             Ok(_) => Ok(()),
             Err(err) => {
-                error!(
-                    "failed to shutdown minfs: {}; trying to terminate minfs process...",
-                    err.shutdown_error()
-                );
-                err.kill_filesystem().await?;
+                error!("failed to shutdown minfs: {}", err);
                 Ok(())
             }
         }

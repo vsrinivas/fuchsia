@@ -69,6 +69,12 @@ pub const TRANSACTION_METADATA_MAX_AMOUNT: u64 =
 #[must_use]
 pub struct TransactionLocks<'a>(pub WriteGuard<'a>);
 
+impl TransactionLocks<'_> {
+    pub async fn commit_prepare(&self) {
+        self.0.manager.commit_prepare_keys(&self.0.lock_keys).await;
+    }
+}
+
 #[async_trait]
 pub trait TransactionHandler: Send + Sync {
     /// Initiates a new transaction.  Implementations should check to see that a transaction can be
@@ -77,13 +83,6 @@ pub trait TransactionHandler: Send + Sync {
     async fn new_transaction<'a>(
         self: Arc<Self>,
         lock_keys: &[LockKey],
-        options: Options<'a>,
-    ) -> Result<Transaction<'a>, Error>;
-
-    /// Like |new_transaction|, but with an already-acquired set of locks.
-    async fn new_transaction_with_locks<'a>(
-        self: Arc<Self>,
-        locks: TransactionLocks<'_>,
         options: Options<'a>,
     ) -> Result<Transaction<'a>, Error>;
 
@@ -438,27 +437,6 @@ impl<'a> Transaction<'a> {
         }
     }
 
-    pub async fn new_with_locks<H: TransactionHandler + AsRef<LockManager> + 'static>(
-        handler: Arc<H>,
-        metadata_reservation: MetadataReservation,
-        read_locks: &[LockKey],
-        mut txn_locks: TransactionLocks<'_>,
-    ) -> Transaction<'a> {
-        let (read_locks, txn_locks) = {
-            let lock_manager: &LockManager = handler.as_ref().as_ref();
-            let mut read_guard = debug_assert_not_too_long!(lock_manager.read_lock(read_locks));
-            (std::mem::take(&mut read_guard.lock_keys), std::mem::take(&mut txn_locks.0.lock_keys))
-        };
-        Transaction {
-            handler,
-            mutations: BTreeSet::new(),
-            txn_locks,
-            read_locks,
-            allocator_reservation: None,
-            metadata_reservation,
-        }
-    }
-
     /// Adds a mutation to this transaction.  If the mutation already exists, it is replaced and the
     /// old mutation is returned.
     pub fn add(&mut self, object_id: u64, mutation: Mutation) -> Option<Mutation> {
@@ -759,7 +737,11 @@ impl LockManager {
 
     /// Prepares to commit by waiting for readers to finish.
     pub async fn commit_prepare(&self, transaction: &Transaction<'_>) {
-        for lock in &transaction.txn_locks {
+        self.commit_prepare_keys(&transaction.txn_locks).await;
+    }
+
+    async fn commit_prepare_keys(&self, lock_keys: &[LockKey]) {
+        for lock in lock_keys {
             poll_fn(|cx| {
                 let mut locks = self.locks.lock().unwrap();
                 let entry = locks.keys.get_mut(&lock).expect("key missing!");

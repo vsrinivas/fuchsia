@@ -9,15 +9,20 @@ use {
         error::{BindError, CommandError, KillError, QueryError, ServeError, ShutdownError},
         launch_process, FSConfig,
     },
+    anyhow::{anyhow, Error},
     cstr::cstr,
     fdio::SpawnAction,
+    fidl::encoding::Decodable,
     fidl::endpoints::{ClientEnd, ServerEnd},
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
+    fidl_fuchsia_fs_startup::{CheckOptions, FormatOptions, StartOptions, StartupMarker},
     fidl_fuchsia_io as fio,
     fuchsia_async::OnSignals,
-    fuchsia_component::client::connect_to_protocol_at_dir_root,
+    fuchsia_component::client::{connect_to_protocol, connect_to_protocol_at_dir_root},
     fuchsia_runtime::{HandleInfo, HandleType},
-    fuchsia_zircon::{Channel, Handle, HandleBased, Process, Signals, Status, Task},
+    fuchsia_zircon::{Channel, Handle, Process, Signals, Status, Task},
     log::warn,
+    std::sync::Mutex,
 };
 
 /// Asynchronously manages a block device for filesystem operations.
@@ -54,22 +59,33 @@ impl<FSC: FSConfig> Filesystem<FSC> {
     /// # Errors
     ///
     /// Returns [`Err`] if the filesystem process failed to launch or returned a non-zero exit code.
-    pub async fn format(&self) -> Result<(), CommandError> {
-        // SpawnAction is not Send, so make sure it is dropped before any `await`s.
-        let process = {
-            let mut args = vec![self.config.binary_path(), cstr!("mkfs")];
-            args.append(&mut self.config.generic_args());
-            args.append(&mut self.config.format_args());
-            let actions = vec![
-                // device handle is passed in as a PA_USER0 handle at argument 1
-                SpawnAction::add_handle(
-                    HandleInfo::new(HandleType::User0, 1),
-                    self.get_block_handle()?,
-                ),
-            ];
-            launch_process(&args, actions)?
-        };
-        wait_for_successful_exit(process).await
+    pub async fn format(&self) -> Result<(), Error> {
+        if self.config.component_name().is_some() {
+            let proxy = connect_to_protocol::<StartupMarker>()?;
+            let mut options = FormatOptions::new_empty();
+            options.crypt = self.config.crypt_client().map(|c| c.into());
+            proxy
+                .format(self.get_block_handle()?.into(), &mut options)
+                .await?
+                .map_err(Status::from_raw)?;
+        } else {
+            // SpawnAction is not Send, so make sure it is dropped before any `await`s.
+            let process = {
+                let mut args = vec![self.config.binary_path(), cstr!("mkfs")];
+                args.append(&mut self.config.generic_args());
+                args.append(&mut self.config.format_args());
+                let actions = vec![
+                    // device handle is passed in as a PA_USER0 handle at argument 1
+                    SpawnAction::add_handle(
+                        HandleInfo::new(HandleType::User0, 1),
+                        self.get_block_handle()?,
+                    ),
+                ];
+                launch_process(&args, actions)?
+            };
+            wait_for_successful_exit(process).await?;
+        }
+        Ok(())
     }
 
     /// Runs `fsck`, which checks and optionally repairs the filesystem on the block device.
@@ -82,21 +98,32 @@ impl<FSC: FSConfig> Filesystem<FSC> {
     /// # Errors
     ///
     /// Returns [`Err`] if the filesystem process failed to launch or returned a non-zero exit code.
-    pub async fn fsck(&self) -> Result<(), CommandError> {
-        // SpawnAction is not Send, so make sure it is dropped before any `await`s.
-        let process = {
-            let mut args = vec![self.config.binary_path(), cstr!("fsck")];
-            args.append(&mut self.config.generic_args());
-            let actions = vec![
-                // device handle is passed in as a PA_USER0 handle at argument 1
-                SpawnAction::add_handle(
-                    HandleInfo::new(HandleType::User0, 1),
-                    self.get_block_handle()?,
-                ),
-            ];
-            launch_process(&args, actions)?
-        };
-        wait_for_successful_exit(process).await
+    pub async fn fsck(&self) -> Result<(), Error> {
+        if self.config.component_name().is_some() {
+            let proxy = connect_to_protocol::<StartupMarker>()?;
+            let mut options = CheckOptions::new_empty();
+            options.crypt = self.config.crypt_client().map(|c| c.into());
+            proxy
+                .check(self.get_block_handle()?.into(), &mut options)
+                .await?
+                .map_err(Status::from_raw)?;
+        } else {
+            // SpawnAction is not Send, so make sure it is dropped before any `await`s.
+            let process = {
+                let mut args = vec![self.config.binary_path(), cstr!("fsck")];
+                args.append(&mut self.config.generic_args());
+                let actions = vec![
+                    // device handle is passed in as a PA_USER0 handle at argument 1
+                    SpawnAction::add_handle(
+                        HandleInfo::new(HandleType::User0, 1),
+                        self.get_block_handle()?,
+                    ),
+                ];
+                launch_process(&args, actions)?
+            };
+            wait_for_successful_exit(process).await?;
+        }
+        Ok(())
     }
 
     /// Serves the filesystem on the block device and returns a [`ServingFilesystem`] representing
@@ -104,14 +131,60 @@ impl<FSC: FSConfig> Filesystem<FSC> {
     ///
     /// # Errors
     ///
-    /// Returns [`Err`] if serving the filesystem failed. Use the method
-    /// [`ServeErrorAndFilesystem::into_filesystem()`] to recover this `Filesystem` object.
-    pub async fn serve(self) -> Result<ServingFilesystem<FSC>, ServeErrorAndFilesystem<FSC>> {
-        match self.do_serve().await {
-            Ok((process, export_root, root_dir)) => {
-                Ok(ServingFilesystem { filesystem: Some(self), process, export_root, root_dir })
-            }
-            Err(serve_error) => Err(ServeErrorAndFilesystem { serve_error, filesystem: self }),
+    /// Returns [`Err`] if serving the filesystem failed.
+    pub async fn serve(&self) -> Result<ServingFilesystem, Error> {
+        // If the filesystem is a component, the startup service must be routed to this component.
+        // For now, only one filesystem instance is supported.
+        if let Some(component_name) = self.config.component_name() {
+            let proxy = connect_to_protocol::<StartupMarker>()?;
+            let mut options = StartOptions::new_empty();
+            options.crypt = self.config.crypt_client().map(|c| c.into());
+            proxy
+                .start(self.get_block_handle()?.into(), &mut options)
+                .await?
+                .map_err(Status::from_raw)?;
+
+            let realm = connect_to_protocol::<fcomponent::RealmMarker>()?;
+            let (exposed_dir, server_end) =
+                fidl::endpoints::create_proxy::<fio::DirectoryMarker>()?;
+            realm
+                .open_exposed_dir(
+                    &mut fdecl::ChildRef { name: component_name.to_string(), collection: None },
+                    server_end,
+                )
+                .await?
+                .map_err(|e| anyhow!("OpenExposedDir error: {:?}", e))?;
+            let (root_dir, server_end) = fidl::endpoints::create_endpoints::<fio::NodeMarker>()?;
+            exposed_dir.open(
+                fio::OpenFlags::RIGHT_READABLE
+                    | fio::OpenFlags::POSIX_EXECUTABLE
+                    | fio::OpenFlags::POSIX_WRITABLE,
+                0,
+                "root",
+                server_end,
+            )?;
+
+            Ok(ServingFilesystem {
+                process: None,
+                exposed_dir,
+                root_dir: ClientEnd::<fio::DirectoryMarker>::new(root_dir.into_channel())
+                    .into_proxy()?,
+                binding: Mutex::new(None),
+            })
+        } else {
+            // do_serve is returning the outgoing directory for the process which is different from
+            // the exposed directory that would be returned by Realm's open_exposed_dir.  However,
+            // all the filesystems we currently support expose the services we care about via their
+            // root rather than via the usual /svc directory, so we can treat them as the same.
+            // This is fine for now since this mechanism of mounting filesystems will go away at
+            // some point.
+            let (process, export_root, root_dir) = self.do_serve().await?;
+            Ok(ServingFilesystem {
+                process: Some(process),
+                exposed_dir: export_root,
+                root_dir,
+                binding: Mutex::new(None),
+            })
         }
     }
 
@@ -157,32 +230,36 @@ impl<FSC: FSConfig> Filesystem<FSC> {
 }
 
 /// Asynchronously manages a serving filesystem. Created from [`Filesystem::serve()`].
-pub struct ServingFilesystem<FSC> {
-    filesystem: Option<Filesystem<FSC>>,
-    process: Process,
-    export_root: fio::DirectoryProxy,
+pub struct ServingFilesystem {
+    // If the filesystem is running as a component, there will be no process and no export root.
+    process: Option<Process>,
+    exposed_dir: fio::DirectoryProxy,
     root_dir: fio::DirectoryProxy,
+
+    // The path in the local namespace that this filesystem is bound to (optional).
+    binding: Mutex<Option<String>>,
 }
 
-impl<FSC: FSConfig> ServingFilesystem<FSC> {
+impl ServingFilesystem {
     /// Returns a proxy to the root directory of the serving filesystem.
     pub fn root(&self) -> &fio::DirectoryProxy {
         &self.root_dir
     }
 
-    /// Binds the root directory being served by this filesystem to a path in the local namespace
-    /// and returns a [`BindGuard`] that unbinds the path when dropped.
-    /// The path must be absolute, containing no "." nor ".." entries.
+    /// Binds the root directory being served by this filesystem to a path in the local namespace.
+    /// The path must be absolute, containing no "." nor ".." entries.  The binding will be dropped
+    /// when self is dropped.  Only one binding is supported.
     ///
     /// # Errors
     ///
     /// Returns [`Err`] if binding failed.
-    pub fn bind_to_path<'a>(&'a self, path: &str) -> Result<BindGuard<'a, FSC>, BindError> {
+    pub fn bind_to_path<'a>(&self, path: &str) -> Result<(), BindError> {
         let (client_end, server_end) = Channel::create().map_err(fidl::Error::ChannelPairCreate)?;
         self.root_dir.clone(fio::OpenFlags::CLONE_SAME_RIGHTS, ServerEnd::new(server_end))?;
         let namespace = fdio::Namespace::installed().map_err(BindError::LocalNamespace)?;
         namespace.bind(path, client_end).map_err(BindError::Bind)?;
-        Ok(BindGuard { _filesystem: self, namespace, path: path.to_string() })
+        *self.binding.lock().unwrap() = Some(path.to_string());
+        Ok(())
     }
 
     /// Attempts to shutdown the filesystem using the
@@ -192,33 +269,32 @@ impl<FSC: FSConfig> ServingFilesystem<FSC> {
     /// # Errors
     ///
     /// Returns [`Err`] if the shutdown failed or the filesystem process did not terminate.
-    /// The error type provides a way to recover from this error using the method
-    /// [`ShutdownErrorAndFilesystem::kill()`].
-    pub async fn shutdown(mut self) -> Result<Filesystem<FSC>, ShutdownErrorAndFilesystem<FSC>> {
-        match self.do_shutdown().await {
-            Ok(()) => Ok(self.filesystem.take().unwrap()),
-            Err(shutdown_error) => {
-                Err(ShutdownErrorAndFilesystem { shutdown_error, filesystem: self })
+    pub async fn shutdown(mut self) -> Result<(), ShutdownError> {
+        async fn do_shutdown(exposed_dir: &fio::DirectoryProxy) -> Result<(), Error> {
+            connect_to_protocol_at_dir_root::<fidl_fuchsia_fs::AdminMarker>(exposed_dir)?
+                .shutdown()
+                .await?;
+            Ok(())
+        }
+        if let Err(e) = do_shutdown(&self.exposed_dir).await {
+            if let Some(process) = self.process.take() {
+                if process.kill().is_ok() {
+                    let _ = OnSignals::new(&process, Signals::PROCESS_TERMINATED).await;
+                }
+            }
+            return Err(e.into());
+        }
+
+        if let Some(process) = self.process.take() {
+            let _ = OnSignals::new(&process, Signals::PROCESS_TERMINATED)
+                .await
+                .map_err(ShutdownError::ProcessTerminatedSignal)?;
+
+            let info = process.info().map_err(ShutdownError::GetProcessReturnCode)?;
+            if info.return_code != 0 {
+                warn!("process returned non-zero exit code ({}) after shutdown", info.return_code);
             }
         }
-    }
-
-    async fn do_shutdown(&mut self) -> Result<(), ShutdownError> {
-        let admin_proxy: fidl_fuchsia_fs::AdminProxy =
-            connect_to_protocol_at_dir_root::<fidl_fuchsia_fs::AdminMarker>(&self.export_root)?;
-        admin_proxy.shutdown().await?;
-
-        let _ = OnSignals::new(&self.process, Signals::PROCESS_TERMINATED)
-            .await
-            .map_err(ShutdownError::ProcessTerminatedSignal)?;
-
-        let info = self.process.info().map_err(ShutdownError::GetProcessReturnCode)?;
-        if info.return_code != 0 {
-            warn!("process returned non-zero exit code ({}) after shutdown", info.return_code);
-        }
-
-        // Prevent the drop impl from killing the process again.
-        self.process = Handle::invalid().into();
         Ok(())
     }
 
@@ -239,37 +315,31 @@ impl<FSC: FSConfig> ServingFilesystem<FSC> {
     ///
     /// Returns [`Err`] if the filesystem process could not be terminated. There is no way to
     /// recover the [`Filesystem`] from this error.
-    pub async fn kill(mut self) -> Result<Filesystem<FSC>, KillError> {
+    pub async fn kill(mut self) -> Result<(), Error> {
         // Prevent the drop impl from killing the process again.
-        let mut process = Handle::invalid().into();
-        std::mem::swap(&mut self.process, &mut process);
-        process.kill().map_err(KillError::TaskKill)?;
-        let _ = OnSignals::new(&process, Signals::PROCESS_TERMINATED)
-            .await
-            .map_err(KillError::ProcessTerminatedSignal)?;
-        Ok(self.filesystem.take().unwrap())
-    }
-}
-
-impl<FSC> Drop for ServingFilesystem<FSC> {
-    fn drop(&mut self) {
-        if !self.process.is_invalid_handle() {
-            let _ = self.process.kill();
+        if let Some(process) = self.process.take() {
+            process.kill().map_err(KillError::TaskKill)?;
+            let _ = OnSignals::new(&process, Signals::PROCESS_TERMINATED)
+                .await
+                .map_err(KillError::ProcessTerminatedSignal)?;
+        } else {
+            // For components, just shut down the filesystem.
+            self.shutdown().await?;
         }
+        Ok(())
     }
 }
 
-/// A RAII wrapper returned from [`ServingFilesystem::bind_to_path()`] that unbinds a path when
-/// dropped.
-pub struct BindGuard<'a, FSC> {
-    _filesystem: &'a ServingFilesystem<FSC>,
-    namespace: fdio::Namespace,
-    path: String,
-}
-
-impl<'a, FSC> Drop for BindGuard<'a, FSC> {
+impl Drop for ServingFilesystem {
     fn drop(&mut self) {
-        let _ = self.namespace.unbind(&self.path);
+        if let Some(process) = self.process.take() {
+            let _ = process.kill();
+        }
+        if let Some(path) = self.binding.lock().unwrap().as_ref() {
+            if let Ok(namespace) = fdio::Namespace::installed() {
+                let _ = namespace.unbind(path);
+            }
+        }
     }
 }
 
@@ -286,68 +356,6 @@ async fn wait_for_successful_exit(process: Process) -> Result<(), CommandError> 
     }
 }
 
-/// The error type returned from [`Filesystem::serve()`].
-///
-/// Provides a method [`Self::into_filesystem()`] to retrieve the [`Filesystem`] that caused
-/// the error.
-pub struct ServeErrorAndFilesystem<FSC> {
-    serve_error: ServeError,
-    filesystem: Filesystem<FSC>,
-}
-
-impl<FSC> ServeErrorAndFilesystem<FSC> {
-    /// Returns the error type representing the failure.
-    pub fn serve_error(&self) -> &ServeError {
-        &self.serve_error
-    }
-
-    /// Consumes this error and returns the [`Filesystem`] that caused it.
-    pub fn into_filesystem(self) -> Filesystem<FSC> {
-        self.filesystem
-    }
-}
-
-impl<FSC> std::fmt::Debug for ServeErrorAndFilesystem<FSC> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("ServeErrorAndFilesystem")
-            .field("serve_error", &self.serve_error)
-            .finish_non_exhaustive()
-    }
-}
-
-/// The error type returned from [`ServingFilesystem::shutdown()`].
-///
-/// Provides a way to attempt to kill the serving filesystem process as a way to recover.
-pub struct ShutdownErrorAndFilesystem<FSC> {
-    shutdown_error: ShutdownError,
-    filesystem: ServingFilesystem<FSC>,
-}
-
-impl<FSC: FSConfig> ShutdownErrorAndFilesystem<FSC> {
-    /// Returns the error type representing the failure.
-    pub fn shutdown_error(&self) -> &ShutdownError {
-        &self.shutdown_error
-    }
-
-    /// Kills the filesystem process and returns the backing [`Filesystem`].
-    ///
-    /// # Errors
-    ///
-    /// Returns [`Err`] if the filesystem process could not be killed. The error type [`KillError`]
-    /// does not offer a way to recover the backing [`Filesystem`].
-    pub async fn kill_filesystem(self) -> Result<Filesystem<FSC>, KillError> {
-        self.filesystem.kill().await
-    }
-}
-
-impl<FSC> std::fmt::Debug for ShutdownErrorAndFilesystem<FSC> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("ShutdownErrorAndFilesystem")
-            .field("shutdown_error", &self.shutdown_error)
-            .finish_non_exhaustive()
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use std::io::Read;
@@ -356,6 +364,7 @@ mod tests {
         super::*,
         crate::{BlobCompression, BlobEvictionPolicy, Blobfs, Factoryfs, Minfs},
         fidl_fuchsia_io as fio,
+        fuchsia_zircon::HandleBased,
         ramdevice_client::RamdiskClient,
         std::io::{Seek, Write},
     };
@@ -474,7 +483,7 @@ mod tests {
             fs_info2.block_size as u64 // assuming content < 8K
         );
 
-        let blobfs = serving.shutdown().await.expect("failed to shutdown blobfs the first time");
+        serving.shutdown().await.expect("failed to shutdown blobfs the first time");
         let serving = blobfs.serve().await.expect("failed to serve blobfs the second time");
 
         {
@@ -512,7 +521,7 @@ mod tests {
 
         blobfs.format().await.expect("failed to format blobfs");
         let serving = blobfs.serve().await.expect("failed to serve blobfs");
-        let bind_guard = serving.bind_to_path("/test-blobfs-path").expect("bind_to_path failed");
+        serving.bind_to_path("/test-blobfs-path").expect("bind_to_path failed");
         let test_path = format!("/test-blobfs-path/{}", merkle);
 
         {
@@ -528,7 +537,7 @@ mod tests {
             assert_eq!(buf, test_content);
         }
 
-        drop(bind_guard);
+        drop(serving);
 
         std::fs::File::open(&test_path).expect_err("test file was not unbound");
     }
@@ -631,7 +640,7 @@ mod tests {
             fs_info2.block_size as u64 // assuming content < 8K
         );
 
-        let minfs = serving.shutdown().await.expect("failed to shutdown minfs the first time");
+        serving.shutdown().await.expect("failed to shutdown minfs the first time");
         let serving = minfs.serve().await.expect("failed to serve minfs the second time");
 
         {
@@ -668,7 +677,7 @@ mod tests {
 
         minfs.format().await.expect("failed to format minfs");
         let serving = minfs.serve().await.expect("failed to serve minfs");
-        let bind_guard = serving.bind_to_path("/test-minfs-path").expect("bind_to_path failed");
+        serving.bind_to_path("/test-minfs-path").expect("bind_to_path failed");
         let test_path = "/test-minfs-path/test_file";
 
         {
@@ -683,7 +692,7 @@ mod tests {
             assert_eq!(buf, test_content);
         }
 
-        drop(bind_guard);
+        drop(serving);
 
         std::fs::File::open(test_path).expect_err("test file was not unbound");
     }
@@ -734,17 +743,17 @@ mod tests {
         let factoryfs = new_fs(&ramdisk, Factoryfs::default());
 
         factoryfs.format().await.expect("failed to format factoryfs");
-        let serving = factoryfs.serve().await.expect("failed to serve factoryfs");
-        let bind_guard = serving.bind_to_path("/test-factoryfs-path").expect("bind_to_path failed");
-
-        // factoryfs is read-only, so just check that we can open the root directory.
         {
-            let file =
-                std::fs::File::open("/test-factoryfs-path").expect("failed to open root directory");
-            file.metadata().expect("failed to get metadata");
-        }
+            let serving = factoryfs.serve().await.expect("failed to serve factoryfs");
+            serving.bind_to_path("/test-factoryfs-path").expect("bind_to_path failed");
 
-        drop(bind_guard);
+            // factoryfs is read-only, so just check that we can open the root directory.
+            {
+                let file = std::fs::File::open("/test-factoryfs-path")
+                    .expect("failed to open root directory");
+                file.metadata().expect("failed to get metadata");
+            }
+        }
 
         std::fs::File::open("/test-factoryfs-path").expect_err("factoryfs path is still bound");
     }

@@ -182,7 +182,7 @@ struct Inner {
     // Waker for the flush task.
     flush_waker: Option<Waker>,
 
-    // Tells the flush task to terminate.
+    // Indicates the journal has been terminated.
     terminate: bool,
 
     // Disable compactions.
@@ -206,6 +206,19 @@ struct Inner {
     // number and this number.  New super-blocks will be written every time about half of this
     // amount is written to the journal.
     reclaim_size: u64,
+}
+
+impl Inner {
+    fn terminate(&mut self) {
+        self.terminate = true;
+        if let Some(waker) = self.flush_waker.take() {
+            waker.wake();
+        }
+        if let Some(waker) = self.sync_waker.take() {
+            waker.wake();
+        }
+        self.reclaim_event = None;
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -704,11 +717,11 @@ impl Journal {
             // Reset the stream to indicate that we've remounted the journal.
             reader_checkpoint.checksum ^= RESET_XOR;
             reader_checkpoint.version = LATEST_VERSION;
-            inner.flushed_offset = reader_checkpoint.file_offset;
             inner.device_flushed_offset = device_flushed_offset;
             let mut writer_checkpoint = reader_checkpoint.clone();
             writer_checkpoint.file_offset =
                 round_up(writer_checkpoint.file_offset, BLOCK_SIZE).unwrap();
+            inner.flushed_offset = writer_checkpoint.file_offset;
             inner.writer.seek(writer_checkpoint);
             inner.output_reset_version = true;
             if last_checkpoint.file_offset < inner.flushed_offset {
@@ -1209,7 +1222,7 @@ impl Journal {
                 if let Poll::Ready(result) = fut.poll_unpin(ctx) {
                     if let Err(e) = result {
                         log::info!("Flush error: {:?}", e);
-                        self.inner.lock().unwrap().terminate = true;
+                        self.inner.lock().unwrap().terminate();
                         flush_error = true;
                     }
                     flush_fut = None;
@@ -1221,7 +1234,7 @@ impl Journal {
                     let mut inner = self.inner.lock().unwrap();
                     if let Err(e) = result {
                         log::info!("Compaction error: {:?}", e);
-                        inner.terminate = true;
+                        inner.terminate();
                     }
                     compact_fut = None;
                     inner.compaction_running = false;
@@ -1278,13 +1291,9 @@ impl Journal {
         }
     }
 
-    /// Terminate the flush task.
+    /// Terminate all journal activity.
     pub fn terminate(&self) {
-        let mut inner = self.inner.lock().unwrap();
-        inner.terminate = true;
-        if let Some(waker) = inner.flush_waker.take() {
-            waker.wake();
-        }
+        self.inner.lock().unwrap().terminate();
     }
 }
 

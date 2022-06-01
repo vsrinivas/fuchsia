@@ -47,7 +47,7 @@ pub mod asynchronous;
 mod error;
 
 use {
-    anyhow::{format_err, Context as _, Error},
+    anyhow::{bail, format_err, Context as _, Error},
     cstr::cstr,
     fdio::{service_connect_at, spawn_etc, Namespace, SpawnAction, SpawnOptions},
     fidl::endpoints::DiscoverableProtocolMarker,
@@ -235,7 +235,7 @@ fn run_command_and_wait_for_clean_exit(
     if !zx::ProcessInfoFlags::from_bits(info.flags).unwrap().contains(zx::ProcessInfoFlags::EXITED)
         || info.return_code != 0
     {
-        return Err(format_err!("process returned non-zero exit code ({})", info.return_code));
+        bail!("process returned non-zero exit code ({})", info.return_code);
     }
 
     Ok(())
@@ -243,6 +243,12 @@ fn run_command_and_wait_for_clean_exit(
 
 /// Describes the configuration for a particular native filesystem.
 pub trait FSConfig {
+    /// If the filesystem runs as a component, Returns the component name in which case the
+    /// binary_path, and the _args methods are not relevant.
+    fn component_name(&self) -> Option<&str> {
+        None
+    }
+
     /// Path to the filesystem binary
     fn binary_path(&self) -> &CStr;
 
@@ -307,7 +313,10 @@ impl<FSC: FSConfig> Filesystem<FSC> {
     /// and can't contain any '.' or '..' entries.
     pub fn mount(&mut self, mount_point: &str) -> Result<(), Error> {
         if self.instance.is_some() {
-            return Err(format_err!("cannot mount. filesystem is already mounted"));
+            bail!("cannot mount. filesystem is already mounted");
+        }
+        if self.config.component_name().is_some() {
+            bail!("Not supported");
         }
 
         let block_device = self.get_channel()?;
@@ -326,7 +335,10 @@ impl<FSC: FSConfig> Filesystem<FSC> {
     /// Format the associated device with a fresh filesystem. It must not be mounted.
     pub fn format(&mut self) -> Result<(), Error> {
         if self.instance.is_some() {
-            return Err(format_err!("cannot format! filesystem is mounted"));
+            bail!("cannot format! filesystem is mounted");
+        }
+        if self.config.component_name().is_some() {
+            bail!("Not supported");
         }
 
         let block_device = self.get_channel()?;
@@ -344,7 +356,10 @@ impl<FSC: FSConfig> Filesystem<FSC> {
     /// error if it doesn't. Will fail if run on a mounted partition.
     pub fn fsck(&mut self) -> Result<(), Error> {
         if self.instance.is_some() {
-            return Err(format_err!("cannot fsck! filesystem is mounted"));
+            bail!("cannot fsck! filesystem is mounted");
+        }
+        if self.config.component_name().is_some() {
+            bail!("Not supported");
         }
 
         let block_device = self.get_channel()?;
@@ -574,22 +589,11 @@ impl Fxfs {
 }
 
 impl FSConfig for Fxfs {
+    fn component_name(&self) -> Option<&str> {
+        Some("fxfs")
+    }
     fn binary_path(&self) -> &CStr {
-        cstr!("/pkg/bin/fxfs")
-    }
-    fn generic_args(&self) -> Vec<&CStr> {
-        let mut args = vec![];
-        if self.verbose {
-            args.push(cstr!("--verbose"));
-        }
-        args
-    }
-    fn mount_args(&self) -> Vec<&CStr> {
-        let mut args = vec![];
-        if self.readonly {
-            args.push(cstr!("--readonly"));
-        }
-        args
+        cstr!("")
     }
     fn crypt_client(&self) -> Option<zx::Channel> {
         Some((self.crypt_client_fn)())
