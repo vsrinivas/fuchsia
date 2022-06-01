@@ -121,8 +121,8 @@ impl<
 trait BufferIpLinkDeviceContext<D: LinkDevice, C, TimerId, B: BufferMut>:
     IpLinkDeviceContext<D, C, TimerId>
     + FrameContext<C, B, <Self as DeviceIdContext<D>>::DeviceId>
-    + RecvFrameContext<B, RecvIpFrameMeta<<Self as DeviceIdContext<D>>::DeviceId, Ipv4>>
-    + RecvFrameContext<B, RecvIpFrameMeta<<Self as DeviceIdContext<D>>::DeviceId, Ipv6>>
+    + RecvFrameContext<C, B, RecvIpFrameMeta<<Self as DeviceIdContext<D>>::DeviceId, Ipv4>>
+    + RecvFrameContext<C, B, RecvIpFrameMeta<<Self as DeviceIdContext<D>>::DeviceId, Ipv6>>
 {
 }
 
@@ -133,24 +133,34 @@ impl<
         B: BufferMut,
         SC: IpLinkDeviceContext<D, C, TimerId>
             + FrameContext<C, B, <Self as DeviceIdContext<D>>::DeviceId>
-            + RecvFrameContext<B, RecvIpFrameMeta<<Self as DeviceIdContext<D>>::DeviceId, Ipv4>>
-            + RecvFrameContext<B, RecvIpFrameMeta<<Self as DeviceIdContext<D>>::DeviceId, Ipv6>>,
+            + RecvFrameContext<C, B, RecvIpFrameMeta<<Self as DeviceIdContext<D>>::DeviceId, Ipv4>>
+            + RecvFrameContext<C, B, RecvIpFrameMeta<<Self as DeviceIdContext<D>>::DeviceId, Ipv6>>,
     > BufferIpLinkDeviceContext<D, C, TimerId, B> for SC
 {
 }
 
 impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext>
-    RecvFrameContext<B, RecvIpFrameMeta<EthernetDeviceId, Ipv4>> for Ctx<D, C>
+    RecvFrameContext<(), B, RecvIpFrameMeta<EthernetDeviceId, Ipv4>> for Ctx<D, C>
 {
-    fn receive_frame(&mut self, metadata: RecvIpFrameMeta<EthernetDeviceId, Ipv4>, frame: B) {
+    fn receive_frame(
+        &mut self,
+        _ctx: &mut (),
+        metadata: RecvIpFrameMeta<EthernetDeviceId, Ipv4>,
+        frame: B,
+    ) {
         crate::ip::receive_ipv4_packet(self, metadata.device.into(), metadata.frame_dst, frame);
     }
 }
 
 impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext>
-    RecvFrameContext<B, RecvIpFrameMeta<EthernetDeviceId, Ipv6>> for Ctx<D, C>
+    RecvFrameContext<(), B, RecvIpFrameMeta<EthernetDeviceId, Ipv6>> for Ctx<D, C>
 {
-    fn receive_frame(&mut self, metadata: RecvIpFrameMeta<EthernetDeviceId, Ipv6>, frame: B) {
+    fn receive_frame(
+        &mut self,
+        _ctx: &mut (),
+        metadata: RecvIpFrameMeta<EthernetDeviceId, Ipv6>,
+        frame: B,
+    ) {
         crate::ip::receive_ipv6_packet(self, metadata.device.into(), metadata.frame_dst, frame);
     }
 }

@@ -456,11 +456,11 @@ pub trait DualStateContext<State0, State1, Id0 = (), Id1 = ()> {
 }
 
 /// A context for receiving frames.
-pub trait RecvFrameContext<B: BufferMut, Meta> {
+pub trait RecvFrameContext<C, B: BufferMut, Meta> {
     /// Receive a frame.
     ///
     /// `receive_frame` receives a frame with the given metadata.
-    fn receive_frame(&mut self, metadata: Meta, frame: B);
+    fn receive_frame(&mut self, ctx: &mut C, metadata: Meta, frame: B);
 }
 
 // TODO(joshlf): Rename `FrameContext` to `SendFrameContext`

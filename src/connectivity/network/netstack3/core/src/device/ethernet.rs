@@ -71,6 +71,7 @@ pub(crate) trait EthernetIpLinkDeviceContext<C>:
     // L3.
     fn add_ipv6_addr_subnet(
         &mut self,
+        ctx: &mut C,
         device_id: Self::DeviceId,
         addr_sub: AddrSubnet<Ipv6Addr>,
         config: AddrConfig<Self::Instant>,
@@ -81,6 +82,7 @@ pub(crate) trait EthernetIpLinkDeviceContext<C>:
     // L3.
     fn del_ipv6_addr_on_dad_failure(
         &mut self,
+        ctx: &mut C,
         device_id: Self::DeviceId,
         addr: &SpecifiedAddr<Ipv6Addr>,
     ) -> Result<(), NotFoundError>;
@@ -90,6 +92,7 @@ pub(crate) trait EthernetIpLinkDeviceContext<C>:
     // L3.
     fn join_ipv6_multicast(
         &mut self,
+        ctx: &mut C,
         device_id: Self::DeviceId,
         multicast_addr: MulticastAddr<Ipv6Addr>,
     );
@@ -99,6 +102,7 @@ pub(crate) trait EthernetIpLinkDeviceContext<C>:
     // L3.
     fn leave_ipv6_multicast(
         &mut self,
+        ctx: &mut C,
         device_id: Self::DeviceId,
         multicast_addr: MulticastAddr<Ipv6Addr>,
     );
@@ -107,6 +111,7 @@ pub(crate) trait EthernetIpLinkDeviceContext<C>:
 impl<D: EventDispatcher, C: BlanketCoreContext> EthernetIpLinkDeviceContext<()> for Ctx<D, C> {
     fn add_ipv6_addr_subnet(
         &mut self,
+        _ctx: &mut (),
         device_id: EthernetDeviceId,
         addr_sub: AddrSubnet<Ipv6Addr>,
         config: AddrConfig<C::Instant>,
@@ -116,6 +121,7 @@ impl<D: EventDispatcher, C: BlanketCoreContext> EthernetIpLinkDeviceContext<()> 
 
     fn del_ipv6_addr_on_dad_failure(
         &mut self,
+        _ctx: &mut (),
         device_id: EthernetDeviceId,
         addr: &SpecifiedAddr<Ipv6Addr>,
     ) -> Result<(), NotFoundError> {
@@ -130,6 +136,7 @@ impl<D: EventDispatcher, C: BlanketCoreContext> EthernetIpLinkDeviceContext<()> 
 
     fn join_ipv6_multicast(
         &mut self,
+        _ctx: &mut (),
         device_id: Self::DeviceId,
         multicast_addr: MulticastAddr<Ipv6Addr>,
     ) {
@@ -143,6 +150,7 @@ impl<D: EventDispatcher, C: BlanketCoreContext> EthernetIpLinkDeviceContext<()> 
 
     fn leave_ipv6_multicast(
         &mut self,
+        _ctx: &mut (),
         device_id: Self::DeviceId,
         multicast_addr: MulticastAddr<Ipv6Addr>,
     ) {
@@ -493,12 +501,16 @@ pub(super) fn receive_frame<C, B: BufferMut, SC: BufferEthernetIpLinkDeviceConte
                 }
             }
         }
-        Some(EtherType::Ipv4) => {
-            sync_ctx.receive_frame(RecvIpFrameMeta::<_, Ipv4>::new(device_id, frame_dst), buffer)
-        }
-        Some(EtherType::Ipv6) => {
-            sync_ctx.receive_frame(RecvIpFrameMeta::<_, Ipv6>::new(device_id, frame_dst), buffer)
-        }
+        Some(EtherType::Ipv4) => sync_ctx.receive_frame(
+            ctx,
+            RecvIpFrameMeta::<_, Ipv4>::new(device_id, frame_dst),
+            buffer,
+        ),
+        Some(EtherType::Ipv6) => sync_ctx.receive_frame(
+            ctx,
+            RecvIpFrameMeta::<_, Ipv6>::new(device_id, frame_dst),
+            buffer,
+        ),
         Some(EtherType::Other(_)) | None => {} // TODO(joshlf)
     }
 }
@@ -839,12 +851,12 @@ impl<C, SC: EthernetIpLinkDeviceContext<C>> NdpContext<EthernetLinkDevice, C> fo
 
     fn duplicate_address_detected(
         &mut self,
-        _ctx: &mut C,
+        ctx: &mut C,
         device_id: SC::DeviceId,
         addr: UnicastAddr<Ipv6Addr>,
     ) {
         let () = self
-            .del_ipv6_addr_on_dad_failure(device_id, &addr.into_specified())
+            .del_ipv6_addr_on_dad_failure(ctx, device_id, &addr.into_specified())
             .expect("expected to delete an address we are performing DAD on");
     }
 
@@ -1035,6 +1047,7 @@ mod tests {
     impl<C> EthernetIpLinkDeviceContext<C> for DummyCtx {
         fn add_ipv6_addr_subnet(
             &mut self,
+            _ctx: &mut C,
             _device_id: DummyDeviceId,
             _addr_sub: AddrSubnet<Ipv6Addr>,
             _config: AddrConfig<DummyInstant>,
@@ -1044,6 +1057,7 @@ mod tests {
 
         fn del_ipv6_addr_on_dad_failure(
             &mut self,
+            _ctx: &mut C,
             _device_id: DummyDeviceId,
             _addr: &SpecifiedAddr<Ipv6Addr>,
         ) -> Result<(), NotFoundError> {
@@ -1052,6 +1066,7 @@ mod tests {
 
         fn join_ipv6_multicast(
             &mut self,
+            _ctx: &mut C,
             _device_id: DummyDeviceId,
             _multicast_addr: MulticastAddr<Ipv6Addr>,
         ) {
@@ -1060,6 +1075,7 @@ mod tests {
 
         fn leave_ipv6_multicast(
             &mut self,
+            _ctx: &mut C,
             _device_id: DummyDeviceId,
             _multicast_addr: MulticastAddr<Ipv6Addr>,
         ) {
