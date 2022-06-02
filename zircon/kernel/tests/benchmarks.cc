@@ -35,9 +35,36 @@ const size_t BUFSIZE = (512 * 1024);  // must be smaller than max allowed heap a
 const size_t ITER =
     (1UL * 1024 * 1024 * 1024 / BUFSIZE);  // enough iterations to have to copy/set 1GB of memory
 
+namespace {
+
+// Disables interrupts and marks the calling CPU as inactive for the lifetime of the object.
+//
+// The purpose of this class is to "isolate" the calling CPU from the rest of the system to ensure
+// benchmarks are not impacted by interrupts and ensure the lockup detector does not think the
+// calling CPU has become unresponsive (the lockup detector only monitors active CPUs).
+class InactiveCpuGuard {
+ public:
+  InactiveCpuGuard() : was_active_(mp_is_cpu_active(arch_curr_cpu_num())) {
+    if (was_active_) {
+      mp_set_curr_cpu_active(false);
+    }
+  }
+  ~InactiveCpuGuard() {
+    if (was_active_) {
+      mp_set_curr_cpu_active(was_active_);
+    }
+  }
+
+ private:
+  InterruptDisableGuard interrupt_guard_;
+  bool was_active_;
+};
+
+}  // namespace
+
 __NO_INLINE static void bench_cycles_per_second() {
   {
-    InterruptDisableGuard irqd;
+    InactiveCpuGuard inactive_cpu_guard;
     const zx_ticks_t before_ticks = current_ticks();
     const uint64_t before_cycles = arch::Cycles();
     for (size_t i = 0; i < 100000000; i++) {
@@ -62,7 +89,7 @@ __NO_INLINE static void bench_set_overhead() {
 
   uint64_t count;
   {
-    InterruptDisableGuard irqd;
+    InactiveCpuGuard inactive_cpu_guard;
 
     count = arch::Cycles();
     for (size_t i = 0; i < ITER; i++) {
@@ -85,7 +112,7 @@ __NO_INLINE static void bench_memset() {
 
   uint64_t count;
   {
-    InterruptDisableGuard irqd;
+    InactiveCpuGuard inactive_cpu_guard;
 
     count = arch::Cycles();
     for (size_t i = 0; i < ITER; i++) {
@@ -112,7 +139,7 @@ __NO_INLINE static void bench_memset_per_page() {
 
   uint64_t count;
   {
-    InterruptDisableGuard irqd;
+    InactiveCpuGuard inactive_cpu_guard;
 
     count = arch::Cycles();
     for (size_t i = 0; i < ITER; i++) {
@@ -141,7 +168,7 @@ __NO_INLINE static void bench_zero_page() {
 
   uint64_t count;
   {
-    InterruptDisableGuard irqd;
+    InactiveCpuGuard inactive_cpu_guard;
 
     count = arch::Cycles();
     for (size_t i = 0; i < ITER; i++) {
@@ -171,7 +198,7 @@ __NO_INLINE static void bench_cset() {
 
   uint64_t count;
   {
-    InterruptDisableGuard irqd;
+    InactiveCpuGuard inactive_cpu_guard;
 
     count = arch::Cycles();
     for (size_t i = 0; i < ITER; i++) {
@@ -201,7 +228,7 @@ __NO_INLINE static void bench_cset_wide() {
 
   uint64_t count;
   {
-    InterruptDisableGuard irqd;
+    InactiveCpuGuard inactive_cpu_guard;
 
     count = arch::Cycles();
     for (size_t i = 0; i < ITER; i++) {
@@ -237,7 +264,7 @@ __NO_INLINE static void bench_memcpy() {
 
   uint64_t count;
   {
-    InterruptDisableGuard irqd;
+    InactiveCpuGuard inactive_cpu_guard;
 
     count = arch::Cycles();
     for (size_t i = 0; i < ITER; i++) {
@@ -264,7 +291,7 @@ __NO_INLINE static void bench_spinlock(const char* spin_lock_name) {
 #define COUNT (128 * 1024 * 1024)
   // test 1: acquire/release a spinlock with interrupts already disabled
   {
-    InterruptDisableGuard irqd;
+    InactiveCpuGuard inactive_cpu_guard;
 
     c = arch::Cycles();
     for (size_t i = 0; i < COUNT; i++) {
@@ -283,7 +310,7 @@ __NO_INLINE static void bench_spinlock(const char* spin_lock_name) {
 
   // test 2: acquire/release a spinlock with irq save and irqs already disabled
   {
-    InterruptDisableGuard irqd;
+    InactiveCpuGuard inactive_cpu_guard;
 
     c = arch::Cycles();
     for (size_t i = 0; i < COUNT; i++) {
