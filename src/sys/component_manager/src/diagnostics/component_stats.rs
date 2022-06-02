@@ -6,8 +6,7 @@ use {
     crate::diagnostics::{
         measurement::Measurement, runtime_stats_source::RuntimeStatsSource, task_info::TaskInfo,
     },
-    fuchsia_inspect as inspect,
-    fuchsia_zircon::sys as zx_sys,
+    fuchsia_inspect as inspect, fuchsia_zircon as zx,
     futures::lock::Mutex,
     std::{fmt::Debug, sync::Arc},
 };
@@ -55,7 +54,7 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> ComponentStats<T> {
     }
 
     /// Removes all tasks that are not alive. Returns the koids of the ones that were deleted.
-    pub async fn clean_stale(&mut self) -> Vec<zx_sys::zx_koid_t> {
+    pub async fn clean_stale(&mut self) -> Vec<zx::sys::zx_koid_t> {
         let mut deleted_koids = vec![];
         let mut final_tasks = vec![];
         while let Some(task) = self.tasks.pop() {
@@ -71,6 +70,29 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> ComponentStats<T> {
         }
         self.tasks = final_tasks;
         deleted_koids
+    }
+
+    pub async fn remove_by_koids(&mut self, remove: &[zx::sys::zx_koid_t]) {
+        let mut final_tasks = vec![];
+        while let Some(task) = self.tasks.pop() {
+            let task_koid = task.lock().await.koid();
+            if !remove.contains(&task_koid) {
+                final_tasks.push(task)
+            }
+        }
+
+        self.tasks = final_tasks;
+    }
+
+    pub async fn gather_dead_tasks(&self) -> Vec<(zx::Time, Arc<Mutex<TaskInfo<T>>>)> {
+        let mut dead_tasks = vec![];
+        for task in &self.tasks {
+            if let Some(t) = task.lock().await.most_recent_measurement().await {
+                dead_tasks.push((t, task.clone()));
+            }
+        }
+
+        dead_tasks
     }
 
     /// Writes the stats to inspect under the given node. Returns the number of tasks that were

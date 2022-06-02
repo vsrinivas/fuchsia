@@ -7,7 +7,7 @@ use {
         diagnostics::{
             component_stats::ComponentStats,
             constants::*,
-            measurement::Measurement,
+            measurement::{Measurement, MeasurementsQueue},
             runtime_stats_source::{
                 DiagnosticsReceiverProvider, RuntimeStatsContainer, RuntimeStatsSource,
             },
@@ -29,6 +29,7 @@ use {
         FutureExt, StreamExt,
     },
     injectable_time::{MonotonicTime, TimeSource},
+    lazy_static::lazy_static,
     log::warn,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ExtendedMoniker},
     std::{
@@ -49,6 +50,10 @@ macro_rules! maybe_return {
 }
 
 const MAX_INSPECT_SIZE : usize = 2 * 1024 * 1024 /* 2MB */;
+
+lazy_static! {
+    static ref AGGREGATE_SAMPLES: inspect::StringReference<'static> = "@aggregated".into();
+}
 
 /// Provides stats for all components running in the system.
 pub struct ComponentTreeStats<T: RuntimeStatsSource + Debug> {
@@ -79,6 +84,8 @@ pub struct ComponentTreeStats<T: RuntimeStatsSource + Debug> {
     diagnostics_waiter_task_sender: mpsc::UnboundedSender<fasync::Task<()>>,
 
     time_source: Arc<dyn TimeSource + Send + Sync>,
+
+    aggregated_dead_task_data: Mutex<MeasurementsQueue>,
 }
 
 impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> ComponentTreeStats<T> {
@@ -115,7 +122,11 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> ComponentTreeStats<T
             _wait_diagnostics_drain: fasync::Task::spawn(async move {
                 rcv.for_each_concurrent(None, |rx| async move { rx.await }).await;
             }),
-            time_source,
+            time_source: time_source.clone(),
+            aggregated_dead_task_data: Mutex::new(MeasurementsQueue::new(
+                COMPONENT_CPU_MAX_SAMPLES,
+                time_source,
+            )),
         });
 
         let weak_self = Arc::downgrade(&this);
@@ -184,6 +195,7 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> ComponentTreeStats<T
         let inspector = inspect::Inspector::new_with_size(MAX_INSPECT_SIZE);
         let components = inspector.root().create_child("components");
         let (component_count, task_count) = self.write_measurements(&components).await;
+        self.write_aggregate_measurements(&components).await;
         inspector.root().record_uint("component_count", component_count);
         inspector.root().record_uint("task_count", task_count);
         inspector.root().record(components);
@@ -198,6 +210,17 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> ComponentTreeStats<T
         let inspector = inspect::Inspector::new();
         self.totals.lock().await.write_recents_to(inspector.root());
         inspector
+    }
+
+    async fn write_aggregate_measurements(&self, components_node: &inspect::Node) {
+        let locked_aggregate = self.aggregated_dead_task_data.lock().await;
+        if locked_aggregate.no_true_measurements() {
+            return;
+        }
+
+        let aggregate = components_node.create_child(&*AGGREGATE_SAMPLES);
+        locked_aggregate.record_to_node(&aggregate);
+        components_node.record(aggregate);
     }
 
     async fn write_measurements(&self, node: &inspect::Node) -> (u64, u64) {
@@ -271,6 +294,58 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> ComponentTreeStats<T
         self.processing_times.insert((zx::Time::get_monotonic() - start).into_nanos());
     }
 
+    async fn prune_dead_tasks(self: &Arc<Self>, max_dead_tasks: usize) {
+        let mut all_dead_tasks = BTreeMap::new();
+        for (moniker, component) in self.tree.lock().await.iter() {
+            let dead_tasks = component.lock().await.gather_dead_tasks().await;
+            for (timestamp, task) in dead_tasks {
+                all_dead_tasks.insert(timestamp, (task, moniker.clone()));
+            }
+        }
+
+        if all_dead_tasks.len() <= max_dead_tasks {
+            return;
+        }
+
+        let total = all_dead_tasks.len();
+        let to_remove = all_dead_tasks.iter().take(total - (max_dead_tasks / 2));
+
+        let mut koids_to_remove = vec![];
+        let mut aggregate_data = self.aggregated_dead_task_data.lock().await;
+        for (_, (unlocked_task, _)) in to_remove {
+            let mut task = unlocked_task.lock().await;
+            if let Ok(measurements) = task.take_measurements_queue().await {
+                koids_to_remove.push(task.koid());
+                *aggregate_data += measurements;
+            }
+        }
+
+        let mut stats_to_remove = vec![];
+        for (moniker, stats) in self.tree.lock().await.iter() {
+            let mut stat_guard = stats.lock().await;
+            stat_guard.remove_by_koids(&koids_to_remove).await;
+            if !stat_guard.is_alive().await {
+                stats_to_remove.push(moniker.clone());
+            }
+        }
+
+        let mut stats = self.tree.lock().await;
+        for moniker in stats_to_remove {
+            // Ensure that they are still not alive (if a component restarted it might be alive
+            // again).
+            if let Some(stat) = stats.get(&moniker) {
+                if !stat.lock().await.is_alive().await {
+                    stats.remove(&moniker);
+                }
+            }
+        }
+
+        let mut tasks = self.tasks.lock().await;
+        for koid in koids_to_remove {
+            tasks.remove(&koid);
+        }
+    }
+
     async fn on_component_started<P, C>(self: &Arc<Self>, moniker: AbsoluteMoniker, runtime: &P)
     where
         P: DiagnosticsReceiverProvider<C, T>,
@@ -337,6 +412,9 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> ComponentTreeStats<T
         };
         task_guard.insert(koid, Arc::downgrade(&task_info));
         stats.lock().await.add_task(task_info).await;
+        drop(task_guard);
+        drop(tree_lock);
+        this.prune_dead_tasks(MAX_DEAD_TASKS).await;
     }
 }
 
@@ -495,6 +573,176 @@ mod tests {
         assert!(stats.tree.lock().await.get(&moniker).is_none());
         assert_eq!(stats.tree.lock().await.len(), 0);
         assert_eq!(stats.tasks.lock().await.len(), 0);
+    }
+
+    fn create_measurements_vec_for_fake_task(
+        num_measurements: i64,
+        init_cpu: i64,
+        init_queue: i64,
+    ) -> Vec<zx::TaskRuntimeInfo> {
+        let mut v = vec![];
+        for i in 0..num_measurements {
+            v.push(zx::TaskRuntimeInfo {
+                cpu_time: i * init_cpu,
+                queue_time: i * init_queue,
+                ..zx::TaskRuntimeInfo::default()
+            });
+        }
+
+        v
+    }
+
+    #[fuchsia::test]
+    async fn dead_tasks_are_pruned() {
+        let clock = Arc::new(FakeTime::new());
+        let inspector = inspect::Inspector::new();
+        let stats = Arc::new(
+            ComponentTreeStats::new_with_timesource(
+                inspector.root().create_child("cpu_stats"),
+                clock.clone(),
+            )
+            .await,
+        );
+
+        let mut previous_task_count = 0;
+        for i in 0..(MAX_DEAD_TASKS * 2) {
+            clock.add_ticks(1);
+            let component_task =
+                FakeTask::new(i as u64, create_measurements_vec_for_fake_task(300, 2, 4));
+
+            let moniker = AbsoluteMoniker::from(vec![format!("moniker-{}", i).as_ref()]);
+            let fake_runtime =
+                FakeRuntime::new(FakeDiagnosticsContainer::new(component_task, None));
+            stats.on_component_started(moniker.clone(), &fake_runtime).await;
+
+            loop {
+                let current = stats.tree.lock().await.len();
+                if current != previous_task_count {
+                    previous_task_count = current;
+                    break;
+                }
+                fasync::Timer::new(fasync::Time::after(100i64.millis())).await;
+            }
+
+            for task in stats
+                .tree
+                .lock()
+                .await
+                .get(&moniker.into())
+                .unwrap()
+                .lock()
+                .await
+                .tasks_mut()
+                .iter_mut()
+            {
+                task.lock().await.force_terminate().await;
+            }
+        }
+
+        let task_count = stats.tasks.lock().await.len();
+        let moniker_count = stats.tree.lock().await.len();
+        assert_eq!(task_count, 88);
+        assert_eq!(moniker_count, 88);
+    }
+
+    #[fuchsia::test]
+    async fn aggregated_data_available_inspect() {
+        let max_dead_tasks = 4;
+        let clock = Arc::new(FakeTime::new());
+        let inspector = inspect::Inspector::new();
+        let stats = Arc::new(
+            ComponentTreeStats::new_with_timesource(
+                inspector.root().create_child("cpu_stats"),
+                clock.clone(),
+            )
+            .await,
+        );
+
+        let mut moniker_list = vec![];
+        for i in 0..(max_dead_tasks * 2) {
+            clock.add_ticks(1);
+            let moniker = AbsoluteMoniker::from(vec![format!("moniker-{}", i).as_ref()]);
+            moniker_list.push(moniker.clone());
+            let component_task =
+                FakeTask::new(i as u64, create_measurements_vec_for_fake_task(5, 1, 1));
+            stats.track_ready(moniker.into(), component_task).await;
+        }
+
+        clock.add_ticks(CPU_SAMPLE_PERIOD.as_nanos() as i64);
+        stats.measure().await;
+        clock.add_ticks(CPU_SAMPLE_PERIOD.as_nanos() as i64);
+        stats.measure().await;
+        clock.add_ticks(CPU_SAMPLE_PERIOD.as_nanos() as i64);
+        stats.measure().await;
+
+        assert_data_tree!(inspector, root: {
+            cpu_stats: contains {
+                measurements: contains {
+                    components: {
+                        "moniker-0": contains {},
+                        "moniker-1": contains {},
+                        "moniker-2": contains {},
+                        "moniker-3": contains {},
+                        "moniker-4": contains {},
+                        "moniker-5": contains {},
+                        "moniker-6": contains {},
+                        "moniker-7": contains {},
+                    }
+                }
+            }
+        });
+
+        for moniker in moniker_list {
+            for task in stats
+                .tree
+                .lock()
+                .await
+                .get(&moniker.clone().into())
+                .unwrap()
+                .lock()
+                .await
+                .tasks_mut()
+                .iter_mut()
+            {
+                task.lock().await.force_terminate().await;
+                // the timestamp for termination is used as a key when pruning,
+                // so all of the tasks cannot be removed at exactly the same time
+                clock.add_ticks(1);
+            }
+        }
+
+        stats.prune_dead_tasks(max_dead_tasks).await;
+
+        assert_data_tree!(inspector, root: {
+            cpu_stats: contains {
+                measurements: contains {
+                    components: {
+                        "@aggregated": {
+                            "@samples": {
+                                "0": {
+                                    timestamp: AnyProperty,
+                                    cpu_time: 0i64,
+                                    queue_time: 0i64,
+                                },
+                                "1": {
+                                    timestamp: AnyProperty,
+                                    cpu_time: 6i64,
+                                    queue_time: 6i64,
+                                },
+                                "2": {
+                                    timestamp: AnyProperty,
+                                    cpu_time: 12i64,
+                                    queue_time: 12i64,
+                                },
+                            }
+                        },
+
+                        "moniker-6": contains {},
+                        "moniker-7": contains {},
+                    }
+                }
+            }
+        });
     }
 
     #[fuchsia::test]

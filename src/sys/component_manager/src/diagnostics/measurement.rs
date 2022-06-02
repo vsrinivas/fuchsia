@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    crate::diagnostics::constants::{CPU_SAMPLE_PERIOD, MEASUREMENT_EPSILON},
+    crate::diagnostics::constants::{
+        COMPONENT_CPU_MAX_SAMPLES, CPU_SAMPLE_PERIOD, MEASUREMENT_EPSILON,
+    },
     core::cmp::Reverse,
     fuchsia_inspect as inspect, fuchsia_zircon as zx,
     injectable_time::TimeSource,
@@ -20,6 +22,9 @@ lazy_static! {
     static ref TIMESTAMP: inspect::StringReference<'static> = "timestamp".into();
     static ref CPU_TIME: inspect::StringReference<'static> = "cpu_time".into();
     static ref QUEUE_TIME: inspect::StringReference<'static> = "queue_time".into();
+    static ref SAMPLES: inspect::StringReference<'static> = "@samples".into();
+    static ref SAMPLE_INDEXES: Vec<inspect::StringReference<'static>> =
+        (0..COMPONENT_CPU_MAX_SAMPLES).map(|x| x.to_string().into()).collect();
 }
 
 #[derive(Debug, Clone, Default, PartialOrd, Eq, Ord, PartialEq)]
@@ -261,6 +266,17 @@ impl MeasurementsQueue {
             }
             MostRecentMeasurement::Measurement(ref v) => Some(v),
         }
+    }
+
+    pub fn record_to_node(&self, parent: &inspect::Node) {
+        let samples = parent.create_child(&*SAMPLES);
+        // gather measurements ordered oldest -> newest
+        for (i, measurement) in self.iter_sorted().rev().enumerate() {
+            let child = samples.create_child(&SAMPLE_INDEXES[i]);
+            measurement.record_to_node(&child);
+            samples.record(child);
+        }
+        parent.record(samples);
     }
 }
 

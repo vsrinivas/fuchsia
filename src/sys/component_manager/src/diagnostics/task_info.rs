@@ -14,19 +14,12 @@ use {
     fuchsia_zircon::sys::{self as zx_sys, zx_system_get_num_cpus},
     futures::{future::BoxFuture, lock::Mutex, FutureExt},
     injectable_time::TimeSource,
-    lazy_static::lazy_static,
     moniker::ExtendedMoniker,
     std::{
         fmt::Debug,
         sync::{Arc, Weak},
     },
 };
-
-lazy_static! {
-    static ref SAMPLES: inspect::StringReference<'static> = "@samples".into();
-    static ref SAMPLE_INDEXES: Vec<inspect::StringReference<'static>> =
-        (0..COMPONENT_CPU_MAX_SAMPLES).map(|x| x.to_string().into()).collect();
-}
 
 pub(crate) fn create_cpu_histogram(
     node: &inspect::Node,
@@ -64,7 +57,7 @@ where
 pub struct TaskInfo<T: RuntimeStatsSource + Debug> {
     koid: zx_sys::zx_koid_t,
     pub(crate) task: Arc<Mutex<TaskState<T>>>,
-    time_source: Arc<dyn TimeSource + Sync + Send>,
+    pub(crate) time_source: Arc<dyn TimeSource + Sync + Send>,
     pub(crate) has_parent_task: bool,
     measurements: MeasurementsQueue,
     histogram: Option<UintLinearHistogramProperty>,
@@ -74,6 +67,7 @@ pub struct TaskInfo<T: RuntimeStatsSource + Debug> {
     sample_period: std::time::Duration,
     children: Vec<Weak<Mutex<TaskInfo<T>>>>,
     _terminated_task: fasync::Task<()>,
+    pub(crate) most_recent_measurement_nanos: Arc<Mutex<Option<i64>>>,
 }
 
 impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> TaskInfo<T> {
@@ -102,6 +96,9 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> TaskInfo<T> {
         let maybe_handle = task.handle_ref().duplicate(zx::Rights::SAME_RIGHTS).ok();
         let task_state = Arc::new(Mutex::new(TaskState::from(task)));
         let weak_task_state = Arc::downgrade(&task_state);
+        let most_recent_measurement_nanos = Arc::new(Mutex::new(None));
+        let movable_most_recent_measurement_nanos = most_recent_measurement_nanos.clone();
+        let movable_time_source = time_source.clone();
         let _terminated_task = fasync::Task::spawn(async move {
             if let Some(handle) = maybe_handle {
                 fasync::OnSignals::new(&handle, zx::Signals::TASK_TERMINATED)
@@ -113,6 +110,9 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> TaskInfo<T> {
             // If we failed to duplicate the handle then still mark this task as terminated to
             // ensure it's cleaned up.
             if let Some(task_state) = weak_task_state.upgrade() {
+                let mut terminated_at_nanos_guard =
+                    movable_most_recent_measurement_nanos.lock().await;
+                *terminated_at_nanos_guard = Some(movable_time_source.now());
                 let mut state = task_state.lock().await;
                 *state = match std::mem::replace(&mut *state, TaskState::TerminatedAndMeasured) {
                     s @ TaskState::TerminatedAndMeasured => s,
@@ -134,6 +134,7 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> TaskInfo<T> {
             previous_histogram_timestamp: time_source.now(),
             time_source,
             _terminated_task,
+            most_recent_measurement_nanos,
         })
     }
 
@@ -154,6 +155,23 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> TaskInfo<T> {
         self.children.push(task);
     }
 
+    pub async fn most_recent_measurement(&self) -> Option<zx::Time> {
+        self.most_recent_measurement_nanos.lock().await.map(|t| zx::Time::from_nanos(t))
+    }
+
+    /// Takes the MeasurementsQueue from this task, replacing it with an empty one.
+    /// This function is only valid when `self.task == TaskState::Terminated*`.
+    /// The task will be considered stale after this function runs.
+    pub async fn take_measurements_queue(&mut self) -> Result<MeasurementsQueue, ()> {
+        match &*self.task.lock().await {
+            TaskState::TerminatedAndMeasured | TaskState::Terminated(_) => Ok(std::mem::replace(
+                &mut self.measurements,
+                MeasurementsQueue::new(COMPONENT_CPU_MAX_SAMPLES, self.time_source.clone()),
+            )),
+            _ => Err(()),
+        }
+    }
+
     fn measure_subtree<'a>(&'a mut self) -> BoxFuture<'a, Option<&'a Measurement>> {
         async move {
             let runtime_info_res = {
@@ -166,6 +184,9 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> TaskInfo<T> {
                     TaskState::Terminated(task) => {
                         let result = task.get_runtime_info().await;
                         *guard = TaskState::TerminatedAndMeasured;
+                        let mut terminated_at_nanos_guard =
+                            self.most_recent_measurement_nanos.lock().await;
+                        *terminated_at_nanos_guard = Some(self.time_source.now());
                         result
                     }
                     TaskState::Alive(task) => task.get_runtime_info().await,
@@ -232,14 +253,7 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> TaskInfo<T> {
     /// Writes the task measurements under the given inspect node `parent`.
     pub fn record_to_node(&self, parent: &inspect::Node) {
         let node = parent.create_child(self.koid.to_string());
-        let samples = node.create_child(&*SAMPLES);
-        // gather measurements ordered oldest -> newest
-        for (i, measurement) in self.measurements.iter_sorted().rev().enumerate() {
-            let child = samples.create_child(&SAMPLE_INDEXES[i]);
-            measurement.record_to_node(&child);
-            samples.record(child);
-        }
-        node.record(samples);
+        self.measurements.record_to_node(&node);
         parent.record(node);
     }
 
@@ -405,7 +419,6 @@ mod tests {
         task.record_to_node(inspector.root());
         assert_eq!(60, COMPONENT_CPU_MAX_SAMPLES);
         assert_eq!(task.measurements.true_measurement_count(), 60);
-        assert_eq!(SAMPLE_INDEXES.len(), 60);
 
         let hierarchy = inspector.get_diagnostics_hierarchy();
         for top_level in &hierarchy.children {
