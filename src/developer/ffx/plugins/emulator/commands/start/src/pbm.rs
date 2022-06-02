@@ -20,6 +20,20 @@ use futures::executor::block_on;
 use port_picker::{is_free_tcp_port, pick_unused_port};
 use std::{collections::hash_map::DefaultHasher, hash::Hasher, path::PathBuf, time::Duration};
 
+/// Lists the virtual device spec names in the specified product.
+pub(crate) async fn list_virtual_devices(cmd: &StartCommand) -> Result<Vec<String>> {
+    let product_url =
+        pbms::select_product_bundle(&cmd.product_bundle).await.context("select product bundle")?;
+    if let Some(name) = product_url.fragment() {
+        let fms_entries = pbms::fms_entries_from(&product_url).await.context("get fms entries")?;
+        let product_bundle = fms::find_product_bundle(&fms_entries, &Some(name.to_string()))
+            .context("finding product bundle by name")?;
+        Ok(product_bundle.device_refs.clone())
+    } else {
+        bail!("product name is required");
+    }
+}
+
 /// Create a RuntimeConfiguration based on the command line args.
 pub(crate) async fn make_configs(
     cmd: &StartCommand,
@@ -32,7 +46,13 @@ pub(crate) async fn make_configs(
     let fms_entries = pbms::fms_entries_from(&product_url).await.context("get fms entries")?;
     let product_bundle = fms::find_product_bundle(&fms_entries, &Some(name.to_string()))
         .context("problem with product_bundle")?;
-    let virtual_device = fms::find_virtual_device(&fms_entries, &product_bundle.device_refs)
+
+    let device_name_list = match &cmd.device {
+        Some(device_spec_name) => vec![device_spec_name.clone()],
+        None => vec![product_bundle.device_refs[0].clone()],
+    };
+
+    let virtual_device = fms::find_virtual_device(&fms_entries, &device_name_list)
         .context("problem with virtual device")?;
     if cmd.verbose {
         println!(

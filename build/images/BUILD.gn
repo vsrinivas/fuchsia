@@ -1267,7 +1267,12 @@ if (!bootfs_only && !build_sdk_archives) {
   compatible_devices = []
 
   # Virtual device manifest should only be generated for emu compatible boards.
+  # TODO(fxbug.dev/90565): Support multiple virtual device specs.
   if (board_is_emu) {
+    if (!defined(virtual_device_labels)) {
+      virtual_device_labels = []
+    }
+
     # Append '-emu' to the end of the device_name in order to make it unique for
     # cases where the board is compatible with a physical and virtual device.
     device_name = "${board_name}-emu"
@@ -1275,11 +1280,28 @@ if (!bootfs_only && !build_sdk_archives) {
       device_name = "${virtual_device_name_prefix}-${device_name}"
     }
 
-    virtual_device_specification("virtual_device_specification") {
+    # Add the recommended configuration first. This is the default
+    # used unless a specific device is requested.
+    virtual_device_labels += [ ":virtual_device_specification_recommended" ]
+    virtual_device_specification("virtual_device_specification_recommended") {
       testonly = true
-      name = device_name
+      name = "${device_name}-recommended"
+      description = "Recommended configuration for running this product"
     }
-    compatible_devices += [ device_name ]
+    compatible_devices += [ "${device_name}-recommended" ]
+
+    # Add the Minimum configuration
+    virtual_device_labels += [ ":virtual_device_specification_min" ]
+    virtual_device_specification("virtual_device_specification_min") {
+      testonly = true
+      name = "${device_name}-min"
+      description = "Minimum configuration for running this product"
+      memory = {
+        quantity = 2048
+        units = "megabytes"
+      }
+    }
+    compatible_devices += [ "${device_name}-min" ]
   }
 
   # Physical device manifest should only be generated for physical boards.
@@ -1299,7 +1321,8 @@ if (!bootfs_only && !build_sdk_archives) {
     deps = []
 
     if (board_is_emu) {
-      deps += [ ":virtual_device_specification" ]
+      deps += virtual_device_labels
+
       emu_manifest = {
         initial_ramdisk = "fuchsia.zbi"
         kernel = rebase_path(qemu_kernel_file, root_out_dir)
