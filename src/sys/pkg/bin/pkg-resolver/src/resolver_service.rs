@@ -532,8 +532,9 @@ async fn hash_from_repo_or_cache(
         }
         Err(e) => {
             // If we couldn't get TUF metadata, we might not have networking. Check in
-            // system/data/cache_packages (not to be confused with pkg-cache). The cache_packages
-            // manifest pkg URLs are for fuchsia.com, so do not use the rewritten URL.
+            // the cache packages manifest (not to be confused with pkg-cache). The
+            // cache packages manifest pkg URLs are for fuchsia.com, so do not use the
+            // rewritten URL.
             match hash_from_cache_packages_manifest(&pkg_url, system_cache_list) {
                 Some(blob) => Ok(HashSource::SystemImageCachePackages(blob, e)),
                 None => Err(e),

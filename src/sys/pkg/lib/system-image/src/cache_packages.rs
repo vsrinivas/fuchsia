@@ -3,16 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        path_hash_mapping::{Cache, PathHashMapping},
-        CachePackagesInitError,
-    },
+    crate::CachePackagesInitError,
     fuchsia_hash::Hash,
-    fuchsia_url::{AbsolutePackageUrl, ParseError, PinnedAbsolutePackageUrl, RepositoryUrl},
+    fuchsia_url::{AbsolutePackageUrl, PinnedAbsolutePackageUrl},
     serde::{Deserialize, Serialize},
 };
-
-const DEFAULT_PACKAGE_DOMAIN: &str = "fuchsia.com";
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct CachePackages {
@@ -23,25 +18,6 @@ impl CachePackages {
     /// Create a new instance of `CachePackages` containing entries provided.
     pub fn from_entries(entries: Vec<PinnedAbsolutePackageUrl>) -> Self {
         CachePackages { contents: entries }
-    }
-
-    pub(crate) fn from_path_hash_mapping(
-        mapping: PathHashMapping<Cache>,
-    ) -> Result<Self, ParseError> {
-        let contents = mapping
-            .into_contents()
-            .map(|(path, hash)| {
-                let (name, variant) = path.into_name_and_variant();
-                PinnedAbsolutePackageUrl::new(
-                    RepositoryUrl::parse_host(DEFAULT_PACKAGE_DOMAIN.to_string())
-                        .expect("parse static string as repository host"),
-                    name,
-                    Some(variant),
-                    hash,
-                )
-            })
-            .collect::<Vec<_>>();
-        Ok(CachePackages { contents })
     }
 
     /// Create a new instance of `CachePackages` from parsing a json.
@@ -83,6 +59,14 @@ impl CachePackages {
             }
         })
     }
+
+    pub fn serialize(&self, writer: impl std::io::Write) -> Result<(), serde_json::Error> {
+        if self.contents.is_empty() {
+            return Ok(());
+        }
+        let content = Packages { version: "1".to_string(), content: self.contents.clone() };
+        serde_json::to_writer(writer, &content)
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -101,21 +85,7 @@ fn parse_json(contents: &[u8]) -> Result<Vec<PinnedAbsolutePackageUrl>, CachePac
 
 #[cfg(test)]
 mod tests {
-    use {super::*, assert_matches::assert_matches, fuchsia_pkg::PackagePath};
-
-    #[test]
-    fn populate_from_path_hash_mapping() {
-        let path_hash_packages = PathHashMapping::<Cache>::from_entries(vec![(
-            PackagePath::from_name_and_variant("name0".parse().unwrap(), "0".parse().unwrap()),
-            "0000000000000000000000000000000000000000000000000000000000000000".parse().unwrap(),
-        )]);
-
-        let packages = CachePackages::from_path_hash_mapping(path_hash_packages).unwrap();
-        let expected = vec![
-            "fuchsia-pkg://fuchsia.com/name0/0?hash=0000000000000000000000000000000000000000000000000000000000000000"
-        ];
-        assert!(packages.into_contents().map(|u| u.to_string()).eq(expected.into_iter()));
-    }
+    use {super::*, assert_matches::assert_matches};
 
     #[test]
     fn populate_from_valid_json() {
@@ -201,5 +171,30 @@ mod tests {
                 &AbsolutePackageUrl::parse(&format!("fuchsia-pkg://fuchsia.com/name")).unwrap()
             )
         );
+    }
+
+    #[test]
+    fn test_serialize() {
+        let hash = fuchsia_hash::Hash::from([0; 32]);
+        let packages = CachePackages::from_entries(vec![PinnedAbsolutePackageUrl::parse(
+            &format!("fuchsia-pkg://foo.bar/qwe/0?hash={hash}"),
+        )
+        .unwrap()]);
+        assert_eq!(
+            serde_json::to_value(Packages {
+                version: "1".to_string(),
+                content: packages.contents.clone()
+            })
+            .unwrap(),
+            serde_json::json!({
+                "version": "1",
+                "content": vec![
+                    "fuchsia-pkg://foo.bar/qwe/0?hash=0000000000000000000000000000000000000000000000000000000000000000"],
+            })
+        );
+
+        let mut bytes = vec![];
+        packages.serialize(&mut bytes).unwrap();
+        assert_eq!(CachePackages::from_json(&bytes).unwrap(), packages);
     }
 }
