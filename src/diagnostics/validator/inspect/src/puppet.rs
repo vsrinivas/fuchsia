@@ -12,10 +12,10 @@ use {
     fidl_fuchsia_sys::{EnvironmentControllerProxy, EnvironmentMarker, EnvironmentOptions},
     fidl_test_inspect_validate as validate,
     fuchsia_component::client as fclient,
-    fuchsia_url::pkg_url::PkgUrl,
+    fuchsia_url::AbsoluteComponentUrl,
     fuchsia_zircon::{self as zx, Vmo},
     std::sync::atomic::{AtomicU64, Ordering},
-    std::{convert::TryFrom, path::Path, str::FromStr},
+    std::{convert::TryFrom, path::Path},
 };
 
 pub const VMO_SIZE: u64 = 4096;
@@ -70,8 +70,8 @@ impl Puppet {
 
     // Extracts the .cmx file basename for output to the user.
     fn derive_my_name(url: &str) -> Result<String, Error> {
-        let url_parse = PkgUrl::from_str(url)?;
-        let cmx_name = url_parse.resource().ok_or(format_err!("URL parse"))?;
+        let url_parse = AbsoluteComponentUrl::parse(url)?;
+        let cmx_name = url_parse.resource();
         let cmx_path = Path::new(cmx_name);
         if let Some(s) = cmx_path.file_stem() {
             if let Some(s) = s.to_str() {
