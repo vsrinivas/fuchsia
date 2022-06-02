@@ -9,12 +9,9 @@ steadily evolved since then.
 
 ## What's been migrated?
 
-Last updated: **September 2021**
+Last updated: **June 2022**
 
-The migration is underway, but broadly speaking:
-
-*   Over a third of production components have been migrated.
-*   All usermode tests have been migrated to run as modern components.
+Over two thirds of components have been migrated (`.cmx` to `.cml`).
 
 ## Technical background
 
