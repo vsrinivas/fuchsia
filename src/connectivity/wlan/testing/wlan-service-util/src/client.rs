@@ -78,7 +78,7 @@ impl TryFrom<SecurityContext> for fidl_security::Authentication {
                     Err(SecurityError::Incompatible)
                 }
             }
-            Protection::Wep => WepKey::try_from(unparsed_credential_bytes.as_slice())
+            Protection::Wep => WepKey::parse(unparsed_credential_bytes.as_slice())
                 .map(|key| fidl_security::Authentication {
                     protocol: fidl_security::Protocol::Wep,
                     credentials: Some(Box::new(fidl_security::Credentials::Wep(

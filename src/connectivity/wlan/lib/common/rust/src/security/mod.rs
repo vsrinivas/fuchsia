@@ -203,7 +203,7 @@ impl TryFrom<fidl_security::Credentials> for BareCredentials {
     fn try_from(credentials: fidl_security::Credentials) -> Result<Self, Self::Error> {
         match credentials {
             fidl_security::Credentials::Wep(fidl_security::WepCredentials { key }) => {
-                WepKey::try_from(key.as_slice())
+                WepKey::try_from_literal_bytes(key.as_slice())
                     .map(|key| BareCredentials::WepKey(key))
                     .map_err(From::from)
             }

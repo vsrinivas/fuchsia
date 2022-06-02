@@ -111,7 +111,7 @@ impl TryFrom<SecurityContext> for fidl_security::Authentication {
             Protection::Wep => unparsed_password_text
                 .ok_or(SecurityError::Incompatible)
                 .and_then(|unparsed_password_text| {
-                    WepKey::try_from(unparsed_password_text.as_bytes()).map_err(From::from)
+                    WepKey::parse(unparsed_password_text.as_bytes()).map_err(From::from)
                 })
                 .map(|key| fidl_security::Authentication {
                     protocol: fidl_security::Protocol::Wep,

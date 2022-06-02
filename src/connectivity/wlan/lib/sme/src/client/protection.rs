@@ -82,7 +82,7 @@ trait CredentialExt {
 impl CredentialExt for Credential {
     fn to_wep_credentials(&self) -> Result<Credentials, Error> {
         match self {
-            Credential::Password(ref password) => WepKey::try_from(password.as_slice())
+            Credential::Password(ref password) => WepKey::parse(password.as_slice())
                 .map(|key| Credentials::Wep(WepCredentials { key: key.into() }))
                 .map_err(From::from),
             _ => Err(format_err!("Failed to construct credential for WEP")),
@@ -844,5 +844,58 @@ mod tests {
         context
             .authentication_config()
             .expect_err("created WPA3 auth config for incompatible device");
+    }
+
+    // TODO(fxbug.dev/95873): This code is temporary. See `CredentialExt`.
+    #[test]
+    fn to_wep_credentials() {
+        assert!(matches!(
+            Credential::Password(b"ABCDEF0000".to_vec()).to_wep_credentials(),
+            Ok(Credentials::Wep(_)),
+        ));
+        assert!(matches!(
+            Credential::Password(b"ABCDEF0000123ABCDEF0000123".to_vec()).to_wep_credentials(),
+            Ok(Credentials::Wep(_)),
+        ));
+        assert!(matches!(
+            Credential::Password(b"vwxyz".to_vec()).to_wep_credentials(),
+            Ok(Credentials::Wep(_)),
+        ));
+        assert!(matches!(
+            Credential::Password(b"nopqrstuvwxyz".to_vec()).to_wep_credentials(),
+            Ok(Credentials::Wep(_)),
+        ));
+
+        assert!(Credential::Password(b"ABCDEF0000F".to_vec()).to_wep_credentials().is_err());
+        assert!(Credential::Password(b"ABCDEFNOPE".to_vec()).to_wep_credentials().is_err());
+        assert!(Credential::Password(b"uvwxyz".to_vec()).to_wep_credentials().is_err());
+    }
+
+    // TODO(fxbug.dev/95873): This code is temporary. See `CredentialExt`.
+    #[test]
+    fn to_wpa1_wpa2_personal_credentials() {
+        assert!(matches!(
+            Credential::Password(b"password".to_vec()).to_wpa1_wpa2_personal_credentials(),
+            Ok(Credentials::Wpa(WpaCredentials::Passphrase(_))),
+        ));
+        assert!(matches!(
+            Credential::Psk(vec![0u8; PSK_SIZE_BYTES]).to_wpa1_wpa2_personal_credentials(),
+            Ok(Credentials::Wpa(WpaCredentials::Psk(_))),
+        ));
+
+        assert!(Credential::Password(b"no".to_vec()).to_wpa1_wpa2_personal_credentials().is_err());
+        assert!(Credential::Psk(vec![0u8; 8]).to_wpa1_wpa2_personal_credentials().is_err());
+    }
+
+    // TODO(fxbug.dev/95873): This code is temporary. See `CredentialExt`.
+    #[test]
+    fn to_wpa3_personal_credentials() {
+        assert!(matches!(
+            Credential::Password(b"password".to_vec()).to_wpa3_personal_credentials(),
+            Ok(Credentials::Wpa(WpaCredentials::Passphrase(_))),
+        ));
+
+        assert!(Credential::Password(b"no".to_vec()).to_wpa3_personal_credentials().is_err());
+        assert!(Credential::Psk(vec![0u8; PSK_SIZE_BYTES]).to_wpa3_personal_credentials().is_err());
     }
 }
