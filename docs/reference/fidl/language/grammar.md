@@ -102,7 +102,7 @@ value-layout-member = ( attribute-list ) , IDENTIFIER , "=" , constant ; [NOTE 4
 
 struct-layout =  "{" , ( struct-layout-member, ";" )* , "}" ;
 
-struct-layout-member = ( attribute-list ) , member-field , ( "=" , constant ) ;
+struct-layout-member = ( attribute-list ) , member-field ;
 
 ordinal-layout =  "{" , ( ordinal-layout-member , ";" )* , "}" ; [NOTE 5]
 

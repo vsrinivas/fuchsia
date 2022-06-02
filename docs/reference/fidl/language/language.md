@@ -136,32 +136,6 @@ constant expressions.
 > you *cannot* declare a constant as having the value `6 + 5`, for
 > example.
 
-### Default Initialization
-
-Primitive structure members may have initialization values specified
-in the declaration.
-For example:
-
-```fidl
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="defaults" %}
-```
-
-If the programmer does not supply a background color, the default
-value of `0xFF77FF` will be used.
-
-However, if the program does not supply a foreground color, there is no
-default.
-The foreground color must be supplied; otherwise it's a logic error on
-the programmer's part.
-
-There is a subtlety about the semantics and what defaults mean:
-
-* If the target language can support defaults (Dart, C++)
-    * then it MUST support defaults
-* If the target language cannot support defaults (C, Rust, Go)
-    * then it MAY provide support that programmers can optionally
-      invoke (e.g., a macro in C).
-
 ### Declaration Separator
 
 FIDL uses the semi-colon **';'** to separate adjacent declarations within the

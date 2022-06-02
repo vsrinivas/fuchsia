@@ -209,9 +209,6 @@ operations:
 * Construction with explicit values for each member.
 * Reading and writing members.
 
-Bindings MAY support default values for structs. The default values are
-specified in the [JSON IR][jsonir].
-
 ### Union support
 
 Bindings MUST provide a type for each union that supports the following
@@ -274,9 +271,6 @@ operations:
 * Reading and writing each member, including checking whether a given member is
   set. These SHOULD follow the naming scheme: `get_[member]`, `set_[member]`,
   and `has_[member]`, cased properly for the target language.
-
-Bindings MAY support default values for tables. The default values are specified
-in the [JSON IR][jsonir].
 
 Bindings MAY provide constructors for tables that only require specifying values
 for fields that have a value. For example, in Rust this can be accomplished
