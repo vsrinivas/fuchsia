@@ -339,165 +339,20 @@ std::unique_ptr<BlobInfo> CreateBlob(const fbl::RefPtr<fs::Vnode>& root, size_t 
 // creating a huge blob that occupies all the blocks freed by blob deletion. We measure/verify
 // metrics at each stage.
 // This test has an understanding about block allocation policy.
+
+using FragmentationStats = blobfs::Blobfs::FragmentationStats;
+
+void FragmentationStatsEqual(const FragmentationStats& lhs, const FragmentationStats& rhs) {
+  ASSERT_EQ(lhs.total_nodes, rhs.total_nodes);
+  ASSERT_EQ(lhs.files_in_use, rhs.files_in_use);
+  ASSERT_EQ(lhs.extent_containers_in_use, rhs.extent_containers_in_use);
+  ASSERT_EQ(lhs.extents_per_file, rhs.extents_per_file);
+  ASSERT_EQ(lhs.free_fragments, rhs.free_fragments);
+  ASSERT_EQ(lhs.in_use_fragments, rhs.in_use_fragments);
+}
+
 TEST(BlobfsFragmentationTest, FragmentationMetrics) {
-  struct Stats {
-    int64_t total_nodes = 0;
-    int64_t blobs_in_use = 0;
-    int64_t extent_containers_in_use = 0;
-    std::map<size_t, uint64_t> extents_per_blob;
-    std::map<size_t, uint64_t> free_fragments;
-    std::map<size_t, uint64_t> in_use_fragments;
-
-    bool operator==(const Stats& other) const {
-      return total_nodes == other.total_nodes && blobs_in_use == other.blobs_in_use &&
-             extent_containers_in_use == other.extent_containers_in_use &&
-             extents_per_blob == other.extents_per_blob && free_fragments == other.free_fragments &&
-             in_use_fragments == other.in_use_fragments;
-    }
-
-    void ClearMaps() {
-      extents_per_blob.clear();
-      free_fragments.clear();
-      in_use_fragments.clear();
-    }
-  };
-
-  // We have to do things this way because InMemoryLogger is not thread-safe.
-  class Logger : public cobalt_client::InMemoryLogger {
-   public:
-    bool WaitUntilStatsEq(const Stats& expected) {
-      const auto timeout = std::chrono::seconds(10);
-      const auto start = std::chrono::steady_clock::now();
-      const auto end = start + timeout;
-      for (auto now = start; now < end; now = std::chrono::steady_clock::now()) {
-        auto sync_timeout = std::chrono::duration_cast<std::chrono::microseconds>(end - now);
-        if (sync_completion_wait(&sync_, zx::usec(sync_timeout.count()).get()) != ZX_OK) {
-          break;
-        }
-        sync_completion_reset(&sync_);
-        std::lock_guard<std::mutex> lock(mtx_);
-        if (found_ == expected) {
-          found_.ClearMaps();
-          return true;
-        }
-      }
-      std::lock_guard<std::mutex> lock(mtx_);
-      found_.ClearMaps();
-      return false;
-    }
-
-    void MaybeSignal() FXL_REQUIRE(mtx_) {
-      // Wake up if all of the relevant metrics have been logged more than past the last wakeup
-      // watermark.
-      constexpr const std::array<fs_metrics::Event, 6> kRelevantEvents{
-          fs_metrics::Event::kFragmentationTotalNodes,
-          fs_metrics::Event::kFragmentationInUseFragments,
-          fs_metrics::Event::kFragmentationFreeFragments,
-          fs_metrics::Event::kFragmentationInodesInUse,
-          fs_metrics::Event::kFragmentationExtentContainersInUse,
-          fs_metrics::Event::kFragmentationExtentsPerFile,
-      };
-      uint64_t min_value = 0;
-      for (auto event : kRelevantEvents) {
-        if (!min_value || log_counts_[event] < min_value) {
-          min_value = log_counts_[event];
-        }
-      }
-      if (min_value > last_signal_watermark_) {
-        last_signal_watermark_ = min_value;
-        sync_completion_signal(&sync_);
-      }
-    }
-
-    bool LogInteger(const cobalt_client::MetricOptions& metric_info, int64_t value) override {
-      if (!InMemoryLogger::LogInteger(metric_info, value)) {
-        return false;
-      }
-      std::lock_guard<std::mutex> lock(mtx_);
-
-      auto id = static_cast<fs_metrics::Event>(metric_info.metric_id);
-      log_counts_[id]++;
-      switch (id) {
-        case fs_metrics::Event::kFragmentationTotalNodes: {
-          if (value != 0)
-            found_.total_nodes = value;
-          break;
-        }
-        case fs_metrics::Event::kFragmentationInodesInUse: {
-          if (value != 0)
-            found_.blobs_in_use = value;
-          break;
-        }
-        case fs_metrics::Event::kFragmentationExtentContainersInUse: {
-          if (value != 0)
-            found_.extent_containers_in_use = value;
-          break;
-        }
-        default:
-          break;
-      }
-      MaybeSignal();
-      return true;
-    }
-
-    bool Log(const cobalt_client::MetricOptions& metric_info, const HistogramBucket* buckets,
-             size_t num_buckets) override {
-      if (!InMemoryLogger::Log(metric_info, buckets, num_buckets)) {
-        return false;
-      }
-      std::lock_guard<std::mutex> lock(mtx_);
-      if (num_buckets == 0) {
-        MaybeSignal();
-        return true;
-      }
-
-      auto id = static_cast<fs_metrics::Event>(metric_info.metric_id);
-      log_counts_[id]++;
-      std::map<size_t, uint64_t>* map = nullptr;
-      switch (id) {
-        case fs_metrics::Event::kFragmentationExtentsPerFile: {
-          map = &found_.extents_per_blob;
-          break;
-        }
-        case fs_metrics::Event::kFragmentationInUseFragments: {
-          map = &found_.in_use_fragments;
-          break;
-        }
-        case fs_metrics::Event::kFragmentationFreeFragments: {
-          map = &found_.free_fragments;
-          break;
-        }
-        default:
-          break;
-      }
-
-      if (map == nullptr) {
-        return true;
-      }
-      for (size_t i = 0; i < num_buckets; i++) {
-        if (buckets[i].count > 0)
-          (*map)[i] += buckets[i].count;
-      }
-      MaybeSignal();
-      return true;
-    }
-
-   private:
-    // The metric flushing thread in Blobfs calls Log and LogInteger while the test is looping in
-    // WaitUntilStatsEq. This mutex guards the members that are used by both threads.
-    std::mutex mtx_;
-    Stats found_ FXL_GUARDED_BY(mtx_);
-    sync_completion_t sync_;
-
-    std::map<fs_metrics::Event, uint64_t> log_counts_ FXL_GUARDED_BY(mtx_);
-    // The last signal was delivered when the min of the relevant entries in log_counts_ was this
-    // value.
-    uint64_t last_signal_watermark_ FXL_GUARDED_BY(mtx_) = 0;
-  };
-
-  std::unique_ptr<Logger> logger = std::make_unique<Logger>();
-  auto* logger_ptr = logger.get();
-
+  FragmentationMetrics stub_metrics;
   auto device = MockBlockDevice::CreateAndFormat(
       {
           .blob_layout_format = BlobLayoutFormat::kCompactMerkleTreeAtEnd,
@@ -507,21 +362,19 @@ TEST(BlobfsFragmentationTest, FragmentationMetrics) {
       kNumBlocks);
   ASSERT_TRUE(device);
 
-  MountOptions mount_options{
-      .collector_factory =
-          [&logger] { return std::make_unique<cobalt_client::Collector>(std::move(logger)); },
-      .metrics_flush_time = zx::msec(100)};
   BlobfsTestSetup setup;
-  ASSERT_EQ(ZX_OK, setup.Mount(std::move(device), mount_options));
+  ASSERT_EQ(ZX_OK, setup.Mount(std::move(device), {}));
 
   srand(testing::UnitTest::GetInstance()->random_seed());
 
   {
-    Stats expected;
-    expected.total_nodes = static_cast<int64_t>(setup.blobfs()->Info().inode_count);
-    expected.free_fragments[6] = 2;
-    setup.blobfs()->UpdateFragmentationMetrics();
-    ASSERT_TRUE(logger_ptr->WaitUntilStatsEq(expected));
+    FragmentationStats expected{};
+    expected.total_nodes = setup.blobfs()->Info().inode_count;
+    // All fragments should be free since we didn't create any files yet.
+    expected.free_fragments[setup.blobfs()->Info().data_block_count - 1] = 1;
+    FragmentationStats actual;
+    setup.blobfs()->CalculateFragmentationMetrics(stub_metrics, &actual);
+    ASSERT_NO_FATAL_FAILURE(FragmentationStatsEqual(expected, actual));
   }
 
   fbl::RefPtr<fs::Vnode> root;
@@ -536,15 +389,20 @@ TEST(BlobfsFragmentationTest, FragmentationMetrics) {
     infos.push_back(CreateBlob(root, 64));
   }
 
+  // The last free fragment should reflect the number of blocks we allocated.
+  uint64_t last_free_fragment = setup.blobfs()->Info().data_block_count - kSmallBlobCount;
+
   {
-    Stats expected;
-    expected.total_nodes = static_cast<int64_t>(setup.blobfs()->Info().inode_count);
-    expected.blobs_in_use = kSmallBlobCount;
-    expected.extents_per_blob[1] = kSmallBlobCount;
+    FragmentationStats expected{};
+    expected.total_nodes = setup.blobfs()->Info().inode_count;
+    expected.files_in_use = kSmallBlobCount;
+    // Each blob should only use a single extent.
+    expected.extents_per_file[1] = kSmallBlobCount;
     expected.in_use_fragments[1] = kSmallBlobCount;
-    expected.free_fragments[6] = 1;
-    setup.blobfs()->UpdateFragmentationMetrics();
-    ASSERT_TRUE(logger_ptr->WaitUntilStatsEq(expected));
+    expected.free_fragments[last_free_fragment - 1] = 1;
+    FragmentationStats actual;
+    setup.blobfs()->CalculateFragmentationMetrics(stub_metrics, &actual);
+    ASSERT_NO_FATAL_FAILURE(FragmentationStatsEqual(expected, actual));
   }
 
   // Delete few blobs. Notice the pattern we delete. With these deletions free(0) and used(1)
@@ -557,20 +415,23 @@ TEST(BlobfsFragmentationTest, FragmentationMetrics) {
   ASSERT_EQ(root->Unlink(infos[6]->path, false), ZX_OK);
 
   {
-    Stats expected;
-    expected.total_nodes = static_cast<int64_t>(setup.blobfs()->Info().inode_count);
-    expected.blobs_in_use = kSmallBlobCount - kBlobsDeleted;
-    expected.free_fragments[1] = 3;
-    expected.free_fragments[6] = 1;
-    expected.extents_per_blob[1] = kSmallBlobCount - kBlobsDeleted;
+    FragmentationStats expected{};
+    expected.total_nodes = setup.blobfs()->Info().inode_count;
+    expected.files_in_use = kSmallBlobCount - kBlobsDeleted;
+    expected.free_fragments[1] = 2;
+    expected.free_fragments[2] = 1;
+    expected.free_fragments[last_free_fragment - 1] = 1;
+    expected.extents_per_file[1] = kSmallBlobCount - kBlobsDeleted;
     expected.in_use_fragments[1] = kSmallBlobCount - kBlobsDeleted;
-    setup.blobfs()->UpdateFragmentationMetrics();
-    ASSERT_TRUE(logger_ptr->WaitUntilStatsEq(expected));
+    FragmentationStats actual;
+    setup.blobfs()->CalculateFragmentationMetrics(stub_metrics, &actual);
+    ASSERT_NO_FATAL_FAILURE(FragmentationStatsEqual(expected, actual));
   }
 
-  // Create a huge(10 blocks) blob that potentially fills atleast three free fragments that we
+  // Create a huge (20 blocks) blob that potentially fills at least three free fragments that we
   // created above.
-  auto info = CreateBlob(root, 20 * 8192);
+  const uint64_t kLargeFileNumBlocks = 20;
+  auto info = CreateBlob(root, kLargeFileNumBlocks * kBlobfsBlockSize);
   fbl::RefPtr<fs::Vnode> file;
   ASSERT_EQ(root->Lookup(info->path, &file), ZX_OK);
   fs::VnodeAttributes attributes;
@@ -582,17 +443,20 @@ TEST(BlobfsFragmentationTest, FragmentationMetrics) {
   ASSERT_GT(blocks, kBlobsDeleted);
 
   {
-    Stats expected;
-    expected.total_nodes = static_cast<int64_t>(setup.blobfs()->Info().inode_count);
-    expected.blobs_in_use = kSmallBlobCount - kBlobsDeleted + 1;
+    FragmentationStats expected{};
+    expected.total_nodes = setup.blobfs()->Info().inode_count;
+    expected.files_in_use = kSmallBlobCount - kBlobsDeleted + 1;
     expected.extent_containers_in_use = 1;
-    expected.free_fragments[1] = 1;
-    expected.free_fragments[5] = 1;
-    expected.extents_per_blob[1] = kSmallBlobCount - kBlobsDeleted + 1;
+    expected.free_fragments[2] = 1;
+    expected.free_fragments[last_free_fragment - kLargeFileNumBlocks] = 1;
+    expected.extents_per_file[1] = kSmallBlobCount - kBlobsDeleted;
+    // The large file we create should span three extents.
+    expected.extents_per_file[3] = 1;
     expected.in_use_fragments[1] = kSmallBlobCount - kBlobsDeleted + 2;
-    expected.in_use_fragments[2] = 1;
-    setup.blobfs()->UpdateFragmentationMetrics();
-    ASSERT_TRUE(logger_ptr->WaitUntilStatsEq(expected));
+    expected.in_use_fragments[kLargeFileNumBlocks - 1] = 1;
+    FragmentationStats actual;
+    setup.blobfs()->CalculateFragmentationMetrics(stub_metrics, &actual);
+    ASSERT_NO_FATAL_FAILURE(FragmentationStatsEqual(expected, actual));
   }
 }
 

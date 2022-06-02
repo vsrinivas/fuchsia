@@ -62,7 +62,7 @@ zx_status_t Directory::Lookup(std::string_view name, fbl::RefPtr<fs::Vnode>* out
 
   assert(memchr(name.data(), '/', name.length()) == nullptr);
 
-  return blobfs_->GetNodeOperations()->lookup.Track([&] {
+  return blobfs_->node_operations().lookup.Track([&] {
     if (name == ".") {
       // Special case: Accessing root directory via '.'
       *out = fbl::RefPtr<Directory>(this);
@@ -102,7 +102,7 @@ zx_status_t Directory::Create(std::string_view name, uint32_t mode, fbl::RefPtr<
   auto event = blobfs_->GetMetrics()->NewLatencyEvent(fs_metrics::Event::kCreate);
   assert(memchr(name.data(), '/', name.length()) == nullptr);
 
-  return blobfs_->GetNodeOperations()->create.Track([&] {
+  return blobfs_->node_operations().create.Track([&] {
     Digest digest;
     zx_status_t status;
     if ((status = digest.Parse(name.data(), name.length())) != ZX_OK) {
@@ -130,7 +130,7 @@ zx_status_t Directory::Unlink(std::string_view name, bool must_be_dir) {
   auto event = blobfs_->GetMetrics()->NewLatencyEvent(fs_metrics::Event::kUnlink);
   assert(memchr(name.data(), '/', name.length()) == nullptr);
 
-  return blobfs_->GetNodeOperations()->unlink.Track([&] {
+  return blobfs_->node_operations().unlink.Track([&] {
     zx_status_t status;
     Digest digest;
     if ((status = digest.Parse(name.data(), name.length())) != ZX_OK) {
@@ -148,7 +148,7 @@ zx_status_t Directory::Unlink(std::string_view name, bool must_be_dir) {
 }
 
 void Directory::Sync(SyncCallback closure) {
-  auto event = blobfs_->GetNodeOperations()->sync.NewEvent();
+  auto event = blobfs_->node_operations().sync.NewEvent();
   blobfs_->Sync(
       [this, cb = std::move(closure), event = std::move(event)](zx_status_t status) mutable {
         // This callback will be issued on the journal thread in the normal case. This is important

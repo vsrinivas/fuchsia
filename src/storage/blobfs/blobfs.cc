@@ -350,7 +350,6 @@ zx::status<std::unique_ptr<Blobfs>> Blobfs::Create(async_dispatcher_t* dispatche
     return zx::error(status);
   }
 
-  fs->UpdateFragmentationMetrics();
   fs->InitializeInspectTree();
 
   return zx::ok(std::move(fs));
@@ -382,6 +381,8 @@ void Blobfs::InitializeInspectTree() {
   if (device) {
     inspect_tree_.UpdateVolumeData(*device);
   }
+
+  inspect_tree_.CalculateFragmentationMetrics(*this);
 }
 
 // Writeback enabled, journaling enabled.
@@ -843,7 +844,7 @@ Blobfs::Blobfs(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> devi
       write_compression_settings_(write_compression_settings),
       vmex_resource_(std::move(vmex_resource)),
       inspect_tree_(),
-      metrics_(CreateMetrics(inspect_tree_.Inspector(), std::move(collector_factory),
+      metrics_(CreateMetrics(inspect_tree_.inspector(), std::move(collector_factory),
                              metrics_flush_time)),
       pager_backed_cache_policy_(pager_backed_cache_policy) {
   ZX_ASSERT(vfs_);
@@ -896,12 +897,6 @@ std::unique_ptr<BlockDevice> Blobfs::Reset() {
 
   // Flushes the underlying block device.
   this->Flush();
-
-  // If we have not initialized allocator, skip updating fragmentation metrics as it depends on
-  // in-memoery inode table.
-  if (GetAllocator() != nullptr) {
-    UpdateFragmentationMetrics();
-  }
 
   BlockDetachVmo(std::move(info_vmoid_));
 
@@ -961,34 +956,52 @@ zx_status_t Blobfs::InitializeVnodes() {
   return ZX_OK;
 }
 
-zx_status_t Blobfs::ComputeBlobLevelFragmentation(uint32_t node_index, Inode& inode) {
-  auto blob_fragmentaion = &metrics_->cobalt_metrics().FragmentationMetrics().extents_per_file;
-  auto used_fragmentaion = &metrics_->cobalt_metrics().FragmentationMetrics().in_use_fragments;
+void Blobfs::ComputeBlobFragmentation(uint32_t node_index, Inode& inode,
+                                      FragmentationMetrics& fragmentation_metrics,
+                                      Blobfs::FragmentationStats* out_stats) {
   if (inode.extent_count == 0) {
-    return ZX_OK;
+    return;
   }
-  blob_fragmentaion->Add(inode.extent_count);
+
+  fragmentation_metrics.extents_per_file.Insert(inode.extent_count);
+  if (out_stats) {
+    ++out_stats->extents_per_file[inode.extent_count];
+  }
 
   for (ExtentCountType i = 0; i < std::min<uint32_t>(kInlineMaxExtents, inode.extent_count); ++i) {
-    used_fragmentaion->Add(inode.extents[i].Length());
+    fragmentation_metrics.in_use_fragments.Insert(inode.extents[i].Length());
+    if (out_stats) {
+      ++out_stats->in_use_fragments[inode.extents[i].Length()];
+    }
   }
 
   AllocatedNodeIterator extents_iter(GetNodeFinder(), node_index, &inode);
   while (!extents_iter.Done()) {
     zx::status<ExtentContainer*> container_or = extents_iter.Next();
     if (container_or.is_error()) {
-      return container_or.error_value();
+      FX_LOGS(ERROR) << "Failed to get next extent container for inode " << node_index << ": "
+                     << container_or.status_string();
+      // Attempt to continue onto the next extent if we fail on this one.
+      continue;
     }
     auto container = container_or.value();
     for (ExtentCountType i = 0; i < container->extent_count; ++i) {
-      used_fragmentaion->Add(container->extents[i].Length());
+      fragmentation_metrics.in_use_fragments.Insert(container->extents[i].Length());
+      if (out_stats) {
+        ++out_stats->in_use_fragments[container->extents[i].Length()];
+      }
     }
   }
-  return ZX_OK;
 }
 
-void Blobfs::ComputeFragmentationMetrics() {
-  TRACE_DURATION("blobfs", "Blobfs::ComputeFragmentationMetrics");
+void Blobfs::CalculateFragmentationMetrics(FragmentationMetrics& fragmentation_metrics,
+                                           Blobfs::FragmentationStats* out_stats) {
+  TRACE_DURATION("blobfs", "Blobfs::CalculateFragmentationMetrics");
+  if (out_stats) {
+    *out_stats = {};
+  }
+
+  // Calculate blob-level fragmentation statistics.
   uint64_t extent_containers_in_use = 0;
   uint64_t blobs_in_use = 0;
   for (uint32_t node_index = 0; node_index < info_.inode_count; ++node_index) {
@@ -1003,18 +1016,29 @@ void Blobfs::ComputeFragmentationMetrics() {
     }
 
     ++blobs_in_use;
-    if (ComputeBlobLevelFragmentation(node_index, *inode.value()) != ZX_OK) {
-      // We print error and continue.
-      FX_LOGS(ERROR) << "Failed getting fragmentaion metrics for blob:" << node_index;
-    }
+    ComputeBlobFragmentation(node_index, *inode.value(), fragmentation_metrics, out_stats);
   }
 
+  fragmentation_metrics.total_nodes.Set(Info().inode_count);
+  fragmentation_metrics.files_in_use.Set(blobs_in_use);
+  fragmentation_metrics.extent_containers_in_use.Set(extent_containers_in_use);
+
+  if (out_stats) {
+    out_stats->total_nodes = Info().inode_count;
+    out_stats->files_in_use = blobs_in_use;
+    out_stats->extent_containers_in_use = extent_containers_in_use;
+  }
+
+  // Calculate free space fragmentation.
   uint64_t free_run = 0;
   for (uint64_t i = 0; i < Info().data_block_count; ++i) {
     if (allocator_->IsBlockAllocated(i).value()) {
       // This is the end of free fragment. Count it.
       if (free_run != 0) {
-        metrics_->cobalt_metrics().FragmentationMetrics().free_fragments.Add(free_run);
+        fragmentation_metrics.free_fragments.Insert(free_run);
+        if (out_stats) {
+          ++out_stats->free_fragments[free_run];
+        }
         free_run = 0;
       }
       continue;
@@ -1024,18 +1048,11 @@ void Blobfs::ComputeFragmentationMetrics() {
 
   // If this is the end of last free fragment, count it.
   if (free_run != 0) {
-    metrics_->cobalt_metrics().FragmentationMetrics().free_fragments.Add(free_run);
+    fragmentation_metrics.free_fragments.Insert(free_run);
+    if (out_stats) {
+      ++out_stats->free_fragments[free_run];
+    }
   }
-
-  metrics_->cobalt_metrics().FragmentationMetrics().total_nodes.Set(Info().inode_count);
-  metrics_->cobalt_metrics().FragmentationMetrics().inodes_in_use.Set(blobs_in_use);
-  metrics_->cobalt_metrics().FragmentationMetrics().extent_containers_in_use.Set(
-      extent_containers_in_use);
-}
-
-zx_status_t Blobfs::UpdateFragmentationMetrics() {
-  ComputeFragmentationMetrics();
-  return ZX_OK;
 }
 
 zx_status_t Blobfs::ReloadSuperblock() {

@@ -4,6 +4,10 @@
 
 #include "src/storage/blobfs/blobfs_inspect_tree.h"
 
+#include <atomic>
+
+#include "src/storage/blobfs/blobfs.h"
+
 namespace {
 
 inspect::Inspector CreateInspector() {
@@ -29,6 +33,8 @@ BlobfsInspectTree::BlobfsInspectTree()
       tree_root_(inspector_.GetRoot().CreateChild("blobfs")),
       opstats_node_(tree_root_.CreateChild("fs.opstats")),
       node_operations_(opstats_node_),
+      detail_node_(tree_root_.CreateChild(fs_inspect::kDetailNodeName)),
+      fragmentation_metrics_node_(detail_node_.CreateChild("fragmentation_metrics")),
       fs_inspect_nodes_(fs_inspect::CreateTree(tree_root_, CreateCallbacks())) {}
 
 // Set general filesystem information.
@@ -83,5 +89,32 @@ fs_inspect::NodeCallbacks BlobfsInspectTree::CreateCallbacks() {
           },
   };
 }
+
+void BlobfsInspectTree::CalculateFragmentationMetrics(Blobfs& blobfs) {
+  fragmentation_metrics_node_.AtomicUpdate([this, &blobfs](inspect::Node& node) {
+    fragmentation_metrics_ = FragmentationMetrics(node);
+    blobfs.CalculateFragmentationMetrics(fragmentation_metrics_);
+  });
+}
+
+namespace {
+inspect::ExponentialUintHistogram CreateFragmentationMetricsHistogram(std::string_view name,
+                                                                      inspect::Node& root) {
+  // These values must match the metric definitions in Cobalt.
+  static constexpr uint64_t kFloor = 0;
+  static constexpr uint64_t kInitialStep = 10;
+  static constexpr uint64_t kStepMultiplier = 2;
+  static constexpr size_t kBuckets = 10;
+  return root.CreateExponentialUintHistogram(name, kFloor, kInitialStep, kStepMultiplier, kBuckets);
+}
+}  // namespace
+
+FragmentationMetrics::FragmentationMetrics(inspect::Node& root)
+    : total_nodes(root.CreateUint("total_nodes", 0u)),
+      files_in_use(root.CreateUint("files_in_use", 0u)),
+      extent_containers_in_use(root.CreateUint("extent_containers_in_use", 0u)),
+      extents_per_file(CreateFragmentationMetricsHistogram("extents_per_file", root)),
+      in_use_fragments(CreateFragmentationMetricsHistogram("in_use_fragments", root)),
+      free_fragments(CreateFragmentationMetricsHistogram("free_fragments", root)) {}
 
 }  // namespace blobfs

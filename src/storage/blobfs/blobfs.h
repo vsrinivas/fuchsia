@@ -111,7 +111,7 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   // Returns filesystem specific information.
   zx::status<fs::FilesystemInfo> GetFilesystemInfo();
 
-  fs_inspect::NodeOperations* GetNodeOperations() { return inspect_tree_.GetNodeOperations(); }
+  fs_inspect::NodeOperations& node_operations() { return inspect_tree_.node_operations(); }
 
   // TransactionManager interface.
   //
@@ -205,9 +205,25 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
 
   zx::status<std::unique_ptr<Superblock>> ReadBackupSuperblock();
 
-  // Updates fragmentation metrics in cobalt. This is called only twice per mount session - once
-  // during mount and once during unmount.
-  zx_status_t UpdateFragmentationMetrics();
+  // Statistics calculated by CalculateFragmentationMetrics, mainly for testing/validation purposes.
+  // Can consume a lot of memory if filled in by |CalculateFragmentationStatistics|.
+  struct FragmentationStats {
+    uint64_t total_nodes;
+    uint64_t files_in_use;
+    uint64_t extent_containers_in_use;
+    std::map<size_t, uint64_t> extents_per_file;
+    std::map<size_t, uint64_t> free_fragments;
+    std::map<size_t, uint64_t> in_use_fragments;
+  };
+
+  // Updates fragmentation metric properties in |out_metrics|. The calculated statistics can also be
+  // obtained directly providing |out_stats|.
+  //
+  // **NOTE**: This function is not thread-safe, and is computationally expensive. It scans through
+  // all inodes, extents, and data bitmap entries. Errors are logged but ignored in an attempt to
+  // provide as much information as possible (i.e. corrupted extents are skipped).
+  void CalculateFragmentationMetrics(FragmentationMetrics& fragmentation_metrics,
+                                     FragmentationStats* out_stats = nullptr);
 
   // Return true if streaming writes feature is enabled.
   static bool StreamingWritesEnabled();
@@ -286,14 +302,11 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   // NOP if oldest_minor_version >= kBlobfsMinorVersionHostToolHandlesNullBlobCorrectly.
   zx_status_t MigrateToRev4();
 
-  // Walks all the extents of a given inode and updates |extents_per_blob| and |used_fragments|
-  // metrics.
-  zx_status_t ComputeBlobLevelFragmentation(uint32_t node_index, Inode& inode);
-
-  // Returns fragmentation details for the filesystem.
-  // This fuunction is not a thread safe function nor it is performanct as it ends up scanning
-  // all of inodes, extents and data bitmap. So use it carefully.
-  void ComputeFragmentationMetrics();
+  // Walks all the extents of a given inode, updating |extents_per_blob| and |used_fragments|
+  // metrics in |out_metrics|. If |out_stats| is provided, also records those values there.
+  void ComputeBlobFragmentation(uint32_t node_index, Inode& inode,
+                                FragmentationMetrics& fragmentation_metrics,
+                                FragmentationStats* out_stats);
 
   static std::shared_ptr<BlobfsMetrics> CreateMetrics(
       inspect::Inspector inspector,

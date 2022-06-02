@@ -65,32 +65,6 @@ struct FsCommonMetrics {
     cobalt_client::Histogram<kHistogramBuckets> writer_write_info_block;
   } journal;
 
-  struct FragmentationMetrics {
-    // Total number of nodes in the system. These nodes can be used for inodes or for extent
-    // containers(in case of blobfs).
-    cobalt_client::Integer total_nodes;
-
-    // Total number of nodes used as inodes for blobs or for files/directories.
-    cobalt_client::Integer inodes_in_use;
-
-    // Total number of nodes used as extent containers.
-    cobalt_client::Integer extent_containers_in_use;
-
-    // Stats about number of extents used per blob. This shows per blob fragmentation of used data
-    // blocks. It gives us an idea about fragmentation from blob to blob - some blobs might be more
-    // fragmented than the others.
-    cobalt_client::Histogram<kHistogramBuckets> extents_per_file;
-
-    // Stats about used data blocks fragments. This shows used block fragmentation within
-    // the filesystem.
-    cobalt_client::Histogram<kHistogramBuckets> in_use_fragments;
-
-    // Stats about free data blocks fragments. This provides an important insight into
-    // success/failure
-    // of OTA.
-    cobalt_client::Histogram<kHistogramBuckets> free_fragments;
-  } fragmentation_metrics;
-
   // Mirrors |Metrics::IsEnabled|, such that |FsCommonMetrics| is self sufficient
   // to determine whether metrics should be logged or not.
   bool metrics_enabled = false;
@@ -150,10 +124,6 @@ class Metrics {
 
   const CompressionFormatMetrics& compression_format_metrics() const;
   CompressionFormatMetrics* mutable_compression_format_metrics();
-
-  FsCommonMetrics::FragmentationMetrics& FragmentationMetrics() {
-    return fs_common_metrics_.fragmentation_metrics;
-  }
 
  private:
   struct CompareCounters {

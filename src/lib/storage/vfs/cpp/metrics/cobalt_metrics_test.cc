@@ -89,8 +89,6 @@ TEST(CobaltMetricsTest, EventSourceSetInMetricOptions) {
   const auto& fs_common_metrics = metrics.fs_common_metrics();
   EXPECT_EQ(fs_common_metrics.vnode.close.GetOptions().event_codes[0], source_event_code);
   EXPECT_EQ(fs_common_metrics.journal.write_data.GetOptions().event_codes[0], source_event_code);
-  EXPECT_EQ(fs_common_metrics.fragmentation_metrics.total_nodes.GetOptions().event_codes[0],
-            source_event_code);
 }
 
 TEST(CobaltMetricsTest, CreateCompressionFormatMetrics) {

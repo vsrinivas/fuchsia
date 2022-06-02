@@ -8,6 +8,7 @@
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/system/public/zircon/compiler.h>
 
+#include <memory>
 #include <mutex>
 
 #include "src/lib/storage/vfs/cpp/inspect/inspect_tree.h"
@@ -15,6 +16,30 @@
 #include "src/storage/blobfs/format.h"
 
 namespace blobfs {
+
+class Blobfs;
+
+// Encapsulates Blobfs fragmentation metrics. Thread-safe.
+struct FragmentationMetrics {
+  FragmentationMetrics() = default;
+  explicit FragmentationMetrics(inspect::Node& root);
+
+  // Total number of inodes in the filesystem.
+  inspect::UintProperty total_nodes;
+  // Total number of files (blobs) in use.
+  inspect::UintProperty files_in_use;
+  // Total number of nodes used as extent containers.
+  inspect::UintProperty extent_containers_in_use;
+  // Stats about number of extents used per blob. This shows per blob fragmentation of used data
+  // blocks. It gives us an idea about fragmentation from blob to blob - some blobs might be more
+  // fragmented than the others.
+  inspect::ExponentialUintHistogram extents_per_file;
+  // Stats about used data blocks fragments. This shows used block fragmentation within Blobfs.
+  inspect::ExponentialUintHistogram in_use_fragments;
+  // Stats about free data blocks fragments. This provides an important insight into
+  // success/failure of OTA.
+  inspect::ExponentialUintHistogram free_fragments;
+};
 
 // Encapsulates the state required to make a filesystem inspect tree for Blobfs.
 class BlobfsInspectTree final {
@@ -32,11 +57,14 @@ class BlobfsInspectTree final {
   void UpdateVolumeData(const block_client::BlockDevice& device, bool out_of_space = false)
       __TA_EXCLUDES(volume_mutex_);
 
-  // Reference to the Inspector this object owns.
-  const inspect::Inspector& Inspector() { return inspector_; }
+  // The Inspector this object owns.
+  const inspect::Inspector& inspector() { return inspector_; }
 
-  // Obtain node-level operation trackers.
-  fs_inspect::NodeOperations* GetNodeOperations() { return &node_operations_; }
+  // Node-level operation trackers.
+  fs_inspect::NodeOperations& node_operations() { return node_operations_; }
+
+  // Calls |CalculateFragmentationMetrics| on |blobfs| and atomically updates the Inspect tree.
+  void CalculateFragmentationMetrics(Blobfs& blobfs);
 
  private:
   // Helper function to create and return all required callbacks to create an fs_inspect tree.
@@ -69,6 +97,12 @@ class BlobfsInspectTree final {
 
   // All common filesystem node operation trackers.
   fs_inspect::NodeOperations node_operations_;
+
+  // fs.detail node under which all Blobfs-specific properties are placed.
+  inspect::Node detail_node_;
+
+  inspect::Node fragmentation_metrics_node_;
+  FragmentationMetrics fragmentation_metrics_;
 
   // Filesystem inspect tree nodes.
   // **MUST be declared last**, as the callbacks passed to this object use the above properties.

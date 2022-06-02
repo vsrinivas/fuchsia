@@ -943,7 +943,7 @@ zx_status_t Blob::GetNodeInfoForProtocol([[maybe_unused]] fs::VnodeProtocol prot
 zx_status_t Blob::Read(void* data, size_t len, size_t off, size_t* out_actual) {
   TRACE_DURATION("blobfs", "Blob::Read", "len", len, "off", off);
   auto event = blobfs_->GetMetrics()->NewLatencyEvent(fs_metrics::Event::kRead);
-  return blobfs_->GetNodeOperations()->read.Track(
+  return blobfs_->node_operations().read.Track(
       [&] { return ReadInternal(data, len, off, out_actual); });
 }
 
@@ -951,7 +951,7 @@ zx_status_t Blob::Write(const void* data, size_t len, size_t offset, size_t* out
   TRACE_DURATION("blobfs", "Blob::Write", "len", len, "off", offset);
   auto event = blobfs_->GetMetrics()->NewLatencyEvent(fs_metrics::Event::kWrite);
 
-  return blobfs_->GetNodeOperations()->write.Track([&] {
+  return blobfs_->node_operations().write.Track([&] {
     std::lock_guard lock(mutex_);
     return WriteInternal(data, len, {offset}, out_actual);
   });
@@ -961,7 +961,7 @@ zx_status_t Blob::Append(const void* data, size_t len, size_t* out_end, size_t* 
   TRACE_DURATION("blobfs", "Blob::Append", "len", len);
   auto event = blobfs_->GetMetrics()->NewLatencyEvent(fs_metrics::Event::kAppend);
 
-  return blobfs_->GetNodeOperations()->append.Track([&] {
+  return blobfs_->node_operations().append.Track([&] {
     std::lock_guard lock(mutex_);
 
     zx_status_t status = WriteInternal(data, len, std::nullopt, out_actual);
@@ -979,7 +979,7 @@ zx_status_t Blob::GetAttributes(fs::VnodeAttributes* a) {
   TRACE_DURATION("blobfs", "Blob::GetAttributes");
   auto event = blobfs_->GetMetrics()->NewLatencyEvent(fs_metrics::Event::kGetAttr);
 
-  return blobfs_->GetNodeOperations()->get_attr.Track([&] {
+  return blobfs_->node_operations().get_attr.Track([&] {
     // SizeData() expects to be called outside the lock.
     auto content_size = SizeData();
 
@@ -1001,7 +1001,7 @@ zx_status_t Blob::Truncate(size_t len) {
   TRACE_DURATION("blobfs", "Blob::Truncate", "len", len);
   auto event = blobfs_->GetMetrics()->NewLatencyEvent(fs_metrics::Event::kTruncate);
 
-  return blobfs_->GetNodeOperations()->truncate.Track([&] {
+  return blobfs_->node_operations().truncate.Track([&] {
     return PrepareWrite(len, blobfs_->ShouldCompress() && len > kCompressionSizeThresholdBytes);
   });
 }
@@ -1047,7 +1047,7 @@ void Blob::Sync(SyncCallback on_complete) {
   TRACE_DURATION("blobfs", "Blob::Sync");
   auto event_deprecated = blobfs_->GetMetrics()->NewLatencyEvent(fs_metrics::Event::kSync);
 
-  auto event = blobfs_->GetNodeOperations()->sync.NewEvent();
+  auto event = blobfs_->node_operations().sync.NewEvent();
   // Wraps `on_complete` to record the result into `event` as well.
   SyncCallback completion_callback = [on_complete = std::move(on_complete),
                                       event_deprecated = std::move(event_deprecated),
@@ -1188,7 +1188,7 @@ zx_status_t Blob::OpenNode([[maybe_unused]] ValidatedOptions options,
 zx_status_t Blob::CloseNode() {
   TRACE_DURATION("blobfs", "Blob::CloseNode");
   auto event = blobfs_->GetMetrics()->NewLatencyEvent(fs_metrics::Event::kClose);
-  return blobfs_->GetNodeOperations()->close.Track([&] {
+  return blobfs_->node_operations().close.Track([&] {
     std::lock_guard lock(mutex_);
 
     if (paged_vmo() && !HasReferences()) {

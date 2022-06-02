@@ -123,6 +123,60 @@
             "metric_id": 48,
             "metric_type": "Occurrence",
             "selector": "bootstrap/fshost:root/corruption_events:fxfs"
+        },
+        {
+            "event_codes": [
+                2
+            ],
+            "metric_id": 62,
+            "metric_type": "Integer",
+            "selector": "bootstrap/fshost/blobfs:root/blobfs/fs.detail/fragmentation_metrics:total_nodes",
+            "upload_once": true
+        },
+        {
+            "event_codes": [
+                2
+            ],
+            "metric_id": 63,
+            "metric_type": "Integer",
+            "selector": "bootstrap/fshost/blobfs:root/blobfs/fs.detail/fragmentation_metrics:files_in_use",
+            "upload_once": true
+        },
+        {
+            "event_codes": [
+                2
+            ],
+            "metric_id": 64,
+            "metric_type": "Integer",
+            "selector": "bootstrap/fshost/blobfs:root/blobfs/fs.detail/fragmentation_metrics:extent_containers_in_use",
+            "upload_once": true
+        },
+        {
+            "event_codes": [
+                2
+            ],
+            "metric_id": 65,
+            "metric_type": "IntHistogram",
+            "selector": "bootstrap/fshost/blobfs:root/blobfs/fs.detail/fragmentation_metrics:extents_per_file",
+            "upload_once": true
+        },
+        {
+            "event_codes": [
+                2
+            ],
+            "metric_id": 66,
+            "metric_type": "IntHistogram",
+            "selector": "bootstrap/fshost/blobfs:root/blobfs/fs.detail/fragmentation_metrics:in_use_fragments",
+            "upload_once": true
+        },
+        {
+            "event_codes": [
+                2
+            ],
+            "metric_id": 67,
+            "metric_type": "IntHistogram",
+            "selector": "bootstrap/fshost/blobfs:root/blobfs/fs.detail/fragmentation_metrics:free_fragments",
+            "upload_once": true
         }
     ],
     "poll_rate_sec": 600,

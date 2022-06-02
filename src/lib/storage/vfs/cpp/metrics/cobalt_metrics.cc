@@ -76,26 +76,6 @@ FsCommonMetrics::FsCommonMetrics(cobalt_client::Collector* collector, Source sou
 
   journal.writer_write_info_block.Initialize(
       MakeHistogramOptions(micro_base, Event::kJournalWriterWriteInfoBlock), collector);
-
-  fragmentation_metrics.extents_per_file.Initialize(
-      MakeHistogramOptions(nano_base, Event::kFragmentationExtentsPerFile), collector);
-  fragmentation_metrics.in_use_fragments.Initialize(
-      MakeHistogramOptions(nano_base, Event::kFragmentationInUseFragments), collector);
-  fragmentation_metrics.free_fragments.Initialize(
-      MakeHistogramOptions(nano_base, Event::kFragmentationFreeFragments), collector);
-
-  cobalt_client::MetricOptions options = {
-      .metric_id = static_cast<uint32_t>(Event::kFragmentationTotalNodes),
-      .metric_dimensions = 1,
-      .event_codes = {source_event_code},
-  };
-  fragmentation_metrics.total_nodes.Initialize(options, collector);
-
-  options.metric_id = static_cast<uint32_t>(Event::kFragmentationInodesInUse);
-  fragmentation_metrics.inodes_in_use.Initialize(options, collector);
-
-  options.metric_id = static_cast<uint32_t>(Event::kFragmentationExtentContainersInUse);
-  fragmentation_metrics.extent_containers_in_use.Initialize(options, collector);
 }
 
 CompressionFormatMetrics::CompressionFormatMetrics(
