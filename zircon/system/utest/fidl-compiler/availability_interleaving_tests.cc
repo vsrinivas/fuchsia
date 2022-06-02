@@ -363,6 +363,11 @@ const TestCase kTestCases[] = {
     {"arAR", {&fidl::ErrNameNotFound}},
 };
 
+// Substitutes replacement for placeholder in str.
+void substitute(std::string& str, std::string_view placeholder, std::string_view replacement) {
+  str.replace(str.find(placeholder), placeholder.size(), replacement);
+}
+
 TEST(AvailabilityInterleavingTests, SameLibrary) {
   for (auto& test_case : kTestCases) {
     auto attributes = test_case.Format();
@@ -370,14 +375,14 @@ TEST(AvailabilityInterleavingTests, SameLibrary) {
 @available(added=1)
 library example;
 
-%1
+${source_available}
 const SOURCE bool = TARGET;
 
-%2
+${target_available}
 const TARGET bool = false;
 )FIDL";
-    fidl.replace(fidl.find("%1"), 2, attributes.source_available);
-    fidl.replace(fidl.find("%2"), 2, attributes.target_available);
+    substitute(fidl, "${source_available}", attributes.source_available);
+    substitute(fidl, "${target_available}", attributes.target_available);
     TestLibrary library(fidl);
     ASSERT_NO_FAILURES(test_case.CompileAndAssert(library), "code: %.*s, fidl:\n\n%s",
                        static_cast<int>(test_case.code.size()), test_case.code.data(),
@@ -385,35 +390,105 @@ const TARGET bool = false;
   }
 }
 
-TEST(AvailabilityInterleavingTests, ExternalLibrary) {
-  for (auto& test_case : kTestCases) {
-    SharedAmongstLibraries shared;
-    auto attributes = test_case.Format();
-    std::string dependency_fidl = R"FIDL(
-@available(platform="foo", added=1)
-library dependency;
+// Tests compilation of example_fidl and dependency_fidl after substituting
+// ${source_available} in example_fidl and ${target_available} in
+// dependency_fidl using the values from test_case.
+void TestExternalLibrary(const TestCase& test_case, std::string example_fidl,
+                         std::string dependency_fidl) {
+  SharedAmongstLibraries shared;
+  auto attributes = test_case.Format();
+  substitute(dependency_fidl, "${target_available}", attributes.target_available);
+  TestLibrary dependency(&shared, "dependency.fidl", dependency_fidl);
+  ASSERT_COMPILED(dependency);
+  substitute(example_fidl, "${source_available}", attributes.source_available);
+  TestLibrary example(&shared, "example.fidl", example_fidl);
+  ASSERT_NO_FAILURES(test_case.CompileAndAssert(example),
+                     "code: %.*s, dependency.fidl:\n\n%s\n\nexample.fidl:\n\n%s",
+                     static_cast<int>(test_case.code.size()), test_case.code.data(),
+                     dependency_fidl.c_str(), example_fidl.c_str());
+}
 
-%1
+TEST(AvailabilityInterleavingTests, DeclToDeclExternal) {
+  std::string example_fidl = R"FIDL(
+@available(added=1)
+library platform.example;
+
+using platform.dependency;
+
+${source_available}
+const SOURCE bool = platform.dependency.TARGET;
+)FIDL";
+  std::string dependency_fidl = R"FIDL(
+@available(added=1)
+library platform.dependency;
+
+${target_available}
 const TARGET bool = false;
 )FIDL";
-    dependency_fidl.replace(dependency_fidl.find("%1"), 2, attributes.target_available);
-    TestLibrary dependency(&shared, "dependency.fidl", dependency_fidl);
-    ASSERT_COMPILED(dependency);
-    std::string example_fidl = R"FIDL(
-@available(platform="foo", added=1)
-library example;
+  for (auto& test_case : kTestCases) {
+    ASSERT_NO_FAILURES(TestExternalLibrary(test_case, example_fidl, dependency_fidl));
+  }
+}
 
-using dependency;
+TEST(AvailabilityInterleavingTests, LibraryToLibraryExternal) {
+  std::string example_fidl = R"FIDL(
+${source_available}
+library platform.example;
 
-%1
-const SOURCE bool = dependency.TARGET;
+using platform.dependency;
+
+const SOURCE bool = platform.dependency.TARGET;
 )FIDL";
-    example_fidl.replace(example_fidl.find("%1"), 2, attributes.source_available);
-    TestLibrary example(&shared, "example.fidl", example_fidl);
-    ASSERT_NO_FAILURES(test_case.CompileAndAssert(example),
-                       "code: %.*s, dependency.fidl:\n\n%s\n\nexample.fidl:\n\n%s",
-                       static_cast<int>(test_case.code.size()), test_case.code.data(),
-                       dependency_fidl.c_str(), example_fidl.c_str());
+  std::string dependency_fidl = R"FIDL(
+${target_available}
+library platform.dependency;
+
+const TARGET bool = false;
+)FIDL";
+  for (auto& test_case : kTestCases) {
+    ASSERT_NO_FAILURES(TestExternalLibrary(test_case, example_fidl, dependency_fidl));
+  }
+}
+
+TEST(AvailabilityInterleavingTests, LibraryToDeclExternal) {
+  std::string example_fidl = R"FIDL(
+${source_available}
+library platform.example;
+
+using platform.dependency;
+
+const SOURCE bool = platform.dependency.TARGET;
+)FIDL";
+  std::string dependency_fidl = R"FIDL(
+@available(added=1)
+library platform.dependency;
+
+${target_available}
+const TARGET bool = false;
+)FIDL";
+  for (auto& test_case : kTestCases) {
+    ASSERT_NO_FAILURES(TestExternalLibrary(test_case, example_fidl, dependency_fidl));
+  }
+}
+
+TEST(AvailabilityInterleavingTests, DeclToLibraryExternal) {
+  std::string example_fidl = R"FIDL(
+@available(added=1)
+library platform.example;
+
+using platform.dependency;
+
+${source_available}
+const SOURCE bool = platform.dependency.TARGET;
+)FIDL";
+  std::string dependency_fidl = R"FIDL(
+${target_available}
+library platform.dependency;
+
+const TARGET bool = false;
+)FIDL";
+  for (auto& test_case : kTestCases) {
+    ASSERT_NO_FAILURES(TestExternalLibrary(test_case, example_fidl, dependency_fidl));
   }
 }
 

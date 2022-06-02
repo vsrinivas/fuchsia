@@ -1736,6 +1736,31 @@ type Foo = struct {
   ASSERT_COMPILED(example);
 }
 
+TEST(VersioningTests, GoodMultiplePlatformsExplicitPlatform) {
+  SharedAmongstLibraries shared;
+  shared.SelectVersion("xyz", "3");
+  shared.SelectVersion("example", "HEAD");
+
+  TestLibrary dependency(&shared, "dependency.fidl", R"FIDL(
+@available(platform="xyz", added=1)
+library dependency;
+
+@available(added=3, removed=4)
+type Foo = struct {};
+)FIDL");
+  ASSERT_COMPILED(dependency);
+
+  TestLibrary example(&shared, "example.fidl", R"FIDL(
+@available(added=1)
+library example;
+
+using dependency;
+
+alias Foo = dependency.Foo;
+)FIDL");
+  ASSERT_COMPILED(example);
+}
+
 TEST(VersioningTests, GoodMultiplePlatformsUsesCorrectDecl) {
   SharedAmongstLibraries shared;
   shared.SelectVersion("dependency", "4");
