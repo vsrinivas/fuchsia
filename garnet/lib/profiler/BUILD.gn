@@ -66,7 +66,6 @@ source_set("profiler_lib") {
     "//src/lib/fxl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/syslog",
   ]
 
   # gpertools sources do not build with Wconversion.

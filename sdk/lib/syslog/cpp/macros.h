@@ -109,6 +109,11 @@ struct LogBuffer {
     Encode(KeyValue<const char*, int64_t>(value.key, value.value));
   }
 
+  // Encodes an uint64
+  void Encode(KeyValue<const char*, uint64_t> value) {
+    syslog_backend::WriteKeyValue(this, value.key, value.value);
+  }
+
   // Encodes a NULL-terminated C-string.
   void Encode(KeyValue<const char*, const char*> value) {
     syslog_backend::WriteKeyValue(this, value.key, value.value);
