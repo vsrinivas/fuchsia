@@ -939,7 +939,7 @@ TEST_P(SocketOptsTest, SetUDPMulticastIfImrIfindex) {
     ASSERT_EQ(param_out.s_addr, INADDR_ANY);
   }
 
-  ASSERT_EQ(close(s.release()), 0) << strerror(errno);
+  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
 }
 
 TEST_P(SocketOptsTest, SetUDPMulticastIfImrAddress) {
@@ -970,7 +970,7 @@ TEST_P(SocketOptsTest, SetUDPMulticastIfImrAddress) {
 
   ASSERT_EQ(param_out.s_addr, param_in.imr_address.s_addr);
 
-  ASSERT_EQ(close(s.release()), 0) << strerror(errno);
+  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
 }
 
 // Tests that a two byte RECVTOS/RECVTCLASS optval is acceptable.
@@ -1203,7 +1203,7 @@ class SocketTest : public testing::TestWithParam<AddrKind> {
     ASSERT_TRUE(sock_ = fbl::unique_fd(socket(Domain(), socktype, 0))) << strerror(errno);
   }
 
-  void TearDown() override { ASSERT_EQ(close(sock_.release()), 0) << strerror(errno); }
+  void TearDown() override { EXPECT_EQ(close(sock_.release()), 0) << strerror(errno); }
 
   const fbl::unique_fd& sock() { return sock_; }
 

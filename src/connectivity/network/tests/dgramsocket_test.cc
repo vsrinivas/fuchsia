@@ -92,7 +92,7 @@ TEST(LocalhostTest, DatagramSocketIgnoresMsgWaitAll) {
   ASSERT_EQ(recvfrom(recvfd.get(), nullptr, 0, MSG_WAITALL, nullptr, nullptr), -1);
   ASSERT_EQ(errno, EAGAIN) << strerror(errno);
 
-  ASSERT_EQ(close(recvfd.release()), 0) << strerror(errno);
+  EXPECT_EQ(close(recvfd.release()), 0) << strerror(errno);
 }
 
 TEST(LocalhostTest, DatagramSocketSendMsgNameLenTooBig) {
@@ -111,7 +111,7 @@ TEST(LocalhostTest, DatagramSocketSendMsgNameLenTooBig) {
   ASSERT_EQ(sendmsg(fd.get(), &msg, 0), -1);
   ASSERT_EQ(errno, EINVAL) << strerror(errno);
 
-  ASSERT_EQ(close(fd.release()), 0) << strerror(errno);
+  EXPECT_EQ(close(fd.release()), 0) << strerror(errno);
 }
 
 TEST(LocalhostTest, DatagramSocketAtOOBMark) {
@@ -203,7 +203,7 @@ TEST(LocalhostTest, IpAddMembershipAny) {
   ASSERT_EQ(setsockopt(s.get(), SOL_IP, IP_ADD_MEMBERSHIP, &param, sizeof(param)), 0)
       << strerror(errno);
 
-  ASSERT_EQ(close(s.release()), 0) << strerror(errno);
+  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
 }
 
 TEST(LocalhostTest, ConnectAFMismatchINET) {
@@ -298,7 +298,7 @@ TEST_P(IOReadingMethodTest, DatagramSocketErrorWhileBlocked) {
     ASSERT_EQ(n, 0);
   }
 
-  ASSERT_EQ(close(fd.release()), 0) << strerror(errno);
+  EXPECT_EQ(close(fd.release()), 0) << strerror(errno);
 }
 
 INSTANTIATE_TEST_SUITE_P(IOReadingMethodTests, IOReadingMethodTest,
@@ -347,7 +347,7 @@ class DatagramSocketErrBase {
     ASSERT_NO_FATAL_FAILURE(BindLoopback(unused_fd));
     ASSERT_NO_FATAL_FAILURE(ConnectTo(fd, unused_fd));
     // Closing this socket ensures that `fd` ends up connected to an unbound port.
-    ASSERT_EQ(close(unused_fd.release()), 0) << strerror(errno);
+    EXPECT_EQ(close(unused_fd.release()), 0) << strerror(errno);
 
     {
       // Send a UDP packet from `fd` to trigger a port unreachable response.
@@ -404,7 +404,7 @@ TEST_P(DatagramSocketErrWithNonBlockingOptionTest, ClearsErrWithGetSockOpt) {
   EXPECT_EQ(err, ECONNREFUSED) << strerror(err);
 
   ASSERT_NO_FATAL_FAILURE(CheckNoPendingEvents(fd));
-  ASSERT_EQ(close(fd.release()), 0) << strerror(errno);
+  EXPECT_EQ(close(fd.release()), 0) << strerror(errno);
 }
 
 INSTANTIATE_TEST_SUITE_P(NetDatagramTest, DatagramSocketErrWithNonBlockingOptionTest,
@@ -435,7 +435,7 @@ TEST_P(DatagramSocketErrWithIOMethodNonBlockingOptionTest, ClearsErrWithIO) {
   ASSERT_NO_FATAL_FAILURE(TriggerICMPUnreachable(fd));
   ASSERT_NO_FATAL_FAILURE(ExpectConnectionRefusedErr(fd, io_method));
   ASSERT_NO_FATAL_FAILURE(CheckNoPendingEvents(fd));
-  ASSERT_EQ(close(fd.release()), 0) << strerror(errno);
+  EXPECT_EQ(close(fd.release()), 0) << strerror(errno);
 }
 
 TEST_P(DatagramSocketErrWithIOMethodNonBlockingOptionTest,
@@ -457,7 +457,7 @@ TEST_P(DatagramSocketErrWithIOMethodNonBlockingOptionTest,
   // Expect socket I/O returns the received error.
   ASSERT_NO_FATAL_FAILURE(ExpectConnectionRefusedErr(fd, io_method));
   ASSERT_NO_FATAL_FAILURE(CheckNoPendingEvents(fd));
-  ASSERT_EQ(close(fd.release()), 0) << strerror(errno);
+  EXPECT_EQ(close(fd.release()), 0) << strerror(errno);
 }
 
 std::string IOMethodNonBlockingOptionParamsToString(
@@ -517,8 +517,8 @@ TEST_P(DatagramSocketErrWithIOMethodTest, ClearsErrWithIOAfterDatagramReceived) 
   ASSERT_NO_FATAL_FAILURE(ExpectCharsEqual(recv_buf, send_buf, sizeof(send_buf)));
 
   ASSERT_NO_FATAL_FAILURE(CheckNoPendingEvents(fd));
-  ASSERT_EQ(close(fd.release()), 0) << strerror(errno);
-  ASSERT_EQ(close(send_fd.release()), 0) << strerror(errno);
+  EXPECT_EQ(close(fd.release()), 0) << strerror(errno);
+  EXPECT_EQ(close(send_fd.release()), 0) << strerror(errno);
 }
 
 INSTANTIATE_TEST_SUITE_P(NetDatagramTest, DatagramSocketErrWithIOMethodTest,
@@ -616,7 +616,7 @@ TEST_P(DatagramSocketErrWithIOMethodCmsgCacheInvalidationTest, ClearsErrWithIOWi
     EXPECT_EQ(CMSG_FIRSTHDR(&msghdr), nullptr);
   }
   ASSERT_NO_FATAL_FAILURE(CheckNoPendingEvents(fd));
-  ASSERT_EQ(close(send_fd.release()), 0) << strerror(errno);
+  EXPECT_EQ(close(send_fd.release()), 0) << strerror(errno);
 }
 
 std::string IOMethodCmsgCacheInvalidationParamsToString(
@@ -834,7 +834,7 @@ TEST(NetDatagramTest, DatagramConnectWrite) {
   ASSERT_EQ(connect(sendfd.get(), reinterpret_cast<sockaddr*>(&addr), addrlen), 0)
       << strerror(errno);
   ASSERT_EQ(write(sendfd.get(), msg, sizeof(msg)), ssize_t(sizeof(msg))) << strerror(errno);
-  ASSERT_EQ(close(sendfd.release()), 0) << strerror(errno);
+  EXPECT_EQ(close(sendfd.release()), 0) << strerror(errno);
 
   pollfd pfd = {
       .fd = recvfd.get(),
@@ -979,7 +979,7 @@ TEST(NetDatagramTest, DatagramSendtoRecvfrom) {
   ASSERT_NE(peerstr, nullptr);
   ASSERT_STREQ(peerstr, addrstr);
 
-  ASSERT_EQ(close(sendfd.release()), 0) << strerror(errno);
+  EXPECT_EQ(close(sendfd.release()), 0) << strerror(errno);
 
   EXPECT_EQ(close(recvfd.release()), 0) << strerror(errno);
 }
@@ -1036,7 +1036,7 @@ TEST(NetDatagramTest, DatagramSendtoRecvfromV6) {
   ASSERT_NE(peerstr, nullptr);
   ASSERT_STREQ(peerstr, addrstr);
 
-  ASSERT_EQ(close(sendfd.release()), 0) << strerror(errno);
+  EXPECT_EQ(close(sendfd.release()), 0) << strerror(errno);
 
   EXPECT_EQ(close(recvfd.release()), 0) << strerror(errno);
 }
@@ -1141,7 +1141,7 @@ TEST(NetDatagramTest, ConnectUnspecV4) {
                     offsetof(sockaddr_in, sin_family) + sizeof(addr.sin_family)),
             0)
       << strerror(errno);
-  ASSERT_EQ(close(fd.release()), 0) << strerror(errno);
+  EXPECT_EQ(close(fd.release()), 0) << strerror(errno);
 }
 
 TEST(NetDatagramTest, ConnectUnspecV6) {
@@ -1156,7 +1156,7 @@ TEST(NetDatagramTest, ConnectUnspecV6) {
                     offsetof(sockaddr_in6, sin6_family) + sizeof(addr.sin6_family)),
             0)
       << strerror(errno);
-  ASSERT_EQ(close(fd.release()), 0) << strerror(errno);
+  EXPECT_EQ(close(fd.release()), 0) << strerror(errno);
 }
 
 TEST(IoctlTest, IoctlGetInterfaceFlags) {
@@ -3006,7 +3006,7 @@ class DatagramLinearizedSendSemanticsCloseInstance
         DatagramLinearizedSendSemanticsTestInstance::SendDatagramFrom(other_sender_fd_.get()));
   }
 
-  void ToggleOff() { ASSERT_EQ(close(other_sender_fd_.release()), 0) << strerror(errno); }
+  void ToggleOff() { EXPECT_EQ(close(other_sender_fd_.release()), 0) << strerror(errno); }
 
   void ObserveOn() { ASSERT_NO_FATAL_FAILURE(RecvDatagramOn(bound().get())); }
 

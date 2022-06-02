@@ -69,7 +69,7 @@ TEST(RawSocketTest, SendToDifferentProtocolV6) {
             -1);
   ASSERT_EQ(errno, EINVAL);
 
-  ASSERT_EQ(close(fd.release()), 0) << strerror(errno);
+  EXPECT_EQ(close(fd.release()), 0) << strerror(errno);
 }
 
 TEST(RawSocketTest, SendToDifferentProtocolV4) {
@@ -148,8 +148,8 @@ TEST(RawSocketTest, SendToDifferentProtocolV4) {
     ASSERT_NO_FATAL_FAILURE(recv(tcp, IPPROTO_TCP /* proto */, IPPROTO_TCP /* payload */));
   }
 
-  ASSERT_EQ(close(tcp.release()), 0) << strerror(errno);
-  ASSERT_EQ(close(udp.release()), 0) << strerror(errno);
+  EXPECT_EQ(close(tcp.release()), 0) << strerror(errno);
+  EXPECT_EQ(close(udp.release()), 0) << strerror(errno);
 }
 
 TEST(RawSocketTest, SendtoRecvfromV6) {
@@ -268,8 +268,8 @@ TEST(RawSocketTest, SendtoRecvfromV6) {
     ASSERT_NO_FATAL_FAILURE(check_packet());
   }
 
-  ASSERT_EQ(close(rawfd.release()), 0) << strerror(errno);
-  ASSERT_EQ(close(udpfd.release()), 0) << strerror(errno);
+  EXPECT_EQ(close(rawfd.release()), 0) << strerror(errno);
+  EXPECT_EQ(close(udpfd.release()), 0) << strerror(errno);
 }
 
 TEST(RawSocketTest, SendtoRecvfrom) {
@@ -432,8 +432,8 @@ TEST(RawSocketTest, SendtoRecvfrom) {
     ASSERT_NO_FATAL_FAILURE(check_payload());
   }
 
-  ASSERT_EQ(close(rawfd.release()), 0) << strerror(errno);
-  ASSERT_EQ(close(udpfd.release()), 0) << strerror(errno);
+  EXPECT_EQ(close(rawfd.release()), 0) << strerror(errno);
+  EXPECT_EQ(close(udpfd.release()), 0) << strerror(errno);
 }
 
 // Fixture for tests parameterized by family and protocol.

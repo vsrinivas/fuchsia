@@ -148,7 +148,7 @@ class NetStreamSocketsTest : public testing::Test {
 
     ASSERT_TRUE(server_ = fbl::unique_fd(accept(listener.get(), nullptr, nullptr)))
         << strerror(errno);
-    ASSERT_EQ(close(listener.release()), 0) << strerror(errno);
+    EXPECT_EQ(close(listener.release()), 0) << strerror(errno);
   }
 
   fbl::unique_fd& client() { return client_; }
@@ -246,7 +246,7 @@ TEST_F(NetStreamSocketsTest, PeerClosedPOLLOUT) {
 TEST_F(NetStreamSocketsTest, BlockingAcceptWrite) {
   const char msg[] = "hello";
   ASSERT_EQ(write(server().get(), msg, sizeof(msg)), ssize_t(sizeof(msg))) << strerror(errno);
-  ASSERT_EQ(close(server().release()), 0) << strerror(errno);
+  EXPECT_EQ(close(server().release()), 0) << strerror(errno);
 
   char buf[sizeof(msg) + 1] = {};
   ASSERT_EQ(read(client().get(), buf, sizeof(buf)), ssize_t(sizeof(msg))) << strerror(errno);
@@ -300,11 +300,11 @@ TEST_F(NetStreamSocketsTest, Recvmmsg) {
 TEST_F(NetStreamSocketsTest, BlockingAcceptDupWrite) {
   fbl::unique_fd dupfd;
   ASSERT_TRUE(dupfd = fbl::unique_fd(dup(server().get()))) << strerror(errno);
-  ASSERT_EQ(close(server().release()), 0) << strerror(errno);
+  EXPECT_EQ(close(server().release()), 0) << strerror(errno);
 
   const char msg[] = "hello";
   ASSERT_EQ(write(dupfd.get(), msg, sizeof(msg)), ssize_t(sizeof(msg))) << strerror(errno);
-  ASSERT_EQ(close(dupfd.release()), 0) << strerror(errno);
+  EXPECT_EQ(close(dupfd.release()), 0) << strerror(errno);
 
   char buf[sizeof(msg) + 1] = {};
   ASSERT_EQ(read(client().get(), buf, sizeof(buf)), ssize_t(sizeof(msg))) << strerror(errno);
@@ -545,7 +545,7 @@ class StopListenWhileConnect : public testing::TestWithParam<IOMethod> {};
 
 TEST_P(StopListenWhileConnect, Close) {
   TestListenWhileConnect(
-      GetParam(), [](fbl::unique_fd& f) { ASSERT_EQ(close(f.release()), 0) << strerror(errno); });
+      GetParam(), [](fbl::unique_fd& f) { EXPECT_EQ(close(f.release()), 0) << strerror(errno); });
 }
 
 TEST_P(StopListenWhileConnect, Shutdown) {
@@ -677,15 +677,15 @@ TEST_P(ConnectingIOTest, BlockedIO) {
   ASSERT_NO_FATAL_FAILURE(AssertBlocked(fut));
 
   if (close_listener) {
-    ASSERT_EQ(close(listener.release()), 0) << strerror(errno);
+    EXPECT_EQ(close(listener.release()), 0) << strerror(errno);
   } else {
     // Accept the precursor connection to make room for the test client
     // connection to complete.
     fbl::unique_fd precursor_accept;
     ASSERT_TRUE(precursor_accept = fbl::unique_fd(accept(listener.get(), nullptr, nullptr)))
         << strerror(errno);
-    ASSERT_EQ(close(precursor_accept.release()), 0) << strerror(errno);
-    ASSERT_EQ(close(precursor_client.release()), 0) << strerror(errno);
+    EXPECT_EQ(close(precursor_accept.release()), 0) << strerror(errno);
+    EXPECT_EQ(close(precursor_client.release()), 0) << strerror(errno);
 
     // Accept the test client connection.
     fbl::unique_fd test_accept;
@@ -893,14 +893,14 @@ TEST(NetStreamTest, BlockingAcceptWriteMultiple) {
     ASSERT_TRUE(connfd = fbl::unique_fd(accept(acptfd.get(), nullptr, nullptr))) << strerror(errno);
 
     ASSERT_EQ(write(connfd.get(), msg, sizeof(msg)), ssize_t(sizeof(msg))) << strerror(errno);
-    ASSERT_EQ(close(connfd.release()), 0) << strerror(errno);
+    EXPECT_EQ(close(connfd.release()), 0) << strerror(errno);
   }
 
   for (auto& clientfd : clientfds) {
     char buf[sizeof(msg) + 1] = {};
     ASSERT_EQ(read(clientfd.get(), buf, sizeof(buf)), ssize_t(sizeof(msg))) << strerror(errno);
     ASSERT_STREQ(buf, msg);
-    ASSERT_EQ(close(clientfd.release()), 0) << strerror(errno);
+    EXPECT_EQ(close(clientfd.release()), 0) << strerror(errno);
   }
 
   EXPECT_EQ(close(acptfd.release()), 0) << strerror(errno);
@@ -939,12 +939,12 @@ TEST(NetStreamTest, NonBlockingAcceptWrite) {
 
   const char msg[] = "hello";
   ASSERT_EQ(write(connfd.get(), msg, sizeof(msg)), ssize_t(sizeof(msg))) << strerror(errno);
-  ASSERT_EQ(close(connfd.release()), 0) << strerror(errno);
+  EXPECT_EQ(close(connfd.release()), 0) << strerror(errno);
 
   char buf[sizeof(msg) + 1] = {};
   ASSERT_EQ(read(clientfd.get(), buf, sizeof(buf)), ssize_t(sizeof(msg))) << strerror(errno);
   ASSERT_STREQ(buf, msg);
-  ASSERT_EQ(close(clientfd.release()), 0) << strerror(errno);
+  EXPECT_EQ(close(clientfd.release()), 0) << strerror(errno);
   EXPECT_EQ(close(acptfd.release()), 0) << strerror(errno);
 }
 
@@ -981,16 +981,16 @@ TEST(NetStreamTest, NonBlockingAcceptDupWrite) {
 
   fbl::unique_fd dupfd;
   ASSERT_TRUE(dupfd = fbl::unique_fd(dup(connfd.get()))) << strerror(errno);
-  ASSERT_EQ(close(connfd.release()), 0) << strerror(errno);
+  EXPECT_EQ(close(connfd.release()), 0) << strerror(errno);
 
   const char msg[] = "hello";
   ASSERT_EQ(write(dupfd.get(), msg, sizeof(msg)), ssize_t(sizeof(msg))) << strerror(errno);
-  ASSERT_EQ(close(dupfd.release()), 0) << strerror(errno);
+  EXPECT_EQ(close(dupfd.release()), 0) << strerror(errno);
 
   char buf[sizeof(msg) + 1] = {};
   ASSERT_EQ(read(clientfd.get(), buf, sizeof(buf)), ssize_t(sizeof(msg))) << strerror(errno);
   ASSERT_STREQ(buf, msg);
-  ASSERT_EQ(close(clientfd.release()), 0) << strerror(errno);
+  EXPECT_EQ(close(clientfd.release()), 0) << strerror(errno);
   EXPECT_EQ(close(acptfd.release()), 0) << strerror(errno);
 }
 
@@ -1038,12 +1038,12 @@ TEST(NetStreamTest, NonBlockingConnectWrite) {
 
   const char msg[] = "hello";
   ASSERT_EQ(write(connfd.get(), msg, sizeof(msg)), ssize_t(sizeof(msg))) << strerror(errno);
-  ASSERT_EQ(close(connfd.release()), 0) << strerror(errno);
+  EXPECT_EQ(close(connfd.release()), 0) << strerror(errno);
 
   char buf[sizeof(msg) + 1] = {};
   ASSERT_EQ(read(clientfd.get(), buf, sizeof(buf)), ssize_t(sizeof(msg))) << strerror(errno);
   ASSERT_STREQ(buf, msg);
-  ASSERT_EQ(close(clientfd.release()), 0) << strerror(errno);
+  EXPECT_EQ(close(clientfd.release()), 0) << strerror(errno);
   EXPECT_EQ(close(acptfd.release()), 0) << strerror(errno);
 }
 
@@ -1077,7 +1077,7 @@ TEST(NetStreamTest, NonBlockingConnectRead) {
 
     const char msg[] = "hello";
     ASSERT_EQ(write(clientfd.get(), msg, sizeof(msg)), ssize_t(sizeof(msg))) << strerror(errno);
-    ASSERT_EQ(close(clientfd.release()), 0) << strerror(errno);
+    EXPECT_EQ(close(clientfd.release()), 0) << strerror(errno);
 
     // Note: the success of connection can be detected with POLLOUT, but
     // we use POLLIN here to wait until some data is written by the peer.
@@ -1098,7 +1098,7 @@ TEST(NetStreamTest, NonBlockingConnectRead) {
     char buf[sizeof(msg) + 1] = {};
     ASSERT_EQ(read(connfd.get(), buf, sizeof(buf)), ssize_t(sizeof(msg))) << strerror(errno);
     ASSERT_STREQ(buf, msg);
-    ASSERT_EQ(close(connfd.release()), 0) << strerror(errno);
+    EXPECT_EQ(close(connfd.release()), 0) << strerror(errno);
     EXPECT_EQ(close(acptfd.release()), 0) << strerror(errno);
   }
 }
@@ -1195,7 +1195,7 @@ TEST(NetStreamTest, GetTcpInfo) {
     ASSERT_EQ(info_len, sizeof(tcpi_state));
   }
 
-  ASSERT_EQ(close(fd.release()), 0) << strerror(errno);
+  EXPECT_EQ(close(fd.release()), 0) << strerror(errno);
 }
 
 TEST(NetStreamTest, GetSocketAcceptConn) {
@@ -1359,7 +1359,7 @@ TEST_P(BlockedIOTest, CloseWhileBlocked) {
 
       int fd = client().release();
 
-      ASSERT_EQ(close(fd), 0) << strerror(errno);
+      EXPECT_EQ(close(fd), 0) << strerror(errno);
 
       // Closing the file descriptor does not interrupt the pending I/O.
       ASSERT_NO_FATAL_FAILURE(AssertBlocked(fut));
@@ -1373,7 +1373,7 @@ TEST_P(BlockedIOTest, CloseWhileBlocked) {
     case CloseTarget::SERVER: {
       ASSERT_EQ(setsockopt(server().get(), SOL_SOCKET, SO_LINGER, &opt, sizeof(opt)), 0)
           << strerror(errno);
-      ASSERT_EQ(close(server().release()), 0) << strerror(errno);
+      EXPECT_EQ(close(server().release()), 0) << strerror(errno);
       break;
     }
   }
@@ -1565,8 +1565,8 @@ TEST(NetStreamTest, ConnectTwice) {
   ASSERT_EQ(errno, ECONNABORTED) << strerror(errno);
 #endif
 
-  ASSERT_EQ(close(listener.release()), 0) << strerror(errno);
-  ASSERT_EQ(close(client.release()), 0) << strerror(errno);
+  EXPECT_EQ(close(listener.release()), 0) << strerror(errno);
+  EXPECT_EQ(close(client.release()), 0) << strerror(errno);
 }
 
 TEST(NetStreamTest, ConnectCloseRace) {
@@ -1603,7 +1603,7 @@ TEST(NetStreamTest, ConnectCloseRace) {
 #endif
                     )
             << strerror(errno);
-        ASSERT_EQ(close(client.release()), 0) << strerror(errno);
+        EXPECT_EQ(close(client.release()), 0) << strerror(errno);
       }
     });
   }
@@ -1686,13 +1686,13 @@ TEST_P(HangupTest, DuringConnect) {
     case CloseTarget::CLIENT:
       switch (hangup_method) {
         case HangupMethod::kClose: {
-          ASSERT_EQ(close(established_client.release()), 0) << strerror(errno);
+          EXPECT_EQ(close(established_client.release()), 0) << strerror(errno);
           // Closing the established client isn't enough; the connection must be accepted before
           // the connecting client can make progress.
           EXPECT_EQ(connect(connecting_client.get(), addr, addr_len), -1) << strerror(errno);
           EXPECT_EQ(errno, EALREADY) << strerror(errno);
 
-          ASSERT_EQ(close(connecting_client.release()), 0) << strerror(errno);
+          EXPECT_EQ(close(connecting_client.release()), 0) << strerror(errno);
 
           // Established connection is still in the accept queue, even though it's closed.
           fbl::unique_fd accepted;
@@ -1766,7 +1766,7 @@ TEST_P(HangupTest, DuringConnect) {
     case CloseTarget::SERVER: {
       switch (hangup_method) {
         case HangupMethod::kClose:
-          ASSERT_EQ(close(listener.release()), 0) << strerror(errno);
+          EXPECT_EQ(close(listener.release()), 0) << strerror(errno);
           break;
         case HangupMethod::kShutdown: {
           ASSERT_EQ(shutdown(listener.get(), SHUT_RD), 0) << strerror(errno);
@@ -1926,7 +1926,7 @@ TEST(LocalhostTest, AcceptAfterReset) {
     EXPECT_EQ(pfd.revents, POLLIN);
 
     // Close the client and trigger a RST.
-    ASSERT_EQ(close(client.release()), 0) << strerror(errno);
+    EXPECT_EQ(close(client.release()), 0) << strerror(errno);
   }
 
   fbl::unique_fd conn;
@@ -2002,7 +2002,7 @@ TEST(LocalhostTest, RaceLocalPeerClose) {
               << strerror(errno);
           ASSERT_EQ(connect(peer.get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)), 0)
               << strerror(errno);
-          ASSERT_EQ(close(peer.release()), 0) << strerror(errno);
+          EXPECT_EQ(close(peer.release()), 0) << strerror(errno);
 
           // Accept the connection and close it, adding new racing signal (operating on `close`) to
           // Netstack.
@@ -2022,7 +2022,7 @@ TEST(LocalhostTest, RaceLocalPeerClose) {
 #endif
                 << strerror(errno);
           } else {
-            ASSERT_EQ(close(local.release()), 0) << strerror(errno);
+            EXPECT_EQ(close(local.release()), 0) << strerror(errno);
           }
         });
   }
@@ -2031,7 +2031,7 @@ TEST(LocalhostTest, RaceLocalPeerClose) {
     t.join();
   }
 
-  ASSERT_EQ(close(listener.release()), 0) << strerror(errno);
+  EXPECT_EQ(close(listener.release()), 0) << strerror(errno);
 }
 
 TEST(LocalhostTest, GetAddrInfo) {
@@ -2155,7 +2155,7 @@ TEST_P(IOMethodTest, NullptrFaultSTREAM) {
 
   ASSERT_TRUE(server = fbl::unique_fd(accept4(listener.get(), nullptr, nullptr, SOCK_NONBLOCK)))
       << strerror(errno);
-  ASSERT_EQ(close(listener.release()), 0) << strerror(errno);
+  EXPECT_EQ(close(listener.release()), 0) << strerror(errno);
 
   DoNullPtrIO(client, server, GetParam(), false);
 }
