@@ -12,7 +12,6 @@ use fuchsia_inspect::{
     health::Reporter,
 };
 use fuchsia_inspect_derive::WithInspect;
-use fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn};
 use futures::{future::join, prelude::*};
 use std::fs::File;
 use std::io::BufReader;
@@ -64,12 +63,12 @@ async fn create_metric_logger() -> Option<MetricLogger> {
         Ok(f) => match serde_json::from_reader(BufReader::new(f)) {
             Ok(map) => map,
             Err(err) => {
-                fx_log_err!("Failed to parse component map file: {}", err);
+                error!(%err, "Failed to parse component map file");
                 return None;
             }
         },
         Err(err) => {
-            fx_log_info!("Failed to open component map file: {}", err);
+            info!(%err, "Failed to open component map file");
             return None;
         }
     };
@@ -79,12 +78,12 @@ async fn create_metric_logger() -> Option<MetricLogger> {
         Ok(f) => match serde_json::from_reader(BufReader::new(f)) {
             Ok(specs) => specs,
             Err(err) => {
-                fx_log_err!("Failed to parse metric specs file: {}", err);
+                error!(%err, "Failed to parse metric specs file");
                 return None;
             }
         },
         Err(err) => {
-            fx_log_info!("Failed to open metric specs file: {}", err);
+            info!(%err, "Failed to open metric specs file");
             return None;
         }
     };
@@ -92,7 +91,7 @@ async fn create_metric_logger() -> Option<MetricLogger> {
     match MetricLogger::new(specs, component_map).await {
         Ok(logger) => Some(logger),
         Err(err) => {
-            fx_log_err!("Failed to instantiate MetricLogger: {}", err);
+            error!(%err, "Failed to instantiate MetricLogger");
             None
         }
     }
@@ -127,7 +126,7 @@ async fn maintain(
             if let Some(ref mut metric_logger) = metric_logger {
                 let res = metric_logger.process(&log).await;
                 if let Err(err) = res {
-                    fx_log_warn!("MetricLogger failed: {}", err);
+                    warn!(%err, "MetricLogger failed");
                 }
             }
         }

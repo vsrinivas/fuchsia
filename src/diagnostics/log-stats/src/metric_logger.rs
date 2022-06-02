@@ -10,10 +10,10 @@ use {
     fidl_fuchsia_metrics::{MetricEventLoggerFactoryMarker, MetricEventLoggerProxy, ProjectSpec},
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
-    fuchsia_syslog::fx_log_warn,
     serde::Deserialize,
     std::collections::{HashMap, HashSet},
     std::convert::TryFrom,
+    tracing::warn,
 };
 
 #[derive(Deserialize)]
@@ -122,7 +122,7 @@ impl MetricLogger {
         if self.current_interval_errors.len() >= MAX_ERRORS_PER_INTERVAL {
             // Only print this warning once per interval: the first time that we reached capacity.
             if !self.reached_capacity {
-                fx_log_warn!("Received too many ERRORs. Will temporarily halt logging the metric.");
+                warn!("Received too many ERRORs. Will temporarily halt logging the metric.");
                 self.reached_capacity = true;
             }
             return Ok(());
@@ -194,9 +194,9 @@ impl MetricLogger {
         match status {
             Ok(()) => Ok(()),
             Err(e) => {
-                fx_log_warn!(
-                    "Not logging metrics for {} seconds because Cobalt failed",
-                    COBALT_BACKOFF_SECONDS
+                warn!(
+                    seconds = COBALT_BACKOFF_SECONDS,
+                    "Not logging metrics because Cobalt failed",
                 );
                 self.last_cobalt_failure_time = now;
                 Err(anyhow::format_err!("Cobalt returned error: {}", e as u8))
