@@ -4,6 +4,7 @@
 
 group("drivers") {
   deps = [
+    "drivers/acpi-arm64",
     "drivers/astro",
     "drivers/av400",
     "drivers/integration-test",
