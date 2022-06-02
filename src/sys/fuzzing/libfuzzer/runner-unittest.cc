@@ -80,6 +80,10 @@ class LibFuzzerRunnerTest : public RunnerTest {
     cmdline.push_back("-handle_abrt=0");
 #endif  // LIBFUZZER_ALLOW_DEBUG
 
+    // LibFuzzer's "entropic energy" feature allows it to focus on inputs that provide more useful
+    // coverage; but is tricky to fake in unit testing.
+    cmdline.push_back("-entropic=0");
+
     libfuzzer_runner->set_cmdline(std::move(cmdline));
   }
 

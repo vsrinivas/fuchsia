@@ -103,6 +103,18 @@ zx_status_t Corpus::Add(Input input) {
   return ZX_OK;
 }
 
+zx_status_t Corpus::Add(CorpusPtr corpus) {
+  if (!corpus) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  for (auto& input : corpus->inputs_) {
+    if (auto status = Add(input.Duplicate()); status != ZX_OK) {
+      return status;
+    }
+  }
+  return ZX_OK;
+}
+
 bool Corpus::At(size_t offset, Input* out) {
   out->Clear();
   if (offset >= inputs_.size()) {

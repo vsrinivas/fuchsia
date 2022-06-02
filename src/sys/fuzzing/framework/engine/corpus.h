@@ -55,6 +55,11 @@ class Corpus final {
   // specified by the options; ZX_OK otherwise.
   zx_status_t Add(Input input);
 
+  // Adds all inputs from the given |corpus| to this corpus. Returns ZX_ERR_INVALID_ARGS if |corpus|
+  // is null, and ZX_ERR_BUFFER_TOO_SMALL if any/ input exceeds the max size specified by the
+  // options. Otherwise, returns ZX_OK.
+  zx_status_t Add(CorpusPtr corpus);
+
   // Returns true and the input at |offset| in the corpus via |out| if |offset| is less than the
   // number of inputs; otherwise returns false and sets |out| to an empty input.
   bool At(size_t offset, Input* out);

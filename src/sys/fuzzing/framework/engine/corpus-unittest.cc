@@ -129,6 +129,42 @@ TEST(CorpusTest, AddInputs) {
   EXPECT_EQ(corpus.total_size(), expected);
 }
 
+TEST(CorpusTest, AddCorpus) {
+  auto corpus1 = Corpus::MakePtr();
+  auto options = DefaultOptions();
+  options->set_max_input_size(4);
+  corpus1->Configure(options);
+  EXPECT_EQ(corpus1->Add(Input("foo")), ZX_OK);
+  EXPECT_EQ(corpus1->Add(Input("bar")), ZX_OK);
+
+  // Null pointer.
+  CorpusPtr corpus2;
+  EXPECT_EQ(corpus1->Add(corpus2), ZX_ERR_INVALID_ARGS);
+
+  // Long input.
+  corpus2 = Corpus::MakePtr();
+  corpus2->Configure(DefaultOptions());
+  EXPECT_EQ(corpus2->Add(Input("foobarbaz")), ZX_OK);
+  EXPECT_EQ(corpus1->Add(corpus2), ZX_ERR_BUFFER_TOO_SMALL);
+
+  // Valid
+  corpus2 = Corpus::MakePtr();
+  corpus2->Configure(DefaultOptions());
+  EXPECT_EQ(corpus2->Add(Input("bar")), ZX_OK);
+  EXPECT_EQ(corpus2->Add(Input("baz")), ZX_OK);
+  EXPECT_EQ(corpus1->Add(corpus2), ZX_OK);
+
+  Input inputs[4];
+  for (size_t i = 0; i < 3; ++i) {
+    EXPECT_TRUE(corpus1->At(i + 1, &inputs[i]));
+  }
+  EXPECT_FALSE(corpus1->At(4, &inputs[3]));
+  // Should be sorted on return.
+  EXPECT_EQ(inputs[0], Input("bar"));
+  EXPECT_EQ(inputs[1], Input("baz"));
+  EXPECT_EQ(inputs[2], Input("foo"));
+}
+
 TEST(CorpusTest, At) {
   Corpus corpus;
   corpus.Configure(DefaultOptions());

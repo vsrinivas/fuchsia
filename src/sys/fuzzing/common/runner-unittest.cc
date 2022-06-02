@@ -291,18 +291,79 @@ void RunnerTest::CleanseTwoBytes() {
 }
 
 void RunnerTest::FuzzUntilError() {
+  auto runner = this->runner();
   auto options = DefaultOptions();
   options->set_detect_exits(true);
+  options->set_mutation_depth(1);
   Configure(options);
 
   Artifact artifact;
-  FUZZING_EXPECT_OK(runner()->Fuzz(), &artifact);
-  FUZZING_EXPECT_OK(RunOne());
-  FUZZING_EXPECT_OK(RunOne());
-  FUZZING_EXPECT_OK(RunOne());
-  FUZZING_EXPECT_OK(RunOne(FuzzResult::EXIT));
+  FUZZING_EXPECT_OK(runner->Fuzz(), &artifact);
 
+  // Add some corpus elements.
+  std::vector<Input> inputs;
+  inputs.emplace_back("foo");
+  inputs.emplace_back("bar");
+  inputs.emplace_back("baz");
+  inputs.emplace_back("qux");
+  auto last = CorpusType::LIVE;
+  auto next = CorpusType::SEED;
+  for (const auto& input : inputs) {
+    EXPECT_EQ(runner->AddToCorpus(next, input.Duplicate()), ZX_OK);
+    std::swap(next, last);
+  }
+
+  // Set some coverage for the inputs above. Some runners (e.g. libFuzzer) won't mutate an input
+  // that lacks any coverage. According to the AFL bucketing scheme used by libFuzzer and others,
+  // the counter must be at least 2 to map to a coverage "feature".
+  for (size_t i = 0; i < inputs.size(); ++i) {
+    SetCoverage(inputs[i], {{i + 1, i + 1}});
+  }
+
+  std::vector<Input> actual;
+  for (size_t i = 0; i < 100; ++i) {
+    FUZZING_EXPECT_OK(RunOne().then([&](Result<Input>& result) {
+      if (result.is_ok()) {
+        actual.push_back(result.take_value());
+      }
+    }));
+  }
+
+  FUZZING_EXPECT_OK(RunOne(FuzzResult::EXIT));
   RunUntilIdle();
+
+  // Helper lambda to check if the sequence of bytes given by |needle| appears in order, but not
+  // necessarily contiguously, in the sequence of bytes given by |haystack|.
+  auto contains = [](const Input& haystack, const Input& needle) -> bool {
+    const auto* needle_data = needle.data();
+    const auto* haystack_data = haystack.data();
+    size_t i = 0;
+    for (size_t j = 0; i < needle.size() && j < haystack.size(); ++j) {
+      if (needle_data[i] == haystack_data[j]) {
+        ++i;
+      }
+    }
+    return i == needle.size();
+  };
+
+  // Verify that each corpus element is 1) used as-is, and 2) used as the basis for mutations.
+  for (auto& orig : inputs) {
+    bool exact_match_found = false;
+    bool near_match_found = false;
+    for (auto& input : actual) {
+      if (orig == input) {
+        exact_match_found = true;
+      } else if (contains(input, orig)) {
+        near_match_found = true;
+      }
+      if (exact_match_found && near_match_found) {
+        break;
+      }
+    }
+    EXPECT_TRUE(exact_match_found) << "input: " << orig.ToHex();
+    EXPECT_TRUE(near_match_found) << "input: " << orig.ToHex();
+  }
+
   EXPECT_EQ(artifact.fuzz_result(), FuzzResult::EXIT);
 }
 
@@ -314,19 +375,6 @@ void RunnerTest::FuzzUntilRuns() {
   Configure(options);
   std::vector<std::string> expected({""});
 
-  // Add some seed corpus elements.
-  Input input1({0x01, 0x11});
-  EXPECT_EQ(runner->AddToCorpus(CorpusType::SEED, input1.Duplicate()), ZX_OK);
-  expected.push_back(input1.ToHex());
-
-  Input input2({0x02, 0x22});
-  EXPECT_EQ(runner->AddToCorpus(CorpusType::SEED, input2.Duplicate()), ZX_OK);
-  expected.push_back(input2.ToHex());
-
-  Input input3({0x03, 0x33});
-  EXPECT_EQ(runner->AddToCorpus(CorpusType::LIVE, input3.Duplicate()), ZX_OK);
-  expected.push_back(input3.ToHex());
-
   // Subscribe to status updates.
   FakeMonitor monitor(executor());
   runner->AddMonitor(monitor.NewBinding());
@@ -335,12 +383,8 @@ void RunnerTest::FuzzUntilRuns() {
   Artifact artifact;
   FUZZING_EXPECT_OK(runner->Fuzz(), &artifact);
 
-  std::vector<std::string> actual;
   for (size_t i = 0; i < kNumRuns; ++i) {
-    FUZZING_EXPECT_OK(RunOne({{i, i}}).and_then([&actual](const Input& input) {
-      actual.push_back(input.ToHex());
-      return fpromise::ok();
-    }));
+    FUZZING_EXPECT_OK(RunOne({{i, i}}));
   }
 
   // Check that we get the expected status updates.
@@ -392,14 +436,8 @@ void RunnerTest::FuzzUntilRuns() {
   ASSERT_TRUE(status.has_covered_pcs());
   EXPECT_GE(status.covered_pcs(), covered_pcs);
 
-  // All done. Every corpus inputs should have been run.
+  // All done.
   EXPECT_EQ(artifact.fuzz_result(), FuzzResult::NO_ERRORS);
-  std::sort(expected.begin(), expected.end());
-  std::sort(actual.begin(), actual.end());
-  std::vector<std::string> missing;
-  std::set_difference(expected.begin(), expected.end(), actual.begin(), actual.end(),
-                      std::inserter(missing, missing.begin()));
-  EXPECT_EQ(missing, std::vector<std::string>());
 }
 
 void RunnerTest::FuzzUntilTime() {

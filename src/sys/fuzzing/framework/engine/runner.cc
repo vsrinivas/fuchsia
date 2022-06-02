@@ -476,13 +476,14 @@ ZxPromise<> RunnerImpl::GenerateInputs(size_t num_inputs, size_t backlog) {
           }
           auto input = recycle.take_value();
           if (num_mutations >= mutation_depth) {
-            // Pick an input an mutate it |mutation_depth| times in a row.
+            // Pick an input and mutate it |mutation_depth| times in a row.
             mutagen_.reset_mutations();
             live_corpus_->Pick(mutagen_.base_input());
             live_corpus_->Pick(mutagen_.crossover());
             num_mutations = 0;
           }
           mutagen_.Mutate(&input);
+          ++num_mutations;
           auto status = generated_.Send(std::move(input));
           num_sent++;
           if (status != ZX_OK) {
@@ -593,6 +594,7 @@ ZxPromise<Artifact> RunnerImpl::FuzzInputs(size_t backlog) {
             [this] { return TestCorpusAsync(live_corpus_, kAccumulateCoverage); });
       })
       .or_else([this, backlog, num_inputs](const zx_status_t& status) {
+        live_corpus_->Add(seed_corpus_);
         return CheckPrevious(status).and_then(
             [generate = ZxFuture<>(GenerateInputs(num_inputs, backlog)),
              test = ZxFuture<Artifact>(TestInputs(kAccumulateCoverageAndKeepInputs))](
