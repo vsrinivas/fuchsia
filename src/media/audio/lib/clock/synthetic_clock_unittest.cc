@@ -129,5 +129,23 @@ TEST(SyntheticClockRealmTest, Advance) {
   EXPECT_EQ(clock2->now(), zx::time(50));
 }
 
+TEST(SyntheticClockRealmTest, DuplicateUnreadable) {
+  auto realm = SyntheticClockRealm::Create();
+  auto clock = realm->CreateClock("clock", kExternalDomain, true);
+
+  auto zx_clock = clock->DuplicateZxClockUnreadable();
+
+  // Must not have WRITE or READ.
+  zx_info_handle_basic_t info;
+  auto status = zx_clock.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+  FX_CHECK(status == ZX_OK) << "zx_clock.get_info failed, status is " << status;
+  EXPECT_EQ(info.rights, ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER);
+
+  // Clock read should fail.
+  zx_time_t unused;
+  status = zx_clock.read(&unused);
+  EXPECT_NE(status, ZX_OK);
+}
+
 }  // namespace
 }  // namespace media_audio

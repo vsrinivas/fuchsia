@@ -26,6 +26,7 @@ source_set("clock") {
     "recovered_clock.h",
     "synthetic_clock.cc",
     "synthetic_clock.h",
+    "unadjustable_clock_wrapper.h",
     "utils.cc",
     "utils.h",
   ]

@@ -80,6 +80,15 @@ std::optional<zx::clock> SyntheticClock::DuplicateZxClockReadOnly() const {
   return std::nullopt;
 }
 
+zx::clock SyntheticClock::DuplicateZxClockUnreadable() const {
+  // This should not fail.
+  zx_rights_t rights = ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER;
+  zx::clock dup;
+  auto status = zx_clock_.duplicate(rights, &dup);
+  FX_CHECK(status == ZX_OK) << "zx::clock::duplicate failed with status " << status;
+  return dup;
+}
+
 // static
 std::shared_ptr<SyntheticClockRealm> SyntheticClockRealm::Create() {
   struct MakePublicCtor : SyntheticClockRealm {

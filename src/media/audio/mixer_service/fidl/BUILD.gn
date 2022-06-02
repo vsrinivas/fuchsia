@@ -1,7 +1,6 @@
 # Copyright 2022 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 import("//build/components.gni")
 
 group("tests") {
@@ -18,15 +17,21 @@ source_set("fidl") {
 
   sources = [
     "base_fidl_server.h",
+    "clock_registry.cc",
+    "clock_registry.h",
     "fidl_graph.cc",
     "fidl_graph.h",
     "fidl_graph_creator.cc",
     "fidl_graph_creator.h",
+    "fidl_synthetic_clock.cc",
+    "fidl_synthetic_clock.h",
     "node.cc",
     "node.h",
     "ptr_decls.h",
     "reachability.cc",
     "reachability.h",
+    "real_clock_registry.cc",
+    "real_clock_registry.h",
   ]
 
   public_deps = [
@@ -37,6 +42,7 @@ source_set("fidl") {
     "//sdk/lib/fit-promise",
     "//src/media/audio/mixer_service/common",
     "//src/media/audio/mixer_service/mix",
+    "//zircon/system/ulib/sync:sync-cpp",
     "//zircon/system/ulib/trace",
   ]
 
@@ -51,8 +57,10 @@ executable("fidl_unittests") {
 
   sources = [
     "base_fidl_server_unittest.cc",
+    "fidl_synthetic_clock_unittest.cc",
     "node_unittest.cc",
     "reachability_unittest.cc",
+    "real_clock_registry_unittest.cc",
   ]
 
   deps = [
@@ -62,6 +70,7 @@ executable("fidl_unittests") {
     "//third_party/googletest:gmock",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/async-loop/testing:async-loop-testing",
   ]
 }
 

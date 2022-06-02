@@ -103,7 +103,7 @@ std::optional<zx::clock> RealClock::DuplicateZxClockReadOnly() const {
   zx_rights_t rights = ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ;
   zx::clock dup;
   if (auto status = clock_.duplicate(rights, &dup); status != ZX_OK) {
-    FX_LOGS(ERROR) << "ReadClock.DuplicateZxClockReadOnly failed with status " << status;
+    FX_LOGS(ERROR) << "RealClock.DuplicateZxClockReadOnly failed with status " << status;
     return std::nullopt;
   }
   return dup;

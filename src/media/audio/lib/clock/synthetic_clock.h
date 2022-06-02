@@ -34,6 +34,12 @@ class SyntheticClock : public Clock {
   void SetRate(int32_t rate_adjust_ppm) override;
   std::optional<zx::clock> DuplicateZxClockReadOnly() const override;
 
+  // Duplicates the underlying zx::clock with ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER but not
+  // ZX_RIGHT_READ or ZX_RIGHT_WRITE. The returned zx::clock can act as a handle for this
+  // SyntheticClock since its koid matches `koid()`. However, the zx::clock is not readable because
+  // its value is not synchronized with this SyntheticClock.
+  zx::clock DuplicateZxClockUnreadable() const;
+
  private:
   friend class SyntheticClockRealm;
 
