@@ -3702,7 +3702,7 @@ zx_status_t VmCowPages::ResizeLocked(uint64_t s) {
       zx_status_t status = page_list_.ForEveryPageAndGapInRange(
           [](const auto* p, uint64_t off) { return ZX_ERR_NEXT; },
           [this](uint64_t gap_start, uint64_t gap_end) {
-            page_source_->OnPagesSupplied(gap_start, gap_end);
+            page_source_->OnPagesSupplied(gap_start, gap_end - gap_start);
             return ZX_ERR_NEXT;
           },
           start, end);
