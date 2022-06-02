@@ -8,12 +8,12 @@ use {
         self as avdtp, ErrorCode, ServiceCapability, ServiceCategory, StreamEndpoint,
         StreamEndpointId,
     },
-    fuchsia_bluetooth::{inspect::DataStreamInspect, types::PeerId},
+    fuchsia_bluetooth::types::PeerId,
     fuchsia_inspect::{self as inspect, Property},
     fuchsia_inspect_derive::{AttachError, Inspect},
     futures::{future::BoxFuture, FutureExt, TryFutureExt},
     std::{collections::HashMap, convert::TryFrom, fmt, sync::Arc},
-    tracing::warn,
+    tracing::{info, warn},
 };
 
 use crate::codec::MediaCodecConfig;
@@ -113,14 +113,17 @@ impl Stream {
         peer_id: &PeerId,
         config: &MediaCodecConfig,
     ) -> Option<Box<dyn MediaTaskRunner>> {
-        let mut inspect = DataStreamInspect::default();
-        let _ = inspect.iattach(&self.inspect, "media_stream");
-        match self.media_task_builder.configure(peer_id, &config, inspect) {
+        match self.media_task_builder.configure(peer_id, &config) {
             Err(e) => {
-                warn!("Failed to build media task: {:?}", e);
+                warn!("Failed to build media task: {e:?}");
                 None
             }
-            Ok(media_task_runner) => Some(media_task_runner),
+            Ok(mut media_task_runner) => {
+                if let Err(e) = media_task_runner.iattach(&self.inspect, "media_task") {
+                    info!("Media Task inspect: {e}");
+                }
+                Some(media_task_runner)
+            }
         }
     }
 

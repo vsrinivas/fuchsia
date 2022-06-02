@@ -82,10 +82,15 @@ To view the current state of the profile, use `fx iquery show core/bt-a2dp`.
             [repeated for each stream endpoint, connected endpoints will have a media_stream]
             stream_4:
               endpoint_state = [...]
-              media_stream:
-                bytes_per_second_current = 23672
-                start_time = 11227039005541
-                total_bytes = 125695
+              media_task:
+                codec_config = MediaCodecConfig { codec_type: MediaCodecType::AUDIO_AAC, codec_extra: [128, 0, 132, 129, 244, 0] }
+                source_type = audio_out
+                data_stream:
+                  bytes_per_second_current = 2421
+                  start_time = 694766005791
+                  streaming_secs = 28
+                  total_bytes = 73062
+
 ```
 
 ## Setting up Bluetooth Audio

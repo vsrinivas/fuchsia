@@ -118,6 +118,19 @@ pub enum AudioSourceType {
     BigBen,
 }
 
+impl core::fmt::Display for AudioSourceType {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(
+            f,
+            "{}",
+            match self {
+                AudioSourceType::AudioOut => "audio_out",
+                AudioSourceType::BigBen => "big_ben",
+            }
+        )
+    }
+}
+
 impl std::str::FromStr for AudioSourceType {
     type Err = anyhow::Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {

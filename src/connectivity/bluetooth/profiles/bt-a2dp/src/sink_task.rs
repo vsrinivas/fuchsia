@@ -11,14 +11,14 @@ use {
     fidl_fuchsia_media as media, fidl_fuchsia_media_sessions2 as sessions2,
     fidl_fuchsia_metrics as cobalt, fuchsia_async as fasync,
     fuchsia_bluetooth::{inspect::DataStreamInspect, types::PeerId},
+    fuchsia_inspect::Node,
+    fuchsia_inspect_derive::{AttachError, Inspect},
     fuchsia_trace as trace,
     futures::{
         channel::oneshot,
         future::{BoxFuture, Fuse, Future, Shared},
         select, FutureExt, StreamExt, TryFutureExt,
     },
-    parking_lot::Mutex,
-    std::sync::Arc,
     thiserror::Error,
     tracing::{info, trace, warn},
 };
@@ -50,7 +50,6 @@ impl MediaTaskBuilder for SinkTaskBuilder {
         &self,
         peer_id: &PeerId,
         codec_config: &MediaCodecConfig,
-        data_stream_inspect: DataStreamInspect,
     ) -> Result<Box<dyn MediaTaskRunner>, MediaTaskError> {
         let builder = self.clone();
         let peer_id = peer_id.clone();
@@ -58,7 +57,6 @@ impl MediaTaskBuilder for SinkTaskBuilder {
         Ok::<Box<dyn MediaTaskRunner>, _>(Box::new(ConfiguredSinkTask::new(
             codec_config,
             builder,
-            data_stream_inspect,
             peer_id,
         )))
     }
@@ -71,28 +69,23 @@ struct ConfiguredSinkTask {
     peer_id: PeerId,
     /// A clone of the Builder at the time this was configured.
     builder: SinkTaskBuilder,
-    /// Data Stream inspect object for tracking total bytes / current transfer speed.
-    stream_inspect: Arc<Mutex<DataStreamInspect>>,
     /// Future that will return the Session ID for Media, if we have started the session.
     session_id_fut: Option<Shared<oneshot::Receiver<u64>>>,
     /// Session Task (AVRCP relay) if it is started.
     _session_task: Option<fasync::Task<()>>,
+    /// Inspect node
+    inspect: fuchsia_inspect::Node,
 }
 
 impl ConfiguredSinkTask {
-    fn new(
-        codec_config: MediaCodecConfig,
-        builder: SinkTaskBuilder,
-        stream_inspect: DataStreamInspect,
-        peer_id: PeerId,
-    ) -> Self {
+    fn new(codec_config: MediaCodecConfig, builder: SinkTaskBuilder, peer_id: PeerId) -> Self {
         Self {
             codec_config,
             builder,
             peer_id,
-            stream_inspect: Arc::new(Mutex::new(stream_inspect)),
             session_id_fut: None,
             _session_task: None,
+            inspect: Node::default(),
         }
     }
 
@@ -138,13 +131,30 @@ impl ConfiguredSinkTask {
             .expect("just set this")
             .map_ok_or_else(|_e| 0, |id| id)
     }
+
+    fn update_inspect(&self) {
+        self.inspect.record_string("codec_config", &format!("{:?}", self.codec_config));
+    }
+}
+
+impl Inspect for &mut ConfiguredSinkTask {
+    fn iattach(
+        self,
+        parent: &fuchsia_inspect::Node,
+        name: impl AsRef<str>,
+    ) -> Result<(), AttachError> {
+        self.inspect = parent.create_child(name.as_ref());
+        self.update_inspect();
+        Ok(())
+    }
 }
 
 impl MediaTaskRunner for ConfiguredSinkTask {
     fn start(&mut self, stream: MediaStream) -> Result<Box<dyn MediaTask>, MediaTaskError> {
         let codec_config = self.codec_config.clone();
         let audio_factory = self.builder.audio_consumer_factory.clone();
-        let stream_inspect = self.stream_inspect.clone();
+        let mut stream_inspect = DataStreamInspect::default();
+        let _ = stream_inspect.iattach(&self.inspect, "data_stream");
         let session_id_fut = self.establish_session();
         let media_player_fut = async move {
             let session_id = session_id_fut.await;
@@ -166,7 +176,12 @@ impl MediaTaskRunner for ConfiguredSinkTask {
 
     fn reconfigure(&mut self, codec_config: &MediaCodecConfig) -> Result<(), MediaTaskError> {
         self.codec_config = codec_config.clone();
+        self.update_inspect();
         Ok(())
+    }
+
+    fn iattach(&mut self, parent: &Node, name: &str) -> Result<(), AttachError> {
+        fuchsia_inspect_derive::Inspect::iattach(self, parent, name)
     }
 }
 
@@ -248,11 +263,11 @@ impl MediaTask for RunningSinkTask {
 async fn media_stream_task(
     mut stream: (impl futures::Stream<Item = avdtp::Result<Vec<u8>>> + std::marker::Unpin),
     player_gen: Box<dyn Fn() -> Result<player::Player, Error> + Send>,
-    inspect: Arc<Mutex<DataStreamInspect>>,
+    mut inspect: DataStreamInspect,
 ) -> StreamingError {
     let mut player: Option<player::Player> = None;
     let mut packet_count: u64 = 0;
-    let _ = inspect.try_lock().map(|mut l| l.start());
+    inspect.start();
     loop {
         let mut player_event_fut =
             player.as_mut().map(|p| p.next_event().fuse()).unwrap_or(Fuse::terminated());
@@ -284,10 +299,7 @@ async fn media_stream_task(
                     player = Some(new_player);
                 }
 
-                let _ = inspect.try_lock().map(|mut l| {
-                    l.record_transferred(pkt.len(), fasync::Time::now());
-                });
-
+                inspect.record_transferred(pkt.len(), fasync::Time::now());
                 if let Err(e) = player.as_mut().unwrap().push_payload(&pkt.as_slice()).await {
                     info!("can't push packet: {:?}", e);
                 }
@@ -352,7 +364,8 @@ mod tests {
         fuchsia_inspect_derive::WithInspect,
         fuchsia_zircon::DurationNum,
         futures::{channel::mpsc, io::AsyncWriteExt, pin_mut, task::Poll, StreamExt},
-        std::sync::RwLock,
+        parking_lot::Mutex,
+        std::sync::{Arc, RwLock},
     };
 
     fn fake_cobalt_sender(
@@ -389,9 +402,7 @@ mod tests {
             SinkTaskBuilder::new(None, proxy, audio_consumer_factory_proxy, "Tests".to_string());
 
         let sbc_config = MediaCodecConfig::min_sbc();
-        let mut runner = builder
-            .configure(&PeerId(1), &sbc_config, DataStreamInspect::default())
-            .expect("configured");
+        let mut runner = builder.configure(&PeerId(1), &sbc_config).expect("configured");
 
         // Should't start session until we start a stream.
         assert!(exec.run_until_stalled(&mut session_requests.next()).is_pending());
@@ -447,9 +458,7 @@ mod tests {
         );
 
         let sbc_config = MediaCodecConfig::min_sbc();
-        let mut runner = builder
-            .configure(&PeerId(1), &sbc_config, DataStreamInspect::default())
-            .expect("configured");
+        let mut runner = builder.configure(&PeerId(1), &sbc_config).expect("configured");
 
         // Should't start session until we start a stream.
         assert!(exec.run_until_stalled(&mut session_requests.next()).is_pending());
@@ -477,11 +486,10 @@ mod tests {
         }
     }
 
-    fn setup_media_stream_test(
-    ) -> (fasync::TestExecutor, MediaCodecConfig, Arc<Mutex<DataStreamInspect>>) {
+    fn setup_media_stream_test() -> (fasync::TestExecutor, MediaCodecConfig, DataStreamInspect) {
         let exec = fasync::TestExecutor::new().expect("executor should build");
         let sbc_config = MediaCodecConfig::min_sbc();
-        let inspect = Arc::new(Mutex::new(DataStreamInspect::default()));
+        let inspect = DataStreamInspect::default();
         (exec, sbc_config, inspect)
     }
 
@@ -627,8 +635,8 @@ mod tests {
             player::tests::setup_player(&mut exec, sbc_config);
         let inspector = inspect::component::inspector();
         let root = inspector.root();
-        let d = DataStreamInspect::default().with_inspect(root, "stream").expect("attach to tree");
-        let inspect = Arc::new(Mutex::new(d));
+        let inspect =
+            DataStreamInspect::default().with_inspect(root, "stream").expect("attach to tree");
 
         exec.set_fake_time(fasync::Time::from_nanos(5_678900000));
 
@@ -706,11 +714,8 @@ mod tests {
                 .expect("proxy pair creation");
 
         let sbc_config = MediaCodecConfig::min_sbc();
-
-        let inspect = Arc::new(Mutex::new(DataStreamInspect::default()));
-
         let codec_type = sbc_config.codec_type().clone();
-
+        let inspect = DataStreamInspect::default();
         let session_id = 1;
 
         let media_stream_fut = media_stream_task(

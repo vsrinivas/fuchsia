@@ -9,14 +9,14 @@ use {
     fidl_fuchsia_media::{AudioChannelId, AudioPcmMode, PcmFormat},
     fuchsia_async as fasync,
     fuchsia_bluetooth::{inspect::DataStreamInspect, types::PeerId},
+    fuchsia_inspect::Node,
+    fuchsia_inspect_derive::{AttachError, Inspect},
     fuchsia_trace as trace,
     futures::{
         channel::oneshot,
         future::{BoxFuture, Shared},
-        lock::Mutex,
         AsyncWriteExt, FutureExt, TryFutureExt, TryStreamExt,
     },
-    std::sync::Arc,
     tracing::{info, trace, warn},
 };
 
@@ -39,9 +39,8 @@ impl MediaTaskBuilder for SourceTaskBuilder {
         &self,
         peer_id: &PeerId,
         codec_config: &MediaCodecConfig,
-        data_stream_inspect: DataStreamInspect,
     ) -> Result<Box<dyn MediaTaskRunner>, MediaTaskError> {
-        let res = self.configure_task(peer_id, codec_config, data_stream_inspect);
+        let res = self.configure_task(peer_id, codec_config);
         Ok::<Box<dyn MediaTaskRunner>, _>(Box::new(res?))
     }
 }
@@ -57,7 +56,6 @@ impl SourceTaskBuilder {
         &self,
         peer_id: &PeerId,
         codec_config: &MediaCodecConfig,
-        data_stream_inspect: DataStreamInspect,
     ) -> Result<ConfiguredSourceTask, MediaTaskError> {
         let channel_map = match codec_config.channel_count() {
             Ok(1) => vec![AudioChannelId::Cf],
@@ -76,13 +74,7 @@ impl SourceTaskBuilder {
             trace!("SourceTaskBuilder: can't build encoded stream: {:?}", e);
             return Err(MediaTaskError::Other(format!("Can't build encoded stream: {}", e)));
         }
-        Ok(ConfiguredSourceTask::build(
-            pcm_format,
-            self.source_type,
-            peer_id.clone(),
-            codec_config,
-            data_stream_inspect,
-        ))
+        Ok(ConfiguredSourceTask::build(pcm_format, self.source_type, peer_id.clone(), codec_config))
     }
 }
 
@@ -98,8 +90,8 @@ pub(crate) struct ConfiguredSourceTask {
     peer_id: PeerId,
     /// Configuration providing the format of encoded audio requested by the peer.
     codec_config: MediaCodecConfig,
-    /// Data Stream inspect object for tracking total bytes / current transfer speed.
-    data_stream_inspect: Arc<Mutex<DataStreamInspect>>,
+    /// Inspect node
+    inspect: fuchsia_inspect::Node,
 }
 
 impl ConfiguredSourceTask {
@@ -111,15 +103,31 @@ impl ConfiguredSourceTask {
         source_type: sources::AudioSourceType,
         peer_id: PeerId,
         codec_config: &MediaCodecConfig,
-        data_stream_inspect: DataStreamInspect,
     ) -> Self {
         Self {
             pcm_format,
             source_type,
             peer_id,
             codec_config: codec_config.clone(),
-            data_stream_inspect: Arc::new(Mutex::new(data_stream_inspect)),
+            inspect: Default::default(),
         }
+    }
+
+    fn update_inspect(&self) {
+        self.inspect.record_string("source_type", &format!("{}", self.source_type));
+        self.inspect.record_string("codec_config", &format!("{:?}", self.codec_config));
+    }
+}
+
+impl Inspect for &mut ConfiguredSourceTask {
+    fn iattach(
+        self,
+        parent: &fuchsia_inspect::Node,
+        name: impl AsRef<str>,
+    ) -> Result<(), AttachError> {
+        self.inspect = parent.create_child(name.as_ref());
+        self.update_inspect();
+        Ok(())
     }
 }
 
@@ -131,14 +139,20 @@ impl MediaTaskRunner for ConfiguredSourceTask {
         let encoded_stream =
             EncodedStream::build(self.pcm_format.clone(), source_stream, &self.codec_config)
                 .map_err(|e| MediaTaskError::Other(format!("Can't build encoded stream: {}", e)))?;
+        let mut data_stream_inspect = DataStreamInspect::default();
+        let _ = data_stream_inspect.iattach(&self.inspect, "data_stream");
         let stream_task = RunningSourceTask::build(
             self.codec_config.clone(),
             encoded_stream,
             stream,
-            self.data_stream_inspect.clone(),
+            data_stream_inspect,
         );
-        let _ = self.data_stream_inspect.try_lock().map(|mut l| l.start());
         Ok(Box::new(stream_task))
+    }
+
+    /// the running media task to the tree (i.e. data transferred, jitter, etc)
+    fn iattach(&mut self, parent: &Node, name: &str) -> Result<(), AttachError> {
+        fuchsia_inspect_derive::Inspect::iattach(self, parent, name)
     }
 }
 
@@ -154,8 +168,9 @@ impl RunningSourceTask {
         codec_config: MediaCodecConfig,
         mut encoded_stream: EncodedStream,
         mut media_stream: MediaStream,
-        data_stream_inspect: Arc<Mutex<DataStreamInspect>>,
+        mut data_stream_inspect: DataStreamInspect,
     ) -> Result<(), Error> {
+        data_stream_inspect.start();
         let frames_per_encoded = codec_config.pcm_frames_per_encoded_frame() as u32;
         let max_tx_size = media_stream.max_tx_size()?;
         let mut packet_builder = codec_config.make_packet_builder(max_tx_size)?;
@@ -179,9 +194,7 @@ impl RunningSourceTask {
                     trace::duration_end!("bt-a2dp", "Media:PacketSent");
                     return Ok(());
                 }
-                let _ = data_stream_inspect.try_lock().map(|mut l| {
-                    l.record_transferred(packet.len(), fasync::Time::now());
-                });
+                data_stream_inspect.record_transferred(packet.len(), fasync::Time::now());
                 trace::duration_end!("bt-a2dp", "Media:PacketSent");
             }
         }
@@ -191,9 +204,10 @@ impl RunningSourceTask {
         codec_config: MediaCodecConfig,
         encoded_stream: EncodedStream,
         media_stream: MediaStream,
-        inspect: Arc<Mutex<DataStreamInspect>>,
+        inspect: DataStreamInspect,
     ) -> Self {
         let (sender, receiver) = oneshot::channel();
+
         let stream_task_fut =
             Self::stream_task(codec_config, encoded_stream, media_stream, inspect);
         let wrapped_task = fasync::Task::spawn(async move {
@@ -231,22 +245,19 @@ mod tests {
     use bt_avdtp::MediaCodecType;
     use fuchsia_bluetooth::types::Channel;
     use fuchsia_inspect as inspect;
-    use fuchsia_inspect_derive::WithInspect;
     use futures::StreamExt;
     use parking_lot::Mutex;
-    use std::sync::RwLock;
+    use std::sync::{Arc, RwLock};
     use test_util::assert_gt;
 
-    #[test]
+    #[fuchsia::test]
     fn configures_source_from_codec_config() {
         let _exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let builder = SourceTaskBuilder::new(sources::AudioSourceType::BigBen);
 
         // Minimum SBC requirements are mono, 48kHz
         let mono_config = MediaCodecConfig::min_sbc();
-        let task = builder
-            .configure_task(&PeerId(1), &mono_config, DataStreamInspect::default())
-            .expect("should build okay");
+        let task = builder.configure_task(&PeerId(1), &mono_config).expect("should build okay");
         assert_eq!(48000, task.pcm_format.frames_per_second);
         assert_eq!(1, task.pcm_format.channel_map.len());
 
@@ -265,26 +276,23 @@ mod tests {
             MediaCodecConfig::build(MediaCodecType::AUDIO_SBC, &sbc_codec_info.to_bytes().to_vec())
                 .unwrap();
 
-        let task = builder
-            .configure_task(&PeerId(1), &stereo_config, DataStreamInspect::default())
-            .expect("should build okay");
+        let task = builder.configure_task(&PeerId(1), &stereo_config).expect("should build okay");
         assert_eq!(44100, task.pcm_format.frames_per_second);
         assert_eq!(2, task.pcm_format.channel_map.len());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn source_media_stream_stats() {
         let mut exec = fasync::TestExecutor::new().expect("executor should build");
         let builder = SourceTaskBuilder::new(sources::AudioSourceType::BigBen);
 
         let inspector = inspect::component::inspector();
         let root = inspector.root();
-        let d = DataStreamInspect::default().with_inspect(root, "stream").expect("attach to tree");
 
         // Minimum SBC requirements are mono, 48kHz
         let mono_config = MediaCodecConfig::min_sbc();
-        let mut task =
-            builder.configure_task(&PeerId(1), &mono_config, d).expect("should build okay");
+        let mut task = builder.configure_task(&PeerId(1), &mono_config).expect("should build okay");
+        MediaTaskRunner::iattach(&mut task, &root, "source_task").expect("should attach okay");
 
         let (mut remote, local) = Channel::create();
         let local = Arc::new(RwLock::new(local));
@@ -301,12 +309,12 @@ mod tests {
         // We don't know exactly how many were sent at this point, but make sure we got at
         // least some recorded.
         let total_bytes = hierarchy
-            .get_property_by_path(&vec!["stream", "total_bytes"])
+            .get_property_by_path(&vec!["source_task", "data_stream", "total_bytes"])
             .expect("missing property");
         assert_gt!(total_bytes.uint().expect("uint"), &0);
 
         let bytes_per_second_current = hierarchy
-            .get_property_by_path(&vec!["stream", "bytes_per_second_current"])
+            .get_property_by_path(&vec!["source_task", "data_stream", "bytes_per_second_current"])
             .expect("missing property");
         assert_gt!(bytes_per_second_current.uint().expect("uint"), &0);
     }

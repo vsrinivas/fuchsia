@@ -4,7 +4,9 @@
 
 use {
     bt_avdtp::MediaStream,
-    fuchsia_bluetooth::{inspect::DataStreamInspect, types::PeerId},
+    fuchsia_bluetooth::types::PeerId,
+    fuchsia_inspect::Node,
+    fuchsia_inspect_derive::AttachError,
     futures::{
         future::{BoxFuture, Shared},
         FutureExt,
@@ -47,7 +49,6 @@ pub trait MediaTaskBuilder: Send + Sync {
         &self,
         peer_id: &PeerId,
         codec_config: &MediaCodecConfig,
-        data_stream_inspect: DataStreamInspect,
     ) -> Result<Box<dyn MediaTaskRunner>, MediaTaskError>;
 }
 
@@ -67,6 +68,12 @@ pub trait MediaTaskRunner: Send {
     /// The runner remains configured with the initial configuration on an error.
     fn reconfigure(&mut self, _config: &MediaCodecConfig) -> Result<(), MediaTaskError> {
         Err(MediaTaskError::ConfigurationNotSupported)
+    }
+
+    /// Add information from the running media task to the inspect tree
+    /// (i.e. data transferred, jitter, etc)
+    fn iattach(&mut self, _parent: &Node, _name: &str) -> Result<(), AttachError> {
+        Err("attach not implemented".into())
     }
 }
 
@@ -262,7 +269,6 @@ pub mod tests {
             &self,
             peer_id: &PeerId,
             codec_config: &MediaCodecConfig,
-            _data_stream_inspect: DataStreamInspect,
         ) -> Result<Box<dyn MediaTaskRunner>, MediaTaskError> {
             let runner = TestMediaTaskRunner {
                 peer_id: peer_id.clone(),
