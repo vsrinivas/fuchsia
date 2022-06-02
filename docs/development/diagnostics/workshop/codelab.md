@@ -1,7 +1,7 @@
 # Diagnostics and testing codelab
 
 This document contains a codelab for debugging with diagnostics and tests. It is currently
-intended for developers writing tests within fuchsia.git. It is currently a work in progress.
+intended for developers writing tests within fuchsia.git.
 
 ## Prerequisites
 
@@ -193,8 +193,10 @@ This section covers adding tests to verify the fix.
 
 This example contains [example unit tests][example-unittests] and an
 [example integration test][example-integration-test], including some tests that are
-disabled due to the bug. Feel free to either modify the examples, or create new tests from
-scratch using the flows below.
+disabled due to the bug.
+
+Try writing new tests that could help prevent the bug in the component. Feel free to either modify
+the example tests, or create new tests from scratch using the flows below.
 
 ### Adding new unit tests
 
