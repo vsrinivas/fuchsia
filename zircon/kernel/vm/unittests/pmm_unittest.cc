@@ -540,8 +540,7 @@ static bool pmm_node_oom_sync_alloc_failure_test() {
   // Allocations should work again, but the PMM is still allowed to randomly fail requests, so we
   // cannot guarantee that any small finite number of allocation attempts will work.
   // We can check that waiting to retry an allocation completes with no timeout though.
-  EXPECT_EQ(ZX_OK,
-            node.node().WaitTillShouldRetrySingleAlloc(Deadline::no_slack(ZX_TIME_INFINITE_PAST)));
+  EXPECT_EQ(ZX_OK, node.node().WaitTillShouldRetrySingleAlloc(Deadline::infinite_past()));
 
   END_TEST;
 }

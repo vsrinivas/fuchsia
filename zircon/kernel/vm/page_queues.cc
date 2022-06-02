@@ -382,7 +382,7 @@ void PageQueues::LruThread() {
 void PageQueues::RotatePagerBackedQueues(AgeReason reason) {
   VM_KTRACE_DURATION(2, "RotatePagerBackedQueues");
   // We expect LRU processing to have already happened, so first poll the mru semaphore.
-  if (mru_semaphore_.Wait(Deadline::no_slack(ZX_TIME_INFINITE_PAST)) == ZX_ERR_TIMED_OUT) {
+  if (mru_semaphore_.Wait(Deadline::infinite_past()) == ZX_ERR_TIMED_OUT) {
     // We should not have needed to wait for lru processing here, as it should have already been
     // made available due to earlier triggers. Although this could reasonably happen due to races or
     // delays in scheduling we record in a counter as happening regularly could indicate a bug.

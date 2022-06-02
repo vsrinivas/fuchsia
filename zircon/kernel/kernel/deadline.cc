@@ -11,6 +11,7 @@
 const TimerSlack TimerSlack::none_{0, TIMER_SLACK_CENTER};
 
 const Deadline Deadline::infinite_{ZX_TIME_INFINITE, TimerSlack::none()};
+const Deadline Deadline::infinite_past_{ZX_TIME_INFINITE_PAST, TimerSlack::none()};
 
 zx_time_t Deadline::earliest() const {
   switch (slack_.mode()) {

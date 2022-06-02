@@ -67,6 +67,9 @@ class Deadline {
   // A deadline that will never be reached.
   static constexpr const Deadline& infinite() { return infinite_; }
 
+  // A deadline that's always in the past.
+  static constexpr const Deadline& infinite_past() { return infinite_past_; }
+
   constexpr zx_time_t when() const { return when_; }
 
   constexpr TimerSlack slack() const { return slack_; }
@@ -79,6 +82,7 @@ class Deadline {
 
  private:
   static const Deadline infinite_;
+  static const Deadline infinite_past_;
 
   const zx_time_t when_;
   const TimerSlack slack_;

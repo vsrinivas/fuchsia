@@ -178,7 +178,7 @@ bool NmiInterruptsTimerTest() {
         g_cpu_context_exchange.RequestContext(arch_curr_cpu_num(), ZX_TIME_INFINITE, context);
     args->timer_fired.store(true);
   };
-  t.Set(Deadline::no_slack(ZX_TIME_INFINITE_PAST), timer_cb, &args);
+  t.Set(Deadline::infinite_past(), timer_cb, &args);
 
   // Wait for the timer to fire.
   while (!args.timer_fired.load()) {
