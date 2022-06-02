@@ -37,10 +37,7 @@ pub struct ImmutableConnection {
 
 impl DerivedConnection for ImmutableConnection {
     type Directory = dyn ImmutableConnectionClient;
-
-    fn mutable() -> bool {
-        false
-    }
+    const MUTABLE: bool = false;
 
     fn new(
         scope: ExecutionScope,

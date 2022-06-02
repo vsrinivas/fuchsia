@@ -37,8 +37,8 @@ pub enum ConnectionState {
 pub trait DerivedConnection: Send + Sync {
     type Directory: BaseConnectionClient + ?Sized;
 
-    /// Returns whether these connections support mutable connections.
-    fn mutable() -> bool;
+    /// Whether these connections support mutable connections.
+    const MUTABLE: bool;
 
     fn new(
         scope: ExecutionScope,

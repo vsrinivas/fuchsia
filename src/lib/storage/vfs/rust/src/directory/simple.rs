@@ -6,7 +6,6 @@
 //! Use [`mod@crate::directory::immutable::simple`]
 //! to construct actual instances.  See [`Simple`] for details.
 
-#[allow(unused_imports)]
 use crate::{
     common::{rights_to_posix_mode_bits, send_on_open_with_error},
     directory::{
@@ -167,7 +166,7 @@ where
         let (name, path_ref) = match path.next_with_ref() {
             (path_ref, Some(name)) => (name, path_ref),
             (_, None) => {
-                if Connection::mutable() {
+                if Connection::MUTABLE {
                     MutableConnection::create_connection(scope, self, flags, server_end);
                 } else {
                     ImmutableConnection::create_connection(scope, self, flags, server_end);
@@ -304,7 +303,7 @@ where
             mode: fio::MODE_TYPE_DIRECTORY
                 | rights_to_posix_mode_bits(
                     /*r*/ true,
-                    /*w*/ Connection::mutable(),
+                    /*w*/ Connection::MUTABLE,
                     /*x*/ true,
                 ),
             id: self.inode,

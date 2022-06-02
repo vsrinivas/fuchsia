@@ -66,10 +66,7 @@ pub struct MutableConnection {
 
 impl DerivedConnection for MutableConnection {
     type Directory = dyn MutableConnectionClient;
-
-    fn mutable() -> bool {
-        true
-    }
+    const MUTABLE: bool = true;
 
     fn new(
         scope: ExecutionScope,
