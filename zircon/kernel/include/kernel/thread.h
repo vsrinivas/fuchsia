@@ -12,6 +12,7 @@
 #include <lib/backtrace.h>
 #include <lib/fit/function.h>
 #include <lib/relaxed_atomic.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <platform.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
@@ -45,6 +46,7 @@
 class Dpc;
 struct Thread;
 class OwnedWaitQueue;
+class PreemptionState;
 class StackOwnedLoanedPagesInterval;
 class ThreadDispatcher;
 class WaitQueue;
@@ -64,6 +66,29 @@ enum class ResourceOwnership {
   // Blocking is happening whilst waiting for shared read access to a resource.
   Reader,
 };
+
+// The PreemptDisabledToken (and its global singleton instance,
+// |preempt_disabled_token|) are clang static analysis tokens which can be used
+// to annotate methods as requiring that local preemption be disabled in order
+// to operate properly.  See the AnnotatedAutoPreemptDisabler helper in
+// kernel/auto_preempt_disabler.h for more details.
+struct TA_CAP("token") PreemptDisabledToken {
+ public:
+  void AssertHeld() TA_ASSERT();
+
+  PreemptDisabledToken() = default;
+  PreemptDisabledToken(const PreemptDisabledToken&) = delete;
+  PreemptDisabledToken(PreemptDisabledToken&&) = delete;
+  PreemptDisabledToken& operator=(const PreemptDisabledToken&) = delete;
+  PreemptDisabledToken& operator=(PreemptDisabledToken&&) = delete;
+
+ private:
+  friend class PreemptionState;
+  void Acquire() TA_ACQ() {}
+  void Release() TA_REL() {}
+};
+
+extern PreemptDisabledToken preempt_disabled_token;
 
 // Whether a block or a sleep can be interrupted.
 enum class Interruptible : bool { No, Yes };
@@ -540,6 +565,16 @@ class PreemptionState {
     }
   }
 
+  void PreemptDisableAnnotated() TA_ACQ(preempt_disabled_token) {
+    preempt_disabled_token.Acquire();
+    PreemptDisable();
+  }
+
+  void PreemptReenableAnnotated() TA_REL(preempt_disabled_token) {
+    preempt_disabled_token.Release();
+    PreemptReenable();
+  }
+
   // PreemptReenableDelayFlush() decrements the preempt disable counter, but
   // deliberately does _not_ flush any pending local preemption operation.
   // Instead, if local preemption has become enabled again after the count
@@ -606,6 +641,16 @@ class PreemptionState {
       DEBUG_ASSERT(old_count != 1 << kEagerReschedDisableShift || !arch_blocking_disallowed());
       FlushPending(old_count == 1 << kEagerReschedDisableShift ? FlushAll : FlushRemote);
     }
+  }
+
+  void EagerReschedDisableAnnotated() TA_ACQ(preempt_disabled_token) {
+    preempt_disabled_token.Acquire();
+    EagerReschedDisable();
+  }
+
+  void EagerReschedReenableAnnotated(bool flush_pending = true) TA_REL(preempt_disabled_token) {
+    preempt_disabled_token.Release();
+    EagerReschedReenable(flush_pending);
   }
 
   // PreemptSetPending() marks a pending preemption for the given CPUs.
@@ -1421,6 +1466,10 @@ inline void WaitQueueCollection::MinRelativeDeadlineTraits::ResetBest(Thread& th
 #ifdef DEBUG_ASSERT_IMPLEMENTED
   thread.wait_queue_state().subtree_min_rel_deadline_thread_ = nullptr;
 #endif
+}
+
+inline void PreemptDisabledToken::AssertHeld() {
+  DEBUG_ASSERT(Thread::Current::preemption_state().PreemptIsEnabled() == false);
 }
 
 #endif  // ZIRCON_KERNEL_INCLUDE_KERNEL_THREAD_H_

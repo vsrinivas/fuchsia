@@ -73,6 +73,37 @@ class AutoPreemptDisabler {
   bool disabled_{true};
 };
 
+// AnnotatedAutoPreemptDisabler is an RAII helper which is almost identical in
+// functionality to the AutoPreemptDisabler.  The main difference is that the
+// Annotated version will automatically acquire/release the
+// preempt_disabled_token, allowing it to be used in situations where static
+// analysis demands proof that preemption has been disabled before a method can
+// be called.
+class TA_SCOPED_CAP AnnotatedAutoPreemptDisabler {
+ public:
+  AnnotatedAutoPreemptDisabler() TA_ACQ(preempt_disabled_token) {
+    Thread::Current::preemption_state().PreemptDisableAnnotated();
+  }
+
+  ~AnnotatedAutoPreemptDisabler() TA_REL() { Enable(); }
+
+  // Enables preemption if it was previously disabled by this instance.
+  void Enable() TA_REL() {
+    if (disabled_) {
+      Thread::Current::preemption_state().PreemptReenableAnnotated();
+      disabled_ = false;
+    }
+  }
+
+  AnnotatedAutoPreemptDisabler(const AutoPreemptDisabler&) = delete;
+  AnnotatedAutoPreemptDisabler& operator=(const AutoPreemptDisabler&) = delete;
+  AnnotatedAutoPreemptDisabler(AutoPreemptDisabler&&) = delete;
+  AnnotatedAutoPreemptDisabler& operator=(AutoPreemptDisabler&&) = delete;
+
+ private:
+  bool disabled_{true};
+};
+
 // AutoEagerReschedDisabler is a RAII helper that automatically manages
 // disabling and re-enabling eager reschedules, including both local and remote
 // CPUs. This type works the same as AutoPreemptDisable, except that it also
@@ -108,6 +139,38 @@ class AutoEagerReschedDisabler {
       disabled_ = false;
     }
   }
+
+ private:
+  bool disabled_{true};
+};
+
+// AnnotatedEagerReschedDsiabler is an RAII helper which is almost identical in
+// functionality to the AutoEagerReschedDsiabler.  The main difference is that
+// the Annotated version will automatically acquire/release the
+// preempt_disabled_token, allowing it to be used in situations where static
+// analysis demands proof that preemption has been disabled before a method can
+// be called.
+class TA_SCOPED_CAP AnnotatedAutoEagerReschedDisabler {
+ public:
+  AnnotatedAutoEagerReschedDisabler() TA_ACQ(preempt_disabled_token) {
+    Thread::Current::preemption_state().EagerReschedDisableAnnotated();
+  }
+  ~AnnotatedAutoEagerReschedDisabler() TA_REL() {
+    Thread::Current::preemption_state().EagerReschedReenableAnnotated();
+  }
+
+  // Enables preemption if it was previously disabled by this instance.
+  void Enable() TA_REL() {
+    if (disabled_) {
+      Thread::Current::preemption_state().EagerReschedReenableAnnotated();
+      disabled_ = false;
+    }
+  }
+
+  AnnotatedAutoEagerReschedDisabler(const AutoEagerReschedDisabler&) = delete;
+  AnnotatedAutoEagerReschedDisabler& operator=(const AutoEagerReschedDisabler&) = delete;
+  AnnotatedAutoEagerReschedDisabler(AutoEagerReschedDisabler&&) = delete;
+  AnnotatedAutoEagerReschedDisabler& operator=(AutoEagerReschedDisabler&&) = delete;
 
  private:
   bool disabled_{true};
