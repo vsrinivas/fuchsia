@@ -203,6 +203,14 @@ class ClockSyncPipelineTest : public HermeticAudioTest {
     // Shift the output so that neither "peak detection" range crosses the ring buffer boundary.
     auto ring_buffer = SnapshotRingBuffer(offset_before_output_start);
 
+    if constexpr (!kEnableAllOverflowAndUnderflowChecksInRealtimeTests) {
+      // In case of underflows, exit NOW (don't assess this buffer).
+      // TODO(fxbug.dev/80003): Remove workarounds when underflow conditions are fixed.
+      if (DeviceHasUnderflows(output_)) {
+        GTEST_SKIP() << "Skipping impulse checks due to underflows";
+      }
+    }
+
     // A. two impulses are detected in the bisected output ring buffer
     auto num_frames_output = NumFramesOutput(clock_slew_ppm, frames_between_impulses);
     auto midpoint = static_cast<int64_t>(num_frames_output) / 2;
@@ -216,11 +224,6 @@ class ClockSyncPipelineTest : public HermeticAudioTest {
       ring_buffer.Display(first_start, first_start + TotalRampFrames(), "Front of output ring");
       auto second_start = midpoint + second_peak.index - PreRampFrames();
       ring_buffer.Display(second_start, second_start + TotalRampFrames(), "Back of output ring");
-    }
-
-    // TODO(fxbug.dev/80003): Skipping checks until underflows are fixed.
-    if (DeviceHasUnderflows(output_)) {
-      GTEST_SKIP() << "Skipping threshold checks due to underflows";
     }
 
     EXPECT_GE(first_peak.value, kOutputImpulseMagnitude);
@@ -273,9 +276,12 @@ class ClockSyncPipelineTest : public HermeticAudioTest {
     // We shift the output so that neither signal range nor silence range cross the ring's edge.
     auto ring_buffer = SnapshotRingBuffer(offset_before_output_start);
 
-    // TODO(fxbug.dev/80003): Skipping checks until underflows are fixed.
-    if (DeviceHasUnderflows(output_)) {
-      GTEST_SKIP() << "Skipping threshold checks due to underflows";
+    if constexpr (!kEnableAllOverflowAndUnderflowChecksInRealtimeTests) {
+      // In case of underflows, exit NOW (don't assess this buffer).
+      // TODO(fxbug.dev/80003): Remove workarounds when underflow conditions are fixed.
+      if (DeviceHasUnderflows(output_)) {
+        GTEST_SKIP() << "Skipping data checks due to underflows";
+      }
     }
 
     // The output should contain silence, followed by TotalRampFrames of transition, followed by
@@ -393,11 +399,6 @@ class ClockSyncPipelineTest : public HermeticAudioTest {
     renderer_->PlaySynchronized(this, output_, 0);
     renderer_->WaitForPackets(this, packets2);
 
-    // TODO(fxbug.dev/80003): Skipping checks until underflows are fixed.
-    if (DeviceHasUnderflows(output_)) {
-      GTEST_SKIP() << "Skipping threshold checks due to underflows";
-    }
-
     // offset_before_input_start is input frame where signal starts. Add PostRampFrames to get the
     // frame where any effect of preceding silence is completely gone. Translate to output frame.
     auto offset_before_output_start = static_cast<int64_t>(
@@ -405,6 +406,14 @@ class ClockSyncPipelineTest : public HermeticAudioTest {
 
     // Shift the entire buffer (with wraparound) to produce a full-length signal starting at [0].
     auto ring_buffer = SnapshotRingBuffer(offset_before_output_start);
+
+    if constexpr (!kEnableAllOverflowAndUnderflowChecksInRealtimeTests) {
+      // In case of underflows, exit NOW (don't assess this buffer).
+      // TODO(fxbug.dev/80003): Remove workarounds when underflow conditions are fixed.
+      if (DeviceHasUnderflows(output_)) {
+        GTEST_SKIP() << "Skipping data checks due to underflows";
+      }
+    }
 
     // Compute the slewed frequency in the output.
     int32_t output_freq = static_cast<int32_t>(

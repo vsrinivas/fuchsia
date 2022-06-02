@@ -131,9 +131,13 @@ class AudioCoreThermalTest : public HermeticPipelineTest {
     renderer->WaitForPackets(this, packets);
 
     auto ring_buffer = device->SnapshotRingBuffer();
-    // TODO(fxbug.dev/80003): Remove workarounds when underflow conditions are fixed.
-    if (DeviceHasUnderflows(device)) {
-      GTEST_SKIP() << "Skipping step magnitude checks due to underflows";
+
+    if constexpr (!kEnableAllOverflowAndUnderflowChecksInRealtimeTests) {
+      // In case of underflows, exit NOW (don't assess this buffer).
+      // TODO(fxbug.dev/80003): Remove workarounds when underflow conditions are fixed.
+      if (DeviceHasUnderflows(device)) {
+        GTEST_SKIP() << "Skipping step magnitude checks due to underflows";
+      }
     }
 
     CompareAudioBufferOptions opts;

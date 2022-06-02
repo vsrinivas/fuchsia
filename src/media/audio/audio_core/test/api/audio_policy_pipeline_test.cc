@@ -73,6 +73,8 @@ class AudioAdminTest : public HermeticAudioTest {
                             int64_t expected_frames_per_packet, int16_t expected_data);
 
   void TestCaptureMuteRender(bool set_usage_to_disable);
+
+  VirtualOutput<kSampleFormat>* output_ = nullptr;
 };
 
 // AudioAdminTest implementation
@@ -101,7 +103,7 @@ void AudioAdminTest::SetUpVirtualAudioOutput() {
   const audio_stream_unique_id_t kUniqueId{{0x4a, 0x41, 0x49, 0x4a, 0x4a, 0x41, 0x49, 0x4a, 0x4a,
                                             0x41, 0x49, 0x4a, 0x4a, 0x41, 0x49, 0x4a}};
 
-  CreateOutput(kUniqueId, kFormat, kRingBufferFrames);
+  output_ = CreateOutput(kUniqueId, kFormat, kRingBufferFrames);
 }
 
 void AudioAdminTest::SetUpVirtualAudioInput() {
@@ -227,7 +229,16 @@ TEST_F(AudioAdminTest, SingleRenderStream) {
   capturer->fidl()->StartAsyncCapture(10);
   ExpectCallbacks();
 
-  // Check that we got 10 frames as we expected.
+  if constexpr (!kEnableAllOverflowAndUnderflowChecksInRealtimeTests) {
+    // In case of underflows, exit NOW (don't assess this buffer).
+    // TODO(fxbug.dev/80003): Remove workarounds when underflow conditions are fixed.
+    if (DeviceHasUnderflows(output_)) {
+      GTEST_SKIP() << "Skipping data checks due to underflows";
+      __builtin_unreachable();
+    }
+  }
+
+  // Check that we got 10 frames containing the exact data values we expected.
   ASSERT_NE(captured, std::nullopt);
   ExpectPacketContains("captured", *captured, 10, kPlaybackData1);
 }
@@ -276,7 +287,16 @@ TEST_F(AudioAdminTest, RenderMuteCapture) {
   capturer->fidl()->StartAsyncCapture(10);
   ExpectCallbacks();
 
-  // Check that we got 10 samples as we expected.
+  if constexpr (!kEnableAllOverflowAndUnderflowChecksInRealtimeTests) {
+    // In case of underflows, exit NOW (don't assess this buffer).
+    // TODO(fxbug.dev/80003): Remove workarounds when underflow conditions are fixed.
+    if (DeviceHasUnderflows(output_)) {
+      GTEST_SKIP() << "Skipping data checks due to underflows";
+      __builtin_unreachable();
+    }
+  }
+
+  // Check that we got 10 frames containing the exact data values we expected.
   ASSERT_NE(captured, std::nullopt);
   ExpectPacketContains("captured", *captured, 10, 0x0);
 }
@@ -338,7 +358,16 @@ void AudioAdminTest::TestCaptureMuteRender(bool set_usage_to_disable) {
   loopback_capturer->fidl()->StartAsyncCapture(10);
   ExpectCallbacks();
 
-  // Check that we got 10 samples as we expected.
+  if constexpr (!kEnableAllOverflowAndUnderflowChecksInRealtimeTests) {
+    // In case of underflows, exit NOW (don't assess this buffer).
+    // TODO(fxbug.dev/80003): Remove workarounds when underflow conditions are fixed.
+    if (DeviceHasUnderflows(output_)) {
+      GTEST_SKIP() << "Skipping data checks due to underflows";
+      __builtin_unreachable();
+    }
+  }
+
+  // Check that we got 10 frames containing the exact data values we expected.
   int16_t expected_data = set_usage_to_disable ? kPlaybackData1 : 0x0;
   ExpectPacketContains("loopback_captured", *loopback_captured, 10, expected_data);
 }
@@ -401,7 +430,16 @@ TEST_F(AudioAdminTest, DualRenderStreamMix) {
   capturer->fidl()->StartAsyncCapture(10);
   ExpectCallbacks();
 
-  // Check that we got 10 samples as we expected.
+  if constexpr (!kEnableAllOverflowAndUnderflowChecksInRealtimeTests) {
+    // In case of underflows, exit NOW (don't assess this buffer).
+    // TODO(fxbug.dev/80003): Remove workarounds when underflow conditions are fixed.
+    if (DeviceHasUnderflows(output_)) {
+      GTEST_SKIP() << "Skipping data checks due to underflows";
+      __builtin_unreachable();
+    }
+  }
+
+  // Check that we got 10 frames containing the exact data values we expected.
   ASSERT_NE(captured, std::nullopt);
   ExpectPacketContains("captured", *captured, 10, kPlaybackData1 + kPlaybackData2);
 }
@@ -469,7 +507,16 @@ TEST_F(AudioAdminTest, DualRenderStreamDucking) {
   capturer->fidl()->StartAsyncCapture(10);
   ExpectCallbacks();
 
-  // Check that we got 10 samples as we expected.
+  if constexpr (!kEnableAllOverflowAndUnderflowChecksInRealtimeTests) {
+    // In case of underflows, exit NOW (don't assess this buffer).
+    // TODO(fxbug.dev/80003): Remove workarounds when underflow conditions are fixed.
+    if (DeviceHasUnderflows(output_)) {
+      GTEST_SKIP() << "Skipping data checks due to underflows";
+      __builtin_unreachable();
+    }
+  }
+
+  // Check that we got 10 frames containing the exact data values we expected.
   ASSERT_NE(captured, std::nullopt);
   ExpectPacketContains("captured", *captured, 10, kDuckedPlaybackData1 + kPlaybackData2);
 }
@@ -527,7 +574,16 @@ TEST_F(AudioAdminTest, DualRenderStreamMute) {
   capturer->fidl()->StartAsyncCapture(10);
   ExpectCallbacks();
 
-  // Check that we got 10 samples as we expected.
+  if constexpr (!kEnableAllOverflowAndUnderflowChecksInRealtimeTests) {
+    // In case of underflows, exit NOW (don't assess this buffer).
+    // TODO(fxbug.dev/80003): Remove workarounds when underflow conditions are fixed.
+    if (DeviceHasUnderflows(output_)) {
+      GTEST_SKIP() << "Skipping data checks due to underflows";
+      __builtin_unreachable();
+    }
+  }
+
+  // Check that we got 10 frames containing the exact data values we expected.
   ASSERT_NE(captured, std::nullopt);
   ExpectPacketContains("captured", *captured, 10, kPlaybackData1);
 }
@@ -588,7 +644,16 @@ TEST_F(AudioAdminTest, DualCaptureStreamNone) {
   capturer2->fidl()->StartAsyncCapture(10);
   ExpectCallbacks();
 
-  // Check that all of the samples contain the expected data.
+  if constexpr (!kEnableAllOverflowAndUnderflowChecksInRealtimeTests) {
+    // In case of underflows, exit NOW (don't assess this buffer).
+    // TODO(fxbug.dev/80003): Remove workarounds when underflow conditions are fixed.
+    if (DeviceHasUnderflows(output_)) {
+      GTEST_SKIP() << "Skipping data checks due to underflows";
+      __builtin_unreachable();
+    }
+  }
+
+  // Check that all the frames contained the exact data values we expected.
   ASSERT_NE(captured1, std::nullopt);
   ASSERT_NE(captured2, std::nullopt);
   ExpectPacketContains("captured1", *captured1, 10, kVirtualInputSampleValue);
@@ -652,7 +717,16 @@ TEST_F(AudioAdminTest, DISABLED_DualCaptureStreamMute) {
   capturer2->fidl()->StartAsyncCapture(10);
   RunLoopUntil([&captured1, &captured2]() { return captured1 && captured2; });
 
-  // Check that we got 10 samples as we expected.
+  if constexpr (!kEnableAllOverflowAndUnderflowChecksInRealtimeTests) {
+    // In case of underflows, exit NOW (don't assess this buffer).
+    // TODO(fxbug.dev/80003): Remove workarounds when underflow conditions are fixed.
+    if (DeviceHasUnderflows(output_)) {
+      GTEST_SKIP() << "Skipping data checks due to underflows";
+      __builtin_unreachable();
+    }
+  }
+
+  // Check that all the frames contained the exact data values we expected.
   ASSERT_NE(captured1, std::nullopt);
   ASSERT_NE(captured2, std::nullopt);
   ExpectPacketContains("captured1", *captured1, 10, kPlaybackData1);

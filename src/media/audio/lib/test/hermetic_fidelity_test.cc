@@ -742,6 +742,13 @@ void HermeticFidelityTest::Run(
     auto ring_buffer = GetRendererOutput(tc.input_format, total_input_buffer_len, tc.path, input,
                                          device, tc.renderer_clock_mode, tc.gain_db);
 
+    // In case of underflows, exit NOW (don't assess this buffer or run other frequencies).
+    // TODO(fxbug.dev/80003): Remove workarounds when underflow conditions are fixed.
+    if (DeviceHasUnderflows(device)) {
+      FX_LOGS(INFO) << "Test case will exit early: underflows were detected";
+      break;
+    }
+
     // For each channel: 1. analyze output, 2) display in-progress results if configured, 3) display
     // output buffer sections if applicable, 4) exit if underflows, 5) save results for later.
     for (const auto& channel_spec : tc.channels_to_measure) {
@@ -864,13 +871,6 @@ void HermeticFidelityTest::Run(
         }
       }
 
-      // In case of underflows, exit early (don't assess the remaining channels). Also don't retain
-      // level+SiNAD vals or compare to our worst-case, since the measurements are invalid.
-      // TODO(fxbug.dev/80003): Remove workarounds when underflow conditions are fixed.
-      if (DeviceHasUnderflows(device)) {
-        break;
-      }
-
       // Retrieve the arrays of measurements for this path and channel
       auto& curr_level_db = level_results(tc.test_name, channel_spec.channel);
       auto& curr_sinad_db = sinad_results(tc.test_name, channel_spec.channel);
@@ -882,12 +882,6 @@ void HermeticFidelityTest::Run(
         curr_level_db[freq.idx] = level_db;
       }
     }
-
-    // In case of underflows, don't bother measuring the rest of the frequency set.
-    // TODO(fxbug.dev/80003): Remove workarounds when underflow conditions are fixed.
-    if (DeviceHasUnderflows(device)) {
-      break;
-    }
   }
 
   if constexpr (kDisplaySummaryResults) {
@@ -895,7 +889,7 @@ void HermeticFidelityTest::Run(
   }
 
   // Only check results and pass/fail if we made a complete set of measurements without underflows.
-  // If there were underflows, SKIP (don't fail) so it doesn't look like a fidelity regression.
+  // If there were underflows, SKIP (don't fail) so it won't look like a fidelity regression.
   // TODO(fxbug.dev/80003): Remove workarounds when underflow conditions are fixed.
   if (DeviceHasUnderflows(device)) {
     GTEST_SKIP() << "Skipping threshold checks due to underflows";

@@ -76,7 +76,7 @@ TEST_F(AudioLoopbackStressTest, SingleLongCapture) {
   constexpr auto kInputDurationSeconds = 10;
 
   // The output device, renderers, and capturer can each store exactly 1s of audio data.
-  CreateOutput({{0xff, 0x00}}, kFormat, kPayloadFrames);
+  auto output = CreateOutput({{0xff, 0x00}}, kFormat, kPayloadFrames);
   auto renderer = CreateAudioRenderer(kFormat, kPayloadFrames);
   auto capturer = CreateAudioCapturer(kFormat, kPayloadFrames,
                                       fuchsia::media::AudioCapturerConfiguration::WithLoopback(
@@ -146,6 +146,15 @@ TEST_F(AudioLoopbackStressTest, SingleLongCapture) {
   capturer->fidl().events().OnPacketProduced = nullptr;
   capturer->fidl()->StopAsyncCaptureNoReply();
   RunLoopUntilIdle();
+
+  if constexpr (!kEnableAllOverflowAndUnderflowChecksInRealtimeTests) {
+    // In case of underflows, exit NOW (don't assess this buffer).
+    // TODO(fxbug.dev/80003): Remove workarounds when underflow conditions are fixed.
+    if (DeviceHasUnderflows(output)) {
+      GTEST_SKIP() << "Skipping data checks due to underflows";
+      __builtin_unreachable();
+    }
+  }
 
   // Find the first output frame. Since input[0] == 0 (silence), look for input[1], which is 1.
   auto second_output_frame = FirstNonSilentFrame(captured_packets);

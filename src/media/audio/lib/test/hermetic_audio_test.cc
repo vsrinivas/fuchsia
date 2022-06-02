@@ -78,6 +78,16 @@ void HermeticAudioTest::SetUp() {
 
   environment_->ConnectToService(audio_dev_enum_.NewRequest());
   AddErrorHandler(audio_dev_enum_, "AudioDeviceEnumerator");
+  {
+    // Connect is asynchronous: it creates a channel but does not wait until the server has
+    // received our channel and is ready to process our requests. We must wait until the server
+    // is ready to serve this channel otherwise we may miss device arrival events that happen
+    // shortly after the Connect call. To ensure the server is ready, we simply call a read-only
+    // method and wait for a response.
+    bool connected = false;
+    audio_dev_enum_->GetDevices([&connected](auto devices) mutable { connected = true; });
+    RunLoopUntil([&connected]() { return connected; });
+  }
   WatchForDeviceArrivals();
 
   TRACE_DURATION("audio", "HermeticAudioTest::WaitForAudioDeviceEnumerator");
