@@ -250,7 +250,7 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
       return ZX_ERR_INVALID_ARGS;
     }
     wlan_softmac->RemoveDevice();
-    zxlogf(ERROR, "%s: DestroyIface: done", name_.c_str());
+    zxlogf(DEBUG, "%s: DestroyIface: done", name_.c_str());
     return ZX_OK;
   }
 
@@ -298,7 +298,7 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
     std::lock_guard<std::mutex> guard(lock_);
     stopped_ = true;
     callback();
-    zxlogf(INFO, "%s: Shutdown done", name_.c_str());
+    zxlogf(DEBUG, "%s: Shutdown done", name_.c_str());
   }
 
   virtual void Rx(uint16_t wlan_softmac_id, ::std::vector<uint8_t> data,
@@ -308,7 +308,7 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
     if (WlantapMac* wlan_softmac = wlan_softmac_devices_.Get(wlan_softmac_id)) {
       wlan_softmac->Rx(data, info);
     }
-    zxlogf(INFO, "%s: Rx done", name_.c_str());
+    zxlogf(DEBUG, "%s: Rx done", name_.c_str());
   }
 
   virtual void Status(uint16_t wlan_softmac_id, uint32_t st) override {
@@ -317,7 +317,7 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
     if (WlantapMac* wlan_softmac = wlan_softmac_devices_.Get(wlan_softmac_id)) {
       wlan_softmac->Status(st);
     }
-    zxlogf(INFO, "%s: Status done", name_.c_str());
+    zxlogf(DEBUG, "%s: Status done", name_.c_str());
   }
 
   virtual void ReportTxStatus(uint16_t wlan_softmac_id, wlan_common::WlanTxStatus ts) override {
@@ -330,7 +330,7 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
       wlan_softmac->ReportTxStatus(ts);
     }
     if (!phy_config_->quiet || report_tx_status_count_ <= 32) {
-      zxlogf(INFO, "%s: ReportTxStatus %zu done", name_.c_str(), report_tx_status_count_);
+      zxlogf(DEBUG, "%s: ReportTxStatus %zu done", name_.c_str(), report_tx_status_count_);
     }
   }
 
@@ -365,7 +365,7 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
 
     user_binding_.events().Tx(ToTxArgs(wlan_softmac_id, pkt));
     if (!phy_config_->quiet || report_tx_status_count_ < 32) {
-      zxlogf(INFO, "%s: WlantapMacQueueTx done(%zu bytes), tx_report_count=%zu", name_.c_str(),
+      zxlogf(DEBUG, "%s: WlantapMacQueueTx done(%zu bytes), tx_report_count=%zu", name_.c_str(),
              pkt_size, report_tx_status_count_);
     }
   }
@@ -387,7 +387,7 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
                      .cbw = static_cast<wlan_common::ChannelBandwidth>(channel->cbw),
                      .secondary80 = channel->secondary80}});
     if (!phy_config_->quiet) {
-      zxlogf(INFO, "%s: WlantapMacSetChannel done", name_.c_str());
+      zxlogf(DEBUG, "%s: WlantapMacSetChannel done", name_.c_str());
     }
   }
 
@@ -406,7 +406,7 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
              .bss_type = static_cast<fuchsia::wlan::internal::BssType>(config->bss_type),
              .remote = config->remote,
          }});
-    zxlogf(INFO, "%s: WlantapMacConfigureBss done", name_.c_str());
+    zxlogf(DEBUG, "%s: WlantapMacConfigureBss done", name_.c_str());
   }
 
   virtual void WlantapMacSetKey(uint16_t wlan_softmac_id,
@@ -418,7 +418,7 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
       return;
     }
     user_binding_.events().SetKey(ToSetKeyArgs(wlan_softmac_id, key_config));
-    zxlogf(INFO, "%s: WlantapMacSetKey done", name_.c_str());
+    zxlogf(DEBUG, "%s: WlantapMacSetKey done", name_.c_str());
   }
 
   zx_device_t* device_;
