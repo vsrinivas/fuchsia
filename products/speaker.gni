@@ -45,3 +45,7 @@ core_realm_shards -= [
 legacy_cache_package_labels += []
 
 legacy_universe_package_labels += []
+
+# Use the product assembly config file to specify the product configuration.
+fuchsia_product_assembly_config_file =
+    "//build/assembly/empty_product_config.json"

@@ -245,9 +245,7 @@ impl ImageAssemblyConfigBuilder {
             qemu_kernel,
         } = self;
 
-        // repackage any matching packages, ignoring whether we actually succeed. if a patch has
-        // been provided that doesn't match a package, we silently skip it and let product
-        // validation catch any issues
+        // repackage any matching packages
         for (package, config) in structured_config {
             // get the manifest for this package name, returning the set from which it was removed
             if let Some((manifest, source_package_set)) =
@@ -268,6 +266,8 @@ impl ImageAssemblyConfigBuilder {
                 let new_entry = PackageEntry::parse_from(new_path)
                     .with_context(|| format!("parsing repackaged {}", package))?;
                 source_package_set.insert(new_entry.name().to_owned(), new_entry);
+            } else {
+                // TODO(https://fxbug.dev/101556) return an error here
             }
         }
 

@@ -12,5 +12,4 @@ product_assembly_configuration("workstation") {
   product = {
     session_url = "fuchsia-pkg://fuchsia.com/workstation_session#meta/workstation_routing.cm"
   }
-  cache_packages = [ "//src/session/bin/session_manager" ]
 }

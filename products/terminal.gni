@@ -82,3 +82,7 @@ legacy_universe_package_labels += [
   # Only for products in which Flutter is supported.
   "//src/tests/intl/timezone:tests-for-flutter",
 ]
+
+# Use the product assembly config file to specify the product configuration.
+fuchsia_product_assembly_config_file =
+    "//build/assembly/empty_product_config.json"

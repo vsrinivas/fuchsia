@@ -54,7 +54,10 @@ pub struct ProductConfig {
     pub packages: ProductPackagesConfig,
 
     /// Start URL to pass to `session_manager`.
-    session_url: Option<String>,
+    ///
+    /// Default to the empty string which creates a "paused" config that launches nothing to start.
+    #[serde(default)]
+    session_url: String,
 }
 
 /// Packages provided by the product, to add to the assembled images.
@@ -86,17 +89,16 @@ impl ProductAssemblyConfig {
         }
 
         // Configure the session URL.
-        if let Some(session_url) = &self.product.session_url {
-            ensure!(
-                session_url.is_empty() || session_url.starts_with("fuchsia-pkg://"),
-                "valid session URLs must start with `fuchsia-pkg://`, got `{}`",
-                session_url
-            );
-            patches
-                .package("session_manager")
-                .component("meta/session_manager.cm")
-                .field("session_url", session_url.to_owned());
-        }
+        ensure!(
+            self.product.session_url.is_empty()
+                || self.product.session_url.starts_with("fuchsia-pkg://"),
+            "valid session URLs must start with `fuchsia-pkg://`, got `{}`",
+            self.product.session_url
+        );
+        patches
+            .package("session_manager")
+            .component("meta/session_manager.cm")
+            .field("session_url", self.product.session_url.to_owned());
 
         Ok(patches.inner)
     }

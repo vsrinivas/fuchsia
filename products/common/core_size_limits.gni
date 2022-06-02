@@ -77,6 +77,7 @@ size_checker_input = {
         "build/images/fuchsia/fuchsia/legacy/packages/base/device_settings_manager",
         "build/images/fuchsia/fuchsia/legacy/packages/base/stash",
         "build/images/fuchsia/fuchsia/legacy/packages/base/sysmgr",
+        "build/images/fuchsia/fuchsia/repackaged/session_manager",
       ]
       limit = 2046836  # 1.952 MiB
       creep_limit = 204800  # 200.0 KiB
