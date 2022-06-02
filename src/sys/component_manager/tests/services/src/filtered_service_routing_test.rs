@@ -439,16 +439,7 @@ async fn create_dynamic_service_client(
         startup: Some(fdecl::StartupMode::Lazy),
         ..fdecl::Child::EMPTY
     };
-    let dynamic_offers = vec![
-        fdecl::Offer::Service(offer_service_decl),
-        fdecl::Offer::Protocol(fdecl::OfferProtocol {
-            source: Some(fdecl::Ref::Parent(fdecl::ParentRef)),
-            source_name: Some("fuchsia.logger.LogSink".to_string()),
-            target_name: Some("fuchsia.logger.LogSink".to_string()),
-            dependency_type: Some(fdecl::DependencyType::Strong),
-            ..fdecl::OfferProtocol::EMPTY
-        }),
-    ];
+    let dynamic_offers = vec![fdecl::Offer::Service(offer_service_decl)];
     let _ = realm
         .create_child(
             &mut collection_ref,
