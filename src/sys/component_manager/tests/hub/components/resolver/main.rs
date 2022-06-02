@@ -8,61 +8,49 @@ use hub_report::*;
 async fn main() {
     expect_dir_listing(
         "/hub/children/child_a",
-        vec!["children", "component_type", "debug", "moniker", "id", "url"],
+        vec!["children", "component_type", "moniker", "id", "url"],
     )
     .await;
     expect_dir_listing(
         "/hub/children/child_b",
-        vec!["children", "component_type", "debug", "moniker", "id", "url"],
+        vec!["children", "component_type", "moniker", "id", "url"],
     )
     .await;
-    expect_dir_listing("/hub/debug", vec!["fuchsia.sys2.LifecycleController"]).await;
-    expect_dir_listing("/hub/children/child_a/debug/", vec!["fuchsia.sys2.LifecycleController"])
-        .await;
-    expect_dir_listing("/hub/children/child_b/debug/", vec!["fuchsia.sys2.LifecycleController"])
-        .await;
-    resolve_component(
-        "/hub/children/child_a/debug/fuchsia.sys2.LifecycleController",
-        "./does_not_exist",
-        false,
-    )
-    .await;
-    resolve_component("/hub/children/child_a/debug/fuchsia.sys2.LifecycleController", ".", true)
-        .await;
+    resolve_component("./child_a/does_not_exist", false).await;
+    resolve_component("./child_a", true).await;
     expect_dir_listing(
         "/hub/children/child_a",
-        vec!["children", "component_type", "debug", "id", "moniker", "resolved", "url"],
+        vec!["children", "component_type", "id", "moniker", "resolved", "url"],
     )
     .await;
-    resolve_component("/hub/debug/fuchsia.sys2.LifecycleController", "./child_b", true).await;
+    resolve_component("./child_b", true).await;
     expect_dir_listing(
         "/hub/children/child_b",
-        vec!["children", "component_type", "debug", "id", "moniker", "resolved", "url"],
+        vec!["children", "component_type", "id", "moniker", "resolved", "url"],
     )
     .await;
-    start_component("/hub/debug/fuchsia.sys2.LifecycleController", "./child_b", true).await;
+    start_component("./child_b", true).await;
     expect_dir_listing(
         "/hub/children/child_b",
-        vec!["children", "component_type", "debug", "exec", "id", "moniker", "resolved", "url"],
+        vec!["children", "component_type", "exec", "id", "moniker", "resolved", "url"],
     )
     .await;
-    start_component("/hub/children/child_a/debug/fuchsia.sys2.LifecycleController", ".", true)
-        .await;
+    start_component("./child_a", true).await;
     expect_dir_listing(
         "/hub/children/child_a",
-        vec!["children", "component_type", "debug", "exec", "id", "moniker", "resolved", "url"],
+        vec!["children", "component_type", "exec", "id", "moniker", "resolved", "url"],
     )
     .await;
-    stop_component("/hub/debug/fuchsia.sys2.LifecycleController", "./child_b", true).await;
+    stop_component("./child_b", true).await;
     expect_dir_listing(
         "/hub/children/child_b",
-        vec!["children", "component_type", "debug", "id", "moniker", "resolved", "url"],
+        vec!["children", "component_type", "id", "moniker", "resolved", "url"],
     )
     .await;
-    stop_component("/hub/children/child_a/debug/fuchsia.sys2.LifecycleController", ".", true).await;
+    stop_component("./child_a", true).await;
     expect_dir_listing(
         "/hub/children/child_a",
-        vec!["children", "component_type", "debug", "id", "moniker", "resolved", "url"],
+        vec!["children", "component_type", "id", "moniker", "resolved", "url"],
     )
     .await;
 }

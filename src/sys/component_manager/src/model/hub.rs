@@ -4,12 +4,11 @@
 
 use {
     crate::{
-        builtin::lifecycle_controller::LifecycleController,
         capability::{CapabilityProvider, CapabilitySource},
         model::{
             addable_directory::AddableDirectoryWithResult,
             component::{StartReason, WeakComponentInstance},
-            dir_tree::{DirTree, DirTreeCapability},
+            dir_tree::DirTree,
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration, RuntimeInfo},
             routing_fns::{route_expose_fn, route_use_fn},
@@ -18,20 +17,17 @@ use {
     ::routing::capability_source::InternalCapability,
     async_trait::async_trait,
     cm_moniker::InstancedAbsoluteMoniker,
-    cm_rust::{CapabilityPath, ComponentDecl},
+    cm_rust::ComponentDecl,
     cm_task_scope::TaskScope,
     cm_util::{channel, io::clone_dir},
     config_encoder::ConfigFields,
-    fidl::{endpoints::ServerEnd, prelude::*},
-    fidl_fuchsia_io as fio,
-    fidl_fuchsia_sys2::LifecycleControllerMarker,
-    fuchsia_zircon as zx,
+    fidl::endpoints::ServerEnd,
+    fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     futures::lock::Mutex,
     moniker::{AbsoluteMonikerBase, ChildMonikerBase},
     rand::Rng,
     std::{
         collections::hash_map::HashMap,
-        convert::TryFrom,
         path::PathBuf,
         sync::{Arc, Weak},
     },
@@ -100,32 +96,18 @@ struct Instance {
 pub struct Hub {
     instances: Mutex<HashMap<InstancedAbsoluteMoniker, Instance>>,
     scope: ExecutionScope,
-    lifecycle_controller: Arc<LifecycleController>,
 }
 
 impl Hub {
-    /// Create a new Hub given a `component_url` for the root component and a
-    /// `lifecycle_controller_factory` which can create scoped LifecycleController services.
-    pub fn new(
-        component_url: String,
-        lifecycle_controller: Arc<LifecycleController>,
-    ) -> Result<Self, ModelError> {
+    /// Create a new Hub given a `component_url` for the root component
+    pub fn new(component_url: String) -> Result<Self, ModelError> {
         let mut instance_map = HashMap::new();
         let instanced_moniker = InstancedAbsoluteMoniker::root();
 
-        Hub::add_instance_if_necessary(
-            &lifecycle_controller,
-            &instanced_moniker,
-            component_url,
-            &mut instance_map,
-        )?
-        .expect("Did not create directory.");
+        Hub::add_instance_if_necessary(&instanced_moniker, component_url, &mut instance_map)?
+            .expect("Did not create directory.");
 
-        Ok(Hub {
-            instances: Mutex::new(instance_map),
-            scope: ExecutionScope::new(),
-            lifecycle_controller,
-        })
+        Ok(Hub { instances: Mutex::new(instance_map), scope: ExecutionScope::new() })
     }
 
     pub async fn open_root(
@@ -182,7 +164,6 @@ impl Hub {
     }
 
     fn add_instance_if_necessary(
-        lifecycle_controller: &Arc<LifecycleController>,
         instanced_moniker: &InstancedAbsoluteMoniker,
         component_url: String,
         instance_map: &mut HashMap<InstancedAbsoluteMoniker, Instance>,
@@ -236,8 +217,6 @@ impl Hub {
         let children = pfs::simple();
         instance.add_node("children", children.clone(), &instanced_moniker)?;
 
-        Self::add_debug_directory(lifecycle_controller, instance.clone(), instanced_moniker)?;
-
         let mut rng = rand::thread_rng();
         let instance_uuid: u128 = rng.gen();
 
@@ -271,13 +250,11 @@ impl Hub {
     }
 
     async fn add_instance_to_parent_if_necessary<'a>(
-        lifecycle_controller: &Arc<LifecycleController>,
         instanced_moniker: &'a InstancedAbsoluteMoniker,
         component_url: String,
         mut instance_map: &'a mut HashMap<InstancedAbsoluteMoniker, Instance>,
     ) -> Result<(), ModelError> {
         let (uuid, controlled) = match Hub::add_instance_if_necessary(
-            lifecycle_controller,
             &instanced_moniker,
             component_url,
             &mut instance_map,
@@ -378,55 +355,6 @@ impl Hub {
             in_dir.add_node("pkg", remote_dir(pkg_dir), target_moniker)?;
         }
         execution_directory.add_node("in", in_dir, target_moniker)?;
-        Ok(())
-    }
-
-    fn add_debug_directory(
-        lifecycle_controller: &Arc<LifecycleController>,
-        parent_directory: Directory,
-        target_moniker: &InstancedAbsoluteMoniker,
-    ) -> Result<(), ModelError> {
-        let mut debug_dir = pfs::simple();
-
-        let lifecycle_controller = lifecycle_controller.clone();
-        let lifecycle_controller_path = CapabilityPath::try_from(
-            format!("/{}", LifecycleControllerMarker::PROTOCOL_NAME).as_str(),
-        )
-        .unwrap();
-        let moniker = target_moniker.without_instance_ids();
-        let capabilities = vec![DirTreeCapability::new(
-            lifecycle_controller_path,
-            Box::new(
-                move |scope: ExecutionScope,
-                      flags: fio::OpenFlags,
-                      mode: u32,
-                      relative_path: pfsPath,
-                      server_end: ServerEnd<fio::NodeMarker>| {
-                    log::info!("Connecting fuchsia.sys2.LifecycleController");
-                    let lifecycle_controller = lifecycle_controller.clone();
-                    let moniker = moniker.clone();
-                    // Forward to the vfs::service::Service implementation of DirectoryEntry::open
-                    // instead of just converting the server_end into a
-                    // LifecycleControllerRequestStream and using scope to spawn a task to handle
-                    // the stream so that `flags` and `mode` are handled correctly, including:
-                    //   1. enforcing that OpenFlags::DESCRIBE is not set if
-                    //      OpenFlags::NODE_REFERENCE is not set.
-                    //   2. handling OpenFlags::NODE_REFERENCE correctly (which includes sending
-                    //      OnOpen if requested), which prevents the shell from hanging when e.g.
-                    //      `ls -l` is run in the containing directory.
-                    vfs::service::host(move |stream| {
-                        let lifecycle_controller = lifecycle_controller.clone();
-                        let moniker = moniker.clone();
-                        async move { lifecycle_controller.serve(moniker, stream).await }
-                    })
-                    .open(scope, flags, mode, relative_path, server_end)
-                },
-            ),
-        )];
-        let tree = DirTree::build_from_capabilities(capabilities);
-        tree.install(target_moniker, &mut debug_dir)?;
-
-        parent_directory.add_node("debug", debug_dir, target_moniker)?;
         Ok(())
     }
 
@@ -615,13 +543,8 @@ impl Hub {
     ) -> Result<(), ModelError> {
         let mut instance_map = self.instances.lock().await;
 
-        Self::add_instance_to_parent_if_necessary(
-            &self.lifecycle_controller,
-            target_moniker,
-            component_url,
-            &mut instance_map,
-        )
-        .await?;
+        Self::add_instance_to_parent_if_necessary(target_moniker, component_url, &mut instance_map)
+            .await?;
         Ok(())
     }
 
@@ -1315,7 +1238,7 @@ mod tests {
         assert_eq!(vec!["fake_file"], list_sub_directory(&use_dir, "pkg").await);
 
         assert_eq!(
-            vec!["children", "component_type", "debug", "exec", "id", "moniker", "resolved", "url"],
+            vec!["children", "component_type", "exec", "id", "moniker", "resolved", "url"],
             list_sub_directory(&use_dir, "hub").await
         );
     }
@@ -1581,45 +1504,5 @@ mod tests {
         )
         .expect("Failed to open directory");
         assert_eq!(vec!["bar", "hippo"], list_directory_recursive(&expose_dir).await);
-    }
-
-    #[fuchsia::test]
-    async fn hub_debug_directory() {
-        let root_component_url = "test:///root".to_string();
-        let (_model, _builtin_environment, hub_proxy) = start_component_manager_with_hub(
-            root_component_url.clone(),
-            vec![ComponentDescriptor {
-                name: "root",
-                decl: ComponentDeclBuilder::new().add_lazy_child("a").build(),
-                config: None,
-                host_fn: None,
-                runtime_host_fn: Some(bleep_runtime_dir_fn()),
-            }],
-        )
-        .await;
-
-        let debug_svc_dir = io_util::open_directory(
-            &hub_proxy,
-            &Path::new("debug"),
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
-        )
-        .expect("Failed to open directory");
-
-        assert_eq!(
-            vec!["fuchsia.sys2.LifecycleController"],
-            list_directory_recursive(&debug_svc_dir).await
-        );
-
-        let _: fio::NodeProxy = io_util::directory::open_node(
-            &debug_svc_dir,
-            "fuchsia.sys2.LifecycleController",
-            fio::OpenFlags::NODE_REFERENCE,
-            0,
-        )
-        .await
-        .expect(
-            "fuchsia.sys2.LifecycleController should handle NODE_REFERENCE correctly, including \
-             sending the OnOpen event when requested",
-        );
     }
 }

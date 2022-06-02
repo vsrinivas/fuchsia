@@ -24,5 +24,9 @@
             rights: [ "rw*" ],
             path: "/hub",
         },
+        {
+            protocol: "fuchsia.sys2.LifecycleController",
+            from: "framework",
+        },
     ],
 }

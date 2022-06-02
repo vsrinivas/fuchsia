@@ -15,7 +15,10 @@
     ],
     use: [
         {
-            protocol: [ "fuchsia.component.Realm" ],
+            protocol: [
+                "fuchsia.component.Realm",
+                "fuchsia.sys2.LifecycleController",
+            ],
             from: "framework",
         },
         {

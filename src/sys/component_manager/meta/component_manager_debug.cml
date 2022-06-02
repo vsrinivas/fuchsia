@@ -20,7 +20,12 @@
             rights: [ "rw*" ],
             path: "/hub",
         },
-        { protocol: "fuchsia.sys2.EventSource" },
+        {
+            protocol: [
+                "fuchsia.sys2.EventSource",
+                "fuchsia.sys2.LifecycleController",
+            ],
+        },
     ],
     use: [
         {
@@ -38,7 +43,10 @@
             from: "self",
         },
         {
-            protocol: "fuchsia.sys2.EventSource",
+            protocol: [
+                "fuchsia.sys2.EventSource",
+                "fuchsia.sys2.LifecycleController",
+            ],
             from: "self",
         },
     ],

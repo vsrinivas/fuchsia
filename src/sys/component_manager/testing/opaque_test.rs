@@ -110,11 +110,10 @@ impl OpaqueTest {
     /// Connects to the `fuchsia.sys2.LifecycleController` protocol exposed by
     /// component manager and attempts to start the root component.
     pub async fn start_component_tree(&self) -> Result<(), Error> {
-        let mut debug_path = self.get_hub_v2_path();
-        debug_path.push("debug");
-        let debug_path = debug_path.display().to_string();
+        let svc_path = self.get_component_manager_path().join("out/svc");
+        let svc_path = svc_path.display().to_string();
         let lifecycle_controller =
-            connect_to_protocol_at::<fsys::LifecycleControllerMarker>(&debug_path)?;
+            connect_to_protocol_at::<fsys::LifecycleControllerMarker>(&svc_path)?;
         lifecycle_controller
             .start("./")
             .await?

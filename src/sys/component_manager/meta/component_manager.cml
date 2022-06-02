@@ -20,6 +20,7 @@
             rights: [ "rw*" ],
             path: "/hub",
         },
+        { protocol: "fuchsia.sys2.LifecycleController" },
     ],
     use: [
         {
@@ -34,6 +35,10 @@
     expose: [
         {
             directory: "hub",
+            from: "self",
+        },
+        {
+            protocol: "fuchsia.sys2.LifecycleController",
             from: "self",
         },
     ],

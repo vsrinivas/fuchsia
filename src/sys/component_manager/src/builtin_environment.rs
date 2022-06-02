@@ -90,6 +90,7 @@ use {
     futures::prelude::*,
     lazy_static::lazy_static,
     log::*,
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
     std::{path::PathBuf, sync::Arc},
 };
 
@@ -817,9 +818,7 @@ impl BuiltinEnvironment {
         };
 
         let hub = if enable_introspection {
-            let lifecycle_controller = lifecycle_controller.as_ref().unwrap().clone();
-            let hub =
-                Arc::new(Hub::new(root_component_url.as_str().to_owned(), lifecycle_controller)?);
+            let hub = Arc::new(Hub::new(root_component_url.as_str().to_owned())?);
             model.root().hooks.install(hub.hooks()).await;
             Some(hub)
         } else {
@@ -922,7 +921,8 @@ impl BuiltinEnvironment {
         })
     }
 
-    /// Setup a ServiceFs that contains the Hub and (optionally) the `EventSource` service.
+    /// Setup a ServiceFs that contains debug capabilities like the root Hub, LifecycleController,
+    /// and EventSource.
     async fn create_service_fs<'a>(
         &self,
         debug_event_source_tasks: Arc<Mutex<Vec<fasync::Task<()>>>>,
@@ -936,15 +936,34 @@ impl BuiltinEnvironment {
 
         // Setup the hub
         let (hub_proxy, hub_server_end) = create_proxy::<fio::DirectoryMarker>().unwrap();
-        self.hub
-            .as_ref()
-            .unwrap()
-            .open_root(
+        if let Some(hub) = &self.hub {
+            hub.open_root(
                 fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
                 hub_server_end.into_channel(),
             )
             .await?;
-        service_fs.add_remote("hub", hub_proxy);
+            service_fs.add_remote("hub", hub_proxy);
+        }
+
+        // Install the root fuchsia.sys2.LifecycleController
+        if let Some(lifecycle_controller) = &self.lifecycle_controller {
+            let lifecycle_controller = lifecycle_controller.clone();
+            let scope = self.model.top_instance().task_scope().clone();
+            service_fs.dir("svc").add_fidl_service(move |stream| {
+                let lifecycle_controller = lifecycle_controller.clone();
+                let scope = scope.clone();
+                // Spawn a short-lived task that adds the lifecycle controller serve to
+                // component manager's task scope.
+                fasync::Task::spawn(async move {
+                    scope
+                        .add_task(async move {
+                            lifecycle_controller.serve(AbsoluteMoniker::root(), stream).await;
+                        })
+                        .await;
+                })
+                .detach();
+            });
+        }
 
         // If component manager is in debug mode, create an event source scoped at the
         // root and offer it via ServiceFs to the outside world.

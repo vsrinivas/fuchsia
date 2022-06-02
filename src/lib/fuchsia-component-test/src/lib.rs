@@ -561,9 +561,7 @@ impl RealmInstance {
     pub async fn start_component_tree(&self) -> Result<(), Error> {
         let lifecycle_controller = self
             .root
-            .connect_to_named_protocol_at_exposed_dir::<fsys::LifecycleControllerMarker>(
-                "hub/debug/fuchsia.sys2.LifecycleController",
-            )
+            .connect_to_protocol_at_exposed_dir::<fsys::LifecycleControllerMarker>()
             .map_err(|e| Error::CannotStartRootComponent(e))?;
         lifecycle_controller.start("./").await?.map_err(|e| {
             Error::CannotStartRootComponent(format_err!("received error status: {:?}", e))
@@ -816,6 +814,7 @@ impl RealmBuilder {
             .add_route(
                 Route::new()
                     .capability(Capability::directory("hub").path("/hub").rights(fio::RW_STAR_DIR))
+                    .capability(Capability::protocol_by_name("fuchsia.sys2.LifecycleController"))
                     .capability(Capability::protocol_by_name("fuchsia.sys2.EventSource"))
                     .from(Ref::child("component_manager"))
                     .to(Ref::parent()),
